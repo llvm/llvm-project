@@ -5,6 +5,7 @@ add_entrypoint_object(
   HDRS
     strtoimax.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
     libc.src.errno.errno
 )
@@ -16,6 +17,7 @@ add_entrypoint_object(
   HDRS
     strtoumax.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
     libc.src.errno.errno
 )

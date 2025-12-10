@@ -58,8 +58,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   StringRef getPassName() const override {
@@ -120,7 +119,6 @@ bool RemoveLoadsIntoFakeUses::run(MachineFunction &MF) {
 
   SmallVector<MachineInstr *> RegFakeUses;
   LivePhysRegs.init(*TRI);
-  SmallVector<MachineInstr *, 16> Statepoints;
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     RegFakeUses.clear();
     LivePhysRegs.addLiveOuts(*MBB);
@@ -152,7 +150,6 @@ bool RemoveLoadsIntoFakeUses::run(MachineFunction &MF) {
         // choose to ignore it so that this pass has no side effects unrelated
         // to fake uses.
         SmallDenseSet<MachineInstr *> FakeUsesToDelete;
-        SmallVector<MachineInstr *> RemainingFakeUses;
         for (MachineInstr *&FakeUse : reverse(RegFakeUses)) {
           if (FakeUse->readsRegister(Reg, TRI)) {
             FakeUsesToDelete.insert(FakeUse);

@@ -18,7 +18,7 @@
 #include <limits>
 
 #if KMP_AFFINITY_SUPPORTED
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
 class KMPHwlocAffinity : public KMPAffinity {
 public:
   class Mask : public KMPAffinity::Mask {
@@ -109,7 +109,7 @@ public:
       }
       return error;
     }
-#endif
+#endif // KMP_OS_WINDOWS
     int get_proc_group() const override {
       int group = -1;
 #if KMP_OS_WINDOWS
@@ -191,7 +191,7 @@ public:
   }
   api_type get_api_type() const override { return HWLOC; }
 };
-#endif /* KMP_USE_HWLOC */
+#endif /* KMP_HWLOC_ENABLED */
 
 #if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||     \
     KMP_OS_AIX
@@ -309,6 +309,17 @@ public:
 #ifndef __NR_sched_getaffinity
 #define __NR_sched_getaffinity 240
 #elif __NR_sched_getaffinity != 240
+#error Wrong code for getaffinity system call.
+#endif /* __NR_sched_getaffinity */
+#elif KMP_ARCH_SPARC
+#ifndef __NR_sched_setaffinity
+#define __NR_sched_setaffinity 261
+#elif __NR_sched_setaffinity != 261
+#error Wrong code for setaffinity system call.
+#endif /* __NR_sched_setaffinity */
+#ifndef __NR_sched_getaffinity
+#define __NR_sched_getaffinity 260
+#elif __NR_sched_getaffinity != 260
 #error Wrong code for getaffinity system call.
 #endif /* __NR_sched_getaffinity */
 #else

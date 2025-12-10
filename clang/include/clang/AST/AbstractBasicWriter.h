@@ -138,8 +138,7 @@ public:
     asImpl().writeUInt32(uint32_t(value));
   }
 
-  template <class T>
-  void writeArray(llvm::ArrayRef<T> array) {
+  template <class T> void writeArray(ArrayRef<T> array) {
     asImpl().writeUInt32(array.size());
     for (const T &elt : array) {
       WriteDispatcher<T>::write(asImpl(), elt);
@@ -177,12 +176,12 @@ public:
     asImpl().writeUInt32(path.size());
     auto &ctx = ((BasicWriterBase<Impl> *)this)->getASTContext();
     for (auto elem : path) {
-      if (elemTy->getAs<RecordType>()) {
+      if (elemTy->isRecordType()) {
         asImpl().writeUInt32(elem.getAsBaseOrMember().getInt());
         const Decl *baseOrMember = elem.getAsBaseOrMember().getPointer();
         if (const auto *recordDecl = dyn_cast<CXXRecordDecl>(baseOrMember)) {
           asImpl().writeDeclRef(recordDecl);
-          elemTy = ctx.getRecordType(recordDecl);
+          elemTy = ctx.getCanonicalTagType(recordDecl);
         } else {
           const auto *valueDecl = cast<ValueDecl>(baseOrMember);
           asImpl().writeDeclRef(valueDecl);
@@ -230,46 +229,43 @@ public:
     asImpl().writeExprRef(CE.getCondition());
   }
 
-  void writeNestedNameSpecifier(NestedNameSpecifier *NNS) {
+  void writeNestedNameSpecifier(NestedNameSpecifier NNS) {
     // Nested name specifiers usually aren't too long. I think that 8 would
     // typically accommodate the vast majority.
-    SmallVector<NestedNameSpecifier *, 8> nestedNames;
+    SmallVector<NestedNameSpecifier, 8> nestedNames;
 
     // Push each of the NNS's onto a stack for serialization in reverse order.
     while (NNS) {
       nestedNames.push_back(NNS);
-      NNS = NNS->getPrefix();
+      NNS = NNS.getKind() == NestedNameSpecifier::Kind::Namespace
+                ? NNS.getAsNamespaceAndPrefix().Prefix
+                : std::nullopt;
     }
 
     asImpl().writeUInt32(nestedNames.size());
     while (!nestedNames.empty()) {
       NNS = nestedNames.pop_back_val();
-      NestedNameSpecifier::SpecifierKind kind = NNS->getKind();
+      NestedNameSpecifier::Kind kind = NNS.getKind();
       asImpl().writeNestedNameSpecifierKind(kind);
       switch (kind) {
-      case NestedNameSpecifier::Identifier:
-        asImpl().writeIdentifier(NNS->getAsIdentifier());
+      case NestedNameSpecifier::Kind::Namespace:
+        asImpl().writeNamespaceBaseDeclRef(
+            NNS.getAsNamespaceAndPrefix().Namespace);
+        continue;
+      case NestedNameSpecifier::Kind::Type:
+        asImpl().writeQualType(QualType(NNS.getAsType(), 0));
         continue;
 
-      case NestedNameSpecifier::Namespace:
-        asImpl().writeNamespaceDeclRef(NNS->getAsNamespace());
-        continue;
-
-      case NestedNameSpecifier::NamespaceAlias:
-        asImpl().writeNamespaceAliasDeclRef(NNS->getAsNamespaceAlias());
-        continue;
-
-      case NestedNameSpecifier::TypeSpec:
-        asImpl().writeQualType(QualType(NNS->getAsType(), 0));
-        continue;
-
-      case NestedNameSpecifier::Global:
+      case NestedNameSpecifier::Kind::Global:
         // Don't need to write an associated value.
         continue;
 
-      case NestedNameSpecifier::Super:
-        asImpl().writeDeclRef(NNS->getAsRecordDecl());
+      case NestedNameSpecifier::Kind::MicrosoftSuper:
+        asImpl().writeDeclRef(NNS.getAsMicrosoftSuper());
         continue;
+
+      case NestedNameSpecifier::Kind::Null:
+        llvm_unreachable("unexpected null nested name specifier");
       }
       llvm_unreachable("bad nested name specifier kind");
     }

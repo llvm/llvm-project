@@ -1,0 +1,195 @@
+## Test that llvm-readobj shows proper relocation type
+## names and values for sparcv9 target.
+
+# RUN: yaml2obj %s -o %t-sparcv9.o
+# RUN: llvm-readobj -r --expand-relocs %t-sparcv9.o | FileCheck %s
+
+# CHECK: Type: R_SPARC_NONE (0)
+# CHECK: Type: R_SPARC_8 (1)
+# CHECK: Type: R_SPARC_16 (2)
+# CHECK: Type: R_SPARC_32 (3)
+# CHECK: Type: R_SPARC_DISP8 (4)
+# CHECK: Type: R_SPARC_DISP16 (5)
+# CHECK: Type: R_SPARC_DISP32 (6)
+# CHECK: Type: R_SPARC_WDISP30 (7)
+# CHECK: Type: R_SPARC_WDISP22 (8)
+# CHECK: Type: R_SPARC_HI22 (9)
+# CHECK: Type: R_SPARC_22 (10)
+# CHECK: Type: R_SPARC_13 (11)
+# CHECK: Type: R_SPARC_LO10 (12)
+# CHECK: Type: R_SPARC_GOT10 (13)
+# CHECK: Type: R_SPARC_GOT13 (14)
+# CHECK: Type: R_SPARC_GOT22 (15)
+# CHECK: Type: R_SPARC_PC10 (16)
+# CHECK: Type: R_SPARC_PC22 (17)
+# CHECK: Type: R_SPARC_WPLT30 (18)
+# CHECK: Type: R_SPARC_COPY (19)
+# CHECK: Type: R_SPARC_GLOB_DAT (20)
+# CHECK: Type: R_SPARC_JMP_SLOT (21)
+# CHECK: Type: R_SPARC_RELATIVE (22)
+# CHECK: Type: R_SPARC_UA32 (23)
+# CHECK: Type: R_SPARC_PLT32 (24)
+# CHECK: Type: R_SPARC_HIPLT22 (25)
+# CHECK: Type: R_SPARC_LOPLT10 (26)
+# CHECK: Type: R_SPARC_PCPLT32 (27)
+# CHECK: Type: R_SPARC_PCPLT22 (28)
+# CHECK: Type: R_SPARC_PCPLT10 (29)
+# CHECK: Type: R_SPARC_10 (30)
+# CHECK: Type: R_SPARC_11 (31)
+# CHECK: Type: R_SPARC_64 (32)
+# CHECK: Type: R_SPARC_OLO10 (33)
+# CHECK: Type: R_SPARC_HH22 (34)
+# CHECK: Type: R_SPARC_HM10 (35)
+# CHECK: Type: R_SPARC_LM22 (36)
+# CHECK: Type: R_SPARC_PC_HH22 (37)
+# CHECK: Type: R_SPARC_PC_HM10 (38)
+# CHECK: Type: R_SPARC_PC_LM22 (39)
+# CHECK: Type: R_SPARC_WDISP16 (40)
+# CHECK: Type: R_SPARC_WDISP19 (41)
+# CHECK: Type: R_SPARC_7 (43)
+# CHECK: Type: R_SPARC_5 (44)
+# CHECK: Type: R_SPARC_6 (45)
+# CHECK: Type: R_SPARC_DISP64 (46)
+# CHECK: Type: R_SPARC_PLT64 (47)
+# CHECK: Type: R_SPARC_HIX22 (48)
+# CHECK: Type: R_SPARC_LOX10 (49)
+# CHECK: Type: R_SPARC_H44 (50)
+# CHECK: Type: R_SPARC_M44 (51)
+# CHECK: Type: R_SPARC_L44 (52)
+# CHECK: Type: R_SPARC_REGISTER (53)
+# CHECK: Type: R_SPARC_UA64 (54)
+# CHECK: Type: R_SPARC_UA16 (55)
+# CHECK: Type: R_SPARC_TLS_GD_HI22 (56)
+# CHECK: Type: R_SPARC_TLS_GD_LO10 (57)
+# CHECK: Type: R_SPARC_TLS_GD_ADD (58)
+# CHECK: Type: R_SPARC_TLS_GD_CALL (59)
+# CHECK: Type: R_SPARC_TLS_LDM_HI22 (60)
+# CHECK: Type: R_SPARC_TLS_LDM_LO10 (61)
+# CHECK: Type: R_SPARC_TLS_LDM_ADD (62)
+# CHECK: Type: R_SPARC_TLS_LDM_CALL (63)
+# CHECK: Type: R_SPARC_TLS_LDO_HIX22 (64)
+# CHECK: Type: R_SPARC_TLS_LDO_LOX10 (65)
+# CHECK: Type: R_SPARC_TLS_LDO_ADD (66)
+# CHECK: Type: R_SPARC_TLS_IE_HI22 (67)
+# CHECK: Type: R_SPARC_TLS_IE_LO10 (68)
+# CHECK: Type: R_SPARC_TLS_IE_LD (69)
+# CHECK: Type: R_SPARC_TLS_IE_LDX (70)
+# CHECK: Type: R_SPARC_TLS_IE_ADD (71)
+# CHECK: Type: R_SPARC_TLS_LE_HIX22 (72)
+# CHECK: Type: R_SPARC_TLS_LE_LOX10 (73)
+# CHECK: Type: R_SPARC_TLS_DTPMOD32 (74)
+# CHECK: Type: R_SPARC_TLS_DTPMOD64 (75)
+# CHECK: Type: R_SPARC_TLS_DTPOFF32 (76)
+# CHECK: Type: R_SPARC_TLS_DTPOFF64 (77)
+# CHECK: Type: R_SPARC_TLS_TPOFF32 (78)
+# CHECK: Type: R_SPARC_TLS_TPOFF64 (79)
+# CHECK: Type: R_SPARC_GOTDATA_HIX22 (80)
+# CHECK: Type: R_SPARC_GOTDATA_LOX10 (81)
+# CHECK: Type: R_SPARC_GOTDATA_OP_HIX22 (82)
+# CHECK: Type: R_SPARC_GOTDATA_OP_LOX10 (83)
+# CHECK: Type: R_SPARC_GOTDATA_OP (84)
+# CHECK: Type: R_SPARC_H34 (85)
+# CHECK: Type: R_SPARC_SIZE32 (86)
+# CHECK: Type: R_SPARC_SIZE64 (87)
+# CHECK: Type: R_SPARC_WDISP10 (88)
+# CHECK: Type: R_SPARC_IRELATIVE (249)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: EM_SPARCV9
+Sections:
+  - Name: .rela.text
+    Type: SHT_RELA
+    Relocations:
+      - Type: R_SPARC_NONE
+      - Type: R_SPARC_8
+      - Type: R_SPARC_16
+      - Type: R_SPARC_32
+      - Type: R_SPARC_DISP8
+      - Type: R_SPARC_DISP16
+      - Type: R_SPARC_DISP32
+      - Type: R_SPARC_WDISP30
+      - Type: R_SPARC_WDISP22
+      - Type: R_SPARC_HI22
+      - Type: R_SPARC_22
+      - Type: R_SPARC_13
+      - Type: R_SPARC_LO10
+      - Type: R_SPARC_GOT10
+      - Type: R_SPARC_GOT13
+      - Type: R_SPARC_GOT22
+      - Type: R_SPARC_PC10
+      - Type: R_SPARC_PC22
+      - Type: R_SPARC_WPLT30
+      - Type: R_SPARC_COPY
+      - Type: R_SPARC_GLOB_DAT
+      - Type: R_SPARC_JMP_SLOT
+      - Type: R_SPARC_RELATIVE
+      - Type: R_SPARC_UA32
+      - Type: R_SPARC_PLT32
+      - Type: R_SPARC_HIPLT22
+      - Type: R_SPARC_LOPLT10
+      - Type: R_SPARC_PCPLT32
+      - Type: R_SPARC_PCPLT22
+      - Type: R_SPARC_PCPLT10
+      - Type: R_SPARC_10
+      - Type: R_SPARC_11
+      - Type: R_SPARC_64
+      - Type: R_SPARC_OLO10
+      - Type: R_SPARC_HH22
+      - Type: R_SPARC_HM10
+      - Type: R_SPARC_LM22
+      - Type: R_SPARC_PC_HH22
+      - Type: R_SPARC_PC_HM10
+      - Type: R_SPARC_PC_LM22
+      - Type: R_SPARC_WDISP16
+      - Type: R_SPARC_WDISP19
+      - Type: R_SPARC_7
+      - Type: R_SPARC_5
+      - Type: R_SPARC_6
+      - Type: R_SPARC_DISP64
+      - Type: R_SPARC_PLT64
+      - Type: R_SPARC_HIX22
+      - Type: R_SPARC_LOX10
+      - Type: R_SPARC_H44
+      - Type: R_SPARC_M44
+      - Type: R_SPARC_L44
+      - Type: R_SPARC_REGISTER
+      - Type: R_SPARC_UA64
+      - Type: R_SPARC_UA16
+      - Type: R_SPARC_TLS_GD_HI22
+      - Type: R_SPARC_TLS_GD_LO10
+      - Type: R_SPARC_TLS_GD_ADD
+      - Type: R_SPARC_TLS_GD_CALL
+      - Type: R_SPARC_TLS_LDM_HI22
+      - Type: R_SPARC_TLS_LDM_LO10
+      - Type: R_SPARC_TLS_LDM_ADD
+      - Type: R_SPARC_TLS_LDM_CALL
+      - Type: R_SPARC_TLS_LDO_HIX22
+      - Type: R_SPARC_TLS_LDO_LOX10
+      - Type: R_SPARC_TLS_LDO_ADD
+      - Type: R_SPARC_TLS_IE_HI22
+      - Type: R_SPARC_TLS_IE_LO10
+      - Type: R_SPARC_TLS_IE_LD
+      - Type: R_SPARC_TLS_IE_LDX
+      - Type: R_SPARC_TLS_IE_ADD
+      - Type: R_SPARC_TLS_LE_HIX22
+      - Type: R_SPARC_TLS_LE_LOX10
+      - Type: R_SPARC_TLS_DTPMOD32
+      - Type: R_SPARC_TLS_DTPMOD64
+      - Type: R_SPARC_TLS_DTPOFF32
+      - Type: R_SPARC_TLS_DTPOFF64
+      - Type: R_SPARC_TLS_TPOFF32
+      - Type: R_SPARC_TLS_TPOFF64
+      - Type: R_SPARC_GOTDATA_HIX22
+      - Type: R_SPARC_GOTDATA_LOX10
+      - Type: R_SPARC_GOTDATA_OP_HIX22
+      - Type: R_SPARC_GOTDATA_OP_LOX10
+      - Type: R_SPARC_GOTDATA_OP
+      - Type: R_SPARC_H34
+      - Type: R_SPARC_SIZE32
+      - Type: R_SPARC_SIZE64
+      - Type: R_SPARC_WDISP10
+      - Type: R_SPARC_IRELATIVE

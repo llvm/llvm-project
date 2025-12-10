@@ -43,17 +43,24 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexNumbersTest) {
   // This test will check that we can lex different number tokens
   const llvm::StringLiteral Source = R"cc(
     -42 42 +42 +2147483648
+    42. 4.2 .42
+    42f 4.2F
+    .42e+3 4.2E-12
+    42.e+10f
   )cc";
 
-  auto TokLoc = SourceLocation();
-
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
   SmallVector<TokenKind> Expected = {
-      TokenKind::pu_minus,    TokenKind::int_literal, TokenKind::int_literal,
-      TokenKind::pu_plus,     TokenKind::int_literal, TokenKind::pu_plus,
-      TokenKind::int_literal,
+      TokenKind::pu_minus,      TokenKind::int_literal,
+      TokenKind::int_literal,   TokenKind::pu_plus,
+      TokenKind::int_literal,   TokenKind::pu_plus,
+      TokenKind::int_literal,   TokenKind::float_literal,
+      TokenKind::float_literal, TokenKind::float_literal,
+      TokenKind::float_literal, TokenKind::float_literal,
+      TokenKind::float_literal, TokenKind::float_literal,
+      TokenKind::float_literal,
   };
   checkTokens(Lexer, Tokens, Expected);
 
@@ -73,13 +80,45 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexNumbersTest) {
   // is treated as an unsigned integer instead
   IntToken = Tokens[6];
   ASSERT_EQ(IntToken.NumSpelling, "2147483648");
+
+  // Sample decimal end
+  hlsl::RootSignatureToken FloatToken = Tokens[7];
+  ASSERT_EQ(FloatToken.NumSpelling, "42.");
+
+  // Sample decimal middle
+  FloatToken = Tokens[8];
+  ASSERT_EQ(FloatToken.NumSpelling, "4.2");
+
+  // Sample decimal start
+  FloatToken = Tokens[9];
+  ASSERT_EQ(FloatToken.NumSpelling, ".42");
+
+  // Sample float lower
+  FloatToken = Tokens[10];
+  ASSERT_EQ(FloatToken.NumSpelling, "42f");
+
+  // Sample float upper
+  FloatToken = Tokens[11];
+  ASSERT_EQ(FloatToken.NumSpelling, "4.2F");
+
+  // Sample exp +
+  FloatToken = Tokens[12];
+  ASSERT_EQ(FloatToken.NumSpelling, ".42e+3");
+
+  // Sample exp -
+  FloatToken = Tokens[13];
+  ASSERT_EQ(FloatToken.NumSpelling, "4.2E-12");
+
+  // Sample all combined
+  FloatToken = Tokens[14];
+  ASSERT_EQ(FloatToken.NumSpelling, "42.e+10f");
 }
 
 TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
   // This test will check that we can lex all defined tokens as defined in
   // HLSLRootSignatureTokenKinds.def, plus some additional integer variations
   const llvm::StringLiteral Source = R"cc(
-    42
+    42 42.0f
 
     b0 t43 u987 s234
 
@@ -87,14 +126,33 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
     RootSignature
 
-    DescriptorTable
+    RootFlags DescriptorTable RootConstants StaticSampler
+
+    num32BitConstants
 
     CBV SRV UAV Sampler
     space visibility flags
     numDescriptors offset
 
+    filter mipLODBias addressU addressV addressW
+    maxAnisotropy comparisonFunc borderColor
+    minLOD maxLOD
+
     unbounded
     DESCRIPTOR_RANGE_OFFSET_APPEND
+
+    allow_input_assembler_input_layout
+    deny_vertex_shader_root_access
+    deny_hull_shader_root_access
+    deny_domain_shader_root_access
+    deny_geometry_shader_root_access
+    deny_pixel_shader_root_access
+    deny_amplification_shader_root_access
+    deny_mesh_shader_root_access
+    allow_stream_output
+    local_root_signature
+    cbv_srv_uav_heap_directly_indexed
+    sampler_heap_directly_indexed
 
     DATA_VOLATILE
     DATA_STATIC_WHILE_SET_AT_EXECUTE
@@ -110,9 +168,69 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
     shader_visibility_pixel
     shader_visibility_amplification
     shader_visibility_mesh
+
+    FILTER_MIN_MAG_MIP_POINT
+    FILTER_MIN_MAG_POINT_MIP_LINEAR
+    FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT
+    FILTER_MIN_POINT_MAG_MIP_LINEAR
+    FILTER_MIN_LINEAR_MAG_MIP_POINT
+    FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR
+    FILTER_MIN_MAG_LINEAR_MIP_POINT
+    FILTER_MIN_MAG_MIP_LINEAR
+    FILTER_ANISOTROPIC
+    FILTER_COMPARISON_MIN_MAG_MIP_POINT
+    FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR
+    FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT
+    FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR
+    FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT
+    FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR
+    FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT
+    FILTER_COMPARISON_MIN_MAG_MIP_LINEAR
+    FILTER_COMPARISON_ANISOTROPIC
+    FILTER_MINIMUM_MIN_MAG_MIP_POINT
+    FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR
+    FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT
+    FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR
+    FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT
+    FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR
+    FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT
+    FILTER_MINIMUM_MIN_MAG_MIP_LINEAR
+    FILTER_MINIMUM_ANISOTROPIC
+    FILTER_MAXIMUM_MIN_MAG_MIP_POINT
+    FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR
+    FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT
+    FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR
+    FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT
+    FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR
+    FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT
+    FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR
+    FILTER_MAXIMUM_ANISOTROPIC
+
+    TEXTURE_ADDRESS_WRAP
+    TEXTURE_ADDRESS_MIRROR
+    TEXTURE_ADDRESS_CLAMP
+    TEXTURE_ADDRESS_BORDER
+    TEXTURE_ADDRESS_MIRRORONCE
+
+    comparison_never
+    comparison_less
+    comparison_equal
+    comparison_less_equal
+    comparison_greater
+    comparison_not_equal
+    comparison_greater_equal
+    comparison_always
+
+    STATIC_BORDER_COLOR_TRANSPARENT_BLACK
+    STATIC_BORDER_COLOR_OPAQUE_BLACK
+    STATIC_BORDER_COLOR_OPAQUE_WHITE
+    STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT
+    STATIC_BORDER_COLOR_OPAQUE_WHITE_UINT
+
+    UINT_BORDER_COLOR
+    NON_NORMALIZED_COORDINATES
   )cc";
-  auto TokLoc = SourceLocation();
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
   SmallVector<TokenKind> Expected = {
@@ -133,8 +251,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidCaseInsensitiveKeywordsTest) {
     SPACE visibility FLAGS
     numDescriptors OFFSET
   )cc";
-  auto TokLoc = SourceLocation();
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
   SmallVector<TokenKind> Expected = {
@@ -158,8 +275,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexPeekTest) {
   const llvm::StringLiteral Source = R"cc(
     )1
   )cc";
-  auto TokLoc = SourceLocation();
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
 
   // Test basic peek
   hlsl::RootSignatureToken Res = Lexer.peekNextToken();

@@ -18,20 +18,21 @@ define void @test(double %0) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> [[TMP9]], double [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP8]], <4 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP12:%.*]] = call <6 x double> @llvm.vector.insert.v6f64.v2f64(<6 x double> [[TMP11]], <2 x double> [[TMP10]], i64 4)
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP10]], <2 x double> poison, <6 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <6 x double> [[TMP11]], <6 x double> [[TMP13]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
 ; CHECK-NEXT:    br i1 false, label %[[DOTLR_PH272_PREHEADER:.*]], [[DOT_CRIT_EDGE:label %.*]]
 ; CHECK:       [[_LR_PH272_PREHEADER:.*:]]
-; CHECK-NEXT:    br i1 false, [[DOT_CRIT_EDGE]], label %[[BB13:.*]]
-; CHECK:       [[BB13]]:
+; CHECK-NEXT:    br i1 false, [[DOT_CRIT_EDGE]], label %[[BB14:.*]]
+; CHECK:       [[BB14]]:
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <6 x double> [[TMP12]], <6 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x double> [[TMP14]], <4 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP16:%.*]] = call <6 x double> @llvm.vector.insert.v6f64.v2f64(<6 x double> [[TMP15]], <2 x double> splat (double 0x7FF8000000000000), i64 4)
-; CHECK-NEXT:    br i1 false, label %[[BB17:.*]], [[DOT_CRIT_EDGE]]
-; CHECK:       [[BB17]]:
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <6 x double> [[TMP15]], <6 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000, double undef, double undef, double undef, double undef>, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
+; CHECK-NEXT:    br i1 false, label %[[BB18:.*]], [[DOT_CRIT_EDGE]]
+; CHECK:       [[BB18]]:
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <6 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double poison, double 0.000000e+00, double 0.000000e+00>, double [[TMP0]], i32 3
 ; CHECK-NEXT:    br [[DOT_CRIT_EDGE]]
 ; CHECK:       [[__CRIT_EDGE:.*:]]
-; CHECK-NEXT:    [[TMP19:%.*]] = phi <6 x double> [ [[TMP12]], %[[BB7]] ], [ [[TMP18]], %[[BB17]] ], [ [[TMP16]], %[[BB13]] ], [ [[TMP12]], %[[DOTLR_PH272_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = phi <6 x double> [ [[TMP12]], %[[BB7]] ], [ [[TMP18]], %[[BB18]] ], [ [[TMP17]], %[[BB14]] ], [ [[TMP12]], %[[DOTLR_PH272_PREHEADER]] ]
 ; CHECK-NEXT:    ret void
 ;
 .thread:

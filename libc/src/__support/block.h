@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_BLOCK_H
 #define LLVM_LIBC_SRC___SUPPORT_BLOCK_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/limits.h"
@@ -19,8 +20,6 @@
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/math_extras.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -44,8 +43,8 @@ using cpp::optional;
 /// The blocks store their offsets to the previous and next blocks. The latter
 /// is also the block's size.
 ///
-/// All blocks have their usable space aligned to some multiple of max_align_t.
-/// This also implies that block outer sizes are aligned to max_align_t.
+/// All blocks have their usable space aligned to some multiple of MIN_ALIGN.
+/// This also implies that block outer sizes are aligned to MIN_ALIGN.
 ///
 /// As an example, the diagram below represents two contiguous `Block`s. The
 /// indices indicate byte offsets:
@@ -98,13 +97,17 @@ class Block {
   static constexpr size_t SIZE_MASK = ~(PREV_FREE_MASK | LAST_MASK);
 
 public:
+  // To ensure block sizes have two lower unused bits, ensure usable space is
+  // always aligned to at least 4 bytes. (The distances between usable spaces,
+  // the outer size, is then always also 4-aligned.)
+  static constexpr size_t MIN_ALIGN = cpp::max(size_t{4}, alignof(max_align_t));
   // No copy or move.
   Block(const Block &other) = delete;
   Block &operator=(const Block &other) = delete;
 
   /// Initializes a given memory region into a first block and a sentinel last
   /// block. Returns the first block, which has its usable space aligned to
-  /// max_align_t.
+  /// MIN_ALIGN.
   static optional<Block *> init(ByteSpan region);
 
   /// @returns  A pointer to a `Block`, given a pointer to the start of the
@@ -161,17 +164,17 @@ public:
 
   /// @returns A pointer to the usable space inside this block.
   ///
-  /// Aligned to some multiple of max_align_t.
+  /// Aligned to some multiple of MIN_ALIGN.
   LIBC_INLINE cpp::byte *usable_space() {
     auto *s = reinterpret_cast<cpp::byte *>(this) + sizeof(Block);
-    LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % alignof(max_align_t) == 0 &&
-                "usable space must be aligned to a multiple of max_align_t");
+    LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % MIN_ALIGN == 0 &&
+                "usable space must be aligned to MIN_ALIGN");
     return s;
   }
   LIBC_INLINE const cpp::byte *usable_space() const {
     const auto *s = reinterpret_cast<const cpp::byte *>(this) + sizeof(Block);
-    LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % alignof(max_align_t) == 0 &&
-                "usable space must be aligned to a multiple of max_align_t");
+    LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % MIN_ALIGN == 0 &&
+                "usable space must be aligned to MIN_ALIGN");
     return s;
   }
 
@@ -186,9 +189,9 @@ public:
   /// `new_inner_size`. The remaining space will be returned as a new block,
   /// with usable space aligned to `usable_space_alignment`. Note that the prev_
   /// field of the next block counts as part of the inner size of the block.
-  /// `usable_space_alignment` must be a multiple of max_align_t.
+  /// `usable_space_alignment` must be a multiple of MIN_ALIGN.
   optional<Block *> split(size_t new_inner_size,
-                          size_t usable_space_alignment = alignof(max_align_t));
+                          size_t usable_space_alignment = MIN_ALIGN);
 
   /// Merges this block with the one that comes after it.
   bool merge_next();
@@ -229,13 +232,11 @@ public:
 
   LIBC_INLINE Block(size_t outer_size, bool is_last) : next_(outer_size) {
     // Last blocks are not usable, so they need not have sizes aligned to
-    // max_align_t. Their lower bits must still be free, so they must be aligned
-    // to Block.
-    LIBC_ASSERT(
-        outer_size % (is_last ? alignof(Block) : alignof(max_align_t)) == 0 &&
-        "block sizes must be aligned");
-    LIBC_ASSERT(is_usable_space_aligned(alignof(max_align_t)) &&
-                "usable space must be aligned to a multiple of max_align_t");
+    // MIN_ALIGN.
+    LIBC_ASSERT(outer_size % (is_last ? alignof(Block) : MIN_ALIGN) == 0 &&
+                "block sizes must be aligned");
+    LIBC_ASSERT(is_usable_space_aligned(MIN_ALIGN) &&
+                "usable space must be aligned to a multiple of MIN_ALIGN");
     if (is_last)
       next_ |= LAST_MASK;
   }
@@ -250,11 +251,10 @@ public:
   // Returns 0 if there is no such size.
   LIBC_INLINE static size_t min_size_for_allocation(size_t alignment,
                                                     size_t size) {
-    LIBC_ASSERT(alignment >= alignof(max_align_t) &&
-                alignment % alignof(max_align_t) == 0 &&
-                "alignment must be multiple of max_align_t");
+    LIBC_ASSERT(alignment >= MIN_ALIGN && alignment % MIN_ALIGN == 0 &&
+                "alignment must be multiple of MIN_ALIGN");
 
-    if (alignment == alignof(max_align_t))
+    if (alignment == MIN_ALIGN)
       return size;
 
     // We must create a new block inside this one (splitting). This requires a
@@ -275,7 +275,7 @@ public:
     // So the maximum distance would be G - L. As a special case, if L is 1
     // (unaligned), the max distance is G - 1.
     //
-    // This block's usable space is aligned to max_align_t >= Block. With zero
+    // This block's usable space is aligned to MIN_ALIGN >= Block. With zero
     // padding, the next block's usable space is sizeof(Block) past it, which is
     // a point aligned to Block. Thus the max padding needed is alignment -
     // alignof(Block).
@@ -310,13 +310,15 @@ public:
   static BlockInfo allocate(Block *block, size_t alignment, size_t size);
 
   // These two functions may wrap around.
-  LIBC_INLINE static uintptr_t next_possible_block_start(
-      uintptr_t ptr, size_t usable_space_alignment = alignof(max_align_t)) {
+  LIBC_INLINE static uintptr_t
+  next_possible_block_start(uintptr_t ptr,
+                            size_t usable_space_alignment = MIN_ALIGN) {
     return align_up(ptr + sizeof(Block), usable_space_alignment) -
            sizeof(Block);
   }
-  LIBC_INLINE static uintptr_t prev_possible_block_start(
-      uintptr_t ptr, size_t usable_space_alignment = alignof(max_align_t)) {
+  LIBC_INLINE static uintptr_t
+  prev_possible_block_start(uintptr_t ptr,
+                            size_t usable_space_alignment = MIN_ALIGN) {
     return align_down(ptr, usable_space_alignment) - sizeof(Block);
   }
 
@@ -361,9 +363,6 @@ public:
   static constexpr size_t PREV_FIELD_SIZE = sizeof(prev_);
 };
 
-static_assert(alignof(Block) >= 4,
-              "at least 2 bits must be available in block sizes for flags");
-
 LIBC_INLINE
 optional<Block *> Block::init(ByteSpan region) {
   if (!region.data())
@@ -395,8 +394,8 @@ optional<Block *> Block::init(ByteSpan region) {
 
 LIBC_INLINE
 Block::BlockInfo Block::allocate(Block *block, size_t alignment, size_t size) {
-  LIBC_ASSERT(alignment % alignof(max_align_t) == 0 &&
-              "alignment must be a multiple of max_align_t");
+  LIBC_ASSERT(alignment % MIN_ALIGN == 0 &&
+              "alignment must be a multiple of MIN_ALIGN");
 
   BlockInfo info{block, /*prev=*/nullptr, /*next=*/nullptr};
 
@@ -431,8 +430,8 @@ Block::BlockInfo Block::allocate(Block *block, size_t alignment, size_t size) {
 LIBC_INLINE
 optional<Block *> Block::split(size_t new_inner_size,
                                size_t usable_space_alignment) {
-  LIBC_ASSERT(usable_space_alignment % alignof(max_align_t) == 0 &&
-              "alignment must be a multiple of max_align_t");
+  LIBC_ASSERT(usable_space_alignment % MIN_ALIGN == 0 &&
+              "alignment must be a multiple of MIN_ALIGN");
   if (used())
     return {};
 
@@ -446,8 +445,8 @@ optional<Block *> Block::split(size_t new_inner_size,
   if (next_block_start < start)
     return {};
   size_t new_outer_size = next_block_start - start;
-  LIBC_ASSERT(new_outer_size % alignof(max_align_t) == 0 &&
-              "new size must be aligned to max_align_t");
+  LIBC_ASSERT(new_outer_size % MIN_ALIGN == 0 &&
+              "new size must be aligned to MIN_ALIGN");
 
   if (outer_size() < new_outer_size ||
       outer_size() - new_outer_size < sizeof(Block))

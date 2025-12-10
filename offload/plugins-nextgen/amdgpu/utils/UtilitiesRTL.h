@@ -13,6 +13,7 @@
 #include <cstdint>
 
 #include "Shared/Debug.h"
+#include "Shared/Utils.h"
 #include "Utils/ELF.h"
 
 #include "omptarget.h"
@@ -26,7 +27,7 @@ namespace plugin {
 namespace hsa_utils {
 
 // The implicit arguments of COV5 AMDGPU kernels.
-struct AMDGPUImplicitArgsTy {
+struct alignas(alignof(void *)) AMDGPUImplicitArgsTy {
   uint32_t BlockCountX;
   uint32_t BlockCountY;
   uint32_t BlockCountZ;
@@ -58,6 +59,18 @@ inline Error readAMDGPUMetaDataFromImage(
     return Err;
   DP("ELFABIVERSION Version: %u\n", ELFABIVersion);
   return Err;
+}
+
+/// Initializes the HSA implicit argument if the struct size permits it. This is
+/// necessary because optimizations can modify the size of the struct if
+/// portions of it are unused.
+template <typename MemberTy, typename T>
+void initImplArg(AMDGPUImplicitArgsTy *Base,
+                 MemberTy AMDGPUImplicitArgsTy::*Member, size_t AvailableSize,
+                 T Value) {
+  uint64_t Offset = utils::getPtrDiff(&(Base->*Member), Base);
+  if (Offset + sizeof(MemberTy) <= AvailableSize)
+    Base->*Member = static_cast<MemberTy>(Value);
 }
 
 } // namespace hsa_utils

@@ -78,16 +78,10 @@ struct missing_iter_value_t {
 };
 static_assert(!check_indirectly_readable<missing_iter_value_t>());
 
-struct unrelated_lvalue_ref_and_rvalue_ref {};
-
-struct iter_ref1 {};
-template <>
-struct std::common_reference<iter_ref1&, iter_ref1&&> {};
-
-template <>
-struct std::common_reference<iter_ref1&&, iter_ref1&> {};
-
-static_assert(!std::common_reference_with<iter_ref1&, iter_ref1&&>);
+struct iter_ref1 {
+  iter_ref1(const iter_ref1&) = delete;
+  iter_ref1(iter_ref1&&)      = delete;
+};
 
 struct bad_iter_reference_t {
   using value_type = int;
@@ -128,23 +122,8 @@ struct different_reference_types_with_common_reference {
 static_assert(check_indirectly_readable<different_reference_types_with_common_reference>());
 
 struct iter_ref4 {
-  operator iter_rvalue_ref() const;
+  operator iter_rvalue_ref();
 };
-
-template <template <class> class XQual, template <class> class YQual>
-struct std::basic_common_reference<iter_ref4, iter_rvalue_ref, XQual, YQual> {
-  using type = iter_rvalue_ref;
-};
-template <template <class> class XQual, template <class> class YQual>
-struct std::basic_common_reference<iter_rvalue_ref, iter_ref4, XQual, YQual> {
-  using type = iter_rvalue_ref;
-};
-
-// FIXME: This is UB according to [meta.rqmts], and there is no exception for common_reference.
-template <>
-struct std::common_reference<iter_ref4 const&, iter_rvalue_ref&&> {};
-template <>
-struct std::common_reference<iter_rvalue_ref&&, iter_ref4 const&> {};
 
 static_assert(std::common_reference_with<iter_ref4&&, iter_rvalue_ref&&>);
 static_assert(!std::common_reference_with<iter_ref4 const&, iter_rvalue_ref&&>);

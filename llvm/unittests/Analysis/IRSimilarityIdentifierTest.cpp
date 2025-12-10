@@ -17,14 +17,12 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 using namespace IRSimilarity;
-
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<bool> UseNewDbgInfoFormat;
 
 static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
                                               StringRef ModuleStr) {
@@ -50,6 +48,9 @@ void getSimilarities(
   IRSimilarityIdentifier Identifier(/*EnableBranchMatching = */false);
   SimilarityCandidates = Identifier.findSimilarity(M);
 }
+
+// TODO: All these tests could probably become IR LIT tests like
+// IROutliner/outlining-special-state.ll
 
 // Checks that different opcodes are mapped to different values
 TEST(IRInstructionMapper, OpcodeDifferentiation) {

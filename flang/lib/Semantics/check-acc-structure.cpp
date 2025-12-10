@@ -6,9 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 #include "check-acc-structure.h"
+#include "resolve-names-utils.h"
 #include "flang/Common/enum-set.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
+#include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Semantics/type.h"
+#include "flang/Support/Fortran.h"
+#include "llvm/Support/AtomicOrdering.h"
+
+#include <optional>
 
 #define CHECK_SIMPLE_CLAUSE(X, Y) \
   void AccStructureChecker::Enter(const parser::AccClause::X &) { \
@@ -99,18 +108,25 @@ bool AccStructureChecker::IsComputeConstruct(
       directive == llvm::acc::ACCD_kernels_loop;
 }
 
-bool AccStructureChecker::IsInsideComputeConstruct() const {
-  if (dirContext_.size() <= 1) {
-    return false;
-  }
+bool AccStructureChecker::IsLoopConstruct(
+    llvm::acc::Directive directive) const {
+  return directive == llvm::acc::Directive::ACCD_loop ||
+      directive == llvm::acc::ACCD_parallel_loop ||
+      directive == llvm::acc::ACCD_serial_loop ||
+      directive == llvm::acc::ACCD_kernels_loop;
+}
 
+std::optional<llvm::acc::Directive>
+AccStructureChecker::getParentComputeConstruct() const {
   // Check all nested context skipping the first one.
-  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
-    if (IsComputeConstruct(dirContext_[i - 1].directive)) {
-      return true;
-    }
-  }
-  return false;
+  for (std::size_t i = dirContext_.size() - 1; i > 0; --i)
+    if (IsComputeConstruct(dirContext_[i - 1].directive))
+      return dirContext_[i - 1].directive;
+  return std::nullopt;
+}
+
+bool AccStructureChecker::IsInsideComputeConstruct() const {
+  return getParentComputeConstruct().has_value();
 }
 
 void AccStructureChecker::CheckNotInComputeConstruct() {
@@ -119,6 +135,14 @@ void AccStructureChecker::CheckNotInComputeConstruct() {
         "Directive %s may not be called within a compute region"_err_en_US,
         ContextDirectiveAsFortran());
   }
+}
+
+bool AccStructureChecker::IsInsideKernelsConstruct() const {
+  if (auto directive = getParentComputeConstruct())
+    if (*directive == llvm::acc::ACCD_kernels ||
+        *directive == llvm::acc::ACCD_kernels_loop)
+      return true;
+  return false;
 }
 
 void AccStructureChecker::Enter(const parser::AccClause &x) {
@@ -243,6 +267,86 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
   dirContext_.pop_back();
 }
 
+std::optional<std::int64_t> AccStructureChecker::getGangDimensionSize(
+    DirectiveContext &dirContext) {
+  for (auto it : dirContext.clauseInfo) {
+    const auto *clause{it.second};
+    if (const auto *gangClause{
+            std::get_if<parser::AccClause::Gang>(&clause->u)})
+      if (gangClause->v) {
+        const Fortran::parser::AccGangArgList &x{*gangClause->v};
+        for (const Fortran::parser::AccGangArg &gangArg : x.v)
+          if (const auto *dim{
+                  std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)})
+            if (const auto v{EvaluateInt64(context_, dim->v)})
+              return *v;
+      }
+  }
+  return std::nullopt;
+}
+
+void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
+  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
+    auto &parent{dirContext_[i - 1]};
+    if (IsLoopConstruct(parent.directive)) {
+      for (auto parentClause : parent.actualClauses) {
+        for (auto cl : GetContext().actualClauses) {
+          bool invalid{false};
+          if (parentClause == llvm::acc::Clause::ACCC_gang &&
+              cl == llvm::acc::Clause::ACCC_gang) {
+            if (IsInsideKernelsConstruct()) {
+              context_.Say(GetContext().clauseSource,
+                  "Nested GANG loops are not allowed in the region of a KERNELS construct"_err_en_US);
+            } else {
+              auto parentDim = getGangDimensionSize(parent);
+              auto currentDim = getGangDimensionSize(GetContext());
+              std::int64_t parentDimNum = 1, currentDimNum = 1;
+              if (parentDim)
+                parentDimNum = *parentDim;
+              if (currentDim)
+                currentDimNum = *currentDim;
+              if (parentDimNum <= currentDimNum) {
+                std::string parentDimStr, currentDimStr;
+                if (parentDim)
+                  parentDimStr = "(dim:" + std::to_string(parentDimNum) + ")";
+                if (currentDim)
+                  currentDimStr = "(dim:" + std::to_string(currentDimNum) + ")";
+                context_.Say(GetContext().clauseSource,
+                    "%s%s clause is not allowed in the region of a loop with the %s%s clause"_err_en_US,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCClauseName(cl).str()),
+                    currentDimStr,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCClauseName(parentClause).str()),
+                    parentDimStr);
+                continue;
+              }
+            }
+          } else if (parentClause == llvm::acc::Clause::ACCC_worker &&
+              (cl == llvm::acc::Clause::ACCC_gang ||
+                  cl == llvm::acc::Clause::ACCC_worker)) {
+            invalid = true;
+          } else if (parentClause == llvm::acc::Clause::ACCC_vector &&
+              (cl == llvm::acc::Clause::ACCC_gang ||
+                  cl == llvm::acc::Clause::ACCC_worker ||
+                  cl == llvm::acc::Clause::ACCC_vector)) {
+            invalid = true;
+          }
+          if (invalid)
+            context_.Say(GetContext().clauseSource,
+                "%s clause is not allowed in the region of a loop with the %s clause"_err_en_US,
+                parser::ToUpperCaseLetters(
+                    llvm::acc::getOpenACCClauseName(cl).str()),
+                parser::ToUpperCaseLetters(
+                    llvm::acc::getOpenACCClauseName(parentClause).str()));
+        }
+      }
+    }
+    if (IsComputeConstruct(parent.directive))
+      break;
+  }
+}
+
 void AccStructureChecker::Enter(const parser::OpenACCLoopConstruct &x) {
   const auto &beginDir{std::get<parser::AccBeginLoopDirective>(x.t)};
   const auto &loopDir{std::get<parser::AccLoopDirective>(beginDir.t)};
@@ -260,6 +364,8 @@ void AccStructureChecker::Leave(const parser::OpenACCLoopConstruct &x) {
     CheckNotAllowedIfClause(llvm::acc::Clause::ACCC_seq,
         {llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_vector,
             llvm::acc::Clause::ACCC_worker});
+    // Restriction - 2.9.2, 2.9.3, 2.9.4
+    CheckNotInSameOrSubLevelLoopConstruct();
   }
   dirContext_.pop_back();
 }
@@ -342,20 +448,219 @@ void AccStructureChecker::Leave(const parser::OpenACCAtomicConstruct &x) {
   dirContext_.pop_back();
 }
 
-void AccStructureChecker::Enter(const parser::AccAtomicUpdate &x) {
-  const parser::AssignmentStmt &assignment{
-      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
-  const auto &var{std::get<parser::Variable>(assignment.t)};
-  const auto &expr{std::get<parser::Expr>(assignment.t)};
+void AccStructureChecker::CheckAtomicStmt(
+    const parser::AssignmentStmt &assign, const std::string &construct) {
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  const auto &expr{std::get<parser::Expr>(assign.t)};
   const auto *rhs{GetExpr(context_, expr)};
   const auto *lhs{GetExpr(context_, var)};
-  if (lhs && rhs) {
-    if (lhs->Rank() != 0)
+
+  if (lhs) {
+    if (lhs->Rank() != 0) {
       context_.Say(expr.source,
-          "LHS of atomic update statement must be scalar"_err_en_US);
-    if (rhs->Rank() != 0)
+          "LHS of atomic %s statement must be scalar"_err_en_US, construct);
+    }
+    // TODO: Check if lhs is intrinsic type.
+  }
+  if (rhs) {
+    if (rhs->Rank() != 0) {
       context_.Say(var.GetSource(),
-          "RHS of atomic update statement must be scalar"_err_en_US);
+          "RHS of atomic %s statement must be scalar"_err_en_US, construct);
+    }
+    // TODO: Check if rhs is intrinsic type.
+  }
+}
+
+static constexpr evaluate::operation::OperatorSet validAccAtomicUpdateOperators{
+    evaluate::operation::Operator::Add, evaluate::operation::Operator::Mul,
+    evaluate::operation::Operator::Sub, evaluate::operation::Operator::Div,
+    evaluate::operation::Operator::And, evaluate::operation::Operator::Or,
+    evaluate::operation::Operator::Eqv, evaluate::operation::Operator::Neqv,
+    evaluate::operation::Operator::Max, evaluate::operation::Operator::Min};
+
+static bool IsValidAtomicUpdateOperation(
+    const evaluate::operation::Operator &op) {
+  return validAccAtomicUpdateOperators.test(op);
+}
+
+// Couldn't reproduce this behavior with evaluate::UnwrapConvertedExpr which
+// is similar but only works within a single type category.
+static SomeExpr GetExprModuloConversion(const SomeExpr &expr) {
+  const auto [op, args]{evaluate::GetTopLevelOperation(expr)};
+  // Check: if it is a conversion then it must have at least one argument.
+  CHECK(((op != evaluate::operation::Operator::Convert &&
+             op != evaluate::operation::Operator::Resize) ||
+            args.size() >= 1) &&
+      "Invalid conversion operation");
+  if ((op == evaluate::operation::Operator::Convert ||
+          op == evaluate::operation::Operator::Resize) &&
+      args.size() >= 1) {
+    return args[0];
+  }
+  return expr;
+}
+
+void AccStructureChecker::CheckAtomicUpdateStmt(
+    const parser::AssignmentStmt &assign, const SomeExpr &updateVar,
+    const SomeExpr *captureVar) {
+  CheckAtomicStmt(assign, "update");
+  const auto &expr{std::get<parser::Expr>(assign.t)};
+  const auto *rhs{GetExpr(context_, expr)};
+  if (rhs) {
+    const auto [op, args]{
+        evaluate::GetTopLevelOperation(GetExprModuloConversion(*rhs))};
+    if (!IsValidAtomicUpdateOperation(op)) {
+      context_.Say(expr.source,
+          "Invalid atomic update operation, can only use: *, +, -, *, /, and, or, eqv, neqv, max, min, iand, ior, ieor"_err_en_US);
+    } else {
+      bool foundUpdateVar{false};
+      for (const auto &arg : args) {
+        if (updateVar == GetExprModuloConversion(arg)) {
+          if (foundUpdateVar) {
+            context_.Say(expr.source,
+                "The updated variable, %s, cannot appear more than once in the atomic update operation"_err_en_US,
+                updateVar.AsFortran());
+          } else {
+            foundUpdateVar = true;
+          }
+        } else if (evaluate::IsVarSubexpressionOf(updateVar, arg)) {
+          // TODO: Get the source location of arg and point to the individual
+          // argument.
+          context_.Say(expr.source,
+              "Arguments to the atomic update operation cannot reference the updated variable, %s, as a subexpression"_err_en_US,
+              updateVar.AsFortran());
+        }
+      }
+      if (!foundUpdateVar) {
+        context_.Say(expr.source,
+            "The RHS of this atomic update statement must reference the updated variable: %s"_err_en_US,
+            updateVar.AsFortran());
+      }
+    }
+  }
+}
+
+void AccStructureChecker::CheckAtomicWriteStmt(
+    const parser::AssignmentStmt &assign, const SomeExpr &updateVar,
+    const SomeExpr *captureVar) {
+  CheckAtomicStmt(assign, "write");
+  const auto &expr{std::get<parser::Expr>(assign.t)};
+  const auto *rhs{GetExpr(context_, expr)};
+  if (rhs) {
+    if (evaluate::IsVarSubexpressionOf(updateVar, *rhs)) {
+      context_.Say(expr.source,
+          "The RHS of this atomic write statement cannot reference the atomic variable: %s"_err_en_US,
+          updateVar.AsFortran());
+    }
+  }
+}
+
+void AccStructureChecker::CheckAtomicCaptureStmt(
+    const parser::AssignmentStmt &assign, const SomeExpr *updateVar,
+    const SomeExpr &captureVar) {
+  CheckAtomicStmt(assign, "capture");
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicCapture &capture) {
+  const Fortran::parser::AssignmentStmt &stmt1{
+      std::get<Fortran::parser::AccAtomicCapture::Stmt1>(capture.t)
+          .v.statement};
+  const Fortran::parser::AssignmentStmt &stmt2{
+      std::get<Fortran::parser::AccAtomicCapture::Stmt2>(capture.t)
+          .v.statement};
+  const auto &var1{std::get<parser::Variable>(stmt1.t)};
+  const auto &var2{std::get<parser::Variable>(stmt2.t)};
+  const auto *lhs1{GetExpr(context_, var1)};
+  const auto *lhs2{GetExpr(context_, var2)};
+  if (!lhs1 || !lhs2) {
+    // Not enough information to check.
+    return;
+  }
+  if (*lhs1 == *lhs2) {
+    context_.Say(std::get<parser::Verbatim>(capture.t).source,
+        "The variables assigned in this atomic capture construct must be distinct"_err_en_US);
+    return;
+  }
+  const auto &expr1{std::get<parser::Expr>(stmt1.t)};
+  const auto &expr2{std::get<parser::Expr>(stmt2.t)};
+  const auto *rhs1{GetExpr(context_, expr1)};
+  const auto *rhs2{GetExpr(context_, expr2)};
+  if (!rhs1 || !rhs2) {
+    return;
+  }
+  bool stmt1CapturesLhs2{*lhs2 == GetExprModuloConversion(*rhs1)};
+  bool stmt2CapturesLhs1{*lhs1 == GetExprModuloConversion(*rhs2)};
+  if (stmt1CapturesLhs2 && !stmt2CapturesLhs1) {
+    if (*lhs2 == GetExprModuloConversion(*rhs2)) {
+      // a = b; b = b: Doesn't fit the spec.
+      context_.Say(std::get<parser::Verbatim>(capture.t).source,
+          "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
+      // TODO: Add attatchment that a = b seems to be a capture,
+      // but b = b is not a valid update or write.
+    } else if (evaluate::IsVarSubexpressionOf(*lhs2, *rhs2)) {
+      // Take v = x; x = <expr w/ x> as capture; update
+      const auto &updateVar{*lhs2};
+      const auto &captureVar{*lhs1};
+      CheckAtomicCaptureStmt(stmt1, &updateVar, captureVar);
+      CheckAtomicUpdateStmt(stmt2, updateVar, &captureVar);
+    } else {
+      // Take v = x; x = <expr w/o x> as capture; write
+      const auto &updateVar{*lhs2};
+      const auto &captureVar{*lhs1};
+      CheckAtomicCaptureStmt(stmt1, &updateVar, captureVar);
+      CheckAtomicWriteStmt(stmt2, updateVar, &captureVar);
+    }
+  } else if (stmt2CapturesLhs1 && !stmt1CapturesLhs2) {
+    if (*lhs1 == GetExprModuloConversion(*rhs1)) {
+      // Error a = a; b = a;
+      context_.Say(var1.GetSource(),
+          "The first assignment in this atomic capture construct doesn't perform a valid update"_err_en_US);
+      // Add attatchment that a = a is not considered an update,
+      // but b = a seems to be a capture.
+    } else {
+      // Take x = <expr>; v = x: as update; capture
+      const auto &updateVar{*lhs1};
+      const auto &captureVar{*lhs2};
+      CheckAtomicUpdateStmt(stmt1, updateVar, &captureVar);
+      CheckAtomicCaptureStmt(stmt2, &updateVar, captureVar);
+    }
+  } else if (stmt1CapturesLhs2 && stmt2CapturesLhs1) {
+    // x1 = x2; x2 = x1; Doesn't fit the spec.
+    context_.Say(std::get<parser::Verbatim>(capture.t).source,
+        "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
+    // TODO: Add attatchment that both assignments seem to be captures.
+  } else { // !stmt1CapturesLhs2 && !stmt2CapturesLhs1
+    // a = <expr != b>; b = <expr != a>; Doesn't fit the spec
+    context_.Say(std::get<parser::Verbatim>(capture.t).source,
+        "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
+    // TODO: Add attatchment that neither assignment seems to be a capture.
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicUpdate &x) {
+  const auto &assign{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  if (const auto *updateVar{GetExpr(context_, var)}) {
+    CheckAtomicUpdateStmt(assign, *updateVar, /*captureVar=*/nullptr);
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicWrite &x) {
+  const auto &assign{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  if (const auto *updateVar{GetExpr(context_, var)}) {
+    CheckAtomicWriteStmt(assign, *updateVar, /*captureVar=*/nullptr);
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicRead &x) {
+  const auto &assign{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  if (const auto *captureVar{GetExpr(context_, var)}) {
+    CheckAtomicCaptureStmt(assign, /*updateVar=*/nullptr, *captureVar);
   }
 }
 
@@ -405,7 +710,8 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
-              if (const auto *name = getDesignatorNameIfDataRef(designator)) {
+              if (const auto *name =
+                      parser::GetDesignatorNameIfDataRef(designator)) {
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
                   if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
                     context_.Warn(common::UsageWarning::OpenAccUsage,
@@ -678,26 +984,29 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
-              if (const auto *name = getDesignatorNameIfDataRef(designator)) {
+              if (const auto *name =
+                      parser::GetDesignatorNameIfDataRef(designator)) {
                 if (name->symbol) {
-                  const auto *type{name->symbol->GetType()};
-                  if (type->IsNumeric(TypeCategory::Integer) &&
-                      !reductionIntegerSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for integer type"_err_en_US);
-                  } else if (type->IsNumeric(TypeCategory::Real) &&
-                      !reductionRealSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for real type"_err_en_US);
-                  } else if (type->IsNumeric(TypeCategory::Complex) &&
-                      !reductionComplexSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for complex type"_err_en_US);
-                  } else if (type->category() ==
-                          Fortran::semantics::DeclTypeSpec::Category::Logical &&
-                      !reductionLogicalSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for logical type"_err_en_US);
+                  if (const auto *type{name->symbol->GetType()}) {
+                    if (type->IsNumeric(TypeCategory::Integer) &&
+                        !reductionIntegerSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for integer type"_err_en_US);
+                    } else if (type->IsNumeric(TypeCategory::Real) &&
+                        !reductionRealSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for real type"_err_en_US);
+                    } else if (type->IsNumeric(TypeCategory::Complex) &&
+                        !reductionComplexSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for complex type"_err_en_US);
+                    } else if (type->category() ==
+                            Fortran::semantics::DeclTypeSpec::Category::
+                                Logical &&
+                        !reductionLogicalSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for logical type"_err_en_US);
+                    }
                   }
                   // TODO: check composite type.
                 }

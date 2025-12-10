@@ -113,7 +113,7 @@ rarely have to include this file directly).
 
 ``isa<>``:
   The ``isa<>`` operator works exactly like the Java "``instanceof``" operator.
-  It returns true or false depending on whether a reference or pointer points to
+  It returns ``true`` or ``false`` depending on whether a reference or pointer points to
   an instance of the specified class.  This can be very useful for constraint
   checking of various sorts (example below).
 
@@ -135,7 +135,7 @@ rarely have to include this file directly).
       return !L->contains(cast<Instruction>(V)->getParent());
     }
 
-  Note that you should **not** use an ``isa<>`` test followed by a ``cast<>``,
+  Note that you should **not** use an ``isa<>`` test followed by a ``cast<>``;
   for that use the ``dyn_cast<>`` operator.
 
 ``dyn_cast<>``:
@@ -167,7 +167,7 @@ rarely have to include this file directly).
 ``isa_and_present<>``:
   The ``isa_and_present<>`` operator works just like the ``isa<>`` operator,
   except that it allows for a null pointer as an argument (which it then
-  returns false).  This can sometimes be useful, allowing you to combine several
+  returns ``false``).  This can sometimes be useful, allowing you to combine several
   null checks into one.
 
 ``cast_if_present<>``:
@@ -234,8 +234,8 @@ the ``str`` member function.  See ``llvm/ADT/StringRef.h`` (`doxygen
 <https://llvm.org/doxygen/StringRef_8h_source.html>`__) for more
 information.
 
-You should rarely use the ``StringRef`` class directly, because it contains
-pointers to external memory it is not generally safe to store an instance of the
+You should rarely use the ``StringRef`` class directly. Because it contains
+pointers to external memory, it is not generally safe to store an instance of the
 class (unless you know that the external storage will not be freed).
 ``StringRef`` is small and pervasive enough in LLVM that it should always be
 passed by value.
@@ -402,7 +402,7 @@ doxygen documentation or by looking at the unit test suite.
 Error handling
 --------------
 
-Proper error handling helps us identify bugs in our code, and helps end-users
+Proper error handling helps us identify bugs in our code, and helps end users
 understand errors in their tool usage. Errors fall into two broad categories:
 *programmatic* and *recoverable*, with different strategies for handling and
 reporting.
@@ -416,14 +416,14 @@ to abort quickly at the point of failure (providing some basic diagnostic) when
 invariants are broken at runtime.
 
 The fundamental tools for handling programmatic errors are assertions and the
-llvm_unreachable function. Assertions are used to express invariant conditions,
+``llvm_unreachable`` function. Assertions are used to express invariant conditions,
 and should include a message describing the invariant:
 
 .. code-block:: c++
 
   assert(isPhysReg(R) && "All virt regs should have been allocated already.");
 
-The llvm_unreachable function can be used to document areas of control flow
+The ``llvm_unreachable`` function can be used to document areas of control flow
 that should never be entered if the program invariants hold:
 
 .. code-block:: c++
@@ -437,13 +437,22 @@ that should never be entered if the program invariants hold:
       llvm_unreachable("X should be Foo or Bar here");
   }
 
+Additionally, ``reportFatalInternalError`` can be used to report invariant
+violations even in builds that do not enable assertions:
+
+.. code-block:: c++
+
+  if (VerifyFooAnalysis && !Foo.verify()) {
+    reportFatalInternalError("Analysis 'foo' not preserved");
+  }
+
 Recoverable Errors
 ^^^^^^^^^^^^^^^^^^
 
-Recoverable errors represent an error in the program's environment, for example
+Recoverable errors represent an error in the program's environment, for example,
 a resource failure (a missing file, a dropped network connection, etc.), or
 malformed input. These errors should be detected and communicated to a level of
-the program where they can be handled appropriately. Handling the error may be
+the program that can handle them appropriately. Handling the error may be
 as simple as reporting the issue to the user, or it may involve attempts at
 recovery.
 
@@ -452,9 +461,9 @@ recovery.
    While it would be ideal to use this error handling scheme throughout
    LLVM, there are places where this hasn't been practical to apply. In
    situations where you absolutely must emit a non-programmatic error and
-   the ``Error`` model isn't workable you can call ``report_fatal_error``,
-   which will call installed error handlers, print a message, and abort the
-   program. The use of `report_fatal_error` in this case is discouraged.
+   the ``Error`` model isn't workable you can call ``reportFatalUsageError``,
+   which will call installed error handlers, print a message, and exit the
+   program. The use of ``reportFatalUsageError`` in this case is discouraged.
 
 Recoverable errors are modeled using LLVM's ``Error`` scheme. This scheme
 represents errors using function return values, similar to classic C integer
@@ -477,7 +486,7 @@ Success values are very cheap to construct and return - they have minimal
 impact on program performance.
 
 Failure values are constructed using ``make_error<T>``, where ``T`` is any class
-that inherits from the ErrorInfo utility, E.g.:
+that inherits from the ``ErrorInfo`` utility, E.g.:
 
 .. code-block:: c++
 
@@ -570,7 +579,7 @@ This second form is often more readable for functions that involve multiple
 
 If an ``Expected<T>`` value will be moved into an existing variable then the
 ``moveInto()`` method avoids the need to name an extra variable.  This is
-useful to enable ``operator->()`` the ``Expected<T>`` value has pointer-like
+useful to enable ``operator->()`` if the ``Expected<T>`` value has pointer-like
 semantics.  For example:
 
 .. code-block:: c++
@@ -589,7 +598,7 @@ semantics.  For example:
   }
 
 This third form works with any type that can be assigned to from ``T&&``. This
-can be useful if the ``Expected<T>`` value needs to be stored an already-declared
+can be useful if the ``Expected<T>`` value needs to be stored in an already-declared
 ``std::optional<T>``. For example:
 
 .. code-block:: c++
@@ -610,7 +619,7 @@ can be useful if the ``Expected<T>`` value needs to be stored an already-declare
 
 All ``Error`` instances, whether success or failure, must be either checked or
 moved from (via ``std::move`` or a return) before they are destructed.
-Accidentally discarding an unchecked error will cause a program abort at the
+Accidentally discarding an unchecked error will cause a program to abort at the
 point where the unchecked value's destructor is run, making it easy to identify
 and fix violations of this rule.
 
@@ -652,14 +661,14 @@ a variadic list of "handlers", each of which must be a callable type (a
 function, lambda, or class with a call operator) with one argument. The
 ``handleErrors`` function will visit each handler in the sequence and check its
 argument type against the dynamic type of the error, running the first handler
-that matches. This is the same decision process that is used decide which catch
+that matches. This is the same decision process that is used to decide which catch
 clause to run for a C++ exception.
 
 Since the list of handlers passed to ``handleErrors`` may not cover every error
 type that can occur, the ``handleErrors`` function also returns an Error value
 that must be checked or propagated. If the error value that is passed to
 ``handleErrors`` does not match any of the handlers it will be returned from
-handleErrors. Idiomatic use of ``handleErrors`` thus looks like:
+``handleErrors``. Idiomatic use of ``handleErrors`` thus looks like:
 
 .. code-block:: c++
 
@@ -674,18 +683,18 @@ handleErrors. Idiomatic use of ``handleErrors`` thus looks like:
           }))
     return Err;
 
-In cases where you truly know that the handler list is exhaustive the
+In cases where you truly know that the handler list is exhaustive, the
 ``handleAllErrors`` function can be used instead. This is identical to
 ``handleErrors`` except that it will terminate the program if an unhandled
 error is passed in, and can therefore return void. The ``handleAllErrors``
 function should generally be avoided: the introduction of a new error type
 elsewhere in the program can easily turn a formerly exhaustive list of errors
 into a non-exhaustive list, risking unexpected program termination. Where
-possible, use handleErrors and propagate unknown errors up the stack instead.
+possible, use ``handleErrors`` and propagate unknown errors up the stack instead.
 
 For tool code, where errors can be handled by printing an error message then
 exiting with an error code, the :ref:`ExitOnError <err_exitonerr>` utility
-may be a better choice than handleErrors, as it simplifies control flow when
+may be a better choice than ``handleErrors``, as it simplifies control flow when
 calling fallible functions.
 
 In situations where it is known that a particular call to a fallible function
@@ -697,9 +706,9 @@ simplifying control flow.
 StringError
 """""""""""
 
-Many kinds of errors have no recovery strategy, the only action that can be
+Many kinds of errors have no recovery strategy; the only action that can be
 taken is to report them to the user so that the user can attempt to fix the
-environment. In this case representing the error as a string makes perfect
+environment. In this case, representing the error as a string makes perfect
 sense. LLVM provides the ``StringError`` class for this purpose. It takes two
 arguments: A string error message, and an equivalent ``std::error_code`` for
 interoperability. It also provides a ``createStringError`` function to simplify
@@ -712,7 +721,7 @@ common usage of this class:
   createStringError(errc::executable_format_error, "Bad executable");
 
 If you're certain that the error you're building will never need to be converted
-to a ``std::error_code`` you can use the ``inconvertibleErrorCode()`` function:
+to a ``std::error_code``, you can use the ``inconvertibleErrorCode()`` function:
 
 .. code-block:: c++
 
@@ -782,18 +791,18 @@ actually recognises three different forms of handler signature:
   Error(std::unique_ptr<UserDefinedError> E);
 
 Any error returned from a handler will be returned from the ``handleErrors``
-function so that it can be handled itself, or propagated up the stack.
+function so that it can be handled itself or propagated up the stack.
 
 .. _err_exitonerr:
 
 Using ExitOnError to simplify tool code
 """""""""""""""""""""""""""""""""""""""
 
-Library code should never call ``exit`` for a recoverable error, however in tool
+Library code should never call ``exit`` for a recoverable error; however, in tool
 code (especially command line tools) this can be a reasonable approach. Calling
 ``exit`` upon encountering an error dramatically simplifies control flow as the
 error no longer needs to be propagated up the stack. This allows code to be
-written in straight-line style, as long as each fallible call is wrapped in a
+written in a straight-line style, as long as each fallible call is wrapped in a
 check and call to exit. The ``ExitOnError`` class supports this pattern by
 providing call operators that inspect ``Error`` values, stripping the error away
 in the success case and logging to ``stderr`` then exiting in the failure case.
@@ -818,7 +827,7 @@ turning them into non-failing calls:
   }
 
 On failure, the error's log message will be written to ``stderr``, optionally
-preceded by a string "banner" that can be set by calling the setBanner method. A
+preceded by a string "banner" that can be set by calling the ``setBanner`` method. A
 mapping can also be supplied from ``Error`` values to exit codes using the
 ``setExitCodeMapper`` method:
 
@@ -845,8 +854,8 @@ Some functions may only fail for a subset of their inputs, so calls using known
 safe inputs can be assumed to succeed.
 
 The cantFail functions encapsulate this by wrapping an assertion that their
-argument is a success value and, in the case of Expected<T>, unwrapping the
-T value:
+argument is a success value and, in the case of ``Expected<T>``, unwrapping the
+``T`` value:
 
 .. code-block:: c++
 
@@ -859,16 +868,16 @@ T value:
     ...
   }
 
-Like the ExitOnError utility, cantFail simplifies control flow. Their treatment
-of error cases is very different however: Where ExitOnError is guaranteed to
-terminate the program on an error input, cantFail simply asserts that the result
+Like the ExitOnError utility, ``cantFail`` simplifies control flow. Their treatment
+of error cases is very different, however: Where ExitOnError is guaranteed to
+terminate the program on an error input, ``cantFail`` simply asserts that the result
 is success. In debug builds this will result in an assertion failure if an error
-is encountered. In release builds the behavior of cantFail for failure values is
-undefined. As such, care must be taken in the use of cantFail: clients must be
-certain that a cantFail wrapped call really can not fail with the given
+is encountered. In release builds, the behavior of ``cantFail`` for failure values is
+undefined. As such, care must be taken in the use of ``cantFail``: clients must be
+certain that a ``cantFail`` wrapped call really can not fail with the given
 arguments.
 
-Use of the cantFail functions should be rare in library code, but they are
+Use of the ``cantFail`` functions should be rare in library code, but they are
 likely to be of more use in tool and unit-test code where inputs and/or
 mocked-up classes or functions may be known to be safe.
 
@@ -919,11 +928,11 @@ well-formed Foo or an Error, never an object in an invalid state.
 Propagating and consuming errors based on types
 """""""""""""""""""""""""""""""""""""""""""""""
 
-In some contexts, certain types of error are known to be benign. For example,
+In some contexts, certain types of errors are known to be benign. For example,
 when walking an archive, some clients may be happy to skip over badly formatted
 object files rather than terminating the walk immediately. Skipping badly
 formatted objects could be achieved using an elaborate handler method, but the
-Error.h header provides two utilities that make this idiom much cleaner: the
+``Error.h`` header provides two utilities that make this idiom much cleaner: the
 type inspection method, ``isA``, and the ``consumeError`` function:
 
 .. code-block:: c++
@@ -947,8 +956,8 @@ type inspection method, ``isA``, and the ``consumeError`` function:
 Concatenating Errors with joinErrors
 """"""""""""""""""""""""""""""""""""
 
-In the archive walking example above ``BadFileFormat`` errors are simply
-consumed and ignored. If the client had wanted report these errors after
+In the archive walking example above, ``BadFileFormat`` errors are simply
+consumed and ignored. If the client had wanted to report these errors after
 completing the walk over the archive they could use the ``joinErrors`` utility:
 
 .. code-block:: c++
@@ -970,17 +979,17 @@ completing the walk over the archive they could use the ``joinErrors`` utility:
   }
 
 The ``joinErrors`` routine builds a special error type called ``ErrorList``,
-which holds a list of user defined errors. The ``handleErrors`` routine
+which holds a list of user-defined errors. The ``handleErrors`` routine
 recognizes this type and will attempt to handle each of the contained errors in
 order. If all contained errors can be handled, ``handleErrors`` will return
-``Error::success()``, otherwise ``handleErrors`` will concatenate the remaining
+``Error::success()``; otherwise, ``handleErrors`` will concatenate the remaining
 errors and return the resulting ``ErrorList``.
 
 Building fallible iterators and iterator ranges
 """""""""""""""""""""""""""""""""""""""""""""""
 
-The archive walking examples above retrieve archive members by index, however
-this requires considerable boiler-plate for iteration and error checking. We can
+The archive walking examples above retrieve archive members by index; however,
+this requires considerable boilerplate for iteration and error checking. We can
 clean this up by using the "fallible iterator" pattern, which supports the
 following natural iteration idiom for fallible containers like Archive:
 
@@ -1030,11 +1039,11 @@ fallible_iterator utility which provides ``operator++`` and ``operator--``,
 returning any errors via a reference passed in to the wrapper at construction
 time. The fallible_iterator wrapper takes care of (a) jumping to the end of the
 range on error, and (b) marking the error as checked whenever an iterator is
-compared to ``end`` and found to be inequal (in particular: this marks the
+compared to ``end`` and found to be unequal (in particular, this marks the
 error as checked throughout the body of a range-based for loop), enabling early
 exit from the loop without redundant error checking.
 
-Instances of the fallible iterator interface (e.g. FallibleChildIterator above)
+Instances of the fallible iterator interface (e.g., FallibleChildIterator above)
 are wrapped using the ``make_fallible_itr`` and ``make_fallible_end``
 functions. E.g.:
 
@@ -1059,12 +1068,12 @@ functions. E.g.:
 
 Using the fallible_iterator utility allows for both natural construction of
 fallible iterators (using failing ``inc`` and ``dec`` operations) and
-relatively natural use of c++ iterator/loop idioms.
+relatively natural use of C++ iterator/loop idioms.
 
 .. _function_apis:
 
 More information on Error and its related utilities can be found in the
-Error.h header file.
+``Error.h`` header file.
 
 Passing functions and other callable objects
 --------------------------------------------
@@ -1134,10 +1143,10 @@ be passed by value.
 
 .. _DEBUG:
 
-The ``LLVM_DEBUG()`` macro and ``-debug`` option
-------------------------------------------------
+The ``LDBG`` and ``LLVM_DEBUG()`` macros and ``-debug`` option
+--------------------------------------------------------------
 
-Often when working on your pass you will put a bunch of debugging printouts and
+Often, when working on your pass, you will put a bunch of debugging printouts and
 other code into your pass.  After you get it working, you want to remove it, but
 you may need it again in the future (to work out new bugs that you run across).
 
@@ -1145,97 +1154,149 @@ Naturally, because of this, you don't want to delete the debug printouts, but
 you don't want them to always be noisy.  A standard compromise is to comment
 them out, allowing you to enable them if you need them in the future.
 
-The ``llvm/Support/Debug.h`` (`doxygen
-<https://llvm.org/doxygen/Debug_8h_source.html>`__) file provides a macro named
-``LLVM_DEBUG()`` that is a much nicer solution to this problem.  Basically, you can
-put arbitrary code into the argument of the ``LLVM_DEBUG`` macro, and it is only
-executed if '``opt``' (or any other tool) is run with the '``-debug``' command
-line argument:
+The ``llvm/Support/DebugLog.h`` file provides a macro named ``LDBG`` that is a
+more convenient way to add debug output to your code. It is a macro that
+provides a raw_ostream that is used to write the debug output.
 
 .. code-block:: c++
 
-  LLVM_DEBUG(dbgs() << "I am here!\n");
+  LDBG() << "I am here!";
 
-Then you can run your pass like this:
+It'll only print the output if the debug output is enabled.
+It also supports a `level` argument to control the verbosity of the output.
+
+.. code-block:: c++
+
+  LDBG(2) << "I am here!";
+
+A ``DEBUG_TYPE`` macro may optionally be defined in the file before using
+``LDBG()``, otherwise the file name is used as the debug type.
+The file name and line number are automatically added to the output, as well as
+a terminating newline.
+
+The debug output can be enabled by passing the ``-debug`` command line argument.
 
 .. code-block:: none
 
   $ opt < a.bc > /dev/null -mypass
   <no output>
   $ opt < a.bc > /dev/null -mypass -debug
-  I am here!
+  [my-pass MyPass.cpp:123 2] I am here!
 
-Using the ``LLVM_DEBUG()`` macro instead of a home-brewed solution allows you to not
-have to create "yet another" command line option for the debug output for your
-pass.  Note that ``LLVM_DEBUG()`` macros are disabled for non-asserts builds, so they
-do not cause a performance impact at all (for the same reason, they should also
-not contain side-effects!).
+While ``LDBG()`` is useful to add debug output to your code, there are cases
+where you may need to guard a block of code with a debug check. The
+``llvm/Support/Debug.h`` (`doxygen
+<https://llvm.org/doxygen/Debug_8h_source.html>`__) file provides a macro named
+``LLVM_DEBUG()`` that offers a solution to this problem.  You can put arbitrary
+code into the argument of the ``LLVM_DEBUG`` macro, and it is only executed if
+'``opt``' (or any other tool) is run with the '``-debug``' command
+line argument.
 
-One additional nice thing about the ``LLVM_DEBUG()`` macro is that you can enable or
-disable it directly in gdb.  Just use "``set DebugFlag=0``" or "``set
-DebugFlag=1``" from the gdb if the program is running.  If the program hasn't
-been started yet, you can always just run it with ``-debug``.
+.. code-block:: c++
+
+  LLVM_DEBUG({
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
+        llvm::MemoryBuffer::getFile(logFile->first);
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
+      LDBG() << "Output:\n" << (*logBuffer)->getBuffer();
+    }
+  });
+
+
+Using these macros instead of a home-brewed solution allows you to not have to
+create "yet another" command-line option for the debug output for your pass.
+Note that ``LDBG()`` and ``LLVM_DEBUG()`` macros are disabled for non-asserts
+builds, so they do not cause a performance impact at all (for the same reason,
+they should also not contain side-effects!).
+
+One additional nice thing about the ``LDBG()`` and ``LLVM_DEBUG()`` macros is
+that you can enable or disable it directly in gdb.  Just use
+"``set DebugFlag=0``" or "``set DebugFlag=1``" from the gdb if the program is
+running.  If the program hasn't been started yet, you can always just run it
+with ``-debug``.
 
 .. _DEBUG_TYPE:
 
 Fine grained debug info with ``DEBUG_TYPE`` and the ``-debug-only`` option
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Sometimes you may find yourself in a situation where enabling ``-debug`` just
+Sometimes, you may find yourself in a situation where enabling ``-debug`` just
 turns on **too much** information (such as when working on the code generator).
 If you want to enable debug information with more fine-grained control, you
-should define the ``DEBUG_TYPE`` macro and use the ``-debug-only`` option as
-follows:
+can control the debug type and level with associate with each logging statement
+as follows:
 
 .. code-block:: c++
 
-  #define DEBUG_TYPE "foo"
-  LLVM_DEBUG(dbgs() << "'foo' debug type\n");
-  #undef  DEBUG_TYPE
-  #define DEBUG_TYPE "bar"
-  LLVM_DEBUG(dbgs() << "'bar' debug type\n");
-  #undef  DEBUG_TYPE
+  #define DEBUG_TYPE "foo" // Optional: the file name is used instead if not defined
+  LDBG(2) << "Hello,";
+  // DEBUG_TYPE can be overridden locally, here with "bar"
+  LDBG("bar", 3) << "'bar' debug type";
 
-Then you can run your pass like this:
+
+A more fine-grained control of the output can be achieved by passing the
+``-debug-only`` command line argument:
 
 .. code-block:: none
 
-  $ opt < a.bc > /dev/null -mypass
-  <no output>
-  $ opt < a.bc > /dev/null -mypass -debug
-  'foo' debug type
-  'bar' debug type
   $ opt < a.bc > /dev/null -mypass -debug-only=foo
-  'foo' debug type
-  $ opt < a.bc > /dev/null -mypass -debug-only=bar
-  'bar' debug type
+  [foo MyPass.cpp:123 2] Hello,
   $ opt < a.bc > /dev/null -mypass -debug-only=foo,bar
-  'foo' debug type
-  'bar' debug type
+  [foo MyPass.cpp:123 2] Hello,
+  [bar MyPass.cpp:124 3] World!
+  $ opt < a.bc > /dev/null -mypass -debug-only=bar
+  [bar MyPass.cpp:124 3] World!
 
-Of course, in practice, you should only set ``DEBUG_TYPE`` at the top of a file,
-to specify the debug type for the entire module. Be careful that you only do
-this after including Debug.h and not around any #include of headers. Also, you
-should use names more meaningful than "foo" and "bar", because there is no
-system in place to ensure that names do not conflict. If two different modules
-use the same string, they will all be turned on when the name is specified.
+The debug-only argument is a comma separated list of debug types and levels.
+The level is an optional integer setting the maximum debug level to enable:
+
+.. code-block:: none
+
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:2,bar:2
+  [foo MyPass.cpp:123 2] Hello,
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:1,bar:3
+  [bar MyPass.cpp:124 3] World!
+
+Instead of opting in specific debug types, the ``-debug-only`` option also
+works to filter out debug output for specific debug types, by omitting the
+level (or setting it to 0):
+
+.. code-block:: none
+
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:
+  [bar MyPass.cpp:124 3] World!
+  $ opt < a.bc > /dev/null -mypass -debug-only=bar:0,foo:
+
+
+In practice, you should only set ``DEBUG_TYPE`` at the top of a file, to
+specify the debug type for the entire module. Be careful that you only do
+this after you're done including headers (in particular ``Debug.h``/``DebugLog.h``).
+Also, you should use names more meaningful than "foo" and "bar", because there
+is no system in place to ensure that names do not conflict. If two different
+modules use the same string, they will all be turned on when the name is specified.
 This allows, for example, all debug information for instruction scheduling to be
 enabled with ``-debug-only=InstrSched``, even if the source lives in multiple
 files. The name must not include a comma (,) as that is used to separate the
 arguments of the ``-debug-only`` option.
 
-For performance reasons, -debug-only is not available in optimized build
-(``--enable-optimized``) of LLVM.
+For performance reasons, -debug-only is not available in non-asserts build
+of LLVM.
 
-The ``DEBUG_WITH_TYPE`` macro is also available for situations where you would
-like to set ``DEBUG_TYPE``, but only for one specific ``DEBUG`` statement.  It
-takes an additional first parameter, which is the type to use.  For example, the
-preceding example could be written as:
+The ``DEBUG_WITH_TYPE`` macro is an alternative to the ``LLVM_DEBUG()`` macro
+for situations where you would like to set ``DEBUG_TYPE``, but only for one
+specific ``LLVM_DEBUG`` statement.  It takes an additional first parameter,
+which is the type to use. The example from the previous section could be
+written as:
 
 .. code-block:: c++
 
-  DEBUG_WITH_TYPE("foo", dbgs() << "'foo' debug type\n");
-  DEBUG_WITH_TYPE("bar", dbgs() << "'bar' debug type\n");
+  DEBUG_WITH_TYPE("special-type", {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
+        llvm::MemoryBuffer::getFile(logFile->first);
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
+      LDBG("special-type") << "Output:\n" << (*logBuffer)->getBuffer();
+    }
+  });
 
 .. _Statistic:
 
@@ -1328,7 +1389,7 @@ maintainable and useful.
 Adding debug counters to aid in debugging your code
 ---------------------------------------------------
 
-Sometimes, when writing new passes, or trying to track down bugs, it
+Sometimes, when writing new passes or trying to track down bugs, it
 is useful to be able to control whether certain things in your pass
 happen or not.  For example, there are times the minimization tooling
 can only easily give you large testcases.  You would like to narrow
@@ -1340,9 +1401,9 @@ certain number of times.
 The ``llvm/Support/DebugCounter.h`` (`doxygen
 <https://llvm.org/doxygen/DebugCounter_8h_source.html>`__) file
 provides a class named ``DebugCounter`` that can be used to create
-command line counter options that control execution of parts of your code.
+command-line counter options that control execution of parts of your code.
 
-Define your DebugCounter like this:
+Define your ``DebugCounter`` like this:
 
 .. code-block:: c++
 
@@ -1355,7 +1416,7 @@ is specified by the first argument.  The name of the counter
 argument, and the description used in the help is specified by the
 third argument.
 
-Whatever code you want that control, use ``DebugCounter::shouldExecute`` to control it.
+Whatever code you want to control, use ``DebugCounter::shouldExecute`` to control it.
 
 .. code-block:: c++
 
@@ -1391,7 +1452,7 @@ A more general utility is provided in `llvm/tools/reduce-chunk-list/reduce-chunk
 How to use reduce-chunk-list:
 First, Figure out the number of calls to the debug counter you want to minimize.
 To do so, run the compilation command causing you want to minimize with `-print-debug-counter` adding a `-mllvm` if needed.
-Than find the line with the counter of interest. it should look like:
+Then find the line with the counter of interest. it should look like:
 
 .. code-block:: none
 
@@ -1399,7 +1460,7 @@ Than find the line with the counter of interest. it should look like:
 
 The number of calls to `my-counter` is 5678
 
-Than Find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
+Then find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
 Build a reproducer script like:
 
 .. code-block:: bash
@@ -1408,7 +1469,7 @@ Build a reproducer script like:
   opt -debug-counter=my-counter=$1
   # ... Test result of the command. Failure of the script is considered interesting
 
-Than run `reduce-chunk-list my-script.sh 0-5678 2>&1 | tee dump_bisect`
+Then run `reduce-chunk-list my-script.sh 0-5678 2>&1 | tee dump_bisect`
 This command may take some time.
 but when it is done, it will print the result like: `Minimal Chunks = 0:1:5:11-12:33-34`
 
@@ -1467,7 +1528,7 @@ LLVM has a plethora of data structures in the ``llvm/ADT/`` directory, and we
 commonly use STL data structures.  This section describes the trade-offs you
 should consider when you pick one.
 
-The first step is a choose your own adventure: do you want a sequential
+The first step is to choose your own adventure: do you want a sequential
 container, a set-like container, or a map-like container?  The most important
 thing when choosing a container is the algorithmic properties of how you plan to
 access the container.  Based on that, you should use:
@@ -1570,18 +1631,18 @@ llvm/ADT/SmallVector.h
 ``SmallVector<Type, N>`` is a simple class that looks and smells just like
 ``vector<Type>``: it supports efficient iteration, lays out elements in memory
 order (so you can do pointer arithmetic between elements), supports efficient
-push_back/pop_back operations, supports efficient random access to its elements,
+``push_back``/``pop_back`` operations, supports efficient random access to its elements,
 etc.
 
-The main advantage of SmallVector is that it allocates space for some number of
-elements (N) **in the object itself**.  Because of this, if the SmallVector is
+The main advantage of ``SmallVector`` is that it allocates space for some number of
+elements (N) **in the object itself**.  Because of this, if the ``SmallVector`` is
 dynamically smaller than N, no malloc is performed.  This can be a big win in
 cases where the malloc/free call is far more expensive than the code that
 fiddles around with the elements.
 
-This is good for vectors that are "usually small" (e.g. the number of
+This is good for vectors that are "usually small" (e.g., the number of
 predecessors/successors of a block is usually less than 8).  On the other hand,
-this makes the size of the SmallVector itself large, so you don't want to
+this makes the size of the ``SmallVector`` itself large, so you don't want to
 allocate lots of them (doing so will waste a lot of space).  As such,
 SmallVectors are most useful when on the stack.
 
@@ -1591,21 +1652,21 @@ omitting the ``N``). This will choose a default number of
 inlined elements reasonable for allocation on the stack (for example, trying
 to keep ``sizeof(SmallVector<T>)`` around 64 bytes).
 
-SmallVector also provides a nice portable and efficient replacement for
+``SmallVector`` also provides a nice portable and efficient replacement for
 ``alloca``.
 
-SmallVector has grown a few other minor advantages over std::vector, causing
+``SmallVector`` has grown a few other minor advantages over ``std::vector``, causing
 ``SmallVector<Type, 0>`` to be preferred over ``std::vector<Type>``.
 
-#. std::vector is exception-safe, and some implementations have pessimizations
-   that copy elements when SmallVector would move them.
+#. ``std::vector`` is exception-safe, and some implementations have pessimizations
+   that copy elements when ``SmallVector`` would move them.
 
-#. SmallVector understands ``std::is_trivially_copyable<Type>`` and uses realloc aggressively.
+#. ``SmallVector`` understands ``std::is_trivially_copyable<Type>`` and uses realloc aggressively.
 
-#. Many LLVM APIs take a SmallVectorImpl as an out parameter (see the note
+#. Many LLVM APIs take a ``SmallVectorImpl`` as an out parameter (see the note
    below).
 
-#. SmallVector with N equal to 0 is smaller than std::vector on 64-bit
+#. ``SmallVector`` with N equal to 0 is smaller than ``std::vector`` on 64-bit
    platforms, since it uses ``unsigned`` (instead of ``void*``) for its size
    and capacity.
 
@@ -1623,7 +1684,7 @@ SmallVector has grown a few other minor advantages over std::vector, causing
 
    .. code-block:: c++
 
-      // DISCOURAGED: Clients cannot pass e.g. raw arrays.
+      // DISCOURAGED: Clients cannot pass e.g., raw arrays.
       hardcodedContiguousStorage(const SmallVectorImpl<Foo> &In);
       // ENCOURAGED: Clients can pass any contiguous storage of Foo.
       allowsAnyContiguousStorage(ArrayRef<Foo> In);
@@ -1634,7 +1695,7 @@ SmallVector has grown a few other minor advantages over std::vector, causing
         allowsAnyContiguousStorage(Vec); // Works.
       }
 
-      // DISCOURAGED: Clients cannot pass e.g. SmallVector<Foo, 8>.
+      // DISCOURAGED: Clients cannot pass e.g., SmallVector<Foo, 8>.
       hardcodedSmallSize(SmallVector<Foo, 2> &Out);
       // ENCOURAGED: Clients can pass any SmallVector<Foo, N>.
       allowsAnySmallSize(SmallVectorImpl<Foo> &Out);
@@ -1668,17 +1729,17 @@ page and one extra indirection when accessing elements with their positional
 index.
 
 In order to minimise the memory footprint of this container, it's important to
-balance the PageSize so that it's not too small (otherwise the overhead of the
-pointer per page might become too high) and not too big (otherwise the memory
+balance the ``PageSize`` so that it's not too small (otherwise, the overhead of the
+pointer per page might become too high) and not too big (otherwise, the memory
 is wasted if the page is not fully used).
 
 Moreover, while retaining the order of the elements based on their insertion
 index, like a vector, iterating over the elements via ``begin()`` and ``end()``
-is not provided in the API, due to the fact accessing the elements in order
+is not provided in the API, due to the fact that accessing the elements in order
 would allocate all the iterated pages, defeating memory savings and the purpose
 of the ``PagedVector``.
 
-Finally a ``materialized_begin()`` and ``materialized_end`` iterators are
+Finally, ``materialized_begin()`` and ``materialized_end`` iterators are
 provided to access the elements associated to the accessed pages, which could
 speed up operations that need to iterate over initialized elements in a
 non-ordered manner.
@@ -1689,11 +1750,11 @@ non-ordered manner.
 ^^^^^^^^
 
 ``std::vector<T>`` is well loved and respected.  However, ``SmallVector<T, 0>``
-is often a better option due to the advantages listed above.  std::vector is
+is often a better option due to the advantages listed above.  ``std::vector`` is
 still useful when you need to store more than ``UINT32_MAX`` elements or when
 interfacing with code that expects vectors :).
 
-One worthwhile note about std::vector: avoid code like this:
+One worthwhile note about ``std::vector``: avoid code like this:
 
 .. code-block:: c++
 
@@ -1721,9 +1782,9 @@ loop.
 ^^^^^^^
 
 ``std::deque`` is, in some senses, a generalized version of ``std::vector``.
-Like ``std::vector``, it provides constant time random access and other similar
+Like ``std::vector``, it provides constant-time random access and other similar
 properties, but it also provides efficient access to the front of the list.  It
-does not guarantee continuity of elements within memory.
+does not guarantee the continuity of elements within memory.
 
 In exchange for this extra flexibility, ``std::deque`` has significantly higher
 constant factor costs than ``std::vector``.  If possible, use ``std::vector`` or
@@ -1740,10 +1801,10 @@ extremely high constant factor, particularly for small data types.
 ``std::list`` also only supports bidirectional iteration, not random access
 iteration.
 
-In exchange for this high cost, std::list supports efficient access to both ends
+In exchange for this high cost, ``std::list`` supports efficient access to both ends
 of the list (like ``std::deque``, but unlike ``std::vector`` or
 ``SmallVector``).  In addition, the iterator invalidation characteristics of
-std::list are stronger than that of a vector class: inserting or removing an
+``std::list`` are stronger than that of a vector class: inserting or removing an
 element into the list does not invalidate iterator or pointers to other elements
 in the list.
 
@@ -1782,7 +1843,7 @@ Related classes of interest are explained in the following subsections:
 llvm/ADT/PackedVector.h
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Useful for storing a vector of values using only a few number of bits for each
+Useful for storing a vector of values using only a few bits for each
 value.  Apart from the standard operations of a vector-like container, it can
 also perform an 'or' set operation.
 
@@ -1840,13 +1901,13 @@ non-empty ``ilist``\ s.
 
 The only sensible solution to this problem is to allocate a so-called *sentinel*
 along with the intrusive list, which serves as the ``end`` iterator, providing
-the back-link to the last element.  However conforming to the C++ convention it
+the back-link to the last element.  However, conforming to the C++ convention it
 is illegal to ``operator++`` beyond the sentinel and it also must not be
 dereferenced.
 
 These constraints allow for some implementation freedom to the ``ilist`` how to
 allocate and store the sentinel.  The corresponding policy is dictated by
-``ilist_traits<T>``.  By default a ``T`` gets heap-allocated whenever the need
+``ilist_traits<T>``.  By default, a ``T`` gets heap-allocated whenever the need
 for a sentinel arises.
 
 While the default policy is sufficient in most cases, it may break down when
@@ -1880,13 +1941,13 @@ String-like containers
 
 There are a variety of ways to pass around and use strings in C and C++, and
 LLVM adds a few new options to choose from.  Pick the first option on this list
-that will do what you need, they are ordered according to their relative cost.
+that will do what you need; they are ordered according to their relative cost.
 
 Note that it is generally preferred to *not* pass strings around as ``const
 char*``'s.  These have a number of problems, including the fact that they
 cannot represent embedded nul ("\0") characters, and do not have a length
 available efficiently.  The general replacement for '``const char*``' is
-StringRef.
+``StringRef``.
 
 For more information on choosing string containers for APIs, please see
 :ref:`Passing Strings <string_apis>`.
@@ -1896,41 +1957,41 @@ For more information on choosing string containers for APIs, please see
 llvm/ADT/StringRef.h
 ^^^^^^^^^^^^^^^^^^^^
 
-The StringRef class is a simple value class that contains a pointer to a
+The ``StringRef`` class is a simple value class that contains a pointer to a
 character and a length, and is quite related to the :ref:`ArrayRef
 <dss_arrayref>` class (but specialized for arrays of characters).  Because
-StringRef carries a length with it, it safely handles strings with embedded nul
+``StringRef`` carries a length with it, it safely handles strings with embedded nul
 characters in it, getting the length does not require a strlen call, and it even
 has very convenient APIs for slicing and dicing the character range that it
 represents.
 
-StringRef is ideal for passing simple strings around that are known to be live,
-either because they are C string literals, std::string, a C array, or a
-SmallVector.  Each of these cases has an efficient implicit conversion to
-StringRef, which doesn't result in a dynamic strlen being executed.
+``StringRef`` is ideal for passing simple strings around that are known to be live,
+either because they are C string literals, ``std::string``, a C array, or a
+``SmallVector``.  Each of these cases has an efficient implicit conversion to
+``StringRef``, which doesn't result in a dynamic ``strlen`` being executed.
 
-StringRef has a few major limitations which make more powerful string containers
+``StringRef`` has a few major limitations which make more powerful string containers
 useful:
 
-#. You cannot directly convert a StringRef to a 'const char*' because there is
-   no way to add a trailing nul (unlike the .c_str() method on various stronger
+#. You cannot directly convert a ``StringRef`` to a ``const char*`` because there is
+   no way to add a trailing nul (unlike the ``.c_str()`` method on various stronger
    classes).
 
-#. StringRef doesn't own or keep alive the underlying string bytes.
-   As such it can easily lead to dangling pointers, and is not suitable for
-   embedding in datastructures in most cases (instead, use an std::string or
+#. ``StringRef`` doesn't own or keep alive the underlying string bytes.
+   As such, it can easily lead to dangling pointers, and is not suitable for
+   embedding in datastructures in most cases (instead, use an ``std::string`` or
    something like that).
 
-#. For the same reason, StringRef cannot be used as the return value of a
-   method if the method "computes" the result string.  Instead, use std::string.
+#. For the same reason, ``StringRef`` cannot be used as the return value of a
+   method if the method "computes" the result string.  Instead, use ``std::string``.
 
-#. StringRef's do not allow you to mutate the pointed-to string bytes and it
+#. ``StringRef``'s do not allow you to mutate the pointed-to string bytes and it
    doesn't allow you to insert or remove bytes from the range.  For editing
    operations like this, it interoperates with the :ref:`Twine <dss_twine>`
    class.
 
 Because of its strengths and limitations, it is very common for a function to
-take a StringRef and for a method on an object to return a StringRef that points
+take a ``StringRef`` and for a method on an object to return a ``StringRef`` that points
 into some string that it owns.
 
 .. _dss_twine:
@@ -1970,25 +2031,25 @@ behavior and will probably crash:
   const Twine &Tmp = X + "." + Twine(i);
   foo(Tmp);
 
-... because the temporaries are destroyed before the call.  That said, Twine's
-are much more efficient than intermediate std::string temporaries, and they work
-really well with StringRef.  Just be aware of their limitations.
+... because the temporaries are destroyed before the call.  That said, ``Twine``'s
+are much more efficient than intermediate ``std::string`` temporaries, and they work
+really well with ``StringRef``.  Just be aware of their limitations.
 
 .. _dss_smallstring:
 
 llvm/ADT/SmallString.h
 ^^^^^^^^^^^^^^^^^^^^^^
 
-SmallString is a subclass of :ref:`SmallVector <dss_smallvector>` that adds some
-convenience APIs like += that takes StringRef's.  SmallString avoids allocating
+``SmallString`` is a subclass of :ref:`SmallVector <dss_smallvector>` that adds some
+convenience APIs like += that takes ``StringRef``'s.  ``SmallString`` avoids allocating
 memory in the case when the preallocated space is enough to hold its data, and
 it calls back to general heap allocation when required.  Since it owns its data,
 it is very safe to use and supports full mutation of the string.
 
-Like SmallVector's, the big downside to SmallString is their sizeof.  While they
+Like ``SmallVector``'s, the big downside to ``SmallString`` is their sizeof.  While they
 are optimized for small strings, they themselves are not particularly small.
 This means that they work great for temporary scratch buffers on the stack, but
-should not generally be put into the heap: it is very rare to see a SmallString
+should not generally be put into the heap: it is very rare to see a ``SmallString``
 as the member of a frequently-allocated heap data structure or returned
 by-value.
 
@@ -1997,18 +2058,18 @@ by-value.
 std::string
 ^^^^^^^^^^^
 
-The standard C++ std::string class is a very general class that (like
-SmallString) owns its underlying data.  sizeof(std::string) is very reasonable
+The standard C++ ``std::string`` class is a very general class that (like
+``SmallString``) owns its underlying data.  sizeof(std::string) is very reasonable
 so it can be embedded into heap data structures and returned by-value.  On the
-other hand, std::string is highly inefficient for inline editing (e.g.
+other hand, ``std::string`` is highly inefficient for inline editing (e.g.
 concatenating a bunch of stuff together) and because it is provided by the
 standard library, its performance characteristics depend a lot of the host
-standard library (e.g. libc++ and MSVC provide a highly optimized string class,
+standard library (e.g., libc++ and MSVC provide a highly optimized string class,
 GCC contains a really slow implementation).
 
-The major disadvantage of std::string is that almost every operation that makes
+The major disadvantage of ``std::string`` is that almost every operation that makes
 them larger can allocate memory, which is slow.  As such, it is better to use
-SmallVector or Twine as a scratch buffer, but then use std::string to persist
+``SmallVector`` or ``Twine`` as a scratch buffer, but then use ``std::string`` to persist
 the result.
 
 .. _ds_set:
@@ -2026,8 +2087,8 @@ A sorted 'vector'
 ^^^^^^^^^^^^^^^^^
 
 If you intend to insert a lot of elements, then do a lot of queries, a great
-approach is to use an std::vector (or other sequential container) with
-std::sort+std::unique to remove duplicates.  This approach works really well if
+approach is to use an ``std::vector`` (or other sequential container) with
+``std::sort``+``std::unique`` to remove duplicates.  This approach works really well if
 your usage pattern has these two distinct phases (insert then query), and can be
 coupled with a good choice of :ref:`sequential container <ds_sequential>`.
 
@@ -2093,12 +2154,22 @@ copy-construction, which :ref:`SmallSet <dss_smallset>` and :ref:`SmallPtrSet
 llvm/ADT/DenseSet.h
 ^^^^^^^^^^^^^^^^^^^
 
-DenseSet is a simple quadratically probed hash table.  It excels at supporting
+``DenseSet`` is a simple quadratically probed hash table.  It excels at supporting
 small values: it uses a single allocation to hold all of the pairs that are
-currently inserted in the set.  DenseSet is a great way to unique small values
+currently inserted in the set.  ``DenseSet`` is a great way to unique small values
 that are not simple pointers (use :ref:`SmallPtrSet <dss_smallptrset>` for
-pointers).  Note that DenseSet has the same requirements for the value type that
+pointers).  Note that ``DenseSet`` has the same requirements for the value type that
 :ref:`DenseMap <dss_densemap>` has.
+
+.. _dss_radixtree:
+
+llvm/ADT/RadixTree.h
+^^^^^^^^^^^^^^^^^^^^
+
+``RadixTree`` is a trie-based data structure that stores range-like keys and
+their associated values. It is particularly efficient for storing keys that
+share common prefixes, as it can compress these prefixes to save memory. It
+supports efficient search of matching prefixes.
 
 .. _dss_sparseset:
 
@@ -2119,15 +2190,15 @@ data structures.
 llvm/ADT/SparseMultiSet.h
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-SparseMultiSet adds multiset behavior to SparseSet, while retaining SparseSet's
-desirable attributes. Like SparseSet, it typically uses a lot of memory, but
+``SparseMultiSet`` adds multiset behavior to ``SparseSet``, while retaining ``SparseSet``'s
+desirable attributes. Like ``SparseSet``, it typically uses a lot of memory, but
 provides operations that are almost as fast as a vector.  Typical keys are
 physical registers, virtual registers, or numbered basic blocks.
 
-SparseMultiSet is useful for algorithms that need very fast
+``SparseMultiSet`` is useful for algorithms that need very fast
 clear/find/insert/erase of the entire collection, and iteration over sets of
 elements sharing a key. It is often a more efficient choice than using composite
-data structures (e.g. vector-of-vectors, map-of-vectors). It is not intended for
+data structures (e.g., vector-of-vectors, map-of-vectors). It is not intended for
 building composite data structures.
 
 .. _dss_FoldingSet:
@@ -2135,10 +2206,10 @@ building composite data structures.
 llvm/ADT/FoldingSet.h
 ^^^^^^^^^^^^^^^^^^^^^
 
-FoldingSet is an aggregate class that is really good at uniquing
+``FoldingSet`` is an aggregate class that is really good at uniquing
 expensive-to-create or polymorphic objects.  It is a combination of a chained
 hash table with intrusive links (uniqued objects are required to inherit from
-FoldingSetNode) that uses :ref:`SmallVector <dss_smallvector>` as part of its ID
+``FoldingSetNode``) that uses :ref:`SmallVector <dss_smallvector>` as part of its ID
 process.
 
 Consider a case where you want to implement a "getOrCreateFoo" method for a
@@ -2148,14 +2219,14 @@ operands), but we don't want to 'new' a node, then try inserting it into a set
 only to find out it already exists, at which point we would have to delete it
 and return the node that already exists.
 
-To support this style of client, FoldingSet perform a query with a
-FoldingSetNodeID (which wraps SmallVector) that can be used to describe the
+To support this style of client, ``FoldingSet`` perform a query with a
+``FoldingSetNodeID`` (which wraps ``SmallVector``) that can be used to describe the
 element that we want to query for.  The query either returns the element
 matching the ID or it returns an opaque ID that indicates where insertion should
 take place.  Construction of the ID usually does not require heap traffic.
 
-Because FoldingSet uses intrusive links, it can support polymorphic objects in
-the set (for example, you can have SDNode instances mixed with LoadSDNodes).
+Because ``FoldingSet`` uses intrusive links, it can support polymorphic objects in
+the set (for example, you can have ``SDNode`` instances mixed with ``LoadSDNodes``).
 Because the elements are individually allocated, pointers to the elements are
 stable: inserting or removing elements does not invalidate any pointers to other
 elements.
@@ -2166,7 +2237,7 @@ elements.
 ^^^^^
 
 ``std::set`` is a reasonable all-around set class, which is decent at many
-things but great at nothing.  std::set allocates memory for each element
+things but great at nothing.  ``std::set`` allocates memory for each element
 inserted (thus it is very malloc intensive) and typically stores three pointers
 per element in the set (thus adding a large amount of per-element space
 overhead).  It offers guaranteed log(n) performance, which is not particularly
@@ -2174,12 +2245,12 @@ fast from a complexity standpoint (particularly if the elements of the set are
 expensive to compare, like strings), and has extremely high constant factors for
 lookup, insertion and removal.
 
-The advantages of std::set are that its iterators are stable (deleting or
+The advantages of ``std::set`` are that its iterators are stable (deleting or
 inserting an element from the set does not affect iterators or pointers to other
 elements) and that iteration over the set is guaranteed to be in sorted order.
 If the elements in the set are large, then the relative overhead of the pointers
 and malloc traffic is not a big deal, but if the elements of the set are small,
-std::set is almost never a good choice.
+``std::set`` is almost never a good choice.
 
 .. _dss_setvector:
 
@@ -2194,17 +2265,17 @@ inserting elements into both a set-like container and the sequential container,
 using the set-like container for uniquing and the sequential container for
 iteration.
 
-The difference between SetVector and other sets is that the order of iteration
-is guaranteed to match the order of insertion into the SetVector.  This property
+The difference between ``SetVector`` and other sets is that the order of iteration
+is guaranteed to match the order of insertion into the ``SetVector``.  This property
 is really important for things like sets of pointers.  Because pointer values
-are non-deterministic (e.g. vary across runs of the program on different
+are non-deterministic (e.g., vary across runs of the program on different
 machines), iterating over the pointers in the set will not be in a well-defined
 order.
 
-The drawback of SetVector is that it requires twice as much space as a normal
+The drawback of ``SetVector`` is that it requires twice as much space as a normal
 set and has the sum of constant factors from the set-like container and the
 sequential container that it uses.  Use it **only** if you need to iterate over
-the elements in a deterministic order.  SetVector is also expensive to delete
+the elements in a deterministic order.  ``SetVector`` is also expensive to delete
 elements out of (linear time), unless you use its "pop_back" method, which is
 faster.
 
@@ -2233,11 +2304,11 @@ produces a lot of malloc traffic.  It should be avoided.
 llvm/ADT/ImmutableSet.h
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-ImmutableSet is an immutable (functional) set implementation based on an AVL
+``ImmutableSet`` is an immutable (functional) set implementation based on an AVL
 tree.  Adding or removing elements is done through a Factory object and results
-in the creation of a new ImmutableSet object.  If an ImmutableSet already exists
+in the creation of a new ``ImmutableSet`` object.  If an ``ImmutableSet`` already exists
 with the given contents, then the existing one is returned; equality is compared
-with a FoldingSetNodeID.  The time and space complexity of add or remove
+with a ``FoldingSetNodeID``.  The time and space complexity of add or remove
 operations is logarithmic in the size of the original set.
 
 There is no method for returning an element of the set, you can only check for
@@ -2248,11 +2319,11 @@ membership.
 Other Set-Like Container Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The STL provides several other options, such as std::multiset and
-std::unordered_set.  We never use containers like unordered_set because
+The STL provides several other options, such as ``std::multiset`` and
+``std::unordered_set``.  We never use containers like ``unordered_set`` because
 they are generally very expensive (each insertion requires a malloc).
 
-std::multiset is useful if you're not interested in elimination of duplicates,
+``std::multiset`` is useful if you're not interested in elimination of duplicates,
 but has all the drawbacks of :ref:`std::set <dss_set>`.  A sorted vector
 (where you don't delete duplicate entries) or some other approach is almost
 always better.
@@ -2273,7 +2344,7 @@ A sorted 'vector'
 If your usage pattern follows a strict insert-then-query approach, you can
 trivially use the same approach as :ref:`sorted vectors for set-like containers
 <dss_sortedvectorset>`.  The only difference is that your query function (which
-uses std::lower_bound to get efficient log(n) lookup) should only compare the
+uses ``std::lower_bound`` to get efficient log(n) lookup) should only compare the
 key, not both the key and value.  This yields the same advantages as sorted
 vectors for sets.
 
@@ -2284,11 +2355,11 @@ llvm/ADT/StringMap.h
 
 Strings are commonly used as keys in maps, and they are difficult to support
 efficiently: they are variable length, inefficient to hash and compare when
-long, expensive to copy, etc.  StringMap is a specialized container designed to
+long, expensive to copy, etc.  ``StringMap`` is a specialized container designed to
 cope with these issues.  It supports mapping an arbitrary range of bytes to an
 arbitrary other object.
 
-The StringMap implementation uses a quadratically-probed hash table, where the
+The ``StringMap`` implementation uses a quadratically-probed hash table, where the
 buckets store a pointer to the heap allocated entries (and some other stuff).
 The entries in the map must be heap allocated because the strings are variable
 length.  The string data (key) and the element object (value) are stored in the
@@ -2296,26 +2367,26 @@ same allocation with the string data immediately after the element object.
 This container guarantees the "``(char*)(&Value+1)``" points to the key string
 for a value.
 
-The StringMap is very fast for several reasons: quadratic probing is very cache
+The ``StringMap`` is very fast for several reasons: quadratic probing is very cache
 efficient for lookups, the hash value of strings in buckets is not recomputed
-when looking up an element, StringMap rarely has to touch the memory for
+when looking up an element, ``StringMap`` rarely has to touch the memory for
 unrelated objects when looking up a value (even when hash collisions happen),
 hash table growth does not recompute the hash values for strings already in the
 table, and each pair in the map is store in a single allocation (the string data
 is stored in the same allocation as the Value of a pair).
 
-StringMap also provides query methods that take byte ranges, so it only ever
+``StringMap`` also provides query methods that take byte ranges, so it only ever
 copies a string if a value is inserted into the table.
 
-StringMap iteration order, however, is not guaranteed to be deterministic, so
-any uses which require that should instead use a std::map.
+``StringMap`` iteration order, however, is not guaranteed to be deterministic, so
+any uses which require that should instead use a ``std::map``.
 
 .. _dss_indexmap:
 
 llvm/ADT/IndexedMap.h
 ^^^^^^^^^^^^^^^^^^^^^
 
-IndexedMap is a specialized container for mapping small dense integers (or
+``IndexedMap`` is a specialized container for mapping small dense integers (or
 values that can be mapped to small dense integers) to some other type.  It is
 internally implemented as a vector with a mapping function that maps the keys
 to the dense integer range.
@@ -2329,27 +2400,27 @@ virtual register ID).
 llvm/ADT/DenseMap.h
 ^^^^^^^^^^^^^^^^^^^
 
-DenseMap is a simple quadratically probed hash table.  It excels at supporting
+``DenseMap`` is a simple quadratically probed hash table.  It excels at supporting
 small keys and values: it uses a single allocation to hold all of the pairs
-that are currently inserted in the map.  DenseMap is a great way to map
+that are currently inserted in the map.  ``DenseMap`` is a great way to map
 pointers to pointers, or map other small types to each other.
 
-There are several aspects of DenseMap that you should be aware of, however.
-The iterators in a DenseMap are invalidated whenever an insertion occurs,
-unlike map.  Also, because DenseMap allocates space for a large number of
+There are several aspects of ``DenseMap`` that you should be aware of, however.
+The iterators in a ``DenseMap`` are invalidated whenever an insertion occurs,
+unlike ``map``.  Also, because ``DenseMap`` allocates space for a large number of
 key/value pairs (it starts with 64 by default), it will waste a lot of space if
 your keys or values are large.  Finally, you must implement a partial
-specialization of DenseMapInfo for the key that you want, if it isn't already
-supported.  This is required to tell DenseMap about two special marker values
+specialization of ``DenseMapInfo`` for the key that you want, if it isn't already
+supported.  This is required to tell ``DenseMap`` about two special marker values
 (which can never be inserted into the map) that it needs internally.
 
-DenseMap's find_as() method supports lookup operations using an alternate key
+``DenseMap``'s ``find_as()`` method supports lookup operations using an alternate key
 type.  This is useful in cases where the normal key type is expensive to
-construct, but cheap to compare against.  The DenseMapInfo is responsible for
+construct, but cheap to compare against.  The ``DenseMapInfo`` is responsible for
 defining the appropriate comparison and hashing methods for each alternate key
 type used.
 
-DenseMap.h also contains a SmallDenseMap variant, that similar to
+``DenseMap.h`` also contains a ``SmallDenseMap`` variant, that similar to
 :ref:`SmallVector <dss_smallvector>` performs no heap allocation until the
 number of elements in the template parameter N are exceeded.
 
@@ -2360,22 +2431,22 @@ llvm/IR/ValueMap.h
 
 ValueMap is a wrapper around a :ref:`DenseMap <dss_densemap>` mapping
 ``Value*``\ s (or subclasses) to another type.  When a Value is deleted or
-RAUW'ed, ValueMap will update itself so the new version of the key is mapped to
+RAUW'ed, ``ValueMap`` will update itself so the new version of the key is mapped to
 the same value, just as if the key were a WeakVH.  You can configure exactly how
 this happens, and what else happens on these two events, by passing a ``Config``
-parameter to the ValueMap template.
+parameter to the ``ValueMap`` template.
 
 .. _dss_intervalmap:
 
 llvm/ADT/IntervalMap.h
 ^^^^^^^^^^^^^^^^^^^^^^
 
-IntervalMap is a compact map for small keys and values.  It maps key intervals
+``IntervalMap`` is a compact map for small keys and values.  It maps key intervals
 instead of single keys, and it will automatically coalesce adjacent intervals.
 When the map only contains a few intervals, they are stored in the map object
 itself to avoid allocations.
 
-The IntervalMap iterators are quite big, so they should not be passed around as
+The ``IntervalMap`` iterators are quite big, so they should not be passed around as
 STL iterators.  The heavyweight iterators allow a smaller data structure.
 
 .. _dss_intervaltree:
@@ -2387,7 +2458,7 @@ llvm/ADT/IntervalTree.h
 allows finding all intervals that overlap with any given point. At this time,
 it does not support any deletion or rebalancing operations.
 
-The IntervalTree is designed to be set up once, and then queried without any
+The ``IntervalTree`` is designed to be set up once, and then queried without any
 further additions.
 
 .. _dss_map:
@@ -2395,14 +2466,14 @@ further additions.
 <map>
 ^^^^^
 
-std::map has similar characteristics to :ref:`std::set <dss_set>`: it uses a
+``std::map`` has similar characteristics to :ref:`std::set <dss_set>`: it uses a
 single allocation per pair inserted into the map, it offers log(n) lookup with
 an extremely large constant factor, imposes a space penalty of 3 pointers per
 pair in the map, etc.
 
-std::map is most useful when your keys or values are very large, if you need to
+``std::map`` is most useful when your keys or values are very large, if you need to
 iterate over the collection in sorted order, or if you need stable iterators
-into the map (i.e. they don't get invalidated if an insertion or deletion of
+into the map (i.e., they don't get invalidated if an insertion or deletion of
 another element takes place).
 
 .. _dss_mapvector:
@@ -2410,7 +2481,7 @@ another element takes place).
 llvm/ADT/MapVector.h
 ^^^^^^^^^^^^^^^^^^^^
 
-``MapVector<KeyT,ValueT>`` provides a subset of the DenseMap interface.  The
+``MapVector<KeyT,ValueT>`` provides a subset of the ``DenseMap`` interface.  The
 main difference is that the iteration order is guaranteed to be the insertion
 order, making it an easy (but somewhat expensive) solution for non-deterministic
 iteration over maps of pointers.
@@ -2426,10 +2497,10 @@ necessary to remove elements, it's best to remove them in bulk using
 llvm/ADT/IntEqClasses.h
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-IntEqClasses provides a compact representation of equivalence classes of small
+``IntEqClasses`` provides a compact representation of equivalence classes of small
 integers.  Initially, each integer in the range 0..n-1 has its own equivalence
 class.  Classes can be joined by passing two class representatives to the
-join(a, b) method.  Two integers are in the same class when findLeader() returns
+``join(a, b)`` method.  Two integers are in the same class when ``findLeader()`` returns
 the same representative.
 
 Once all equivalence classes are formed, the map can be compressed so each
@@ -2442,11 +2513,11 @@ it can be edited again.
 llvm/ADT/ImmutableMap.h
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-ImmutableMap is an immutable (functional) map implementation based on an AVL
+``ImmutableMap`` is an immutable (functional) map implementation based on an AVL
 tree.  Adding or removing elements is done through a Factory object and results
-in the creation of a new ImmutableMap object.  If an ImmutableMap already exists
+in the creation of a new ``ImmutableMap`` object.  If an ``ImmutableMap`` already exists
 with the given key set, then the existing one is returned; equality is compared
-with a FoldingSetNodeID.  The time and space complexity of add or remove
+with a ``FoldingSetNodeID``.  The time and space complexity of add or remove
 operations is logarithmic in the size of the original map.
 
 .. _dss_othermap:
@@ -2454,12 +2525,12 @@ operations is logarithmic in the size of the original map.
 Other Map-Like Container Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The STL provides several other options, such as std::multimap and
-std::unordered_map.  We never use containers like unordered_map because
+The STL provides several other options, such as ``std::multimap`` and
+``std::unordered_map``.  We never use containers like ``unordered_map`` because
 they are generally very expensive (each insertion requires a malloc).
 
-std::multimap is useful if you want to map a key to multiple values, but has all
-the drawbacks of std::map.  A sorted vector or some other approach is almost
+``std::multimap`` is useful if you want to map a key to multiple values, but has all
+the drawbacks of ``std::map``.  A sorted vector or some other approach is almost
 always better.
 
 .. _ds_bit:
@@ -2471,7 +2542,7 @@ There are several bit storage containers, and choosing when to use each is
 relatively straightforward.
 
 One additional option is ``std::vector<bool>``: we discourage its use for two
-reasons 1) the implementation in many common compilers (e.g.  commonly
+reasons 1) the implementation in many common compilers (e.g.,  commonly
 available versions of GCC) is extremely inefficient and 2) the C++ standards
 committee is likely to deprecate this container and/or change it significantly
 somehow.  In any case, please don't use it.
@@ -2481,12 +2552,12 @@ somehow.  In any case, please don't use it.
 BitVector
 ^^^^^^^^^
 
-The BitVector container provides a dynamic size set of bits for manipulation.
+The ``BitVector`` container provides a dynamic size set of bits for manipulation.
 It supports individual bit setting/testing, as well as set operations.  The set
 operations take time O(size of bitvector), but operations are performed one word
-at a time, instead of one bit at a time.  This makes the BitVector very fast for
-set operations compared to other containers.  Use the BitVector when you expect
-the number of set bits to be high (i.e. a dense set).
+at a time, instead of one bit at a time.  This makes the ``BitVector`` very fast for
+set operations compared to other containers.  Use the ``BitVector`` when you expect
+the number of set bits to be high (i.e., a dense set).
 
 .. _dss_smallbitvector:
 
@@ -2507,29 +2578,29 @@ its operator[] does not provide an assignable lvalue.
 SparseBitVector
 ^^^^^^^^^^^^^^^
 
-The SparseBitVector container is much like BitVector, with one major difference:
-Only the bits that are set, are stored.  This makes the SparseBitVector much
-more space efficient than BitVector when the set is sparse, as well as making
+The ``SparseBitVector`` container is much like ``BitVector``, with one major difference:
+Only the bits that are set, are stored.  This makes the ``SparseBitVector`` much
+more space efficient than ``BitVector`` when the set is sparse, as well as making
 set operations O(number of set bits) instead of O(size of universe).  The
-downside to the SparseBitVector is that setting and testing of random bits is
-O(N), and on large SparseBitVectors, this can be slower than BitVector.  In our
+downside to the ``SparseBitVector`` is that setting and testing of random bits is
+O(N), and on large ``SparseBitVectors``, this can be slower than ``BitVector``.  In our
 implementation, setting or testing bits in sorted order (either forwards or
 reverse) is O(1) worst case.  Testing and setting bits within 128 bits (depends
 on size) of the current bit is also O(1).  As a general statement,
-testing/setting bits in a SparseBitVector is O(distance away from last set bit).
+testing/setting bits in a ``SparseBitVector`` is O(distance away from last set bit).
 
 .. _dss_coalescingbitvector:
 
 CoalescingBitVector
 ^^^^^^^^^^^^^^^^^^^
 
-The CoalescingBitVector container is similar in principle to a SparseBitVector,
+The ``CoalescingBitVector`` container is similar in principle to a ``SparseBitVector``,
 but is optimized to represent large contiguous ranges of set bits compactly. It
 does this by coalescing contiguous ranges of set bits into intervals. Searching
-for a bit in a CoalescingBitVector is O(log(gaps between contiguous ranges)).
+for a bit in a ``CoalescingBitVector`` is O(log(gaps between contiguous ranges)).
 
-CoalescingBitVector is a better choice than BitVector when gaps between ranges
-of set bits are large. It's a better choice than SparseBitVector when find()
+``CoalescingBitVector`` is a better choice than ``BitVector`` when gaps between ranges
+of set bits are large. It's a better choice than ``SparseBitVector`` when find()
 operations must have fast, predictable performance. However, it's not a good
 choice for representing sets which have lots of very short ranges. E.g. the set
 `{2*x : x \in [0, n)}` would be a pathological input.
@@ -2632,16 +2703,7 @@ with an ``assert``).
 Debugging
 =========
 
-A handful of `GDB pretty printers
-<https://sourceware.org/gdb/onlinedocs/gdb/Pretty-Printing.html>`__ are
-provided for some of the core LLVM libraries. To use them, execute the
-following (or add it to your ``~/.gdbinit``)::
-
-  source /path/to/llvm/src/utils/gdb-scripts/prettyprinters.py
-
-It also might be handy to enable the `print pretty
-<http://ftp.gnu.org/old-gnu/Manuals/gdb/html_node/gdb_57.html>`__ option to
-avoid data structures being printed as a big block of text.
+See :doc:`Debugging LLVM <DebuggingLLVM>`.
 
 .. _common:
 
@@ -2764,7 +2826,7 @@ Turning an iterator into a class pointer (and vice-versa)
 
 Sometimes, it'll be useful to grab a reference (or pointer) to a class instance
 when all you've got at hand is an iterator.  Well, extracting a reference or a
-pointer from an iterator is very straight-forward.  Assuming that ``i`` is a
+pointer from an iterator is very straightforward.  Assuming that ``i`` is a
 ``BasicBlock::iterator`` and ``j`` is a ``BasicBlock::const_iterator``:
 
 .. code-block:: c++
@@ -2796,7 +2858,7 @@ Say that you're writing a FunctionPass and would like to count all the locations
 in the entire module (that is, across every ``Function``) where a certain
 function (i.e., some ``Function *``) is already in scope.  As you'll learn
 later, you may want to use an ``InstVisitor`` to accomplish this in a much more
-straight-forward manner, but this example will allow us to explore how you'd do
+straightforward manner, but this example will allow us to explore how you'd do
 it if you didn't have ``InstVisitor`` around.  In pseudo-code, this is what we
 want to do:
 
@@ -2923,7 +2985,7 @@ Creating and inserting new ``Instruction``\ s
 
 *Instantiating Instructions*
 
-Creation of ``Instruction``\ s is straight-forward: simply call the constructor
+Creation of ``Instruction``\ s is straightforward: simply call the constructor
 for the kind of instruction to instantiate and provide the necessary parameters.
 For example, an ``AllocaInst`` only *requires* a (const-ptr-to) ``Type``.  Thus:
 
@@ -3041,7 +3103,7 @@ Deleting Instructions
 ^^^^^^^^^^^^^^^^^^^^^
 
 Deleting an instruction from an existing sequence of instructions that form a
-BasicBlock_ is very straight-forward: just call the instruction's
+``BasicBlock`` is very straightforward: just call the instruction's
 ``eraseFromParent()`` method.  For example:
 
 .. code-block:: c++
@@ -3243,7 +3305,7 @@ naming value definitions.  The symbol table can provide a name for any Value_.
 Note that the ``SymbolTable`` class should not be directly accessed by most
 clients.  It should only be used when iteration over the symbol table names
 themselves are required, which is very special purpose.  Note that not all LLVM
-Value_\ s have names, and those without names (i.e. they have an empty name) do
+Value_\ s have names, and those without names (i.e., they have an empty name) do
 not exist in the symbol table.
 
 Symbol tables support iteration over the values in the symbol table with
@@ -3780,7 +3842,7 @@ Important Subclasses of the ``Instruction`` class
 
 * ``BinaryOperator``
 
-  This subclasses represents all two operand instructions whose operands must be
+  This subclass represents all two operand instructions whose operands must be
   the same type, except for the comparison instructions.
 
 .. _CastInst:
@@ -3809,7 +3871,7 @@ Important Public Members of the ``Instruction`` class
 
 * ``bool mayWriteToMemory()``
 
-  Returns true if the instruction writes to memory, i.e. it is a ``call``,
+  Returns true if the instruction writes to memory, i.e., it is a ``call``,
   ``free``, ``invoke``, or ``store``.
 
 * ``unsigned getOpcode()``
@@ -3819,7 +3881,7 @@ Important Public Members of the ``Instruction`` class
 * ``Instruction *clone() const``
 
   Returns another instance of the specified instruction, identical in all ways
-  to the original except that the instruction has no parent (i.e. it's not
+  to the original except that the instruction has no parent (i.e., it's not
   embedded into a BasicBlock_), and it has no name.
 
 .. _Constant:
@@ -3841,16 +3903,16 @@ Important Subclasses of Constant
   any width.
 
   * ``const APInt& getValue() const``: Returns the underlying
-    value of this constant, an APInt value.
+    value of this constant, an ``APInt`` value.
 
   * ``int64_t getSExtValue() const``: Converts the underlying APInt value to an
-    int64_t via sign extension.  If the value (not the bit width) of the APInt
-    is too large to fit in an int64_t, an assertion will result.  For this
+    ``int64_t`` via sign extension.  If the value (not the bit width) of the APInt
+    is too large to fit in an ``int64_t``, an assertion will result.  For this
     reason, use of this method is discouraged.
 
-  * ``uint64_t getZExtValue() const``: Converts the underlying APInt value
-    to a uint64_t via zero extension.  IF the value (not the bit width) of the
-    APInt is too large to fit in a uint64_t, an assertion will result.  For this
+  * ``uint64_t getZExtValue() const``: Converts the underlying ``APInt`` value
+    to a ``uint64_t`` via zero extension.  If the value (not the bit width) of the
+    APInt is too large to fit in a ``uint64_t``, an assertion will result.  For this
     reason, use of this method is discouraged.
 
   * ``static ConstantInt* get(const APInt& Val)``: Returns the ConstantInt
@@ -4139,7 +4201,7 @@ Important Public Members of the ``BasicBlock`` class
   new block, and a :ref:`Function <c_Function>` to insert it into.  If the
   ``Parent`` parameter is specified, the new ``BasicBlock`` is automatically
   inserted at the end of the specified :ref:`Function <c_Function>`, if not
-  specified, the BasicBlock must be manually inserted into the :ref:`Function
+  specified, the ``BasicBlock`` must be manually inserted into the :ref:`Function
   <c_Function>`.
 
 * | ``BasicBlock::iterator`` - Typedef for instruction list iterator

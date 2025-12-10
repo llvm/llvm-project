@@ -394,7 +394,7 @@ llvm.func @array_attribute_two_different_types() -> !llvm.struct<(f64, f64)> {
 // -----
 
 llvm.func @struct_wrong_attribute_type() -> !llvm.struct<(f64, f64)> {
-  // expected-error @+1 {{expected array attribute}}
+  // expected-error @+1 {{expected array attribute for struct type}}
   %0 = llvm.mlir.constant(1.0 : f64) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -437,6 +437,111 @@ llvm.func @scalable_vec_requires_splat() -> vector<[4]xf64> {
   // expected-error @+1{{scalable vector type requires a splat attribute}}
   %0 = llvm.mlir.constant(dense<[1.0, 1.0, 2.0, 2.0]> : tensor<4xf64>) : vector<[4]xf64>
   llvm.return %0 : vector<[4]xf64>
+}
+
+
+// -----
+
+llvm.func @int_attr_requires_int_type() -> f32 {
+  // expected-error @below{{expected integer type}}
+  %0 = llvm.mlir.constant(1 : index) : f32
+  llvm.return %0 : f32
+}
+
+// -----
+
+llvm.func @vector_int_attr_requires_int_type() -> vector<2xf32> {
+  // expected-error @below{{expected integer element type}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : vector<2xi32>) : vector<2xf32>
+  llvm.return %0 : vector<2xf32>
+}
+
+// -----
+
+llvm.func @float_attr_and_type_required_same() -> f16 {
+  // expected-error @below{{attribute and type have different float semantics}}
+  %cst = llvm.mlir.constant(1.0 : bf16) : f16
+  llvm.return %cst : f16
+}
+
+// -----
+
+llvm.func @vector_float_attr_and_type_required_same() -> vector<2xf16> {
+  // expected-error @below{{attribute and type have different float semantics}}
+  %cst = llvm.mlir.constant(dense<[1.0, 2.0]> : vector<2xbf16>) : vector<2xf16>
+  llvm.return %cst : vector<2xf16>
+}
+
+// -----
+
+llvm.func @incompatible_integer_type_for_float_attr() -> i32 {
+  // expected-error @below{{expected integer type of width 16}}
+  %cst = llvm.mlir.constant(1.0 : f16) : i32
+  llvm.return %cst : i32
+}
+
+// -----
+
+llvm.func @vector_incompatible_integer_type_for_float_attr() -> vector<2xi8> {
+  // expected-error @below{{expected integer type of width 16}}
+  %cst = llvm.mlir.constant(dense<[1.0, 2.0]> : vector<2xf16>) : vector<2xi8>
+  llvm.return %cst : vector<2xi8>
+}
+
+// -----
+
+llvm.func @vector_with_non_vector_type() -> f32 {
+  // expected-error @below{{expected vector or array type}}
+  %cst = llvm.mlir.constant(dense<100.0> : vector<1xf64>) : f32
+  llvm.return %cst : f32
+}
+
+// -----
+
+llvm.func @array_attr_with_invalid_type() -> i32 {
+  // expected-error @below{{expected array or struct type for array attribute}}
+  %0 = llvm.mlir.constant([1 : i32]) : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+llvm.func @elements_attribute_incompatible_nested_array_struct1_type() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
+  // expected-error @below{{expected integer element type for integer elements attribute}}
+  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
+  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
+}
+
+// -----
+
+llvm.func @elements_attribute_incompatible_nested_array_struct3_type() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
+  // expected-error @below{{expected integer element type for integer elements attribute}}
+  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
+  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
+}
+
+// -----
+
+llvm.func @invalid_struct_element_type() -> !llvm.struct<(f64, array<2 x i32>)> {
+  // expected-error @below{{expected struct element types to be floating point type or integer type}}
+  %0 = llvm.mlir.constant([1.0 : f64, dense<[1, 2]> : tensor<2xi32>]) : !llvm.struct<(f64, array<2 x i32>)>
+  llvm.return %0 : !llvm.struct<(f64, array<2 x i32>)>
+}
+
+// -----
+
+llvm.func @wrong_struct_element_attr_type() -> !llvm.struct<(f64, f64)> {
+  // expected-error @below{{expected element of array attribute to be floating point or integer}}
+  %0 = llvm.mlir.constant([dense<[1, 2]> : tensor<2xi32>, 2.0 : f64]) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
+}
+
+// -----
+
+llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
+  // expected-error @below{{struct element at index 0 is of wrong type}}
+  %0 = llvm.mlir.constant([1.0 : f32, 1.0 : f32]) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
 }
 
 // -----
@@ -484,13 +589,13 @@ func.func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !ll
   return %b : !llvm.array<4 x vector<8xf32>>
 }
 
-
 // -----
 
 func.func @extractvalue_non_llvm_type(%a : i32, %b : tensor<*xi32>) {
   // expected-error@+2 {{expected LLVM IR Dialect type}}
   llvm.extractvalue %b[0] : tensor<*xi32>
 }
+
 // -----
 
 func.func @extractvalue_struct_out_of_bounds() {
@@ -559,21 +664,21 @@ func.func @zero_non_llvm_type() {
 // -----
 
 func.func @nvvm_invalid_shfl_pred_1(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
+  // expected-error@+1 {{expected return type to be a two-element struct}}
   %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> i32
 }
 
 // -----
 
 func.func @nvvm_invalid_shfl_pred_2(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
+  // expected-error@+1 {{expected return type to be a two-element struct}}
   %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @nvvm_invalid_shfl_pred_3(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
+  // expected-error@+1 {{expected second element in the returned struct to be of type 'i1' but got 'i32' instead}}
   %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i32)>
 }
 
@@ -638,6 +743,36 @@ func.func @nvvm_invalid_mma_8(%a0 : i32, %a1 : i32,
 
 // -----
 
+// f32 return type, f16 accumulate type
+llvm.func @nvvm_mma_m16n8k16_f32_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                                     %a2 : vector<2xf16>, %a3 : vector<2xf16>,
+                                     %b0 : vector<2xf16>, %b1 : vector<2xf16>,
+                                     %c0 : vector<2xf16>, %c1 : vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)> {
+  // C and D should have the same type according to PTX ISA
+  // expected-error@+1 {{'nvvm.mma.sync' op ctype does not match dtype}}
+  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1]
+    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
+     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
+}
+
+// -----
+
+// f16 return type, f32 accumulate type
+llvm.func @nvvm_mma_m16n8k16_f16_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                                     %a2 : vector<2xf16>, %a3 : vector<2xf16>,
+                                     %b0 : vector<2xf16>, %b1 : vector<2xf16>,
+                                     %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> {
+  // C and D should have the same type according to PTX ISA
+  // expected-error@+1 {{'nvvm.mma.sync' op ctype does not match dtype}}
+  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
+    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
+     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+  llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+}
+
+// -----
+
 func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{op failed to verify that result #0 and operand #1 have the same type}}
   %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm.ptr, f32) -> i32
@@ -659,6 +794,7 @@ func.func @atomicrmw_scalable_vector(%ptr : !llvm.ptr, %f32_vec : vector<[2]xf32
   %0 = llvm.atomicrmw fadd %ptr, %f32_vec unordered : !llvm.ptr, vector<[2]xf32>
   llvm.return
 }
+
 // -----
 
 func.func @atomicrmw_vector_expected_float(%ptr : !llvm.ptr, %i32_vec : vector<3xi32>) {
@@ -1114,38 +1250,6 @@ llvm.func @gpu_wmma_mma_op_invalid_result(%arg0: vector<2 x f16>, %arg1: vector<
 
 // -----
 
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected source pointer in memory space 3}}
-  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr) -> i32
-  llvm.return
-}
-
-// -----
-
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected num attribute to be 1, 2 or 4}}
-  %l = nvvm.ldmatrix %arg0 {num = 3 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> i32
-  llvm.return
-}
-
-// -----
-
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is i32}}
-  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32)>
-  llvm.return
-}
-
-// -----
-
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is a structure of 4 elements of type i32}}
-  %l = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
-  llvm.return
-}
-
-// -----
-
 llvm.func @caller() {
   // expected-error @below {{expected function call to produce a value}}
   llvm.call @callee() : () -> ()
@@ -1201,8 +1305,8 @@ func.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
 // -----
 
 func.func @mapa(%a: !llvm.ptr, %b : i32) {
-  // expected-error @below {{`res` and `a` should have the same type}}
-  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr<3>
+  // expected-error @below {{'nvvm.mapa' op failed to verify that Valid address-space check(or mapping) for mapa Op}}
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr<7>
   return
 }
 
@@ -1646,38 +1750,6 @@ llvm.func @foo(%arg: !llvm.ptr) {
 
 // -----
 
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{to use im2col mode, the tensor has to be at least 3-dimensional}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr
-  return
-}
-// -----
-
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{im2col offsets must be 2 less than number of coordinates}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr
-  return
-}
-
-// -----
-
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[]: !llvm.ptr<3>, !llvm.ptr
-  return
-}
-
-
-// -----
-
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd0,%crd1,%crd2,%crd3]: !llvm.ptr<3>, !llvm.ptr
-  return
-}
-
-// -----
-
 // expected-error @below {{no_inline and always_inline attributes are incompatible}}
 llvm.func @alwaysinline_noinline() attributes { always_inline, no_inline } {
   llvm.return
@@ -1800,6 +1872,29 @@ module {
 
 // -----
 
+module {
+  // expected-error@below {{'ProfileSummary' key expects a '#llvm.profile_summary' attribute}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "ProfileSummary", 3 : i64>]
+}
+
+// -----
+
+llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
+     // expected-error@below {{expected one of [SampleProfile, InstrProf, CSInstrProf] for LLVM ProfileSummary format kinds, got: YoloFmt}}
+     #llvm.profile_summary<format = "YoloFmt", total_count = 263646, max_count = 86427,
+     // expected-error@above {{failed to parse ModuleFlagProfileSummaryAttr parameter 'format' which is to be a `ProfileSummaryFormatKind`}}
+       max_internal_count = 86427, max_function_count = 4691,
+       num_counts = 3712, num_functions = 796,
+       is_partial_profile = 0,
+       partial_profile_ratio = 0.000000e+00 : f64,
+       detailed_summary =
+         <cut_off = 10000, min_count = 86427, num_counts = 1>,
+         <cut_off = 100000, min_count = 86427, num_counts = 1>
+      // expected-error@below {{failed to parse ModuleFlagAttr parameter}}
+>>]
+
+// -----
+
 llvm.func @t0() -> !llvm.ptr {
   %0 = llvm.blockaddress <function = @t0, tag = <id = 1>> : !llvm.ptr
   llvm.blocktag <id = 1>
@@ -1818,4 +1913,155 @@ llvm.func @t1() -> !llvm.ptr {
   llvm.br ^bb1
 ^bb1:
   llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @gep_inbounds_flag_usage(%ptr: !llvm.ptr, %idx: i64) {
+  // expected-error@+1 {{'inbounds_flag' cannot be used directly}}
+  llvm.getelementptr inbounds_flag %ptr[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_size() : !llvm.array<2x!llvm.struct<(i32, f32)>> {
+  // expected-error@below {{'llvm.mlir.constant' op array attribute size does not match array type size in dimension 0: 1 vs. 2}}
+  %0 = llvm.mlir.constant([[42 : i32, 1.000000e+00 : f32]]) : !llvm.array<2x!llvm.struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<2x!llvm.struct<(i32, f32)>>
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_nesting() : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>> {
+  // expected-error@below {{'llvm.mlir.constant' op nested attribute for sub-array in dimension 1 at index 0 must be a zero, or undef, or array attribute}}
+  %0 = llvm.mlir.constant([[1 : i32]]) : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>>
+  llvm.return %0 : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>>
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_elements() : !llvm.array<1x!llvm.struct<(i32, f32)>> {
+  // expected-error@below {{'llvm.mlir.constant' op nested array attribute size for struct element at index 0 must match struct size: 1 vs. 2}}
+  %0 = llvm.mlir.constant([[1 : i32]]) : !llvm.array<1x!llvm.struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<1x!llvm.struct<(i32, f32)>>
+}
+
+// -----
+
+llvm.mlir.global internal constant @bad_array_attr_simple_type() : !llvm.array<2 x f64> {
+  // expected-error@below {{'llvm.mlir.constant' op for array with an array attribute must have a struct element type}}
+  %0 = llvm.mlir.constant([2.5, 7.4]) : !llvm.array<2 x f64>
+  llvm.return %0 : !llvm.array<2 x f64>
+}
+
+// -----
+
+llvm.func @inlineAsmMustTail(%arg0: i32, %arg1 : !llvm.ptr) {
+  // expected-error@+1 {{op tail call kind 'musttail' is not supported}}
+  %8 = llvm.inline_asm tail_call_kind = <musttail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_prefetch(%arg0: !llvm.ptr) {
+  // expected-error@+1 {{op operand #0 must be LLVM pointer in address space 1 or LLVM pointer in address space 4}}
+  xevm.prefetch %arg0 <{cache_control = #xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr)
+  llvm.return
+}
+
+// -----
+llvm.func @invalid_xevm_blockload(%arg0: !llvm.ptr<1>) {
+  // expected-error@+1 {{op vector size must be 2, 4 or 8 for element type > 8 bits}}
+  %0 = xevm.blockload %arg0 : (!llvm.ptr<1>) -> vector<3xi16>
+  llvm.return
+}
+
+// -----
+llvm.func @invalid_xevm_blockstore(%arg0: !llvm.ptr<1>, %arg1: vector<5xi8>) {
+  // expected-error@+1 {{op vector size must be 2, 4, 8 or 16 for 8-bit element type}}
+  xevm.blockstore %arg0, %arg1 : (!llvm.ptr<1>, vector<5xi8>)
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_mma(%loaded_c_casted: vector<4xf32>, %loaded_a: vector<8xi16>, %loaded_b_casted: vector<8xi32>) -> vector<8xf32> {
+  // expected-error@+1 {{op type of C operand must match result type}}
+  %c_result = xevm.mma %loaded_a, %loaded_b_casted, %loaded_c_casted {shape = <m = 8, n = 16, k = 16>, types = <d = f32, a = f16, b = f16, c = f32>} : (vector<8xi16>, vector<8xi32>, vector<4xf32>) -> vector<8xf32>
+  llvm.return %c_result : vector<8xf32>
+}
+
+// -----
+
+llvm.func @invalid_xevm_matrix_1(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i32, %base_pitch_c: i32, %x: i32, %y: i32, %c_result_casted: vector<8xi32>) {
+  // expected-error@+1 {{op expecting tile_width to be between 1 and 8}}
+  xevm.blockstore2d %c, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %c_result_casted <{elem_size_in_bits=64 : i32, tile_width=16 : i32, tile_height=8 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_matrix_2(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i32, %base_pitch_c: i32, %x: i32, %y: i32, %c_result_casted: vector<8xi32>) {
+  // expected-error@+1 {{op expecting elem_size_in_bits to be 8, 16, 32, or 64}}
+  xevm.blockstore2d %c, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %c_result_casted <{elem_size_in_bits=18 : i32, tile_width=16 : i32, tile_height=8 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_matrix_3(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<8xi16> {
+  // expected-error@+1 {{op result size of 128 bits does not match the expected size of 208 bits}}
+  %loaded_a = xevm.blockload2d %a, %base_width_a, %base_height_a, %base_pitch_a, %x, %y <{elem_size_in_bits=16 : i32, tile_width=26 : i32, tile_height=8 : i32, v_blocks=1 : i32, transpose=false, pack_register=false, cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi16>
+  llvm.return %loaded_a : vector<8xi16>
+}
+
+// -----
+
+llvm.func external @resolve_foo() -> !llvm.ptr attributes {dso_local}
+// expected-error@+1 {{'llvm.mlir.ifunc' op resolver must be a definition}}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
+
+// -----
+
+llvm.mlir.global external @resolve_foo() : !llvm.ptr
+// expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
+
+// -----
+
+llvm.func external @resolve_foo() -> !llvm.ptr
+// expected-error@+1 {{'llvm.mlir.ifunc' op 'common' linkage not supported in ifuncs}}
+llvm.mlir.ifunc common @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
+
+// -----
+
+llvm.mlir.global external @resolve_foo() : !llvm.ptr
+llvm.mlir.alias external @alias_resolver : !llvm.ptr {
+  %0 = llvm.mlir.addressof @resolve_foo : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+// expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @alias_resolver {dso_local}
+
+// -----
+
+llvm.func @invalid_sincos_nonhomogeneous_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f64)>
+}
+
+// -----
+
+llvm.func @invalid_sincos_non_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> f32
+}
+
+// -----
+
+llvm.func @invalid_sincos_gt_2_element_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
 }

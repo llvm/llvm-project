@@ -10,6 +10,7 @@ tablegen(LLVM BPFGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM BPFGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM BPFGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM BPFGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM BPFGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM BPFGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM BPFGenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM BPFGenRegisterBank.inc -gen-register-bank)
@@ -37,6 +38,7 @@ add_llvm_target(BPFCodeGen
   BPFRegisterInfo.cpp
   BPFSelectionDAGInfo.cpp
   BPFSubtarget.cpp
+  BPFTargetLoweringObjectFile.cpp
   BPFTargetMachine.cpp
   BPFMIPeephole.cpp
   BPFMIChecking.cpp

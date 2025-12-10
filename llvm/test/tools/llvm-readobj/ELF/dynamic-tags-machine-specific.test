@@ -445,3 +445,41 @@ ProgramHeaders:
   - Type:     PT_DYNAMIC
     FirstSec: .dynamic
     LastSec:  .dynamic
+
+## Case 7: Test that SPARCV9 machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=7 %s -o %t.sparcv9
+# RUN: llvm-readobj --dynamic-table %t.sparcv9 | FileCheck %s --check-prefix=LLVM-SPARCV9
+# RUN: llvm-readelf --dynamic-table %t.sparcv9 | FileCheck %s --check-prefix=GNU-SPARCV9
+
+# LLVM-SPARCV9:      DynamicSection [ (2 entries)
+# LLVM-SPARCV9-NEXT:   Tag        Type                      Name/Value
+# LLVM-SPARCV9-NEXT:   0x0000000070000001 SPARC_REGISTER    0x12345
+# LLVM-SPARCV9-NEXT:   0x0000000000000000 NULL              0x0
+# LLVM-SPARCV9-NEXT: ]
+
+# GNU-SPARCV9:      Dynamic section at offset {{.*}} contains 2 entries:
+# GNU-SPARCV9-NEXT:  Tag        Type                       Name/Value
+# GNU-SPARCV9-NEXT:  0x0000000070000001 (SPARC_REGISTER)   0x12345
+# GNU-SPARCV9-NEXT:  0x0000000000000000 (NULL)             0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_EXEC
+  Machine: EM_SPARCV9
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SPARC_REGISTER
+        Value: 0x12345
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

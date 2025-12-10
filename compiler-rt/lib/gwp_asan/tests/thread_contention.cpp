@@ -15,6 +15,8 @@
 #include <thread>
 #include <vector>
 
+namespace {
+
 void asyncTask(gwp_asan::GuardedPoolAllocator *GPA,
                std::atomic<bool> *StartingGun, unsigned NumIterations) {
   while (!*StartingGun) {
@@ -63,3 +65,5 @@ TEST_F(CustomGuardedPoolAllocator, ThreadContention) {
   InitNumSlots(NumThreads);
   runThreadContentionTest(NumThreads, NumIterations, &GPA);
 }
+
+} // namespace

@@ -4,8 +4,8 @@ linuxkernel-must-check-errs
 ===========================
 
 Checks Linux kernel code to see if it uses the results from the functions in
-``linux/err.h``. Also checks to see if code uses the results from functions that
-directly return a value from one of these error functions.
+``linux/err.h``. Also checks to see if code uses the results from functions
+that directly return a value from one of these error functions.
 
 This is important in the Linux kernel because ``ERR_PTR``, ``PTR_ERR``,
 ``IS_ERR``, ``IS_ERR_OR_NULL``, ``ERR_CAST``, and ``PTR_ERR_OR_ZERO`` return

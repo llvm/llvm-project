@@ -28,11 +28,13 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: atomicrmw_xchg_i64
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
-    ; CHECK: [[SWPX:%[0-9]+]]:gpr64 = SWPX [[SUBREG_TO_REG]], [[COPY]] :: (load store monotonic (s64) on %ir.addr)
-    ; CHECK: $x0 = COPY [[SWPX]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: [[SWPX:%[0-9]+]]:gpr64 = SWPX [[SUBREG_TO_REG]], [[COPY]] :: (load store monotonic (s64) on %ir.addr)
+    ; CHECK-NEXT: $x0 = COPY [[SWPX]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 1
     %2:gpr(s64) = G_ATOMICRMW_XCHG %0, %1 :: (load store monotonic (s64) on %ir.addr)
@@ -48,11 +50,13 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: atomicrmw_add_i64
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
-    ; CHECK: [[LDADDX:%[0-9]+]]:gpr64 = LDADDX [[SUBREG_TO_REG]], [[COPY]] :: (load store monotonic (s64) on %ir.addr)
-    ; CHECK: $x0 = COPY [[LDADDX]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: [[LDADDX:%[0-9]+]]:gpr64 = LDADDX [[SUBREG_TO_REG]], [[COPY]] :: (load store monotonic (s64) on %ir.addr)
+    ; CHECK-NEXT: $x0 = COPY [[LDADDX]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 1
     %2:gpr(s64) = G_ATOMICRMW_ADD %0, %1 :: (load store monotonic (s64) on %ir.addr)
@@ -68,10 +72,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: atomicrmw_add_i32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[LDADDALW:%[0-9]+]]:gpr32 = LDADDALW [[MOVi32imm]], [[COPY]] :: (load store seq_cst (s32) on %ir.addr)
-    ; CHECK: $w0 = COPY [[LDADDALW]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: [[LDADDALW:%[0-9]+]]:gpr32 = LDADDALW [[MOVi32imm]], [[COPY]] :: (load store seq_cst (s32) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[LDADDALW]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_ATOMICRMW_ADD %0, %1 :: (load store seq_cst (s32) on %ir.addr)
@@ -88,10 +94,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: atomicrmw_sub_i32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[LDADDALW:%[0-9]+]]:gpr32 = LDADDALW [[MOVi32imm]], [[COPY]] :: (load store seq_cst (s32) on %ir.addr)
-    ; CHECK: $w0 = COPY [[LDADDALW]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: [[LDADDALW:%[0-9]+]]:gpr32 = LDADDALW [[MOVi32imm]], [[COPY]] :: (load store seq_cst (s32) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[LDADDALW]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_ATOMICRMW_ADD %0, %1 :: (load store seq_cst (s32) on %ir.addr)
@@ -108,11 +116,13 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: atomicrmw_and_i32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[ORNWrr:%[0-9]+]]:gpr32 = ORNWrr $wzr, [[MOVi32imm]]
-    ; CHECK: [[LDCLRAW:%[0-9]+]]:gpr32 = LDCLRAW [[ORNWrr]], [[COPY]] :: (load store acquire (s32) on %ir.addr)
-    ; CHECK: $w0 = COPY [[LDCLRAW]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: [[ORNWrr:%[0-9]+]]:gpr32 = ORNWrr $wzr, [[MOVi32imm]]
+    ; CHECK-NEXT: [[LDCLRAW:%[0-9]+]]:gpr32 = LDCLRAW [[ORNWrr]], [[COPY]] :: (load store acquire (s32) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[LDCLRAW]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_ATOMICRMW_AND %0, %1 :: (load store acquire (s32) on %ir.addr)
@@ -129,10 +139,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: atomicrmw_or_i32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[LDSETLW:%[0-9]+]]:gpr32 = LDSETLW [[MOVi32imm]], [[COPY]] :: (load store release (s32) on %ir.addr)
-    ; CHECK: $w0 = COPY [[LDSETLW]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: [[LDSETLW:%[0-9]+]]:gpr32 = LDSETLW [[MOVi32imm]], [[COPY]] :: (load store release (s32) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[LDSETLW]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_ATOMICRMW_OR %0, %1 :: (load store release (s32) on %ir.addr)
@@ -149,10 +161,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: atomicrmw_xor_i32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[LDEORALW:%[0-9]+]]:gpr32 = LDEORALW [[MOVi32imm]], [[COPY]] :: (load store acq_rel (s32) on %ir.addr)
-    ; CHECK: $w0 = COPY [[LDEORALW]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: [[LDEORALW:%[0-9]+]]:gpr32 = LDEORALW [[MOVi32imm]], [[COPY]] :: (load store acq_rel (s32) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[LDEORALW]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_ATOMICRMW_XOR %0, %1 :: (load store acq_rel (s32) on %ir.addr)
@@ -169,10 +183,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: atomicrmw_min_i32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[LDSMINALW:%[0-9]+]]:gpr32 = LDSMINALW [[MOVi32imm]], [[COPY]] :: (load store acq_rel (s32) on %ir.addr)
-    ; CHECK: $w0 = COPY [[LDSMINALW]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: [[LDSMINALW:%[0-9]+]]:gpr32 = LDSMINALW [[MOVi32imm]], [[COPY]] :: (load store acq_rel (s32) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[LDSMINALW]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_ATOMICRMW_MIN %0, %1 :: (load store acq_rel (s32) on %ir.addr)
@@ -189,10 +205,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: atomicrmw_max_i32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[LDSMAXALW:%[0-9]+]]:gpr32 = LDSMAXALW [[MOVi32imm]], [[COPY]] :: (load store acq_rel (s32) on %ir.addr)
-    ; CHECK: $w0 = COPY [[LDSMAXALW]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: [[LDSMAXALW:%[0-9]+]]:gpr32 = LDSMAXALW [[MOVi32imm]], [[COPY]] :: (load store acq_rel (s32) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[LDSMAXALW]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_ATOMICRMW_MAX %0, %1 :: (load store acq_rel (s32) on %ir.addr)
@@ -209,10 +227,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: atomicrmw_umin_i32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[LDUMINALW:%[0-9]+]]:gpr32 = LDUMINALW [[MOVi32imm]], [[COPY]] :: (load store acq_rel (s32) on %ir.addr)
-    ; CHECK: $w0 = COPY [[LDUMINALW]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: [[LDUMINALW:%[0-9]+]]:gpr32 = LDUMINALW [[MOVi32imm]], [[COPY]] :: (load store acq_rel (s32) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[LDUMINALW]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_ATOMICRMW_UMIN %0, %1 :: (load store acq_rel (s32) on %ir.addr)
@@ -229,10 +249,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: atomicrmw_umax_i32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[LDUMAXALW:%[0-9]+]]:gpr32 = LDUMAXALW [[MOVi32imm]], [[COPY]] :: (load store acq_rel (s32) on %ir.addr)
-    ; CHECK: $w0 = COPY [[LDUMAXALW]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: [[LDUMAXALW:%[0-9]+]]:gpr32 = LDUMAXALW [[MOVi32imm]], [[COPY]] :: (load store acq_rel (s32) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[LDUMAXALW]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_ATOMICRMW_UMAX %0, %1 :: (load store acq_rel (s32) on %ir.addr)

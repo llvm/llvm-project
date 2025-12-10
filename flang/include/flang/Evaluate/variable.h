@@ -98,8 +98,6 @@ private:
 
 // A NamedEntity is either a whole Symbol or a component in an instance
 // of a derived type.  It may be a descriptor.
-// TODO: this is basically a symbol with an optional DataRef base;
-// could be used to replace Component.
 class NamedEntity {
 public:
   CLASS_BOILERPLATE(NamedEntity)
@@ -239,28 +237,16 @@ private:
   std::vector<Subscript> subscript_;
 };
 
-// R914 coindexed-named-object
-// R924 image-selector, R926 image-selector-spec.
-// C825 severely limits the usage of derived types with coarray ultimate
-// components: they can't be pointers, allocatables, arrays, coarrays, or
-// function results.  They can be components of other derived types.
-// Although the F'2018 Standard never prohibits multiple image-selectors
-// per se in the same data-ref or designator, nor the presence of an
-// image-selector after a part-ref with rank, the constraints on the
-// derived types that would have be involved make it impossible to declare
-// an object that could be referenced in these ways (esp. C748 & C825).
-// C930 precludes having both TEAM= and TEAM_NUMBER=.
-// TODO C931 prohibits the use of a coindexed object as a stat-variable.
+// A coindexed data-ref.  The base is represented as a general
+// DataRef, but the base may not contain a CoarrayRef and may
+// have rank > 0 only in an uppermost ArrayRef.
 class CoarrayRef {
 public:
   CLASS_BOILERPLATE(CoarrayRef)
-  CoarrayRef(SymbolVector &&, std::vector<Subscript> &&,
-      std::vector<Expr<SubscriptInteger>> &&);
+  CoarrayRef(DataRef &&, std::vector<Expr<SubscriptInteger>> &&);
 
-  const SymbolVector &base() const { return base_; }
-  SymbolVector &base() { return base_; }
-  const std::vector<Subscript> &subscript() const { return subscript_; }
-  std::vector<Subscript> &subscript() { return subscript_; }
+  const DataRef &base() const { return base_.value(); }
+  DataRef &base() { return base_.value(); }
   const std::vector<Expr<SubscriptInteger>> &cosubscript() const {
     return cosubscript_;
   }
@@ -270,25 +256,28 @@ public:
   // (i.e., Designator or pointer-valued FunctionRef).
   std::optional<Expr<SomeInteger>> stat() const;
   CoarrayRef &set_stat(Expr<SomeInteger> &&);
-  std::optional<Expr<SomeInteger>> team() const;
-  bool teamIsTeamNumber() const { return teamIsTeamNumber_; }
-  CoarrayRef &set_team(Expr<SomeInteger> &&, bool isTeamNumber = false);
+  // When team() is Expr<SomeInteger>, it's TEAM_NUMBER=; otherwise,
+  // it's TEAM=.
+  std::optional<Expr<SomeType>> team() const;
+  CoarrayRef &set_team(Expr<SomeType> &&);
+  // When notify() is Expr<Some>, it's NOTIFY=.
+  std::optional<Expr<SomeType>> notify() const;
+  CoarrayRef &set_notify(Expr<SomeType> &&);
 
   int Rank() const;
   int Corank() const { return 0; }
   const Symbol &GetFirstSymbol() const;
   const Symbol &GetLastSymbol() const;
-  NamedEntity GetBase() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
   bool operator==(const CoarrayRef &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
-  SymbolVector base_;
-  std::vector<Subscript> subscript_;
+  common::CopyableIndirection<DataRef> base_;
   std::vector<Expr<SubscriptInteger>> cosubscript_;
-  std::optional<common::CopyableIndirection<Expr<SomeInteger>>> stat_, team_;
-  bool teamIsTeamNumber_{false}; // false: TEAM=, true: TEAM_NUMBER=
+  std::optional<common::CopyableIndirection<Expr<SomeType>>> notify_;
+  std::optional<common::CopyableIndirection<Expr<SomeInteger>>> stat_;
+  std::optional<common::CopyableIndirection<Expr<SomeType>>> team_;
 };
 
 // R911 data-ref is defined syntactically as a series of part-refs, which

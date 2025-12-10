@@ -141,7 +141,7 @@ subroutine test_iabs()
   call foo_iabs(iabs)
 end subroutine
 
-! TODO: exhaustive test of unrestricted intrinsic table 16.2 
+! TODO: exhaustive test of unrestricted intrinsic table 16.2
 
 ! TODO: improve dummy procedure types when interface is given.
 ! CHECK: func @_QPtodo3(

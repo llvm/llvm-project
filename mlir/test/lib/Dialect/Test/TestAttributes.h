@@ -17,17 +17,18 @@
 #include <tuple>
 
 #include "TestTraits.h"
-#include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
+#include "mlir/IR/TensorEncoding.h"
 
+// generated files require above includes to come first
 #include "TestAttrInterfaces.h.inc"
 #include "TestOpEnums.h.inc"
-#include "mlir/IR/DialectResourceBlobManager.h"
 
 namespace test {
 class TestDialect;

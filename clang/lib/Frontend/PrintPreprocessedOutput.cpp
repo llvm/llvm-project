@@ -22,7 +22,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -569,8 +568,7 @@ void PrintPPOutputPPCallbacks::MacroDefined(const Token &MacroNameTok,
   SourceLocation DefLoc = MI->getDefinitionLoc();
   if (DirectivesOnly && !MI->isUsed()) {
     SourceManager &SM = PP.getSourceManager();
-    if (SM.isWrittenInBuiltinFile(DefLoc) ||
-        SM.isWrittenInCommandLineFile(DefLoc))
+    if (SM.isInPredefinedFile(DefLoc))
       return;
   }
   MoveToLine(DefLoc, /*RequireStartOfLine=*/true);

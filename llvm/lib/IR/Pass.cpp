@@ -60,10 +60,14 @@ static std::string getDescription(const Module &M) {
   return "module (" + M.getName().str() + ")";
 }
 
-bool ModulePass::skipModule(Module &M) const {
-  OptPassGate &Gate = M.getContext().getOptPassGate();
-  return Gate.isEnabled() &&
-         !Gate.shouldRunPass(this->getPassName(), getDescription(M));
+bool ModulePass::skipModule(const Module &M) const {
+  const OptPassGate &Gate = M.getContext().getOptPassGate();
+
+  StringRef PassName = getPassArgument();
+  if (PassName.empty())
+    PassName = this->getPassName();
+
+  return Gate.isEnabled() && !Gate.shouldRunPass(PassName, getDescription(M));
 }
 
 bool Pass::mustPreserveAnalysisID(char &AID) const {
@@ -86,6 +90,16 @@ StringRef Pass::getPassName() const {
   return "Unnamed pass: implement Pass::getPassName()";
 }
 
+/// getPassArgument - Return a nice clean name for a pass
+/// corresponding to that used to enable the pass in opt
+StringRef Pass::getPassArgument() const {
+  AnalysisID AID = getPassID();
+  const PassInfo *PI = Pass::lookupPassInfo(AID);
+  if (PI)
+    return PI->getPassArgument();
+  return "";
+}
+
 void Pass::preparePassManager(PMStack &) {
   // By default, don't do anything.
 }
@@ -105,10 +119,6 @@ void Pass::releaseMemory() {
 
 void Pass::verifyAnalysis() const {
   // By default, don't do anything.
-}
-
-void *Pass::getAdjustedAnalysisPointer(AnalysisID AID) {
-  return this;
 }
 
 ImmutablePass *Pass::getAsImmutablePass() {
@@ -177,8 +187,12 @@ static std::string getDescription(const Function &F) {
 
 bool FunctionPass::skipFunction(const Function &F) const {
   OptPassGate &Gate = F.getContext().getOptPassGate();
-  if (Gate.isEnabled() &&
-      !Gate.shouldRunPass(this->getPassName(), getDescription(F)))
+
+  StringRef PassName = getPassArgument();
+  if (PassName.empty())
+    PassName = this->getPassName();
+
+  if (Gate.isEnabled() && !Gate.shouldRunPass(PassName, getDescription(F)))
     return true;
 
   if (F.hasOptNone()) {
@@ -282,3 +296,21 @@ AnalysisUsage &AnalysisUsage::addRequiredTransitiveID(char &ID) {
   pushUnique(RequiredTransitive, &ID);
   return *this;
 }
+
+#ifndef NDEBUG
+const char *llvm::to_string(ThinOrFullLTOPhase Phase) {
+  switch (Phase) {
+  case ThinOrFullLTOPhase::None:
+    return "None";
+  case ThinOrFullLTOPhase::ThinLTOPreLink:
+    return "ThinLTOPreLink";
+  case ThinOrFullLTOPhase::ThinLTOPostLink:
+    return "ThinLTOPostLink";
+  case ThinOrFullLTOPhase::FullLTOPreLink:
+    return "FullLTOPreLink";
+  case ThinOrFullLTOPhase::FullLTOPostLink:
+    return "FullLTOPostLink";
+  }
+  llvm_unreachable("invalid phase");
+}
+#endif

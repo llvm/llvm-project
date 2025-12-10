@@ -184,21 +184,30 @@ define i32 @i32_poison(i32 %x) nounwind {
 define i64 @i64_nopoison(i64 %x) nounwind {
 ; SPARC-LABEL: i64_nopoison:
 ; SPARC:       ! %bb.0:
+; SPARC-NEXT:    orcc %o1, %o0, %g0
+; SPARC-NEXT:    be .LBB2_3
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.1: ! %cond.false
 ; SPARC-NEXT:    sethi 122669, %o2
 ; SPARC-NEXT:    or %o2, 305, %o2
 ; SPARC-NEXT:    sethi %hi(.LCPI2_0), %o3
-; SPARC-NEXT:    cmp %o0, 0
-; SPARC-NEXT:    be .LBB2_3
+; SPARC-NEXT:    cmp %o1, 0
+; SPARC-NEXT:    bne .LBB2_4
 ; SPARC-NEXT:    add %o3, %lo(.LCPI2_0), %o3
-; SPARC-NEXT:  ! %bb.1:
-; SPARC-NEXT:    sub %g0, %o0, %o4
-; SPARC-NEXT:    and %o0, %o4, %o0
+; SPARC-NEXT:  ! %bb.2: ! %cond.false
+; SPARC-NEXT:    sub %g0, %o0, %o1
+; SPARC-NEXT:    and %o0, %o1, %o0
 ; SPARC-NEXT:    smul %o0, %o2, %o0
 ; SPARC-NEXT:    srl %o0, 27, %o0
-; SPARC-NEXT:    cmp %o1, 0
-; SPARC-NEXT:    be .LBB2_4
 ; SPARC-NEXT:    ldub [%o3+%o0], %o0
-; SPARC-NEXT:  .LBB2_2:
+; SPARC-NEXT:    add %o0, 32, %o1
+; SPARC-NEXT:    retl
+; SPARC-NEXT:    mov %g0, %o0
+; SPARC-NEXT:  .LBB2_3:
+; SPARC-NEXT:    mov %g0, %o0
+; SPARC-NEXT:    retl
+; SPARC-NEXT:    mov 64, %o1
+; SPARC-NEXT:  .LBB2_4:
 ; SPARC-NEXT:    sub %g0, %o1, %o0
 ; SPARC-NEXT:    and %o1, %o0, %o0
 ; SPARC-NEXT:    smul %o0, %o2, %o0
@@ -206,33 +215,33 @@ define i64 @i64_nopoison(i64 %x) nounwind {
 ; SPARC-NEXT:    ldub [%o3+%o0], %o1
 ; SPARC-NEXT:    retl
 ; SPARC-NEXT:    mov %g0, %o0
-; SPARC-NEXT:  .LBB2_3:
-; SPARC-NEXT:    mov 32, %o0
-; SPARC-NEXT:    cmp %o1, 0
-; SPARC-NEXT:    bne .LBB2_2
-; SPARC-NEXT:    nop
-; SPARC-NEXT:  .LBB2_4:
-; SPARC-NEXT:    add %o0, 32, %o1
-; SPARC-NEXT:    retl
-; SPARC-NEXT:    mov %g0, %o0
 ;
 ; SPARC-POPC-LABEL: i64_nopoison:
 ; SPARC-POPC:       ! %bb.0:
+; SPARC-POPC-NEXT:    orcc %o1, %o0, %g0
+; SPARC-POPC-NEXT:    be .LBB2_3
+; SPARC-POPC-NEXT:    nop
+; SPARC-POPC-NEXT:  ! %bb.1: ! %cond.false
 ; SPARC-POPC-NEXT:    sethi 122669, %o2
 ; SPARC-POPC-NEXT:    or %o2, 305, %o2
 ; SPARC-POPC-NEXT:    sethi %hi(.LCPI2_0), %o3
-; SPARC-POPC-NEXT:    cmp %o0, 0
-; SPARC-POPC-NEXT:    be .LBB2_3
+; SPARC-POPC-NEXT:    cmp %o1, 0
+; SPARC-POPC-NEXT:    bne .LBB2_4
 ; SPARC-POPC-NEXT:    add %o3, %lo(.LCPI2_0), %o3
-; SPARC-POPC-NEXT:  ! %bb.1:
-; SPARC-POPC-NEXT:    sub %g0, %o0, %o4
-; SPARC-POPC-NEXT:    and %o0, %o4, %o0
+; SPARC-POPC-NEXT:  ! %bb.2: ! %cond.false
+; SPARC-POPC-NEXT:    sub %g0, %o0, %o1
+; SPARC-POPC-NEXT:    and %o0, %o1, %o0
 ; SPARC-POPC-NEXT:    smul %o0, %o2, %o0
 ; SPARC-POPC-NEXT:    srl %o0, 27, %o0
-; SPARC-POPC-NEXT:    cmp %o1, 0
-; SPARC-POPC-NEXT:    be .LBB2_4
 ; SPARC-POPC-NEXT:    ldub [%o3+%o0], %o0
-; SPARC-POPC-NEXT:  .LBB2_2:
+; SPARC-POPC-NEXT:    add %o0, 32, %o1
+; SPARC-POPC-NEXT:    retl
+; SPARC-POPC-NEXT:    mov %g0, %o0
+; SPARC-POPC-NEXT:  .LBB2_3:
+; SPARC-POPC-NEXT:    mov %g0, %o0
+; SPARC-POPC-NEXT:    retl
+; SPARC-POPC-NEXT:    mov 64, %o1
+; SPARC-POPC-NEXT:  .LBB2_4:
 ; SPARC-POPC-NEXT:    sub %g0, %o1, %o0
 ; SPARC-POPC-NEXT:    and %o1, %o0, %o0
 ; SPARC-POPC-NEXT:    smul %o0, %o2, %o0
@@ -240,40 +249,28 @@ define i64 @i64_nopoison(i64 %x) nounwind {
 ; SPARC-POPC-NEXT:    ldub [%o3+%o0], %o1
 ; SPARC-POPC-NEXT:    retl
 ; SPARC-POPC-NEXT:    mov %g0, %o0
-; SPARC-POPC-NEXT:  .LBB2_3:
-; SPARC-POPC-NEXT:    mov 32, %o0
-; SPARC-POPC-NEXT:    cmp %o1, 0
-; SPARC-POPC-NEXT:    bne .LBB2_2
-; SPARC-POPC-NEXT:    nop
-; SPARC-POPC-NEXT:  .LBB2_4:
-; SPARC-POPC-NEXT:    add %o0, 32, %o1
-; SPARC-POPC-NEXT:    retl
-; SPARC-POPC-NEXT:    mov %g0, %o0
 ;
 ; SPARC-VIS3-LABEL: i64_nopoison:
 ; SPARC-VIS3:       ! %bb.0:
-; SPARC-VIS3-NEXT:    cmp %o1, 0
-; SPARC-VIS3-NEXT:    bne .LBB2_2
-; SPARC-VIS3-NEXT:    nop
-; SPARC-VIS3-NEXT:  ! %bb.1:
-; SPARC-VIS3-NEXT:    add %o0, -1, %o1
-; SPARC-VIS3-NEXT:    andn %o1, %o0, %o0
+; SPARC-VIS3-NEXT:    add %o0, -1, %o2
+; SPARC-VIS3-NEXT:    andn %o2, %o0, %o0
 ; SPARC-VIS3-NEXT:    srl %o0, 0, %o0
 ; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
 ; SPARC-VIS3-NEXT:    add %o0, -32, %o0
-; SPARC-VIS3-NEXT:    ba .LBB2_3
-; SPARC-VIS3-NEXT:    mov 64, %o1
-; SPARC-VIS3-NEXT:  .LBB2_2:
+; SPARC-VIS3-NEXT:    mov 64, %o2
+; SPARC-VIS3-NEXT:    sub %o2, %o0, %o2
 ; SPARC-VIS3-NEXT:    add %o1, -1, %o0
 ; SPARC-VIS3-NEXT:    andn %o0, %o1, %o0
 ; SPARC-VIS3-NEXT:    srl %o0, 0, %o0
 ; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
 ; SPARC-VIS3-NEXT:    add %o0, -32, %o0
-; SPARC-VIS3-NEXT:    mov 32, %o1
-; SPARC-VIS3-NEXT:  .LBB2_3:
-; SPARC-VIS3-NEXT:    sub %o1, %o0, %o1
-; SPARC-VIS3-NEXT:    retl
+; SPARC-VIS3-NEXT:    mov 32, %o3
+; SPARC-VIS3-NEXT:    sub %o3, %o0, %o0
+; SPARC-VIS3-NEXT:    cmp %o1, 0
+; SPARC-VIS3-NEXT:    movne %icc, %o0, %o2
 ; SPARC-VIS3-NEXT:    mov %g0, %o0
+; SPARC-VIS3-NEXT:    retl
+; SPARC-VIS3-NEXT:    mov %o2, %o1
 ;
 ; SPARC64-LABEL: i64_nopoison:
 ; SPARC64:       ! %bb.0:
@@ -374,28 +371,25 @@ define i64 @i64_poison(i64 %x) nounwind {
 ;
 ; SPARC-VIS3-LABEL: i64_poison:
 ; SPARC-VIS3:       ! %bb.0:
-; SPARC-VIS3-NEXT:    cmp %o1, 0
-; SPARC-VIS3-NEXT:    bne .LBB3_2
-; SPARC-VIS3-NEXT:    nop
-; SPARC-VIS3-NEXT:  ! %bb.1:
-; SPARC-VIS3-NEXT:    add %o0, -1, %o1
-; SPARC-VIS3-NEXT:    andn %o1, %o0, %o0
+; SPARC-VIS3-NEXT:    add %o0, -1, %o2
+; SPARC-VIS3-NEXT:    andn %o2, %o0, %o0
 ; SPARC-VIS3-NEXT:    srl %o0, 0, %o0
 ; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
 ; SPARC-VIS3-NEXT:    add %o0, -32, %o0
-; SPARC-VIS3-NEXT:    ba .LBB3_3
-; SPARC-VIS3-NEXT:    mov 64, %o1
-; SPARC-VIS3-NEXT:  .LBB3_2:
+; SPARC-VIS3-NEXT:    mov 64, %o2
+; SPARC-VIS3-NEXT:    sub %o2, %o0, %o2
 ; SPARC-VIS3-NEXT:    add %o1, -1, %o0
 ; SPARC-VIS3-NEXT:    andn %o0, %o1, %o0
 ; SPARC-VIS3-NEXT:    srl %o0, 0, %o0
 ; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
 ; SPARC-VIS3-NEXT:    add %o0, -32, %o0
-; SPARC-VIS3-NEXT:    mov 32, %o1
-; SPARC-VIS3-NEXT:  .LBB3_3:
-; SPARC-VIS3-NEXT:    sub %o1, %o0, %o1
-; SPARC-VIS3-NEXT:    retl
+; SPARC-VIS3-NEXT:    mov 32, %o3
+; SPARC-VIS3-NEXT:    sub %o3, %o0, %o0
+; SPARC-VIS3-NEXT:    cmp %o1, 0
+; SPARC-VIS3-NEXT:    movne %icc, %o0, %o2
 ; SPARC-VIS3-NEXT:    mov %g0, %o0
+; SPARC-VIS3-NEXT:    retl
+; SPARC-VIS3-NEXT:    mov %o2, %o1
 ;
 ; SPARC64-LABEL: i64_poison:
 ; SPARC64:       ! %bb.0:

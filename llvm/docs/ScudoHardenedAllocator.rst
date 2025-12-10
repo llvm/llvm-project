@@ -36,7 +36,7 @@ The allocator combines several components that serve distinct purposes:
 
 - the Primary allocator: fast and efficient, it services smaller allocation
   sizes by carving reserved memory regions into blocks of identical size. There
-  are currently two Primary allocators implemented, specific to 32 and 64 bit
+  are currently two Primary allocators implemented, specific to 32- and 64-bit
   architectures. It is configurable via compile time options.
 
 - the Secondary allocator: slower, it services larger allocation sizes via the

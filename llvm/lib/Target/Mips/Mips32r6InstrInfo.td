@@ -22,6 +22,7 @@ def SDT_MipsFSelect : SDTypeProfile<1, 3, [SDTCisFP<1>,
                                            SDTCisSameAs<0,2>,
                                            SDTCisSameAs<2,3>]>;
 
+// Floating point select
 def MipsFSelect : SDNode<"MipsISD::FSELECT", SDT_MipsFSelect>;
 
 //===----------------------------------------------------------------------===//
@@ -1122,13 +1123,25 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(fmaxnum_ieee f32:$lhs, f32:$rhs),
                 (MAX_S   f32:$lhs, f32:$rhs)>,
                 ISA_MIPS32R6;
+  def : MipsPat<(fmaxnum f32:$lhs, f32:$rhs),
+                (MAX_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
   def : MipsPat<(fmaxnum_ieee f64:$lhs, f64:$rhs),
+                (MAX_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fmaxnum f64:$lhs, f64:$rhs),
                 (MAX_D   f64:$lhs, f64:$rhs)>,
                 ISA_MIPS32R6;
   def : MipsPat<(fminnum_ieee f32:$lhs, f32:$rhs),
                 (MIN_S   f32:$lhs, f32:$rhs)>,
                 ISA_MIPS32R6;
+  def : MipsPat<(fminnum f32:$lhs, f32:$rhs),
+                (MIN_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
   def : MipsPat<(fminnum_ieee f64:$lhs, f64:$rhs),
+                (MIN_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fminnum f64:$lhs, f64:$rhs),
                 (MIN_D   f64:$lhs, f64:$rhs)>,
                 ISA_MIPS32R6;
   def : MipsPat<(f32 (fcanonicalize f32:$src)),
@@ -1213,4 +1226,3 @@ let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                                                              GPR32Opnd>,
                                     ISA_MIPS32R6;
 }
-

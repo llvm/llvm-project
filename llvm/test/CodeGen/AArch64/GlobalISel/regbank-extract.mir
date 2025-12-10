@@ -11,10 +11,11 @@ body:             |
 
     ; CHECK-LABEL: name: extract_s64_s128
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(s128) = COPY $q0
-    ; CHECK: [[EXTRACT:%[0-9]+]]:fpr(s64) = G_EXTRACT [[COPY]](s128), 0
-    ; CHECK: $d2 = COPY [[EXTRACT]](s64)
-    ; CHECK: RET_ReallyLR implicit $d2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s128) = COPY $q0
+    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:fpr(s64) = G_EXTRACT [[COPY]](s128), 0
+    ; CHECK-NEXT: $d2 = COPY [[EXTRACT]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d2
     %0:_(s128) = COPY $q0
     %1:_(s64) = G_EXTRACT %0(s128), 0
     $d2 = COPY %1(s64)
@@ -33,9 +34,10 @@ body:             |
 
     ; CHECK-LABEL: name: extract_s64_s128_gpr
     ; CHECK: liveins: $x0_x1, $x1
-    ; CHECK: [[CASPX:%[0-9]+]]:xseqpairsclass(s128) = CASPX $x0_x1, $x0_x1, $x0
-    ; CHECK: [[EXTRACT:%[0-9]+]]:gpr(s64) = G_EXTRACT [[CASPX]](s128), 0
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[CASPX:%[0-9]+]]:xseqpairsclass(s128) = CASPX $x0_x1, $x0_x1, $x0
+    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:gpr(s64) = G_EXTRACT [[CASPX]](s128), 0
+    ; CHECK-NEXT: RET_ReallyLR
     %0:xseqpairsclass = CASPX $x0_x1, $x0_x1, $x0
     %1:_(s64) = G_EXTRACT %0:xseqpairsclass(s128), 0
 

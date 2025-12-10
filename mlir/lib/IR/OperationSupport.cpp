@@ -15,7 +15,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/Support/SHA1.h"
 #include <numeric>
 #include <optional>
@@ -407,15 +406,13 @@ OperandRangeRange::OperandRangeRange(OperandRange operands,
 OperandRange OperandRangeRange::join() const {
   const OwnerT &owner = getBase();
   ArrayRef<int32_t> sizeData = llvm::cast<DenseI32ArrayAttr>(owner.second);
-  return OperandRange(owner.first,
-                      std::accumulate(sizeData.begin(), sizeData.end(), 0));
+  return OperandRange(owner.first, llvm::sum_of(sizeData));
 }
 
 OperandRange OperandRangeRange::dereference(const OwnerT &object,
                                             ptrdiff_t index) {
   ArrayRef<int32_t> sizeData = llvm::cast<DenseI32ArrayAttr>(object.second);
-  uint32_t startIndex =
-      std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
+  uint32_t startIndex = llvm::sum_of(sizeData.take_front(index));
   return OperandRange(object.first + startIndex, *(sizeData.begin() + index));
 }
 
@@ -566,8 +563,7 @@ MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
                                                           ptrdiff_t index) {
   ArrayRef<int32_t> sizeData =
       llvm::cast<DenseI32ArrayAttr>(object.second.getValue());
-  uint32_t startIndex =
-      std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
+  uint32_t startIndex = llvm::sum_of(sizeData.take_front(index));
   return object.first.slice(
       startIndex, *(sizeData.begin() + index),
       MutableOperandRange::OperandSegment(index, object.second));
@@ -680,9 +676,13 @@ llvm::hash_code OperationEquivalence::computeHash(
   //   - Operation Name
   //   - Attributes
   //   - Result Types
+  DictionaryAttr dictAttrs;
+  if (!(flags & Flags::IgnoreDiscardableAttrs))
+    dictAttrs = op->getRawDictionaryAttrs();
   llvm::hash_code hash =
-      llvm::hash_combine(op->getName(), op->getRawDictionaryAttrs(),
-                         op->getResultTypes(), op->hashProperties());
+      llvm::hash_combine(op->getName(), dictAttrs, op->getResultTypes());
+  if (!(flags & Flags::IgnoreProperties))
+    hash = llvm::hash_combine(hash, op->hashProperties());
 
   //   - Location if required
   if (!(flags & Flags::IgnoreLocations))
@@ -836,14 +836,19 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
     return true;
 
   // 1. Compare the operation properties.
+  if (!(flags & IgnoreDiscardableAttrs) &&
+      lhs->getRawDictionaryAttrs() != rhs->getRawDictionaryAttrs())
+    return false;
+
   if (lhs->getName() != rhs->getName() ||
-      lhs->getRawDictionaryAttrs() != rhs->getRawDictionaryAttrs() ||
       lhs->getNumRegions() != rhs->getNumRegions() ||
       lhs->getNumSuccessors() != rhs->getNumSuccessors() ||
       lhs->getNumOperands() != rhs->getNumOperands() ||
-      lhs->getNumResults() != rhs->getNumResults() ||
-      !lhs->getName().compareOpProperties(lhs->getPropertiesStorage(),
-                                          rhs->getPropertiesStorage()))
+      lhs->getNumResults() != rhs->getNumResults())
+    return false;
+  if (!(flags & IgnoreProperties) &&
+      !(lhs->getName().compareOpProperties(lhs->getPropertiesStorage(),
+                                           rhs->getPropertiesStorage())))
     return false;
   if (!(flags & IgnoreLocations) && lhs->getLoc() != rhs->getLoc())
     return false;

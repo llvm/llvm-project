@@ -24,7 +24,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
@@ -39,6 +38,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -114,7 +114,8 @@ static cl::opt<unsigned>
                          cl::init(0x7fff),
                          cl::desc("Maximum global merge offset"));
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializePowerPCTarget() {
   // Register the targets
   RegisterTargetMachine<PPCTargetMachine> A(getThePPC32Target());
   RegisterTargetMachine<PPCTargetMachine> B(getThePPC32LETarget());
@@ -128,7 +129,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCLoopInstrFormPrepPass(PR);
   initializePPCTOCRegDepsPass(PR);
   initializePPCEarlyReturnPass(PR);
-  initializePPCVSXCopyPass(PR);
+  initializePPCVSXWACCCopyPass(PR);
   initializePPCVSXFMAMutatePass(PR);
   initializePPCVSXSwapRemovalPass(PR);
   initializePPCReduceCRLogicalsPass(PR);
@@ -144,58 +145,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
   initializePPCDAGToDAGISelLegacyPass(PR);
-}
-
-static bool isLittleEndianTriple(const Triple &T) {
-  return T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle;
-}
-
-/// Return the datalayout string of a subtarget.
-static std::string getDataLayoutString(const Triple &T) {
-  bool is64Bit = T.getArch() == Triple::ppc64 || T.getArch() == Triple::ppc64le;
-  std::string Ret;
-
-  // Most PPC* platforms are big endian, PPC(64)LE is little endian.
-  if (isLittleEndianTriple(T))
-    Ret = "e";
-  else
-    Ret = "E";
-
-  Ret += DataLayout::getManglingComponent(T);
-
-  // PPC32 has 32 bit pointers. The PS3 (OS Lv2) is a PPC64 machine with 32 bit
-  // pointers.
-  if (!is64Bit || T.getOS() == Triple::Lv2)
-    Ret += "-p:32:32";
-
-  // If the target ABI uses function descriptors, then the alignment of function
-  // pointers depends on the alignment used to emit the descriptor. Otherwise,
-  // function pointers are aligned to 32 bits because the instructions must be.
-  if ((T.getArch() == Triple::ppc64 && !T.isPPC64ELFv2ABI())) {
-    Ret += "-Fi64";
-  } else if (T.isOSAIX()) {
-    Ret += is64Bit ? "-Fi64" : "-Fi32";
-  } else {
-    Ret += "-Fn32";
-  }
-
-  // Note, the alignment values for f64 and i64 on ppc64 in Darwin
-  // documentation are wrong; these are correct (i.e. "what gcc does").
-  Ret += "-i64:64";
-
-  // PPC64 has 32 and 64 bit registers, PPC32 has only 32 bit ones.
-  if (is64Bit)
-    Ret += "-i128:128-n32:64";
-  else
-    Ret += "-n32";
-
-  // Specify the vector alignment explicitly. For v256i1 and v512i1, the
-  // calculated alignment would be 256*alignment(i1) and 512*alignment(i1),
-  // which is 256 and 512 bytes - way over aligned.
-  if (is64Bit && (T.isOSAIX() || T.isOSLinux()))
-    Ret += "-S128-v256:256:256-v512:512:512";
-
-  return Ret;
+  initializePPCLinuxAsmPrinterPass(PR);
+  initializePPCAIXAsmPrinterPass(PR);
 }
 
 static std::string computeFSAdditions(StringRef FS, CodeGenOptLevel OL,
@@ -309,12 +260,10 @@ getEffectivePPCCodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
 
 static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
   const PPCSubtarget &ST = C->MF->getSubtarget<PPCSubtarget>();
-  ScheduleDAGMILive *DAG =
-    new ScheduleDAGMILive(C, ST.usePPCPreRASchedStrategy() ?
-                          std::make_unique<PPCPreRASchedStrategy>(C) :
-                          std::make_unique<GenericScheduler>(C));
+  ScheduleDAGMILive *DAG = ST.usePPCPreRASchedStrategy()
+                               ? createSchedLive<PPCPreRASchedStrategy>(C)
+                               : createSchedLive<GenericScheduler>(C);
   // add DAG Mutations here.
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
   if (ST.hasStoreFusion())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.hasFusion())
@@ -323,13 +272,12 @@ static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
   return DAG;
 }
 
-static ScheduleDAGInstrs *createPPCPostMachineScheduler(
-  MachineSchedContext *C) {
+static ScheduleDAGInstrs *
+createPPCPostMachineScheduler(MachineSchedContext *C) {
   const PPCSubtarget &ST = C->MF->getSubtarget<PPCSubtarget>();
-  ScheduleDAGMI *DAG =
-    new ScheduleDAGMI(C, ST.usePPCPostRASchedStrategy() ?
-                      std::make_unique<PPCPostRASchedStrategy>(C) :
-                      std::make_unique<PostGenericScheduler>(C), true);
+  ScheduleDAGMI *DAG = ST.usePPCPostRASchedStrategy()
+                           ? createSchedPostRA<PPCPostRASchedStrategy>(C)
+                           : createSchedPostRA<PostGenericScheduler>(C);
   // add DAG Mutations here.
   if (ST.hasStoreFusion())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
@@ -348,13 +296,14 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, getDataLayoutString(TT), TT, CPU,
-                               computeFSAdditions(FS, OL, TT), Options,
+    : CodeGenTargetMachineImpl(T,
+                               TT.computeDataLayout(Options.MCOptions.ABIName),
+                               TT, CPU, computeFSAdditions(FS, OL, TT), Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
       TargetABI(computeTargetABI(TT, Options)),
-      Endianness(isLittleEndianTriple(TT) ? Endian::LITTLE : Endian::BIG) {
+      Endianness(TT.isLittleEndian() ? Endian::LITTLE : Endian::BIG) {
   initAsmInfo();
 }
 
@@ -528,7 +477,7 @@ bool PPCPassConfig::addInstSelector() {
     addPass(createPPCCTRLoopsVerify());
 #endif
 
-  addPass(createPPCVSXCopyPass());
+  addPass(createPPCVSXWACCCopyPass());
   return false;
 }
 
@@ -561,7 +510,8 @@ void PPCPassConfig::addMachineSSAOptimization() {
 
 void PPCPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    insertPass(VSXFMAMutateEarly ? &RegisterCoalescerID : &MachineSchedulerID,
+    insertPass(VSXFMAMutateEarly ? &TwoAddressInstructionPassID
+                                 : &MachineSchedulerID,
                &PPCVSXFMAMutateID);
   }
 

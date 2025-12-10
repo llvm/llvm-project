@@ -1,6 +1,6 @@
 ! REQUIRES: plugins, examples, shell
 
-! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport.so -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport%pluginext -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
 
 subroutine omp_sections()
   integer :: x
@@ -13,11 +13,11 @@ subroutine omp_sections()
 end subroutine omp_sections
 
 !CHECK: - file:            {{.*}}
-!CHECK:   line:            9
+!CHECK:   line:            8
 !CHECK:   construct:       section
 !CHECK:   clauses:         []
 !CHECK: - file:            {{.*}}
-!CHECK:   line:            11
+!CHECK:   line:            10
 !CHECK:   construct:       section
 !CHECK:   clauses:         []
 !CHECK: - file:            {{.*}}

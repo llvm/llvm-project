@@ -5,7 +5,8 @@
 
 # Create a bin directory to store the mock-driver and add it to the path
 # RUN: mkdir -p %t.dir/bin
-# RUN: export PATH=%t.dir/bin:$PATH
+# RUN: %python -c "print(__import__('os').environ['PATH'])" | tr -d '\n' > %t.path
+# RUN: export PATH=%t.dir/bin:%{readfile:%t.path}
 # Generate a mock-driver that will print %temp_dir%/my/dir and
 # %temp_dir%/my/dir2 as include search paths.
 # RUN: echo '#!/bin/sh' >> %t.dir/bin/my_driver.sh
@@ -52,7 +53,7 @@
 # Bless the mock driver we've just created so that clangd can execute it.
 # Note: include clangd's stderr in the FileCheck input with "2>&1" so that we
 # can match output lines like "ASTWorker building file"
-# RUN: clangd -lit-test -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test
+# RUN: clangd --clang-tidy=false -lit-test -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}
 ---
 {
@@ -88,4 +89,4 @@
 
 # Run clangd a second time, to make sure it picks up the driver name from the config file
 # Note, we need to pass -enable-config because -lit-test otherwise disables it
-# RUN: clangd -lit-test -enable-config -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test
+# RUN: clangd --clang-tidy=false -lit-test -enable-config -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test

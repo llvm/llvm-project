@@ -293,10 +293,42 @@ void populateVectorBitCastLoweringPatterns(RewritePatternSet &patterns,
                                            int64_t targetRank = 1,
                                            PatternBenefit benefit = 1);
 
+void populateVectorShuffleLoweringPatterns(RewritePatternSet &patterns,
+                                           PatternBenefit benefit = 1);
+
 /// Populates a pattern that rank-reduces n-D FMAs into (n-1)-D FMAs where
 /// n > 1.
 void populateVectorRankReducingFMAPattern(RewritePatternSet &patterns);
 
+/// Populate patterns to rewrite sequences of `vector.to_elements` +
+/// `vector.from_elements` operations into a tree of `vector.shuffle`
+/// operations.
+void populateVectorToFromElementsToShuffleTreePatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
+/// Populate the pattern set with the following patterns:
+///
+/// [ContractionOpToMatmulOpLowering]
+/// Lowers `vector.contract` to `llvm.intr.matrix.multiply`.
+///
+/// Given the high benefit, this will be prioriotised over other
+/// contract-lowering patterns. As such, the convert-vector-to-llvm pass will
+/// only run this registration conditionally.
+void populateVectorContractToMatrixMultiply(RewritePatternSet &patterns,
+                                            PatternBenefit benefit = 100);
+
+/// Populate the pattern set with the following patterns:
+///
+/// [TransposeOpLowering]
+/// Lowers `vector.transpose` to `llvm.intr.matrix.flat_transpose`.
+///
+/// Given the high benefit, this will be prioriotised over other
+/// transpose-lowering patterns. As such, the convert-vector-to-llvm pass will
+/// only run this registration conditionally.
+void populateVectorTransposeToFlatTranspose(RewritePatternSet &patterns,
+                                            PatternBenefit benefit = 100);
+
 } // namespace vector
 } // namespace mlir
+
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_LOWERINGPATTERNS_H

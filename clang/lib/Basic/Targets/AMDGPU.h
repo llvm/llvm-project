@@ -84,12 +84,25 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
     return TT.getArch() == llvm::Triple::r600;
   }
 
+  bool hasFlatSupport() const {
+    if (GPUKind >= llvm::AMDGPU::GK_GFX700)
+      return true;
+
+    // Dummy target is assumed to be gfx700+ for amdhsa.
+    if (GPUKind == llvm::AMDGPU::GK_NONE &&
+        getTriple().getOS() == llvm::Triple::AMDHSA)
+      return true;
+
+    return false;
+  }
+
 public:
   AMDGPUTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
   void setAddressSpaceMap(bool DefaultIsPrivate);
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 
   uint64_t getPointerWidthV(LangAS AS) const override {
     if (isR600(getTriple()))
@@ -315,9 +328,23 @@ public:
       Opts["cl_amd_media_ops"] = true;
       Opts["cl_amd_media_ops2"] = true;
 
+      // FIXME: Check subtarget for image support.
       Opts["__opencl_c_images"] = true;
       Opts["__opencl_c_3d_image_writes"] = true;
+      Opts["__opencl_c_read_write_images"] = true;
       Opts["cl_khr_3d_image_writes"] = true;
+      Opts["__opencl_c_program_scope_global_variables"] = true;
+      Opts["__opencl_c_atomic_order_acq_rel"] = true;
+      Opts["__opencl_c_atomic_order_seq_cst"] = true;
+      Opts["__opencl_c_atomic_scope_device"] = true;
+      Opts["__opencl_c_atomic_scope_all_devices"] = true;
+      Opts["__opencl_c_work_group_collective_functions"] = true;
+
+      if (hasFlatSupport()) {
+        Opts["__opencl_c_generic_address_space"] = true;
+        Opts["__opencl_c_device_enqueue"] = true;
+        Opts["__opencl_c_pipes"] = true;
+      }
     }
   }
 
@@ -396,15 +423,12 @@ public:
   /// in the DWARF.
   std::optional<unsigned>
   getDWARFAddressSpace(unsigned AddressSpace) const override {
-    const unsigned DWARF_Private = 1;
-    const unsigned DWARF_Local = 2;
-    if (AddressSpace == llvm::AMDGPUAS::PRIVATE_ADDRESS) {
-      return DWARF_Private;
-    } else if (AddressSpace == llvm::AMDGPUAS::LOCAL_ADDRESS) {
-      return DWARF_Local;
-    } else {
+    int DWARFAS = llvm::AMDGPU::mapToDWARFAddrSpace(AddressSpace);
+    // If there is no corresponding address space identifier, or it would be
+    // the default, then don't emit the attribute.
+    if (DWARFAS == -1 || DWARFAS == llvm::AMDGPU::DWARFAS::DEFAULT)
       return std::nullopt;
-    }
+    return DWARFAS;
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
@@ -412,8 +436,7 @@ public:
     default:
       return CCCR_Warning;
     case CC_C:
-    case CC_OpenCLKernel:
-    case CC_AMDGPUKernelCall:
+    case CC_DeviceKernel:
       return CCCR_OK;
     }
   }
@@ -437,6 +460,7 @@ public:
   // pre-defined macros.
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
+    HasFullBFloat16 = true;
     auto TargetIDFeatures =
         getAllPossibleTargetIDFeatures(getTriple(), getArchNameAMDGCN(GPUKind));
     for (const auto &F : Features) {

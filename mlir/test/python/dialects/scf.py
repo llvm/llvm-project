@@ -1,10 +1,14 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 from mlir.ir import *
-from mlir.dialects import arith
-from mlir.dialects import func
-from mlir.dialects import memref
-from mlir.dialects import scf
+from mlir.extras import types as T
+from mlir.dialects import (
+    arith,
+    func,
+    memref,
+    scf,
+    cf,
+)
 from mlir.passmanager import PassManager
 
 
@@ -16,6 +20,26 @@ def constructAndPrintInModule(f):
             f()
         print(module)
     return f
+
+
+# CHECK-LABEL: TEST: testSimpleForall
+# CHECK: scf.forall (%[[IV0:.*]], %[[IV1:.*]]) in (4, 8) shared_outs(%[[BOUND_ARG:.*]] = %{{.*}}) -> (tensor<4x8xf32>)
+# CHECK:   arith.addi %[[IV0]], %[[IV1]]
+# CHECK:   scf.forall.in_parallel
+@constructAndPrintInModule
+def testSimpleForall():
+    f32 = F32Type.get()
+    tensor_type = RankedTensorType.get([4, 8], f32)
+
+    @func.FuncOp.from_py_func(tensor_type)
+    def forall_loop(tensor):
+        loop = scf.ForallOp([0, 0], [4, 8], [1, 1], [tensor])
+        with InsertionPoint(loop.body):
+            i, j = loop.induction_variables
+            arith.addi(i, j)
+            loop.terminator()
+        # The verifier will check that the regions have been created properly.
+        assert loop.verify()
 
 
 # CHECK-LABEL: TEST: testSimpleLoop
@@ -335,3 +359,117 @@ def testIfWithElse():
 # CHECK:   scf.yield %[[TWO]], %[[THREE]]
 # CHECK: arith.addi %[[RET]]#0, %[[RET]]#1
 # CHECK: return
+
+
+@constructAndPrintInModule
+def testIndexSwitch():
+    i32 = T.i32()
+
+    @func.FuncOp.from_py_func(T.index(), results=[i32])
+    def index_switch(index):
+        c1 = arith.constant(i32, 1)
+        c0 = arith.constant(i32, 0)
+        value = arith.constant(i32, 5)
+        switch_op = scf.IndexSwitchOp([i32], index, range(3))
+
+        assert switch_op.regions[0] == switch_op.default_region
+        assert switch_op.regions[1] == switch_op.case_regions[0]
+        assert switch_op.regions[1] == switch_op.case_region(0)
+        assert len(switch_op.case_regions) == 3
+        assert len(switch_op.regions) == 4
+
+        with InsertionPoint(switch_op.default_block):
+            cf.assert_(arith.constant(T.bool(), 0), "Whoops!")
+            scf.yield_([c1])
+
+        for i, block in enumerate(switch_op.case_blocks):
+            with InsertionPoint(block):
+                scf.yield_([arith.constant(i32, i)])
+
+        func.return_([switch_op.results[0]])
+
+    return index_switch
+
+
+# CHECK-LABEL:   func.func @index_switch(
+# CHECK-SAME:      %[[ARG0:.*]]: index) -> i32 {
+# CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : i32
+# CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : i32
+# CHECK:           %[[CONSTANT_2:.*]] = arith.constant 5 : i32
+# CHECK:           %[[INDEX_SWITCH_0:.*]] = scf.index_switch %[[ARG0]] -> i32
+# CHECK:           case 0 {
+# CHECK:             %[[CONSTANT_3:.*]] = arith.constant 0 : i32
+# CHECK:             scf.yield %[[CONSTANT_3]] : i32
+# CHECK:           }
+# CHECK:           case 1 {
+# CHECK:             %[[CONSTANT_4:.*]] = arith.constant 1 : i32
+# CHECK:             scf.yield %[[CONSTANT_4]] : i32
+# CHECK:           }
+# CHECK:           case 2 {
+# CHECK:             %[[CONSTANT_5:.*]] = arith.constant 2 : i32
+# CHECK:             scf.yield %[[CONSTANT_5]] : i32
+# CHECK:           }
+# CHECK:           default {
+# CHECK:             %[[CONSTANT_6:.*]] = arith.constant false
+# CHECK:             cf.assert %[[CONSTANT_6]], "Whoops!"
+# CHECK:             scf.yield %[[CONSTANT_0]] : i32
+# CHECK:           }
+# CHECK:           return %[[INDEX_SWITCH_0]] : i32
+# CHECK:         }
+
+
+@constructAndPrintInModule
+def testIndexSwitchWithBodyBuilders():
+    i32 = T.i32()
+
+    @func.FuncOp.from_py_func(T.index(), results=[i32])
+    def index_switch(index):
+        c1 = arith.constant(i32, 1)
+        c0 = arith.constant(i32, 0)
+        value = arith.constant(i32, 5)
+
+        def default_body_builder(switch_op):
+            cf.assert_(arith.constant(T.bool(), 0), "Whoops!")
+            scf.yield_([c1])
+
+        def case_body_builder(switch_op, case_index: int, case_value: int):
+            scf.yield_([arith.constant(i32, case_value)])
+
+        result = scf.index_switch(
+            results=[i32],
+            arg=index,
+            cases=range(3),
+            case_body_builder=case_body_builder,
+            default_body_builder=default_body_builder,
+        )
+
+        func.return_([result])
+
+    return index_switch
+
+
+# CHECK-LABEL:   func.func @index_switch(
+# CHECK-SAME:      %[[ARG0:.*]]: index) -> i32 {
+# CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : i32
+# CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : i32
+# CHECK:           %[[CONSTANT_2:.*]] = arith.constant 5 : i32
+# CHECK:           %[[INDEX_SWITCH_0:.*]] = scf.index_switch %[[ARG0]] -> i32
+# CHECK:           case 0 {
+# CHECK:             %[[CONSTANT_3:.*]] = arith.constant 0 : i32
+# CHECK:             scf.yield %[[CONSTANT_3]] : i32
+# CHECK:           }
+# CHECK:           case 1 {
+# CHECK:             %[[CONSTANT_4:.*]] = arith.constant 1 : i32
+# CHECK:             scf.yield %[[CONSTANT_4]] : i32
+# CHECK:           }
+# CHECK:           case 2 {
+# CHECK:             %[[CONSTANT_5:.*]] = arith.constant 2 : i32
+# CHECK:             scf.yield %[[CONSTANT_5]] : i32
+# CHECK:           }
+# CHECK:           default {
+# CHECK:             %[[CONSTANT_6:.*]] = arith.constant false
+# CHECK:             cf.assert %[[CONSTANT_6]], "Whoops!"
+# CHECK:             scf.yield %[[CONSTANT_0]] : i32
+# CHECK:           }
+# CHECK:           return %[[INDEX_SWITCH_0]] : i32
+# CHECK:         }

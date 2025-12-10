@@ -1,4 +1,4 @@
-//===--- NonConstParameterCheck.cpp - clang-tidy---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -155,7 +155,7 @@ void NonConstParameterCheck::diagnoseNonConstParameters() {
         dyn_cast_or_null<const FunctionDecl>(Par->getParentFunctionOrMethod());
     if (!Function)
       continue;
-    unsigned Index = Par->getFunctionScopeIndex();
+    const unsigned Index = Par->getFunctionScopeIndex();
     for (FunctionDecl *FnDecl : Function->redecls()) {
       if (FnDecl->getNumParams() <= Index)
         continue;

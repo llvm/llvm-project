@@ -1477,7 +1477,7 @@ define <2 x float> @frem2f32(<2 x float> %A, <2 x float> %B) {
 ; CHECK-LABEL: frem2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
@@ -1487,14 +1487,14 @@ define <2 x float> @frem2f32(<2 x float> %A, <2 x float> %B) {
 ; CHECK-NEXT:    mov s1, v1.s[1]
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    add sp, sp, #64
@@ -1507,7 +1507,7 @@ define <4 x float> @frem4f32(<4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: frem4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    stp q0, q1, [sp, #16] // 32-byte Folded Spill
@@ -1515,30 +1515,30 @@ define <4 x float> @frem4f32(<4 x float> %A, <4 x float> %B) {
 ; CHECK-NEXT:    mov s1, v1.s[1]
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    mov s1, v1.s[2]
 ; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
 ; CHECK-NEXT:    mov s0, v0.s[3]
 ; CHECK-NEXT:    mov s1, v1.s[3]
 ; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #64
@@ -1564,7 +1564,7 @@ define <2 x double> @frem2d64(<2 x double> %A, <2 x double> %B) {
 ; CHECK-LABEL: frem2d64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
@@ -1572,14 +1572,14 @@ define <2 x double> @frem2d64(<2 x double> %A, <2 x double> %B) {
 ; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    bl fmod
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    bl fmod
-; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
@@ -1606,6 +1606,18 @@ define <16 x i8> @poly_mulv16i8(<16 x i8> %lhs, <16 x i8> %rhs) {
 ; CHECK-NEXT:    ret
    %prod = call <16 x i8> @llvm.aarch64.neon.pmul.v16i8(<16 x i8> %lhs, <16 x i8> %rhs)
    ret <16 x i8> %prod
+}
+
+define <16 x i8> @commutable_poly_mul(<16 x i8> %lhs, <16 x i8> %rhs) {
+; CHECK-LABEL: commutable_poly_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pmul v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    add v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    ret
+  %1 = call <16 x i8> @llvm.aarch64.neon.pmul.v16i8(<16 x i8> %lhs, <16 x i8> %rhs)
+  %2 = call <16 x i8> @llvm.aarch64.neon.pmul.v16i8(<16 x i8> %rhs, <16 x i8> %lhs)
+  %3 = add <16 x i8> %1, %2
+  ret <16 x i8> %3
 }
 
 declare <4 x i16> @llvm.aarch64.neon.sqdmulh.v4i16(<4 x i16>, <4 x i16>)

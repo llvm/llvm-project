@@ -137,12 +137,14 @@ void populateVectorReductionToContractPatterns(RewritePatternSet &patterns,
 void populateVectorTransferFullPartialPatterns(
     RewritePatternSet &patterns, const VectorTransformsOptions &options);
 
-/// Collect a set of patterns to reduce the rank of the operands of vector
-/// transfer ops to operate on the largest contigious vector.
-/// These patterns are useful when lowering to dialects with 1d vector type
-/// such as llvm and it will result fewer memory reads.
-void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+/// Collect a set of patterns to collapse the most inner unit dims in xfer Ops
+///
+/// These patters reduce the rank of the operands of vector transfer ops to
+/// operate on vectors without trailing unit dims. This helps reduce the rank of
+/// the operands, which can be helpful when lowering to dialects that only
+/// support 1D vector type such as LLVM.
+void populateDropInnerMostUnitDimsXferOpPatterns(RewritePatternSet &patterns,
+                                                 PatternBenefit benefit = 1);
 
 /// Patterns that remove redundant Vector Ops by re-ordering them with
 /// e.g. elementwise Ops:
@@ -233,8 +235,8 @@ void populateBreakDownVectorReductionPatterns(
 ///
 /// [DecomposeNDExtractStridedSlice]
 /// ================================
-/// For such cases, we can rewrite it to ExtractOp/ExtractElementOp + lower
-/// rank ExtractStridedSliceOp + InsertOp/InsertElementOp for the n-D case.
+/// For such cases, we can rewrite it to ExtractOp + lower rank
+/// ExtractStridedSliceOp + InsertOp for the n-D case.
 void populateVectorInsertExtractStridedSliceDecompositionPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
@@ -320,6 +322,16 @@ void populateVectorUnrollPatterns(RewritePatternSet &patterns,
                                   const UnrollVectorOptions &options,
                                   PatternBenefit benefit = 1);
 
+/// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
+/// outermost dimension of the operand.
+void populateVectorToElementsUnrollPatterns(RewritePatternSet &patterns,
+                                            PatternBenefit benefit = 1);
+
+/// Unrolls 2 or more dimensional `vector.from_elements` ops by unrolling the
+/// outermost dimension.
+void populateVectorFromElementsUnrollPatterns(RewritePatternSet &patterns,
+                                              PatternBenefit benefit = 1);
+
 /// Collect a set of leading one dimension removal patterns.
 ///
 /// These patterns insert vector.shape_cast to remove leading one dimensions
@@ -381,6 +393,16 @@ void populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns, bool disableAtomicRMW = false);
 
+/// Populates patterns for both MeMref flattening and Vector narrow type
+/// emulation.
+///
+/// Patterns for narrow-type-emulation require "flattened" MemRef(s), so this
+/// composite populate* method can be used for narrow-type-emulation for Ops
+/// operating on MemRef(s) that are rank > 2.
+void populateMemRefFlattenAndVectorNarrowTypeEmulationPatterns(
+    arith::NarrowTypeEmulationConverter &typeConverter,
+    RewritePatternSet &patterns);
+
 /// Rewrite a vector `bitcast(trunci)` to use a more efficient sequence of
 /// vector operations comprising `shuffle` and `bitwise` ops.
 /// Warning: these patterns currently only work for little endian targets.
@@ -406,18 +428,38 @@ void populateVectorNarrowTypeRewritePatterns(RewritePatternSet &patterns,
 void populateVectorTransposeNarrowTypeRewritePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
-/// Populates patterns for ND vectors (N >= 2) linearization and sets up the
-/// provided ConversionTarget with the appropriate legality configuration for
-/// the ops to get converted properly.
-void populateVectorLinearizeTypeConversionsAndLegality(
-    TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target, unsigned targetBitWidth);
+/// Initialize `typeConverter` and `conversionTarget` for vector linearization.
+///
+/// Definition: here 'linearization' means converting a single operation with
+/// 1+ vector operand/result of rank>1, into a new single operation whose
+/// vector operands and results are all of rank<=1.
+///
+/// This function registers (1) which operations are legal, and hence should not
+/// be linearized, (2) what the converted types are (rank-1 vectors) and how to
+/// materialze the conversion (with shape_cast)
+///
+/// Note: the set of legal operations can be extended by a user if for example
+/// certain rank>1 vectors are considered valid, by adding additional
+/// dynamically legal ops to `conversionTarget`.
+///
+/// Further note: the choice to use a dialect conversion design for
+/// linearization is to make it easy to reuse generic structural type
+/// conversions for linearizing scf/cf/func operations
+void populateForVectorLinearize(TypeConverter &typeConverter,
+                                ConversionTarget &conversionTarget);
 
-/// Populates patterns for linearizing ND (N >= 2) vector operations to 1D
-/// vector shuffle operations.
-void populateVectorLinearizeShuffleLikeOpsPatterns(
-    const TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target, unsigned targetBitWidth);
+/// Populates `patterns` for ND vector (N >= 2) linearization. This currently
+/// contains patterns for converting ConstantLike, Vectorizable, and
+/// vector::BitCast ops.
+void populateVectorLinearizeBasePatterns(const TypeConverter &,
+                                         const ConversionTarget &,
+                                         RewritePatternSet &patterns);
+
+/// Populates `patterns` for linearizing ND (N >= 2) vector operations
+/// to 1D vector shuffle operations.
+void populateVectorLinearizeShuffleLikeOpsPatterns(const TypeConverter &,
+                                                   const ConversionTarget &,
+                                                   RewritePatternSet &patterns);
 
 } // namespace vector
 } // namespace mlir

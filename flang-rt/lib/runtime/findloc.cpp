@@ -153,10 +153,13 @@ template <TypeCategory CAT,
     class HELPER>
 struct NumericFindlocHelper {
   template <int KIND> struct Functor {
-    RT_API_ATTRS void operator()(TypeCategory targetCat, int targetKind,
-        Descriptor &result, const Descriptor &x, const Descriptor &target,
-        int kind, int dim, const Descriptor *mask, bool back,
-        Terminator &terminator) const {
+    // NVCC inlines more aggressively which causes too many specializations of
+    // this function to be inlined causing compiler timeouts. Set as
+    // noinline to allow compilation to complete.
+    RT_API_ATTRS RT_DEVICE_NOINLINE void operator()(TypeCategory targetCat,
+        int targetKind, Descriptor &result, const Descriptor &x,
+        const Descriptor &target, int kind, int dim, const Descriptor *mask,
+        bool back, Terminator &terminator) const {
       switch (targetCat) {
       case TypeCategory::Integer:
       case TypeCategory::Unsigned:
@@ -220,7 +223,7 @@ void RTDEF(Findloc)(Descriptor &result, const Descriptor &x,
       CFI_attribute_allocatable);
   result.GetDimension(0).SetBounds(1, extent[0]);
   Terminator terminator{source, line};
-  if (int stat{result.Allocate(kNoAsyncId)}) {
+  if (int stat{result.Allocate(kNoAsyncObject)}) {
     terminator.Crash(
         "FINDLOC: could not allocate memory for result; STAT=%d", stat);
   }

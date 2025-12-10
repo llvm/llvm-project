@@ -108,7 +108,7 @@ define <2 x half> @flat_atomic_fadd_ret_v2f16_agent_offset(ptr %ptr, <2 x half> 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i32 256
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i32 256
   %result = atomicrmw fadd ptr %gep, <2 x half> %val syncscope("agent") seq_cst
   ret <2 x half> %result
 }
@@ -122,7 +122,7 @@ define void @flat_atomic_fadd_noret_v2f16_agent_offset(ptr %ptr, <2 x half> %val
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i32 256
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i32 256
   %unused = atomicrmw fadd ptr %gep, <2 x half> %val syncscope("agent") seq_cst
   ret void
 }

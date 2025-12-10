@@ -132,8 +132,36 @@ if (LLVM_ENABLE_SPHINX)
     # Generated files
     gen_rst_file_from_td(AttributeReference.rst -gen-attr-docs ../include/clang/Basic/Attr.td "${docs_targets}")
     gen_rst_file_from_td(DiagnosticsReference.rst -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
-    gen_rst_file_from_td(ClangCommandLineReference.rst -gen-opt-docs ../include/clang/Driver/ClangOptionDocs.td "${docs_targets}")
+    gen_rst_file_from_td(ClangCommandLineReference.rst -gen-opt-docs ../include/clang/Options/ClangOptionDocs.td "${docs_targets}")
 
+    # Another generated file from a different source
+    set(docs_tools_dir ${CMAKE_CURRENT_SOURCE_DIR}/tools)
+    set(aopts_rst_rel_path analyzer/user-docs/Options.rst)
+    set(aopts_rst "${CMAKE_CURRENT_BINARY_DIR}/${aopts_rst_rel_path}")
+    set(analyzeroptions_def "${CMAKE_CURRENT_SOURCE_DIR}/../include/clang/StaticAnalyzer/Core/AnalyzerOptions.def")
+    set(aopts_rst_in "${CMAKE_CURRENT_SOURCE_DIR}/${aopts_rst_rel_path}.in")
+    add_custom_command(
+      OUTPUT ${aopts_rst}
+      COMMAND ${Python3_EXECUTABLE} generate_analyzer_options_docs.py
+              --options-def "${analyzeroptions_def}"
+              --template "${aopts_rst_in}"
+              --out "${aopts_rst}"
+      WORKING_DIRECTORY ${docs_tools_dir}
+      VERBATIM
+      COMMENT "Generating ${aopts_rst}"
+      DEPENDS ${docs_tools_dir}/${generate_aopts_docs}
+              ${aopts_rst_in}
+              copy-clang-rst-docs
+      )
+    add_custom_target(generate-analyzer-options-rst DEPENDS ${aopts_rst})
+    foreach(target ${docs_targets})
+      add_dependencies(${target} generate-analyzer-options-rst)
+    endforeach()
+
+    # Technically this is redundant because generate-analyzer-options-rst
+    # depends on the copy operation (because it wants to drop a generated file
+    # into a subdirectory of the copied tree), but I'm leaving it here for the
+    # sake of clarity.
     foreach(target ${docs_targets})
       add_dependencies(${target} copy-clang-rst-docs)
     endforeach()

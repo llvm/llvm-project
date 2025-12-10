@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx900 | FileCheck %s
 
 ; Check that the redundant immediate MOV instruction
 ; (by-product of handling phi nodes) is not found

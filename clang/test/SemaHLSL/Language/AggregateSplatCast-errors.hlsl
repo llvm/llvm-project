@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify -verify-ignore-unexpected=note
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify -verify-ignore-unexpected=note
 
 struct S {
   int A : 8;
@@ -12,12 +12,6 @@ struct R {
     int4 G;
   };
 };
-
-// casting types which contain bitfields is not yet supported.
-export void cantCast() {
-  S s = (S)1;
-  // expected-error@-1 {{no matching conversion for C-style cast from 'int' to 'S'}}
-}
 
 // Can't cast a union
 export void cantCast2() {

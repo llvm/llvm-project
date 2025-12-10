@@ -88,6 +88,7 @@ using DistSchedule = tomp::clause::DistScheduleT<TypeTy, IdTy, ExprTy>;
 using Doacross = tomp::clause::DoacrossT<TypeTy, IdTy, ExprTy>;
 using DynamicAllocators =
     tomp::clause::DynamicAllocatorsT<TypeTy, IdTy, ExprTy>;
+using DynGroupprivate = tomp::clause::DynGroupprivateT<TypeTy, IdTy, ExprTy>;
 using Enter = tomp::clause::EnterT<TypeTy, IdTy, ExprTy>;
 using Exclusive = tomp::clause::ExclusiveT<TypeTy, IdTy, ExprTy>;
 using Fail = tomp::clause::FailT<TypeTy, IdTy, ExprTy>;
@@ -188,7 +189,7 @@ struct StringifyClause {
   }
 
   static std::string to_str(llvm::omp::Directive D) {
-    return getOpenMPDirectiveName(D).str();
+    return getOpenMPDirectiveName(D, llvm::omp::FallbackVersion).str();
   }
   static std::string to_str(llvm::omp::Clause C) {
     return getOpenMPClauseName(C).str();
@@ -276,13 +277,39 @@ struct StringifyClause {
   std::string Str;
 };
 
+std::string stringify(const omp::Clause &C) { //
+  return StringifyClause(C).Str;
+}
+
 std::string stringify(const omp::DirectiveWithClauses &DWC) {
   std::stringstream Stream;
 
-  Stream << getOpenMPDirectiveName(DWC.id).str();
+  Stream << getOpenMPDirectiveName(DWC.id, llvm::omp::FallbackVersion).str();
   for (const omp::Clause &C : DWC.clauses)
-    Stream << ' ' << StringifyClause(C).Str;
+    Stream << ' ' << stringify(C);
 
+  return Stream.str();
+}
+
+std::string stringify(tomp::ErrorCode E) {
+  switch (E) {
+  case tomp::ErrorCode::NoLeafAllowing:
+    return "no leaf that allows this clause";
+  case tomp::ErrorCode::NoLeafPrivatizing:
+    return "no leaf with a privatizing clause";
+  case tomp::ErrorCode::InvalidDirNameMod:
+    return "invalid directive name modifier";
+  case tomp::ErrorCode::RedModNotApplied:
+    return "the reduction modifier cannot be applied";
+  }
+  return "unrecognized error code " + std::to_string(llvm::to_underlying(E));
+}
+
+std::string stringify(std::pair<const omp::Clause *, tomp::ErrorCode> &ER) {
+  std::stringstream Stream;
+
+  Stream << "error while applying '" << stringify(*ER.first)
+         << "': " << stringify(ER.second);
   return Stream.str();
 }
 
@@ -431,8 +458,8 @@ TEST_F(OpenMPDecompositionTest, Firstprivate3) {
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
-  ASSERT_EQ(Dir0, "target map(2, , , , (x))"); // (12), (27)
-  ASSERT_EQ(Dir1, "teams shared(x)");          // (6), (17)
+  ASSERT_EQ(Dir0, "target map(2, , , , , , (x))"); // (12), (27)
+  ASSERT_EQ(Dir1, "teams shared(x)");              // (6), (17)
   ASSERT_EQ(Dir2, "distribute firstprivate(x) lastprivate(, (x))"); // (5), (21)
 }
 
@@ -574,9 +601,9 @@ TEST_F(OpenMPDecompositionTest, Lastprivate3) {
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
-  ASSERT_EQ(Dir0, "target map(2, , , , (x))"); // (21), (27)
-  ASSERT_EQ(Dir1, "parallel shared(x)");       // (22)
-  ASSERT_EQ(Dir2, "do lastprivate(, (x))");    // (21)
+  ASSERT_EQ(Dir0, "target map(2, , , , , , (x))"); // (21), (27)
+  ASSERT_EQ(Dir1, "parallel shared(x)");           // (22)
+  ASSERT_EQ(Dir2, "do lastprivate(, (x))");        // (21)
 }
 
 // SHARED
@@ -984,9 +1011,9 @@ TEST_F(OpenMPDecompositionTest, Reduction7) {
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
-  ASSERT_EQ(Dir0, "target map(2, , , , (x))"); // (36), (10)
-  ASSERT_EQ(Dir1, "parallel shared(x)");       // (36), (1), (4)
-  ASSERT_EQ(Dir2, "do reduction(, (3), (x))"); // (36)
+  ASSERT_EQ(Dir0, "target map(2, , , , , , (x))"); // (36), (10)
+  ASSERT_EQ(Dir1, "parallel shared(x)");           // (36), (1), (4)
+  ASSERT_EQ(Dir2, "do reduction(, (3), (x))");     // (36)
 }
 
 // IF
@@ -1107,5 +1134,82 @@ TEST_F(OpenMPDecompositionTest, Misc1) {
   ASSERT_EQ(Dec.output.size(), 1u);
   std::string Dir0 = stringify(Dec.output[0]);
   ASSERT_EQ(Dir0, "simd linear(, , (x)) lastprivate(, (x))");
+}
+
+// --- Failure/error reporting tests
+
+TEST_F(OpenMPDecompositionTest, Error1) {
+  // "parallel for at(compilation)" is invalid because the "at" clause
+  // does not apply to either "parallel" or "for".
+
+  omp::List<omp::Clause> Clauses{
+      {OMPC_at, omp::clause::At{omp::clause::At::ActionTime::Compilation}},
+  };
+
+  omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_parallel_for,
+                                  Clauses);
+  ASSERT_EQ(Dec.errors.size(), 1u);
+  std::string Err0 = stringify(Dec.errors[0]);
+  ASSERT_EQ(Err0,
+            "error while applying 'at(0)': no leaf that allows this clause");
+}
+
+TEST_F(OpenMPDecompositionTest, Error2) {
+  // "parallel loop allocate(x) private(x)" is invalid because "allocate"
+  // can only be applied to "parallel", while "private" is applied to "loop".
+  // This violates the requirement that the leaf with an "allocate" also has
+  // a privatizing clause.
+
+  omp::Object x{"x"};
+
+  omp::List<omp::Clause> Clauses{
+      {OMPC_allocate, omp::clause::Allocate{{std::nullopt, std::nullopt, {x}}}},
+      {OMPC_private, omp::clause::Private{{x}}},
+  };
+
+  omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_parallel_loop,
+                                  Clauses);
+  ASSERT_EQ(Dec.errors.size(), 1u);
+  std::string Err0 = stringify(Dec.errors[0]);
+  ASSERT_EQ(Err0, "error while applying 'allocate(, , (x))': no leaf with a "
+                  "privatizing clause");
+}
+
+TEST_F(OpenMPDecompositionTest, Error3) {
+  // "parallel for if(target: e)" is invalid because the "target" directive-
+  // name-modifier does not refer to a constituent directive.
+
+  omp::ExprTy e;
+
+  omp::List<omp::Clause> Clauses{
+      {OMPC_if, omp::clause::If{{llvm::omp::Directive::OMPD_target, e}}},
+  };
+
+  omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_parallel_for,
+                                  Clauses);
+  ASSERT_EQ(Dec.errors.size(), 1u);
+  std::string Err0 = stringify(Dec.errors[0]);
+  ASSERT_EQ(Err0, "error while applying 'if(target, expr)': invalid directive "
+                  "name modifier");
+}
+
+TEST_F(OpenMPDecompositionTest, Error4) {
+  // "masked taskloop reduction(+, task: x)" is invalid because the "task"
+  // modifier can only be applied to "parallel" or a worksharing directive.
+
+  omp::Object x{"x"};
+  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto TaskMod = omp::clause::Reduction::ReductionModifier::Task;
+
+  omp::List<omp::Clause> Clauses{
+      {OMPC_reduction, omp::clause::Reduction{{TaskMod, {Add}, {x}}}},
+  };
+
+  omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_masked_taskloop,
+                                  Clauses);
+  ASSERT_EQ(Dec.errors.size(), 1u);
+  std::string Err0 = stringify(Dec.errors[0]);
+  ASSERT_EQ(Err0, "error while applying 'reduction(2, (3), (x))': the "
+                  "reduction modifier cannot be applied");
 }
 } // namespace

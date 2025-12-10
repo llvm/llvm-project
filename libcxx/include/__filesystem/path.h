@@ -29,7 +29,6 @@
 
 #if _LIBCPP_HAS_LOCALIZATION
 #  include <iomanip> // for quoted
-#  include <locale>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -42,8 +41,6 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
-
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 template <class _Tp>
 struct __can_convert_char {
@@ -327,6 +324,7 @@ struct _PathCVT<char> {
   }
 };
 
+#    if _LIBCPP_HAS_LOCALIZATION
 template <class _ECharT>
 struct _PathExport {
   typedef __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Narrower;
@@ -367,7 +365,7 @@ struct _PathExport<char16_t> {
   }
 };
 
-#    if _LIBCPP_HAS_CHAR8_T
+#      if _LIBCPP_HAS_CHAR8_T
 template <>
 struct _PathExport<char8_t> {
   typedef __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Narrower;
@@ -377,8 +375,9 @@ struct _PathExport<char8_t> {
     _Narrower()(back_inserter(__dest), __src.data(), __src.data() + __src.size());
   }
 };
-#    endif // _LIBCPP_HAS_CHAR8_T
-#  endif   /* _LIBCPP_WIN32API */
+#      endif // _LIBCPP_HAS_CHAR8_T
+#    endif   // _LIBCPP_HAS_LOCALIZATION
+#  endif     // _LIBCPP_WIN32API
 
 class _LIBCPP_EXPORTED_FROM_ABI path {
   template <class _SourceOrIter, class _Tp = path&>
@@ -862,7 +861,7 @@ public:
   }
 
   // iterators
-  class _LIBCPP_EXPORTED_FROM_ABI iterator;
+  class iterator;
   typedef iterator const_iterator;
 
   iterator begin() const;
@@ -911,14 +910,12 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(path& __lhs, path& __rhs) noexcept { __lh
 
 _LIBCPP_EXPORTED_FROM_ABI size_t hash_value(const path& __p) noexcept;
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
-
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <>
-struct _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY hash<filesystem::path> : __unary_function<filesystem::path, size_t> {
+struct hash<filesystem::path> : __unary_function<filesystem::path, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(filesystem::path const& __p) const noexcept {
     return filesystem::hash_value(__p);
   }

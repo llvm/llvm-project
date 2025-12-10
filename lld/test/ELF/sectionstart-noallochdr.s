@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: ld.lld %t.o --section-start .data=0x20 \
+# RUN: ld.lld %t.o --image-base=0 --section-start .data=0x20 \
 # RUN: --section-start .bss=0x30 --section-start .text=0x10 -o %t1
 # RUN: llvm-objdump --section-headers %t1 | FileCheck %s
 

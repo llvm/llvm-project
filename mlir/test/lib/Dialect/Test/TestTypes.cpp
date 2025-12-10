@@ -245,6 +245,10 @@ void TestType::printTypeC(Location loc) const {
   emitRemark(loc) << *this << " - TestC";
 }
 
+void TestType::printTypeC(Location loc, int value) const {
+  emitRemark(loc) << *this << " - " << value << " - Int TestC";
+}
+
 //===----------------------------------------------------------------------===//
 // TestTypeWithLayout
 //===----------------------------------------------------------------------===//
@@ -390,6 +394,14 @@ getCustomAssemblyFormatDynamicType(TestDialect *testDialect) {
   return DynamicTypeDefinition::get("dynamic_custom_assembly_format",
                                     testDialect, std::move(verifier),
                                     std::move(parser), std::move(printer));
+}
+
+test::detail::TestCustomStorageCtorTypeStorage *
+test::detail::TestCustomStorageCtorTypeStorage::construct(
+    mlir::StorageUniquer::StorageAllocator &, std::tuple<int> &&) {
+  // Note: this tests linker error ("undefined symbol"), the actual
+  // implementation is not important.
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -544,4 +556,30 @@ void TestTypeOpAsmTypeInterfaceType::getAsmName(
 TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
   os << "op_asm_type_interface_type";
   return ::mlir::OpAsmDialectInterface::AliasResult::FinalAlias;
+}
+
+::mlir::FailureOr<::mlir::bufferization::BufferLikeType>
+TestTensorType::getBufferType(
+    const ::mlir::bufferization::BufferizationOptions &,
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()>) {
+  return cast<bufferization::BufferLikeType>(
+      TestMemrefType::get(getContext(), getShape(), getElementType(), nullptr));
+}
+
+::mlir::LogicalResult TestTensorType::verifyCompatibleBufferType(
+    ::mlir::bufferization::BufferLikeType bufferType,
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {
+  if (auto testMemref = dyn_cast<TestMemrefType>(bufferType)) {
+    const bool valid = getShape() == testMemref.getShape() &&
+                       getElementType() == testMemref.getElementType();
+    return mlir::success(valid);
+  }
+
+  if (auto builtinMemref = dyn_cast<MemRefType>(bufferType)) {
+    const bool valid = getShape() == builtinMemref.getShape() &&
+                       getElementType() == builtinMemref.getElementType();
+    return mlir::success(valid);
+  }
+
+  return emitError() << "expected MemRefType or TestMemrefType";
 }

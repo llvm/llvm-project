@@ -133,7 +133,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
@@ -1702,8 +1701,8 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
                                     .addReg(ARM::SP)
                                     .setMIFlags(MachineInstr::FrameSetup)
                                     .add(predOps(ARMCC::AL));
-      for (unsigned i = 0, e = Regs.size(); i < e; ++i)
-        MIB.addReg(Regs[i].first, getKillRegState(Regs[i].second));
+      for (const auto &[Reg, Kill] : Regs)
+        MIB.addReg(Reg, getKillRegState(Kill));
     } else if (Regs.size() == 1) {
       BuildMI(MBB, MI, DL, TII.get(StrOpc), ARM::SP)
           .addReg(Regs[0].first, getKillRegState(Regs[0].second))
@@ -1748,9 +1747,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
          RetOpcode == ARM::TCRETURNrinotr12);
     isInterrupt =
         RetOpcode == ARM::SUBS_PC_LR || RetOpcode == ARM::t2SUBS_PC_LR;
-    isTrap =
-        RetOpcode == ARM::TRAP || RetOpcode == ARM::TRAPNaCl ||
-        RetOpcode == ARM::tTRAP;
+    isTrap = RetOpcode == ARM::TRAP || RetOpcode == ARM::tTRAP;
     isCmseEntry = (RetOpcode == ARM::tBXNS || RetOpcode == ARM::tBXNS_RET);
   }
 
@@ -1891,7 +1888,6 @@ void ARMFrameLowering::emitFPStatusRestores(
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
-  SmallVector<MCRegister> Regs;
   auto RegPresent = [&CSI](MCRegister Reg) {
     return llvm::any_of(CSI, [Reg](const CalleeSavedInfo &C) {
       return C.getReg() == Reg;
@@ -2346,7 +2342,6 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
   const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   const ARMBaseInstrInfo &TII =
       *static_cast<const ARMBaseInstrInfo *>(MF.getSubtarget().getInstrInfo());
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   unsigned Limit = (1 << 12) - 1;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
@@ -2368,7 +2363,7 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
           break;
 
         const MCInstrDesc &MCID = MI.getDesc();
-        const TargetRegisterClass *RegClass = TII.getRegClass(MCID, i, TRI, MF);
+        const TargetRegisterClass *RegClass = TII.getRegClass(MCID, i);
         if (RegClass && !RegClass->contains(ARM::SP))
           HasNonSPFrameIndex = true;
 
@@ -2541,7 +2536,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   (void)TRI;  // Silence unused warning in non-assert builds.
-  Register FramePtr = RegInfo->getFrameRegister(MF);
+  Register FramePtr = STI.getFramePointerReg();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
       STI.getPushPopSplitVariation(MF);
 
@@ -2788,7 +2783,11 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);
 
-    if (HasFP) {
+    // Save the FP if:
+    // 1. We currently need it (HasFP), OR
+    // 2. We might need it later due to stack realignment from aligned DPRCS2
+    //    saves (which will make hasFP() become true in emitPrologue).
+    if (HasFP || (isFPReserved(MF) && AFI->getNumAlignedDPRCS2Regs() > 0)) {
       SavedRegs.set(FramePtr);
       // If the frame pointer is required by the ABI, also spill LR so that we
       // emit a complete frame record.

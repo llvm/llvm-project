@@ -1,4 +1,4 @@
-//===--- ClangTidyOptions.cpp - clang-tidy ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,12 +8,12 @@
 
 #include "ClangTidyOptions.h"
 #include "ClangTidyModuleRegistry.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -72,7 +72,8 @@ struct NOptionMap {
   NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap) {
     Options.reserve(OptionMap.size());
     for (const auto &KeyValue : OptionMap)
-      Options.emplace_back(std::string(KeyValue.getKey()), KeyValue.getValue().Value);
+      Options.emplace_back(std::string(KeyValue.getKey()),
+                           KeyValue.getValue().Value);
   }
   ClangTidyOptions::OptionMap denormalize(IO &) {
     ClangTidyOptions::OptionMap Map;
@@ -100,6 +101,8 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     for (auto &Option : SortedOptions) {
       bool UseDefault = false;
       void *SaveInfo = nullptr;
+      // Requires 'llvm::yaml::IO' to accept 'StringRef'
+      // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
       IO.preflightKey(Option.first.data(), true, false, UseDefault, SaveInfo);
       IO.scalarString(Option.second, needsQuotes(Option.second));
       IO.postflightKey(SaveInfo);
@@ -116,7 +119,9 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
       yamlize(IO, NOpts->Options, true, Ctx);
     } else if (isa<MappingNode>(I.getCurrentNode())) {
       IO.beginMapping();
-      for (StringRef Key : IO.keys()) {
+      for (const StringRef Key : IO.keys()) {
+        // Requires 'llvm::yaml::IO' to accept 'StringRef'
+        // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
         IO.mapRequired(Key.data(), Val[Key].Value);
       }
       IO.endMapping();
@@ -125,6 +130,53 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     }
   }
 }
+
+namespace {
+struct MultiLineString {
+  std::string &S;
+};
+} // namespace
+
+template <> struct BlockScalarTraits<MultiLineString> {
+  static void output(const MultiLineString &S, void *Ctxt, raw_ostream &OS) {
+    OS << S.S;
+  }
+  static StringRef input(StringRef Str, void *Ctxt, MultiLineString &S) {
+    S.S = Str;
+    return "";
+  }
+};
+
+template <> struct ScalarEnumerationTraits<clang::DiagnosticIDs::Level> {
+  static void enumeration(IO &IO, clang::DiagnosticIDs::Level &Level) {
+    IO.enumCase(Level, "Warning", clang::DiagnosticIDs::Level::Warning);
+    IO.enumCase(Level, "Note", clang::DiagnosticIDs::Level::Note);
+  }
+};
+template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckDiag> {
+  // NOLINTNEXTLINE(readability-identifier-naming) Defined by YAMLTraits.h
+  static const bool flow = false;
+};
+template <> struct MappingTraits<ClangTidyOptions::CustomCheckDiag> {
+  static void mapping(IO &IO, ClangTidyOptions::CustomCheckDiag &D) {
+    IO.mapRequired("BindName", D.BindName);
+    MultiLineString MLS{D.Message};
+    IO.mapRequired("Message", MLS);
+    IO.mapOptional("Level", D.Level);
+  }
+};
+template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckValue> {
+  // NOLINTNEXTLINE(readability-identifier-naming) Defined by YAMLTraits.h
+  static const bool flow = false;
+};
+template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
+  static void mapping(IO &IO, ClangTidyOptions::CustomCheckValue &V) {
+    IO.mapRequired("Name", V.Name);
+    MultiLineString MLS{V.Query};
+    IO.mapRequired("Query", MLS);
+    IO.mapRequired("Diagnostic", V.Diags);
+  }
+};
 
 struct ChecksVariant {
   std::optional<std::string> AsString;
@@ -181,6 +233,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("InheritParentConfig", Options.InheritParentConfig);
     IO.mapOptional("UseColor", Options.UseColor);
     IO.mapOptional("SystemHeaders", Options.SystemHeaders);
+    IO.mapOptional("CustomChecks", Options.CustomChecks);
   }
 };
 
@@ -194,7 +247,7 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.WarningsAsErrors = "";
   Options.HeaderFileExtensions = {"", "h", "hh", "hpp", "hxx"};
   Options.ImplementationFileExtensions = {"c", "cc", "cpp", "cxx"};
-  Options.HeaderFilterRegex = "";
+  Options.HeaderFilterRegex = ".*";
   Options.ExcludeHeaderFilterRegex = "";
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
@@ -242,7 +295,8 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(UseColor, Other.UseColor);
   mergeVectors(ExtraArgs, Other.ExtraArgs);
   mergeVectors(ExtraArgsBefore, Other.ExtraArgsBefore);
-
+  // FIXME: how to handle duplicate names check?
+  mergeVectors(CustomChecks, Other.CustomChecks);
   for (const auto &KeyValue : Other.CheckOptions) {
     CheckOptions.insert_or_assign(
         KeyValue.getKey(),
@@ -338,7 +392,7 @@ llvm::ErrorOr<llvm::SmallString<128>>
 FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
   assert(FS && "FS must be set.");
   llvm::SmallString<128> NormalizedAbsolutePath = {Path};
-  std::error_code Err = FS->makeAbsolute(NormalizedAbsolutePath);
+  const std::error_code Err = FS->makeAbsolute(NormalizedAbsolutePath);
   if (Err)
     return Err;
   llvm::sys::path::remove_dots(NormalizedAbsolutePath, /*remove_dot_dot=*/true);
@@ -409,7 +463,7 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   LLVM_DEBUG(llvm::dbgs() << "Getting options for file " << FileName
                           << "...\n");
 
-  llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+  const llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
       getNormalizedAbsolutePath(FileName);
   if (!AbsoluteFilePath)
     return {};
@@ -417,8 +471,8 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   std::vector<OptionsSource> RawOptions =
       DefaultOptionsProvider::getRawOptions(AbsoluteFilePath->str());
   addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
-  OptionsSource CommandLineOptions(OverrideOptions,
-                                   OptionsSourceTypeCheckCommandLineOption);
+  const OptionsSource CommandLineOptions(
+      OverrideOptions, OptionsSourceTypeCheckCommandLineOption);
 
   RawOptions.push_back(CommandLineOptions);
   return RawOptions;
@@ -448,7 +502,7 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
 
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
         FS->getBufferForFile(ConfigFile);
-    if (std::error_code EC = Text.getError()) {
+    if (const std::error_code EC = Text.getError()) {
       llvm::errs() << "Can't read " << ConfigFile << ": " << EC.message()
                    << "\n";
       continue;

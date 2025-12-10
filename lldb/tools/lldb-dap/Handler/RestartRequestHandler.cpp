@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include "llvm/Support/JSON.h"
@@ -68,23 +69,6 @@ void RestartRequestHandler::operator()(
     dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
-  // Check if we were in a "launch" session or an "attach" session.
-  //
-  // Restarting is not well defined when we started the session by attaching to
-  // an existing process, because we don't know how the process was started, so
-  // we don't support it.
-  //
-  // Note that when using runInTerminal we're technically attached, but it's an
-  // implementation detail. The adapter *did* launch the process in response to
-  // a "launch" command, so we can still stop it and re-run it. This is why we
-  // don't just check `dap.is_attach`.
-  if (!dap.last_launch_request) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message",
-                      "Restarting an \"attach\" session is not supported.");
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
 
   const llvm::json::Object *arguments = request.getObject("arguments");
   if (arguments) {
@@ -108,7 +92,6 @@ void RestartRequestHandler::operator()(
       // Update DAP configuration based on the latest copy of the launch
       // arguments.
       dap.SetConfiguration(updated_arguments.configuration, false);
-      dap.stop_at_entry = updated_arguments.stopOnEntry;
       dap.ConfigureSourceMaps();
     }
   }
@@ -121,8 +104,8 @@ void RestartRequestHandler::operator()(
   // Stop the current process if necessary. The logic here is similar to
   // CommandObjectProcessLaunchOrAttach::StopProcessIfNecessary, except that
   // we don't ask the user for confirmation.
-  dap.debugger.SetAsync(false);
   if (process.IsValid()) {
+    ScopeSyncMode scope_sync_mode(dap.debugger);
     lldb::StateType state = process.GetState();
     if (state != lldb::eStateConnected) {
       process.Kill();
@@ -131,7 +114,6 @@ void RestartRequestHandler::operator()(
     // for threads of the process we are terminating.
     dap.thread_ids.clear();
   }
-  dap.debugger.SetAsync(true);
 
   // FIXME: Should we run 'preRunCommands'?
   // FIXME: Should we add a 'preRestartCommands'?
@@ -142,11 +124,17 @@ void RestartRequestHandler::operator()(
     return;
   }
 
+  SendProcessEvent(dap, Launch);
+
   // This is normally done after receiving a "configuration done" request.
   // Because we're restarting, configuration has already happened so we can
   // continue the process right away.
   if (dap.stop_at_entry) {
-    SendThreadStoppedEvent(dap);
+    if (llvm::Error err = SendThreadStoppedEvent(dap, /*on_entry=*/true)) {
+      EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+      dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
   } else {
     dap.target.GetProcess().Continue();
   }

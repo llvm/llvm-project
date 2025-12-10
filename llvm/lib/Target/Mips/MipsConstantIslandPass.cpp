@@ -24,7 +24,6 @@
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -232,7 +231,7 @@ namespace {
 
     /// NewWaterList - The subset of WaterList that was created since the
     /// previous iteration by inserting unconditional branches.
-    SmallSet<MachineBasicBlock*, 4> NewWaterList;
+    SmallPtrSet<MachineBasicBlock *, 4> NewWaterList;
 
     using water_iterator = std::vector<MachineBasicBlock *>::iterator;
 
@@ -321,7 +320,8 @@ namespace {
   struct ImmBranch {
     MachineInstr *MI;
     unsigned MaxDisp : 31;
-    bool isCond : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned isCond : 1;
     int UncondBr;
 
     ImmBranch(MachineInstr *mi, unsigned maxdisp, bool cond, int ubr)
@@ -363,8 +363,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &F) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     void doInitialPlacement(std::vector<MachineInstr*> &CPEMIs);
@@ -1648,7 +1647,6 @@ void MipsConstantIslands::prescanForConstants() {
           MI.removeOperand(1);
           MI.removeOperand(1);
           MI.addOperand(MachineOperand::CreateCPI(index, 0));
-          MI.addOperand(MachineOperand::CreateImm(4));
         }
         break;
       }

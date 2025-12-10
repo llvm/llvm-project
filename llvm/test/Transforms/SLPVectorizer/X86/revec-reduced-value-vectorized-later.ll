@@ -4,31 +4,9 @@
 define <4 x i16> @test() {
 ; CHECK-LABEL: define <4 x i16> @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> poison, <4 x i16> zeroinitializer, i64 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> [[TMP0]], <4 x i16> zeroinitializer, i64 4)
-; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i16> [[TMP1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v4i16(<16 x i16> poison, <4 x i16> zeroinitializer, i64 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i16> [[TMP4]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v4i16(<16 x i16> [[TMP4]], <4 x i16> zeroinitializer, i64 4)
-; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v4i16(<16 x i16> [[TMP6]], <4 x i16> zeroinitializer, i64 8)
-; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v4i16(<16 x i16> [[TMP7]], <4 x i16> zeroinitializer, i64 12)
-; CHECK-NEXT:    [[TMP9:%.*]] = add <16 x i16> [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add <16 x i16> [[TMP8]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = add <16 x i16> [[TMP3]], [[TMP8]]
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <16 x i16> [[TMP10]], <16 x i16> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:    [[TMP25:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP24]])
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i16> poison, i16 [[TMP25]], i64 0
-; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <16 x i16> [[TMP10]], <16 x i16> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-NEXT:    [[TMP28:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP27]])
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x i16> [[TMP26]], i16 [[TMP28]], i64 1
-; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <16 x i16> [[TMP10]], <16 x i16> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK-NEXT:    [[TMP31:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP30]])
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i16> [[TMP29]], i16 [[TMP31]], i64 2
-; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <16 x i16> [[TMP10]], <16 x i16> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:    [[TMP34:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP33]])
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x i16> [[TMP32]], i16 [[TMP34]], i64 3
-; CHECK-NEXT:    [[RDX_OP:%.*]] = or <16 x i16> [[TMP11]], [[TMP9]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i16> zeroinitializer, <4 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <16 x i16> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[RDX_OP:%.*]] = or <16 x i16> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = shufflevector <16 x i16> [[RDX_OP]], <16 x i16> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[TMP37:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP36]])
 ; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i16> poison, i16 [[TMP37]], i64 0
@@ -42,8 +20,7 @@ define <4 x i16> @test() {
 ; CHECK-NEXT:    [[TMP46:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP45]])
 ; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <4 x i16> [[TMP44]], i16 [[TMP46]], i64 3
 ; CHECK-NEXT:    [[OP_RDX9:%.*]] = or <4 x i16> [[TMP47]], zeroinitializer
-; CHECK-NEXT:    [[OP_RDX11:%.*]] = or <4 x i16> [[OP_RDX9]], [[TMP35]]
-; CHECK-NEXT:    ret <4 x i16> [[OP_RDX11]]
+; CHECK-NEXT:    ret <4 x i16> [[OP_RDX9]]
 ;
 entry:
   %subi = add <4 x i16> zeroinitializer, zeroinitializer

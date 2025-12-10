@@ -141,7 +141,7 @@ def : GCNPat <
 
 } // End SubtargetPredicate = isGFX11Only
 
-let SubtargetPredicate = isGFX12Plus in {
+let SubtargetPredicate = isGFX12PlusNot12_50 in {
 
 def DS_DIRECT_LOAD : DSDIR_Pseudo<"ds_direct_load", VDSDIR_getIns<1>.ret, 1>;
 def DS_PARAM_LOAD : DSDIR_Pseudo<"ds_param_load", VDSDIR_getIns<0>.ret, 0>;
@@ -156,7 +156,7 @@ def : GCNPat <
   (DS_PARAM_LOAD timm:$attr, timm:$attrchan, 0, 1)
 >;
 
-} // End SubtargetPredicate = isGFX12Only
+} // End SubtargetPredicate = isGFX12PlusNot12_50.
 
 //===----------------------------------------------------------------------===//
 // GFX11

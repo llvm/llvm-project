@@ -138,7 +138,7 @@ namespace templated {
     void operator delete(id_alias<C> *, std::destroying_delete_t);
   };
   template<typename T> struct D {
-    void operator delete(typename id_struct<D>::type *, std::destroying_delete_t); // expected-error {{use 'D<T> *'}}
+    void operator delete(typename id_struct<D>::type *, std::destroying_delete_t); // expected-error {{use 'templated::D<T> *'}}
   };
 }
 

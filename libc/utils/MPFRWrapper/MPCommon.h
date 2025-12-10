@@ -9,13 +9,13 @@
 #ifndef LLVM_LIBC_UTILS_MPFRWRAPPER_MPCOMMON_H
 #define LLVM_LIBC_UTILS_MPFRWRAPPER_MPCOMMON_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/RoundingModeUtils.h"
-
-#include <stdint.h>
 
 #include "mpfr_inc.h"
 
@@ -65,6 +65,10 @@ template <> struct ExtraPrecision<float128> {
 };
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
+template <> struct ExtraPrecision<bfloat16> {
+  static constexpr unsigned int VALUE = 64;
+};
+
 // If the ulp tolerance is less than or equal to 0.5, we would check that the
 // result is rounded correctly with respect to the rounding mode by using the
 // same precision as the inputs.
@@ -112,7 +116,7 @@ public:
 #ifdef LIBC_TYPES_HAS_FLOAT16
                                  || cpp::is_same_v<float16, XType>
 #endif
-                             ,
+                                 || cpp::is_same_v<bfloat16, XType>,
                              int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
@@ -185,9 +189,11 @@ public:
   MPFRNumber add(const MPFRNumber &b) const;
   MPFRNumber asin() const;
   MPFRNumber asinh() const;
+  MPFRNumber asinpi() const;
   MPFRNumber atan() const;
   MPFRNumber atan2(const MPFRNumber &b);
   MPFRNumber atanh() const;
+  MPFRNumber atanpi() const;
   MPFRNumber cbrt() const;
   MPFRNumber ceil() const;
   MPFRNumber cos() const;
@@ -216,6 +222,7 @@ public:
   bool round_to_long(long &result) const;
   bool round_to_long(mpfr_rnd_t rnd, long &result) const;
   MPFRNumber rint(mpfr_rnd_t rnd) const;
+  MPFRNumber rsqrt() const;
   MPFRNumber mod_2pi() const;
   MPFRNumber mod_pi_over_2() const;
   MPFRNumber mod_pi_over_4() const;

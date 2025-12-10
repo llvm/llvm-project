@@ -13,12 +13,10 @@
 #define FORTRAN_RUNTIME_EXTENSIONS_H_
 
 #include "flang/Runtime/entry-names.h"
-
-#define FORTRAN_PROCEDURE_NAME(name) name##_
-
-#include "flang/Runtime/entry-names.h"
 #include <cstddef>
 #include <cstdint>
+
+#define FORTRAN_PROCEDURE_NAME(name) name##_
 
 #ifdef _WIN32
 // UID and GID don't exist on Windows, these exist to avoid errors.
@@ -27,11 +25,21 @@ typedef std::uint32_t gid_t;
 #else
 #include "sys/types.h" //pid_t
 #endif
+namespace Fortran {
+namespace runtime {
+class Descriptor;
+}
+} // namespace Fortran
 
 extern "C" {
 
+// PGI extension function DSECNDS(refTime)
+double FORTRAN_PROCEDURE_NAME(dsecnds)(double *refTime);
+double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line);
+
 // CALL FLUSH(n) antedates the Fortran 2003 FLUSH statement.
 void FORTRAN_PROCEDURE_NAME(flush)(const int &unit);
+void RTNAME(Flush)(int unit);
 
 // GNU extension subroutine FDATE
 void FORTRAN_PROCEDURE_NAME(fdate)(char *string, std::int64_t length);
@@ -42,6 +50,9 @@ void RTNAME(Free)(std::intptr_t ptr);
 std::int32_t RTNAME(Fseek)(int unit, std::int64_t zeroBasedPos, int whence,
     const char *sourceFileName, int lineNumber);
 std::int64_t RTNAME(Ftell)(int unit);
+
+// FNUM maps a Fortran unit number to its UNIX file descriptor
+std::int32_t FORTRAN_PROCEDURE_NAME(fnum)(const int &unitNumber);
 
 // GNU Fortran 77 compatibility function IARGC.
 std::int32_t FORTRAN_PROCEDURE_NAME(iargc)();
@@ -88,6 +99,25 @@ int FORTRAN_PROCEDURE_NAME(ierrno)();
 
 // GNU extension subroutine PERROR(STRING)
 void RTNAME(Perror)(const char *str);
+
+// MCLOCK -- returns accumulated time in ticks
+int FORTRAN_PROCEDURE_NAME(mclock)();
+
+// GNU extension subroutine SECNDS(refTime)
+float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime);
+float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line);
+
+// GNU extension function IRAND(I)
+int RTNAME(Irand)(int *i);
+
+// GNU extension function RAND(I)
+float RTNAME(Rand)(int *i, const char *sourceFile, int line);
+
+// GNU extension subroutine SRAND(SEED)
+void FORTRAN_PROCEDURE_NAME(srand)(int *seed);
+
+// flang extension subroutine SHOW_DESCRIPTOR(D)
+void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr);
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_

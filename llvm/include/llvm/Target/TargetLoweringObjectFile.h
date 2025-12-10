@@ -16,6 +16,7 @@
 
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -43,7 +44,7 @@ class StringRef;
 class TargetMachine;
 class DSOLocalEquivalent;
 
-class TargetLoweringObjectFile : public MCObjectFileInfo {
+class LLVM_ABI TargetLoweringObjectFile : public MCObjectFileInfo {
   /// Name-mangler for global names.
   Mangler *Mang = nullptr;
 
@@ -73,7 +74,7 @@ public:
   TargetLoweringObjectFile(const TargetLoweringObjectFile &) = delete;
   TargetLoweringObjectFile &
   operator=(const TargetLoweringObjectFile &) = delete;
-  virtual ~TargetLoweringObjectFile();
+  ~TargetLoweringObjectFile() override;
 
   Mangler &getMangler() const { return *Mang; }
 
@@ -91,6 +92,11 @@ public:
 
   /// Emit Call Graph Profile metadata.
   void emitCGProfileMetadata(MCStreamer &Streamer, Module &M) const;
+
+  /// Emit pseudo_probe_desc metadata.
+  void emitPseudoProbeDescMetadata(MCStreamer &Streamer, Module &M,
+                                   std::function<void(MCStreamer &Streamer)>
+                                       COMDATSymEmitter = nullptr) const;
 
   /// Process linker options metadata and emit platform-specific bits.
   virtual void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const {}

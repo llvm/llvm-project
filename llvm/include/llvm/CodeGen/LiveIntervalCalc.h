@@ -18,6 +18,7 @@
 #define LLVM_CODEGEN_LIVEINTERVALCALC_H
 
 #include "llvm/CodeGen/LiveRangeCalc.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -36,8 +37,8 @@ class LiveIntervalCalc : public LiveRangeCalc {
   /// (via <def,read-undef> operands).
   /// If @p LR is a main range, the @p LaneMask should be set to ~0, i.e.
   /// LaneBitmask::getAll().
-  void extendToUses(LiveRange &LR, Register Reg, LaneBitmask LaneMask,
-                    LiveInterval *LI = nullptr);
+  LLVM_ABI void extendToUses(LiveRange &LR, Register Reg, LaneBitmask LaneMask,
+                             LiveInterval *LI = nullptr);
 
 public:
   LiveIntervalCalc() = default;
@@ -45,7 +46,7 @@ public:
   /// createDeadDefs - Create a dead def in LI for every def operand of Reg.
   /// Each instruction defining Reg gets a new VNInfo with a corresponding
   /// minimal live range.
-  void createDeadDefs(LiveRange &LR, Register Reg);
+  LLVM_ABI void createDeadDefs(LiveRange &LR, Register Reg);
 
   /// Extend the live range of @p LR to reach all uses of Reg.
   ///
@@ -58,12 +59,12 @@ public:
   /// Calculates liveness for the register specified in live interval @p LI.
   /// Creates subregister live ranges as needed if subreg liveness tracking is
   /// enabled.
-  void calculate(LiveInterval &LI, bool TrackSubRegs);
+  LLVM_ABI void calculate(LiveInterval &LI, bool TrackSubRegs);
 
   /// For live interval \p LI with correct SubRanges construct matching
   /// information for the main live range. Expects the main live range to not
   /// have any segments or value numbers.
-  void constructMainRangeFromSubranges(LiveInterval &LI);
+  LLVM_ABI void constructMainRangeFromSubranges(LiveInterval &LI);
 };
 
 } // end namespace llvm

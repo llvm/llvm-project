@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace Fortran::lower {
@@ -94,6 +95,16 @@ bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y);
 bool isEqual(const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
              const Fortran::lower::ExplicitIterSpace::ArrayBases &y);
+
+template <typename OpType, typename OperandsStructType>
+void privatizeSymbol(
+    lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
+    lower::SymMap &symTable,
+    llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
+    std::optional<llvm::omp::Directive> dir = std::nullopt);
+
 } // end namespace Fortran::lower
 
 // DenseMapInfo for pointers to Fortran::lower::SomeExpr.

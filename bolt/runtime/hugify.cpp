@@ -24,7 +24,7 @@
   {}
 #endif
 
-// Function constains trampoline to _start,
+// Function constrains trampoline to _start,
 // so we can resume regular execution of the function that we hooked.
 extern void __bolt_hugify_start_program();
 

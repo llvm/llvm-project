@@ -6,14 +6,14 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 define void @foo(ptr %ptr, ptr %ptr.2) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[PTR_2:%.*]], i64 4
 ; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 640
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[PTR_2]], [[UGLYGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[PTR]], [[UGLYGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -27,21 +27,18 @@ define void @foo(ptr %ptr, ptr %ptr.2) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 3
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[PTR_2]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP6]], i32 0
-; CHECK-NEXT:    store <4 x i64> [[VEC_IND]], ptr [[TMP7]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store <4 x i64> [[VEC_IND]], ptr [[TMP6]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 80
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 80, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 82, [[MIDDLE_BLOCK]] ], [ 2, [[ENTRY]] ], [ 2, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CAN_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[CAN_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ], [ [[TMP12:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CAN_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[CAN_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi i64 [ 2, [[SCALAR_PH]] ], [ [[TMP12:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 4294967295
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP9]] to i32
 ; CHECK-NEXT:    store i32 [[TMP11]], ptr [[PTR_2]], align 4

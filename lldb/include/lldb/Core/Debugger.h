@@ -107,6 +107,9 @@ public:
 
   static void Destroy(lldb::DebuggerSP &debugger_sp);
 
+  /// Get the build configuration as structured data.
+  static StructuredData::DictionarySP GetBuildConfiguration();
+
   static lldb::DebuggerSP FindDebuggerWithID(lldb::user_id_t id);
 
   static lldb::DebuggerSP
@@ -181,7 +184,15 @@ public:
     return m_target_list.GetSelectedTarget();
   }
 
+  /// Get the execution context representing the selected entities in the
+  /// selected target.
   ExecutionContext GetSelectedExecutionContext();
+
+  /// Similar to GetSelectedExecutionContext but returns a
+  /// ExecutionContextRef, and will hold the dummy target if no target is
+  /// currently selected.
+  ExecutionContextRef GetSelectedExecutionContextRef();
+
   /// Get accessor for the target list.
   ///
   /// The target list is part of the global debugger object. This the single
@@ -227,6 +238,8 @@ public:
 
   const char *GetIOHandlerHelpPrologue();
 
+  void RefreshIOHandler();
+
   void ClearIOHandlers();
 
   bool EnableLog(llvm::StringRef channel,
@@ -243,17 +256,17 @@ public:
 
   bool GetAutoConfirm() const;
 
-  const FormatEntity::Entry *GetDisassemblyFormat() const;
+  FormatEntity::Entry GetDisassemblyFormat() const;
 
-  const FormatEntity::Entry *GetFrameFormat() const;
+  FormatEntity::Entry GetFrameFormat() const;
 
-  const FormatEntity::Entry *GetFrameFormatUnique() const;
+  FormatEntity::Entry GetFrameFormatUnique() const;
 
   uint64_t GetStopDisassemblyMaxSize() const;
 
-  const FormatEntity::Entry *GetThreadFormat() const;
+  FormatEntity::Entry GetThreadFormat() const;
 
-  const FormatEntity::Entry *GetThreadStopFormat() const;
+  FormatEntity::Entry GetThreadStopFormat() const;
 
   lldb::ScriptLanguage GetScriptLanguage() const;
 
@@ -297,7 +310,7 @@ public:
 
   bool GetShowStatusline() const;
 
-  const FormatEntity::Entry *GetStatuslineFormat() const;
+  FormatEntity::Entry GetStatuslineFormat() const;
   bool SetStatuslineFormat(const FormatEntity::Entry &format);
 
   llvm::StringRef GetSeparator() const;
@@ -306,6 +319,10 @@ public:
   llvm::StringRef GetShowProgressAnsiPrefix() const;
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
+
+  llvm::StringRef GetDisabledAnsiPrefix() const;
+
+  llvm::StringRef GetDisabledAnsiSuffix() const;
 
   bool GetUseAutosuggestion() const;
 
@@ -361,7 +378,7 @@ public:
 
   bool GetNotifyVoid() const;
 
-  const std::string &GetInstanceName() { return m_instance_name; }
+  const std::string &GetInstanceName() const { return m_instance_name; }
 
   bool GetShowInlineDiagnostics() const;
 
@@ -413,7 +430,7 @@ public:
   void CancelInterruptRequest();
 
   /// Redraw the statusline if enabled.
-  void RedrawStatusline(bool update = true);
+  void RedrawStatusline(std::optional<ExecutionContextRef> exe_ctx_ref);
 
   /// This is the correct way to query the state of Interruption.
   /// If you are on the RunCommandInterpreter thread, it will check the
@@ -668,6 +685,7 @@ protected:
   lldb::LockableStreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
   /// @}
 
+  bool IsEscapeCodeCapableTTY();
   bool StatuslineSupported();
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
@@ -695,9 +713,9 @@ protected:
 
   void HandleBreakpointEvent(const lldb::EventSP &event_sp);
 
-  void HandleProcessEvent(const lldb::EventSP &event_sp);
+  lldb::ProcessSP HandleProcessEvent(const lldb::EventSP &event_sp);
 
-  void HandleThreadEvent(const lldb::EventSP &event_sp);
+  lldb::ThreadSP HandleThreadEvent(const lldb::EventSP &event_sp);
 
   void HandleProgressEvent(const lldb::EventSP &event_sp);
 

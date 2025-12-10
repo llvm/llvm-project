@@ -1,0 +1,5 @@
+# REQUIRES: system-linux
+# RUN: %lldb -b -s %s -c %p/Inputs/x86-64-linux-tkill.core | FileCheck %s
+
+thread list
+# CHECK: hread #1: tid = 2667987, 0x00007f9a265076cd, name = 'tkill.out', stop reason = SIGSEGV: sent by tkill system call (sender pid=2667987, uid=649752)

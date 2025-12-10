@@ -2,6 +2,10 @@ set(LLVM_TARGET_DEFINITIONS LLGSOptions.td)
 tablegen(LLVM LLGSOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLGSOptionsTableGen)
 
+set(LLVM_TARGET_DEFINITIONS PlatformOptions.td)
+tablegen(LLVM PlatformOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(PlatformOptionsTableGen)
+
 set(LLDB_PLUGINS)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
@@ -49,6 +53,9 @@ add_lldb_tool(lldb-server
     LLDBServerUtilities.cpp
     SystemInitializerLLGS.cpp
 
+    LINK_COMPONENTS
+      Option
+      Support
     LINK_LIBS
       lldbHost
       lldbInitialization
@@ -60,14 +67,11 @@ add_lldb_tool(lldb-server
       lldbPluginInstructionMIPS64
       lldbPluginInstructionRISCV
       ${LLDB_SYSTEM_LIBS}
-
-    LINK_COMPONENTS
-      Option
-      Support
 )
 
 add_dependencies(lldb-server
   LLGSOptionsTableGen
+  PlatformOptionsTableGen
   ${tablegen_deps}
 )
 target_include_directories(lldb-server PRIVATE "${LLDB_SOURCE_DIR}/source")

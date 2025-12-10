@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
@@ -29,8 +30,8 @@ public:
     return S->kind() == DebugSubsectionKind::FrameData;
   }
 
-  Error initialize(BinaryStreamReader Reader);
-  Error initialize(BinaryStreamRef Stream);
+  LLVM_ABI Error initialize(BinaryStreamReader Reader);
+  LLVM_ABI Error initialize(BinaryStreamRef Stream);
 
   FixedStreamArray<FrameData>::Iterator begin() const { return Frames.begin(); }
   FixedStreamArray<FrameData>::Iterator end() const { return Frames.end(); }
@@ -42,7 +43,7 @@ private:
   FixedStreamArray<FrameData> Frames;
 };
 
-class DebugFrameDataSubsection final : public DebugSubsection {
+class LLVM_ABI DebugFrameDataSubsection final : public DebugSubsection {
 public:
   DebugFrameDataSubsection(bool IncludeRelocPtr)
       : DebugSubsection(DebugSubsectionKind::FrameData),

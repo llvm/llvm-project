@@ -99,7 +99,7 @@ function(llvm_update_compile_flags name)
 endfunction()
 
 function(add_llvm_symbol_exports target_name export_file)
-  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     set(native_export_file "${target_name}.exports")
     add_custom_command(OUTPUT ${native_export_file}
       COMMAND sed -e "s/^/_/" < ${export_file} > ${native_export_file}
@@ -108,7 +108,7 @@ function(add_llvm_symbol_exports target_name export_file)
       COMMENT "Creating export file for ${target_name}")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-exported_symbols_list,\"${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}\"")
-  elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     # FIXME: `-Wl,-bE:` bypasses whatever handling there is in the build
     # compiler driver to defer to the specified export list.
     set(native_export_file "${export_file}")
@@ -137,7 +137,7 @@ function(add_llvm_symbol_exports target_name export_file)
       set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                    LINK_FLAGS "  -Wl,--version-script,\"${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}\"")
     endif()
-  elseif(WIN32)
+  elseif(WIN32 OR CYGWIN)
     set(native_export_file "${target_name}.def")
 
     add_custom_command(OUTPUT ${native_export_file}
@@ -153,7 +153,7 @@ function(add_llvm_symbol_exports target_name export_file)
     elseif(CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
       # clang in msvc mode, calling a link.exe/lld-link style linker
       set(export_file_linker_flag "-Wl,/DEF:${export_file_linker_flag}")
-    elseif(MINGW)
+    elseif(MINGW OR CYGWIN)
       # ${export_file_linker_flag}, which is the plain file name, works as is
       # when passed to the compiler driver, which then passes it on to the
       # linker as an input file.
@@ -257,12 +257,6 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
       set(LLVM_LINKER_IS_GNULD YES CACHE INTERNAL "")
       message(STATUS "Linker detection: GNU ld")
-    elseif("${stderr}" MATCHES "(illumos)" OR
-           "${stdout}" MATCHES "(illumos)")
-      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
-      set(LLVM_LINKER_IS_SOLARISLD YES CACHE INTERNAL "")
-      set(LLVM_LINKER_IS_SOLARISLD_ILLUMOS YES CACHE INTERNAL "")
-      message(STATUS "Linker detection: Solaris ld (illumos)")
     elseif("${stderr}" MATCHES "Solaris Link Editors" OR
            "${stdout}" MATCHES "Solaris Link Editors")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
@@ -274,7 +268,7 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     endif()
   endif()
 
-  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     include(CheckLinkerFlag)
     # Linkers that support Darwin allow a setting to internalize all symbol exports,
     # aiding in reducing binary size and often is applicable for executables.
@@ -296,6 +290,7 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
 endif()
 
 function(add_link_opts target_name)
+  include(CheckLinkerFlag)
   get_llvm_distribution(${target_name} in_distribution in_distribution_var)
   if(NOT in_distribution)
     # Don't LTO optimize targets that aren't part of any distribution.
@@ -320,14 +315,13 @@ function(add_link_opts target_name)
   # linker in a context where the optimizations are not important.
   if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
     if(NOT LLVM_NO_DEAD_STRIP)
-      if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+      if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
         # ld64's implementation of -dead_strip breaks tools that use plugins.
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,-dead_strip")
-      elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
+      elseif("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
         # Support for ld -z discard-unused=sections was only added in
         # Solaris 11.4.  GNU ld ignores it, but warns every time.
-        include(CheckLinkerFlag)
         check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
         if (LINKER_SUPPORTS_Z_DISCARD_UNUSED)
           set_property(TARGET ${target_name} APPEND_STRING PROPERTY
@@ -339,7 +333,7 @@ function(add_link_opts target_name)
                      LINK_FLAGS " -Wl,--gc-sections")
       endif()
     else() #LLVM_NO_DEAD_STRIP
-      if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+      if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,-bnogc")
       endif()
@@ -351,10 +345,16 @@ function(add_link_opts target_name)
                  LINK_FLAGS " -Wl,-no_warn_duplicate_libraries")
   endif()
 
-  if(ARG_SUPPORT_PLUGINS AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  if(ARG_SUPPORT_PLUGINS AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-brtl")
   endif()
+
+  # Check for existence of symbolic functions flag. Not supported
+  # by the older BFD linker (such as on some OpenBSD archs), the
+  # MinGW driver for LLD, and the Solaris native linker.
+  check_linker_flag(CXX "-Wl,-Bsymbolic-functions"
+                    LLVM_LINKER_SUPPORTS_B_SYMBOLIC_FUNCTIONS)
 endfunction(add_link_opts)
 
 # Set each output directory according to ${CMAKE_CONFIGURATION_TYPES}.
@@ -666,8 +666,8 @@ function(llvm_add_library name)
     # When building shared objects for each target there are some internal APIs
     # that are used across shared objects which we can't hide.
     if (LLVM_BUILD_LLVM_DYLIB_VIS AND NOT BUILD_SHARED_LIBS AND NOT APPLE AND
-        (NOT (WIN32 OR CYGWIN) OR (MINGW AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")) AND
-        NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX") AND
+        (NOT (WIN32 OR CYGWIN) OR ((MINGW OR CYGWIN) AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")) AND
+        NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX") AND
         NOT DEFINED CMAKE_CXX_VISIBILITY_PRESET)
 
       set_target_properties(${name} PROPERTIES
@@ -1094,7 +1094,7 @@ macro(add_llvm_executable name)
     llvm_update_compile_flags(${name})
   endif()
 
-  if (ARG_SUPPORT_PLUGINS AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  if (ARG_SUPPORT_PLUGINS AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set(LLVM_NO_DEAD_STRIP On)
   endif()
 
@@ -1359,6 +1359,14 @@ function(export_executable_symbols target)
     while(NOT "${new_libs}" STREQUAL "")
       foreach(lib ${new_libs})
         if(TARGET ${lib})
+          # If this is a ALIAS target, continue with its aliasee instead.
+          get_target_property(aliased_lib ${lib} ALIASED_TARGET)
+          if(aliased_lib)
+             set(new_libs ${lib_aliased_target})
+             list(APPEND newer_libs ${aliased_lib})
+             continue()
+          endif()
+
           get_target_property(lib_type ${lib} TYPE)
           if("${lib_type}" STREQUAL "STATIC_LIBRARY")
             list(APPEND static_libs ${lib})
@@ -1417,7 +1425,7 @@ function(export_executable_symbols target)
     # CMake doesn't set CMAKE_EXE_EXPORTS_${lang}_FLAG on Solaris, so
     # ENABLE_EXPORTS has no effect.  While Solaris ld defaults to -rdynamic
     # behaviour, GNU ld needs it.
-    if (APPLE OR ${CMAKE_SYSTEM_NAME} STREQUAL "SunOS")
+    if (APPLE OR "${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")
       set_property(TARGET ${target} APPEND_STRING PROPERTY
         LINK_FLAGS " -rdynamic")
     endif()
@@ -1442,6 +1450,7 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-lib
     llvm-mca
     llvm-ml
+    llvm-ml64
     llvm-nm
     llvm-objcopy
     llvm-objdump
@@ -1746,6 +1755,31 @@ function(add_llvm_implicit_projects)
   llvm_add_implicit_projects(LLVM)
 endfunction(add_llvm_implicit_projects)
 
+function(set_unittest_link_flags target_name)
+  # The runtime benefits of LTO don't outweight the compile time costs for
+  # tests.
+  if(LLVM_ENABLE_LTO)
+    if((UNIX OR MINGW) AND LINKER_IS_LLD)
+      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
+        # When using FatLTO, just use relocatable linking.
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
+      else()
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--lto-O0")
+      endif()
+    elseif(LINKER_IS_LLD_LINK)
+      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                    LINK_FLAGS " /opt:lldlto=0")
+    elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
+      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                    LINK_FLAGS " -Wl,-mllvm,-O0")
+    endif()
+  endif()
+
+  target_link_options(${target_name} PRIVATE "${LLVM_UNITTEST_LINK_FLAGS}")
+endfunction(set_unittest_link_flags)
+
 # Generic support for adding a unittest.
 function(add_unittest test_suite test_name)
   if( NOT LLVM_BUILD_TESTS )
@@ -1769,34 +1803,20 @@ function(add_unittest test_suite test_name)
   get_subproject_title(subproject_title)
   set_target_properties(${test_name} PROPERTIES FOLDER "${subproject_title}/Tests/Unit")
 
-  # The runtime benefits of LTO don't outweight the compile time costs for tests.
-  if(LLVM_ENABLE_LTO)
-    if((UNIX OR MINGW) AND LINKER_IS_LLD)
-      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
-        # When using FatLTO, just use relocatable linking.
-        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
-      else()
-        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,--lto-O0")
-      endif()
-    elseif(LINKER_IS_LLD_LINK)
-      set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " /opt:lldlto=0")
-    elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
-      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " -Wl,-mllvm,-O0")
-    endif()
-  endif()
-
-  target_link_options(${test_name} PRIVATE "${LLVM_UNITTEST_LINK_FLAGS}")
+  set_unittest_link_flags(${test_name})
 
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${test_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   # libpthreads overrides some standard library symbols, so main
   # executable must be linked with it in order to provide consistent
   # API for all shared libaries loaded by this executable.
-  target_link_libraries(${test_name} PRIVATE llvm_gtest_main llvm_gtest ${LLVM_PTHREAD_LIB})
+  # default_gtest should be an alias to either llvm_gtest or runtimes_gtest.
+  # If it is not defined, fall back to llvm_gtest.
+  if(TARGET default_gtest)
+    target_link_libraries(${test_name} PRIVATE default_gtest_main default_gtest ${LLVM_PTHREAD_LIB})
+  else ()
+    target_link_libraries(${test_name} PRIVATE llvm_gtest_main llvm_gtest ${LLVM_PTHREAD_LIB})
+  endif ()
 
   add_dependencies(${test_suite} ${test_name})
 endfunction()
@@ -2192,7 +2212,12 @@ endfunction()
 
 function(add_lit_testsuites project directory)
   if (NOT LLVM_ENABLE_IDE)
-    cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "FOLDER" "PARAMS;DEPENDS;ARGS" ${ARGN})
+    cmake_parse_arguments(ARG
+      "EXCLUDE_FROM_CHECK_ALL"
+      "FOLDER;BINARY_DIR"
+      "PARAMS;DEPENDS;ARGS;SKIP"
+      ${ARGN}
+      )
 
     if (NOT ARG_FOLDER)
       get_subproject_title(subproject_title)
@@ -2213,13 +2238,28 @@ function(add_lit_testsuites project directory)
       endif()
 
       # Create a check- target for the directory.
-      string(REPLACE ${directory} "" name_slash ${lit_suite})
+      string(REPLACE "${directory}/" "" name_slash ${lit_suite})
+      set(_should_skip FALSE)
+      foreach(skip IN LISTS ARG_SKIP)
+        if(name_slash MATCHES "${skip}")
+          set(_should_skip TRUE)
+          break()
+        endif()
+      endforeach()
+      if (_should_skip)
+        continue()
+      endif()
       if (name_slash)
+        set(filter ${name_slash})
         string(REPLACE "/" "-" name_slash ${name_slash})
         string(REPLACE "\\" "-" name_dashes ${name_slash})
-        string(TOLOWER "${project}${name_dashes}" name_var)
+        string(TOLOWER "${project}-${name_dashes}" name_var)
+        set(lit_args ${lit_suite})
+        if (ARG_BINARY_DIR)
+          set(lit_args ${ARG_BINARY_DIR} --filter=${filter})
+        endif()
         add_lit_target("check-${name_var}" "Running lit suite ${lit_suite}"
-          ${lit_suite}
+          ${lit_args}
           ${EXCLUDE_FROM_CHECK_ALL}
           PARAMS ${ARG_PARAMS}
           DEPENDS ${ARG_DEPENDS}
@@ -2535,7 +2575,7 @@ function(llvm_setup_rpath name)
   if (APPLE)
     set(_install_name_dir INSTALL_NAME_DIR "@rpath")
     set(_install_rpath "@loader_path/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
-  elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND BUILD_SHARED_LIBS)
+  elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX" AND BUILD_SHARED_LIBS)
     # $ORIGIN is not interpreted at link time by aix ld.
     # Since BUILD_SHARED_LIBS is only recommended for use by developers,
     # hardcode the rpath to build/install lib dir first in this mode.
@@ -2544,7 +2584,7 @@ function(llvm_setup_rpath name)
   elseif(UNIX)
     set(_build_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
     set(_install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}")
-    if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
+    if("${CMAKE_SYSTEM_NAME}" MATCHES "(FreeBSD|DragonFly)")
       set_property(TARGET ${name} APPEND_STRING PROPERTY
                    LINK_FLAGS " -Wl,-z,origin ")
     endif()
@@ -2562,7 +2602,7 @@ function(llvm_setup_rpath name)
   # On AIX, the tool chain doesn't support modifying rpaths/libpaths for XCOFF
   # on install at the moment, so BUILD_WITH_INSTALL_RPATH is required.
   if("${CMAKE_BUILD_RPATH}" STREQUAL "")
-    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin|AIX")
+    if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin|AIX")
       set_property(TARGET ${name} PROPERTY BUILD_WITH_INSTALL_RPATH ON)
     else()
       set_property(TARGET ${name} APPEND PROPERTY BUILD_RPATH "${_build_rpath}")

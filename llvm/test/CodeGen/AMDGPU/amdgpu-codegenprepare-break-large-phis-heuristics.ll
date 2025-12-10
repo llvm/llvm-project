@@ -726,16 +726,16 @@ define amdgpu_kernel void @used_by_unbreakable_and_breakable_phi(<5 x double> %i
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE815:%.*]] = extractelement <5 x double> [[LARGEPHI_INSERTSLICE4]], i64 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE01]], [[THEN1]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE22]], [[THEN1]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE43]], [[THEN1]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE64]], [[THEN1]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE85]], [[THEN1]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE011]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE212]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE413]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE614]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE815]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE01]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE22]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE43]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE64]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE85]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE011]], [[THEN1]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE212]], [[THEN1]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE413]], [[THEN1]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE614]], [[THEN1]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE815]], [[THEN1]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[FINALLY]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE016:%.*]] = insertelement <5 x double> poison, double [[TMP10]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE117:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE016]], double [[TMP11]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE218:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE117]], double [[TMP12]], i64 2
@@ -746,8 +746,8 @@ define amdgpu_kernel void @used_by_unbreakable_and_breakable_phi(<5 x double> %i
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE28:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE17]], double [[TMP7]], i64 2
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE39:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE28]], double [[TMP8]], i64 3
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE410:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE39]], double [[TMP9]], i64 4
-; CHECK-NEXT:    store <5 x double> [[LARGEPHI_INSERTSLICE410]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    store <5 x double> [[LARGEPHI_INSERTSLICE420]], ptr [[OUT]], align 1
+; CHECK-NEXT:    store <5 x double> [[LARGEPHI_INSERTSLICE410]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1187,11 +1187,11 @@ define amdgpu_kernel void @test_breakable_chain_5_out_of_7(<5 x double> %in, ptr
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE960:%.*]] = extractelement <5 x double> [[IN]], i64 4
 ; CHECK-NEXT:    br i1 [[COND]], label [[END:%.*]], label [[COND5_END]]
 ; CHECK:       cond5.end:
-; CHECK-NEXT:    [[TMP25:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE041]], [[COND4_END]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[COND5_TRUE]] ]
-; CHECK-NEXT:    [[TMP26:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE242]], [[COND4_END]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[COND5_TRUE]] ]
-; CHECK-NEXT:    [[TMP27:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE443]], [[COND4_END]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[COND5_TRUE]] ]
-; CHECK-NEXT:    [[TMP28:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE644]], [[COND4_END]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[COND5_TRUE]] ]
-; CHECK-NEXT:    [[TMP29:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE845]], [[COND4_END]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[COND5_TRUE]] ]
+; CHECK-NEXT:    [[TMP25:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE041]], [[COND4_END]] ], [ [[LARGEPHI_EXTRACTSLICE152]], [[COND5_TRUE]] ]
+; CHECK-NEXT:    [[TMP26:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE242]], [[COND4_END]] ], [ [[LARGEPHI_EXTRACTSLICE354]], [[COND5_TRUE]] ]
+; CHECK-NEXT:    [[TMP27:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE443]], [[COND4_END]] ], [ [[LARGEPHI_EXTRACTSLICE556]], [[COND5_TRUE]] ]
+; CHECK-NEXT:    [[TMP28:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE644]], [[COND4_END]] ], [ [[LARGEPHI_EXTRACTSLICE758]], [[COND5_TRUE]] ]
+; CHECK-NEXT:    [[TMP29:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE845]], [[COND4_END]] ], [ [[LARGEPHI_EXTRACTSLICE960]], [[COND5_TRUE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE046:%.*]] = insertelement <5 x double> poison, double [[TMP25]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE147:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE046]], double [[TMP26]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE248:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE147]], double [[TMP27]], i64 2
@@ -1204,11 +1204,11 @@ define amdgpu_kernel void @test_breakable_chain_5_out_of_7(<5 x double> %in, ptr
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE859:%.*]] = extractelement <5 x double> [[LARGEPHI_INSERTSLICE450]], i64 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP30:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE051]], [[COND5_END]] ], [ [[LARGEPHI_EXTRACTSLICE152]], [[COND5_TRUE]] ]
-; CHECK-NEXT:    [[TMP31:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE253]], [[COND5_END]] ], [ [[LARGEPHI_EXTRACTSLICE354]], [[COND5_TRUE]] ]
-; CHECK-NEXT:    [[TMP32:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE455]], [[COND5_END]] ], [ [[LARGEPHI_EXTRACTSLICE556]], [[COND5_TRUE]] ]
-; CHECK-NEXT:    [[TMP33:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE657]], [[COND5_END]] ], [ [[LARGEPHI_EXTRACTSLICE758]], [[COND5_TRUE]] ]
-; CHECK-NEXT:    [[TMP34:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE859]], [[COND5_END]] ], [ [[LARGEPHI_EXTRACTSLICE960]], [[COND5_TRUE]] ]
+; CHECK-NEXT:    [[TMP30:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE051]], [[COND5_END]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[COND5_TRUE]] ]
+; CHECK-NEXT:    [[TMP31:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE253]], [[COND5_END]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[COND5_TRUE]] ]
+; CHECK-NEXT:    [[TMP32:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE455]], [[COND5_END]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[COND5_TRUE]] ]
+; CHECK-NEXT:    [[TMP33:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE657]], [[COND5_END]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[COND5_TRUE]] ]
+; CHECK-NEXT:    [[TMP34:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE859]], [[COND5_END]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[COND5_TRUE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE061:%.*]] = insertelement <5 x double> poison, double [[TMP30]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE162:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE061]], double [[TMP31]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE263:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE162]], double [[TMP32]], i64 2

@@ -7,7 +7,7 @@
 subroutine do_simd_aligned(A)
   use iso_c_binding
   type(c_ptr) :: A
-  
+
   ! CHECK:      omp.wsloop
   ! CHECK-NOT:  aligned({{.*}})
   ! CHECK-SAME: {
@@ -66,3 +66,34 @@ subroutine do_simd_reduction()
     end do
   !$omp end do simd
 end subroutine do_simd_reduction
+
+! CHECK-LABEL: func.func @_QPdo_simd_private(
+subroutine do_simd_private()
+  integer, allocatable :: tmp
+  ! CHECK:      omp.wsloop
+  ! CHECK-SAME: private(@[[PRIV_IVAR_SYM:.*]] %{{.*}} -> %[[PRIV_IVAR:.*]] : !fir.ref<i32>)
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-NEXT: omp.loop_nest (%[[IVAR:.*]]) : i32
+  !$omp do simd private(tmp)
+  do i=1, 10
+  ! CHECK:      %[[PRIV_IVAR_DECL:.*]]:2 = hlfir.declare %[[PRIV_IVAR]]
+  ! CHECK:      hlfir.assign %[[IVAR]] to %[[PRIV_IVAR_DECL]]#0
+  ! CHECK:      omp.yield
+    tmp = tmp + 1
+  end do
+end subroutine do_simd_private
+
+! CHECK-LABEL: func.func @_QPdo_simd_lastprivate_firstprivate(
+subroutine do_simd_lastprivate_firstprivate()
+  integer :: a
+  ! CHECK:      omp.wsloop
+  ! CHECK-SAME: private(@[[FIRSTPRIVATE_A_SYM:.*]] %{{.*}} -> %[[FIRSTPRIVATE_A:.*]], @[[PRIVATE_I_SYM:.*]] %{{.*}} -> %[[PRIVATE_I:.*]] : !fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK-NEXT: omp.simd
+  !$omp do simd lastprivate(a) firstprivate(a)
+  do i = 1, 10
+    ! CHECK: %[[FIRSTPRIVATE_A_DECL:.*]]:2 = hlfir.declare %[[FIRSTPRIVATE_A]]
+    ! CHECK: %[[PRIVATE_I_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_I]]
+    a = a + 1
+  end do
+  !$omp end do simd
+end subroutine do_simd_lastprivate_firstprivate

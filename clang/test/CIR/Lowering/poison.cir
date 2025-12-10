@@ -1,0 +1,14 @@
+// RUN: cir-translate -cir-to-llvmir --disable-cc-lowering -o %t.ll %s
+// RUN: FileCheck -check-prefix=LLVM --input-file=%t.ll %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @lower_poison() -> !s32i {
+    %0 = cir.const #cir.poison : !s32i
+    cir.return %0 : !s32i
+  }
+  // LLVM-LABEL: @lower_poison
+  // LLVM-NEXT:    ret i32 poison
+  // LLVM-NEXT:  }
+}

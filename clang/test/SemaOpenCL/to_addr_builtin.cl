@@ -115,7 +115,7 @@ void test(void) {
 #if (__OPENCL_C_VERSION__ < CL_VERSION_2_0) || (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 && !defined(__opencl_c_generic_address_space))
   // expected-error@-2{{use of undeclared identifier 'to_global'}}
 #else
-  // expected-warning@-4{{incompatible pointer types initializing '__global char *__private' with an expression of type '__global int *'}}
+  // expected-error@-4{{incompatible pointer types initializing '__global char *__private' with an expression of type '__global int *'}}
   // expected-warning@-5{{passing non-generic address space pointer to to_global may cause dynamic conversion affecting performance}}
 #endif
 
@@ -123,7 +123,7 @@ void test(void) {
 #if (__OPENCL_C_VERSION__ < CL_VERSION_2_0) || (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 && !defined(__opencl_c_generic_address_space))
   // expected-error@-2{{use of undeclared identifier 'to_global'}}
 #else
-  // expected-warning@-4{{incompatible pointer types assigning to '__global float *__private' from '__global int *'}}
+  // expected-error@-4{{incompatible pointer types assigning to '__global float *__private' from '__global int *'}}
   // expected-warning@-5{{passing non-generic address space pointer to to_global may cause dynamic conversion affecting performance}}
 #endif
 

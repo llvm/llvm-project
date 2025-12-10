@@ -22,8 +22,6 @@
 #include <string>
 #include <vector>
 
-struct InstructionSpecifier;
-
 namespace llvm {
 class Record;
 #define X86_INSTR_MRM_MAPPING                                                  \
@@ -179,6 +177,8 @@ enum { ExplicitREX2 = 1, ExplicitEVEX = 3 };
 
 namespace X86Disassembler {
 class DisassemblerTables;
+struct InstructionSpecifier;
+
 /// Extract common fields of a single X86 instruction from a CodeGenInstruction
 struct RecognizableInstrBase {
   /// The OpPrefix field from the record
@@ -281,7 +281,7 @@ private:
   ///                         If register size does not match OpSize, then
   ///                         register sizes keep their size.
   /// @return               - The operand's type.
-  static OperandType typeFromString(const std::string &s, bool hasREX_W,
+  static OperandType typeFromString(StringRef Str, bool hasREX_W,
                                     uint8_t OpSize);
 
   /// immediateEncodingFromString - Translates an immediate encoding from the
@@ -292,28 +292,28 @@ private:
   /// @param OpSize  - Indicates whether this is an OpSize16 instruction.
   ///                  If it is not, then 16-bit immediate operands stay 16-bit.
   /// @return        - The operand's encoding.
-  static OperandEncoding immediateEncodingFromString(const std::string &s,
+  static OperandEncoding immediateEncodingFromString(StringRef Str,
                                                      uint8_t OpSize);
 
   /// rmRegisterEncodingFromString - Like immediateEncodingFromString, but
   ///   handles operands that are in the REG field of the ModR/M byte.
-  static OperandEncoding rmRegisterEncodingFromString(const std::string &s,
+  static OperandEncoding rmRegisterEncodingFromString(StringRef Str,
                                                       uint8_t OpSize);
 
   /// rmRegisterEncodingFromString - Like immediateEncodingFromString, but
   ///   handles operands that are in the REG field of the ModR/M byte.
-  static OperandEncoding roRegisterEncodingFromString(const std::string &s,
+  static OperandEncoding roRegisterEncodingFromString(StringRef Str,
                                                       uint8_t OpSize);
-  static OperandEncoding memoryEncodingFromString(const std::string &s,
+  static OperandEncoding memoryEncodingFromString(StringRef Str,
                                                   uint8_t OpSize);
-  static OperandEncoding relocationEncodingFromString(const std::string &s,
+  static OperandEncoding relocationEncodingFromString(StringRef Str,
                                                       uint8_t OpSize);
-  static OperandEncoding opcodeModifierEncodingFromString(const std::string &s,
+  static OperandEncoding opcodeModifierEncodingFromString(StringRef Str,
                                                           uint8_t OpSize);
-  static OperandEncoding vvvvRegisterEncodingFromString(const std::string &s,
+  static OperandEncoding vvvvRegisterEncodingFromString(StringRef Str,
                                                         uint8_t OpSize);
-  static OperandEncoding
-  writemaskRegisterEncodingFromString(const std::string &s, uint8_t OpSize);
+  static OperandEncoding writemaskRegisterEncodingFromString(StringRef Str,
+                                                             uint8_t OpSize);
 
   /// Adjust the encoding type for an operand based on the instruction.
   void adjustOperandEncoding(OperandEncoding &encoding);
@@ -336,12 +336,13 @@ private:
   /// @param operandMapping       - The operand mapping, which has an entry for
   ///                               each operand that indicates whether it is a
   ///                               duplicate, and of what.
+  using EncodingFn =
+      llvm::function_ref<OperandEncoding(StringRef s, uint8_t OpSize)>;
   void handleOperand(bool optional, unsigned &operandIndex,
                      unsigned &physicalOperandIndex,
                      unsigned numPhysicalOperands,
                      const unsigned *operandMapping,
-                     OperandEncoding (*encodingFromString)(const std::string &,
-                                                           uint8_t OpSize));
+                     EncodingFn encodingFromString);
 
   /// emitInstructionSpecifier - Loads the instruction specifier for the current
   ///   instruction into a DisassemblerTables.
@@ -382,6 +383,18 @@ bool isMemoryOperand(const Record *Rec);
 bool isImmediateOperand(const Record *Rec);
 unsigned getRegOperandSize(const Record *RegRec);
 unsigned getMemOperandSize(const Record *MemRec);
+
+/// byteFromBitsInit - Extracts a value at most 8 bits in width from a BitsInit.
+///   Useful for switch statements and the like.
+///
+/// @param B - A pointer to the BitsInit to be decoded.
+/// @return  - The field, with the first bit in the BitsInit as the lowest
+///            order bit.
+inline uint8_t byteFromBitsInit(const BitsInit *B) {
+  assert(B->getNumBits() <= 8 && "Field is too large for uint8_t!");
+  return static_cast<uint8_t>(*B->convertInitializerToInt());
+}
+
 } // namespace X86Disassembler
 } // namespace llvm
 #endif

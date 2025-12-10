@@ -1,3 +1,5 @@
+set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND Trace)
+
 option(LLDB_BUILD_INTEL_PT "Enable Building of Intel(R) Processor Trace Tool" OFF)
 
 add_subdirectory(common)

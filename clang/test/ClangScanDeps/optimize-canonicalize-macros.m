@@ -8,6 +8,9 @@
 // RUN:   -j 1 -format experimental-full -optimize-args=canonicalize-macros > %t/deps.db
 // RUN: cat %t/deps.db | FileCheck %s -DPREFIX=%/t
 
+// This tests that we have two scanning module variants.
+// RUN: find %t/module-cache -name "*.pcm" | wc -l | grep 2
+
 // Verify that there are only two variants and that the expected merges have
 // happened.
 

@@ -14,10 +14,12 @@
 #define LLVM_EXECUTIONENGINE_ORC_UNWINDINFOREGISTRATIONPLUGIN_H
 
 #include "llvm/ExecutionEngine/Orc/LinkGraphLinkingLayer.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::orc {
 
-class UnwindInfoRegistrationPlugin : public LinkGraphLinkingLayer::Plugin {
+class LLVM_ABI UnwindInfoRegistrationPlugin
+    : public LinkGraphLinkingLayer::Plugin {
 public:
   UnwindInfoRegistrationPlugin(ExecutionSession &ES, ExecutorAddr Register,
                                ExecutorAddr Deregister)

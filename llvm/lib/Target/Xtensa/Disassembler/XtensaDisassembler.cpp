@@ -15,6 +15,7 @@
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "TargetInfo/XtensaTargetInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -24,6 +25,7 @@
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "Xtensa-disassembler"
 
@@ -73,50 +75,112 @@ static DecodeStatus DecodeARRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-static const MCPhysReg MRDecoderTable[] = {Xtensa::M0, Xtensa::M1, Xtensa::M2,
-                                           Xtensa::M3};
-
 static DecodeStatus DecodeMRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,
                                           const void *Decoder) {
-  if (RegNo >= std::size(MRDecoderTable))
+  if (RegNo > 3)
     return MCDisassembler::Fail;
 
-  MCPhysReg Reg = MRDecoderTable[RegNo];
+  MCPhysReg Reg = Xtensa::M0 + RegNo;
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
-
-static const MCPhysReg MR01DecoderTable[] = {Xtensa::M0, Xtensa::M1};
 
 static DecodeStatus DecodeMR01RegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
-  if (RegNo > 2)
+  if (RegNo > 1)
     return MCDisassembler::Fail;
 
-  MCPhysReg Reg = MR01DecoderTable[RegNo];
+  MCPhysReg Reg = Xtensa::M0 + RegNo;
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
-
-static const MCPhysReg MR23DecoderTable[] = {Xtensa::M2, Xtensa::M3};
 
 static DecodeStatus DecodeMR23RegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
-  if (RegNo != 2 && RegNo != 3)
+  if (RegNo > 1)
     return MCDisassembler::Fail;
 
-  MCPhysReg Reg = MR23DecoderTable[RegNo - 2];
+  MCPhysReg Reg = Xtensa::M2 + RegNo;
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
 
-const MCPhysReg SRDecoderTable[] = {
-    Xtensa::SAR, 3,  Xtensa::ACCLO,      16, Xtensa::ACCHI,       17,
-    Xtensa::M0,  32, Xtensa::M1,         33, Xtensa::M2,          34,
-    Xtensa::M3,  35, Xtensa::WINDOWBASE, 72, Xtensa::WINDOWSTART, 73};
+static DecodeStatus DecodeFPRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                           uint64_t Address,
+                                           const void *Decoder) {
+  if (RegNo > 15)
+    return MCDisassembler::Fail;
+
+  MCPhysReg Reg = Xtensa::F0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeURRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                          uint64_t Address,
+                                          const MCDisassembler *Decoder) {
+  if (RegNo > 255)
+    return MCDisassembler::Fail;
+
+  Xtensa::RegisterAccessType RAType = Inst.getOpcode() == Xtensa::WUR
+                                          ? Xtensa::REGISTER_WRITE
+                                          : Xtensa::REGISTER_READ;
+
+  const XtensaDisassembler *Dis =
+      static_cast<const XtensaDisassembler *>(Decoder);
+  const MCRegisterInfo *MRI = Dis->getContext().getRegisterInfo();
+  MCPhysReg Reg = Xtensa::getUserRegister(RegNo, *MRI);
+  if (!Xtensa::checkRegister(Reg, Decoder->getSubtargetInfo().getFeatureBits(),
+                             RAType))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+struct DecodeRegister {
+  MCPhysReg Reg;
+  uint32_t RegNo;
+};
+
+const DecodeRegister SRDecoderTable[] = {
+    {Xtensa::LBEG, 0},         {Xtensa::LEND, 1},
+    {Xtensa::LCOUNT, 2},       {Xtensa::SAR, 3},
+    {Xtensa::BREG, 4},         {Xtensa::LITBASE, 5},
+    {Xtensa::SCOMPARE1, 12},   {Xtensa::ACCLO, 16},
+    {Xtensa::ACCHI, 17},       {Xtensa::M0, 32},
+    {Xtensa::M1, 33},          {Xtensa::M2, 34},
+    {Xtensa::M3, 35},          {Xtensa::WINDOWBASE, 72},
+    {Xtensa::WINDOWSTART, 73}, {Xtensa::IBREAKENABLE, 96},
+    {Xtensa::MEMCTL, 97},      {Xtensa::ATOMCTL, 99},
+    {Xtensa::DDR, 104},        {Xtensa::IBREAKA0, 128},
+    {Xtensa::IBREAKA1, 129},   {Xtensa::DBREAKA0, 144},
+    {Xtensa::DBREAKA1, 145},   {Xtensa::DBREAKC0, 160},
+    {Xtensa::DBREAKC1, 161},   {Xtensa::CONFIGID0, 176},
+    {Xtensa::EPC1, 177},       {Xtensa::EPC2, 178},
+    {Xtensa::EPC3, 179},       {Xtensa::EPC4, 180},
+    {Xtensa::EPC5, 181},       {Xtensa::EPC6, 182},
+    {Xtensa::EPC7, 183},       {Xtensa::DEPC, 192},
+    {Xtensa::EPS2, 194},       {Xtensa::EPS3, 195},
+    {Xtensa::EPS4, 196},       {Xtensa::EPS5, 197},
+    {Xtensa::EPS6, 198},       {Xtensa::EPS7, 199},
+    {Xtensa::CONFIGID1, 208},  {Xtensa::EXCSAVE1, 209},
+    {Xtensa::EXCSAVE2, 210},   {Xtensa::EXCSAVE3, 211},
+    {Xtensa::EXCSAVE4, 212},   {Xtensa::EXCSAVE5, 213},
+    {Xtensa::EXCSAVE6, 214},   {Xtensa::EXCSAVE7, 215},
+    {Xtensa::CPENABLE, 224},   {Xtensa::INTERRUPT, 226},
+    {Xtensa::INTCLEAR, 227},   {Xtensa::INTENABLE, 228},
+    {Xtensa::PS, 230},         {Xtensa::VECBASE, 231},
+    {Xtensa::EXCCAUSE, 232},   {Xtensa::DEBUGCAUSE, 233},
+    {Xtensa::CCOUNT, 234},     {Xtensa::PRID, 235},
+    {Xtensa::ICOUNT, 236},     {Xtensa::ICOUNTLEVEL, 237},
+    {Xtensa::EXCVADDR, 238},   {Xtensa::CCOMPARE0, 240},
+    {Xtensa::CCOMPARE1, 241},  {Xtensa::CCOMPARE2, 242},
+    {Xtensa::MISC0, 244},      {Xtensa::MISC1, 245},
+    {Xtensa::MISC2, 246},      {Xtensa::MISC3, 247}};
 
 static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,
@@ -124,12 +188,24 @@ static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
   if (RegNo > 255)
     return MCDisassembler::Fail;
 
-  for (unsigned i = 0; i < std::size(SRDecoderTable); i += 2) {
-    if (SRDecoderTable[i + 1] == RegNo) {
-      MCPhysReg Reg = SRDecoderTable[i];
+  Xtensa::RegisterAccessType RAType =
+      Inst.getOpcode() == Xtensa::WSR
+          ? Xtensa::REGISTER_WRITE
+          : (Inst.getOpcode() == Xtensa::RSR ? Xtensa::REGISTER_READ
+                                             : Xtensa::REGISTER_EXCHANGE);
 
-      if (!Xtensa::checkRegister(Reg,
-                                 Decoder->getSubtargetInfo().getFeatureBits()))
+  for (unsigned i = 0; i < std::size(SRDecoderTable); i++) {
+    if (SRDecoderTable[i].RegNo == RegNo) {
+      MCPhysReg Reg = SRDecoderTable[i].Reg;
+
+      // Handle special case. The INTERRUPT/INTSET registers use the same
+      // encoding, but INTERRUPT used for read and INTSET for write.
+      if (Reg == Xtensa::INTERRUPT && RAType == Xtensa::REGISTER_WRITE) {
+        Reg = Xtensa::INTSET;
+      }
+
+      if (!Xtensa::checkRegister(
+              Reg, Decoder->getSubtargetInfo().getFeatureBits(), RAType))
         return MCDisassembler::Fail;
 
       Inst.addOperand(MCOperand::createReg(Reg));
@@ -140,18 +216,13 @@ static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Fail;
 }
 
-const MCPhysReg BRDecoderTable[] = {
-    Xtensa::B0,  Xtensa::B1,  Xtensa::B2,  Xtensa::B3, Xtensa::B4,  Xtensa::B5,
-    Xtensa::B6,  Xtensa::B7,  Xtensa::B8,  Xtensa::B9, Xtensa::B10, Xtensa::B11,
-    Xtensa::B12, Xtensa::B13, Xtensa::B14, Xtensa::B15};
-
 static DecodeStatus DecodeBRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,
                                           const void *Decoder) {
-  if (RegNo >= std::size(BRDecoderTable))
+  if (RegNo > 15)
     return MCDisassembler::Fail;
 
-  MCPhysReg Reg = BRDecoderTable[RegNo];
+  MCPhysReg Reg = Xtensa::B0 + RegNo;
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }

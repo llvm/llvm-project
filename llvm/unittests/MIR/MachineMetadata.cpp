@@ -33,7 +33,7 @@ using namespace llvm;
 
 class MachineMetadataTest : public testing::Test {
 public:
-  MachineMetadataTest() {}
+  MachineMetadataTest() = default;
 
 protected:
   LLVMContext Context;
@@ -205,8 +205,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerAArch64) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...
@@ -354,8 +354,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerX64) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...
@@ -446,8 +446,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerAMDGPU) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...
@@ -564,8 +564,7 @@ body:             |
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
-  ASSERT_TRUE(Properties.hasProperty(
-      MachineFunctionProperties::Property::TiedOpsRewritten));
+  ASSERT_TRUE(Properties.hasTiedOpsRewritten());
 }
 
 TEST_F(MachineMetadataTest, NoTiedOpsRewritten) {
@@ -595,6 +594,5 @@ body:             |
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
-  ASSERT_FALSE(Properties.hasProperty(
-      MachineFunctionProperties::Property::TiedOpsRewritten));
+  ASSERT_FALSE(Properties.hasTiedOpsRewritten());
 }

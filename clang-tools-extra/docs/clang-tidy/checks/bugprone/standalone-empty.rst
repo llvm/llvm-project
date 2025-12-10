@@ -30,7 +30,9 @@ A call to ``clear()`` would appropriately clear the contents of the range:
   ...
   v.clear();
 
-Limitations:
+
+Limitations
+-----------
 
 * Doesn't warn if ``empty()`` is defined and used with the ignore result in the
   class template definition (for example in the library implementation). These

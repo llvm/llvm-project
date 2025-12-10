@@ -44,9 +44,6 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Decayed" IncludeView="poly">{(clang::DecayedType *)this,na}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Decayed" IncludeView="left">{(clang::DecayedType *)this,view(left)na}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Decayed" IncludeView="right">{(clang::DecayedType *)this,view(right)na}</DisplayString>
-    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Elaborated" IncludeView="poly">{(clang::ElaboratedType *)this,na}</DisplayString>
-    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Elaborated" IncludeView="left">{(clang::ElaboratedType *)this,view(left)na}</DisplayString>
-    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Elaborated" IncludeView="right">{(clang::ElaboratedType *)this,view(right)na}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::TemplateTypeParm" IncludeView="poly">{*(clang::TemplateTypeParmType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::TemplateTypeParm" IncludeView="cpp">{*(clang::TemplateTypeParmType *)this,view(cpp)}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::SubstTemplateTypeParm" IncludeView="poly">{*(clang::SubstTemplateTypeParmType *)this}</DisplayString>
@@ -94,7 +91,6 @@ For later versions of Visual Studio, no setup is required-->
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::IncompleteArray">(clang::IncompleteArrayType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::Attributed">*(clang::AttributedType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::Decayed">(clang::DecayedType *)this</ExpandedItem>
-      <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::Elaborated">(clang::ElaboratedType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::TemplateTypeParm">(clang::TemplateTypeParmType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::SubstTemplateTypeParm">(clang::SubstTemplateTypeParmType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::Record">(clang::RecordType *)this</ExpandedItem>
@@ -426,16 +422,6 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{OriginalTy}</DisplayString>
     <Expand>
       <ExpandedItem>(clang::AdjustedType *)this</ExpandedItem>
-    </Expand>
-  </Type>
-  <Type Name="clang::ElaboratedType">
-    <DisplayString IncludeView="left">{NamedType,view(left)}</DisplayString>
-    <DisplayString IncludeView="right">{NamedType,view(right)}</DisplayString>
-    <DisplayString>{NamedType}</DisplayString>
-    <Expand>
-      <Item Name="[Keyword]">(clang::ElaboratedTypeKeyword)TypeWithKeywordBits.Keyword</Item>
-      <Item Name="[Nested Name Specifier]">NNS</Item>
-      <Item Name="[Underlying Type]">NamedType,view(cmn)</Item>
     </Expand>
   </Type>
   <Type Name="clang::TemplateTypeParmType">
@@ -1069,7 +1055,7 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::LookupResult">
-    <DisplayString Condition="ResultKind == clang::LookupResult::Ambiguous">{Ambiguity,en}: {Decls}</DisplayString>
+    <DisplayString Condition="ResultKind == clang::LookupResultKind::Ambiguous">{Ambiguity,en}: {Decls}</DisplayString>
     <DisplayString>{ResultKind,en}: {Decls}</DisplayString>
   </Type>
   <Type Name="clang::ActionResult&lt;*, 0&gt;">

@@ -32,7 +32,7 @@ data from an executable or a shared library [3]_ consists of a header and
 multiple sections, with each section as a memory dump. The raw profile data needs
 to be reasonably compact and fast to generate.
 
-There are no backward or forward version compatiblity guarantees for the raw profile
+There are no backward or forward version compatibility guarantees for the raw profile
 format. That is, compilers and tools `require`_ a specific raw profile version
 to parse the profiles.
 
@@ -80,7 +80,7 @@ of all the sections ahead of it.
 
 .. note::
    Sections might be padded to meet specific alignment requirements. For
-   simplicity, header fields and data sections solely for padding purpose are
+   simplicity, header fields and data sections solely for padding purposes are
    omitted in the data layout graph above and the rest of this document.
 
 Header
@@ -195,7 +195,7 @@ The fields are documented as follows:
 
 ``FuncHash``
   A checksum of the function's IR, taking control flow graph and instrumented
-  value sites into accounts. See `computeCFGHash`_ for details.
+  value sites into account. See `computeCFGHash`_ for details.
 
 .. _`computeCFGHash`: https://github.com/llvm/llvm-project/blob/7c3b67d2038cfb48a80299089f6a1308eee1df7f/llvm/lib/Transforms/Instrumentation/PGOInstrumentation.cpp#L616-L685
 
@@ -210,7 +210,7 @@ The fields are documented as follows:
 .. _`commit a1532ed`: https://github.com/llvm/llvm-project/commit/a1532ed27582038e2d9588108ba0fe8237f01844
 
   .. note::
-    ``CounterPtr`` might represent a different value for non-IRPGO use case. For
+    ``CounterPtr`` might represent a different value for non-IRPGO use cases. For
     example, for `binary profile correlation`_, it represents the absolute address of counter.
     When in doubt, check source code.
 
@@ -221,7 +221,7 @@ The fields are documented as follows:
   corresponding bitmap.
 
   .. note::
-    Similar to `CounterPtr`_, this field may represent a different value for non-IRPGO use case.
+    Similar to `CounterPtr`_, this field may represent a different value for non-IRPGO use cases.
 
 ``FunctionPointer``
   Records the function address when instrumented binary runs. This is used to
@@ -381,7 +381,7 @@ This section contains the profile data for value profiling.
 The value profiles corresponding to a profile metadata are serialized contiguously
 as one record, and value profile records are stored in the same order as the
 respective profile data, such that a raw profile reader `advances`_ the pointer to
-profile data and the pointer to value profile records simutaneously [5]_ to find
+profile data and the pointer to value profile records simultaneously [5]_ to find
 value profiles for a per function, per `FuncHash`_ profile data.
 
 .. _`advances`: https://github.com/llvm/llvm-project/blob/7e15fa9161eda7497a5d6abf0d951a1d12d86550/llvm/include/llvm/ProfileData/InstrProfReader.h#L456-L457
@@ -520,7 +520,7 @@ based profile data. For supported usages, check out `llvm-profdata documentation
 .. [4] The counter section is used by a few variant types (like temporal
    profiling) and might have different semantics there.
 .. [5] The step size of data pointer is the ``sizeof(ProfileData)``, and the step
-   size of value profile pointer is calcuated based on the number of collected
+   size of value profile pointer is calculated based on the number of collected
    values.
 
 .. _`lightweight instrumentation`: https://groups.google.com/g/llvm-dev/c/r03Z6JoN7d4

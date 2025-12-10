@@ -57,6 +57,7 @@ createMipsInstructionSelector(const MipsTargetMachine &, const MipsSubtarget &,
                               const MipsRegisterBankInfo &);
 
 void initializeMicroMipsSizeReducePass(PassRegistry &);
+void initializeMipsAsmPrinterPass(PassRegistry &);
 void initializeMipsBranchExpansionPass(PassRegistry &);
 void initializeMipsDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeMipsDelaySlotFillerPass(PassRegistry &);

@@ -135,6 +135,19 @@ public:
   /// hook on the AsmParser.
   virtual void printFloat(const APFloat &value);
 
+  /// Print the given integer value. This is useful to force a uint8_t/int8_t to
+  /// be printed as an integer instead of a char.
+  template <typename IntT>
+  std::enable_if_t<std::is_integral_v<IntT>, void> printInteger(IntT value) {
+    // Handle int8_t/uint8_t specially to avoid printing as char
+    if constexpr (std::is_same_v<IntT, int8_t> ||
+                  std::is_same_v<IntT, uint8_t>) {
+      getStream() << static_cast<int>(value);
+    } else {
+      getStream() << value;
+    }
+  }
+
   virtual void printType(Type type);
   virtual void printAttribute(Attribute attr);
 
@@ -193,6 +206,9 @@ public:
   /// Print the given attribute without its type. The corresponding parser must
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr);
+
+  /// Print the given named attribute.
+  virtual void printNamedAttribute(NamedAttribute attr);
 
   /// Print the alias for the given attribute, return failure if no alias could
   /// be printed.
@@ -655,6 +671,12 @@ public:
 
   /// Parse a '+' token if present.
   virtual ParseResult parseOptionalPlus() = 0;
+
+  /// Parse a '/' token.
+  virtual ParseResult parseSlash() = 0;
+
+  /// Parse a '/' token if present.
+  virtual ParseResult parseOptionalSlash() = 0;
 
   /// Parse a '-' token.
   virtual ParseResult parseMinus() = 0;

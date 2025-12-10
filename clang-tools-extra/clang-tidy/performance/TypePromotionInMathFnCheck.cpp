@@ -1,4 +1,4 @@
-//===--- TypePromotionInMathFnCheck.cpp - clang-tidy-----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -155,18 +155,18 @@ void TypePromotionInMathFnCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
   assert(Call != nullptr);
 
-  StringRef OldFnName = Call->getDirectCallee()->getName();
+  const StringRef OldFnName = Call->getDirectCallee()->getName();
 
   // In C++ mode, we prefer std::foo to ::foof.  But some of these suggestions
   // are only valid in C++11 and newer.
-  static llvm::StringSet<> Cpp11OnlyFns = {
+  static const llvm::StringSet<> Cpp11OnlyFns = {
       "acosh",     "asinh",      "atanh",     "cbrt",   "copysign", "erf",
       "erfc",      "exp2",       "expm1",     "fdim",   "fma",      "fmax",
       "fmin",      "hypot",      "ilogb",     "lgamma", "llrint",   "llround",
       "log1p",     "log2",       "logb",      "lrint",  "lround",   "nearbyint",
       "nextafter", "nexttoward", "remainder", "remquo", "rint",     "round",
       "scalbln",   "scalbn",     "tgamma",    "trunc"};
-  bool StdFnRequiresCpp11 = Cpp11OnlyFns.count(OldFnName);
+  const bool StdFnRequiresCpp11 = Cpp11OnlyFns.contains(OldFnName);
 
   std::string NewFnName;
   bool FnInCmath = false;

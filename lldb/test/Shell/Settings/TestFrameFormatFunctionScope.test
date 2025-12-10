@@ -3,9 +3,12 @@
 # Test the ${function.scope} frame-format variable.
 
 # RUN: split-file %s %t
-# RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out
-# RUN: %lldb -o "settings set interpreter.stop-command-source-on-error false" \
-# RUN:       -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN: %clangxx_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+#
+# RUN: %clangxx_host -O0 %t/main.cpp -o %t-nodebug.out
+# RUN: %lldb -x -b -s %t/commands.input %t-nodebug.out -o exit 2>&1 \
 # RUN:       | FileCheck %s
 
 #--- main.cpp

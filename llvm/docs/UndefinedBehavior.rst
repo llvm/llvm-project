@@ -300,12 +300,12 @@ Take the following example function:
     entry:
       br label %loop
 
-   loop:
+    loop:
       %i = phi i32 [ 0, %entry ], [ %i2, %loop.end ]
       %cond = icmp ule i32 %i, %n
       br i1 %cond, label %loop.cont, label %exit
 
-   loop.cont:
+    loop.cont:
       br i1 %c, label %then, label %else
 
     then:
@@ -334,22 +334,22 @@ We would obtain the following IR:
     entry:
       br i1 %c, label %then, label %else
 
-   then:
+    then:
       %i = phi i32 [ 0, %entry ], [ %i2, %then.cont ]
       %cond = icmp ule i32 %i, %n
       br i1 %cond, label %then.cont, label %exit
 
-   then.cont:
+    then.cont:
       ...
       %i2 = add i32 %i, 1
       br label %then
 
-   else:
+    else:
       %i3 = phi i32 [ 0, %entry ], [ %i4, %else.cont ]
       %cond = icmp ule i32 %i3, %n
       br i1 %cond, label %else.cont, label %exit
 
-   else.cont:
+    else.cont:
       ...
       %i4 = add i32 %i3, 1
       br label %else
@@ -381,6 +381,8 @@ We can make the loop unswitching optimization above correct as follows:
     entry:
       %c2 = freeze i1 %c
       br i1 %c2, label %then, label %else
+      ...
+    }
 
 
 Writing Tests Without Undefined Behavior
@@ -399,7 +401,7 @@ particular divisor value because our optimization kicks in regardless:
     define i32 @fn(i8 %a) {
       %div = udiv i8 %a, poison
       ...
-   }
+    }
 
 The issue with this test is that it triggers immediate UB. This prevents
 verification tools like Alive from validating the correctness of the
@@ -412,7 +414,7 @@ The test above should use a dummy function argument instead of using poison:
     define i32 @fn(i8 %a, i8 %dummy) {
       %div = udiv i8 %a, %dummy
       ...
-   }
+    }
 
 Common sources of immediate UB in tests include branching on undef/poison
 conditions and dereferencing undef/poison/null pointers.

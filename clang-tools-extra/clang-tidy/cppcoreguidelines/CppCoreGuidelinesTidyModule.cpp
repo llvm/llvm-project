@@ -1,4 +1,4 @@
-//===-- CppCoreGuidelinesTidyModule.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,6 +36,7 @@
 #include "OwningMemoryCheck.h"
 #include "PreferMemberInitializerCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
+#include "ProBoundsAvoidUncheckedContainerAccessCheck.h"
 #include "ProBoundsConstantArrayIndexCheck.h"
 #include "ProBoundsPointerArithmeticCheck.h"
 #include "ProTypeConstCastCheck.h"
@@ -48,6 +49,7 @@
 #include "RvalueReferenceParamNotMovedCheck.h"
 #include "SlicingCheck.h"
 #include "SpecialMemberFunctionsCheck.h"
+#include "UseEnumClassCheck.h"
 #include "VirtualClassDestructorCheck.h"
 
 namespace clang::tidy {
@@ -106,6 +108,8 @@ public:
         "cppcoreguidelines-prefer-member-initializer");
     CheckFactories.registerCheck<ProBoundsArrayToPointerDecayCheck>(
         "cppcoreguidelines-pro-bounds-array-to-pointer-decay");
+    CheckFactories.registerCheck<ProBoundsAvoidUncheckedContainerAccessCheck>(
+        "cppcoreguidelines-pro-bounds-avoid-unchecked-container-access");
     CheckFactories.registerCheck<ProBoundsConstantArrayIndexCheck>(
         "cppcoreguidelines-pro-bounds-constant-array-index");
     CheckFactories.registerCheck<ProBoundsPointerArithmeticCheck>(
@@ -131,6 +135,8 @@ public:
     CheckFactories.registerCheck<SlicingCheck>("cppcoreguidelines-slicing");
     CheckFactories.registerCheck<modernize::UseDefaultMemberInitCheck>(
         "cppcoreguidelines-use-default-member-init");
+    CheckFactories.registerCheck<UseEnumClassCheck>(
+        "cppcoreguidelines-use-enum-class");
     CheckFactories.registerCheck<misc::UnconventionalAssignOperatorCheck>(
         "cppcoreguidelines-c-copy-assignment-signature");
     CheckFactories.registerCheck<VirtualClassDestructorCheck>(
@@ -156,6 +162,7 @@ static ClangTidyModuleRegistry::Add<CppCoreGuidelinesModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the CppCoreGuidelinesModule.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int CppCoreGuidelinesModuleAnchorSource = 0;
 
 } // namespace clang::tidy

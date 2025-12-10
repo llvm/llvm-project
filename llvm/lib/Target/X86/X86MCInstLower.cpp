@@ -15,7 +15,7 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86InstComments.h"
-#include "MCTargetDesc/X86MCExpr.h"
+#include "MCTargetDesc/X86MCAsmInfo.h"
 #include "MCTargetDesc/X86ShuffleDecode.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "X86AsmPrinter.h"
@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Mangler.h"
@@ -48,6 +49,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include <string>
@@ -113,7 +115,7 @@ struct NoAutoPaddingScope {
 static void emitX86Nops(MCStreamer &OS, unsigned NumBytes,
                         const X86Subtarget *Subtarget);
 
-void X86AsmPrinter::StackMapShadowTracker::count(MCInst &Inst,
+void X86AsmPrinter::StackMapShadowTracker::count(const MCInst &Inst,
                                                  const MCSubtargetInfo &STI,
                                                  MCCodeEmitter *CodeEmitter) {
   if (InShadow) {
@@ -233,7 +235,7 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   // FIXME: We would like an efficient form for this, so we don't have to do a
   // lot of extra uniquing.
   const MCExpr *Expr = nullptr;
-  auto Specifier = X86MCExpr::VK_None;
+  uint16_t Specifier = X86::S_None;
 
   switch (MO.getTargetFlags()) {
   default:
@@ -246,61 +248,61 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
     break;
 
   case X86II::MO_TLVP:
-    Specifier = X86MCExpr::VK_TLVP;
+    Specifier = X86::S_TLVP;
     break;
   case X86II::MO_TLVP_PIC_BASE:
-    Expr = MCSymbolRefExpr::create(Sym, X86MCExpr::VK_TLVP, Ctx);
+    Expr = MCSymbolRefExpr::create(Sym, X86::S_TLVP, Ctx);
     // Subtract the pic base.
     Expr = MCBinaryExpr::createSub(
         Expr, MCSymbolRefExpr::create(MF.getPICBaseSymbol(), Ctx), Ctx);
     break;
   case X86II::MO_SECREL:
-    Specifier = X86MCExpr::Specifier(MCSymbolRefExpr::VK_SECREL);
+    Specifier = uint16_t(X86::S_COFF_SECREL);
     break;
   case X86II::MO_TLSGD:
-    Specifier = X86MCExpr::VK_TLSGD;
+    Specifier = X86::S_TLSGD;
     break;
   case X86II::MO_TLSLD:
-    Specifier = X86MCExpr::VK_TLSLD;
+    Specifier = X86::S_TLSLD;
     break;
   case X86II::MO_TLSLDM:
-    Specifier = X86MCExpr::VK_TLSLDM;
+    Specifier = X86::S_TLSLDM;
     break;
   case X86II::MO_GOTTPOFF:
-    Specifier = X86MCExpr::VK_GOTTPOFF;
+    Specifier = X86::S_GOTTPOFF;
     break;
   case X86II::MO_INDNTPOFF:
-    Specifier = X86MCExpr::VK_INDNTPOFF;
+    Specifier = X86::S_INDNTPOFF;
     break;
   case X86II::MO_TPOFF:
-    Specifier = X86MCExpr::VK_TPOFF;
+    Specifier = X86::S_TPOFF;
     break;
   case X86II::MO_DTPOFF:
-    Specifier = X86MCExpr::VK_DTPOFF;
+    Specifier = X86::S_DTPOFF;
     break;
   case X86II::MO_NTPOFF:
-    Specifier = X86MCExpr::VK_NTPOFF;
+    Specifier = X86::S_NTPOFF;
     break;
   case X86II::MO_GOTNTPOFF:
-    Specifier = X86MCExpr::VK_GOTNTPOFF;
+    Specifier = X86::S_GOTNTPOFF;
     break;
   case X86II::MO_GOTPCREL:
-    Specifier = X86MCExpr::VK_GOTPCREL;
+    Specifier = X86::S_GOTPCREL;
     break;
   case X86II::MO_GOTPCREL_NORELAX:
-    Specifier = X86MCExpr::VK_GOTPCREL_NORELAX;
+    Specifier = X86::S_GOTPCREL_NORELAX;
     break;
   case X86II::MO_GOT:
-    Specifier = X86MCExpr::VK_GOT;
+    Specifier = X86::S_GOT;
     break;
   case X86II::MO_GOTOFF:
-    Specifier = X86MCExpr::VK_GOTOFF;
+    Specifier = X86::S_GOTOFF;
     break;
   case X86II::MO_PLT:
-    Specifier = X86MCExpr::VK_PLT;
+    Specifier = X86::S_PLT;
     break;
   case X86II::MO_ABS8:
-    Specifier = X86MCExpr::VK_ABS8;
+    Specifier = X86::S_ABS8;
     break;
   case X86II::MO_PIC_BASE_OFFSET:
   case X86II::MO_DARWIN_NONLAZY_PIC_BASE:
@@ -532,23 +534,23 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   bool Is64BitsLP64 = getSubtarget().isTarget64BitLP64();
   MCContext &Ctx = OutStreamer->getContext();
 
-  X86MCExpr::Specifier Specifier;
+  X86::Specifier Specifier;
   switch (MI.getOpcode()) {
   case X86::TLS_addr32:
   case X86::TLS_addr64:
   case X86::TLS_addrX32:
-    Specifier = X86MCExpr::VK_TLSGD;
+    Specifier = X86::S_TLSGD;
     break;
   case X86::TLS_base_addr32:
-    Specifier = X86MCExpr::VK_TLSLDM;
+    Specifier = X86::S_TLSLDM;
     break;
   case X86::TLS_base_addr64:
   case X86::TLS_base_addrX32:
-    Specifier = X86MCExpr::VK_TLSLD;
+    Specifier = X86::S_TLSLD;
     break;
   case X86::TLS_desc32:
   case X86::TLS_desc64:
-    Specifier = X86MCExpr::VK_TLSDESC;
+    Specifier = X86::S_TLSDESC;
     break;
   default:
     llvm_unreachable("unexpected opcode");
@@ -565,10 +567,10 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   bool UseGot = MMI->getModule()->getRtLibUseGOT() &&
                 Ctx.getTargetOptions()->X86RelaxRelocations;
 
-  if (Specifier == X86MCExpr::VK_TLSDESC) {
+  if (Specifier == X86::S_TLSDESC) {
     const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(
-        MCInstLowering.GetSymbolFromOperand(MI.getOperand(3)),
-        X86MCExpr::VK_TLSCALL, Ctx);
+        MCInstLowering.GetSymbolFromOperand(MI.getOperand(3)), X86::S_TLSCALL,
+        Ctx);
     EmitAndCountInstruction(
         MCInstBuilder(Is64BitsLP64 ? X86::LEA64r : X86::LEA32r)
             .addReg(Is64BitsLP64 ? X86::RAX : X86::EAX)
@@ -585,7 +587,7 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
             .addExpr(Expr)
             .addReg(0));
   } else if (Is64Bits) {
-    bool NeedsPadding = Specifier == X86MCExpr::VK_TLSGD;
+    bool NeedsPadding = Specifier == X86::S_TLSGD;
     if (NeedsPadding && Is64BitsLP64)
       EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
     EmitAndCountInstruction(MCInstBuilder(X86::LEA64r)
@@ -604,7 +606,7 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
     }
     if (UseGot) {
       const MCExpr *Expr =
-          MCSymbolRefExpr::create(TlsGetAddr, X86MCExpr::VK_GOTPCREL, Ctx);
+          MCSymbolRefExpr::create(TlsGetAddr, X86::S_GOTPCREL, Ctx);
       EmitAndCountInstruction(MCInstBuilder(X86::CALL64m)
                                   .addReg(X86::RIP)
                                   .addImm(1)
@@ -612,12 +614,12 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                                   .addExpr(Expr)
                                   .addReg(0));
     } else {
-      EmitAndCountInstruction(MCInstBuilder(X86::CALL64pcrel32)
-                                  .addExpr(MCSymbolRefExpr::create(
-                                      TlsGetAddr, X86MCExpr::VK_PLT, Ctx)));
+      EmitAndCountInstruction(
+          MCInstBuilder(X86::CALL64pcrel32)
+              .addExpr(MCSymbolRefExpr::create(TlsGetAddr, X86::S_PLT, Ctx)));
     }
   } else {
-    if (Specifier == X86MCExpr::VK_TLSGD && !UseGot) {
+    if (Specifier == X86::S_TLSGD && !UseGot) {
       EmitAndCountInstruction(MCInstBuilder(X86::LEA32r)
                                   .addReg(X86::EAX)
                                   .addReg(0)
@@ -637,8 +639,7 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
 
     const MCSymbol *TlsGetAddr = Ctx.getOrCreateSymbol("___tls_get_addr");
     if (UseGot) {
-      const MCExpr *Expr =
-          MCSymbolRefExpr::create(TlsGetAddr, X86MCExpr::VK_GOT, Ctx);
+      const MCExpr *Expr = MCSymbolRefExpr::create(TlsGetAddr, X86::S_GOT, Ctx);
       EmitAndCountInstruction(MCInstBuilder(X86::CALL32m)
                                   .addReg(X86::EBX)
                                   .addImm(1)
@@ -646,9 +647,9 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                                   .addExpr(Expr)
                                   .addReg(0));
     } else {
-      EmitAndCountInstruction(MCInstBuilder(X86::CALLpcrel32)
-                                  .addExpr(MCSymbolRefExpr::create(
-                                      TlsGetAddr, X86MCExpr::VK_PLT, Ctx)));
+      EmitAndCountInstruction(
+          MCInstBuilder(X86::CALLpcrel32)
+              .addExpr(MCSymbolRefExpr::create(TlsGetAddr, X86::S_PLT, Ctx)));
     }
   }
 }
@@ -833,6 +834,7 @@ void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
     CallInst.setOpcode(CallOpcode);
     CallInst.addOperand(CallTargetMCOp);
     OutStreamer->emitInstruction(CallInst, getSubtargetInfo());
+    maybeEmitNopAfterCallForWindowsEH(&MI);
   }
 
   // Record our statepoint node in the same section used by STACKMAP
@@ -1430,21 +1432,6 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
     OutStreamer->emitLabel(FallthroughLabel);
 }
 
-// Returns instruction preceding MBBI in MachineFunction.
-// If MBBI is the first instruction of the first basic block, returns null.
-static MachineBasicBlock::const_iterator
-PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
-  const MachineBasicBlock *MBB = MBBI->getParent();
-  while (MBBI == MBB->begin()) {
-    if (MBB == &MBB->getParent()->front())
-      return MachineBasicBlock::const_iterator();
-    MBB = MBB->getPrevNode();
-    MBBI = MBB->end();
-  }
-  --MBBI;
-  return MBBI;
-}
-
 static unsigned getSrcIdx(const MachineInstr* MI, unsigned SrcIdx) {
   if (X86II::isKMasked(MI->getDesc().TSFlags)) {
     // Skip mask operand.
@@ -1568,9 +1555,23 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
   if (isa<UndefValue>(COp)) {
     CS << "u";
   } else if (auto *CI = dyn_cast<ConstantInt>(COp)) {
-    printConstant(CI->getValue(), CS, PrintZero);
+    if (auto VTy = dyn_cast<FixedVectorType>(CI->getType())) {
+      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
+        if (I != 0)
+          CS << ',';
+        printConstant(CI->getValue(), CS, PrintZero);
+      }
+    } else
+      printConstant(CI->getValue(), CS, PrintZero);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
-    printConstant(CF->getValueAPF(), CS, PrintZero);
+    if (auto VTy = dyn_cast<FixedVectorType>(CF->getType())) {
+      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
+        if (I != 0)
+          CS << ',';
+        printConstant(CF->getValueAPF(), CS, PrintZero);
+      }
+    } else
+      printConstant(CF->getValueAPF(), CS, PrintZero);
   } else if (auto *CDS = dyn_cast<ConstantDataSequential>(COp)) {
     Type *EltTy = CDS->getElementType();
     bool IsInteger = EltTy->isIntegerTy();
@@ -1709,7 +1710,7 @@ static void printZeroExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
 
 void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-  assert(getSubtarget().isOSWindowsOrUEFI() &&
+  assert((getSubtarget().isOSWindows() || getSubtarget().isUEFI()) &&
          "SEH_ instruction Windows and UEFI only");
 
   // Use the .cv_fpo directives if we're emitting CodeView on 32-bit x86.
@@ -1784,6 +1785,14 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
 
   case X86::SEH_EndEpilogue:
     OutStreamer->emitWinCFIEndEpilogue();
+    break;
+
+  case X86::SEH_UnwindV2Start:
+    OutStreamer->emitWinCFIUnwindV2Start();
+    break;
+
+  case X86::SEH_UnwindVersion:
+    OutStreamer->emitWinCFIUnwindVersion(MI->getOperand(0).getImm());
     break;
 
   default:
@@ -1919,6 +1928,17 @@ static void addConstantComments(const MachineInstr *MI,
 #define INSTR_CASE(Prefix, Instr, Suffix, Postfix)                             \
   case X86::Prefix##Instr##Suffix##rm##Postfix:
 
+#define CASE_AVX512_ARITH_RM(Instr)                                            \
+  INSTR_CASE(V, Instr, Z128, )                                                 \
+  INSTR_CASE(V, Instr, Z128, k)                                                \
+  INSTR_CASE(V, Instr, Z128, kz)                                               \
+  INSTR_CASE(V, Instr, Z256, )                                                 \
+  INSTR_CASE(V, Instr, Z256, k)                                                \
+  INSTR_CASE(V, Instr, Z256, kz)                                               \
+  INSTR_CASE(V, Instr, Z, )                                                    \
+  INSTR_CASE(V, Instr, Z, k)                                                   \
+  INSTR_CASE(V, Instr, Z, kz)
+
 #define CASE_ARITH_RM(Instr)                                                   \
   INSTR_CASE(, Instr, , )   /* SSE */                                          \
   INSTR_CASE(V, Instr, , )  /* AVX-128 */                                      \
@@ -1934,40 +1954,26 @@ static void addConstantComments(const MachineInstr *MI,
   INSTR_CASE(V, Instr, Z, kz)
 
     // TODO: Add additional instructions when useful.
-    CASE_ARITH_RM(PMADDUBSW) {
-      unsigned SrcIdx = getSrcIdx(MI, 1);
-      if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-        if (C->getType()->getScalarSizeInBits() == 8) {
-          std::string Comment;
-          raw_string_ostream CS(Comment);
-          unsigned VectorWidth =
-              X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-          CS << "[";
-          printConstant(C, VectorWidth, CS);
-          CS << "]";
-          OutStreamer.AddComment(CS.str());
-        }
-      }
-      break;
-    }
-
+    CASE_ARITH_RM(PMADDUBSW)
     CASE_ARITH_RM(PMADDWD)
+    CASE_ARITH_RM(PMULDQ)
+    CASE_ARITH_RM(PMULUDQ)
+    CASE_ARITH_RM(PMULLD)
+    CASE_AVX512_ARITH_RM(PMULLQ)
     CASE_ARITH_RM(PMULLW)
     CASE_ARITH_RM(PMULHW)
     CASE_ARITH_RM(PMULHUW)
     CASE_ARITH_RM(PMULHRSW) {
       unsigned SrcIdx = getSrcIdx(MI, 1);
       if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-        if (C->getType()->getScalarSizeInBits() == 16) {
-          std::string Comment;
-          raw_string_ostream CS(Comment);
-          unsigned VectorWidth =
-              X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-          CS << "[";
-          printConstant(C, VectorWidth, CS);
-          CS << "]";
-          OutStreamer.AddComment(CS.str());
-        }
+        std::string Comment;
+        raw_string_ostream CS(Comment);
+        unsigned VectorWidth =
+            X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+        CS << "[";
+        printConstant(C, VectorWidth, CS);
+        CS << "]";
+        OutStreamer.AddComment(CS.str());
       }
       break;
     }
@@ -2192,6 +2198,31 @@ static void addConstantComments(const MachineInstr *MI,
   }
 }
 
+// Does the given operand refer to a DLLIMPORT function?
+bool isImportedFunction(const MachineOperand &MO) {
+  return MO.isGlobal() && (MO.getTargetFlags() == X86II::MO_DLLIMPORT);
+}
+
+// Is the given instruction a call to a CFGuard function?
+bool isCallToCFGuardFunction(const MachineInstr *MI) {
+  assert(MI->getOpcode() == X86::TAILJMPm64_REX ||
+         MI->getOpcode() == X86::CALL64m);
+  const MachineOperand &MO = MI->getOperand(3);
+  return MO.isGlobal() && (MO.getTargetFlags() == X86II::MO_NO_FLAG) &&
+         isCFGuardFunction(MO.getGlobal());
+}
+
+// Does the containing block for the given instruction contain any jump table
+// info (indicating that the block is a dispatch for a jump table)?
+bool hasJumpTableInfoInBlock(const llvm::MachineInstr *MI) {
+  const MachineBasicBlock &MBB = *MI->getParent();
+  for (auto I = MBB.instr_rbegin(), E = MBB.instr_rend(); I != E; ++I)
+    if (I->isJumpTableDebugInfo())
+      return true;
+
+  return false;
+}
+
 void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   // FIXME: Enable feature predicate checks once all the test pass.
   // X86_MC::verifyInstructionPredicates(MI->getOpcode(),
@@ -2223,6 +2254,9 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     else if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_EVEX)
       OutStreamer->AddComment("EVEX TO EVEX Compression ", false);
   }
+
+  // We use this to suppress NOP padding for Windows EH.
+  bool IsTailJump = false;
 
   switch (MI->getOpcode()) {
   case TargetOpcode::DBG_VALUE:
@@ -2270,7 +2304,17 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::TAILJMPd64:
     if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
       EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
-    [[fallthrough]];
+
+    if (EnableImportCallOptimization && isImportedFunction(MI->getOperand(0))) {
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_IMPORT_BR);
+    }
+
+    // Lower this as normal, but add a comment.
+    OutStreamer->AddComment("TAILCALL");
+    IsTailJump = true;
+    break;
+
   case X86::TAILJMPr:
   case X86::TAILJMPm:
   case X86::TAILJMPd:
@@ -2278,10 +2322,59 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::TAILJMPr64:
   case X86::TAILJMPm64:
   case X86::TAILJMPd64_CC:
-  case X86::TAILJMPr64_REX:
-  case X86::TAILJMPm64_REX:
+    if (EnableImportCallOptimization)
+      report_fatal_error("Unexpected TAILJMP instruction was emitted when "
+                         "import call optimization was enabled");
+
     // Lower these as normal, but add some comments.
     OutStreamer->AddComment("TAILCALL");
+    IsTailJump = true;
+    break;
+
+  case X86::TAILJMPm64_REX:
+    if (EnableImportCallOptimization && isCallToCFGuardFunction(MI)) {
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_CFG_BR_REX);
+    }
+
+    OutStreamer->AddComment("TAILCALL");
+    IsTailJump = true;
+    break;
+
+  case X86::TAILJMPr64_REX: {
+    if (EnableImportCallOptimization) {
+      assert(MI->getOperand(0).getReg() == X86::RAX &&
+             "Indirect tail calls with impcall enabled must go through RAX (as "
+             "enforced by TCRETURNImpCallri64)");
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_INDIR_BR);
+    }
+
+    OutStreamer->AddComment("TAILCALL");
+    IsTailJump = true;
+    break;
+  }
+
+  case X86::JMP64r:
+    if (EnableImportCallOptimization && hasJumpTableInfoInBlock(MI)) {
+      uint16_t EncodedReg =
+          this->getSubtarget().getRegisterInfo()->getEncodingValue(
+              MI->getOperand(0).getReg().asMCReg());
+      emitLabelAndRecordForImportCallOptimization(
+          (ImportCallKind)(IMAGE_RETPOLINE_AMD64_SWITCHTABLE_FIRST +
+                           EncodedReg));
+    }
+    break;
+
+  case X86::JMP16r:
+  case X86::JMP16m:
+  case X86::JMP32r:
+  case X86::JMP32m:
+  case X86::JMP64m:
+    if (EnableImportCallOptimization && hasJumpTableInfoInBlock(MI))
+      report_fatal_error(
+          "Unexpected JMP instruction was emitted for a jump-table when import "
+          "call optimization was enabled");
     break;
 
   case X86::TLS_addr32:
@@ -2428,31 +2521,13 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::SEH_PushFrame:
   case X86::SEH_EndPrologue:
   case X86::SEH_EndEpilogue:
+  case X86::SEH_UnwindV2Start:
+  case X86::SEH_UnwindVersion:
     EmitSEHInstruction(MI);
     return;
 
   case X86::SEH_BeginEpilogue: {
     assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    // Windows unwinder will not invoke function's exception handler if IP is
-    // either in prologue or in epilogue.  This behavior causes a problem when a
-    // call immediately precedes an epilogue, because the return address points
-    // into the epilogue.  To cope with that, we insert a 'nop' if it ends up
-    // immediately after a CALL in the final emitted code.
-    MachineBasicBlock::const_iterator MBBI(MI);
-    // Check if preceded by a call and emit nop if so.
-    for (MBBI = PrevCrossBBInst(MBBI);
-         MBBI != MachineBasicBlock::const_iterator();
-         MBBI = PrevCrossBBInst(MBBI)) {
-      // Pseudo instructions that aren't a call are assumed to not emit any
-      // code. If they do, we worst case generate unnecessary noops after a
-      // call.
-      if (MBBI->isCall() || !MBBI->isPseudo()) {
-        if (MBBI->isCall())
-          EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
-        break;
-      }
-    }
-
     EmitSEHInstruction(MI);
     return;
   }
@@ -2468,7 +2543,52 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::CALL64pcrel32:
     if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
       EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
+
+    if (EnableImportCallOptimization && isImportedFunction(MI->getOperand(0))) {
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_IMPORT_CALL);
+
+      MCInst TmpInst;
+      MCInstLowering.Lower(MI, TmpInst);
+
+      // For Import Call Optimization to work, we need a the call instruction
+      // with a rex prefix, and a 5-byte nop after the call instruction.
+      EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
+      emitCallInstruction(TmpInst);
+      emitNop(*OutStreamer, 5, Subtarget);
+      maybeEmitNopAfterCallForWindowsEH(MI);
+      return;
+    }
+
     break;
+
+  case X86::CALL64r:
+    if (EnableImportCallOptimization) {
+      assert(MI->getOperand(0).getReg() == X86::RAX &&
+             "Indirect calls with impcall enabled must go through RAX (as "
+             "enforced by CALL64r_ImpCall)");
+
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_INDIR_CALL);
+      MCInst TmpInst;
+      MCInstLowering.Lower(MI, TmpInst);
+      emitCallInstruction(TmpInst);
+
+      // For Import Call Optimization to work, we need a 3-byte nop after the
+      // call instruction.
+      emitNop(*OutStreamer, 3, Subtarget);
+      maybeEmitNopAfterCallForWindowsEH(MI);
+      return;
+    }
+    break;
+
+  case X86::CALL64m:
+    if (EnableImportCallOptimization && isCallToCFGuardFunction(MI)) {
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_CFG_CALL);
+    }
+    break;
+
   case X86::JCC_1:
     // Two instruction prefixes (2EH for branch not-taken and 3EH for branch
     // taken) are used as branch hints. Here we add branch taken prefix for
@@ -2489,20 +2609,198 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
 
-  // Stackmap shadows cannot include branch targets, so we can count the bytes
-  // in a call towards the shadow, but must ensure that the no thread returns
-  // in to the stackmap shadow.  The only way to achieve this is if the call
-  // is at the end of the shadow.
   if (MI->isCall()) {
-    // Count then size of the call towards the shadow
-    SMShadowTracker.count(TmpInst, getSubtargetInfo(), CodeEmitter.get());
-    // Then flush the shadow so that we fill with nops before the call, not
-    // after it.
-    SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
-    // Then emit the call
-    OutStreamer->emitInstruction(TmpInst, getSubtargetInfo());
+    emitCallInstruction(TmpInst);
+    // Since tail calls transfer control without leaving a stack frame, there is
+    // never a need for NOP padding tail calls.
+    if (!IsTailJump)
+      maybeEmitNopAfterCallForWindowsEH(MI);
     return;
   }
 
   EmitAndCountInstruction(TmpInst);
+}
+
+void X86AsmPrinter::emitCallInstruction(const llvm::MCInst &MCI) {
+  // Stackmap shadows cannot include branch targets, so we can count the bytes
+  // in a call towards the shadow, but must ensure that the no thread returns
+  // in to the stackmap shadow.  The only way to achieve this is if the call
+  // is at the end of the shadow.
+
+  // Count then size of the call towards the shadow
+  SMShadowTracker.count(MCI, getSubtargetInfo(), CodeEmitter.get());
+  // Then flush the shadow so that we fill with nops before the call, not
+  // after it.
+  SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
+  // Then emit the call
+  OutStreamer->emitInstruction(MCI, getSubtargetInfo());
+}
+
+// Determines whether a NOP is required after a CALL, so that Windows EH
+// IP2State tables have the correct information.
+//
+// On most Windows platforms (AMD64, ARM64, ARM32, IA64, but *not* x86-32),
+// exception handling works by looking up instruction pointers in lookup
+// tables. These lookup tables are stored in .xdata sections in executables.
+// One element of the lookup tables are the "IP2State" tables (Instruction
+// Pointer to State).
+//
+// If a function has any instructions that require cleanup during exception
+// unwinding, then it will have an IP2State table. Each entry in the IP2State
+// table describes a range of bytes in the function's instruction stream, and
+// associates an "EH state number" with that range of instructions. A value of
+// -1 means "the null state", which does not require any code to execute.
+// A value other than -1 is an index into the State table.
+//
+// The entries in the IP2State table contain byte offsets within the instruction
+// stream of the function. The Windows ABI requires that these offsets are
+// aligned to instruction boundaries; they are not permitted to point to a byte
+// that is not the first byte of an instruction.
+//
+// Unfortunately, CALL instructions present a problem during unwinding. CALL
+// instructions push the address of the instruction after the CALL instruction,
+// so that execution can resume after the CALL. If the CALL is the last
+// instruction within an IP2State region, then the return address (on the stack)
+// points to the *next* IP2State region. This means that the unwinder will
+// use the wrong cleanup funclet during unwinding.
+//
+// To fix this problem, the Windows AMD64 ABI requires that CALL instructions
+// are never placed at the end of an IP2State region. Stated equivalently, the
+// end of a CALL instruction cannot be aligned to an IP2State boundary.  If a
+// CALL instruction would occur at the end of an IP2State region, then the
+// compiler must insert a NOP instruction after the CALL. The NOP instruction
+// is placed in the same EH region as the CALL instruction, so that the return
+// address points to the NOP and the unwinder will locate the correct region.
+//
+// NOP padding is only necessary on Windows AMD64 targets. On ARM64 and ARM32,
+// instructions have a fixed size so the unwinder knows how to "back up" by
+// one instruction.
+//
+// Interaction with Import Call Optimization (ICO):
+//
+// Import Call Optimization (ICO) is a compiler + OS feature on Windows which
+// improves the performance and security of DLL imports. ICO relies on using a
+// specific CALL idiom that can be replaced by the OS DLL loader. This removes
+// a load and indirect CALL and replaces it with a single direct CALL.
+//
+// To achieve this, ICO also inserts NOPs after the CALL instruction. If the
+// end of the CALL is aligned with an EH state transition, we *also* insert
+// a single-byte NOP.  **Both forms of NOPs must be preserved.**  They cannot
+// be combined into a single larger NOP; nor can the second NOP be removed.
+//
+// This is necessary because, if ICO is active and the call site is modified
+// by the loader, the loader will end up overwriting the NOPs that were inserted
+// for ICO. That means that those NOPs cannot be used for the correct
+// termination of the exception handling region (the IP2State transition),
+// so we still need an additional NOP instruction.  The NOPs cannot be combined
+// into a longer NOP (which is ordinarily desirable) because then ICO would
+// split one instruction, producing a malformed instruction after the ICO call.
+void X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH(const MachineInstr *MI) {
+  // We only need to insert NOPs after CALLs when targeting Windows on AMD64.
+  // (Don't let the name fool you: Itanium refers to table-based exception
+  // handling, not the Itanium architecture.)
+  if (MAI->getExceptionHandlingType() != ExceptionHandling::WinEH ||
+      MAI->getWinEHEncodingType() != WinEH::EncodingType::Itanium) {
+    return;
+  }
+
+  bool HasEHPersonality = MF->getWinEHFuncInfo() != nullptr;
+
+  // Set up MBB iterator, initially positioned on the same MBB as MI.
+  MachineFunction::const_iterator MFI(MI->getParent());
+  MachineFunction::const_iterator MFE(MF->end());
+
+  // Set up instruction iterator, positioned immediately *after* MI.
+  MachineBasicBlock::const_iterator MBBI(MI);
+  MachineBasicBlock::const_iterator MBBE = MI->getParent()->end();
+  ++MBBI; // Step over MI
+
+  // This loop iterates MBBs
+  for (;;) {
+    // This loop iterates instructions
+    for (; MBBI != MBBE; ++MBBI) {
+      // Check the instruction that follows this CALL.
+      const MachineInstr &NextMI = *MBBI;
+
+      // If there is an EH_LABEL after this CALL, then there is an EH state
+      // transition after this CALL. This is exactly the situation which
+      // requires NOP padding.
+      if (NextMI.isEHLabel()) {
+        if (HasEHPersonality) {
+          EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
+          return;
+        }
+        // We actually want to continue, in case there is an SEH_BeginEpilogue
+        // instruction after the EH_LABEL. In some situations, IR is produced
+        // that contains EH_LABEL pseudo-instructions, even when we are not
+        // generating IP2State tables. We still need to insert a NOP before
+        // SEH_BeginEpilogue in that case.
+        continue;
+      }
+
+      // Somewhat similarly, if the CALL is the last instruction before the
+      // SEH prologue, then we also need a NOP. This is necessary because the
+      // Windows stack unwinder will not invoke a function's exception handler
+      // if the instruction pointer is in the function prologue or epilogue.
+      //
+      // We always emit a NOP before SEH_BeginEpilogue, even if there is no
+      // personality function (unwind info) for this frame. This is the same
+      // behavior as MSVC.
+      if (NextMI.getOpcode() == X86::SEH_BeginEpilogue) {
+        EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
+        return;
+      }
+
+      if (!NextMI.isPseudo() && !NextMI.isMetaInstruction()) {
+        // We found a real instruction. During the CALL, the return IP will
+        // point to this instruction. Since this instruction has the same EH
+        // state as the call itself (because there is no intervening EH_LABEL),
+        // the IP2State table will be accurate; there is no need to insert a
+        // NOP.
+        return;
+      }
+
+      // The next instruction is a pseudo-op. Ignore it and keep searching.
+      // Because these instructions do not generate any machine code, they
+      // cannot prevent the IP2State table from pointing at the wrong
+      // instruction during a CALL.
+    }
+
+    // We've reached the end of this MBB. Find the next MBB in program order.
+    // MBB order should be finalized by this point, so falling across MBBs is
+    // expected.
+    ++MFI;
+    if (MFI == MFE) {
+      // No more blocks; we've reached the end of the function. This should
+      // only happen with no-return functions, but double-check to be sure.
+      if (HasEHPersonality) {
+        // If the CALL has no successors, then it is a noreturn function.
+        // Insert an INT3 instead of a NOP. This accomplishes the same purpose,
+        // but is more clear to read. Also, analysis tools will understand
+        // that they should not continue disassembling after the CALL (unless
+        // there are other branches to that label).
+        if (MI->getParent()->succ_empty())
+          EmitAndCountInstruction(MCInstBuilder(X86::INT3));
+        else
+          EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
+      }
+      return;
+    }
+
+    // Set up iterator to scan the next basic block.
+    const MachineBasicBlock *NextMBB = &*MFI;
+    MBBI = NextMBB->instr_begin();
+    MBBE = NextMBB->instr_end();
+  }
+}
+
+void X86AsmPrinter::emitLabelAndRecordForImportCallOptimization(
+    ImportCallKind Kind) {
+  assert(EnableImportCallOptimization);
+
+  MCSymbol *CallSiteSymbol = MMI->getContext().createNamedTempSymbol("impcall");
+  OutStreamer->emitLabel(CallSiteSymbol);
+
+  SectionToImportedFunctionCalls[OutStreamer->getCurrentSectionOnly()]
+      .push_back({CallSiteSymbol, Kind});
 }

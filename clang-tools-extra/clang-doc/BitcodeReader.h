@@ -17,8 +17,6 @@
 
 #include "BitcodeWriter.h"
 #include "Representation.h"
-#include "clang/AST/AST.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/Error.h"
 #include <optional>
@@ -29,7 +27,8 @@ namespace doc {
 // Class to read bitstream into an InfoSet collection
 class ClangDocBitcodeReader {
 public:
-  ClangDocBitcodeReader(llvm::BitstreamCursor &Stream) : Stream(Stream) {}
+  ClangDocBitcodeReader(llvm::BitstreamCursor &Stream, DiagnosticsEngine &Diags)
+      : Stream(Stream), Diags(Diags) {}
 
   // Main entry point, calls readBlock to read each block in the given stream.
   llvm::Expected<std::vector<std::unique_ptr<Info>>> readBitcode();
@@ -59,14 +58,22 @@ private:
 
   // Helper function to step through blocks to find and dispatch the next record
   // or block to be read.
-  Cursor skipUntilRecordOrBlock(unsigned &BlockOrRecordID);
+  llvm::Expected<Cursor> skipUntilRecordOrBlock(unsigned &BlockOrRecordID);
 
   // Helper function to set up the appropriate type of Info.
   llvm::Expected<std::unique_ptr<Info>> readBlockToInfo(unsigned ID);
 
+  template <typename InfoType, typename T, typename CallbackFunction>
+  llvm::Error handleSubBlock(unsigned ID, T Parent, CallbackFunction Function);
+
+  template <typename InfoType, typename T, typename CallbackFunction>
+  llvm::Error handleTypeSubBlock(unsigned ID, T Parent,
+                                 CallbackFunction Function);
+
   llvm::BitstreamCursor &Stream;
   std::optional<llvm::BitstreamBlockInfo> BlockInfo;
   FieldId CurrentReferenceField;
+  DiagnosticsEngine &Diags;
 };
 
 } // namespace doc

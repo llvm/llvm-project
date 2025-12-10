@@ -23,7 +23,6 @@ class InstSP<dag outs, dag ins, string asmstr, list<dag> pattern,
   let Pattern = pattern;
 
   let DecoderNamespace = "Sparc";
-  field bits<32> SoftFail = 0;
 
   let Itinerary = itin;
 }
@@ -102,6 +101,49 @@ class F2_4<bit annul, bit pred, dag outs, dag ins,
   let Inst{13-0}  = imm16{13-0};
 }
 
+class F2_5<bit cc, dag outs, dag ins, string asmstr,
+           list<dag> pattern = [], InstrItinClass itin = NoItinerary>
+    : InstSP<outs, ins, asmstr, pattern, itin> {
+  bits<10> imm10;
+  bits<5>  rs1;
+  bits<5>  rs2;
+  bits<4>  cond;
+
+  let op          = 0; // op = 0
+
+  let Inst{29}    = cond{3};
+  let Inst{28}    = 1;
+  let Inst{27-25} = cond{2-0};
+  let Inst{24-22} = 0b011;
+  let Inst{21}    = cc;
+  let Inst{20-19} = imm10{9-8};
+  let Inst{18-14} = rs1;
+  let Inst{13}    = 0; // i = 0
+  let Inst{12-5}  = imm10{7-0};
+  let Inst{4-0}   = rs2;
+}
+
+class F2_6<bit cc, dag outs, dag ins, string asmstr,
+           list<dag> pattern = [], InstrItinClass itin = NoItinerary>
+    : InstSP<outs, ins, asmstr, pattern, itin> {
+  bits<10> imm10;
+  bits<5>  rs1;
+  bits<5>  simm5;
+  bits<4>  cond;
+
+  let op          = 0; // op = 0
+
+  let Inst{29}    = cond{3};
+  let Inst{28}    = 1;
+  let Inst{27-25} = cond{2-0};
+  let Inst{24-22} = 0b011;
+  let Inst{21}    = cc;
+  let Inst{20-19} = imm10{9-8};
+  let Inst{18-14} = rs1;
+  let Inst{13}    = 1; // i = 1
+  let Inst{12-5}  = imm10{7-0};
+  let Inst{4-0}   = simm5;
+}
 
 //===----------------------------------------------------------------------===//
 // Format #3 instruction classes in the Sparc
@@ -258,6 +300,23 @@ multiclass F3_S<string OpcStr, bits<6> Op3Val, bit XVal, SDNode OpNode,
                  !strconcat(OpcStr, " $rs1, $shcnt, $rd"),
                  [(set VT:$rd, (OpNode VT:$rs1, (i32 imm:$shcnt)))],
                  itin>;
+}
+
+// 4-operand instructions.
+class F3_4<bits<6> op3val, bits<4> op5val, dag outs, dag ins,
+           string asmstr, list<dag> pattern = [], InstrItinClass itin = NoItinerary>
+   : F3<outs, ins, asmstr, pattern, itin> {
+  bits<4> op5;
+  bits<5> rs3;
+  bits<5> rs2;
+
+  let op         = 2;
+  let op3        = op3val;
+  let op5        = op5val;
+
+  let Inst{13-9} = rs3;
+  let Inst{8-5}  = op5;
+  let Inst{4-0}  = rs2;
 }
 
 class F4<bits<6> op3, dag outs, dag ins, string asmstr, list<dag> pattern,

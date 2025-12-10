@@ -3,8 +3,8 @@
 
 # RuntimeDyld can be used to link and load emitted code for both, MCJIT and Orc.
 #
-# RUN: %clang -g -S -emit-llvm --target=x86_64-unknown-unknown-elf \
-# RUN:        -o %t.ll %p/Inputs/jitbp.cpp
+# RUN: %clangxx -g -S -emit-llvm --target=x86_64-unknown-unknown-elf \
+# RUN:          -o %t.ll %p/Inputs/jitbp.cpp
 #
 # RUN: %lldb -b -o 'settings set plugin.jit-loader.gdb.enable on' -o 'b jitbp' \
 # RUN:          -o 'run --jit-kind=mcjit %t.ll' lli | FileCheck %s

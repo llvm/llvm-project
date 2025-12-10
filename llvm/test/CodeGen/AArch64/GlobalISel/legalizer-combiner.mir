@@ -7,8 +7,10 @@ body:             |
   bb.1:
     liveins: $w0
     ; CHECK-LABEL: name: test_unmerge
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: $w0 = COPY [[COPY]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $w0
     %1:_(<4 x s32>) = G_BUILD_VECTOR %0(s32), %0(s32), %0(s32), %0(s32)
     %2:_(s32), %3:_(s32), %4:_(s32), %5:_(s32) = G_UNMERGE_VALUES %1(<4 x s32>)
@@ -21,10 +23,12 @@ body:             |
   bb.1:
     liveins: $w0
     ; CHECK-LABEL: name: test_legal_const_ext
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C]]
-    ; CHECK: $w0 = COPY [[ADD]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[ADD]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s1) = G_TRUNC %0(s32)
     %2:_(s1) = G_CONSTANT i1 2
@@ -45,12 +49,13 @@ body:             |
 
     ; CHECK-LABEL: name: concat_vectors_unmerge_to_bitcast
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s128) = G_BITCAST [[COPY]](<2 x s64>)
-    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s128) = G_BITCAST [[COPY1]](<2 x s64>)
-    ; CHECK: $q0 = COPY [[BITCAST]](s128)
-    ; CHECK: $q1 = COPY [[BITCAST1]](s128)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s128) = G_BITCAST [[COPY]](<2 x s64>)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(s128) = G_BITCAST [[COPY1]](<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY [[BITCAST]](s128)
+    ; CHECK-NEXT: $q1 = COPY [[BITCAST1]](s128)
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<4 x s64>) = G_CONCAT_VECTORS %0(<2 x s64>), %1(<2 x s64>)
@@ -72,14 +77,15 @@ body:             |
 
     ; CHECK-LABEL: name: concat_vectors_unmerge_to_unmerge
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
-    ; CHECK: $x0 = COPY [[UV]](s64)
-    ; CHECK: $x1 = COPY [[UV1]](s64)
-    ; CHECK: $x2 = COPY [[UV2]](s64)
-    ; CHECK: $x3 = COPY [[UV3]](s64)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
+    ; CHECK-NEXT: $x0 = COPY [[UV]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[UV1]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[UV2]](s64)
+    ; CHECK-NEXT: $x3 = COPY [[UV3]](s64)
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<4 x s64>) = G_CONCAT_VECTORS %0(<2 x s64>), %1(<2 x s64>)
@@ -97,20 +103,21 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: unmerge_merge_combine
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64))
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128))
-    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD1]](s128)
-    ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[LOAD]], [[UV]]
-    ; CHECK: [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[C]], [[UV]]
-    ; CHECK: [[MUL2:%[0-9]+]]:_(s64) = G_MUL [[LOAD]], [[UV1]]
-    ; CHECK: [[UMULH:%[0-9]+]]:_(s64) = G_UMULH [[LOAD]], [[UV]]
-    ; CHECK: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[MUL1]], [[MUL2]]
-    ; CHECK: [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[ADD]], [[UMULH]]
-    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[MUL]](s64), [[ADD1]](s64)
-    ; CHECK: $q0 = COPY [[MV]](s128)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64))
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128))
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD1]](s128)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[LOAD]], [[UV]]
+    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[C]], [[UV]]
+    ; CHECK-NEXT: [[MUL2:%[0-9]+]]:_(s64) = G_MUL [[LOAD]], [[UV1]]
+    ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(s64) = G_UMULH [[LOAD]], [[UV]]
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[MUL1]], [[MUL2]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[ADD]], [[UMULH]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[MUL]](s64), [[ADD1]](s64)
+    ; CHECK-NEXT: $q0 = COPY [[MV]](s128)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s128) = G_ZEXTLOAD %0:_(p0) :: (load (s64))
     %2:_(s128) = G_LOAD %0:_(p0) :: (load (s128))

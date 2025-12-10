@@ -1,4 +1,4 @@
-//===--- NonConstParameterCheck.h - clang-tidy-------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NON_CONST_PARAMETER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NON_CONST_PARAMETER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NONCONSTPARAMETERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NONCONSTPARAMETERCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::readability {
 /// Warn when a pointer function parameter can be const.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/non-const-parameter.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/non-const-parameter.html
 class NonConstParameterCheck : public ClangTidyCheck {
 public:
   NonConstParameterCheck(StringRef Name, ClangTidyContext *Context)
@@ -59,4 +59,4 @@ private:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NON_CONST_PARAMETER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NONCONSTPARAMETERCHECK_H

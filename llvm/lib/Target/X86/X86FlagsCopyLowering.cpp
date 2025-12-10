@@ -50,7 +50,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <iterator>
 #include <utility>
@@ -65,6 +64,8 @@ STATISTIC(NumSetCCsInserted, "Number of setCC instructions inserted");
 STATISTIC(NumTestsInserted, "Number of test instructions inserted");
 STATISTIC(NumAddsInserted, "Number of adds instructions inserted");
 STATISTIC(NumNFsConvertedTo, "Number of NF instructions converted to");
+
+extern cl::opt<bool> X86EnableAPXForRelocation;
 
 namespace {
 
@@ -242,7 +243,15 @@ static EFLAGSClobber getClobberType(const MachineInstr &MI) {
       MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
   if (!FlagDef)
     return NoClobber;
-  if (FlagDef->isDead() && X86::getNFVariant(MI.getOpcode()))
+
+  // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
+  // optimization for replacing non-NF with NF. This is to keep backward
+  // compatiblity with old version of linkers without APX relocation type
+  // support on Linux OS.
+  bool IsWithReloc =
+      X86EnableAPXForRelocation ? false : isAddMemInstrWithRelocation(MI);
+
+  if (FlagDef->isDead() && X86::getNFVariant(MI.getOpcode()) && !IsWithReloc)
     return EvitableClobber;
 
   return InevitableClobber;

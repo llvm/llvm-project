@@ -28,7 +28,9 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeCycleInfoWrapperPassPass(Registry);
   initializeDXILMetadataAnalysisWrapperPassPass(Registry);
   initializeDXILResourceWrapperPassPass(Registry);
+  initializeDXILResourceBindingWrapperPassPass(Registry);
   initializeDXILResourceTypeWrapperPassPass(Registry);
+  initializeDXILResourceWrapperPassPass(Registry);
   initializeDependenceAnalysisWrapperPassPass(Registry);
   initializeDominanceFrontierWrapperPassPass(Registry);
   initializeDomViewerWrapperPassPass(Registry);
@@ -61,6 +63,7 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeRegionPrinterPass(Registry);
   initializeRegionOnlyViewerPass(Registry);
   initializeRegionOnlyPrinterPass(Registry);
+  initializeRuntimeLibraryInfoWrapperPass(Registry);
   initializeSCEVAAWrapperPassPass(Registry);
   initializeScalarEvolutionWrapperPassPass(Registry);
   initializeStackSafetyGlobalInfoWrapperPassPass(Registry);

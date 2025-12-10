@@ -57,6 +57,7 @@ def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
 def SplitDoubleTy : DXILOpParamType;
 def BinaryWithCarryTy : DXILOpParamType;
+def DimensionsTy : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -422,9 +423,37 @@ def Saturate : DXILOp<7, unary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def IsNaN : DXILOp<8, isSpecialFloat> {
+  let Doc = "Determines if the specified value is NaN.";
+  let intrinsics = [IntrinSelect<int_dx_isnan>];
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def IsInf : DXILOp<9, isSpecialFloat> {
   let Doc = "Determines if the specified value is infinite.";
   let intrinsics = [IntrinSelect<int_dx_isinf>];
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def IsFinite : DXILOp<10, isSpecialFloat> {
+  let Doc = "Determines if the specified value is finite.";
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def IsNormal : DXILOp<11, isSpecialFloat> {
+  let Doc = "Determines if the specified value is normal.";
   let arguments = [OverloadTy];
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -873,6 +902,13 @@ def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
+def GetDimensions : DXILOp<72, getDimensions> {
+  let Doc = "gets the dimensions of a buffer or texture";
+  let arguments = [HandleTy, Int32Ty];
+  let result = DimensionsTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
   let intrinsics = [
@@ -892,6 +928,24 @@ def Discard : DXILOp<82, discard> {
   let arguments = [Int1Ty];
   let result = VoidTy;
   let stages = [Stages<DXIL1_0, [pixel]>];
+}
+
+def DerivCoarseX : DXILOp<83, unary> {
+  let Doc = "computes the rate of change per stamp in x direction";
+  let intrinsics = [IntrinSelect<int_dx_ddx_coarse>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>];
+}
+
+def DerivCoarseY : DXILOp<84, unary> {
+  let Doc = "computes the rate of change per stamp in y direction";
+  let intrinsics = [IntrinSelect<int_dx_ddy_coarse>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>];
 }
 
 def ThreadId : DXILOp<93, threadId> {
@@ -938,7 +992,8 @@ def MakeDouble : DXILOp<101, makeDouble> {
   let Doc = "creates a double value";
   let intrinsics = [IntrinSelect<int_dx_asdouble>];
   let arguments = [Int32Ty, Int32Ty];
-  let result = DoubleTy;
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
@@ -1021,6 +1076,16 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
                    IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Max>,
                    IntrinArgI8<SignedOpKind_Unsigned>
                  ]>,
+    IntrinSelect<int_dx_wave_reduce_min,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Min>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_reduce_umin,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Min>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>,
   ];
 
   let arguments = [OverloadTy, Int8Ty, Int8Ty];
@@ -1030,6 +1095,15 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   ];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, []>];
+}
+
+def LegacyF16ToF32 : DXILOp<131, legacyF16ToF32> {
+  let Doc = "returns the float16 stored in the low-half of the uint converted "
+            "to a float";
+  let intrinsics = [IntrinSelect<int_dx_legacyf16tof32>];
+  let arguments = [Int32Ty];
+  let result = FloatTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
 def WaveAllBitCount : DXILOp<135, waveAllOp> {
@@ -1080,11 +1154,11 @@ def RawBufferStore : DXILOp<140, rawBufferStore> {
 def Dot2AddHalf : DXILOp<162, dot2AddHalf> {
   let Doc = "2D half dot product with accumulate to float";
   let intrinsics = [IntrinSelect<int_dx_dot2add>];
-  let arguments = [FloatTy, HalfTy, HalfTy, HalfTy, HalfTy];
-  let result = FloatTy;
-  let overloads = [Overloads<DXIL1_0, []>];
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let arguments = [OverloadTy, HalfTy, HalfTy, HalfTy, HalfTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_4, [FloatTy]>];
+  let stages = [Stages<DXIL1_4, [all_stages]>];
+  let attributes = [Attributes<DXIL1_4, [ReadNone]>];
 }
 
 def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
@@ -1092,9 +1166,10 @@ def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
             "accumulate to i32";
   let intrinsics = [IntrinSelect<int_dx_dot4add_i8packed>];
   let arguments = [Int32Ty, Int32Ty, Int32Ty];
-  let result = Int32Ty;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_4, [Int32Ty]>];
+  let stages = [Stages<DXIL1_4, [all_stages]>];
+  let attributes = [Attributes<DXIL1_4, [ReadNone]>];
 }
 
 def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
@@ -1102,9 +1177,10 @@ def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
             "accumulate to i32";
   let intrinsics = [IntrinSelect<int_dx_dot4add_u8packed>];
   let arguments = [Int32Ty, Int32Ty, Int32Ty];
-  let result = Int32Ty;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_4, [Int32Ty]>];
+  let stages = [Stages<DXIL1_4, [all_stages]>];
+  let attributes = [Attributes<DXIL1_4, [ReadNone]>];
 }
 
 def AnnotateHandle : DXILOp<216, annotateHandle> {

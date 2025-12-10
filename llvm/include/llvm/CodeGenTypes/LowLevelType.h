@@ -28,6 +28,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 
@@ -140,7 +141,7 @@ public:
   explicit constexpr LLT()
       : IsScalar(false), IsPointer(false), IsVector(false), RawData(0) {}
 
-  explicit LLT(MVT VT);
+  LLVM_ABI explicit LLT(MVT VT);
 
   constexpr bool isValid() const { return IsScalar || RawData != 0; }
   constexpr bool isScalar() const { return IsScalar; }
@@ -158,7 +159,7 @@ public:
   /// vector types.
   constexpr uint16_t getNumElements() const {
     if (isScalable())
-      llvm::reportInvalidSizeRequest(
+      llvm::reportFatalInternalError(
           "Possible incorrect use of LLT::getNumElements() for "
           "scalable vector. Scalable flag may be dropped, use "
           "LLT::getElementCount() instead");
@@ -282,7 +283,7 @@ public:
       return scalar(getScalarSizeInBits());
   }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -339,18 +340,18 @@ private:
   ///   valid encodings, SizeInBits/SizeOfElement must be larger than 0.
   /// * Non-pointer scalar (isPointer == 0 && isVector == 0):
   ///   SizeInBits: 32;
-  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 29};
+  static constexpr BitFieldInfo ScalarSizeFieldInfo{32, 29};
   /// * Pointer (isPointer == 1 && isVector == 0):
   ///   SizeInBits: 16;
   ///   AddressSpace: 24;
-  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 45};
-  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 21};
+  static constexpr BitFieldInfo PointerSizeFieldInfo{16, 45};
+  static constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 21};
   /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 32;
   ///   Scalable: 1;
-  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 5};
-  static const constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
+  static constexpr BitFieldInfo VectorElementsFieldInfo{16, 5};
+  static constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
   /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 16;

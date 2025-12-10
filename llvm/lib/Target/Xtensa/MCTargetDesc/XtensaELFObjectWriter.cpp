@@ -8,6 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/XtensaMCAsmInfo.h"
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -30,10 +31,9 @@ public:
   virtual ~XtensaObjectWriter();
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
 };
 } // namespace
 
@@ -43,13 +43,15 @@ XtensaObjectWriter::XtensaObjectWriter(uint8_t OSABI)
 
 XtensaObjectWriter::~XtensaObjectWriter() {}
 
-unsigned XtensaObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
-                                          const MCFixup &Fixup,
+unsigned XtensaObjectWriter::getRelocType(const MCFixup &Fixup,
+                                          const MCValue &Target,
                                           bool IsPCRel) const {
+  uint8_t Specifier = Target.getSpecifier();
 
   switch ((unsigned)Fixup.getKind()) {
   case FK_Data_4:
-    return ELF::R_XTENSA_32;
+    return Specifier == Xtensa::S_TPOFF ? ELF::R_XTENSA_TLS_TPOFF
+                                        : ELF::R_XTENSA_32;
   default:
     return ELF::R_XTENSA_SLOT0_OP;
   }
@@ -61,7 +63,6 @@ llvm::createXtensaObjectWriter(uint8_t OSABI, bool IsLittleEndian) {
 }
 
 bool XtensaObjectWriter::needsRelocateWithSymbol(const MCValue &,
-                                                 const MCSymbol &,
                                                  unsigned Type) const {
   return false;
 }

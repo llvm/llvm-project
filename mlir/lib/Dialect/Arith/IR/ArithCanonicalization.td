@@ -273,7 +273,7 @@ def RedundantSelectFalse :
     Pat<(SelectOp $pred, $a, (SelectOp $pred, $b, $c)),
         (SelectOp $pred, $a, $c)>;
 
-// select(pred, false, true) => not(pred) 
+// select(pred, false, true) => not(pred)
 def SelectI1ToNot :
     Pat<(SelectOp $pred,
                   (ConstantLikeMatcher ConstantAttr<I1Attr, "0">),
@@ -313,9 +313,9 @@ def IndexCastUIOfExtUI :
 // BitcastOp
 //===----------------------------------------------------------------------===//
 
-// bitcast(bitcast(x)) -> x
+// bitcast(type1, bitcast(type2, x)) -> bitcast(type1, x)
 def BitcastOfBitcast :
-    Pat<(Arith_BitcastOp (Arith_BitcastOp $x)), (replaceWithValue $x)>;
+    Pat<(Arith_BitcastOp (Arith_BitcastOp $x)), (Arith_BitcastOp $x)>;
 
 //===----------------------------------------------------------------------===//
 // ExtSIOp
@@ -361,10 +361,6 @@ def OrOfExtSI :
 // TruncIOp
 //===----------------------------------------------------------------------===//
 
-def ValuesWithSameType :
-    Constraint<
-      CPred<"llvm::all_equal({$0.getType(), $1.getType(), $2.getType()})">>;
-
 def ValueWiderThan :
     Constraint<And<[
       CPred<"getScalarOrElementWidth($0) > getScalarOrElementWidth($1)">,
@@ -378,14 +374,14 @@ def TruncationMatchesShiftAmount :
 
 // trunci(extsi(x)) -> extsi(x), when only the sign-extension bits are truncated
 def TruncIExtSIToExtSI :
-    Pat<(Arith_TruncIOp:$tr (Arith_ExtSIOp:$ext $x)),
+    Pat<(Arith_TruncIOp:$tr (Arith_ExtSIOp:$ext $x), $overflow),
         (Arith_ExtSIOp $x),
         [(ValueWiderThan $ext, $tr),
          (ValueWiderThan $tr, $x)]>;
 
 // trunci(extui(x)) -> extui(x), when only the zero-extension bits are truncated
 def TruncIExtUIToExtUI :
-    Pat<(Arith_TruncIOp:$tr (Arith_ExtUIOp:$ext $x)),
+    Pat<(Arith_TruncIOp:$tr (Arith_ExtUIOp:$ext $x), $overflow),
         (Arith_ExtUIOp $x),
         [(ValueWiderThan $ext, $tr),
          (ValueWiderThan $tr, $x)]>;
@@ -393,31 +389,25 @@ def TruncIExtUIToExtUI :
 // trunci(shrsi(x, c)) -> trunci(shrui(x, c))
 def TruncIShrSIToTrunciShrUI :
     Pat<(Arith_TruncIOp:$tr
-          (Arith_ShRSIOp $x, (ConstantLikeMatcher TypedAttrInterface:$c0))),
-        (Arith_TruncIOp (Arith_ShRUIOp $x, (Arith_ConstantOp (cast<"TypedAttr"> $c0)))),
+          (Arith_ShRSIOp $x, (ConstantLikeMatcher TypedAttrInterface:$c0), $exact), $overflow),
+        (Arith_TruncIOp (Arith_ShRUIOp $x, (Arith_ConstantOp (cast<"TypedAttr"> $c0)), $exact), $overflow),
         [(TruncationMatchesShiftAmount $x, $tr, $c0)]>;
 
-// trunci(shrui(mul(sext(x), sext(y)), c)) -> mulsi_extended(x, y)
-def TruncIShrUIMulIToMulSIExtended :
-    Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
-                              (Arith_MulIOp:$mul
-                                (Arith_ExtSIOp $x), (Arith_ExtSIOp $y), $ovf1),
-                              (ConstantLikeMatcher AnyAttr:$c0))),
-        (Arith_MulSIExtendedOp:$res__1 $x, $y),
-      [(ValuesWithSameType $tr, $x, $y),
-       (ValueWiderThan $mul, $x),
-       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
+//===----------------------------------------------------------------------===//
+// TruncFOp
+//===----------------------------------------------------------------------===//
 
-// trunci(shrui(mul(zext(x), zext(y)), c)) -> mului_extended(x, y)
-def TruncIShrUIMulIToMulUIExtended :
-    Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
-                              (Arith_MulIOp:$mul
-                                (Arith_ExtUIOp $x), (Arith_ExtUIOp $y), $ovf1),
-                              (ConstantLikeMatcher AnyAttr:$c0))),
-        (Arith_MulUIExtendedOp:$res__1 $x, $y),
-      [(ValuesWithSameType $tr, $x, $y),
-       (ValueWiderThan $mul, $x),
-       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
+// truncf(sitofp(x)) -> sitofp(x) if default rounding mode.
+def TruncFSIToFPToSIToFP :
+    Pat<(Arith_TruncFOp:$tr (Arith_SIToFPOp:$fp $x), $rmf, $fmf),
+        (Arith_SIToFPOp $x),
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
+
+// truncf(uitofp(x)) -> uitofp(x) if default rounding mode.
+def TruncFUIToFPToUIToFP :
+    Pat<(Arith_TruncFOp:$tr (Arith_UIToFPOp:$fp $x), $rmf, $fmf),
+        (Arith_UIToFPOp $x),
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
 
 //===----------------------------------------------------------------------===//
 // MulFOp

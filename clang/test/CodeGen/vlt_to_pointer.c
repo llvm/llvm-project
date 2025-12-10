@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -Wno-error=incompatible-pointer-types %s -emit-llvm -o - | FileCheck %s
 
 int c[1][3*2];
 // CHECK: @{{.+}} ={{.*}}global [1 x [6 x {{i[0-9]+}}]] zeroinitializer

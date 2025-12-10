@@ -167,9 +167,8 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   default:
     llvm_unreachable("Unexpected opcode");
   case Instruction::Or:
-    // TODO: We'd be better off creating disjoint or here, but we don't yet
-    // have an IRBuilder API for that.
-    [[fallthrough]];
+    Start = Builder.CreateOr(Start, Splat, "", /*IsDisjoint=*/true);
+    break;
   case Instruction::Add:
     Start = Builder.CreateAdd(Start, Splat);
     break;
@@ -496,18 +495,19 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
   VectorType *DataType;
   Value *StoreVal = nullptr, *Ptr, *Mask, *EVL = nullptr;
-  MaybeAlign MA;
+  Align Alignment;
   switch (II->getIntrinsicID()) {
   case Intrinsic::masked_gather:
     DataType = cast<VectorType>(II->getType());
     Ptr = II->getArgOperand(0);
-    MA = cast<ConstantInt>(II->getArgOperand(1))->getMaybeAlignValue();
-    Mask = II->getArgOperand(2);
+    Alignment = II->getParamAlign(0).valueOrOne();
+    Mask = II->getArgOperand(1);
     break;
   case Intrinsic::vp_gather:
     DataType = cast<VectorType>(II->getType());
     Ptr = II->getArgOperand(0);
-    MA = II->getParamAlign(0).value_or(
+    // FIXME: Falling back to ABI alignment is incorrect.
+    Alignment = II->getParamAlign(0).value_or(
         DL->getABITypeAlign(DataType->getElementType()));
     Mask = II->getArgOperand(1);
     EVL = II->getArgOperand(2);
@@ -516,14 +516,15 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
     DataType = cast<VectorType>(II->getArgOperand(0)->getType());
     StoreVal = II->getArgOperand(0);
     Ptr = II->getArgOperand(1);
-    MA = cast<ConstantInt>(II->getArgOperand(2))->getMaybeAlignValue();
-    Mask = II->getArgOperand(3);
+    Alignment = II->getParamAlign(1).valueOrOne();
+    Mask = II->getArgOperand(2);
     break;
   case Intrinsic::vp_scatter:
     DataType = cast<VectorType>(II->getArgOperand(0)->getType());
     StoreVal = II->getArgOperand(0);
     Ptr = II->getArgOperand(1);
-    MA = II->getParamAlign(1).value_or(
+    // FIXME: Falling back to ABI alignment is incorrect.
+    Alignment = II->getParamAlign(1).value_or(
         DL->getABITypeAlign(DataType->getElementType()));
     Mask = II->getArgOperand(2);
     EVL = II->getArgOperand(3);
@@ -534,7 +535,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
 
   // Make sure the operation will be supported by the backend.
   EVT DataTypeVT = TLI->getValueType(*DL, DataType);
-  if (!MA || !TLI->isLegalStridedLoadStore(DataTypeVT, *MA))
+  if (!TLI->isLegalStridedLoadStore(DataTypeVT, Alignment))
     return false;
 
   // FIXME: Let the backend type legalize by splitting/widening?
@@ -562,7 +563,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
     EVL = Builder.CreateElementCount(
         Builder.getInt32Ty(), cast<VectorType>(DataType)->getElementCount());
 
-  CallInst *Call;
+  Value *Call;
 
   if (!StoreVal) {
     Call = Builder.CreateIntrinsic(
@@ -572,8 +573,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
 
     // Merge llvm.masked.gather's passthru
     if (II->getIntrinsicID() == Intrinsic::masked_gather)
-      Call = Builder.CreateIntrinsic(Intrinsic::vp_select, {DataType},
-                                     {Mask, Call, II->getArgOperand(3), EVL});
+      Call = Builder.CreateSelect(Mask, Call, II->getArgOperand(2));
   } else
     Call = Builder.CreateIntrinsic(
         Intrinsic::experimental_vp_strided_store,

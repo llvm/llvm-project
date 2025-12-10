@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -136,6 +138,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::Android, T.getEnvironment());
+
+  T = Triple("aarch64-unknown-hurd-gnu");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Hurd, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
 
   // PS4 has two spellings for the vendor.
   T = Triple("x86_64-scei-ps4");
@@ -545,12 +553,35 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(VersionTuple(1, 8), T.getDXILVersion());
   EXPECT_EQ(Triple::Amplification, T.getEnvironment());
 
+  T = Triple("dxilv1.0-unknown-shadermodel1.0-rootsignature");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_0, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(VersionTuple(1, 0), T.getDXILVersion());
+  EXPECT_EQ(Triple::RootSignature, T.getEnvironment());
+
+  T = Triple("dxilv1.1-unknown-shadermodel1.1-rootsignature");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_1, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(VersionTuple(1, 1), T.getDXILVersion());
+  EXPECT_EQ(Triple::RootSignature, T.getEnvironment());
+
   T = Triple("dxilv1.8-unknown-shadermodel6.15-library");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::DXILSubArch_v1_8, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(VersionTuple(1, 8), T.getDXILVersion());
+
+  T = Triple("dxilv1.9-unknown-shadermodel6.15-library");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_9, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(VersionTuple(1, 9), T.getDXILVersion());
 
   T = Triple("x86_64-unknown-fuchsia");
   EXPECT_EQ(Triple::x86_64, T.getArch());
@@ -757,6 +788,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("riscv64-meta-unknown-mtia");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::Meta, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::MTIA, T.getEnvironment());
+
   T = Triple("riscv64-unknown-linux");
   EXPECT_EQ(Triple::riscv64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -774,6 +811,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::SUSE, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-hurd-gnu");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Hurd, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
 
   T = Triple("armv7hl-suse-linux-gnueabi");
   EXPECT_EQ(Triple::arm, T.getArch());
@@ -1263,6 +1306,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
+  T = Triple("dxilv1.9-unknown-unknown");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_9, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
   // Check specification of unknown SubArch results in
   // unknown architecture.
   T = Triple("dxilv1.999-unknown-unknown");
@@ -1354,8 +1403,31 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("aarch64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
+  T = Triple("x86_64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
+
+  T = Triple("riscv32-unknown-cheriotrtos");
+  EXPECT_EQ(Triple::riscv32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::CheriotRTOS, T.getOS());
 }
 
 static std::string Join(StringRef A, StringRef B, StringRef C) {
@@ -2263,6 +2335,44 @@ TEST(TripleTest, XROS) {
   EXPECT_EQ(VersionTuple(17), Version);
 }
 
+TEST(TripleTest, BridgeOS) {
+  Triple T;
+  VersionTuple Version;
+
+  T = Triple("arm64-apple-bridgeos");
+  EXPECT_TRUE(T.isBridgeOS());
+  EXPECT_FALSE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "bridgeos");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(0), Version);
+
+  T = Triple("arm64-apple-bridgeos1.0");
+  EXPECT_TRUE(T.isBridgeOS());
+  EXPECT_FALSE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "bridgeos1.0");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(1), Version);
+
+  T = Triple("arm64-apple-bridgeos9.0");
+  EXPECT_TRUE(T.isBridgeOS());
+  EXPECT_FALSE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "bridgeos9.0");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(9), Version);
+}
+
 TEST(TripleTest, getOSVersion) {
   Triple T;
   VersionTuple Version;
@@ -2335,6 +2445,79 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_TRUE(T.isMacOSX());
   T.getMacOSXVersion(Version);
   EXPECT_EQ(VersionTuple(10, 16), Version);
+
+  // 16 forms a valid triple, even though it's not
+  // a version of a macOS.
+  T = Triple("x86_64-apple-macos16.0");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(16, 0), Version);
+
+  T = Triple("arm64-apple-macosx26.1");
+  EXPECT_TRUE(T.isMacOSX());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(26, 1), Version);
+
+  // 19.0 forms a valid triple, even though it's not
+  // a version of a iOS.
+  T = Triple("arm64-apple-ios19.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(19, 0), T.getOSVersion());
+
+  T = Triple("arm64-apple-ios27.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(27, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-watchos12.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isWatchOS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(26, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-visionos3.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(26, 0), T.getiOSVersion());
+
+  T = Triple("x86_64-apple-darwin26");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(27), Version);
+
+  // Check invalid ranges are remapped.
+  T = Triple("arm64-apple-visionos6.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(29, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-watchos14.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isWatchOS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(28, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-ios21.1");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(28, 1), T.getiOSVersion());
 
   T = Triple("x86_64-apple-darwin20");
   EXPECT_TRUE(T.isMacOSX());
@@ -2447,14 +2630,90 @@ TEST(TripleTest, isMacOSVersionLT) {
   EXPECT_FALSE(T.isMacOSXVersionLT(10, 15, 0));
 }
 
+TEST(TripleTest, isMacOSVersionGE) {
+  Triple T = Triple("x86_64-apple-macos11");
+  EXPECT_FALSE(T.isMacOSXVersionGE(11, 1, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(10, 15, 0));
+
+  T = Triple("x86_64-apple-darwin20");
+  EXPECT_FALSE(T.isMacOSXVersionGE(11, 1, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(11, 0, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(10, 15, 0));
+}
+
 TEST(TripleTest, CanonicalizeOSVersion) {
   EXPECT_EQ(VersionTuple(10, 15, 4),
             Triple::getCanonicalVersionForOS(Triple::MacOSX,
-                                             VersionTuple(10, 15, 4)));
-  EXPECT_EQ(VersionTuple(11, 0), Triple::getCanonicalVersionForOS(
-                                     Triple::MacOSX, VersionTuple(10, 16)));
+                                             VersionTuple(10, 15, 4),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(11, 0),
+            Triple::getCanonicalVersionForOS(
+                Triple::MacOSX, VersionTuple(10, 16), /*IsInValidRange=*/true));
   EXPECT_EQ(VersionTuple(20),
-            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(20)));
+            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(20),
+                                             /*IsInValidRange=*/true));
+
+  // Validate mappings for all expected OS versions remapping to 26.
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::MacOSX, VersionTuple(16),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::IOS, VersionTuple(19),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::TvOS, VersionTuple(19),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::WatchOS, VersionTuple(12),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::XROS, VersionTuple(3),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(10),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(10),
+                                             /*IsInValidRange=*/true));
+
+  // Verify invalid ranges can be remapped.
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::MacOSX, VersionTuple(18),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::IOS, VersionTuple(21),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::WatchOS, VersionTuple(14),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::TvOS, VersionTuple(21),
+                                             /*IsInValidRange=*/false));
+}
+
+TEST(TripleTest, CheckValidOSVersion) {
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(16)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::IOS, VersionTuple(19)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(19)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(18, 2)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::WatchOS, VersionTuple(12)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::XROS, VersionTuple(3)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::Darwin, VersionTuple(26)));
+  EXPECT_TRUE(
+      Triple::isValidVersionForOS(Triple::BridgeOS, VersionTuple(26, 1, 1)));
+
+  EXPECT_FALSE(
+      Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(16, 1)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(18)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::IOS, VersionTuple(21)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::WatchOS, VersionTuple(14)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(21)));
 }
 
 TEST(TripleTest, FileFormat) {
@@ -2561,6 +2820,163 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv64-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::DXContainer, Triple("dxil-apple-macosx").getObjectFormat());
+}
+
+TEST(TripleTest, DefaultExceptionHandling) {
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-unknown-linux-gnu").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-unknown-freebsd").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("wasm32-unknown-wasi-wasm").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("wasm64-unknown-wasi-wasm").getDefaultExceptionHandling());
+
+  EXPECT_EQ(
+      ExceptionHandling::ARM,
+      Triple("arm-unknown-linux-android16").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("armv6-unknown-netbsd-eabi").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::ARM,
+            Triple("armv7-suse-linux-gnueabihf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::ARM,
+            Triple("thumbv7-linux-gnueabihf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("thumbv7-none-netbsd").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::ZOS,
+            Triple("s390x-ibm-zos").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("systemz-ibm-linux").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("sparcel-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("amdgcn--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("nvptx64--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("spirv32--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("spirv64--").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-pc-windows-msvc-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("i686-pc-windows-msvc").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i386-apple-darwin9").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("x86_64-unknown-uefi").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI, // ???
+            Triple("x86_64-unknown-msvc").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("riscv32-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("riscv64-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("xcore-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("xtensa-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("lanai-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("arc-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(
+      ExceptionHandling::DwarfCFI,
+      Triple("loongarch32-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(
+      ExceptionHandling::DwarfCFI,
+      Triple("loongarch64-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("msp430-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("m68k-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("csky-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::AIX,
+            Triple("powerpc-ibm-aix").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::AIX,
+            Triple("powerpc---xcoff").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("powerpc-apple-macosx").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-pc-cygwin-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-pc-cygwin-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("x86_64-pc-win32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("x86_64-pc-windows-coreclr").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("ve-unknown-linux").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("ve-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("armv7k-apple-watchos").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::SjLj,
+            Triple("armv7-apple-ios").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mips64-mti-linux-gnu").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mips").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mips-pc-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("mips-pc-windows-msvc-coff").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("mipsel-windows--coff").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mipsel-windows-msvc").getDefaultExceptionHandling());
+
+  EXPECT_EQ(
+      ExceptionHandling::WinEH,
+      Triple("aarch64-unknown-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("aarch64-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("arm64_32-apple-ios").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("arm64-apple-macosx").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("xcore-xmos-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("i386-pc-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i386-mingw32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("i386-pc-win32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i386-pc-mingw32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-pc-cygwin").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-pc-mingw64").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-win32-gnu").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-scei-ps4").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("aarch64-pc-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("aarch64-pc-windows-elf").getDefaultExceptionHandling());
 }
 
 TEST(TripleTest, NormalizeWindows) {
@@ -2863,9 +3279,9 @@ TEST(TripleTest, DXILNormaizeWithVersion) {
             Triple::normalize("dxil--shadermodel6.0"));
   EXPECT_EQ("dxilv1.1-unknown-shadermodel6.1-library",
             Triple::normalize("dxil-shadermodel6.1-unknown-library"));
-  EXPECT_EQ("dxilv1.8-unknown-shadermodel6.x-unknown",
+  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
             Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
-  EXPECT_EQ("dxilv1.8-unknown-shadermodel6.x-unknown",
+  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
             Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
   EXPECT_EQ("dxil-unknown-unknown-unknown", Triple::normalize("dxil---"));
   EXPECT_EQ("dxilv1.0-pc-shadermodel5.0-compute",
@@ -2908,4 +3324,12 @@ TEST(TripleTest, isCompatibleWith) {
     EXPECT_TRUE(DoTest(C.B, C.A, C.Result));
   }
 }
+
+TEST(DataLayoutTest, UEFI) {
+  Triple TT = Triple("x86_64-unknown-uefi");
+
+  // Test UEFI X86_64 Mangling Component.
+  EXPECT_THAT(TT.computeDataLayout(), testing::HasSubstr("-m:w-"));
+}
+
 } // end anonymous namespace

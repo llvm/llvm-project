@@ -132,6 +132,8 @@ void SBLineEntry::SetLine(uint32_t line) {
   LLDB_INSTRUMENT_VA(this, line);
 
   ref().line = line;
+  if (!ref().range.IsValid())
+    ref().synthetic = true;
 }
 
 void SBLineEntry::SetColumn(uint32_t column) {

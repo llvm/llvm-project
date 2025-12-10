@@ -50,7 +50,7 @@
 #define CLANG_EXPORT_TEMPLATE
 #endif
 #elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
-    defined(__MVS__)
+    defined(__MVS__) || defined(__CYGWIN__)
 #define CLANG_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define CLANG_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define CLANG_EXPORT_TEMPLATE

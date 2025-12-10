@@ -86,11 +86,11 @@ return:
 define float @test_merge_anyof_v4sf(<4 x float> %t) {
 ; CHECK-LABEL: @test_merge_anyof_v4sf(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = fcmp olt <4 x float> [[T:%.*]], zeroinitializer
+; CHECK-NEXT:    [[T:%.*]] = freeze <4 x float> [[T1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fcmp olt <4 x float> [[T]], zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <4 x float> [[T]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> [[TMP0]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <8 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i1> [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i1> [[TMP3]] to i8
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[T]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[T]], [[SHIFT]]
@@ -400,11 +400,11 @@ return:
 define float @test_merge_anyof_v4si(<4 x i32> %t) {
 ; CHECK-LABEL: @test_merge_anyof_v4si(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt <4 x i32> [[T:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[T:%.*]] = freeze <4 x i32> [[T1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt <4 x i32> [[T]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[T]], splat (i32 255)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> [[TMP0]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <8 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i1> [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i1> [[TMP3]] to i8
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[T]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[T]], [[SHIFT]]

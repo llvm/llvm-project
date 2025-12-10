@@ -196,7 +196,9 @@ void ImportSection::addImport(Symbol *sym) {
   StringRef module = sym->importModule.value_or(defaultModule);
   StringRef name = sym->importName.value_or(sym->getName());
   if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
-    ImportKey<WasmSignature> key(*(f->getSignature()), module, name);
+    const WasmSignature *sig = f->getSignature();
+    assert(sig && "imported functions must have a signature");
+    ImportKey<WasmSignature> key(*sig, module, name);
     auto entry = importedFunctions.try_emplace(key, numImportedFunctions);
     if (entry.second) {
       importedSymbols.emplace_back(sym);
@@ -258,6 +260,10 @@ void ImportSection::writeBody() {
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_SHARED;
     if (is64)
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_64;
+    if (ctx.arg.pageSize != WasmDefaultPageSize) {
+      import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_PAGE_SIZE;
+      import.Memory.PageSize = ctx.arg.pageSize;
+    }
     writeImport(os, import);
   }
 
@@ -430,8 +436,6 @@ void GlobalSection::addInternalGOTEntry(Symbol *sym) {
 void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
   assert(!ctx.arg.extendedConst);
   bool is64 = ctx.arg.is64.value_or(false);
-  unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
-                                   : WASM_OPCODE_I32_CONST;
   unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
                                  : WASM_OPCODE_I32_ADD;
 
@@ -448,8 +452,7 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
         writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(), "__memory_base");
 
       // Add the virtual address of the data symbol
-      writeU8(os, opcode_ptr_const, "CONST");
-      writeSleb128(os, d->getVA(), "offset");
+      writePtrConst(os, d->getVA(), is64, "offset");
     } else if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
       if (f->isStub)
         continue;
@@ -458,8 +461,7 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
       writeUleb128(os, ctx.sym.tableBase->getGlobalIndex(), "__table_base");
 
       // Add the table index to __table_base
-      writeU8(os, opcode_ptr_const, "CONST");
-      writeSleb128(os, f->getTableIndex(), "offset");
+      writePtrConst(os, f->getTableIndex(), is64, "offset");
     } else {
       assert(isa<UndefinedData>(sym) || isa<SharedData>(sym));
       continue;

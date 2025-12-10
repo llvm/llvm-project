@@ -566,6 +566,141 @@ v_interp_p2_f16 v5, v2, attr0.x, v3 clamp
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // VI: v_interp_p2_f16 v5, v2, attr0.x, v3 clamp ; encoding: [0x05,0x80,0x76,0xd2,0x00,0x04,0x0e,0x04]
 
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3     ; encoding: [0x05,0x00,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,1,0] ; encoding: [0x05,0x20,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,1,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3     ; encoding: [0x05,0x00,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,1,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,1,0] ; encoding: [0x05,0x20,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,1,0] ; encoding: [0x05,0x28,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,1,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,1,0] ; encoding: [0x05,0x20,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,1,0] ; encoding: [0x05,0x28,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,1,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,1,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,1,0] ; encoding: [0x05,0x28,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,0,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3     ; encoding: [0x05,0x00,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,0,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,0,1] ; encoding: [0x05,0x40,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,1,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,1,0] ; encoding: [0x05,0x20,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,1,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,1,1] ; encoding: [0x05,0x60,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,1,0,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3     ; encoding: [0x05,0x00,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,1,0,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,0,1] ; encoding: [0x05,0x40,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,1,1,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,1,0] ; encoding: [0x05,0x20,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,1,1,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[0,0,1,1] ; encoding: [0x05,0x60,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,0,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,0,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,0,1] ; encoding: [0x05,0x48,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,1,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,1,0] ; encoding: [0x05,0x28,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,1,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,1,1] ; encoding: [0x05,0x68,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,1,0,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,1,0,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,0,1] ; encoding: [0x05,0x48,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,1,1,0]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,1,0] ; encoding: [0x05,0x28,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,1,1,1]
+// GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 op_sel:[1,0,1,1] ; encoding: [0x05,0x68,0x77,0xd2,0x00,0x04,0x0e,0x04]
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-3]]:{{[0-9]+}}: error: not a valid operand.
+
 v_interp_p2_legacy_f16 v5, v2, attr31.x, v3
 // GFX9: v_interp_p2_legacy_f16 v5, v2, attr31.x, v3 ; encoding: [0x05,0x00,0x76,0xd2,0x1f,0x04,0x0e,0x04]
 // NOGCN: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -723,8 +858,8 @@ v_add_f64 v[0:1], s0, v[0:1]
 // NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 v_add_f64 v[0:1], s[0:3], v[0:1]
 
-// NOGCN: :[[@LINE+2]]:{{[0-9]+}}: error: invalid operand for instruction
-// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOGCN: :[[@LINE+2]]:{{[0-9]+}}: error: too few operands for instruction
+// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: too few operands for instruction
 v_add_f64 v[0:1], v0, v[0:1]
 
 // NOGCN: :[[@LINE+2]]:{{[0-9]+}}: error: invalid operand for instruction

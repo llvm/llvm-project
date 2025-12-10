@@ -215,7 +215,7 @@ define void @composite_type() !dbg !3 {
 ; // -----
 
 ; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], isOptimized = false, emissionKind = None, nameTableKind = None>
+; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], isOptimized = false, emissionKind = None, nameTableKind = None, splitDebugFilename = "test.dwo">
 ; Verify an empty subroutine types list is supported.
 ; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
 ; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #[[CU]], scope = #[[FILE]], name = "subprogram", linkageName = "subprogram", file = #[[FILE]], line = 42, scopeLine = 42, subprogramFlags = Definition, type = #[[SP_TYPE]]>
@@ -227,7 +227,7 @@ define void @subprogram() !dbg !3 {
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, nameTableKind: None)
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, nameTableKind: None, splitDebugFilename: "test.dwo")
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "subprogram", linkageName: "subprogram", scope: !2, file: !2, line: 42, scopeLine: 42, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(cc: DW_CC_normal, types: !5)
@@ -240,11 +240,10 @@ define void @subprogram() !dbg !3 {
 define void @func_loc() !dbg !3 {
   ret void
 }
-; CHECK-DAG: #[[NAME_LOC:.+]] = loc("func_loc")
 ; CHECK-DAG: #[[FILE_LOC:.+]] = loc("debug-info.ll":42:0)
 ; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, line = 42, subprogramFlags = Definition>
 
-; CHECK: loc(fused<#[[SP]]>[#[[NAME_LOC]], #[[FILE_LOC]]]
+; CHECK: loc(fused<#[[SP]]>[#[[FILE_LOC]]]
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}

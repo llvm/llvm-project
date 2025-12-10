@@ -14,7 +14,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+d,+zcmp,+prefer-vsetvli-over-read-vlenb -O2 < %s \
 ; RUN:    | FileCheck --check-prefix=SPILL-O2-ZCMP-VSETVLI %s
 
-
 @.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 
 define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x double> %c, i64 %gvl) nounwind
@@ -256,11 +255,10 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    add sp, sp, a0
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    cm.popret {ra, s0}, 32
 {
-   %x = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i64 7, i64 %gvl)
+   %x = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i64 7, i64 %gvl)
    %call = call signext i32 @puts(ptr @.str)
-   %z = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %a, <vscale x 1 x double> %x, i64 7, i64 %gvl)
+   %z = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x double> %a, <vscale x 1 x double> %x, i64 7, i64 %gvl)
    ret <vscale x 1 x double> %z
 }
 
-declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> %passthru, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i64, i64 %gvl)
 declare i32 @puts(ptr);

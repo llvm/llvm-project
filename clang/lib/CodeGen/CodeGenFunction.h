@@ -17,8 +17,8 @@
 #include "CGLoopInfo.h"
 #include "CGValue.h"
 #include "CodeGenModule.h"
-#include "CodeGenPGO.h"
 #include "EHScopeStack.h"
+#include "SanitizerHandler.h"
 #include "VarBypassDetector.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
@@ -90,6 +90,7 @@ class OSLogBufferLayout;
 
 namespace CodeGen {
 class CodeGenTypes;
+class CodeGenPGO;
 class CGCallee;
 class CGFunctionInfo;
 class CGBlockInfo;
@@ -114,40 +115,6 @@ enum TypeEvaluationKind {
   TEK_Aggregate
 };
 // clang-format on
-
-#define LIST_SANITIZER_CHECKS                                                  \
-  SANITIZER_CHECK(AddOverflow, add_overflow, 0)                                \
-  SANITIZER_CHECK(BuiltinUnreachable, builtin_unreachable, 0)                  \
-  SANITIZER_CHECK(CFICheckFail, cfi_check_fail, 0)                             \
-  SANITIZER_CHECK(DivremOverflow, divrem_overflow, 0)                          \
-  SANITIZER_CHECK(DynamicTypeCacheMiss, dynamic_type_cache_miss, 0)            \
-  SANITIZER_CHECK(FloatCastOverflow, float_cast_overflow, 0)                   \
-  SANITIZER_CHECK(FunctionTypeMismatch, function_type_mismatch, 0)             \
-  SANITIZER_CHECK(ImplicitConversion, implicit_conversion, 0)                  \
-  SANITIZER_CHECK(InvalidBuiltin, invalid_builtin, 0)                          \
-  SANITIZER_CHECK(InvalidObjCCast, invalid_objc_cast, 0)                       \
-  SANITIZER_CHECK(LoadInvalidValue, load_invalid_value, 0)                     \
-  SANITIZER_CHECK(MissingReturn, missing_return, 0)                            \
-  SANITIZER_CHECK(MulOverflow, mul_overflow, 0)                                \
-  SANITIZER_CHECK(NegateOverflow, negate_overflow, 0)                          \
-  SANITIZER_CHECK(NullabilityArg, nullability_arg, 0)                          \
-  SANITIZER_CHECK(NullabilityReturn, nullability_return, 1)                    \
-  SANITIZER_CHECK(NonnullArg, nonnull_arg, 0)                                  \
-  SANITIZER_CHECK(NonnullReturn, nonnull_return, 1)                            \
-  SANITIZER_CHECK(OutOfBounds, out_of_bounds, 0)                               \
-  SANITIZER_CHECK(PointerOverflow, pointer_overflow, 0)                        \
-  SANITIZER_CHECK(ShiftOutOfBounds, shift_out_of_bounds, 0)                    \
-  SANITIZER_CHECK(SubOverflow, sub_overflow, 0)                                \
-  SANITIZER_CHECK(TypeMismatch, type_mismatch, 1)                              \
-  SANITIZER_CHECK(AlignmentAssumption, alignment_assumption, 0)                \
-  SANITIZER_CHECK(VLABoundNotPositive, vla_bound_not_positive, 0)              \
-  SANITIZER_CHECK(BoundsSafety, bounds_safety, 0)
-
-enum SanitizerHandler {
-#define SANITIZER_CHECK(Enum, Name, Version) Enum,
-  LIST_SANITIZER_CHECKS
-#undef SANITIZER_CHECK
-};
 
 /// Helper class with most of the code for saving a value for a
 /// conditional expression cleanup.
@@ -258,6 +225,23 @@ template <> struct DominatingValue<RValue> {
   }
 };
 
+/// A scoped helper to set the current source atom group for
+/// CGDebugInfo::addInstToCurrentSourceAtom. A source atom is a source construct
+/// that is "interesting" for debug stepping purposes. We use an atom group
+/// number to track the instruction(s) that implement the functionality for the
+/// atom, plus backup instructions/source locations.
+class ApplyAtomGroup {
+  uint64_t OriginalAtom = 0;
+  CGDebugInfo *DI = nullptr;
+
+  ApplyAtomGroup(const ApplyAtomGroup &) = delete;
+  void operator=(const ApplyAtomGroup &) = delete;
+
+public:
+  ApplyAtomGroup(CGDebugInfo *DI);
+  ~ApplyAtomGroup();
+};
+
 /// CodeGenFunction - This class organizes the per-function state that is used
 /// while generating LLVM code.
 class CodeGenFunction : public CodeGenTypeCache {
@@ -361,6 +345,10 @@ public:
   const CGFunctionInfo *CurFnInfo = nullptr;
   QualType FnRetTy;
   llvm::Function *CurFn = nullptr;
+
+  /// If a cast expression is being visited, this holds the current cast's
+  /// expression.
+  const CastExpr *CurCast = nullptr;
 
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;
@@ -717,14 +705,12 @@ public:
     bool isRedundantBeforeReturn() override { return true; }
 
     llvm::Value *Addr;
-    llvm::Value *Size;
 
   public:
-    CallLifetimeEnd(RawAddress addr, llvm::Value *size)
-        : Addr(addr.getPointer()), Size(size) {}
+    CallLifetimeEnd(RawAddress addr) : Addr(addr.getPointer()) {}
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
-      CGF.EmitLifetimeEnd(Size, Addr);
+      CGF.EmitLifetimeEnd(Addr);
     }
   };
 
@@ -743,7 +729,7 @@ public:
   };
 
   /// Header for data within LifetimeExtendedCleanupStack.
-  struct LifetimeExtendedCleanupHeader {
+  struct alignas(uint64_t) LifetimeExtendedCleanupHeader {
     /// The size of the following cleanup object.
     unsigned Size;
     /// The kind of cleanup to push.
@@ -869,6 +855,9 @@ public:
       }
       CGM.setAtomicOpts(AO);
     }
+
+    CGAtomicOptionsRAII(const CGAtomicOptionsRAII &) = delete;
+    CGAtomicOptionsRAII &operator=(const CGAtomicOptionsRAII &) = delete;
     ~CGAtomicOptionsRAII() { CGM.setAtomicOpts(SavedAtomicOpts); }
 
   private:
@@ -962,7 +951,8 @@ public:
         LifetimeExtendedCleanupStack.size() + sizeof(Header) + Header.Size +
         (Header.IsConditional ? sizeof(ActiveFlag) : 0));
 
-    static_assert(sizeof(Header) % alignof(T) == 0,
+    static_assert((alignof(LifetimeExtendedCleanupHeader) == alignof(T)) &&
+                      (alignof(T) == alignof(RawAddress)),
                   "Cleanup will be allocated on misaligned address");
     char *Buffer = &LifetimeExtendedCleanupStack[OldSize];
     new (Buffer) LifetimeExtendedCleanupHeader(Header);
@@ -1566,9 +1556,11 @@ private:
   // BreakContinueStack - This keeps track of where break and continue
   // statements should jump to.
   struct BreakContinue {
-    BreakContinue(JumpDest Break, JumpDest Continue)
-        : BreakBlock(Break), ContinueBlock(Continue) {}
+    BreakContinue(const Stmt &LoopOrSwitch, JumpDest Break, JumpDest Continue)
+        : LoopOrSwitch(&LoopOrSwitch), BreakBlock(Break),
+          ContinueBlock(Continue) {}
 
+    const Stmt *LoopOrSwitch;
     JumpDest BreakBlock;
     JumpDest ContinueBlock;
   };
@@ -1653,7 +1645,7 @@ private:
   llvm::Value *emitCondLikelihoodViaExpectIntrinsic(llvm::Value *Cond,
                                                     Stmt::Likelihood LH);
 
-  CodeGenPGO PGO;
+  std::unique_ptr<CodeGenPGO> PGO;
 
   /// Bitmap used by MC/DC to track condition outcomes of a boolean expression.
   Address MCDCCondBitmapAddr = Address::invalid();
@@ -1666,12 +1658,9 @@ private:
                                             uint64_t LoopCount) const;
 
 public:
-  auto getIsCounterPair(const Stmt *S) const { return PGO.getIsCounterPair(S); }
-
-  void markStmtAsUsed(bool Skipped, const Stmt *S) {
-    PGO.markStmtAsUsed(Skipped, S);
-  }
-  void markStmtMaybeUsed(const Stmt *S) { PGO.markStmtMaybeUsed(S); }
+  std::pair<bool, bool> getIsCounterPair(const Stmt *S) const;
+  void markStmtAsUsed(bool Skipped, const Stmt *S);
+  void markStmtMaybeUsed(const Stmt *S);
 
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
@@ -1685,13 +1674,7 @@ public:
 
   /// Allocate a temp value on the stack that MCDC can use to track condition
   /// results.
-  void maybeCreateMCDCCondBitmap() {
-    if (isMCDCCoverageEnabled()) {
-      PGO.emitMCDCParameters(Builder);
-      MCDCCondBitmapAddr =
-          CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
-    }
-  }
+  void maybeCreateMCDCCondBitmap();
 
   bool isBinaryLogicalOp(const Expr *E) const {
     const BinaryOperator *BOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
@@ -1699,43 +1682,37 @@ public:
   }
 
   /// Zero-init the MCDC temp value.
-  void maybeResetMCDCCondBitmap(const Expr *E) {
-    if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
-      PGO.emitMCDCCondBitmapReset(Builder, E, MCDCCondBitmapAddr);
-      PGO.setCurrentStmt(E);
-    }
-  }
+  void maybeResetMCDCCondBitmap(const Expr *E);
 
   /// Increment the profiler's counter for the given expression by \p StepV.
   /// If \p StepV is null, the default increment is 1.
-  void maybeUpdateMCDCTestVectorBitmap(const Expr *E) {
-    if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
-      PGO.emitMCDCTestVectorBitmapUpdate(Builder, E, MCDCCondBitmapAddr, *this);
-      PGO.setCurrentStmt(E);
-    }
-  }
+  void maybeUpdateMCDCTestVectorBitmap(const Expr *E);
 
   /// Update the MCDC temp value with the condition's evaluated result.
-  void maybeUpdateMCDCCondBitmap(const Expr *E, llvm::Value *Val) {
-    if (isMCDCCoverageEnabled()) {
-      PGO.emitMCDCCondBitmapUpdate(Builder, E, MCDCCondBitmapAddr, Val, *this);
-      PGO.setCurrentStmt(E);
-    }
-  }
+  void maybeUpdateMCDCCondBitmap(const Expr *E, llvm::Value *Val);
 
   /// Get the profiler's count for the given statement.
-  uint64_t getProfileCount(const Stmt *S) {
-    return PGO.getStmtCount(S).value_or(0);
-  }
+  uint64_t getProfileCount(const Stmt *S);
 
   /// Set the profiler's current count.
-  void setCurrentProfileCount(uint64_t Count) {
-    PGO.setCurrentRegionCount(Count);
-  }
+  void setCurrentProfileCount(uint64_t Count);
 
   /// Get the profiler's current count. This is generally the count for the most
   /// recently incremented counter.
-  uint64_t getCurrentProfileCount() { return PGO.getCurrentRegionCount(); }
+  uint64_t getCurrentProfileCount();
+
+  /// See CGDebugInfo::addInstToCurrentSourceAtom.
+  void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                  llvm::Value *Backup);
+
+  /// See CGDebugInfo::addInstToSpecificSourceAtom.
+  void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                   llvm::Value *Backup, uint64_t Atom);
+
+  /// Add \p KeyInstruction and an optional \p Backup instruction to a new atom
+  /// group (See ApplyAtomGroup for more info).
+  void addInstToNewSourceAtom(llvm::Instruction *KeyInstruction,
+                              llvm::Value *Backup);
 
 private:
   /// SwitchInsn - This is nearest current switch instruction. It is null if
@@ -2582,9 +2559,12 @@ public:
                           const FunctionArgList &Args);
 
   /// EmitFunctionEpilog - Emit the target specific LLVM code to return the
-  /// given temporary.
+  /// given temporary. Specify the source location atom group (Key Instructions
+  /// debug info feature) for the `ret` using \p RetKeyInstructionsSourceAtom.
+  /// If it's 0, the `ret` will get added to a new source atom group.
   void EmitFunctionEpilog(const CGFunctionInfo &FI, bool EmitRetDbgLoc,
-                          SourceLocation EndLoc);
+                          SourceLocation EndLoc,
+                          uint64_t RetKeyInstructionsSourceAtom);
 
   /// Emit a test that checks if the return value \p RV is nonnull.
   void EmitReturnValueCheck(llvm::Value *RV);
@@ -2830,6 +2810,13 @@ public:
     AllocaTracker Tracker;
   };
 
+private:
+  /// If \p Alloca is not in the same address space as \p DestLangAS, insert an
+  /// address space cast and return a new RawAddress based on this value.
+  RawAddress MaybeCastStackAddressSpace(RawAddress Alloca, LangAS DestLangAS,
+                                        llvm::Value *ArraySize = nullptr);
+
+public:
   /// CreateTempAlloca - This creates an alloca and inserts it into the entry
   /// block if \p ArraySize is nullptr, otherwise inserts it at the current
   /// insertion point of the builder. The caller is responsible for setting an
@@ -2858,10 +2845,28 @@ public:
   /// more efficient if the caller knows that the address will not be exposed.
   llvm::AllocaInst *CreateTempAlloca(llvm::Type *Ty, const Twine &Name = "tmp",
                                      llvm::Value *ArraySize = nullptr);
+
+  /// CreateTempAlloca - This creates a alloca and inserts it into the entry
+  /// block. The alloca is casted to the address space of \p UseAddrSpace if
+  /// necessary.
+  RawAddress CreateTempAlloca(llvm::Type *Ty, LangAS UseAddrSpace,
+                              CharUnits align, const Twine &Name = "tmp",
+                              llvm::Value *ArraySize = nullptr,
+                              RawAddress *Alloca = nullptr);
+
+  /// CreateTempAlloca - This creates a alloca and inserts it into the entry
+  /// block. The alloca is casted to default address space if necessary.
+  ///
+  /// FIXME: This version should be removed, and context should provide the
+  /// context use address space used instead of default.
   RawAddress CreateTempAlloca(llvm::Type *Ty, CharUnits align,
                               const Twine &Name = "tmp",
                               llvm::Value *ArraySize = nullptr,
-                              RawAddress *Alloca = nullptr);
+                              RawAddress *Alloca = nullptr) {
+    return CreateTempAlloca(Ty, LangAS::Default, align, Name, ArraySize,
+                            Alloca);
+  }
+
   RawAddress CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits align,
                                          const Twine &Name = "tmp",
                                          llvm::Value *ArraySize = nullptr);
@@ -2980,10 +2985,8 @@ public:
   /// hasVolatileMember - returns true if aggregate type has a volatile
   /// member.
   bool hasVolatileMember(QualType T) {
-    if (const RecordType *RT = T->getAs<RecordType>()) {
-      const RecordDecl *RD = cast<RecordDecl>(RT->getDecl());
+    if (const auto *RD = T->getAsRecordDecl())
       return RD->hasVolatileMember();
-    }
     return false;
   }
 
@@ -3006,6 +3009,7 @@ public:
 
   /// Emit an aggregate assignment.
   void EmitAggregateAssign(LValue Dest, LValue Src, QualType EltTy) {
+    ApplyAtomGroup Grp(getDebugInfo());
     bool IsVolatile = hasVolatileMember(EltTy);
     EmitAggregateCopy(Dest, Src, EltTy, AggValueSlot::MayOverlap, IsVolatile);
   }
@@ -3239,8 +3243,8 @@ public:
   void EmitSehTryScopeBegin();
   void EmitSehTryScopeEnd();
 
-  llvm::Value *EmitLifetimeStart(llvm::TypeSize Size, llvm::Value *Addr);
-  void EmitLifetimeEnd(llvm::Value *Size, llvm::Value *Addr);
+  bool EmitLifetimeStart(llvm::Value *Addr);
+  void EmitLifetimeEnd(llvm::Value *Addr);
 
   llvm::Value *EmitCXXNewExpr(const CXXNewExpr *E);
   void EmitCXXDeleteExpr(const CXXDeleteExpr *E);
@@ -3341,12 +3345,37 @@ public:
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
 
+  /// Returns debug info, with additional annotation if
+  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
+  /// any of the ordinals.
+  llvm::DILocation *
+  SanitizerAnnotateDebugInfo(ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+                             SanitizerHandler Handler);
+
+  /// Build metadata used by the AllocToken instrumentation.
+  llvm::MDNode *buildAllocToken(QualType AllocType);
+  /// Emit and set additional metadata used by the AllocToken instrumentation.
+  void EmitAllocToken(llvm::CallBase *CB, QualType AllocType);
+  /// Build additional metadata used by the AllocToken instrumentation,
+  /// inferring the type from an allocation call expression.
+  llvm::MDNode *buildAllocToken(const CallExpr *E);
+  /// Emit and set additional metadata used by the AllocToken instrumentation,
+  /// inferring the type from an allocation call expression.
+  void EmitAllocToken(llvm::CallBase *CB, const CallExpr *E);
+
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
 
   /// Build an expression accessing the "counted_by" field.
   llvm::Value *EmitLoadOfCountedByField(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
+
+  // Emit bounds checking for flexible array and pointer members with the
+  // counted_by attribute.
+  void EmitCountedByBoundsChecking(const Expr *E, llvm::Value *Idx,
+                                   Address Addr, QualType IdxTy,
+                                   QualType ArrayTy, bool Accessed,
+                                   bool FlexibleArray);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
@@ -3409,8 +3438,8 @@ public:
     /// initializer.
     bool IsConstantAggregate;
 
-    /// Non-null if we should use lifetime annotations.
-    llvm::Value *SizeForLifetimeMarkers;
+    /// True if lifetime markers should be used.
+    bool UseLifetimeMarkers;
 
     /// Address with original alloca instruction. Invalid if the variable was
     /// emitted as a global constant.
@@ -3424,20 +3453,14 @@ public:
     AutoVarEmission(const VarDecl &variable)
         : Variable(&variable), Addr(Address::invalid()), NRVOFlag(nullptr),
           IsEscapingByRef(false), IsConstantAggregate(false),
-          SizeForLifetimeMarkers(nullptr), AllocaAddr(RawAddress::invalid()) {}
+          UseLifetimeMarkers(false), AllocaAddr(RawAddress::invalid()) {}
 
     bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
 
   public:
     static AutoVarEmission invalid() { return AutoVarEmission(Invalid()); }
 
-    bool useLifetimeMarkers() const {
-      return SizeForLifetimeMarkers != nullptr;
-    }
-    llvm::Value *getSizeForLifetimeMarkers() const {
-      assert(useLifetimeMarkers());
-      return SizeForLifetimeMarkers;
-    }
+    bool useLifetimeMarkers() const { return UseLifetimeMarkers; }
 
     /// Returns the raw, allocated address, which is not necessarily
     /// the address of the object itself. It is casted to default
@@ -3600,6 +3623,8 @@ public:
   void EmitCaseStmtRange(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitAsmStmt(const AsmStmt &S);
 
+  const BreakContinue *GetDestForLoopControlStmt(const LoopControlStmt &S);
+
   void EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S);
   void EmitObjCAtTryStmt(const ObjCAtTryStmt &S);
   void EmitObjCAtThrowStmt(const ObjCAtThrowStmt &S);
@@ -3684,8 +3709,9 @@ public:
   llvm::Function *EmitCapturedStmt(const CapturedStmt &S, CapturedRegionKind K);
   llvm::Function *GenerateCapturedStmtFunction(const CapturedStmt &S);
   Address GenerateCapturedStmtArgument(const CapturedStmt &S);
-  llvm::Function *GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
-                                                     SourceLocation Loc);
+  llvm::Function *
+  GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
+                                     const OMPExecutableDirective &D);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
@@ -3850,6 +3876,7 @@ public:
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
+  void EmitOMPFuseDirective(const OMPFuseDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
   void EmitOMPScopeDirective(const OMPScopeDirective &S);
@@ -4452,10 +4479,8 @@ public:
                                 AggValueSlot slot = AggValueSlot::ignored());
   LValue EmitPseudoObjectLValue(const PseudoObjectExpr *e);
 
-  void FlattenAccessAndType(
-      Address Addr, QualType AddrTy,
-      SmallVectorImpl<std::pair<Address, llvm::Value *>> &AccessList,
-      SmallVectorImpl<QualType> &FlatTypes);
+  void FlattenAccessAndTypeLValue(LValue LVal,
+                                  SmallVectorImpl<LValue> &AccessList);
 
   llvm::Value *EmitIvarOffset(const ObjCInterfaceDecl *Interface,
                               const ObjCIvarDecl *Ivar);
@@ -4552,7 +4577,7 @@ public:
                                        ArrayRef<llvm::Value *> args);
 
   CGCallee BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
-                                     NestedNameSpecifier *Qual, llvm::Type *Ty);
+                                     NestedNameSpecifier Qual, llvm::Type *Ty);
 
   CGCallee BuildAppleKextVirtualDestructorCall(const CXXDestructorDecl *DD,
                                                CXXDtorType Type,
@@ -4657,7 +4682,7 @@ public:
                                llvm::CallBase **CallOrInvoke = nullptr);
   RValue EmitCXXMemberOrOperatorMemberCallExpr(
       const CallExpr *CE, const CXXMethodDecl *MD, ReturnValueSlot ReturnValue,
-      bool HasQualifier, NestedNameSpecifier *Qualifier, bool IsArrow,
+      bool HasQualifier, NestedNameSpecifier Qualifier, bool IsArrow,
       const Expr *Base, llvm::CallBase **CallOrInvoke);
   // Compute the object pointer.
   Address EmitCXXMemberDataPointerAddress(
@@ -4845,6 +4870,12 @@ public:
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                    ReturnValueSlot ReturnValue);
+
+  // Returns a builtin function that the SPIR-V backend will expand into a spec
+  // constant.
+  llvm::Function *
+  getSpecConstantFunction(const clang::QualType &SpecConstantType);
+
   llvm::Value *EmitDirectXBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitSPIRVBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
@@ -5206,6 +5237,12 @@ public:
   /// operation is a subtraction.
   enum { NotSubtraction = false, IsSubtraction = true };
 
+  /// Emit pointer + index arithmetic.
+  llvm::Value *EmitPointerArithmetic(const BinaryOperator *BO,
+                                     Expr *pointerOperand, llvm::Value *pointer,
+                                     Expr *indexOperand, llvm::Value *index,
+                                     bool isSubtraction);
+
   /// Same as IRBuilder::CreateInBoundsGEP, but additionally emits a check to
   /// detect undefined behavior when the pointer overflow sanitizer is enabled.
   /// \p SignedIndices indicates whether any of the GEP indices are signed.
@@ -5260,7 +5297,8 @@ public:
   EmitCheck(ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>>
                 Checked,
             SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,
-            ArrayRef<llvm::Value *> DynamicArgs);
+            ArrayRef<llvm::Value *> DynamicArgs,
+            const TrapReason *TR = nullptr);
 
   /// Emit a slow path cross-DSO CFI check which calls __cfi_slowpath
   /// if Cond if false.
@@ -5276,7 +5314,7 @@ public:
   /// Create a basic block that will call the trap intrinsic, and emit a
   /// conditional branch to it, for the -ftrapv checks.
   void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
-                     bool NoMerge = false);
+                     bool NoMerge = false, const TrapReason *TR = nullptr);
 
   /// Emit a call to trap or debugtrap and attach function attribute
   /// "trap-func-name" if specified.
@@ -5401,9 +5439,20 @@ private:
                                      llvm::IntegerType *ResType,
                                      llvm::Value *EmittedE, bool IsDynamic);
 
-  llvm::Value *emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
+  llvm::Value *emitCountedBySize(const Expr *E, llvm::Value *EmittedE,
+                                 unsigned Type, llvm::IntegerType *ResType);
+
+  llvm::Value *emitCountedByMemberSize(const MemberExpr *E, const Expr *Idx,
+                                       llvm::Value *EmittedE,
+                                       QualType CastedArrayElementTy,
                                        unsigned Type,
                                        llvm::IntegerType *ResType);
+
+  llvm::Value *emitCountedByPointerSize(const ImplicitCastExpr *E,
+                                        const Expr *Idx, llvm::Value *EmittedE,
+                                        QualType CastedArrayElementTy,
+                                        unsigned Type,
+                                        llvm::IntegerType *ResType);
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);

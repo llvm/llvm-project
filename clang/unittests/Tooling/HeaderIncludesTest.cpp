@@ -594,6 +594,148 @@ TEST_F(HeaderIncludesTest, CanDeleteAfterCode) {
   EXPECT_EQ(Expected, remove(Code, "\"b.h\""));
 }
 
+TEST_F(HeaderIncludesTest, InsertInGlobalModuleFragment) {
+  // Ensure header insertions go only in the global module fragment
+  std::string Code = R"cpp(// comments
+
+// more comments
+
+module;
+export module foo;
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+  std::string Expected = R"cpp(// comments
+
+// more comments
+
+module;
+#include <vector>
+export module foo;
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+
+  auto InsertedCode = insert(Code, "<vector>");
+  EXPECT_EQ(Expected, insert(Code, "<vector>"));
+}
+
+TEST_F(HeaderIncludesTest, InsertInGlobalModuleFragmentWithPP) {
+  // Ensure header insertions go only in the global module fragment
+  std::string Code = R"cpp(// comments
+
+// more comments
+
+// some more comments
+
+module;
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// comment
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// more comment
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+  std::string Expected = R"cpp(// comments
+
+// more comments
+
+// some more comments
+
+module;
+
+#include <vector>
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// comment
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// more comment
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+
+  EXPECT_EQ(Expected, insert(Code, "<vector>"));
+}
+
+TEST_F(HeaderIncludesTest, InsertInGlobalModuleFragmentWithPPIncludes) {
+  // Ensure header insertions go only in the global module fragment
+  std::string Code = R"cpp(// comments
+
+// more comments
+
+// some more comments
+
+module;
+
+#include "header.h"
+
+#include <string>
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// comment
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// more comment
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+  std::string Expected = R"cpp(// comments
+
+// more comments
+
+// some more comments
+
+module;
+
+#include "header.h"
+
+#include <string>
+#include <vector>
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// comment
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// more comment
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+
+  EXPECT_EQ(Expected, insert(Code, "<vector>"));
+}
+
 } // namespace
 } // namespace tooling
 } // namespace clang

@@ -135,16 +135,22 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
     } else if (proc.IsPure()) {
       std::size_t j{0};
       for (const auto &arg : call.arguments()) {
-        if (const auto *dataDummy{j < proc.dummyArguments.size()
-                    ? std::get_if<characteristics::DummyDataObject>(
-                          &proc.dummyArguments[j].u)
-                    : nullptr};
-            dataDummy &&
+        const auto *dataDummy{j < proc.dummyArguments.size()
+                ? std::get_if<characteristics::DummyDataObject>(
+                      &proc.dummyArguments[j].u)
+                : nullptr};
+        if (dataDummy &&
             dataDummy->attrs.test(
                 characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry)) {
           // The value of the argument doesn't matter
         } else if (!arg) {
-          return false;
+          if (dataDummy &&
+              dataDummy->attrs.test(
+                  characteristics::DummyDataObject::Attr::Optional)) {
+            // Missing optional arguments are okay.
+          } else {
+            return false;
+          }
         } else if (const auto *expr{arg->UnwrapExpr()};
             !expr || !(*this)(*expr)) {
           return false;
@@ -373,8 +379,11 @@ bool IsInitialProcedureTarget(const semantics::Symbol &symbol) {
       common::visitors{
           [&](const semantics::SubprogramDetails &subp) {
             return !subp.isDummy() && !subp.stmtFunction() &&
-                symbol.owner().kind() != semantics::Scope::Kind::MainProgram &&
-                symbol.owner().kind() != semantics::Scope::Kind::Subprogram;
+                ((symbol.owner().kind() !=
+                         semantics::Scope::Kind::MainProgram &&
+                     symbol.owner().kind() !=
+                         semantics::Scope::Kind::Subprogram) ||
+                    ultimate.attrs().test(semantics::Attr::EXTERNAL));
           },
           [](const semantics::SubprogramNameDetails &x) {
             return x.kind() != semantics::SubprogramKind::Internal;
@@ -405,6 +414,88 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
   }
 }
 
+class SuspiciousRealLiteralFinder
+    : public AnyTraverse<SuspiciousRealLiteralFinder> {
+public:
+  using Base = AnyTraverse<SuspiciousRealLiteralFinder>;
+  SuspiciousRealLiteralFinder(int kind, FoldingContext &c)
+      : Base{*this}, kind_{kind}, context_{c} {}
+  using Base::operator();
+  template <int KIND>
+  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
+    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+      context_.Warn(common::UsageWarning::RealConstantWidening,
+          "Default real literal in REAL(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
+          kind_, x.AsFortran());
+      return true;
+    } else {
+      return false;
+    }
+  }
+  template <int KIND>
+  bool operator()(const Constant<Type<TypeCategory::Complex, KIND>> &x) const {
+    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+      context_.Warn(common::UsageWarning::RealConstantWidening,
+          "Default real literal in COMPLEX(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
+          kind_, x.AsFortran());
+      return true;
+    } else {
+      return false;
+    }
+  }
+  template <TypeCategory TOCAT, int TOKIND, TypeCategory FROMCAT>
+  bool operator()(const Convert<Type<TOCAT, TOKIND>, FROMCAT> &x) const {
+    if constexpr ((TOCAT == TypeCategory::Real ||
+                      TOCAT == TypeCategory::Complex) &&
+        (FROMCAT == TypeCategory::Real || FROMCAT == TypeCategory::Complex)) {
+      auto fromType{x.left().GetType()};
+      if (!fromType || fromType->kind() < TOKIND) {
+        return false;
+      }
+    }
+    return (*this)(x.left());
+  }
+
+private:
+  int kind_;
+  FoldingContext &context_;
+};
+
+void CheckRealWidening(const Expr<SomeType> &expr, const DynamicType &toType,
+    FoldingContext &context) {
+  if (toType.category() == TypeCategory::Real ||
+      toType.category() == TypeCategory::Complex) {
+    if (auto fromType{expr.GetType()}) {
+      if ((fromType->category() == TypeCategory::Real ||
+              fromType->category() == TypeCategory::Complex) &&
+          toType.kind() > fromType->kind()) {
+        SuspiciousRealLiteralFinder{toType.kind(), context}(expr);
+      }
+    }
+  }
+}
+
+void CheckRealWidening(const Expr<SomeType> &expr,
+    const std::optional<DynamicType> &toType, FoldingContext &context) {
+  if (toType) {
+    CheckRealWidening(expr, *toType, context);
+  }
+}
+
+class InexactLiteralConversionFlagClearer
+    : public AnyTraverse<InexactLiteralConversionFlagClearer> {
+public:
+  using Base = AnyTraverse<InexactLiteralConversionFlagClearer>;
+  InexactLiteralConversionFlagClearer() : Base(*this) {}
+  using Base::operator();
+  template <int KIND>
+  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
+    auto &mut{const_cast<Type<TypeCategory::Real, KIND> &>(x.result())};
+    mut.set_isFromInexactLiteralConversion(false);
+    return false;
+  }
+};
+
 // Converts, folds, and then checks type, rank, and shape of an
 // initialization expression for a named constant, a non-pointer
 // variable static initialization, a component default initializer,
@@ -416,16 +507,14 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
   if (auto symTS{
           characteristics::TypeAndShape::Characterize(symbol, context)}) {
     auto xType{x.GetType()};
+    CheckRealWidening(x, symTS->type(), context);
     auto converted{ConvertToType(symTS->type(), Expr<SomeType>{x})};
     if (!converted &&
         symbol.owner().context().IsEnabled(
             common::LanguageFeature::LogicalIntegerAssignment)) {
       converted = DataConstantConversionExtension(context, symTS->type(), x);
-      if (converted &&
-          symbol.owner().context().ShouldWarn(
-              common::LanguageFeature::LogicalIntegerAssignment)) {
-        context.messages().Say(
-            common::LanguageFeature::LogicalIntegerAssignment,
+      if (converted) {
+        context.Warn(common::LanguageFeature::LogicalIntegerAssignment,
             "nonstandard usage: initialization of %s with %s"_port_en_US,
             symTS->type().AsFortran(), x.GetType().value().AsFortran());
       }
@@ -433,6 +522,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
     if (converted) {
       auto folded{Fold(context, std::move(*converted))};
       if (IsActuallyConstant(folded)) {
+        InexactLiteralConversionFlagClearer{}(folded);
         int symRank{symTS->Rank()};
         if (IsImpliedShape(symbol)) {
           if (folded.Rank() == symRank) {
@@ -579,10 +669,8 @@ public:
         // host-associated dummy argument, and that doesn't seem like a
         // good idea.
         if (!inInquiry_ && hasHostAssociation &&
-            ultimate.attrs().test(semantics::Attr::INTENT_OUT) &&
-            context_.languageFeatures().ShouldWarn(
-                common::UsageWarning::HostAssociatedIntentOutInSpecExpr)) {
-          context_.messages().Say(
+            ultimate.attrs().test(semantics::Attr::INTENT_OUT)) {
+          context_.Warn(common::UsageWarning::HostAssociatedIntentOutInSpecExpr,
               "specification expression refers to host-associated INTENT(OUT) dummy argument '%s'"_port_en_US,
               ultimate.name());
         }
@@ -593,13 +681,9 @@ public:
     } else if (isInitialized &&
         context_.languageFeatures().IsEnabled(
             common::LanguageFeature::SavedLocalInSpecExpr)) {
-      if (!scope_.IsModuleFile() &&
-          context_.languageFeatures().ShouldWarn(
-              common::LanguageFeature::SavedLocalInSpecExpr)) {
-        context_.messages().Say(common::LanguageFeature::SavedLocalInSpecExpr,
-            "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
-            ultimate.name());
-      }
+      context_.Warn(common::LanguageFeature::SavedLocalInSpecExpr,
+          "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
+          ultimate.name());
       return std::nullopt;
     } else if (const auto *object{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
@@ -917,8 +1001,8 @@ public:
       } else {
         return Base::operator()(ultimate); // use expr
       }
-    } else if (semantics::IsPointer(ultimate) ||
-        semantics::IsAssumedShape(ultimate) || IsAssumedRank(ultimate)) {
+    } else if (semantics::IsPointer(ultimate) || IsAssumedShape(ultimate) ||
+        IsAssumedRank(ultimate)) {
       return std::nullopt;
     } else if (ultimate.has<semantics::ObjectEntityDetails>()) {
       return true;
@@ -946,26 +1030,45 @@ public:
       return std::nullopt;
     }
   }
-  Result operator()(const CoarrayRef &x) const {
-    int rank{0};
-    return CheckSubscripts(x.subscript(), rank).has_value();
-  }
+  Result operator()(const CoarrayRef &x) const { return (*this)(x.base()); }
   Result operator()(const Component &x) const {
     if (x.base().Rank() == 0) {
       return (*this)(x.GetLastSymbol());
     } else {
-      if (Result baseIsContiguous{(*this)(x.base())}) {
+      const DataRef &base{x.base()};
+      if (Result baseIsContiguous{(*this)(base)}) {
         if (!*baseIsContiguous) {
           return false;
+        } else {
+          bool sizeKnown{false};
+          if (auto constShape{GetConstantExtents(context_, x)}) {
+            sizeKnown = true;
+            if (GetSize(*constShape) <= 1) {
+              return true; // empty or singleton
+            }
+          }
+          const Symbol &last{base.GetLastSymbol()};
+          if (auto type{DynamicType::From(last)}) {
+            CHECK(type->category() == TypeCategory::Derived);
+            if (!type->IsPolymorphic()) {
+              const auto &derived{type->GetDerivedTypeSpec()};
+              if (const auto *scope{derived.scope()}) {
+                auto iter{scope->begin()};
+                if (++iter == scope->end()) {
+                  return true; // type has but one component
+                } else if (sizeKnown) {
+                  return false; // multiple components & array size is known > 1
+                }
+              }
+            }
+          }
         }
-        // TODO: should be true if base is contiguous and this is only
-        // component, or when the base has at most one element
       }
       return std::nullopt;
     }
   }
   Result operator()(const ComplexPart &x) const {
-    // TODO: should be true when base is empty array, too
+    // TODO: should be true when base is empty array or singleton, too
     return x.complex().Rank() == 0;
   }
   Result operator()(const Substring &x) const {
@@ -1201,7 +1304,21 @@ std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
   }
 }
 
+std::optional<bool> IsContiguous(const ActualArgument &actual,
+    FoldingContext &fc, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1) {
+  if (auto *expr{actual.UnwrapExpr()}) {
+    return IsContiguous(
+        *expr, fc, namedConstantSectionsAreContiguous, firstDimensionStride1);
+  } else {
+    return std::nullopt;
+  }
+}
+
 template std::optional<bool> IsContiguous(const Expr<SomeType> &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
+template std::optional<bool> IsContiguous(const ActualArgument &,
     FoldingContext &, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1);
 template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &,
@@ -1351,6 +1468,164 @@ private:
 std::optional<parser::Message> CheckStatementFunction(
     const Symbol &sf, const Expr<SomeType> &expr, FoldingContext &context) {
   return StmtFunctionChecker{sf, context}(expr);
+}
+
+// Helper class for checking differences between actual and dummy arguments
+class CopyInOutExplicitInterface {
+public:
+  explicit CopyInOutExplicitInterface(FoldingContext &fc,
+      const ActualArgument &actual,
+      const characteristics::DummyDataObject &dummyObj)
+      : fc_{fc}, actual_{actual}, dummyObj_{dummyObj} {}
+
+  // Returns true if dummy arg needs to be contiguous
+  bool DummyNeedsContiguity() const {
+    if (dummyObj_.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
+      return false;
+    }
+    bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
+    bool dummyIsExplicitShape{dummyObj_.type.IsExplicitShape()};
+    bool dummyIsAssumedSize{dummyObj_.type.attrs().test(
+        characteristics::TypeAndShape::Attr::AssumedSize)};
+    bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
+    // type(*) with IGNORE_TKR(tkr) is often used to interface with C "void*".
+    // Since the other languages don't know about Fortran's discontiguity
+    // handling, such cases should require contiguity.
+    bool dummyIsVoidStar{dummyObj_.type.type().IsAssumedType() &&
+        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type) &&
+        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank) &&
+        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Kind)};
+    // Explicit shape and assumed size arrays must be contiguous
+    bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
+        (dummyTreatAsArray && !dummyIsPolymorphic) || dummyIsVoidStar ||
+        dummyObj_.attrs.test(
+            characteristics::DummyDataObject::Attr::Contiguous)};
+    return dummyNeedsContiguity;
+  }
+
+  bool HavePolymorphicDifferences() const {
+    if (dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type)) {
+      return false;
+    }
+    if (auto actualType{
+            characteristics::TypeAndShape::Characterize(actual_, fc_)}) {
+      bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
+      bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
+      if (actualIsPolymorphic && !dummyIsPolymorphic) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool HaveArrayOrAssumedRankArgs() const {
+    bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
+    return IsArrayOrAssumedRank(actual_) &&
+        (IsArrayOrAssumedRank(dummyObj_) || dummyTreatAsArray);
+  }
+
+  bool PassByValue() const {
+    return dummyObj_.attrs.test(characteristics::DummyDataObject::Attr::Value);
+  }
+
+  bool HaveCoarrayDifferences() const {
+    return ExtractCoarrayRef(actual_) && dummyObj_.type.corank() == 0;
+  }
+
+  bool HasIntentOut() const { return dummyObj_.intent == common::Intent::Out; }
+
+  bool HasIntentIn() const { return dummyObj_.intent == common::Intent::In; }
+
+  static bool IsArrayOrAssumedRank(const ActualArgument &actual) {
+    return semantics::IsAssumedRank(actual) || actual.Rank() > 0;
+  }
+
+  static bool IsArrayOrAssumedRank(
+      const characteristics::DummyDataObject &dummy) {
+    return dummy.type.attrs().test(
+               characteristics::TypeAndShape::Attr::AssumedRank) ||
+        dummy.type.Rank() > 0;
+  }
+
+private:
+  FoldingContext &fc_;
+  const ActualArgument &actual_;
+  const characteristics::DummyDataObject &dummyObj_;
+};
+
+// If forCopyOut is false, returns if a particular actual/dummy argument
+// combination may need a temporary creation with copy-in operation. If
+// forCopyOut is true, returns the same for copy-out operation. For
+// procedures with explicit interface, it's expected that "dummy" is not null.
+// For procedures with implicit interface dummy may be null.
+//
+// Returns std::optional<bool> indicating whether the copy is known to be
+// needed (true) or not needed (false); returns std::nullopt if the necessity
+// of the copy is undetermined.
+//
+// Note that these copy-in and copy-out checks are done from the caller's
+// perspective, meaning that for copy-in the caller need to do the copy
+// before calling the callee. Similarly, for copy-out the caller is expected
+// to do the copy after the callee returns.
+std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
+    const characteristics::DummyArgument *dummy, FoldingContext &fc,
+    bool forCopyOut) {
+  if (!actual) {
+    return std::nullopt;
+  }
+  if (actual->isAlternateReturn()) {
+    return std::nullopt;
+  }
+  const auto *dummyObj{dummy
+          ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
+          : nullptr};
+  const bool forCopyIn{!forCopyOut};
+  if (!evaluate::IsVariable(*actual)) {
+    // Expressions are copy-in, but not copy-out.
+    return forCopyIn;
+  }
+  auto maybeContigActual{IsContiguous(*actual, fc)};
+  if (dummyObj) { // Explict interface
+    CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
+    if (forCopyOut && check.HasIntentIn()) {
+      // INTENT(IN) dummy args never need copy-out
+      return false;
+    }
+    if (forCopyIn && check.HasIntentOut()) {
+      // INTENT(OUT) dummy args never need copy-in
+      return false;
+    }
+    if (check.PassByValue()) {
+      // Pass by value, always copy-in, never copy-out
+      return forCopyIn;
+    }
+    if (check.HaveCoarrayDifferences()) {
+      return true;
+    }
+    // Note: contiguity and polymorphic checks deal with array or assumed rank
+    // arguments
+    if (!check.HaveArrayOrAssumedRankArgs()) {
+      return false;
+    }
+    if (maybeContigActual.has_value()) {
+      // We know whether actual arg is contiguous or not
+      bool isContiguousActual{maybeContigActual.value()};
+      bool actualArgNeedsCopy{
+          (!isContiguousActual || check.HavePolymorphicDifferences()) &&
+          check.DummyNeedsContiguity()};
+      return actualArgNeedsCopy;
+    } else {
+      // We don't know whether actual arg is contiguous or not
+      return check.DummyNeedsContiguity();
+    }
+  } else { // Implicit interface
+    if (maybeContigActual.has_value()) {
+      // If known contiguous, don't copy in/out.
+      // If known non-contiguous, copy in/out.
+      return !*maybeContigActual;
+    }
+  }
+  return std::nullopt;
 }
 
 } // namespace Fortran::evaluate

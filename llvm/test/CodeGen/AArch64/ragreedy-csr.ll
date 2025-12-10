@@ -46,10 +46,10 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    stp x9, x0, [sp, #32] ; 16-byte Folded Spill
 ; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    mov w1, #32768 ; =0x8000
-; CHECK-NEXT:    str x10, [sp, #8] ; 8-byte Folded Spill
-; CHECK-NEXT:    str x11, [sp, #24] ; 8-byte Folded Spill
-; CHECK-NEXT:    str w12, [sp, #4] ; 4-byte Folded Spill
-; CHECK-NEXT:    str w13, [sp, #20] ; 4-byte Folded Spill
+; CHECK-NEXT:    str x10, [sp, #8] ; 8-byte Spill
+; CHECK-NEXT:    str x11, [sp, #24] ; 8-byte Spill
+; CHECK-NEXT:    str w12, [sp, #4] ; 4-byte Spill
+; CHECK-NEXT:    str w13, [sp, #20] ; 4-byte Spill
 ; CHECK-NEXT:    bl ___maskrune
 ; CHECK-NEXT:  Lloh2:
 ; CHECK-NEXT:    adrp x14, __DefaultRuneLocale@GOTPAGE
@@ -57,10 +57,10 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:  Lloh3:
 ; CHECK-NEXT:    ldr x14, [x14, __DefaultRuneLocale@GOTPAGEOFF]
 ; CHECK-NEXT:    ldp x11, x9, [sp, #24] ; 16-byte Folded Reload
-; CHECK-NEXT:    ldr w13, [sp, #20] ; 4-byte Folded Reload
-; CHECK-NEXT:    ldr w12, [sp, #4] ; 4-byte Folded Reload
-; CHECK-NEXT:    ldr x10, [sp, #8] ; 8-byte Folded Reload
-; CHECK-NEXT:    ldr x0, [sp, #40] ; 8-byte Folded Reload
+; CHECK-NEXT:    ldr w13, [sp, #20] ; 4-byte Reload
+; CHECK-NEXT:    ldr w12, [sp, #4] ; 4-byte Reload
+; CHECK-NEXT:    ldr x10, [sp, #8] ; 8-byte Reload
+; CHECK-NEXT:    ldr x0, [sp, #40] ; 8-byte Reload
 ; CHECK-NEXT:    cbz w8, LBB0_4
 ; CHECK-NEXT:    b LBB0_6
 ; CHECK-NEXT:  LBB0_3: ; %cond.true.i.i
@@ -90,10 +90,10 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    stp x9, x0, [sp, #32] ; 16-byte Folded Spill
 ; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    mov w1, #32768 ; =0x8000
-; CHECK-NEXT:    str x10, [sp, #8] ; 8-byte Folded Spill
-; CHECK-NEXT:    str x11, [sp, #24] ; 8-byte Folded Spill
-; CHECK-NEXT:    str w12, [sp, #4] ; 4-byte Folded Spill
-; CHECK-NEXT:    str w13, [sp, #20] ; 4-byte Folded Spill
+; CHECK-NEXT:    str x10, [sp, #8] ; 8-byte Spill
+; CHECK-NEXT:    str x11, [sp, #24] ; 8-byte Spill
+; CHECK-NEXT:    str w12, [sp, #4] ; 4-byte Spill
+; CHECK-NEXT:    str w13, [sp, #20] ; 4-byte Spill
 ; CHECK-NEXT:    bl ___maskrune
 ; CHECK-NEXT:  Lloh4:
 ; CHECK-NEXT:    adrp x14, __DefaultRuneLocale@GOTPAGE
@@ -101,10 +101,10 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:  Lloh5:
 ; CHECK-NEXT:    ldr x14, [x14, __DefaultRuneLocale@GOTPAGEOFF]
 ; CHECK-NEXT:    ldp x11, x9, [sp, #24] ; 16-byte Folded Reload
-; CHECK-NEXT:    ldr w13, [sp, #20] ; 4-byte Folded Reload
-; CHECK-NEXT:    ldr w12, [sp, #4] ; 4-byte Folded Reload
-; CHECK-NEXT:    ldr x10, [sp, #8] ; 8-byte Folded Reload
-; CHECK-NEXT:    ldr x0, [sp, #40] ; 8-byte Folded Reload
+; CHECK-NEXT:    ldr w13, [sp, #20] ; 4-byte Reload
+; CHECK-NEXT:    ldr w12, [sp, #4] ; 4-byte Reload
+; CHECK-NEXT:    ldr x10, [sp, #8] ; 8-byte Reload
+; CHECK-NEXT:    ldr x0, [sp, #40] ; 8-byte Reload
 ; CHECK-NEXT:    cbnz w8, LBB0_6
 ; CHECK-NEXT:  LBB0_9: ; %while.end
 ; CHECK-NEXT:    orr w8, w13, w12

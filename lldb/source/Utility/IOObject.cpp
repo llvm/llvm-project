@@ -8,7 +8,16 @@
 
 #include "lldb/Utility/IOObject.h"
 
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#endif
+
 using namespace lldb_private;
 
+#ifdef _WIN32
+const IOObject::WaitableHandle IOObject::kInvalidHandleValue =
+    INVALID_HANDLE_VALUE;
+#else
 const IOObject::WaitableHandle IOObject::kInvalidHandleValue = -1;
+#endif
 IOObject::~IOObject() = default;

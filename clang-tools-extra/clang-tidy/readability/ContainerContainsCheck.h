@@ -1,4 +1,4 @@
-//===--- ContainerContainsCheck.h - clang-tidy ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::readability {
 /// to the `container.contains()` method.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/container-contains.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/container-contains.html
 class ContainerContainsCheck : public ClangTidyCheck {
 public:
   ContainerContainsCheck(StringRef Name, ClangTidyContext *Context)

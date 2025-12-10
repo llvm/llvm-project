@@ -1,4 +1,4 @@
-//===--- OptionalValueConversionCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -101,11 +101,9 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
                                            hasName(MakeOptional),
                                            returns(BindOptionalType)))),
                    hasArgument(0, OptionalDerefMatcher)),
-               callExpr(
+               callExpr(argumentCountIs(1),
 
-                   argumentCountIs(1),
-
-                   hasArgument(0, OptionalDerefMatcher))),
+                        hasArgument(0, OptionalDerefMatcher))),
            unless(anyOf(hasAncestor(typeLoc()),
                         hasAncestor(expr(matchers::hasUnevaluatedContext())))))
           .bind("expr"),

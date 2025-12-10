@@ -48,19 +48,31 @@ enum SDNF {
   SDNFIsStrictFP,
 };
 
-struct SDTypeConstraint {
-  SDTC Kind;
-  uint8_t OpNo;
-  uint8_t OtherOpNo;
+struct VTByHwModePair {
+  uint8_t Mode;
   MVT::SimpleValueType VT;
 };
+
+struct SDTypeConstraint {
+  SDTC Kind;
+  uint8_t ConstrainedValIdx;
+  uint8_t ConstrainingValIdx;
+  /// For Kind == SDTCisVT or SDTCVecEltisVT:
+  /// - if not using HwMode, NumHwModes == 0 and VT is MVT::SimpleValueType;
+  /// - otherwise, VT is offset into VTByHwModeTable and NumHwModes specifies
+  ///   the number of entries.
+  uint8_t NumHwModes;
+  uint16_t VT;
+};
+
+using SDNodeTSFlags = uint32_t;
 
 struct SDNodeDesc {
   uint16_t NumResults;
   int16_t NumOperands;
   uint32_t Properties;
   uint32_t Flags;
-  uint32_t TSFlags;
+  SDNodeTSFlags TSFlags;
   unsigned NameOffset;
   unsigned ConstraintOffset;
   unsigned ConstraintCount;
@@ -74,13 +86,15 @@ class SDNodeInfo final {
   unsigned NumOpcodes;
   const SDNodeDesc *Descs;
   StringTable Names;
+  const VTByHwModePair *VTByHwModeTable;
   const SDTypeConstraint *Constraints;
 
 public:
   constexpr SDNodeInfo(unsigned NumOpcodes, const SDNodeDesc *Descs,
-                       StringTable Names, const SDTypeConstraint *Constraints)
+                       StringTable Names, const VTByHwModePair *VTByHwModeTable,
+                       const SDTypeConstraint *Constraints)
       : NumOpcodes(NumOpcodes), Descs(Descs), Names(Names),
-        Constraints(Constraints) {}
+        VTByHwModeTable(VTByHwModeTable), Constraints(Constraints) {}
 
   /// Returns true if there is a generated description for a node with the given
   /// target-specific opcode.

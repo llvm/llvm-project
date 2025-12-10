@@ -16,6 +16,14 @@ define double @PR20832()  {
   ret double %1
 }
 
+define <vscale x 1 x double> @scalable_vector()  {
+; CHECK-LABEL: @scalable_vector(
+; CHECK-NEXT:    ret <vscale x 1 x double> splat (double 5.600000e+01)
+;
+  %1 = call <vscale x 1 x double> @llvm.fma(<vscale x 1 x double> splat (double 7.0), <vscale x 1 x double> splat (double 8.0), <vscale x 1 x double> splat (double 0.0))
+  ret <vscale x 1 x double> %1
+}
+
 ; Test builtin fma with all finite non-zero constants.
 define double @test_all_finite()  {
 ; CHECK-LABEL: @test_all_finite(

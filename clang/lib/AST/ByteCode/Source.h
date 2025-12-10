@@ -45,16 +45,13 @@ public:
     assert(Ptr != nullptr && "Invalid code pointer");
     return CodePtr(Ptr - RHS);
   }
-  CodePtr operator+(ssize_t RHS) const {
-    assert(Ptr != nullptr && "Invalid code pointer");
-    return CodePtr(Ptr + RHS);
-  }
 
   bool operator!=(const CodePtr &RHS) const { return Ptr != RHS.Ptr; }
   const std::byte *operator*() const { return Ptr; }
   explicit operator bool() const { return Ptr; }
   bool operator<=(const CodePtr &RHS) const { return Ptr <= RHS.Ptr; }
   bool operator>=(const CodePtr &RHS) const { return Ptr >= RHS.Ptr; }
+  bool operator==(const CodePtr RHS) const { return Ptr == RHS.Ptr; }
 
   /// Reads data and advances the pointer.
   template <typename T> std::enable_if_t<!std::is_pointer<T>::value, T> read() {
@@ -96,6 +93,7 @@ public:
 private:
   llvm::PointerUnion<const Decl *, const Stmt *> Source;
 };
+static_assert(sizeof(SourceInfo) == sizeof(void *));
 
 using SourceMap = std::vector<std::pair<unsigned, SourceInfo>>;
 

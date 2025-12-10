@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_100a -mattr=+ptx86 | FileCheck --check-prefixes=CHECK %s
-; RUN: %if ptxas-12.8 %{ llc < %s -march=nvptx64 -mcpu=sm_100a -mattr=+ptx86 | %ptxas-verify -arch=sm_100a %}
+; RUN: %if ptxas-sm_100a && ptxas-isa-8.6 %{ llc < %s -march=nvptx64 -mcpu=sm_100a -mattr=+ptx86 | %ptxas-verify -arch=sm_100a %}
 
 ; CHECK-LABEL: test_set_maxn_reg_sm100a
 define void @test_set_maxn_reg_sm100a() {

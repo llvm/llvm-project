@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/MultilibBuilder.h"
-#include "../../lib/Driver/ToolChains/CommonArgs.h"
 #include "SimpleDiagnosticConsumer.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Driver/CommonArgs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -61,7 +61,7 @@ TEST(MultilibBuilderTest, Construction3) {
       MultilibBuilder().flag("-f1").flag("-f2").flag("-f3", /*Disallow=*/true);
   for (const std::string &A : M.flags()) {
     ASSERT_TRUE(llvm::StringSwitch<bool>(A)
-                    .Cases("-f1", "-f2", "!f3", true)
+                    .Cases({"-f1", "-f2", "!f3"}, true)
                     .Default(false));
   }
 }
@@ -91,7 +91,7 @@ TEST(MultilibBuilderTest, SetConstruction2) {
   ASSERT_TRUE(MS.size() == 4);
   for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
     ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())
-                    .Cases("", "/sof", "/el", "/sof/el", true)
+                    .Cases({"", "/sof", "/el", "/sof/el"}, true)
                     .Default(false))
         << "Multilib " << *I << " wasn't expected";
     ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())

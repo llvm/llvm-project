@@ -174,10 +174,11 @@ def note_constexpr_heap_alloc_limit_exceeded : Note<
 def note_constexpr_this : Note<
   "%select{|implicit }0use of 'this' pointer is only allowed within the "
   "evaluation of a call to a 'constexpr' member function">;
-def access_kind : TextSubstitution<
-  "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to|construction of|"
-  "destruction of|read of}0">;
+def access_kind
+    : TextSubstitution<
+          "%select{read of|read of|assignment to|increment of|decrement of|"
+          "member call on|dynamic_cast of|typeid applied to|construction of|"
+          "destruction of|read of|read of}0">;
 def access_kind_subobject : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|"
@@ -222,6 +223,9 @@ def note_constexpr_ltor_incomplete_type : Note<
 def note_constexpr_access_null : Note<
   "%sub{access_kind}0 "
   "dereferenced null pointer is not allowed in a constant expression">;
+def note_constexpr_dereferencing_null
+    : Note<"dereferencing a null pointer is not allowed in a constant "
+           "expression">;
 def note_constexpr_access_past_end : Note<
   "%sub{access_kind}0 dereferenced one-past-the-end pointer "
   "is not allowed in a constant expression">;
@@ -240,6 +244,8 @@ def note_constexpr_access_static_temporary : Note<
   "outside the expression that created the temporary">;
 def note_constexpr_access_unreadable_object : Note<
   "%sub{access_kind}0 object '%1' whose value is not known">;
+def note_constexpr_access_unknown_variable : Note<
+  "%sub{access_kind}0 variable %1 whose value is not known">;
 def note_constexpr_access_deleted_object : Note<
   "%sub{access_kind}0 heap allocated object that has been deleted">;
 def note_constexpr_modify_global : Note<
@@ -394,6 +400,15 @@ def note_constexpr_non_const_vectorelements : Note<
   "cannot determine number of elements for sizeless vectors in a constant expression">;
 def note_constexpr_assumption_failed : Note<
   "assumption evaluated to false">;
+def note_constexpr_countzeroes_zero : Note<
+  "evaluation of %select{__builtin_elementwise_clzg|__builtin_elementwise_ctzg}0 "
+  "with a zero value is undefined">;
+def note_constexpr_infer_alloc_token_type_inference_failed : Note<
+  "could not infer allocation type for __builtin_infer_alloc_token">;
+def note_constexpr_infer_alloc_token_no_metadata : Note<
+  "could not get token metadata for inferred type">;
+def note_constexpr_infer_alloc_token_stateful_mode : Note<
+  "stateful alloc token mode not supported in constexpr">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 
@@ -478,16 +493,23 @@ def warn_odr_function_type_inconsistent : Warning<
   "external function %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">,
   InGroup<ODR>;
+def warn_odr_tag_type_with_attributes : Warning<
+  "type %0 has %select{an attribute|a member with an attribute}1 which "
+  "currently causes the types to be treated as though they are incompatible">,
+  InGroup<ODR>, DefaultError;
+def note_odr_attr_here : Note<"attribute %0 here">;
 def err_odr_tag_type_inconsistent
-    : Error<"type %0 has incompatible definitions in different translation "
-            "units">;
+    : Error<"type %0 has incompatible definitions%select{| in different "
+            "translation units}1">;
 def warn_odr_tag_type_inconsistent
-    : Warning<"type %0 has incompatible definitions in different translation "
-              "units">,
+    : Warning<"type %0 has incompatible definitions%select{| in different "
+              "translation units}1">,
       InGroup<ODR>;
 def note_odr_tag_kind_here: Note<
   "%0 is a %select{struct|interface|union|class|enum}1 here">;
 def note_odr_field : Note<"field %0 has type %1 here">;
+def note_odr_field_bit_width : Note<"bit-field %0 has bit-width %1 here">;
+def note_odr_field_not_bit_field : Note<"field %0 is not a bit-field">;
 def note_odr_field_name : Note<"field has name %0 here">;
 def note_odr_missing_field : Note<"no corresponding field here">;
 def note_odr_base : Note<"class has base type %0">;
@@ -498,6 +520,14 @@ def note_odr_number_of_bases : Note<
   "class has %0 base %plural{1:class|:classes}0">;
 def note_odr_enumerator : Note<"enumerator %0 with value %1 here">;
 def note_odr_missing_enumerator : Note<"no corresponding enumerator here">;
+def note_odr_incompatible_fixed_underlying_type : Note<
+  "enumeration %0 declared with incompatible fixed underlying types (%1 vs. "
+  "%2)">;
+def note_odr_fixed_underlying_type : Note<
+  "enumeration %0 has fixed underlying type here">;
+def note_odr_missing_fixed_underlying_type : Note<
+  "enumeration %0 missing fixed underlying type here">;
+
 def err_odr_field_type_inconsistent : Error<
   "field %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">;
@@ -992,6 +1022,8 @@ def note_module_odr_violation_mismatch_decl_unknown : Note<
   "different friend declaration|different function template|different method|"
   "different instance variable|different property|another unexpected decl}2">;
 
+def err_struct_too_large : Error<
+  "structure '%0' is too large, which exceeds maximum allowed size of %1 bytes">;
 
 def remark_sanitize_address_insert_extra_padding_accepted : Remark<
     "-fsanitize-address-field-padding applied to %0">, ShowInSystemHeader,

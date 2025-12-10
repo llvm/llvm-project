@@ -19,13 +19,13 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Error.h"
@@ -454,10 +454,6 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S) {
   bool hasDIE = DebugInfoData.isValidOffset(Offset);
   DWARFUnitVector TypeUnitVector;
   DWARFUnitVector CompileUnitVector;
-  /// A map that tracks all references (converted absolute references) so we
-  /// can verify each reference points to a valid DIE and not an offset that
-  /// lies between to valid DIEs.
-  ReferenceMap CrossUnitReferences;
   while (hasDIE) {
     if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, UnitType,
                           isUnitDWARF64)) {
@@ -663,6 +659,35 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   return NumErrors;
 }
 
+bool DWARFVerifier::verifyExpressionOp(const DWARFExpression::Operation &Op,
+                                       DWARFUnit *U) {
+  for (unsigned Operand = 0; Operand < Op.Desc.Op.size(); ++Operand) {
+    unsigned Size = Op.Desc.Op[Operand];
+
+    if (Size == DWARFExpression::Operation::BaseTypeRef) {
+      // For DW_OP_convert the operand may be 0 to indicate that conversion to
+      // the generic type should be done, so don't look up a base type in that
+      // case. The same holds for DW_OP_reinterpret, which is currently not
+      // supported.
+      if (Op.Opcode == DW_OP_convert && Op.Operands[Operand] == 0)
+        continue;
+      auto Die = U->getDIEForOffset(U->getOffset() + Op.Operands[Operand]);
+      if (!Die || Die.getTag() != dwarf::DW_TAG_base_type)
+        return false;
+    }
+  }
+
+  return true;
+}
+
+bool DWARFVerifier::verifyExpression(const DWARFExpression &E, DWARFUnit *U) {
+  for (auto &Op : E)
+    if (!verifyExpressionOp(Op, U))
+      return false;
+
+  return true;
+}
+
 unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                                                  DWARFAttribute &AttrValue) {
   unsigned NumErrors = 0;
@@ -731,7 +756,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
             any_of(Expression, [](const DWARFExpression::Operation &Op) {
               return Op.isError();
             });
-        if (Error || !Expression.verify(U))
+        if (Error || !verifyExpression(Expression, U))
           ReportError("Invalid DWARF expressions",
                       "DIE contains invalid DWARF expression:");
       }
@@ -824,6 +849,85 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                                   : "Invalid file index in DW_AT_call_line",
           "DIE has " + AttributeString(Attr) + " with invalid encoding");
     }
+    break;
+  }
+  case DW_AT_LLVM_stmt_sequence: {
+    // Make sure the offset in the DW_AT_LLVM_stmt_sequence attribute is valid
+    // and points to a valid sequence offset in the line table.
+    auto SectionOffset = AttrValue.Value.getAsSectionOffset();
+    if (!SectionOffset) {
+      ReportError("Invalid DW_AT_LLVM_stmt_sequence encoding",
+                  "DIE has invalid DW_AT_LLVM_stmt_sequence encoding");
+      break;
+    }
+    if (*SectionOffset >= U->getLineSection().Data.size()) {
+      ReportError(
+          "DW_AT_LLVM_stmt_sequence offset out of bounds",
+          "DW_AT_LLVM_stmt_sequence offset is beyond .debug_line bounds: " +
+              llvm::formatv("{0:x8}", *SectionOffset));
+      break;
+    }
+
+    // Get the line table for this unit to validate bounds
+    const auto *LineTable = DCtx.getLineTableForUnit(U);
+    if (!LineTable) {
+      ReportError("DW_AT_LLVM_stmt_sequence without line table",
+                  "DIE has DW_AT_LLVM_stmt_sequence but compile unit has no "
+                  "line table");
+      break;
+    }
+
+    // Get the DW_AT_stmt_list offset from the compile unit DIE
+    DWARFDie CUDie = U->getUnitDIE();
+    auto StmtListOffset = toSectionOffset(CUDie.find(DW_AT_stmt_list));
+    if (!StmtListOffset) {
+      ReportError("DW_AT_LLVM_stmt_sequence without DW_AT_stmt_list",
+                  "DIE has DW_AT_LLVM_stmt_sequence but compile unit has no "
+                  "DW_AT_stmt_list");
+      break;
+    }
+
+    const int8_t DwarfOffset =
+        LineTable->Prologue.getFormParams().getDwarfOffsetByteSize();
+    // Calculate the bounds of this specific line table
+    uint64_t LineTableStart = *StmtListOffset;
+    uint64_t PrologueLength = LineTable->Prologue.PrologueLength;
+    uint64_t TotalLength = LineTable->Prologue.TotalLength;
+    uint64_t LineTableEnd = LineTableStart + TotalLength + DwarfOffset;
+
+    // See DWARF definition for this, the following three do not
+    // count toward prologue length. Calculate SequencesStart correctly
+    // according to DWARF specification:
+    uint64_t InitialLengthSize = DwarfOffset;
+    // Version field is always 2 bytes
+    uint64_t VersionSize = 2;
+    uint64_t PrologueLengthSize = DwarfOffset;
+    uint64_t SequencesStart = LineTableStart + InitialLengthSize + VersionSize +
+                              PrologueLengthSize + PrologueLength;
+
+    // Check if the offset is within the bounds of this specific line table
+    if (*SectionOffset < SequencesStart || *SectionOffset >= LineTableEnd) {
+      ReportError("DW_AT_LLVM_stmt_sequence offset out of line table bounds",
+                  "DW_AT_LLVM_stmt_sequence offset " +
+                      llvm::formatv("{0:x8}", *SectionOffset) +
+                      " is not within the line table bounds [" +
+                      llvm::formatv("{0:x8}", SequencesStart) + ", " +
+                      llvm::formatv("{0:x8}", LineTableEnd) + ")");
+      break;
+    }
+
+    // Check if the offset matches any of the sequence offset.
+    auto It = llvm::find_if(LineTable->Sequences,
+                            [SectionOffset](const auto &Sequence) {
+                              return Sequence.StmtSeqOffset == *SectionOffset;
+                            });
+
+    if (It == LineTable->Sequences.end())
+      ReportError(
+          "Invalid DW_AT_LLVM_stmt_sequence offset",
+          "DW_AT_LLVM_stmt_sequence offset " +
+              llvm::formatv("{0:x8}", *SectionOffset) +
+              " does not point to a valid sequence offset in the line table");
     break;
   }
   default:
@@ -1389,7 +1493,6 @@ void DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
     }
     NextUncovered = std::max(NextUncovered, Idx);
   }
-  return;
 }
 
 void DWARFVerifier::verifyNameIndexAttribute(
@@ -1469,7 +1572,6 @@ void DWARFVerifier::verifyNameIndexAttribute(
     });
     return;
   }
-  return;
 }
 
 void DWARFVerifier::verifyNameIndexAbbrevs(
@@ -2068,7 +2170,6 @@ void DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
       }
     }
   }
-  return;
 }
 
 bool DWARFVerifier::handleAccelTables() {

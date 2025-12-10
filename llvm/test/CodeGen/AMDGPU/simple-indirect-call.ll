@@ -3,8 +3,6 @@
 
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 
-target datalayout = "A5"
-
 define internal void @indirect() {
 ; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@indirect
 ; ATTRIBUTOR_GCN-SAME: () #[[ATTR0:[0-9]+]] {
@@ -21,37 +19,33 @@ define amdgpu_kernel void @test_simple_indirect_call() {
 ; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
 ; ATTRIBUTOR_GCN-SAME: () #[[ATTR1:[0-9]+]] {
 ; ATTRIBUTOR_GCN-NEXT:    [[FPTR:%.*]] = alloca ptr, align 8, addrspace(5)
-; ATTRIBUTOR_GCN-NEXT:    store ptr @indirect, ptr addrspace(5) [[FPTR]], align 8
-; ATTRIBUTOR_GCN-NEXT:    [[FP:%.*]] = load ptr, ptr addrspace(5) [[FPTR]], align 8
-; ATTRIBUTOR_GCN-NEXT:    call void @indirect()
+; ATTRIBUTOR_GCN-NEXT:    store ptr @indirect, ptr addrspace(5) [[FPTR]], align 8, !noalias.addrspace [[META0:![0-9]+]]
+; ATTRIBUTOR_GCN-NEXT:    [[FP:%.*]] = load ptr, ptr addrspace(5) [[FPTR]], align 8, !noalias.addrspace [[META0]]
+; ATTRIBUTOR_GCN-NEXT:    call void [[FP]]()
 ; ATTRIBUTOR_GCN-NEXT:    ret void
 ;
 ; GFX9-LABEL: test_simple_indirect_call:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
-; GFX9-NEXT:    s_mov_b32 s13, s15
-; GFX9-NEXT:    s_mov_b32 s12, s14
-; GFX9-NEXT:    s_load_dwordx2 s[14:15], s[4:5], 0x4
 ; GFX9-NEXT:    s_add_u32 s0, s0, s17
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
-; GFX9-NEXT:    s_mov_b32 s32, 0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshr_b32 s14, s14, 16
-; GFX9-NEXT:    s_mul_i32 s14, s14, s15
-; GFX9-NEXT:    v_mul_lo_u32 v3, s14, v0
 ; GFX9-NEXT:    s_getpc_b64 s[18:19]
 ; GFX9-NEXT:    s_add_u32 s18, s18, indirect@rel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s19, s19, indirect@rel32@hi+12
-; GFX9-NEXT:    s_mov_b32 s14, s16
-; GFX9-NEXT:    v_mad_u32_u24 v3, v1, s15, v3
-; GFX9-NEXT:    v_add_lshl_u32 v5, v3, v2, 3
-; GFX9-NEXT:    v_mov_b32_e32 v3, s18
+; GFX9-NEXT:    s_mov_b32 s13, s15
+; GFX9-NEXT:    s_mov_b32 s12, s14
+; GFX9-NEXT:    s_mov_b64 s[14:15], src_private_base
+; GFX9-NEXT:    v_mov_b32_e32 v5, s18
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX9-NEXT:    v_mov_b32_e32 v4, s19
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; GFX9-NEXT:    v_mov_b32_e32 v4, s15
+; GFX9-NEXT:    v_mov_b32_e32 v6, s19
 ; GFX9-NEXT:    v_or3_b32 v31, v0, v1, v2
-; GFX9-NEXT:    ds_write_b64 v5, v[3:4]
+; GFX9-NEXT:    s_mov_b32 s14, s16
+; GFX9-NEXT:    s_movk_i32 s32, 0x400
+; GFX9-NEXT:    flat_store_dwordx2 v[3:4], v[5:6]
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GFX9-NEXT:    s_endpgm
   %fptr = alloca ptr, addrspace(5)
@@ -64,7 +58,8 @@ define amdgpu_kernel void @test_simple_indirect_call() {
 
 
 ;.
+; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_GCN: attributes #[[ATTR1]] = { "uniform-work-group-size"="false" }
 ;.
-; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_GCN: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_GCN: [[META0]] = !{i32 1, i32 5, i32 6, i32 10}
 ;.

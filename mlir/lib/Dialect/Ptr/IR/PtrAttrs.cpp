@@ -11,8 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::ptr;
@@ -23,45 +21,49 @@ constexpr const static unsigned kBitsInByte = 8;
 // GenericSpaceAttr
 //===----------------------------------------------------------------------===//
 
-LogicalResult GenericSpaceAttr::isValidLoad(
-    Type type, ptr::AtomicOrdering ordering, IntegerAttr alignment,
+bool GenericSpaceAttr::isValidLoad(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return success();
+  return true;
 }
 
-LogicalResult GenericSpaceAttr::isValidStore(
-    Type type, ptr::AtomicOrdering ordering, IntegerAttr alignment,
+bool GenericSpaceAttr::isValidStore(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return success();
+  return true;
 }
 
-LogicalResult GenericSpaceAttr::isValidAtomicOp(
+bool GenericSpaceAttr::isValidAtomicOp(
     ptr::AtomicBinOp op, Type type, ptr::AtomicOrdering ordering,
-    IntegerAttr alignment, function_ref<InFlightDiagnostic()> emitError) const {
-  return success();
-}
-
-LogicalResult GenericSpaceAttr::isValidAtomicXchg(
-    Type type, ptr::AtomicOrdering successOrdering,
-    ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return success();
+  return true;
 }
 
-LogicalResult GenericSpaceAttr::isValidAddrSpaceCast(
+bool GenericSpaceAttr::isValidAtomicXchg(
+    Type type, ptr::AtomicOrdering successOrdering,
+    ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return true;
+}
+
+bool GenericSpaceAttr::isValidAddrSpaceCast(
     Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
   // TODO: update this method once the `addrspace_cast` op is added to the
   // dialect.
   assert(false && "unimplemented, see TODO in the source.");
-  return failure();
+  return false;
 }
 
-LogicalResult GenericSpaceAttr::isValidPtrIntCast(
+bool GenericSpaceAttr::isValidPtrIntCast(
     Type intLikeTy, Type ptrLikeTy,
     function_ref<InFlightDiagnostic()> emitError) const {
   // TODO: update this method once the int-cast ops are added to the dialect.
   assert(false && "unimplemented, see TODO in the source.");
-  return failure();
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

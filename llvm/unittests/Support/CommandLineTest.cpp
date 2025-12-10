@@ -28,6 +28,9 @@
 #include <fstream>
 #include <stdlib.h>
 #include <string>
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 using namespace llvm;
 using llvm::unittest::TempDir;
@@ -834,14 +837,23 @@ TEST(CommandLineTest, DefaultOptions) {
 }
 
 TEST(CommandLineTest, ArgumentLimit) {
-  std::string args(32 * 4096, 'a');
-  EXPECT_FALSE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args.data()));
+#if HAVE_UNISTD_H && defined(_SC_ARG_MAX)
+  if (sysconf(_SC_ARG_MAX) != -1) {
+#endif
+    std::string args(32 * 4096, 'a');
+    EXPECT_FALSE(
+        llvm::sys::commandLineFitsWithinSystemLimits("cl", args.data()));
+#if HAVE_UNISTD_H && defined(_SC_ARG_MAX)
+  }
+#endif
   std::string args2(256, 'a');
   EXPECT_TRUE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args2.data()));
 }
 
 TEST(CommandLineTest, ArgumentLimitWindows) {
-  if (!Triple(sys::getProcessTriple()).isOSWindows())
+  Triple processTriple(sys::getProcessTriple());
+  if (!processTriple.isOSWindows() ||
+      processTriple.isWindowsCygwinEnvironment())
     GTEST_SKIP();
   // We use 32000 as a limit for command line length. Program name ('cl'),
   // separating spaces and termination null character occupy 5 symbols.
@@ -854,7 +866,9 @@ TEST(CommandLineTest, ArgumentLimitWindows) {
 }
 
 TEST(CommandLineTest, ResponseFileWindows) {
-  if (!Triple(sys::getProcessTriple()).isOSWindows())
+  Triple processTriple(sys::getProcessTriple());
+  if (!processTriple.isOSWindows() ||
+      processTriple.isWindowsCygwinEnvironment())
     GTEST_SKIP();
 
   StackOption<std::string, cl::list<std::string>> InputFilenames(
@@ -1901,20 +1915,20 @@ TEST(CommandLineTest, LongOptions) {
 
   // Fails because `-ab` is treated as `-a -b`, so `-a` is seen twice, and
   // `val1` is unexpected.
-  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args1, StringRef(),
-                                           &OS, nullptr, true));
+  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args1, StringRef(), &OS, nullptr,
+                                           nullptr, true));
   EXPECT_FALSE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 
   // Works because `-a` is treated differently than `--ab`.
-  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args2, StringRef(),
-                                           &OS, nullptr, true));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args2, StringRef(), &OS, nullptr,
+                                          nullptr, true));
   EXPECT_TRUE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 
   // Works because `-ab` is treated as `-a -b`, and `--ab` is a long option.
-  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args3, StringRef(),
-                                           &OS, nullptr, true));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args3, StringRef(), &OS, nullptr,
+                                          nullptr, true));
   EXPECT_TRUE(OptA);
   EXPECT_TRUE(OptBLong);
   EXPECT_STREQ("val1", OptAB.c_str());
@@ -2100,6 +2114,22 @@ TEST(CommandLineTest, ConsumeAfterTwoPositionals) {
   EXPECT_EQ(ExtraArgs.size(), 2u);
   EXPECT_EQ(ExtraArgs[0], "arg1");
   EXPECT_EQ(ExtraArgs[1], "arg2");
+  EXPECT_TRUE(Errs.empty());
+}
+
+TEST(CommandLineTest, ConsumeOptionalString) {
+  cl::ResetCommandLineParser();
+
+  StackOption<std::optional<std::string>, cl::opt<std::optional<std::string>>>
+      Input("input");
+
+  const char *Args[] = {"prog", "--input=\"value\""};
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+  ASSERT_TRUE(cl::ParseCommandLineOptions(2, Args, StringRef(), &OS));
+  ASSERT_TRUE(Input.has_value());
+  EXPECT_EQ("\"value\"", *Input);
   EXPECT_TRUE(Errs.empty());
 }
 

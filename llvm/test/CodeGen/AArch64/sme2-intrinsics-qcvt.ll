@@ -49,7 +49,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-9
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
@@ -58,7 +58,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 ; CHECK-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc8, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 72 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc8, 0x00, 0x1e, 0x22 // sp + 16 + 72 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    lsl x8, x0, #1
 ; CHECK-NEXT:    add x9, x1, x0
@@ -81,7 +81,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 ; CHECK-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #9
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

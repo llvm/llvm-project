@@ -283,8 +283,10 @@ def RetCC_X86Common : CallingConv<[
             CCAssignToReg<[ZMM0,ZMM1,ZMM2,ZMM3]>>,
 
   // Long double types are always returned in FP0 (even with SSE),
-  // except on Win64.
-  CCIfNotSubtarget<"isTargetWin64()", CCIfType<[f80], CCAssignToReg<[FP0, FP1]>>>
+  // except on Win64 and UEFI64.
+  CCIfNotSubtarget<"isTargetWin64()",
+                    CCIfNotSubtarget<"isTargetUEFI64()",
+                    CCIfType<[f80], CCAssignToReg<[FP0, FP1]>>>>
 ]>;
 
 // X86-32 C return-value convention.
@@ -494,6 +496,9 @@ def RetCC_X86_64 : CallingConv<[
           
   // Mingw64 and native Win64 use Win64 CC
   CCIfSubtarget<"isTargetWin64()", CCDelegateTo<RetCC_X86_Win64_C>>,
+
+  // UEFI64 uses Win64 CC
+  CCIfSubtarget<"isTargetUEFI64()", CCDelegateTo<RetCC_X86_Win64_C>>,
 
   // Otherwise, drop to normal X86-64 CC
   CCDelegateTo<RetCC_X86_64_C>
@@ -827,6 +832,7 @@ def CC_X86_32_Common : CallingConv<[
   CCIfType<[f64], CCAssignToStack<8, 4>>,
 
   // Long doubles get slots whose size and alignment depends on the subtarget.
+  CCIfSubtarget<"isTargetDarwin()", CCIfType<[f80], CCAssignToStack<0, 4>>>,
   CCIfType<[f80], CCAssignToStack<0, 0>>,
 
   // Boolean vectors of AVX-512 are passed in SIMD registers.
@@ -852,6 +858,11 @@ def CC_X86_32_C : CallingConv<[
 
   // The 'nest' parameter, if any, is passed in ECX.
   CCIfNest<CCAssignToReg<[ECX]>>,
+
+  // i128 and fp128 need to be passed on the stack with a higher alignment than
+  // their legal types. Handle this with a custom function.
+  CCIfType<[i32],
+           CCIfConsecutiveRegs<CCCustom<"CC_X86_32_I128_FP128">>>,
 
   // On swifttailcc pass swiftself in ECX.
   CCIfCC<"CallingConv::SwiftTail",
@@ -1084,6 +1095,9 @@ def CC_X86_64 : CallingConv<[
 
   // Mingw64 and native Win64 use Win64 CC
   CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_C>>,
+
+  // UEFI uses Win64 CC
+  CCIfSubtarget<"isTargetUEFI64()", CCDelegateTo<CC_X86_Win64_C>>,
 
   // Otherwise, drop to normal X86-64 CC
   CCDelegateTo<CC_X86_64_C>

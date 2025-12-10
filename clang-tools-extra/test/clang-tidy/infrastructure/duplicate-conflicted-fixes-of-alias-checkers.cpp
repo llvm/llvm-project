@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s cppcoreguidelines-pro-type-member-init,hicpp-member-init,modernize-use-emplace,hicpp-use-emplace %t -- \
+// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init,hicpp-member-init,modernize-use-emplace,hicpp-use-emplace %t -- \
 //// RUN:     -config='{CheckOptions: { \
 //// RUN:         cppcoreguidelines-pro-type-member-init.UseAssignment: true, \
 //// RUN:     }}'
@@ -19,5 +19,5 @@ public:
 private:
   int _num1;
   int _num2;
-  // CHECK-FIXES: _num2;
+  // CHECK-FIXES: int _num2;
 };

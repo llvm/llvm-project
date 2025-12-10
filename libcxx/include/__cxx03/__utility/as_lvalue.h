@@ -21,15 +21,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp& __as_lvalue(_LIBCPP_LIFETIMEBOUND _Tp&& __t) {
-  return static_cast<_Tp&>(__t);
-}
-
-#endif // !_LIBCPP_CXX03_LANG
-
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

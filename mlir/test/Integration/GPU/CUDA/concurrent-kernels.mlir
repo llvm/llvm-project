@@ -2,8 +2,8 @@
 // increment a global atomic counter and wait for the counter to reach 2.
 //
 // RUN: mlir-opt %s \
-// RUN: | mlir-opt -gpu-lower-to-nvvm-pipeline="cubin-format=%gpu_compilation_format" \
-// RUN: | CUDA_MODULE_LOADING=EAGER mlir-runner \
+// RUN: | mlir-opt -gpu-lower-to-nvvm-pipeline="cubin-format=%gpu_compilation_format allow-pattern-rollback=0" \
+// RUN: | env CUDA_MODULE_LOADING=EAGER mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void

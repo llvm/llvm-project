@@ -87,6 +87,12 @@ public:
   void applyMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo) const;
   void applyClamp(MachineInstr &MI, Register &Reg) const;
 
+  void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
+
+  bool combineD16Load(MachineInstr &MI) const;
+  bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
+                    MachineInstr *SmallLoad, Register ToOverwriteD16) const;
+
 private:
   SIModeRegisterDefaults getMode() const;
   bool getIEEE() const;
@@ -362,6 +368,116 @@ void AMDGPURegBankCombinerImpl::applyMed3(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+void AMDGPURegBankCombinerImpl::applyCanonicalizeZextShiftAmt(
+    MachineInstr &MI, MachineInstr &Ext) const {
+  unsigned ShOpc = MI.getOpcode();
+  assert(ShOpc == AMDGPU::G_SHL || ShOpc == AMDGPU::G_LSHR ||
+         ShOpc == AMDGPU::G_ASHR);
+  assert(Ext.getOpcode() == AMDGPU::G_ZEXT);
+
+  Register AmtReg = Ext.getOperand(1).getReg();
+  Register ShDst = MI.getOperand(0).getReg();
+  Register ShSrc = MI.getOperand(1).getReg();
+
+  LLT ExtAmtTy = MRI.getType(Ext.getOperand(0).getReg());
+  LLT AmtTy = MRI.getType(AmtReg);
+
+  auto &RB = *MRI.getRegBank(AmtReg);
+
+  auto NewExt = B.buildAnyExt(ExtAmtTy, AmtReg);
+  auto Mask = B.buildConstant(
+      ExtAmtTy, maskTrailingOnes<uint64_t>(AmtTy.getScalarSizeInBits()));
+  auto And = B.buildAnd(ExtAmtTy, NewExt, Mask);
+  B.buildInstr(ShOpc, {ShDst}, {ShSrc, And});
+
+  MRI.setRegBank(NewExt.getReg(0), RB);
+  MRI.setRegBank(Mask.getReg(0), RB);
+  MRI.setRegBank(And.getReg(0), RB);
+  MI.eraseFromParent();
+}
+
+bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
+  Register Dst;
+  MachineInstr *Load, *SextLoad;
+  const int64_t CleanLo16 = 0xFFFFFFFFFFFF0000;
+  const int64_t CleanHi16 = 0x000000000000FFFF;
+
+  // Load lo
+  if (mi_match(MI.getOperand(1).getReg(), MRI,
+               m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
+                            m_Copy(m_SpecificICst(CleanLo16))),
+                     m_MInstr(Load)))) {
+
+    if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
+      const MachineMemOperand *MMO = *Load->memoperands_begin();
+      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      if (LoadSize == 8)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_U8, MI, Load, Dst);
+      if (LoadSize == 16)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO, MI, Load, Dst);
+      return false;
+    }
+
+    if (mi_match(
+            Load, MRI,
+            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
+      if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
+        return false;
+
+      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
+      if (MMO->getSizeInBits().getValue() != 8)
+        return false;
+
+      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_I8, MI, SextLoad, Dst);
+    }
+
+    return false;
+  }
+
+  // Load hi
+  if (mi_match(MI.getOperand(1).getReg(), MRI,
+               m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
+                            m_Copy(m_SpecificICst(CleanHi16))),
+                     m_GShl(m_MInstr(Load), m_Copy(m_SpecificICst(16)))))) {
+
+    if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
+      const MachineMemOperand *MMO = *Load->memoperands_begin();
+      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      if (LoadSize == 8)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_U8, MI, Load, Dst);
+      if (LoadSize == 16)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI, MI, Load, Dst);
+      return false;
+    }
+
+    if (mi_match(
+            Load, MRI,
+            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
+      if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
+        return false;
+      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
+      if (MMO->getSizeInBits().getValue() != 8)
+        return false;
+
+      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, MI, SextLoad, Dst);
+    }
+
+    return false;
+  }
+
+  return false;
+}
+
+bool AMDGPURegBankCombinerImpl::applyD16Load(
+    unsigned D16Opc, MachineInstr &DstMI, MachineInstr *SmallLoad,
+    Register SrcReg32ToOverwriteD16) const {
+  B.buildInstr(D16Opc, {DstMI.getOperand(0).getReg()},
+               {SmallLoad->getOperand(1).getReg(), SrcReg32ToOverwriteD16})
+      .setMemRefs(SmallLoad->memoperands());
+  DstMI.eraseFromParent();
+  return true;
+}
+
 SIModeRegisterDefaults AMDGPURegBankCombinerImpl::getMode() const {
   return MF.getInfo<SIMachineFunctionInfo>()->getMode();
 }
@@ -416,8 +532,8 @@ void AMDGPURegBankCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelValueTrackingAnalysis>();
-  AU.addPreserved<GISelValueTrackingAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   if (!IsOptNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -432,8 +548,7 @@ AMDGPURegBankCombiner::AMDGPURegBankCombiner(bool IsOptNone)
 }
 
 bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
@@ -441,7 +556,8 @@ bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  GISelValueTracking *VT = &getAnalysis<GISelValueTrackingAnalysis>().get(MF);
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
 
   const auto *LI = ST.getLegalizerInfo();
   MachineDominatorTree *MDT =
@@ -466,7 +582,7 @@ INITIALIZE_PASS_BEGIN(AMDGPURegBankCombiner, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs after regbankselect",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AMDGPURegBankCombiner, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after regbankselect", false,
                     false)

@@ -494,9 +494,7 @@ define <2 x i8> @sdiv_exact_negated_dividend_constant_divisor_vec_splat(<2 x i8>
 
 define i8 @sdiv_negated_dividend_constant_divisor_smin(i8 %x) {
 ; CHECK-LABEL: @sdiv_negated_dividend_constant_divisor_smin(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[D:%.*]] = zext i1 [[TMP1]] to i8
-; CHECK-NEXT:    ret i8 [[D]]
+; CHECK-NEXT:    ret i8 0
 ;
   %neg = sub nsw i8 0, %x
   %d = sdiv i8 %neg, -128
@@ -505,9 +503,7 @@ define i8 @sdiv_negated_dividend_constant_divisor_smin(i8 %x) {
 
 define <2 x i8> @sdiv_negated_dividend_constant_divisor_vec_splat_smin(<2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_negated_dividend_constant_divisor_vec_splat_smin(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], splat (i8 -128)
-; CHECK-NEXT:    [[D:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
-; CHECK-NEXT:    ret <2 x i8> [[D]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %neg = sub nsw <2 x i8> zeroinitializer, %x
   %d = sdiv <2 x i8> %neg, <i8 -128, i8 -128>

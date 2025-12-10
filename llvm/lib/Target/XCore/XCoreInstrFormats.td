@@ -19,7 +19,6 @@ class InstXCore<int sz, dag outs, dag ins, string asmstr, list<dag> pattern>
   let AsmString   = asmstr;
   let Pattern = pattern;
   let Size = sz;
-  field bits<32> SoftFail = 0;
 }
 
 // XCore pseudo instructions format

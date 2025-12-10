@@ -3,21 +3,21 @@
 
 struct RegisterContext
 {
-    uintptr_t r0;
-    uintptr_t r1;
-    uintptr_t r2;
-    uintptr_t r3;
-    uintptr_t r4;
-    uintptr_t pc;
-    uintptr_t fp;
-    uintptr_t sp;
+  uintptr_t r0;
+  uintptr_t r1;
+  uintptr_t r2;
+  uintptr_t r3;
+  uintptr_t r4;
+  uintptr_t pc;
+  uintptr_t fp;
+  uintptr_t sp;
 };
 
 struct ThreadInfo {
-    uint32_t tid;
-    const char *name;
-    RegisterContext regs;
-    ThreadInfo *next;
+  uint32_t tid;
+  const char *name;
+  RegisterContext regs;
+  ThreadInfo *next;
 };
 int main (int argc, char const *argv[], char const *envp[]);
 
@@ -27,14 +27,17 @@ ThreadInfo *g_thread_list_ptr = &g_thread1;
 
 int main (int argc, char const *argv[], char const *envp[])
 {
-    printf ("g_thread_list is %p\n", g_thread_list_ptr);
-    return 0; //% v = self.dbg.GetSelectedTarget().FindFirstGlobalVariable('g_thread_list_ptr')
-    //% v_gla = v.GetChildMemberWithName('regs').GetLoadAddress()
-    //% v_aof = v.GetChildMemberWithName('regs').AddressOf().GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS)
-    //% expr = '(%s)0x%x' % (v.GetType().GetName(), v.GetValueAsUnsigned(0))
-    //% e = v.CreateValueFromExpression('e', expr)
-    //% e_gla = e.GetChildMemberWithName('regs').GetLoadAddress()
-    //% e_aof = e.GetChildMemberWithName('regs').AddressOf().GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS)
-    //% self.assertTrue(v_gla == e_gla, "GetLoadAddress() differs")
-    //% self.assertTrue(v_aof == e_aof, "AddressOf() differs")
+  // clang-format off
+  printf ("g_thread_list is %p\n", g_thread_list_ptr);
+  return 0; //% v = self.dbg.GetSelectedTarget().FindFirstGlobalVariable('g_thread_list_ptr')
+  //% self.assertTrue(v.AddressOf().IsValid())
+  //% self.assertFalse(v.AddressOf().AddressOf().IsValid())
+  //% v_gla = v.GetChildMemberWithName('regs').GetLoadAddress()
+  //% v_aof = v.GetChildMemberWithName('regs').AddressOf().GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS)
+  //% expr = '(%s)0x%x' % (v.GetType().GetName(), v.GetValueAsUnsigned(0))
+  //% e = v.CreateValueFromExpression('e', expr)
+  //% e_gla = e.GetChildMemberWithName('regs').GetLoadAddress()
+  //% e_aof = e.GetChildMemberWithName('regs').AddressOf().GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS)
+  //% self.assertTrue(v_gla == e_gla, "GetLoadAddress() differs")
+  //% self.assertTrue(v_aof == e_aof, "AddressOf() differs")
 }

@@ -18,6 +18,7 @@
 
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -32,36 +33,27 @@ using namespace lldb_private;
 
 static char ID;
 
-#define VALID_POINTER_CHECK_NAME "_$__lldb_valid_pointer_check"
 #define VALID_OBJC_OBJECT_CHECK_NAME "$__lldb_objc_object_check"
-
-static const char g_valid_pointer_check_text[] =
-    "extern \"C\" void\n"
-    "_$__lldb_valid_pointer_check (unsigned char *$__lldb_arg_ptr)\n"
-    "{\n"
-    "    unsigned char $__lldb_local_val = *$__lldb_arg_ptr;\n"
-    "}";
 
 ClangDynamicCheckerFunctions::ClangDynamicCheckerFunctions()
     : DynamicCheckerFunctions(DCF_Clang) {}
 
 ClangDynamicCheckerFunctions::~ClangDynamicCheckerFunctions() = default;
 
-llvm::Error ClangDynamicCheckerFunctions::Install(
-    DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) {
-  Expected<std::unique_ptr<UtilityFunction>> utility_fn =
-      exe_ctx.GetTargetRef().CreateUtilityFunction(
-          g_valid_pointer_check_text, VALID_POINTER_CHECK_NAME,
-          lldb::eLanguageTypeC, exe_ctx);
-  if (!utility_fn)
-    return utility_fn.takeError();
-  m_valid_pointer_check = std::move(*utility_fn);
-
+llvm::Error
+ClangDynamicCheckerFunctions::Install(DiagnosticManager &diagnostic_manager,
+                                      ExecutionContext &exe_ctx) {
   if (Process *process = exe_ctx.GetProcessPtr()) {
     ObjCLanguageRuntime *objc_language_runtime =
         ObjCLanguageRuntime::Get(*process);
 
-    if (objc_language_runtime) {
+    SourceLanguage lang = process->GetTarget().GetLanguage();
+    if (!lang)
+      if (auto *frame = exe_ctx.GetFramePtr())
+        lang = frame->GetLanguage();
+
+    if (objc_language_runtime &&
+        Language::LanguageIsObjC(lang.AsLanguageType())) {
       Expected<std::unique_ptr<UtilityFunction>> checker_fn =
           objc_language_runtime->CreateObjectChecker(VALID_OBJC_OBJECT_CHECK_NAME, exe_ctx);
       if (!checker_fn)
@@ -78,11 +70,7 @@ bool ClangDynamicCheckerFunctions::DoCheckersExplainStop(lldb::addr_t addr,
   // FIXME: We have to get the checkers to know why they scotched the call in
   // more detail,
   // so we can print a better message here.
-  if (m_valid_pointer_check && m_valid_pointer_check->ContainsAddress(addr)) {
-    message.Printf("Attempted to dereference an invalid pointer.");
-    return true;
-  } else if (m_objc_object_check &&
-             m_objc_object_check->ContainsAddress(addr)) {
+  if (m_objc_object_check && m_objc_object_check->ContainsAddress(addr)) {
     message.Printf("Attempted to dereference an invalid ObjC Object or send it "
                    "an unrecognized selector");
     return true;
@@ -224,29 +212,6 @@ protected:
   }
 
   /// Build a function pointer for a function with signature void
-  /// (*)(uint8_t*) with a given address
-  ///
-  /// \param[in] start_address
-  ///     The address of the function.
-  ///
-  /// \return
-  ///     The function pointer, for use in a CallInst.
-  llvm::FunctionCallee BuildPointerValidatorFunc(lldb::addr_t start_address) {
-    llvm::Type *param_array[1];
-
-    param_array[0] = const_cast<llvm::PointerType *>(GetI8PtrTy());
-
-    ArrayRef<llvm::Type *> params(param_array, 1);
-
-    FunctionType *fun_ty = FunctionType::get(
-        llvm::Type::getVoidTy(m_module.getContext()), params, true);
-    PointerType *fun_ptr_ty = PointerType::getUnqual(m_module.getContext());
-    Constant *fun_addr_int =
-        ConstantInt::get(GetIntptrTy(), start_address, false);
-    return {fun_ty, ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty)};
-  }
-
-  /// Build a function pointer for a function with signature void
   /// (*)(uint8_t*, uint8_t*) with a given address
   ///
   /// \param[in] start_address
@@ -298,53 +263,6 @@ protected:
 private:
   PointerType *m_i8ptr_ty = nullptr;
   IntegerType *m_intptr_ty = nullptr;
-};
-
-class ValidPointerChecker : public Instrumenter {
-public:
-  ValidPointerChecker(llvm::Module &module,
-                      std::shared_ptr<UtilityFunction> checker_function)
-      : Instrumenter(module, checker_function),
-        m_valid_pointer_check_func(nullptr) {}
-
-  ~ValidPointerChecker() override = default;
-
-protected:
-  bool InstrumentInstruction(llvm::Instruction *inst) override {
-    Log *log = GetLog(LLDBLog::Expressions);
-
-    LLDB_LOGF(log, "Instrumenting load/store instruction: %s\n",
-              PrintValue(inst).c_str());
-
-    if (!m_valid_pointer_check_func)
-      m_valid_pointer_check_func =
-          BuildPointerValidatorFunc(m_checker_function->StartAddress());
-
-    llvm::Value *dereferenced_ptr = nullptr;
-
-    if (llvm::LoadInst *li = dyn_cast<llvm::LoadInst>(inst))
-      dereferenced_ptr = li->getPointerOperand();
-    else if (llvm::StoreInst *si = dyn_cast<llvm::StoreInst>(inst))
-      dereferenced_ptr = si->getPointerOperand();
-    else
-      return false;
-
-    // Insert an instruction to call the helper with the result
-    CallInst::Create(m_valid_pointer_check_func, dereferenced_ptr, "",
-                     inst->getIterator());
-
-    return true;
-  }
-
-  bool InspectInstruction(llvm::Instruction &i) override {
-    if (isa<llvm::LoadInst>(&i) || isa<llvm::StoreInst>(&i))
-      RegisterInstruction(i);
-
-    return true;
-  }
-
-private:
-  llvm::FunctionCallee m_valid_pointer_check_func;
 };
 
 class ObjcObjectChecker : public Instrumenter {
@@ -525,16 +443,6 @@ bool IRDynamicChecks::runOnModule(llvm::Module &M) {
     LLDB_LOGF(log, "Couldn't find %s() in the module", m_func_name.c_str());
 
     return false;
-  }
-
-  if (m_checker_functions.m_valid_pointer_check) {
-    ValidPointerChecker vpc(M, m_checker_functions.m_valid_pointer_check);
-
-    if (!vpc.Inspect(*function))
-      return false;
-
-    if (!vpc.Instrument())
-      return false;
   }
 
   if (m_checker_functions.m_objc_object_check) {

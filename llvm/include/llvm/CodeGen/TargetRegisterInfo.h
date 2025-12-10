@@ -24,6 +24,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
@@ -67,7 +68,7 @@ public:
   const bool CoveredBySubRegs;
   const unsigned *SuperClasses;
   const uint16_t SuperClassesSize;
-  ArrayRef<MCPhysReg> (*OrderFunc)(const MachineFunction&);
+  ArrayRef<MCPhysReg> (*OrderFunc)(const MachineFunction &, bool Rev);
 
   /// Return the register class ID number.
   unsigned getID() const { return MC->getID(); }
@@ -108,10 +109,15 @@ public:
     return MC->contains(Reg1.asMCReg(), Reg2.asMCReg());
   }
 
-  /// Return the cost of copying a value between two registers in this class.
-  /// A negative number means the register class is very expensive
-  /// to copy e.g. status flag register classes.
-  int getCopyCost() const { return MC->getCopyCost(); }
+  /// Return the cost of copying a value between two registers in this class. If
+  /// this is the maximum value, the register may be impossible to copy.
+  uint8_t getCopyCost() const { return MC->getCopyCost(); }
+
+  /// \return true if register class is very expensive to copy e.g. status flag
+  /// register classes.
+  bool expensiveOrImpossibleToCopy() const {
+    return MC->getCopyCost() == std::numeric_limits<uint8_t>::max();
+  }
 
   /// Return true if this register class may be used to create virtual
   /// registers.
@@ -198,8 +204,9 @@ public:
   /// other criteria.
   ///
   /// By default, this method returns all registers in the class.
-  ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF) const {
-    return OrderFunc ? OrderFunc(MF) : getRegisters();
+  ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF,
+                                            bool Rev = false) const {
+    return OrderFunc ? OrderFunc(MF, Rev) : getRegisters();
   }
 
   /// Returns the combination of all lane masks of register in this class.
@@ -232,7 +239,7 @@ struct RegClassWeight {
 /// to this array so that we can turn register number into a register
 /// descriptor.
 ///
-class TargetRegisterInfo : public MCRegisterInfo {
+class LLVM_ABI TargetRegisterInfo : public MCRegisterInfo {
 public:
   using regclass_iterator = const TargetRegisterClass * const *;
   using vt_iterator = const MVT::SimpleValueType *;
@@ -271,9 +278,10 @@ protected:
                      const RegClassInfo *const RCIs,
                      const MVT::SimpleValueType *const RCVTLists,
                      unsigned Mode = 0);
-  virtual ~TargetRegisterInfo();
 
 public:
+  ~TargetRegisterInfo() override;
+
   /// Return the number of registers for the function. (may overestimate)
   virtual unsigned getNumSupportedRegs(const MachineFunction &) const {
     return getNumRegs();
@@ -675,6 +683,20 @@ public:
   getMatchingSuperRegClass(const TargetRegisterClass *A,
                            const TargetRegisterClass *B, unsigned Idx) const;
 
+  /// Find a common register class that can accomodate both the source and
+  /// destination operands of a copy-like instruction:
+  ///
+  /// DefRC:DefSubReg = COPY SrcRC:SrcSubReg
+  ///
+  /// This is a generalized form of getMatchingSuperRegClass,
+  /// getCommonSuperRegClass, and getCommonSubClass which handles 0, 1, or 2
+  /// subregister indexes. Those utilities should be preferred if the number of
+  /// non-0 subregister indexes is known.
+  const TargetRegisterClass *
+  findCommonRegClass(const TargetRegisterClass *DefRC, unsigned DefSubReg,
+                     const TargetRegisterClass *SrcRC,
+                     unsigned SrcSubReg) const;
+
   // For a copy-like instruction that defines a register of class DefRC with
   // subreg index DefSubReg, reading from another source with class SrcRC and
   // subregister SrcSubReg return true if this is a preferable copy
@@ -682,7 +704,10 @@ public:
   virtual bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
                                     unsigned DefSubReg,
                                     const TargetRegisterClass *SrcRC,
-                                    unsigned SrcSubReg) const;
+                                    unsigned SrcSubReg) const {
+    // If this source does not incur a cross register bank copy, use it.
+    return findCommonRegClass(DefRC, DefSubReg, SrcRC, SrcSubReg) != nullptr;
+  }
 
   /// Returns the largest legal sub-class of RC that
   /// supports the sub-register index Idx.
@@ -880,7 +905,7 @@ public:
   /// If a target supports multiple different pointer register classes,
   /// kind specifies which one is indicated.
   virtual const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF, unsigned Kind=0) const {
+  getPointerRegClass(unsigned Kind = 0) const {
     llvm_unreachable("Target didn't implement getPointerRegClass!");
   }
 
@@ -933,7 +958,7 @@ public:
   TypeSize getRegSizeInBits(Register Reg, const MachineRegisterInfo &MRI) const;
 
   /// Get the weight in units of pressure for this register unit.
-  virtual unsigned getRegUnitWeight(unsigned RegUnit) const = 0;
+  virtual unsigned getRegUnitWeight(MCRegUnit RegUnit) const = 0;
 
   /// Get the number of dimensions of register pressure.
   virtual unsigned getNumRegPressureSets() const = 0;
@@ -953,7 +978,7 @@ public:
 
   /// Get the dimensions of register pressure impacted by this register unit.
   /// Returns a -1 terminated array of pressure set IDs.
-  virtual const int *getRegUnitPressureSets(unsigned RegUnit) const = 0;
+  virtual const int *getRegUnitPressureSets(MCRegUnit RegUnit) const = 0;
 
   /// Get the scale factor of spill weight for this register class.
   virtual float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const;
@@ -1192,21 +1217,6 @@ public:
     return true;
   }
 
-  /// Deferred spilling delays the spill insertion of a virtual register
-  /// after every other allocation. By deferring the spilling, it is
-  /// sometimes possible to eliminate that spilling altogether because
-  /// something else could have been eliminated, thus leaving some space
-  /// for the virtual register.
-  /// However, this comes with a compile time impact because it adds one
-  /// more stage to the greedy register allocator.
-  /// This method is used to decide whether \p VirtReg should use the deferred
-  /// spilling stage instead of being spilled right away.
-  virtual bool
-  shouldUseDeferredSpillingForVirtReg(const MachineFunction &MF,
-                                      const LiveInterval &VirtReg) const {
-    return false;
-  }
-
   /// When prioritizing live ranges in register allocation, if this hook returns
   /// true then the AllocationPriority of the register class will be treated as
   /// more important than whether the range is local to a basic block or global.
@@ -1256,6 +1266,10 @@ public:
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const {
     return {};
   }
+
+  // Whether this register should be ignored when generating CodeView debug
+  // info, because it's a known there is no mapping available.
+  virtual bool isIgnoredCVReg(MCRegister LLVMReg) const { return false; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -1419,9 +1433,10 @@ struct VirtReg2IndexFunctor {
 ///   %physreg17      - a physical register when no TRI instance given.
 ///
 /// Usage: OS << printReg(Reg, TRI, SubRegIdx) << '\n';
-Printable printReg(Register Reg, const TargetRegisterInfo *TRI = nullptr,
-                   unsigned SubIdx = 0,
-                   const MachineRegisterInfo *MRI = nullptr);
+LLVM_ABI Printable printReg(Register Reg,
+                            const TargetRegisterInfo *TRI = nullptr,
+                            unsigned SubIdx = 0,
+                            const MachineRegisterInfo *MRI = nullptr);
 
 /// Create Printable object to print register units on a \ref raw_ostream.
 ///
@@ -1431,16 +1446,18 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI = nullptr,
 ///   fp0~st7 - Dual roots.
 ///
 /// Usage: OS << printRegUnit(Unit, TRI) << '\n';
-Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
+LLVM_ABI Printable printRegUnit(MCRegUnit Unit, const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.
-Printable printVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
+LLVM_ABI Printable printVRegOrUnit(VirtRegOrUnit VRegOrUnit,
+                                   const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print register classes or register banks
 /// on a \ref raw_ostream.
-Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
-                              const TargetRegisterInfo *TRI);
+LLVM_ABI Printable printRegClassOrBank(Register Reg,
+                                       const MachineRegisterInfo &RegInfo,
+                                       const TargetRegisterInfo *TRI);
 
 } // end namespace llvm
 

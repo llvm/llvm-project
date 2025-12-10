@@ -111,7 +111,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         TODO: Change name of operand, which is not accurate for xfer_write.
       }],
       /*retTy=*/"::mlir::Value",
-      /*methodName=*/"getSource",
+      /*methodName=*/"getBase",
       /*args=*/(ins)
     >,
     InterfaceMethod<
@@ -203,7 +203,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
 
     /// Return the shaped type of the "source" operand value.
     ::mlir::ShapedType getShapedType() {
-      return ::llvm::cast<::mlir::ShapedType>($_op.getSource().getType());
+      return ::llvm::cast<::mlir::ShapedType>($_op.getBase().getType());
     }
 
     /// Return the number of dimensions that participate in the permutation map.

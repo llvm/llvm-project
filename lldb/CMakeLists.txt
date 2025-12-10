@@ -37,6 +37,9 @@ endif()
 
 include(LLDBConfig)
 include(AddLLDB)
+include(LLDBLayeringCheck)
+
+set(LLDB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Define the LLDB_CONFIGURATION_xxx matching the build type.
 if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
@@ -59,11 +62,16 @@ if (LLDB_ENABLE_PYTHON)
   set(cachestring_LLDB_PYTHON_EXT_SUFFIX
     "Filename extension for native code python modules")
 
+  if (LLDB_ENABLE_PYTHON_LIMITED_API)
+    set(stable_abi "--stable-abi")
+  endif()
+
   foreach(var LLDB_PYTHON_RELATIVE_PATH LLDB_PYTHON_EXE_RELATIVE_PATH LLDB_PYTHON_EXT_SUFFIX)
     if(NOT DEFINED ${var} AND NOT CMAKE_CROSSCOMPILING)
       execute_process(
         COMMAND ${Python3_EXECUTABLE}
           ${CMAKE_CURRENT_SOURCE_DIR}/bindings/python/get-python-config.py
+          ${stable_abi}
           ${var}
         OUTPUT_VARIABLE value
         OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -82,6 +90,12 @@ if (LLDB_ENABLE_PYTHON)
     # Add "_d" manually if LLDB_PYTHON_EXT_SUFFIX lacks it due to release Python configuration.
     if(NOT FIRST_2_CHARS STREQUAL "_d")
       set(LLDB_PYTHON_EXT_SUFFIX "_d${LLDB_PYTHON_EXT_SUFFIX}")
+    endif()
+  endif()
+  if(TARGET Python3::Python)
+    get_target_property(_Python3_LIB_PATH Python3::Python IMPORTED_LIBRARY_LOCATION)
+    if(_Python3_LIB_PATH)
+      get_filename_component(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME "${_Python3_LIB_PATH}" NAME)
     endif()
   endif()
 endif ()
@@ -124,6 +138,8 @@ add_subdirectory(utils/TableGen)
 add_subdirectory(source)
 add_subdirectory(tools)
 add_subdirectory(docs)
+
+check_lldb_plugin_layering()
 
 if (LLDB_ENABLE_PYTHON)
   if(LLDB_BUILD_FRAMEWORK)

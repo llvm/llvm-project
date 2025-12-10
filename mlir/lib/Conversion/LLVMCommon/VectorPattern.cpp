@@ -87,17 +87,17 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
   auto result1DVectorTy = resultTypeInfo.llvm1DVectorTy;
   auto resultNDVectoryTy = resultTypeInfo.llvmNDVectorTy;
   auto loc = op->getLoc();
-  Value desc = rewriter.create<LLVM::PoisonOp>(loc, resultNDVectoryTy);
+  Value desc = LLVM::PoisonOp::create(rewriter, loc, resultNDVectoryTy);
   nDVectorIterate(resultTypeInfo, rewriter, [&](ArrayRef<int64_t> position) {
     // For this unrolled `position` corresponding to the `linearIndex`^th
     // element, extract operand vectors
     SmallVector<Value, 4> extractedOperands;
     for (const auto &operand : llvm::enumerate(operands)) {
-      extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
-          loc, operand.value(), position));
+      extractedOperands.push_back(LLVM::ExtractValueOp::create(
+          rewriter, loc, operand.value(), position));
     }
     Value newVal = createOperand(result1DVectorTy, extractedOperands);
-    desc = rewriter.create<LLVM::InsertValueOp>(loc, desc, newVal, position);
+    desc = LLVM::InsertValueOp::create(rewriter, loc, desc, newVal, position);
   });
   rewriter.replaceOp(op, desc);
   return success();
@@ -105,9 +105,9 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
 
 LogicalResult LLVM::detail::vectorOneToOneRewrite(
     Operation *op, StringRef targetOp, ValueRange operands,
-    ArrayRef<NamedAttribute> targetAttrs,
-    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
-    IntegerOverflowFlags overflowFlags) {
+    ArrayRef<NamedAttribute> targetAttrs, Attribute propertiesAttr,
+    const LLVMTypeConverter &typeConverter,
+    ConversionPatternRewriter &rewriter) {
   assert(!operands.empty());
 
   // Cannot convert ops if their operands are not of LLVM type.
@@ -116,18 +116,38 @@ LogicalResult LLVM::detail::vectorOneToOneRewrite(
 
   auto llvmNDVectorTy = operands[0].getType();
   if (!isa<LLVM::LLVMArrayType>(llvmNDVectorTy))
-    return oneToOneRewrite(op, targetOp, operands, targetAttrs, typeConverter,
-                           rewriter, overflowFlags);
-
-  auto callback = [op, targetOp, targetAttrs, overflowFlags,
+    return oneToOneRewrite(op, targetOp, operands, targetAttrs, propertiesAttr,
+                           typeConverter, rewriter);
+  auto callback = [op, targetOp, targetAttrs, propertiesAttr,
                    &rewriter](Type llvm1DVectorTy, ValueRange operands) {
-    Operation *newOp =
-        rewriter.create(op->getLoc(), rewriter.getStringAttr(targetOp),
-                        operands, llvm1DVectorTy, targetAttrs);
-    LLVM::detail::setNativeProperties(newOp, overflowFlags);
+    OperationState state(op->getLoc(), rewriter.getStringAttr(targetOp),
+                         operands, llvm1DVectorTy, targetAttrs);
+    state.propertiesAttr = propertiesAttr;
+    Operation *newOp = rewriter.create(state);
     return newOp->getResult(0);
   };
 
   return handleMultidimensionalVectors(op, operands, typeConverter, callback,
                                        rewriter);
+}
+
+/// Return the given type if it's a floating point type. If the given type is
+/// a vector type, return its element type if it's a floating point type.
+static FloatType getFloatingPointType(Type type) {
+  if (auto floatType = dyn_cast<FloatType>(type))
+    return floatType;
+  if (auto vecType = dyn_cast<VectorType>(type))
+    return dyn_cast<FloatType>(vecType.getElementType());
+  return nullptr;
+}
+
+bool LLVM::detail::isUnsupportedFloatingPointType(
+    const TypeConverter &typeConverter, Type type) {
+  FloatType floatType = getFloatingPointType(type);
+  if (!floatType)
+    return false;
+  Type convertedType = typeConverter.convertType(floatType);
+  if (!convertedType)
+    return true;
+  return !isa<FloatType>(convertedType);
 }

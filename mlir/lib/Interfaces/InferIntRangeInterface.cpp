@@ -146,6 +146,25 @@ raw_ostream &mlir::operator<<(raw_ostream &os, const IntegerValueRange &range) {
   return os;
 }
 
+SmallVector<IntegerValueRange>
+mlir::getIntValueRanges(ArrayRef<OpFoldResult> values,
+                        GetIntRangeFn getIntRange, int32_t indexBitwidth) {
+  SmallVector<IntegerValueRange> ranges;
+  ranges.reserve(values.size());
+  for (OpFoldResult ofr : values) {
+    if (auto value = dyn_cast<Value>(ofr)) {
+      ranges.push_back(getIntRange(value));
+      continue;
+    }
+
+    // Create a constant range.
+    auto attr = cast<IntegerAttr>(cast<Attribute>(ofr));
+    ranges.emplace_back(ConstantIntRanges::constant(
+        attr.getValue().sextOrTrunc(indexBitwidth)));
+  }
+  return ranges;
+}
+
 void mlir::intrange::detail::defaultInferResultRanges(
     InferIntRangeInterface interface, ArrayRef<IntegerValueRange> argRanges,
     SetIntLatticeFn setResultRanges) {

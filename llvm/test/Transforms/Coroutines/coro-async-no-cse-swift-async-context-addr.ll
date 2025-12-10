@@ -41,7 +41,7 @@ entry:
   %11 = call ptr @llvm.swift.async.context.addr()
 	store ptr %9, ptr %11, align 8
 
-  %12 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %3, i1 false, ptr @repo.0, ptr %9, ptr %10)
+  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %3, i1 false, ptr @repo.0, ptr %9, ptr %10)
   unreachable
 }
 
@@ -66,7 +66,7 @@ entry:
 declare { ptr } @llvm.coro.suspend.async.sl_p0i8s(i32, ptr, ptr, ...) #1
 declare token @llvm.coro.id.async(i32, i32, i32, ptr) #1
 declare ptr @llvm.coro.begin(token, ptr writeonly) #1
-declare i1 @llvm.coro.end.async(ptr, i1, ...) #1
+declare void @llvm.coro.end.async(ptr, i1, ...) #1
 declare ptr @llvm.coro.async.resume() #1
 declare ptr @llvm.swift.async.context.addr() #1
 

@@ -16,7 +16,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 
 using namespace llvm;
@@ -109,6 +108,55 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
   return findOrCreateSource(BB, Insts, {}, anyType());
 }
 
+// Adapts the current pointer for a legal mem operation on the target arch.
+static Value *buildTargetLegalPtr(Module *M, Value *Ptr, InsertPosition IP,
+                                  const Twine &Name,
+                                  SmallVector<Instruction *> *NewInsts) {
+  if (M && M->getTargetTriple().isAMDGCN()) {
+    // Check if we should perform an address space cast
+    PointerType *pointerType = dyn_cast<PointerType>(Ptr->getType());
+    if (pointerType && pointerType->getAddressSpace() == 8) {
+      // Perform address space cast from address space 8 to address space 7
+      auto NewPtr = new AddrSpaceCastInst(
+          Ptr, PointerType::get(M->getContext(), 7), Name + ".ASC", IP);
+      if (NewInsts)
+        NewInsts->push_back(NewPtr);
+      return NewPtr;
+    }
+  }
+
+  return Ptr;
+}
+
+// Stores a value to memory, considering the target triple's restrictions.
+static Instruction *buildTargetLegalStore(Value *Val, Value *Ptr,
+                                          InsertPosition IP, Module *M) {
+  Value *StorePtr = buildTargetLegalPtr(M, Ptr, IP, "", nullptr);
+  Instruction *Store = new StoreInst(Val, StorePtr, IP);
+  return Store;
+}
+
+// Loads a value from memory, considering the target triple's restrictions.
+static std::pair<Instruction *, SmallVector<Instruction *>>
+buildTargetLegalLoad(Type *AccessTy, Value *Ptr, InsertPosition IP, Module *M,
+                     const Twine &LoadName) {
+  SmallVector<Instruction *> NewInsts;
+
+  Value *LoadPtr = buildTargetLegalPtr(M, Ptr, IP, LoadName, &NewInsts);
+
+  Instruction *Load = new LoadInst(AccessTy, LoadPtr, LoadName, IP);
+  NewInsts.push_back(Load);
+
+  return std::make_pair(Load, NewInsts);
+}
+
+static void eraseNewInstructions(SmallVector<Instruction *> &NewInsts) {
+  // Remove in reverse order (uses before defs)
+  for (auto it = NewInsts.rbegin(); it != NewInsts.rend(); ++it) {
+    (*it)->eraseFromParent();
+  }
+}
+
 Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
                                            ArrayRef<Instruction *> Insts,
                                            ArrayRef<Value *> Srcs,
@@ -159,19 +207,20 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
       Module *M = BB.getParent()->getParent();
       auto [GV, DidCreate] = findOrCreateGlobalVariable(M, Srcs, Pred);
       Type *Ty = GV->getValueType();
-      LoadInst *LoadGV = nullptr;
-      if (BB.getTerminator()) {
-        LoadGV = new LoadInst(Ty, GV, "LGV", BB.getFirstInsertionPt());
-      } else {
-        LoadGV = new LoadInst(Ty, GV, "LGV", &BB);
-      }
+      InsertPosition IP = BB.getTerminator()
+                              ? InsertPosition(BB.getFirstInsertionPt())
+                              : InsertPosition(&BB);
+      // Build a legal load and track new instructions in case a rollback is
+      // needed.
+      auto [LoadGV, NewInsts] = buildTargetLegalLoad(Ty, GV, IP, M, "LGV");
       // Because we might be generating new values, we have to check if it
       // matches again.
       if (DidCreate) {
         if (Pred.matches(Srcs, LoadGV)) {
           return LoadGV;
         }
-        LoadGV->eraseFromParent();
+        // Remove newly inserted instructions
+        eraseNewInstructions(NewInsts);
         // If no one is using this GlobalVariable, delete it too.
         if (GV->use_empty()) {
           GV->eraseFromParent();
@@ -209,13 +258,18 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
     }
     // Pick the type independently.
     Type *AccessTy = RS.getSelection()->getType();
-    auto *NewLoad = new LoadInst(AccessTy, Ptr, "L", IP);
+    // Build a legal load and track new instructions in case a rollback is
+    // needed.
+    auto [NewLoad, NewInsts] =
+        buildTargetLegalLoad(AccessTy, Ptr, IP, BB.getModule(), "L");
 
     // Only sample this load if it really matches the descriptor
     if (Pred.matches(Srcs, NewLoad))
       RS.sample(NewLoad, RS.totalWeight());
-    else
-      NewLoad->eraseFromParent();
+    else {
+      // Remove newly inserted instructions
+      eraseNewInstructions(NewInsts);
+    }
   }
 
   Value *newSrc = RS.getSelection();
@@ -321,8 +375,10 @@ Instruction *RandomIRBuilder::connectToSink(BasicBlock &BB,
       std::shuffle(Dominators.begin(), Dominators.end(), Rand);
       for (BasicBlock *Dom : Dominators) {
         for (Instruction &I : *Dom) {
-          if (isa<PointerType>(I.getType()))
-            return new StoreInst(V, &I, Insts.back()->getIterator());
+          if (isa<PointerType>(I.getType())) {
+            return buildTargetLegalStore(V, &I, Insts.back()->getIterator(),
+                                         I.getModule());
+          }
         }
       }
       break;
@@ -345,10 +401,10 @@ Instruction *RandomIRBuilder::connectToSink(BasicBlock &BB,
       /// TODO: allocate a new stack memory.
       return newSink(BB, Insts, V);
     case SinkToGlobalVariable: {
-      Module *M = BB.getParent()->getParent();
+      Module *M = BB.getModule();
       auto [GV, DidCreate] =
           findOrCreateGlobalVariable(M, {}, fuzzerop::onlyType(V->getType()));
-      return new StoreInst(V, GV, Insts.back()->getIterator());
+      return buildTargetLegalStore(V, GV, Insts.back()->getIterator(), M);
     }
     case EndOfValueSink:
     default:
@@ -370,7 +426,8 @@ Instruction *RandomIRBuilder::newSink(BasicBlock &BB,
     }
   }
 
-  return new StoreInst(V, Ptr, Insts.back()->getIterator());
+  return buildTargetLegalStore(V, Ptr, Insts.back()->getIterator(),
+                               BB.getModule());
 }
 
 Value *RandomIRBuilder::findPointer(BasicBlock &BB,

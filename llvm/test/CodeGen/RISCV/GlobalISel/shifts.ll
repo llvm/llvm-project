@@ -7,9 +7,6 @@
 ; Basic shift support is tested as part of ALU.ll. This file ensures that
 ; shifts which may not be supported natively are lowered properly.
 
-declare i64 @llvm.fshr.i64(i64, i64, i64)
-declare i128 @llvm.fshr.i128(i128, i128, i128)
-
 define i64 @lshr64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: lshr64:
 ; RV32I:       # %bb.0:
@@ -330,13 +327,13 @@ define i128 @lshr128(i128 %a, i128 %b) nounwind {
 ; RV64I-NEXT:    li a3, 64
 ; RV64I-NEXT:    bltu a2, a3, .LBB6_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    subw a4, a2, a3
+; RV64I-NEXT:    sub a4, a2, a3
 ; RV64I-NEXT:    srl a4, a1, a4
 ; RV64I-NEXT:    bnez a2, .LBB6_3
 ; RV64I-NEXT:    j .LBB6_4
 ; RV64I-NEXT:  .LBB6_2:
 ; RV64I-NEXT:    srl a4, a0, a2
-; RV64I-NEXT:    negw a5, a2
+; RV64I-NEXT:    neg a5, a2
 ; RV64I-NEXT:    sll a5, a1, a5
 ; RV64I-NEXT:    or a4, a4, a5
 ; RV64I-NEXT:    beqz a2, .LBB6_4
@@ -476,13 +473,13 @@ define i128 @ashr128(i128 %a, i128 %b) nounwind {
 ; RV64I-NEXT:    li a3, 64
 ; RV64I-NEXT:    bltu a2, a3, .LBB7_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    subw a4, a2, a3
+; RV64I-NEXT:    sub a4, a2, a3
 ; RV64I-NEXT:    sra a4, a1, a4
 ; RV64I-NEXT:    bnez a2, .LBB7_3
 ; RV64I-NEXT:    j .LBB7_4
 ; RV64I-NEXT:  .LBB7_2:
 ; RV64I-NEXT:    srl a4, a0, a2
-; RV64I-NEXT:    negw a5, a2
+; RV64I-NEXT:    neg a5, a2
 ; RV64I-NEXT:    sll a5, a1, a5
 ; RV64I-NEXT:    or a4, a4, a5
 ; RV64I-NEXT:    beqz a2, .LBB7_4
@@ -615,13 +612,13 @@ define i128 @shl128(i128 %a, i128 %b) nounwind {
 ; RV64I-NEXT:    bltu a2, a4, .LBB8_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    li a0, 0
-; RV64I-NEXT:    subw a4, a2, a4
+; RV64I-NEXT:    sub a4, a2, a4
 ; RV64I-NEXT:    sll a3, a3, a4
 ; RV64I-NEXT:    bnez a2, .LBB8_3
 ; RV64I-NEXT:    j .LBB8_4
 ; RV64I-NEXT:  .LBB8_2:
 ; RV64I-NEXT:    sll a0, a3, a2
-; RV64I-NEXT:    negw a4, a2
+; RV64I-NEXT:    neg a4, a2
 ; RV64I-NEXT:    srl a3, a3, a4
 ; RV64I-NEXT:    sll a4, a1, a2
 ; RV64I-NEXT:    or a3, a3, a4
@@ -685,7 +682,7 @@ define i64 @fshr64_minsize(i64 %a, i64 %b) minsize nounwind {
 ;
 ; RV64I-LABEL: fshr64_minsize:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    negw a2, a1
+; RV64I-NEXT:    neg a2, a1
 ; RV64I-NEXT:    srl a1, a0, a1
 ; RV64I-NEXT:    sll a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
@@ -914,12 +911,12 @@ define i128 @fshr128_minsize(i128 %a, i128 %b) minsize nounwind {
 ; RV64I-NEXT:    li a4, 64
 ; RV64I-NEXT:    bltu a5, a4, .LBB10_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    subw a3, a5, a4
+; RV64I-NEXT:    sub a3, a5, a4
 ; RV64I-NEXT:    srl a6, a1, a3
 ; RV64I-NEXT:    j .LBB10_3
 ; RV64I-NEXT:  .LBB10_2:
 ; RV64I-NEXT:    srl a3, a0, a2
-; RV64I-NEXT:    negw a6, a5
+; RV64I-NEXT:    neg a6, a5
 ; RV64I-NEXT:    sll a6, a1, a6
 ; RV64I-NEXT:    or a6, a3, a6
 ; RV64I-NEXT:  .LBB10_3:
@@ -928,7 +925,7 @@ define i128 @fshr128_minsize(i128 %a, i128 %b) minsize nounwind {
 ; RV64I-NEXT:  # %bb.4:
 ; RV64I-NEXT:    mv a3, a6
 ; RV64I-NEXT:  .LBB10_5:
-; RV64I-NEXT:    negw a7, a2
+; RV64I-NEXT:    neg a7, a2
 ; RV64I-NEXT:    bltu a5, a4, .LBB10_7
 ; RV64I-NEXT:  # %bb.6:
 ; RV64I-NEXT:    li a2, 0
@@ -940,13 +937,13 @@ define i128 @fshr128_minsize(i128 %a, i128 %b) minsize nounwind {
 ; RV64I-NEXT:    bltu a6, a4, .LBB10_10
 ; RV64I-NEXT:  # %bb.9:
 ; RV64I-NEXT:    li a5, 0
-; RV64I-NEXT:    subw a4, a6, a4
+; RV64I-NEXT:    sub a4, a6, a4
 ; RV64I-NEXT:    sll a0, a0, a4
 ; RV64I-NEXT:    bnez a6, .LBB10_11
 ; RV64I-NEXT:    j .LBB10_12
 ; RV64I-NEXT:  .LBB10_10:
 ; RV64I-NEXT:    sll a5, a0, a7
-; RV64I-NEXT:    negw a4, a6
+; RV64I-NEXT:    neg a4, a6
 ; RV64I-NEXT:    srl a0, a0, a4
 ; RV64I-NEXT:    sll a4, a1, a7
 ; RV64I-NEXT:    or a0, a0, a4

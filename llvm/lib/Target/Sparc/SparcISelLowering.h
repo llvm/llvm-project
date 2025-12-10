@@ -20,47 +20,6 @@
 namespace llvm {
   class SparcSubtarget;
 
-  namespace SPISD {
-  enum NodeType : unsigned {
-    FIRST_NUMBER = ISD::BUILTIN_OP_END,
-    CMPICC,    // Compare two GPR operands, set icc+xcc.
-    CMPFCC,    // Compare two FP operands, set fcc.
-    CMPFCC_V9, // Compare two FP operands, set fcc (v9 variant).
-    BRICC,     // Branch to dest on icc condition
-    BPICC,    // Branch to dest on icc condition, with prediction (64-bit only).
-    BPXCC,    // Branch to dest on xcc condition, with prediction (64-bit only).
-    BRFCC,    // Branch to dest on fcc condition
-    BRFCC_V9, // Branch to dest on fcc condition (v9 variant).
-    BR_REG,   // Branch to dest using the comparison of a register with zero.
-    SELECT_ICC, // Select between two values using the current ICC flags.
-    SELECT_XCC, // Select between two values using the current XCC flags.
-    SELECT_FCC, // Select between two values using the current FCC flags.
-    SELECT_REG, // Select between two values using the comparison of a register
-                // with zero.
-
-    Hi,
-    Lo, // Hi/Lo operations, typically on a global address.
-
-    FTOI, // FP to Int within a FP register.
-    ITOF, // Int to FP within a FP register.
-    FTOX, // FP to Int64 within a FP register.
-    XTOF, // Int64 to FP within a FP register.
-
-    CALL,            // A call instruction.
-    RET_GLUE,        // Return with a glue operand.
-    GLOBAL_BASE_REG, // Global base reg for PIC.
-    FLUSHW,          // FLUSH register windows to stack.
-
-    TAIL_CALL, // Tail call
-
-    TLS_ADD, // For Thread Local Storage (TLS).
-    TLS_LD,
-    TLS_CALL,
-
-    LOAD_GDOP, // Load operation w/ gdop relocation.
-  };
-  }
-
   class SparcTargetLowering : public TargetLowering {
     const SparcSubtarget *Subtarget;
   public:
@@ -68,6 +27,8 @@ namespace llvm {
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
     bool useSoftFloat() const override;
+
+    bool softPromoteHalfType() const override { return true; }
 
     /// computeKnownBitsForTargetNode - Determine which of the bits specified
     /// in Mask are known to be either zero or one and return them in the
@@ -81,8 +42,6 @@ namespace llvm {
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *MBB) const override;
-
-    const char *getTargetNodeName(unsigned Opcode) const override;
 
     ConstraintType getConstraintType(StringRef Constraint) const override;
     ConstraintWeight
@@ -120,7 +79,6 @@ namespace llvm {
 
     /// Override to support customized stack guard loading.
     bool useLoadStackGuardNode(const Module &M) const override;
-    void insertSSPDeclarations(Module &M) const override;
 
     /// getSetCCResultType - Return the ISD::SETCC ValueType
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -207,6 +165,8 @@ namespace llvm {
       return VT != MVT::f128;
     }
 
+    bool isFNegFree(EVT VT) const override;
+
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
 
@@ -217,6 +177,16 @@ namespace llvm {
     }
 
     bool isCheapToSpeculateCttz(Type *Ty) const override;
+
+    bool enableAggressiveFMAFusion(EVT VT) const override { return true; };
+
+    bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                    EVT VT) const override;
+
+    Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                  AtomicOrdering Ord) const override;
+    Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                   AtomicOrdering Ord) const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       // FIXME: We insert fences for each atomics and generate

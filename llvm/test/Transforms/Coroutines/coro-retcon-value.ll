@@ -25,7 +25,7 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -64,7 +64,7 @@ entry:
 declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i8 @llvm.coro.suspend.retcon.i8(...)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.prepare.retcon(ptr)
 
 declare {ptr, i32} @prototype(ptr, i8 zeroext)

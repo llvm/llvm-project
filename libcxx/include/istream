@@ -70,6 +70,7 @@ public:
     basic_istream& getline(char_type* s, streamsize n, char_type delim);
 
     basic_istream& ignore(streamsize n = 1, int_type delim = traits_type::eof());
+    basic_istream& ignore(streamsize n, char_type delim);                         // Since C++26, implemented as a DR
     int_type peek();
     basic_istream& read (char_type* s, streamsize n);
     streamsize readsome(char_type* s, streamsize n);
@@ -167,16 +168,18 @@ template <class Stream, class T>
 
 #    include <__fwd/istream.h>
 #    include <__iterator/istreambuf_iterator.h>
+#    include <__locale_dir/num.h>
 #    include <__ostream/basic_ostream.h>
 #    include <__type_traits/conjunction.h>
 #    include <__type_traits/enable_if.h>
 #    include <__type_traits/is_base_of.h>
+#    include <__type_traits/is_same.h>
 #    include <__type_traits/make_unsigned.h>
 #    include <__utility/declval.h>
 #    include <__utility/forward.h>
 #    include <bitset>
 #    include <ios>
-#    include <locale>
+#    include <streambuf>
 #    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -291,6 +294,10 @@ public:
   basic_istream& getline(char_type* __s, streamsize __n, char_type __dlm);
 
   basic_istream& ignore(streamsize __n = 1, int_type __dlm = traits_type::eof());
+  template <class _Tp = char_type, __enable_if_t<is_same<_Tp, char>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI basic_istream& ignore(streamsize __n, char_type __delim) {
+    return ignore(__n, traits_type::to_int_type(__delim));
+  }
   int_type peek();
   basic_istream& read(char_type* __s, streamsize __n);
   streamsize readsome(char_type* __s, streamsize __n);
@@ -1263,41 +1270,70 @@ _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>& __is, basic_string<_CharT, _Traits, _Allocator>& __str, _CharT __dlm) {
   ios_base::iostate __state = ios_base::goodbit;
   typename basic_istream<_CharT, _Traits>::sentry __sen(__is, true);
-  if (__sen) {
+  if (!__sen)
+    return __is;
 #    if _LIBCPP_HAS_EXCEPTIONS
-    try {
+  try {
 #    endif
-      __str.clear();
-      streamsize __extr = 0;
-      while (true) {
-        typename _Traits::int_type __i = __is.rdbuf()->sbumpc();
-        if (_Traits::eq_int_type(__i, _Traits::eof())) {
-          __state |= ios_base::eofbit;
-          break;
-        }
-        ++__extr;
-        _CharT __ch = _Traits::to_char_type(__i);
-        if (_Traits::eq(__ch, __dlm))
-          break;
-        __str.push_back(__ch);
-        if (__str.size() == __str.max_size()) {
-          __state |= ios_base::failbit;
-          break;
-        }
+    __str.clear();
+
+    auto& __buffer = *__is.rdbuf();
+
+    auto __next = __buffer.sgetc();
+    for (; !_Traits::eq_int_type(__next, _Traits::eof()); __next = __buffer.sgetc()) {
+      const auto* __first = __buffer.gptr();
+      const auto* __last  = __buffer.egptr();
+      _CharT __1buf;
+
+      if (__first == __last) {
+        __1buf  = __next;
+        __first = std::addressof(__1buf);
+        __last  = std::addressof(__1buf) + 1;
       }
-      if (__extr == 0)
+
+      auto __bump_stream = [&](ptrdiff_t __diff) {
+        if (__first == std::addressof(__1buf)) {
+          _LIBCPP_ASSERT_INTERNAL(__diff == 0 || __diff == 1, "trying to bump stream further than buffer size");
+          if (__diff != 0)
+            __buffer.sbumpc();
+        } else {
+          __buffer.__gbump_ptrdiff(__diff);
+        }
+      };
+
+      const auto* const __match = _Traits::find(__first, __last - __first, __dlm);
+      if (__match)
+        __last = __match;
+
+      if (auto __cap = __str.max_size() - __str.size(); __cap > static_cast<size_t>(__last - __first)) {
+        __str.append(__first, __last);
+        __bump_stream(__last - __first);
+
+        if (__match) {
+          __bump_stream(1); // Remove the matched character
+          break;
+        }
+      } else {
+        __str.append(__first, __cap);
+        __bump_stream(__cap);
         __state |= ios_base::failbit;
-#    if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      __state |= ios_base::badbit;
-      __is.__setstate_nothrow(__state);
-      if (__is.exceptions() & ios_base::badbit) {
-        throw;
+        break;
       }
     }
-#    endif
-    __is.setstate(__state);
+
+    if (_Traits::eq_int_type(__next, _Traits::eof()))
+      __state |= ios_base::eofbit | (__str.empty() ? ios_base::failbit : ios_base::goodbit);
+
+#    if _LIBCPP_HAS_EXCEPTIONS
+  } catch (...) {
+    __state |= ios_base::badbit;
+    __is.__setstate_nothrow(__state);
+    if (__is.exceptions() & ios_base::badbit) {
+      throw;
+    }
   }
+#    endif
+  __is.setstate(__state);
   return __is;
 }
 
@@ -1380,6 +1416,10 @@ _LIBCPP_POP_MACROS
 #    include <iosfwd>
 #    include <ostream>
 #    include <type_traits>
+#  endif
+
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
+#    include <locale>
 #  endif
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

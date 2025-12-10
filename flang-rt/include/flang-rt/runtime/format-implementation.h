@@ -49,7 +49,7 @@ RT_API_ATTRS FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
       SubscriptValue at[maxRank];
       formatDescriptor->GetLowerBounds(at);
       for (std::size_t j{0}; j < elements; ++j) {
-        std::memcpy(p, formatDescriptor->Element<char>(at), elementBytes);
+        runtime::memcpy(p, formatDescriptor->Element<char>(at), elementBytes);
         p += elementBytes;
         formatDescriptor->IncrementSubscripts(at);
       }
@@ -302,7 +302,7 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
     }
   }
   while (true) {
-    Fortran::common::optional<int> repeat;
+    common::optional<int> repeat;
     bool unlimited{false};
     auto maybeReversionPoint{offset_};
     CharType ch{GetNextChar(context)};
@@ -427,7 +427,14 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
       } else {
         --chars;
       }
-      EmitAscii(context, format_ + start, chars);
+      if constexpr (std::is_base_of_v<InputStatementState, CONTEXT>) {
+        context.HandleRelativePosition(chars);
+      } else {
+        if (context.GetConnectionState().NeedHardAdvance(chars)) {
+          context.AdvanceRecord();
+        }
+        EmitAscii(context, format_ + start, chars);
+      }
     } else if (ch == 'H') {
       // 9HHOLLERITH
       if (!repeat || *repeat < 1 || offset_ + *repeat > formatLength_) {
@@ -435,7 +442,15 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
             maybeReversionPoint);
         return 0;
       }
-      EmitAscii(context, format_ + offset_, static_cast<std::size_t>(*repeat));
+      if constexpr (std::is_base_of_v<InputStatementState, CONTEXT>) {
+        context.HandleRelativePosition(static_cast<std::size_t>(*repeat));
+      } else {
+        if (context.GetConnectionState().NeedHardAdvance(*repeat)) {
+          context.AdvanceRecord();
+        }
+        EmitAscii(
+            context, format_ + offset_, static_cast<std::size_t>(*repeat));
+      }
       offset_ += *repeat;
     } else if (ch >= 'A' && ch <= 'Z') {
       int start{offset_ - 1};
@@ -478,6 +493,9 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
     } else if (ch == '\t' || ch == '\v') {
       // Tabs (extension)
       // TODO: any other raw characters?
+      if (context.GetConnectionState().NeedHardAdvance(1)) {
+        context.AdvanceRecord();
+      }
       EmitAscii(context, format_ + offset_ - 1, 1);
     } else {
       ReportBadFormat(
@@ -489,8 +507,8 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
 
 // Returns the next data edit descriptor
 template <typename CONTEXT>
-RT_API_ATTRS Fortran::common::optional<DataEdit>
-FormatControl<CONTEXT>::GetNextDataEdit(Context &context, int maxRepeat) {
+RT_API_ATTRS common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
+    Context &context, int maxRepeat) {
   int repeat{CueUpNextDataEdit(context)};
   auto start{offset_};
   DataEdit edit;
@@ -521,16 +539,16 @@ FormatControl<CONTEXT>::GetNextDataEdit(Context &context, int maxRepeat) {
         }
         if (edit.ioTypeChars >= edit.maxIoTypeChars) {
           ReportBadFormat(context, "Excessive DT'iotype' in FORMAT", start);
-          return Fortran::common::nullopt;
+          return common::nullopt;
         }
-        edit.ioType[edit.ioTypeChars++] = ch;
+        context.ioType[edit.ioTypeChars++] = ch;
         if (ch == quote) {
           ++offset_;
         }
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT'iotype' in FORMAT", start);
-        return Fortran::common::nullopt;
+        return common::nullopt;
       }
     }
     if (PeekNext() == '(') {
@@ -545,9 +563,9 @@ FormatControl<CONTEXT>::GetNextDataEdit(Context &context, int maxRepeat) {
         }
         if (edit.vListEntries >= edit.maxVListEntries) {
           ReportBadFormat(context, "Excessive DT(v_list) in FORMAT", start);
-          return Fortran::common::nullopt;
+          return common::nullopt;
         }
-        edit.vList[edit.vListEntries++] = n;
+        context.vList[edit.vListEntries++] = n;
         auto ch{static_cast<char>(GetNextChar(context))};
         if (ch != ',') {
           ok = ch == ')';
@@ -556,7 +574,7 @@ FormatControl<CONTEXT>::GetNextDataEdit(Context &context, int maxRepeat) {
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT(v_list) in FORMAT", start);
-        return Fortran::common::nullopt;
+        return common::nullopt;
       }
     }
   } else { // not DT'iotype'

@@ -2416,6 +2416,39 @@ define <3 x i8> @umin_unary_shuffle_ops_narrowing(<4 x i8> %x, <4 x i8> %y) {
   ret <3 x i8> %r
 }
 
+define <3 x i8> @smax_unary_shuffle_ops_lhs_const(<3 x i8> %x) {
+; CHECK-LABEL: @smax_unary_shuffle_ops_lhs_const(
+; CHECK-NEXT:    [[X:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[X1:%.*]], <3 x i8> <i8 1, i8 0, i8 2>)
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X]], <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    ret <3 x i8> [[SX]]
+;
+  %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  %r = call <3 x i8> @llvm.smax(<3 x i8> %sx, <3 x i8> <i8 0, i8 1, i8 2>)
+  ret <3 x i8> %r
+}
+
+define <vscale x 3 x i8> @smax_unary_shuffle_ops_lhs_const_scalable(<vscale x 3 x i8> %x) {
+; CHECK-LABEL: @smax_unary_shuffle_ops_lhs_const_scalable(
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 3 x i8> @llvm.smax.nxv3i8(<vscale x 3 x i8> [[SX:%.*]], <vscale x 3 x i8> splat (i8 42))
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <vscale x 3 x i8> [[R]], <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 3 x i8> [[R1]]
+;
+  %sx = shufflevector <vscale x 3 x i8> %x, <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
+  %r = call <vscale x 3 x i8> @llvm.smax(<vscale x 3 x i8> %sx, <vscale x 3 x i8> splat (i8 42))
+  ret <vscale x 3 x i8> %r
+}
+
+define <3 x i8> @smax_unary_shuffle_ops_lhs_const_widening(<2 x i8> %x) {
+; CHECK-LABEL: @smax_unary_shuffle_ops_lhs_const_widening(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[X1:%.*]], <2 x i8> <i8 1, i8 0>)
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <2 x i8> [[X]], <2 x i8> poison, <3 x i32> <i32 1, i32 0, i32 poison>
+; CHECK-NEXT:    ret <3 x i8> [[SX]]
+;
+  %sx = shufflevector <2 x i8> %x, <2 x i8> poison, <3 x i32> <i32 1, i32 0, i32 poison>
+  %r = call <3 x i8> @llvm.smax(<3 x i8> %sx, <3 x i8> <i8 0, i8 1, i8 2>)
+  ret <3 x i8> %r
+}
+
 ; negative test - must have 2 shuffles
 
 define <3 x i8> @smax_unary_shuffle_ops_unshuffled_op(<3 x i8> %x, <3 x i8> %y) {
@@ -2475,6 +2508,21 @@ define <3 x i8> @smin_unary_shuffle_ops_uses(<3 x i8> %x, <3 x i8> %y) {
   %sy = shufflevector <3 x i8> %y, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
   call void @use_vec(<3 x i8> %sy)
   %r = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %sx, <3 x i8> %sy)
+  ret <3 x i8> %r
+}
+
+; negative test - too many uses
+
+define <3 x i8> @smin_unary_shuffle_ops_uses_const(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @smin_unary_shuffle_ops_uses_const(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    call void @use_vec(<3 x i8> [[SX]])
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[SX]], <3 x i8> <i8 1, i8 2, i8 3>)
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  call void @use_vec(<3 x i8> %sx)
+  %r = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %sx, <3 x i8> <i8 1, i8 2, i8 3>)
   ret <3 x i8> %r
 }
 

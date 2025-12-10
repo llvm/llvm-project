@@ -111,25 +111,25 @@ public:
     }
   };
 
-  bool contains(key_type_ref K) const {
+  [[nodiscard]] bool contains(key_type_ref K) const {
     return Root ? Root->contains(K) : false;
   }
 
-  bool operator==(const ImmutableMap &RHS) const {
+  [[nodiscard]] bool operator==(const ImmutableMap &RHS) const {
     return Root && RHS.Root ? Root->isEqual(*RHS.Root.get()) : Root == RHS.Root;
   }
 
-  bool operator!=(const ImmutableMap &RHS) const {
+  [[nodiscard]] bool operator!=(const ImmutableMap &RHS) const {
     return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
                             : Root != RHS.Root;
   }
 
-  TreeTy *getRoot() const {
+  [[nodiscard]] TreeTy *getRoot() const {
     if (Root) { Root->retain(); }
     return Root.get();
   }
 
-  TreeTy *getRootWithoutRetain() const { return Root.get(); }
+  [[nodiscard]] TreeTy *getRootWithoutRetain() const { return Root.get(); }
 
   void manualRetain() {
     if (Root) Root->retain();
@@ -139,7 +139,7 @@ public:
     if (Root) Root->release();
   }
 
-  bool isEmpty() const { return !Root; }
+  [[nodiscard]] bool isEmpty() const { return !Root; }
 
 public:
   //===--------------------------------------------------===//
@@ -163,10 +163,10 @@ public:
     data_type_ref getData() const { return (*this)->second; }
   };
 
-  iterator begin() const { return iterator(Root.get()); }
-  iterator end() const { return iterator(); }
+  [[nodiscard]] iterator begin() const { return iterator(Root.get()); }
+  [[nodiscard]] iterator end() const { return iterator(); }
 
-  data_type* lookup(key_type_ref K) const {
+  [[nodiscard]] data_type *lookup(key_type_ref K) const {
     if (Root) {
       TreeTy* T = Root->find(K);
       if (T) return &T->getValue().second;
@@ -178,7 +178,7 @@ public:
   /// getMaxElement - Returns the <key,value> pair in the ImmutableMap for
   ///  which key is the highest in the ordering of keys in the map.  This
   ///  method returns NULL if the map is empty.
-  value_type* getMaxElement() const {
+  [[nodiscard]] value_type *getMaxElement() const {
     return Root ? &(Root->getMaxElement()->getValue()) : nullptr;
   }
 
@@ -186,7 +186,9 @@ public:
   // Utility methods.
   //===--------------------------------------------------===//
 
-  unsigned getHeight() const { return Root ? Root->getHeight() : 0; }
+  [[nodiscard]] unsigned getHeight() const {
+    return Root ? Root->getHeight() : 0;
+  }
 
   static inline void Profile(FoldingSetNodeID& ID, const ImmutableMap& M) {
     ID.AddPointer(M.Root.get());
@@ -250,7 +252,7 @@ public:
     return ImmutableMapRef(NewT, Factory);
   }
 
-  bool contains(key_type_ref K) const {
+  [[nodiscard]] bool contains(key_type_ref K) const {
     return Root ? Root->contains(K) : false;
   }
 
@@ -258,16 +260,16 @@ public:
     return ImmutableMap<KeyT, ValT>(Factory->getCanonicalTree(Root.get()));
   }
 
-  bool operator==(const ImmutableMapRef &RHS) const {
+  [[nodiscard]] bool operator==(const ImmutableMapRef &RHS) const {
     return Root && RHS.Root ? Root->isEqual(*RHS.Root.get()) : Root == RHS.Root;
   }
 
-  bool operator!=(const ImmutableMapRef &RHS) const {
+  [[nodiscard]] bool operator!=(const ImmutableMapRef &RHS) const {
     return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
                             : Root != RHS.Root;
   }
 
-  bool isEmpty() const { return !Root; }
+  [[nodiscard]] bool isEmpty() const { return !Root; }
 
   //===--------------------------------------------------===//
   // For testing.
@@ -293,10 +295,10 @@ public:
     data_type_ref getData() const { return (*this)->second; }
   };
 
-  iterator begin() const { return iterator(Root.get()); }
-  iterator end() const { return iterator(); }
+  [[nodiscard]] iterator begin() const { return iterator(Root.get()); }
+  [[nodiscard]] iterator end() const { return iterator(); }
 
-  data_type *lookup(key_type_ref K) const {
+  [[nodiscard]] data_type *lookup(key_type_ref K) const {
     if (Root) {
       TreeTy* T = Root->find(K);
       if (T) return &T->getValue().second;
@@ -308,7 +310,7 @@ public:
   /// getMaxElement - Returns the <key,value> pair in the ImmutableMap for
   ///  which key is the highest in the ordering of keys in the map.  This
   ///  method returns NULL if the map is empty.
-  value_type* getMaxElement() const {
+  [[nodiscard]] value_type *getMaxElement() const {
     return Root ? &(Root->getMaxElement()->getValue()) : nullptr;
   }
 
@@ -316,7 +318,9 @@ public:
   // Utility methods.
   //===--------------------------------------------------===//
 
-  unsigned getHeight() const { return Root ? Root->getHeight() : 0; }
+  [[nodiscard]] unsigned getHeight() const {
+    return Root ? Root->getHeight() : 0;
+  }
 
   static inline void Profile(FoldingSetNodeID &ID, const ImmutableMapRef &M) {
     ID.AddPointer(M.Root.get());

@@ -194,13 +194,12 @@ define void @test_revhv32i16(ptr %a) #0 {
 define void @test_rev_elts_fail(ptr %a) #1 {
 ; CHECK-LABEL: test_rev_elts_fail:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    adrp x8, .LCPI11_0
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI11_0
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x8]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x8]
 ; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i64>, ptr %a
   %tmp2 = shufflevector <4 x i64> %tmp1, <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
@@ -228,9 +227,8 @@ define void @test_revdv4f64_sve2p1(ptr %a) #2 {
 ; CHECK-LABEL: test_revdv4f64_sve2p1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    revd z0.q, p1/m, z0.q
+; CHECK-NEXT:    revd z0.q, p0/m, z0.q
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %a
@@ -275,10 +273,9 @@ define void @test_revv8i32(ptr %a) #0 {
 define void @test_revv32i8_vl256(ptr %a) #1 {
 ; CHECK-LABEL: test_revv32i8_vl256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    rev z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <32 x i8>, ptr %a
   %tmp2 = shufflevector <32 x i8> %tmp1, <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -290,10 +287,9 @@ define void @test_revv32i8_vl256(ptr %a) #1 {
 define void @test_revv16i16_vl256(ptr %a) #1 {
 ; CHECK-LABEL: test_revv16i16_vl256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    rev z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <16 x i16>, ptr %a
   %tmp2 = shufflevector <16 x i16> %tmp1, <16 x i16> poison, <16 x i32> <i32 poison, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -305,10 +301,9 @@ define void @test_revv16i16_vl256(ptr %a) #1 {
 define void @test_revv8f32_vl256(ptr %a) #1 {
 ; CHECK-LABEL: test_revv8f32_vl256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    rev z0.s, z0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x float>, ptr %a
   %tmp2 = shufflevector <8 x float> %tmp1, <8 x float> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -320,10 +315,9 @@ define void @test_revv8f32_vl256(ptr %a) #1 {
 define void @test_revv4f64_vl256(ptr %a) #1 {
 ; CHECK-LABEL: test_revv4f64_vl256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    rev z0.d, z0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %a
   %tmp2 = shufflevector <4 x double> %tmp1, <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -335,10 +329,9 @@ define void @test_revv4f64_vl256(ptr %a) #1 {
 define void @test_revv8i32v8i32(ptr %a, ptr %b) #1 {
 ; CHECK-LABEL: test_revv8i32v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x1]
+; CHECK-NEXT:    ldr z0, [x1]
 ; CHECK-NEXT:    rev z0.s, z0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i32>, ptr %a
   %tmp2 = load <8 x i32>, ptr %b
@@ -351,13 +344,12 @@ define void @test_revv8i32v8i32(ptr %a, ptr %b) #1 {
 define void @test_rev_fail(ptr %a) #1 {
 ; CHECK-LABEL: test_rev_fail:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    adrp x8, .LCPI20_0
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI20_0
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x8]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x8]
 ; CHECK-NEXT:    tbl z0.h, { z0.h }, z1.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <16 x i16>, ptr %a
   %tmp2 = shufflevector <16 x i16> %tmp1, <16 x i16> poison, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
@@ -379,7 +371,6 @@ define void @test_revv8i16v8i16(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ldr q5, [x0]
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov h1, v0.h[4]
 ; CHECK-NEXT:    mov h2, v0.h[5]
 ; CHECK-NEXT:    mov h3, v0.h[6]
@@ -409,8 +400,8 @@ define void @test_revv8i16v8i16(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-NEXT:    str h0, [sp, #10]
 ; CHECK-NEXT:    str h1, [sp, #8]
 ; CHECK-NEXT:    str h2, [sp, #4]
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
-; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
+; CHECK-NEXT:    ldr z0, [x8]
+; CHECK-NEXT:    str z0, [x2]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret

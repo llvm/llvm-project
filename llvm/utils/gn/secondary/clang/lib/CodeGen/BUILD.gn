@@ -6,6 +6,7 @@ static_library("CodeGen") {
     "//clang/include/clang/Basic:arm_mve_builtin_cg",
     "//clang/include/clang/Basic:arm_sme_builtin_cg",
     "//clang/include/clang/Basic:arm_sve_builtin_cg",
+    "//clang/include/clang/Basic:riscv_andes_vector_builtin_cg",
     "//clang/include/clang/Basic:riscv_sifive_vector_builtin_cg",
     "//clang/include/clang/Basic:riscv_vector_builtin_cg",
     "//clang/lib/AST",
@@ -132,7 +133,6 @@ static_library("CodeGen") {
     "Targets/MSP430.cpp",
     "Targets/Mips.cpp",
     "Targets/NVPTX.cpp",
-    "Targets/PNaCl.cpp",
     "Targets/PPC.cpp",
     "Targets/RISCV.cpp",
     "Targets/SPIR.cpp",
@@ -143,6 +143,7 @@ static_library("CodeGen") {
     "Targets/WebAssembly.cpp",
     "Targets/X86.cpp",
     "Targets/XCore.cpp",
+    "TrapReasonBuilder.cpp",
     "VarBypassDetector.cpp",
   ]
 }

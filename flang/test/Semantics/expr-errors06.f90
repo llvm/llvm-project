@@ -43,6 +43,6 @@ subroutine subr(da)
   print *, empty(1:0,1) ! ok
   print *, empty(:,1) ! ok
   print *, empty(i:j,k) ! ok
-  !WARNING: Empty array dimension 1 should not be subscripted as an element or non-empty array section
+  !WARNING: Empty array dimension 1 should not be subscripted as an element or non-empty array section [-Wsubscripted-empty-array]
   print *, empty(i,1)
 end

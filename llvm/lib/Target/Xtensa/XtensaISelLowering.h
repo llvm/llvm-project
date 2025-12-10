@@ -20,45 +20,6 @@
 
 namespace llvm {
 
-namespace XtensaISD {
-enum {
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  BR_JT,
-
-  // Calls a function.  Operand 0 is the chain operand and operand 1
-  // is the target address.  The arguments start at operand 2.
-  // There is an optional glue operand at the end.
-  CALL,
-  // Call with rotation window by 8 registers
-  CALLW8,
-
-  // Extract unsigned immediate. Operand 0 is value, operand 1
-  // is bit position of the field [0..31], operand 2 is bit size
-  // of the field [1..16]
-  EXTUI,
-
-  MOVSP,
-
-  // Wraps a TargetGlobalAddress that should be loaded using PC-relative
-  // accesses.  Operand 0 is the address.
-  PCREL_WRAPPER,
-  RET,
-  RETW,
-
-  // Select with condition operator - This selects between a true value and
-  // a false value (ops #2 and #3) based on the boolean result of comparing
-  // the lhs and rhs (ops #0 and #1) of a conditional expression with the
-  // condition code in op #4
-  SELECT_CC,
-
-  // SRCL(R) performs shift left(right) of the concatenation of 2 registers
-  // and returns high(low) 32-bit part of 64-bit result
-  SRCL,
-  // Shift Right Combined
-  SRCR,
-};
-}
-
 class XtensaSubtarget;
 
 class XtensaTargetLowering : public TargetLowering {
@@ -70,6 +31,9 @@ public:
     return LHSTy.getSizeInBits() <= 32 ? MVT::i32 : MVT::i64;
   }
 
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
+
   EVT getSetCCResultType(const DataLayout &, LLVMContext &,
                          EVT VT) const override {
     if (!VT.isVector())
@@ -79,7 +43,8 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-  const char *getTargetNodeName(unsigned Opcode) const override;
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize) const override;
 
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
@@ -117,6 +82,12 @@ public:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
+  bool shouldInsertFencesForAtomic(const Instruction *I) const override {
+    return true;
+  }
+
+  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+
   bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                               SDValue C) const override;
 
@@ -134,6 +105,8 @@ private:
   SDValue LowerImmediate(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
 

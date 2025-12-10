@@ -61,12 +61,13 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
 
     // Calculate relocation hashes
     for (const auto &r : sec.relocs) {
-      if (r.length == 0 || r.referent.isNull() || r.offset >= data.size())
+      uint32_t relocLength = 1 << r.length;
+      if (r.referent.isNull() || r.offset + relocLength > data.size())
         continue;
 
       uint64_t relocHash = getRelocHash(r, sectionToIdx);
       uint32_t start = (r.offset < windowSize) ? 0 : r.offset - windowSize + 1;
-      for (uint32_t i = start; i < r.offset + r.length; i++) {
+      for (uint32_t i = start; i < r.offset + relocLength; i++) {
         auto window = data.drop_front(i).take_front(windowSize);
         hashes.push_back(xxh3_64bits(window) ^ relocHash);
       }
@@ -84,7 +85,7 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
 
 private:
   static uint64_t
-  getRelocHash(const Reloc &reloc,
+  getRelocHash(const macho::Reloc &reloc,
                const llvm::DenseMap<const void *, uint64_t> &sectionToIdx) {
     auto *isec = reloc.getReferentInputSection();
     std::optional<uint64_t> sectionIdx;
@@ -115,7 +116,11 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     for (auto *sec : file->sections) {
       for (auto &subsec : sec->subsections) {
         auto *isec = subsec.isec;
-        if (!isec || isec->data.empty())
+        if (!isec || isec->data.empty() || !isec->data.data())
+          continue;
+        // CString section order is handled by
+        // {Deduplicated}CStringSection::finalizeContents()
+        if (isa<CStringInputSection>(isec) || isec->isFinal)
           continue;
         // ConcatInputSections are entirely live or dead, so the offset is
         // irrelevant.
@@ -124,7 +129,7 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
         size_t idx = sections.size();
         sections.emplace_back(isec);
         for (auto *sym : BPOrdererMachO::getSymbols(*isec)) {
-          auto rootName = getRootSymbol(sym->getName());
+          auto rootName = lld::utils::getRootSymbol(sym->getName());
           rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
           if (auto linkageName =
                   BPOrdererMachO::getResolvedLinkageName(rootName))

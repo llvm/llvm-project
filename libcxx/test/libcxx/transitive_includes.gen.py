@@ -17,8 +17,6 @@
 # to avoid breaking users at every release.
 
 # RUN: %{python} %s %{libcxx-dir}/utils
-
-# block Lit from interpreting a RUN/XFAIL/etc inside the generation script
 # END.
 
 import sys
@@ -90,10 +88,8 @@ else:
 // TODO: Figure out why <stdatomic.h> doesn't work on FreeBSD
 // UNSUPPORTED: LIBCXX-FREEBSD-FIXME
 
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
-
 // RUN: mkdir %t
-// RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} --trace-includes -fshow-skipped-includes --preprocess > /dev/null 2> %t/trace-includes.txt
+// RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -Wno-deprecated --trace-includes -fshow-skipped-includes --preprocess > /dev/null 2> %t/trace-includes.txt
 // RUN: %{{python}} %{{libcxx-dir}}/test/libcxx/transitive_includes/to_csv.py %t/trace-includes.txt > %t/actual_transitive_includes.csv
 // RUN: cat %{{libcxx-dir}}/test/libcxx/transitive_includes/%{{cxx_std}}.csv | awk '/^{escaped_header} / {{ print }}' > %t/expected_transitive_includes.csv
 // RUN: diff -w %t/expected_transitive_includes.csv %t/actual_transitive_includes.csv

@@ -23,7 +23,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SyncScope.h"
@@ -40,6 +40,7 @@
 #include <optional>
 
 namespace clang {
+  class AllocSizeAttr;
   class APValue;
   class ASTContext;
   class BlockDecl;
@@ -57,6 +58,7 @@ namespace clang {
   class StringLiteral;
   class TargetInfo;
   class ValueDecl;
+  class WarnUnusedResultAttr;
 
 /// A simple array of base specifiers.
 typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
@@ -240,8 +242,7 @@ public:
     return static_cast<bool>(getDependence() & ExprDependence::UnexpandedPack);
   }
 
-  /// Whether this expression contains subexpressions which had errors, e.g. a
-  /// TypoExpr.
+  /// Whether this expression contains subexpressions which had errors.
   bool containsErrors() const {
     return static_cast<bool>(getDependence() & ExprDependence::Error);
   }
@@ -262,6 +263,12 @@ public:
   bool isUnusedResultAWarning(const Expr *&WarnExpr, SourceLocation &Loc,
                               SourceRange &R1, SourceRange &R2,
                               ASTContext &Ctx) const;
+
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  static std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttrImpl(const Decl *Callee, QualType ReturnType);
 
   /// isLValue - True if this expression is an "l-value" according to
   /// the rules of the current language.  C and C++ give somewhat
@@ -547,17 +554,13 @@ public:
       bool IgnoreTemplateOrMacroSubstitution = false) const;
 
   /// isIntegerConstantExpr - Return the value if this expression is a valid
-  /// integer constant expression.  If not a valid i-c-e, return std::nullopt
-  /// and fill in Loc (if specified) with the location of the invalid
-  /// expression.
+  /// integer constant expression.  If not a valid i-c-e, return std::nullopt.
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
   std::optional<llvm::APSInt>
-  getIntegerConstantExpr(const ASTContext &Ctx,
-                         SourceLocation *Loc = nullptr) const;
-  bool isIntegerConstantExpr(const ASTContext &Ctx,
-                             SourceLocation *Loc = nullptr) const;
+  getIntegerConstantExpr(const ASTContext &Ctx) const;
+  bool isIntegerConstantExpr(const ASTContext &Ctx) const;
 
   /// isCXX98IntegralConstantExpr - Return true if this expression is an
   /// integral constant expression in C++98. Can only be used in C++.
@@ -568,8 +571,8 @@ public:
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
-  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result = nullptr,
-                           SourceLocation *Loc = nullptr) const;
+  bool isCXX11ConstantExpr(const ASTContext &Ctx,
+                           APValue *Result = nullptr) const;
 
   /// isPotentialConstantExpr - Return true if this function's definition
   /// might be usable in a constant expression in C++11, if it were marked
@@ -631,8 +634,8 @@ public:
 
     EvalStatus() = default;
 
-    // hasSideEffects - Return true if the evaluated expression has
-    // side effects.
+    /// Return true if the evaluated expression has
+    /// side effects.
     bool hasSideEffects() const {
       return HasSideEffects;
     }
@@ -643,8 +646,8 @@ public:
     /// Val - This is the value the expression can be folded to.
     APValue Val;
 
-    // isGlobalLValue - Return true if the evaluated lvalue expression
-    // is global.
+    /// Return true if the evaluated lvalue expression
+    /// is global.
     bool isGlobalLValue() const;
   };
 
@@ -712,9 +715,7 @@ public:
   /// EvaluateKnownConstInt - Call EvaluateAsRValue and return the folded
   /// integer. This must be called on an expression that constant folds to an
   /// integer.
-  llvm::APSInt EvaluateKnownConstInt(
-      const ASTContext &Ctx,
-      SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr) const;
+  llvm::APSInt EvaluateKnownConstInt(const ASTContext &Ctx) const;
 
   llvm::APSInt EvaluateKnownConstIntCheckOverflow(
       const ASTContext &Ctx,
@@ -1035,7 +1036,7 @@ public:
 // PointerLikeTypeTraits is specialized so it can be used with a forward-decl of
 // Expr. Verify that we got it right.
 static_assert(llvm::PointerLikeTypeTraits<Expr *>::NumLowBitsAvailable <=
-                  llvm::detail::ConstantLog2<alignof(Expr)>::value,
+                  llvm::ConstantLog2<alignof(Expr)>(),
               "PointerLikeTypeTraits<Expr*> assumes too much alignment.");
 
 using ConstantExprKind = Expr::ConstantExprKind;
@@ -1344,7 +1345,13 @@ public:
 
   SourceLocation getLocation() const { return DeclRefExprBits.Loc; }
   void setLocation(SourceLocation L) { DeclRefExprBits.Loc = L; }
-  SourceLocation getBeginLoc() const LLVM_READONLY;
+
+  SourceLocation getBeginLoc() const {
+    if (hasQualifier())
+      return getQualifierLoc().getBeginLoc();
+    return DeclRefExprBits.Loc;
+  }
+
   SourceLocation getEndLoc() const LLVM_READONLY;
 
   /// Determine whether this declaration reference was preceded by a
@@ -1361,7 +1368,7 @@ public:
 
   /// If the name was qualified, retrieves the nested-name-specifier
   /// that precedes the name. Otherwise, returns NULL.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
 
@@ -1829,8 +1836,7 @@ class StringLiteral final
 
   /// Build a string literal.
   StringLiteral(const ASTContext &Ctx, StringRef Str, StringLiteralKind Kind,
-                bool Pascal, QualType Ty, const SourceLocation *Loc,
-                unsigned NumConcatenated);
+                bool Pascal, QualType Ty, ArrayRef<SourceLocation> Locs);
 
   /// Build an empty string literal.
   StringLiteral(EmptyShell Empty, unsigned NumConcatenated, unsigned Length,
@@ -1848,18 +1854,10 @@ class StringLiteral final
 
 public:
   /// This is the "fully general" constructor that allows representation of
-  /// strings formed from multiple concatenated tokens.
+  /// strings formed from one or more concatenated tokens.
   static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
                                StringLiteralKind Kind, bool Pascal, QualType Ty,
-                               const SourceLocation *Loc,
-                               unsigned NumConcatenated);
-
-  /// Simple constructor for string literals made from one token.
-  static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
-                               StringLiteralKind Kind, bool Pascal, QualType Ty,
-                               SourceLocation Loc) {
-    return Create(Ctx, Str, Kind, Pascal, Ty, &Loc, 1);
-  }
+                               ArrayRef<SourceLocation> Locs);
 
   /// Construct an empty string literal.
   static StringLiteral *CreateEmpty(const ASTContext &Ctx,
@@ -2023,7 +2021,7 @@ class PredefinedExpr final
   void setFunctionName(StringLiteral *SL) {
     assert(hasFunctionName() &&
            "This PredefinedExpr has no storage for a function name!");
-    *getTrailingObjects<Stmt *>() = SL;
+    *getTrailingObjects() = SL;
   }
 
 public:
@@ -2050,13 +2048,13 @@ public:
 
   StringLiteral *getFunctionName() {
     return hasFunctionName()
-               ? static_cast<StringLiteral *>(*getTrailingObjects<Stmt *>())
+               ? static_cast<StringLiteral *>(*getTrailingObjects())
                : nullptr;
   }
 
   const StringLiteral *getFunctionName() const {
     return hasFunctionName()
-               ? static_cast<StringLiteral *>(*getTrailingObjects<Stmt *>())
+               ? static_cast<StringLiteral *>(*getTrailingObjects())
                : nullptr;
   }
 
@@ -2078,13 +2076,11 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() + hasFunctionName());
+    return child_range(getTrailingObjects(hasFunctionName()));
   }
 
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() + hasFunctionName());
+    return const_child_range(getTrailingObjects(hasFunctionName()));
   }
 };
 
@@ -2248,18 +2244,14 @@ class UnaryOperator final
       private llvm::TrailingObjects<UnaryOperator, FPOptionsOverride> {
   Stmt *Val;
 
-  size_t numTrailingObjects(OverloadToken<FPOptionsOverride>) const {
-    return UnaryOperatorBits.HasFPFeatures ? 1 : 0;
-  }
-
   FPOptionsOverride &getTrailingFPFeatures() {
     assert(UnaryOperatorBits.HasFPFeatures);
-    return *getTrailingObjects<FPOptionsOverride>();
+    return *getTrailingObjects();
   }
 
   const FPOptionsOverride &getTrailingFPFeatures() const {
     assert(UnaryOperatorBits.HasFPFeatures);
-    return *getTrailingObjects<FPOptionsOverride>();
+    return *getTrailingObjects();
   }
 
 public:
@@ -2580,13 +2572,11 @@ public:
   }
 
   const OffsetOfNode &getComponent(unsigned Idx) const {
-    assert(Idx < NumComps && "Subscript out of range");
-    return getTrailingObjects<OffsetOfNode>()[Idx];
+    return getTrailingObjects<OffsetOfNode>(NumComps)[Idx];
   }
 
   void setComponent(unsigned Idx, OffsetOfNode ON) {
-    assert(Idx < NumComps && "Subscript out of range");
-    getTrailingObjects<OffsetOfNode>()[Idx] = ON;
+    getTrailingObjects<OffsetOfNode>(NumComps)[Idx] = ON;
   }
 
   unsigned getNumComponents() const {
@@ -2594,18 +2584,15 @@ public:
   }
 
   Expr* getIndexExpr(unsigned Idx) {
-    assert(Idx < NumExprs && "Subscript out of range");
-    return getTrailingObjects<Expr *>()[Idx];
+    return getTrailingObjects<Expr *>(NumExprs)[Idx];
   }
 
   const Expr *getIndexExpr(unsigned Idx) const {
-    assert(Idx < NumExprs && "Subscript out of range");
-    return getTrailingObjects<Expr *>()[Idx];
+    return getTrailingObjects<Expr *>(NumExprs)[Idx];
   }
 
   void setIndexExpr(unsigned Idx, Expr* E) {
-    assert(Idx < NumComps && "Subscript out of range");
-    getTrailingObjects<Expr *>()[Idx] = E;
+    getTrailingObjects<Expr *>(NumComps)[Idx] = E;
   }
 
   unsigned getNumExpressions() const {
@@ -2912,26 +2899,35 @@ class CallExpr : public Expr {
   //
   // * An optional of type FPOptionsOverride.
   //
-  // Note that we store the offset in bytes from the this pointer to the start
-  // of the trailing objects. It would be perfectly possible to compute it
-  // based on the dynamic kind of the CallExpr. However 1.) we have plenty of
-  // space in the bit-fields of Stmt. 2.) It was benchmarked to be faster to
-  // compute this once and then load the offset from the bit-fields of Stmt,
-  // instead of re-computing the offset each time the trailing objects are
-  // accessed.
+  // CallExpr subclasses are asssumed to be 32 bytes or less, and CallExpr
+  // itself is 24 bytes. To avoid having to recompute or store the offset of the
+  // trailing objects, we put it at 32 bytes (such that it is suitable for all
+  // subclasses) We use the 8 bytes gap left for instances of CallExpr to store
+  // the begin source location, which has a significant impact on perf as
+  // getBeginLoc is assumed to be cheap.
+  // The layourt is as follow:
+  // CallExpr | Begin | 4 bytes left | Trailing Objects
+  // CXXMemberCallExpr | Trailing Objects
+  // A bit in CallExprBitfields indicates if source locations are present.
 
+protected:
+  static constexpr unsigned OffsetToTrailingObjects = 32;
+  template <typename T>
+  static constexpr unsigned
+  sizeToAllocateForCallExprSubclass(unsigned SizeOfTrailingObjects) {
+    static_assert(sizeof(T) <= CallExpr::OffsetToTrailingObjects);
+    return SizeOfTrailingObjects + CallExpr::OffsetToTrailingObjects;
+  }
+
+private:
   /// Return a pointer to the start of the trailing array of "Stmt *".
   Stmt **getTrailingStmts() {
     return reinterpret_cast<Stmt **>(reinterpret_cast<char *>(this) +
-                                     CallExprBits.OffsetToTrailingObjects);
+                                     OffsetToTrailingObjects);
   }
   Stmt *const *getTrailingStmts() const {
     return const_cast<CallExpr *>(this)->getTrailingStmts();
   }
-
-  /// Map a statement class to the appropriate offset in bytes from the
-  /// this pointer to the trailing objects.
-  static unsigned offsetToTrailingObjects(StmtClass SC);
 
   unsigned getSizeOfTrailingStmts() const {
     return (1 + getNumPreArgs() + getNumArgs()) * sizeof(Stmt *);
@@ -2939,7 +2935,7 @@ class CallExpr : public Expr {
 
   size_t getOffsetOfTrailingFPFeatures() const {
     assert(hasStoredFPFeatures());
-    return CallExprBits.OffsetToTrailingObjects + getSizeOfTrailingStmts();
+    return OffsetToTrailingObjects + getSizeOfTrailingStmts();
   }
 
 public:
@@ -2986,14 +2982,14 @@ protected:
   FPOptionsOverride *getTrailingFPFeatures() {
     assert(hasStoredFPFeatures());
     return reinterpret_cast<FPOptionsOverride *>(
-        reinterpret_cast<char *>(this) + CallExprBits.OffsetToTrailingObjects +
+        reinterpret_cast<char *>(this) + OffsetToTrailingObjects +
         getSizeOfTrailingStmts());
   }
   const FPOptionsOverride *getTrailingFPFeatures() const {
     assert(hasStoredFPFeatures());
     return reinterpret_cast<const FPOptionsOverride *>(
-        reinterpret_cast<const char *>(this) +
-        CallExprBits.OffsetToTrailingObjects + getSizeOfTrailingStmts());
+        reinterpret_cast<const char *>(this) + OffsetToTrailingObjects +
+        getSizeOfTrailingStmts());
   }
 
 public:
@@ -3038,6 +3034,19 @@ public:
   bool usesADL() const { return getADLCallKind() == UsesADL; }
 
   bool hasStoredFPFeatures() const { return CallExprBits.HasFPFeatures; }
+
+  bool usesMemberSyntax() const {
+    return CallExprBits.ExplicitObjectMemFunUsingMemberSyntax;
+  }
+  void setUsesMemberSyntax(bool V = true) {
+    CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = V;
+    // Because the source location may be different for explicit
+    // member, we reset the cached values.
+    if (CallExprBits.HasTrailingSourceLoc) {
+      CallExprBits.HasTrailingSourceLoc = false;
+      updateTrailingSourceLoc();
+    }
+  }
 
   bool isCoroElideSafe() const { return CallExprBits.IsCoroElideSafe; }
   void setCoroElideSafe(bool V = true) { CallExprBits.IsCoroElideSafe = V; }
@@ -3090,9 +3099,9 @@ public:
   /// Compute and set dependence bits.
   void computeDependence() {
     setDependence(clang::computeDependence(
-        this, llvm::ArrayRef(
-                  reinterpret_cast<Expr **>(getTrailingStmts() + PREARGS_START),
-                  getNumPreArgs())));
+        this,
+        ArrayRef(reinterpret_cast<Expr **>(getTrailingStmts() + PREARGS_START),
+                 getNumPreArgs())));
   }
 
   /// Reduce the number of arguments in this call expression. This is used for
@@ -3137,8 +3146,7 @@ public:
   /// interface.  This provides efficient reverse iteration of the
   /// subexpressions.  This is currently used for CFG construction.
   ArrayRef<Stmt *> getRawSubExprs() {
-    return llvm::ArrayRef(getTrailingStmts(),
-                          PREARGS_START + getNumPreArgs() + getNumArgs());
+    return {getTrailingStmts(), PREARGS_START + getNumPreArgs() + getNumArgs()};
   }
 
   /// Get FPOptionsOverride from trailing storage.
@@ -3184,11 +3192,13 @@ public:
   /// type.
   QualType getCallReturnType(const ASTContext &Ctx) const;
 
-  /// Returns the WarnUnusedResultAttr that is either declared on the called
-  /// function, or its return type declaration, together with a NamedDecl that
-  /// refers to the declaration the attribute is attached onto.
-  std::pair<const NamedDecl *, const Attr *>
-  getUnusedResultAttr(const ASTContext &Ctx) const;
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttrImpl(getCalleeDecl(), getCallReturnType(Ctx));
+  }
 
   /// Returns true if this call expression should warn on unused results.
   bool hasUnusedResultAttr(const ASTContext &Ctx) const {
@@ -3198,9 +3208,48 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY;
-  SourceLocation getEndLoc() const LLVM_READONLY;
+  SourceLocation getBeginLoc() const {
+    if (CallExprBits.HasTrailingSourceLoc) {
+      static_assert(sizeof(CallExpr) <=
+                    OffsetToTrailingObjects + sizeof(SourceLocation));
+      return *reinterpret_cast<const SourceLocation *>(
+          reinterpret_cast<const char *>(this + 1));
+    }
 
+    if (usesMemberSyntax())
+      if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid())
+        return FirstArgLoc;
+
+    // FIXME: Some builtins have no callee begin location
+    SourceLocation begin = getCallee()->getBeginLoc();
+    if (begin.isInvalid() && getNumArgs() > 0 && getArg(0))
+      begin = getArg(0)->getBeginLoc();
+    return begin;
+  }
+
+  SourceLocation getEndLoc() const { return getRParenLoc(); }
+
+private:
+  friend class ASTStmtReader;
+  bool hasTrailingSourceLoc() const {
+    return CallExprBits.HasTrailingSourceLoc;
+  }
+
+  void updateTrailingSourceLoc() {
+    assert(!CallExprBits.HasTrailingSourceLoc &&
+           "Trailing source loc already set?");
+    assert(getStmtClass() == CallExprClass &&
+           "Calling setTrailingSourceLocs on a subclass of CallExpr");
+    static_assert(sizeof(CallExpr) <=
+                  OffsetToTrailingObjects + sizeof(SourceLocation));
+
+    SourceLocation *Locs =
+        reinterpret_cast<SourceLocation *>(reinterpret_cast<char *>(this + 1));
+    new (Locs) SourceLocation(getBeginLoc());
+    CallExprBits.HasTrailingSourceLoc = true;
+  }
+
+public:
   /// Return true if this is a call to __assume() or __builtin_assume() with
   /// a non-value-dependent constant parameter evaluating as false.
   bool isBuiltinAssumeFalse(const ASTContext &Ctx) const;
@@ -3210,6 +3259,15 @@ public:
   void markDependentForPostponedNameLookup() {
     setDependence(getDependence() | ExprDependence::TypeValueInstantiation);
   }
+
+  /// Try to get the alloc_size attribute of the callee. May return null.
+  const AllocSizeAttr *getCalleeAllocSizeAttr() const;
+
+  /// Evaluates the total size in bytes allocated by calling a function
+  /// decorated with alloc_size. Returns std::nullopt if the the result cannot
+  /// be evaluated.
+  std::optional<llvm::APInt>
+  evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const;
 
   bool isCallToStdMove() const;
 
@@ -3348,7 +3406,7 @@ public:
   /// If the member name was qualified, retrieves the
   /// nested-name-specifier that precedes the member name. Otherwise, returns
   /// NULL.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
 
@@ -3489,11 +3547,16 @@ class CompoundLiteralExpr : public Expr {
   /// The int part of the pair stores whether this expr is file scope.
   llvm::PointerIntPair<TypeSourceInfo *, 1, bool> TInfoAndScope;
   Stmt *Init;
+
+  /// Value of constant literals with static storage duration.
+  mutable APValue *StaticValue = nullptr;
+
 public:
   CompoundLiteralExpr(SourceLocation lparenloc, TypeSourceInfo *tinfo,
                       QualType T, ExprValueKind VK, Expr *init, bool fileScope)
       : Expr(CompoundLiteralExprClass, T, VK, OK_Ordinary),
         LParenLoc(lparenloc), TInfoAndScope(tinfo, fileScope), Init(init) {
+    assert(Init && "Init is a nullptr");
     setDependence(computeDependence(this));
   }
 
@@ -3518,20 +3581,16 @@ public:
     TInfoAndScope.setPointer(tinfo);
   }
 
+  bool hasStaticStorage() const { return isFileScope() && isGLValue(); }
+  APValue &getOrCreateStaticValue(ASTContext &Ctx) const;
+  APValue &getStaticValue() const;
+
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
     if (LParenLoc.isInvalid())
       return Init->getBeginLoc();
     return LParenLoc;
   }
-  SourceLocation getEndLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
-    return Init->getEndLoc();
-  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Init->getEndLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CompoundLiteralExprClass;
@@ -4523,7 +4582,6 @@ class ShuffleVectorExpr : public Expr {
   // indices.  The number of values in this list is always
   // 2+the number of indices in the vector type.
   Stmt **SubExprs;
-  unsigned NumExprs;
 
 public:
   ShuffleVectorExpr(const ASTContext &C, ArrayRef<Expr*> args, QualType Type,
@@ -4549,34 +4607,41 @@ public:
   /// getNumSubExprs - Return the size of the SubExprs array.  This includes the
   /// constant expression, the actual arguments passed in, and the function
   /// pointers.
-  unsigned getNumSubExprs() const { return NumExprs; }
+  unsigned getNumSubExprs() const { return ShuffleVectorExprBits.NumExprs; }
 
   /// Retrieve the array of expressions.
   Expr **getSubExprs() { return reinterpret_cast<Expr **>(SubExprs); }
 
   /// getExpr - Return the Expr at the specified index.
   Expr *getExpr(unsigned Index) {
-    assert((Index < NumExprs) && "Arg access out of range!");
+    assert((Index < ShuffleVectorExprBits.NumExprs) &&
+           "Arg access out of range!");
     return cast<Expr>(SubExprs[Index]);
   }
   const Expr *getExpr(unsigned Index) const {
-    assert((Index < NumExprs) && "Arg access out of range!");
+    assert((Index < ShuffleVectorExprBits.NumExprs) &&
+           "Arg access out of range!");
     return cast<Expr>(SubExprs[Index]);
   }
 
   void setExprs(const ASTContext &C, ArrayRef<Expr *> Exprs);
 
-  llvm::APSInt getShuffleMaskIdx(const ASTContext &Ctx, unsigned N) const {
-    assert((N < NumExprs - 2) && "Shuffle idx out of range!");
-    return getExpr(N+2)->EvaluateKnownConstInt(Ctx);
+  llvm::APSInt getShuffleMaskIdx(unsigned N) const {
+    assert((N < ShuffleVectorExprBits.NumExprs - 2) &&
+           "Shuffle idx out of range!");
+    assert(isa<ConstantExpr>(getExpr(N + 2)) &&
+           "Index expression must be a ConstantExpr");
+    return cast<ConstantExpr>(getExpr(N + 2))->getAPValueResult().getInt();
   }
 
   // Iterators
   child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[0]+NumExprs);
+    return child_range(&SubExprs[0],
+                       &SubExprs[0] + ShuffleVectorExprBits.NumExprs);
   }
   const_child_range children() const {
-    return const_child_range(&SubExprs[0], &SubExprs[0] + NumExprs);
+    return const_child_range(&SubExprs[0],
+                             &SubExprs[0] + ShuffleVectorExprBits.NumExprs);
   }
 };
 
@@ -4617,12 +4682,12 @@ private:
 
   FPOptionsOverride &getTrailingFPFeatures() {
     assert(ConvertVectorExprBits.HasFPFeatures);
-    return *getTrailingObjects<FPOptionsOverride>();
+    return *getTrailingObjects();
   }
 
   const FPOptionsOverride &getTrailingFPFeatures() const {
     assert(ConvertVectorExprBits.HasFPFeatures);
-    return *getTrailingObjects<FPOptionsOverride>();
+    return *getTrailingObjects();
   }
 
 public:
@@ -4718,13 +4783,13 @@ class ChooseExpr : public Expr {
   enum { COND, LHS, RHS, END_EXPR };
   Stmt* SubExprs[END_EXPR]; // Left/Middle/Right hand sides.
   SourceLocation BuiltinLoc, RParenLoc;
-  bool CondIsTrue;
+
 public:
   ChooseExpr(SourceLocation BLoc, Expr *cond, Expr *lhs, Expr *rhs, QualType t,
              ExprValueKind VK, ExprObjectKind OK, SourceLocation RP,
              bool condIsTrue)
-      : Expr(ChooseExprClass, t, VK, OK), BuiltinLoc(BLoc), RParenLoc(RP),
-        CondIsTrue(condIsTrue) {
+      : Expr(ChooseExprClass, t, VK, OK), BuiltinLoc(BLoc), RParenLoc(RP) {
+    ChooseExprBits.CondIsTrue = condIsTrue;
     SubExprs[COND] = cond;
     SubExprs[LHS] = lhs;
     SubExprs[RHS] = rhs;
@@ -4740,9 +4805,9 @@ public:
   bool isConditionTrue() const {
     assert(!isConditionDependent() &&
            "Dependent condition isn't true or false");
-    return CondIsTrue;
+    return ChooseExprBits.CondIsTrue;
   }
-  void setIsConditionTrue(bool isTrue) { CondIsTrue = isTrue; }
+  void setIsConditionTrue(bool isTrue) { ChooseExprBits.CondIsTrue = isTrue; }
 
   bool isConditionDependent() const {
     return getCond()->isTypeDependent() || getCond()->isValueDependent();
@@ -5046,9 +5111,9 @@ public:
              "trying to dereference an invalid iterator");
       IntegerLiteral *N = EExpr->FakeChildNode;
       N->setValue(*EExpr->Ctx,
-                  llvm::APInt(N->getValue().getBitWidth(),
+                  llvm::APInt(N->getBitWidth(),
                               EExpr->Data->BinaryData->getCodeUnit(CurOffset),
-                              N->getType()->isSignedIntegerType()));
+                              /*Signed=*/true));
       // We want to return a reference to the fake child node in the
       // EmbedExpr, not the local variable N.
       return const_cast<typename BaseTy::reference>(EExpr->FakeChildNode);
@@ -5215,11 +5280,9 @@ public:
     return reinterpret_cast<Expr * const *>(InitExprs.data());
   }
 
-  ArrayRef<Expr *> inits() { return llvm::ArrayRef(getInits(), getNumInits()); }
+  ArrayRef<Expr *> inits() { return {getInits(), getNumInits()}; }
 
-  ArrayRef<Expr *> inits() const {
-    return llvm::ArrayRef(getInits(), getNumInits());
-  }
+  ArrayRef<Expr *> inits() const { return {getInits(), getNumInits()}; }
 
   const Expr *getInit(unsigned Init) const {
     assert(Init < getNumInits() && "Initializer access out of range!");
@@ -5283,9 +5346,8 @@ public:
 
   /// Determine whether this initializer list contains a designated initializer.
   bool hasDesignatedInit() const {
-    return std::any_of(begin(), end(), [](const Stmt *S) {
-      return isa<DesignatedInitExpr>(S);
-    });
+    return llvm::any_of(
+        *this, [](const Stmt *S) { return isa<DesignatedInitExpr>(S); });
   }
 
   /// If this initializes a union, specifies which field in the
@@ -5448,7 +5510,7 @@ private:
   Designator *Designators;
 
   DesignatedInitExpr(const ASTContext &C, QualType Ty,
-                     llvm::ArrayRef<Designator> Designators,
+                     ArrayRef<Designator> Designators,
                      SourceLocation EqualOrColonLoc, bool GNUSyntax,
                      ArrayRef<Expr *> IndexExprs, Expr *Init);
 
@@ -5641,8 +5703,8 @@ public:
   };
 
   static DesignatedInitExpr *Create(const ASTContext &C,
-                                    llvm::ArrayRef<Designator> Designators,
-                                    ArrayRef<Expr*> IndexExprs,
+                                    ArrayRef<Designator> Designators,
+                                    ArrayRef<Expr *> IndexExprs,
                                     SourceLocation EqualOrColonLoc,
                                     bool GNUSyntax, Expr *Init);
 
@@ -5653,11 +5715,11 @@ public:
   unsigned size() const { return NumDesignators; }
 
   // Iterator access to the designators.
-  llvm::MutableArrayRef<Designator> designators() {
+  MutableArrayRef<Designator> designators() {
     return {Designators, NumDesignators};
   }
 
-  llvm::ArrayRef<Designator> designators() const {
+  ArrayRef<Designator> designators() const {
     return {Designators, NumDesignators};
   }
 
@@ -5703,13 +5765,11 @@ public:
   unsigned getNumSubExprs() const { return NumSubExprs; }
 
   Expr *getSubExpr(unsigned Idx) const {
-    assert(Idx < NumSubExprs && "Subscript out of range");
-    return cast<Expr>(getTrailingObjects<Stmt *>()[Idx]);
+    return cast<Expr>(getTrailingObjects(NumSubExprs)[Idx]);
   }
 
   void setSubExpr(unsigned Idx, Expr *E) {
-    assert(Idx < NumSubExprs && "Subscript out of range");
-    getTrailingObjects<Stmt *>()[Idx] = E;
+    getTrailingObjects(NumSubExprs)[Idx] = E;
   }
 
   /// Replaces the designator at index @p Idx with the series
@@ -5728,11 +5788,11 @@ public:
 
   // Iterators
   child_range children() {
-    Stmt **begin = getTrailingObjects<Stmt *>();
+    Stmt **begin = getTrailingObjects();
     return child_range(begin, begin + NumSubExprs);
   }
   const_child_range children() const {
-    Stmt * const *begin = getTrailingObjects<Stmt *>();
+    Stmt *const *begin = getTrailingObjects();
     return const_child_range(begin, begin + NumSubExprs);
   }
 
@@ -5992,11 +6052,9 @@ public:
     return const_cast<ParenListExpr *>(this)->getExpr(Init);
   }
 
-  Expr **getExprs() {
-    return reinterpret_cast<Expr **>(getTrailingObjects<Stmt *>());
-  }
+  Expr **getExprs() { return reinterpret_cast<Expr **>(getTrailingObjects()); }
 
-  ArrayRef<Expr *> exprs() { return llvm::ArrayRef(getExprs(), getNumExprs()); }
+  ArrayRef<Expr *> exprs() { return {getExprs(), getNumExprs()}; }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -6009,12 +6067,10 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() + getNumExprs());
+    return child_range(getTrailingObjects(getNumExprs()));
   }
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() + getNumExprs());
+    return const_child_range(getTrailingObjects(getNumExprs()));
   }
 };
 
@@ -6419,14 +6475,12 @@ public:
   }
 
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() +
-                           numTrailingObjects(OverloadToken<Stmt *>()));
+    return child_range(getTrailingObjects<Stmt *>(
+        numTrailingObjects(OverloadToken<Stmt *>())));
   }
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() +
-                                 numTrailingObjects(OverloadToken<Stmt *>()));
+    return const_child_range(getTrailingObjects<Stmt *>(
+        numTrailingObjects(OverloadToken<Stmt *>())));
   }
 };
 
@@ -6645,11 +6699,6 @@ class PseudoObjectExpr final
   // in to Create, which is an index within the semantic forms.
   // Note also that ASTStmtWriter assumes this encoding.
 
-  Expr **getSubExprsBuffer() { return getTrailingObjects<Expr *>(); }
-  const Expr * const *getSubExprsBuffer() const {
-    return getTrailingObjects<Expr *>();
-  }
-
   PseudoObjectExpr(QualType type, ExprValueKind VK,
                    Expr *syntactic, ArrayRef<Expr*> semantic,
                    unsigned resultIndex);
@@ -6675,8 +6724,8 @@ public:
   /// Return the syntactic form of this expression, i.e. the
   /// expression it actually looks like.  Likely to be expressed in
   /// terms of OpaqueValueExprs bound in the semantic form.
-  Expr *getSyntacticForm() { return getSubExprsBuffer()[0]; }
-  const Expr *getSyntacticForm() const { return getSubExprsBuffer()[0]; }
+  Expr *getSyntacticForm() { return getTrailingObjects()[0]; }
+  const Expr *getSyntacticForm() const { return getTrailingObjects()[0]; }
 
   /// Return the index of the result-bearing expression into the semantics
   /// expressions, or PseudoObjectExpr::NoResult if there is none.
@@ -6689,7 +6738,7 @@ public:
   Expr *getResultExpr() {
     if (PseudoObjectExprBits.ResultIndex == 0)
       return nullptr;
-    return getSubExprsBuffer()[PseudoObjectExprBits.ResultIndex];
+    return getTrailingObjects()[PseudoObjectExprBits.ResultIndex];
   }
   const Expr *getResultExpr() const {
     return const_cast<PseudoObjectExpr*>(this)->getResultExpr();
@@ -6699,29 +6748,26 @@ public:
 
   typedef Expr * const *semantics_iterator;
   typedef const Expr * const *const_semantics_iterator;
-  semantics_iterator semantics_begin() {
-    return getSubExprsBuffer() + 1;
-  }
+  semantics_iterator semantics_begin() { return getTrailingObjects() + 1; }
   const_semantics_iterator semantics_begin() const {
-    return getSubExprsBuffer() + 1;
+    return getTrailingObjects() + 1;
   }
   semantics_iterator semantics_end() {
-    return getSubExprsBuffer() + getNumSubExprs();
+    return getTrailingObjects() + getNumSubExprs();
   }
   const_semantics_iterator semantics_end() const {
-    return getSubExprsBuffer() + getNumSubExprs();
+    return getTrailingObjects() + getNumSubExprs();
   }
 
   ArrayRef<Expr*> semantics() {
-    return ArrayRef(semantics_begin(), semantics_end());
+    return getTrailingObjects(getNumSubExprs()).drop_front();
   }
   ArrayRef<const Expr*> semantics() const {
-    return ArrayRef(semantics_begin(), semantics_end());
+    return getTrailingObjects(getNumSubExprs()).drop_front();
   }
 
   Expr *getSemanticExpr(unsigned index) {
-    assert(index + 1 < getNumSubExprs());
-    return getSubExprsBuffer()[index + 1];
+    return getTrailingObjects(getNumSubExprs())[index + 1];
   }
   const Expr *getSemanticExpr(unsigned index) const {
     return const_cast<PseudoObjectExpr*>(this)->getSemanticExpr(index);
@@ -6746,7 +6792,7 @@ public:
   }
   const_child_range children() const {
     Stmt *const *cs = const_cast<Stmt *const *>(
-        reinterpret_cast<const Stmt *const *>(getSubExprsBuffer()));
+        reinterpret_cast<const Stmt *const *>(getTrailingObjects()));
     return const_child_range(cs, cs + getNumSubExprs());
   }
 
@@ -6862,6 +6908,21 @@ public:
            getOp() == AO__scoped_atomic_compare_exchange_n;
   }
 
+  bool hasVal1Operand() const {
+    switch (getOp()) {
+    case AO__atomic_load_n:
+    case AO__scoped_atomic_load_n:
+    case AO__c11_atomic_load:
+    case AO__opencl_atomic_load:
+    case AO__hip_atomic_load:
+    case AO__atomic_test_and_set:
+    case AO__atomic_clear:
+      return false;
+    default:
+      return true;
+    }
+  }
+
   bool isOpenCL() const {
     return getOp() >= AO__opencl_atomic_compare_exchange_strong &&
            getOp() <= AO__opencl_atomic_store;
@@ -6918,36 +6979,6 @@ public:
   std::unique_ptr<AtomicScopeModel> getScopeModel() const {
     return getScopeModel(getOp());
   }
-};
-
-/// TypoExpr - Internal placeholder for expressions where typo correction
-/// still needs to be performed and/or an error diagnostic emitted.
-class TypoExpr : public Expr {
-  // The location for the typo name.
-  SourceLocation TypoLoc;
-
-public:
-  TypoExpr(QualType T, SourceLocation TypoLoc)
-      : Expr(TypoExprClass, T, VK_LValue, OK_Ordinary), TypoLoc(TypoLoc) {
-    assert(T->isDependentType() && "TypoExpr given a non-dependent type");
-    setDependence(ExprDependence::TypeValueInstantiation |
-                  ExprDependence::Error);
-  }
-
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-
-  SourceLocation getBeginLoc() const LLVM_READONLY { return TypoLoc; }
-  SourceLocation getEndLoc() const LLVM_READONLY { return TypoLoc; }
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == TypoExprClass;
-  }
-
 };
 
 /// This class represents BOTH the OpenMP Array Section and OpenACC 'subarray',
@@ -7128,6 +7159,18 @@ public:
 
   /// Return original type of the base expression for array section.
   static QualType getBaseOriginalType(const Expr *Base);
+
+  /// Return the effective 'element' type of this array section. As the array
+  /// section itself returns a collection of elements (closer to its `getBase`
+  /// type), this is only useful for figuring out the effective type of this if
+  /// it were a normal Array subscript expr.
+  QualType getElementType() const;
+
+  /// Returns the effective 'type' of the base of this array section.  This
+  /// should be the array/pointer type that this operates on.  Just
+  /// getBase->getType isn't sufficient, since it doesn't look through existing
+  /// Array sections to figure out the actual 'base' of this.
+  QualType getBaseType() const;
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ArraySectionExprClass;
@@ -7350,17 +7393,14 @@ public:
                               ArrayRef<Expr *> SubExprs);
   static RecoveryExpr *CreateEmpty(ASTContext &Ctx, unsigned NumSubExprs);
 
-  ArrayRef<Expr *> subExpressions() {
-    auto *B = getTrailingObjects<Expr *>();
-    return llvm::ArrayRef(B, B + NumExprs);
-  }
+  ArrayRef<Expr *> subExpressions() { return getTrailingObjects(NumExprs); }
 
   ArrayRef<const Expr *> subExpressions() const {
     return const_cast<RecoveryExpr *>(this)->subExpressions();
   }
 
   child_range children() {
-    Stmt **B = reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>());
+    Stmt **B = reinterpret_cast<Stmt **>(getTrailingObjects());
     return child_range(B, B + NumExprs);
   }
 

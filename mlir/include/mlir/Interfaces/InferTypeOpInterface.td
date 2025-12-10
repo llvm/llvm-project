@@ -9,6 +9,11 @@
 // This file contains a set of interfaces that can be used to define information
 // related to type inference.
 //
+// This interface is also used by ODS to create builders for operations that
+// do not require result type to be specified. Including this interface in
+// dialect op definitions is sufficient to result in such builders being
+// automatically generated for trivially buildable result types.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_INFERTYPEOPINTERFACE
@@ -37,6 +42,10 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       and the regions of the op. Be aware that this method is supposed to be
       called with valid arguments, e.g., operands are verified, or it may result
       in an undefined behavior.
+
+      The inferred result types may be less precise than what may be specified
+      directly or produced by refinement, but are required to be compatible
+      (as defined by the op's compatibility function).
       }],
       /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"inferReturnTypes",
@@ -67,10 +76,10 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       The return types may be elided or specific elements be null for elements
       that should just be returned but not verified.
 
-      Because this method can be called from within different stages of IR
-      verification, implementations should not assume the arguments to
-      represent fully valid IR and are responsible for checking inputs for
-      validity to the degree necessary to perform the return type inference.
+      This method may be called from within different stages of IR verification,
+      implementations should not assume the arguments to represent fully valid
+      IR and are responsible for checking inputs for validity to the degree
+      necessary to perform the return type inference.
       }],
       /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"refineReturnTypes",
@@ -100,8 +109,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       }]
     >,
     StaticInterfaceMethod<
-      /*desc=*/"Returns whether two array of types are compatible result types"
-               " for an op.",
+      /*desc=*/"Returns whether two type ranges are compatible result types.",
       /*retTy=*/"bool",
       /*methodName=*/"isCompatibleReturnTypes",
       /*args=*/(ins "::mlir::TypeRange":$lhs, "::mlir::TypeRange":$rhs),
@@ -353,21 +361,76 @@ def ReifyRankedShapedTypeOpInterface :
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
-        Reify the shape of the result of an operation (typically in terms of the
-        shape of its operands).
+        Reify the shapes of all the result of an operation (typically in terms 
+        of the shape of its operands).
 
         `reifiedReturnShapes` is populated with one vector per op result. Each
         of those vectors contains an OpFoldResult for each dimension of the
-        shaped type. In case a dimension in the type is static, the
-        corresponding entry is an IntegerAttr. Otherwise, it is a Value. The
-        given builder may be used to insert ops that compute result shapes.
+        shaped type. The given builder may be used to insert ops that compute
+        result shapes.
 
-        If the shape of a particular result cannot be computed it must be empty.
+        If the shape of a particular result cannot be computed it in terms of
+        its operands it must be left empty. If any dimension of the result cannot
+        be computed it must be set to OpFoldResult().
       }],
       /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"reifyResultShapes",
       /*args=*/(ins "::mlir::OpBuilder &":$builder,
-        "::mlir::ReifiedRankedShapedTypeDims &":$reifiedReturnShapes)
+        "::mlir::ReifiedRankedShapedTypeDims &":$reifiedReturnShapes),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return ::mlir::failure(); }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Reify the shape of a single result of an operation (typically in terms 
+        of the shape of its operands).
+
+        Returns the shape of a single result of the operation as a
+        `SmallVector<OpFoldResult>`, one per dimension of the shaped type. The
+        given builder may be used to insert ops that compute result shapes.
+
+        If any dimension of the result cannot be computed it must be set to
+        OpFoldResult().
+      }],
+      /*retTy=*/"::llvm::FailureOr<::llvm::SmallVector<::mlir::OpFoldResult>>",
+      /*methodName=*/"reifyShapeOfResult",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+        "int":$resultIndex),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        ReifiedRankedShapedTypeDims reifiedShapes;
+        if (failed(cast<ReifyRankedShapedTypeOpInterface>($_op.getOperation()).reifyResultShapes(builder, reifiedShapes)))
+          return failure();
+        if (resultIndex < 0 || resultIndex >= static_cast<int>(reifiedShapes.size()))
+          return $_op.emitOpError("invalid result index");
+        return reifiedShapes[resultIndex];
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Reify the shape of a dimension of a given result of an operation
+        (typically in terms of the shape of its operands).
+
+        Returns the shape of a specific dimension of a result of the operation as
+        an OpFoldResult. The given builder may be used to insert ops that compute
+        the shapes.
+
+        If the dimension of the result cannot be computed the method must return
+        `failure()`.
+      }],
+      /*retTy=*/"::llvm::FailureOr<::mlir::OpFoldResult>",
+      /*methodName=*/"reifyDimOfResult",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+        "int":$resultIndex, "int":$dim),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        auto shapes = cast<ReifyRankedShapedTypeOpInterface>($_op.getOperation()).reifyShapeOfResult(builder, resultIndex);
+        if (failed(shapes))
+          return failure();
+        if (dim < 0 || dim >= static_cast<int>((*shapes).size()))
+          return $_op.emitOpError("invalid dimension");
+        return (*shapes)[dim];
+      }]
     >
   ];
 }
