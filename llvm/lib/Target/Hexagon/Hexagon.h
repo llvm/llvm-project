@@ -92,9 +92,6 @@ FunctionPass *createHexagonGenInsert();
 FunctionPass *createHexagonGenMemAbsolute();
 FunctionPass *createHexagonGenMux();
 FunctionPass *createHexagonGenPredicate();
-FunctionPass *
-createHexagonGenWideningVecFloatInstr(const HexagonTargetMachine &);
-FunctionPass *createHexagonGenWideningVecInstr(const HexagonTargetMachine &);
 FunctionPass *createHexagonHardwareLoops();
 FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
@@ -105,7 +102,6 @@ FunctionPass *createHexagonMergeActivateWeight();
 FunctionPass *createHexagonNewValueJump();
 FunctionPass *createHexagonOptAddrMode();
 FunctionPass *createHexagonOptimizeSZextends();
-FunctionPass *createHexagonOptShuffleVector(const HexagonTargetMachine &);
 FunctionPass *createHexagonPacketizer(bool Minimal);
 FunctionPass *createHexagonPeephole();
 FunctionPass *createHexagonRDFOpt();
