@@ -390,21 +390,84 @@ void OpenACCDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
-// RegionBranchOpInterface for acc.kernels
+// RegionBranchOpInterface for acc.kernels / acc.parallel / acc.serial /
+// acc.kernel_environment / acc.data / acc.host_data / acc.loop
 //===----------------------------------------------------------------------===//
 
 void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
-  // If the predecessor is the kernels op, branch into the body.
   if (point.isParent()) {
     regions.push_back(RegionSuccessor(&getRegion()));
     return;
   }
 
-  // Otherwise, the region branches back to the parent operation. KernelsOp
-  // does not produce results, so forward an empty result range.
   regions.push_back(
       RegionSuccessor(getOperation(), getOperation()->getResults()));
+}
+
+void ParallelOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&getRegion()));
+    return;
+  }
+
+  regions.push_back(
+      RegionSuccessor(getOperation(), getOperation()->getResults()));
+}
+
+void SerialOp::getSuccessorRegions(RegionBranchPoint point,
+                                   SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&getRegion()));
+    return;
+  }
+
+  regions.push_back(
+      RegionSuccessor(getOperation(), getOperation()->getResults()));
+}
+
+void KernelEnvironmentOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&getRegion()));
+    return;
+  }
+
+  regions.push_back(
+      RegionSuccessor(getOperation(), getOperation()->getResults()));
+}
+
+void DataOp::getSuccessorRegions(RegionBranchPoint point,
+                                 SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&getRegion()));
+    return;
+  }
+
+  regions.push_back(
+      RegionSuccessor(getOperation(), getOperation()->getResults()));
+}
+
+void HostDataOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&getRegion()));
+    return;
+  }
+
+  regions.push_back(
+      RegionSuccessor(getOperation(), getOperation()->getResults()));
+}
+
+void LoopOp::getSuccessorRegions(RegionBranchPoint point,
+                                 SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&getRegion()));
+    return;
+  }
+
+  regions.push_back(RegionSuccessor(getOperation(), getResults()));
 }
 
 //===----------------------------------------------------------------------===//
