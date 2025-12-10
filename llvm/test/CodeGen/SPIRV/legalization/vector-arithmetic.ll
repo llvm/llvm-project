@@ -29,30 +29,57 @@ entry:
   %9 = load <16 x float>, ptr addrspace(10) %8, align 4
   
   ; We expect the large vectors to be split into size 4, and the operations performed on them.
-  ; CHECK: OpFMul %[[#v4f32]]
-  ; CHECK: OpFMul %[[#v4f32]]
-  ; CHECK: OpFMul %[[#v4f32]]
-  ; CHECK: OpFMul %[[#v4f32]]
+  ; CHECK: %[[#Mul1:]] = OpFMul %[[#v4f32]]
+  ; CHECK: %[[#Mul2:]] = OpFMul %[[#v4f32]]
+  ; CHECK: %[[#Mul3:]] = OpFMul %[[#v4f32]]
+  ; CHECK: %[[#Mul4:]] = OpFMul %[[#v4f32]]
   %10 = fmul reassoc nnan ninf nsz arcp afn <16 x float> %3, splat (float 3.000000e+00)
 
-  ; CHECK: OpFAdd %[[#v4f32]]
-  ; CHECK: OpFAdd %[[#v4f32]]
-  ; CHECK: OpFAdd %[[#v4f32]]
-  ; CHECK: OpFAdd %[[#v4f32]]
+  ; CHECK: %[[#Add1:]] = OpFAdd %[[#v4f32]] %[[#Mul1]]
+  ; CHECK: %[[#Add2:]] = OpFAdd %[[#v4f32]] %[[#Mul2]]
+  ; CHECK: %[[#Add3:]] = OpFAdd %[[#v4f32]] %[[#Mul3]]
+  ; CHECK: %[[#Add4:]] = OpFAdd %[[#v4f32]] %[[#Mul4]]
   %11 = fadd reassoc nnan ninf nsz arcp afn <16 x float> %10, %5
 
-  ; CHECK: OpFAdd %[[#v4f32]]
-  ; CHECK: OpFAdd %[[#v4f32]]
-  ; CHECK: OpFAdd %[[#v4f32]]
-  ; CHECK: OpFAdd %[[#v4f32]]
-  %12 = fadd reassoc nnan ninf nsz arcp afn <16 x float> %11, %7
+  ; CHECK: %[[#Sub1:]] = OpFSub %[[#v4f32]] %[[#Add1]]
+  ; CHECK: %[[#Sub2:]] = OpFSub %[[#v4f32]] %[[#Add2]]
+  ; CHECK: %[[#Sub3:]] = OpFSub %[[#v4f32]] %[[#Add3]]
+  ; CHECK: %[[#Sub4:]] = OpFSub %[[#v4f32]] %[[#Add4]]
+  %13 = fsub reassoc nnan ninf nsz arcp afn <16 x float> %11, %9
 
-  ; CHECK: OpFSub %[[#v4f32]]
-  ; CHECK: OpFSub %[[#v4f32]]
-  ; CHECK: OpFSub %[[#v4f32]]
-  ; CHECK: OpFSub %[[#v4f32]]
-  %13 = fsub reassoc nnan ninf nsz arcp afn <16 x float> %12, %9
-
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub1]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub1]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub1]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub1]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub2]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub2]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub2]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub2]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub3]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub3]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub3]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub3]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub4]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub4]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub4]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Sub4]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  
   %14 = getelementptr [4 x [16 x float] ], ptr addrspace(10) @f2, i32 0, i32 0
   store <16 x float> %13, ptr addrspace(10) %14, align 4
   ret void
@@ -67,47 +94,80 @@ entry:
   %4 = getelementptr [4 x [16 x i32] ], ptr addrspace(10) @i1, i32 0, i32 1
   %5 = load <16 x i32>, ptr addrspace(10) %4, align 4
 
-  ; CHECK: OpIAdd %[[#v4i32]]
-  ; CHECK: OpIAdd %[[#v4i32]]
-  ; CHECK: OpIAdd %[[#v4i32]]
-  ; CHECK: OpIAdd %[[#v4i32]]
+  ; CHECK: %[[#Add1:]] = OpIAdd %[[#v4i32]]
+  ; CHECK: %[[#Add2:]] = OpIAdd %[[#v4i32]]
+  ; CHECK: %[[#Add3:]] = OpIAdd %[[#v4i32]]
+  ; CHECK: %[[#Add4:]] = OpIAdd %[[#v4i32]]
   %6 = add <16 x i32> %3, %5
 
-  ; CHECK: OpISub %[[#v4i32]]
-  ; CHECK: OpISub %[[#v4i32]]
-  ; CHECK: OpISub %[[#v4i32]]
-  ; CHECK: OpISub %[[#v4i32]]
+  ; CHECK: %[[#Sub1:]] = OpISub %[[#v4i32]] %[[#Add1]]
+  ; CHECK: %[[#Sub2:]] = OpISub %[[#v4i32]] %[[#Add2]]
+  ; CHECK: %[[#Sub3:]] = OpISub %[[#v4i32]] %[[#Add3]]
+  ; CHECK: %[[#Sub4:]] = OpISub %[[#v4i32]] %[[#Add4]]
   %7 = sub <16 x i32> %6, %5
 
-  ; CHECK: OpIMul %[[#v4i32]]
-  ; CHECK: OpIMul %[[#v4i32]]
-  ; CHECK: OpIMul %[[#v4i32]]
-  ; CHECK: OpIMul %[[#v4i32]]
+  ; CHECK: %[[#Mul1:]] = OpIMul %[[#v4i32]] %[[#Sub1]]
+  ; CHECK: %[[#Mul2:]] = OpIMul %[[#v4i32]] %[[#Sub2]]
+  ; CHECK: %[[#Mul3:]] = OpIMul %[[#v4i32]] %[[#Sub3]]
+  ; CHECK: %[[#Mul4:]] = OpIMul %[[#v4i32]] %[[#Sub4]]
   %8 = mul <16 x i32> %7, splat (i32 2)
 
-  ; CHECK: OpSDiv %[[#v4i32]]
-  ; CHECK: OpSDiv %[[#v4i32]]
-  ; CHECK: OpSDiv %[[#v4i32]]
-  ; CHECK: OpSDiv %[[#v4i32]]
+  ; CHECK: %[[#SDiv1:]] = OpSDiv %[[#v4i32]] %[[#Mul1]]
+  ; CHECK: %[[#SDiv2:]] = OpSDiv %[[#v4i32]] %[[#Mul2]]
+  ; CHECK: %[[#SDiv3:]] = OpSDiv %[[#v4i32]] %[[#Mul3]]
+  ; CHECK: %[[#SDiv4:]] = OpSDiv %[[#v4i32]] %[[#Mul4]]
   %9 = sdiv <16 x i32> %8, splat (i32 2)
 
-  ; CHECK: OpUDiv %[[#v4i32]]
-  ; CHECK: OpUDiv %[[#v4i32]]
-  ; CHECK: OpUDiv %[[#v4i32]]
-  ; CHECK: OpUDiv %[[#v4i32]]
+  ; CHECK: %[[#UDiv1:]] = OpUDiv %[[#v4i32]] %[[#SDiv1]]
+  ; CHECK: %[[#UDiv2:]] = OpUDiv %[[#v4i32]] %[[#SDiv2]]
+  ; CHECK: %[[#UDiv3:]] = OpUDiv %[[#v4i32]] %[[#SDiv3]]
+  ; CHECK: %[[#UDiv4:]] = OpUDiv %[[#v4i32]] %[[#SDiv4]]
   %10 = udiv <16 x i32> %9, splat (i32 1)
 
-  ; CHECK: OpSRem %[[#v4i32]]
-  ; CHECK: OpSRem %[[#v4i32]]
-  ; CHECK: OpSRem %[[#v4i32]]
-  ; CHECK: OpSRem %[[#v4i32]]
+  ; CHECK: %[[#SRem1:]] = OpSRem %[[#v4i32]] %[[#UDiv1]]
+  ; CHECK: %[[#SRem2:]] = OpSRem %[[#v4i32]] %[[#UDiv2]]
+  ; CHECK: %[[#SRem3:]] = OpSRem %[[#v4i32]] %[[#UDiv3]]
+  ; CHECK: %[[#SRem4:]] = OpSRem %[[#v4i32]] %[[#UDiv4]]
   %11 = srem <16 x i32> %10, splat (i32 3)
 
-  ; CHECK: OpUMod %[[#v4i32]]
-  ; CHECK: OpUMod %[[#v4i32]]
-  ; CHECK: OpUMod %[[#v4i32]]
-  ; CHECK: OpUMod %[[#v4i32]]
+  ; CHECK: %[[#UMod1:]] = OpUMod %[[#v4i32]] %[[#SRem1]]
+  ; CHECK: %[[#UMod2:]] = OpUMod %[[#v4i32]] %[[#SRem2]]
+  ; CHECK: %[[#UMod3:]] = OpUMod %[[#v4i32]] %[[#SRem3]]
+  ; CHECK: %[[#UMod4:]] = OpUMod %[[#v4i32]] %[[#SRem4]]
   %12 = urem <16 x i32> %11, splat (i32 3)
+
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod1]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod1]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod1]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod1]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod2]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod2]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod2]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod2]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod3]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod3]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod3]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod3]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod4]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod4]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod4]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod4]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
 
   %13 = getelementptr [4 x [16 x i32] ], ptr addrspace(10) @i2, i32 0, i32 0
   store <16 x i32> %12, ptr addrspace(10) %13, align 4
@@ -123,23 +183,56 @@ entry:
   %4 = getelementptr [4 x [16 x float] ], ptr addrspace(10) @f1, i32 0, i32 1
   %5 = load <16 x float>, ptr addrspace(10) %4, align 4
 
-  ; CHECK: OpFDiv %[[#v4f32]]
-  ; CHECK: OpFDiv %[[#v4f32]]
-  ; CHECK: OpFDiv %[[#v4f32]]
-  ; CHECK: OpFDiv %[[#v4f32]]
+  ; CHECK: %[[#FDiv1:]] = OpFDiv %[[#v4f32]]
+  ; CHECK: %[[#FDiv2:]] = OpFDiv %[[#v4f32]]
+  ; CHECK: %[[#FDiv3:]] = OpFDiv %[[#v4f32]]
+  ; CHECK: %[[#FDiv4:]] = OpFDiv %[[#v4f32]]
   %6 = fdiv reassoc nnan ninf nsz arcp afn <16 x float> %3, splat (float 2.000000e+00)
 
-  ; CHECK: OpFRem %[[#v4f32]]
-  ; CHECK: OpFRem %[[#v4f32]]
-  ; CHECK: OpFRem %[[#v4f32]]
-  ; CHECK: OpFRem %[[#v4f32]]
+  ; CHECK: %[[#FRem1:]] = OpFRem %[[#v4f32]] %[[#FDiv1]]
+  ; CHECK: %[[#FRem2:]] = OpFRem %[[#v4f32]] %[[#FDiv2]]
+  ; CHECK: %[[#FRem3:]] = OpFRem %[[#v4f32]] %[[#FDiv3]]
+  ; CHECK: %[[#FRem4:]] = OpFRem %[[#v4f32]] %[[#FDiv4]]
   %7 = frem reassoc nnan ninf nsz arcp afn <16 x float> %6, splat (float 3.000000e+00)
 
-  ; CHECK: OpExtInst %[[#v4f32]] {{.*}} Fma
-  ; CHECK: OpExtInst %[[#v4f32]] {{.*}} Fma
-  ; CHECK: OpExtInst %[[#v4f32]] {{.*}} Fma
-  ; CHECK: OpExtInst %[[#v4f32]] {{.*}} Fma
+  ; CHECK: %[[#Fma1:]] = OpExtInst %[[#v4f32]] {{.*}} Fma {{.*}} %[[#FDiv1]] %[[#FRem1]]
+  ; CHECK: %[[#Fma2:]] = OpExtInst %[[#v4f32]] {{.*}} Fma {{.*}} %[[#FDiv2]] %[[#FRem2]]
+  ; CHECK: %[[#Fma3:]] = OpExtInst %[[#v4f32]] {{.*}} Fma {{.*}} %[[#FDiv3]] %[[#FRem3]]
+  ; CHECK: %[[#Fma4:]] = OpExtInst %[[#v4f32]] {{.*}} Fma {{.*}} %[[#FDiv4]] %[[#FRem4]]
   %8 = call reassoc nnan ninf nsz arcp afn <16 x float> @llvm.fma.v16f32(<16 x float> %5, <16 x float> %6, <16 x float> %7)
+
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma1]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma1]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma1]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma1]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma2]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma2]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma2]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma2]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma3]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma3]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma3]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma3]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma4]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma4]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma4]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma4]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
 
   %9 = getelementptr [4 x [16 x float] ], ptr addrspace(10) @f2, i32 0, i32 0
   store <16 x float> %8, ptr addrspace(10) %9, align 4
