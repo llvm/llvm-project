@@ -2261,7 +2261,7 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpPreferenceSelector &x) {
-    common::visit(
+    common::visit( //
         common::visitors{
             [&](const OmpPreferenceSelector::FRID &s) {
               Word("FR");
@@ -2279,7 +2279,7 @@ public:
         x.u);
   }
   void Unparse(const OmpPreferenceSpecification &x) {
-    common::visit(
+    common::visit( //
         common::visitors{
             [&](const std::list<OmpPreferenceSelector> &s) {
               Put("{");

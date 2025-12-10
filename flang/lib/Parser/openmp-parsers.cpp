@@ -1495,7 +1495,7 @@ TYPE_PARSER( //
     "INDIRECT" >> construct<OmpClause>(construct<OmpClause::Indirect>(
                       maybe(parenthesized(scalarLogicalExpr)))) ||
     "INIT"_id >> construct<OmpClause>(construct<OmpClause::Init>(
-                  parenthesized(Parser<OmpInitClause>{}))) ||
+                     parenthesized(Parser<OmpInitClause>{}))) ||
     "INCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Inclusive>(
                        parenthesized(Parser<OmpObjectList>{}))) ||
     "INITIALIZER" >> construct<OmpClause>(construct<OmpClause::Initializer>(
