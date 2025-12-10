@@ -689,19 +689,7 @@ DynamicSymbols:
   - Name:            ilogbl
     Type:            STT_FUNC
     Section:         .text
-    Binding:         STB_GLOBAL
-  - Name:            llrint
-    Type:            STT_FUNC
-    Section:         .text
-    Binding:         STB_GLOBAL
-  - Name:            llrintf
-    Type:            STT_FUNC
-    Section:         .text
-    Binding:         STB_GLOBAL
-  - Name:            llrintl
-    Type:            STT_FUNC
-    Section:         .text
-    Binding:         STB_GLOBAL        
+    Binding:         STB_GLOBAL       
   - Name:            logb
     Type:            STT_FUNC
     Section:         .text
