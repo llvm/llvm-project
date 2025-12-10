@@ -1451,9 +1451,9 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
       assert(ST->hasVMemToLDSLoad());
       LLVM_DEBUG(dbgs() << "Processing S_WAITCNT_lds_direct: " << II
-                        << "Before: " << Wait.LoadCnt << '\n';);
+                        << "Before: " << Wait;);
       ScoreBrackets.determineWait(LOAD_CNT, FIRST_LDS_VGPR, Wait);
-      LLVM_DEBUG(dbgs() << "After: " << Wait.LoadCnt << '\n';);
+      LLVM_DEBUG(dbgs() << "After: " << Wait;);
 
       // It is possible (but unlikely) that this is the only wait instruction,
       // in which case, we exit this loop without a WaitcntInstr to consume
