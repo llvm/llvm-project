@@ -68,30 +68,30 @@ public:
 
   void SetName(ConstString name) { m_frozen_sp->SetName(name); }
 
-  // This function is used to copy the address-of m_live_sp into m_frozen_sp.
-  // It is necessary because the results of certain cast and pointer-
-  // arithmetic operations (such as those described in bugzilla issues 11588
-  // and 11618) generate frozen objects that do not have a valid address-of,
-  // which can be troublesome when using synthetic children providers.
-  // Transferring the address-of the live object solves these issues and
-  // provides the expected user-level behavior.
-  // The other job we do in TransferAddress is adjust the value in the live
-  // address slot in the target for the "offset to top" in multiply inherited
-  // class hierarchies.
+  /// This function is used to copy the address-of m_live_sp into m_frozen_sp.
+  /// It is necessary because the results of certain cast and pointer-
+  /// arithmetic operations (such as those described in bugzilla issues 11588
+  /// and 11618) generate frozen objects that do not have a valid address-of,
+  /// which can be troublesome when using synthetic children providers.
+  /// Transferring the address-of the live object solves these issues and
+  /// provides the expected user-level behavior.
+  /// The other job we do in TransferAddress is adjust the value in the live
+  /// address slot in the target for the "offset to top" in multiply inherited
+  /// class hierarchies.
   void TransferAddress(bool force = false);
 
-  // When we build an expression variable we know whether we're going to use the
-  // static or dynamic result.  If we present the dynamic value once, we should
-  // use the dynamic value in future references to the variable, so we record
-  // that fact here.
+  /// When we build an expression variable we know whether we're going to use the
+  /// static or dynamic result.  If we present the dynamic value once, we should
+  /// use the dynamic value in future references to the variable, so we record
+  /// that fact here.
   void PreserveDynamicOption(lldb::DynamicValueType dyn_type) {
     m_dyn_option = dyn_type;
   }
-  // We don't try to get the dynamic value of the live object when we fetch
-  // it here.  The live object describes the container of the value in the
-  // target, but it's type is of the object for convenience.  So it can't
-  // produce the dynamic value.  Instead, we use TransferAddress to adjust the
-  // value held by the LiveObject.
+  /// We don't try to get the dynamic value of the live object when we fetch
+  /// it here.  The live object describes the container of the value in the
+  /// target, but it's type is of the object for convenience.  So it can't
+  /// produce the dynamic value.  Instead, we use TransferAddress to adjust the
+  /// value held by the LiveObject.
   lldb::ValueObjectSP GetLiveObject() { return m_live_sp; }
 
   enum Flags {
