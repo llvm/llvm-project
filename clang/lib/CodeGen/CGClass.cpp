@@ -1499,32 +1499,33 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
   CGF.EmitBlock(callDeleteBB);
   const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
   const CXXRecordDecl *ClassDecl = Dtor->getParent();
-  assert(Dtor->getArrayOperatorDelete());
-  if (!Dtor->getGlobalArrayOperatorDelete()) {
-    CGF.EmitDeleteCall(Dtor->getArrayOperatorDelete(), allocatedPtr,
-                       CGF.getContext().getCanonicalTagType(ClassDecl));
-  } else {
-    // If global operator[] is set, the class had its own operator delete[].
-    // In that case, check the 4th bit. If it is set, we need to call
-    // ::delete[].
-    llvm::Value *CheckTheBitForGlobDeleteCall = CGF.Builder.CreateAnd(
-        ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 4));
+  if (Dtor->getArrayOperatorDelete()) {
+    if (!Dtor->getGlobalArrayOperatorDelete()) {
+      CGF.EmitDeleteCall(Dtor->getArrayOperatorDelete(), allocatedPtr,
+                         CGF.getContext().getCanonicalTagType(ClassDecl));
+    } else {
+      // If global operator[] is set, the class had its own operator delete[].
+      // In that case, check the 4th bit. If it is set, we need to call
+      // ::delete[].
+      llvm::Value *CheckTheBitForGlobDeleteCall = CGF.Builder.CreateAnd(
+          ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 4));
 
-    llvm::Value *ShouldCallGlobDelete =
-        CGF.Builder.CreateIsNull(CheckTheBitForGlobDeleteCall);
-    llvm::BasicBlock *GlobDelete =
-        CGF.createBasicBlock("dtor.call_glob_delete_after_array_destroy");
-    llvm::BasicBlock *ClassDelete =
-        CGF.createBasicBlock("dtor.call_class_delete_after_array_destroy");
-    CGF.Builder.CreateCondBr(ShouldCallGlobDelete, ClassDelete, GlobDelete);
-    CGF.EmitBlock(ClassDelete);
-    CGF.EmitDeleteCall(Dtor->getArrayOperatorDelete(), allocatedPtr,
-                       CGF.getContext().getCanonicalTagType(ClassDecl));
-    CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+      llvm::Value *ShouldCallGlobDelete =
+          CGF.Builder.CreateIsNull(CheckTheBitForGlobDeleteCall);
+      llvm::BasicBlock *GlobDelete =
+          CGF.createBasicBlock("dtor.call_glob_delete_after_array_destroy");
+      llvm::BasicBlock *ClassDelete =
+          CGF.createBasicBlock("dtor.call_class_delete_after_array_destroy");
+      CGF.Builder.CreateCondBr(ShouldCallGlobDelete, ClassDelete, GlobDelete);
+      CGF.EmitBlock(ClassDelete);
+      CGF.EmitDeleteCall(Dtor->getArrayOperatorDelete(), allocatedPtr,
+                         CGF.getContext().getCanonicalTagType(ClassDecl));
+      CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
 
-    CGF.EmitBlock(GlobDelete);
-    CGF.EmitDeleteCall(Dtor->getGlobalArrayOperatorDelete(), allocatedPtr,
-                       CGF.getContext().getCanonicalTagType(ClassDecl));
+      CGF.EmitBlock(GlobDelete);
+      CGF.EmitDeleteCall(Dtor->getGlobalArrayOperatorDelete(), allocatedPtr,
+                         CGF.getContext().getCanonicalTagType(ClassDecl));
+    }
   }
 
   CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
