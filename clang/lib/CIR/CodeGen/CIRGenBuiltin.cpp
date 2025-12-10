@@ -60,9 +60,8 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::get(result);
 }
 
-static mlir::Value makeAtomicFenceOpValue(CIRGenFunction &cgf,
-                                          const CallExpr *expr,
-                                          cir::SyncScopeKind syncScope) {
+static void emitAtomicFenceOp(CIRGenFunction &cgf, const CallExpr *expr,
+                              cir::SyncScopeKind syncScope) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Value orderingVal = cgf.emitScalarExpr(expr->getArg(0));
 
@@ -72,7 +71,7 @@ static mlir::Value makeAtomicFenceOpValue(CIRGenFunction &cgf,
     // TODO(cir): Emit code to switch on `orderingVal`,
     //            and creating the fence op for valid values.
     cgf.cgm.errorNYI("Variable atomic fence ordering");
-    return {};
+    return;
   }
 
   auto constOrderingAttr = constOrdering.getValueAttr<cir::IntAttr>();
@@ -84,7 +83,7 @@ static mlir::Value makeAtomicFenceOpValue(CIRGenFunction &cgf,
       builder, cgf.getLoc(expr->getSourceRange()), ordering,
       cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
 
-  return {};
+  return;
 }
 
 namespace {
@@ -1010,12 +1009,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__atomic_test_and_set:
   case Builtin::BI__atomic_clear:
     return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI__atomic_thread_fence:
-    return RValue::get(
-        makeAtomicFenceOpValue(*this, e, cir::SyncScopeKind::System));
-  case Builtin::BI__atomic_signal_fence:
-    return RValue::get(
-        makeAtomicFenceOpValue(*this, e, cir::SyncScopeKind::SingleThread));
+  case Builtin::BI__atomic_thread_fence: {
+    emitAtomicFenceOp(*this, e, cir::SyncScopeKind::System);
+    return RValue::get(nullptr);
+  }
+  case Builtin::BI__atomic_signal_fence: {
+    emitAtomicFenceOp(*this, e, cir::SyncScopeKind::SingleThread);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__c11_atomic_thread_fence:
   case Builtin::BI__c11_atomic_signal_fence:
   case Builtin::BI__scoped_atomic_thread_fence:
