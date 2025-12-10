@@ -505,7 +505,6 @@ def : AMDGPUPat <
   (fshr i32:$src0, i32:$src1, i32:$src2),
   (BIT_ALIGN_INT_eg $src0, $src1, $src2)
 >;
-def : ROTRPattern <BIT_ALIGN_INT_eg>;
 def MULADD_eg : MULADD_Common<0x14>;
 def MULADD_IEEE_eg : MULADD_IEEE_Common<0x18>;
 def FMA_eg : FMA_Common<0x7>;

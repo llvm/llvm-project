@@ -314,6 +314,10 @@ LogicalResult MBarrierTestWaitOp::verify() {
   return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
 }
 
+LogicalResult MBarrierTryWaitOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
+}
+
 LogicalResult ConvertFloatToTF32Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
   switch (getRnd()) {
@@ -417,7 +421,7 @@ LogicalResult ConvertBF16x2ToF8x2Op::verify() {
                                    "bf16x2 to f8x2.";
 
   auto rnd = getRnd();
-  if (!(rnd == RndMode::RZ || rnd == RndMode::RP))
+  if (rnd != RndMode::RZ && rnd != RndMode::RP)
     return emitOpError("Only RZ and RP rounding modes are supported for "
                        "conversions from bf16x2 to f8x2.");
 
@@ -2094,6 +2098,13 @@ bool NVVM::WgmmaMmaAsyncOp::getAsmValues(
   return true; // Has manual mapping
 }
 
+LogicalResult NVVM::FenceSyncRestrictOp::verify() {
+  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
+      getOrder() != NVVM::MemOrderKind::RELEASE)
+    return emitOpError("only acquire and release semantics are supported");
+  return success();
+}
+
 LogicalResult NVVM::FenceProxyOp::verify() {
   if (getKind() == NVVM::ProxyKind::TENSORMAP)
     return emitOpError() << "tensormap proxy is not a supported proxy kind";
@@ -2116,7 +2127,6 @@ LogicalResult NVVM::FenceProxyAcquireOp::verify() {
   if (getToProxy() != NVVM::ProxyKind::TENSORMAP)
     return emitOpError("uni-directional proxies only support tensormap "
                        "for to_proxy attribute");
-
   return success();
 }
 
@@ -2128,7 +2138,19 @@ LogicalResult NVVM::FenceProxyReleaseOp::verify() {
   if (getToProxy() != NVVM::ProxyKind::TENSORMAP)
     return emitOpError("uni-directional proxies only support tensormap "
                        "for to_proxy attribute");
+  return success();
+}
 
+LogicalResult NVVM::FenceProxySyncRestrictOp::verify() {
+  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
+      getOrder() != NVVM::MemOrderKind::RELEASE)
+    return emitOpError("only acquire and release semantics are supported");
+
+  if (getFromProxy() != NVVM::ProxyKind::GENERIC)
+    return emitOpError("only generic is support for from_proxy attribute");
+
+  if (getToProxy() != NVVM::ProxyKind::async)
+    return emitOpError("only async is supported for to_proxy attribute");
   return success();
 }
 
@@ -2750,6 +2772,56 @@ mlir::NVVM::IDArgPair MBarrierTestWaitOp::getIntrinsicIDAndArgs(
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
   return {id, {mbar, input}};
+}
+
+mlir::NVVM::IDArgPair MBarrierTryWaitOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierTryWaitOp>(op);
+  bool isPhaseParity = thisOp.getStateOrPhase().getType().isInteger(32);
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  bool hasTicks = static_cast<bool>(thisOp.getTicks());
+  // bit-0: isPhaseParity
+  // bit-1: Scope
+  // bit-2: hasTicks
+  size_t index = ((hasTicks ? 1 : 0) << 2) | ((isClusterScope ? 1 : 0) << 1) |
+                 (isPhaseParity ? 1 : 0);
+
+  // clang-format off
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_scope_cluster_space_cta};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_relaxed_scope_cluster_space_cta};
+  // clang-format on
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the mbarrier pointer
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mbar);
+  args.push_back(mt.lookupValue(thisOp.getStateOrPhase()));
+  if (hasTicks)
+    args.push_back(mt.lookupValue(thisOp.getTicks()));
+
+  return {id, std::move(args)};
 }
 
 mlir::NVVM::IDArgPair CpAsyncMBarrierArriveOp::getIntrinsicIDAndArgs(

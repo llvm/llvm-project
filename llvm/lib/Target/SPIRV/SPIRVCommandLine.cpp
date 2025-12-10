@@ -13,9 +13,14 @@
 
 #include "SPIRVCommandLine.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
+
+#include <functional>
 #include <map>
+#include <string>
+#include <utility>
+#include <vector>
 
 #define DEBUG_TYPE "spirv-commandline"
 
@@ -31,6 +36,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_min_max},
         {"SPV_INTEL_16bit_atomics",
          SPIRV::Extension::Extension::SPV_INTEL_16bit_atomics},
+        {"SPV_NV_shader_atomic_fp16_vector",
+         SPIRV::Extension::Extension::SPV_NV_shader_atomic_fp16_vector},
         {"SPV_EXT_arithmetic_fence",
          SPIRV::Extension::Extension::SPV_EXT_arithmetic_fence},
         {"SPV_EXT_demote_to_helper_invocation",
@@ -174,7 +181,17 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   std::set<SPIRV::Extension::Extension> &Vals) {
   SmallVector<StringRef, 10> Tokens;
   ArgValue.split(Tokens, ",", -1, false);
-  std::sort(Tokens.begin(), Tokens.end());
+  llvm::sort(Tokens, [](auto &&LHS, auto &&RHS) {
+    // We want to ensure that we handle "all" first, to ensure that any
+    // subsequent disablement actually behaves as expected i.e. given
+    // --spv-ext=all,-foo, we first enable all and then disable foo; this should
+    // be revisited and simplified.
+    if (LHS == "all")
+      return true;
+    if (RHS == "all")
+      return false;
+    return !(RHS < LHS);
+  });
 
   std::set<SPIRV::Extension::Extension> EnabledExtensions;
 

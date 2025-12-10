@@ -86,13 +86,9 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
                                       Status &error) {
   error.Clear();
 
-  std::string executable;
   STARTUPINFOEXW startupinfoex = {};
-  STARTUPINFOW &startupinfo = startupinfoex.StartupInfo;
-  PROCESS_INFORMATION pi = {};
-
-  startupinfo.cb = sizeof(startupinfoex);
-  startupinfo.dwFlags |= STARTF_USESTDHANDLES;
+  startupinfoex.StartupInfo.cb = sizeof(startupinfoex);
+  startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
 
   HANDLE stdin_handle = GetStdioHandle(launch_info, STDIN_FILENO);
   HANDLE stdout_handle = GetStdioHandle(launch_info, STDOUT_FILENO);
@@ -136,8 +132,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
       getenv("LLDB_LAUNCH_INFERIORS_WITHOUT_CONSOLE");
   if (hide_console_var &&
       llvm::StringRef(hide_console_var).equals_insensitive("true")) {
-    startupinfo.dwFlags |= STARTF_USESHOWWINDOW;
-    startupinfo.wShowWindow = SW_HIDE;
+    startupinfoex.StartupInfo.dwFlags |= STARTF_USESHOWWINDOW;
+    startupinfoex.StartupInfo.wShowWindow = SW_HIDE;
   }
 
   DWORD flags = CREATE_NEW_CONSOLE | CREATE_UNICODE_ENVIRONMENT |
@@ -169,6 +165,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   llvm::ConvertUTF8toWide(launch_info.GetWorkingDirectory().GetPath(),
                           wworkingDirectory);
 
+  PROCESS_INFORMATION pi = {};
+
   BOOL result = ::CreateProcessW(
       wexecutable.c_str(), pwcommandLine, NULL, NULL,
       /*bInheritHandles=*/!inherited_handles.empty(), flags, environment.data(),
@@ -198,21 +196,20 @@ llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandles(
     const ProcessLaunchInfo &launch_info, STARTUPINFOEXW &startupinfoex,
     HANDLE stdout_handle, HANDLE stderr_handle, HANDLE stdin_handle) {
   std::vector<HANDLE> inherited_handles;
-  STARTUPINFOW startupinfo = startupinfoex.StartupInfo;
 
-  startupinfo.hStdError =
+  startupinfoex.StartupInfo.hStdError =
       stderr_handle ? stderr_handle : GetStdHandle(STD_ERROR_HANDLE);
-  startupinfo.hStdInput =
+  startupinfoex.StartupInfo.hStdInput =
       stdin_handle ? stdin_handle : GetStdHandle(STD_INPUT_HANDLE);
-  startupinfo.hStdOutput =
+  startupinfoex.StartupInfo.hStdOutput =
       stdout_handle ? stdout_handle : GetStdHandle(STD_OUTPUT_HANDLE);
 
-  if (startupinfo.hStdError)
-    inherited_handles.push_back(startupinfo.hStdError);
-  if (startupinfo.hStdInput)
-    inherited_handles.push_back(startupinfo.hStdInput);
-  if (startupinfo.hStdOutput)
-    inherited_handles.push_back(startupinfo.hStdOutput);
+  if (startupinfoex.StartupInfo.hStdError)
+    inherited_handles.push_back(startupinfoex.StartupInfo.hStdError);
+  if (startupinfoex.StartupInfo.hStdInput)
+    inherited_handles.push_back(startupinfoex.StartupInfo.hStdInput);
+  if (startupinfoex.StartupInfo.hStdOutput)
+    inherited_handles.push_back(startupinfoex.StartupInfo.hStdOutput);
 
   for (size_t i = 0; i < launch_info.GetNumFileActions(); ++i) {
     const FileAction *act = launch_info.GetFileActionAtIndex(i);
@@ -244,7 +241,6 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
   secattr.nLength = sizeof(SECURITY_ATTRIBUTES);
   secattr.bInheritHandle = TRUE;
 
-  llvm::StringRef path = action->GetPath();
   DWORD access = 0;
   DWORD share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD create = 0;
@@ -261,6 +257,7 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
       flags = FILE_FLAG_WRITE_THROUGH;
   }
 
+  const std::string path = action->GetFileSpec().GetPath();
   std::wstring wpath;
   llvm::ConvertUTF8toWide(path, wpath);
   HANDLE result = ::CreateFileW(wpath.c_str(), access, share, &secattr, create,

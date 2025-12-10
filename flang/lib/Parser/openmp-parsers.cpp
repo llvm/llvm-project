@@ -817,6 +817,9 @@ TYPE_PARSER(construct<OmpDeviceModifier>(
     "ANCESTOR" >> pure(OmpDeviceModifier::Value::Ancestor) ||
     "DEVICE_NUM" >> pure(OmpDeviceModifier::Value::Device_Num)))
 
+TYPE_PARSER(construct<OmpDimsModifier>( //
+    "DIMS" >> parenthesized(scalarIntConstantExpr)))
+
 TYPE_PARSER(construct<OmpDirectiveNameModifier>(OmpDirectiveNameParser{}))
 
 TYPE_PARSER(construct<OmpExpectation>( //
@@ -870,6 +873,8 @@ TYPE_PARSER(construct<OmpLinearModifier>( //
     "REF" >> pure(OmpLinearModifier::Value::Ref) ||
     "VAL" >> pure(OmpLinearModifier::Value::Val) ||
     "UVAL" >> pure(OmpLinearModifier::Value::Uval)))
+
+TYPE_PARSER(construct<OmpLowerBound>(scalarIntExpr))
 
 TYPE_PARSER(construct<OmpMapper>( //
     "MAPPER"_tok >> parenthesized(Parser<ObjectName>{})))
@@ -1015,6 +1020,13 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(
     construct<OmpNumTasksClause::Modifier>(Parser<OmpPrescriptiveness>{})))
 
+TYPE_PARSER(sourced( //
+    construct<OmpNumTeamsClause::Modifier>(Parser<OmpDimsModifier>{}) ||
+    construct<OmpNumTeamsClause::Modifier>(Parser<OmpLowerBound>{})))
+
+TYPE_PARSER(sourced(
+    construct<OmpNumThreadsClause::Modifier>(Parser<OmpDimsModifier>{})))
+
 TYPE_PARSER(sourced(construct<OmpReductionClause::Modifier>(sourced(
     construct<OmpReductionClause::Modifier>(Parser<OmpReductionModifier>{}) ||
     construct<OmpReductionClause::Modifier>(
@@ -1026,6 +1038,9 @@ TYPE_PARSER(sourced(construct<OmpScheduleClause::Modifier>(sourced(
 
 TYPE_PARSER(sourced(construct<OmpTaskReductionClause::Modifier>(
     Parser<OmpReductionIdentifier>{})))
+
+TYPE_PARSER(sourced(
+    construct<OmpThreadLimitClause::Modifier>(Parser<OmpDimsModifier>{})))
 
 TYPE_PARSER(sourced(construct<OmpToClause::Modifier>(
     sourced(construct<OmpToClause::Modifier>(Parser<OmpExpectation>{}) ||
@@ -1197,7 +1212,15 @@ TYPE_PARSER(construct<OmpTaskReductionClause>(
     maybe(nonemptyList(Parser<OmpTaskReductionClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
+TYPE_PARSER(construct<OmpThreadLimitClause>(
+    maybe(nonemptyList(Parser<OmpThreadLimitClause::Modifier>{}) / ":"),
+    nonemptyList(scalarIntExpr)))
+
 TYPE_PARSER(construct<OmpTransparentClause>(scalarIntExpr))
+
+TYPE_PARSER(construct<OmpThreadsetClause>(
+    "OMP_POOL" >> pure(OmpThreadsetClause::ThreadsetPolicy::Omp_Pool) ||
+    "OMP_TEAM" >> pure(OmpThreadsetClause::ThreadsetPolicy::Omp_Team)))
 
 // OMP 5.0 2.11.4 allocate-clause -> ALLOCATE ([allocator:] variable-name-list)
 // OMP 5.2 2.13.4 allocate-clause -> ALLOCATE ([allocate-modifier
@@ -1323,6 +1346,14 @@ TYPE_PARSER(construct<OmpGrainsizeClause>(
 TYPE_PARSER(construct<OmpNumTasksClause>(
     maybe(nonemptyList(Parser<OmpNumTasksClause::Modifier>{}) / ":"),
     scalarIntExpr))
+
+TYPE_PARSER(construct<OmpNumTeamsClause>(
+    maybe(nonemptyList(Parser<OmpNumTeamsClause::Modifier>{}) / ":"),
+    nonemptyList(scalarIntExpr)))
+
+TYPE_PARSER(construct<OmpNumThreadsClause>(
+    maybe(nonemptyList(Parser<OmpNumThreadsClause::Modifier>{}) / ":"),
+    nonemptyList(scalarIntExpr)))
 
 TYPE_PARSER( //
     construct<OmpObject>(designator) ||
@@ -1497,9 +1528,9 @@ TYPE_PARSER( //
     "NUM_TASKS" >> construct<OmpClause>(construct<OmpClause::NumTasks>(
                        parenthesized(Parser<OmpNumTasksClause>{}))) ||
     "NUM_TEAMS" >> construct<OmpClause>(construct<OmpClause::NumTeams>(
-                       parenthesized(scalarIntExpr))) ||
+                       parenthesized(Parser<OmpNumTeamsClause>{}))) ||
     "NUM_THREADS" >> construct<OmpClause>(construct<OmpClause::NumThreads>(
-                         parenthesized(scalarIntExpr))) ||
+                         parenthesized(Parser<OmpNumThreadsClause>{}))) ||
     "OMPX_BARE" >> construct<OmpClause>(construct<OmpClause::OmpxBare>()) ||
     "ORDER" >> construct<OmpClause>(construct<OmpClause::Order>(
                    parenthesized(Parser<OmpOrderClause>{}))) ||
@@ -1550,9 +1581,11 @@ TYPE_PARSER( //
                    parenthesized(nonemptyList(scalarIntExpr)))) ||
     "PERMUTATION" >> construct<OmpClause>(construct<OmpClause::Permutation>(
                          parenthesized(nonemptyList(scalarIntExpr)))) ||
-    "THREADS" >> construct<OmpClause>(construct<OmpClause::Threads>()) ||
+    "THREADS"_id >> construct<OmpClause>(construct<OmpClause::Threads>()) ||
+    "THREADSET" >> construct<OmpClause>(construct<OmpClause::Threadset>(
+                       parenthesized(Parser<OmpThreadsetClause>{}))) ||
     "THREAD_LIMIT" >> construct<OmpClause>(construct<OmpClause::ThreadLimit>(
-                          parenthesized(scalarIntExpr))) ||
+                          parenthesized(Parser<OmpThreadLimitClause>{}))) ||
     "TO" >> construct<OmpClause>(construct<OmpClause::To>(
                 parenthesized(Parser<OmpToClause>{}))) ||
     "TRANSPARENT" >>
@@ -1914,7 +1947,7 @@ struct OmpLoopConstructParser {
     auto loopItem{LoopNestParser{} || ompLoopConstruct};
 
     if (auto &&begin{OmpBeginDirectiveParser(dirs_).Parse(state)}) {
-      auto loopDir{begin->DirName().v};
+      auto loopDir{begin->DirId()};
       auto assoc{llvm::omp::getDirectiveAssociation(loopDir)};
       if (assoc == llvm::omp::Association::LoopNest) {
         if (auto &&item{attempt(loopItem).Parse(state)}) {
