@@ -920,7 +920,7 @@ def FeatureDisableUnpredicatedLdStLower : SubtargetFeature<
     "true", "Disable lowering unpredicated loads/stores as LDR/STR">;
 
 def FeatureAggressiveInterleaving : SubtargetFeature<"aggressive-interleaving",
-                                                     "AggressiveInterleaving", "false",
+                                                     "AggressiveInterleaving", "true",
                                                      "Make use of aggressive interleaving during vectorization">;
 
 //===----------------------------------------------------------------------===//
