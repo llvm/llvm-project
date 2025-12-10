@@ -36,6 +36,7 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Xteamr.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Memory.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Xteams.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/DeviceMemInit.cpp
   ${emissary_sources}
 
 )
