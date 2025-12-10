@@ -254,9 +254,10 @@ private:
 
   /// Generates the implicit data ops for a compute construct.
   template <typename OpT>
-  void generateImplicitDataOps(
-      ModuleOp &module, OpT computeConstructOp,
-      std::optional<acc::ClauseDefaultValue> &defaultClause);
+  void
+  generateImplicitDataOps(ModuleOp &module, OpT computeConstructOp,
+                          std::optional<acc::ClauseDefaultValue> &defaultClause,
+                          acc::OpenACCSupport &accSupport);
 
   /// Generates a private recipe for a variable.
   acc::PrivateRecipeOp generatePrivateRecipe(ModuleOp &module, Value var,
@@ -277,10 +278,14 @@ private:
 
 /// Determines if a variable is a candidate for implicit data mapping.
 /// Returns true if the variable is a candidate, false otherwise.
-static bool isCandidateForImplicitData(Value val, Region &accRegion) {
+static bool isCandidateForImplicitData(Value val, Region &accRegion,
+                                       acc::OpenACCSupport &accSupport) {
   // Ensure the variable is an allowed type for data clause.
   if (!acc::isPointerLikeType(val.getType()) &&
       !acc::isMappableType(val.getType()))
+    return false;
+
+  if (accSupport.isValidValueUse(val, accRegion))
     return false;
 
   // If this is already coming from a data clause, we do not need to generate
@@ -683,7 +688,8 @@ static void insertInSortedOrder(SmallVector<Value> &sortedDataClauseOperands,
 template <typename OpT>
 void ACCImplicitData::generateImplicitDataOps(
     ModuleOp &module, OpT computeConstructOp,
-    std::optional<acc::ClauseDefaultValue> &defaultClause) {
+    std::optional<acc::ClauseDefaultValue> &defaultClause,
+    acc::OpenACCSupport &accSupport) {
   // Implicit data attributes are only applied if "[t]here is no default(none)
   // clause visible at the compute construct."
   if (defaultClause.has_value() &&
@@ -699,7 +705,7 @@ void ACCImplicitData::generateImplicitDataOps(
 
   // 2) Run the filtering to find relevant pointers that need copied.
   auto isCandidate{[&](Value val) -> bool {
-    return isCandidateForImplicitData(val, accRegion);
+    return isCandidateForImplicitData(val, accRegion, accSupport);
   }};
   auto candidateVars(
       llvm::to_vector(llvm::make_filter_range(liveInValues, isCandidate)));
@@ -763,6 +769,9 @@ void ACCImplicitData::generateImplicitDataOps(
 
 void ACCImplicitData::runOnOperation() {
   ModuleOp module = this->getOperation();
+
+  acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
+
   module.walk([&](Operation *op) {
     if (isa<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(op)) {
       assert(op->getNumRegions() == 1 && "must have 1 region");
@@ -771,7 +780,7 @@ void ACCImplicitData::runOnOperation() {
       llvm::TypeSwitch<Operation *, void>(op)
           .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
               [&](auto op) {
-                generateImplicitDataOps(module, op, defaultClause);
+                generateImplicitDataOps(module, op, defaultClause, accSupport);
               })
           .Default([&](Operation *) {});
     }
