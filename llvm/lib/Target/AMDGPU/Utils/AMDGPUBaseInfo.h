@@ -1119,6 +1119,8 @@ struct Waitcnt {
         std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
         std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt));
   }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait);
 };
 
 // The following methods are only meaningful on targets that support

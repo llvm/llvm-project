@@ -46,6 +46,17 @@ prepared to handle their opaque implementation pointer being empty, and doing
 something reasonable. We also always have an "IsValid" method on all the SB
 classes to report whether the object is empty or not.
 
+.. note::
+  The implication of an object being "empty" can vary by class.
+
+  For most classes, the lack of anything backing the class means that it
+  would not be valid to interact with it by calling any other methods
+  on it.
+
+  One exception to this is ``SBError``, which can provide valid
+  information even when empty. This is because it does not need an
+  underlying object to be able to represent a success state.
+
 Another piece of the SB API infrastructure is the Python (or other script
 interpreter) customization. SWIG allows you to add property access, iterators
 and documentation to classes. We place the property accessors and iterators in
