@@ -751,6 +751,31 @@ TEST_F(AArch64GISelMITest, TestFPClassFAdd_Zero) {
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
 
+TEST_F(AArch64GISelMITest, TestFPClassFAdd_NegZero) {
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))    
+    %rhs:_(s32) = G_FCONSTANT float -0.0
+    %fadd:_(s32) = G_FADD %lhs, %rhs
+    %copy_fadd:_(s32) = COPY %fadd
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcAllFlags, Known.KnownFPClasses);
+  EXPECT_EQ(std::nullopt, Known.SignBit);
+}
+
 TEST_F(AArch64GISelMITest, TestFPClassFMul) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
