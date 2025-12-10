@@ -23,7 +23,7 @@ local:
 
 ### Why do I get a warning or error about an executable stack?
 
-This warning or error occurs because Flang's implementation of pointers to internal procedures requires an executable stack.
+This occurs because Flang's implementation of pointers to internal procedures requires an executable stack.
 
 When an internal procedure is referenced from outside its host scope (e.g., via a procedure pointer), the implementation must ensure it can still access its host-associated variables.
 To achieve this, the current implementation of Flang generates a small piece of code, called a "trampoline", on the stack dynamically.
