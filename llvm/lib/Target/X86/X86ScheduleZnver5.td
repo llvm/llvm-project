@@ -724,7 +724,7 @@ def : InstRW<[Zn5WriteXCHG32rm_XCHG64rm], (instrs XCHG32rm, XCHG64rm)>;
 defm : Zn5WriteResIntPair<WriteDiv8, [Zn5Divider], 10, [10], 2>;
 defm : Zn5WriteResIntPair<WriteDiv16, [Zn5Divider], 11, [11], 2>;
 defm : Zn5WriteResIntPair<WriteDiv32, [Zn5Divider], 13, [13], 2>;
-defm : Zn5WriteResIntPair<WriteDiv64, [Zn5Divider], 10, [16], 2>;
+defm : Zn5WriteResIntPair<WriteDiv64, [Zn5Divider], 16, [16], 2>;
 defm : Zn5WriteResIntPair<WriteIDiv8, [Zn5Divider], 10, [10], 2>;
 defm : Zn5WriteResIntPair<WriteIDiv16, [Zn5Divider], 11, [11], 2>;
 defm : Zn5WriteResIntPair<WriteIDiv32, [Zn5Divider], 13, [13], 2>;
