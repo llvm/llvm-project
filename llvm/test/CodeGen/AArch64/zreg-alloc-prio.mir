@@ -1,0 +1,511 @@
+# RUN: llc %s --run-pass=greedy -o - | FileCheck %s
+--- |
+  target triple = "aarch64-linux"
+
+  define void @f(ptr %A, ptr %B, ptr %C) #0 {
+  entry:
+    %splitgep11 = getelementptr i8, ptr %C, i64 1005140
+    %splitgep10 = getelementptr i8, ptr %C, i64 804112
+    %splitgep9 = getelementptr i8, ptr %C, i64 603084
+    %splitgep8 = getelementptr i8, ptr %C, i64 402056
+    %splitgep7 = getelementptr i8, ptr %C, i64 201028
+    %vs = tail call i64 @llvm.vscale.i64()
+    %0 = shl i64 %vs, 4
+    %1 = add i64 %0, 603084
+    %2 = add i64 %0, 402056
+    %3 = add i64 %0, 201021
+    br label %loop
+
+  loop:                                             ; preds = %loop, %entry
+    %lsr.iv = phi i64 [ %lsr.iv.next, %loop ], [ -4, %entry ]
+    %A.addr = phi ptr [ %A, %entry ], [ %A.addr.next, %loop ]
+    %acc00 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc00.t3, %loop ]
+    %acc01 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc01.t3, %loop ]
+    %acc10 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc10.t3, %loop ]
+    %acc11 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc11.t3, %loop ]
+    %acc20 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc20.t3, %loop ]
+    %acc21 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc21.t3, %loop ]
+    %acc30 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc30.t3, %loop ]
+    %acc31 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc31.t3, %loop ]
+    %acc40 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc40.t3, %loop ]
+    %acc41 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc41.t3, %loop ]
+    %acc50 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc50.t3, %loop ]
+    %acc51 = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %acc51.t3, %loop ]
+    %B.addr = phi ptr [ %B, %entry ], [ %splitgep6, %loop ]
+    %splitgep6 = getelementptr i8, ptr %B.addr, i64 804112
+    %splitgep5 = getelementptr i8, ptr %B.addr, i64 603084
+    %splitgep4 = getelementptr i8, ptr %B.addr, i64 402056
+    %splitgep = getelementptr i8, ptr %B.addr, i64 201021
+    %A0.n = load <4 x float>, ptr %A.addr, align 4
+    %A0.z = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %A0.n, i64 0)
+    %A0.b = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %A0.z, i64 0)
+    %A.addr.1 = getelementptr i8, ptr %A.addr, i64 3072
+    %A1.n = load <4 x float>, ptr %A.addr.1, align 4
+    %A1.z = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %A1.n, i64 0)
+    %A1.b = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %A1.z, i64 0)
+    %A.addr.2 = getelementptr i8, ptr %A.addr, i64 6144
+    %A2.n = load <4 x float>, ptr %A.addr.2, align 4
+    %A2.z = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %A2.n, i64 0)
+    %A2.b = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %A2.z, i64 0)
+    %A.addr.3 = getelementptr i8, ptr %A.addr, i64 9216
+    %A3.n = load <4 x float>, ptr %A.addr.3, align 4
+    %A3.z = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %A3.n, i64 0)
+    %A3.b = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %A3.z, i64 0)
+    %A.addr.4 = getelementptr i8, ptr %A.addr, i64 12288
+    %A4.n = load <4 x float>, ptr %A.addr.4, align 4
+    %A4.z = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %A4.n, i64 0)
+    %A4.b = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %A4.z, i64 0)
+    %A.addr.5 = getelementptr i8, ptr %A.addr, i64 15360
+    %A5.n = load <4 x float>, ptr %A.addr.5, align 4
+    %A5.z = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %A5.n, i64 0)
+    %A5.b = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %A5.z, i64 0)
+    %B00 = load <vscale x 4 x float>, ptr %B.addr, align 16
+    %4 = tail call i64 @llvm.vscale.i64()
+    %5 = shl i64 %4, 4
+    %scevgep3 = getelementptr i8, ptr %B.addr, i64 %5
+    %B01 = load <vscale x 4 x float>, ptr %scevgep3, align 16
+    %acc00.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc00, <vscale x 4 x float> %B00, <vscale x 4 x float> %A0.b, i32 0)
+    %acc01.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc01, <vscale x 4 x float> %B01, <vscale x 4 x float> %A0.b, i32 0)
+    %acc10.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc10, <vscale x 4 x float> %B00, <vscale x 4 x float> %A1.b, i32 0)
+    %acc11.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc11, <vscale x 4 x float> %B01, <vscale x 4 x float> %A1.b, i32 0)
+    %acc20.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc20, <vscale x 4 x float> %B00, <vscale x 4 x float> %A2.b, i32 0)
+    %acc21.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc21, <vscale x 4 x float> %B01, <vscale x 4 x float> %A2.b, i32 0)
+    %acc30.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc30, <vscale x 4 x float> %B00, <vscale x 4 x float> %A3.b, i32 0)
+    %acc31.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc31, <vscale x 4 x float> %B01, <vscale x 4 x float> %A4.b, i32 0)
+    %acc40.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc40, <vscale x 4 x float> %B00, <vscale x 4 x float> %A5.b, i32 0)
+    %acc41.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc41, <vscale x 4 x float> %B01, <vscale x 4 x float> %A5.b, i32 0)
+    %acc50.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc50, <vscale x 4 x float> %B00, <vscale x 4 x float> %A5.b, i32 0)
+    %acc51.t0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc51, <vscale x 4 x float> %B01, <vscale x 4 x float> %A5.b, i32 0)
+    %B10 = load <vscale x 4 x float>, ptr %splitgep, align 16
+    %scevgep2 = getelementptr i8, ptr %B.addr, i64 %3
+    %B11 = load <vscale x 4 x float>, ptr %scevgep2, align 16
+    %acc00.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc00.t0, <vscale x 4 x float> %B10, <vscale x 4 x float> %A0.b, i32 1)
+    %acc01.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc01.t0, <vscale x 4 x float> %B11, <vscale x 4 x float> %A0.b, i32 1)
+    %acc10.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc10.t0, <vscale x 4 x float> %B10, <vscale x 4 x float> %A1.b, i32 1)
+    %acc11.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc11.t0, <vscale x 4 x float> %B11, <vscale x 4 x float> %A1.b, i32 1)
+    %acc20.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc20.t0, <vscale x 4 x float> %B10, <vscale x 4 x float> %A2.b, i32 1)
+    %acc21.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc21.t0, <vscale x 4 x float> %B11, <vscale x 4 x float> %A2.b, i32 1)
+    %acc30.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc30.t0, <vscale x 4 x float> %B10, <vscale x 4 x float> %A3.b, i32 1)
+    %acc31.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc31.t0, <vscale x 4 x float> %B11, <vscale x 4 x float> %A3.b, i32 1)
+    %acc40.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc40.t0, <vscale x 4 x float> %B10, <vscale x 4 x float> %A4.b, i32 1)
+    %acc41.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc41.t0, <vscale x 4 x float> %B11, <vscale x 4 x float> %A4.b, i32 1)
+    %acc50.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc50.t0, <vscale x 4 x float> %B10, <vscale x 4 x float> %A5.b, i32 1)
+    %acc51.t1 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc51.t0, <vscale x 4 x float> %B11, <vscale x 4 x float> %A5.b, i32 1)
+    %B20 = load <vscale x 4 x float>, ptr %splitgep4, align 16
+    %scevgep1 = getelementptr i8, ptr %B.addr, i64 %2
+    %B21 = load <vscale x 4 x float>, ptr %scevgep1, align 16
+    %acc00.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc00.t1, <vscale x 4 x float> %B20, <vscale x 4 x float> %A0.b, i32 2)
+    %acc01.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc01.t1, <vscale x 4 x float> %B21, <vscale x 4 x float> %A0.b, i32 2)
+    %acc10.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc10.t1, <vscale x 4 x float> %B20, <vscale x 4 x float> %A1.b, i32 2)
+    %acc11.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc11.t1, <vscale x 4 x float> %B21, <vscale x 4 x float> %A1.b, i32 2)
+    %acc20.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc20.t1, <vscale x 4 x float> %B20, <vscale x 4 x float> %A2.b, i32 2)
+    %acc21.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc21.t1, <vscale x 4 x float> %B21, <vscale x 4 x float> %A2.b, i32 2)
+    %acc30.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc30.t1, <vscale x 4 x float> %B20, <vscale x 4 x float> %A3.b, i32 2)
+    %acc31.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc31.t1, <vscale x 4 x float> %B21, <vscale x 4 x float> %A3.b, i32 2)
+    %acc40.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc40.t1, <vscale x 4 x float> %B20, <vscale x 4 x float> %A4.b, i32 2)
+    %acc41.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc41.t1, <vscale x 4 x float> %B21, <vscale x 4 x float> %A4.b, i32 2)
+    %acc50.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc50.t1, <vscale x 4 x float> %B20, <vscale x 4 x float> %A5.b, i32 2)
+    %acc51.t2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc51.t1, <vscale x 4 x float> %B21, <vscale x 4 x float> %A5.b, i32 2)
+    %B30 = load <vscale x 4 x float>, ptr %splitgep5, align 16
+    %scevgep = getelementptr i8, ptr %B.addr, i64 %1
+    %B31 = load <vscale x 4 x float>, ptr %scevgep, align 16
+    %acc00.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc00.t2, <vscale x 4 x float> %B30, <vscale x 4 x float> %A0.b, i32 3)
+    %acc01.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc01.t2, <vscale x 4 x float> %B31, <vscale x 4 x float> %A0.b, i32 3)
+    %acc10.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc10.t2, <vscale x 4 x float> %B30, <vscale x 4 x float> %A1.b, i32 3)
+    %acc11.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc11.t2, <vscale x 4 x float> %B31, <vscale x 4 x float> %A1.b, i32 3)
+    %acc20.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc20.t2, <vscale x 4 x float> %B30, <vscale x 4 x float> %A2.b, i32 3)
+    %acc21.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc21.t2, <vscale x 4 x float> %B31, <vscale x 4 x float> %A2.b, i32 3)
+    %acc30.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc30.t2, <vscale x 4 x float> %B30, <vscale x 4 x float> %A3.b, i32 3)
+    %acc31.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc31.t2, <vscale x 4 x float> %B31, <vscale x 4 x float> %A3.b, i32 3)
+    %acc40.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc40.t2, <vscale x 4 x float> %B30, <vscale x 4 x float> %A4.b, i32 3)
+    %acc41.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc41.t2, <vscale x 4 x float> %B31, <vscale x 4 x float> %A4.b, i32 3)
+    %acc50.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc50.t2, <vscale x 4 x float> %B30, <vscale x 4 x float> %A5.b, i32 3)
+    %acc51.t3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4 x float> %acc51.t2, <vscale x 4 x float> %B31, <vscale x 4 x float> %A5.b, i32 3)
+    %A.addr.next = getelementptr i8, ptr %A.addr, i64 16
+    %lsr.iv.next = add nsw i64 %lsr.iv, 4
+    %cmp = icmp ult i64 %lsr.iv.next, 761
+    br i1 %cmp, label %loop, label %exit
+
+  exit:                                             ; preds = %loop
+    store <vscale x 4 x float> %acc00.t3, ptr %C, align 16
+    %6 = tail call i64 @llvm.vscale.i64()
+    %7 = shl nuw nsw i64 %6, 2
+    %C01 = getelementptr inbounds nuw float, ptr %C, i64 %7
+    store <vscale x 4 x float> %acc01.t3, ptr %C01, align 16
+    store <vscale x 4 x float> %acc10.t3, ptr %splitgep7, align 16
+    %8 = tail call i64 @llvm.vscale.i64()
+    %9 = shl nuw nsw i64 %8, 2
+    %C11 = getelementptr inbounds nuw float, ptr %splitgep7, i64 %9
+    store <vscale x 4 x float> %acc11.t3, ptr %C11, align 16
+    store <vscale x 4 x float> %acc20.t3, ptr %splitgep8, align 16
+    %10 = tail call i64 @llvm.vscale.i64()
+    %11 = shl nuw nsw i64 %10, 2
+    %C21 = getelementptr inbounds nuw float, ptr %splitgep8, i64 %11
+    store <vscale x 4 x float> %acc21.t3, ptr %C21, align 16
+    store <vscale x 4 x float> %acc30.t3, ptr %splitgep9, align 16
+    %12 = tail call i64 @llvm.vscale.i64()
+    %13 = shl nuw nsw i64 %12, 2
+    %C31 = getelementptr inbounds nuw float, ptr %splitgep9, i64 %13
+    store <vscale x 4 x float> %acc31.t3, ptr %C31, align 16
+    store <vscale x 4 x float> %acc40.t3, ptr %splitgep10, align 16
+    %14 = tail call i64 @llvm.vscale.i64()
+    %15 = shl nuw nsw i64 %14, 2
+    %C41 = getelementptr inbounds nuw float, ptr %splitgep10, i64 %15
+    store <vscale x 4 x float> %acc41.t3, ptr %C41, align 16
+    store <vscale x 4 x float> %acc50.t3, ptr %splitgep11, align 16
+    %16 = tail call i64 @llvm.vscale.i64()
+    %17 = shl nuw nsw i64 %16, 2
+    %C51 = getelementptr inbounds nuw float, ptr %splitgep11, i64 %17
+    store <vscale x 4 x float> %acc51.t3, ptr %C51, align 16
+    ret void
+  }
+
+  attributes #0 = { "target-features"="+sve" }
+...
+---
+name:            f
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         false
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 1, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 2, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 3, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 4, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 5, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 6, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 7, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 8, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 9, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 10, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 11, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 12, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 13, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 14, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 15, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 16, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 17, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 18, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 19, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 20, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 21, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 22, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 23, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 24, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 25, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 26, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 27, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 28, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 29, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 30, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 31, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 32, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 33, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 34, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 35, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 36, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 37, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 38, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 39, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 40, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 41, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 42, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 43, class: gpr32, preferred-register: '', flags: [  ] }
+  - { id: 44, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 45, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 46, class: gpr32, preferred-register: '', flags: [  ] }
+  - { id: 47, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 48, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 49, class: gpr32, preferred-register: '', flags: [  ] }
+  - { id: 50, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 51, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 52, class: gpr32, preferred-register: '', flags: [  ] }
+  - { id: 53, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 54, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 55, class: gpr32, preferred-register: '', flags: [  ] }
+  - { id: 56, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 57, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 58, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 59, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 60, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 61, class: gpr32, preferred-register: '', flags: [  ] }
+  - { id: 62, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 63, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 64, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 65, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 66, class: gpr32, preferred-register: '', flags: [  ] }
+  - { id: 67, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 68, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 69, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 70, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 71, class: ppr_3b, preferred-register: '', flags: [  ] }
+  - { id: 72, class: zpr_3b, preferred-register: '', flags: [  ] }
+  - { id: 73, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 74, class: zpr_3b, preferred-register: '', flags: [  ] }
+  - { id: 75, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 76, class: zpr_3b, preferred-register: '', flags: [  ] }
+  - { id: 77, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 78, class: zpr_3b, preferred-register: '', flags: [  ] }
+  - { id: 79, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 80, class: zpr_3b, preferred-register: '', flags: [  ] }
+  - { id: 81, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 82, class: zpr_3b, preferred-register: '', flags: [  ] }
+  - { id: 83, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 84, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 85, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 86, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 87, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 88, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 89, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 90, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 91, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 92, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 93, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 94, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 95, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 96, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 97, class: ppr_3b, preferred-register: '', flags: [  ] }
+  - { id: 98, class: gpr32, preferred-register: '', flags: [  ] }
+  - { id: 99, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 100, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 101, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 102, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 103, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 104, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 105, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 106, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 107, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 108, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 109, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 110, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 111, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 112, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 113, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 114, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 115, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 116, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 117, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 118, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 119, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 120, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 121, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 122, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 123, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 124, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 125, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 126, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 127, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 128, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 129, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 130, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 131, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 132, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 133, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 134, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 135, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 136, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 137, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 138, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 139, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 140, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 141, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 142, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 143, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 144, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 145, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 146, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 147, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 148, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 149, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 150, class: zpr, preferred-register: '', flags: [  ] }
+  - { id: 151, class: gpr64common, preferred-register: '', flags: [  ] }
+liveins:
+  - { reg: '$x0', virtual-reg: '%38' }
+  - { reg: '$x1', virtual-reg: '%39' }
+  - { reg: '$x2', virtual-reg: '%40' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $x0, $x1, $x2
+
+    %40:gpr64common = COPY $x2
+    %151:gpr64common = COPY $x1
+    %138:gpr64common = COPY $x0
+    undef %47.sub_32:gpr64 = MOVi32imm 804112
+    %133:gpr64sp = ADDXri %40, 245, 12
+    %1:gpr64common = ADDXrr %40, %47
+    undef %50.sub_32:gpr64 = MOVi32imm 603084
+    %2:gpr64common = ADDXrr %40, %50
+    %0:gpr64common = ADDXri %133, 1620, 0
+    undef %53.sub_32:gpr64 = MOVi32imm 402056
+    %3:gpr64common = ADDXrr %40, %53
+    %135:gpr64sp = ADDXri %40, 49, 12
+    %58:gpr64 = RDVLI_XI 1, implicit $vg
+    %4:gpr64common = ADDXri %135, 324, 0
+    %5:gpr64common = ADDXrr %58, %50
+    undef %62.sub_32:gpr64common = MOVi32imm 201021
+    %6:gpr64common = ADDXrr %58, %53
+    %7:gpr64common = ADDXrr %58, %62
+    undef %139.zsub:zpr = MOVIv2d_ns 0
+    %137:gpr64common = MOVi64imm -4
+    undef %140.zsub:zpr = MOVIv2d_ns 0
+    undef %141.zsub:zpr = MOVIv2d_ns 0
+    undef %142.zsub:zpr = MOVIv2d_ns 0
+    undef %143.zsub:zpr = MOVIv2d_ns 0
+    undef %144.zsub:zpr = MOVIv2d_ns 0
+    undef %145.zsub:zpr = MOVIv2d_ns 0
+    undef %146.zsub:zpr = MOVIv2d_ns 0
+    undef %147.zsub:zpr = MOVIv2d_ns 0
+    undef %148.zsub:zpr = MOVIv2d_ns 0
+    undef %149.zsub:zpr = MOVIv2d_ns 0
+    undef %150.zsub:zpr = MOVIv2d_ns 0
+    %69:gpr64common = MOVi64imm 150771
+    %70:gpr64common = MOVi64imm 100514
+    %71:ppr_3b = PTRUE_S 31, implicit $vg
+    %73:gpr64common = MOVi64imm 768
+    %75:gpr64common = MOVi64imm 1536
+    %97:ppr_3b = PTRUE_B 31, implicit $vg
+    %77:gpr64common = MOVi64imm 2304
+    %79:gpr64common = MOVi64imm 3072
+    %81:gpr64common = MOVi64imm 3840
+
+  bb.1.loop:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+
+    %22:gpr64common = COPY %151
+    %72:zpr_3b = LD1RQ_W_IMM %71, %138, 0 :: (load (s128) from %ir.A.addr, align 4)
+    %74:zpr_3b = LD1RQ_W %71, %138, %73 :: (load (s128) from %ir.A.addr.1, align 4)
+    %83:zpr = LDR_ZXI %22, 0 :: (load (<vscale x 1 x s128>) from %ir.B.addr)
+    %76:zpr_3b = LD1RQ_W %71, %138, %75 :: (load (s128) from %ir.A.addr.2, align 4)
+    %84:zpr = LDR_ZXI %22, 1 :: (load (<vscale x 1 x s128>) from %ir.scevgep3)
+    %78:zpr_3b = LD1RQ_W %71, %138, %77 :: (load (s128) from %ir.A.addr.3, align 4)
+    %80:zpr_3b = LD1RQ_W %71, %138, %79 :: (load (s128) from %ir.A.addr.4, align 4)
+    %139:zpr = nofpexcept FMLA_ZZZI_S %139, %83, %72, 0
+    %82:zpr_3b = LD1RQ_W %71, %138, %81 :: (load (s128) from %ir.A.addr.5, align 4)
+    %140:zpr = nofpexcept FMLA_ZZZI_S %140, %84, %72, 0
+    %141:zpr = nofpexcept FMLA_ZZZI_S %141, %83, %74, 0
+    %142:zpr = nofpexcept FMLA_ZZZI_S %142, %84, %74, 0
+    %143:zpr = nofpexcept FMLA_ZZZI_S %143, %83, %76, 0
+    %100:zpr = LD1B %97, %22, %62 :: (load (<vscale x 1 x s128>) from %ir.splitgep)
+    %144:zpr = nofpexcept FMLA_ZZZI_S %144, %84, %76, 0
+    %145:zpr = nofpexcept FMLA_ZZZI_S %145, %83, %78, 0
+    %101:zpr = LD1B %97, %22, %7 :: (load (<vscale x 1 x s128>) from %ir.scevgep2)
+    %146:zpr = nofpexcept FMLA_ZZZI_S %146, %84, %80, 0
+    %147:zpr = nofpexcept FMLA_ZZZI_S %147, %83, %82, 0
+    %148:zpr = nofpexcept FMLA_ZZZI_S %148, %84, %82, 0
+    %149:zpr = nofpexcept FMLA_ZZZI_S %149, %83, %82, 0
+    %150:zpr = nofpexcept FMLA_ZZZI_S %150, %84, %82, 0
+    %139:zpr = nofpexcept FMLA_ZZZI_S %139, %100, %72, 1
+    %140:zpr = nofpexcept FMLA_ZZZI_S %140, %101, %72, 1
+    %141:zpr = nofpexcept FMLA_ZZZI_S %141, %100, %74, 1
+    %142:zpr = nofpexcept FMLA_ZZZI_S %142, %101, %74, 1
+    %143:zpr = nofpexcept FMLA_ZZZI_S %143, %100, %76, 1
+    %144:zpr = nofpexcept FMLA_ZZZI_S %144, %101, %76, 1
+    %145:zpr = nofpexcept FMLA_ZZZI_S %145, %100, %78, 1
+    %114:zpr = LD1W %71, %22, %70 :: (load (<vscale x 1 x s128>) from %ir.splitgep4)
+    %146:zpr = nofpexcept FMLA_ZZZI_S %146, %101, %78, 1
+    %147:zpr = nofpexcept FMLA_ZZZI_S %147, %100, %80, 1
+    %115:zpr = LD1B %97, %22, %6 :: (load (<vscale x 1 x s128>) from %ir.scevgep1)
+    %148:zpr = nofpexcept FMLA_ZZZI_S %148, %101, %80, 1
+    %149:zpr = nofpexcept FMLA_ZZZI_S %149, %100, %82, 1
+    %150:zpr = nofpexcept FMLA_ZZZI_S %150, %101, %82, 1
+    %139:zpr = nofpexcept FMLA_ZZZI_S %139, %114, %72, 2
+    %140:zpr = nofpexcept FMLA_ZZZI_S %140, %115, %72, 2
+    %141:zpr = nofpexcept FMLA_ZZZI_S %141, %114, %74, 2
+    %142:zpr = nofpexcept FMLA_ZZZI_S %142, %115, %74, 2
+    %143:zpr = nofpexcept FMLA_ZZZI_S %143, %114, %76, 2
+    %144:zpr = nofpexcept FMLA_ZZZI_S %144, %115, %76, 2
+    %145:zpr = nofpexcept FMLA_ZZZI_S %145, %114, %78, 2
+    %146:zpr = nofpexcept FMLA_ZZZI_S %146, %115, %78, 2
+    %128:zpr = LD1W %71, %22, %69 :: (load (<vscale x 1 x s128>) from %ir.splitgep5)
+    %129:zpr = LD1B %97, %22, %5 :: (load (<vscale x 1 x s128>) from %ir.scevgep)
+    %147:zpr = nofpexcept FMLA_ZZZI_S %147, %114, %80, 2
+    %148:zpr = nofpexcept FMLA_ZZZI_S %148, %115, %80, 2
+    %149:zpr = nofpexcept FMLA_ZZZI_S %149, %114, %82, 2
+    %150:zpr = nofpexcept FMLA_ZZZI_S %150, %115, %82, 2
+    %139:zpr = nofpexcept FMLA_ZZZI_S %139, %128, %72, 3
+    %140:zpr = nofpexcept FMLA_ZZZI_S %140, %129, %72, 3
+    %141:zpr = nofpexcept FMLA_ZZZI_S %141, %128, %74, 3
+    %142:zpr = nofpexcept FMLA_ZZZI_S %142, %129, %74, 3
+    %143:zpr = nofpexcept FMLA_ZZZI_S %143, %128, %76, 3
+    %144:zpr = nofpexcept FMLA_ZZZI_S %144, %129, %76, 3
+    %145:zpr = nofpexcept FMLA_ZZZI_S %145, %128, %78, 3
+    %146:zpr = nofpexcept FMLA_ZZZI_S %146, %129, %78, 3
+    %147:zpr = nofpexcept FMLA_ZZZI_S %147, %128, %80, 3
+    %148:zpr = nofpexcept FMLA_ZZZI_S %148, %129, %80, 3
+    %149:zpr = nofpexcept FMLA_ZZZI_S %149, %128, %82, 3
+    %150:zpr = nofpexcept FMLA_ZZZI_S %150, %129, %82, 3
+    %137:gpr64common = nsw ADDXri %137, 4, 0
+    dead $xzr = SUBSXri %137, 761, 0, implicit-def $nzcv
+    %151:gpr64common = ADDXrr %22, %47
+    %138:gpr64common = ADDXri %138, 16, 0
+    Bcc 3, %bb.1, implicit killed $nzcv
+    B %bb.2
+
+  bb.2.exit:
+    STR_ZXI %139, %40, 0 :: (store (<vscale x 1 x s128>) into %ir.C)
+    STR_ZXI %140, %40, 1 :: (store (<vscale x 1 x s128>) into %ir.C01)
+    STR_ZXI %141, %4, 0 :: (store (<vscale x 1 x s128>) into %ir.splitgep7)
+    STR_ZXI %142, %4, 1 :: (store (<vscale x 1 x s128>) into %ir.C11)
+    STR_ZXI %143, %3, 0 :: (store (<vscale x 1 x s128>) into %ir.splitgep8)
+    STR_ZXI %144, %3, 1 :: (store (<vscale x 1 x s128>) into %ir.C21)
+    STR_ZXI %145, %2, 0 :: (store (<vscale x 1 x s128>) into %ir.splitgep9)
+    STR_ZXI %146, %2, 1 :: (store (<vscale x 1 x s128>) into %ir.C31)
+    STR_ZXI %147, %1, 0 :: (store (<vscale x 1 x s128>) into %ir.splitgep10)
+    STR_ZXI %148, %1, 1 :: (store (<vscale x 1 x s128>) into %ir.C41)
+    STR_ZXI %149, %0, 0 :: (store (<vscale x 1 x s128>) into %ir.splitgep11)
+    STR_ZXI %150, %0, 1 :: (store (<vscale x 1 x s128>) into %ir.C51)
+    RET_ReallyLR
+...
+
+# Check that the loop does not have any spills
+
+# CHECK-LABEL: bb.1.loop
+# CHECK-NOT: STR_ZXI
+# CHECK: bb.2.exit:
