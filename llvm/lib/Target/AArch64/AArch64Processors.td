@@ -306,7 +306,8 @@ def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  FeatureAggressiveFMA,
                                  FeatureArithmeticBccFusion,
                                  FeatureStorePairSuppress,
-                                 FeaturePredictableSelectIsExpensive]>;
+                                 FeaturePredictableSelectIsExpensive,
+                                 FeatureDisableUnpredicatedLdStLower]>;
 
 def TuneMONAKA : SubtargetFeature<"fujitsu-monaka", "ARMProcFamily", "MONAKA",
                                  "Fujitsu FUJITSU-MONAKA processors", [

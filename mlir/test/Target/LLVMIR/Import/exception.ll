@@ -123,9 +123,7 @@ define void @landingpad_dominance() personality ptr @__gxx_personality_v0 {
 entry:
   ; CHECK:    %[[null:.*]] = llvm.mlir.zero : !llvm.ptr
   ; CHECK:    %[[c1:.*]] = llvm.mlir.constant(0 : i32) : i32
-  ; CHECK:    %[[undef:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i32)>
-  ; CHECK:    %[[tmpstruct:.*]] = llvm.insertvalue %[[null]], %[[undef]][0] : !llvm.struct<(ptr, i32)>
-  ; CHECK:    %[[struct:.*]] = llvm.insertvalue %[[c1]], %[[tmpstruct]][1] : !llvm.struct<(ptr, i32)>
+  ; CHECK:    %[[struct:.*]] = llvm.mlir.zero : !llvm.struct<(ptr, i32)>
   ; CHECK:    llvm.call @f0(%[[null]]) : (!llvm.ptr) -> ()
   call void @f0(ptr null)
   ; CHECK:    llvm.call @f1(%[[c1]]) : (i32) -> ()
@@ -190,3 +188,57 @@ bb3:
 !6 = !DILocation(line: 2, column: 2, scope: !3)
 !7 = !DILocation(line: 7, column: 4, scope: !4, inlinedAt: !6)
 !8 = !DILocalVariable(scope: !4, name: "size")
+
+; // -----
+
+declare i32 @__gxx_personality_v0(...)
+declare void @foo(ptr)
+
+; Test that landingpad filter clauses with zeroinitializer are correctly
+; translated to llvm.mlir.zero
+
+; CHECK-LABEL: @landingpad_zero_filter
+define void @landingpad_zero_filter() personality ptr @__gxx_personality_v0 {
+entry:
+  ; CHECK: %[[ZERO:.+]] = llvm.mlir.zero : !llvm.array<0 x ptr>
+  invoke void @foo(ptr null) to label %normal unwind label %lpad
+
+normal:
+  ret void
+
+lpad:
+  ; CHECK: %{{[0-9]+}} = llvm.landingpad cleanup (filter %[[ZERO]] : !llvm.array<0 x ptr>) : !llvm.struct<(ptr, i32)>
+  %0 = landingpad { ptr, i32 }
+          cleanup
+          filter [0 x ptr] zeroinitializer
+  ret void
+}
+
+; // -----
+
+declare i32 @__gxx_personality_v0(...)
+declare void @foo(ptr)
+
+; Test that landingpad with multiple filter clauses of different zero-element
+; array types are correctly handled. Note that zero-element arrays of primitive
+; types like i32 may be converted to dense attributes, while ptr arrays use
+; llvm.mlir.zero.
+
+; CHECK-LABEL: @landingpad_mixed_filters
+define void @landingpad_mixed_filters() personality ptr @__gxx_personality_v0 {
+entry:
+  ; CHECK: %[[ZERO1:.+]] = llvm.mlir.zero : !llvm.array<0 x ptr>
+  ; CHECK: %[[ZERO2:.+]] = llvm.mlir.{{(zero|constant)}}{{.*}}: !llvm.array<0 x i32>
+  invoke void @foo(ptr null) to label %normal unwind label %lpad
+
+normal:
+  ret void
+
+lpad:
+  ; CHECK: %{{[0-9]+}} = llvm.landingpad cleanup (filter %[[ZERO1]] : !llvm.array<0 x ptr>) (filter %[[ZERO2]] : !llvm.array<0 x i32>) : !llvm.struct<(ptr, i32)>
+  %0 = landingpad { ptr, i32 }
+          cleanup
+          filter [0 x ptr] zeroinitializer
+          filter [0 x i32] zeroinitializer
+  ret void
+}

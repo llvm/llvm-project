@@ -442,19 +442,19 @@ exit:
 ; low, so the discount in getPredBlockCostDivisor is high enough to not fit in
 ; uint32_t. Make sure we return uint64_t which fits all possible BlockFrequency
 ; values.
-define void @getPredBlockCostDivisor_truncate(i32 %0) {
+define void @getPredBlockCostDivisor_truncate(i32 %0, i1 %c1, i1 %c2, ptr %p) {
 ; CHECK-LABEL: define void @getPredBlockCostDivisor_truncate(
-; CHECK-SAME: i32 [[TMP0:%.*]]) {
+; CHECK-SAME: i32 [[TMP0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[TMP0]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    [[ISNAN_1:%.*]] = fcmp uno double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    br i1 [[ISNAN_1]], label %[[IF_1:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 [[C1]], label %[[IF_1:.*]], label %[[LATCH]], !prof [[PROF15:![0-9]+]]
 ; CHECK:       [[IF_1]]:
-; CHECK-NEXT:    [[ISNAN_2:%.*]] = fcmp uno double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    br i1 [[ISNAN_2]], label %[[IF_2:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[IF_2:.*]], label %[[LATCH]], !prof [[PROF15]]
 ; CHECK:       [[IF_2]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
@@ -468,14 +468,14 @@ entry:
 
 loop:
   %iv = phi i32 [ %0, %entry ], [ %iv.next, %latch ]
-  %isnan.1 = fcmp uno double 0.000000e+00, 0.000000e+00
-  br i1 %isnan.1, label %if.1, label %latch
+  br i1 %c1, label %if.1, label %latch, !prof !4
 
 if.1:
-  %isnan.2 = fcmp uno double 0.000000e+00, 0.000000e+00
-  br i1 %isnan.2, label %if.2, label %latch
+  br i1 %c2, label %if.2, label %latch, !prof !4
 
 if.2:
+  %gep = getelementptr i32, ptr %p, i32 %iv
+  store i32 0, ptr %gep
   br label %latch
 
 latch:
@@ -486,6 +486,8 @@ latch:
 exit:
   ret void
 }
+
+!4 = !{!"branch_weights", i32 0, i32 1}
 
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
@@ -503,4 +505,5 @@ exit:
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META10]], [[META11]]}
 ; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META11]], [[META10]]}
+; CHECK: [[PROF15]] = !{!"branch_weights", i32 0, i32 1}
 ;.
