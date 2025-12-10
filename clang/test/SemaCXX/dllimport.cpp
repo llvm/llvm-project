@@ -1526,6 +1526,28 @@ template <typename T> struct __declspec(dllimport) PartiallySpecializedClassTemp
 template <typename T> struct ExpliciallySpecializedClassTemplate {};
 template <> struct __declspec(dllimport) ExpliciallySpecializedClassTemplate<int> { void f() {} };
 
+// Function-local static constexpr in dllimport function (or class).
+struct DLLImportFuncWithConstexprStatic {
+  __declspec(dllimport) static const int *func() {
+    // expected-warning@-1{{'dllimport' attribute ignored on inline function}}
+    static constexpr int value = 42;
+    static constexpr const int *p = &value;
+    static_assert(*p == 42, "");
+    return p;
+  }
+  __declspec(dllimport) __forceinline static const int *funcForceInline() {
+    // expected-warning@-1{{'dllimport' attribute ignored on inline function}}
+    static constexpr int value = 42;
+    static constexpr const int *p = &value;
+    static_assert(*p == 42, "");
+    return p;
+  }
+};
+const int* (*pFunc)() = &DLLImportFuncWithConstexprStatic::func;
+const int* (*pFuncForceInline)() = &DLLImportFuncWithConstexprStatic::funcForceInline;
+bool UsedDLLImportFuncWithConstexprStatic() {
+  return pFunc() == DLLImportFuncWithConstexprStatic::func() && pFuncForceInline() == DLLImportFuncWithConstexprStatic::funcForceInline();
+}
 
 //===----------------------------------------------------------------------===//
 // Classes with template base classes
