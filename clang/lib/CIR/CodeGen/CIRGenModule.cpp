@@ -21,7 +21,9 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -30,6 +32,8 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
+
+#include <algorithm>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -960,9 +964,36 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
     return builder.getString(str, eltTy, finalSize);
   }
 
-  errorNYI(e->getSourceRange(),
-           "getConstantArrayFromStringLiteral: wide characters");
-  return mlir::Attribute();
+  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(convertType(e->getType()));
+  assert(arrayTy && "string literals must be emitted as an array type");
+
+  auto arrayEltTy = mlir::dyn_cast<cir::IntType>(arrayTy.getElementType());
+  assert(arrayEltTy &&
+         "string literal elements must be emitted as integral type");
+
+  auto arraySize = arrayTy.getSize();
+  auto literalSize = e->getLength();
+
+  // Collect the code units.
+  SmallVector<uint32_t, 32> elementValues;
+  elementValues.reserve(arraySize);
+  for (unsigned i = 0; i < literalSize; ++i)
+    elementValues.push_back(e->getCodeUnit(i));
+  elementValues.resize(arraySize);
+
+  // If the string is full of null bytes, emit a #cir.zero instead.
+  if (std::all_of(elementValues.begin(), elementValues.end(),
+                  [](uint32_t x) { return x == 0; }))
+    return cir::ZeroAttr::get(arrayTy);
+
+  // Otherwise emit a constant array holding the characters.
+  SmallVector<mlir::Attribute, 32> elements;
+  elements.reserve(arraySize);
+  for (uint64_t i = 0; i < arraySize; ++i)
+    elements.push_back(cir::IntAttr::get(arrayEltTy, elementValues[i]));
+
+  auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
+  return builder.getConstArray(elementsAttr, arrayTy);
 }
 
 bool CIRGenModule::supportsCOMDAT() const {
