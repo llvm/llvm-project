@@ -41,7 +41,7 @@ void InitializePlatformInterceptors();
 // Use macro to describe if specific function should be
 // intercepted on a given platform.
 #  if !SANITIZER_WINDOWS
-     // AIX currently can't retrieve the address of _longjmp
+   // AIX currently can't retrieve the address of _longjmp
 #    if !SANITIZER_AIX
 #      define ASAN_INTERCEPT__LONGJMP 1
 #    else
@@ -108,7 +108,7 @@ void InitializePlatformInterceptors();
 #    define ASAN_INTERCEPT_EXIT 1
 #  else
 #    define ASAN_INTERCEPT_EXIT 0
- #  endif
+#  endif
 
 #  if SANITIZER_NETBSD
 #    define ASAN_INTERCEPT_ATEXIT 1
