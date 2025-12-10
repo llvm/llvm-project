@@ -2847,7 +2847,7 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
 }
 
 // Return true if its cheap to bitcast this to a vector type.
-static bool mayFoldToVector(SDValue Op, const X86Subtarget &Subtarget) {
+static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget) {
   if (peekThroughBitcasts(Op).getValueType().isVector())
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
@@ -33967,7 +33967,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     assert(Subtarget.hasCDI() && "AVX512CD required");
     assert((VT == MVT::i256 || VT == MVT::i512) && "Unexpected VT!");
-    if (VT == MVT::i256 && !mayFoldToVector(N0, Subtarget))
+    if (VT == MVT::i256 && !mayFoldIntoVector(N0, Subtarget))
       return;
 
     unsigned SizeInBits = VT.getSizeInBits();
