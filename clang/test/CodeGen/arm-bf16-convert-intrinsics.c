@@ -314,4 +314,3 @@ bfloat16_t test_vcvth_bf16_f32(float32_t a) {
 float32_t test_vcvtah_f32_bf16(bfloat16_t a) {
   return vcvtah_f32_bf16(a);
 }
-
