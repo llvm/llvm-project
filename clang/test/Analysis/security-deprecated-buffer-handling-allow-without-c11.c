@@ -1,22 +1,61 @@
-// Test 1: Without C11 and without flag - should NOT warn
-// RUN: %clang_analyze_cc1 %s -verify=c99-noflag -std=gnu99 \
-// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+// These cases should not warn
 
-// Test 2: Without C11 but with flag enabled - should warn
+// C99 with "all" mode
 // RUN: %clang_analyze_cc1 %s -verify=common -std=gnu99 \
 // RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
-// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportInC99AndEarlier=true
+// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=all
 
-// Test 3: With C11 - should warn (existing behavior)
+// C11 with default mode
 // RUN: %clang_analyze_cc1 %s -verify=common -std=gnu11 \
 // RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+
+// C11 with "all" mode
+// RUN: %clang_analyze_cc1 %s -verify=common -std=gnu11 \
+// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
+// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=all
+
+// C11 with "c11-only" mode
+// RUN: %clang_analyze_cc1 %s -verify=common -std=gnu11 \
+// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
+// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=c11-only
+
+// C11 with "actionable" mode and Annex K available
+// RUN: %clang_analyze_cc1 %s -verify=common -std=gnu11 \
+// RUN:   -D__STDC_LIB_EXT1__=200509L -D__STDC_WANT_LIB_EXT1__=1 \
+// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
+// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=actionable
+
+// These cases should not warn
+
+// C99 with default mode
+// RUN: %clang_analyze_cc1 %s -verify=c99-default -std=gnu99 \
+// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+
+// C99 with "actionable" mode and no Annex K
+// RUN: %clang_analyze_cc1 %s -verify=c99-actionable -std=gnu99 \
+// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
+// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=actionable
+
+// C99 with "c11-only" mode
+// RUN: %clang_analyze_cc1 %s -verify=c99-c11only -std=gnu99 \
+// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
+// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=c11-only
+
+// C11 with "actionable" mode and no Annex K
+// RUN: %clang_analyze_cc1 %s -verify=c11-actionable-noannex -std=gnu11 \
+// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
+// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=actionable
+
 
 #include "Inputs/system-header-simulator.h"
 
 extern char buf[128];
 extern char src[128];
 
-// c99-noflag-no-diagnostics
+// c99-default-no-diagnostics
+// c99-actionable-no-diagnostics
+// c99-c11only-no-diagnostics
+// c11-actionable-noannex-no-diagnostics
 
 void test_memcpy(void) {
   memcpy(buf, src, 10);

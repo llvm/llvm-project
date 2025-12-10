@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/AnnexKDetection.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
@@ -34,6 +35,9 @@ static bool isArc4RandomAvailable(const ASTContext &Ctx) {
 }
 
 namespace {
+
+enum class ReportPolicy { All, Actionable, C11Only };
+
 struct ChecksFilter {
   bool check_bcmp = false;
   bool check_bcopy = false;
@@ -50,7 +54,7 @@ struct ChecksFilter {
   bool check_UncheckedReturn = false;
   bool check_decodeValueOfObjCType = false;
 
-  bool reportDeprecatedOrUnsafeBufferHandlingInC99AndEarlier = false;
+  ReportPolicy ReportMode = ReportPolicy::C11Only;
 
   CheckerNameRef checkName_bcmp;
   CheckerNameRef checkName_bcopy;
@@ -756,8 +760,22 @@ void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
   if (!filter.check_DeprecatedOrUnsafeBufferHandling)
     return;
 
-  if (!(BR.getContext().getLangOpts().C11 ||
-        filter.reportDeprecatedOrUnsafeBufferHandlingInC99AndEarlier))
+  const bool ShouldReport = [this] {
+    const bool IsAnnexKAvailable = analysis::isAnnexKAvailable(
+        &BR.getPreprocessor(), BR.getContext().getLangOpts());
+    const bool IsC11OrLaterStandard = BR.getContext().getLangOpts().C11;
+
+    switch (filter.ReportMode) {
+    case ReportPolicy::All:
+      return true;
+    case ReportPolicy::Actionable:
+      return IsAnnexKAvailable;
+    case ReportPolicy::C11Only:
+      return IsC11OrLaterStandard;
+    }
+  }();
+
+  if (!ShouldReport)
     return;
 
   // Issue a warning. ArgIndex == -1: Deprecated but not unsafe (has size
@@ -1122,9 +1140,21 @@ void ento::registerDeprecatedOrUnsafeBufferHandling(CheckerManager &Mgr) {
   Checker->filter.check_DeprecatedOrUnsafeBufferHandling = true;
   Checker->filter.checkName_DeprecatedOrUnsafeBufferHandling =
       Mgr.getCurrentCheckerName();
-  Checker->filter.reportDeprecatedOrUnsafeBufferHandlingInC99AndEarlier =
-      Mgr.getAnalyzerOptions().getCheckerBooleanOption(
-          Mgr.getCurrentCheckerName(), "ReportInC99AndEarlier");
+
+  // Parse ReportMode option (defaults to C11Only for backward compatibility)
+  StringRef ReportModeStr = Mgr.getAnalyzerOptions().getCheckerStringOption(
+      Mgr.getCurrentCheckerName(), "ReportMode");
+  if (ReportModeStr == "all")
+    Checker->filter.ReportMode = ReportPolicy::All;
+  else if (ReportModeStr == "actionable")
+    Checker->filter.ReportMode = ReportPolicy::Actionable;
+  else if (ReportModeStr == "c11-only")
+    Checker->filter.ReportMode = ReportPolicy::C11Only;
+  else
+    Mgr.reportInvalidCheckerOptionValue(
+        Checker, "ReportMode",
+        "ReportMode should be one of the folliwing values: \"all\", "
+        "\"actionable\" or \"c11-only\" (the default)");
 }
 
 bool ento::shouldRegisterDeprecatedOrUnsafeBufferHandling(
