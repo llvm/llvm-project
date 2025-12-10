@@ -11,7 +11,6 @@
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
@@ -20,15 +19,10 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LSP/Logging.h"
 #include "llvm/Support/SourceMgr.h"
 
-#include <filesystem>
 #include <memory>
-#include <string>
 
 namespace llvm {
 // Tracks and Manages the Cache of all Artifacts for a given IR.
