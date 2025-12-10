@@ -807,6 +807,15 @@ public:
   /// the execution of the binary is completed.
   std::optional<uint64_t> FiniFunctionAddress;
 
+  /// DT_INIT.
+  std::optional<uint64_t> InitAddress;
+
+  /// DT_INIT_ARRAY. Only used when DT_INIT is not set.
+  std::optional<uint64_t> InitArrayAddress;
+
+  /// DT_INIT_ARRAYSZ. Only used when DT_INIT is not set.
+  std::optional<uint64_t> InitArraySize;
+
   /// DT_FINI.
   std::optional<uint64_t> FiniAddress;
 

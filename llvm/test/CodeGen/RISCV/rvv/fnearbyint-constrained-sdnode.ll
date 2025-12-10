@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfh,+v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,RV64 %s
 
-declare <vscale x 1 x half> @llvm.experimental.constrained.nearbyint.nxv1f16(<vscale x 1 x half>, metadata, metadata)
-
 define <vscale x 1 x half> @nearbyint_nxv1f16(<vscale x 1 x half> %v) strictfp {
 ; CHECK-LABEL: nearbyint_nxv1f16:
 ; CHECK:       # %bb.0:
@@ -28,8 +26,6 @@ define <vscale x 1 x half> @nearbyint_nxv1f16(<vscale x 1 x half> %v) strictfp {
   %r = call <vscale x 1 x half> @llvm.experimental.constrained.nearbyint.nxv1f16(<vscale x 1 x half> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 1 x half> %r
 }
-
-declare <vscale x 2 x half> @llvm.experimental.constrained.nearbyint.nxv2f16(<vscale x 2 x half>, metadata, metadata)
 
 define <vscale x 2 x half> @nearbyint_nxv2f16(<vscale x 2 x half> %v) strictfp {
 ; CHECK-LABEL: nearbyint_nxv2f16:
@@ -54,8 +50,6 @@ define <vscale x 2 x half> @nearbyint_nxv2f16(<vscale x 2 x half> %v) strictfp {
   ret <vscale x 2 x half> %r
 }
 
-declare <vscale x 4 x half> @llvm.experimental.constrained.nearbyint.nxv4f16(<vscale x 4 x half>, metadata, metadata)
-
 define <vscale x 4 x half> @nearbyint_nxv4f16(<vscale x 4 x half> %v) strictfp {
 ; CHECK-LABEL: nearbyint_nxv4f16:
 ; CHECK:       # %bb.0:
@@ -78,8 +72,6 @@ define <vscale x 4 x half> @nearbyint_nxv4f16(<vscale x 4 x half> %v) strictfp {
   %r = call <vscale x 4 x half> @llvm.experimental.constrained.nearbyint.nxv4f16(<vscale x 4 x half> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 4 x half> %r
 }
-
-declare <vscale x 8 x half> @llvm.experimental.constrained.nearbyint.nxv8f16(<vscale x 8 x half>, metadata, metadata)
 
 define <vscale x 8 x half> @nearbyint_nxv8f16(<vscale x 8 x half> %v) strictfp {
 ; CHECK-LABEL: nearbyint_nxv8f16:
@@ -104,8 +96,6 @@ define <vscale x 8 x half> @nearbyint_nxv8f16(<vscale x 8 x half> %v) strictfp {
   ret <vscale x 8 x half> %r
 }
 
-declare <vscale x 16 x half> @llvm.experimental.constrained.nearbyint.nxv16f16(<vscale x 16 x half>, metadata, metadata)
-
 define <vscale x 16 x half> @nearbyint_nxv16f16(<vscale x 16 x half> %v) strictfp {
 ; CHECK-LABEL: nearbyint_nxv16f16:
 ; CHECK:       # %bb.0:
@@ -128,8 +118,6 @@ define <vscale x 16 x half> @nearbyint_nxv16f16(<vscale x 16 x half> %v) strictf
   %r = call <vscale x 16 x half> @llvm.experimental.constrained.nearbyint.nxv16f16(<vscale x 16 x half> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 16 x half> %r
 }
-
-declare <vscale x 32 x half> @llvm.experimental.constrained.nearbyint.nxv32f16(<vscale x 32 x half>, metadata, metadata)
 
 define <vscale x 32 x half> @nearbyint_nxv32f16(<vscale x 32 x half> %v) strictfp {
 ; CHECK-LABEL: nearbyint_nxv32f16:
@@ -154,8 +142,6 @@ define <vscale x 32 x half> @nearbyint_nxv32f16(<vscale x 32 x half> %v) strictf
   ret <vscale x 32 x half> %r
 }
 
-declare <vscale x 1 x float> @llvm.experimental.constrained.nearbyint.nxv1f32(<vscale x 1 x float>, metadata, metadata)
-
 define <vscale x 1 x float> @nearbyint_nxv1f32(<vscale x 1 x float> %v) strictfp {
 ; CHECK-LABEL: nearbyint_nxv1f32:
 ; CHECK:       # %bb.0:
@@ -177,8 +163,6 @@ define <vscale x 1 x float> @nearbyint_nxv1f32(<vscale x 1 x float> %v) strictfp
   %r = call <vscale x 1 x float> @llvm.experimental.constrained.nearbyint.nxv1f32(<vscale x 1 x float> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 1 x float> %r
 }
-
-declare <vscale x 2 x float> @llvm.experimental.constrained.nearbyint.nxv2f32(<vscale x 2 x float>, metadata, metadata)
 
 define <vscale x 2 x float> @nearbyint_nxv2f32(<vscale x 2 x float> %v) strictfp {
 ; CHECK-LABEL: nearbyint_nxv2f32:
@@ -202,8 +186,6 @@ define <vscale x 2 x float> @nearbyint_nxv2f32(<vscale x 2 x float> %v) strictfp
   ret <vscale x 2 x float> %r
 }
 
-declare <vscale x 4 x float> @llvm.experimental.constrained.nearbyint.nxv4f32(<vscale x 4 x float>, metadata, metadata)
-
 define <vscale x 4 x float> @nearbyint_nxv4f32(<vscale x 4 x float> %v) strictfp {
 ; CHECK-LABEL: nearbyint_nxv4f32:
 ; CHECK:       # %bb.0:
@@ -225,8 +207,6 @@ define <vscale x 4 x float> @nearbyint_nxv4f32(<vscale x 4 x float> %v) strictfp
   %r = call <vscale x 4 x float> @llvm.experimental.constrained.nearbyint.nxv4f32(<vscale x 4 x float> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 4 x float> %r
 }
-
-declare <vscale x 8 x float> @llvm.experimental.constrained.nearbyint.nxv8f32(<vscale x 8 x float>, metadata, metadata)
 
 define <vscale x 8 x float> @nearbyint_nxv8f32(<vscale x 8 x float> %v) strictfp {
 ; CHECK-LABEL: nearbyint_nxv8f32:
@@ -250,8 +230,6 @@ define <vscale x 8 x float> @nearbyint_nxv8f32(<vscale x 8 x float> %v) strictfp
   ret <vscale x 8 x float> %r
 }
 
-declare <vscale x 16 x float> @llvm.experimental.constrained.nearbyint.nxv16f32(<vscale x 16 x float>, metadata, metadata)
-
 define <vscale x 16 x float> @nearbyint_nxv16f32(<vscale x 16 x float> %v) strictfp {
 ; CHECK-LABEL: nearbyint_nxv16f32:
 ; CHECK:       # %bb.0:
@@ -273,8 +251,6 @@ define <vscale x 16 x float> @nearbyint_nxv16f32(<vscale x 16 x float> %v) stric
   %r = call <vscale x 16 x float> @llvm.experimental.constrained.nearbyint.nxv16f32(<vscale x 16 x float> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 16 x float> %r
 }
-
-declare <vscale x 1 x double> @llvm.experimental.constrained.nearbyint.nxv1f64(<vscale x 1 x double>, metadata, metadata)
 
 define <vscale x 1 x double> @nearbyint_nxv1f64(<vscale x 1 x double> %v) strictfp {
 ; RV32-LABEL: nearbyint_nxv1f64:
@@ -317,8 +293,6 @@ define <vscale x 1 x double> @nearbyint_nxv1f64(<vscale x 1 x double> %v) strict
   ret <vscale x 1 x double> %r
 }
 
-declare <vscale x 2 x double> @llvm.experimental.constrained.nearbyint.nxv2f64(<vscale x 2 x double>, metadata, metadata)
-
 define <vscale x 2 x double> @nearbyint_nxv2f64(<vscale x 2 x double> %v) strictfp {
 ; RV32-LABEL: nearbyint_nxv2f64:
 ; RV32:       # %bb.0:
@@ -360,8 +334,6 @@ define <vscale x 2 x double> @nearbyint_nxv2f64(<vscale x 2 x double> %v) strict
   ret <vscale x 2 x double> %r
 }
 
-declare <vscale x 4 x double> @llvm.experimental.constrained.nearbyint.nxv4f64(<vscale x 4 x double>, metadata, metadata)
-
 define <vscale x 4 x double> @nearbyint_nxv4f64(<vscale x 4 x double> %v) strictfp {
 ; RV32-LABEL: nearbyint_nxv4f64:
 ; RV32:       # %bb.0:
@@ -402,8 +374,6 @@ define <vscale x 4 x double> @nearbyint_nxv4f64(<vscale x 4 x double> %v) strict
   %r = call <vscale x 4 x double> @llvm.experimental.constrained.nearbyint.nxv4f64(<vscale x 4 x double> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 4 x double> %r
 }
-
-declare <vscale x 8 x double> @llvm.experimental.constrained.nearbyint.nxv8f64(<vscale x 8 x double>, metadata, metadata)
 
 define <vscale x 8 x double> @nearbyint_nxv8f64(<vscale x 8 x double> %v) strictfp {
 ; RV32-LABEL: nearbyint_nxv8f64:

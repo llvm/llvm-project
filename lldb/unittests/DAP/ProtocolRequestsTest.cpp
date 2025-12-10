@@ -77,7 +77,7 @@ TEST(ProtocolRequestsTest, EvaluateArguments) {
   EXPECT_EQ(expected->expression, "hello world");
   EXPECT_EQ(expected->context, eEvaluateContextRepl);
 
-  // Check required keys;
+  // Check required keys.
   EXPECT_THAT_EXPECTED(parse<EvaluateArguments>(R"({})"),
                        FailedWithMessage("missing value at (root).expression"));
 }
@@ -117,4 +117,68 @@ TEST(ProtocolRequestsTest, EvaluateResponseBody) {
 
   ASSERT_THAT_EXPECTED(expected_opt, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected_opt), PrettyPrint(body));
+}
+
+TEST(ProtocolRequestsTest, InitializeRequestArguments) {
+  llvm::Expected<InitializeRequestArguments> expected =
+      parse<InitializeRequestArguments>(R"({"adapterID": "myid"})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->adapterID, "myid");
+
+  // Check optional keys.
+  expected = parse<InitializeRequestArguments>(R"({
+    "adapterID": "myid",
+    "clientID": "myclientid",
+    "clientName": "lldb-dap-unit-tests",
+    "locale": "en-US",
+    "linesStartAt1": true,
+    "columnsStartAt1": true,
+    "pathFormat": "uri",
+    "supportsVariableType": true,
+    "supportsVariablePaging": true,
+    "supportsRunInTerminalRequest": true,
+    "supportsMemoryReferences": true,
+    "supportsProgressReporting": true,
+    "supportsInvalidatedEvent": true,
+    "supportsMemoryEvent": true,
+    "supportsArgsCanBeInterpretedByShell": true,
+    "supportsStartDebuggingRequest": true,
+    "supportsANSIStyling": true
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->adapterID, "myid");
+  EXPECT_EQ(expected->clientID, "myclientid");
+  EXPECT_EQ(expected->clientName, "lldb-dap-unit-tests");
+  EXPECT_EQ(expected->locale, "en-US");
+  EXPECT_EQ(expected->linesStartAt1, true);
+  EXPECT_EQ(expected->columnsStartAt1, true);
+  EXPECT_EQ(expected->pathFormat, ePathFormatURI);
+  EXPECT_EQ(expected->supportedFeatures.contains(eClientFeatureVariableType),
+            true);
+  EXPECT_EQ(
+      expected->supportedFeatures.contains(eClientFeatureRunInTerminalRequest),
+      true);
+  EXPECT_EQ(
+      expected->supportedFeatures.contains(eClientFeatureMemoryReferences),
+      true);
+  EXPECT_EQ(
+      expected->supportedFeatures.contains(eClientFeatureProgressReporting),
+      true);
+  EXPECT_EQ(
+      expected->supportedFeatures.contains(eClientFeatureInvalidatedEvent),
+      true);
+  EXPECT_EQ(expected->supportedFeatures.contains(eClientFeatureMemoryEvent),
+            true);
+  EXPECT_EQ(expected->supportedFeatures.contains(
+                eClientFeatureArgsCanBeInterpretedByShell),
+            true);
+  EXPECT_EQ(
+      expected->supportedFeatures.contains(eClientFeatureStartDebuggingRequest),
+      true);
+  EXPECT_EQ(expected->supportedFeatures.contains(eClientFeatureANSIStyling),
+            true);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<InitializeRequestArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).adapterID"));
 }

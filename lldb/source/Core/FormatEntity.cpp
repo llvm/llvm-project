@@ -27,6 +27,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/BorrowedStackFrame.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Language.h"
@@ -109,6 +110,7 @@ constexpr Definition g_frame_child_entries[] = {
                                   g_string_entry),
     Definition("is-artificial", EntryType::FrameIsArtificial),
     Definition("kind", EntryType::FrameKind),
+    Definition("borrowed-info", EntryType::FrameBorrowedInfo),
 };
 
 constexpr Definition g_function_child_entries[] = {
@@ -382,6 +384,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FrameRegisterByName);
     ENUM_TO_CSTR(FrameIsArtificial);
     ENUM_TO_CSTR(FrameKind);
+    ENUM_TO_CSTR(FrameBorrowedInfo);
     ENUM_TO_CSTR(ScriptFrame);
     ENUM_TO_CSTR(FunctionID);
     ENUM_TO_CSTR(FunctionDidChange);
@@ -1757,6 +1760,22 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
         else if (frame->IsHistorical())
           s.PutCString(" [history]");
         return true;
+      }
+    return false;
+  }
+
+  case Entry::Type::FrameBorrowedInfo: {
+    if (exe_ctx)
+      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+        if (BorrowedStackFrame *borrowed_frame =
+                llvm::dyn_cast<BorrowedStackFrame>(frame)) {
+          if (lldb::StackFrameSP borrowed_from_sp =
+                  borrowed_frame->GetBorrowedFrame()) {
+            s.Printf(" [borrowed from frame #%u]",
+                     borrowed_from_sp->GetFrameIndex());
+            return true;
+          }
+        }
       }
     return false;
   }

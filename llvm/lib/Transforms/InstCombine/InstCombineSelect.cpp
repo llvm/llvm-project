@@ -1163,6 +1163,7 @@ static Value *canonicalizeSaturatedAddSigned(ICmpInst *Cmp, Value *TVal,
   // (X >= Y) ? INT_MAX : (X + C) --> sadd.sat(X, C)
   // where Y is INT_MAX - C or INT_MAX - C - 1, and C > 0
   if ((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE) &&
+      isa<Constant>(Cmp1) &&
       match(FVal, m_Add(m_Specific(Cmp0), m_StrictlyPositive(C)))) {
     APInt IntMax =
         APInt::getSignedMaxValue(Cmp1->getType()->getScalarSizeInBits());

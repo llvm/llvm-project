@@ -40,13 +40,15 @@ class OpenMP_EnumAttr<EnumAttrInfo enumInfo, string name>
 // capture_clause enum.
 //===----------------------------------------------------------------------===//
 
-def CaptureClauseTo : I32EnumAttrCase<"to", 0>;
-def CaptureClauseLink : I32EnumAttrCase<"link", 1>;
-def CaptureClauseEnter : I32EnumAttrCase<"enter", 2>;
+def CaptureClauseNone : I32EnumAttrCase<"none", 0>;
+def CaptureClauseTo : I32EnumAttrCase<"to", 1>;
+def CaptureClauseLink : I32EnumAttrCase<"link", 2>;
+def CaptureClauseEnter : I32EnumAttrCase<"enter", 3>;
 
 def DeclareTargetCaptureClause : OpenMP_I32EnumAttr<
     "DeclareTargetCaptureClause",
     "capture clause", [
+      CaptureClauseNone,
       CaptureClauseTo,
       CaptureClauseLink,
       CaptureClauseEnter

@@ -3077,6 +3077,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::ptrauth_auth:
   case Intrinsic::ptrauth_resign: {
+    // We don't support this optimization on intrinsic calls with deactivation
+    // symbols, which are represented using operand bundles.
+    if (II->hasOperandBundles())
+      break;
+
     // (sign|resign) + (auth|resign) can be folded by omitting the middle
     // sign+auth component if the key and discriminator match.
     bool NeedSign = II->getIntrinsicID() == Intrinsic::ptrauth_resign;
@@ -3088,6 +3093,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // whatever we replace this sequence with.
     Value *AuthKey = nullptr, *AuthDisc = nullptr, *BasePtr;
     if (const auto *CI = dyn_cast<CallBase>(Ptr)) {
+      // We don't support this optimization on intrinsic calls with deactivation
+      // symbols, which are represented using operand bundles.
+      if (CI->hasOperandBundles())
+        break;
+
       BasePtr = CI->getArgOperand(0);
       if (CI->getIntrinsicID() == Intrinsic::ptrauth_sign) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
@@ -3110,9 +3120,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (NeedSign && isa<ConstantInt>(II->getArgOperand(4))) {
         auto *SignKey = cast<ConstantInt>(II->getArgOperand(3));
         auto *SignDisc = cast<ConstantInt>(II->getArgOperand(4));
-        auto *SignAddrDisc = ConstantPointerNull::get(Builder.getPtrTy());
+        auto *Null = ConstantPointerNull::get(Builder.getPtrTy());
         auto *NewCPA = ConstantPtrAuth::get(CPA->getPointer(), SignKey,
-                                            SignDisc, SignAddrDisc);
+                                            SignDisc, /*AddrDisc=*/Null,
+                                            /*DeactivationSymbol=*/Null);
         replaceInstUsesWith(
             *II, ConstantExpr::getPointerCast(NewCPA, II->getType()));
         return eraseInstFromFunction(*II);
@@ -4004,6 +4015,27 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                     ConstantInt::get(OpTy, Op1->usub_sat(*Op0))}));
     }
     break;
+  }
+  case Intrinsic::experimental_get_vector_length: {
+    // get.vector.length(Cnt, MaxLanes) --> Cnt when Cnt <= MaxLanes
+    unsigned BitWidth =
+        std::max(II->getArgOperand(0)->getType()->getScalarSizeInBits(),
+                 II->getType()->getScalarSizeInBits());
+    ConstantRange Cnt =
+        computeConstantRangeIncludingKnownBits(II->getArgOperand(0), false,
+                                               SQ.getWithInstruction(II))
+            .zextOrTrunc(BitWidth);
+    ConstantRange MaxLanes = cast<ConstantInt>(II->getArgOperand(1))
+                                 ->getValue()
+                                 .zextOrTrunc(Cnt.getBitWidth());
+    if (cast<ConstantInt>(II->getArgOperand(2))->isOne())
+      MaxLanes = MaxLanes.multiply(
+          getVScaleRange(II->getFunction(), Cnt.getBitWidth()));
+
+    if (Cnt.icmp(CmpInst::ICMP_ULE, MaxLanes))
+      return replaceInstUsesWith(
+          *II, Builder.CreateZExtOrTrunc(II->getArgOperand(0), II->getType()));
+    return nullptr;
   }
   default: {
     // Handle target specific intrinsics

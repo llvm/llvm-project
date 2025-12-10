@@ -108,23 +108,23 @@ struct InitializeRequestArguments {
   std::string adapterID;
 
   /// The ID of the client using this adapter.
-  std::optional<std::string> clientID;
+  std::string clientID;
 
   /// The human-readable name of the client using this adapter.
-  std::optional<std::string> clientName;
+  std::string clientName;
 
   /// The ISO-639 locale of the client using this adapter, e.g. en-US or de-CH.
-  std::optional<std::string> locale;
+  std::string locale;
 
   /// Determines in what format paths are specified. The default is `path`,
   /// which is the native format.
   PathFormat pathFormat = ePatFormatPath;
 
   /// If true all line numbers are 1-based (default).
-  std::optional<bool> linesStartAt1;
+  bool linesStartAt1 = true;
 
   /// If true all column numbers are 1-based (default).
-  std::optional<bool> columnsStartAt1;
+  bool columnsStartAt1 = true;
 
   /// The set of supported features reported by the client.
   llvm::DenseSet<ClientFeature> supportedFeatures;
@@ -133,7 +133,7 @@ struct InitializeRequestArguments {
   /// @{
 
   /// Source init files when initializing lldb::SBDebugger.
-  std::optional<bool> lldbExtSourceInitFile;
+  bool lldbExtSourceInitFile = true;
 
   /// @}
 };
@@ -349,6 +349,12 @@ struct AttachRequestArguments {
 
   /// Path to the core file to debug.
   std::string coreFile;
+
+  /// Unique ID of an existing target to attach to.
+  std::optional<lldb::user_id_t> targetId;
+
+  /// ID of an existing debugger instance to use.
+  std::optional<int> debuggerId;
 
   /// @}
 };

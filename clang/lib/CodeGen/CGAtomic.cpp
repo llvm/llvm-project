@@ -16,8 +16,8 @@
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
@@ -767,6 +767,13 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     Op = llvm::AtomicRMWInst::Nand;
     break;
 
+  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
+    Op = llvm::AtomicRMWInst::UIncWrap;
+    break;
+  case AtomicExpr::AO__scoped_atomic_udec_wrap:
+    Op = llvm::AtomicRMWInst::UDecWrap;
+    break;
+
   case AtomicExpr::AO__atomic_test_and_set: {
     llvm::AtomicRMWInst *RMWI =
         CGF.emitAtomicRMWInst(llvm::AtomicRMWInst::Xchg, Ptr,
@@ -1071,6 +1078,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
+  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
+  case AtomicExpr::AO__scoped_atomic_udec_wrap:
     Val1 = EmitValToTemp(*this, E->getVal1());
     break;
   }
@@ -1269,6 +1278,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__opencl_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_max_fetch:
+    case AtomicExpr::AO__scoped_atomic_uinc_wrap:
+    case AtomicExpr::AO__scoped_atomic_udec_wrap:
     case AtomicExpr::AO__atomic_test_and_set:
     case AtomicExpr::AO__atomic_clear:
       llvm_unreachable("Integral atomic operations always become atomicrmw!");

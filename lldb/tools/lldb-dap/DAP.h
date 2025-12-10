@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_DAP_H
 
 #include "DAPForward.h"
+#include "DAPSessionManager.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "InstructionBreakpoint.h"
@@ -47,6 +48,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -81,6 +83,8 @@ enum class ReplMode { Variable = 0, Command, Auto };
 using DAPTransport = lldb_private::transport::JSONTransport<ProtocolDescriptor>;
 
 struct DAP final : public DAPTransport::MessageHandler {
+  friend class DAPSessionManager;
+
   /// Path to the lldb-dap binary itself.
   static llvm::StringRef debug_adapter_path;
 
@@ -156,6 +160,11 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   /// Whether to disable sourcing .lldbinit files.
   bool no_lldbinit;
+
+  /// Stores whether the initialize request specified a value for
+  /// lldbExtSourceInitFile. Used by the test suite to prevent sourcing
+  /// `.lldbinit` and changing its behavior.
+  bool sourceInitFile = true;
 
   /// The initial thread list upon attaching.
   std::vector<protocol::Thread> initial_thread_list;
@@ -408,8 +417,32 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
 
+  /// Get the client name for this DAP session.
+  llvm::StringRef GetClientName() const { return m_client_name; }
+
   void StartEventThread();
   void StartProgressEventThread();
+
+  /// DAP debugger initialization functions.
+  /// @{
+
+  /// Perform complete DAP initialization for a new debugger.
+  llvm::Error InitializeDebugger();
+
+  /// Perform complete DAP initialization by reusing an existing debugger and
+  /// target.
+  ///
+  /// \param[in] debugger_id
+  ///     The ID of the existing debugger to reuse.
+  ///
+  /// \param[in] target_id
+  ///     The globally unique ID of the existing target to reuse.
+  llvm::Error InitializeDebugger(int debugger_id, lldb::user_id_t target_id);
+
+  /// Start event handling threads based on client capabilities.
+  void StartEventThreads();
+
+  /// @}
 
   /// Sets the given protocol `breakpoints` in the given `source`, while
   /// removing any existing breakpoints in the given source if they are not in
@@ -453,15 +486,11 @@ private:
 
   /// Event threads.
   /// @{
-  void EventThread();
-  void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited);
-  void HandleTargetEvent(const lldb::SBEvent &event);
-  void HandleBreakpointEvent(const lldb::SBEvent &event);
-  void HandleThreadEvent(const lldb::SBEvent &event);
-  void HandleDiagnosticEvent(const lldb::SBEvent &event);
   void ProgressEventThread();
 
-  std::thread event_thread;
+  /// Event thread is a shared pointer in case we have a multiple
+  /// DAP instances sharing the same event thread.
+  std::shared_ptr<ManagedEventThread> event_thread_sp;
   std::thread progress_event_thread;
   /// @}
 

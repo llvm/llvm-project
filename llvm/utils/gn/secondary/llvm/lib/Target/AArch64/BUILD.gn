@@ -76,6 +76,7 @@ tablegen("AArch64GenSDNodeInfo") {
   visibility = [
     ":LLVMAArch64CodeGen",
     "//bolt/unittests/Core:CoreTests",
+    "//bolt/unittests/Passes:PassTests",
     "//llvm/unittests/Target/AArch64:AArch64Tests",
   ]
   args = [ "-gen-sd-node-info" ]

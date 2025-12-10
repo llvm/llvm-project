@@ -345,9 +345,7 @@ public:
 
 class WaitcntGeneratorPreGFX12 : public WaitcntGenerator {
 public:
-  WaitcntGeneratorPreGFX12() = default;
-  WaitcntGeneratorPreGFX12(const MachineFunction &MF)
-      : WaitcntGenerator(MF, NUM_NORMAL_INST_CNTS) {}
+  using WaitcntGenerator::WaitcntGenerator;
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -381,10 +379,7 @@ public:
 
 class WaitcntGeneratorGFX12Plus : public WaitcntGenerator {
 public:
-  WaitcntGeneratorGFX12Plus() = default;
-  WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
-                            InstCounterType MaxCounter)
-      : WaitcntGenerator(MF, MaxCounter) {}
+  using WaitcntGenerator::WaitcntGenerator;
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -552,9 +547,7 @@ public:
       return VMEM_ACCESS;
     if (Inst.mayStore() &&
         (!Inst.mayLoad() || SIInstrInfo::isAtomicNoRet(Inst))) {
-      // FLAT and SCRATCH instructions may access scratch. Other VMEM
-      // instructions do not.
-      if (TII->mayAccessScratchThroughFlat(Inst))
+      if (TII->mayAccessScratch(Inst))
         return SCRATCH_WRITE_ACCESS;
       return VMEM_WRITE_ACCESS;
     }
@@ -924,6 +917,7 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(
 
 void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
   InstCounterType T = eventCounter(Context->WaitEventMaskForInst, E);
+  assert(T < Context->MaxCounter);
 
   unsigned UB = getScoreUB(T);
   unsigned CurrScore = UB + 1;
@@ -2291,10 +2285,13 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(LDS_ACCESS, Inst);
     }
 
-    // This is a flat memory operation that access both VMEM and LDS, so note it
-    // - it will require that both the VM and LGKM be flushed to zero if it is
-    // pending when a VM or LGKM dependency occurs.
-    if (FlatASCount > 1)
+    // If this is a truly flat memory operation, then it accesss both VMEM and
+    // LDS, so note it - it will require that both the VM and LGKM be flushed to
+    // zero if it is pending when a VM or LGKM dependency occurs.
+    //
+    // For example, LDS DMA operations have FLAT set in their TSFlags for
+    // unspecified reasons, but they are not flat operations)
+    if (!SIInstrInfo::isLDSDMA(Inst) && FlatASCount > 1)
       ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
              !llvm::AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode())) {
@@ -2746,7 +2743,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     WCG = &WCGGFX12Plus;
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
-    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF);
+    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF, MaxCounter);
     WCG = &WCGPreGFX12;
   }
 

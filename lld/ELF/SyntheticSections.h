@@ -68,7 +68,6 @@ public:
     uint32_t fdeVARel;
   };
 
-  SmallVector<FdeData, 0> getFdeData() const;
   ArrayRef<CieRecord *> getCieRecords() const { return cieRecords; }
   template <class ELFT>
   void iterateFDEWithLSDA(llvm::function_ref<void(InputSection &)> fn);
@@ -93,6 +92,17 @@ private:
 
   // CIE records are uniquified by their contents and personality functions.
   llvm::DenseMap<std::pair<ArrayRef<uint8_t>, Symbol *>, CieRecord *> cieMap;
+};
+
+// .eh_frame_hdr contains a binary search table for .eh_frame FDEs. The section
+// is covered by a PT_GNU_EH_FRAME segment, which allows the runtime unwinder to
+// locate it via functions like `dl_iterate_phdr`.
+class EhFrameHeader final : public SyntheticSection {
+public:
+  EhFrameHeader(Ctx &);
+  void writeTo(uint8_t *buf) override;
+  size_t getSize() const override;
+  bool isNeeded() const override;
 };
 
 class GotSection final : public SyntheticSection {
@@ -965,24 +975,6 @@ private:
   SmallVector<GdbSymbol, 0> symbols;
 
   size_t size;
-};
-
-// --eh-frame-hdr option tells linker to construct a header for all the
-// .eh_frame sections. This header is placed to a section named .eh_frame_hdr
-// and also to a PT_GNU_EH_FRAME segment.
-// At runtime the unwinder then can find all the PT_GNU_EH_FRAME segments by
-// calling dl_iterate_phdr.
-// This section contains a lookup table for quick binary search of FDEs.
-// Detailed info about internals can be found in Ian Lance Taylor's blog:
-// http://www.airs.com/blog/archives/460 (".eh_frame")
-// http://www.airs.com/blog/archives/462 (".eh_frame_hdr")
-class EhFrameHeader final : public SyntheticSection {
-public:
-  EhFrameHeader(Ctx &);
-  void write();
-  void writeTo(uint8_t *buf) override;
-  size_t getSize() const override;
-  bool isNeeded() const override;
 };
 
 // For more information about .gnu.version and .gnu.version_r see:

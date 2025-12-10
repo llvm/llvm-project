@@ -327,11 +327,11 @@ cc_library(
         # We unconditionally depend on the custom LLVM zlib wrapper. This will
         # be an empty library unless zlib is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
-        "@llvm_zlib//:zlib",
+        "//third-party:zlib",
         # We unconditionally depend on the custom LLVM zstd wrapper. This will
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
-        "@llvm_zstd//:zstd",
+        "//third-party:zstd",
     ],
 )
 
@@ -1243,42 +1243,12 @@ cc_library(
     ],
 )
 
-AnalysisFpExcSrcs = [
-    "lib/Analysis/ConstantFolding.cpp",
-]
-
-cc_library(
-    name = "AnalysisFpExc",
-    srcs = AnalysisFpExcSrcs,
-    hdrs = glob(
-        [
-            "include/llvm/Analysis/*.h",
-            "include/llvm/Analysis/Utils/*.h",
-        ],
-    ),
-    copts = llvm_copts + ["-ftrapping-math"],
-    textual_hdrs = glob([
-        "include/llvm/Analysis/*.def",
-    ]),
-    deps = [
-        ":BinaryFormat",
-        ":Core",
-        ":Object",
-        ":ProfileData",
-        ":Support",
-        ":TargetParser",
-        ":config",
-        ":target_library_info_gen",
-    ],
-)
-
 cc_library(
     name = "Analysis",
     srcs = glob(
         [
             "lib/Analysis/*.cpp",
         ],
-        exclude = AnalysisFpExcSrcs,
     ),
     hdrs = glob(
         [
@@ -1288,12 +1258,11 @@ cc_library(
     ) + [
         "include/llvm-c/Analysis.h",
     ],
-    copts = llvm_copts,
+    copts = llvm_copts + ["-ftrapping-math"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
     ]),
     deps = [
-        ":AnalysisFpExc",
         ":BinaryFormat",
         ":Core",
         ":FrontendHLSL",
@@ -2379,10 +2348,7 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenSubtargetInfo.inc",
             ),
             (
-                [
-                    "-gen-disassembler",
-                    "-ignore-non-decodable-operands",
-                ],
+                ["-gen-disassembler"],
                 "lib/Target/ARM/ARMGenDisassemblerTables.inc",
             ),
         ],
@@ -2718,6 +2684,10 @@ llvm_target_lib_list = [lib for lib in [
                     "lib/Target/LoongArch/LoongArchGenRegisterInfoHeader.inc",
                     "lib/Target/LoongArch/LoongArchGenRegisterInfoTargetDesc.inc",
                 ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/LoongArch/LoongArchGenSDNodeInfo.inc",
             ),
             (
                 ["-gen-subtarget"],
@@ -4116,6 +4086,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":JITLink",

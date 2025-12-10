@@ -40,8 +40,8 @@ void InitializePlatformInterceptors();
 
 // Use macro to describe if specific function should be
 // intercepted on a given platform.
-#if !SANITIZER_WINDOWS
-   // AIX currently can't retrieve the address of _longjmp
+#  if !SANITIZER_WINDOWS
+     // AIX currently can't retrieve the address of _longjmp
 #    if !SANITIZER_AIX
 #      define ASAN_INTERCEPT__LONGJMP 1
 #    else
@@ -49,24 +49,24 @@ void InitializePlatformInterceptors();
 #    endif
 #    define ASAN_INTERCEPT_INDEX 1
 #    define ASAN_INTERCEPT_PTHREAD_CREATE 1
-#else
-# define ASAN_INTERCEPT__LONGJMP 0
-# define ASAN_INTERCEPT_INDEX 0
-# define ASAN_INTERCEPT_PTHREAD_CREATE 0
-#endif
+#  else
+#    define ASAN_INTERCEPT__LONGJMP 0
+#    define ASAN_INTERCEPT_INDEX 0
+#    define ASAN_INTERCEPT_PTHREAD_CREATE 0
+#  endif
 
-#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
-# define ASAN_USE_ALIAS_ATTRIBUTE_FOR_INDEX 1
-#else
-# define ASAN_USE_ALIAS_ATTRIBUTE_FOR_INDEX 0
-#endif
+#  if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
+      SANITIZER_SOLARIS
+#    define ASAN_USE_ALIAS_ATTRIBUTE_FOR_INDEX 1
+#  else
+#    define ASAN_USE_ALIAS_ATTRIBUTE_FOR_INDEX 0
+#  endif
 
-#if SANITIZER_GLIBC || SANITIZER_SOLARIS
-# define ASAN_INTERCEPT_SWAPCONTEXT 1
-#else
-# define ASAN_INTERCEPT_SWAPCONTEXT 0
-#endif
+#  if SANITIZER_GLIBC || SANITIZER_SOLARIS
+#    define ASAN_INTERCEPT_SWAPCONTEXT 1
+#  else
+#    define ASAN_INTERCEPT_SWAPCONTEXT 0
+#  endif
 
 // AIX currently can't retrieve the address of siglongjmp
 #  if !SANITIZER_WINDOWS && !SANITIZER_AIX
@@ -108,7 +108,7 @@ void InitializePlatformInterceptors();
 #    define ASAN_INTERCEPT_EXIT 1
 #  else
 #    define ASAN_INTERCEPT_EXIT 0
-#  endif
+ #  endif
 
 #  if SANITIZER_NETBSD
 #    define ASAN_INTERCEPT_ATEXIT 1
@@ -153,13 +153,13 @@ void InitializePlatformInterceptors();
 #    define ASAN_INTERCEPT_PTHREAD_ATFORK 0
 #  endif
 
-DECLARE_REAL(int, memcmp, const void *a1, const void *a2, SIZE_T size)
-DECLARE_REAL(char*, strchr, const char *str, int c)
-DECLARE_REAL(SIZE_T, strlen, const char *s)
-DECLARE_REAL(char*, strncpy, char *to, const char *from, SIZE_T size)
-DECLARE_REAL(SIZE_T, strnlen, const char *s, SIZE_T maxlen)
+DECLARE_REAL(int, memcmp, const void* a1, const void* a2, SIZE_T size)
+DECLARE_REAL(char*, strchr, const char* str, int c)
+DECLARE_REAL(SIZE_T, strlen, const char* s)
+DECLARE_REAL(char*, strncpy, char* to, const char* from, SIZE_T size)
+DECLARE_REAL(SIZE_T, strnlen, const char* s, SIZE_T maxlen)
 DECLARE_REAL(SIZE_T, wcsnlen, const wchar_t* s, SIZE_T maxlen)
-DECLARE_REAL(char*, strstr, const char *s1, const char *s2)
+DECLARE_REAL(char*, strstr, const char* s1, const char* s2)
 
 #  if !SANITIZER_APPLE
 #    define ASAN_INTERCEPT_FUNC(name)                                        \
@@ -186,11 +186,11 @@ DECLARE_REAL(char*, strstr, const char *s1, const char *s2)
 #    define ASAN_INTERCEPT_FUNC(name)
 #  endif  // SANITIZER_APPLE
 
-#define ASAN_INTERCEPTOR_ENTER(ctx, func)                                      \
-  AsanInterceptorContext _ctx = {#func};                                       \
-  ctx = (void *)&_ctx;                                                         \
-  (void) ctx;
-#define COMMON_INTERCEPT_FUNCTION(name) ASAN_INTERCEPT_FUNC(name)
+#  define ASAN_INTERCEPTOR_ENTER(ctx, func) \
+    AsanInterceptorContext _ctx = {#func};  \
+    ctx = (void*)&_ctx;                     \
+    (void)ctx;
+#  define COMMON_INTERCEPT_FUNCTION(name) ASAN_INTERCEPT_FUNC(name)
 
 #endif  // !SANITIZER_FUCHSIA
 

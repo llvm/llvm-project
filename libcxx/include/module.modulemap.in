@@ -829,6 +829,7 @@ module std [system] {
     module simd_utils                             { header "__algorithm/simd_utils.h" }
     module sort_heap                              { header "__algorithm/sort_heap.h" }
     module sort                                   { header "__algorithm/sort.h" }
+    module specialized_algorithms                 { header "__algorithm/specialized_algorithms.h" }
     module stable_partition                       { header "__algorithm/stable_partition.h" }
     module stable_sort {
       header "__algorithm/stable_sort.h"
@@ -1583,6 +1584,7 @@ module std [system] {
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
       textual header "__locale_dir/support/netbsd.h"
+      textual header "__locale_dir/support/newlib.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/windows.h"
@@ -1591,7 +1593,6 @@ module std [system] {
     module locale_base_api {
       textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
-      textual header "__locale_dir/locale_base_api/musl.h"
       textual header "__locale_dir/locale_base_api/openbsd.h"
     }
     export *
@@ -1629,7 +1630,6 @@ module std [system] {
   module memory {
     module addressof                          { header "__memory/addressof.h" }
     module align                              { header "__memory/align.h" }
-    module aligned_alloc                      { header "__memory/aligned_alloc.h" }
     module allocate_at_least                  { header "__memory/allocate_at_least.h" }
     module allocation_guard                   { header "__memory/allocation_guard.h" }
     module allocator {

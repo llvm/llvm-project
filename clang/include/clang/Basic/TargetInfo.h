@@ -1796,11 +1796,6 @@ public:
   /// destructor body.
   virtual bool callGlobalDeleteInDeletingDtor(const LangOptions &) const;
 
-  /// Controls whether to emit MSVC vector deleting destructors. The support for
-  /// vector deleting affects vtable layout and therefore is an ABI breaking
-  /// change. The support was only implemented at Clang 22 timeframe.
-  virtual bool emitVectorDeletingDtors(const LangOptions &) const;
-
   /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.
   virtual bool hasSjLjLowering() const {
@@ -1852,6 +1847,9 @@ public:
       getTargetOpts().OpenCLFeaturesMap[Name] = V;
     }
   }
+
+  /// Set features that depend on other features.
+  virtual void setDependentOpenCLOpts();
 
   /// Get supported OpenCL extensions and optional core features.
   llvm::StringMap<bool> &getSupportedOpenCLOpts() {

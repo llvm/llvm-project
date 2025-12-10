@@ -121,7 +121,7 @@ define void @test_range_metadata(ptr %array_length_ptr, ptr %base,
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
 ; CHECK-NEXT:    [[ARRAY_LENGTH:%.*]] = load i32, ptr [[ARRAY_LENGTH_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[ARRAY_LENGTH]] to i64
-; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp ult i64 [[INDVARS_IV]], [[TMP2]]
+; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[WITHIN_LIMITS]], label [[CONTINUE:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    br label [[FOR_INC]]
@@ -174,7 +174,7 @@ define void @test_neg(ptr %array_length_ptr, ptr %base,
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
 ; CHECK-NEXT:    [[ARRAY_LENGTH:%.*]] = load i32, ptr [[ARRAY_LENGTH_PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[ARRAY_LENGTH]] to i64
-; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp ult i64 [[INDVARS_IV]], [[TMP1]]
+; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[WITHIN_LIMITS]], label [[CONTINUE:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    br label [[FOR_INC]]
@@ -232,7 +232,7 @@ define void @test_transitive_use(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[CONTINUE:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[MUL_WITHIN:%.*]] = icmp ult i64 [[TMP3]], 64
+; CHECK-NEXT:    [[MUL_WITHIN:%.*]] = icmp samesign ult i64 [[TMP3]], 64
 ; CHECK-NEXT:    br i1 [[MUL_WITHIN]], label [[GUARDED:%.*]], label [[CONTINUE_2:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
@@ -297,7 +297,7 @@ define void @test_guard_one_bb(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
-; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp ult i64 [[INDVARS_IV]], 64
+; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], 64
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_LIMITS]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]
@@ -337,7 +337,7 @@ define void @test_guard_in_the_same_bb(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
-; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp ult i64 [[INDVARS_IV]], 64
+; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], 64
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_LIMITS]]) [ "deopt"() ]
@@ -382,7 +382,7 @@ define void @test_guard_in_idom(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
-; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp ult i64 [[INDVARS_IV]], 64
+; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], 64
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_LIMITS]]) [ "deopt"() ]
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
@@ -427,9 +427,9 @@ define void @test_guard_merge_ranges(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
-; CHECK-NEXT:    [[WITHIN_LIMITS_1:%.*]] = icmp ult i64 [[INDVARS_IV]], 64
+; CHECK-NEXT:    [[WITHIN_LIMITS_1:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], 64
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_LIMITS_1]]) [ "deopt"() ]
-; CHECK-NEXT:    [[WITHIN_LIMITS_2:%.*]] = icmp ult i64 [[INDVARS_IV]], 2147483647
+; CHECK-NEXT:    [[WITHIN_LIMITS_2:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], 2147483647
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_LIMITS_2]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]

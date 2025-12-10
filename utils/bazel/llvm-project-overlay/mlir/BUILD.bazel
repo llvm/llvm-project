@@ -1694,6 +1694,12 @@ gentbl_cc_library(
             "-gen-dialect-defs",
             "-dialect=amdgpu",
         ],
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.h.inc": [
+            "-gen-typedef-decls",
+        ],
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc": [
+            "-gen-typedef-defs",
+        ],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc": ["-gen-enum-decls"],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc": ["-gen-enum-defs"],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPU.h.inc": ["-gen-op-decls"],
@@ -2578,6 +2584,50 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "X86VectorTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "X86VectorTransformOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.cpp.inc": ["-gen-op-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.td",
+    deps = [
+        ":X86VectorTransformOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "X86VectorTransformOps",
+    srcs = glob(["lib/Dialect/X86Vector/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86Vector/TransformOps/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":VectorDialect",
+        ":X86VectorDialect",
+        ":X86VectorTransformOpsIncGen",
+        ":X86VectorTransforms",
+    ],
+)
+
 cc_library(
     name = "X86VectorTransforms",
     srcs = glob(["lib/Dialect/X86Vector/Transforms/*.cpp"]),
@@ -2588,6 +2638,10 @@ cc_library(
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":LinalgDialect",
+        ":LinalgInterfaces",
+        ":Pass",
+        ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
         ":X86VectorDialect",
@@ -4390,6 +4444,7 @@ cc_library(
         ":SCFIncGen",
         ":SideEffectInterfaces",
         ":TensorDialect",
+        ":TransformUtils",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -4741,6 +4796,7 @@ cc_library(
         ":IR",
         ":InliningUtils",
         ":SideEffectInterfaces",
+        ":UBDialect",
         "//llvm:Support",
     ],
 )
@@ -9571,6 +9627,7 @@ cc_library(
         ":UBToLLVM",
         ":VectorToLLVM",
         ":VectorTransformOps",
+        ":X86VectorTransformOps",
         ":XeGPUTransformOps",
         ":XeVMToLLVM",
         ":XeVMToLLVMIRTranslation",
@@ -10063,6 +10120,7 @@ cc_binary(
         "//llvm:TableGen",
         "//llvm:TargetParser",
         "//llvm:config",
+        "//llvm:vt_gen",
     ],
 )
 
@@ -10351,6 +10409,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
         ":Pass",
+        ":Support",
         ":TransformUtils",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -10750,6 +10809,7 @@ cc_library(
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
+        ":InliningUtils",
         ":SideEffectInterfaces",
         "//llvm:Support",
     ],
@@ -14036,12 +14096,7 @@ cc_library(
 
 cc_library(
     name = "PDLLAST",
-    srcs = glob(
-        [
-            "lib/Tools/PDLL/AST/*.cpp",
-            "lib/Tools/PDLL/AST/*.h",
-        ],
-    ),
+    srcs = glob(["lib/Tools/PDLL/AST/*.cpp"]),
     hdrs = glob(["include/mlir/Tools/PDLL/AST/*.h"]),
     includes = ["include"],
     deps = [

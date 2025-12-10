@@ -98,7 +98,8 @@ public:
     OB_kcfi = 8,                   // "kcfi"
     OB_convergencectrl = 9,        // "convergencectrl"
     OB_align = 10,                 // "align"
-    OB_LastBundleID = OB_align     // Marker for last bundle ID
+    OB_deactivation_symbol = 11,   // "deactivation-symbol"
+    OB_LastBundleID = OB_deactivation_symbol
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.

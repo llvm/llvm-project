@@ -211,6 +211,31 @@ static auto isStatusConstructor() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return cxxConstructExpr(hasType(statusType()));
 }
+static auto isLoggingGetReferenceableValueCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(callee(
+      functionDecl(hasName("::absl::log_internal::GetReferenceableValue"))));
+}
+
+static auto isLoggingCheckEqImpl() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(
+      callee(functionDecl(hasName("::absl::log_internal::Check_EQImpl"))));
+}
+
+static auto isAsStatusCallWithStatus() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(
+      callee(functionDecl(hasName("::absl::log_internal::AsStatus"))),
+      hasArgument(0, hasType(statusClass())));
+}
+
+static auto isAsStatusCallWithStatusOr() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(
+      callee(functionDecl(hasName("::absl::log_internal::AsStatus"))),
+      hasArgument(0, hasType(statusOrType())));
+}
 
 static auto
 buildDiagnoseMatchSwitch(const UncheckedStatusOrAccessModelOptions &Options) {
@@ -602,6 +627,76 @@ static void transferStatusConstructor(const CXXConstructExpr *Expr,
   if (State.Env.getValue(locForOk(StatusLoc)) == nullptr)
     initializeStatus(StatusLoc, State.Env);
 }
+static void
+transferLoggingGetReferenceableValueCall(const CallExpr *Expr,
+                                         const MatchFinder::MatchResult &,
+                                         LatticeTransferState &State) {
+  assert(Expr->getNumArgs() == 1);
+  if (Expr->getArg(0)->isPRValue())
+    return;
+  auto *ArgLoc = State.Env.getStorageLocation(*Expr->getArg(0));
+  if (ArgLoc == nullptr)
+    return;
+
+  State.Env.setStorageLocation(*Expr, *ArgLoc);
+}
+
+static void transferLoggingCheckEqImpl(const CallExpr *Expr,
+                                       const MatchFinder::MatchResult &,
+                                       LatticeTransferState &State) {
+  assert(Expr->getNumArgs() > 2);
+
+  auto *EqVal = evaluateEquality(Expr->getArg(0), Expr->getArg(1), State.Env);
+  if (EqVal == nullptr)
+    return;
+
+  // Consider modelling this more accurately instead of assigning BoolValue
+  // as the value of an expression of pointer type.
+  // For now, this is being handled in transferPointerToBoolean.
+  State.Env.setValue(*Expr, State.Env.makeNot(*EqVal));
+}
+
+static void transferAsStatusCallWithStatus(const CallExpr *Expr,
+                                           const MatchFinder::MatchResult &,
+                                           LatticeTransferState &State) {
+  assert(Expr->getNumArgs() == 1);
+
+  auto *ArgLoc = State.Env.get<RecordStorageLocation>(*Expr->getArg(0));
+  if (ArgLoc == nullptr)
+    return;
+
+  if (State.Env.getValue(locForOk(*ArgLoc)) == nullptr)
+    initializeStatus(*ArgLoc, State.Env);
+
+  auto &ExprVal = State.Env.create<PointerValue>(*ArgLoc);
+  State.Env.setValue(*Expr, ExprVal);
+}
+
+static void transferAsStatusCallWithStatusOr(const CallExpr *Expr,
+                                             const MatchFinder::MatchResult &,
+                                             LatticeTransferState &State) {
+  assert(Expr->getNumArgs() == 1);
+
+  auto *ArgLoc = State.Env.get<RecordStorageLocation>(*Expr->getArg(0));
+  if (ArgLoc == nullptr)
+    return;
+
+  RecordStorageLocation &StatusLoc = locForStatus(*ArgLoc);
+
+  if (State.Env.getValue(locForOk(StatusLoc)) == nullptr)
+    initializeStatusOr(*ArgLoc, State.Env);
+
+  auto &ExprVal = State.Env.create<PointerValue>(StatusLoc);
+  State.Env.setValue(*Expr, ExprVal);
+}
+
+static void transferPointerToBoolean(const ImplicitCastExpr *Expr,
+                                     const MatchFinder::MatchResult &,
+                                     LatticeTransferState &State) {
+  if (auto *SubExprVal =
+          dyn_cast_or_null<BoolValue>(State.Env.getValue(*Expr->getSubExpr())))
+    State.Env.setValue(*Expr, *SubExprVal);
+}
 
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
@@ -652,6 +747,14 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                           transferValueAssignmentCall)
       .CaseOfCFGStmt<CXXConstructExpr>(isStatusOrValueConstructor(),
                                        transferValueConstructor)
+      .CaseOfCFGStmt<CallExpr>(isAsStatusCallWithStatus(),
+                               transferAsStatusCallWithStatus)
+      .CaseOfCFGStmt<CallExpr>(isAsStatusCallWithStatusOr(),
+                               transferAsStatusCallWithStatusOr)
+      .CaseOfCFGStmt<CallExpr>(isLoggingGetReferenceableValueCall(),
+                               transferLoggingGetReferenceableValueCall)
+      .CaseOfCFGStmt<CallExpr>(isLoggingCheckEqImpl(),
+                               transferLoggingCheckEqImpl)
       // N.B. These need to come after all other CXXConstructExpr.
       // These are there to make sure that every Status and StatusOr object
       // have their ok boolean initialized when constructed. If we were to
@@ -662,6 +765,9 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                        transferStatusOrConstructor)
       .CaseOfCFGStmt<CXXConstructExpr>(isStatusConstructor(),
                                        transferStatusConstructor)
+      .CaseOfCFGStmt<ImplicitCastExpr>(
+          implicitCastExpr(hasCastKind(CK_PointerToBoolean)),
+          transferPointerToBoolean)
       .Build();
 }
 
