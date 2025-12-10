@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/assign.h"
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 #include "flang/Runtime/stop.h"
+#endif
 #include "flang-rt/runtime/assign-impl.h"
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/descriptor.h"
@@ -861,17 +863,6 @@ void RTDEF(AssignPolymorphic)(Descriptor &to, const Descriptor &from,
       MaybeReallocate | NeedFinalization | ComponentCanBeDefinedAssignment |
           PolymorphicLHS);
 }
-
-#if defined(OMP_OFFLOAD_BUILD)
-// To support a recently added use of variant in the OpenMP offload build,
-// added an abort wrapper which calls the flang-rt FortranAAbort.
-// Avoids the following linker error:
-//   ld.lld: error: undefined symbol: abort
-//   >>> referenced by /tmp/device_aassign.amdgcn.gfx90a-34a7ed.img.lto.o:(std::__throw_bad_variant_access(char const*))
-extern "C" void abort(void) {
-  RTNAME(Abort)();
-}
-#endif
 
 RT_EXT_API_GROUP_END
 } // extern "C"

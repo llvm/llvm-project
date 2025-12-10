@@ -360,9 +360,11 @@ wstring to_wstring(unsigned long val) { return i_to_string<wstring>(val); }
 wstring to_wstring(unsigned long long val) { return i_to_string<wstring>(val); }
 #endif
 
+#if not defined(__AMDGPU__) && not defined(__NVPTX__)
 string to_string(float val) { return as_string(snprintf, initial_string< string>()(), "%f", val); }
 string to_string(double val) { return as_string(snprintf, initial_string< string>()(), "%f", val); }
 string to_string(long double val) { return as_string(snprintf, initial_string< string>()(), "%Lf", val); }
+#endif
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 wstring to_wstring(float val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%f", val); }

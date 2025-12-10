@@ -42,6 +42,13 @@
 #define RT_USE_PSEUDO_FILE_UNIT 1
 #endif
 
+#if (defined(__AMDGPU__) ||  defined(__NVPTX__)) && defined(EMBED_FLANG_RT_GPU_LLVM_IR)
+// Use the pseudo lock and pseudo file unit implementations
+// for the device.
+#define RT_USE_PSEUDO_LOCK 1
+#define RT_USE_PSEUDO_FILE_UNIT 1
+#endif
+
 namespace Fortran::runtime {
 
 class Terminator;

@@ -23,6 +23,7 @@ namespace Fortran::runtime::io {
 RT_EXT_API_GROUP_BEGIN
 #endif
 
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 Cookie IODEF(BeginExternalListOutput)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   return BeginExternalListIO<Direction::Output, ExternalListIoStatementState>(
@@ -33,6 +34,7 @@ enum Iostat IODEF(EndIoStatement)(Cookie cookie) {
   IoStatementState &io{*cookie};
   return static_cast<enum Iostat>(io.EndIoStatement());
 }
+#endif
 
 template <int KIND, typename INT = CppTypeFor<TypeCategory::Integer, KIND>>
 inline RT_API_ATTRS bool FormattedScalarIntegerOutput(
@@ -45,6 +47,7 @@ inline RT_API_ATTRS bool FormattedScalarIntegerOutput(
   }
 }
 
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 bool IODEF(OutputInteger8)(Cookie cookie, std::int8_t n) {
   return FormattedScalarIntegerOutput<1>(*cookie, n, "OutputInteger8");
 }
@@ -60,6 +63,7 @@ bool IODEF(OutputInteger32)(Cookie cookie, std::int32_t n) {
 bool IODEF(OutputInteger64)(Cookie cookie, std::int64_t n) {
   return FormattedScalarIntegerOutput<8>(*cookie, n, "OutputInteger64");
 }
+#endif
 
 #ifdef __SIZEOF_INT128__
 bool IODEF(OutputInteger128)(Cookie cookie, common::int128_t n) {
@@ -79,6 +83,7 @@ inline RT_API_ATTRS bool FormattedScalarRealOutput(
   }
 }
 
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 bool IODEF(OutputReal32)(Cookie cookie, float x) {
   return FormattedScalarRealOutput<4>(*cookie, x, "OutputReal32");
 }
@@ -86,6 +91,7 @@ bool IODEF(OutputReal32)(Cookie cookie, float x) {
 bool IODEF(OutputReal64)(Cookie cookie, double x) {
   return FormattedScalarRealOutput<8>(*cookie, x, "OutputReal64");
 }
+#endif
 
 template <int KIND,
     typename REAL = typename RealOutputEditing<KIND>::BinaryFloatingPoint>
@@ -110,6 +116,7 @@ inline RT_API_ATTRS bool FormattedScalarComplexOutput(
   return false;
 }
 
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 bool IODEF(OutputComplex32)(Cookie cookie, float re, float im) {
   return FormattedScalarComplexOutput<4>(*cookie, re, im, "OutputComplex32");
 }
@@ -145,6 +152,7 @@ bool IODEF(OutputLogical)(Cookie cookie, bool truth) {
     return false;
   }
 }
+#endif
 
 } // namespace Fortran::runtime::io
 

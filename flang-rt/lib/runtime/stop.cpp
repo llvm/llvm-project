@@ -13,11 +13,15 @@
 #include "flang-rt/runtime/file.h"
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/terminator.h"
+#if not defined(__AMDGPU__) && not defined(__NVPTX__)
 #include "flang/Runtime/main.h"
+#endif
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
+#if not defined(__AMDGPU__) && not defined(__NVPTX__)
 #include <thread>
+#endif
 
 #ifdef HAVE_BACKTRACE
 #include BACKTRACE_HEADER
@@ -26,6 +30,7 @@
 extern "C" {
 
 [[maybe_unused]] static void DescribeIEEESignaledExceptions() {
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 #ifdef fetestexcept // a macro in some environments; omit std::
   auto excepts{fetestexcept(FE_ALL_EXCEPT)};
 #else
@@ -60,6 +65,7 @@ extern "C" {
 #endif
     std::fputc('\n', stderr);
   }
+#endif
 }
 
 static void CloseAllExternalUnits(const char *why) {
@@ -67,6 +73,7 @@ static void CloseAllExternalUnits(const char *why) {
   Fortran::runtime::io::ExternalFileUnit::CloseAll(handler);
 }
 
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 [[noreturn]] RT_API_ATTRS void RTNAME(StopStatement)(
     int code, bool isErrorStop, bool quiet) {
 #if defined(RT_DEVICE_COMPILATION)
@@ -103,7 +110,9 @@ static void CloseAllExternalUnits(const char *why) {
   std::exit(code);
 #endif
 }
+#endif
 
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 [[noreturn]] RT_API_ATTRS void RTNAME(StopStatementText)(
     const char *code, std::size_t length, bool isErrorStop, bool quiet) {
 #if defined(RT_DEVICE_COMPILATION)
@@ -136,6 +145,7 @@ static void CloseAllExternalUnits(const char *why) {
   }
 #endif
 }
+#endif
 
 static bool StartPause() {
   if (Fortran::runtime::io::IsATerminal(0)) {
@@ -218,13 +228,14 @@ static RT_NOINLINE_ATTR void PrintBacktrace() {
 
 #endif
 }
-
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 [[noreturn]] RT_OPTNONE_ATTR void RTNAME(Abort)() {
 #ifdef HAVE_BACKTRACE
   PrintBacktrace();
 #endif
   std::abort();
 }
+#endif
 
 RT_OPTNONE_ATTR void FORTRAN_PROCEDURE_NAME(backtrace)() { PrintBacktrace(); }
 

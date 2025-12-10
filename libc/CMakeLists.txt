@@ -67,6 +67,7 @@ if(NOT LIBC_NAMESPACE MATCHES "^__llvm_libc")
   message(FATAL_ERROR "Invalid LIBC_NAMESPACE. Must start with '__llvm_libc' was '${LIBC_NAMESPACE}'")
 endif()
 
+string(REPLACE "." "_" LIBC_NAMESPACE "${LIBC_NAMESPACE}")
 message(STATUS "Setting LIBC_NAMESPACE namespace to '${LIBC_NAMESPACE}'")
 add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 

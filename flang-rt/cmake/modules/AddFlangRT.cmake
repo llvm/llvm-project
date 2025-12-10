@@ -219,6 +219,12 @@ function (add_flangrt_library name)
     # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
     target_compile_features(${tgtname} PRIVATE cxx_std_17)
 
+    # Determine which version of GPU Flang-RT we want to build:
+    # flang_rt.hostdevice or the implicitly linked device flang_rt.runtime.
+    if (FLANG_RT_EMBED_GPU_LLVM_IR)
+      target_compile_definitions(${tgtname} PRIVATE EMBED_FLANG_RT_GPU_LLVM_IR)
+    endif ()
+
     # When building the flang runtime if LTO is enabled the archive file
     # contains LLVM IR rather than object code. Currently flang is not
     # LTO aware so cannot link this file to compiled Fortran code.

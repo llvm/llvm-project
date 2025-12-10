@@ -199,12 +199,14 @@ RT_API_ATTRS Cookie BeginExternalFormattedIO(const char *format,
   }
 }
 
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 Cookie IODEF(BeginExternalFormattedOutput)(const char *format,
     std::size_t formatLength, const Descriptor *formatDescriptor,
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   return BeginExternalFormattedIO<Direction::Output>(format, formatLength,
       formatDescriptor, unitNumber, sourceFile, sourceLine);
 }
+#endif
 
 Cookie IODEF(BeginExternalFormattedInput)(const char *format,
     std::size_t formatLength, const Descriptor *formatDescriptor,
