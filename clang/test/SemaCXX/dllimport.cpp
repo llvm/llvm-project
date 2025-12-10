@@ -1528,15 +1528,10 @@ template <> struct __declspec(dllimport) ExpliciallySpecializedClassTemplate<int
 
 // Function-local static constexpr in dllimport function (or class).
 struct DLLImportFuncWithConstexprStatic {
+#if defined(GNU)
+// expected-warning@+2{{'dllimport' attribute ignored on inline function}}
+#endif
   __declspec(dllimport) static const int *func() {
-    // expected-warning@-1{{'dllimport' attribute ignored on inline function}}
-    static constexpr int value = 42;
-    static constexpr const int *p = &value;
-    static_assert(*p == 42, "");
-    return p;
-  }
-  __declspec(dllimport) __forceinline static const int *funcForceInline() {
-    // expected-warning@-1{{'dllimport' attribute ignored on inline function}}
     static constexpr int value = 42;
     static constexpr const int *p = &value;
     static_assert(*p == 42, "");
@@ -1544,10 +1539,27 @@ struct DLLImportFuncWithConstexprStatic {
   }
 };
 const int* (*pFunc)() = &DLLImportFuncWithConstexprStatic::func;
-const int* (*pFuncForceInline)() = &DLLImportFuncWithConstexprStatic::funcForceInline;
 bool UsedDLLImportFuncWithConstexprStatic() {
-  return pFunc() == DLLImportFuncWithConstexprStatic::func() && pFuncForceInline() == DLLImportFuncWithConstexprStatic::funcForceInline();
+  return pFunc() == DLLImportFuncWithConstexprStatic::func();
 }
+
+#if !defined(PS)
+struct DLLImportInlineFuncWithConstexprStatic {
+#if defined(GNU)
+  // expected-warning@+2{{'dllimport' attribute ignored on inline function}}
+#endif
+  __declspec(dllimport) __forceinline static const int* funcForceInline() {
+    static constexpr int value = 42;
+    static constexpr const int* p = &value;
+    static_assert(*p == 42, "");
+    return p;
+  }
+};
+const int* (*pFuncForceInline)() = &DLLImportInlineFuncWithConstexprStatic::funcForceInline;
+bool UsedDLLImportInlineFuncWithConstexprStatic() {
+  return pFuncForceInline() == DLLImportInlineFuncWithConstexprStatic::funcForceInline();
+}
+#endif // !PS
 
 //===----------------------------------------------------------------------===//
 // Classes with template base classes
