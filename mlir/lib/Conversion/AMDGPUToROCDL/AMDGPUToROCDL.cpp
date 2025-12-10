@@ -2329,7 +2329,9 @@ struct AMDGPUMakeDmaBaseLowering : public ConvertOpToLLVMPattern<BaseOp> {
       assert(llvm::is_contained<unsigned>({16, 32}, indexSize) &&
              "expected index_size to be 16 or 32");
       unsigned idx = (indexSize / 16) - 1;
-      sgprs[0] = setValueAtOffset(rewriter, loc, sgprs[0], consts[idx], 31);
+
+      if (idx)
+        sgprs[0] = setValueAtOffset(rewriter, loc, sgprs[0], consts[idx], 31);
     }
 
     ValueRange ldsIndices = adaptor.getLdsIndices();
