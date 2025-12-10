@@ -7,6 +7,7 @@
 // CHECK-TOOL-BC: "-cc1" {{.*}} "-o" "[[TMP1_BC:.+]]" "-x" "ir" "{{.*}}.bc"
 // CHECK-TOOL-BC: "-cc1" {{.*}} "-o" "[[TMP2_BC:.+]]" "-x" "ir" "{{.*}}.bc"
 // CHECK-TOOL-BC: llvm-link{{.*}} "-o" {{.*}} "[[TMP1_BC]]" "[[TMP2_BC]]"
+// CHECK-TOOL-BC-NOT: llvm-link
 
 // RUN: %clang -ccc-print-bindings --target=spirv64 -emit-llvm %t/a.bc %t/b.bc 2>&1 | FileCheck -check-prefix=CHECK-BINDINGS-BC %s
 
@@ -23,6 +24,7 @@
 // CHECK-TOOL-SRC: "-cc1" {{.*}} "-o" "[[TMP1_SRC_BC:.+]]" "-x" "c" "{{.*}}foo.c"
 // CHECK-TOOL-SRC: "-cc1" {{.*}} "-o" "[[TMP2_SRC_BC:.+]]" "-x" "c" "{{.*}}bar.c"
 // CHECK-TOOL-SRC: llvm-link{{.*}} "-o" {{.*}} "[[TMP1_SRC_BC]]" "[[TMP2_SRC_BC]]"
+// CHECK-TOOL-SRC-NOT: llvm-link
 
 // RUN: %clang -ccc-print-bindings --target=spirv64 -emit-llvm %t/foo.c %t/bar.c 2>&1 | FileCheck -check-prefix=CHECK-BINDINGS-SRC %s
 

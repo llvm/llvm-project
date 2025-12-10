@@ -82,12 +82,6 @@ void SPIRV::constructLLVMLinkCommand(Compilation &C, const Tool &T,
     LlvmLinkArgs.push_back(Input.getFilename());
 
   tools::constructLLVMLinkCommand(C, T, JA, Inputs, LlvmLinkArgs, Output, Args);
-
-  const char *LlvmLink =
-      C.getArgs().MakeArgString(T.getToolChain().GetProgramPath("llvm-link"));
-  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
-                                         LlvmLink, LlvmLinkArgs, Inputs,
-                                         Output));
 }
 
 void SPIRV::Translator::ConstructJob(Compilation &C, const JobAction &JA,
