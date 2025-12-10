@@ -1746,14 +1746,14 @@ TEST(STLExtrasTest, Search) {
   std::vector<int> Haystack2 = {10, 20, 30, 40, 50};
   std::vector<int> Needle5 = {20, 30};
   std::vector<int> Needle6 = {200, 300};
-  auto It8 = llvm::search(Haystack2, Needle5,
-                          [](int a, int b) { return a == b; });
+  auto It8 =
+      llvm::search(Haystack2, Needle5, [](int a, int b) { return a == b; });
   EXPECT_NE(It8, Haystack2.end());
   EXPECT_EQ(It8, Haystack2.begin() + 1);
 
   // Test with predicate that doesn't match
-  auto It9 = llvm::search(Haystack2, Needle6,
-                          [](int a, int b) { return a == b; });
+  auto It9 =
+      llvm::search(Haystack2, Needle6, [](int a, int b) { return a == b; });
   EXPECT_EQ(It9, Haystack2.end());
 
   // Test with StringRef
@@ -1811,7 +1811,8 @@ TEST(STLExtrasTest, AdjacentFind) {
   auto It6 = llvm::adjacent_find(Single);
   EXPECT_EQ(It6, Single.end());
 
-  // Test with predicate version - finding adjacent elements that satisfy predicate
+  // Test with predicate version - finding adjacent elements that satisfy
+  // predicate
   std::vector<int> V5 = {1, 2, 4, 3, 5, 6};
   auto It7 = llvm::adjacent_find(V5, [](int a, int b) { return a > b; });
   EXPECT_NE(It7, V5.end());
