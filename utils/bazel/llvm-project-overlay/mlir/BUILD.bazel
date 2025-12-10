@@ -10398,6 +10398,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ArithUtils",
         ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
@@ -10410,7 +10411,6 @@ cc_library(
         ":ViewLikeInterface",
         "//llvm:Support",
         "//llvm:ir_headers",
-        ":ArithUtils",
     ],
 )
 
