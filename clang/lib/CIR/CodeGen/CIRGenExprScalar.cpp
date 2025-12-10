@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
 
@@ -810,8 +811,14 @@ public:
     return {};
   }
   mlir::Value VisitSourceLocExpr(SourceLocExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: source loc");
-    return {};
+    ASTContext &ctx = cgf.getContext();
+    APValue evaluated =
+        e->EvaluateInContext(ctx, cgf.curSourceLocExprScope.getDefaultExpr());
+    mlir::Attribute attribute = ConstantEmitter(cgf).emitAbstract(
+        e->getLocation(), evaluated, e->getType());
+    mlir::TypedAttr typedAttr = mlir::cast<mlir::TypedAttr>(attribute);
+    return cir::ConstantOp::create(builder, cgf.getLoc(e->getExprLoc()),
+                                   typedAttr);
   }
   mlir::Value VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
     CIRGenFunction::CXXDefaultArgExprScope scope(cgf, dae);

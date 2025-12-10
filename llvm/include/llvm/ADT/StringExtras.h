@@ -541,6 +541,7 @@ public:
     }
     return Separator;
   }
+  bool unused() { return First; }
 };
 
 /// A forward iterator over partitions of string over a separator.
