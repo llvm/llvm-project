@@ -28,9 +28,11 @@ class UniformityInfoAnalysis;
 
 class Function;
 
+/// Configuration for AMDGPU register pressure guard.
+/// Values of 0 use command-line option defaults.
 struct AMDGPURegPressureGuardConfig {
-  unsigned MaxPercentIncrease = 20;
-  unsigned MinBaselineVGPRs = 96;
+  unsigned MaxPercentIncrease = 0; // 0 = use cl::opt default (20)
+  unsigned MinBaselineVGPRs = 0;   // 0 = use cl::opt default (96)
 };
 
 FunctionPass *createRegPressureBaselineMeasurementPass(
@@ -72,6 +74,7 @@ unsigned computeMaxVGPRPressure(Function &F, DominatorTree &DT,
                                 const UniformityInfo &UA);
 
 namespace AMDGPURegPressureGuardHelper {
+bool isEnabled();
 bool shouldGuardFunction(const AMDGPURegPressureGuardConfig &Config,
                          Function &F, unsigned BaselineVGPRs);
 bool shouldRevert(const AMDGPURegPressureGuardConfig &Config,
@@ -84,6 +87,9 @@ PreservedAnalyses
 AMDGPURegPressureGuardPass<PassT>::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   using namespace AMDGPURegPressureGuardHelper;
+
+  if (!isEnabled())
+    return WrappedPass.run(F, AM);
 
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);

@@ -24,6 +24,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <memory>
@@ -32,6 +33,22 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-reg-pressure-guard"
 
+static cl::opt<bool> EnableRegPressureGuard(
+    "amdgpu-enable-reg-pressure-guard",
+    cl::desc("Enable AMDGPU register pressure guard to revert transformations "
+             "that increase VGPR pressure beyond threshold"),
+    cl::init(true));
+
+static cl::opt<unsigned> MaxPercentIncreaseOpt(
+    "amdgpu-reg-pressure-max-increase",
+    cl::desc("Maximum allowed percentage increase in VGPR pressure"),
+    cl::init(20));
+
+static cl::opt<unsigned> MinBaselineVGPRsOpt(
+    "amdgpu-reg-pressure-min-baseline",
+    cl::desc("Minimum baseline VGPRs required to enable guard"),
+    cl::init(96));
+
 STATISTIC(NumFunctionsGuarded, "Number of functions checked by guard");
 STATISTIC(NumTransformationsReverted, "Number of transformations reverted");
 STATISTIC(NumTransformationsKept, "Number of transformations kept");
@@ -39,12 +56,18 @@ STATISTIC(NumTransformationsKept, "Number of transformations kept");
 namespace llvm {
 namespace AMDGPURegPressureGuardHelper {
 
+bool isEnabled() { return EnableRegPressureGuard; }
+
 bool shouldGuardFunction(const AMDGPURegPressureGuardConfig &Config,
                          Function &F, unsigned BaselineVGPRs) {
-  if (BaselineVGPRs < Config.MinBaselineVGPRs) {
+  unsigned MinBaseline = Config.MinBaselineVGPRs > 0
+                             ? Config.MinBaselineVGPRs
+                             : MinBaselineVGPRsOpt;
+
+  if (BaselineVGPRs < MinBaseline) {
     LLVM_DEBUG(dbgs() << "AMDGPURegPressureGuard: Skipping " << F.getName()
                       << " - baseline VGPRs (" << BaselineVGPRs
-                      << ") below threshold (" << Config.MinBaselineVGPRs
+                      << ") below threshold (" << MinBaseline
                       << ")\n");
     return false;
   }
@@ -64,11 +87,14 @@ bool shouldRevert(const AMDGPURegPressureGuardConfig &Config,
     return false;
 
   unsigned PercentIncrease = ((NewVGPRs - BaselineVGPRs) * 100) / BaselineVGPRs;
+  unsigned MaxIncrease = Config.MaxPercentIncrease > 0
+                             ? Config.MaxPercentIncrease
+                             : MaxPercentIncreaseOpt;
 
-  if (PercentIncrease > Config.MaxPercentIncrease) {
+  if (PercentIncrease > MaxIncrease) {
     LLVM_DEBUG(dbgs() << "AMDGPURegPressureGuard: Reverting transformation - "
                       << "VGPR increase " << PercentIncrease
-                      << "% exceeds limit " << Config.MaxPercentIncrease
+                      << "% exceeds limit " << MaxIncrease
                       << "%\n");
     return true;
   }
@@ -122,6 +148,9 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
+    if (!EnableRegPressureGuard)
+      return false;
+
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
     auto &UA = getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
