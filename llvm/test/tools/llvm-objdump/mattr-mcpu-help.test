@@ -4,7 +4,7 @@
 # RUN: llvm-objdump -d %t --mcpu=help 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE
 
-## We should be able to retrieve help message without -d.
+## The help message can be printed without -d.
 # RUN: llvm-objdump --mattr=help %t 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK
 # RUN: llvm-objdump --mcpu=help %t 2>&1 \
@@ -16,7 +16,7 @@
 # RUN: llvm-objdump --mcpu=help --section-headers %t 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-SECTION-HEADERS
 
-## We report error when we can't infer triple.
+## We report an error when we can't infer the triple because we don't have --triple or an input object (including a.out).
 # RUN: not llvm-objdump --mattr=help 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: not llvm-objdump --mcpu=help 2>&1 \

@@ -1,13 +1,13 @@
 # RUN: yaml2obj %s -o %t
-# REQUIRES: mips-registered-target,x86-registered-target
+# REQUIRES: mips-registered-target
 
-## We shoule be able to retrieve help message by triple.
+## When specifying --triple, the help message should be printed for the specified target.
 # RUN: llvm-objdump --mattr=help --triple=mips 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-MIPS
 # RUN: llvm-objdump --mcpu=help --triple=mips 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-MIPS
 
-## The help message will always depends on --triple.
+## The help message will depend on the target specified by --triple even if the input is for a different target.
 # RUN: llvm-objdump --mattr=help --triple=mips %t 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-MIPS
 # RUN: llvm-objdump --mcpu=help --triple=mips %t 2>&1 \
