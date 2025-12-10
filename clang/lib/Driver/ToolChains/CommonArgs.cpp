@@ -35,6 +35,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
 #include "clang/Driver/XRayArgs.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -1095,27 +1096,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "mcpu=" + CPU));
 
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    // The optimization level matches
-    // CompilerInvocation.cpp:getOptimizationLevel().
-    StringRef OOpt;
-    if (A->getOption().matches(options::OPT_O4) ||
-        A->getOption().matches(options::OPT_Ofast))
-      OOpt = "3";
-    else if (A->getOption().matches(options::OPT_O)) {
-      OOpt = A->getValue();
-      if (OOpt == "g")
-        OOpt = "1";
-      else if (OOpt == "s" || OOpt == "z")
-        OOpt = "2";
-    } else if (A->getOption().matches(options::OPT_O0))
-      OOpt = "0";
-    if (!OOpt.empty()) {
+  if (Args.getLastArg(options::OPT_O_Group)) {
+    unsigned OptimizationLevel =
+        getOptimizationLevel(Args, InputKind(), D.getDiags());
+    CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
+                                         "O" + Twine(OptimizationLevel)));
+    if (IsAMDGCN)
       CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "O" + OOpt));
-      if (IsAMDGCN)
-        CmdArgs.push_back(Args.MakeArgString(Twine("--lto-CGO") + OOpt));
-    }
+          Args.MakeArgString(Twine("--lto-CGO") + Twine(OptimizationLevel)));
   }
 
   if (Args.hasArg(options::OPT_gsplit_dwarf)) {
