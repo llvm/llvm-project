@@ -1330,7 +1330,7 @@ Here's the list of compilers surveyed, hot linked to the source of data on it.  
 *   PGI -- [Compiler Reference version 19.1](https://www.pgroup.com/resources/docs/19.1/x86/pgi-ref-guide/index.htm#cmdln-options-ref), [Fortran Reference Guide version 17](https://www.pgroup.com/doc/pgi17fortref.pdf)
 *   [Classic Flang](https://github.com/flang-compiler/flang/wiki/Using-Flang) -- information from GitHub
 
-This document has been kept relatively small by providing links to much of the information about options rather than duplicating that information.  For some PGI options, there are direct links.  But direct links were not possible for Cray, GNU and some PGI options.
+This document has been kept relatively small by providing links to much of the information about options rather than duplicating that information.  For some PGI options, there are direct links.  But direct links were not possible for the remaining PGI options and those of other compilers
 
 Many compilers have options that can either be enabled or disabled.  Some compilers indicate this by the presence or absence of the letters "no" in the option name (IBM, Intel, and PGI) while Cray precedes many options with either "e" for enabled or "d" for disabled.  This document only includes the enabled version of the option specification.
 
