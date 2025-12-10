@@ -262,7 +262,6 @@ else ()
   add_custom_target(check-flang-rt)
 endif()
 
-
 ###################
 # Install headers #
 ###################
