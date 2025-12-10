@@ -101,8 +101,8 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(Type *Ty) const;
 
-  /// \returns true if the result of the value could potentially be
-  /// different across workitems in a wavefront.
+  /// \returns true if V might be divergent even when all of its operands
+  /// are uniform.
   bool isSourceOfDivergence(const Value *V) const;
 
   /// Returns true for the target specific set of operations which produce
