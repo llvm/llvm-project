@@ -2238,6 +2238,8 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
 bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
                                                   VPBuilder &LoopBuilder) {
   VPDominatorTree VPDT(Plan);
+  VPTypeAnalysis TypeInfo(Plan);
+  VPBuilder PHBuilder(Plan.getVectorPreheader());
 
   SmallVector<VPFirstOrderRecurrencePHIRecipe *> RecurrencePhis;
   for (VPRecipeBase &R :
@@ -2246,6 +2248,15 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
       RecurrencePhis.push_back(FOR);
 
   for (VPFirstOrderRecurrencePHIRecipe *FOR : RecurrencePhis) {
+    /// Adjust start value of fixed-order recurrence phi to [poison, ... ,
+    /// poison, start value].
+    VPValue *StartV = FOR->getStartValue();
+    VPValue *NewStart = PHBuilder.createNaryOp(
+        VPInstruction::InsertLastLane, {Plan.getOrAddLiveIn(PoisonValue::get(
+                                            TypeInfo.inferScalarType(StartV))),
+                                        StartV});
+    FOR->setOperand(0, NewStart);
+
     SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
     VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
     // Fixed-order recurrences do not contain cycles, so this loop is guaranteed
