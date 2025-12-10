@@ -122,8 +122,7 @@ and postsubmit CI on the `LLVM buildbot <https://lab.llvm.org/buildbot>`_. For
 instructions on contributing a postsubmit buildbot read
 `the LLVM documentation <https://llvm.org/docs/HowToAddABuilder.html>`_ and for
 presubmit tests read
-`the github documentation <https://github.com/llvm/llvm-project/blob/main/.github/workflows/libc-fullbuild-tests.yml>`
-TODO: proper link.
+`the best practices <https://llvm.org/docs/CIBestPractices.html>`_
 
 The test configurations are at these links:
  * `Linux Postsubmit <https://github.com/llvm/llvm-zorg/blob/main/zorg/buildbot/builders/annotated/libc-linux.py>`_
