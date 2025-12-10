@@ -7,6 +7,8 @@
 // RUN:   %t/compress-regclass-by-hwmode.td -o /dev/null 2>&1 | FileCheck %t/compress-regclass-by-hwmode.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %t -I %S \
 // RUN:   %t/compress-regclass-by-hwmode-2.td -o /dev/null 2>&1 | FileCheck %t/compress-regclass-by-hwmode-2.td --implicit-check-not="error:"
+// RUN: not llvm-tblgen --gen-dag-isel  -I %p/../../include -I %t -I %S \
+// RUN:   %t/vt-by-hwmode-missing.td -o /dev/null 2>&1 | FileCheck %t/vt-by-hwmode-missing.td --implicit-check-not="error:"
 
 //--- Common.td
 include "Common/RegClassByHwModeCommon.td"
@@ -84,5 +86,36 @@ let Predicates = [IsPtr32] in
 def : CompressPat<(X_MOV_BIG XRegs:$dst, XRegs:$src),
                   (PTR_MOV PtrRC:$dst, PtrRC:$src)>;
 // CHECK: [[#@LINE-2]]:1: error: Type mismatch between Input and Output Dag operand 'dst'
+def MyTargetISA : InstrInfo;
+def MyTarget : Target { let InstructionSet = MyTargetISA; }
+
+
+//--- vt-by-hwmode-missing.td
+include "Common.td"
+/// This should fail since we are missing a DefaultMode entry for the
+/// ValueTypeByHwMode and can't resolve it for the Ptr32 (default) case.
+def BadVT : ValueTypeByHwMode<[Ptr64], [i64]>;
+def BadVTRegClass : RegisterClass<"MyTarget", [i64, BadVT], 64, (add Y0, Y1)>;
+/// NOTE: this error only occurs for RegClassByHwMode, normal RegisterClass
+/// logic for VT resolution takes a different code path and does not error.
+def TEST_OK : TestInstruction {
+  let OutOperandList = (outs BadVTRegClass:$dst);
+  let InOperandList = (ins BadVTRegClass:$src1, BadVTRegClass:$src2);
+  let AsmString = "test $dst, $src1, $src2";
+  let Pattern = [(set BadVTRegClass:$dst, (add BadVTRegClass:$src1, BadVTRegClass:$src2))];
+}
+/// Once we use RegClassByHwMode, we get an error about missing modes:
+def BadPtrRC : RegClassByHwMode<[Ptr32, Ptr64], [BadVTRegClass, YRegs]>;
+// CHECK: vt-by-hwmode-missing.td:[[#@LINE-1]]:5: error: Could not resolve VT for Mode DefaultMode
+// CHECK: vt-by-hwmode-missing.td:4:5: note: ValueTypeByHwMode BadVT defined here
+// CHECK: vt-by-hwmode-missing.td:[[#@LINE+1]]:5: note: pattern instantiated here
+def TEST : TestInstruction {
+  let OutOperandList = (outs BadPtrRC:$dst);
+  let InOperandList = (ins BadPtrRC:$src1, BadPtrRC:$src2);
+  let AsmString = "test $dst, $src1, $src2";
+  let opcode = 0;
+  let Pattern = [(set BadPtrRC:$dst, (add BadPtrRC:$src1, BadPtrRC:$src2))];
+}
+
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }

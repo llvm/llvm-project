@@ -266,3 +266,28 @@ mlir::acc::getDominatingDataClauses(mlir::Operation *computeConstructOp,
 
   return dominatingDataClauses.takeVector();
 }
+
+mlir::remark::detail::InFlightRemark
+mlir::acc::emitRemark(mlir::Operation *op, const llvm::Twine &message,
+                      llvm::StringRef category) {
+  using namespace mlir::remark;
+  mlir::Location loc = op->getLoc();
+  auto *engine = loc->getContext()->getRemarkEngine();
+  if (!engine)
+    return remark::detail::InFlightRemark{};
+
+  llvm::StringRef funcName;
+  if (auto func = dyn_cast<mlir::FunctionOpInterface>(op))
+    funcName = func.getName();
+  else if (auto funcOp = op->getParentOfType<mlir::FunctionOpInterface>())
+    funcName = funcOp.getName();
+
+  auto opts = RemarkOpts::name("openacc").category(category);
+  if (!funcName.empty())
+    opts = opts.function(funcName);
+
+  auto remark = engine->emitOptimizationRemark(loc, opts);
+  if (remark)
+    remark << message.str();
+  return remark;
+}

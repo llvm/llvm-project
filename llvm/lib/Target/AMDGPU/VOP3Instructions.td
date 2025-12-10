@@ -1721,6 +1721,28 @@ let SubtargetPredicate = isGFX11Plus in {
   defm V_MINMAX_I32     : VOP3Inst<"v_minmax_i32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
   defm V_CVT_PK_I16_F32 : VOP3Inst<"v_cvt_pk_i16_f32", VOP3_Profile<VOP_V2I16_F32_F32>>;
   defm V_CVT_PK_U16_F32 : VOP3Inst<"v_cvt_pk_u16_f32", VOP3_Profile<VOP_V2I16_F32_F32>>;
+
+  def : GCNPat<(v2i16 (build_vector (i16 (fp_to_sint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                                                      (i16 (fp_to_sint (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
+               (V_CVT_PK_I16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
+  def : GCNPat<(v2i16 (build_vector (i16 (fp_to_uint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                                                      (i16 (fp_to_uint (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
+               (V_CVT_PK_U16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
+
+  // Fallback patterns for f32->i16 conversion. These are only required because
+  // f32->i16 has to be legal so that we can select V_CVT_PK_[IU]16_F32 above.
+  let True16Predicate = UseRealTrue16Insts in {
+    def : GCNPat<(i16 (fp_to_sint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                 (EXTRACT_SUBREG (V_CVT_I32_F32_e64 $src0_modifiers, $src0), lo16)>;
+    def : GCNPat<(i16 (fp_to_uint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                 (EXTRACT_SUBREG (V_CVT_U32_F32_e64 $src0_modifiers, $src0), lo16)>;
+  }
+  let True16Predicate = NotUseRealTrue16Insts in {
+    def : GCNPat<(i16 (fp_to_sint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                 (V_CVT_I32_F32_e64 $src0_modifiers, $src0)>;
+    def : GCNPat<(i16 (fp_to_uint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                 (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
+  }
 } // End SubtargetPredicate = isGFX11Plus
 
 class VOP3_CVT_SR_FP16_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_F1632_FP8BF8_TiedInput_Profile<P> {

@@ -16,6 +16,7 @@ add_mlir_dialect_library(MLIROpenACCUtils
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
+  MLIRArithUtils
   MLIROpenACCDialect
   MLIRIR
   MLIRSupport

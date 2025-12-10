@@ -469,6 +469,14 @@ let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE],
 } // End SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE]
   // SchedRW = [WriteSFPU], isReMaterializable = 1
 
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in {
+    // Fallback patterns for f32->i16 conversion.
+    def : GCNPat<(i16 (UniformUnaryFrag<fp_to_sint> f32:$src0)),
+                 (S_CVT_I32_F32 $src0)>;
+    def : GCNPat<(i16 (UniformUnaryFrag<fp_to_uint> f32:$src0)),
+                 (S_CVT_U32_F32 $src0)>;
+}
+
 let hasSideEffects = 1 in {
 let has_sdst = 0 in {
 let Uses = [M0] in {
