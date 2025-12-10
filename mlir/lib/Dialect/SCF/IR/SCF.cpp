@@ -3744,9 +3744,9 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
         (ifOp.elseBlock() && !ifOp.elseBlock()->without_terminator().empty()))
       return failure();
 
-    assert(ifOp->use_empty() || (llvm::all_equal(ifOp->getUsers()) &&
-                                 *ifOp->user_begin() == conditionOp) &&
-                                    "ifOp has unexpected uses");
+    assert((ifOp->use_empty() || (llvm::all_equal(ifOp->getUsers()) &&
+                                  *ifOp->user_begin() == conditionOp)) &&
+           "ifOp has unexpected uses");
 
     Location loc = op.getLoc();
 
@@ -4471,7 +4471,7 @@ struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
 
   LogicalResult matchAndRewrite(WhileOp loop,
                                 PatternRewriter &rewriter) const override {
-    auto oldBefore = loop.getBeforeBody();
+    auto *oldBefore = loop.getBeforeBody();
     ConditionOp oldTerm = loop.getConditionOp();
     ValueRange beforeArgs = oldBefore->getArguments();
     ValueRange termArgs = oldTerm.getArgs();
@@ -4492,7 +4492,7 @@ struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
                                                beforeArgs);
     }
 
-    auto oldAfter = loop.getAfterBody();
+    auto *oldAfter = loop.getAfterBody();
 
     SmallVector<Type> newResultTypes(beforeArgs.size());
     for (auto &&[i, j] : llvm::enumerate(*mapping))
@@ -4501,8 +4501,8 @@ struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
     auto newLoop = WhileOp::create(
         rewriter, loop.getLoc(), newResultTypes, loop.getInits(),
         /*beforeBuilder=*/nullptr, /*afterBuilder=*/nullptr);
-    auto newBefore = newLoop.getBeforeBody();
-    auto newAfter = newLoop.getAfterBody();
+    auto *newBefore = newLoop.getBeforeBody();
+    auto *newAfter = newLoop.getAfterBody();
 
     SmallVector<Value> newResults(beforeArgs.size());
     SmallVector<Value> newAfterArgs(beforeArgs.size());
