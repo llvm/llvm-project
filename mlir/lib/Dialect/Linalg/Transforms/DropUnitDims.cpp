@@ -28,6 +28,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
@@ -809,50 +810,32 @@ struct RankReducedInsertSliceOp : public OpRewritePattern<InsertOpTy> {
 
 /// Patterns that are used to canonicalize the use of unit-extent dims for
 /// broadcasting.
-static void
-populateFoldUnitExtentDimsViaReshapesPatterns(RewritePatternSet &patterns,
-                                              ControlDropUnitDims &options) {
-  auto *context = patterns.getContext();
-  patterns.add<DropUnitDims>(context, options);
-  patterns.add<DropPadUnitDims>(context, options);
-  // TODO: Patterns unrelated to unit dim folding should be factored out.
-  patterns.add<RankReducedExtractSliceOp,
-               RankReducedInsertSliceOp<tensor::InsertSliceOp>,
-               RankReducedInsertSliceOp<tensor::ParallelInsertSliceOp>>(
-      context);
-  linalg::FillOp::getCanonicalizationPatterns(patterns, context);
-  tensor::CollapseShapeOp::getCanonicalizationPatterns(patterns, context);
-  tensor::EmptyOp::getCanonicalizationPatterns(patterns, context);
-  tensor::ExpandShapeOp::getCanonicalizationPatterns(patterns, context);
-  tensor::populateFoldTensorEmptyPatterns(patterns);
-  memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
-  memref::populateResolveShapedTypeResultDimsPatterns(patterns);
-}
-
-static void
-populateFoldUnitExtentDimsViaSlicesPatterns(RewritePatternSet &patterns,
-                                            ControlDropUnitDims &options) {
-  auto *context = patterns.getContext();
-  patterns.add<DropUnitDims>(context, options);
-  patterns.add<DropPadUnitDims>(context, options);
-  // TODO: Patterns unrelated to unit dim folding should be factored out.
-  linalg::FillOp::getCanonicalizationPatterns(patterns, context);
-  tensor::EmptyOp::getCanonicalizationPatterns(patterns, context);
-  tensor::populateFoldTensorEmptyPatterns(patterns);
-  memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
-  memref::populateResolveShapedTypeResultDimsPatterns(patterns);
-}
-
 void mlir::linalg::populateFoldUnitExtentDimsPatterns(
     RewritePatternSet &patterns, linalg::ControlDropUnitDims &options) {
-  if (options.rankReductionStrategy ==
-      linalg::ControlDropUnitDims::RankReductionStrategy::ExtractInsertSlice) {
-    populateFoldUnitExtentDimsViaSlicesPatterns(patterns, options);
-  } else if (options.rankReductionStrategy ==
-             linalg::ControlDropUnitDims::RankReductionStrategy::
-                 ReassociativeReshape) {
-    populateFoldUnitExtentDimsViaReshapesPatterns(patterns, options);
+  auto *context = patterns.getContext();
+  patterns.add<DropUnitDims>(context, options);
+  patterns.add<DropPadUnitDims>(context, options);
+}
+
+void mlir::linalg::populateFoldUnitExtentDimsCanonicalizationPatterns(
+    RewritePatternSet &patterns, linalg::ControlDropUnitDims &options) {
+  auto *context = patterns.getContext();
+  bool reassociativeReshape =
+      options.rankReductionStrategy ==
+      linalg::ControlDropUnitDims::RankReductionStrategy::ReassociativeReshape;
+  if (reassociativeReshape) {
+    patterns.add<RankReducedExtractSliceOp,
+                 RankReducedInsertSliceOp<tensor::InsertSliceOp>,
+                 RankReducedInsertSliceOp<tensor::ParallelInsertSliceOp>>(
+        context);
+    tensor::CollapseShapeOp::getCanonicalizationPatterns(patterns, context);
+    tensor::ExpandShapeOp::getCanonicalizationPatterns(patterns, context);
   }
+  linalg::FillOp::getCanonicalizationPatterns(patterns, context);
+  tensor::EmptyOp::getCanonicalizationPatterns(patterns, context);
+  tensor::populateFoldTensorEmptyPatterns(patterns);
+  memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
+  memref::populateResolveShapedTypeResultDimsPatterns(patterns);
 }
 
 void mlir::linalg::populateMoveInitOperandsToInputPattern(
@@ -870,15 +853,27 @@ struct LinalgFoldUnitExtentDimsPass
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();
-    RewritePatternSet patterns(context);
     ControlDropUnitDims options;
     if (useRankReducingSlices) {
       options.rankReductionStrategy = linalg::ControlDropUnitDims::
           RankReductionStrategy::ExtractInsertSlice;
     }
-    linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
-    populateMoveInitOperandsToInputPattern(patterns);
-    (void)applyPatternsGreedily(op, std::move(patterns));
+
+    // Apply fold unit extent dims patterns with walk-based driver.
+    {
+      RewritePatternSet patterns(context);
+      linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
+      walkAndApplyPatterns(op, std::move(patterns));
+    }
+
+    // Apply canonicalization patterns with greedy driver.
+    {
+      RewritePatternSet patterns(context);
+      populateMoveInitOperandsToInputPattern(patterns);
+      linalg::populateFoldUnitExtentDimsCanonicalizationPatterns(patterns,
+                                                                 options);
+      (void)applyPatternsGreedily(op, std::move(patterns));
+    }
   }
 };
 

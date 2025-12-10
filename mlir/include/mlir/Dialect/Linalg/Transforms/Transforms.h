@@ -2089,9 +2089,15 @@ void populateFuseTensorPadWithProducerLinalgOpPatterns(
 void populateSimplifyDepthwiseConvPatterns(RewritePatternSet &patterns);
 
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
-/// tensors via reassociative reshape ops.
+/// tensors and memref.
+/// Note that these patterns should not be used with a greedy driver.
 void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns,
                                         ControlDropUnitDims &options);
+
+/// Populates canonicalization patterns that simplify IR after folding
+/// unit-extent dimensions.
+void populateFoldUnitExtentDimsCanonicalizationPatterns(
+    RewritePatternSet &patterns, ControlDropUnitDims &options);
 
 /// A pattern that converts init operands to input operands.
 void populateMoveInitOperandsToInputPattern(RewritePatternSet &patterns);
