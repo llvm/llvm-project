@@ -523,7 +523,6 @@ namespace DeleteRunsDtors {
   static_assert(abc2() == 1);
 }
 
-/// FIXME: There is a slight difference in diagnostics here.
 namespace FaultyDtorCalledByDelete {
   struct InnerFoo {
     int *mem;
