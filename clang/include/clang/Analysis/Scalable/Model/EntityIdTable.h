@@ -25,7 +25,7 @@ namespace ssaf {
 class EntityIdTable {
   std::set<EntityName> Entities;
 
-  std::vector<const EntityName*> IdToEntity;
+  std::vector<const EntityName *> IdToEntity;
 
 public:
   EntityIdTable() = default;
@@ -34,15 +34,16 @@ public:
   ///
   /// If the entity already exists in the table, returns its existing Id.
   /// Otherwise, creates and returns a new Id. This operation is idempotent.
-  EntityId createEntityId(const EntityName& Name);
+  EntityId createEntityId(const EntityName &Name);
 
   /// Returns true if an entity with the given name exists in the table.
-  bool exists(const EntityName& Name) const;
+  bool exists(const EntityName &Name) const;
 
   /// Invokes the callback for each entity in the table.
   ///
   /// Iteration order is unspecified.
-  void forEach(std::function<void(const EntityName&, EntityId)> Callback) const;
+  void
+  forEach(std::function<void(const EntityName &, EntityId)> Callback) const;
 
   /// Returns the number of unique entities in the table.
   size_t count() const;

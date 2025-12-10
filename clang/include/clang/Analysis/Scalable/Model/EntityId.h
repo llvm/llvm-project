@@ -38,9 +38,9 @@ class EntityId {
   EntityId() = delete;
 
 public:
-  bool operator==(const EntityId& Other) const { return Index == Other.Index; }
-  bool operator<(const EntityId& Other) const { return Index < Other.Index; }
-  bool operator!=(const EntityId& Other) const { return !(*this == Other); }
+  bool operator==(const EntityId &Other) const { return Index == Other.Index; }
+  bool operator<(const EntityId &Other) const { return Index < Other.Index; }
+  bool operator!=(const EntityId &Other) const { return !(*this == Other); }
 };
 
 } // namespace ssaf

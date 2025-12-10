@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"
+#include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
-#include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -86,7 +86,8 @@ TEST(EntityIdTableTest, WithBuildNamespace) {
   NestedBuildNamespace NS = NestedBuildNamespace::makeCompilationUnit("test.o");
 
   EntityName Entity1("c:@F@foo", "", NS);
-  EntityName Entity2("c:@F@foo", "", NestedBuildNamespace::makeCompilationUnit("other.o"));
+  EntityName Entity2("c:@F@foo", "",
+                     NestedBuildNamespace::makeCompilationUnit("other.o"));
 
   EntityId Id1 = Table.createEntityId(Entity1);
   EntityId Id2 = Table.createEntityId(Entity2);
@@ -98,9 +99,8 @@ TEST(EntityIdTableTest, ForEachEmptyTable) {
   EntityIdTable Table;
 
   int CallbackCount = 0;
-  Table.forEach([&CallbackCount](const EntityName&, EntityId) {
-    CallbackCount++;
-  });
+  Table.forEach(
+      [&CallbackCount](const EntityName &, EntityId) { CallbackCount++; });
 
   EXPECT_EQ(CallbackCount, 0);
 }
@@ -119,7 +119,7 @@ TEST(EntityIdTableTest, ForEachMultipleEntities) {
   std::set<EntityId> VisitedIds;
   std::set<EntityName> VisitedNames;
 
-  Table.forEach([&](const EntityName& Name, EntityId Id) {
+  Table.forEach([&](const EntityName &Name, EntityId Id) {
     VisitedIds.insert(Id);
     VisitedNames.insert(Name);
   });
