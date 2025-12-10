@@ -22,7 +22,8 @@ using namespace mlir;
 using namespace mlir::vector;
 using namespace mlir::x86vector;
 
-static FailureOr<llvm::SmallVector<Operation *>> getAllUsers(Operation *op) {
+static FailureOr<llvm::SmallVector<Operation *>>
+getSameBlockUsers(Operation *op) {
   llvm::SmallVector<Operation *> opUsers;
   for (OpResult result : op->getResults()) {
     for (Operation *user : result.getUsers()) {
@@ -48,10 +49,10 @@ static bool checkLooping(Operation *op) {
   llvm::SmallVector<Operation *> operations;
   operations.push_back(op);
 
-  // Retrive the next immediate two/three operation until it is a vector.load or
+  // Retrive the next immediate operation until it is a vector.load or
   // a vector.transfer_read
   Operation *nextOp = op->getNextNode();
-  while (operations.size() < 3 && nextOp) {
+  while (nextOp) {
     if (isa<vector::LoadOp>(nextOp) || isa<vector::TransferReadOp>(nextOp)) {
       operations.push_back(op);
     } else {
@@ -63,7 +64,7 @@ static bool checkLooping(Operation *op) {
   // If all the loads or transfer_reads have same immediate nextOp as its
   // user, then it loops.
   for (Operation *op : operations) {
-    FailureOr<llvm::SmallVector<Operation *>> users = getAllUsers(op);
+    FailureOr<llvm::SmallVector<Operation *>> users = getSameBlockUsers(op);
     if (failed(users))
       return false;
 
@@ -83,7 +84,7 @@ struct SinkVectorProducerOps final : public OpRewritePattern<producerOp> {
   LogicalResult matchAndRewrite(producerOp op,
                                 PatternRewriter &rewriter) const override {
 
-    auto users = getAllUsers(op);
+    auto users = getSameBlockUsers(op);
     if (failed(users))
       return failure();
 
@@ -98,12 +99,12 @@ struct SinkVectorProducerOps final : public OpRewritePattern<producerOp> {
 
     // Iterate until the last instruction to find the first users of all
     // producers within the block.
-    Operation *nextOp = op->getNextNode();
+    Operation *nextOp = op;
 
-    while (nextOp) {
+    while ((nextOp = nextOp->getNextNode())) {
 
       if (isa<vector::LoadOp>(nextOp) || isa<vector::TransferReadOp>(nextOp)) {
-        auto nextUsers = getAllUsers(nextOp);
+        auto nextUsers = getSameBlockUsers(nextOp);
 
         if (failed(nextUsers))
           continue;
@@ -126,7 +127,6 @@ struct SinkVectorProducerOps final : public OpRewritePattern<producerOp> {
           prodsAllUsers.erase(op);
         }
       }
-      nextOp = nextOp->getNextNode();
     }
 
     // Move all the loads or transfer_reads before its first use.
