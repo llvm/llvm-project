@@ -19,14 +19,14 @@
 # CHECK-2: foo2
 
 ## Test error cases.
-# RUN: not llvm-symbolizer --obj="archive.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-# CHECK-ERROR: error: no matching member 'nonexistent.o' with arch {{.*}} in 'archive.a'
+# RUN: not llvm-symbolizer --default-arch=ppc64le --obj="archive.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+# CHECK-ERROR: error: 'archive.a(nonexistent.o)': no matching member 'nonexistent.o' with arch 'ppc64le' in 'archive.a'
 
 # RUN: not llvm-symbolizer --obj="1.o(1.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
-# CHECK-NOTARCHIVE: error: '1.o' is not a valid archive
+# CHECK-NOTARCHIVE: error: '1.o(1.o)': '1.o' is not a valid archive
 
-# RUN: not llvm-symbolizer --obj="archive.a()" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOSYMBOL
-# CHECK-NOSYMBOL: error: no matching member '' with arch {{.*}} in 'archive.a'
+# RUN: not llvm-symbolizer --obj="archive.a():ppc64le" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOSYMBOL
+# CHECK-NOSYMBOL: error: 'archive.a():ppc64le': no matching member '' with arch 'ppc64le' in 'archive.a'
 
 --- !ELF
 FileHeader:

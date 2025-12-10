@@ -27,14 +27,14 @@
 # CHECK-64: foo64
 
 ## Test error cases.
-# RUN: not llvm-symbolizer --obj="archive.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-# CHECK-ERROR: error: no matching member 'nonexistent.o' with arch {{.*}} in 'archive.a'
+# RUN: not llvm-symbolizer --default-arch=ppc --obj="archive.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+# CHECK-ERROR: error: 'archive.a(nonexistent.o)': no matching member 'nonexistent.o' with arch 'ppc' in 'archive.a'
 
 # RUN: not llvm-symbolizer --obj="test.o(test.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
-# CHECK-NOTARCHIVE: error: 'test.o' is not a valid archive
+# CHECK-NOTARCHIVE: error: 'test.o(test.o)': 'test.o' is not a valid archive
 
-# RUN: not llvm-symbolizer --obj="archive.a()" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOSYMBOL
-# CHECK-NOSYMBOL: error: no matching member '' with arch {{.*}} in 'archive.a'
+# RUN: not llvm-symbolizer --obj="archive.a():ppc64" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOSYMBOL
+# CHECK-NOSYMBOL: error: 'archive.a():ppc64': no matching member '' with arch 'ppc64' in 'archive.a'
 
 ## 32-bit XCOFF object.
 --- !XCOFF
