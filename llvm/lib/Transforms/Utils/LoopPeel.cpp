@@ -447,7 +447,10 @@ static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
   const DataLayout &DL = L.getHeader()->getDataLayout();
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
-      if (I.mayWriteToMemory())
+      // Don't consider llvm.assume as writing to memory.
+      if (I.mayWriteToMemory() &&
+          !(isa<IntrinsicInst>(I) &&
+            cast<IntrinsicInst>(I).getIntrinsicID() == Intrinsic::assume))
         return 0;
 
       if (LoadUsers.contains(&I))
