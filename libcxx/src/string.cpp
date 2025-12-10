@@ -53,8 +53,18 @@ void basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, si
   __annotate_new(__sz);
 }
 
+// We provide the external 'npos' instantiation for backwards compatibility. However, that was never provided on COFF
+// platforms, so we only provide it on non-coff platforms.
+#  ifdef _LIBCPP_OBJECT_FORMAT_COFF
+#    define STRING_NPOS(CharT) static_assert(true)
+#  else
+#    define STRING_NPOS(CharT)                                                                                         \
+      template _LIBCPP_EXPORTED_FROM_ABI const basic_string<CharT>::size_type basic_string<CharT>::npos
+#  endif
+
 #  define STRING_LEGACY_API(CharT)                                                                                     \
-    template _LIBCPP_EXPORTED_FROM_ABI void basic_string<CharT>::__init(const value_type*, size_type, size_type)
+    template _LIBCPP_EXPORTED_FROM_ABI void basic_string<CharT>::__init(const value_type*, size_type, size_type);      \
+    STRING_NPOS(CharT)
 
 STRING_LEGACY_API(char);
 #  if _LIBCPP_HAS_WIDE_CHARACTERS

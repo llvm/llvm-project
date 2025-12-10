@@ -217,7 +217,6 @@ typedef __char32_t char32_t;
 #    endif
 
 #    define _LIBCPP_HIDDEN
-#    define _LIBCPP_TEMPLATE_DATA_VIS
 #    define _LIBCPP_NAMESPACE_VISIBILITY
 
 #  else
@@ -229,7 +228,6 @@ typedef __char32_t char32_t;
 #    endif
 
 #    define _LIBCPP_HIDDEN _LIBCPP_VISIBILITY("hidden")
-#    define _LIBCPP_TEMPLATE_DATA_VIS _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS

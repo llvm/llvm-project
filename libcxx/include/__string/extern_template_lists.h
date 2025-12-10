@@ -68,7 +68,6 @@
     Func(int basic_string<CharT>::compare(size_type, size_type, const value_type*) const)                              \
     Func(int basic_string<CharT>::compare(size_type, size_type, const value_type*, size_type) const)                   \
     Func(int basic_string<CharT>::compare(size_type, size_type, const basic_string&, size_type, size_type) const)      \
-    Func(const basic_string<CharT>::size_type basic_string<CharT>::npos)                                               \
 
 #define _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(Func, CharT)                                                            \
   _LIBCPP_STRING_COMMON_EXTERN_TEMPLATE_LIST(Func, CharT)                                                              \
