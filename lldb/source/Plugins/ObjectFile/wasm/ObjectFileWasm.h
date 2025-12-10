@@ -146,6 +146,7 @@ private:
   /// \}
 
   std::vector<section_info> m_sect_infos;
+  uint32_t m_num_imported_functions = 0;
   std::vector<Symbol> m_symbols;
   ArchSpec m_arch;
   UUID m_uuid;

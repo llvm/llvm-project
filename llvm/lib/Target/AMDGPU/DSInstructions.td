@@ -886,15 +886,6 @@ defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc_gfx9<"ds_sub_clamp_rtn_u32", VGPROp_3
 def DS_BPERMUTE_FI_B32    : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32",
                                              int_amdgcn_ds_bpermute_fi_b32>;
 
-multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
-                                  ValueType vt, string frag> {
-  def : DSAtomicRetPat<inst, vt,
-                        !cast<PatFrag>(frag#"_local_addrspace")>;
-  def : DSAtomicRetPat<noRetInst, vt,
-                        !cast<PatFrag>(frag#"_noret_local_addrspace"), /* complexity */ 1>;
-}
-
-defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
 } // let SubtargetPredicate = isGFX12Plus
 
 let SubtargetPredicate = isGFX1250Plus in {

@@ -3951,6 +3951,15 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     StringRef S = llvm::getAllocTokenModeAsString(*Opts.AllocTokenMode);
     GenerateArg(Consumer, OPT_falloc_token_mode_EQ, S);
   }
+  // Generate args for matrix types.
+  if (Opts.MatrixTypes) {
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixColMajor)
+      GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "column-major");
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixRowMajor)
+      GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "row-major");
+  }
 }
 
 bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
@@ -4543,6 +4552,27 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.AllocTokenMode = Mode;
     else
       Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+  }
+
+  // Enable options for matrix types.
+  if (Opts.MatrixTypes) {
+    if (const Arg *A = Args.getLastArg(OPT_fmatrix_memory_layout_EQ)) {
+      StringRef ClangValue = A->getValue();
+      if (ClangValue == "row-major")
+        Opts.setDefaultMatrixMemoryLayout(
+            LangOptions::MatrixMemoryLayout::MatrixRowMajor);
+      else
+        Opts.setDefaultMatrixMemoryLayout(
+            LangOptions::MatrixMemoryLayout::MatrixColMajor);
+
+      for (Arg *A : Args.filtered(options::OPT_mllvm)) {
+        StringRef OptValue = A->getValue();
+        if (OptValue.consume_front("-matrix-default-layout=") &&
+            ClangValue != OptValue)
+          Diags.Report(diag::err_conflicting_matrix_layout_flags)
+              << ClangValue << OptValue;
+      }
+    }
   }
 
   // Validate options for HLSL
