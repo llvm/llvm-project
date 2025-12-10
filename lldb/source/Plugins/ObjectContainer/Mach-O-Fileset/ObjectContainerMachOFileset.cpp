@@ -197,24 +197,24 @@ bool ObjectContainerMachOFileset::ParseHeader() {
 
   std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-  std::optional<mach_header> header = ParseMachOHeader(m_data);
+  std::optional<mach_header> header = ParseMachOHeader(*m_data_sp.get());
   if (!header)
     return false;
 
   const size_t header_size = MachHeaderSizeFromMagic(header->magic);
   const size_t header_and_lc_size = header_size + header->sizeofcmds;
 
-  if (m_data.GetByteSize() < header_and_lc_size) {
+  if (m_data_sp->GetByteSize() < header_and_lc_size) {
     ProcessSP process_sp(m_process_wp.lock());
     DataBufferSP data_sp =
         process_sp
             ? ObjectFile::ReadMemory(process_sp, m_memory_addr,
                                      header_and_lc_size)
             : ObjectFile::MapFileData(m_file, header_and_lc_size, m_offset);
-    m_data.SetData(data_sp);
+    m_data_sp->SetData(data_sp);
   }
 
-  return ParseFileset(m_data, *header, m_entries, m_memory_addr);
+  return ParseFileset(*m_data_sp.get(), *header, m_entries, m_memory_addr);
 }
 
 size_t ObjectContainerMachOFileset::GetModuleSpecifications(
@@ -282,11 +282,11 @@ ObjectContainerMachOFileset::GetObjectFile(const lldb_private::FileSpec *file) {
   if (!entry)
     return {};
 
-  DataBufferSP data_sp;
+  DataExtractorSP extractor_sp;
   lldb::offset_t data_offset = 0;
   return ObjectFile::FindPlugin(module_sp, file, m_offset + entry->fileoff,
-                                m_data.GetByteSize() - entry->fileoff, data_sp,
-                                data_offset);
+                                m_data_sp->GetByteSize() - entry->fileoff,
+                                extractor_sp, data_offset);
 }
 
 ObjectContainerMachOFileset::Entry *

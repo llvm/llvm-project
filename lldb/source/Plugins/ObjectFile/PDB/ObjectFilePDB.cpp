@@ -91,10 +91,9 @@ bool ObjectFilePDB::initPDBFile() {
   return true;
 }
 
-ObjectFile *
-ObjectFilePDB::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
-                              offset_t data_offset, const FileSpec *file,
-                              offset_t file_offset, offset_t length) {
+ObjectFile *ObjectFilePDB::CreateInstance(
+    const ModuleSP &module_sp, DataExtractorSP data_sp, offset_t data_offset,
+    const FileSpec *file, offset_t file_offset, offset_t length) {
   auto objfile_up = std::make_unique<ObjectFilePDB>(
       module_sp, data_sp, data_offset, file, file_offset, length);
   if (!objfile_up->initPDBFile())
@@ -158,9 +157,10 @@ size_t ObjectFilePDB::GetModuleSpecifications(
   return specs.GetSize() - initial_count;
 }
 
-ObjectFilePDB::ObjectFilePDB(const ModuleSP &module_sp, DataBufferSP &data_sp,
-                             offset_t data_offset, const FileSpec *file,
-                             offset_t offset, offset_t length)
+ObjectFilePDB::ObjectFilePDB(const ModuleSP &module_sp,
+                             DataExtractorSP &data_sp, offset_t data_offset,
+                             const FileSpec *file, offset_t offset,
+                             offset_t length)
     : ObjectFile(module_sp, file, offset, length, data_sp, data_offset) {}
 
 std::unique_ptr<PDBFile>

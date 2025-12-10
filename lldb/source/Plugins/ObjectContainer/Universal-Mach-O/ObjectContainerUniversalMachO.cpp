@@ -74,10 +74,10 @@ ObjectContainerUniversalMachO::ObjectContainerUniversalMachO(
 ObjectContainerUniversalMachO::~ObjectContainerUniversalMachO() = default;
 
 bool ObjectContainerUniversalMachO::ParseHeader() {
-  bool success = ParseHeader(m_data, m_header, m_fat_archs);
+  bool success = ParseHeader(*m_data_sp.get(), m_header, m_fat_archs);
   // We no longer need any data, we parsed all we needed to parse and cached it
   // in m_header and m_fat_archs
-  m_data.Clear();
+  m_data_sp = std::make_shared<DataExtractor>();
   return success;
 }
 
@@ -177,11 +177,11 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
     }
 
     if (arch_idx < m_header.nfat_arch) {
-      DataBufferSP data_sp;
+      DataExtractorSP extractor_sp;
       lldb::offset_t data_offset = 0;
       return ObjectFile::FindPlugin(
           module_sp, file, m_offset + m_fat_archs[arch_idx].GetOffset(),
-          m_fat_archs[arch_idx].GetSize(), data_sp, data_offset);
+          m_fat_archs[arch_idx].GetSize(), extractor_sp, data_offset);
     }
   }
   return ObjectFileSP();

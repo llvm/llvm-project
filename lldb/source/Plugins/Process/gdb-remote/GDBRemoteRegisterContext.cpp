@@ -162,7 +162,8 @@ bool GDBRemoteRegisterContext::PrivateSetRegisterValue(uint32_t reg,
   InvalidateIfNeeded(false);
 
   DataBufferSP buffer_sp(new DataBufferHeap(&new_reg_val, sizeof(new_reg_val)));
-  DataExtractor data(buffer_sp, endian::InlHostByteOrder(), sizeof(void *));
+  DataExtractor data;
+  data.SetData(buffer_sp, 0, buffer_sp->GetByteSize());
 
   // If our register context and our register info disagree, which should never
   // happen, don't overwrite past the end of the buffer.

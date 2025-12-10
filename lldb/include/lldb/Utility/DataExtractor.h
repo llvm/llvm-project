@@ -109,6 +109,18 @@ public:
   DataExtractor(const lldb::DataBufferSP &data_sp, lldb::ByteOrder byte_order,
                 uint32_t addr_size, uint32_t target_byte_size = 1);
 
+  /// Constructure with shared data, but no byte order/addr size unspecified.
+  ///
+  /// Copies the data shared pointer which adds a reference to the contained
+  /// in \a data_sp. The shared data reference is reference counted to ensure
+  /// the data lives as long as anyone still has a valid shared pointer to the
+  /// data in \a data_sp.
+  ///
+  /// \param[in] data_sp
+  ///     A shared pointer to data.
+  DataExtractor(const lldb::DataBufferSP &data_sp,
+                uint32_t target_byte_size = 1);
+
   /// Construct with a subset of \a data.
   ///
   /// Initialize this object with a subset of the data bytes in \a data. If \a

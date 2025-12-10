@@ -13,7 +13,9 @@
 #include "lldb/Symbol/ObjectContainer.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/NonNullSharedPtr.h"
 
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/Chrono.h"
@@ -112,7 +114,7 @@ protected:
 
     Archive(const lldb_private::ArchSpec &arch,
             const llvm::sys::TimePoint<> &mod_time, lldb::offset_t file_offset,
-            lldb_private::DataExtractor &data, ArchiveType archive_type);
+            lldb::DataExtractorSP data, ArchiveType archive_type);
 
     ~Archive();
 
@@ -127,7 +129,7 @@ protected:
     static Archive::shared_ptr ParseAndCacheArchiveForFile(
         const lldb_private::FileSpec &file, const lldb_private::ArchSpec &arch,
         const llvm::sys::TimePoint<> &mod_time, lldb::offset_t file_offset,
-        lldb_private::DataExtractor &data, ArchiveType archive_type);
+        lldb::DataExtractorSP data_sp, ArchiveType archive_type);
 
     size_t GetNumObjects() const { return m_objects.size(); }
 
@@ -154,7 +156,8 @@ protected:
 
     bool HasNoExternalReferences() const;
 
-    lldb_private::DataExtractor &GetData() { return m_data; }
+    lldb_private::DataExtractor &GetData() { return *m_data_sp.get(); }
+    lldb::DataExtractorSP &GetDataSP() { return m_data_sp; }
 
     ArchiveType GetArchiveType() { return m_archive_type; }
 
@@ -166,9 +169,9 @@ protected:
     lldb::offset_t m_file_offset;
     std::vector<Object> m_objects;
     ObjectNameToIndexMap m_object_name_to_index_map;
-    lldb_private::DataExtractor m_data; ///< The data for this object container
-                                        ///so we don't lose data if the .a files
-                                        ///gets modified
+    lldb::DataExtractorSP m_data_sp; ///< The data for this object container
+                                     /// so we don't lose data if the .a files
+                                     /// gets modified
     ArchiveType m_archive_type;
   };
 

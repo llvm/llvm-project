@@ -31,7 +31,7 @@ public:
   loadPDBFile(std::string PdbPath, llvm::BumpPtrAllocator &Allocator);
 
   static ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
+  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataExtractorSP data_sp,
                  lldb::offset_t data_offset, const FileSpec *file,
                  lldb::offset_t file_offset, lldb::offset_t length);
 
@@ -89,7 +89,7 @@ public:
 
   llvm::pdb::PDBFile &GetPDBFile() { return *m_file_up; }
 
-  ObjectFilePDB(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+  ObjectFilePDB(const lldb::ModuleSP &module_sp, lldb::DataExtractorSP &data_sp,
                 lldb::offset_t data_offset, const FileSpec *file,
                 lldb::offset_t offset, lldb::offset_t length);
 
