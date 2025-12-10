@@ -77,7 +77,7 @@ ValueObjectSP GetNthStorage(ValueObject &outer, int64_t index) {
   if (!parent)
     return nullptr;
 
-  // Now go to std::_Variant_storage
+  // Now go to std::_Variant_storage.
   ValueObjectSP container_sp = parent->GetChildAtIndex(0);
   if (!container_sp)
     return nullptr;
@@ -126,7 +126,8 @@ bool formatters::MsvcStlVariantSummaryProvider(
 
   CompilerType active_type = storage_type.GetTypeTemplateArgument(1, true);
   if (!active_type) {
-    // PDB: get the type from the head as we don't have template arguments there
+    // PDB: get the type from the head as we don't have template arguments
+    // there.
     ValueObjectSP head = GetHead(*storage);
     active_type = head->GetCompilerType();
     if (!active_type)
