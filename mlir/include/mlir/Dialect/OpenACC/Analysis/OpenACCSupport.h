@@ -85,6 +85,9 @@ struct OpenACCSupportTraits {
     /// Check if a symbol use is valid for use in an OpenACC region.
     virtual bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
                                   Operation **definingOpPtr) = 0;
+
+    /// Check if a value use is legal in an OpenACC region.
+    virtual bool isValidValueUse(Value v, mlir::Region &region) = 0;
   };
 
   /// SFINAE helpers to detect if implementation has optional methods
@@ -96,6 +99,14 @@ struct OpenACCSupportTraits {
   using has_isValidSymbolUse =
       llvm::is_detected<isValidSymbolUse_t, ImplT, Operation *, SymbolRefAttr,
                         Operation **>;
+
+  template <typename ImplT, typename... Args>
+  using isValidValueUse_t =
+      decltype(std::declval<ImplT>().isValidValueUse(std::declval<Args>()...));
+
+  template <typename ImplT>
+  using has_isValidValueUse =
+      llvm::is_detected<isValidValueUse_t, ImplT, Value, Region &>;
 
   /// This class wraps a concrete OpenACCSupport implementation and forwards
   /// interface calls to it. This provides type erasure, allowing different
@@ -126,6 +137,13 @@ struct OpenACCSupportTraits {
         return impl.isValidSymbolUse(user, symbol, definingOpPtr);
       else
         return acc::isValidSymbolUse(user, symbol, definingOpPtr);
+    }
+
+    bool isValidValueUse(Value v, Region &region) final {
+      if constexpr (has_isValidSymbolUse<ImplT>::value)
+        return impl.isValidValueUse(v, region);
+      else
+        return false;
     }
 
   private:
@@ -188,6 +206,12 @@ public:
   /// \return true if the symbol use is valid, false otherwise.
   bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
                         Operation **definingOpPtr = nullptr);
+
+  /// Check if a value use is legal in an OpenACC region.
+  ///
+  /// \param v The MLIR value to check for legality.
+  /// \param region The MLIR region in which the legality is checked.
+  bool isValidValueUse(Value v, Region &region);
 
   /// Signal that this analysis should always be preserved so that
   /// underlying implementation registration is not lost.

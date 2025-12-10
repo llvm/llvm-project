@@ -67,7 +67,7 @@ def HasJS            : Predicate<"Subtarget->hasJS()">,
 def HasCCIDX         : Predicate<"Subtarget->hasCCIDX()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCCIDX), "ccidx">;
 def HasComplxNum     : Predicate<"Subtarget->hasComplxNum()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureComplxNum), "complxnum">;
+                                 AssemblerPredicateWithAll<(all_of FeatureComplxNum), "fcma">;
 def HasNV            : Predicate<"Subtarget->hasNV()">,
                                  AssemblerPredicateWithAll<(all_of FeatureNV), "nv">;
 def HasMPAM          : Predicate<"Subtarget->hasMPAM()">,
@@ -443,6 +443,8 @@ def AllowMisalignedMemAccesses
 
 def UseWzrToVecMove : Predicate<"Subtarget->useWzrToVecMove()">;
 
+def AllowUnpredicatedLdStLower
+                    : Predicate<"!Subtarget->disableUnpredicatedLdStLower()">;
 
 //===----------------------------------------------------------------------===//
 // AArch64-specific DAG Nodes.
