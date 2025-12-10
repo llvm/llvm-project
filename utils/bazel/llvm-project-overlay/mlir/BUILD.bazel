@@ -10384,6 +10384,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCUtils",
         ":Pass",
+        "//llvm:Support",
     ],
 )
 
@@ -10409,6 +10410,7 @@ cc_library(
         ":ViewLikeInterface",
         "//llvm:Support",
         "//llvm:ir_headers",
+        ":ArithUtils",
     ],
 )
 
