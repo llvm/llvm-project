@@ -928,7 +928,8 @@ bool llvm::computeUnrollCount(
     OptimizationRemarkEmitter *ORE, unsigned TripCount, unsigned MaxTripCount,
     bool MaxOrZero, unsigned TripMultiple, const UnrollCostEstimator &UCE,
     TargetTransformInfo::UnrollingPreferences &UP,
-    TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound) {
+    TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound,
+    bool AllowLoadWideningPeel) {
 
   unsigned LoopSize = UCE.getRolledLoopSize();
 
@@ -1014,7 +1015,8 @@ bool llvm::computeUnrollCount(
   }
 
   // 5th priority is loop peeling.
-  computePeelCount(L, LoopSize, PP, TripCount, DT, SE, TTI, AC, UP.Threshold);
+  computePeelCount(L, LoopSize, PP, TripCount, DT, SE, TTI, AC, UP.Threshold,
+                   AllowLoadWideningPeel);
   if (PP.PeelCount) {
     UP.Runtime = false;
     UP.Count = 1;
@@ -1293,10 +1295,14 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   // computeUnrollCount() decides whether it is beneficial to use upper bound to
   // fully unroll the loop.
+  // When OnlyFullUnroll is true, we're running before vectorization
+  // (LoopFullUnrollPass), so disable load widening peeling to avoid peeling
+  // loops that could have been vectorized instead.
   bool UseUpperBound = false;
   bool IsCountSetExplicitly = computeUnrollCount(
       L, TTI, DT, LI, &AC, SE, EphValues, &ORE, TripCount, MaxTripCount,
-      MaxOrZero, TripMultiple, UCE, UP, PP, UseUpperBound);
+      MaxOrZero, TripMultiple, UCE, UP, PP, UseUpperBound,
+      /*AllowLoadWideningPeel=*/!OnlyFullUnroll);
   if (!UP.Count)
     return LoopUnrollResult::Unmodified;
 
@@ -1316,6 +1322,12 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     ValueToValueMapTy VMap;
     if (peelLoop(L, PP.PeelCount, PP.PeelLast, LI, &SE, DT, &AC, PreserveLCSSA,
                  VMap)) {
+      // Widen consecutive loads after last-iteration peeling
+      if (PP.PeelLast) {
+        const DataLayout &DL = L->getHeader()->getDataLayout();
+        widenLoadsAfterPeel(*L, SE, DL, TTI, DT, LI);
+      }
+
       simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, nullptr);
       // If the loop was peeled, we already "used up" the profile information
       // we had, so we don't want to unroll or peel again.
