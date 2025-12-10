@@ -1409,8 +1409,7 @@ def Zn5WriteVecOpMaskKRMov : SchedWriteRes<[Zn5FPOpMask4]> {
 def : InstRW<[Zn5WriteVecOpMaskKRMov], (instrs KMOVBkr, KMOVDkr, KMOVQkr, KMOVWkr)>;
 
 def Zn5WriteVecALU2Slow : SchedWriteRes<[Zn5FPVAdd12]> {
-  // TODO: All align instructions are expected to be of 4 cycle latency
-  let Latency = 4;
+  let Latency = 2;
   let ReleaseAtCycles = [1];
   let NumMicroOps = 1;
 }
