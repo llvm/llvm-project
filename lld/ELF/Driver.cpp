@@ -2776,7 +2776,7 @@ template <class ELFT>
 void LinkerDriver::compileGccIRFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
   // Compile files and replace symbols.
-  GccIRCompiler *c = GccIRCompiler::getInstance(ctx);
+  GccIRCompiler *c = new GccIRCompiler(ctx);
   lto.reset(c);
 
   for (ELFFileBase *file : ctx.objectFiles)

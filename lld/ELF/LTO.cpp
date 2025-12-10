@@ -427,29 +427,17 @@ void BitcodeCompiler::addObject(IRFile &f,
 }
 
 #if LLD_ENABLE_GNU_LTO
-GccIRCompiler *GccIRCompiler::singleton = nullptr;
-
-GccIRCompiler *GccIRCompiler::getInstance() {
-  assert(singleton != nullptr);
-  return singleton;
-}
-
-GccIRCompiler *GccIRCompiler::getInstance(Ctx &ctx) {
-  if (singleton == nullptr) {
-    singleton = new GccIRCompiler(ctx);
-    singleton->loadPlugin();
-  }
-
-  return singleton;
-}
+GccIRCompiler *gcc = nullptr;
 
 GccIRCompiler::GccIRCompiler(Ctx &ctx) : IRCompiler(ctx) {
-  singleton = nullptr;
   initializeTv();
+  assert(gcc == nullptr);
+  gcc = this;
+  loadPlugin();
 }
 
 GccIRCompiler::~GccIRCompiler() {
-  singleton = nullptr;
+  gcc = nullptr;
 }
 
 void GccIRCompiler::loadPlugin() {
@@ -476,24 +464,21 @@ void GccIRCompiler::loadPlugin() {
 
 enum ld_plugin_status
 GccIRCompiler::registerClaimFile(ld_plugin_claim_file_handler handler) {
-  GccIRCompiler *c = GccIRCompiler::getInstance();
-  c->claimFileHandler = handler;
+  gcc->claimFileHandler = handler;
   return LDPS_OK;
 }
 
 #if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
 enum ld_plugin_status
 GccIRCompiler::registerClaimFileV2(ld_plugin_claim_file_handler_v2 handler) {
-  GccIRCompiler *c = GccIRCompiler::getInstance();
-  c->claimFileHandlerV2 = handler;
+  gcc->claimFileHandlerV2 = handler;
   return LDPS_OK;
 }
 #endif
 
 enum ld_plugin_status
 regAllSymbolsRead(ld_plugin_all_symbols_read_handler handler) {
-  GccIRCompiler *c = GccIRCompiler::getInstance();
-  return c->registerAllSymbolsRead(handler);
+  return gcc->registerAllSymbolsRead(handler);
 }
 
 enum ld_plugin_status GccIRCompiler::registerAllSymbolsRead(
@@ -527,9 +512,7 @@ static enum ld_plugin_status getSymbols(const void *handle, int nsyms,
 }
 
 ld_plugin_status addInputFile(const char *pathname) {
-  GccIRCompiler *c = GccIRCompiler::getInstance();
-
-  if (c->addCompiledFile(StringRef(pathname)))
+  if (gcc->addCompiledFile(StringRef(pathname)))
     return LDPS_OK;
   else
     return LDPS_ERR;

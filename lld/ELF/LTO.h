@@ -87,9 +87,8 @@ protected:
                  std::vector<llvm::lto::SymbolResolution> &r) override;
 
 public:
+  GccIRCompiler(Ctx &ctx);
   ~GccIRCompiler();
-  static GccIRCompiler *getInstance();
-  static GccIRCompiler *getInstance(Ctx &ctx);
 
   void add(ELFFileBase &f);
   SmallVector<std::unique_ptr<InputFile>, 0> compile() override;
@@ -105,9 +104,7 @@ public:
   bool addCompiledFile(StringRef path);
 
 private:
-  GccIRCompiler(Ctx &ctx);
   std::vector<std::unique_ptr<MemoryBuffer>> files;
-  static GccIRCompiler *singleton;
   SmallVector<struct ld_plugin_tv> tv;
   ld_plugin_claim_file_handler claimFileHandler;
 #if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
