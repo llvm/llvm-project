@@ -3698,10 +3698,6 @@ class NVVM_MmaBlockScaleBase<string mnemonic, list<Trait> traits = []> :
         return 0;
       }
 
-      // Common declarations - implementations in NVVMDialect.cpp
-      MMATypes accumPtxType();
-      MMATypes resultPtxType();
-
       static mlir::NVVM::IDArgPair
       getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
                             llvm::IRBuilderBase& builder);
@@ -3847,9 +3843,6 @@ def NVVM_MmaSpBlockScaleOp : NVVM_MmaBlockScaleBase<"mma.sp.block_scale"> {
         MMA_SP_BLOCK_SCALE_INTR<>.id, [{
         return 0;
       }
-
-      MMATypes accumPtxType();
-      MMATypes resultPtxType();
 
       static mlir::NVVM::IDArgPair
       getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,

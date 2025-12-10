@@ -1852,14 +1852,6 @@ void MmaBlockScaleOp::build(
                       }));
 }
 
-MMATypes MmaBlockScaleOp::accumPtxType() {
-  return inferPtxTypeFromResult(*this);
-}
-
-MMATypes MmaBlockScaleOp::resultPtxType() {
-  return inferPtxTypeFromResult(*this);
-}
-
 NVVM::IDArgPair MmaBlockScaleOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::MmaBlockScaleOp>(op);
@@ -1884,7 +1876,7 @@ NVVM::IDArgPair MmaBlockScaleOp::getIntrinsicIDAndArgs(
   unsigned intId = MmaBlockScaleOp::getIntrinsicID(
       curOp.getShape().getM(), curOp.getShape().getN(), curOp.getShape().getK(),
       *curOp.getMultiplicandAPtxType(), *curOp.getMultiplicandBPtxType(),
-      curOp.accumPtxType(), curOp.getScaleVecSize(),
+      inferPtxTypeFromResult(curOp), curOp.getScaleVecSize(),
       curOp.getBlockScaleFormat(), curOp.getKind());
 
   return {intId, args};
@@ -2119,14 +2111,6 @@ void MmaSpBlockScaleOp::build(
                       }));
 }
 
-MMATypes MmaSpBlockScaleOp::accumPtxType() {
-  return inferPtxTypeFromResult(*this);
-}
-
-MMATypes MmaSpBlockScaleOp::resultPtxType() {
-  return inferPtxTypeFromResult(*this);
-}
-
 NVVM::IDArgPair MmaSpBlockScaleOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::MmaSpBlockScaleOp>(op);
@@ -2155,7 +2139,7 @@ NVVM::IDArgPair MmaSpBlockScaleOp::getIntrinsicIDAndArgs(
   unsigned intId = MmaSpBlockScaleOp::getIntrinsicID(
       curOp.getShape().getM(), curOp.getShape().getN(), curOp.getShape().getK(),
       *curOp.getMultiplicandAPtxType(), *curOp.getMultiplicandBPtxType(),
-      curOp.accumPtxType(), curOp.getScaleVecSize(),
+      inferPtxTypeFromResult(curOp), curOp.getScaleVecSize(),
       curOp.getBlockScaleFormat(), curOp.getKind());
 
   return {intId, args};
