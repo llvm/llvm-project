@@ -29,7 +29,7 @@ on how to get in touch with us and to learn more about the current status.
    Directives
    OpenMPSupport
    Real16MathSupport
-   OptionComparison
+   Unsigned
 ```
 
 # Contributing to Flang
@@ -86,6 +86,7 @@ on how to get in touch with us and to learn more about the current status.
    OpenMP-declare-target
    OpenMP-descriptor-management
    OpenMP-semantics
+   OptionComparison
    Overview
    ParallelMultiImageFortranRuntime
    ParameterizedDerivedTypes
@@ -100,7 +101,6 @@ on how to get in touch with us and to learn more about the current status.
    Semantics
    f2018-grammar.md
    fstack-arrays
-   Unsigned
 ```
 
 # Indices and tables
