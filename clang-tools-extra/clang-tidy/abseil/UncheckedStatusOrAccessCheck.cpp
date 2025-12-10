@@ -25,8 +25,6 @@ static constexpr llvm::StringLiteral FuncID("fun");
 
 void UncheckedStatusOrAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
-  if (!getLangOpts().CPlusPlus)
-    return;
 
   auto HasStatusOrCallDescendant =
       hasDescendant(callExpr(callee(cxxMethodDecl(ofClass(hasAnyName(
@@ -41,6 +39,7 @@ void UncheckedStatusOrAccessCheck::registerMatchers(MatchFinder *Finder) {
           .bind(FuncID),
       this);
 }
+
 void UncheckedStatusOrAccessCheck::check(
     const MatchFinder::MatchResult &Result) {
   if (Result.SourceManager->getDiagnostics().hasUncompilableErrorOccurred())
@@ -59,6 +58,11 @@ void UncheckedStatusOrAccessCheck::check(
       diag(Loc, "unchecked access to 'absl::StatusOr' value");
   else
     llvm::consumeError(Locs.takeError());
+}
+
+bool UncheckedStatusOrAccessCheck::isLanguageVersionSupported(
+    const LangOptions &LangOpts) const {
+  return LangOpts.CPlusPlus;
 }
 
 } // namespace clang::tidy::abseil
