@@ -220,6 +220,9 @@ private:
   findStyleKindForVar(const VarDecl *Var, QualType Type,
                       ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
 
+  StyleKind
+  undefinedStyle(ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
+
   /// Stores the style options as a vector, indexed by the specified \ref
   /// StyleKind, for a given directory.
   mutable llvm::StringMap<FileStyle> NamingStylesCache;
@@ -241,3 +244,4 @@ struct OptionEnumMapping<readability::IdentifierNamingCheck::CaseType> {
 } // namespace clang::tidy
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IDENTIFIERNAMINGCHECK_H
+
