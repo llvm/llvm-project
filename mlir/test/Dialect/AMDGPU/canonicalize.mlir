@@ -244,3 +244,39 @@ func.func @scaled_mfma_ugly_shapes(%opA: vector<32xf4E2M1FN>, %opB: vector<32xf4
   %res_7 = amdgpu.scaled_mfma 16x16x128 (%sA_0_7[0] * %opA) * (%sB_6_19[0] * %opB) + %cst_0 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf32>
   return %res_4, %res_5, %res_6, %res_7 : vector<4xf32>, vector<4xf32>, vector<4xf32>, vector<4xf32>
 }
+
+// -----
+
+// CHECK-LABEL fuse_memory_counter_wait
+func.func @fuse_memory_counter_wait() {
+  //      CHECK: amdgpu.memory_counter_wait
+  // CHECK-SAME: load(1) store(2) ds(2) exp(1) tensor(0)
+  // CHECK-NEXT: return
+  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4) tensor(5)
+  amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1) tensor(0)
+  return
+}
+
+// CHECK-LABEL fuse_memory_counter_wait_different_counters
+func.func @fuse_memory_counter_wait_different_counters() {
+  //      CHECK: amdgpu.memory_counter_wait
+  // CHECK-SAME: load(1) store(2) ds(3) exp(4)
+  // CHECK-NEXT: return
+  amdgpu.memory_counter_wait load(1) store(2)
+  amdgpu.memory_counter_wait ds(3) exp(4)
+  return
+}
+
+func.func private @use()
+
+// CHECK-LABEL fuse_memory_counter_wait_not_adjacent
+func.func @fuse_memory_counter_wait_not_adjacent() {
+  //      CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
+  // CHECK-NEXT: call @use()
+  // CHECK-NEXT: amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1)
+  // CHECK-NEXT: return
+  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
+  func.call @use() : () -> ()
+  amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1)
+  return
+}

@@ -3,7 +3,7 @@
 ; RUN: opt -p loop-unroll -mcpu=apple-m2 -S %s | FileCheck --check-prefix=APPLE %s
 ; RUN: opt -p loop-unroll -mcpu=apple-m3 -S %s | FileCheck --check-prefix=APPLE %s
 ; RUN: opt -p loop-unroll -mcpu=apple-m4 -S %s | FileCheck --check-prefix=APPLE %s
-; RUN: opt -p loop-unroll -mcpu=apple-a17 -S %s | FileCheck --check-prefix=APPLE-A17 %s
+; RUN: opt -p loop-unroll -mcpu=apple-a17 -S %s | FileCheck --check-prefix=APPLE %s
 ; RUN: opt -p loop-unroll -mcpu=cortex-a57 -S %s | FileCheck --check-prefix=OTHER %s
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
@@ -100,23 +100,6 @@ define void @small_load_store_loop(ptr %src, ptr %dst, i64 %N, i64 %scale) {
 ; APPLE-NEXT:    br label %[[EXIT]]
 ; APPLE:       [[EXIT]]:
 ; APPLE-NEXT:    ret void
-;
-; APPLE-A17-LABEL: define void @small_load_store_loop(
-; APPLE-A17-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[SCALE:%.*]]) #[[ATTR0:[0-9]+]] {
-; APPLE-A17-NEXT:  [[ENTRY:.*]]:
-; APPLE-A17-NEXT:    br label %[[LOOP:.*]]
-; APPLE-A17:       [[LOOP]]:
-; APPLE-A17-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[SCALED_IV:%.*]] = mul nuw nsw i64 [[IV]], [[SCALE]]
-; APPLE-A17-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV]]
-; APPLE-A17-NEXT:    [[L:%.*]] = load float, ptr [[GEP_SRC]], align 4
-; APPLE-A17-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV]]
-; APPLE-A17-NEXT:    store float [[L]], ptr [[GEP_DST]], align 4
-; APPLE-A17-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; APPLE-A17-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; APPLE-A17-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
-; APPLE-A17:       [[EXIT]]:
-; APPLE-A17-NEXT:    ret void
 ;
 ; OTHER-LABEL: define void @small_load_store_loop(
 ; OTHER-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[SCALE:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -234,24 +217,6 @@ define void @load_op_store_loop(ptr %src, ptr %dst, i64 %N, i64 %scale, float %k
 ; APPLE:       [[EXIT]]:
 ; APPLE-NEXT:    ret void
 ;
-; APPLE-A17-LABEL: define void @load_op_store_loop(
-; APPLE-A17-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[SCALE:%.*]], float [[K:%.*]]) #[[ATTR0]] {
-; APPLE-A17-NEXT:  [[ENTRY:.*]]:
-; APPLE-A17-NEXT:    br label %[[LOOP:.*]]
-; APPLE-A17:       [[LOOP]]:
-; APPLE-A17-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[SCALED_IV:%.*]] = mul nuw nsw i64 [[IV]], [[SCALE]]
-; APPLE-A17-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV]]
-; APPLE-A17-NEXT:    [[L:%.*]] = load float, ptr [[GEP_SRC]], align 4
-; APPLE-A17-NEXT:    [[O:%.*]] = fadd float [[L]], [[K]]
-; APPLE-A17-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV]]
-; APPLE-A17-NEXT:    store float [[O]], ptr [[GEP_DST]], align 4
-; APPLE-A17-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; APPLE-A17-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; APPLE-A17-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
-; APPLE-A17:       [[EXIT]]:
-; APPLE-A17-NEXT:    ret void
-;
 ; OTHER-LABEL: define void @load_op_store_loop(
 ; OTHER-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[SCALE:%.*]], float [[K:%.*]]) #[[ATTR0]] {
 ; OTHER-NEXT:  [[ENTRY:.*]]:
@@ -348,33 +313,7 @@ define void @load_op_store_loop_multiblock(ptr %src, ptr %dst, i64 %N, i64 %scal
 ; APPLE:       [[EXIT]]:
 ; APPLE-NEXT:    ret void
 ;
-; APPLE-A17-LABEL: define void @load_op_store_loop_multiblock(
-; APPLE-A17-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[SCALE:%.*]], float [[K:%.*]]) #[[ATTR0]] {
-; APPLE-A17-NEXT:  [[ENTRY:.*]]:
-; APPLE-A17-NEXT:    br label %[[LOOP:.*]]
-; APPLE-A17:       [[LOOP]]:
-; APPLE-A17-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOPCONT:.*]] ]
-; APPLE-A17-NEXT:    [[SCALED_IV:%.*]] = mul nuw nsw i64 [[IV]], [[SCALE]]
-; APPLE-A17-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV]]
-; APPLE-A17-NEXT:    [[L1:%.*]] = load float, ptr [[GEP_SRC]], align 4
-; APPLE-A17-NEXT:    [[AND:%.*]] = and i64 [[IV]], 1
-; APPLE-A17-NEXT:    [[ODD:%.*]] = icmp eq i64 [[AND]], 1
-; APPLE-A17-NEXT:    br i1 [[ODD]], label %[[LOOPODD:.*]], label %[[LOOPCONT]]
-; APPLE-A17:       [[LOOPCONT]]:
-; APPLE-A17-NEXT:    [[D:%.*]] = phi float [ [[L2:%.*]], %[[LOOPODD]] ], [ [[L1]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[O:%.*]] = fadd float [[D]], [[K]]
-; APPLE-A17-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV]]
-; APPLE-A17-NEXT:    store float [[O]], ptr [[GEP_DST]], align 4
-; APPLE-A17-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; APPLE-A17-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; APPLE-A17-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
-; APPLE-A17:       [[LOOPODD]]:
-; APPLE-A17-NEXT:    [[L2]] = fneg float [[L1]]
-; APPLE-A17-NEXT:    br label %[[LOOPCONT]]
-; APPLE-A17:       [[EXIT]]:
-; APPLE-A17-NEXT:    ret void
-;
-; OTHER-LABEL: define void @load_op_store_loop_multiblock(
+; ; OTHER-LABEL: define void @load_op_store_loop_multiblock(
 ; OTHER-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[SCALE:%.*]], float [[K:%.*]]) #[[ATTR0]] {
 ; OTHER-NEXT:  [[ENTRY:.*]]:
 ; OTHER-NEXT:    br label %[[LOOP:.*]]
@@ -713,66 +652,6 @@ define void @early_continue_dep_on_load_large(ptr %p.1, ptr %p.2, i64 %N, i32 %x
 ; APPLE:       [[EXIT]]:
 ; APPLE-NEXT:    ret void
 ;
-; APPLE-A17-LABEL: define void @early_continue_dep_on_load_large(
-; APPLE-A17-SAME: ptr [[P_1:%.*]], ptr [[P_2:%.*]], i64 [[N:%.*]], i32 [[X:%.*]], i32 [[WIDTH:%.*]], i32 [[T_1:%.*]], i32 [[T_2:%.*]]) #[[ATTR0]] {
-; APPLE-A17-NEXT:  [[ENTRY:.*]]:
-; APPLE-A17-NEXT:    br label %[[LOOP_HEADER:.*]]
-; APPLE-A17:       [[LOOP_HEADER]]:
-; APPLE-A17-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; APPLE-A17-NEXT:    [[GEP:%.*]] = getelementptr { i32, i8, i8, [2 x i8] }, ptr [[P_1]], i64 [[IV]]
-; APPLE-A17-NEXT:    [[L_1:%.*]] = load i32, ptr [[GEP]], align 4
-; APPLE-A17-NEXT:    [[C_1:%.*]] = icmp sgt i32 [[L_1]], [[T_1]]
-; APPLE-A17-NEXT:    br i1 [[C_1]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
-; APPLE-A17:       [[THEN]]:
-; APPLE-A17-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP]], i64 4
-; APPLE-A17-NEXT:    [[L_2:%.*]] = load i8, ptr [[GEP_4]], align 4
-; APPLE-A17-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[L_2]], 7
-; APPLE-A17-NEXT:    br i1 [[C_2]], label %[[MERGE:.*]], label %[[ELSE:.*]]
-; APPLE-A17:       [[ELSE]]:
-; APPLE-A17-NEXT:    [[CONV_I:%.*]] = zext nneg i8 [[L_2]] to i64
-; APPLE-A17-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [9 x i8], ptr @A, i64 0, i64 [[CONV_I]]
-; APPLE-A17-NEXT:    [[L_3:%.*]] = load i8, ptr [[GEP_A]], align 1
-; APPLE-A17-NEXT:    [[IDXPROM_I:%.*]] = sext i8 [[L_3]] to i64
-; APPLE-A17-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [8 x i32], ptr @B, i64 0, i64 [[IDXPROM_I]]
-; APPLE-A17-NEXT:    [[L_4:%.*]] = load i32, ptr [[GEP_B]], align 4
-; APPLE-A17-NEXT:    [[GEP_C:%.*]] = getelementptr inbounds [8 x i32], ptr @C, i64 0, i64 [[IDXPROM_I]]
-; APPLE-A17-NEXT:    [[L_5:%.*]] = load i32, ptr [[GEP_C]], align 4
-; APPLE-A17-NEXT:    br label %[[MERGE]]
-; APPLE-A17:       [[MERGE]]:
-; APPLE-A17-NEXT:    [[MERGE_1:%.*]] = phi i32 [ 0, %[[THEN]] ], [ [[L_4]], %[[ELSE]] ]
-; APPLE-A17-NEXT:    [[MERGE_2:%.*]] = phi i32 [ 0, %[[THEN]] ], [ [[L_5]], %[[ELSE]] ]
-; APPLE-A17-NEXT:    [[ADD14:%.*]] = add nsw i32 [[MERGE_2]], [[X]]
-; APPLE-A17-NEXT:    [[MUL15:%.*]] = mul nsw i32 [[ADD14]], [[WIDTH]]
-; APPLE-A17-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[IV]] to i32
-; APPLE-A17-NEXT:    [[ADD16:%.*]] = add nsw i32 [[MERGE_1]], [[TMP0]]
-; APPLE-A17-NEXT:    [[ADD17:%.*]] = add nsw i32 [[ADD16]], [[MUL15]]
-; APPLE-A17-NEXT:    [[IDXPROM18:%.*]] = sext i32 [[ADD17]] to i64
-; APPLE-A17-NEXT:    [[GEP_P_2:%.*]] = getelementptr inbounds { i32, i8, i8, [2 x i8] }, ptr [[P_2]], i64 [[IDXPROM18]]
-; APPLE-A17-NEXT:    [[L_6:%.*]] = load i32, ptr [[GEP_P_2]], align 4
-; APPLE-A17-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[MERGE_2]]
-; APPLE-A17-NEXT:    [[MUL21:%.*]] = mul nsw i32 [[SUB]], [[WIDTH]]
-; APPLE-A17-NEXT:    [[SUB22:%.*]] = sub i32 [[TMP0]], [[MERGE_1]]
-; APPLE-A17-NEXT:    [[ADD23:%.*]] = add nsw i32 [[SUB22]], [[MUL21]]
-; APPLE-A17-NEXT:    [[IDXPROM24:%.*]] = sext i32 [[ADD23]] to i64
-; APPLE-A17-NEXT:    [[GEP_P2_1:%.*]] = getelementptr inbounds { i32, i8, i8, [2 x i8] }, ptr [[P_2]], i64 [[IDXPROM24]]
-; APPLE-A17-NEXT:    [[L_7:%.*]] = load i32, ptr [[GEP_P2_1]], align 4
-; APPLE-A17-NEXT:    [[C_3:%.*]] = icmp sgt i32 [[L_1]], [[L_6]]
-; APPLE-A17-NEXT:    [[C_4:%.*]] = icmp sgt i32 [[L_1]], [[L_7]]
-; APPLE-A17-NEXT:    [[AND34:%.*]] = and i1 [[C_3]], [[C_4]]
-; APPLE-A17-NEXT:    br i1 [[AND34]], label %[[STORE_RES:.*]], label %[[LOOP_LATCH]]
-; APPLE-A17:       [[STORE_RES]]:
-; APPLE-A17-NEXT:    [[C_5:%.*]] = icmp sgt i32 [[L_1]], [[T_2]]
-; APPLE-A17-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP]], i64 5
-; APPLE-A17-NEXT:    [[RES:%.*]] = select i1 [[C_5]], i8 1, i8 2
-; APPLE-A17-NEXT:    store i8 [[RES]], ptr [[GEP_5]], align 1
-; APPLE-A17-NEXT:    br label %[[LOOP_LATCH]]
-; APPLE-A17:       [[LOOP_LATCH]]:
-; APPLE-A17-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; APPLE-A17-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; APPLE-A17-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
-; APPLE-A17:       [[EXIT]]:
-; APPLE-A17-NEXT:    ret void
-;
 ; OTHER-LABEL: define void @early_continue_dep_on_load_large(
 ; OTHER-SAME: ptr [[P_1:%.*]], ptr [[P_2:%.*]], i64 [[N:%.*]], i32 [[X:%.*]], i32 [[WIDTH:%.*]], i32 [[T_1:%.*]], i32 [[T_2:%.*]]) #[[ATTR0]] {
 ; OTHER-NEXT:  [[ENTRY:.*]]:
@@ -935,23 +814,6 @@ define i32 @test_add_reduction_unroll_partial(ptr %a, i64 noundef %n) {
 ; APPLE-NEXT:    [[BIN_RDX2:%.*]] = add i32 [[RDX_NEXT_3]], [[BIN_RDX1]]
 ; APPLE-NEXT:    ret i32 [[BIN_RDX2]]
 ;
-; APPLE-A17-LABEL: define i32 @test_add_reduction_unroll_partial(
-; APPLE-A17-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) #[[ATTR0]] {
-; APPLE-A17-NEXT:  [[ENTRY:.*]]:
-; APPLE-A17-NEXT:    br label %[[LOOP:.*]]
-; APPLE-A17:       [[LOOP]]:
-; APPLE-A17-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
-; APPLE-A17-NEXT:    [[TMP0:%.*]] = load i32, ptr [[GEP_A]], align 2
-; APPLE-A17-NEXT:    [[RDX_NEXT]] = add nuw nsw i32 [[RDX]], [[TMP0]]
-; APPLE-A17-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; APPLE-A17-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; APPLE-A17-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
-; APPLE-A17:       [[EXIT]]:
-; APPLE-A17-NEXT:    [[RES:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    ret i32 [[RES]]
-;
 ; OTHER-LABEL: define i32 @test_add_reduction_unroll_partial(
 ; OTHER-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) #[[ATTR0]] {
 ; OTHER-NEXT:  [[ENTRY:.*]]:
@@ -1024,29 +886,6 @@ define i32 @test_add_reduction_multi_block(ptr %a, i64 noundef %n) {
 ; APPLE:       [[EXIT]]:
 ; APPLE-NEXT:    [[RES:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP_LATCH]] ]
 ; APPLE-NEXT:    ret i32 [[RES]]
-;
-; APPLE-A17-LABEL: define i32 @test_add_reduction_multi_block(
-; APPLE-A17-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) #[[ATTR0]] {
-; APPLE-A17-NEXT:  [[ENTRY:.*]]:
-; APPLE-A17-NEXT:    br label %[[LOOP:.*]]
-; APPLE-A17:       [[LOOP]]:
-; APPLE-A17-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; APPLE-A17-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT:%.*]], %[[LOOP_LATCH]] ]
-; APPLE-A17-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
-; APPLE-A17-NEXT:    [[TMP0:%.*]] = load i32, ptr [[GEP_A]], align 2
-; APPLE-A17-NEXT:    [[C:%.*]] = call i1 @cond()
-; APPLE-A17-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
-; APPLE-A17:       [[THEN]]:
-; APPLE-A17-NEXT:    store i32 0, ptr [[GEP_A]], align 4
-; APPLE-A17-NEXT:    br label %[[LOOP_LATCH]]
-; APPLE-A17:       [[LOOP_LATCH]]:
-; APPLE-A17-NEXT:    [[RDX_NEXT]] = add nuw nsw i32 [[RDX]], [[TMP0]]
-; APPLE-A17-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; APPLE-A17-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; APPLE-A17-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
-; APPLE-A17:       [[EXIT]]:
-; APPLE-A17-NEXT:    [[RES:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP_LATCH]] ]
-; APPLE-A17-NEXT:    ret i32 [[RES]]
 ;
 ; OTHER-LABEL: define i32 @test_add_reduction_multi_block(
 ; OTHER-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) #[[ATTR0]] {
@@ -1139,27 +978,6 @@ define i32 @test_add_and_mul_reduction_unroll_partial(ptr %a, i64 noundef %n) {
 ; APPLE-NEXT:    [[BIN_RDX3:%.*]] = add i32 [[RDX_NEXT_3]], [[BIN_RDX2]]
 ; APPLE-NEXT:    [[SUM:%.*]] = add i32 [[BIN_RDX3]], [[RES_2]]
 ; APPLE-NEXT:    ret i32 [[SUM]]
-;
-; APPLE-A17-LABEL: define i32 @test_add_and_mul_reduction_unroll_partial(
-; APPLE-A17-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) #[[ATTR0]] {
-; APPLE-A17-NEXT:  [[ENTRY:.*]]:
-; APPLE-A17-NEXT:    br label %[[LOOP:.*]]
-; APPLE-A17:       [[LOOP]]:
-; APPLE-A17-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[RDX_2:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_2_NEXT:%.*]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
-; APPLE-A17-NEXT:    [[TMP0:%.*]] = load i32, ptr [[GEP_A]], align 2
-; APPLE-A17-NEXT:    [[RDX_NEXT]] = add nuw nsw i32 [[RDX]], [[TMP0]]
-; APPLE-A17-NEXT:    [[RDX_2_NEXT]] = mul i32 [[RDX_2]], [[TMP0]]
-; APPLE-A17-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; APPLE-A17-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; APPLE-A17-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
-; APPLE-A17:       [[EXIT]]:
-; APPLE-A17-NEXT:    [[RES_1:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[RES_2:%.*]] = phi i32 [ [[RDX_2_NEXT]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[SUM:%.*]] = add i32 [[RES_1]], [[RES_2]]
-; APPLE-A17-NEXT:    ret i32 [[SUM]]
 ;
 ; OTHER-LABEL: define i32 @test_add_and_mul_reduction_unroll_partial(
 ; OTHER-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) #[[ATTR0]] {
@@ -1280,23 +1098,6 @@ define i32 @test_add_reduction_runtime(ptr %a, i64 noundef %n) {
 ; APPLE:       [[EXIT]]:
 ; APPLE-NEXT:    [[RES:%.*]] = phi i32 [ [[BIN_RDX4]], %[[EXIT_UNR_LCSSA]] ], [ [[RES_PH1]], %[[EXIT_EPILOG_LCSSA]] ]
 ; APPLE-NEXT:    ret i32 [[RES]]
-;
-; APPLE-A17-LABEL: define i32 @test_add_reduction_runtime(
-; APPLE-A17-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) #[[ATTR0]] {
-; APPLE-A17-NEXT:  [[ENTRY:.*]]:
-; APPLE-A17-NEXT:    br label %[[LOOP:.*]]
-; APPLE-A17:       [[LOOP]]:
-; APPLE-A17-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
-; APPLE-A17-NEXT:    [[TMP0:%.*]] = load i32, ptr [[GEP_A]], align 2
-; APPLE-A17-NEXT:    [[RDX_NEXT]] = add nuw nsw i32 [[RDX]], [[TMP0]]
-; APPLE-A17-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; APPLE-A17-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; APPLE-A17-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
-; APPLE-A17:       [[EXIT]]:
-; APPLE-A17-NEXT:    [[RES:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ]
-; APPLE-A17-NEXT:    ret i32 [[RES]]
 ;
 ; OTHER-LABEL: define i32 @test_add_reduction_runtime(
 ; OTHER-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) #[[ATTR0]] {

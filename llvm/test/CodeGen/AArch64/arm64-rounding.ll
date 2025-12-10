@@ -26,21 +26,17 @@ declare double @floor(double) nounwind readnone
 ; CHECK: frinti
 define float @test3(float %a) #0 {
 entry:
-  %call = tail call float @nearbyintf(float %a) nounwind readnone
+  %call = tail call float @llvm.nearbyint.f32(float %a) nounwind readnone
   ret float %call
 }
-
-declare float @nearbyintf(float) nounwind readnone
 
 ; CHECK-LABEL: test4:
 ; CHECK: frinti
 define double @test4(double %a) #0 {
 entry:
-  %call = tail call double @nearbyint(double %a) nounwind readnone
+  %call = tail call double @llvm.nearbyint.f64(double %a) nounwind readnone
   ret double %call
 }
-
-declare double @nearbyint(double) nounwind readnone
 
 ; CHECK-LABEL: test5:
 ; CHECK: frintp
