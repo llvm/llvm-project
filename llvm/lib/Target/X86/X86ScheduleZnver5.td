@@ -730,8 +730,13 @@ defm : Zn5WriteResIntPair<WriteIDiv16, [Zn5Divider], 11, [11], 2>;
 defm : Zn5WriteResIntPair<WriteIDiv32, [Zn5Divider], 13, [13], 2>;
 defm : Zn5WriteResIntPair<WriteIDiv64, [Zn5Divider], 16, [16], 2>;
 
-defm : Zn5WriteResIntPair<WriteBSF, [Zn5ALU1], 1, [1], 6, /*LoadUOps=*/1>; // Bit scan forward.
-defm : Zn5WriteResIntPair<WriteBSR, [Zn5ALU1], 1, [1], 6, /*LoadUOps=*/1>; // Bit scan reverse.
+// FIXME: For Znver4, the values given in the Instruction Latencies spreadsheet
+// supplied with the SOG differ rather dramatically in terms of throughput with
+// measured values from uops.info. With Znver5, I am using Agner Fog's instruction
+// tables, which also differ from the values provided by AMD, but seem much more likely.
+
+defm : Zn5WriteResIntPair<WriteBSF, [Zn5ALU1], 1, [1], 1, /*LoadUOps=*/1>; // Bit scan forward.
+defm : Zn5WriteResIntPair<WriteBSR, [Zn5ALU1], 1, [1], 1, /*LoadUOps=*/1>; // Bit scan reverse.
 
 defm : Zn5WriteResIntPair<WritePOPCNT, [Zn5ALU0_5], 1, [1], 1>; // Bit population count.
 
