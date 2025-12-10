@@ -241,8 +241,8 @@ public:
 
   /// Compute the index to access the element at (\p RowIdx, \p ColumnIdx) from
   /// a matrix with \p NumRows embedded in a vector.
-  Value *CreateIndex(Value *RowIdx, Value *ColumnIdx, unsigned NumRows,
-                     Twine const &Name = "") {
+  Value *createColumnMajorIndex(Value *RowIdx, Value *ColumnIdx,
+                                unsigned NumRows, Twine const &Name = "") {
     unsigned MaxWidth = std::max(RowIdx->getType()->getScalarSizeInBits(),
                                  ColumnIdx->getType()->getScalarSizeInBits());
     Type *IntTy = IntegerType::get(RowIdx->getType()->getContext(), MaxWidth);
@@ -250,6 +250,19 @@ public:
     ColumnIdx = B.CreateZExt(ColumnIdx, IntTy);
     Value *NumRowsV = B.getIntN(MaxWidth, NumRows);
     return B.CreateAdd(B.CreateMul(ColumnIdx, NumRowsV), RowIdx);
+  }
+
+  /// Compute the index to access the element at (\p RowIdx, \p ColumnIdx) from
+  /// a matrix with \p NumCols embedded in a vector.
+  Value *createRowMajorIndex(Value *RowIdx, Value *ColumnIdx, unsigned NumCols,
+                             Twine const &Name = "") {
+    unsigned MaxWidth = std::max(RowIdx->getType()->getScalarSizeInBits(),
+                                 ColumnIdx->getType()->getScalarSizeInBits());
+    Type *IntTy = IntegerType::get(RowIdx->getType()->getContext(), MaxWidth);
+    RowIdx = B.CreateZExt(RowIdx, IntTy);
+    ColumnIdx = B.CreateZExt(ColumnIdx, IntTy);
+    Value *NumColsV = B.getIntN(MaxWidth, NumCols);
+    return B.CreateAdd(B.CreateMul(RowIdx, NumColsV), ColumnIdx);
   }
 };
 

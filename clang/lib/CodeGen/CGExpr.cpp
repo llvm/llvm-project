@@ -4977,11 +4977,19 @@ LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
   llvm::Value *RowIdx = EmitMatrixIndexExpr(E->getRowIdx());
   llvm::Value *ColIdx = EmitMatrixIndexExpr(E->getColumnIdx());
 
-  llvm::Value *NumRows = Builder.getIntN(
-      RowIdx->getType()->getScalarSizeInBits(),
-      E->getBase()->getType()->castAs<ConstantMatrixType>()->getNumRows());
-  llvm::Value *FinalIdx =
-      Builder.CreateAdd(Builder.CreateMul(ColIdx, NumRows), RowIdx);
+  llvm::Value *FinalIdx;
+  if (getLangOpts().getDefaultMatrixMemoryLayout() ==
+      LangOptions::MatrixMemoryLayout::MatrixRowMajor) {
+    llvm::Value *NumCols = Builder.getIntN(
+        RowIdx->getType()->getScalarSizeInBits(),
+        E->getBase()->getType()->castAs<ConstantMatrixType>()->getNumColumns());
+    FinalIdx = Builder.CreateAdd(Builder.CreateMul(RowIdx, NumCols), ColIdx);
+  } else {
+    llvm::Value *NumRows = Builder.getIntN(
+        RowIdx->getType()->getScalarSizeInBits(),
+        E->getBase()->getType()->castAs<ConstantMatrixType>()->getNumRows());
+    FinalIdx = Builder.CreateAdd(Builder.CreateMul(ColIdx, NumRows), RowIdx);
+  }
   return LValue::MakeMatrixElt(
       MaybeConvertMatrixAddress(Base.getAddress(), *this), FinalIdx,
       E->getBase()->getType(), Base.getBaseInfo(), TBAAAccessInfo());

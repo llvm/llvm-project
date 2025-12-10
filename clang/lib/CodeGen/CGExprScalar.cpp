@@ -2155,9 +2155,18 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   Value *ColumnIdx = CGF.EmitMatrixIndexExpr(E->getColumnIdx());
 
   const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
-  unsigned NumRows = MatrixTy->getNumRows();
   llvm::MatrixBuilder MB(Builder);
-  Value *Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows);
+
+  Value *Idx;
+  if (CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+      LangOptions::MatrixMemoryLayout::MatrixRowMajor) {
+    unsigned NumCols = MatrixTy->getNumColumns();
+    Idx = MB.createRowMajorIndex(RowIdx, ColumnIdx, NumCols);
+  } else {
+    unsigned NumRows = MatrixTy->getNumRows();
+    Idx = MB.createColumnMajorIndex(RowIdx, ColumnIdx, NumRows);
+  }
+
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
     MB.CreateIndexAssumption(Idx, MatrixTy->getNumElementsFlattened());
 
