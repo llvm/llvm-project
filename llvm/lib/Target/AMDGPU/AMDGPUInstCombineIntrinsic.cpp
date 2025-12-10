@@ -1743,8 +1743,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *D3 = II.getArgOperand(3);
     // We know that not passing the second and third tensor DMA groups is
     // equivalent to passing zeroes for those registers, so we rewrite to the
-    // shorter form here.
-    if (!match(D2, m_Zero()) || !match(D3, m_Zero()))
+    // shorter form here. Undef or poison are replaced by 0.
+    auto Pred = m_CombineOr(m_Zero(), m_Undef());
+    if (!match(D2, Pred) || !match(D3, Pred))
       return std::nullopt;
 
     auto ShortIntrinsic = IID == Intrinsic::amdgcn_tensor_load_to_lds
@@ -1752,7 +1753,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                               : Intrinsic::amdgcn_tensor_store_from_lds_d2;
     CallInst *NewII = IC.Builder.CreateIntrinsic(
         ShortIntrinsic,
-        {II.getArgOperand(0), II.getArgOperand(1), II.getArgOperand(4)}, &II);
+        {II.getArgOperand(0), II.getArgOperand(1), II.getArgOperand(4)});
     NewII->takeName(&II);
     NewII->copyMetadata(II);
     return IC.eraseInstFromFunction(II);

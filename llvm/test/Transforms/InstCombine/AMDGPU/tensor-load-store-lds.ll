@@ -2,7 +2,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=instcombine < %s | FileCheck %s
 
 ; --------------------------------------------------------------------
-; tensor_load_to_lds: D2 and D3 are zero -> convert to _d2 variant
+; tensor_load_to_lds: D2 and D3 are zero/poison -> convert to _d2 variant
 ; --------------------------------------------------------------------
 
 define void @test_tensor_load_to_lds_d2_d3_zero(<4 x i32> inreg %d0, <8 x i32> inreg %d1) {
@@ -12,6 +12,36 @@ define void @test_tensor_load_to_lds_d2_d3_zero(<4 x i32> inreg %d0, <8 x i32> i
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %d0, <8 x i32> %d1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 0)
+  ret void
+}
+
+define void @test_tensor_load_to_lds_d2_d3_poison(<4 x i32> inreg %d0, <8 x i32> inreg %d1) {
+; CHECK-LABEL: define void @test_tensor_load_to_lds_d2_d3_poison(
+; CHECK-SAME: <4 x i32> inreg [[D0:%.*]], <8 x i32> inreg [[D1:%.*]]) {
+; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds.d2(<4 x i32> [[D0]], <8 x i32> [[D1]], i32 0)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %d0, <8 x i32> %d1, <4 x i32> poison, <4 x i32> poison, i32 0)
+  ret void
+}
+
+define void @test_tensor_load_to_lds_d2_zero_d3_poison(<4 x i32> inreg %d0, <8 x i32> inreg %d1) {
+; CHECK-LABEL: define void @test_tensor_load_to_lds_d2_zero_d3_poison(
+; CHECK-SAME: <4 x i32> inreg [[D0:%.*]], <8 x i32> inreg [[D1:%.*]]) {
+; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds.d2(<4 x i32> [[D0]], <8 x i32> [[D1]], i32 0)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %d0, <8 x i32> %d1, <4 x i32> zeroinitializer, <4 x i32> poison, i32 0)
+  ret void
+}
+
+define void @test_tensor_load_to_lds_d2_poison_d3_zero(<4 x i32> inreg %d0, <8 x i32> inreg %d1) {
+; CHECK-LABEL: define void @test_tensor_load_to_lds_d2_poison_d3_zero(
+; CHECK-SAME: <4 x i32> inreg [[D0:%.*]], <8 x i32> inreg [[D1:%.*]]) {
+; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds.d2(<4 x i32> [[D0]], <8 x i32> [[D1]], i32 0)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %d0, <8 x i32> %d1, <4 x i32> poison, <4 x i32> zeroinitializer, i32 0)
   ret void
 }
 
@@ -50,7 +80,7 @@ define void @test_tensor_load_to_lds_d2_d3_nonzero(<4 x i32> inreg %d0, <8 x i32
 }
 
 ; --------------------------------------------------------------------
-; tensor_store_from_lds: D2 and D3 are zero -> convert to _d2 variant
+; tensor_store_from_lds: D2 and D3 are zero/poison -> convert to _d2 variant
 ; --------------------------------------------------------------------
 
 define void @test_tensor_store_from_lds_d2_d3_zero(<4 x i32> inreg %d0, <8 x i32> inreg %d1) {
@@ -60,6 +90,36 @@ define void @test_tensor_store_from_lds_d2_d3_zero(<4 x i32> inreg %d0, <8 x i32
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %d0, <8 x i32> %d1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 0)
+  ret void
+}
+
+define void @test_tensor_store_from_lds_d2_d3_poison(<4 x i32> inreg %d0, <8 x i32> inreg %d1) {
+; CHECK-LABEL: define void @test_tensor_store_from_lds_d2_d3_poison(
+; CHECK-SAME: <4 x i32> inreg [[D0:%.*]], <8 x i32> inreg [[D1:%.*]]) {
+; CHECK-NEXT:    call void @llvm.amdgcn.tensor.store.from.lds.d2(<4 x i32> [[D0]], <8 x i32> [[D1]], i32 0)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %d0, <8 x i32> %d1, <4 x i32> poison, <4 x i32> poison, i32 0)
+  ret void
+}
+
+define void @test_tensor_store_from_lds_d2_zero_d3_poison(<4 x i32> inreg %d0, <8 x i32> inreg %d1) {
+; CHECK-LABEL: define void @test_tensor_store_from_lds_d2_zero_d3_poison(
+; CHECK-SAME: <4 x i32> inreg [[D0:%.*]], <8 x i32> inreg [[D1:%.*]]) {
+; CHECK-NEXT:    call void @llvm.amdgcn.tensor.store.from.lds.d2(<4 x i32> [[D0]], <8 x i32> [[D1]], i32 0)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %d0, <8 x i32> %d1, <4 x i32> zeroinitializer, <4 x i32> poison, i32 0)
+  ret void
+}
+
+define void @test_tensor_store_from_lds_d2_poison_d3_zero(<4 x i32> inreg %d0, <8 x i32> inreg %d1) {
+; CHECK-LABEL: define void @test_tensor_store_from_lds_d2_poison_d3_zero(
+; CHECK-SAME: <4 x i32> inreg [[D0:%.*]], <8 x i32> inreg [[D1:%.*]]) {
+; CHECK-NEXT:    call void @llvm.amdgcn.tensor.store.from.lds.d2(<4 x i32> [[D0]], <8 x i32> [[D1]], i32 0)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %d0, <8 x i32> %d1, <4 x i32> poison, <4 x i32> zeroinitializer, i32 0)
   ret void
 }
 
