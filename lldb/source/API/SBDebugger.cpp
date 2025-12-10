@@ -179,7 +179,7 @@ void SBDebugger::Initialize() {
 lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   LLDB_INSTRUMENT();
 
-  SBError error((Status()));
+  SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
           std::make_unique<SystemInitializerFull>())) {
     error.SetError(Status::FromError(std::move(e)));
