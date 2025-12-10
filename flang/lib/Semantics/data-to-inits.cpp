@@ -863,7 +863,7 @@ static bool ProcessScopes(const Scope &scope,
       if (std::find_if(associated.begin(), associated.end(), [](SymbolRef ref) {
             return IsInitialized(*ref);
           }) != associated.end()) {
-        // If a symbol without a size gets here then it is possible to get an
+        // If a symbol whose size has not been computed it is possible to get an
         // assertion failure when trying to contruct the initializer. The lack
         // of a size is assumed to be because there was an error reported that
         // blocked computing the size. As of writing this comment, this is only
@@ -871,9 +871,6 @@ static bool ProcessScopes(const Scope &scope,
         // this needs to be called earlier, then we need to skip equivalence
         // checking if there are any sizeless symbols and assert that there is
         // an error reported.
-        CHECK(std::find_if(associated.begin(), associated.end(),
-                  [](SymbolRef ref) { return ref->sizeOpt().has_value(); }) !=
-            associated.end());
         result &=
             CombineEquivalencedInitialization(associated, exprAnalyzer, inits);
       }
