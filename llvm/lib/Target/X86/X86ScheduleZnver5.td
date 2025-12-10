@@ -8,27 +8,32 @@
 //
 // This file defines the machine model for Znver5 to support instruction
 // scheduling and other instruction cost heuristics.
-// Based on: (To Be Updated)
-//  * Early information of hardware specification.
+// Based on:
+//  * Software Optimization Guide for the AMD Zen5 Microarchitecture
+//    https://docs.amd.com/v/u/en-US/58455_1.00
 //===----------------------------------------------------------------------===//
 
 def Znver5Model : SchedMachineModel {
-  // The processor may dispatch up to 8 macro ops per cycle
+  // AMD SOG, 2.9.7 Dispatch
+  // The processor may dispatch up to 8 macro-ops per cycle
   // into the execution engine.
   let IssueWidth = 8;
+  // AMD SOG, 2.10.3 Retire Control Unit
   // The retire control unit (RCU) tracks the completion status of all
   // outstanding operations (integer, load/store, and floating-point) and is
   // the final arbiter for exception processing and recovery.
-  // The unit can receive up to 6 macro ops dispatched per cycle and track up
+  // The unit can receive up to 8 macro ops dispatched per cycle and track up
   // to 448 macro ops in-flight in non-SMT mode or 224 per thread in SMT mode.
   let MicroOpBufferSize = 448;
-  // The op cache is organized as an associative cache with 64 sets and 8 ways.
-  // At each set-way intersection is an entry containing up to 8 macro ops.
-  // The maximum capacity of the op cache is 6.75K ops.
-  // Assuming a maximum dispatch of 9 ops/cy and a mispredict cost of 12cy from
-  // the op-cache, we limit the loop buffer to 8*12 = 96 to avoid loop
-  // unrolling leading to excessive filling of the op-cache from frontend.
-  let LoopMicroOpBufferSize = 96;
+  // AMD SOG, 2.9.1 Op Cache
+  // The op cache is organized as an associative cache with 64 sets and 16 ways.
+  // At each set-way intersection is an entry containing up to 6 instructions or
+  // fused instructions. This differs from Zen3 and Zen4 opcache entries, which
+  // stored macro-ops, and can improve effective Op Cache storage density. The
+  // maximum capacity of the op cache is 6 K instructions or fused instructions.
+  // FIXME: not sure how to model this difference from Znver3/4
+
+  // AMD SOG, 2.6.2 L1 Data Cache
   // The L1 data cache has a 4- or 5- cycle integer load-to-use latency.
   // The AGU and LS pipelines are optimized for simple address generation modes.
   // <...> and can achieve 4-cycle load-to-use integer load latency.
@@ -45,6 +50,14 @@ def Znver5Model : SchedMachineModel {
   // <...>. The common case penalty is 15 cycles.
   let MispredictPenalty = 15;
 
+  // AMD SOG, 2.8 Optimizing Branching
+  // The common case penalty is 15 cycles.
+  // Assuming a dispatch of 8 ops/cy and a mispredict cost of 15 from
+  // the op-cache, we limit the loop buffer to 8*15 = 120 to avoid loop
+  // unrolling leading to excessive filling of the op-cache from frontend.
+  
+  let LoopMicroOpBufferSize = mul!(IssueWidth, MispredictPenalty);
+
   let PostRAScheduler = 1; // Enable Post RegAlloc Scheduler pass.
 
   let CompleteModel = 1;
@@ -57,6 +70,7 @@ let SchedModel = Znver5Model in {
 // RCU
 //===----------------------------------------------------------------------===//
 
+// AMD SOG, 2.10.3 Retire Control Unit
 // The unit can receive up to 8 macro ops dispatched per cycle and track up to
 // 448 macro ops in-flight in non-SMT mode or 224 per thread in SMT mode. <...>
 // The retire unit handles in-order commit of up to eight macro ops per cycle.
@@ -66,6 +80,7 @@ def Zn5RCU : RetireControlUnit<Znver5Model.MicroOpBufferSize, 8>;
 // Integer Execution Unit
 //
 
+// AMD SOG, 2.4 Superscalar Organization
 // The processor uses four decoupled independent integer scheduler queues,
 // each one servicing one ALU pipeline and one or two other pipelines
 
@@ -73,8 +88,10 @@ def Zn5RCU : RetireControlUnit<Znver5Model.MicroOpBufferSize, 8>;
 // Execution pipes
 //===----------------------------------------------------------------------===//
 
-// The processor contains 4 general purpose integer execution pipes.
-// Each pipe has an ALU capable of general purpose integer operations.
+// AMD SOG, 2.10.2 Execution Units
+
+// The processor contains 6 general purpose integer execution pipes.
+// Each pipe has an ALU capable of general-purpose integer operations.
 def Zn5ALU0 : ProcResource<1>;
 def Zn5ALU1 : ProcResource<1>;
 def Zn5ALU2 : ProcResource<1>;
@@ -97,7 +114,9 @@ def Zn5AGU3 : ProcResource<1>;
 // Execution Units
 //===----------------------------------------------------------------------===//
 
-// ALU0 additionally has divide <...> execution capability.
+// AMD SOG, 2.10.2 Execution Units
+
+// ALU3 additionally has divide <...> execution capability.
 defvar Zn5Divider = Zn5ALU3;
 
 // ALU3,4,5 additionally have <...> branch execution capability.
@@ -113,6 +132,8 @@ defvar Zn5MUL2 = Zn5ALU2;
 
 // Execution pipeline grouping
 //===----------------------------------------------------------------------===//
+
+// AMD SOG, 2.10.2 Execution Units
 
 // General ALU operations
 // Simple bit twiddling: bit test, shift/rotate, bit extraction
@@ -147,17 +168,18 @@ def Zn5IntegerPRF : RegisterFile<240, [GR64, CCR], [1, 1], [1, 0],
                               0>; // Restrict move elimination to zero regs.
 
 // The integer scheduler has a 136 entry macro op capacity.
-// The schedulers can receive up to eight macro ops per cycle, with a limit of
-// four per scheduler. Scheduler service ALU units and AGU unit separately.
-// ALU scheduler can issue three micro-ops per cycle into each of ALU pipeline
-// groups (ALU0-2) and (ALU3-5). AGU scheduler can issue four micro-ops per cycle
-// to its associated pipelines.
+
+// AMD SOG, 2.10.2 Execution Units
+// The schedulers can receive up to eight macro-ops per cycle.
+// The ALU scheduler can issue six micro-ops per cycle and the AGU scheduler can
+// issue four micro-ops per cycle.
 
 def Zn5Int : ProcResGroup<[Zn5ALU0, Zn5ALU1, Zn5ALU2,         // scheduler 1
                            Zn5ALU3, Zn5ALU4, Zn5ALU5,         // scheduler 2
                            Zn5AGU0, Zn5AGU1, Zn5AGU2, Zn5AGU3 // scheduler 3
                           ]> {
   // There are two banks of the buffers with 136 macro op capacity.
+  // FIXME: where is this value from?
   let BufferSize = 136;
 }
 
@@ -165,8 +187,10 @@ def Zn5Int : ProcResGroup<[Zn5ALU0, Zn5ALU1, Zn5ALU2,         // scheduler 1
 // Floating-Point Unit
 //
 
+// AMD SOG, 2.4 Superscalar Organization
 // The processor uses <...> two decoupled independent floating point schedulers
-// each servicing two FP pipelines and one store or FP-to-integer pipeline.
+// each servicing two FP pipelines; and one independent floating point scheduler
+// servicing store data or FP-to-integer pipelines.
 
 //
 // Execution pipes
@@ -324,6 +348,7 @@ def Zn5FPCLM01 : ProcResGroup<[Zn5FPCLM0, Zn5FPCLM1]>;
 // Scheduling
 //===----------------------------------------------------------------------===//
 
+// FIXME: not sure if this still holds for Znver5
 // Agner, 21.8 Register renaming and out-of-order schedulers
 // The floating point register file has 384 vector registers
 // of 512b each in zen5.
@@ -331,16 +356,19 @@ def Zn5FpPRF : RegisterFile<384, [VR64, VR128, VR256, VR512], [1, 1, 1, 1], [0, 
                             6,  // Max moves that can be eliminated per cycle.
                             0>; // Restrict move elimination to zero regs.
 
+// AMD SOG, 2.11 Floating-Point Unit
 // The floating-point scheduler has a 3*38 entry macro op capacity.
 // <...> the scheduler can issue 1 micro op per cycle for each pipe.
 // FIXME: those are two separate schedulers, not a single big one.
+// FIXME: not sure if these values hold for Znver5
 def Zn5FP : ProcResGroup<[Zn5FP0, Zn5FP2,          /*Zn5FP4,*/ // scheduler 0
                           Zn5FP1, Zn5FP3, Zn5FP45 /*Zn5FP5*/  // scheduler 1
                          ]> {
   let BufferSize = !mul(3, 38);
 }
 
-// Macro ops can be dispatched to the 64 entry Non Scheduling Queue (NSQ)
+// AMD SOG, 2.11 Floating-Point Unit
+// Macro ops can be dispatched to the 96 entry Non-Scheduling Queue (NSQ)
 // even if floating-point scheduler is full.
 // FIXME: how to model this properly?
 
@@ -823,6 +851,8 @@ def Zn5WriteRotateLeftMCL : SchedWriteRes<[Zn5AGU0123, Zn5Load, Zn5ALU012]> {
 def : InstRW<[Zn5WriteRotateLeftMCL], (instrs RCL8mCL, RCL16mCL, RCL32mCL, RCL64mCL)>;
 
 // Double shift instructions.
+// AMD SOG 2.10.2 Execution Units
+// Shift instructions SHLD and SHRD have a three-cycle latency.
 defm : Zn5WriteResInt<WriteSHDrri, [Zn5ALU012], 2, [3], 4>;
 defm : Zn5WriteResInt<WriteSHDrrcl, [Zn5ALU012], 2, [3], 5>;
 defm : Zn5WriteResInt<WriteSHDmri, [Zn5AGU0123, Zn5Load, Zn5ALU012], !add(Znver5Model.LoadLatency, 2), [1, 1, 4], 6>;
