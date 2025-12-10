@@ -477,6 +477,10 @@ public:
   /// @brief Whether this affine series is a scalar or a splat of a scalar
   bool isScalarOrSplat() const;
 
+  /// @brief returns the integer type to be used by the slopes w.r.t. the base.
+  /// If the base is already of integer type, returns it, else the base is of
+  /// pointer type and returns the integer type used to index pointers (index of
+  /// GEP).
   static IntegerType *getSlopeTypeFor(const DataLayout &DL, Type *BaseType);
 
   /// @brief Sets the i-th slope of this linear series to V
@@ -515,12 +519,16 @@ private:
   TensorShape LSShape;
 
   void computeLSShape() {
+    Type *ScalarTy = Base->getType()->getScalarType();
+    if (!ScalarTy->isIntegerTy() && !ScalarTy->isPointerTy())
+      llvm_unreachable("LinearSeries base must be of integer or pointer type");
+    if (baseShape.nonEmptyDims().anyCommon(slopeShape.nonEmptyDims()))
+      llvm_unreachable("Base and slope shapes are not orthogonal");
     LSShape = baseShape;
     // This should't happen by construction
     Error e = LSShape.combineShapeBcast(slopeShape);
-    if (e) {
-      llvm_unreachable("Base and slope shapes are incompatible");
-    }
+    if (e)
+      llvm_unreachable("Broadcast on orthogonal shapes must succeed");
   }
 };
 
