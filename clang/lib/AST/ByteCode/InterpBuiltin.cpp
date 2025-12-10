@@ -2222,11 +2222,8 @@ static bool interp__builtin_assume_dereferenceable(InterpState &S, CodePtr OpPC,
         << AK_Read << S.Current->getRange(OpPC);
     return false;
   }
-  if (!Ptr.isBlockPointer()) {
-    if (Ptr.isIntegralPointer())
-      return false;
+  if (!Ptr.isBlockPointer())
     return false;
-  }
   if (!Ptr.isLive())
     return false;
   if (Ptr.isPastEnd()) {
