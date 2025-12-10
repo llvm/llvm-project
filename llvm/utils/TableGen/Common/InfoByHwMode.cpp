@@ -29,8 +29,8 @@ std::string llvm::getModeName(unsigned Mode) {
   return (Twine('m') + Twine(Mode)).str();
 }
 
-ValueTypeByHwMode::ValueTypeByHwMode(const Record *R,
-                                     const CodeGenHwModes &CGH) {
+ValueTypeByHwMode::ValueTypeByHwMode(const Record *R, const CodeGenHwModes &CGH)
+    : InfoByHwMode<llvm::MVT>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
     auto I = Map.try_emplace(P.first, MVT(llvm::getValueType(P.second)));
@@ -140,7 +140,8 @@ void RegSizeInfo::writeToStream(raw_ostream &OS) const {
 }
 
 RegSizeInfoByHwMode::RegSizeInfoByHwMode(const Record *R,
-                                         const CodeGenHwModes &CGH) {
+                                         const CodeGenHwModes &CGH)
+    : InfoByHwMode<llvm::RegSizeInfo>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
     auto I = Map.try_emplace(P.first, RegSizeInfo(P.second));
@@ -188,7 +189,8 @@ void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
 }
 
 RegClassByHwMode::RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
-                                   const CodeGenRegBank &RegBank) {
+                                   const CodeGenRegBank &RegBank)
+    : InfoByHwMode<const llvm::CodeGenRegisterClass *>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
 
   for (auto [ModeID, RegClassRec] : MS.Items) {
@@ -206,7 +208,8 @@ SubRegRange::SubRegRange(const Record *R) {
 }
 
 SubRegRangeByHwMode::SubRegRangeByHwMode(const Record *R,
-                                         const CodeGenHwModes &CGH) {
+                                         const CodeGenHwModes &CGH)
+    : InfoByHwMode<llvm::SubRegRange>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
     auto I = Map.try_emplace(P.first, SubRegRange(P.second));
@@ -216,7 +219,8 @@ SubRegRangeByHwMode::SubRegRangeByHwMode(const Record *R,
 }
 
 EncodingInfoByHwMode::EncodingInfoByHwMode(const Record *R,
-                                           const CodeGenHwModes &CGH) {
+                                           const CodeGenHwModes &CGH)
+    : InfoByHwMode<const llvm::Record *>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
     assert(P.second && P.second->isSubClassOf("InstructionEncoding") &&
