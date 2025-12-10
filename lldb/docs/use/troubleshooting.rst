@@ -120,7 +120,7 @@ print the same information:
 
    (lldb) script lldb.debugger.GetBuildConfiguration()
 
-This command will fail if no scripting langauge is enabled. In that case, you
+This command will fail if no scripting langauge was enabled. In that case, you
 can instead check the shared library dependencies of LLDB.
 
 For example on Linux you can use the following command:
@@ -132,7 +132,6 @@ For example on Linux you can use the following command:
    0x0000000000000001 (NEEDED)             Shared library: [libxml2.so.2]
    0x0000000000000001 (NEEDED)             Shared library: [libedit.so.2]
    <...>
-   0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
 
 The output above shows us that this particular copy of LLDB has XML parsing
 (``libxml2``) and editline (``libedit``) enabled.
@@ -142,12 +141,15 @@ The output above shows us that this particular copy of LLDB has XML parsing
    ``readelf -d`` as used above only shows direct dependencies of the binary.
    Libraries loaded by a library will not be shown. An example of this is Python.
    ``lldb`` requires ``liblldb`` and it is ``liblldb`` that would require ``libpython``.
-
    The same ``readelf`` command can be used on ``liblldb`` to see if it does
    depend on Python.
 
    ``ldd`` will show you the full dependency tree of ``lldb`` but **do not**
    use it unless you trust the ``lldb`` binary. As some versions of ``ldd`` may
    execute the binary in the process of inspecting it.
+
+On Windows, use ``dumpbin /dependents <path-to-lldb>``. The same caveat from
+Linux applies to Windows. To find dependencies like Python, you need to run
+``dumpbin`` on ``liblldb.dll`` too.
 
 On MacOS, use ``otool -l <path-to-lldb>``.
