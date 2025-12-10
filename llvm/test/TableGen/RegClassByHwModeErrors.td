@@ -128,7 +128,7 @@ include "Common.td"
 /// We should get an error if the same mode is listed more than once
 defvar Ptr64Alias = Ptr64;
 def BadRegClass : RegClassByHwMode<[Ptr32, Ptr64, Ptr64Alias], [XRegs, YRegs, YRegs]>;
-// CHECK: [[#@LINE-1]]:5: error: Duplicate RegisterClass entry for HwMode Ptr64: YRegs
+// CHECK: [[#@LINE-1]]:5: error: duplicate RegisterClass entry for HwMode Ptr64: YRegs
 // Need at least one CompressPat use of the bad reg class to trigger the error:
 def USE_BAD_REG_CLASS : TestInstruction {
   let OutOperandList = (outs BadRegClass:$dst);
