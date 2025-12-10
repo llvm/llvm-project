@@ -27,10 +27,10 @@ for header in public_headers:
 {lit_header_undeprecations.get(header, '')}
 
 // TODO: run clang-tidy with modules enabled once they are supported
-// RUN: %{{clang-tidy}} %s --warnings-as-errors=*                                           \
-// RUN:                    -header-filter=.*                                                \
-// RUN:                    --config-file=%{{libcxx-dir}}/.clang-tidy                        \
-// RUN:                    --load=%{{test-tools-dir}}/clang_tidy_checks/libcxx-tidy.plugin  \
+// RUN: %{{clang-tidy}} %s --warnings-as-errors=*                                           \\
+// RUN:                    -header-filter=.*                                                \\
+// RUN:                    --config-file=%{{libcxx-dir}}/.clang-tidy                        \\
+// RUN:                    --load=%{{test-tools-dir}}/clang_tidy_checks/libcxx-tidy.plugin  \\
 // RUN:                    -- -Wweak-vtables %{{compile_flags}} -fno-modules
 
 #include <{header}>
