@@ -901,3 +901,40 @@ loop:
 exit:
   ret void
 }
+
+declare void @use(i128)
+
+define void @sext_i128(ptr %a) {
+; CHECK-LABEL: @sext_i128(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i128, ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i128 [[LOAD]], 0
+; CHECK-NEXT:    [[SEXT1:%.*]] = sext i1 [[CMP1]] to i128
+; CHECK-NEXT:    [[CMP1_FROZEN:%.*]] = freeze i1 [[CMP1]]
+; CHECK-NEXT:    br i1 [[CMP1_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i128 -1, 0
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[ADD:%.*]] = phi i128 [ [[TMP0]], [[SELECT_TRUE_SINK]] ], [ 0, [[LOOP]] ]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i128 [[ADD]], 0
+; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %load = load i128, ptr %a, align 16
+  %cmp1 = icmp slt i128 %load, 0
+  %sext1 = sext i1 %cmp1 to i128
+  %add = add i128 %sext1, 0
+  %cmp2 = icmp slt i128 %add, 0
+  br i1 %cmp2, label %loop, label %exit
+
+exit:
+  ret void
+}
