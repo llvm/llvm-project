@@ -86,6 +86,10 @@ private:
   mutable std::shared_mutex Mtx;
 };
 
+// The LibraryCursor iterates through a list of LibraryInfo pointers,
+// returning only those libraries that match a specified LibState. LibraryIndex
+// provides these lists based on PathType, and the cursor filters them as it
+// iterates.
 class LibraryCursor {
 public:
   LibraryCursor(const std::vector<const LibraryInfo *> &L, LibState S)
@@ -109,6 +113,8 @@ private:
   size_t Pos = 0; // cursor position
 };
 
+// LibraryIndex keeps libraries grouped by PathType and lets you
+// get a cursor to walk through libraries of a specific type/state.
 class LibraryIndex {
   friend LibraryManager;
 
