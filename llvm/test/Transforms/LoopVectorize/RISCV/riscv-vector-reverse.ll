@@ -186,23 +186,14 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV64:       [[FOR_BODY_PREHEADER]]:
 ; RV64-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; RV64-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
-; RV64:       [[VECTOR_SCEVCHECK]]:
-; RV64-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP0]], -1
-; RV64-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
-; RV64-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; RV64-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
-; RV64-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
-; RV64-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
-; RV64-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[TMP9]]
-; RV64-NEXT:    br i1 [[TMP8]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; RV64-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; RV64:       [[VECTOR_MEMCHECK]]:
 ; RV64-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
 ; RV64-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 4
 ; RV64-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP13]]
-; RV64-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; RV64-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64:       [[VECTOR_PH]]:
 ; RV64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV64:       [[VECTOR_BODY]]:
@@ -240,8 +231,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64:       [[MIDDLE_BLOCK]]:
 ; RV64-NEXT:    br label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]]
 ; RV64:       [[SCALAR_PH]]:
-; RV64-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ], [ [[TMP0]], %[[VECTOR_MEMCHECK]] ]
-; RV64-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[N]], %[[VECTOR_SCEVCHECK]] ], [ [[N]], %[[VECTOR_MEMCHECK]] ]
 ; RV64-NEXT:    br label %[[FOR_BODY:.*]]
 ; RV64:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
 ; RV64-NEXT:    br label %[[FOR_COND_CLEANUP]]
@@ -320,16 +309,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
 ; RV64-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; RV64-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; RV64-UF2:       [[VECTOR_SCEVCHECK]]:
-; RV64-UF2-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP0]], -1
-; RV64-UF2-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
-; RV64-UF2-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
-; RV64-UF2-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
-; RV64-UF2-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
-; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP9]]
-; RV64-UF2-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; RV64-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64-UF2:       [[VECTOR_MEMCHECK]]:
 ; RV64-UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
@@ -392,8 +372,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[TMP20]]
 ; RV64-UF2-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; RV64-UF2:       [[SCALAR_PH]]:
-; RV64-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP48]], %[[MIDDLE_BLOCK]] ], [ [[TMP0]], %[[FOR_BODY_PREHEADER]] ], [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ], [ [[TMP0]], %[[VECTOR_MEMCHECK]] ]
-; RV64-UF2-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ [[N]], %[[FOR_BODY_PREHEADER]] ], [ [[N]], %[[VECTOR_SCEVCHECK]] ], [ [[N]], %[[VECTOR_MEMCHECK]] ]
+; RV64-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP48]], %[[MIDDLE_BLOCK]] ], [ [[TMP0]], %[[FOR_BODY_PREHEADER]] ], [ [[TMP0]], %[[VECTOR_MEMCHECK]] ]
+; RV64-UF2-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ [[N]], %[[FOR_BODY_PREHEADER]] ], [ [[N]], %[[VECTOR_MEMCHECK]] ]
 ; RV64-UF2-NEXT:    br label %[[FOR_BODY:.*]]
 ; RV64-UF2:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
 ; RV64-UF2-NEXT:    br label %[[FOR_COND_CLEANUP]]
@@ -437,23 +417,14 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; RV64:       [[FOR_BODY_PREHEADER]]:
 ; RV64-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; RV64-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
-; RV64:       [[VECTOR_SCEVCHECK]]:
-; RV64-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP0]], -1
-; RV64-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
-; RV64-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; RV64-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
-; RV64-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
-; RV64-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
-; RV64-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[TMP9]]
-; RV64-NEXT:    br i1 [[TMP8]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; RV64-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; RV64:       [[VECTOR_MEMCHECK]]:
 ; RV64-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
 ; RV64-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 4
 ; RV64-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP13]]
-; RV64-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; RV64-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64:       [[VECTOR_PH]]:
 ; RV64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV64:       [[VECTOR_BODY]]:
@@ -491,8 +462,6 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64:       [[MIDDLE_BLOCK]]:
 ; RV64-NEXT:    br label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]]
 ; RV64:       [[SCALAR_PH]]:
-; RV64-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ], [ [[TMP0]], %[[VECTOR_MEMCHECK]] ]
-; RV64-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[N]], %[[VECTOR_SCEVCHECK]] ], [ [[N]], %[[VECTOR_MEMCHECK]] ]
 ; RV64-NEXT:    br label %[[FOR_BODY:.*]]
 ; RV64:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
 ; RV64-NEXT:    br label %[[FOR_COND_CLEANUP]]
@@ -571,16 +540,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
 ; RV64-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; RV64-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; RV64-UF2:       [[VECTOR_SCEVCHECK]]:
-; RV64-UF2-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP0]], -1
-; RV64-UF2-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
-; RV64-UF2-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
-; RV64-UF2-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
-; RV64-UF2-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
-; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP9]]
-; RV64-UF2-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; RV64-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64-UF2:       [[VECTOR_MEMCHECK]]:
 ; RV64-UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
@@ -643,8 +603,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[TMP20]]
 ; RV64-UF2-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; RV64-UF2:       [[SCALAR_PH]]:
-; RV64-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP48]], %[[MIDDLE_BLOCK]] ], [ [[TMP0]], %[[FOR_BODY_PREHEADER]] ], [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ], [ [[TMP0]], %[[VECTOR_MEMCHECK]] ]
-; RV64-UF2-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ [[N]], %[[FOR_BODY_PREHEADER]] ], [ [[N]], %[[VECTOR_SCEVCHECK]] ], [ [[N]], %[[VECTOR_MEMCHECK]] ]
+; RV64-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP48]], %[[MIDDLE_BLOCK]] ], [ [[TMP0]], %[[FOR_BODY_PREHEADER]] ], [ [[TMP0]], %[[VECTOR_MEMCHECK]] ]
+; RV64-UF2-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ [[N]], %[[FOR_BODY_PREHEADER]] ], [ [[N]], %[[VECTOR_MEMCHECK]] ]
 ; RV64-UF2-NEXT:    br label %[[FOR_BODY:.*]]
 ; RV64-UF2:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
 ; RV64-UF2-NEXT:    br label %[[FOR_COND_CLEANUP]]

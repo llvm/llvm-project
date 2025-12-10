@@ -38,23 +38,8 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], [[UMIN1]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 24
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
-; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i8 [[CONV3]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP6]])
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP6]], [[UMIN]]
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i8
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i8 [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP9]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i32 [[TMP7]], 255
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP10]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[DOTPROMOTED]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP14]], [[TMP7]]
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp slt i32 [[TMP15]], [[TMP14]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP13]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp ult i32 [[TMP4]], 8
+; CHECK-NEXT:    br i1 [[TMP17]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP4]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP4]], [[N_MOD_VF]]
@@ -77,8 +62,8 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DOTPROMOTED]], [[FOR_BODY8_LR_PH]] ], [ [[DOTPROMOTED]], [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[CONV3]], [[FOR_BODY8_LR_PH]] ], [ [[CONV3]], [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DOTPROMOTED]], [[FOR_BODY8_LR_PH]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[CONV3]], [[FOR_BODY8_LR_PH]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY8:%.*]]
 ; CHECK:       for.body8:
 ; CHECK-NEXT:    [[INC5:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY8]] ]

@@ -44,8 +44,9 @@ define void @example() {
 ; FORCED-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FORCED-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
-; FORCED-NEXT:    br [[EXIT:label %.*]]
-; FORCED:       [[SCALAR_PH:.*:]]
+; FORCED-NEXT:    br label %[[EXIT:.*]]
+; FORCED:       [[EXIT]]:
+; FORCED-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -85,12 +86,7 @@ define void @test_replicating_store_x86_fp80_cost(i32 %n, ptr %dst) #0 {
 ; FORCED-NEXT:  [[ENTRY:.*:]]
 ; FORCED-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 2
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 2
-; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; FORCED:       [[VECTOR_SCEVCHECK]]:
-; FORCED-NEXT:    [[TMP1:%.*]] = zext i32 [[N]] to i64
-; FORCED-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; FORCED-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP2]], 4294967295
-; FORCED-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]

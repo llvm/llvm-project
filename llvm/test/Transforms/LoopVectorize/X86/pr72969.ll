@@ -35,19 +35,7 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; VEC-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
-; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
-; VEC:       vector.scevcheck:
-; VEC-NEXT:    [[TMP5:%.*]] = add i64 [[P1]], 16
-; VEC-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP5]], i64 add (i64 ptrtoint (ptr @h to i64), i64 1))
-; VEC-NEXT:    [[TMP6:%.*]] = add i64 [[UMAX]], -9
-; VEC-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[P1]]
-; VEC-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 3
-; VEC-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP8]] to i16
-; VEC-NEXT:    [[TMP11:%.*]] = add i16 2, [[TMP10]]
-; VEC-NEXT:    [[TMP12:%.*]] = icmp ult i16 [[TMP11]], 2
-; VEC-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[TMP8]], 65535
-; VEC-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]]
-; VEC-NEXT:    br i1 [[TMP14]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; VEC:       vector.ph:
 ; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 4
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
@@ -84,9 +72,9 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VEC:       scalar.ph:
-; VEC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
-; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
-; VEC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; VEC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; VEC-NEXT:    br label [[FOR_BODY:%.*]]
 ; VEC:       for.body:
 ; VEC-NEXT:    [[SCALAR_RECUR:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IDX:%.*]], [[FOR_BODY]] ]
@@ -126,5 +114,5 @@ exit:
 ; VEC: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; VEC: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; VEC: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; VEC: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; VEC: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ;.

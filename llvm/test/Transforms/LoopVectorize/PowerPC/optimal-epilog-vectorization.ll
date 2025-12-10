@@ -237,16 +237,7 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-TWO-CHECK-NEXT:  [[ITER_CHECK:.*:]]
 ; VF-TWO-CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
 ; VF-TWO-CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 2
-; VF-TWO-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; VF-TWO-CHECK:       [[VECTOR_SCEVCHECK]]:
-; VF-TWO-CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
-; VF-TWO-CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; VF-TWO-CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; VF-TWO-CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP0]], [[TMP2]]
-; VF-TWO-CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], [[TMP0]]
-; VF-TWO-CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
-; VF-TWO-CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP4]], [[TMP6]]
-; VF-TWO-CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; VF-TWO-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; VF-TWO-CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; VF-TWO-CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
 ; VF-TWO-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -360,16 +351,7 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-FOUR-CHECK-NEXT:  [[ITER_CHECK:.*:]]
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
 ; VF-FOUR-CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
-; VF-FOUR-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; VF-FOUR-CHECK:       [[VECTOR_SCEVCHECK]]:
-; VF-FOUR-CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
-; VF-FOUR-CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; VF-FOUR-CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; VF-FOUR-CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP0]], [[TMP2]]
-; VF-FOUR-CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], [[TMP0]]
-; VF-FOUR-CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
-; VF-FOUR-CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP4]], [[TMP6]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; VF-FOUR-CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; VF-FOUR-CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
 ; VF-FOUR-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]

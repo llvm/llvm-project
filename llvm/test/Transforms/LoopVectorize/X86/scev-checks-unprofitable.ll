@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; expression when vectorizing loop.2
 define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr %dst) {
 ; CHECK-LABEL: define void @value_defined_in_loop1_used_for_trip_counts(
-; CHECK-SAME: i32 [[START:%.*]], i1 [[C:%.*]], ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[OFFSET_IDX:%.*]], i1 [[C:%.*]], ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C]], i32 0, i32 7
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[SELECT]] to i64
@@ -33,10 +33,31 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT_1_LOOPEXIT1:.*]]
 ; CHECK:       [[LOOP_2_PREHEADER]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[IV_1]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 8
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH2:.*]]
+; CHECK:       [[VECTOR_PH2]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 8
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[OFFSET_IDX]], [[DOTCAST]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY3:.*]]
+; CHECK:       [[VECTOR_BODY3]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[OFFSET_IDX]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr [[TMP5]], align 2
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK4:.*]]
+; CHECK:       [[MIDDLE_BLOCK4]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_1_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK4]] ], [ 0, %[[LOOP_2_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[TMP2]], %[[MIDDLE_BLOCK4]] ], [ [[OFFSET_IDX]], %[[LOOP_2_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP_2:.*]]
 ; CHECK:       [[LOOP_2]]:
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[IV_2_NEXT:%.*]], %[[LOOP_2]] ], [ 0, %[[LOOP_2_PREHEADER]] ]
-; CHECK-NEXT:    [[IV_3:%.*]] = phi i32 [ [[IV_3_NEXT:%.*]], %[[LOOP_2]] ], [ [[START]], %[[LOOP_2_PREHEADER]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[IV_2_NEXT:%.*]], %[[LOOP_2]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV_3:%.*]] = phi i32 [ [[IV_3_NEXT:%.*]], %[[LOOP_2]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_3_NEXT]] = add i32 [[IV_3]], 1
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i64 [[IV_2]], 1
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[IV_3]], 1
@@ -44,7 +65,7 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i64 [[ZEXT8]]
 ; CHECK-NEXT:    store i16 0, ptr [[GEP_DST]], align 2
 ; CHECK-NEXT:    [[EC_2:%.*]] = icmp ult i64 [[IV_2]], [[IV_1_LCSSA]]
-; CHECK-NEXT:    br i1 [[EC_2]], label %[[LOOP_2]], label %[[EXIT_1_LOOPEXIT:.*]]
+; CHECK-NEXT:    br i1 [[EC_2]], label %[[LOOP_2]], label %[[EXIT_1_LOOPEXIT]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT_1_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT_1:.*]]
 ; CHECK:       [[EXIT_1_LOOPEXIT1]]:
@@ -87,3 +108,8 @@ loop.3:
 exit.1:
   ret void
 }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
+;.

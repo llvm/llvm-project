@@ -11,22 +11,13 @@ define void @predicated_uniform_load(ptr %src, i32 %n, ptr %dst, i1 %cond) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[SMAX2]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i32 [[TMP2]], 1
 ; CHECK-NEXT:    br label [[VECTOR_SCEVCHECK:%.*]]
-; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[IBOX]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP5]], i64 0)
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[SMAX]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[SMAX]], 4294967295
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[NBRBOXES:%.*]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[BOXES:%.*]], i64 4
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[NBRBOXES]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[BOXES]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[COND:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
@@ -48,10 +39,9 @@ define void @predicated_uniform_load(ptr %src, i32 %n, ptr %dst, i1 %cond) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_THEN:%.*]], label [[LOOP_ELSE:%.*]]
 ; CHECK:       loop.then:
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]

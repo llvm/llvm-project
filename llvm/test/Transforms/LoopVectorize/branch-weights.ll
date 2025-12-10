@@ -12,11 +12,7 @@ define void @f0(i8 %n, i32 %len, ptr %p) !prof !0 {
 ; MAINVF4IC1_EPI4:    br i1 [[CMP_ENTRY]], label %[[ITER_CHECK:.*]], label %[[EXIT:.*]], !prof [[PROF1:![0-9]+]]
 ; MAINVF4IC1_EPI4:  [[ITER_CHECK]]:
 ; MAINVF4IC1_EPI4:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0:%.*]], 4
-; MAINVF4IC1_EPI4:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]], !prof [[PROF2:![0-9]+]]
-; MAINVF4IC1_EPI4:  [[VECTOR_SCEVCHECK]]:
-; MAINVF4IC1_EPI4:    [[TMP2:%.*]] = icmp slt i8 [[TMP1:%.*]], 0
-; MAINVF4IC1_EPI4:    [[TMP3:%.*]] = icmp ugt i32 [[LEN]], 255
-; MAINVF4IC1_EPI4:    br i1 [[TMP4:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]], !prof [[PROF2]]
+; MAINVF4IC1_EPI4:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]], !prof [[PROF2:![0-9]+]]
 ; MAINVF4IC1_EPI4:  [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; MAINVF4IC1_EPI4:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[TMP0]], 4
 ; MAINVF4IC1_EPI4:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF2]]
@@ -55,11 +51,7 @@ define void @f0(i8 %n, i32 %len, ptr %p) !prof !0 {
 ; MAINVF4IC2_EPI4:    br i1 [[CMP_ENTRY]], label %[[ITER_CHECK:.*]], label %[[EXIT:.*]], !prof [[PROF1:![0-9]+]]
 ; MAINVF4IC2_EPI4:  [[ITER_CHECK]]:
 ; MAINVF4IC2_EPI4:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0:%.*]], 4
-; MAINVF4IC2_EPI4:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]], !prof [[PROF2:![0-9]+]]
-; MAINVF4IC2_EPI4:  [[VECTOR_SCEVCHECK]]:
-; MAINVF4IC2_EPI4:    [[TMP2:%.*]] = icmp slt i8 [[TMP1:%.*]], 0
-; MAINVF4IC2_EPI4:    [[TMP3:%.*]] = icmp ugt i32 [[LEN]], 255
-; MAINVF4IC2_EPI4:    br i1 [[TMP4:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]], !prof [[PROF2]]
+; MAINVF4IC2_EPI4:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]], !prof [[PROF2:![0-9]+]]
 ; MAINVF4IC2_EPI4:  [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; MAINVF4IC2_EPI4:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[TMP0]], 8
 ; MAINVF4IC2_EPI4:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF2]]
@@ -130,7 +122,7 @@ exit:
 ; MAINVF4IC1_EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]], [[META6]], [[META12:![0-9]+]]}
 ; MAINVF4IC1_EPI4: [[META12]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; MAINVF4IC1_EPI4: [[PROF13]] = !{!"branch_weights", i32 2, i32 1}
-; MAINVF4IC1_EPI4: [[LOOP14]] = distinct !{[[LOOP14]], [[META5]], [[META15:![0-9]+]]}
+; MAINVF4IC1_EPI4: [[LOOP14]] = distinct !{[[LOOP14]], [[META6]], [[META5]], [[META15:![0-9]+]]}
 ; MAINVF4IC1_EPI4: [[META15]] = !{!"llvm.loop.estimated_trip_count", i32 3}
 ;.
 ; MAINVF4IC2_EPI4: [[PROF0]] = !{!"function_entry_count", i64 13}
@@ -148,6 +140,6 @@ exit:
 ; MAINVF4IC2_EPI4: [[META12]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; MAINVF4IC2_EPI4: [[PROF13]] = !{!"branch_weights", i32 1, i32 3}
 ; MAINVF4IC2_EPI4: [[PROF14]] = !{!"branch_weights", i32 2, i32 1}
-; MAINVF4IC2_EPI4: [[LOOP15]] = distinct !{[[LOOP15]], [[META5]], [[META16:![0-9]+]]}
+; MAINVF4IC2_EPI4: [[LOOP15]] = distinct !{[[LOOP15]], [[META6]], [[META5]], [[META16:![0-9]+]]}
 ; MAINVF4IC2_EPI4: [[META16]] = !{!"llvm.loop.estimated_trip_count", i32 3}
 ;.

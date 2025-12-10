@@ -386,17 +386,8 @@ define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[END]] to i10
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i10 [[TMP0]] to i64
 ; CHECK-NEXT:    [[UMAX1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 1)
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX1]], 8
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
-; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[END_CLAMPED]], i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
-; CHECK-NEXT:    [[TMP4:%.*]] = add i8 1, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i8 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i32 [[TMP2]], 255
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[UMAX1]], 4
+; CHECK-NEXT:    br i1 [[TMP7]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX1]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX1]], [[N_MOD_VF]]
@@ -423,8 +414,8 @@ define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; CHECK:       vector.early.exit:
 ; CHECK-NEXT:    br label [[FOUND:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IND:%.*]] = phi i8 [ [[IND_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -538,5 +529,5 @@ attributes #1 = { "target-features"="+sve" vscale_range(1,16) }
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META2]], [[META1]]}
 ;.

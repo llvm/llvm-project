@@ -31,22 +31,7 @@ define i32 @foo1(i32 %N, ptr nocapture readnone %A, ptr nocapture readonly %B, i
 ; CHECK-NEXT:    br i1 [[CMP8]], [[FOR_END:label %.*]], label %[[FOR_BODY_LR_PH:.*]]
 ; CHECK:       [[FOR_BODY_LR_PH]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[N]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[N]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 [[N]]
-; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[TMP3]], i32 [[TMP0]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[J]], [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[J]], [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[TMP4]], [[J]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[TMP5]], [[J]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP2]], i1 [[TMP7]], i1 [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
@@ -142,16 +127,7 @@ define i32 @foo2(i16 zeroext %N, ptr nocapture readnone %A, ptr nocapture readon
 ; CHECK-NEXT:    br i1 [[CMP11]], [[FOR_END:label %.*]], label %[[FOR_BODY_LR_PH:.*]]
 ; CHECK:       [[FOR_BODY_LR_PH]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[CONV]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[CONV]], -1
-; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[CONV]], i32 [[TMP0]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[J]], [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP1]], [[J]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[CONV]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[CONV]], [[N_MOD_VF]]

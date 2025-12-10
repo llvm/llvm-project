@@ -150,15 +150,7 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -217,8 +209,8 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label %[[FOR_END_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i32 [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i32 [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -913,7 +905,7 @@ exit:                                        ; preds = %loop
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}

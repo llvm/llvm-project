@@ -20,16 +20,7 @@ define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[T1_0_LCSSA2]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP3]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
-; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 -1, [[ARR1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], [[T1_0_LCSSA2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = add i8 1, [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i8 [[TMP7]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP5]], 255
-; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP3]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[N_MOD_VF]]
@@ -54,7 +45,7 @@ define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

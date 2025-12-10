@@ -525,10 +525,7 @@ define i32 @smax_reduction_multiple_incoming(ptr %src, i32 %n, i1 %cond) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[IV_PH]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[N]], [[IV_PH]]
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
@@ -551,8 +548,8 @@ define i32 @smax_reduction_multiple_incoming(ptr %src, i32 %n, i1 %cond) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[IV_PH]], %[[LOOP_HEADER_PREHEADER]] ], [ [[IV_PH]], %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ [[MAX_PH]], %[[LOOP_HEADER_PREHEADER]] ], [ [[MAX_PH]], %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[IV_PH]], %[[LOOP_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ [[MAX_PH]], %[[LOOP_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP_HEADER]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]

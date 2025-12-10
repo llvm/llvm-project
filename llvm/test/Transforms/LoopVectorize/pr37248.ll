@@ -20,17 +20,7 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[SMIN1:%.*]] = call i32 @llvm.smin.i32(i32 [[START]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN1]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[START]], i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[START]], [[SMIN]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[START]] to i16
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP2]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i16 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i16 [[TMP5]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[TMP2]], 65535
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
@@ -40,7 +30,7 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE3:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[START]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
@@ -50,11 +40,11 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP11]], i32 1
-; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3]]
-; CHECK:       [[PRED_STORE_IF2]]:
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
+; CHECK:       [[PRED_STORE_IF1]]:
 ; CHECK-NEXT:    store i32 10, ptr [[B]], align 1
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE3]]
-; CHECK:       [[PRED_STORE_CONTINUE3]]:
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; CHECK:       [[PRED_STORE_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x i16], ptr @a, i16 0, i16 [[TMP12]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i16, ptr [[TMP15]], i64 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[TMP16]], i64 -1
@@ -98,17 +88,7 @@ define void @f2(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[SMIN1:%.*]] = call i32 @llvm.smin.i32(i32 [[START]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN1]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[START]], i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[START]], [[SMIN]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[START]] to i16
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP2]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i16 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i16 [[TMP5]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[TMP2]], 65535
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
