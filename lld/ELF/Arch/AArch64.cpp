@@ -48,7 +48,8 @@ bool elf::isAArch64BTILandingPad(Ctx &ctx, Symbol &s, int64_t a) {
   if (off >= isec->getSize())
     return true;
   const uint8_t *buf = isec->content().begin();
-  // Synthetic sections may have a size but empty data - Assume that they won't contain a landing pad
+  // Synthetic sections may have a size but empty data - Assume that they won't
+  // contain a landing pad
   if (buf == nullptr && isa<SyntheticSection>(isec))
     return false;
 
