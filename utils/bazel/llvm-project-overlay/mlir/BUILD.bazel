@@ -8504,6 +8504,7 @@ cc_library(
         ":IR",
         ":Pass",
         ":TransformUtils",
+        ":VectorDialect",
     ],
 )
 
@@ -10392,6 +10393,8 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
+        ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
         ":OpenACCDialect",
@@ -10399,6 +10402,7 @@ cc_library(
         ":OpenACCPassIncGen",
         ":OpenACCTypeInterfacesIncGen",
         ":Support",
+        ":TransformUtils",
         ":ViewLikeInterface",
         "//llvm:Support",
         "//llvm:ir_headers",

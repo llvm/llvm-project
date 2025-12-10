@@ -536,7 +536,8 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-last-element ir<%add>
+; CHECK-NEXT:   EMIT vp<[[EXIT_PART:%.+]]> = extract-last-part ir<%add>
+; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-last-lane vp<[[EXIT_PART]]>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
@@ -903,7 +904,8 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%idx>
 ; CHECK-NEXT:    WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:    WIDEN-CAST ir<%zext> = zext nneg ir<%l>
-; CHECK-NEXT:    EMIT vp<[[EXT:%.+]]> = extract-last-element ir<%zext>
+; CHECK-NEXT:    EMIT vp<[[EXT_PART:%.+]]> = extract-last-part ir<%zext>
+; CHECK-NEXT:    EMIT vp<[[EXT:%.+]]> = extract-last-lane vp<[[EXT_PART]]>
 ; CHECK-NEXT:    CLONE store vp<[[EXT]]>, ir<%p1>
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -960,7 +962,8 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-element ir<%for.1.next>
+; CHECK-NEXT:   EMIT vp<[[RESUME_1_PART:%.+]]> = extract-last-part ir<%for.1.next>
+; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-lane vp<[[RESUME_1_PART]]>
 ; CHECK-NEXT:   EMIT vp<[[FOR_RESULT:%.+]]> = extract-penultimate-element ir<%for.1.next>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
