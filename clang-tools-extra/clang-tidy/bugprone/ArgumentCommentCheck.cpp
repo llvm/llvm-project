@@ -142,31 +142,46 @@ getCommentsBeforeLoc(ASTContext *Ctx, SourceLocation Loc) {
   return Comments;
 }
 
-static bool isLikelyTypo(llvm::ArrayRef<ParmVarDecl *> Params,
-                         StringRef ArgName, unsigned ArgIndex) {
-  const std::string ArgNameLowerStr = ArgName.lower();
-  const StringRef ArgNameLower = ArgNameLowerStr;
+template <typename NamedDeclRange>
+static bool isLikelyTypo(const NamedDeclRange &Candidates, StringRef ArgName,
+                         StringRef TargetName) {
+  llvm::SmallString<64> ArgNameLower;
+  ArgNameLower.reserve(ArgName.size());
+  for (char C : ArgName)
+    ArgNameLower.push_back(llvm::toLower(C));
+  const StringRef ArgNameLowerRef = StringRef(ArgNameLower);
   // The threshold is arbitrary.
   const unsigned UpperBound = ((ArgName.size() + 2) / 3) + 1;
-  const unsigned ThisED = ArgNameLower.edit_distance(
-      Params[ArgIndex]->getIdentifier()->getName().lower(),
+  llvm::SmallString<64> TargetNameLower;
+  TargetNameLower.reserve(TargetName.size());
+  for (char C : TargetName)
+    TargetNameLower.push_back(llvm::toLower(C));
+  const unsigned ThisED = ArgNameLowerRef.edit_distance(
+      StringRef(TargetNameLower),
       /*AllowReplacements=*/true, UpperBound);
   if (ThisED >= UpperBound)
     return false;
 
-  for (unsigned I = 0, E = Params.size(); I != E; ++I) {
-    if (I == ArgIndex)
-      continue;
-    const IdentifierInfo *II = Params[I]->getIdentifier();
+  for (const auto &Candidate : Candidates) {
+    const IdentifierInfo *II = Candidate->getIdentifier();
     if (!II)
       continue;
 
+    // Skip the target itself.
+    if (II->getName() == TargetName)
+      continue;
+
     const unsigned Threshold = 2;
-    // Other parameters must be an edit distance at least Threshold more away
-    // from this parameter. This gives us greater confidence that this is a
-    // typo of this parameter and not one with a similar name.
-    const unsigned OtherED = ArgNameLower.edit_distance(
-        II->getName().lower(),
+    // Other candidates must be an edit distance at least Threshold more away
+    // from this candidate. This gives us greater confidence that this is a
+    // typo of this candidate and not one with a similar name.
+    llvm::SmallString<64> CandidateLower;
+    StringRef CandName = II->getName();
+    CandidateLower.reserve(CandName.size());
+    for (char C : CandName)
+      CandidateLower.push_back(llvm::toLower(C));
+    const unsigned OtherED = ArgNameLowerRef.edit_distance(
+        StringRef(CandidateLower),
         /*AllowReplacements=*/true, ThisED + Threshold);
     if (OtherED < ThisED + Threshold)
       return false;
@@ -319,7 +334,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
               diag(Comment.first, "argument name '%0' in comment does not "
                                   "match parameter name %1")
               << Matches[2] << II;
-          if (isLikelyTypo(Callee->parameters(), Matches[2], I)) {
+          if (isLikelyTypo(Callee->parameters(), Matches[2], II->getName())) {
             Diag << FixItHint::CreateReplacement(
                 Comment.first, (Matches[1] + II->getName() + Matches[3]).str());
           }
