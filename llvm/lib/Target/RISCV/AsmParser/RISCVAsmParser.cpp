@@ -3473,7 +3473,8 @@ bool RISCVAsmParser::parseDirectiveVariantCC() {
   return false;
 }
 
-void RISCVAsmParser::validateInstructionPreEmit(const MCInst &Inst, const MCSubtargetInfo &STI) {
+void RISCVAsmParser::validateInstructionPreEmit(const MCInst &Inst,
+                                                const MCSubtargetInfo &STI) {
   // Ensure that we don't emit instructions with missing predicates or invalid
   // register classes.
   // TODO: ideally this code should be shared between targets.
@@ -3489,11 +3490,12 @@ void RISCVAsmParser::validateInstructionPreEmit(const MCInst &Inst, const MCSubt
         continue;
       const MCRegisterClass &RegClass = MRI->getRegClass(RCID);
       if (!RegClass.contains(Op.getReg())) {
-        getParser().printError(getLoc(), MII.getName(Inst.getOpcode()) + " operand " +
-                            Twine(I + 1) + " register " +
-                            MRI->getName(Op.getReg()) +
-                            " is not a member of register class " +
-                            MRI->getRegClassName(&RegClass));
+        getParser().printError(getLoc(),
+                               MII.getName(Inst.getOpcode()) + " operand " +
+                                   Twine(I + 1) + " register " +
+                                   MRI->getName(Op.getReg()) +
+                                   " is not a member of register class " +
+                                   MRI->getRegClassName(&RegClass));
         reportFatalInternalError("Attempting to emit invalid instruction. "
                                  "Incorrect pseudo expansion?");
       }
