@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_MULTIPLEINHERITANCECHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_MULTIPLEINHERITANCECHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MULTIPLEINHERITANCECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MULTIPLEINHERITANCECHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::fuchsia {
+namespace clang::tidy::misc {
 
 /// Multiple implementation inheritance is discouraged.
 ///
@@ -38,6 +38,6 @@ private:
   llvm::DenseMap<const CXXRecordDecl *, bool> InterfaceMap;
 };
 
-} // namespace clang::tidy::fuchsia
+} // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_MULTIPLEINHERITANCECHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MULTIPLEINHERITANCECHECK_H
