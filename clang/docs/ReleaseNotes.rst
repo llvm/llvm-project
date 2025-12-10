@@ -331,6 +331,7 @@ New Compiler Flags
 - New option ``-fsanitize-debug-trap-reasons=`` added to control emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New options for enabling allocation token instrumentation: ``-fsanitize=alloc-token``, ``-falloc-token-max=``, ``-fsanitize-alloc-token-fast-abi``, ``-fsanitize-alloc-token-extended``.
 - The ``-resource-dir`` option is now displayed in the list of options shown by ``--help``.
+- New option ``-fmatrix-memory-layout`` added to control the memory layout of Clang matrix types. (e.g. ``-fmatrix-memory-layout=column-major`` or ``-fmatrix-memory-layout=row-major``).
 
 Lanai Support
 ^^^^^^^^^^^^^^
@@ -464,6 +465,10 @@ Improvements to Clang's diagnostics
 - Clang now detects potential missing format and format_matches attributes on function,
   Objective-C method and block declarations when calling format functions. It is part
   of the format-nonliteral diagnostic (#GH60718)
+
+- Fixed a crash when enabling ``-fdiagnostics-format=sarif`` and the output 
+  carries messages like 'In file included from ...' or 'In module ...'.
+  Now the include/import locations are written into `sarif.run.result.relatedLocations`.
 
 Improvements to Clang's time-trace
 ----------------------------------

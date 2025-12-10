@@ -180,6 +180,7 @@ struct MissingFeatures {
   static bool atomicInfoGetAtomicAddress() { return false; }
   static bool atomicScope() { return false; }
   static bool atomicSyncScopeID() { return false; }
+  static bool atomicMapTargetSyncScope() { return false; }
   static bool atomicTypes() { return false; }
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
@@ -188,6 +189,10 @@ struct MissingFeatures {
   // Global ctor handling
   static bool globalCtorLexOrder() { return false; }
   static bool globalCtorAssociatedData() { return false; }
+
+  // LowerModule handling
+  static bool lowerModuleCodeGenOpts() { return false; }
+  static bool lowerModuleLangOpts() { return false; }
 
   // Misc
   static bool aarch64SIMDIntrinsics() { return false; }
@@ -292,6 +297,7 @@ struct MissingFeatures {
   static bool lowerModeOptLevel() { return false; }
   static bool loweringPrepareX86CXXABI() { return false; }
   static bool loweringPrepareAArch64XXABI() { return false; }
+  static bool makeTripleAlwaysPresent() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
   static bool metaDataNode() { return false; }
