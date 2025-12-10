@@ -865,10 +865,6 @@ public:
     cgf.emitCXXThrowExpr(e);
     return {};
   }
-  mlir::Value VisitCXXNoexceptExpr(CXXNoexceptExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: cxx noexcept");
-    return {};
-  }
 
   mlir::Value VisitCXXNoexceptExpr(CXXNoexceptExpr *e) {
     return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
