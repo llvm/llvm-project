@@ -1708,7 +1708,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
-  
+
   return MPM;
 }
 
@@ -1819,6 +1819,7 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   addAnnotationRemarksPass(MPM);
 
   addRequiredLTOPreLinkPasses(MPM);
+  
   return MPM;
 }
 
