@@ -2625,8 +2625,8 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                 clauses.ifExpr, clauses.numTeamsLower, clauses.numTeamsUpper,
-                 clauses.numTeamsDims, clauses.numTeamsValues,
+                 clauses.ifExpr, clauses.numTeamsDims, clauses.numTeamsValues,
+                 clauses.numTeamsLower, clauses.numTeamsUpper,
                  /*private_vars=*/{}, /*private_syms=*/nullptr,
                  /*private_needs_barrier=*/nullptr, clauses.reductionMod,
                  clauses.reductionVars,
@@ -2648,14 +2648,57 @@ LogicalResult TeamsOp::verify() {
                      "in any OpenMP dialect operations");
 
   // Check for num_teams clause restrictions
-  if (auto numTeamsLowerBound = getNumTeamsLower()) {
-    auto numTeamsUpperBound = getNumTeamsUpper();
-    if (!numTeamsUpperBound)
-      return emitError("expected num_teams upper bound to be defined if the "
-                       "lower bound is defined");
-    if (numTeamsLowerBound.getType() != numTeamsUpperBound.getType())
+  auto numTeamsDims = getNumTeamsDims();
+  auto numTeamsValues = getNumTeamsValues();
+  auto numTeamsLower = getNumTeamsLower();
+  auto numTeamsUpper = getNumTeamsUpper();
+
+  // Cannot use both dims modifier and unidimensional style
+  if (numTeamsDims.has_value() && (numTeamsLower || numTeamsUpper)) {
+    return emitError(
+        "num_teams with dims modifier cannot be used together with "
+        "lower/upper bounds (unidimensional style)");
+  }
+
+  // With dims modifier (multidimensional)
+  if (numTeamsDims.has_value()) {
+    if (numTeamsValues.empty()) {
       return emitError(
-          "expected num_teams upper bound and lower bound to be the same type");
+          "num_teams dims modifier requires values to be specified");
+    }
+
+    if (numTeamsValues.size() != static_cast<size_t>(*numTeamsDims)) {
+      return emitError("num_teams dims(")
+             << *numTeamsDims << ") specified but " << numTeamsValues.size()
+             << " values provided";
+    }
+
+    // All values must have the same type
+    if (!numTeamsValues.empty()) {
+      Type firstType = numTeamsValues.front().getType();
+      for (auto value : numTeamsValues) {
+        if (value.getType() != firstType) {
+          return emitError(
+              "num_teams dims modifier requires all values to have "
+              "the same type");
+        }
+      }
+    }
+  } else {
+    // Without dims modifier
+    if (!numTeamsValues.empty()) {
+      return emitError(
+          "num_teams values can only be specified with dims modifier");
+    }
+
+    if (numTeamsLower) {
+      if (!numTeamsUpper)
+        return emitError("expected num_teams upper bound to be defined if the "
+                         "lower bound is defined");
+      if (numTeamsLower.getType() != numTeamsUpper.getType())
+        return emitError("expected num_teams upper bound and lower bound to be "
+                         "the same type");
+    }
   }
 
   // Check for allocate clause restrictions
@@ -4490,66 +4533,133 @@ void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 }
 
 //===----------------------------------------------------------------------===//
-// Parser and printer for Clauses with dims modifier
+// Helper: Parse dims modifier with values
 //===----------------------------------------------------------------------===//
-// clause_name(dims(3): %v0, %v1, %v2 : i32, i32, i32)
-// clause_name(%v : i32)
-static ParseResult
-parseDimsModifier(OpAsmParser &parser, IntegerAttr &dimsAttr,
-                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-                  SmallVectorImpl<Type> &types) {
-  std::optional<int64_t> dims;
-  // Try to parse optional dims modifier: dims(N):
-  if (succeeded(parser.parseOptionalKeyword("dims"))) {
-    int64_t dimsValue;
-    if (parser.parseLParen() || parser.parseInteger(dimsValue) ||
-        parser.parseRParen() || parser.parseColon()) {
-      return failure();
-    }
-    dims = dimsValue;
-  }
-  // Parse the operand list
-  if (parser.parseOperandList(values))
+// Parses: dims(N): values : type (single type for all values)
+static ParseResult parseDimsModifierWithValues(
+    OpAsmParser &parser, IntegerAttr &dimsAttr,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    SmallVectorImpl<Type> &types) {
+  if (failed(parser.parseOptionalKeyword("dims"))) {
     return failure();
-  // Parse colon and types
-  if (parser.parseColon() || parser.parseTypeList(types))
+  }
+
+  // Parse (N): values : type
+  int64_t dimsValue;
+  if (parser.parseLParen() || parser.parseInteger(dimsValue) ||
+      parser.parseRParen() || parser.parseColon()) {
     return failure();
-
-  // Verify dims matches number of values if specified
-  if (dims.has_value() && values.size() != static_cast<size_t>(*dims)) {
-    return parser.emitError(parser.getCurrentLocation())
-           << "dims(" << *dims << ") specified but " << values.size()
-           << " values provided";
   }
 
-  // If dims not specified but we have values, it's implicitly unidimensional
-  if (!dims.has_value() && values.size() != 1) {
-    return parser.emitError(parser.getCurrentLocation())
-           << "expected 1 value without dims modifier, but got "
-           << values.size() << " values";
+  if (parser.parseOperandList(values) || parser.parseColon()) {
+    return failure();
   }
 
-  // Convert to IntegerAttr
-  if (dims.has_value()) {
-    dimsAttr = parser.getBuilder().getI64IntegerAttr(*dims);
+  // Parse single type (all values have same type)
+  Type valueType;
+  if (parser.parseType(valueType)) {
+    return failure();
   }
+
+  // Fill types vector with same type for all values
+  types.assign(values.size(), valueType);
+
+  dimsAttr = parser.getBuilder().getI64IntegerAttr(dimsValue);
   return success();
 }
 
-static void printDimsModifier(OpAsmPrinter &p, Operation *op,
-                              IntegerAttr dimsAttr, OperandRange values,
-                              TypeRange types) {
-  // Print dims modifier if present
+//===----------------------------------------------------------------------===//
+// Parser and printer for num_teams clause with dims modifier
+//===----------------------------------------------------------------------===//
+static ParseResult
+parseNumTeamsClause(OpAsmParser &parser, IntegerAttr &dimsAttr,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+                    SmallVectorImpl<Type> &types,
+                    std::optional<OpAsmParser::UnresolvedOperand> &lowerBound,
+                    Type &lowerBoundType,
+                    std::optional<OpAsmParser::UnresolvedOperand> &upperBound,
+                    Type &upperBoundType) {
+
+  // Format: num_teams(dims(N): values : type)
+  if (succeeded(parseDimsModifierWithValues(parser, dimsAttr, values, types))) {
+    return success();
+  }
+
+  // Format: num_teams(to upper : type)
+  if (succeeded(parser.parseOptionalKeyword("to"))) {
+    OpAsmParser::UnresolvedOperand upperOperand;
+    if (parser.parseOperand(upperOperand) || parser.parseColon() ||
+        parser.parseType(upperBoundType)) {
+      return failure();
+    }
+    upperBound = upperOperand;
+    return success();
+  }
+
+  // Format: num_teams(lower : type to upper : type)
+  OpAsmParser::UnresolvedOperand lowerOperand;
+  if (parser.parseOperand(lowerOperand) || parser.parseColon() ||
+      parser.parseType(lowerBoundType)) {
+    return failure();
+  }
+
+  if (failed(parser.parseKeyword("to"))) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "expected 'to' keyword in num_teams clause";
+  }
+
+  OpAsmParser::UnresolvedOperand upperOperand;
+  if (parser.parseOperand(upperOperand) || parser.parseColon() ||
+      parser.parseType(upperBoundType)) {
+    return failure();
+  }
+
+  lowerBound = lowerOperand;
+  upperBound = upperOperand;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Helper: Print dims modifier with values
+//===----------------------------------------------------------------------===//
+// Prints: dims(N): values : type (single type for all values)
+static void printDimsModifierWithValues(OpAsmPrinter &p, IntegerAttr dimsAttr,
+                                        OperandRange values, TypeRange types) {
   if (dimsAttr) {
     p << "dims(" << dimsAttr.getInt() << "): ";
   }
 
-  // Print operands
   p.printOperands(values);
 
-  // Print types
+  // Print single type
   p << " : ";
-  llvm::interleaveComma(types, p);
+  if (!types.empty()) {
+    p << types.front();
+  }
+}
+
+static void printNumTeamsClause(OpAsmPrinter &p, Operation *op,
+                                IntegerAttr dimsAttr, OperandRange values,
+                                TypeRange types, Value lowerBound,
+                                Type lowerBoundType, Value upperBound,
+                                Type upperBoundType) {
+  if (!values.empty()) {
+    // Multidimensional: dims(N): values : type
+    printDimsModifierWithValues(p, dimsAttr, values, types);
+  } else if (upperBound) {
+    if (lowerBound) {
+      // Both bounds: lower : type to upper : type
+      p.printOperand(lowerBound);
+      p << " : " << lowerBoundType << " to ";
+      p.printOperand(upperBound);
+      p << " : " << upperBoundType;
+    } else {
+      // Upper only: to upper : type
+      p << " to ";
+      p.printOperand(upperBound);
+      p << " : " << upperBoundType;
+    }
+  }
 }
 
 #define GET_ATTRDEF_CLASSES
