@@ -189,15 +189,16 @@ loadNZCVImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
                         .addReg(TempReg1)
                         .addReg(TempReg1)
                         .addReg(TempReg2);
-  MCInst OrrMask = MCInstBuilder(AArch64::ORRXrr)
-                       .addReg(TempReg1)
-                       .addReg(TempReg1)
-                       .addImm(Value.getZExtValue());
   MCInst MoveToNZCV =
       MCInstBuilder(AArch64::MSR).addImm(AArch64SysReg::NZCV).addReg(TempReg1);
 
   if (Value.getZExtValue() == 0)
     return {MoveFromNZCV, LoadMask, BitClear, MoveToNZCV};
+
+  MCInst OrrMask = MCInstBuilder(AArch64::ORRXrr)
+                       .addReg(TempReg1)
+                       .addReg(TempReg1)
+                       .addImm(Value.getZExtValue());
   return {MoveFromNZCV, LoadMask, BitClear, OrrMask, MoveToNZCV};
 }
 
