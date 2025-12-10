@@ -85,12 +85,13 @@ if (NOT COMPILER_RT_PROFILE_BAREMETAL)
   # - Value profiling, because it requires malloc (InstrProfilingValue.c).
   #   This could be optional if someone needs it.
   # - GCDA profiling, which is unrelated (GCDAProfiling.c)
-  list(APPEND PROFILE_SOURCES GCDAProfiling.c
-                              InstrProfilingFile.c
-                              InstrProfilingRuntime.cpp
-                              InstrProfilingUtil.c
-                              InstrProfilingValue.c
-                              )
+  list(APPEND PROFILE_SOURCES
+    GCDAProfiling.c
+    InstrProfilingFile.c
+    InstrProfilingRuntime.cpp
+    InstrProfilingUtil.c
+    InstrProfilingValue.c
+    )
 endif()
 
 set(PROFILE_HEADERS
