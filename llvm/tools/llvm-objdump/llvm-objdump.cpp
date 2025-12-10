@@ -3534,25 +3534,25 @@ commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
 }
 
 static void mcpuHelp() {
-  std::string Error;
   Triple TheTriple;
 
   if (!TripleName.empty()) {
     TheTriple.setTriple(TripleName);
   } else {
-    // We can guarantee that InputFilenames won't be empty.
+    assert(InputFilenames.size());
     Expected<OwningBinary<Binary>> OBinary = createBinary(InputFilenames[0]);
-    // OwningBinary<Binary> OBinary =
-    if (!OBinary)
-      reportError(InputFilenames[0],
-                  "A target triple was not specified and could "
-                  " not be inferred from the input file.");
+    if (auto E = OBinary.takeError()) {
+      reportError(InputFilenames[0], "triple was not specified and could not "
+                                     "be inferred from the input file: " +
+                                         toString(std::move(E)));
+    }
 
     Binary *Bin = OBinary->getBinary();
     if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin))
       TheTriple = Obj->makeTriple();
   }
 
+  std::string Error;
   const Target *DummyTarget = TargetRegistry::lookupTarget(TheTriple, Error);
   if (!DummyTarget)
     reportCmdLineError(Error);
@@ -3874,13 +3874,14 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
 
   // If the target triple is derived from the files, we display help message
   // when disassembling them.
-  if (!Disassemble && PrintCpuHelp) {
+  if (PrintCpuHelp) {
     mcpuHelp();
     if (!ShouldDump)
       return EXIT_SUCCESS;
   }
 
   DisasmSymbolSet.insert_range(DisassembleSymbols);
+
 
   llvm::for_each(InputFilenames, dumpInput);
 

@@ -1,20 +1,20 @@
 # RUN: yaml2obj %s -o %t
-# REQUIRES: mips-registered-target
+# REQUIRES: x86-registered-target
 
 ## When specifying --triple, the help message should be printed for the specified target.
-# RUN: llvm-objdump --mattr=help --triple=mips 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-MIPS
-# RUN: llvm-objdump --mcpu=help --triple=mips 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-MIPS
+# RUN: llvm-objdump --mattr=help --triple=x86_64 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-X86
+# RUN: llvm-objdump --mcpu=help --triple=x86_64 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-X86
 
 ## The help message will depend on the target specified by --triple even if the input is for a different target.
-# RUN: llvm-objdump --mattr=help --triple=mips %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-MIPS
-# RUN: llvm-objdump --mcpu=help --triple=mips %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-MIPS
+# RUN: llvm-objdump --mattr=help --triple=x86_64 %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-X86
+# RUN: llvm-objdump --mcpu=help --triple=x86_64 %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-X86
 
 # CHECK-HELP: Available CPUs for this target:
-# CHECK-MIPS: mips
+# CHECK-X86: x86-64
 # CHECK-HELP: Available features for this target:
 
 --- !ELF
@@ -22,4 +22,4 @@ FileHeader:
   Class:           ELFCLASS32
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
-  Machine:         EM_X86_64
+  Machine:         EM_MIPS

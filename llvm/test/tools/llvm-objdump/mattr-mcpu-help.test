@@ -1,4 +1,6 @@
 # RUN: yaml2obj %s -o %t
+# REQUIRES: x86-registered-target
+
 # RUN: llvm-objdump -d %t --mattr=help 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE
 # RUN: llvm-objdump -d %t --mcpu=help 2>&1 \
@@ -18,11 +20,9 @@
 
 ## We report an error when we can't infer the triple because we don't have --triple or an input object (including a.out).
 # RUN: not llvm-objdump --mattr=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
+# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR --implicit-check-not=error:
 # RUN: not llvm-objdump --mcpu=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
-
-# REQUIRES: x86-registered-target
+# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR --implicit-check-not=error:
 
 # CHECK: Available CPUs for this target:
 # CHECK: Available features for this target:
@@ -32,7 +32,7 @@
 # CHECK-SECTION-HEADERS: Sections:
 # CHECK-SECTION-HEADERS: Idx Name               Size     VMA              Type
 
-# CHECK-ERROR: A target triple was not specified and could not be inferred from the input file.
+# CHECK-ERROR: llvm-objdump: error: 'a.out': triple was not specified and could not be inferred from the input file: No such file or directory
 
 --- !ELF
 FileHeader:
