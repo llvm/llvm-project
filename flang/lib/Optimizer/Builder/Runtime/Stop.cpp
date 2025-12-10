@@ -15,6 +15,25 @@
 
 using namespace Fortran::runtime;
 
+/// Runtime calls that do not return to the caller indicate this condition by
+/// terminating the current basic block with an unreachable op.
+static void genUnreachable(fir::FirOpBuilder &builder,
+                           mlir::Location loc) {
+  mlir::Block *curBlock = builder.getBlock();
+#if 0
+  mlir::Operation *parentOp = curBlock->getParentOp();
+  if (parentOp->getDialect()->getNamespace() ==
+      mlir::omp::OpenMPDialect::getDialectNamespace())
+    Fortran::lower::genOpenMPTerminator(builder, parentOp, loc);
+  else if (Fortran::lower::isInsideOpenACCComputeConstruct(builder))
+    Fortran::lower::genOpenACCTerminator(builder, parentOp, loc);
+  else
+#endif
+    fir::UnreachableOp::create(builder, loc);
+  mlir::Block *newBlock = curBlock->splitBlock(builder.getInsertionPoint());
+  builder.setInsertionPointToStart(newBlock);
+}
+
 void fir::runtime::genExit(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value status) {
   auto exitFunc = fir::runtime::getRuntimeFunc<mkRTKey(Exit)>(loc, builder);
@@ -22,14 +41,14 @@ void fir::runtime::genExit(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, exitFunc.getFunctionType(), status);
   fir::CallOp::create(builder, loc, exitFunc, args);
-  Fortran::lower::genUnreachable(builder, loc);
+  genUnreachable(builder, loc);
 }
 
 void fir::runtime::genAbort(fir::FirOpBuilder &builder, mlir::Location loc) {
   mlir::func::FuncOp abortFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Abort)>(loc, builder);
   fir::CallOp::create(builder, loc, abortFunc, mlir::ValueRange{});
-  Fortran::lower::genUnreachable(builder, loc);
+  genUnreachable(builder, loc);
 }
 
 void fir::runtime::genReportFatalUserError(fir::FirOpBuilder &builder,

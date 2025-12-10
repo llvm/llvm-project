@@ -34,8 +34,8 @@ using namespace Fortran::runtime;
 
 /// Runtime calls that do not return to the caller indicate this condition by
 /// terminating the current basic block with an unreachable op.
-void Fortran::lower::genUnreachable(fir::FirOpBuilder &builder,
-                                    mlir::Location loc) {
+static void genUnreachable(fir::FirOpBuilder &builder,
+                           mlir::Location loc) {
   mlir::Block *curBlock = builder.getBlock();
   mlir::Operation *parentOp = curBlock->getParentOp();
   if (parentOp->getDialect()->getNamespace() ==
@@ -125,7 +125,7 @@ void Fortran::lower::genStopStatement(
            !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>();
   };
   if (blockIsUnterminated())
-    Fortran::lower::genUnreachable(builder, loc);
+    genUnreachable(builder, loc);
 }
 
 void Fortran::lower::genFailImageStatement(
@@ -135,7 +135,7 @@ void Fortran::lower::genFailImageStatement(
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(FailImageStatement)>(loc, builder);
   fir::CallOp::create(builder, loc, callee, mlir::ValueRange{});
-  Fortran::lower::genUnreachable(builder, loc);
+  genUnreachable(builder, loc);
 }
 
 void Fortran::lower::genNotifyWaitStatement(
