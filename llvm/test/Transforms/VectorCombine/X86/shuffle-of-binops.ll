@@ -20,6 +20,19 @@ define <4 x float> @shuf_fdiv_v4f32_yy(<4 x float> %x, <4 x float> %y, <4 x floa
   ret <4 x float> %r
 }
 
+define <16 x i16> @shuf_uniform_shift_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: define <16 x i16> @shuf_uniform_shift_v16i16_v8i16(
+; CHECK-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> [[A1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[RES:%.*]] = shl <16 x i16> [[TMP1]], splat (i16 7)
+; CHECK-NEXT:    ret <16 x i16> [[RES]]
+;
+  %v0 = shl <8 x i16> %a0, splat (i16 7)
+  %v1 = shl <8 x i16> %a1, splat (i16 7)
+  %res  = shufflevector <8 x i16> %v0, <8 x i16> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i16> %res
+}
+
 ; Common operand is op0 of the binops.
 
 define <4 x i32> @shuf_add_v4i32_xx(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {

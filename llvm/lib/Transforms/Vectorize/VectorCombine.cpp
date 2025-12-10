@@ -2437,6 +2437,10 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
       M -= NumSrcElts;
   };
 
+  TTI::OperandValueInfo Op0Info, Op1Info;
+  Op0Info = TTI.mergeInfo(X, Z);
+  Op1Info = TTI.mergeInfo(Y, W);
+
   SmallVector<int> NewMask0(OldMask);
   TargetTransformInfo::ShuffleKind SK0 = TargetTransformInfo::SK_PermuteTwoSrc;
   if (X == Z) {
@@ -2500,11 +2504,12 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
                          nullptr, {Y, W});
 
   if (PredLHS == CmpInst::BAD_ICMP_PREDICATE) {
-    NewCost +=
-        TTI.getArithmeticInstrCost(LHS->getOpcode(), ShuffleDstTy, CostKind);
+    NewCost += TTI.getArithmeticInstrCost(LHS->getOpcode(), ShuffleDstTy,
+                                          CostKind, Op0Info, Op1Info);
   } else {
-    NewCost += TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy,
-                                      ShuffleDstTy, PredLHS, CostKind);
+    NewCost +=
+        TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy, ShuffleDstTy,
+                               PredLHS, CostKind, Op0Info, Op1Info);
   }
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two binops: " << I

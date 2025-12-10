@@ -956,6 +956,27 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
   return {OpInfo, OpProps};
 }
 
+TargetTransformInfo::OperandValueInfo
+TargetTransformInfo::mergeInfo(const Value *X, const Value *Y) {
+  auto [OpInfoX, OpPropsX] = TargetTransformInfo::getOperandInfo(X);
+  auto [OpInfoY, OpPropsY] = TargetTransformInfo::getOperandInfo(Y);
+
+  OperandValueKind MergeInfo = OK_AnyValue;
+  OperandValueProperties MergeProp = OP_None;
+
+  if (OpInfoX == OK_AnyValue || OpInfoY == OK_AnyValue ||
+      OpInfoX == OK_UniformValue || OpInfoY == OK_UniformValue)
+    MergeInfo = OK_AnyValue;
+  else if (OpInfoX == OK_NonUniformConstantValue ||
+           OpInfoY == OK_NonUniformConstantValue)
+    MergeInfo = OK_NonUniformConstantValue;
+  else
+    MergeInfo = X == Y ? OK_UniformConstantValue : OK_NonUniformConstantValue;
+
+  MergeProp = OpPropsX == OpPropsY ? OpPropsX : OP_None;
+  return {MergeInfo, MergeProp};
+}
+
 InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     OperandValueInfo Op1Info, OperandValueInfo Op2Info,
