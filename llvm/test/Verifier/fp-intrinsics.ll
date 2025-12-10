@@ -159,5 +159,14 @@ entry:
   ret double %ftrunc
 }
 
+; Test fp.round bundle that specifies value in incorrext format.
+; CHECK-NEXT: Unrecognized value in "fp.round" bundle operand
+; CHECK-NEXT:   %ftrunc = call double @llvm.nearbyint.f64(double %a) #{{[0-9]+}} [ "fp.round"(metadata !"towardzero,upward") ]
+define double @f18(double %a) #0 {
+entry:
+  %ftrunc = call double @llvm.nearbyint.f64(double %a) #0 [ "fp.round"(metadata !"towardzero,upward") ]
+  ret double %ftrunc
+}
+
 
 attributes #0 = { strictfp }

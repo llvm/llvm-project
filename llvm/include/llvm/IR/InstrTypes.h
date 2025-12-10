@@ -1025,6 +1025,14 @@ struct OperandBundleUse {
     return false;
   }
 
+  /// Return the value of the given input as a string. The input must be
+  /// a string metadata.
+  StringRef getInputAsString(size_t Ndx) const {
+    const Value *V = Inputs[Ndx].get();
+    const auto *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return cast<MDString>(MD)->getString();
+  }
+
   /// Return the tag of this operand bundle as a string.
   StringRef getTagName() const {
     return Tag->getKey();
@@ -1088,6 +1096,14 @@ public:
   input_iterator input_begin() const { return Inputs.begin(); }
   input_iterator input_end() const { return Inputs.end(); }
 
+  /// Return the value of the given input as a string. The input must be
+  /// a string metadata.
+  StringRef getInputAsString(size_t Ndx) const {
+    const Value *V = Inputs[Ndx];
+    const auto *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return cast<MDString>(MD)->getString();
+  }
+
   StringRef getTag() const { return Tag; }
 };
 
@@ -1098,7 +1114,7 @@ using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
 /// bundle set.
 void addRoundingBundle(LLVMContext &Ctx,
                        SmallVectorImpl<OperandBundleDef> &Bundles,
-                       RoundingMode Rounding);
+                       RoundingMode Rounding, bool Assumed = false);
 
 /// Add a bundle with tag "fp.except" and the specified exception behavior to
 /// the given bundle set.
@@ -2180,6 +2196,10 @@ public:
 
   /// Returns true, if this call has a floating-point operand bundle.
   bool hasFloatingPointOperandBundle() const;
+
+  /// Return information about the rounding mode to be used for evaluation of
+  /// the called instruction.
+  RoundingSpec getRoundingSpec() const;
 
   /// Return the effective rounding mode for this call.
   RoundingMode getRoundingMode() const;
