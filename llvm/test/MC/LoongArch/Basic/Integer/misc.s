@@ -33,6 +33,13 @@ rdtimeh.w $a7, $a1
 # CHECK-ASM: encoding: [0x03,0x6d,0x00,0x00]
 cpucfg $sp, $a4
 
+# CHECK-ASM-AND-OBJ: ud 0
+# CHECK-ASM: encoding: [0x00,0x04,0x60,0x38]
+ud 0
+
+# CHECK-ASM-AND-OBJ: ud 31
+# CHECK-ASM: encoding: [0xff,0x07,0x60,0x38]
+ud 31
 
 #############################################################
 ## Instructions only for loongarch64

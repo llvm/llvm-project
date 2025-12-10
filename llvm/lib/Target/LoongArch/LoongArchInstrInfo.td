@@ -800,6 +800,10 @@ class AM_3R<bits<32> op>
   let Constraints = "@earlyclobber $rd";
 }
 
+class AU_3R<bits<32> op> : AM_3R<op> {
+  let DecoderMethod = "DecodeAMOrUDInstruction";
+}
+
 class AMCAS_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rk, GPRMemAtomic:$rj),
             "$rd, $rk, $rj"> {
@@ -922,6 +926,9 @@ def SYSCALL : MISC_I15<0x002b0000>;
 def BREAK   : MISC_I15<0x002a0000>;
 def RDTIMEL_W : RDTIME_2R<0x00006000>;
 def RDTIMEH_W : RDTIME_2R<0x00006400>;
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+def UD : FmtUD<(outs), (ins uimm5:$imm5), "$imm5">;
 
 // The CPUCFG instruction offers a reliable way to probing CPU features.
 // Although support is not guaranteed on LA32R, having compiler support
@@ -1087,7 +1094,7 @@ def STLE_D : STORE_3R<0x387f8000>;
 // Atomic Memory Access Instructions for 64-bits
 def AMSWAP_B     : AM_3R<0x385c0000>;
 def AMSWAP_H     : AM_3R<0x385c8000>;
-def AMSWAP_W     : AM_3R<0x38600000>;
+def AMSWAP_W     : AU_3R<0x38600000>;
 def AMSWAP_D     : AM_3R<0x38608000>;
 def AMADD_B      : AM_3R<0x385d0000>;
 def AMADD_H      : AM_3R<0x385d8000>;

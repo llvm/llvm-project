@@ -157,6 +157,29 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+// Decode AMOSWAP.W and UD, which share the same base encoding.
+// If rk == 1 and rd == rj, interpret the instruction as UD;
+// otherwise decode as AMSWAP.W.
+static DecodeStatus DecodeAMOrUDInstruction(MCInst &Inst, unsigned Insn,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  unsigned rd = fieldFromInstruction(Insn, 0, 5);
+  unsigned rj = fieldFromInstruction(Insn, 5, 5);
+  unsigned rk = fieldFromInstruction(Insn, 10, 5);
+
+  if (rk == 1 && rd == rj) {
+    Inst.setOpcode(LoongArch::UD);
+    Inst.addOperand(MCOperand::createImm(rd));
+  } else {
+    Inst.setOpcode(LoongArch::AMSWAP_W);
+    Inst.addOperand(MCOperand::createReg(LoongArch::R0 + rd));
+    Inst.addOperand(MCOperand::createReg(LoongArch::R0 + rk));
+    Inst.addOperand(MCOperand::createReg(LoongArch::R0 + rj));
+  }
+
+  return MCDisassembler::Success;
+}
+
 #include "LoongArchGenDisassemblerTables.inc"
 
 DecodeStatus LoongArchDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
