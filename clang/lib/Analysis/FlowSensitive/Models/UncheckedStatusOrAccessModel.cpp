@@ -351,6 +351,25 @@ static auto isAssertionResultConstructFromBoolCall() {
       hasArgument(0, hasType(booleanType())));
 }
 
+static auto isStatusOrReturningCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(
+      callee(functionDecl(returns(possiblyReferencedStatusOrType()))));
+}
+
+static auto isStatusOrPtrReturningCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(callee(functionDecl(returns(hasUnqualifiedDesugaredType(
+      pointerType(pointee(possiblyReferencedStatusOrType())))))));
+}
+
+static auto isStatusPtrReturningCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(callee(functionDecl(returns(hasUnqualifiedDesugaredType(
+      pointerType(pointee(hasUnqualifiedDesugaredType(
+          recordType(hasDeclaration(statusClass()))))))))));
+}
+
 static auto
 buildDiagnoseMatchSwitch(const UncheckedStatusOrAccessModelOptions &Options) {
   return CFGMatchSwitchBuilder<const Environment,
@@ -1074,6 +1093,40 @@ static void transferValueCall(const CXXMemberCallExpr *Expr,
                                  StatusOrLoc->getSyntheticField("value"));
 }
 
+static void transferStatusOrPtrReturningCall(const CallExpr *Expr,
+                                             const MatchFinder::MatchResult &,
+                                             LatticeTransferState &State) {
+  PointerValue *PointerVal =
+      dyn_cast_or_null<PointerValue>(State.Env.getValue(*Expr));
+  if (!PointerVal) {
+    PointerVal = cast<PointerValue>(State.Env.createValue(Expr->getType()));
+    State.Env.setValue(*Expr, *PointerVal);
+  }
+
+  auto *RecordLoc =
+      dyn_cast_or_null<RecordStorageLocation>(&PointerVal->getPointeeLoc());
+  if (RecordLoc != nullptr &&
+      State.Env.getValue(locForOk(locForStatus(*RecordLoc))) == nullptr)
+    initializeStatusOr(*RecordLoc, State.Env);
+}
+
+static void transferStatusPtrReturningCall(const CallExpr *Expr,
+                                           const MatchFinder::MatchResult &,
+                                           LatticeTransferState &State) {
+  PointerValue *PointerVal =
+      dyn_cast_or_null<PointerValue>(State.Env.getValue(*Expr));
+  if (!PointerVal) {
+    PointerVal = cast<PointerValue>(State.Env.createValue(Expr->getType()));
+    State.Env.setValue(*Expr, *PointerVal);
+  }
+
+  auto *RecordLoc =
+      dyn_cast_or_null<RecordStorageLocation>(&PointerVal->getPointeeLoc());
+  if (RecordLoc != nullptr &&
+      State.Env.getValue(locForOk(*RecordLoc)) == nullptr)
+    initializeStatus(*RecordLoc, State.Env);
+}
+
 static RecordStorageLocation *
 getSmartPtrLikeStorageLocation(const Expr &E, const Environment &Env) {
   if (!E.isPRValue())
@@ -1228,6 +1281,18 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                         transferNonConstMemberCall)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(isNonConstMemberOperatorCall(),
                                           transferNonConstMemberOperatorCall)
+      // N.B. this has to be after transferConstMemberCall, otherwise we would
+      // always return a fresh RecordStorageLocation for the StatusOr.
+      .CaseOfCFGStmt<CallExpr>(isStatusOrReturningCall(),
+                               [](const CallExpr *Expr,
+                                  const MatchFinder::MatchResult &,
+                                  LatticeTransferState &State) {
+                                 transferStatusOrReturningCall(Expr, State);
+                               })
+      .CaseOfCFGStmt<CallExpr>(isStatusOrPtrReturningCall(),
+                               transferStatusOrPtrReturningCall)
+      .CaseOfCFGStmt<CallExpr>(isStatusPtrReturningCall(),
+                               transferStatusPtrReturningCall)
       // N.B. These need to come after all other CXXConstructExpr.
       // These are there to make sure that every Status and StatusOr object
       // have their ok boolean initialized when constructed. If we were to
