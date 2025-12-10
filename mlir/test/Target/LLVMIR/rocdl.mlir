@@ -1341,6 +1341,20 @@ llvm.func @rocdl.raw.ptr.buffer.load.lds(%rsrc : !llvm.ptr<8>, %dstLds : !llvm.p
   llvm.return
 }
 
+llvm.func @rocdl.global.prefetch(%ptr : !llvm.ptr<1>) {
+  // CHECK-LABEL: rocdl.global.prefetch
+  // CHECK: call void @llvm.amdgcn.global.prefetch(ptr addrspace(1) %{{.*}}, i32 0)
+  rocdl.global.prefetch %ptr, scope 0 : !llvm.ptr<1>
+  llvm.return
+}
+
+llvm.func @rocdl.flat.prefetch(%ptr : !llvm.ptr) {
+  // CHECK-LABEL: rocdl.flat.prefetch
+  // CHECK: call void @llvm.amdgcn.flat.prefetch(ptr %{{.*}}, i32 0)
+  rocdl.flat.prefetch %ptr, scope 0 : !llvm.ptr
+  llvm.return
+}
+
 llvm.func @rocdl.wmma.scale(%arg0: i32, %arg1: vector<4xf32>, %arg2: vector<8xi32>,
                             %arg3: vector<12xi32>, %arg5: vector<16xi32>,
                             %arg8: i64, %arg9: vector<8xf32>) -> vector<4xf32> {
