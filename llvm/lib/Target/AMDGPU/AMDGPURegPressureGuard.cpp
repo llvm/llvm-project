@@ -151,11 +151,9 @@ public:
     if (!EnableRegPressureGuard)
       return false;
 
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    auto &UA = getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-
-    unsigned BaselineVGPRs = llvm::computeMaxVGPRPressure(F, DT, &PDT, UA);
+    auto &EstimatorPass =
+        getAnalysis<AMDGPURegPressureEstimatorWrapperPass>();
+    unsigned BaselineVGPRs = EstimatorPass.getMaxVGPRs();
 
     bool ShouldGuard = llvm::AMDGPURegPressureGuardHelper::shouldGuardFunction(
         Config, F, BaselineVGPRs);
@@ -186,9 +184,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
-    AU.addRequired<UniformityInfoWrapperPass>();
+    AU.addRequired<AMDGPURegPressureEstimatorWrapperPass>();
     AU.setPreservesAll();
   }
 
@@ -216,11 +212,9 @@ public:
       return false;
     }
 
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    auto &UA = getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-
-    unsigned NewVGPRs = llvm::computeMaxVGPRPressure(F, DT, &PDT, UA);
+    auto &EstimatorPass =
+        getAnalysis<AMDGPURegPressureEstimatorWrapperPass>();
+    unsigned NewVGPRs = EstimatorPass.getMaxVGPRs();
 
     LLVM_DEBUG(dbgs() << "AMDGPURegPressureGuard: Verifying " << F.getName()
                       << " (baseline: " << State.BaselineVGPRs
@@ -245,9 +239,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
-    AU.addRequired<UniformityInfoWrapperPass>();
+    AU.addRequired<AMDGPURegPressureEstimatorWrapperPass>();
   }
 
   StringRef getPassName() const override {
@@ -264,7 +256,7 @@ INITIALIZE_PASS_BEGIN(RegPressureBaselineMeasurementPass,
                       "amdgpu-reg-pressure-baseline",
                       "AMDGPU Register Pressure Baseline Measurement", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AMDGPURegPressureEstimatorWrapperPass)
 INITIALIZE_PASS_END(RegPressureBaselineMeasurementPass,
                     "amdgpu-reg-pressure-baseline",
                     "AMDGPU Register Pressure Baseline Measurement", false,
@@ -273,7 +265,7 @@ INITIALIZE_PASS_END(RegPressureBaselineMeasurementPass,
 INITIALIZE_PASS_BEGIN(RegPressureVerificationPass,
                       "amdgpu-reg-pressure-verification",
                       "AMDGPU Register Pressure Verification", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AMDGPURegPressureEstimatorWrapperPass)
 INITIALIZE_PASS_END(RegPressureVerificationPass,
                     "amdgpu-reg-pressure-verification",
                     "AMDGPU Register Pressure Verification", false, false)

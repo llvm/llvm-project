@@ -17,6 +17,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUREGPRESSUREGUARD_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUREGPRESSUREGUARD_H
 
+#include "AMDGPURegPressureEstimator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
@@ -69,10 +70,6 @@ public:
 
 namespace llvm {
 
-unsigned computeMaxVGPRPressure(Function &F, DominatorTree &DT,
-                                PostDominatorTree *PDT,
-                                const UniformityInfo &UA);
-
 namespace AMDGPURegPressureGuardHelper {
 bool isEnabled();
 bool shouldGuardFunction(const AMDGPURegPressureGuardConfig &Config,
@@ -91,11 +88,8 @@ AMDGPURegPressureGuardPass<PassT>::run(Function &F,
   if (!isEnabled())
     return WrappedPass.run(F, AM);
 
-  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
-  auto &UA = AM.getResult<UniformityInfoAnalysis>(F);
-
-  unsigned BaselineVGPRs = computeMaxVGPRPressure(F, DT, PDT, UA);
+  auto BaselineResult = AM.getResult<AMDGPURegPressureEstimatorAnalysis>(F);
+  unsigned BaselineVGPRs = BaselineResult.MaxVGPRs;
 
   if (!shouldGuardFunction(Config, F, BaselineVGPRs))
     return WrappedPass.run(F, AM);
@@ -105,11 +99,8 @@ AMDGPURegPressureGuardPass<PassT>::run(Function &F,
 
   PreservedAnalyses PA = WrappedPass.run(F, AM);
 
-  auto &NewDT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto *NewPDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
-  auto &NewUA = AM.getResult<UniformityInfoAnalysis>(F);
-
-  unsigned NewVGPRs = computeMaxVGPRPressure(F, NewDT, NewPDT, NewUA);
+  auto NewResult = AM.getResult<AMDGPURegPressureEstimatorAnalysis>(F);
+  unsigned NewVGPRs = NewResult.MaxVGPRs;
 
   bool ShouldRevert = shouldRevert(Config, BaselineVGPRs, NewVGPRs);
 

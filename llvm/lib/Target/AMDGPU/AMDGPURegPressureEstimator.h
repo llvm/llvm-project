@@ -32,10 +32,6 @@ class Function;
 class DominatorTree;
 class PostDominatorTree;
 
-unsigned computeMaxVGPRPressure(Function &F, DominatorTree &DT,
-                                PostDominatorTree *PDT,
-                                const GenericUniformityInfo<SSAContext> &UA);
-
 struct AMDGPURegPressureEstimatorResult {
   unsigned MaxVGPRs;
 
