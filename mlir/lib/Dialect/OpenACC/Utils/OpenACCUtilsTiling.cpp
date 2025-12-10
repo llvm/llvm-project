@@ -253,7 +253,7 @@ llvm::SmallVector<mlir::acc::LoopOp>
 mlir::acc::uncollapseLoops(mlir::acc::LoopOp origLoop, unsigned tileCount,
                            unsigned collapseCount,
                            mlir::RewriterBase &rewriter) {
-  llvm::SmallVector<mlir::acc::LoopOp, 3> newLoops;
+  llvm::SmallVector<mlir::acc::LoopOp> newLoops;
   llvm::SmallVector<mlir::Value, 3> newIVs;
   mlir::Location loc = origLoop.getLoc();
   llvm::SmallVector<bool> newInclusiveUBs;
