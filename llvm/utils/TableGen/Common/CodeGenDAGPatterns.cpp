@@ -3773,25 +3773,32 @@ static bool InferFromPattern(CodeGenInstruction &InstInfo,
     InstInfo.InferredFrom = PatDef;
 
   // Check explicitly set flags for consistency.
-  if (InstInfo.hasSideEffects != PatInfo.hasSideEffects &&
-      !InstInfo.hasSideEffects_Unset) {
+  if (InstInfo.hasSideEffects_Unset) {
+    InstInfo.hasSideEffects = PatInfo.hasSideEffects;
+  } else if (InstInfo.hasSideEffects != PatInfo.hasSideEffects) {
     // Allow explicitly setting hasSideEffects = 1 on instructions, even when
     // the pattern has no side effects. That could be useful for div/rem
     // instructions that may trap.
-    if (!InstInfo.hasSideEffects) {
+    // Allow setting isTrap = 1 on instructions instead, if we know better at
+    // the instruction level what the side effect is.
+    if (!InstInfo.hasSideEffects && !InstInfo.isTrap) {
       Error = true;
       PrintError(PatDef->getLoc(), "Pattern doesn't match hasSideEffects = " +
                                        Twine(InstInfo.hasSideEffects));
     }
   }
 
-  if (InstInfo.mayStore != PatInfo.mayStore && !InstInfo.mayStore_Unset) {
+  if (InstInfo.mayStore_Unset) {
+    InstInfo.mayStore = PatInfo.mayStore;
+  } else if (InstInfo.mayStore != PatInfo.mayStore) {
     Error = true;
     PrintError(PatDef->getLoc(),
                "Pattern doesn't match mayStore = " + Twine(InstInfo.mayStore));
   }
 
-  if (InstInfo.mayLoad != PatInfo.mayLoad && !InstInfo.mayLoad_Unset) {
+  if (InstInfo.mayLoad_Unset) {
+    InstInfo.mayLoad = PatInfo.mayLoad;
+  } else if (InstInfo.mayLoad != PatInfo.mayLoad) {
     // Allow explicitly setting mayLoad = 1, even when the pattern has no loads.
     // Some targets translate immediates to loads.
     if (!InstInfo.mayLoad) {
@@ -3800,11 +3807,6 @@ static bool InferFromPattern(CodeGenInstruction &InstInfo,
                  "Pattern doesn't match mayLoad = " + Twine(InstInfo.mayLoad));
     }
   }
-
-  // Transfer inferred flags.
-  InstInfo.hasSideEffects |= PatInfo.hasSideEffects;
-  InstInfo.mayStore |= PatInfo.mayStore;
-  InstInfo.mayLoad |= PatInfo.mayLoad;
 
   // These flags are silently added without any verification.
   // FIXME: To match historical behavior of TableGen, for now add those flags
@@ -4263,11 +4265,13 @@ void CodeGenDAGPatterns::VerifyInstructionFlags() {
       continue;
 
     // Count the number of instructions with each flag set.
+    unsigned NumTraps = 0;
     unsigned NumSideEffects = 0;
     unsigned NumStores = 0;
     unsigned NumLoads = 0;
     for (const Record *Instr : Instrs) {
       const CodeGenInstruction &InstInfo = Target.getInstruction(Instr);
+      NumTraps += InstInfo.isTrap;
       NumSideEffects += InstInfo.hasSideEffects;
       NumStores += InstInfo.mayStore;
       NumLoads += InstInfo.mayLoad;
@@ -4282,7 +4286,10 @@ void CodeGenDAGPatterns::VerifyInstructionFlags() {
 
     // Check for missing flags in the output.
     // Permit extra flags for now at least.
-    if (PatInfo.hasSideEffects && !NumSideEffects)
+
+    // Allow instructions to be marked isTrap instead of hasSideEffects if we
+    // know how the pattern's side effect manifests.
+    if (PatInfo.hasSideEffects && !NumSideEffects && !NumTraps)
       Msgs.push_back("pattern has side effects, but hasSideEffects isn't set");
 
     // Don't verify store flags on instructions with side effects. At least for
