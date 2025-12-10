@@ -104,6 +104,7 @@ public:
   void emitEndOfAsmFile(Module &M) override;
   void emitXXStructor(const DataLayout &DL, const Constant *CV) override;
   void emitGlobalVariable(const GlobalVariable *GV) override;
+  void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
 
@@ -158,6 +159,8 @@ private:
   MCSymbol *GetARMJTIPICJumpTableLabel(unsigned uid) const;
 
   MCSymbol *GetARMGVSymbol(const GlobalValue *GV, unsigned char TargetFlags);
+
+  void emitCMSEVeneerAlias(const GlobalAlias &GA);
 
 public:
   /// EmitMachineConstantPoolValue - Print a machine constantpool value to

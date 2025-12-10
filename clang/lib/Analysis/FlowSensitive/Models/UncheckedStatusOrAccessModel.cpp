@@ -324,7 +324,7 @@ static auto isPredicateFormatterFromStatusMatcherCall() {
       hasOverloadedOperatorName("()"),
       callee(cxxMethodDecl(ofClass(
           hasName("testing::internal::PredicateFormatterFromMatcher")))),
-      hasArgument(2, hasType(cxxRecordDecl(hasName("absl::Status")))));
+      hasArgument(2, hasType(statusType())));
 }
 
 static auto isPredicateFormatterFromStatusOrMatcherCall() {
