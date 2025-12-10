@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-argument-comment %t
+// RUN: %check_clang_tidy -std=c++17 %s bugprone-argument-comment %t
 
 struct A {
   int x, y;
@@ -53,4 +53,20 @@ struct CorrectFix {
 void testFix() {
   CorrectFix c = {/*long_feild_name=*/1, 2};
   // CHECK-MESSAGES: [[@LINE-1]]:19: warning: argument name 'long_feild_name' in comment does not match parameter name 'long_field_name' [bugprone-argument-comment]
+}
+
+struct Base {
+  int b;
+};
+
+struct Derived : Base {
+  int d;
+};
+
+void testInheritance() {
+  Derived d1 = {/*b=*/ 1, /*d=*/ 2};
+  Derived d2 = {/*x=*/ 1, /*d=*/ 2};
+  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: argument name 'x' in comment does not match parameter name 'b' [bugprone-argument-comment]
+  Derived d3 = {/*b=*/ 1, /*x=*/ 2};
+  // CHECK-MESSAGES: [[@LINE-1]]:27: warning: argument name 'x' in comment does not match parameter name 'd' [bugprone-argument-comment]
 }

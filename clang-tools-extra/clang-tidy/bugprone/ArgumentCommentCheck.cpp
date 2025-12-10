@@ -157,9 +157,9 @@ static bool isLikelyTypo(const NamedDeclRange &Candidates, StringRef ArgName,
   TargetNameLower.reserve(TargetName.size());
   for (char C : TargetName)
     TargetNameLower.push_back(llvm::toLower(C));
-  const unsigned ThisED = ArgNameLowerRef.edit_distance(
-      StringRef(TargetNameLower),
-      /*AllowReplacements=*/true, UpperBound);
+  const unsigned ThisED =
+      ArgNameLowerRef.edit_distance(StringRef(TargetNameLower),
+                                    /*AllowReplacements=*/true, UpperBound);
   if (ThisED >= UpperBound)
     return false;
 
@@ -264,8 +264,7 @@ static const FunctionDecl *resolveMocks(const FunctionDecl *Func) {
 static CharSourceRange makeFileCharRange(ASTContext *Ctx, SourceLocation Begin,
                                          SourceLocation End) {
   return Lexer::makeFileCharRange(CharSourceRange::getCharRange(Begin, End),
-                                  Ctx->getSourceManager(),
-                                  Ctx->getLangOpts());
+                                  Ctx->getSourceManager(), Ctx->getLangOpts());
 }
 
 // Collects consecutive comments immediately preceding an argument expression.
@@ -294,9 +293,8 @@ collectLeadingComments(ASTContext *Ctx, SourceLocation SearchBegin,
 template <typename NamedDeclRange>
 static bool diagnoseMismatchInComment(
     ArgumentCommentCheck &Self, ASTContext *Ctx,
-    const NamedDeclRange &Candidates, const IdentifierInfo *II,
-    bool StrictMode, llvm::Regex &IdentRE,
-    const std::pair<SourceLocation, StringRef> &Comment,
+    const NamedDeclRange &Candidates, const IdentifierInfo *II, bool StrictMode,
+    llvm::Regex &IdentRE, const std::pair<SourceLocation, StringRef> &Comment,
     SourceLocation DeclLoc) {
   llvm::SmallVector<StringRef, 2> Matches;
   if (!(IdentRE.match(Comment.second, &Matches) &&
@@ -304,10 +302,11 @@ static bool diagnoseMismatchInComment(
     return false;
 
   {
-    const DiagnosticBuilder Diag = Self.diag(
-        Comment.first,
-        "argument name '%0' in comment does not match parameter name %1")
-                                   << Matches[2] << II;
+    const DiagnosticBuilder Diag =
+        Self.diag(
+            Comment.first,
+            "argument name '%0' in comment does not match parameter name %1")
+        << Matches[2] << II;
     if (isLikelyTypo(Candidates, Matches[2], II->getName())) {
       Diag << FixItHint::CreateReplacement(
           Comment.first, (Matches[1] + II->getName() + Matches[3]).str());
@@ -392,6 +391,67 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   }
 }
 
+static void checkRecordInitializer(ArgumentCommentCheck &Self, ASTContext *Ctx,
+                                   const RecordDecl *RD,
+                                   const InitListExpr *InitList,
+                                   unsigned &InitIndex,
+                                   SourceLocation &ArgBeginLoc) {
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    for (const auto &Base : CXXRD->bases()) {
+      if (InitIndex >= InitList->getNumInits())
+        return;
+      const RecordDecl *BaseRD = Base.getType()->getAsRecordDecl();
+      if (BaseRD) {
+        checkRecordInitializer(Self, Ctx, BaseRD, InitList, InitIndex,
+                               ArgBeginLoc);
+      } else {
+        // If we can't resolve the base record (e.g. template), skip the
+        // initializer.
+        if (const Expr *Arg = InitList->getInit(InitIndex))
+          ArgBeginLoc = Arg->getEndLoc();
+        InitIndex++;
+      }
+    }
+  }
+
+  for (const FieldDecl *FD : RD->fields()) {
+    if (InitIndex >= InitList->getNumInits())
+      break;
+
+    if (FD->isUnnamedBitField())
+      continue;
+
+    const Expr *Arg = InitList->getInit(InitIndex);
+
+    const IdentifierInfo *II = FD->getIdentifier();
+    if (!II) {
+      ArgBeginLoc = Arg->getEndLoc();
+      InitIndex++;
+      continue;
+    }
+
+    llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Comments =
+        collectLeadingComments(Ctx, ArgBeginLoc, Arg);
+    ArgBeginLoc = Arg->getEndLoc();
+
+    for (auto Comment : Comments)
+      (void)diagnoseMismatchInComment(Self, Ctx, RD->fields(), II,
+                                      Self.isStrictMode(), Self.getIdentRE(),
+                                      Comment, FD->getLocation());
+
+    if (Comments.empty() && Self.shouldAddComment(Arg)) {
+      llvm::SmallString<32> ArgComment;
+      (llvm::Twine("/*") + II->getName() + "=*/").toStringRef(ArgComment);
+      const DiagnosticBuilder Diag =
+          Self.diag(Arg->getBeginLoc(),
+                    "argument comment missing for literal argument %0")
+          << II << FixItHint::CreateInsertion(Arg->getBeginLoc(), ArgComment);
+    }
+
+    InitIndex++;
+  }
+}
+
 void ArgumentCommentCheck::checkInitList(ASTContext *Ctx,
                                          const InitListExpr *InitList) {
   const QualType Type = InitList->getType();
@@ -419,42 +479,7 @@ void ArgumentCommentCheck::checkInitList(ASTContext *Ctx,
 
   SourceLocation ArgBeginLoc = InitList->getLBraceLoc();
   unsigned InitIndex = 0;
-  for (const FieldDecl *FD : RD->fields()) {
-    if (InitIndex >= InitList->getNumInits())
-      break;
-
-    if (FD->isUnnamedBitField())
-      continue;
-
-    const Expr *Arg = InitList->getInit(InitIndex);
-
-    const IdentifierInfo *II = FD->getIdentifier();
-    if (!II) {
-      ArgBeginLoc = Arg->getEndLoc();
-      InitIndex++;
-      continue;
-    }
-
-    llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Comments =
-        collectLeadingComments(Ctx, ArgBeginLoc, Arg);
-    ArgBeginLoc = Arg->getEndLoc();
-
-    for (auto Comment : Comments)
-      (void)diagnoseMismatchInComment(*this, Ctx, RD->fields(), II, StrictMode,
-                                      IdentRE, Comment, FD->getLocation());
-
-    if (Comments.empty() && shouldAddComment(Arg)) {
-      llvm::SmallString<32> ArgComment;
-      (llvm::Twine("/*") + II->getName() + "=*/").toStringRef(ArgComment);
-      const DiagnosticBuilder Diag =
-          diag(Arg->getBeginLoc(),
-               "argument comment missing for literal argument %0")
-          << II
-          << FixItHint::CreateInsertion(Arg->getBeginLoc(), ArgComment);
-    }
-
-    InitIndex++;
-  }
+  checkRecordInitializer(*this, Ctx, RD, InitList, InitIndex, ArgBeginLoc);
 }
 
 void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
