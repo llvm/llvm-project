@@ -239,4 +239,61 @@ entry:
   ret void
 }
 
+; Test constrained fma vector arithmetic operations
+define void @test_constrained_fma_vector() local_unnamed_addr #0 {
+; CHECK: OpFunction
+entry:
+  %2 = getelementptr [4 x [16 x float] ], ptr addrspace(10) @f1, i32 0, i32 0
+  %3 = load <16 x float>, ptr addrspace(10) %2, align 4
+  %4 = getelementptr [4 x [16 x float] ], ptr addrspace(10) @f1, i32 0, i32 1
+  %5 = load <16 x float>, ptr addrspace(10) %4, align 4
+  %6 = getelementptr [4 x [16 x float] ], ptr addrspace(10) @f1, i32 0, i32 2
+  %7 = load <16 x float>, ptr addrspace(10) %6, align 4
+
+  ; CHECK: %[[#Fma1:]] = OpExtInst %[[#v4f32]] {{.*}} Fma
+  ; CHECK: %[[#Fma2:]] = OpExtInst %[[#v4f32]] {{.*}} Fma
+  ; CHECK: %[[#Fma3:]] = OpExtInst %[[#v4f32]] {{.*}} Fma
+  ; CHECK: %[[#Fma4:]] = OpExtInst %[[#v4f32]] {{.*}} Fma
+  %8 = call <16 x float> @llvm.experimental.constrained.fma.v16f32(<16 x float> %3, <16 x float> %5, <16 x float> %7, metadata !"round.dynamic", metadata !"fpexcept.strict")
+
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma1]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma1]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma1]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma1]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma2]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma2]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma2]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma2]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma3]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma3]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma3]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma3]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma4]] 0
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma4]] 1
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma4]] 2
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma4]] 3
+  ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
+
+  %9 = getelementptr [4 x [16 x float] ], ptr addrspace(10) @f2, i32 0, i32 0
+  store <16 x float> %8, ptr addrspace(10) %9, align 4
+  ret void
+}
+
+declare <16 x float> @llvm.experimental.constrained.fma.v16f32(<16 x float>, <16 x float>, <16 x float>, metadata, metadata)
+
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }

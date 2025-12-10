@@ -184,7 +184,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
           .custom();
   }
 
-  getActionDefinitionsBuilder(TargetOpcode::G_FMA)
+  getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA})
       .legalFor(allScalars)
       .legalFor(allowedVectorTypes)
       .moreElementsToNextPow2(0)
@@ -294,9 +294,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_USUBSAT, G_SCMP, G_UCMP})
       .legalFor(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectors);
-
-  getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA})
-      .legalFor(allFloatScalarsAndVectors);
 
   getActionDefinitionsBuilder(G_STRICT_FLDEXP)
       .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
