@@ -10,5 +10,4 @@ end function test_exit
 ! CHECK-LABEL: func.func @_QPtest_exit
 ! CHECK: fir.call @_FortranAExit
 ! CHECK-NEXT: fir.unreachable
-
 ! CHECK: func.func private @_FortranAExit{{.*}} attributes {{.*}}noreturn
