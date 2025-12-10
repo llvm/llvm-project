@@ -422,7 +422,7 @@ void MCMachOStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 }
 
 void MCMachOStreamer::finishImpl() {
-  emitFrames(&getAssembler().getBackend());
+  emitFrames();
 
   // We have to set the fragment atom associations so we can relax properly for
   // Mach-O.

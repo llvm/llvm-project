@@ -251,7 +251,6 @@ start:
   %0 = tail call i32 @llvm.fptosi.sat.i32.f64(double %a)
   ret i32 %0
 }
-declare i32 @llvm.fptosi.sat.i32.f64(double)
 
 ; For RV64D, fcvt.lu.d is semantically equivalent to fcvt.wu.d in this case
 ; because fptosi will produce poison if the result doesn't fit into an i32.
@@ -460,7 +459,6 @@ start:
   %0 = tail call i32 @llvm.fptoui.sat.i32.f64(double %a)
   ret i32 %0
 }
-declare i32 @llvm.fptoui.sat.i32.f64(double)
 
 define double @fcvt_d_w(i32 %a) nounwind {
 ; CHECKIFD-LABEL: fcvt_d_w:
@@ -885,7 +883,6 @@ start:
   %0 = tail call i64 @llvm.fptosi.sat.i64.f64(double %a)
   ret i64 %0
 }
-declare i64 @llvm.fptosi.sat.i64.f64(double)
 
 define i64 @fcvt_lu_d(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_lu_d:
@@ -1077,7 +1074,6 @@ start:
   %0 = tail call i64 @llvm.fptoui.sat.i64.f64(double %a)
   ret i64 %0
 }
-declare i64 @llvm.fptoui.sat.i64.f64(double)
 
 define i64 @fmv_x_d(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fmv_x_d:
@@ -1783,7 +1779,6 @@ start:
   %0 = tail call i16 @llvm.fptosi.sat.i16.f64(double %a)
   ret i16 %0
 }
-declare i16 @llvm.fptosi.sat.i16.f64(double)
 
 define zeroext i16 @fcvt_wu_s_i16(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_wu_s_i16:
@@ -1954,7 +1949,6 @@ start:
   %0 = tail call i16 @llvm.fptoui.sat.i16.f64(double %a)
   ret i16 %0
 }
-declare i16 @llvm.fptoui.sat.i16.f64(double)
 
 define signext i8 @fcvt_w_s_i8(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_w_s_i8:
@@ -2158,7 +2152,6 @@ start:
   %0 = tail call i8 @llvm.fptosi.sat.i8.f64(double %a)
   ret i8 %0
 }
-declare i8 @llvm.fptosi.sat.i8.f64(double)
 
 define zeroext i8 @fcvt_wu_s_i8(double %a) nounwind {
 ;
@@ -2327,7 +2320,6 @@ start:
   %0 = tail call i8 @llvm.fptoui.sat.i8.f64(double %a)
   ret i8 %0
 }
-declare i8 @llvm.fptoui.sat.i8.f64(double)
 
 define zeroext i32 @fcvt_wu_d_sat_zext(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_wu_d_sat_zext:

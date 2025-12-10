@@ -1975,7 +1975,6 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
       existingInlineKind && *existingInlineKind == cir::InlineKind::NoInline;
   bool isAlwaysInline = existingInlineKind &&
                         *existingInlineKind == cir::InlineKind::AlwaysInline;
-
   if (!decl) {
     assert(!cir::MissingFeatures::hlsl());
 
@@ -1984,8 +1983,7 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
       // If inlining is disabled and we don't have a declaration to control
       // inlining, mark the function as 'noinline' unless it is explicitly
       // marked as 'alwaysinline'.
-      f.setInlineKindAttr(
-          cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+      f.setInlineKind(cir::InlineKind::NoInline);
     }
 
     return;
@@ -2002,19 +2000,16 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   // Handle inline attributes
   if (decl->hasAttr<NoInlineAttr>() && !isAlwaysInline) {
     // Add noinline if the function isn't always_inline.
-    f.setInlineKindAttr(
-        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+    f.setInlineKind(cir::InlineKind::NoInline);
   } else if (decl->hasAttr<AlwaysInlineAttr>() && !isNoInline) {
     // Don't override AlwaysInline with NoInline, or vice versa, since we can't
     // specify both in IR.
-    f.setInlineKindAttr(
-        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::AlwaysInline));
+    f.setInlineKind(cir::InlineKind::AlwaysInline);
   } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
     // If inlining is disabled, force everything that isn't always_inline
     // to carry an explicit noinline attribute.
     if (!isAlwaysInline) {
-      f.setInlineKindAttr(
-          cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+      f.setInlineKind(cir::InlineKind::NoInline);
     }
   } else {
     // Otherwise, propagate the inline hint attribute and potentially use its
@@ -2036,13 +2031,11 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
         return any_of(pattern->redecls(), checkRedeclForInline);
       };
       if (checkForInline(fd)) {
-        f.setInlineKindAttr(cir::InlineAttr::get(&getMLIRContext(),
-                                                 cir::InlineKind::InlineHint));
+        f.setInlineKind(cir::InlineKind::InlineHint);
       } else if (codeGenOpts.getInlining() ==
                      CodeGenOptions::OnlyHintInlining &&
                  !fd->isInlined() && !isAlwaysInline) {
-        f.setInlineKindAttr(
-            cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+        f.setInlineKind(cir::InlineKind::NoInline);
       }
     }
   }
@@ -2234,6 +2227,15 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
 
     if (!cgf)
       theModule.push_back(func);
+
+    if (this->getLangOpts().OpenACC) {
+      // We only have to handle this attribute, since OpenACCAnnotAttrs are
+      // handled via the end-of-TU work.
+      for (const auto *attr :
+           funcDecl->specific_attrs<OpenACCRoutineDeclAttr>())
+        emitOpenACCRoutineDecl(funcDecl, func, attr->getLocation(),
+                               attr->Clauses);
+    }
   }
   return func;
 }
@@ -2495,4 +2497,40 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
 DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature) {
   return errorNYI(loc.getBegin(), feature) << loc;
+}
+
+void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
+                                   cir::LabelOp label) {
+  [[maybe_unused]] auto result =
+      blockAddressInfoToLabel.try_emplace(blockInfo, label);
+  assert(result.second &&
+         "attempting to map a blockaddress info that is already mapped");
+}
+
+void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
+  [[maybe_unused]] auto result = unresolvedBlockAddressToLabel.insert(op);
+  assert(result.second &&
+         "attempting to map a blockaddress operation that is already mapped");
+}
+
+void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
+                                           cir::LabelOp label) {
+  [[maybe_unused]] auto result = blockAddressToLabel.try_emplace(op, label);
+  assert(result.second &&
+         "attempting to map a blockaddress operation that is already mapped");
+}
+
+void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
+                                              cir::LabelOp newLabel) {
+  auto *it = blockAddressToLabel.find(op);
+  assert(it != blockAddressToLabel.end() &&
+         "trying to update a blockaddress not previously mapped");
+  assert(!it->second && "blockaddress already has a resolved label");
+
+  it->second = newLabel;
+}
+
+cir::LabelOp
+CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
+  return blockAddressInfoToLabel.lookup(blockInfo);
 }

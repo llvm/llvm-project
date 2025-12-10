@@ -20,9 +20,15 @@ define float @sinf(float %x) {
 
 ; CHECK: declare void @acosf(...)
 
+; CHECK: declare noalias noundef ptr @calloc(i64 noundef, i64 noundef) [[CALLOC_ATTRS:#[0-9]+]]
+
 ; CHECK: declare void @fdim(...)
 ; CHECK: declare void @fdimf(...)
 ; CHECK: declare void @fdiml(...)
+
+; CHECK: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
+
+; CHECK: declare noalias noundef ptr @malloc(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 
 ; CHECK: declare void @nan(...)
 ; CHECK: declare void @nanf(...)
@@ -58,3 +64,6 @@ define float @sinf(float %x) {
 
 ; CHECK: declare void @truncl(...)
 
+; CHECK: attributes [[CALLOC_ATTRS]] = { mustprogress nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
+; CHECK: attributes [[FREE_ATTRS]] = { mustprogress nounwind willreturn allockind("free") "alloc-family"="malloc" }
+; CHECK: attributes [[MALLOC_ATTRS]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

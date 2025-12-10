@@ -12,8 +12,6 @@
 ; RUN:   -verify-machineinstrs -target-abi=lp64 \
 ; RUN:   | FileCheck -check-prefix=RV64IZFINXZDINX %s
 
-declare double @llvm.minimum.f64(double, double)
-
 define double @fminimum_f64(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fminimum_f64:
 ; CHECKIFD:       # %bb.0:
@@ -74,8 +72,6 @@ define double @fminimum_f64(double %a, double %b) nounwind {
   %1 = call double @llvm.minimum.f64(double %a, double %b)
   ret double %1
 }
-
-declare double @llvm.maximum.f64(double, double)
 
 define double @fmaximum_f64(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fmaximum_f64:

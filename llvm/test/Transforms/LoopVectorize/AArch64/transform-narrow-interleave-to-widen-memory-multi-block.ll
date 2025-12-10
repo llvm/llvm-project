@@ -88,7 +88,7 @@ define void @load_store_interleave_group_block_invar_cond(ptr noalias %data, ptr
 ; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE11]]
 ; VF2IC2:       [[PRED_STORE_CONTINUE11]]:
 ; VF2IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DST_1]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 2
+; VF2IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 2
 ; VF2IC2-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP5]], align 1
 ; VF2IC2-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP6]], align 1
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -199,7 +199,7 @@ define void @load_store_interleave_group_block_var_cond(ptr noalias %data, ptr %
 ; VF2IC2-NEXT:    [[INTERLEAVED_VEC5:%.*]] = shufflevector <4 x i64> [[TMP6]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; VF2IC2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC5]], ptr [[TMP4]], align 8
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[MASKS]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i32 2
+; VF2IC2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 2
 ; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP7]], align 1
 ; VF2IC2-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x i8>, ptr [[TMP8]], align 1
 ; VF2IC2-NEXT:    [[TMP9:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], zeroinitializer

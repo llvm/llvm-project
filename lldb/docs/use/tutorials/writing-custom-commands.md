@@ -1,6 +1,6 @@
 # Writing Custom Commands
 
-### Create a new command using a Python function
+## Create a new command using a Python function
 
 Python functions can be used to create new LLDB command interpreter commands,
 which will work like all the natively defined lldb commands. This provides a
@@ -51,7 +51,7 @@ command definition form can't do the right thing.
 | `result` | `lldb.SBCommandReturnObject` | A return object which encapsulates success/failure information for the command and output text that needs to be printed as a result of the command. The plain Python "print" command also works but text won't go in the result by default (it is useful as a temporary logging facility). |
 | `internal_dict` | `python dict object` | The dictionary for the current embedded script session which contains all variables and functions. |
 
-### Create a new command using a Python class
+## Create a new command using a Python class
 
 Since lldb 3.7, Python commands can also be implemented by means of a class
 which should implement the following interface:
@@ -103,7 +103,7 @@ print("my command does lots of cool stuff", file=result)
 `SBCommandReturnObject` and `SBStream` both support this file-like behavior by
 providing `write()` and `flush()` calls at the Python layer.
 
-### Parsed Commands
+## Parsed Commands
 
 The commands that are added using this class definition are what lldb calls
 "raw" commands.  The command interpreter doesn't attempt to parse the command,
@@ -207,7 +207,7 @@ Mostly useful for handle_completion where you get passed the long option.
 """
 ```
 
-### Completion
+## Completion
 
 lldb will handle completing your option names, and all your enum values
 automatically.  If your option or argument types have associated built-in completers,
@@ -280,7 +280,7 @@ You can optionally include a "descriptions" key, whose value is a parallel array
 of description strings, and the completion will show the description next to
 each completion.
 
-### Loading Commands
+## Loading Commands
 
 One other handy convenience when defining lldb command-line commands is the
 command "command script import" which will import a module specified by file
@@ -309,7 +309,7 @@ def goodstuff(debugger, command, ctx, result, internal_dict):
     # Command Implementation code goes here
 ```
 
-### Examples
+## Examples
 
 Now we can create a module called ls.py in the file ~/ls.py that will implement
 a function that can be used by LLDB's python command code:
@@ -413,7 +413,7 @@ you may want a `pofoo` X command, that equates po [ModifyString(X)
 capitalizedString]. The following debugger interaction shows how to achieve
 that goal:
 
-```python3
+```
 (lldb) script
 Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.
 >>> def pofoo_funct(debugger, command, result, internal_dict):

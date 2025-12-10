@@ -11,8 +11,6 @@
 
 // RUN: %clang_cc1 -fsanitize=cfi-icall -fno-sanitize-trap=cfi-icall -fsanitize-recover=cfi-icall -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs -flto -fvisibility=hidden -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=PRESERVE_MIN %s
 
-// RUN: %clang_cc1 -fsanitize=cfi-icall -fno-sanitize-trap=cfi-icall -fsanitize-recover=cfi-icall -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs -flto -fvisibility=hidden -triple riscv64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=RECOVER_MIN_I386 %s
-
 // RUN: %clang_cc1 -fsanitize=cfi-icall -fno-sanitize-trap=cfi-icall -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs -flto -fvisibility=hidden -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ABORT_MIN %s
 
 
@@ -45,11 +43,6 @@
 // PRESERVE_MIN-SAME: ) #[[ATTR0:[0-9]+]] !type [[META6:![0-9]+]] !type [[META7:![0-9]+]] {
 // PRESERVE_MIN-NEXT:  [[ENTRY:.*:]]
 // PRESERVE_MIN-NEXT:    ret void
-//
-// RECOVER_MIN_I386-LABEL: define hidden void @f(
-// RECOVER_MIN_I386-SAME: ) #[[ATTR0:[0-9]+]] !type [[META10:![0-9]+]] !type [[META11:![0-9]+]] {
-// RECOVER_MIN_I386-NEXT:  [[ENTRY:.*:]]
-// RECOVER_MIN_I386-NEXT:    ret void
 //
 void f() {
 }
@@ -178,32 +171,11 @@ void xf();
 // PRESERVE_MIN-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[TMP2]], metadata !"_ZTSFvE"), !nosanitize [[META10:![0-9]+]]
 // PRESERVE_MIN-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF11:![0-9]+]], !nosanitize [[META10]]
 // PRESERVE_MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
-// PRESERVE_MIN-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal() #[[ATTR4:[0-9]+]], !nosanitize [[META10]]
+// PRESERVE_MIN-NEXT:    call preserve_allcc void @__ubsan_handle_cfi_check_fail_minimal_preserve() #[[ATTR4:[0-9]+]], !nosanitize [[META10]]
 // PRESERVE_MIN-NEXT:    br label %[[CONT]], !nosanitize [[META10]]
 // PRESERVE_MIN:       [[CONT]]:
 // PRESERVE_MIN-NEXT:    call void (...) [[TMP2]]()
 // PRESERVE_MIN-NEXT:    ret void
-//
-// RECOVER_MIN_I386-LABEL: define hidden void @g(
-// RECOVER_MIN_I386-SAME: i32 noundef signext [[B:%.*]]) #[[ATTR0]] !type [[META12:![0-9]+]] !type [[META13:![0-9]+]] {
-// RECOVER_MIN_I386-NEXT:  [[ENTRY:.*:]]
-// RECOVER_MIN_I386-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
-// RECOVER_MIN_I386-NEXT:    [[FP:%.*]] = alloca ptr, align 8
-// RECOVER_MIN_I386-NEXT:    store i32 [[B]], ptr [[B_ADDR]], align 4
-// RECOVER_MIN_I386-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B_ADDR]], align 4
-// RECOVER_MIN_I386-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
-// RECOVER_MIN_I386-NEXT:    [[TMP1:%.*]] = zext i1 [[TOBOOL]] to i64
-// RECOVER_MIN_I386-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], ptr @f, ptr @xf
-// RECOVER_MIN_I386-NEXT:    store ptr [[COND]], ptr [[FP]], align 8
-// RECOVER_MIN_I386-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[FP]], align 8
-// RECOVER_MIN_I386-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[TMP2]], metadata !"_ZTSFvE"), !nosanitize [[META14:![0-9]+]]
-// RECOVER_MIN_I386-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF15:![0-9]+]], !nosanitize [[META14]]
-// RECOVER_MIN_I386:       [[HANDLER_CFI_CHECK_FAIL]]:
-// RECOVER_MIN_I386-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal() #[[ATTR4:[0-9]+]], !nosanitize [[META14]]
-// RECOVER_MIN_I386-NEXT:    br label %[[CONT]], !nosanitize [[META14]]
-// RECOVER_MIN_I386:       [[CONT]]:
-// RECOVER_MIN_I386-NEXT:    call void [[TMP2]]()
-// RECOVER_MIN_I386-NEXT:    ret void
 //
 void g(int b) {
   void (*fp)() = b ? f : xf;
@@ -251,11 +223,4 @@ void g(int b) {
 // PRESERVE_MIN: [[META9]] = !{i64 0, !"_ZTSFviE.generalized"}
 // PRESERVE_MIN: [[META10]] = !{}
 // PRESERVE_MIN: [[PROF11]] = !{!"branch_weights", i32 1048575, i32 1}
-//.
-// RECOVER_MIN_I386: [[META10]] = !{i64 0, !"_ZTSFvE"}
-// RECOVER_MIN_I386: [[META11]] = !{i64 0, !"_ZTSFvE.generalized"}
-// RECOVER_MIN_I386: [[META12]] = !{i64 0, !"_ZTSFviE"}
-// RECOVER_MIN_I386: [[META13]] = !{i64 0, !"_ZTSFviE.generalized"}
-// RECOVER_MIN_I386: [[META14]] = !{}
-// RECOVER_MIN_I386: [[PROF15]] = !{!"branch_weights", i32 1048575, i32 1}
 //.
