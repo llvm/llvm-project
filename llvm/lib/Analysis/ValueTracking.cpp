@@ -7286,15 +7286,15 @@ OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
                                                    const Value *RHS,
                                                    const SimplifyQuery &SQ,
                                                    bool IsNSW) {
-  KnownBits LHSKnown = computeKnownBits(LHS, SQ);
-  KnownBits RHSKnown = computeKnownBits(RHS, SQ);
+  ConstantRange LHSRange =
+      computeConstantRangeIncludingKnownBits(LHS, false, SQ);
+  ConstantRange RHSRange =
+      computeConstantRangeIncludingKnownBits(RHS, false, SQ);
 
   // mul nsw of two non-negative numbers is also nuw.
-  if (IsNSW && LHSKnown.isNonNegative() && RHSKnown.isNonNegative())
+  if (IsNSW && LHSRange.isAllNonNegative() && RHSRange.isAllNonNegative())
     return OverflowResult::NeverOverflows;
 
-  ConstantRange LHSRange = ConstantRange::fromKnownBits(LHSKnown, false);
-  ConstantRange RHSRange = ConstantRange::fromKnownBits(RHSKnown, false);
   return mapOverflowResult(LHSRange.unsignedMulMayOverflow(RHSRange));
 }
 
