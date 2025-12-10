@@ -4,7 +4,7 @@ from typing import Optional, Callable, Any, List, Union
 import uuid
 
 import dap_server
-from dap_server import Source
+from dap_server import Source, Response
 from lldbsuite.test.decorators import skipIf
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
@@ -497,9 +497,9 @@ class DAPTestCaseBase(TestBase):
         *,
         disconnectAutomatically=True,
         sourceInitFile=False,
-        expectFailure=False,
+        waitForResponse=False,
         **kwargs,
-    ):
+    ) -> Optional[Response]:
         """Build the default Makefile target, create the DAP debug adapter,
         and attach to the process.
         """
@@ -515,22 +515,21 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_attach(**kwargs)
-        if expectFailure:
-            return response
-        if not (response and response["success"]):
-            error_msg = self._build_error_message("attach failed", response)
-            self.assertTrue(response and response["success"], error_msg)
+        attach_seq = self.dap_server.request_attach(**kwargs)
+        if waitForResponse:
+            return self.dap_server.receive_response(attach_seq)
+        self.dap_server.wait_for_event(["initialized"])
+        return None
 
     def launch(
         self,
-        program=None,
+        program: str,
         *,
         sourceInitFile=False,
         disconnectAutomatically=True,
-        expectFailure=False,
+        waitForResponse=False,
         **kwargs,
-    ):
+    ) -> Optional[Response]:
         """Sending launch request to dap"""
 
         # Make sure we disconnect and terminate the DAP debug adapter,
@@ -545,12 +544,11 @@ class DAPTestCaseBase(TestBase):
 
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_launch(program, **kwargs)
-        if expectFailure:
-            return response
-        if not (response and response["success"]):
-            error_msg = self._build_error_message("launch failed", response)
-            self.assertTrue(response and response["success"], error_msg)
+        launch_seq = self.dap_server.request_launch(program, **kwargs)
+        if waitForResponse:
+            return self.dap_server.receive_response(launch_seq)
+        self.dap_server.wait_for_event(["initialized"])
+        return None
 
     def build_and_launch(
         self,
@@ -566,6 +564,10 @@ class DAPTestCaseBase(TestBase):
         self.assertTrue(os.path.exists(program), "executable must exist")
 
         return self.launch(program, **kwargs)
+
+    def verify_configuration_done(self):
+        resp = self.dap_server.request_configurationDone()
+        self.assertTrue(resp["success"])
 
     def getBuiltinDebugServerTool(self):
         # Tries to find simulation/lldb-server/gdbserver tool path.

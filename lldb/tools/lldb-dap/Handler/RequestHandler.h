@@ -11,17 +11,16 @@
 
 #include "DAP.h"
 #include "DAPError.h"
-#include "DAPLog.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include <optional>
 #include <type_traits>
-#include <variant>
 #include <vector>
 
 template <typename T> struct is_optional : std::false_type {};
@@ -75,6 +74,12 @@ protected:
   bool HasInstructionGranularity(const llvm::json::Object &request) const;
 
   /// @}
+
+  /// HandleErrorResponse converts an error into a response.
+  void HandleErrorResponse(llvm::Error err, protocol::Response &response) const;
+
+  /// Send a response to the client.
+  void Send(protocol::Response &response) const;
 
   DAP &dap;
 };
@@ -135,36 +140,26 @@ class RequestHandler : public BaseRequestHandler {
     llvm::Expected<Args> arguments = parseArgs<Args>(request);
     if (llvm::Error err = arguments.takeError()) {
       HandleErrorResponse(std::move(err), response);
-      dap.Send(response);
+      Send(response);
       return;
     }
 
     if constexpr (std::is_same_v<Resp, llvm::Error>) {
-      if (llvm::Error err = Run(*arguments)) {
+      if (llvm::Error err = Run(*arguments))
         HandleErrorResponse(std::move(err), response);
-      } else {
+      else
         response.success = true;
-      }
     } else {
       Resp body = Run(*arguments);
-      if (llvm::Error err = body.takeError()) {
+      if (llvm::Error err = body.takeError())
         HandleErrorResponse(std::move(err), response);
-      } else {
+      else {
         response.success = true;
         response.body = std::move(*body);
       }
     }
 
-    // Mark the request as 'cancelled' if the debugger was interrupted while
-    // evaluating this handler.
-    if (dap.debugger.InterruptRequested()) {
-      dap.debugger.CancelInterruptRequest();
-      response.success = false;
-      response.message = protocol::eResponseMessageCancelled;
-      response.body = std::nullopt;
-    }
-
-    dap.Send(response);
+    Send(response);
 
     PostRun();
   };
@@ -177,48 +172,71 @@ class RequestHandler : public BaseRequestHandler {
   /// *NOTE*: PostRun will be invoked even if the `Run` operation returned an
   /// error.
   virtual void PostRun() const {};
+};
 
-  void HandleErrorResponse(llvm::Error err,
-                           protocol::Response &response) const {
-    response.success = false;
-    llvm::handleAllErrors(
-        std::move(err),
-        [&](const NotStoppedError &err) {
-          response.message = lldb_dap::protocol::eResponseMessageNotStopped;
-        },
-        [&](const DAPError &err) {
-          protocol::ErrorMessage error_message;
-          error_message.sendTelemetry = false;
-          error_message.format = err.getMessage();
-          error_message.showUser = err.getShowUser();
-          error_message.id = err.convertToErrorCode().value();
-          error_message.url = err.getURL();
-          error_message.urlLabel = err.getURLLabel();
-          protocol::ErrorResponseBody body;
-          body.error = error_message;
-          response.body = body;
-        },
-        [&](const llvm::ErrorInfoBase &err) {
-          protocol::ErrorMessage error_message;
-          error_message.showUser = true;
-          error_message.sendTelemetry = false;
-          error_message.format = err.message();
-          error_message.id = err.convertToErrorCode().value();
-          protocol::ErrorResponseBody body;
-          body.error = error_message;
-          response.body = body;
-        });
-  }
+/// Base class for handling DAP requests. Handlers should declare their
+/// arguments and response body types like:
+///
+/// class MyRequestHandler : public AsyncRequestHandler<Arguments, Response> {
+///   ....
+/// };
+template <typename Args, typename Resp>
+class AsyncRequestHandler : public BaseRequestHandler {
+  using BaseRequestHandler::BaseRequestHandler;
+
+  void operator()(const protocol::Request &request) const override {
+    protocol::Response response;
+    response.request_seq = request.seq;
+    response.command = request.command;
+
+    llvm::Expected<Args> arguments = parseArgs<Args>(request);
+    if (llvm::Error err = arguments.takeError()) {
+      HandleErrorResponse(std::move(err), response);
+      dap.Send(response);
+      return;
+    }
+
+    if constexpr (std::is_same_v<Resp, llvm::Error>) {
+      Run(*arguments, [this, response](llvm::Error err) mutable {
+        lldb::SBMutex lock = dap.GetAPIMutex();
+        std::lock_guard<lldb::SBMutex> guard(lock);
+
+        if (err)
+          HandleErrorResponse(std::move(err), response);
+        else
+          response.success = true;
+
+        Send(response);
+      });
+    } else {
+      Run(*arguments, [this, response](Resp body) mutable {
+        lldb::SBMutex lock = dap.GetAPIMutex();
+        std::lock_guard<lldb::SBMutex> guard(lock);
+
+        if (llvm::Error err = body.takeError())
+          HandleErrorResponse(std::move(err), response);
+        else {
+          response.success = true;
+          response.body = std::move(*body);
+        }
+
+        Send(response);
+      });
+    }
+  };
+
+  virtual void Run(const Args &, llvm::unique_function<void(Resp)>) const = 0;
 };
 
 class AttachRequestHandler
-    : public RequestHandler<protocol::AttachRequestArguments,
-                            protocol::AttachResponse> {
+    : public AsyncRequestHandler<protocol::AttachRequestArguments,
+                                 protocol::AttachResponse> {
 public:
-  using RequestHandler::RequestHandler;
+  using AsyncRequestHandler::AsyncRequestHandler;
   static llvm::StringLiteral GetCommand() { return "attach"; }
-  llvm::Error Run(const protocol::AttachRequestArguments &args) const override;
-  void PostRun() const override;
+  void
+  Run(const protocol::AttachRequestArguments &args,
+      llvm::unique_function<void(protocol::AttachResponse)>) const override;
 };
 
 class BreakpointLocationsRequestHandler
@@ -277,6 +295,7 @@ public:
   }
   protocol::ConfigurationDoneResponse
   Run(const protocol::ConfigurationDoneArguments &) const override;
+  void PostRun() const override;
 };
 
 class DisconnectRequestHandler
@@ -330,14 +349,13 @@ public:
 };
 
 class LaunchRequestHandler
-    : public RequestHandler<protocol::LaunchRequestArguments,
-                            protocol::LaunchResponse> {
+    : public AsyncRequestHandler<protocol::LaunchRequestArguments,
+                                 protocol::LaunchResponse> {
 public:
-  using RequestHandler::RequestHandler;
+  using AsyncRequestHandler::AsyncRequestHandler;
   static llvm::StringLiteral GetCommand() { return "launch"; }
-  llvm::Error
-  Run(const protocol::LaunchRequestArguments &arguments) const override;
-  void PostRun() const override;
+  void Run(const protocol::LaunchRequestArguments &arguments,
+           llvm::unique_function<void(llvm::Error)>) const override;
 };
 
 class RestartRequestHandler : public LegacyRequestHandler {

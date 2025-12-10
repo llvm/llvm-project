@@ -21,16 +21,18 @@ using namespace lldb_dap::protocol;
 namespace lldb_dap {
 
 /// Launch request; value of command field is 'launch'.
-Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
+void LaunchRequestHandler::Run(
+    const LaunchRequestArguments &arguments,
+    llvm::unique_function<void(llvm::Error)> callback) const {
   // Initialize DAP debugger.
   if (Error err = dap.InitializeDebugger())
-    return err;
+    return callback(std::move(err));
 
   // Validate that we have a well formed launch request.
   if (!arguments.launchCommands.empty() &&
       arguments.console != protocol::eConsoleInternal)
-    return make_error<DAPError>(
-        "'launchCommands' and non-internal 'console' are mutually exclusive");
+    return callback(make_error<DAPError>(
+        "'launchCommands' and non-internal 'console' are mutually exclusive"));
 
   dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
   dap.last_launch_request = arguments;
@@ -48,30 +50,30 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
   // This is run before target is created, so commands can't do anything with
   // the targets - preRunCommands are run with the target.
   if (Error err = dap.RunInitCommands())
-    return err;
+    return callback(std::move(err));
 
   dap.ConfigureSourceMaps();
 
   lldb::SBError error;
   lldb::SBTarget target = dap.CreateTarget(error);
   if (error.Fail())
-    return ToError(error);
+    return callback(ToError(error));
 
   dap.SetTarget(target);
 
   // Run any pre run LLDB commands the user specified in the launch.json
   if (Error err = dap.RunPreRunCommands())
-    return err;
+    return callback(std::move(err));
 
   if (Error err = LaunchProcess(arguments))
-    return err;
+    return callback(std::move(err));
 
   dap.RunPostRunCommands();
 
-  return Error::success();
-}
+  dap.on_configuration_done = [callback = std::move(callback)]() mutable {
+    callback(Error::success());
+  };
 
-void LaunchRequestHandler::PostRun() const {
   dap.SendJSON(CreateEventObject("initialized"));
 }
 

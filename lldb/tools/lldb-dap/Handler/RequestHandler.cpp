@@ -257,7 +257,7 @@ llvm::Error BaseRequestHandler::LaunchProcess(
 
 void BaseRequestHandler::PrintWelcomeMessage() const {
 #ifdef LLDB_DAP_WELCOME_MESSAGE
-  dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
+  dap.SendOutput(eOutputCategoryConsole, LLDB_DAP_WELCOME_MESSAGE);
 #endif
 }
 
@@ -266,6 +266,50 @@ bool BaseRequestHandler::HasInstructionGranularity(
   if (std::optional<llvm::StringRef> value = arguments.getString("granularity"))
     return value == "instruction";
   return false;
+}
+
+void BaseRequestHandler::HandleErrorResponse(
+    llvm::Error err, protocol::Response &response) const {
+  response.success = false;
+  llvm::handleAllErrors(
+      std::move(err),
+      [&](const NotStoppedError &err) {
+        response.message = lldb_dap::protocol::eResponseMessageNotStopped;
+      },
+      [&](const DAPError &err) {
+        protocol::ErrorMessage error_message;
+        error_message.sendTelemetry = false;
+        error_message.format = err.getMessage();
+        error_message.showUser = err.getShowUser();
+        error_message.id = err.convertToErrorCode().value();
+        error_message.url = err.getURL();
+        error_message.urlLabel = err.getURLLabel();
+        protocol::ErrorResponseBody body;
+        body.error = error_message;
+        response.body = body;
+      },
+      [&](const llvm::ErrorInfoBase &err) {
+        protocol::ErrorMessage error_message;
+        error_message.showUser = true;
+        error_message.sendTelemetry = false;
+        error_message.format = err.message();
+        error_message.id = err.convertToErrorCode().value();
+        protocol::ErrorResponseBody body;
+        body.error = error_message;
+        response.body = body;
+      });
+}
+
+void BaseRequestHandler::Send(protocol::Response &response) const {
+  // Mark the request as 'cancelled' if the debugger was interrupted while
+  // evaluating this handler.
+  if (dap.debugger.InterruptRequested()) {
+    response.success = false;
+    response.message = protocol::eResponseMessageCancelled;
+    response.body = std::nullopt;
+  }
+
+  dap.Send(response);
 }
 
 } // namespace lldb_dap
