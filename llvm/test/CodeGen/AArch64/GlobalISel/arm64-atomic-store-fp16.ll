@@ -8,12 +8,14 @@
 define void @atomic_store_half(ptr %addr, half %val) {
 ; CHECK-NOFP16-LABEL: atomic_store_half:
 ; CHECK-NOFP16:       ; %bb.0:
+; CHECK-NOFP16-NEXT:    ; kill: def $h0 killed $h0 def $s0
 ; CHECK-NOFP16-NEXT:    fmov w8, s0
 ; CHECK-NOFP16-NEXT:    stlrh w8, [x0]
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: atomic_store_half:
 ; CHECK-FP16:       ; %bb.0:
+; CHECK-FP16-NEXT:    ; kill: def $h0 killed $h0 def $s0
 ; CHECK-FP16-NEXT:    fmov w8, s0
 ; CHECK-FP16-NEXT:    stlrh w8, [x0]
 ; CHECK-FP16-NEXT:    ret
@@ -44,12 +46,14 @@ define half @atomic_load_half(ptr %addr) {
 define void @atomic_store_bfloat(ptr %addr, bfloat %val) {
 ; CHECK-NOFP16-LABEL: atomic_store_bfloat:
 ; CHECK-NOFP16:       ; %bb.0:
+; CHECK-NOFP16-NEXT:    ; kill: def $h0 killed $h0 def $s0
 ; CHECK-NOFP16-NEXT:    fmov w8, s0
 ; CHECK-NOFP16-NEXT:    stlrh w8, [x0]
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: atomic_store_bfloat:
 ; CHECK-FP16:       ; %bb.0:
+; CHECK-FP16-NEXT:    ; kill: def $h0 killed $h0 def $s0
 ; CHECK-FP16-NEXT:    fmov w8, s0
 ; CHECK-FP16-NEXT:    stlrh w8, [x0]
 ; CHECK-FP16-NEXT:    ret
@@ -75,39 +79,4 @@ define bfloat @atomic_load_bfloat(ptr %addr) {
   %ival = load atomic i16, ptr %addr acquire, align 2
   %val = bitcast i16 %ival to bfloat
   ret bfloat %val
-}
-
-; Test FPR8 to GPR32 copies (bitcast <1 x i8> to i8 for atomic store)
-define void @atomic_store_v1i8(ptr %addr, <1 x i8> %val) {
-; CHECK-NOFP16-LABEL: atomic_store_v1i8:
-; CHECK-NOFP16:       ; %bb.0:
-; CHECK-NOFP16-NEXT:    fmov w8, s0
-; CHECK-NOFP16-NEXT:    stlrb w8, [x0]
-; CHECK-NOFP16-NEXT:    ret
-;
-; CHECK-FP16-LABEL: atomic_store_v1i8:
-; CHECK-FP16:       ; %bb.0:
-; CHECK-FP16-NEXT:    fmov w8, s0
-; CHECK-FP16-NEXT:    stlrb w8, [x0]
-; CHECK-FP16-NEXT:    ret
-  %ival = bitcast <1 x i8> %val to i8
-  store atomic i8 %ival, ptr %addr release, align 1
-  ret void
-}
-
-define <1 x i8> @atomic_load_v1i8(ptr %addr) {
-; CHECK-NOFP16-LABEL: atomic_load_v1i8:
-; CHECK-NOFP16:       ; %bb.0:
-; CHECK-NOFP16-NEXT:    ldarb w8, [x0]
-; CHECK-NOFP16-NEXT:    fmov s0, w8
-; CHECK-NOFP16-NEXT:    ret
-;
-; CHECK-FP16-LABEL: atomic_load_v1i8:
-; CHECK-FP16:       ; %bb.0:
-; CHECK-FP16-NEXT:    ldarb w8, [x0]
-; CHECK-FP16-NEXT:    fmov s0, w8
-; CHECK-FP16-NEXT:    ret
-  %ival = load atomic i8, ptr %addr acquire, align 1
-  %val = bitcast i8 %ival to <1 x i8>
-  ret <1 x i8> %val
 }
