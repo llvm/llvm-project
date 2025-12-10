@@ -32,7 +32,7 @@
 # CHECK-SECTION-HEADERS: Sections:
 # CHECK-SECTION-HEADERS: Idx Name               Size     VMA              Type
 
-# CHECK-ERROR: llvm-objdump{{.*}}: error: 'a.out': triple was not specified and could not be inferred from the input file: No such file or directory
+# CHECK-ERROR: llvm-objdump{{(\.exe)?}}: error: 'a.out': triple was not specified and could not be inferred from the input file: No such file or directory
 
 --- !ELF
 FileHeader:
