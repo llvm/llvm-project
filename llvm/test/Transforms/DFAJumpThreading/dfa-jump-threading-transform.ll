@@ -103,7 +103,7 @@ define i32 @test2(i32 %init) {
 ; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI:%.*]] = phi i32 [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_1]]
 ; CHECK:       loop.1:
-; CHECK-NEXT:    [[STATE_1:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[STATE_1_BE_SI_UNFOLD_PHI]], [[STATE_1_BE2_SI_UNFOLD_FALSE:%.*]] ], [ [[DOTSI_UNFOLD_PHI]], [[SEL_SI_UNFOLD_FALSE]] ]
+; CHECK-NEXT:    [[STATE_1:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[DOTSI_UNFOLD_PHI]], [[SEL_SI_UNFOLD_FALSE]] ], [ [[STATE_1_BE_SI_UNFOLD_PHI]], [[STATE_1_BE2_SI_UNFOLD_FALSE:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_2:%.*]]
 ; CHECK:       loop.1.jt4:
 ; CHECK-NEXT:    [[STATE_1_JT4:%.*]] = phi i32 [ [[STATE_1_BE_SI_UNFOLD_PHI_JT4]], [[STATE_1_BE2_SI_UNFOLD_FALSE_JT4:%.*]] ]

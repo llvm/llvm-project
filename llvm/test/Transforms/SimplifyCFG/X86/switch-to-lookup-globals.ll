@@ -18,7 +18,7 @@ define i1 @zot(i32 %arg) {
 ; CHECK-NEXT:    %switch.load = load ptr, ptr %switch.gep, align 8
 ; CHECK-NEXT:    br label %bb6
 ; CHECK:       bb6:
-; CHECK-NEXT:    %tmp7 = phi ptr [ %switch.load, %switch.lookup ], [ null, %bb ]
+; CHECK-NEXT:    %tmp7 = phi ptr [ null, %bb ], [ %switch.load, %switch.lookup ]
 ; CHECK-NEXT:    %tmp8 = icmp eq ptr %tmp7, getelementptr inbounds ([75 x { i32, i32, i32, i8, i8 }], ptr @global, i64 1, i64 0, i32 0)
 ; CHECK-NEXT:    ret i1 %tmp8
 ;

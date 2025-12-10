@@ -182,7 +182,7 @@ define i4 @bitmap_no_default(i32 %x) {
 ; OPTNOLUT:       [[DEFAULT]]:
 ; OPTNOLUT-NEXT:    unreachable
 ; OPTNOLUT:       [[END]]:
-; OPTNOLUT-NEXT:    [[SWITCH_MASKED:%.*]] = phi i4 [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ 0, %[[ENTRY]] ]
+; OPTNOLUT-NEXT:    [[SWITCH_MASKED:%.*]] = phi i4 [ -8, %[[CASE3]] ], [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ 0, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i4 [[SWITCH_MASKED]]
 ;
 ; TTINOLUT-LABEL: define i4 @bitmap_no_default(
@@ -237,7 +237,7 @@ define i4 @bitmap_with_default(i32 %x) {
 ; OPTNOLUT:       [[DEFAULT]]:
 ; OPTNOLUT-NEXT:    br label %[[END]]
 ; OPTNOLUT:       [[END]]:
-; OPTNOLUT-NEXT:    [[IDX:%.*]] = phi i4 [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ -1, %[[DEFAULT]] ], [ 0, %[[ENTRY]] ]
+; OPTNOLUT-NEXT:    [[IDX:%.*]] = phi i4 [ -1, %[[DEFAULT]] ], [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ 0, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i4 [[IDX]]
 ;
 ; TTINOLUT-LABEL: define i4 @bitmap_with_default(
