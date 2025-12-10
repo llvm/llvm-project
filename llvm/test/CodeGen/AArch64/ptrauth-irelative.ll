@@ -67,6 +67,19 @@
 ; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
 @disc = constant ptr ptrauth (ptr @dsolocal, i32 2, i64 0, ptr @disc), align 8
 
+; CHECK: disc65536:
+; CHECK-NEXT: [[PLACE:.*]]:
+; CHECK-NEXT: .section .text.startup
+; CHECK-NEXT: [[FUNC:.*]]:
+; CHECK-NEXT: adrp x0, dsolocal
+; CHECK-NEXT: add x0, x0, :lo12:dsolocal
+; CHECK-NEXT: adrp x1, [[PLACE]]+65536
+; CHECK-NEXT: add x1, x1, :lo12:[[PLACE]]+65536
+; CHECK-NEXT: b __emupac_pacda
+; CHECK-NEXT: .section .rodata
+; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
+@disc65536 = constant ptr ptrauth (ptr @dsolocal, i32 2, i64 65536, ptr @disc), align 8
+
 @global = external global i8
 
 ; CHECK: globalref:
