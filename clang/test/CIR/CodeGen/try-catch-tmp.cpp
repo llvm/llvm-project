@@ -17,6 +17,7 @@ void calling_division_inside_try_block() {
 // CIR:       %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> !s32i
 // CIR:       cir.yield
 // CIR:   } catch all {
+// CIR:       %[[CATCH_PARAM:.*]] = cir.catch_param : !cir.ptr<!void>
 // CIR:       cir.yield
 // CIR:   }
 // CIR: }
