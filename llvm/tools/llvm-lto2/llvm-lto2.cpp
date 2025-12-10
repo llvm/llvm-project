@@ -286,12 +286,8 @@ static int run(int argc, char **argv) {
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
   auto TimeTraceScopeExit = make_scope_exit([]() {
     if (TimeTrace) {
-      if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
-        handleAllErrors(std::move(E), [&](const StringError &SE) {
-          errs() << SE.getMessage() << "\n";
-        });
-        return;
-      }
+      check(timeTraceProfilerWrite(TimeTraceFile, OutputFilename),
+            "timeTraceProfilerWrite failed");
       timeTraceProfilerCleanup();
     }
   });
