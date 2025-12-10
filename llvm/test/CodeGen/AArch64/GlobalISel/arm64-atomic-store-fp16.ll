@@ -14,7 +14,7 @@ define void @atomic_store_half(ptr %addr, half %val) {
 ;
 ; CHECK-FP16-LABEL: atomic_store_half:
 ; CHECK-FP16:       ; %bb.0:
-; CHECK-FP16-NEXT:    fmov w8, h0
+; CHECK-FP16-NEXT:    fmov w8, s0
 ; CHECK-FP16-NEXT:    stlrh w8, [x0]
 ; CHECK-FP16-NEXT:    ret
   %ival = bitcast half %val to i16
@@ -50,7 +50,7 @@ define void @atomic_store_bfloat(ptr %addr, bfloat %val) {
 ;
 ; CHECK-FP16-LABEL: atomic_store_bfloat:
 ; CHECK-FP16:       ; %bb.0:
-; CHECK-FP16-NEXT:    fmov w8, h0
+; CHECK-FP16-NEXT:    fmov w8, s0
 ; CHECK-FP16-NEXT:    stlrh w8, [x0]
 ; CHECK-FP16-NEXT:    ret
   %ival = bitcast bfloat %val to i16
