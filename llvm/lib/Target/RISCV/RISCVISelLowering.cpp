@@ -24323,14 +24323,15 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       break;
     }
   } else if (Constraint == "vr") {
+    // Check VM first so that mask types will use that instead of VR.
     for (const auto *RC :
-         {&RISCV::VRRegClass, &RISCV::VRM2RegClass, &RISCV::VRM4RegClass,
-          &RISCV::VRM8RegClass, &RISCV::VRN2M1RegClass, &RISCV::VRN3M1RegClass,
-          &RISCV::VRN4M1RegClass, &RISCV::VRN5M1RegClass,
-          &RISCV::VRN6M1RegClass, &RISCV::VRN7M1RegClass,
-          &RISCV::VRN8M1RegClass, &RISCV::VRN2M2RegClass,
-          &RISCV::VRN3M2RegClass, &RISCV::VRN4M2RegClass,
-          &RISCV::VRN2M4RegClass}) {
+         {&RISCV::VMRegClass, &RISCV::VRRegClass, &RISCV::VRM2RegClass,
+          &RISCV::VRM4RegClass, &RISCV::VRM8RegClass, &RISCV::VRN2M1RegClass,
+          &RISCV::VRN3M1RegClass, &RISCV::VRN4M1RegClass,
+          &RISCV::VRN5M1RegClass, &RISCV::VRN6M1RegClass,
+          &RISCV::VRN7M1RegClass, &RISCV::VRN8M1RegClass,
+          &RISCV::VRN2M2RegClass, &RISCV::VRN3M2RegClass,
+          &RISCV::VRN4M2RegClass, &RISCV::VRN2M4RegClass}) {
       if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
         return std::make_pair(0U, RC);
 
@@ -24341,15 +24342,16 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
     }
   } else if (Constraint == "vd") {
+    // Check VMNoV0 first so that mask types will use that instead of VRNoV0.
     for (const auto *RC :
-         {&RISCV::VRNoV0RegClass, &RISCV::VRM2NoV0RegClass,
-          &RISCV::VRM4NoV0RegClass, &RISCV::VRM8NoV0RegClass,
-          &RISCV::VRN2M1NoV0RegClass, &RISCV::VRN3M1NoV0RegClass,
-          &RISCV::VRN4M1NoV0RegClass, &RISCV::VRN5M1NoV0RegClass,
-          &RISCV::VRN6M1NoV0RegClass, &RISCV::VRN7M1NoV0RegClass,
-          &RISCV::VRN8M1NoV0RegClass, &RISCV::VRN2M2NoV0RegClass,
-          &RISCV::VRN3M2NoV0RegClass, &RISCV::VRN4M2NoV0RegClass,
-          &RISCV::VRN2M4NoV0RegClass}) {
+         {&RISCV::VMNoV0RegClass, &RISCV::VRNoV0RegClass,
+          &RISCV::VRM2NoV0RegClass, &RISCV::VRM4NoV0RegClass,
+          &RISCV::VRM8NoV0RegClass, &RISCV::VRN2M1NoV0RegClass,
+          &RISCV::VRN3M1NoV0RegClass, &RISCV::VRN4M1NoV0RegClass,
+          &RISCV::VRN5M1NoV0RegClass, &RISCV::VRN6M1NoV0RegClass,
+          &RISCV::VRN7M1NoV0RegClass, &RISCV::VRN8M1NoV0RegClass,
+          &RISCV::VRN2M2NoV0RegClass, &RISCV::VRN3M2NoV0RegClass,
+          &RISCV::VRN4M2NoV0RegClass, &RISCV::VRN2M4NoV0RegClass}) {
       if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
         return std::make_pair(0U, RC);
 
