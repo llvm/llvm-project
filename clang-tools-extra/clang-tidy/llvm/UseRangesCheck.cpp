@@ -69,11 +69,12 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
                 "is_sorted",   "min_element",
                 "max_element", "binary_search",
                 "lower_bound", "upper_bound",
-                "unique",      "uninitialized_copy"});
+                "unique",      "uninitialized_copy",
+                "adjacent_find"});
 
   // Two range algorithms
   AddStdToLLVM(llvm::makeIntrusiveRefCnt<StdToLLVMReplacer>(TwoSig),
-               {"equal", "mismatch", "includes"});
+               {"equal", "mismatch", "includes", "search"});
 
   return Results;
 }
