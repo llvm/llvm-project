@@ -13,7 +13,7 @@ define amdgpu_kernel void @aliasinfo_2i32(ptr addrspace(1) %out, ptr addrspace(1
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4
-; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -38,7 +38,7 @@ define amdgpu_kernel void @aliasinfo_2i32_NA(ptr addrspace(1) noalias %out, ptr 
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META1:![0-9]+]], !noalias [[META4:![0-9]+]]
-; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR5]]
+; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META4]], !noalias [[META1]]
 ; CHECK-NEXT:    ret void
 ;
@@ -63,7 +63,7 @@ define amdgpu_kernel void @aliasinfo_2i32_AS(ptr addrspace(1) %out, ptr addrspac
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
-; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR5]]
+; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
@@ -88,7 +88,7 @@ define amdgpu_kernel void @aliasinfo_2i32_NA_AS(ptr addrspace(1) noalias %out, p
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META14:![0-9]+]]
-; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR5]]
+; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META14]], !noalias [[META11]]
 ; CHECK-NEXT:    ret void
 ;
@@ -249,381 +249,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @aliasinfo_10v16f16(ptr addrspace(3) %in, ptr addrspace(3) %out) #0 {
-; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_10v16f16(
-; CHECK-SAME: ptr addrspace(3) [[IN:%.*]], ptr addrspace(3) [[OUT:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_10V16F16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-; CHECK-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[LOAD_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[IN]], i32 [[IDX]]
-; CHECK-NEXT:    [[LOAD_0:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], align 32
-; CHECK-NEXT:    [[LOAD_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], i32 64
-; CHECK-NEXT:    [[LOAD_1:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], align 32
-; CHECK-NEXT:    [[LOAD_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], i32 128
-; CHECK-NEXT:    [[LOAD_2:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], align 32
-; CHECK-NEXT:    [[LOAD_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], i32 192
-; CHECK-NEXT:    [[LOAD_3:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], align 32
-; CHECK-NEXT:    [[LOAD_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], i32 256
-; CHECK-NEXT:    [[LOAD_4:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_4_ADDR]], align 32
-; CHECK-NEXT:    [[MAI_0:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], i1 false)
-; CHECK-NEXT:    [[MAI_1:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], i1 false)
-; CHECK-NEXT:    [[MAI_2:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], i1 false)
-; CHECK-NEXT:    [[MAI_3:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], i1 false)
-; CHECK-NEXT:    [[MAI_4:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], i1 false)
-; CHECK-NEXT:    [[STORE_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 [[IDX]]
-; CHECK-NEXT:    store <16 x half> [[MAI_0]], ptr addrspace(3) [[STORE_0_ADDR]], align 32
-; CHECK-NEXT:    [[STORE_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 64
-; CHECK-NEXT:    store <16 x half> [[MAI_1]], ptr addrspace(3) [[STORE_1_ADDR]], align 32
-; CHECK-NEXT:    [[STORE_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 128
-; CHECK-NEXT:    store <16 x half> [[MAI_2]], ptr addrspace(3) [[STORE_2_ADDR]], align 32
-; CHECK-NEXT:    [[STORE_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 192
-; CHECK-NEXT:    store <16 x half> [[MAI_3]], ptr addrspace(3) [[STORE_3_ADDR]], align 32
-; CHECK-NEXT:    [[STORE_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 256
-; CHECK-NEXT:    store <16 x half> [[MAI_4]], ptr addrspace(3) [[STORE_4_ADDR]], align 32
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    ret void
-;
-entry:
-  %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %load.0.addr = getelementptr <16 x half>, ptr addrspace(3) %in, i32 %idx
-  %load.0 = load <16 x half>, ptr addrspace(3) %load.0.addr
-  %load.1.addr = getelementptr <16 x half>, ptr addrspace(3) %load.0.addr, i32 64
-  %load.1 = load <16 x half>, ptr addrspace(3) %load.1.addr
-  %load.2.addr = getelementptr <16 x half>, ptr addrspace(3) %load.1.addr, i32 128
-  %load.2 = load <16 x half>, ptr addrspace(3) %load.2.addr
-  %load.3.addr = getelementptr <16 x half>, ptr addrspace(3) %load.2.addr, i32 192
-  %load.3 = load <16 x half>, ptr addrspace(3) %load.3.addr
-  %load.4.addr = getelementptr <16 x half>, ptr addrspace(3) %load.3.addr, i32 256
-  %load.4 = load <16 x half>, ptr addrspace(3) %load.4.addr
-  %mai.0 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.0, <16 x half> %load.0, <16 x half> %load.0, i1 0)
-  %mai.1 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.1, <16 x half> %load.1, <16 x half> %load.1, i1 0)
-  %mai.2 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.2, <16 x half> %load.2, <16 x half> %load.2, i1 0)
-  %mai.3 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.3, <16 x half> %load.3, <16 x half> %load.3, i1 0)
-  %mai.4 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.4, <16 x half> %load.4, <16 x half> %load.4, i1 0)
-  %store.0.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 %idx
-  store <16 x half> %mai.0, ptr addrspace(3) %store.0.addr
-  %store.1.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 64
-  store <16 x half> %mai.1, ptr addrspace(3) %store.1.addr
-  %store.2.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 128
-  store <16 x half> %mai.2, ptr addrspace(3) %store.2.addr
-  %store.3.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 192
-  store <16 x half> %mai.3, ptr addrspace(3) %store.3.addr
-  %store.4.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 256
-  store <16 x half> %mai.4, ptr addrspace(3) %store.4.addr
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  ret void
-}
-
-define amdgpu_kernel void @aliasinfo_10v16f16_NA(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
-; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_10v16f16_NA(
-; CHECK-SAME: ptr addrspace(3) noalias [[IN:%.*]], ptr addrspace(3) noalias [[OUT:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_10V16F16_NA_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-; CHECK-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[LOAD_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[IN]], i32 [[IDX]]
-; CHECK-NEXT:    [[LOAD_0:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], align 32, !alias.scope [[META42:![0-9]+]], !noalias [[META45:![0-9]+]]
-; CHECK-NEXT:    [[LOAD_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], i32 64
-; CHECK-NEXT:    [[LOAD_1:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], align 32, !alias.scope [[META42]], !noalias [[META45]]
-; CHECK-NEXT:    [[LOAD_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], i32 128
-; CHECK-NEXT:    [[LOAD_2:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], align 32, !alias.scope [[META42]], !noalias [[META45]]
-; CHECK-NEXT:    [[LOAD_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], i32 192
-; CHECK-NEXT:    [[LOAD_3:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], align 32, !alias.scope [[META42]], !noalias [[META45]]
-; CHECK-NEXT:    [[LOAD_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], i32 256
-; CHECK-NEXT:    [[LOAD_4:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_4_ADDR]], align 32, !alias.scope [[META42]], !noalias [[META45]]
-; CHECK-NEXT:    [[MAI_0:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], i1 false)
-; CHECK-NEXT:    [[MAI_1:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], i1 false)
-; CHECK-NEXT:    [[MAI_2:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], i1 false)
-; CHECK-NEXT:    [[MAI_3:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], i1 false)
-; CHECK-NEXT:    [[MAI_4:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], i1 false)
-; CHECK-NEXT:    [[STORE_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 [[IDX]]
-; CHECK-NEXT:    store <16 x half> [[MAI_0]], ptr addrspace(3) [[STORE_0_ADDR]], align 32, !alias.scope [[META45]], !noalias [[META42]]
-; CHECK-NEXT:    [[STORE_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 64
-; CHECK-NEXT:    store <16 x half> [[MAI_1]], ptr addrspace(3) [[STORE_1_ADDR]], align 32, !alias.scope [[META45]], !noalias [[META42]]
-; CHECK-NEXT:    [[STORE_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 128
-; CHECK-NEXT:    store <16 x half> [[MAI_2]], ptr addrspace(3) [[STORE_2_ADDR]], align 32, !alias.scope [[META45]], !noalias [[META42]]
-; CHECK-NEXT:    [[STORE_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 192
-; CHECK-NEXT:    store <16 x half> [[MAI_3]], ptr addrspace(3) [[STORE_3_ADDR]], align 32, !alias.scope [[META45]], !noalias [[META42]]
-; CHECK-NEXT:    [[STORE_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 256
-; CHECK-NEXT:    store <16 x half> [[MAI_4]], ptr addrspace(3) [[STORE_4_ADDR]], align 32, !alias.scope [[META45]], !noalias [[META42]]
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    ret void
-;
-entry:
-  %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %load.0.addr = getelementptr <16 x half>, ptr addrspace(3) %in, i32 %idx
-  %load.0 = load <16 x half>, ptr addrspace(3) %load.0.addr
-  %load.1.addr = getelementptr <16 x half>, ptr addrspace(3) %load.0.addr, i32 64
-  %load.1 = load <16 x half>, ptr addrspace(3) %load.1.addr
-  %load.2.addr = getelementptr <16 x half>, ptr addrspace(3) %load.1.addr, i32 128
-  %load.2 = load <16 x half>, ptr addrspace(3) %load.2.addr
-  %load.3.addr = getelementptr <16 x half>, ptr addrspace(3) %load.2.addr, i32 192
-  %load.3 = load <16 x half>, ptr addrspace(3) %load.3.addr
-  %load.4.addr = getelementptr <16 x half>, ptr addrspace(3) %load.3.addr, i32 256
-  %load.4 = load <16 x half>, ptr addrspace(3) %load.4.addr
-  %mai.0 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.0, <16 x half> %load.0, <16 x half> %load.0, i1 0)
-  %mai.1 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.1, <16 x half> %load.1, <16 x half> %load.1, i1 0)
-  %mai.2 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.2, <16 x half> %load.2, <16 x half> %load.2, i1 0)
-  %mai.3 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.3, <16 x half> %load.3, <16 x half> %load.3, i1 0)
-  %mai.4 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.4, <16 x half> %load.4, <16 x half> %load.4, i1 0)
-  %store.0.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 %idx
-  store <16 x half> %mai.0, ptr addrspace(3) %store.0.addr
-  %store.1.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 64
-  store <16 x half> %mai.1, ptr addrspace(3) %store.1.addr
-  %store.2.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 128
-  store <16 x half> %mai.2, ptr addrspace(3) %store.2.addr
-  %store.3.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 192
-  store <16 x half> %mai.3, ptr addrspace(3) %store.3.addr
-  %store.4.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 256
-  store <16 x half> %mai.4, ptr addrspace(3) %store.4.addr
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  ret void
-}
-
-define amdgpu_kernel void @aliasinfo_10v16f16_AS(ptr addrspace(3) %in, ptr addrspace(3) %out) #0 {
-; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_10v16f16_AS(
-; CHECK-SAME: ptr addrspace(3) [[IN:%.*]], ptr addrspace(3) [[OUT:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_10V16F16_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-; CHECK-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[LOAD_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[IN]], i32 [[IDX]]
-; CHECK-NEXT:    [[LOAD_0:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], align 32, !alias.scope [[META6]], !noalias [[META9]]
-; CHECK-NEXT:    [[LOAD_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], i32 64
-; CHECK-NEXT:    [[LOAD_1:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], align 32, !alias.scope [[META6]], !noalias [[META9]]
-; CHECK-NEXT:    [[LOAD_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], i32 128
-; CHECK-NEXT:    [[LOAD_2:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], align 32, !alias.scope [[META6]], !noalias [[META9]]
-; CHECK-NEXT:    [[LOAD_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], i32 192
-; CHECK-NEXT:    [[LOAD_3:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], align 32, !alias.scope [[META6]], !noalias [[META9]]
-; CHECK-NEXT:    [[LOAD_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], i32 256
-; CHECK-NEXT:    [[LOAD_4:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_4_ADDR]], align 32, !alias.scope [[META6]], !noalias [[META9]]
-; CHECK-NEXT:    [[MAI_0:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], i1 false)
-; CHECK-NEXT:    [[MAI_1:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], i1 false)
-; CHECK-NEXT:    [[MAI_2:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], i1 false)
-; CHECK-NEXT:    [[MAI_3:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], i1 false)
-; CHECK-NEXT:    [[MAI_4:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], i1 false)
-; CHECK-NEXT:    [[STORE_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 [[IDX]]
-; CHECK-NEXT:    store <16 x half> [[MAI_0]], ptr addrspace(3) [[STORE_0_ADDR]], align 32, !alias.scope [[META9]], !noalias [[META6]]
-; CHECK-NEXT:    [[STORE_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 64
-; CHECK-NEXT:    store <16 x half> [[MAI_1]], ptr addrspace(3) [[STORE_1_ADDR]], align 32, !alias.scope [[META9]], !noalias [[META6]]
-; CHECK-NEXT:    [[STORE_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 128
-; CHECK-NEXT:    store <16 x half> [[MAI_2]], ptr addrspace(3) [[STORE_2_ADDR]], align 32, !alias.scope [[META9]], !noalias [[META6]]
-; CHECK-NEXT:    [[STORE_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 192
-; CHECK-NEXT:    store <16 x half> [[MAI_3]], ptr addrspace(3) [[STORE_3_ADDR]], align 32, !alias.scope [[META9]], !noalias [[META6]]
-; CHECK-NEXT:    [[STORE_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 256
-; CHECK-NEXT:    store <16 x half> [[MAI_4]], ptr addrspace(3) [[STORE_4_ADDR]], align 32, !alias.scope [[META9]], !noalias [[META6]]
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    ret void
-;
-entry:
-  %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %load.0.addr = getelementptr <16 x half>, ptr addrspace(3) %in, i32 %idx
-  %load.0 = load <16 x half>, ptr addrspace(3) %load.0.addr, !alias.scope !4, !noalias !2
-  %load.1.addr = getelementptr <16 x half>, ptr addrspace(3) %load.0.addr, i32 64
-  %load.1 = load <16 x half>, ptr addrspace(3) %load.1.addr, !alias.scope !4, !noalias !2
-  %load.2.addr = getelementptr <16 x half>, ptr addrspace(3) %load.1.addr, i32 128
-  %load.2 = load <16 x half>, ptr addrspace(3) %load.2.addr, !alias.scope !4, !noalias !2
-  %load.3.addr = getelementptr <16 x half>, ptr addrspace(3) %load.2.addr, i32 192
-  %load.3 = load <16 x half>, ptr addrspace(3) %load.3.addr, !alias.scope !4, !noalias !2
-  %load.4.addr = getelementptr <16 x half>, ptr addrspace(3) %load.3.addr, i32 256
-  %load.4 = load <16 x half>, ptr addrspace(3) %load.4.addr, !alias.scope !4, !noalias !2
-  %mai.0 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.0, <16 x half> %load.0, <16 x half> %load.0, i1 0)
-  %mai.1 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.1, <16 x half> %load.1, <16 x half> %load.1, i1 0)
-  %mai.2 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.2, <16 x half> %load.2, <16 x half> %load.2, i1 0)
-  %mai.3 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.3, <16 x half> %load.3, <16 x half> %load.3, i1 0)
-  %mai.4 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.4, <16 x half> %load.4, <16 x half> %load.4, i1 0)
-  %store.0.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 %idx
-  store <16 x half> %mai.0, ptr addrspace(3) %store.0.addr, !alias.scope !2, !noalias !4
-  %store.1.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 64
-  store <16 x half> %mai.1, ptr addrspace(3) %store.1.addr, !alias.scope !2, !noalias !4
-  %store.2.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 128
-  store <16 x half> %mai.2, ptr addrspace(3) %store.2.addr, !alias.scope !2, !noalias !4
-  %store.3.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 192
-  store <16 x half> %mai.3, ptr addrspace(3) %store.3.addr, !alias.scope !2, !noalias !4
-  %store.4.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 256
-  store <16 x half> %mai.4, ptr addrspace(3) %store.4.addr, !alias.scope !2, !noalias !4
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  ret void
-}
-
-define amdgpu_kernel void @aliasinfo_10v16f16_NA_AS(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
-; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_10v16f16_NA_AS(
-; CHECK-SAME: ptr addrspace(3) noalias [[IN:%.*]], ptr addrspace(3) noalias [[OUT:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_10V16F16_NA_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-; CHECK-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[LOAD_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[IN]], i32 [[IDX]]
-; CHECK-NEXT:    [[LOAD_0:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], align 32, !alias.scope [[META47:![0-9]+]], !noalias [[META50:![0-9]+]]
-; CHECK-NEXT:    [[LOAD_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], i32 64
-; CHECK-NEXT:    [[LOAD_1:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], align 32, !alias.scope [[META47]], !noalias [[META50]]
-; CHECK-NEXT:    [[LOAD_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], i32 128
-; CHECK-NEXT:    [[LOAD_2:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], align 32, !alias.scope [[META47]], !noalias [[META50]]
-; CHECK-NEXT:    [[LOAD_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], i32 192
-; CHECK-NEXT:    [[LOAD_3:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], align 32, !alias.scope [[META47]], !noalias [[META50]]
-; CHECK-NEXT:    [[LOAD_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], i32 256
-; CHECK-NEXT:    [[LOAD_4:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_4_ADDR]], align 32, !alias.scope [[META47]], !noalias [[META50]]
-; CHECK-NEXT:    [[MAI_0:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], i1 false)
-; CHECK-NEXT:    [[MAI_1:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], i1 false)
-; CHECK-NEXT:    [[MAI_2:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], i1 false)
-; CHECK-NEXT:    [[MAI_3:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], i1 false)
-; CHECK-NEXT:    [[MAI_4:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], i1 false)
-; CHECK-NEXT:    [[STORE_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 [[IDX]]
-; CHECK-NEXT:    store <16 x half> [[MAI_0]], ptr addrspace(3) [[STORE_0_ADDR]], align 32, !alias.scope [[META50]], !noalias [[META47]]
-; CHECK-NEXT:    [[STORE_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 64
-; CHECK-NEXT:    store <16 x half> [[MAI_1]], ptr addrspace(3) [[STORE_1_ADDR]], align 32, !alias.scope [[META50]], !noalias [[META47]]
-; CHECK-NEXT:    [[STORE_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 128
-; CHECK-NEXT:    store <16 x half> [[MAI_2]], ptr addrspace(3) [[STORE_2_ADDR]], align 32, !alias.scope [[META50]], !noalias [[META47]]
-; CHECK-NEXT:    [[STORE_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 192
-; CHECK-NEXT:    store <16 x half> [[MAI_3]], ptr addrspace(3) [[STORE_3_ADDR]], align 32, !alias.scope [[META50]], !noalias [[META47]]
-; CHECK-NEXT:    [[STORE_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 256
-; CHECK-NEXT:    store <16 x half> [[MAI_4]], ptr addrspace(3) [[STORE_4_ADDR]], align 32, !alias.scope [[META50]], !noalias [[META47]]
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    ret void
-;
-entry:
-  %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %load.0.addr = getelementptr <16 x half>, ptr addrspace(3) %in, i32 %idx
-  %load.0 = load <16 x half>, ptr addrspace(3) %load.0.addr, !alias.scope !4, !noalias !2
-  %load.1.addr = getelementptr <16 x half>, ptr addrspace(3) %load.0.addr, i32 64
-  %load.1 = load <16 x half>, ptr addrspace(3) %load.1.addr, !alias.scope !4, !noalias !2
-  %load.2.addr = getelementptr <16 x half>, ptr addrspace(3) %load.1.addr, i32 128
-  %load.2 = load <16 x half>, ptr addrspace(3) %load.2.addr, !alias.scope !4, !noalias !2
-  %load.3.addr = getelementptr <16 x half>, ptr addrspace(3) %load.2.addr, i32 192
-  %load.3 = load <16 x half>, ptr addrspace(3) %load.3.addr, !alias.scope !4, !noalias !2
-  %load.4.addr = getelementptr <16 x half>, ptr addrspace(3) %load.3.addr, i32 256
-  %load.4 = load <16 x half>, ptr addrspace(3) %load.4.addr, !alias.scope !4, !noalias !2
-  %mai.0 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.0, <16 x half> %load.0, <16 x half> %load.0, i1 0)
-  %mai.1 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.1, <16 x half> %load.1, <16 x half> %load.1, i1 0)
-  %mai.2 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.2, <16 x half> %load.2, <16 x half> %load.2, i1 0)
-  %mai.3 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.3, <16 x half> %load.3, <16 x half> %load.3, i1 0)
-  %mai.4 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %load.4, <16 x half> %load.4, <16 x half> %load.4, i1 0)
-  %store.0.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 %idx
-  store <16 x half> %mai.0, ptr addrspace(3) %store.0.addr, !alias.scope !2, !noalias !4
-  %store.1.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 64
-  store <16 x half> %mai.1, ptr addrspace(3) %store.1.addr, !alias.scope !2, !noalias !4
-  %store.2.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 128
-  store <16 x half> %mai.2, ptr addrspace(3) %store.2.addr, !alias.scope !2, !noalias !4
-  %store.3.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 192
-  store <16 x half> %mai.3, ptr addrspace(3) %store.3.addr, !alias.scope !2, !noalias !4
-  %store.4.addr = getelementptr <16 x half>, ptr addrspace(3) %out, i32 256
-  store <16 x half> %mai.4, ptr addrspace(3) %store.4.addr, !alias.scope !2, !noalias !4
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-  call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-  ret void
-}
-
 declare i32 @llvm.amdgcn.workitem.id.x() #2
-declare void @llvm.amdgcn.sched.group.barrier(i32, i32, i32) #1
-declare <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half>, <16 x half> , <16 x half>, i1 immarg) #1
 
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1,32" }
 attributes #1 = { nounwind }
@@ -677,14 +303,4 @@ attributes #2 = { nounwind readnone speculatable }
 ; CHECK: [[META39]] = !{[[META7]], [[META34]], [[META30]], [[META35]]}
 ; CHECK: [[META40]] = !{[[META10]], [[META34]]}
 ; CHECK: [[META41]] = !{[[META7]], [[META33]], [[META30]], [[META35]]}
-; CHECK: [[META42]] = !{[[META43:![0-9]+]]}
-; CHECK: [[META43]] = distinct !{[[META43]], [[META44:![0-9]+]], !"in"}
-; CHECK: [[META44]] = distinct !{[[META44]], !"aliasinfo_10v16f16_NA"}
-; CHECK: [[META45]] = !{[[META46:![0-9]+]]}
-; CHECK: [[META46]] = distinct !{[[META46]], [[META44]], !"out"}
-; CHECK: [[META47]] = !{[[META7]], [[META48:![0-9]+]]}
-; CHECK: [[META48]] = distinct !{[[META48]], [[META49:![0-9]+]], !"in"}
-; CHECK: [[META49]] = distinct !{[[META49]], !"aliasinfo_10v16f16_NA_AS"}
-; CHECK: [[META50]] = !{[[META10]], [[META51:![0-9]+]]}
-; CHECK: [[META51]] = distinct !{[[META51]], [[META49]], !"out"}
 ;.

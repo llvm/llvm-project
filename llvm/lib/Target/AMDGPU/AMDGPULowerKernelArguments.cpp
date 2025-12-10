@@ -25,10 +25,12 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 #include <string>
 
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
@@ -97,10 +99,23 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
        Inst != InstEnd; ++Inst) {
     // If instruction accesses memory, collect its pointer arguments.
     Instruction *I = &(*Inst);
-    SmallVector<InterestingMemoryOperand, 2u> MemOps;
-    AMDGPU::getInterestingMemoryOperands(*F.getParent(), I, MemOps);
+    SmallVector<const Value *, 2u> PtrArgs;
 
-    if (MemOps.empty())
+    if (std::optional<MemoryLocation> MO = MemoryLocation::getOrNone(I))
+      PtrArgs.push_back(MO->Ptr);
+    else if (const CallBase *Call = dyn_cast<CallBase>(I)) {
+      if (Call->doesNotAccessMemory())
+        continue;
+
+      for (Value *Arg : Call->args()) {
+        if (!Arg->getType()->isPointerTy())
+          continue;
+
+        PtrArgs.push_back(Arg);
+      }
+    }
+
+    if (PtrArgs.empty())
       continue;
 
     // Collect underlying objects of pointer arguments.
@@ -108,9 +123,9 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
     SmallPtrSet<const Value *, 4u> ObjSet;
     SmallVector<Metadata *, 4u> NoAliases;
 
-    for (InterestingMemoryOperand &MO : MemOps) {
+    for (const Value *Val : PtrArgs) {
       SmallVector<const Value *, 4u> Objects;
-      getUnderlyingObjects(MO.getPtr(), Objects);
+      getUnderlyingObjects(Val, Objects);
       ObjSet.insert_range(Objects);
     }
 
