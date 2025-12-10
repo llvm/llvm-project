@@ -4054,7 +4054,7 @@ void Verifier::visitCallBase(CallBase &Call) {
         Check(isa<MDString>(MD),
               "Value of a \"fp.round\" bundle operand must be a string", Call);
         StringRef Item = cast<MDString>(MD)->getString();
-        if (convertBundleToRoundingMode(Item)) {
+        if (readRoundingSpec(Item)) {
           Check(!FoundRoundingMode, "Rounding mode is specified more that once",
                 Call);
           FoundRoundingMode = true;

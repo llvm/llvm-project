@@ -21,6 +21,40 @@
 
 using namespace llvm;
 
+std::optional<RoundingSpec> llvm::readRoundingSpec(StringRef Str) {
+  SmallVector<StringRef, 2> Parts;
+  Str.split(Parts, ',');
+  if (Parts.size() < 1 || Parts.size() > 2)
+    return std::nullopt;
+
+  RoundingMode Effective = readRoundingMode(Parts.front());
+  if (Effective == RoundingMode::Invalid)
+    return std::nullopt;
+  if (Parts.size() == 1)
+    return RoundingSpec::makeStatic(Effective);
+
+  RoundingMode Dynamic = readRoundingMode(Parts[1]);
+  if (Dynamic == RoundingMode::Invalid)
+    return std::nullopt;
+  if (Dynamic != RoundingMode::Dynamic)
+    std::swap(Effective, Dynamic);
+  if (Dynamic != RoundingMode::Dynamic)
+    return std::nullopt;
+
+  return RoundingSpec(Effective, true);
+}
+
+RoundingMode llvm::readRoundingMode(StringRef RoundingArg) {
+  return StringSwitch<RoundingMode>(RoundingArg)
+      .Case("dynamic", RoundingMode::Dynamic)
+      .Case("tonearest", RoundingMode::NearestTiesToEven)
+      .Case("tonearestaway", RoundingMode::NearestTiesToAway)
+      .Case("downward", RoundingMode::TowardNegative)
+      .Case("upward", RoundingMode::TowardPositive)
+      .Case("towardzero", RoundingMode::TowardZero)
+      .Default(RoundingMode::Invalid);
+}
+
 std::optional<RoundingMode>
 llvm::convertStrToRoundingMode(StringRef RoundingArg) {
   // For dynamic rounding mode, we use round to nearest but we will set the
@@ -32,18 +66,6 @@ llvm::convertStrToRoundingMode(StringRef RoundingArg) {
       .Case("round.downward", RoundingMode::TowardNegative)
       .Case("round.upward", RoundingMode::TowardPositive)
       .Case("round.towardzero", RoundingMode::TowardZero)
-      .Default(std::nullopt);
-}
-
-std::optional<RoundingMode>
-llvm::convertBundleToRoundingMode(StringRef RoundingArg) {
-  return StringSwitch<std::optional<RoundingMode>>(RoundingArg)
-      .Case("dynamic", RoundingMode::Dynamic)
-      .Case("tonearest", RoundingMode::NearestTiesToEven)
-      .Case("tonearestaway", RoundingMode::NearestTiesToAway)
-      .Case("downward", RoundingMode::TowardNegative)
-      .Case("upward", RoundingMode::TowardPositive)
-      .Case("towardzero", RoundingMode::TowardZero)
       .Default(std::nullopt);
 }
 

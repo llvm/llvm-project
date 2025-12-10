@@ -142,7 +142,8 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
                  "FP exception in default mode must be ignored");
         }
 
-        // Options specified by bundle arguments have higher precedence. Some FP
+        // The options specified by the specified bundles have higher
+        // precedence than the options specified in the builder. Some FP
         // operations do not depend on rounding mode, do not add "fp.round"
         // to them.
         bool NoRoundingMode = !IntrinsicInst::dependsOnRoundingMode(ID);
@@ -155,9 +156,9 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
           if (AddExceptions && Bundle.getTag() == "fp.except")
             AddExceptions = false;
         }
-
         if (AddRounding && NoRoundingMode)
           AddRounding = false;
+
         if (!OpBundles.empty()) {
           if (RoundingModeIsSpecified && NoRoundingMode) {
             std::copy_if(OpBundles.begin(), OpBundles.end(),
@@ -167,6 +168,18 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
                          });
           } else {
             ActualBundles.append(OpBundles.begin(), OpBundles.end());
+#ifndef NDEBUG
+            // In the default floating-point mode assumed rounding is not
+            // allowed, except when rounding mode is NearestTiesToEven.
+            if (!IsFPConstrained)
+              for (const OperandBundleDef &Bundle : ActualBundles) {
+                if (Bundle.getTag() == "fp.round") {
+                  StringRef MDS = Bundle.getInputAsString(0);
+                  RoundingSpec RS = *readRoundingSpec(MDS);
+                  assert(RS.isStatic() || RS.isDefault());
+                }
+              }
+#endif
           }
           ActualBundlesRef = ActualBundles;
         }

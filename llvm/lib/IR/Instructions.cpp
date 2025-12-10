@@ -648,24 +648,25 @@ bool CallBase::hasFloatingPointOperandBundle() const {
   return false;
 }
 
-RoundingMode CallBase::getRoundingMode() const {
-  // Try reading rounding mode from operand bundle.
-  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fp_round)) {
-    Value *V = RoundingBundle->Inputs.front();
-    Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
-    if (auto RM = convertBundleToRoundingMode(cast<MDString>(MD)->getString()))
-      return *RM;
-  }
+RoundingSpec CallBase::getRoundingSpec() const {
+  // Try reading the rounding mode from the operand bundles.
+  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fp_round))
+    if (auto R = readRoundingSpec(RoundingBundle->getInputAsString(0)))
+      return *R;
 
-  // No FP bundle, try to guess from attributes of the current function.
+  // No FP bundle, try to guess from the attributes of the current function.
   if (const BasicBlock *BB = getParent())
     if (const Function *F = BB->getParent())
       return F->getAttributes().hasFnAttr(Attribute::StrictFP)
-                 ? RoundingMode::Dynamic
-                 : RoundingMode::NearestTiesToEven;
+                 ? RoundingSpec::makeDynamic()
+                 : RoundingSpec::makeAssumed(RoundingMode::NearestTiesToEven);
 
-  // Isolated call. Assume default environment.
-  return RoundingMode::NearestTiesToEven;
+  // An isolated call. Assume the default environment.
+  return RoundingSpec::makeAssumed(RoundingMode::NearestTiesToEven);
+}
+
+RoundingMode CallBase::getRoundingMode() const {
+  return getRoundingSpec().getEffective();
 }
 
 fp::ExceptionBehavior CallBase::getExceptionBehavior() const {
@@ -816,7 +817,7 @@ bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
 
 void llvm::addRoundingBundle(LLVMContext &Ctx,
                              SmallVectorImpl<OperandBundleDef> &Bundles,
-                             RoundingMode Rounding) {
+                             RoundingMode Rounding, bool Assumed) {
   assert(std::find_if(Bundles.begin(), Bundles.end(),
                       [](const OperandBundleDef &B) {
                         return B.getTag() == "fp.round";
@@ -824,7 +825,13 @@ void llvm::addRoundingBundle(LLVMContext &Ctx,
          "Bundle 'fp.round' already exists");
   std::optional<StringRef> RndStr = convertRoundingModeToBundle(Rounding);
   assert(RndStr && "Garbage rounding mode!");
-  auto *RoundingMDS = MDString::get(Ctx, *RndStr);
+  StringRef RndValue = *RndStr;
+  std::string RndSpec;
+  if (Assumed && Rounding != RoundingMode::Dynamic) {
+    RndSpec = RndValue.str() + ",dynamic";
+    RndValue = StringRef(RndSpec);
+  }
+  auto *RoundingMDS = MDString::get(Ctx, RndValue);
   auto *RM = MetadataAsValue::get(Ctx, RoundingMDS);
   Bundles.emplace_back("fp.round", RM);
 }
