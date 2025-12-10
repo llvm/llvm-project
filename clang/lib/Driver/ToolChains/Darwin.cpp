@@ -566,8 +566,6 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-static void AppendPlatformPrefix(SmallString<128> &Path, const llvm::Triple &T);
-
 void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,
@@ -801,7 +799,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (auto *Sysroot = Args.getLastArg(options::OPT_isysroot)) {
         auto AddSearchPath = [&](StringRef Flag, StringRef SearchPath) {
           SmallString<128> P(Sysroot->getValue());
-          AppendPlatformPrefix(P, Triple);
+          getMachOToolChain().AppendPlatformPrefix(P, Triple);
           llvm::sys::path::append(P, SearchPath);
           if (getToolChain().getVFS().exists(P)) {
             CmdArgs.push_back(Args.MakeArgString(Flag + P));
@@ -2609,9 +2607,15 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
 // For certain platforms/environments almost all resources (e.g., headers) are
 // located in sub-directories, e.g., for DriverKit they live in
 // <SYSROOT>/System/DriverKit/usr/include (instead of <SYSROOT>/usr/include).
-static void AppendPlatformPrefix(SmallString<128> &Path,
-                                 const llvm::Triple &T) {
-  if (T.isDriverKit()) {
+void DarwinClang::AppendPlatformPrefix(SmallString<128> &Path,
+                                       const llvm::Triple &T) const {
+  if (SDKInfo) {
+    const StringRef SystemPrefix = SDKInfo->getSystemPrefix(T);
+    if (!SystemPrefix.empty())
+      llvm::sys::path::append(Path, SystemPrefix);
+  } else if (T.isDriverKit()) {
+    // The first version of DriverKit didn't have SDKSettings.json, manually add
+    // its prefix.
     llvm::sys::path::append(Path, "System", "DriverKit");
   }
 }

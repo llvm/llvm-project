@@ -144,17 +144,27 @@ public:
   DarwinSDKInfo(
       VersionTuple Version, VersionTuple MaximumDeploymentTarget,
       llvm::Triple::OSType OS,
+      llvm::SmallDenseMap<llvm::Triple, std::string> SystemPrefixes =
+          llvm::SmallDenseMap<llvm::Triple, std::string>(),
       llvm::DenseMap<OSEnvPair::StorageType,
                      std::optional<RelatedTargetVersionMapping>>
           VersionMappings =
               llvm::DenseMap<OSEnvPair::StorageType,
                              std::optional<RelatedTargetVersionMapping>>())
       : Version(Version), MaximumDeploymentTarget(MaximumDeploymentTarget),
-        OS(OS), VersionMappings(std::move(VersionMappings)) {}
+        OS(OS), SystemPrefixes(SystemPrefixes),
+        VersionMappings(std::move(VersionMappings)) {}
 
   const llvm::VersionTuple &getVersion() const { return Version; }
 
   const llvm::Triple::OSType &getOS() const { return OS; }
+
+  const StringRef getSystemPrefix(llvm::Triple Triple) const {
+    auto SystemPrefix = SystemPrefixes.find(Triple);
+    if (SystemPrefix == SystemPrefixes.end())
+      return StringRef();
+    return SystemPrefix->getSecond();
+  }
 
   // Returns the optional, target-specific version mapping that maps from one
   // target to another target.
@@ -181,6 +191,7 @@ private:
   VersionTuple Version;
   VersionTuple MaximumDeploymentTarget;
   llvm::Triple::OSType OS;
+  llvm::SmallDenseMap<llvm::Triple, std::string> SystemPrefixes;
   // Need to wrap the value in an optional here as the value has to be default
   // constructible, and std::unique_ptr doesn't like DarwinSDKInfo being
   // Optional as Optional is trying to copy it in emplace.

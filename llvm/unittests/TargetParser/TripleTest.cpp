@@ -3325,6 +3325,19 @@ TEST(TripleTest, isCompatibleWith) {
   }
 }
 
+TEST(TripleTest, equalsAndHash) {
+  EXPECT_EQ(Triple("arm64-apple-ios26.0"), Triple("arm64-apple-ios26.0"));
+  EXPECT_EQ(Triple("arm64-apple-ios26.0"), Triple("arm64-apple-ios26.1"));
+  EXPECT_NE(Triple("arm64-apple-ios26.0"), Triple("arm64-apple-macos26.0"));
+  EXPECT_NE(Triple("arm64-apple-ios26.0"),
+            Triple("arm64-apple-ios26.0-macabi"));
+
+  EXPECT_EQ(hash_value(Triple("arm64-apple-ios26.0")),
+            hash_value(Triple("arm64-apple-ios26.0")));
+  EXPECT_EQ(hash_value(Triple("arm64-apple-ios26.0")),
+            hash_value(Triple("arm64-apple-ios26.1")));
+}
+
 TEST(DataLayoutTest, UEFI) {
   Triple TT = Triple("x86_64-unknown-uefi");
 

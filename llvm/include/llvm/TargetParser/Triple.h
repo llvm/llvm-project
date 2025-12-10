@@ -9,6 +9,7 @@
 #ifndef LLVM_TARGETPARSER_TRIPLE_H
 #define LLVM_TARGETPARSER_TRIPLE_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
@@ -202,7 +203,8 @@ public:
     OpenEmbedded,
     Intel,
     Meta,
-    LastVendorType = Meta
+    LastVendorType = Meta,
+    TombstoneVendor = LastVendorType + 1
   };
   enum OSType {
     UnknownOS,
@@ -1362,6 +1364,27 @@ public:
   /// Compute the LLVM IR data layout string based on the triple. Some targets
   /// customize the layout based on the ABIName string.
   LLVM_ABI std::string computeDataLayout(StringRef ABIName = "") const;
+};
+
+inline hash_code hash_value(const Triple &Val) {
+  return hash_combine(Val.getArch(), Val.getSubArch(), Val.getVendor(),
+                      Val.getOS(), Val.getEnvironment(), Val.getObjectFormat());
+}
+
+template <> struct DenseMapInfo<Triple> {
+  static inline Triple getEmptyKey() { return Triple(); }
+
+  static inline Triple getTombstoneKey() {
+    Triple TombstoneKey;
+    TombstoneKey.setVendor(Triple::TombstoneVendor);
+    return TombstoneKey;
+  }
+
+  static unsigned getHashValue(const Triple &Val) { return hash_value(Val); }
+
+  static bool isEqual(const Triple &LHS, const Triple &RHS) {
+    return LHS == RHS;
+  }
 };
 
 } // End llvm namespace

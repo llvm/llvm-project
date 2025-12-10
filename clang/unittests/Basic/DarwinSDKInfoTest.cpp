@@ -78,6 +78,38 @@ TEST(DarwinSDKInfo, VersionMappingParseError) {
           .has_value());
 }
 
+TEST(DarwinSDKInfo, SystemPrefix) {
+  llvm::json::Object SDKSettings(
+      {{"Version", "26.0"}, {"MaximumDeploymentTarget", "26.0.99"}});
+  llvm::json::Object SupportedTargets;
+  llvm::json::Object MacOS({{"Archs", {"x86_64", "arm64"}},
+                            {"LLVMTargetTripleVendor", "apple"},
+                            {"LLVMTargetTripleSys", "macos"},
+                            {"LLVMTargetTripleEnvironment", ""},
+                            {"SystemPrefix", ""}});
+  llvm::json::Object MacCatalyst({{"Archs", {"x86_64", "arm64"}},
+                                  {"LLVMTargetTripleVendor", "apple"},
+                                  {"LLVMTargetTripleSys", "ios"},
+                                  {"LLVMTargetTripleEnvironment", "macabi"},
+                                  {"SystemPrefix", "/System/iOSSupport"}});
+  llvm::json::Object DriverKit({{"Archs", {"x86_64", "arm64"}},
+                                {"LLVMTargetTripleVendor", "apple"},
+                                {"LLVMTargetTripleSys", "driverkit"},
+                                {"LLVMTargetTripleEnvironment", ""},
+                                {"SystemPrefix", "/System/DriverKit"}});
+  SupportedTargets["macosx"] = std::move(MacOS);
+  SupportedTargets["iosmac"] = std::move(MacCatalyst);
+  SupportedTargets["driverkit"] = std::move(DriverKit);
+  SDKSettings["SupportedTargets"] = std::move(SupportedTargets);
+
+  auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON(&SDKSettings);
+  ASSERT_TRUE(SDKInfo);
+  EXPECT_EQ(SDKInfo->getSystemPrefix(Triple("arm64-apple-macos26.0")), "");
+  EXPECT_EQ(SDKInfo->getSystemPrefix(Triple("arm64-apple-ios26.0-macabi")), "");
+  EXPECT_EQ(SDKInfo->getSystemPrefix(Triple("arm64-apple-driverkit")),
+            "/System/DriverKit");
+}
+
 TEST(DarwinSDKInfoTest, ParseAndTestMappingMacCatalyst) {
   llvm::json::Object Obj;
   Obj["Version"] = "11.0";

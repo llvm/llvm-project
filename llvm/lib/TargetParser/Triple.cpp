@@ -281,6 +281,8 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   case SUSE: return "suse";
   case Meta:
     return "meta";
+  case TombstoneVendor:
+    return "tombstone";
   }
 
   llvm_unreachable("Invalid VendorType!");
