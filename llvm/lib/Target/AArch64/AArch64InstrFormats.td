@@ -9059,7 +9059,8 @@ multiclass BaseSIMDThreeSameVectorBF16DotI<bit Q, bit U, string asm,
     def : Pat<(AccumType (int_aarch64_neon_bfdot
                 (AccumType RegType:$Rd), (InputType RegType:$Rn),
                 (InputType (bitconvert
-                  (DupTypes.VT0 (AArch64duplane32 (DupTypes.VT1 V128:$Rm), VectorIndexS:$Idx)))))),
+                  (DupTypes.VT0 (AArch64duplane32 (DupTypes.VT1
+                    (bitconvert (v8bf16 V128:$Rm))), VectorIndexS:$Idx)))))),
               (!cast<Instruction>(NAME) $Rd, $Rn, $Rm, VectorIndexS:$Idx)>;
   }
 }
