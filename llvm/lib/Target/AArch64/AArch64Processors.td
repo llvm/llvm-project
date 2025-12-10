@@ -320,8 +320,8 @@ def TuneX925 : SubtargetFeature<"cortex-x925", "ARMProcFamily",
                                 FeatureAvoidLDAPUR,
                                 FeaturePredictableSelectIsExpensive]>;
 
-def TuneC1Ultra : SubtargetFeature<"c1-ultra", "ARMProcFamily",
-                                  "C1Ultra", "C1-Ultra ARM Processors",[
+def TuneC1Premium : SubtargetFeature<"c1-premium", "ARMProcFamily",
+                                  "C1Premium", "C1-Premium ARM Processors",[
                                   FeatureALULSLFast,
                                   FeatureFuseAdrpAdd,
                                   FeatureFuseCmpCSel,
@@ -333,8 +333,8 @@ def TuneC1Ultra : SubtargetFeature<"c1-ultra", "ARMProcFamily",
                                   FeatureAvoidLDAPUR,
                                   FeaturePredictableSelectIsExpensive]>;
 
-def TuneC1Premium : SubtargetFeature<"c1-premium", "ARMProcFamily",
-                                  "C1Premium", "C1-Premium ARM Processors",[
+def TuneC1Ultra : SubtargetFeature<"c1-ultra", "ARMProcFamily",
+                                  "C1Ultra", "C1-Ultra ARM Processors",[
                                   FeatureALULSLFast,
                                   FeatureFuseAdrpAdd,
                                   FeatureFuseCmpCSel,
@@ -1067,20 +1067,6 @@ def ProcessorFeatures {
                                  FeatureDotProd, FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8,
                                  FeatureJS, FeatureLSE, FeatureNEON, FeaturePAuth, FeatureRAS,
                                  FeatureRCPC, FeatureRDM, FeatureFPAC];
-  list<SubtargetFeature> C1Ultra = [HasV9_3aOps, FeatureNEON, FeatureCLRBHB,
-                                    FeatureCHK, FeatureFPARMv8, FeaturePerfMon,
-                                    FeatureSPECRES2, FeatureSSBS, FeatureRDM,
-                                    FeatureVH, FeatureBF16, FeatureDotProd,
-                                    FeatureFP16FML, FeatureFullFP16,
-                                    FeatureMPAM, FeatureSPE, FeatureSVE,
-                                    FeatureCCIDX, FeatureComplxNum, FeatureFPAC,
-                                    FeatureJS, FeatureAM, FeatureRAS,
-                                    FeatureSEL2, FeatureTRACEV8_4,
-                                    FeatureAltFPCmp, FeatureFRInt3264,
-                                    FeatureMTE, FeatureFineGrainedTraps,
-                                    FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
-                                    FeatureETE, FeatureSVEBitPerm, FeatureSVE2,
-                                    FeatureTRBE, FeatureSME, FeatureSME2];
   list<SubtargetFeature> C1Premium = [HasV9_3aOps, FeatureNEON, FeatureCLRBHB,
                                       FeatureCHK, FeatureFPARMv8,
                                       FeaturePerfMon, FeatureSPECRES2,
@@ -1097,6 +1083,20 @@ def ProcessorFeatures {
                                       FeatureETE, FeatureSVEBitPerm,
                                       FeatureSVE2, FeatureTRBE, FeatureSME,
                                       FeatureSME2];
+  list<SubtargetFeature> C1Ultra = [HasV9_3aOps, FeatureNEON, FeatureCLRBHB,
+                                    FeatureCHK, FeatureFPARMv8, FeaturePerfMon,
+                                    FeatureSPECRES2, FeatureSSBS, FeatureRDM,
+                                    FeatureVH, FeatureBF16, FeatureDotProd,
+                                    FeatureFP16FML, FeatureFullFP16,
+                                    FeatureMPAM, FeatureSPE, FeatureSVE,
+                                    FeatureCCIDX, FeatureComplxNum, FeatureFPAC,
+                                    FeatureJS, FeatureAM, FeatureRAS,
+                                    FeatureSEL2, FeatureTRACEV8_4,
+                                    FeatureAltFPCmp, FeatureFRInt3264,
+                                    FeatureMTE, FeatureFineGrainedTraps,
+                                    FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
+                                    FeatureETE, FeatureSVEBitPerm, FeatureSVE2,
+                                    FeatureTRBE, FeatureSME, FeatureSME2];
   list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
                                      FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
                                      FeatureSVE, FeatureComplxNum,
@@ -1368,7 +1368,7 @@ def : ProcessorModel<"cortex-a520", CortexA510Model, ProcessorFeatures.A520,
                      [TuneA520]>;
 def : ProcessorModel<"cortex-a520ae", CortexA510Model, ProcessorFeatures.A520AE,
                      [TuneA520AE]>;
-def : ProcessorModel<"c1-nano", NeoverseN2Model,
+def : ProcessorModel<"c1-nano", CortexA510Model,
                      ProcessorFeatures.C1Nano, [TuneC1Nano]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, ProcessorFeatures.A53,
                      [TuneA57]>;
@@ -1404,7 +1404,7 @@ def : ProcessorModel<"cortex-a720ae", NeoverseN2Model, ProcessorFeatures.A720AE,
                      [TuneA720AE]>;
 def : ProcessorModel<"cortex-a725", NeoverseN3Model, ProcessorFeatures.A725,
                      [TuneA725]>;
-def : ProcessorModel<"c1-pro", NeoverseN2Model,
+def : ProcessorModel<"c1-pro", NeoverseN3Model,
                      ProcessorFeatures.C1Pro, [TuneC1Pro]>;
 def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
                      [TuneR82]>;
@@ -1422,10 +1422,10 @@ def : ProcessorModel<"cortex-x4", NeoverseV3Model, ProcessorFeatures.X4,
                      [TuneX4]>;
 def : ProcessorModel<"cortex-x925", NeoverseV3Model, ProcessorFeatures.X925,
                      [TuneX925]>;
-def : ProcessorModel<"c1-ultra", NeoverseV3Model,
-                     ProcessorFeatures.C1Ultra, [TuneC1Ultra]>;
 def : ProcessorModel<"c1-premium", NeoverseV3Model,
                      ProcessorFeatures.C1Premium, [TuneC1Premium]>;
+def : ProcessorModel<"c1-ultra", NeoverseV3Model,
+                     ProcessorFeatures.C1Ultra, [TuneC1Ultra]>;
 def : ProcessorModel<"gb10", NeoverseV3Model, ProcessorFeatures.GB10,
                      [TuneX925]>;
 def : ProcessorModel<"grace", NeoverseV2Model, ProcessorFeatures.Grace,
