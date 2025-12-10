@@ -15,14 +15,11 @@ endif()
 if (LIBCXXABI_USE_LLVM_UNWINDER AND TARGET unwind)
   list(APPEND libcxx_test_suite_install_targets unwind-headers unwind)
 endif()
-# Run installation targets serially to avoid race conditions between install targets
-set_property(GLOBAL PROPERTY JOB_POOLS libcxx-test-install-pool=1 APPEND)
 foreach(target IN LISTS libcxx_test_suite_install_targets)
   add_custom_target(libcxx-test-suite-install-${target} DEPENDS "${target}"
                     COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
                                                --prefix "${LIBCXX_TESTING_INSTALL_PREFIX}"
-                                               --component "${target}"
-                    JOB_POOL libcxx-test-install-pool)
+                                               --component "${target}")
   add_dependencies(cxx-test-depends libcxx-test-suite-install-${target})
 endforeach()
 
