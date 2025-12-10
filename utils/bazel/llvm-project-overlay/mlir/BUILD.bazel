@@ -8504,6 +8504,7 @@ cc_library(
         ":IR",
         ":Pass",
         ":TransformUtils",
+        ":VectorDialect",
     ],
 )
 

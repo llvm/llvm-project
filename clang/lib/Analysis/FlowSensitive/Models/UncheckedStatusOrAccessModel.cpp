@@ -324,7 +324,7 @@ static auto isPredicateFormatterFromStatusMatcherCall() {
       hasOverloadedOperatorName("()"),
       callee(cxxMethodDecl(ofClass(
           hasName("testing::internal::PredicateFormatterFromMatcher")))),
-      hasArgument(2, hasType(cxxRecordDecl(hasName("absl::Status")))));
+      hasArgument(2, hasType(statusType())));
 }
 
 static auto isPredicateFormatterFromStatusOrMatcherCall() {
@@ -1064,6 +1064,16 @@ static void transferArrowCall(const CallExpr *Expr,
                                 StatusOrLoc->getSyntheticField("value")));
 }
 
+static void transferValueCall(const CXXMemberCallExpr *Expr,
+                              const MatchFinder::MatchResult &,
+                              LatticeTransferState &State) {
+  auto *StatusOrLoc = getImplicitObjectLocation(*Expr, State.Env);
+
+  if (StatusOrLoc && State.Env.getStorageLocation(*Expr) == nullptr)
+    State.Env.setStorageLocation(*Expr,
+                                 StatusOrLoc->getSyntheticField("value"));
+}
+
 static RecordStorageLocation *
 getSmartPtrLikeStorageLocation(const Expr &E, const Environment &Env) {
   if (!E.isPRValue())
@@ -1154,6 +1164,8 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                transferArrowCall)
       .CaseOfCFGStmt<CallExpr>(isStatusOrOperatorCallWithName("*"),
                                transferDerefCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusOrMemberCallWithName("value"),
+                                        transferValueCall)
       .CaseOfCFGStmt<CallExpr>(isAsStatusCallWithStatus(),
                                transferAsStatusCallWithStatus)
       .CaseOfCFGStmt<CallExpr>(isAsStatusCallWithStatusOr(),
