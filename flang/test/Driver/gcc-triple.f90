@@ -1,4 +1,4 @@
-!! UNSUPPORTED: system-windows, system-aix
+!! UNSUPPORTED: system-windows, system-aix, system-darwin
 
 !! Test that --gcc-triple option is working as expected.
 
