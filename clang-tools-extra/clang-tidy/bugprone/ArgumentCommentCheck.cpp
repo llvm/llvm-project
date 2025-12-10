@@ -290,6 +290,32 @@ collectLeadingComments(ASTContext *Ctx, SourceLocation SearchBegin,
   return Result;
 }
 
+template <typename NamedDeclRange>
+static bool diagnoseMismatchInComment(
+    ArgumentCommentCheck &Self, ASTContext *Ctx,
+    const NamedDeclRange &Candidates, const IdentifierInfo *II,
+    bool StrictMode, llvm::Regex &IdentRE,
+    const std::pair<SourceLocation, StringRef> &Comment,
+    SourceLocation DeclLoc) {
+  llvm::SmallVector<StringRef, 2> Matches;
+  if (!(IdentRE.match(Comment.second, &Matches) &&
+        !sameName(Matches[2], II->getName(), StrictMode)))
+    return false;
+
+  {
+    const DiagnosticBuilder Diag = Self.diag(
+        Comment.first,
+        "argument name '%0' in comment does not match parameter name %1")
+                                   << Matches[2] << II;
+    if (isLikelyTypo(Candidates, Matches[2], II->getName())) {
+      Diag << FixItHint::CreateReplacement(
+          Comment.first, (Matches[1] + II->getName() + Matches[3]).str());
+    }
+  }
+  Self.diag(DeclLoc, "%0 declared here", DiagnosticIDs::Note) << II;
+  return true;
+}
+
 // Given the argument type and the options determine if we should
 // be adding an argument comment.
 bool ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
@@ -342,25 +368,13 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     ArgBeginLoc = Args[I]->getEndLoc();
 
     for (auto Comment : Comments) {
-      llvm::SmallVector<StringRef, 2> Matches;
-      if (IdentRE.match(Comment.second, &Matches) &&
-          !sameName(Matches[2], II->getName(), StrictMode)) {
-        {
-          const DiagnosticBuilder Diag =
-              diag(Comment.first, "argument name '%0' in comment does not "
-                                  "match parameter name %1")
-              << Matches[2] << II;
-          if (isLikelyTypo(Callee->parameters(), Matches[2], II->getName())) {
-            Diag << FixItHint::CreateReplacement(
-                Comment.first, (Matches[1] + II->getName() + Matches[3]).str());
-          }
-        }
-        diag(PVD->getLocation(), "%0 declared here", DiagnosticIDs::Note) << II;
-        if (OriginalCallee != Callee) {
-          diag(OriginalCallee->getLocation(),
-               "actual callee (%0) is declared here", DiagnosticIDs::Note)
-              << OriginalCallee;
-        }
+      const bool HadMismatch = diagnoseMismatchInComment(
+          *this, Ctx, Callee->parameters(), II, StrictMode, IdentRE, Comment,
+          PVD->getLocation());
+      if (HadMismatch && OriginalCallee != Callee) {
+        diag(OriginalCallee->getLocation(),
+             "actual callee (%0) is declared here", DiagnosticIDs::Note)
+            << OriginalCallee;
       }
     }
 
