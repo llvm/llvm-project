@@ -239,6 +239,10 @@ static cl::opt<WWMRegisterRegAlloc::FunctionPassCtor, false,
                 cl::init(&useDefaultRegisterAllocator),
                 cl::desc("Register allocator to use for WWM registers"));
 
+static cl::opt<bool> EnableCondBarrier("amdgpu-enable-cond-barrier",
+                                       cl::Hidden, cl::init(false),
+                                       cl::desc("Enable SI_COND_BARRIER pseudo instruction expansion"));
+
 static void initializeDefaultSGPRRegisterAllocatorOnce() {
   RegisterRegAlloc::FunctionPassCtor Ctor = SGPRRegisterRegAlloc::getDefault();
 
@@ -1763,10 +1767,12 @@ void GCNPassConfig::addPostRegAlloc() {
   if (getOptLevel() > CodeGenOptLevel::None)
     addPass(&SIOptimizeExecMaskingLegacyID);
 
-  // Add ExpandCondBarrier pass before post-RA pseudo expansion
-  addPass(&AMDGPUExpandCondBarrierID);
-
   TargetPassConfig::addPostRegAlloc();
+
+  // Add ExpandCondBarrier pass AFTER standard post-RA pseudo expansion
+  // SI_COND_BARRIER returns false from SIInstrInfo::expandPostRAPseudo()
+  if (EnableCondBarrier)
+    addPass(&AMDGPUExpandCondBarrierID);
 }
 
 void GCNPassConfig::addPreSched2() {

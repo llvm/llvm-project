@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=amdgpu-expand-cond-barrier %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-enable-cond-barrier -run-pass=amdgpu-expand-cond-barrier %s -o - | FileCheck %s
 
 --- |
   define amdgpu_kernel void @test_single_barrier() {

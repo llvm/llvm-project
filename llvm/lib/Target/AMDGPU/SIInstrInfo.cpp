@@ -2029,7 +2029,11 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   default: return TargetInstrInfo::expandPostRAPseudo(MI);
 
   case AMDGPU::SI_COND_BARRIER:
-    // SI_COND_BARRIER is handled by the dedicated ExpandCondBarrier pass
+    // SI_COND_BARRIER requires a separate pass because it needs to modify the CFG
+    // (split basic blocks, create new blocks, add successors), which causes
+    // iterator invalidation issues when done within expandPostRAPseudo().
+    // The ExpandPostRAPseudos pass uses early_inc_iterator which gets invalidated
+    // by CFG modifications, leading to crashes.
     return false;
 
   case AMDGPU::S_MOV_B64_term:
