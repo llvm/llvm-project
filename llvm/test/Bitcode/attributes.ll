@@ -577,8 +577,8 @@ define void @captures(ptr captures(address) %p) {
   ret void
 }
 
-; CHECK: define void @dead_on_return(ptr dead_on_return %p)
-define void @dead_on_return(ptr dead_on_return %p) {
+; CHECK: define void @dead_on_return(ptr dead_on_return(4) %p)
+define void @dead_on_return(ptr dead_on_return(4) %p) {
   ret void
 }
 

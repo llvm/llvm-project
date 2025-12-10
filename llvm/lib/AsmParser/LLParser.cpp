@@ -1612,6 +1612,13 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     B.addDereferenceableAttr(Bytes);
     return false;
   }
+  case Attribute::DeadOnReturn: {
+    uint64_t Bytes;
+    if (parseOptionalDerefAttrBytes(lltok::kw_dead_on_return, Bytes))
+      return true;
+    B.addDeadOnReturnAttr(Bytes);
+    return false;
+  }
   case Attribute::DereferenceableOrNull: {
     uint64_t Bytes;
     if (parseOptionalDerefAttrBytes(lltok::kw_dereferenceable_or_null, Bytes))
@@ -2476,7 +2483,8 @@ bool LLParser::parseOptionalCodeModel(CodeModel::Model &model) {
 bool LLParser::parseOptionalDerefAttrBytes(lltok::Kind AttrKind,
                                            uint64_t &Bytes) {
   assert((AttrKind == lltok::kw_dereferenceable ||
-          AttrKind == lltok::kw_dereferenceable_or_null) &&
+          AttrKind == lltok::kw_dereferenceable_or_null ||
+          AttrKind == lltok::kw_dead_on_return) &&
          "contract!");
 
   Bytes = 0;
