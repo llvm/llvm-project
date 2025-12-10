@@ -1213,14 +1213,6 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_TEAM_NUM)(void) {
 #endif
 }
 
-int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_DEFAULT_DEVICE)(void) {
-#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
-  return 0;
-#else
-  return __kmp_entry_thread()->th.th_current_task->td_icvs.default_device;
-#endif
-}
-
 void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_DEFAULT_DEVICE)(int KMP_DEREF arg) {
 #if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
 // Nothing.
@@ -1265,6 +1257,16 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)(void)
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)(void) {
   // same as omp_get_num_devices()
   return KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)();
+}
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_DEFAULT_DEVICE)(void) {
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
+  return 0;
+#else
+  // When offloading is disabled, return the initial device (host)
+  if (__kmp_target_offload == tgt_disabled)
+    return KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)();
+  return __kmp_entry_thread()->th.th_current_task->td_icvs.default_device;
+#endif
 }
 
 #if defined(KMP_STUB)
