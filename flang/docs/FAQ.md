@@ -25,7 +25,7 @@ local:
 
 This occurs because Flang's implementation of pointers to internal procedures requires an executable stack.
 
-When an internal procedure is referenced from outside its host scope (e.g., via a procedure pointer), the implementation must ensure it can still access its host-associated variables.
+When an internal procedure is referenced from outside its host scope (e.g., via a procedure pointer), the implementation must ensure that it can still access its host-associated variables.
 To achieve this, the current implementation of Flang generates a small piece of code, called a "trampoline", on the stack dynamically.
 Since this trampoline code must be executed, the stack needs to be executable.
 For a more detailed explanation of trampolines, please refer to the [design document](InternalProcedureTrampolines.md).
