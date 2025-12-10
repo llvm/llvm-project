@@ -272,7 +272,7 @@ def G_URSHR_I: AArch64GenericInstruction {
 
 def G_VSLI: AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$src3);
   let hasSideEffects = 0;
 }
 
