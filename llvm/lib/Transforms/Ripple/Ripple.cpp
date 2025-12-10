@@ -1287,6 +1287,25 @@ Error Ripple::replaceRippleGetSize() {
   return AllErrors;
 }
 
+void Ripple::revisitUserInstructions(Instruction *I,
+                                     std::queue<Instruction *> &Queue) {
+  for (auto *User : I->users())
+    if (Instruction *UserInst = dyn_cast<Instruction>(User))
+      if (domTree.isReachableFromEntry(UserInst->getParent()))
+        Queue.push(UserInst);
+
+  if (auto *Store = dyn_cast<StoreInst>(I))
+    if (auto MemLoc = MemoryLocation::getOrNone(I))
+      if (aliasesWithPromotableAlloca(*MemLoc)) {
+        visitAllInstructionsBeingClobberedBy(
+            cast<MemoryDef>(MemSSA.getMemoryAccess(Store)),
+            [&](Instruction *Clobbered) -> bool {
+              Queue.push(Clobbered);
+              return true;
+            });
+      }
+}
+
 Error Ripple::propagateShapes(bool &WaitingForSpecialization) {
   LLVM_DEBUG(dbgs() << "Propagating shapes in function:\n"; F.print(dbgs()));
 
@@ -1312,42 +1331,6 @@ Error Ripple::propagateShapes(bool &WaitingForSpecialization) {
 
   std::queue<Instruction *> WorkQueue;
   WaitingForSpecialization = false;
-
-  std::function<void(Instruction *)> revisitUserInstructions =
-      [&](Instruction *I) {
-        for (auto *User : I->users())
-          if (Instruction *UserInst = dyn_cast<Instruction>(User))
-            if (domTree.isReachableFromEntry(UserInst->getParent()))
-              WorkQueue.push(UserInst);
-
-        if (auto MemLoc = MemoryLocation::getOrNone(I))
-          if (AllocaInst *Alloca = aliasesWithPromotableAlloca(*MemLoc)) {
-            if (auto *Store = dyn_cast<StoreInst>(I)) {
-              visitAllInstructionsBeingClobberedBy(
-                  cast<MemoryDef>(MemSSA.getMemoryAccess(Store)),
-                  [&](Instruction *Clobbered) -> bool {
-                    WorkQueue.push(Clobbered);
-                    return true;
-                  });
-            } else if (auto *Load = dyn_cast<LoadInst>(I)) {
-              visitAllClobberingInstructions(
-                  cast<MemoryUse>(MemSSA.getMemoryAccess(Load)),
-                  [&](Instruction *Clobber) -> bool {
-                    WorkQueue.push(Clobber);
-                    return true;
-                  });
-            } else {
-              llvm_unreachable("Ripple doesn't support promotion of VAARG or "
-                               "Atomic instructions");
-            }
-
-            // Alloca gets the largest shape of all its users
-            auto &AllocaShape = getRippleShape(Alloca);
-            auto &InstructionShape = getRippleShape(I);
-            if (AllocaShape.flatShape() < InstructionShape.flatShape())
-              setRippleShape(Alloca, InstructionShape);
-          }
-      };
 
   // Start processing the function in reverse post order
   for (auto *BB : getFuncRPOT())
@@ -1383,7 +1366,15 @@ Error Ripple::propagateShapes(bool &WaitingForSpecialization) {
     // Process the users if we updates the shape of the instruction
     if (setRippleShape(I, *NewShape)) {
       // Revisit users of an instruction that changed shape
-      revisitUserInstructions(I);
+      revisitUserInstructions(I, WorkQueue);
+
+      if (auto MemLoc = MemoryLocation::getOrNone(I))
+        if (AllocaInst *Alloca = aliasesWithPromotableAlloca(*MemLoc)) {
+          // Alloca gets the largest shape of all its users
+          auto &AllocaShape = getRippleShape(Alloca);
+          if (AllocaShape.flatShape() < NewShape->flatShape())
+            setRippleShape(Alloca, *NewShape);
+        }
 
       if (isa<BranchInst>(I) || isa<SwitchInst>(I)) {
         // Mark masked calls
@@ -1430,7 +1421,16 @@ Error Ripple::propagateShapes(bool &WaitingForSpecialization) {
         setRippleShape(Return, BcastReturnShape);
   }
 
-  // Now that all shapes have settled, create linear series
+  assert(allInstructionsHaveRippleShapes() &&
+         "Some instruction has no Ripple shape");
+  return Error::success();
+}
+
+Error Ripple::createLinearSeries() {
+  assert(allInstructionsHaveRippleShapes() &&
+         "Some instruction has no Ripple shape");
+  std::queue<Instruction *> WorkQueue;
+
   for (auto *BB : getFuncRPOT()) {
     for (auto &I : *BB) {
       WorkQueue.push(&I);
@@ -1445,12 +1445,18 @@ Error Ripple::propagateShapes(bool &WaitingForSpecialization) {
     LLVM_DEBUG(dbgs() << "Linear series is: " << CSAfter << "\n");
 
     if (CSBefore.getState() != CSAfter.getState())
-      revisitUserInstructions(I);
+      revisitUserInstructions(I, WorkQueue);
   }
 
   // Remove non-valid series
   clearPotentialSeries();
 
+  assert(allInstructionsHaveRippleShapes() &&
+         "Some instruction has no Ripple shape");
+  return Error::success();
+}
+
+Error Ripple::simplifyLinearSeries() {
   // Simplify and cleanup slopes
   simplifySlopes();
 
@@ -1682,6 +1688,12 @@ PreservedAnalyses Ripple::run() {
   }
 
   emitRippleRemarks();
+
+  if (Error e = createLinearSeries())
+    llvm_unreachable("compiler error: Linear Series creation failure");
+
+  if (Error e = simplifyLinearSeries())
+    llvm_unreachable("compiler error: Linear Series simplification failure");
 
   LLVM_DEBUG(dbgs() << "Function before vector instruction generation:\n";
              F.print(dbgs()));

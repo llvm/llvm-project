@@ -72,6 +72,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <queue>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -1105,8 +1106,22 @@ public:
   /// one
   Error replaceRippleGetSize();
 
+  /// @brief Push to the @p Queue all the users of the instruction I
+  /// If I is a store to a promotable alloca, revisit all the instruction being
+  /// clobbered by it.
+  void revisitUserInstructions(Instruction *I,
+                               std::queue<Instruction *> &Queue);
+
   /// @brief Propagate shapes throughout the function
   Error propagateShapes(bool &WaitingForSpecialization);
+
+  /// @brief Create and propagate linear series using the instruction shapes
+  /// @pre All instruction in the function must have a shape
+  /// @see propagateShapes
+  Error createLinearSeries();
+
+  /// @brief Simplify linear series for better code generation
+  Error simplifyLinearSeries();
 
   /// @brief Transform the function!
   /// @return the set of analysis that are preserved
@@ -1247,6 +1262,12 @@ public:
   IntrinsicInst *
   getBlockShapeIntrinsicReporting(const Use &RippleBlockShapePtr) {
     return getBlockShapeIntrinsicHelper<true>(RippleBlockShapePtr);
+  }
+
+  /// @brief Returns the linearseries attached to an instruction, or nullptr if
+  /// not a linear series.
+  const LinearSeries *getLinseriesFor(const Instruction *I) const {
+    return LsCache.Valid.lookup_or(I, nullptr);
   }
 
 private:
