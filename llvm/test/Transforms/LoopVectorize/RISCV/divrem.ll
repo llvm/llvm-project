@@ -1019,3 +1019,79 @@ latch:
 for.end:
   ret void
 }
+
+; Test for https://github.com/llvm/llvm-project/issues/159402. For invariant divisors,
+; selects can be introduced outside the vector loop and their cost should not be
+; considered for each loop iteration.
+define i32 @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c) {
+; CHECK-LABEL: @udiv_sdiv_with_invariant_divisors(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ -12, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[NARROW_IV:%.*]] = phi i8 [ -12, [[ENTRY]] ], [ [[IV_NEXT_TRUNC:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP_LATCH]], label [[THEN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[UD:%.*]] = udiv i8 [[NARROW_IV]], [[X:%.*]]
+; CHECK-NEXT:    [[UD_EXT:%.*]] = zext i8 [[UD]] to i16
+; CHECK-NEXT:    [[SD:%.*]] = sdiv i16 [[UD_EXT]], [[Y:%.*]]
+; CHECK-NEXT:    [[SD_EXT:%.*]] = sext i16 [[SD]] to i32
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 0, [[LOOP_HEADER]] ], [ [[SD_EXT]], [[THEN]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i16 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i16 [[IV_NEXT]], 0
+; CHECK-NEXT:    [[IV_NEXT_TRUNC]] = trunc i16 [[IV_NEXT]] to i8
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[MERGE_LCSSA:%.*]] = phi i32 [ [[MERGE]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i32 [[MERGE_LCSSA]]
+;
+; FIXED-LABEL: @udiv_sdiv_with_invariant_divisors(
+; FIXED-NEXT:  entry:
+; FIXED-NEXT:    br label [[LOOP_HEADER:%.*]]
+; FIXED:       loop.header:
+; FIXED-NEXT:    [[IV:%.*]] = phi i16 [ -12, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; FIXED-NEXT:    [[NARROW_IV:%.*]] = phi i8 [ -12, [[SCALAR_PH]] ], [ [[IV_NEXT_TRUNC:%.*]], [[LOOP_LATCH]] ]
+; FIXED-NEXT:    br i1 [[C:%.*]], label [[LOOP_LATCH]], label [[THEN:%.*]]
+; FIXED:       then:
+; FIXED-NEXT:    [[UD:%.*]] = udiv i8 [[NARROW_IV]], [[X:%.*]]
+; FIXED-NEXT:    [[UD_EXT:%.*]] = zext i8 [[UD]] to i16
+; FIXED-NEXT:    [[SD:%.*]] = sdiv i16 [[UD_EXT]], [[Y:%.*]]
+; FIXED-NEXT:    [[SD_EXT:%.*]] = sext i16 [[SD]] to i32
+; FIXED-NEXT:    br label [[LOOP_LATCH]]
+; FIXED:       loop.latch:
+; FIXED-NEXT:    [[MERGE:%.*]] = phi i32 [ 0, [[LOOP_HEADER]] ], [ [[SD_EXT]], [[THEN]] ]
+; FIXED-NEXT:    [[IV_NEXT]] = add nsw i16 [[IV]], 1
+; FIXED-NEXT:    [[EC:%.*]] = icmp eq i16 [[IV_NEXT]], 0
+; FIXED-NEXT:    [[IV_NEXT_TRUNC]] = trunc i16 [[IV_NEXT]] to i8
+; FIXED-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]]
+; FIXED:       exit:
+; FIXED-NEXT:    [[MERGE_LCSSA:%.*]] = phi i32 [ [[MERGE]], [[LOOP_LATCH]] ]
+; FIXED-NEXT:    ret i32 [[MERGE_LCSSA]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i16 [ -12, %entry ], [ %iv.next, %loop.latch ]
+  %narrow.iv = phi i8 [ -12, %entry ], [ %iv.next.trunc, %loop.latch ]
+  br i1 %c, label %loop.latch, label %then
+
+then:
+  %ud = udiv i8 %narrow.iv, %x
+  %ud.ext = zext i8 %ud to i16
+  %sd = sdiv i16 %ud.ext, %y
+  %sd.ext = sext i16 %sd to i32
+  br label %loop.latch
+
+loop.latch:
+  %merge = phi i32 [ 0, %loop.header ], [ %sd.ext, %then ]
+  %iv.next = add nsw i16 %iv, 1
+  %ec = icmp eq i16 %iv.next, 0
+  %iv.next.trunc = trunc i16 %iv.next to i8
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret i32 %merge
+}

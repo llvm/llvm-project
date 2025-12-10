@@ -248,6 +248,10 @@ struct VPlanTransforms {
   static void sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
                                    const Loop *L);
 
+  /// Add explicit Build[Struct]Vector recipes that combine multiple scalar
+  /// values into single vectors.
+  static void materializeBuildVectors(VPlan &Plan);
+
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF
   /// elements, if all transformed interleave groups access the full vector

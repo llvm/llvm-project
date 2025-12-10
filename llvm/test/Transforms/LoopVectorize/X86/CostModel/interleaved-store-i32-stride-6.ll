@@ -43,7 +43,6 @@ define void @test() {
 ; AVX512:  LV: Found an estimated cost of 25 for VF 8 For instruction: store i32 %v5, ptr %out5, align 4
 ; AVX512:  LV: Found an estimated cost of 51 for VF 16 For instruction: store i32 %v5, ptr %out5, align 4
 ; AVX512:  LV: Found an estimated cost of 102 for VF 32 For instruction: store i32 %v5, ptr %out5, align 4
-; AVX512:  LV: Found an estimated cost of 204 for VF 64 For instruction: store i32 %v5, ptr %out5, align 4
 ;
 entry:
   br label %for.body

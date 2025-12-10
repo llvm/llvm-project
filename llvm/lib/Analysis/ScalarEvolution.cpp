@@ -3493,17 +3493,25 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
           /// {X,+,N}/C => {Y,+,N}/C where Y=X-(X%N). Safe when C%N=0.
           // We can currently only fold X%N if X is constant.
           const SCEVConstant *StartC = dyn_cast<SCEVConstant>(AR->getStart());
-          if (StartC && !DivInt.urem(StepInt) &&
-              getZeroExtendExpr(AR, ExtTy) ==
-              getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
-                            getZeroExtendExpr(Step, ExtTy),
-                            AR->getLoop(), SCEV::FlagAnyWrap)) {
+          if (StartC && !DivInt.urem(StepInt)) {
             const APInt &StartInt = StartC->getAPInt();
             const APInt &StartRem = StartInt.urem(StepInt);
-            if (StartRem != 0) {
-              const SCEV *NewLHS =
-                  getAddRecExpr(getConstant(StartInt - StartRem), Step,
-                                AR->getLoop(), SCEV::FlagNW);
+            bool NoWrap =
+                getZeroExtendExpr(AR, ExtTy) ==
+                getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
+                              getZeroExtendExpr(Step, ExtTy), AR->getLoop(),
+                              SCEV::FlagAnyWrap);
+
+            // With N <= C and both N, C as powers-of-2, the transformation
+            // {X,+,N}/C => {(X - X%N),+,N}/C preserves division results even
+            // if wrapping occurs, as the division results remain equivalent for
+            // all offsets in [[(X - X%N), X).
+            bool CanFoldWithWrap = StepInt.ule(DivInt) && // N <= C
+                                   StepInt.isPowerOf2() && DivInt.isPowerOf2();
+            if (StartRem != 0 && (NoWrap || CanFoldWithWrap)) {
+              const SCEV *NewLHS = getAddRecExpr(
+                  getConstant(StartInt - StartRem), Step, AR->getLoop(),
+                  NoWrap ? SCEV::FlagNW : SCEV::FlagAnyWrap);
               if (LHS != NewLHS) {
                 LHS = NewLHS;
 
@@ -3770,13 +3778,11 @@ ScalarEvolution::getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
   return getOrCreateAddRecExpr(Operands, L, Flags);
 }
 
-const SCEV *
-ScalarEvolution::getGEPExpr(GEPOperator *GEP,
-                            const SmallVectorImpl<const SCEV *> &IndexExprs) {
+const SCEV *ScalarEvolution::getGEPExpr(GEPOperator *GEP,
+                                        ArrayRef<const SCEV *> IndexExprs) {
   const SCEV *BaseExpr = getSCEV(GEP->getPointerOperand());
   // getSCEV(Base)->getType() has the same address space as Base->getType()
   // because SCEV::getType() preserves the address space.
-  Type *IntIdxTy = getEffectiveSCEVType(BaseExpr->getType());
   GEPNoWrapFlags NW = GEP->getNoWrapFlags();
   if (NW != GEPNoWrapFlags::none()) {
     // We'd like to propagate flags from the IR to the corresponding SCEV nodes,
@@ -3789,13 +3795,20 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
       NW = GEPNoWrapFlags::none();
   }
 
+  return getGEPExpr(BaseExpr, IndexExprs, GEP->getSourceElementType(), NW);
+}
+
+const SCEV *ScalarEvolution::getGEPExpr(const SCEV *BaseExpr,
+                                        ArrayRef<const SCEV *> IndexExprs,
+                                        Type *SrcElementTy, GEPNoWrapFlags NW) {
   SCEV::NoWrapFlags OffsetWrap = SCEV::FlagAnyWrap;
   if (NW.hasNoUnsignedSignedWrap())
     OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNSW);
   if (NW.hasNoUnsignedWrap())
     OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNUW);
 
-  Type *CurTy = GEP->getType();
+  Type *CurTy = BaseExpr->getType();
+  Type *IntIdxTy = getEffectiveSCEVType(BaseExpr->getType());
   bool FirstIter = true;
   SmallVector<const SCEV *, 4> Offsets;
   for (const SCEV *IndexExpr : IndexExprs) {
@@ -3814,7 +3827,7 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
       if (FirstIter) {
         assert(isa<PointerType>(CurTy) &&
                "The first index of a GEP indexes a pointer");
-        CurTy = GEP->getSourceElementType();
+        CurTy = SrcElementTy;
         FirstIter = false;
       } else {
         CurTy = GetElementPtrInst::getTypeAtIndex(CurTy, (uint64_t)0);

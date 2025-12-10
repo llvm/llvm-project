@@ -1152,7 +1152,10 @@ public:
   CallWideningDecision getCallWideningDecision(CallInst *CI,
                                                ElementCount VF) const {
     assert(!VF.isScalar() && "Expected vector VF");
-    return CallWideningDecisions.at({CI, VF});
+    auto I = CallWideningDecisions.find({CI, VF});
+    if (I == CallWideningDecisions.end())
+      return {CM_Unknown, nullptr, Intrinsic::not_intrinsic, std::nullopt, 0};
+    return I->second;
   }
 
   /// Return True if instruction \p I is an optimizable truncate whose operand
@@ -1562,7 +1565,7 @@ private:
   /// A type representing the costs for instructions if they were to be
   /// scalarized rather than vectorized. The entries are Instruction-Cost
   /// pairs.
-  using ScalarCostsTy = DenseMap<Instruction *, InstructionCost>;
+  using ScalarCostsTy = MapVector<Instruction *, InstructionCost>;
 
   /// A set containing all BasicBlocks that are known to present after
   /// vectorization as a predicated block.
@@ -1596,7 +1599,7 @@ private:
   /// presence of a cost for an instruction in the mapping indicates that the
   /// instruction will be scalarized when vectorizing with the associated
   /// vectorization factor. The entries are VF-ScalarCostTy pairs.
-  DenseMap<ElementCount, ScalarCostsTy> InstsToScalarize;
+  MapVector<ElementCount, ScalarCostsTy> InstsToScalarize;
 
   /// Holds the instructions known to be uniform after vectorization.
   /// The data is collected per VF.
@@ -1665,7 +1668,9 @@ private:
     Instruction *I = dyn_cast<Instruction>(V);
     if (VF.isScalar() || !I || !TheLoop->contains(I) ||
         TheLoop->isLoopInvariant(I) ||
-        getWideningDecision(I, VF) == CM_Scalarize)
+        getWideningDecision(I, VF) == CM_Scalarize ||
+        (isa<CallInst>(I) &&
+         getCallWideningDecision(cast<CallInst>(I), VF).Kind == CM_Scalarize))
       return false;
 
     // Assume we can vectorize V (and hence we need extraction) if the
@@ -1680,8 +1685,16 @@ private:
   /// Returns a range containing only operands needing to be extracted.
   SmallVector<Value *, 4> filterExtractingOperands(Instruction::op_range Ops,
                                                    ElementCount VF) const {
-    return SmallVector<Value *, 4>(make_filter_range(
-        Ops, [this, VF](Value *V) { return this->needsExtract(V, VF); }));
+
+    SmallPtrSet<const Value *, 4> UniqueOperands;
+    SmallVector<Value *, 4> Res;
+    for (Value *Op : Ops) {
+      if (isa<Constant>(Op) || !UniqueOperands.insert(Op).second ||
+          !needsExtract(Op, VF))
+        continue;
+      Res.push_back(Op);
+    }
+    return Res;
   }
 
 public:
@@ -3037,10 +3050,9 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
     // likely.
     ScalarizationCost = ScalarizationCost / getPredBlockCostDivisor(CostKind);
   }
+
   InstructionCost SafeDivisorCost = 0;
-
   auto *VecTy = toVectorTy(I->getType(), VF);
-
   // The cost of the select guard to ensure all lanes are well defined
   // after we speculate above any internal control flow.
   SafeDivisorCost +=
@@ -3048,19 +3060,12 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
                              toVectorTy(Type::getInt1Ty(I->getContext()), VF),
                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
-  // Certain instructions can be cheaper to vectorize if they have a constant
-  // second vector operand. One example of this are shifts on x86.
-  Value *Op2 = I->getOperand(1);
-  auto Op2Info = TTI.getOperandInfo(Op2);
-  if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue &&
-      Legal->isInvariant(Op2))
-    Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
-
   SmallVector<const Value *, 4> Operands(I->operand_values());
   SafeDivisorCost += TTI.getArithmeticInstrCost(
-    I->getOpcode(), VecTy, CostKind,
-    {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-    Op2Info, Operands, I);
+      I->getOpcode(), VecTy, CostKind,
+      {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+      {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+      Operands, I);
   return {ScalarizationCost, SafeDivisorCost};
 }
 
@@ -3310,6 +3315,11 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
       auto *Ptr = getLoadStorePointerOperand(&I);
       if (!Ptr)
         continue;
+
+      // If the pointer can be proven to be uniform, always add it to the
+      // worklist.
+      if (isa<Instruction>(Ptr) && Legal->isUniform(Ptr, VF))
+        AddToWorklistIfAllowed(cast<Instruction>(Ptr));
 
       if (IsUniformMemOpUse(&I))
         AddToWorklistIfAllowed(&I);
@@ -4284,6 +4294,25 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           if (!VPI)
             continue;
           switch (VPI->getOpcode()) {
+          // Selects are only modelled in the legacy cost model for safe
+          // divisors.
+          case Instruction::Select: {
+            VPValue *VPV = VPI->getVPSingleValue();
+            if (VPV->getNumUsers() == 1) {
+              if (auto *WR = dyn_cast<VPWidenRecipe>(*VPV->user_begin())) {
+                switch (WR->getOpcode()) {
+                case Instruction::UDiv:
+                case Instruction::SDiv:
+                case Instruction::URem:
+                case Instruction::SRem:
+                  continue;
+                default:
+                  break;
+                }
+              }
+            }
+            [[fallthrough]];
+          }
           case VPInstruction::ActiveLaneMask:
           case VPInstruction::ExplicitVectorLength:
             C += VPI->cost(VF, CostCtx);
@@ -4925,7 +4954,8 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         if (!isScalarAfterVectorization(&I, VF) && !VF.isScalable() &&
             !useEmulatedMaskMemRefHack(&I, VF) &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0) {
-          ScalarCostsVF.insert_range(ScalarCosts);
+          for (const auto &[I, IC] : ScalarCosts)
+            ScalarCostsVF.insert({I, IC});
           // Check if we decided to scalarize a call. If so, update the widening
           // decision of the call to CM_Scalarize with the computed scalar cost.
           for (const auto &[I, Cost] : ScalarCosts) {
@@ -5564,8 +5594,7 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   SmallVector<Type *> Tys;
   for (auto *V : filterExtractingOperands(Ops, VF))
     Tys.push_back(maybeVectorizeType(V->getType(), VF));
-  return Cost + TTI.getOperandsScalarizationOverhead(
-                    filterExtractingOperands(Ops, VF), Tys, CostKind);
+  return Cost + TTI.getOperandsScalarizationOverhead(Tys, CostKind);
 }
 
 void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
@@ -5687,9 +5716,18 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // If the instructions belongs to an interleave group, the whole group
       // receives the same decision. The whole group receives the cost, but
       // the cost will actually be assigned to one instruction.
-      if (const auto *Group = getInterleavedAccessGroup(&I))
-        setWideningDecision(Group, VF, Decision, Cost);
-      else
+      if (const auto *Group = getInterleavedAccessGroup(&I)) {
+        if (Decision == CM_Scalarize) {
+          for (unsigned Idx = 0; Idx < Group->getFactor(); ++Idx) {
+            if (auto *I = Group->getMember(Idx)) {
+              setWideningDecision(I, VF, Decision,
+                                  getMemInstScalarizationCost(I, VF));
+            }
+          }
+        } else {
+          setWideningDecision(Group, VF, Decision, Cost);
+        }
+      } else
         setWideningDecision(&I, VF, Decision, Cost);
     }
   }
@@ -5725,6 +5763,20 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
           Worklist.push_back(InstOp);
   }
 
+  auto UpdateMemOpUserCost = [this, VF](LoadInst *LI) {
+    // If there are direct memory op users of the newly scalarized load,
+    // their cost may have changed because there's no scalarization
+    // overhead for the operand. Update it.
+    for (User *U : LI->users()) {
+      if (!isa<LoadInst, StoreInst>(U))
+        continue;
+      if (getWideningDecision(cast<Instruction>(U), VF) != CM_Scalarize)
+        continue;
+      setWideningDecision(
+          cast<Instruction>(U), VF, CM_Scalarize,
+          getMemInstScalarizationCost(cast<Instruction>(U), VF));
+    }
+  };
   for (auto *I : AddrDefs) {
     if (isa<LoadInst>(I)) {
       // Setting the desired widening decision should ideally be handled in
@@ -5732,20 +5784,26 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // if the loaded register is involved in an address computation, it is
       // instead changed here when we know this is the case.
       InstWidening Decision = getWideningDecision(I, VF);
-      if (Decision == CM_Widen || Decision == CM_Widen_Reverse)
-        // Scalarize a widened load of address.
+      if (Decision == CM_Widen || Decision == CM_Widen_Reverse ||
+          (!isPredicatedInst(I) && !Legal->isUniformMemOp(*I, VF) &&
+           Decision == CM_Scalarize)) {
+        // Scalarize a widened load of address or update the cost of a scalar
+        // load of an address.
         setWideningDecision(
             I, VF, CM_Scalarize,
             (VF.getKnownMinValue() *
              getMemoryInstructionCost(I, ElementCount::getFixed(1))));
-      else if (const auto *Group = getInterleavedAccessGroup(I)) {
+        UpdateMemOpUserCost(cast<LoadInst>(I));
+      } else if (const auto *Group = getInterleavedAccessGroup(I)) {
         // Scalarize an interleave group of address loads.
         for (unsigned I = 0; I < Group->getFactor(); ++I) {
-          if (Instruction *Member = Group->getMember(I))
+          if (Instruction *Member = Group->getMember(I)) {
             setWideningDecision(
                 Member, VF, CM_Scalarize,
                 (VF.getKnownMinValue() *
                  getMemoryInstructionCost(Member, ElementCount::getFixed(1))));
+            UpdateMemOpUserCost(cast<LoadInst>(Member));
+          }
         }
       }
     } else {
@@ -6912,6 +6970,28 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
     return nullptr;
   };
 
+  // Check if a select for a safe divisor was hoisted to the pre-header. If so,
+  // the select doesn't need to be considered for the vector loop cost; go with
+  // the more accurate VPlan-based cost model.
+  for (VPRecipeBase &R : *Plan.getVectorPreheader()) {
+    auto *VPI = dyn_cast<VPInstruction>(&R);
+    if (!VPI || VPI->getOpcode() != Instruction::Select ||
+        VPI->getNumUsers() != 1)
+      continue;
+
+    if (auto *WR = dyn_cast<VPWidenRecipe>(*VPI->user_begin())) {
+      switch (WR->getOpcode()) {
+      case Instruction::UDiv:
+      case Instruction::SDiv:
+      case Instruction::URem:
+      case Instruction::SRem:
+        return true;
+      default:
+        break;
+      }
+    }
+  }
+
   DenseSet<Instruction *> SeenInstrs;
   auto Iter = vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -6952,12 +7032,12 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       if (Instruction *UI = GetInstructionForCost(&R)) {
         // If we adjusted the predicate of the recipe, the cost in the legacy
         // cost model may be different.
-        if (auto *WidenCmp = dyn_cast<VPWidenRecipe>(&R)) {
-          if ((WidenCmp->getOpcode() == Instruction::ICmp ||
-               WidenCmp->getOpcode() == Instruction::FCmp) &&
-              WidenCmp->getPredicate() != cast<CmpInst>(UI)->getPredicate())
-            return true;
-        }
+        using namespace VPlanPatternMatch;
+        CmpPredicate Pred;
+        if (match(&R, m_Cmp(Pred, m_VPValue(), m_VPValue())) &&
+            cast<VPRecipeWithIRFlags>(R).getPredicate() !=
+                cast<CmpInst>(UI)->getPredicate())
+          return true;
         SeenInstrs.insert(UI);
       }
     }
@@ -7217,8 +7297,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
                            OrigLoop->getHeader()->getContext());
-  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
+  VPlanTransforms::runPass(VPlanTransforms::materializeBuildVectors, BestVPlan);
   VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
+  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   bool HasBranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator());
   if (HasBranchWeights) {
