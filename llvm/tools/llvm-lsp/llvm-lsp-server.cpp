@@ -121,7 +121,8 @@ void LspServer::handleRequestGetReferences(
 void LspServer::handleRequestTextDocumentDocumentSymbol(
     const lsp::DocumentSymbolParams &Params,
     lsp::Callback<std::vector<lsp::DocumentSymbol>> Reply) {
-  if (!OpenDocuments.contains(Params.textDocument.uri.file().str())) {
+  if (OpenDocuments.find(Params.textDocument.uri.file().str()) ==
+      OpenDocuments.end()) {
     lsp::Logger::error(
         "Document in textDocument/documentSymbol request not open: {}",
         Params.textDocument.uri.file());
