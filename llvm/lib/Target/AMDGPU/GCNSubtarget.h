@@ -289,6 +289,7 @@ protected:
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
+  bool HasSWakeupBarrier = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1611,6 +1612,9 @@ public:
 
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
+
+  // \returns true if target has S_WAKEUP_BARRIER instruction.
+  bool hasSWakeupBarrier() const { return HasSWakeupBarrier; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1250 has not only fixed the bug but also

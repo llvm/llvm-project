@@ -11515,6 +11515,11 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
+  case Intrinsic::amdgcn_s_wakeup_barrier: {
+    if (!Subtarget->hasSWakeupBarrier())
+      return SDValue();
+    [[fallthrough]];
+  }
   case Intrinsic::amdgcn_s_barrier_join: {
     // these three intrinsics have one operand: barrier pointer
     SDValue Chain = Op->getOperand(0);
@@ -11524,16 +11529,32 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     if (isa<ConstantSDNode>(BarOp)) {
       uint64_t BarVal = cast<ConstantSDNode>(BarOp)->getZExtValue();
-      Opc = AMDGPU::S_BARRIER_JOIN_IMM;
-
+      switch (IntrinsicID) {
+      default:
+        return SDValue();
+      case Intrinsic::amdgcn_s_barrier_join:
+        Opc = AMDGPU::S_BARRIER_JOIN_IMM;
+        break;
+      case Intrinsic::amdgcn_s_wakeup_barrier:
+        Opc = AMDGPU::S_WAKEUP_BARRIER_IMM;
+        break;
+      }
       // extract the BarrierID from bits 4-9 of the immediate
       unsigned BarID = (BarVal >> 4) & 0x3F;
       SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
     } else {
-      Opc = AMDGPU::S_BARRIER_JOIN_M0;
-
+      switch (IntrinsicID) {
+      default:
+        return SDValue();
+      case Intrinsic::amdgcn_s_barrier_join:
+        Opc = AMDGPU::S_BARRIER_JOIN_M0;
+        break;
+      case Intrinsic::amdgcn_s_wakeup_barrier:
+        Opc = AMDGPU::S_WAKEUP_BARRIER_M0;
+        break;
+      }
       // extract the BarrierID from bits 4-9 of BarOp, copy to M0[5:0]
       SDValue M0Val;
       M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,

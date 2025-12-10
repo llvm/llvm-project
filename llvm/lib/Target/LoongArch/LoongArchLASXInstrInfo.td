@@ -1437,9 +1437,8 @@ defm : PatShiftXrSplatUimm<shl, "XVSLLI">;
 defm : PatShiftXrUimm<loongarch_vslli, "XVSLLI">;
 
 // XVSRL[I]_{B/H/W/D}
-defm : PatXrXr<srl, "XVSRL">;
-defm : PatShiftXrXr<srl, "XVSRL">;
-defm : PatShiftXrSplatUimm<srl, "XVSRLI">;
+defm : PatXrXr<loongarch_vsrl, "XVSRL">;
+defm : PatShiftXrXr<loongarch_vsrl, "XVSRL">;
 defm : PatShiftXrUimm<loongarch_vsrli, "XVSRLI">;
 
 // XVSRA[I]_{B/H/W/D}
@@ -2045,18 +2044,18 @@ defm : VAvgPat<sra, "XVAVG_B", v32i8>;
 defm : VAvgPat<sra, "XVAVG_H", v16i16>;
 defm : VAvgPat<sra, "XVAVG_W", v8i32>;
 defm : VAvgPat<sra, "XVAVG_D", v4i64>;
-defm : VAvgPat<srl, "XVAVG_BU", v32i8>;
-defm : VAvgPat<srl, "XVAVG_HU", v16i16>;
-defm : VAvgPat<srl, "XVAVG_WU", v8i32>;
-defm : VAvgPat<srl, "XVAVG_DU", v4i64>;
+defm : VAvgIPat<loongarch_vsrli, "XVAVG_BU", v32i8>;
+defm : VAvgIPat<loongarch_vsrli, "XVAVG_HU", v16i16>;
+defm : VAvgIPat<loongarch_vsrli, "XVAVG_WU", v8i32>;
+defm : VAvgIPat<loongarch_vsrli, "XVAVG_DU", v4i64>;
 defm : VAvgrPat<sra, "XVAVGR_B", v32i8>;
 defm : VAvgrPat<sra, "XVAVGR_H", v16i16>;
 defm : VAvgrPat<sra, "XVAVGR_W", v8i32>;
 defm : VAvgrPat<sra, "XVAVGR_D", v4i64>;
-defm : VAvgrPat<srl, "XVAVGR_BU", v32i8>;
-defm : VAvgrPat<srl, "XVAVGR_HU", v16i16>;
-defm : VAvgrPat<srl, "XVAVGR_WU", v8i32>;
-defm : VAvgrPat<srl, "XVAVGR_DU", v4i64>;
+defm : VAvgrIPat<loongarch_vsrli, "XVAVGR_BU", v32i8>;
+defm : VAvgrIPat<loongarch_vsrli, "XVAVGR_HU", v16i16>;
+defm : VAvgrIPat<loongarch_vsrli, "XVAVGR_WU", v8i32>;
+defm : VAvgrIPat<loongarch_vsrli, "XVAVGR_DU", v4i64>;
 
 // abs
 def : Pat<(abs v32i8:$xj), (XVSIGNCOV_B v32i8:$xj, v32i8:$xj)>;

@@ -504,6 +504,12 @@ def S_BARRIER_JOIN_M0 : SOP1_Pseudo <"s_barrier_join m0", (outs), (ins),
   let isConvergent = 1;
 }
 
+def S_WAKEUP_BARRIER_M0 : SOP1_Pseudo <"s_wakeup_barrier m0", (outs), (ins),
+  "", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+  let SubtargetPredicate = HasSWakeupBarrier;
+}
 } // End Uses = [M0]
 
 def S_BARRIER_SIGNAL_IMM : SOP1_Pseudo <"s_barrier_signal", (outs),
@@ -527,6 +533,12 @@ def S_BARRIER_JOIN_IMM : SOP1_Pseudo <"s_barrier_join", (outs),
   let isConvergent = 1;
 }
 
+def S_WAKEUP_BARRIER_IMM : SOP1_Pseudo <"s_wakeup_barrier", (outs),
+  (ins SplitBarrier:$src0), "$src0", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+  let SubtargetPredicate = HasSWakeupBarrier;
+}
 } // End has_sdst = 0
 
 def S_GET_BARRIER_STATE_IMM : SOP1_Pseudo <"s_get_barrier_state", (outs SSrc_b32:$sdst),
@@ -2226,6 +2238,8 @@ defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12<0x058>;
 // GFX1250
 defm S_GET_SHADER_CYCLES_U64      : SOP1_Real_gfx12<0x06>;
 defm S_ADD_PC_I64                 : SOP1_Real_gfx12<0x04b>;
+defm S_WAKEUP_BARRIER_M0          : SOP1_M0_Real_gfx12<0x057>;
+defm S_WAKEUP_BARRIER_IMM         : SOP1_IMM_Real_gfx12<0x057>;
 
 //===----------------------------------------------------------------------===//
 // SOP1 - GFX1150, GFX12
