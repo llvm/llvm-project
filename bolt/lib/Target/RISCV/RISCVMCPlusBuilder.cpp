@@ -548,8 +548,8 @@ public:
                  MCPhysReg RegCnt) const {
     Inst = MCInstBuilder(RISCV::AMOADD_D)
                .addReg(RegAtomic)
-               .addReg(RegTo)
-               .addReg(RegCnt);
+               .addReg(RegCnt)
+               .addReg(RegTo);
   }
 
   InstructionListType createRegCmpJE(MCPhysReg RegNo, MCPhysReg RegTmp,
