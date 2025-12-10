@@ -390,84 +390,65 @@ void OpenACCDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
-// RegionBranchOpInterface for acc.kernels / acc.parallel / acc.serial /
-// acc.kernel_environment / acc.data / acc.host_data / acc.loop
+// RegionBranchOpInterface helpers and implementations for acc.* ops
 //===----------------------------------------------------------------------===//
 
-void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
-                                    SmallVectorImpl<RegionSuccessor> &regions) {
+/// Generic helper for single-region OpenACC ops that execute their body once
+/// and then return to the parent operation with their results (if any).
+static void
+getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
+                                  RegionBranchPoint point,
+                                  SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent()) {
-    regions.push_back(RegionSuccessor(&getRegion()));
+    regions.emplace_back(&region);
     return;
   }
 
-  regions.push_back(
-      RegionSuccessor(getOperation(), getOperation()->getResults()));
+  regions.emplace_back(op, op->getResults());
+}
+
+void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
+                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
 }
 
 void ParallelOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  if (point.isParent()) {
-    regions.push_back(RegionSuccessor(&getRegion()));
-    return;
-  }
-
-  regions.push_back(
-      RegionSuccessor(getOperation(), getOperation()->getResults()));
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
 }
 
 void SerialOp::getSuccessorRegions(RegionBranchPoint point,
                                    SmallVectorImpl<RegionSuccessor> &regions) {
-  if (point.isParent()) {
-    regions.push_back(RegionSuccessor(&getRegion()));
-    return;
-  }
-
-  regions.push_back(
-      RegionSuccessor(getOperation(), getOperation()->getResults()));
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
 }
 
 void KernelEnvironmentOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  if (point.isParent()) {
-    regions.push_back(RegionSuccessor(&getRegion()));
-    return;
-  }
-
-  regions.push_back(
-      RegionSuccessor(getOperation(), getOperation()->getResults()));
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
 }
 
 void DataOp::getSuccessorRegions(RegionBranchPoint point,
                                  SmallVectorImpl<RegionSuccessor> &regions) {
-  if (point.isParent()) {
-    regions.push_back(RegionSuccessor(&getRegion()));
-    return;
-  }
-
-  regions.push_back(
-      RegionSuccessor(getOperation(), getOperation()->getResults()));
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
 }
 
 void HostDataOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  if (point.isParent()) {
-    regions.push_back(RegionSuccessor(&getRegion()));
-    return;
-  }
-
-  regions.push_back(
-      RegionSuccessor(getOperation(), getOperation()->getResults()));
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
 }
 
 void LoopOp::getSuccessorRegions(RegionBranchPoint point,
                                  SmallVectorImpl<RegionSuccessor> &regions) {
-  if (point.isParent()) {
-    regions.push_back(RegionSuccessor(&getRegion()));
-    return;
-  }
-
-  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+  // Model acc.loop like scf.execute_region: enter the loop body from the
+  // parent, and return to the parent op with the loop's results.
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
 }
 
 //===----------------------------------------------------------------------===//
