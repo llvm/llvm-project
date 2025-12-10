@@ -1,27 +1,23 @@
-REQUIRES: x86
-
-## Test that the LLD produces expected time trace output for DTLTO.
+; Test that the LLD produces expected time trace output for DTLTO.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
-RUN: sed 's/@t1/@t2/g' t1.ll > t2.ll
-
-## Generate ThinLTO bitcode files.
+; Generate bitcode files with summary.
 RUN: opt -thinlto-bc t1.ll -o t1.bc
 RUN: opt -thinlto-bc t2.ll -o t2.bc
 
-## Generate object files for mock.py to return.
-RUN: llc t1.ll --filetype=obj -o t1.o
-RUN: llc t2.ll --filetype=obj -o t2.o
+; Generate fake object files for mock.py to return.
+RUN: touch t1.o t2.o
 
-## Link and generate a time trace.
-## Note: mock.py doesn’t compile; it copies the specified object files to the
-## outputs in job order.
-RUN: ld.lld t1.bc t2.bc -o my.elf \
-RUN:   --thinlto-distributor=%python \
-RUN:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
-RUN:   --thinlto-distributor-arg=t1.o --thinlto-distributor-arg=t2.o \
-RUN:   --time-trace-granularity=0 --time-trace=%t.json
+; Perform DTLTO and generate a time trace. mock.py does not do any compilation,
+; instead it simply writes the contents of the object files supplied on the
+; command line into the output object files in job order.
+RUN: llvm-lto2 run t1.bc t2.bc -o t.o \
+RUN:   -dtlto-distributor=%python \
+RUN:   -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py,t1.o,t2.o \
+RUN:   --time-trace --time-trace-granularity=0 --time-trace-file=%t.json \
+RUN:   -r=t1.bc,t1,px \
+RUN:   -r=t2.bc,t2,px
 RUN: %python filter_order_and_pprint.py %t.json | FileCheck %s
 
 ## Check that DTLTO events are recorded.
@@ -47,11 +43,19 @@ CHECK-NEXT: "name": "Total Remove DTLTO temporary files"
 CHECK-SAME:   "count": 1,
 CHECK-NOT:  "name"
 
-#--- t1.ll
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+;--- t1.ll
 target triple = "x86_64-unknown-linux-gnu"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @t1() {
+  ret void
+}
+
+;--- t2.ll
+target triple = "x86_64-unknown-linux-gnu"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+define void @t2() {
   ret void
 }
 
@@ -68,3 +72,4 @@ events.sort(key=lambda e: (e["name"], str(e.get("args", {}).get("detail", ""))))
 for ev in events:
     name = ev.pop("name")
     print(json.dumps({"name": name, **ev}))
+
