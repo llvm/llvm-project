@@ -56,6 +56,7 @@ void call_function_inside_try_catch_with_exception_type() {
 // CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> !s32i
 // CIR:     cir.yield
 // CIR:   } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
+// CIR:     %[[CATCH_PARAM:.*]] = cir.catch_param : !cir.ptr<!s32i>
 // CIR:     cir.yield
 // CIR:   } unwind {
 // CIR:     cir.resume

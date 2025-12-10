@@ -376,7 +376,6 @@ struct MissingFeatures {
   static bool tryOp() { return false; }
   static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
-  static bool catchParamOp() { return false; }
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }

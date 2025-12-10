@@ -536,9 +536,6 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
         emitStmt(catchStmt->getHandlerBlock(), /*useCurrentScope=*/true);
     assert(emitResult.succeeded() && "failed to emit catch handler block");
 
-    assert(!cir::MissingFeatures::catchParamOp());
-    cir::YieldOp::create(builder, tryOp->getLoc());
-
     // [except.handle]p11:
     //   The currently handled exception is rethrown if control
     //   reaches the end of a handler of the function-try-block of a
