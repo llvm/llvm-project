@@ -2507,7 +2507,10 @@ struct AMDGPUMakeDmaDescriptorLowering
                                         Location loc, Value sgpr1, Value sgpr2,
                                         ArrayRef<Value> consts, uint64_t dimX,
                                         uint32_t offset) const {
-    SmallVector<OpFoldResult> mixedGlobalSizes = op.getMixedGlobalSizes();
+    ArrayRef<int64_t> globalStaticSizes = adaptor.getGlobalStaticSizes();
+    ValueRange globalDynamicSizes = adaptor.getGlobalDynamicSizes();
+    SmallVector<OpFoldResult> mixedGlobalSizes =
+        getMixedValues(globalStaticSizes, globalDynamicSizes, rewriter);
     if (mixedGlobalSizes.size() <= dimX)
       return {sgpr1, sgpr2};
 
@@ -2559,8 +2562,10 @@ struct AMDGPUMakeDmaDescriptorLowering
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr, ArrayRef<Value> consts, size_t dimX,
                     int64_t offset) const {
-    SmallVector<OpFoldResult> mixedSharedSizes = op.getMixedSharedSizes();
-
+    ArrayRef<int64_t> sharedStaticSizes = adaptor.getSharedStaticSizes();
+    ValueRange sharedDynamicSizes = adaptor.getSharedDynamicSizes();
+    SmallVector<OpFoldResult> mixedSharedSizes =
+        getMixedValues(sharedStaticSizes, sharedDynamicSizes, rewriter);
     if (mixedSharedSizes.size() <= dimX)
       return sgpr;
 
@@ -2608,7 +2613,10 @@ struct AMDGPUMakeDmaDescriptorLowering
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgprY, Value sgprZ, ArrayRef<Value> consts,
                       size_t dimX, int64_t offset) const {
-    SmallVector<OpFoldResult> mixedGlobalStrides = op.getMixedGlobalStrides();
+    ArrayRef<int64_t> globalStaticStrides = adaptor.getGlobalStaticStrides();
+    ValueRange globalDynamicStrides = adaptor.getGlobalDynamicStrides();
+    SmallVector<OpFoldResult> mixedGlobalStrides =
+        getMixedValues(globalStaticStrides, globalDynamicStrides, rewriter);
 
     if (mixedGlobalStrides.size() <= dimX)
       return {sgprY, sgprZ};
@@ -2711,7 +2719,10 @@ struct AMDGPUMakeDmaDescriptorLowering
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr0, ArrayRef<Value> consts, int64_t dimX,
                       int64_t offset) const {
-    SmallVector<OpFoldResult> mixedGlobalSizes = op.getMixedGlobalSizes();
+    ArrayRef<int64_t> globalStaticSizes = adaptor.getGlobalStaticSizes();
+    ValueRange globalDynamicSizes = adaptor.getGlobalDynamicSizes();
+    SmallVector<OpFoldResult> mixedGlobalSizes =
+        getMixedValues(globalStaticSizes, globalDynamicSizes, rewriter);
     if (mixedGlobalSizes.size() <= static_cast<unsigned long>(dimX))
       return sgpr0;
 

@@ -460,10 +460,58 @@ func.func @make_dma_descriptor_pad_enable(%base: !amdgpu.tdm_base<i32>, %pad_amo
 
 // -----
 
+// CHECK-LABEL: func @make_dma_descriptor_dynamic
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[GS0:.+]]: index, %[[GS1:.+]]: index, %[[GST1:.+]]: index, %[[SHS0:.+]]: index, %[[SHS1:.+]]: index)
+func.func @make_dma_descriptor_dynamic(%base: !amdgpu.tdm_base<i32>, %gs0: index, %gs1: index, %gst1: index, %shs0: index, %shs1: index) -> !amdgpu.tdm_descriptor {
+  // CHECK-DAG: %[[DGROUP0:.+]] = builtin.unrealized_conversion_cast %[[BASE]]
+  // CHECK-DAG: %[[GS0I:.+]] = builtin.unrealized_conversion_cast %[[GS0]]
+  // CHECK-DAG: %[[GS1I:.+]] = builtin.unrealized_conversion_cast %[[GS1]]
+  // CHECK-DAG: %[[GST1I:.+]] = builtin.unrealized_conversion_cast %[[GST1]]
+  // CHECK-DAG: %[[SHS0I:.+]] = builtin.unrealized_conversion_cast %[[SHS0]]
+  // CHECK-DAG: %[[SHS1I:.+]] = builtin.unrealized_conversion_cast %[[SHS1]]
+
+  // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32)
+  // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32)
+  // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32)
+  // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32)
+  // CHECK-DAG: %[[C4:.+]] = llvm.mlir.constant(4 : i32)
+  // CHECK-DAG: %[[C5:.+]] = llvm.mlir.constant(5 : i32)
+  // CHECK-DAG: %[[C6:.+]] = llvm.mlir.constant(6 : i32)
+  // CHECK-DAG: %[[C7:.+]] = llvm.mlir.constant(7 : i32)
+
+  // CHECK: %[[TENSOR_DIM_0:.+]] = llvm.trunc %[[GS0I]] : i64 to i32
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32)
+  // CHECK: %[[SGPR1:.+]] = llvm.shl %[[TENSOR_DIM_0]], %[[SHIFT]]
+
+  // CHECK: %[[TENSOR_DIM_1:.+]] = llvm.trunc %[[GS1I]] : i64 to i32
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32)
+  // CHECK: %[[SGPR2:.+]] = llvm.shl %[[TENSOR_DIM_1]], %[[SHIFT]]
+
+  // CHECK: %[[TILE_DIM_0:.+]] = llvm.trunc %[[SHS0I]] : i64 to i32
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32)
+  // CHECK: %[[TILE_DIM_0_SHIFTED:.+]] = llvm.shl %[[TILE_DIM_0:.+]], %[[SHIFT]]
+
+  // CHECK: %[[TILE_DIM_1:.+]] = llvm.trunc %[[SHS1I]] : i64 to i32
+
+  // CHECK-DAG: %[[TENSOR_DIM_0_STRIDE:.+]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[MASK:.+]] = llvm.mlir.constant(281474976710655 : i64) : i64
+
+  // CHECK-DAG: %[[MASK:.+]] = llvm.mlir.constant(281474976710655 : i64) : i64
+  // CHECK: %[[TENSOR_DIM_1_STRIDE_MASKED:.+]] = llvm.and %[[MASK]], %[[GST1I]]
+  // CHECK-DAG: %[[TENSOR_DIM_1_STRIDE_LOW:.+]] = llvm.trunc %[[TENSOR_DIM_1_STRIDE_MASKED]]
+  // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED:.+]] = llvm.shl %[[TENSOR_DIM_1_STRIDE_LOW]], %[[SHIFT]]
+
+
+  %descriptor = amdgpu.make_dma_descriptor %base globalSize [%gs1, %gs0] globalStride [%gst1, 1] sharedSize [%shs1, %shs0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return %descriptor : !amdgpu.tdm_descriptor
+}
+
+// -----
+
 // CHECK-LABEL: func @make_dma_descriptor
 // CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
 func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_descriptor {
-
   // CHECK-DAG: %[[DGROUP0:.+]] = builtin.unrealized_conversion_cast %[[BASE]]
 
   // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32)
