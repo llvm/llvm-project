@@ -276,6 +276,12 @@ def G_SLI: AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_SRI: AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$src3);
+  let hasSideEffects = 0;
+}
+
 // Generic instruction for the BSP pseudo. It is expanded into BSP, which
 // expands into BSL/BIT/BIF after register allocation.
 def G_BSP : AArch64GenericInstruction {
@@ -327,6 +333,8 @@ def : GINodeEquiv<G_USDOT, AArch64usdot>;
 def : GINodeEquiv<G_SQSHLU_I, AArch64sqshlui>;
 def : GINodeEquiv<G_SRSHR_I, AArch64srshri>;
 def : GINodeEquiv<G_URSHR_I, AArch64urshri>;
+def : GINodeEquiv<G_SLI, AArch64vsli>;
+def : GINodeEquiv<G_SRI, AArch64vsri>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
