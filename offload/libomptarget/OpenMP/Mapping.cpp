@@ -376,7 +376,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
         if (Ret != OFFLOAD_SUCCESS) {
           // If it fails to wait for the event, we need to return nullptr in
           // case of any data race.
-          REPORT() << "Failed to wait for event " << Event;
+          REPORT() << "Failed to wait for event " << Event << ".";
           return TargetPointerResultTy{};
         }
       }

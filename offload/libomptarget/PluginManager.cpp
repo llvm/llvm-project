@@ -296,7 +296,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
       }
     }
     if (!FoundRTL)
-      ODBG(ODT_Init) << "No RTL found for image " << Img->ImageStart;
+      ODBG(ODT_Init) << "No RTL found for image " << Img->ImageStart << "!";
   }
   PM->RTLsMtx.unlock();
 
@@ -416,7 +416,7 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
              "Not expecting a device ID outside the table's bounds!");
       __tgt_device_image *Img = TransTable->TargetsImages[DeviceId];
       if (!Img) {
-        REPORT() << "No image loaded for device id " << DeviceId;
+        REPORT() << "No image loaded for device id " << DeviceId << ".";
         Rc = OFFLOAD_FAIL;
         break;
       }
