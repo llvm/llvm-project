@@ -176,7 +176,7 @@ functions:
       - type: size_t
   - name: getpagesize
     standards:
-      - GNUExtensions
+      - BSDExtensions
     return_type: int
     arguments:
       - type: void
