@@ -148,14 +148,14 @@ static bool isLikelyTypo(const NamedDeclRange &Candidates, StringRef ArgName,
                          StringRef TargetName) {
   llvm::SmallString<64> ArgNameLower;
   ArgNameLower.reserve(ArgName.size());
-  for (char C : ArgName)
+  for (const char C : ArgName)
     ArgNameLower.push_back(llvm::toLower(C));
   const StringRef ArgNameLowerRef = StringRef(ArgNameLower);
   // The threshold is arbitrary.
   const unsigned UpperBound = ((ArgName.size() + 2) / 3) + 1;
   llvm::SmallString<64> TargetNameLower;
   TargetNameLower.reserve(TargetName.size());
-  for (char C : TargetName)
+  for (const char C : TargetName)
     TargetNameLower.push_back(llvm::toLower(C));
   const unsigned ThisED =
       ArgNameLowerRef.edit_distance(StringRef(TargetNameLower),
@@ -177,9 +177,9 @@ static bool isLikelyTypo(const NamedDeclRange &Candidates, StringRef ArgName,
     // from this candidate. This gives us greater confidence that this is a
     // typo of this candidate and not one with a similar name.
     llvm::SmallString<64> CandidateLower;
-    StringRef CandName = II->getName();
+    const StringRef CandName = II->getName();
     CandidateLower.reserve(CandName.size());
-    for (char C : CandName)
+    for (const char C : CandName)
       CandidateLower.push_back(llvm::toLower(C));
     const unsigned OtherED = ArgNameLowerRef.edit_distance(
         StringRef(CandidateLower),
@@ -363,7 +363,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
       }
     }
 
-    llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Comments =
+    const llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Comments =
         collectLeadingComments(Ctx, ArgBeginLoc, Args[I]);
     ArgBeginLoc = Args[I]->getEndLoc();
 
@@ -429,15 +429,15 @@ void ArgumentCommentCheck::checkRecordInitializer(ASTContext *Ctx,
       }
 
       const Expr *NextInit = InitList->getInit(InitIndex);
-      QualType InitType = NextInit->getType();
-      QualType BaseType = Base.getType();
+      const QualType InitType = NextInit->getType();
+      const QualType BaseType = Base.getType();
 
       // Check if this is an explicit initializer for the base.
       const Expr *Stripped = NextInit->IgnoreParenImpCasts();
       const auto *SubInitList = dyn_cast<InitListExpr>(Stripped);
-      bool IsExplicitSubInit =
+      const bool IsExplicitSubInit =
           SubInitList &&
-          Ctx->hasSameUnqualifiedType(SubInitList->getType(), BaseType);
+          ASTContext::hasSameUnqualifiedType(SubInitList->getType(), BaseType);
 
       if (IsExplicitSubInit) {
         unsigned SubIndex = 0;
@@ -445,7 +445,7 @@ void ArgumentCommentCheck::checkRecordInitializer(ASTContext *Ctx,
         checkRecordInitializer(Ctx, BaseRD, SubInitList, SubIndex, SubLoc);
         ArgBeginLoc = NextInit->getEndLoc();
         InitIndex++;
-      } else if (Ctx->hasSameUnqualifiedType(InitType, BaseType) ||
+      } else if (ASTContext::hasSameUnqualifiedType(InitType, BaseType) ||
                  (InitType->isRecordType() && BaseType->isRecordType() &&
                   cast<CXXRecordDecl>(InitType->getAsRecordDecl())
                       ->isDerivedFrom(cast<CXXRecordDecl>(BaseRD)))) {
@@ -476,7 +476,7 @@ void ArgumentCommentCheck::checkRecordInitializer(ASTContext *Ctx,
       continue;
     }
 
-    llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Comments =
+    const llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Comments =
         collectLeadingComments(Ctx, ArgBeginLoc, Arg);
     ArgBeginLoc = Arg->getEndLoc();
 
