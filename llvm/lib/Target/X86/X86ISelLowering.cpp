@@ -2846,6 +2846,15 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
   return false;
 }
 
+// Return true if its cheap to bitcast this to a vector type.
+static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget) {
+  if (peekThroughBitcasts(Op).getValueType().isVector())
+    return true;
+  if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
+    return true;
+  return X86::mayFoldLoad(Op, Subtarget);
+}
+
 static bool isLogicOp(unsigned Opcode) {
   // TODO: Add support for X86ISD::FAND/FOR/FXOR/FANDN with test coverage.
   return ISD::isBitwiseLogicOp(Opcode) || X86ISD::ANDNP == Opcode;
@@ -33162,7 +33171,14 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
     // For illegal i64 atomic_stores, we can try to use MOVQ or MOVLPS if SSE
     // is enabled.
     if (VT == MVT::i64) {
-      if (Subtarget.hasSSE1()) {
+      SDValue BCValue = peekThroughBitcasts(Node->getVal());
+      if (BCValue.getValueType() == MVT::f64 &&
+          (Subtarget.hasX87() || Subtarget.hasSSE2())) {
+        // If the i64 was bitcast from a f64 then we can do the f64 atomic store
+        // directly with FSTPL/MOVSD.
+        Chain = DAG.getStore(Node->getChain(), dl, BCValue, Node->getBasePtr(),
+                             Node->getMemOperand());
+      } else if (Subtarget.hasSSE1()) {
         SDValue SclToVec =
             DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, Node->getVal());
         MVT StVT = Subtarget.hasSSE2() ? MVT::v2i64 : MVT::v4f32;
@@ -33958,7 +33974,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     assert(Subtarget.hasCDI() && "AVX512CD required");
     assert((VT == MVT::i256 || VT == MVT::i512) && "Unexpected VT!");
-    if (VT == MVT::i256 && !X86::mayFoldLoad(N0, Subtarget))
+    if (VT == MVT::i256 && !mayFoldIntoVector(N0, Subtarget))
       return;
 
     unsigned SizeInBits = VT.getSizeInBits();
@@ -61974,8 +61990,8 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
       if (C->getZExtValue() == 0xff || C->getZExtValue() == 0xffff ||
           (Subtarget.is64Bit() && C->getZExtValue() == 0xffffffff)) {
-        Result = DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
-                                       Op.getValueType());
+        Result = DAG.getSignedTargetConstant(C->getSExtValue(), SDLoc(Op),
+                                             Op.getValueType());
         break;
       }
     }
@@ -62013,7 +62029,8 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
       if (ConstantInt::isValueValidForType(Type::getInt32Ty(*DAG.getContext()),
                                            C->getSExtValue())) {
         // Widen to 64 bits here to get it sign extended.
-        Result = DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op), MVT::i64);
+        Result =
+            DAG.getSignedTargetConstant(C->getSExtValue(), SDLoc(Op), MVT::i64);
         break;
       }
     // FIXME gcc accepts some relocatable values here too, but only in certain
@@ -62062,9 +62079,11 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
       BooleanContent BCont = getBooleanContents(MVT::i64);
       ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
                                     : ISD::SIGN_EXTEND;
-      int64_t ExtVal = ExtOpc == ISD::ZERO_EXTEND ? CST->getZExtValue()
-                                                  : CST->getSExtValue();
-      Result = DAG.getTargetConstant(ExtVal, SDLoc(Op), MVT::i64);
+      SDLoc DL(Op);
+      Result =
+          ExtOpc == ISD::ZERO_EXTEND
+              ? DAG.getTargetConstant(CST->getZExtValue(), DL, MVT::i64)
+              : DAG.getSignedTargetConstant(CST->getSExtValue(), DL, MVT::i64);
       break;
     }
 
