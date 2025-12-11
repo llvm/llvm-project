@@ -25,7 +25,6 @@ namespace MyNamespace {
 // CHECK-GLOBAL-NEXT:                </div>
 // CHECK-GLOBAL-NEXT:                <div class="resizer" id="resizer"></div>
 // CHECK-GLOBAL-NEXT:                <div class="content">
-// CHECK-GLOBAL-EMPTY:
 // CHECK-GLOBAL-NEXT:                </div>
 // CHECK-GLOBAL-NEXT:            </div>
 // CHECK-GLOBAL-NEXT:        </main>
