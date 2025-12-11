@@ -18,3 +18,27 @@ void choose_expr() {
 
 // OGCG: %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG: store i32 2, ptr %[[A_ADDR]], align 4
+
+void choose_expr_non_constant() {
+  int a;
+  int b;
+  int c = __builtin_choose_expr(1, a, b);
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b"]
+// CIR: %[[C_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["c", init]
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CIR: cir.store {{.*}} %[[TMP_A]], %[[C_ADDR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[C_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[TMP_A:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// LLVM: store i32 %[[TMP_A]], ptr %[[C_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca i32, align 4
+// OGCG: %[[B_ADDR:.*]] = alloca i32, align 4
+// OGCG: %[[C_ADDR:.*]] = alloca i32, align 4
+// OGCG: %[[TMP_A:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// OGCG: store i32 %[[TMP_A]], ptr %[[C_ADDR]], align 4
