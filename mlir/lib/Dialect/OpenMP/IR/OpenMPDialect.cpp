@@ -2210,8 +2210,28 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                   /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars,
                   clauses.mapVars, clauses.nowait, clauses.privateVars,
                   makeArrayAttr(ctx, clauses.privateSyms),
-                  clauses.privateNeedsBarrier, clauses.threadLimit,
+                  clauses.privateNeedsBarrier, clauses.threadLimitNumDims,
+                  clauses.threadLimitDimsValues, clauses.threadLimit,
                   /*private_maps=*/nullptr);
+}
+
+// helper for thread_limit clause restrictions
+static LogicalResult
+verifyThreadLimitClause(Operation *op,
+                        std::optional<IntegerAttr> threadLimitNumDims,
+                        OperandRange threadLimitDimsValues, Value threadLimit) {
+  bool hasDimsModifier =
+      threadLimitNumDims.has_value() && threadLimitNumDims.value();
+
+  if (hasDimsModifier && threadLimit) {
+    return op->emitError("thread_limit with dims modifier cannot be used "
+                         "together with number of threads");
+  }
+
+  if (failed(verifyDimsModifier(op, threadLimitNumDims, threadLimitDimsValues)))
+    return failure();
+
+  return success();
 }
 
 LogicalResult TargetOp::verify() {
@@ -2223,6 +2243,11 @@ LogicalResult TargetOp::verify() {
     return failure();
 
   if (failed(verifyMapClause(*this, getMapVars())))
+    return failure();
+
+  if (failed(verifyThreadLimitClause(*this, getThreadLimitNumDimsAttr(),
+                                     getThreadLimitDimsValues(),
+                                     getThreadLimit())))
     return failure();
 
   return verifyPrivateVarsMapping(*this);
@@ -2691,6 +2716,12 @@ LogicalResult TeamsOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
+
+  // Check for thread_limit clause restrictions
+  if (failed(verifyThreadLimitClause(*this, getThreadLimitNumDimsAttr(),
+                                     getThreadLimitDimsValues(),
+                                     getThreadLimit())))
+    return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());
@@ -4620,6 +4651,42 @@ static void printNumTeamsClause(OpAsmPrinter &p, Operation *op,
       p.printOperand(upperBound);
       p << " : " << upperBoundType;
     }
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Parser and printer for thread_limit clause
+//===----------------------------------------------------------------------===//
+static ParseResult
+parseThreadLimitClause(OpAsmParser &parser, IntegerAttr &dimsAttr,
+                       SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+                       SmallVectorImpl<Type> &types,
+                       std::optional<OpAsmParser::UnresolvedOperand> &bounds,
+                       Type &boundsType) {
+  if (succeeded(parseDimsModifierWithValues(parser, dimsAttr, values, types))) {
+    return success();
+  }
+
+  OpAsmParser::UnresolvedOperand boundsOperand;
+  if (parser.parseOperand(boundsOperand) || parser.parseColon() ||
+      parser.parseType(boundsType)) {
+    return failure();
+  }
+  bounds = boundsOperand;
+  return success();
+}
+
+static void printThreadLimitClause(OpAsmPrinter &p, Operation *op,
+                                   IntegerAttr dimsAttr, OperandRange values,
+                                   TypeRange types, Value bounds,
+                                   Type boundsType) {
+  if (!values.empty()) {
+    // Multidimensional: dims(N): values : type
+    printDimsModifierWithValues(p, dimsAttr, values, types);
+  } else if (bounds) {
+    // Both bounds: bounds : type
+    p.printOperand(bounds);
+    p << " : " << boundsType;
   }
 }
 

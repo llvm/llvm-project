@@ -1438,7 +1438,7 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
     // expected-error @below {{expected equal sizes for allocate and allocator variables}}
     "omp.teams" (%data_var) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0,0>} : (memref<i32>) -> ()
+    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0,0,0>} : (memref<i32>) -> ()
     omp.terminator
   }
   return
@@ -1451,7 +1451,7 @@ func.func @omp_teams_num_teams1(%lb : i32) {
     // expected-error @below {{expected num_teams upper bound to be defined if the lower bound is defined}}
     "omp.teams" (%lb) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0,0>} : (i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0,0,0>} : (i32) -> ()
     omp.terminator
   }
   return
@@ -1484,6 +1484,139 @@ func.func @omp_teams_num_teams2(%lb : i32, %ub : i16) {
     }
     omp.terminator
   }
+  return
+}
+
+// -----
+
+func.func @omp_teams_thread_limit_dims_mismatch() {
+  omp.target {
+    %v0 = arith.constant 1 : i32
+    %v1 = arith.constant 2 : i32
+    // expected-error @below {{dims(3) specified but 2 values provided}}
+    "omp.teams" (%v0, %v1) ({
+      omp.terminator
+    }) {thread_limit_num_dims = 3 : i64, operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,2,0>} : (i32, i32) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_thread_limit_dims_with_scalar() {
+  omp.target {
+    %v0 = arith.constant 1 : i32
+    %v1 = arith.constant 2 : i32
+    %tl = arith.constant 4 : i32
+    // expected-error @below {{thread_limit with dims modifier cannot be used together with number of threads}}
+    "omp.teams" (%v0, %v1, %tl) ({
+      omp.terminator
+    }) {thread_limit_num_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,2,1>} : (i32, i32, i32) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_thread_limit_dims_no_values() {
+  omp.target {
+    // expected-error @below {{dims modifier requires values to be specified}}
+    "omp.teams" () ({
+      omp.terminator
+    }) {thread_limit_num_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,0>} : () -> ()
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_thread_limit_values_without_dims() {
+  omp.target {
+    %v0 = arith.constant 1 : i32
+    %v1 = arith.constant 2 : i32
+    // expected-error @below {{dims values can only be specified with dims modifier}}
+    "omp.teams" (%v0, %v1) ({
+      omp.terminator
+    }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,2,0>} : (i32, i32) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_thread_limit_dims_type_mismatch() {
+  omp.target {
+    %v0 = arith.constant 1 : i32
+    %v1 = arith.constant 2 : i64
+    // expected-error @below {{dims modifier requires all values to have the same type}}
+    "omp.teams" (%v0, %v1) ({
+      omp.terminator
+    }) {thread_limit_num_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,2,0>} : (i32, i64) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_target_thread_limit_dims_mismatch() {
+  %v0 = arith.constant 1 : i32
+  %v1 = arith.constant 2 : i32
+  // expected-error @below {{dims(3) specified but 2 values provided}}
+  "omp.target" (%v0, %v1) ({
+    omp.terminator
+  }) {thread_limit_num_dims = 3 : i64, operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,0,0,0,2,0>} : (i32, i32) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_target_thread_limit_dims_with_scalar() {
+  %v0 = arith.constant 1 : i32
+  %v1 = arith.constant 2 : i32
+  %tl = arith.constant 4 : i32
+  // expected-error @below {{thread_limit with dims modifier cannot be used together with number of threads}}
+  "omp.target" (%v0, %v1, %tl) ({
+    omp.terminator
+  }) {thread_limit_num_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,0,0,0,2,1>} : (i32, i32, i32) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_target_thread_limit_dims_no_values() {
+  // expected-error @below {{dims modifier requires values to be specified}}
+  "omp.target" () ({
+    omp.terminator
+  }) {thread_limit_num_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,0,0,0,0,0>} : () -> ()
+  return
+}
+
+// -----
+
+func.func @omp_target_thread_limit_values_without_dims() {
+  %v0 = arith.constant 1 : i32
+  %v1 = arith.constant 2 : i32
+  // expected-error @below {{dims values can only be specified with dims modifier}}
+  "omp.target" (%v0, %v1) ({
+    omp.terminator
+  }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,0,0,0,2,0>} : (i32, i32) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_target_thread_limit_dims_type_mismatch() {
+  %v0 = arith.constant 1 : i32
+  %v1 = arith.constant 2 : i64
+  // expected-error @below {{dims modifier requires all values to have the same type}}
+  "omp.target" (%v0, %v1) ({
+    omp.terminator
+  }) {thread_limit_num_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,0,0,0,2,0>} : (i32, i64) -> ()
   return
 }
 
@@ -2475,7 +2608,7 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.target"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
