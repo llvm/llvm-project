@@ -1174,6 +1174,31 @@ def ROCDL_RawBufferAtomicCmpSwap :
 }
 
 //===---------------------------------------------------------------------===//
+// Memory prefetch intrinsics
+
+def ROCDL_GlobalPrefetchOp :
+  ROCDL_IntrOp<"global.prefetch", [], [], [], 0, 0, 0, 0, [1], ["scope"]>,
+  Arguments<(ins Arg<LLVM_PointerInAddressSpace<1>, "", []>:$ptr, I32Attr:$scope)> {
+  let description = [{
+    Prefetches 1 byte of data per lane from global memory into the WGP-cache or L2-cache.
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr `,` `scope` $scope attr-dict `:` qualified(type($ptr))";
+}
+
+def ROCDL_FlatPrefetchOp :
+  ROCDL_IntrOp<"flat.prefetch", [], [], [], 0, 0, 0, 0, [1], ["scope"]>,
+  Arguments<(ins Arg<LLVM_PointerInAddressSpace<0>, "", []>:$ptr, I32Attr:$scope)> {
+  let description = [{
+    Prefetches 1 byte of data per lane using flat-memory addresses into the WGP-cache or L2-cache.
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr `,` `scope` $scope attr-dict `:` qualified(type($ptr))";
+}
+
+//===---------------------------------------------------------------------===//
 // MI-100 and MI-200 buffer atomic floating point add intrinsic
 
 def ROCDL_RawBufferAtomicFAddOp :
