@@ -2425,8 +2425,6 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
 
-  MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
-
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
