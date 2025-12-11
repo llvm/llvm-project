@@ -7287,9 +7287,9 @@ OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
                                                    const SimplifyQuery &SQ,
                                                    bool IsNSW) {
   ConstantRange LHSRange =
-      computeConstantRangeIncludingKnownBits(LHS, false, SQ);
+      computeConstantRangeIncludingKnownBits(LHS, /*ForSigned=*/false, SQ);
   ConstantRange RHSRange =
-      computeConstantRangeIncludingKnownBits(RHS, false, SQ);
+      computeConstantRangeIncludingKnownBits(RHS, /*ForSigned=*/false, SQ);
 
   // mul nsw of two non-negative numbers is also nuw.
   if (IsNSW && LHSRange.isAllNonNegative() && RHSRange.isAllNonNegative())
