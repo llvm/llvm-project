@@ -3939,10 +3939,14 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return PyOpSuccessors(self.getOperation().getRef());
           },
           "Returns the list of Operation successors.")
-      .def("replace_uses_of_with",
-           [](PyOperation &self, PyValue &from, PyValue &to) {
-             mlirOperationReplaceUsesOfWith(self.get(), from.get(), to.get());
-           })
+      .def(
+          "replace_uses_of_with",
+          [](PyOperation &self, PyValue &of, PyValue &with) {
+            mlirOperationReplaceUsesOfWith(self.get(), of.get(), with.get());
+          },
+          "of"_a, "with"_a,
+          "Replaces uses of the 'of' value with the 'with' value inside the "
+          "operation.")
       .def("_set_invalid", &PyOperation::setInvalid,
            "Invalidate the operation.");
 
