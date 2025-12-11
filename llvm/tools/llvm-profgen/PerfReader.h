@@ -597,6 +597,9 @@ protected:
   uint64_t NumTotalSample = 0;
   uint64_t NumLeafExternalFrame = 0;
   uint64_t NumLeadingOutgoingLBR = 0;
+
+  // Default to PID 0 when none is provided
+  static constexpr int32_t DefaultPID = 0;
 };
 
 // Read perf script to parse the events and samples.

@@ -200,7 +200,8 @@ class ProfiledBinary {
   // The runtime base address that the first executable segment is loaded at.
   // The binary may be loaded at different addresses in different processes,
   // so we use a map to store base address by PID.
-  // If the profile doesn't contain PID info we use PID 0.
+  // If the profile doesn't contain PID info we use the default PID value
+  // (DefaultPID defined in PerfReaderBase).
   std::unordered_map<int32_t, uint64_t> BaseAddressByPID;
   // The last PID we saw the binary loaded into. Used to warn the user if a
   // binary is loaded in multiple processes without --multi-process-profile.
@@ -402,7 +403,7 @@ public:
 
   StringRef getPath() const { return Path; }
   StringRef getName() const { return llvm::sys::path::filename(Path); }
-  uint64_t getPIDBaseAddress(int32_t PID) const {
+  uint64_t getBaseAddress(int32_t PID) const {
     auto Pos = BaseAddressByPID.find(PID);
     if (Pos == BaseAddressByPID.end()) {
       // Use preferred address as the default base address.
@@ -411,15 +412,15 @@ public:
 
     return Pos->second;
   }
-  void setPIDBaseAddress(int32_t PID, uint64_t Address) {
+  void setBaseAddress(int32_t PID, uint64_t Address) {
     BaseAddressByPID[PID] = Address;
   }
 
   bool isCOFF() const { return IsCOFF; }
 
   // Canonicalize to use preferred load address as base address.
-  uint64_t canonicalizeVirtualAddress(int64_t PID, uint64_t Address) {
-    return Address - getPIDBaseAddress(PID) + getPreferredBaseAddress();
+  uint64_t canonicalizeVirtualAddress(int32_t PID, uint64_t Address) {
+    return Address - getBaseAddress(PID) + getPreferredBaseAddress();
   }
   // Return the preferred load address for the first executable segment.
   uint64_t getPreferredBaseAddress() const {

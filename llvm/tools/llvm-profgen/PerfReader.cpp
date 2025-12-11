@@ -447,8 +447,9 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
       if (DataSymbol.starts_with("_ZTV")) {
         uint64_t IP = 0;
         Fields[2].getAsInteger(16, IP);
-        // If no PID is in the profile's samples, we treat everything as PID 0
-        int32_t LookupPID = MultiProcessProfile ? PID : 0;
+        // If no PID is in the profile's samples, we treat everything as the
+        // default PID value
+        int32_t LookupPID = MultiProcessProfile ? PID : DefaultPID;
         Counter.recordDataAccessCount(
             Binary->canonicalizeVirtualAddress(LookupPID, IP), DataSymbol, 1);
       }
@@ -557,11 +558,12 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   if (!PIDFilter.empty() && !PIDFilter.contains(Event.PID))
     return;
 
-  // If no PID is in the profile's samples, we treat everything as PID 0
-  int32_t LookupPID = MultiProcessProfile ? Event.PID : 0;
+  // If no PID is in the profile's samples, we treat everything as the default
+  // PID value
+  int32_t LookupPID = MultiProcessProfile ? Event.PID : DefaultPID;
 
   // Drop the event if its image is loaded at the same address
-  if (Event.Address == Binary->getPIDBaseAddress(LookupPID)) {
+  if (Event.Address == Binary->getBaseAddress(LookupPID)) {
     Binary->setIsLoadedByMMap(true);
     return;
   }
@@ -572,7 +574,7 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
     WithColor::warning() << "Binary previously loaded in process ID "
                          << LastSeenPID.value() << " at "
                          << format("0x%" PRIx64,
-                                   Binary->getPIDBaseAddress(LookupPID))
+                                   Binary->getBaseAddress(LookupPID))
                          << " was reloaded in process ID " << Event.PID
                          << " at " << format("0x%" PRIx64, Event.Address)
                          << ". If profiling multiple processes running "
@@ -587,7 +589,7 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
     // Only update for the first executable segment and assume all other
     // segments are loaded at consecutive memory addresses, which is the case on
     // X64.
-    Binary->setPIDBaseAddress(LookupPID, Event.Address);
+    Binary->setBaseAddress(LookupPID, Event.Address);
     Binary->setIsLoadedByMMap(true);
   } else {
     // Verify segments are loaded consecutively.
@@ -598,7 +600,7 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
       auto I = std::distance(Offsets.begin(), It);
       const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
       if (PreferredAddrs[I] - Binary->getPreferredBaseAddress() !=
-          Event.Address - Binary->getPIDBaseAddress(LookupPID))
+          Event.Address - Binary->getBaseAddress(LookupPID))
         exitWithError("Executable segments not loaded consecutively");
     } else {
       if (It == Offsets.begin())
@@ -609,7 +611,7 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
         --It;
         assert(*It < Event.Offset);
         if (Event.Offset - *It !=
-            Event.Address - Binary->getPIDBaseAddress(LookupPID))
+            Event.Address - Binary->getBaseAddress(LookupPID))
           exitWithError("Segment not loaded by consecutive mmaps");
       }
     }
@@ -703,8 +705,8 @@ bool PerfScriptReader::extractLBRStack(std::optional<int32_t> PIDIfKnown,
 
   // Skip the leading instruction pointer.
   size_t Index = 0;
-  // Default to PID 0 if not provided
-  int32_t PID = 0;
+  // Default to a default PID value if not provided
+  int32_t PID = DefaultPID;
   uint64_t LeadingAddr;
 
   if (Records.size() < (MultiProcessProfile ? 2 : 1)) {
@@ -874,8 +876,8 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
 #ifndef NDEBUG
   Sample->Linenum = TraceIt.getLineNumber();
 #endif
-  // Default to PID 0
-  int32_t PID = 0;
+  // Default to a default PID value
+  int32_t PID = DefaultPID;
   if (MultiProcessProfile) {
     // Parse the PID at the beginning of the sample
     StringRef FirstLine = TraceIt.getCurrentLine();
@@ -1263,17 +1265,14 @@ bool PerfScriptReader::isMMapEvent(StringRef Line) {
   if (Line.empty() || Line.size() < 50)
     return false;
 
-  if (MultiProcessProfile) {
+  auto Trimmed = Line;
+  if (MultiProcessProfile)
     // Trim off the first numeric field, which is the PID.
     // Make sure not to trim other numeric fields.
-    auto Trimmed = Line.ltrim().ltrim("0123456789").ltrim();
+    Trimmed = Line.ltrim().ltrim("0123456789").ltrim();
 
-    if (Trimmed.empty() || std::isdigit(Trimmed[0]))
-      return false;
-  } else {
-    if (std::isdigit(Line[0]))
-      return false;
-  }
+  if (Trimmed.empty() || std::isdigit(Trimmed[0]))
+    return false;
 
   // PERF_RECORD_MMAP2 or PERF_RECORD_MMAP does not appear at the beginning of
   // the line for ` perf script  --show-mmap-events  -i ...`
