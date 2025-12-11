@@ -250,10 +250,10 @@ def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 
 def CIR_AnyVectorType : CIR_TypeBase<"::cir::VectorType", "vector type">;
 
-def CIR_VectorElementType : AnyTypeOf<[CIR_AnyIntOrFloatType, CIR_AnyPtrType],
-    "any cir integer, floating point or pointer type"
-> {
-    let cppFunctionName = "isValidVectorTypeElementType";
+def CIR_VectorElementType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType, CIR_AnyPtrType],
+                "any cir boolean, integer, floating point or pointer type"> {
+  let cppFunctionName = "isValidVectorTypeElementType";
 }
 
 class CIR_ElementTypePred<Pred pred> : SubstLeaves<"$_self",
@@ -265,6 +265,9 @@ class CIR_VectorTypeOf<list<Type> types, string summary = "">
         !if(!empty(summary),
             "vector of " # CIR_TypeSummaries<types>.value,
             summary)>;
+
+// Type constraint accepting a either a type T or a vector of type T
+class CIR_ScalarOrVectorOf<Type T> : AnyTypeOf<[T, CIR_VectorTypeOf<[T]>]>;
 
 // Vector of integral type
 def IntegerVector : Type<
