@@ -170,46 +170,48 @@ public:
     return isLoadFromStack(Inst);
   }
 
-  // We look for instructions that load from stack or make stack pointer
-  // adjustment, and assume the basic block is an epilogue if and only if
-  // such instructions are present and also immediately precede the branch
-  // instruction that ends the basic block.
+  // We look for instruction that saves LR to or restores LR from stack.
+  //
+  // If we ever see an LR save to stack, we assume this block is not an
+  // epilogue.
+  //
+  // If there is no LR save in the block and we see an LR restore from
+  // stack, we assume it is an epilogue.
+  //
+  // If neither is seen, we assume it is not an epilogue.
+  //
+  // This is not meant to accurately recognize epilogue in all possible
+  // cases, but to have BOLT be conservative on treating basic block as
+  // epilogue and then turning indirect branch with unknown control flow
+  // to tail call.
   bool isEpilogue(const BinaryBasicBlock &BB) const override {
     if (BB.succ_size())
       return false;
 
-    bool SeenLoadFromStack = false;
-    bool SeenStackPointerAdjustment = false;
-    for (const MCInst &Instr : BB) {
+    bool SeenLRRestoreFromStack = false;
+    for (auto It = BB.rbegin(); It != BB.rend(); ++It) {
+      const MCInst &Instr = *It;
       // Skip CFI pseudo instruction.
       if (isCFI(Instr))
         continue;
-
-      bool IsPop = isPop(Instr);
-      // A load from stack instruction could do SP adjustment in pre-index or
-      // post-index form, which we can skip to check for epilogue recognition
-      // purpose.
-      bool IsSPAdj = (isADD(Instr) || isMOVW(Instr)) &&
-                     Instr.getOperand(0).isReg() &&
-                     Instr.getOperand(0).getReg() == AArch64::SP;
-      SeenLoadFromStack |= IsPop;
-      SeenStackPointerAdjustment |= IsSPAdj;
-
-      if (!SeenLoadFromStack && !SeenStackPointerAdjustment)
-        continue;
-      if (IsPop || IsSPAdj || isPAuthOnLR(Instr))
-        continue;
       if (isReturn(Instr))
         return true;
-      if (isBranch(Instr))
-        break;
 
-      // Any previously seen load from stack or stack adjustment instruction
-      // is definitely not part of epilogue code sequence, so reset these two.
-      SeenLoadFromStack = false;
-      SeenStackPointerAdjustment = false;
+      if (isStoreToStack(Instr)) {
+        for (const MCOperand &Operand : useOperands(Instr)) {
+          if (Operand.isReg() && Operand.getReg() == AArch64::LR) {
+            return false;
+          }
+        }
+      } else if (isLoadFromStack(Instr)) {
+        for (const MCOperand &Operand : defOperands(Instr)) {
+          if (Operand.isReg() && Operand.getReg() == AArch64::LR) {
+            SeenLRRestoreFromStack = true;
+          }
+        }
+      }
     }
-    return SeenLoadFromStack || SeenStackPointerAdjustment;
+    return SeenLRRestoreFromStack;
   }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
