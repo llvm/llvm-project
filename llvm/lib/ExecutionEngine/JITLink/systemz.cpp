@@ -106,9 +106,49 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "RequestGOTAndTransformToDelta32dbl";
   case RequestTLSDescInGOTAndTransformToDelta64FromGOT:
     return "RequestTLSDescInGOTAndTransformToDelta64FromGOT";
+  case Delta32dblToPtrJumpStubBypassable:
+    return "Delta32dblToPtrJumpStubBypassable";
   default:
     return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
   }
+}
+
+Error optimizeGOTAndStubAccesses(LinkGraph &G) {
+  LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
+
+  for (auto *B : G.blocks())
+    for (auto &E : B->edges()) {
+      if (E.getKind() == systemz::Delta32dblToPtrJumpStubBypassable) {
+        auto &StubBlock = E.getTarget().getBlock();
+        assert(StubBlock.getSize() == sizeof(Pointer64JumpStubContent) &&
+               "Stub block should be stub sized");
+        assert(StubBlock.edges_size() == 1 &&
+               "Stub block should only have one outgoing edge");
+
+        auto &GOTBlock = StubBlock.edges().begin()->getTarget().getBlock();
+        assert(GOTBlock.getSize() == G.getPointerSize() &&
+               "GOT block should be pointer sized");
+        assert(GOTBlock.edges_size() == 1 &&
+               "GOT block should only have one outgoing edge");
+
+        auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
+        orc::ExecutorAddr EdgeAddr = B->getAddress() + E.getOffset();
+        orc::ExecutorAddr TargetAddr = GOTTarget.getAddress();
+
+        int64_t Displacement = TargetAddr - EdgeAddr;
+        if (isInt<32>(Displacement)) {
+          E.setKind(systemz::Delta32dbl);
+          E.setTarget(GOTTarget);
+          LLVM_DEBUG({
+            dbgs() << "  Replaced stub branch with direct branch:\n    ";
+            printEdge(dbgs(), *B, E, getEdgeKindName(E.getKind()));
+            dbgs() << "\n";
+          });
+        }
+      }
+    }
+
+  return Error::success();
 }
 
 } // namespace systemz

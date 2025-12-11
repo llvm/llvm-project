@@ -219,6 +219,24 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   DeltaPLT32dbl,
 
+  /// Relaxable version of DeltaPLT32dbl.
+  ///
+  /// The edge kind has the same fixup expression as DeltaPLT32dbl,
+  /// but identifies the call/branch as being to a pointer jump stub that may be
+  /// bypassed with a direct jump to the ultimate target if the ultimate target
+  /// is within range of the fixup location.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target - Fixup + Addend) >> 1 : int32
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression before shifting right by 1 must
+  ///     fit into an int33, otherwise an out-of-range error will be returned.
+  ///   - The result of the fixup expression  before shifting right by 1 must
+  ///     be multiple of 2, otherwise an alignment error will be returned.
+  ///
+  Delta32dblToPtrJumpStubBypassable,
+
   /// A 24-bit Delta shifted by 1.
   ///
   /// Delta from the fixup to the PLT slot for the target. This will lead to
@@ -652,6 +670,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     break;
   }
   case Delta32dbl:
+  case Delta32dblToPtrJumpStubBypassable:
   case DeltaPLT32dbl: {
     int64_t Value = S + A - P;
     if (!LLVM_UNLIKELY(isInt<33>(Value)))
@@ -891,12 +910,15 @@ public:
       return false;
 
     switch (E.getKind()) {
+    case systemz::DeltaPLT32dbl: {
+      E.setKind(systemz::Delta32dblToPtrJumpStubBypassable);
+      break;
+    }
     case systemz::DeltaPLT32:
     case systemz::DeltaPLT64:
     case systemz::DeltaPLT12dbl:
     case systemz::DeltaPLT16dbl:
     case systemz::DeltaPLT24dbl:
-    case systemz::DeltaPLT32dbl:
     case systemz::Delta16PLTFromGOT:
     case systemz::Delta32PLTFromGOT:
     case systemz::Delta64PLTFromGOT:
@@ -929,6 +951,12 @@ public:
   GOTTableManager &GOT;
   Section *StubsSection = nullptr;
 };
+
+/// Optimize the GOT and Stub relocations if the edge target address is in
+/// range - Edge of kind is marked as Delta32dblToPtrJumpStubBypassable.
+/// For this edge kind, if the target is in range, replace a indirect jump
+/// by plt stub with a direct jump to the target.
+LLVM_ABI Error optimizeGOTAndStubAccesses(LinkGraph &G);
 
 } // namespace systemz
 } // namespace jitlink
