@@ -32,10 +32,10 @@
 
 using namespace llvm;
 
-namespace dtlto {
+namespace {
 
 // Writes the content of a memory buffer into a file.
-static llvm::Error saveBuffer(StringRef FileBuffer, StringRef FilePath) {
+llvm::Error saveBuffer(StringRef FileBuffer, StringRef FilePath) {
   std::error_code EC;
   raw_fd_ostream OS(FilePath.str(), EC, sys::fs::OpenFlags::OF_None);
   if (EC) {
@@ -68,15 +68,17 @@ SmallString<64> computeThinArchiveMemberPath(const StringRef ArchivePath,
   return MemberPath;
 }
 
+} // namespace
+
 // Determines if a file at the given path is a thin archive file.
 //
 // This function uses a cache to avoid repeatedly reading the same file.
 // It reads only the header portion (magic bytes) of the file to identify
 // the archive type.
-Expected<bool> isThinArchive(lto::DTLTO *Dtlto, const StringRef ArchivePath) {
+Expected<bool> lto::DTLTO::isThinArchive(const StringRef ArchivePath) {
   // Return cached result if available.
-  auto Cached = Dtlto->ArchiveFiles.find(ArchivePath);
-  if (Cached != Dtlto->ArchiveFiles.end())
+  auto Cached = ArchiveFiles.find(ArchivePath);
+  if (Cached != ArchiveFiles.end())
     return Cached->second;
 
   uint64_t FileSize = -1;
@@ -110,11 +112,9 @@ Expected<bool> isThinArchive(lto::DTLTO *Dtlto, const StringRef ArchivePath) {
   IsThin = MemBuf.starts_with(object::ThinArchiveMagic);
 
   // Cache the result
-  Dtlto->ArchiveFiles[ArchivePath] = IsThin;
+  ArchiveFiles[ArchivePath] = IsThin;
   return IsThin;
 }
-
-} // namespace dtlto
 
 // Removes any temporary regular archive member files that were created during
 // processing.
@@ -149,14 +149,14 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
   BitcodeModule &BM = Input->getSingleBitcodeModule();
 
   // Check if the archive is a thin archive.
-  Expected<bool> IsThin = dtlto::isThinArchive(this, ArchivePath);
+  Expected<bool> IsThin = isThinArchive(ArchivePath);
   if (!IsThin)
     return IsThin.takeError();
 
   if (*IsThin) {
     // For thin archives, use the path to the actual file.
-    NewModuleId = dtlto::computeThinArchiveMemberPath(ArchivePath,
-                                                      Input->getMemberName());
+    NewModuleId =
+        computeThinArchiveMemberPath(ArchivePath, Input->getMemberName());
   } else {
     // For regular archives, generate a unique name.
     Input->memberOfArchive(true);
@@ -174,12 +174,10 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
   return Input;
 }
 
-namespace dtlto {
-
 // Write the archive member content to a file named after the module ID.
 // If a file with that name already exists, it's likely a leftover from a
 // previously terminated linker process and can be safely overwritten.
-Error saveInputArchiveMember(lto::DTLTO &LtoObj, lto::InputFile *Input) {
+Error lto::DTLTO::saveInputArchiveMember(lto::InputFile *Input) {
   StringRef ModuleId = Input->getName();
   if (Input->isMemberOfArchive()) {
     MemoryBufferRef MemoryBufferRef = Input->getFileBuffer();
@@ -191,17 +189,15 @@ Error saveInputArchiveMember(lto::DTLTO &LtoObj, lto::InputFile *Input) {
 
 // Iterates through all ThinLTO-enabled input files and saves their content
 // to separate files if they are regular archive members.
-Error saveInputArchiveMembers(lto::DTLTO &LtoObj) {
-  for (auto &Input : LtoObj.InputFiles) {
+Error lto::DTLTO::saveInputArchiveMembers() {
+  for (auto &Input : InputFiles) {
     if (!Input->isThinLTO())
       continue;
-    if (Error EC = saveInputArchiveMember(LtoObj, Input.get()))
+    if (Error EC = saveInputArchiveMember(Input.get()))
       return EC;
   }
   return Error::success();
 }
-
-} // namespace dtlto
 
 // Entry point for DTLTO archives support.
 //
@@ -210,7 +206,7 @@ Error saveInputArchiveMembers(lto::DTLTO &LtoObj) {
 llvm::Error lto::DTLTO::handleArchiveInputs() {
 
   // Process and save archive members to separate files if needed.
-  if (Error EC = dtlto::saveInputArchiveMembers(*this))
+  if (Error EC = saveInputArchiveMembers())
     return EC;
   return Error::success();
 }

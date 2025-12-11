@@ -34,13 +34,6 @@
 #include "llvm/Transforms/IPO/FunctionImport.h"
 
 namespace llvm {
-namespace lto {
-class LTO;
-}
-} // namespace llvm
-
-
-namespace llvm {
 
 class Error;
 class IRMover;
