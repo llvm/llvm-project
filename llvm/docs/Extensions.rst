@@ -419,6 +419,9 @@ features of the older versions).
 Version 4 (newest): Capable of encoding basic block hashes. This feature is
 enabled by the 7th bit of the feature byte.
 
+Starting from version 5, the feature data will be two bytes long.
+
+
 Example:
 
 .. code-block:: gas
