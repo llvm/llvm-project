@@ -1628,7 +1628,9 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
        A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ) ||
        A->getOption().matches(options::OPT_fsanitize_annotate_debug_info_EQ) ||
        A->getOption().matches(
-           options::OPT_fno_sanitize_annotate_debug_info_EQ)) &&
+           options::OPT_fno_sanitize_annotate_debug_info_EQ) ||
+       A->getOption().matches(
+           options::OPT_fsanitize_ignore_for_ubsan_feature_EQ)) &&
       "Invalid argument in parseArgValues!");
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
