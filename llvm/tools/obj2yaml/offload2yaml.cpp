@@ -41,29 +41,24 @@ void populateYAML(OffloadYAML::Binary &YAMLBinary,
 
 Expected<OffloadYAML::Binary *> dump(MemoryBufferRef Source,
                                      UniqueStringSaver Saver) {
-  Expected<std::unique_ptr<object::OffloadBinary>> OB =
-      object::OffloadBinary::createV1(Source);
-  if (!OB)
-    return OB.takeError();
-
   std::unique_ptr<OffloadYAML::Binary> YAMLBinary =
       std::make_unique<OffloadYAML::Binary>();
 
   YAMLBinary->Members = std::vector<OffloadYAML::Binary::Member>();
 
   uint64_t Offset = 0;
-  while (Offset < (*OB)->getMemoryBufferRef().getBufferSize()) {
+  while (Offset < Source.getBufferSize()) {
     MemoryBufferRef Buffer = MemoryBufferRef(
-        (*OB)->getData().drop_front(Offset), (*OB)->getFileName());
-    auto BinaryOrErr = object::OffloadBinary::createV1(Buffer);
-    if (!BinaryOrErr)
-      return BinaryOrErr.takeError();
+        Source.getBuffer().drop_front(Offset), Source.getBufferIdentifier());
+    auto BinariesOrErr = object::OffloadBinary::create(Buffer);
+    if (!BinariesOrErr)
+      return BinariesOrErr.takeError();
 
-    std::unique_ptr<object::OffloadBinary> BinaryPtr = std::move(*BinaryOrErr);
+    SmallVector<std::unique_ptr<object::OffloadBinary>> &Binaries =
+        *BinariesOrErr;
+    populateYAML(*YAMLBinary, Binaries, Saver);
 
-    populateYAML(*YAMLBinary, BinaryPtr, Saver);
-
-    Offset += BinaryPtr->getSize();
+    Offset += Binaries[0]->getSize();
   }
 
   return YAMLBinary.release();

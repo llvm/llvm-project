@@ -35,7 +35,7 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
                           SmallVectorImpl<OffloadFile> &Binaries) {
   uint64_t Offset = 0;
   // There could be multiple offloading binaries stored at this section.
-  while (Offset < Contents.getBuffer().size()) {
+  while (Offset < Contents.getBufferSize()) {
     std::unique_ptr<MemoryBuffer> Buffer =
         MemoryBuffer::getMemBuffer(Contents.getBuffer().drop_front(Offset), "",
                                    /*RequiresNullTerminator*/ false);

@@ -94,7 +94,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
     // Unrecognized object file format.
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::offload_binary:
-    return OffloadBinary::createV1(Buffer);
+    return OffloadBinary::create(Buffer);
   case file_magic::minidump:
     return MinidumpFile::create(Buffer);
   case file_magic::tapi_file:
