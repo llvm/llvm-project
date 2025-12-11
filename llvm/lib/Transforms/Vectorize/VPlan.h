@@ -2517,7 +2517,7 @@ public:
   /// all other incoming values are merged into it.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands, DebugLoc DL)
       : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, DL) {
-    assert(Operands.size() > 0 && "Expected at least one operand!");
+    assert(Operands.size() >= 2 && "Expected at least two operands!");
   }
 
   VPBlendRecipe *clone() override {
