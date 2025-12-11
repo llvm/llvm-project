@@ -34,7 +34,6 @@ resolveCommentSpaceMode(CommentKind Kind,
   case CommentKind::Plain:
     return GeneralMode;
   case CommentKind::Parameter:
-    return FormatStyle::SICS_Leave;
   case CommentKind::DocString:
     return FormatStyle::SICS_Leave;
   }

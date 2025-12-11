@@ -28,7 +28,7 @@ namespace {
 CommentKind classifyBlockComment(StringRef Text) {
   if (Text.starts_with("/**") || Text.starts_with("/*!"))
     return CommentKind::DocString;
-  const StringRef Content = Text.drop_front(2).drop_back(2).trim();
+  const StringRef Content = Text.drop_back(2).trim();
   if (Content.ends_with('='))
     return CommentKind::Parameter;
   return CommentKind::Plain;
