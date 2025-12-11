@@ -202,7 +202,7 @@ void yamlize(IO &IO, GlobListVariant &Val, bool, EmptyContext &Ctx) {
 }
 
 static void mapGlobList(IO &IO, std::optional<std::string> &GlobList,
-                        const char *Key) {
+                        StringRef Key) {
   if (IO.outputting()) {
     // Output always a string
     IO.mapOptional(Key, GlobList);
