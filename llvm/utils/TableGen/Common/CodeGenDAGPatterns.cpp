@@ -1798,15 +1798,27 @@ bool llvm::operator<(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS) {
 /// RegClassByHwMode acts like ValueTypeByHwMode, taking the type of the
 /// register class from the active mode.
 static TypeSetByHwMode getTypeForRegClassByHwMode(const CodeGenTarget &T,
-                                                  const Record *R) {
+                                                  const Record *R,
+                                                  ArrayRef<SMLoc> Loc) {
   TypeSetByHwMode TypeSet;
   RegClassByHwMode Helper(R, T.getHwModes(), T.getRegBank());
 
   for (auto [ModeID, RegClass] : Helper) {
     ArrayRef<ValueTypeByHwMode> RegClassVTs = RegClass->getValueTypes();
     MachineValueTypeSet &ModeTypeSet = TypeSet.getOrCreate(ModeID);
-    for (const ValueTypeByHwMode &VT : RegClassVTs)
+    for (const ValueTypeByHwMode &VT : RegClassVTs) {
+      if (!VT.hasMode(ModeID) && !VT.hasDefault()) {
+        PrintError(R->getLoc(), "Could not resolve VT for Mode " +
+                                    T.getHwModes().getModeName(ModeID, true));
+        if (VT.getRecord())
+          PrintNote(VT.getRecord()->getLoc(), "ValueTypeByHwMode " +
+                                                  VT.getRecord()->getName() +
+                                                  " defined here");
+        PrintFatalNote(Loc, "pattern instantiated here");
+        continue;
+      }
       ModeTypeSet.insert(VT.getType(ModeID));
+    }
   }
 
   return TypeSet;
@@ -1830,10 +1842,6 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
     return UpdateNodeType(ResNo, getValueTypeByHwMode(R, T.getHwModes()), TP);
   }
 
-  // PointerLikeRegClass has a type that is determined at runtime.
-  if (Operand->isSubClassOf("PointerLikeRegClass"))
-    return UpdateNodeType(ResNo, MVT::iPTR, TP);
-
   // Both RegisterClass and RegisterOperand operands derive their types from a
   // register class def.
   const Record *RC = nullptr;
@@ -1845,7 +1853,9 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
   assert(RC && "Unknown operand type");
   CodeGenTarget &Tgt = TP.getDAGPatterns().getTargetInfo();
   if (RC->isSubClassOf("RegClassByHwMode"))
-    return UpdateNodeType(ResNo, getTypeForRegClassByHwMode(Tgt, RC), TP);
+    return UpdateNodeType(
+        ResNo, getTypeForRegClassByHwMode(Tgt, RC, TP.getRecord()->getLoc()),
+        TP);
 
   return UpdateNodeType(ResNo, Tgt.getRegisterClass(RC).getValueTypes(), TP);
 }
@@ -2335,7 +2345,7 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
     const CodeGenTarget &T = TP.getDAGPatterns().getTargetInfo();
 
     if (RegClass->isSubClassOf("RegClassByHwMode"))
-      return getTypeForRegClassByHwMode(T, RegClass);
+      return getTypeForRegClassByHwMode(T, RegClass, TP.getRecord()->getLoc());
 
     return TypeSetByHwMode(T.getRegisterClass(RegClass).getValueTypes());
   }
@@ -2358,7 +2368,7 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
 
   if (R->isSubClassOf("RegClassByHwMode")) {
     const CodeGenTarget &T = CDP.getTargetInfo();
-    return getTypeForRegClassByHwMode(T, R);
+    return getTypeForRegClassByHwMode(T, R, TP.getRecord()->getLoc());
   }
 
   if (R->isSubClassOf("PatFrags")) {
@@ -2412,12 +2422,6 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
     const Record *T = CDP.getComplexPattern(R).getValueType();
     const CodeGenHwModes &CGH = CDP.getTargetInfo().getHwModes();
     return TypeSetByHwMode(getValueTypeByHwMode(T, CGH));
-  }
-  if (R->isSubClassOf("PointerLikeRegClass")) {
-    assert(ResNo == 0 && "Regclass can only have one result!");
-    TypeSetByHwMode VTS(MVT::iPTR);
-    TP.getInfer().expandOverloads(VTS);
-    return VTS;
   }
 
   if (R->getName() == "node" || R->getName() == "srcvalue" ||
@@ -3661,8 +3665,7 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
 
     if (Val->getDef()->isSubClassOf("RegisterClassLike") ||
         Val->getDef()->isSubClassOf("ValueType") ||
-        Val->getDef()->isSubClassOf("RegisterOperand") ||
-        Val->getDef()->isSubClassOf("PointerLikeRegClass")) {
+        Val->getDef()->isSubClassOf("RegisterOperand")) {
       if (Dest->getName().empty())
         I.error("set destination must have a name!");
       if (!InstResults.insert_or_assign(Dest->getName(), Dest).second)

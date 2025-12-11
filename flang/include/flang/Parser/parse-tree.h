@@ -22,6 +22,7 @@
 #include "format-specification.h"
 #include "message.h"
 #include "provenance.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
@@ -3383,6 +3384,12 @@ struct CompilerDirective {
     std::tuple<common::Indirection<Designator>, uint64_t> t;
   };
   EMPTY_CLASS(VectorAlways);
+  struct VectorLength {
+    TUPLE_CLASS_BOILERPLATE(VectorLength);
+    ENUM_CLASS(Kind, Auto, Fixed, Scalable);
+
+    std::tuple<std::uint64_t, Kind> t;
+  };
   struct NameValue {
     TUPLE_CLASS_BOILERPLATE(NameValue);
     std::tuple<Name, std::optional<std::uint64_t>> t;
@@ -3407,9 +3414,9 @@ struct CompilerDirective {
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
-      NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline,
-      Prefetch, IVDep>
+      VectorAlways, VectorLength, std::list<NameValue>, Unroll, UnrollAndJam,
+      Unrecognized, NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline,
+      NoInline, Prefetch, IVDep>
       u;
 };
 
@@ -3972,6 +3979,14 @@ struct OmpDeviceModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceModifier, Value);
 };
 
+// Ref: TODO
+//
+// dims-modifier ->
+//   constant integer expression                    // since 6.1
+struct OmpDimsModifier {
+  WRAPPER_CLASS_BOILERPLATE(OmpDimsModifier, ScalarIntConstantExpr);
+};
+
 // Ref: [5.2:72-73,230-323], in 4.5-5.1 it's scattered over individual
 // directives that allow the IF clause.
 //
@@ -4080,6 +4095,14 @@ struct OmpLastprivateModifier {
 struct OmpLinearModifier {
   ENUM_CLASS(Value, Ref, Uval, Val);
   WRAPPER_CLASS_BOILERPLATE(OmpLinearModifier, Value);
+};
+
+// Ref: [5.1:100-104], [5.2:277], [6.0:452-453]
+//
+// lower-bound ->
+//    scalar-integer-expression                     // since 5.1
+struct OmpLowerBound {
+  WRAPPER_CLASS_BOILERPLATE(OmpLowerBound, ScalarIntExpr);
 };
 
 // Ref: [5.0:176-180], [5.1:205-210], [5.2:149-150]
@@ -4665,10 +4688,10 @@ struct OmpLinearClause {
 
 // Ref: [6.0:207-208]
 //
-// loop-range-clause ->
+// looprange-clause ->
 //    LOOPRANGE(first, count)                       // since 6.0
-struct OmpLoopRangeClause {
-  TUPLE_CLASS_BOILERPLATE(OmpLoopRangeClause);
+struct OmpLooprangeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpLooprangeClause);
   std::tuple<ScalarIntConstantExpr, ScalarIntConstantExpr> t;
 };
 
@@ -4741,6 +4764,30 @@ struct OmpNumTasksClause {
   TUPLE_CLASS_BOILERPLATE(OmpNumTasksClause);
   MODIFIER_BOILERPLATE(OmpPrescriptiveness);
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
+};
+
+// Ref: [4.5:114-116], [5.0:82-85], [5.1:100-104], [5.2:277], [6.0:452-453]
+//
+// num-teams-clause ->
+//    NUM_TEAMS(expr) |                             // since 4.5
+//    NUM_TEAMS([lower-bound:] upper-bound) |       // since 5.1
+//    NUM_TEAMS([dims: upper-bound...)              // since 6.1
+struct OmpNumTeamsClause {
+  TUPLE_CLASS_BOILERPLATE(OmpNumTeamsClause);
+  MODIFIER_BOILERPLATE(OmpDimsModifier, OmpLowerBound);
+  std::tuple<MODIFIERS(), std::list<ScalarIntExpr>> t;
+};
+
+// Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:227], [6.0:388-389]
+//
+// num-threads-clause
+//    NUM_THREADS(expr) |                           // since 4.5
+//    NUM_THREADS(expr...) |                        // since 6.0
+//    NUM_THREADS([dims-modifier:] expr...)         // since 6.1
+struct OmpNumThreadsClause {
+  TUPLE_CLASS_BOILERPLATE(OmpNumThreadsClause);
+  MODIFIER_BOILERPLATE(OmpDimsModifier);
+  std::tuple<MODIFIERS(), std::list<ScalarIntExpr>> t;
 };
 
 // Ref: [5.0:101-109], [5.1:126-134], [5.2:233-234]
@@ -4846,6 +4893,17 @@ struct OmpTaskReductionClause {
   TUPLE_CLASS_BOILERPLATE(OmpTaskReductionClause);
   MODIFIER_BOILERPLATE(OmpReductionIdentifier);
   std::tuple<MODIFIERS(), OmpObjectList> t;
+};
+
+// Ref: [4.5:114-116], [5.0:82-85], [5.1:100-104], [5.2:277], [6.0:452-453]
+//
+// thread-limit-clause ->
+//    THREAD_LIMIT(threadlim)                       // since 4.5
+//    THREAD_LIMIT([dims-modifier:] threadlim...)   // since 6.1
+struct OmpThreadLimitClause {
+  TUPLE_CLASS_BOILERPLATE(OmpThreadLimitClause);
+  MODIFIER_BOILERPLATE(OmpDimsModifier);
+  std::tuple<MODIFIERS(), std::list<ScalarIntExpr>> t;
 };
 
 // Ref: [6.0:442]
@@ -4975,7 +5033,9 @@ struct OmpClauseList {
 // --- Directives and constructs
 
 struct OmpDirectiveSpecification {
-  ENUM_CLASS(Flags, None, DeprecatedSyntax);
+  ENUM_CLASS(Flag, DeprecatedSyntax, CrossesLabelDo)
+  using Flags = common::EnumSet<Flag, Flag_enumSize>;
+
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
   const OmpDirectiveName &DirName() const {
     return std::get<OmpDirectiveName>(t);

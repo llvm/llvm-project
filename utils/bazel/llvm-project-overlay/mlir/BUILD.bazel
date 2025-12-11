@@ -85,6 +85,8 @@ exports_files(glob(["include/**/*.td"]))
         tbl_outs = {
             "include/mlir/IR/" + name + ".h.inc": ["-gen-op-interface-decls"],
             "include/mlir/IR/" + name + ".cpp.inc": ["-gen-op-interface-defs"],
+            "include/mlir/IR/" + name + "AttrInterface.h.inc": ["-gen-attr-interface-decls"],
+            "include/mlir/IR/" + name + "AttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
         },
         tblgen = ":mlir-tblgen",
         td_file = "include/mlir/IR/" + name + ".td",
@@ -1693,6 +1695,12 @@ gentbl_cc_library(
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUDialect.cpp.inc": [
             "-gen-dialect-defs",
             "-dialect=amdgpu",
+        ],
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.h.inc": [
+            "-gen-typedef-decls",
+        ],
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc": [
+            "-gen-typedef-defs",
         ],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc": ["-gen-enum-decls"],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc": ["-gen-enum-defs"],
@@ -4438,6 +4446,7 @@ cc_library(
         ":SCFIncGen",
         ":SideEffectInterfaces",
         ":TensorDialect",
+        ":TransformUtils",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -4508,6 +4517,7 @@ cc_library(
     deps = [
         ":CallOpInterfaces",
         ":IR",
+        ":TransformsDialectInterfaceIncGen",
         "//llvm:Support",
     ],
 )
@@ -4789,6 +4799,7 @@ cc_library(
         ":IR",
         ":InliningUtils",
         ":SideEffectInterfaces",
+        ":UBDialect",
         "//llvm:Support",
     ],
 )
@@ -5961,6 +5972,7 @@ cc_library(
         ":AMDGPUDialect",
         ":AMDGPUUtils",
         ":ConversionPassIncGen",
+        ":GPUToGPURuntimeTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -7974,6 +7986,21 @@ gentbl_cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "TransformsDialectInterfaceIncGen",
+    includes = ["include"],
+    tbl_outs = {
+        "include/mlir/Transforms/DialectInlinerInterface.h.inc": [
+            "-gen-dialect-interface-decls",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Transforms/DialectInlinerInterface.td",
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
 cc_library(
     name = "Transforms",
     srcs = glob([
@@ -8480,6 +8507,7 @@ cc_library(
         ":IR",
         ":Pass",
         ":TransformUtils",
+        ":VectorDialect",
     ],
 )
 
@@ -10112,6 +10140,7 @@ cc_binary(
         "//llvm:TableGen",
         "//llvm:TargetParser",
         "//llvm:config",
+        "//llvm:vt_gen",
     ],
 )
 
@@ -10355,6 +10384,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCUtils",
         ":Pass",
+        "//llvm:Support",
     ],
 )
 
@@ -10367,6 +10397,9 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
+        ":ArithUtils",
+        ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
         ":OpenACCDialect",
@@ -10374,6 +10407,7 @@ cc_library(
         ":OpenACCPassIncGen",
         ":OpenACCTypeInterfacesIncGen",
         ":Support",
+        ":TransformUtils",
         ":ViewLikeInterface",
         "//llvm:Support",
         "//llvm:ir_headers",
@@ -10400,6 +10434,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
         ":Pass",
+        ":Support",
         ":TransformUtils",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -10799,6 +10834,7 @@ cc_library(
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
+        ":InliningUtils",
         ":SideEffectInterfaces",
         "//llvm:Support",
     ],
@@ -14085,12 +14121,7 @@ cc_library(
 
 cc_library(
     name = "PDLLAST",
-    srcs = glob(
-        [
-            "lib/Tools/PDLL/AST/*.cpp",
-            "lib/Tools/PDLL/AST/*.h",
-        ],
-    ),
+    srcs = glob(["lib/Tools/PDLL/AST/*.cpp"]),
     hdrs = glob(["include/mlir/Tools/PDLL/AST/*.h"]),
     includes = ["include"],
     deps = [

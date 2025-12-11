@@ -364,6 +364,9 @@ CAST_OPERATION(IntToOCLSampler)
 // Truncate a vector type by dropping elements from the end (HLSL only).
 CAST_OPERATION(HLSLVectorTruncation)
 
+// Truncate a matrix type by dropping elements from the end (HLSL only).
+CAST_OPERATION(HLSLMatrixTruncation)
+
 // Non-decaying array RValue cast (HLSL only).
 CAST_OPERATION(HLSLArrayRValue)
 

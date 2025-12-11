@@ -1848,6 +1848,25 @@ public:
             [&](const CompilerDirective::VectorAlways &valways) {
               Word("!DIR$ VECTOR ALWAYS");
             },
+            [&](const CompilerDirective::VectorLength &vlength) {
+              using Kind = CompilerDirective::VectorLength::Kind;
+              std::uint64_t length = std::get<std::uint64_t>(vlength.t);
+              Kind kind = std::get<Kind>(vlength.t);
+
+              Word("!DIR$ VECTOR VECTORLENGTH (");
+              // || kind == Kind::Auto handles the case of VECTORLENGTH(0) so we
+              // don't print nothing
+              if (length != 0 || kind == Kind::Auto) {
+                Walk(length);
+              }
+              if (length != 0 && kind != Kind::Auto) {
+                Word(", ");
+              }
+              if (kind != Kind::Auto) {
+                Word(CompilerDirective::VectorLength::EnumToString(kind));
+              }
+              Word(")");
+            },
             [&](const std::list<CompilerDirective::NameValue> &names) {
               Walk("!DIR$ ", names, " ");
             },
@@ -2142,7 +2161,7 @@ public:
 
     Walk(std::get<OmpDirectiveName>(x.t));
     auto flags{std::get<OmpDirectiveSpecification::Flags>(x.t)};
-    if (flags == OmpDirectiveSpecification::Flags::DeprecatedSyntax) {
+    if (flags.test(OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
       if (x.DirId() == llvm::omp::Directive::OMPD_flush) {
         // FLUSH clause arglist
         unparseClauses();
@@ -2205,6 +2224,12 @@ public:
   void Unparse(const OmpDirectiveNameModifier &x) {
     unsigned ompVersion{langOpts_.OpenMPVersion};
     Word(llvm::omp::getOpenMPDirectiveName(x.v, ompVersion));
+  }
+  void Unparse(const OmpDimsModifier &x) {
+    Word("DIMS");
+    Put("(");
+    Walk(x.v);
+    Put(")");
   }
   void Unparse(const OmpStylizedDeclaration &x) {
     // empty
@@ -2370,7 +2395,7 @@ public:
       }
     }
   }
-  void Unparse(const OmpLoopRangeClause &x) {
+  void Unparse(const OmpLooprangeClause &x) {
     Word("LOOPRANGE(");
     Walk(std::get<0>(x.t));
     Put(", ");
@@ -2428,6 +2453,21 @@ public:
     using Modifier = OmpNumTasksClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarIntExpr>(x.t));
+  }
+  void Unparse(const OmpNumTeamsClause &x) {
+    using Modifier = OmpNumTeamsClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
+    Walk(std::get<std::list<ScalarIntExpr>>(x.t));
+  }
+  void Unparse(const OmpNumThreadsClause &x) {
+    using Modifier = OmpNumThreadsClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
+    Walk(std::get<std::list<ScalarIntExpr>>(x.t));
+  }
+  void Unparse(const OmpThreadLimitClause &x) {
+    using Modifier = OmpThreadLimitClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
+    Walk(std::get<std::list<ScalarIntExpr>>(x.t));
   }
   void Unparse(const OmpDoacross::Sink &x) {
     Word("SINK: ");
@@ -2539,8 +2579,8 @@ public:
   void Unparse(const OpenMPInteropConstruct &x) {
     BeginOpenMP();
     Word("!$OMP INTEROP");
-    using Flags = OmpDirectiveSpecification::Flags;
-    if (std::get<Flags>(x.v.t) == Flags::DeprecatedSyntax) {
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.v.t)};
+    if (flags.test(OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
       Walk("(", std::get<std::optional<OmpArgumentList>>(x.v.t), ")");
       Walk(" ", std::get<std::optional<OmpClauseList>>(x.v.t));
     } else {
@@ -2679,8 +2719,8 @@ public:
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
     Word("!$OMP FLUSH");
-    using Flags = OmpDirectiveSpecification::Flags;
-    if (std::get<Flags>(x.v.t) == Flags::DeprecatedSyntax) {
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.v.t)};
+    if (flags.test(OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
       Walk("(", std::get<std::optional<OmpArgumentList>>(x.v.t), ")");
       Walk(" ", std::get<std::optional<OmpClauseList>>(x.v.t));
     } else {
@@ -2799,6 +2839,7 @@ public:
   WALK_NESTED_ENUM(OmpTaskDependenceType, Value) // OMP task-dependence-type
   WALK_NESTED_ENUM(OmpScheduleClause, Kind) // OMP schedule-kind
   WALK_NESTED_ENUM(OmpSeverityClause, Severity) // OMP severity
+  WALK_NESTED_ENUM(OmpThreadsetClause, ThreadsetPolicy) // OMP threadset
   WALK_NESTED_ENUM(OmpAccessGroup, Value)
   WALK_NESTED_ENUM(OmpDeviceModifier, Value) // OMP device modifier
   WALK_NESTED_ENUM(

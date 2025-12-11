@@ -12,15 +12,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/InferAlignment.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static bool tryToImproveAlign(
     const DataLayout &DL, Instruction *I,
@@ -33,6 +38,21 @@ static bool tryToImproveAlign(
     Align NewAlign = Fn(PtrOp, OldAlign, PrefAlign);
     if (NewAlign > OldAlign) {
       setLoadStoreAlignment(I, NewAlign);
+      return true;
+    }
+  }
+
+  Value *PtrOp;
+  const APInt *Const;
+  if (match(I, m_And(m_PtrToIntOrAddr(m_Value(PtrOp)), m_APInt(Const)))) {
+    Align ActualAlign = Fn(PtrOp, Align(1), Align(1));
+    if (Const->ult(ActualAlign.value())) {
+      I->replaceAllUsesWith(Constant::getNullValue(I->getType()));
+      return true;
+    }
+    if (Const->uge(
+            APInt::getBitsSetFrom(Const->getBitWidth(), Log2(ActualAlign)))) {
+      I->replaceAllUsesWith(I->getOperand(0));
       return true;
     }
   }

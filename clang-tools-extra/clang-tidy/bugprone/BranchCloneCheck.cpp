@@ -75,12 +75,9 @@ static bool isFallthroughSwitchBranch(const SwitchBranch &Branch) {
       if (!S)
         return true;
 
-      for (const Attr *A : S->getAttrs()) {
-        if (isa<FallThroughAttr>(A))
-          return false;
-      }
-
-      return true;
+      return llvm::all_of(S->getAttrs(), [](const Attr *A) {
+        return !isa<FallThroughAttr>(A);
+      });
     }
   } Visitor;
 
@@ -239,6 +236,12 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
                          IgnoreSideEffects))
       return false;
     return true;
+  }
+  case Stmt::DeferStmtClass: {
+    const auto *DefStmt1 = cast<DeferStmt>(Stmt1);
+    const auto *DefStmt2 = cast<DeferStmt>(Stmt2);
+    return isIdenticalStmt(Ctx, DefStmt1->getBody(), DefStmt2->getBody(),
+                           IgnoreSideEffects);
   }
   case Stmt::CompoundStmtClass: {
     const auto *CompStmt1 = cast<CompoundStmt>(Stmt1);

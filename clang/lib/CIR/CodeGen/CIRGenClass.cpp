@@ -111,8 +111,23 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
     // NOTE(cir): CodeGen allows record types to be memcpy'd if applicable,
     // whereas ClangIR wants to represent all object construction explicitly.
     if (!baseElementTy->isRecordType()) {
-      cgf.cgm.errorNYI(memberInit->getSourceRange(),
-                       "emitMemberInitializer: array of non-record type");
+      unsigned srcArgIndex =
+          cgf.cgm.getCXXABI().getSrcArgforCopyCtor(constructor, args);
+      cir::LoadOp srcPtr = cgf.getBuilder().createLoad(
+          cgf.getLoc(memberInit->getSourceLocation()),
+          cgf.getAddrOfLocalVar(args[srcArgIndex]));
+      LValue thisRhslv = cgf.makeNaturalAlignAddrLValue(srcPtr, recordTy);
+      LValue src = cgf.emitLValueForFieldInitialization(thisRhslv, field,
+                                                        field->getName());
+
+      // Copy the aggregate.
+      cgf.emitAggregateCopy(lhs, src, fieldType,
+                            cgf.getOverlapForFieldInit(field),
+                            lhs.isVolatileQualified());
+      // Ensure that we destroy the objects if an exception is thrown later in
+      // the constructor.
+      assert(!cgf.needsEHCleanup(fieldType.isDestructedType()) &&
+             "Arrays of non-record types shouldn't need EH cleanup");
       return;
     }
   }
@@ -134,7 +149,7 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   CallBaseDtor(const CXXRecordDecl *base, bool baseIsVirtual)
       : baseClass(base), baseIsVirtual(baseIsVirtual) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     const CXXRecordDecl *derivedClass =
         cast<CXXMethodDecl>(cgf.curFuncDecl)->getParent();
 
@@ -909,7 +924,7 @@ mlir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
 struct CallDtorDelete final : EHScopeStack::Cleanup {
   CallDtorDelete() {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(cgf.curFuncDecl);
     const CXXRecordDecl *classDecl = dtor->getParent();
     cgf.emitDeleteCall(dtor->getOperatorDelete(),
@@ -926,7 +941,7 @@ public:
   DestroyField(const FieldDecl *field, CIRGenFunction::Destroyer *destroyer)
       : field(field), destroyer(destroyer) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     // Find the address of the field.
     Address thisValue = cgf.loadCXXThisAddress();
     CanQualType recordTy =
@@ -935,7 +950,7 @@ public:
     LValue lv = cgf.emitLValueForField(thisLV, field);
     assert(lv.isSimple());
 
-    assert(!cir::MissingFeatures::ehCleanupFlags());
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     cgf.emitDestroy(lv.getAddress(), field->getType(), destroyer);
   }
 };
@@ -1032,7 +1047,7 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
       continue;
 
     CleanupKind cleanupKind = getCleanupKind(dtorKind);
-    assert(!cir::MissingFeatures::ehCleanupFlags());
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     ehStack.pushCleanup<DestroyField>(cleanupKind, field,
                                       getDestroyer(dtorKind));
   }

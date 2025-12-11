@@ -61,6 +61,59 @@ llvm.func @kernel_func_workgroups()
   llvm.return
 }
 
+llvm.func @kernel_math_ops(%a: f32, %b: f16, %c: bf16) {
+  // CHECK-LABEL: kernel_math_ops
+  // CHECK: call float @llvm.amdgcn.tanh.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.tanh.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.tanh.bf16(bfloat %{{.*}})
+  %tanh0 = rocdl.tanh %a f32 -> f32
+  %tanh1 = rocdl.tanh %b f16 -> f16
+  %tanh2 = rocdl.tanh %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.sin.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.sin.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.sin.bf16(bfloat %{{.*}})
+  %sin0 = rocdl.sin %a f32 -> f32
+  %sin1 = rocdl.sin %b f16 -> f16
+  %sin2 = rocdl.sin %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.cos.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.cos.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.cos.bf16(bfloat %{{.*}})
+  %cos0 = rocdl.cos %a f32 -> f32
+  %cos1 = rocdl.cos %b f16 -> f16
+  %cos2 = rocdl.cos %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.rcp.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.rcp.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.rcp.bf16(bfloat %{{.*}})
+  %rcp0 = rocdl.rcp %a f32 -> f32
+  %rcp1 = rocdl.rcp %b f16 -> f16
+  %rcp2 = rocdl.rcp %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.exp2.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.exp2.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.exp2.bf16(bfloat %{{.*}})
+  %exp2_0 = rocdl.exp2 %a f32 -> f32
+  %exp2_1 = rocdl.exp2 %b f16 -> f16
+  %exp2_2 = rocdl.exp2 %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.log.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.log.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.log.bf16(bfloat %{{.*}})
+  %log0 = rocdl.log %a f32 -> f32
+  %log1 = rocdl.log %b f16 -> f16
+  %log2 = rocdl.log %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.sqrt.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.sqrt.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.sqrt.bf16(bfloat %{{.*}})
+  %sqrt0 = rocdl.sqrt %a f32 -> f32
+  %sqrt1 = rocdl.sqrt %b f16 -> f16
+  %sqrt2 = rocdl.sqrt %c bf16 -> bf16
+  llvm.return
+}
+
 llvm.func @known_block_sizes()
     attributes {rocdl.kernel,
       rocdl.flat_work_group_size = "128,128",
@@ -1141,6 +1194,19 @@ llvm.func @rocdl.global.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3
   llvm.return
 }
 
+// CHECK-LABEL: rocdl.cluster.load.async.to.lds
+llvm.func @rocdl.cluster.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+  // CHECK: call void @llvm.amdgcn.cluster.load.async.to.lds.b8
+  rocdl.cluster.load.async.to.lds.b8 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.cluster.load.async.to.lds.b32
+  rocdl.cluster.load.async.to.lds.b32 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.cluster.load.async.to.lds.b64
+  rocdl.cluster.load.async.to.lds.b64 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.cluster.load.async.to.lds.b128
+  rocdl.cluster.load.async.to.lds.b128 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  llvm.return
+}
+
 // CHECK-LABEL: rocdl.tensor.load.to.lds
 llvm.func @rocdl.tensor.load.to.lds(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>,
                                     %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
@@ -1272,6 +1338,20 @@ llvm.func @rocdl.raw.ptr.buffer.load.lds(%rsrc : !llvm.ptr<8>, %dstLds : !llvm.p
   // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %{{.*}}, ptr addrspace(3) %{{.*}}, i32 4, i32 %{{.*}}, i32 %{{.*}}, i32 128, i32 1
   rocdl.raw.ptr.buffer.load.lds %rsrc, %dstLds, %size, %voffset, %soffset, %offset, %aux
 
+  llvm.return
+}
+
+llvm.func @rocdl.global.prefetch(%ptr : !llvm.ptr<1>) {
+  // CHECK-LABEL: rocdl.global.prefetch
+  // CHECK: call void @llvm.amdgcn.global.prefetch(ptr addrspace(1) %{{.*}}, i32 0)
+  rocdl.global.prefetch %ptr, scope 0 : !llvm.ptr<1>
+  llvm.return
+}
+
+llvm.func @rocdl.flat.prefetch(%ptr : !llvm.ptr) {
+  // CHECK-LABEL: rocdl.flat.prefetch
+  // CHECK: call void @llvm.amdgcn.flat.prefetch(ptr %{{.*}}, i32 0)
+  rocdl.flat.prefetch %ptr, scope 0 : !llvm.ptr
   llvm.return
 }
 

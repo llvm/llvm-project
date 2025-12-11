@@ -161,7 +161,7 @@ define amdgpu_ps void @s_fneg_f64_salu_use(double inreg %in, i32 inreg %val, ptr
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX12-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX12-NEXT:    s_endpgm
