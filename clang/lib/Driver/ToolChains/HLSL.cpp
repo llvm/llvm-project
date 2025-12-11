@@ -511,16 +511,16 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       continue;
     }
     if (A->getOption().getID() == options::OPT_dxc_col_major) {
-      DAL->AddSeparateArg(nullptr,
-                          Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
-                          "column-major");
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
+                        "column-major");
       A->claim();
       continue;
     }
     if (A->getOption().getID() == options::OPT_dxc_row_major) {
-      DAL->AddSeparateArg(nullptr,
-                          Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
-                          "row-major");
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
+                        "row-major");
       A->claim();
       continue;
     }
