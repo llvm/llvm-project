@@ -1080,6 +1080,12 @@ def CIR_SwitchOp : CIR_Op<"switch", [
     conditionally executing multiple regions of code. The operand to an switch
     is an integral condition value.
 
+    Besides taking an integer condition and CIR regions, it also accepts an
+    `all_enum_cases_covered` attribute indicating whether all enum cases are 
+    handled by the operation. Note that the presence of a default CaseOp does 
+    not imply `all_enum_cases_covered`. The original AST switch must explicitly list 
+    every enum case.
+
     The set of `cir.case` operations and their enclosing `cir.switch`
     represent the semantics of a C/C++ switch statement. Users can use
     `collectCases(llvm::SmallVector<CaseOp> &cases)` to collect the `cir.case`
@@ -1206,7 +1212,10 @@ def CIR_SwitchOp : CIR_Op<"switch", [
     ```
   }];
 
-  let arguments = (ins CIR_IntType:$condition);
+  let arguments = (ins 
+    CIR_IntType:$condition,
+    UnitAttr:$allEnumCasesCovered
+  );
 
   let regions = (region AnyRegion:$body);
 
@@ -1217,9 +1226,9 @@ def CIR_SwitchOp : CIR_Op<"switch", [
   ];
 
   let assemblyFormat = [{
-    custom<SwitchOp>(
-      $body, $condition, type($condition)
-    )
+    `(` $condition `:` qualified(type($condition)) `)` 
+     (`allEnumCasesCovered` $allEnumCasesCovered^)?
+    $body
     attr-dict
   }];
 

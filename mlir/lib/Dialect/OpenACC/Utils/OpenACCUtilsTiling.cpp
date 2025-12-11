@@ -13,21 +13,27 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtilsTiling.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 // Resolve unknown tile sizes (represented as -1 for tile(*)) to the default.
-static mlir::Value resolveUnknownTileSize(mlir::Value tileSize,
+// Returns a value with the same type as targetType.
+static mlir::Value resolveAndCastTileSize(mlir::Value tileSize,
                                           int32_t defaultTileSize,
+                                          mlir::Type targetType,
                                           mlir::RewriterBase &rewriter,
                                           mlir::Location loc) {
   auto constVal = mlir::getConstantIntValue(tileSize);
-  if (constVal && *constVal < 0)
+  if (constVal && *constVal < 0) {
+    // Create constant with the target type directly
     return mlir::arith::ConstantOp::create(
-        rewriter, loc, rewriter.getI32Type(),
-        rewriter.getI32IntegerAttr(defaultTileSize));
-  return tileSize;
+        rewriter, loc, targetType,
+        rewriter.getIntegerAttr(targetType, defaultTileSize));
+  }
+  return mlir::getValueOrCreateCastToIndexLike(rewriter, loc, targetType,
+                                               tileSize);
 }
 
 // Remove vector/worker attributes from loop
@@ -134,13 +140,6 @@ mlir::acc::tileACCLoops(llvm::SmallVector<mlir::acc::LoopOp> &tileLoops,
   mlir::acc::LoopOp outerLoop = tileLoops[0];
   const mlir::Location loc = outerLoop.getLoc();
 
-  // Resolve unknown tile sizes (tile(*) represented as -1)
-  llvm::SmallVector<mlir::Value> resolvedTileSizes;
-  rewriter.setInsertionPoint(outerLoop);
-  for (mlir::Value tileSize : tileSizes)
-    resolvedTileSizes.push_back(
-        resolveUnknownTileSize(tileSize, defaultTileSize, rewriter, loc));
-
   mlir::acc::LoopOp innerLoop = tileLoops[tileLoops.size() - 1];
   llvm::SmallVector<mlir::Value, 3> origIVs;
   llvm::SmallVector<mlir::Value, 3> origSteps;
@@ -176,10 +175,11 @@ mlir::acc::tileACCLoops(llvm::SmallVector<mlir::acc::LoopOp> &tileLoops,
     llvm::SmallVector<mlir::Value, 3> currentLoopSteps;
     for (auto [j, step] : llvm::enumerate(tileLoop.getStep())) {
       origSteps.push_back(step);
-      if (i + j >= resolvedTileSizes.size()) {
+      if (i + j >= tileSizes.size()) {
         currentLoopSteps.push_back(step);
       } else {
-        mlir::Value tileSize = resolvedTileSizes[i + j];
+        mlir::Value tileSize = resolveAndCastTileSize(
+            tileSizes[i + j], defaultTileSize, step.getType(), rewriter, loc);
         auto newLoopStep =
             mlir::arith::MulIOp::create(rewriter, loc, step, tileSize);
         currentLoopSteps.push_back(newLoopStep);
@@ -214,7 +214,7 @@ mlir::acc::tileACCLoops(llvm::SmallVector<mlir::acc::LoopOp> &tileLoops,
 
   // Create and insert nested elementLoopOps before terminator of outer loopOp
   mlir::acc::LoopOp currentLoop = innerLoop;
-  for (size_t i = 0; i < resolvedTileSizes.size(); i++) {
+  for (size_t i = 0; i < tileSizes.size(); i++) {
     rewriter.setInsertionPoint(currentLoop.getBody().getTerminator());
     mlir::DenseBoolArrayAttr inclusiveUBAttr = mlir::DenseBoolArrayAttr{};
     if (inclusiveUBs[i])
