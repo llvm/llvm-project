@@ -2220,7 +2220,7 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   assert(ST.needsAlignedVGPRs());
   static_assert(AMDGPU::VGPR0 + 1 == AMDGPU::VGPR1);
 
-  DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc DL = MI->getDebugLoc();
   MachineBasicBlock *MBB = MI->getParent();
   MachineOperand *Src1 = TII.getNamedOperand(*MI, AMDGPU::OpName::src1);
 
@@ -2237,9 +2237,9 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   Register DstReg = MI->getOperand(0).getReg();
   if (!Src1->isReg() || Src1->getReg() != DstReg) {
     Register DstLo = TRI.getSubReg(DstReg, AMDGPU::sub0);
-    runOnInstruction(BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MOV_B32_e32))
-                         .addReg(DstLo, RegState::Define)
-                         .addReg(AmtReg, Amt->isKill() ? RegState::Kill : 0));
+    runOnInstruction(
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MOV_B32_e32), DstLo)
+            .addReg(AmtReg, Amt->isKill() ? RegState::Kill : 0));
     Amt->setReg(DstLo);
     Amt->setIsKill(true);
     return true;
