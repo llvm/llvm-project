@@ -5354,8 +5354,13 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       return false;
     }
     callgraph::Flags CGFlags = static_cast<callgraph::Flags>(FlagsVal);
-    if (FlagsVal > 7) {
-      reportWarning(createError("unexpected value. Expected [0-7] but found [" +
+    constexpr callgraph::Flags ValidFlags = callgraph::IsIndirectTarget |
+                                            callgraph::HasDirectCallees |
+                                            callgraph::HasIndirectCallees;
+    constexpr uint8_t ValidMask = static_cast<uint8_t>(ValidFlags);
+    if ((FlagsVal & ~ValidMask) != 0) {
+      reportWarning(createError("unexpected value. Expected [0-" +
+                                std::to_string(ValidMask) + "] but found [" +
                                 std::to_string(FlagsVal) + "]"),
                     FileName);
       return false;
