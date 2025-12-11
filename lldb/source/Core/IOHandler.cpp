@@ -245,6 +245,9 @@ IOHandlerEditline::IOHandlerEditline(
   SetPrompt(prompt);
 
 #if LLDB_ENABLE_LIBEDIT
+  // To use Editline, we need an input, output, and error stream. Not all valid
+  // files will have a FILE* stream. Don't use Editline if the input is not a
+  // real terminal.
   const bool use_editline =
       m_input_sp && m_input_sp->GetIsRealTerminal() &&             // Input
       m_output_sp && m_output_sp->GetUnlockedFile().GetStream() && // Output
