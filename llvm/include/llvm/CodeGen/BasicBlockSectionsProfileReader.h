@@ -110,8 +110,8 @@ public:
   // Returns a pointer to the CFGProfile for the function \p FuncName.
   // Returns nullptr if no profile data is available for the function.
   const CFGProfile *getFunctionCFGProfile(StringRef FuncName) const {
-    auto It = ProgramDirectivesAndProfile.find(getAliasName(FuncName));
-    if (It == ProgramDirectivesAndProfile.end())
+    auto It = ProgramOptimizationProfile.find(getAliasName(FuncName));
+    if (It == ProgramOptimizationProfile.end())
       return nullptr;
     return &It->second.CFG;
   }
