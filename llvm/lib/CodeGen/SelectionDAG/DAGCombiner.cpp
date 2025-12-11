@@ -11907,7 +11907,16 @@ static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
   if (!VT.isFloatingPoint())
     return false;
 
-  return Flags.hasNoSignedZeros() &&
+  bool hasMinMaxOpc = (TLI.isOperationLegalOrCustom(ISD::FMINNUM, VT) &&
+                       TLI.isOperationLegalOrCustom(ISD::FMAXNUM, VT)) ||
+                      (TLI.isOperationLegalOrCustom(ISD::FMINNUM_IEEE, VT) &&
+                       TLI.isOperationLegalOrCustom(ISD::FMAXNUM_IEEE, VT)) ||
+                      (TLI.isOperationLegalOrCustom(ISD::FMINIMUM, VT) &&
+                       TLI.isOperationLegalOrCustom(ISD::FMAXIMUM, VT)) ||
+                      (TLI.isOperationLegalOrCustom(ISD::FMINIMUMNUM, VT) &&
+                       TLI.isOperationLegalOrCustom(ISD::FMAXIMUMNUM, VT));
+
+  return (Flags.hasNoSignedZeros() || hasMinMaxOpc) &&
          TLI.isProfitableToCombineMinNumMaxNum(VT) &&
          (Flags.hasNoNaNs() ||
           (DAG.isKnownNeverNaN(RHS) && DAG.isKnownNeverNaN(LHS)));
@@ -11919,6 +11928,10 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
                                        const TargetLowering &TLI,
                                        SelectionDAG &DAG) {
   EVT TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  unsigned IEEE2019NumOpcode = 0;
+  unsigned IEEE2019Opcode = 0;
+  unsigned IEEEOpcode = 0;
+  unsigned Opcode = 0;
   switch (CC) {
   case ISD::SETOLT:
   case ISD::SETOLE:
@@ -11927,48 +11940,52 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETULT:
   case ISD::SETULE: {
     // Since it's known never nan to get here already, either fminimumnum,
-    // fminimum, fminnum, or fminnum_ieee are OK. Try the ieee version first,
-    // since it's fminnum is expanded in terms of it.
-    unsigned IEEE2019NumOpcode =
-        (LHS == True) ? ISD::FMINIMUMNUM : ISD::FMAXIMUMNUM;
-    if (TLI.isOperationLegal(IEEE2019NumOpcode, VT))
-      return DAG.getNode(IEEE2019NumOpcode, DL, VT, LHS, RHS);
-
-    unsigned IEEE2019Opcode = (LHS == True) ? ISD::FMINIMUM : ISD::FMAXIMUM;
-    if (TLI.isOperationLegal(IEEE2019Opcode, VT))
-      return DAG.getNode(IEEE2019Opcode, DL, VT, LHS, RHS);
-
-    unsigned IEEEOpcode = (LHS == True) ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
-    if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
-      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
-
-    unsigned Opcode = (LHS == True) ? ISD::FMINNUM : ISD::FMAXNUM;
-    if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
-    return SDValue();
+    // fminimum, fminnum, or fminnum_ieee are OK. Try Legal first and then
+    // Custom.
+    IEEE2019NumOpcode = LHS == True ? ISD::FMINIMUMNUM : ISD::FMAXIMUMNUM;
+    IEEE2019Opcode = LHS == True ? ISD::FMINIMUM : ISD::FMAXIMUM;
+    IEEEOpcode = LHS == True ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
+    Opcode = LHS == True ? ISD::FMINNUM : ISD::FMAXNUM;
   }
+    [[fallthrough]];
   case ISD::SETOGT:
   case ISD::SETOGE:
   case ISD::SETGT:
   case ISD::SETGE:
   case ISD::SETUGT:
   case ISD::SETUGE: {
-    unsigned IEEE2019NumOpcode =
-        (LHS == True) ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
-    if (TLI.isOperationLegal(IEEE2019NumOpcode, VT))
-      return DAG.getNode(IEEE2019NumOpcode, DL, VT, LHS, RHS);
-
-    unsigned IEEE2019Opcode = (LHS == True) ? ISD::FMAXIMUM : ISD::FMINIMUM;
+    if (Opcode == 0) {
+      // Since it's known never nan to get here already, either fminimumnum,
+      // fminimum, fminnum, or fminnum_ieee are OK. Try Legal first and then
+      // Custom.
+      IEEE2019NumOpcode = (LHS == True) ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
+      IEEE2019Opcode = (LHS == True) ? ISD::FMAXIMUM : ISD::FMINIMUM;
+      IEEEOpcode = (LHS == True) ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+      Opcode = (LHS == True) ? ISD::FMAXNUM : ISD::FMINNUM;
+    }
+    // Try FMINIMUM/FMAXIMUM first as it has smaller codesize on AMDGPU GFX12.
     if (TLI.isOperationLegal(IEEE2019Opcode, VT))
       return DAG.getNode(IEEE2019Opcode, DL, VT, LHS, RHS);
-
-    unsigned IEEEOpcode = (LHS == True) ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
-    if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
+    if (TLI.isOperationLegal(IEEE2019NumOpcode, VT))
+      return DAG.getNode(IEEE2019NumOpcode, DL, VT, LHS, RHS);
+    if (TLI.isOperationLegal(IEEEOpcode, VT))
       return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
+    if (TLI.isOperationLegal(Opcode, VT))
+      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
 
-    unsigned Opcode = (LHS == True) ? ISD::FMAXNUM : ISD::FMINNUM;
+    if (TLI.isOperationCustom(IEEE2019Opcode, VT))
+      return DAG.getNode(IEEE2019Opcode, DL, VT, LHS, RHS);
+    if (TLI.isOperationCustom(IEEE2019NumOpcode, VT))
+      return DAG.getNode(IEEE2019NumOpcode, DL, VT, LHS, RHS);
+    if (TLI.isOperationCustom(IEEEOpcode, VT))
+      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
+    if (TLI.isOperationCustom(Opcode, VT))
+      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+
     if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
       return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+    return SDValue();
+
     return SDValue();
   }
   default:
