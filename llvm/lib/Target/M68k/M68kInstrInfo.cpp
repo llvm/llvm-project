@@ -690,6 +690,7 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 const DebugLoc &DL, Register DstReg,
                                 Register SrcReg, bool KillSrc,
                                 bool RenamableDest, bool RenamableSrc) const {
+  const auto &Subtarget = MBB.getParent()->getSubtarget<M68kSubtarget>();
   unsigned Opc = 0;
 
   // First deal with the normal symmetric copies.
@@ -735,6 +736,10 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (FromCCR) {
     Opc = M68k::MOV16dc;
+    if (!Subtarget.atLeastM68010()) {
+      Opc = M68k::MOV16ds;
+      SrcReg = M68k::SR;
+    }
     if (!M68k::DR8RegClass.contains(DstReg) &&
         !M68k::DR16RegClass.contains(DstReg) &&
         !M68k::DR32RegClass.contains(DstReg)) {

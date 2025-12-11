@@ -250,6 +250,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpagesize
+  SRCS
+    getpagesize.cpp
+  HDRS
+    ../getpagesize.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.auxv
+)
+
+add_entrypoint_object(
   geteuid
   SRCS
     geteuid.cpp

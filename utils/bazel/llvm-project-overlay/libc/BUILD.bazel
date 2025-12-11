@@ -6093,6 +6093,15 @@ libc_function(
 )
 
 libc_function(
+    name = "getpagesize",
+    srcs = ["src/unistd/linux/getpagesize.cpp"],
+    hdrs = ["src/unistd/getpagesize.h"],
+    deps = [
+        ":__support_osutil_linux_auxv",
+    ],
+)
+
+libc_function(
     name = "getppid",
     srcs = ["src/unistd/linux/getppid.cpp"],
     hdrs = ["src/unistd/getppid.h"],
