@@ -31,17 +31,17 @@ func.func @num_threads_once(%n : si32) {
 // -----
 
 func.func @num_threads_dims_no_values() {
-  // expected-error@+1 {{num_threads dims modifier requires values to be specified}}
+  // expected-error@+1 {{dims modifier requires values to be specified}}
   "omp.parallel"() ({
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0>, num_threads_dims = 2 : i64} : () -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0>, num_threads_num_dims = 2 : i64} : () -> ()
   return
 }
 
 // -----
 
 func.func @num_threads_dims_mismatch(%n : i64) {
-  // expected-error@+1 {{num_threads dims(2) specified but 1 values provided}}
+  // expected-error@+1 {{dims(2) specified but 1 values provided}}
   omp.parallel num_threads(dims(2): %n : i64) {
     omp.terminator
   }
@@ -52,10 +52,10 @@ func.func @num_threads_dims_mismatch(%n : i64) {
 // -----
 
 func.func @num_threads_dims_and_scalar(%n : i64, %m: i64) {
-  // expected-error@+1 {{num_threads dims and number of threads cannot be used together}}
+  // expected-error@+1 {{num_threads with dims modifier cannot be used together with number of threads}}
   "omp.parallel"(%n, %n, %m) ({
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,0,0,2,1,0,0>, num_threads_dims = 2 : i64} : (i64, i64, i64) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,0,2,1,0,0>, num_threads_num_dims = 2 : i64} : (i64, i64, i64) -> ()
   return
 }
 

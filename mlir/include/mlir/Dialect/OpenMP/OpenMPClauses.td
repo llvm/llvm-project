@@ -1069,14 +1069,14 @@ class OpenMP_NumThreadsClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$num_threads_dims,
-    Variadic<AnyInteger>:$num_threads_values,
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$num_threads_num_dims,
+    Variadic<AnyInteger>:$num_threads_dims_values,
     Optional<IntLikeType>:$num_threads
   );
 
   let optAssemblyFormat = [{
     `num_threads` `(` custom<NumThreadsClause>(
-      $num_threads_dims, $num_threads_values, type($num_threads_values),
+      $num_threads_num_dims, $num_threads_dims_values, type($num_threads_dims_values),
       $num_threads, type($num_threads)
     ) `)`
   }];
@@ -1086,7 +1086,7 @@ class OpenMP_NumThreadsClauseSkip<
     space formed by the construct on which it appears.
 
     With dims modifier:
-    - Uses `num_threads_dims` (dimension count) and `num_threads_values` (upper bounds list)
+    - Uses `num_threads_num_dims` (dimension count) and `num_threads_dims_values` (upper bounds list)
     - Specifies upper bounds for each dimension (all must have same type)
     - Format: `num_threads(dims(N): upper_bound_0, ..., upper_bound_N-1 : type)`
     - Example: `num_threads(dims(3): %ub0, %ub1, %ub2 : i32)`
@@ -1100,28 +1100,23 @@ class OpenMP_NumThreadsClauseSkip<
 
   let extraClassDeclaration = [{
     /// Returns true if the dims modifier is explicitly present
-    bool hasDimsModifier() {
-      return getNumThreadsDims().has_value();
+    bool hasNumThreadsDimsModifier() {
+      return getNumThreadsNumDims().has_value() && getNumThreadsNumDims().value();
     }
 
     /// Returns the number of dimensions specified by dims modifier
-    unsigned getNumDimensions() {
-      if (!hasDimsModifier())
+    unsigned getNumThreadsDimsCount() {
+      if (!hasNumThreadsDimsModifier())
         return 1;
-      return static_cast<unsigned>(*getNumThreadsDims());
-    }
-
-    /// Returns all dimension values as an operand range
-    ::mlir::OperandRange getDimensionValues() {
-      return getNumThreadsValues();
+      return static_cast<unsigned>(*getNumThreadsNumDims());
     }
 
     /// Returns the value for a specific dimension index
-    /// Index must be less than getNumDimensions()
-    ::mlir::Value getDimensionValue(unsigned index) {
-      assert(index < getDimensionValues().size() &&
-             "Dimension index out of bounds");
-      return getDimensionValues()[index];
+    /// Index must be less than getNumThreadsDimsCount()
+    ::mlir::Value getNumThreadsDimsValue(unsigned index) {
+      assert(index < getNumThreadsDimsCount() &&
+             "Num threads dims index out of bounds");
+      return getNumThreadsDimsValues()[index];
     }
   }];
 }

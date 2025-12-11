@@ -2519,7 +2519,7 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   ParallelOp::build(
       builder, state, clauses.allocateVars, clauses.allocatorVars,
-      clauses.ifExpr, clauses.numThreadsDims, clauses.numThreadsValues,
+      clauses.ifExpr, clauses.numThreadsNumDims, clauses.numThreadsDimsValues,
       clauses.numThreads, clauses.privateVars,
       makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
       clauses.procBindKind, clauses.reductionMod, clauses.reductionVars,
@@ -2570,30 +2570,28 @@ static LogicalResult verifyPrivateVarList(OpType &op) {
   return success();
 }
 
+// Helper: Verify num_threads clause
+LogicalResult
+verifyNumThreadsClause(Operation *op,
+                       std::optional<IntegerAttr> numThreadsNumDims,
+                       OperandRange numThreadsDimsValues, Value numThreads) {
+  bool hasDimsModifier =
+      numThreadsNumDims.has_value() && numThreadsNumDims.value();
+  if (hasDimsModifier && numThreads) {
+    return op->emitError("num_threads with dims modifier cannot be used "
+                         "together with number of threads");
+  }
+  if (failed(verifyDimsModifier(op, numThreadsNumDims, numThreadsDimsValues)))
+    return failure();
+  return success();
+}
+
 LogicalResult ParallelOp::verify() {
   // verify num_threads clause restrictions
-  auto numThreadsDims = getNumThreadsDims();
-  auto numThreadsValues = getNumThreadsValues();
-  auto numThreads = getNumThreads();
-
-  // num_threads with dims modifier
-  if (numThreadsDims.has_value() && numThreadsValues.empty()) {
-    return emitError(
-        "num_threads dims modifier requires values to be specified");
-  }
-
-  if (numThreadsDims.has_value() &&
-      numThreadsValues.size() != static_cast<size_t>(*numThreadsDims)) {
-    return emitError("num_threads dims(")
-           << *numThreadsDims << ") specified but " << numThreadsValues.size()
-           << " values provided";
-  }
-
-  // num_threads dims and number of threads cannot be used together
-  if (numThreadsDims.has_value() && numThreads) {
-    return emitError(
-        "num_threads dims and number of threads cannot be used together");
-  }
+  if (failed(verifyNumThreadsClause(
+          getOperation(), this->getNumThreadsNumDimsAttr(),
+          this->getNumThreadsDimsValues(), this->getNumThreads())))
+    return failure();
 
   // verify allocate clause restrictions
   if (getAllocateVars().size() != getAllocatorVars().size())
