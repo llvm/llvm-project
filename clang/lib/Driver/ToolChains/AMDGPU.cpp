@@ -967,8 +967,10 @@ void ROCMToolChain::addClangTargetOptions(
                           true))
     return;
 
-    // For SPIR-V (SPIRVAMDToolChain) we must not link any device libraries so we skip it.
-  if (!this->getEffectiveTriple().isSPIRV()){
+  // For SPIR-V (SPIRVAMDToolChain) we must not link any device libraries so we
+  // skip it.
+  if (this->getEffectiveTriple().isSPIRV())
+    return;
   // Get the device name and canonicalize it
   const StringRef GpuArch = getGPUArch(DriverArgs);
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
@@ -996,7 +998,6 @@ void ROCMToolChain::addClangTargetOptions(
       CC1Args.push_back("-mlink-bitcode-file");
     CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
   }
-}
 }
 
 bool RocmInstallationDetector::checkCommonBitcodeLibs(
