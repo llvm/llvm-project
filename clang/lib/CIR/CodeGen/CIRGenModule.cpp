@@ -1733,17 +1733,17 @@ createOpenACCBindTempFunction(ASTContext &ctx, const IdentifierInfo *bindName,
         protoFunc->getType(), /*TInfo=*/nullptr, StorageClass::SC_None);
 
   QualType funcTy = protoFunc->getType();
-  auto *FPT = cast<FunctionProtoType>(protoFunc->getType());
+  auto *fpt = cast<FunctionProtoType>(protoFunc->getType());
 
   // If this is a member function, add an explicit 'this' to the function type.
   if (auto *methodDecl = dyn_cast<CXXMethodDecl>(protoFunc);
       methodDecl && methodDecl->isImplicitObjectMemberFunction()) {
-    llvm::SmallVector<QualType> paramTypes{FPT->getParamTypes()};
+    llvm::SmallVector<QualType> paramTypes{fpt->getParamTypes()};
     paramTypes.insert(paramTypes.begin(), methodDecl->getThisType());
 
-    funcTy = ctx.getFunctionType(FPT->getReturnType(), paramTypes,
-                                 FPT->getExtProtoInfo());
-    FPT = cast<FunctionProtoType>(funcTy);
+    funcTy = ctx.getFunctionType(fpt->getReturnType(), paramTypes,
+                                 fpt->getExtProtoInfo());
+    fpt = cast<FunctionProtoType>(funcTy);
   }
 
   auto *tempFunc =
@@ -1752,14 +1752,15 @@ createOpenACCBindTempFunction(ASTContext &ctx, const IdentifierInfo *bindName,
                            /*NLoc=*/SourceLocation{}, bindName, funcTy,
                            /*TInfo=*/nullptr, StorageClass::SC_None);
 
-  SmallVector<ParmVarDecl *, 16> params;
+  SmallVector<ParmVarDecl *> params;
+  params.reserve(fpt->getNumParams());
 
   // Add all of the parameters.
-  for (unsigned i = 0, e = FPT->getNumParams(); i != e; ++i) {
+  for (unsigned i = 0, e = fpt->getNumParams(); i != e; ++i) {
     ParmVarDecl *parm = ParmVarDecl::Create(
         ctx, tempFunc, /*StartLoc=*/SourceLocation{},
         /*IdLoc=*/SourceLocation{},
-        /*Id=*/nullptr, FPT->getParamType(i), /*TInfo=*/nullptr,
+        /*Id=*/nullptr, fpt->getParamType(i), /*TInfo=*/nullptr,
         StorageClass::SC_None, /*DefArg=*/nullptr);
     parm->setScopeInfo(0, i);
     params.push_back(parm);
