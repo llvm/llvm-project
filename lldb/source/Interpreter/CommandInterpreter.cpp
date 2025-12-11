@@ -3283,6 +3283,7 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
     if (line.empty())
       return;
   }
+  bool echoed_command = false;
   if (!is_interactive) {
     // When using a non-interactive file handle (like when sourcing commands
     // from a file) we need to echo the command out so we don't just see the
@@ -3291,6 +3292,7 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       LockedStreamFile locked_stream =
           io_handler.GetOutputStreamFileSP()->Lock();
       locked_stream.Printf("%s%s\n", io_handler.GetPrompt(), line.c_str());
+      echoed_command = true;
     }
   }
 
@@ -3310,10 +3312,22 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
   lldb_private::CommandReturnObject result(m_debugger.GetUseColor());
   HandleCommand(line.c_str(), eLazyBoolCalculate, result);
 
-  // Now emit the command output text from the command we just executed
-  if ((result.Succeeded() &&
-       io_handler.GetFlags().Test(eHandleCommandFlagPrintResult)) ||
-      io_handler.GetFlags().Test(eHandleCommandFlagPrintErrors)) {
+  const bool print_result =
+      result.Succeeded() &&
+      io_handler.GetFlags().Test(eHandleCommandFlagPrintResult);
+  const bool print_error =
+      io_handler.GetFlags().Test(eHandleCommandFlagPrintErrors);
+
+  // Now emit the command output text from the command we just executed.
+  if (print_result || print_error) {
+    // If the command failed and we didn't echo it, echo it now so the user
+    // knows which command produced the error.
+    if (!echoed_command && !result.Succeeded() && print_error) {
+      LockedStreamFile locked_stream =
+          io_handler.GetOutputStreamFileSP()->Lock();
+      locked_stream.Printf("%s%s\n", io_handler.GetPrompt(), line.c_str());
+    }
+
     auto DefaultPrintCallback = [&](const CommandReturnObject &result) {
       // Display any inline diagnostics first.
       const bool inline_diagnostics = !result.GetImmediateErrorStream() &&

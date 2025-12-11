@@ -1,0 +1,10 @@
+# Test that failed commands are echoed even when echoing is disabled.
+# This ensures users can see which command produced an error.
+
+RUN: mkdir -p %t.home
+RUN: cp %S/Inputs/FailedCommand.in %t.home/.lldbinit
+RUN: env HOME=%t.home %lldb-init -b 2>&1 | FileCheck %s
+
+CHECK-NOT: expr 1+2
+CHECK: (lldb) bogus_command
+CHECK: error: 'bogus_command' is not a valid command
