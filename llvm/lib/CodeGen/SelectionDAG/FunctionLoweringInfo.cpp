@@ -517,8 +517,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
       else
         Val = CI->getValue().zext(BitWidth);
       DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, Val.getNumSignBits());
-      DestLOI.Known.Zero &= ~Val;
-      DestLOI.Known.One &= Val;
+      DestLOI.Known = DestLOI.Known.intersectWith(KnownBits::makeConstant(Val));
       continue;
     }
 
