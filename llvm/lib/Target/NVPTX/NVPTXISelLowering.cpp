@@ -2746,6 +2746,64 @@ lowerTcgen05Ld(SDNode *N, SelectionDAG &DAG, bool HasOffset = false) {
   return {{BuildVector, Chain}};
 }
 
+static SDValue lowerTensormapReplaceElemtype(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  unsigned Val = N->getConstantOperandVal(3);
+
+  if (!DAG.getSubtarget<NVPTXSubtarget>().hasTensormapReplaceElemtypeSupport(
+          Val)) {
+    const Function &Fn = DAG.getMachineFunction().getFunction();
+
+    unsigned AS = 0;
+    if (auto *MemN = dyn_cast<MemIntrinsicSDNode>(N)) {
+      AS = MemN->getAddressSpace();
+    }
+    Type *PtrTy = PointerType::get(*DAG.getContext(), AS);
+    Module *M = DAG.getMachineFunction().getFunction().getParent();
+
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        Fn,
+        "Intrinsic " +
+            Intrinsic::getName(N->getConstantOperandVal(1), {PtrTy}, M) +
+            " with elemtype " + Twine(Val) +
+            " is not supported on the given target.",
+        DL.getDebugLoc()));
+    return Op.getOperand(0);
+  }
+
+  return Op;
+}
+
+static SDValue lowerTensormapReplaceSwizzleMode(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  unsigned Val = N->getConstantOperandVal(3);
+
+  if (!DAG.getSubtarget<NVPTXSubtarget>().hasTensormapReplaceSwizzleModeSupport(
+          Val)) {
+    const Function &Fn = DAG.getMachineFunction().getFunction();
+
+    unsigned AS = 0;
+    if (auto *MemN = dyn_cast<MemIntrinsicSDNode>(N)) {
+      AS = MemN->getAddressSpace();
+    }
+    Type *PtrTy = PointerType::get(*DAG.getContext(), AS);
+    Module *M = DAG.getMachineFunction().getFunction().getParent();
+
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        Fn,
+        "Intrinsic " +
+            Intrinsic::getName(N->getConstantOperandVal(1), {PtrTy}, M) +
+            " with swizzle mode " + Twine(Val) +
+            " is not supported on the given target.",
+        DL.getDebugLoc()));
+    return Op.getOperand(0);
+  }
+
+  return Op;
+}
+
 static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDValue Intrin = N->getOperand(1);
@@ -2822,6 +2880,10 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
     return LowerTcgen05MMADisableOutputLane(Op, DAG);
+  case Intrinsic::nvvm_tensormap_replace_elemtype:
+    return lowerTensormapReplaceElemtype(Op, DAG);
+  case Intrinsic::nvvm_tensormap_replace_swizzle_mode:
+    return lowerTensormapReplaceSwizzleMode(Op, DAG);
   }
   return Op;
 }
@@ -4522,6 +4584,35 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.flags =
         MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tensormap_replace_global_address:
+  case Intrinsic::nvvm_tensormap_replace_global_stride:{
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tensormap_replace_rank:
+  case Intrinsic::nvvm_tensormap_replace_box_dim:
+  case Intrinsic::nvvm_tensormap_replace_global_dim:
+  case Intrinsic::nvvm_tensormap_replace_element_stride:
+  case Intrinsic::nvvm_tensormap_replace_elemtype:
+  case Intrinsic::nvvm_tensormap_replace_interleave_layout:
+  case Intrinsic::nvvm_tensormap_replace_swizzle_mode:
+  case Intrinsic::nvvm_tensormap_replace_swizzle_atomicity:
+  case Intrinsic::nvvm_tensormap_replace_fill_mode: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
     return true;
   }

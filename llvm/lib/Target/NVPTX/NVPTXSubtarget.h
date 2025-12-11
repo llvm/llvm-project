@@ -202,6 +202,34 @@ public:
            hasPTXWithAccelSMs(86, {100, 101, 120});
   }
 
+  bool hasTensormapReplaceSupport() const {
+    return hasPTXWithFamilySMs(90, {90, 100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {90, 100, 101, 120}) ||
+           hasPTXWithAccelSMs(83, {90, 100, 101, 120});
+  }
+
+  bool hasTensormapReplaceElemtypeSupport(unsigned value) const {
+    if (value >= 13)
+      return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+             hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+             hasPTXWithAccelSMs(87, {100, 101, 120});
+
+    return hasTensormapReplaceSupport();
+  }
+
+  bool hasTensormapReplaceSwizzleAtomicitySupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(87, {100, 101, 120});
+  }
+
+  bool hasTensormapReplaceSwizzleModeSupport(unsigned value) const {
+    if (value == 4)
+      return hasPTXWithAccelSMs(88, {103});
+
+    return hasTensormapReplaceSupport();
+  }
+
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
   // terminates a basic block. Instead, it would assume that control flow
   // continued to the next instruction. The next instruction could be in the

@@ -63,6 +63,12 @@ void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
 
 void printTcgen05CollectorUsageOp(raw_ostream &OS, const Constant *ImmArgVal);
 
+void printTensormapElemType(raw_ostream &OS, const Constant *ImmArgVal);
+void printTensormapInterleaveLayout(raw_ostream &OS, const Constant *ImmArgVal);
+void printTensormapSwizzleMode(raw_ostream &OS, const Constant *ImmArgVal);
+void printTensormapSwizzleAtomicity(raw_ostream &OS, const Constant *ImmArgVal);
+void printTensormapFillMode(raw_ostream &OS, const Constant *ImmArgVal);
+
 inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_f2i_rm_ftz:

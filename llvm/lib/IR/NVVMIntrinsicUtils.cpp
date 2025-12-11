@@ -59,3 +59,148 @@ void nvvm::printTcgen05CollectorUsageOp(raw_ostream &OS,
   llvm_unreachable("printTcgen05CollectorUsageOp called with invalid value for "
                    "immediate argument");
 }
+
+void nvvm::printTensormapElemType(raw_ostream &OS, const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    switch (Val) {
+    case 0:
+      OS << "u8";
+      return;
+    case 1:
+      OS << "u16";
+      return;
+    case 2:
+      OS << "u32";
+      return;
+    case 3:
+      OS << "s32";
+      return;
+    case 4:
+      OS << "u64";
+      return;
+    case 5:
+      OS << "s64";
+      return;
+    case 6:
+      OS << "f16";
+      return;
+    case 7:
+      OS << "f32";
+      return;
+    case 8:
+      OS << "f32.ftz";
+      return;
+    case 9:
+      OS << "f64";
+      return;
+    case 10:
+      OS << "bf16";
+      return;
+    case 11:
+      OS << "tf32";
+      return;
+    case 12:
+      OS << "tf32.ftz";
+      return;
+    case 13:
+      OS << "b4x16";
+      return;
+    case 14:
+      OS << "b4x16_p64";
+      return;
+    case 15:
+      OS << "b6x16_p32";
+      return;
+    }
+  }
+  llvm_unreachable("printTensormapElemType called with invalid value for "
+                   "immediate argument");
+}
+
+void nvvm::printTensormapInterleaveLayout(raw_ostream &OS,
+                                          const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    switch (Val) {
+    case 0:
+      OS << "No interleave";
+      return;
+    case 1:
+      OS << "16B interleave";
+      return;
+    case 2:
+      OS << "32B interleave";
+      return;
+    }
+  }
+  llvm_unreachable(
+      "printTensormapInterleaveLayout called with invalid value for "
+      "immediate argument");
+}
+
+void nvvm::printTensormapSwizzleMode(raw_ostream &OS,
+                                     const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    switch (Val) {
+    case 0:
+      OS << "No swizzling";
+      return;
+    case 1:
+      OS << "32B swizzling";
+      return;
+    case 2:
+      OS << "64B swizzling";
+      return;
+    case 3:
+      OS << "128B swizzling";
+      return;
+    case 4:
+      OS << "96B swizzling";
+      return;
+    }
+  }
+  llvm_unreachable("printTensormapSwizzleMode called with invalid value for "
+                   "immediate argument");
+}
+
+void nvvm::printTensormapSwizzleAtomicity(raw_ostream &OS,
+                                          const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    switch (Val) {
+    case 0:
+      OS << "16B";
+      return;
+    case 1:
+      OS << "32B";
+      return;
+    case 2:
+      OS << "32B + 8B flip";
+      return;
+    case 3:
+      OS << "64B";
+      return;
+    }
+  }
+  llvm_unreachable(
+      "printTensormapSwizzleAtomicity called with invalid value for "
+      "immediate argument");
+}
+
+void nvvm::printTensormapFillMode(raw_ostream &OS, const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    switch (Val) {
+    case 0:
+      OS << "Zero fill";
+      return;
+    case 1:
+      OS << "OOB-NaN fill";
+      return;
+    }
+  }
+  llvm_unreachable("printTensormapFillMode called with invalid value for "
+                   "immediate argument");
+}
