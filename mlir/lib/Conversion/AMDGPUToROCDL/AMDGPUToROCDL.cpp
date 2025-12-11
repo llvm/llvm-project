@@ -2288,7 +2288,8 @@ static Value setValueAtOffset(ConversionPatternRewriter &rewriter, Location loc,
   if (matchPattern(accumulator, mlir::m_Zero()))
     return value;
 
-  return LLVM::OrOp::create(rewriter, loc, accumulator, value);
+  constexpr bool isDisjoint = true;
+  return LLVM::OrOp::create(rewriter, loc, accumulator, value, isDisjoint);
 }
 
 template <typename BaseOp>
