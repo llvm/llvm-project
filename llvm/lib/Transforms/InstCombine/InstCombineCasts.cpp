@@ -1578,7 +1578,8 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     }
   }
 
-  if (!Zext.hasNonNeg()) {
+  if (!Zext.hasNonNeg() &&
+      !any_of(Zext.users(), [](User *U) { return isa<FreezeInst>(U); })) {
     // If this zero extend is only used by a shift, add nneg flag.
     if (Zext.hasOneUse() &&
         SrcTy->getScalarSizeInBits() >
