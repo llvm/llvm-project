@@ -914,7 +914,7 @@ std::string SwiftLanguageRuntime::GetObjectDescriptionExpr_Copy(
 
 static llvm::Expected<ValueObjectSP>
 RunObjectDescription(ValueObject &object, std::string &expr_string,
-                     Process &process, bool disable_availability = false) {
+                     Process &process, bool context_free = false) {
   Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
   ValueObjectSP result_sp;
   EvaluateExpressionOptions eval_options;
@@ -923,8 +923,8 @@ RunObjectDescription(ValueObject &object, std::string &expr_string,
   eval_options.SetSuppressPersistentResult(true);
   eval_options.SetIgnoreBreakpoints(true);
   eval_options.SetTimeout(process.GetUtilityExpressionTimeout());
-  if (disable_availability)
-    eval_options.SetDisableAvailability();
+  if (context_free)
+    eval_options.SetUseContextFreeSwiftPrintObject();
 
   StackFrameSP frame_sp = object.GetFrameSP();
   if (!frame_sp)

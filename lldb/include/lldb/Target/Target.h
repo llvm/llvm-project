@@ -568,11 +568,13 @@ public:
 
   bool GetPreparePlaygroundStubFunctions() const { return m_prepare_playground_stub_functions; }
 
-  void SetDisableAvailability(bool disable = true) {
-    m_disable_availability = disable;
+  void SetUseContextFreeSwiftPrintObject(bool enable = true) {
+    m_use_context_free_swift_print_object = enable;
   }
 
-  bool GetDisableAvailability() const { return m_disable_availability; }
+  bool GetUseContextFreeSwiftPrintObject() const {
+    return m_use_context_free_swift_print_object;
+  }
 
 private:
   ExecutionPolicy m_execution_policy = default_execution_policy;
@@ -615,8 +617,10 @@ private:
   mutable uint32_t m_pound_line_line = 0;
   bool m_prepare_playground_stub_functions = true;
 
-  /// Disable compiler availability checking.
-  bool m_disable_availability = false;
+  /// An evaluation mode that for swift. Has the following effects:
+  ///   1. Disables implicit module loading
+  ///   2. Disables compiler availability checking
+  bool m_use_context_free_swift_print_object = false;
 
   /// During expression evaluation, any SymbolContext in this list will be
   /// used for symbol/function lookup before any other context (except for
