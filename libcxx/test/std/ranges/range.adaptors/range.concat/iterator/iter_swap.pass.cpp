@@ -23,58 +23,117 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "../types.h"
+#include "../../range_adaptor_types.h"
 
 template <class It>
 concept has_iter_swap = requires(It it) { std::ranges::iter_swap(it, it); };
 
-struct ThrowingMove {
-  ThrowingMove() = default;
-  ThrowingMove(ThrowingMove&&) {}
-  ThrowingMove& operator=(ThrowingMove&&) { return *this; }
+struct Elem {
+  int v;
+  friend constexpr void swap(Elem& a, Elem& b) noexcept { std::ranges::swap(a.v, b.v); }
 };
 
-template <class Iterator, bool IsNoexcept>
-constexpr void test() {
-  using Sentinel = sentinel_wrapper<Iterator>;
-  using View     = minimal_view<Iterator, Sentinel>;
+template <typename T>
+struct SwapIter {
+  using iterator_concept  = std::forward_iterator_tag;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type   = std::ptrdiff_t;
+  using value_type        = T;
+
+  T* p = nullptr;
+
+  constexpr T& operator*() const noexcept { return *p; }
+  constexpr SwapIter& operator++() noexcept {
+    ++p;
+    return *this;
+  }
+  constexpr SwapIter operator++(int) noexcept {
+    SwapIter tmp = *this;
+    ++*this;
+    return tmp;
+  }
+  friend constexpr bool operator==(SwapIter, SwapIter) = default;
+
+  friend constexpr void iter_swap(const SwapIter& it1, const SwapIter& it2) { std::ranges::swap(*it1, *it2); }
+};
+
+template <typename T>
+struct SwapIterNoCustom {
+  using iterator_concept  = std::forward_iterator_tag;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type   = std::ptrdiff_t;
+  using value_type        = T;
+
+  T* p = nullptr;
+
+  constexpr T& operator*() const noexcept { return *p; }
+  constexpr SwapIterNoCustom& operator++() noexcept {
+    ++p;
+    return *this;
+  }
+  constexpr SwapIterNoCustom operator++(int) noexcept {
+    SwapIterNoCustom tmp = *this;
+    ++*this;
+    return tmp;
+  }
+  friend constexpr bool operator==(SwapIterNoCustom, SwapIterNoCustom) = default;
+};
+
+template <typename Iter, class Sentinel>
+struct MiniView : std::ranges::view_base {
+  Iter b{};
+  Sentinel e{};
+  constexpr MiniView() = default;
+  constexpr MiniView(Iter first, Sentinel last) : b(first), e(last) {}
+  constexpr Iter begin() const noexcept { return b; }
+  constexpr Sentinel end() const noexcept { return e; }
+};
+
+constexpr bool test() {
+  using IteratorA = SwapIter<Elem>;
+  using SentinelA = sentinel_wrapper<IteratorA>;
+  using IteratorB = SwapIterNoCustom<Elem>;
+  using SentinelB = sentinel_wrapper<IteratorB>;
+  using ViewA     = MiniView<IteratorA, SentinelA>;
+  using ViewB     = MiniView<IteratorB, SentinelB>;
 
   {
-    std::array<int, 5> array1{0, 1, 2, 3, 4};
-    std::array<int, 5> array2{5, 6, 7, 8, 9};
+    Elem a1[2]{{1}, {2}};
+    Elem a2[2]{{3}, {4}};
 
-    View v1{Iterator(array1.data()), Sentinel(Iterator(array1.data() + array1.size()))};
-    View v2{Iterator(array2.data()), Sentinel(Iterator(array2.data() + array2.size()))};
-    std::ranges::concat_view view(std::move(v1), std::move(v2));
+    ViewA v1{IteratorA(a1), SentinelA(IteratorA(a1 + 2))};
+    ViewA v2{IteratorA(a2), SentinelA(IteratorA(a2 + 2))};
 
-    auto it1 = view.begin();
-    auto it2 = ++view.begin();
+    std::ranges::concat_view cv(v1, v2);
 
-    static_assert(std::is_same_v<decltype(iter_swap(it1, it2)), void>);
-    static_assert(noexcept(iter_swap(it1, it2)) == IsNoexcept);
+    auto it1 = cv.begin();
+    auto it2 = ++cv.begin();
+    it2++;
 
-    assert(*it1 == 0 && *it2 == 1);
-    iter_swap(it1, it2);
-    assert(*it1 == 1);
-    assert(*it2 == 0);
+    std::ranges::iter_swap(it1, it2);
+
+    // iter_swap
+    assert(a1[0].v == 3 && a2[0].v == 1);
   }
 
   {
-    // iter swap may throw
-    std::array<ThrowingMove, 2> iterSwapMayThrow{};
-    std::ranges::concat_view v(iterSwapMayThrow);
-    auto iter1 = v.begin();
-    auto iter2 = ++v.begin();
-    static_assert(!noexcept(std::ranges::iter_swap(iter1, iter2)));
-  }
-}
+    Elem a[2]{{1}, {2}};
+    Elem b[2]{{3}, {4}};
 
-constexpr bool tests() {
-  test<cpp17_input_iterator<int*>, /* noexcept */ false>();
-  test<forward_iterator<int*>, /* noexcept */ false>();
-  test<bidirectional_iterator<int*>, /* noexcept */ false>();
-  test<random_access_iterator<int*>, /* noexcept */ false>();
-  test<contiguous_iterator<int*>, /* noexcept */ false>();
-  test<int*, /* noexcept */ false>();
+    ViewA v1{IteratorA(a), SentinelA(IteratorA(a + 2))};
+    ViewB v2{IteratorB(b), SentinelB(IteratorB(b + 2))};
+
+    std::ranges::concat_view cv(v1, v2);
+
+    auto it1 = cv.begin();
+    auto it2 = ++cv.begin();
+    it2++;
+
+    std::ranges::iter_swap(it1, it2);
+
+    // ranges::swap(*x,*y)
+    assert(a[0].v == 3 && b[0].v == 1);
+  }
 
   // Test that iter_swap requires the underlying iterator to be iter_swappable
   {
@@ -90,7 +149,7 @@ constexpr bool tests() {
 }
 
 int main(int, char**) {
-  tests();
-  static_assert(tests());
+  test();
+  static_assert(test());
   return 0;
 }

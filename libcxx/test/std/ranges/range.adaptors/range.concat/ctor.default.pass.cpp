@@ -8,6 +8,8 @@
 
 // REQUIRES: std-at-least-c++26
 
+// constexpr concat_view() = default;
+
 #include <cassert>
 #include <ranges>
 #include <type_traits>

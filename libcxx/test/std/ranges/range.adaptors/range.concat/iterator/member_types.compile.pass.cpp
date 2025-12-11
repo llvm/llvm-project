@@ -8,6 +8,8 @@
 
 // REQUIRES: std-at-least-c++26
 
+// test iterator_concept, iterator_category, difference_type, value_type
+
 #include <array>
 #include <forward_list>
 #include <list>

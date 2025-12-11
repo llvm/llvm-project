@@ -8,6 +8,12 @@
 
 // REQUIRES: std-at-least-c++26
 
+// constexpr auto size()
+//     requires(sized_range<_Views> && ...)
+
+// constexpr auto size() const
+//     requires(sized_range<const _Views> && ...)
+
 #include <cassert>
 #include <ranges>
 

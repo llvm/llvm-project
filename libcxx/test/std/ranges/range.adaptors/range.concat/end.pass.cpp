@@ -8,6 +8,12 @@
 
 // REQUIRES: std-at-least-c++26
 
+// constexpr auto end()
+//   requires(!(__simple_view<_Views> && ...))
+
+// constexpr auto end() const
+//     requires(range<const _Views> && ...)
+
 #include <cassert>
 #include <ranges>
 

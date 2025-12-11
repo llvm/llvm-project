@@ -8,6 +8,9 @@
 
 // REQUIRES: std-at-least-c++26
 
+// constexpr __iterator(__iterator<!_Const> __i)
+//     requires _Const && (convertible_to<iterator_t<_Views>, iterator_t<const _Views>> && ...)
+
 #include <cassert>
 #include <ranges>
 

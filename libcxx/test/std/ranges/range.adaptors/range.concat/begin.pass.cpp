@@ -8,6 +8,12 @@
 
 // REQUIRES: std-at-least-c++26
 
+// constexpr __iterator<false> begin()
+//     requires(!(__simple_view<_Views> && ...))
+
+// constexpr __iterator<true> begin() const
+//     requires((range<const _Views> && ...) && __concatable<const _Views...>)
+
 #include <ranges>
 #include <vector>
 

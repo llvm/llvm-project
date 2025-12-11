@@ -8,6 +8,9 @@
 
 // REQUIRES: std-at-least-c++26
 
+// template <class... _Views>
+// concat_view(_Views&&...) -> concat_view<views::all_t<_Views>...>;
+
 #include <cassert>
 #include <ranges>
 #include <type_traits>
