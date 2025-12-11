@@ -9644,5 +9644,10 @@ of the requested ABI for structures which only use C features.
 
 Note that the default behavior can be controlled by ``-mms-bitfields`` and
 ``-mno-ms-bitfields`` switches and via ``#pragma ms_struct``.
+
+The primary difference is for bitfields, where the MS variant only packs
+adjacent fields into the same allocation unit if they have integral types
+of the same size, while the GCC/Itanium variant packs all fields in a bitfield
+tightly.
   }];
 }
