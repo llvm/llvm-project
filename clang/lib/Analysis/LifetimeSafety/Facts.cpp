@@ -112,8 +112,13 @@ void FactManager::dumpBlockSizes(const CFG &Cfg,
     llvm::dbgs() << "Bailed out before generating facts.\n";
     return;
   }
-  if (CfgOriginCountThreshold > 0 && OriginMgr.getNumOrigins() > CfgOriginCountThreshold) {
-    LLVM_DEBUG(llvm::dbgs() << "Number of origins exceeded CFG Origin Count Threshold. Number of Origins: " << OriginMgr.getNumOrigins() << ", threshold: " << BlockNumThreshold << "\n" << "Bailed out after generating facts.\n");
+  if (CfgOriginCountThreshold > 0 &&
+      OriginMgr.getNumOrigins() > CfgOriginCountThreshold) {
+    LLVM_DEBUG(llvm::dbgs() << "Number of origins exceeded CFG Origin Count "
+                               "Threshold. Number of Origins: "
+                            << OriginMgr.getNumOrigins()
+                            << ", threshold: " << BlockNumThreshold << "\n"
+                            << "Bailed out after generating facts.\n");
     return;
   }
   llvm::dbgs() << "Number of CFG Blocks: " << Cfg.getNumBlockIDs() << "\n";

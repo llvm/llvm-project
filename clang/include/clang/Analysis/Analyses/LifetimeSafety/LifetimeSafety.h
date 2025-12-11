@@ -55,7 +55,7 @@ public:
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetyReporter *Reporter,
                                uint32_t CfgBlocknumThreshold,
-                              uint32_t CfgOriginCountThreshold);
+                               uint32_t CfgOriginCountThreshold);
 
 namespace internal {
 /// An object to hold the factories for immutable collections, ensuring
@@ -73,7 +73,7 @@ public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                          LifetimeSafetyReporter *Reporter,
                          uint32_t CfgBlocknumThreshold,
-                        uint32_t CfgOriginCountThreshold);
+                         uint32_t CfgOriginCountThreshold);
 
   void run();
 

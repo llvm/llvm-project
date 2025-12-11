@@ -5178,9 +5178,9 @@ def fcfg_origin_count_threshold
     : Joined<["-"], "fcfg-origin-count-threshold=">,
       Group<m_Group>,
       Visibility<[ClangOption, CC1Option]>,
-      HelpText<
-          "Set Threshold for count of origins in a CFG after fact generation above which lifetime analysis "
-          "will be skipped for the CFG">,
+      HelpText<"Set Threshold for count of origins in a CFG after fact "
+               "generation above which lifetime analysis "
+               "will be skipped for the CFG">,
       MarshallingInfoInt<LangOpts<"CfgOriginCountThreshold">>;
 def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
   Visibility<[ClangOption, CC1Option, FlangOption]>,
