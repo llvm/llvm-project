@@ -150,7 +150,7 @@ def normalize_value_range(
 
 class Operation(ir.OpView):
     @classmethod
-    def __init_subclass__(cls, *, name=None, **kwargs):
+    def __init_subclass__(cls, *, name: str = None, **kwargs):
         super().__init_subclass__(**kwargs)
 
         # for subclasses without "name" parameter,
@@ -222,7 +222,7 @@ class Operation(ir.OpView):
         return Signature(params)
 
     @classmethod
-    def _generate_init_method(cls, fields):
+    def _generate_init_method(cls, fields: List[FieldDef]) -> None:
         init_sig = cls._generate_init_signature(fields)
         operands, attrs, results = partition_fields(fields)
 
@@ -259,7 +259,9 @@ class Operation(ir.OpView):
         cls.__init__ = __init__
 
     @classmethod
-    def _generate_class_attributes(cls, dialect_name, op_name, fields):
+    def _generate_class_attributes(
+        cls, dialect_name: str, op_name: str, fields: List[FieldDef]
+    ) -> None:
         operands, attrs, results = partition_fields(fields)
 
         operand_segments = cls._generate_segments(operands)
@@ -271,7 +273,7 @@ class Operation(ir.OpView):
         cls._ODS_RESULT_SEGMENTS = result_segments
 
     @classmethod
-    def _generate_attr_properties(cls, attrs):
+    def _generate_attr_properties(cls, attrs: List[Attribute]) -> None:
         for attr in attrs:
             setattr(
                 cls,
@@ -280,7 +282,7 @@ class Operation(ir.OpView):
             )
 
     @classmethod
-    def _generate_operand_properties(cls, operands):
+    def _generate_operand_properties(cls, operands: List[Operand]) -> None:
         for i, operand in enumerate(operands):
             if cls._ODS_OPERAND_SEGMENTS:
 
@@ -297,7 +299,7 @@ class Operation(ir.OpView):
                 setattr(cls, operand.name, property(lambda self, i=i: self.operands[i]))
 
     @classmethod
-    def _generate_result_properties(cls, results):
+    def _generate_result_properties(cls, results: List[Result]) -> None:
         for i, result in enumerate(results):
             if cls._ODS_RESULT_SEGMENTS:
 
