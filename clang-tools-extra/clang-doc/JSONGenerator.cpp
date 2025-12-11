@@ -629,8 +629,10 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     serializeInfo(Info, Object, RepositoryUrl);
   };
 
-  if (!I.Children.Functions.empty())
+  if (!I.Children.Functions.empty()) {
     serializeArray(I.Children.Functions, Obj, "Functions", SerializeInfo);
+    Obj["HasFunctions"] = true;
+  }
 
   if (!I.Children.Concepts.empty())
     serializeArray(I.Children.Concepts, Obj, "Concepts", SerializeInfo);
