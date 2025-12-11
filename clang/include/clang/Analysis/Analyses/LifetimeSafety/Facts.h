@@ -242,8 +242,8 @@ public:
   const LoanManager &getLoanMgr() const { return LoanMgr; }
   OriginManager &getOriginMgr() { return OriginMgr; }
   const OriginManager &getOriginMgr() const { return OriginMgr; }
-  void setBlockFactNumThreshold(uint32_t Threshold) {
-    BlockFactNumThreshold = Threshold;
+  void setBlockNumThreshold(uint32_t Threshold) {
+    BlockNumThreshold = Threshold;
   }
 
 private:
@@ -253,7 +253,7 @@ private:
   /// Facts for each CFG block, indexed by block ID.
   llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
   llvm::BumpPtrAllocator FactAllocator;
-  uint32_t BlockFactNumThreshold = 0;
+  uint32_t BlockNumThreshold = 0;
 };
 } // namespace clang::lifetimes::internal
 

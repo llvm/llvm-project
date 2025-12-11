@@ -103,16 +103,19 @@ void FactManager::dumpBlockSizes(const CFG &Cfg,
   if (const Decl *D = AC.getDecl())
     if (const auto *ND = dyn_cast<NamedDecl>(D))
       llvm::dbgs() << "Function: " << ND->getQualifiedNameAsString() << "\n";
+  llvm::dbgs() << "Number of CFG Blocks: " << Cfg.getNumBlockIDs() << "\n";
+  if (BlockNumThreshold > 0 && Cfg.getNumBlockIDs() > BlockNumThreshold) {
+    llvm::dbgs() << "CFG Block Number Threshold: " << BlockNumThreshold << "\n";
+    llvm::dbgs() << "Bailed out before generating facts.\n";
+    return;
+  }
   // Print blocks in the order as they appear in code for a stable ordering.
   for (const CFGBlock *B : *AC.getAnalysis<PostOrderCFGView>()) {
-    if (BlockFactNumThreshold > 0 && getFacts(B).size() > BlockFactNumThreshold)
-      continue;
-    if (B->getLabel()) {
+    if (B->getLabel())
       llvm::dbgs() << "  Block: " << B->getLabel()->getStmtClassName();
-    } else {
+    else
       llvm::dbgs() << "  Block B" << B->getBlockID();
-    }
-    llvm::dbgs() << ": Number of facts = " << getFacts(B).size() << "\n";
+    llvm::dbgs() << ": Number of elements = " << B->size() << "\n";
   }
 }
 

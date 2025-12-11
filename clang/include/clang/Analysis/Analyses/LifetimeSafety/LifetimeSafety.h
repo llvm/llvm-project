@@ -53,8 +53,7 @@ public:
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetyReporter *Reporter,
-                               uint32_t CfgBlocknumThreshold,
-                                              uint32_t CfgOriginCountThreshold);
+                               uint32_t CfgBlocknumThreshold);
 
 namespace internal {
 /// An object to hold the factories for immutable collections, ensuring
@@ -71,8 +70,7 @@ class LifetimeSafetyAnalysis {
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                          LifetimeSafetyReporter *Reporter,
-                         uint32_t CfgBlocknumThreshold,
-                                              uint32_t CfgOriginCountThreshold);
+                         uint32_t CfgBlocknumThreshold);
 
   void run();
 
@@ -84,10 +82,8 @@ public:
   FactManager &getFactManager() { return FactMgr; }
 
 private:
-  bool shouldBailOutCFGPreFactGeneration(const CFG& Cfg) const;
-  bool shouldBailOutCFGPostFactGeneration(const CFG& Cfg) const;
+  bool shouldBailOutCFGPreFactGeneration(const CFG &Cfg) const;
   uint32_t CfgBlocknumThreshold;
-  uint32_t CfgOriginCountThreshold;
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
   LifetimeFactory Factory;

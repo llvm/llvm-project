@@ -28,32 +28,26 @@
 #include "llvm/Support/TimeProfiler.h"
 #include <memory>
 
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "lifetime-safety"
+
 namespace clang::lifetimes {
 namespace internal {
 
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter,
-                                               uint32_t CfgBlocknumThreshold,
-                                              uint32_t CfgOriginCountThreshold)
-    : CfgBlocknumThreshold(CfgBlocknumThreshold), CfgOriginCountThreshold(CfgOriginCountThreshold), AC(AC), Reporter(Reporter) {
-  FactMgr.setBlockFactNumThreshold(CfgBlocknumThreshold);
+                                               uint32_t CfgBlocknumThreshold)
+    : CfgBlocknumThreshold(CfgBlocknumThreshold), AC(AC), Reporter(Reporter) {
+  FactMgr.setBlockNumThreshold(CfgBlocknumThreshold);
 }
 
 bool LifetimeSafetyAnalysis::shouldBailOutCFGPreFactGeneration(const CFG& Cfg) const {
-  if (Cfg.getNumBlockIDs() > CfgBlocknumThreshold) {
+  if ((CfgBlocknumThreshold > 0) &&
+      (Cfg.getNumBlockIDs() > CfgBlocknumThreshold)) {
     LLVM_DEBUG(llvm::dbgs()
-               << "Lifetime Safety Analysis aborted: CFG too large before fact generation ("
-               << Cfg.getNumBlockIDs() << " blocks).\n");
-    return true;
-  }
-  return false;
-}
-
-bool LifetimeSafetyAnalysis::shouldBailOutCFGPostFactGeneration(const CFG& Cfg) const {
-  if (FactMgr.getOriginMgr().getNumOrigins() > CfgOriginCountThreshold) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "Lifetime Safety Analysis aborted: Too many origins after fact generation ("
-               << FactMgr.getOriginMgr().getNumOrigins() << " origins).\n");
+               << "Aborting Lifetime Safety analysis for current CFG as it has "
+                  "blocks exceeding the thresold. Number of blocks: "
+               << Cfg.getNumBlockIDs() << "\n");
     return true;
   }
   return false;
@@ -72,9 +66,6 @@ void LifetimeSafetyAnalysis::run() {
 
   FactsGenerator FactGen(FactMgr, AC);
   FactGen.run();
-  if (shouldBailOutCFGPostFactGeneration(Cfg)) {
-    return;
-  }
   DEBUG_WITH_TYPE("LifetimeFacts", FactMgr.dump(Cfg, AC));
   DEBUG_WITH_TYPE("LifetimeCFGSizes", FactMgr.dumpBlockSizes(Cfg, AC));
 
@@ -103,11 +94,8 @@ void LifetimeSafetyAnalysis::run() {
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetyReporter *Reporter,
-                               uint32_t CfgBlocknumThreshold,
-                                              uint32_t CfgOriginCountThreshold) {
-  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter,
-                                            CfgBlocknumThreshold,
-                                          CfgOriginCountThreshold);
+                               uint32_t CfgBlocknumThreshold) {
+  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter, CfgBlocknumThreshold);
   Analysis.run();
 }
 } // namespace clang::lifetimes
