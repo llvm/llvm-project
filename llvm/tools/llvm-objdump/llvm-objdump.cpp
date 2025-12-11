@@ -3555,7 +3555,8 @@ static void mcpuHelp() {
   }
 
   std::string ErrMessage;
-  const Target *DummyTarget = TargetRegistry::lookupTarget(TheTriple, ErrMessage);
+  const Target *DummyTarget =
+      TargetRegistry::lookupTarget(TheTriple, ErrMessage);
   if (!DummyTarget)
     reportCmdLineError(ErrMessage);
   // We need to access the Help() through the corresponding MCSubtargetInfo.
