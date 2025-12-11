@@ -1403,9 +1403,14 @@ IdentifierNamingCheck::getMacroFailureInfo(const Token &MacroNameTok,
   if (!Style.isActive())
     return std::nullopt;
 
+  const auto &Styles = Style.getStyles();
+  const StyleKind UsedKind = !Styles[SK_MacroDefinition] && Styles[SK_Default]
+                                 ? SK_Default
+                                 : SK_MacroDefinition;
+
   return getFailureInfo("", MacroNameTok.getIdentifierInfo()->getName(),
                         nullptr, Loc, Style.getStyles(), Style.getHNOption(),
-                        SK_MacroDefinition, SM, IgnoreFailedSplit);
+                        UsedKind, SM, IgnoreFailedSplit);
 }
 
 RenamerClangTidyCheck::DiagInfo
