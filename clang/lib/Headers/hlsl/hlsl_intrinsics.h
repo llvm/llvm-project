@@ -671,6 +671,86 @@ inline bool CheckAccessFullyMapped(uint Status) {
 }
 
 //===----------------------------------------------------------------------===//
+// ddx builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddx(T x)
+/// \brief Computes the sum of the absolute values of the partial derivatives
+/// with regard to the x screen space coordinate.
+/// \param x [in] The floating-point scalar or vector to process.
+///
+/// The return value is a floating-point scalar or vector where each element
+/// holds the computation of the matching element in the input.
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> ddx(T input) {
+  return __detail::ddx_impl(input);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+ddx(T input) {
+  return __detail::ddx_impl(input);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::HLSL_FIXED_VECTOR<half, N> ddx(
+    __detail::HLSL_FIXED_VECTOR<half, N> input) {
+  return __detail::ddx_impl(input);
+}
+
+template <int N>
+const inline __detail::HLSL_FIXED_VECTOR<float, N>
+ddx(__detail::HLSL_FIXED_VECTOR<float, N> input) {
+  return __detail::ddx_impl(input);
+}
+
+//===----------------------------------------------------------------------===//
+// ddy builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddy(T x)
+/// \brief Computes the sum of the absolute values of the partial derivatives
+/// with regard to the y screen space coordinate.
+/// \param x [in] The floating-point scalar or vector to process.
+///
+/// The return value is a floating-point scalar or vector where each element
+/// holds the computation of the matching element in the input.
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> ddy(T input) {
+  return __detail::ddy_impl(input);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+ddy(T input) {
+  return __detail::ddy_impl(input);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::HLSL_FIXED_VECTOR<half, N> ddy(
+    __detail::HLSL_FIXED_VECTOR<half, N> input) {
+  return __detail::ddy_impl(input);
+}
+
+template <int N>
+const inline __detail::HLSL_FIXED_VECTOR<float, N>
+ddy(__detail::HLSL_FIXED_VECTOR<float, N> input) {
+  return __detail::ddy_impl(input);
+}
+
+//===----------------------------------------------------------------------===//
 // fwidth builtin
 //===----------------------------------------------------------------------===//
 
