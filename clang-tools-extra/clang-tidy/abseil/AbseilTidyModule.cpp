@@ -68,10 +68,10 @@ public:
     CheckFactories.registerCheck<TimeComparisonCheck>("abseil-time-comparison");
     CheckFactories.registerCheck<TimeSubtractionCheck>(
         "abseil-time-subtraction");
-    CheckFactories.registerCheck<UpgradeDurationConversionsCheck>(
-        "abseil-upgrade-duration-conversions");
     CheckFactories.registerCheck<UncheckedStatusOrAccessCheck>(
         "abseil-unchecked-statusor-access");
+    CheckFactories.registerCheck<UpgradeDurationConversionsCheck>(
+        "abseil-upgrade-duration-conversions");
   }
 };
 

@@ -200,7 +200,7 @@ two calls:
    }
    void f(Foo foo) {
      if (foo.get().ok()) {
-       use(*get.get());
+       use(*foo.get());
      }
    }
 
@@ -218,7 +218,7 @@ assumes the return value of the accessor was mutated.
    void f(Foo foo) {
      if (foo.get().ok()) {
        foo.mutate();
-       use(*get.get()); // unsafe: mutate might have changed the state of the object
+       use(*foo.get()); // unsafe: mutate might have changed the state of the object
      }
    }
 
