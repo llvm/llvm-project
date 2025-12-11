@@ -118,28 +118,28 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @uadd_int64_t(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECK-LABEL: uadd_int64_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    vmov r0, r1, d3
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    adds r5, r2, r0
-; CHECK-NEXT:    adc.w lr, r3, r1
-; CHECK-NEXT:    subs r2, r5, r2
-; CHECK-NEXT:    sbcs.w r2, lr, r3
-; CHECK-NEXT:    vmov r3, r12, d2
-; CHECK-NEXT:    vmov r1, r4, d0
-; CHECK-NEXT:    csetm r2, lo
-; CHECK-NEXT:    adds r3, r3, r1
-; CHECK-NEXT:    adc.w r0, r4, r12
-; CHECK-NEXT:    subs r1, r3, r1
-; CHECK-NEXT:    sbcs.w r1, r0, r4
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r5
+; CHECK-NEXT:    adds.w lr, r2, r0
+; CHECK-NEXT:    vmov r2, r4, d0
+; CHECK-NEXT:    adc.w r12, r3, r1
+; CHECK-NEXT:    subs.w r0, lr, r0
+; CHECK-NEXT:    sbcs.w r0, r12, r1
+; CHECK-NEXT:    vmov r1, r3, d2
+; CHECK-NEXT:    csetm r0, lo
+; CHECK-NEXT:    adds r2, r2, r1
+; CHECK-NEXT:    adcs r4, r3
+; CHECK-NEXT:    subs r1, r2, r1
+; CHECK-NEXT:    sbcs.w r1, r4, r3
+; CHECK-NEXT:    vmov q1[2], q1[0], r2, lr
 ; CHECK-NEXT:    csetm r1, lo
-; CHECK-NEXT:    vmov q1[3], q1[1], r0, lr
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r2
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r2
+; CHECK-NEXT:    vmov q1[3], q1[1], r4, r12
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    vorr q0, q1, q0
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %0 = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> %src1, <2 x i64> %src2)
   ret <2 x i64> %0

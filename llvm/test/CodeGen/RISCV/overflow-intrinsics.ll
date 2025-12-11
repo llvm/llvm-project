@@ -69,12 +69,12 @@ define i64 @uaddo1_math_overflow_used(i64 %a, i64 %b, ptr %res) nounwind ssp {
 ;
 ; RV64-LABEL: uaddo1_math_overflow_used:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    bltu a0, a1, .LBB1_2
+; RV64-NEXT:    add a3, a1, a0
+; RV64-NEXT:    bltu a3, a0, .LBB1_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a1, 42
 ; RV64-NEXT:  .LBB1_2:
-; RV64-NEXT:    sd a0, 0(a2)
+; RV64-NEXT:    sd a3, 0(a2)
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    ret
   %add = add i64 %b, %a
@@ -143,12 +143,12 @@ define i64 @uaddo2_math_overflow_used(i64 %a, i64 %b, ptr %res) nounwind ssp {
 ;
 ; RV64-LABEL: uaddo2_math_overflow_used:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    bltu a0, a1, .LBB3_2
+; RV64-NEXT:    add a3, a1, a0
+; RV64-NEXT:    bltu a3, a0, .LBB3_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a1, 42
 ; RV64-NEXT:  .LBB3_2:
-; RV64-NEXT:    sd a0, 0(a2)
+; RV64-NEXT:    sd a3, 0(a2)
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    ret
   %add = add i64 %b, %a
@@ -217,12 +217,12 @@ define i64 @uaddo3_math_overflow_used(i64 %a, i64 %b, ptr %res) nounwind ssp {
 ;
 ; RV64-LABEL: uaddo3_math_overflow_used:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    bltu a0, a1, .LBB5_2
+; RV64-NEXT:    add a3, a1, a0
+; RV64-NEXT:    bltu a3, a0, .LBB5_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a1, 42
 ; RV64-NEXT:  .LBB5_2:
-; RV64-NEXT:    sd a0, 0(a2)
+; RV64-NEXT:    sd a3, 0(a2)
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    ret
   %add = add i64 %b, %a

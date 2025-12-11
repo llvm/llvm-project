@@ -113,10 +113,10 @@ define i32 @unsigned_sat_constant_i32_using_min(i32 %x) {
 define i32 @unsigned_sat_constant_i32_using_cmp_sum(i32 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i32_using_cmp_sum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi 4, 3, 42
-; CHECK-NEXT:    cmplw 4, 3
-; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    isellt 3, 3, 4
+; CHECK-NEXT:    addi 3, 3, 42
+; CHECK-NEXT:    li 4, -1
+; CHECK-NEXT:    cmplwi 3, 42
+; CHECK-NEXT:    isellt 3, 4, 3
 ; CHECK-NEXT:    blr
   %a = add i32 %x, 42
   %c = icmp ugt i32 %x, %a
@@ -303,10 +303,10 @@ define i32 @unsigned_sat_variable_i32_using_min(i32 %x, i32 %y) {
 define i32 @unsigned_sat_variable_i32_using_cmp_sum(i32 %x, i32 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i32_using_cmp_sum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    add 4, 3, 4
-; CHECK-NEXT:    cmplw 4, 3
-; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    isellt 3, 3, 4
+; CHECK-NEXT:    add 3, 3, 4
+; CHECK-NEXT:    cmplw 3, 4
+; CHECK-NEXT:    li 4, -1
+; CHECK-NEXT:    isellt 3, 4, 3
 ; CHECK-NEXT:    blr
   %a = add i32 %x, %y
   %c = icmp ugt i32 %x, %a

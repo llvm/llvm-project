@@ -16,7 +16,7 @@ define i64 @addcarry(i64 %x, i64 %y) nounwind {
 ; RISCV32-NEXT:    add a7, a7, t0
 ; RISCV32-NEXT:    add a4, t1, a6
 ; RISCV32-NEXT:    sltu a5, t1, a5
-; RISCV32-NEXT:    sltu a6, a4, t1
+; RISCV32-NEXT:    sltu a6, a4, a6
 ; RISCV32-NEXT:    add a5, a7, a5
 ; RISCV32-NEXT:    add a5, a5, a6
 ; RISCV32-NEXT:    mul a6, a1, a3
@@ -45,16 +45,16 @@ define i64 @addcarry(i64 %x, i64 %y) nounwind {
 define { i32, i32, i1 } @addcarry_2x32(i32 %x0, i32 %x1, i32 %y0, i32 %y1) nounwind {
 ; RISCV32-LABEL: addcarry_2x32:
 ; RISCV32:       # %bb.0:
-; RISCV32-NEXT:    add a3, a1, a3
-; RISCV32-NEXT:    add a4, a2, a4
-; RISCV32-NEXT:    sltu a1, a3, a1
-; RISCV32-NEXT:    sltu a2, a4, a2
-; RISCV32-NEXT:    add a1, a4, a1
-; RISCV32-NEXT:    sltu a4, a1, a4
-; RISCV32-NEXT:    or a2, a2, a4
-; RISCV32-NEXT:    sw a3, 0(a0)
-; RISCV32-NEXT:    sw a1, 4(a0)
-; RISCV32-NEXT:    sb a2, 8(a0)
+; RISCV32-NEXT:    add a1, a1, a3
+; RISCV32-NEXT:    add a2, a2, a4
+; RISCV32-NEXT:    sltu a3, a1, a3
+; RISCV32-NEXT:    sltu a4, a2, a4
+; RISCV32-NEXT:    add a2, a2, a3
+; RISCV32-NEXT:    sltu a3, a2, a3
+; RISCV32-NEXT:    or a3, a4, a3
+; RISCV32-NEXT:    sw a1, 0(a0)
+; RISCV32-NEXT:    sw a2, 4(a0)
+; RISCV32-NEXT:    sb a3, 8(a0)
 ; RISCV32-NEXT:    ret
   %t0 = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %x0, i32 %y0)
   %s0 = extractvalue { i32, i1 } %t0, 0

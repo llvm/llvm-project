@@ -1782,12 +1782,11 @@ define <4 x i32> @vp_uadd_sat_v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i
 ; SSE-LABEL: vp_uadd_sat_v4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
-; SSE-NEXT:    movdqa %xmm0, %xmm3
-; SSE-NEXT:    pxor %xmm2, %xmm3
 ; SSE-NEXT:    paddd %xmm1, %xmm0
+; SSE-NEXT:    pxor %xmm2, %xmm1
 ; SSE-NEXT:    pxor %xmm0, %xmm2
-; SSE-NEXT:    pcmpgtd %xmm2, %xmm3
-; SSE-NEXT:    por %xmm3, %xmm0
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm1
+; SSE-NEXT:    por %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: vp_uadd_sat_v4i32:

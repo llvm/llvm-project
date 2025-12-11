@@ -8,10 +8,10 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; RV32I-LABEL: func32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    mul a1, a1, a2
-; RV32I-NEXT:    add a1, a0, a1
-; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    neg a0, a0
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    sltu a1, a0, a1
+; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: func32:
@@ -63,10 +63,10 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ;
 ; RV64I-LABEL: func64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a2, a0, a2
-; RV64I-NEXT:    sltu a0, a2, a0
-; RV64I-NEXT:    neg a0, a0
-; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    sltu a1, a0, a2
+; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZbb-LABEL: func64:

@@ -31,10 +31,10 @@ define i32 @addsat(i32 %a, i32 %b) {
 define i32 @addusat(i32 %a, i32 %b) {
 ; RV32I-LABEL: addusat:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    add a1, a0, a1
-; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    neg a0, a0
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    sltu a1, a0, a1
+; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCIA-LABEL: addusat:

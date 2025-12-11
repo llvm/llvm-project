@@ -304,12 +304,13 @@ define <16 x i1> @lane_mask_v16i1_i8(i8 %index, i8 %TC) {
 ;
 ; CHECK-STREAMING-LABEL: lane_mask_v16i1_i8:
 ; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    index z0.b, w0, #1
+; CHECK-STREAMING-NEXT:    index z0.b, #0, #1
 ; CHECK-STREAMING-NEXT:    mov z1.b, w0
 ; CHECK-STREAMING-NEXT:    ptrue p0.b, vl16
-; CHECK-STREAMING-NEXT:    cmphi p1.b, p0/z, z1.b, z0.b
-; CHECK-STREAMING-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-STREAMING-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-STREAMING-NEXT:    add z1.b, z1.b, z0.b
+; CHECK-STREAMING-NEXT:    cmphi p1.b, p0/z, z0.b, z1.b
+; CHECK-STREAMING-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-STREAMING-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-STREAMING-NEXT:    mov z1.b, w1
 ; CHECK-STREAMING-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
 ; CHECK-STREAMING-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
@@ -331,12 +332,13 @@ define <8 x i1> @lane_mask_v8i1_i8(i8 %index, i8 %TC) {
 ;
 ; CHECK-STREAMING-LABEL: lane_mask_v8i1_i8:
 ; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    index z0.b, w0, #1
+; CHECK-STREAMING-NEXT:    index z0.b, #0, #1
 ; CHECK-STREAMING-NEXT:    mov z1.b, w0
 ; CHECK-STREAMING-NEXT:    ptrue p0.b, vl8
-; CHECK-STREAMING-NEXT:    cmphi p1.b, p0/z, z1.b, z0.b
-; CHECK-STREAMING-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-STREAMING-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-STREAMING-NEXT:    add z1.b, z1.b, z0.b
+; CHECK-STREAMING-NEXT:    cmphi p1.b, p0/z, z0.b, z1.b
+; CHECK-STREAMING-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-STREAMING-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-STREAMING-NEXT:    mov z1.b, w1
 ; CHECK-STREAMING-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
 ; CHECK-STREAMING-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
