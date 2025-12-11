@@ -601,7 +601,6 @@ function(add_mlir_python_common_capi_library name)
   # Generate the aggregate .so that everything depends on.
   add_mlir_aggregate(${name}
     SHARED
-    DISABLE_INSTALL
     EMBED_LIBS ${_embed_libs}
   )
 

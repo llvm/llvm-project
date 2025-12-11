@@ -920,9 +920,6 @@ nb::object PyOperation::create(std::string_view name,
   PyMlirContext::ErrorCapture errors(location.getContext());
   MlirOperation operation = mlirOperationCreate(&state);
   if (!operation.ptr) {
-    for (auto take : errors.take()) {
-      std::cout << take.message << "\n";
-    }
     throw MLIRError("Operation creation failed", errors.take());
   }
   PyOperationRef created =
@@ -1672,7 +1669,7 @@ void PySymbolTable::walkSymbolTables(PyOperationBase &from,
   }
 }
 
-void registerMLIRErrorInIRCore() {
+void registerMLIRErrorInCore() {
   nb::register_exception_translator([](const std::exception_ptr &p,
                                        void *payload) {
     // We can't define exceptions with custom fields through pybind, so

@@ -1002,11 +1002,16 @@ add_mlir_library(MLIRPythonSupport
   LINK_COMPONENTS
     Support
   LINK_LIBS
+    Python::Module
     ${NB_LIBRARY_TARGET_NAME}
-    MLIRCAPIIR
+    MLIRPythonCAPI
 )
-target_link_libraries(MLIRPythonSupport PUBLIC ${NB_LIBRARY_TARGET_NAME})
 nanobind_link_options(MLIRPythonSupport)
+get_target_property(_current_link_options MLIRPythonSupport LINK_OPTIONS)
+if(_current_link_options)
+  string(REPLACE "LINKER:-z,defs" "" _modified_link_options "${_current_link_options}")
+  set_property(TARGET MLIRPythonSupport PROPERTY LINK_OPTIONS "${_modified_link_options}")
+endif()
 set_target_properties(MLIRPythonSupport PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
   BINARY_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
@@ -1041,5 +1046,8 @@ if(APPLE)
 endif()
 target_link_libraries(
   MLIRPythonModules.extension._mlir.dso
+  PUBLIC MLIRPythonSupport)
+target_link_libraries(
+  MLIRPythonModules.extension._mlirPythonTestNanobind.dso
   PUBLIC MLIRPythonSupport)
 target_compile_definitions(MLIRPythonSupport PRIVATE NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN})

@@ -8,10 +8,10 @@
 
 #include "Rewrite.h"
 
-#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Rewrite.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/IRCore.h"
 // clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
