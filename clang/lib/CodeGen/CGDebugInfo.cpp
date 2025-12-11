@@ -3930,12 +3930,19 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
-llvm::DILocation *CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc Location,
-                                                       StringRef FuncName) {
-  llvm::DISubprogram *SP =
-      createInlinedSubprogram(FuncName, Location->getFile());
+llvm::DILocation *
+CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                     llvm::DISubprogram *SynthSP) {
   return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
-                               /*Scope=*/SP, /*InlinedAt=*/Location);
+                               SynthSP, ParentLocation);
+}
+
+llvm::DILocation *
+CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                     StringRef SynthFuncName,
+                                     llvm::DIFile *SynthFile) {
+  llvm::DISubprogram *SP = createInlinedSubprogram(SynthFuncName, SynthFile);
+  return CreateSyntheticInlineAt(ParentLocation, SP);
 }
 
 llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
@@ -3949,7 +3956,8 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
   FuncName += "$";
   FuncName += FailureMsg;
 
-  return CreateSyntheticInlineAt(TrapLocation, FuncName);
+  return CreateSyntheticInlineAt(TrapLocation, FuncName,
+                                 TrapLocation->getFile());
 }
 
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
@@ -6642,8 +6650,11 @@ llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
   else
     Label = SanitizerHandlerToCheckLabel(Handler);
 
-  if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); }))
-    return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label);
+  if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); })) {
+    llvm::DIFile *File = llvm::DIFile::get(CGM.getLLVMContext(),
+                                           "ubsan_interface.h", "sanitizer");
+    return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label, File);
+  }
 
   return CheckDebugLoc;
 }
