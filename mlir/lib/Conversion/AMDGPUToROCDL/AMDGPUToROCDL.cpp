@@ -2325,7 +2325,8 @@ struct AMDGPUMakeDmaBaseLowering : public ConvertOpToLLVMPattern<BaseOp> {
       sgprs[0] = setValueAtOffset(rewriter, loc, sgprs[0], consts[1], 30);
 
       auto type = cast<TDMGatherBaseType>(op.getResult().getType());
-      unsigned indexSize = type.getIndexSize();
+      Type indexType = type.getIndexType();
+      unsigned indexSize = indexType.getIntOrFloatBitWidth();
       assert(llvm::is_contained<unsigned>({16, 32}, indexSize) &&
              "expected index_size to be 16 or 32");
       unsigned idx = (indexSize / 16) - 1;

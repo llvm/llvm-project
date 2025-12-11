@@ -243,7 +243,7 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>
 
 // CHECK-LABEL: func @make_gather_dma_base
 // CHECK-SAME: (%[[IDX:.+]]: index, %[[MEM:.+]]: memref<8xi32, 1>, %[[SMEM:.+]]: memref<8xi32, 3>)
-func.func @make_gather_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>, %smem: memref<8xi32,#gpu_lds_addrspace>) -> (!amdgpu.tdm_gather_base<i32,16>, !amdgpu.tdm_gather_base<i32, 32>) {
+func.func @make_gather_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>, %smem: memref<8xi32,#gpu_lds_addrspace>) -> (!amdgpu.tdm_gather_base<i32, i16>, !amdgpu.tdm_gather_base<i32, i32>) {
 
   // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
@@ -257,7 +257,7 @@ func.func @make_gather_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_add
   // CHECK: %[[V4I32_0_0:.+]] = llvm.mlir.poison : vector<4xi32>
   // CHECK: %[[V4I32_0_1:.+]] = llvm.insertelement %[[SGPR0]], %[[V4I32_0_0]][%[[C0]] : i32]
 
-  %0 = amdgpu.make_gather_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu_global_addrspace>, memref<8xi32, #gpu_lds_addrspace> -> !amdgpu.tdm_gather_base<i32,16>
+  %0 = amdgpu.make_gather_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu_global_addrspace>, memref<8xi32, #gpu_lds_addrspace> -> !amdgpu.tdm_gather_base<i32, i16>
 
   // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
@@ -276,9 +276,9 @@ func.func @make_gather_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_add
   // CHECK: %[[V4I32_0_1:.+]] = llvm.insertelement %[[SGPR0]], %[[V4I32_0_0]][%[[C0]] : i32]
 
 
-  %1 = amdgpu.make_gather_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu_global_addrspace>, memref<8xi32, #gpu_lds_addrspace> -> !amdgpu.tdm_gather_base<i32,32>
+  %1 = amdgpu.make_gather_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu_global_addrspace>, memref<8xi32, #gpu_lds_addrspace> -> !amdgpu.tdm_gather_base<i32, i32>
 
-  func.return %0, %1 : !amdgpu.tdm_gather_base<i32,16>, !amdgpu.tdm_gather_base<i32, 32>
+  func.return %0, %1 : !amdgpu.tdm_gather_base<i32,i16>, !amdgpu.tdm_gather_base<i32,i32>
 }
 
 // -----

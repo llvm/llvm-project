@@ -119,13 +119,13 @@ def AMDGPU_TDMGatherBaseType : AMDGPU_Type<"TDMGatherBase", "tdm_gather_base"> {
     The value defined by this operation is only intended to be used by
     amdgpu.tdm_make_gather_descriptor.
   }];
-  let parameters = (ins "Type":$elementType, "unsigned":$indexSize);
+  let parameters = (ins "Type":$elementType, "Type":$indexType);
   let builders = [
-    TypeBuilderWithInferredContext<(ins "Type":$elementType, "unsigned": $indexSize), [{
-      return $_get(elementType.getContext(), elementType, indexSize);
+    TypeBuilderWithInferredContext<(ins "Type":$elementType, "Type": $indexType), [{
+      return $_get(elementType.getContext(), elementType, indexType);
     }]>
   ];
-  let assemblyFormat = "`<` $elementType `,` $indexSize `>`";
+  let assemblyFormat = "`<` $elementType `,` $indexType`>`";
 }
 
 def AMDGPU_TDMDescriptorType : AMDGPU_Type<"TDMDescriptor", "tdm_descriptor"> {
@@ -1280,7 +1280,7 @@ def AMDGPU_MakeGatherDmaBaseOp : AMDGPU_DmaBaseOp<"make_gather_dma_base", AMDGPU
     This operation creates a value corresponding to the tensor descriptor (D#) group 0
     found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
 
-    Unlike `make_dma_base`, this operation returns `!amdgpu.tdm_gather_base<$element_type, $index_size>`
+    Unlike `make_dma_base`, this operation returns `!amdgpu.tdm_gather_base<$element_type, $index_type>`
     which is only compatible with `make_gather_dma_descriptor`. Using the descriptor returned
     by `make_gather_dma_descriptor` will set the `tensor_load_to_lds` and `tensor_store_from_lds` to gather mode.
 
