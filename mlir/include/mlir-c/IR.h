@@ -858,6 +858,11 @@ MLIR_CAPI_EXPORTED
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
                        void *userData, MlirWalkOrder walkOrder);
 
+/// Replace uses of 'of' value with the 'with' value inside the 'op' operation.
+/// operation.
+MLIR_CAPI_EXPORTED void
+mlirOperationReplaceUsesOfWith(MlirOperation op, MlirValue of, MlirValue with);
+
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//
