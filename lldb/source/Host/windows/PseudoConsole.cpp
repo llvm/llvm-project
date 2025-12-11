@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/windows/PseudoConsole.h"
+
+#include <mutex>
+
 #include "lldb/Host/windows/windows.h"
 
 #include "llvm/Support/Errc.h"
@@ -25,11 +28,10 @@ typedef VOID(WINAPI *ClosePseudoConsole_t)(HPCON hPC);
 class ConPTY {
 public:
   static bool Initialize() {
-    static bool initialized = false;
-    static bool success = false;
+    std::lock_guard<std::mutex> guard(m_initialized_mutex);
 
-    if (!initialized) {
-      initialized = true;
+    if (!m_initialized) {
+      m_initialized = true;
 
       HMODULE hMod = LoadLibraryW(L"kernel32.dll");
       if (!hMod) {
@@ -40,10 +42,10 @@ public:
           (CreatePseudoConsole_t)GetProcAddress(hMod, "CreatePseudoConsole");
       pClose = (ClosePseudoConsole_t)GetProcAddress(hMod, "ClosePseudoConsole");
 
-      success = (pCreate && pClose);
+      m_success = (pCreate && pClose);
     }
 
-    return success;
+    return m_success;
   }
 
   static bool IsAvailable() { return Initialize(); }
@@ -61,10 +63,16 @@ public:
 private:
   static CreatePseudoConsole_t pCreate;
   static ClosePseudoConsole_t pClose;
+  static std::mutex m_initialized_mutex;
+  static bool m_initialized;
+  static bool m_success;
 };
 
 CreatePseudoConsole_t ConPTY::pCreate = nullptr;
 ClosePseudoConsole_t ConPTY::pClose = nullptr;
+std::mutex ConPTY::m_initialized_mutex{};
+bool ConPTY::m_initialized = false;
+bool ConPTY::m_success = false;
 
 llvm::Error PseudoConsole::OpenPseudoConsole() {
   if (!ConPTY::IsAvailable())

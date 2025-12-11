@@ -523,11 +523,13 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
   if (!process_sp)
     return nullptr;
   error = process_sp->Launch(launch_info);
+#ifdef _WIN32
   if (error.Success())
     process_sp->SetPseudoConsoleHandle(launch_info.GetPTYSP());
   else
     LLDB_LOGF(log, "Platform::%s LaunchProcess() failed: %s", __FUNCTION__,
               error.AsCString());
+#endif
 
   return process_sp;
 }
