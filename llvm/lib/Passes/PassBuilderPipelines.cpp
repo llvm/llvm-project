@@ -412,6 +412,9 @@ void PassBuilder::invokePipelineEarlySimplificationEPCallbacks(
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
+   // Count the types of instructions used
+  if (AreStatisticsEnabled())
+    MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
 }
 
 // Helper to check if the current compilation phase is preparing for LTO
@@ -1737,10 +1740,6 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
-
-  // Count the types of instructions used
-  if (AreStatisticsEnabled())
-    MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);

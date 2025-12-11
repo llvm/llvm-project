@@ -1,25 +1,14 @@
-; RUN: opt -stats -passes=instcount < %s 2>&1 | FileCheck %s --check-prefix=UNOPT
-; RUN: opt -stats -O3 < %s 2>&1 | FileCheck %s --check-prefix=OPT
+; RUN: opt -stats -passes=instcount < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -O3 < %s 2>&1 | FileCheck %s
 
-; --- FIRST RUN (UNOPTIMIZED) ---
-; UNOPT-DAG: 8 instcount - Number of Br insts
-; UNOPT-DAG: 6 instcount - Number of Call insts
-; UNOPT-DAG: 2 instcount - Number of ICmp insts
-; UNOPT-DAG: 1 instcount - Number of Ret insts
-; UNOPT-DAG: 1 instcount - Number of Switch insts
-; UNOPT-DAG: 10 instcount - Number of basic blocks
-; UNOPT-DAG: 1 instcount - Number of non-external functions
-; UNOPT-DAG: 18 instcount - Number of instructions (of all types)
-
-; --- SECOND RUN (OPTIMIZED) ---
-; OPT-DAG: 8 instcount - Number of Br insts
-; OPT-DAG: 6 instcount - Number of Call insts
-; OPT-DAG: 2 instcount - Number of ICmp insts
-; OPT-DAG: 1 instcount - Number of Ret insts
-; OPT-DAG: 1 instcount - Number of Switch insts
-; OPT-DAG: 10 instcount - Number of basic blocks
-; OPT-DAG: 1 instcount - Number of non-external functions
-; OPT-DAG: 18 instcount - Number of instructions (of all types)
+; CHECK-DAG: 8 instcount - Number of Br insts
+; CHECK-DAG: 6 instcount - Number of Call insts
+; CHECK-DAG: 2 instcount - Number of ICmp insts
+; CHECK-DAG: 1 instcount - Number of Ret insts
+; CHECK-DAG: 1 instcount - Number of Switch insts
+; CHECK-DAG: 10 instcount - Number of basic blocks
+; CHECK-DAG: 1 instcount - Number of non-external functions
+; CHECK-DAG: 18 instcount - Number of instructions (of all types)
 
 
 define dso_local void @foo(i32 noundef %i, i32 noundef %j, i32 noundef %n) {
