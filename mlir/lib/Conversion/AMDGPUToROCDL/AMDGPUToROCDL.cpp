@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
 
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -506,9 +507,15 @@ struct MemoryCounterWaitOpLowering
       if (std::optional<int> exp = adaptor.getExp())
         ROCDL::WaitExpcntOp::create(rewriter, loc, *exp);
 
+      if (std::optional<int> tensor = adaptor.getTensor())
+        ROCDL::WaitTensorcntOp::create(rewriter, loc, *tensor);
+
       rewriter.eraseOp(op);
       return success();
     }
+
+    if (adaptor.getTensor())
+      return op.emitOpError("unsupported chipset");
 
     auto getVal = [](Attribute attr) -> unsigned {
       if (attr)
@@ -2368,6 +2375,18 @@ struct AMDGPUMakeDmaDescriptorLowering
     return LLVM::OrOp::create(rewriter, loc, accumulator, value);
   }
 
+  Value setWorkgroupMask(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+                         ConversionPatternRewriter &rewriter, Location loc,
+                         Value sgpr0) const {
+    Value mask = op.getWorkgroupMask();
+    if (!mask)
+      return sgpr0;
+
+    Type i32 = rewriter.getI32Type();
+    Value extendedMask = LLVM::ZExtOp::create(rewriter, loc, i32, mask);
+    return setValueAtOffset(rewriter, loc, sgpr0, extendedMask, 0);
+  }
+
   Value setDataSize(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr0, ArrayRef<Value> consts) const {
@@ -2377,7 +2396,8 @@ struct AMDGPUMakeDmaDescriptorLowering
         llvm::is_contained<unsigned>({8, 16, 32, 64}, elementTypeWidthInBits) &&
         "expected type width to be 8, 16, 32, or 64.");
     int64_t dataSize = llvm::Log2_32(elementTypeWidthInBits / 8);
-    return createI32Constant(rewriter, loc, dataSize << 16);
+    Value size = createI32Constant(rewriter, loc, dataSize);
+    return setValueAtOffset(rewriter, loc, sgpr0, size, 16);
   }
 
   Value setAtomicBarrier(MakeDmaDescriptorOp op, OpAdaptor adaptor,
@@ -2409,6 +2429,15 @@ struct AMDGPUMakeDmaDescriptorLowering
       return sgpr0;
 
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 20);
+  }
+
+  Value setEarlyTimeout(MakeDmaDescriptorOp op, OpAdaptor adaptorm,
+                        ConversionPatternRewriter &rewriter, Location loc,
+                        Value sgpr0, ArrayRef<Value> consts) const {
+    if (!op.getWorkgroupMask())
+      return sgpr0;
+
+    return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 21);
   }
 
   Value setPadInterval(MakeDmaDescriptorOp op, OpAdaptor adaptor,
@@ -2615,10 +2644,12 @@ struct AMDGPUMakeDmaDescriptorLowering
       sgprs[i] = consts[0];
     }
 
+    sgprs[0] = setWorkgroupMask(op, adaptor, rewriter, loc, sgprs[0]);
     sgprs[0] = setDataSize(op, adaptor, rewriter, loc, sgprs[0], consts);
     sgprs[0] = setAtomicBarrier(op, adaptor, rewriter, loc, sgprs[0], consts);
     sgprs[0] = setIterateEnable(op, adaptor, rewriter, loc, sgprs[0], consts);
     sgprs[0] = setPadEnable(op, adaptor, rewriter, loc, sgprs[0], consts);
+    sgprs[0] = setEarlyTimeout(op, adaptor, rewriter, loc, sgprs[0], consts);
     sgprs[0] = setPadInterval(op, adaptor, rewriter, loc, sgprs[0], consts);
     sgprs[0] = setPadAmount(op, adaptor, rewriter, loc, sgprs[0], consts);
 
@@ -2694,12 +2725,9 @@ struct ConvertAMDGPUToROCDLPass
 
     RewritePatternSet patterns(ctx);
     LLVMTypeConverter converter(ctx);
-    converter.addConversion([&](TDMBaseType type) -> Type {
-      Type i32 = IntegerType::get(type.getContext(), 32);
-      return converter.convertType(VectorType::get(4, i32));
-    });
 
     populateAMDGPUToROCDLConversionPatterns(converter, patterns, *maybeChipset);
+    populateCommonAMDGPUTypeAndAttributeConversions(converter);
     LLVMConversionTarget target(getContext());
     target.addIllegalDialect<::mlir::amdgpu::AMDGPUDialect>();
     target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
@@ -2711,7 +2739,23 @@ struct ConvertAMDGPUToROCDLPass
 };
 } // namespace
 
-void mlir::populateAMDGPUMemorySpaceAttributeConversions(
+void mlir::populateCommonAMDGPUTypeAndAttributeConversions(
+    TypeConverter &typeConverter) {
+  populateGpuMemorySpaceAttributeConversions(
+      typeConverter, [](gpu::AddressSpace space) {
+        switch (space) {
+        case gpu::AddressSpace::Global:
+          return ROCDL::ROCDLDialect::kGlobalMemoryAddressSpace;
+        case gpu::AddressSpace::Workgroup:
+          return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
+        case gpu::AddressSpace::Private:
+          return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
+        }
+        llvm_unreachable("unknown address space enum value");
+      });
+}
+
+void mlir::populateAMDGPUTypeAndAttributeConversions(
     TypeConverter &typeConverter) {
   typeConverter.addTypeAttributeConversion(
       [](BaseMemRefType type, amdgpu::AddressSpaceAttr as)
@@ -2728,12 +2772,16 @@ void mlir::populateAMDGPUMemorySpaceAttributeConversions(
         }
         return TypeConverter::AttributeConversionResult::abort();
       });
+  typeConverter.addConversion([&](TDMBaseType type) -> Type {
+    Type i32 = IntegerType::get(type.getContext(), 32);
+    return typeConverter.convertType(VectorType::get(4, i32));
+  });
 }
 
 void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                                    RewritePatternSet &patterns,
                                                    Chipset chipset) {
-  populateAMDGPUMemorySpaceAttributeConversions(converter);
+  populateAMDGPUTypeAndAttributeConversions(converter);
   patterns.add<
       FatRawBufferCastLowering,
       RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,

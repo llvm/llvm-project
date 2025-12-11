@@ -22,7 +22,7 @@ def HWI16:  PatLeaf<(VecPI16 HvxWR:$R)>;
 def HWI32:  PatLeaf<(VecPI32 HvxWR:$R)>;
 def HWF16:  PatLeaf<(VecPF16 HvxWR:$R)>;
 def HWF32:  PatLeaf<(VecPF32 HvxWR:$R)>;
-def HWBF16: PatLeaf<(VecBF16 HvxWR:$R)>;
+def HWBF16: PatLeaf<(VecPBF16 HvxWR:$R)>;
 
 def SDTVecUnaryOp:
   SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
@@ -261,16 +261,6 @@ let Predicates = [UseHVX] in {
   defm: NopCast_pat<VecPI16, VecPI32, HvxWR>;
 }
 
-let Predicates = [UseHVXV68] in {
-  defm: NopCast_pat<VecI8,   VecF16,  HvxVR>;
-  defm: NopCast_pat<VecI16,  VecF16,  HvxVR>;
-  defm: NopCast_pat<VecI32,  VecF16,  HvxVR>;
-  defm: NopCast_pat<VecF32,  VecF16,  HvxVR>;
-  defm: NopCast_pat<VecPI8,  VecPF32,  HvxWR>;
-  defm: NopCast_pat<VecPI16,  VecPF32,  HvxWR>;
-  defm: NopCast_pat<VecPI32,  VecPF32,  HvxWR>;
-}
-
 let Predicates = [UseHVX, UseHVXFloatingPoint] in {
   defm: NopCast_pat<VecI8,   VecF16,  HvxVR>;
   defm: NopCast_pat<VecI8,   VecBF16, HvxVR>;
@@ -317,8 +307,6 @@ let Predicates = [UseHVX] in {
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
   def: Pat<(VecPI32 (concat_vectors HVI32:$Vs, HVI32:$Vt)),
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
-  def: Pat<(VecPF32 (concat_vectors HVF32:$Vs, HVF32:$Vt)),
-           (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
 
   def: Pat<(VecQ8  (qcat HQ16:$Qs, HQ16:$Qt)), (Combineq $Qt, $Qs)>;
   def: Pat<(VecQ16 (qcat HQ32:$Qs, HQ32:$Qt)), (Combineq $Qt, $Qs)>;
@@ -354,10 +342,14 @@ let Predicates = [UseHVX, UseHVXFloatingPoint] in {
 
   def: Pat<(VecPF16 (concat_vectors HVF16:$Vs, HVF16:$Vt)),
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
+  def: Pat<(VecPBF16 (concat_vectors HVBF16:$Vs, HVBF16:$Vt)),
+           (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
   def: Pat<(VecPF32 (concat_vectors HVF32:$Vs, HVF32:$Vt)),
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
 
   def: Pat<(HexagonVINSERTW0 HVF16:$Vu, I32:$Rt),
+           (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
+  def: Pat<(HexagonVINSERTW0 HVBF16:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
   def: Pat<(HexagonVINSERTW0 HVF32:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
