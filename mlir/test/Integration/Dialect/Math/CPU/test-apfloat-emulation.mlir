@@ -8,7 +8,7 @@
 // RUN:             --shared-libs=%mlir_c_runner_utils \
 // RUN:             --shared-libs=%mlir_apfloat_wrappers | FileCheck %s
 
-// Case 2: Only unsupported arithmetics (f8E4M3FN) is lowered through APFloat.
+// Case 2: Only unsupported arithmetics is lowered through APFloat.
 //         Arithmetics on f32 is lowered directly to LLVM.
 // RUN: mlir-opt %s --convert-to-llvm --convert-math-to-apfloat \
 // RUN:          --convert-to-llvm --reconcile-unrealized-casts | \
@@ -35,7 +35,7 @@ func.func @entry() {
 
   // CHECK: 16
   %c4 = math.fma %fourf8E8M0FNU, %twof8E8M0FNU, %eightf8E8M0FNU : f8E8M0FNU
-  // vector.print %c4 : f8E8M0FNU
+  vector.print %c4 : f8E8M0FNU
 
   return
 }

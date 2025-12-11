@@ -157,7 +157,6 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
   }
 
   SymbolOpInterface symTable;
-  const char *APFloatName;
 };
 
 namespace {

@@ -199,7 +199,7 @@ MLIR_APFLOAT_WRAPPERS_EXPORT bool _mlir_apfloat_isnan(int32_t semantics,
   return x.isNaN();
 }
 
-MLIR_APFLOAT_WRAPPERS_EXPORT bool
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t
 _mlir_apfloat_fused_multiply_add(int32_t semantics, uint64_t operand,
                                  uint64_t multiplicand, uint64_t addend) {
   const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
@@ -210,12 +210,6 @@ _mlir_apfloat_fused_multiply_add(int32_t semantics, uint64_t operand,
   llvm::APFloat addend_(sem, llvm::APInt(bitWidth, addend));
   llvm::detail::opStatus stat = operand_.fusedMultiplyAdd(
       multiplicand_, addend_, llvm::RoundingMode::NearestTiesToEven);
-
-  ////////////
-  operand_.print(llvm::dbgs());
-  llvm::dbgs() << "\n";
-  ////////////
-
   assert(stat == llvm::APFloatBase::opOK &&
          "expected fusedMultiplyAdd status to be OK");
   return operand_.bitcastToAPInt().getZExtValue();
