@@ -50,6 +50,7 @@
 //        to use WZR/XZR directly in some cases.
 //===----------------------------------------------------------------------===//
 #include "AArch64.h"
+#include "AArch64InstrInfo.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
@@ -475,6 +476,7 @@ bool AArch64RedundantCopyElimination::runOnMachineFunction(
     return false;
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   // Resize the clobbered and used register unit trackers.  We do this once per
   // function.
@@ -484,8 +486,10 @@ bool AArch64RedundantCopyElimination::runOnMachineFunction(
   OptBBUsedRegs.init(*TRI);
 
   bool Changed = false;
-  for (MachineBasicBlock &MBB : MF)
+  for (MachineBasicBlock &MBB : MF) {
+    Changed |= optimizeTerminators(&MBB, TII);
     Changed |= optimizeBlock(&MBB);
+  }
   return Changed;
 }
 
