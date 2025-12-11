@@ -14,6 +14,7 @@
 // constexpr auto end() const
 //     requires(range<const _Views> && ...)
 
+#include <array>
 #include <cassert>
 #include <ranges>
 

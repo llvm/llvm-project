@@ -13,6 +13,7 @@
 #include <array>
 #include <cassert>
 #include <ranges>
+#include <string>
 #include <vector>
 
 #include "test_iterators.h"
