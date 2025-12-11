@@ -36,7 +36,7 @@ END SUBROUTINE test_interop_02
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = interop
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Init -> OmpInitClause
-!PARSE-TREE: | | Modifier -> OmpInteropType -> Value = TargetSync
+!PARSE-TREE: | | Modifier -> OmpInteropType -> Value = Targetsync
 !PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | OmpClause -> Use -> OmpUseClause -> OmpObject -> Designator -> DataRef -> Name = 'obj1'
 !PARSE-TREE: | OmpClause -> Destroy -> OmpDestroyClause -> OmpObject -> Designator -> DataRef -> Name = 'obj3'
@@ -60,7 +60,7 @@ END SUBROUTINE test_interop_03
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = interop
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Init -> OmpInitClause
-!PARSE-TREE: | | Modifier -> OmpInteropType -> Value = TargetSync
+!PARSE-TREE: | | Modifier -> OmpInteropType -> Value = Targetsync
 !PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | OmpClause -> Depend -> OmpDependClause -> TaskDep
 !PARSE-TREE: | | Modifier -> OmpTaskDependenceType -> Value = Inout
@@ -90,7 +90,7 @@ END SUBROUTINE test_interop_04
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Init -> OmpInitClause
 !PARSE-TREE: | | Modifier -> OmpPreferType -> OmpPreferenceSpecification -> Expr -> LiteralConstant -> CharLiteralConstant
 !PARSE-TREE: | | | string = 'cuda'
-!PARSE-TREE: | | Modifier -> OmpInteropType -> Value = TargetSync
+!PARSE-TREE: | | Modifier -> OmpInteropType -> Value = Targetsync
 !PARSE-TREE: | | Modifier -> OmpInteropType -> Value = Target
 !PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | OmpClause -> Depend -> OmpDependClause -> TaskDep
@@ -118,7 +118,7 @@ END SUBROUTINE test_interop_05
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = interop
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Init -> OmpInitClause
 !PARSE-TREE: | | Modifier -> OmpPreferType -> OmpPreferenceSpecification -> Expr -> Designator -> DataRef -> Name = 'omp_ifr_sycl'
-!PARSE-TREE: | | Modifier -> OmpInteropType -> Value = TargetSync
+!PARSE-TREE: | | Modifier -> OmpInteropType -> Value = Targetsync
 !PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: | | Modifier -> OmpDeviceModifier -> Value = Device_Num
@@ -149,6 +149,6 @@ END
 !PARSE-TREE: | | | string = 'ext1'
 !PARSE-TREE: | | Expr -> LiteralConstant -> CharLiteralConstant
 !PARSE-TREE: | | | string = 'ext2'
-!PARSE-TREE: | | Modifier -> OmpInteropType -> Value = TargetSync
+!PARSE-TREE: | | Modifier -> OmpInteropType -> Value = Targetsync
 !PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | Flags = {}
