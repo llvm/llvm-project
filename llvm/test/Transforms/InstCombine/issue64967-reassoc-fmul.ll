@@ -25,8 +25,7 @@ define float @fmul(float %x) {
 define float @fmul_reassoc(float %x) {
 ; CHECK-LABEL: define float @fmul_reassoc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[FMUL0:%.*]] = fmul reassoc float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[FMUL1:%.*]] = fmul reassoc float [[FMUL0]], 4.000000e+00
+; CHECK-NEXT:    [[FMUL1:%.*]] = fmul reassoc float [[X]], 8.000000e+00
 ; CHECK-NEXT:    ret float [[FMUL1]]
 ;
   %fmul0 = fmul reassoc float %x, 2.0
@@ -37,8 +36,7 @@ define float @fmul_reassoc(float %x) {
 define <2 x float> @fmul_reassoc_v2(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @fmul_reassoc_v2(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[FMUL0:%.*]] = fmul reassoc <2 x float> [[X]], splat (float 2.000000e+00)
-; CHECK-NEXT:    [[FMUL1:%.*]] = fmul reassoc <2 x float> [[FMUL0]], splat (float 4.000000e+00)
+; CHECK-NEXT:    [[FMUL1:%.*]] = fmul reassoc <2 x float> [[X]], splat (float 8.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[FMUL1]]
 ;
   %fmul0 = fmul reassoc <2 x float> %x, splat (float 2.0)
@@ -54,8 +52,7 @@ define <2 x float> @fmul_reassoc_v2(<2 x float> %x) {
 define float @fmul_reassoc_negative_0(float %x) {
 ; CHECK-LABEL: define float @fmul_reassoc_negative_0(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[FMUL0:%.*]] = fmul reassoc float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[FMUL1:%.*]] = fmul reassoc float [[FMUL0]], -4.000000e+00
+; CHECK-NEXT:    [[FMUL1:%.*]] = fmul reassoc float [[X]], -8.000000e+00
 ; CHECK-NEXT:    ret float [[FMUL1]]
 ;
   %fmul0 = fmul reassoc float %x, 2.0
@@ -71,8 +68,7 @@ define float @fmul_reassoc_negative_0(float %x) {
 define float @fmul_reassoc_negative_1(float %x) {
 ; CHECK-LABEL: define float @fmul_reassoc_negative_1(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[FMUL0:%.*]] = fmul reassoc float [[X]], -2.000000e+00
-; CHECK-NEXT:    [[FMUL1:%.*]] = fmul reassoc float [[FMUL0]], 4.000000e+00
+; CHECK-NEXT:    [[FMUL1:%.*]] = fmul reassoc float [[X]], -8.000000e+00
 ; CHECK-NEXT:    ret float [[FMUL1]]
 ;
   %fmul0 = fmul reassoc float %x, -2.0
@@ -95,8 +91,7 @@ define float @fmul_reassoc_nsz(float %x) {
 define float @fmul_reassoc_posk_neg0(float %x) {
 ; CHECK-LABEL: define float @fmul_reassoc_posk_neg0(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[FMUL0:%.*]] = fmul reassoc float [[X]], 4.000000e+00
-; CHECK-NEXT:    [[FMUL1:%.*]] = fmul reassoc float [[FMUL0]], -0.000000e+00
+; CHECK-NEXT:    [[FMUL1:%.*]] = fmul reassoc float [[X]], -0.000000e+00
 ; CHECK-NEXT:    ret float [[FMUL1]]
 ;
   %fmul0 = fmul reassoc float %x, 4.0
@@ -108,8 +103,7 @@ define float @fmul_reassoc_neg0_posk(float %x) {
 ; CHECK-LABEL: define float @fmul_reassoc_neg0_posk(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[FMUL0:%.*]] = fmul reassoc float [[X]], -0.000000e+00
-; CHECK-NEXT:    [[FMUL1:%.*]] = fmul reassoc float [[FMUL0]], 4.000000e+00
-; CHECK-NEXT:    ret float [[FMUL1]]
+; CHECK-NEXT:    ret float [[FMUL0]]
 ;
   %fmul0 = fmul reassoc float %x, -0.0
   %fmul1 = fmul reassoc float %fmul0, 4.0
