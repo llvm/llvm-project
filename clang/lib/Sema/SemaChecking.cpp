@@ -7010,6 +7010,35 @@ tryAgain:
 
     return SLCT_NotALiteral;
   }
+  case Stmt::ArraySubscriptExprClass: {
+    const ArraySubscriptExpr *Subscript = cast<ArraySubscriptExpr>(E);
+    // If we are subscripting a DeclRefExpr, and that DeclRefExpr
+    // is a constant that is initialized with an initializer list,
+    // and the subscript index is a compile-time constant, try to
+    // get a format string out of it.
+    if (const auto *Base =
+            dyn_cast<DeclRefExpr>(Subscript->getBase()->IgnoreParenCasts())) {
+      if (const auto *VDecl = dyn_cast<VarDecl>(Base->getDecl())) {
+        if (VDecl->getType().isConstQualified()) {
+          if (const auto *Init = dyn_cast<InitListExpr>(VDecl->getInit())) {
+            Expr::EvalResult IndexResult;
+            if (Subscript->getIdx()->EvaluateAsInt(
+                    IndexResult, S.Context, Expr::SE_NoSideEffects,
+                    S.isConstantEvaluatedContext())) {
+              if (IndexResult.Val.getInt().isRepresentableByInt64()) {
+                int64_t ArrayIndex = IndexResult.Val.getInt().getExtValue();
+                if (ArrayIndex >= 0 && ArrayIndex < Init->getNumInits()) {
+                  E = Init->getInit(ArrayIndex);
+                  goto tryAgain;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return SLCT_NotALiteral;
+  }
 
   default:
     return SLCT_NotALiteral;
