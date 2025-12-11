@@ -4399,7 +4399,7 @@ def DLLExport : InheritableAttr, TargetSpecificAttr<TargetHasDLLImportExport> {
 
 def DLLExportOnDecl : InheritableAttr, TargetSpecificAttr<TargetHasDLLImportExport> {
   // This attribute is only used to warn if there was a `__declspec(dllexport)`
-  // on a declaration, but not on the defintion of an explciit instantiation
+  // on a declaration, but not on the defintion of an explicit instantiation
   let Spellings = [];
   let Subjects = SubjectList<[CXXRecord]>;
   let Documentation = [InternalOnly];

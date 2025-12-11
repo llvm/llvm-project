@@ -430,10 +430,7 @@ template struct ExplicitlyInstantiatedTemplate<int>; // ms-ps-note {{class templ
 template <typename T> struct ExplicitlyExportInstantiatedTemplate { void func() {} };
 template struct __declspec(dllexport) ExplicitlyExportInstantiatedTemplate<int>;
 template <typename T> struct ExplicitlyExportDeclaredInstantiatedTemplate { void func() {} };
-#ifdef GNU
-// expected-note@+2 {{attribute is missing}}
-#endif
-extern template struct ExplicitlyExportDeclaredInstantiatedTemplate<int>;
+extern template struct ExplicitlyExportDeclaredInstantiatedTemplate<int>; // gnu-warning {{attribute is missing}}
 template struct __declspec(dllexport) ExplicitlyExportDeclaredInstantiatedTemplate<int>; // gnu-warning {{'dllexport' attribute ignored on explicit instantiation definition}}
 template <typename T> struct ExplicitlyImportInstantiatedTemplate { void func() {} };
 template struct __declspec(dllimport) ExplicitlyImportInstantiatedTemplate<int>;
