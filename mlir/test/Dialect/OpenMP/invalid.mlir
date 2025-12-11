@@ -1463,10 +1463,10 @@ func.func @omp_teams_num_teams_dims_mismatch() {
   omp.target {
     %v0 = arith.constant 1 : i32
     %v1 = arith.constant 2 : i32
-    // expected-error @below {{num_teams dims(3) specified but 2 values provided}}
+    // expected-error @below {{dims(3) specified but 2 values provided}}
     "omp.teams" (%v0, %v1) ({
       omp.terminator
-    }) {num_teams_dims = 3 : i64, operandSegmentSizes = array<i32: 0,0,0,2,0,0,0,0,0>} : (i32, i32) -> ()
+    }) {num_teams_num_dims = 3 : i64, operandSegmentSizes = array<i32: 0,0,0,2,0,0,0,0,0>} : (i32, i32) -> ()
     omp.terminator
   }
   return
@@ -1480,10 +1480,10 @@ func.func @omp_teams_num_teams_dims_with_bounds() {
     %v1 = arith.constant 2 : i32
     %lb = arith.constant 3 : i32
     %ub = arith.constant 4 : i32
-    // expected-error @below {{num_teams with dims modifier cannot be used together with lower/upper bounds (unidimensional style)}}
+    // expected-error @below {{num_teams with dims modifier cannot be used together with lower/upper bounds}}
     "omp.teams" (%v0, %v1, %lb, %ub) ({
       omp.terminator
-    }) {num_teams_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,2,1,1,0,0,0>} : (i32, i32, i32, i32) -> ()
+    }) {num_teams_num_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,2,1,1,0,0,0>} : (i32, i32, i32, i32) -> ()
     omp.terminator
   }
   return
@@ -1495,7 +1495,7 @@ func.func @omp_teams_num_teams_values_without_dims() {
   omp.target {
     %v0 = arith.constant 1 : i32
     %v1 = arith.constant 2 : i32
-    // expected-error @below {{num_teams values can only be specified with dims modifier}}
+    // expected-error @below {{dims values can only be specified with dims modifier}}
     "omp.teams" (%v0, %v1) ({
       omp.terminator
     }) {operandSegmentSizes = array<i32: 0,0,0,2,0,0,0,0,0>} : (i32, i32) -> ()
@@ -1508,10 +1508,10 @@ func.func @omp_teams_num_teams_values_without_dims() {
 
 func.func @omp_teams_num_teams_dims_no_values() {
   omp.target {
-    // expected-error @below {{num_teams dims modifier requires values to be specified}}
+    // expected-error @below {{dims modifier requires values to be specified}}
     "omp.teams" () ({
       omp.terminator
-    }) {num_teams_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,0>} : () -> ()
+    }) {num_teams_num_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,0,0,0,0,0,0>} : () -> ()
     omp.terminator
   }
   return
@@ -1523,10 +1523,10 @@ func.func @omp_teams_num_teams_dims_type_mismatch() {
   omp.target {
     %v0 = arith.constant 1 : i32
     %v1 = arith.constant 2 : i64
-    // expected-error @below {{num_teams dims modifier requires all values to have the same type}}
+    // expected-error @below {{dims modifier requires all values to have the same type}}
     "omp.teams" (%v0, %v1) ({
       omp.terminator
-    }) {num_teams_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,2,0,0,0,0,0>} : (i32, i64) -> ()
+    }) {num_teams_num_dims = 2 : i64, operandSegmentSizes = array<i32: 0,0,0,2,0,0,0,0,0>} : (i32, i64) -> ()
     omp.terminator
   }
   return

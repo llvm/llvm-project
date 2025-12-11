@@ -974,15 +974,15 @@ class OpenMP_NumTeamsClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$num_teams_dims,
-    Variadic<AnyInteger>:$num_teams_values,
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$num_teams_num_dims,
+    Variadic<AnyInteger>:$num_teams_dims_values,
     Optional<AnyInteger>:$num_teams_lower,
     Optional<AnyInteger>:$num_teams_upper
   );
 
   let optAssemblyFormat = [{
     `num_teams` `(` custom<NumTeamsClause>(
-      $num_teams_dims, $num_teams_values, type($num_teams_values),
+      $num_teams_num_dims, $num_teams_dims_values, type($num_teams_dims_values),
       $num_teams_lower, type($num_teams_lower),
       $num_teams_upper, type($num_teams_upper)
     ) `)`
@@ -993,7 +993,7 @@ class OpenMP_NumTeamsClauseSkip<
     construct on which it appears.
 
     With dims modifier: (OpenMP 6.1 requirement)
-    - Uses `num_teams_dims` (dimension count) and `num_teams_values` (upper bounds list)
+    - Uses `num_teams_num_dims` (dimension count) and `num_teams_dims_values` (upper bounds list)
     - Specifies upper bounds for each dimension (all must have same type)
     - Format: `num_teams(dims(N): upper_bound_0, ..., upper_bound_N-1 : type)`
     - Example: `num_teams(dims(3): %ub0, %ub1, %ub2 : i32)`
@@ -1007,28 +1007,23 @@ class OpenMP_NumTeamsClauseSkip<
 
   let extraClassDeclaration = [{
     /// Returns true if the dims modifier is explicitly present
-    bool hasDimsModifier() {
-      return getNumTeamsDims().has_value();
+    bool hasNumTeamsDimsModifier() {
+      return getNumTeamsNumDims().has_value() && getNumTeamsNumDims().value();
     }
 
-    /// Returns the number of dimensions specified by dims modifier
-    unsigned getNumDimensions() {
-      if (!hasDimsModifier())
+    /// Returns the number of dimensions specified for num_teams
+    unsigned getNumTeamsDimsCount() {
+      if (!hasNumTeamsDimsModifier())
         return 1;
-      return static_cast<unsigned>(*getNumTeamsDims());
-    }
-
-    /// Returns all dimension values as an operand range
-    ::mlir::OperandRange getDimensionValues() {
-      return getNumTeamsValues();
+      return static_cast<unsigned>(*getNumTeamsNumDims());
     }
 
     /// Returns the value for a specific dimension index
-    /// Index must be less than getNumDimensions()
-    ::mlir::Value getDimensionValue(unsigned index) {
-      assert(index < getDimensionValues().size() &&
-             "Dimension index out of bounds");
-      return getDimensionValues()[index];
+    /// Index must be less than getNumTeamsDimsCount()
+    ::mlir::Value getNumTeamsDimsValue(unsigned index) {
+      assert(index < getNumTeamsDimsCount() &&
+             "Num teams dims index out of bounds");
+      return getNumTeamsDimsValues()[index];
     }
   }];
 }
