@@ -1128,77 +1128,51 @@ inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> __sqr(const complex<_Tp>& __x) {
 
 // asinh
 
-template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI inline _Complex float __casinh(_Complex float __v) { return __builtin_casinhf(__v); }
+_LIBCPP_HIDE_FROM_ABI inline _Complex double __casinh(_Complex double __v) { return __builtin_casinh(__v); }
+_LIBCPP_HIDE_FROM_ABI inline _Complex long double __casinh(_Complex long double __v) { return __builtin_casinhl(__v); }
+
+template <class _Tp, __enable_if_t<is_floating_point<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> asinh(const complex<_Tp>& __x) {
-  const _Tp __pi(atan2(+0., -0.));
-  if (std::isinf(__x.real())) {
-    if (std::isnan(__x.imag()))
-      return __x;
-    if (std::isinf(__x.imag()))
-      return complex<_Tp>(__x.real(), std::copysign(__pi * _Tp(0.25), __x.imag()));
-    return complex<_Tp>(__x.real(), std::copysign(_Tp(0), __x.imag()));
-  }
-  if (std::isnan(__x.real())) {
-    if (std::isinf(__x.imag()))
-      return complex<_Tp>(__x.imag(), __x.real());
-    if (__x.imag() == 0)
-      return __x;
-    return complex<_Tp>(__x.real(), __x.real());
-  }
-  if (std::isinf(__x.imag()))
-    return complex<_Tp>(std::copysign(__x.imag(), __x.real()), std::copysign(__pi / _Tp(2), __x.imag()));
+  return complex<_Tp>(__from_builtin_tag(), std::__casinh(__x.__builtin()));
+}
+
+template <class _Tp, __enable_if_t<!is_floating_point<_Tp>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> asinh(const complex<_Tp>& __x) {
   complex<_Tp> __z = std::log(__x + std::sqrt(std::__sqr(__x) + _Tp(1)));
   return complex<_Tp>(std::copysign(__z.real(), __x.real()), std::copysign(__z.imag(), __x.imag()));
 }
 
 // acosh
 
-template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI inline _Complex float __cacosh(_Complex float __v) { return __builtin_cacoshf(__v); }
+_LIBCPP_HIDE_FROM_ABI inline _Complex double __cacosh(_Complex double __v) { return __builtin_cacosh(__v); }
+_LIBCPP_HIDE_FROM_ABI inline _Complex long double __cacosh(_Complex long double __v) { return __builtin_cacoshl(__v); }
+
+template <class _Tp, __enable_if_t<is_floating_point<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> acosh(const complex<_Tp>& __x) {
-  const _Tp __pi(atan2(+0., -0.));
-  if (std::isinf(__x.real())) {
-    if (std::isnan(__x.imag()))
-      return complex<_Tp>(std::abs(__x.real()), __x.imag());
-    if (std::isinf(__x.imag())) {
-      if (__x.real() > 0)
-        return complex<_Tp>(__x.real(), std::copysign(__pi * _Tp(0.25), __x.imag()));
-      else
-        return complex<_Tp>(-__x.real(), std::copysign(__pi * _Tp(0.75), __x.imag()));
-    }
-    if (__x.real() < 0)
-      return complex<_Tp>(-__x.real(), std::copysign(__pi, __x.imag()));
-    return complex<_Tp>(__x.real(), std::copysign(_Tp(0), __x.imag()));
-  }
-  if (std::isnan(__x.real())) {
-    if (std::isinf(__x.imag()))
-      return complex<_Tp>(std::abs(__x.imag()), __x.real());
-    return complex<_Tp>(__x.real(), __x.real());
-  }
-  if (std::isinf(__x.imag()))
-    return complex<_Tp>(std::abs(__x.imag()), std::copysign(__pi / _Tp(2), __x.imag()));
+  return complex<_Tp>(__from_builtin_tag(), std::__cacosh(__x.__builtin()));
+}
+
+template <class _Tp, __enable_if_t<!is_floating_point<_Tp>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> acosh(const complex<_Tp>& __x) {
   complex<_Tp> __z = std::log(__x + std::sqrt(std::__sqr(__x) - _Tp(1)));
   return complex<_Tp>(std::copysign(__z.real(), _Tp(0)), std::copysign(__z.imag(), __x.imag()));
 }
 
 // atanh
 
-template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI inline _Complex float __catanh(_Complex float __v) { return __builtin_catanhf(__v); }
+_LIBCPP_HIDE_FROM_ABI inline _Complex double __catanh(_Complex double __v) { return __builtin_catanh(__v); }
+_LIBCPP_HIDE_FROM_ABI inline _Complex long double __catanh(_Complex long double __v) { return __builtin_catanhl(__v); }
+
+template <class _Tp, __enable_if_t<is_floating_point<_Tp>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> atanh(const complex<_Tp>& __v) {
+  return complex<_Tp>(__from_builtin_tag(), std::__catanh(__v.__builtin()));
+}
+
+template <class _Tp, __enable_if_t<!is_floating_point<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> atanh(const complex<_Tp>& __x) {
-  const _Tp __pi(atan2(+0., -0.));
-  if (std::isinf(__x.imag())) {
-    return complex<_Tp>(std::copysign(_Tp(0), __x.real()), std::copysign(__pi / _Tp(2), __x.imag()));
-  }
-  if (std::isnan(__x.imag())) {
-    if (std::isinf(__x.real()) || __x.real() == 0)
-      return complex<_Tp>(std::copysign(_Tp(0), __x.real()), __x.imag());
-    return complex<_Tp>(__x.imag(), __x.imag());
-  }
-  if (std::isnan(__x.real())) {
-    return complex<_Tp>(__x.real(), __x.real());
-  }
-  if (std::isinf(__x.real())) {
-    return complex<_Tp>(std::copysign(_Tp(0), __x.real()), std::copysign(__pi / _Tp(2), __x.imag()));
-  }
   if (std::abs(__x.real()) == _Tp(1) && __x.imag() == _Tp(0)) {
     return complex<_Tp>(std::copysign(_Tp(INFINITY), __x.real()), std::copysign(_Tp(0), __x.imag()));
   }
