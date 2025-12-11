@@ -244,10 +244,6 @@ if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   )
 endif()
 
-if (LIBCXX_ENABLE_SHARED)
-  list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
-endif()
-
 if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
   # Since we most likely do not have a mt.exe replacement, disable the
   # manifest bundling.  This allows a normal cmake invocation to pass which
@@ -295,16 +291,10 @@ if (LIBCXX_HERMETIC_STATIC_LIBRARY)
   target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
 endif()
 
-if (LIBCXX_ENABLE_STATIC)
-  list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
-endif()
 # Attempt to merge the libc++.a archive and the ABI library archive into one.
 if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
   target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
 endif()
-
-# Add a meta-target for both libraries.
-add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 
 # Build the experimental static library
 set(LIBCXX_EXPERIMENTAL_SOURCES
@@ -355,6 +345,15 @@ set_target_properties(cxx_experimental
 cxx_add_common_build_flags(cxx_experimental)
 target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
 
+# Add a meta-target for both libraries.
+add_custom_target(cxx)
+if (LIBCXX_ENABLE_SHARED)
+  add_dependencies(cxx cxx_shared)
+endif()
+if (LIBCXX_ENABLE_STATIC)
+  add_dependencies(cxx cxx_static)
+endif()
+
 if (LIBCXX_INSTALL_SHARED_LIBRARY)
   install(TARGETS cxx_shared
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
@@ -385,30 +384,26 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
 endif()
 
 if (NOT CMAKE_CONFIGURATION_TYPES)
-    if(LIBCXX_INSTALL_LIBRARY)
-      set(lib_install_target "cxx;cxx_experimental")
-    endif()
-    if(LIBCXX_INSTALL_HEADERS)
-      set(header_install_target install-cxx-headers)
-    endif()
-    if(LIBCXX_INSTALL_MODULES)
-      set(module_install_target install-cxx-modules)
-    endif()
-    add_custom_target(install-cxx
-                      DEPENDS ${lib_install_target}
-                              cxx_experimental
-                              ${header_install_target}
-                              ${module_install_target}
-                      COMMAND "${CMAKE_COMMAND}"
-                      -DCMAKE_INSTALL_COMPONENT=cxx
-                      -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
-    add_custom_target(install-cxx-stripped
-                      DEPENDS ${lib_install_target}
-                              cxx_experimental
-                              ${header_install_target}
-                              ${module_install_target}
-                      COMMAND "${CMAKE_COMMAND}"
-                      -DCMAKE_INSTALL_COMPONENT=cxx
-                      -DCMAKE_INSTALL_DO_STRIP=1
-                      -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
+  add_custom_target(install-cxx
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx)
+  add_custom_target(install-cxx-stripped
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx --strip)
+
+  add_dependencies(install-cxx cxx_experimental)
+  add_dependencies(install-cxx-stripped cxx_experimental)
+
+  if (LIBCXX_INSTALL_LIBRARY)
+    add_dependencies(install-cxx cxx)
+    add_dependencies(install-cxx-stripped cxx)
+  endif()
+
+  if(LIBCXX_INSTALL_HEADERS)
+    add_dependencies(install-cxx install-cxx-headers)
+    add_dependencies(install-cxx-stripped install-cxx-headers-stripped)
+  endif()
+
+  if(LIBCXX_INSTALL_MODULES)
+    add_dependencies(install-cxx install-cxx-modules)
+    add_dependencies(install-cxx-stripped install-cxx-modules-stripped)
+  endif()
 endif()
