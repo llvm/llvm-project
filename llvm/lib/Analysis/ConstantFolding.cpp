@@ -1223,11 +1223,12 @@ Constant *llvm::ConstantFoldCompareInstOperands(
         }
       }
 
-      // Only do this transformation if the int is intptrty in size, otherwise
-      // there is a truncation or extension that we aren't modeling.
-      if (CE0->getOpcode() == Instruction::PtrToInt) {
-        Type *IntPtrTy = DL.getIntPtrType(CE0->getOperand(0)->getType());
-        if (CE0->getType() == IntPtrTy) {
+      // icmp only compares the address part of the pointer, so only do this
+      // transform if the integer size matches the address size.
+      if (CE0->getOpcode() == Instruction::PtrToInt ||
+          CE0->getOpcode() == Instruction::PtrToAddr) {
+        Type *AddrTy = DL.getAddressType(CE0->getOperand(0)->getType());
+        if (CE0->getType() == AddrTy) {
           Constant *C = CE0->getOperand(0);
           Constant *Null = Constant::getNullValue(C->getType());
           return ConstantFoldCompareInstOperands(Predicate, C, Null, DL, TLI);
@@ -1250,11 +1251,12 @@ Constant *llvm::ConstantFoldCompareInstOperands(
             return ConstantFoldCompareInstOperands(Predicate, C0, C1, DL, TLI);
         }
 
-        // Only do this transformation if the int is intptrty in size, otherwise
-        // there is a truncation or extension that we aren't modeling.
-        if (CE0->getOpcode() == Instruction::PtrToInt) {
-          Type *IntPtrTy = DL.getIntPtrType(CE0->getOperand(0)->getType());
-          if (CE0->getType() == IntPtrTy &&
+        // icmp only compares the address part of the pointer, so only do this
+        // transform if the integer size matches the address size.
+        if (CE0->getOpcode() == Instruction::PtrToInt ||
+            CE0->getOpcode() == Instruction::PtrToAddr) {
+          Type *AddrTy = DL.getAddressType(CE0->getOperand(0)->getType());
+          if (CE0->getType() == AddrTy &&
               CE0->getOperand(0)->getType() == CE1->getOperand(0)->getType()) {
             return ConstantFoldCompareInstOperands(
                 Predicate, CE0->getOperand(0), CE1->getOperand(0), DL, TLI);
