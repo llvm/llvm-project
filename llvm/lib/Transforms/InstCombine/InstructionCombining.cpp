@@ -2818,10 +2818,11 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
         (match(GEPIdx, m_APInt(ConstOffset)) &&
          match(SrcIdx,
                m_Select(m_Value(Cond), m_APInt(TrueVal), m_APInt(FalseVal))))) {
+      auto *Select = isa<SelectInst>(GEPIdx) ? cast<SelectInst>(GEPIdx) : cast<SelectInst>(SrcIdx);
+
       // Make sure the select has only one use.
-      if ((isa<SelectInst>(GEPIdx) && !GEPIdx->hasOneUse()) ||
-          (isa<SelectInst>(SrcIdx) && !SrcIdx->hasOneUse()))
-        return nullptr;
+      if (!Select->hasOneUse())
+      return nullptr;
 
       if (TrueVal->getBitWidth() != ConstOffset->getBitWidth() ||
           FalseVal->getBitWidth() != ConstOffset->getBitWidth())
@@ -2829,12 +2830,18 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
 
       APInt NewTrueVal = *ConstOffset + *TrueVal;
       APInt NewFalseVal = *ConstOffset + *FalseVal;
-      Value *NewSelect = Builder.CreateSelect(Cond, Builder.getInt(NewTrueVal),
-                                              Builder.getInt(NewFalseVal));
+      Constant *NewTrue = Builder.getInt(NewTrueVal);
+      Constant *NewFalse = Builder.getInt(NewFalseVal);
+      // Consider vector splat.
+      if (auto *VT = dyn_cast<VectorType>(Select->getType())) {
+        NewTrue = ConstantVector::getSplat(VT->getElementCount(), NewTrue);
+        NewFalse = ConstantVector::getSplat(VT->getElementCount(), NewFalse);
+      }
+      Value *NewSelect = Builder.CreateSelect(Cond, NewTrue, NewFalse);
       GEPNoWrapFlags Flags =
           getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
       return replaceInstUsesWith(GEP,
-                                 Builder.CreateGEP(GEP.getSourceElementType(),
+                                 Builder.CreateGEP(GEP.getResultElementType(),
                                                    Src->getPointerOperand(),
                                                    NewSelect, "", Flags));
     }
