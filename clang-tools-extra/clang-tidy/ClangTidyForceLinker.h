@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYFORCELINKER_H
 
 #include "clang-tidy-config.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Compiler.h" // IWYU pragma: keep
 
 namespace clang::tidy {
 
