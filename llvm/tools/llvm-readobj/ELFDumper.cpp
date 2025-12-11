@@ -5315,7 +5315,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
       Obj.getSectionAndRelocations(IsMatch);
   if (!MapOrErr || MapOrErr->empty()) {
-    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found."),
+    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found"),
                   FileName);
     return false;
   }
@@ -5342,7 +5342,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     if (FormatVersionNumber != 0) {
       reportWarning(createError("unknown format version value [" +
                                 std::to_string(FormatVersionNumber) +
-                                "] in .llvm.callgraph section."),
+                                "] in .llvm.callgraph section"),
                     FileName);
       return false;
     }
