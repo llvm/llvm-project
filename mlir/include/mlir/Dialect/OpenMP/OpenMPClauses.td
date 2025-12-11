@@ -1465,7 +1465,18 @@ class OpenMP_ThreadLimitClauseSkip<
   }];
 
   let description = [{
-    The optional `thread_limit` specifies the limit on the number of threads.
+    The `thread_limit` clause specifies the limit on the number of threads.
+
+    With dims modifier:
+    - The number of dimensions is specified by the `thread_limit_num_dims` attribute.
+    - The values for each dimension are specified by the `thread_limit_dims_values` attribute.
+    - Format: `thread_limit(dims(N): values : type)`
+    - Example: `thread_limit(dims(2): %n, %m : i64)`
+
+    Without dims modifier:
+    - The number of threads is specified by the `thread_limit`.
+    - Format: `thread_limit(number_of_threads : type)`
+    - Example: `thread_limit(%n : i64)`
   }];
 
   let extraClassDeclaration = [{
