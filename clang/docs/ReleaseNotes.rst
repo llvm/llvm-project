@@ -783,6 +783,8 @@ Crash and bug fixes
 - Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
 - Fixed a crash when parsing invalid nested name specifier sequences
   containing a single colon. (#GH167905)
+- Fixed a crash when parsing malformed #pragma clang loop vectorize_width(4,8,16)
+  by diagnosing invalid comma-separated argument lists. (#GH166325)
 
 Improvements
 ^^^^^^^^^^^^
