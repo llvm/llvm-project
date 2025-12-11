@@ -1002,7 +1002,7 @@ namespace {
 class MLIRTextFile {
 public:
   MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
-               int64_t version, lsp::DialectRegistryFn registry_fn,
+               int64_t version, lsp::DialectRegistryFn registryFn,
                std::vector<lsp::Diagnostic> &diagnostics);
 
   /// Return the current version of this text file.
@@ -1051,9 +1051,9 @@ private:
 } // namespace
 
 MLIRTextFile::MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
-                           int64_t version, lsp::DialectRegistryFn registry_fn,
+                           int64_t version, lsp::DialectRegistryFn registryFn,
                            std::vector<lsp::Diagnostic> &diagnostics)
-    : context(registry_fn(uri), MLIRContext::Threading::DISABLED),
+    : context(registryFn(uri), MLIRContext::Threading::DISABLED),
       contents(fileContents.str()), version(version) {
   context.allowUnregisteredDialects();
 
@@ -1268,11 +1268,11 @@ MLIRTextFileChunk &MLIRTextFile::getChunkFor(lsp::Position &pos) {
 //===----------------------------------------------------------------------===//
 
 struct lsp::MLIRServer::Impl {
-  Impl(lsp::DialectRegistryFn registry_fn) : registry_fn(registry_fn) {}
+  Impl(lsp::DialectRegistryFn registryFn) : registryFn(registryFn) {}
 
   /// The registry factory for containing dialects that can be recognized in
   /// parsed .mlir files.
-  lsp::DialectRegistryFn registry_fn;
+  lsp::DialectRegistryFn registryFn;
 
   /// The files held by the server, mapped by their URI file name.
   llvm::StringMap<std::unique_ptr<MLIRTextFile>> files;
@@ -1282,15 +1282,15 @@ struct lsp::MLIRServer::Impl {
 // MLIRServer
 //===----------------------------------------------------------------------===//
 
-lsp::MLIRServer::MLIRServer(lsp::DialectRegistryFn registry_fn)
-    : impl(std::make_unique<Impl>(registry_fn)) {}
+lsp::MLIRServer::MLIRServer(lsp::DialectRegistryFn registryFn)
+    : impl(std::make_unique<Impl>(registryFn)) {}
 lsp::MLIRServer::~MLIRServer() = default;
 
 void lsp::MLIRServer::addOrUpdateDocument(
     const URIForFile &uri, StringRef contents, int64_t version,
     std::vector<llvm::lsp::Diagnostic> &diagnostics) {
   impl->files[uri.file()] = std::make_unique<MLIRTextFile>(
-      uri, contents, version, impl->registry_fn, diagnostics);
+      uri, contents, version, impl->registryFn, diagnostics);
 }
 
 std::optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
@@ -1353,7 +1353,7 @@ void lsp::MLIRServer::getCodeActions(const URIForFile &uri, const Range &pos,
 
 llvm::Expected<lsp::MLIRConvertBytecodeResult>
 lsp::MLIRServer::convertFromBytecode(const URIForFile &uri) {
-  MLIRContext tempContext(impl->registry_fn(uri));
+  MLIRContext tempContext(impl->registryFn(uri));
   tempContext.allowUnregisteredDialects();
 
   // Collect any errors during parsing.

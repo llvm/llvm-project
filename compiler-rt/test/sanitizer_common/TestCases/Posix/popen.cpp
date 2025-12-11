@@ -2,6 +2,8 @@
 // CHECK: 1
 // CHECK-NEXT: 2
 
+// XFAIL: iossim
+
 #include <assert.h>
 #include <stdio.h>
 

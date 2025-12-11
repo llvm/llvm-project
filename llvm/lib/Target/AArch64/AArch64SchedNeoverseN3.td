@@ -1715,7 +1715,7 @@ def : InstRW<[N3Write_0or2c_1M], (instregex "^PTRUES_[BHSD]")>;
 def : InstRW<[N3Write_2c_1M], (instregex "^PFIRST_B$", "^PNEXT_[BHSD]$")>;
 
 // Predicate test
-def : InstRW<[N3Write_1c_1M], (instrs PTEST_PP)>;
+def : InstRW<[N3Write_1c_1M], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[N3Write_2c_1M], (instregex "^TRN[12]_PPP_[BHSDQ]$")>;
