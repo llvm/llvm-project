@@ -186,8 +186,8 @@ static unsigned conjugateICmpMask(unsigned Mask) {
   return NewMask;
 }
 
-// Adapts the external decomposeBitTestICmp for local use.
-static bool decomposeBitTestICmp(Value *Cond, CmpInst::Predicate &Pred,
+// Adapts the external decomposeBitTest for local use.
+static bool decomposeBitTest(Value *Cond, CmpInst::Predicate &Pred,
                                  Value *&X, Value *&Y, Value *&Z) {
   auto Res = llvm::decomposeBitTest(Cond, /*LookThroughTrunc=*/true,
                                     /*AllowNonZeroC=*/true);
@@ -220,7 +220,7 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C, Value *&D, Value *&E,
 
   // Check whether the icmp can be decomposed into a bit test.
   Value *L1, *L11, *L12, *L2, *L21, *L22;
-  if (decomposeBitTestICmp(LHS, PredL, L11, L12, L2)) {
+  if (decomposeBitTest(LHS, PredL, L11, L12, L2)) {
     L21 = L22 = L1 = nullptr;
   } else {
     auto *LHSCMP = dyn_cast<ICmpInst>(LHS);
@@ -253,7 +253,7 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C, Value *&D, Value *&E,
     return std::nullopt;
 
   Value *R11, *R12, *R2;
-  if (decomposeBitTestICmp(RHS, PredR, R11, R12, R2)) {
+  if (decomposeBitTest(RHS, PredR, R11, R12, R2)) {
     if (R11 == L11 || R11 == L12 || R11 == L21 || R11 == L22) {
       A = R11;
       D = R12;
