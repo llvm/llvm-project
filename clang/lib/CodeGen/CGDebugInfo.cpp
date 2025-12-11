@@ -6651,8 +6651,12 @@ llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
     Label = SanitizerHandlerToCheckLabel(Handler);
 
   if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); })) {
+    // Use ubsan header file to have the same filename for all checks. There is
+    // noting special in that file, we just want to make tools to count all
+    // syntetic functions of a check as the same.
     llvm::DIFile *File = llvm::DIFile::get(CGM.getLLVMContext(),
-                                           "ubsan_interface.h", "sanitizer");
+                                           /*Filename=*/"ubsan_interface.h",
+                                           /*Directory=*/"sanitizer");
     return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label, File);
   }
 
