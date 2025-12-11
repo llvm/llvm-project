@@ -33,22 +33,22 @@
 # CHECK5-PLUS: : DW_OP_breg2 X2+32)
 # CHECK5-PLUS: DW_AT_type {{.*}}vbool1_t
 
-# CHECK0-MINUS: : DW_OP_breg8 X8-40)
+# CHECK0-MINUS: : DW_OP_breg2 X2+8)
 # CHECK0-MINUS: DW_AT_type {{.*}}int32_t
 #
-# CHECK1-MINUS: : DW_OP_breg8 X8-48)
+# CHECK1-MINUS: : DW_OP_breg2 X2+0)
 # CHECK1-MINUS: DW_AT_type {{.*}}int32_t
 #
-# CHECK2-MINUS: : DW_OP_breg8 X8-48, DW_OP_lit1, DW_OP_bregx VLENB+0, DW_OP_mul, DW_OP_minus)
+# CHECK2-MINUS: : DW_OP_breg2 X2+32, DW_OP_lit3, DW_OP_bregx VLENB+0, DW_OP_mul, DW_OP_plus)
 # CHECK2-MINUS: DW_AT_type {{.*}}vint32m1_t
 #
-# CHECK3-MINUS: : DW_OP_breg8 X8-48, DW_OP_lit2, DW_OP_bregx VLENB+0, DW_OP_mul, DW_OP_minus)
+# CHECK3-MINUS: : DW_OP_breg2 X2+32, DW_OP_lit2, DW_OP_bregx VLENB+0, DW_OP_mul, DW_OP_plus)
 # CHECK3-MINUS: DW_AT_type {{.*}}vint32m1_t
 #
-# CHECK4-MINUS: : DW_OP_breg8 X8-48, DW_OP_lit3, DW_OP_bregx VLENB+0, DW_OP_mul, DW_OP_minus)
+# CHECK4-MINUS: : DW_OP_breg2 X2+32, DW_OP_lit1, DW_OP_bregx VLENB+0, DW_OP_mul, DW_OP_plus)
 # CHECK4-MINUS: DW_AT_type {{.*}}vbool1_t
 #
-# CHECK5-MINUS: : DW_OP_breg8 X8-48, DW_OP_lit4, DW_OP_bregx VLENB+0, DW_OP_mul, DW_OP_minus)
+# CHECK5-MINUS: : DW_OP_breg2 X2+32)
 # CHECK5-MINUS: DW_AT_type {{.*}}vbool1_t
 
 --- |
