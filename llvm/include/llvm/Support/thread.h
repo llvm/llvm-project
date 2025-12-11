@@ -101,13 +101,9 @@ public:
     return *this;
   }
 
-  bool is_null() const noexcept {
-    return get_id() == 0;
-  }
+  bool is_null() const noexcept { return get_id() == 0; }
 
-  bool joinable() const noexcept {
-    return !is_null();
-  }
+  bool joinable() const noexcept { return !is_null(); }
 
   inline id get_id() const noexcept;
 
