@@ -14,7 +14,6 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
-#include <__memory/allocate_at_least.h>
 #include <__memory/allocator_traits.h>
 #include <__new/allocate.h>
 #include <__new/exceptions.h>
@@ -51,33 +50,21 @@ public:
 };
 #endif // _LIBCPP_STD_VER <= 17
 
-// This class provides a non-trivial default constructor to the class that derives from it
-// if the condition is satisfied.
-//
-// The second template parameter exists to allow giving a unique type to __non_trivial_if,
-// which makes it possible to avoid breaking the ABI when making this a base class of an
-// existing class. Without that, imagine we have classes D1 and D2, both of which used to
-// have no base classes, but which now derive from __non_trivial_if. The layout of a class
-// that inherits from both D1 and D2 will change because the two __non_trivial_if base
-// classes are not allowed to share the same address.
-//
-// By making those __non_trivial_if base classes unique, we work around this problem and
-// it is safe to start deriving from __non_trivial_if in existing classes.
-template <bool _Cond, class _Unique>
-struct __non_trivial_if {};
+template <bool, class _Unique>
+struct __non_trivially_default_constructible_if {};
 
 template <class _Unique>
-struct __non_trivial_if<true, _Unique> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __non_trivial_if() _NOEXCEPT {}
+struct __non_trivially_default_constructible_if<true, _Unique> {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __non_trivially_default_constructible_if() {}
 };
 
-// allocator
-//
-// Note: For ABI compatibility between C++20 and previous standards, we make
-//       allocator<void> trivial in C++20.
-
 template <class _Tp>
-class allocator : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> > {
+class allocator
+// TODO(LLVM 24): Remove the opt-out
+#ifdef _LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR
+    : __non_trivially_default_constructible_if<!is_void<_Tp>::value, allocator<_Tp> >
+#endif
+{
   static_assert(!is_const<_Tp>::value, "std::allocator does not support const types");
   static_assert(!is_volatile<_Tp>::value, "std::allocator does not support volatile types");
 

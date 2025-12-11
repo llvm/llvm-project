@@ -122,5 +122,9 @@ ABI Affecting Changes
 - ``ranges::iota_view`` is now aware of ``__int128``. This causes ``iota_view::difference_type`` to change from
   ``long long`` to ``__int128`` in some cases.
 
+- ``std::allocator`` is now trivially default constructible. The behaviour can be reverted by defining
+  ``_LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR``. Please inform the libc++ team if you need this flag, since it will
+  be removed in LLVM 24 if there is no evidence that it's required.
+
 Build System Changes
 --------------------
