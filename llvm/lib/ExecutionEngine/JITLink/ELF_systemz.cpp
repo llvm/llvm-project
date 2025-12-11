@@ -27,12 +27,67 @@ using namespace llvm::jitlink;
 namespace {
 
 constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
+constexpr StringRef ELFTLSInfoSectionName = "$__TLSINFO";
+
+// TLS Info Builder.
+class TLSInfoTableManager_ELF_systemz
+    : public TableManager<TLSInfoTableManager_ELF_systemz> {
+public:
+  static StringRef getSectionName() { return ELFTLSInfoSectionName; }
+
+  static const uint8_t TLSInfoEntryContent[16];
+
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
+    if (E.getKind() ==
+        systemz::RequestTLSDescInGOTAndTransformToDelta64FromGOT) {
+      LLVM_DEBUG({
+        dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
+               << formatv("{0:x}", B->getFixupAddress(E)) << " ("
+               << formatv("{0:x}", B->getAddress()) << " + "
+               << formatv("{0:x}", E.getOffset()) << ")\n";
+      });
+      E.setKind(systemz::Delta64FromGOT);
+      E.setTarget(getEntryForTarget(G, E.getTarget()));
+      return true;
+    }
+    return false;
+  }
+
+  Symbol &createEntry(LinkGraph &G, Symbol &Target) {
+    // the TLS Info entry's key value will be written by the fixTLVSectionByName
+    // pass, so create mutable content.
+    auto &TLSInfoEntry = G.createMutableContentBlock(
+        getTLSInfoSection(G), G.allocateContent(getTLSInfoEntryContent()),
+        orc::ExecutorAddr(), 8, 0);
+    TLSInfoEntry.addEdge(systemz::Pointer64, 8, Target, 0);
+    return G.addAnonymousSymbol(TLSInfoEntry, 0, 16, false, false);
+  }
+
+private:
+  Section &getTLSInfoSection(LinkGraph &G) {
+    if (!TLSInfoTable)
+      TLSInfoTable = &G.createSection(getSectionName(), orc::MemProt::Read);
+    return *TLSInfoTable;
+  }
+
+  ArrayRef<char> getTLSInfoEntryContent() const {
+    return {reinterpret_cast<const char *>(TLSInfoEntryContent),
+            sizeof(TLSInfoEntryContent)};
+  }
+
+  Section *TLSInfoTable = nullptr;
+};
+
+const uint8_t TLSInfoTableManager_ELF_systemz::TLSInfoEntryContent[16] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 Error buildTables_ELF_systemz(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
   systemz::GOTTableManager GOT;
   systemz::PLTTableManager PLT(GOT);
-  visitExistingEdges(G, GOT, PLT);
+  TLSInfoTableManager_ELF_systemz TLSInfo;
+  visitExistingEdges(G, GOT, PLT, TLSInfo);
   return Error::success();
 }
 
@@ -327,6 +382,15 @@ private:
     }
     case ELF::R_390_GOTPCDBL: {
       Kind = systemz::Delta32dblGOTBase;
+      break;
+    }
+    // Tag for function call in general dynamic TLS code.
+    case ELF::R_390_TLS_GDCALL: {
+      break;
+    }
+    // Direct 64 bit for general dynamic thread local data.
+    case ELF::R_390_TLS_GD64: {
+      Kind = systemz::RequestTLSDescInGOTAndTransformToDelta64FromGOT;
       break;
     }
     default:
