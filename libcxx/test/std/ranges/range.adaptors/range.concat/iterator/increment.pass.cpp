@@ -27,7 +27,7 @@ struct InputRange {
   using iterator = cpp17_input_iterator<int*>;
   int* begin_;
   int* end_;
-  constexpr InputRange(int* b, int* e): begin_(b), end_(e) {}
+  constexpr InputRange(int* b, int* e) : begin_(b), end_(e) {}
   constexpr iterator begin() const { return iterator(begin_); }
   constexpr sentinel_wrapper<iterator> end() const { return sentinel_wrapper<iterator>(iterator(end_)); }
 };
