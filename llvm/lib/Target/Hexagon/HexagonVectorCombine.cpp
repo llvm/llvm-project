@@ -2470,19 +2470,19 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
     Dst->eraseFromParent();
   } else if (Qual == HvxIdioms::LLVM_Scatter) {
     // Gather feeds directly into scatter.
-    auto *DstInpTy = cast<VectorType>(Dst->getOperand(1)->getType());
-    assert(DstInpTy && "Cannot handle no vector type for llvm.scatter");
-    [[maybe_unused]] unsigned DstInpSize = HVC.getSizeOf(DstInpTy);
-    [[maybe_unused]] unsigned DstElements = HVC.length(DstInpTy);
-    [[maybe_unused]] auto *DstElemTy =
-        cast<PointerType>(DstInpTy->getElementType());
-    assert(DstElemTy && "llvm.scatter needs vector of ptr argument");
-    LLVM_DEBUG(dbgs() << "  Gather feeds into scatter\n  Values to scatter : "
-                      << *Dst->getOperand(0) << "\n");
-    LLVM_DEBUG(dbgs() << "  Dst type(" << *DstInpTy << ") elements("
-                      << DstElements << ") VecLen(" << DstInpSize << ") type("
-                      << *DstElemTy << ") Access alignment("
-                      << *Dst->getOperand(2) << ")\n");
+    LLVM_DEBUG({
+      auto *DstInpTy = cast<VectorType>(Dst->getOperand(1)->getType());
+      assert(DstInpTy && "Cannot handle no vector type for llvm.scatter");
+      unsigned DstInpSize = HVC.getSizeOf(DstInpTy);
+      unsigned DstElements = HVC.length(DstInpTy);
+      auto *DstElemTy = cast<PointerType>(DstInpTy->getElementType());
+      assert(DstElemTy && "llvm.scatter needs vector of ptr argument");
+      dbgs() << "  Gather feeds into scatter\n  Values to scatter : "
+             << *Dst->getOperand(0) << "\n";
+      dbgs() << "  Dst type(" << *DstInpTy << ") elements(" << DstElements
+             << ") VecLen(" << DstInpSize << ") type(" << *DstElemTy
+             << ") Access alignment(" << *Dst->getOperand(2) << ")\n";
+    });
     // Address of source
     auto *Src = getPointer(IndexLoad);
     if (!Src)
