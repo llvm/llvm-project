@@ -3332,10 +3332,11 @@ TEST(TripleTest, equalsAndHash) {
   EXPECT_NE(Triple("arm64-apple-ios26.0"),
             Triple("arm64-apple-ios26.0-macabi"));
 
-  EXPECT_EQ(hash_value(Triple("arm64-apple-ios26.0")),
-            hash_value(Triple("arm64-apple-ios26.0")));
-  EXPECT_EQ(hash_value(Triple("arm64-apple-ios26.0")),
-            hash_value(Triple("arm64-apple-ios26.1")));
+  std::hash<Triple> Hasher;
+  EXPECT_EQ(Hasher(Triple("arm64-apple-ios26.0")),
+            Hasher(Triple("arm64-apple-ios26.0")));
+  EXPECT_EQ(Hasher(Triple("arm64-apple-ios26.0")),
+            Hasher(Triple("arm64-apple-ios26.1")));
 }
 
 TEST(DataLayoutTest, UEFI) {

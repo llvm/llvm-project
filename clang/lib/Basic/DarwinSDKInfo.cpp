@@ -85,10 +85,10 @@ static llvm::Triple::OSType parseOS(const llvm::json::Object &Obj) {
       .Default(llvm::Triple::UnknownOS);
 }
 
-static llvm::SmallDenseMap<llvm::Triple, std::string>
+static std::unordered_map<llvm::Triple, std::string>
 parseSystemPrefixes(const llvm::json::Object &Obj, llvm::Triple::OSType SDKOS,
                     VersionTuple Version) {
-  llvm::SmallDenseMap<llvm::Triple, std::string> SystemPrefixes;
+  std::unordered_map<llvm::Triple, std::string> SystemPrefixes;
   auto SupportedTargets = Obj.getObject("SupportedTargets");
   if (!SupportedTargets)
     return SystemPrefixes;
@@ -152,7 +152,7 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
   if (!MaximumDeploymentVersion)
     return std::nullopt;
   llvm::Triple::OSType OS = parseOS(*Obj);
-  llvm::SmallDenseMap<llvm::Triple, std::string> SystemPrefixes =
+  std::unordered_map<llvm::Triple, std::string> SystemPrefixes =
       parseSystemPrefixes(*Obj, OS, *Version);
   llvm::DenseMap<OSEnvPair::StorageType,
                  std::optional<RelatedTargetVersionMapping>>
