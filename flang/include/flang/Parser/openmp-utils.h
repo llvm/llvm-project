@@ -237,6 +237,83 @@ struct OmpAllocateInfo {
 
 OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x);
 
+namespace detail {
+template <bool IsConst, typename T> struct ConstIf {
+  using type = std::conditional_t<IsConst, std::add_const_t<T>, T>;
+};
+
+template <bool IsConst, typename T>
+using ConstIfT = typename ConstIf<IsConst, T>::type;
+} // namespace detail
+
+template <bool IsConst> struct LoopRange {
+  using QualBlock = detail::ConstIfT<IsConst, Block>;
+  using QualReference = decltype(std::declval<QualBlock>().front());
+  using QualPointer = std::remove_reference_t<QualReference> *;
+
+  LoopRange(QualBlock &x) { Initialize(x); }
+  LoopRange(QualReference x);
+
+  LoopRange(detail::ConstIfT<IsConst, OpenMPLoopConstruct> &x)
+      : LoopRange(std::get<Block>(x.t)) {}
+  LoopRange(detail::ConstIfT<IsConst, DoConstruct> &x)
+      : LoopRange(std::get<Block>(x.t)) {}
+
+  size_t size() const { return items.size(); }
+  bool empty() const { return items.size() == 0; }
+
+  struct iterator;
+
+  iterator begin();
+  iterator end();
+
+private:
+  void Initialize(QualBlock &body);
+
+  std::vector<QualPointer> items;
+};
+
+template <typename T> LoopRange(T &x) -> LoopRange<std::is_const_v<T>>;
+
+template <bool IsConst> struct LoopRange<IsConst>::iterator {
+  QualReference operator*() { return **at; }
+
+  bool operator==(const iterator &other) const { return at == other.at; }
+  bool operator!=(const iterator &other) const { return at != other.at; }
+
+  iterator &operator++() {
+    ++at;
+    return *this;
+  }
+  iterator &operator--() {
+    --at;
+    return *this;
+  }
+  iterator operator++(int);
+  iterator operator--(int);
+
+private:
+  friend struct LoopRange;
+  typename decltype(LoopRange::items)::iterator at;
+};
+
+template <bool IsConst> inline auto LoopRange<IsConst>::begin() -> iterator {
+  iterator x;
+  x.at = items.begin();
+  return x;
+}
+
+template <bool IsConst> inline auto LoopRange<IsConst>::end() -> iterator {
+  iterator x;
+  x.at = items.end();
+  return x;
+}
+
+using ConstLoopRange = LoopRange<true>;
+
+extern template struct LoopRange<true>;
+extern template struct LoopRange<false>;
+
 } // namespace Fortran::parser::omp
 
 #endif // FORTRAN_PARSER_OPENMP_UTILS_H
