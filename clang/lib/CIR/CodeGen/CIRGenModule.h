@@ -447,6 +447,13 @@ public:
   void setGVProperties(mlir::Operation *op, const NamedDecl *d) const;
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
 
+  /// Set TLS mode for the given operation based on the given variable
+  /// declaration.
+  void setTLSMode(mlir::Operation *op, const VarDecl &d);
+
+  /// Get TLS mode from CodeGenOptions.
+  cir::TLS_Model getDefaultCIRTLSModel() const;
+
   /// Set function attributes for a function declaration.
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
                              bool isIncompleteFunction, bool isThunk);
@@ -496,6 +503,8 @@ public:
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.
   mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
+
+  mlir::Value emitMemberPointerConstant(const UnaryOperator *e);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
 

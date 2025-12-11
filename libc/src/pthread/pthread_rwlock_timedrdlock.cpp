@@ -13,7 +13,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/threads/linux/rwlock.h"
-#include "src/__support/time/linux/abs_timeout.h"
+#include "src/__support/time/abs_timeout.h"
 
 #include <pthread.h>
 

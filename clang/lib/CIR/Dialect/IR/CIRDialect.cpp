@@ -357,6 +357,12 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
+  if (isa<cir::DataMemberAttr>(attrType)) {
+    // More detailed type verifications are already done in
+    // DataMemberAttr::verify. Don't need to repeat here.
+    return success();
+  }
+
   if (isa<cir::ZeroAttr>(attrType)) {
     if (isa<cir::RecordType, cir::ArrayType, cir::VectorType, cir::ComplexType>(
             opType))
@@ -1731,7 +1737,10 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (auto g = dyn_cast<GlobalOp>(op)) {
     symTy = g.getSymType();
     assert(!cir::MissingFeatures::addressSpace());
-    assert(!cir::MissingFeatures::opGlobalThreadLocal());
+    // Verify that for thread local global access, the global needs to
+    // be marked with tls bits.
+    if (getTls() && !g.getTlsModel())
+      return emitOpError("access to global not marked thread local");
   } else if (auto f = dyn_cast<FuncOp>(op)) {
     symTy = f.getFunctionType();
   } else {
@@ -2329,6 +2338,25 @@ OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
     return getTrueValue();
 
   return {};
+}
+
+LogicalResult cir::SelectOp::verify() {
+  // AllTypesMatch already guarantees trueVal and falseVal have matching types.
+  auto condTy = dyn_cast<cir::VectorType>(getCondition().getType());
+
+  // If condition is not a vector, no further checks are needed.
+  if (!condTy)
+    return success();
+
+  // When condition is a vector, both other operands must also be vectors.
+  if (!isa<cir::VectorType>(getTrueValue().getType()) ||
+      !isa<cir::VectorType>(getFalseValue().getType())) {
+    return emitOpError()
+           << "expected both true and false operands to be vector types "
+              "when the condition is a vector boolean type";
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

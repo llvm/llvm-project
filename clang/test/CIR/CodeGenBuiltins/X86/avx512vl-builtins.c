@@ -199,3 +199,36 @@ __m256i test_mm256_mask_i32gather_epi32(__m256i __v1_old, __mmask8 __mask, __m25
   // OGCG: @llvm.x86.avx512.mask.gather3siv8.si
   return _mm256_mmask_i32gather_epi32(__v1_old, __mask, __index, __addr, 2); 
 }
+
+__m128d test_mm_mask_expand_pd(__m128d __W, __mmask8 __U, __m128d __A) {
+  // CIR-LABEL: _mm_mask_expand_pd
+  // CIR: %[[MASK:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[MASK]], %[[MASK]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.int<u, 1>>
+
+  // LLVM-LABEL: test_mm_mask_expand_pd
+  // LLVM: %[[BC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // LLVM: %[[SHUF:.*]] = shufflevector <8 x i1> %[[BC]], <8 x i1> %[[BC]], <2 x i32> <i32 0, i32 1>
+
+  // OGCG-LABEL: test_mm_mask_expand_pd
+  // OGCG: %[[BC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %[[SHUF:.*]] = shufflevector <8 x i1> %[[BC]], <8 x i1> %[[BC]], <2 x i32> <i32 0, i32 1>
+
+  return _mm_mask_expand_pd(__W,__U,__A);
+}
+
+__m128d test_mm_maskz_expand_pd(__mmask8 __U, __m128d __A) {
+  // CIR-LABEL: _mm_maskz_expand_pd
+  // CIR: %[[MASK:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[MASK]], %[[MASK]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.int<u, 1>>
+
+  // LLVM-LABEL: test_mm_maskz_expand_pd
+  // LLVM: %[[BC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // LLVM: %[[SHUF:.*]] = shufflevector <8 x i1> %[[BC]], <8 x i1> %[[BC]], <2 x i32> <i32 0, i32 1>
+
+  // OGCG-LABEL: test_mm_maskz_expand_pd
+  // OGCG: %[[BC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %[[SHUF:.*]] = shufflevector <8 x i1> %[[BC]], <8 x i1> %[[BC]], <2 x i32> <i32 0, i32 1>
+
+  return _mm_maskz_expand_pd(__U,__A);
+}
+
