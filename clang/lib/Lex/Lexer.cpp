@@ -46,7 +46,9 @@
 #include <string>
 #include <tuple>
 
+#if defined(__i386__) || defined(__x86_64__)
 #include <nmmintrin.h>
+#endif
 
 using namespace clang;
 
@@ -1927,6 +1929,8 @@ fastParseASCIIIdentifierScalar(const char *CurPtr,
   return CurPtr;
 }
 
+#if defined(__i386__) || defined(__x86_64__)
+
 __attribute__((target("sse4.2"))) static const char *
 fastParseASCIIIdentifierSSE42(const char *CurPtr,
                               [[maybe_unused]] const char *BufferEnd) {
@@ -1958,14 +1962,22 @@ static bool supportsSSE42() {
   return SupportsSSE42;
 }
 
+#endif
+
 static const char *fastParseASCIIIdentifier(const char *CurPtr,
                                             const char *BufferEnd) {
+#if !defined(__i386__) && !defined(__x86_64__)
+  return fastParseASCIIIdentifierScalar(CurPtr, BufferEnd);
+#else
+
 #ifndef __SSE4_2__
   if (LLVM_UNLIKELY(!supportsSSE42()))
     return fastParseASCIIIdentifierScalar(CurPtr, BufferEnd);
 #endif
 
   return fastParseASCIIIdentifierSSE42(CurPtr, BufferEnd);
+
+#endif
 }
 
 bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
