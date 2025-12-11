@@ -2340,6 +2340,25 @@ OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+LogicalResult cir::SelectOp::verify() {
+  // AllTypesMatch already guarantees trueVal and falseVal have matching types.
+  auto condTy = dyn_cast<cir::VectorType>(getCondition().getType());
+
+  // If condition is not a vector, no further checks are needed.
+  if (!condTy)
+    return success();
+
+  // When condition is a vector, both other operands must also be vectors.
+  if (!isa<cir::VectorType>(getTrueValue().getType()) ||
+      !isa<cir::VectorType>(getFalseValue().getType())) {
+    return emitOpError()
+           << "expected both true and false operands to be vector types "
+              "when the condition is a vector boolean type";
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // ShiftOp
 //===----------------------------------------------------------------------===//
