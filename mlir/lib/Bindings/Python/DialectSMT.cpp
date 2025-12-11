@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NanobindUtils.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
 
 #include "mlir-c/Dialect/SMT.h"
 #include "mlir-c/IR.h"

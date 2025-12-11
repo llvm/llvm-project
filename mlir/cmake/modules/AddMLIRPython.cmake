@@ -764,6 +764,7 @@ function(add_mlir_python_extension libname extname)
   nanobind_add_module(${libname}
     NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
     FREE_THREADED
+    NB_SHARED
     ${ARG_SOURCES}
   )
 

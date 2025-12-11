@@ -13,11 +13,13 @@
 #include <utility>
 #include <vector>
 
-#include "IRModule.h"
-#include "NanobindUtils.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir/Bindings/Python/IRCore.h"
+// clang-format off
+#include "mlir/Bindings/Python/NanobindUtils.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 #include "mlir-c/IntegerSet.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Support/LLVM.h"
@@ -509,7 +511,8 @@ PyIntegerSet PyIntegerSet::createFromCapsule(const nb::object &capsule) {
       rawIntegerSet);
 }
 
-void mlir::python::populateIRAffine(nb::module_ &m) {
+namespace mlir::python {
+void populateIRAffine(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyAffineExpr and derived classes.
   //----------------------------------------------------------------------------
@@ -995,3 +998,4 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
   PyIntegerSetConstraint::bind(m);
   PyIntegerSetConstraintList::bind(m);
 }
+} // namespace mlir::python

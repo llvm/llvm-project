@@ -12,12 +12,12 @@
 #include <string_view>
 #include <utility>
 
-#include "IRModule.h"
-#include "NanobindUtils.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -1799,7 +1799,8 @@ void PyStringAttribute::bindDerived(ClassTy &c) {
       "Returns the value of the string attribute as `bytes`");
 }
 
-void mlir::python::populateIRAttributes(nb::module_ &m) {
+namespace mlir::python {
+void populateIRAttributes(nb::module_ &m) {
   PyAffineMapAttribute::bind(m);
   PyDenseBoolArrayAttribute::bind(m);
   PyDenseBoolArrayAttribute::PyDenseArrayIterator::bind(m);
@@ -1851,4 +1852,18 @@ void mlir::python::populateIRAttributes(nb::module_ &m) {
   PyUnitAttribute::bind(m);
 
   PyStridedLayoutAttribute::bind(m);
+  nb::register_exception_translator([](const std::exception_ptr &p,
+                                       void *payload) {
+    // We can't define exceptions with custom fields through pybind, so
+    // instead the exception class is defined in python and imported here.
+    try {
+      if (p)
+        std::rethrow_exception(p);
+    } catch (const MLIRError &e) {
+      nb::object obj = nb::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+                           .attr("MLIRError")(e.message, e.errorDiagnostics);
+      PyErr_SetObject(PyExc_Exception, obj.ptr());
+    }
+  });
 }
+} // namespace mlir::python
