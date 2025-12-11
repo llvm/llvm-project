@@ -782,6 +782,23 @@ LogicalResult MakeDmaBaseOp::verify() { return verifyBase(*this); }
 // MakeGatherDmaBaseOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult
+TDMGatherBaseType::verify(function_ref<InFlightDiagnostic()> emitError,
+                          Type elementType, Type indexType) {
+  unsigned width = elementType.getIntOrFloatBitWidth();
+  if (!llvm::is_contained<unsigned>({8, 16, 32, 64}, width))
+    return emitError()
+           << "element type must be 1, 2, 4, or 8 bytes wide but type "
+           << elementType << " is " << width / 8 << " bytes wide.";
+  MLIRContext *ctx = elementType.getContext();
+  Type i16 = IntegerType::get(ctx, 32);
+  Type i32 = IntegerType::get(ctx, 16);
+  if (!llvm::is_contained<Type>({i16, i32}, indexType))
+    return emitError() << "index type must be i16 or i32 but index type is "
+                       << indexType << ".";
+  return success();
+}
+
 LogicalResult MakeGatherDmaBaseOp::verify() { return verifyBase(*this); }
 
 //===----------------------------------------------------------------------===//
