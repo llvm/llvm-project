@@ -1587,4 +1587,3 @@ StyleKind IdentifierNamingCheck::undefinedStyle(
 
 } // namespace readability
 } // namespace clang::tidy
-

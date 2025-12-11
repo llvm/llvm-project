@@ -244,4 +244,3 @@ struct OptionEnumMapping<readability::IdentifierNamingCheck::CaseType> {
 } // namespace clang::tidy
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IDENTIFIERNAMINGCHECK_H
-
