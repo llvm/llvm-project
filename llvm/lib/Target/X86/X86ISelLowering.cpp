@@ -49872,6 +49872,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineMulToPMULDQ(N, DL, DAG, Subtarget))
     return V;
+    
   // ==============================================================
   // Optimize VPMULLQ on slow targets
   // ==============================================================
@@ -49885,8 +49886,8 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
     unsigned Count1 = Known1.countMinLeadingZeros();
 
     // Optimization 1: Use VPMULUDQ (32-bit multiply).
-    // If the upper 32 bits are zero, we can use the standard PMULUDQ instruction. 
-    // This is generally the fastest option and widely supported.
+    // If the upper 32 bits are zero, we can use the standard PMULUDQ
+    // instruction. This is generally the fastest option and widely supported.
     if (Count0 >= 32 && Count1 >= 32) {
       return DAG.getNode(X86ISD::PMULUDQ, DL, VT, Op0, Op1);
     }
