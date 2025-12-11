@@ -14,7 +14,19 @@
       circt = (import nixpkgs-circt { inherit system; }).circt;
       pkgsRV = pkgs.pkgsCross.riscv64;
       targetLlvmLibraries = pkgsRV.llvmPackages_21;
-      patched-libllvm = (targetLlvmLibraries.libllvm.override { src = ./.; });
+      llvmCmakeFlags = [
+        "-DLLVM_TARGETS_TO_BUILD=RISCV"
+        "-DLLVM_ENABLE_PROJECTS=''"
+        "-DLLVM_ENABLE_RUNTIMES=''"
+        "-DLLVM_INCLUDE_UTILS=ON"
+        "-DLLVM_INCLUDE_TESTS=ON"
+        "-DLLVM_INCLUDE_TOOLS=ON"
+      ];
+      patched-libllvm =
+        (targetLlvmLibraries.libllvm.override {
+          src = ./.;
+          devExtraCmakeFlags = llvmCmakeFlags;
+        });
     in rec {
 
       defaultPackage = packages.toolchain;
@@ -101,15 +113,7 @@
 
       devShells.default = targetLlvmLibraries.stdenv.mkDerivation {
         name = "devShell";
-        # buildInputs = [];
-        # ++ (with patched-libllvm; nativeBuildInputs ++ buildInputs ++ propagatedBuildInputs);
-
-        cmakeFlags = [
-          "-GNinja"
-          "-DCMAKE_BUILD_TYPE=Debug"
-          "-DLLVM_TARGETS_TO_BUILD=RISCV"
-        ];
-
+        cmakeFlags = llvmCmakeFlags ++ [ "-GNinja" ];
       };
 
     });
