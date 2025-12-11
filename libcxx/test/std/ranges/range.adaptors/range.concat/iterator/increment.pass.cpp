@@ -86,7 +86,7 @@ constexpr bool test() {
     std::ranges::concat_view view(a, InputRange{buffer});
     auto it    = view.begin();
     using Iter = decltype(it);
-    static_assert(std::is_same_v<decltype(it++), Iter>);
+    static_assert(std::is_same_v<decltype(it++), void>);
     static_assert(std::is_same_v<decltype(++it), Iter&>);
     auto& result = ++it;
     assert(&result == &it);
