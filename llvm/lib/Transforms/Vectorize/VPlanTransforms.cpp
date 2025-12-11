@@ -4093,11 +4093,13 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 ///   reduce.add(mul(...)),
 ///   reduce.add(mul(ext(A), ext(B))),
 ///   reduce.add(ext(mul(ext(A), ext(B)))).
+///   reduce.fadd(fmul(ext(A), ext(B)))
 static VPExpressionRecipe *
 tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                           VPCostContext &Ctx, VFRange &Range) {
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
-  if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
+  if (Opcode != Instruction::Add && Opcode != Instruction::Sub &&
+      Opcode != Instruction::FAdd)
     return nullptr;
 
   Type *RedTy = Ctx.Types.inferScalarType(Red);
@@ -4126,7 +4128,10 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                 Ext1 ? TargetTransformInfo::getPartialReductionExtendKind(
                            Ext1->getOpcode())
                      : TargetTransformInfo::PR_None,
-                Mul->getOpcode(), CostKind, std::nullopt);
+                Mul->getOpcode(), CostKind,
+                RedTy->isFloatingPointTy()
+                    ? std::optional{Red->getFastMathFlags()}
+                    : std::nullopt);
           } else {
             // Only partial reductions support mixed extends at the moment.
             if (Ext0 && Ext1 && Ext0->getOpcode() != Ext1->getOpcode())
@@ -4195,7 +4200,23 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     Mul->setOperand(1, ExtB);
   };
 
-  // Try to match reduce.add(mul(...)).
+  // Try to match reduce.add(fmul(...)).
+  if (match(VecOp, m_FMul(m_VPValue(A), m_VPValue(B)))) {
+    auto *RecipeA = dyn_cast_if_present<VPWidenCastRecipe>(A);
+    auto *RecipeB = dyn_cast_if_present<VPWidenCastRecipe>(B);
+    auto *FMul = dyn_cast<VPWidenRecipe>(VecOp);
+
+    // Match reduce.fadd(fmul(ext, ext)).
+    if (FMul && RecipeA && RecipeB && match(RecipeA, m_FPExt(m_VPValue())) &&
+        match(RecipeB, m_FPExt(m_VPValue())) &&
+        IsMulAccValidAndClampRange(FMul, RecipeA, RecipeB, nullptr)) {
+      return new VPExpressionRecipe(RecipeA, RecipeB, FMul, Red);
+    }
+  }
+  if (Opcode == Instruction::FAdd)
+    return nullptr;
+
+  // Try to match reduce.add(mul(...)) or reduce.add(fmul(...)).
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA = dyn_cast_if_present<VPWidenCastRecipe>(A);
     auto *RecipeB = dyn_cast_if_present<VPWidenCastRecipe>(B);
