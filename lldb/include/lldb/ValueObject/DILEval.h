@@ -73,14 +73,11 @@ private:
 
   /// As a preparation for type casting, compare the requested 'target' type
   /// of the cast with the type of the operand to be cast. If the cast is
-  /// allowed, set 'promo_kind' and 'cast_kind' to the appropriate values for
-  /// the type of cast to be done. Also perform pointer-to-array conversion
-  /// on the operand, if needed, updating the operand & its type appropriately.
-  /// If the requested cast is not allowed, return the appropriate error.
-  llvm::Expected<CompilerType>
-  VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
-                 CompilerType target_type, CastPromotionKind &promo_kind,
-                 CastKind &cast_kind, int location);
+  /// allowed, return the appropriate CastKind for the cast; otherwise return
+  /// an error.
+  llvm::Expected<CastKind>
+  VerifyCastType(lldb::ValueObjectSP operand, CompilerType op_type,
+                 CompilerType target_type, int location);
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;

@@ -22,20 +22,11 @@
 namespace lldb_private::dil {
 
 lldb::ValueObjectSP
-GetDynamicOrSyntheticValue(lldb::ValueObjectSP in_valobj_sp,
+GetDynamicOrSyntheticValue(lldb::ValueObjectSP value_sp,
                            lldb::DynamicValueType use_dynamic,
                            bool use_synthetic) {
-  if (!in_valobj_sp)
-    return in_valobj_sp;
-
-  lldb::ValueObjectSP value_sp = in_valobj_sp;
-  Target *target = value_sp->GetTargetSP().get();
-  // If this ValueObject holds an error, then it is valuable for that.
-  if (value_sp->GetError().Fail())
-    return value_sp;
-
-  if (!target)
-    return lldb::ValueObjectSP();
+  if (!value_sp)
+    return nullptr;
 
   if (use_dynamic != lldb::eNoDynamicValues) {
     lldb::ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(use_dynamic);
@@ -74,7 +65,8 @@ static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
 }
 
 static lldb::ValueObjectSP
-ArrayToPointerConversion(ValueObject &valobj, ExecutionContextScope &ctx) {
+ArrayToPointerConversion(ValueObject &valobj, ExecutionContextScope &ctx,
+                         llvm::StringRef name) {
   uint64_t addr = valobj.GetLoadAddress();
   ExecutionContext exe_ctx;
   ctx.CalculateExecutionContext(exe_ctx);
@@ -130,8 +122,9 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
     }
   }
 
+  llvm::StringRef name = "result";
   if (in_type.IsArrayType())
-    valobj = ArrayToPointerConversion(*valobj, *m_exe_ctx_scope);
+    valobj = ArrayToPointerConversion(*valobj, *m_exe_ctx_scope, name);
 
   if (valobj->GetCompilerType().IsInteger() ||
       valobj->GetCompilerType().IsUnscopedEnumerationType()) {
@@ -771,29 +764,11 @@ Interpreter::Visit(const BooleanLiteralNode *node) {
   return ValueObject::CreateValueObjectFromBool(m_target, value, "result");
 }
 
-llvm::Expected<CompilerType>
-Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
-                            CompilerType target_type,
-                            CastPromotionKind &promo_kind, CastKind &cast_kind,
-                            int location) {
+llvm::Expected<CastKind>
+Interpreter::VerifyCastType(lldb::ValueObjectSP operand, CompilerType op_type,
+                            CompilerType target_type, int location) {
 
-  promo_kind = CastPromotionKind::eNone;
-  if (op_type.IsReferenceType())
-    op_type = op_type.GetNonReferenceType();
   if (target_type.IsScalarType()) {
-    if (op_type.IsArrayType()) {
-      // Do array-to-pointer conversion.
-      CompilerType deref_type =
-          op_type.IsReferenceType() ? op_type.GetNonReferenceType() : op_type;
-      CompilerType result_type =
-          deref_type.GetArrayElementType(nullptr).GetPointerType();
-      uint64_t addr = operand->GetLoadAddress();
-      llvm::StringRef name = operand->GetName().GetStringRef();
-      operand = ValueObject::CreateValueObjectFromAddress(
-          name, addr, m_exe_ctx_scope, result_type, /*do_deref=*/false);
-      op_type = result_type;
-    }
-
     if (op_type.IsPointerType() || op_type.IsNullPtrType()) {
       // Cast from pointer to float/double is not allowed.
       if (target_type.IsFloat()) {
@@ -830,8 +805,7 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
           m_expr, std::move(errMsg), location,
           op_type.TypeDescription().length());
     }
-    promo_kind = CastPromotionKind::eArithmetic;
-    return target_type;
+    return CastKind::eArithmetic;
   }
 
   if (target_type.IsEnumerationType()) {
@@ -845,8 +819,7 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
           m_expr, std::move(errMsg), location,
           op_type.TypeDescription().length());
     }
-    cast_kind = CastKind::eEnumeration;
-    return target_type;
+    return CastKind::eEnumeration;
   }
 
   if (target_type.IsPointerType()) {
@@ -861,8 +834,7 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
           m_expr, std::move(errMsg), location,
           op_type.TypeDescription().length());
     }
-    promo_kind = CastPromotionKind::ePointer;
-    return target_type;
+    return CastKind::ePointer;
   }
 
   if (target_type.IsNullPtrType()) {
@@ -880,15 +852,11 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
           m_expr, std::move(errMsg), location,
           op_type.TypeDescription().length());
     }
-    cast_kind = CastKind::eNullptr;
-    return target_type;
+    return CastKind::eNullptr;
   }
 
-  if (target_type.IsReferenceType()) {
-    // Cast to a reference type.
-    cast_kind = CastKind::eReference;
-    return target_type;
-  }
+  if (target_type.IsReferenceType())
+    return CastKind::eReference;
 
   // Unsupported cast.
   std::string errMsg =
@@ -905,16 +873,22 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
 
   lldb::ValueObjectSP operand = *operand_or_err;
   CompilerType op_type = operand->GetCompilerType();
-  CastKind cast_kind = CastKind::eNone;
-  CastPromotionKind promo_kind = CastPromotionKind::eNone;
+  CompilerType target_type =  node->GetType();
 
-  auto type_or_err = VerifyCastType(operand, op_type, node->GetType(),
-                                    promo_kind, cast_kind, node->GetLocation());
+  if (op_type.IsReferenceType())
+    op_type = op_type.GetNonReferenceType();
+  if (target_type.IsScalarType() && op_type.IsArrayType()) {
+    operand = ArrayToPointerConversion(*operand, *m_exe_ctx_scope,
+                                       operand->GetName().GetStringRef());
+    op_type = operand->GetCompilerType();
+  }
+  auto type_or_err = VerifyCastType(operand, op_type, target_type,
+                                    node->GetLocation());
   if (!type_or_err)
     return type_or_err.takeError();
 
-  CompilerType target_type = *type_or_err;
-  if (op_type.IsReferenceType()) {
+  CastKind cast_kind  = *type_or_err;
+  if (operand->GetCompilerType().IsReferenceType()) {
     Status error;
     operand = operand->Dereference(error);
     if (error.Fail())
@@ -924,30 +898,11 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
 
   switch (cast_kind) {
   case CastKind::eEnumeration: {
-    if (!target_type.IsEnumerationType()) {
-      std::string errMsg = "invalid ast: target type should be an enumeration.";
-      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                                  node->GetLocation());
-    }
-    if (op_type.IsFloat())
+    if (op_type.IsFloat() || op_type.IsInteger() || op_type.IsEnumerationType())
       return operand->CastToEnumType(target_type);
-
-    if (op_type.IsInteger() || op_type.IsEnumerationType())
-      return operand->CastToEnumType(target_type);
-
-    std::string errMsg =
-        "invalid ast: operand is not convertible to enumeration type";
-    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                                node->GetLocation());
-    // return error.ToError();
+    break;
   }
   case CastKind::eNullptr: {
-    if (target_type.GetCanonicalType().GetBasicTypeEnumeration() !=
-        lldb::eBasicTypeNullPtr) {
-      std::string errMsg = "invalid ast: target type should be a nullptr_t.";
-      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                                  node->GetLocation());
-    }
     return ValueObject::CreateValueObjectFromNullptr(m_target, target_type,
                                                      "result");
   }
@@ -957,54 +912,32 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
     return lldb::ValueObjectSP(
         operand_sp->Cast(target_type.GetNonReferenceType()));
   }
+  case CastKind::eArithmetic: {
+    if (op_type.IsPointerType() || op_type.IsNullPtrType() ||
+        op_type.IsScalarType()  || op_type.IsEnumerationType())
+      return operand->CastToBasicType(target_type);
+    break;
+  }
+  case CastKind::ePointer: {
+    uint64_t addr =
+        op_type.IsArrayType()
+        ? operand->GetLoadAddress()
+        : (op_type.IsSigned() ? operand->GetValueAsSigned(0)
+                              : operand->GetValueAsUnsigned(0));
+    llvm::StringRef name = "result";
+    ExecutionContext exe_ctx(m_target.get(), false);
+    return ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
+                                                     target_type,
+                                                     /* do_deref */ false);
+  }
   case CastKind::eNone: {
-    switch (promo_kind) {
-    case CastPromotionKind::eArithmetic: {
-      if (target_type.GetCanonicalType().GetBasicTypeEnumeration() ==
-          lldb::eBasicTypeInvalid) {
-        std::string errMsg = "invalid ast: target type should be a basic type.";
-        return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                                    node->GetLocation());
-      }
-      // Pick an appropriate cast.
-      if (op_type.IsPointerType() || op_type.IsNullPtrType()) {
-        return operand->CastToBasicType(target_type);
-      }
-      if (op_type.IsScalarType()) {
-        return operand->CastToBasicType(target_type);
-      }
-      if (op_type.IsEnumerationType()) {
-        return operand->CastToBasicType(target_type);
-      }
-      std::string errMsg =
-          "invalid ast: operand is not convertible to arithmetic type";
-      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                                  node->GetLocation());
-    }
-    case CastPromotionKind::ePointer: {
-      if (!target_type.IsPointerType()) {
-        std::string errMsg = "invalid ast: target type should be a pointer";
-        return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                                    node->GetLocation());
-      }
-      uint64_t addr =
-          op_type.IsArrayType()
-              ? operand->GetLoadAddress()
-              : (op_type.IsSigned() ? operand->GetValueAsSigned(0)
-                                    : operand->GetValueAsUnsigned(0));
-      llvm::StringRef name = "result";
-      ExecutionContext exe_ctx(m_target.get(), false);
-      return ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
-                                                       target_type,
-                                                       /* do_deref */ false);
-    }
-    case CastPromotionKind::eNone: {
-      return lldb::ValueObjectSP();
-    }
-    } // switch promo_kind
-  } // case CastKind::eNone
-  } // switch cast_kind
-  std::string errMsg = "invalid ast: unexpected c-style cast kind";
+    return lldb::ValueObjectSP();
+  }
+  } // switch
+
+  std::string errMsg = llvm::formatv("unable to cast from '{0}' to '{1}'",
+                                     op_type.TypeDescription(),
+                                     target_type.TypeDescription());
   return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
                                               node->GetLocation());
 }
