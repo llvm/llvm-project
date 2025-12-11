@@ -270,8 +270,8 @@ class PseudoMaskedAMO
 
 class PseudoMaskedAMOMinMax
     : Pseudo<(outs GPR:$res, GPR:$scratch1, GPR:$scratch2),
-             (ins GPR:$addr, GPR:$incr, GPR:$mask, ixlenimm:$sextshamt,
-              ordering:$ordering), []> {
+             (ins GPR:$addr, GPR:$incr, GPR:$mask, GPR:$sextshamt,
+                  ordering:$ordering), []> {
   let Constraints = "@earlyclobber $res,@earlyclobber $scratch1,"
                     "@earlyclobber $scratch2";
   let mayLoad = 1;
