@@ -3944,7 +3944,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyOperation &self, PyValue &of, PyValue &with) {
             mlirOperationReplaceUsesOfWith(self.get(), of.get(), with.get());
           },
-          "of"_a, "with"_a,
+          "of"_a, "with_"_a,
           "Replaces uses of the 'of' value with the 'with' value inside the "
           "operation.")
       .def("_set_invalid", &PyOperation::setInvalid,
