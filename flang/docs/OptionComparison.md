@@ -1322,7 +1322,7 @@ Here's the list of compilers surveyed, hot linked to the source of data on it.  
 
 
 *   [Cray Fortran Reference Manual version 8.7](https://pubs.cray.com/content/S-3901/8.7/cray-fortran-reference-manual/compiler-command-line-options)
-*   IBM  (XLF) version 14.1 -- [Compiler Reference](https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=93), [Compiler Reference direct PDF](https://www.ibm.com/support/pages/system/files/support/swg/swgdocs.nsf/0/94c58d010e922f6d852579de00261d61/$FILE/compiler.pdf) [Language Reference](https://www-01.ibm.com/support/docview.wss?uid=swg27024776&aid=1), [Language Reference PDF](https://www.ibm.com/support/pages/system/files/support/swg/swgdocs.nsf/0/7e46ea600b6646d0852579dc00331978/$FILE/langref.pdf)
+*   IBM  (XLF) version 14.1 -- [Compiler Reference](https://www.ibm.com/support/pages/compiler-reference-xl-fortran-linux-v141#page=93), [Compiler Reference direct PDF](https://www.ibm.com/support/pages/system/files/support/swg/swgdocs.nsf/0/94c58d010e922f6d852579de00261d61/$FILE/compiler.pdf) [Language Reference](https://www.ibm.com/support/pages/language-reference-xl-fortran-linux-v141), [Language Reference direct PDF](https://www.ibm.com/support/pages/system/files/support/swg/swgdocs.nsf/0/7e46ea600b6646d0852579dc00331978/$FILE/langref.pdf)
 *   [Intel Fortran version 19.0](https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-alphabetical-list-of-compiler-options)
 *   [GNU Fortran Compiler version 8.3.0](https://gcc.gnu.org/onlinedocs/gcc-8.3.0/gfortran/Option-Summary.html)
 *   [NAG Fortran Release 6.2](https://www.nag.co.uk/nagware/np/r62_doc/manual/compiler_2_4.html)
