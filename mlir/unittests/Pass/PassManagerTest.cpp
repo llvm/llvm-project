@@ -180,9 +180,9 @@ TEST(PassManagerTest, PassInstrumentation) {
     LogicalResult result = pm.run(module.get());
 
     InstrumentationCounts counts = {
-        .beforePass = instrumentationPtr->beforePassCallbackCount,
-        .afterPass = instrumentationPtr->afterPassCallbackCount,
-        .afterPassFailed = instrumentationPtr->afterPassFailedCallbackCount};
+        instrumentationPtr->beforePassCallbackCount,
+        instrumentationPtr->afterPassCallbackCount,
+        instrumentationPtr->afterPassFailedCallbackCount};
     return {result, counts};
   };
 
@@ -194,15 +194,15 @@ TEST(PassManagerTest, PassInstrumentation) {
       if (failBefore) {
         EXPECT_TRUE(failed(result))
             << "failBefore=" << failBefore << ", failAfter=" << failAfter;
-        expected = {.beforePass = 1, .afterPass = 0, .afterPassFailed = 1};
+        expected = {/*beforePass=*/1, /*afterPass=*/0, /*afterPassFailed=*/1};
       } else if (failAfter) {
         EXPECT_TRUE(failed(result))
             << "failBefore=" << failBefore << ", failAfter=" << failAfter;
-        expected = {.beforePass = 1, .afterPass = 1, .afterPassFailed = 0};
+        expected = {/*beforePass=*/1, /*afterPass=*/1, /*afterPassFailed=*/0};
       } else {
         EXPECT_TRUE(succeeded(result))
             << "failBefore=" << failBefore << ", failAfter=" << failAfter;
-        expected = {.beforePass = 1, .afterPass = 1, .afterPassFailed = 0};
+        expected = {/*beforePass=*/1, /*afterPass=*/1, /*afterPassFailed=*/0};
       }
 
       EXPECT_EQ(counts.beforePass, expected.beforePass)
