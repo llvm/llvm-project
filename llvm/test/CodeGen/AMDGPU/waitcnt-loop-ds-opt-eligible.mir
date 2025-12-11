@@ -1,24 +1,44 @@
-# REQUIRES: asserts
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-insert-waitcnts -amdgpu-waitcnt-loop-ds-opt=true -debug-only=si-insert-waitcnts -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-insert-waitcnts -amdgpu-waitcnt-loop-ds-opt=true -verify-machineinstrs -o - %s | FileCheck -check-prefix=OPT %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-insert-waitcnts -amdgpu-waitcnt-loop-ds-opt=false -verify-machineinstrs -o - %s | FileCheck -check-prefix=NOOPT %s
 
-# Test for DS loop wait optimization eligibility check.
-# Verifies that the pass correctly identifies single-block loops with
-# sufficient DS loads (>=16) and WMMA instructions (>=8) as eligible
-# for optimization.
+# Debug output test (requires asserts build)
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-insert-waitcnts -amdgpu-waitcnt-loop-ds-opt=true -debug-only=si-insert-waitcnts -o /dev/null %s 2>&1 | FileCheck -check-prefix=DBG %s
+# REQUIRES: asserts
+
+# Test for DS loop wait optimization in single-block loops with WMMA.
+# The preheader DS loads are in reverse order compared to loop body loads,
+# which causes the baseline to produce conservative waits that the optimization
+# can relax.
 #
-# CHECK: Loop DS Wait Opt: Loop at bb.1 - 16 DS loads, 8 WMMA/MFMA, {{[0-9]+}} total insts, eligible
+# Key improvement demonstrated:
+#   Without opt: S_WAIT_DSCNT 0 (wait for ALL 16 loads) before first WMMA
+#   With opt:    S_WAIT_DSCNT 12 (wait for only 4 loads, 12 remain in flight)
+#
+# DBG: Loop DS Wait Opt: Loop at bb.1 - 16 DS loads, 8 WMMA/MFMA, {{[0-9]+}} total insts, eligible
+# DBG: Loop DS Wait Opt: Analyzed loop at bb.1 - 16 DS loads, HasBarrier=1, Valid=1
+# DBG: DS Loop Opt: Relaxing DsCnt from 0 to 12 for:
 
 --- |
   define amdgpu_kernel void @ds_loop_eligible() { ret void }
 ...
 
 ---
+# OPT-LABEL: name: ds_loop_eligible
+# NOOPT-LABEL: name: ds_loop_eligible
 name: ds_loop_eligible
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   waveLimiter: false
 body: |
+  ; OPT: bb.0:
+  ; OPT-NOT: S_WAIT_DSCNT
+  ; OPT: S_BRANCH %bb.1
+
+  ; NOOPT: bb.0:
+  ; NOOPT-NOT: S_WAIT_DSCNT
+  ; NOOPT: S_BRANCH %bb.1
+
   bb.0:
     successors: %bb.1
     liveins: $sgpr0, $vgpr0
@@ -43,6 +63,17 @@ body: |
     $vgpr14_vgpr15_vgpr16_vgpr17 = DS_READ_B128 $vgpr0, 16, 0, implicit $m0, implicit $exec
     $vgpr10_vgpr11_vgpr12_vgpr13 = DS_READ_B128 $vgpr0, 0, 0, implicit $m0, implicit $exec
     S_BRANCH %bb.1
+
+  ; OPT: bb.1:
+  ; OPT: S_WAIT_DSCNT 12
+  ; OPT-NEXT: early-clobber $vgpr80{{.*}} = V_WMMA
+  ; OPT: S_WAIT_DSCNT 8
+  ; OPT-NEXT: early-clobber $vgpr88{{.*}} = V_WMMA
+
+  ; NOOPT: bb.1:
+  ; NOOPT: S_WAIT_DSCNT 0
+  ; NOOPT-NEXT: early-clobber $vgpr80{{.*}} = V_WMMA
+  ; NOOPT-NOT: S_WAIT_DSCNT 8
 
   bb.1:
     ; Single-block loop with WMMA and DS loads after barrier
