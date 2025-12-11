@@ -865,7 +865,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
 }
 
 /// This must be kept in sync with FunctionComparator::cmpOperations in
-/// lib/Transforms/IPO/MergeFunctions.cpp.
+/// lib/Transforms/Utils/FunctionComparator.cpp.
 bool Instruction::hasSameSpecialState(const Instruction *I2,
                                       bool IgnoreAlignment,
                                       bool IntersectAttrs) const {
@@ -913,6 +913,12 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
     return CI->getCallingConv() == cast<CallBrInst>(I2)->getCallingConv() &&
            CheckAttrsSame(CI, cast<CallBrInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<CallBrInst>(I2));
+  if (const SwitchInst *SI = dyn_cast<SwitchInst>(I1)) {
+    for (auto [Case1, Case2] : zip(SI->cases(), cast<SwitchInst>(I2)->cases()))
+      if (Case1.getCaseValue() != Case2.getCaseValue())
+        return false;
+    return true;
+  }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(I1))
     return IVI->getIndices() == cast<InsertValueInst>(I2)->getIndices();
   if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(I1))
@@ -973,14 +979,6 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
   if (const PHINode *Phi = dyn_cast<PHINode>(this)) {
     const PHINode *OtherPhi = cast<PHINode>(I);
     return equal(Phi->blocks(), OtherPhi->blocks());
-  }
-
-  if (const SwitchInst *SI = dyn_cast<SwitchInst>(this)) {
-    const SwitchInst *OtherSI = cast<SwitchInst>(I);
-    for (auto [Case, OtherCase] : zip(SI->cases(), OtherSI->cases()))
-      if (Case.getCaseValue() != OtherCase.getCaseValue())
-        return false;
-    return true;
   }
 
   return this->hasSameSpecialState(I, /*IgnoreAlignment=*/false,

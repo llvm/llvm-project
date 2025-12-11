@@ -1904,21 +1904,10 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     // so does not add any new instructions.
 
     // Check if sizes and terminators of all successors match.
+    Instruction *Term0 = UniqueSuccessors[0]->getTerminator();
     bool AllSame =
-        all_of(UniqueSuccessors, [&UniqueSuccessors](BasicBlock *Succ) {
-          Instruction *Term0 = UniqueSuccessors[0]->getTerminator();
-          Instruction *Term = Succ->getTerminator();
-          if (!Term->isSameOperationAs(Term0) ||
-              UniqueSuccessors[0]->size() != Succ->size())
-            return false;
-          if (auto *SI = dyn_cast<SwitchInst>(Term)) {
-            // Switch case values also need to be equal.
-            auto *SI0 = cast<SwitchInst>(Term0);
-            for (auto [Case, Case0] : zip(SI->cases(), SI0->cases()))
-              if (Case.getCaseValue() != Case0.getCaseValue())
-                return false;
-          }
-          return equal(Term->operands(), Term0->operands());
+        all_of(drop_begin(UniqueSuccessors), [Term0](BasicBlock *Succ) {
+          return Succ->getTerminator()->isIdenticalTo(Term0);
         });
     if (!AllSame)
       return false;
