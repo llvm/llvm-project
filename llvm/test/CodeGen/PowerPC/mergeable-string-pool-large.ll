@@ -292,7 +292,7 @@ define dso_local signext i32 @str1() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
-  %call = call signext i32 @callee(ptr noundef nonnull @.str.1)
+  %call = tail call signext i32 @callee(ptr noundef nonnull @.str.1)
   ret i32 %call
 }
 

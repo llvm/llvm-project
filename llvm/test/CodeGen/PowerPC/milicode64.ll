@@ -46,7 +46,7 @@ define noundef i32 @_Z11memcmp_testPKvS0_m(ptr noundef readonly captures(none) %
 ; CHECK-AIX-64-P9-NEXT:    mtlr r0
 ; CHECK-AIX-64-P9-NEXT:    blr
 entry:
-  %call = call i32 @memcmp(ptr noundef %ptr1, ptr noundef %ptr2, i64 noundef %num)
+  %call = tail call i32 @memcmp(ptr noundef %ptr1, ptr noundef %ptr2, i64 noundef %num)
   ret i32 %call
 }
 

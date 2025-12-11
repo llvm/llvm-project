@@ -94,7 +94,7 @@ define dso_local signext i32 @str1() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
-  %call = call signext i32 @callee(ptr noundef nonnull @.str.1)
+  %call = tail call signext i32 @callee(ptr noundef nonnull @.str.1)
   ret i32 %call
 }
 
@@ -159,7 +159,7 @@ define dso_local signext i32 @str2() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
-  %call = call signext i32 @callee(ptr noundef nonnull @.str.2)
+  %call = tail call signext i32 @callee(ptr noundef nonnull @.str.2)
   ret i32 %call
 }
 
@@ -261,8 +261,8 @@ define dso_local signext i32 @str3() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
-  %call = call signext i32 @callee(ptr noundef nonnull @.str.3)
-  %call1 = call signext i32 @callee(ptr noundef nonnull @.str.2)
+  %call = tail call signext i32 @callee(ptr noundef nonnull @.str.3)
+  %call1 = tail call signext i32 @callee(ptr noundef nonnull @.str.2)
   %add = add nsw i32 %call1, %call
   ret i32 %add
 }
@@ -326,7 +326,7 @@ define dso_local signext i32 @str4() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
-  %call = call signext i32 @callee(ptr noundef nonnull @.str.4)
+  %call = tail call signext i32 @callee(ptr noundef nonnull @.str.4)
   ret i32 %call
 }
 
@@ -389,7 +389,7 @@ define dso_local signext i32 @str5() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
-  %call = call signext i32 @callee(ptr noundef nonnull @.str.5)
+  %call = tail call signext i32 @callee(ptr noundef nonnull @.str.5)
   ret i32 %call
 }
 
@@ -749,8 +749,8 @@ define dso_local signext i32 @str7() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    blr
 entry:
   %0 = load ptr, ptr @GLOBALSTRING, align 8
-  %call = call signext i32 @callee(ptr noundef %0)
-  %call1 = call signext i32 @callee(ptr noundef nonnull @.str.8)
+  %call = tail call signext i32 @callee(ptr noundef %0)
+  %call1 = tail call signext i32 @callee(ptr noundef nonnull @.str.8)
   %add = add nsw i32 %call1, %call
   ret i32 %add
 }
@@ -847,8 +847,8 @@ define dso_local signext i32 @mixed1() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
-  %call = call signext i32 @calleeInt(ptr noundef nonnull @IntArray2)
-  %call1 = call signext i32 @callee(ptr noundef nonnull @.str.6)
+  %call = tail call signext i32 @calleeInt(ptr noundef nonnull @IntArray2)
+  %call1 = tail call signext i32 @callee(ptr noundef nonnull @.str.6)
   %add = add nsw i32 %call1, %call
   ret i32 %add
 }
@@ -1087,7 +1087,7 @@ define dso_local signext i32 @str9() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
-  %call = call signext i32 @callee(ptr noundef nonnull @.str.9)
+  %call = tail call signext i32 @callee(ptr noundef nonnull @.str.9)
   ret i32 %call
 }
 
@@ -1150,7 +1150,7 @@ define dso_local signext i32 @str10() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
-  %call = call signext i32 @callee(ptr noundef nonnull @.str.10)
+  %call = tail call signext i32 @callee(ptr noundef nonnull @.str.10)
   ret i32 %call
 }
 

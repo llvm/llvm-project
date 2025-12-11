@@ -19,7 +19,7 @@
 
 define void @bar32(i32 zeroext %var1, i32 noundef zeroext %var2) local_unnamed_addr  {
 entry:
-  call void @foo32(i32 noundef zeroext %var2)
+  tail call void @foo32(i32 noundef zeroext %var2)
   ret void
 }
 
@@ -27,7 +27,7 @@ declare void @foo32(i32 noundef zeroext) local_unnamed_addr
 
 define void @test32() local_unnamed_addr {
 entry:
-  call void @bar32(i32 zeroext poison, i32 noundef zeroext 255)
+  tail call void @bar32(i32 zeroext poison, i32 noundef zeroext 255)
   ret void
 }
 
@@ -85,7 +85,7 @@ entry:
 
 define void @bar8(i8 zeroext %var1, i8 noundef zeroext %var2) local_unnamed_addr  {
 entry:
-  call void @foo8(i8 noundef zeroext %var2)
+  tail call void @foo8(i8 noundef zeroext %var2)
   ret void
 }
 
@@ -93,7 +93,7 @@ declare void @foo8(i8 noundef zeroext) local_unnamed_addr
 
 define void @test8() local_unnamed_addr {
 entry:
-  call void @bar8(i8 zeroext poison, i8 noundef zeroext 255)
+  tail call void @bar8(i8 zeroext poison, i8 noundef zeroext 255)
   ret void
 }
 
@@ -156,7 +156,7 @@ entry:
 
 define void @bar64(i64 zeroext %var1, i64 noundef zeroext %var2) local_unnamed_addr  {
 entry:
-  call void @foo64(i64 noundef zeroext %var2)
+  tail call void @foo64(i64 noundef zeroext %var2)
   ret void
 }
 
@@ -165,7 +165,7 @@ declare void @foo64(i64 noundef zeroext) local_unnamed_addr
 ; Function Attrs: noinline nounwind
 define void @test64() local_unnamed_addr {
 entry:
-  call void @bar64(i64 zeroext poison, i64 noundef zeroext 255)
+  tail call void @bar64(i64 zeroext poison, i64 noundef zeroext 255)
   ret void
 }
 

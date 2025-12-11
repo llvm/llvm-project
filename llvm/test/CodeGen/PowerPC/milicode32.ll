@@ -29,7 +29,7 @@ define i32 @memcmp_test(ptr nocapture noundef readonly %ptr1, ptr nocapture noun
 ; CHECK-LINUX32-P9-NEXT:    mtlr r0
 ; CHECK-LINUX32-P9-NEXT:    blr
 entry:
-  %call = call i32 @memcmp(ptr noundef %ptr1, ptr noundef %ptr2, i32 noundef %num)
+  %call = tail call i32 @memcmp(ptr noundef %ptr1, ptr noundef %ptr2, i32 noundef %num)
     ret i32 %call
 }
 

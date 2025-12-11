@@ -118,9 +118,9 @@ define void @print_tls_func() {
 ; LINUX64BE-NEXT:    mtlr r0
 ; LINUX64BE-NEXT:    blr
 entry:
-  %0 = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @a)
-  %1 = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @b)
-  %call = call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str, ptr noundef nonnull %0, ptr noundef nonnull %1, ptr noundef nonnull @c)
+  %0 = tail call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @a)
+  %1 = tail call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @b)
+  %call = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str, ptr noundef nonnull %0, ptr noundef nonnull %1, ptr noundef nonnull @c)
   ret void
 }
 
@@ -187,7 +187,7 @@ define void @test_func() {
 ; LINUX64BE-NEXT:    mtlr r0
 ; LINUX64BE-NEXT:    blr
 entry:
-  call void @callee(ptr noundef nonnull @d) #4
+  tail call void @callee(ptr noundef nonnull @d) #4
   ret void
 }
 
@@ -254,7 +254,7 @@ define void @test_func2() {
 ; LINUX64BE-NEXT:    mtlr r0
 ; LINUX64BE-NEXT:    blr
 entry:
-  call void @callee2(ptr noundef nonnull @e) #4
+  tail call void @callee2(ptr noundef nonnull @e) #4
   ret void
 }
 

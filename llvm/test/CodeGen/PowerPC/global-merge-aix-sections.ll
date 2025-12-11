@@ -17,10 +17,10 @@
 ; Function Attrs: nounwind
 define void @g() {
 entry:
-  call void @f(ptr noundef nonnull @y, ptr noundef nonnull @z)
-  call void @f(ptr noundef nonnull @l, ptr noundef nonnull @z)
-  call void @h(ptr noundef nonnull @u)
-  call void @s(ptr noundef nonnull @myStruct1)
+  tail call void @f(ptr noundef nonnull @y, ptr noundef nonnull @z)
+  tail call void @f(ptr noundef nonnull @l, ptr noundef nonnull @z)
+  tail call void @h(ptr noundef nonnull @u)
+  tail call void @s(ptr noundef nonnull @myStruct1)
   ret void
 }
 

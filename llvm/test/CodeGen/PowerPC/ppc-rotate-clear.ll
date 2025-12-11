@@ -38,10 +38,10 @@ define dso_local i64 @rotatemask32(i64 noundef %word) local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    rlwnm r3, r3, r4, 1, 31
 ; LINUX64LE-NEXT:    blr
 entry:
-  %0 = call i64 @llvm.ctlz.i64(i64 %word, i1 false)
+  %0 = tail call i64 @llvm.ctlz.i64(i64 %word, i1 false)
   %cast = trunc i64 %0 to i32
   %conv1 = trunc i64 %word to i32
-  %1 = call i32 @llvm.fshl.i32(i32 %conv1, i32 %conv1, i32 %cast)
+  %1 = tail call i32 @llvm.fshl.i32(i32 %conv1, i32 %conv1, i32 %cast)
   %2 = and i32 %1, 2147483647
   %and = zext i32 %2 to i64
   ret i64 %and
@@ -90,8 +90,8 @@ define dso_local i64 @rotatemask64(i64 noundef %word) local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    rldcl r3, r3, r4, 1
 ; LINUX64LE-NEXT:    blr
 entry:
-  %0 = call i64 @llvm.ctlz.i64(i64 %word, i1 false)
-  %1 = call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %0)
+  %0 = tail call i64 @llvm.ctlz.i64(i64 %word, i1 false)
+  %1 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %0)
   %and = and i64 %1, 9223372036854775807
   ret i64 %and
 }
@@ -138,8 +138,8 @@ define dso_local i64 @rotatemask64_2(i64 noundef %word) local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    rldcl r3, r3, r4, 1
 ; LINUX64LE-NEXT:    blr
 entry:
-  %0 = call i64 @llvm.ctlz.i64(i64 %word, i1 false)
-  %1 = call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %0)
+  %0 = tail call i64 @llvm.ctlz.i64(i64 %word, i1 false)
+  %1 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %0)
   %and = and i64 %1, 9223372036854775807
   ret i64 %and
 }
@@ -191,8 +191,8 @@ define dso_local i64 @rotatemask64_3(i64 noundef %word) local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    rldicl r3, r3, 8, 1
 ; LINUX64LE-NEXT:    blr
 entry:
-  %0 = call i64 @llvm.ctlz.i64(i64 %word, i1 false)
-  %1 = call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %0)
+  %0 = tail call i64 @llvm.ctlz.i64(i64 %word, i1 false)
+  %1 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %0)
   %and = and i64 %1, 9223372036854775552
   ret i64 %and
 }
@@ -229,7 +229,7 @@ define dso_local i64 @rotatemask64_nocount(i64 noundef %word, i64 noundef %clz) 
 ; LINUX64LE-NEXT:    rldcl r3, r3, r4, 8
 ; LINUX64LE-NEXT:    blr
 entry:
-  %0 = call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %clz)
+  %0 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %clz)
   %and = and i64 %0, 72057594037927935
   ret i64 %and
 }
@@ -266,7 +266,7 @@ define dso_local i64 @builtincheck(i64 noundef %word, i64 noundef %shift) local_
 ; LINUX64LE-NEXT:    rldcl r3, r3, r4, 1
 ; LINUX64LE-NEXT:    blr
 entry:
-  %0 = call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %shift)
+  %0 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %shift)
   %1 = and i64 %0, 9223372036854775807
   ret i64 %1
 }
@@ -297,7 +297,7 @@ define dso_local i64 @immshift(i64 noundef %word) local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    rldicl r3, r3, 15, 12
 ; LINUX64LE-NEXT:    blr
 entry:
-  %0 = call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 15)
+  %0 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 15)
   %and = and i64 %0, 4503599627370495
   ret i64 %and
 }
@@ -382,11 +382,11 @@ define dso_local i64 @twomasks(i64 noundef %word) local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
-  %0 = call i64 @llvm.ctlz.i64(i64 %word, i1 false)
-  %1 = call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %0)
+  %0 = tail call i64 @llvm.ctlz.i64(i64 %word, i1 false)
+  %1 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %0)
   %and = and i64 %1, 9223372036854775807
   %and1 = and i64 %1, 281474976710655
-  %call = call i64 @callee(i64 noundef %and, i64 noundef %and1) #0
+  %call = tail call i64 @callee(i64 noundef %and, i64 noundef %and1) #0
   ret i64 %call
 }
 
@@ -476,12 +476,12 @@ define dso_local i64 @tworotates(i64 noundef %word) local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
-  %0 = call i64 @llvm.ctlz.i64(i64 %word, i1 false)
-  %1 = call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %0)
-  %2 = call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 23)
+  %0 = tail call i64 @llvm.ctlz.i64(i64 %word, i1 false)
+  %1 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %0)
+  %2 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 23)
   %and = and i64 %1, 9223372036854775807
   %and1 = and i64 %2, 9223372036854775807
-  %call = call i64 @callee(i64 noundef %and, i64 noundef %and1) #0
+  %call = tail call i64 @callee(i64 noundef %and, i64 noundef %and1) #0
   ret i64 %call
 }
 

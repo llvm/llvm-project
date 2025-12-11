@@ -38,7 +38,7 @@ define void @bar1(i64 %a) nounwind {
 ; AIX-NEXT:    blr
   %s = alloca %struct.type8, align 8
   store i64 %a, ptr %s, align 8
-  %call = call ptr @f0(ptr noundef nonnull byval(%struct.type8) align 8 %s)
+  %call = tail call ptr @f0(ptr noundef nonnull byval(%struct.type8) align 8 %s)
   ret void
 }
 
@@ -77,7 +77,7 @@ define void @bar2(i64 %a) nounwind {
   store i64 %a, ptr %index1, align 8
   %index2 = getelementptr inbounds i64, ptr %s, i32 1
   store i64 %a, ptr %index2, align 8
-  %call = call ptr @f1(ptr noundef nonnull byval(%struct.type16) align 8 %s)
+  %call = tail call ptr @f1(ptr noundef nonnull byval(%struct.type16) align 8 %s)
   ret void
 }
 

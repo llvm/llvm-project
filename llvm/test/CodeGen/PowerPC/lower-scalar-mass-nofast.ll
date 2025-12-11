@@ -87,7 +87,7 @@ define float @acosf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_acosf_finite
 ; CHECK: blr
 entry:
-  %call = call float @acosf(float %a)
+  %call = tail call float @acosf(float %a)
   ret float %call
 }
 
@@ -97,7 +97,7 @@ define float @acoshf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_acoshf_finite
 ; CHECK: blr
 entry:
-  %call = call float @acoshf(float %a)
+  %call = tail call float @acoshf(float %a)
   ret float %call
 }
 
@@ -107,7 +107,7 @@ define float @asinf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_asinf_finite
 ; CHECK: blr
 entry:
-  %call = call float @asinf(float %a)
+  %call = tail call float @asinf(float %a)
   ret float %call
 }
 
@@ -117,7 +117,7 @@ define float @asinhf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_asinhf_finite
 ; CHECK: blr
 entry:
-  %call = call float @asinhf(float %a)
+  %call = tail call float @asinhf(float %a)
   ret float %call
 }
 
@@ -127,7 +127,7 @@ define float @atan2f_f32_nofast(float %a, float %b) {
 ; CHECK-NOT: __xl_atan2f_finite
 ; CHECK: blr
 entry:
-  %call = call float @atan2f(float %a, float %b)
+  %call = tail call float @atan2f(float %a, float %b)
   ret float %call
 }
 
@@ -137,7 +137,7 @@ define float @atanf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_atanf_finite
 ; CHECK: blr
 entry:
-  %call = call float @atanf(float %a)
+  %call = tail call float @atanf(float %a)
   ret float %call
 }
 
@@ -147,7 +147,7 @@ define float @atanhf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_atanhf_finite
 ; CHECK: blr
 entry:
-  %call = call float @atanhf(float %a)
+  %call = tail call float @atanhf(float %a)
   ret float %call
 }
 
@@ -157,7 +157,7 @@ define float @cbrtf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_cbrtf_finite
 ; CHECK: blr
 entry:
-  %call = call float @cbrtf(float %a)
+  %call = tail call float @cbrtf(float %a)
   ret float %call
 }
 
@@ -167,7 +167,7 @@ define float @copysignf_f32_nofast(float %a, float %b) {
 ; CHECK-NOT: __xl_copysignf_finite
 ; CHECK: blr
 entry:
-  %call = call float @copysignf(float %a, float %b)
+  %call = tail call float @copysignf(float %a, float %b)
   ret float %call
 }
 
@@ -177,7 +177,7 @@ define float @cosf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_cosf_finite
 ; CHECK: blr
 entry:
-  %call = call float @cosf(float %a)
+  %call = tail call float @cosf(float %a)
   ret float %call
 }
 
@@ -187,7 +187,7 @@ define float @coshf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_coshf_finite
 ; CHECK: blr
 entry:
-  %call = call float @coshf(float %a)
+  %call = tail call float @coshf(float %a)
   ret float %call
 }
 
@@ -197,7 +197,7 @@ define float @erfcf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_erfcf_finite
 ; CHECK: blr
 entry:
-  %call = call float @erfcf(float %a)
+  %call = tail call float @erfcf(float %a)
   ret float %call
 }
 
@@ -207,7 +207,7 @@ define float @erff_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_erff_finite
 ; CHECK: blr
 entry:
-  %call = call float @erff(float %a)
+  %call = tail call float @erff(float %a)
   ret float %call
 }
 
@@ -217,7 +217,7 @@ define float @expf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_expf_finite
 ; CHECK: blr
 entry:
-  %call = call float @expf(float %a)
+  %call = tail call float @expf(float %a)
   ret float %call
 }
 
@@ -227,7 +227,7 @@ define float @expm1f_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_expm1f_finite
 ; CHECK: blr
 entry:
-  %call = call float @expm1f(float %a)
+  %call = tail call float @expm1f(float %a)
   ret float %call
 }
 
@@ -237,7 +237,7 @@ define float @hypotf_f32_nofast(float %a, float %b) {
 ; CHECK-NOT: __xl_hypotf_finite
 ; CHECK: blr
 entry:
-  %call = call float @hypotf(float %a, float %b)
+  %call = tail call float @hypotf(float %a, float %b)
   ret float %call
 }
 
@@ -247,7 +247,7 @@ define float @lgammaf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_lgammaf_finite
 ; CHECK: blr
 entry:
-  %call = call float @lgammaf(float %a)
+  %call = tail call float @lgammaf(float %a)
   ret float %call
 }
 
@@ -257,7 +257,7 @@ define float @log10f_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_log10f_finite
 ; CHECK: blr
 entry:
-  %call = call float @log10f(float %a)
+  %call = tail call float @log10f(float %a)
   ret float %call
 }
 
@@ -267,7 +267,7 @@ define float @log1pf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_log1pf_finite
 ; CHECK: blr
 entry:
-  %call = call float @log1pf(float %a)
+  %call = tail call float @log1pf(float %a)
   ret float %call
 }
 
@@ -277,7 +277,7 @@ define float @logf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_logf_finite
 ; CHECK: blr
 entry:
-  %call = call float @logf(float %a)
+  %call = tail call float @logf(float %a)
   ret float %call
 }
 
@@ -287,7 +287,7 @@ define float @powf_f32_nofast(float %a, float %b) {
 ; CHECK-NOT: __xl_powf_finite
 ; CHECK: blr
 entry:
-  %call = call float @powf(float %a, float %b)
+  %call = tail call float @powf(float %a, float %b)
   ret float %call
 }
 
@@ -297,7 +297,7 @@ define float @rintf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_rintf_finite
 ; CHECK: blr
 entry:
-  %call = call float @rintf(float %a)
+  %call = tail call float @rintf(float %a)
   ret float %call
 }
 
@@ -307,7 +307,7 @@ define float @sinf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_sinf_finite
 ; CHECK: blr
 entry:
-  %call = call float @sinf(float %a)
+  %call = tail call float @sinf(float %a)
   ret float %call
 }
 
@@ -317,7 +317,7 @@ define float @sinhf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_sinhf_finite
 ; CHECK: blr
 entry:
-  %call = call float @sinhf(float %a)
+  %call = tail call float @sinhf(float %a)
   ret float %call
 }
 
@@ -327,7 +327,7 @@ define float @tanf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_tanf_finite
 ; CHECK: blr
 entry:
-  %call = call float @tanf(float %a)
+  %call = tail call float @tanf(float %a)
   ret float %call
 }
 
@@ -337,7 +337,7 @@ define float @tanhf_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_tanhf_finite
 ; CHECK: blr
 entry:
-  %call = call float @tanhf(float %a)
+  %call = tail call float @tanhf(float %a)
   ret float %call
 }
 
@@ -347,7 +347,7 @@ define double @acos_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_acos_finite
 ; CHECK: blr
 entry:
-  %call = call double @acos(double %a)
+  %call = tail call double @acos(double %a)
   ret double %call
 }
 
@@ -357,7 +357,7 @@ define double @acosh_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_acosh_finite
 ; CHECK: blr
 entry:
-  %call = call double @acosh(double %a)
+  %call = tail call double @acosh(double %a)
   ret double %call
 }
 
@@ -367,7 +367,7 @@ define double @anint_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_anint_finite
 ; CHECK: blr
 entry:
-  %call = call double @anint(double %a)
+  %call = tail call double @anint(double %a)
   ret double %call
 }
 
@@ -377,7 +377,7 @@ define double @asin_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_asin_finite
 ; CHECK: blr
 entry:
-  %call = call double @asin(double %a)
+  %call = tail call double @asin(double %a)
   ret double %call
 }
 
@@ -387,7 +387,7 @@ define double @asinh_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_asinh_finite
 ; CHECK: blr
 entry:
-  %call = call double @asinh(double %a)
+  %call = tail call double @asinh(double %a)
   ret double %call
 }
 
@@ -397,7 +397,7 @@ define double @atan_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_atan_finite
 ; CHECK: blr
 entry:
-  %call = call double @atan(double %a)
+  %call = tail call double @atan(double %a)
   ret double %call
 }
 
@@ -407,7 +407,7 @@ define double @atan2_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_atan2_finite
 ; CHECK: blr
 entry:
-  %call = call double @atan2(double %a)
+  %call = tail call double @atan2(double %a)
   ret double %call
 }
 
@@ -417,7 +417,7 @@ define double @atanh_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_atanh_finite
 ; CHECK: blr
 entry:
-  %call = call double @atanh(double %a)
+  %call = tail call double @atanh(double %a)
   ret double %call
 }
 
@@ -427,7 +427,7 @@ define double @cbrt_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_cbrt_finite
 ; CHECK: blr
 entry:
-  %call = call double @cbrt(double %a)
+  %call = tail call double @cbrt(double %a)
   ret double %call
 }
 
@@ -437,7 +437,7 @@ define double @copysign_f64_nofast(double %a, double %b) {
 ; CHECK-NOT: __xl_copysign_finite
 ; CHECK: blr
 entry:
-  %call = call double @copysign(double %a, double %b)
+  %call = tail call double @copysign(double %a, double %b)
   ret double %call
 }
 
@@ -447,7 +447,7 @@ define double @cos_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_cos_finite
 ; CHECK: blr
 entry:
-  %call = call double @cos(double %a)
+  %call = tail call double @cos(double %a)
   ret double %call
 }
 
@@ -457,7 +457,7 @@ define double @cosh_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_cosh_finite
 ; CHECK: blr
 entry:
-  %call = call double @cosh(double %a)
+  %call = tail call double @cosh(double %a)
   ret double %call
 }
 
@@ -467,7 +467,7 @@ define double @cosisin_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_cosisin_finite
 ; CHECK: blr
 entry:
-  %call = call double @cosisin(double %a)
+  %call = tail call double @cosisin(double %a)
   ret double %call
 }
 
@@ -477,7 +477,7 @@ define double @dnint_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_dnint_finite
 ; CHECK: blr
 entry:
-  %call = call double @dnint(double %a)
+  %call = tail call double @dnint(double %a)
   ret double %call
 }
 
@@ -487,7 +487,7 @@ define double @erf_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_erf_finite
 ; CHECK: blr
 entry:
-  %call = call double @erf(double %a)
+  %call = tail call double @erf(double %a)
   ret double %call
 }
 
@@ -497,7 +497,7 @@ define double @erfc_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_erfc_finite
 ; CHECK: blr
 entry:
-  %call = call double @erfc(double %a)
+  %call = tail call double @erfc(double %a)
   ret double %call
 }
 
@@ -507,7 +507,7 @@ define double @exp_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_exp_finite
 ; CHECK: blr
 entry:
-  %call = call double @exp(double %a)
+  %call = tail call double @exp(double %a)
   ret double %call
 }
 
@@ -517,7 +517,7 @@ define double @expm1_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_expm1_finite
 ; CHECK: blr
 entry:
-  %call = call double @expm1(double %a)
+  %call = tail call double @expm1(double %a)
   ret double %call
 }
 
@@ -527,7 +527,7 @@ define double @hypot_f64_nofast(double %a, double %b) {
 ; CHECK-NOT: __xl_hypot_finite
 ; CHECK: blr
 entry:
-  %call = call double @hypot(double %a, double %b)
+  %call = tail call double @hypot(double %a, double %b)
   ret double %call
 }
 
@@ -537,7 +537,7 @@ define double @lgamma_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_lgamma_finite
 ; CHECK: blr
 entry:
-  %call = call double @lgamma(double %a)
+  %call = tail call double @lgamma(double %a)
   ret double %call
 }
 
@@ -547,7 +547,7 @@ define double @log_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_log_finite
 ; CHECK: blr
 entry:
-  %call = call double @log(double %a)
+  %call = tail call double @log(double %a)
   ret double %call
 }
 
@@ -557,7 +557,7 @@ define double @log10_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_log10_finite
 ; CHECK: blr
 entry:
-  %call = call double @log10(double %a)
+  %call = tail call double @log10(double %a)
   ret double %call
 }
 
@@ -567,7 +567,7 @@ define double @log1p_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_log1p_finite
 ; CHECK: blr
 entry:
-  %call = call double @log1p(double %a)
+  %call = tail call double @log1p(double %a)
   ret double %call
 }
 
@@ -577,7 +577,7 @@ define double @pow_f64_nofast(double %a, double %b) {
 ; CHECK-NOT: __xl_pow_finite
 ; CHECK: blr
 entry:
-  %call = call double @pow(double %a, double %b)
+  %call = tail call double @pow(double %a, double %b)
   ret double %call
 }
 
@@ -587,7 +587,7 @@ define double @rsqrt_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_rsqrt_finite
 ; CHECK: blr
 entry:
-  %call = call double @rsqrt(double %a)
+  %call = tail call double @rsqrt(double %a)
   ret double %call
 }
 
@@ -597,7 +597,7 @@ define double @sin_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_sin_finite
 ; CHECK: blr
 entry:
-  %call = call double @sin(double %a)
+  %call = tail call double @sin(double %a)
   ret double %call
 }
 
@@ -607,7 +607,7 @@ define double @sincos_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_sincos_finite
 ; CHECK: blr
 entry:
-  %call = call double @sincos(double %a)
+  %call = tail call double @sincos(double %a)
   ret double %call
 }
 
@@ -617,7 +617,7 @@ define double @sinh_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_sinh_finite
 ; CHECK: blr
 entry:
-  %call = call double @sinh(double %a)
+  %call = tail call double @sinh(double %a)
   ret double %call
 }
 
@@ -627,7 +627,7 @@ define double @sqrt_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_sqrt_finite
 ; CHECK: blr
 entry:
-  %call = call double @sqrt(double %a)
+  %call = tail call double @sqrt(double %a)
   ret double %call
 }
 
@@ -637,7 +637,7 @@ define double @tan_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_tan_finite
 ; CHECK: blr
 entry:
-  %call = call double @tan(double %a)
+  %call = tail call double @tan(double %a)
   ret double %call
 }
 
@@ -647,7 +647,7 @@ define double @tanh_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_tanh_finite
 ; CHECK: blr
 entry:
-  %call = call double @tanh(double %a)
+  %call = tail call double @tanh(double %a)
   ret double %call
 }
 
@@ -657,7 +657,7 @@ define float @__acosf_finite_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_acosf_finite
 ; CHECK: blr
 entry:
-  %call = call float @__acosf_finite(float %a)
+  %call = tail call float @__acosf_finite(float %a)
   ret float %call
 }
 
@@ -667,7 +667,7 @@ define float @__acoshf_finite_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_acoshf_finite
 ; CHECK: blr
 entry:
-  %call = call float @__acoshf_finite(float %a)
+  %call = tail call float @__acoshf_finite(float %a)
   ret float %call
 }
 
@@ -677,7 +677,7 @@ define float @__asinf_finite_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_asinf_finite
 ; CHECK: blr
 entry:
-  %call = call float @__asinf_finite(float %a)
+  %call = tail call float @__asinf_finite(float %a)
   ret float %call
 }
 
@@ -687,7 +687,7 @@ define float @__atan2f_finite_f32_nofast(float %a, float %b) {
 ; CHECK-NOT: __xl_atan2f_finite
 ; CHECK: blr
 entry:
-  %call = call float @__atan2f_finite(float %a, float %b)
+  %call = tail call float @__atan2f_finite(float %a, float %b)
   ret float %call
 }
 
@@ -697,7 +697,7 @@ define float @__atanhf_finite_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_atanhf_finite
 ; CHECK: blr
 entry:
-  %call = call float @__atanhf_finite(float %a)
+  %call = tail call float @__atanhf_finite(float %a)
   ret float %call
 }
 
@@ -707,7 +707,7 @@ define float @__coshf_finite_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_coshf_finite
 ; CHECK: blr
 entry:
-  %call = call float @__coshf_finite(float %a)
+  %call = tail call float @__coshf_finite(float %a)
   ret float %call
 }
 
@@ -717,7 +717,7 @@ define float @__expf_finite_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_expf_finite
 ; CHECK: blr
 entry:
-  %call = call float @__expf_finite(float %a)
+  %call = tail call float @__expf_finite(float %a)
   ret float %call
 }
 
@@ -727,7 +727,7 @@ define float @__logf_finite_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_logf_finite
 ; CHECK: blr
 entry:
-  %call = call float @__logf_finite(float %a)
+  %call = tail call float @__logf_finite(float %a)
   ret float %call
 }
 
@@ -737,7 +737,7 @@ define float @__log10f_finite_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_log10f_finite
 ; CHECK: blr
 entry:
-  %call = call float @__log10f_finite(float %a)
+  %call = tail call float @__log10f_finite(float %a)
   ret float %call
 }
 
@@ -747,7 +747,7 @@ define float @__powf_finite_f32_nofast(float %a, float %b) {
 ; CHECK-NOT: __xl_powf_finite
 ; CHECK: blr
 entry:
-  %call = call float @__powf_finite(float %a, float %b)
+  %call = tail call float @__powf_finite(float %a, float %b)
   ret float %call
 }
 
@@ -757,7 +757,7 @@ define float @__sinhf_finite_f32_nofast(float %a) {
 ; CHECK-NOT: __xl_sinhf_finite
 ; CHECK: blr
 entry:
-  %call = call float @__sinhf_finite(float %a)
+  %call = tail call float @__sinhf_finite(float %a)
   ret float %call
 }
 
@@ -767,7 +767,7 @@ define double @__acos_finite_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_acos_finite
 ; CHECK: blr
 entry:
-  %call = call double @__acos_finite(double %a)
+  %call = tail call double @__acos_finite(double %a)
   ret double %call
 }
 
@@ -777,7 +777,7 @@ define double @__acosh_finite_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_acosh_finite
 ; CHECK: blr
 entry:
-  %call = call double @__acosh_finite(double %a)
+  %call = tail call double @__acosh_finite(double %a)
   ret double %call
 }
 
@@ -787,7 +787,7 @@ define double @__asin_finite_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_asin_finite
 ; CHECK: blr
 entry:
-  %call = call double @__asin_finite(double %a)
+  %call = tail call double @__asin_finite(double %a)
   ret double %call
 }
 
@@ -797,7 +797,7 @@ define double @__atan2_finite_f64_nofast(double %a, double %b) {
 ; CHECK-NOT: __xl_atan2_finite
 ; CHECK: blr
 entry:
-  %call = call double @__atan2_finite(double %a, double %b)
+  %call = tail call double @__atan2_finite(double %a, double %b)
   ret double %call
 }
 
@@ -807,7 +807,7 @@ define double @__atanh_finite_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_atanh_finite
 ; CHECK: blr
 entry:
-  %call = call double @__atanh_finite(double %a)
+  %call = tail call double @__atanh_finite(double %a)
   ret double %call
 }
 
@@ -817,7 +817,7 @@ define double @__cosh_finite_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_cosh_finite
 ; CHECK: blr
 entry:
-  %call = call double @__cosh_finite(double %a)
+  %call = tail call double @__cosh_finite(double %a)
   ret double %call
 }
 
@@ -827,7 +827,7 @@ define double @__exp_finite_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_exp_finite
 ; CHECK: blr
 entry:
-  %call = call double @__exp_finite(double %a)
+  %call = tail call double @__exp_finite(double %a)
   ret double %call
 }
 
@@ -837,7 +837,7 @@ define double @__log_finite_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_log_finite
 ; CHECK: blr
 entry:
-  %call = call double @__log_finite(double %a)
+  %call = tail call double @__log_finite(double %a)
   ret double %call
 }
 
@@ -847,7 +847,7 @@ define double @__log10_finite_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_log10_finite
 ; CHECK: blr
 entry:
-  %call = call double @__log10_finite(double %a)
+  %call = tail call double @__log10_finite(double %a)
   ret double %call
 }
 
@@ -857,7 +857,7 @@ define double @__pow_finite_f64_nofast(double %a, double %b) {
 ; CHECK-NOT: __xl_pow_finite
 ; CHECK: blr
 entry:
-  %call = call double @__pow_finite(double %a, double %b)
+  %call = tail call double @__pow_finite(double %a, double %b)
   ret double %call
 }
 
@@ -867,7 +867,7 @@ define double @__sinh_finite_f64_nofast(double %a) {
 ; CHECK-NOT: __xl_sinh_finite
 ; CHECK: blr
 entry:
-  %call = call double @__sinh_finite(double %a)
+  %call = tail call double @__sinh_finite(double %a)
   ret double %call
 }
 

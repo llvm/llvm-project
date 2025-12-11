@@ -40,7 +40,7 @@ define float @powf_f32_fast025(float %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz float @powf(float %a, float 2.500000e-01)
+  %call = tail call nnan ninf afn nsz float @powf(float %a, float 2.500000e-01)
   ret float %call
 }
 
@@ -77,7 +77,7 @@ define double @pow_f64_fast025(double %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz double @pow(double %a, double 2.500000e-01)
+  %call = tail call nnan ninf afn nsz double @pow(double %a, double 2.500000e-01)
   ret double %call
 }
 
@@ -114,7 +114,7 @@ define float @powf_f32_fast075(float %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz float @powf(float %a, float 7.500000e-01)
+  %call = tail call nnan ninf afn nsz float @powf(float %a, float 7.500000e-01)
   ret float %call
 }
 
@@ -151,7 +151,7 @@ define double @pow_f64_fast075(double %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz double @pow(double %a, double 7.500000e-01)
+  %call = tail call nnan ninf afn nsz double @pow(double %a, double 7.500000e-01)
   ret double %call
 }
 
@@ -188,7 +188,7 @@ define float @powf_f32_fast050(float %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz float @powf(float %a, float 5.000000e-01)
+  %call = tail call nnan ninf afn nsz float @powf(float %a, float 5.000000e-01)
   ret float %call
 }
 
@@ -225,7 +225,7 @@ define double @pow_f64_fast050(double %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz double @pow(double %a, double 5.000000e-01)
+  %call = tail call nnan ninf afn nsz double @pow(double %a, double 5.000000e-01)
   ret double %call
 }
 
@@ -264,7 +264,7 @@ define float @__powf_finite_f32_fast025(float %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz float @__powf_finite(float %a, float 2.500000e-01)
+  %call = tail call nnan ninf afn nsz float @__powf_finite(float %a, float 2.500000e-01)
   ret float %call
 }
 
@@ -301,7 +301,7 @@ define double @__pow_finite_f64_fast025(double %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz double @__pow_finite(double %a, double 2.500000e-01)
+  %call = tail call nnan ninf afn nsz double @__pow_finite(double %a, double 2.500000e-01)
   ret double %call
 }
 
@@ -338,7 +338,7 @@ define float @__powf_finite_f32_fast075(float %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz float @__powf_finite(float %a, float 7.500000e-01)
+  %call = tail call nnan ninf afn nsz float @__powf_finite(float %a, float 7.500000e-01)
   ret float %call
 }
 
@@ -375,7 +375,7 @@ define double @__pow_finite_f64_fast075(double %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz double @__pow_finite(double %a, double 7.500000e-01)
+  %call = tail call nnan ninf afn nsz double @__pow_finite(double %a, double 7.500000e-01)
   ret double %call
 }
 
@@ -412,7 +412,7 @@ define float @__powf_finite_f32_fast050(float %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz float @__powf_finite(float %a, float 5.000000e-01)
+  %call = tail call nnan ninf afn nsz float @__powf_finite(float %a, float 5.000000e-01)
   ret float %call
 }
 
@@ -449,7 +449,7 @@ define double @__pow_finite_f64_fast050(double %a) #1 {
 ; CHECK-AIX-NEXT:    mtlr 0
 ; CHECK-AIX-NEXT:    blr
 entry:
-  %call = call nnan ninf afn nsz double @__pow_finite(double %a, double 5.000000e-01)
+  %call = tail call nnan ninf afn nsz double @__pow_finite(double %a, double 5.000000e-01)
   ret double %call
 }
 

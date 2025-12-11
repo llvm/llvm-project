@@ -52,7 +52,7 @@ entry:
   %add6 = add nsw i64 %add5, %h
   %add7 = add nsw i64 %add6, %i
   %add8 = add nsw i64 %add7, %j
-  call void @foo()
+  tail call void @foo()
   ret void
 }
 
@@ -105,7 +105,7 @@ entry:
   %add6 = add nsw i64 %add5, %h
   %add7 = add nsw i64 %add6, %i
   %add8 = add nsw i64 %add7, %j
-  call void @foo()
+  tail call void @foo()
   ret void
 }
 
@@ -159,7 +159,7 @@ entry:
   %add6 = add nsw i32 %add5, %h
   %add7 = add nsw i32 %add6, %i
   %add8 = add nsw i32 %add7, %j
-  call void @foo()
+  tail call void @foo()
   ret void
 }
 
@@ -212,7 +212,7 @@ entry:
   %add6 = add nsw i32 %add5, %h
   %add7 = add nsw i32 %add6, %i
   %add8 = add nsw i32 %add7, %j
-  call void @foo()
+  tail call void @foo()
   ret void
 }
 
@@ -270,7 +270,7 @@ entry:
   %add6 = fadd float %add5, %h
   %add7 = fadd float %add6, %i
   %add8 = fadd float %add7, %j
-  call void @foo()
+  tail call void @foo()
   ret void
 }
 
@@ -328,7 +328,7 @@ entry:
   %add6 = fadd float %add5, %h
   %add7 = fadd float %add6, %i
   %add8 = fadd float %add7, %j
-  call void @foo()
+  tail call void @foo()
   ret void
 }
 
@@ -386,7 +386,7 @@ entry:
   %add6 = fadd double %add5, %h
   %add7 = fadd double %add6, %i
   %add8 = fadd double %add7, %j
-  call void @foo()
+  tail call void @foo()
   ret void
 }
 
@@ -444,7 +444,7 @@ entry:
   %add6 = fadd double %add5, %h
   %add7 = fadd double %add6, %i
   %add8 = fadd double %add7, %j
-  call void @foo()
+  tail call void @foo()
   ret void
 }
 
@@ -574,16 +574,16 @@ define void @mixed_1(double %a, i64 %b, i64 %c, i32 signext %d, i64 %e, float %f
 ; 64BIT-NEXT:    blr
 entry:
   %add = fadd double %a, %j
-  call void @consume_f64(double %add)
+  tail call void @consume_f64(double %add)
   %add1 = fadd float %f, %g
-  call void @consume_f32(float %add1)
+  tail call void @consume_f32(float %add1)
   %add2 = add nsw i64 %c, %b
   %conv = sext i32 %d to i64
   %add3 = add nsw i64 %add2, %conv
   %add4 = add nsw i64 %add3, %e
-  call void @consume_i64(i64 %add4)
+  tail call void @consume_i64(i64 %add4)
   %add5 = add nsw i32 %i, %d
-  call void @consume_i32(i32 signext %add5)
+  tail call void @consume_i32(i32 signext %add5)
   ret void
 }
 
@@ -644,9 +644,9 @@ entry:
   %vecext = extractelement <4 x i32> %b, i64 0
   %conv = sext i32 %vecext to i64
   %add = add nsw i64 %conv, %c
-  call void @consume_i64(i64 %add)
+  tail call void @consume_i64(i64 %add)
   %vecext1 = extractelement <2 x double> %a, i64 0
-  call void @consume_f64(double %vecext1)
+  tail call void @consume_f64(double %vecext1)
   ret void
 }
 
@@ -741,10 +741,10 @@ entry:
   %vecext = extractelement <2 x double> %a, i64 0
   %add = fadd double %vecext, %f
   %add1 = fadd double %add, %c
-  call void @consume_f64(double %add1)
-  call void @consume_i64(i64 %b)
-  call void @consume_f32(float %d)
-  call void @consume_i32(i32 signext %e)
+  tail call void @consume_f64(double %add1)
+  tail call void @consume_i64(i64 %b)
+  tail call void @consume_f32(float %d)
+  tail call void @consume_i32(i32 signext %e)
   ret void
 }
 
@@ -849,10 +849,10 @@ define void @mixed_5(ptr byref(%struct.bar) align 16 %r, ptr byval(%struct.bar) 
 entry:
   %d = getelementptr inbounds i8, ptr %f, i64 12
   %0 = load double, ptr %d, align 4
-  call void @consume_f64(double %0)
+  tail call void @consume_f64(double %0)
   %i = getelementptr inbounds i8, ptr %x, i64 4
   %1 = load i32, ptr %i, align 4
-  call void @consume_i32(i32 signext %1)
+  tail call void @consume_i32(i32 signext %1)
   ret void
 }
 

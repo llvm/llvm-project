@@ -108,7 +108,7 @@ define dso_local void @print_func() {
 ; LINUX64BE-NEXT:    mtlr r0
 ; LINUX64BE-NEXT:    blr
 entry:
-  %call = call signext i32 @puts(ptr noundef nonnull dereferenceable(1) @.str)
-  %call1 = call signext i32 @puts(ptr noundef nonnull dereferenceable(1) @str)
+  %call = tail call signext i32 @puts(ptr noundef nonnull dereferenceable(1) @.str)
+  %call1 = tail call signext i32 @puts(ptr noundef nonnull dereferenceable(1) @str)
   ret void
 }

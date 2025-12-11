@@ -86,7 +86,7 @@ define float @acosf_f32(float %a) {
 ; CHECK: __xl_acosf
 ; CHECK: blr
 entry:
-  %call = call afn float @acosf(float %a)
+  %call = tail call afn float @acosf(float %a)
   ret float %call
 }
 
@@ -95,7 +95,7 @@ define float @acoshf_f32(float %a) {
 ; CHECK: __xl_acoshf
 ; CHECK: blr
 entry:
-  %call = call afn float @acoshf(float %a)
+  %call = tail call afn float @acoshf(float %a)
   ret float %call
 }
 
@@ -104,7 +104,7 @@ define float @asinf_f32(float %a) {
 ; CHECK: __xl_asinf
 ; CHECK: blr
 entry:
-  %call = call afn float @asinf(float %a)
+  %call = tail call afn float @asinf(float %a)
   ret float %call
 }
 
@@ -113,7 +113,7 @@ define float @asinhf_f32(float %a) {
 ; CHECK: __xl_asinhf
 ; CHECK: blr
 entry:
-  %call = call afn float @asinhf(float %a)
+  %call = tail call afn float @asinhf(float %a)
   ret float %call
 }
 
@@ -122,7 +122,7 @@ define float @atan2f_f32(float %a, float %b) {
 ; CHECK: __xl_atan2f
 ; CHECK: blr
 entry:
-  %call = call afn float @atan2f(float %a, float %b)
+  %call = tail call afn float @atan2f(float %a, float %b)
   ret float %call
 }
 
@@ -131,7 +131,7 @@ define float @atanf_f32(float %a) {
 ; CHECK: __xl_atanf
 ; CHECK: blr
 entry:
-  %call = call afn float @atanf(float %a)
+  %call = tail call afn float @atanf(float %a)
   ret float %call
 }
 
@@ -140,7 +140,7 @@ define float @atanhf_f32(float %a) {
 ; CHECK: __xl_atanhf
 ; CHECK: blr
 entry:
-  %call = call afn float @atanhf(float %a)
+  %call = tail call afn float @atanhf(float %a)
   ret float %call
 }
 
@@ -149,7 +149,7 @@ define float @cbrtf_f32(float %a) {
 ; CHECK: __xl_cbrtf
 ; CHECK: blr
 entry:
-  %call = call afn float @cbrtf(float %a)
+  %call = tail call afn float @cbrtf(float %a)
   ret float %call
 }
 
@@ -158,7 +158,7 @@ define float @copysignf_f32(float %a, float %b) {
 ; CHECK: copysignf
 ; CHECK: blr
 entry:
-  %call = call afn float @copysignf(float %a, float %b)
+  %call = tail call afn float @copysignf(float %a, float %b)
   ret float %call
 }
 
@@ -167,7 +167,7 @@ define float @cosf_f32(float %a) {
 ; CHECK: __xl_cosf
 ; CHECK: blr
 entry:
-  %call = call afn float @cosf(float %a)
+  %call = tail call afn float @cosf(float %a)
   ret float %call
 }
 
@@ -176,7 +176,7 @@ define float @coshf_f32(float %a) {
 ; CHECK: __xl_coshf
 ; CHECK: blr
 entry:
-  %call = call afn float @coshf(float %a)
+  %call = tail call afn float @coshf(float %a)
   ret float %call
 }
 
@@ -185,7 +185,7 @@ define float @erfcf_f32(float %a) {
 ; CHECK: __xl_erfcf
 ; CHECK: blr
 entry:
-  %call = call afn float @erfcf(float %a)
+  %call = tail call afn float @erfcf(float %a)
   ret float %call
 }
 
@@ -194,7 +194,7 @@ define float @erff_f32(float %a) {
 ; CHECK: __xl_erff
 ; CHECK: blr
 entry:
-  %call = call afn float @erff(float %a)
+  %call = tail call afn float @erff(float %a)
   ret float %call
 }
 
@@ -203,7 +203,7 @@ define float @expf_f32(float %a) {
 ; CHECK: __xl_expf
 ; CHECK: blr
 entry:
-  %call = call afn float @expf(float %a)
+  %call = tail call afn float @expf(float %a)
   ret float %call
 }
 
@@ -212,7 +212,7 @@ define float @expm1f_f32(float %a) {
 ; CHECK: __xl_expm1f
 ; CHECK: blr
 entry:
-  %call = call afn float @expm1f(float %a)
+  %call = tail call afn float @expm1f(float %a)
   ret float %call
 }
 
@@ -221,7 +221,7 @@ define float @hypotf_f32(float %a, float %b) {
 ; CHECK: __xl_hypotf
 ; CHECK: blr
 entry:
-  %call = call afn float @hypotf(float %a, float %b)
+  %call = tail call afn float @hypotf(float %a, float %b)
   ret float %call
 }
 
@@ -230,7 +230,7 @@ define float @lgammaf_f32(float %a) {
 ; CHECK: __xl_lgammaf
 ; CHECK: blr
 entry:
-  %call = call afn float @lgammaf(float %a)
+  %call = tail call afn float @lgammaf(float %a)
   ret float %call
 }
 
@@ -239,7 +239,7 @@ define float @log10f_f32(float %a) {
 ; CHECK: __xl_log10f
 ; CHECK: blr
 entry:
-  %call = call afn float @log10f(float %a)
+  %call = tail call afn float @log10f(float %a)
   ret float %call
 }
 
@@ -248,7 +248,7 @@ define float @log1pf_f32(float %a) {
 ; CHECK: __xl_log1pf
 ; CHECK: blr
 entry:
-  %call = call afn float @log1pf(float %a)
+  %call = tail call afn float @log1pf(float %a)
   ret float %call
 }
 
@@ -257,7 +257,7 @@ define float @logf_f32(float %a) {
 ; CHECK: __xl_logf
 ; CHECK: blr
 entry:
-  %call = call afn float @logf(float %a)
+  %call = tail call afn float @logf(float %a)
   ret float %call
 }
 
@@ -266,7 +266,7 @@ define float @powf_f32(float %a, float %b) {
 ; CHECK: __xl_powf
 ; CHECK: blr
 entry:
-  %call = call afn float @powf(float %a, float %b)
+  %call = tail call afn float @powf(float %a, float %b)
   ret float %call
 }
 
@@ -275,7 +275,7 @@ define float @rintf_f32(float %a) {
 ; CHECK-NOT: __xl_rintf
 ; CHECK: blr
 entry:
-  %call = call afn float @rintf(float %a)
+  %call = tail call afn float @rintf(float %a)
   ret float %call
 }
 
@@ -284,7 +284,7 @@ define float @sinf_f32(float %a) {
 ; CHECK: __xl_sinf
 ; CHECK: blr
 entry:
-  %call = call afn float @sinf(float %a)
+  %call = tail call afn float @sinf(float %a)
   ret float %call
 }
 
@@ -293,7 +293,7 @@ define float @sinhf_f32(float %a) {
 ; CHECK: __xl_sinhf
 ; CHECK: blr
 entry:
-  %call = call afn float @sinhf(float %a)
+  %call = tail call afn float @sinhf(float %a)
   ret float %call
 }
 
@@ -302,7 +302,7 @@ define float @tanf_f32(float %a) {
 ; CHECK: __xl_tanf
 ; CHECK: blr
 entry:
-  %call = call afn float @tanf(float %a)
+  %call = tail call afn float @tanf(float %a)
   ret float %call
 }
 
@@ -311,7 +311,7 @@ define float @tanhf_f32(float %a) {
 ; CHECK: __xl_tanhf
 ; CHECK: blr
 entry:
-  %call = call afn float @tanhf(float %a)
+  %call = tail call afn float @tanhf(float %a)
   ret float %call
 }
 
@@ -320,7 +320,7 @@ define double @acos_f64(double %a) {
 ; CHECK: __xl_acos
 ; CHECK: blr
 entry:
-  %call = call afn double @acos(double %a)
+  %call = tail call afn double @acos(double %a)
   ret double %call
 }
 
@@ -329,7 +329,7 @@ define double @acosh_f64(double %a) {
 ; CHECK: __xl_acosh
 ; CHECK: blr
 entry:
-  %call = call afn double @acosh(double %a)
+  %call = tail call afn double @acosh(double %a)
   ret double %call
 }
 
@@ -338,7 +338,7 @@ define double @anint_f64(double %a) {
 ; CHECK-NOT: __xl_anint
 ; CHECK: blr
 entry:
-  %call = call afn double @anint(double %a)
+  %call = tail call afn double @anint(double %a)
   ret double %call
 }
 
@@ -347,7 +347,7 @@ define double @asin_f64(double %a) {
 ; CHECK: __xl_asin
 ; CHECK: blr
 entry:
-  %call = call afn double @asin(double %a)
+  %call = tail call afn double @asin(double %a)
   ret double %call
 }
 
@@ -356,7 +356,7 @@ define double @asinh_f64(double %a) {
 ; CHECK: __xl_asinh
 ; CHECK: blr
 entry:
-  %call = call afn double @asinh(double %a)
+  %call = tail call afn double @asinh(double %a)
   ret double %call
 }
 
@@ -365,7 +365,7 @@ define double @atan_f64(double %a) {
 ; CHECK: __xl_atan
 ; CHECK: blr
 entry:
-  %call = call afn double @atan(double %a)
+  %call = tail call afn double @atan(double %a)
   ret double %call
 }
 
@@ -374,7 +374,7 @@ define double @atan2_f64(double %a, double %b) {
 ; CHECK: __xl_atan2
 ; CHECK: blr
 entry:
-  %call = call afn double @atan2(double %a, double %b)
+  %call = tail call afn double @atan2(double %a, double %b)
   ret double %call
 }
 
@@ -383,7 +383,7 @@ define double @atanh_f64(double %a) {
 ; CHECK: __xl_atanh
 ; CHECK: blr
 entry:
-  %call = call afn double @atanh(double %a)
+  %call = tail call afn double @atanh(double %a)
   ret double %call
 }
 
@@ -392,7 +392,7 @@ define double @cbrt_f64(double %a) {
 ; CHECK: __xl_cbrt
 ; CHECK: blr
 entry:
-  %call = call afn double @cbrt(double %a)
+  %call = tail call afn double @cbrt(double %a)
   ret double %call
 }
 
@@ -401,7 +401,7 @@ define double @copysign_f64(double %a, double %b) {
 ; CHECK: copysign
 ; CHECK: blr
 entry:
-  %call = call afn double @copysign(double %a, double %b)
+  %call = tail call afn double @copysign(double %a, double %b)
   ret double %call
 }
 
@@ -410,7 +410,7 @@ define double @cos_f64(double %a) {
 ; CHECK: __xl_cos
 ; CHECK: blr
 entry:
-  %call = call afn double @cos(double %a)
+  %call = tail call afn double @cos(double %a)
   ret double %call
 }
 
@@ -419,7 +419,7 @@ define double @cosh_f64(double %a) {
 ; CHECK: __xl_cosh
 ; CHECK: blr
 entry:
-  %call = call afn double @cosh(double %a)
+  %call = tail call afn double @cosh(double %a)
   ret double %call
 }
 
@@ -428,7 +428,7 @@ define double @cosisin_f64(double %a) {
 ; CHECK-NOT: __xl_cosisin
 ; CHECK: blr
 entry:
-  %call = call afn double @cosisin(double %a)
+  %call = tail call afn double @cosisin(double %a)
   ret double %call
 }
 
@@ -437,7 +437,7 @@ define double @dnint_f64(double %a) {
 ; CHECK-NOT: __xl_dnint
 ; CHECK: blr
 entry:
-  %call = call afn double @dnint(double %a)
+  %call = tail call afn double @dnint(double %a)
   ret double %call
 }
 
@@ -446,7 +446,7 @@ define double @erf_f64(double %a) {
 ; CHECK: __xl_erf
 ; CHECK: blr
 entry:
-  %call = call afn double @erf(double %a)
+  %call = tail call afn double @erf(double %a)
   ret double %call
 }
 
@@ -455,7 +455,7 @@ define double @erfc_f64(double %a) {
 ; CHECK: __xl_erfc
 ; CHECK: blr
 entry:
-  %call = call afn double @erfc(double %a)
+  %call = tail call afn double @erfc(double %a)
   ret double %call
 }
 
@@ -464,7 +464,7 @@ define double @exp_f64(double %a) {
 ; CHECK: __xl_exp
 ; CHECK: blr
 entry:
-  %call = call afn double @exp(double %a)
+  %call = tail call afn double @exp(double %a)
   ret double %call
 }
 
@@ -473,7 +473,7 @@ define double @expm1_f64(double %a) {
 ; CHECK: __xl_expm1
 ; CHECK: blr
 entry:
-  %call = call afn double @expm1(double %a)
+  %call = tail call afn double @expm1(double %a)
   ret double %call
 }
 
@@ -482,7 +482,7 @@ define double @hypot_f64(double %a, double %b) {
 ; CHECK: __xl_hypot
 ; CHECK: blr
 entry:
-  %call = call afn double @hypot(double %a, double %b)
+  %call = tail call afn double @hypot(double %a, double %b)
   ret double %call
 }
 
@@ -491,7 +491,7 @@ define double @lgamma_f64(double %a) {
 ; CHECK: __xl_lgamma
 ; CHECK: blr
 entry:
-  %call = call afn double @lgamma(double %a)
+  %call = tail call afn double @lgamma(double %a)
   ret double %call
 }
 
@@ -500,7 +500,7 @@ define double @log_f64(double %a) {
 ; CHECK: __xl_log
 ; CHECK: blr
 entry:
-  %call = call afn double @log(double %a)
+  %call = tail call afn double @log(double %a)
   ret double %call
 }
 
@@ -509,7 +509,7 @@ define double @log10_f64(double %a) {
 ; CHECK: __xl_log10
 ; CHECK: blr
 entry:
-  %call = call afn double @log10(double %a)
+  %call = tail call afn double @log10(double %a)
   ret double %call
 }
 
@@ -518,7 +518,7 @@ define double @log1p_f64(double %a) {
 ; CHECK: __xl_log1p
 ; CHECK: blr
 entry:
-  %call = call afn double @log1p(double %a)
+  %call = tail call afn double @log1p(double %a)
   ret double %call
 }
 
@@ -527,7 +527,7 @@ define double @pow_f64(double %a, double %b) {
 ; CHECK: __xl_pow
 ; CHECK: blr
 entry:
-  %call = call afn double @pow(double %a, double %b)
+  %call = tail call afn double @pow(double %a, double %b)
   ret double %call
 }
 
@@ -536,7 +536,7 @@ define double @rsqrt_f64(double %a) {
 ; CHECK: __xl_rsqrt
 ; CHECK: blr
 entry:
-  %call = call afn double @rsqrt(double %a)
+  %call = tail call afn double @rsqrt(double %a)
   ret double %call
 }
 
@@ -545,7 +545,7 @@ define double @sin_f64(double %a) {
 ; CHECK: __xl_sin
 ; CHECK: blr
 entry:
-  %call = call afn double @sin(double %a)
+  %call = tail call afn double @sin(double %a)
   ret double %call
 }
 
@@ -554,7 +554,7 @@ define double @sincos_f64(double %a) {
 ; CHECK-NOT: __xl_sincos
 ; CHECK: blr
 entry:
-  %call = call afn double @sincos(double %a)
+  %call = tail call afn double @sincos(double %a)
   ret double %call
 }
 
@@ -563,7 +563,7 @@ define double @sinh_f64(double %a) {
 ; CHECK: __xl_sinh
 ; CHECK: blr
 entry:
-  %call = call afn double @sinh(double %a)
+  %call = tail call afn double @sinh(double %a)
   ret double %call
 }
 
@@ -572,7 +572,7 @@ define double @sqrt_f64(double %a) {
 ; CHECK: __xl_sqrt
 ; CHECK: blr
 entry:
-  %call = call afn double @sqrt(double %a)
+  %call = tail call afn double @sqrt(double %a)
   ret double %call
 }
 
@@ -581,7 +581,7 @@ define double @tan_f64(double %a) {
 ; CHECK: __xl_tan
 ; CHECK: blr
 entry:
-  %call = call afn double @tan(double %a)
+  %call = tail call afn double @tan(double %a)
   ret double %call
 }
 
@@ -590,7 +590,7 @@ define double @tanh_f64(double %a) {
 ; CHECK: __xl_tanh
 ; CHECK: blr
 entry:
-  %call = call afn double @tanh(double %a)
+  %call = tail call afn double @tanh(double %a)
   ret double %call
 }
 
@@ -599,7 +599,7 @@ define float @__acosf_finite_f32(float %a) {
 ; CHECK: __xl_acosf
 ; CHECK: blr
 entry:
-  %call = call afn float @__acosf_finite(float %a)
+  %call = tail call afn float @__acosf_finite(float %a)
   ret float %call
 }
 
@@ -608,7 +608,7 @@ define float @__acoshf_finite_f32(float %a) {
 ; CHECK: __xl_acoshf
 ; CHECK: blr
 entry:
-  %call = call afn float @__acoshf_finite(float %a)
+  %call = tail call afn float @__acoshf_finite(float %a)
   ret float %call
 }
 
@@ -617,7 +617,7 @@ define float @__asinf_finite_f32(float %a) {
 ; CHECK: __xl_asinf
 ; CHECK: blr
 entry:
-  %call = call afn float @__asinf_finite(float %a)
+  %call = tail call afn float @__asinf_finite(float %a)
   ret float %call
 }
 
@@ -626,7 +626,7 @@ define float @__atan2f_finite_f32(float %a, float %b) {
 ; CHECK: __xl_atan2f
 ; CHECK: blr
 entry:
-  %call = call afn float @__atan2f_finite(float %a, float %b)
+  %call = tail call afn float @__atan2f_finite(float %a, float %b)
   ret float %call
 }
 
@@ -635,7 +635,7 @@ define float @__atanhf_finite_f32(float %a) {
 ; CHECK: __xl_atanhf
 ; CHECK: blr
 entry:
-  %call = call afn float @__atanhf_finite(float %a)
+  %call = tail call afn float @__atanhf_finite(float %a)
   ret float %call
 }
 
@@ -644,7 +644,7 @@ define float @__coshf_finite_f32(float %a) {
 ; CHECK: __xl_coshf
 ; CHECK: blr
 entry:
-  %call = call afn float @__coshf_finite(float %a)
+  %call = tail call afn float @__coshf_finite(float %a)
   ret float %call
 }
 define float @__expf_finite_f32(float %a) {
@@ -652,7 +652,7 @@ define float @__expf_finite_f32(float %a) {
 ; CHECK: __xl_expf
 ; CHECK: blr
 entry:
-  %call = call afn float @__expf_finite(float %a)
+  %call = tail call afn float @__expf_finite(float %a)
   ret float %call
 }
 define float @__logf_finite_f32(float %a) {
@@ -660,7 +660,7 @@ define float @__logf_finite_f32(float %a) {
 ; CHECK: __xl_logf
 ; CHECK: blr
 entry:
-  %call = call afn float @__logf_finite(float %a)
+  %call = tail call afn float @__logf_finite(float %a)
   ret float %call
 }
 define float @__log10f_finite_f32(float %a) {
@@ -668,7 +668,7 @@ define float @__log10f_finite_f32(float %a) {
 ; CHECK: __xl_log10f
 ; CHECK: blr
 entry:
-  %call = call afn float @__log10f_finite(float %a)
+  %call = tail call afn float @__log10f_finite(float %a)
   ret float %call
 }
 define float @__powf_finite_f32(float %a, float %b) {
@@ -676,7 +676,7 @@ define float @__powf_finite_f32(float %a, float %b) {
 ; CHECK: __xl_powf
 ; CHECK: blr
 entry:
-  %call = call afn float @__powf_finite(float %a, float %b)
+  %call = tail call afn float @__powf_finite(float %a, float %b)
   ret float %call
 }
 define float @__sinhf_finite_f32(float %a) {
@@ -684,7 +684,7 @@ define float @__sinhf_finite_f32(float %a) {
 ; CHECK: __xl_sinhf
 ; CHECK: blr
 entry:
-  %call = call afn float @__sinhf_finite(float %a)
+  %call = tail call afn float @__sinhf_finite(float %a)
   ret float %call
 }
 
@@ -693,7 +693,7 @@ define double @__acos_finite_f64(double %a) {
 ; CHECK: __xl_acos
 ; CHECK: blr
 entry:
-  %call = call afn double @__acos_finite(double %a)
+  %call = tail call afn double @__acos_finite(double %a)
   ret double %call
 }
 
@@ -702,7 +702,7 @@ define double @__acosh_finite_f64(double %a) {
 ; CHECK: __xl_acosh
 ; CHECK: blr
 entry:
-  %call = call afn double @__acosh_finite(double %a)
+  %call = tail call afn double @__acosh_finite(double %a)
   ret double %call
 }
 
@@ -711,7 +711,7 @@ define double @__asin_finite_f64(double %a) {
 ; CHECK: __xl_asin
 ; CHECK: blr
 entry:
-  %call = call afn double @__asin_finite(double %a)
+  %call = tail call afn double @__asin_finite(double %a)
   ret double %call
 }
 
@@ -720,7 +720,7 @@ define double @__atan2_finite_f64(double %a, double %b) {
 ; CHECK: __xl_atan2
 ; CHECK: blr
 entry:
-  %call = call afn double @__atan2_finite(double %a, double %b)
+  %call = tail call afn double @__atan2_finite(double %a, double %b)
   ret double %call
 }
 
@@ -729,7 +729,7 @@ define double @__atanh_finite_f64(double %a) {
 ; CHECK: __xl_atanh
 ; CHECK: blr
 entry:
-  %call = call afn double @__atanh_finite(double %a)
+  %call = tail call afn double @__atanh_finite(double %a)
   ret double %call
 }
 
@@ -738,7 +738,7 @@ define double @__cosh_finite_f64(double %a) {
 ; CHECK: __xl_cosh
 ; CHECK: blr
 entry:
-  %call = call afn double @__cosh_finite(double %a)
+  %call = tail call afn double @__cosh_finite(double %a)
   ret double %call
 }
 
@@ -747,7 +747,7 @@ define double @__exp_finite_f64(double %a) {
 ; CHECK: __xl_exp
 ; CHECK: blr
 entry:
-  %call = call afn double @__exp_finite(double %a)
+  %call = tail call afn double @__exp_finite(double %a)
   ret double %call
 }
 
@@ -756,7 +756,7 @@ define double @__log_finite_f64(double %a) {
 ; CHECK: __xl_log
 ; CHECK: blr
 entry:
-  %call = call afn double @__log_finite(double %a)
+  %call = tail call afn double @__log_finite(double %a)
   ret double %call
 }
 
@@ -765,7 +765,7 @@ define double @__log10_finite_f64(double %a) {
 ; CHECK: __xl_log10
 ; CHECK: blr
 entry:
-  %call = call afn double @__log10_finite(double %a)
+  %call = tail call afn double @__log10_finite(double %a)
   ret double %call
 }
 
@@ -774,7 +774,7 @@ define double @__pow_finite_f64(double %a, double %b) {
 ; CHECK: __xl_pow
 ; CHECK: blr
 entry:
-  %call = call afn double @__pow_finite(double %a, double %b)
+  %call = tail call afn double @__pow_finite(double %a, double %b)
   ret double %call
 }
 
@@ -783,6 +783,6 @@ define double @__sinh_finite_f64(double %a) {
 ; CHECK: __xl_sinh
 ; CHECK: blr
 entry:
-  %call = call afn double @__sinh_finite(double %a)
+  %call = tail call afn double @__sinh_finite(double %a)
   ret double %call
 }
