@@ -963,7 +963,6 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
         if (!CallTarget.isIndirect())
           CallTarget = MachineLocation(CalleeOp.getReg()); // Might be zero.
-
       } else if (CalleeOp.isGlobal()) {
         CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
         if (CalleeDecl)
