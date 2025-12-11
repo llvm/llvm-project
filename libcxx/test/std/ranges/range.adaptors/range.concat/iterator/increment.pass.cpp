@@ -32,6 +32,9 @@ struct InputRange {
   constexpr sentinel_wrapper<iterator> end() const { return sentinel_wrapper<iterator>(iterator(end_)); }
 };
 
+static_assert(!std::ranges::forward_range<InputRange>);
+static_assert(std::ranges::input_range<InputRange>);
+
 constexpr bool test() {
   std::array<int, 4> a{1, 2, 3, 4};
   std::array<double, 4> b{1.0, 2.0, 3.0};
