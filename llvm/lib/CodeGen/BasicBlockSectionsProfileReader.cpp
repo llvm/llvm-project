@@ -64,16 +64,16 @@ bool BasicBlockSectionsProfileReader::isFunctionHot(StringRef FuncName) const {
 SmallVector<BBClusterInfo>
 BasicBlockSectionsProfileReader::getClusterInfoForFunction(
     StringRef FuncName) const {
-  auto R = ProgramDirectivesAndProfile.find(getAliasName(FuncName));
-  return R != ProgramDirectivesAndProfile.end() ? R->second.ClusterInfo
+  auto R = ProgramOptimizationProfile.find(getAliasName(FuncName));
+  return R != ProgramOptimizationProfile.end() ? R->second.ClusterInfo
                                                 : SmallVector<BBClusterInfo>();
 }
 
 SmallVector<SmallVector<unsigned>>
 BasicBlockSectionsProfileReader::getClonePathsForFunction(
     StringRef FuncName) const {
-  auto R = ProgramDirectivesAndProfile.find(getAliasName(FuncName));
-  return R != ProgramDirectivesAndProfile.end()
+  auto R = ProgramOptimizationProfile.find(getAliasName(FuncName));
+  return R != ProgramOptimizationProfile.end()
              ? R->second.ClonePaths
              : SmallVector<SmallVector<unsigned>>();
 }
@@ -149,7 +149,7 @@ uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
 //                                ....
 // ****************************************************************************
 Error BasicBlockSectionsProfileReader::ReadV1Profile() {
-  auto FI = ProgramDirectivesAndProfile.end();
+  auto FI = ProgramOptimizationProfile.end();
 
   // Current cluster ID corresponding to this function.
   unsigned CurrentCluster = 0;
@@ -193,7 +193,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       if (!FunctionFound) {
         // Skip the following profile by setting the profile iterator (FI) to
         // the past-the-end element.
-        FI = ProgramDirectivesAndProfile.end();
+        FI = ProgramOptimizationProfile.end();
         DIFilename = "";
         continue;
       }
@@ -202,7 +202,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
 
       // Prepare for parsing clusters of this function name.
       // Start a new cluster map for this function name.
-      auto R = ProgramDirectivesAndProfile.try_emplace(Values.front());
+      auto R = ProgramOptimizationProfile.try_emplace(Values.front());
       // Report error when multiple profiles have been specified for the same
       // function.
       if (!R.second)
@@ -219,7 +219,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     case 'c': // Basic block cluster specifier.
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == ProgramDirectivesAndProfile.end())
+      if (FI == ProgramOptimizationProfile.end())
         continue;
       // Reset current cluster position.
       CurrentPosition = 0;
@@ -240,7 +240,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     case 'p': { // Basic block cloning path specifier.
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == ProgramDirectivesAndProfile.end())
+      if (FI == ProgramOptimizationProfile.end())
         continue;
       SmallSet<unsigned, 5> BBsInPath;
       FI->second.ClonePaths.push_back({});
@@ -260,7 +260,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     case 'g': { // CFG profile specifier.
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == ProgramDirectivesAndProfile.end())
+      if (FI == ProgramOptimizationProfile.end())
         continue;
       // For each node, its CFG profile is encoded as
       // <src>:<count>,<sink_1>:<count_1>,<sink_2>:<count_2>,...
@@ -292,7 +292,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     case 'h': { // Basic block hash secifier.
       // Skip the profile when the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == ProgramDirectivesAndProfile.end())
+      if (FI == ProgramOptimizationProfile.end())
         continue;
       for (auto BBIDHashStr : Values) {
         auto [BBIDStr, HashStr] = BBIDHashStr.split(':');
@@ -318,7 +318,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
 }
 
 Error BasicBlockSectionsProfileReader::ReadV0Profile() {
-  auto FI = ProgramDirectivesAndProfile.end();
+  auto FI = ProgramOptimizationProfile.end();
   // Current cluster ID corresponding to this function.
   unsigned CurrentCluster = 0;
   // Current position in the current cluster.
@@ -339,7 +339,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
     if (S.consume_front("!")) {
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == ProgramDirectivesAndProfile.end())
+      if (FI == ProgramOptimizationProfile.end())
         continue;
       SmallVector<StringRef, 4> BBIDs;
       S.split(BBIDs, ' ');
@@ -391,7 +391,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
       if (!FunctionFound) {
         // Skip the following profile by setting the profile iterator (FI) to
         // the past-the-end element.
-        FI = ProgramDirectivesAndProfile.end();
+        FI = ProgramOptimizationProfile.end();
         continue;
       }
       for (size_t i = 1; i < Aliases.size(); ++i)
@@ -399,7 +399,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
 
       // Prepare for parsing clusters of this function name.
       // Start a new cluster map for this function name.
-      auto R = ProgramDirectivesAndProfile.try_emplace(Aliases.front());
+      auto R = ProgramOptimizationProfile.try_emplace(Aliases.front());
       // Report error when multiple profiles have been specified for the same
       // function.
       if (!R.second)

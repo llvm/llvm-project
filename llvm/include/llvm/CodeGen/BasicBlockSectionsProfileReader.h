@@ -71,8 +71,8 @@ struct CFGProfile {
   }
 };
 
-// This represents the raw input profile for one function.
-struct FunctionProfile {
+// This represents the raw optimization profile for one function.
+struct FunctionOptimizationProfile {
   // BB Cluster information specified by `UniqueBBID`s.
   SmallVector<BBClusterInfo> ClusterInfo;
   // Paths to clone. A path a -> b -> c -> d implies cloning b, c, and d along
@@ -162,10 +162,10 @@ private:
   // data for (all or some of) its basic blocks. The cluster information for
   // every basic block includes its cluster ID along with the position of the
   // basic block in that cluster.
-  StringMap<FunctionProfile> ProgramDirectivesAndProfile;
+  StringMap<FunctionOptimizationProfile> ProgramOptimizationProfile;
 
   // Some functions have alias names. We use this map to find the main alias
-  // name which appears in ProgramDirectivesAndProfile as a key.
+  // name which appears in ProgramOptimizationProfile as a key.
   StringMap<StringRef> FuncAliasMap;
 };
 
