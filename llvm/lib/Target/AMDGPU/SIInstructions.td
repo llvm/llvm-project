@@ -3860,9 +3860,6 @@ let SubtargetPredicate = isGFX9Plus in {
 let True16Predicate = NotHasTrue16BitInsts in
   def : PackB32Pat<V_PACK_B32_F16_e64>;
 
-let True16Predicate = UseRealTrue16Insts in
-  def : PackB32Pat<V_PACK_B32_F16_t16_e64>;
-
 let True16Predicate = UseFakeTrue16Insts in
   def : PackB32Pat<V_PACK_B32_F16_fake16_e64>;
 } // End SubtargetPredicate = isGFX9Plus
