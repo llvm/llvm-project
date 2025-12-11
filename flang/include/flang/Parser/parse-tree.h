@@ -4031,27 +4031,45 @@ struct OmpFallbackModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpFallbackModifier, Value);
 };
 
-// REF: [5.1:217-220], [5.2:293-294]
+// Ref: [6.0:470-471]
 //
-// OmpInteropRuntimeIdentifier ->                   // since 5.2
-// CharLiteralConstant || ScalarIntConstantExpr
-struct OmpInteropRuntimeIdentifier {
-  UNION_CLASS_BOILERPLATE(OmpInteropRuntimeIdentifier);
-  std::variant<CharLiteralConstant, ScalarIntConstantExpr> u;
+// preference-selector ->                           // since 6.0
+//    FR(foreign-runtime-identifier) |
+//    ATTR(preference-property-extension, ...)
+struct OmpPreferenceSelector {
+  UNION_CLASS_BOILERPLATE(OmpPreferenceSelector);
+  using ForeignRuntimeIdentifier = common::Indirection<Expr>;
+  using PreferencePropertyExtension = common::Indirection<Expr>;
+  using Extensions = std::list<PreferencePropertyExtension>;
+  std::variant<ForeignRuntimeIdentifier, Extensions> u;
 };
 
-// REF: [5.1:217-220], [5.2:293-294]
+// Ref: [6.0:470-471]
 //
-// OmpInteropPreference ->                          // since 5.2
-// ([OmpRuntimeIdentifier, ...])
-struct OmpInteropPreference {
+// preference-specification ->
+//    {preference-selector...} |                    // since 6.0
+//    foreign-runtime-identifier                    // since 5.1
+struct OmpPreferenceSpecification {
+  UNION_CLASS_BOILERPLATE(OmpPreferenceSpecification);
+  using ForeignRuntimeIdentifier =
+      OmpPreferenceSelector::ForeignRuntimeIdentifier;
+  std::variant<std::list<OmpPreferenceSelector>, ForeignRuntimeIdentifier> u;
+};
+
+// REF: [5.1:217-220], [5.2:293-294], [6.0:470-471]
+//
+// prefer-type ->                                   // since 5.1
+//    PREFER_TYPE(preference-specification...)
+struct OmpPreferType {
   WRAPPER_CLASS_BOILERPLATE(
-      OmpInteropPreference, std::list<OmpInteropRuntimeIdentifier>);
+      OmpPreferType, std::list<OmpPreferenceSpecification>);
 };
 
-// REF: [5.1:217-220], [5.2:293-294]
+// REF: [5.1:217-220], [5.2:293-294], [6.0:470-471]
 //
-// InteropType -> target || targetsync              // since 5.2
+// interop-type ->                                  // since 5.1
+//    TARGET |
+//    TARGETSYNC
 // There can be at most only two interop-type.
 struct OmpInteropType {
   ENUM_CLASS(Value, Target, TargetSync)
@@ -4997,7 +5015,7 @@ struct OmpWhenClause {
 // There can be at most only two interop-type.
 struct OmpInitClause {
   TUPLE_CLASS_BOILERPLATE(OmpInitClause);
-  MODIFIER_BOILERPLATE(OmpInteropPreference, OmpInteropType);
+  MODIFIER_BOILERPLATE(OmpPreferType, OmpInteropType);
   std::tuple<MODIFIERS(), OmpObject> t;
 };
 

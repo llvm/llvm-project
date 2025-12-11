@@ -372,22 +372,6 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpFallbackModifier>() {
 }
 
 template <>
-const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropPreference>() {
-  static const OmpModifierDescriptor desc{
-      /*name=*/"interop-preference",
-      /*props=*/
-      {
-          {52, {OmpProperty::Unique}},
-      },
-      /*clauses=*/
-      {
-          {52, {Clause::OMPC_init}},
-      },
-  };
-  return desc;
-}
-
-template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropType>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"interop-type",
@@ -548,6 +532,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderingModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_schedule}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPreferType>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"prefer-type",
+      /*props=*/
+      {
+          {52, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_init}},
       },
   };
   return desc;

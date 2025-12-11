@@ -19921,7 +19921,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         if (!Stride) {
           const SCEV *StrideSCEV = SPtrInfo.StrideSCEV;
           assert(StrideSCEV && "Neither StrideVal nor StrideSCEV were set.");
-          SCEVExpander Expander(*SE, *DL, "strided-load-vec");
+          SCEVExpander Expander(*SE, "strided-load-vec");
           Stride = Expander.expandCodeFor(StrideSCEV, StrideSCEV->getType(),
                                           &*Builder.GetInsertPoint());
         }

@@ -3904,9 +3904,19 @@ def warn_attribute_dllimport_static_field_definition : Warning<
 def warn_attribute_dllexport_explicit_instantiation_decl : Warning<
   "explicit instantiation declaration should not be 'dllexport'">,
   InGroup<DllexportExplicitInstantiationDecl>;
-def warn_attribute_dllexport_explicit_instantiation_def : Warning<
+def warn_attr_dllexport_explicit_inst_def : Warning<
+  "'dllexport' attribute ignored on explicit instantiation definition">,
+  InGroup<DllexportExplicitInstantiation>;
+def warn_attr_dllexport_explicit_inst_def_mismatch : Warning<
   "'dllexport' attribute ignored on explicit instantiation definition">,
   InGroup<IgnoredAttributes>;
+def note_prev_decl_missing_dllexport : Note<
+  "'dllexport' attribute is missing on previous declaration">;
+def warn_dllexport_on_decl_ignored : Warning<
+  "explicit instantiation definition is not exported without 'dllexport'">,
+  InGroup<IgnoredAttributes>;
+def note_dllexport_on_decl : Note<
+  "'dllexport' attribute on the declaration is ignored">;
 def warn_attribute_exclude_from_explicit_instantiation_local_class : Warning<
   "%0 attribute ignored on local class%select{| member}1">,
   InGroup<IgnoredAttributes>;
