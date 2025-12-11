@@ -751,6 +751,26 @@ BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
+//  DataMemberType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+DataMemberType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                                  ::mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider size differences under different ABIs
+  assert(!MissingFeatures::cxxABI());
+  return llvm::TypeSize::getFixed(64);
+}
+
+uint64_t
+DataMemberType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                ::mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider alignment differences under different ABIs
+  assert(!MissingFeatures::cxxABI());
+  return 8;
+}
+
+//===----------------------------------------------------------------------===//
 //  VPtrType Definitions
 //===----------------------------------------------------------------------===//
 
