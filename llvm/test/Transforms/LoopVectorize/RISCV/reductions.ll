@@ -1258,3 +1258,61 @@ declare float @llvm.fmuladd.f32(float, float, float)
 attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
 attributes #1 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "target-features"="+zfhmin,+zvfhmin"}
 attributes #2 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "target-features"="+zfbfmin,+zvfbfmin"}
+
+define i32 @cond_add_rdx(ptr %p) {
+; CHECK-LABEL: define i32 @cond_add_rdx(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 4, i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <vscale x 4 x i32> [[TMP1]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i32 [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP3]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <vscale x 4 x i8> [[VP_OP_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = select <vscale x 4 x i1> [[TMP2]], <vscale x 4 x i1> [[TMP4]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i32> [[VEC_PHI]], splat (i32 1)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i32> [[TMP6]], <vscale x 4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP7]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[PREDPHI]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP0]])
+; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP0]], [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP7]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[TMP9]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %latch ]
+  %gep = getelementptr i8, ptr %p, i32 %iv
+  %x = load i8, ptr %gep
+  ; Must be a switch, not a br to recreate the right VPBlendRecipe
+  switch i8 %x, label %latch [ i8 0, label %if ]
+
+if:
+  %add = add i32 %sum, 1
+  br label %latch
+
+latch:
+  %sum.next = phi i32 [ %add, %if ], [ %sum, %loop ]
+  %iv.next = add i32 %iv, 1
+  %ec = icmp uge i32 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %sum.next
+}
