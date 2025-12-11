@@ -534,7 +534,7 @@ namespace vardecl_in_if_condition {
     if (auto* obj = provide(); !obj) // expected-warning@{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
       return nullptr;
     else
-      return obj;
+      return obj->next();
   }
 
 }
