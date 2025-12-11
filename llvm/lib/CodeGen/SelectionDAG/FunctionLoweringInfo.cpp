@@ -442,7 +442,7 @@ FunctionLoweringInfo::GetLiveOutRegInfo(Register Reg, unsigned BitWidth) {
 /// register based on the LiveOutInfo of its operands.
 void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   Type *Ty = PN->getType();
-  if (!Ty->isIntegerTy() || Ty->isVectorTy())
+  if (!Ty->isIntegerTy())
     return;
 
   SmallVector<EVT, 1> ValueVTs;
