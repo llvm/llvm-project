@@ -28,7 +28,7 @@ bb3:
 
 ; CHECK: 	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text.foo
 ; CHECK-NEXT:	.byte	5		# version
-; CHECK-NEXT:	.byte	143		# feature
+; CHECK-NEXT:	.short	143		# feature
 ; CHECK:	.quad	.Lfunc_begin0	# base address
 ; CHECK:	.byte	0		# BB id
 ; CHECK:	.byte	1		# BB id
@@ -80,7 +80,7 @@ bb2:
 
 ; CHECK: 	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text.bar
 ; CHECK-NEXT:	.byte	5		# version
-; CHECK-NEXT:	.byte	7		# feature
+; CHECK-NEXT:	.short	7		# feature
 ; CHECK:	.quad	.Lfunc_begin1	# function address
 ; CHECK:	.byte	0		# BB id
 ; CHECK:	.byte	1		# BB id

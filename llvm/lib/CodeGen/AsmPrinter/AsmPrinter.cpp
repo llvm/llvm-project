@@ -1476,7 +1476,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->AddComment("feature");
   auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls,
                                       FuncCFGProfile);
-  OutStreamer->emitInt8(Features.encode());
+  OutStreamer->emitInt16(Features.encode());
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
     OutStreamer->AddComment("number of basic block ranges");
