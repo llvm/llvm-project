@@ -640,7 +640,7 @@ Status SwiftExpressionSourceCode::GetText(
     if (triple.isOSDarwin()) {
       if (auto process_sp = exe_ctx.GetProcessSP()) {
         os_vers << getAvailabilityName(triple) << " ";
-        if (options.GetDisableAvailability()) {
+        if (options.GetUseContextFreeSwiftPrintObject()) {
           // Disable availability by setting the OS version to 9999. This
           // placeholder OS version used for future OS versions when building
           // the Swift standard library locally.
