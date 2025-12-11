@@ -16405,8 +16405,12 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
     unsigned EltBits = VecVT.getScalarSizeInBits();
     if (ShAmtVal != EltBits || (EltBits != 16 && EltBits != 32))
       return SDValue();
-    if (LHSIsSExt && RHSIsZExt)
+    if ((LHSIsSExt && RHSIsZExt) || (LHSIsZExt && RHSIsSExt)) {
       Opc = RISCVISD::PMULHSU;
+      // commuted case
+      if (LHSIsZExt && RHSIsSExt)
+        std::swap(A, B);
+    }
     else
       return SDValue();
     break;
