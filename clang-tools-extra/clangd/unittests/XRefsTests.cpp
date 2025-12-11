@@ -110,7 +110,7 @@ TEST(HighlightsTest, All) {
           [[~]]Foo() {};
         };
         void foo() {
-          Foo f;
+          Foo [[f]];
           f.[[^~]]Foo();
         }
       )cpp",
@@ -2242,13 +2242,30 @@ TEST(FindReferences, WithinAST) {
        class $def[[Foo]] {};
        void func($(func)[[Fo^o]]<int>);
       )cpp",
-      R"cpp(// Not touching any identifiers.
+      R"cpp(// Destructor not referenced by static identifiers.
         struct Foo {
           $def(Foo)[[~]]Foo() {};
         };
         void foo() {
-          Foo f;
+          static Foo f;
           f.$(foo)[[^~]]Foo();
+        }
+      )cpp",
+      R"cpp(// Destructor referenced by local varable.
+        struct Foo {
+          $def(Foo)[[^~]]Foo() {};
+        };
+        void foo() {
+          Foo $(foo)[[f]];
+        }
+      )cpp",
+      R"cpp(// Destructor referenced by temporary.
+        struct Foo {
+          $def(Foo)[[^~]]Foo() {};
+        };
+        void foo(Foo f) {
+          $(foo)[[Foo]]();
+          foo($(foo)[[f]]);
         }
       )cpp",
       R"cpp(// Lambda capture initializer
