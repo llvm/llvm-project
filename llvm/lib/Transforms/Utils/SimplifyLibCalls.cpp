@@ -3215,6 +3215,40 @@ Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
   return ConstantFP::get(CI->getType(), MaxVal);
 }
 
+/// Constant folds hypot
+Value *LibCallSimplifier::optimizeHypot(CallInst *CI, IRBuilderBase &B) {
+
+  const APFloat *X, *Y;
+  if (!match(CI->getArgOperand(0), m_APFloat(X)) ||
+      !match(CI->getArgOperand(1), m_APFloat(Y))) {
+    return nullptr;
+  }
+  Type *Ty = CI->getType();
+  APFloat Res(X->getSemantics());
+
+  // Only support float and double, as std::hypot doesn't support extended precision types.
+  if (Ty->isFloatTy())
+    Res = APFloat(std::hypot(X->convertToFloat(), Y->convertToFloat()));
+  else if(Ty->isDoubleTy())
+    Res = APFloat(std::hypot(X->convertToDouble(), Y->convertToDouble()));
+  else {
+    return nullptr;
+  }
+
+  // We can fold in the following cases:
+  // 1. Function doesn't access memory (intrinsic, no errno).
+  // 2. Fast-math is enabled (ignore errno).
+  if (CI->doesNotAccessMemory() || CI->isFast())
+    return ConstantFP::get(Ty, Res);
+
+  // 3. Result is finite OR inputs are non-finite (won't set errno).
+  //    hypot only sets errno on overflow with finite inputs.
+  if (Res.isFinite() || !X->isFinite() || !Y->isFinite())
+    return ConstantFP::get(Ty, Res);
+
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // Integer Library Call Optimizations
 //===----------------------------------------------------------------------===//
@@ -4140,6 +4174,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_fdimf:
   case LibFunc_fdiml:
     return optimizeFdim(CI, Builder);
+  case LibFunc_hypot:
+  case LibFunc_hypotf:
+  case LibFunc_hypotl:
+    return optimizeHypot(CI, Builder);
   case LibFunc_fminf:
   case LibFunc_fmin:
   case LibFunc_fminl:
