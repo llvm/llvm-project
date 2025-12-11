@@ -515,9 +515,9 @@ lldb_private::Address ObjectFileXCOFF::GetEntryPointAddress() {
   if (section_sp) {
     lldb::offset_t offset_ptr = section_sp->GetFileOffset() + (vm_addr - section_sp->GetFileAddress());
     if(m_binary->is64Bit())
-        vm_addr = m_data.GetU64(&offset_ptr);
+        vm_addr = m_data_nsp->GetU64(&offset_ptr);
     else
-        vm_addr = m_data.GetU32(&offset_ptr);
+        vm_addr = m_data_nsp->GetU32(&offset_ptr);
   }
 
   if (!section_list)
