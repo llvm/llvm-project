@@ -1102,10 +1102,11 @@ ObjectID OnDiskGraphDB::getExternalReference(const IndexProxy &I) {
 }
 
 std::optional<ObjectID>
-OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest) {
+OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest,
+                                    bool CheckUpstream) {
   auto tryUpstream =
       [&](std::optional<IndexProxy> I) -> std::optional<ObjectID> {
-    if (!UpstreamDB)
+    if (!CheckUpstream || !UpstreamDB)
       return std::nullopt;
     std::optional<ObjectID> UpstreamID =
         UpstreamDB->getExistingReference(Digest);
@@ -1135,6 +1136,15 @@ OnDiskGraphDB::getIndexProxyFromRef(InternalRef Ref) const {
       Index.recoverFromFileOffset(Ref.getFileOffset());
   if (LLVM_UNLIKELY(!P))
     report_fatal_error("OnDiskCAS: corrupt internal reference");
+  return getIndexProxyFromPointer(P);
+}
+
+Expected<OnDiskGraphDB::IndexProxy>
+OnDiskGraphDB::getIndexProxyFromRefChecked(InternalRef Ref) const {
+  OnDiskHashMappedTrie::const_pointer P =
+      Index.recoverFromFileOffset(Ref.getFileOffset());
+  if (LLVM_UNLIKELY(!P))
+    return createStringError(make_error_code(std::errc::protocol_error), "corrupt internal reference");
   return getIndexProxyFromPointer(P);
 }
 
@@ -1232,14 +1242,19 @@ OnDiskGraphDB::ObjectPresence
 OnDiskGraphDB::getObjectPresence(ObjectID ExternalRef,
                                  bool CheckUpstream) const {
   InternalRef Ref = getInternalRef(ExternalRef);
-  IndexProxy I = getIndexProxyFromRef(Ref);
-  TrieRecord::Data Object = I.Ref.load();
+  Expected<IndexProxy> I = getIndexProxyFromRefChecked(Ref);
+  if (!I) {
+    // FIXME: this decision should be migrated to callers.
+    consumeError(I.takeError());
+    return ObjectPresence::Missing;
+  }
+  TrieRecord::Data Object = I->Ref.load();
   if (Object.SK != TrieRecord::StorageKind::Unknown)
     return ObjectPresence::InPrimaryDB;
   if (!CheckUpstream || !UpstreamDB)
     return ObjectPresence::Missing;
   std::optional<ObjectID> UpstreamID =
-      UpstreamDB->getExistingReference(getDigest(I));
+      UpstreamDB->getExistingReference(getDigest(*I));
   return UpstreamID.has_value() ? ObjectPresence::OnlyInUpstreamDB
                                 : ObjectPresence::Missing;
 }
