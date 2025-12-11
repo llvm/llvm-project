@@ -2379,18 +2379,14 @@ foreach vti = AllFloatVectors in {
     // 13.12. Vector Floating-Point Sign-Injection Instructions
     def : Pat<(riscv_fabs_vl (vti.Vector vti.RegClass:$rs), (vti.Mask VMV0:$vm),
                              VLOpFrag),
-              (!cast<Instruction>("PseudoVFSGNJX_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX #"_E"#vti.SEW#"_MASK")
+              (!cast<Instruction>("PseudoVFSGNJX_VV_"# vti.LMul.MX #"_E"#vti.SEW#"_MASK")
                    (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs,
                    vti.RegClass:$rs, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
                    TA_MA)>;
     // Handle fneg with VFSGNJN using the same input for both operands.
     def : Pat<(riscv_fneg_vl (vti.Vector vti.RegClass:$rs), (vti.Mask VMV0:$vm),
                              VLOpFrag),
-              (!cast<Instruction>("PseudoVFSGNJN_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX#"_E"#vti.SEW #"_MASK")
+              (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX#"_E"#vti.SEW #"_MASK")
                    (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs,
                    vti.RegClass:$rs, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
                    TA_MA)>;
@@ -2400,9 +2396,7 @@ foreach vti = AllFloatVectors in {
                                   vti.RegClass:$passthru,
                                   (vti.Mask VMV0:$vm),
                                   VLOpFrag),
-              (!cast<Instruction>("PseudoVFSGNJ_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX#"_E"#vti.SEW#"_MASK")
+              (!cast<Instruction>("PseudoVFSGNJ_VV_"# vti.LMul.MX#"_E"#vti.SEW#"_MASK")
                    vti.RegClass:$passthru, vti.RegClass:$rs1,
                    vti.RegClass:$rs2, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
                    TAIL_AGNOSTIC)>;
@@ -2414,9 +2408,7 @@ foreach vti = AllFloatVectors in {
                                   srcvalue,
                                   (vti.Mask true_mask),
                                   VLOpFrag),
-              (!cast<Instruction>("PseudoVFSGNJN_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX#"_E"#vti.SEW)
+              (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX#"_E"#vti.SEW)
         (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1, vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW, TA_MA)>;
 
@@ -2425,9 +2417,7 @@ foreach vti = AllFloatVectors in {
                                   vti.RegClass:$passthru,
                                   (vti.Mask VMV0:$vm),
                                   VLOpFrag),
-              (!cast<Instruction>("PseudoVFSGNJ_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "V"#vti.ScalarSuffix#"_"# vti.LMul.MX#"_E"#vti.SEW#"_MASK")
+              (!cast<Instruction>("PseudoVFSGNJ_V"#vti.ScalarSuffix#"_"# vti.LMul.MX#"_E"#vti.SEW#"_MASK")
                    vti.RegClass:$passthru, vti.RegClass:$rs1,
                    vti.ScalarRegClass:$rs2, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
                    TAIL_AGNOSTIC)>;
@@ -2453,18 +2443,18 @@ foreach vti = AllBF16Vectors in {
     // 13.12. Vector Floating-Point Sign-Injection Instructions
     def : Pat<(riscv_fabs_vl (vti.Vector vti.RegClass:$rs), (vti.Mask VMV0:$vm),
                              VLOpFrag),
-              (!cast<Instruction>("PseudoVFSGNJX_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX #"_E"#vti.SEW#"_MASK")
+              (!cast<Instruction>("PseudoVFSGNJX"#
+                                  !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                  "_VV_"# vti.LMul.MX #"_E"#vti.SEW#"_MASK")
                    (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs,
                    vti.RegClass:$rs, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
                    TA_MA)>;
     // Handle fneg with VFSGNJN using the same input for both operands.
     def : Pat<(riscv_fneg_vl (vti.Vector vti.RegClass:$rs), (vti.Mask VMV0:$vm),
                              VLOpFrag),
-              (!cast<Instruction>("PseudoVFSGNJN_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX#"_E"#vti.SEW #"_MASK")
+              (!cast<Instruction>("PseudoVFSGNJN"#
+                                  !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                  "_VV_"# vti.LMul.MX#"_E"#vti.SEW #"_MASK")
                    (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs,
                    vti.RegClass:$rs, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
                    TA_MA)>;
@@ -2474,9 +2464,9 @@ foreach vti = AllBF16Vectors in {
                                   vti.RegClass:$passthru,
                                   (vti.Mask VMV0:$vm),
                                   VLOpFrag),
-              (!cast<Instruction>("PseudoVFSGNJ_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX#"_E"#vti.SEW#"_MASK")
+              (!cast<Instruction>("PseudoVFSGNJ"#
+                                  !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                  "_VV_"# vti.LMul.MX#"_E"#vti.SEW#"_MASK")
                    vti.RegClass:$passthru, vti.RegClass:$rs1,
                    vti.RegClass:$rs2, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
                    TAIL_AGNOSTIC)>;
@@ -2488,9 +2478,9 @@ foreach vti = AllBF16Vectors in {
                                   srcvalue,
                                   (vti.Mask true_mask),
                                   VLOpFrag),
-              (!cast<Instruction>("PseudoVFSGNJN_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX#"_E"#vti.SEW)
+              (!cast<Instruction>("PseudoVFSGNJN"#
+                                  !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                  "_VV_"# vti.LMul.MX#"_E"#vti.SEW)
         (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1, vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW, TA_MA)>;
 
@@ -2499,9 +2489,9 @@ foreach vti = AllBF16Vectors in {
                                   vti.RegClass:$passthru,
                                   (vti.Mask VMV0:$vm),
                                   VLOpFrag),
-              (!cast<Instruction>("PseudoVFSGNJ_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "V"#vti.ScalarSuffix#"_"# vti.LMul.MX#"_E"#vti.SEW#"_MASK")
+              (!cast<Instruction>("PseudoVFSGNJ"#
+                                  !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                  "_V"#vti.ScalarSuffix#"_"# vti.LMul.MX#"_E"#vti.SEW#"_MASK")
                    vti.RegClass:$passthru, vti.RegClass:$rs1,
                    vti.ScalarRegClass:$rs2, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
                    TAIL_AGNOSTIC)>;
@@ -2581,8 +2571,8 @@ foreach fvti = AllFloatAndBF16Vectors in {
   let Predicates = GetVTypePredicates<fvti>.Predicates in {
     def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
                            fvti.Vector:$passthru, (fvti.Scalar fvti.ScalarRegClass:$rs2), VLOpFrag)),
-              (!cast<Instruction>("PseudoVFMV_V_" #
-                                  !if(!eq(fvti.Scalar, bf16), "ALT_", "") #
+              (!cast<Instruction>("PseudoVFMV_V" #
+                                  !if(!eq(fvti.Scalar, bf16), "_ALT_", "_") #
                                   fvti.ScalarSuffix # "_" #
                                   fvti.LMul.MX)
                $passthru, (fvti.Scalar fvti.ScalarRegClass:$rs2),
@@ -2635,7 +2625,7 @@ foreach fvtiToFWti = AllWidenableFloatAndBF16Vectors in {
 
   // Define vfwcvt.f.f.v for bf16 when Zvfbfa is enabled.
   if !eq(fvti.Scalar, bf16) then
-    let Predicates = [HasStdExtZvfbfa] in
+    let Predicates = [HasVInstructionsBF16] in
     def : Pat<(fwti.Vector (any_riscv_fpextend_vl
                                (fvti.Vector fvti.RegClass:$rs1),
                                (fvti.Mask VMV0:$vm),
@@ -2693,7 +2683,7 @@ foreach fvtiToFWti = AllWidenableFloatAndBF16Vectors in {
 
   // Define vfncvt.f.f.w for bf16 when Zvfbfa is enabled.
   if !eq(fvti.Scalar, bf16) then
-  let Predicates = [HasStdExtZvfbfa] in
+  let Predicates = [HasVInstructionsBF16] in
   def : Pat<(fvti.Vector (any_riscv_fpround_vl
                              (fwti.Vector fwti.RegClass:$rs1),
                              (fwti.Mask VMV0:$vm), VLOpFrag)),

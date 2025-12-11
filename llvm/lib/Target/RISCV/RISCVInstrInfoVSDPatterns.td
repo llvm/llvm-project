@@ -1348,46 +1348,46 @@ foreach vti = AllFloatAndBF16Vectors in {
 
     // 13.12. Vector Floating-Point Sign-Injection Instructions
     def : Pat<(fabs (vti.Vector vti.RegClass:$rs)),
-              (!cast<Instruction>("PseudoVFSGNJX_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX#"_E"#vti.SEW)
+              (!cast<Instruction>("PseudoVFSGNJX"#
+                                  !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                  "_VV_"# vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs, vti.RegClass:$rs, vti.AVL, vti.Log2SEW, TA_MA)>;
     // Handle fneg with VFSGNJN using the same input for both operands.
     def : Pat<(fneg (vti.Vector vti.RegClass:$rs)),
-              (!cast<Instruction>("PseudoVFSGNJN_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX#"_E"#vti.SEW)
+              (!cast<Instruction>("PseudoVFSGNJN"#
+                                  !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                  "_VV_"# vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs, vti.RegClass:$rs, vti.AVL, vti.Log2SEW, TA_MA)>;
 
     def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
                                      (vti.Vector vti.RegClass:$rs2))),
-              (!cast<Instruction>("PseudoVFSGNJ_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX#"_E"#vti.SEW)
+              (!cast<Instruction>("PseudoVFSGNJ"#
+                                  !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                  "_VV_"# vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
     def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
                                      (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs2)))),
-              (!cast<Instruction>("PseudoVFSGNJ_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_E"#vti.SEW)
+              (!cast<Instruction>("PseudoVFSGNJ"#
+                                  !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                  "_V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
 
     def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
                                      (vti.Vector (fneg vti.RegClass:$rs2)))),
-              (!cast<Instruction>("PseudoVFSGNJN_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "VV_"# vti.LMul.MX#"_E"#vti.SEW)
+              (!cast<Instruction>("PseudoVFSGNJN"#
+                                  !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                  "_VV_"# vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
     def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
                                      (vti.Vector (fneg (SplatFPOp vti.ScalarRegClass:$rs2))))),
-              (!cast<Instruction>("PseudoVFSGNJN_"#
-                                  !if(!eq(vti.Scalar, bf16), "ALT_", "")#
-                                  "V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_E"#vti.SEW)
+              (!cast<Instruction>("PseudoVFSGNJN"#
+                                  !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                  "_V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
   }
@@ -1492,7 +1492,7 @@ foreach fvtiToFWti = AllWidenableFloatAndBF16Vectors in {
                 fvti.AVL, fvti.Log2SEW, TA_MA)>;
   // Define vfncvt.f.f.w for bf16 when Zvfbfa is enabled.
   if !eq(fvti.Scalar, bf16) then
-  let Predicates = [HasStdExtZvfbfa] in
+  let Predicates = [HasVInstructionsBF16] in
   def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
             (!cast<Instruction>("PseudoVFNCVT_F_F_ALT_W_"#fvti.LMul.MX#"_E"#fvti.SEW)
                 (fvti.Vector (IMPLICIT_DEF)),
