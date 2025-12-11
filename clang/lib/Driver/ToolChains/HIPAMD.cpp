@@ -466,12 +466,3 @@ Tool *SPIRVAMDToolChain::buildLinker() const {
   assert(getTriple().getArch() == llvm::Triple::spirv64);
   return new tools::AMDGCN::Linker(*this);
 }
-
-void SPIRVAMDToolChain::addClangTargetOptions(
-    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  // For SPIR-V we must not link any device libraries, so we call the
-  // AMDGPUToolChain impl instead of the ROCMToolChain one.
-  AMDGPUToolChain::addClangTargetOptions(DriverArgs, CC1Args,
-                                         DeviceOffloadingKind);
-}
