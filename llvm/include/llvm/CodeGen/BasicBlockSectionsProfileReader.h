@@ -71,7 +71,8 @@ struct CFGProfile {
   }
 };
 
-// This represents the raw optimization profile for one function.
+// This struct represents the raw optimization profile for a function,
+// including CFG data (block and edge counts) and layout directives (clustering and cloning paths).
 struct FunctionOptimizationProfile {
   // BB Cluster information specified by `UniqueBBID`s.
   SmallVector<BBClusterInfo> ClusterInfo;
