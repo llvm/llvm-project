@@ -2854,7 +2854,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
     bool onlyNeedsTwoDescriptors = !op.getLdsIncrement() && op.getRank() <= 2;
     if (onlyNeedsTwoDescriptors)
-      return LLVM::PoisonOp::create(rewriter, loc, v4i32);
+      return LLVM::ZeroOp::create(rewriter, loc, v4i32);
 
     constexpr int64_t sgprlen = 4;
     Value sgprs[sgprlen];
@@ -2914,7 +2914,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     assert(v4i32 && "expected type conversion to succeed.");
     bool onlyNeedsTwoDescriptors = !op.getLdsIncrement() && op.getRank() <= 2;
     if (onlyNeedsTwoDescriptors)
-      return LLVM::PoisonOp::create(rewriter, loc, v4i32);
+      return LLVM::ZeroOp::create(rewriter, loc, v4i32);
 
     constexpr int32_t sgprlen = 4;
     Value sgprs[sgprlen];

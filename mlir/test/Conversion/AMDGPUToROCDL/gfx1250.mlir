@@ -310,8 +310,8 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK: %[[DGROUP1_6:.+]] = llvm.insertelement %[[SGPR6]], %[[DGROUP1_5]][%[[C6]] : i32]
   // CHECK: %[[DGROUP1:.+]] = llvm.insertelement %[[SGPR7]], %[[DGROUP1_6]][%[[C7]] : i32]
 
-  // CHECK: %[[DGROUP2:.+]] = llvm.mlir.poison : vector<4xi32>
-  // CHECK: %[[DGROUP3:.+]] = llvm.mlir.poison : vector<4xi32>
+  // CHECK: %[[DGROUP2:.+]] = llvm.mlir.zero : vector<4xi32>
+  // CHECK: %[[DGROUP3:.+]] = llvm.mlir.zero : vector<4xi32>
 
   // CHECK: %[[DGROUPS:.+]] = builtin.unrealized_conversion_cast %[[DGROUP0]], %[[DGROUP1]], %[[DGROUP2]], %[[DGROUP3]] : vector<4xi32>, vector<8xi32>, vector<4xi32>, vector<4xi32> to !amdgpu.tdm_descriptor
   %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
@@ -719,8 +719,8 @@ func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_
   // CHECK: %[[DGROUP1_6:.+]] = llvm.insertelement %[[SGPR6]], %[[DGROUP1_5]][%[[C6]] : i32]
   // CHECK: %[[DGROUP1:.+]] = llvm.insertelement %[[SGPR7]], %[[DGROUP1_6]][%[[C7]] : i32]
 
-  // CHECK: %[[DGROUP2:.+]] = llvm.mlir.poison : vector<4xi32>
-  // CHECK: %[[DGROUP3:.+]] = llvm.mlir.poison : vector<4xi32>
+  // CHECK: %[[DGROUP2:.+]] = llvm.mlir.zero : vector<4xi32>
+  // CHECK: %[[DGROUP3:.+]] = llvm.mlir.zero : vector<4xi32>
 
   // CHECK: %[[DGROUPS:.+]] = builtin.unrealized_conversion_cast %[[DGROUP0]], %[[DGROUP1]], %[[DGROUP2]], %[[DGROUP3]] : vector<4xi32>, vector<8xi32>, vector<4xi32>, vector<4xi32> to !amdgpu.tdm_descriptor
   %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] workgroupMask %wg_mask earlyTimeout %timeout : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
