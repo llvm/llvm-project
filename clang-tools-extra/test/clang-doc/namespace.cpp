@@ -63,7 +63,7 @@ class AnonClass {};
 // MD-ANON-INDEX: ### anonFunction
 // MD-ANON-INDEX: *void anonFunction()*
 
-// HTML-ANON-INDEX: <h2> @nonymous_namespace</h2>
+// HTML-ANON-INDEX: <h2>@nonymous_namespace</h2>
 // HTML-ANON-INDEX:     <h2>Inner Classes</h2>
 // HTML-ANON-INDEX:         <ul class="class-container">
 // HTML-ANON-INDEX:             <li id="{{([0-9A-F]{40})}}" style="max-height: 40px;">
@@ -119,7 +119,7 @@ class ClassInNestedNamespace {};
 // MD-NESTED-INDEX: *void functionInNestedNamespace()*
 // MD-NESTED-INDEX: Function in NestedNamespace
 
-// HTML-NESTED-INDEX: <h2> NestedNamespace</h2>
+// HTML-NESTED-INDEX: <h2>NestedNamespace</h2>
 // HTML-NESTED-INDEX:     <h2>Inner Classes</h2>
 // HTML-NESTED-INDEX:     <ul class="class-container">
 // HTML-NESTED-INDEX:         <li id="{{([0-9A-F]{40})}}" style="max-height: 40px;">
@@ -145,7 +145,7 @@ class ClassInNestedNamespace {};
 // MD-PRIMARY-INDEX: *void functionInPrimaryNamespace()*
 // MD-PRIMARY-INDEX:  Function in PrimaryNamespace
 
-// HTML-PRIMARY-INDEX: <h2> PrimaryNamespace</h2>
+// HTML-PRIMARY-INDEX: <h2>PrimaryNamespace</h2>
 // HTML-PRIMARY-INDEX-NOT: <h2 id="Namespaces">Namespaces</h2>
 // HTML-PRIMARY-INDEX-NOT: <a href="NestedNamespace{{[\/]}}index.html">NestedNamespace</a>
 // HTML-PRIMARY-INDEX      <h2>Inner Classes</h2>
@@ -189,7 +189,7 @@ class ClassInAnotherNamespace {};
 // MD-ANOTHER-INDEX: *void functionInAnotherNamespace()*
 // MD-ANOTHER-INDEX: Function in AnotherNamespace
 
-// HTML-ANOTHER-INDEX: <h2> AnotherNamespace</h2>
+// HTML-ANOTHER-INDEX: <h2>AnotherNamespace</h2>
 // HTML-ANOTHER-INDEX:     <h2>Inner Classes</h2>
 // HTML-ANOTHER-INDEX:     <ul class="class-container">
 // HTML-ANOTHER-INDEX:         <li id="{{([0-9A-F]{40})}}" style="max-height: 40px;">
