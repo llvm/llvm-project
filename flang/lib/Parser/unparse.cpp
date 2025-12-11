@@ -2260,28 +2260,47 @@ public:
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
-  void Unparse(const OmpInteropPreference &x) { Walk(x.v, ","); }
+  void Unparse(const OmpPreferenceSelector &x) {
+    common::visit( //
+        common::visitors{
+            [&](const OmpPreferenceSelector::ForeignRuntimeIdentifier &s) {
+              Word("FR");
+              Put("(");
+              Walk(s);
+              Put(")");
+            },
+            [&](const OmpPreferenceSelector::Extensions &s) {
+              Word("ATTR");
+              Put("(");
+              Walk(s, ", ");
+              Put(")");
+            },
+        },
+        x.u);
+  }
+  void Unparse(const OmpPreferenceSpecification &x) {
+    common::visit( //
+        common::visitors{
+            [&](const std::list<OmpPreferenceSelector> &s) {
+              Put("{");
+              Walk(s, ", ");
+              Put("}");
+            },
+            [&](const OmpPreferenceSelector::ForeignRuntimeIdentifier &s) {
+              Walk(s);
+            },
+        },
+        x.u);
+  }
+  void Unparse(const OmpPreferType &x) {
+    Word("PREFER_TYPE");
+    Put("(");
+    Walk(x.v, ", ");
+    Put(")");
+  }
   void Unparse(const OmpInitClause &x) {
     using Modifier = OmpInitClause::Modifier;
-    auto &modifiers{std::get<std::optional<std::list<Modifier>>>(x.t)};
-    bool isTypeStart{true};
-    for (const Modifier &m : *modifiers) {
-      if (auto *interopPreferenceMod{
-              std::get_if<parser::OmpInteropPreference>(&m.u)}) {
-        Put("PREFER_TYPE(");
-        Walk(*interopPreferenceMod);
-        Put("),");
-      } else if (auto *interopTypeMod{
-                     std::get_if<parser::OmpInteropType>(&m.u)}) {
-        if (isTypeStart) {
-          isTypeStart = false;
-        } else {
-          Put(",");
-        }
-        Walk(*interopTypeMod);
-      }
-    }
-    Put(": ");
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObject>(x.t));
   }
   void Unparse(const OmpMapClause &x) {
@@ -2578,15 +2597,8 @@ public:
   }
   void Unparse(const OpenMPInteropConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP INTEROP");
-    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.v.t)};
-    if (flags.test(OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
-      Walk("(", std::get<std::optional<OmpArgumentList>>(x.v.t), ")");
-      Walk(" ", std::get<std::optional<OmpClauseList>>(x.v.t));
-    } else {
-      Walk(" ", std::get<std::optional<OmpClauseList>>(x.v.t));
-      Walk(" (", std::get<std::optional<OmpArgumentList>>(x.v.t), ")");
-    }
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
