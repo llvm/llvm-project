@@ -1840,3 +1840,6 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
 
 include "RISCVInstrInfoVPseudos.td"
 include "RISCVInstrInfoZvfbf.td"
+// Include the non-intrinsic ISel patterns
+include "RISCVInstrInfoVVLPatterns.td"
+include "RISCVInstrInfoVSDPatterns.td"

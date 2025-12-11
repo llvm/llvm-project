@@ -31797,12 +31797,12 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
   unsigned OperandOrder;
   if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
                 OperandOrder) &&
-      WhichResult == 0)
-    return convertFromScalableVector(
-        DAG, VT,
-        DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT,
-                    OperandOrder == 0 ? Op1 : Op2,
-                    OperandOrder == 0 ? Op2 : Op1));
+      WhichResult == 0) {
+    SDValue ZIP = DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT,
+                              OperandOrder == 0 ? Op1 : Op2,
+                              OperandOrder == 0 ? Op2 : Op1);
+    return convertFromScalableVector(DAG, VT, ZIP);
+  }
 
   if (isTRNMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
                 OperandOrder)) {
@@ -31852,12 +31852,12 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
 
     if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
                   OperandOrder) &&
-        WhichResult != 0)
-      return convertFromScalableVector(
-          DAG, VT,
-          DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT,
-                      OperandOrder == 0 ? Op1 : Op2,
-                      OperandOrder == 0 ? Op2 : Op1));
+        WhichResult != 0) {
+      SDValue ZIP = DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT,
+                                OperandOrder == 0 ? Op1 : Op2,
+                                OperandOrder == 0 ? Op2 : Op1);
+      return convertFromScalableVector(DAG, VT, ZIP);
+    }
 
     if (isUZPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult)) {
       unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;

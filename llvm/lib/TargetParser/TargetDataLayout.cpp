@@ -247,6 +247,10 @@ static std::string computePowerDataLayout(const Triple &T, StringRef ABIName) {
   else
     Ret += "-n32";
 
+  // The ABI alignment for doubles on AIX is 4 bytes.
+  if (T.isOSAIX())
+    Ret += "-f64:32:64";
+
   // Specify the vector alignment explicitly. For v256i1 and v512i1, the
   // calculated alignment would be 256*alignment(i1) and 512*alignment(i1),
   // which is 256 and 512 bytes - way over aligned.

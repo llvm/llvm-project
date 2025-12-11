@@ -105,7 +105,7 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
       "E-m:e-Fn32-i64:64-i128:128-n32:64");
   EXPECT_EQ(
       UpgradeDataLayoutString("E-m:a-Fi64-i64:64-n32:64", "powerpc64-ibm-aix"),
-      "E-m:a-Fi64-i64:64-i128:128-n32:64");
+      "E-m:a-Fi64-i64:64-i128:128-n32:64-f64:32:64");
 
   // Check that WebAssembly targets add -i128:128.
   EXPECT_EQ(
@@ -189,6 +189,16 @@ TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
             "E-m:e-Fn32-i64:64-n32");
   EXPECT_EQ(UpgradeDataLayoutString("E-m:a-Fi64-i64:64-n32", "powerpc-aix"),
             "E-m:a-Fi64-i64:64-n32");
+
+  EXPECT_EQ(UpgradeDataLayoutString("E-m:a-p:32:32-Fi32-i64:64-n32",
+                                    "powerpc-unknown-aix"),
+            "E-m:a-p:32:32-Fi32-i64:64-n32-f64:32:64");
+  EXPECT_EQ(
+      UpgradeDataLayoutString(
+          "E-m:a-Fi64-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512",
+          "powerpc64-unknown-aix"),
+      "E-m:a-Fi64-i64:64-i128:128-n32:64-f64:32:64-S128-v256:256:256-v512:512:"
+      "512");
 }
 
 TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
