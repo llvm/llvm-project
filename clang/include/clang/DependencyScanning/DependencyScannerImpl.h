@@ -63,15 +63,15 @@ private:
 std::unique_ptr<DiagnosticOptions>
 createDiagOptions(ArrayRef<std::string> CommandLine);
 
-struct DignosticsEngineWithDiagOpts {
+struct DiagnosticsEngineWithDiagOpts {
   // We need to bound the lifetime of the DiagOpts used to create the
   // DiganosticsEngine with the DiagnosticsEngine itself.
   std::unique_ptr<DiagnosticOptions> DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine;
 
-  DignosticsEngineWithDiagOpts(ArrayRef<std::string> CommandLine,
-                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                               DiagnosticConsumer &DC);
+  DiagnosticsEngineWithDiagOpts(ArrayRef<std::string> CommandLine,
+                                IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                                DiagnosticConsumer &DC);
 };
 
 struct TextDiagnosticsPrinterWithOutput {
@@ -151,7 +151,7 @@ class CompilerInstanceWithContext {
   // DiagConsumer may points to DiagPrinterWithOS->DiagPrinter, or a custom
   // DiagnosticConsumer passed in from initialize.
   DiagnosticConsumer *DiagConsumer = nullptr;
-  std::unique_ptr<DignosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
+  std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
 
   // Context - compiler invocation
   // Compilation's command's arguments may be owned by Alloc when expanded from

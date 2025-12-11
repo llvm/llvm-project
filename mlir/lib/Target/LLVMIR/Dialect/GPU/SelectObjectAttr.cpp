@@ -124,10 +124,10 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
   }
 
   IRBuilder<> builder(module.getContext());
-  auto i32Ty = builder.getInt32Ty();
-  auto i64Ty = builder.getInt64Ty();
-  auto ptrTy = builder.getPtrTy(0);
-  auto voidTy = builder.getVoidTy();
+  auto *i32Ty = builder.getInt32Ty();
+  auto *i64Ty = builder.getInt64Ty();
+  auto *ptrTy = builder.getPtrTy(0);
+  auto *voidTy = builder.getVoidTy();
 
   // Embed the module as a global object.
   auto *modulePtr = new GlobalVariable(
