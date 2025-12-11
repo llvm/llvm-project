@@ -46,9 +46,7 @@
 #include <string>
 #include <tuple>
 
-#ifdef __SSE4_2__
 #include <nmmintrin.h>
-#endif
 
 using namespace clang;
 
@@ -1921,9 +1919,17 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
 }
 
 static const char *
-fastParseASCIIIdentifier(const char *CurPtr,
-                         [[maybe_unused]] const char *BufferEnd) {
-#ifdef __SSE4_2__
+fastParseASCIIIdentifierScalar(const char *CurPtr,
+                               [[maybe_unused]] const char *BufferEnd) {
+  unsigned char C = *CurPtr;
+  while (isAsciiIdentifierContinue(C))
+    C = *++CurPtr;
+  return CurPtr;
+}
+
+__attribute__((target("sse4.2"))) static const char *
+fastParseASCIIIdentifierSSE42(const char *CurPtr,
+                              [[maybe_unused]] const char *BufferEnd) {
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
       '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
   };
@@ -1943,12 +1949,23 @@ fastParseASCIIIdentifier(const char *CurPtr,
       continue;
     return CurPtr;
   }
+
+  return fastParseASCIIIdentifierScalar(CurPtr, BufferEnd);
+}
+
+static bool supportsSSE42() {
+  static bool SupportsSSE42 = __builtin_cpu_supports("sse4.2");
+  return SupportsSSE42;
+}
+
+static const char *fastParseASCIIIdentifier(const char *CurPtr,
+                                            const char *BufferEnd) {
+#ifndef __SSE4_2__
+  if (LLVM_UNLIKELY(!supportsSSE42()))
+    return fastParseASCIIIdentifierScalar(CurPtr, BufferEnd);
 #endif
 
-  unsigned char C = *CurPtr;
-  while (isAsciiIdentifierContinue(C))
-    C = *++CurPtr;
-  return CurPtr;
+  return fastParseASCIIIdentifierSSE42(CurPtr, BufferEnd);
 }
 
 bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
