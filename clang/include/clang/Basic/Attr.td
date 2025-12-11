@@ -4397,6 +4397,7 @@ def GCCStruct : InheritableAttr {
   let Documentation = [MSStructDocs]; // Covers this attribute too.
   let SimpleHandler = 1;
 }
+def : MutualExclusions<[MSStruct, GCCStruct]>;
 
 def DLLExport : InheritableAttr, TargetSpecificAttr<TargetHasDLLImportExport> {
   let Spellings = [Declspec<"dllexport">, GCC<"dllexport">];
