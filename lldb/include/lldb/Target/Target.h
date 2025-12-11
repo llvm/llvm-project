@@ -568,7 +568,9 @@ public:
 
   bool GetPreparePlaygroundStubFunctions() const { return m_prepare_playground_stub_functions; }
 
-  void SetDisableAvailability() { m_disable_availability = true; }
+  void SetDisableAvailability(bool disable = true) {
+    m_disable_availability = disable;
+  }
 
   bool GetDisableAvailability() const { return m_disable_availability; }
 
