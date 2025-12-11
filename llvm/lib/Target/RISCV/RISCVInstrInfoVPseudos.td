@@ -473,17 +473,27 @@ defset list<VTypeInfoToWide> AllWidenableIntVectors = {
   def : VTypeInfoToWide<VI32M4,  VI64M8>;
 }
 
-defset list<VTypeInfoToWide> AllWidenableFloatVectors = {
-  def : VTypeInfoToWide<VF16MF4, VF32MF2>;
-  def : VTypeInfoToWide<VF16MF2, VF32M1>;
-  def : VTypeInfoToWide<VF16M1, VF32M2>;
-  def : VTypeInfoToWide<VF16M2, VF32M4>;
-  def : VTypeInfoToWide<VF16M4, VF32M8>;
+defset list<VTypeInfoToWide> AllWidenableFloatAndBF16Vectors = {
+  defset list<VTypeInfoToWide> AllWidenableFloatVectors = {
+    def : VTypeInfoToWide<VF16MF4, VF32MF2>;
+    def : VTypeInfoToWide<VF16MF2, VF32M1>;
+    def : VTypeInfoToWide<VF16M1, VF32M2>;
+    def : VTypeInfoToWide<VF16M2, VF32M4>;
+    def : VTypeInfoToWide<VF16M4, VF32M8>;
 
-  def : VTypeInfoToWide<VF32MF2, VF64M1>;
-  def : VTypeInfoToWide<VF32M1, VF64M2>;
-  def : VTypeInfoToWide<VF32M2, VF64M4>;
-  def : VTypeInfoToWide<VF32M4, VF64M8>;
+    def : VTypeInfoToWide<VF32MF2, VF64M1>;
+    def : VTypeInfoToWide<VF32M1, VF64M2>;
+    def : VTypeInfoToWide<VF32M2, VF64M4>;
+    def : VTypeInfoToWide<VF32M4, VF64M8>;
+  }
+
+  defset list<VTypeInfoToWide> AllWidenableBF16ToFloatVectors = {
+    def : VTypeInfoToWide<VBF16MF4, VF32MF2>;
+    def : VTypeInfoToWide<VBF16MF2, VF32M1>;
+    def : VTypeInfoToWide<VBF16M1, VF32M2>;
+    def : VTypeInfoToWide<VBF16M2, VF32M4>;
+    def : VTypeInfoToWide<VBF16M4, VF32M8>;
+  }
 }
 
 defset list<VTypeInfoToFraction> AllFractionableVF2IntVectors = {
@@ -541,14 +551,6 @@ defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
   def : VTypeInfoToWide<VI32M1, VF64M2>;
   def : VTypeInfoToWide<VI32M2, VF64M4>;
   def : VTypeInfoToWide<VI32M4, VF64M8>;
-}
-
-defset list<VTypeInfoToWide> AllWidenableBF16ToFloatVectors = {
-  def : VTypeInfoToWide<VBF16MF4, VF32MF2>;
-  def : VTypeInfoToWide<VBF16MF2, VF32M1>;
-  def : VTypeInfoToWide<VBF16M1, VF32M2>;
-  def : VTypeInfoToWide<VBF16M2, VF32M4>;
-  def : VTypeInfoToWide<VBF16M4, VF32M8>;
 }
 
 // This class holds the record of the RISCVVPseudoTable below.
@@ -780,7 +782,7 @@ class GetVRegNoV0<VReg VRegClass> {
 
 class GetVTypePredicates<VTypeInfo vti> {
   list<Predicate> Predicates = !cond(!eq(vti.Scalar, f16) : [HasVInstructionsF16],
-                                     !eq(vti.Scalar, bf16) : [HasVInstructionsBF16Minimal],
+                                     !eq(vti.Scalar, bf16) : [HasVInstructionsBF16],
                                      !eq(vti.Scalar, f32) : [HasVInstructionsAnyF],
                                      !eq(vti.Scalar, f64) : [HasVInstructionsF64],
                                      !eq(vti.SEW, 64) : [HasVInstructionsI64],
@@ -7326,7 +7328,3 @@ defm : VPatBinaryV_VV_INT_EEW<"int_riscv_vrgatherei16_vv", "PseudoVRGATHEREI16",
 // 16.5. Vector Compress Instruction
 //===----------------------------------------------------------------------===//
 defm : VPatUnaryV_V_AnyMask<"int_riscv_vcompress", "PseudoVCOMPRESS", AllVectors>;
-
-// Include the non-intrinsic ISel patterns
-include "RISCVInstrInfoVVLPatterns.td"
-include "RISCVInstrInfoVSDPatterns.td"
