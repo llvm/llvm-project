@@ -1,5 +1,10 @@
 ; RUN: opt -stats -passes=instcount < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -O3 < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -O0 < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -passes='thinlto<O3>' < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -passes='thinlto-pre-link<O2>' < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -passes='lto<O1>' < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -passes='lto-pre-link<Os>' < %s 2>&1 | FileCheck %s
 
 ; CHECK-DAG: 8 instcount - Number of Br insts
 ; CHECK-DAG: 6 instcount - Number of Call insts
