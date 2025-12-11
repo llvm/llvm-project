@@ -141,8 +141,9 @@ status check:
 Use ``ABSL_CHECK_OK`` to signal that you knowingly want to crash on
 non-OK values.
 
-NOTE: Even though using ``.value()``  on a ``nullopt`` is defined to crash,
-it is often unintentional. That is why our checker flags those as well.
+NOTE: Even though using ``.value()``  on a non-``ok()`` ``StatusOr`` is defined
+to crash, it is often unintentional. That is why our checker flags those as
+well.
 
 Accessing the value in the wrong branch
 ---------------------------------------
