@@ -2441,6 +2441,8 @@ static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
     uint64_t Val = CI->getValue().getLimitedValue();
     BitMapAP.setBit(Val);
   }
+  if (!ConstantCompare.IsEq)
+    BitMapAP = ~BitMapAP;
   ConstantInt *BitMap = ConstantInt::get(Context, BitMapAP);
   Value *Result = ConstantComparesGatherer::createBitMapSeq(
       BitMap, Index, Builder, /*BitMapElementTy=*/Type::getInt1Ty(Context));
@@ -2455,12 +2457,11 @@ static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
     Value *BoundsCheck =
         Builder.CreateICmp(ICmpInst::ICMP_ULT, Index, MaxValue);
 
-    Result = Builder.CreateSelect(BoundsCheck, Result,
-                                  ConstantInt::getFalse(Context));
+    Result = Builder.CreateSelect(
+        BoundsCheck, Result,
+        ConstantInt::getBool(Context, !ConstantCompare.IsEq));
   }
 
-  if (!ConstantCompare.IsEq)
-    Result = Builder.CreateNot(Result);
   return Result;
 }
 

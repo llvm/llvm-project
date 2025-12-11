@@ -62,11 +62,10 @@ define i1 @and_icmp_all_neq(i32 noundef %type) {
 ; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[TYPE]] to i16
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -32703, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 32702, [[SWITCH_CAST]]
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i1
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[TYPE]], 16
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
-; CHECK-NEXT:    [[AND_COND1:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[TYPE]], 15
+; CHECK-NEXT:    [[AND_COND1:%.*]] = select i1 [[TMP0]], i1 true, i1 [[SWITCH_MASKED]]
 ; CHECK-NEXT:    ret i1 [[AND_COND1]]
 ;
 entry:
@@ -83,11 +82,10 @@ define i1 @and_icmp_ugt(i32 noundef %type) {
 ; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[TYPE]] to i23
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i23 -4157441, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i23 4157440, [[SWITCH_CAST]]
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i23 [[SWITCH_DOWNSHIFT]] to i1
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[TYPE]], 23
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
-; CHECK-NEXT:    [[AND_COND1:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[TYPE]], 22
+; CHECK-NEXT:    [[AND_COND1:%.*]] = select i1 [[TMP0]], i1 true, i1 [[SWITCH_MASKED]]
 ; CHECK-NEXT:    ret i1 [[AND_COND1]]
 ;
 entry:
@@ -291,11 +289,10 @@ define i1 @and_icmp_expand(i64 noundef %type) {
 ; CHECK-SAME: i64 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[TYPE]] to i36
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i36 -34359738341, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i36 34359738340, [[SWITCH_CAST]]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i36 [[SWITCH_DOWNSHIFT]] to i1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[TYPE]], 36
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP]], i1 [[TRUNC]], i1 false
-; CHECK-NEXT:    [[AND_COND:%.*]] = xor i1 [[AND]], true
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[TYPE]], 35
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TRUNC]]
 ; CHECK-NEXT:    ret i1 [[AND_COND]]
 ;
 entry:
