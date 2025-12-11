@@ -117,3 +117,20 @@ body:             |
     %res:_(s32) = afn G_FCMP floatpred(oge), %lhs(s64), %rhs
     $w0 = COPY %res(s32)
 ...
+---
+name:            test_fcmp_no_same_semantics
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_fcmp_no_same_semantics
+    ; CHECK: %lhs:_(s64) = G_FCONSTANT double 0x5D3B0B8040DF92C9
+    ; CHECK-NEXT: %trunc:_(s32) = G_TRUNC %lhs(s64)
+    ; CHECK-NEXT: %rhs:_(s32) = G_FCONSTANT float 0x3E6BBDE420000000
+    ; CHECK-NEXT: %res:_(s32) = G_FCMP floatpred(oge), %trunc(s32), %rhs
+    ; CHECK-NEXT: $w0 = COPY %res(s32)
+    %lhs:_(s64) = G_FCONSTANT double 0x5D3B0B8040DF92C9
+    %fabs:_(s64) = G_FABS %lhs
+    %trunc:_(s32) = G_TRUNC %fabs(s64)
+    %rhs:_(s32) = G_FCONSTANT float 0x3E6BBDE420000000
+    %res:_(s32) = G_FCMP floatpred(oge), %trunc(s32), %rhs
+    $w0 = COPY %res(s32)
+...
