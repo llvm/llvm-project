@@ -80,6 +80,7 @@ MCFRAGMENT_NODE_REF(MCLEBFragment, FT_LEB, mc:leb)
 MCFRAGMENT_NODE_REF(MCNopsFragment, FT_Nops, mc:nops)
 MCFRAGMENT_NODE_REF(MCOrgFragment, FT_Org, mc:org)
 MCFRAGMENT_NODE_REF(MCSymbolIdFragment, FT_SymbolId, mc:symbol_id)
+MCFRAGMENT_NODE_REF(MCSFrameFragment, FT_SFrame, mc:sframe)
 #endif /* MCFRAGMENT_ENCODED_FRAGMENT_ONLY */
 #undef MCFRAGMENT_ENCODED_FRAGMENT_ONLY
 
