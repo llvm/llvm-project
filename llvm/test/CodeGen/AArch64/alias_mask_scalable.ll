@@ -313,10 +313,8 @@ entry:
 define <vscale x 8 x i1> @whilewr_extract_nxv8i1(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_extract_nxv8i1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, ge
-; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    whilewr p0.b, x0, x1
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 8 x i1> @llvm.loop.dependence.war.mask.nxv8i1(ptr %a, ptr %b, i64 1)
@@ -326,10 +324,9 @@ entry:
 define <vscale x 4 x i1> @whilewr_extract_nxv4i1(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_extract_nxv4i1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, ge
-; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    whilewr p0.b, x0, x1
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv8i1(ptr %a, ptr %b, i64 1)
@@ -340,13 +337,8 @@ entry:
 define <vscale x 2 x i1> @whilewr_extract_nxv2i1(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_extract_nxv2i1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    subs x8, x1, x0
-; CHECK-NEXT:    add x9, x8, #3
-; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    asr x8, x8, #2
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, ge
-; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    whilewr p0.s, x0, x1
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 2 x i1> @llvm.loop.dependence.war.mask.nxv8i1(ptr %a, ptr %b, i64 4)
