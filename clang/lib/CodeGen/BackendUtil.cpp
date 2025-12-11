@@ -148,7 +148,6 @@ class EmitAssemblyHelper {
   const LangOptions &LangOpts;
   llvm::Module *TheModule;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
-  llvm::SmallVector<llvm::PassPlugin> Plugins;
 
   std::unique_ptr<raw_pwrite_stream> OS;
 
@@ -1018,9 +1017,16 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     }
 #endif
   }
-  // Register plugin callbacks with PB.
-  for (auto &Plugin : Plugins)
-    Plugin.registerPassBuilderCallbacks(PB);
+  // Attempt to load pass plugins and register their callbacks with PB.
+  for (auto &PluginFN : CodeGenOpts.PassPlugins) {
+    auto PassPlugin = PassPlugin::Load(PluginFN);
+    if (PassPlugin) {
+      PassPlugin->registerPassBuilderCallbacks(PB);
+    } else {
+      Diags.Report(diag::err_fe_unable_to_load_plugin)
+          << PluginFN << toString(PassPlugin.takeError());
+    }
+  }
   for (const auto &PassCallback : CodeGenOpts.PassBuilderCallbacks)
     PassCallback(PB);
 #define HANDLE_EXTENSION(Ext)                                                  \
@@ -1259,14 +1265,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 void EmitAssemblyHelper::RunCodegenPipeline(
     BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
     std::unique_ptr<llvm::ToolOutputFile> &DwoOS) {
-  // Invoke pre-codegen callback from plugin, which might want to take over the
-  // entire code generation itself.
-  for (auto &Plugin : Plugins) {
-    CodeGenFileType CGFT = getCodeGenFileType(Action);
-    if (Plugin.invokePreCodeGenCallback(*TheModule, *TM, CGFT, *OS))
-      return;
-  }
-
   // We still use the legacy PM to run the codegen pipeline since the new PM
   // does not work with the codegen pipeline.
   // FIXME: make the new PM work with the codegen pipeline.
@@ -1329,17 +1327,6 @@ void EmitAssemblyHelper::emitAssembly(BackendAction Action,
 
   // Before executing passes, print the final values of the LLVM options.
   cl::PrintOptionValues();
-
-  // Attempt to load pass plugins.
-  for (auto &PluginFN : CodeGenOpts.PassPlugins) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
-    if (PassPlugin) {
-      Plugins.push_back(std::move(*PassPlugin));
-    } else {
-      Diags.Report(diag::err_fe_unable_to_load_plugin)
-          << PluginFN << toString(PassPlugin.takeError());
-    }
-  }
 
   std::unique_ptr<llvm::ToolOutputFile> ThinLinkOS, DwoOS;
   RunOptimizationPipeline(Action, OS, ThinLinkOS, BC);
