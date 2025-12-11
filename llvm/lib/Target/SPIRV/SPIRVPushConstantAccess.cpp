@@ -1,5 +1,4 @@
-//===- SPIRVPushConstantAccess.cpp - Translate CBuffer Loads ---------*- C++
-//-*-===//
+//===- SPIRVPushConstantAccess.cpp - Translate CBuffer Loads ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -48,7 +47,7 @@ static bool replacePushConstantAccesses(Module &M, SPIRVGlobalRegistry *GR) {
         GV->isExternallyInitialized());
 
     SmallVector<User *, 4> Users(GV->user_begin(), GV->user_end());
-    for (llvm::User *U : Users) {
+    for (User *U : Users) {
       Instruction *I = dyn_cast<Instruction>(U);
       if (!I)
         continue;
