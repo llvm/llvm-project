@@ -43,21 +43,20 @@ struct tuple_element<_Ip, tuple<_Tp...> > {
 template <class>
 struct tuple_size;
 
+// clang-format fails miserably with pack subscripting currently
+// clang-format off
 template <size_t _Ip, class... _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, tuple<_Tp...> >::type&
-get(tuple<_Tp...>&) _NOEXCEPT;
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp...[_Ip]& get(tuple<_Tp...>&) _NOEXCEPT;
 
 template <size_t _Ip, class... _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, tuple<_Tp...> >::type&
-get(const tuple<_Tp...>&) _NOEXCEPT;
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp...[_Ip]& get(const tuple<_Tp...>&) _NOEXCEPT;
 
 template <size_t _Ip, class... _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, tuple<_Tp...> >::type&&
-get(tuple<_Tp...>&&) _NOEXCEPT;
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp...[_Ip]&& get(tuple<_Tp...>&&) _NOEXCEPT;
 
 template <size_t _Ip, class... _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, tuple<_Tp...> >::type&&
-get(const tuple<_Tp...>&&) _NOEXCEPT;
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp...[_Ip]&& get(const tuple<_Tp...>&&) _NOEXCEPT;
+// clang-format on
 
 #endif // _LIBCPP_CXX03_LANG
 

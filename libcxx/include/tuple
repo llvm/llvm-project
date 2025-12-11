@@ -580,17 +580,17 @@ class _LIBCPP_NO_SPECIALIZATIONS tuple {
 
   _BaseT __base_;
 
+  // clang-format fails miserably with pack subscripting currently
+  // clang-format off
   template <size_t _Jp, class... _Up>
-  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Jp, tuple<_Up...> >::type& get(tuple<_Up...>&) _NOEXCEPT;
+  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 _Up...[_Jp]& get(tuple<_Up...>&) _NOEXCEPT;
   template <size_t _Jp, class... _Up>
-  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Jp, tuple<_Up...> >::type&
-  get(const tuple<_Up...>&) _NOEXCEPT;
+  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Up...[_Jp]& get(const tuple<_Up...>&) _NOEXCEPT;
   template <size_t _Jp, class... _Up>
-  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Jp, tuple<_Up...> >::type&&
-  get(tuple<_Up...>&&) _NOEXCEPT;
+  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 _Up...[_Jp]&& get(tuple<_Up...>&&) _NOEXCEPT;
   template <size_t _Jp, class... _Up>
-  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Jp, tuple<_Up...> >::type&&
-  get(const tuple<_Up...>&&) _NOEXCEPT;
+  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Up...[_Jp]&& get(const tuple<_Up...>&&) _NOEXCEPT;
+  // clang-format on
 
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
@@ -1113,30 +1113,24 @@ swap(const tuple<_Tp...>& __lhs,
 // get
 
 template <size_t _Ip, class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, tuple<_Tp...> >::type&
-get(tuple<_Tp...>& __t) _NOEXCEPT {
-  using type _LIBCPP_NODEBUG = typename tuple_element<_Ip, tuple<_Tp...> >::type;
-  return static_cast<__tuple_leaf<_Ip, type>&>(__t.__base_).get();
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp...[_Ip]& get(tuple<_Tp...>& __t) _NOEXCEPT {
+  return static_cast<__tuple_leaf<_Ip, _Tp...[_Ip]>&>(__t.__base_).get();
 }
 
 template <size_t _Ip, class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, tuple<_Tp...> >::type&
-get(const tuple<_Tp...>& __t) _NOEXCEPT {
-  using type _LIBCPP_NODEBUG = typename tuple_element<_Ip, tuple<_Tp...> >::type;
-  return static_cast<const __tuple_leaf<_Ip, type>&>(__t.__base_).get();
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp...[_Ip]& get(const tuple<_Tp...>& __t) _NOEXCEPT {
+  return static_cast<const __tuple_leaf<_Ip, _Tp...[_Ip]>&>(__t.__base_).get();
 }
 
 template <size_t _Ip, class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, tuple<_Tp...> >::type&&
-get(tuple<_Tp...>&& __t) _NOEXCEPT {
-  using type _LIBCPP_NODEBUG = typename tuple_element<_Ip, tuple<_Tp...> >::type;
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp...[_Ip]&& get(tuple<_Tp...>&& __t) _NOEXCEPT {
+  using type _LIBCPP_NODEBUG = _Tp...[_Ip];
   return static_cast<type&&>(static_cast<__tuple_leaf<_Ip, type>&&>(__t.__base_).get());
 }
 
 template <size_t _Ip, class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, tuple<_Tp...> >::type&&
-get(const tuple<_Tp...>&& __t) _NOEXCEPT {
-  using type _LIBCPP_NODEBUG = typename tuple_element<_Ip, tuple<_Tp...> >::type;
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp...[_Ip]&& get(const tuple<_Tp...>&& __t) _NOEXCEPT {
+  using type _LIBCPP_NODEBUG = _Tp...[_Ip];
   return static_cast<const type&&>(static_cast<const __tuple_leaf<_Ip, type>&&>(__t.__base_).get());
 }
 

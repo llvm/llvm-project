@@ -393,10 +393,12 @@ typedef __char32_t char32_t;
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                           \
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                           \
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++23-extensions")                                                           \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++26-extensions")                                                           \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                                                             \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                             \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                             \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++23-extensions")
+      _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++26-extensions")
 #    define _LIBCPP_POP_EXTENSION_DIAGNOSTICS _LIBCPP_DIAGNOSTIC_POP
 #  else
 #    define _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS
