@@ -318,8 +318,10 @@ enum class CommentKind {
   // A plain comment, i.e. /* ... */.
   Plain,
   // A comment that starts with /*! or /**.
+  // The SpacesInComments option is not applied to them.
   DocString,
-  // A comment that looks like a parameter, e.g. /*param=*/.
+  // A comment that ends with '=' before the closing '*/'.
+  // The SpacesInComments option is not applied to them.
   Parameter,
 };
 
