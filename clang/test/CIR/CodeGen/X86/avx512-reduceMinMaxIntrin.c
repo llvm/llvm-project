@@ -6,7 +6,7 @@
 
 double test_mm512_reduce_max_pd(__m512d __W, double ExtraAddOp){
   // CIR-LABEL: _mm512_reduce_max_pd
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmax.v8f64" %[[V:.*]] : (!cir.vector<8 x !cir.double>) -> !cir.double
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmax" %[[V:.*]] : (!cir.vector<8 x !cir.double>) -> !cir.double
 
   // CIR-LABEL: test_mm512_reduce_max_pd
   // CIR: cir.call @_mm512_reduce_max_pd(%[[VEC:.*]]) : (!cir.vector<8 x !cir.double>) -> !cir.double
@@ -23,7 +23,7 @@ double test_mm512_reduce_max_pd(__m512d __W, double ExtraAddOp){
 
 double test_mm512_reduce_min_pd(__m512d __W, double ExtraMulOp){
   // CIR-LABEL: _mm512_reduce_min_pd
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmin.v8f64" %[[V:.*]] : (!cir.vector<8 x !cir.double>) -> !cir.double
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmin" %[[V:.*]] : (!cir.vector<8 x !cir.double>) -> !cir.double
 
   // CIR-LABEL: test_mm512_reduce_min_pd
   // CIR: cir.call @_mm512_reduce_min_pd(%[[VEC:.*]]) : (!cir.vector<8 x !cir.double>) -> !cir.double
@@ -40,7 +40,7 @@ double test_mm512_reduce_min_pd(__m512d __W, double ExtraMulOp){
 
 float test_mm512_reduce_max_ps(__m512 __W){
   // CIR-LABEL: _mm512_reduce_max_ps
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmax.v16f32" %[[V:.*]] : (!cir.vector<16 x !cir.float>) -> !cir.float
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmax" %[[V:.*]] : (!cir.vector<16 x !cir.float>) -> !cir.float
 
   // CIR-LABEL: test_mm512_reduce_max_ps
   // CIR: cir.call @_mm512_reduce_max_ps(%[[VEC:.*]]) : (!cir.vector<16 x !cir.float>) -> !cir.float
@@ -55,7 +55,7 @@ float test_mm512_reduce_max_ps(__m512 __W){
 
 float test_mm512_reduce_min_ps(__m512 __W){
   // CIR-LABEL: _mm512_reduce_min_ps
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmin.v16f32" %[[V:.*]] : (!cir.vector<16 x !cir.float>) -> !cir.float
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmin" %[[V:.*]] : (!cir.vector<16 x !cir.float>) -> !cir.float
 
   // CIR-LABEL: test_mm512_reduce_min_ps
   // CIR: cir.call @_mm512_reduce_min_ps(%[[VEC:.*]]) : (!cir.vector<16 x !cir.float>) -> !cir.float
