@@ -3659,10 +3659,10 @@ bool GCNHazardRecognizer::fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(0xFFE3);
+      .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0, ST));
   BuildMI(*MI->getParent(), std::next(MI->getIterator()), MI->getDebugLoc(),
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(0xFFE3);
+      .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0, ST));
 
   return true;
 }

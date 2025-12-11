@@ -240,17 +240,16 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
 
+    if (all_equal(PhiR->incoming_values())) {
+      PhiR->replaceAllUsesWith(PhiR->getIncomingValue(0));
+      PhiR->eraseFromParent();
+      continue;
+    }
+
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
       OperandsWithMask.push_back(InVPV);
-      VPValue *EdgeMask = getEdgeMask(InVPBB, VPBB);
-      if (!EdgeMask) {
-        assert(all_equal(PhiR->incoming_values()) &&
-               "Distinct incoming values with one having a full mask");
-        break;
-      }
-
-      OperandsWithMask.push_back(EdgeMask);
+      OperandsWithMask.push_back(getEdgeMask(InVPBB, VPBB));
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
     auto *Blend =

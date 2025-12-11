@@ -168,6 +168,20 @@ public:
   friend class AArch64PrologueEmitter;
   friend class AArch64EpilogueEmitter;
 
+  // Windows unwind can't represent the required stack adjustments if we have
+  // both SVE callee-saves and dynamic stack allocations, and the frame
+  // pointer is before the SVE spills.  The allocation of the frame pointer
+  // must be the last instruction in the prologue so the unwinder can restore
+  // the stack pointer correctly. (And there isn't any unwind opcode for
+  // `addvl sp, x29, -17`.)
+  //
+  // Because of this, we do spills in the opposite order on Windows: first SVE,
+  // then GPRs. The main side-effect of this is that it makes accessing
+  // parameters passed on the stack more expensive.
+  //
+  // We could consider rearranging the spills for simpler cases.
+  bool hasSVECalleeSavesAboveFrameRecord(const MachineFunction &MF) const;
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 
