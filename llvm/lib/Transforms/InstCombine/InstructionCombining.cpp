@@ -5027,43 +5027,9 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   //   Op1.fr = Freeze(Op1)
   //   ... = Inst(Op1.fr, NonPoisonOps...)
 
-  auto CanPushFreeze = [this](Value *V) {
-    if (!isa<Instruction>(V))
+  auto CanPushFreeze = [](Value *V) {
+    if (!isa<Instruction>(V) || isa<PHINode>(V))
       return false;
-
-    if (auto *PN = dyn_cast<PHINode>(V)) {
-      // Detect whether this is a recurrence with a start value and some number
-      // of backedge values. We'll check whether we can push the freeze through
-      // the backedge values (possibly dropping poison flags along the way)
-      // until we reach the phi again. In that case, we can move the freeze to
-      // the start value.
-      Use *StartU = nullptr;
-      bool HasBackedge = false;
-      for (Use &U : PN->incoming_values()) {
-        if (DT.dominates(PN->getParent(), PN->getIncomingBlock(U))) {
-          HasBackedge = true;
-          continue;
-        }
-
-        // Don't bother handling multiple start values.
-        if (StartU)
-          return false;
-        StartU = &U;
-      }
-
-      if (!StartU || !HasBackedge)
-        return false; // Not a recurrence.
-
-      Value *StartV = StartU->get();
-      BasicBlock *StartBB = PN->getIncomingBlock(*StartU);
-      bool StartNeedsFreeze = !isGuaranteedNotToBeUndefOrPoison(StartV);
-      // We can't insert freeze if the start value is the result of the
-      // terminator (e.g. an invoke).
-      if (StartNeedsFreeze && StartBB->getTerminator() == StartV)
-        return false;
-
-      return true;
-    }
 
     // We can't push the freeze through an instruction which can itself create
     // poison.  If the only source of new poison is flags, we can simply
@@ -5073,25 +5039,67 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
                                    /*ConsiderFlagsAndMetadata*/ false);
   };
 
+  Use *StartUNeedsFreeze = nullptr;
+  auto CanPushFreezeThruPHI = [&](PHINode *PN) {
+    // Detect whether this is a recurrence with a start value and some number
+    // of backedge values. We'll check whether we can push the freeze through
+    // the backedge values (possibly dropping poison flags along the way)
+    // until we reach the phi again. In that case, we can move the freeze to
+    // the start value.
+    Use *StartU = nullptr;
+    bool HasBackedge = false;
+    for (Use &U : PN->incoming_values()) {
+      if (DT.dominates(PN->getParent(), PN->getIncomingBlock(U))) {
+        HasBackedge = true;
+        continue;
+      }
+
+      // Don't bother handling multiple start values.
+      if (StartU)
+        return false;
+      StartU = &U;
+    }
+
+    if (!StartU || !HasBackedge)
+      return false; // Not a recurrence.
+
+    Value *StartV = StartU->get();
+    BasicBlock *StartBB = PN->getIncomingBlock(*StartU);
+    bool StartNeedsFreeze = !isGuaranteedNotToBeUndefOrPoison(StartV);
+    // We can't insert freeze if the start value is the result of the
+    // terminator (e.g. an invoke).
+    if (StartNeedsFreeze && StartBB->getTerminator() == StartV)
+      return false;
+
+    if (StartNeedsFreeze)
+      StartUNeedsFreeze = StartU;
+
+    return true;
+  };
+
   // Pushing freezes up long instruction chains can be expensive. Instead,
   // we directly push the freeze all the way to the leaves. However, we leave
   // deduplication of freezes on the same value for freezeOtherUses().
   Use *OrigUse = &OrigFI.getOperandUse(0);
-  SmallPtrSet<Instruction *, 32> Visited;
+  auto *PN = dyn_cast<PHINode>(OrigUse->get());
+  if (PN && !CanPushFreezeThruPHI(PN))
+    return nullptr;
+
+  SmallPtrSet<Instruction *, 8> Visited;
   SmallVector<Use *, 8> Worklist;
   Worklist.push_back(OrigUse);
   while (!Worklist.empty()) {
     auto *U = Worklist.pop_back_val();
     Value *V = U->get();
-    if (!CanPushFreeze(V)) {
-      // If we can't push through the original instruction or a PHI, abort the
-      // transform.
-      if (U == OrigUse || isa<PHINode>(V))
+
+    if (!CanPushFreeze(V) && !isa<PHINode>(V)) {
+      // If we can't push through the original instruction, abort the transform.
+      if (U == OrigUse)
         return nullptr;
 
       auto *UserI = cast<Instruction>(U->getUser());
-      if (auto *PN = dyn_cast<PHINode>(UserI))
-        Builder.SetInsertPoint(PN->getIncomingBlock(*U)->getTerminator());
+      if (auto *UserPN = dyn_cast<PHINode>(UserI))
+        Builder.SetInsertPoint(UserPN->getIncomingBlock(*U)->getTerminator());
       else
         Builder.SetInsertPoint(UserI);
       Value *Frozen = Builder.CreateFreeze(V, V->getName() + ".fr");
@@ -5103,9 +5111,6 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
     if (!Visited.insert(I).second)
       continue;
 
-    if (Visited.size() > 32)
-      return nullptr; // Limit the total number of values we inspect.
-
     // reverse() to emit freezes in a more natural order.
     for (Use &Op : reverse(I->operands())) {
       Value *OpV = Op.get();
@@ -5116,6 +5121,15 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
 
     I->dropPoisonGeneratingAnnotations();
     this->Worklist.add(I);
+  }
+
+  if (StartUNeedsFreeze) {
+    Value *StartV = StartUNeedsFreeze->get();
+    Builder.SetInsertPoint(
+        PN->getIncomingBlock(*StartUNeedsFreeze)->getTerminator());
+    Value *FrozenStartV =
+        Builder.CreateFreeze(StartV, StartV->getName() + ".fr");
+    replaceUse(*StartUNeedsFreeze, FrozenStartV);
   }
 
   return OrigUse->get();

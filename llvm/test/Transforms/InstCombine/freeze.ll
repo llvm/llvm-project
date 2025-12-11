@@ -944,10 +944,10 @@ define void @fold_phi_gep_phi_offset(ptr %init, ptr %end, i64 noundef %n) {
 ; CHECK-LABEL: define void @fold_phi_gep_phi_offset(
 ; CHECK-SAME: ptr [[INIT:%.*]], ptr [[END:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze ptr [[INIT]]
+; CHECK-NEXT:    [[INIT_FR:%.*]] = freeze ptr [[INIT]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[TMP0]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT_FR]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[OFF_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
 ; CHECK-NEXT:    [[I_NEXT]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
@@ -978,10 +978,10 @@ define void @fold_phi_gep_inbounds_phi_offset(ptr %init, ptr %end, i64 noundef %
 ; CHECK-LABEL: define void @fold_phi_gep_inbounds_phi_offset(
 ; CHECK-SAME: ptr [[INIT:%.*]], ptr [[END:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze ptr [[INIT]]
+; CHECK-NEXT:    [[INIT_FR:%.*]] = freeze ptr [[INIT]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[TMP0]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT_FR]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[OFF_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
 ; CHECK-NEXT:    [[I_NEXT]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
@@ -1011,12 +1011,12 @@ define void @fold_phi_gep_phi_offset_multiple(ptr %init, ptr %end, i64 %n) {
 ; CHECK-LABEL: define void @fold_phi_gep_phi_offset_multiple(
 ; CHECK-SAME: ptr [[INIT:%.*]], ptr [[END:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze ptr [[INIT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[N]]
+; CHECK-NEXT:    [[INIT_FR:%.*]] = freeze ptr [[INIT]]
+; CHECK-NEXT:    [[N_FR:%.*]] = freeze i64 [[N]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[TMP0]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[TMP1]], %[[ENTRY]] ], [ [[OFF_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT_FR]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N_FR]], %[[ENTRY]] ], [ [[OFF_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
 ; CHECK-NEXT:    [[I_NEXT]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT]], [[END]]
