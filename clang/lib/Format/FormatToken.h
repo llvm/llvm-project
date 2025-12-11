@@ -334,9 +334,10 @@ struct FormatToken {
         EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
         ContinuesLineCommentSection(false), Finalized(false),
         ClosesRequiresClause(false), EndsCppAttributeGroup(false),
-        BlockCommentKind(CommentKind::Plain), BlockKind(BK_Unknown),
-        Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
-        TypeIsFinalized(false), Type(TT_Unknown) {}
+        BlockCommentKind(static_cast<unsigned>(CommentKind::Plain)),
+        BlockKind(BK_Unknown), Decision(FD_Unformatted),
+        PackingKind(PPK_Inconclusive), TypeIsFinalized(false),
+        Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -414,11 +415,16 @@ struct FormatToken {
 
 private:
   /// Kind of block comment.
-  CommentKind BlockCommentKind = CommentKind::Plain;
+  unsigned BlockCommentKind : 2;
 
 public:
-  CommentKind getBlockCommentKind() const { return BlockCommentKind; }
-  void setBlockCommentKind(CommentKind Kind) { BlockCommentKind = Kind; }
+  CommentKind getBlockCommentKind() const {
+    return static_cast<CommentKind>(BlockCommentKind);
+  }
+  void setBlockCommentKind(CommentKind Kind) {
+    BlockCommentKind = static_cast<unsigned>(Kind);
+    assert(getBlockCommentKind() == Kind && "CommentKind overflow!");
+  }
 
 private:
   /// Contains the kind of block if this token is a brace.
