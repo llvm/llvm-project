@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/Transforms/UseDefaultVisibilityPass.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
 namespace LLVM {
@@ -20,11 +20,15 @@ namespace LLVM {
 
 using namespace mlir;
 
-template <typename OpT>
-static void updateVisibility(OpT op, LLVM::Visibility useDefaultVisibility) {
-  LLVM::Visibility vis = op.getVisibility_();
-  if (vis == LLVM::Visibility::Default)
-    op.setVisibility_(useDefaultVisibility);
+static void updateVisibility(Operation *op,
+                             LLVM::VisibilityAttr newVisibilityAttr) {
+  if (auto visibilityAttr =
+          op->getAttrOfType<LLVM::VisibilityAttr>(LLVM::VisibilityAttr::name)) {
+    LLVM::Visibility visibility = visibilityAttr.getValue();
+    if (visibility == LLVM::Visibility::Default) {
+      op->setAttr(LLVM::VisibilityAttr::name, newVisibilityAttr);
+    }
+  }
 }
 
 namespace {
@@ -36,11 +40,14 @@ class UseDefaultVisibilityPass
 public:
   void runOnOperation() override {
     LLVM::Visibility useDefaultVisibility = useVisibility.getValue();
-    getOperation()->walk([&](Operation *op) {
-      if (auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(op))
-        updateVisibility(funcOp, useDefaultVisibility);
-      else if (auto globalOp = dyn_cast<LLVM::GlobalOp>(op))
-        updateVisibility(globalOp, useDefaultVisibility);
+    Operation *op = getOperation();
+    MLIRContext *context = op->getContext();
+    Dialect *llvmDialect = context->getLoadedDialect<LLVM::LLVMDialect>();
+    auto newVisibilityAttr =
+        LLVM::VisibilityAttr::get(context, useDefaultVisibility);
+    op->walk([&](Operation *op) {
+      if (op->getDialect() == llvmDialect)
+        updateVisibility(op, newVisibilityAttr);
     });
   }
 };
