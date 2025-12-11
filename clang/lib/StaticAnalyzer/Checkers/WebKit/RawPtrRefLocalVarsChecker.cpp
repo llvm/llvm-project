@@ -234,6 +234,10 @@ public:
       }
 
       bool TraverseIfStmt(IfStmt *IS) override {
+        if (IS->getConditionVariable()) {
+          if (auto *Then = IS->getThen(); !Then || TFA.isTrivial(Then))
+            return true;
+        }
         if (!TFA.isTrivial(IS))
           return DynamicRecursiveASTVisitor::TraverseIfStmt(IS);
         return true;
