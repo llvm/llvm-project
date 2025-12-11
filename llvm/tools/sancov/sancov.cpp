@@ -135,18 +135,19 @@ static const Regex SymcovFileRegex(".*\\.symcov");
 // Contents of .sancov file: list of coverage point addresses that were
 // executed.
 struct RawCoverage {
-  explicit RawCoverage(std::unique_ptr<std::set<uint64_t>> Addrs)
-      : Addrs(std::move(Addrs)) {}
+  explicit RawCoverage(std::unique_ptr<std::set<uint64_t>> Addrs,
+                       FileHeader Header)
+      : Addrs(std::move(Addrs)), Header(Header) {}
 
   // Read binary .sancov file.
   static ErrorOr<std::unique_ptr<RawCoverage>>
   read(const std::string &FileName);
 
   // Write binary .sancov file.
-  static void write(const std::string &FileName, const RawCoverage &Coverage,
-                    FileHeader Header);
+  static void write(const std::string &FileName, const RawCoverage &Coverage);
 
   std::unique_ptr<std::set<uint64_t>> Addrs;
+  FileHeader Header;
 };
 
 // Coverage point has an opaque Id and corresponds to multiple source locations.
@@ -271,7 +272,7 @@ RawCoverage::read(const std::string &FileName) {
   // to compactify the data.
   Addrs->erase(0);
 
-  return std::make_unique<RawCoverage>(std::move(Addrs));
+  return std::make_unique<RawCoverage>(std::move(Addrs), *Header);
 }
 
 // Print coverage addresses.
@@ -286,14 +287,15 @@ raw_ostream &operator<<(raw_ostream &OS, const RawCoverage &CoverageData) {
 
 // Write coverage addresses in binary format.
 void RawCoverage::write(const std::string &FileName,
-                        const RawCoverage &Coverage, FileHeader Header) {
+                        const RawCoverage &Coverage) {
   std::error_code EC;
   raw_fd_ostream OS(FileName, EC, sys::fs::OF_None);
   failIfError(EC);
 
-  OS.write(reinterpret_cast<const char *>(&Header), sizeof(Header));
+  OS.write(reinterpret_cast<const char *>(&Coverage.Header),
+           sizeof(Coverage.Header));
 
-  switch (Header.Bitness) {
+  switch (Coverage.Header.Bitness) {
   case Bitness64:
     for (auto Addr : *Coverage.Addrs) {
       uint64_t Addr64 = Addr;
@@ -307,7 +309,7 @@ void RawCoverage::write(const std::string &FileName,
     }
     break;
   default:
-    fail("Unsupported bitness: " + std::to_string(Header.Bitness));
+    fail("Unsupported bitness: " + std::to_string(Coverage.Header.Bitness));
   }
 }
 
@@ -1061,6 +1063,24 @@ static const char *bitnessToString(uint32_t Bitness) {
   }
 }
 
+// Warn if two file headers have different bitness.
+static void warnIfDifferentBitness(const FileHeader &Header1,
+                                   const FileHeader &Header2,
+                                   const std::string &File1Desc,
+                                   const std::string &File2Desc) {
+  if (Header1.Bitness != Header2.Bitness) {
+    errs() << "WARNING: Input files have different bitness (" << File1Desc
+           << ": " << bitnessToString(Header1.Bitness) << ", " << File2Desc
+           << ": " << bitnessToString(Header2.Bitness)
+           << "). Using bitness from " << File1Desc << ".\n";
+
+    if (Header1.Bitness == Bitness32 && Header2.Bitness == Bitness64) {
+      errs() << "WARNING: 64-bit addresses will be truncated to 32 bits. "
+             << "This may result in data loss.\n";
+    }
+  }
+}
+
 // Compute difference between two coverage files (A - B) and write to output
 // file.
 static void diffRawCoverage(const std::string &FileA, const std::string &FileB,
@@ -1071,26 +1091,10 @@ static void diffRawCoverage(const std::string &FileA, const std::string &FileB,
   auto CovB = RawCoverage::read(FileB);
   failIfError(CovB);
 
-  // Determine bitness from both files
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErrA =
-      MemoryBuffer::getFile(FileA);
-  failIfError(BufOrErrA);
-  const FileHeader *HeaderA =
-      reinterpret_cast<const FileHeader *>(BufOrErrA.get()->getBufferStart());
+  const FileHeader &HeaderA = CovA.get()->Header;
+  const FileHeader &HeaderB = CovB.get()->Header;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErrB =
-      MemoryBuffer::getFile(FileB);
-  failIfError(BufOrErrB);
-  const FileHeader *HeaderB =
-      reinterpret_cast<const FileHeader *>(BufOrErrB.get()->getBufferStart());
-
-  // Warn if bitness differs
-  if (HeaderA->Bitness != HeaderB->Bitness) {
-    errs() << "WARNING: Input files have different bitness (File A: "
-           << bitnessToString(HeaderA->Bitness)
-           << ", File B: " << bitnessToString(HeaderB->Bitness)
-           << "). Using bitness from File A.\n";
-  }
+  warnIfDifferentBitness(HeaderA, HeaderB, FileA, FileB);
 
   // Compute A - B
   auto DiffAddrs = std::make_unique<std::set<uint64_t>>();
@@ -1098,8 +1102,8 @@ static void diffRawCoverage(const std::string &FileA, const std::string &FileB,
                       CovB.get()->Addrs->begin(), CovB.get()->Addrs->end(),
                       std::inserter(*DiffAddrs, DiffAddrs->end()));
 
-  RawCoverage DiffCov(std::move(DiffAddrs));
-  RawCoverage::write(OutputFile, DiffCov, *HeaderA);
+  RawCoverage DiffCov(std::move(DiffAddrs), HeaderA);
+  RawCoverage::write(OutputFile, DiffCov);
 }
 
 // Compute union of multiple coverage files and write to output file.
@@ -1111,37 +1115,22 @@ static void unionRawCoverage(const std::vector<std::string> &InputFiles,
   auto UnionCov = RawCoverage::read(InputFiles[0]);
   failIfError(UnionCov);
 
-  // Get header from first file
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFile(InputFiles[0]);
-  failIfError(BufOrErr);
-  const FileHeader *FirstHeader =
-      reinterpret_cast<const FileHeader *>(BufOrErr.get()->getBufferStart());
-  FileHeader Header = *FirstHeader;
+  const FileHeader &UnionHeader = UnionCov.get()->Header;
 
   for (size_t I = 1; I < InputFiles.size(); ++I) {
     auto Cov = RawCoverage::read(InputFiles[I]);
     failIfError(Cov);
 
-    // Check bitness of current file
-    ErrorOr<std::unique_ptr<MemoryBuffer>> CurBufOrErr =
-        MemoryBuffer::getFile(InputFiles[I]);
-    failIfError(CurBufOrErr);
-    const FileHeader *CurHeader = reinterpret_cast<const FileHeader *>(
-        CurBufOrErr.get()->getBufferStart());
+    const FileHeader &CurHeader = Cov.get()->Header;
 
-    if (CurHeader->Bitness != Header.Bitness) {
-      errs() << "WARNING: Input file has different bitness (File "
-             << InputFiles[I] << ": " << bitnessToString(CurHeader->Bitness)
-             << ", First file: " << bitnessToString(Header.Bitness)
-             << "). Using bitness from first file.\n";
-    }
+    warnIfDifferentBitness(UnionHeader, CurHeader, InputFiles[0],
+                           InputFiles[I]);
 
     UnionCov.get()->Addrs->insert(Cov.get()->Addrs->begin(),
                                   Cov.get()->Addrs->end());
   }
 
-  RawCoverage::write(OutputFile, *UnionCov.get(), Header);
+  RawCoverage::write(OutputFile, *UnionCov.get());
 }
 
 static std::unique_ptr<SymbolizedCoverage>
