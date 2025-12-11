@@ -543,7 +543,7 @@ def NVVM_NanosleepOp : NVVM_Op<"nanosleep">,
 // NVVM Performance Monitor events
 //===----------------------------------------------------------------------===//
 
-def NVVM_PMEventOp : NVVM_PTXBuilder_Op<"pmevent">,
+def NVVM_PMEventOp : NVVM_Op<"pmevent">,
   Arguments<(ins OptionalAttr<I16Attr>:$maskedEventId, 
                  OptionalAttr<I32Attr>:$eventId)> {
   let summary = "Trigger one or more Performance Monitor events.";
@@ -561,20 +561,20 @@ def NVVM_PMEventOp : NVVM_PTXBuilder_Op<"pmevent">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent)
   }];
   
-  string llvmBuilder = [{
-      llvm::Value *mId = builder.getInt16(* $maskedEventId);
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_pm_event_mask, {mId});
-  }];
-
   let assemblyFormat = "attr-dict (`id` `=` $eventId^)? (`mask` `=` $maskedEventId^)?";
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    bool hasIntrinsic() { return !getEventId(); }
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
   }];
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("pmevent %0;"); }
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::PMEventOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

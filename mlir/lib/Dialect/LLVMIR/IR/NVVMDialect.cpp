@@ -2476,6 +2476,25 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
   return {id, std::move(args)};
 }
 
+mlir::NVVM::IDArgPair
+PMEventOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                 llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::PMEventOp>(op);
+  llvm::Type *i16Ty = llvm::Type::getInt16Ty(mt.getLLVMContext());
+
+  // With event-id, mask is generated as (1 << event-id)
+  llvm::Value *maskVal;
+  if (auto eventAttr = thisOp.getEventIdAttr()) {
+    uint16_t mask = static_cast<uint16_t>(1u << eventAttr.getInt());
+    maskVal = llvm::ConstantInt::get(i16Ty, mask);
+  } else {
+    maskVal =
+        llvm::ConstantInt::get(i16Ty, thisOp.getMaskedEventIdAttr().getValue());
+  }
+
+  return {llvm::Intrinsic::nvvm_pm_event_mask, {maskVal}};
+}
+
 mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MBarrierInitOp>(op);
