@@ -1470,6 +1470,8 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
       T->isLValueReferenceType() ||
       //   -- pointer to member,
       T->isMemberPointerType() ||
+      //   -- block pointer,
+      T->isBlockPointerType() ||
       //   -- std::nullptr_t, or
       T->isNullPtrType() ||
       //   -- a type that contains a placeholder type.
@@ -7342,7 +7344,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
       //   For a non-type template-parameter of pointer or reference type,
       //   the value of the constant expression shall not refer to
       assert(ParamType->isPointerOrReferenceType() ||
-             ParamType->isNullPtrType());
+             ParamType->isNullPtrType() || ParamType->isBlockPointerType());
       // -- a temporary object
       // -- a string literal
       // -- the result of a typeid expression, or
