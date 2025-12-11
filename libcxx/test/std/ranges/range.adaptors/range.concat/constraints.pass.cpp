@@ -169,13 +169,19 @@ int main(int, char**) {
   }
 
   // input range
-  { static_assert(WellFormedView<InputRange>); }
+  {
+    static_assert(WellFormedView<InputRange>);
+  }
 
   // bidirectional range
-  { static_assert(WellFormedView<std::list<int>>); }
+  {
+    static_assert(WellFormedView<std::list<int>>);
+  }
 
   // random access range
-  { static_assert(WellFormedView<std::vector<int>>); }
+  {
+    static_assert(WellFormedView<std::vector<int>>);
+  }
 
   {
     // LWG 4082
