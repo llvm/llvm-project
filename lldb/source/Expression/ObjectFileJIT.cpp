@@ -41,7 +41,7 @@ void ObjectFileJIT::Terminate() {
 }
 
 ObjectFile *ObjectFileJIT::CreateInstance(const lldb::ModuleSP &module_sp,
-                                          DataExtractorSP data_sp,
+                                          DataExtractorSP extractor_sp,
                                           lldb::offset_t data_offset,
                                           const FileSpec *file,
                                           lldb::offset_t file_offset,

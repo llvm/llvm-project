@@ -24,11 +24,11 @@ ObjectContainer::ObjectContainer(const lldb::ModuleSP &module_sp,
     : ModuleChild(module_sp),
       m_file(), // This file can be different than the module's file spec
       m_offset(file_offset), m_length(length),
-      m_data_sp(std::make_shared<DataExtractor>()) {
+      m_extractor_sp(std::make_shared<DataExtractor>()) {
   if (file)
     m_file = *file;
   if (data_sp) {
-    m_data_sp->SetData(data_sp, data_offset, length);
+    m_extractor_sp->SetData(data_sp, data_offset, length);
   }
 }
 

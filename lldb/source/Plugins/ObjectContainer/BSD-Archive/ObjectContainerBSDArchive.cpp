@@ -68,10 +68,10 @@ void ObjectContainerBSDArchive::Object::Dump() const {
 ObjectContainerBSDArchive::Archive::Archive(const lldb_private::ArchSpec &arch,
                                             const llvm::sys::TimePoint<> &time,
                                             lldb::offset_t file_offset,
-                                            lldb::DataExtractorSP data,
+                                            lldb::DataExtractorSP extractor_sp,
                                             ArchiveType archive_type)
     : m_arch(arch), m_modification_time(time), m_file_offset(file_offset),
-      m_objects(), m_data_sp(data), m_archive_type(archive_type) {}
+      m_objects(), m_extractor_sp(extractor_sp), m_archive_type(archive_type) {}
 
 Log *l = GetLog(LLDBLog::Object);
 ObjectContainerBSDArchive::Archive::~Archive() = default;
@@ -79,8 +79,8 @@ ObjectContainerBSDArchive::Archive::~Archive() = default;
 size_t ObjectContainerBSDArchive::Archive::ParseObjects() {
   std::unique_ptr<llvm::MemoryBuffer> mem_buffer =
       llvm::MemoryBuffer::getMemBuffer(
-          llvm::StringRef((const char *)m_data_sp->GetDataStart(),
-                          m_data_sp->GetByteSize()),
+          llvm::StringRef((const char *)m_extractor_sp->GetDataStart(),
+                          m_extractor_sp->GetByteSize()),
           llvm::StringRef(),
           /*RequiresNullTerminator=*/false);
 
@@ -219,9 +219,9 @@ ObjectContainerBSDArchive::Archive::shared_ptr
 ObjectContainerBSDArchive::Archive::ParseAndCacheArchiveForFile(
     const FileSpec &file, const ArchSpec &arch,
     const llvm::sys::TimePoint<> &time, lldb::offset_t file_offset,
-    DataExtractorSP data, ArchiveType archive_type) {
+    DataExtractorSP extractor_sp, ArchiveType archive_type) {
   shared_ptr archive_sp(
-      new Archive(arch, time, file_offset, data, archive_type));
+      new Archive(arch, time, file_offset, extractor_sp, archive_type));
   if (archive_sp) {
     const size_t num_objects = archive_sp->ParseObjects();
     if (num_objects > 0) {
@@ -366,17 +366,17 @@ ObjectContainerBSDArchive::~ObjectContainerBSDArchive() = default;
 
 bool ObjectContainerBSDArchive::ParseHeader() {
   if (m_archive_sp.get() == nullptr) {
-    if (m_data_sp->GetByteSize() > 0) {
+    if (m_extractor_sp->GetByteSize() > 0) {
       ModuleSP module_sp(GetModule());
       if (module_sp) {
         m_archive_sp = Archive::ParseAndCacheArchiveForFile(
             m_file, module_sp->GetArchitecture(),
-            module_sp->GetModificationTime(), m_offset, m_data_sp,
+            module_sp->GetModificationTime(), m_offset, m_extractor_sp,
             m_archive_type);
       }
-      // Clear the m_data_sp that contains the entire archive data and let our
-      // m_archive_sp hold onto the data.
-      m_data_sp = std::make_shared<DataExtractor>();
+      // Clear the m_extractor_sp that contains the entire archive data and let
+      // our m_archive_sp hold onto the data.
+      m_extractor_sp = std::make_shared<DataExtractor>();
     }
   }
   return m_archive_sp.get() != nullptr;

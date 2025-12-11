@@ -163,12 +163,12 @@ static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
 bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
                                       lldb::addr_t data_offset,
                                       lldb::addr_t data_length) {
-  lldb_private::DataExtractor data;
-  data.SetData(data_sp, data_offset, data_length);
+  lldb_private::DataExtractor extractor;
+  extractor.SetData(data_sp, data_offset, data_length);
   // Need to set this as XCOFF is only compatible with Big Endian
-  data.SetByteOrder(eByteOrderBig);
+  extractor.SetByteOrder(eByteOrderBig);
   lldb::offset_t offset = 0;
-  uint16_t magic = data.GetU16(&offset);
+  uint16_t magic = extractor.GetU16(&offset);
   return XCOFFHeaderSizeFromMagic(magic) != 0;
 }
 
