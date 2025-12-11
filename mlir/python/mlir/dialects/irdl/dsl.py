@@ -375,8 +375,8 @@ class Dialect:
         dialect_class = self._make_dialect_class()
         _cext.register_dialect(dialect_class)
 
-        # for op in self.operations:
-        # _cext.register_operation(dialect_class)(op)
+        for op in self.operations:
+            _cext.register_operation(dialect_class)(op)
 
         self.mlir_module = mlir_module
         self.dialect_class = dialect_class
