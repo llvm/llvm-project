@@ -140,8 +140,9 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
 
   uint16_t port = 0;
   {
+    // Get the next available port by binding a socket to port 0.
     TCPSocket listen_socket(true);
-    error = listen_socket.Listen("localhost:0", 5);
+    error = listen_socket.Listen("localhost:0", /*backlog=*/5);
     if (error.Fail())
       return nullptr;
     port = listen_socket.GetLocalPortNumber();
@@ -195,8 +196,10 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
     // If we know the runtime has exited, that's a better error message than
     // failing to connect.
     if (*exit_code)
-      error = Status::FromErrorStringWithFormatv(
-          "WebAssembly runtime exited with exit code {0}", **exit_code);
+      error = Status::FromError(llvm::joinErrors(
+          llvm::createStringError(llvm::formatv(
+              "WebAssembly runtime exited with exit code {0}", **exit_code)),
+          error.takeError()));
 
     return nullptr;
   }
