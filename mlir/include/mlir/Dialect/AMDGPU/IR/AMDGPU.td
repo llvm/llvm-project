@@ -1272,7 +1272,24 @@ class AMDGPU_DmaBaseOp<string mnemonic, Type outType> :
 
 def AMDGPU_MakeGatherDmaBaseOp : AMDGPU_DmaBaseOp<"make_gather_dma_base", AMDGPU_TDMGatherBaseType> {
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
-  let description = "TODO";
+
+  let description = [{
+    This operation creates a pair of addresses that will be used by `tensor_load_to_lds`
+    and `tensor_store_from_lds`.
+
+    This operation creates a value corresponding to the tensor descriptor (D#) group 0
+    found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
+
+    Unlike `make_dma_base`, this operation returns `!amdgpu.tdm_gather_base<$element_type, $index_size>`
+    which is only compatible with `make_gather_dma_descriptor`. Using the descriptor returned
+    by `make_gather_dma_descriptor` will set the `tensor_load_to_lds` and `tensor_store_from_lds` to gather mode.
+
+    ```mlir
+      %base = amdgpu.make_gather_dma_base %global[%idx0, %idx1], %lds[%idx2, %idx3] : memref<64x64xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_gather_base<i32, 16>
+      %descriptor = amdgpu.make_gather_dma_descriptor %base globalSize [2, 2] globalStride [2, 1] sharedSize [2, 2] : !amdgpu.tdm_gather_base<i32, 16> -> !amdgpu.tdm_descriptor
+      amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
+    ```
+  }];
 
   let extraClassDeclaration = [{
     constexpr int64_t isGather() {
