@@ -74,6 +74,7 @@ Changes to the LLVM IR
   format string function implementations from statically-linked libc's based on
   the requirements of each call. Currently only `float` is supported; this can
   keep floating point support out of printf if it can be proven unused.
+* Case values are no longer operands of `SwitchInst`.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -217,6 +218,7 @@ Changes to the C API
   * `LLVMParseBitcode2` -> `LLVMParseBitcodeInContext2`
   * `LLVMGetBitcodeModule` -> `LLVMGetBitcodeModuleInContext2`
   * `LLVMGetBitcodeModule2` -> `LLVMGetBitcodeModuleInContext2`
+* Add `LLVMGetSwitchCaseValue` and `LLVMSetSwitchCaseValue` to get and set switch case values; switch case values are no longer operands of the instruction.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
