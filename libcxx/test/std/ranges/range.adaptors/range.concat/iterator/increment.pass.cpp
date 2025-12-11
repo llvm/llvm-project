@@ -23,11 +23,13 @@
 #include "test_iterators.h"
 #include "../../range_adaptor_types.h"
 
-struct InputRange : IntBufferView {
-  using IntBufferView::IntBufferView;
-  using iterator = cpp20_input_iterator<int*>;
-  constexpr iterator begin() const { return iterator(buffer_); }
-  constexpr sentinel_wrapper<iterator> end() const { return sentinel_wrapper<iterator>(iterator(buffer_ + size_)); }
+struct InputRange {
+  using iterator = cpp17_input_iterator<int*>;
+  int* begin_;
+  int* end_;
+  constexpr InputRange(int* b, int* e): begin_(b), end_(e) {}
+  constexpr iterator begin() const { return iterator(begin_); }
+  constexpr sentinel_wrapper<iterator> end() const { return sentinel_wrapper<iterator>(iterator(end_)); }
 };
 
 constexpr bool test() {
@@ -68,7 +70,7 @@ constexpr bool test() {
     assert(*it == 2);
   }
 
-  // more than two views, has input range
+  // more than two views
   {
     std::ranges::concat_view view(a, b, std::views::iota(0, 5));
     auto it    = view.begin();
@@ -83,7 +85,7 @@ constexpr bool test() {
   // input range, no postfix operator++
   {
     int buffer[3] = {4, 5, 6};
-    std::ranges::concat_view view(a, InputRange{buffer});
+    std::ranges::concat_view view(a, InputRange{buffer, buffer + 3});
     auto it    = view.begin();
     using Iter = decltype(it);
     static_assert(std::is_same_v<decltype(it++), void>);
