@@ -8,11 +8,11 @@
 # RUN: yaml2obj --docnum=1 %s -o 32.o
 # RUN: yaml2obj --docnum=2 %s -o 64.o
 
-## Create archive with same-named members using different modes.
+## Create big archive with same-named members using explicit format.
 # RUN: cp 32.o test.o
-# RUN: llvm-ar %if system-aix %{-X32%} crv archive.a test.o
+# RUN: llvm-ar --format=bigarchive %if system-aix %{-X32%} crv archive.a test.o
 # RUN: cp 64.o test.o
-# RUN: llvm-ar %if system-aix %{-X64 rv%} %else %{qv%} archive.a test.o
+# RUN: llvm-ar --format=bigarchive %if system-aix %{-X64 rv%} %else %{qv%} archive.a test.o
 
 ## Test symbolization disambiguates between 32-bit and 64-bit members
 ## using architecture specified via --default-arch flag.
