@@ -311,6 +311,9 @@ template <bool IsConst> inline auto LoopRange<IsConst>::end() -> iterator {
 
 using ConstLoopRange = LoopRange<true>;
 
+extern template struct LoopRange<true>;
+extern template struct LoopRange<false>;
+
 } // namespace Fortran::parser::omp
 
 #endif // FORTRAN_PARSER_OPENMP_UTILS_H
