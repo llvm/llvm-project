@@ -343,6 +343,13 @@ generic-asan)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan.cmake"
     check-runtimes
 ;;
+generic-asan-in-tests-only)
+    # This builds the library without ASAN support, but then turns on ASAN support
+    # within the test suite.
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan-in-tests-only.cmake"
+    check-runtimes
+;;
 generic-msan)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-msan.cmake"

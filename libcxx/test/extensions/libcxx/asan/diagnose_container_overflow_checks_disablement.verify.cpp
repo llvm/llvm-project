@@ -8,12 +8,11 @@
 
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
-// REQUIRES: libcpp-instrumented-with-asan
-
 // Check that we diagnose when libc++ has been built with ASAN instrumentation
 // and the user requests turning off the ASAN container checks. Since that is
 // impossible to implement, we diagnose this with an error instead.
 //
+// REQUIRES: libcpp-instrumented-with-asan
 // ADDITIONAL_COMPILE_FLAGS: -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__
 
 #include <deque>

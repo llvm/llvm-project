@@ -9,14 +9,12 @@
 // Check that libc++ honors when __SANITIZER_DISABLE_CONTAINER_OVERFLOW__ is set
 // and disables the container overflow checks.
 //
-// ADDITIONAL_COMPILE_FLAGS: -fsanitize=address -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__
+// REQUIRES: asan
+// ADDITIONAL_COMPILE_FLAGS: -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__
 
 // When libc++ is built with ASAN instrumentation, we can't turn off the ASAN checks,
 // and that is diagnosed as an error.
 // UNSUPPORTED: libcpp-instrumented-with-asan
-
-// MSAN, TSAN and ASAN are mutually exclusive
-// UNSUPPORTED: msan, tsan
 
 // std::basic_string::data is const util C++17
 // UNSUPPORTED: c++03, c++11, c++14
