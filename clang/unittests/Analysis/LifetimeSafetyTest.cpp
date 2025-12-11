@@ -63,7 +63,7 @@ public:
 
     // Run the main analysis.
     Analysis =
-        std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr, 0);
+        std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr, 0, 0);
     Analysis->run();
 
     AnnotationToPointMap = Analysis->getFactManager().getTestPoints();

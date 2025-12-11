@@ -503,6 +503,7 @@ LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type
 
 LANGOPT(CfgBlocknumThreshold, 32, 0, NotCompatible, "Experimental CFG bailout size threshold for C++")
 
+LANGOPT(CfgOriginCountThreshold, 32, 0, NotCompatible, "Experimental CFG bailout origin count threshold for C++")
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

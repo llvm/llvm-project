@@ -245,6 +245,9 @@ public:
   void setBlockNumThreshold(uint32_t Threshold) {
     BlockNumThreshold = Threshold;
   }
+  void setCfgOriginCountThreshold(uint32_t Threshold) {
+    CfgOriginCountThreshold = Threshold;
+  }
 
 private:
   FactID NextFactID{0};
@@ -254,6 +257,7 @@ private:
   llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
   llvm::BumpPtrAllocator FactAllocator;
   uint32_t BlockNumThreshold = 0;
+  uint32_t CfgOriginCountThreshold = 0;
 };
 } // namespace clang::lifetimes::internal
 

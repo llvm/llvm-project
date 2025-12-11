@@ -36,9 +36,11 @@ namespace internal {
 
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter,
-                                               uint32_t CfgBlocknumThreshold)
-    : CfgBlocknumThreshold(CfgBlocknumThreshold), AC(AC), Reporter(Reporter) {
+                                               uint32_t CfgBlocknumThreshold,
+                                              uint32_t CfgOriginCountThreshold)
+    : CfgBlocknumThreshold(CfgBlocknumThreshold), CfgOriginCountThreshold(CfgOriginCountThreshold), AC(AC), Reporter(Reporter) {
   FactMgr.setBlockNumThreshold(CfgBlocknumThreshold);
+  FactMgr.setCfgOriginCountThreshold(CfgOriginCountThreshold);
 }
 
 bool LifetimeSafetyAnalysis::shouldBailOutCFGPreFactGeneration(const CFG& Cfg) const {
@@ -48,6 +50,17 @@ bool LifetimeSafetyAnalysis::shouldBailOutCFGPreFactGeneration(const CFG& Cfg) c
                << "Aborting Lifetime Safety analysis for current CFG as it has "
                   "blocks exceeding the thresold. Number of blocks: "
                << Cfg.getNumBlockIDs() << "\n");
+    return true;
+  }
+  return false;
+}
+
+bool LifetimeSafetyAnalysis::shouldBailOutCFGPostFactGeneration(const CFG &Cfg) const {
+  if (CfgOriginCountThreshold > 0 && FactMgr.getOriginMgr().getNumOrigins() > CfgOriginCountThreshold) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "Aborting Lifetime Safety analysis for current CFG as it has "
+                  "origins exceeding the thresold of " << CfgOriginCountThreshold << ". Number of origins: "
+               << FactMgr.getOriginMgr().getNumOrigins() << "\n");
     return true;
   }
   return false;
@@ -66,6 +79,9 @@ void LifetimeSafetyAnalysis::run() {
 
   FactsGenerator FactGen(FactMgr, AC);
   FactGen.run();
+  if (shouldBailOutCFGPostFactGeneration(Cfg)) {
+    return;
+  }
   DEBUG_WITH_TYPE("LifetimeFacts", FactMgr.dump(Cfg, AC));
   DEBUG_WITH_TYPE("LifetimeCFGSizes", FactMgr.dumpBlockSizes(Cfg, AC));
 
@@ -94,8 +110,9 @@ void LifetimeSafetyAnalysis::run() {
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetyReporter *Reporter,
-                               uint32_t CfgBlocknumThreshold) {
-  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter, CfgBlocknumThreshold);
+                               uint32_t CfgBlocknumThreshold,
+                               uint32_t CfgOriginCountThreshold) {
+  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter, CfgBlocknumThreshold, CfgOriginCountThreshold);
   Analysis.run();
 }
 } // namespace clang::lifetimes

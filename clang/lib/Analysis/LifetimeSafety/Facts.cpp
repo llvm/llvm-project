@@ -9,6 +9,10 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
+#include "llvm/Support/Debug.h"
+
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "lifetime-safety-facts"
 
 namespace clang::lifetimes::internal {
 
@@ -103,12 +107,17 @@ void FactManager::dumpBlockSizes(const CFG &Cfg,
   if (const Decl *D = AC.getDecl())
     if (const auto *ND = dyn_cast<NamedDecl>(D))
       llvm::dbgs() << "Function: " << ND->getQualifiedNameAsString() << "\n";
-  llvm::dbgs() << "Number of CFG Blocks: " << Cfg.getNumBlockIDs() << "\n";
   if (BlockNumThreshold > 0 && Cfg.getNumBlockIDs() > BlockNumThreshold) {
     llvm::dbgs() << "CFG Block Number Threshold: " << BlockNumThreshold << "\n";
     llvm::dbgs() << "Bailed out before generating facts.\n";
     return;
   }
+  if (CfgOriginCountThreshold > 0 && OriginMgr.getNumOrigins() > CfgOriginCountThreshold) {
+    LLVM_DEBUG(llvm::dbgs() << "Number of origins exceeded CFG Origin Count Threshold. Number of Origins: " << OriginMgr.getNumOrigins() << ", threshold: " << BlockNumThreshold << "\n" << "Bailed out after generating facts.\n");
+    return;
+  }
+  llvm::dbgs() << "Number of CFG Blocks: " << Cfg.getNumBlockIDs() << "\n";
+  llvm::dbgs() << "Number of Origins: " << OriginMgr.getNumOrigins() << "\n";
   // Print blocks in the order as they appear in code for a stable ordering.
   for (const CFGBlock *B : *AC.getAnalysis<PostOrderCFGView>()) {
     if (B->getLabel())
