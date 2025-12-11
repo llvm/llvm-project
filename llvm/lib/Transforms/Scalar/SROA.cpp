@@ -5190,7 +5190,6 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 ///   - IsIntegerWideningViable: True if integer widening promotion is used.
 ///   - VectorType: The vector type if vector promotion is used, otherwise
 ///     nullptr.
-///
 static std::tuple<Type *, bool, VectorType *>
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
                     LLVMContext &C) {
@@ -5199,9 +5198,9 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // We prefer vector promotion over integer widening promotion when:
   // - The vector element type is a floating-point type.
   // - All the loads/stores to the alloca are vector loads/stores to the
-  //   entire alloca.
+  //   entire alloca or load/store a single element of the vector.
   //
-  // Otherwise when there is an integer vector with mixed loads/stores we prefer
+  // Otherwise when there is an integer vector with mixed type loads/stores we prefer
   // integer widening promotion because it's more likely the user is doing
   // bitwise arithmetic and we generate better code.
   VectorType *VecTy =
@@ -5283,6 +5282,7 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
 AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
                                    Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
+  // Select the type for the new alloca that spans the partition.
   auto [PartitionTy, IsIntegerWideningViable, VecTy] =
       selectPartitionType(P, DL, AI, *C);
 
