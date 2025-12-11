@@ -383,6 +383,16 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
   return false;
 }
 
+static bool isTargetWindows(const MachineFunction &MF) {
+  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+}
+
+bool AArch64FrameLowering::hasSVECalleeSavesAboveFrameRecord(
+    const MachineFunction &MF) const {
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  return isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
+}
+
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
 /// When Exit block is given, this check is for epilog.
@@ -396,7 +406,7 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
     return false;
 
   // TODO: Window is supported yet.
-  if (needsWinCFI(MF))
+  if (isTargetWindows(MF))
     return false;
 
   // TODO: SVE is not supported yet.
@@ -1180,10 +1190,6 @@ bool AArch64FrameLowering::requiresSaveVG(const MachineFunction &MF) const {
   return true;
 }
 
-static bool isTargetWindows(const MachineFunction &MF) {
-  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
-}
-
 void AArch64FrameLowering::emitPacRetPlusLeafHardening(
     MachineFunction &MF) const {
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
@@ -1282,8 +1288,7 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
     return StackOffset::getFixed(ObjectOffset - getOffsetOfLocalArea());
 
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
-  bool FPAfterSVECalleeSaves =
-      isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
+  bool FPAfterSVECalleeSaves = hasSVECalleeSavesAboveFrameRecord(MF);
   if (MFI.hasScalableStackID(FI)) {
     if (FPAfterSVECalleeSaves &&
         -ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize()) {
@@ -1453,8 +1458,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       "In the presence of dynamic stack pointer realignment, "
       "non-argument/CSR objects cannot be accessed through the frame pointer");
 
-  bool FPAfterSVECalleeSaves =
-      isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
+  bool FPAfterSVECalleeSaves = hasSVECalleeSavesAboveFrameRecord(MF);
 
   if (isSVE) {
     StackOffset FPOffset = StackOffset::get(
@@ -1685,7 +1689,6 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     return;
 
   bool IsWindows = isTargetWindows(MF);
-  bool NeedsWinCFI = AFL.needsWinCFI(MF);
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   unsigned StackHazardSize = getStackHazardSize(MF);
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1703,7 +1706,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
   int StackFillDir = -1;
   int RegInc = 1;
   unsigned FirstReg = 0;
-  if (NeedsWinCFI) {
+  if (IsWindows) {
     // For WinCFI, fill the stack from the bottom up.
     ByteOffset = 0;
     StackFillDir = 1;
@@ -1713,7 +1716,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     FirstReg = Count - 1;
   }
 
-  bool FPAfterSVECalleeSaves = IsWindows && AFI->getSVECalleeSavedStackSize();
+  bool FPAfterSVECalleeSaves = AFL.hasSVECalleeSavesAboveFrameRecord(MF);
   // Windows AAPCS has x9-x15 as volatile registers, x16-x17 as intra-procedural
   // scratch, x18 as platform reserved. However, clang has extended calling
   // convensions such as preserve_most and preserve_all which treat these as
@@ -1783,6 +1786,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       ByteOffset += StackFillDir * StackHazardSize;
     LastReg = RPI.Reg1;
 
+    bool NeedsWinCFI = AFL.needsWinCFI(MF);
     int Scale = TRI->getSpillSize(*RPI.RC);
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
@@ -1799,9 +1803,9 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
         break;
       case RegPairInfo::FPR64:
         if (AArch64::FPR64RegClass.contains(NextReg) &&
-            !invalidateWindowsRegisterPairing(SpillExtendedVolatile, SpillCount,
-                                              RPI.Reg1, NextReg, NeedsWinCFI,
-                                              IsFirst, TRI))
+            !invalidateRegisterPairing(
+                SpillExtendedVolatile, SpillCount, RPI.Reg1, NextReg, IsWindows,
+                NeedsWinCFI, NeedsFrameRecord, IsFirst, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR128:
@@ -1855,7 +1859,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
            "Callee-save registers not saved as adjacent register pair!");
 
     RPI.FrameIdx = CSI[i].getFrameIdx();
-    if (NeedsWinCFI &&
+    if (IsWindows &&
         RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
       RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
 
@@ -1882,7 +1886,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
 
     // Round up size of non-pair to pair size if we need to pad the
     // callee-save area to ensure 16-byte alignment.
-    if (NeedGapToAlignStack && !NeedsWinCFI && !RPI.isScalable() &&
+    if (NeedGapToAlignStack && !IsWindows && !RPI.isScalable() &&
         RPI.Type != RegPairInfo::FPR128 && !RPI.isPaired() &&
         ByteOffset % 16 != 0) {
       ByteOffset += 8 * StackFillDir;
@@ -1898,7 +1902,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     assert(OffsetPost % Scale == 0);
     // If filling top down (default), we want the offset after incrementing it.
     // If filling bottom up (WinCFI) we need the original offset.
-    int Offset = NeedsWinCFI ? OffsetPre : OffsetPost;
+    int Offset = IsWindows ? OffsetPre : OffsetPost;
 
     // The FP, LR pair goes 8 bytes into our expanded 24-byte slot so that the
     // Swift context can directly precede FP.
@@ -1937,7 +1941,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     if (RPI.isPaired())
       i += RegInc;
   }
-  if (NeedsWinCFI) {
+  if (IsWindows) {
     // If we need an alignment gap in the stack, align the topmost stack
     // object. A stack frame with a gap looks like this, bottom up:
     // x19, d8. d9, gap.
@@ -2075,14 +2079,15 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       dbgs() << ")\n";
     });
 
-    assert((!NeedsWinCFI || !(Reg1 == AArch64::LR && Reg2 == AArch64::FP)) &&
+    assert((!isTargetWindows(MF) ||
+            !(Reg1 == AArch64::LR && Reg2 == AArch64::FP)) &&
            "Windows unwdinding requires a consecutive (FP,LR) pair");
     // Windows unwind codes require consecutive registers if registers are
     // paired.  Make the switch here, so that the code below will save (x,x+1)
     // and not (x+1,x).
     unsigned FrameIdxReg1 = RPI.FrameIdx;
     unsigned FrameIdxReg2 = RPI.FrameIdx + 1;
-    if (NeedsWinCFI && RPI.isPaired()) {
+    if (isTargetWindows(MF) && RPI.isPaired()) {
       std::swap(Reg1, Reg2);
       std::swap(FrameIdxReg1, FrameIdxReg2);
     }
@@ -2270,7 +2275,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     // and not (x+1,x).
     unsigned FrameIdxReg1 = RPI.FrameIdx;
     unsigned FrameIdxReg2 = RPI.FrameIdx + 1;
-    if (NeedsWinCFI && RPI.isPaired()) {
+    if (isTargetWindows(MF) && RPI.isPaired()) {
       std::swap(Reg1, Reg2);
       std::swap(FrameIdxReg1, FrameIdxReg2);
     }
@@ -2787,14 +2792,14 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *RegInfo,
     std::vector<CalleeSavedInfo> &CSI) const {
-  bool NeedsWinCFI = needsWinCFI(MF);
+  bool IsWindows = isTargetWindows(MF);
   unsigned StackHazardSize = getStackHazardSize(MF);
   // To match the canonical windows frame layout, reverse the list of
   // callee saved registers to get them laid out by PrologEpilogInserter
   // in the right order. (PrologEpilogInserter allocates stack objects top
   // down. Windows canonical prologs store higher numbered registers at
   // the top, thus have the CSI array start from the highest registers.)
-  if (NeedsWinCFI)
+  if (IsWindows)
     std::reverse(CSI.begin(), CSI.end());
 
   if (CSI.empty())
@@ -2805,8 +2810,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
 
-  bool UsesWinAAPCS = isTargetWindows(MF);
-  if (UsesWinAAPCS && hasFP(MF) && AFI->hasSwiftAsyncContext()) {
+  if (IsWindows && hasFP(MF) && AFI->hasSwiftAsyncContext()) {
     int FrameIdx = MFI.CreateStackObject(8, Align(16), true);
     AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
     MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
@@ -2849,7 +2853,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
 
     // Grab 8 bytes below FP for the extended asynchronous frame info.
-    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && !UsesWinAAPCS &&
+    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && !IsWindows &&
         Reg == AArch64::FP) {
       FrameIdx = MFI.CreateStackObject(8, Alignment, true);
       AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
