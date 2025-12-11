@@ -204,7 +204,7 @@ HTML-CALC:                     <div id="public_val" class="delimiter-container">
 HTML-CALC:                         <pre><code class="language-cpp code-clang-doc" >int public_val</code></pre>
 HTML-CALC:                     </div>
 HTML-CALC:                     <div id="static_val" class="delimiter-container">
-HTML-CALC:                         <pre><code class="language-cpp code-clang-doc" >const int static_val</code></pre>
+HTML-CALC:                         <pre><code class="language-cpp code-clang-doc" >static const int static_val</code></pre>
 HTML-CALC:                     </div>
 HTML-CALC:                 </div>
 HTML-CALC:             </section>

@@ -2486,6 +2486,21 @@ LogicalResult cir::CopyOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// GetRuntimeMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::GetRuntimeMemberOp::verify() {
+  auto recordTy = mlir::cast<RecordType>(getAddr().getType().getPointee());
+  cir::DataMemberType memberPtrTy = getMember().getType();
+
+  if (recordTy != memberPtrTy.getClassTy())
+    return emitError() << "record type does not match the member pointer type";
+  if (getType().getPointee() != memberPtrTy.getMemberTy())
+    return emitError() << "result type does not match the member pointer type";
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // GetMemberOp Definitions
 //===----------------------------------------------------------------------===//
 

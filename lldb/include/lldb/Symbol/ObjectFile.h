@@ -105,10 +105,10 @@ public:
   /// more than one architecture or object.
   ObjectFile(const lldb::ModuleSP &module_sp, const FileSpec *file_spec_ptr,
              lldb::offset_t file_offset, lldb::offset_t length,
-             lldb::DataBufferSP data_sp, lldb::offset_t data_offset);
+             lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset);
 
   ObjectFile(const lldb::ModuleSP &module_sp, const lldb::ProcessSP &process_sp,
-             lldb::addr_t header_addr, lldb::DataBufferSP data_sp);
+             lldb::addr_t header_addr, lldb::DataExtractorSP extractor_sp);
 
   /// Destructor.
   ///
@@ -152,7 +152,7 @@ public:
   static lldb::ObjectFileSP
   FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file_spec,
              lldb::offset_t file_offset, lldb::offset_t file_size,
-             lldb::DataBufferSP &data_sp, lldb::offset_t &data_offset);
+             lldb::DataExtractorSP extractor_sp, lldb::offset_t &data_offset);
 
   /// Find a ObjectFile plug-in that can parse a file in memory.
   ///

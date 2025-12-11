@@ -47,12 +47,12 @@ llvm::StringRef SymbolVendorELF::GetPluginDescriptionStatic() {
 // If this is needed elsewhere, it can be exported/moved.
 static bool IsDwpSymbolFile(const lldb::ModuleSP &module_sp,
                             const FileSpec &file_spec) {
-  DataBufferSP dwp_file_data_sp;
+  DataExtractorSP dwp_file_extractor_sp;
   lldb::offset_t dwp_file_data_offset = 0;
   // Try to create an ObjectFile from the file_spec.
   ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
       module_sp, &file_spec, 0, FileSystem::Instance().GetByteSize(file_spec),
-      dwp_file_data_sp, dwp_file_data_offset);
+      dwp_file_extractor_sp, dwp_file_data_offset);
   // The presence of a debug_cu_index section is the key identifying feature of
   // a DWP file. Make sure we don't fill in the section list on dwp_obj_file
   // (by calling GetSectionList(false)) as this function could be called before
@@ -120,11 +120,11 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
     dsym_fspec = unstripped_spec.GetFileSpec();
   }
 
-  DataBufferSP dsym_file_data_sp;
+  DataExtractorSP dsym_file_extractor_sp;
   lldb::offset_t dsym_file_data_offset = 0;
   ObjectFileSP dsym_objfile_sp = ObjectFile::FindPlugin(
       module_sp, &dsym_fspec, 0, FileSystem::Instance().GetByteSize(dsym_fspec),
-      dsym_file_data_sp, dsym_file_data_offset);
+      dsym_file_extractor_sp, dsym_file_data_offset);
   if (!dsym_objfile_sp)
     return nullptr;
   // This objfile is for debugging purposes. Sadly, ObjectFileELF won't

@@ -1514,6 +1514,10 @@ public:
   RValue emitCXXMemberCallExpr(const clang::CXXMemberCallExpr *e,
                                ReturnValueSlot returnValue);
 
+  Address emitCXXMemberDataPointerAddress(
+      const Expr *e, Address base, mlir::Value memberPtr,
+      const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo);
+
   RValue emitCXXMemberOrOperatorCall(
       const clang::CXXMethodDecl *md, const CIRGenCallee &callee,
       ReturnValueSlot returnValue, mlir::Value thisPtr,
@@ -1695,6 +1699,8 @@ public:
                              std::optional<mlir::Location> elseLoc = {});
 
   mlir::Value emitOpOnBoolExpr(mlir::Location loc, const clang::Expr *cond);
+
+  LValue emitPointerToDataMemberBinaryExpr(const BinaryOperator *e);
 
   mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
   mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
