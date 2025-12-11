@@ -1015,7 +1015,8 @@ public:
 #    endif
 
   _LIBCPP_HIDE_FROM_ABI map& operator=(initializer_list<value_type> __il) {
-    __tree_.__assign_unique(__il.begin(), __il.end());
+    clear();
+    insert(__il.begin(), __il.end());
     return *this;
   }
 
@@ -1689,7 +1690,8 @@ public:
 #    endif
 
   _LIBCPP_HIDE_FROM_ABI multimap& operator=(initializer_list<value_type> __il) {
-    __tree_.__assign_multi(__il.begin(), __il.end());
+    clear();
+    insert(__il.begin(), __il.end());
     return *this;
   }
 
