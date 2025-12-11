@@ -175,7 +175,10 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
   "TagType": "class",
   "Template": {
     "Parameters": [
-      "class T"
+      {
+        "End": true,
+        "Param": "class T"
+      }
     ]
   },
   "USR": "0000000000000000000000000000000000000000",

@@ -7,8 +7,9 @@
 // RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=md
 // RUN: cat %t/docs/GlobalNamespace/index.md | FileCheck %s --check-prefix=MD
 
-// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=json
+// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=html
 // RUN: cat %t/docs/json/GlobalNamespace/index.json | FileCheck %s --check-prefix=JSON
+// RUN: cat %t/docs/html/GlobalNamespace/_ZTV5tuple.html | FileCheck %s --check-prefix=HTML-STRUCT
 
 // YAML: ---
 // YAML-NEXT: USR:             '{{([0-9A-F]{40})}}'
@@ -122,7 +123,7 @@ void function(T x) {}
 // JSON-NEXT:            "Param": "int U = 1"
 // JSON-NEXT:          }
 // JSON-NEXT:        ]
-// JSON-NEXT:      },
+// JSON-NEXT:      }
 
 template <>
 void function<bool, 0>(bool x) {}
@@ -187,6 +188,22 @@ void function<bool, 0>(bool x) {}
 /// Does Tuple things.
 template <typename... Tys>
 struct tuple {};
+
+// HTML-STRUCT:        <section class="hero section-container">
+// HTML-STRUCT-NEXT:       <pre><code class="language-cpp code-clang-doc">template &lt;typename... Tys&gt;</code></pre>
+// HTML-STRUCT-NEXT:       <div class="hero__title">
+// HTML-STRUCT-NEXT:           <h1 class="hero__title-large">struct tuple</h1>
+// HTML-STRUCT-NEXT:           <p>Defined at line [[# @LINE - 6]] of file {{.*}}templates.cpp</p>
+// HTML-STRUCT-NEXT:           <div class="hero__subtitle">
+// HTML-STRUCT-NEXT:               <div>
+// HTML-STRUCT-NEXT:                   <p> A Tuple type</p>
+// HTML-STRUCT-NEXT:               </div>
+// HTML-STRUCT-NEXT:               <div>
+// HTML-STRUCT-NEXT:                   <p> Does Tuple things.</p>
+// HTML-STRUCT-NEXT:               </div>
+// HTML-STRUCT-NEXT:           </div>
+// HTML-STRUCT-NEXT:       </div>
+// HTML-STRUCT-NEXT:   </section>
 
 /// A function with a tuple parameter
 ///
