@@ -506,6 +506,26 @@ public:
   static Constant *constructLinearSeriesVector(IntegerType *intTy,
                                                uint64_t size);
 
+  /// @brief Starting from @p TruncatedVal, visit all of its users and returns
+  /// true if all the arithmetic operations using it have no-wrap semantics.
+  ///
+  /// When true, it means that we can safely propagate a linear series through a
+  /// truncation because of the undefined behavior semantics on overflow.
+  ///
+  /// True when Truncate(AX + B) = Truncate(AX) + Truncate(B) stands.
+  static bool canDistributeTruncAcrossSeries(Value *TruncatedVal);
+
+  /// @brief Starting from the value being extended (i.e., the operand of the
+  /// cast), visit all of its predecessors and returns true if all the
+  /// arithmetic operations using it have no-wrap semantics.
+  ///
+  /// When true, it means that we can safely propagate a linear series through a
+  /// truncation because of the undefined behavior semantics on overflow.
+  ///
+  /// True when Extend(AX + B) = Extend(AX) + Extend(B) stands.
+  static bool canDistributeExtAcrossSeries(Value *CastOperand,
+                                           bool UnsignedSeries);
+
 private:
   /// @brief The base value
   TrackingVH<Value> Base;

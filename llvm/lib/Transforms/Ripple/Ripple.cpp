@@ -5725,6 +5725,95 @@ Ripple::ConstructedSeries Ripple::tryToPromoteLinearSeries(LinearSeries *LS) {
   }
 }
 
+bool LinearSeries::canDistributeTruncAcrossSeries(Value *TruncatedVal) {
+  // TruncInst can be checked directly
+  if (auto *Trunc = dyn_cast<TruncInst>(TruncatedVal)) {
+    if (Trunc->hasNoUnsignedWrap() || Trunc->hasNoSignedWrap())
+      return true;
+  }
+
+  SmallPtrSet<Value *, 16> Visited;
+  SmallVector<Use *, 16> Worklist;
+  for (auto &U : TruncatedVal->uses())
+    Worklist.push_back(&U);
+
+  // For truncation, we check that all the successors adhere to the no-wrap
+  // semantics to allow the propagation of LinearSeries
+
+  while (!Worklist.empty()) {
+    Use *U = Worklist.pop_back_val();
+    Value *V = U->getUser();
+    if (!Visited.insert(V).second)
+      continue;
+
+    // Only allow OverflowingBinaryOperator with the no-wrap semantics
+    if (auto *OB = dyn_cast<OverflowingBinaryOperator>(V)) {
+      if (OB->hasNoUnsignedWrap() || OB->hasNoSignedWrap())
+        continue;
+      else
+        return false;
+    }
+
+    // Only allow propagation of the select values, not the condition
+    auto *Select = dyn_cast<SelectInst>(V);
+    bool IsSelectValueUse = Select && U->get() != Select->getCondition();
+    // For PHI, visit the uses
+    if (isa<PHINode>(V) || IsSelectValueUse) {
+      copy(make_pointer_range(V->uses()), std::back_inserter(Worklist));
+      continue;
+    }
+
+    // Default to not allowing propagation of LinearSeries
+    return false;
+  }
+
+  // All the arithmetic operations have no-wrap semantics
+  return true;
+}
+
+bool LinearSeries::canDistributeExtAcrossSeries(Value *CastOperand,
+                                                bool UnsignedSeries) {
+  SmallPtrSet<Value *, 16> Visited;
+  SmallVector<Value *, 16> Worklist{CastOperand};
+
+  // For extensions, we check that all the predecesors adhere to the no-wrap
+  // semantics to allow the propagation of linearseries through it
+
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+
+    // Only allow OverflowingBinaryOperator with the no-wrap semantics
+    if (auto *OB = dyn_cast<OverflowingBinaryOperator>(V)) {
+      if (UnsignedSeries ? OB->hasNoUnsignedWrap() : OB->hasNoSignedWrap())
+        continue;
+      else
+        return false;
+    }
+
+    // PHI / select are okay only if all incoming paths satisfy no-wrap
+    // semantics.
+    if (auto *PHI = dyn_cast<PHINode>(V)) {
+      copy(PHI->operands(), std::back_inserter(Worklist));
+      continue;
+    }
+
+    // For select check the flowing values
+    if (auto *Select = dyn_cast<SelectInst>(V)) {
+      Worklist.push_back(Select->getTrueValue());
+      Worklist.push_back(Select->getFalseValue());
+      continue;
+    }
+
+    // Default to not allowing propagation of LinearSeries
+    return false;
+  }
+
+  return true; // All relevant arithmetic met the required no-wrap
+               // conditions.
+}
+
 Ripple::ConstructedSeries Ripple::getLinearSeriesFor(Instruction *I) {
   if (!I)
     return {};
@@ -5860,15 +5949,10 @@ Ripple::ConstructedSeries Ripple::getLinearSeriesFor(Instruction *I) {
     if (match(BinOp, m_AShr(m_Shl(m_Value(SlVal), m_ConstantInt(SlAmount)),
                             m_ConstantInt(SrAmount))) &&
         cast<AShrOperator>(BinOp)->isExact() && SrAmount == SlAmount) {
-      // We allow this transformation only if the following ops undefine
-      // behavior on overflow
-      if (!all_of(BinOp->users(), [](User *U) {
-            if (auto *OverflowBinop = dyn_cast<OverflowingBinaryOperator>(U))
-              return OverflowBinop->hasNoSignedWrap() ||
-                     OverflowBinop->hasNoUnsignedWrap();
-            return false;
-          }))
+
+      if (!LinearSeries::canDistributeTruncAcrossSeries(BinOp))
         return {};
+
       // The slopes are the one from the LHS of LhsShift; don't
       // compute them using right shift or we may truncate the slopes!
       auto SlOperandOpSeries = getOperandSeries(SlVal);
@@ -5958,6 +6042,20 @@ Ripple::ConstructedSeries Ripple::getLinearSeriesFor(Instruction *I) {
     auto &CastOpSeries = OperandSeries[0];
     if (CastOpSeries.isNotASeries())
       return {};
+
+    auto Sext = dyn_cast<SExtInst>(CastI);
+    auto Zext = dyn_cast<ZExtInst>(CastI);
+    bool CanDistributeExtension =
+        (Sext || Zext) &&
+        LinearSeries::canDistributeExtAcrossSeries(CastI->getOperand(0),
+                                                   /*unsigned*/ Zext);
+    auto Trunc = dyn_cast<TruncInst>(CastI);
+    bool CanDistributeTrunc =
+        Trunc && LinearSeries::canDistributeTruncAcrossSeries(Trunc);
+
+    if (!CanDistributeExtension && !CanDistributeTrunc)
+      return {};
+
     auto &SlopeShape = CastOpSeries.LS->getSlopeShape();
     for (unsigned i = 0; i < SlopeShape.rank(); ++i) {
       Value *CastOp =
@@ -5977,11 +6075,7 @@ Ripple::ConstructedSeries Ripple::getLinearSeriesFor(Instruction *I) {
     if (InSeries.isNotASeries())
       return {};
 
-    // Cast first because it may affect the slope type
-    if (CastInst *CastI = dyn_cast<CastInst>(UnOp))
-      return processCast(CastI);
-
-    // Scalar bypass
+    // Scalar bypass, no current unary operator can pass through LS
     if (InSeries.LS->isScalar()) {
       auto *LS =
           new LinearSeries(UnOp, InSeries.LS->getBaseShape(),
@@ -6142,7 +6236,7 @@ Ripple::ConstructedSeries Ripple::getLinearSeriesFor(Instruction *I) {
 
     auto &InSeries = OperandSeries[2];
 
-    Value *BcastedVal = BcastOp->getOperand(2);
+    Value *BcastedVal = BcastOp->getArgOperand(2);
 
     // Constants are broadcasted to a splat-series, that's what we want!
     if (!InSeries.isNotASeries() && isa<Constant>(BcastedVal))
@@ -6198,6 +6292,9 @@ Ripple::ConstructedSeries Ripple::getLinearSeriesFor(Instruction *I) {
 
   } else if (UnaryOperator *UnOp = dyn_cast<UnaryOperator>(I)) {
     CS = processUnaryOp(UnOp);
+
+  } else if (auto *Cast = dyn_cast<CastInst>(I)) {
+    CS = processCast(Cast);
 
   } else if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(I)) {
     CS = processBinOp(BinOp);
