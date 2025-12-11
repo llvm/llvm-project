@@ -2727,18 +2727,7 @@ struct ConvertAMDGPUToROCDLPass
     LLVMTypeConverter converter(ctx);
 
     populateAMDGPUToROCDLConversionPatterns(converter, patterns, *maybeChipset);
-    populateGpuMemorySpaceAttributeConversions(
-        converter, [](gpu::AddressSpace space) {
-          switch (space) {
-          case gpu::AddressSpace::Global:
-            return 1;
-          case gpu::AddressSpace::Workgroup:
-            return 3;
-          case gpu::AddressSpace::Private:
-            return 5;
-          }
-          llvm_unreachable("unknown address space enum value");
-        });
+    populateCommonAMDGPUTypeAndAttributeConversions(converter);
     LLVMConversionTarget target(getContext());
     target.addIllegalDialect<::mlir::amdgpu::AMDGPUDialect>();
     target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
@@ -2749,6 +2738,22 @@ struct ConvertAMDGPUToROCDLPass
   }
 };
 } // namespace
+
+void mlir::populateCommonAMDGPUTypeAndAttributeConversions(
+    TypeConverter &typeConverter) {
+  populateGpuMemorySpaceAttributeConversions(
+      typeConverter, [](gpu::AddressSpace space) {
+        switch (space) {
+        case gpu::AddressSpace::Global:
+          return ROCDL::ROCDLDialect::kGlobalMemoryAddressSpace;
+        case gpu::AddressSpace::Workgroup:
+          return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
+        case gpu::AddressSpace::Private:
+          return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
+        }
+        llvm_unreachable("unknown address space enum value");
+      });
+}
 
 void mlir::populateAMDGPUTypeAndAttributeConversions(
     TypeConverter &typeConverter) {
