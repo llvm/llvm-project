@@ -59,6 +59,44 @@ define i8 @load_atomic_i8_aligned_acquire(ptr %ptr) {
     ret i8 %r
 }
 
+define i32 @load_atomic_i8_aligned_acquire_sext_i32(ptr %ptr) {
+; GISEL-LABEL: load_atomic_i8_aligned_acquire_sext_i32:
+; GISEL:    add x8, x0, #4
+; GISEL:    ldaprb w8, [x8]
+; GISEL:    sxtb w0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i8_aligned_acquire_sext_i32:
+; SDAG-AVOIDLDAPUR:    add x8, x0, #4
+; SDAG-AVOIDLDAPUR:    ldaprb w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxtb w0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i8_aligned_acquire_sext_i32:
+; SDAG-NOAVOIDLDAPUR:    ldapursb w0, [x0, #4]
+    %gep = getelementptr inbounds i8, ptr %ptr, i32 4
+    %r = load atomic i8, ptr %gep acquire, align 1
+    %r.sext = sext i8 %r to i32
+    ret i32 %r.sext
+}
+
+define i64 @load_atomic_i8_aligned_acquire_sext_i64(ptr %ptr) {
+; GISEL-LABEL: load_atomic_i8_aligned_acquire_sext_i64:
+; GISEL:    add x8, x0, #4
+; GISEL:    ldaprb w8, [x8]
+; GISEL:    sxtb x0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i8_aligned_acquire_sext_i64:
+; SDAG-AVOIDLDAPUR:    add x8, x0, #4
+; SDAG-AVOIDLDAPUR:    ldaprb w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxtb x0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i8_aligned_acquire_sext_i64:
+; SDAG-NOAVOIDLDAPUR:    ldapursb x0, [x0, #4]
+    %gep = getelementptr inbounds i8, ptr %ptr, i32 4
+    %r = load atomic i8, ptr %gep acquire, align 1
+    %r.sext = sext i8 %r to i64
+    ret i64 %r.sext
+}
+
 define i8 @load_atomic_i8_aligned_acquire_const(ptr readonly %ptr) {
 ; GISEL-LABEL: load_atomic_i8_aligned_acquire_const:
 ; GISEL:    add x8, x0, #4
@@ -73,6 +111,44 @@ define i8 @load_atomic_i8_aligned_acquire_const(ptr readonly %ptr) {
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     %r = load atomic i8, ptr %gep acquire, align 1
     ret i8 %r
+}
+
+define i32 @load_atomic_i8_aligned_acquire_const_sext_i32(ptr readonly %ptr) {
+; GISEL-LABEL: load_atomic_i8_aligned_acquire_const_sext_i32:
+; GISEL:    add x8, x0, #4
+; GISEL:    ldaprb w8, [x8]
+; GISEL:    sxtb w0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i8_aligned_acquire_const_sext_i32:
+; SDAG-AVOIDLDAPUR:    add x8, x0, #4
+; SDAG-AVOIDLDAPUR:    ldaprb w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxtb w0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i8_aligned_acquire_const_sext_i32:
+; SDAG-NOAVOIDLDAPUR:    ldapursb w0, [x0, #4]
+    %gep = getelementptr inbounds i8, ptr %ptr, i32 4
+    %r = load atomic i8, ptr %gep acquire, align 1
+    %r.sext = sext i8 %r to i32
+    ret i32 %r.sext
+}
+
+define i64 @load_atomic_i8_aligned_acquire_const_sext_i64(ptr readonly %ptr) {
+; GISEL-LABEL: load_atomic_i8_aligned_acquire_const_sext_i64:
+; GISEL:    add x8, x0, #4
+; GISEL:    ldaprb w8, [x8]
+; GISEL:    sxtb x0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i8_aligned_acquire_const_sext_i64:
+; SDAG-AVOIDLDAPUR:    add x8, x0, #4
+; SDAG-AVOIDLDAPUR:    ldaprb w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxtb x0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i8_aligned_acquire_const_sext_i64:
+; SDAG-NOAVOIDLDAPUR:    ldapursb x0, [x0, #4]
+    %gep = getelementptr inbounds i8, ptr %ptr, i32 4
+    %r = load atomic i8, ptr %gep acquire, align 1
+    %r.sext = sext i8 %r to i64
+    ret i64 %r.sext
 }
 
 define i8 @load_atomic_i8_aligned_seq_cst(ptr %ptr) {
@@ -141,6 +217,44 @@ define i16 @load_atomic_i16_aligned_acquire(ptr %ptr) {
     ret i16 %r
 }
 
+define i32 @load_atomic_i16_aligned_acquire_sext_i32(ptr %ptr) {
+; GISEL-LABEL: load_atomic_i16_aligned_acquire_sext_i32:
+; GISEL:    add x8, x0, #8
+; GISEL:    ldaprh w8, [x8]
+; GISEL:    sxth w0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i16_aligned_acquire_sext_i32:
+; SDAG-AVOIDLDAPUR:    add x8, x0, #8
+; SDAG-AVOIDLDAPUR:    ldaprh w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxth w0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i16_aligned_acquire_sext_i32:
+; SDAG-NOAVOIDLDAPUR:    ldapursh w0, [x0, #8]
+    %gep = getelementptr inbounds i16, ptr %ptr, i32 4
+    %r = load atomic i16, ptr %gep acquire, align 2
+    %r.sext = sext i16 %r to i32
+    ret i32 %r.sext
+}
+
+define i64 @load_atomic_i16_aligned_acquire_sext_i64(ptr %ptr) {
+; GISEL-LABEL: load_atomic_i16_aligned_acquire_sext_i64:
+; GISEL:    add x8, x0, #8
+; GISEL:    ldaprh w8, [x8]
+; GISEL:    sxth x0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i16_aligned_acquire_sext_i64:
+; SDAG-AVOIDLDAPUR:    add x8, x0, #8
+; SDAG-AVOIDLDAPUR:    ldaprh w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxth x0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i16_aligned_acquire_sext_i64:
+; SDAG-NOAVOIDLDAPUR:    ldapursh x0, [x0, #8]
+    %gep = getelementptr inbounds i16, ptr %ptr, i32 4
+    %r = load atomic i16, ptr %gep acquire, align 2
+    %r.sext = sext i16 %r to i64
+    ret i64 %r.sext
+}
+
 define i16 @load_atomic_i16_aligned_acquire_const(ptr readonly %ptr) {
 ; GISEL-LABEL: load_atomic_i16_aligned_acquire_const:
 ; GISEL:    add x8, x0, #8
@@ -155,6 +269,44 @@ define i16 @load_atomic_i16_aligned_acquire_const(ptr readonly %ptr) {
     %gep = getelementptr inbounds i16, ptr %ptr, i32 4
     %r = load atomic i16, ptr %gep acquire, align 2
     ret i16 %r
+}
+
+define i32 @load_atomic_i16_aligned_acquire_const_sext_i32(ptr readonly %ptr) {
+; GISEL-LABEL: load_atomic_i16_aligned_acquire_const_sext_i32:
+; GISEL:    add x8, x0, #8
+; GISEL:    ldaprh w8, [x8]
+; GISEL:    sxth w0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i16_aligned_acquire_const_sext_i32:
+; SDAG-AVOIDLDAPUR:    add x8, x0, #8
+; SDAG-AVOIDLDAPUR:    ldaprh w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxth w0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i16_aligned_acquire_const_sext_i32:
+; SDAG-NOAVOIDLDAPUR:    ldapursh w0, [x0, #8]
+    %gep = getelementptr inbounds i16, ptr %ptr, i32 4
+    %r = load atomic i16, ptr %gep acquire, align 2
+    %r.sext = sext i16 %r to i32
+    ret i32 %r.sext
+}
+
+define i64 @load_atomic_i16_aligned_acquire_const_sext_i64(ptr readonly %ptr) {
+; GISEL-LABEL: load_atomic_i16_aligned_acquire_const_sext_i64:
+; GISEL:    add x8, x0, #8
+; GISEL:    ldaprh w8, [x8]
+; GISEL:    sxth x0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i16_aligned_acquire_const_sext_i64:
+; SDAG-AVOIDLDAPUR:    add x8, x0, #8
+; SDAG-AVOIDLDAPUR:    ldaprh w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxth x0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i16_aligned_acquire_const_sext_i64:
+; SDAG-NOAVOIDLDAPUR:    ldapursh x0, [x0, #8]
+    %gep = getelementptr inbounds i16, ptr %ptr, i32 4
+    %r = load atomic i16, ptr %gep acquire, align 2
+    %r.sext = sext i16 %r to i64
+    ret i64 %r.sext
 }
 
 define i16 @load_atomic_i16_aligned_seq_cst(ptr %ptr) {
@@ -222,6 +374,24 @@ define i32 @load_atomic_i32_aligned_acquire(ptr %ptr) {
     ret i32 %r
 }
 
+define i64 @load_atomic_i32_aligned_acquire_sext_i64(ptr %ptr) {
+; GISEL-LABEL: load_atomic_i32_aligned_acquire_sext_i64:
+; GISEL:    ldapur w8, [x0, #16]
+; GISEL:    ldapursw x0, [x0, #16]
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i32_aligned_acquire_sext_i64:
+; SDAG-AVOIDLDAPUR:    add x8, x0, #16
+; SDAG-AVOIDLDAPUR:    ldapr w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxtw x0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i32_aligned_acquire_sext_i64:
+; SDAG-NOAVOIDLDAPUR:    ldapursw x0, [x0, #16]
+    %gep = getelementptr inbounds i32, ptr %ptr, i32 4
+    %r = load atomic i32, ptr %gep acquire, align 4
+    %r.sext = sext i32 %r to i64
+    ret i64 %r.sext
+}
+
 define i32 @load_atomic_i32_aligned_acquire_const(ptr readonly %ptr) {
 ; GISEL-LABEL: load_atomic_i32_aligned_acquire_const:
 ; GISEL:    ldapur w0, [x0, #16]
@@ -235,6 +405,24 @@ define i32 @load_atomic_i32_aligned_acquire_const(ptr readonly %ptr) {
     %gep = getelementptr inbounds i32, ptr %ptr, i32 4
     %r = load atomic i32, ptr %gep acquire, align 4
     ret i32 %r
+}
+
+define i64 @load_atomic_i32_aligned_acquire_const_sext_i64(ptr readonly %ptr) {
+; GISEL-LABEL: load_atomic_i32_aligned_acquire_const_sext_i64:
+; GISEL:    ldapur w8, [x0, #16]
+; GISEL:    ldapursw x0, [x0, #16]
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i32_aligned_acquire_const_sext_i64:
+; SDAG-AVOIDLDAPUR:    add x8, x0, #16
+; SDAG-AVOIDLDAPUR:    ldapr w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxtw x0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i32_aligned_acquire_const_sext_i64:
+; SDAG-NOAVOIDLDAPUR:    ldapursw x0, [x0, #16]
+    %gep = getelementptr inbounds i32, ptr %ptr, i32 4
+    %r = load atomic i32, ptr %gep acquire, align 4
+    %r.sext = sext i32 %r to i64
+    ret i64 %r.sext
 }
 
 define i32 @load_atomic_i32_aligned_seq_cst(ptr %ptr) {
@@ -922,6 +1110,54 @@ define i8 @load_atomic_i8_from_gep() {
   ret i8 %l
 }
 
+define i32 @load_atomic_i8_from_gep_sext_i32() {
+; GISEL-LABEL: load_atomic_i8_from_gep_sext_i32:
+; GISEL:    bl init
+; GISEL:    add x8, x8, #1
+; GISEL:    ldaprb w8, [x8]
+; GISEL:    sxtb w0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i8_from_gep_sext_i32:
+; SDAG-AVOIDLDAPUR:    bl init
+; SDAG-AVOIDLDAPUR:    orr x8, x19, #0x1
+; SDAG-AVOIDLDAPUR:    ldaprb w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxtb w0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i8_from_gep_sext_i32:
+; SDAG-NOAVOIDLDAPUR:    bl init
+; SDAG-NOAVOIDLDAPUR:    ldapursb w0, [sp, #13]
+  %a = alloca [3 x i8]
+  call void @init(ptr %a)
+  %arrayidx  = getelementptr [3 x i8], ptr %a, i64 0, i64 1
+  %l = load atomic i8, ptr %arrayidx acquire, align 8
+  %l.sext = sext i8 %l to i32
+  ret i32 %l.sext
+}
+
+define i64 @load_atomic_i8_from_gep_sext_i64() {
+; GISEL-LABEL: load_atomic_i8_from_gep_sext_i64:
+; GISEL:    bl init
+; GISEL:    add x8, x8, #1
+; GISEL:    ldaprb w8, [x8]
+; GISEL:    sxtb x0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i8_from_gep_sext_i64:
+; SDAG-AVOIDLDAPUR:    bl init
+; SDAG-AVOIDLDAPUR:    orr x8, x19, #0x1
+; SDAG-AVOIDLDAPUR:    ldaprb w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxtb x0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i8_from_gep_sext_i64:
+; SDAG-NOAVOIDLDAPUR:    bl init
+; SDAG-NOAVOIDLDAPUR:    ldapursb x0, [sp, #13]
+  %a = alloca [3 x i8]
+  call void @init(ptr %a)
+  %arrayidx  = getelementptr [3 x i8], ptr %a, i64 0, i64 1
+  %l = load atomic i8, ptr %arrayidx acquire, align 8
+  %l.sext = sext i8 %l to i64
+  ret i64 %l.sext
+}
+
 define i16 @load_atomic_i16_from_gep() {
 ; GISEL-LABEL: load_atomic_i16_from_gep:
 ; GISEL:    bl init
@@ -943,6 +1179,54 @@ define i16 @load_atomic_i16_from_gep() {
   ret i16 %l
 }
 
+define i32 @load_atomic_i16_from_gep_sext_i32() {
+; GISEL-LABEL: load_atomic_i16_from_gep_sext_i32:
+; GISEL:    bl init
+; GISEL:    add x8, x8, #2
+; GISEL:    ldaprh w8, [x8]
+; GISEL:    sxth w0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i16_from_gep_sext_i32:
+; SDAG-AVOIDLDAPUR:    bl init
+; SDAG-AVOIDLDAPUR:    orr x8, x19, #0x2
+; SDAG-AVOIDLDAPUR:    ldaprh w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxth w0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i16_from_gep_sext_i32:
+; SDAG-NOAVOIDLDAPUR:    bl init
+; SDAG-NOAVOIDLDAPUR:    ldapursh w0, [sp, #10]
+  %a = alloca [3 x i16]
+  call void @init(ptr %a)
+  %arrayidx  = getelementptr [3 x i16], ptr %a, i64 0, i64 1
+  %l = load atomic i16, ptr %arrayidx acquire, align 8
+  %l.sext = sext i16 %l to i32
+  ret i32 %l.sext
+}
+
+define i64 @load_atomic_i16_from_gep_sext_i64() {
+; GISEL-LABEL: load_atomic_i16_from_gep_sext_i64:
+; GISEL:    bl init
+; GISEL:    add x8, x8, #2
+; GISEL:    ldaprh w8, [x8]
+; GISEL:    sxth x0, w8
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i16_from_gep_sext_i64:
+; SDAG-AVOIDLDAPUR:    bl init
+; SDAG-AVOIDLDAPUR:    orr x8, x19, #0x2
+; SDAG-AVOIDLDAPUR:    ldaprh w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxth x0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i16_from_gep_sext_i64:
+; SDAG-NOAVOIDLDAPUR:    bl init
+; SDAG-NOAVOIDLDAPUR:    ldapursh x0, [sp, #10]
+  %a = alloca [3 x i16]
+  call void @init(ptr %a)
+  %arrayidx  = getelementptr [3 x i16], ptr %a, i64 0, i64 1
+  %l = load atomic i16, ptr %arrayidx acquire, align 8
+  %l.sext = sext i16 %l to i64
+  ret i64 %l.sext
+}
+
 define i32 @load_atomic_i32_from_gep() {
 ; GISEL-LABEL: load_atomic_i32_from_gep:
 ; GISEL:    bl init
@@ -961,6 +1245,29 @@ define i32 @load_atomic_i32_from_gep() {
   %arrayidx  = getelementptr [3 x i32], ptr %a, i64 0, i64 1
   %l = load atomic i32, ptr %arrayidx acquire, align 8
   ret i32 %l
+}
+
+define i64 @load_atomic_i32_from_gep_sext_i64() {
+; GISEL-LABEL: load_atomic_i32_from_gep_sext_i64:
+; GISEL:    bl init
+; GISEL:    ldapur w9, [x8, #4]
+; GISEL:    ldapursw x0, [x8, #4]
+;
+; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i32_from_gep_sext_i64:
+; SDAG-AVOIDLDAPUR:    bl init
+; SDAG-AVOIDLDAPUR:    add x8, x19, #4
+; SDAG-AVOIDLDAPUR:    ldapr w8, [x8]
+; SDAG-AVOIDLDAPUR:    sxtw x0, w8
+;
+; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i32_from_gep_sext_i64:
+; SDAG-NOAVOIDLDAPUR:    bl init
+; SDAG-NOAVOIDLDAPUR:    ldapursw x0, [sp, #8]
+  %a = alloca [3 x i32]
+  call void @init(ptr %a)
+  %arrayidx  = getelementptr [3 x i32], ptr %a, i64 0, i64 1
+  %l = load atomic i32, ptr %arrayidx acquire, align 8
+  %l.sext = sext i32 %l to i64
+  ret i64 %l.sext
 }
 
 define i64 @load_atomic_i64_from_gep() {
