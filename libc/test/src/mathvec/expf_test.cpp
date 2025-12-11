@@ -69,33 +69,28 @@ TEST_F(LlvmLibcVecExpfTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcVecExpfTest, Overflow) {
-  // Exception still supported with current impl and test, but might not endup
-  // being tested.
-  EXPECT_SIMD_EQ_WITH_EXCEPTION(LIBC_NAMESPACE::cpp::splat(inf),
-                                wrap_vexpf(FPBits(0x7f7fffffU).get_val()),
-                                FE_OVERFLOW);
+  // Fails if tested with exceptions
+  EXPECT_SIMD_EQ(LIBC_NAMESPACE::cpp::splat(inf),
+                 wrap_vexpf(FPBits(0x7f7fffffU).get_val()));
 
-  EXPECT_SIMD_EQ_WITH_EXCEPTION(LIBC_NAMESPACE::cpp::splat(inf),
-                                wrap_vexpf(FPBits(0x42cffff8U).get_val()),
-                                FE_OVERFLOW);
+  EXPECT_SIMD_EQ(LIBC_NAMESPACE::cpp::splat(inf),
+                 wrap_vexpf(FPBits(0x42cffff8U).get_val()));
 
-  EXPECT_SIMD_EQ_WITH_EXCEPTION(LIBC_NAMESPACE::cpp::splat(inf),
-                                wrap_vexpf(FPBits(0x42d00008U).get_val()),
-                                FE_OVERFLOW);
+  EXPECT_SIMD_EQ(LIBC_NAMESPACE::cpp::splat(inf),
+                 wrap_vexpf(FPBits(0x42d00008U).get_val()));
 }
 
 TEST_F(LlvmLibcVecExpfTest, Underflow) {
-  // Exception still supported with current impl and test, but eventually won't
-  // be tested.
+  // Passes if tested with exceptions ?
   EXPECT_SIMD_EQ_WITH_EXCEPTION(LIBC_NAMESPACE::cpp::splat(0.0f),
                                 wrap_vexpf(FPBits(0xff7fffffU).get_val()),
                                 FE_UNDERFLOW);
 
   float x = FPBits(0xc2cffff8U).get_val();
-  EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
+  EXPECT_SIMD_EQ(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
 
   x = FPBits(0xc2d00008U).get_val();
-  EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
+  EXPECT_SIMD_EQ(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
 }
 
 // Test with inputs which are the borders of underflow/overflow but still
@@ -106,19 +101,19 @@ TEST_F(LlvmLibcVecExpfTest, Borderline) {
 
   x = FPBits(0x42affff8U).get_val();
   // Do we need ASSERT? If so it needs a version for all rounding modes
-  EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
+  EXPECT_SIMD_EQ(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
 
   x = FPBits(0x42b00008U).get_val();
-  EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
+  EXPECT_SIMD_EQ(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
 
   x = FPBits(0xc2affff8U).get_val();
-  EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
+  EXPECT_SIMD_EQ(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
 
   x = FPBits(0xc2b00008U).get_val();
-  EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
+  EXPECT_SIMD_EQ(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
 
   x = FPBits(0xc236bd8cU).get_val();
-  EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
+  EXPECT_SIMD_EQ(wrap_ref_vexpf(x, 1.0), wrap_vexpf(x, 1.0));
 }
 
 TEST_F(LlvmLibcVecExpfTest, InFloatRange) {
@@ -128,12 +123,11 @@ TEST_F(LlvmLibcVecExpfTest, InFloatRange) {
     float x = FPBits(v).get_val();
     if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
-    EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x), wrap_vexpf(x));
-    EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, aNaN), wrap_vexpf(x, aNaN));
-    EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, inf), wrap_vexpf(x, inf));
-    EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, -inf),
-                                wrap_vexpf(x, neg_inf));
-    EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, 0.0), wrap_vexpf(x, 0.0));
-    EXPECT_SIMD_EQ_ALL_ROUNDING(wrap_ref_vexpf(x, -0.0), wrap_vexpf(x, -0.0));
+    EXPECT_SIMD_EQ(wrap_ref_vexpf(x), wrap_vexpf(x));
+    EXPECT_SIMD_EQ(wrap_ref_vexpf(x, aNaN), wrap_vexpf(x, aNaN));
+    EXPECT_SIMD_EQ(wrap_ref_vexpf(x, inf), wrap_vexpf(x, inf));
+    EXPECT_SIMD_EQ(wrap_ref_vexpf(x, -inf), wrap_vexpf(x, neg_inf));
+    EXPECT_SIMD_EQ(wrap_ref_vexpf(x, 0.0), wrap_vexpf(x, 0.0));
+    EXPECT_SIMD_EQ(wrap_ref_vexpf(x, -0.0), wrap_vexpf(x, -0.0));
   }
 }

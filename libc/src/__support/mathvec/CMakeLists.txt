@@ -19,6 +19,17 @@ add_header_library(
   HDRS
     expf.h
   DEPENDS
+    libc.src.__support.common
     libc.src.__support.CPP.simd
-    libc.src.__support.math.expf
+    libc.src.__support.FPUtil.FPBits
+    libc.src.__support.mathvec.expf_utils
+    libc.src.__support.mathvec.vector_utils
+)
+
+add_header_library(
+  vector_utils
+  HDRS
+    vector_utils.h
+  DEPENDS
+    libc.src.__support.CPP.simd
 )
