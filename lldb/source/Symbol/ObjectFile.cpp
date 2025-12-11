@@ -270,7 +270,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
     m_file = *file_spec_ptr;
   if (extractor_sp && extractor_sp->GetByteSize() > 0) {
     m_data_nsp = extractor_sp;
-    // the offset & length fields may be specifying a subset of the
+    // The offset & length fields may be specifying a subset of the
     // total data buffer.
     m_data_nsp->SetData(extractor_sp->GetSharedDataBuffer(), data_offset,
                         length);
