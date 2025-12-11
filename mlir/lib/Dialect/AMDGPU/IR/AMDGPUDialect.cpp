@@ -755,27 +755,34 @@ LogicalResult TransposeLoadOp::verify() {
 // MakeDmaBaseOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult MakeDmaBaseOp::verify() {
-
-  auto ldsType = cast<MemRefType>(getLds().getType());
-  auto globalType = cast<MemRefType>(getGlobal().getType());
+template <typename BaseOp>
+static LogicalResult verifyBase(BaseOp op) {
+  auto ldsType = cast<MemRefType>(op.getLds().getType());
+  auto globalType = cast<MemRefType>(op.getGlobal().getType());
   if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace()))
-    return emitOpError(
+    return op.emitOpError(
         "lds memref must have workgroup address space attribute.");
   if (!hasGlobalMemorySpace(globalType.getMemorySpace()))
-    return emitOpError(
+    return op.emitOpError(
         "global memref must have global address space attribute.");
 
   Type elementType = ldsType.getElementType();
   unsigned width = elementType.getIntOrFloatBitWidth();
 
   if (!llvm::is_contained<unsigned>({8, 16, 32, 64}, width))
-    return emitOpError(
+    return op.emitOpError(
                "element type must be 1, 2, 4, or 8 bytes long but type was ")
            << width << " bits long.";
-
   return success();
 }
+
+LogicalResult MakeDmaBaseOp::verify() { return verifyBase(*this); }
+
+//===----------------------------------------------------------------------===//
+// MakeGatherDmaBaseOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeGatherDmaBaseOp::verify() { return verifyBase(*this); }
 
 //===----------------------------------------------------------------------===//
 // MakeDmaDescriptorOp

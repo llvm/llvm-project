@@ -1291,6 +1291,8 @@ def AMDGPU_MakeGatherDmaBaseOp : AMDGPU_DmaBaseOp<"make_gather_dma_base", AMDGPU
     ```
   }];
 
+  let hasVerifier = 1;
+
   let extraClassDeclaration = [{
     constexpr int64_t isGather() {
       return true;
