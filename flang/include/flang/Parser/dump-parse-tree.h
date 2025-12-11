@@ -705,7 +705,7 @@ public:
   NODE(parser, OmpSelfModifier)
   NODE_ENUM(OmpSelfModifier, Value)
   NODE(parser, OmpSeverityClause)
-  NODE_ENUM(OmpSeverityClause, Severity)
+  NODE_ENUM(OmpSeverityClause, SevLevel)
   NODE(parser, OmpStepComplexModifier)
   NODE(parser, OmpStepSimpleModifier)
   NODE(parser, OmpStylizedDeclaration)
