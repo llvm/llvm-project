@@ -49,7 +49,10 @@ define float @fmul_by_32_if_0_oeq_zero_f32(float %x) {
 
 define float @ldexp_by_5_if_0_oeq_zero_f32(float %x) {
 ; CHECK-LABEL: @ldexp_by_5_if_0_oeq_zero_f32(
-; CHECK-NEXT:    ret float [[X:%.*]]
+; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SCALED_X:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 5)
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = select i1 [[X_IS_ZERO]], float [[SCALED_X]], float [[X]]
+; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
   %scaled.x = call float @llvm.ldexp.f32.i32(float %x, i32 5)
@@ -59,7 +62,10 @@ define float @ldexp_by_5_if_0_oeq_zero_f32(float %x) {
 
 define <2 x float> @ldexp_by_5_if_0_oeq_zero_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @ldexp_by_5_if_0_oeq_zero_v2f32(
-; CHECK-NEXT:    ret <2 x float> [[SCALED_IF_DENORMAL:%.*]]
+; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SCALED_X:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X]], <2 x i32> splat (i32 5))
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = select <2 x i1> [[X_IS_ZERO]], <2 x float> [[SCALED_X]], <2 x float> [[X]]
+; CHECK-NEXT:    ret <2 x float> [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq <2 x float> %x, zeroinitializer
   %scaled.x = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %x, <2 x i32> <i32 5, i32 5>)
