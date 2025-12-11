@@ -8359,8 +8359,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       }
     }
     W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
-    SmallVector<uint64_t, 4> IndirectTypeIdsList = SmallVector<uint64_t, 4>(
-        CGInfo.IndirectTypeIDs.begin(), CGInfo.IndirectTypeIDs.end());
+    SmallVector<uint64_t, 4> IndirectTypeIdsList(CGInfo.IndirectTypeIDs.begin(),
+                                                 CGInfo.IndirectTypeIDs.end());
     W.printHexList("IndirectTypeIDs", ArrayRef(IndirectTypeIdsList));
   }
 }
