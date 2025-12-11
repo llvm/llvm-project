@@ -791,6 +791,86 @@ define void @test_pslli_w(ptr %ret_ptr, ptr %a_ptr) {
   store <2 x i32> %res, ptr %ret_ptr
   ret void
 }
+; Test logical shift right immediate
+define void @test_psrli_w(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psrli_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    psrli.w a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %res = lshr <2 x i32> %a, splat(i32 2)
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psrli_h(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psrli_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    psrli.h a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, ptr %a_ptr
+  %res = lshr <4 x i16> %a, splat(i16 2)
+  store <4 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psrli_b(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psrli_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    psrli.b a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x i8>, ptr %a_ptr
+  %res = lshr <8 x i8> %a, splat(i8 2)
+  store <8 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test arithmetic shift right immediate
+define void @test_psrai_w(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psrai_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    psrai.w a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %res = ashr <2 x i32> %a, splat(i32 2)
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psrai_h(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psrai_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    psrai.h a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, ptr %a_ptr
+  %res = ashr <4 x i16> %a, splat(i16 2)
+  store <4 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psrai_b(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psrai_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    psrai.b a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x i8>, ptr %a_ptr
+  %res = ashr <8 x i8> %a, splat(i8 2)
+  store <8 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
 
 ; Test arithmetic saturation shift left immediate for v2i32
 define void @test_psslai_w(ptr %ret_ptr, ptr %a_ptr) {
@@ -838,6 +918,78 @@ define void @test_psll_ws_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
   %a = load <2 x i32>, ptr %a_ptr
   %b = load <2 x i32>, ptr %shamt_ptr
   %res = shl <2 x i32> %a, %b
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift right(scalar shamt)
+define void @test_psrl_ws(ptr %ret_ptr, ptr %a_ptr, i32 %shamt) {
+; CHECK-LABEL: test_psrl_ws:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    psrl.ws a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %insert = insertelement <2 x i32> poison, i32 %shamt, i32 0
+  %b = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> zeroinitializer
+  %res = lshr <2 x i32> %a, %b
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test arithmetic shift right(scalar shamt)
+define void @test_psra_ws(ptr %ret_ptr, ptr %a_ptr, i32 %shamt) {
+; CHECK-LABEL: test_psra_ws:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    psra.ws a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %insert = insertelement <2 x i32> poison, i32 %shamt, i32 0
+  %b = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> zeroinitializer
+  %res = ashr <2 x i32> %a, %b
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift right(vector shamt)
+define void @test_psrl_ws_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
+; CHECK-LABEL: test_psrl_ws_vec_shamt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    srlw a3, a1, a2
+; CHECK-NEXT:    srli a2, a2, 32
+; CHECK-NEXT:    srli a1, a1, 32
+; CHECK-NEXT:    srlw a1, a1, a2
+; CHECK-NEXT:    pack a1, a3, a1
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %shamt_ptr
+  %res = lshr <2 x i32> %a, %b
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test arithmetic shift right(vector shamt)
+define void @test_psra_ws_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
+; CHECK-LABEL: test_psra_ws_vec_shamt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    sraw a3, a1, a2
+; CHECK-NEXT:    srli a2, a2, 32
+; CHECK-NEXT:    srli a1, a1, 32
+; CHECK-NEXT:    sraw a1, a1, a2
+; CHECK-NEXT:    pack a1, a3, a1
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %shamt_ptr
+  %res = ashr <2 x i32> %a, %b
   store <2 x i32> %res, ptr %ret_ptr
   ret void
 }

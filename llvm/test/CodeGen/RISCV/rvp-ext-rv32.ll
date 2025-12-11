@@ -638,6 +638,60 @@ define void @test_psslai_h(ptr %ret_ptr, ptr %a_ptr) {
   ret void
 }
 
+; Test logical shift right immediate
+define void @test_psrli_h(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psrli_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    psrli.h a1, a1, 2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %res = lshr <2 x i16> %a, splat(i16 2)
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psrli_b(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psrli_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    psrli.b a1, a1, 2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %res = lshr <4 x i8> %a, splat(i8 2)
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test arithmetic shift right immediate
+define void @test_psrai_h(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psrai_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    psrai.h a1, a1, 2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %res = ashr <2 x i16> %a, splat(i16 2)
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psrai_b(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psrai_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    psrai.b a1, a1, 2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %res = ashr <4 x i8> %a, splat(i8 2)
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
 ; Test logical shift left(scalar shamt)
 define void @test_psll_hs(ptr %ret_ptr, ptr %a_ptr, i16 %shamt) {
 ; CHECK-LABEL: test_psll_hs:
@@ -743,6 +797,246 @@ define void @test_psll_bs_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
   %a = load <4 x i8>, ptr %a_ptr
   %b = load <4 x i8>, ptr %shamt_ptr
   %res = shl <4 x i8> %a, %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift right(scalar shamt)
+define void @test_psrl_hs(ptr %ret_ptr, ptr %a_ptr, i16 %shamt) {
+; CHECK-LABEL: test_psrl_hs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    psrl.hs a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %insert = insertelement <2 x i16> poison, i16 %shamt, i32 0
+  %b = shufflevector <2 x i16> %insert, <2 x i16> poison, <2 x i32> zeroinitializer
+  %res = lshr <2 x i16> %a, %b
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psrl_bs(ptr %ret_ptr, ptr %a_ptr, i8 %shamt) {
+; CHECK-LABEL: test_psrl_bs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    psrl.bs a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %insert = insertelement <4 x i8> poison, i8 %shamt, i32 0
+  %b = shufflevector <4 x i8> %insert, <4 x i8> poison, <4 x i32> zeroinitializer
+  %res = lshr <4 x i8> %a, %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test arithmetic shift right(scalar shamt)
+define void @test_psra_hs(ptr %ret_ptr, ptr %a_ptr, i16 %shamt) {
+; CHECK-LABEL: test_psra_hs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    psra.hs a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %insert = insertelement <2 x i16> poison, i16 %shamt, i32 0
+  %b = shufflevector <2 x i16> %insert, <2 x i16> poison, <2 x i32> zeroinitializer
+  %res = ashr <2 x i16> %a, %b
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psra_bs(ptr %ret_ptr, ptr %a_ptr, i8 %shamt) {
+; CHECK-LABEL: test_psra_bs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    psra.bs a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %insert = insertelement <4 x i8> poison, i8 %shamt, i32 0
+  %b = shufflevector <4 x i8> %insert, <4 x i8> poison, <4 x i32> zeroinitializer
+  %res = ashr <4 x i8> %a, %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift right(vector shamt)
+define void @test_psrl_hs_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
+; CHECK-RV32-LABEL: test_psrl_hs_vec_shamt:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    lw a2, 0(a2)
+; CHECK-RV32-NEXT:    lw a1, 0(a1)
+; CHECK-RV32-NEXT:    srli a3, a2, 16
+; CHECK-RV32-NEXT:    srli a4, a1, 16
+; CHECK-RV32-NEXT:    slli a1, a1, 16
+; CHECK-RV32-NEXT:    srl a3, a4, a3
+; CHECK-RV32-NEXT:    srli a1, a1, 16
+; CHECK-RV32-NEXT:    srl a1, a1, a2
+; CHECK-RV32-NEXT:    pack a1, a1, a3
+; CHECK-RV32-NEXT:    sw a1, 0(a0)
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psrl_hs_vec_shamt:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    lw a2, 0(a2)
+; CHECK-RV64-NEXT:    lw a1, 0(a1)
+; CHECK-RV64-NEXT:    srli a3, a2, 16
+; CHECK-RV64-NEXT:    srliw a4, a1, 16
+; CHECK-RV64-NEXT:    slli a1, a1, 48
+; CHECK-RV64-NEXT:    srl a3, a4, a3
+; CHECK-RV64-NEXT:    srli a1, a1, 48
+; CHECK-RV64-NEXT:    srl a1, a1, a2
+; CHECK-RV64-NEXT:    ppaire.h a1, a1, a3
+; CHECK-RV64-NEXT:    sw a1, 0(a0)
+; CHECK-RV64-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %shamt_ptr
+  %res = lshr <2 x i16> %a, %b
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psrl_bs_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
+; CHECK-RV32-LABEL: test_psrl_bs_vec_shamt:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    lw a2, 0(a2)
+; CHECK-RV32-NEXT:    lw a1, 0(a1)
+; CHECK-RV32-NEXT:    srli a3, a2, 24
+; CHECK-RV32-NEXT:    srli a4, a1, 24
+; CHECK-RV32-NEXT:    srli a5, a2, 8
+; CHECK-RV32-NEXT:    slli a6, a1, 16
+; CHECK-RV32-NEXT:    srl a7, a4, a3
+; CHECK-RV32-NEXT:    srli a3, a6, 24
+; CHECK-RV32-NEXT:    srl a6, a3, a5
+; CHECK-RV32-NEXT:    zext.b a3, a1
+; CHECK-RV32-NEXT:    srli a4, a2, 16
+; CHECK-RV32-NEXT:    slli a1, a1, 8
+; CHECK-RV32-NEXT:    srl a2, a3, a2
+; CHECK-RV32-NEXT:    srli a1, a1, 24
+; CHECK-RV32-NEXT:    srl a3, a1, a4
+; CHECK-RV32-NEXT:    ppaire.db a2, a2, a6
+; CHECK-RV32-NEXT:    pack a1, a2, a3
+; CHECK-RV32-NEXT:    sw a1, 0(a0)
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psrl_bs_vec_shamt:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    lw a2, 0(a2)
+; CHECK-RV64-NEXT:    lw a1, 0(a1)
+; CHECK-RV64-NEXT:    srli a3, a2, 24
+; CHECK-RV64-NEXT:    srliw a4, a1, 24
+; CHECK-RV64-NEXT:    srli a5, a2, 16
+; CHECK-RV64-NEXT:    srl a3, a4, a3
+; CHECK-RV64-NEXT:    slli a4, a1, 40
+; CHECK-RV64-NEXT:    srli a4, a4, 56
+; CHECK-RV64-NEXT:    srl a4, a4, a5
+; CHECK-RV64-NEXT:    zext.b a5, a1
+; CHECK-RV64-NEXT:    srl a5, a5, a2
+; CHECK-RV64-NEXT:    srli a2, a2, 8
+; CHECK-RV64-NEXT:    slli a1, a1, 48
+; CHECK-RV64-NEXT:    srli a1, a1, 56
+; CHECK-RV64-NEXT:    srl a1, a1, a2
+; CHECK-RV64-NEXT:    ppaire.b a2, a4, a3
+; CHECK-RV64-NEXT:    ppaire.b a1, a5, a1
+; CHECK-RV64-NEXT:    ppaire.h a1, a1, a2
+; CHECK-RV64-NEXT:    sw a1, 0(a0)
+; CHECK-RV64-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %shamt_ptr
+  %res = lshr <4 x i8> %a, %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test arithmetic shift right(vector shamt)
+define void @test_psra_hs_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
+; CHECK-RV32-LABEL: test_psra_hs_vec_shamt:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    lw a2, 0(a2)
+; CHECK-RV32-NEXT:    lw a1, 0(a1)
+; CHECK-RV32-NEXT:    srli a3, a2, 16
+; CHECK-RV32-NEXT:    srai a4, a1, 16
+; CHECK-RV32-NEXT:    slli a1, a1, 16
+; CHECK-RV32-NEXT:    sra a3, a4, a3
+; CHECK-RV32-NEXT:    srai a1, a1, 16
+; CHECK-RV32-NEXT:    sra a1, a1, a2
+; CHECK-RV32-NEXT:    pack a1, a1, a3
+; CHECK-RV32-NEXT:    sw a1, 0(a0)
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psra_hs_vec_shamt:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    lw a2, 0(a2)
+; CHECK-RV64-NEXT:    lw a1, 0(a1)
+; CHECK-RV64-NEXT:    srli a3, a2, 16
+; CHECK-RV64-NEXT:    sraiw a4, a1, 16
+; CHECK-RV64-NEXT:    slli a1, a1, 48
+; CHECK-RV64-NEXT:    sra a3, a4, a3
+; CHECK-RV64-NEXT:    srai a1, a1, 48
+; CHECK-RV64-NEXT:    sra a1, a1, a2
+; CHECK-RV64-NEXT:    ppaire.h a1, a1, a3
+; CHECK-RV64-NEXT:    sw a1, 0(a0)
+; CHECK-RV64-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %shamt_ptr
+  %res = ashr <2 x i16> %a, %b
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psra_bs_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
+; CHECK-RV32-LABEL: test_psra_bs_vec_shamt:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    lw a2, 0(a2)
+; CHECK-RV32-NEXT:    lw a1, 0(a1)
+; CHECK-RV32-NEXT:    srli a3, a2, 24
+; CHECK-RV32-NEXT:    srai a4, a1, 24
+; CHECK-RV32-NEXT:    srli a5, a2, 8
+; CHECK-RV32-NEXT:    slli a6, a1, 16
+; CHECK-RV32-NEXT:    sra a7, a4, a3
+; CHECK-RV32-NEXT:    srai a3, a6, 24
+; CHECK-RV32-NEXT:    sra a6, a3, a5
+; CHECK-RV32-NEXT:    srli a3, a2, 16
+; CHECK-RV32-NEXT:    slli a4, a1, 8
+; CHECK-RV32-NEXT:    slli a1, a1, 24
+; CHECK-RV32-NEXT:    srai a4, a4, 24
+; CHECK-RV32-NEXT:    sra a3, a4, a3
+; CHECK-RV32-NEXT:    srai a1, a1, 24
+; CHECK-RV32-NEXT:    sra a2, a1, a2
+; CHECK-RV32-NEXT:    ppaire.db a2, a2, a6
+; CHECK-RV32-NEXT:    pack a1, a2, a3
+; CHECK-RV32-NEXT:    sw a1, 0(a0)
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psra_bs_vec_shamt:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    lw a2, 0(a2)
+; CHECK-RV64-NEXT:    lw a1, 0(a1)
+; CHECK-RV64-NEXT:    srli a3, a2, 24
+; CHECK-RV64-NEXT:    sraiw a4, a1, 24
+; CHECK-RV64-NEXT:    srli a5, a2, 16
+; CHECK-RV64-NEXT:    slli a6, a1, 40
+; CHECK-RV64-NEXT:    sra a3, a4, a3
+; CHECK-RV64-NEXT:    srli a4, a2, 8
+; CHECK-RV64-NEXT:    srai a6, a6, 56
+; CHECK-RV64-NEXT:    sra a5, a6, a5
+; CHECK-RV64-NEXT:    slli a6, a1, 48
+; CHECK-RV64-NEXT:    srai a6, a6, 56
+; CHECK-RV64-NEXT:    sra a4, a6, a4
+; CHECK-RV64-NEXT:    slli a1, a1, 56
+; CHECK-RV64-NEXT:    srai a1, a1, 56
+; CHECK-RV64-NEXT:    sra a1, a1, a2
+; CHECK-RV64-NEXT:    ppaire.b a2, a5, a3
+; CHECK-RV64-NEXT:    ppaire.b a1, a1, a4
+; CHECK-RV64-NEXT:    ppaire.h a1, a1, a2
+; CHECK-RV64-NEXT:    sw a1, 0(a0)
+; CHECK-RV64-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %shamt_ptr
+  %res = ashr <4 x i8> %a, %b
   store <4 x i8> %res, ptr %ret_ptr
   ret void
 }
