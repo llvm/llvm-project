@@ -3,6 +3,8 @@ include(AddMLIRPython)
 # Specifies that all MLIR packages are co-located under the `MLIR_PYTHON_PACKAGE_PREFIX.`
 # top level package (the API has been embedded in a relocatable way).
 add_compile_definitions("MLIR_PYTHON_PACKAGE_PREFIX=${MLIR_PYTHON_PACKAGE_PREFIX}.")
+set(MLIRPythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
+set(PYTHON_SOURCE_DIR "${MLIR_SOURCE_DIR}/lib/Bindings/Python")
 
 ################################################################################
 # Structural groupings.
@@ -524,27 +526,17 @@ declare_mlir_dialect_python_bindings(
 # dependencies.
 ################################################################################
 
-set(PYTHON_SOURCE_DIR "${MLIR_SOURCE_DIR}/lib/Bindings/Python")
 declare_mlir_python_extension(MLIRPythonExtension.Core
   MODULE_NAME _mlir
   ADD_TO_PARENT MLIRPythonSources.Core
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     MainModule.cpp
-    IRAffine.cpp
-    IRAttributes.cpp
-    IRCore.cpp
-    IRInterfaces.cpp
-    IRModule.cpp
-    IRTypes.cpp
     Pass.cpp
     Rewrite.cpp
 
     # Headers must be included explicitly so they are installed.
-    Globals.h
-    IRModule.h
     Pass.h
-    NanobindUtils.h
     Rewrite.h
   PRIVATE_LINK_LIBS
     LLVMSupport
@@ -752,8 +744,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectSMT.cpp
-    # Headers must be included explicitly so they are installed.
-    NanobindUtils.h
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -860,7 +850,6 @@ endif()
 # once ready.
 ################################################################################
 
-set(MLIRPythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
 add_mlir_python_common_capi_library(MLIRPythonCAPI
   INSTALL_COMPONENT MLIRPythonModules
   INSTALL_DESTINATION "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/_mlir_libs"
@@ -997,3 +986,53 @@ if(MLIR_PYTHON_STUBGEN_ENABLED)
     add_dependencies(MLIRPythonModules "${_mlirPythonTestNanobind_typestub_gen_target}")
   endif()
 endif()
+
+get_property(NB_LIBRARY_TARGET_NAME TARGET MLIRPythonModules.extension._mlir.dso PROPERTY LINK_LIBRARIES)
+list(GET NB_LIBRARY_TARGET_NAME 0 NB_LIBRARY_TARGET_NAME)
+add_mlir_library_install(${NB_LIBRARY_TARGET_NAME})
+add_mlir_library(MLIRPythonSupport
+  ${PYTHON_SOURCE_DIR}/Globals.cpp
+  ${PYTHON_SOURCE_DIR}/IRAffine.cpp
+  ${PYTHON_SOURCE_DIR}/IRAttributes.cpp
+  ${PYTHON_SOURCE_DIR}/IRCore.cpp
+  ${PYTHON_SOURCE_DIR}/IRInterfaces.cpp
+  ${PYTHON_SOURCE_DIR}/IRTypes.cpp
+  EXCLUDE_FROM_LIBMLIR
+  SHARED
+  LINK_COMPONENTS
+    Support
+  LINK_LIBS
+    ${NB_LIBRARY_TARGET_NAME}
+    MLIRCAPIIR
+)
+target_link_libraries(MLIRPythonSupport PUBLIC ${NB_LIBRARY_TARGET_NAME})
+nanobind_link_options(MLIRPythonSupport)
+set_target_properties(MLIRPythonSupport PROPERTIES
+  LIBRARY_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
+  BINARY_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
+  # Needed for windows (and doesn't hurt others).
+  RUNTIME_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
+  ARCHIVE_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
+)
+set(eh_rtti_enable)
+if(MSVC)
+  set(eh_rtti_enable /EHsc /GR)
+elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
+  set(eh_rtti_enable -frtti -fexceptions)
+endif()
+target_compile_options(MLIRPythonSupport PRIVATE ${eh_rtti_enable})
+if(APPLE)
+  # NanobindAdaptors.h uses PyClassMethod_New to build `pure_subclass`es but nanobind
+  # doesn't declare this API as undefined in its linker flags. So we need to declare it as such
+  # for downstream users that do not do something like `-undefined dynamic_lookup`.
+  # Same for the rest.
+  target_link_options(MLIRPythonSupport PUBLIC
+    "LINKER:-U,_PyClassMethod_New"
+    "LINKER:-U,_PyCode_Addr2Location"
+    "LINKER:-U,_PyFrame_GetLasti"
+  )
+endif()
+target_link_libraries(
+  MLIRPythonModules.extension._mlir.dso
+  PUBLIC MLIRPythonSupport)
+
