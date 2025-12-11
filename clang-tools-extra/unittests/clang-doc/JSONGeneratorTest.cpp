@@ -245,7 +245,7 @@ TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
   "HasEnums": true,
   "HasRecords": true,
   "InfoType": "namespace",
-  "Name": "Namespace",
+  "Name": "Global Namespace",
   "Namespace": [
     "A"
   ],
