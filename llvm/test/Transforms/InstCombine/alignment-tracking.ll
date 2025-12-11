@@ -6,11 +6,8 @@ define i1 @and_add(ptr %0) {
 ; CHECK-SAME: ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[V0:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 4
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[V0]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = zext i32 [[V1]] to i64
-; CHECK-NEXT:    [[V3:%.*]] = ptrtoint ptr [[V0]] to i64
-; CHECK-NEXT:    [[V4:%.*]] = add i64 [[V2]], [[V3]]
-; CHECK-NEXT:    [[V5:%.*]] = and i64 [[V4]], 2
-; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V5]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[V1]], 2
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[V6]]
 ;
   %v0 = getelementptr inbounds nuw i8, ptr %0, i64 4
@@ -28,11 +25,8 @@ define i1 @and_add_commuted(ptr %0) {
 ; CHECK-SAME: ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[V0:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 4
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[V0]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = zext i32 [[V1]] to i64
-; CHECK-NEXT:    [[V3:%.*]] = ptrtoint ptr [[V0]] to i64
-; CHECK-NEXT:    [[V4:%.*]] = add i64 [[V3]], [[V2]]
-; CHECK-NEXT:    [[V5:%.*]] = and i64 [[V4]], 2
-; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V5]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[V1]], 2
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[V6]]
 ;
   %v0 = getelementptr inbounds nuw i8, ptr %0, i64 4

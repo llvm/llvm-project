@@ -2531,6 +2531,21 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
   if (isa<PointerType>(V->getType())) {
     Align Alignment = V->getPointerAlignment(Q.DL);
     Known.Zero.setLowBits(Log2(Alignment));
+
+    if (Q.CxtI) {
+      for (auto *User : V->users()) {
+        if (auto *PtrOp = getLoadStorePointerOperand(User)) {
+          auto *I = cast<Instruction>(User);
+          auto Zeros = Log2(getLoadStoreAlignment(I));
+          if (V != PtrOp || Known.countMinTrailingZeros() >= Zeros ||
+              I->getParent() != Q.CxtI->getParent() ||
+              !I->comesBefore(Q.CxtI)) {
+            continue;
+          }
+          Known.Zero.setLowBits(Zeros);
+        }
+      }
+    }
   }
 
   // computeKnownBitsFromContext strictly refines Known.
