@@ -331,10 +331,10 @@ static std::optional<size_t> CountGeneratedLoops(
       return std::nullopt;
     }
     if (auto nestedCount{CountGeneratedLoops(std::get<parser::Block>(omp.t))}) {
-      return 1 + *nestedCount - static_cast<size_t>(*count);
-    } else {
-      return std::nullopt;
+      if (static_cast<size_t>(*count) <= *nestedCount)
+        return 1 + *nestedCount - static_cast<size_t>(*count);
     }
+    return std::nullopt;
   }
 
   // For every other loop construct return 1.
