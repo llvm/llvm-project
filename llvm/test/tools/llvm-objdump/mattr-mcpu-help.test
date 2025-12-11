@@ -24,8 +24,7 @@
 # RUN: not llvm-objdump --mcpu=help 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-MISSING-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
 
-## This is a minidump file, which cannot be converted to ObjectFile in llvm.
-# RUN: printf "\x4D\x44\x4D\x50\x93\xA7\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" > %t.minidump
+# RUN: yaml2obj --docnum=2 %s -o %t.minidump
 ## We report an error when the binary file cannot be convert to a recognized object.
 # RUN: not llvm-objdump --mattr=help %t.minidump 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.minidump
@@ -51,3 +50,9 @@ FileHeader:
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
   Machine:         EM_X86_64
+
+--- !minidump
+Streams:
+  - Type:            SystemInfo
+    Processor Arch:  PPC
+    Platform ID:     Linux
