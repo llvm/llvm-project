@@ -129,6 +129,8 @@ bool formatters::MsvcStlVariantSummaryProvider(
     // PDB: get the type from the head as we don't have template arguments
     // there.
     ValueObjectSP head = GetHead(*storage);
+    if (!head)
+      return false;
     active_type = head->GetCompilerType();
     if (!active_type)
       return false;

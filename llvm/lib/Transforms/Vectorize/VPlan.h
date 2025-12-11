@@ -25,7 +25,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 
 #include "VPlanValue.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
@@ -2517,7 +2517,7 @@ public:
   /// all other incoming values are merged into it.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands, DebugLoc DL)
       : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, DL) {
-    assert(Operands.size() > 0 && "Expected at least one operand!");
+    assert(Operands.size() >= 2 && "Expected at least two operands!");
   }
 
   VPBlendRecipe *clone() override {
@@ -3600,8 +3600,6 @@ protected:
 
 /// A recipe for generating the active lane mask for the vector loop that is
 /// used to predicate the vector operations.
-/// TODO: It would be good to use the existing VPWidenPHIRecipe instead and
-/// remove VPActiveLaneMaskPHIRecipe.
 class VPActiveLaneMaskPHIRecipe : public VPHeaderPHIRecipe {
 public:
   VPActiveLaneMaskPHIRecipe(VPValue *StartMask, DebugLoc DL)
@@ -4327,13 +4325,9 @@ class VPlan {
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPValue VFxUF;
 
-  /// Holds a mapping between Values and their corresponding VPValue inside
-  /// VPlan.
-  Value2VPValueTy Value2VPValue;
-
-  /// Contains all the external definitions created for this VPlan. External
-  /// definitions are VPValues that hold a pointer to their underlying IR.
-  SmallVector<VPValue *, 16> VPLiveIns;
+  /// Contains all the external definitions created for this VPlan, as a mapping
+  /// from IR Values to VPValues.
+  SmallMapVector<Value *, VPValue *, 16> LiveIns;
 
   /// Blocks allocated and owned by the VPlan. They will be deleted once the
   /// VPlan is destroyed.
@@ -4530,10 +4524,9 @@ public:
   ///  yet) for \p V.
   VPValue *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPValue of a null Value");
-    auto [It, Inserted] = Value2VPValue.try_emplace(V);
+    auto [It, Inserted] = LiveIns.try_emplace(V);
     if (Inserted) {
       VPValue *VPV = new VPValue(V);
-      VPLiveIns.push_back(VPV);
       assert(VPV->isLiveIn() && "VPV must be a live-in.");
       It->second = VPV;
     }
@@ -4565,17 +4558,10 @@ public:
   }
 
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
-  VPValue *getLiveIn(Value *V) const { return Value2VPValue.lookup(V); }
+  VPValue *getLiveIn(Value *V) const { return LiveIns.lookup(V); }
 
   /// Return the list of live-in VPValues available in the VPlan.
-  ArrayRef<VPValue *> getLiveIns() const {
-    assert(all_of(Value2VPValue,
-                  [this](const auto &P) {
-                    return is_contained(VPLiveIns, P.second);
-                  }) &&
-           "all VPValues in Value2VPValue must also be in VPLiveIns");
-    return VPLiveIns;
-  }
+  auto getLiveIns() const { return LiveIns.values(); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the live-ins of this VPlan to \p O.
