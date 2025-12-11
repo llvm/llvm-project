@@ -870,7 +870,7 @@ class DebugCommunication(object):
             "arguments": {},
         }
         response = self._send_recv(command_dict)
-        if response:
+        if response and response["success"]:
             self.configuration_done_sent = True
             stopped_on_entry = self.is_stopped
             threads_response = self.request_threads()

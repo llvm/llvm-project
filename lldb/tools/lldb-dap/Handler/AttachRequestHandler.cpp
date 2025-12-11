@@ -30,7 +30,7 @@ namespace lldb_dap {
 /// Since attaching is debugger/runtime specific, the arguments for this request
 /// are not part of this specification.
 void AttachRequestHandler::Run(const AttachRequestArguments &args,
-                               unique_function<void(Error)> callback) const {
+                               Callback<Error> callback) const {
   // Initialize DAP debugger and related components if not sharing previously
   // launched debugger.
   std::optional<int> debugger_id = args.debuggerId;
@@ -45,22 +45,27 @@ void AttachRequestHandler::Run(const AttachRequestArguments &args,
   if (Error err = debugger_id && target_id
                       ? dap.InitializeDebugger(*debugger_id, *target_id)
                       : dap.InitializeDebugger())
-    return callback(std::move(err));
+    return DelayResponseUntilConfigurationDone(std::move(callback),
+                                               std::move(err));
 
   // Validate that we have a well formed attach request.
   if (args.attachCommands.empty() && args.coreFile.empty() &&
       args.configuration.program.empty() &&
       args.pid == LLDB_INVALID_PROCESS_ID &&
       args.gdbRemotePort == LLDB_DAP_INVALID_PORT && !target_id.has_value())
-    return callback(make_error<DAPError>(
-        "expected one of 'pid', 'program', 'attachCommands', "
-        "'coreFile', 'gdb-remote-port', or target_id to be specified"));
+    return DelayResponseUntilConfigurationDone(
+        std::move(callback),
+        make_error<DAPError>(
+            "expected one of 'pid', 'program', 'attachCommands', "
+            "'coreFile', 'gdb-remote-port', or target_id to be specified"));
 
   // Check if we have mutually exclusive arguments.
   if ((args.pid != LLDB_INVALID_PROCESS_ID) &&
       (args.gdbRemotePort != LLDB_DAP_INVALID_PORT))
-    return callback(make_error<DAPError>(
-        "'pid' and 'gdb-remote-port' are mutually exclusive"));
+    return DelayResponseUntilConfigurationDone(
+        std::move(callback),
+        make_error<DAPError>(
+            "'pid' and 'gdb-remote-port' are mutually exclusive"));
 
   dap.SetConfiguration(args.configuration, /*is_attach=*/true);
   if (!args.coreFile.empty())
@@ -76,8 +81,9 @@ void AttachRequestHandler::Run(const AttachRequestArguments &args,
     sys::fs::set_current_path(dap.configuration.debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json
-  if (llvm::Error err = dap.RunInitCommands())
-    return callback(std::move(err));
+  if (Error err = dap.RunInitCommands())
+    return DelayResponseUntilConfigurationDone(std::move(callback),
+                                               std::move(err));
 
   dap.ConfigureSourceMaps();
 
@@ -97,22 +103,23 @@ void AttachRequestHandler::Run(const AttachRequestArguments &args,
   }
 
   if (error.Fail())
-    return callback(ToError(error));
+    return DelayResponseUntilConfigurationDone(std::move(callback),
+                                               ToError(error));
 
   dap.SetTarget(target);
 
   // Run any pre run LLDB commands the user specified in the launch.json
   if (Error err = dap.RunPreRunCommands())
-    return callback(std::move(err));
+    return DelayResponseUntilConfigurationDone(std::move(callback),
+                                               std::move(err));
 
   if ((args.pid == LLDB_INVALID_PROCESS_ID ||
        args.gdbRemotePort == LLDB_DAP_INVALID_PORT) &&
-      args.waitFor) {
+      args.waitFor)
     dap.SendOutput(OutputType::Console,
                    llvm::formatv("Waiting to attach to \"{0}\"...",
                                  dap.target.GetExecutable().GetFilename())
                        .str());
-  }
 
   {
     // Perform the launch in synchronous mode so that we don't have to worry
@@ -131,8 +138,10 @@ void AttachRequestHandler::Run(const AttachRequestArguments &args,
 
       // Validate the attachCommand results.
       if (!dap.target.GetProcess().IsValid())
-        return callback(make_error<DAPError>(
-            "attachCommands failed to attach to a process"));
+        return DelayResponseUntilConfigurationDone(
+            std::move(callback),
+            make_error<DAPError>(
+                "attachCommands failed to attach to a process"));
     } else if (!args.coreFile.empty()) {
       dap.target.LoadCore(args.coreFile.data(), error);
     } else if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {
@@ -155,25 +164,26 @@ void AttachRequestHandler::Run(const AttachRequestArguments &args,
       attach_info.SetWaitForLaunch(args.waitFor, /*async=*/false);
       dap.target.Attach(attach_info, error);
     }
+
     if (error.Fail())
-      return callback(ToError(error));
+      return DelayResponseUntilConfigurationDone(std::move(callback),
+                                                 ToError(error));
   }
 
   // Make sure the process is attached and stopped.
   error = dap.WaitForProcessToStop(args.configuration.timeout);
   if (error.Fail())
-    return callback(ToError(error));
+    return DelayResponseUntilConfigurationDone(std::move(callback),
+                                               ToError(error));
 
   if (args.coreFile.empty() && !dap.target.GetProcess().IsValid())
-    return callback(make_error<DAPError>("failed to attach to process"));
+    return DelayResponseUntilConfigurationDone(
+        std::move(callback),
+        make_error<DAPError>("failed to attach to process"));
 
   dap.RunPostRunCommands();
 
-  dap.on_configuration_done = [callback = std::move(callback)]() mutable {
-    callback(Error::success());
-  };
-
-  dap.SendJSON(CreateEventObject("initialized"));
+  DelayResponseUntilConfigurationDone(std::move(callback), Error::success());
 }
 
 } // namespace lldb_dap

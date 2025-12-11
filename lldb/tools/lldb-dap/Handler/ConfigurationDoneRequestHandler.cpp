@@ -66,12 +66,12 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
 }
 
 void ConfigurationDoneRequestHandler::PostRun() const {
-  if (dap.on_configuration_done) {
-    dap.on_configuration_done();
+  if (!dap.on_configuration_done)
+    return;
 
-    // Clear the callback to ensure any captured resources are released.
-    dap.on_configuration_done = nullptr;
-  }
+  dap.on_configuration_done();
+  // Clear the callback to ensure any captured resources are released.
+  dap.on_configuration_done = nullptr;
 }
 
 } // namespace lldb_dap

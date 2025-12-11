@@ -516,9 +516,10 @@ class DAPTestCaseBase(TestBase):
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
         attach_seq = self.dap_server.request_attach(**kwargs)
-        if waitForResponse:
-            return self.dap_server.receive_response(attach_seq)
         self.dap_server.wait_for_event(["initialized"])
+        if waitForResponse:
+            self.dap_server.request_configurationDone()
+            return self.dap_server.receive_response(attach_seq)
         return None
 
     def launch(
@@ -529,7 +530,7 @@ class DAPTestCaseBase(TestBase):
         disconnectAutomatically=True,
         waitForResponse=False,
         **kwargs,
-    ) -> Optional[Response]:
+    ):
         """Sending launch request to dap"""
 
         # Make sure we disconnect and terminate the DAP debug adapter,
@@ -545,10 +546,11 @@ class DAPTestCaseBase(TestBase):
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
         launch_seq = self.dap_server.request_launch(program, **kwargs)
-        if waitForResponse:
-            return self.dap_server.receive_response(launch_seq)
         self.dap_server.wait_for_event(["initialized"])
-        return None
+        if waitForResponse:
+            self.dap_server.request_configurationDone()
+            return self.dap_server.receive_response(launch_seq)
+        return launch_seq
 
     def build_and_launch(
         self,
@@ -565,9 +567,12 @@ class DAPTestCaseBase(TestBase):
 
         return self.launch(program, **kwargs)
 
-    def verify_configuration_done(self):
+    def verify_configuration_done(self, expectedResult=True):
         resp = self.dap_server.request_configurationDone()
-        self.assertTrue(resp["success"])
+        if expectedResult:
+            self.assertTrue(resp["success"])
+        else:
+            self.assertFalse(resp["success"])
 
     def getBuiltinDebugServerTool(self):
         # Tries to find simulation/lldb-server/gdbserver tool path.

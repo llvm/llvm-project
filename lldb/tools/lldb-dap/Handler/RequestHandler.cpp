@@ -18,6 +18,7 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBEnvironment.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
 #include <mutex>
 
 #if !defined(_WIN32)
@@ -268,8 +269,8 @@ bool BaseRequestHandler::HasInstructionGranularity(
   return false;
 }
 
-void BaseRequestHandler::HandleErrorResponse(
-    llvm::Error err, protocol::Response &response) const {
+void BaseRequestHandler::SendError(llvm::Error err,
+                                   protocol::Response &response) const {
   response.success = false;
   llvm::handleAllErrors(
       std::move(err),
@@ -298,6 +299,17 @@ void BaseRequestHandler::HandleErrorResponse(
         body.error = error_message;
         response.body = body;
       });
+
+  Send(response);
+}
+
+void BaseRequestHandler::SendSuccess(
+    protocol::Response &response, std::optional<llvm::json::Value> body) const {
+  response.success = true;
+  if (body)
+    response.body = std::move(*body);
+
+  Send(response);
 }
 
 void BaseRequestHandler::Send(protocol::Response &response) const {

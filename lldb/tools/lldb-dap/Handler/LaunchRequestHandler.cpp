@@ -21,18 +21,20 @@ using namespace lldb_dap::protocol;
 namespace lldb_dap {
 
 /// Launch request; value of command field is 'launch'.
-void LaunchRequestHandler::Run(
-    const LaunchRequestArguments &arguments,
-    llvm::unique_function<void(llvm::Error)> callback) const {
+void LaunchRequestHandler::Run(const LaunchRequestArguments &arguments,
+                               Callback<Error> callback) const {
   // Initialize DAP debugger.
   if (Error err = dap.InitializeDebugger())
-    return callback(std::move(err));
+    return DelayResponseUntilConfigurationDone(std::move(callback),
+                                               std::move(err));
 
   // Validate that we have a well formed launch request.
   if (!arguments.launchCommands.empty() &&
       arguments.console != protocol::eConsoleInternal)
-    return callback(make_error<DAPError>(
-        "'launchCommands' and non-internal 'console' are mutually exclusive"));
+    return DelayResponseUntilConfigurationDone(
+        std::move(callback),
+        make_error<DAPError>("'launchCommands' and non-internal 'console' are "
+                             "mutually exclusive"));
 
   dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
   dap.last_launch_request = arguments;
@@ -50,31 +52,31 @@ void LaunchRequestHandler::Run(
   // This is run before target is created, so commands can't do anything with
   // the targets - preRunCommands are run with the target.
   if (Error err = dap.RunInitCommands())
-    return callback(std::move(err));
+    return DelayResponseUntilConfigurationDone(std::move(callback),
+                                               std::move(err));
 
   dap.ConfigureSourceMaps();
 
   lldb::SBError error;
   lldb::SBTarget target = dap.CreateTarget(error);
   if (error.Fail())
-    return callback(ToError(error));
+    return DelayResponseUntilConfigurationDone(std::move(callback),
+                                               ToError(error));
 
   dap.SetTarget(target);
 
   // Run any pre run LLDB commands the user specified in the launch.json
   if (Error err = dap.RunPreRunCommands())
-    return callback(std::move(err));
+    return DelayResponseUntilConfigurationDone(std::move(callback),
+                                               std::move(err));
 
   if (Error err = LaunchProcess(arguments))
-    return callback(std::move(err));
+    return DelayResponseUntilConfigurationDone(std::move(callback),
+                                               std::move(err));
 
   dap.RunPostRunCommands();
 
-  dap.on_configuration_done = [callback = std::move(callback)]() mutable {
-    callback(Error::success());
-  };
-
-  dap.SendJSON(CreateEventObject("initialized"));
+  DelayResponseUntilConfigurationDone(std::move(callback), Error::success());
 }
 
 } // namespace lldb_dap
