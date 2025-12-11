@@ -2449,7 +2449,7 @@ static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
   // in Index, don't have to worry about overflow on the shift
   unsigned IndexBits =
       dyn_cast<IntegerType>(Index->getType())->getScalarSizeInBits();
-  if (MaxVal >= (1u << IndexBits)) {
+  if (isUIntN(IndexBits, MaxVal)) {
     Value *MaxValue = ConstantInt::get(Context, APInt(IndexBits, MaxVal + 1));
     // %icmp = icmp ult %Index, %max_value
     Value *BoundsCheck =
