@@ -422,7 +422,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
 
       diag(BeginCurrent->front()->getBeginLoc(),
            "switch has %0 consecutive identical branches")
-          << static_cast<int>(std::distance(BeginCurrent, EndCurrent));
+          << std::distance(BeginCurrent, EndCurrent);
 
       SourceLocation EndLoc = (EndCurrent - 1)->back()->getEndLoc();
       // If the case statement is generated from a macro, it's SourceLocation
