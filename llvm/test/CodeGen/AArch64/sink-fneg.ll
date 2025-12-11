@@ -9,8 +9,7 @@ define void @shared_fneg_across_bbs(<4 x float> %x, <4 x float> %y, <4 x float> 
 ; CHECK-NEXT:    str q2, [x1]
 ; CHECK-NEXT:    tbz w0, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %use_bb
-; CHECK-NEXT:    fneg v0.4s, v0.4s
-; CHECK-NEXT:    fmla v4.4s, v0.4s, v3.4s
+; CHECK-NEXT:    fmls v4.4s, v3.4s, v0.4s
 ; CHECK-NEXT:    str q4, [x2]
 ; CHECK-NEXT:  .LBB0_2: // %exit
 ; CHECK-NEXT:    ret
@@ -36,9 +35,7 @@ define void @shared_fnegs_across_bbs(<4 x float> %x, <4 x float> %y, <4 x float>
 ; CHECK-NEXT:    str q2, [x1]
 ; CHECK-NEXT:    tbz w0, #0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %use_bb
-; CHECK-NEXT:    fneg v0.4s, v0.4s
-; CHECK-NEXT:    fneg v1.4s, v3.4s
-; CHECK-NEXT:    fmla v4.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fmla v4.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    str q4, [x2]
 ; CHECK-NEXT:  .LBB1_2: // %exit
 ; CHECK-NEXT:    ret
@@ -62,11 +59,12 @@ define <4 x float> @shared_fneg_with_other_users(<4 x float> %x, <4 x float> %y,
 ; CHECK-LABEL: shared_fneg_with_other_users:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmls v2.4s, v1.4s, v0.4s
-; CHECK-NEXT:    fneg v0.4s, v0.4s
+; CHECK-NEXT:    fneg v1.4s, v0.4s
 ; CHECK-NEXT:    str q2, [x1]
 ; CHECK-NEXT:    tbz w0, #0, .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %use_bb
-; CHECK-NEXT:    fmla v4.4s, v0.4s, v3.4s
+; CHECK-NEXT:    fmls v4.4s, v3.4s, v0.4s
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    str q4, [x2]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_2: // %other_use
@@ -74,8 +72,8 @@ define <4 x float> @shared_fneg_with_other_users(<4 x float> %x, <4 x float> %y,
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
@@ -107,8 +105,7 @@ define void @shared_fneg_across_bbs_fmuladd(<4 x float> %x, <4 x float> %y, <4 x
 ; CHECK-NEXT:    str q2, [x1]
 ; CHECK-NEXT:    tbz w0, #0, .LBB3_2
 ; CHECK-NEXT:  // %bb.1: // %use_bb
-; CHECK-NEXT:    fneg v0.4s, v0.4s
-; CHECK-NEXT:    fmla v4.4s, v0.4s, v3.4s
+; CHECK-NEXT:    fmls v4.4s, v3.4s, v0.4s
 ; CHECK-NEXT:    str q4, [x2]
 ; CHECK-NEXT:  .LBB3_2: // %exit
 ; CHECK-NEXT:    ret
@@ -134,8 +131,7 @@ define void @shared_fneg_across_bbs_fmul_fast(<4 x float> %x, <4 x float> %y, <4
 ; CHECK-NEXT:    str q2, [x1]
 ; CHECK-NEXT:    tbz w0, #0, .LBB4_2
 ; CHECK-NEXT:  // %bb.1: // %use_bb
-; CHECK-NEXT:    fneg v0.4s, v0.4s
-; CHECK-NEXT:    fmla v4.4s, v0.4s, v3.4s
+; CHECK-NEXT:    fmls v4.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    str q4, [x2]
 ; CHECK-NEXT:  .LBB4_2: // %exit
 ; CHECK-NEXT:    ret
@@ -163,8 +159,7 @@ define void @shared_fneg_across_bbs_fmul_contract(<4 x float> %x, <4 x float> %y
 ; CHECK-NEXT:    str q2, [x1]
 ; CHECK-NEXT:    tbz w0, #0, .LBB5_2
 ; CHECK-NEXT:  // %bb.1: // %use_bb
-; CHECK-NEXT:    fneg v0.4s, v0.4s
-; CHECK-NEXT:    fmla v4.4s, v0.4s, v3.4s
+; CHECK-NEXT:    fmls v4.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    str q4, [x2]
 ; CHECK-NEXT:  .LBB5_2: // %exit
 ; CHECK-NEXT:    ret
@@ -192,8 +187,7 @@ define void @shared_fneg_across_bbs_fmul_scalar(float %x, float %y, float %z, fl
 ; CHECK-NEXT:    str s1, [x1]
 ; CHECK-NEXT:    tbz w0, #0, .LBB6_2
 ; CHECK-NEXT:  // %bb.1: // %use_bb
-; CHECK-NEXT:    fneg s0, s0
-; CHECK-NEXT:    fmadd s0, s3, s0, s4
+; CHECK-NEXT:    fmsub s0, s3, s0, s4
 ; CHECK-NEXT:    str s0, [x2]
 ; CHECK-NEXT:  .LBB6_2: // %exit
 ; CHECK-NEXT:    ret
@@ -221,8 +215,7 @@ define void @shared_fneg_splat_across_bbs_fmul(<4 x float> %x, <4 x float> %y, <
 ; CHECK-NEXT:    str q2, [x1]
 ; CHECK-NEXT:    tbz w0, #0, .LBB7_2
 ; CHECK-NEXT:  // %bb.1: // %use_bb
-; CHECK-NEXT:    fneg v0.4s, v0.4s
-; CHECK-NEXT:    fmla v4.4s, v0.4s, v1.s[0]
+; CHECK-NEXT:    fmls v4.4s, v0.4s, v1.s[0]
 ; CHECK-NEXT:    str q4, [x2]
 ; CHECK-NEXT:  .LBB7_2: // %exit
 ; CHECK-NEXT:    ret
