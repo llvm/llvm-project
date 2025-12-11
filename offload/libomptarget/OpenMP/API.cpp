@@ -745,11 +745,11 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
                                                    /*UseHoldRefCount=*/false);
   if (!TPR.isPresent()) {
     ODBG(ODT_Interface) << "Ptr " << Ptr
-                        << "is not present on device %d, returning nullptr";
+                        << "is not present on device %d, returning nullptr.";
     return nullptr;
   }
 
-  ODBG(ODT_Interface) << __func__ << " returns " << TPR.TargetPointer;
+  ODBG(ODT_Interface) << __func__ << " returns " << TPR.TargetPointer << ".";
 
   return TPR.TargetPointer;
 }
