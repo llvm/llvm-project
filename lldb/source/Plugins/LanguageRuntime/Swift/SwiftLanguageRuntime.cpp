@@ -1026,6 +1026,7 @@ static llvm::Error PrintObjectViaPointer(Stream &strm, ValueObject &object,
   if (flags.Test(eTypeInstanceIsPointer)) {
     // Objects are pointers.
     addr = object.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    addr = process.FixDataAddress(addr);
   } else {
     // Get the address of non-object values (structs, enums).
     auto addr_and_type = object.GetAddressOf(false);
