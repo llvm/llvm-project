@@ -831,13 +831,6 @@ TYPE_PARSER(construct<OmpFallbackModifier>("FALLBACK"_tok >>
         "DEFAULT_MEM" >> pure(OmpFallbackModifier::Value::Default_Mem) ||
         "NULL" >> pure(OmpFallbackModifier::Value::Null))))
 
-TYPE_PARSER(construct<OmpInteropRuntimeIdentifier>(
-    construct<OmpInteropRuntimeIdentifier>(charLiteralConstant) ||
-    construct<OmpInteropRuntimeIdentifier>(scalarIntConstantExpr)))
-
-TYPE_PARSER(construct<OmpInteropPreference>(verbatim("PREFER_TYPE"_tok) >>
-    parenthesized(nonemptyList(Parser<OmpInteropRuntimeIdentifier>{}))))
-
 TYPE_PARSER(construct<OmpInteropType>(
     "TARGETSYNC" >> pure(OmpInteropType::Value::TargetSync) ||
     "TARGET" >> pure(OmpInteropType::Value::Target)))
@@ -897,6 +890,20 @@ TYPE_PARSER(construct<OmpOrderingModifier>(
     "MONOTONIC" >> pure(OmpOrderingModifier::Value::Monotonic) ||
     "NONMONOTONIC" >> pure(OmpOrderingModifier::Value::Nonmonotonic) ||
     "SIMD" >> pure(OmpOrderingModifier::Value::Simd)))
+
+TYPE_PARSER( //
+    construct<OmpPreferenceSelector>("FR" >> parenthesized(indirect(expr))) ||
+    construct<OmpPreferenceSelector>(
+        "ATTR" >> parenthesized(nonemptyList(indirect(expr)))))
+
+TYPE_PARSER( //
+    construct<OmpPreferenceSpecification>(
+        braced(nonemptyList(Parser<OmpPreferenceSelector>()))) ||
+    construct<OmpPreferenceSpecification>(indirect(expr)))
+
+TYPE_PARSER(construct<OmpPreferType>( //
+    "PREFER_TYPE" >>
+    parenthesized(nonemptyList(Parser<OmpPreferenceSpecification>{}))))
 
 TYPE_PARSER(construct<OmpPrescriptiveness>(
     "STRICT" >> pure(OmpPrescriptiveness::Value::Strict)))
@@ -986,9 +993,9 @@ TYPE_PARSER(sourced(
     construct<OmpIfClause::Modifier>(Parser<OmpDirectiveNameModifier>{})))
 
 TYPE_PARSER(sourced(
-    construct<OmpInitClause::Modifier>(
-        construct<OmpInitClause::Modifier>(Parser<OmpInteropPreference>{})) ||
-    construct<OmpInitClause::Modifier>(Parser<OmpInteropType>{})))
+    // Try interop-type first, since prefer-type can take arbitrary strings.
+    construct<OmpInitClause::Modifier>(Parser<OmpInteropType>{}) ||
+    construct<OmpInitClause::Modifier>(Parser<OmpPreferType>{})))
 
 TYPE_PARSER(sourced(construct<OmpInReductionClause::Modifier>(
     Parser<OmpReductionIdentifier>{})))
@@ -1487,8 +1494,8 @@ TYPE_PARSER( //
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
     "INDIRECT" >> construct<OmpClause>(construct<OmpClause::Indirect>(
                       maybe(parenthesized(scalarLogicalExpr)))) ||
-    "INIT" >> construct<OmpClause>(construct<OmpClause::Init>(
-                  parenthesized(Parser<OmpInitClause>{}))) ||
+    "INIT"_id >> construct<OmpClause>(construct<OmpClause::Init>(
+                     parenthesized(Parser<OmpInitClause>{}))) ||
     "INCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Inclusive>(
                        parenthesized(Parser<OmpObjectList>{}))) ||
     "INITIALIZER" >> construct<OmpClause>(construct<OmpClause::Initializer>(
