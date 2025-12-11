@@ -5646,6 +5646,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     KnownFPClass KnownLHS, KnownRHS;
     computeKnownFPClass(Op->getOperand(1), DemandedElts, NeedForNan, KnownRHS,
                         Q, Depth + 1);
+
+    const APFloat *CRHS;
+    if (match(Op->getOperand(1), m_APFloat(CRHS))) {
+      // Match denormal scaling pattern, similar to the case in ldexp. If the
+      // constant's exponent is sufficiently large, the result cannot be
+      // subnormal.
+
+      // TODO: Should do general ConstantFPRange analysis.
+      const fltSemantics &Flt =
+          Op->getType()->getScalarType()->getFltSemantics();
+      unsigned Precision = APFloat::semanticsPrecision(Flt);
+      const int MantissaBits = Precision - 1;
+
+      int MinKnownExponent = ilogb(*CRHS);
+      if (MinKnownExponent >= MantissaBits)
+        Known.knownNot(fcSubnormal);
+    }
+
     if (!KnownRHS.isKnownNeverNaN())
       break;
 
