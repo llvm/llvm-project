@@ -16,10 +16,53 @@
 
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
+
+/// Emit code to cause the variable at the given address to be considered as
+/// constant from this point onwards.
+static void emitDeclInvariant(CIRGenFunction &CGF, const VarDecl *D) {
+  mlir::Value addr = CGF.cgm.getAddrOfGlobalVar(D);
+  CGF.emitInvariantStart(CGF.getContext().getTypeSizeInChars(D->getType()),
+                         addr, CGF.getLoc(D->getSourceRange()));
+}
+
+void CIRGenFunction::emitInvariantStart(CharUnits Size, mlir::Value Addr,
+                                        mlir::Location loc) {
+  // Do not emit the intrinsic if we're not optimizing.
+  if (!cgm.getCodeGenOpts().OptimizationLevel)
+    return;
+
+  CIRGenBuilderTy &builder = getBuilder();
+
+  // Create the size constant as i64
+  uint64_t width = Size.getQuantity();
+  mlir::Value sizeValue = builder.getConstInt(loc, builder.getSInt64Ty(),
+                                              static_cast<int64_t>(width));
+
+  // Determine address space for intrinsic name
+  unsigned addrSpace = 0;
+  if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(Addr.getType()))
+    addrSpace =
+        ptrTy.getAddrSpace() ? ptrTy.getAddrSpace().getValue().getUInt() : 0;
+
+  // Format intrinsic name with address space suffix (e.g.,
+  // "invariant.start.p0", "invariant.start.p10")
+  llvm::SmallString<32> intrinsicName;
+  llvm::raw_svector_ostream os(intrinsicName);
+  os << "invariant.start.p" << addrSpace;
+
+  // Create the intrinsic call. The llvm.invariant.start intrinsic returns a
+  // token, but we don't need to capture it. The return type is set to match
+  // the address type for consistency with the operation signature.
+  cir::LLVMIntrinsicCallOp::create(
+      builder, loc, builder.getStringAttr(intrinsicName), Addr.getType(),
+      mlir::ValueRange{sizeValue, Addr});
+}
 
 static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
                          cir::GlobalOp globalOp) {
@@ -234,13 +277,32 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
 
     bool needsDtor = varDecl->needsDestruction(getASTContext()) ==
                      QualType::DK_cxx_destructor;
+    bool isConstantStorage =
+        varDecl->getType().isConstantStorage(getASTContext(), true, !needsDtor);
     // PerformInit, constant store invariant / destroy handled below.
-    if (performInit)
+    if (performInit) {
       emitDeclInit(cgf, varDecl, addr);
+      // For constant storage, emit invariant.start in the ctor region after
+      // initialization but before the yield.
+      if (isConstantStorage) {
+        CIRGenBuilderTy &builder = cgf.getBuilder();
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        // Set insertion point to end of ctor region (before yield)
+        if (!addr.getCtorRegion().empty()) {
+          mlir::Block *block = &addr.getCtorRegion().back();
+          // Find the yield op and insert before it
+          mlir::Operation *yieldOp = block->getTerminator();
+          if (yieldOp) {
+            builder.setInsertionPoint(yieldOp);
+            emitDeclInvariant(cgf, varDecl);
+          }
+        }
+      }
+    } else if (isConstantStorage) {
+      emitDeclInvariant(cgf, varDecl);
+    }
 
-    if (varDecl->getType().isConstantStorage(getASTContext(), true, !needsDtor))
-      errorNYI(varDecl->getSourceRange(), "global with constant storage");
-    else
+    if (!isConstantStorage)
       emitDeclDestroy(cgf, varDecl, addr);
     return;
   }
