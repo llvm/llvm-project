@@ -158,6 +158,7 @@ protected:
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "ProtectedMembers": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "IsStatic": false,
 // CHECK-NEXT:        "Name": "ProtectedField",
 // CHECK-NEXT:        "Type": "int"
 // CHECK-NEXT:      }
@@ -198,6 +199,7 @@ protected:
 // CHECK-NEXT:        },
 // CHECK:         "PublicMembers": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "IsStatic": false,
 // CHECK-NEXT:        "Name": "PublicField",
 // CHECK-NEXT:        "Type": "int"
 // CHECK-NEXT:      }

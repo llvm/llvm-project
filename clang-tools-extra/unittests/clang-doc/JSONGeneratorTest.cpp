@@ -90,6 +90,7 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
       ],
       "PublicMembers": [
         {
+          "IsStatic": false,
           "Name": "N",
           "Type": "int"
         }
@@ -140,6 +141,7 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
   "Path": "GlobalNamespace",
   "ProtectedMembers": [
     {
+      "IsStatic": false,
       "Name": "X",
       "Type": "int"
     }
