@@ -5,7 +5,7 @@
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
 
-# WARN: warning: 'while reading call graph info's [number of direct callsites] for function at [0x2]': unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
+# WARN: warning: '[[FILE]]': unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
 
 ## YAML content was generated from this assembly using obj2yaml.
 ##    .section	.llvm.callgraph,"o",@llvm_call_graph,.text

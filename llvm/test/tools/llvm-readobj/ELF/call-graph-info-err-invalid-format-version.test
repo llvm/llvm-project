@@ -5,7 +5,7 @@
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
 
-# WARN: warning: 'unknown value': unknown format version value [1] in .llvm.callgraph section.
+# WARN: warning: '[[FILE]]': unknown format version value [1] in .llvm.callgraph section.
 
 ## YAML content was generated from this assembly using obj2yaml.
 ##    .text

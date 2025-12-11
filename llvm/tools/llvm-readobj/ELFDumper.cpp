@@ -463,6 +463,7 @@ protected:
     SmallVector<uint32_t> FuncSymIndexes =
         this->getSymbolIndexesForFunctionAddress(FuncAddr, std::nullopt);
     SmallVector<std::string> FuncSymNames;
+    FuncSymNames.reserve(FuncSymIndexes.size());
     for (uint32_t Index : FuncSymIndexes)
       FuncSymNames.push_back(this->getStaticSymbolName(Index));
     return FuncSymNames;
@@ -5315,63 +5316,59 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       Obj.getSectionAndRelocations(IsMatch);
   if (!MapOrErr || MapOrErr->empty()) {
     reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found."),
-                  "missing section");
+                  FileName);
     return false;
   }
   const Elf_Shdr *CGSection = MapOrErr->begin()->first;
   Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
       Obj.getSectionContents(*CGSection);
   if (!SectionBytesOrErr) {
-    reportWarning(SectionBytesOrErr.takeError(),
-                  "unable to read the .llvm.callgraph section");
+    reportWarning(createError("unable to read the .llvm.callgraph section"),
+                  FileName);
     return false;
   }
 
-  auto WarnMalformed = [&](Error &E, Twine FuncPC, StringRef Component) {
-    reportWarning(std::move(E),
-                  Twine("while reading call graph info's [" + Component +
-                        "] for function at [0x" + FuncPC + "]")
-                      .str());
-  };
-
   DataExtractor Data(SectionBytesOrErr.get(), Obj.isLE(),
                      ObjF.getBytesInAddress());
-
   uint64_t UnknownCount = 0;
   uint64_t Offset = 0;
   while (Offset < CGSection->sh_size) {
     Error CGSectionErr = Error::success();
     uint8_t FormatVersionNumber = Data.getU8(&Offset, &CGSectionErr);
     if (CGSectionErr) {
-      reportWarning(std::move(CGSectionErr),
-                    "while reading call graph info FormatVersionNumber");
+      reportWarning(createError("failed while reading FormatVersionNumber"),
+                    FileName);
       return false;
     }
-    if (FormatVersionNumber != 0)
+    if (FormatVersionNumber != 0) {
       reportWarning(createError("unknown format version value [" +
                                 std::to_string(FormatVersionNumber) +
                                 "] in .llvm.callgraph section."),
-                    "unknown value");
+                    FileName);
+      return false;
+    }
 
     uint8_t FlagsVal = Data.getU8(&Offset, &CGSectionErr);
     if (CGSectionErr) {
-      reportWarning(std::move(CGSectionErr),
-                    "while reading call graph info's Flags");
+      reportWarning(createError("failed while reading call graph info's Flags"),
+                    FileName);
       return false;
     }
     callgraph::Flags CGFlags = static_cast<callgraph::Flags>(FlagsVal);
     if (FlagsVal > 7) {
       reportWarning(createError("unexpected value. Expected [0-7] but found [" +
                                 std::to_string(FlagsVal) + "]"),
-                    "while reading call graph info's Flags");
+                    FileName);
       return false;
     }
+
     uint64_t FuncAddrOffset = Offset;
     typename ELFT::uint FuncAddr =
         Data.getUnsigned(&Offset, sizeof(FuncAddr), &CGSectionErr);
     if (CGSectionErr) {
-      reportWarning(std::move(CGSectionErr),
-                    "while reading call graph info function entry PC");
+      reportWarning(
+          createError("failed while reading call graph info function entry PC"),
+          FileName);
       return false;
     }
 
@@ -5385,8 +5382,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     CGInfo.IsIndirectTarget = IsIndirectTarget;
     uint64_t TypeId = Data.getU64(&Offset, &CGSectionErr);
     if (CGSectionErr) {
-      WarnMalformed(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
-                    "indirect type id");
+      reportWarning(std::move(CGSectionErr), FileName);
       return false;
     }
     CGInfo.FunctionTypeId = TypeId;
@@ -5399,8 +5395,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       // Read number of direct call sites for this function.
       uint64_t NumDirectCallees = Data.getULEB128(&Offset, &CGSectionErr);
       if (CGSectionErr) {
-        WarnMalformed(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
-                      "number of direct callsites");
+        reportWarning(std::move(CGSectionErr), FileName);
         return false;
       }
       // Read unique direct callees and populate FuncCGInfos.
@@ -5409,8 +5404,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
         typename ELFT::uint Callee =
             Data.getUnsigned(&Offset, sizeof(Callee), &CGSectionErr);
         if (CGSectionErr) {
-          WarnMalformed(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
-                        "direct callee PC");
+          reportWarning(std::move(CGSectionErr), FileName);
           return false;
         }
         CGInfo.DirectCallees.insert((IsETREL ? CalleeOffset : Callee));
@@ -5423,17 +5417,14 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       uint64_t NumIndirectTargetTypeIDs =
           Data.getULEB128(&Offset, &CGSectionErr);
       if (CGSectionErr) {
-        WarnMalformed(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
-                      "number of indirect target type IDs");
+        reportWarning(std::move(CGSectionErr), FileName);
         return false;
       }
-
       // Read unique indirect target type IDs and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumIndirectTargetTypeIDs; ++I) {
         uint64_t TargetType = Data.getU64(&Offset, &CGSectionErr);
         if (CGSectionErr) {
-          WarnMalformed(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
-                        "indirect type ID");
+          reportWarning(std::move(CGSectionErr), FileName);
           return false;
         }
         CGInfo.IndirectTypeIDs.insert(TargetType);
