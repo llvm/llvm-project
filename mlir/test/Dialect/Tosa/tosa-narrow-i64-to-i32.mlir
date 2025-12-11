@@ -160,3 +160,30 @@ func.func @test_transition_from_i64(%arg0: tensor<1xi64>) -> tensor<1xi32> {
   // COMMON: return %[[OUT_CAST]] : tensor<1xi32>
   return %2 : tensor<1xi32>
 }
+
+// -----
+
+// CHECK-LABEL: test_clamp
+func.func @test_clamp(%arg0: tensor<100xi64>) -> tensor<100xi64> {
+  // COMMON: tosa.clamp %{{.*}} {max_val = 2147483647 : i32, min_val = -2147483648 : i32} : (tensor<100xi32>) -> tensor<100xi32>
+  %1 = tosa.clamp %arg0 {max_val = 2147483647 : i64, min_val = -2147483648 : i64} : (tensor<100xi64>) -> tensor<100xi64>
+  return %1 : tensor<100xi64>
+}
+
+// -----
+
+// CHECK-LABEL: test_clamp_max_outside_i32_range
+func.func @test_clamp_max_outside_i32_range(%arg0: tensor<100xi64>) -> tensor<100xi64> {
+  // expected-error@+1 {{failed to legalize operation 'tosa.clamp'}}
+  %1 = tosa.clamp %arg0 {max_val = 2147483648 : i64, min_val = -2147483648 : i64} : (tensor<100xi64>) -> tensor<100xi64>
+  return %1 : tensor<100xi64>
+}
+
+// -----
+
+// CHECK-LABEL: test_clamp_min_outside_i32_range
+func.func @test_clamp_min_outside_i32_range(%arg0: tensor<100xi64>) -> tensor<100xi64> {
+  // expected-error@+1 {{failed to legalize operation 'tosa.clamp'}}
+  %1 = tosa.clamp %arg0 {max_val = 2147483647 : i64, min_val = -2147483649 : i64} : (tensor<100xi64>) -> tensor<100xi64>
+  return %1 : tensor<100xi64>
+}
