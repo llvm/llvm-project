@@ -6206,8 +6206,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTEND_VECTOR_INREG(SDNode *N) {
       default:
         llvm_unreachable("Node has unexpected Opcode");
     }
-    if (Promoted.getValueType().getSizeInBits() > NVT.getSizeInBits()) {
-      unsigned NewSize = NVT.getSizeInBits();
+    unsigned NewSize = NVT.getSizeInBits();
+    if (Promoted.getValueType().getSizeInBits() > NewSize) {
       EVT ExtractVT = EVT::getVectorVT(
           *DAG.getContext(), Promoted.getValueType().getScalarType(),
           NewSize / Promoted.getScalarValueSizeInBits());
