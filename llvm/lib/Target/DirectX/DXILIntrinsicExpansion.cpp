@@ -669,19 +669,50 @@ static Value *expandFunnelShiftIntrinsic(CallInst *Orig) {
   IRBuilder<> Builder(Orig);
 
   unsigned BitWidth = Ty->getScalarSizeInBits();
-  Constant *Mask = ConstantInt::get(Ty, BitWidth - 1);
-  Constant *Size = ConstantInt::get(Ty, BitWidth);
+  assert(llvm::isPowerOf2_32(BitWidth) &&
+         "Can't use Mask to compute modulo and inverse");
 
-  // The shift is not required to be masked as DXIL op will do so automatically
-  Value *Left =
-      LeftFunnel ? Builder.CreateShl(A, Shift) : Builder.CreateLShr(B, Shift);
+  // Note: if (Shift % BitWidth) == 0 then (BitWidth - Shift) == BitWidth,
+  // shifting by the bitwidth for shl/lshr returns a poisoned result. As such,
+  // we implement the same formula as LegalizerHelper::lowerFunnelShiftAsShifts.
+  //
+  // The funnel shift is expanded like so:
+  // fshl
+  //  -> msb_extract((concat(A, B) << (Shift % BitWidth)), BitWidth)
+  //  -> A << (Shift % BitWidth) | B >> 1 >> (BitWidth - 1 - (Shift % BitWidth))
+  // fshr
+  //  -> lsb_extract((concat(A, B) >> (Shift % BitWidth), BitWidth))
+  //  -> A << 1 << (BitWidth - 1 - (Shift % BitWidth)) | B >> (Shift % BitWidth)
 
+  // (BitWidth - 1) -> Mask
+  Constant *Mask = ConstantInt::get(Ty, Ty->getScalarSizeInBits() - 1);
+
+  // Shift % BitWidth
+  //  -> Shift & (BitWidth - 1)
+  //  -> Shift & Mask
   Value *MaskedShift = Builder.CreateAnd(Shift, Mask);
-  Value *InverseShift = Builder.CreateSub(Size, MaskedShift);
-  Value *Right = LeftFunnel ? Builder.CreateLShr(B, InverseShift)
-                            : Builder.CreateShl(A, InverseShift);
 
-  Value *Result = Builder.CreateOr(Left, Right);
+  // (BitWidth - 1) - (Shift % BitWidth)
+  //  -> ~Shift & (BitWidth - 1)
+  //  -> ~Shift & Mask
+  Value *NotShift = Builder.CreateNot(Shift);
+  Value *InverseShift = Builder.CreateAnd(NotShift, Mask);
+
+  Constant *One = ConstantInt::get(Ty, 1);
+  Value *ShiftedA;
+  Value *ShiftedB;
+
+  if (LeftFunnel) {
+    ShiftedA = Builder.CreateShl(A, MaskedShift);
+    Value *ShiftB1 = Builder.CreateLShr(B, One);
+    ShiftedB = Builder.CreateLShr(ShiftB1, InverseShift);
+  } else {
+    Value *ShiftA1 = Builder.CreateShl(A, One);
+    ShiftedA = Builder.CreateShl(ShiftA1, InverseShift);
+    ShiftedB = Builder.CreateLShr(B, MaskedShift);
+  }
+
+  Value *Result = Builder.CreateOr(ShiftedA, ShiftedB);
   return Result;
 }
 
