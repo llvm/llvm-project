@@ -1,0 +1,13 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.global "private" external @non_tls : !s32i
+  cir.func @error() {
+    // expected-error@+1 {{access to global not marked thread local}}
+    %0 = cir.get_global thread_local @non_tls : !cir.ptr<!s32i>
+    cir.return
+  }
+}
+

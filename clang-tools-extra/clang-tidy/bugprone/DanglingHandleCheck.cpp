@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DanglingHandleCheck.h"
-#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
-using namespace clang::tidy::matchers;
 
 namespace clang::tidy::bugprone {
 

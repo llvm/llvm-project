@@ -70,3 +70,15 @@ s_get_barrier_state s3, -4
 
 s_get_barrier_state s3, m0
 // GFX1250: s_get_barrier_state s3, m0              ; encoding: [0x7d,0x50,0x83,0xbe]
+
+s_wakeup_barrier 1
+// GFX1250: s_wakeup_barrier 1                      ; encoding: [0x81,0x57,0x80,0xbe]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+s_wakeup_barrier -1
+// GFX1250: s_wakeup_barrier -1                     ; encoding: [0xc1,0x57,0x80,0xbe]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+s_wakeup_barrier m0
+// GFX1250: s_wakeup_barrier m0                     ; encoding: [0x7d,0x57,0x80,0xbe]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU

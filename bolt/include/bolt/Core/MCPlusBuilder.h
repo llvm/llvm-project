@@ -538,11 +538,6 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  virtual void createDirectBranch(MCInst &Inst, const MCSymbol *Target,
-                                  MCContext *Ctx) {
-    llvm_unreachable("not implemented");
-  }
-
   virtual MCPhysReg getX86R11() const { llvm_unreachable("not implemented"); }
 
   virtual unsigned getShortBranchOpcode(unsigned Opcode) const {
@@ -1896,6 +1891,19 @@ public:
   /// Update operand of BTI instruction.
   virtual void updateBTIVariant(MCInst &Inst, bool CallTarget,
                                 bool JumpTarget) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Checks if the indirect call / jump is accepted by the landing pad at the
+  /// start of the target BasicBlock.
+  virtual bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Inserts a BTI landing pad to the start of the BB, that matches the
+  /// indirect call inst used to call the BB.
+  virtual void insertBTI(BinaryBasicBlock &BB, MCInst &Call) const {
     llvm_unreachable("not implemented");
   }
 

@@ -159,3 +159,26 @@ __m128i test_mm_shuffle_epi32(__m128i A) {
     // OGCG: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
     return _mm_shuffle_epi32(A, 0x4E);
 }
+
+__m128i test_mm_mul_epu32(__m128i A, __m128i B) {
+  // CIR-LABEL: _mm_mul_epu32
+  // CIR: [[BC_A:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !s64i>
+  // CIR: [[BC_B:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !s64i>
+  // CIR: [[MASK_SCALAR:%.*]] = cir.const #cir.int<4294967295> : !s64i
+  // CIR: [[MASK_VEC:%.*]] = cir.vec.splat [[MASK_SCALAR]] : !s64i, !cir.vector<2 x !s64i>
+  // CIR: [[AND_A:%.*]] = cir.binop(and, [[BC_A]], [[MASK_VEC]])
+  // CIR: [[AND_B:%.*]] = cir.binop(and, [[BC_B]], [[MASK_VEC]])
+  // CIR: [[MUL:%.*]]   = cir.binop(mul, [[AND_A]], [[AND_B]])
+
+  // LLVM-LABEL: _mm_mul_epu32
+  // LLVM: and <2 x i64> %{{.*}}, splat (i64 4294967295)
+  // LLVM: and <2 x i64> %{{.*}}, splat (i64 4294967295)
+  // LLVM: mul <2 x i64> %{{.*}}, %{{.*}}
+
+  // OGCG-LABEL: _mm_mul_epu32
+  // OGCG: and <2 x i64> %{{.*}}, splat (i64 4294967295)
+  // OGCG: and <2 x i64> %{{.*}}, splat (i64 4294967295)
+  // OGCG: mul <2 x i64> %{{.*}}, %{{.*}}
+
+  return _mm_mul_epu32(A, B);
+}
