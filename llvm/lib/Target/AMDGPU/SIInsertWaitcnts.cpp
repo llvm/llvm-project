@@ -839,7 +839,7 @@ private:
   //
   // TODO: Could we track SCC alongside SGPRs so it's not longer a special case?
 
-  struct VGPRInfo {
+  struct VMEMInfo {
     // Scores for all instruction counters.
     std::array<unsigned, NUM_INST_CNTS> Scores = {0};
     // Bitmask of the VmemTypes of VMEM instructions for this VGPR.
@@ -860,7 +860,7 @@ private:
     bool empty() const { return !Scores[0] && !Scores[1]; }
   };
 
-  DenseMap<VMEMID, VGPRInfo> VMem; // VGPR + LDS DMA
+  DenseMap<VMEMID, VMEMInfo> VMem; // VGPR + LDS DMA
   DenseMap<MCRegUnit, SGPRInfo> SGPRs;
 
   // Reg score for SCC.
@@ -2423,6 +2423,13 @@ bool WaitcntBrackets::mergeScore(const MergeInfo &M, unsigned &Score,
 bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
   bool StrictDom = false;
 
+  // Check if "other" has keys we don't have, and create default entries for
+  // those. If they remain empty after merging, we will clean it up after.
+  for (auto K : Other.VMem.keys())
+    VMem.try_emplace(K);
+  for (auto K : Other.SGPRs.keys())
+    SGPRs.try_emplace(K);
+
   for (auto T : inst_counter_types(Context->MaxCounter)) {
     // Merge event flags for this counter
     const unsigned *WaitEventMaskForInst = Context->WaitEventMaskForInst;
@@ -2464,21 +2471,26 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
       }
     }
 
-    for (auto &[RegID, Info] : Other.VMem)
-      StrictDom |= mergeScore(M, VMem[RegID].Scores[T], Info.Scores[T]);
+    for (auto &[RegID, Info] : VMem)
+      StrictDom |= mergeScore(M, Info.Scores[T], Other.getVMemScore(RegID, T));
 
     if (isSmemCounter(T)) {
       unsigned Idx = getSgprScoresIdx(T);
-      for (auto &[RegID, Info] : Other.SGPRs)
-        StrictDom |= mergeScore(M, SGPRs[RegID].Scores[Idx], Info.Scores[Idx]);
+      for (auto &[RegID, Info] : SGPRs) {
+        auto It = Other.SGPRs.find(RegID);
+        unsigned OtherScore =
+            (It != Other.SGPRs.end()) ? It->second.Scores[Idx] : 0;
+        StrictDom |= mergeScore(M, Info.Scores[Idx], OtherScore);
+      }
     }
   }
 
-  for (auto &[TID, Info] : Other.VMem) {
-    auto &Value = VMem[TID];
-    unsigned char NewVmemTypes = Value.VMEMTypes | Info.VMEMTypes;
-    StrictDom |= NewVmemTypes != Value.VMEMTypes;
-    Value.VMEMTypes = NewVmemTypes;
+  for (auto &[TID, Info] : VMem) {
+    if (auto It = Other.VMem.find(TID); It != Other.VMem.end()) {
+      unsigned char NewVmemTypes = Info.VMEMTypes | It->second.VMEMTypes;
+      StrictDom |= NewVmemTypes != Info.VMEMTypes;
+      Info.VMEMTypes = NewVmemTypes;
+    }
   }
 
   purgeEmptyTrackingData();
@@ -2714,7 +2726,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
           VgprUse.insert(RU);
           // If at least one of Op's registers is in the score brackets, the
           // value is likely loaded outside of the loop.
-          unsigned ID = toVMEMID(RU);
+          VMEMID ID = toVMEMID(RU);
           if (Brackets.getVMemScore(ID, LOAD_CNT) >
                   Brackets.getScoreLB(LOAD_CNT) ||
               Brackets.getVMemScore(ID, SAMPLE_CNT) >
