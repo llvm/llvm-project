@@ -7006,6 +7006,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       types::isCXX(InputType))
     CmdArgs.push_back("-fcoro-aligned-allocation");
 
+  if (Args.hasFlag(options::OPT_fdefer_ts, options::OPT_fno_defer_ts,
+                   /*Default=*/false))
+    CmdArgs.push_back("-fdefer-ts");
+
   Args.AddLastArg(CmdArgs, options::OPT_fdouble_square_bracket_attributes,
                   options::OPT_fno_double_square_bracket_attributes);
 
