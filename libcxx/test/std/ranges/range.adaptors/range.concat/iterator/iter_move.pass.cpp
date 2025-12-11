@@ -107,7 +107,6 @@ constexpr bool test() {
     (void)std::ranges::iter_move(it);
   }
 
-
   {
     // All underlying iter_move are noexcept
     // underlying ranges have different

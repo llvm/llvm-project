@@ -164,7 +164,7 @@ constexpr bool test() {
 
     auto it = v.begin();
     it += a.size();
-    --it;           // this skips e
+    --it; // this skips e
     assert(*it == a.back());
 
     auto it2 = v.begin();
@@ -188,7 +188,7 @@ constexpr bool test() {
 
     auto it = v.begin();
     it += a.size();
-    --it;           // skip e2 and e1
+    --it; // skip e2 and e1
     assert(*it == a.back());
   }
 

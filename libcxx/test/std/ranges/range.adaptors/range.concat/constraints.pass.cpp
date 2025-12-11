@@ -18,10 +18,8 @@
 
 // test concept constraints
 
-template<typename T>
-concept WellFormedView = requires(T& a) {
-  std::views::concat(a);
-};
+template <typename T>
+concept WellFormedView = requires(T& a) { std::views::concat(a); };
 
 struct X {};
 struct Y {};
@@ -55,7 +53,7 @@ struct BadView : std::ranges::view_base {
 struct InputRange {
   using Iterator = cpp17_input_iterator<int*>;
   using Sentinel = sentinel_wrapper<Iterator>;
-  constexpr InputRange(int* b, int *e): begin_(b), end_(e) {}
+  constexpr InputRange(int* b, int* e) : begin_(b), end_(e) {}
   constexpr Iterator begin() { return Iterator(begin_); }
   constexpr Sentinel end() { return Sentinel(Iterator(end_)); }
 
@@ -164,27 +162,20 @@ template <typename... Ts>
 concept ConcatViewConstraintsPass = requires(Ts&&... a) { std::views::concat(a...); };
 
 int main(int, char**) {
-
   // rejects when it is an output range
   {
-    std::vector<int> v{1,2,3};
+    std::vector<int> v{1, 2, 3};
     static_assert(!WellFormedView<decltype(std::views::counted(std::back_inserter(v), 3))>);
   }
 
   // input range
-  {
-    static_assert(WellFormedView<InputRange>);
-  }
+  { static_assert(WellFormedView<InputRange>); }
 
   // bidirectional range
-  {
-    static_assert(WellFormedView<std::list<int>>);
-  }
+  { static_assert(WellFormedView<std::list<int>>); }
 
   // random access range
-  {
-    static_assert(WellFormedView<std::vector<int>>);
-  }
+  { static_assert(WellFormedView<std::vector<int>>); }
 
   {
     // LWG 4082

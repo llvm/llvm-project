@@ -57,7 +57,7 @@ struct IntSizeView : std::ranges::view_base {
   constexpr IntSizeView() {}
   constexpr auto begin() const { return iterator{buffer}; }
   constexpr auto end() const { return iterator{buffer + 9}; }
-  constexpr int size () const { return 9; }
+  constexpr int size() const { return 9; }
 };
 
 struct UnsignedSizeView : std::ranges::view_base {
@@ -66,10 +66,8 @@ struct UnsignedSizeView : std::ranges::view_base {
   constexpr UnsignedSizeView() {}
   constexpr auto begin() const { return iterator{buffer}; }
   constexpr auto end() const { return iterator{buffer + 9}; }
-  constexpr unsigned int size () const { return 9; }
+  constexpr unsigned int size() const { return 9; }
 };
-
-
 
 constexpr bool test() {
   {
