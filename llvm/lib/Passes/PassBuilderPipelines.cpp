@@ -191,9 +191,9 @@ static cl::opt<bool> EnablePostPGOLoopRotation(
     "enable-post-pgo-loop-rotation", cl::init(true), cl::Hidden,
     cl::desc("Run the loop rotation transformation after PGO instrumentation"));
 
-static cl::opt<bool>
-    EnableGlobalAnalyses("enable-global-analyses", cl::init(true), cl::Hidden,
-                         cl::desc("Enable inter-procedural analyses"));
+static cl::opt<bool> EnableGlobalAnalyses(
+    "enable-global-analyses", cl::init(true), cl::Hidden,
+    cl::desc("Enable inter-procedural analyses"));
 
 static cl::opt<bool> RunPartialInlining("enable-partial-inlining",
                                         cl::init(false), cl::Hidden,
@@ -412,7 +412,7 @@ void PassBuilder::invokePipelineEarlySimplificationEPCallbacks(
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
-  // Count the types of instructions used
+   // Count the types of instructions used
   if (AreStatisticsEnabled())
     MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
 }
@@ -1181,10 +1181,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // and prior to optimizing globals.
   // FIXME: This position in the pipeline hasn't been carefully considered in
   // years, it should be re-analyzed.
-  MPM.addPass(IPSCCPPass(IPSCCPOptions(/*AllowFuncSpec=*/
-                                       Level != OptimizationLevel::Os &&
-                                       Level != OptimizationLevel::Oz &&
-                                       !isLTOPreLink(Phase))));
+  MPM.addPass(IPSCCPPass(
+              IPSCCPOptions(/*AllowFuncSpec=*/
+                            Level != OptimizationLevel::Os &&
+                            Level != OptimizationLevel::Oz &&
+                            !isLTOPreLink(Phase))));
 
   // Attach metadata to indirect call sites indicating the set of functions
   // they may target at run-time. This should follow IPSCCP.
