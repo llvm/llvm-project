@@ -534,7 +534,7 @@ public:
           if constexpr (is_same_v<decltype(__it1), decltype(__it2)>) {
             ranges::iter_swap(__it1, __it2);
           } else {
-            ranges::swap(*__it1, *__it2);
+            ranges::swap(*__x, *__y);
           }
         },
         __x.__it_,
