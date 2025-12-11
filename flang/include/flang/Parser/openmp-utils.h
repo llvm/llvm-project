@@ -289,8 +289,8 @@ template <bool IsConst> struct LoopRange<IsConst>::iterator {
     --at;
     return *this;
   }
-  iterator &operator++(int);
-  iterator &operator--(int);
+  iterator operator++(int);
+  iterator operator--(int);
 
 private:
   friend struct LoopRange;

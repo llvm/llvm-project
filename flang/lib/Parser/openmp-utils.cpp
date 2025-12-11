@@ -237,6 +237,20 @@ template <bool IsConst> void LoopRange<IsConst>::Initialize(QualBlock &body) {
   } while (!nest.empty());
 }
 
+template <bool IsConst>
+auto LoopRange<IsConst>::iterator::operator++(int) -> iterator {
+  auto old = *this;
+  ++*this;
+  return old;
+}
+
+template <bool IsConst>
+auto LoopRange<IsConst>::iterator::operator--(int) -> iterator {
+  auto old = *this;
+  --*this;
+  return old;
+}
+
 template struct LoopRange<false>;
 template struct LoopRange<true>;
 
