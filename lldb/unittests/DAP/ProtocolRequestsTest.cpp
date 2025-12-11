@@ -243,3 +243,34 @@ TEST(ProtocolRequestsTest, LocationsResponseBody) {
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
 }
+
+TEST(ProtocolRequestsTest, CompileUnitsArguments) {
+  llvm::Expected<CompileUnitsArguments> expected =
+      parse<CompileUnitsArguments>(R"({"moduleId": "42"})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->moduleId, "42");
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<CompileUnitsArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).moduleId"));
+}
+
+TEST(ProtocolRequestsTest, CompileUnitsResponseBody) {
+  CompileUnitsResponseBody body;
+  body.compileUnits = {{"main.cpp"}, {"util.cpp"}};
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({
+    "compileUnits": [
+      {
+        "compileUnitPath": "main.cpp"
+      },
+      {
+        "compileUnitPath": "util.cpp"
+      }
+    ]
+  })");
+
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+}

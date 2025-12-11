@@ -1169,4 +1169,9 @@ json::Value toJSON(const ExceptionDetails &ED) {
   return result;
 }
 
+llvm::json::Value toJSON(const CompileUnit &CU) {
+  json::Object result{{"compileUnitPath", CU.compileUnitPath}};
+  return result;
+}
+
 } // namespace lldb_dap::protocol

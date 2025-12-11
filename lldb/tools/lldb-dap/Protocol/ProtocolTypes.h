@@ -1038,6 +1038,12 @@ struct ExceptionDetails {
 };
 llvm::json::Value toJSON(const ExceptionDetails &);
 
+struct CompileUnit {
+  /// Path of compile unit.
+  std::string compileUnitPath;
+};
+llvm::json::Value toJSON(const CompileUnit &);
+
 } // namespace lldb_dap::protocol
 
 #endif

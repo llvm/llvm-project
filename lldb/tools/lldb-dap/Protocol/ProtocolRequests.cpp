@@ -721,4 +721,15 @@ llvm::json::Value toJSON(const LocationsResponseBody &Body) {
   return result;
 }
 
+bool fromJSON(const llvm::json::Value &Params, CompileUnitsArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("moduleId", Args.moduleId);
+}
+
+llvm::json::Value toJSON(const CompileUnitsResponseBody &Body) {
+  json::Object result{{"compileUnits", Body.compileUnits}};
+  return result;
+}
+
 } // namespace lldb_dap::protocol

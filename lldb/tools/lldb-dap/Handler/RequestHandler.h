@@ -472,11 +472,16 @@ public:
   Run(const protocol::SetInstructionBreakpointsArguments &args) const override;
 };
 
-class CompileUnitsRequestHandler : public LegacyRequestHandler {
+class CompileUnitsRequestHandler
+    : public RequestHandler<
+          std::optional<protocol::CompileUnitsArguments>,
+          llvm::Expected<protocol::CompileUnitsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "compileUnits"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::CompileUnitsResponseBody>
+  Run(const std::optional<protocol::CompileUnitsArguments> &args)
+      const override;
 };
 
 class ModulesRequestHandler final
