@@ -4386,7 +4386,7 @@ multiclass BaseLoadUnscaleV84<string asm, bits<2> sz, bits<2> opc,
                               DAGOperand regtype > {
   def i : BaseLoadStoreUnscale<sz, 0, opc, (outs regtype:$Rt),
                                (ins GPR64sp:$Rn, simm9:$offset), asm, []>,
-          Sched<[WriteST]> {
+          Sched<[WriteLD]> {
     let Inst{29} = 0;
     let Inst{24} = 1;
   }
