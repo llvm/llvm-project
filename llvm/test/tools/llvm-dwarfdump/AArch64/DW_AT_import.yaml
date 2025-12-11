@@ -1,0 +1,73 @@
+# RUN: yaml2obj %s | llvm-dwarfdump -verify - | FileCheck %s --check-prefix=VERIFY
+# VERIFY: No errors.
+#
+# RUN: yaml2obj %s | llvm-dwarfdump - | FileCheck %s
+# CHECK: DW_AT_import ({{.*}} "Foo")
+# CHECK: DW_AT_import ({{.*}} "")
+# CHECK: DW_AT_import ({{.*}})
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_imported_declaration
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_import
+              Form:      DW_FORM_ref4
+        - Code:            0x3
+          Tag:             DW_TAG_module
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+        - Code:            0x4
+          Tag:             DW_TAG_module
+          Children:        DW_CHILDREN_no
+
+  debug_info:
+     - Version:  5
+       UnitType: DW_UT_compile
+       AddrSize: 8
+       Entries:
+
+        - AbbrCode: 0x1
+          Values:
+            - Value: 0x04
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x1e
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x23
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x19
+
+        - AbbrCode: 0x3
+          Values:
+            - CStr: Foo
+
+        - AbbrCode: 0x3
+          Values:
+            - CStr: ''
+
+        - AbbrCode: 0x4
+        - AbbrCode: 0x0
+...
