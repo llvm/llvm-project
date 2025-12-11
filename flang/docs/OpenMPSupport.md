@@ -40,12 +40,12 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | target data construct                                      | P      | device clause not supported |
 | target construct                                           | P      | device clause not supported |
 | target update construct                                    | P      | device clause not supported |
-| declare target directive                                   | P      | |
+| declare target directive                                   | Y      | |
 | teams construct                                            | Y      | |
-| distribute construct                                       | P      | dist_schedule clause not supported |
-| distribute simd construct                                  | P      | dist_schedule and linear clauses are not supported |
-| distribute parallel loop construct                         | P      | dist_schedule clause not supported |
-| distribute parallel loop simd construct                    | P      | dist_schedule and linear clauses are not supported |
+| distribute construct                                       | Y      | |
+| distribute simd construct                                  | P      | linear clauses are not supported |
+| distribute parallel loop construct                         | Y      | |
+| distribute parallel loop simd construct                    | P      | linear clauses are not supported |
 | depend clause                                              | Y      | |
 | declare reduction construct                                | N      | |
 | atomic construct extensions                                | Y      | |
@@ -53,13 +53,13 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | cancellation point construct                               | Y      | |
 | parallel do simd construct                                 | P      | linear clause not supported |
 | target teams construct                                     | P      | device clause not supported |
-| teams distribute construct                                 | P      | dist_schedule clause not supported |
-| teams distribute simd construct                            | P      | dist_schedule and linear clauses are not supported |
-| target teams distribute construct                          | P      | device and dist_schedule clauses are not supported |
-| teams distribute parallel loop construct                   | P      | dist_schedule clause not supported |
-| target teams distribute parallel loop construct            | P      | device and dist_schedule clauses are not supported |
-| teams distribute parallel loop simd construct              | P      | dist_schedule and linear clauses are not supported |
-| target teams distribute parallel loop simd construct       | P      | device, dist_schedule and linear clauses are not supported |
+| teams distribute construct                                 | Y      | |
+| teams distribute simd construct                            | P      | linear clause is not supported |
+| target teams distribute construct                          | P      | device clause is not supported |
+| teams distribute parallel loop construct                   | Y      | |
+| target teams distribute parallel loop construct            | P      | device clause is not supported |
+| teams distribute parallel loop simd construct              | P      | linear clause is not supported |
+| target teams distribute parallel loop simd construct       | P      | device and linear clauses are not supported |
 
 ## Extensions
 ### ATOMIC construct

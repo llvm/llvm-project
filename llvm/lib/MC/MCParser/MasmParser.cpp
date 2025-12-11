@@ -963,8 +963,6 @@ namespace llvm {
 
 extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
 
-extern MCAsmParserExtension *createCOFFMasmParser();
-
 } // end namespace llvm
 
 enum { DEFAULT_ADDRSPACE = 0 };

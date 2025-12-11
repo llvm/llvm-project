@@ -327,11 +327,11 @@ cc_library(
         # We unconditionally depend on the custom LLVM zlib wrapper. This will
         # be an empty library unless zlib is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
-        "@llvm_zlib//:zlib",
+        "//third-party:zlib",
         # We unconditionally depend on the custom LLVM zstd wrapper. This will
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
-        "@llvm_zstd//:zstd",
+        "//third-party:zstd",
     ],
 )
 
@@ -785,6 +785,14 @@ cc_binary(
 )
 
 gentbl_cc_library(
+    name = "target_library_info_gen",
+    tbl_outs = {"include/llvm/Analysis/TargetLibraryInfo.inc": ["-gen-target-library-info"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "include/llvm/Analysis/TargetLibraryInfo.td",
+    deps = [":CommonTargetTdFiles"],
+)
+
+gentbl_cc_library(
     name = "intrinsic_enums_gen",
     tbl_outs = {"include/llvm/IR/IntrinsicEnums.inc": ["-gen-intrinsic-enums"]},
     tblgen = ":llvm-min-tblgen",
@@ -1235,41 +1243,12 @@ cc_library(
     ],
 )
 
-AnalysisFpExcSrcs = [
-    "lib/Analysis/ConstantFolding.cpp",
-]
-
-cc_library(
-    name = "AnalysisFpExc",
-    srcs = AnalysisFpExcSrcs,
-    hdrs = glob(
-        [
-            "include/llvm/Analysis/*.h",
-            "include/llvm/Analysis/Utils/*.h",
-        ],
-    ),
-    copts = llvm_copts + ["-ftrapping-math"],
-    textual_hdrs = glob([
-        "include/llvm/Analysis/*.def",
-    ]),
-    deps = [
-        ":BinaryFormat",
-        ":Core",
-        ":Object",
-        ":ProfileData",
-        ":Support",
-        ":TargetParser",
-        ":config",
-    ],
-)
-
 cc_library(
     name = "Analysis",
     srcs = glob(
         [
             "lib/Analysis/*.cpp",
         ],
-        exclude = AnalysisFpExcSrcs,
     ),
     hdrs = glob(
         [
@@ -1279,12 +1258,11 @@ cc_library(
     ) + [
         "include/llvm-c/Analysis.h",
     ],
-    copts = llvm_copts,
+    copts = llvm_copts + ["-ftrapping-math"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
     ]),
     deps = [
-        ":AnalysisFpExc",
         ":BinaryFormat",
         ":Core",
         ":FrontendHLSL",
@@ -1293,6 +1271,7 @@ cc_library(
         ":Support",
         ":TargetParser",
         ":config",
+        ":target_library_info_gen",
     ],
 )
 
@@ -1352,6 +1331,7 @@ cc_library(
 filegroup(
     name = "common_target_td_sources",
     srcs = glob([
+        "include/llvm/Analysis/*.td",
         "include/llvm/CodeGen/*.td",
         "include/llvm/Frontend/Directive/*.td",
         "include/llvm/IR/Intrinsics*.td",
@@ -1548,18 +1528,6 @@ td_library(
     srcs = glob([
         "lib/Target/AMDGPU/**/*.td",
     ]),
-)
-
-gentbl_cc_library(
-    name = "InstCombineTableGen",
-    strip_include_prefix = "lib/Target/AMDGPU",
-    tbl_outs = {"lib/Target/AMDGPU/InstCombineTables.inc": ["-gen-searchable-tables"]},
-    tblgen = ":llvm-tblgen",
-    td_file = "lib/Target/AMDGPU/InstCombineTables.td",
-    deps = [
-        ":AMDGPUTargetTdFiles",
-        ":CommonTargetTdFiles",
-    ],
 )
 
 cc_library(
@@ -2368,10 +2336,7 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenSubtargetInfo.inc",
             ),
             (
-                [
-                    "-gen-disassembler",
-                    "-ignore-non-decodable-operands",
-                ],
+                ["-gen-disassembler"],
                 "lib/Target/ARM/ARMGenDisassemblerTables.inc",
             ),
         ],
@@ -2445,7 +2410,6 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
-            ":InstCombineTableGen",
             ":amdgpu_isel_target_gen",
             ":r600_target_gen",
         ],
@@ -2709,6 +2673,10 @@ llvm_target_lib_list = [lib for lib in [
                 ],
             ),
             (
+                ["-gen-sd-node-info"],
+                "lib/Target/LoongArch/LoongArchGenSDNodeInfo.inc",
+            ),
+            (
                 ["-gen-subtarget"],
                 "lib/Target/LoongArch/LoongArchGenSubtargetInfo.inc",
             ),
@@ -2784,6 +2752,12 @@ llvm_target_lib_list = [lib for lib in [
                     "lib/Target/Mips/MipsGenRegisterInfoMCDesc.inc",
                     "lib/Target/Mips/MipsGenRegisterInfoHeader.inc",
                     "lib/Target/Mips/MipsGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                [
+                    "lib/Target/Mips/MipsGenSDNodeInfo.inc",
                 ],
             ),
             (
@@ -4105,6 +4079,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":JITLink",
@@ -4558,7 +4533,7 @@ cc_binary(
             "-Wl,--export-dynamic-symbol=__gxx_personality_v0",
             "-Wl,--export-dynamic-symbol=__cxa_allocate_exception",
             "-Wl,--export-dynamic-symbol=__cxa_throw",
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
             "-Wl,--export-dynamic-symbol=llvm_orc_registerEHFrameSectionWrapper",
             "-Wl,--export-dynamic-symbol=llvm_orc_deregisterEHFrameSectionWrapper",
         ],
@@ -5108,7 +5083,7 @@ cc_binary(
             "-Wl,--export-dynamic-symbol=__gxx_personality_v0",
             "-Wl,--export-dynamic-symbol=__cxa_allocate_exception",
             "-Wl,--export-dynamic-symbol=__cxa_throw",
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
         ],
     }),
     stamp = 0,

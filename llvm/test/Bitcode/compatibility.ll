@@ -217,9 +217,13 @@ declare void @g.f1()
 ; CHECK: @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
 ; CHECK: @g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
 
+@ds = external global i32
+
 ; ptrauth constant
 @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null)
 ; CHECK: @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535)
+@auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
+; CHECK: @auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
 
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]

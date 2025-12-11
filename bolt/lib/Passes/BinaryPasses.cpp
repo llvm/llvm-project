@@ -1276,13 +1276,6 @@ Error SimplifyRODataLoads::runOnFunctions(BinaryContext &BC) {
 }
 
 Error AssignSections::runOnFunctions(BinaryContext &BC) {
-  for (BinaryFunction *Function : BC.getInjectedBinaryFunctions()) {
-    if (!Function->isPatch()) {
-      Function->setCodeSectionName(BC.getInjectedCodeSectionName());
-      Function->setColdCodeSectionName(BC.getInjectedColdCodeSectionName());
-    }
-  }
-
   // In non-relocation mode functions have pre-assigned section names.
   if (!BC.HasRelocations)
     return Error::success();

@@ -35,7 +35,6 @@ void UseOverrideCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseOverrideCheck::registerMatchers(MatchFinder *Finder) {
-
   auto IgnoreDestructorMatcher =
       IgnoreDestructors ? cxxMethodDecl(unless(cxxDestructorDecl()))
                         : cxxMethodDecl();

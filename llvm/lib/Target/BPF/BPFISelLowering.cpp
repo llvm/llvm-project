@@ -58,7 +58,7 @@ static void fail(const SDLoc &DL, SelectionDAG &DAG, const Twine &Msg,
 
 BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
                                      const BPFSubtarget &STI)
-    : TargetLowering(TM) {
+    : TargetLowering(TM, STI) {
 
   // Set up the register classes.
   addRegisterClass(MVT::i64, &BPF::GPRRegClass);

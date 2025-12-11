@@ -3782,21 +3782,21 @@ namespace {
       if (CheckReferenceOnly && !ReferenceField)
         return true;
 
-      llvm::SmallVector<unsigned, 4> UsedFieldIndex;
       // Discard the first field since it is the field decl that is being
       // initialized.
-      for (const FieldDecl *FD : llvm::drop_begin(llvm::reverse(Fields)))
-        UsedFieldIndex.push_back(FD->getFieldIndex());
+      auto UsedFields = llvm::drop_begin(llvm::reverse(Fields));
+      auto UsedIter = UsedFields.begin();
+      const auto UsedEnd = UsedFields.end();
 
-      for (auto UsedIter = UsedFieldIndex.begin(),
-                UsedEnd = UsedFieldIndex.end(),
-                OrigIter = InitFieldIndex.begin(),
-                OrigEnd = InitFieldIndex.end();
-           UsedIter != UsedEnd && OrigIter != OrigEnd; ++UsedIter, ++OrigIter) {
-        if (*UsedIter < *OrigIter)
-          return true;
-        if (*UsedIter > *OrigIter)
+      for (const unsigned Orig : InitFieldIndex) {
+        if (UsedIter == UsedEnd)
           break;
+        const unsigned UsedIndex = (*UsedIter)->getFieldIndex();
+        if (UsedIndex < Orig)
+          return true;
+        if (UsedIndex > Orig)
+          break;
+        ++UsedIter;
       }
 
       return false;
@@ -6590,7 +6590,10 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   if (ClassExported && !ClassAttr->isInherited() &&
       TSK == TSK_ExplicitInstantiationDeclaration &&
       !Context.getTargetInfo().getTriple().isOSCygMing()) {
-    Class->dropAttr<DLLExportAttr>();
+    if (auto *DEA = Class->getAttr<DLLExportAttr>()) {
+      Class->addAttr(DLLExportOnDeclAttr::Create(Context, DEA->getLoc()));
+      Class->dropAttr<DLLExportAttr>();
+    }
     return;
   }
 
@@ -6627,6 +6630,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
         auto *Ctor = dyn_cast<CXXConstructorDecl>(MD);
         if ((MD->isMoveAssignmentOperator() ||
              (Ctor && Ctor->isMoveConstructor())) &&
+            getLangOpts().isCompatibleWithMSVC() &&
             !getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015))
           continue;
 
@@ -11139,11 +11143,9 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
     else
       Loc = RD->getLocation();
 
-    DeclarationName Name =
-        Context.DeclarationNames.getCXXOperatorName(OO_Delete);
     // If we have a virtual destructor, look up the deallocation function
     if (FunctionDecl *OperatorDelete = FindDeallocationFunctionForDestructor(
-            Loc, RD, /*Diagnose=*/true, /*LookForGlobal=*/false, Name)) {
+            Loc, RD, /*Diagnose=*/true, /*LookForGlobal=*/false)) {
       Expr *ThisArg = nullptr;
 
       // If the notional 'delete this' expression requires a non-trivial
@@ -11191,32 +11193,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
         // delete calls that require it.
         FunctionDecl *GlobalOperatorDelete =
             FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
-                                                  /*LookForGlobal*/ true, Name);
+                                                  /*LookForGlobal*/ true);
         Destructor->setOperatorGlobalDelete(GlobalOperatorDelete);
-      }
-
-      if (Context.getTargetInfo().emitVectorDeletingDtors(
-              Context.getLangOpts())) {
-        // Lookup delete[] too in case we have to emit a vector deleting dtor.
-        DeclarationName VDeleteName =
-            Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
-        FunctionDecl *ArrOperatorDelete = FindDeallocationFunctionForDestructor(
-            Loc, RD, /*Diagnose*/ false,
-            /*LookForGlobal*/ false, VDeleteName);
-        if (ArrOperatorDelete && isa<CXXMethodDecl>(ArrOperatorDelete)) {
-          FunctionDecl *GlobalArrOperatorDelete =
-              FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
-                                                    /*LookForGlobal*/ true,
-                                                    VDeleteName);
-          Destructor->setGlobalOperatorArrayDelete(GlobalArrOperatorDelete);
-        } else if (!ArrOperatorDelete) {
-          ArrOperatorDelete = FindDeallocationFunctionForDestructor(
-              Loc, RD, /*Diagnose*/ false,
-              /*LookForGlobal*/ true, VDeleteName);
-        }
-        assert(ArrOperatorDelete &&
-               "Should've found at least global array delete");
-        Destructor->setOperatorArrayDelete(ArrOperatorDelete);
       }
     }
   }

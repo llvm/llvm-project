@@ -25,7 +25,6 @@ static_library("Orc") {
     "DebugUtils.cpp",
     "EHFrameRegistrationPlugin.cpp",
     "ELFNixPlatform.cpp",
-    "EPCDebugObjectRegistrar.cpp",
     "EPCDynamicLibrarySearchGenerator.cpp",
     "EPCGenericDylibManager.cpp",
     "EPCGenericJITLinkMemoryManager.cpp",

@@ -465,6 +465,10 @@ public:
 
   RangeDataVector(Compare compare = Compare()) : m_compare(compare) {}
 
+  RangeDataVector(std::initializer_list<AugmentedEntry> entries,
+                  Compare compare = Compare())
+      : m_entries(entries), m_compare(compare) {}
+
   ~RangeDataVector() = default;
 
   void Append(const Entry &entry) { m_entries.emplace_back(entry); }

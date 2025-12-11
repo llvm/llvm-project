@@ -14,7 +14,7 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 0 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<%0>
 ; CHECK:  Cost of 0 for VF 2: vp<%4> = SCALAR-STEPS vp<%3>, ir<1>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<%4>
-; CHECK:  Cost of 0 for VF 2: vp<%5> = vector-pointer ir<%g.src>
+; CHECK:  Cost of 0 for VF 2: vp<%5> = vector-pointer inbounds ir<%g.src>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<%5>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%iv.4> = add ir<%iv>, ir<4>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c> = icmp ule ir<%l>, ir<128>
@@ -32,7 +32,7 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 0 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<%0>
 ; CHECK:  Cost of 0 for VF 4: vp<%4> = SCALAR-STEPS vp<%3>, ir<1>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<%4>
-; CHECK:  Cost of 0 for VF 4: vp<%5> = vector-pointer ir<%g.src>
+; CHECK:  Cost of 0 for VF 4: vp<%5> = vector-pointer inbounds ir<%g.src>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<%5>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%iv.4> = add ir<%iv>, ir<4>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c> = icmp ule ir<%l>, ir<128>

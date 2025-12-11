@@ -34,9 +34,9 @@ using namespace clang;
 /// ambiguous, i.e., there are two or more paths that refer to
 /// different base class subobjects of the same type. BaseType must be
 /// an unqualified, canonical class type.
-bool CXXBasePaths::isAmbiguous(CanQualType BaseType) {
+bool CXXBasePaths::isAmbiguous(CanQualType BaseType) const {
   BaseType = BaseType.getUnqualifiedType();
-  IsVirtBaseAndNumberNonVirtBases Subobjects = ClassSubobjects[BaseType];
+  IsVirtBaseAndNumberNonVirtBases Subobjects = ClassSubobjects.lookup(BaseType);
   return Subobjects.NumberOfNonVirtBases + (Subobjects.IsVirtBase ? 1 : 0) > 1;
 }
 
