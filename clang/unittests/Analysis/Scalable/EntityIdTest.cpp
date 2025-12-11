@@ -21,9 +21,9 @@ TEST(EntityIdTest, Equality) {
   EntityName Entity1("c:@F@foo", "", {});
   EntityName Entity2("c:@F@bar", "", {});
 
-  EntityId Id1 = Table.createEntityId(Entity1);
-  EntityId Id2 = Table.createEntityId(Entity2);
-  EntityId Id1Copy = Table.createEntityId(Entity1);
+  EntityId Id1 = Table.getId(Entity1);
+  EntityId Id2 = Table.getId(Entity2);
+  EntityId Id1Copy = Table.getId(Entity1);
 
   EXPECT_EQ(Id1, Id1Copy);
   EXPECT_FALSE(Id1 != Id1Copy);
@@ -38,8 +38,8 @@ TEST(EntityIdTest, LessThan) {
   EntityName Entity1("c:@F@aaa", "", {});
   EntityName Entity2("c:@F@bbb", "", {});
 
-  EntityId Id1 = Table.createEntityId(Entity1);
-  EntityId Id2 = Table.createEntityId(Entity2);
+  EntityId Id1 = Table.getId(Entity1);
+  EntityId Id2 = Table.getId(Entity2);
 
   EXPECT_TRUE(Id1 < Id2 || Id2 < Id1);
 }
@@ -51,9 +51,9 @@ TEST(EntityIdTest, Transitivity) {
   EntityName Entity2("c:@F@yyy", "", {});
   EntityName Entity3("c:@F@zzz", "", {});
 
-  EntityId Ids[3] = {Table.createEntityId(Entity1),
-                     Table.createEntityId(Entity2),
-                     Table.createEntityId(Entity3)};
+  EntityId Ids[3] = {Table.getId(Entity1),
+                     Table.getId(Entity2),
+                     Table.getId(Entity3)};
 
   std::sort(Ids, Ids + 3);
 

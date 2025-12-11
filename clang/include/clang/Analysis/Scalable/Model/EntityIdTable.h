@@ -31,7 +31,7 @@ public:
   ///
   /// If the entity already exists in the table, returns its existing Id.
   /// Otherwise, creates and returns a new Id. This operation is idempotent.
-  EntityId createEntityId(const EntityName &Name);
+  EntityId getId(const EntityName &Name);
 
   /// Returns true if an entity with the given name exists in the table.
   bool exists(const EntityName &Name) const;

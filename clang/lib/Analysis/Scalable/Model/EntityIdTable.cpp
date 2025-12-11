@@ -12,7 +12,7 @@
 namespace clang {
 namespace ssaf {
 
-EntityId EntityIdTable::createEntityId(const EntityName &Name) {
+EntityId EntityIdTable::getId(const EntityName &Name) {
   const auto It = Entities.find(Name);
   if (It == Entities.end()) {
     EntityId Id(Entities.size());

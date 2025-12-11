@@ -20,7 +20,7 @@ TEST(EntityIdTableTest, CreateNewEntity) {
   EntityIdTable Table;
 
   EntityName Entity("c:@F@foo", "", {});
-  Table.createEntityId(Entity);
+  Table.getId(Entity);
 
   EXPECT_TRUE(Table.exists(Entity));
 }
@@ -30,9 +30,9 @@ TEST(EntityIdTableTest, Idempotency) {
 
   EntityName Entity("c:@F@foo", "", {});
 
-  EntityId Id1 = Table.createEntityId(Entity);
-  EntityId Id2 = Table.createEntityId(Entity);
-  EntityId Id3 = Table.createEntityId(Entity);
+  EntityId Id1 = Table.getId(Entity);
+  EntityId Id2 = Table.getId(Entity);
+  EntityId Id3 = Table.getId(Entity);
 
   EXPECT_EQ(Id1, Id2);
   EXPECT_EQ(Id2, Id3);
@@ -45,8 +45,8 @@ TEST(EntityIdTableTest, ExistsTrue) {
   EntityName Entity1("c:@F@foo", "", {});
   EntityName Entity2("c:@V@bar", "", {});
 
-  Table.createEntityId(Entity1);
-  Table.createEntityId(Entity2);
+  Table.getId(Entity1);
+  Table.getId(Entity2);
 
   EXPECT_TRUE(Table.exists(Entity1));
   EXPECT_TRUE(Table.exists(Entity2));
@@ -58,7 +58,7 @@ TEST(EntityIdTableTest, ExistsFalse) {
   EntityName Entity1("c:@F@foo", "", {});
   EntityName Entity2("c:@F@bar", "", {});
 
-  Table.createEntityId(Entity1);
+  Table.getId(Entity1);
 
   EXPECT_TRUE(Table.exists(Entity1));
   EXPECT_FALSE(Table.exists(Entity2));
@@ -71,9 +71,9 @@ TEST(EntityIdTableTest, MultipleEntities) {
   EntityName Entity2("c:@F@bar", "", {});
   EntityName Entity3("c:@V@baz", "", {});
 
-  EntityId Id1 = Table.createEntityId(Entity1);
-  EntityId Id2 = Table.createEntityId(Entity2);
-  EntityId Id3 = Table.createEntityId(Entity3);
+  EntityId Id1 = Table.getId(Entity1);
+  EntityId Id2 = Table.getId(Entity2);
+  EntityId Id3 = Table.getId(Entity3);
 
   EXPECT_NE(Id1, Id2);
   EXPECT_NE(Id1, Id3);
@@ -89,8 +89,8 @@ TEST(EntityIdTableTest, WithBuildNamespace) {
   EntityName Entity2("c:@F@foo", "",
                      NestedBuildNamespace::makeCompilationUnit("other.o"));
 
-  EntityId Id1 = Table.createEntityId(Entity1);
-  EntityId Id2 = Table.createEntityId(Entity2);
+  EntityId Id1 = Table.getId(Entity1);
+  EntityId Id2 = Table.getId(Entity2);
 
   EXPECT_NE(Id1, Id2);
 }
@@ -112,9 +112,9 @@ TEST(EntityIdTableTest, ForEachMultipleEntities) {
   EntityName Entity2("c:@F@bar", "", {});
   EntityName Entity3("c:@V@baz", "", {});
 
-  EntityId Id1 = Table.createEntityId(Entity1);
-  EntityId Id2 = Table.createEntityId(Entity2);
-  EntityId Id3 = Table.createEntityId(Entity3);
+  EntityId Id1 = Table.getId(Entity1);
+  EntityId Id2 = Table.getId(Entity2);
+  EntityId Id3 = Table.getId(Entity3);
 
   std::set<EntityId> VisitedIds;
   std::set<EntityName> VisitedNames;
