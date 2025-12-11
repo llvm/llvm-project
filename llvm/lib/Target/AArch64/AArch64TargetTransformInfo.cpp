@@ -1066,17 +1066,15 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::loop_dependence_raw_mask:
   case Intrinsic::loop_dependence_war_mask: {
-    unsigned EltSizeInBytes =
-        cast<ConstantInt>(ICA.getArgs()[2])->getZExtValue();
-    EVT VecVT = getTLI()->getValueType(DL, RetTy);
-    // An invalid element size and return type combination must be expanded.
-    bool MustBeExpanded =
-        VecVT.getVectorMinNumElements() != (16 / EltSizeInBytes) ||
-        !isPowerOf2_32(EltSizeInBytes) || EltSizeInBytes > 8;
-
-    // The whilewr/rw instructions require SVE2 or SME
-    if (!MustBeExpanded && (ST->hasSVE2() || ST->hasSME()))
-      return 1;
+    // The whilewr/rw instructions require SVE2 or SME.
+    if (ST->hasSVE2() || ST->hasSME()) {
+      EVT VecVT = getTLI()->getValueType(DL, RetTy);
+      unsigned EltSizeInBytes =
+          cast<ConstantInt>(ICA.getArgs()[2])->getZExtValue();
+      if (is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes) &&
+          VecVT.getVectorMinNumElements() == (16 / EltSizeInBytes))
+        return 1;
+    }
     break;
   }
   case Intrinsic::experimental_vector_extract_last_active:
