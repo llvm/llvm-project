@@ -45,7 +45,7 @@ struct AliasAnalysis {
              Unknown);
 
   /// Attributes of the memory source object.
-  ENUM_CLASS(Attribute, Target, Pointer, IntentIn);
+  ENUM_CLASS(Attribute, Target, Pointer, IntentIn, CrayPointer, CrayPointee);
 
   // See
   // https://discourse.llvm.org/t/rfc-distinguish-between-data-and-non-data-in-fir-alias-analysis/78759/1
@@ -160,6 +160,15 @@ struct AliasAnalysis {
 
     /// Return true, if Pointer attribute is set.
     bool isPointer() const;
+
+    /// Return true, if CrayPointer attribute is set.
+    bool isCrayPointer() const;
+
+    /// Return true, if CrayPointee attribute is set.
+    bool isCrayPointee() const;
+
+    /// Return true, if CrayPointer or CrayPointee attribute is set.
+    bool isCrayPointerOrPointee() const;
 
     bool isDummyArgument() const;
     bool isData() const;

@@ -219,6 +219,10 @@ public:
   // authenticating)
   void LowerLOADgotAUTH(const MachineInstr &MI);
 
+  void emitAddImm(MCRegister Val, int64_t Addend, MCRegister Tmp);
+  void emitAddress(MCRegister Reg, const MCExpr *Expr, MCRegister Tmp,
+                   bool DSOLocal, const MCSubtargetInfo &STI);
+
   const MCExpr *emitPAuthRelocationAsIRelative(
       const MCExpr *Target, uint64_t Disc, AArch64PACKey::ID KeyID,
       bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr);
@@ -2336,50 +2340,82 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, BRInst);
 }
 
-static void emitAddress(MCStreamer &Streamer, MCRegister Reg,
-                        const MCExpr *Expr, bool DSOLocal,
-                        const MCSubtargetInfo &STI) {
+void AArch64AsmPrinter::emitAddImm(MCRegister Reg, int64_t Addend,
+                                   MCRegister Tmp) {
+  if (Addend != 0) {
+    const uint64_t AbsOffset = (Addend > 0 ? Addend : -((uint64_t)Addend));
+    const bool IsNeg = Addend < 0;
+    if (isUInt<24>(AbsOffset)) {
+      for (int BitPos = 0; BitPos != 24 && (AbsOffset >> BitPos);
+           BitPos += 12) {
+        EmitToStreamer(
+            MCInstBuilder(IsNeg ? AArch64::SUBXri : AArch64::ADDXri)
+                .addReg(Reg)
+                .addReg(Reg)
+                .addImm((AbsOffset >> BitPos) & 0xfff)
+                .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, BitPos)));
+      }
+    } else {
+      const uint64_t UAddend = Addend;
+      EmitToStreamer(MCInstBuilder(IsNeg ? AArch64::MOVNXi : AArch64::MOVZXi)
+                         .addReg(Tmp)
+                         .addImm((IsNeg ? ~UAddend : UAddend) & 0xffff)
+                         .addImm(/*shift=*/0));
+      auto NeedMovk = [IsNeg, UAddend](int BitPos) -> bool {
+        assert(BitPos == 16 || BitPos == 32 || BitPos == 48);
+        uint64_t Shifted = UAddend >> BitPos;
+        if (!IsNeg)
+          return Shifted != 0;
+        for (int I = 0; I != 64 - BitPos; I += 16)
+          if (((Shifted >> I) & 0xffff) != 0xffff)
+            return true;
+        return false;
+      };
+      for (int BitPos = 16; BitPos != 64 && NeedMovk(BitPos); BitPos += 16)
+        emitMOVK(Tmp, (UAddend >> BitPos) & 0xffff, BitPos);
+
+      EmitToStreamer(MCInstBuilder(AArch64::ADDXrs)
+                         .addReg(Reg)
+                         .addReg(Reg)
+                         .addReg(Tmp)
+                         .addImm(/*shift=*/0));
+    }
+  }
+}
+
+void AArch64AsmPrinter::emitAddress(MCRegister Reg, const MCExpr *Expr,
+                                    MCRegister Tmp, bool DSOLocal,
+                                    const MCSubtargetInfo &STI) {
   MCValue Val;
   if (!Expr->evaluateAsRelocatable(Val, nullptr))
     report_fatal_error("emitAddress could not evaluate");
   if (DSOLocal) {
-    Streamer.emitInstruction(
+    EmitToStreamer(
         MCInstBuilder(AArch64::ADRP)
             .addReg(Reg)
             .addExpr(MCSpecifierExpr::create(Expr, AArch64::S_ABS_PAGE,
-                                             Streamer.getContext())),
-        STI);
-    Streamer.emitInstruction(
-        MCInstBuilder(AArch64::ADDXri)
-            .addReg(Reg)
-            .addReg(Reg)
-            .addExpr(MCSpecifierExpr::create(Expr, AArch64::S_LO12,
-                                             Streamer.getContext()))
-            .addImm(0),
-        STI);
+                                             OutStreamer->getContext())));
+    EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
+                       .addReg(Reg)
+                       .addReg(Reg)
+                       .addExpr(MCSpecifierExpr::create(
+                           Expr, AArch64::S_LO12, OutStreamer->getContext()))
+                       .addImm(0));
   } else {
     auto *SymRef =
-        MCSymbolRefExpr::create(Val.getAddSym(), Streamer.getContext());
-    Streamer.emitInstruction(
+        MCSymbolRefExpr::create(Val.getAddSym(), OutStreamer->getContext());
+    EmitToStreamer(
         MCInstBuilder(AArch64::ADRP)
             .addReg(Reg)
             .addExpr(MCSpecifierExpr::create(SymRef, AArch64::S_GOT_PAGE,
-                                             Streamer.getContext())),
-        STI);
-    Streamer.emitInstruction(
+                                             OutStreamer->getContext())));
+    EmitToStreamer(
         MCInstBuilder(AArch64::LDRXui)
             .addReg(Reg)
             .addReg(Reg)
             .addExpr(MCSpecifierExpr::create(SymRef, AArch64::S_GOT_LO12,
-                                             Streamer.getContext())),
-        STI);
-    if (Val.getConstant())
-      Streamer.emitInstruction(MCInstBuilder(AArch64::ADDXri)
-                                   .addReg(Reg)
-                                   .addReg(Reg)
-                                   .addImm(Val.getConstant())
-                                   .addImm(0),
-                               STI);
+                                             OutStreamer->getContext())));
+    emitAddImm(Reg, Val.getConstant(), Tmp);
   }
 }
 
@@ -2387,7 +2423,7 @@ static bool targetSupportsPAuthRelocation(const Triple &TT,
                                           const MCExpr *Target,
                                           const MCExpr *DSExpr) {
   // No released version of glibc supports PAuth relocations.
-  if (TT.isOSGlibc())
+  if (TT.isOSGlibc() || TT.isMusl())
     return false;
 
   // We emit PAuth constants as IRELATIVE relocations in cases where the
@@ -2504,14 +2540,14 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
                                      .addImm(0),
                                  *STI);
   } else {
-    emitAddress(*OutStreamer, AArch64::X0, Target, IsDSOLocal, *STI);
+    emitAddress(AArch64::X0, Target, AArch64::X16, IsDSOLocal, *STI);
   }
   if (HasAddressDiversity) {
     auto *PlacePlusDisc = MCBinaryExpr::createAdd(
         MCSymbolRefExpr::create(Place, OutStreamer->getContext()),
         MCConstantExpr::create(Disc, OutStreamer->getContext()),
         OutStreamer->getContext());
-    emitAddress(*OutStreamer, AArch64::X1, PlacePlusDisc, /*IsDSOLocal=*/true,
+    emitAddress(AArch64::X1, PlacePlusDisc, AArch64::X16, /*IsDSOLocal=*/true,
                 *STI);
   } else {
     if (!isUInt<16>(Disc)) {
@@ -2801,46 +2837,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
                        .addImm(0));
   }
 
-  if (Offset != 0) {
-    const uint64_t AbsOffset = (Offset > 0 ? Offset : -((uint64_t)Offset));
-    const bool IsNeg = Offset < 0;
-    if (isUInt<24>(AbsOffset)) {
-      for (int BitPos = 0; BitPos != 24 && (AbsOffset >> BitPos);
-           BitPos += 12) {
-        EmitToStreamer(
-            MCInstBuilder(IsNeg ? AArch64::SUBXri : AArch64::ADDXri)
-                .addReg(AArch64::X16)
-                .addReg(AArch64::X16)
-                .addImm((AbsOffset >> BitPos) & 0xfff)
-                .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, BitPos)));
-      }
-    } else {
-      const uint64_t UOffset = Offset;
-      EmitToStreamer(MCInstBuilder(IsNeg ? AArch64::MOVNXi : AArch64::MOVZXi)
-                         .addReg(AArch64::X17)
-                         .addImm((IsNeg ? ~UOffset : UOffset) & 0xffff)
-                         .addImm(/*shift=*/0));
-      auto NeedMovk = [IsNeg, UOffset](int BitPos) -> bool {
-        assert(BitPos == 16 || BitPos == 32 || BitPos == 48);
-        uint64_t Shifted = UOffset >> BitPos;
-        if (!IsNeg)
-          return Shifted != 0;
-        for (int I = 0; I != 64 - BitPos; I += 16)
-          if (((Shifted >> I) & 0xffff) != 0xffff)
-            return true;
-        return false;
-      };
-      for (int BitPos = 16; BitPos != 64 && NeedMovk(BitPos); BitPos += 16)
-        emitMOVK(AArch64::X17, (UOffset >> BitPos) & 0xffff, BitPos);
-
-      EmitToStreamer(MCInstBuilder(AArch64::ADDXrs)
-                         .addReg(AArch64::X16)
-                         .addReg(AArch64::X16)
-                         .addReg(AArch64::X17)
-                         .addImm(/*shift=*/0));
-    }
-  }
-
+  emitAddImm(AArch64::X16, Offset, AArch64::X17);
   Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17);
 
   auto MIB = MCInstBuilder(getPACOpcodeForKey(Key, DiscReg == AArch64::XZR))

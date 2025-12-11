@@ -421,7 +421,7 @@ LogicalResult ConvertBF16x2ToF8x2Op::verify() {
                                    "bf16x2 to f8x2.";
 
   auto rnd = getRnd();
-  if (!(rnd == RndMode::RZ || rnd == RndMode::RP))
+  if (rnd != RndMode::RZ && rnd != RndMode::RP)
     return emitOpError("Only RZ and RP rounding modes are supported for "
                        "conversions from bf16x2 to f8x2.");
 

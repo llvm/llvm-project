@@ -126,6 +126,9 @@ public:
 
   virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
+  virtual void emitBeginCatch(CIRGenFunction &cgf,
+                              const CXXCatchStmt *catchStmt) = 0;
+
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
 

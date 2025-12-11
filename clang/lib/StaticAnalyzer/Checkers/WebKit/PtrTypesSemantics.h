@@ -134,6 +134,9 @@ bool isCtorOfCheckedPtr(const clang::FunctionDecl *F);
 /// uncounted parameter, false if not.
 bool isCtorOfSafePtr(const clang::FunctionDecl *F);
 
+/// \returns true if \p F is std::move or WTF::move.
+bool isStdOrWTFMove(const clang::FunctionDecl *F);
+
 /// \returns true if \p Name is RefPtr, Ref, or its variant, false if not.
 bool isRefType(const std::string &Name);
 

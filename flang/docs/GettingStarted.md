@@ -76,7 +76,6 @@ cmake \
   -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$LD_LIBRARY_PATH" \
-  -DFLANG_ENABLE_WERROR=ON \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_TARGETS_TO_BUILD=host \
   -DLLVM_LIT_ARGS=-v \
@@ -85,6 +84,15 @@ cmake \
   ../llvm-project/llvm
 
 ninja
+```
+
+```{note}
+  Contributions to Flang are expected not to produce any new compiler warnings.
+  This is enforced by post-commit buildbots. To do the same locally, add
+  `-DFLANG_ENABLE_WERROR=ON` to the above `cmake` command.
+
+  Only Clang builds are checked for this, so we do not recommend using this
+  option with GCC as there will be preexisting warnings.
 ```
 
 On Darwin, to make flang able to link binaries with the default sysroot without
@@ -142,7 +150,6 @@ cmake \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$LD_LIBRARY_PATH" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-  -DFLANG_ENABLE_WERROR=ON \
   -DLLVM_TARGETS_TO_BUILD=host \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_BUILD_MAIN_SRC_DIR=$ROOTDIR/build/lib/cmake/llvm \
@@ -154,6 +161,15 @@ cmake \
   ..
 
 ninja
+```
+
+```{note}
+  Contributions to Flang are expected not to produce any new compiler warnings.
+  This is enforced by post-commit buildbots. To do the same locally, add
+  `-DFLANG_ENABLE_WERROR=ON` to the above `cmake` command.
+
+  Only Clang builds are checked for this, so we do not recommend using this
+  option with GCC as there will be preexisting warnings.
 ```
 
 To run the flang tests on this build, execute the command in the `flang/build`

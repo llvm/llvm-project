@@ -502,7 +502,7 @@ static Value *getTrueOrFalseValue(
   } else {
     assert((isa<AShrOperator>(AuxI) || isa<SExtInst>(AuxI)) &&
            "Unexpected opcode");
-    CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), -1));
+    CBO->setOperand(CondIdx, ConstantInt::getAllOnesValue(CBO->getType()));
   }
 
   unsigned OtherIdx = 1 - CondIdx;

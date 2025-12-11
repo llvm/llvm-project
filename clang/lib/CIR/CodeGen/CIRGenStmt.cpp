@@ -1105,6 +1105,8 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
     terminateBody(builder, caseOp.getCaseRegion(), caseOp.getLoc());
   terminateBody(builder, swop.getBody(), swop.getLoc());
 
+  swop.setAllEnumCasesCovered(s.isAllEnumCasesCovered());
+
   return res;
 }
 

@@ -878,6 +878,20 @@ llvm.func @rocdl.raw.ptr.buffer.i32(%rsrc : !llvm.ptr<8>,
   llvm.return
 }
 
+llvm.func @rocdl.global.prefetch(%ptr : !llvm.ptr<1>) {
+  // CHECK-LABEL: rocdl.global.prefetch
+  // CHECK: rocdl.global.prefetch %{{.*}}, scope 0 : !llvm.ptr<1>
+  rocdl.global.prefetch %ptr, scope 0 : !llvm.ptr<1>
+  llvm.return
+}
+
+llvm.func @rocdl.flat.prefetch(%ptr : !llvm.ptr) {
+  // CHECK-LABEL: rocdl.flat.prefetch
+  // CHECK: rocdl.flat.prefetch %{{.*}}, scope 0 : !llvm.ptr 
+  rocdl.flat.prefetch %ptr, scope 0 : !llvm.ptr
+  llvm.return
+}
+
 // -----
 
 llvm.func @rocdl.raw.buffer.f32(%rsrc : vector<4xi32>,

@@ -61,6 +61,7 @@ void MCInstPrinter::printAnnotation(raw_ostream &OS, StringRef Annot) {
 }
 
 static bool matchAliasCondition(const MCInst &MI, const MCSubtargetInfo *STI,
+                                const MCInstrInfo &MII,
                                 const MCRegisterInfo &MRI, unsigned &OpIdx,
                                 const AliasMatchingData &M,
                                 const AliasPatternCond &C,
@@ -102,6 +103,12 @@ static bool matchAliasCondition(const MCInst &MI, const MCSubtargetInfo *STI,
   case AliasPatternCond::K_TiedReg:
     // Operand must match the register of another operand.
     return Opnd.isReg() && Opnd.getReg() == MI.getOperand(C.Value).getReg();
+  case AliasPatternCond::K_RegClassByHwMode: {
+    // Operand must be RegisterByHwMode. Value is RegClassByHwMode index.
+    unsigned HwModeId = STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo);
+    int16_t RCID = MII.getRegClassByHwModeTable(HwModeId)[C.Value];
+    return Opnd.isReg() && MRI.getRegClass(RCID).contains(Opnd.getReg());
+  }
   case AliasPatternCond::K_RegClass:
     // Operand must be a register in this class. Value is a register class id.
     return Opnd.isReg() && MRI.getRegClass(C.Value).contains(Opnd.getReg());
@@ -148,7 +155,7 @@ const char *MCInstPrinter::matchAliasPatterns(const MCInst *MI,
     unsigned OpIdx = 0;
     bool OrPredicateResult = false;
     if (llvm::all_of(Conds, [&](const AliasPatternCond &C) {
-          return matchAliasCondition(*MI, STI, MRI, OpIdx, M, C,
+          return matchAliasCondition(*MI, STI, MII, MRI, OpIdx, M, C,
                                      OrPredicateResult);
         })) {
       // If all conditions matched, use this asm string.

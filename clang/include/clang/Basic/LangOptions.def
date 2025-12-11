@@ -194,6 +194,7 @@ LANGOPT(NoSignedZero      , 1, 0, Benign, "Permit Floating Point optimization wi
 LANGOPT(AllowRecip        , 1, 0, Benign, "Permit Floating Point reciprocal")
 LANGOPT(ApproxFunc        , 1, 0, Benign, "Permit Floating Point approximation")
 LANGOPT(NamedLoops        , 1, 0, Benign, "Permit named break/continue")
+LANGOPT(DeferTS           , 1, 0, Benign, "C '_Defer' Technical Specification")
 
 ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 3, CX_None, NotCompatible, "Enable use of range reduction for complex arithmetics.")
 

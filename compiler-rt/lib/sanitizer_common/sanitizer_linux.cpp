@@ -1287,7 +1287,7 @@ uptr GetPageSize() {
 
 uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
 #  if SANITIZER_HAIKU
-  int cookie = 0;
+  int32_t cookie = 0;
   image_info info;
   const char *argv0 = "<UNKNOWN>";
   while (get_next_image_info(B_CURRENT_TEAM, &cookie, &info) == B_OK) {
@@ -1987,7 +1987,10 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 #    elif SANITIZER_NETBSD
   uptr err = ucontext->uc_mcontext.__gregs[_REG_ERR];
 #    elif SANITIZER_HAIKU
-  uptr err = ucontext->uc_mcontext.r13;
+  uptr err = 0;  // FIXME: ucontext->uc_mcontext.r13;
+                 // The err register was added on the main branch and not
+                 // available with the current release. To be reverted later.
+                 // https://github.com/haiku/haiku/commit/11adda21aa4e6b24f71a496868a44d7607bc3764
 #    elif SANITIZER_SOLARIS && defined(__i386__)
   const int Err = 13;
   uptr err = ucontext->uc_mcontext.gregs[Err];
@@ -2617,6 +2620,11 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *pc = ucontext->uc_mcontext.mc_eip;
   *bp = ucontext->uc_mcontext.mc_ebp;
   *sp = ucontext->uc_mcontext.mc_esp;
+#    elif SANITIZER_HAIKU
+  ucontext_t *ucontext = (ucontext_t *)context;
+  *pc = ucontext->uc_mcontext.eip;
+  *bp = ucontext->uc_mcontext.ebp;
+  *sp = ucontext->uc_mcontext.esp;
 #    else
   ucontext_t *ucontext = (ucontext_t *)context;
 #      if SANITIZER_SOLARIS

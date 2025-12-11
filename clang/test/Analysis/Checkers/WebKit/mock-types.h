@@ -17,6 +17,12 @@ template<typename T> typename remove_reference<T>::type&& move(T&& t);
 
 #endif
 
+namespace WTF {
+
+template<typename T> typename std::remove_reference<T>::type&& move(T&& t);
+
+}
+
 #ifndef mock_types_1103988513531
 #define mock_types_1103988513531
 

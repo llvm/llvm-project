@@ -387,6 +387,7 @@ public:
   unsigned trivial69() { return offsetof(OtherObj, children); }
   DerivedNumber* trivial70() { [[clang::suppress]] return static_cast<DerivedNumber*>(number); }
   unsigned trivial71() { return std::bit_cast<unsigned>(nullptr); }
+  unsigned trivial72() { Number n { 5 }; return WTF::move(n).value(); }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;

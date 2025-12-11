@@ -22,10 +22,15 @@ declare fp128 @llvm.minnum.f128(fp128, fp128)
 declare fp128 @llvm.minimum.f128(fp128, fp128)
 
 ; Test the fmin library function.
-define double @f1(double %dummy, double %val1, double %val2) {
+define double @f1(double %dummy, double %val1, double %val2) nounwind {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    wfmindb %f0, %f2, %f4, 4
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    aghi %r15, -160
+; CHECK-NEXT:    ldr %f0, %f2
+; CHECK-NEXT:    ldr %f2, %f4
+; CHECK-NEXT:    brasl %r14, fmin@PLT
+; CHECK-NEXT:    lmg %r14, %r15, 272(%r15)
 ; CHECK-NEXT:    br %r14
   %ret = call double @fmin(double %val1, double %val2) readnone
   ret double %ret
@@ -99,10 +104,15 @@ define <2 x double> @f7(<2 x double> %dummy, <2 x double> %val1, <2 x double> %v
 }
 
 ; Test the fminf library function.
-define float @f11(float %dummy, float %val1, float %val2) {
+define float @f11(float %dummy, float %val1, float %val2) nounwind {
 ; CHECK-LABEL: f11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    wfminsb %f0, %f2, %f4, 4
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    aghi %r15, -160
+; CHECK-NEXT:    ldr %f0, %f2
+; CHECK-NEXT:    ldr %f2, %f4
+; CHECK-NEXT:    brasl %r14, fminf@PLT
+; CHECK-NEXT:    lmg %r14, %r15, 272(%r15)
 ; CHECK-NEXT:    br %r14
   %ret = call float @fminf(float %val1, float %val2) readnone
   ret float %ret
@@ -207,13 +217,23 @@ define <4 x float> @f17(<4 x float> %dummy, <4 x float> %val1,
 }
 
 ; Test the fminl library function.
-define void @f21(ptr %ptr1, ptr %ptr2, ptr %dst) {
+define void @f21(ptr %ptr1, ptr %ptr2, ptr %dst) nounwind {
 ; CHECK-LABEL: f21:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r13, %r15, 104(%r15)
+; CHECK-NEXT:    aghi %r15, -208
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 0(%r3), 3
-; CHECK-NEXT:    wfminxb %v0, %v0, %v1, 4
-; CHECK-NEXT:    vst %v0, 0(%r4), 3
+; CHECK-NEXT:    lgr %r13, %r4
+; CHECK-NEXT:    la %r2, 192(%r15)
+; CHECK-NEXT:    la %r3, 176(%r15)
+; CHECK-NEXT:    la %r4, 160(%r15)
+; CHECK-NEXT:    vst %v1, 160(%r15), 3
+; CHECK-NEXT:    vst %v0, 176(%r15), 3
+; CHECK-NEXT:    brasl %r14, fminl@PLT
+; CHECK-NEXT:    vl %v0, 192(%r15), 3
+; CHECK-NEXT:    vst %v0, 0(%r13), 3
+; CHECK-NEXT:    lmg %r13, %r15, 312(%r15)
 ; CHECK-NEXT:    br %r14
   %val1 = load fp128, ptr %ptr1
   %val2 = load fp128, ptr %ptr2

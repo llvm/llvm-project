@@ -982,21 +982,23 @@ Init make(const parser::OmpClause::Init &inp,
 Initializer make(const parser::OmpClause::Initializer &inp,
                  semantics::SemanticsContext &semaCtx) {
   const parser::OmpInitializerExpression &iexpr = inp.v.v;
-  const parser::OmpStylizedInstance &styleInstance = iexpr.v.front();
-  const parser::OmpStylizedInstance::Instance &instance =
-      std::get<parser::OmpStylizedInstance::Instance>(styleInstance.t);
-  if (const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u)) {
-    auto &expr = std::get<parser::Expr>(as->t);
-    return Initializer{makeExpr(expr, semaCtx)};
-  } else if (const auto *call = std::get_if<parser::CallStmt>(&instance.u)) {
-    if (call->typedCall) {
+  Initializer initializer;
+  for (const parser::OmpStylizedInstance &styleInstance : iexpr.v) {
+    auto &instance =
+        std::get<parser::OmpStylizedInstance::Instance>(styleInstance.t);
+    if (const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u)) {
+      auto &expr = std::get<parser::Expr>(as->t);
+      initializer.v.push_back(makeExpr(expr, semaCtx));
+    } else if (const auto *call = std::get_if<parser::CallStmt>(&instance.u)) {
+      assert(call->typedCall && "Expecting typedCall");
       const auto &procRef = *call->typedCall;
-      semantics::SomeExpr evalProcRef{procRef};
-      return Initializer{evalProcRef};
+      initializer.v.push_back(semantics::SomeExpr(procRef));
+    } else {
+      llvm_unreachable("Unexpected initializer");
     }
   }
 
-  llvm_unreachable("Unexpected initializer");
+  return initializer;
 }
 
 InReduction make(const parser::OmpClause::InReduction &inp,
@@ -1251,16 +1253,20 @@ NumTasks make(const parser::OmpClause::NumTasks &inp,
 
 NumTeams make(const parser::OmpClause::NumTeams &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
+  // inp.v -> parser::OmpNumTeamsClause
+  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!t1.empty());
   List<NumTeams::Range> v{{{/*LowerBound=*/std::nullopt,
-                            /*UpperBound=*/makeExpr(inp.v, semaCtx)}}};
+                            /*UpperBound=*/makeExpr(t1.front(), semaCtx)}}};
   return NumTeams{/*List=*/v};
 }
 
 NumThreads make(const parser::OmpClause::NumThreads &inp,
                 semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
-  return NumThreads{/*Nthreads=*/makeExpr(inp.v, semaCtx)};
+  // inp.v -> parser::OmpNumThreadsClause
+  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!t1.empty());
+  return NumThreads{/*Nthreads=*/makeExpr(t1.front(), semaCtx)};
 }
 
 // OmpxAttribute: empty
@@ -1502,8 +1508,10 @@ TaskReduction make(const parser::OmpClause::TaskReduction &inp,
 
 ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
                  semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
-  return ThreadLimit{/*Threadlim=*/makeExpr(inp.v, semaCtx)};
+  // inp.v -> parser::OmpThreadLimitClause
+  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!t1.empty());
+  return ThreadLimit{/*Threadlim=*/makeExpr(t1.front(), semaCtx)};
 }
 
 Threadset make(const parser::OmpClause::Threadset &inp,

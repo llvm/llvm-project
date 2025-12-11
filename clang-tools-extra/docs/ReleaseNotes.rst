@@ -586,6 +586,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-casting>` check by fixing false
   negatives when explicitly cast from function pointer.
 
+- Improved :doc:`readability-redundant-control-flow
+  <clang-tidy/checks/readability/redundant-control-flow>` by fixing an issue
+  where the check would sometimes suggest deleting not only a redundant
+  ``return`` or ``continue``, but also unrelated lines preceding it.
+
 - Improved :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
