@@ -90,6 +90,7 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
       ],
       "PublicMembers": [
         {
+          "IsStatic": false,
           "Name": "N",
           "Type": "int"
         }
@@ -115,8 +116,10 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
     }
   ],
   "HasEnums": true,
+  "HasParents": true,
   "HasPublicFunctions": true,
   "HasRecords": true,
+  "HasVirtualParents": true,
   "InfoType": "record",
   "IsTypedef": false,
   "Location": {
@@ -140,6 +143,7 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
   "Path": "GlobalNamespace",
   "ProtectedMembers": [
     {
+      "IsStatic": false,
       "Name": "X",
       "Type": "int"
     }
@@ -241,7 +245,7 @@ TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
   "HasEnums": true,
   "HasRecords": true,
   "InfoType": "namespace",
-  "Name": "Namespace",
+  "Name": "Global Namespace",
   "Namespace": [
     "A"
   ],

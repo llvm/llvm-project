@@ -145,7 +145,6 @@ void test_move_noexcept() {
     C c;
     C d = std::move(c);
   }
-#endif // _LIBCPP_VERSION
   {
     // Comparator fails to be nothrow-move-constructible
     using C = std::flat_multiset<int, ThrowingMoveComp>;
@@ -153,6 +152,7 @@ void test_move_noexcept() {
     C c;
     C d = std::move(c);
   }
+#endif // _LIBCPP_VERSION
 }
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
