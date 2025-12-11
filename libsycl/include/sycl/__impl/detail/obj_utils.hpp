@@ -61,7 +61,7 @@ SyclObject createSyclObjFromImpl(From &&from) {
   return ImplUtils::createSyclObjFromImpl<SyclObject>(std::forward<From>(from));
 }
 
-// std::hash support (4.5.2. Common reference semantics)
+// SYCL 2020 4.5.2. Common reference semantics (std::hash support)
 template <typename T> struct HashBase {
   size_t operator()(const T &Obj) const {
 #ifdef __SYCL_DEVICE_ONLY__

@@ -23,22 +23,19 @@
 #  endif
 #endif // __SYCL2020_DEPRECATED
 
-static_assert(__cplusplus >= 201703L,
-              "SYCL RT does not support C++ version earlier than C++17.");
+static_assert(__cplusplus >= 201703L, "Libsycl requires C++17 or later.");
 
 #if defined(_WIN32) && !defined(_DLL) && !defined(__SYCL_DEVICE_ONLY__)
-// SYCL library is designed such a way that STL objects cross DLL boundary,
-// which is guaranteed to work properly only when the application uses the same
-// C++ runtime that SYCL library uses.
-// The appplications using sycl.dll must be linked with dynamic/release C++ MSVC
-// runtime, i.e. be compiled with /MD switch. Similarly, the applications using
-// sycld.dll must be linked with dynamic/debug C++ runtime and be compiled with
-// /MDd switch.
-// Compiler automatically adds /MD or /MDd when -fsycl switch is used.
-// The options /MD and /MDd that make the code to use dynamic runtime also
-// define the _DLL macro.
+// When built for use with the MSVC C++ standard library, libsycl requires
+// use of the DLL versions of the MSVC run-time (RT) library. This requirement
+// extends to applications that link with libsycl since the same MSVC run-time
+// library must be used to ensure ABI compatibility for objects of C++ standard
+// library types like std::vector that are passed to or returned from SYCL
+// interfaces. Applications must therefore compile and link with the /MD option
+// when linking to a release build of libsycl and with the /MDd option when
+// linking to a debug build.
 #  define ERROR_MESSAGE                                                        \
-    "SYCL library is designed to work safely with dynamic C++ runtime."        \
+    "Libsycl is designed to work safely with dynamic C++ runtime."             \
     "Please use /MD switch with sycl.dll, /MDd switch with sycld.dll, "        \
     "or -fsycl switch to set C++ runtime automatically."
 #  if defined(_MSC_VER)

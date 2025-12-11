@@ -21,6 +21,23 @@
 using namespace sycl;
 using namespace std::literals;
 
+inline std::string_view getBackendName(const backend &Backend) {
+  switch (Backend) {
+  case backend::opencl:
+    return "opencl";
+  case backend::level_zero:
+    return "level_zero";
+  case backend::cuda:
+    return "cuda";
+  case backend::hip:
+    return "hip";
+  case backend::all:
+    return "all";
+  }
+
+  return "";
+}
+
 int main(int argc, char **argv) {
   llvm::cl::opt<bool> Verbose(
       "verbose",
@@ -40,7 +57,7 @@ int main(int argc, char **argv) {
 
     for (const auto &Platform : Platforms) {
       backend Backend = Platform.get_backend();
-      std::cout << "[" << detail::get_backend_name(Backend) << ":"
+      std::cout << "[" << getBackendName(Backend) << ":"
                 << "unknown" << "]" << std::endl;
     }
 

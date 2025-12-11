@@ -10,8 +10,10 @@ SYCL runtime implementation
 Current Status
 ========
 
-The implementation is in the very early stages of upstreaming. The first milestone is to get
-support for a simple SYCL application with device code using Unified Shared Memory:
+The implementation is in the very early stages of upstreaming. The first
+milestone is to get
+support for a simple SYCL application with device code using Unified Shared
+Memory:
 
 .. code-block:: c++
 
@@ -43,7 +45,8 @@ support for a simple SYCL application with device code using Unified Shared Memo
      return error;
    }
 
-This requires at least partial support of the following functionality on the libsycl side:
+This requires at least partial support of the following functionality on the
+libsycl side:
   * ``sycl::platform`` class
   * ``sycl::device`` class
   * ``sycl::context`` class
@@ -51,7 +54,8 @@ This requires at least partial support of the following functionality on the lib
   * ``sycl::handler`` class
   * ``sycl::id`` and ``sycl::range`` classes
   * Unified shared memory allocation/deallocation
-  * Program manager, an internal component for retrieving and using device images from the multi-architectural binaries
+  * Program manager, an internal component for retrieving and using device
+images from the multi-architectural binaries
 
 Build steps
 ========
@@ -81,5 +85,5 @@ To build LLVM with libsycl runtime enabled the following script can be used.
 Limitations
 ========
 
-SYCL runtime is not tested and is not guaranteed to work on Windows because offloading runtime (liboffload) used by SYCL runtime doesn't currently support Windows.
-The limitation to be revised once liboffload will add support for Windows.
+Libsycl is not currently supported on Windows because it depends on liboffload
+which doesn't currently support Windows.

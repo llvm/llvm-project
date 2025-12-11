@@ -28,10 +28,10 @@ template <typename T>
 using is_platform_info_desc_t = typename is_info_desc<T, platform>::return_type;
 } // namespace detail
 
-// A.1. Platform information descriptors
+// SYCL 2020 A.1. Platform information descriptors
 namespace info {
 namespace platform {
-// 4.6.2.4. Information descriptors
+// SYCL 2020 4.6.2.4. Information descriptors
 struct version : detail::info_desc_tag<version, sycl::platform> {
   using return_type = std::string;
 };

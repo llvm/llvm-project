@@ -26,8 +26,6 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-class context;
-
 enum class errc : int {
   success = 0,
   runtime = 1,
@@ -55,7 +53,7 @@ _LIBSYCL_EXPORT const std::error_category &sycl_category() noexcept;
 // Derive from std::exception so uncaught exceptions are printed in c++ default
 // exception handler.
 // Virtual inheritance is mandated by SYCL 2020.
-// 4.13.2. Exception class interface
+// SYCL 2020 4.13.2. Exception class interface
 class _LIBSYCL_EXPORT exception : public virtual std::exception {
 public:
   exception(std::error_code, const char *);

@@ -12,7 +12,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-// 4.9.2 Exception Class Interface
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/exception.hpp>
 

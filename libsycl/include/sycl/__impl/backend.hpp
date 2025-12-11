@@ -23,48 +23,28 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-// 4.1. Backends
-enum class backend : char {
-  opencl = 1,
-  level_zero = 2,
-  cuda = 3,
-  hip = 4,
-  all = 5,
+// SYCL 2020 4.1. Backends
+enum class backend : unsigned char {
+  opencl = 0,
+  level_zero,
+  cuda,
+  hip,
+  all,
 };
 
 namespace detail {
 template <typename T> struct is_backend_info_desc : std::false_type {};
 } // namespace detail
 
-// 4.5.1.1. Type traits backend_traits
+// SYCL 2020  4.5.1.1. Type traits backend_traits
 template <backend Backend> class backend_traits;
 
-template <backend Backend, typename SYCLObjectT>
+template <backend Backend, typename SyclType>
 using backend_input_t =
-    typename backend_traits<Backend>::template input_type<SYCLObjectT>;
-template <backend Backend, typename SYCLObjectT>
+    typename backend_traits<Backend>::template input_type<SyclType>;
+template <backend Backend, typename SyclType>
 using backend_return_t =
-    typename backend_traits<Backend>::template return_type<SYCLObjectT>;
-
-namespace detail {
-// Used by SYCL tools
-inline std::string_view get_backend_name(const backend &Backend) {
-  switch (Backend) {
-  case backend::opencl:
-    return "opencl";
-  case backend::level_zero:
-    return "level_zero";
-  case backend::cuda:
-    return "cuda";
-  case backend::hip:
-    return "hip";
-  case backend::all:
-    return "all";
-  }
-
-  return "";
-}
-} // namespace detail
+    typename backend_traits<Backend>::template return_type<SyclType>;
 
 _LIBSYCL_END_NAMESPACE_SYCL
 

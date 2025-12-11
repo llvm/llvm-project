@@ -29,7 +29,7 @@ namespace detail {
 class platform_impl;
 } // namespace detail
 
-// 4.6.2. Platform class
+// SYCL 2020 4.6.2. Platform class
 class _LIBSYCL_EXPORT platform {
 public:
   /// Constructs a platform object that is a copy of the platform which contains
