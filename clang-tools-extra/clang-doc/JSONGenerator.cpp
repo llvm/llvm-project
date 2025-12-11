@@ -318,7 +318,8 @@ serializeCommonAttributes(const Info &I, json::Object &Obj,
 }
 
 static void serializeReference(const Reference &Ref, Object &ReferenceObj) {
-  ReferenceObj["Path"] = Ref.Path;
+  if (!Ref.Path.empty())
+    ReferenceObj["Path"] = Ref.Path;
   ReferenceObj["Name"] = Ref.Name;
   ReferenceObj["QualName"] = Ref.QualName;
   ReferenceObj["USR"] = toHex(toStringRef(Ref.USR));
@@ -620,9 +621,11 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
   if (I.USR == GlobalNamespaceID)
     Obj["Name"] = "Global Namespace";
 
-  if (!I.Children.Namespaces.empty())
+  if (!I.Children.Namespaces.empty()) {
     serializeArray(I.Children.Namespaces, Obj, "Namespaces",
                    SerializeReferenceLambda);
+    Obj["HasNamespaces"] = true;
+  }
 
   static auto SerializeInfo = [RepositoryUrl](const auto &Info,
                                               Object &Object) {
