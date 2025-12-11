@@ -1577,9 +1577,9 @@ enum NodeType {
   // is replaced with (lane + lane_offset) for the ISD opcode.
   //
   //  E.g., for LOOP_DEPENDENCE_WAR_MASK:
-  //    `(ptrB - ptrA) > elementSize * lane`
+  //    `elementSize * lane < (ptrB - ptrA)`
   //  Becomes:
-  //    `(ptrB - ptrA) > elementSize * (lane + lane_offset)`
+  //    `elementSize * (lane + lane_offset) < (ptrB - ptrA)`
   //
   // This is done to allow for trivial splitting of the operation. Note: The
   // lane offset is always a constant, for scalable masks, it is implicitly
