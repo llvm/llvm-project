@@ -1665,14 +1665,11 @@ static void hoistStaticAllocasToAllocaIP(
         terminator->getNumSuccessors() == 0)
       continue;
 
-    for (unsigned i = 0; i < terminator->getNumSuccessors(); ++i) {
-      llvm::BasicBlock *successor = terminator->getSuccessor(i);
-
+    for (llvm::BasicBlock *successor : llvm::successors(terminator))
       if (!seenBlocks.contains(successor)) {
         inlinedBlocks.push_back(successor);
         seenBlocks.insert(successor);
       }
-    }
   }
 
   for (llvm::Instruction *staticAlloca : staticAllocas)
