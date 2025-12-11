@@ -2806,6 +2806,81 @@ public:
     Inst.addOperand(MCOperand::createImm(HintNum));
   }
 
+  bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const override {
+    assert((isIndirectCall(Call) || isIndirectBranch(Call)) &&
+           "Not an indirect call or branch.");
+
+    // A BLR can be accepted by a BTI c.
+    if (isIndirectCall(Call))
+      return isBTILandingPad(Pad, true, false) ||
+             isBTILandingPad(Pad, true, true);
+
+    // A BR can be accepted by a BTI j or BTI c (and BTI jc) IF the operand is
+    // x16 or x17. If the operand is not x16 or x17, it can be accepted by a BTI
+    // j or BTI jc (and not BTI c).
+    if (isIndirectBranch(Call)) {
+      assert(Call.getNumOperands() == 1 &&
+             "Indirect branch needs to have 1 operand.");
+      assert(Call.getOperand(0).isReg() &&
+             "Indirect branch does not have a register operand.");
+      MCPhysReg Reg = Call.getOperand(0).getReg();
+      if (Reg == AArch64::X16 || Reg == AArch64::X17)
+        return isBTILandingPad(Pad, true, false) ||
+               isBTILandingPad(Pad, false, true) ||
+               isBTILandingPad(Pad, true, true);
+      return isBTILandingPad(Pad, false, true) ||
+             isBTILandingPad(Pad, true, true);
+    }
+    return false;
+  }
+
+  void insertBTI(BinaryBasicBlock &BB, MCInst &Call) const override {
+    auto II = BB.getFirstNonPseudo();
+    // Only check the first instruction for non-empty BasicBlocks
+    bool Empty = (II == BB.end());
+    if (!Empty && isCallCoveredByBTI(Call, *II))
+      return;
+    // A BLR can be accepted by a BTI c.
+    if (isIndirectCall(Call)) {
+      // if we have a BTI j at the start, extend it to a BTI jc,
+      // otherwise insert a new BTI c.
+      if (!Empty && isBTILandingPad(*II, false, true)) {
+        updateBTIVariant(*II, true, true);
+      } else {
+        MCInst BTIInst;
+        createBTI(BTIInst, true, false);
+        BB.insertInstruction(II, BTIInst);
+      }
+    }
+
+    // A BR can be accepted by a BTI j or BTI c (and BTI jc) IF the operand is
+    // x16 or x17. If the operand is not x16 or x17, it can be accepted by a
+    // BTI j or BTI jc (and not BTI c).
+    if (isIndirectBranch(Call)) {
+      assert(Call.getNumOperands() == 1 &&
+             "Indirect branch needs to have 1 operand.");
+      assert(Call.getOperand(0).isReg() &&
+             "Indirect branch does not have a register operand.");
+      MCPhysReg Reg = Call.getOperand(0).getReg();
+      if (Reg == AArch64::X16 || Reg == AArch64::X17) {
+        // Add a new BTI c
+        MCInst BTIInst;
+        createBTI(BTIInst, true, false);
+        BB.insertInstruction(II, BTIInst);
+      } else {
+        // If BB starts with a BTI c, extend it to BTI jc,
+        // otherwise insert a new BTI j.
+        if (!Empty && isBTILandingPad(*II, true, false)) {
+          updateBTIVariant(*II, true, true);
+        } else {
+          MCInst BTIInst;
+          createBTI(BTIInst, false, true);
+          BB.insertInstruction(II, BTIInst);
+        }
+      }
+    }
+  }
+
   InstructionListType materializeAddress(const MCSymbol *Target, MCContext *Ctx,
                                          MCPhysReg RegName,
                                          int64_t Addend = 0) const override {
