@@ -9,25 +9,7 @@
 <html lang="en-US">
 {{>HeadPartial}}
 <body>
-    <nav class="navbar">
-        <div class="navbar__container">
-            {{#ProjectName}}
-            <div class="navbar__logo">
-                {{ProjectName}}
-            </div>
-            {{/ProjectName}}
-            <div class="navbar__menu">
-                <ul class="navbar__links">
-                    <li class="navbar__item">
-                        <a href="/" class="navbar__link">Namespace</a>
-                    </li>
-                    <li class="navbar__item">
-                        <a href="/" class="navbar__link">Class</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    {{>NavbarPartial}}
     <main>
         <div class="container">
             <div class="sidebar">
