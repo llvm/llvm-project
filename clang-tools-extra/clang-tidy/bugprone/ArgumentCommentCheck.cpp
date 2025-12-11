@@ -554,7 +554,6 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *InitList = dyn_cast<InitListExpr>(E)) {
     checkInitList(Result.Context, InitList);
-    return;
   }
 }
 
