@@ -671,11 +671,13 @@ def CIR_StoreOp : CIR_Op<"store", [
                            [MemWrite]>:$addr,
                        UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
+                       OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
     (`align` `(` $alignment^ `)`)?
+    (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
