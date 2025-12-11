@@ -560,10 +560,17 @@ struct LinalgDetensorize
     if (failed(applyPatternsGreedily(getOperation(), std::move(canonPatterns))))
       signalPassFailure();
 
-    // Get rid of the dummy entry block we created in the beginning to work
-    // around dialect conversion signature rewriting.
-    rewriter.eraseOp(branch);
-    rewriter.mergeBlocks(postEntryBlock, entryBlock);
+    // Only attempt to unwind the initial block split (merge postEntryBlock
+    // back into entryBlock) if the dialect conversion did NOT modify
+    // postEntryBlock block signature.
+    // If the postEntryBlock block has arguments the merge is unsafe because
+    // mergeBlocks requires 0 block arguments and no predecessors.
+    if (postEntryBlock->getNumArguments() == 0) {
+      // Get rid of the dummy entry block we created in the beginning to work
+      // around dialect conversion signature rewriting.
+      rewriter.eraseOp(branch);
+      rewriter.mergeBlocks(postEntryBlock, entryBlock);
+    }
   }
 };
 } // namespace
