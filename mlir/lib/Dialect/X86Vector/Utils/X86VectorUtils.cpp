@@ -15,8 +15,8 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 
-using namespace mlir;
-using namespace mlir::x86vector;
+namespace mlir {
+namespace x86vector {
 
 static FailureOr<SmallVector<mlir::utils::IteratorType>>
 inferIteratorsFromOutMap(AffineMap map) {
@@ -32,9 +32,8 @@ inferIteratorsFromOutMap(AffineMap map) {
 
 // Returns true if the operation is in VNNI layout.
 // Optionally, the check can be constrained to a specific VNNI blocking factor.
-bool mlir::x86vector::isInVnniLayout(Operation *op,
-                                     ArrayRef<AffineMap> indexingMaps,
-                                     std::optional<unsigned> blockingFactor) {
+bool isInVnniLayout(Operation *op, ArrayRef<AffineMap> indexingMaps,
+                    std::optional<unsigned> blockingFactor) {
   // Narrow down type operations - VNNI only applies to contractions.
   FailureOr<linalg::ContractionDimensions> dims =
       linalg::inferContractionDims(indexingMaps);
@@ -104,3 +103,6 @@ bool mlir::x86vector::isInVnniLayout(Operation *op,
 
   return true;
 }
+
+} // namespace x86vector
+} // namespace mlir

@@ -24,7 +24,7 @@ using namespace mlir;
 using namespace mlir::vector;
 using namespace mlir::x86vector;
 
-// This function retrives the source operation of the load or transfer
+// This function retrieves the source operation of the load or transfer
 // reads and creates subviews for the BF16 packed-operations to
 // broadcast or load BF16 elements as F32 packed elements.
 //
@@ -81,7 +81,7 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
   sizes.push_back(rewriter.getIndexAttr(vnniDimSize));
 
   // update the unit/nonUnit Dim size either it is A(LHS) or B(RHS).
-  sizes[indexVals.size() - mnDimIdx] = rewriter.getIndexAttr(mnDimSize);
+  sizes[mnDimIdx] = rewriter.getIndexAttr(mnDimSize);
 
   // for unitDim, first broadcast odd element, so index is set to 1.
   if (mnDimSize == 1)
@@ -97,6 +97,9 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
   // op loads and broadcast the first BF16 element into packed F32. It
   // cannot distinguish between even and odd BF16 elements within a
   // packed pair.
+  // Example:
+  // memref.subview %arg0[%c0,%c1]:memref<1x2xbf16> to memref<1x1xbf16> // Odd
+  // memref.subview %arg0[%c0,%c0]:memref<1x2xbf16> to memref<1x1xbf16> // Even
   if (mnDimSize == 1) {
     indexVals[indexVals.size() - 1] = rewriter.getIndexAttr(0);
     sizes[indexVals.size() - 1] = rewriter.getIndexAttr(1);
@@ -156,20 +159,32 @@ struct VectorContractBF16ToFMA
     if (!accTy)
       return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type.");
 
-    if ((lhsTy.getElementType().isBF16() && !accTy.getElementType().isF32()))
+    if (!accTy.getElementType().isF32())
       return rewriter.notifyMatchFailure(
           contractOp, "Only F32 acumulation supported for BF16 type.");
 
     ArrayRef<int64_t> lhsShape = lhsTy.getShape();
     llvm::SmallVector<int64_t> nonUnitDimLhs;
-    llvm::copy_if(lhsShape, std::back_inserter(nonUnitDimLhs),
-                  [](int64_t dim) { return dim != 1; });
+    llvm::SmallVector<unsigned> nonUnitIndicesLhs;
+
+    for (auto it : llvm::enumerate(lhsShape)) {
+      if (it.value() != 1) {
+        nonUnitDimLhs.push_back(it.value());
+        nonUnitIndicesLhs.push_back(it.index());
+      }
+    }
 
     VectorType rhsTy = contractOp.getRhsType();
     ArrayRef<int64_t> rhsShape = rhsTy.getShape();
     llvm::SmallVector<int64_t> nonUnitDimRhs;
-    llvm::copy_if(rhsShape, std::back_inserter(nonUnitDimRhs),
-                  [](int64_t dim) { return dim != 1; });
+    llvm::SmallVector<unsigned> nonUnitIndicesRhs;
+
+    for (auto it : llvm::enumerate(rhsShape)) {
+      if (it.value() != 1) {
+        nonUnitDimRhs.push_back(it.value());
+        nonUnitIndicesRhs.push_back(it.index());
+      }
+    }
 
     if ((nonUnitDimLhs.size() - 1) > 0 && (nonUnitDimRhs.size() - 1) > 0)
       return rewriter.notifyMatchFailure(contractOp,
@@ -180,14 +195,6 @@ struct VectorContractBF16ToFMA
       return rewriter.notifyMatchFailure(
           contractOp,
           "Excepts a one non-unit A/B dimension for either LHS or RHS shape.");
-
-    /* VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
-    if (!accTy)
-      return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type.");
-
-    if ((lhsTy.getElementType().isBF16() && !accTy.getElementType().isF32()))
-      return rewriter.notifyMatchFailure(
-          contractOp, "Only F32 acumulation supported for BF16 type."); */
 
     ArrayRef<int64_t> accShape = accTy.getShape();
     llvm::SmallVector<int64_t> nonUnitDimAcc;
@@ -223,7 +230,9 @@ struct VectorContractBF16ToFMA
         rhsHasMultipleNonUnitDims ? contractOp.getRhs() : contractOp.getLhs();
 
     // mnDim index differs depending on the orientation.
-    int mnDimIdx = rhsHasMultipleNonUnitDims ? 2 : 3; // A or B
+    int mnDimIdx = rhsHasMultipleNonUnitDims
+                       ? nonUnitIndicesRhs.front()
+                       : nonUnitIndicesLhs.front(); // A or B
 
     // VNNI factor: always 1 for unit dims, 2 for non-unit dims.
     int unitVnni = 1;
@@ -264,13 +273,9 @@ struct VectorContractBF16ToFMA
         vector::FMAOp::create(rewriter, loc, loadBcstOddIdxElementToF32,
                               loadOddIdxElementF32, castAcc);
 
-    llvm::SmallVector<Operation *> users;
-    for (OpResult result : contractOp->getResults())
-      for (Operation *user : result.getUsers())
-        users.push_back(user);
-
-    if (users.size() == 1)
-      rewriter.setInsertionPoint(users[0]);
+    OpResult vcResult = contractOp->getResult(0);
+    if (vcResult.hasOneUse())
+      rewriter.setInsertionPoint(*vcResult.getUsers().begin());
 
     // Load, broadcast, and do FMA for even indexed BF16 elements.
     auto loadBcstEvenIdxElementToF32 = x86vector::BcstToPackedF32Op::create(
