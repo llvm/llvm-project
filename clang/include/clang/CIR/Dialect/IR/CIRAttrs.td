@@ -499,6 +499,49 @@ def CIR_DataMemberAttr : CIR_Attr<"DataMember", "data_member", [
 }
 
 //===----------------------------------------------------------------------===//
+// MethodAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
+  let summary = "Holds a constant pointer-to-member-function value";
+  let description = [{
+    A method attribute is a literal attribute that represents a constant
+    pointer-to-member-function value.
+
+    If the member function is a non-virtual function, the `symbol` parameter
+    gives the global symbol for the non-virtual member function.
+
+    Virtual function handling is not yet implemented.
+
+    If `symbol` is not present, the attribute represents a null pointer
+    constant.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "cir::MethodType">:$type,
+                        OptionalParameter<
+                            "std::optional<mlir::FlatSymbolRefAttr>">:$symbol);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::MethodType":$type), [{
+      return $_get(type.getContext(), type, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::MethodType":$type,
+                                        "mlir::FlatSymbolRefAttr":$symbol), [{
+      return $_get(type.getContext(), type, symbol);
+    }]>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    bool isNull() const {
+      return !getSymbol().has_value();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 
