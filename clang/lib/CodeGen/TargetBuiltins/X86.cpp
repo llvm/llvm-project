@@ -90,14 +90,14 @@ static Value *emitX86Round(CodeGenFunction &CGF, Value *X,
   if (UseMXCSR) {
     ID = Intrinsic::experimental_constrained_nearbyint;
 
+    Value *RoundingMode =
+        MetadataAsValue::get(Ctx, MDString::get(Ctx, "round.dynamic"));
+
     Value *ExceptMode =
         MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore"));
 
-    Value *RoundingMode =
-        MetadataAsValue::get(Ctx, MDString::get(Ctx, "rounding.dynamic"));
-
     Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
-    return CGF.Builder.CreateCall(F, {X, ExceptMode, RoundingMode});
+    return CGF.Builder.CreateCall(F, {X, RoundingMode, ExceptMode});
   }
 
   switch (RoundingMode) {
