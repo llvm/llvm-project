@@ -2364,7 +2364,17 @@ private:
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __align_it(size_type __s) _NOEXCEPT {
     return (__s + (__a - 1)) & ~(__a - 1);
   }
-  enum { __alignment = 8 };
+
+  // GCC currently doesn't define __STDCPP_DEFAULT_NEW_ALIGNMENT__ unconditionally
+  // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123872
+#  ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
+  static inline const size_t
+      __alignment = __is_std_allocator_v<allocator_type> && __STDCPP_DEFAULT_NEW_ALIGNMENT__ > sizeof(void*)
+                      ? __STDCPP_DEFAULT_NEW_ALIGNMENT__
+                      : sizeof(void*);
+#  else
+  static inline const size_t __alignment = sizeof(void*);
+#  endif
 
   // This makes sure that we're using a capacity with some extra alignment, since allocators almost always over-align
   // the allocations anyways, improving memory usage. More importantly, this ensures that the lowest bit is never set
