@@ -99,7 +99,6 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
 
   mlir::Value hasStat = op.getHasStat() ? builder.createBool(loc, true)
                                         : builder.createBool(loc, false);
-
   mlir::Value errmsg;
   if (op.getErrmsg()) {
     errmsg = op.getErrmsg();
@@ -116,12 +115,15 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
                   loc, fir::ReferenceType::get(
                            mlir::IntegerType::get(op.getContext(), 1)));
     if (op.getSource()) {
+      mlir::Value isDeviceSource = op.getDeviceSource()
+                                       ? builder.createBool(loc, true)
+                                       : builder.createBool(loc, false);
       mlir::Value stream =
           op.getStream() ? op.getStream()
                          : builder.createNullConstant(loc, fTy.getInput(2));
       args = fir::runtime::createArguments(
           builder, loc, fTy, op.getBox(), op.getSource(), stream, pinned,
-          hasStat, errmsg, sourceFile, sourceLine);
+          hasStat, errmsg, sourceFile, sourceLine, isDeviceSource);
     } else {
       mlir::Value stream =
           op.getStream() ? op.getStream()
@@ -322,15 +324,7 @@ struct CUFAllocateOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    bool isPointer = false;
-
-    if (auto declareOp =
-            mlir::dyn_cast_or_null<fir::DeclareOp>(op.getBox().getDefiningOp()))
-      if (declareOp.getFortranAttrs() &&
-          bitEnumContainsAny(*declareOp.getFortranAttrs(),
-                             fir::FortranVariableFlagsEnum::pointer))
-        isPointer = true;
-
+    bool isPointer = op.getPointer();
     if (op.getHasDoubleDescriptor()) {
       // Allocation for module variable are done with custom runtime entry point
       // so the descriptors can be synchronized.

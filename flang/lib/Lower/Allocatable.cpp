@@ -629,9 +629,10 @@ private:
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
 
+    bool sourceIsDevice = false;
     if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
       if (Fortran::semantics::IsCUDADevice(*sym))
-        TODO(loc, "CUDA Fortran: allocate with device source");
+        sourceIsDevice = true;
 
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
@@ -651,7 +652,7 @@ private:
       genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol())) {
+    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()) || sourceIsDevice) {
       stat =
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
     } else {
@@ -798,12 +799,19 @@ private:
     // Keep return type the same as a standard AllocatableAllocate call.
     mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
 
+    bool isSourceDevice = false;
+    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
+      if (Fortran::semantics::IsCUDADevice(*sym))
+        isSourceDevice = true;
+
     bool doubleDescriptors = Fortran::lower::hasDoubleDescriptor(box.getAddr());
     return cuf::AllocateOp::create(
                builder, loc, retTy, box.getAddr(), errmsg, stream, pinned,
                source, cudaAttr,
                errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr,
-               doubleDescriptors ? builder.getUnitAttr() : nullptr)
+               doubleDescriptors ? builder.getUnitAttr() : nullptr,
+               box.isPointer() ? builder.getUnitAttr() : nullptr,
+               isSourceDevice ? builder.getUnitAttr() : nullptr)
         .getResult();
   }
 
@@ -873,7 +881,8 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
   return cuf::DeallocateOp::create(
              builder, loc, retTy, box.getAddr(), errmsg, cudaAttr,
              errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr,
-             doubleDescriptors ? builder.getUnitAttr() : nullptr)
+             doubleDescriptors ? builder.getUnitAttr() : nullptr,
+             box.isPointer() ? builder.getUnitAttr() : nullptr)
       .getResult();
 }
 

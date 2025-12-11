@@ -227,6 +227,14 @@ end
 ! CHECK: %[[FLASE_CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
 ! CHECK: fir.store %[[FLASE_CONV]] to %[[PLOG_DECL]]#0 : !fir.ref<!fir.logical<4>>
 
+subroutine devicepointer()
+  integer, device, pointer :: i(:)
+  allocate(i(10))
+end
+
+! CHECK-LABEL: func.func @_QPdevicepointer()
+! CHECK: cuf.allocate{{.*}}pointer
+
 subroutine cuda_component()
   use globals
   type(t1), pointer, dimension(:) :: d
@@ -253,3 +261,12 @@ end subroutine
 ! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>, hasDoubleDescriptor} -> i32
 ! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>, hasDoubleDescriptor} -> i32
 ! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
+
+attributes(global) subroutine from_device_source()
+  real, device, allocatable :: a(:)
+  real, allocatable :: b(:)
+  allocate(b, source=a)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPfrom_device_source()
+! CHECK: cuf.allocate{{.*}}device_source
