@@ -8,6 +8,10 @@
 
 // <string>
 
+// This test is sensitive what __STDCPP_DEFAULT_NEW_ALIGNMENT__ is set to. Enable aligned-new for GCC so that GCC
+// defines the macro
+// ADDITIONAL_COMPILE_FLAGS(gcc): -faligned-new
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -15,22 +19,21 @@
 
 #include "test_macros.h"
 
-// alignment of the string heap buffer is hardcoded to 8
-const std::size_t alignment = 8;
+#ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
+static const std::size_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+#else
+static const std::size_t alignment = 8;
+#endif
 
 int main(int, char**) {
-  std::string input_string;
-  input_string.resize(64, 'a');
-
-  // Call a constructor which selects its size using __recommend.
-  std::string test_string(input_string.data());
+  std::string str(64, 'a');
   const std::size_t expected_align8_size = 71;
 
   // Demonstrate the lesser capacity/allocation size when the alignment requirement is 8.
   if (alignment == 8) {
-    assert(test_string.capacity() == expected_align8_size);
+    assert(str.capacity() == expected_align8_size);
   } else {
-    assert(test_string.capacity() == expected_align8_size + 8);
+    assert(str.capacity() == expected_align8_size + 8);
   }
 
   return 0;

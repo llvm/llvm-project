@@ -15,8 +15,11 @@
 
 #include "test_macros.h"
 
-// alignment of the string heap buffer is hardcoded to 8
-const std::size_t alignment = 8;
+#ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
+static const std::size_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+#else
+static const std::size_t alginment = 8;
+#endif
 
 int main(int, char**) {
   std::string input_string;
