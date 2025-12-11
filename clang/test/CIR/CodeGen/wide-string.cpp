@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
+// Test with built-in char16_t type
 const char16_t *test_utf16() {
   return u"你好世界";
 }
@@ -37,7 +38,7 @@ const char32_t *test_zero32() {
 // LLVM: @{{.+}} = private constant [5 x i32] zeroinitializer
 // OGCG: @{{.+}} = private unnamed_addr constant [5 x i32] zeroinitializer
 
-#include <stddef.h>
+typedef __WCHAR_TYPE__ wchar_t;
 
 const wchar_t *test_wchar() {
   return L"1234";
@@ -54,3 +55,14 @@ const wchar_t *test_wchar_zero() {
 // CIR: cir.global "private" constant cir_private dso_local @{{.+}} = #cir.zero : !cir.array<!s32i x 1>
 // LLVM: @{{.+}} = private constant [1 x i32] zeroinitializer
 // OGCG: @{{.+}} = private unnamed_addr constant [1 x i32] zeroinitializer
+
+// Test with typedef'd char16_t to ensure typedef path works correctly
+typedef __CHAR16_TYPE__ char16_t;
+
+const char16_t *test_char16_typedef() {
+  return u"test";
+}
+
+// CIR: cir.global "private" constant cir_private dso_local @{{.+}} = #cir.const_array<[#cir.int<116> : !u16i, #cir.int<101> : !u16i, #cir.int<115> : !u16i, #cir.int<116> : !u16i, #cir.int<0> : !u16i]> : !cir.array<!u16i x 5>
+// LLVM: @{{.+}} = private constant [5 x i16] [i16 116, i16 101, i16 115, i16 116, i16 0]
+// OGCG: @{{.+}} = private unnamed_addr constant [5 x i16] [i16 116, i16 101, i16 115, i16 116, i16 0]
