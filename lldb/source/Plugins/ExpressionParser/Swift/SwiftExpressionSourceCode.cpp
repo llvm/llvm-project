@@ -650,7 +650,7 @@ Status SwiftExpressionSourceCode::GetText(
           bool is_simulator = platform->GetPluginName().ends_with("-simulator");
           if (is_simulator) {
             // The simulators look like the host OS to Process, but Platform
-            // can the version out of an environment variable.
+            // can get the version out of an environment variable.
             os_vers << platform->GetOSVersion(process_sp.get()).getAsString();
           } else {
             llvm::VersionTuple version = process_sp->GetHostOSVersion();
