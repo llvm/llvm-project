@@ -156,12 +156,10 @@ private:
   // empty string if no debug info is available.
   StringMap<SmallString<128>> FunctionNameToDIFilename;
 
-  // This contains the BB cluster information for the whole program.
-  //
-  // For every function name, it contains the cloning directives and profile
-  // data for (all or some of) its basic blocks. The cluster information for
-  // every basic block includes its cluster ID along with the position of the
-  // basic block in that cluster.
+  // This map contains the optimization profile for each function in the program.
+  // A function's optimization profile consists of CFG data (node and edge
+  // counts) and layout directives such as basic block clustering and cloning
+  // paths.
   StringMap<FunctionOptimizationProfile> ProgramOptimizationProfile;
 
   // Some functions have alias names. We use this map to find the main alias
