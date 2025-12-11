@@ -374,8 +374,48 @@ namespace GH150709 {
 namespace DiscardedAddrLabel {
   void foo(void) {
   L:
-    *&&L; // both-error {{indirection not permitted}} \
+    *&&L; // both-error {{indirection not permitted on operand of type 'void *'}} \
           // both-warning {{expression result unused}}
   }
 }
 
+struct Counter {
+  int copies;
+  constexpr Counter(int copies) : copies(copies) {}
+  constexpr Counter(const Counter& other) : copies(other.copies + 1) {}
+};
+// Passing an lvalue by value makes a non-elidable copy.
+constexpr int PassByValue(Counter c) { return c.copies; }
+static_assert(PassByValue(Counter(0)) == 0, "expect no copies");
+
+namespace PointerCast {
+  /// The two interpreters disagree here.
+  struct S { int x, y; } s;
+  constexpr S* sptr = &s;
+  struct U {};
+  struct Str {
+    int e : (Str*)(sptr) == (Str*)(sptr); // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{cast that performs the conversions of a reinterpret_cast}}
+  };
+}
+
+namespace DummyToGlobalBlockMove {
+  struct Baz {
+    unsigned int n;
+  };
+
+  struct AP {
+    const AP *p;
+    const Baz *lp;
+  };
+
+  class Bar {
+  public:
+    static Baz _m[];
+    static const AP m;
+  };
+
+  const AP Bar::m = {0, &Bar::_m[0]};
+  Baz Bar::_m[] = {{0}};
+  const AP m = {&Bar ::m};
+}

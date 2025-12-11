@@ -14,8 +14,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -1035,12 +1035,12 @@ static const char *ArmMachOArchName(StringRef Arch) {
       .Case("xscale", "xscale")
       .Case("armv4t", "armv4t")
       .Case("armv7", "armv7")
-      .Cases("armv7a", "armv7-a", "armv7")
-      .Cases("armv7r", "armv7-r", "armv7")
-      .Cases("armv7em", "armv7e-m", "armv7em")
-      .Cases("armv7k", "armv7-k", "armv7k")
-      .Cases("armv7m", "armv7-m", "armv7m")
-      .Cases("armv7s", "armv7-s", "armv7s")
+      .Cases({"armv7a", "armv7-a"}, "armv7")
+      .Cases({"armv7r", "armv7-r"}, "armv7")
+      .Cases({"armv7em", "armv7e-m"}, "armv7em")
+      .Cases({"armv7k", "armv7-k"}, "armv7k")
+      .Cases({"armv7m", "armv7-m"}, "armv7m")
+      .Cases({"armv7s", "armv7-s"}, "armv7s")
       .Default(nullptr);
 }
 
@@ -1079,7 +1079,7 @@ StringRef MachO::getMachOArchName(const ArgList &Args) const {
 
   case llvm::Triple::thumb:
   case llvm::Triple::arm:
-    if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ))
+    if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
       if (const char *Arch = ArmMachOArchName(A->getValue()))
         return Arch;
 
@@ -2993,7 +2993,7 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
   if (!BoundArch.empty()) {
     StringRef Name = BoundArch;
     const Option MCpu = Opts.getOption(options::OPT_mcpu_EQ);
-    const Option MArch = Opts.getOption(clang::driver::options::OPT_march_EQ);
+    const Option MArch = Opts.getOption(options::OPT_march_EQ);
 
     // This code must be kept in sync with LLVM's getArchTypeForDarwinArch,
     // which defines the list of which architectures we accept.

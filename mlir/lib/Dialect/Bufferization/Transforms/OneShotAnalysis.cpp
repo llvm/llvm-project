@@ -497,7 +497,7 @@ static bool matchesInsertDestination(const AnalysisState &state,
   // terminates. All of them must be equivalent subsets.
   SetVector<Value> backwardSlice =
       state.findValueInReverseUseDefChain(opOperand, matchingSubset);
-  return static_cast<bool>(llvm::all_of(backwardSlice, matchingSubset));
+  return llvm::all_of(backwardSlice, matchingSubset);
 }
 
 /// Return "true" if the given "read" and potentially conflicting "write" are

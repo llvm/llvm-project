@@ -14,8 +14,8 @@ define i32 @preserve_inbounds(i64 %start, ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[START]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 -3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[REVERSE]], [[VEC_PHI]]
@@ -60,8 +60,8 @@ define i32 @preserve_nusw(i64 %start, ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[START]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nusw i32, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr nusw i32, ptr [[TMP2]], i32 -3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nusw i32, ptr [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr nusw i32, ptr [[TMP2]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[REVERSE]], [[VEC_PHI]]
@@ -106,8 +106,8 @@ define i32 @drop_nuw(i64 %start, ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[START]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP2]], i32 -3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP2]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[REVERSE]], [[VEC_PHI]]

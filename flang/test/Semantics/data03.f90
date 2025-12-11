@@ -44,7 +44,7 @@ module m
       DATA(a[i], i = 1, 5) / 5 * 1 /
       !C875
       !ERROR: Data object variable must not be a function reference
-      DATA f(1) / 1 / 
+      DATA f(1) / 1 /
       !C875
       !ERROR: Data object must have constant subscripts
       DATA b(ind) / 1 /

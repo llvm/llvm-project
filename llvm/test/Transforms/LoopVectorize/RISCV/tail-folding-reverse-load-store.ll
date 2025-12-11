@@ -331,20 +331,20 @@ define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
 ; NO-VP-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1024, [[INDEX]]
 ; NO-VP-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[OFFSET_IDX]]
-; NO-VP-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 -15
+; NO-VP-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -15
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; NO-VP-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; NO-VP-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B:%.*]], <16 x i8> [[REVERSE]]
 ; NO-VP-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> align 1 [[TMP3]], <16 x i1> splat (i1 true), <16 x i8> poison)
 ; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[OFFSET_IDX]]
-; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 0
-; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i32 -15
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i64 0
+; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i64 -15
 ; NO-VP-NEXT:    [[REVERSE1:%.*]] = shufflevector <16 x i8> [[WIDE_MASKED_GATHER]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; NO-VP-NEXT:    store <16 x i8> [[REVERSE1]], ptr [[TMP6]], align 1
 ; NO-VP-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[D:%.*]], i64 [[OFFSET_IDX]]
-; NO-VP-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i32 0
-; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i32 -15
+; NO-VP-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 0
+; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 -15
 ; NO-VP-NEXT:    store <16 x i8> [[REVERSE1]], ptr [[TMP9]], align 1
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024

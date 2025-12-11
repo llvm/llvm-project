@@ -636,6 +636,16 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::Loader::runInitializersBottomUpPlusUpwardLinks(dyld4::RuntimeState&) const::$_0::",
      /*.qualifiers=*/" const",
+   },
+   {"_Z4funcILN3foo4EnumE1EEvv",
+     {
+       /*.BasenameRange=*/{5, 9}, /*.TemplateArgumentsRange=*/{9, 23}, /*.ScopeRange=*/{5, 5},
+       /*.ArgumentsRange=*/{23, 25}, /*.QualifiersRange=*/{25, 25}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
+     /*.basename=*/"func",
+     /*.scope=*/"",
+     /*.qualifiers=*/"",
    }
     // clang-format on
 };

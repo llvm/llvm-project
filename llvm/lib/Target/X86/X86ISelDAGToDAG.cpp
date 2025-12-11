@@ -337,23 +337,8 @@ namespace {
     // lowering but before ISEL.
     bool isAMXSDNode(SDNode *N) const {
       // Check if N is AMX SDNode:
-      // 1. check specific opcode since these carry MVT::Untyped instead of
-      // x86amx_type;
-      // 2. check result type;
-      // 3. check operand type;
-      switch (N->getOpcode()) {
-      default:
-        break;
-      case X86::PT2RPNTLVWZ0V:
-      case X86::PT2RPNTLVWZ0T1V:
-      case X86::PT2RPNTLVWZ1V:
-      case X86::PT2RPNTLVWZ1T1V:
-      case X86::PT2RPNTLVWZ0RSV:
-      case X86::PT2RPNTLVWZ0RST1V:
-      case X86::PT2RPNTLVWZ1RSV:
-      case X86::PT2RPNTLVWZ1RST1V:
-        return true;
-      }
+      // 1. check result type;
+      // 2. check operand type;
       for (unsigned Idx = 0, E = N->getNumValues(); Idx != E; ++Idx) {
         if (N->getValueType(Idx) == MVT::x86amx)
           return true;
@@ -1019,7 +1004,9 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     if ((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
         N->getSimpleValueType(0).isVector() && !mayPreventLoadFold()) {
       APInt SplatVal;
-      if (X86::isConstantSplat(N->getOperand(1), SplatVal) &&
+      if (!ISD::isBuildVectorOfConstantSDNodes(
+              peekThroughBitcasts(N->getOperand(0)).getNode()) &&
+          X86::isConstantSplat(N->getOperand(1), SplatVal) &&
           SplatVal.isOne()) {
         SDLoc DL(N);
 
@@ -1888,8 +1875,8 @@ bool X86DAGToDAGISel::matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM,
   // For more information see http://people.redhat.com/drepper/tls.pdf
   if (isNullConstant(Address) && AM.Segment.getNode() == nullptr &&
       !IndirectTlsSegRefs &&
-      (Subtarget->isTargetGlibc() || Subtarget->isTargetAndroid() ||
-       Subtarget->isTargetFuchsia())) {
+      (Subtarget->isTargetGlibc() || Subtarget->isTargetMusl() ||
+       Subtarget->isTargetAndroid() || Subtarget->isTargetFuchsia())) {
     if (Subtarget->isTarget64BitILP32() && !AllowSegmentRegForX32)
       return true;
     switch (N->getPointerInfo().getAddrSpace()) {
@@ -4743,9 +4730,9 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   auto tryPeelOuterNotWrappingLogic = [&](SDNode *Op) {
     if (Op->getOpcode() == ISD::XOR && Op->hasOneUse() &&
         ISD::isBuildVectorAllOnes(Op->getOperand(1).getNode())) {
-      SDValue InnerOp = Op->getOperand(0);
+      SDValue InnerOp = getFoldableLogicOp(Op->getOperand(0));
 
-      if (!getFoldableLogicOp(InnerOp))
+      if (!InnerOp)
         return SDValue();
 
       N0 = InnerOp.getOperand(0);
@@ -5395,65 +5382,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         SDValue Ops[] = { TReg, Base, Scale, Index, Disp, Segment, Chain };
         CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
       }
-      ReplaceNode(Node, CNode);
-      return;
-    }
-    case Intrinsic::x86_t2rpntlvwz0rs:
-    case Intrinsic::x86_t2rpntlvwz0rst1:
-    case Intrinsic::x86_t2rpntlvwz1rs:
-    case Intrinsic::x86_t2rpntlvwz1rst1:
-      if (!Subtarget->hasAMXMOVRS())
-        break;
-      [[fallthrough]];
-    case Intrinsic::x86_t2rpntlvwz0:
-    case Intrinsic::x86_t2rpntlvwz0t1:
-    case Intrinsic::x86_t2rpntlvwz1:
-    case Intrinsic::x86_t2rpntlvwz1t1: {
-      if (!Subtarget->hasAMXTRANSPOSE())
-        break;
-      auto *MFI =
-          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
-      MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
-      unsigned Opc;
-      switch (IntNo) {
-      default:
-        llvm_unreachable("Unexpected intrinsic!");
-      case Intrinsic::x86_t2rpntlvwz0:
-        Opc = X86::PT2RPNTLVWZ0;
-        break;
-      case Intrinsic::x86_t2rpntlvwz0t1:
-        Opc = X86::PT2RPNTLVWZ0T1;
-        break;
-      case Intrinsic::x86_t2rpntlvwz1:
-        Opc = X86::PT2RPNTLVWZ1;
-        break;
-      case Intrinsic::x86_t2rpntlvwz1t1:
-        Opc = X86::PT2RPNTLVWZ1T1;
-        break;
-      case Intrinsic::x86_t2rpntlvwz0rs:
-        Opc = X86::PT2RPNTLVWZ0RS;
-        break;
-      case Intrinsic::x86_t2rpntlvwz0rst1:
-        Opc = X86::PT2RPNTLVWZ0RST1;
-        break;
-      case Intrinsic::x86_t2rpntlvwz1rs:
-        Opc = X86::PT2RPNTLVWZ1RS;
-        break;
-      case Intrinsic::x86_t2rpntlvwz1rst1:
-        Opc = X86::PT2RPNTLVWZ1RST1;
-        break;
-      }
-      // FIXME: Match displacement and scale.
-      unsigned TIndex = Node->getConstantOperandVal(2);
-      SDValue TReg = getI8Imm(TIndex, dl);
-      SDValue Base = Node->getOperand(3);
-      SDValue Scale = getI8Imm(1, dl);
-      SDValue Index = Node->getOperand(4);
-      SDValue Disp = CurDAG->getTargetConstant(0, dl, MVT::i32);
-      SDValue Segment = CurDAG->getRegister(0, MVT::i16);
-      SDValue Chain = Node->getOperand(0);
-      SDValue Ops[] = {TReg, Base, Scale, Index, Disp, Segment, Chain};
-      MachineSDNode *CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
       ReplaceNode(Node, CNode);
       return;
     }

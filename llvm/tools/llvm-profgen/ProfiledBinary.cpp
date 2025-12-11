@@ -37,6 +37,14 @@ cl::opt<bool> ShowSourceLocations("show-source-locations",
                                   cl::desc("Print source locations."),
                                   cl::cat(ProfGenCategory));
 
+cl::opt<bool> LoadFunctionFromSymbol(
+    "load-function-from-symbol", cl::init(true),
+    cl::desc(
+        "Gather additional binary function info from symbols (e.g. .symtab) in "
+        "case dwarf info is incomplete. Only support binaries in ELF format "
+        "with pseudo probe, for other formats, this flag will be a no-op."),
+    cl::cat(ProfGenCategory));
+
 static cl::opt<bool>
     ShowCanonicalFnName("show-canonical-fname",
                         cl::desc("Print canonical function name."),
@@ -187,7 +195,7 @@ ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
   load();
 }
 
-ProfiledBinary::~ProfiledBinary() {}
+ProfiledBinary::~ProfiledBinary() = default;
 
 void ProfiledBinary::warnNoFuncEntry() {
   uint64_t NoFuncEntryNum = 0;
@@ -256,6 +264,9 @@ void ProfiledBinary::load() {
 
   if (ShowDisassemblyOnly)
     decodePseudoProbe(Obj);
+
+  if (LoadFunctionFromSymbol && UsePseudoProbes)
+    loadSymbolsFromSymtab(Obj);
 
   // Disassemble the text sections.
   disassemble(Obj);
@@ -461,6 +472,13 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
   } else {
     for (auto *F : ProfiledFunctions) {
       GuidFilter.insert(Function::getGUIDAssumingExternalLinkage(F->FuncName));
+      // DWARF name might be broken when a DWARF32 .debug_str.dwo section
+      // execeeds 4GB. We expect symbol table to contain the correct function
+      // names which matches the pseudo probe. Adding back all the GUIDs if
+      // possible.
+      auto AltGUIDs = AlternativeFunctionGUIDs.equal_range(F);
+      for (const auto &[_, Func] : make_range(AltGUIDs))
+        GuidFilter.insert(Func);
       for (auto &Range : F->Ranges) {
         auto GUIDs = StartAddrToSymMap.equal_range(Range.first);
         for (const auto &[StartAddr, Func] : make_range(GUIDs))
@@ -522,7 +540,9 @@ void ProfiledBinary::setIsFuncEntry(FuncRange *FuncRange,
   // Set IsFuncEntry to ture if there is only one range in the function or the
   // RangeSymName from ELF is equal to its DWARF-based function name.
   if (FuncRange->Func->Ranges.size() == 1 ||
-      (!FuncRange->IsFuncEntry && FuncRange->getFuncName() == RangeSymName))
+      (!FuncRange->IsFuncEntry &&
+       (FuncRange->getFuncName() == RangeSymName ||
+        FuncRange->Func->NameStatus != DwarfNameStatus::Matched)))
     FuncRange->IsFuncEntry = true;
 }
 
@@ -604,13 +624,14 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       // Record potential call targets for tail frame inference later-on.
       if (InferMissingFrames && FRange) {
         uint64_t Target = 0;
-        MIA->evaluateBranch(Inst, Address, Size, Target);
+        [[maybe_unused]] bool Err =
+            MIA->evaluateBranch(Inst, Address, Size, Target);
         if (MCDesc.isCall()) {
           // Indirect call targets are unknown at this point. Recording the
           // unknown target (zero) for further LBR-based refinement.
           MissingContextInferrer->CallEdges[Address].insert(Target);
         } else if (MCDesc.isUnconditionalBranch()) {
-          assert(Target &&
+          assert(Err &&
                  "target should be known for unconditional direct branch");
           // Any inter-function unconditional jump is considered tail call at
           // this point. This is not 100% accurate and could further be
@@ -817,6 +838,100 @@ void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
     uint64_t GUID = Function::getGUIDAssumingExternalLinkage(Name);
     SymbolStartAddrs[GUID] = Addr;
     StartAddrToSymMap.emplace(Addr, GUID);
+  }
+}
+
+void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
+  // Load binary functions from symbol table when Debug info is incomplete.
+  // Strip the internal suffixes which are not reflected in the DWARF info.
+  const SmallVector<StringRef, 10> Suffixes(
+      {// Internal suffixes from CoroSplit pass
+       ".cleanup", ".destroy", ".resume",
+       // Internal suffixes from Bolt
+       ".cold", ".warm",
+       // Compiler/LTO internal
+       ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."});
+  StringRef FileName = Obj->getFileName();
+  // Only apply this to ELF binary. e.g. COFF file format doesn't have `size`
+  // field in the symbol table.
+  bool IsELFObject = isa<ELFObjectFileBase>(Obj);
+  if (!IsELFObject)
+    return;
+  for (const SymbolRef &Symbol : Obj->symbols()) {
+    const SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName);
+    const uint64_t StartAddr = unwrapOrError(Symbol.getAddress(), FileName);
+    const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
+    uint64_t Size = 0;
+    if (LLVM_LIKELY(IsELFObject)) {
+      ELFSymbolRef ElfSymbol(Symbol);
+      Size = ElfSymbol.getSize();
+    }
+
+    if (Size == 0 || Type != SymbolRef::ST_Function)
+      continue;
+
+    const uint64_t EndAddr = StartAddr + Size;
+    const StringRef SymName =
+        FunctionSamples::getCanonicalFnName(Name, Suffixes);
+    assert(StartAddr < EndAddr && StartAddr >= getPreferredBaseAddress() &&
+           "Function range is invalid.");
+
+    auto Range = findFuncRange(StartAddr);
+    if (!Range) {
+      assert(findFuncRange(EndAddr - 1) == nullptr &&
+             "Function range overlaps with existing functions.");
+      // Function from symbol table not found previously in DWARF, store ranges.
+      auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
+      auto &Func = Ret.first->second;
+      if (Ret.second) {
+        Func.FuncName = Ret.first->first;
+        HashBinaryFunctions[Function::getGUIDAssumingExternalLinkage(SymName)] =
+            &Func;
+      }
+
+      Func.NameStatus = DwarfNameStatus::Missing;
+      Func.Ranges.emplace_back(StartAddr, EndAddr);
+
+      auto R = StartAddrToFuncRangeMap.emplace(StartAddr, FuncRange());
+      FuncRange &FRange = R.first->second;
+
+      FRange.Func = &Func;
+      FRange.StartAddress = StartAddr;
+      FRange.EndAddress = EndAddr;
+
+    } else if (SymName != Range->getFuncName()) {
+      // Function range already found from DWARF, but the symbol name from
+      // symbol table is inconsistent with debug info. Log this discrepancy and
+      // the alternative function GUID.
+      if (ShowDetailedWarning)
+        WithColor::warning()
+            << "Conflicting name for symbol " << Name << " with range ("
+            << format("%8" PRIx64, StartAddr) << ", "
+            << format("%8" PRIx64, EndAddr) << ")"
+            << ", but the DWARF symbol " << Range->getFuncName()
+            << " indicates an overlapping range ("
+            << format("%8" PRIx64, Range->StartAddress) << ", "
+            << format("%8" PRIx64, Range->EndAddress) << ")\n";
+
+      assert(StartAddr == Range->StartAddress && EndAddr == Range->EndAddress &&
+             "Mismatched function range");
+
+      Range->Func->NameStatus = DwarfNameStatus::Mismatch;
+      AlternativeFunctionGUIDs.emplace(
+          Range->Func, Function::getGUIDAssumingExternalLinkage(SymName));
+
+    } else if (StartAddr != Range->StartAddress &&
+               EndAddr != Range->EndAddress) {
+      // Function already found in DWARF, but the address range from symbol
+      // table conflicts/overlaps with the debug info.
+      WithColor::warning() << "Conflicting range for symbol " << Name
+                           << " with range (" << format("%8" PRIx64, StartAddr)
+                           << ", " << format("%8" PRIx64, EndAddr) << ")"
+                           << ", but the DWARF symbol " << Range->getFuncName()
+                           << " indicates another range ("
+                           << format("%8" PRIx64, Range->StartAddress) << ", "
+                           << format("%8" PRIx64, Range->EndAddress) << ")\n";
+    }
   }
 }
 
@@ -1032,6 +1147,58 @@ void ProfiledBinary::computeInlinedContextSizeForFunc(
                                                  ProbeContext);
     }
   }
+}
+
+void ProfiledBinary::loadSymbolsFromPseudoProbe() {
+  if (!UsePseudoProbes)
+    return;
+
+  const AddressProbesMap &Address2ProbesMap = getAddress2ProbesMap();
+  for (auto *Func : ProfiledFunctions) {
+    if (Func->NameStatus != DwarfNameStatus::Mismatch)
+      continue;
+    for (auto &[StartAddr, EndAddr] : Func->Ranges) {
+      auto Range = findFuncRangeForStartAddr(StartAddr);
+      if (!Range->IsFuncEntry)
+        continue;
+      const auto &Probe = Address2ProbesMap.find(StartAddr, EndAddr);
+      if (Probe.begin() != Probe.end()) {
+        const MCDecodedPseudoProbeInlineTree *InlineTreeNode =
+            Probe.begin()->get().getInlineTreeNode();
+        while (!InlineTreeNode->isTopLevelFunc())
+          InlineTreeNode = static_cast<MCDecodedPseudoProbeInlineTree *>(
+              InlineTreeNode->Parent);
+
+        auto TopLevelProbes = InlineTreeNode->getProbes();
+        [[maybe_unused]] auto TopProbe = TopLevelProbes.begin();
+        assert(TopProbe != TopLevelProbes.end() &&
+               TopProbe->getAddress() >= StartAddr &&
+               TopProbe->getAddress() < EndAddr &&
+               "Top level pseudo probe does not match function range");
+
+        const auto *ProbeDesc = getFuncDescForGUID(InlineTreeNode->Guid);
+        auto Ret = PseudoProbeNames.emplace(Func, ProbeDesc->FuncName);
+        if (!Ret.second && Ret.first->second != ProbeDesc->FuncName &&
+            ShowDetailedWarning)
+          WithColor::warning()
+              << "Mismatched pseudo probe names in function " << Func->FuncName
+              << " at range: (" << format("%8" PRIx64, StartAddr) << ", "
+              << format("%8" PRIx64, EndAddr) << "). "
+              << "The previously found pseudo probe name is "
+              << Ret.first->second << " but it conflicts with name "
+              << ProbeDesc->FuncName
+              << " This likely indicates a DWARF error that produces "
+                 "conflicting symbols at the same starting address.\n";
+      }
+    }
+  }
+}
+
+StringRef ProfiledBinary::findPseudoProbeName(const BinaryFunction *Func) {
+  auto ProbeName = PseudoProbeNames.find(Func);
+  if (ProbeName == PseudoProbeNames.end())
+    return StringRef();
+  return ProbeName->second;
 }
 
 void ProfiledBinary::inferMissingFrames(

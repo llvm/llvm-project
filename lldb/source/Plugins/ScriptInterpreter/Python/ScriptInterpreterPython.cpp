@@ -272,6 +272,7 @@ void ScriptInterpreterPython::SharedLibraryDirectoryHelper(
   // does.
   if (this_file.GetFileNameExtension() == ".pyd") {
     this_file.RemoveLastPathComponent(); // _lldb.pyd or _lldb_d.pyd
+    this_file.RemoveLastPathComponent(); // native
     this_file.RemoveLastPathComponent(); // lldb
     llvm::StringRef libdir = LLDB_PYTHON_RELATIVE_LIBDIR;
     for (auto it = llvm::sys::path::begin(libdir),
@@ -1524,6 +1525,11 @@ ScriptInterpreterPythonImpl::CreateScriptedThreadInterface() {
 ScriptedFrameInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedFrameInterface() {
   return std::make_shared<ScriptedFramePythonInterface>(*this);
+}
+
+ScriptedFrameProviderInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedFrameProviderInterface() {
+  return std::make_shared<ScriptedFrameProviderPythonInterface>(*this);
 }
 
 ScriptedThreadPlanInterfaceSP

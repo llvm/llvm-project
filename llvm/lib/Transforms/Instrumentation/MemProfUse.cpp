@@ -63,6 +63,11 @@ static cl::opt<bool>
                             cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
+    PrintFunctionGuids("memprof-print-function-guids",
+                       cl::desc("Print function GUIDs computed for matching"),
+                       cl::Hidden, cl::init(false));
+
+static cl::opt<bool>
     SalvageStaleProfile("memprof-salvage-stale-profile",
                         cl::desc("Salvage stale MemProf profile"),
                         cl::init(false), cl::Hidden);
@@ -127,15 +132,19 @@ static uint64_t computeStackId(const memprof::Frame &Frame) {
   return computeStackId(Frame.Function, Frame.LineOffset, Frame.Column);
 }
 
+static AllocationType getAllocType(const AllocationInfo *AllocInfo) {
+  return getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
+                      AllocInfo->Info.getAllocCount(),
+                      AllocInfo->Info.getTotalLifetime());
+}
+
 static AllocationType addCallStack(CallStackTrie &AllocTrie,
                                    const AllocationInfo *AllocInfo,
                                    uint64_t FullStackId) {
   SmallVector<uint64_t> StackIds;
   for (const auto &StackFrame : AllocInfo->CallStack)
     StackIds.push_back(computeStackId(StackFrame));
-  auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
-                                AllocInfo->Info.getAllocCount(),
-                                AllocInfo->Info.getTotalLifetime());
+  auto AllocType = getAllocType(AllocInfo);
   std::vector<ContextTotalSize> ContextSizeInfo;
   if (recordContextSizeInfoForAnalysis()) {
     auto TotalSize = AllocInfo->Info.getTotalSize();
@@ -405,22 +414,39 @@ handleAllocSite(Instruction &I, CallBase *CI,
                 const std::set<const AllocationInfo *> &AllocInfoSet,
                 std::map<std::pair<uint64_t, unsigned>, AllocMatchInfo>
                     &FullStackIdToAllocMatchInfo) {
+  // TODO: Remove this once the profile creation logic deduplicates contexts
+  // that are the same other than the IsInlineFrame bool. Until then, keep the
+  // largest.
+  DenseMap<uint64_t, const AllocationInfo *> UniqueFullContextIdAllocInfo;
+  for (auto *AllocInfo : AllocInfoSet) {
+    auto FullStackId = computeFullStackId(AllocInfo->CallStack);
+    auto [It, Inserted] =
+        UniqueFullContextIdAllocInfo.insert({FullStackId, AllocInfo});
+    // If inserted entry, done.
+    if (Inserted)
+      continue;
+    // Keep the larger one, or the noncold one if they are the same size.
+    auto CurSize = It->second->Info.getTotalSize();
+    auto NewSize = AllocInfo->Info.getTotalSize();
+    if ((CurSize > NewSize) ||
+        (CurSize == NewSize &&
+         getAllocType(AllocInfo) != AllocationType::NotCold))
+      continue;
+    It->second = AllocInfo;
+  }
   // We may match this instruction's location list to multiple MIB
   // contexts. Add them to a Trie specialized for trimming the contexts to
   // the minimal needed to disambiguate contexts with unique behavior.
   CallStackTrie AllocTrie(&ORE, MaxColdSize);
   uint64_t TotalSize = 0;
   uint64_t TotalColdSize = 0;
-  for (auto *AllocInfo : AllocInfoSet) {
+  for (auto &[FullStackId, AllocInfo] : UniqueFullContextIdAllocInfo) {
     // Check the full inlined call stack against this one.
     // If we found and thus matched all frames on the call, include
     // this MIB.
     if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
                                            InlinedCallStack)) {
       NumOfMemProfMatchedAllocContexts++;
-      uint64_t FullStackId = 0;
-      if (ClPrintMemProfMatchInfo || recordContextSizeInfoForAnalysis())
-        FullStackId = computeFullStackId(AllocInfo->CallStack);
       auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
       TotalSize += AllocInfo->Info.getTotalSize();
       if (AllocType == AllocationType::Cold)
@@ -433,6 +459,15 @@ handleAllocSite(Instruction &I, CallBase *CI,
                                                    InlinedCallStack.size())] = {
             AllocInfo->Info.getTotalSize(), AllocType};
       }
+      ORE.emit(
+          OptimizationRemark(DEBUG_TYPE, "MemProfUse", CI)
+          << ore::NV("AllocationCall", CI) << " in function "
+          << ore::NV("Caller", CI->getFunction())
+          << " matched alloc context with alloc type "
+          << ore::NV("Attribute", getAllocTypeAttributeString(AllocType))
+          << " total size " << ore::NV("Size", AllocInfo->Info.getTotalSize())
+          << " full context id " << ore::NV("Context", FullStackId)
+          << " frame count " << ore::NV("Frames", InlinedCallStack.size()));
     }
   }
   // If the threshold for the percent of cold bytes is less than 100%,
@@ -474,53 +509,59 @@ struct CallSiteEntry {
   ArrayRef<Frame> Frames;
   // Potential targets for indirect calls.
   ArrayRef<GlobalValue::GUID> CalleeGuids;
-
-  // Only compare Frame contents.
-  // Use pointer-based equality instead of ArrayRef's operator== which does
-  // element-wise comparison. We want to check if it's the same slice of the
-  // underlying array, not just equivalent content.
-  bool operator==(const CallSiteEntry &Other) const {
-    return Frames.data() == Other.Frames.data() &&
-           Frames.size() == Other.Frames.size();
-  }
 };
 
-struct CallSiteEntryHash {
-  size_t operator()(const CallSiteEntry &Entry) const {
-    return computeFullStackId(Entry.Frames);
-  }
-};
-
-static void handleCallSite(
-    Instruction &I, const Function *CalledFunction,
-    ArrayRef<uint64_t> InlinedCallStack,
-    const std::unordered_set<CallSiteEntry, CallSiteEntryHash> &CallSiteEntries,
-    Module &M, std::set<std::vector<uint64_t>> &MatchedCallSites) {
+static void handleCallSite(Instruction &I, const Function *CalledFunction,
+                           ArrayRef<uint64_t> InlinedCallStack,
+                           const std::vector<CallSiteEntry> &CallSiteEntries,
+                           Module &M,
+                           std::set<std::vector<uint64_t>> &MatchedCallSites,
+                           OptimizationRemarkEmitter &ORE) {
   auto &Ctx = M.getContext();
+  // Set of Callee GUIDs to attach to indirect calls. We accumulate all of them
+  // to support cases where the instuction's inlined frames match multiple call
+  // site entries, which can happen if the profile was collected from a binary
+  // where this instruction was eventually inlined into multiple callers.
+  SetVector<GlobalValue::GUID> CalleeGuids;
+  bool CallsiteMDAdded = false;
   for (const auto &CallSiteEntry : CallSiteEntries) {
     // If we found and thus matched all frames on the call, create and
     // attach call stack metadata.
     if (stackFrameIncludesInlinedCallStack(CallSiteEntry.Frames,
                                            InlinedCallStack)) {
       NumOfMemProfMatchedCallSites++;
-      addCallsiteMetadata(I, InlinedCallStack, Ctx);
-
-      // Try to attach indirect call metadata if possible.
-      if (!CalledFunction)
-        addVPMetadata(M, I, CallSiteEntry.CalleeGuids);
-
       // Only need to find one with a matching call stack and add a single
       // callsite metadata.
+      if (!CallsiteMDAdded) {
+        addCallsiteMetadata(I, InlinedCallStack, Ctx);
 
-      // Accumulate call site matching information upon request.
-      if (ClPrintMemProfMatchInfo) {
-        std::vector<uint64_t> CallStack;
-        append_range(CallStack, InlinedCallStack);
-        MatchedCallSites.insert(std::move(CallStack));
+        // Accumulate call site matching information upon request.
+        if (ClPrintMemProfMatchInfo) {
+          std::vector<uint64_t> CallStack;
+          append_range(CallStack, InlinedCallStack);
+          MatchedCallSites.insert(std::move(CallStack));
+        }
+        ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", &I)
+                 << ore::NV("CallSite", &I) << " in function "
+                 << ore::NV("Caller", I.getFunction())
+                 << " matched callsite with frame count "
+                 << ore::NV("Frames", InlinedCallStack.size()));
+
+        // If this is a direct call, we're done.
+        if (CalledFunction)
+          break;
+        CallsiteMDAdded = true;
       }
-      break;
+
+      assert(!CalledFunction && "Didn't expect direct call");
+
+      // Collect Callee GUIDs from all matching CallSiteEntries.
+      CalleeGuids.insert(CallSiteEntry.CalleeGuids.begin(),
+                         CallSiteEntry.CalleeGuids.end());
     }
   }
+  // Try to attach indirect call metadata if possible.
+  addVPMetadata(M, I, CalleeGuids.getArrayRef());
 }
 
 static void readMemprof(Module &M, Function &F,
@@ -541,6 +582,9 @@ static void readMemprof(Module &M, Function &F,
   // linkage function.
   auto FuncName = F.getName();
   auto FuncGUID = Function::getGUIDAssumingExternalLinkage(FuncName);
+  if (PrintFunctionGuids)
+    errs() << "MemProf: Function GUID " << FuncGUID << " is " << FuncName
+           << "\n";
   std::optional<memprof::MemProfRecord> MemProfRec;
   auto Err = MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec);
   if (Err) {
@@ -595,8 +639,7 @@ static void readMemprof(Module &M, Function &F,
 
   // For the callsites we need to record slices of the frame array (see comments
   // below where the map entries are added) along with their CalleeGuids.
-  std::map<uint64_t, std::unordered_set<CallSiteEntry, CallSiteEntryHash>>
-      LocHashToCallSites;
+  std::map<uint64_t, std::vector<CallSiteEntry>> LocHashToCallSites;
   for (auto &AI : MemProfRec->AllocSites) {
     NumOfMemProfAllocContextProfiles++;
     // Associate the allocation info with the leaf frame. The later matching
@@ -615,7 +658,7 @@ static void readMemprof(Module &M, Function &F,
       uint64_t StackId = computeStackId(StackFrame);
       ArrayRef<Frame> FrameSlice = ArrayRef<Frame>(CS.Frames).drop_front(Idx++);
       ArrayRef<GlobalValue::GUID> CalleeGuids(CS.CalleeGuids);
-      LocHashToCallSites[StackId].insert({FrameSlice, CalleeGuids});
+      LocHashToCallSites[StackId].push_back({FrameSlice, CalleeGuids});
 
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
@@ -698,7 +741,7 @@ static void readMemprof(Module &M, Function &F,
         // instruction's leaf location in the callsites map and not the
         // allocation map.
         handleCallSite(I, CalledFunction, InlinedCallStack,
-                       CallSitesIter->second, M, MatchedCallSites);
+                       CallSitesIter->second, M, MatchedCallSites, ORE);
     }
   }
 }

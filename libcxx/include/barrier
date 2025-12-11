@@ -158,7 +158,9 @@ class barrier {
 public:
   using arrival_token = typename __barrier_base<_CompletionF>::arrival_token;
 
-  static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept { return __barrier_base<_CompletionF>::max(); }
+  [[nodiscard]] static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept {
+    return __barrier_base<_CompletionF>::max();
+  }
 
   _LIBCPP_HIDE_FROM_ABI explicit barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
       : __b_(__count, std::move(__completion)) {

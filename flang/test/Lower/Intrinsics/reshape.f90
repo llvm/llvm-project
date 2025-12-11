@@ -24,16 +24,16 @@ subroutine reshape_test(x, source, pd, sh, ord)
   ! CHECK-DAG:  %[[a18:.*]] = fir.box_addr %[[a15]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
   ! CHECK-DAG:  fir.freemem %[[a18]]
   end subroutine
-  
+
   ! CHECK-LABEL: func @_QPtest_reshape_optional(
   ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
   ! CHECK-SAME:  %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   subroutine test_reshape_optional(pad, order, source, shape)
-    real, pointer :: pad(:, :) 
-    integer, pointer :: order(:) 
+    real, pointer :: pad(:, :)
+    integer, pointer :: order(:)
     real :: source(:, :, :)
-    integer :: shape(4) 
-    print *, reshape(source=source, shape=shape, pad=pad, order=order)  
+    integer :: shape(4)
+    print *, reshape(source=source, shape=shape, pad=pad, order=order)
   ! CHECK:  %[[VAL_13:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
   ! CHECK:  %[[VAL_14:.*]] = fir.box_addr %[[VAL_13]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>) -> !fir.ptr<!fir.array<?x?xf32>>
   ! CHECK:  %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (!fir.ptr<!fir.array<?x?xf32>>) -> i64

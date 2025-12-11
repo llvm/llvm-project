@@ -79,7 +79,7 @@ struct CustomMappingTraits<
       }
       Args.push_back(Arg);
     }
-    io.mapRequired(Key.str().c_str(), V[Args]);
+    io.mapRequired(Key, V[Args]);
   }
   static void output(
       IO &io,
@@ -91,7 +91,7 @@ struct CustomMappingTraits<
           Key += ',';
         Key += llvm::utostr(Arg);
       }
-      io.mapRequired(Key.c_str(), P.second);
+      io.mapRequired(Key, P.second);
     }
   }
 };
@@ -122,11 +122,11 @@ struct CustomMappingTraits<std::map<uint64_t, WholeProgramDevirtResolution>> {
       io.setError("key not an integer");
       return;
     }
-    io.mapRequired(Key.str().c_str(), V[KeyInt]);
+    io.mapRequired(Key, V[KeyInt]);
   }
   static void output(IO &io, std::map<uint64_t, WholeProgramDevirtResolution> &V) {
     for (auto &P : V)
-      io.mapRequired(llvm::utostr(P.first).c_str(), P.second);
+      io.mapRequired(llvm::utostr(P.first), P.second);
   }
 };
 
@@ -215,7 +215,7 @@ namespace yaml {
 template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
   static void inputOne(IO &io, StringRef Key, GlobalValueSummaryMapTy &V) {
     std::vector<GlobalValueSummaryYaml> GVSums;
-    io.mapRequired(Key.str().c_str(), GVSums);
+    io.mapRequired(Key, GVSums);
     uint64_t KeyInt;
     if (Key.getAsInteger(0, KeyInt)) {
       io.setError("key not an integer");
@@ -290,7 +290,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
         }
       }
       if (!GVSums.empty())
-        io.mapRequired(llvm::utostr(P.first).c_str(), GVSums);
+        io.mapRequired(llvm::utostr(P.first), GVSums);
     }
   }
   static void fixAliaseeLinks(GlobalValueSummaryMapTy &V) {
@@ -313,12 +313,12 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
 template <> struct CustomMappingTraits<TypeIdSummaryMapTy> {
   static void inputOne(IO &io, StringRef Key, TypeIdSummaryMapTy &V) {
     TypeIdSummary TId;
-    io.mapRequired(Key.str().c_str(), TId);
+    io.mapRequired(Key, TId);
     V.insert({GlobalValue::getGUIDAssumingExternalLinkage(Key), {Key, TId}});
   }
   static void output(IO &io, TypeIdSummaryMapTy &V) {
     for (auto &TidIter : V)
-      io.mapRequired(TidIter.second.first.str().c_str(), TidIter.second.second);
+      io.mapRequired(TidIter.second.first, TidIter.second.second);
   }
 };
 

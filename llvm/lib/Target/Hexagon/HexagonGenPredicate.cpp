@@ -30,7 +30,6 @@
 #include <cassert>
 #include <iterator>
 #include <queue>
-#include <utility>
 
 #define DEBUG_TYPE "gen-pred"
 

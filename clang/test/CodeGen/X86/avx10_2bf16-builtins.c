@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64 -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386 -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386   -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
+
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64 -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386   -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 __m256bh test_mm256_setzero_pbh() {
   // CHECK-LABEL: @test_mm256_setzero_pbh
@@ -353,6 +357,7 @@ __m128bh test_mm_move_sbh(__m128bh A, __m128bh B) {
   // CHECK: insertelement <8 x bfloat> %{{.*}}, bfloat %{{.*}}, i32 0
   return _mm_move_sbh(A, B);
 }
+TEST_CONSTEXPR(match_m128bh(_mm_move_sbh((__m128bh)(__v8bf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f}, (__m128bh)(__v8bf){9.0f,10.0f,11.0f,12.0f,13.0f,14.0f,15.0f,16.0f}), 9.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f));
 
 __m128bh test_mm_mask_move_sbh(__m128bh __W, __mmask8 __U, __m128bh __A, __m128bh __B) {
   // CHECK-LABEL: @test_mm_mask_move_sbh
@@ -366,6 +371,7 @@ __m128bh test_mm_mask_move_sbh(__m128bh __W, __mmask8 __U, __m128bh __A, __m128b
   // CHECK-NEXT: insertelement <8 x bfloat> [[VEC]], bfloat [[SEL]], i64 0
   return _mm_mask_move_sbh(__W, __U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128bh(_mm_mask_move_sbh((__m128bh)(__v8bf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f}, (__mmask8)0x01, (__m128bh)(__v8bf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}, (__m128bh)(__v8bf){9.0f,10.0f,11.0f,12.0f,13.0f,14.0f,15.0f,16.0f}), 9.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f));
 
 __m128bh test_mm_maskz_move_sbh(__mmask8 __U, __m128bh __A, __m128bh __B) {
   // CHECK-LABEL: @test_mm_maskz_move_sbh

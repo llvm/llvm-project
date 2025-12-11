@@ -41,7 +41,7 @@ void DurationSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Scale)
     return;
 
-  std::string RhsReplacement =
+  const std::string RhsReplacement =
       rewriteExprFromNumberToDuration(Result, *Scale, Binop->getRHS());
 
   const Expr *LhsArg = Result.Nodes.getNodeAs<Expr>("lhs_arg");

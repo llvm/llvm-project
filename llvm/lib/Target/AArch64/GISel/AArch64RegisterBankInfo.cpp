@@ -483,6 +483,14 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_sqadd:
   case Intrinsic::aarch64_neon_sqsub:
   case Intrinsic::aarch64_crypto_sha1h:
+  case Intrinsic::aarch64_neon_srshl:
+  case Intrinsic::aarch64_neon_urshl:
+  case Intrinsic::aarch64_neon_sqshl:
+  case Intrinsic::aarch64_neon_uqshl:
+  case Intrinsic::aarch64_neon_sqrshl:
+  case Intrinsic::aarch64_neon_uqrshl:
+  case Intrinsic::aarch64_neon_ushl:
+  case Intrinsic::aarch64_neon_sshl:
   case Intrinsic::aarch64_crypto_sha1c:
   case Intrinsic::aarch64_crypto_sha1p:
   case Intrinsic::aarch64_crypto_sha1m:
@@ -560,6 +568,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
+  case AArch64::G_PMULL:
     return true;
   case TargetOpcode::G_INTRINSIC:
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {

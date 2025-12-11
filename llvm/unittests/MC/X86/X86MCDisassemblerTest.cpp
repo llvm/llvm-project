@@ -62,7 +62,7 @@ Context &getContext() {
 class X86MCSymbolizerTest : public MCSymbolizer {
 public:
   X86MCSymbolizerTest(MCContext &MC) : MCSymbolizer(MC, nullptr) {}
-  ~X86MCSymbolizerTest() override {}
+  ~X86MCSymbolizerTest() override = default;
 
   struct OpInfo {
     int64_t Value = 0;

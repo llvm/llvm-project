@@ -708,7 +708,7 @@ struct DEMANGLE_ABI SpecialTableSymbolNode : public SymbolNode {
     return N->kind() == NodeKind::SpecialTableSymbol;
   }
 
-  QualifiedNameNode *TargetName = nullptr;
+  NodeArrayNode *TargetNames = nullptr;
   Qualifiers Quals = Qualifiers::Q_None;
 };
 

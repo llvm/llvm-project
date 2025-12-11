@@ -293,6 +293,7 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 //   CHAR8SUPPORT - This is a keyword if 'char8_t' is a built-in type
 //   KEYFIXEDPOINT - This is a keyword according to the N1169 fixed point
 //                   extension.
+//   KEYDEFERTS - This is a keyword if the C '_Defer' TS is enabled
 //   KEYZOS - This is a keyword in C/C++ on z/OS
 //
 KEYWORD(auto                        , KEYALL)
@@ -440,6 +441,9 @@ KEYWORD(_Float16                    , KEYALL)
 // C23 keywords
 C23_KEYWORD(typeof                  , KEYGNU)
 C23_KEYWORD(typeof_unqual           , 0)
+
+// '_Defer' TS
+KEYWORD(_Defer                      , KEYDEFERTS)
 
 // ISO/IEC JTC1 SC22 WG14 N1169 Extension
 KEYWORD(_Accum                      , KEYFIXEDPOINT)

@@ -150,9 +150,9 @@ public:
     assert(!isInvalid() && "Loop not in a valid state!");
     return SubLoops;
   }
-  typedef typename std::vector<LoopT *>::const_iterator iterator;
-  typedef
-      typename std::vector<LoopT *>::const_reverse_iterator reverse_iterator;
+  using iterator = typename std::vector<LoopT *>::const_iterator;
+  using reverse_iterator =
+      typename std::vector<LoopT *>::const_reverse_iterator;
   iterator begin() const { return getSubLoops().begin(); }
   iterator end() const { return getSubLoops().end(); }
   reverse_iterator rbegin() const { return getSubLoops().rbegin(); }
@@ -174,7 +174,7 @@ public:
     assert(!isInvalid() && "Loop not in a valid state!");
     return Blocks;
   }
-  typedef typename ArrayRef<BlockT *>::const_iterator block_iterator;
+  using block_iterator = typename ArrayRef<BlockT *>::const_iterator;
   block_iterator block_begin() const { return getBlocks().begin(); }
   block_iterator block_end() const { return getBlocks().end(); }
   inline iterator_range<block_iterator> blocks() const {
@@ -302,7 +302,7 @@ public:
   bool hasNoExitBlocks() const;
 
   /// Edge type.
-  typedef std::pair<BlockT *, BlockT *> Edge;
+  using Edge = std::pair<BlockT *, BlockT *>;
 
   /// Return all pairs of (_inside_block_,_outside_block_).
   void getExitEdges(SmallVectorImpl<Edge> &ExitEdges) const;
@@ -575,9 +575,9 @@ public:
   /// iterator/begin/end - The interface to the top-level loops in the current
   /// function.
   ///
-  typedef typename std::vector<LoopT *>::const_iterator iterator;
-  typedef
-      typename std::vector<LoopT *>::const_reverse_iterator reverse_iterator;
+  using iterator = typename std::vector<LoopT *>::const_iterator;
+  using reverse_iterator =
+      typename std::vector<LoopT *>::const_reverse_iterator;
   iterator begin() const { return TopLevelLoops.begin(); }
   iterator end() const { return TopLevelLoops.end(); }
   reverse_iterator rbegin() const { return TopLevelLoops.rbegin(); }
@@ -614,6 +614,17 @@ public:
     const LoopT *L = getLoopFor(BB);
     return L ? L->getLoopDepth() : 0;
   }
+
+  /// \brief Find the innermost loop containing both given loops.
+  ///
+  /// \returns the innermost loop containing both \p A and \p B
+  ///          or nullptr if there is no such loop.
+  LoopT *getSmallestCommonLoop(LoopT *A, LoopT *B) const;
+  /// \brief Find the innermost loop containing both given blocks.
+  ///
+  /// \returns the innermost loop containing both \p A and \p B
+  ///          or nullptr if there is no such loop.
+  LoopT *getSmallestCommonLoop(BlockT *A, BlockT *B) const;
 
   // True if the block is a loop header node
   bool isLoopHeader(const BlockT *BB) const {

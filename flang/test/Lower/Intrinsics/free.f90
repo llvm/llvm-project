@@ -7,8 +7,8 @@ subroutine free_ptr()
   pointer (ptr_x, x)
   ! CHECK:           %[[X:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
   ! CHECK:           %[[X_PTR:.*]] = fir.alloca i64 {bindc_name = "ptr_x", uniq_name = "_QFfree_ptrEptr_x"}
-  ! CHECK:           %[[X_PTR_DECL:.*]]:2 = hlfir.declare %[[X_PTR]] {uniq_name = "_QFfree_ptrEptr_x"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-  ! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFfree_ptrEx"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+  ! CHECK:           %[[X_PTR_DECL:.*]]:2 = hlfir.declare %[[X_PTR]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFfree_ptrEptr_x"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+  ! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFfree_ptrEx"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
   ! CHECK:           %[[X_LD:.*]] = fir.load %[[X_PTR_DECL]]#0 : !fir.ref<i64>
   ! CHECK:           fir.call @_FortranAFree(%[[X_LD]]) fastmath<contract> : (i64) -> ()
   ! CHECK:           return

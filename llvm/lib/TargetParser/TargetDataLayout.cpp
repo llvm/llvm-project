@@ -208,7 +208,7 @@ static std::string computeMipsDataLayout(const Triple &TT, StringRef ABIName) {
   return Ret;
 }
 
-static std::string computePowerDataLayout(const Triple &T) {
+static std::string computePowerDataLayout(const Triple &T, StringRef ABIName) {
   bool is64Bit = T.isPPC64();
   std::string Ret;
 
@@ -228,7 +228,8 @@ static std::string computePowerDataLayout(const Triple &T) {
   // If the target ABI uses function descriptors, then the alignment of function
   // pointers depends on the alignment used to emit the descriptor. Otherwise,
   // function pointers are aligned to 32 bits because the instructions must be.
-  if ((T.getArch() == Triple::ppc64 && !T.isPPC64ELFv2ABI())) {
+  if ((T.getArch() == Triple::ppc64 &&
+       (!T.isPPC64ELFv2ABI() && ABIName != "elfv2"))) {
     Ret += "-Fi64";
   } else if (T.isOSAIX()) {
     Ret += is64Bit ? "-Fi64" : "-Fi32";
@@ -245,6 +246,10 @@ static std::string computePowerDataLayout(const Triple &T) {
     Ret += "-i128:128-n32:64";
   else
     Ret += "-n32";
+
+  // The ABI alignment for doubles on AIX is 4 bytes.
+  if (T.isOSAIX())
+    Ret += "-f64:32:64";
 
   // Specify the vector alignment explicitly. For v256i1 and v512i1, the
   // calculated alignment would be 256*alignment(i1) and 512*alignment(i1),
@@ -573,7 +578,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::ppcle:
   case Triple::ppc64:
   case Triple::ppc64le:
-    return computePowerDataLayout(*this);
+    return computePowerDataLayout(*this, ABIName);
   case Triple::r600:
   case Triple::amdgcn:
     return computeAMDDataLayout(*this);
@@ -594,6 +599,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::x86_64:
     return computeX86DataLayout(*this);
   case Triple::xcore:
+    return "e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i64:32-f64:32-a:0:32-n32";
   case Triple::xtensa:
     return "e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32";
   case Triple::nvptx:

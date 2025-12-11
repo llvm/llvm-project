@@ -24,7 +24,7 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-void test() {
+constexpr bool test() {
   {
     using A1 = limited_allocator<int, 10>;
     using C  = std::flat_multiset<int, std::less<int>, std::vector<int, A1>>;
@@ -59,10 +59,15 @@ void test() {
     assert(c.max_size() <= max_dist);
     assert(c.max_size() <= alloc_max_size(std::allocator<char>()));
   }
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
