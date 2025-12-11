@@ -5330,12 +5330,11 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
 
   DataExtractor Data(SectionBytesOrErr.get(), Obj.isLE(),
                      ObjF.getBytesInAddress());
+  DataExtractor::Cursor C(0);
   uint64_t UnknownCount = 0;
-  uint64_t Offset = 0;
-  while (Offset < CGSection->sh_size) {
-    Error CGSectionErr = Error::success();
-    uint8_t FormatVersionNumber = Data.getU8(&Offset, &CGSectionErr);
-    if (CGSectionErr) {
+  while (C && C.tell() < CGSection->sh_size) {
+    uint8_t FormatVersionNumber = Data.getU8(C);
+    if (!C) {
       reportWarning(createError("failed while reading FormatVersionNumber"),
                     FileName);
       return false;
@@ -5348,8 +5347,8 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       return false;
     }
 
-    uint8_t FlagsVal = Data.getU8(&Offset, &CGSectionErr);
-    if (CGSectionErr) {
+    uint8_t FlagsVal = Data.getU8(C);
+    if (!C) {
       reportWarning(createError("failed while reading call graph info's Flags"),
                     FileName);
       return false;
@@ -5362,10 +5361,10 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       return false;
     }
 
-    uint64_t FuncAddrOffset = Offset;
+    uint64_t FuncAddrOffset = C.tell();
     typename ELFT::uint FuncAddr =
-        Data.getUnsigned(&Offset, sizeof(FuncAddr), &CGSectionErr);
-    if (CGSectionErr) {
+        Data.getUnsigned(C, sizeof(typename ELFT::uint));
+    if (!C) {
       reportWarning(
           createError("failed while reading call graph info function entry PC"),
           FileName);
@@ -5380,9 +5379,9 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     bool IsIndirectTarget =
         (CGFlags & callgraph::IsIndirectTarget) != callgraph::None;
     CGInfo.IsIndirectTarget = IsIndirectTarget;
-    uint64_t TypeId = Data.getU64(&Offset, &CGSectionErr);
-    if (CGSectionErr) {
-      reportWarning(std::move(CGSectionErr), FileName);
+    uint64_t TypeId = Data.getU64(C);
+    if (!C) {
+      reportWarning(C.takeError(), FileName);
       return false;
     }
     CGInfo.FunctionTypeId = TypeId;
@@ -5393,18 +5392,18 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
         (CGFlags & callgraph::HasDirectCallees) != callgraph::None;
     if (HasDirectCallees) {
       // Read number of direct call sites for this function.
-      uint64_t NumDirectCallees = Data.getULEB128(&Offset, &CGSectionErr);
-      if (CGSectionErr) {
-        reportWarning(std::move(CGSectionErr), FileName);
+      uint64_t NumDirectCallees = Data.getULEB128(C);
+      if (!C) {
+        reportWarning(C.takeError(), FileName);
         return false;
       }
       // Read unique direct callees and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumDirectCallees; ++I) {
-        uint64_t CalleeOffset = Offset;
+        uint64_t CalleeOffset = C.tell();
         typename ELFT::uint Callee =
-            Data.getUnsigned(&Offset, sizeof(Callee), &CGSectionErr);
-        if (CGSectionErr) {
-          reportWarning(std::move(CGSectionErr), FileName);
+            Data.getUnsigned(C, sizeof(typename ELFT::uint));
+        if (!C) {
+          reportWarning(C.takeError(), FileName);
           return false;
         }
         CGInfo.DirectCallees.insert((IsETREL ? CalleeOffset : Callee));
@@ -5414,17 +5413,16 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     bool HasIndirectTypeIds =
         (CGFlags & callgraph::HasIndirectCallees) != callgraph::None;
     if (HasIndirectTypeIds) {
-      uint64_t NumIndirectTargetTypeIDs =
-          Data.getULEB128(&Offset, &CGSectionErr);
-      if (CGSectionErr) {
-        reportWarning(std::move(CGSectionErr), FileName);
+      uint64_t NumIndirectTargetTypeIDs = Data.getULEB128(C);
+      if (!C) {
+        reportWarning(C.takeError(), FileName);
         return false;
       }
       // Read unique indirect target type IDs and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumIndirectTargetTypeIDs; ++I) {
-        uint64_t TargetType = Data.getU64(&Offset, &CGSectionErr);
-        if (CGSectionErr) {
-          reportWarning(std::move(CGSectionErr), FileName);
+        uint64_t TargetType = Data.getU64(C);
+        if (!C) {
+          reportWarning(C.takeError(), FileName);
           return false;
         }
         CGInfo.IndirectTypeIDs.insert(TargetType);
