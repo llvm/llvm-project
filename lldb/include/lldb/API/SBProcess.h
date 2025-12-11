@@ -205,6 +205,9 @@ public:
   size_t ReadCStringFromMemory(addr_t addr, void *char_buf, size_t size,
                                lldb::SBError &error);
 
+  SBStringList ReadCStringsFromMemory(SBValueList string_addresses,
+                                      SBError &error);
+
   uint64_t ReadUnsignedFromMemory(addr_t addr, uint32_t byte_size,
                                   lldb::SBError &error);
 
