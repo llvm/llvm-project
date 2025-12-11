@@ -41,8 +41,8 @@
 ;     +--------+
 ;              |
 ;          bb.18.exit
-define amdgpu_ps i32 @test12 (ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, ptr addrspace(1) %p6, ptr addrspace(1) %p7, ptr addrspace(1) %p8, ptr addrspace(1) %p9, ptr addrspace(1) %p10, ptr addrspace(1) %p11, i32 %TC1, i32 %TC2, i32 %TC3, i32 %TC4, i32 %TC5, i32 %Val1, i32 %Val2, i1 %cond1) {
-  ; CHECK-LABEL: name: test12
+define amdgpu_ps i32 @test (ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, ptr addrspace(1) %p6, ptr addrspace(1) %p7, ptr addrspace(1) %p8, ptr addrspace(1) %p9, ptr addrspace(1) %p10, ptr addrspace(1) %p11, i32 %TC1, i32 %TC2, i32 %TC3, i32 %TC4, i32 %TC5, i32 %Val1, i32 %Val2, i1 %cond1) {
+  ; CHECK-LABEL: name: test
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27

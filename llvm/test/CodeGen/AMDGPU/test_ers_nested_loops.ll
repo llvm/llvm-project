@@ -18,8 +18,8 @@
 ;                         |
 ;                     bb.6.exit
 ;
-define amdgpu_ps i32 @test9(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, i32 %TC1, i32 %TC2, i32 %TC3) {
-  ; CHECK-LABEL: name: test9
+define amdgpu_ps i32 @test(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, i32 %TC1, i32 %TC2, i32 %TC3) {
+  ; CHECK-LABEL: name: test
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11

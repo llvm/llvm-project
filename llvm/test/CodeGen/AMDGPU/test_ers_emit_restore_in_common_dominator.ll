@@ -32,8 +32,8 @@
 ;       \     |
 ;      bb.14.exit
 ;
-define amdgpu_ps i32 @test3(ptr addrspace(1) %p1, ptr addrspace(3) %p2, i1 %cond1, i1 %cond2) {
-  ; CHECK-LABEL: name: test3
+define amdgpu_ps i32 @test(ptr addrspace(1) %p1, ptr addrspace(3) %p2, i1 %cond1, i1 %cond2) {
+  ; CHECK-LABEL: name: test
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4

@@ -1617,7 +1617,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
     insertPass(&LiveVariablesID, &AMDGPUNextUseAnalysisID);
 
   if (OptEarlyRegisterSpilling)
-    insertPass(&LiveVariablesID, &AMDGPUEarlyRegisterSpillingID);
+    insertPass(&AMDGPUNextUseAnalysisID, &AMDGPUEarlyRegisterSpillingID);
 
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of

@@ -23,94 +23,20 @@ STATISTIC(NumOfERSSpills, "Number of ERS spills");
 
 static cl::opt<bool> EarlyRegisterSpilling("early-register-spilling",
                                            cl::init(true), cl::Hidden);
+
+// TODO: Remove this flag.
 static cl::opt<unsigned>
     VGPRMaxNums("max-vgprs", cl::init(0), cl::Hidden,
                 cl::desc("The maximum number of VGPRs per wave."));
 
-static bool isVCCRegister(Register Reg) {
-  return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI;
-}
-
-static bool isSpillSaveInstr(MachineInstr *MI) {
-  switch (MI->getOpcode()) {
-  case AMDGPU::SI_SPILL_S32_SAVE:
-  case AMDGPU::SI_SPILL_S64_SAVE:
-  case AMDGPU::SI_SPILL_S96_SAVE:
-  case AMDGPU::SI_SPILL_S128_SAVE:
-  case AMDGPU::SI_SPILL_S160_SAVE:
-  case AMDGPU::SI_SPILL_S192_SAVE:
-  case AMDGPU::SI_SPILL_S224_SAVE:
-  case AMDGPU::SI_SPILL_S256_SAVE:
-  case AMDGPU::SI_SPILL_S288_SAVE:
-  case AMDGPU::SI_SPILL_S320_SAVE:
-  case AMDGPU::SI_SPILL_S352_SAVE:
-  case AMDGPU::SI_SPILL_S384_SAVE:
-  case AMDGPU::SI_SPILL_S512_SAVE:
-  case AMDGPU::SI_SPILL_S1024_SAVE:
-  case AMDGPU::SI_SPILL_V32_SAVE:
-  case AMDGPU::SI_SPILL_V64_SAVE:
-  case AMDGPU::SI_SPILL_V96_SAVE:
-  case AMDGPU::SI_SPILL_V128_SAVE:
-  case AMDGPU::SI_SPILL_V160_SAVE:
-  case AMDGPU::SI_SPILL_V192_SAVE:
-  case AMDGPU::SI_SPILL_V224_SAVE:
-  case AMDGPU::SI_SPILL_V256_SAVE:
-  case AMDGPU::SI_SPILL_V288_SAVE:
-  case AMDGPU::SI_SPILL_V320_SAVE:
-  case AMDGPU::SI_SPILL_V352_SAVE:
-  case AMDGPU::SI_SPILL_V384_SAVE:
-  case AMDGPU::SI_SPILL_V512_SAVE:
-  case AMDGPU::SI_SPILL_V1024_SAVE:
-    return true;
-  default:
-    return false;
-  }
-  return false;
-}
-
-static bool isSpillRestoreInstr(MachineInstr *MI) {
-  switch (MI->getOpcode()) {
-  case AMDGPU::SI_SPILL_S32_RESTORE:
-  case AMDGPU::SI_SPILL_S64_RESTORE:
-  case AMDGPU::SI_SPILL_S96_RESTORE:
-  case AMDGPU::SI_SPILL_S128_RESTORE:
-  case AMDGPU::SI_SPILL_S160_RESTORE:
-  case AMDGPU::SI_SPILL_S192_RESTORE:
-  case AMDGPU::SI_SPILL_S224_RESTORE:
-  case AMDGPU::SI_SPILL_S256_RESTORE:
-  case AMDGPU::SI_SPILL_S288_RESTORE:
-  case AMDGPU::SI_SPILL_S320_RESTORE:
-  case AMDGPU::SI_SPILL_S352_RESTORE:
-  case AMDGPU::SI_SPILL_S384_RESTORE:
-  case AMDGPU::SI_SPILL_S512_RESTORE:
-  case AMDGPU::SI_SPILL_S1024_RESTORE:
-  case AMDGPU::SI_SPILL_V32_RESTORE:
-  case AMDGPU::SI_SPILL_V64_RESTORE:
-  case AMDGPU::SI_SPILL_V96_RESTORE:
-  case AMDGPU::SI_SPILL_V128_RESTORE:
-  case AMDGPU::SI_SPILL_V160_RESTORE:
-  case AMDGPU::SI_SPILL_V192_RESTORE:
-  case AMDGPU::SI_SPILL_V224_RESTORE:
-  case AMDGPU::SI_SPILL_V256_RESTORE:
-  case AMDGPU::SI_SPILL_V288_RESTORE:
-  case AMDGPU::SI_SPILL_V320_RESTORE:
-  case AMDGPU::SI_SPILL_V352_RESTORE:
-  case AMDGPU::SI_SPILL_V384_RESTORE:
-  case AMDGPU::SI_SPILL_V512_RESTORE:
-  case AMDGPU::SI_SPILL_V1024_RESTORE:
-    return true;
-  default:
-    return false;
-  }
-  return false;
-}
-
+// TODO: Preserve SlotIndexes analysis in getAnalysisUsage()
 void AMDGPUEarlyRegisterSpilling::updateIndexes(MachineInstr *MI) {
   if (Indexes->hasIndex(*MI))
     Indexes->removeMachineInstrFromMaps(*MI);
   Indexes->insertMachineInstrInMaps(*MI);
 }
 
+// TODO: Preserve LiveIntervals analysis in getAnalysisUsage()
 void AMDGPUEarlyRegisterSpilling::updateLiveness(Register Reg) {
   if (LIS->hasInterval(Reg))
     LIS->removeInterval(Reg);
@@ -119,14 +45,14 @@ void AMDGPUEarlyRegisterSpilling::updateLiveness(Register Reg) {
 
 void AMDGPUEarlyRegisterSpilling::updateLiveness(MachineInstr *MI) {
   for (auto &MO : MI->operands()) {
-    if (MO.isReg()) {
-      auto Reg = MO.getReg();
-      if (Reg.isVirtual()) {
-        if (LIS->hasInterval(Reg))
-          LIS->removeInterval(Reg);
-        LIS->createAndComputeVirtRegInterval(Reg);
-      }
-    }
+    if (!MO.isReg())
+      continue;
+    auto Reg = MO.getReg();
+    if (!Reg.isVirtual())
+      continue;
+    if (LIS->hasInterval(Reg))
+      LIS->removeInterval(Reg);
+    LIS->createAndComputeVirtRegInterval(Reg);
   }
 }
 
@@ -166,15 +92,14 @@ AMDGPUEarlyRegisterSpilling::emitRestore(Register DefRegToSpill,
 
 MachineInstr *
 AMDGPUEarlyRegisterSpilling::emitRestore(Register DefRegToSpill,
-                                         MachineBasicBlock *InsertBB, int FI) {
-  assert(InsertBB && "The value of the block is nullptr.");
+                                         MachineBasicBlock &InsertBB, int FI) {
   const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, DefRegToSpill);
   Register NewReg = MRI->createVirtualRegister(RC);
   RestoredRegs.insert(NewReg);
-  auto It = InsertBB->getFirstTerminator();
-  if (It == InsertBB->end())
-    It = InsertBB->instr_end();
-  TII->loadRegFromStackSlot(*InsertBB, It, NewReg, FI, RC, 0);
+  auto It = InsertBB.getFirstTerminator();
+  if (It == InsertBB.end())
+    It = InsertBB.instr_end();
+  TII->loadRegFromStackSlot(*&InsertBB, It, NewReg, FI, RC, 0);
   MachineInstr *Restore = &*(std::prev(It));
   LIS->InsertMachineInstrInMaps(*Restore);
   LLVM_DEBUG(dbgs() << "Restore instruction = " << *Restore);
@@ -185,18 +110,17 @@ AMDGPUEarlyRegisterSpilling::emitRestore(Register DefRegToSpill,
   return Restore;
 }
 
-// TODO: Enable spill spill and restore instructions.
+// TODO: Tune this check to improve spilling.
 bool AMDGPUEarlyRegisterSpilling::isLegalToSpill(Register CandidateReg) {
   assert(MRI->hasOneDef(CandidateReg) &&
          "The Register does not have one definition");
   MachineInstr *CandidateMI = MRI->getOneDef(CandidateReg)->getParent();
   return !hasPHIUseInSameBB(CandidateReg, CandidateMI->getParent()) &&
          !MRI->use_nodbg_empty(CandidateReg) &&
-         !isSpillSaveInstr(CandidateMI) && !isSpillRestoreInstr(CandidateMI) &&
+         !TII->isVGPRSpill(CandidateMI->getOpcode()) &&
          !isSpilledReg(CandidateReg) && !isRestoredReg(CandidateReg) &&
          !CandidateReg.isPhysical() && !TRI->isAGPR(*MRI, CandidateReg) &&
-         !isVCCRegister(CandidateReg) && !CandidateMI->isTerminator() &&
-         TRI->isVGPR(*MRI, CandidateReg);
+         !CandidateMI->isTerminator() && TRI->isVGPR(*MRI, CandidateReg);
 }
 
 SmallVector<Register> AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
@@ -272,8 +196,7 @@ SmallVector<Register> AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
     return Pair1.second > Pair2.second;
   });
 
-  SmallVector<Register> RegistersToSpill;
-  RegistersToSpill.reserve(RegCandidates.size());
+  SmallVector<Register> RegistersToSpill(llvm::make_first_range(RegCandidates));
   for (auto P : RegCandidates)
     RegistersToSpill.push_back(P.first);
 
@@ -307,15 +230,15 @@ bool AMDGPUEarlyRegisterSpilling::shouldEmitRestoreInCommonDominator(
     MachineBasicBlock *CommonDominatorToRestore) {
   if (SpillBlock == CommonDominatorToRestore)
     return false;
-  else if (CurMBB == CommonDominatorToRestore)
+  if (CurMBB == CommonDominatorToRestore)
     return false;
-  else if (DT->dominates(CommonDominatorToRestore, SpillBlock))
+  if (DT->dominates(CommonDominatorToRestore, SpillBlock))
     return false;
-  else if (isReachable(CommonDominatorToRestore, SpillBlock))
+  if (isReachable(CommonDominatorToRestore, SpillBlock))
     return false;
-  else if (!DT->dominates(SpillBlock, CommonDominatorToRestore))
+  if (!DT->dominates(SpillBlock, CommonDominatorToRestore))
     return false;
-  else if (MLI->getLoopFor(CommonDominatorToRestore))
+  if (MLI->getLoopFor(CommonDominatorToRestore))
     return false;
   return true;
 }
@@ -390,7 +313,7 @@ void AMDGPUEarlyRegisterSpilling::emitRestoreInstrsForDominatedUses(
   //
   // Create groups of instructions where the group head dominates the rest in
   // the group. In addition, we check if we can find an eligible common
-  // dominator that we can emit the restore isntruction.
+  // dominator where we can emit the restore instruction.
   //
   // In the following example, there are two groups. The first group consists of
   // the uses in BB3 and BB5 and the second group consists of the uses in BB4
@@ -488,16 +411,16 @@ void AMDGPUEarlyRegisterSpilling::emitRestoreInstrsForDominatedUses(
         Head = UseInCommonDominator;
         HeadMBB = CommonDominator;
       } else {
-        Restore = emitRestore(DefRegToSpill, CommonDominator, FI);
+        Restore = emitRestore(DefRegToSpill, *CommonDominator, FI);
         Head->substituteRegister(DefRegToSpill, Restore->getOperand(0).getReg(),
                                  0, *TRI);
       }
     } else if (Head->isPHI()) {
-      Restore = emitRestore(DefRegToSpill, HeadMBB, FI);
+      Restore = emitRestore(DefRegToSpill, *HeadMBB, FI);
       Head->substituteRegister(DefRegToSpill, Restore->getOperand(0).getReg(),
                                0, *TRI);
     } else if (MLI->getLoopFor(Head->getParent())) {
-      Restore = emitRestore(DefRegToSpill, HeadMBB, FI);
+      Restore = emitRestore(DefRegToSpill, *HeadMBB, FI);
       Head->substituteRegister(DefRegToSpill, Restore->getOperand(0).getReg(),
                                0, *TRI);
     } else {
@@ -808,7 +731,7 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
                  FI);
   }
   // Reset the tracker because it has already read the next instruction which
-  // we might have modified by a emitting a spill or restore instruction.
+  // we might have modified by emitting a spill or restore instruction.
   RPTracker.reset(*CurMI);
   RPTracker.advance();
 }
@@ -848,7 +771,6 @@ bool AMDGPUEarlyRegisterSpilling::runOnMachineFunction(MachineFunction &MF) {
   MFI = MF.getInfo<SIMachineFunctionInfo>();
   FrameInfo = &MF.getFrameInfo();
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
   Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   NUA.run(MF, MLI);
@@ -888,8 +810,8 @@ bool AMDGPUEarlyRegisterSpilling::runOnMachineFunction(MachineFunction &MF) {
       if (MI->isDebugInstr())
         continue;
 
-      if (!isSpillSaveInstr(MI) && !isSpillRestoreInstr(MI) &&
-          !MI->isBranch()) {
+      if (!TII->isVGPRSpill(MI->getOpcode()) && !MI->isBranch()) {
+
         const MachineInstr *LastTrackedMI = RPTracker.getLastTrackedMI();
         assert(MI == LastTrackedMI && "The tracker and the loop iteration "
                                       "should visit the same instruction.");
@@ -928,7 +850,6 @@ INITIALIZE_PASS_BEGIN(AMDGPUEarlyRegisterSpilling, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(AMDGPUEarlyRegisterSpilling, DEBUG_TYPE,
                     "Early Register Spilling", false, false)

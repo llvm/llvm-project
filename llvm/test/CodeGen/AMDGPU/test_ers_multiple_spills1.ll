@@ -41,8 +41,8 @@
 ;       \     |
 ;      bb.14.bb10
 ;
-define amdgpu_ps void @test11(ptr addrspace(1) %p1, ptr addrspace(3) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, ptr addrspace(1) %p6, ptr addrspace(1) %p7, ptr addrspace(1) %p8, ptr addrspace(1) %p9, ptr addrspace(1) %p10) {
-  ; CHECK-LABEL: name: test11
+define amdgpu_ps void @test(ptr addrspace(1) %p1, ptr addrspace(3) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, ptr addrspace(1) %p6, ptr addrspace(1) %p7, ptr addrspace(1) %p8, ptr addrspace(1) %p9, ptr addrspace(1) %p10) {
+  ; CHECK-LABEL: name: test
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18

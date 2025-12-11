@@ -23,7 +23,6 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -42,16 +41,15 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   const SIMachineFunctionInfo *MFI = nullptr;
   MachineFrameInfo *FrameInfo = nullptr;
   LiveIntervals *LIS = nullptr;
-  LiveVariables *LV = nullptr;
   SlotIndexes *Indexes = nullptr;
   MachineDominatorTree *DT = nullptr;
 
   AMDGPUNextUseAnalysis NUA;
   /// Keep the registers that are spilled.
   DenseSet<Register> SpilledRegs;
-  /// keep the output registers of the restored instructions.
+  /// Keep the output registers of the restored instructions.
   DenseSet<Register> RestoredRegs;
-  /// Similar to next-use distance analysis, ee assume an approximate trip count
+  /// Similar to next-use distance analysis, we assume an approximate trip count
   /// of 1000 for all loops.
   static constexpr const uint64_t LoopWeight = 1000;
 
@@ -81,14 +79,14 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
                     const SetVectorType &UnreachableUses,
                     const TargetRegisterClass *RC, int FI);
 
-  /// Main spill functions that emits the spill and restore code.
+  /// Main spill function that emits the spill and restore code.
   void spill(MachineInstr *CurMI, GCNDownwardRPTracker &RPTracker,
              unsigned NumOfSpills);
 
-  /// Emit restore instructions where it is needed
+  /// Emit restore instruction where it is needed
   MachineInstr *emitRestore(Register SpillReg, MachineInstr *UseMI, int FI);
-  /// Emit restore instruction at the end of a basic block
-  MachineInstr *emitRestore(Register SpillReg, MachineBasicBlock *InsertBB,
+  /// Emit restore instruction at the end of a basic block.
+  MachineInstr *emitRestore(Register SpillReg, MachineBasicBlock &InsertBB,
                             int FI);
 
   /// Emit restore instructions for each group that contains the uses that are
@@ -127,22 +125,12 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   bool hasPHIUseInSameBB(Register Reg, MachineBasicBlock *MBB);
 
   /// Calculate the initial maximum register pressure per basic block (before
-  /// any spilling) because it gives us the maximum number of VGPRs and SGPRs
+  /// any spilling) because it gives us the maximum number of VGPRs and SGPRs.
   GCNRegPressure getMaxPressure(const MachineFunction &MF);
 
-  bool isSpilledReg(Register Reg) {
-    auto It = SpilledRegs.find(Reg);
-    if (It != SpilledRegs.end())
-      return true;
-    return false;
-  }
+  bool isSpilledReg(Register Reg) { return SpilledRegs.contains(Reg); }
 
-  bool isRestoredReg(Register Reg) {
-    auto It = RestoredRegs.find(Reg);
-    if (It != RestoredRegs.end())
-      return true;
-    return false;
-  }
+  bool isRestoredReg(Register Reg) { return RestoredRegs.contains(Reg); }
 
   void clearTables() {
     SpilledRegs.clear();
@@ -161,12 +149,13 @@ public:
 
   bool runOnMachineFunction(MachineFunction &) override;
 
-  StringRef getPassName() const override { return "Early Register Spilling"; }
+  StringRef getPassName() const override {
+    return "AMDGPU Early Register Spilling";
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addRequired<SlotIndexesWrapperPass>();
-    AU.addRequired<LiveVariablesWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineLoopInfoWrapperPass>();
