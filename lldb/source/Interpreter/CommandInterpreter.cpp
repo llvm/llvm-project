@@ -316,6 +316,11 @@ void CommandInterpreter::Initialize() {
     AddAlias("continue", cmd_obj_sp);
   }
 
+  // At this point, I'm leaving "b" command aliased to "_regexp-break".  There's
+  // a catch-all regexp in the command that takes any unrecognized input and
+  // runs it as `break set <input>` and switching the command to break add
+  // would change that behavior.  People who want to use the break add for the
+  // "b" alias can do so in their .lldbinit.
   cmd_obj_sp = GetCommandSPExact("_regexp-break");
   if (cmd_obj_sp)
     AddAlias("b", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
@@ -665,6 +670,89 @@ void CommandInterpreter::LoadCommandDictionary() {
       CommandObjectSP break_regex_cmd_sp(break_regex_cmd_up.release());
       m_command_dict[std::string(break_regex_cmd_sp->GetCommandName())] =
           break_regex_cmd_sp;
+    }
+  }
+
+  // clang-format off
+  // FIXME: It would be simpler to just use the linespec's directly here, but
+  // the `b` alias allows "foo.c   :   12   :   45" but the linespec parser
+  // is more rigorous, and doesn't strip spaces, so the two are not equivalent.
+  const char *break_add_regexes[][2] = {
+      {"^(.*[^[:space:]])[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*$",
+       "breakpoint add file --file '%1' --line %2 --column %3"},
+      {"^(.*[^[:space:]])[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*$",
+       "breakpoint add file --file '%1' --line %2"},
+      {"^/([^/]+)/$", "breakpoint add pattern -- %1"},
+      {"^([[:digit:]]+)[[:space:]]*$",
+      "breakpoint add file --line %1"},
+      {"^\\*?(0x[[:xdigit:]]+)[[:space:]]*$",
+      "breakpoint add address %1"},
+      {"^[\"']?([-+]?\\[.*\\])[\"']?[[:space:]]*$",
+       "breakpoint add name '%1'"},
+      {"^(-.*)$",
+      "breakpoint add name '%1'"},
+      {"^(.*[^[:space:]])`(.*[^[:space:]])[[:space:]]*$",
+       "breakpoint add name '%2' --shlib '%1'"},
+      {"^\\&(.*[^[:space:]])[[:space:]]*$",
+       "breakpoint add name '%1' --skip-prologue=0"},
+      {"^[\"']?(.*[^[:space:]\"'])[\"']?[[:space:]]*$",
+       "breakpoint add name '%1'"}};
+  // clang-format on
+
+  size_t num_add_regexes = std::size(break_add_regexes);
+
+  std::unique_ptr<CommandObjectRegexCommand> break_add_regex_cmd_up(
+      new CommandObjectRegexCommand(
+          *this, "_regexp-break-add",
+          "Set a breakpoint using one of several shorthand formats, or list "
+          "the existing breakpoints if no arguments are provided.",
+          "\n"
+          "_regexp-break-add <filename>:<linenum>:<colnum>\n"
+          "              main.c:12:21          // Break at line 12 and column "
+          "21 of main.c\n\n"
+          "_regexp-break-add <filename>:<linenum>\n"
+          "              main.c:12             // Break at line 12 of "
+          "main.c\n\n"
+          "_regexp-break-add <linenum>\n"
+          "              12                    // Break at line 12 of current "
+          "file\n\n"
+          "_regexp-break-add 0x<address>\n"
+          "              0x1234000             // Break at address "
+          "0x1234000\n\n"
+          "_regexp-break-add <name>\n"
+          "              main                  // Break in 'main' after the "
+          "prologue\n\n"
+          "_regexp-break-add &<name>\n"
+          "              &main                 // Break at first instruction "
+          "in 'main'\n\n"
+          "_regexp-break-add <module>`<name>\n"
+          "              libc.so`malloc        // Break in 'malloc' from "
+          "'libc.so'\n\n"
+          "_regexp-break-add /<source-regex>/\n"
+          "              /break here/          // Break on source lines in "
+          "current file\n"
+          "                                    // containing text 'break "
+          "here'.\n"
+          "_regexp-break-add\n"
+          "                                    // List the existing "
+          "breakpoints\n",
+          lldb::eSymbolCompletion | lldb::eSourceFileCompletion, false));
+
+  if (break_add_regex_cmd_up) {
+    bool success = true;
+    for (size_t i = 0; i < num_add_regexes; i++) {
+      success = break_add_regex_cmd_up->AddRegexCommand(
+          break_add_regexes[i][0], break_add_regexes[i][1]);
+      if (!success)
+        break;
+    }
+    success =
+        break_add_regex_cmd_up->AddRegexCommand("^$", "breakpoint list --full");
+
+    if (success) {
+      CommandObjectSP break_add_regex_cmd_sp(break_add_regex_cmd_up.release());
+      m_command_dict[std::string(break_add_regex_cmd_sp->GetCommandName())] =
+          break_add_regex_cmd_sp;
     }
   }
 
