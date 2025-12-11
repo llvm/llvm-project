@@ -6,25 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IRModule.h"
+#include "mlir/Bindings/Python/IRCore.h"
 
 #include <optional>
 #include <vector>
 
-#include "Globals.h"
-#include "NanobindUtils.h"
+#include "mlir/Bindings/Python/Globals.h"
+// clang-format off
+#include "mlir/Bindings/Python/NanobindUtils.h"
 #include "mlir-c/Bindings/Python/Interop.h"
+// clang-format on
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 
 namespace nb = nanobind;
 using namespace mlir;
-using namespace mlir::python;
 
 // -----------------------------------------------------------------------------
 // PyGlobals
 // -----------------------------------------------------------------------------
 
+namespace mlir::python {
 PyGlobals *PyGlobals::instance = nullptr;
 
 PyGlobals::PyGlobals() {
@@ -265,3 +267,7 @@ bool PyGlobals::TracebackLoc::isUserTracebackFilename(
   }
   return isUserTracebackFilenameCache[file];
 }
+
+nanobind::ft_mutex PyGlobalDebugFlag::mutex;
+
+} // namespace mlir::python

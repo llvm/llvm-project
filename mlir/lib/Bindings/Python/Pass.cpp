@@ -8,8 +8,8 @@
 
 #include "Pass.h"
 
-#include "Globals.h"
-#include "IRModule.h"
+#include "mlir/Bindings/Python/Globals.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir-c/Pass.h"
 // clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"

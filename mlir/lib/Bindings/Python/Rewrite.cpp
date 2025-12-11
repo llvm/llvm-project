@@ -8,7 +8,7 @@
 
 #include "Rewrite.h"
 
-#include "IRModule.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Rewrite.h"
 #include "mlir-c/Support.h"

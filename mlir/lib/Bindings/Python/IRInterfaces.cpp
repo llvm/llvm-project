@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "IRModule.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Interfaces.h"
