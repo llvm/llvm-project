@@ -3,9 +3,9 @@
 
 target datalayout = "n32:64"
 
-define i1 @or_icmp_2(i32 signext noundef %type) {
+define i1 @or_icmp_2(i32 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_2(
-; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TYPE]], 6
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TYPE]], 0
@@ -19,9 +19,9 @@ entry:
   ret i1 %or.cond
 }
 
-define i1 @or_icmp_3(i32 signext noundef %type) {
+define i1 @or_icmp_3(i32 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_3(
-; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[TYPE]] to i16
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -32703, [[SWITCH_CAST]]
@@ -40,9 +40,9 @@ entry:
 }
 
 ; Don't currently handle a single non-equal
-define i1 @or_icmp_extra(i32 signext noundef %type) {
+define i1 @or_icmp_extra(i32 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_extra(
-; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[TYPE]], -7
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP0]], -6
@@ -57,9 +57,9 @@ entry:
   ret i1 %or.cond1
 }
 
-define i1 @and_icmp_all_neq(i32 signext noundef %type) {
+define i1 @and_icmp_all_neq(i32 noundef %type) {
 ; CHECK-LABEL: define i1 @and_icmp_all_neq(
-; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[TYPE]] to i16
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -32703, [[SWITCH_CAST]]
@@ -78,9 +78,9 @@ entry:
   ret i1 %and.cond1
 }
 
-define i1 @and_icmp_ugt(i32 signext noundef %type) {
+define i1 @and_icmp_ugt(i32 noundef %type) {
 ; CHECK-LABEL: define i1 @and_icmp_ugt(
-; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[TYPE]] to i23
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i23 -4157441, [[SWITCH_CAST]]
@@ -99,9 +99,9 @@ entry:
   ret i1 %and.cond1
 }
 
-define i1 @or_icmp_ltu(i32 signext noundef %type) {
+define i1 @or_icmp_ltu(i32 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_ltu(
-; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[TYPE]] to i16
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -32689, [[SWITCH_CAST]]
@@ -119,9 +119,9 @@ entry:
   ret i1 %or.cond1
 }
 
-define i1 @or_icmp_7(i32 signext noundef %type) {
+define i1 @or_icmp_7(i32 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_7(
-; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i32 -1878900663, [[TYPE]]
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i32 [[SWITCH_DOWNSHIFT]] to i1
@@ -147,9 +147,9 @@ entry:
 }
 
 ; Cannot optimize since Imm > XLen
-define i1 @or_icmp_gte_64(i32 signext noundef %type) {
+define i1 @or_icmp_gte_64(i32 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_gte_64(
-; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TYPE]], 6
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TYPE]], 64
@@ -164,9 +164,9 @@ entry:
 }
 
 ; Cannot optimize since %type has multiple uses
-define i32 @or_icmp_multiple_uses(i32 signext noundef %type) {
+define i32 @or_icmp_multiple_uses(i32 noundef %type) {
 ; CHECK-LABEL: define i32 @or_icmp_multiple_uses(
-; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TYPE]], 6
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TYPE]], 0
@@ -187,9 +187,9 @@ entry:
 }
 
 ; Cannot optimize since not == comparison
-define i1 @or_icmp_not_eq(i32 signext noundef %type) {
+define i1 @or_icmp_not_eq(i32 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_not_eq(
-; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i32 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[TYPE]], -7
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[TMP0]], -5
@@ -202,9 +202,9 @@ entry:
   ret i1 %or.cond
 }
 
-define i1 @or_icmp_i64(i64 signext noundef %type) {
+define i1 @or_icmp_i64(i64 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_i64(
-; CHECK-SAME: i64 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i64 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[TYPE]] to i16
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -32703, [[SWITCH_CAST]]
@@ -223,9 +223,9 @@ entry:
 }
 
 ; Cannot optimize since not the same value being compared
-define i1 @or_icmp_specific(i64 signext noundef %type, i64 signext noundef %type1, i64 signext noundef %type2) {
+define i1 @or_icmp_specific(i64 noundef %type, i64 noundef %type1, i64 noundef %type2) {
 ; CHECK-LABEL: define i1 @or_icmp_specific(
-; CHECK-SAME: i64 noundef signext [[TYPE:%.*]], i64 noundef signext [[TYPE1:%.*]], i64 noundef signext [[TYPE2:%.*]]) {
+; CHECK-SAME: i64 noundef [[TYPE:%.*]], i64 noundef [[TYPE1:%.*]], i64 noundef [[TYPE2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TYPE]], 6
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[TYPE1]], 0
@@ -244,9 +244,9 @@ entry:
 }
 
 ; Cannot optimize since %type can be un-def
-define i1 @or_icmp_undef(i64 signext %type) {
+define i1 @or_icmp_undef(i64 %type) {
 ; CHECK-LABEL: define i1 @or_icmp_undef(
-; CHECK-SAME: i64 signext [[TYPE:%.*]]) {
+; CHECK-SAME: i64 [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TYPE]], 6
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[TYPE]], 0
@@ -264,9 +264,9 @@ entry:
   ret i1 %or.cond1
 }
 
-define i1 @or_icmp_expand(i64 signext noundef %type) {
+define i1 @or_icmp_expand(i64 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_expand(
-; CHECK-SAME: i64 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i64 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[TYPE]] to i36
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i36 -34359738341, [[SWITCH_CAST]]
@@ -286,9 +286,9 @@ entry:
   ret i1 %or.cond
 }
 
-define i1 @and_icmp_expand(i64 signext noundef %type) {
+define i1 @and_icmp_expand(i64 noundef %type) {
 ; CHECK-LABEL: define i1 @and_icmp_expand(
-; CHECK-SAME: i64 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i64 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[TYPE]] to i36
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i36 -34359738341, [[SWITCH_CAST]]
@@ -311,9 +311,9 @@ entry:
 }
 
 ; Can't mix existing IsEq sequence and new !IsEq sequence
-define i1 @and_icmp_no_expand(i64 signext noundef %type) {
+define i1 @and_icmp_no_expand(i64 noundef %type) {
 ; CHECK-LABEL: define i1 @and_icmp_no_expand(
-; CHECK-SAME: i64 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i64 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TYPE_T:%.*]] = trunc i64 [[TYPE]] to i7
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i7 27, [[TYPE_T]]
@@ -334,9 +334,9 @@ entry:
 }
 
 ; Can't mix existing !IsEq sequence and new IsEq sequence
-define i1 @or_icmp_no_expand(i64 signext noundef %type) {
+define i1 @or_icmp_no_expand(i64 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_no_expand(
-; CHECK-SAME: i64 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i64 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[TYPE]], 35
 ; CHECK-NEXT:    ret i1 [[CMP1]]
@@ -354,9 +354,9 @@ entry:
 }
 
 ; Cannot optimize bounds check smaller than largest BitMap bit
-define i1 @or_icmp_expand_small_bounds(i64 signext noundef %type) {
+define i1 @or_icmp_expand_small_bounds(i64 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_expand_small_bounds(
-; CHECK-SAME: i64 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i64 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TYPE_T:%.*]] = trunc i64 [[TYPE]] to i7
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i7 27, [[TYPE_T]]
@@ -379,9 +379,9 @@ entry:
 }
 
 ; Cannot optimize bounds check larger than XLen
-define i1 @or_icmp_expand_large_bounds(i64 signext noundef %type) {
+define i1 @or_icmp_expand_large_bounds(i64 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_expand_large_bounds(
-; CHECK-SAME: i64 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i64 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 65, [[TYPE]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[TYPE]], 65
@@ -401,9 +401,9 @@ entry:
   ret i1 %or.cond
 }
 
-define i1 @or_icmp_expand_trunc_type_shr(i128 signext noundef %type) {
+define i1 @or_icmp_expand_trunc_type_shr(i128 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_expand_trunc_type_shr(
-; CHECK-SAME: i128 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i128 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i128 [[TYPE]] to i36
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i36 -34359738303, [[SWITCH_CAST]]
@@ -423,9 +423,9 @@ entry:
   ret i1 %or.cond
 }
 
-define i1 @or_icmp_expand_zext_cmp(i64 signext noundef %type) {
+define i1 @or_icmp_expand_zext_cmp(i64 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_expand_zext_cmp(
-; CHECK-SAME: i64 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i64 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[TYPE]] to i36
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i36 -34359738303, [[SWITCH_CAST]]
@@ -445,9 +445,9 @@ entry:
   ret i1 %or.cond
 }
 
-define i1 @or_icmp_i128(i128 signext noundef %type) {
+define i1 @or_icmp_i128(i128 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_i128(
-; CHECK-SAME: i128 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i128 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i128 [[TYPE]] to i16
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -32703, [[SWITCH_CAST]]
@@ -465,9 +465,9 @@ entry:
   ret i1 %or.cond1
 }
 
-define i1 @or_icmp_expand_128(i128 signext noundef %type) {
+define i1 @or_icmp_expand_128(i128 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_expand_128(
-; CHECK-SAME: i128 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i128 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i128 [[TYPE]] to i36
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i36 -34359738303, [[SWITCH_CAST]]
@@ -488,9 +488,9 @@ entry:
 }
 
 ; Cannot optimize BitMap larger than XLen
-define i1 @or_icmp_expand_large_bitmap(i128 signext noundef %type) {
+define i1 @or_icmp_expand_large_bitmap(i128 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_expand_large_bitmap(
-; CHECK-SAME: i128 noundef signext [[TYPE:%.*]]) {
+; CHECK-SAME: i128 noundef [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i128 73786976294838206465, [[TYPE]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i128 [[TYPE]], 128
