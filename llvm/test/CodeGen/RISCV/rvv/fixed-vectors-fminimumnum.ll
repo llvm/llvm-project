@@ -377,12 +377,7 @@ define <2 x bfloat> @min_v2bf16(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; ZVFBFA-LABEL: min_v2bf16:
 ; ZVFBFA:       # %bb.0: # %entry
 ; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v9
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vfmin.vv v9, v9, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v9
+; ZVFBFA-NEXT:    vfmin.vv v8, v8, v9
 ; ZVFBFA-NEXT:    ret
 entry:
   %c = call <2 x bfloat> @llvm.minimumnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
@@ -563,12 +558,7 @@ define <4 x bfloat> @min_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; ZVFBFA-LABEL: min_v4bf16:
 ; ZVFBFA:       # %bb.0: # %entry
 ; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v9
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFA-NEXT:    vfmin.vv v9, v9, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, mf2, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v9
+; ZVFBFA-NEXT:    vfmin.vv v8, v8, v9
 ; ZVFBFA-NEXT:    ret
 entry:
   %c = call <4 x bfloat> @llvm.minimumnum.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b)
@@ -869,12 +859,7 @@ define <8 x bfloat> @min_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; ZVFBFA-LABEL: min_v8bf16:
 ; ZVFBFA:       # %bb.0: # %entry
 ; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v9
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFBFA-NEXT:    vfmin.vv v10, v12, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, m1, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v10
+; ZVFBFA-NEXT:    vfmin.vv v8, v8, v9
 ; ZVFBFA-NEXT:    ret
 entry:
   %c = call <8 x bfloat> @llvm.minimumnum.v8bf16(<8 x bfloat> %a, <8 x bfloat> %b)
@@ -1239,12 +1224,7 @@ define <9 x bfloat> @min_v9bf16(<9 x bfloat> %a, <9 x bfloat> %b) {
 ; ZVFBFA-LABEL: min_v9bf16:
 ; ZVFBFA:       # %bb.0: # %entry
 ; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmin.vv v12, v16, v12
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, m2, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v12
+; ZVFBFA-NEXT:    vfmin.vv v8, v8, v10
 ; ZVFBFA-NEXT:    ret
 entry:
   %c = call <9 x bfloat> @llvm.minimumnum.v9bf16(<9 x bfloat> %a, <9 x bfloat> %b)
@@ -1725,12 +1705,7 @@ define <16 x bfloat> @min_v16bf16(<16 x bfloat> %a, <16 x bfloat> %b) {
 ; ZVFBFA-LABEL: min_v16bf16:
 ; ZVFBFA:       # %bb.0: # %entry
 ; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmin.vv v12, v16, v12
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, m2, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v12
+; ZVFBFA-NEXT:    vfmin.vv v8, v8, v10
 ; ZVFBFA-NEXT:    ret
 entry:
   %c = call <16 x bfloat> @llvm.minimumnum.v16bf16(<16 x bfloat> %a, <16 x bfloat> %b)

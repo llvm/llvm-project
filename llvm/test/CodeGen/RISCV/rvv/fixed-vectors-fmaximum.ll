@@ -50,18 +50,11 @@ define <2 x bfloat> @vfmax_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; ZVFBFA-LABEL: vfmax_v2bf16_vv:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vv v0, v10, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vmerge.vvm v9, v10, v8, v0
 ; ZVFBFA-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFBFA-NEXT:    vmerge.vvm v8, v8, v10, v0
-; ZVFBFA-NEXT:    vfmax.vv v9, v8, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v9
+; ZVFBFA-NEXT:    vmerge.vvm v10, v8, v9, v0
+; ZVFBFA-NEXT:    vmfeq.vv v0, v9, v9
+; ZVFBFA-NEXT:    vmerge.vvm v8, v9, v8, v0
+; ZVFBFA-NEXT:    vfmax.vv v8, v8, v10
 ; ZVFBFA-NEXT:    ret
   %v = call <2 x bfloat> @llvm.maximum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
   ret <2 x bfloat> %v
@@ -105,18 +98,11 @@ define <4 x bfloat> @vfmax_v4bf16_vv(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; ZVFBFA-LABEL: vfmax_v4bf16_vv:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vv v0, v10, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, mf2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFA-NEXT:    vmerge.vvm v9, v10, v8, v0
 ; ZVFBFA-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFBFA-NEXT:    vmerge.vvm v8, v8, v10, v0
-; ZVFBFA-NEXT:    vfmax.vv v9, v8, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, mf2, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v9
+; ZVFBFA-NEXT:    vmerge.vvm v10, v8, v9, v0
+; ZVFBFA-NEXT:    vmfeq.vv v0, v9, v9
+; ZVFBFA-NEXT:    vmerge.vvm v8, v9, v8, v0
+; ZVFBFA-NEXT:    vfmax.vv v8, v8, v10
 ; ZVFBFA-NEXT:    ret
   %v = call <4 x bfloat> @llvm.maximum.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b)
   ret <4 x bfloat> %v
@@ -160,18 +146,11 @@ define <8 x bfloat> @vfmax_v8bf16_vv(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; ZVFBFA-LABEL: vfmax_v8bf16_vv:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vv v0, v10, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, m1, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v9
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFBFA-NEXT:    vmerge.vvm v8, v10, v12, v0
-; ZVFBFA-NEXT:    vmfeq.vv v0, v12, v12
-; ZVFBFA-NEXT:    vmerge.vvm v10, v12, v10, v0
-; ZVFBFA-NEXT:    vfmax.vv v10, v10, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, m1, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v10
+; ZVFBFA-NEXT:    vmfeq.vv v0, v8, v8
+; ZVFBFA-NEXT:    vmerge.vvm v10, v8, v9, v0
+; ZVFBFA-NEXT:    vmfeq.vv v0, v9, v9
+; ZVFBFA-NEXT:    vmerge.vvm v8, v9, v8, v0
+; ZVFBFA-NEXT:    vfmax.vv v8, v8, v10
 ; ZVFBFA-NEXT:    ret
   %v = call <8 x bfloat> @llvm.maximum.v8bf16(<8 x bfloat> %a, <8 x bfloat> %b)
   ret <8 x bfloat> %v
@@ -215,18 +194,11 @@ define <16 x bfloat> @vfmax_v16bf16_vv(<16 x bfloat> %a, <16 x bfloat> %b) {
 ; ZVFBFA-LABEL: vfmax_v16bf16_vv:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmfeq.vv v0, v12, v12
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, m2, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vmerge.vvm v8, v12, v16, v0
-; ZVFBFA-NEXT:    vmfeq.vv v0, v16, v16
-; ZVFBFA-NEXT:    vmerge.vvm v12, v16, v12, v0
-; ZVFBFA-NEXT:    vfmax.vv v12, v12, v8
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, m2, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v12
+; ZVFBFA-NEXT:    vmfeq.vv v0, v8, v8
+; ZVFBFA-NEXT:    vmerge.vvm v12, v8, v10, v0
+; ZVFBFA-NEXT:    vmfeq.vv v0, v10, v10
+; ZVFBFA-NEXT:    vmerge.vvm v8, v10, v8, v0
+; ZVFBFA-NEXT:    vfmax.vv v8, v8, v12
 ; ZVFBFA-NEXT:    ret
   %v = call <16 x bfloat> @llvm.maximum.v16bf16(<16 x bfloat> %a, <16 x bfloat> %b)
   ret <16 x bfloat> %v
