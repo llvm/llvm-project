@@ -5200,9 +5200,9 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // - All the loads/stores to the alloca are vector loads/stores to the
   //   entire alloca or load/store a single element of the vector.
   //
-  // Otherwise when there is an integer vector with mixed type loads/stores we prefer
-  // integer widening promotion because it's more likely the user is doing
-  // bitwise arithmetic and we generate better code.
+  // Otherwise when there is an integer vector with mixed type loads/stores we
+  // prefer integer widening promotion because it's more likely the user is
+  // doing bitwise arithmetic and we generate better code.
   VectorType *VecTy =
       isVectorPromotionViable(P, DL, AI.getFunction()->getVScaleValue());
   // If the vector element type is a floating-point type, we prefer vector
