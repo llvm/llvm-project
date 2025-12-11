@@ -615,7 +615,6 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
         {op}, *pass);
   }
 
-
   // Invalidate any non preserved analyses.
   am.invalidate(pass->passState->preservedAnalyses);
 
@@ -1205,7 +1204,9 @@ void PassInstrumentation::runBeforePipeline(
 void PassInstrumentation::runAfterPipeline(
     std::optional<OperationName> name, const PipelineParentInfo &parentInfo) {}
 
-void PassInstrumentation::signalPassFailure(Pass *pass) { pass->signalPassFailure(); }
+void PassInstrumentation::signalPassFailure(Pass *pass) {
+  pass->signalPassFailure();
+}
 
 //===----------------------------------------------------------------------===//
 // PassInstrumentor

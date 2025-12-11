@@ -128,21 +128,24 @@ struct TestPassInstrumentation : public PassInstrumentation {
   bool failAfterPass = false;
 
   void runBeforePass(Pass *pass, Operation *op) override {
-    if (pass->getTypeID() != TypeID::get<AddAttrFunctionPass>()) return;
+    if (pass->getTypeID() != TypeID::get<AddAttrFunctionPass>())
+      return;
 
     ++beforePassCallbackCount;
     if (failBeforePass)
       signalPassFailure(pass);
   }
   void runAfterPass(Pass *pass, Operation *op) override {
-    if (pass->getTypeID() != TypeID::get<AddAttrFunctionPass>()) return;
+    if (pass->getTypeID() != TypeID::get<AddAttrFunctionPass>())
+      return;
 
     ++afterPassCallbackCount;
     if (failAfterPass)
       signalPassFailure(pass);
   }
   void runAfterPassFailed(Pass *pass, Operation *op) override {
-    if (pass->getTypeID() != TypeID::get<AddAttrFunctionPass>()) return;
+    if (pass->getTypeID() != TypeID::get<AddAttrFunctionPass>())
+      return;
 
     ++afterPassFailedCallbackCount;
   }
