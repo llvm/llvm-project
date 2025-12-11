@@ -38,6 +38,10 @@ class Vector {
     last_ = 0;
   }
 
+  const T* Data() const { return begin_; }
+
+  T* Data() { return begin_; }
+
   uptr Size() const {
     return end_ - begin_;
   }

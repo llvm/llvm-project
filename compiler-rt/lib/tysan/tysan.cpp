@@ -15,10 +15,13 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_printf.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
+#include "sanitizer_common/sanitizer_vector.h"
 
 #include "tysan/tysan.h"
 
@@ -39,6 +42,36 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 tysan_copy_types(const void *daddr, const void *saddr, uptr size) {
   if (tysan_inited)
     internal_memmove(shadow_for(daddr), shadow_for(saddr), size * sizeof(uptr));
+}
+
+/// `printf` into a Vector<char> using sanitizer-internal libraries.
+/// No null terminator is appended.
+FORMAT(2, 3)
+static void printfToVector(Vector<char> &V, const char *FormatString, ...) {
+  // Unlike regular vsnprintf, internal_vsnprintf does not accept a
+  // null/zero-length buffer.
+  char PretendBuffer[2];
+
+  va_list Args, ArgsCopy;
+  va_start(Args, FormatString);
+  va_copy(ArgsCopy, Args);
+
+  const size_t CurrentSize = V.Size();
+  const size_t AddedSize =
+      internal_vsnprintf(PretendBuffer, 2, FormatString, Args);
+
+  // Allocate one byte extra for the null terminator inserted by
+  // internal_vsnprintf.
+  V.Resize(CurrentSize + AddedSize + 1);
+
+  internal_vsnprintf(&V[CurrentSize], V.Size() - CurrentSize, FormatString,
+                     ArgsCopy);
+
+  // Remove the null terminator added by internal_vsnprintf.
+  V.PopBack();
+
+  va_end(ArgsCopy);
+  va_end(Args);
 }
 
 /// Struct returned by `parseIndirectionPrefix`.
@@ -73,12 +106,12 @@ static ParseIndirectionPrefixResult parseIndirectionPrefix(const char *Name) {
 
 /// Given a TBAA type descriptor name, this function demangles it, also
 /// rewriting the `pN T` pointer notation with more conventional "T*" notation.
-static size_t writeDemangledTypeName(char *Buffer, size_t BufferSize,
-                                     const char *Name) {
-  if (Name[0] == '\0')
-    return internal_snprintf(Buffer, BufferSize, "<anonymous type>");
-
-  size_t Written = 0;
+/// Warning: This function does not add a null terminator to the buffer.
+static void writeDemangledTypeName(Vector<char> &Buffer, const char *Name) {
+  if (Name[0] == '\0') {
+    printfToVector(Buffer, "<anonymous type>");
+    return;
+  }
 
   // Parse indirection prefix and remove it.
   const auto [Indirection, RemainingName] = parseIndirectionPrefix(Name);
@@ -93,14 +126,11 @@ static size_t writeDemangledTypeName(char *Buffer, size_t BufferSize,
     DName += TIPrefixLen;
 
   // Print type name.
-  Written +=
-      internal_snprintf(&Buffer[Written], BufferSize - Written, "%s", DName);
+  printfToVector(Buffer, "%s", DName);
 
   // Print asterisks for indirection (C pointer notation).
   for (size_t i = 0; i < Indirection; ++i)
-    Written += internal_snprintf(&Buffer[Written], BufferSize - Written, "*");
-
-  return Written;
+    printfToVector(Buffer, "*");
 }
 
 static void printTDName(tysan_type_descriptor *td) {
@@ -122,12 +152,14 @@ static void printTDName(tysan_type_descriptor *td) {
     }
     break;
   case TYSAN_STRUCT_TD:
-    constexpr size_t BufferSize = 512;
-    char Buffer[BufferSize];
+    Vector<char> Buffer;
     writeDemangledTypeName(
-        Buffer, BufferSize,
-        (char *)(td->Struct.Members + td->Struct.MemberCount));
-    Printf("%s", Buffer);
+        Buffer, (char *)(td->Struct.Members + td->Struct.MemberCount));
+
+    // Append null terminator.
+    Buffer.PushBack('\0');
+    Printf("%s", Buffer.Data());
+
     break;
   }
 }
