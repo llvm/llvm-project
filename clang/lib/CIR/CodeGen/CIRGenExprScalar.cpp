@@ -1354,8 +1354,7 @@ public:
   }
 
   mlir::Value VisitChooseExpr(ChooseExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: choose");
-    return {};
+    return Visit(e->getChosenSubExpr());
   }
 
   mlir::Value VisitObjCStringLiteral(const ObjCStringLiteral *e) {
