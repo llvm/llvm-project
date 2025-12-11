@@ -3,9 +3,10 @@
 // RUN:     readability-identifier-naming.DefaultCase: "lower_case", \
 // RUN:   }}'
 
-// DefaultCase enables every type of symbol to be checked with same case
-// TODO: DefaultCase does not work for macros?
+// DefaultCase enables every type of identifier to be checked with same case
 #define MyMacro
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for default 'MyMacro' [readability-identifier-naming]
+// CHECK-FIXES: #define my_macro
 
 namespace MyNamespace {
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for default 'MyNamespace' [readability-identifier-naming]

@@ -5,7 +5,6 @@
 // RUN:     readability-identifier-naming.TemplateParameterCase: "UPPER_CASE", \
 // RUN:   }}'
 
-// DefaultCase enables every type of symbol to be checked with same case
 #define MyMacro
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for macro definition 'MyMacro' [readability-identifier-naming]
 // CHECK-FIXES: #define MY_MACRO
