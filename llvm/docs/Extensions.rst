@@ -526,6 +526,13 @@ those bits are:
    defined in ``llvm/Support/BranchProbability.h``. It indicates the probability
    that the block is followed by a given successor block during execution.
 
+#. Post-Link CFG - When enabled, the PGO Analysis Map will include CFG
+   information obtained from a post-link tool, such as Propeller. This feature
+   is enabled with the ``-pgo-analysis-map-emit-bb-sections-cfg`` flag. When
+   this option is active, the map will contain basic block and edge frequencies
+   from the basic block sections profile. This provides more accurate profiling
+   information that reflects the final binary layout.
+
 This extra data requires version 2 or above. This is necessary since successors
 of basic blocks won't know their index but will know their BB ID.
 
