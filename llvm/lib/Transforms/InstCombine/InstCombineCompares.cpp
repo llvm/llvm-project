@@ -337,7 +337,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
     // Generate (i-FirstTrue) <u (TrueRangeEnd-FirstTrue+1).
     if (FirstTrueElement) {
-      Value *Offs = ConstantInt::get(Idx->getType(), -FirstTrueElement);
+      Value *Offs = ConstantInt::getSigned(Idx->getType(), -FirstTrueElement);
       Idx = Builder.CreateAdd(Idx, Offs);
     }
 
@@ -352,7 +352,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     Idx = MaskIdx(Idx);
     // Generate (i-FirstFalse) >u (FalseRangeEnd-FirstFalse).
     if (FirstFalseElement) {
-      Value *Offs = ConstantInt::get(Idx->getType(), -FirstFalseElement);
+      Value *Offs = ConstantInt::getSigned(Idx->getType(), -FirstFalseElement);
       Idx = Builder.CreateAdd(Idx, Offs);
     }
 
