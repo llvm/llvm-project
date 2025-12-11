@@ -44,6 +44,16 @@ def TestTypeInterface
     InterfaceMethod<"Prints the type name.",
       "void", "printTypeC", (ins "::mlir::Location":$loc)
     >,
+    // Check that we can have multiple method with the same name.
+    InterfaceMethod<"Prints the type name, with a value prefixed.",
+      "void", "printTypeC", (ins "::mlir::Location":$loc, "int":$value)
+    >,
+    InterfaceMethod<"Prints the type name, with a value prefixed.",
+      "void", "printTypeC", (ins "::mlir::Location":$loc, "float":$value),
+      [{}], /*defaultImplementation=*/[{
+        emitRemark(loc) << $_type << " - " << value << " - Float TestC";
+      }]
+    >,
     // It should be possible to use the interface type name as result type
     // as well as in the implementation.
     InterfaceMethod<"Prints the type name and returns the type as interface.",

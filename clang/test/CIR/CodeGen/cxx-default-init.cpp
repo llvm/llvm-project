@@ -36,13 +36,13 @@ struct ZeroInit {
 // CIR:   %[[ARR_BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!s32i x 4>> -> !cir.ptr<!s32i>
 // CIR:   cir.store{{.*}} %[[ARR_BEGIN]], %[[ITER]]
 // CIR:   %[[FOUR:.*]] = cir.const #cir.int<4> : !s64i
-// CIR:   %[[END:.*]] = cir.ptr_stride(%[[ARR_BEGIN]] : !cir.ptr<!s32i>, %[[FOUR]] : !s64i)
+// CIR:   %[[END:.*]] = cir.ptr_stride %[[ARR_BEGIN]], %[[FOUR]] : (!cir.ptr<!s32i>, !s64i)
 // CIR:   cir.do {
 // CIR:     %[[CUR:.*]] = cir.load{{.*}} %[[ITER]]
 // CIR:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:     cir.store{{.*}} %[[ZERO]], %[[CUR]]
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR:     %[[NEXT:.*]] = cir.ptr_stride(%[[CUR]] : !cir.ptr<!s32i>, %[[ONE]] : !s64i)
+// CIR:     %[[NEXT:.*]] = cir.ptr_stride %[[CUR]], %[[ONE]] : (!cir.ptr<!s32i>, !s64i)
 // CIR:     cir.store{{.*}} %[[NEXT]], %[[ITER]]
 // CIR:     cir.yield
 // CIR:   } while {
@@ -143,20 +143,20 @@ struct ValueInit {
 // CIR:   %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
 // CIR:   cir.store{{.*}} %[[FOUR]], %[[ARR_BEGIN]]
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR:   %[[SECOND:.*]] = cir.ptr_stride(%[[ARR_BEGIN]] : !cir.ptr<!s32i>, %[[ONE]] : !s64i)
+// CIR:   %[[SECOND:.*]] = cir.ptr_stride %[[ARR_BEGIN]], %[[ONE]] : (!cir.ptr<!s32i>, !s64i)
 // CIR:   %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
 // CIR:   cir.store{{.*}} %[[FIVE]], %[[SECOND]]
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR:   %[[NEXT:.*]] = cir.ptr_stride(%[[SECOND]] : !cir.ptr<!s32i>, %[[ONE]] : !s64i)
+// CIR:   %[[NEXT:.*]] = cir.ptr_stride %[[SECOND]], %[[ONE]] : (!cir.ptr<!s32i>, !s64i)
 // CIR:   cir.store{{.*}} %[[NEXT]], %[[ITER]]
 // CIR:   %[[FOUR:.*]] = cir.const #cir.int<4> : !s64i
-// CIR:   %[[END:.*]] = cir.ptr_stride(%[[ARR_BEGIN]] : !cir.ptr<!s32i>, %[[FOUR]] : !s64i)
+// CIR:   %[[END:.*]] = cir.ptr_stride %[[ARR_BEGIN]], %[[FOUR]] : (!cir.ptr<!s32i>, !s64i)
 // CIR:   cir.do {
 // CIR:     %[[CUR:.*]] = cir.load{{.*}} %[[ITER]]
 // CIR:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:     cir.store{{.*}} %[[ZERO]], %[[CUR]]
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR:     %[[NEXT:.*]] = cir.ptr_stride(%[[CUR]] : !cir.ptr<!s32i>, %[[ONE]] : !s64i)
+// CIR:     %[[NEXT:.*]] = cir.ptr_stride %[[CUR]], %[[ONE]] : (!cir.ptr<!s32i>, !s64i)
 // CIR:     cir.store{{.*}} %[[NEXT]], %[[ITER]]
 // CIR:     cir.yield
 // CIR:   } while {

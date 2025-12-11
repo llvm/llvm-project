@@ -29,9 +29,13 @@ function(compile_to_bc)
   if( NOT ${FILE_EXT} STREQUAL ".ll" )
     # Pass '-c' when not running the preprocessor
     set( PP_OPTS -c )
+    set( EXTRA_OPTS ${ARG_EXTRA_OPTS} )
   else()
     set( PP_OPTS -E;-P )
     set( TMP_SUFFIX .tmp )
+    string( REPLACE "-Xclang;-fdeclare-opencl-builtins;-Xclang;-finclude-default-header"
+      "" EXTRA_OPTS "${ARG_EXTRA_OPTS}"
+    )
   endif()
 
   set( TARGET_ARG )
@@ -48,7 +52,7 @@ function(compile_to_bc)
     COMMAND ${clang_exe}
       ${TARGET_ARG}
       ${PP_OPTS}
-      ${ARG_EXTRA_OPTS}
+      ${EXTRA_OPTS}
       -MD -MF ${ARG_OUTPUT}.d -MT ${ARG_OUTPUT}${TMP_SUFFIX}
       # LLVM 13 enables standard includes by default - we don't want
       # those when pre-processing IR. We disable it unconditionally.
@@ -261,7 +265,7 @@ function(libclc_install)
 
   install(
     FILES ${files}
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
+    DESTINATION ${LIBCLC_INSTALL_DIR}
   )
 endfunction()
 
@@ -353,7 +357,7 @@ function(add_libclc_builtin_set)
       TRIPLE ${ARG_TRIPLE}
       INPUT ${input_file}
       OUTPUT ${output_file}
-      EXTRA_OPTS -fno-builtin -nostdlib "${ARG_COMPILE_FLAGS}"
+      EXTRA_OPTS -nostdlib "${ARG_COMPILE_FLAGS}"
         "${file_specific_compile_options}"
         -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
       DEPENDENCIES ${input_file_dep}
@@ -392,7 +396,7 @@ function(add_libclc_builtin_set)
   list( PREPEND bytecode_files ${bytecode_ir_files} )
 
   if( NOT bytecode_files )
-    message(FATAL_ERROR "Cannot create an empty builtins library")
+    message(FATAL_ERROR "Cannot create an empty builtins library for ${ARG_ARCH_SUFFIX}")
   endif()
 
   set( builtins_link_lib_tgt builtins.link.${ARG_ARCH_SUFFIX} )

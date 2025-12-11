@@ -310,6 +310,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FMA:                        return "fma";
   case ISD::STRICT_FMA:                 return "strict_fma";
   case ISD::FMAD:                       return "fmad";
+  case ISD::FMULADD:                    return "fmuladd";
   case ISD::FREM:                       return "frem";
   case ISD::STRICT_FREM:                return "strict_frem";
   case ISD::FCOPYSIGN:                  return "fcopysign";
@@ -471,6 +472,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::LIFETIME_END:               return "lifetime.end";
   case ISD::FAKE_USE:
     return "fake_use";
+  case ISD::RELOC_NONE:
+    return "reloc_none";
   case ISD::PSEUDO_PROBE:
     return "pseudoprobe";
   case ISD::GC_TRANSITION_START:        return "gc_transition.start";
@@ -587,6 +590,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "partial_reduce_smla";
   case ISD::PARTIAL_REDUCE_SUMLA:
     return "partial_reduce_sumla";
+  case ISD::PARTIAL_REDUCE_FMLA:
+    return "partial_reduce_fmla";
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
     return "loop_dep_war";
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
@@ -687,6 +692,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
 
   if (getFlags().hasSameSign())
     OS << " samesign";
+
+  if (getFlags().hasInBounds())
+    OS << " inbounds";
 
   if (getFlags().hasNonNeg())
     OS << " nneg";

@@ -89,7 +89,7 @@ static bool isCallback(QualType T) {
     T = T->getPointeeType();
 
   if (const RecordType *RT = T->getAsStructureType()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     for (const auto *I : RD->fields()) {
       QualType FieldT = I->getType();
       if (FieldT->isBlockPointerType() || FieldT->isFunctionPointerType())
@@ -230,13 +230,11 @@ static void findPtrToConstParams(llvm::SmallSet<unsigned, 4> &PreserveArgs,
 }
 
 ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
-                                             ProgramStateRef Orig) const {
-  ProgramStateRef Result = (Orig ? Orig : getState());
-
+                                             ProgramStateRef State) const {
   // Don't invalidate anything if the callee is marked pure/const.
-  if (const Decl *callee = getDecl())
-    if (callee->hasAttr<PureAttr>() || callee->hasAttr<ConstAttr>())
-      return Result;
+  if (const Decl *Callee = getDecl())
+    if (Callee->hasAttr<PureAttr>() || Callee->hasAttr<ConstAttr>())
+      return State;
 
   SmallVector<SVal, 8> ValuesToInvalidate;
   RegionAndSymbolInvalidationTraits ETraits;
@@ -278,10 +276,10 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   // Invalidate designated regions using the batch invalidation API.
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
   //  global variables.
-  return Result->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
-                                   BlockCount, getLocationContext(),
-                                   /*CausedByPointerEscape*/ true,
-                                   /*Symbols=*/nullptr, this, &ETraits);
+  return State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
+                                  BlockCount, getLocationContext(),
+                                  /*CausedByPointerEscape*/ true,
+                                  /*Symbols=*/nullptr, this, &ETraits);
 }
 
 ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
@@ -391,9 +389,8 @@ bool CallEvent::isVariadic(const Decl *D) {
 
 static bool isTransparentUnion(QualType T) {
   const RecordType *UT = T->getAsUnionType();
-  return UT && UT->getOriginalDecl()
-                   ->getMostRecentDecl()
-                   ->hasAttr<TransparentUnionAttr>();
+  return UT &&
+         UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>();
 }
 
 // In some cases, symbolic cases should be transformed before we associate

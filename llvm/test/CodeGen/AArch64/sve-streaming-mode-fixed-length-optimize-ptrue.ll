@@ -954,9 +954,8 @@ define void @fadd_v16f16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fadd z1.h, p0/m, z1.h, z3.h
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fadd z2.h, p0/m, z2.h, z3.h
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fadd_v16f16:
@@ -1170,9 +1169,8 @@ define void @fadd_v8f32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fadd z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fadd z2.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fadd_v8f32:
@@ -1258,9 +1256,8 @@ define void @fadd_v4f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fadd z1.d, p0/m, z1.d, z3.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fadd z2.d, p0/m, z2.d, z3.d
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fadd_v4f64:

@@ -134,6 +134,9 @@ bool isCtorOfCheckedPtr(const clang::FunctionDecl *F);
 /// uncounted parameter, false if not.
 bool isCtorOfSafePtr(const clang::FunctionDecl *F);
 
+/// \returns true if \p F is std::move or WTF::move.
+bool isStdOrWTFMove(const clang::FunctionDecl *F);
+
 /// \returns true if \p Name is RefPtr, Ref, or its variant, false if not.
 bool isRefType(const std::string &Name);
 
@@ -142,6 +145,10 @@ bool isCheckedPtr(const std::string &Name);
 
 /// \returns true if \p Name is RetainPtr or its variant, false if not.
 bool isRetainPtrOrOSPtr(const std::string &Name);
+
+/// \returns true if \p Name is an owning smar pointer such as Ref, CheckedPtr,
+/// and unique_ptr.
+bool isOwnerPtr(const std::string &Name);
 
 /// \returns true if \p Name is a smart pointer type name, false if not.
 bool isSmartPtrClass(const std::string &Name);

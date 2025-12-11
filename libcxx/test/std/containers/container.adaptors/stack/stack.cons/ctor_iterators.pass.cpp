@@ -15,6 +15,7 @@
 
 #include <cassert>
 #include <stack>
+#include <type_traits>
 
 #include "test_allocator.h"
 

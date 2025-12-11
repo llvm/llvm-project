@@ -16,18 +16,20 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
-#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/DebugLog.h"
 #include <cassert>
 #include <optional>
 #include <utility>
 
 using namespace mlir;
+
+#define DEBUG_TYPE "local-alias-analysis"
 
 //===----------------------------------------------------------------------===//
 // Underlying Address Computation
@@ -42,81 +44,47 @@ static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
                                            DenseSet<Value> &visited,
                                            SmallVectorImpl<Value> &output);
 
-/// Given a successor (`region`) of a RegionBranchOpInterface, collect all of
-/// the underlying values being addressed by one of the successor inputs. If the
-/// provided `region` is null, as per `RegionBranchOpInterface` this represents
-/// the parent operation.
-static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
-                                           Region *region, Value inputValue,
-                                           unsigned inputIndex,
-                                           unsigned maxDepth,
-                                           DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output) {
-  // Given the index of a region of the branch (`predIndex`), or std::nullopt to
-  // represent the parent operation, try to return the index into the outputs of
-  // this region predecessor that correspond to the input values of `region`. If
-  // an index could not be found, std::nullopt is returned instead.
-  auto getOperandIndexIfPred =
-      [&](RegionBranchPoint pred) -> std::optional<unsigned> {
-    SmallVector<RegionSuccessor, 2> successors;
-    branch.getSuccessorRegions(pred, successors);
-    for (RegionSuccessor &successor : successors) {
-      if (successor.getSuccessor() != region)
-        continue;
-      // Check that the successor inputs map to the given input value.
-      ValueRange inputs = successor.getSuccessorInputs();
-      if (inputs.empty()) {
-        output.push_back(inputValue);
-        break;
-      }
-      unsigned firstInputIndex, lastInputIndex;
-      if (region) {
-        firstInputIndex = cast<BlockArgument>(inputs[0]).getArgNumber();
-        lastInputIndex = cast<BlockArgument>(inputs.back()).getArgNumber();
-      } else {
-        firstInputIndex = cast<OpResult>(inputs[0]).getResultNumber();
-        lastInputIndex = cast<OpResult>(inputs.back()).getResultNumber();
-      }
-      if (firstInputIndex > inputIndex || lastInputIndex < inputIndex) {
-        output.push_back(inputValue);
-        break;
-      }
-      return inputIndex - firstInputIndex;
-    }
-    return std::nullopt;
-  };
-
-  // Check branches from the parent operation.
-  auto branchPoint = RegionBranchPoint::parent();
-  if (region)
-    branchPoint = region;
-
-  if (std::optional<unsigned> operandIndex =
-          getOperandIndexIfPred(/*predIndex=*/RegionBranchPoint::parent())) {
-    collectUnderlyingAddressValues(
-        branch.getEntrySuccessorOperands(branchPoint)[*operandIndex], maxDepth,
-        visited, output);
+/// Given a RegionBranchOpInterface operation  (`branch`), a Value`inputValue`
+/// which is an input for the provided successor (`initialSuccessor`), try to
+/// find the possible sources for the value along the control flow edges.
+static void collectUnderlyingAddressValues2(
+    RegionBranchOpInterface branch, RegionSuccessor initialSuccessor,
+    Value inputValue, unsigned inputIndex, unsigned maxDepth,
+    DenseSet<Value> &visited, SmallVectorImpl<Value> &output) {
+  LDBG() << "collectUnderlyingAddressValues2: "
+         << OpWithFlags(branch.getOperation(), OpPrintingFlags().skipRegions());
+  LDBG() << " with initialSuccessor " << initialSuccessor;
+  LDBG() << "  inputValue: " << inputValue;
+  LDBG() << "  inputIndex: " << inputIndex;
+  LDBG() << "  maxDepth: " << maxDepth;
+  ValueRange inputs = initialSuccessor.getSuccessorInputs();
+  if (inputs.empty()) {
+    LDBG() << "  input is empty, enqueue value";
+    output.push_back(inputValue);
+    return;
   }
-  // Check branches from each child region.
-  Operation *op = branch.getOperation();
-  for (Region &region : op->getRegions()) {
-    if (std::optional<unsigned> operandIndex = getOperandIndexIfPred(region)) {
-      for (Block &block : region) {
-        // Try to determine possible region-branch successor operands for the
-        // current region.
-        if (auto term = dyn_cast<RegionBranchTerminatorOpInterface>(
-                block.getTerminator())) {
-          collectUnderlyingAddressValues(
-              term.getSuccessorOperands(branchPoint)[*operandIndex], maxDepth,
-              visited, output);
-        } else if (block.getNumSuccessors()) {
-          // Otherwise, if this terminator may exit the region we can't make
-          // any assumptions about which values get passed.
-          output.push_back(inputValue);
-          return;
-        }
-      }
-    }
+  unsigned firstInputIndex, lastInputIndex;
+  if (isa<BlockArgument>(inputs[0])) {
+    firstInputIndex = cast<BlockArgument>(inputs[0]).getArgNumber();
+    lastInputIndex = cast<BlockArgument>(inputs.back()).getArgNumber();
+  } else {
+    firstInputIndex = cast<OpResult>(inputs[0]).getResultNumber();
+    lastInputIndex = cast<OpResult>(inputs.back()).getResultNumber();
+  }
+  if (firstInputIndex > inputIndex || lastInputIndex < inputIndex) {
+    LDBG() << "  !! Input index " << inputIndex << " out of range "
+           << firstInputIndex << " to " << lastInputIndex
+           << ", adding input value to output";
+    output.push_back(inputValue);
+    return;
+  }
+  SmallVector<Value> predecessorValues;
+  branch.getPredecessorValues(initialSuccessor, inputIndex - firstInputIndex,
+                              predecessorValues);
+  LDBG() << "  Found " << predecessorValues.size() << " predecessor values";
+  for (Value predecessorValue : predecessorValues) {
+    LDBG() << "    Processing predecessor value: " << predecessorValue;
+    collectUnderlyingAddressValues(predecessorValue, maxDepth, visited, output);
   }
 }
 
@@ -124,22 +92,28 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
 static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
                                            DenseSet<Value> &visited,
                                            SmallVectorImpl<Value> &output) {
+  LDBG() << "collectUnderlyingAddressValues (OpResult): " << result;
+  LDBG() << "  maxDepth: " << maxDepth;
+
   Operation *op = result.getOwner();
 
   // If this is a view, unwrap to the source.
   if (ViewLikeOpInterface view = dyn_cast<ViewLikeOpInterface>(op)) {
     if (result == view.getViewDest()) {
+      LDBG() << "  Unwrapping view to source: " << view.getViewSource();
       return collectUnderlyingAddressValues(view.getViewSource(), maxDepth,
                                             visited, output);
     }
   }
   // Check to see if we can reason about the control flow of this op.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
-    return collectUnderlyingAddressValues(branch, /*region=*/nullptr, result,
-                                          result.getResultNumber(), maxDepth,
-                                          visited, output);
+    LDBG() << "  Processing region branch operation";
+    return collectUnderlyingAddressValues2(
+        branch, RegionSuccessor(op, op->getResults()), result,
+        result.getResultNumber(), maxDepth, visited, output);
   }
 
+  LDBG() << "  Adding result to output: " << result;
   output.push_back(result);
 }
 
@@ -148,14 +122,23 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
 static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
                                            DenseSet<Value> &visited,
                                            SmallVectorImpl<Value> &output) {
+  LDBG() << "collectUnderlyingAddressValues (BlockArgument): " << arg;
+  LDBG() << "  maxDepth: " << maxDepth;
+  LDBG() << "  argNumber: " << arg.getArgNumber();
+  LDBG() << "  isEntryBlock: " << arg.getOwner()->isEntryBlock();
+
   Block *block = arg.getOwner();
   unsigned argNumber = arg.getArgNumber();
 
   // Handle the case of a non-entry block.
   if (!block->isEntryBlock()) {
+    LDBG() << "  Processing non-entry block with "
+           << std::distance(block->pred_begin(), block->pred_end())
+           << " predecessors";
     for (auto it = block->pred_begin(), e = block->pred_end(); it != e; ++it) {
       auto branch = dyn_cast<BranchOpInterface>((*it)->getTerminator());
       if (!branch) {
+        LDBG() << "    Cannot analyze control flow, adding argument to output";
         // We can't analyze the control flow, so bail out early.
         output.push_back(arg);
         return;
@@ -165,10 +148,12 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
       unsigned index = it.getSuccessorIndex();
       Value operand = branch.getSuccessorOperands(index)[argNumber];
       if (!operand) {
+        LDBG() << "    No operand found for argument, adding to output";
         // We can't analyze the control flow, so bail out early.
         output.push_back(arg);
         return;
       }
+      LDBG() << "    Processing operand from predecessor: " << operand;
       collectUnderlyingAddressValues(operand, maxDepth, visited, output);
     }
     return;
@@ -178,10 +163,35 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
   Region *region = block->getParent();
   Operation *op = region->getParentOp();
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
-    return collectUnderlyingAddressValues(branch, region, arg, argNumber,
-                                          maxDepth, visited, output);
+    LDBG() << "  Processing region branch operation for entry block";
+    // We have to find the successor matching the region, so that the input
+    // arguments are correctly set.
+    // TODO: this isn't comprehensive: the successor may not be reachable from
+    // the entry block.
+    SmallVector<RegionSuccessor> successors;
+    branch.getSuccessorRegions(RegionBranchPoint::parent(), successors);
+    RegionSuccessor regionSuccessor(region);
+    bool found = false;
+    for (RegionSuccessor &successor : successors) {
+      if (successor.getSuccessor() == region) {
+        LDBG() << "  Found matching region successor: " << successor;
+        found = true;
+        regionSuccessor = successor;
+        break;
+      }
+    }
+    if (!found) {
+      LDBG()
+          << "  No matching region successor found, adding argument to output";
+      output.push_back(arg);
+      return;
+    }
+    return collectUnderlyingAddressValues2(
+        branch, regionSuccessor, arg, argNumber, maxDepth, visited, output);
   }
 
+  LDBG()
+      << "  Cannot reason about underlying address, adding argument to output";
   // We can't reason about the underlying address of this argument.
   output.push_back(arg);
 }
@@ -190,17 +200,26 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
 static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
                                            DenseSet<Value> &visited,
                                            SmallVectorImpl<Value> &output) {
+  LDBG() << "collectUnderlyingAddressValues: " << value;
+  LDBG() << "  maxDepth: " << maxDepth;
+
   // Check that we don't infinitely recurse.
-  if (!visited.insert(value).second)
+  if (!visited.insert(value).second) {
+    LDBG() << "  Value already visited, skipping";
     return;
+  }
   if (maxDepth == 0) {
+    LDBG() << "  Max depth reached, adding value to output";
     output.push_back(value);
     return;
   }
   --maxDepth;
 
-  if (BlockArgument arg = dyn_cast<BlockArgument>(value))
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
+    LDBG() << "  Processing as BlockArgument";
     return collectUnderlyingAddressValues(arg, maxDepth, visited, output);
+  }
+  LDBG() << "  Processing as OpResult";
   collectUnderlyingAddressValues(cast<OpResult>(value), maxDepth, visited,
                                  output);
 }
@@ -208,9 +227,11 @@ static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
 /// Given a value, collect all of the underlying values being addressed.
 static void collectUnderlyingAddressValues(Value value,
                                            SmallVectorImpl<Value> &output) {
+  LDBG() << "collectUnderlyingAddressValues: " << value;
   DenseSet<Value> visited;
   collectUnderlyingAddressValues(value, maxUnderlyingValueSearchDepth, visited,
                                  output);
+  LDBG() << "  Collected " << output.size() << " underlying values";
 }
 
 //===----------------------------------------------------------------------===//
@@ -227,19 +248,33 @@ static LogicalResult
 getAllocEffectFor(Value value,
                   std::optional<MemoryEffects::EffectInstance> &effect,
                   Operation *&allocScopeOp) {
+  LDBG() << "getAllocEffectFor: " << value;
+
   // Try to get a memory effect interface for the parent operation.
   Operation *op;
-  if (BlockArgument arg = dyn_cast<BlockArgument>(value))
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
     op = arg.getOwner()->getParentOp();
-  else
+    LDBG() << "  BlockArgument, parent op: "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
+  } else {
     op = cast<OpResult>(value).getOwner();
+    LDBG() << "  OpResult, owner op: "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
+  }
+
   MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
-  if (!interface)
+  if (!interface) {
+    LDBG() << "  No memory effect interface found";
     return failure();
+  }
 
   // Try to find an allocation effect on the resource.
-  if (!(effect = interface.getEffectOnValue<MemoryEffects::Allocate>(value)))
+  if (!(effect = interface.getEffectOnValue<MemoryEffects::Allocate>(value))) {
+    LDBG() << "  No allocation effect found on value";
     return failure();
+  }
+
+  LDBG() << "  Found allocation effect";
 
   // If we found an allocation effect, try to find a scope for the allocation.
   // If the resource of this allocation is automatically scoped, find the parent
@@ -247,6 +282,12 @@ getAllocEffectFor(Value value,
   if (llvm::isa<SideEffects::AutomaticAllocationScopeResource>(
           effect->getResource())) {
     allocScopeOp = op->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
+    if (allocScopeOp) {
+      LDBG() << "  Automatic allocation scope found: "
+             << OpWithFlags(allocScopeOp, OpPrintingFlags().skipRegions());
+    } else {
+      LDBG() << "  Automatic allocation scope found: null";
+    }
     return success();
   }
 
@@ -255,47 +296,105 @@ getAllocEffectFor(Value value,
   // For now assume allocation scope to the function scope (we don't care if
   // pointer escape outside function).
   allocScopeOp = op->getParentOfType<FunctionOpInterface>();
+  if (allocScopeOp) {
+    LDBG() << "  Function scope found: "
+           << OpWithFlags(allocScopeOp, OpPrintingFlags().skipRegions());
+  } else {
+    LDBG() << "  Function scope found: null";
+  }
   return success();
+}
+
+static Operation *isDistinctObjectsOp(Operation *op) {
+  if (op && op->hasTrait<OpTrait::DistinctObjectsTrait>())
+    return op;
+
+  return nullptr;
+}
+
+static Value getDistinctObjectsOperand(Operation *op, Value value) {
+  unsigned argNumber = cast<OpResult>(value).getResultNumber();
+  return op->getOperand(argNumber);
+}
+
+static std::optional<AliasResult> checkDistinctObjects(Value lhs, Value rhs) {
+  // We should already checked that lhs and rhs are different.
+  assert(lhs != rhs && "lhs and rhs must be different");
+
+  // Result and corresponding operand must alias.
+  auto lhsOp = isDistinctObjectsOp(lhs.getDefiningOp());
+  if (lhsOp && getDistinctObjectsOperand(lhsOp, lhs) == rhs)
+    return AliasResult::MustAlias;
+
+  auto rhsOp = isDistinctObjectsOp(rhs.getDefiningOp());
+  if (rhsOp && getDistinctObjectsOperand(rhsOp, rhs) == lhs)
+    return AliasResult::MustAlias;
+
+  // If two different values come from the same `DistinctObjects` operation,
+  // they don't alias.
+  if (lhsOp && lhsOp == rhsOp)
+    return AliasResult::NoAlias;
+
+  return std::nullopt;
 }
 
 /// Given the two values, return their aliasing behavior.
 AliasResult LocalAliasAnalysis::aliasImpl(Value lhs, Value rhs) {
-  if (lhs == rhs)
+  LDBG() << "aliasImpl: " << lhs << " vs " << rhs;
+
+  if (lhs == rhs) {
+    LDBG() << "  Same value, must alias";
     return AliasResult::MustAlias;
+  }
+
   Operation *lhsAllocScope = nullptr, *rhsAllocScope = nullptr;
   std::optional<MemoryEffects::EffectInstance> lhsAlloc, rhsAlloc;
 
   // Handle the case where lhs is a constant.
   Attribute lhsAttr, rhsAttr;
   if (matchPattern(lhs, m_Constant(&lhsAttr))) {
+    LDBG() << "  lhs is constant";
     // TODO: This is overly conservative. Two matching constants don't
     // necessarily map to the same address. For example, if the two values
     // correspond to different symbols that both represent a definition.
-    if (matchPattern(rhs, m_Constant(&rhsAttr)))
+    if (matchPattern(rhs, m_Constant(&rhsAttr))) {
+      LDBG() << "  rhs is also constant, may alias";
       return AliasResult::MayAlias;
+    }
 
     // Try to find an alloc effect on rhs. If an effect was found we can't
     // alias, otherwise we might.
-    return succeeded(getAllocEffectFor(rhs, rhsAlloc, rhsAllocScope))
-               ? AliasResult::NoAlias
-               : AliasResult::MayAlias;
+    bool rhsHasAlloc =
+        succeeded(getAllocEffectFor(rhs, rhsAlloc, rhsAllocScope));
+    LDBG() << "  rhs has alloc effect: " << rhsHasAlloc;
+    return rhsHasAlloc ? AliasResult::NoAlias : AliasResult::MayAlias;
   }
   // Handle the case where rhs is a constant.
   if (matchPattern(rhs, m_Constant(&rhsAttr))) {
+    LDBG() << "  rhs is constant";
     // Try to find an alloc effect on lhs. If an effect was found we can't
     // alias, otherwise we might.
-    return succeeded(getAllocEffectFor(lhs, lhsAlloc, lhsAllocScope))
-               ? AliasResult::NoAlias
-               : AliasResult::MayAlias;
+    bool lhsHasAlloc =
+        succeeded(getAllocEffectFor(lhs, lhsAlloc, lhsAllocScope));
+    LDBG() << "  lhs has alloc effect: " << lhsHasAlloc;
+    return lhsHasAlloc ? AliasResult::NoAlias : AliasResult::MayAlias;
   }
+
+  if (std::optional<AliasResult> result = checkDistinctObjects(lhs, rhs))
+    return *result;
 
   // Otherwise, neither of the values are constant so check to see if either has
   // an allocation effect.
   bool lhsHasAlloc = succeeded(getAllocEffectFor(lhs, lhsAlloc, lhsAllocScope));
   bool rhsHasAlloc = succeeded(getAllocEffectFor(rhs, rhsAlloc, rhsAllocScope));
+  LDBG() << "  lhs has alloc effect: " << lhsHasAlloc;
+  LDBG() << "  rhs has alloc effect: " << rhsHasAlloc;
+
   if (lhsHasAlloc == rhsHasAlloc) {
     // If both values have an allocation effect we know they don't alias, and if
     // neither have an effect we can't make an assumptions.
+    LDBG() << "  Both have same alloc status: "
+           << (lhsHasAlloc ? "NoAlias" : "MayAlias");
     return lhsHasAlloc ? AliasResult::NoAlias : AliasResult::MayAlias;
   }
 
@@ -303,6 +402,7 @@ AliasResult LocalAliasAnalysis::aliasImpl(Value lhs, Value rhs) {
   // and one without. Move the one with the effect to the lhs to make the next
   // checks simpler.
   if (rhsHasAlloc) {
+    LDBG() << "  Swapping lhs and rhs to put alloc effect on lhs";
     std::swap(lhs, rhs);
     lhsAlloc = rhsAlloc;
     lhsAllocScope = rhsAllocScope;
@@ -311,49 +411,74 @@ AliasResult LocalAliasAnalysis::aliasImpl(Value lhs, Value rhs) {
   // If the effect has a scoped allocation region, check to see if the
   // non-effect value is defined above that scope.
   if (lhsAllocScope) {
+    LDBG() << "  Checking allocation scope: "
+           << OpWithFlags(lhsAllocScope, OpPrintingFlags().skipRegions());
     // If the parent operation of rhs is an ancestor of the allocation scope, or
     // if rhs is an entry block argument of the allocation scope we know the two
     // values can't alias.
     Operation *rhsParentOp = rhs.getParentRegion()->getParentOp();
-    if (rhsParentOp->isProperAncestor(lhsAllocScope))
+    if (rhsParentOp->isProperAncestor(lhsAllocScope)) {
+      LDBG() << "  rhs parent is ancestor of alloc scope, no alias";
       return AliasResult::NoAlias;
+    }
     if (rhsParentOp == lhsAllocScope) {
       BlockArgument rhsArg = dyn_cast<BlockArgument>(rhs);
-      if (rhsArg && rhs.getParentBlock()->isEntryBlock())
+      if (rhsArg && rhs.getParentBlock()->isEntryBlock()) {
+        LDBG() << "  rhs is entry block arg of alloc scope, no alias";
         return AliasResult::NoAlias;
+      }
     }
   }
 
   // If we couldn't reason about the relationship between the two values,
   // conservatively assume they might alias.
+  LDBG() << "  Cannot reason about relationship, may alias";
   return AliasResult::MayAlias;
 }
 
 /// Given the two values, return their aliasing behavior.
 AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
-  if (lhs == rhs)
+  LDBG() << "alias: " << lhs << " vs " << rhs;
+
+  if (lhs == rhs) {
+    LDBG() << "  Same value, must alias";
     return AliasResult::MustAlias;
+  }
 
   // Get the underlying values being addressed.
   SmallVector<Value, 8> lhsValues, rhsValues;
   collectUnderlyingAddressValues(lhs, lhsValues);
   collectUnderlyingAddressValues(rhs, rhsValues);
 
+  LDBG() << "  lhs underlying values: " << lhsValues.size();
+  LDBG() << "  rhs underlying values: " << rhsValues.size();
+
   // If we failed to collect for either of the values somehow, conservatively
   // assume they may alias.
-  if (lhsValues.empty() || rhsValues.empty())
+  if (lhsValues.empty() || rhsValues.empty()) {
+    LDBG() << "  Failed to collect underlying values, may alias";
     return AliasResult::MayAlias;
+  }
 
   // Check the alias results against each of the underlying values.
   std::optional<AliasResult> result;
   for (Value lhsVal : lhsValues) {
     for (Value rhsVal : rhsValues) {
+      LDBG() << "  Checking underlying values: " << lhsVal << " vs " << rhsVal;
       AliasResult nextResult = aliasImpl(lhsVal, rhsVal);
+      LDBG() << "  Result: "
+             << (nextResult == AliasResult::MustAlias ? "MustAlias"
+                 : nextResult == AliasResult::NoAlias ? "NoAlias"
+                                                      : "MayAlias");
       result = result ? result->merge(nextResult) : nextResult;
     }
   }
 
   // We should always have a valid result here.
+  LDBG() << "  Final result: "
+         << (result->isMust() ? "MustAlias"
+             : result->isNo() ? "NoAlias"
+                              : "MayAlias");
   return *result;
 }
 
@@ -362,8 +487,12 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
 //===----------------------------------------------------------------------===//
 
 ModRefResult LocalAliasAnalysis::getModRef(Operation *op, Value location) {
+  LDBG() << "getModRef: " << OpWithFlags(op, OpPrintingFlags().skipRegions())
+         << " on location " << location;
+
   // Check to see if this operation relies on nested side effects.
   if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
+    LDBG() << "  Operation has recursive memory effects, returning ModAndRef";
     // TODO: To check recursive operations we need to check all of the nested
     // operations, which can result in a quadratic number of queries. We should
     // introduce some caching of some kind to help alleviate this, especially as
@@ -374,38 +503,64 @@ ModRefResult LocalAliasAnalysis::getModRef(Operation *op, Value location) {
 
   // Otherwise, check to see if this operation has a memory effect interface.
   MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
-  if (!interface)
+  if (!interface) {
+    LDBG() << "  No memory effect interface, returning ModAndRef";
     return ModRefResult::getModAndRef();
+  }
 
   // Build a ModRefResult by merging the behavior of the effects of this
   // operation.
   SmallVector<MemoryEffects::EffectInstance> effects;
   interface.getEffects(effects);
+  LDBG() << "  Found " << effects.size() << " memory effects";
 
   ModRefResult result = ModRefResult::getNoModRef();
   for (const MemoryEffects::EffectInstance &effect : effects) {
-    if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
+    if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect())) {
+      LDBG() << "    Skipping alloc/free effect";
       continue;
+    }
 
     // Check for an alias between the effect and our memory location.
     // TODO: Add support for checking an alias with a symbol reference.
     AliasResult aliasResult = AliasResult::MayAlias;
-    if (Value effectValue = effect.getValue())
+    if (Value effectValue = effect.getValue()) {
+      LDBG() << "    Checking alias between effect value " << effectValue
+             << " and location " << location;
       aliasResult = alias(effectValue, location);
+      LDBG() << "    Alias result: "
+             << (aliasResult.isMust() ? "MustAlias"
+                 : aliasResult.isNo() ? "NoAlias"
+                                      : "MayAlias");
+    } else {
+      LDBG() << "    No effect value, assuming MayAlias";
+    }
 
     // If we don't alias, ignore this effect.
-    if (aliasResult.isNo())
+    if (aliasResult.isNo()) {
+      LDBG() << "    No alias, ignoring effect";
       continue;
+    }
 
     // Merge in the corresponding mod or ref for this effect.
     if (isa<MemoryEffects::Read>(effect.getEffect())) {
+      LDBG() << "    Adding Ref to result";
       result = result.merge(ModRefResult::getRef());
     } else {
       assert(isa<MemoryEffects::Write>(effect.getEffect()));
+      LDBG() << "    Adding Mod to result";
       result = result.merge(ModRefResult::getMod());
     }
-    if (result.isModAndRef())
+    if (result.isModAndRef()) {
+      LDBG() << "    Result is now ModAndRef, breaking";
       break;
+    }
   }
+
+  LDBG() << "  Final ModRef result: "
+         << (result.isModAndRef() ? "ModAndRef"
+             : result.isMod()     ? "Mod"
+             : result.isRef()     ? "Ref"
+                                  : "NoModRef");
   return result;
 }

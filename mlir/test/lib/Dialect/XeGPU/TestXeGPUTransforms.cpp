@@ -200,7 +200,8 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
 
     Value sgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-    auto maybeOffsets = sliceAttr.getOffsets(rewriter, loc, sgId, wgShape);
+    auto maybeOffsets =
+        sliceAttr.computeDistributedCoords(rewriter, loc, sgId, wgShape);
     if (failed(maybeOffsets))
       return failure();
 
@@ -243,6 +244,36 @@ struct TestXeGPUSGDistribute
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct TestXeGPUMoveFuncBodyToWarpOp
+    : public PassWrapper<TestXeGPUMoveFuncBodyToWarpOp,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUMoveFuncBodyToWarpOp)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-move-func-to-warp-op";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU move gpu function body to "
+           "WarpExecuteOnLane0 op.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPUMoveFuncBodyToWarpOp() = default;
+  TestXeGPUMoveFuncBodyToWarpOp(const TestXeGPUMoveFuncBodyToWarpOp &pass) =
+      default;
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(patterns);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -312,6 +343,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
   PassRegistration<TestXeGPUSGDistribute>();
+  PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
 }
 } // namespace test
 } // namespace mlir

@@ -22,7 +22,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -76,20 +75,6 @@ struct VectorShapeCast final : public OpConversionPattern<vector::ShapeCastOp> {
 
     // Lowering for size-n vectors when n > 1 hasn't been implemented.
     return failure();
-  }
-};
-
-// Convert `vector.splat` to `vector.broadcast`. There is a path from
-// `vector.broadcast` to SPIRV via other patterns.
-struct VectorSplatToBroadcast final
-    : public OpConversionPattern<vector::SplatOp> {
-  using Base::Base;
-  LogicalResult
-  matchAndRewrite(vector::SplatOp splat, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splat, splat.getType(),
-                                                     adaptor.getInput());
-    return success();
   }
 };
 
@@ -1092,10 +1077,10 @@ void mlir::populateVectorToSPIRVPatterns(
       VectorReductionPattern<CL_INT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<CL_FLOAT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>, VectorShapeCast,
-      VectorSplatToBroadcast, VectorInsertStridedSliceOpConvert,
-      VectorShuffleOpConvert, VectorInterleaveOpConvert,
-      VectorDeinterleaveOpConvert, VectorScalarBroadcastPattern,
-      VectorLoadOpConverter, VectorStoreOpConverter, VectorStepOpConvert>(
+      VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
+      VectorInterleaveOpConvert, VectorDeinterleaveOpConvert,
+      VectorScalarBroadcastPattern, VectorLoadOpConverter,
+      VectorStoreOpConverter, VectorStepOpConvert>(
       typeConverter, patterns.getContext(), PatternBenefit(1));
 
   // Make sure that the more specialized dot product pattern has higher benefit

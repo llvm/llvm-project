@@ -171,10 +171,10 @@ void RedundantStringCStrCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
   const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg");
   const auto *Member = Result.Nodes.getNodeAs<MemberExpr>("member");
-  bool Arrow = Member->isArrow();
+  const bool Arrow = Member->isArrow();
   // Replace the "call" node with the "arg" node, prefixed with '*'
   // if the call was using '->' rather than '.'.
-  std::string ArgText =
+  const std::string ArgText =
       Arrow ? utils::fixit::formatDereference(*Arg, *Result.Context)
             : tooling::fixit::getText(*Arg, *Result.Context).str();
   if (ArgText.empty())

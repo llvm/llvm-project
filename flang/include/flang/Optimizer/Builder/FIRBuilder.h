@@ -208,6 +208,11 @@ public:
     return createRealConstant(loc, realType, 0u);
   }
 
+  /// Create a real constant of type \p realType with value one.
+  mlir::Value createRealOneConstant(mlir::Location loc, mlir::Type realType) {
+    return createRealConstant(loc, realType, 1u);
+  }
+
   /// Create a slot for a local on the stack. Besides the variable's type and
   /// shape, it may be given name, pinned, or target attributes.
   mlir::Value allocateLocal(mlir::Location loc, mlir::Type ty,
@@ -820,7 +825,8 @@ void genScalarAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &lhs,
                          const fir::ExtendedValue &rhs,
                          bool needFinalization = false,
-                         bool isTemporaryLHS = false);
+                         bool isTemporaryLHS = false,
+                         mlir::ArrayAttr accessGroups = {});
 
 /// Assign \p rhs to \p lhs. Both \p rhs and \p lhs must be scalar derived
 /// types. The assignment follows Fortran intrinsic assignment semantic for
@@ -854,6 +860,11 @@ mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
 /// for logical types).
 mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Type type);
+
+/// Create a one value of a given numerical or logical \p type (`true`
+/// for logical types).
+mlir::Value createOneValue(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Type type);
 
 /// Get the integer constants of triplet and compute the extent.
 std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,

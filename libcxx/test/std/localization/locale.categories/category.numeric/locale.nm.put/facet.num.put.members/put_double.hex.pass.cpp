@@ -13,6 +13,7 @@
 // iter_type put(iter_type s, ios_base& iob, char_type fill, double v) const;
 
 // XFAIL: win32-broken-printf-a-precision
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <locale>
 #include <ios>

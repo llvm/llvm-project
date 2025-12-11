@@ -442,6 +442,10 @@ void UdtRecordCompleter::Record::ConstructRecord() {
 
   // The end offset to a vector of field/struct that ends at the offset.
   std::map<uint64_t, std::vector<Member *>> end_offset_map;
+  auto is_last_end_offset = [&](auto it) {
+    return it != end_offset_map.end() && ++it == end_offset_map.end();
+  };
+
   for (auto &pair : fields_map) {
     uint64_t offset = pair.first;
     auto &fields = pair.second;
@@ -462,8 +466,23 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       }
       if (iter->second.empty())
         continue;
-      parent = iter->second.back();
-      iter->second.pop_back();
+
+      // If the new fields come after the already added ones
+      // without overlap, go back to the root.
+      if (iter->first <= offset && is_last_end_offset(iter)) {
+        if (record.kind == Member::Struct) {
+          parent = &record;
+        } else {
+          assert(record.kind == Member::Union &&
+                 "Current record must be a union");
+          assert(!record.fields.empty());
+          // For unions, append the field to the last struct
+          parent = record.fields.back().get();
+        }
+      } else {
+        parent = iter->second.back();
+        iter->second.pop_back();
+      }
     }
     // If it's a field, then the field is inside a union, so we can safely
     // increase its size by converting it to a struct to hold multiple fields.

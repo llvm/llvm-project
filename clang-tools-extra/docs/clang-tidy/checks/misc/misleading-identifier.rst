@@ -4,8 +4,8 @@ misc-misleading-identifier
 ==========================
 
 Finds identifiers that contain Unicode characters with right-to-left direction,
-which can be confusing as they may change the understanding of a whole statement
-line, as described in `Trojan Source <https://trojansource.codes>`_.
+which can be confusing as they may change the understanding of a whole
+statement line, as described in `Trojan Source <https://trojansource.codes>`_.
 
 An example of such misleading code follows:
 

@@ -61,12 +61,13 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
 
     // Calculate relocation hashes
     for (const auto &r : sec.relocs) {
-      if (r.length == 0 || r.referent.isNull() || r.offset >= data.size())
+      uint32_t relocLength = 1 << r.length;
+      if (r.referent.isNull() || r.offset + relocLength > data.size())
         continue;
 
       uint64_t relocHash = getRelocHash(r, sectionToIdx);
       uint32_t start = (r.offset < windowSize) ? 0 : r.offset - windowSize + 1;
-      for (uint32_t i = start; i < r.offset + r.length; i++) {
+      for (uint32_t i = start; i < r.offset + relocLength; i++) {
         auto window = data.drop_front(i).take_front(windowSize);
         hashes.push_back(xxh3_64bits(window) ^ relocHash);
       }
@@ -116,6 +117,10 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
       for (auto &subsec : sec->subsections) {
         auto *isec = subsec.isec;
         if (!isec || isec->data.empty() || !isec->data.data())
+          continue;
+        // CString section order is handled by
+        // {Deduplicated}CStringSection::finalizeContents()
+        if (isa<CStringInputSection>(isec) || isec->isFinal)
           continue;
         // ConcatInputSections are entirely live or dead, so the offset is
         // irrelevant.

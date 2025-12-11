@@ -70,7 +70,7 @@ public:
   }
 
   /// Return a printable string for CASID.
-  std::string toString() const;
+  LLVM_ABI std::string toString() const;
 
   ArrayRef<uint8_t> getHash() const {
     return arrayRefFromStringRef<uint8_t>(Hash);
@@ -95,8 +95,7 @@ public:
   }
 
   friend hash_code hash_value(const CASID &ID) {
-    ArrayRef<uint8_t> Hash = ID.getHash();
-    return hash_combine_range(Hash.begin(), Hash.end());
+    return hash_combine_range(ID.getHash());
   }
 
   const CASContext &getContext() const {

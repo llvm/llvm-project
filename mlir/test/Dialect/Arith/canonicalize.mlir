@@ -2958,6 +2958,19 @@ func.func @truncIShrSIToTrunciShrUI(%a: i64) -> i32 {
   return %hi : i32
 }
 
+// CHECK-LABEL: @truncIShrSIExactToTrunciShrUIExact
+//  CHECK-SAME:   (%[[A:.+]]: i64)
+//  CHECK-NEXT:   %[[C32:.+]] = arith.constant 32 : i64
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C32]] exact : i64
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] : i64 to i32
+//  CHECK-NEXT:   return %[[TRU]] : i32
+func.func @truncIShrSIExactToTrunciShrUIExact(%a: i64) -> i32 {
+  %c32 = arith.constant 32: i64
+  %sh = arith.shrsi %a, %c32 exact : i64
+  %hi = arith.trunci %sh: i64 to i32
+  return %hi : i32
+}
+
 // CHECK-LABEL: @truncIShrSIToTrunciShrUIBadShiftAmt1
 //       CHECK:   arith.shrsi
 func.func @truncIShrSIToTrunciShrUIBadShiftAmt1(%a: i64) -> i32 {

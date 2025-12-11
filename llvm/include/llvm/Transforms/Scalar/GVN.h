@@ -28,6 +28,7 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -322,11 +323,6 @@ private:
   };
   LeaderMap LeaderTable;
 
-  // Block-local map of equivalent values to their leader, does not
-  // propagate to any successors. Entries added mid-block are applied
-  // to the remaining instructions in the block.
-  SmallMapVector<Value *, Value *, 4> ReplaceOperandsWithMap;
-
   // Map the block to reversed postorder traversal number. It is used to
   // find back edge easily.
   DenseMap<AssertingVH<BasicBlock>, uint32_t> BlockRPONumber;
@@ -402,9 +398,9 @@ private:
   void verifyRemoved(const Instruction *I) const;
   bool splitCriticalEdges();
   BasicBlock *splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ);
-  bool replaceOperandsForInBlockEquality(Instruction *I) const;
-  bool propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
-                         bool DominatesByEdge);
+  bool
+  propagateEquality(Value *LHS, Value *RHS,
+                    const std::variant<BasicBlockEdge, Instruction *> &Root);
   bool processFoldableCondBr(BranchInst *BI);
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();

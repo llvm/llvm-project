@@ -12,6 +12,7 @@
 #include "SIDefines.h"
 #include "Utils/AMDGPUAsmUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -73,7 +74,13 @@ void AMDGPUInstPrinter::printU16ImmDecOperand(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
-  O << formatHex(MI->getOperand(OpNo).getImm() & 0xffffffff);
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Op.isExpr()) {
+    MAI.printExpr(O, *Op.getExpr());
+    return;
+  }
+
+  O << formatHex(Op.getImm() & 0xffffffff);
 }
 
 void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
@@ -330,7 +337,7 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
 
 // \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v1023] or
 // \p Reg itself otherwise.
-static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+static MCRegister getRegForPrinting(MCRegister Reg, const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
   if (Idx < 0x100)
@@ -349,10 +356,10 @@ static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
 }
 
 // Restore MSBs of a VGPR above 255 from the MCInstrAnalysis.
-static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
-                               const MCInstrDesc &Desc,
-                               const MCRegisterInfo &MRI,
-                               const AMDGPUMCInstrAnalysis &MIA) {
+static MCRegister getRegFromMIA(MCRegister Reg, unsigned OpNo,
+                                const MCInstrDesc &Desc,
+                                const MCRegisterInfo &MRI,
+                                const AMDGPUMCInstrAnalysis &MIA) {
   unsigned VgprMSBs = MIA.getVgprMSBs();
   if (!VgprMSBs)
     return Reg;
@@ -397,10 +404,10 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
   }
 #endif
 
-  unsigned PrintReg = getRegForPrinting(Reg, MRI);
+  MCRegister PrintReg = getRegForPrinting(Reg, MRI);
   O << getRegisterName(PrintReg);
 
-  if (PrintReg != Reg.id())
+  if (PrintReg != Reg)
     O << " /*" << getRegisterName(Reg) << "*/";
 }
 
@@ -482,6 +489,18 @@ void AMDGPUInstPrinter::printVINTRPDst(const MCInst *MI, unsigned OpNo,
     O << "_e32 ";
 
   printRegularOperand(MI, OpNo, STI, O);
+}
+
+void AMDGPUInstPrinter::printAVLdSt32Align2RegOp(const MCInst *MI,
+                                                 unsigned OpNo,
+                                                 const MCSubtargetInfo &STI,
+                                                 raw_ostream &O) {
+  MCRegister Reg = MI->getOperand(OpNo).getReg();
+
+  // On targets with an even alignment requirement
+  if (MCRegister SubReg = MRI.getSubReg(Reg, AMDGPU::sub0))
+    Reg = SubReg;
+  printRegOperand(Reg, O, MRI);
 }
 
 void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
@@ -788,13 +807,25 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     // Check if operand register class contains register used.
     // Intention: print disassembler message when invalid code is decoded,
     // for example sgpr register used in VReg or VISrc(VReg or imm) operand.
-    int RCID = Desc.operands()[OpNo].RegClass;
-    if (RCID != -1) {
-      const MCRegisterClass RC = MRI.getRegClass(RCID);
+    const MCOperandInfo &OpInfo = Desc.operands()[OpNo];
+    if (OpInfo.RegClass != -1) {
+      int16_t RCID = MII.getOpRegClassID(
+          OpInfo, STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+      const MCRegisterClass &RC = MRI.getRegClass(RCID);
       auto Reg = mc2PseudoReg(Op.getReg());
       if (!RC.contains(Reg) && !isInlineValue(Reg)) {
-        O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
-          << "\' register class*/";
+        bool IsWaveSizeOp = OpInfo.isLookupRegClassByHwMode() &&
+                            (OpInfo.RegClass == AMDGPU::SReg_1 ||
+                             OpInfo.RegClass == AMDGPU::SReg_1_XEXEC);
+        // Suppress this comment for a mismatched wavesize. Some users expect to
+        // be able to assemble and disassemble modules with mixed wavesizes, but
+        // we do not know the subtarget in different functions in MC.
+        //
+        // TODO: Should probably print it anyway, maybe a more specific version.
+        if (!IsWaveSizeOp) {
+          O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
+            << "\' register class*/";
+        }
       }
     }
   } else if (Op.isImm()) {
@@ -1025,7 +1056,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 
   if (!AMDGPU::isLegalDPALU_DPPControl(STI, Imm) &&
-      AMDGPU::isDPALU_DPP(Desc, STI)) {
+      AMDGPU::isDPALU_DPP(Desc, MII, STI)) {
     O << " /* DP ALU dpp only supports "
       << (isGFX12(STI) ? "row_share" : "row_newbcast") << " */";
     return;
@@ -1280,6 +1311,17 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
         (ModIdx != -1) ? MI->getOperand(ModIdx).getImm() : DefaultValue;
   }
 
+  // Some instructions, e.g. v_interp_p2_f16 in GFX9, have src0, src2, but no
+  // src1.
+  if (NumOps == 1 && AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src2) &&
+      !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src1)) {
+    Ops[NumOps++] = DefaultValue; // Set src1_modifiers to default.
+    int Mod2Idx =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
+    assert(Mod2Idx != -1);
+    Ops[NumOps++] = MI->getOperand(Mod2Idx).getImm();
+  }
+
   const bool HasDst =
       (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst) != -1) ||
       (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::sdst) != -1);
@@ -1312,12 +1354,9 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
     return;
 
   O << Name;
-  for (int I = 0; I < NumOps; ++I) {
-    if (I != 0)
-      O << ',';
-
-    O << !!(Ops[I] & Mod);
-  }
+  ListSeparator Sep(",");
+  for (int I = 0; I < NumOps; ++I)
+    O << Sep << !!(Ops[I] & Mod);
 
   if (HasDstSel) {
     O << ',' << !!(Ops[0] & SISrcMods::DST_OP_SEL);
@@ -1555,14 +1594,10 @@ void AMDGPUInstPrinter::printGPRIdxMode(const MCInst *MI, unsigned OpNo,
     O << formatHex(static_cast<uint64_t>(Val));
   } else {
     O << "gpr_idx(";
-    bool NeedComma = false;
+    ListSeparator Sep(",");
     for (unsigned ModeId = ID_MIN; ModeId <= ID_MAX; ++ModeId) {
-      if (Val & (1 << ModeId)) {
-        if (NeedComma)
-          O << ',';
-        O << IdSymbolic[ModeId];
-        NeedComma = true;
-      }
+      if (Val & (1 << ModeId))
+        O << Sep << IdSymbolic[ModeId];
     }
     O << ')';
   }
@@ -1769,25 +1804,16 @@ void AMDGPUInstPrinter::printSWaitCnt(const MCInst *MI, unsigned OpNo,
   bool IsDefaultLgkmcnt = Lgkmcnt == getLgkmcntBitMask(ISA);
   bool PrintAll = IsDefaultVmcnt && IsDefaultExpcnt && IsDefaultLgkmcnt;
 
-  bool NeedSpace = false;
+  ListSeparator Sep(" ");
 
-  if (!IsDefaultVmcnt || PrintAll) {
-    O << "vmcnt(" << Vmcnt << ')';
-    NeedSpace = true;
-  }
+  if (!IsDefaultVmcnt || PrintAll)
+    O << Sep << "vmcnt(" << Vmcnt << ')';
 
-  if (!IsDefaultExpcnt || PrintAll) {
-    if (NeedSpace)
-      O << ' ';
-    O << "expcnt(" << Expcnt << ')';
-    NeedSpace = true;
-  }
+  if (!IsDefaultExpcnt || PrintAll)
+    O << Sep << "expcnt(" << Expcnt << ')';
 
-  if (!IsDefaultLgkmcnt || PrintAll) {
-    if (NeedSpace)
-      O << ' ';
-    O << "lgkmcnt(" << Lgkmcnt << ')';
-  }
+  if (!IsDefaultLgkmcnt || PrintAll)
+    O << Sep << "lgkmcnt(" << Lgkmcnt << ')';
 }
 
 void AMDGPUInstPrinter::printDepCtr(const MCInst *MI, unsigned OpNo,
@@ -1803,14 +1829,10 @@ void AMDGPUInstPrinter::printDepCtr(const MCInst *MI, unsigned OpNo,
     StringRef Name;
     unsigned Val;
     bool IsDefault;
-    bool NeedSpace = false;
+    ListSeparator Sep(" ");
     while (decodeDepCtr(Imm16, Id, Name, Val, IsDefault, STI)) {
-      if (!IsDefault || !HasNonDefaultVal) {
-        if (NeedSpace)
-          O << ' ';
-        O << Name << '(' << Val << ')';
-        NeedSpace = true;
-      }
+      if (!IsDefault || !HasNonDefaultVal)
+        O << Sep << Name << '(' << Val << ')';
     }
   } else {
     O << formatHex(Imm16);

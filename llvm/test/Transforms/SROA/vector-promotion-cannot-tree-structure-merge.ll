@@ -219,4 +219,18 @@ entry:
 
 }
 
+define <1 x i32> @test_store_value_size_not_multiple_of_allocated_element_type_size(<1 x i16> %a, <1 x i16> %b) {
+entry:
+  %alloca = alloca [2 x i16]
+
+  %ptr0 = getelementptr inbounds [2 x i16], ptr %alloca, i32 0, i32 0
+  store <1 x i16> %a, ptr %ptr0
+
+  %ptr1 = getelementptr inbounds [2 x i16], ptr %alloca, i32 0, i32 1
+  store <1 x i16> %b, ptr %ptr1
+
+  %result = load <1 x i32>, ptr %alloca
+  ret <1 x i32> %result
+}
+
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)

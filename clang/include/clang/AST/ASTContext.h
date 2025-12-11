@@ -488,6 +488,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   /// Declaration for the CUDA cudaConfigureCall function.
   FunctionDecl *cudaConfigureCallDecl = nullptr;
+  /// Declaration for the CUDA cudaGetParameterBuffer function.
+  FunctionDecl *cudaGetParameterBufferDecl = nullptr;
+  /// Declaration for the CUDA cudaLaunchDevice function.
+  FunctionDecl *cudaLaunchDeviceDecl = nullptr;
 
   /// Keeps track of all declaration attributes.
   ///
@@ -1640,6 +1644,18 @@ public:
   FunctionDecl *getcudaConfigureCallDecl() {
     return cudaConfigureCallDecl;
   }
+
+  void setcudaGetParameterBufferDecl(FunctionDecl *FD) {
+    cudaGetParameterBufferDecl = FD;
+  }
+
+  FunctionDecl *getcudaGetParameterBufferDecl() {
+    return cudaGetParameterBufferDecl;
+  }
+
+  void setcudaLaunchDeviceDecl(FunctionDecl *FD) { cudaLaunchDeviceDecl = FD; }
+
+  FunctionDecl *getcudaLaunchDeviceDecl() { return cudaLaunchDeviceDecl; }
 
   /// Returns true iff we need copy/dispose helpers for the given type.
   bool BlockRequiresCopying(QualType Ty, const VarDecl *D);
@@ -2874,11 +2890,11 @@ public:
   /// returned type is guaranteed to be free of any of these, allowing two
   /// canonical types to be compared for exact equality with a simple pointer
   /// comparison.
-  CanQualType getCanonicalType(QualType T) const {
+  static CanQualType getCanonicalType(QualType T) {
     return CanQualType::CreateUnsafe(T.getCanonicalType());
   }
 
-  const Type *getCanonicalType(const Type *T) const {
+  static const Type *getCanonicalType(const Type *T) {
     return T->getCanonicalTypeInternal().getTypePtr();
   }
 
@@ -2890,10 +2906,10 @@ public:
   CanQualType getCanonicalParamType(QualType T) const;
 
   /// Determine whether the given types \p T1 and \p T2 are equivalent.
-  bool hasSameType(QualType T1, QualType T2) const {
+  static bool hasSameType(QualType T1, QualType T2) {
     return getCanonicalType(T1) == getCanonicalType(T2);
   }
-  bool hasSameType(const Type *T1, const Type *T2) const {
+  static bool hasSameType(const Type *T1, const Type *T2) {
     return getCanonicalType(T1) == getCanonicalType(T2);
   }
 
@@ -2921,7 +2937,7 @@ public:
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.
-  bool hasSameUnqualifiedType(QualType T1, QualType T2) const {
+  static bool hasSameUnqualifiedType(QualType T1, QualType T2) {
     return getCanonicalType(T1).getTypePtr() ==
            getCanonicalType(T2).getTypePtr();
   }

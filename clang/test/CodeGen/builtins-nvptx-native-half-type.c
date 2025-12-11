@@ -41,7 +41,7 @@ __device__ void nvvm_ex2_sm75() {
 #if __CUDA_ARCH__ >= 750
   // CHECK_PTX70_SM75: call half @llvm.nvvm.ex2.approx.f16
   __nvvm_ex2_approx_f16(0.1f16);
-  // CHECK_PTX70_SM75: call <2 x half> @llvm.nvvm.ex2.approx.f16x2
+  // CHECK_PTX70_SM75: call <2 x half> @llvm.nvvm.ex2.approx.v2f16
   __nvvm_ex2_approx_f16x2({0.1f16, 0.7f16});
 #endif
   // CHECK: ret void

@@ -159,17 +159,29 @@ def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
     let cppFunctionName = "isAnyIntegerOrFloatingPointType";
 }
 
+def CIR_AnyIntOrBoolOrFloatType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyFloatType, CIR_AnyIntType],
+                "integer, boolean or floating point type"> {
+  let cppFunctionName = "isAnyIntegerOrBooleanOrFloatingPointType";
+}
+
 //===----------------------------------------------------------------------===//
 // Complex Type predicates
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyComplexType : CIR_TypeBase<"::cir::ComplexType", "complex type">;
 
-def CIR_AnyComplexOrIntOrFloatType : AnyTypeOf<[
-    CIR_AnyComplexType, CIR_AnyFloatType, CIR_AnyIntType
-], "complex, integer or floating point type"> {
-    let cppFunctionName = "isComplexOrIntegerOrFloatingPointType";
+def CIR_AnyComplexOrIntOrBoolOrFloatType
+    : AnyTypeOf<[CIR_AnyComplexType, CIR_AnyIntOrBoolOrFloatType],
+                "complex, integer, boolean or floating point type"> {
+  let cppFunctionName = "isComplexOrIntegerOrBoolOrFloatingPointType";
 }
+
+//===----------------------------------------------------------------------===//
+// Record Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyRecordType : CIR_TypeBase<"::cir::RecordType", "record type">;
 
 //===----------------------------------------------------------------------===//
 // Array Type predicates
@@ -228,6 +240,8 @@ def CIR_PtrToIntOrFloatType : CIR_PtrToType<CIR_AnyIntOrFloatType>;
 
 def CIR_PtrToComplexType : CIR_PtrToType<CIR_AnyComplexType>;
 
+def CIR_PtrToRecordType : CIR_PtrToType<CIR_AnyRecordType>;
+
 def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 
 //===----------------------------------------------------------------------===//
@@ -236,10 +250,10 @@ def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 
 def CIR_AnyVectorType : CIR_TypeBase<"::cir::VectorType", "vector type">;
 
-def CIR_VectorElementType : AnyTypeOf<[CIR_AnyIntOrFloatType, CIR_AnyPtrType],
-    "any cir integer, floating point or pointer type"
-> {
-    let cppFunctionName = "isValidVectorTypeElementType";
+def CIR_VectorElementType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType, CIR_AnyPtrType],
+                "any cir boolean, integer, floating point or pointer type"> {
+  let cppFunctionName = "isValidVectorTypeElementType";
 }
 
 class CIR_ElementTypePred<Pred pred> : SubstLeaves<"$_self",
@@ -251,6 +265,9 @@ class CIR_VectorTypeOf<list<Type> types, string summary = "">
         !if(!empty(summary),
             "vector of " # CIR_TypeSummaries<types>.value,
             summary)>;
+
+// Type constraint accepting a either a type T or a vector of type T
+class CIR_ScalarOrVectorOf<Type T> : AnyTypeOf<[T, CIR_VectorTypeOf<[T]>]>;
 
 // Vector of integral type
 def IntegerVector : Type<
@@ -296,6 +313,13 @@ def CIR_AnyFloatOrVecOfFloatType
 }
 
 //===----------------------------------------------------------------------===//
+// Data member type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyDataMemberType : CIR_TypeBase<"::cir::DataMemberType",
+    "data member type">;
+
+//===----------------------------------------------------------------------===//
 // VPtr type predicates
 //===----------------------------------------------------------------------===//
 
@@ -308,7 +332,8 @@ def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>;
 //===----------------------------------------------------------------------===//
 
 defvar CIR_ScalarTypes = [
-    CIR_AnyBoolType, CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType
+    CIR_AnyBoolType, CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType,
+    CIR_AnyDataMemberType, CIR_AnyVPtrType
 ];
 
 def CIR_AnyScalarType : AnyTypeOf<CIR_ScalarTypes, "cir scalar type"> {

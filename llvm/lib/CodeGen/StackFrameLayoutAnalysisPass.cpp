@@ -306,10 +306,7 @@ char &llvm::StackFrameLayoutAnalysisPassID = StackFrameLayoutAnalysisLegacy::ID;
 INITIALIZE_PASS(StackFrameLayoutAnalysisLegacy, "stack-frame-layout",
                 "Stack Frame Layout", false, false)
 
-namespace llvm {
 /// Returns a newly-created StackFrameLayout pass.
-MachineFunctionPass *createStackFrameLayoutAnalysisPass() {
+MachineFunctionPass *llvm::createStackFrameLayoutAnalysisPass() {
   return new StackFrameLayoutAnalysisLegacy();
 }
-
-} // namespace llvm

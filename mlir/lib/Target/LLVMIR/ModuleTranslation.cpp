@@ -588,10 +588,17 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   }
   // For integer types, we allow a mismatch in sizes as the index type in
   // MLIR might have a different size than the index type in the LLVM module.
-  if (auto intAttr = dyn_cast<IntegerAttr>(attr))
-    return llvm::ConstantInt::get(
-        llvmType,
-        intAttr.getValue().sextOrTrunc(llvmType->getIntegerBitWidth()));
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+    // If the attribute is an unsigned integer or a 1-bit integer, zero-extend
+    // the value to the bit width of the LLVM type. Otherwise, sign-extend.
+    auto intTy = dyn_cast<IntegerType>(intAttr.getType());
+    APInt value;
+    if (intTy && (intTy.isUnsigned() || intTy.getWidth() == 1))
+      value = intAttr.getValue().zextOrTrunc(llvmType->getIntegerBitWidth());
+    else
+      value = intAttr.getValue().sextOrTrunc(llvmType->getIntegerBitWidth());
+    return llvm::ConstantInt::get(llvmType, value);
+  }
   if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
     const llvm::fltSemantics &sem = floatAttr.getValue().getSemantics();
     // Special case for 8-bit floats, which are represented by integers due to
@@ -649,40 +656,38 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
       auto *arrayType = llvm::ArrayType::get(elementType, numElements);
       if (child->isZeroValue() && !elementType->isFPOrFPVectorTy()) {
         return llvm::ConstantAggregateZero::get(arrayType);
-      } else {
-        if (llvm::ConstantDataSequential::isElementTypeCompatible(
-                elementType)) {
-          // TODO: Handle all compatible types. This code only handles integer.
-          if (isa<llvm::IntegerType>(elementType)) {
-            if (llvm::ConstantInt *ci = dyn_cast<llvm::ConstantInt>(child)) {
-              if (ci->getBitWidth() == 8) {
-                SmallVector<int8_t> constants(numElements, ci->getZExtValue());
-                return llvm::ConstantDataArray::get(elementType->getContext(),
-                                                    constants);
-              }
-              if (ci->getBitWidth() == 16) {
-                SmallVector<int16_t> constants(numElements, ci->getZExtValue());
-                return llvm::ConstantDataArray::get(elementType->getContext(),
-                                                    constants);
-              }
-              if (ci->getBitWidth() == 32) {
-                SmallVector<int32_t> constants(numElements, ci->getZExtValue());
-                return llvm::ConstantDataArray::get(elementType->getContext(),
-                                                    constants);
-              }
-              if (ci->getBitWidth() == 64) {
-                SmallVector<int64_t> constants(numElements, ci->getZExtValue());
-                return llvm::ConstantDataArray::get(elementType->getContext(),
-                                                    constants);
-              }
+      }
+      if (llvm::ConstantDataSequential::isElementTypeCompatible(elementType)) {
+        // TODO: Handle all compatible types. This code only handles integer.
+        if (isa<llvm::IntegerType>(elementType)) {
+          if (llvm::ConstantInt *ci = dyn_cast<llvm::ConstantInt>(child)) {
+            if (ci->getBitWidth() == 8) {
+              SmallVector<int8_t> constants(numElements, ci->getZExtValue());
+              return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                  constants);
+            }
+            if (ci->getBitWidth() == 16) {
+              SmallVector<int16_t> constants(numElements, ci->getZExtValue());
+              return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                  constants);
+            }
+            if (ci->getBitWidth() == 32) {
+              SmallVector<int32_t> constants(numElements, ci->getZExtValue());
+              return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                  constants);
+            }
+            if (ci->getBitWidth() == 64) {
+              SmallVector<int64_t> constants(numElements, ci->getZExtValue());
+              return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                  constants);
             }
           }
         }
-        // std::vector is used here to accomodate large number of elements that
-        // exceed SmallVector capacity.
-        std::vector<llvm::Constant *> constants(numElements, child);
-        return llvm::ConstantArray::get(arrayType, constants);
       }
+      // std::vector is used here to accomodate large number of elements that
+      // exceed SmallVector capacity.
+      std::vector<llvm::Constant *> constants(numElements, child);
+      return llvm::ConstantArray::get(arrayType, constants);
     }
   }
 
@@ -894,10 +899,13 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
     llvm::IRBuilderBase &builder, llvm::Intrinsic::ID intrinsic,
     ArrayRef<llvm::Value *> args, ArrayRef<llvm::Type *> tys) {
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::Function *fn =
-      llvm::Intrinsic::getOrInsertDeclaration(module, intrinsic, tys);
-  return builder.CreateCall(fn, args);
+  return builder.CreateIntrinsic(intrinsic, tys, args);
+}
+
+llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
+    llvm::IRBuilderBase &builder, llvm::Intrinsic::ID intrinsic,
+    llvm::Type *retTy, ArrayRef<llvm::Value *> args) {
+  return builder.CreateIntrinsic(retTy, intrinsic, args);
 }
 
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
@@ -922,8 +930,7 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
     assert(opBundleSizes.size() == opBundleTagsAttr.size() &&
            "operand bundles and tags do not match");
 
-    numOpBundleOperands =
-        std::accumulate(opBundleSizes.begin(), opBundleSizes.end(), size_t(0));
+    numOpBundleOperands = llvm::sum_of(opBundleSizes);
     assert(numOpBundleOperands <= intrOp->getNumOperands() &&
            "operand bundle operands is more than the number of operands");
 
@@ -1561,9 +1568,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
 
-  if (auto unsafeFpMath = func.getUnsafeFpMath())
-    llvmFunc->addFnAttr("unsafe-fp-math", llvm::toStringRef(*unsafeFpMath));
-
   if (auto noInfsFpMath = func.getNoInfsFpMath())
     llvmFunc->addFnAttr("no-infs-fp-math", llvm::toStringRef(*noInfsFpMath));
 
@@ -1643,6 +1647,15 @@ static void convertFunctionMemoryAttributes(LLVMFuncOp func,
   newMemEffects |=
       llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
                           convertModRefInfoToLLVM(memEffects.getOther()));
+  newMemEffects |=
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::ErrnoMem,
+                          convertModRefInfoToLLVM(memEffects.getErrnoMem()));
+  newMemEffects |=
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::TargetMem0,
+                          convertModRefInfoToLLVM(memEffects.getTargetMem0()));
+  newMemEffects |=
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::TargetMem1,
+                          convertModRefInfoToLLVM(memEffects.getTargetMem1()));
   llvmFunc->setMemoryEffects(newMemEffects);
 }
 
@@ -1653,6 +1666,8 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::NoInline);
   if (func.getAlwaysInlineAttr())
     llvmFunc->addFnAttr(llvm::Attribute::AlwaysInline);
+  if (func.getInlineHintAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::InlineHint);
   if (func.getOptimizeNoneAttr())
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
   if (func.getConvergentAttr())
@@ -2126,8 +2141,16 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
   //    LLVM metadata instances.
   AttrTypeWalker walker;
   walker.addWalk([&](TBAARootAttr root) {
-    tbaaMetadataMapping.insert(
-        {root, llvm::MDNode::get(ctx, llvm::MDString::get(ctx, root.getId()))});
+    llvm::MDNode *node;
+    if (StringAttr id = root.getId()) {
+      node = llvm::MDNode::get(ctx, llvm::MDString::get(ctx, id));
+    } else {
+      // Anonymous root nodes are self-referencing.
+      auto selfRef = llvm::MDNode::getTemporary(ctx, {});
+      node = llvm::MDNode::get(ctx, {selfRef.get()});
+      node->replaceOperandWith(0, node);
+    }
+    tbaaMetadataMapping.insert({root, node});
   });
 
   walker.addWalk([&](TBAATypeDescriptorAttr descriptor) {
@@ -2258,8 +2281,11 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
         /* HasRequiresUnifiedSharedMemory = */ false,
         /* HasRequiresDynamicAllocators = */ false);
     unsigned int defaultAS =
-        getLLVMModule()->getDataLayout().getProgramAddressSpace();
+        llvmModule->getDataLayout().getProgramAddressSpace();
     config.setDefaultTargetAS(defaultAS);
+    config.setRuntimeCC(llvmModule->getTargetTriple().isSPIRV()
+                            ? llvm::CallingConv::SPIR_FUNC
+                            : llvm::CallingConv::C);
     ompBuilder->setConfig(std::move(config));
     ompBuilder->initialize();
   }

@@ -17,12 +17,14 @@
 #include <__bit/countr.h>
 #include <__bit/invert_if.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/identity.h>
 #include <__fwd/bit_reference.h>
 #include <__iterator/segmented_iterator.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
@@ -228,7 +230,8 @@ struct __find_segment {
   template <class _InputIterator, class _Proj>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _InputIterator
   operator()(_InputIterator __first, _InputIterator __last, _Proj& __proj) const {
-    return std::__find(__first, __last, __value_, __proj);
+    return std::__rewrap_iter(
+        __first, std::__find(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __value_, __proj));
   }
 };
 

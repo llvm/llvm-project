@@ -16,7 +16,6 @@ import resource
 import sys
 import subprocess
 import time
-import types
 
 # ----------------------------------------------------------------------
 # Code that auto imports LLDB
@@ -121,19 +120,19 @@ class BreakpointAction(Action):
             self.breakpoints.append(breakpoint)
         else:
             if module:
-                if isinstance(module, types.ListType):
+                if isinstance(module, list):
                     for module_path in module:
                         self.modules.Append(lldb.SBFileSpec(module_path, False))
-                elif isinstance(module, types.StringTypes):
+                elif isinstance(module, str):
                     self.modules.Append(lldb.SBFileSpec(module, False))
             if name:
                 # "file" can be a list or a string
                 if file:
-                    if isinstance(file, types.ListType):
+                    if isinstance(file, list):
                         self.files = lldb.SBFileSpecList()
                         for f in file:
                             self.files.Append(lldb.SBFileSpec(f, False))
-                    elif isinstance(file, types.StringTypes):
+                    elif isinstance(file, str):
                         self.files.Append(lldb.SBFileSpec(file, False))
                 self.breakpoints.append(
                     self.target.BreakpointCreateByName(name, self.modules, self.files)

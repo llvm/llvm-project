@@ -13,5 +13,5 @@ rnk@google.com (email), rnk (Discourse), rnk (GitHub), rnk (Discord)
 Other Members
 -------------
 Eli Friedman
-efriedma@quicinc.com> (email), efriedma-quic (Discourse), efriedma-quic (GitHub)
+efriedma@qti.qualcomm.com> (email), efriedma-quic (Discourse), efriedma-quic (GitHub)
 

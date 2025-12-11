@@ -81,7 +81,7 @@ void MisleadingCaptureDefaultByValueCheck::check(
     return;
 
   if (Lambda->getCaptureDefault() == LCD_ByCopy) {
-    bool IsThisImplicitlyCaptured = std::any_of(
+    const bool IsThisImplicitlyCaptured = std::any_of(
         Lambda->implicit_capture_begin(), Lambda->implicit_capture_end(),
         [](const LambdaCapture &Capture) { return Capture.capturesThis(); });
     auto Diag = diag(Lambda->getCaptureDefaultLoc(),
@@ -89,8 +89,8 @@ void MisleadingCaptureDefaultByValueCheck::check(
                      "should not specify a by-value capture default")
                 << IsThisImplicitlyCaptured;
 
-    std::string ReplacementText = createReplacementText(Lambda);
-    SourceLocation DefaultCaptureEnd =
+    const std::string ReplacementText = createReplacementText(Lambda);
+    const SourceLocation DefaultCaptureEnd =
         findDefaultCaptureEnd(Lambda, *Result.Context);
     Diag << FixItHint::CreateReplacement(
         CharSourceRange::getCharRange(Lambda->getCaptureDefaultLoc(),

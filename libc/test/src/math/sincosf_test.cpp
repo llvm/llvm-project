@@ -8,14 +8,20 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/sincosf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include "hdr/stdint_proxy.h"
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -60,36 +66,36 @@ TEST_F(LlvmLibcSinCosfTest, SpecialNumbers) {
     mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
     if (__r1.success) {                                                        \
       LIBC_NAMESPACE::sincosf(input, &sin, &cos);                              \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Nearest);                          \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Nearest);                          \
     }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r2(mpfr::RoundingMode::Upward);                  \
     if (__r2.success) {                                                        \
       LIBC_NAMESPACE::sincosf(input, &sin, &cos);                              \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Upward);                           \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Upward);                           \
     }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r3(mpfr::RoundingMode::Downward);                \
     if (__r3.success) {                                                        \
       LIBC_NAMESPACE::sincosf(input, &sin, &cos);                              \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Downward);                         \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::Downward);                         \
     }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r4(mpfr::RoundingMode::TowardZero);              \
     if (__r4.success) {                                                        \
       LIBC_NAMESPACE::sincosf(input, &sin, &cos);                              \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Sin, input, sin, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::TowardZero);                       \
-      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, 0.5,                 \
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, input, cos, TOLERANCE + 0.5,     \
                         mpfr::RoundingMode::TowardZero);                       \
     }                                                                          \
   }

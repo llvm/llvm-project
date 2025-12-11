@@ -76,7 +76,7 @@ protected:
 // number of a different type. e.g.:
 //   ExtractSecondType<Foo..., int>::type
 template <typename Ty1, typename Ty2> struct ExtractSecondType {
-  typedef Ty2 type;
+  using type = Ty2;
 };
 
 // TrailingObjectsImpl is somewhat complicated, because it is a
@@ -101,8 +101,8 @@ class TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy, NextTy,
     : public TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, NextTy,
                                  MoreTys...> {
 
-  typedef TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, NextTy, MoreTys...>
-      ParentType;
+  using ParentType =
+      TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, NextTy, MoreTys...>;
 
   struct RequiresRealignment {
     static const bool value = alignof(PrevTy) < alignof(NextTy);
@@ -182,8 +182,6 @@ protected:
   static constexpr size_t additionalSizeToAllocImpl(size_t SizeSoFar) {
     return SizeSoFar;
   }
-
-  template <bool CheckAlignment> static void verifyTrailingObjectsAlignment() {}
 };
 
 } // end namespace trailing_objects_internal
@@ -203,10 +201,7 @@ class TrailingObjects
 
   template <typename... Tys> class Foo {};
 
-  typedef trailing_objects_internal::TrailingObjectsImpl<
-      trailing_objects_internal::MaxAlignment<TrailingTys...>, BaseTy,
-      TrailingObjects<BaseTy, TrailingTys...>, BaseTy, TrailingTys...>
-      ParentType;
+  using ParentType = typename TrailingObjects::TrailingObjectsImpl;
   using TrailingObjectsBase = trailing_objects_internal::TrailingObjectsBase;
 
   using ParentType::getTrailingObjectsImpl;

@@ -109,9 +109,7 @@ tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
 /// {0}: The name of the dialect class.
 /// {1}: The dialect namespace.
 /// {2}: The dialect parent class.
-/// {3}: The summary and description comments.
 static const char *const dialectDeclBeginStr = R"(
-{3}
 class {0} : public ::mlir::{2} {
   explicit {0}(::mlir::MLIRContext *context);
 
@@ -249,10 +247,11 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
     StringRef superClassName =
         dialect.isExtensible() ? "ExtensibleDialect" : "Dialect";
 
-    std::string comments = tblgen::emitSummaryAndDescComments(
-        dialect.getSummary(), dialect.getDescription());
+    tblgen::emitSummaryAndDescComments(os, dialect.getSummary(),
+                                       dialect.getDescription(),
+                                       /*terminateCmment=*/false);
     os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
-                        superClassName, comments);
+                        superClassName);
 
     // If the dialect requested the default attribute printer and parser, emit
     // the declarations for the hooks.

@@ -7,6 +7,8 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_optnone,+SPV_INTEL_optnone %s -o - | FileCheck %s --check-prefixes=CHECK-TWO-EXTENSIONS
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=all %s -o - | FileCheck %s --check-prefixes=CHECK-ALL-EXTENSIONS
 
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK-ALL-EXTENSIONS
+
 ; CHECK-EXTENSION: OpCapability OptNoneEXT
 ; CHECK-EXTENSION: OpExtension "SPV_EXT_optnone"
 ; CHECK-NO-EXTENSION-NOT: OpCapability OptNoneINTEL

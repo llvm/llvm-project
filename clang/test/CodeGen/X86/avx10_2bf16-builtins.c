@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64 -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386 -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386   -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
+
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64 -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386   -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 __m256bh test_mm256_setzero_pbh() {
   // CHECK-LABEL: @test_mm256_setzero_pbh
@@ -274,7 +278,7 @@ __m256bh test_mm256_loadu_pbh(void *p) {
 
 __m128bh test_mm_load_sbh(void const *A) {
   // CHECK-LABEL: test_mm_load_sbh
-  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr %{{.*}}, i32 1, <8 x i1> bitcast (<1 x i8> splat (i8 1) to <8 x i1>), <8 x bfloat> %{{.*}})
+  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr align 1 %{{.*}}, <8 x i1> bitcast (<1 x i8> splat (i8 1) to <8 x i1>), <8 x bfloat> %{{.*}})
   return _mm_load_sbh(A);
 }
 
@@ -305,7 +309,7 @@ void test_mm_store_sbh(void *A, __m128bh B) {
 
 void test_mm_mask_store_sbh(void *__P, __mmask8 __U, __m128bh __A) {
   // CHECK-LABEL: @test_mm_mask_store_sbh
-  // CHECK: call void @llvm.masked.store.v8bf16.p0(<8 x bfloat> %{{.*}}, ptr %{{.*}}, i32 1, <8 x i1> %{{.*}})
+  // CHECK: call void @llvm.masked.store.v8bf16.p0(<8 x bfloat> %{{.*}}, ptr align 1 %{{.*}}, <8 x i1> %{{.*}})
   _mm_mask_store_sbh(__P, __U, __A);
 }
 
@@ -323,13 +327,13 @@ void test_mm_store_pbh(void *p, __m128bh a) {
 
 __m128bh test_mm_mask_load_sbh(__m128bh __A, __mmask8 __U, const void *__W) {
   // CHECK-LABEL: @test_mm_mask_load_sbh
-  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x bfloat> %{{.*}})
+  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x bfloat> %{{.*}})
   return _mm_mask_load_sbh(__A, __U, __W);
 }
 
 __m128bh test_mm_maskz_load_sbh(__mmask8 __U, const void *__W) {
   // CHECK-LABEL: @test_mm_maskz_load_sbh
-  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x bfloat> %{{.*}})
+  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x bfloat> %{{.*}})
   return _mm_maskz_load_sbh(__U, __W);
 }
 
@@ -353,6 +357,7 @@ __m128bh test_mm_move_sbh(__m128bh A, __m128bh B) {
   // CHECK: insertelement <8 x bfloat> %{{.*}}, bfloat %{{.*}}, i32 0
   return _mm_move_sbh(A, B);
 }
+TEST_CONSTEXPR(match_m128bh(_mm_move_sbh((__m128bh)(__v8bf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f}, (__m128bh)(__v8bf){9.0f,10.0f,11.0f,12.0f,13.0f,14.0f,15.0f,16.0f}), 9.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f));
 
 __m128bh test_mm_mask_move_sbh(__m128bh __W, __mmask8 __U, __m128bh __A, __m128bh __B) {
   // CHECK-LABEL: @test_mm_mask_move_sbh
@@ -366,6 +371,7 @@ __m128bh test_mm_mask_move_sbh(__m128bh __W, __mmask8 __U, __m128bh __A, __m128b
   // CHECK-NEXT: insertelement <8 x bfloat> [[VEC]], bfloat [[SEL]], i64 0
   return _mm_mask_move_sbh(__W, __U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128bh(_mm_mask_move_sbh((__m128bh)(__v8bf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f}, (__mmask8)0x01, (__m128bh)(__v8bf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}, (__m128bh)(__v8bf){9.0f,10.0f,11.0f,12.0f,13.0f,14.0f,15.0f,16.0f}), 9.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f));
 
 __m128bh test_mm_maskz_move_sbh(__mmask8 __U, __m128bh __A, __m128bh __B) {
   // CHECK-LABEL: @test_mm_maskz_move_sbh

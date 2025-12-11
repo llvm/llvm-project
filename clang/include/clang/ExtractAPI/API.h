@@ -618,17 +618,17 @@ struct TagRecord : APIRecord, RecordContext {
   static bool classofKind(RecordKind K) {
     switch (K) {
     case RK_Enum:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_Struct:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_Union:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_CXXClass:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplate:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplateSpecialization:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplatePartialSpecialization:
       return true;
     default:
@@ -704,15 +704,15 @@ struct RecordRecord : TagRecord {
   static bool classofKind(RecordKind K) {
     switch (K) {
     case RK_Struct:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_Union:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_CXXClass:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplate:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplateSpecialization:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplatePartialSpecialization:
       return true;
     default:

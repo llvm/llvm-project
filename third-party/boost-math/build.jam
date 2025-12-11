@@ -1,0 +1,48 @@
+# Copyright René Ferdinand Rivera Morell 2023-2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+constant boost_dependencies :
+    /boost/assert//boost_assert
+    /boost/concept_check//boost_concept_check
+    /boost/config//boost_config
+    /boost/core//boost_core
+    /boost/integer//boost_integer
+    /boost/lexical_cast//boost_lexical_cast
+    /boost/predef//boost_predef
+    /boost/random//boost_random
+    /boost/static_assert//boost_static_assert
+    /boost/throw_exception//boost_throw_exception ;
+
+project /boost/math
+    : common-requirements
+        <include>include
+    ;
+
+explicit
+    [ alias boost_math : : : : <library>$(boost_dependencies) ]
+    [ alias boost_math_c99 : build//boost_math_c99 ]
+    [ alias boost_math_c99f : build//boost_math_c99f ]
+    [ alias boost_math_c99l : build//boost_math_c99l ]
+    [ alias boost_math_tr1 : build//boost_math_tr1 ]
+    [ alias boost_math_tr1f : build//boost_math_tr1f ]
+    [ alias boost_math_tr1l : build//boost_math_tr1l ]
+    [ alias all :
+        boost_math
+        boost_math_c99 boost_math_c99f boost_math_c99l
+        boost_math_tr1 boost_math_tr1f boost_math_tr1l
+        example test ]
+    [ alias testing : : : :
+        <include>test
+        <include>include_private ]
+    ;
+
+call-if : boost-library math
+    : install boost_math
+        boost_math_c99 boost_math_c99f boost_math_c99l
+        boost_math_tr1 boost_math_tr1f boost_math_tr1l
+    ;
+

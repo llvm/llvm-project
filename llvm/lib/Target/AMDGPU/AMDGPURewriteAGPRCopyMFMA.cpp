@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
 
@@ -96,8 +97,8 @@ public:
 
   /// Compute the register class constraints based on the uses of \p Reg,
   /// excluding MFMA uses from which can be rewritten to change the register
-  /// class constraint. This should be nearly identical to
-  /// MachineRegisterInfo::recomputeRegClass.
+  /// class constraint. MFMA scale operands need to be constraint checked.
+  /// This should be nearly identical to MachineRegisterInfo::recomputeRegClass.
 
   /// \p RewriteCandidates will collect the set of MFMA instructions that need
   /// to have the opcode mutated to perform the replacement.
@@ -151,9 +152,16 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
 
       // We can swap the classes of dst + src2 as a pair to AGPR, so ignore the
       // effects of rewrite candidates. It just so happens that we can use
-      // either AGPR or VGPR in src0/src1, so don't bother checking the
-      // constraint effects of the individual operands.
+      // either AGPR or VGPR in src0/src1. We still need to check constraint
+      // effects for scale variant, which does not allow AGPR.
       if (isRewriteCandidate(*MI)) {
+        int AGPROp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
+        const MCInstrDesc &AGPRDesc = TII.get(AGPROp);
+        const TargetRegisterClass *NewRC =
+            TII.getRegClass(AGPRDesc, MO.getOperandNo());
+        if (!TRI.hasAGPRs(NewRC))
+          return false;
+
         const MachineOperand *VDst =
             TII.getNamedOperand(*MI, AMDGPU::OpName::vdst);
         const MachineOperand *Src2 =
@@ -482,12 +490,13 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
   }
 
   sort(StackIntervals, [](const LiveInterval *A, const LiveInterval *B) {
+    // The ordering has to be strictly weak.
     /// Sort heaviest intervals first to prioritize their unspilling
-    if (A->weight() > B->weight())
-      return true;
+    if (A->weight() != B->weight())
+      return A->weight() > B->weight();
 
-    if (A->getSize() > B->getSize())
-      return true;
+    if (A->getSize() != B->getSize())
+      return A->getSize() > B->getSize();
 
     // Tie breaker by number to avoid need for stable sort
     return A->reg().stackSlotIndex() < B->reg().stackSlotIndex();
@@ -658,7 +667,11 @@ AMDGPURewriteAGPRCopyMFMAPass::run(MachineFunction &MF,
   if (!Impl.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  PA.preserve<LiveStacksAnalysis>();
+  PA.preserveSet<CFGAnalyses>()
+      .preserve<LiveStacksAnalysis>()
+      .preserve<VirtRegMapAnalysis>()
+      .preserve<SlotIndexesAnalysis>()
+      .preserve<LiveIntervalsAnalysis>()
+      .preserve<LiveRegMatrixAnalysis>();
   return PA;
 }

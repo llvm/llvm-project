@@ -37,15 +37,6 @@ define i64 @strict_align_feature(ptr %p) #0 {
 
 attributes #0 = { "target-features"="+strict-align" }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: call
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for direct_mem
-; FALLBACK-WITH-REPORT-OUT-LABEL: direct_mem
-define void @direct_mem(i32 %x, i32 %y) {
-entry:
-  tail call void asm sideeffect "", "imr,imr,~{memory}"(i32 %x, i32 %y)
-  ret void
-}
-
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower function{{.*}}scalable_arg
 ; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_arg
 define <vscale x 16 x i8> @scalable_arg(<vscale x 16 x i1> %pred, ptr %addr) #1 {

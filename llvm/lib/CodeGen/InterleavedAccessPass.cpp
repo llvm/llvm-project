@@ -258,13 +258,11 @@ static Value *getMaskOperand(IntrinsicInst *II) {
   default:
     llvm_unreachable("Unexpected intrinsic");
   case Intrinsic::vp_load:
-    return II->getOperand(1);
   case Intrinsic::masked_load:
-    return II->getOperand(2);
+    return II->getOperand(1);
   case Intrinsic::vp_store:
-    return II->getOperand(2);
   case Intrinsic::masked_store:
-    return II->getOperand(3);
+    return II->getOperand(2);
   }
 }
 

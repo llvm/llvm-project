@@ -4,7 +4,7 @@ REQUIRES: system-linux, perf
 
 RUN: %clang %S/Inputs/perf_test.c -fuse-ld=lld -pie -Wl,--script=%S/Inputs/perf_test.lds -o %t
 RUN: perf record -Fmax -e cycles:u -o %t2 -- %t
-RUN: perf2bolt %t -p=%t2 -o %t3 -nl -ignore-build-id --show-density \
+RUN: perf2bolt %t -p=%t2 -o %t3 -ba -ignore-build-id --show-density \
 RUN:   --heatmap %t.hm 2>&1 | FileCheck %s
 RUN: FileCheck %s --input-file %t.hm-section-hotness.csv --check-prefix=CHECK-HM
 
@@ -15,7 +15,7 @@ CHECK: BOLT-INFO: Functions with density >= {{.*}} account for 99.00% total samp
 
 RUN: %clang %S/Inputs/perf_test.c -no-pie -fuse-ld=lld -o %t4
 RUN: perf record -Fmax -e cycles:u -o %t5 -- %t4
-RUN: perf2bolt %t4 -p=%t5 -o %t6 -nl -ignore-build-id --show-density \
+RUN: perf2bolt %t4 -p=%t5 -o %t6 -ba -ignore-build-id --show-density \
 RUN:   --heatmap %t.hm2 2>&1 | FileCheck %s
 RUN: FileCheck %s --input-file %t.hm2-section-hotness.csv --check-prefix=CHECK-HM
 

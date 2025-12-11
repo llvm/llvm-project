@@ -423,6 +423,9 @@ enum CPol {
   // Volatile (used to preserve/signal operation volatility for buffer
   // operations not a real instruction bit)
   VOLATILE = 1 << 31,
+  // The set of "cache policy" bits used for compiler features that
+  // do not correspond to handware features.
+  VIRTUAL_BITS = VOLATILE,
 };
 
 } // namespace CPol
@@ -520,6 +523,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
+  ID_SCHED_MODE = 26,
   ID_PERF_SNAPSHOT_DATA_gfx11 = 27,
   ID_IB_STS2 = 28,
   ID_SHADER_CYCLES = 29,

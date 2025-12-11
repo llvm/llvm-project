@@ -20,7 +20,6 @@
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
-#include <utility>
 
 using namespace llvm;
 
@@ -536,8 +535,6 @@ bool COFFMasmParser::parseSEHDirectiveEndProlog(StringRef Directive,
   return false;
 }
 
-namespace llvm {
-
-MCAsmParserExtension *createCOFFMasmParser() { return new COFFMasmParser; }
-
-} // end namespace llvm
+MCAsmParserExtension *llvm::createCOFFMasmParser() {
+  return new COFFMasmParser;
+}

@@ -21,7 +21,7 @@ add_header_library(
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.optional
-    libc.src.__support.time.linux.abs_timeout
+    libc.src.__support.time.abs_timeout
 )
 
 set(monotonicity_flags)
@@ -38,8 +38,8 @@ add_header_library(
   DEPENDS
     .futex_utils
     libc.src.__support.threads.sleep
-    libc.src.__support.time.linux.abs_timeout
-    libc.src.__support.time.linux.monotonicity
+    libc.src.__support.time.abs_timeout
+    libc.src.__support.time.monotonicity
     libc.src.__support.CPP.optional
     libc.hdr.types.pid_t
   COMPILE_OPTIONS
@@ -97,10 +97,8 @@ add_object_library(
                             # value other than 0 is dangerous. We know.
 )
 
-add_object_library(
+add_header_library(
   callonce
-  SRCS
-    callonce.cpp
   HDRS
     ../callonce.h
     callonce.h

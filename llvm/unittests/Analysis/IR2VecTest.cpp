@@ -18,7 +18,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <map>
 #include <vector>
 
 using namespace llvm;
@@ -30,7 +29,9 @@ namespace {
 class TestableEmbedder : public Embedder {
 public:
   TestableEmbedder(const Function &F, const Vocabulary &V) : Embedder(F, V) {}
-  void computeEmbeddings(const BasicBlock &BB) const override {}
+  Embedding computeEmbeddings(const Instruction &I) const override {
+    return Embedding();
+  }
 };
 
 TEST(EmbeddingTest, ConstructorsAndAccessors) {
@@ -321,18 +322,12 @@ protected:
   }
 };
 
-TEST_F(IR2VecTestFixture, GetInstVecMap_Symbolic) {
+TEST_F(IR2VecTestFixture, GetInstVec_Symbolic) {
   auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, *V);
   ASSERT_TRUE(static_cast<bool>(Emb));
 
-  const auto &InstMap = Emb->getInstVecMap();
-
-  EXPECT_EQ(InstMap.size(), 2u);
-  EXPECT_TRUE(InstMap.count(AddInst));
-  EXPECT_TRUE(InstMap.count(RetInst));
-
-  const auto &AddEmb = InstMap.at(AddInst);
-  const auto &RetEmb = InstMap.at(RetInst);
+  const auto &AddEmb = Emb->getInstVector(*AddInst);
+  const auto &RetEmb = Emb->getInstVector(*RetInst);
   EXPECT_EQ(AddEmb.size(), 2u);
   EXPECT_EQ(RetEmb.size(), 2u);
 
@@ -340,51 +335,17 @@ TEST_F(IR2VecTestFixture, GetInstVecMap_Symbolic) {
   EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 15.5)));
 }
 
-TEST_F(IR2VecTestFixture, GetInstVecMap_FlowAware) {
+TEST_F(IR2VecTestFixture, GetInstVec_FlowAware) {
   auto Emb = Embedder::create(IR2VecKind::FlowAware, *F, *V);
   ASSERT_TRUE(static_cast<bool>(Emb));
 
-  const auto &InstMap = Emb->getInstVecMap();
+  const auto &AddEmb = Emb->getInstVector(*AddInst);
+  const auto &RetEmb = Emb->getInstVector(*RetInst);
+  EXPECT_EQ(AddEmb.size(), 2u);
+  EXPECT_EQ(RetEmb.size(), 2u);
 
-  EXPECT_EQ(InstMap.size(), 2u);
-  EXPECT_TRUE(InstMap.count(AddInst));
-  EXPECT_TRUE(InstMap.count(RetInst));
-
-  EXPECT_EQ(InstMap.at(AddInst).size(), 2u);
-  EXPECT_EQ(InstMap.at(RetInst).size(), 2u);
-
-  EXPECT_TRUE(InstMap.at(AddInst).approximatelyEquals(Embedding(2, 25.5)));
-  EXPECT_TRUE(InstMap.at(RetInst).approximatelyEquals(Embedding(2, 32.6)));
-}
-
-TEST_F(IR2VecTestFixture, GetBBVecMap_Symbolic) {
-  auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, *V);
-  ASSERT_TRUE(static_cast<bool>(Emb));
-
-  const auto &BBMap = Emb->getBBVecMap();
-
-  EXPECT_EQ(BBMap.size(), 1u);
-  EXPECT_TRUE(BBMap.count(BB));
-  EXPECT_EQ(BBMap.at(BB).size(), 2u);
-
-  // BB vector should be sum of add and ret: {25.5, 25.5} + {15.5, 15.5} =
-  // {41.0, 41.0}
-  EXPECT_TRUE(BBMap.at(BB).approximatelyEquals(Embedding(2, 41.0)));
-}
-
-TEST_F(IR2VecTestFixture, GetBBVecMap_FlowAware) {
-  auto Emb = Embedder::create(IR2VecKind::FlowAware, *F, *V);
-  ASSERT_TRUE(static_cast<bool>(Emb));
-
-  const auto &BBMap = Emb->getBBVecMap();
-
-  EXPECT_EQ(BBMap.size(), 1u);
-  EXPECT_TRUE(BBMap.count(BB));
-  EXPECT_EQ(BBMap.at(BB).size(), 2u);
-
-  // BB vector should be sum of add and ret: {25.5, 25.5} + {32.6, 32.6} =
-  // {58.1, 58.1}
-  EXPECT_TRUE(BBMap.at(BB).approximatelyEquals(Embedding(2, 58.1)));
+  EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 25.5)));
+  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 32.6)));
 }
 
 TEST_F(IR2VecTestFixture, GetBBVector_Symbolic) {
@@ -394,6 +355,8 @@ TEST_F(IR2VecTestFixture, GetBBVector_Symbolic) {
   const auto &BBVec = Emb->getBBVector(*BB);
 
   EXPECT_EQ(BBVec.size(), 2u);
+  // BB vector should be sum of add and ret: {25.5, 25.5} + {15.5, 15.5} =
+  // {41.0, 41.0}
   EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 41.0)));
 }
 
@@ -404,6 +367,8 @@ TEST_F(IR2VecTestFixture, GetBBVector_FlowAware) {
   const auto &BBVec = Emb->getBBVector(*BB);
 
   EXPECT_EQ(BBVec.size(), 2u);
+  // BB vector should be sum of add and ret: {25.5, 25.5} + {32.6, 32.6} =
+  // {58.1, 58.1}
   EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 58.1)));
 }
 
@@ -428,6 +393,48 @@ TEST_F(IR2VecTestFixture, GetFunctionVector_FlowAware) {
   EXPECT_EQ(FuncVec.size(), 2u);
   // Function vector should match BB vector (only one BB): {58.1, 58.1}
   EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 58.1)));
+}
+
+TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_Symbolic) {
+  auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, *V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
+
+  // Get initial function vector
+  const auto &FuncVec1 = Emb->getFunctionVector();
+
+  // Compute embeddings again by calling getFunctionVector multiple times
+  const auto &FuncVec2 = Emb->getFunctionVector();
+  const auto &FuncVec3 = Emb->getFunctionVector();
+
+  // All function vectors should be identical
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec2));
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec3));
+  EXPECT_TRUE(FuncVec2.approximatelyEquals(FuncVec3));
+
+  Emb->invalidateEmbeddings();
+  const auto &FuncVec4 = Emb->getFunctionVector();
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec4));
+}
+
+TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_FlowAware) {
+  auto Emb = Embedder::create(IR2VecKind::FlowAware, *F, *V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
+
+  // Get initial function vector
+  const auto &FuncVec1 = Emb->getFunctionVector();
+
+  // Compute embeddings again by calling getFunctionVector multiple times
+  const auto &FuncVec2 = Emb->getFunctionVector();
+  const auto &FuncVec3 = Emb->getFunctionVector();
+
+  // All function vectors should be identical
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec2));
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec3));
+  EXPECT_TRUE(FuncVec2.approximatelyEquals(FuncVec3));
+
+  Emb->invalidateEmbeddings();
+  const auto &FuncVec4 = Emb->getFunctionVector();
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec4));
 }
 
 static constexpr unsigned MaxOpcodes = Vocabulary::MaxOpcodes;
