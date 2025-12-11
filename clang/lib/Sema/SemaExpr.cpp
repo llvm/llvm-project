@@ -6877,6 +6877,34 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(NDecl);
   unsigned BuiltinID = (FDecl ? FDecl->getBuiltinID() : 0);
 
+  auto IsSJLJ = [&] {
+    switch (BuiltinID) {
+    case Builtin::BI__builtin_longjmp:
+    case Builtin::BI__builtin_setjmp:
+    case Builtin::BI__sigsetjmp:
+    case Builtin::BI_longjmp:
+    case Builtin::BI_setjmp:
+    case Builtin::BIlongjmp:
+    case Builtin::BIsetjmp:
+    case Builtin::BIsiglongjmp:
+    case Builtin::BIsigsetjmp:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  // Forbid any call to setjmp/longjmp and friends inside a '_Defer' statement.
+  if (!CurrentDefer.empty() && IsSJLJ()) {
+    // Note: If we ever start supporting '_Defer' in C++ we'll have to check
+    // for more than just blocks (e.g. lambdas, nested classes...).
+    Scope *DeferParent = CurrentDefer.back().first;
+    Scope *Block = CurScope->getBlockParent();
+    if (DeferParent->Contains(*CurScope) &&
+        (!Block || !DeferParent->Contains(*Block)))
+      Diag(Fn->getExprLoc(), diag::err_defer_invalid_sjlj) << FDecl;
+  }
+
   // Functions with 'interrupt' attribute cannot be called directly.
   if (FDecl) {
     if (FDecl->hasAttr<AnyX86InterruptAttr>()) {

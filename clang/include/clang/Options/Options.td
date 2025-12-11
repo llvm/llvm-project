@@ -1677,6 +1677,14 @@ defm named_loops
           PosFlag<SetTrue, [], [CC1Option], "Enable support for named loops">,
           NegFlag<SetFalse>>;
 
+// C '_Defer' TS
+defm defer_ts : BoolFOption<"defer-ts",
+  LangOpts<"DeferTS">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable support for the C '_Defer' Technical Specification">,
+  NegFlag<SetFalse>>,
+  ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
+
 // C++ Coroutines
 defm coroutines : BoolFOption<"coroutines",
   LangOpts<"Coroutines">, Default<cpp20.KeyPath>,
@@ -1961,6 +1969,14 @@ defm lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option],
           " experimental lifetime safety for C++">>;
+
+defm lifetime_safety_inference
+    : BoolFOption<"experimental-lifetime-safety-inference",
+                  LangOpts<"EnableLifetimeSafetyInference">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " experimental lifetime safety inference for C++">>;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,

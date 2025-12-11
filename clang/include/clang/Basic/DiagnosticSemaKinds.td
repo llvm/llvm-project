@@ -6844,6 +6844,7 @@ def note_protected_by_objc_weak_init : Note<
   "jump bypasses initialization of __weak variable">;
 def note_protected_by_non_trivial_c_struct_init : Note<
   "jump bypasses initialization of variable of non-trivial C struct type">;
+def note_protected_by_defer_stmt : Note<"jump bypasses defer statement">;
 def note_enters_block_captures_cxx_obj : Note<
   "jump enters lifetime of block which captures a destructible C++ object">;
 def note_enters_block_captures_strong : Note<
@@ -6857,6 +6858,7 @@ def note_enters_compound_literal_scope : Note<
   "jump enters lifetime of a compound literal that is non-trivial to destruct">;
 def note_enters_statement_expression : Note<
   "jump enters a statement expression">;
+def note_enters_defer_stmt : Note<"jump enters a defer statement">;
 
 def note_exits_cleanup : Note<
   "jump exits scope of variable with __attribute__((cleanup))">;
@@ -6902,6 +6904,16 @@ def note_exits_block_captures_non_trivial_c_struct : Note<
   "to destroy">;
 def note_exits_compound_literal_scope : Note<
   "jump exits lifetime of a compound literal that is non-trivial to destruct">;
+def note_exits_defer_stmt : Note<"jump exits a defer statement">;
+def err_jump_out_of_defer_stmt : Error<
+  "cannot %enum_select<DeferJumpKind>{"
+  "%Break{break out of a}|"
+  "%Continue{continue loop outside of enclosing}|"
+  "%Return{return from a}|"
+  "%SEHLeave{__leave a}"
+  "}0 defer statement">;
+def err_defer_invalid_sjlj : Error<
+  "cannot use %0 inside a defer statement">;
 
 def err_func_returning_qualified_void : ExtWarn<
   "function cannot return qualified void type %0">,
@@ -11016,6 +11028,8 @@ def err_switch_explicit_conversion : Error<
 def err_switch_incomplete_class_type : Error<
   "switch condition has incomplete class type %0">;
 
+// TODO: It ought to be possible to refactor these to be a single warning that
+// uses %enum_select.
 def warn_empty_if_body : Warning<
   "if statement has empty body">, InGroup<EmptyBody>;
 def warn_empty_for_body : Warning<
@@ -11026,6 +11040,8 @@ def warn_empty_while_body : Warning<
   "while loop has empty body">, InGroup<EmptyBody>;
 def warn_empty_switch_body : Warning<
   "switch statement has empty body">, InGroup<EmptyBody>;
+def warn_empty_defer_body : Warning<
+  "defer statement has empty body">, InGroup<EmptyBody>;
 def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
 
