@@ -6097,7 +6097,7 @@ libc_function(
     srcs = ["src/unistd/linux/getpagesize.cpp"],
     hdrs = ["src/unistd/getpagesize.h"],
     deps = [
-        ":sysconf",
+        ":__support_osutil_linux_auxv",
     ],
 )
 
