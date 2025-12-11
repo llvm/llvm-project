@@ -1,4 +1,3 @@
-# REQUIRES: shell
 # UNSUPPORTED: system-windows
 
 # This test demonstrates the new "IncludeDirs" field.

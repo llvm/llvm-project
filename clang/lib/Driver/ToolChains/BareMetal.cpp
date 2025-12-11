@@ -418,8 +418,6 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (!SysRootDir.empty()) {
     for (const Multilib &M : getOrderedMultilibs()) {
       if (!M.includeDirs().empty()) {
-        // Add include directories specified in multilib.yaml under the
-        // 'IncludeDirs' field
         for (const std::string &Path : M.includeDirs()) {
           SmallString<128> Dir(SysRoot);
           llvm::sys::path::append(Dir, Path);
@@ -512,8 +510,6 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
         break;
       }
       if (!M.includeDirs().empty()) {
-        // Add include directories specified in multilib.yaml under the
-        // 'IncludeDirs' field
         for (const std::string &Path : M.includeDirs()) {
           Dir = SysRoot;
           llvm::sys::path::append(Dir, Path, "c++", "v1");
