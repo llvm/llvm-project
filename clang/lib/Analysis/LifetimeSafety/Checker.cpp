@@ -55,13 +55,14 @@ private:
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
   LifetimeSafetyReporter *Reporter;
+  ASTContext &AST;
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
                   AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
-        Reporter(Reporter) {
+        Reporter(Reporter), AST(ADC.getASTContext()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -70,6 +71,11 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
+    //  Annotation inference is currently guarded by a frontend flag. In the
+    //  future, this might be replaced by a design that differentiates between
+    //  explicit and inferred findings with separate warning groups.
+    if (AST.getLangOpts().EnableLifetimeSafetyInference)
+      inferAnnotations();
   }
 
   /// Checks if an escaping origin holds a placeholder loan, indicating a
@@ -159,6 +165,20 @@ public:
       return;
     for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap)
       Reporter->suggestAnnotation(PVD, EscapeExpr);
+  }
+
+  void inferAnnotations() {
+    // FIXME: To maximise inference propagation, functions should be analyzed in
+    // post-order of the call graph, allowing inferred annotations to propagate
+    // through the call chain
+    // FIXME: Add the inferred attribute to all redeclarations of the function,
+    // not just the definition being analyzed.
+    for (const auto &[ConstPVD, EscapeExpr] : AnnotationWarningsMap) {
+      ParmVarDecl *PVD = const_cast<ParmVarDecl *>(ConstPVD);
+      if (!PVD->hasAttr<LifetimeBoundAttr>())
+        PVD->addAttr(
+            LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
+    }
   }
 };
 } // namespace
