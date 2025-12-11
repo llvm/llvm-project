@@ -163,7 +163,7 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
                          << "' was found in the ELF image and "
                          << HostGlobal.getSize() << " bytes will copied from "
                          << ImageGlobal.getPtr() << " to "
-                         << HostGlobal.getPtr();
+                         << HostGlobal.getPtr() << ".";
 
   assert(Image.getStart() <= ImageGlobal.getPtr() &&
          utils::advancePtr(ImageGlobal.getPtr(), ImageGlobal.getSize()) <

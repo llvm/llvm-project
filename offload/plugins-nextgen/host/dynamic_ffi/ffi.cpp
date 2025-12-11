@@ -43,7 +43,8 @@ uint32_t ffi_init() {
       llvm::sys::DynamicLibrary::getPermanentLibrary(FFI_PATH, &ErrMsg));
 
   if (!DynlibHandle->isValid()) {
-    ODBG(ODT_Init) << "Unable to load library '" << FFI_PATH << "': " << ErrMsg;
+    ODBG(ODT_Init) << "Unable to load library '" << FFI_PATH << "': " << ErrMsg
+                   << "!";
     return DYNAMIC_FFI_FAIL;
   }
 
@@ -52,7 +53,8 @@ uint32_t ffi_init() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      ODBG(ODT_Init) << "Unable to find '" << Sym << "' in '" << FFI_PATH;
+      ODBG(ODT_Init) << "Unable to find '" << Sym << "' in '" << FFI_PATH
+                     << "'!";
       return DYNAMIC_FFI_FAIL;
     }
     ODBG(ODT_Init) << "Implementing " << Sym << " with dlsym(" << Sym << ") -> "

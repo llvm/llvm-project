@@ -81,7 +81,8 @@ class MemoryManagerTy {
   static int findBucket(size_t Size) {
     const size_t F = floorToPowerOfTwo(Size);
 
-    ODBG(ODT_Alloc) << "findBucket: Size " << Size << " is floored to " << F;
+    ODBG(ODT_Alloc) << "findBucket: Size " << Size << " is floored to " << F
+                    << ".";
 
     int L = 0, H = NumBuckets - 1;
     while (H - L > 1) {
@@ -237,7 +238,7 @@ public:
       return nullptr;
 
     ODBG(ODT_Alloc) << "MemoryManagerTy::allocate: size " << Size
-                    << " with host pointer " << HstPtr;
+                    << " with host pointer " << HstPtr << ".";
 
     // If the size is greater than the threshold, allocate it directly from
     // device.
@@ -306,7 +307,7 @@ public:
 
   /// Deallocate memory pointed by \p TgtPtr
   Error free(void *TgtPtr) {
-    ODBG(ODT_Alloc) << "MemoryManagerTy::free: target memory " << TgtPtr;
+    ODBG(ODT_Alloc) << "MemoryManagerTy::free: target memory " << TgtPtr << ".";
 
     NodeTy *P = nullptr;
 
@@ -330,7 +331,8 @@ public:
     // Insert the node to the free list
     const int B = findBucket(P->Size);
 
-    ODBG(ODT_Alloc) << "Found its node " << P << ". Insert it to bucket " << B;
+    ODBG(ODT_Alloc) << "Found its node " << P << ". Insert it to bucket " << B
+                    << ".";
 
     {
       std::lock_guard<std::mutex> G(FreeListLocks[B]);
