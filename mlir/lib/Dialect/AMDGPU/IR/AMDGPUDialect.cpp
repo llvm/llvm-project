@@ -147,21 +147,16 @@ LogicalResult FatRawBufferCastOp::inferReturnTypes(
   return success();
 }
 
-LogicalResult FatRawBufferCastOp::reifyResultShapes(
-    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+FailureOr<OpFoldResult> FatRawBufferCastOp::reifyDimOfResult(OpBuilder &builder,
+                                                             int resultIndex,
+                                                             int dim) {
+  assert(resultIndex == 0 && "FatRawBufferCastOp has a single result");
   Value source = getSource();
   auto sourceType = cast<MemRefType>(source.getType());
-  Location loc = getLoc();
-  SmallVector<OpFoldResult> shapes;
-  for (int64_t i = 0, e = sourceType.getRank(); i < e; ++i) {
-    if (sourceType.isDynamicDim(i)) {
-      shapes.push_back(builder.createOrFold<memref::DimOp>(loc, source, i));
-    } else {
-      shapes.push_back(builder.getIndexAttr(sourceType.getDimSize(i)));
-    }
-  }
-  reifiedReturnShapes.push_back(std::move(shapes));
-  return success();
+  if (sourceType.isDynamicDim(dim))
+    return OpFoldResult(
+        builder.createOrFold<memref::DimOp>(getLoc(), source, dim));
+  return OpFoldResult(builder.getIndexAttr(sourceType.getDimSize(dim)));
 }
 
 LogicalResult FatRawBufferCastOp::verify() {
