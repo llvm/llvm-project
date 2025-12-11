@@ -66,7 +66,7 @@ BasicBlockSectionsProfileReader::getClusterInfoForFunction(
     StringRef FuncName) const {
   auto R = ProgramDirectivesAndProfile.find(getAliasName(FuncName));
   return R != ProgramDirectivesAndProfile.end() ? R->second.ClusterInfo
-                                              : SmallVector<BBClusterInfo>();
+                                                : SmallVector<BBClusterInfo>();
 }
 
 SmallVector<SmallVector<unsigned>>
@@ -82,7 +82,8 @@ uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
     StringRef FuncName, const UniqueBBID &SrcBBID,
     const UniqueBBID &SinkBBID) const {
   const CFGProfile *CFG = getFunctionCFGProfile(FuncName);
-  if (CFG == nullptr) return 0;
+  if (CFG == nullptr)
+    return 0;
   auto NodeIt = CFG->EdgeCounts.find(SrcBBID);
   if (NodeIt == CFG->EdgeCounts.end())
     return 0;
@@ -507,7 +508,9 @@ BasicBlockSectionsProfileReaderWrapperPass::getClonePathsForFunction(
   return BBSPR.getClonePathsForFunction(FuncName);
 }
 
-const CFGProfile *BasicBlockSectionsProfileReaderWrapperPass::getFunctionCFGProfile(StringRef FuncName) const {
+const CFGProfile *
+BasicBlockSectionsProfileReaderWrapperPass::getFunctionCFGProfile(
+    StringRef FuncName) const {
   return BBSPR.getFunctionCFGProfile(FuncName);
 }
 

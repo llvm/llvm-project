@@ -54,7 +54,6 @@ struct CFGProfile {
   // UniqueBBID.
   DenseMap<unsigned, uint64_t> BBHashes;
 
-
   // Returns the profile count for the given basic block or zero if it does not
   // exist.
   uint64_t getBlockCount(const UniqueBBID &BBID) const {
