@@ -124,27 +124,6 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
 
-    // // For ConvertLayoutOp, the layout is stored in the targetLayoutAttr
-    // // if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(defOp))
-    // //   return convertOp.getTargetLayoutAttr();
-
-    // // for LoadNdOp, the layout is stored in the tensor descriptor
-    // if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
-    //   return getDistributeLayoutAttr(loadNd.getTensorDesc());
-
-    // // for LoadMatrixOp, the layout is attached to the property of the op
-    // if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(defOp))
-    //   return loadOp.getLayoutAttr();
-
-    // // // for StoreMatrixOp, the layout is attached to the property of the op
-    // // if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
-    // //   return storeOp.getLayoutAttr();
-
-    // // check for "permament" layout only after "temporary" layout name lookup
-    // // for backward compatibility
-    // if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(defOp))
-    //   return loadGatherOp.getLayoutAttr();
-
     if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(defOp)) {
       return anchorOp.getAnchorLayout();
     }
@@ -166,28 +145,6 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   return nullptr;
 }
 
-// xegpu::DistributeLayoutAttr
-// xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
-//   Operation *op = opr.getOwner();
-
-//   if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(op))
-//     return loadOp.getLayoutAttr();
-
-//   if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(op))
-//     return storeOp.getLayoutAttr();
-
-//   std::string layoutName = xegpu::getTempLayoutName(opr);
-//   if (op->hasAttr(layoutName))
-//     return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
-
-//   // check for "permament" layout only after "temporary" layout name lookup
-//   if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
-//     if (auto layout = storeScatterOp.getLayoutAttr())
-//       return layout;
-
-//   return getDistributeLayoutAttr(opr.get());
-// }
-
 xegpu::DistributeLayoutAttr
 xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
@@ -200,8 +157,8 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   if (op->hasAttr(layoutName))
     return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
 
-  return nullptr;
-  // return getDistributeLayoutAttr(opr.get());
+  // return nullptr;
+  return getDistributeLayoutAttr(opr.get());
 }
 
 // Returns the permanent layout attribute for the given result if it's
@@ -239,33 +196,33 @@ maybePickPermanentLayout(xegpu::DistributeLayoutAttr layout,
   return candidate;
 }
 
-template <typename T, typename>
-void xegpu::setDistributeLayoutAttr(const T &operandOrResult,
+void xegpu::setDistributeLayoutAttr(
+    const mlir::OpResult &result,
+    const mlir::xegpu::DistributeLayoutAttr layout) {
+  Operation *owner = result.getOwner();
+
+  if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(owner)) {
+    if (anchorOp.getAnchorLayout() == layout)
+      return;
+    return anchorOp.setAnchorLayout(layout);
+  }
+
+  std::string name = xegpu::getTempLayoutName(result);
+  if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
+    return;
+  owner->setAttr(name, layout);
+}
+
+void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
                                     const DistributeLayoutAttr layout) {
-  Operation *owner = operandOrResult.getOwner();
-  std::string name = xegpu::getTempLayoutName(operandOrResult);
+  Operation *owner = operand.getOwner();
+
+  std::string name = xegpu::getTempLayoutName(operand);
 
   if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
     return;
-
-  DistributeLayoutAttr candidate = layout;
-  // if (respectPermLayout)
-  //   candidate = maybePickPermanentLayout(layout, operandOrResult, owner,
-  //   name);
-
-  if (candidate)
-    owner->setAttr(name, candidate);
+  owner->setAttr(name, layout);
 }
-
-// Explicit instantiation for OpResult
-template void xegpu::setDistributeLayoutAttr<mlir::OpResult>(
-    const mlir::OpResult &result,
-    const mlir::xegpu::DistributeLayoutAttr layout);
-
-// Explicit instantiation for OpOperand
-template void xegpu::setDistributeLayoutAttr<mlir::OpOperand>(
-    const mlir::OpOperand &operand,
-    const mlir::xegpu::DistributeLayoutAttr layout);
 
 void xegpu::setDistributeLayoutAttrs(
     Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl) {

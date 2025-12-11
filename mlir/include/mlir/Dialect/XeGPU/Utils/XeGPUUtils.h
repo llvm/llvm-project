@@ -102,12 +102,12 @@ void removeLayoutAttr(const T &operandOrResult);
 /// applied recursively to the contained operations
 void removeLayoutAttrs(Operation *op);
 
-/// Sets the DistributeLayoutAttr for a given OpOperand or OpResult by attaching
-/// it to the owner's dictionary attributes
-template <typename T,
-          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
-                                      std::is_same_v<T, OpResult>>>
-void setDistributeLayoutAttr(const T &operandOrResult,
+/// Sets the DistributeLayoutAttr for a given OpResult
+void setDistributeLayoutAttr(const OpResult &Result,
+                             const DistributeLayoutAttr layout);
+
+/// Sets the DistributeLayoutAttr for a given OpOperand
+void setDistributeLayoutAttr(const OpOperand &opr,
                              const DistributeLayoutAttr layout);
 
 /// Set the DistributeLayoutAttr for each OpOperand and OpResult of the given
