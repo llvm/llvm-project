@@ -1379,7 +1379,7 @@ public:
   /// the only global-initializer user of the ptrauth signed pointer.
   LLVM_ABI Constant *getAddrDiscriminator() const;
 
-  LLVM_ABI_FOR_TEST Constant *getDeactivationSymbol() const;
+  LLVM_ABI Constant *getDeactivationSymbol() const;
 
   /// Whether there is any non-null address discriminator.
   bool hasAddressDiscriminator() const {
