@@ -2202,3 +2202,31 @@ define i8 @mul_not_nsw_nonneg(i8 %x, i8 %y) {
   %mul = mul i8 %x, %y
   ret i8 %mul
 }
+
+define i16 @mul_udiv_zext(i8 %x) {
+; CHECK-LABEL: @mul_udiv_zext(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 [[X_FR]], 15
+; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw i8 [[X_FR]], [[TMP1]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[NARROW]] to i16
+; CHECK-NEXT:    ret i16 [[ZEXT]]
+;
+  %div = udiv i8 %x, 15
+  %zext = zext i8 %div to i16
+  %mul = mul i16 %zext, 15
+  ret i16 %mul
+}
+
+define i16 @mul_udiv_zext_uneq(i8 %x) {
+; CHECK-LABEL: @mul_udiv_zext_uneq(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X:%.*]], 20
+; CHECK-NEXT:    [[NARROW:%.*]] = mul nuw i8 [[DIV]], 15
+; CHECK-NEXT:    [[MUL:%.*]] = zext i8 [[NARROW]] to i16
+; CHECK-NEXT:    ret i16 [[MUL]]
+;
+  %div = udiv i8 %x, 20
+  %zext = zext i8 %div to i16
+  %mul = mul i16 %zext, 15
+  ret i16 %mul
+}
+

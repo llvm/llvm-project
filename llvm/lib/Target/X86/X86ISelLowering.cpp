@@ -1142,6 +1142,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::LRINT, MVT::v4f32, Custom);
     setOperationAction(ISD::LRINT, MVT::v2i32, Custom);
 
+    setOperationAction(ISD::AND, MVT::i128, Custom);
+    setOperationAction(ISD::OR, MVT::i128, Custom);
+    setOperationAction(ISD::XOR, MVT::i128, Custom);
+
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
       setOperationAction(ISD::SMAX, VT, VT == MVT::v8i16 ? Legal : Custom);
       setOperationAction(ISD::SMIN, VT, VT == MVT::v8i16 ? Legal : Custom);
@@ -1480,6 +1484,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::LRINT, MVT::v8f32, Custom);
     setOperationAction(ISD::LRINT, MVT::v4f64, Custom);
+
+    setOperationAction(ISD::AND, MVT::i256, Custom);
+    setOperationAction(ISD::OR, MVT::i256, Custom);
+    setOperationAction(ISD::XOR, MVT::i256, Custom);
 
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
@@ -1835,6 +1843,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        Subtarget.hasDQI() ? Legal : Custom);
     if (Subtarget.hasDQI())
       setOperationAction(ISD::LLRINT, MVT::v8f64, Legal);
+
+    setOperationAction(ISD::AND, MVT::i512, Custom);
+    setOperationAction(ISD::OR, MVT::i512, Custom);
+    setOperationAction(ISD::XOR, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
       setOperationPromotedToType(ISD::FP_TO_SINT       , VT, MVT::v16i32);
@@ -2844,6 +2856,15 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
     return (ISD::ZERO_EXTEND == Opcode);
   }
   return false;
+}
+
+// Return true if its cheap to bitcast this to a vector type.
+static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget) {
+  if (peekThroughBitcasts(Op).getValueType().isVector())
+    return true;
+  if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
+    return true;
+  return X86::mayFoldLoad(Op, Subtarget);
 }
 
 static bool isLogicOp(unsigned Opcode) {
@@ -33162,7 +33183,14 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
     // For illegal i64 atomic_stores, we can try to use MOVQ or MOVLPS if SSE
     // is enabled.
     if (VT == MVT::i64) {
-      if (Subtarget.hasSSE1()) {
+      SDValue BCValue = peekThroughBitcasts(Node->getVal());
+      if (BCValue.getValueType() == MVT::f64 &&
+          (Subtarget.hasX87() || Subtarget.hasSSE2())) {
+        // If the i64 was bitcast from a f64 then we can do the f64 atomic store
+        // directly with FSTPL/MOVSD.
+        Chain = DAG.getStore(Node->getChain(), dl, BCValue, Node->getBasePtr(),
+                             Node->getMemOperand());
+      } else if (Subtarget.hasSSE1()) {
         SDValue SclToVec =
             DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, Node->getVal());
         MVT StVT = Subtarget.hasSSE2() ? MVT::v2i64 : MVT::v4f32;
@@ -33910,6 +33938,23 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case X86ISD::CVTPS2PH:
     Results.push_back(LowerCVTPS2PH(SDValue(N, 0), DAG));
     return;
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR: {
+    SDValue N0 = N->getOperand(0);
+    SDValue N1 = N->getOperand(1);
+    EVT VT = N->getValueType(0);
+    assert((VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512) &&
+           "Unexpected VT!");
+    // See if this is free to perform on the FPU to avoid splitting.
+    MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+    if (!mayFoldIntoVector(N0, Subtarget) || !mayFoldIntoVector(N1, Subtarget))
+      return;
+    SDValue Op = DAG.getNode(Opc, dl, VecVT, DAG.getBitcast(VecVT, N0),
+                             DAG.getBitcast(VecVT, N1));
+    Results.push_back(DAG.getBitcast(VT, Op));
+    return;
+  }
   case ISD::CTPOP: {
     assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
     // If we have at most 32 active bits, then perform as i32 CTPOP.
@@ -33958,7 +34003,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     assert(Subtarget.hasCDI() && "AVX512CD required");
     assert((VT == MVT::i256 || VT == MVT::i512) && "Unexpected VT!");
-    if (VT == MVT::i256 && !X86::mayFoldLoad(N0, Subtarget))
+    if (VT == MVT::i256 && !mayFoldIntoVector(N0, Subtarget))
       return;
 
     unsigned SizeInBits = VT.getSizeInBits();
