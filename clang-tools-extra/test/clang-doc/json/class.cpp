@@ -47,9 +47,6 @@ protected:
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "TextComment": " It has some nice methods and fields."
-// CHECK-NEXT:          },
-// CHECK-NEXT:          {
-// CHECK-NEXT:            "TextComment": ""
 // CHECK-NEXT:          }
 // CHECK:         "DocumentationFileName": "_ZTV7MyClass",
 // CHECK:         "Enums": [
@@ -161,6 +158,7 @@ protected:
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "ProtectedMembers": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "IsStatic": false,
 // CHECK-NEXT:        "Name": "ProtectedField",
 // CHECK-NEXT:        "Type": "int"
 // CHECK-NEXT:      }
@@ -201,6 +199,7 @@ protected:
 // CHECK-NEXT:        },
 // CHECK:         "PublicMembers": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "IsStatic": false,
 // CHECK-NEXT:        "Name": "PublicField",
 // CHECK-NEXT:        "Type": "int"
 // CHECK-NEXT:      }

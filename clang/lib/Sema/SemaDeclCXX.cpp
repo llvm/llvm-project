@@ -6590,7 +6590,10 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   if (ClassExported && !ClassAttr->isInherited() &&
       TSK == TSK_ExplicitInstantiationDeclaration &&
       !Context.getTargetInfo().getTriple().isOSCygMing()) {
-    Class->dropAttr<DLLExportAttr>();
+    if (auto *DEA = Class->getAttr<DLLExportAttr>()) {
+      Class->addAttr(DLLExportOnDeclAttr::Create(Context, DEA->getLoc()));
+      Class->dropAttr<DLLExportAttr>();
+    }
     return;
   }
 
@@ -6627,6 +6630,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
         auto *Ctor = dyn_cast<CXXConstructorDecl>(MD);
         if ((MD->isMoveAssignmentOperator() ||
              (Ctor && Ctor->isMoveConstructor())) &&
+            getLangOpts().isCompatibleWithMSVC() &&
             !getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015))
           continue;
 
