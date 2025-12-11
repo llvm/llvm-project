@@ -100,8 +100,9 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
       Optional<fir_ReferenceType>:$stream,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
-      cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat,
-      UnitAttr:$hasDoubleDescriptor, UnitAttr:$pointer);
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr, UnitAttr:$hasStat,
+      UnitAttr:$hasDoubleDescriptor, UnitAttr:$pointer,
+      UnitAttr:$device_source);
 
   let results = (outs AnyIntegerType:$stat);
 
