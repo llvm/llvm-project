@@ -311,8 +311,6 @@ constexpr bool test() {
     std::span<const int> s1{arr_a};
     std::span<const int> s2{arr_b};
     auto v      = std::views::concat(s1, s2);
-    using Iter  = decltype(v.begin());
-    using CIter = decltype(std::as_const(v).begin());
     auto i      = v.begin();
     auto j      = v.begin();
     std::ranges::advance(j, arr_a.size());
