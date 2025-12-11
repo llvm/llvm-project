@@ -968,6 +968,29 @@ TEST(InstructionsTest, SwitchInst) {
   const auto &Handle = *CCI;
   EXPECT_EQ(1, Handle.getCaseValue()->getSExtValue());
   EXPECT_EQ(BB1.get(), Handle.getCaseSuccessor());
+
+  // C API tests.
+  EXPECT_EQ(BB0.get(), unwrap(LLVMGetSwitchDefaultDest(wrap(SI))));
+  EXPECT_EQ(BB0.get(), unwrap(LLVMGetSuccessor(wrap(SI), 0)));
+  EXPECT_EQ(BB1.get(), unwrap(LLVMGetSuccessor(wrap(SI), 1)));
+  EXPECT_EQ(
+      1,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 1))->getSExtValue());
+  EXPECT_EQ(BB2.get(), unwrap(LLVMGetSuccessor(wrap(SI), 2)));
+  EXPECT_EQ(
+      2,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 2))->getSExtValue());
+  EXPECT_EQ(BB3.get(), unwrap(LLVMGetSuccessor(wrap(SI), 3)));
+  EXPECT_EQ(
+      3,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 3))->getSExtValue());
+  // Test case value modification. The C API provides case value indices
+  // matching the successor indices.
+  LLVMSetSwitchCaseValue(wrap(SI), 2, wrap(ConstantInt::get(Int32Ty, 12)));
+  EXPECT_EQ(12, (SI->case_begin() + 1)->getCaseValue()->getSExtValue());
+  EXPECT_EQ(
+      12,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 2))->getSExtValue());
 }
 
 TEST(InstructionsTest, SwitchInstProfUpdateWrapper) {

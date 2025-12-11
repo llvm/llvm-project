@@ -967,6 +967,10 @@ void ROCMToolChain::addClangTargetOptions(
                           true))
     return;
 
+  // For SPIR-V (SPIRVAMDToolChain) we must not link any device libraries so we
+  // skip it.
+  if (this->getEffectiveTriple().isSPIRV())
+    return;
   // Get the device name and canonicalize it
   const StringRef GpuArch = getGPUArch(DriverArgs);
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);

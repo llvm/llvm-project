@@ -724,6 +724,12 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     return cmpMDNode(L->getMetadata(LLVMContext::MD_range),
                      R->getMetadata(LLVMContext::MD_range));
   }
+  if (const SwitchInst *SI = dyn_cast<SwitchInst>(L)) {
+    for (auto [LCase, RCase] : zip(SI->cases(), cast<SwitchInst>(R)->cases()))
+      if (int Res = cmpConstants(LCase.getCaseValue(), RCase.getCaseValue()))
+        return Res;
+    return 0;
+  }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(L)) {
     ArrayRef<unsigned> LIndices = IVI->getIndices();
     ArrayRef<unsigned> RIndices = cast<InsertValueInst>(R)->getIndices();

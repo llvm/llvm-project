@@ -1109,10 +1109,11 @@ ObjectID OnDiskGraphDB::getExternalReference(const IndexProxy &I) {
 }
 
 std::optional<ObjectID>
-OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest) {
+OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest,
+                                    bool CheckUpstream) {
   auto tryUpstream =
       [&](std::optional<IndexProxy> I) -> std::optional<ObjectID> {
-    if (!UpstreamDB)
+    if (!CheckUpstream || !UpstreamDB)
       return std::nullopt;
     std::optional<ObjectID> UpstreamID =
         UpstreamDB->getExistingReference(Digest);

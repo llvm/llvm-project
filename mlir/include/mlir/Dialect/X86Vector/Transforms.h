@@ -91,6 +91,10 @@ void populateVectorContractToFMAPatterns(RewritePatternSet &patterns);
 void populateVectorContractToPackedTypeDotProductPatterns(
     RewritePatternSet &patterns);
 
+// Performs forward scheduling of vector producer ops to minimize their live
+// range by placing them at their earliest legal use site
+void populateSinkVectorProducerOpsPatterns(RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h

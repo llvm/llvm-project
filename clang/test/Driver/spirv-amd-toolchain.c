@@ -12,7 +12,7 @@
 // BINDINGS: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[OUTPUT:.+]]"
 // BINDINGS: # "spirv64-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[OUTPUT]]"], output: "a.out"
 
-// RUN: %clang -### --target=spirv64-amd-amdhsa %s -nogpulib -nogpuinc 2>&1 \
+// RUN: %clang -### --target=spirv64-amd-amdhsa %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=INVOCATION
 // INVOCATION: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-disable-llvm-optzns" {{.*}} "-o" "[[OUTPUT:.+]]" "-x" "c"
 // INVOCATION: "{{.*}}llvm-link" "-o" "[[LINKED_OUTPUT:.+]]" "[[OUTPUT]]"

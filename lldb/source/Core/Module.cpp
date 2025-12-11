@@ -1569,7 +1569,9 @@ void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
 
   if (!sdk_path_or_err) {
     Debugger::ReportError("Error while searching for Xcode SDK: " +
-                          toString(sdk_path_or_err.takeError()));
+                              toString(sdk_path_or_err.takeError()),
+                          /*debugger_id=*/std::nullopt,
+                          GetDiagnosticOnceFlag(sdk_name));
     return;
   }
 
