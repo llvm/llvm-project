@@ -680,7 +680,7 @@ entry:
 define i32 @test28() nounwind  {
 ; CHECK-LABEL: @test28(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ORIENTATIONS:%.*]] = alloca [1 x [1 x %struct.x]], align 8
+; CHECK-NEXT:    [[ORIENTATIONS:%.*]] = alloca [1 x [1 x [[STRUCT_X:%.*]]]], align 8
 ; CHECK-NEXT:    [[T3:%.*]] = call i32 @puts(ptr noundef nonnull dereferenceable(1) @.str) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
