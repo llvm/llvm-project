@@ -3289,9 +3289,8 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
     // from a file) we need to echo the command out so we don't just see the
     // command output and no command...
     if (EchoCommandNonInteractive(line, io_handler.GetFlags())) {
-      LockedStreamFile locked_stream =
-          io_handler.GetOutputStreamFileSP()->Lock();
-      locked_stream.Printf("%s%s\n", io_handler.GetPrompt(), line.c_str());
+      io_handler.GetOutputStreamFileSP()->Lock()
+          << io_handler.GetPrompt() << line << '\n';
       echoed_command = true;
     }
   }
@@ -3323,9 +3322,8 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
     // If the command failed and we didn't echo it, echo it now so the user
     // knows which command produced the error.
     if (!echoed_command && !result.Succeeded() && print_error) {
-      LockedStreamFile locked_stream =
-          io_handler.GetOutputStreamFileSP()->Lock();
-      locked_stream.Printf("%s%s\n", io_handler.GetPrompt(), line.c_str());
+      io_handler.GetOutputStreamFileSP()->Lock()
+          << io_handler.GetPrompt() << line << '\n';
     }
 
     auto DefaultPrintCallback = [&](const CommandReturnObject &result) {
