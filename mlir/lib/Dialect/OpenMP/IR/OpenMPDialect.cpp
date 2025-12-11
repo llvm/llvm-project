@@ -2504,6 +2504,8 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        ArrayRef<NamedAttribute> attributes) {
   ParallelOp::build(builder, state, /*allocate_vars=*/ValueRange(),
                     /*allocator_vars=*/ValueRange(), /*if_expr=*/nullptr,
+                    /*num_threads_dims=*/nullptr,
+                    /*num_threads_values=*/ValueRange(),
                     /*num_threads=*/nullptr, /*private_vars=*/ValueRange(),
                     /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
                     /*proc_bind_kind=*/nullptr,
@@ -2515,13 +2517,14 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
 void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        const ParallelOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  ParallelOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                    clauses.ifExpr, clauses.numThreads, clauses.privateVars,
-                    makeArrayAttr(ctx, clauses.privateSyms),
-                    clauses.privateNeedsBarrier, clauses.procBindKind,
-                    clauses.reductionMod, clauses.reductionVars,
-                    makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                    makeArrayAttr(ctx, clauses.reductionSyms));
+  ParallelOp::build(
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      clauses.ifExpr, clauses.numThreadsDims, clauses.numThreadsValues,
+      clauses.numThreads, clauses.privateVars,
+      makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
+      clauses.procBindKind, clauses.reductionMod, clauses.reductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+      makeArrayAttr(ctx, clauses.reductionSyms));
 }
 
 template <typename OpType>
@@ -2568,13 +2571,40 @@ static LogicalResult verifyPrivateVarList(OpType &op) {
 }
 
 LogicalResult ParallelOp::verify() {
+  // verify num_threads clause restrictions
+  auto numThreadsDims = getNumThreadsDims();
+  auto numThreadsValues = getNumThreadsValues();
+  auto numThreads = getNumThreads();
+
+  // num_threads with dims modifier
+  if (numThreadsDims.has_value() && numThreadsValues.empty()) {
+    return emitError(
+        "num_threads dims modifier requires values to be specified");
+  }
+
+  if (numThreadsDims.has_value() &&
+      numThreadsValues.size() != static_cast<size_t>(*numThreadsDims)) {
+    return emitError("num_threads dims(")
+           << *numThreadsDims << ") specified but " << numThreadsValues.size()
+           << " values provided";
+  }
+
+  // num_threads dims and number of threads cannot be used together
+  if (numThreadsDims.has_value() && numThreads) {
+    return emitError(
+        "num_threads dims and number of threads cannot be used together");
+  }
+
+  // verify allocate clause restrictions
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
 
+  // verify private variables restrictions
   if (failed(verifyPrivateVarList(*this)))
     return failure();
 
+  // verify reduction variables restrictions
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());
 }
@@ -4620,6 +4650,41 @@ static void printNumTeamsClause(OpAsmPrinter &p, Operation *op,
       p.printOperand(upperBound);
       p << " : " << upperBoundType;
     }
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Parser and printer for num_threads clause
+//===----------------------------------------------------------------------===//
+static ParseResult
+parseNumThreadsClause(OpAsmParser &parser, IntegerAttr &dimsAttr,
+                      SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+                      SmallVectorImpl<Type> &types,
+                      std::optional<OpAsmParser::UnresolvedOperand> &bounds,
+                      Type &boundsType) {
+  if (succeeded(parseDimsModifierWithValues(parser, dimsAttr, values, types))) {
+    return success();
+  }
+
+  OpAsmParser::UnresolvedOperand boundsOperand;
+  if (parser.parseOperand(boundsOperand) || parser.parseColon() ||
+      parser.parseType(boundsType)) {
+    return failure();
+  }
+  bounds = boundsOperand;
+  return success();
+}
+
+static void printNumThreadsClause(OpAsmPrinter &p, Operation *op,
+                                  IntegerAttr dimsAttr, OperandRange values,
+                                  TypeRange types, Value bounds,
+                                  Type boundsType) {
+  if (!values.empty()) {
+    printDimsModifierWithValues(p, dimsAttr, values, types);
+  }
+  if (bounds) {
+    p.printOperand(bounds);
+    p << " : " << boundsType;
   }
 }
 
