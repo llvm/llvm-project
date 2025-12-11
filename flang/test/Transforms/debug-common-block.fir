@@ -16,18 +16,18 @@ module {
     %1 = fir.convert %0 : (!fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<!fir.array<?xi8>>
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %4 = fircg.ext_declare %3 {uniq_name = "_QFf1Ex"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc4)
+    %4 = fircg.ext_declare %3 storage(%0[0]) {uniq_name = "_QFf1Ex"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc4)
     %5 = fir.address_of(@a_) : !fir.ref<tuple<i32, !fir.array<8xi8>>>
     %6 = fir.convert %5 : (!fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<!fir.array<?xi8>>
     %7 = fir.coordinate_of %6, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %8 = fir.convert %7 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %9 = fircg.ext_declare %8 {uniq_name = "_QFf1Exa"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc5)
+    %9 = fircg.ext_declare %8 storage(%5[0]) {uniq_name = "_QFf1Exa"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc5)
     %10 = fir.coordinate_of %1, %c4 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %11 = fir.convert %10 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %12 = fircg.ext_declare %11 {uniq_name = "_QFf1Ey"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc6)
+    %12 = fircg.ext_declare %11 storage(%0[4]) {uniq_name = "_QFf1Ey"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc6)
     %13 = fir.coordinate_of %6, %c4 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %14 = fir.convert %13 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %15 = fircg.ext_declare %14 {uniq_name = "_QFf1Eya"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc7)
+    %15 = fircg.ext_declare %14 storage(%5[4]) {uniq_name = "_QFf1Eya"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc7)
     return
   } loc(#loc3)
   func.func @f2() {
@@ -40,24 +40,24 @@ module {
     %1 = fir.convert %0 : (!fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<!fir.array<?xi8>>
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %4 = fircg.ext_declare %3 {uniq_name = "_QFf2Ex"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc9)
+    %4 = fircg.ext_declare %3 storage(%0[0]) {uniq_name = "_QFf2Ex"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc9)
     %5 = fir.address_of(@a_) : !fir.ref<tuple<i32, !fir.array<8xi8>>>
     %6 = fir.convert %5 : (!fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<!fir.array<?xi8>>
     %7 = fir.coordinate_of %6, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %8 = fir.convert %7 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %9 = fircg.ext_declare %8 {uniq_name = "_QFf2Exa"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc10)
+    %9 = fircg.ext_declare %8 storage(%5[0]) {uniq_name = "_QFf2Exa"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc10)
     %10 = fir.coordinate_of %1, %c4 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %11 = fir.convert %10 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %12 = fircg.ext_declare %11 {uniq_name = "_QFf2Ey"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc11)
+    %12 = fircg.ext_declare %11 storage(%0[4]) {uniq_name = "_QFf2Ey"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc11)
     %13 = fir.coordinate_of %6, %c4 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %14 = fir.convert %13 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %15 = fircg.ext_declare %14 {uniq_name = "_QFf2Eya"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc12)
+    %15 = fircg.ext_declare %14 storage(%5[4]) {uniq_name = "_QFf2Eya"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc12)
     %16 = fir.coordinate_of %1, %c8 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %17 = fir.convert %16 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %18 = fircg.ext_declare %17 {uniq_name = "_QFf2Ez"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc13)
+    %18 = fircg.ext_declare %17 storage(%0[8]) {uniq_name = "_QFf2Ez"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc13)
     %19 = fir.coordinate_of %6, %c8 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %20 = fir.convert %19 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %21 = fircg.ext_declare %20 {uniq_name = "_QFf2Eza"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc14)
+    %21 = fircg.ext_declare %20 storage(%5[8]) {uniq_name = "_QFf2Eza"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc14)
     return
   } loc(#loc8)
   func.func @f3() {
@@ -69,12 +69,12 @@ module {
     %1 = fir.convert %0 : (!fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<!fir.array<?xi8>>
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<i32>
-    %4 = fircg.ext_declare %3 {uniq_name = "_QFf3Ex"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc16)
+    %4 = fircg.ext_declare %3 storage(%0[0]) {uniq_name = "_QFf3Ex"} : (!fir.ref<i32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<i32> loc(#loc16)
     %5 = fir.address_of(@a_) : !fir.ref<tuple<i32, !fir.array<8xi8>>>
     %6 = fir.convert %5 : (!fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<!fir.array<?xi8>>
     %7 = fir.coordinate_of %6, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %8 = fir.convert %7 : (!fir.ref<i8>) -> !fir.ref<i32>
-    %9 = fircg.ext_declare %8 {uniq_name = "_QFf3Exa"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc17)
+    %9 = fircg.ext_declare %8 storage(%5[0]) {uniq_name = "_QFf3Exa"} : (!fir.ref<i32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<i32> loc(#loc17)
     return
   } loc(#loc15)
   func.func @test() {
@@ -87,24 +87,24 @@ module {
     %1 = fir.convert %0 : (!fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<!fir.array<?xi8>>
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %4 = fircg.ext_declare %3 {uniq_name = "_QFEv1"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc19)
+    %4 = fircg.ext_declare %3 storage(%0[0]) {uniq_name = "_QFEv1"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc19)
     %5 = fir.coordinate_of %1, %c4 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %6 = fir.convert %5 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %7 = fircg.ext_declare %6 {uniq_name = "_QFEv2"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc20)
+    %7 = fircg.ext_declare %6 storage(%0[4]) {uniq_name = "_QFEv2"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc20)
     %8 = fir.coordinate_of %1, %c8 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %9 = fir.convert %8 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %10 = fircg.ext_declare %9 {uniq_name = "_QFEv3"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc21)
+    %10 = fircg.ext_declare %9 storage(%0[8]) {uniq_name = "_QFEv3"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc21)
     %11 = fir.address_of(@a_) : !fir.ref<tuple<i32, !fir.array<8xi8>>>
     %12 = fir.convert %11 : (!fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<!fir.array<?xi8>>
     %13 = fir.coordinate_of %12, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %14 = fir.convert %13 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %15 = fircg.ext_declare %14 {uniq_name = "_QFEva1"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc22)
+    %15 = fircg.ext_declare %14 storage(%11[0]) {uniq_name = "_QFEva1"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc22)
     %16 = fir.coordinate_of %12, %c4 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %17 = fir.convert %16 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %18 = fircg.ext_declare %17 {uniq_name = "_QFEva2"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc23)
+    %18 = fircg.ext_declare %17 storage(%11[4]) {uniq_name = "_QFEva2"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc23)
     %19 = fir.coordinate_of %12, %c8 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
     %20 = fir.convert %19 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %21 = fircg.ext_declare %20 {uniq_name = "_QFEva3"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc24)
+    %21 = fircg.ext_declare %20 storage(%11[8]) {uniq_name = "_QFEva3"} : (!fir.ref<f32>, !fir.ref<tuple<i32, !fir.array<8xi8>>>) -> !fir.ref<f32> loc(#loc24)
     return
   } loc(#loc18)
 }

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-dependences>' -debug-only=polly-dependence -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<deps>' -polly-print-deps -debug-only=polly-dependence -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; REQUIRES: asserts
 ;

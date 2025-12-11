@@ -561,6 +561,8 @@ int test_mm_movemask_ps(__m128 A) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse.movmsk.ps(<4 x float> %{{.*}})
   return _mm_movemask_ps(A);
 }
+TEST_CONSTEXPR(_mm_movemask_ps((__m128)(__v4sf){-2.0f, 3.0f, -5.5f, -0.0f}) == 0xD);
+TEST_CONSTEXPR(_mm_movemask_ps((__m128)(__v4sf){-7.348215e5, 0.00314159, -12.789, 2.7182818}) == 0x5);
 
 __m128 test_mm_mul_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_mul_ps
@@ -736,6 +738,11 @@ __m128 test_mm_shuffle_ps(__m128 A, __m128 B) {
   return _mm_shuffle_ps(A, B, 0);
 }
 
+TEST_CONSTEXPR((match_m128(_mm_shuffle_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){5.0f, 6.0f, 7.0f, 8.0f}), 4), 1.0f, 2.0f, 5.0f, 5.0f)));
+TEST_CONSTEXPR((match_m128(_mm_shuffle_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){5.0f, 6.0f, 7.0f, 8.0f}), 0), 1.0f, 1.0f, 5.0f, 5.0f)));
+TEST_CONSTEXPR((match_m128(_mm_shuffle_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){5.0f, 6.0f, 7.0f, 8.0f}), 255), 4.0f, 4.0f, 8.0f, 8.0f)));
+TEST_CONSTEXPR((match_m128(_mm_shuffle_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){5.0f, 6.0f, 7.0f, 8.0f}), 27), 4.0f, 3.0f, 6.0f, 5.0f)));
+
 __m128 test_mm_sqrt_ps(__m128 x) {
   // CHECK-LABEL: test_mm_sqrt_ps
   // CHECK: call {{.*}}<4 x float> @llvm.sqrt.v4f32(<4 x float> {{.*}})
@@ -744,9 +751,9 @@ __m128 test_mm_sqrt_ps(__m128 x) {
 
 __m128 test_mm_sqrt_ss(__m128 x) {
   // CHECK-LABEL: test_mm_sqrt_ss
-  // CHECK: extractelement <4 x float> {{.*}}, i64 0
+  // CHECK: extractelement <4 x float> {{.*}}, i32 0
   // CHECK: call float @llvm.sqrt.f32(float {{.*}})
-  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i64 0
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 0
   return _mm_sqrt_ss(x);
 }
 

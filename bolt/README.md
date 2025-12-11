@@ -164,7 +164,7 @@ $ perf2bolt -p perf.data -o perf.fdata <executable>
 This command will aggregate branch data from `perf.data` and store it in a
 format that is both more compact and more resilient to binary modifications.
 
-If the profile was collected without brstacks, you will need to add `-nl` flag to
+If the profile was collected without brstacks, you will need to add `-ba` flag to
 the command line above.
 
 ### Step 3: Optimize with BOLT
@@ -173,7 +173,7 @@ Once you have `perf.fdata` ready, you can use it for optimizations with
 BOLT. Assuming your environment is setup to include the right path, execute
 `llvm-bolt`:
 ```
-$ llvm-bolt <executable> -o <executable>.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
+$ llvm-bolt <executable> -o <executable>.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=cdsort -split-functions -split-all-cold -split-eh -dyno-stats
 ```
 
 If you do need an updated debug info, then add `-update-debug-sections` option
@@ -201,6 +201,26 @@ $ merge-fdata *.fdata > combined.fdata
 ```
 Use `combined.fdata` for **Step 3** above to generate a universally optimized
 binary.
+
+## Identifying a Binary Modified By BOLT
+
+A binary that has been modified by BOLT will include a `bolt_info` note and may
+have extra sections with `bolt` in their name.
+
+You can use `readelf` to find these:
+```
+$ readelf -S <your-binary> | grep bolt
+  [11] .bolt.org.eh_frame PROGBITS <...>
+<...>
+  [39] .note.bolt_info   NOTE <...>
+```
+The note can be displayed with:
+```
+$ readelf -p .note.bolt_info <your-binary>
+String dump of section '.note.bolt_info':
+  <...>
+  [    10]  BOLT revision: <...>
+```
 
 ## License
 

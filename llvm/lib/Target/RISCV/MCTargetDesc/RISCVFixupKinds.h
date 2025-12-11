@@ -11,7 +11,6 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCFixup.h"
-#include <utility>
 
 #undef RISCV
 

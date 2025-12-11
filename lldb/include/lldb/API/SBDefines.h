@@ -76,6 +76,7 @@ class LLDB_API SBFileSpec;
 class LLDB_API SBFileSpecList;
 class LLDB_API SBFormat;
 class LLDB_API SBFrame;
+class LLDB_API SBFrameList;
 class LLDB_API SBFunction;
 class LLDB_API SBHostOS;
 class LLDB_API SBInstruction;

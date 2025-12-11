@@ -44,21 +44,20 @@ public:
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).
   ///
-  const ThumbRegisterInfo &getRegisterInfo() const override { return RI; }
+  const ThumbRegisterInfo &getRegisterInfo() const { return RI; }
 
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
@@ -90,6 +89,9 @@ inline ARMVCC::VPTCodes getVPTInstrPredicate(const MachineInstr &MI) {
   Register PredReg;
   return getVPTInstrPredicate(MI, PredReg);
 }
+// Identify the input operand in an MVE predicated instruction which
+// contributes the values of any inactive vector lanes.
+int findVPTInactiveOperandIdx(const MachineInstr &MI);
 
 // Recomputes the Block Mask of Instr, a VPT or VPST instruction.
 // This rebuilds the block mask of the instruction depending on the predicates

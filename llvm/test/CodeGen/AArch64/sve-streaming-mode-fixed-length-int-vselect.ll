@@ -338,7 +338,7 @@ define void @select_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    csel w9, w11, w10, eq
 ; NONEON-NOSVE-NEXT:    cmp w13, w12
 ; NONEON-NOSVE-NEXT:    ldrb w1, [sp, #21]
-; NONEON-NOSVE-NEXT:    str w8, [sp, #12] // 4-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str w8, [sp, #12] // 4-byte Spill
 ; NONEON-NOSVE-NEXT:    csel w8, w13, w12, eq
 ; NONEON-NOSVE-NEXT:    cmp w16, w14
 ; NONEON-NOSVE-NEXT:    ldrb w13, [sp, #38]
@@ -372,7 +372,7 @@ define void @select_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldrb w6, [sp, #44]
 ; NONEON-NOSVE-NEXT:    cmp w5, w2
 ; NONEON-NOSVE-NEXT:    ldrb w30, [sp, #29]
-; NONEON-NOSVE-NEXT:    str w8, [sp] // 4-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str w8, [sp] // 4-byte Spill
 ; NONEON-NOSVE-NEXT:    csel w2, w5, w2, eq
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #46]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #30]
@@ -705,7 +705,7 @@ define void @select_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-LABEL: select_v16i16:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #112
-; NONEON-NOSVE-NEXT:    str x19, [sp, #96] // 8-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str x19, [sp, #96] // 8-byte Spill
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 112
 ; NONEON-NOSVE-NEXT:    .cfi_offset w19, -16
 ; NONEON-NOSVE-NEXT:    ldp q0, q3, [x1]
@@ -776,7 +776,7 @@ define void @select_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    cmp w19, w10
 ; NONEON-NOSVE-NEXT:    csel w10, w19, w10, eq
 ; NONEON-NOSVE-NEXT:    strh w11, [sp, #92]
-; NONEON-NOSVE-NEXT:    ldr x19, [sp, #96] // 8-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr x19, [sp, #96] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    cmp w5, w4
 ; NONEON-NOSVE-NEXT:    strh w10, [sp, #94]
 ; NONEON-NOSVE-NEXT:    csel w8, w5, w4, eq

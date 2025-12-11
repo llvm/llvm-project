@@ -1,6 +1,15 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 ! Check OpenMP clause validity for the following directives:
 !     2.10 Device constructs
+
+subroutine f
+  integer :: i
+  !WARNING: `DISTRIBUTE` must be dynamically enclosed in a `TEAMS` region.
+  !$omp distribute
+  do i = 1, 100
+     print *, "hello"
+  end do
+end subroutine
 program main
 
   real(8) :: arrayA(256), arrayB(256)
@@ -108,4 +117,8 @@ program main
       end do
       !$omp end distribute
   !$omp end task
+
+  !$omp teams
+    call foo
+  !$omp end teams
 end program main

@@ -72,7 +72,7 @@ enum class IR2VecKind { Symbolic, FlowAware };
 
 namespace ir2vec {
 
-extern llvm::cl::OptionCategory IR2VecCategory;
+LLVM_ABI extern llvm::cl::OptionCategory IR2VecCategory;
 LLVM_ABI extern cl::opt<float> OpcWeight;
 LLVM_ABI extern cl::opt<float> TypeWeight;
 LLVM_ABI extern cl::opt<float> ArgWeight;
@@ -110,8 +110,8 @@ public:
     return Data[Itr];
   }
 
-  using iterator = typename std::vector<double>::iterator;
-  using const_iterator = typename std::vector<double>::const_iterator;
+  using iterator = std::vector<double>::iterator;
+  using const_iterator = std::vector<double>::const_iterator;
 
   iterator begin() { return Data.begin(); }
   iterator end() { return Data.end(); }
@@ -161,10 +161,10 @@ private:
 
 public:
   /// Default constructor creates empty storage (invalid state)
-  VocabStorage() : Sections(), TotalSize(0), Dimension(0) {}
+  VocabStorage() = default;
 
   /// Create a VocabStorage with pre-organized section data
-  VocabStorage(std::vector<std::vector<Embedding>> &&SectionData);
+  LLVM_ABI VocabStorage(std::vector<std::vector<Embedding>> &&SectionData);
 
   VocabStorage(VocabStorage &&) = default;
   VocabStorage &operator=(VocabStorage &&) = default;

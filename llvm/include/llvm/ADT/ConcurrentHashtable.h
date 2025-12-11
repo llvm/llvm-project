@@ -24,7 +24,6 @@
 #include <iomanip>
 #include <mutex>
 #include <sstream>
-#include <type_traits>
 
 namespace llvm {
 
@@ -177,7 +176,7 @@ public:
 
 #if LLVM_ENABLE_THREADS
     // Lock bucket.
-    CurBucket.Guard.lock();
+    std::scoped_lock<std::mutex> Lock(CurBucket.Guard);
 #endif
 
     HashesPtr BucketHashes = CurBucket.Hashes;
@@ -195,11 +194,6 @@ public:
 
         CurBucket.NumberOfEntries++;
         RehashBucket(CurBucket);
-
-#if LLVM_ENABLE_THREADS
-        CurBucket.Guard.unlock();
-#endif
-
         return {NewData, true};
       }
 
@@ -208,10 +202,6 @@ public:
         KeyDataTy *EntryData = BucketEntries[CurEntryIdx];
         if (Info::isEqual(Info::getKey(*EntryData), NewValue)) {
           // Already existed entry matched with inserted data is found.
-#if LLVM_ENABLE_THREADS
-          CurBucket.Guard.unlock();
-#endif
-
           return {EntryData, false};
         }
       }
@@ -352,10 +342,8 @@ protected:
     CurBucket.Size = NewBucketSize;
 
     // Delete old bucket entries.
-    if (SrcHashes != nullptr)
-      delete[] SrcHashes;
-    if (SrcEntries != nullptr)
-      delete[] SrcEntries;
+    delete[] SrcHashes;
+    delete[] SrcEntries;
   }
 
   uint32_t getBucketIdx(hash_code Hash) { return Hash & HashMask; }

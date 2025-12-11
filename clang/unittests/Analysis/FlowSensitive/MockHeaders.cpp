@@ -459,6 +459,10 @@ struct is_scalar
 template <>
 struct is_scalar<nullptr_t> : public true_type {};
 
+struct in_place_t {};
+
+constexpr in_place_t in_place;
+
 } // namespace std
 
 #endif // STD_TYPE_TRAITS_H
@@ -511,9 +515,8 @@ using remove_reference_t = typename std::remove_reference<T>::type;
 template <typename T>
 using decay_t = typename std::decay<T>::type;
 
-struct in_place_t {};
-
-constexpr in_place_t in_place;
+using std::in_place;
+using std::in_place_t;
 } // namespace absl
 
 #endif // ABSL_TYPE_TRAITS_H
@@ -588,9 +591,6 @@ static constexpr char StdOptionalHeader[] = R"(
 #include "std_utility.h"
 
 namespace std {
-
-struct in_place_t {};
-constexpr in_place_t in_place;
 
 struct nullopt_t {
   constexpr explicit nullopt_t() {}
@@ -1356,7 +1356,9 @@ bool operator==(const Status &lhs, const Status &rhs);
 bool operator!=(const Status &lhs, const Status &rhs);
 
 Status OkStatus();
-Status InvalidArgumentError(char *);
+Status InvalidArgumentError(const char *);
+
+}  // namespace absl
 
 #endif // STATUS_H
 )cc";
@@ -1369,6 +1371,8 @@ constexpr const char StatusOrDefsHeader[] = R"cc(
 #include "std_initializer_list.h"
 #include "std_type_traits.h"
 #include "std_utility.h"
+
+namespace absl {
 
 template <typename T> struct StatusOr;
 
@@ -2232,6 +2236,95 @@ using testing::AssertionResult;
 #endif // TESTING_DEFS_H
 )cc";
 
+constexpr const char StdUniquePtrHeader[] = R"cc(
+namespace std {
+
+  template <typename T>
+  struct default_delete {};
+
+  template <typename T, typename D = default_delete<T>>
+  class unique_ptr {
+   public:
+    using element_type = T;
+    using deleter_type = D;
+
+    constexpr unique_ptr();
+    constexpr unique_ptr(nullptr_t) noexcept;
+    unique_ptr(unique_ptr&&);
+    explicit unique_ptr(T*);
+    template <typename U, typename E>
+    unique_ptr(unique_ptr<U, E>&&);
+
+    ~unique_ptr();
+
+    unique_ptr& operator=(unique_ptr&&);
+    template <typename U, typename E>
+    unique_ptr& operator=(unique_ptr<U, E>&&);
+    unique_ptr& operator=(nullptr_t);
+
+    void reset(T* = nullptr) noexcept;
+    T* release();
+    T* get() const;
+
+    T& operator*() const;
+    T* operator->() const;
+    explicit operator bool() const noexcept;
+  };
+
+  template <typename T, typename D>
+  class unique_ptr<T[], D> {
+   public:
+    T* get() const;
+    T& operator[](size_t i);
+    const T& operator[](size_t i) const;
+  };
+
+  template <typename T, typename... Args>
+  unique_ptr<T> make_unique(Args&&...);
+
+  template <class T, class D>
+  void swap(unique_ptr<T, D>& x, unique_ptr<T, D>& y) noexcept;
+
+  template <class T1, class D1, class T2, class D2>
+  bool operator==(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
+  template <class T1, class D1, class T2, class D2>
+  bool operator!=(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
+  template <class T1, class D1, class T2, class D2>
+  bool operator<(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
+  template <class T1, class D1, class T2, class D2>
+  bool operator<=(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
+  template <class T1, class D1, class T2, class D2>
+  bool operator>(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
+  template <class T1, class D1, class T2, class D2>
+  bool operator>=(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
+
+  template <class T, class D>
+  bool operator==(const unique_ptr<T, D>& x, nullptr_t) noexcept;
+  template <class T, class D>
+  bool operator==(nullptr_t, const unique_ptr<T, D>& y) noexcept;
+  template <class T, class D>
+  bool operator!=(const unique_ptr<T, D>& x, nullptr_t) noexcept;
+  template <class T, class D>
+  bool operator!=(nullptr_t, const unique_ptr<T, D>& y) noexcept;
+  template <class T, class D>
+  bool operator<(const unique_ptr<T, D>& x, nullptr_t);
+  template <class T, class D>
+  bool operator<(nullptr_t, const unique_ptr<T, D>& y);
+  template <class T, class D>
+  bool operator<=(const unique_ptr<T, D>& x, nullptr_t);
+  template <class T, class D>
+  bool operator<=(nullptr_t, const unique_ptr<T, D>& y);
+  template <class T, class D>
+  bool operator>(const unique_ptr<T, D>& x, nullptr_t);
+  template <class T, class D>
+  bool operator>(nullptr_t, const unique_ptr<T, D>& y);
+  template <class T, class D>
+  bool operator>=(const unique_ptr<T, D>& x, nullptr_t);
+  template <class T, class D>
+  bool operator>=(nullptr_t, const unique_ptr<T, D>& y);
+}
+)cc";
+
 std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   std::vector<std::pair<std::string, std::string>> Headers;
   Headers.emplace_back("cstddef.h", CStdDefHeader);
@@ -2249,6 +2342,7 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("statusor_defs.h", StatusOrDefsHeader);
   Headers.emplace_back("absl_log.h", AbslLogHeader);
   Headers.emplace_back("testing_defs.h", TestingDefsHeader);
+  Headers.emplace_back("std_unique_ptr.h", StdUniquePtrHeader);
   return Headers;
 }
 

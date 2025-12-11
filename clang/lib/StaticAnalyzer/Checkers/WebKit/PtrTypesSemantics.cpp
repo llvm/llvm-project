@@ -185,6 +185,18 @@ bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
          isCtorOfRetainPtrOrOSPtr(F);
 }
 
+bool isStdOrWTFMove(const clang::FunctionDecl *F) {
+  auto FnName = safeGetName(F);
+  auto *Namespace = F->getParent();
+  if (!Namespace)
+    return false;
+  auto *TUDeck = Namespace->getParent();
+  if (!isa_and_nonnull<TranslationUnitDecl>(TUDeck))
+    return false;
+  auto NsName = safeGetName(Namespace);
+  return (NsName == "WTF" || NsName == "std") && FnName == "move";
+}
+
 template <typename Predicate>
 static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
   QualType type = T;
@@ -576,6 +588,10 @@ public:
     // A compound statement is allowed as long each individual sub-statement
     // is trivial.
     return WithCachedResult(CS, [&]() { return VisitChildren(CS); });
+  }
+
+  bool VisitCoroutineBodyStmt(const CoroutineBodyStmt *CBS) {
+    return WithCachedResult(CBS, [&]() { return VisitChildren(CBS); });
   }
 
   bool VisitReturnStmt(const ReturnStmt *RS) {

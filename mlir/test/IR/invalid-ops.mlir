@@ -145,3 +145,11 @@ func.func @verify_fail_3() {
   %r = "arith.constant"() {value = -3 : si32} : () -> si32
   return
 }
+
+// -----
+
+// Verify that symbols with results are rejected
+module {
+  // expected-error@+1 {{'test.symbol_with_result' op symbols must not have results}}
+  %0 = "test.symbol_with_result"() <{sym_name = "test_symbol"}> : () -> i32
+}

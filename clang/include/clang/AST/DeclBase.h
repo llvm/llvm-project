@@ -2642,7 +2642,7 @@ public:
 
   using udir_iterator_base =
       llvm::iterator_adaptor_base<udir_iterator, lookup_iterator,
-                                  typename lookup_iterator::iterator_category,
+                                  lookup_iterator::iterator_category,
                                   UsingDirectiveDecl *>;
 
   struct udir_iterator : udir_iterator_base {

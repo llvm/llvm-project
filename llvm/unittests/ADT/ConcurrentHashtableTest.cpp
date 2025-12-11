@@ -14,14 +14,13 @@
 #include "gtest/gtest.h"
 #include <limits>
 #include <random>
-#include <vector>
 using namespace llvm;
 using namespace parallel;
 
 namespace {
 class String {
 public:
-  String() {}
+  String() = default;
   const std::string &getKey() const { return Data; }
 
   template <typename AllocatorTy>

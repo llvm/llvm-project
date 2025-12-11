@@ -179,9 +179,13 @@ TEST_F(MainLoopTest, PipeDelayBetweenRegisterAndRun) {
     ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
   };
   // Add a write that triggers a read events.
-  loop.AddCallback(cb, std::chrono::milliseconds(500));
-  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
-                   std::chrono::milliseconds(1000));
+  bool addition_succeeded =
+      loop.AddCallback(cb, std::chrono::milliseconds(500));
+  ASSERT_TRUE(addition_succeeded);
+  addition_succeeded =
+      loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                       std::chrono::milliseconds(1000));
+  ASSERT_TRUE(addition_succeeded);
   ASSERT_TRUE(error.Success());
   ASSERT_TRUE(handle);
 
@@ -310,8 +314,10 @@ TEST_F(MainLoopTest, NoSpuriousSocketReads) {
       error);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   // Terminate the loop after one second.
-  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
-                   std::chrono::seconds(1));
+  bool addition_succeeded =
+      loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                       std::chrono::seconds(1));
+  ASSERT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(loop.Run().ToError(), llvm::Succeeded());
 
   // Make sure the callback was called only once.
@@ -388,10 +394,11 @@ TEST_F(MainLoopTest, PendingCallbackTrigger) {
   MainLoop loop;
   std::promise<void> add_callback2;
   bool callback1_called = false;
-  loop.AddPendingCallback([&](MainLoopBase &loop) {
+  bool addition_succeeded = loop.AddPendingCallback([&](MainLoopBase &loop) {
     callback1_called = true;
     add_callback2.set_value();
   });
+  EXPECT_TRUE(addition_succeeded);
   Status error;
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   bool callback2_called = false;
@@ -416,9 +423,11 @@ TEST_F(MainLoopTest, ManyPendingCallbacks) {
   // caused a deadlock when the pipe filled up (either because the main loop was
   // not running, because it was slow, or because it was busy/blocked doing
   // something else).
-  for (int i = 0; i < 65536; ++i)
-    loop.AddPendingCallback(
+  for (int i = 0; i < 65536; ++i) {
+    bool addition_succeeded = loop.AddPendingCallback(
         [&](MainLoopBase &loop) { loop.RequestTermination(); });
+    EXPECT_TRUE(addition_succeeded);
+  }
   ASSERT_TRUE(loop.Run().Success());
 }
 
@@ -444,8 +453,10 @@ TEST_F(MainLoopTest, TimedCallbacksRunInOrder) {
   add_cb(2);
   add_cb(4);
   add_cb(1);
-  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
-                   start + 5 * epsilon);
+  bool addition_succeeded =
+      loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                       start + 5 * epsilon);
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
   EXPECT_GE(std::chrono::steady_clock::now() - start, 5 * epsilon);
   ASSERT_THAT(order, testing::ElementsAre(1, 2, 3, 4));
@@ -455,22 +466,24 @@ TEST_F(MainLoopTest, TimedCallbackShortensSleep) {
   MainLoop loop;
   auto start = std::chrono::steady_clock::now();
   bool long_callback_called = false;
-  loop.AddCallback(
+  bool addition_succeeded = loop.AddCallback(
       [&](MainLoopBase &loop) {
         long_callback_called = true;
         loop.RequestTermination();
       },
       std::chrono::seconds(30));
+  EXPECT_TRUE(addition_succeeded);
   std::future<Status> async_run =
       std::async(std::launch::async, &MainLoop::Run, std::ref(loop));
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   bool short_callback_called = false;
-  loop.AddCallback(
+  addition_succeeded = loop.AddCallback(
       [&](MainLoopBase &loop) {
         short_callback_called = true;
         loop.RequestTermination();
       },
       std::chrono::seconds(1));
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(async_run.get().takeError(), llvm::Succeeded());
   EXPECT_LT(std::chrono::steady_clock::now() - start, std::chrono::seconds(10));
   EXPECT_TRUE(short_callback_called);

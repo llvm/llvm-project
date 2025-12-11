@@ -252,6 +252,13 @@ llvm::raw_ostream &ActualArgument::AsFortran(llvm::raw_ostream &o) const {
   return o;
 }
 
+std::string ActualArgument::AsFortran() const {
+  std::string result;
+  llvm::raw_string_ostream sstream(result);
+  AsFortran(sstream);
+  return result;
+}
+
 llvm::raw_ostream &SpecificIntrinsic::AsFortran(llvm::raw_ostream &o) const {
   return o << name;
 }

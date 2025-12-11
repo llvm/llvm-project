@@ -102,24 +102,31 @@ def : Pat<(i64 (AArch64AllocateSMESaveBuffer GPR64:$size)),
 let hasSideEffects = 1, isMeta = 1 in {
   def InOutZAUsePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
   def RequiresZASavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def RequiresZT0SavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
 def SMEStateAllocPseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
 
 def CommitZASavePseudo
   : Pseudo<(outs),
-           (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i64imm:$commit_routine, variable_ops), []>,
+           (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i1imm:$zero_zt0,
+                i64imm:$commit_routine, variable_ops), []>,
            Sched<[]>;
 
 def AArch64_inout_za_use
   : SDNode<"AArch64ISD::INOUT_ZA_USE", SDTypeProfile<0, 0,[]>,
-           [SDNPHasChain, SDNPInGlue]>;
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
 def : Pat<(AArch64_inout_za_use), (InOutZAUsePseudo)>;
 
 def AArch64_requires_za_save
   : SDNode<"AArch64ISD::REQUIRES_ZA_SAVE", SDTypeProfile<0, 0,[]>,
-           [SDNPHasChain, SDNPInGlue]>;
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
 def : Pat<(AArch64_requires_za_save), (RequiresZASavePseudo)>;
+
+def AArch64_requires_zt0_save
+  : SDNode<"AArch64ISD::REQUIRES_ZT0_SAVE", SDTypeProfile<0, 0, []>,
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
+def : Pat<(AArch64_requires_zt0_save), (RequiresZT0SavePseudo)>;
 
 def AArch64_sme_state_alloc
   : SDNode<"AArch64ISD::SME_STATE_ALLOC", SDTypeProfile<0, 0,[]>,
@@ -1173,3 +1180,14 @@ let Predicates = [HasSME_MOP4, HasSMEF64F64] in {
   defm FMOP4A : sme2_fmop4as_fp64_non_widening<0, "fmop4a", "int_aarch64_sme_mop4a">;
   defm FMOP4S : sme2_fmop4as_fp64_non_widening<1, "fmop4s", "int_aarch64_sme_mop4s">;
 }
+
+//===----------------------------------------------------------------------===//
+// SME2.3 instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSME2p3] in {
+  def LUTI6_ZTZ       : sme2_lut_single<"luti6">;
+  def LUTI6_4ZT3Z     : sme2_luti6_zt_consecutive<"luti6">;
+  def LUTI6_S_4ZT3Z   : sme2_luti6_zt_strided<"luti6">;
+  def LUTI6_4Z2Z2ZI   : sme2_luti6_vector_vg4_consecutive<"luti6">;
+  def LUTI6_S_4Z2Z2ZI : sme2_luti6_vector_vg4_strided<"luti6">;
+} // [HasSME2p3]

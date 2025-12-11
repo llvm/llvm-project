@@ -1,5 +1,5 @@
 ! Ensure argument -fconvert=<value> accepts all relevant options and produces an
-! error if an invalid value is specified. 
+! error if an invalid value is specified.
 
 !--------------------------
 ! FLANG DRIVER (flang)

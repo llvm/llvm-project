@@ -30,8 +30,6 @@ let Namespace = "X86" in {
   def sub_ymm      : SubRegIndex<256>;
   def sub_mask_0   : SubRegIndex<-1>;
   def sub_mask_1   : SubRegIndex<-1, -1>;
-  def sub_t0       : SubRegIndex<8192>;
-  def sub_t1       : SubRegIndex<8192, 8192>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -432,10 +430,6 @@ def TMM4:  X86Reg<"tmm4",   4>;
 def TMM5:  X86Reg<"tmm5",   5>;
 def TMM6:  X86Reg<"tmm6",   6>;
 def TMM7:  X86Reg<"tmm7",   7>;
-// TMM register pairs
-def TPAIRS : RegisterTuples<[sub_t0, sub_t1],
-                            [(add TMM0, TMM2, TMM4, TMM6),
-                             (add TMM1, TMM3, TMM5, TMM7)]>;
 }
 
 // Floating point stack registers. These don't map one-to-one to the FP
@@ -862,9 +856,6 @@ def VK64WM  : RegisterClass<"X86", [v64i1], 64, (add VK32WM)> {let Size = 64;}
 let CopyCost = -1 in // Don't allow copying of tile registers
 def TILE : RegisterClass<"X86", [x86amx], 8192,
                          (sequence "TMM%u", 0, 7)> {let Size = 8192;}
-// Need check alignment 3rd operand size=1024*2*8
-let isAllocatable = 1 in
-def TILEPAIR : RegisterClass<"X86", [untyped], 512, (add TPAIRS)> {let Size = 16384;}
 
 //===----------------------------------------------------------------------===//
 // Register categories.

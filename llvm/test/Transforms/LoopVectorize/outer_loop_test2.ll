@@ -50,7 +50,7 @@
 
 ; CHECK: [[ForInc]]:
 ; CHECK: %[[IndNext]] = add nuw i64 %[[Ind]], 4
-; CHECK: %[[VecIndNext]] = add <4 x i64> %[[VecInd]], splat (i64 4)
+; CHECK: %[[VecIndNext]] = add nuw nsw <4 x i64> %[[VecInd]], splat (i64 4)
 ; CHECK: %[[Cmp:.*]] = icmp eq i64 %[[IndNext]], {{.*}}
 ; CHECK: br i1 %[[Cmp]], label %middle.block, label %vector.body
 

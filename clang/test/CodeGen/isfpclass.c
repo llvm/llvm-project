@@ -162,17 +162,17 @@ int4 check_isfpclass_nan_strict_v4f32(float4 x) {
 // CHECK-LABEL: define dso_local void @check_isfpclass_nan_v4f64(
 // CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 16 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[X:%.*]] = load <4 x double>, ptr [[TMP0]], align 16, !tbaa [[CHAR_TBAA2:![0-9]+]]
+// CHECK-NEXT:    [[X:%.*]] = load <4 x double>, ptr [[TMP0]], align 16, !tbaa [[CHAR_TBAA6:![0-9]+]]
 // CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <4 x double> [[X]], zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i64>
-// CHECK-NEXT:    store <4 x i64> [[TMP2]], ptr [[AGG_RESULT]], align 16, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    store <4 x i64> [[TMP2]], ptr [[AGG_RESULT]], align 16, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 long4 check_isfpclass_nan_v4f64(double4 x) {
   return __builtin_isfpclass(x, 3 /*NaN*/);
 }
 //.
-// CHECK: [[CHAR_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[CHAR_TBAA6]] = !{[[META4]], [[META4]], i64 0}
 //.
