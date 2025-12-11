@@ -72,7 +72,8 @@ struct CFGProfile {
 };
 
 // This struct represents the raw optimization profile for a function,
-// including CFG data (block and edge counts) and layout directives (clustering and cloning paths).
+// including CFG data (block and edge counts) and layout directives (clustering
+// and cloning paths).
 struct FunctionOptimizationProfile {
   // BB Cluster information specified by `UniqueBBID`s.
   SmallVector<BBClusterInfo> ClusterInfo;
@@ -157,10 +158,10 @@ private:
   // empty string if no debug info is available.
   StringMap<SmallString<128>> FunctionNameToDIFilename;
 
-  // This map contains the optimization profile for each function in the program.
-  // A function's optimization profile consists of CFG data (node and edge
-  // counts) and layout directives such as basic block clustering and cloning
-  // paths.
+  // This map contains the optimization profile for each function in the
+  // program. A function's optimization profile consists of CFG data (node and
+  // edge counts) and layout directives such as basic block clustering and
+  // cloning paths.
   StringMap<FunctionOptimizationProfile> ProgramOptimizationProfile;
 
   // Some functions have alias names. We use this map to find the main alias

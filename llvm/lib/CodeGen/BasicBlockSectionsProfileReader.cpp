@@ -66,7 +66,7 @@ BasicBlockSectionsProfileReader::getClusterInfoForFunction(
     StringRef FuncName) const {
   auto R = ProgramOptimizationProfile.find(getAliasName(FuncName));
   return R != ProgramOptimizationProfile.end() ? R->second.ClusterInfo
-                                                : SmallVector<BBClusterInfo>();
+                                               : SmallVector<BBClusterInfo>();
 }
 
 SmallVector<SmallVector<unsigned>>
