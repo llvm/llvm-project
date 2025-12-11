@@ -2714,19 +2714,18 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
 
   llvm::BumpPtrAllocator alloc;
   llvm::StringSaver saver(alloc);
-  SmallVector<StringRef> bitcodeLibFuncs;
   if (!ctx.bitcodeFiles.empty()) {
     markBuffersAsDontNeed(ctx, skipLinkedOutput);
-    for (StringRef libFunc : lto::LTO::getLibFuncSymbols(*tt, saver)) {
-      Symbol *sym = ctx.symtab->find(libFunc);
-      if (!sym)
-        continue;
-      if (isa<BitcodeFile>(sym->file))
+
+    SmallVector<StringRef> bitcodeLibFuncs;
+    for (StringRef libFunc : lto::LTO::getLibFuncSymbols(*tt, saver))
+      if (Symbol *sym = ctx.symtab->find(libFunc);
+          sym && isa<BitcodeFile>(sym->file))
         bitcodeLibFuncs.push_back(libFunc);
-    }
+    lto->setBitcodeLibFuncs(bitcodeLibFuncs);
   }
 
-  ltoObjectFiles = lto->compile(bitcodeLibFuncs);
+  ltoObjectFiles = lto->compile();
   for (auto &file : ltoObjectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
