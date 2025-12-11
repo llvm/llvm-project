@@ -4216,7 +4216,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   if (Opcode == Instruction::FAdd)
     return nullptr;
 
-  // Try to match reduce.add(mul(...)) or reduce.add(fmul(...)).
+  // Try to match reduce.add(mul(...)).
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA = dyn_cast_if_present<VPWidenCastRecipe>(A);
     auto *RecipeB = dyn_cast_if_present<VPWidenCastRecipe>(B);
