@@ -16,7 +16,7 @@ namespace clang::tidy::misc {
 /// Multiple implementation inheritance is discouraged.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/multiple-inheritance.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/multiple-inheritance.html
 class MultipleInheritanceCheck : public ClangTidyCheck {
 public:
   MultipleInheritanceCheck(StringRef Name, ClangTidyContext *Context)

@@ -16,6 +16,7 @@ add_clang_library(clangTidyFuchsiaModule STATIC
   LINK_LIBS
   clangTidy
   clangTidyGoogleModule
+  clangTidyMiscModule
   clangTidyUtils
 
   DEPENDS
