@@ -1417,7 +1417,7 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 
 static llvm::object::BBAddrMap::Features
 getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
-                    bool HasCalls, const CfgProfile *FuncCfgProfile) {
+                    bool HasCalls, const CFGProfile *FuncCFGProfile) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
   if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
@@ -1439,7 +1439,7 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
   bool BrProbEnabled =
       AllFeatures ||
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
-  bool PostLinkCfgEnabled = FuncCfgProfile && PgoAnalysisMapEmitBBSectionsCfg;
+  bool PostLinkCfgEnabled = FuncCFGProfile && PgoAnalysisMapEmitBBSectionsCfg;
 
   if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
     MF.getFunction().getContext().emitError(
@@ -1462,9 +1462,9 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   if (auto *BBSPRPass =
           getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>())
     BBSPR = &BBSPRPass->getBBSPR();
-  const CfgProfile *FuncCfgProfile = nullptr;
+  const CFGProfile *FuncCFGProfile = nullptr;
   if (BBSPR)
-    FuncCfgProfile = BBSPR->getFunctionCfgProfile(MF.getFunction().getName());
+    FuncCFGProfile = BBSPR->getFunctionCFGProfile(MF.getFunction().getName());
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
 
@@ -1475,7 +1475,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
   auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls,
-                                      FuncCfgProfile);
+                                      FuncCFGProfile);
   OutStreamer->emitInt8(Features.encode());
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
@@ -1583,7 +1583,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
           if (Features.PostLinkCfg) {
             OutStreamer->AddComment("basic block frequency (propeller)");
             OutStreamer->emitULEB128IntValue(
-                FuncCfgProfile->getBlockCount(*MBB.getBBID()));
+                FuncCFGProfile->getBlockCount(*MBB.getBBID()));
           }
         }
         if (Features.BrProb) {
@@ -1598,7 +1598,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
                 MBPI->getEdgeProbability(&MBB, SuccMBB).getNumerator());
             if (Features.PostLinkCfg) {
               OutStreamer->AddComment("successor branch frequency (propeller)");
-              OutStreamer->emitULEB128IntValue(FuncCfgProfile->getEdgeCount(
+              OutStreamer->emitULEB128IntValue(FuncCFGProfile->getEdgeCount(
                   *MBB.getBBID(), *SuccMBB->getBBID()));
             }
           }

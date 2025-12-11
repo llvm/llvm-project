@@ -43,11 +43,17 @@ struct BBClusterInfo {
 };
 
 // This represents the CFG profile data for a function.
-struct CfgProfile {
+struct CFGProfile {
   // Node counts for each basic block.
   DenseMap<UniqueBBID, uint64_t> NodeCounts;
   // Edge counts for each edge, stored as a nested map.
   DenseMap<UniqueBBID, DenseMap<UniqueBBID, uint64_t>> EdgeCounts;
+
+  // Hash for each basic block. The Hashes are stored for every original block
+  // (not cloned blocks), hence the map key being unsigned instead of
+  // UniqueBBID.
+  DenseMap<unsigned, uint64_t> BBHashes;
+
 
   // Returns the profile count for the given basic block or zero if it does not
   // exist.
@@ -75,11 +81,7 @@ struct FunctionProfile {
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
   // Cfg profile data (block and edge frequencies).
-  CfgProfile Cfg;
-  // Hash for each basic block. The Hashes are stored for every original block
-  // (not cloned blocks), hence the map key being unsigned instead of
-  // UniqueBBID.
-  DenseMap<unsigned, uint64_t> BBHashes;
+  CFGProfile CFG;
 };
 
 class BasicBlockSectionsProfileReader {
@@ -103,18 +105,17 @@ public:
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
 
-  // Returns a pointer to the CfgProfile for the given function.
-  // Returns nullptr if no profile data is available for the function.
-  const CfgProfile *getFunctionCfgProfile(StringRef FuncName) const {
-    auto It = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
-    if (It == ProgramPathAndClusterInfo.end())
-      return nullptr;
-    return &It->second.Cfg;
-  }
+  uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
+                        const UniqueBBID &DestBBID) const;
 
-  // Return the complete function path and cluster info for the given function.
-  std::pair<bool, FunctionPathAndClusterInfo>
-  getFunctionPathAndClusterInfo(StringRef FuncName) const;
+  // Returns a pointer to the CFGProfile for the function \p FuncName.
+  // Returns nullptr if no profile data is available for the function.
+  const CFGProfile *getFunctionCFGProfile(StringRef FuncName) const {
+    auto It = ProgramDirectivesAndProfile.find(getAliasName(FuncName));
+    if (It == ProgramDirectivesAndProfile.end())
+      return nullptr;
+    return &It->second.CFG;
+  }
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -162,10 +163,10 @@ private:
   // for (all or some of) its basic blocks. The cluster information for every
   // basic block includes its cluster ID along with the position of the basic
   // block in that cluster.
-  StringMap<FunctionProfile> ProgramPathAndClusterInfo;
+  StringMap<FunctionProfile> ProgramDirectivesAndProfile;
 
   // Some functions have alias names. We use this map to find the main alias
-  // name which appears in ProgramPathAndClusterInfo as a key.
+  // name which appears in ProgramDirectivesAndProfile as a key.
   StringMap<StringRef> FuncAliasMap;
 };
 
@@ -222,11 +223,10 @@ public:
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
 
+  const CFGProfile *getFunctionCFGProfile(StringRef FuncName) const;
+
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &DestBBID) const;
-
-  std::pair<bool, FunctionPathAndClusterInfo>
-  getFunctionPathAndClusterInfo(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.
