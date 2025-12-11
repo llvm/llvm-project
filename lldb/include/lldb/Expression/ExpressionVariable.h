@@ -80,10 +80,10 @@ public:
   /// class hierarchies.
   void TransferAddress(bool force = false);
 
-  /// When we build an expression variable we know whether we're going to use the
-  /// static or dynamic result.  If we present the dynamic value once, we should
-  /// use the dynamic value in future references to the variable, so we record
-  /// that fact here.
+  /// When we build an expression variable we know whether we're going to use
+  /// the static or dynamic result.  If we present the dynamic value once, we
+  /// should use the dynamic value in future references to the variable, so we
+  /// record that fact here.
   void PreserveDynamicOption(lldb::DynamicValueType dyn_type) {
     m_dyn_option = dyn_type;
   }
