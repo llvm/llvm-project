@@ -8681,11 +8681,9 @@ inline bool Type::isExtVectorBoolType() const {
 }
 
 inline bool Type::isConstantMatrixBoolType() const {
-  if (!isConstantMatrixType())
-    return false;
-  return cast<ConstantMatrixType>(CanonicalType)
-      ->getElementType()
-      ->isBooleanType();
+  if (auto *CMT = dyn_cast<ConstantMatrixType>(CanonicalType))
+    return CMT->getElementType()->isBooleanType();
+  return false;
 }
 
 inline bool Type::isSubscriptableVectorType() const {

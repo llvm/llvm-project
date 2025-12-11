@@ -68,7 +68,7 @@ bool2x2 fn2(bool V) {
 // CHECK-NEXT:    ret i1 [[TMP1]]
 //
 bool fn3() {
-  S s = {{true,true, false, false}, 1.0};
+  S s = {{true,true,false,false}, 1.0};
   return s.bM[0][0];
 }
 
