@@ -20481,6 +20481,12 @@ Value *BoUpSLP::vectorizeTree(
   LLVM_DEBUG(dbgs() << "SLP: Extracting " << ExternalUses.size()
                     << " values .\n");
 
+  // Look across the different vectorizable trees and look for opportunies
+  // to optimize pairs of nodes
+  // For instance, two interleaved-strided loads can be optimized into
+  // two vectorized loads followed by a shuffle operation
+  R.mergeAndOptimizeTrees();
+
   SmallVector<ShuffledInsertData<Value *>> ShuffledInserts;
   // Maps vector instruction to original insertelement instruction
   DenseMap<Value *, InsertElementInst *> VectorToInsertElement;
