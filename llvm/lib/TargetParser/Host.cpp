@@ -2326,7 +2326,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
 #define PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE 59
 #endif
 #ifndef PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE
-#define PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE  66
+#define PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE 66
 #endif
 #ifndef PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE 67
@@ -2370,7 +2370,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["sve-aes"] =
       IsProcessorFeaturePresent(PF_ARM_SVE_PMULL128_INSTRUCTIONS_AVAILABLE);
   Features["sve-bitperm"] =
-    IsProcessorFeaturePresent(PF_ARM_SVE_BITPERM_INSTRUCTIONS_AVAILABLE);
+      IsProcessorFeaturePresent(PF_ARM_SVE_BITPERM_INSTRUCTIONS_AVAILABLE);
   Features["sve-sha3"] =
       IsProcessorFeaturePresent(PF_ARM_SVE_SHA3_INSTRUCTIONS_AVAILABLE);
   Features["sve-sm4"] =
