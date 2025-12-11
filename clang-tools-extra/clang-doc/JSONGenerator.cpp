@@ -545,6 +545,8 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
     json::Array &PubMembersArrayRef = *PublicMembersArray.getAsArray();
     json::Value ProtectedMembersArray = Array();
     json::Array &ProtMembersArrayRef = *ProtectedMembersArray.getAsArray();
+    json::Value PrivateMembersArray = Array();
+    json::Array &PrivateMembersArrayRef = *PrivateMembersArray.getAsArray();
 
     for (const MemberTypeInfo &Member : I.Members) {
       json::Value MemberVal = Object();
@@ -557,12 +559,16 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
         PubMembersArrayRef.push_back(MemberVal);
       else if (Member.Access == AccessSpecifier::AS_protected)
         ProtMembersArrayRef.push_back(MemberVal);
+      else if (Member.Access == AccessSpecifier::AS_private)
+        PrivateMembersArrayRef.push_back(MemberVal);
     }
 
     if (!PubMembersArrayRef.empty())
       insertArray(Obj, PublicMembersArray, "PublicMembers");
     if (!ProtMembersArrayRef.empty())
       Obj["ProtectedMembers"] = ProtectedMembersArray;
+    if (!PrivateMembersArrayRef.empty())
+      insertArray(Obj, PrivateMembersArray, "PrivateMembers");
   }
 
   if (!I.Bases.empty())
@@ -604,6 +610,8 @@ static void serializeInfo(const VarInfo &I, json::Object &Obj,
 static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
                           const std::optional<StringRef> RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
+  if (I.USR == GlobalNamespaceID)
+    Obj["Name"] = "Global Namespace";
 
   if (!I.Children.Namespaces.empty())
     serializeArray(I.Children.Namespaces, Obj, "Namespaces",

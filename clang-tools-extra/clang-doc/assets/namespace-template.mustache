@@ -13,7 +13,7 @@
     <main>
         <div class="container">
             <div class="sidebar">
-                <h2>{{RecordType}} {{Name}}</h2>
+                <h2>{{#RecordType}}{{RecordType}} {{/RecordType}}{{Name}}</h2>
                 <ul>
                     {{#HasEnums}}
                     <li class="sidebar-section">
