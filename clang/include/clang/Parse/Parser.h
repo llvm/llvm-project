@@ -7610,6 +7610,16 @@ public:
 
   StmtResult ParseBreakOrContinueStatement(bool IsContinue);
 
+  /// ParseDeferStatement
+  /// \verbatim
+  ///       defer-statement:
+  ///         '_Defer' deferred-block
+  ///
+  ///       deferred-block:
+  ///         unlabeled-statement
+  /// \endverbatim
+  StmtResult ParseDeferStatement(SourceLocation *TrailingElseLoc);
+
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributes &Attrs,

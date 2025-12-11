@@ -164,6 +164,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     return KS_Unknown;
   case KEYFIXEDPOINT:
     return LangOpts.FixedPoint ? KS_Enabled : KS_Disabled;
+  case KEYDEFERTS:
+    return LangOpts.DeferTS ? KS_Enabled : KS_Disabled;
   /* TO_UPSTREAM(BoundsSafety) ON*/
   case KEYBOUNDSSAFETY:
     return LangOpts.BoundsSafety ? KS_Enabled : KS_Unknown;
