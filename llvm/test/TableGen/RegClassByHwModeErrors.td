@@ -9,6 +9,8 @@
 // RUN:   %t/compress-regclass-by-hwmode-2.td -o /dev/null 2>&1 | FileCheck %t/compress-regclass-by-hwmode-2.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen --gen-dag-isel  -I %p/../../include -I %t -I %S \
 // RUN:   %t/vt-by-hwmode-missing.td -o /dev/null 2>&1 | FileCheck %t/vt-by-hwmode-missing.td --implicit-check-not="error:"
+// RUN: not llvm-tblgen --gen-dag-isel -I %p/../../include -I %t -I %S \
+// RUN:   %t/multiple-entries-for-same-mode.td -o /dev/null 2>&1 | FileCheck %t/multiple-entries-for-same-mode.td --implicit-check-not="error:"
 
 //--- Common.td
 include "Common/RegClassByHwModeCommon.td"
@@ -119,3 +121,22 @@ def TEST : TestInstruction {
 
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }
+
+
+//--- multiple-entries-for-same-mode.td
+include "Common.td"
+/// We should get an error if the same mode is listed more than once
+defvar Ptr64Alias = Ptr64;
+def BadRegClass : RegClassByHwMode<[Ptr32, Ptr64, Ptr64Alias], [XRegs, YRegs, YRegs]>;
+// CHECK: [[#@LINE-1]]:5: error: duplicate RegisterClass entry for HwMode Ptr64: YRegs
+// Need at least one CompressPat use of the bad reg class to trigger the error:
+def USE_BAD_REG_CLASS : TestInstruction {
+  let OutOperandList = (outs BadRegClass:$dst);
+  let InOperandList = (ins BadRegClass:$src1, BadRegClass:$src2);
+  let AsmString = "bad $dst";
+  let Pattern = [(set BadRegClass:$dst, (add BadRegClass:$src1, BadRegClass:$src2))];
+}
+def MyTargetISA : InstrInfo;
+def MyTarget : Target {
+  let InstructionSet = MyTargetISA;
+}
