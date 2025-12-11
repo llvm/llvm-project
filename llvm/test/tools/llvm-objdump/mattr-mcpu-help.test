@@ -8,9 +8,9 @@
 
 ## The help message can be printed without -d.
 # RUN: llvm-objdump --mattr=help %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK
+# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DISASSEMBLE
 # RUN: llvm-objdump --mcpu=help %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK
+# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DISASSEMBLE
 
 ## We still handle other options.
 # RUN: llvm-objdump --mattr=help --section-headers %t 2>&1 \
@@ -20,19 +20,30 @@
 
 ## We report an error when we can't infer the triple because we don't have --triple or an input object (including a.out).
 # RUN: not llvm-objdump --mattr=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
+# RUN:   | FileCheck %s --check-prefix=CHECK-MISSING-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
 # RUN: not llvm-objdump --mcpu=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
+# RUN:   | FileCheck %s --check-prefix=CHECK-MISSING-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
+
+## This is a minidump file, which cannot be converted to ObjectFile in llvm.
+# RUN: printf "\x4D\x44\x4D\x50\x93\xA7\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" > %t.minidump
+## We report an error when the binary file cannot be convert to a recognized object.
+# RUN: not llvm-objdump --mattr=help %t.minidump 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.minidump
+# RUN: not llvm-objdump --mcpu=help %t.minidump 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.minidump
 
 # CHECK: Available CPUs for this target:
 # CHECK: Available features for this target:
 ## To check we still disassemble the file:
 # CHECK-DISASSEMBLE: file format elf64-x86-64
+# CHECK-NO-DISASSEMBLE-NOT: file format elf64-x86-64
 
 # CHECK-SECTION-HEADERS: Sections:
 # CHECK-SECTION-HEADERS: Idx Name               Size     VMA              Type
 
-# CHECK-ERROR: llvm-objdump{{.*}}: error: 'a.out': triple was not specified and could not be inferred from the input file: [[MSG]]
+# CHECK-MISSING-ERROR: llvm-objdump{{.*}}: error: 'a.out': triple was not specified and could not be inferred from the input file: [[MSG]]
+
+# CHECK-UNSUPPORTED-ERROR: llvm-objdump{{.*}}: error: '[[FILE]]': input file is not an object file
 
 --- !ELF
 FileHeader:

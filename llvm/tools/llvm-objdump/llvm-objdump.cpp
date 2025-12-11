@@ -3539,9 +3539,9 @@ static void mcpuHelp() {
   if (!TripleName.empty()) {
     TheTriple.setTriple(TripleName);
   } else {
-    assert(InputFilenames.size());
+    assert(!InputFilenames.empty());
     Expected<OwningBinary<Binary>> OBinary = createBinary(InputFilenames[0]);
-    if (auto E = OBinary.takeError()) {
+    if (Error E = OBinary.takeError()) {
       reportError(InputFilenames[0], "triple was not specified and could not "
                                      "be inferred from the input file: " +
                                          toString(std::move(E)));
@@ -3551,13 +3551,13 @@ static void mcpuHelp() {
     if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin))
       TheTriple = Obj->makeTriple();
     else
-      reportError(InputFilenames[0], "file format not recognized");
+      reportError(InputFilenames[0], "input file is not an object file");
   }
 
-  std::string Error;
-  const Target *DummyTarget = TargetRegistry::lookupTarget(TheTriple, Error);
+  std::string ErrMessage;
+  const Target *DummyTarget = TargetRegistry::lookupTarget(TheTriple, ErrMessage);
   if (!DummyTarget)
-    reportCmdLineError(Error);
+    reportCmdLineError(ErrMessage);
   // We need to access the Help() through the corresponding MCSubtargetInfo.
   DummyTarget->createMCSubtargetInfo(TheTriple, "help", "");
 }
