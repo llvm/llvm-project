@@ -2149,29 +2149,28 @@ public:
       //   diff = (ptrB - ptrA) / eltSize
       //   cmp = icmp sle diff, 0
       //   upper_bound = select cmp, -1, diff
-      //   mask = get_active_lane_mask lane_offset, upper_bound
+      //   mask = get_active_lane_mask 0, upper_bound
       //
       // loop_dependence_raw_mask:
       //   diff = (abs(ptrB - ptrA)) / eltSize
       //   cmp = icmp eq diff, 0
       //   upper_bound = select cmp, -1, diff
-      //   mask = get_active_lane_mask lane_offset, upper_bound
+      //   mask = get_active_lane_mask 0, upper_bound
       //
-      InstructionCost Cost = 0;
       Type *PtrTy = ICA.getArgTypes()[0];
-      unsigned EltSizeInBytes =
-          cast<ConstantInt>(ICA.getArgs()[2])->getZExtValue();
       bool IsReadAfterWrite = IID == Intrinsic::loop_dependence_raw_mask;
 
-      Cost +=
+      InstructionCost Cost =
           thisT()->getArithmeticInstrCost(Instruction::Sub, PtrTy, CostKind);
       if (IsReadAfterWrite) {
         IntrinsicCostAttributes AbsAttrs(Intrinsic::abs, PtrTy, {PtrTy}, {});
         Cost += thisT()->getIntrinsicInstrCost(AbsAttrs, CostKind);
       }
-      Cost += thisT()->getArithmeticInstrCost(
-          isPowerOf2_32(EltSizeInBytes) ? Instruction::AShr : Instruction::SDiv,
-          PtrTy, CostKind);
+
+      TTI::OperandValueInfo EltSizeOpInfo =
+          TTI::getOperandInfo(ICA.getArgs()[2]);
+      Cost += thisT()->getArithmeticInstrCost(Instruction::SDiv, PtrTy,
+                                              CostKind, {}, EltSizeOpInfo);
 
       Type *CondTy = IntegerType::getInt1Ty(RetTy->getContext());
       CmpInst::Predicate Pred =
