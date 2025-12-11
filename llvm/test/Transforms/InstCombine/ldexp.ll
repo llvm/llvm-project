@@ -641,7 +641,7 @@ define float @ldexp_ldexp_0(float %x, i32 %y) {
 define float @ldexp_neg150(float %x) {
 ; CHECK-LABEL: define float @ldexp_neg150
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 -150)
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 -150)
