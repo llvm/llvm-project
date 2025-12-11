@@ -5309,13 +5309,17 @@ enum Flags : uint8_t {
 } // namespace callgraph
 
 template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
-  const Elf_Shdr *CGSection = findSectionByName(".llvm.callgraph");
-  if (!CGSection) {
-    reportWarning(createError("no .llvm.callgraph section found."),
+  auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
+    return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
+  };
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
+      Obj.getSectionAndRelocations(IsMatch);
+  if (!MapOrErr || MapOrErr->empty()) {
+    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found."),
                   "missing section");
     return false;
   }
-
+  const Elf_Shdr *CGSection = MapOrErr->begin()->first;
   Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
       Obj.getSectionContents(*CGSection);
   if (!SectionBytesOrErr) {
@@ -5448,22 +5452,17 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
 template <class ELFT>
 void ELFDumper<ELFT>::getCallGraphRelocations(
     std::vector<Relocation<ELFT>> &Relocations, const Elf_Shdr *&RelocSymTab) {
-  const Elf_Shdr *CGSection = findSectionByName(".llvm.callgraph");
-  if (!CGSection)
-    return;
-
-  const Elf_Shdr *CGRelSection = nullptr;
-  auto IsMatch = [&](const Elf_Shdr &Sec) { return &Sec == CGSection; };
+  auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
+    return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
+  };
   Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
       Obj.getSectionAndRelocations(IsMatch);
-
-  if (!MapOrErr || MapOrErr->empty())
-    reportWarning(createError(".llvm.callgraph (" + describe(*CGSection) +
-                              ") does not have a corresponding "
-                              "relocation section"),
-                  FileName);
-
-  CGRelSection = MapOrErr->front().second;
+  if (!MapOrErr || MapOrErr->empty()) {
+    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found"),
+                  "missing section");
+    return;
+  }
+  const Elf_Shdr *CGRelSection = MapOrErr->front().second;
   if (CGRelSection) {
     forEachRelocationDo(*CGRelSection,
                         [&](const Relocation<ELFT> &R, unsigned Ndx,

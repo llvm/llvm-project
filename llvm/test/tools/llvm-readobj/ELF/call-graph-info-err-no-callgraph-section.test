@@ -4,7 +4,7 @@
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
 
-# CHECK: warning: 'missing section': no .llvm.callgraph section found.
+# CHECK: warning: 'missing section': no SHT_LLVM_CALL_GRAPH section found.
 
 ## YAML content was generated from this assembly using obj2yaml.
 ##    .text
