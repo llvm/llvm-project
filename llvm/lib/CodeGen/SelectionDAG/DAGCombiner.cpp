@@ -6653,8 +6653,7 @@ static unsigned getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2,
 // (X == 0) || (Y == 0) --> (X * Y) == 0
 // (X != 0) && (Y != 0) --> (X * Y) != 0
 SDValue DAGCombiner::foldLogicSetCCToMul(SDNode *N, const SDLoc &DL) {
-  if (OptLevel == CodeGenOptLevel::None ||
-      !DAG.getMachineFunction().getFunction().hasMinSize())
+  if (!DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
   unsigned Opcode = N->getOpcode();
@@ -6680,9 +6679,10 @@ SDValue DAGCombiner::foldLogicSetCCToMul(SDNode *N, const SDLoc &DL) {
   ISD::CondCode CC0 = cast<CondCodeSDNode>(N0.getOperand(2))->get();
   ISD::CondCode CC1 = cast<CondCodeSDNode>(N1.getOperand(2))->get();
 
-  if (CC0 != ExpectedCC || CC1 != ExpectedCC || !isNullConstant(C0) ||
-      !isNullConstant(C1) || A.getValueType() != B.getValueType() ||
-      !A.getValueType().isScalarInteger())
+  if (CC0 != ExpectedCC || CC1 != ExpectedCC ||
+      !A.getValueType().isScalarInteger() ||
+      A.getValueType() != B.getValueType() || !isNullConstant(C0) ||
+      !isNullConstant(C1))
     return SDValue();
 
   unsigned BitWidth = A.getValueSizeInBits();
@@ -6698,8 +6698,7 @@ SDValue DAGCombiner::foldLogicSetCCToMul(SDNode *N, const SDLoc &DL) {
 
   SDValue Mul = DAG.getNode(ISD::MUL, DL, A.getValueType(), A, B, Flags);
 
-  return DAG.getSetCC(DL, N->getValueType(0), Mul,
-                      DAG.getConstant(0, DL, A.getValueType()), ExpectedCC);
+  return DAG.getSetCC(DL, N->getValueType(0), Mul, C0, ExpectedCC);
 }
 
 static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
