@@ -12,19 +12,19 @@
 #include <string_view>
 #include <utility>
 
-#include "IRModule.h"
-#include "NanobindUtils.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace nb = nanobind;
 using namespace nanobind::literals;
 using namespace mlir;
-using namespace mlir::python;
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 using llvm::SmallVector;
 
@@ -121,7 +121,9 @@ Raises:
     type or if the buffer does not meet expectations.
 )";
 
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 struct nb_buffer_info {
   void *ptr = nullptr;
@@ -227,14 +229,6 @@ template <>
 struct nb_format_descriptor<double> {
   static const char *format() { return "d"; }
 };
-
-static MlirStringRef toMlirStringRef(const std::string &s) {
-  return mlirStringRefCreate(s.data(), s.size());
-}
-
-static MlirStringRef toMlirStringRef(const nb::bytes &s) {
-  return mlirStringRefCreate(static_cast<const char *>(s.data()), s.size());
-}
 
 class PyAffineMapAttribute : public PyConcreteAttribute<PyAffineMapAttribute> {
 public:
@@ -1753,7 +1747,9 @@ nb::object symbolRefOrFlatSymbolRefAttributeCaster(PyAttribute &pyAttribute) {
   throw nb::type_error(msg.c_str());
 }
 
-} // namespace
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 void PyStringAttribute::bindDerived(ClassTy &c) {
   c.def_static(
@@ -1799,7 +1795,10 @@ void PyStringAttribute::bindDerived(ClassTy &c) {
       "Returns the value of the string attribute as `bytes`");
 }
 
-void mlir::python::populateIRAttributes(nb::module_ &m) {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+void populateIRAttributes(nb::module_ &m) {
   PyAffineMapAttribute::bind(m);
   PyDenseBoolArrayAttribute::bind(m);
   PyDenseBoolArrayAttribute::PyDenseArrayIterator::bind(m);
@@ -1852,3 +1851,6 @@ void mlir::python::populateIRAttributes(nb::module_ &m) {
 
   PyStridedLayoutAttribute::bind(m);
 }
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
