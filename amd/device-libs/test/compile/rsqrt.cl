@@ -26,13 +26,14 @@ float test_rsqrt_f32(float x) {
 
 // CHECK-LABEL: {{^}}test_rsqrt_f64:
 // CHECK: v_rsq_f64
+// CHECK: v_cmp_class_f64
+// CHECK: v_cndmask_b32
+// CHECK: v_cndmask_b32
 // CHECK: v_mul_f64
 // CHECK: v_fma_f64
 // CHECK: v_mul_f64
 // CHECK: v_fma_f64
 // CHECK: v_fma_f64
-// CHECK: v_cndmask_b32
-// CHECK: v_cndmask_b32
 double test_rsqrt_f64(double x) {
     return rsqrt(x);
 }
