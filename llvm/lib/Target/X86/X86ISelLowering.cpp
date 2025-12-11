@@ -2805,7 +2805,7 @@ X86TargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
 //===----------------------------------------------------------------------===//
 
 bool X86::mayFoldLoad(SDValue Op, const X86Subtarget &Subtarget,
-                      bool AssumeSingleUse) {
+                      bool AssumeSingleUse, bool IgnoreAlignment) {
   if (!AssumeSingleUse && !Op.hasOneUse())
     return false;
   if (!ISD::isNormalLoad(Op.getNode()))
@@ -2813,8 +2813,9 @@ bool X86::mayFoldLoad(SDValue Op, const X86Subtarget &Subtarget,
 
   // If this is an unaligned vector, make sure the target supports folding it.
   auto *Ld = cast<LoadSDNode>(Op.getNode());
-  if (!Subtarget.hasAVX() && !Subtarget.hasSSEUnalignedMem() &&
-      Ld->getValueSizeInBits(0) == 128 && Ld->getAlign() < Align(16))
+  if (!IgnoreAlignment && !Subtarget.hasAVX() &&
+      !Subtarget.hasSSEUnalignedMem() && Ld->getValueSizeInBits(0) == 128 &&
+      Ld->getAlign() < Align(16))
     return false;
 
   // TODO: If this is a non-temporal load and the target has an instruction
@@ -2864,7 +2865,8 @@ static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget) {
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
-  return X86::mayFoldLoad(Op, Subtarget);
+  return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/false,
+                          /*IgnoreAlignment=*/true);
 }
 
 static bool isLogicOp(unsigned Opcode) {
