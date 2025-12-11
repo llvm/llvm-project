@@ -604,6 +604,11 @@ Changes in existing checks
   comments between the ``if`` condition and the ``then`` block are preserved
   when applying the fix.
 
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` by adding option
+  `DefaultCase` which simplifies configs by removing the need to specify each
+  identifier kind separately.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
