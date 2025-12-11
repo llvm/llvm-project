@@ -1811,22 +1811,6 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
 }
 
 SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
-  // Expand these intrinsics:
-  //    ; Figure out if there's overlap between the pointers.
-  //    diff = (ptrB - ptrA) / eltSize ; read-after-write will use the absolute
-  //        difference
-  //    cmp = diff <= 0 ; read-after-write will check for equality
-  //        with 0
-  //    ; Create a mask with each lane < diff active. This is essentiallly an
-  //        active lane mask between 0 and diff.
-  //    diff_splat = splat diff to <Y x i64>
-  //    steps = stepvector <Y x i64>
-  //    diff_mask = steps <= diff_splat
-  //    ; OR that diff mask with the comparison result, so that each lane is
-  //        active if it's less than diff or there was no overlap in the
-  //        first place. Otherwise the lane is inactive.
-  //    cmp_splat = splat cmp to <Y x i1>
-  //    result = or cmp_splat diff_mask
   SDLoc DL(N);
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
