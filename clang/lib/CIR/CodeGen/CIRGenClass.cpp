@@ -584,6 +584,25 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   assert(!cir::MissingFeatures::requiresCleanups());
 }
 
+Address CIRGenFunction::emitCXXMemberDataPointerAddress(
+    const Expr *e, Address base, mlir::Value memberPtr,
+    const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo) {
+  assert(!cir::MissingFeatures::cxxABI());
+
+  cir::GetRuntimeMemberOp op = builder.createGetIndirectMember(
+      getLoc(e->getSourceRange()), base.getPointer(), memberPtr);
+
+  QualType memberType = memberPtrType->getPointeeType();
+  assert(!cir::MissingFeatures::opTBAA());
+  CharUnits memberAlign = cgm.getNaturalTypeAlignment(memberType, baseInfo);
+  memberAlign = cgm.getDynamicOffsetAlignment(
+      base.getAlignment(), memberPtrType->getMostRecentCXXRecordDecl(),
+      memberAlign);
+
+  return Address(op, convertTypeForMem(memberPtrType->getPointeeType()),
+                 memberAlign);
+}
+
 CharUnits
 CIRGenModule::getDynamicOffsetAlignment(CharUnits actualBaseAlign,
                                         const CXXRecordDecl *baseDecl,
