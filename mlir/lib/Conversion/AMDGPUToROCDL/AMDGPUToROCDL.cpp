@@ -2725,24 +2725,9 @@ struct ConvertAMDGPUToROCDLPass
 
     RewritePatternSet patterns(ctx);
     LLVMTypeConverter converter(ctx);
-    converter.addConversion([&](TDMBaseType type) -> Type {
-      Type i32 = IntegerType::get(type.getContext(), 32);
-      return converter.convertType(VectorType::get(4, i32));
-    });
 
     populateAMDGPUToROCDLConversionPatterns(converter, patterns, *maybeChipset);
-    populateGpuMemorySpaceAttributeConversions(
-        converter, [](gpu::AddressSpace space) {
-          switch (space) {
-          case gpu::AddressSpace::Global:
-            return 1;
-          case gpu::AddressSpace::Workgroup:
-            return 3;
-          case gpu::AddressSpace::Private:
-            return 5;
-          }
-          llvm_unreachable("unknown address space enum value");
-        });
+    populateCommonAMDGPUTypeAndAttributeConversions(converter);
     LLVMConversionTarget target(getContext());
     target.addIllegalDialect<::mlir::amdgpu::AMDGPUDialect>();
     target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
@@ -2754,7 +2739,23 @@ struct ConvertAMDGPUToROCDLPass
 };
 } // namespace
 
-void mlir::populateAMDGPUMemorySpaceAttributeConversions(
+void mlir::populateCommonAMDGPUTypeAndAttributeConversions(
+    TypeConverter &typeConverter) {
+  populateGpuMemorySpaceAttributeConversions(
+      typeConverter, [](gpu::AddressSpace space) {
+        switch (space) {
+        case gpu::AddressSpace::Global:
+          return ROCDL::ROCDLDialect::kGlobalMemoryAddressSpace;
+        case gpu::AddressSpace::Workgroup:
+          return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
+        case gpu::AddressSpace::Private:
+          return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
+        }
+        llvm_unreachable("unknown address space enum value");
+      });
+}
+
+void mlir::populateAMDGPUTypeAndAttributeConversions(
     TypeConverter &typeConverter) {
   typeConverter.addTypeAttributeConversion(
       [](BaseMemRefType type, amdgpu::AddressSpaceAttr as)
@@ -2771,12 +2772,16 @@ void mlir::populateAMDGPUMemorySpaceAttributeConversions(
         }
         return TypeConverter::AttributeConversionResult::abort();
       });
+  typeConverter.addConversion([&](TDMBaseType type) -> Type {
+    Type i32 = IntegerType::get(type.getContext(), 32);
+    return typeConverter.convertType(VectorType::get(4, i32));
+  });
 }
 
 void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                                    RewritePatternSet &patterns,
                                                    Chipset chipset) {
-  populateAMDGPUMemorySpaceAttributeConversions(converter);
+  populateAMDGPUTypeAndAttributeConversions(converter);
   patterns.add<
       FatRawBufferCastLowering,
       RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,

@@ -3231,6 +3231,17 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
   }
 }
 
+mlir::LogicalResult CIRToLLVMGetRuntimeMemberOpLowering::matchAndRewrite(
+    cir::GetRuntimeMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(lowerMod && "lowering module is not available");
+  mlir::Type llvmResTy = getTypeConverter()->convertType(op.getType());
+  mlir::Operation *llvmOp = lowerMod->getCXXABI().lowerGetRuntimeMember(
+      op, llvmResTy, adaptor.getAddr(), adaptor.getMember(), rewriter);
+  rewriter.replaceOp(op, llvmOp);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMUnreachableOpLowering::matchAndRewrite(
     cir::UnreachableOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
