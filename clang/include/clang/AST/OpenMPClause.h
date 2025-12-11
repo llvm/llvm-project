@@ -1512,12 +1512,6 @@ class OMPTransparentClause final : public OMPClause {
   /// Location of '('.
   SourceLocation LParenLoc;
 
-  /// A kind of the 'transparent' clause.
-  OpenMPTransparentKind Kind = OMPC_TRANSPARENT_unknown;
-
-  /// Start location of the kind in source code.
-  SourceLocation KindLoc;
-
   /// Argument of the 'transparent' clause.
   Stmt *Transparent = nullptr;
 
@@ -1551,18 +1545,16 @@ public:
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
-  /// Returns kind of the clause.
-  OpenMPTransparentKind getTransparentKind() const { return Kind; }
-
   /// Returns argument of the clause.
   Expr *getTransparent() const { return cast<Expr>(Transparent); }
 
   child_range children() {
-    return child_range(child_iterator(), child_iterator());
+    return child_range(reinterpret_cast<Stmt **>(&Transparent),
+                       reinterpret_cast<Stmt **>(&Transparent) + 1);
   }
 
   const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
+    return const_child_range(&Transparent, &Transparent + 1);
   }
 
   child_range used_children() {

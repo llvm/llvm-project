@@ -7930,7 +7930,10 @@ void OMPClauseWriter::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
   Record.writeEnum(C->getThreadsetKind());
 }
 
-void OMPClauseWriter::VisitOMPTransparentClause(OMPTransparentClause *C) {}
+void OMPClauseWriter::VisitOMPTransparentClause(OMPTransparentClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddStmt(C->getTransparent());
+}
 
 void OMPClauseWriter::VisitOMPProcBindClause(OMPProcBindClause *C) {
   Record.push_back(unsigned(C->getProcBindKind()));
