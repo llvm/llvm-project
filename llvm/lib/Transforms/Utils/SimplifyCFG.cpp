@@ -6660,7 +6660,7 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
   }
   case BitMapKind: {
     ++NumBitMaps;
-    return ConstantComparesGatherer::createBitMapSeq(BitMap, Index, &Builder,
+    return ConstantComparesGatherer::createBitMapSeq(BitMap, Index, Builder,
                                                      BitMapElementTy);
   }
   case LookupTableKind: {

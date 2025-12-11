@@ -2443,7 +2443,7 @@ static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
   }
   ConstantInt *BitMap = ConstantInt::get(Context, BitMapAP);
   Value *Result = ConstantComparesGatherer::createBitMapSeq(
-      BitMap, Index, &Builder, /*BitMapElementTy=*/Type::getInt1Ty(Context));
+      BitMap, Index, Builder, /*BitMapElementTy=*/Type::getInt1Ty(Context));
 
   // If the maximum value in the bitmap is larger than can be stored
   // in Index, don't have to worry about overflow on the shift

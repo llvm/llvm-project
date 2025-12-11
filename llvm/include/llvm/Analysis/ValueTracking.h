@@ -1083,7 +1083,7 @@ struct ConstantComparesGatherer {
   operator=(const ConstantComparesGatherer &) = delete;
 
   static Value *createBitMapSeq(ConstantInt *BitMap, Value *Index,
-                                IRBuilderBase *Builder,
+                                IRBuilderBase &Builder,
                                 IntegerType *BitMapElementTy);
 
 private:
