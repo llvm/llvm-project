@@ -3492,7 +3492,7 @@ def MMABlockScaleKindAttr : EnumAttr<NVVM_Dialect, MMABlockScaleKind, "block_sca
     +--------------+-------------------------------------------+
     | Matrix Kind  |      supported types for A / B            |
     +--------------+-------------------------------------------+
-    | mxf8f6f4     | e4m3, e5m3, e2m3, e3m2, e2m1              |
+    | mxf8f6f4     | e4m3, e5m2, e2m3, e3m2, e2m1              |
     | mxf4         | e2m1                                      |
     | mxf4nvf4     | e2m1                                      |
     +--------------+-------------------------------------------+
