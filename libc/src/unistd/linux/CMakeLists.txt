@@ -256,7 +256,7 @@ add_entrypoint_object(
   HDRS
     ../getpagesize.h
   DEPENDS
-    libc.src.unistd.sysconf
+    libc.src.__support.OSUtil.linux.auxv
 )
 
 add_entrypoint_object(

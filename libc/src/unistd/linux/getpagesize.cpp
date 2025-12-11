@@ -8,14 +8,18 @@
 
 #include "src/unistd/getpagesize.h"
 
+#include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/unistd/sysconf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, getpagesize, ()) {
-  return static_cast<int>(LIBC_NAMESPACE::sysconf(_SC_PAGESIZE));
+  cpp::optional<unsigned long> page_size =
+      (LIBC_NAMESPACE::auxv::get(AT_PAGESZ));
+  if (page_size)
+    return static_cast<int>(*page_size);
+  return -1;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
