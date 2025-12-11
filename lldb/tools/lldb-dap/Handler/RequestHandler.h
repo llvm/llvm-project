@@ -213,9 +213,9 @@ class AsyncRequestHandler : public BaseRequestHandler {
         lldb::SBMutex lock = dap.GetAPIMutex();
         std::lock_guard<lldb::SBMutex> guard(lock);
 
-        if (llvm::Error err = body.takeError())
+        if (llvm::Error err = body.takeError()) {
           HandleErrorResponse(std::move(err), response);
-        else {
+        } else {
           response.success = true;
           response.body = std::move(*body);
         }
