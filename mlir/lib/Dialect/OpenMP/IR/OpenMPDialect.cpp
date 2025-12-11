@@ -2197,6 +2197,40 @@ LogicalResult TargetUpdateOp::verify() {
 // TargetOp
 //===----------------------------------------------------------------------===//
 
+// Helper: Verify dims modifier
+static LogicalResult verifyDimsModifier(Operation *op,
+                                        std::optional<IntegerAttr> numDimsAttr,
+                                        OperandRange dimsValues) {
+  if (numDimsAttr.has_value() && numDimsAttr.value()) {
+    if (dimsValues.empty()) {
+      return op->emitError("dims modifier requires values to be specified");
+    }
+
+    if (dimsValues.size() != static_cast<size_t>(numDimsAttr->getInt())) {
+      return op->emitError("dims(")
+             << numDimsAttr->getInt() << ") specified but " << dimsValues.size()
+             << " values provided";
+    }
+
+    if (!dimsValues.empty()) {
+      Type firstType = dimsValues.front().getType();
+      for (auto value : dimsValues) {
+        if (value.getType() != firstType) {
+          return op->emitError(
+              "dims modifier requires all values to have the same type");
+        }
+      }
+    }
+    return success();
+  } else {
+    if (!dimsValues.empty()) {
+      return op->emitError(
+          "dims values can only be specified with dims modifier");
+    }
+  }
+  return success();
+}
+
 void TargetOp::build(OpBuilder &builder, OperationState &state,
                      const TargetOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
@@ -2624,15 +2658,49 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
                     const TeamsOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
-  TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                 clauses.ifExpr, clauses.numTeamsDims, clauses.numTeamsValues,
-                 clauses.numTeamsLower, clauses.numTeamsUpper,
-                 /*private_vars=*/{}, /*private_syms=*/nullptr,
-                 /*private_needs_barrier=*/nullptr, clauses.reductionMod,
-                 clauses.reductionVars,
-                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                 makeArrayAttr(ctx, clauses.reductionSyms),
-                 clauses.threadLimit);
+  TeamsOp::build(
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      clauses.ifExpr, clauses.numTeamsNumDims, clauses.numTeamsDimsValues,
+      clauses.numTeamsLower, clauses.numTeamsUpper,
+      /*private_vars=*/{}, /*private_syms=*/nullptr,
+      /*private_needs_barrier=*/nullptr, clauses.reductionMod,
+      clauses.reductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimit);
+}
+
+// Helper: Verify num_teams clause
+static LogicalResult
+verifyNumTeamsClause(Operation *op, std::optional<IntegerAttr> numTeamsNumDims,
+                     OperandRange numTeamsDimsValues, Value numTeamsLower,
+                     Value numTeamsUpper) {
+  bool hasDimsModifier = numTeamsNumDims.has_value() && numTeamsNumDims.value();
+
+  // Cannot use both dims modifier and unidimensional style
+  if (hasDimsModifier && (numTeamsLower || numTeamsUpper)) {
+    return op->emitError(
+        "num_teams with dims modifier cannot be used together with "
+        "lower/upper bounds");
+  }
+
+  // With dims modifier
+  if (failed(verifyDimsModifier(op, numTeamsNumDims, numTeamsDimsValues)))
+    return failure();
+
+  // Without dims modifier
+  if (!hasDimsModifier) {
+    if (numTeamsLower) {
+      if (!numTeamsUpper)
+        return op->emitError(
+            "expected num_teams upper bound to be defined if the "
+            "lower bound is defined");
+      if (numTeamsLower.getType() != numTeamsUpper.getType())
+        return op->emitError(
+            "expected num_teams upper bound and lower bound to be "
+            "the same type");
+    }
+  }
+  return success();
 }
 
 LogicalResult TeamsOp::verify() {
@@ -2648,58 +2716,10 @@ LogicalResult TeamsOp::verify() {
                      "in any OpenMP dialect operations");
 
   // Check for num_teams clause restrictions
-  auto numTeamsDims = getNumTeamsDims();
-  auto numTeamsValues = getNumTeamsValues();
-  auto numTeamsLower = getNumTeamsLower();
-  auto numTeamsUpper = getNumTeamsUpper();
-
-  // Cannot use both dims modifier and unidimensional style
-  if (numTeamsDims.has_value() && (numTeamsLower || numTeamsUpper)) {
-    return emitError(
-        "num_teams with dims modifier cannot be used together with "
-        "lower/upper bounds (unidimensional style)");
-  }
-
-  // With dims modifier (multidimensional)
-  if (numTeamsDims.has_value()) {
-    if (numTeamsValues.empty()) {
-      return emitError(
-          "num_teams dims modifier requires values to be specified");
-    }
-
-    if (numTeamsValues.size() != static_cast<size_t>(*numTeamsDims)) {
-      return emitError("num_teams dims(")
-             << *numTeamsDims << ") specified but " << numTeamsValues.size()
-             << " values provided";
-    }
-
-    // All values must have the same type
-    if (!numTeamsValues.empty()) {
-      Type firstType = numTeamsValues.front().getType();
-      for (auto value : numTeamsValues) {
-        if (value.getType() != firstType) {
-          return emitError(
-              "num_teams dims modifier requires all values to have "
-              "the same type");
-        }
-      }
-    }
-  } else {
-    // Without dims modifier
-    if (!numTeamsValues.empty()) {
-      return emitError(
-          "num_teams values can only be specified with dims modifier");
-    }
-
-    if (numTeamsLower) {
-      if (!numTeamsUpper)
-        return emitError("expected num_teams upper bound to be defined if the "
-                         "lower bound is defined");
-      if (numTeamsLower.getType() != numTeamsUpper.getType())
-        return emitError("expected num_teams upper bound and lower bound to be "
-                         "the same type");
-    }
-  }
+  if (failed(verifyNumTeamsClause(
+          op, this->getNumTeamsNumDimsAttr(), this->getNumTeamsDimsValues(),
+          this->getNumTeamsLower(), this->getNumTeamsUpper())))
+    return failure();
 
   // Check for allocate clause restrictions
   if (getAllocateVars().size() != getAllocatorVars().size())
