@@ -1424,6 +1424,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdForwardListSynthProvider")));
 
+  AddCXXSynthetic(cpp_category_sp, LibStdcppSpanSyntheticFrontEndCreator,
+                  "libstdc++ std::span synthetic children", "^std::span<.+>$",
+                  stl_deref_flags, true);
+
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
 
@@ -1514,6 +1518,11 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
                 "libstdc++ std::coroutine_handle summary provider",
                 libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libstdc++ std::span summary provider", "^std::span<.+>$",
+                stl_summary_flags, true);
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *

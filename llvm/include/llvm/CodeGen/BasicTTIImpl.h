@@ -410,10 +410,6 @@ public:
     return false;
   }
 
-  bool isSourceOfDivergence(const Value *V) const override { return false; }
-
-  bool isAlwaysUniform(const Value *V) const override { return false; }
-
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
     return false;
   }
@@ -1555,55 +1551,6 @@ public:
     }
 
     return Cost;
-  }
-
-  InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const override {
-    Type *DataTy = MICA.getDataType();
-    Align Alignment = MICA.getAlignment();
-    unsigned Opcode = MICA.getID() == Intrinsic::masked_load
-                          ? Instruction::Load
-                          : Instruction::Store;
-    // TODO: Pass on AddressSpace when we have test coverage.
-    return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, true, false,
-                                       CostKind);
-  }
-
-  InstructionCost
-  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const override {
-    return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
-                                       true, CostKind);
-  }
-
-  InstructionCost
-  getExpandCompressMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                                TTI::TargetCostKind CostKind) const override {
-    unsigned Opcode = MICA.getID() == Intrinsic::masked_expandload
-                          ? Instruction::Load
-                          : Instruction::Store;
-    Type *DataTy = MICA.getDataType();
-    bool VariableMask = MICA.getVariableMask();
-    Align Alignment = MICA.getAlignment();
-    // Treat expand load/compress store as gather/scatter operation.
-    // TODO: implement more precise cost estimation for these intrinsics.
-    return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
-                                       /*IsGatherScatter*/ true, CostKind);
-  }
-
-  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override {
-    // For a target without strided memory operations (or for an illegal
-    // operation type on one which does), assume we lower to a gather/scatter
-    // operation.  (Which may in turn be scalarized.)
-    return thisT()->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                           Alignment, CostKind, I);
   }
 
   InstructionCost getInterleavedMemoryOpCost(
@@ -3054,8 +3001,6 @@ public:
                            TTI::TargetCostKind CostKind) const override {
     unsigned Id = MICA.getID();
     Type *DataTy = MICA.getDataType();
-    const Value *Ptr = MICA.getPointer();
-    const Instruction *I = MICA.getInst();
     bool VariableMask = MICA.getVariableMask();
     Align Alignment = MICA.getAlignment();
 
@@ -3065,26 +3010,46 @@ public:
       unsigned Opcode = Id == Intrinsic::experimental_vp_strided_load
                             ? Instruction::Load
                             : Instruction::Store;
-      return thisT()->getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                             Alignment, CostKind, I);
+      // For a target without strided memory operations (or for an illegal
+      // operation type on one which does), assume we lower to a gather/scatter
+      // operation.  (Which may in turn be scalarized.)
+      return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment,
+                                         VariableMask, true, CostKind);
     }
     case Intrinsic::masked_scatter:
     case Intrinsic::masked_gather:
     case Intrinsic::vp_scatter:
     case Intrinsic::vp_gather: {
-      unsigned Opcode =
-          (Id == Intrinsic::masked_gather || Id == Intrinsic::vp_gather)
-              ? Instruction::Load
-              : Instruction::Store;
-      return thisT()->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                             Alignment, CostKind, I);
+      unsigned Opcode = (MICA.getID() == Intrinsic::masked_gather ||
+                         MICA.getID() == Intrinsic::vp_gather)
+                            ? Instruction::Load
+                            : Instruction::Store;
+
+      return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment,
+                                         VariableMask, true, CostKind);
     }
+    case Intrinsic::vp_load:
+    case Intrinsic::vp_store:
+      return InstructionCost::getInvalid();
     case Intrinsic::masked_load:
-    case Intrinsic::masked_store:
-      return thisT()->getMaskedMemoryOpCost(MICA, CostKind);
+    case Intrinsic::masked_store: {
+      unsigned Opcode =
+          Id == Intrinsic::masked_load ? Instruction::Load : Instruction::Store;
+      // TODO: Pass on AddressSpace when we have test coverage.
+      return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, true, false,
+                                         CostKind);
+    }
     case Intrinsic::masked_compressstore:
-    case Intrinsic::masked_expandload:
-      return thisT()->getExpandCompressMemoryOpCost(MICA, CostKind);
+    case Intrinsic::masked_expandload: {
+      unsigned Opcode = MICA.getID() == Intrinsic::masked_expandload
+                            ? Instruction::Load
+                            : Instruction::Store;
+      // Treat expand load/compress store as gather/scatter operation.
+      // TODO: implement more precise cost estimation for these intrinsics.
+      return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment,
+                                         VariableMask,
+                                         /*IsGatherScatter*/ true, CostKind);
+    }
     case Intrinsic::vp_load_ff:
       return InstructionCost::getInvalid();
     default:

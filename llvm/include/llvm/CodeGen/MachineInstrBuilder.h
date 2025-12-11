@@ -307,6 +307,11 @@ public:
     return *this;
   }
 
+  const MachineInstrBuilder &addLaneMask(LaneBitmask LaneMask) const {
+    MI->addOperand(*MF, MachineOperand::CreateLaneMask(LaneMask));
+    return *this;
+  }
+
   const MachineInstrBuilder &addSym(MCSymbol *Sym,
                                     unsigned char TargetFlags = 0) const {
     MI->addOperand(*MF, MachineOperand::CreateMCSymbol(Sym, TargetFlags));

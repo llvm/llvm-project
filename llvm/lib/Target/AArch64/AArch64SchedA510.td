@@ -617,7 +617,7 @@ def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^PTRUES_[BHS
 def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^PFIRST_B", "^PNEXT_[BHSD]")>;
 
 // Predicate test
-def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instrs PTEST_PP)>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^TRN[12]_PPP_[BHSDQ]")>;
