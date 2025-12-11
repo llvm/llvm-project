@@ -11,7 +11,7 @@
 ; CHECK-DAG: 18 instcount - Number of instructions (of all types)
 
 
-define dso_local void @foo(i32 noundef %i, i32 noundef %j, i32 noundef %n) {
+define void @foo(i32 %i, i32 %j, i32 %n) {
 entry:
   %cmp = icmp slt i32 %i, %j
   br i1 %cmp, label %if.then, label %if.end
