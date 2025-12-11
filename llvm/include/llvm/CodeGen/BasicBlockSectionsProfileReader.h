@@ -158,10 +158,10 @@ private:
 
   // This contains the BB cluster information for the whole program.
   //
-  // For every function name, it contains the cloning directives and profile data
-  // for (all or some of) its basic blocks. The cluster information for every
-  // basic block includes its cluster ID along with the position of the basic
-  // block in that cluster.
+  // For every function name, it contains the cloning directives and profile
+  // data for (all or some of) its basic blocks. The cluster information for
+  // every basic block includes its cluster ID along with the position of the
+  // basic block in that cluster.
   StringMap<FunctionProfile> ProgramDirectivesAndProfile;
 
   // Some functions have alias names. We use this map to find the main alias
