@@ -3089,19 +3089,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // exponent. Also could broaden sign check to cover == 0 case.
     Value *Src = II->getArgOperand(0);
     Value *Exp = II->getArgOperand(1);
-
-    uint64_t ConstExp;
-    if (match(Exp, m_ConstantInt(ConstExp))) {
-      // ldexp(x, K) -> fmul x, 2^K
-      const fltSemantics &FPTy =
-          Src->getType()->getScalarType()->getFltSemantics();
-      Constant *FPConst =
-          ConstantFP::get(Src->getType(), scalbn(APFloat::getOne(FPTy),
-                                                 static_cast<int>(ConstExp),
-                                                 APFloat::rmNearestTiesToEven));
-      return BinaryOperator::CreateFMulFMF(Src, FPConst, II);
-    }
-
     Value *InnerSrc;
     Value *InnerExp;
     if (match(Src, m_OneUse(m_Intrinsic<Intrinsic::ldexp>(
