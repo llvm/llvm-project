@@ -80,11 +80,13 @@ public:
     }
   };
 
-  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Intervals);
+  LLVM_ABI static void
+  printChunks(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Intervals);
 
   /// Return true on parsing error and print the error message on the
   /// llvm::errs()
-  LLVM_ABI static bool parseChunks(StringRef Str, IntegerIntervalUtils::IntervalList &Res);
+  LLVM_ABI static bool parseChunks(StringRef Str,
+                                   IntegerIntervalUtils::IntervalList &Res);
 
   /// Returns a reference to the singleton instance.
   LLVM_ABI static DebugCounter &instance();

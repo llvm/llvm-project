@@ -133,7 +133,8 @@ void DebugCounter::push_back(const std::string &Val) {
     return;
   }
 
-  auto ExpectedChunks = IntegerIntervalUtils::parseIntervals(CounterPair.second, ':');
+  auto ExpectedChunks =
+      IntegerIntervalUtils::parseIntervals(CounterPair.second, ':');
   if (!ExpectedChunks) {
     handleAllErrors(ExpectedChunks.takeError(), [&](const StringError &E) {
       errs() << "DebugCounter Error: " << E.getMessage() << "\n";
