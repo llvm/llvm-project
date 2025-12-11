@@ -378,7 +378,7 @@ func.func @make_gather_dma_base_invalid_addressspace(%idx: index, %mem: memref<8
 
 // -----
 
-func.func @make_gather_dma_base_invalid_addressspace(%idx: index, %mem: memref<8xi32>) {
+func.func @make_gather_dma_base_invalid_index_type(%idx: index, %mem: memref<8xi32>) {
   // expected-error@+1 {{index type must be i16 or i32 but index type is 'i64'.}}
   amdgpu.make_gather_dma_base %mem[%idx], %mem[%idx] : memref<8xi32>, memref<8xi32> -> !amdgpu.tdm_gather_base<i32, i64>
 }
