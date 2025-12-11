@@ -3890,7 +3890,7 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
   // Decompose ((A & N) ? 0 : N * C) into BitMaskMul
   if (match(Op, m_Select(m_Value(Cond), m_APInt(EqZero), m_APInt(NeZero)))) {
     auto ICmpDecompose =
-        decomposeBitTest(Cond, /*LookThruTrunc=*/true,
+        decomposeBitTest(Cond, /*LookThroughTrunc=*/true,
                          /*AllowNonZeroC=*/false, /*DecomposeBitMask=*/true);
     if (!ICmpDecompose.has_value())
       return std::nullopt;
