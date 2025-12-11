@@ -903,17 +903,6 @@ llvm.func @nvvm_dot_accumulate_2way(%a: vector<2xi16>, %b: vector<4xi8>, %c: i32
 
 // -----
 
-// CHECK-LABEL: @nvvm_pmevent
-llvm.func @nvvm_pmevent() {
-  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 15000)
-  nvvm.pmevent mask = 15000
-  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 4)
-  nvvm.pmevent mask = 4
-  llvm.return
-}
-
-// -----
-
 // CHECK-LABEL: @nanosleep
 llvm.func @nanosleep(%duration: i32) {
   // CHECK: call void @llvm.nvvm.nanosleep(i32 %{{.*}})
