@@ -271,7 +271,7 @@ body: |
     ; GFX1250: liveins: $vgpr3
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 killed $vgpr2_vgpr3, implicit $exec, implicit $exec
-    $vgpr0_vgpr1 = COPY killed $vgpr2_vgpr3, 12, implicit $exec
+    $vgpr0_vgpr1 = COPY_LANEMASK killed $vgpr2_vgpr3, lanemask(12), implicit $exec
 ...
 
 ---
@@ -304,7 +304,7 @@ body: |
     ; GFX1250: liveins: $vgpr2
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 killed $vgpr2_vgpr3, implicit $exec, implicit $exec
-    $vgpr0_vgpr1 = COPY killed $vgpr2_vgpr3, 3, implicit $exec
+    $vgpr0_vgpr1 = COPY_LANEMASK killed $vgpr2_vgpr3, lanemask(3), implicit $exec
 ...
 
 ---

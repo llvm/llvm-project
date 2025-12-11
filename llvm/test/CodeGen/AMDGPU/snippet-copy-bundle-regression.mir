@@ -45,7 +45,7 @@ body:             |
   ; CHECK-NEXT:   $vgpr1 = COPY renamable $sgpr55
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL undef renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit undef $sgpr15, implicit $vgpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-  ; CHECK-NEXT:   $vcc = COPY renamable $sgpr34_sgpr35
+  ; CHECK-NEXT:   $vcc = COPY_LANEMASK renamable $sgpr34_sgpr35, lanemask(0x000000000000000C)
   ; CHECK-NEXT:   S_CBRANCH_VCCZ %bb.2, implicit undef $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

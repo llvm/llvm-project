@@ -1473,8 +1473,9 @@ public:
 
   /// Return true is the instruction is an identity copy.
   bool isIdentityCopy() const {
-    return isCopy() && getOperand(0).getReg() == getOperand(1).getReg() &&
-      getOperand(0).getSubReg() == getOperand(1).getSubReg();
+    return (isCopy() || isCopyLaneMask()) &&
+           getOperand(0).getReg() == getOperand(1).getReg() &&
+           getOperand(0).getSubReg() == getOperand(1).getSubReg();
   }
 
   /// Return true if this is a transient instruction that is either very likely

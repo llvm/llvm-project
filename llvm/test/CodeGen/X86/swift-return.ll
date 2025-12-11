@@ -412,9 +412,9 @@ define swiftcc { i32, i32, i32, i32 } @gen7(i32 %key) {
 ; CHECK-LABEL: gen7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    movl %edi, %r8d
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    movl %eax, %r8d
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: gen7:
@@ -435,9 +435,9 @@ define swiftcc { i64, i64, i64, i64 } @gen8(i64 %key) {
 ; CHECK-LABEL: gen8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    movq %rdi, %rcx
-; CHECK-NEXT:    movq %rdi, %r8
+; CHECK-NEXT:    movq %rax, %rdx
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    movq %rax, %r8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: gen8:
@@ -483,9 +483,9 @@ define swiftcc { double, double, double, double, i64, i64, i64, i64 } @gen10(dou
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm0, %xmm2
 ; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    movq %rdi, %rcx
-; CHECK-NEXT:    movq %rdi, %r8
+; CHECK-NEXT:    movq %rax, %rdx
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    movq %rax, %r8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: gen10:

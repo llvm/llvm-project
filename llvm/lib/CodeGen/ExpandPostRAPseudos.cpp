@@ -168,6 +168,7 @@ bool ExpandPostRA::run(MachineFunction &MF) {
         MadeChange |= LowerSubregToReg(&MI);
         break;
       case TargetOpcode::COPY:
+      case TargetOpcode::COPY_LANEMASK:
         TII->lowerCopy(&MI, TRI);
         MadeChange = true;
         break;

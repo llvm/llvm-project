@@ -50,7 +50,7 @@ body:             |
   ; CHECK-NEXT:   renamable $sgpr56 = S_MOV_B32 0
   ; CHECK-NEXT:   renamable $sgpr12_sgpr13 = V_CMP_EQ_U32_e64 undef $sgpr4, undef %18:vgpr_32, implicit $exec
   ; CHECK-NEXT:   SI_SPILL_S64_SAVE killed renamable $sgpr12_sgpr13, %stack.4, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.4, align 4, addrspace 5)
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_1024_align2 = COPY renamable $sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, 12884901888, implicit $exec
+  ; CHECK-NEXT:   [[COPY_LANEMASK:%[0-9]+]]:vreg_1024_align2 = COPY_LANEMASK renamable $sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, lanemask(0x0000000300000000), implicit $exec
   ; CHECK-NEXT:   renamable $sgpr100_sgpr101 = V_CMP_NE_U32_e64 1, undef %18:vgpr_32, implicit $exec
   ; CHECK-NEXT:   renamable $sgpr57 = S_MOV_B32 1083786240
   ; CHECK-NEXT:   SI_SPILL_S1024_SAVE renamable $sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.1, align 4, addrspace 5)
@@ -61,7 +61,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x0000000000000003, $sgpr10_sgpr11, $sgpr18_sgpr19, $sgpr34_sgpr35, $sgpr100_sgpr101
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $vcc = S_AND_B64 $exec, renamable $sgpr100_sgpr101, implicit-def dead $scc
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_1024_align2 = COPY [[COPY]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_1024_align2 = COPY [[COPY_LANEMASK]]
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.2, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.17
   ; CHECK-NEXT: {{  $}}
@@ -136,7 +136,7 @@ body:             |
   ; CHECK-NEXT:   renamable $sgpr66 = COPY killed renamable $sgpr84
   ; CHECK-NEXT:   renamable $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99 = SI_SPILL_S1024_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s1024) from %stack.1, align 4, addrspace 5)
   ; CHECK-NEXT:   renamable $sgpr67 = COPY killed renamable $sgpr84
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_1024_align2 = COPY killed renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, implicit $exec
+  ; CHECK-NEXT:   [[COPY_LANEMASK:%[0-9]+]]:vreg_1024_align2 = COPY killed renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.11, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}
@@ -185,7 +185,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr64_sgpr65 = nofpexcept V_CMP_NLT_F64_e64 0, undef $sgpr4_sgpr5, 0, undef %29:vreg_64_align2, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   renamable $sgpr66_sgpr67 = nofpexcept V_CMP_NLT_F64_e64 0, 4607182418800017408, 0, undef %29:vreg_64_align2, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   dead [[V_INDIRECT_REG_READ_GPR_IDX_B32_V32_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V32 [[COPY1]], undef $sgpr14, 11, implicit-def $m0, implicit $m0, implicit $exec
+  ; CHECK-NEXT:   dead [[V_INDIRECT_REG_READ_GPR_IDX_B32_V32_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V32 [[COPY]], undef $sgpr14, 11, implicit-def $m0, implicit $m0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8:
   ; CHECK-NEXT:   successors: %bb.10(0x40000000), %bb.9(0x40000000)
@@ -199,8 +199,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x0000000000000003, $sgpr10_sgpr11, $sgpr18_sgpr19, $sgpr34_sgpr35, $sgpr54_sgpr55, $sgpr64_sgpr65, $sgpr66_sgpr67, $sgpr100_sgpr101
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99 = SI_SPILL_S1024_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s1024) from %stack.1, align 4, addrspace 5)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY killed renamable $sgpr84_sgpr85, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR undef %18:vgpr_32, [[COPY2]], undef renamable $sgpr4_sgpr5, 0, 0, implicit $exec :: (store (s64), addrspace 1)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY killed renamable $sgpr84_sgpr85, implicit $exec
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR undef %18:vgpr_32, [[COPY1]], undef renamable $sgpr4_sgpr5, 0, 0, implicit $exec :: (store (s64), addrspace 1)
   ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr18_sgpr19, implicit $exec
   ; CHECK-NEXT:   dead renamable $sgpr12_sgpr13 = V_CMP_NE_U32_e64 1, [[V_CNDMASK_B32_e64_1]], implicit $exec
   ; CHECK-NEXT:   renamable $sgpr82 = S_ADD_U32 renamable $sgpr8, 32, implicit-def dead $scc
@@ -221,7 +221,7 @@ body:             |
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL undef renamable $sgpr12_sgpr13, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY renamable $sgpr82_sgpr83, 3
+  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY_LANEMASK renamable $sgpr82_sgpr83, lanemask(0x0000000000000003)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL undef renamable $sgpr12_sgpr13, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr8_sgpr9
   ; CHECK-NEXT:   renamable $sgpr18_sgpr19 = COPY killed renamable $sgpr48_sgpr49
   ; CHECK-NEXT:   renamable $sgpr14 = COPY killed renamable $sgpr85

@@ -820,8 +820,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned SrcSize = RI.getRegSizeInBits(*SrcRC);
 
   uint64_t LiveRegUnitMaskVal = 0;
-  if (MI->getNumOperands() > 2 && MI->getOperand(2).isImm()) {
-    LiveRegUnitMaskVal = MI->getOperand(2).getImm();
+  if (MI->getOpcode() == TargetOpcode::COPY_LANEMASK) {
+    LiveRegUnitMaskVal = MI->getOperand(2).getLaneMask().getAsInteger();
   }
 
   bool isSrcRegFullLive = LiveRegUnitMaskVal == 0;

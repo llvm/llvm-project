@@ -1346,7 +1346,7 @@ def REG_SEQUENCE : StandardPseudoInstruction {
 }
 def COPY : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
-  let InOperandList = (ins unknown:$src, variable_ops);
+  let InOperandList = (ins unknown:$src);
   let AsmString = "";
   let hasSideEffects = false;
   let isAsCheapAsAMove = true;

@@ -884,12 +884,21 @@ void TargetInstrInfo::lowerCopy(
   if (IdentityCopy || SrcMO.isUndef()) {
     // No need to insert an identity copy instruction, but replace with a KILL
     // if liveness is changed.
-    if (SrcMO.isUndef() || MI->getNumOperands() > 2) {
+    if (MI->getOpcode() == TargetOpcode::COPY &&
+        (SrcMO.isUndef() || MI->getNumOperands() > 2)) {
       // We must make sure the super-register gets killed. Replace the
       // instruction with KILL.
       MI->setDesc(get(TargetOpcode::KILL));
       return;
     }
+    if (MI->getOpcode() == TargetOpcode::COPY_LANEMASK &&
+        (SrcMO.isUndef() || MI->getNumOperands() > 3)) {
+      // We must make sure the super-register gets killed. Replace the
+      // instruction with KILL.
+      MI->setDesc(get(TargetOpcode::KILL));
+      return;
+    }
+
     // Vanilla identity copy.
     MI->eraseFromParent();
     return;
@@ -900,7 +909,10 @@ void TargetInstrInfo::lowerCopy(
               DstMO.getReg().isPhysical() ? DstMO.isRenamable() : false,
               SrcMO.getReg().isPhysical() ? SrcMO.isRenamable() : false);
 
-  if (MI->getNumOperands() > 2)
+  if (MI->getOpcode() == TargetOpcode::COPY && MI->getNumOperands() > 2)
+    transferImplicitOperands(MI, &TRI);
+  if (MI->getOpcode() == TargetOpcode::COPY_LANEMASK &&
+      MI->getNumOperands() > 3)
     transferImplicitOperands(MI, &TRI);
   MI->eraseFromParent();
 }

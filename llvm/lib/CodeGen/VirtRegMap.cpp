@@ -213,8 +213,8 @@ class VirtRegRewriter {
   void rewrite();
   void addMBBLiveIns();
   bool readsUndefSubreg(const MachineOperand &MO) const;
-  uint64_t calcLiveRegUnitMask(const MachineOperand &MO,
-                               MCRegister PhysReg) const;
+  LaneBitmask calcLiveRegUnitMask(const MachineOperand &MO,
+                                  MCRegister PhysReg) const;
   void addLiveInsForSubRanges(const LiveInterval &LI, MCRegister PhysReg) const;
   void handleIdentityCopy(MachineInstr &MI);
   void expandCopyBundle(MachineInstr &MI) const;
@@ -476,11 +476,11 @@ bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
   return true;
 }
 
-// Return LaneBitmask value as unint64_t for PhysReg assigned to MO,
+// Return LaneBitmask value for PhysReg assigned to MO,
 // representing its live register units at its parent MI. In case of undef or
 // fully live MO, return 0u.
-uint64_t VirtRegRewriter::calcLiveRegUnitMask(const MachineOperand &MO,
-                                              MCRegister PhysReg) const {
+LaneBitmask VirtRegRewriter::calcLiveRegUnitMask(const MachineOperand &MO,
+                                                 MCRegister PhysReg) const {
   Register Reg = MO.getReg();
   const LiveInterval &LI = LIS->getInterval(Reg);
   const MachineInstr &MI = *MO.getParent();
@@ -492,20 +492,20 @@ uint64_t VirtRegRewriter::calcLiveRegUnitMask(const MachineOperand &MO,
                                                : LaneBitmask::getNone());
 
   LaneBitmask LiveRegUnitMask;
-  DenseSet<unsigned> LiveRegUnits;
+  DenseSet<MCRegUnit> LiveRegUnits;
 
   // dbgs() << "\n********** " << printReg(Reg, TRI) << "[ " <<
   // printReg(PhysReg, TRI) << " ]" << " **********\n";
 
   if (MO.isUndef())
-    return 0u;
+    return LaneBitmask::getNone();
 
   assert(LI.liveAt(MIIndex) &&
          "Reads of completely dead register should be marked undef already");
 
   if (LI.hasSubRanges()) {
     for (MCRegUnitMaskIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-      unsigned Unit = (*Units).first;
+      MCRegUnit Unit = (*Units).first;
       LaneBitmask Mask = (*Units).second;
       for (const LiveInterval::SubRange &S : LI.subranges()) {
         if ((S.LaneMask & UseMask & Mask).any() && S.liveAt(MIIndex)) {
@@ -515,7 +515,7 @@ uint64_t VirtRegRewriter::calcLiveRegUnitMask(const MachineOperand &MO,
     }
   } else {
     for (MCRegUnitMaskIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-      unsigned Unit = (*Units).first;
+      MCRegUnit Unit = (*Units).first;
       const LiveRange &UnitRange = LIS->getRegUnit(Unit);
       LaneBitmask Mask = (*Units).second;
 
@@ -531,7 +531,7 @@ uint64_t VirtRegRewriter::calcLiveRegUnitMask(const MachineOperand &MO,
   }
 
   for (MCRegUnitMaskIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    unsigned Unit = (*Units).first;
+    MCRegUnit Unit = (*Units).first;
     LaneBitmask Mask = (*Units).second;
     if (LiveRegUnits.count(Unit)) {
       // dbgs() << "LIVE DEF UNIT : " << printRegUnit(Unit, TRI) << '\n';
@@ -541,10 +541,13 @@ uint64_t VirtRegRewriter::calcLiveRegUnitMask(const MachineOperand &MO,
 
   // dbgs() << "UseMask : " << PrintLaneMask(UseMask) << '\n';
   // dbgs() << "LiveRegUnitMask : " << PrintLaneMask(LiveRegUnitMask) << '\n';
-  if (UseMask == LiveRegUnitMask)
-    return 0u;
+  // If all lanes are live or dead, no need to create a COPY_LANEMASK
+  // instruction.
+  if (LiveRegUnitMask.all() || LiveRegUnitMask.none() ||
+      LiveRegUnitMask == UseMask)
+    return LaneBitmask::getNone();
 
-  return LiveRegUnitMask.getAsInteger();
+  return LiveRegUnitMask;
 }
 
 void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) {
@@ -568,11 +571,14 @@ void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) {
   // give us additional liveness information: The target (super-)register
   // must not be valid before this point. Replace the COPY with a KILL
   // instruction to maintain this information.
-
-  // Avoid COPY with an exact 3 operand, wiith third operand be Mask, as
-  // it same as a COPY with no additional liveness information.
-  if (MI.getOperand(1).isUndef() || MI.getNumOperands() > 3 ||
-      (MI.getNumOperands() == 3 && !MI.getOperand(2).isImm())) {
+  if (MI.getOpcode() == TargetOpcode::COPY &&
+      (MI.getOperand(1).isUndef() || MI.getNumOperands() > 2)) {
+    MI.setDesc(TII->get(TargetOpcode::KILL));
+    LLVM_DEBUG(dbgs() << "  replace by: " << MI);
+    return;
+  }
+  if (MI.getOpcode() == TargetOpcode::COPY_LANEMASK &&
+      (MI.getOperand(1).isUndef() || MI.getNumOperands() > 3)) {
     MI.setDesc(TII->get(TargetOpcode::KILL));
     LLVM_DEBUG(dbgs() << "  replace by: " << MI);
     return;
@@ -718,14 +724,14 @@ void VirtRegRewriter::rewrite() {
   SmallVector<Register, 8> SuperDeads;
   SmallVector<Register, 8> SuperDefs;
   SmallVector<Register, 8> SuperKills;
-  uint64_t Mask;
+  LaneBitmask LaneMask;
 
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {
     LLVM_DEBUG(MBBI->print(dbgs(), Indexes));
     for (MachineInstr &MI : llvm::make_early_inc_range(MBBI->instrs())) {
       // reset for each MI.
-      Mask = 0u;
+      LaneMask = LaneBitmask::getNone();
       for (MachineOperand &MO : MI.operands()) {
         // Make sure MRI knows about registers clobbered by regmasks.
         if (MO.isRegMask())
@@ -744,7 +750,7 @@ void VirtRegRewriter::rewrite() {
         assert(!MRI->isReserved(PhysReg) && "Reserved register assignment");
 
         if (MO.isUse() && MI.isCopy())
-          Mask = calcLiveRegUnitMask(MO, PhysReg);
+          LaneMask = calcLiveRegUnitMask(MO, PhysReg);
 
         // Preserve semantics of sub-register operands.
         unsigned SubReg = MO.getSubReg();
@@ -822,9 +828,12 @@ void VirtRegRewriter::rewrite() {
         MO.setIsRenamable(true);
       }
 
-      // Add LaneBitmask as MO_Imm
-      if (MI.isCopy() && Mask)
-        MI.addOperand(*MF, MachineOperand::CreateImm(Mask));
+      // If there are any live lanes, replace a COPY instruction with a
+      // COPY_LANEMASK instruction with the lane mask.
+      if (MI.isCopy() && LaneMask.any()) {
+        MI.setDesc(TII->get(TargetOpcode::COPY_LANEMASK));
+        MI.addOperand(*MF, MachineOperand::CreateLaneMask(LaneMask));
+      }
 
       // Add any missing super-register kills after rewriting the whole
       // instruction.

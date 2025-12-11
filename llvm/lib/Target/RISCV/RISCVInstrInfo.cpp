@@ -262,7 +262,9 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
   if (PreferWholeRegisterMove)
     return false;
 
-  assert(MBBI->getOpcode() == TargetOpcode::COPY &&
+  // TODO : Support COPY_LANEMASK instruction.
+  assert((MBBI->getOpcode() == TargetOpcode::COPY ||
+          MBBI->getOpcode() == TargetOpcode::COPY_LANEMASK) &&
          "Unexpected COPY instruction.");
   Register SrcReg = MBBI->getOperand(1).getReg();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
