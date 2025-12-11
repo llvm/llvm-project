@@ -8,31 +8,31 @@ define void @foo(ptr readonly %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6
 ; CHECK-NEXT:    cmpd 5, 7
 ; CHECK-NEXT:    bgelr 0
 ; CHECK-NEXT:  # %bb.1: # %.preheader
+; CHECK-NEXT:    addi 12, 5, 3
 ; CHECK-NEXT:    std 27, -40(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi 27, 5, 2
-; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 28, 5, 3
-; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 30, 5, 1
-; CHECK-NEXT:    mulld 12, 8, 5
-; CHECK-NEXT:    mulld 0, 9, 8
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 29, 3, 16
-; CHECK-NEXT:    sldi 11, 10, 3
+; CHECK-NEXT:    addi 29, 5, 1
+; CHECK-NEXT:    addi 11, 3, 16
+; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; CHECK-NEXT:    mulld 0, 9, 8
+; CHECK-NEXT:    mulld 28, 8, 5
+; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
+; CHECK-NEXT:    sldi 30, 10, 3
 ; CHECK-NEXT:    std 22, -80(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 23, -72(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 24, -64(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 25, -56(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 26, -48(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mulld 30, 8, 30
-; CHECK-NEXT:    mulld 28, 8, 28
+; CHECK-NEXT:    mulld 12, 8, 12
+; CHECK-NEXT:    mulld 29, 8, 29
 ; CHECK-NEXT:    mulld 8, 8, 27
 ; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    add 5, 5, 9
 ; CHECK-NEXT:    add 12, 12, 0
-; CHECK-NEXT:    add 30, 30, 0
+; CHECK-NEXT:    add 29, 29, 0
 ; CHECK-NEXT:    add 28, 28, 0
 ; CHECK-NEXT:    add 8, 8, 0
 ; CHECK-NEXT:    cmpd 5, 7
@@ -43,24 +43,24 @@ define void @foo(ptr readonly %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6
 ; CHECK-NEXT:    cmpd 6, 27
 ; CHECK-NEXT:    bge 0, .LBB0_2
 ; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    add 25, 6, 12
+; CHECK-NEXT:    add 24, 6, 28
+; CHECK-NEXT:    add 26, 6, 12
+; CHECK-NEXT:    add 25, 6, 29
+; CHECK-NEXT:    sldi 23, 24, 3
 ; CHECK-NEXT:    add 24, 6, 8
-; CHECK-NEXT:    sldi 26, 6, 3
-; CHECK-NEXT:    sldi 23, 25, 3
-; CHECK-NEXT:    add 25, 6, 30
-; CHECK-NEXT:    sldi 24, 24, 3
-; CHECK-NEXT:    add 26, 4, 26
+; CHECK-NEXT:    sldi 26, 26, 3
 ; CHECK-NEXT:    sldi 22, 25, 3
-; CHECK-NEXT:    add 25, 6, 28
-; CHECK-NEXT:    add 24, 29, 24
+; CHECK-NEXT:    sldi 25, 6, 3
+; CHECK-NEXT:    sldi 24, 24, 3
+; CHECK-NEXT:    add 26, 11, 26
+; CHECK-NEXT:    add 25, 4, 25
 ; CHECK-NEXT:    add 23, 3, 23
-; CHECK-NEXT:    sldi 25, 25, 3
 ; CHECK-NEXT:    add 22, 3, 22
-; CHECK-NEXT:    add 25, 29, 25
+; CHECK-NEXT:    add 24, 11, 24
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_5: # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    lfd 0, 0(26)
+; CHECK-NEXT:    lfd 0, 0(25)
 ; CHECK-NEXT:    lfd 1, 0(23)
 ; CHECK-NEXT:    add 6, 6, 10
 ; CHECK-NEXT:    cmpd 6, 27
@@ -70,7 +70,7 @@ define void @foo(ptr readonly %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6
 ; CHECK-NEXT:    lfd 1, 16(23)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
 ; CHECK-NEXT:    lfd 1, 24(23)
-; CHECK-NEXT:    add 23, 23, 11
+; CHECK-NEXT:    add 23, 23, 30
 ; CHECK-NEXT:    xsadddp 0, 0, 1
 ; CHECK-NEXT:    lfd 1, 0(22)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
@@ -79,7 +79,7 @@ define void @foo(ptr readonly %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6
 ; CHECK-NEXT:    lfd 1, 16(22)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
 ; CHECK-NEXT:    lfd 1, 24(22)
-; CHECK-NEXT:    add 22, 22, 11
+; CHECK-NEXT:    add 22, 22, 30
 ; CHECK-NEXT:    xsadddp 0, 0, 1
 ; CHECK-NEXT:    lfd 1, -16(24)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
@@ -88,19 +88,19 @@ define void @foo(ptr readonly %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6
 ; CHECK-NEXT:    lfd 1, 0(24)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
 ; CHECK-NEXT:    lfd 1, 8(24)
-; CHECK-NEXT:    add 24, 24, 11
+; CHECK-NEXT:    add 24, 24, 30
 ; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, -16(25)
+; CHECK-NEXT:    lfd 1, -16(26)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, -8(25)
+; CHECK-NEXT:    lfd 1, -8(26)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 0(25)
+; CHECK-NEXT:    lfd 1, 0(26)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 8(25)
-; CHECK-NEXT:    add 25, 25, 11
+; CHECK-NEXT:    lfd 1, 8(26)
+; CHECK-NEXT:    add 26, 26, 30
 ; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    stfd 0, 0(26)
-; CHECK-NEXT:    add 26, 26, 11
+; CHECK-NEXT:    stfd 0, 0(25)
+; CHECK-NEXT:    add 25, 25, 30
 ; CHECK-NEXT:    blt 0, .LBB0_5
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_6:

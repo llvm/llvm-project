@@ -136,7 +136,7 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    movl (%r8), %r9d
 ; CHECK-NEXT:    leal 8(,%rdx,8), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    leaq 32(%rsi), %rbx
+; CHECK-NEXT:    leaq 48(%rsi), %rbx
 ; CHECK-NEXT:    leaq 8(,%rdx,8), %r14
 ; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    movq x0@GOTPCREL(%rip), %r12
@@ -223,10 +223,10 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:  .LBB1_12: # %vector.body
 ; CHECK-NEXT:    # Parent Loop BB1_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    movdqu %xmm0, -48(%r11)
 ; CHECK-NEXT:    movdqu %xmm0, -32(%r11)
 ; CHECK-NEXT:    movdqu %xmm0, -16(%r11)
 ; CHECK-NEXT:    movdqu %xmm0, (%r11)
-; CHECK-NEXT:    movdqu %xmm0, 16(%r11)
 ; CHECK-NEXT:    addq $64, %r11
 ; CHECK-NEXT:    addq $8, %rax
 ; CHECK-NEXT:    jne .LBB1_12

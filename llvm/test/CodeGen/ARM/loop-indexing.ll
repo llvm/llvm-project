@@ -68,12 +68,11 @@ exit:
 }
 
 ; CHECK-LABEL: convolve_16bit
-; TODO: Both arrays should use indexing
 ; CHECK-DEFAULT: ldr{{.*}}, #8]!
-; CHECK-DEFAULT-NOT: ldr{{.*}}]!
+; CHECK-DEFAULT: ldr{{.*}}, #8]!
 
 ; CHECK-COMPLEX: ldr{{.*}}, #8]!
-; CHECK-COMPLEX-NOT: ldr{{.*}}]!
+; CHECK-COMPLEX: ldr{{.*}}, #8]!
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!

@@ -16,8 +16,8 @@ define void @foo(i32 zeroext %n, ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    cmplwi r3, 0
 ; CHECK-NEXT:    beqlr cr0
 ; CHECK-NEXT:  # %bb.1: # %for.body.lr.ph
-; CHECK-NEXT:    addi r4, r4, 64
 ; CHECK-NEXT:    addi r5, r5, 64
+; CHECK-NEXT:    addi r4, r4, 64
 ; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %for.body
@@ -41,8 +41,8 @@ define void @foo(i32 zeroext %n, ptr %ptr, ptr %ptr2) {
 ; CHECK-BE-NEXT:    cmplwi r3, 0
 ; CHECK-BE-NEXT:    beqlr cr0
 ; CHECK-BE-NEXT:  # %bb.1: # %for.body.lr.ph
-; CHECK-BE-NEXT:    addi r4, r4, 64
 ; CHECK-BE-NEXT:    addi r5, r5, 64
+; CHECK-BE-NEXT:    addi r4, r4, 64
 ; CHECK-BE-NEXT:    mtctr r3
 ; CHECK-BE-NEXT:    .p2align 4
 ; CHECK-BE-NEXT:  .LBB0_2: # %for.body

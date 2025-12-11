@@ -10,13 +10,13 @@ define void @unrolled_loop(ptr %src, ptr %dst, i32 %low, i32 %high, i64 %n) {
 ; CHECK-LABEL: define void @unrolled_loop(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[LOW:%.*]], i32 [[HIGH:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 8
 ; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[DST]], i64 8
+; CHECK-NEXT:    [[SCEVGEP15:%.*]] = getelementptr i8, ptr [[SRC]], i64 8
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[LSR_IV7:%.*]] = phi ptr [ [[SCEVGEP8:%.*]], %[[FOR_INC_3:.*]] ], [ [[SCEVGEP6]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], %[[FOR_INC_3]] ], [ [[SCEVGEP]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[FOR_INC_3]] ], [ [[N]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[FOR_INC_3:.*]] ], [ [[N]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP16:%.*]], %[[FOR_INC_3]] ], [ [[SCEVGEP15]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV7:%.*]] = phi ptr [ [[SCEVGEP8:%.*]], %[[FOR_INC_3]] ], [ [[SCEVGEP6]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[LSR_IV1]], i64 -8
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[SCEVGEP3]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[VAL]], [[HIGH]]
@@ -57,7 +57,6 @@ define void @unrolled_loop(ptr %src, ptr %dst, i32 %low, i32 %high, i64 %n) {
 ; CHECK:       [[FOR_INC_1]]:
 ; CHECK-NEXT:    [[VAL_2:%.*]] = load i32, ptr [[LSR_IV1]], align 4
 ; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp sgt i32 [[VAL_2]], [[HIGH]]
-; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 16
 ; CHECK-NEXT:    br i1 [[CMP1_2]], label %[[IF_THEN_2:.*]], label %[[IF_ELSE_2:.*]]
 ; CHECK:       [[IF_ELSE_2]]:
 ; CHECK-NEXT:    [[CMP2_2:%.*]] = icmp slt i32 [[VAL_2]], [[LOW]]
@@ -75,6 +74,7 @@ define void @unrolled_loop(ptr %src, ptr %dst, i32 %low, i32 %high, i64 %n) {
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    [[VAL_3:%.*]] = load i32, ptr [[SCEVGEP4]], align 4
 ; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp sgt i32 [[VAL_3]], [[HIGH]]
+; CHECK-NEXT:    [[SCEVGEP16]] = getelementptr i8, ptr [[LSR_IV1]], i64 16
 ; CHECK-NEXT:    br i1 [[CMP1_3]], label %[[IF_THEN_3:.*]], label %[[IF_ELSE_3:.*]]
 ; CHECK:       [[IF_ELSE_3]]:
 ; CHECK-NEXT:    [[CMP2_3:%.*]] = icmp slt i32 [[VAL_3]], [[LOW]]
@@ -91,8 +91,8 @@ define void @unrolled_loop(ptr %src, ptr %dst, i32 %low, i32 %high, i64 %n) {
 ; CHECK-NEXT:    store i32 [[HIGH]], ptr [[SCEVGEP11]], align 4
 ; CHECK-NEXT:    br label %[[FOR_INC_3]]
 ; CHECK:       [[FOR_INC_3]]:
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -4
 ; CHECK-NEXT:    [[SCEVGEP8]] = getelementptr i8, ptr [[LSR_IV7]], i64 16
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV14]], -4
 ; CHECK-NEXT:    [[NITER_NCMP:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[NITER_NCMP]], label %[[EXIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:

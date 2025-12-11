@@ -5,25 +5,17 @@
 define void @convolution(ptr %src0, ptr %src1, i64 %stride_xm, i64 %stride_xp, ptr %dst, i32 %w) {
 ; CHECK-LABEL: convolution:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add x9, x1, x3
-; CHECK-NEXT:    add x10, x1, x2
-; CHECK-NEXT:    add x11, x0, x2
-; CHECK-NEXT:    add x12, x0, x3
 ; CHECK-NEXT:  .LBB0_1: // %do.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x13, x1, x8
-; CHECK-NEXT:    add x14, x0, x8
-; CHECK-NEXT:    ldr q0, [x11, x8]
-; CHECK-NEXT:    ldp q2, q3, [x14]
-; CHECK-NEXT:    ldr q1, [x12, x8]
-; CHECK-NEXT:    ldp q6, q7, [x13]
+; CHECK-NEXT:    ldr q0, [x0, x2]
+; CHECK-NEXT:    ldr q1, [x0, x3]
 ; CHECK-NEXT:    subs w5, w5, #1
-; CHECK-NEXT:    ldr q4, [x10, x8]
-; CHECK-NEXT:    ldr q5, [x9, x8]
+; CHECK-NEXT:    ldp q2, q3, [x0], #32
+; CHECK-NEXT:    ldr q4, [x1, x2]
+; CHECK-NEXT:    ldr q5, [x1, x3]
 ; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldp q6, q7, [x1], #32
 ; CHECK-NEXT:    fadd v1.4s, v2.4s, v3.4s
-; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    fadd v2.4s, v4.4s, v5.4s
 ; CHECK-NEXT:    fadd v3.4s, v6.4s, v7.4s
 ; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
