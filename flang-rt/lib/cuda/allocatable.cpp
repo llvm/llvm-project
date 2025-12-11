@@ -74,7 +74,6 @@ int RTDEF(CUFAllocatableAllocateSourceSync)(Descriptor &alloc,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine,
     bool sourceIsDevice) {
   int stat;
-  printf("%d\n", sourceIsDevice);
   if (sourceIsDevice) {
     stat = RTNAME(CUFAllocatableAllocate)(
         alloc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine);
