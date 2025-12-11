@@ -8,6 +8,7 @@
 
 // Runtime exception support.
 
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 #include "flang/Runtime/exceptions.h"
 #include "flang-rt/runtime/terminator.h"
 #include <cfenv>
@@ -207,3 +208,4 @@ size_t RTNAME(GetStatusTypeSize)(void) {
 
 } // extern "C"
 } // namespace Fortran::runtime
+#endif
