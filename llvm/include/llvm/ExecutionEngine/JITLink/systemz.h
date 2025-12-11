@@ -507,6 +507,21 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   RequestGOTAndTransformToDelta32dbl,
 
+  /// A TLSInfo entry getter/constructor, transformed to Delta64FromGOT.
+  ///
+  /// Indicates that this edge should be transformed into a Delta64FromGOT
+  /// targeting the TLSInfo entry for the edge's current target. A TLSInfo
+  /// entry for the target should be created if one does not already exist.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestTLSDescInGOTAndTransformToDelta64FromGOT,
+
   /// A 32-bit Delta to GOT base.
   ///
   /// Fixup expression:

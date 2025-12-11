@@ -2,13 +2,15 @@
 // CHECK: 1
 // CHECK-NEXT: 2
 
+// XFAIL: iossim
+
 #include <assert.h>
 #include <stdio.h>
 
 int main(void) {
   // use a tool that produces different output than input to verify
   // that everything worked correctly
-  FILE *fp = popen("/usr/bin/sort", "w");
+  FILE *fp = popen("sort", "w");
   assert(fp);
 
   // verify that fileno() returns a meaningful descriptor (needed
