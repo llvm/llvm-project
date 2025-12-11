@@ -1452,15 +1452,42 @@ class OpenMP_ThreadLimitClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$thread_limit_num_dims,
+    Variadic<AnyInteger>:$thread_limit_dims_values,
     Optional<AnyInteger>:$thread_limit
   );
 
   let optAssemblyFormat = [{
-    `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
+    `thread_limit` `(` custom<ThreadLimitClause>(
+      $thread_limit_num_dims, $thread_limit_dims_values, type($thread_limit_dims_values),
+      $thread_limit, type($thread_limit)
+    ) `)`
   }];
 
   let description = [{
     The optional `thread_limit` specifies the limit on the number of threads.
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if the dims modifier is explicitly present
+    bool hasThreadLimitDimsModifier() {
+      return getThreadLimitNumDims().has_value() && getThreadLimitNumDims().value();
+    }
+
+    /// Returns the number of dimensions specified by dims modifier
+    unsigned getThreadLimitDimsCount() {
+      if (!hasThreadLimitDimsModifier())
+        return 1;
+      return static_cast<unsigned>(*getThreadLimitNumDims());
+    }
+
+    /// Returns the value for a specific dimension index
+    /// Index must be less than getThreadLimitDimsCount()
+    ::mlir::Value getThreadLimitDimensionValue(unsigned index) {
+      assert(index < getThreadLimitDimsCount() &&
+             "Thread limit dims index out of bounds");
+      return getThreadLimitDimsValues()[index];
+    }
   }];
 }
 

@@ -2029,6 +2029,10 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
         "Lowering of num_teams with dims modifier is not yet implemented.");
   }
 
+  if (op.hasThreadLimitDimsModifier()) {
+    return op.emitError("Lowering of thread_limit with dims modifier is NYI.");
+  }
+
   DenseMap<Value, llvm::Value *> reductionVariableMap;
   unsigned numReductionVars = op.getNumReductionVars();
   SmallVector<omp::DeclareReductionOp> reductionDecls;
@@ -6042,8 +6046,9 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
           .Case([&](omp::TeamsOp teamsOp) {
             // num_teams dims and values are not yet supported
             assert(!teamsOp.hasNumTeamsDimsModifier() &&
-                   "Lowering of num_teams with dims modifier is not yet "
-                   "implemented.");
+                   "Lowering of num_teams with dims modifier is NYI.");
+            assert(!teamsOp.hasThreadLimitDimsModifier() &&
+                   "Lowering of thread_limit with dims modifier is NYI.");
             if (teamsOp.getNumTeamsLower() == blockArg)
               numTeamsLower = hostEvalVar;
             else if (teamsOp.getNumTeamsUpper() == blockArg)
@@ -6167,9 +6172,10 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     // ensures values are mapped and available inside of the target region.
     if (auto teamsOp = castOrGetParentOfType<omp::TeamsOp>(capturedOp)) {
       // num_teams dims and values are not yet supported
-      assert(
-          !teamsOp.hasNumTeamsDimsModifier() &&
-          "Lowering of num_teams with dims modifier is not yet implemented.");
+      assert(!teamsOp.hasNumTeamsDimsModifier() &&
+             "Lowering of num_teams with dims modifier is NYI.");
+      assert(!teamsOp.hasThreadLimitDimsModifier() &&
+             "Lowering of thread_limit with dims modifier is NYI.");
       numTeamsLower = teamsOp.getNumTeamsLower();
       numTeamsUpper = teamsOp.getNumTeamsUpper();
       threadLimit = teamsOp.getThreadLimit();
