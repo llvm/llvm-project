@@ -186,7 +186,7 @@ your issues, you look into the other methods first.
 Target Description Format XML
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The first, and preferred, method is the debug server sending LLDB an XML
+The most commonly used method is the debug server sending LLDB an XML
 document in the
 `Target Description Format <https://sourceware.org/gdb/current/onlinedocs/gdb.html/Target-Description-Format.html>`__.
 
