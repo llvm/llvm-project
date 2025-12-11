@@ -13,6 +13,7 @@
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
@@ -143,6 +144,23 @@ LogicalResult FatRawBufferCastOp::inferReturnTypes(
   if (failed(resultType))
     return failure();
   inferredReturnTypes = SmallVector<Type>{*resultType};
+  return success();
+}
+
+LogicalResult FatRawBufferCastOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  Value source = getSource();
+  auto sourceType = cast<MemRefType>(source.getType());
+  Location loc = getLoc();
+  SmallVector<OpFoldResult> shapes;
+  for (int64_t i = 0, e = sourceType.getRank(); i < e; ++i) {
+    if (sourceType.isDynamicDim(i)) {
+      shapes.push_back(builder.createOrFold<memref::DimOp>(loc, source, i));
+    } else {
+      shapes.push_back(builder.getIndexAttr(sourceType.getDimSize(i)));
+    }
+  }
+  reifiedReturnShapes.push_back(std::move(shapes));
   return success();
 }
 
