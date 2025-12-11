@@ -158,7 +158,7 @@ private:
 
   // This contains the BB cluster information for the whole program.
   //
-  // For every function name, it contains the cloning and cluster information
+  // For every function name, it contains the cloning directives and profile data
   // for (all or some of) its basic blocks. The cluster information for every
   // basic block includes its cluster ID along with the position of the basic
   // block in that cluster.
