@@ -5499,6 +5499,52 @@ public:
   }
 };
 
+/// Helper that selects an expression from an InitListExpr depending
+/// on the current expansion index.
+///
+/// \see CXXExpansionStmtPattern
+class CXXExpansionSelectExpr : public Expr {
+  friend class ASTStmtReader;
+
+  enum SubExpr { RANGE, INDEX, COUNT };
+  Expr *SubExprs[COUNT];
+
+public:
+  CXXExpansionSelectExpr(EmptyShell Empty);
+  CXXExpansionSelectExpr(const ASTContext &C, InitListExpr *Range, Expr *Idx);
+
+  InitListExpr *getRangeExpr() {
+    return cast<InitListExpr>(SubExprs[RANGE]);
+  }
+
+  const InitListExpr *getRangeExpr() const {
+    return cast<InitListExpr>(SubExprs[RANGE]);
+  }
+
+  void setRangeExpr(InitListExpr *E) { SubExprs[RANGE] = E; }
+
+  Expr *getIndexExpr() { return SubExprs[INDEX]; }
+  const Expr *getIndexExpr() const { return SubExprs[INDEX]; }
+  void setIndexExpr(Expr *E) { SubExprs[INDEX] = E; }
+
+  SourceLocation getBeginLoc() const { return getRangeExpr()->getBeginLoc(); }
+  SourceLocation getEndLoc() const { return getRangeExpr()->getEndLoc(); }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(SubExprs),
+                       reinterpret_cast<Stmt **>(SubExprs + COUNT));
+  }
+
+  const_child_range children() const {
+    return const_child_range(
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs)),
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs + COUNT)));
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXExpansionSelectExprClass;
+  }
+};
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_EXPRCXX_H

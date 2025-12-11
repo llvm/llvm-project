@@ -1717,6 +1717,9 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
     return getReplacedTemplateParameter(
         cast<FunctionDecl>(D)->getTemplateSpecializationInfo()->getTemplate(),
         Index);
+  case Decl::Kind::CXXExpansionStmt:
+    assert(Index == 0 && "expansion stmts only have a single template param");
+    return {cast<CXXExpansionStmtDecl>(D)->getIndexTemplateParm(), {}};
   default:
     llvm_unreachable("Unhandled templated declaration kind");
   }
@@ -1787,4 +1790,23 @@ const Decl &clang::adjustDeclToTemplate(const Decl &D) {
   }
   // FIXME: Adjust alias templates?
   return D;
+}
+
+CXXExpansionStmtDecl::CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
+                                           NonTypeTemplateParmDecl *NTTP)
+    : Decl(CXXExpansionStmt, DC, Loc), DeclContext(CXXExpansionStmt),
+      IndexNTTP(NTTP) {}
+
+CXXExpansionStmtDecl *
+CXXExpansionStmtDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation Loc,
+                             NonTypeTemplateParmDecl *NTTP) {
+  return new (C, DC) CXXExpansionStmtDecl(DC, Loc, NTTP);
+}
+CXXExpansionStmtDecl *
+CXXExpansionStmtDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  return new (C, ID) CXXExpansionStmtDecl(nullptr, SourceLocation(), nullptr);
+}
+
+SourceRange CXXExpansionStmtDecl::getSourceRange() const {
+  return Expansion ? Expansion->getSourceRange() : SourceRange();
 }

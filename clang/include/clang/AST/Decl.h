@@ -1247,14 +1247,16 @@ public:
 
   /// Returns true for local variable declarations other than parameters.
   /// Note that this includes static variables inside of functions. It also
-  /// includes variables inside blocks.
+  /// includes variables inside blocks and expansion statements.
   ///
   ///   void foo() { int x; static int y; extern int z; }
   bool isLocalVarDecl() const {
     if (getKind() != Decl::Var && getKind() != Decl::Decomposition)
       return false;
     if (const DeclContext *DC = getLexicalDeclContext())
-      return DC->getRedeclContext()->isFunctionOrMethod();
+      return DC->getEnclosingNonExpansionStatementContext()
+          ->getRedeclContext()
+          ->isFunctionOrMethod();
     return false;
   }
 

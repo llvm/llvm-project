@@ -204,6 +204,10 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::CXXForRangeStmtClass:
     EmitCXXForRangeStmt(cast<CXXForRangeStmt>(*S), Attrs);
     break;
+  case Stmt::CXXExpansionStmtPatternClass:
+    llvm_unreachable("unexpanded expansion statements should not be emitted");
+  case Stmt::CXXExpansionStmtInstantiationClass:
+    llvm_unreachable("Todo");
   case Stmt::SEHTryStmtClass:
     EmitSEHTryStmt(cast<SEHTryStmt>(*S));
     break;

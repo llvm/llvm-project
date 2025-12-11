@@ -1730,6 +1730,35 @@ void ASTStmtReader::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   S->setBody(Record.readSubStmt());
 }
 
+void ASTStmtReader::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
+  VisitStmt(S);
+  Record.skipInts(1); // Skip kind.
+  S->LParenLoc = readSourceLocation();
+  S->ColonLoc = readSourceLocation();
+  S->RParenLoc = readSourceLocation();
+  S->ParentDecl = cast<CXXExpansionStmtDecl>(Record.readDeclRef());
+  for (Stmt *&SubStmt : S->children())
+    SubStmt = Record.readSubStmt();
+}
+
+void ASTStmtReader::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
+  VisitStmt(S);
+  Record.skipInts(2);
+  S->BeginLoc = readSourceLocation();
+  S->EndLoc = readSourceLocation();
+  for (unsigned I = 0; I < S->getNumSubStmts(); ++I)
+    S->getAllSubStmts()[I] = Record.readSubStmt();
+  S->setShouldApplyLifetimeExtensionToSharedStmts(Record.readBool());
+}
+
+void ASTStmtReader::VisitCXXExpansionSelectExpr(
+    CXXExpansionSelectExpr *E) {
+  VisitExpr(E);
+  E->setRangeExpr(cast<InitListExpr>(Record.readSubExpr()));
+  E->setIndexExpr(Record.readSubExpr());
+}
+
 void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
   VisitStmt(S);
   S->KeywordLoc = readSourceLocation();
@@ -3566,6 +3595,19 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
              /*numHandlers=*/Record[ASTStmtReader::NumStmtFields]);
       break;
 
+    case STMT_CXX_EXPANSION_PATTERN:
+      S = CXXExpansionStmtPattern::CreateEmpty(
+          Context, Empty,
+          static_cast<CXXExpansionStmtPattern::ExpansionStmtKind>(
+              Record[ASTStmtReader::NumStmtFields]));
+      break;
+
+    case STMT_CXX_EXPANSION_INSTANTIATION:
+      S = CXXExpansionStmtInstantiation::CreateEmpty(
+          Context, Empty, Record[ASTStmtReader::NumStmtFields],
+          Record[ASTStmtReader::NumStmtFields + 1]);
+      break;
+
     case STMT_CXX_FOR_RANGE:
       S = new (Context) CXXForRangeStmt(Empty);
       break;
@@ -4443,6 +4485,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) ConceptSpecializationExpr(Empty);
       break;
     }
+
+    case EXPR_CXX_EXPANSION_SELECT:
+      S = new (Context) CXXExpansionSelectExpr(Empty);
+      break;
+
     case STMT_OPENACC_COMPUTE_CONSTRUCT: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
       S = OpenACCComputeConstruct::CreateEmpty(Context, NumClauses);

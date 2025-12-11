@@ -22,6 +22,7 @@
 namespace clang {
 
 class VarDecl;
+class CXXExpansionStmtDecl;
 
 /// CXXCatchStmt - This represents a C++ catch block.
 ///
@@ -521,6 +522,519 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CoreturnStmtClass;
+  }
+};
+
+/// CXXExpansionStmtPattern - Represents an unexpanded C++ expansion statement.
+///
+/// There are four kinds of expansion statements.
+///
+/// 1. Enumerating expansion statements.
+/// 2. Iterating expansion statements.
+/// 3. Destructuring expansion statements.
+/// 4. Dependent expansion statements.
+///
+/// 1. An 'enumerating' expansion statement is one whose expansion-initializer
+/// is a brace-enclosed expression-list; this list is syntactically similar to
+/// an initializer list, but it isn't actually an expression in and of itself
+/// (in that it is never evaluated or emitted) and instead is just treated as
+/// a group of expressions. The expansion initializer of this is always a
+/// syntactic-form 'InitListExpr'.
+///
+/// Example:
+/// \verbatim
+///   template for (auto x : { 1, 2, 3 }) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// Note that the expression-list may also contain pack expansions, e.g.
+/// '{ 1, xs... }', in which case the expansion size is dependent.
+///
+/// Here, the '{ 1, 2, 3 }' is parsed as an 'InitListExpr'. This node
+/// handles storing (and pack-expanding) the individual expressions.
+///
+/// Sema then wraps this with a 'CXXExpansionSelectExpr', which also
+/// contains a reference to an integral NTTP that is used as the expansion
+/// index; this index is either dependent (if the expansion-size is dependent),
+/// or set to a value of I in the I-th expansion during the expansion process.
+///
+/// The actual expansion is done by 'BuildCXXExpansionSelectExpr()': for
+/// example, during the 2nd expansion of '{ a, b, c }', I is equal to 1, and
+/// BuildCXXExpansionSelectExpr(), when called via TreeTransform,
+/// 'instantiates' the expression '{ a, b, c }' to just 'b'.
+///
+/// 2. Represents an unexpanded iterating expansion statement.
+///
+/// An 'iterating' expansion statement is one whose expansion-initializer is a
+/// a range (i.e. it has a corresponding 'begin()'/'end()' pair that is
+/// determined based on a number of conditions as stated in [stmt.expand] and
+/// [stmt.ranged]).
+///
+/// The expression used to compute the size of the expansion is not stored and
+/// is only created at the moment of expansion.
+///
+/// Example:
+/// \verbatim
+///   static constexpr std::string_view foo = "1234";
+///   template for (auto x : foo) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// 3. Represents an unexpanded destructuring expansion statement.
+///
+/// A 'destructuring' expansion statement is any expansion statement that is
+/// not enumerating or iterating (i.e. destructuring is the last thing we try,
+/// and if it doesn't work, the program is ill-formed).
+///
+/// This essentially involves treating the expansion-initializer as the
+/// initializer of a structured-binding declarations, with the number of
+/// bindings and expansion size determined by the usual means (array size,
+/// std::tuple_size, etc.).
+///
+/// Example:
+/// \verbatim
+///   std::array<int, 3> a {1, 2, 3};
+///   template for (auto x : a) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// Sema wraps the initializer with a CXXExpansionSelectExpr, which selects a
+/// binding based on the current expansion index.
+///
+/// 4. Represents an expansion statement whose expansion-initializer is
+/// type-dependent.
+///
+/// This will be instantiated as either an iterating or destructuring expansion
+/// statement. Dependent expansion statements can never be enumerating, even if
+/// the expansion size is dependent because the expression-list contains a pack.
+///
+/// Example:
+/// \verbatim
+///   template <typename T>
+///   void f() {
+///     template for (auto x : T()) {
+///       // ...
+///     }
+///   }
+/// \endverbatim
+///
+/// \see CXXExpansionStmtDecl for more documentation on expansion statements.
+class CXXExpansionStmtPattern final
+    : public Stmt,
+      llvm::TrailingObjects<CXXExpansionStmtPattern, Stmt *> {
+  friend class ASTStmtReader;
+  friend TrailingObjects;
+
+public:
+  enum class ExpansionStmtKind : uint8_t {
+    Enumerating,
+    Iterating,
+    Destructuring,
+    Dependent,
+  };
+
+private:
+  ExpansionStmtKind PatternKind;
+  SourceLocation LParenLoc;
+  SourceLocation ColonLoc;
+  SourceLocation RParenLoc;
+  CXXExpansionStmtDecl *ParentDecl;
+
+  enum SubStmt {
+    INIT,
+    VAR,
+    BODY,
+    FIRST_CHILD_STMT,
+    COUNT_Enumerating = FIRST_CHILD_STMT,
+
+    // Dependent expansion initializer.
+    EXPANSION_INITIALIZER = FIRST_CHILD_STMT,
+    COUNT_Dependent,
+
+    // Destructuring expansion statement.
+    DECOMP_DECL = FIRST_CHILD_STMT,
+    COUNT_Destructuring,
+
+    // Iterating expansion statement.
+    RANGE = FIRST_CHILD_STMT,
+    BEGIN,
+    END,
+    COUNT_Iterating,
+  };
+
+  CXXExpansionStmtPattern(ExpansionStmtKind PatternKind, EmptyShell Empty);
+  CXXExpansionStmtPattern(ExpansionStmtKind PatternKind,
+                          CXXExpansionStmtDecl *ESD, Stmt *Init,
+                          DeclStmt *ExpansionVar, SourceLocation LParenLoc,
+                          SourceLocation ColonLoc, SourceLocation RParenLoc);
+
+public:
+  static CXXExpansionStmtPattern *
+  CreateEmpty(ASTContext &Context, EmptyShell Empty, ExpansionStmtKind Kind);
+
+  /// Create a dependent expansion statement pattern.
+  static CXXExpansionStmtPattern *
+  CreateDependent(ASTContext &Context, CXXExpansionStmtDecl *ESD, Stmt *Init,
+                  DeclStmt *ExpansionVar, Expr *ExpansionInitializer,
+                  SourceLocation LParenLoc, SourceLocation ColonLoc,
+                  SourceLocation RParenLoc);
+
+  /// Create a destructuring expansion statement pattern.
+  static CXXExpansionStmtPattern *
+  CreateDestructuring(ASTContext &Context, CXXExpansionStmtDecl *ESD,
+                      Stmt *Init, DeclStmt *ExpansionVar,
+                      Stmt *DecompositionDeclStmt, SourceLocation LParenLoc,
+                      SourceLocation ColonLoc, SourceLocation RParenLoc);
+
+  /// Create an enumerating expansion statement pattern.
+  static CXXExpansionStmtPattern *
+  CreateEnumerating(ASTContext &Context, CXXExpansionStmtDecl *ESD, Stmt *Init,
+                    DeclStmt *ExpansionVar, SourceLocation LParenLoc,
+                    SourceLocation ColonLoc, SourceLocation RParenLoc);
+
+  /// Create an iterating expansion statement pattern.
+  static CXXExpansionStmtPattern *
+  CreateIterating(ASTContext &Context, CXXExpansionStmtDecl *ESD, Stmt *Init,
+                  DeclStmt *ExpansionVar, DeclStmt *Range, DeclStmt *Begin,
+                  DeclStmt *End, SourceLocation LParenLoc,
+                  SourceLocation ColonLoc, SourceLocation RParenLoc);
+
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  SourceLocation getColonLoc() const { return ColonLoc; }
+  SourceLocation getRParenLoc() const { return RParenLoc; }
+  SourceLocation getBeginLoc() const;
+  SourceLocation getEndLoc() const {
+    return getBody() ? getBody()->getEndLoc() : RParenLoc;
+  }
+
+  ExpansionStmtKind getKind() const { return PatternKind; }
+  bool isDependent() const {
+    return PatternKind == ExpansionStmtKind::Dependent;
+  }
+  bool isEnumerating() const {
+    return PatternKind == ExpansionStmtKind::Enumerating;
+  }
+  bool isIterating() const {
+    return PatternKind == ExpansionStmtKind::Iterating;
+  }
+  bool isDestructuring() const {
+    return PatternKind == ExpansionStmtKind::Destructuring;
+  }
+
+  unsigned getNumSubStmts() const { return getNumSubStmts(PatternKind); }
+
+  // Accessors for subcomponents common to all expansion statements.
+  CXXExpansionStmtDecl *getDecl() { return ParentDecl; }
+  const CXXExpansionStmtDecl *getDecl() const { return ParentDecl; }
+
+  Stmt *getInit() { return getSubStmt(INIT); }
+  const Stmt *getInit() const { return getSubStmt(INIT); }
+  void setInit(Stmt *S) { getSubStmt(INIT) = S; }
+
+  VarDecl *getExpansionVariable();
+  const VarDecl *getExpansionVariable() const {
+    return const_cast<CXXExpansionStmtPattern *>(this)->getExpansionVariable();
+  }
+
+  DeclStmt *getExpansionVarStmt() { return cast<DeclStmt>(getSubStmt(VAR)); }
+  const DeclStmt *getExpansionVarStmt() const {
+    return cast<DeclStmt>(getSubStmt(VAR));
+  }
+
+  void setExpansionVarStmt(Stmt *S) { getSubStmt(VAR) = S; }
+
+  Stmt *getBody() { return getSubStmt(BODY); }
+  const Stmt *getBody() const { return getSubStmt(BODY); }
+  void setBody(Stmt *S) { getSubStmt(BODY) = S; }
+
+  // Accessors for iterating statements.
+  const DeclStmt *getRangeVarStmt() const {
+    assert(isIterating());
+    return cast<DeclStmt>(getSubStmt(RANGE));
+  }
+
+  DeclStmt *getRangeVarStmt() {
+    assert(isIterating());
+    return cast<DeclStmt>(getSubStmt(RANGE));
+  }
+
+  void setRangeVarStmt(DeclStmt *S) {
+    assert(isIterating());
+    getSubStmt(RANGE) = S;
+  }
+
+  const VarDecl *getRangeVar() const {
+    assert(isIterating());
+    return cast<VarDecl>(getRangeVarStmt()->getSingleDecl());
+  }
+
+  VarDecl *getRangeVar() {
+    assert(isIterating());
+    return cast<VarDecl>(getRangeVarStmt()->getSingleDecl());
+  }
+
+  const DeclStmt *getBeginVarStmt() const {
+    assert(isIterating());
+    return cast<DeclStmt>(getSubStmt(BEGIN));
+  }
+
+  DeclStmt *getBeginVarStmt() {
+    assert(isIterating());
+    return cast<DeclStmt>(getSubStmt(BEGIN));
+  }
+
+  void setBeginVarStmt(DeclStmt *S) {
+    assert(isIterating());
+    getSubStmt(BEGIN) = S;
+  }
+
+  const VarDecl *getBeginVar() const {
+    assert(isIterating());
+    return cast<VarDecl>(getBeginVarStmt()->getSingleDecl());
+  }
+
+  VarDecl *getBeginVar() {
+    assert(isIterating());
+    return cast<VarDecl>(getBeginVarStmt()->getSingleDecl());
+  }
+
+  const DeclStmt *getEndVarStmt() const {
+    assert(isIterating());
+    return cast<DeclStmt>(getSubStmt(END));
+  }
+
+  DeclStmt *getEndVarStmt() {
+    assert(isIterating());
+    return cast<DeclStmt>(getSubStmt(END));
+  }
+
+  void setEndVarStmt(DeclStmt *S) {
+    assert(isIterating());
+    getSubStmt(END) = S;
+  }
+
+  const VarDecl *getEndVar() const {
+    assert(isIterating());
+    return cast<VarDecl>(getEndVarStmt()->getSingleDecl());
+  }
+
+  VarDecl *getEndVar() {
+    assert(isIterating());
+    return cast<VarDecl>(getEndVarStmt()->getSingleDecl());
+  }
+
+  // Accessors for destructuring statements.
+  Stmt *getDecompositionDeclStmt() {
+    assert(isDestructuring());
+    return getSubStmt(DECOMP_DECL);
+  }
+
+  const Stmt *getDecompositionDeclStmt() const {
+    assert(isDestructuring());
+    return getSubStmt(DECOMP_DECL);
+  }
+
+  void setDecompositionDeclStmt(Stmt *S) {
+    assert(isDestructuring());
+    getSubStmt(DECOMP_DECL) = S;
+  }
+
+  DecompositionDecl *getDecompositionDecl();
+  const DecompositionDecl *getDecompositionDecl() const {
+    return const_cast<CXXExpansionStmtPattern *>(this)->getDecompositionDecl();
+  }
+
+  // Accessors for dependent statements.
+  Expr *getExpansionInitializer() {
+    assert(isDependent());
+    return cast<Expr>(getSubStmt(EXPANSION_INITIALIZER));
+  }
+
+  const Expr *getExpansionInitializer() const {
+    assert(isDependent());
+    return cast<Expr>(getSubStmt(EXPANSION_INITIALIZER));
+  }
+
+  void setExpansionInitializer(Expr *S) {
+    assert(isDependent());
+    getSubStmt(EXPANSION_INITIALIZER) = S;
+  }
+
+  child_range children() {
+    return child_range(getTrailingObjects(),
+                       getTrailingObjects() + getNumSubStmts());
+  }
+
+  const_child_range children() const {
+    return const_child_range(getTrailingObjects(),
+                             getTrailingObjects() + getNumSubStmts());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXExpansionStmtPatternClass;
+  }
+
+private:
+  template <typename... Args>
+  static CXXExpansionStmtPattern *AllocateAndConstruct(ASTContext &Context,
+                                                       ExpansionStmtKind Kind,
+                                                       Args &&...Arguments);
+
+  static unsigned getNumSubStmts(ExpansionStmtKind Kind);
+  Stmt *getSubStmt(unsigned Idx) const {
+    assert(Idx < getNumSubStmts());
+    return getTrailingObjects()[Idx];
+  }
+
+  Stmt *&getSubStmt(unsigned Idx) {
+    assert(Idx < getNumSubStmts());
+    return getTrailingObjects()[Idx];
+  }
+};
+
+/// Represents the code generated for an expanded expansion statement.
+///
+/// This holds 'shared statements' and 'instantiations'; these encode the
+/// general underlying pattern that all expansion statements desugar to. Note
+/// that only the inner '{}' (i.e. those marked as 'Actual "CompoundStmt"'
+/// below) are actually present as 'CompoundStmt's in the AST; the outer braces
+/// that wrap everything do *not* correspond to an actual 'CompoundStmt' and are
+/// implicit in the sense that we simply push a scope when evaluating or
+/// emitting IR for a 'CXXExpansionStmtInstantiation'.
+///
+/// The 'instantiations' are precisely these inner compound statements.
+///
+/// \verbatim
+/// { // Not actually present in the AST.
+///   <shared statements>
+///   { // Actual 'CompoundStmt'.
+///     <1st instantiation>
+///   }
+///   ...
+///   { // Actual 'CompoundStmt'.
+///     <n-th instantiation>
+///   }
+/// }
+/// \endverbatim
+///
+/// For example, the CXXExpansionStmtInstantiation that corresponds to the
+/// following expansion statement
+///
+/// \verbatim
+///   std::tuple<int, int, int> a{1, 2, 3};
+///   template for (auto x : a) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// would be
+///
+/// \verbatim
+/// {
+///   auto [__u0, __u1, __u2] = a;
+///   {
+///     auto x = __u0;
+///     // ...
+///   }
+///   {
+///     auto x = __u1;
+///     // ...
+///   }
+///   {
+///     auto x = __u2;
+///     // ...
+///   }
+/// }
+/// \endverbatim
+///
+/// There are two reasons why this needs to exist and why we don't just store a
+/// list of instantiations in some other node:
+///
+///   1. We need custom codegen to handle break/continue in expansion statements
+///      properly, so it can't just be a compound statement.
+///
+///   2. The expansions are created after both the pattern and the
+///      'CXXExpansionStmtDecl', so we can't just store them as trailing data in
+///      either of those nodes (because we don't know how many expansions there
+///      will be when those notes are allocated).
+///
+/// \see CXXExpansionStmtDecl
+class CXXExpansionStmtInstantiation final
+    : public Stmt,
+      llvm::TrailingObjects<CXXExpansionStmtInstantiation, Stmt *> {
+  friend class ASTStmtReader;
+  friend TrailingObjects;
+
+  SourceLocation BeginLoc;
+  SourceLocation EndLoc;
+
+  // Instantiations are stored first, then shared statements.
+  const unsigned NumInstantiations : 20;
+  const unsigned NumSharedStmts : 3;
+  unsigned ShouldApplyLifetimeExtensionToSharedStmts : 1;
+
+  CXXExpansionStmtInstantiation(EmptyShell Empty, unsigned NumInstantiations,
+                                unsigned NumSharedStmts);
+  CXXExpansionStmtInstantiation(SourceLocation BeginLoc, SourceLocation EndLoc,
+                                ArrayRef<Stmt *> Instantiations,
+                                ArrayRef<Stmt *> SharedStmts,
+                                bool ShouldApplyLifetimeExtensionToSharedStmts);
+
+public:
+  static CXXExpansionStmtInstantiation *
+  Create(ASTContext &C, SourceLocation BeginLoc, SourceLocation EndLoc,
+         ArrayRef<Stmt *> Instantiations, ArrayRef<Stmt *> SharedStmts,
+         bool ShouldApplyLifetimeExtensionToSharedStmts);
+
+  static CXXExpansionStmtInstantiation *CreateEmpty(ASTContext &C,
+                                                    EmptyShell Empty,
+                                                    unsigned NumInstantiations,
+                                                    unsigned NumSharedStmts);
+
+  ArrayRef<Stmt *> getAllSubStmts() const {
+    return getTrailingObjects(getNumSubStmts());
+  }
+
+  MutableArrayRef<Stmt *> getAllSubStmts() {
+    return getTrailingObjects(getNumSubStmts());
+  }
+
+  unsigned getNumSubStmts() const { return NumInstantiations + NumSharedStmts; }
+
+  ArrayRef<Stmt *> getInstantiations() const {
+    return getTrailingObjects(NumInstantiations);
+  }
+
+  ArrayRef<Stmt *> getSharedStmts() const {
+    return getAllSubStmts().drop_front(NumInstantiations);
+  }
+
+  bool shouldApplyLifetimeExtensionToSharedStmts() const {
+    return ShouldApplyLifetimeExtensionToSharedStmts;
+  }
+
+  void setShouldApplyLifetimeExtensionToSharedStmts(bool Apply) {
+    ShouldApplyLifetimeExtensionToSharedStmts = Apply;
+  }
+
+  SourceLocation getBeginLoc() const { return BeginLoc; }
+  SourceLocation getEndLoc() const { return EndLoc; }
+
+  child_range children() {
+    Stmt **S = getTrailingObjects();
+    return child_range(S, S + getNumSubStmts());
+  }
+
+  const_child_range children() const {
+    Stmt *const *S = getTrailingObjects();
+    return const_child_range(S, S + getNumSubStmts());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXExpansionStmtInstantiationClass;
   }
 };
 

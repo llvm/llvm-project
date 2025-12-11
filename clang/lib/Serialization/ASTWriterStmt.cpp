@@ -1704,6 +1704,39 @@ void ASTStmtWriter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   Code = serialization::STMT_CXX_FOR_RANGE;
 }
 
+void ASTStmtWriter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
+  VisitStmt(S);
+  Record.push_back(static_cast<unsigned>(S->getKind()));
+  Record.AddSourceLocation(S->getLParenLoc());
+  Record.AddSourceLocation(S->getColonLoc());
+  Record.AddSourceLocation(S->getRParenLoc());
+  Record.AddDeclRef(S->getDecl());
+  for (Stmt* SubStmt : S->children())
+    Record.AddStmt(SubStmt);
+  Code = serialization::STMT_CXX_EXPANSION_PATTERN;
+}
+
+void ASTStmtWriter::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
+  VisitStmt(S);
+  Record.push_back(S->getInstantiations().size());
+  Record.push_back(S->getSharedStmts().size());
+  Record.AddSourceLocation(S->getBeginLoc());
+  Record.AddSourceLocation(S->getEndLoc());
+  for (Stmt *St : S->getAllSubStmts())
+    Record.AddStmt(St);
+  Record.push_back(S->shouldApplyLifetimeExtensionToSharedStmts());
+  Code = serialization::STMT_CXX_EXPANSION_INSTANTIATION;
+}
+
+void ASTStmtWriter::VisitCXXExpansionSelectExpr(
+    CXXExpansionSelectExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getRangeExpr());
+  Record.AddStmt(E->getIndexExpr());
+  Code = serialization::EXPR_CXX_EXPANSION_SELECT;
+}
+
 void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
   VisitStmt(S);
   Record.AddSourceLocation(S->getKeywordLoc());

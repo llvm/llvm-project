@@ -290,6 +290,8 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
 
   case Stmt::CoroutineBodyStmtClass:
   case Stmt::CoreturnStmtClass:
+  case Stmt::CXXExpansionStmtPatternClass:
+  case Stmt::CXXExpansionStmtInstantiationClass:
     K = CXCursor_UnexposedStmt;
     break;
 
@@ -338,6 +340,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::EmbedExprClass:
   case Stmt::HLSLOutArgExprClass:
   case Stmt::OpenACCAsteriskSizeExprClass:
+  case Stmt::CXXExpansionSelectExprClass:
     K = CXCursor_UnexposedExpr;
     break;
 

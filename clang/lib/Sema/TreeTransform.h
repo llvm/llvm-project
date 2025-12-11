@@ -9294,6 +9294,24 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
   return FinishCXXForRangeStmt(NewStmt.get(), Body.get());
 }
 
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
+    CXXExpansionStmtPattern *S) {
+  llvm_unreachable("TOOD");
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
+  llvm_unreachable("TOOD");
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformCXXExpansionSelectExpr(
+    CXXExpansionSelectExpr *E) {
+  llvm_unreachable("TOOD");
+}
+
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformMSDependentExistsStmt(

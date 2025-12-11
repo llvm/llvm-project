@@ -263,7 +263,8 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
   PrintRawDeclStmt(Node);
   // Certain pragma declarations shouldn't have a semi-colon after them.
   if (!Node->isSingleDecl() ||
-      !isa<OpenACCDeclareDecl, OpenACCRoutineDecl>(Node->getSingleDecl()))
+      !isa<CXXExpansionStmtDecl, OpenACCDeclareDecl, OpenACCRoutineDecl>(
+          Node->getSingleDecl()))
     OS << ";";
   OS << NL;
 }
@@ -445,6 +446,38 @@ void StmtPrinter::VisitCXXForRangeStmt(CXXForRangeStmt *Node) {
   PrintExpr(Node->getRangeInit());
   OS << ")";
   PrintControlledStmt(Node->getBody());
+}
+
+void StmtPrinter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *Node) {
+  OS << "template for (";
+  if (Node->getInit())
+    PrintInitStmt(Node->getInit(), 14);
+  PrintingPolicy SubPolicy(Policy);
+  SubPolicy.SuppressInitializers = true;
+  Node->getExpansionVariable()->print(OS, SubPolicy, IndentLevel);
+  OS << " : ";
+
+  if (Node->isIterating())
+    PrintExpr(Node->getRangeVar()->getInit());
+  else if (Node->isDependent())
+    PrintExpr(Node->getExpansionInitializer());
+  else if (Node->isDestructuring())
+    PrintExpr(Node->getDecompositionDecl()->getInit());
+  else
+    PrintExpr(Node->getExpansionVariable()->getInit());
+
+  OS << ")";
+  PrintControlledStmt(Node->getBody());
+}
+
+void StmtPrinter::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *) {
+  llvm_unreachable("should never be printed");
+}
+
+void StmtPrinter::VisitCXXExpansionSelectExpr(
+    CXXExpansionSelectExpr *Node) {
+  PrintExpr(Node->getRangeExpr());
 }
 
 void StmtPrinter::VisitMSDependentExistsStmt(MSDependentExistsStmt *Node) {
