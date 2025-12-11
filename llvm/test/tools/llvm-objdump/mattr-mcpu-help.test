@@ -20,9 +20,9 @@
 
 ## We report an error when we can't infer the triple because we don't have --triple or an input object (including a.out).
 # RUN: not llvm-objdump --mattr=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR --implicit-check-not=error:
+# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
 # RUN: not llvm-objdump --mcpu=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR --implicit-check-not=error:
+# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
 
 # CHECK: Available CPUs for this target:
 # CHECK: Available features for this target:
@@ -32,7 +32,7 @@
 # CHECK-SECTION-HEADERS: Sections:
 # CHECK-SECTION-HEADERS: Idx Name               Size     VMA              Type
 
-# CHECK-ERROR: llvm-objdump{{(\.exe)?}}: error: 'a.out': triple was not specified and could not be inferred from the input file: No such file or directory
+# CHECK-ERROR: llvm-objdump{{.*}}: error: 'a.out': triple was not specified and could not be inferred from the input file: [[MSG]]
 
 --- !ELF
 FileHeader:
