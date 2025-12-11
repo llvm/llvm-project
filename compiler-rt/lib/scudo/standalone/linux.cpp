@@ -262,11 +262,15 @@ u64 getResidentPages(uptr BaseAddress, uptr Size) {
       Length = sizeof(PageData) << PageSizeLog;
     }
     if (mincore(reinterpret_cast<void *>(CurrentAddress), Length, PageData) ==
-        -1)
+        -1) {
+      ScopedString Str;
+      Str.append("mincore failed: %s\n", strerror(errno));
+      Str.output();
       break;
-    for (size_t I = 0; I < Length >> PageSizeLog; I++) {
+    }
+    for (size_t I = 0; I < Length >> PageSizeLog; ++I) {
       if (PageData[I])
-        ResidentPages++;
+        ++ResidentPages;
     }
     CurrentAddress += Length;
   }

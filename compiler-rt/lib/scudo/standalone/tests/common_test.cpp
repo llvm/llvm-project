@@ -32,7 +32,7 @@ TEST(ScudoCommonTest, VerifyGetResidentPages) {
   ASSERT_TRUE(MemMap.map(/*Addr=*/0U, SizeBytes, "ResidentMemorySize"));
   ASSERT_NE(MemMap.getBase(), 0U);
 
-  // Only android seem to properly detect when single pages are touched.
+  // Only android seems to properly detect when single pages are touched.
 #if SCUDO_ANDROID
   // Verify nothing should be mapped in right after the map is created.
   EXPECT_EQ(0U, getResidentPages(MemMap.getBase(), SizeBytes));
