@@ -33,6 +33,15 @@ struct clang::CIRGen::CGCoroData {
   // Stores the result of __builtin_coro_begin call.
   mlir::Value coroBegin = nullptr;
 
+  // Stores the insertion point for final suspend, this happens after the
+  // promise call (return_xxx promise member) but before a cir.br to the return
+  // block.
+  mlir::Operation *finalSuspendInsPoint;
+
+  // How many co_return statements are in the coroutine. Used to decide whether
+  // we need to add co_return; equivalent at the end of the user authored body.
+  unsigned coreturnCount = 0;
+
   // The promise type's 'unhandled_exception' handler, if it defines one.
   Stmt *exceptionHandler = nullptr;
 };
@@ -116,6 +125,29 @@ static void createCoroData(CIRGenFunction &cgf,
 
   curCoro.data = std::make_unique<CGCoroData>();
   curCoro.data->coroId = coroId;
+}
+
+static mlir::LogicalResult
+emitBodyAndFallthrough(CIRGenFunction &cgf, const CoroutineBodyStmt &s,
+                       Stmt *body,
+                       const CIRGenFunction::LexicalScope *currLexScope) {
+  if (cgf.emitStmt(body, /*useCurrentScope=*/true).failed())
+    return mlir::failure();
+  // Note that LLVM checks CanFallthrough by looking into the availability
+  // of the insert block which is kinda brittle and unintuitive, seems to be
+  // related with how landing pads are handled.
+  //
+  // CIRGen handles this by checking pre-existing co_returns in the current
+  // scope instead.
+
+  // From LLVM IR Gen: const bool CanFallthrough = Builder.GetInsertBlock();
+  const bool canFallthrough = !currLexScope->hasCoreturn();
+  if (canFallthrough)
+    if (Stmt *onFallthrough = s.getFallthroughHandler())
+      if (cgf.emitStmt(onFallthrough, /*useCurrentScope=*/true).failed())
+        return mlir::failure();
+
+  return mlir::success();
 }
 
 cir::CallOp CIRGenFunction::emitCoroIDBuiltinCall(mlir::Location loc,
@@ -267,11 +299,39 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
                        /*isInit*/ true);
 
     assert(!cir::MissingFeatures::ehCleanupScope());
-    // FIXME(cir): EHStack.pushCleanup<CallCoroEnd>(EHCleanup);
+
     curCoro.data->currentAwaitKind = cir::AwaitKind::Init;
     if (emitStmt(s.getInitSuspendStmt(), /*useCurrentScope=*/true).failed())
       return mlir::failure();
-    assert(!cir::MissingFeatures::emitBodyAndFallthrough());
+
+    curCoro.data->currentAwaitKind = cir::AwaitKind::User;
+
+    // FIXME(cir): wrap emitBodyAndFallthrough with try/catch bits.
+    if (s.getExceptionHandler())
+      assert(!cir::MissingFeatures::unhandledException());
+    if (emitBodyAndFallthrough(*this, s, s.getBody(), curLexScope).failed())
+      return mlir::failure();
+
+    // Note that LLVM checks CanFallthrough by looking into the availability
+    // of the insert block which is kinda brittle and unintuitive, seems to be
+    // related with how landing pads are handled.
+    //
+    // CIRGen handles this by checking pre-existing co_returns in the current
+    // scope instead.
+    //
+    // From LLVM IR Gen: const bool CanFallthrough = Builder.GetInsertBlock();
+    const bool canFallthrough = curLexScope->hasCoreturn();
+    const bool hasCoreturns = curCoro.data->coreturnCount > 0;
+    if (canFallthrough || hasCoreturns) {
+      curCoro.data->currentAwaitKind = cir::AwaitKind::Final;
+      {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPoint(curCoro.data->finalSuspendInsPoint);
+        if (emitStmt(s.getFinalSuspendStmt(), /*useCurrentScope=*/true)
+                .failed())
+          return mlir::failure();
+      }
+    }
   }
   return mlir::success();
 }
@@ -424,4 +484,33 @@ RValue CIRGenFunction::emitCoawaitExpr(const CoawaitExpr &e,
                                        bool ignoreResult) {
   return emitSuspendExpr(*this, e, curCoro.data->currentAwaitKind, aggSlot,
                          ignoreResult);
+}
+
+mlir::LogicalResult CIRGenFunction::emitCoreturnStmt(CoreturnStmt const &s) {
+  ++curCoro.data->coreturnCount;
+  curLexScope->setCoreturn();
+
+  const Expr *rv = s.getOperand();
+  if (rv && rv->getType()->isVoidType() && !isa<InitListExpr>(rv)) {
+    // Make sure to evaluate the non initlist expression of a co_return
+    // with a void expression for side effects.
+    assert(!cir::MissingFeatures::ehCleanupScope());
+    emitIgnoredExpr(rv);
+  }
+
+  if (emitStmt(s.getPromiseCall(), /*useCurrentScope=*/true).failed())
+    return mlir::failure();
+  // Create a new return block (if not existent) and add a branch to
+  // it. The actual return instruction is only inserted during current
+  // scope cleanup handling.
+  mlir::Location loc = getLoc(s.getSourceRange());
+  mlir::Block *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
+  curCoro.data->finalSuspendInsPoint =
+      cir::BrOp::create(builder, loc, retBlock);
+
+  // Insert the new block to continue codegen after branch to ret block,
+  // this will likely be an empty block.
+  builder.createBlock(builder.getBlock()->getParent());
+
+  return mlir::success();
 }

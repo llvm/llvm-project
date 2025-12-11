@@ -154,6 +154,7 @@ struct MissingFeatures {
   static bool coroOutsideFrameMD() { return false; }
   static bool coroCoReturn() { return false; }
   static bool coroCoYield() { return false; }
+  static bool unhandledException() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
