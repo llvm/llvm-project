@@ -5808,6 +5808,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AMDGPUDialect",
+        ":AMDGPUToROCDL",
         ":AMDGPUUtils",
         ":AffineDialect",
         ":ArithDialect",
@@ -10384,6 +10385,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCUtils",
         ":Pass",
+        "//llvm:Support",
     ],
 )
 
@@ -10397,6 +10399,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ArithUtils",
         ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",

@@ -2423,7 +2423,7 @@ static bool targetSupportsPAuthRelocation(const Triple &TT,
                                           const MCExpr *Target,
                                           const MCExpr *DSExpr) {
   // No released version of glibc supports PAuth relocations.
-  if (TT.isOSGlibc())
+  if (TT.isOSGlibc() || TT.isMusl())
     return false;
 
   // We emit PAuth constants as IRELATIVE relocations in cases where the

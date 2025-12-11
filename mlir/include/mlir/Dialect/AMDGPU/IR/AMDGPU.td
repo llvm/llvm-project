@@ -110,8 +110,13 @@ def AMDGPU_TDMDescriptorType : AMDGPU_Type<"TDMDescriptor", "tdm_descriptor"> {
     This type is opaque and corresponds to the two or four descriptor groups
     used in tensor_load_to_lds or tensor_store_from_lds.
   }];
-
 }
+
+class AMDGPU_ConcreteVector<Type elem, int length> :
+  FixedVectorOfLengthAndType<[length], [elem]>,
+  BuildableType<
+    "::mlir::VectorType::get({" # length # "} ,"
+      # elem.builderCall # ")">;
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Op definitions
@@ -1296,14 +1301,14 @@ def AMDGPU_MakeDmaDescriptorOp :
     DenseI64ArrayAttr: $global_static_strides,
     Variadic<Index>: $shared_dynamic_sizes,
     DenseI64ArrayAttr: $shared_static_sizes,
-    Optional<I16>: $workgroup_mask,
+    Optional<AMDGPU_ConcreteVector<I1, 16>>: $workgroup_mask,
     Optional<I1>: $early_timeout,
-    Optional<Index>: $pad_amount,
-    Optional<Index>: $pad_interval,
+    Optional<I32>: $pad_amount,
+    Optional<I32>: $pad_interval,
     Optional<AnyMemRef>: $atomic_barrier_address,
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
-    Optional<Index>: $lds_increment,
+    Optional<I32>: $lds_increment,
     Optional<Index>: $iteration_count)>,
   Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
 
@@ -1335,7 +1340,7 @@ def AMDGPU_MakeDmaDescriptorOp :
      2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
      $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
      $lds_increment determines how much to increment the starting LDS address per iteration in units of the $base's element type.
-     $iterate_count determines how many times to iterate.
+     $iterate_count determines how many times to iterate, it must be a value in the inclusive interval [1, 256].
 
      ```mlir
       // Example of moving a two-dimensional tensor to LDS.
@@ -1345,7 +1350,7 @@ def AMDGPU_MakeDmaDescriptorOp :
 
       // Example of moving a two dimension tensor to LDS where padding is applied after every integer.
       %base = amdgpu.make_dma_base %global[0, 0], %lds[0, 0] : memref<32x32xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
-      %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padding(%pad_amount pad_every %pad_interval) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+      %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padShared(%pad_amount every %pad_interval) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
      ```
   }];
