@@ -769,7 +769,7 @@ static LogicalResult verifyBase(BaseOp op) {
   Type elementType = ldsType.getElementType();
   unsigned width = elementType.getIntOrFloatBitWidth();
 
-  if (!llvm::is_contained<unsigned>({8, 16, 32, 64}, width))
+  if (!llvm::is_contained({8u, 16u, 32u, 64u}, width))
     return op.emitOpError(
                "element type must be 1, 2, 4, or 8 bytes long but type was ")
            << width << " bits long.";
@@ -786,14 +786,14 @@ LogicalResult
 TDMGatherBaseType::verify(function_ref<InFlightDiagnostic()> emitError,
                           Type elementType, Type indexType) {
   unsigned width = elementType.getIntOrFloatBitWidth();
-  if (!llvm::is_contained<unsigned>({8, 16, 32, 64}, width))
+  if (!llvm::is_contained({8u, 16u, 32u, 64u}, width))
     return emitError()
            << "element type must be 1, 2, 4, or 8 bytes wide but type "
            << elementType << " is " << width / 8 << " bytes wide.";
   MLIRContext *ctx = elementType.getContext();
   Type i16 = IntegerType::get(ctx, 32);
   Type i32 = IntegerType::get(ctx, 16);
-  if (!llvm::is_contained<Type>({i16, i32}, indexType))
+  if (!llvm::is_contained({i16, i32}, indexType))
     return emitError() << "index type must be i16 or i32 but index type is "
                        << indexType << ".";
   return success();
@@ -825,7 +825,7 @@ LogicalResult MakeDmaDescriptorOp::verify() {
     return emitOpError("tensor must have same rank as tile.");
 
   unsigned elementTypeWidth = getElementTypeWidth();
-  if (!llvm::is_contained<unsigned>({8, 16, 32, 64}, elementTypeWidth))
+  if (!llvm::is_contained({8u, 16u, 32u, 64u}, elementTypeWidth))
     return emitOpError(
                "element type width must be 1, 2, 4 or 8 bytes, but was ")
            << elementTypeWidth << " bits long";

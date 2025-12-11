@@ -1644,7 +1644,7 @@ int32_t getScaleSel(int32_t blockSize, unsigned bitWidth, int32_t scaleWaveHalf,
   // those values are merged together. (Note: scaleWaveHalf isn't a high-level
   // attribute but is derifed from firstScaleLane).
   assert(llvm::is_contained({16, 32}, blockSize));
-  assert(llvm::is_contained(llvm::ArrayRef<unsigned>{4, 6, 8}, bitWidth));
+  assert(llvm::is_contained({4u, 6u, 8u}, bitWidth));
 
   const bool isFp8 = bitWidth == 8;
   const bool isBlock16 = blockSize == 16;
@@ -2327,12 +2327,12 @@ struct AMDGPUMakeDmaBaseLowering : public ConvertOpToLLVMPattern<BaseOp> {
       auto type = cast<TDMGatherBaseType>(op.getResult().getType());
       Type indexType = type.getIndexType();
       unsigned indexSize = indexType.getIntOrFloatBitWidth();
-      assert(llvm::is_contained<unsigned>({16, 32}, indexSize) &&
+      assert(llvm::is_contained({16u, 32u}, indexSize) &&
              "expected index_size to be 16 or 32");
       unsigned idx = (indexSize / 16) - 1;
 
       if (idx)
-        sgprs[0] = setValueAtOffset(rewriter, loc, sgprs[0], consts[idx], 31);
+        sgprs[0] = setValueAtOffset(rewriter, loc, sgprs[0], consts[1], 31);
     }
 
     ValueRange ldsIndices = adaptor.getLdsIndices();
@@ -2410,9 +2410,8 @@ struct AMDGPUMakeDmaDescriptorLowering
                     Value sgpr0, ArrayRef<Value> consts) const {
     // Compute data_size.
     unsigned elementTypeWidthInBits = op.getElementTypeWidth();
-    assert(
-        llvm::is_contained<unsigned>({8, 16, 32, 64}, elementTypeWidthInBits) &&
-        "expected type width to be 8, 16, 32, or 64.");
+    assert(llvm::is_contained({8u, 16u, 32u, 64u}, elementTypeWidthInBits) &&
+           "expected type width to be 8, 16, 32, or 64.");
     int64_t dataSize = llvm::Log2_32(elementTypeWidthInBits / 8);
     Value size = createI32Constant(rewriter, loc, dataSize);
     return setValueAtOffset(rewriter, loc, sgpr0, size, 16);
