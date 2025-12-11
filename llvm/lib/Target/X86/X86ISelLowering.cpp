@@ -49872,7 +49872,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineMulToPMULDQ(N, DL, DAG, Subtarget))
     return V;
-    
+
   // ==============================================================
   // Optimize VPMULLQ on slow targets
   // ==============================================================
