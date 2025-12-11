@@ -16410,8 +16410,7 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
       // commuted case
       if (LHSIsZExt && RHSIsSExt)
         std::swap(A, B);
-    }
-    else
+    } else
       return SDValue();
     break;
   }
