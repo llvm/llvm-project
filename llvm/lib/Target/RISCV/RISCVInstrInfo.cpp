@@ -3025,6 +3025,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_COND_CODE:
           Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;
           break;
+        case RISCVOp::OPERAND_ATOMIC_ORDERING:
+          Ok = isValidAtomicOrdering(Imm);
+          break;
         case RISCVOp::OPERAND_VEC_POLICY:
           Ok = (Imm & (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC)) ==
                Imm;
