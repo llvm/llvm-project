@@ -1101,8 +1101,7 @@ private:
 ///
 /// Example:
 ///   Given a constant_mask operation:
-///     %0 = vector.constant_mask [6, 10] : vector<8x16xi1>  // mask first 6x10
-///     elements
+///     %0 = vector.constant_mask [6, 10] : vector<8x16xi1>
 ///
 ///   and a target unroll shape of <4x8>, the pattern produces:
 ///
@@ -1137,7 +1136,8 @@ struct UnrollConstantMaskPattern
 
   LogicalResult matchAndRewrite(vector::ConstantMaskOp constantMaskOp,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, constantMaskOp);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, constantMaskOp);
     if (!targetShape)
       return failure();
 
@@ -1153,7 +1153,7 @@ struct UnrollConstantMaskPattern
 
     // In each dimension (d), each unrolled vector computes its mask size as:
     // min(max(originalMaskDim[d] - offset[d], 0), unrolledDimSize[d]).
-    for (SmallVector<int64_t> offsets :
+    for (const SmallVector<int64_t> &offsets :
          StaticTileOffsetRange(originalSize, *targetShape)) {
       SmallVector<int64_t> unrolledMaskDims;
 
