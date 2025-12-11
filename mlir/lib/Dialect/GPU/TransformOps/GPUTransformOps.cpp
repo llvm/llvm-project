@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 
+#include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
@@ -128,18 +129,7 @@ LogicalResult transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
 void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
-  populateGpuMemorySpaceAttributeConversions(
-      llvmTypeConverter, [](AddressSpace space) {
-        switch (space) {
-        case AddressSpace::Global:
-          return ROCDL::ROCDLDialect::kGlobalMemoryAddressSpace;
-        case AddressSpace::Workgroup:
-          return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
-        case AddressSpace::Private:
-          return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
-        }
-        llvm_unreachable("unknown address space enum value");
-      });
+  populateCommonAMDGPUTypeAndAttributeConversions(llvmTypeConverter);
   FailureOr<amdgpu::Chipset> maybeChipset =
       amdgpu::Chipset::parse(getChipset());
   assert(llvm::succeeded(maybeChipset) && "expected valid chipset");
