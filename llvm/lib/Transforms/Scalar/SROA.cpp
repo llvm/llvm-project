@@ -5222,7 +5222,7 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
     if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size()) {
       // We prefer vector promotion here because if vector promotion is viable
       // and there is a common type used, then it implies the second listed
-      // condition for prefering vector promotion is true.
+      // condition for preferring vector promotion is true.
       if (VecTy)
         return {VecTy, false, VecTy};
       return {CommonUseTy, isIntegerWideningViable(P, CommonUseTy, DL),
