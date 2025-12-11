@@ -35542,6 +35542,8 @@ bool X86TargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   switch (VT.getSimpleVT().SimpleTy) {
   case MVT::f16:
     return Subtarget.hasFP16();
+  case MVT::bf16:
+    return Subtarget.hasAVX10_2();
   case MVT::f32:
   case MVT::f64:
     return true;
