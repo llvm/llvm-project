@@ -1675,6 +1675,8 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
   addLocationWithExpr(Die, Attribute, Location, {});
 }
 
+/// Add a memory location exprloc to \p DIE with attribute \p Attribute
+/// at \p Location + \p Offset.
 void DwarfCompileUnit::addMemoryLocation(DIE &Die, dwarf::Attribute Attribute,
                                          const MachineLocation &Location,
                                          int64_t Offset) {
