@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZISelLowering.h"
+#include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZCallingConv.h"
 #include "SystemZConstantPoolValue.h"
 #include "SystemZMachineFunctionInfo.h"
@@ -8133,16 +8134,14 @@ SDValue SystemZTargetLowering::combineSTORE(
   // combine STORE (LOAD_STACK_GUARD) into MOVE_STACK_GUARD
   if (Op1->isMachineOpcode() &&
       (Op1->getMachineOpcode() == SystemZ::LOAD_STACK_GUARD)) {
-    // If so, create a MOVE_STACK_GUARD node to replace the store,
-    // and a LOAD_STACK_GUARD_ADDRESS to replace the LOAD_STACK_GUARD
-    MachineSDNode *LoadAddr = DAG.getMachineNode(
-        SystemZ::LOAD_STACK_GUARD_ADDRESS, SDLoc(SN), MVT::i64);
+    // If so, create a MOVE_STACK_GUARD_DAG node to replace the store,
+    // as well as the LOAD_STACK_GUARD.
     int FI = cast<FrameIndexSDNode>(SN->getOperand(2))->getIndex();
     // FrameIndex, Dummy Displacement
     SDValue Ops[] = {DAG.getTargetFrameIndex(FI, MVT::i64),
                      DAG.getTargetConstant(0, SDLoc(SN), MVT::i64),
-                     SDValue(LoadAddr, 0), SN->getChain()};
-    MachineSDNode *Move = DAG.getMachineNode(SystemZ::MOVE_STACK_GUARD,
+                     SN->getChain()};
+    MachineSDNode *Move = DAG.getMachineNode(SystemZ::MOVE_STACK_GUARD_DAG,
                                              SDLoc(SN), MVT::Other, Ops);
 
     return SDValue(Move, 0);
@@ -9052,17 +9051,13 @@ SDValue SystemZTargetLowering::combineBR_CCMASK(SDNode *N,
     // Handle the load's chain if necessary
     DAG.ReplaceAllUsesOfValueWith(OutChain, InChain);
 
-    // Construct the LOAD_STACK_GUARD_ADDRESS node to replace LOAD_STACK_GUARD
-    auto *LoadAddress =
-        DAG.getMachineNode(SystemZ::LOAD_STACK_GUARD_ADDRESS, DL, MVT::i64);
-
-    // Construct the COMPARE_STACK_GUARD node
+    // Construct the COMPARE_STACK_GUARD_DAG to replace the icmp and
+    // LOAD_STACK_GUARD nodes.
     SDVTList CmpVTs = DAG.getVTList(MVT::Other, MVT::Glue);
     auto CompOps = {DAG.getTargetFrameIndex(FI, MVT::i64),
-                    DAG.getTargetConstant(0, DL, MVT::i64),
-                    SDValue(LoadAddress, 0), InChain};
-    auto *Compare =
-        DAG.getMachineNode(SystemZ::COMPARE_STACK_GUARD, DL, CmpVTs, CompOps);
+                    DAG.getTargetConstant(0, DL, MVT::i64), InChain};
+    auto *Compare = DAG.getMachineNode(SystemZ::COMPARE_STACK_GUARD_DAG, DL,
+                                       CmpVTs, CompOps);
     // Construct the BRC node using COMPARE_STACK_GUARD's CC result
     auto BranchOps = {DAG.getTargetConstant(CCValidVal, DL, MVT::i32),
                       DAG.getTargetConstant(CCMaskVal, DL, MVT::i32),
@@ -11161,6 +11156,34 @@ getBackchainAddress(SDValue SP, SelectionDAG &DAG) const {
                      DAG.getIntPtrConstant(TFL->getBackchainOffset(MF), DL));
 }
 
+MachineBasicBlock *
+SystemZTargetLowering::emitMSGPseudo(MachineInstr &MI,
+                                     MachineBasicBlock *MBB) const {
+  MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();
+  const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  Register AddrReg = MRI->createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+  BuildMI(*MBB, MI, DL, TII->get(SystemZ::MOVE_STACK_GUARD), AddrReg)
+      .addFrameIndex(MI.getOperand(0).getIndex())
+      .addImm(MI.getOperand(1).getImm());
+  MI.eraseFromParent();
+  return MBB;
+}
+
+MachineBasicBlock *
+SystemZTargetLowering::emitCSGPseudo(MachineInstr &MI,
+                                     MachineBasicBlock *MBB) const {
+  MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();
+  const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  Register AddrReg = MRI->createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+  BuildMI(*MBB, MI, DL, TII->get(SystemZ::COMPARE_STACK_GUARD), AddrReg)
+      .addFrameIndex(MI.getOperand(0).getIndex())
+      .addImm(MI.getOperand(1).getImm());
+  MI.eraseFromParent();
+  return MBB;
+}
+
 MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *MBB) const {
   switch (MI.getOpcode()) {
@@ -11317,6 +11340,12 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case TargetOpcode::STACKMAP:
   case TargetOpcode::PATCHPOINT:
     return emitPatchPoint(MI, MBB);
+
+  case SystemZ::MOVE_STACK_GUARD_DAG:
+    return emitMSGPseudo(MI, MBB);
+
+  case SystemZ::COMPARE_STACK_GUARD_DAG:
+    return emitCSGPseudo(MI, MBB);
 
   default:
     llvm_unreachable("Unexpected instr type to insert");

@@ -470,7 +470,10 @@ private:
                                          unsigned Opcode) const;
   MachineBasicBlock *emitProbedAlloca(MachineInstr &MI,
                                       MachineBasicBlock *MBB) const;
-
+  MachineBasicBlock *emitMSGPseudo(MachineInstr &MI,
+                                   MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitCSGPseudo(MachineInstr &MI,
+                                   MachineBasicBlock *MBB) const;
   SDValue getBackchainAddress(SDValue SP, SelectionDAG &DAG) const;
 
   MachineMemOperand::Flags

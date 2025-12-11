@@ -1779,9 +1779,102 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     splitAdjDynAlloc(MI);
     return true;
 
+  case SystemZ::MOVE_STACK_GUARD:
+    expandMSGPseudo(MI);
+    return true;
+
+  case SystemZ::COMPARE_STACK_GUARD:
+    expandCSGPseudo(MI);
+    return true;
+
   default:
     return false;
   }
+}
+
+namespace {
+unsigned long getStackGuardOffset(const MachineBasicBlock &MBB) {
+  // In the TLS (default) case, AddrReg will contain the thread pointer, so we
+  // need to add 40 bytes to get the actual address of the stack guard.
+  StringRef GuardType =
+      MBB.getParent()->getFunction().getParent()->getStackProtectorGuard();
+  return (GuardType == "global") ? 0 : 40;
+}
+} // namespace
+
+// Emit the stack guard address load, depending on guard type.
+// Return the register the stack guard address was loaded into.
+void SystemZInstrInfo::emitLoadStackGuardAddress(MachineInstr &MI) const {
+  MachineBasicBlock &MBB = *(MI.getParent());
+  const MachineFunction &MF = *(MBB.getParent());
+  const Register AddrReg = MI.getOperand(0).getReg();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const Register Reg32 =
+      MRI.getTargetRegisterInfo()->getSubReg(AddrReg, SystemZ::subreg_l32);
+  const auto DL = MI.getDebugLoc();
+
+  const Module *M = MF.getFunction().getParent();
+  StringRef GuardType = M->getStackProtectorGuard();
+
+  if (GuardType.empty() || (GuardType == "tls")) {
+    // EAR can only load the low subregister so use a shift for %a0 to produce
+    // the GR containing %a0 and %a1.
+
+    // ear <reg>, %a0
+    BuildMI(MBB, MI, DL, get(SystemZ::EAR), Reg32)
+        .addReg(SystemZ::A0);
+
+    // sllg <reg>, <reg>, 32
+    BuildMI(MBB, MI, DL, get(SystemZ::SLLG), AddrReg)
+        .addReg(AddrReg)
+        .addReg(0)
+        .addImm(32);
+
+    // ear <reg>, %a1
+    BuildMI(MBB, MI, DL, get(SystemZ::EAR), Reg32)
+        .addReg(SystemZ::A1);
+
+  } else if (GuardType == "global") {
+    // Obtain the global value.
+    const auto *GV = M->getNamedGlobal("__stack_chk_guard");
+    assert(GV &&
+           "could not create reference to global variable __stack_chk_guard");
+    // Ref->
+    // Emit the address load.
+    if (M->getPICLevel() == PICLevel::NotPIC) {
+      BuildMI(MBB, MI, DL, get(SystemZ::LARL), AddrReg).addGlobalAddress(GV);
+    } else {
+      BuildMI(MBB, MI, DL, get(SystemZ::LGRL), AddrReg)
+          .addGlobalAddress(GV, 0, SystemZII::MO_GOT);
+    }
+
+  } else {
+    llvm_unreachable(
+        (Twine("Unknown stack protector type \"") + GuardType + "\"")
+            .str()
+            .c_str());
+  }
+}
+
+void SystemZInstrInfo::expandMSGPseudo(MachineInstr &MI) const {
+  emitLoadStackGuardAddress(MI);
+  BuildMI(*(MI.getParent()), MI, MI.getDebugLoc(), get(SystemZ::MVC))
+      .addReg(MI.getOperand(1).getReg())
+      .addImm(MI.getOperand(2).getImm())
+      .addImm(8)
+      .addReg(MI.getOperand(0).getReg())
+      .addImm(getStackGuardOffset(*(MI.getParent())));
+  MI.removeFromParent();
+}
+void SystemZInstrInfo::expandCSGPseudo(MachineInstr &MI) const {
+  emitLoadStackGuardAddress(MI);
+  BuildMI(*(MI.getParent()), MI, MI.getDebugLoc(), get(SystemZ::CLC))
+      .addReg(MI.getOperand(1).getReg())
+      .addImm(MI.getOperand(2).getImm())
+      .addImm(8)
+      .addReg(MI.getOperand(0).getReg())
+      .addImm(getStackGuardOffset(*(MI.getParent())));
+  MI.removeFromParent();
 }
 
 unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
@@ -1801,27 +1894,24 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (MI.getOpcode() == TargetOpcode::PATCHABLE_RET)
     return 18 + (MI.getOperand(0).getImm() == SystemZ::CondReturn ? 4 : 0);
   if ((MI.getOpcode() == SystemZ::MOVE_STACK_GUARD) ||
-      (MI.getOpcode() == SystemZ::COMPARE_STACK_GUARD))
-    return 6;
-  if ((MI.getOpcode() == SystemZ::LOAD_STACK_GUARD_ADDRESS) ||
-      (MI.getOpcode() == TargetOpcode::LOAD_STACK_GUARD)) {
-    StringRef GuardType = MI.getParent()
-                              ->getParent()
-                              ->getFunction()
-                              .getParent()
-                              ->getStackProtectorGuard();
-    unsigned Size = (MI.getOpcode() == TargetOpcode::LOAD_STACK_GUARD)
-                        ? 6 // lg to load value
-                        : 0;
-    if (GuardType == "global")
-      return Size + 6; // larl/lgrl
-    if (GuardType.empty() || GuardType == "tls")
-      return Size + 14; // ear,sllg,ear
-    llvm_unreachable(
-        (Twine("Unknown stack protector type \"") + GuardType + "\"")
+      (MI.getOpcode() == SystemZ::COMPARE_STACK_GUARD)) {
+      StringRef GuardType = MI.getParent()
+      ->getParent()
+      ->getFunction()
+      .getParent()
+      ->getStackProtectorGuard();
+      unsigned Size = 6;  // mvc,clc
+      if (GuardType == "global")
+        Size += 6; // larl/lgrl
+      else if (GuardType.empty() || GuardType == "tls")
+        Size += 14; // ear,sllg,ear
+      else
+        llvm_unreachable(
+          (Twine("Unknown stack protector type \"") + GuardType + "\"")
             .str()
             .c_str());
-  }
+      return Size;
+    }
 
   return MI.getDesc().getSize();
 }

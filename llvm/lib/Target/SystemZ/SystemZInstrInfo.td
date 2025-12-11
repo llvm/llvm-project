@@ -523,15 +523,22 @@ let SimpleBDXStore = 1, mayStore = 1 in {
 }
 
 let hasNoSchedulingInfo = 1, hasSideEffects = 1 in {
-  // LOAD_STACK_GUARD_ADDRESS may not Load, because it has no (official)
-  // operands.
-  let isReMaterializable = 1 in
-    def LOAD_STACK_GUARD_ADDRESS : Pseudo<(outs ADDR64:$grdaddr), (ins), []>;
   let mayLoad = 1 in {
-    let mayStore = 1 in def MOVE_STACK_GUARD
-        : Pseudo<(outs), (ins bdaddr12only:$grdloc, ADDR64:$grdaddr), []>;
-    let Defs = [CC] in def COMPARE_STACK_GUARD
-        : Pseudo<(outs), (ins bdaddr12only:$grdloc, ADDR64:$grdaddr), []>;
+    let mayStore = 1 in {
+      // load the stack guard's address, and move the stack guard to the stack.
+      let usesCustomInserter = 1 in def MOVE_STACK_GUARD_DAG
+          : Pseudo<(outs), (ins bdaddr12only:$grdloc), []>;
+      let Constraints = "@earlyclobber $grdaddr" in def MOVE_STACK_GUARD
+          : Pseudo<(outs ADDR64:$grdaddr), (ins bdaddr12only:$grdloc), []>;
+    }
+    let Defs = [CC] in {
+      // load the stack guard's address, and compare the stack guard against
+      // the one on the stack.
+      let usesCustomInserter = 1 in def COMPARE_STACK_GUARD_DAG
+          : Pseudo<(outs), (ins bdaddr12only:$grdloc), []>;
+      let Constraints = "@earlyclobber $grdaddr" in def COMPARE_STACK_GUARD
+          : Pseudo<(outs ADDR64:$grdaddr), (ins bdaddr12only:$grdloc), []>;
+    }
   }
 }
 
