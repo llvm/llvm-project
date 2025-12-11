@@ -4670,8 +4670,7 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
 
 DenseMap<const SCEV *, Value *>
 VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
-  const DataLayout &DL = SE.getDataLayout();
-  SCEVExpander Expander(SE, DL, "induction", /*PreserveLCSSA=*/false);
+  SCEVExpander Expander(SE, "induction", /*PreserveLCSSA=*/false);
 
   auto *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
   BasicBlock *EntryBB = Entry->getIRBasicBlock();
