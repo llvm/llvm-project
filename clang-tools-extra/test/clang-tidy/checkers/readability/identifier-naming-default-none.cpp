@@ -1,25 +1,45 @@
 // RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
 // RUN:   -config='{CheckOptions: {}}'
 
-int BadGlobal;
+// Empty options effectively disable the check, allowing PascalCase...
+#define MyMacro
 
-int good_global;
+namespace MyNamespace {
 
-struct BadStruct {
-  int BadField;
+using MyAlias = int;
+
+int MyGlobal;
+
+struct MyStruct {
+  int MyField;
 };
 
-struct good_struct {
-  int good_field;
-};
-
-int BadFunction(int BadParameter) {
-  int BadVariable = BadParameter;
-  return BadVariable;
+template <typename MyTypename>
+int MyFunction(int MyArgument) {
+  int MyVariable = MyArgument;
+  return MyVariable;
 }
 
-int good_function(int good_parameter) {
-  int good_variable = good_parameter;
-  return good_variable;
+}
+
+// ...or lower_case for the same set of symbol types
+#define my_macro_2
+
+namespace my_namespace_2 {
+
+using my_alias = int;
+
+my_alias my_global;
+
+struct my_struct {
+  int my_field;
+};
+
+template <typename my_typename>
+int my_function(int my_argument) {
+  int my_variable = my_argument;
+  return my_variable;
+}
+
 }
 

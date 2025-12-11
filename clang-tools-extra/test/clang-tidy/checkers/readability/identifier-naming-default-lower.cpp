@@ -1,26 +1,66 @@
 // RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     readability-identifier-naming.DefaultCase: "lower_case" }}'
+// RUN:     readability-identifier-naming.DefaultCase: "lower_case", \
+// RUN:   }}'
 
-int BadGlobal;
+// DefaultCase enables every type of symbol to be checked with same case
+// TODO: DefaultCase does not work for macros?
+#define MyMacro
 
-int good_global;
+namespace MyNamespace {
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for default 'MyNamespace' [readability-identifier-naming]
+// CHECK-FIXES: namespace my_namespace {
 
-struct BadStruct {
-  int BadField;
+using MyAlias = int;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for default 'MyAlias' [readability-identifier-naming]
+// CHECK-FIXES: using my_alias = int;
+
+int MyGlobal;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for default 'MyGlobal' [readability-identifier-naming]
+// CHECK-FIXES: int my_global;
+
+struct MyStruct {
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for default 'MyStruct' [readability-identifier-naming]
+// CHECK-FIXES: struct my_struct {
+  int MyField;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for default 'MyField' [readability-identifier-naming]
+// CHECK-FIXES: int my_field;
 };
 
-struct good_struct {
-  int good_field;
-};
-
-int BadFunction(int BadParameter) {
-  int BadVariable = BadParameter;
-  return BadVariable;
+template <typename MyTypename>
+// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: invalid case style for default 'MyTypename' [readability-identifier-naming]
+// CHECK-FIXES: template <typename my_typename>
+int MyFunction(int MyArgument) {
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for default 'MyFunction' [readability-identifier-naming]
+// CHECK-MESSAGES: :[[@LINE-2]]:20: warning: invalid case style for default 'MyArgument' [readability-identifier-naming]
+// CHECK-FIXES: int my_function(int my_argument) {
+  int MyVariable = MyArgument;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for default 'MyVariable' [readability-identifier-naming]
+// CHECK-FIXES: int my_variable = my_argument;
+  return MyVariable;
+// CHECK-FIXES: return my_variable;
 }
 
-int good_function(int good_parameter) {
-  int good_variable = good_parameter;
-  return good_variable;
+}
+
+// These are all already formatted as desired
+#define my_macro_2
+
+namespace my_namespace_2 {
+
+using my_alias = int;
+
+my_alias my_global;
+
+struct my_struct {
+  int my_field;
+};
+
+template <typename my_typename>
+int my_function(int my_argument) {
+  int my_variable = my_argument;
+  return my_variable;
+}
+
 }
 
