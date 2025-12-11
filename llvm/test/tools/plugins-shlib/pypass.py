@@ -5,20 +5,34 @@
 # RUN: env LLVM_PYPASS_SCRIPT=%s \
 # RUN:   opt -load-pass-plugin=%plugindir/pypass-plugin%pluginext \
 # RUN:       -passes=pypass -disable-output %S/Inputs/foobar.ll | FileCheck %s
-
+#
 # We can use command-line arguments for parameters
 # RUN:   opt -load-pass-plugin=%plugindir/pypass-plugin%pluginext \
 # RUN:       -pypass-script=%s -pypass-dylib=%libpython \
 # RUN:       -passes=pypass -disable-output %S/Inputs/foobar.ll | FileCheck %s
-
+#
 # Loading the plugin twice causes no issues
 # RUN:   opt -load-pass-plugin=%plugindir/pypass-plugin%pluginext \
 # RUN:       -load-pass-plugin=%plugindir/pypass-plugin%pluginext \
 # RUN:       -pypass-script=%s -pypass-dylib=%libpython \
 # RUN:       -passes=pypass -disable-output %S/Inputs/foobar.ll | FileCheck %s
-
+#
 # CHECK: Python version: 3
 # CHECK: 0x{{[0-9a-f]+}} Module
+
+# Fail gracefully for invalid libpython path
+# RUN: not opt -load-pass-plugin=%plugindir/pypass-plugin%pluginext \
+# RUN:         -pypass-script=%s -pypass-dylib=invalid \
+# RUN:         -passes=pypass -disable-output %S/Inputs/foobar.ll 2>&1 | FileCheck --check-prefix=INVALID-DYLIB %s
+#
+# INVALID-DYLIB: Failed to load Python shared library: 'invalid'
+
+# Fail gracefully for invalid script path
+# RUN: not opt -load-pass-plugin=%plugindir/pypass-plugin%pluginext \
+# RUN:         -pypass-script=invalid -pypass-dylib=%libpython \
+# RUN:         -passes=pypass -disable-output %S/Inputs/foobar.ll 2>&1 | FileCheck --check-prefix=INVALID-SCRIPT %s
+#
+# INVALID-SCRIPT: Failed to locate script file: 'invalid'
 
 # We can import modules relative to the script directory
 from Inputs.mymod import pyversion

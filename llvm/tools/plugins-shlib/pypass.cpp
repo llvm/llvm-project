@@ -12,6 +12,8 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "llvm-c/Types.h"
+
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
@@ -35,6 +37,7 @@ static std::string findPython() {
   if (const char *Path = std::getenv("LLVM_PYPASS_DYLIB"))
     return std::string(Path);
   // TODO: Run Python from PATH and use a script to query the shared lib
+  errs() << "Failed to detect Python dynamic library\n";
   return std::string{};
 }
 
@@ -135,10 +138,16 @@ private:
   }
 
   bool loadDylib(std::string Path) {
+    // Empty paths dlopen host process
+    if (Path.empty()) {
+      errs() << "Failed to load Python shared library: ''\n";
+      return false;
+    }
     std::string Err;
     Dylib = sys::DynamicLibrary::getPermanentLibrary(Path.c_str(), &Err);
     if (!Dylib.isValid()) {
-      errs() << "dlopen for '" << Path << "' failed: " << Err << "\n";
+      errs() << "Failed to load Python shared library: '" << Path << "' ("
+             << Err << ")\n";
       return false;
     }
 
@@ -215,22 +224,43 @@ public:
   bool isValid() const { return Valid; }
 
   bool loadScript(const std::string &Path) const {
-    if (!importModule("runpy"))
+    std::filesystem::path Script(Path);
+    if (!std::filesystem::exists(Script)) {
+      errs() << "Failed to locate script file: '" << Script << "'\n";
       return false;
-    if (!evaluate("globals().update(runpy.run_path('" + Path + "'))",
-                  PyGlobals))
+    }
+
+    // Make relative paths resolve naturally in import statements
+    if (!importModule("sys")) {
+      // Python import error was dumped already
       return false;
+    }
+    std::string Dir = Script.parent_path().u8string();
+    if (!evaluate("sys.path.append('" + Dir + "')", PyGlobals)) {
+      errs() << "Failed to add import search path: '" << Dir << "'\n";
+      return false;
+    }
+
+    // Evaluating the script runs top-level statements in the global context.
+    // TODO: In order to support multiple instances of the plugin with different
+    // scripts, we will need an isolated context for each.
+    if (!importModule("runpy")) {
+      // Python import error was dumped already
+      return false;
+    }
+    std::string LoadCmd = "globals().update(runpy.run_path('" + Path + "'))";
+    if (!evaluate(LoadCmd, PyGlobals)) {
+      errs() << "Failed to load script for PyPass plugin: '" << Path << "'\n";
+      return false;
+    }
+
+    // Validate script file
     if (!PyDict_GetItemString(PyGlobals, "run")) {
       errs() << "Script defines no run() function: " << Path << "\n";
       return false;
     }
-    return true;
-  }
 
-  bool addImportSearchPath(const std::string &Path) const {
-    if (!importModule("sys"))
-      return false;
-    return evaluate("sys.path.append('" + Path + "')", PyGlobals);
+    return true;
   }
 
   void *getFunction(std::string Name) const {
@@ -274,17 +304,6 @@ private:
 class PyPassContext {
 public:
   PyPassContext(const PythonAPI &PyAPI) : PyAPI(PyAPI) {}
-
-  bool loadScript(const std::string &Path) {
-    // Make relative paths resolve naturally in import statements
-    std::string Dir = std::filesystem::path(Path).parent_path().u8string();
-    if (!PyAPI.addImportSearchPath(Dir)) {
-      errs() << "Failed to add import search path: " << Dir << "\n";
-      return false;
-    }
-
-    return PyAPI.loadScript(Path);
-  }
 
   bool registerEP(std::string Name) {
     // Default is no, if the function is not defined
@@ -344,21 +363,18 @@ struct PyPass : PassInfoMixin<PyPass> {
 static void registerCallbacks(PassBuilder &PB) {
   // Python API is initialized once and shared across all threads
   const PythonAPI &PyAPI = PythonAPI::instance();
+
+  // Don't register callbacks if init fails, e.g. shared library not found
   if (!PyAPI.isValid())
     return;
 
-  // Context is shared across all entry-points in this pipeline
-  auto Context = std::make_shared<PyPassContext>(PyAPI);
-
-  // All entry-point callbacks are forwarded to the same script
-  // TODO: In order to support multiple instances of the plugin with different
-  // scripts, we will need an isolated interpreter session for each.
+  // Don't register callbacks if script fails to load, e.g. file not found
   std::string ScriptPath = findScript();
-  if (!Context->loadScript(ScriptPath)) {
-    errs() << "Failed to load script for PyPass plugin: '" << ScriptPath
-           << "\n";
+  if (!PyAPI.loadScript(ScriptPath))
     return;
-  }
+
+  // Context is shared across all entry-points in this pipeline
+  auto Context = std::make_shared<PyPassContext>(PythonAPI::instance());
 
   // Create one PyPass instance per entry-point
   if (Context->registerEP("PipelineStartEPCallback"))
