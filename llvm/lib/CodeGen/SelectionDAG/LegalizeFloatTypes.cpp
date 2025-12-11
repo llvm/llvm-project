@@ -3507,6 +3507,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FMAD(SDNode *N) {
   SDValue Op0 = GetSoftPromotedHalf(N->getOperand(0));
   SDValue Op1 = GetSoftPromotedHalf(N->getOperand(1));
   SDValue Op2 = GetSoftPromotedHalf(N->getOperand(2));
+  SDNodeFlags Flags = N->getFlags();
   SDLoc dl(N);
 
   // Promote to the larger FP type.
@@ -3515,9 +3516,27 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FMAD(SDNode *N) {
   Op1 = DAG.getNode(PromotionOpcode, dl, NVT, Op1);
   Op2 = DAG.getNode(PromotionOpcode, dl, NVT, Op2);
 
-  SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, Op0, Op1, Op2);
+  SDValue Res;
+  if (OVT == MVT::f16) {
+    // An f16 fma must go via f64 to prevent double rounding issues.
+    SDValue A64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op0, Flags);
+    SDValue B64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op1, Flags);
+    SDValue C64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op2, Flags);
 
-  // Convert back to FP16 as an integer.
+    // Prefer a wide FMA node if available; otherwise expand to mul+add.
+    SDValue WideRes;
+    if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), MVT::f64)) {
+      WideRes = DAG.getNode(ISD::FMA, dl, MVT::f64, A64, B64, C64, Flags);
+    } else {
+      SDValue Mul = DAG.getNode(ISD::FMUL, dl, MVT::f64, A64, B64, Flags);
+      WideRes = DAG.getNode(ISD::FADD, dl, MVT::f64, Mul, C64, Flags);
+    }
+
+    return DAG.getNode(GetPromotionOpcode(MVT::f64, OVT), dl, MVT::i16,
+                       WideRes);
+  }
+
+  Res = DAG.getNode(N->getOpcode(), dl, NVT, Op0, Op1, Op2, Flags);
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
