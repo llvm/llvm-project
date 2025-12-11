@@ -4038,9 +4038,10 @@ struct OmpFallbackModifier {
 //    ATTR(preference-property-extension, ...)
 struct OmpPreferenceSelector {
   UNION_CLASS_BOILERPLATE(OmpPreferenceSelector);
-  using FRID = common::Indirection<Expr>;
-  using Attrs = std::list<common::Indirection<Expr>>;
-  std::variant<FRID, Attrs> u;
+  using ForeignRuntimeIdentifier = common::Indirection<Expr>;
+  using PreferencePropertyExtension = common::Indirection<Expr>;
+  using Extensions = std::list<PreferencePropertyExtension>;
+  std::variant<ForeignRuntimeIdentifier, Extensions> u;
 };
 
 // Ref: [6.0:470-471]
@@ -4050,8 +4051,9 @@ struct OmpPreferenceSelector {
 //    foreign-runtime-identifier                    // since 5.1
 struct OmpPreferenceSpecification {
   UNION_CLASS_BOILERPLATE(OmpPreferenceSpecification);
-  using FRID = OmpPreferenceSelector::FRID;
-  std::variant<std::list<OmpPreferenceSelector>, FRID> u;
+  using ForeignRuntimeIdentifier =
+      OmpPreferenceSelector::ForeignRuntimeIdentifier;
+  std::variant<std::list<OmpPreferenceSelector>, ForeignRuntimeIdentifier> u;
 };
 
 // REF: [5.1:217-220], [5.2:293-294], [6.0:470-471]

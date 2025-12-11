@@ -2263,13 +2263,13 @@ public:
   void Unparse(const OmpPreferenceSelector &x) {
     common::visit( //
         common::visitors{
-            [&](const OmpPreferenceSelector::FRID &s) {
+            [&](const OmpPreferenceSelector::ForeignRuntimeIdentifier &s) {
               Word("FR");
               Put("(");
               Walk(s);
               Put(")");
             },
-            [&](const OmpPreferenceSelector::Attrs &s) {
+            [&](const OmpPreferenceSelector::Extensions &s) {
               Word("ATTR");
               Put("(");
               Walk(s, ", ");
@@ -2286,7 +2286,9 @@ public:
               Walk(s, ", ");
               Put("}");
             },
-            [&](const OmpPreferenceSelector::FRID &s) { Walk(s); },
+            [&](const OmpPreferenceSelector::ForeignRuntimeIdentifier &s) {
+              Walk(s);
+            },
         },
         x.u);
   }
