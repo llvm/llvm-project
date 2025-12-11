@@ -2818,11 +2818,12 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
         (match(GEPIdx, m_APInt(ConstOffset)) &&
          match(SrcIdx,
                m_Select(m_Value(Cond), m_APInt(TrueVal), m_APInt(FalseVal))))) {
-      auto *Select = isa<SelectInst>(GEPIdx) ? cast<SelectInst>(GEPIdx) : cast<SelectInst>(SrcIdx);
+      auto *Select = isa<SelectInst>(GEPIdx) ? cast<SelectInst>(GEPIdx)
+                                             : cast<SelectInst>(SrcIdx);
 
       // Make sure the select has only one use.
       if (!Select->hasOneUse())
-      return nullptr;
+        return nullptr;
 
       if (TrueVal->getBitWidth() != ConstOffset->getBitWidth() ||
           FalseVal->getBitWidth() != ConstOffset->getBitWidth())
