@@ -964,33 +964,35 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
     return builder.getString(str, eltTy, finalSize);
   }
 
-  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(convertType(e->getType()));
-  assert(arrayTy && "string literals must be emitted as an array type");
+  auto arrayTy = mlir::cast<cir::ArrayType>(convertType(e->getType()));
 
-  auto arrayEltTy = mlir::dyn_cast<cir::IntType>(arrayTy.getElementType());
-  assert(arrayEltTy &&
-         "string literal elements must be emitted as integral type");
+  auto arrayEltTy = mlir::cast<cir::IntType>(arrayTy.getElementType());
 
-  auto arraySize = arrayTy.getSize();
-  auto literalSize = e->getLength();
+  uint64_t arraySize = arrayTy.getSize();
+  unsigned literalSize = e->getLength();
 
-  // Collect the code units.
-  SmallVector<uint32_t, 32> elementValues;
-  elementValues.reserve(arraySize);
-  for (unsigned i = 0; i < literalSize; ++i)
-    elementValues.push_back(e->getCodeUnit(i));
-  elementValues.resize(arraySize);
+  // Check if the string is all null bytes before building the vector.
+  // In most non-zero cases, this will break out on the first element.
+  // Padding bytes (if literalSize < arraySize) are implicitly zero.
+  bool isAllZero = true;
+  for (unsigned i = 0; i < literalSize; ++i) {
+    if (e->getCodeUnit(i) != 0) {
+      isAllZero = false;
+      break;
+    }
+  }
 
-  // If the string is full of null bytes, emit a #cir.zero instead.
-  if (std::all_of(elementValues.begin(), elementValues.end(),
-                  [](uint32_t x) { return x == 0; }))
+  if (isAllZero)
     return cir::ZeroAttr::get(arrayTy);
 
   // Otherwise emit a constant array holding the characters.
-  SmallVector<mlir::Attribute, 32> elements;
+  SmallVector<mlir::Attribute> elements;
   elements.reserve(arraySize);
-  for (uint64_t i = 0; i < arraySize; ++i)
-    elements.push_back(cir::IntAttr::get(arrayEltTy, elementValues[i]));
+  for (unsigned i = 0; i < literalSize; ++i)
+    elements.push_back(cir::IntAttr::get(arrayEltTy, e->getCodeUnit(i)));
+  // Pad with zeros if needed.
+  for (uint64_t i = literalSize; i < arraySize; ++i)
+    elements.push_back(cir::IntAttr::get(arrayEltTy, 0));
 
   auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
   return builder.getConstArray(elementsAttr, arrayTy);
