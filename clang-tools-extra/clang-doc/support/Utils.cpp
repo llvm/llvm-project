@@ -28,8 +28,7 @@ SmallString<128> appendPathPosix(StringRef Base, StringRef Path) {
   return Default;
 }
 
-void getMustacheHtmlFiles(StringRef AssetsPath,
-                          clang::doc::ClangDocContext &CDCtx) {
+void getHtmlFiles(StringRef AssetsPath, clang::doc::ClangDocContext &CDCtx) {
   assert(!AssetsPath.empty());
   assert(sys::fs::is_directory(AssetsPath));
 

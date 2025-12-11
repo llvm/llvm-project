@@ -50,3 +50,4 @@ add_clang_library(clangAnalysis
 add_subdirectory(plugins)
 add_subdirectory(FlowSensitive)
 add_subdirectory(LifetimeSafety)
+add_subdirectory(Scalable)
