@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --format=mustache --output=%t --executor=standalone %s 
+// RUN: clang-doc --format=html --output=%t --executor=standalone %s 
 // RUN: FileCheck %s < %t/html/MyNamespace/index.html
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html --check-prefix=CHECK-GLOBAL
 
@@ -25,7 +25,6 @@ namespace MyNamespace {
 // CHECK-GLOBAL-NEXT:                </div>
 // CHECK-GLOBAL-NEXT:                <div class="resizer" id="resizer"></div>
 // CHECK-GLOBAL-NEXT:                <div class="content">
-// CHECK-GLOBAL-EMPTY:
 // CHECK-GLOBAL-NEXT:                </div>
 // CHECK-GLOBAL-NEXT:            </div>
 // CHECK-GLOBAL-NEXT:        </main>

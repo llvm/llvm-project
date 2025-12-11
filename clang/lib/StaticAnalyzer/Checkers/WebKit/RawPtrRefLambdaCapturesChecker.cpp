@@ -416,12 +416,9 @@ public:
             return false;
           }
           if (auto *CE = dyn_cast<CallExpr>(Arg)) {
-            if (CE->isCallToStdMove() && CE->getNumArgs() == 1) {
-              Arg = CE->getArg(0)->IgnoreParenCasts();
-              continue;
-            }
             if (auto *Callee = CE->getDirectCallee()) {
-              if (isCtorOfSafePtr(Callee) && CE->getNumArgs() == 1) {
+              if ((isStdOrWTFMove(Callee) || isCtorOfSafePtr(Callee)) &&
+                  CE->getNumArgs() == 1) {
                 Arg = CE->getArg(0)->IgnoreParenCasts();
                 continue;
               }
@@ -587,6 +584,8 @@ public:
   }
 
   std::optional<bool> isUnsafePtr(QualType QT) const final {
+    if (QT.hasStrongOrWeakObjCLifetime())
+      return false;
     return RTC->isUnretained(QT);
   }
 

@@ -89,6 +89,9 @@ public:
     return SmVersion >= 100 && PTXVersion >= 88 &&
            AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
   }
+  bool hasUsedBytesMaskPragma() const {
+    return SmVersion >= 50 && PTXVersion >= 83;
+  }
   bool hasAtomAddF64() const { return SmVersion >= 60; }
   bool hasAtomScope() const { return SmVersion >= 60; }
   bool hasAtomBitwise64() const { return SmVersion >= 32; }

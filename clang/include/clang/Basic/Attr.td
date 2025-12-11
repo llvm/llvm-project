@@ -4397,6 +4397,14 @@ def DLLExport : InheritableAttr, TargetSpecificAttr<TargetHasDLLImportExport> {
   let Documentation = [DLLExportDocs];
 }
 
+def DLLExportOnDecl : InheritableAttr, TargetSpecificAttr<TargetHasDLLImportExport> {
+  // This attribute is only used to warn if there was a `__declspec(dllexport)`
+  // on a declaration, but not on the defintion of an explicit instantiation
+  let Spellings = [];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [InternalOnly];
+}
+
 def DLLExportStaticLocal : InheritableAttr, TargetSpecificAttr<TargetHasDLLImportExport> {
   // This attribute is used internally only when -fno-dllexport-inlines is
   // passed. This attribute is added to inline functions of a class having the

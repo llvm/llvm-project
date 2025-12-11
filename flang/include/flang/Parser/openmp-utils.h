@@ -289,8 +289,8 @@ template <bool IsConst> struct LoopRange<IsConst>::iterator {
     --at;
     return *this;
   }
-  iterator &operator++(int);
-  iterator &operator--(int);
+  iterator operator++(int);
+  iterator operator--(int);
 
 private:
   friend struct LoopRange;
@@ -310,6 +310,9 @@ template <bool IsConst> inline auto LoopRange<IsConst>::end() -> iterator {
 }
 
 using ConstLoopRange = LoopRange<true>;
+
+extern template struct LoopRange<true>;
+extern template struct LoopRange<false>;
 
 } // namespace Fortran::parser::omp
 

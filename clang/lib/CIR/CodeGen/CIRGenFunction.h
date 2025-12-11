@@ -954,6 +954,11 @@ public:
   clang::QualType buildFunctionArgList(clang::GlobalDecl gd,
                                        FunctionArgList &args);
 
+  /// Emit the function prologue: declare function arguments in the symbol
+  /// table.
+  void emitFunctionProlog(const FunctionArgList &args, mlir::Block *entryBB,
+                          const FunctionDecl *fd, SourceLocation bodyBeginLoc);
+
   /// Emit code for the start of a function.
   /// \param loc       The location to be associated with the function.
   /// \param startLoc  The location of the function body.
@@ -1248,13 +1253,14 @@ public:
   /// CIR emit functions
   /// ----------------------
 public:
-  mlir::Value emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
-                                     ReturnValueSlot returnValue,
-                                     llvm::Triple::ArchType arch);
-  mlir::Value emitAArch64SMEBuiltinExpr(unsigned builtinID,
-                                        const CallExpr *expr);
-  mlir::Value emitAArch64SVEBuiltinExpr(unsigned builtinID,
-                                        const CallExpr *expr);
+  std::optional<mlir::Value>
+  emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
+                         ReturnValueSlot returnValue,
+                         llvm::Triple::ArchType arch);
+  std::optional<mlir::Value> emitAArch64SMEBuiltinExpr(unsigned builtinID,
+                                                       const CallExpr *expr);
+  std::optional<mlir::Value> emitAArch64SVEBuiltinExpr(unsigned builtinID,
+                                                       const CallExpr *expr);
 
   mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
                                       SourceLocation loc,
@@ -1814,9 +1820,9 @@ public:
                                      bool buildingTopLevelCase);
   mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
 
-  mlir::Value emitTargetBuiltinExpr(unsigned builtinID,
-                                    const clang::CallExpr *e,
-                                    ReturnValueSlot &returnValue);
+  std::optional<mlir::Value>
+  emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,
+                        ReturnValueSlot &returnValue);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
@@ -1856,7 +1862,8 @@ public:
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
-  mlir::Value emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr);
+  std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
+                                                const CallExpr *expr);
 
   /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
   /// nonnull, if 1\p LHS is marked _Nonnull.

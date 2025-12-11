@@ -277,7 +277,7 @@ void OmpStructureChecker::CheckNestedBlock(
       context_.Say(dir->source,
           "Compiler directives are not allowed inside OpenMP loop constructs"_warn_en_US);
     } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(stmt)}) {
-      if (!IsLoopTransforming(omp->BeginDir().DirName().v)) {
+      if (!IsLoopTransforming(omp->BeginDir().DirId())) {
         context_.Say(omp->source,
             "Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs"_err_en_US);
       }
