@@ -2425,11 +2425,11 @@ static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
       ConstantCompare.Extra)
     return nullptr;
 
-  unsigned MaxRegWidth = DL.getLargestLegalIntTypeSizeInBits();
-  unsigned MaxVal = 0;
+  uint64_t MaxRegWidth = DL.getLargestLegalIntTypeSizeInBits();
+  uint64_t MaxVal = 0;
   // TODO: Handle case where some values are too large for map but some are not.
   for (auto *CI : Values) {
-    unsigned Val = CI->getValue().getLimitedValue();
+    uint64_t Val = CI->getValue().getLimitedValue();
     if (Val >= MaxRegWidth)
       return nullptr;
     if (Val > MaxVal)
@@ -2438,7 +2438,7 @@ static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
   LLVMContext &Context = Or.getContext();
   APInt BitMapAP(MaxVal + 1, 0);
   for (auto *CI : Values) {
-    unsigned Val = CI->getValue().getLimitedValue();
+    uint64_t Val = CI->getValue().getLimitedValue();
     BitMapAP.setBit(Val);
   }
   ConstantInt *BitMap = ConstantInt::get(Context, BitMapAP);
