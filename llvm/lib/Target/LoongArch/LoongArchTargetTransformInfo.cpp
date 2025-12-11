@@ -17,7 +17,9 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/InstructionCost.h"
 #include <optional>
 
@@ -638,6 +640,248 @@ InstructionCost LoongArchTTIImpl::getCFInstrCost(unsigned Opcode,
     return 4;
   }
   return 1;
+}
+
+InstructionCost LoongArchTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) const {
+
+  // 64-bit packed float vectors (v2f32) are widened to type v4f32.
+  // 64-bit packed integer vectors (v2i32) are widened to type v4i32.
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
+
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+
+  if (Kind == TTI::SK_Broadcast) {
+    // For Broadcasts we are splatting the first element from the first input
+    // register, so only need to reference that input and all the output
+    // registers are the same.
+    LT.first = 1;
+
+    // If we're broadcasting a load with [X]VLDREPL can do this for free.
+    using namespace PatternMatch;
+    if (!Args.empty() && match(Args[0], m_OneUse(m_Load(m_Value()))) &&
+        (ST->hasExtLSX() || ST->hasExtLASX()))
+      return TTI::TCC_Free;
+  }
+
+  // Attempt to detect a cheaper inlane shuffle, avoiding 128-bit subvector
+  // permutation.
+  bool IsInLaneShuffle = false;
+  if (SrcTy->getPrimitiveSizeInBits() > 0 &&
+      (SrcTy->getPrimitiveSizeInBits() % 128) == 0 &&
+      SrcTy->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
+      Mask.size() == SrcTy->getElementCount().getKnownMinValue()) {
+    unsigned NumLanes = SrcTy->getPrimitiveSizeInBits() / 128;
+    unsigned NumEltsPerLane = Mask.size() / NumLanes;
+    if ((Mask.size() % NumLanes) == 0) {
+      IsInLaneShuffle = all_of(enumerate(Mask), [&](const auto &P) {
+        return P.value() == PoisonMaskElem ||
+               ((P.value() % Mask.size()) / NumEltsPerLane) ==
+                   (P.index() / NumEltsPerLane);
+      });
+    }
+  }
+
+  // Subvector extractions are free if they start at the beginning of a
+  // vector and cheap if the subvectors are aligned.
+  if (Kind == TTI::SK_ExtractSubvector && LT.second.isVector()) {
+    int NumElts = LT.second.getVectorNumElements();
+    if ((Index % NumElts) == 0)
+      return TTI::TCC_Free;
+    std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
+    if (SubLT.second.isVector()) {
+      int NumSubElts = SubLT.second.getVectorNumElements();
+      if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
+        return SubLT.first;
+    }
+    // If the extract subvector is not optimal, treat it as single op shuffle.
+    Kind = TTI::SK_PermuteSingleSrc;
+  }
+
+  // Subvector insertions are cheap if the subvectors are aligned.
+  // Note that in general, the insertion starting at the beginning of a vector
+  // isn't free, because we need to preserve the rest of the wide vector,
+  // but if the destination vector legalizes to the same width as the subvector
+  // then the insertion will simplify to a (free) register copy.
+  if (Kind == TTI::SK_InsertSubvector && LT.second.isVector()) {
+    std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(DstTy);
+    int NumElts = DstLT.second.getVectorNumElements();
+    std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
+    if (SubLT.second.isVector()) {
+      int NumSubElts = SubLT.second.getVectorNumElements();
+      bool MatchingTypes =
+          NumElts == NumSubElts &&
+          (SubTp->getElementCount().getKnownMinValue() % NumSubElts) == 0;
+      if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
+        return MatchingTypes ? TTI::TCC_Free : SubLT.first;
+    }
+
+    // Attempt to match vextrins/xvinsve0 pattern.
+    if (LT.first == 1 && SubLT.first == 1) {
+      // vextrins.{w/d}
+      if (ST->hasExtLSX() &&
+          ((LT.second == MVT::v4f32 && SubLT.second == MVT::f32) ||
+           (LT.second == MVT::v2f64 && SubLT.second == MVT::f64)))
+        return 1;
+
+      // xvinsve0.{w/d}
+      if (ST->hasExtLASX() &&
+          ((LT.second == MVT::v8f32 && SubLT.second == MVT::f32) ||
+           (LT.second == MVT::v4f64 && SubLT.second == MVT::f64)))
+        return 1;
+    }
+
+    // If the insertion is the lowest subvector then it will be blended
+    // otherwise treat it like a 2-op shuffle.
+    Kind =
+        (Index == 0 && LT.first == 1) ? TTI::SK_Select : TTI::SK_PermuteTwoSrc;
+  }
+
+  static const CostKindTblEntry LSXCostTable[] = {
+      {TTI::SK_Broadcast, MVT::v16i8, {1, 1}}, // vreplvei.b
+      {TTI::SK_Broadcast, MVT::v8i16, {1, 1}}, // vreplvei.h
+      {TTI::SK_Broadcast, MVT::v4i32, {1, 1}}, // vreplvei.w
+      {TTI::SK_Broadcast, MVT::v2i64, {1, 1}}, // vreplvei.d
+      {TTI::SK_Broadcast, MVT::v4f32, {1, 1}}, // vreplvei.w
+      {TTI::SK_Broadcast, MVT::v2f64, {1, 1}}, // vreplvei.d
+
+      {TTI::SK_Reverse, MVT::v16i8, {2, 2}}, // vshuf4i.w + vshuf4i.b
+      {TTI::SK_Reverse, MVT::v8i16, {2, 2}}, // vshuf4i.d + vshuf4i.h
+      {TTI::SK_Reverse, MVT::v4i32, {1, 1}}, // vshuf4i.w
+      {TTI::SK_Reverse, MVT::v2i64, {1, 1}}, // vshuf4i.d
+      {TTI::SK_Reverse, MVT::v4f32, {1, 1}}, // vshuf4i.w
+      {TTI::SK_Reverse, MVT::v2f64, {1, 1}}, // vshuf4i.d
+
+      {TTI::SK_Select, MVT::v16i8, {1, 2}}, // vbitsel.v
+      {TTI::SK_Select, MVT::v8i16, {1, 2}}, // vbitsel.v
+      {TTI::SK_Select, MVT::v4i32, {1, 2}}, // vbitsel.v
+      {TTI::SK_Select, MVT::v2i64, {1, 1}}, // vshuf4i.d
+      {TTI::SK_Select, MVT::v4f32, {1, 2}}, // vbitsel.v
+      {TTI::SK_Select, MVT::v2f64, {1, 1}}, // vshuf4i.d
+
+      {TTI::SK_Splice, MVT::v16i8, {3, 3}}, // vbsrl.v + vbsll.v + vor.v
+      {TTI::SK_Splice, MVT::v8i16, {3, 3}}, // vbsrl.v + vbsll.v + vor.v
+      {TTI::SK_Splice, MVT::v4i32, {3, 3}}, // vbsrl.v/vbsll.v + vor.v
+      {TTI::SK_Splice, MVT::v2i64, {1, 1}}, // vshuf4i.d
+      {TTI::SK_Splice, MVT::v4f32, {2, 2}}, // vbsrl.v/vbsll.v + vor.v
+      {TTI::SK_Splice, MVT::v2f64, {1, 1}}, // vshuf4i.d
+
+      {TTI::SK_Transpose, MVT::v16i8, {1, 1}}, // vpackev.b
+      {TTI::SK_Transpose, MVT::v8i16, {1, 1}}, // vpackev.h
+      {TTI::SK_Transpose, MVT::v4i32, {1, 1}}, // vpackev.w
+      {TTI::SK_Transpose, MVT::v2i64, {1, 1}}, // vpackev.d
+      {TTI::SK_Transpose, MVT::v4f32, {1, 1}}, // vpackev.w
+      {TTI::SK_Transpose, MVT::v2f64, {1, 1}}, // vpackev.d
+
+      {TTI::SK_PermuteSingleSrc, MVT::v16i8, {1, 2}}, // vshuf.b
+      {TTI::SK_PermuteSingleSrc, MVT::v8i16, {1, 2}}, // vshuf.h
+      {TTI::SK_PermuteSingleSrc, MVT::v4i32, {1, 1}}, // vshuf4i.w
+      {TTI::SK_PermuteSingleSrc, MVT::v2i64, {1, 1}}, // vshuf4i.d
+      {TTI::SK_PermuteSingleSrc, MVT::v4f32, {1, 1}}, // vshuf4i.w
+      {TTI::SK_PermuteSingleSrc, MVT::v2f64, {1, 1}}, // vshuf4i.d
+
+      {TTI::SK_PermuteTwoSrc, MVT::v16i8, {1, 2}}, // vshuf.b
+      {TTI::SK_PermuteTwoSrc, MVT::v8i16, {1, 2}}, // vshuf.h
+      {TTI::SK_PermuteTwoSrc, MVT::v4i32, {1, 2}}, // vshuf.w
+      {TTI::SK_PermuteTwoSrc, MVT::v2i64, {1, 1}}, // vshuf4i.d
+      {TTI::SK_PermuteTwoSrc, MVT::v4f32, {1, 2}}, // vshuf.w
+      {TTI::SK_PermuteTwoSrc, MVT::v2f64, {1, 1}}, // vshuf4i.d
+  };
+
+  if (ST->hasExtLSX()) {
+    if (const auto *Entry = CostTableLookup(LSXCostTable, Kind, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+  }
+
+  static const CostKindTblEntry LASXInLaneCostTable[] = {
+      {TTI::SK_PermuteSingleSrc, MVT::v32i8, {1, 2}},  // xvshuf.b
+      {TTI::SK_PermuteSingleSrc, MVT::v16i16, {1, 2}}, // xvshuf.h
+
+      {TTI::SK_PermuteTwoSrc, MVT::v32i8, {1, 2}},  // xvshuf.b
+      {TTI::SK_PermuteTwoSrc, MVT::v16i16, {1, 2}}, // xvshuf.h
+      {TTI::SK_PermuteTwoSrc, MVT::v8i32, {1, 2}},  // xvshuf.w
+      {TTI::SK_PermuteTwoSrc, MVT::v4i64, {1, 2}},  // xvshuf.d
+      {TTI::SK_PermuteTwoSrc, MVT::v8f32, {1, 2}},  // xvshuf.w
+      {TTI::SK_PermuteTwoSrc, MVT::v4f64, {1, 2}},  // xvshuf.d
+  };
+
+  if (ST->hasExtLASX() && IsInLaneShuffle) {
+    if (const auto *Entry =
+            CostTableLookup(LASXInLaneCostTable, Kind, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+  }
+
+  static const CostKindTblEntry LASXCostTable[] = {
+      {TTI::SK_Broadcast, MVT::v32i8, {4, 2}},  // xvpermi.d + xvrepl128vei.b
+      {TTI::SK_Broadcast, MVT::v16i16, {4, 2}}, // xvpermi.d + xvrepl128vei.h
+      {TTI::SK_Broadcast, MVT::v8i32, {4, 2}},  // xvpermi.d + xvrepl128vei.w
+      {TTI::SK_Broadcast, MVT::v4i64, {3, 1}},  // xvpermi.d
+      {TTI::SK_Broadcast, MVT::v8f32, {4, 2}},  // xvpermi.d + xvrepl128vei.w
+      {TTI::SK_Broadcast, MVT::v4f64, {3, 1}},  // xvpermi.d
+
+      {TTI::SK_Reverse, MVT::v32i8, {5, 3}},  // xvpermi.d + xvshuf4i.w
+                                              // + xvshuf4i.b
+      {TTI::SK_Reverse, MVT::v16i16, {4, 2}}, // xvpermi.d + xvshuf4i.h
+      {TTI::SK_Reverse, MVT::v8i32, {4, 2}},  // xvpermi.d + xvshuf4i.w
+      {TTI::SK_Reverse, MVT::v4i64, {3, 1}},  // xvpermi.d
+      {TTI::SK_Reverse, MVT::v8f32, {4, 2}},  // xvpermi.d + xvshuf4i.w
+      {TTI::SK_Reverse, MVT::v4f64, {3, 1}},  // xvpermi.d
+
+      {TTI::SK_Select, MVT::v32i8, {1, 2}},  // xvbitsel.v
+      {TTI::SK_Select, MVT::v16i16, {1, 2}}, // xvbitsel.v
+      {TTI::SK_Select, MVT::v8i32, {1, 2}},  // xvbitsel.v
+      {TTI::SK_Select, MVT::v4i64, {1, 2}},  // xvbitsel.v
+      {TTI::SK_Select, MVT::v8f32, {1, 2}},  // xvbitsel.v
+      {TTI::SK_Select, MVT::v4f64, {1, 2}},  // xvbitsel.v
+
+      {TTI::SK_Splice, MVT::v32i8, {6, 4}},  // xvpermi.q + xvbsll.v + xvbsrl.v
+                                             // + xvor.v
+      {TTI::SK_Splice, MVT::v16i16, {6, 4}}, // xvpermi.q + xvbsll.v + xvbsrl.v
+                                             // + xvor.v
+      {TTI::SK_Splice, MVT::v8i32, {6, 4}},  // xvpermi.q + xvbsll.v + xvbsrl.v
+                                             // + xvor.v
+      {TTI::SK_Splice, MVT::v4i64, {4, 2}},  // xvpermi.q + xvshuf4i.d
+      {TTI::SK_Splice, MVT::v8f32, {6, 4}},  // xvpermi.q + xvbsll.v + xvbsrl.v
+                                             // + xvor.v
+      {TTI::SK_Splice, MVT::v4f64, {4, 2}},  // xvpermi.q + xvshuf4i.d
+
+      {TTI::SK_Transpose, MVT::v32i8, {1, 1}},  // xvpackev.b
+      {TTI::SK_Transpose, MVT::v16i16, {1, 1}}, // xvpackev.h
+      {TTI::SK_Transpose, MVT::v8i32, {1, 1}},  // xvpackev.w
+      {TTI::SK_Transpose, MVT::v4i64, {1, 1}},  // xvpackev.d
+      {TTI::SK_Transpose, MVT::v8f32, {1, 1}},  // xvpackev.w
+      {TTI::SK_Transpose, MVT::v4f64, {1, 1}},  // xvpackev.d
+
+      {TTI::SK_PermuteSingleSrc, MVT::v32i8, {4, 3}},  // xvpermi.d + xvshuf.b
+      {TTI::SK_PermuteSingleSrc, MVT::v16i16, {4, 3}}, // xvpermi.d + xvshuf.h
+      {TTI::SK_PermuteSingleSrc, MVT::v8i32, {3, 1}},  // xvperm.w
+      {TTI::SK_PermuteSingleSrc, MVT::v4i64, {3, 1}},  // xvpermi.d
+      {TTI::SK_PermuteSingleSrc, MVT::v8f32, {3, 1}},  // xvperm.w
+      {TTI::SK_PermuteSingleSrc, MVT::v4f64, {3, 1}},  // xvpermi.d
+
+      {TTI::SK_PermuteTwoSrc, MVT::v32i8, {9, 8}},  // 2 *xvpermi.q + 2*xvshuf.b
+                                                    // + xvbitsel.v
+      {TTI::SK_PermuteTwoSrc, MVT::v16i16, {9, 8}}, // 2*xvpermi.q + 2*xvshuf.h
+                                                    // + xvbitsel.v
+      {TTI::SK_PermuteTwoSrc, MVT::v8i32, {7, 4}},  // 2*xvperm.w + xvbitsel.v
+      {TTI::SK_PermuteTwoSrc, MVT::v4i64, {7, 4}},  // 2*xvpermi.d + xvshuf.d
+      {TTI::SK_PermuteTwoSrc, MVT::v8f32, {7, 4}},  // 2*xvperm.w + xvbitsel.v
+      {TTI::SK_PermuteTwoSrc, MVT::v4f64, {7, 4}},  // 2*xvpermi.d + xvshuf.d
+  };
+
+  if (ST->hasExtLASX()) {
+    if (const auto *Entry = CostTableLookup(LASXCostTable, Kind, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+  }
+
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                               SubTp);
 }
 
 bool LoongArchTTIImpl::prefersVectorizedAddressing() const { return false; }

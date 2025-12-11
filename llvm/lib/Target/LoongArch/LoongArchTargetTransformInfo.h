@@ -82,6 +82,12 @@ public:
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) const override;
 
+  InstructionCost
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
+                 const Instruction *CxtI = nullptr) const override;
+
   bool prefersVectorizedAddressing() const override;
 
   TTI::MemCmpExpansionOptions
