@@ -63,6 +63,12 @@ static cl::opt<bool> ForceEmitZeroLoadFlag(
     cl::desc("Force all waitcnt load counters to wait until 0"),
     cl::init(false), cl::Hidden);
 
+static cl::opt<bool> OptimizeDSLoopWaitcnt(
+    "amdgpu-waitcnt-loop-ds-opt",
+    cl::desc(
+        "Optimize DS wait counts in single-block loops with WMMA (GFX12+)"),
+    cl::init(false), cl::Hidden);
+
 namespace {
 // Class of object that encapsulates latest instruction counter score
 // associated with the operand.  Used for determining whether
@@ -448,6 +454,23 @@ private:
   // message.
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
 
+  // Single-block loop DS wait optimization (GFX12+)
+  // This optimization relaxes DS wait counts in loops with many DS loads and
+  // WMMA instructions, allowing more overlap between memory and compute.
+  struct LoopDSWaitOptInfo {
+    // Maps VGPR number to the position (1-based) of the DS load that writes it.
+    // Position 1 = first DS load in sequence, etc.
+    DenseMap<unsigned, unsigned> VGPRToLoadPosition;
+    unsigned TotalDSLoads = 0;
+    bool Valid = false;
+    // Set to true when relaxation is actually applied in the loop body.
+    // Used to determine if preheader needs DS_CNT flush.
+    mutable bool RelaxationApplied = false;
+  };
+
+  // Cache of loop DS wait optimization info, keyed by loop header MBB.
+  DenseMap<MachineBasicBlock *, LoopDSWaitOptInfo> LoopDSWaitOptCache;
+
   HardwareLimits Limits;
 
 public:
@@ -573,6 +596,10 @@ public:
                              WaitcntBrackets &ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
                             WaitcntBrackets &ScoreBrackets);
+
+  // DS loop wait optimization functions
+  bool isEligibleForDSLoopOpt(MachineLoop *ML, LoopDSWaitOptInfo &Info) const;
+  void analyzeSingleBBLoopDSLoads(MachineLoop *ML);
 };
 
 // This objects maintains the current score brackets of each wait counter, and
@@ -2643,6 +2670,85 @@ bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
   return SIInstrInfo::isVMEM(MI);
 }
 
+//===----------------------------------------------------------------------===//
+// DS Loop Wait Optimization (GFX12+)
+//
+// This optimization relaxes DS wait counts in single-block loops that have
+// many DS loads and WMMA/MFMA instructions (typical GEMM kernels with software
+// pipelining). Instead of waiting for almost all DS loads to complete before
+// each WMMA, we analyze which specific loads feed each WMMA and wait only for
+// those to complete, allowing more overlap between memory and compute.
+//
+// Opportunity arises when the load ordering in the preheader block and
+// the load ordering at the end of the loop body, feeding the loaded data
+// to the next iteration, are not matched well (since their orderings are
+// not co-optimized)
+//===----------------------------------------------------------------------===//
+
+bool SIInsertWaitcnts::isEligibleForDSLoopOpt(MachineLoop *ML,
+                                              LoopDSWaitOptInfo &Info) const {
+  if (!OptimizeDSLoopWaitcnt)
+    return false;
+
+  // Only for GFX12+ where we have a separate counter for LDS.
+  if (!ST->hasExtendedWaitCounts())
+    return false;
+
+  // Must be a single-block loop. Makes the analysis easier.
+  if (ML->getNumBlocks() != 1)
+    return false;
+
+  MachineBasicBlock *MBB = ML->getHeader();
+
+  // Count DS loads, WMMA/MFMA instructions, and total non-meta instructions
+  unsigned NumDSLoads = 0;
+  unsigned NumWMMA = 0;
+  unsigned NumInsts = 0;
+
+  for (const MachineInstr &MI : *MBB) {
+    if (!MI.isMetaInstruction())
+      ++NumInsts;
+
+    if (SIInstrInfo::isDS(MI)) {
+      if (MI.mayLoad() && !MI.mayStore())
+        ++NumDSLoads;
+    } else if (SIInstrInfo::isWMMA(MI) || SIInstrInfo::isMFMA(MI)) {
+      ++NumWMMA;
+    }
+  }
+
+  // Heuristics: need significant number of DS loads and WMMA/MFMA
+  // to make this optimization worthwhile
+  if (NumDSLoads < 16 || NumWMMA < 8)
+    return false;
+
+  // DS loads and WMMAs should be a significant portion of the loop body
+  // (at least 1/4 of the instructions)
+  if ((NumDSLoads + NumWMMA) * 4 < NumInsts)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Loop DS Wait Opt: Loop at "; MBB->printName(dbgs());
+             dbgs() << " - " << NumDSLoads << " DS loads, " << NumWMMA
+                    << " WMMA/MFMA, " << NumInsts
+                    << " total insts, eligible\n");
+
+  return true;
+}
+
+void SIInsertWaitcnts::analyzeSingleBBLoopDSLoads(MachineLoop *ML) {
+  MachineBasicBlock *MBB = ML->getHeader();
+  LoopDSWaitOptInfo &Info = LoopDSWaitOptCache[MBB];
+
+  // Quick structural checks
+  if (!isEligibleForDSLoopOpt(ML, Info)) {
+    Info.Valid = false;
+    return;
+  }
+
+  // For now, just mark as invalid - full analysis comes in a later PR.
+  Info.Valid = false;
+}
+
 // Return true if it is better to flush the vmcnt counter in the preheader of
 // the given loop. We currently decide to flush in two situations:
 // 1. The loop contains vmem store(s), no vmem load and at least one use of a
@@ -2786,6 +2892,22 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
 
   BlockInfos.clear();
+  LoopDSWaitOptCache.clear();
+
+  // Analyze single-block loops for DS wait optimization (GFX12+)
+  if (OptimizeDSLoopWaitcnt && ST->hasExtendedWaitCounts()) {
+    SmallVector<MachineLoop *, 4> Worklist(MLI->begin(), MLI->end());
+    while (!Worklist.empty()) {
+      MachineLoop *ML = Worklist.pop_back_val();
+      auto BeginIt = ML->getSubLoops().begin();
+      auto EndIt = ML->getSubLoops().end();
+      if (BeginIt == EndIt) // innermost loop only
+        analyzeSingleBBLoopDSLoads(ML);
+      else
+        Worklist.append(BeginIt, EndIt);
+    }
+  }
+
   bool Modified = false;
 
   MachineBasicBlock &EntryBB = MF.front();
@@ -2975,6 +3097,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   }
   ReleaseVGPRInsts.clear();
   PreheadersToFlush.clear();
+  LoopDSWaitOptCache.clear();
   SLoadAddresses.clear();
 
   return Modified;
