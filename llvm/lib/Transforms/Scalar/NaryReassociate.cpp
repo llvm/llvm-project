@@ -640,7 +640,7 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
                                       SE->getUnknown(R1MinMax)};
     const SCEV *R2Expr = SE->getMinMaxExpr(SCEVType, Ops2);
 
-    SCEVExpander Expander(*SE, *DL, "nary-reassociate");
+    SCEVExpander Expander(*SE, "nary-reassociate");
     Value *NewMinMax = Expander.expandCodeFor(R2Expr, I->getType(), I);
     NewMinMax->setName(Twine(I->getName()).concat(".nary"));
 
