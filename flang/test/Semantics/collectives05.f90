@@ -56,7 +56,7 @@ program main
   allocate(foo_t :: polymorphic)
 
   ! Test all statically verifiable semantic requirements on co_reduce arguments
-  ! Note: We cannot check requirements that relate to "corresponding references." 
+  ! Note: We cannot check requirements that relate to "corresponding references."
   ! References can correspond only if they execute on differing images.  A code that
   ! executes in a single image might be standard-conforming even if the same code
   ! executing in multiple images is not.

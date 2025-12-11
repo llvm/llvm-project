@@ -6,8 +6,8 @@
 // RUN: FileCheck %s < %t/GlobalNamespace/MyClass.md --check-prefix=MD-MYCLASS
 
 // RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %s
-// RUN: FileCheck %s < %t/GlobalNamespace/MyClass.html --check-prefix=HTML-MYCLASS-LINE
-// RUN: FileCheck %s < %t/GlobalNamespace/MyClass.html --check-prefix=HTML-MYCLASS
+// RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV7MyClass.html --check-prefix=HTML-MYCLASS-LINE
+// RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV7MyClass.html --check-prefix=HTML-MYCLASS
 
 #define DECLARE_METHODS                                           \
     /**   							  
@@ -21,15 +21,18 @@
 // MD-MYCLASS: *public int Add(int a, int b)*
 // MD-MYCLASS: **brief** Declare a method to calculate the sum of two numbers
 
-// HTML-MYCLASS: <p>public int Add(int a, int b)</p>
-// HTML-MYCLASS: <div>brief</div>
-// HTML-MYCLASS: <p> Declare a method to calculate the sum of two numbers</p>
+
+// HTML-MYCLASS: <pre><code class="language-cpp code-clang-doc">int Add (int a, int b)</code></pre>
+// HTML-MYCLASS: <div>
+// HTML-MYCLASS:     <div>
+// HTML-MYCLASS:         <p> Declare a method to calculate the sum of two numbers</p>
+// HTML-MYCLASS:     </div>
 
 
 class MyClass {
 public:
-// MD-MYCLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}comments-in-macros.cpp#[[@LINE+2]]*
-// HTML-MYCLASS-LINE: <p>Defined at line [[@LINE+1]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}comments-in-macros.cpp</p>
+// MD-MYCLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}comments-in-macros.cpp#[[@LINE-2]]*
+// HTML-MYCLASS-LINE: <p>Defined at line [[@LINE-3]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}comments-in-macros.cpp</p>
     DECLARE_METHODS
 };
 

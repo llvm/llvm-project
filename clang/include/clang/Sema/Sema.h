@@ -3019,7 +3019,7 @@ private:
                          llvm::SmallBitVector &CheckedVarArgs);
   bool CheckFormatArguments(ArrayRef<const Expr *> Args,
                             FormatArgumentPassingKind FAPK,
-                            const StringLiteral *ReferenceFormatString,
+                            StringLiteral *ReferenceFormatString,
                             unsigned format_idx, unsigned firstDataArg,
                             FormatStringType Type, VariadicCallType CallType,
                             SourceLocation Loc, SourceRange range,
@@ -10935,6 +10935,10 @@ public:
   /// Stack of active SEH __finally scopes.  Can be empty.
   SmallVector<Scope *, 2> CurrentSEHFinally;
 
+  /// Stack of '_Defer' statements that are currently being parsed, as well
+  /// as the locations of their '_Defer' keywords. Can be empty.
+  SmallVector<std::pair<Scope *, SourceLocation>, 2> CurrentDefer;
+
   StmtResult ActOnExprStmt(ExprResult Arg, bool DiscardedValue = true);
   StmtResult ActOnExprStmtError();
 
@@ -11080,6 +11084,10 @@ public:
                                LabelDecl *Label, SourceLocation LabelLoc);
   StmtResult ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
                             LabelDecl *Label, SourceLocation LabelLoc);
+
+  void ActOnStartOfDeferStmt(SourceLocation DeferLoc, Scope *CurScope);
+  void ActOnDeferStmtError(Scope *CurScope);
+  StmtResult ActOnEndOfDeferStmt(Stmt *Body, Scope *CurScope);
 
   struct NamedReturnInfo {
     const VarDecl *Candidate;

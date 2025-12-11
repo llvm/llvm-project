@@ -263,3 +263,67 @@ func.func @maxnumf(%arg0: f32, %arg1: f32) {
   %0 = arith.maxnumf %arg0, %arg1 : f32
   return
 }
+
+// -----
+
+// CHECK-LABEL: func.func @unsupported_bitwidth
+//       CHECK:   arith.addf {{.*}} : f128
+//       CHECK:   arith.negf {{.*}} : f128
+//       CHECK:   arith.cmpf {{.*}} : f128
+//       CHECK:   arith.extf {{.*}} : f32 to f128
+//       CHECK:   arith.truncf {{.*}} : f128 to f32
+//       CHECK:   arith.fptosi {{.*}} : f128 to i32
+//       CHECK:   arith.fptosi {{.*}} : f32 to i92
+//       CHECK:   arith.sitofp {{.*}} : i1 to f128
+//       CHECK:   arith.sitofp {{.*}} : i92 to f32
+func.func @unsupported_bitwidth(%arg0: f128, %arg1: f128, %arg2: f32) {
+  %0 = arith.addf %arg0, %arg1 : f128
+  %1 = arith.negf %arg0 : f128
+  %2 = arith.cmpf "ult", %arg0, %arg1 : f128
+  %3 = arith.extf %arg2 : f32 to f128
+  %4 = arith.truncf %arg0 : f128 to f32
+  %5 = arith.fptosi %arg0 : f128 to i32
+  %6 = arith.fptosi %arg2 : f32 to i92
+  %7 = arith.sitofp %2 : i1 to f128
+  %8 = arith.sitofp %6 : i92 to f32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @addf_vector
+//     CHECK-2:   vector.to_elements
+
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   call
+//       CHECK:   arith.trunci
+
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   call
+//       CHECK:   arith.trunci
+
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   call
+//       CHECK:   arith.trunci
+
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   call
+//       CHECK:   arith.trunci
+
+//       CHECK:   vector.from_elements
+func.func @addf_vector(%arg0: vector<4xf4E2M1FN>, %arg1: vector<4xf4E2M1FN>) {
+  %0 = arith.addf %arg0, %arg1 : vector<4xf4E2M1FN>
+  return
+}
