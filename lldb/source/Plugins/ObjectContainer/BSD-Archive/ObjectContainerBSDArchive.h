@@ -169,9 +169,9 @@ protected:
     lldb::offset_t m_file_offset;
     std::vector<Object> m_objects;
     ObjectNameToIndexMap m_object_name_to_index_map;
-    lldb::DataExtractorSP m_data_sp; ///< The data for this object container
-                                     /// so we don't lose data if the .a files
-                                     /// gets modified
+    /// The data for this object container so we don't lose data if the .a files
+    /// gets modified.
+    lldb::DataExtractorSP m_data_sp;
     ArchiveType m_archive_type;
   };
 
