@@ -3268,6 +3268,10 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   if (auto ifVar = opInst.getIfExpr())
     ifCond = moduleTranslation.lookupValue(ifVar);
   llvm::Value *numThreads = nullptr;
+  // num_threads dims and values are not yet supported
+  assert(!opInst.getNumThreadsDims().has_value() &&
+         opInst.getNumThreadsValues().empty() &&
+         "Lowering of num_threads with dims modifier is NYI.");
   if (auto numThreadsVar = opInst.getNumThreads())
     numThreads = moduleTranslation.lookupValue(numThreadsVar);
   auto pbKind = llvm::omp::OMP_PROC_BIND_default;
@@ -6050,6 +6054,10 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
               llvm_unreachable("unsupported host_eval use");
           })
           .Case([&](omp::ParallelOp parallelOp) {
+            // num_threads dims and values are not yet supported
+            assert(!parallelOp.getNumThreadsDims().has_value() &&
+                   parallelOp.getNumThreadsValues().empty() &&
+                   "Lowering of num_threads with dims modifier is NYI.");
             if (parallelOp.getNumThreads() == blockArg)
               numThreads = hostEvalVar;
             else
@@ -6167,8 +6175,13 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
       threadLimit = teamsOp.getThreadLimit();
     }
 
-    if (auto parallelOp = castOrGetParentOfType<omp::ParallelOp>(capturedOp))
+    if (auto parallelOp = castOrGetParentOfType<omp::ParallelOp>(capturedOp)) {
+      // num_threads dims and values are not yet supported
+      assert(!parallelOp.getNumThreadsDims().has_value() &&
+             parallelOp.getNumThreadsValues().empty() &&
+             "Lowering of num_threads with dims modifier is NYI.");
       numThreads = parallelOp.getNumThreads();
+    }
   }
 
   // Handle clauses impacting the number of teams.
