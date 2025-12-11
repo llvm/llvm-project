@@ -123,7 +123,7 @@
                     <div>
                         {{#PublicMembers}}
                         <div id="{{Name}}" class="delimiter-container">
-                            <pre><code class="language-cpp code-clang-doc" >{{Type}} {{Name}}</code></pre>
+                            <pre><code class="language-cpp code-clang-doc" >{{#IsStatic}}static {{/IsStatic}}{{Type}} {{Name}}</code></pre>
                             {{#MemberComments}}
                             <div>
                                 {{>Comments}}
@@ -140,7 +140,7 @@
                     <div>
                         {{#Obj}}
                         <div id="{{Name}}" class="delimiter-container">
-                            <pre><code class="language-cpp code-clang-doc" >{{Type}} {{Name}}</code></pre>
+                            <pre><code class="language-cpp code-clang-doc" >{{#IsStatic}}static {{/IsStatic}}{{Type}} {{Name}}</code></pre>
                             {{#MemberComments}}
                             <div>
                                 {{>Comments}}
