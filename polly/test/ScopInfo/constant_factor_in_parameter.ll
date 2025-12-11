@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -disable-output '-passes=print<polly-function-scops>' < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -disable-output '-passes=print<polly-function-scops>' < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -disable-output '-passes=polly-custom<scops>' -polly-print-scops < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -disable-output '-passes=polly-custom<scops>' -polly-print-scops < %s 2>&1 | FileCheck %s
 ;
 ; Check that the constant part of the N * M * 4 expression is not part of the
 ; parameter but explicit in the access function. This can avoid existentially

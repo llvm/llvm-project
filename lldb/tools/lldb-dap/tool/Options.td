@@ -82,3 +82,11 @@ def connection_timeout: S<"connection-timeout">,
     "timeout is reached, the server will be closed and the process will exit. "
     "Not specifying this argument or specifying non-positive values will "
     "cause the server to wait for new connections indefinitely.">;
+
+def client
+    : S<"client">,
+      MetaVarName<"<client>">,
+      HelpText<
+          "Use lldb-dap as a launcher for a curated number of DAP client.">;
+
+def REM : R<["--"], "">;

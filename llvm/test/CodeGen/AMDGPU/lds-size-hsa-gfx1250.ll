@@ -41,7 +41,7 @@ define amdgpu_kernel void @test_lds_i32(i32 %val) {
 ; GCN-LABEL: test_lds_array_i8:
 ; GCN: .amdhsa_group_segment_fixed_size 327680
 ; GCN: ; LDSByteSize: 327680 bytes/workgroup
-; MESA: granulated_lds_size = 320
+; MESA: granulated_lds_size = 160
 define amdgpu_kernel void @test_lds_array_i8() {
   %gep = getelementptr inbounds [327679 x i8], ptr addrspace(3) @lds.array.i8, i32 0, i32 5
   %val = load i8, ptr addrspace(3) %gep
@@ -52,7 +52,7 @@ define amdgpu_kernel void @test_lds_array_i8() {
 ; GCN-LABEL: test_lds_array_i16:
 ; GCN: .amdhsa_group_segment_fixed_size 327680
 ; GCN: ; LDSByteSize: 327680 bytes/workgroup
-; MESA: granulated_lds_size = 320
+; MESA: granulated_lds_size = 160
 define amdgpu_kernel void @test_lds_array_i16() {
   %gep = getelementptr inbounds [163839 x i16], ptr addrspace(3) @lds.array.i16, i32 0, i32 10
   %val = load i16, ptr addrspace(3) %gep
@@ -63,7 +63,7 @@ define amdgpu_kernel void @test_lds_array_i16() {
 ; GCN-LABEL: test_lds_array_i32:
 ; GCN: .amdhsa_group_segment_fixed_size 327680
 ; GCN: ; LDSByteSize: 327680 bytes/workgroup
-; MESA: granulated_lds_size = 320
+; MESA: granulated_lds_size = 160
 define amdgpu_kernel void @test_lds_array_i32() {
   %gep = getelementptr inbounds [81919 x i32], ptr addrspace(3) @lds.array.i32, i32 0, i32 20
   %val = load i32, ptr addrspace(3) %gep

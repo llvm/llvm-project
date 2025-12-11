@@ -80,8 +80,8 @@ attributes #1 = { nounwind readnone }
 !26 = !DILocation(line: 9, column: 3, scope: !4)
 !27 = distinct !DISubprogram(name: "func3", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !28)
 !28 = !{!29}
-!29 = !DILocalVariable(name: "n", arg: 1, scope: !30, file: !1, line: 8, type: !7)
+!29 = !DILocalVariable(name: "n", arg: 1, scope: !27, file: !1, line: 8, type: !33)
 !30 = distinct !DISubprogram(name: "func4", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !31)
 !31 = !{!32}
 !32 = !DILocalVariable(name: "n", arg: 1, scope: !30, file: !1, line: 8, type: !7)
-
+!33 = !DIDerivedType(tag: DW_TAG_typedef, name: "size_t", scope: !30, file: !1, line: 13, baseType: !7)

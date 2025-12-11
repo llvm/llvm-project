@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa,scoped-noalias-aa,tbaa '-passes=print<polly-function-scops>' -disable-output < %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa,scoped-noalias-aa,tbaa '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s
 ;
 ; Ensure that ScopInfo's alias analysis llvm.memcpy for,
 ; like the AliasSetTracker, preserves bitcasts.

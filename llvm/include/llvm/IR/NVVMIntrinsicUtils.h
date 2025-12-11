@@ -18,8 +18,11 @@
 #include <stdint.h>
 
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace nvvm {
@@ -55,6 +58,10 @@ enum class Tcgen05CollectorUsageOp : uint8_t {
   FILL = 2,
   USE = 3,
 };
+
+void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
+
+void printTcgen05CollectorUsageOp(raw_ostream &OS, const Constant *ImmArgVal);
 
 inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {

@@ -20,6 +20,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -127,7 +128,6 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
 #include <cassert>
-#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -638,6 +638,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
               /*Force=*/true);
     addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>(),
               /*Force=*/true);
+    addIRPass(RequireAnalysisPass<RuntimeLibraryAnalysis, Module>(),
+              /*Force=*/true);
     addISelPasses(addIRPass);
   }
 
@@ -1079,10 +1081,12 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
 
   derived().addPreEmitPass(addPass);
 
-  if (TM.Options.EnableIPRA)
+  if (TM.Options.EnableIPRA) {
     // Collect register usage information and produce a register mask of
     // clobbered registers, to be used to optimize call sites.
+    addPass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>());
     addPass(RegUsageInfoCollectorPass());
+  }
 
   addPass(FuncletLayoutPass());
 

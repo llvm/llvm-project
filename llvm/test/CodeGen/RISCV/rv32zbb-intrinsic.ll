@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZBB
 
-declare i32 @llvm.riscv.orc.b.i32(i32)
-
 define i32 @orcb(i32 %a) nounwind {
 ; RV32ZBB-LABEL: orcb:
 ; RV32ZBB:       # %bb.0:

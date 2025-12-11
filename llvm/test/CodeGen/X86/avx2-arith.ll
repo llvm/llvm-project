@@ -121,14 +121,13 @@ define <16 x i8> @mul_v16i8(<16 x i8> %i, <16 x i8> %j) nounwind readnone {
 define <32 x i8> @mul_v32i8(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 ; CHECK-LABEL: mul_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; CHECK-NEXT:    vpand %ymm2, %ymm1, %ymm3
-; CHECK-NEXT:    vpmaddubsw %ymm3, %ymm0, %ymm3
-; CHECK-NEXT:    vpand %ymm2, %ymm3, %ymm3
-; CHECK-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; CHECK-NEXT:    vpmullw %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; CHECK-NEXT:    vpandn %ymm1, %ymm3, %ymm1
 ; CHECK-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpsllw $8, %ymm0, %ymm0
-; CHECK-NEXT:    vpor %ymm0, %ymm3, %ymm0
+; CHECK-NEXT:    vpor %ymm0, %ymm2, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = mul <32 x i8> %i, %j
   ret <32 x i8> %x

@@ -11,3 +11,29 @@ struct Foo {
   }
 };
 } // namespace GH95707
+
+namespace GH163731 {
+struct S1 {
+  int a;
+  void m(this S1 &self) {
+    auto lambda = [](int a) { return a; };
+  }
+};
+
+struct S2 {
+  int a;
+  void m(this S2 &self) {
+    int a = 1;                // expected-note {{previous declaration is here}}
+    auto lambda = [](int a) { // expected-warning {{declaration shadows a local variable}}
+      return a;
+    };
+  }
+};
+
+struct S3 {
+  int a;
+  void m(this S3 &self) {
+    auto lambda = [self](int a) { return a + self.a; };
+  }
+};
+}

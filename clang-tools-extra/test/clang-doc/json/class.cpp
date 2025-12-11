@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/json/_ZTV7MyClass.json
+// RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV7MyClass.json
 
 struct Foo;
 
@@ -47,9 +47,6 @@ protected:
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "TextComment": " It has some nice methods and fields."
-// CHECK-NEXT:          },
-// CHECK-NEXT:          {
-// CHECK-NEXT:            "TextComment": ""
 // CHECK-NEXT:          }
 // CHECK:         "DocumentationFileName": "_ZTV7MyClass",
 // CHECK:         "Enums": [
@@ -124,8 +121,6 @@ protected:
 // CHECK-NEXT:        }
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
-// COM:           FIXME: FullName is not emitted correctly.
-// CHECK-NEXT:    "FullName": "",
 // CHECK-NEXT:    "HasEnums": true,
 // CHECK-NEXT:    "HasPublicFunctions": true,
 // CHECK-NEXT:    "HasPublicMembers": true,

@@ -121,6 +121,13 @@ multiclass RVVVQMACCQOQBuiltinSet<list<list<string>> suffixes_prototypes> {
     defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "s", suffixes_prototypes>;
 }
 
+multiclass RVVVFEXPBuiltinSet<list<list<string>> suffixes_prototypes, string type_range> {
+  let UnMaskedPolicyScheme = HasPassthruOperand,
+      OverloadedName = NAME,
+      Log2LMUL = [-2, -1, 0, 1, 2, 3] in
+    defm NAME : RVVOutBuiltinSet<NAME, type_range, suffixes_prototypes>;
+}
+
 multiclass RVVVFNRCLIPBuiltinSet<string suffix, string prototype, string type_range> {
   let Log2LMUL = [-3, -2, -1, 0, 1, 2],
       Name = NAME,
@@ -144,6 +151,26 @@ let UnMaskedPolicyScheme = HasPolicyOperand in
     defm sf_vqmaccus_4x8x4 : RVVVQMACCQOQBuiltinSet<[["", "w", "ww(FixedSEW:8)SUv(FixedSEW:8)v"]]>;
     defm sf_vqmaccsu_4x8x4 : RVVVQMACCQOQBuiltinSet<[["", "w", "ww(FixedSEW:8)Sv(FixedSEW:8)Uv"]]>;
   }
+
+let RequiredFeatures = ["xsfvfbfexp16e"] in {
+  defm sf_vfexp : RVVVFEXPBuiltinSet<[["v", "v", "vv"]], "y">;
+}
+
+let RequiredFeatures = ["xsfvfexp16e"] in {
+  defm sf_vfexp : RVVVFEXPBuiltinSet<[["v", "v", "vv"]], "x">;
+}
+
+let RequiredFeatures = ["xsfvfexp32e"] in {
+  defm sf_vfexp : RVVVFEXPBuiltinSet<[["v", "v", "vv"]], "f">;
+}
+
+let RequiredFeatures = ["xsfvfexpa"] in {
+  defm sf_vfexpa : RVVVFEXPBuiltinSet<[["v", "v", "vv"]], "xf">;
+}
+
+let RequiredFeatures = ["xsfvfexpa64e"] in {
+  defm sf_vfexpa : RVVVFEXPBuiltinSet<[["v", "v", "vv"]], "d">;
+}
 
 let UnMaskedPolicyScheme = HasPolicyOperand in
   let RequiredFeatures = ["xsfvfwmaccqqq"] in

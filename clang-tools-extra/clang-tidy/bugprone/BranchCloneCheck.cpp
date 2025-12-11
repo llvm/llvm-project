@@ -75,12 +75,9 @@ static bool isFallthroughSwitchBranch(const SwitchBranch &Branch) {
       if (!S)
         return true;
 
-      for (const Attr *A : S->getAttrs()) {
-        if (isa<FallThroughAttr>(A))
-          return false;
-      }
-
-      return true;
+      return llvm::all_of(S->getAttrs(), [](const Attr *A) {
+        return !isa<FallThroughAttr>(A);
+      });
     }
   } Visitor;
 
@@ -117,7 +114,6 @@ void BranchCloneCheck::registerMatchers(MatchFinder *Finder) {
 ///
 static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
                             const Stmt *Stmt2, bool IgnoreSideEffects) {
-
   if (!Stmt1 || !Stmt2)
     return !Stmt1 && !Stmt2;
 
@@ -241,6 +237,12 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
       return false;
     return true;
   }
+  case Stmt::DeferStmtClass: {
+    const auto *DefStmt1 = cast<DeferStmt>(Stmt1);
+    const auto *DefStmt2 = cast<DeferStmt>(Stmt2);
+    return isIdenticalStmt(Ctx, DefStmt1->getBody(), DefStmt2->getBody(),
+                           IgnoreSideEffects);
+  }
   case Stmt::CompoundStmtClass: {
     const auto *CompStmt1 = cast<CompoundStmt>(Stmt1);
     const auto *CompStmt2 = cast<CompoundStmt>(Stmt2);
@@ -281,8 +283,8 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
     const auto *IntLit1 = cast<IntegerLiteral>(Stmt1);
     const auto *IntLit2 = cast<IntegerLiteral>(Stmt2);
 
-    llvm::APInt I1 = IntLit1->getValue();
-    llvm::APInt I2 = IntLit2->getValue();
+    const llvm::APInt I1 = IntLit1->getValue();
+    const llvm::APInt I2 = IntLit2->getValue();
     if (I1.getBitWidth() != I2.getBitWidth())
       return false;
     return I1 == I2;
@@ -352,7 +354,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }
 
-    size_t N = Branches.size();
+    const size_t N = Branches.size();
     llvm::BitVector KnownAsClone(N);
 
     for (size_t I = 0; I + 1 < N; I++) {
@@ -375,7 +377,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
           // We report the first occurrence only when we find the second one.
           diag(Branches[I]->getBeginLoc(),
                "repeated branch body in conditional chain");
-          SourceLocation End =
+          const SourceLocation End =
               Lexer::getLocForEndOfToken(Branches[I]->getEndLoc(), 0,
                                          *Result.SourceManager, getLangOpts());
           if (End.isValid()) {

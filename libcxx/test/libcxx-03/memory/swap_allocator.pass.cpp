@@ -58,24 +58,5 @@ int main(int, char**) {
     assert(a2.i == 42);
   }
 
-#if TEST_STD_VER >= 11
-  {
-    NoexceptSwapAlloc noexcept_alloc;
-    static_assert(noexcept(std::__swap_allocator(noexcept_alloc, noexcept_alloc)), "");
-  }
-
-#if TEST_STD_VER > 11
-  { // From C++14, `__swap_allocator` is unconditionally noexcept.
-    ThrowingSwapAlloc throwing_alloc;
-    static_assert(noexcept(std::__swap_allocator(throwing_alloc, throwing_alloc)), "");
-  }
-#else
-  { // Until C++14, `__swap_allocator` is only noexcept if the underlying `swap` function is `noexcept`.
-    ThrowingSwapAlloc throwing_alloc;
-    static_assert(!noexcept(std::__swap_allocator(throwing_alloc, throwing_alloc)), "");
-  }
-#endif // TEST_STD_VER > 11
-#endif // TEST_STD_VER >= 11
-
   return 0;
 }

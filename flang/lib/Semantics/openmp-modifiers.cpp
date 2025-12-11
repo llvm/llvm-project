@@ -75,6 +75,22 @@ unsigned OmpModifierDescriptor::since(llvm::omp::Clause id) const {
 // generated in the future.
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAccessGroup>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"access-group",
+      /*props=*/
+      {
+          {61, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {61, {Clause::OMPC_dyn_groupprivate}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlignment>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"alignment",
@@ -273,6 +289,24 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDimsModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"dims-modifier",
+      /*props=*/
+      {
+          {61, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {61,
+              {Clause::OMPC_num_teams, Clause::OMPC_num_threads,
+                  Clause::OMPC_thread_limit}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDeviceModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"device-modifier",
@@ -316,6 +350,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpExpectation>() {
       /*clauses=*/
       {
           {51, {Clause::OMPC_from, Clause::OMPC_to}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpFallbackModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"fallback-modifier",
+      /*props=*/
+      {
+          {61, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {61, {Clause::OMPC_dyn_groupprivate}},
       },
   };
   return desc;
@@ -400,6 +450,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_linear}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLowerBound>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"lower-bound",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique, OmpProperty::Ultimate}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_num_teams}},
       },
   };
   return desc;

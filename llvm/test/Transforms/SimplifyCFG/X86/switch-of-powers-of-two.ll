@@ -141,5 +141,5 @@ return:
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 58, i32 5}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 56, i32 5}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 53, i32 5}
 ;.

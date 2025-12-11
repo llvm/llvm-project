@@ -26,13 +26,13 @@ using namespace llvm;
 void MSP430InstrInfo::anchor() {}
 
 MSP430InstrInfo::MSP430InstrInfo(const MSP430Subtarget &STI)
-    : MSP430GenInstrInfo(STI, MSP430::ADJCALLSTACKDOWN, MSP430::ADJCALLSTACKUP),
+    : MSP430GenInstrInfo(STI, RI, MSP430::ADJCALLSTACKDOWN,
+                         MSP430::ADJCALLSTACKUP),
       RI() {}
 
 void MSP430InstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
+    bool isKill, int FrameIdx, const TargetRegisterClass *RC, Register VReg,
     MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (MI != MBB.end()) DL = MI->getDebugLoc();
@@ -56,10 +56,12 @@ void MSP430InstrInfo::storeRegToStackSlot(
     llvm_unreachable("Cannot store this register to stack slot!");
 }
 
-void MSP430InstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MI,
+                                           Register DestReg, int FrameIdx,
+                                           const TargetRegisterClass *RC,
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (MI != MBB.end()) DL = MI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();

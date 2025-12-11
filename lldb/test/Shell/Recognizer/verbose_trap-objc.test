@@ -1,0 +1,12 @@
+# REQUIRES: system-darwin
+#
+# RUN: %clang_host -g %S/Inputs/verbose_trap.m -o %t.out
+# RUN: %lldb -b -s %s %t.out | FileCheck %s
+
+run
+# CHECK: thread #{{.*}}stop reason = Foo: Bar
+frame info
+# CHECK: frame #{{.*}}`main at verbose_trap.m
+frame recognizer info 0
+# CHECK: frame 0 is recognized by Verbose Trap StackFrame Recognizer
+q

@@ -10,7 +10,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @tbl2_b_tuple(i64 %stride, ptr
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z12, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z11, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -20,7 +20,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @tbl2_b_tuple(i64 %stride, ptr
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    ld1b { z3.b, z11.b }, pn8/z, [x1]
 ; CHECK-NEXT:    ld1b { z4.b, z12.b }, pn8/z, [x1, x0]
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    tbl z2.b, { z3.b, z4.b }, z0.b
 ; CHECK-NEXT:    tbl z1.b, { z11.b, z12.b }, z0.b
 ; CHECK-NEXT:    ldr z12, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -50,7 +50,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @tbl2_h_tuple(i64 %stride, ptr
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z12, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z11, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -61,7 +61,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @tbl2_h_tuple(i64 %stride, ptr
 ; CHECK-NEXT:    add x8, x1, x0
 ; CHECK-NEXT:    ld1h { z3.h, z11.h }, pn8/z, [x1]
 ; CHECK-NEXT:    ld1h { z4.h, z12.h }, pn8/z, [x8]
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    tbl z2.h, { z3.h, z4.h }, z0.h
 ; CHECK-NEXT:    tbl z1.h, { z11.h, z12.h }, z0.h
 ; CHECK-NEXT:    ldr z12, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -91,7 +91,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32> } @tbl2_s_tuple(i64 %stride, ptr
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z12, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z11, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -102,7 +102,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32> } @tbl2_s_tuple(i64 %stride, ptr
 ; CHECK-NEXT:    add x8, x1, x0
 ; CHECK-NEXT:    ld1w { z3.s, z11.s }, pn8/z, [x1]
 ; CHECK-NEXT:    ld1w { z4.s, z12.s }, pn8/z, [x8]
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    tbl z2.s, { z3.s, z4.s }, z0.s
 ; CHECK-NEXT:    tbl z1.s, { z11.s, z12.s }, z0.s
 ; CHECK-NEXT:    ldr z12, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -132,7 +132,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @tbl2_d_tuple(i64 %stride, ptr
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z12, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z11, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -143,7 +143,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @tbl2_d_tuple(i64 %stride, ptr
 ; CHECK-NEXT:    add x8, x1, x0
 ; CHECK-NEXT:    ld1d { z3.d, z11.d }, pn8/z, [x1]
 ; CHECK-NEXT:    ld1d { z4.d, z12.d }, pn8/z, [x8]
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    tbl z2.d, { z3.d, z4.d }, z0.d
 ; CHECK-NEXT:    tbl z1.d, { z11.d, z12.d }, z0.d
 ; CHECK-NEXT:    ldr z12, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -173,7 +173,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @tbl2_bf16_tuple(i64 %st
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z12, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z11, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -184,7 +184,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @tbl2_bf16_tuple(i64 %st
 ; CHECK-NEXT:    add x8, x1, x0
 ; CHECK-NEXT:    ld1h { z3.h, z11.h }, pn8/z, [x1]
 ; CHECK-NEXT:    ld1h { z4.h, z12.h }, pn8/z, [x8]
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    tbl z2.h, { z3.h, z4.h }, z0.h
 ; CHECK-NEXT:    tbl z1.h, { z11.h, z12.h }, z0.h
 ; CHECK-NEXT:    ldr z12, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -214,7 +214,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float> } @tbl2_f32_tuple(i64 %strid
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z12, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z11, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -225,7 +225,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float> } @tbl2_f32_tuple(i64 %strid
 ; CHECK-NEXT:    add x8, x1, x0
 ; CHECK-NEXT:    ld1w { z3.s, z11.s }, pn8/z, [x1]
 ; CHECK-NEXT:    ld1w { z4.s, z12.s }, pn8/z, [x8]
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    tbl z2.s, { z3.s, z4.s }, z0.s
 ; CHECK-NEXT:    tbl z1.s, { z11.s, z12.s }, z0.s
 ; CHECK-NEXT:    ldr z12, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -255,7 +255,7 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @tbl2_f64_tuple(i64 %str
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z12, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z11, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -266,7 +266,7 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @tbl2_f64_tuple(i64 %str
 ; CHECK-NEXT:    add x8, x1, x0
 ; CHECK-NEXT:    ld1d { z3.d, z11.d }, pn8/z, [x1]
 ; CHECK-NEXT:    ld1d { z4.d, z12.d }, pn8/z, [x8]
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    tbl z2.d, { z3.d, z4.d }, z0.d
 ; CHECK-NEXT:    tbl z1.d, { z11.d, z12.d }, z0.d
 ; CHECK-NEXT:    ldr z12, [sp, #1, mul vl] // 16-byte Folded Reload

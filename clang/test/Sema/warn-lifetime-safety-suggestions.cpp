@@ -1,0 +1,201 @@
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -verify %s
+
+struct MyObj {
+  int id;
+  ~MyObj() {}  // Non-trivial destructor
+  MyObj operator+(MyObj);
+};
+
+struct [[gsl::Pointer()]] View {
+  View(const MyObj&); // Borrows from MyObj
+  View();
+  void use() const;
+};
+
+View return_view_directly (View a) {    // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                             // expected-note {{param returned here}}
+}
+
+View conditional_return_view (
+    View a,         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+    View b,         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+    bool c) {
+  View res;
+  if (c)  
+    res = a;                    
+  else
+    res = b;          
+  return res;  // expected-note 2 {{param returned here}} 
+}
+
+// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
+MyObj& return_reference (MyObj& a, MyObj& b, bool c) {
+  if(c) {
+    return a;   
+  }
+  return b;     
+}
+
+// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
+View return_view_from_reference (MyObj& p) {
+  return p; 
+}
+
+int* return_pointer_directly (int* a) {    // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                                // expected-note {{param returned here}} 
+}
+
+MyObj* return_pointer_object (MyObj* a) {  // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                                // expected-note {{param returned here}} 
+}
+
+View only_one_paramter_annotated (View a [[clang::lifetimebound]], 
+  View b,         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  bool c) {
+ if(c)
+  return a;
+ return b;        // expected-note {{param returned here}} 
+}
+
+View reassigned_to_another_parameter (
+    View a,
+    View b) {     // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  a = b;
+  return a;       // expected-note {{param returned here}} 
+}
+
+struct ReturnsSelf {
+  const ReturnsSelf& get() const {
+    return *this;
+  }
+};
+
+struct ViewProvider {
+  MyObj data;
+  View getView() const {
+    return data;
+  }
+};
+
+// FIXME: Fails to generate lifetime suggestions for the implicit 'this' parameter, as this feature is not yet implemented.
+void test_get_on_temporary() {
+  const ReturnsSelf& s_ref = ReturnsSelf().get();
+  (void)s_ref;
+}
+
+// FIXME: Fails to generate lifetime suggestions for the implicit 'this' parameter, as this feature is not yet implemented.
+void test_getView_on_temporary() {
+  View sv = ViewProvider{1}.getView();
+  (void)sv;
+}
+
+//===----------------------------------------------------------------------===//
+// Annotation Inference Test Cases
+//===----------------------------------------------------------------------===//
+
+namespace correct_order_inference {
+View return_view_by_func (View a) {    // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return return_view_directly(a);      // expected-note {{param returned here}}
+}
+
+MyObj* return_pointer_by_func (MyObj* a) {         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return return_pointer_object(a);                 // expected-note {{param returned here}} 
+}
+} // namespace correct_order_inference
+
+namespace incorrect_order_inference_view {
+View return_view_callee(View a);
+
+// FIXME: No lifetime annotation suggestion when functions are not present in the callee-before-caller pattern
+View return_view_caller(View a) {
+  return return_view_callee(a);
+}
+
+View return_view_callee(View a) {     // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                           // expected-note {{param returned here}}
+}   
+} // namespace incorrect_order_inference_view
+
+namespace incorrect_order_inference_object {
+MyObj* return_object_callee(MyObj* a);
+
+// FIXME: No lifetime annotation suggestion warning when functions are not present in the callee-before-caller pattern
+MyObj* return_object_caller(MyObj* a) {
+  return return_object_callee(a);
+}
+
+MyObj* return_object_callee(MyObj* a) {      // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                                  // expected-note {{param returned here}}
+}   
+} // namespace incorrect_order_inference_object
+
+namespace simple_annotation_inference {
+View inference_callee_return_identity(View a) { // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                                     // expected-note {{param returned here}}
+}
+
+View inference_caller_forwards_callee(View a) { // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return inference_callee_return_identity(a);   // expected-note {{param returned here}}
+}
+
+View inference_top_level_return_stack_view() {
+  MyObj local_stack;
+  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory is returned later}}
+                                                            // expected-note@-1 {{returned here}}
+}
+} // namespace simple_annotation_inference
+
+namespace inference_in_order_with_redecls {
+View inference_callee_return_identity(View a);
+View inference_callee_return_identity(View a) {   // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                                       // expected-note {{param returned here}}
+}
+
+View inference_caller_forwards_callee(View a);
+View inference_caller_forwards_callee(View a) {   // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return inference_callee_return_identity(a);     // expected-note {{param returned here}}
+}
+  
+View inference_top_level_return_stack_view() {
+  MyObj local_stack;
+  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory is returned later}}
+                                                            // expected-note@-1 {{returned here}}
+}
+} // namespace inference_in_order_with_redecls
+
+namespace inference_with_templates {
+template<typename T>  
+T* template_identity(T* a) {            // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                             // expected-note {{param returned here}}
+}
+
+template<typename T>
+T* template_caller(T* a) {
+  return template_identity(a);          // expected-note {{in instantiation of function template specialization 'inference_with_templates::template_identity<MyObj>' requested here}}
+}
+
+// FIXME: Fails to detect UAR as template instantiations are deferred to the end of the Translation Unit.
+MyObj* test_template_inference_with_stack() {
+  MyObj local_stack;
+  return template_caller(&local_stack); // expected-note {{in instantiation of function template specialization 'inference_with_templates::template_caller<MyObj>' requested here}}                                              
+}
+} // namespace inference_with_templates
+
+//===----------------------------------------------------------------------===//
+// Negative Test Cases
+//===----------------------------------------------------------------------===//
+
+View already_annotated(View a [[clang::lifetimebound]]) {
+ return a;
+}
+
+MyObj return_obj_by_value(MyObj& p) {
+  return p;
+}
+
+MyObj GlobalMyObj;
+View Global = GlobalMyObj;
+View Reassigned(View a) {
+  a = Global;
+  return a;
+}

@@ -7,15 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/islower_l.h"
-#include "src/__support/ctype_utils.h"
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, islower_l, (int c, locale_t)) {
-  return static_cast<int>(internal::islower(static_cast<unsigned>(c)));
+  if (c < 0 || c > cpp::numeric_limits<unsigned char>::max())
+    return 0;
+  return static_cast<int>(internal::islower(static_cast<char>(c)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -131,6 +131,10 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoCCMAXU:
   case RISCV::PseudoCCMIN:
   case RISCV::PseudoCCMINU:
+  case RISCV::PseudoCCMUL:
+  case RISCV::PseudoCCLUI:
+  case RISCV::PseudoCCQC_LI:
+  case RISCV::PseudoCCQC_E_LI:
   case RISCV::PseudoCCADDW:
   case RISCV::PseudoCCSUBW:
   case RISCV::PseudoCCSLL:
@@ -237,6 +241,10 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     case RISCV::PseudoCCMIN:   NewOpc = RISCV::MIN;   break;
     case RISCV::PseudoCCMAXU:  NewOpc = RISCV::MAXU;  break;
     case RISCV::PseudoCCMINU:  NewOpc = RISCV::MINU;  break;
+    case RISCV::PseudoCCMUL:   NewOpc = RISCV::MUL;   break;
+    case RISCV::PseudoCCLUI:   NewOpc = RISCV::LUI;   break;
+    case RISCV::PseudoCCQC_LI:  NewOpc = RISCV::QC_LI;   break;
+    case RISCV::PseudoCCQC_E_LI: NewOpc = RISCV::QC_E_LI;   break;
     case RISCV::PseudoCCADDI:  NewOpc = RISCV::ADDI;  break;
     case RISCV::PseudoCCSLLI:  NewOpc = RISCV::SLLI;  break;
     case RISCV::PseudoCCSRLI:  NewOpc = RISCV::SRLI;  break;
@@ -266,6 +274,9 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
           .add(MI.getOperand(5))
           .add(MI.getOperand(6))
           .add(MI.getOperand(7));
+    } else if (NewOpc == RISCV::LUI || NewOpc == RISCV::QC_LI ||
+               NewOpc == RISCV::QC_E_LI) {
+      BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg).add(MI.getOperand(5));
     } else {
       BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
           .add(MI.getOperand(5))

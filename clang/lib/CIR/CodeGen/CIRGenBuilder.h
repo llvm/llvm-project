@@ -189,6 +189,11 @@ public:
     return getType<cir::RecordType>(nameAttr, kind);
   }
 
+  cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
+                                        unsigned memberIndex) {
+    return cir::DataMemberAttr::get(ty, memberIndex);
+  }
+
   // Return true if the value is a null constant such as null pointer, (+0.0)
   // for floating-point or zero initializer
   bool isNullValue(mlir::Attribute attr) const {
@@ -211,6 +216,16 @@ public:
       fv.convert(fpVal.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
                  &ignored);
       return fv.bitwiseIsEqual(fpVal);
+    }
+    if (const auto recordVal = mlir::dyn_cast<cir::ConstRecordAttr>(attr)) {
+      for (const auto elt : recordVal.getMembers()) {
+        // FIXME(cir): the record's ID should not be considered a member.
+        if (mlir::isa<mlir::StringAttr>(elt))
+          continue;
+        if (!isNullValue(elt))
+          return false;
+      }
+      return true;
     }
 
     if (const auto arrayVal = mlir::dyn_cast<cir::ConstArrayAttr>(attr)) {
@@ -315,8 +330,10 @@ public:
     return getConstantInt(loc, getUInt32Ty(), c);
   }
   cir::ConstantOp getSInt64(uint64_t c, mlir::Location loc) {
-    cir::IntType sInt64Ty = getSInt64Ty();
-    return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(sInt64Ty, c));
+    return getConstantInt(loc, getSInt64Ty(), c);
+  }
+  cir::ConstantOp getUInt64(uint64_t c, mlir::Location loc) {
+    return getConstantInt(loc, getUInt64Ty(), c);
   }
 
   mlir::Value createNeg(mlir::Value value) {
@@ -330,6 +347,11 @@ public:
     }
 
     llvm_unreachable("negation for the given type is NYI");
+  }
+
+  cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
+                                   cir::FPClassTest flags) {
+    return cir::IsFPClassOp::create(*this, loc, src, flags);
   }
 
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
@@ -403,6 +425,19 @@ public:
     return Address(baseAddr, destType, addr.getAlignment());
   }
 
+  Address createDerivedClassAddr(mlir::Location loc, Address addr,
+                                 mlir::Type destType, unsigned offset,
+                                 bool assumeNotNull) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    cir::PointerType ptrTy = getPointerTo(destType);
+    auto derivedAddr =
+        cir::DerivedClassAddrOp::create(*this, loc, ptrTy, addr.getPointer(),
+                                        mlir::APInt(64, offset), assumeNotNull);
+    return Address(derivedAddr, destType, addr.getAlignment());
+  }
+
   mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
                                  mlir::Value addr, uint64_t offset) {
     return cir::VTTAddrPointOp::create(*this, loc, retTy,
@@ -432,6 +467,7 @@ public:
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
     return cir::LoadOp::create(*this, loc, addr.getPointer(), /*isDeref=*/false,
                                isVolatile, /*alignment=*/align,
+                               /*sync_scope=*/cir::SyncScopeKindAttr{},
                                /*mem_order=*/cir::MemOrderAttr{});
   }
 
@@ -443,6 +479,7 @@ public:
     mlir::IntegerAttr alignAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
                                /*isVolatile=*/false, alignAttr,
+                               /*sync_scope=*/cir::SyncScopeKindAttr{},
                                /*mem_order=*/cir::MemOrderAttr{});
   }
 
@@ -571,6 +608,35 @@ public:
                                       storageType, info.name, info.size, offset,
                                       info.isSigned, isLvalueVolatile,
                                       addr.getAlignment().getAsAlign().value());
+  }
+
+  cir::VecShuffleOp
+  createVecShuffle(mlir::Location loc, mlir::Value vec1, mlir::Value vec2,
+                   llvm::ArrayRef<mlir::Attribute> maskAttrs) {
+    auto vecType = mlir::cast<cir::VectorType>(vec1.getType());
+    auto resultTy = cir::VectorType::get(getContext(), vecType.getElementType(),
+                                         maskAttrs.size());
+    return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, vec2,
+                                     getArrayAttr(maskAttrs));
+  }
+
+  cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                     mlir::Value vec2,
+                                     llvm::ArrayRef<int64_t> mask) {
+    auto maskAttrs = llvm::to_vector_of<mlir::Attribute>(
+        llvm::map_range(mask, [&](int32_t idx) {
+          return cir::IntAttr::get(getSInt32Ty(), idx);
+        }));
+    return createVecShuffle(loc, vec1, vec2, maskAttrs);
+  }
+
+  cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                     llvm::ArrayRef<int64_t> mask) {
+    /// Create a unary shuffle. The second vector operand of the IR instruction
+    /// is poison.
+    cir::ConstantOp poison =
+        getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
+    return createVecShuffle(loc, vec1, poison, mask);
   }
 };
 

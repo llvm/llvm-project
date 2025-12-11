@@ -191,6 +191,19 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
 
 #undef ELF_RELOC
 
+StringRef llvm::object::getRISCVVendorRelocationTypeName(uint32_t Type,
+                                                         StringRef Vendor) {
+#define ELF_RISCV_NONSTANDARD_RELOC(vendor, name, number)                      \
+  if (Vendor == #vendor && Type == number)                                     \
+    return #name;
+
+#include "llvm/BinaryFormat/ELFRelocs/RISCV_nonstandard.def"
+
+#undef ELF_RISCV_NONSTANDARD_RELOC
+
+  return "Unknown";
+}
+
 uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
   switch (Machine) {
   case ELF::EM_X86_64:
