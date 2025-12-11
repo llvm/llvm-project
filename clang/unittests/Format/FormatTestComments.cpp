@@ -4691,7 +4691,7 @@ TEST_F(FormatTestComments, SpacesInBlockComments) {
   FormatStyle Style = getLLVMStyle();
   Style.SpacesInComments = FormatStyle::SICS_Always;
   verifyFormat("/* comment */", "/*comment*/", Style);
-  verifyFormat("/* comment */", "/* comment */", Style);
+  verifyFormat("/* comment */", Style);
   verifyFormat("/* comment */", "/*  comment  */", Style);
   verifyFormat("/* comment */", "/*\tcomment\t*/", Style);
   verifyFormat("/* comment */", "/* \t comment \t */", Style);
@@ -4720,7 +4720,7 @@ TEST_F(FormatTestComments, SpacesInBlockComments) {
   verifyFormat("/* */", "/*   */", Style);
 
   Style.SpacesInComments = FormatStyle::SICS_Never;
-  verifyFormat("/*comment*/", "/*comment*/", Style);
+  verifyFormat("/*comment*/", Style);
   verifyFormat("/*comment*/", "/* comment */", Style);
   verifyFormat("/*comment*/", "/*  comment  */", Style);
   verifyFormat("/*comment*/", "/*\tcomment\t*/", Style);
@@ -4750,11 +4750,11 @@ TEST_F(FormatTestComments, SpacesInBlockComments) {
   verifyFormat("/**/", "/*   */", Style);
 
   Style.SpacesInComments = FormatStyle::SICS_Leave;
-  verifyFormat("/*comment*/", "/*comment*/", Style);
-  verifyFormat("/* comment */", "/* comment */", Style);
+  verifyFormat("/*comment*/", Style);
+  verifyFormat("/* comment */", Style);
   verifyFormat("/*  comment  */", "/*  comment  */", Style);
-  verifyFormat("/*\tcomment\t*/", "/*\tcomment\t*/", Style);
-  verifyFormat("/* \t comment \t */", "/* \t comment \t */", Style);
+  verifyFormat("/*\tcomment\t*/", Style);
+  verifyFormat("/* \t comment \t */", Style);
   verifyFormat("/*   */", "/*   */", Style);
 
   Style = getLLVMStyleWithColumns(21);
@@ -4778,20 +4778,20 @@ TEST_F(FormatTestComments, SpacesInBlockComments) {
 TEST_F(FormatTestComments, SpacesInBlockCommentsIgnoresParamAndDoc) {
   FormatStyle Style = getLLVMStyle();
   Style.SpacesInComments = FormatStyle::SICS_Always;
-  verifyFormat("call(/*Arg=*/value);", "call(/*Arg=*/value);", Style);
-  verifyFormat("call(/* Arg= */value);", "call(/* Arg= */value);", Style);
-  verifyFormat("/** comment */", "/** comment */", Style);
-  verifyFormat("/*! comment */", "/*! comment */", Style);
-  verifyFormat("/**comment*/", "/**comment*/", Style);
-  verifyFormat("/*!comment*/", "/*!comment*/", Style);
+  verifyFormat("call(/*Arg=*/value);", Style);
+  verifyFormat("call(/* Arg= */value);", Style);
+  verifyFormat("/** comment */", Style);
+  verifyFormat("/*! comment */", Style);
+  verifyFormat("/**comment*/", Style);
+  verifyFormat("/*!comment*/", Style);
 
   Style.SpacesInComments = FormatStyle::SICS_Never;
-  verifyFormat("call(/*Arg=*/value);", "call(/*Arg=*/value);", Style);
-  verifyFormat("call(/* Arg= */value);", "call(/* Arg= */value);", Style);
-  verifyFormat("/** comment */", "/** comment */", Style);
-  verifyFormat("/*! comment */", "/*! comment */", Style);
-  verifyFormat("/**comment*/", "/**comment*/", Style);
-  verifyFormat("/*!comment*/", "/*!comment*/", Style);
+  verifyFormat("call(/*Arg=*/value);", Style);
+  verifyFormat("call(/* Arg= */value);", Style);
+  verifyFormat("/** comment */", Style);
+  verifyFormat("/*! comment */", Style);
+  verifyFormat("/**comment*/", Style);
+  verifyFormat("/*!comment*/", Style);
 }
 
 TEST_F(FormatTestComments, SplitCommentIntroducers) {
