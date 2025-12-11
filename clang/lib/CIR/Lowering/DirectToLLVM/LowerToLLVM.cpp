@@ -1684,13 +1684,16 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   // Convert adapted value to its memory type if needed.
   mlir::Value value = emitToMemory(rewriter, dataLayout,
                                    op.getValue().getType(), adaptor.getValue());
-  // TODO: nontemporal, syncscope.
+  // TODO: nontemporal.
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
+  std::optional<llvm::StringRef> syncScope =
+      getLLVMSyncScope(op.getSyncScope());
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
       op.getIsVolatile(),
-      /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder);
+      /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder,
+      syncScope.value_or(llvm::StringRef()));
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();

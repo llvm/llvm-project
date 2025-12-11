@@ -330,8 +330,10 @@ public:
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
                            bool isVolatile = false,
                            mlir::IntegerAttr align = {},
+                           cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
-    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, order);
+    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, scope,
+                                order);
   }
 
   /// Emit a load from an boolean flag variable.
