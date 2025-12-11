@@ -3180,7 +3180,8 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   }
   case PPC::PPCLdFixedAddr: {
-    assert(Subtarget.getTargetTriple().isOSGlibc() &&
+    assert((Subtarget.getTargetTriple().isOSGlibc() ||
+            Subtarget.getTargetTriple().isMusl()) &&
            "Only targets with Glibc expected to contain PPCLdFixedAddr");
     int64_t Offset = 0;
     const unsigned Reg = Subtarget.isPPC64() ? PPC::X13 : PPC::R2;
