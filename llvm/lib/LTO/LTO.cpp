@@ -48,6 +48,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
@@ -2354,6 +2355,13 @@ public:
          nullptr,
          false};
 
+    // Cleanup per-job temporary files on abnormal process exit.
+    if (!SaveTemps) {
+      llvm::sys::RemoveFileOnSignal(J.NativeObjectPath);
+      if (!ShouldEmitIndexFiles)
+        llvm::sys::RemoveFileOnSignal(J.SummaryIndexPath);
+    }
+
     assert(ModuleToDefinedGVSummaries.count(ModulePath));
 
     // The BackendThreadPool is only used here to write the sharded index files
@@ -2535,6 +2543,9 @@ public:
     SString JsonFile = sys::path::parent_path(LinkerOutputFile);
     sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." + UID +
                                     ".dist-file.json");
+    // Cleanup DTLTO JSON file on abnormal process exit.
+    if (!SaveTemps)
+      llvm::sys::RemoveFileOnSignal(JsonFile);
     if (!emitDistributorJson(JsonFile))
       return make_error<StringError>(
           BCError + "failed to generate distributor JSON script: " + JsonFile,
