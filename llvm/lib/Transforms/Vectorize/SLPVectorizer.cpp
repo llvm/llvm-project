@@ -2016,6 +2016,9 @@ public:
   /// Construct a vectorizable tree that starts at \p Roots.
   void buildTree(ArrayRef<Value *> Roots);
 
+  // Split a large tree into vector register size trees
+  void splitRootsAndBuild(ArrayRef<Value *> &Roots);
+
   /// Return the scalars of the root node.
   ArrayRef<Value *> getRootNodeScalars() const {
     assert(!VectorizableTree.empty() && "No graph to get the first node from");
@@ -4482,7 +4485,7 @@ private:
 
   /// -- Vectorization State --
   /// Holds all of the tree entries.
-  TreeEntry::VecTreeTy VectorizableTree;
+  SmallVector<TreeEntry::VecTreeTy> VectorizableTrees;
 
 #ifndef NDEBUG
   /// Debug printer.
@@ -9180,6 +9183,26 @@ BoUpSLP::findExternalStoreUsersReorderIndices(TreeEntry *TE) const {
   return ExternalReorderIndices;
 }
 
+void BoUpSLP::splitRootsAndBuild(ArrayRef<Value *> &Roots) {
+  unsigned EltSize = getVectorElementSize(Roots[0]);
+  auto *I = dyn_cast<Instruction>(Roots[0]);
+  assert(I && "Expected instruction to contain roots");
+  unsigned MaxVF = getMaximumVF(EltSize, I->getOpcode());
+  unsigned MinVF = getMinVF(EltSize);
+  MinVF = std::max<unsigned>(2, MinVF);
+  unsigned TotalElts = Roots.size();
+  if (TotalElts % MaxVF != 0 && TotalElts % MaxVF < MinVF)
+    return;
+
+  for (auto StartElt = Roots.begin(); StartElt < Roots.end(); StartElt += MaxVF) {
+    VectorizableTrees.emplace_back();
+    unsigned CurrElts = std::min(TotalElts - StartElt, MaxVF);
+    SmallVector<Value *> CurrRoots(StartElt, StartElt + CurrElts);
+    buildTreeRec(CurrRoots, 0, EdgeInfo());
+  }
+  return;
+}
+
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         const SmallDenseSet<Value *> &UserIgnoreLst) {
   deleteTree();
@@ -9188,7 +9211,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
   UserIgnoreList = &UserIgnoreLst;
   if (!allSameType(Roots))
     return;
-  buildTreeRec(Roots, 0, EdgeInfo());
+
+  splitRootsAndBuild(Roots);
 }
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
@@ -9197,7 +9221,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
          "TreeEntryToStridedPtrInfoMap is not cleared");
   if (!allSameType(Roots))
     return;
-  buildTreeRec(Roots, 0, EdgeInfo());
+
+  splitRootsAndBuild(Roots);
 }
 
 /// Tries to find subvector of loads and builds new vector of only loads if can
@@ -20349,7 +20374,8 @@ Value *BoUpSLP::vectorizeTree(
       (void)vectorizeTree(TE.get());
     }
   }
-  (void)vectorizeTree(VectorizableTree[0].get());
+  for (auto Tree : VectorizableTrees)
+    (void)vectorizeTree(VectorizableTree[0].get());
   // Run through the list of postponed gathers and emit them, replacing the temp
   // emitted allocas with actual vector instructions.
   ArrayRef<const TreeEntry *> PostponedNodes = PostponedGathers.getArrayRef();
@@ -23397,7 +23423,7 @@ bool SLPVectorizerPass::vectorizeStores(
       }
 
       SmallVector<unsigned> CandidateVFs;
-      for (unsigned VF = std::max(MaxVF, NonPowerOf2VF); VF >= MinVF;
+      for (unsigned VF = Stores.size(); VF >= MinVF;
            VF = divideCeil(VF, 2))
         CandidateVFs.push_back(VF);
 
