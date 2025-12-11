@@ -38,8 +38,7 @@ public:
     // Check if we have an origin for this expression.
     if (!ExprToOriginId.contains(E)) {
       // No origin found: count this as missing origin.
-      LSStats.ExprTypeToMissingOriginCount[std::string(
-          E->getType().getAsString())]++;
+      LSStats.ExprTypeToMissingOriginCount[E->getType().getTypePtr()]++;
       LSStats.ExprStmtClassToMissingOriginCount[std::string(
           E->getStmtClassName())]++;
     }

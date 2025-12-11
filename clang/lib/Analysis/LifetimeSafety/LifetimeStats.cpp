@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
+#include "clang/AST/TypeBase.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes {
@@ -20,7 +21,8 @@ void printStats(const LifetimeSafetyStats &Stats) {
                   "(QualType : count) :\n\n";
   unsigned TotalMissingOrigins = 0;
   for (const auto &[type, count] : Stats.ExprTypeToMissingOriginCount) {
-    llvm::errs() << type << " : " << count << '\n';
+    QualType QT = QualType(type, 0);
+    llvm::errs() << QT.getAsString() << " : " << count << '\n';
     TotalMissingOrigins += count;
   }
   llvm::errs() << "\n\n*** LifetimeSafety Missing Origin per StmtClassName: "

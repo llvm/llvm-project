@@ -14,6 +14,8 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIFETIMESTATS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIFETIMESTATS_H
 
+#include "clang/AST/TypeBase.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace clang::lifetimes {
@@ -21,10 +23,10 @@ namespace clang::lifetimes {
 /// These are accumulated across all analyzed functions and printed
 /// when -print-stats is enabled.
 struct LifetimeSafetyStats {
-  /// A map from `QualType` to their missing origin counts.
-  llvm::StringMap<unsigned> ExprStmtClassToMissingOriginCount;
   /// A map from `StmtClassName` to their missing origin counts.
-  llvm::StringMap<unsigned> ExprTypeToMissingOriginCount;
+  llvm::StringMap<unsigned> ExprStmtClassToMissingOriginCount;
+  /// A map from `QualType` to their missing origin counts.
+  llvm::DenseMap<const clang::Type *, unsigned> ExprTypeToMissingOriginCount;
 };
 
 /// Utility function to print missing origin stats.
