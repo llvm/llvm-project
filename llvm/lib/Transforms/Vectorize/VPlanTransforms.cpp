@@ -1685,8 +1685,6 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
 /// Try to see if all of \p Blend's masks share a common value logically and'ed
 /// and remove it from the masks.
 static void removeCommonBlendMask(VPBlendRecipe *Blend) {
-  if (Blend->isNormalized())
-    return;
   VPValue *CommonEdgeMask;
   if (!match(Blend->getMask(0),
              m_LogicalAnd(m_VPValue(CommonEdgeMask), m_VPValue())))
@@ -1713,9 +1711,7 @@ static void simplifyBlends(VPlan &Plan) {
 
       // Try to remove redundant blend recipes.
       SmallPtrSet<VPValue *, 4> UniqueValues;
-      if (Blend->isNormalized() || !match(Blend->getMask(0), m_False()))
-        UniqueValues.insert(Blend->getIncomingValue(0));
-      for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
+      for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I)
         if (!match(Blend->getMask(I), m_False()))
           UniqueValues.insert(Blend->getIncomingValue(I));
 
@@ -1724,9 +1720,6 @@ static void simplifyBlends(VPlan &Plan) {
         Blend->eraseFromParent();
         continue;
       }
-
-      if (Blend->isNormalized())
-        continue;
 
       // Normalize the blend so its first incoming value is used as the initial
       // value with the others blended into it.
@@ -1743,39 +1736,22 @@ static void simplifyBlends(VPlan &Plan) {
         }
       }
 
-      SmallVector<VPValue *, 4> OperandsWithMask;
-      OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
-
+      // Expand VPBlendRecipe into VPInstruction::Select.
+      VPBuilder Builder(&R);
+      VPValue *NewBlend = Blend->getIncomingValue(StartIndex);
       for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
         if (I == StartIndex)
           continue;
-        OperandsWithMask.push_back(Blend->getIncomingValue(I));
-        OperandsWithMask.push_back(Blend->getMask(I));
+        NewBlend =
+            Builder.createSelect(Blend->getMask(I), Blend->getIncomingValue(I),
+                                 NewBlend, Blend->getDebugLoc(), "predphi");
+        NewBlend->setUnderlyingValue(Blend->getUnderlyingValue());
       }
-
-      auto *NewBlend =
-          new VPBlendRecipe(cast_or_null<PHINode>(Blend->getUnderlyingValue()),
-                            OperandsWithMask, Blend->getDebugLoc());
-      NewBlend->insertBefore(&R);
 
       VPValue *DeadMask = Blend->getMask(StartIndex);
       Blend->replaceAllUsesWith(NewBlend);
       Blend->eraseFromParent();
       recursivelyDeleteDeadRecipes(DeadMask);
-
-      /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
-      VPValue *NewMask;
-      if (NewBlend->getNumOperands() == 3 &&
-          match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
-        VPValue *Inc0 = NewBlend->getOperand(0);
-        VPValue *Inc1 = NewBlend->getOperand(1);
-        VPValue *OldMask = NewBlend->getOperand(2);
-        NewBlend->setOperand(0, Inc1);
-        NewBlend->setOperand(1, Inc0);
-        NewBlend->setOperand(2, NewMask);
-        if (OldMask->getNumUsers() == 0)
-          cast<VPInstruction>(OldMask)->eraseFromParent();
-      }
     }
   }
 }
@@ -3702,6 +3678,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      VPBuilder Builder(&R);
+
       if (auto *WidenIVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
         expandVPWidenIntOrFpInduction(WidenIVR, TypeInfo);
         ToRemove.push_back(WidenIVR);
@@ -3722,18 +3700,6 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         expandVPWidenPointerInduction(WidenIVR, TypeInfo);
         ToRemove.push_back(WidenIVR);
         continue;
-      }
-
-      // Expand VPBlendRecipe into VPInstruction::Select.
-      VPBuilder Builder(&R);
-      if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
-        VPValue *Select = Blend->getIncomingValue(0);
-        for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
-          Select = Builder.createSelect(Blend->getMask(I),
-                                        Blend->getIncomingValue(I), Select,
-                                        R.getDebugLoc(), "predphi");
-        Blend->replaceAllUsesWith(Select);
-        ToRemove.push_back(Blend);
       }
 
       if (auto *Expr = dyn_cast<VPExpressionRecipe>(&R)) {

@@ -3142,14 +3142,13 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
     if (!Cur || !Seen.insert(Cur).second)
       continue;
 
-    auto *Blend = dyn_cast<VPBlendRecipe>(Cur);
     // Skip blends that use V only through a compare by checking if any incoming
     // value was already visited.
-    if (Blend && none_of(seq<unsigned>(0, Blend->getNumIncomingValues()),
-                         [&](unsigned I) {
-                           return Seen.contains(
-                               Blend->getIncomingValue(I)->getDefiningRecipe());
-                         }))
+    if (isa_and_nonnull<PHINode>(Cur->getUnderlyingValue()) &&
+        isa<VPInstruction>(Cur) &&
+        cast<VPInstruction>(Cur)->getOpcode() == Instruction::Select &&
+        !Seen.contains(Cur->getOperand(1)->getDefiningRecipe()) &&
+        !Seen.contains(Cur->getOperand(2)->getDefiningRecipe()))
       continue;
 
     for (VPUser *U : Cur->users()) {
@@ -3170,13 +3169,17 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
       }
     }
 
-    // The legacy cost model only supports scalarization loads/stores with phi
-    // addresses, if the phi is directly used as load/store address. Don't
-    // traverse further for Blends.
-    if (Blend)
-      continue;
-
-    append_range(WorkList, Cur->users());
+    for (VPUser *U : Cur->users()) {
+      // The legacy cost model only supports scalarization loads/stores with phi
+      // addresses, if the phi is directly used as load/store address. Don't
+      // traverse further for PHI selects.
+      if (isa_and_nonnull<PHINode>(Cur->getUnderlyingValue()) &&
+          (!isa<VPSingleDefRecipe>(U) ||
+           cast<VPSingleDefRecipe>(U)->getUnderlyingValue() !=
+               Cur->getUnderlyingValue()))
+        continue;
+      WorkList.push_back(U);
+    }
   }
   return false;
 }

@@ -2526,9 +2526,7 @@ protected:
 class LLVM_ABI_FOR_TEST VPBlendRecipe : public VPSingleDefRecipe {
 public:
   /// The blend operation is a User of the incoming values and of their
-  /// respective masks, ordered [I0, M0, I1, M1, I2, M2, ...]. Note that M0 can
-  /// be omitted (implied by passing an odd number of operands) in which case
-  /// all other incoming values are merged into it.
+  /// respective masks, ordered [I0, M0, I1, M1, I2, M2, ...].
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands, DebugLoc DL)
       : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, DL) {
     assert(Operands.size() >= 2 && "Expected at least two operands!");
@@ -2541,32 +2539,17 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPBlendSC)
 
-  /// A normalized blend is one that has an odd number of operands, whereby the
-  /// first operand does not have an associated mask.
-  bool isNormalized() const { return getNumOperands() % 2; }
-
-  /// Return the number of incoming values, taking into account when normalized
-  /// the first incoming value will have no mask.
-  unsigned getNumIncomingValues() const {
-    return (getNumOperands() + isNormalized()) / 2;
-  }
+  /// Return the number of incoming values.
+  unsigned getNumIncomingValues() const { return getNumOperands() / 2; }
 
   /// Return incoming value number \p Idx.
-  VPValue *getIncomingValue(unsigned Idx) const {
-    return Idx == 0 ? getOperand(0) : getOperand(Idx * 2 - isNormalized());
-  }
+  VPValue *getIncomingValue(unsigned Idx) const { return getOperand(Idx * 2); }
 
   /// Return mask number \p Idx.
-  VPValue *getMask(unsigned Idx) const {
-    assert((Idx > 0 || !isNormalized()) && "First index has no mask!");
-    return Idx == 0 ? getOperand(1) : getOperand(Idx * 2 + !isNormalized());
-  }
+  VPValue *getMask(unsigned Idx) const { return getOperand(Idx * 2 + 1); }
 
   /// Set mask number \p Idx to \p V.
-  void setMask(unsigned Idx, VPValue *V) {
-    assert((Idx > 0 || !isNormalized()) && "First index has no mask!");
-    Idx == 0 ? setOperand(1, V) : setOperand(Idx * 2 + !isNormalized(), V);
-  }
+  void setMask(unsigned Idx, VPValue *V) { setOperand(Idx * 2 + 1, V); }
 
   void execute(VPTransformState &State) override {
     llvm_unreachable("VPBlendRecipe should be expanded by simplifyBlends");
