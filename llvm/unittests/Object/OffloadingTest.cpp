@@ -50,7 +50,9 @@ TEST(OffloadingTest, checkOffloadingBinary) {
     FAIL();
 
   // Make sure we get the same data out.
-  auto &Binary = **BinaryOrErr;
+  auto &Binaries = *BinaryOrErr;
+  ASSERT_EQ(Binaries.size(), 1u);
+  auto &Binary = *Binaries[0];
   ASSERT_EQ(Data.TheImageKind, Binary.getImageKind());
   ASSERT_EQ(Data.TheOffloadKind, Binary.getOffloadKind());
   ASSERT_EQ(Data.Flags, Binary.getFlags());

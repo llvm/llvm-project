@@ -88,7 +88,7 @@ public:
   struct Header {
     uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
     uint32_t Version = OffloadBinary::Version;   // Version identifier.
-    uint64_t Size;        // Size in bytes of this entire binary.
+    uint64_t Size;          // Size in bytes of this entire binary.
     uint64_t EntriesOffset; // Offset in bytes to the start of entries block.
     uint64_t EntriesCount;  // Number of metadata entries in the binary.
   };
@@ -215,7 +215,8 @@ public:
         getBinary()->getMemoryBufferRef().getBufferIdentifier());
 
     // This parsing should never fail because it has already been parsed.
-    auto NewBinaryOrErr = OffloadBinary::create(*Buffer, getBinary()->getIndex());
+    auto NewBinaryOrErr =
+        OffloadBinary::create(*Buffer, getBinary()->getIndex());
     assert(NewBinaryOrErr && "Failed to parse a copy of the binary?");
     if (!NewBinaryOrErr)
       llvm::consumeError(NewBinaryOrErr.takeError());
