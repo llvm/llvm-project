@@ -103,7 +103,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
-  auto *Blend = new VPBlendRecipe(Phi, {DefI}, {});
+  auto *Blend = new VPBlendRecipe(Phi, {DefI, Plan.getTrue()}, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
