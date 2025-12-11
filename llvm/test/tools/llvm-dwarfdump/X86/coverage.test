@@ -16,9 +16,9 @@ RUN: llvm-dwarfdump --show-variable-coverage --combine-inline-variable-instances
 
 COMBINE:      Variable coverage statistics:
 COMBINE-NEXT: Function InstanceCount Variable Decl LinesCovered
-COMBINE-NEXT: f 1 k test.c:22 2
-COMBINE-NEXT: f 1 l test.c:22 3
-COMBINE-NEXT: fn1 1 a test.c:14 1
-COMBINE-NEXT: fn1 1 u test.c:7 1
-COMBINE-NEXT: fn1 1 x test.c:5 1
-COMBINE-NEXT: fn1 1 y test.c:5 1
+COMBINE-NEXT: f 1 k test.c:22 5
+COMBINE-NEXT: f 1 l test.c:22 5
+COMBINE-NEXT: fn1 1 a test.c:14 0
+COMBINE-NEXT: fn1 1 u test.c:7 0
+COMBINE-NEXT: fn1 1 x test.c:5 0
+COMBINE-NEXT: fn1 1 y test.c:5 0

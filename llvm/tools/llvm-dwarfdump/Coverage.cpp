@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-dwarfdump.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
@@ -21,24 +22,23 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
-#include <set>
 
 using namespace llvm;
 using namespace llvm::dwarf;
 using namespace llvm::object;
 
-typedef std::pair<std::string, std::string> StringPair;
 /// Pair of file index and line number representing a source location.
-typedef std::pair<uint16_t, std::size_t> SourceLocation;
+typedef std::pair<uint16_t, size_t> SourceLocation;
 
-/// Returns the set of source lines covered by a variable's debug information.
-static std::optional<std::set<SourceLocation>>
+/// Returns the set of source lines covered by a variable's debug information,
+/// computed by intersecting the variable's location ranges and the containing
+/// scope's address ranges.
+static DenseSet<SourceLocation>
 computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
                         const DWARFDebugLine::LineTable *const LineTable) {
   /// Adds source locations to the set that correspond to an address range.
   auto addLines = [](const DWARFDebugLine::LineTable *LineTable,
-                     std::set<SourceLocation> &Lines, DWARFAddressRange Range,
-                     std::map<std::string, uint16_t, std::less<>> &FileNames) {
+                     DenseSet<SourceLocation> &Lines, DWARFAddressRange Range) {
     std::vector<uint32_t> Rows;
     if (LineTable->lookupAddressRange({Range.LowPC, Range.SectionIndex},
                                       Range.HighPC - Range.LowPC, Rows)) {
@@ -49,16 +49,6 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
           continue;
         const auto FileIndex = Row.File;
 
-        // Add the file's name to the map if not present.
-        if (!any_of(FileNames,
-                    [FileIndex](auto &FN) { return FN.second == FileIndex; })) {
-          std::string Name;
-          LineTable->getFileNameByIndex(
-              FileIndex, "",
-              DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath, Name);
-          FileNames.emplace(Name, FileIndex);
-        }
-
         const auto Line = Row.Line;
         if (Line) // Ignore zero lines.
           Lines.insert({FileIndex, Line});
@@ -66,49 +56,45 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
     }
   };
 
-  std::map<std::string, uint16_t, std::less<>> FileNames;
-
   // The optionals below will be empty if no address ranges were found, and
   // present (but containing an empty set) if ranges were found but contained no
   // source locations, in order to distinguish the two cases.
 
   auto Locations = VariableDIE.getLocations(DW_AT_location);
-  std::optional<std::set<SourceLocation>> Lines;
+  std::optional<DenseSet<SourceLocation>> Lines;
   if (Locations) {
     for (const auto &L : Locations.get()) {
       if (L.Range) {
         if (!Lines)
           Lines = {{}};
-        addLines(LineTable, *Lines, L.Range.value(), FileNames);
+        addLines(LineTable, *Lines, L.Range.value());
       }
     }
   } else {
+    // If the variable is optimized out and has no DW_AT_location, return an
+    // empty set instead of falling back to the parent scope's address ranges.
     consumeError(Locations.takeError());
+    return {};
   }
 
   // DW_AT_location attribute may contain overly broad address ranges, or none
   // at all, so we also consider the parent scope's address ranges if present.
   auto ParentRanges = VariableDIE.getParent().getAddressRanges();
-  std::optional<std::set<SourceLocation>> ParentLines;
+  std::optional<DenseSet<SourceLocation>> ParentLines;
   if (ParentRanges) {
     ParentLines = {{}};
     for (const auto &R : ParentRanges.get())
-      addLines(LineTable, *ParentLines, R, FileNames);
+      addLines(LineTable, *ParentLines, R);
   } else {
     consumeError(ParentRanges.takeError());
   }
 
-  if (!Lines && ParentLines) {
+  if (!Lines && ParentLines)
     Lines = ParentLines;
-  } else if (ParentLines) {
-    std::set<SourceLocation> Intersection;
-    std::set_intersection(Lines->begin(), Lines->end(), ParentLines->begin(),
-                          ParentLines->end(),
-                          std::inserter(Intersection, Intersection.begin()));
-    Lines = Intersection;
-  }
+  else if (ParentLines)
+    llvm::set_intersect(*Lines, *ParentLines);
 
-  return Lines;
+  return Lines.value_or(DenseSet<SourceLocation>());
 }
 
 static const SmallVector<DWARFDie> getParentSubroutines(DWARFDie DIE) {
@@ -222,10 +208,8 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
         continue;
 
       const auto Cov = computeVariableCoverage(DICtx, Die, LT);
-      if (!Cov || Cov->empty())
-        continue;
 
-      VarCoverage VarCov = {Parents, Cov->size(), 1};
+      VarCoverage VarCov = {Parents, Cov.size(), 1};
 
       Vars.insert({*Key, VarCov});
     }
