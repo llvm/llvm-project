@@ -9786,22 +9786,17 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       SDValue ConstVal = IsCZERO_NEZ ? TrueV : FalseV;
       SDValue RegV = IsCZERO_NEZ ? FalseV : TrueV;
       int64_t RawConstVal = cast<ConstantSDNode>(ConstVal)->getSExtValue();
-      // Fall back to XORI if Const == -0x800
-      if (RawConstVal == -0x800) {
-        SDValue XorOp = DAG.getNode(ISD::XOR, DL, VT, RegV, ConstVal);
-        SDValue CMOV =
-            DAG.getNode(IsCZERO_NEZ ? RISCVISD::CZERO_NEZ : RISCVISD::CZERO_EQZ,
-                        DL, VT, XorOp, CondV);
-        return DAG.getNode(ISD::XOR, DL, VT, CMOV, ConstVal);
-      }
       // Efficient only if the constant and its negation fit into `ADDI`
       // Prefer Add/Sub over Xor since can be compressed for small immediates
       if (isInt<12>(RawConstVal)) {
-        SDValue SubOp = DAG.getNode(ISD::SUB, DL, VT, RegV, ConstVal);
-        SDValue CMOV =
+        // Fall back to XORI if Const == -0x800 since we don't have SUBI.
+        unsigned SubOpc = (RawConstVal == -0x800) ? ISD::XOR : ISD::SUB;
+        unsigned AddOpc = (RawConstVal == -0x800) ? ISD::XOR : ISD::ADD;
+        SDValue SubOp = DAG.getNode(SubOpc, DL, VT, RegV, ConstVal);
+        SDValue CZERO =
             DAG.getNode(IsCZERO_NEZ ? RISCVISD::CZERO_NEZ : RISCVISD::CZERO_EQZ,
                         DL, VT, SubOp, CondV);
-        return DAG.getNode(ISD::ADD, DL, VT, CMOV, ConstVal);
+        return DAG.getNode(AddOpc, DL, VT, CZERO, ConstVal);
       }
     }
 
@@ -24323,9 +24318,11 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       break;
     }
   } else if (Constraint == "vr") {
-    // Check VM first so that mask types will use that instead of VR.
+    // Check VM and fractional LMUL first so that those types will use that
+    // class instead of VR.
     for (const auto *RC :
-         {&RISCV::VMRegClass, &RISCV::VRRegClass, &RISCV::VRM2RegClass,
+         {&RISCV::VMRegClass, &RISCV::VRMF8RegClass, &RISCV::VRMF4RegClass,
+          &RISCV::VRMF2RegClass, &RISCV::VRRegClass, &RISCV::VRM2RegClass,
           &RISCV::VRM4RegClass, &RISCV::VRM8RegClass, &RISCV::VRN2M1RegClass,
           &RISCV::VRN3M1RegClass, &RISCV::VRN4M1RegClass,
           &RISCV::VRN5M1RegClass, &RISCV::VRN6M1RegClass,
@@ -24342,16 +24339,19 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
     }
   } else if (Constraint == "vd") {
-    // Check VMNoV0 first so that mask types will use that instead of VRNoV0.
+    // Check VMNoV0 and fractional LMUL first so that those types will use that
+    // class instead of VRNoV0.
     for (const auto *RC :
-         {&RISCV::VMNoV0RegClass, &RISCV::VRNoV0RegClass,
-          &RISCV::VRM2NoV0RegClass, &RISCV::VRM4NoV0RegClass,
-          &RISCV::VRM8NoV0RegClass, &RISCV::VRN2M1NoV0RegClass,
-          &RISCV::VRN3M1NoV0RegClass, &RISCV::VRN4M1NoV0RegClass,
-          &RISCV::VRN5M1NoV0RegClass, &RISCV::VRN6M1NoV0RegClass,
-          &RISCV::VRN7M1NoV0RegClass, &RISCV::VRN8M1NoV0RegClass,
-          &RISCV::VRN2M2NoV0RegClass, &RISCV::VRN3M2NoV0RegClass,
-          &RISCV::VRN4M2NoV0RegClass, &RISCV::VRN2M4NoV0RegClass}) {
+         {&RISCV::VMNoV0RegClass, &RISCV::VRMF8NoV0RegClass,
+          &RISCV::VRMF4NoV0RegClass, &RISCV::VRMF2NoV0RegClass,
+          &RISCV::VRNoV0RegClass, &RISCV::VRM2NoV0RegClass,
+          &RISCV::VRM4NoV0RegClass, &RISCV::VRM8NoV0RegClass,
+          &RISCV::VRN2M1NoV0RegClass, &RISCV::VRN3M1NoV0RegClass,
+          &RISCV::VRN4M1NoV0RegClass, &RISCV::VRN5M1NoV0RegClass,
+          &RISCV::VRN6M1NoV0RegClass, &RISCV::VRN7M1NoV0RegClass,
+          &RISCV::VRN8M1NoV0RegClass, &RISCV::VRN2M2NoV0RegClass,
+          &RISCV::VRN3M2NoV0RegClass, &RISCV::VRN4M2NoV0RegClass,
+          &RISCV::VRN2M4NoV0RegClass}) {
       if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
         return std::make_pair(0U, RC);
 
@@ -25229,12 +25229,10 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
     return true;
   }
 
-  if ((ValueVT.isScalableVector() || ValueVT.isFixedLengthVector()) &&
-      PartVT.isScalableVector()) {
-    if (ValueVT.isFixedLengthVector()) {
-      ValueVT = getContainerForFixedLengthVector(ValueVT.getSimpleVT());
-      Val = convertToScalableVector(ValueVT, Val, DAG, Subtarget);
-    }
+  if (ValueVT.isFixedLengthVector() && PartVT.isScalableVector()) {
+    ValueVT = getContainerForFixedLengthVector(ValueVT.getSimpleVT());
+    Val = convertToScalableVector(ValueVT, Val, DAG, Subtarget);
+
     LLVMContext &Context = *DAG.getContext();
     EVT ValueEltVT = ValueVT.getVectorElementType();
     EVT PartEltVT = PartVT.getVectorElementType();
@@ -25304,17 +25302,17 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
     return Val;
   }
 
-  if ((ValueVT.isScalableVector() || ValueVT.isFixedLengthVector()) &&
-      PartVT.isScalableVector()) {
+  if (ValueVT.isFixedLengthVector() && PartVT.isScalableVector()) {
     LLVMContext &Context = *DAG.getContext();
     SDValue Val = Parts[0];
     EVT ValueEltVT = ValueVT.getVectorElementType();
     EVT PartEltVT = PartVT.getVectorElementType();
-    unsigned ValueVTBitSize = ValueVT.getSizeInBits().getKnownMinValue();
-    if (ValueVT.isFixedLengthVector())
-      ValueVTBitSize = getContainerForFixedLengthVector(ValueVT.getSimpleVT())
-                           .getSizeInBits()
-                           .getKnownMinValue();
+
+    unsigned ValueVTBitSize =
+        getContainerForFixedLengthVector(ValueVT.getSimpleVT())
+            .getSizeInBits()
+            .getKnownMinValue();
+
     unsigned PartVTBitSize = PartVT.getSizeInBits().getKnownMinValue();
     if (PartVTBitSize % ValueVTBitSize == 0) {
       assert(PartVTBitSize >= ValueVTBitSize);
