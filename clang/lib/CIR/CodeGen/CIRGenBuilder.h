@@ -529,6 +529,19 @@ public:
                    addr.getAlignment()};
   }
 
+  cir::GetRuntimeMemberOp createGetIndirectMember(mlir::Location loc,
+                                                  mlir::Value objectPtr,
+                                                  mlir::Value memberPtr) {
+    auto memberPtrTy = mlir::cast<cir::DataMemberType>(memberPtr.getType());
+
+    // TODO(cir): consider address space.
+    assert(!cir::MissingFeatures::addressSpace());
+    cir::PointerType resultTy = getPointerTo(memberPtrTy.getMemberTy());
+
+    return cir::GetRuntimeMemberOp::create(*this, loc, resultTy, objectPtr,
+                                           memberPtr);
+  }
+
   /// Create a cir.ptr_stride operation to get access to an array element.
   /// \p idx is the index of the element to access, \p shouldDecay is true if
   /// the result should decay to a pointer to the element type.
