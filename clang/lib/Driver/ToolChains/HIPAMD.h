@@ -104,6 +104,11 @@ public:
   SPIRVAMDToolChain(const Driver &D, const llvm::Triple &Triple,
                     const llvm::opt::ArgList &Args);
 
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
+
 protected:
   Tool *buildLinker() const override;
 };
