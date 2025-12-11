@@ -8,9 +8,9 @@
 
 #include "Pass.h"
 
+#include "mlir-c/Pass.h"
 #include "mlir/Bindings/Python/Globals.h"
 #include "mlir/Bindings/Python/IRCore.h"
-#include "mlir-c/Pass.h"
 // clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
@@ -254,4 +254,5 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           },
           "Print the textual representation for this PassManager, suitable to "
           "be passed to `parse` for round-tripping.");
+  registerMLIRError();
 }

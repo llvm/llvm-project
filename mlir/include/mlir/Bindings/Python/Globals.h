@@ -245,7 +245,6 @@ private:
   static nanobind::ft_mutex mutex;
 };
 
-
 } // namespace python
 } // namespace mlir
 
