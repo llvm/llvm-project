@@ -4568,10 +4568,11 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
       // If we are linking but were passed -emit-llvm, we will be calling
       // llvm-link, so set the output type accordingly. This is only allowed in
       // rare cases, so make sure we aren't going to error about it.
-      types::ID LT =
-          Args.hasArg(options::OPT_emit_llvm) && !Diags.hasErrorOccurred()
-              ? types::TY_LLVM_BC
-              : types::TY_Image;
+      bool LinkingIR = Args.hasArg(options::OPT_emit_llvm) &&
+                       (C.getDefaultToolChain().getTriple().isAMDGPU() ||
+                        C.getDefaultToolChain().getTriple().isSPIRV());
+      types::ID LT = LinkingIR && !Diags.hasErrorOccurred() ? types::TY_LLVM_BC
+                                                            : types::TY_Image;
       LA = C.MakeAction<LinkJobAction>(LinkerInputs, LT);
     }
     if (!UseNewOffloadingDriver)
