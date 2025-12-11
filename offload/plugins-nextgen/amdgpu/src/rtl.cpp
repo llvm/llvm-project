@@ -4647,9 +4647,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   Error preAllocateDeviceMemoryPool() {
 
     void *DevPtr;
-    // Use PER_DEVICE_PREALLOC_SIZE (128KB) as heap and allocate 512MB for
+    // Use PER_DEVICE_PREALLOC_SIZE (128KB) as heap and allocate 8MB for
     // device memory
-    size_t PreAllocSize = hsa_utils::PER_DEVICE_PREALLOC_SIZE + DMSlabSize;
+    size_t SlabAlignment = 2 * 1024 * 1024; // 2MB
+    size_t PreAllocSize =
+        hsa_utils::PER_DEVICE_PREALLOC_SIZE + DMSlabSize + SlabAlignment;
 
     for (AMDGPUMemoryPoolTy *MemoryPool : AllMemoryPools) {
       if (!MemoryPool->isGlobal())
@@ -4673,12 +4675,32 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
         PreAllocatedDeviceMemoryPool = DevPtr;
 
+        // Ensure slab is 2MB aligned
+        uintptr_t BaseAddr = reinterpret_cast<uintptr_t>(DevPtr);
+        uintptr_t HeapEnd = BaseAddr + hsa_utils::PER_DEVICE_PREALLOC_SIZE;
+        uintptr_t AlignedSlabAddr =
+            (HeapEnd + SlabAlignment - 1) & ~(SlabAlignment - 1);
+
         DMHeapPtr = DevPtr;
-        DMSlabPtr =
-            reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(DevPtr) +
-                                     hsa_utils::PER_DEVICE_PREALLOC_SIZE);
+        DMSlabPtr = reinterpret_cast<void *>(AlignedSlabAddr);
+
+        // Verify alignment and bounds
+        uintptr_t SlabEnd = AlignedSlabAddr + DMSlabSize;
+        uintptr_t AllocEnd = BaseAddr + PreAllocSize;
+        assert((AlignedSlabAddr % SlabAlignment) == 0 &&
+               "DMSlabPtr must be 2MB aligned!");
+        assert(SlabEnd <= AllocEnd && "Slab region exceeds allocated memory!");
+
+        // Found a suitable pool and allocated
+        break;
       }
     }
+
+    if (!DMHeapPtr)
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "Could not find a suitable memory pool for device "
+                           "memory allocation.");
+
     return Plugin::success();
   }
 
@@ -5087,8 +5109,8 @@ private:
   void *DMHeapPtr = nullptr;
   void *DMSlabPtr = nullptr;
   bool DMInitialized = false;
-  static constexpr uint32_t DMNumSlabs = 256;
-  static constexpr size_t DMSlabSize = DMNumSlabs * (2 * 1024 * 1024); // 512MB
+  static constexpr uint32_t DMNumSlabs = 4;
+  static constexpr size_t DMSlabSize = DMNumSlabs * (2 * 1024 * 1024); // 8MB
 
   /// Struct holding time in ns at a point in time for both host and device
   /// This is used to compute a device-to-host offset and skew. Required for
