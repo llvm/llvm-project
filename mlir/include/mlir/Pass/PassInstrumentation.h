@@ -81,7 +81,9 @@ public:
   /// current operation being analyzed.
   virtual void runAfterAnalysis(StringRef name, TypeID id, Operation *op) {}
 
-  static void signalPassFailure(Pass *pass);
+  /// Helper method to enable analysis to signal pass failure. Used, for
+  /// example, when pre- or post-conditions fail.
+  void signalPassFailure(Pass *pass);
 };
 
 /// This class holds a collection of PassInstrumentation objects, and invokes

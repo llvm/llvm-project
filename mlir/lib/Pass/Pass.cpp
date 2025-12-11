@@ -599,6 +599,8 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
   if (pi)
     pi->runBeforePass(pass, op);
 
+  // Pass instrumentation can use pass failure to flag unmet invariants
+  // (preconditions) of the pass. Skip running pass if in failure state.
   bool passFailed = pass->passState->irAndPassFailed.getInt();
   if (!passFailed) {
     op->getContext()->executeAction<PassExecutionAction>(
