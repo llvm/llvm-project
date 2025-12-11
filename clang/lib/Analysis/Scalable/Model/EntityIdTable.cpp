@@ -7,26 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"
-#include <algorithm>
 #include <cassert>
 
 namespace clang {
 namespace ssaf {
 
 EntityId EntityIdTable::createEntityId(const EntityName &Name) {
-  auto [It, Inserted] = Entities.insert(Name);
-
-  if (Inserted) {
-    IdToEntity.push_back(&(*It));
-    return EntityId(IdToEntity.size() - 1);
+  const auto It = Entities.find(Name);
+  if (It == Entities.end()) {
+    EntityId Id(Entities.size());
+    Entities.emplace(Name, Id);
+    return Id;
   }
 
-  const EntityName *EntityPtr = &(*It);
-  auto IdIt = std::find(IdToEntity.begin(), IdToEntity.end(), EntityPtr);
-  assert(IdIt != IdToEntity.end() && "Entity exists but has no ID");
-
-  size_t Index = std::distance(IdToEntity.begin(), IdIt);
-  return EntityId(Index);
+  return It->second;
 }
 
 bool EntityIdTable::exists(const EntityName &Name) const {
@@ -35,14 +29,12 @@ bool EntityIdTable::exists(const EntityName &Name) const {
 
 void EntityIdTable::forEach(
     std::function<void(const EntityName &, EntityId)> Callback) const {
-  for (size_t Index = 0; Index < IdToEntity.size(); ++Index) {
-    EntityId EId(Index);
-    const EntityName &Name = *IdToEntity[Index];
-    Callback(Name, EId);
+  for (const auto& [Name, Id] : Entities) {
+    Callback(Name, Id);
   }
 }
 
-size_t EntityIdTable::count() const { return IdToEntity.size(); }
+size_t EntityIdTable::count() const { return Entities.size(); }
 
 } // namespace ssaf
 } // namespace clang

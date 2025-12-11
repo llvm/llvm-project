@@ -12,8 +12,7 @@
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include <functional>
-#include <set>
-#include <vector>
+#include <map>
 
 namespace clang {
 namespace ssaf {
@@ -23,9 +22,7 @@ namespace ssaf {
 /// The table maps each unique EntityName maps to exactly one EntityId.
 /// Entities are never removed.
 class EntityIdTable {
-  std::set<EntityName> Entities;
-
-  std::vector<const EntityName *> IdToEntity;
+  std::map<EntityName, EntityId> Entities;
 
 public:
   EntityIdTable() = default;
