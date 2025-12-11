@@ -180,6 +180,9 @@ If you are using one, or want to write one, you can learn about them by reading
 the ``*_target_definition.py`` files in the
 `Python examples folder <https://github.com/llvm/llvm-project/tree/main/lldb/examples/python>`__.
 
+We reccomend that before attempting to write a target definition script to solve
+your issues, you look into the other methods first.
+
 Target Description Format XML
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
