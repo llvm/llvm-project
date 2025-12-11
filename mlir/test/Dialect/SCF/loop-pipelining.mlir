@@ -14,7 +14,7 @@
 //  CHECK-SAME:     step %[[C1]] iter_args(%[[LARG:.*]] = %[[L0]]) -> (f32) {
 //  CHECK-NEXT:     %[[ADD0:.*]] = arith.addf %[[LARG]], %{{.*}} : f32
 //  CHECK-NEXT:     memref.store %[[ADD0]], %[[R]][%[[IV]]] : memref<?xf32>
-//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] : index
+//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[LR:.*]] = memref.load %[[A]][%[[IV1]]] : memref<?xf32>
 //  CHECK-NEXT:     scf.yield %[[LR]] : f32
 //  CHECK-NEXT:   }
@@ -87,7 +87,7 @@ func.func @iteration_lt_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:     %[[ADD0:.*]] = scf.execute_region
 //  CHECK-NEXT:       arith.addf %[[LARG]], %{{.*}} : f32
 //       CHECK:     memref.store %[[ADD0]], %[[R]][%[[IV]]] : memref<?xf32>
-//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] : index
+//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[LR:.*]] = scf.execute_region
 //  CHECK-NEXT:       memref.load %[[A]][%[[IV1]]] : memref<?xf32>
 //       CHECK:     scf.yield %[[LR]] : f32
@@ -135,7 +135,7 @@ func.func @simple_pipeline_region(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-SAME:     step %[[C3]] iter_args(%[[LARG0:.*]] = %[[L0]], %[[LARG1:.*]] = %[[L1]]) -> (f32, f32) {
 //  CHECK-NEXT:     %[[ADD0:.*]] = arith.addf %[[LARG0]], %{{.*}} : f32
 //  CHECK-NEXT:     memref.store %[[ADD0]], %[[R]][%[[IV]]] : memref<?xf32>
-//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C6]] : index
+//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C6]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[LR:.*]] = memref.load %[[A]][%[[IV1]]] : memref<?xf32>
 //  CHECK-NEXT:     scf.yield %[[LARG1]], %[[LR]] : f32, f32
 //  CHECK-NEXT:   }
@@ -175,7 +175,7 @@ func.func @simple_pipeline_step(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-SAME:     %[[LARG:.*]] = %[[L1]]) -> (f32, f32) {
 //  CHECK-NEXT:     memref.store %[[ADDARG]], %[[R]][%[[IV]]] : memref<?xf32>
 //  CHECK-NEXT:     %[[ADD1:.*]] = arith.addf %[[LARG]], %{{.*}} : f32
-//  CHECK-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] : index
+//  CHECK-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[L3:.*]] = memref.load %[[A]][%[[IV2]]] : memref<?xf32>
 //  CHECK-NEXT:     scf.yield %[[ADD1]], %[[L3]] : f32, f32
 //  CHECK-NEXT:   }
@@ -224,7 +224,7 @@ func.func @simple_pipeline_step(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  NOEPILOGUE-NEXT:     } else {
 //  NOEPILOGUE-NEXT:       scf.yield %[[CF]] : f32
 //  NOEPILOGUE-NEXT:     }
-//  NOEPILOGUE-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] : index
+//  NOEPILOGUE-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] overflow<nsw> : index
 //  NOEPILOGUE-NEXT:     %[[L3:.*]] = scf.if %[[S0]] -> (f32) {
 //  NOEPILOGUE-NEXT:       %[[PL:.*]] = memref.load %[[A]][%[[IV2]]] : memref<?xf32>
 //  NOEPILOGUE-NEXT:       scf.yield %[[PL]] : f32
@@ -274,7 +274,7 @@ func.func @three_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-SAME:     %[[LA3:.*]] = %[[L3]]) -> (f32, f32, f32, f32) {
 //  CHECK-NEXT:     %[[ADD0:.*]] = arith.addf %[[LA0]], %{{.*}} : f32
 //  CHECK-NEXT:     memref.store %[[ADD0]], %[[R]][%[[IV]]] : memref<?xf32>
-//  CHECK-NEXT:     %[[IV4:.*]] = arith.addi %[[IV]], %[[C4]] : index
+//  CHECK-NEXT:     %[[IV4:.*]] = arith.addi %[[IV]], %[[C4]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[L4:.*]] = memref.load %[[A]][%[[IV4]]] : memref<?xf32>
 //  CHECK-NEXT:     scf.yield %[[LA1]], %[[LA2]], %[[LA3]], %[[L4]] : f32, f32, f32, f32
 //  CHECK-NEXT:   }
@@ -326,7 +326,7 @@ func.func @long_liverange(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:     %[[ADD2:.*]] = arith.addf %[[LA2]], %{{.*}} : f32
 //  CHECK-NEXT:     %[[MUL1:.*]] = arith.mulf %[[ADDARG1]], %[[LA1]] : f32
 //  CHECK-NEXT:     memref.store %[[MULARG0]], %[[R]][%[[IV]]] : memref<?xf32>
-//  CHECK-NEXT:     %[[IV3:.*]] = arith.addi %[[IV]], %[[C3]] : index
+//  CHECK-NEXT:     %[[IV3:.*]] = arith.addi %[[IV]], %[[C3]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[L3:.*]] = memref.load %[[A]][%[[IV3]]] : memref<?xf32>
 //  CHECK-NEXT:     scf.yield %[[LA2]], %[[L3]], %[[ADD2]], %[[MUL1]] : f32, f32, f32, f32
 //  CHECK-NEXT:   }
@@ -379,7 +379,7 @@ func.func @multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:     %[[MUL1:.*]] = scf.execute_region
 // arith.mulf %[[ADDARG1]], %[[LA1]] : f32
 //       CHECK:     memref.store %[[MULARG0]], %[[R]][%[[IV]]] : memref<?xf32>
-//  CHECK-NEXT:     %[[IV3:.*]] = arith.addi %[[IV]], %[[C3]] : index
+//  CHECK-NEXT:     %[[IV3:.*]] = arith.addi %[[IV]], %[[C3]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[L3:.*]] = memref.load %[[A]][%[[IV3]]] : memref<?xf32>
 //  CHECK-NEXT:     scf.yield %[[LA2]], %[[L3]], %[[ADD2]], %[[MUL1]] : f32, f32, f32, f32
 //  CHECK-NEXT:   }
@@ -425,7 +425,7 @@ func.func @region_multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-SAME:     step %[[C1]] iter_args(%[[C:.*]] = %[[CSTF]],
 //  CHECK-SAME:     %[[LARG:.*]] = %[[L0]]) -> (f32, f32) {
 //  CHECK-NEXT:     %[[ADD0:.*]] = arith.addf %[[LARG]], %[[C]] : f32
-//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] : index
+//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[L1:.*]] = memref.load %[[A]][%[[IV1]]] : memref<?xf32>
 //  CHECK-NEXT:     scf.yield %[[ADD0]], %[[L1]] : f32, f32
 //  CHECK-NEXT:   }
@@ -464,7 +464,7 @@ func.func @loop_carried(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-SAME:     %[[ADDARG:.*]] = %[[ADD0]], %[[LARG:.*]] = %[[L1]]) -> (f32, f32, f32) {
 //  CHECK-NEXT:     %[[MUL0:.*]] = arith.mulf %[[ADDARG]], %[[CSTF]] : f32
 //  CHECK-NEXT:     %[[ADD1:.*]] = arith.addf %[[LARG]], %[[MUL0]] : f32
-//  CHECK-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] : index
+//  CHECK-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV2]]] : memref<?xf32>
 //  CHECK-NEXT:     scf.yield %[[MUL0]], %[[ADD1]], %[[L2]] : f32, f32, f32
 //  CHECK-NEXT:   }
@@ -509,7 +509,7 @@ func.func @backedge_different_stage(%A: memref<?xf32>) -> f32 {
 //       CHECK:     %[[MUL0:.*]] = arith.mulf %[[ADDARG]], %[[CSTF]] : f32
 //       CHECK:     %[[ADD1:.*]] = scf.execute_region
 //  CHECK-NEXT:       arith.addf %[[LARG]], %[[MUL0]] : f32
-//       CHECK:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] : index
+//       CHECK:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] overflow<nsw> : index
 //       CHECK:     %[[L2:.*]] = scf.execute_region
 //  CHECK-NEXT:       memref.load %[[A]][%[[IV2]]] : memref<?xf32>
 //       CHECK:     scf.yield %[[MUL0]], %[[ADD1]], %[[L2]] : f32, f32, f32
@@ -558,7 +558,7 @@ func.func @region_backedge_different_stage(%A: memref<?xf32>) -> f32 {
 //  CHECK-SAME:     %[[LARG:.*]] = %[[L0]]) -> (f32, f32) {
 //  CHECK-NEXT:     %[[ADD0:.*]] = arith.addf %[[LARG]], %[[C]] : f32
 //  CHECK-NEXT:     %[[MUL0:.*]] = arith.mulf %[[ADD0]], %[[CSTF]] : f32
-//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] : index
+//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV1]]] : memref<?xf32>
 //  CHECK-NEXT:     scf.yield %[[MUL0]], %[[L2]] : f32, f32
 //  CHECK-NEXT:   }
@@ -603,11 +603,11 @@ func.func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
 // CHECK:     %[[CV:.+]] = memref.subview %[[ARG2]]
 // CHECK:     linalg.generic
 // CHECK-SAME:  ins(%[[IA]], %[[IB]], %{{.*}} : {{.*}}) outs(%[[CV]] :
-// CHECK:     %[[NEXT:.+]] = arith.addi %[[IV]], %[[C1]]
+// CHECK:     %[[NEXT:.+]] = arith.addi %[[IV]], %[[C1]] overflow<nsw>
 // CHECK:     %[[ASV:.+]] = memref.subview %[[ARG0]][%[[NEXT]]] [8] [1] :
-// CHECK:     %[[NEXT:.+]] = arith.addi %[[IV]], %[[C1]] :
+// CHECK:     %[[NEXT:.+]] = arith.addi %[[IV]], %[[C1]] overflow<nsw> :
 // CHECK:     %[[BSV:.+]] = memref.subview %[[ARG1]][%[[NEXT]]] [8] [1] :
-// CHECK:     %[[NEXT:.+]] = arith.addi %[[IV]], %[[C1]] :
+// CHECK:     %[[NEXT:.+]] = arith.addi %[[IV]], %[[C1]] overflow<nsw> :
 // CHECK:     %[[BUFIDX:.+]] = affine.apply
 // CHECK:     %[[APROSV:.+]] = memref.subview %[[APRO]][%[[BUFIDX]], 0] [1, 8] [1, 1] :
 // CHECK:     %[[BPROSV:.+]] = memref.subview %[[BPRO]][%[[BUFIDX]], 0] [1, 8] [1, 1] :
@@ -679,10 +679,10 @@ func.func @pipeline_op_with_region(%A: memref<?xf32>, %B: memref<?xf32>, %result
 //  CHECK-NEXT:   %[[R:.*]]:3 = scf.for %[[IV:.*]] = %[[C0]] to %[[C3]]
 //  CHECK-SAME:     step %[[C1]] iter_args(%[[C:.*]] = %[[CSTF]],
 //  CHECK-SAME:     %[[ARG1:.*]] = %[[L0]], %[[ARG2:.*]] = %[[L1]]) -> (f32, f32, f32) {
-//  CHECK-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C1]] : index
+//  CHECK-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C1]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV2]]] : memref<?xf32>
 //  CHECK-NEXT:     %[[MUL0:.*]] = arith.mulf %[[C]], %[[ARG1]] : f32
-//  CHECK-NEXT:     %[[IV3:.*]] = arith.addi %[[IV]], %[[C1]] : index
+//  CHECK-NEXT:     %[[IV3:.*]] = arith.addi %[[IV]], %[[C1]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[IV4:.*]] = arith.addi %[[IV3]], %[[C1]] : index
 //  CHECK-NEXT:     %[[L3:.*]] = memref.load %[[A]][%[[IV4]]] : memref<?xf32>
 //  CHECK-NEXT:     %[[MUL1:.*]] = arith.mulf %[[ARG2]], %[[MUL0]] : f32
@@ -778,9 +778,9 @@ func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>, %ub: 
 //      NOEPILOGUE: %[[P_I0:.+]] = arith.cmpi slt, %[[LB]], %[[UB]] : index
 //      NOEPILOGUE: %[[L0:.+]] = scf.if %[[P_I0]] -> (f32) {
 // NOEPILOGUE-NEXT:   memref.load %[[A]][%[[LB]]] : memref<?xf32>
-//      NOEPILOGUE: %[[IV1:.+]] = arith.addi %[[LB]], %[[STEP]] : index
+//      NOEPILOGUE: %[[IV1:.+]] = arith.addi %[[LB]], %[[STEP]] overflow<nsw> : index
 //      NOEPILOGUE: %[[P_I1:.+]] = arith.cmpi slt, %[[IV1]], %[[UB]] : index
-//      NOEPILOGUE: %[[IV1_2:.+]] = arith.addi %[[LB]], %[[STEP]] : index
+//      NOEPILOGUE: %[[IV1_2:.+]] = arith.addi %[[LB]], %[[STEP]] overflow<nsw> : index
 //      NOEPILOGUE: %[[V0:.+]] = scf.if %[[P_I0]] -> (f32) {
 // NOEPILOGUE-NEXT:   arith.addf %[[L0]], %[[CSTF]] : f32
 //      NOEPILOGUE: %[[L1:.+]] = scf.if %[[P_I1]] -> (f32) {
@@ -795,7 +795,7 @@ func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>, %ub: 
 //      NOEPILOGUE:   %[[V2:.+]] = scf.if %[[P_I3]] -> (f32) {
 //      NOEPILOGUE:     arith.addf %[[L2]], %[[CSTF]] : f32
 //      NOEPILOGUE:   %[[IT4:.+]] = arith.muli %[[STEP]], %[[C2]] : index
-//      NOEPILOGUE:   %[[IV3:.+]] = arith.addi %[[IV2]], %[[IT4]] : index
+//      NOEPILOGUE:   %[[IV3:.+]] = arith.addi %[[IV2]], %[[IT4]] overflow<nsw> : index
 //      NOEPILOGUE:   %[[L3:.+]] = scf.if %[[P_I2]] -> (f32) {
 //      NOEPILOGUE:     memref.load %[[A]][%[[IV3]]] : memref<?xf32>
 //      NOEPILOGUE:   scf.yield %[[V2]], %[[L3]] : f32, f32
@@ -824,11 +824,11 @@ func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>, %ub: 
 //        CHECK:   %[[SUBI_17:.*]] = arith.subi %[[DIVSI_15]], %[[C2]]
 //        CHECK:   %[[MAXSI_18:.*]] = arith.maxsi %[[SUBI_17]], %[[C0]]
 //        CHECK:   %[[MULI_19:.*]] = arith.muli %[[STEP]], %[[MAXSI_18]]
-//        CHECK:   %[[ADDI_20:.*]] = arith.addi %[[LB]], %[[MULI_19]]
-//        CHECK:   %[[ADDI_21:.*]] = arith.addi %[[MAXSI_18]], %[[C1]]
+//        CHECK:   %[[ADDI_20:.*]] = arith.addi %[[LB]], %[[MULI_19]] overflow<nsw>
+//        CHECK:   %[[ADDI_21:.*]] = arith.addi %[[MAXSI_18]], %[[C1]] overflow<nsw>
 //        CHECK:   %[[CMPI_22:.*]] = arith.cmpi sge, %[[DIVSI_15]], %[[C1]]
 //        CHECK:   %[[MULI_23:.*]] = arith.muli %[[STEP]], %[[ADDI_21]]
-//        CHECK:   %[[ADDI_24:.*]] = arith.addi %[[LB]], %[[MULI_23]]
+//        CHECK:   %[[ADDI_24:.*]] = arith.addi %[[LB]], %[[MULI_23]] overflow<nsw>
 //        CHECK:   %[[CMPI_25:.*]] = arith.cmpi sge, %[[DIVSI_15]], %[[C2]]
 //        CHECK:   scf.if %[[CMPI_22]] {
 //        CHECK:     memref.store %{{.*}}#0, %{{.*}}[%[[ADDI_20]]]
@@ -863,7 +863,7 @@ func.func @dynamic_loop(%A: memref<?xf32>, %result: memref<?xf32>, %lb: index, %
 //       NOEPILOGUE:       %[[CMPI_4:.*]] = arith.cmpi slt, %[[ARG5]], %[[SUBI_3]]
 //       NOEPILOGUE:       %[[ADDF_5:.*]] = arith.addf %[[ARG7]], %[[ARG6]]
 //       NOEPILOGUE:       %[[MULF_6:.*]] = arith.mulf %[[ADDF_5]], %{{.*}}
-//       NOEPILOGUE:       %[[ADDI_7:.*]] = arith.addi %[[ARG5]], %{{.*}}
+//       NOEPILOGUE:       %[[ADDI_7:.*]] = arith.addi %[[ARG5]], %{{.*}} overflow<nsw>
 //       NOEPILOGUE:       %[[IF_8:.*]] = scf.if %[[CMPI_4]]
 //       NOEPILOGUE:         %[[LOAD_9:.*]] = memref.load %{{.*}}[%[[ADDI_7]]]
 //       NOEPILOGUE:         scf.yield %[[LOAD_9]]
@@ -884,7 +884,7 @@ func.func @dynamic_loop(%A: memref<?xf32>, %result: memref<?xf32>, %lb: index, %
 //       CHECK:   %{{.*}}:2 = scf.for %[[ARG5:.*]] = %[[LB:.*]] to %[[UBM]] step %[[STEP:.*]] iter_args(%[[ARG6:.*]] = %{{.*}}, %[[ARG7:.*]] = %{{.*}})
 //       CHECK:       %[[ADDF_13:.*]] = arith.addf %[[ARG7]], %[[ARG6]]
 //       CHECK:       %[[MULF_14:.*]] = arith.mulf %[[ADDF_13]], %{{.*}}
-//       CHECK:       %[[ADDI_15:.*]] = arith.addi %[[ARG5]], %{{.*}}
+//       CHECK:       %[[ADDI_15:.*]] = arith.addi %[[ARG5]], %{{.*}} overflow<nsw>
 //       CHECK:       %[[LOAD_16:.*]] = memref.load %{{.*}}[%[[ADDI_15]]]
 //       CHECK:       scf.yield %[[MULF_14]], %[[LOAD_16]]
 //       CHECK:     }
@@ -940,7 +940,7 @@ func.func @dynamic_loop_result(%A: memref<?xf32>, %result: memref<?xf32>, %lb: i
 //  CHECK-NEXT:     %[[ADD0:.*]] = arith.addf %[[ARG1]], %[[ARG0]] : f32
 //  CHECK-NEXT:     %[[MUL0:.*]] = arith.mulf %[[ADD0]], %[[CST0]] : f32
 //  CHECK-NEXT:     memref.store %[[MUL0]], %[[A]][%[[IV]]] : memref<?xf32>
-//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] : index
+//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] overflow<nsw> : index
 //  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV1]]] : memref<?xf32>
 //  CHECK-NEXT:     scf.yield %[[CST0]], %[[L2]] : f32
 //  CHECK-NEXT:   }

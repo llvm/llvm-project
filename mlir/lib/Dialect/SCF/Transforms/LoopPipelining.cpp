@@ -283,7 +283,8 @@ LogicalResult LoopPipelinerInternal::emitPrologue(RewriterBase &rewriter) {
           arith::MulIOp::create(
               rewriter, loc, step,
               arith::ConstantOp::create(rewriter, loc,
-                                        rewriter.getIntegerAttr(t, i))));
+                                        rewriter.getIntegerAttr(t, i))),
+          arith::IntegerOverflowFlags::nsw);
       predicates[i] = arith::CmpIOp::create(rewriter, loc,
                                             arith::CmpIPredicate::slt, iv, ub);
     }
@@ -296,7 +297,8 @@ LogicalResult LoopPipelinerInternal::emitPrologue(RewriterBase &rewriter) {
         arith::MulIOp::create(
             rewriter, loc, step,
             arith::ConstantOp::create(rewriter, loc,
-                                      rewriter.getIntegerAttr(t, i))));
+                                      rewriter.getIntegerAttr(t, i))),
+        arith::IntegerOverflowFlags::nsw);
     setValueMapping(forOp.getInductionVar(), iv, i);
     for (Operation *op : opOrder) {
       if (stages[op] > i)
@@ -521,7 +523,8 @@ LogicalResult LoopPipelinerInternal::createKernel(
                 rewriter, forOp.getLoc(),
                 rewriter.getIntegerAttr(t, maxStage - stages[op])));
         Value iv = arith::AddIOp::create(rewriter, forOp.getLoc(),
-                                         newForOp.getInductionVar(), offset);
+                                         newForOp.getInductionVar(), offset,
+                                         arith::IntegerOverflowFlags::nsw);
         nestedNewOp->setOperand(operand->getOperandNumber(), iv);
         rewriter.setInsertionPointAfter(newOp);
         continue;
@@ -667,7 +670,8 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
                                            createConst(-1));
 
   Value rangeDiff = arith::SubIOp::create(rewriter, loc, ub, lb);
-  Value rangeIncrStep = arith::AddIOp::create(rewriter, loc, rangeDiff, step);
+  Value rangeIncrStep = arith::AddIOp::create(rewriter, loc, rangeDiff, step,
+                                              arith::IntegerOverflowFlags::nsw);
   Value rangeDecr =
       arith::AddIOp::create(rewriter, loc, rangeIncrStep, stepDecr);
   Value totalIterations =
@@ -686,12 +690,14 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
   for (int64_t i = 1; i <= maxStage; i++) {
     // newLastIter = lb + step * iterI
     Value newlastIter = arith::AddIOp::create(
-        rewriter, loc, lb, arith::MulIOp::create(rewriter, loc, step, iterI));
+        rewriter, loc, lb, arith::MulIOp::create(rewriter, loc, step, iterI),
+        arith::IntegerOverflowFlags::nsw);
 
     setValueMapping(forOp.getInductionVar(), newlastIter, i);
 
     // increment to next iterI
-    iterI = arith::AddIOp::create(rewriter, loc, iterI, one);
+    iterI = arith::AddIOp::create(rewriter, loc, iterI, one,
+                                  arith::IntegerOverflowFlags::nsw);
 
     if (dynamicLoop) {
       // Disable stages when `i` is greater than total_iters.
