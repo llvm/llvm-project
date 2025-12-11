@@ -83,8 +83,7 @@ entry:
 ; CHECK-FM: blr
 
 ; CHECK-FM-VSX: @min1
-; CHECK-FM-VSX: xssubdp [[REG:[0-9]+]], 2, 1
-; CHECK-FM-VSX: fsel 1, [[REG]], 1, 2
+; CHECK-FM-VSX: xsmindp [[REG:[0-9]+]], 1, 2
 ; CHECK-FM-VSX: blr
 }
 
@@ -104,8 +103,7 @@ entry:
 ; CHECK-FM: blr
 
 ; CHECK-FM-VSX: @max1
-; CHECK-FM-VSX: xssubdp [[REG:[0-9]+]], 1, 2
-; CHECK-FM-VSX: fsel 1, [[REG]], 1, 2
+; CHECK-FM-VSX: xsmaxdp [[REG:[0-9]+]], 1, 2
 ; CHECK-FM-VSX: blr
 }
 

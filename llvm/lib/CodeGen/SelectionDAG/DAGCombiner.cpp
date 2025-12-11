@@ -11973,6 +11973,13 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
     if (TLI.isOperationLegal(Opcode, VT))
       return DAG.getNode(Opcode, DL, VT, LHS, RHS);
 
+    // X86 has combineFMinFMax
+    if (TLI.hasTargetDAGCombine((ISD::NodeType)IEEE2019Opcode) ||
+        TLI.hasTargetDAGCombine((ISD::NodeType)IEEE2019NumOpcode) ||
+        TLI.hasTargetDAGCombine((ISD::NodeType)IEEEOpcode) ||
+        TLI.hasTargetDAGCombine((ISD::NodeType)Opcode))
+      return SDValue();
+
     if (TLI.isOperationCustom(IEEE2019Opcode, VT))
       return DAG.getNode(IEEE2019Opcode, DL, VT, LHS, RHS);
     if (TLI.isOperationCustom(IEEE2019NumOpcode, VT))

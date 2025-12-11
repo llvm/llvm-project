@@ -184,7 +184,7 @@ define float @fp-armv8_vminnm_NNNo(float %a) {
 define double @fp-armv8_vminnm_NNNole(double %a) {
 ; CHECK-LABEL: "fp-armv8_vminnm_NNNole":
 ; CHECK: vminnm.f64
-; CHECK-NOT: vminnm.f64
+; CHECK: vminnm.f64
   %cmp1 = fcmp ole double %a, 34.
   %cond1 = select nsz i1 %cmp1, double %a, double 34.
   %cmp2 = fcmp ole double 56., %cond1
