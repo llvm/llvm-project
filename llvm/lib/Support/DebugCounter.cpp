@@ -11,8 +11,8 @@ using namespace llvm;
 namespace llvm {
 
 void DebugCounter::printChunks(raw_ostream &OS,
-                               ArrayRef<IntegerInclusiveInterval> Ranges) {
-  IntegerIntervalUtils::printIntervals(OS, Ranges, ':');
+                               ArrayRef<IntegerInclusiveInterval> Chunks) {
+  IntegerIntervalUtils::printIntervals(OS, Chunks, ':');
 }
 
 } // namespace llvm
