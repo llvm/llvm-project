@@ -519,6 +519,8 @@ LANGOPT(BoundsSafetyBringUpMissingChecks, 7, clang::LangOptions::getDefaultBound
 
 LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety analysis for C++")
 
+LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Experimental lifetime safety inference analysis for C++")
+
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 
 #undef LANGOPT
