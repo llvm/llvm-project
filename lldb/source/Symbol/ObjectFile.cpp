@@ -68,7 +68,7 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
   if (!file)
     return {};
 
-  if (!extractor_sp || extractor_sp->GetByteSize() == 0) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
     const bool file_exists = FileSystem::Instance().Exists(*file);
     // We have an object name which most likely means we have a .o file in
     // a static archive (.a file). Try and see if we have a cached archive
@@ -92,7 +92,7 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
     }
   }
 
-  if (!extractor_sp || extractor_sp->GetByteSize() == 0) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
     // Check for archive file with format "/path/to/archive.a(object.o)"
     llvm::SmallString<256> path_with_object;
     module_sp->GetFileSpec().GetPath(path_with_object);
@@ -127,7 +127,7 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
     }
   }
 
-  if (extractor_sp && extractor_sp->GetByteSize() > 0) {
+  if (extractor_sp && extractor_sp->HasData()) {
     // Check if this is a normal object file by iterating through all
     // object file plugin instances.
     ObjectFileCreateInstance callback;
@@ -268,7 +268,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
       m_symtab_once_up(new llvm::once_flag()) {
   if (file_spec_ptr)
     m_file = *file_spec_ptr;
-  if (extractor_sp && extractor_sp->GetByteSize() > 0) {
+  if (extractor_sp && extractor_sp->HasData()) {
     m_data_nsp = extractor_sp;
     // The offset & length fields may be specifying a subset of the
     // total data buffer.
@@ -293,7 +293,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
       m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(process_sp),
       m_memory_addr(header_addr), m_sections_up(), m_symtab_up(),
       m_symtab_once_up(new llvm::once_flag()) {
-  if (header_extractor_sp && header_extractor_sp->GetByteSize() > 0)
+  if (header_extractor_sp && header_extractor_sp->HasData())
     m_data_nsp = header_extractor_sp;
   Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log,

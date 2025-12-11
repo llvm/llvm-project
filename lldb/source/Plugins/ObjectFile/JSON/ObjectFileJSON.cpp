@@ -42,7 +42,7 @@ ObjectFile *ObjectFileJSON::CreateInstance(const ModuleSP &module_sp,
                                            const FileSpec *file,
                                            offset_t file_offset,
                                            offset_t length) {
-  if (!extractor_sp || extractor_sp->GetByteSize() == 0) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
     DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;

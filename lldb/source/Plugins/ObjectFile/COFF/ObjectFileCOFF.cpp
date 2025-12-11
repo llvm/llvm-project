@@ -51,7 +51,7 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
                                offset_t file_offset, offset_t length) {
   Log *log = GetLog(LLDBLog::Object);
 
-  if (!extractor_sp || extractor_sp->GetByteSize() == 0) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
     DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp) {
       LLDB_LOG(log,
@@ -63,7 +63,7 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
     data_offset = 0;
   }
 
-  assert(extractor_sp && extractor_sp->GetByteSize() > 0 &&
+  assert(extractor_sp && extractor_sp->HasData() &&
          "must have mapped file at this point");
 
   if (!IsCOFFObjectFile(extractor_sp->GetSharedDataBuffer()))

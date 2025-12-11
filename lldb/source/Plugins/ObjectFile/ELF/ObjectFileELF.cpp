@@ -393,7 +393,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
                                           lldb::offset_t file_offset,
                                           lldb::offset_t length) {
   bool mapped_writable = false;
-  if (!extractor_sp || extractor_sp->GetByteSize() == 0) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
     DataBufferSP buffer_sp = MapFileDataWritable(*file, length, file_offset);
     if (!buffer_sp)
       return nullptr;
@@ -403,7 +403,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
     mapped_writable = true;
   }
 
-  assert(extractor_sp && extractor_sp->GetByteSize() > 0);
+  assert(extractor_sp && extractor_sp->HasData());
 
   DataBufferSP data_sp = extractor_sp->GetSharedDataBuffer();
 

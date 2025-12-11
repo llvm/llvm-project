@@ -786,7 +786,7 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
                                             const FileSpec *file,
                                             lldb::offset_t file_offset,
                                             lldb::offset_t length) {
-  if (!extractor_sp || extractor_sp->GetByteSize() == 0) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
     DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;

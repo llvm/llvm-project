@@ -207,7 +207,7 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(
     lldb::offset_t data_offset, const lldb_private::FileSpec *file_p,
     lldb::offset_t file_offset, lldb::offset_t length) {
   FileSpec file = file_p ? *file_p : FileSpec();
-  if (!extractor_sp || extractor_sp->GetByteSize() == 0) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
     DataBufferSP data_sp = MapFileData(file, length, file_offset);
     if (!data_sp)
       return nullptr;

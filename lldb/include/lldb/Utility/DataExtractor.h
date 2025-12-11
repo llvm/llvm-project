@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_DATAEXTRACTOR_H
 #define LLDB_UTILITY_DATAEXTRACTOR_H
 
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -818,6 +819,8 @@ public:
   uint64_t GetULEB128(lldb::offset_t *offset_ptr) const;
 
   lldb::DataBufferSP &GetSharedDataBuffer() { return m_data_sp; }
+
+  bool HasData() { return m_start && m_end && m_end - m_start > 0; }
 
   /// Peek at a C string at \a offset.
   ///
