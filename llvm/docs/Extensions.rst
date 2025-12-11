@@ -416,14 +416,14 @@ as offsets relative to prior addresses.
 The following versioning schemes are currently supported (newer versions support
 features of the older versions).
 
+Version 5 (newest): Capable of encoding Post-Link CFG information, which
+provides basic block and edge frequencies obtained from a post-link tool like
+Propeller, reflecting the final binary layout. This feature is enabled by the 8th
+bit of the feature entry.
+The feature data will be two bytes long to accommodate future extensions.
+
 Version 4: Capable of encoding basic block hashes. This feature is
 enabled by the 7th bit of the feature byte.
-
-Version 5 (newest): The feature data will be two bytes long to accommodate
-future extensions. It is also capable of encoding Post-Link CFG information,
-which provides basic block and edge frequencies obtained from a post-link tool
-like Propeller, reflecting the final binary layout.
-
 
 Example:
 
