@@ -35,7 +35,7 @@ define float @ret_mul_exponent_f32_22(float %arg0) {
 }
 
 define float @ret_mul_exponent_f32_23(float %arg0) {
-; CHECK-LABEL: define float @ret_mul_exponent_f32_23(
+; CHECK-LABEL: define nofpclass(sub) float @ret_mul_exponent_f32_23(
 ; CHECK-SAME: float [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul float [[ARG0]], 0x4160000000000000
 ; CHECK-NEXT:    ret float [[CALL]]
@@ -45,7 +45,7 @@ define float @ret_mul_exponent_f32_23(float %arg0) {
 }
 
 define float @ret_mul_exponent_f32_24(float %arg0) {
-; CHECK-LABEL: define float @ret_mul_exponent_f32_24(
+; CHECK-LABEL: define nofpclass(sub) float @ret_mul_exponent_f32_24(
 ; CHECK-SAME: float [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul float [[ARG0]], 0x4170000000000000
 ; CHECK-NEXT:    ret float [[CALL]]
@@ -55,7 +55,7 @@ define float @ret_mul_exponent_f32_24(float %arg0) {
 }
 
 define float @ret_mul_exponent_f32_23_nnan(float nofpclass(nan) %arg0) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_mul_exponent_f32_23_nnan(
+; CHECK-LABEL: define nofpclass(nan sub) float @ret_mul_exponent_f32_23_nnan(
 ; CHECK-SAME: float nofpclass(nan) [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul float [[ARG0]], 0x4160000000000000
 ; CHECK-NEXT:    ret float [[CALL]]
@@ -85,7 +85,7 @@ define double @ret_mul_exponent_f64_51(double %arg0) {
 }
 
 define double @ret_mul_exponent_f64_52(double %arg0) {
-; CHECK-LABEL: define double @ret_mul_exponent_f64_52(
+; CHECK-LABEL: define nofpclass(sub) double @ret_mul_exponent_f64_52(
 ; CHECK-SAME: double [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul double [[ARG0]], 0x4330000000000000
 ; CHECK-NEXT:    ret double [[CALL]]
@@ -95,7 +95,7 @@ define double @ret_mul_exponent_f64_52(double %arg0) {
 }
 
 define double @ret_mul_exponent_f64_53(double %arg0) {
-; CHECK-LABEL: define double @ret_mul_exponent_f64_53(
+; CHECK-LABEL: define nofpclass(sub) double @ret_mul_exponent_f64_53(
 ; CHECK-SAME: double [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul double [[ARG0]], 0x4340000000000000
 ; CHECK-NEXT:    ret double [[CALL]]
@@ -125,7 +125,7 @@ define half @ret_mul_exponent_f16_9(half %arg0) {
 }
 
 define half @ret_mul_exponent_f16_10(half %arg0) {
-; CHECK-LABEL: define half @ret_mul_exponent_f16_10(
+; CHECK-LABEL: define nofpclass(sub) half @ret_mul_exponent_f16_10(
 ; CHECK-SAME: half [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul half [[ARG0]], 0xH6400
 ; CHECK-NEXT:    ret half [[CALL]]
@@ -145,7 +145,7 @@ define bfloat @ret_mul_exponent_bf16_6(bfloat %arg0) {
 }
 
 define bfloat @ret_mul_exponent_bf16_7(bfloat %arg0) {
-; CHECK-LABEL: define bfloat @ret_mul_exponent_bf16_7(
+; CHECK-LABEL: define nofpclass(sub) bfloat @ret_mul_exponent_bf16_7(
 ; CHECK-SAME: bfloat [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul bfloat [[ARG0]], 0xR4300
 ; CHECK-NEXT:    ret bfloat [[CALL]]
@@ -155,7 +155,7 @@ define bfloat @ret_mul_exponent_bf16_7(bfloat %arg0) {
 }
 
 define bfloat @ret_mul_exponent_bf16_8(bfloat %arg0) {
-; CHECK-LABEL: define bfloat @ret_mul_exponent_bf16_8(
+; CHECK-LABEL: define nofpclass(sub) bfloat @ret_mul_exponent_bf16_8(
 ; CHECK-SAME: bfloat [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul bfloat [[ARG0]], 0xR4380
 ; CHECK-NEXT:    ret bfloat [[CALL]]
@@ -215,7 +215,7 @@ define float @ret_mul_exponent_f32_neg127(float %arg0) {
 }
 
 define <2 x float> @ret_mul_exponent_v2f32_splat_23(<2 x float> %arg0) {
-; CHECK-LABEL: define <2 x float> @ret_mul_exponent_v2f32_splat_23(
+; CHECK-LABEL: define nofpclass(sub) <2 x float> @ret_mul_exponent_v2f32_splat_23(
 ; CHECK-SAME: <2 x float> [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul <2 x float> [[ARG0]], splat (float 0x4160000000000000)
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
@@ -267,7 +267,7 @@ define float @ret_mul_f32_0(float %arg0) {
 }
 
 define float @ret_mul_f32_inf(float %arg0) {
-; CHECK-LABEL: define float @ret_mul_f32_inf(
+; CHECK-LABEL: define nofpclass(sub) float @ret_mul_f32_inf(
 ; CHECK-SAME: float [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul float [[ARG0]], 0x7FF0000000000000
 ; CHECK-NEXT:    ret float [[CALL]]
