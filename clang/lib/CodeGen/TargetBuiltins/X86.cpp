@@ -78,16 +78,16 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
 // Emit rounding for the value X according to the rounding RoundingControl.
 static Value *emitX86Round(CodeGenFunction &CGF, Value *X,
                            unsigned RoundingControl) {
-  unsigned roundingMask = 0b11;
-  unsigned useMXCSRBit = 0b1000;
+  unsigned RoundingMask = 0b11;
+  unsigned UseMXCSRBit = 0b1000;
 
-  unsigned roundingMode = RoundingControl & roundingMask;
-  bool useMXCSR = RoundingControl & useMXCSRBit;
+  unsigned RoundingMode = RoundingControl & RoundingMask;
+  bool UseMXCSR = RoundingControl & UseMXCSRBit;
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
   LLVMContext &Ctx = CGF.CGM.getLLVMContext();
 
-  if (useMXCSR) {
+  if (UseMXCSR) {
     ID = Intrinsic::experimental_constrained_nearbyint;
 
     Value *ExceptMode =
@@ -100,7 +100,7 @@ static Value *emitX86Round(CodeGenFunction &CGF, Value *X,
     return CGF.Builder.CreateCall(F, {X, ExceptMode, RoundingMode});
   }
 
-  switch (roundingMode) {
+  switch (RoundingMode) {
   case 0b00:
     ID = Intrinsic::roundeven;
     break;
