@@ -1,0 +1,4 @@
+# This should succeed and not be echoed.
+expr 1+2
+# This should fail and be echoed.
+bogus_command
