@@ -7434,14 +7434,14 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorCompressToSVE(
 
 SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
                                                     SelectionDAG &DAG) const {
-  SDLoc DL(Op);
   EVT VT = Op.getValueType();
-  if (VT.isFixedLengthVector())
-    return LowerFixedLengthVectorCompressToSVE(Op, DAG);
-
   if (!Subtarget->isSVEAvailable())
     return SDValue();
 
+  if (VT.isFixedLengthVector())
+    return LowerFixedLengthVectorCompressToSVE(Op, DAG);
+
+  SDLoc DL(Op);
   SDValue Vec = Op.getOperand(0);
   SDValue Mask = Op.getOperand(1);
   SDValue Passthru = Op.getOperand(2);
