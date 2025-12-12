@@ -329,7 +329,7 @@ define <vscale x 4 x i1> @whilewr_extract_nxv4i1(ptr %a, ptr %b) {
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv8i1(ptr %a, ptr %b, i64 1)
+  %0 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1(ptr %a, ptr %b, i64 1)
   ret <vscale x 4 x i1> %0
 }
 
@@ -341,6 +341,6 @@ define <vscale x 2 x i1> @whilewr_extract_nxv2i1(ptr %a, ptr %b) {
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <vscale x 2 x i1> @llvm.loop.dependence.war.mask.nxv8i1(ptr %a, ptr %b, i64 4)
+  %0 = call <vscale x 2 x i1> @llvm.loop.dependence.war.mask.nxv2i1(ptr %a, ptr %b, i64 4)
   ret <vscale x 2 x i1> %0
 }
