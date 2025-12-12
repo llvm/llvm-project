@@ -1743,7 +1743,6 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
-
   return MPM;
 }
 
