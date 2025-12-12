@@ -1245,6 +1245,16 @@ struct CompileUnitsResponseBody {
 };
 llvm::json::Value toJSON(const CompileUnitsResponseBody &);
 
+/// Arguments for `testGetTargetBreakpoints` request.
+using TestGetTargetBreakpointsArguments = EmptyArguments;
+
+/// Response to `testGetTargetBreakpoints` request.
+struct TestGetTargetBreakpointsResponseBody {
+  /// Array of all breakpoints that are currently set in the target.
+  std::vector<Breakpoint> breakpoints;
+};
+llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &);
+
 } // namespace lldb_dap::protocol
 
 #endif

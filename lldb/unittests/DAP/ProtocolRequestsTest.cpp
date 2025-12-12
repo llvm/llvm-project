@@ -274,3 +274,33 @@ TEST(ProtocolRequestsTest, CompileUnitsResponseBody) {
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
 }
+
+TEST(ProtocolRequestsTest, TestGetTargetBreakpointsResponseBody) {
+  Breakpoint breakpoint1;
+  breakpoint1.id = 1;
+  breakpoint1.verified = true;
+  Breakpoint breakpoint2;
+  breakpoint2.id = 2;
+  breakpoint2.verified = false;
+  breakpoint2.message = "Failed to set breakpoint";
+  TestGetTargetBreakpointsResponseBody body;
+  body.breakpoints = {breakpoint1, breakpoint2};
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({
+    "breakpoints": [
+      {
+        "id": 1,
+        "verified": true
+      },
+      {
+        "id": 2,
+        "verified": false,
+        "message": "Failed to set breakpoint"
+      }
+    ]
+  })");
+
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+}

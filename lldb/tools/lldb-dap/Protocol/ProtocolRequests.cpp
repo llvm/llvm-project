@@ -732,4 +732,9 @@ llvm::json::Value toJSON(const CompileUnitsResponseBody &Body) {
   return result;
 }
 
+llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &Body) {
+  json::Object result{{"breakpoints", Body.breakpoints}};
+  return result;
+}
+
 } // namespace lldb_dap::protocol
