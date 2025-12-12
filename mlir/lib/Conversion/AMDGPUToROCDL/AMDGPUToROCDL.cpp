@@ -1644,7 +1644,7 @@ int32_t getScaleSel(int32_t blockSize, unsigned bitWidth, int32_t scaleWaveHalf,
   // those values are merged together. (Note: scaleWaveHalf isn't a high-level
   // attribute but is derifed from firstScaleLane).
   assert(llvm::is_contained({16, 32}, blockSize));
-  assert(llvm::is_contained(llvm::ArrayRef<unsigned>{4, 6, 8}, bitWidth));
+  assert(llvm::is_contained({4u, 6u, 8u}, bitWidth));
 
   const bool isFp8 = bitWidth == 8;
   const bool isBlock16 = blockSize == 16;
@@ -2276,45 +2276,88 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
   }
 };
 
-struct AMDGPUMakeDmaBaseLowering
-    : public ConvertOpToLLVMPattern<MakeDmaBaseOp> {
-  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+static Value setValueAtOffset(ConversionPatternRewriter &rewriter, Location loc,
+                              Value accumulator, Value value, int64_t shift) {
+  shift = shift % 32;
+  Value shiftAmount;
+  if (shift != 0) {
+    shiftAmount = createI32Constant(rewriter, loc, shift % 32);
+    value = LLVM::ShlOp::create(rewriter, loc, value, shiftAmount);
+  }
+
+  if (matchPattern(accumulator, mlir::m_Zero()))
+    return value;
+
+  constexpr bool isDisjoint = true;
+  return LLVM::OrOp::create(rewriter, loc, accumulator, value, isDisjoint);
+}
+
+template <typename BaseOp>
+struct AMDGPUMakeDmaBaseLowering : public ConvertOpToLLVMPattern<BaseOp> {
+  using ConvertOpToLLVMPattern<BaseOp>::ConvertOpToLLVMPattern;
+  using Adaptor = typename ConvertOpToLLVMPattern<BaseOp>::OpAdaptor;
 
   AMDGPUMakeDmaBaseLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<MakeDmaBaseOp>(converter), chipset(chipset) {}
+      : ConvertOpToLLVMPattern<BaseOp>(converter), chipset(chipset) {}
   Chipset chipset;
 
   LogicalResult
-  matchAndRewrite(MakeDmaBaseOp op, OpAdaptor adaptor,
+  matchAndRewrite(BaseOp op, Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (chipset < kGfx1250)
       return op->emitOpError("make_dma_base is only supported on gfx1250");
 
     Location loc = op.getLoc();
 
+    constexpr int32_t constlen = 4;
+    Value consts[constlen];
+    for (int64_t i = 0; i < constlen; i++)
+      consts[i] = createI32Constant(rewriter, loc, i);
+
+    constexpr int32_t sgprslen = constlen;
+    Value sgprs[sgprslen];
+    for (int64_t i = 0; i < sgprslen; i++) {
+      sgprs[i] = consts[0];
+    }
+
+    sgprs[0] = consts[1];
+
+    if (op.isGather()) {
+      sgprs[0] = setValueAtOffset(rewriter, loc, sgprs[0], consts[1], 30);
+
+      auto type = cast<TDMGatherBaseType>(op.getResult().getType());
+      Type indexType = type.getIndexType();
+      unsigned indexSize = indexType.getIntOrFloatBitWidth();
+      assert(llvm::is_contained({16u, 32u}, indexSize) &&
+             "expected index_size to be 16 or 32");
+      unsigned idx = (indexSize / 16) - 1;
+
+      if (idx)
+        sgprs[0] = setValueAtOffset(rewriter, loc, sgprs[0], consts[1], 31);
+    }
+
     ValueRange ldsIndices = adaptor.getLdsIndices();
     Value lds = adaptor.getLds();
     auto ldsMemRefType = cast<MemRefType>(op.getLds().getType());
 
-    Value ldsPtr =
-        getStridedElementPtr(rewriter, loc, ldsMemRefType, lds, ldsIndices);
+    Value ldsPtr = ConvertToLLVMPattern::getStridedElementPtr(
+        rewriter, loc, ldsMemRefType, lds, ldsIndices);
 
     ValueRange globalIndices = adaptor.getGlobalIndices();
     Value global = adaptor.getGlobal();
     auto globalMemRefType = cast<MemRefType>(op.getGlobal().getType());
 
-    Value globalPtr = getStridedElementPtr(rewriter, loc, globalMemRefType,
-                                           global, globalIndices);
+    Value globalPtr = ConvertToLLVMPattern::getStridedElementPtr(
+        rewriter, loc, globalMemRefType, global, globalIndices);
 
     Type i32 = rewriter.getI32Type();
     Type i64 = rewriter.getI64Type();
 
-    Value castForLdsAddr = LLVM::PtrToIntOp::create(rewriter, loc, i32, ldsPtr);
+    sgprs[1] = LLVM::PtrToIntOp::create(rewriter, loc, i32, ldsPtr);
     Value castForGlobalAddr =
         LLVM::PtrToIntOp::create(rewriter, loc, i64, globalPtr);
 
-    Value lowHalf =
-        LLVM::TruncOp::create(rewriter, loc, i32, castForGlobalAddr);
+    sgprs[2] = LLVM::TruncOp::create(rewriter, loc, i32, castForGlobalAddr);
 
     Value shift = LLVM::LShrOp::create(rewriter, loc, castForGlobalAddr,
                                        createI64Constant(rewriter, loc, 32));
@@ -2322,26 +2365,17 @@ struct AMDGPUMakeDmaBaseLowering
     Value highHalf = LLVM::TruncOp::create(rewriter, loc, i32, shift);
 
     Value mask = createI32Constant(rewriter, loc, (1ull << 25) - 1);
-    Value validHighHalf = LLVM::AndOp::create(rewriter, loc, highHalf, mask);
+    highHalf = LLVM::AndOp::create(rewriter, loc, highHalf, mask);
 
-    Value typeField = createI32Constant(rewriter, loc, 2 << 30);
-    Value highHalfPlusType =
-        LLVM::OrOp::create(rewriter, loc, validHighHalf, typeField);
-
-    Value c0 = createI32Constant(rewriter, loc, 0);
-    Value c1 = createI32Constant(rewriter, loc, 1);
-    Value c2 = createI32Constant(rewriter, loc, 2);
-    Value c3 = createI32Constant(rewriter, loc, 3);
+    sgprs[3] = setValueAtOffset(rewriter, loc, highHalf, consts[2], 30);
 
     Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
     assert(v4i32 && "expected type conversion to succeed");
     Value result = LLVM::PoisonOp::create(rewriter, loc, v4i32);
-    result = LLVM::InsertElementOp::create(rewriter, loc, result, c1, c0);
-    result = LLVM::InsertElementOp::create(rewriter, loc, result,
-                                           castForLdsAddr, c1);
-    result = LLVM::InsertElementOp::create(rewriter, loc, result, lowHalf, c2);
-    result = LLVM::InsertElementOp::create(rewriter, loc, result,
-                                           highHalfPlusType, c3);
+
+    for (auto [sgpr, constant] : llvm::zip_equal(sgprs, consts))
+      result =
+          LLVM::InsertElementOp::create(rewriter, loc, result, sgpr, constant);
 
     rewriter.replaceOp(op, result);
     return success();
@@ -2359,21 +2393,6 @@ struct AMDGPUMakeDmaDescriptorLowering
   Chipset chipset;
 
   Value getDGroup0(OpAdaptor adaptor) const { return adaptor.getBase(); }
-
-  Value setValueAtOffset(ConversionPatternRewriter &rewriter, Location loc,
-                         Value accumulator, Value value, int64_t shift) const {
-    shift = shift % 32;
-    Value shiftAmount;
-    if (shift != 0) {
-      shiftAmount = createI32Constant(rewriter, loc, shift % 32);
-      value = LLVM::ShlOp::create(rewriter, loc, value, shiftAmount);
-    }
-
-    if (matchPattern(accumulator, mlir::m_Zero()))
-      return value;
-
-    return LLVM::OrOp::create(rewriter, loc, accumulator, value);
-  }
 
   Value setWorkgroupMask(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
@@ -2393,9 +2412,8 @@ struct AMDGPUMakeDmaDescriptorLowering
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr0, ArrayRef<Value> consts) const {
     unsigned elementTypeWidthInBits = op.getElementTypeWidth();
-    assert(
-        llvm::is_contained<unsigned>({8, 16, 32, 64}, elementTypeWidthInBits) &&
-        "expected type width to be 8, 16, 32, or 64.");
+    assert(llvm::is_contained({8u, 16u, 32u, 64u}, elementTypeWidthInBits) &&
+           "expected type width to be 8, 16, 32, or 64.");
     int64_t idx = llvm::Log2_32(elementTypeWidthInBits / 8);
     Value size = consts[idx];
     return setValueAtOffset(rewriter, loc, sgpr0, size, 16);
@@ -3055,7 +3073,8 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
       ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
       PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
       GatherToLDSOpLowering, TransposeLoadOpLowering, AMDGPUPermlaneLowering,
-      AMDGPUMakeDmaBaseLowering, AMDGPUMakeDmaDescriptorLowering>(converter,
-                                                                  chipset);
+      AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+      AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
+      AMDGPUMakeDmaDescriptorLowering>(converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }

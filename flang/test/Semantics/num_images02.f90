@@ -27,11 +27,11 @@ program num_images_with_team_type
 
   !___ non-conforming statements ___
 
-  ! non-scalar integer argument 
+  ! non-scalar integer argument
   !ERROR: unknown keyword argument to intrinsic 'num_images'
   n = num_images(team_number=array)
 
-  ! non-scalar team_type argument 
+  ! non-scalar team_type argument
   !ERROR: unknown keyword argument to intrinsic 'num_images'
   n = num_images(team=league)
 

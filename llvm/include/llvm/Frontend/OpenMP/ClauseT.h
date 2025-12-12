@@ -190,6 +190,14 @@ template <typename I, typename E> using ObjectListT = ListT<ObjectT<I, E>>;
 using DirectiveName = llvm::omp::Directive;
 
 template <typename I, typename E> //
+struct StylizedInstanceT {
+  using Variables = ObjectListT<I, E>;
+  using Instance = E;
+  using TupleTrait = std::true_type;
+  std::tuple<Variables, Instance> t;
+};
+
+template <typename I, typename E> //
 struct DefinedOperatorT {
   struct DefinedOpName {
     using WrapperTrait = std::true_type;
@@ -762,8 +770,7 @@ struct InitT {
 // V5.2: [5.5.4] `initializer` clause
 template <typename T, typename I, typename E> //
 struct InitializerT {
-  using InitializerExpr = E;
-  using List = ListT<InitializerExpr>;
+  using List = ListT<type::StylizedInstanceT<I, E>>;
   using WrapperTrait = std::true_type;
   List v;
 };

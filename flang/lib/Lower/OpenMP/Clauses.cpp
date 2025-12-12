@@ -13,6 +13,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-modifiers.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
 
 #include <list>
@@ -126,6 +127,11 @@ Object makeObject(const parser::OmpObject &object,
   }
   // OmpObject is std::variant<Designator, /*common block*/ Name>;
   return makeObject(std::get<parser::Designator>(object.u), semaCtx);
+}
+
+Object makeObject(const parser::EntityDecl &decl,
+                  semantics::SemanticsContext &semaCtx) {
+  return makeObject(std::get<parser::ObjectName>(decl.t), semaCtx);
 }
 
 ObjectList makeObjects(const parser::OmpArgumentList &objects,
@@ -275,12 +281,10 @@ makeIteratorSpecifiers(const parser::OmpIteratorSpecifier &inp,
   auto &tds = std::get<parser::TypeDeclarationStmt>(inp.t);
   auto &entities = std::get<std::list<parser::EntityDecl>>(tds.t);
   for (const parser::EntityDecl &ed : entities) {
-    auto &name = std::get<parser::ObjectName>(ed.t);
-    assert(name.symbol && "Expecting symbol for iterator variable");
-    auto *stype = name.symbol->GetType();
-    assert(stype && "Expecting symbol type");
-    IteratorSpecifier spec{{evaluate::DynamicType::From(*stype),
-                            makeObject(name, semaCtx), range}};
+    auto *symbol = std::get<parser::ObjectName>(ed.t).symbol;
+    auto *type = DEREF(symbol).GetType();
+    IteratorSpecifier spec{{evaluate::DynamicType::From(DEREF(type)),
+                            makeObject(ed, semaCtx), range}};
     specifiers.emplace_back(std::move(spec));
   }
 
@@ -983,19 +987,24 @@ Initializer make(const parser::OmpClause::Initializer &inp,
                  semantics::SemanticsContext &semaCtx) {
   const parser::OmpInitializerExpression &iexpr = inp.v.v;
   Initializer initializer;
-  for (const parser::OmpStylizedInstance &styleInstance : iexpr.v) {
-    auto &instance =
-        std::get<parser::OmpStylizedInstance::Instance>(styleInstance.t);
-    if (const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u)) {
-      auto &expr = std::get<parser::Expr>(as->t);
-      initializer.v.push_back(makeExpr(expr, semaCtx));
-    } else if (const auto *call = std::get_if<parser::CallStmt>(&instance.u)) {
-      assert(call->typedCall && "Expecting typedCall");
-      const auto &procRef = *call->typedCall;
-      initializer.v.push_back(semantics::SomeExpr(procRef));
-    } else {
-      llvm_unreachable("Unexpected initializer");
-    }
+
+  for (const parser::OmpStylizedInstance &sinst : iexpr.v) {
+    ObjectList variables;
+    llvm::transform(
+        std::get<std::list<parser::OmpStylizedDeclaration>>(sinst.t),
+        std::back_inserter(variables),
+        [&](const parser::OmpStylizedDeclaration &s) {
+          return makeObject(s.var, semaCtx);
+        });
+
+    SomeExpr instance = [&]() {
+      if (auto &&expr = semantics::omp::MakeEvaluateExpr(sinst))
+        return std::move(*expr);
+      llvm_unreachable("Expecting expression instance");
+    }();
+
+    initializer.v.push_back(
+        StylizedInstance{{std::move(variables), std::move(instance)}});
   }
 
   return initializer;
