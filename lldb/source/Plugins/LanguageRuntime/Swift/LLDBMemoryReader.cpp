@@ -180,6 +180,14 @@ LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
   if (!target.GetSwiftUseReflectionSymbols())
     return {};
 
+  auto &triple = m_process.GetTarget().GetArchitecture().GetTriple();
+  // On Linux, there seems to be a bug where we can't reliably look for symbols by address,
+  // since these symbols have an actual size and can overlap.
+  // This could be an LLDB bug or a compiler bug.
+  // rdar://166344740
+  if (triple.isOSLinux())
+    return {};
+
   std::optional<Address> maybeAddr = remoteAddressToLLDBAddress(address);
   // This is not an assert, but should never happen.
   if (!maybeAddr)
@@ -193,19 +201,6 @@ LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
     // `address` is a real load address.
     if (!target.ResolveLoadAddress(address.getRawAddress(), addr))
       return {};
-  }
-
-  if (auto section_sp = addr.GetSection()) {
-    if (auto *obj_file = section_sp->GetObjectFile()) {
-      auto obj_file_format_type =
-          obj_file->GetArchitecture().GetTriple().getObjectFormat();
-      if (auto swift_obj_file_format =
-              GetSwiftObjectFileFormat(obj_file_format_type)) {
-        if (!swift_obj_file_format->sectionContainsReflectionData(
-                section_sp->GetName().GetStringRef()))
-          return {};
-      }
-    }
   }
 
   if (auto *symbol = addr.CalculateSymbolContextSymbol()) {
