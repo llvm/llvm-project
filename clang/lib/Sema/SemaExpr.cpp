@@ -7834,6 +7834,26 @@ ExprResult Sema::prepareVectorSplat(QualType VectorTy, Expr *SplattedExpr) {
   return ImpCastExprToType(SplattedExpr, DestElemTy, CK);
 }
 
+ExprResult Sema::prepareMatrixSplat(QualType MatrixTy, Expr *SplattedExpr) {
+  QualType DestElemTy = MatrixTy->castAs<MatrixType>()->getElementType();
+
+  if (DestElemTy == SplattedExpr->getType())
+    return SplattedExpr;
+
+  assert(DestElemTy->isFloatingType() ||
+         DestElemTy->isIntegralOrEnumerationType());
+
+  // TODO: Add support for boolean matrix once exposed
+  // https://github.com/llvm/llvm-project/issues/170920
+  ExprResult CastExprRes = SplattedExpr;
+  CastKind CK = PrepareScalarCast(CastExprRes, DestElemTy);
+  if (CastExprRes.isInvalid())
+    return ExprError();
+  SplattedExpr = CastExprRes.get();
+
+  return ImpCastExprToType(SplattedExpr, DestElemTy, CK);
+}
+
 ExprResult Sema::CheckExtVectorCast(SourceRange R, QualType DestTy,
                                     Expr *CastExpr, CastKind &Kind) {
   assert(DestTy->isExtVectorType() && "Not an extended vector type!");
