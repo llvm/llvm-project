@@ -39,12 +39,14 @@ ModuleToObject::ModuleToObject(
     int optLevel, function_ref<void(llvm::Module &)> initialLlvmIRCallback,
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
-    function_ref<void(StringRef)> isaCallback)
+    function_ref<void(StringRef)> isaCallback,
+    function_ref<void(StringRef)> binaryCompilerDiagnosticCallback)
     : module(module), triple(triple), chip(chip), features(features),
       optLevel(optLevel), initialLlvmIRCallback(initialLlvmIRCallback),
       linkedLlvmIRCallback(linkedLlvmIRCallback),
       optimizedLlvmIRCallback(optimizedLlvmIRCallback),
-      isaCallback(isaCallback) {}
+      isaCallback(isaCallback),
+      binaryCompilerDiagnosticCallback(binaryCompilerDiagnosticCallback) {}
 
 ModuleToObject::~ModuleToObject() = default;
 

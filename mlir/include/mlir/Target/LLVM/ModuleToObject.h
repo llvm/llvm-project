@@ -35,7 +35,8 @@ public:
       function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
       function_ref<void(llvm::Module &)> linkedLlvmIRCallback = {},
       function_ref<void(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<void(StringRef)> isaCallback = {});
+      function_ref<void(StringRef)> isaCallback = {},
+      function_ref<void(StringRef)> binaryCompilerDiagnosticCallback = {});
   virtual ~ModuleToObject();
 
   /// Returns the operation being serialized.
@@ -133,6 +134,9 @@ protected:
   /// Callback invoked with the target ISA for the device,
   /// for example PTX assembly.
   function_ref<void(StringRef)> isaCallback;
+
+  /// Callback for diagnostic messages from the binary compiler.
+  function_ref<void(StringRef)> binaryCompilerDiagnosticCallback;
 
 private:
   /// The TargetMachine created for the given Triple, if available.

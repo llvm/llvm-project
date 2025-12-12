@@ -24,6 +24,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/InterleavedRange.h"
 
 #include "llvm/ADT/ScopeExit.h"
@@ -103,7 +104,8 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
                      targetOptions.getInitialLlvmIRCallback(),
                      targetOptions.getLinkedLlvmIRCallback(),
                      targetOptions.getOptimizedLlvmIRCallback(),
-                     targetOptions.getISACallback()),
+                     targetOptions.getISACallback(),
+                     targetOptions.getbinaryCompilerDiagnosticCallback()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
       librariesToLink(targetOptions.getLibrariesToLink()) {
 
@@ -212,12 +214,14 @@ public:
   gpu::GPUModuleOp getOperation();
 
   /// Compiles PTX to cubin using `ptxas`.
-  std::optional<SmallVector<char, 0>>
-  compileToBinary(const std::string &ptxCode);
+  std::optional<SmallVector<char, 0>> compileToBinary(
+      const std::string &ptxCode,
+      function_ref<void(StringRef)> binaryCompilerDiagnosticCallback);
 
   /// Compiles PTX to cubin using the `nvptxcompiler` library.
-  std::optional<SmallVector<char, 0>>
-  compileToBinaryNVPTX(const std::string &ptxCode);
+  std::optional<SmallVector<char, 0>> compileToBinaryNVPTX(
+      const std::string &ptxCode,
+      function_ref<void(StringRef)> binaryCompilerDiagnosticCallback);
 
   /// Serializes the LLVM module to an object format, depending on the
   /// compilation target selected in target options.
@@ -346,13 +350,13 @@ static void setOptionalCommandlineArguments(NVVMTargetAttr target,
 
 // TODO: clean this method & have a generic tool driver or never emit binaries
 // with this mechanism and let another stage take care of it.
-std::optional<SmallVector<char, 0>>
-NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
+std::optional<SmallVector<char, 0>> NVPTXSerializer::compileToBinary(
+    const std::string &ptxCode,
+    function_ref<void(StringRef)> binaryCompilerDiagnosticCallback) {
   // Determine if the serializer should create a fatbinary with the PTX embeded
   // or a simple CUBIN binary.
   const bool createFatbin =
       targetOptions.getCompilationTarget() == gpu::CompilationTarget::Fatbin;
-
   // Find the `ptxas` & `fatbinary` tools.
   std::optional<std::string> ptxasCompiler = findTool("ptxas");
   if (!ptxasCompiler)
@@ -521,6 +525,15 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
                                                 /*ErrMsg=*/&message))
     return emitLogError("`fatbinary`");
 
+  if (binaryCompilerDiagnosticCallback) {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
+        llvm::MemoryBuffer::getFile(logFile->first);
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
+      StringRef logRef = (*logBuffer)->getBuffer();
+      binaryCompilerDiagnosticCallback(logRef);
+    }
+  }
+
 // Dump the output of the tools, helpful if the verbose flag was passed.
 #define DEBUG_TYPE "serialize-to-binary"
   LLVM_DEBUG({
@@ -569,8 +582,9 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     }                                                                          \
   } while (false)
 
-std::optional<SmallVector<char, 0>>
-NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
+std::optional<SmallVector<char, 0>> NVPTXSerializer::compileToBinaryNVPTX(
+    const std::string &ptxCode,
+    function_ref<void(StringRef)> binaryCompilerDiagnosticCallback) {
   Location loc = getOperation().getLoc();
   nvPTXCompilerHandle compiler = nullptr;
   nvPTXCompileResult status;
@@ -618,21 +632,31 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
   RETURN_ON_NVPTXCOMPILER_ERROR(
       nvPTXCompilerGetCompiledProgram(compiler, (void *)binary.data()));
 
-// Dump the log of the compiler, helpful if the verbose flag was passed.
+  // Lambda to fetch info log; returns empty vector on failure or no log.
+  auto fetchInfoLog = [&]() -> SmallVector<char> {
+    size_t size = 0;
+    if (nvPTXCompilerGetInfoLogSize(compiler, &size) != NVPTXCOMPILE_SUCCESS ||
+        size == 0)
+      return {};
+    SmallVector<char> log(size + 1, 0);
+    if (nvPTXCompilerGetInfoLog(compiler, log.data()) != NVPTXCOMPILE_SUCCESS)
+      return {};
+    return log;
+  };
+
+  if (binaryCompilerDiagnosticCallback) {
+    if (auto log = fetchInfoLog(); !log.empty())
+      binaryCompilerDiagnosticCallback(StringRef(log.data(), log.size()));
+  }
+
 #define DEBUG_TYPE "serialize-to-binary"
   LLVM_DEBUG({
-    RETURN_ON_NVPTXCOMPILER_ERROR(
-        nvPTXCompilerGetInfoLogSize(compiler, &logSize));
-    if (logSize != 0) {
-      SmallVector<char> log(logSize + 1, 0);
-      RETURN_ON_NVPTXCOMPILER_ERROR(
-          nvPTXCompilerGetInfoLog(compiler, log.data()));
+    if (auto log = fetchInfoLog(); !log.empty())
       LDBG() << "NVPTX compiler invocation for module: "
              << getOperation().getNameAttr()
              << "\nArguments: " << llvm::interleaved(cmdOpts.second, " ")
              << "\nOutput\n"
              << log.data();
-    }
   });
 #undef DEBUG_TYPE
   RETURN_ON_NVPTXCOMPILER_ERROR(nvPTXCompilerDestroy(&compiler));
@@ -723,9 +747,10 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   moduleToObjectTimer.startTimer();
   // Compile to binary.
 #if MLIR_ENABLE_NVPTXCOMPILER
-  result = compileToBinaryNVPTX(*serializedISA);
+  result =
+      compileToBinaryNVPTX(*serializedISA, binaryCompilerDiagnosticCallback);
 #else
-  result = compileToBinary(*serializedISA);
+  result = compileToBinary(*serializedISA, binaryCompilerDiagnosticCallback);
 #endif // MLIR_ENABLE_NVPTXCOMPILER
 
   moduleToObjectTimer.stopTimer();

@@ -220,6 +220,40 @@ TEST_F(MLIRTargetLLVMNVVM,
   }
 }
 
+// Test NVVM serialization to Binary.
+TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(CallbackForBinary)) {
+  if (!hasPtxas())
+    GTEST_SKIP() << "PTXAS compiler not found, skipping test.";
+
+  MLIRContext context(registry);
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+
+  // Create an NVVM target.
+  NVVM::NVVMTargetAttr target = NVVM::NVVMTargetAttr::get(&context);
+  std::string binaryResult;
+  auto binaryCompilerDiagnosticCallback =
+      [&binaryResult](llvm::StringRef binaryTarget) {
+        binaryResult = binaryTarget.str();
+      };
+  // Serialize the module.
+  auto serializer = dyn_cast<gpu::TargetAttrInterface>(target);
+  ASSERT_TRUE(!!serializer);
+  gpu::TargetOptions options("", {}, "-v", "", gpu::CompilationTarget::Binary,
+                             {}, {}, {}, {}, {},
+                             binaryCompilerDiagnosticCallback);
+  for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
+    std::optional<SmallVector<char, 0>> object =
+        serializer.serializeToObject(gpuModule, options);
+    // Check that the serializer was successful.
+    ASSERT_TRUE(object != std::nullopt);
+    ASSERT_TRUE(!object->empty());
+    ASSERT_TRUE(llvm::StringRef(binaryResult).contains("ptxas info"));
+  }
+}
+
 // Test linking LLVM IR from a resource attribute.
 TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(LinkedLLVMIRResource)) {
   MLIRContext context(registry);
