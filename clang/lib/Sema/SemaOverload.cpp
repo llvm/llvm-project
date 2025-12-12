@@ -165,6 +165,7 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_HLSL_Dimension_Reduction,
       ICR_Conversion,
       ICR_HLSL_Scalar_Widening,
+      ICR_HLSL_Scalar_Widening,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -228,6 +229,7 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
       "HLSL matrix truncation",
       "Non-decaying array conversion",
       "HLSL vector splat",
+      "HLSL matrix splat",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -2144,6 +2146,15 @@ static bool IsMatrixConversion(Sema &S, QualType FromType, QualType ToType,
     if (S.Context.hasSameUnqualifiedType(FromElTy, ToElTy))
       return true;
     return IsVectorOrMatrixElementConversion(S, FromElTy, ToElTy, ICK, From);
+  }
+
+  // Matrix splat from any arithmetic type to a matrix.
+  if (ToMatrixType && FromType->isArithmeticType()) {
+    ElConv = ICK_HLSL_Matrix_Splat;
+    QualType ToElTy = ToMatrixType->getElementType();
+    return IsVectorOrMatrixElementConversion(S, FromType, ToElTy, ICK, From);
+    ICK = ICK_HLSL_Matrix_Splat;
+    return true;
   }
   if (FromMatrixType && !ToMatrixType) {
     ElConv = ICK_HLSL_Matrix_Truncation;
@@ -6301,6 +6312,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_SVE_Vector_Conversion:
   case ICK_RVV_Vector_Conversion:
   case ICK_HLSL_Vector_Splat:
+  case ICK_HLSL_Matrix_Splat:
   case ICK_Vector_Splat:
   case ICK_Complex_Real:
   case ICK_Block_Pointer_Conversion:
