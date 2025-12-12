@@ -667,11 +667,11 @@ static Value convertSparseMFMAVectorOperand(ConversionPatternRewriter &rewriter,
                                             bool allowBf16 = true) {
   Type inputType = input.getType();
   if (auto vectorType = dyn_cast<VectorType>(inputType)) {
-    // bf16 -> i16 when not allowed (pre-gfx950)
+    // bf16 -> i16 when not allowed (pre-gfx950).
     if (vectorType.getElementType().isBF16() && !allowBf16)
       return LLVM::BitcastOp::create(
           rewriter, loc, vectorType.clone(rewriter.getI16Type()), input);
-    // i8/fp8 vectors -> vector<Nxi32>
+    // i8/fp8 vectors -> vector<Nxi32>.
     if (isa<IntegerType>(vectorType.getElementType()) &&
         vectorType.getElementTypeBitWidth() <= 8) {
       int64_t numWords = llvm::divideCeil(
