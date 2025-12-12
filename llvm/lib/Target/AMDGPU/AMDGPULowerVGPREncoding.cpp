@@ -138,7 +138,7 @@ private:
   MachineBasicBlock::instr_iterator
   handleClause(MachineBasicBlock::instr_iterator I);
 
-  /// Check if an instruction \p I is immediately after another control
+  /// Check if an instruction \p I is immediately after another program state
   /// instruction which it cannot coissue with. If so, insert before that
   /// instruction to encourage more coissuing.
   MachineBasicBlock::instr_iterator
@@ -299,17 +299,17 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
     return I;
 
   MachineBasicBlock::instr_iterator Prev = std::prev(I);
-  auto isControlSALU = [this](MachineInstr *MI) {
+  auto isProgramStatetSALU = [this](MachineInstr *MI) {
     return TII->isBarrier(MI->getOpcode()) ||
-           TII->isWaitcnt(MI || (SIInstrInfo::isControlInstr(*MI) &&
+           TII->isWaitcnt(MI || (SIInstrInfo::isProgramStatetSALU(*MI) &&
                                  MI->getOpcode() != AMDGPU::S_SET_VGPR_MSB));
   };
 
-  if (!isControlSALU(&*Prev))
+  if (!isProgramStatetSALU(&*Prev))
     return I;
 
   while (!Prev.isEnd() && (Prev != Prev->getParent()->begin()) &&
-         isControlSALU(&*Prev)) {
+         isProgramStatetSALU(&*Prev)) {
     --Prev;
   }
   return Prev;
