@@ -14,7 +14,7 @@ define amdgpu_kernel void @exp_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; CHECK-NEXT:   [[V_EXP_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_EXP_F16_t16_e64 0, killed [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_EXP_F16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_EXP_F16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[REG_SEQUENCE1]]
   ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -37,7 +37,7 @@ define amdgpu_kernel void @log_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; CHECK-NEXT:   [[V_LOG_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_LOG_F16_t16_e64 0, killed [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_LOG_F16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_LOG_F16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[REG_SEQUENCE1]]
   ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -60,7 +60,7 @@ define amdgpu_kernel void @rcp_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; CHECK-NEXT:   [[V_RCP_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_RCP_F16_t16_e64 0, killed [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_RCP_F16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_RCP_F16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[REG_SEQUENCE1]]
   ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -83,7 +83,7 @@ define amdgpu_kernel void @rsq_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; CHECK-NEXT:   [[V_RSQ_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_RSQ_F16_t16_e64 0, killed [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_RSQ_F16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_RSQ_F16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[REG_SEQUENCE1]]
   ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -106,7 +106,7 @@ define amdgpu_kernel void @sqrt_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; CHECK-NEXT:   [[V_SQRT_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_SQRT_F16_t16_e64 0, killed [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_SQRT_F16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_SQRT_F16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[REG_SEQUENCE1]]
   ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0

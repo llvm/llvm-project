@@ -132,6 +132,34 @@ body:             |
 ...
 
 ---
+name:            copy_vgpr16_sreg32_lo16_usedby_salu16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: copy_vgpr16_sreg32_lo16_usedby_salu16
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF]].lo16, %subreg.lo16, [[DEF1]], %subreg.hi16
+    ; GCN-NEXT: [[V_TRUNC_F16_t16_e64_:%[0-9]+]]:vgpr_16 = V_TRUNC_F16_t16_e64 0, [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = COPY %0.lo16:vgpr_32
+    %2:sreg_32 = S_TRUNC_F16 %1:sreg_32, implicit $mode
+...
+
+---
+name:            copy_vgpr16_sreg32_hi16_usedby_salu16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: copy_vgpr16_sreg32_hi16_usedby_salu16
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF]].hi16, %subreg.lo16, [[DEF1]], %subreg.hi16
+    ; GCN-NEXT: [[V_TRUNC_F16_t16_e64_:%[0-9]+]]:vgpr_16 = V_TRUNC_F16_t16_e64 0, [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = COPY %0.hi16:vgpr_32
+    %2:sreg_32 = S_TRUNC_F16 %1:sreg_32, implicit $mode
+...
+
+---
 name:            copy_vgpr16_sreg32_usedby_salu32
 body:             |
   bb.0:
@@ -158,21 +186,17 @@ body:             |
 ...
 
 ---
-name:            S_FMAC_F16
+name:            reg_sequence_vgpr32_sreg32
 body:             |
   bb.0:
-    ; GCN-LABEL: name: S_FMAC_F16
+    ; GCN-LABEL: name: reg_sequence_vgpr32_sreg32
     ; GCN: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF]], %subreg.lo16, [[DEF1]], %subreg.hi16
-    ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF]], %subreg.lo16, [[DEF2]], %subreg.hi16
-    ; GCN-NEXT: [[V_FMAC_F16_t16_e64_:%[0-9]+]]:vgpr_16 = V_FMAC_F16_t16_e64 0, [[REG_SEQUENCE1]].lo16, 0, [[REG_SEQUENCE1]].lo16, 0, [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF1]].lo16, %subreg.lo16, [[DEF]], %subreg.hi16
     %0:vgpr_16 = IMPLICIT_DEF
-    %1:sgpr_lo16 = COPY %0:vgpr_16
-    %2:sreg_32 = COPY %0:vgpr_16
-    %3:sreg_32 = COPY %1:sgpr_lo16
-    %4:sreg_32 = S_FMAC_F16 %3:sreg_32, %3:sreg_32, %2:sreg_32, implicit $mode
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %1:vgpr_32
+    %3:vgpr_32 = REG_SEQUENCE %2:sreg_32, %subreg.lo16, %0:vgpr_16, %subreg.hi16
 ...
 
 ---
