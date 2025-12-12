@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/properties/os.h"
 #include "src/__support/wctype/wctype_classification_utils.h"
 #include "test/UnitTest/Test.h"
 
 namespace {
 
+// On Windows, wchar_t is 16 bits. We guard the cases that do not fit
+// within 16 bits to prevent narrowing conversion and incorrect test results.
 struct TestCase {
-  wchar_t wc;
+  uint32_t wc;
   const char *name;
   bool expected;
 };
@@ -62,7 +65,7 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Lower) {
                       {0x4E00, "CJK UNIFIED IDEOGRAPH-4E00", false}};
 
   for (const auto &tc : cases) {
-    bool res = LIBC_NAMESPACE::lookup_properties(tc.wc) &
+    bool res = LIBC_NAMESPACE::lookup_properties(static_cast<wchar_t>(tc.wc)) &
                LIBC_NAMESPACE::PropertyFlag::LOWER;
     EXPECT_EQ(res, tc.expected) << tc.name << "\n";
   }
@@ -117,7 +120,7 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Upper) {
       {0x4E00, "CJK UNIFIED IDEOGRAPH-4E00", false}};
 
   for (const auto &tc : cases) {
-    bool res = LIBC_NAMESPACE::lookup_properties(tc.wc) &
+    bool res = LIBC_NAMESPACE::lookup_properties(static_cast<wchar_t>(tc.wc)) &
                LIBC_NAMESPACE::PropertyFlag::UPPER;
     EXPECT_EQ(res, tc.expected) << tc.name << "\n";
   }
@@ -165,16 +168,20 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Alpha) {
       {0x4E01, "CJK UNIFIED IDEOGRAPH-4E01", true},
       {0x9FFF, "CJK UNIFIED IDEOGRAPH-9FFF (last in BMP)", true},
 
-      // Emoji and symbols (not alphabetic)
-      {0x1F600, "GRINNING FACE", false},
+      // Emoji and symbols
       {0x2764, "HEAVY BLACK HEART", false},
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
+      {0x1F600, "GRINNING FACE", false},
+#endif // LIBC_TARGET_OS_IS_WINDOWS
 
       // Special cases
       {0x0000, "NULL", false},
       {0xFFFD, "REPLACEMENT CHARACTER", false},
 
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
       // Beyond BMP - CJK Extension B
       {0x20000, "CJK UNIFIED IDEOGRAPH-20000", true},
+#endif // LIBC_TARGET_OS_IS_WINDOWS
 
       // Roman numerals - Category Nl (Letter Numbers)
       {0x2160, "ROMAN NUMERAL ONE", true},
@@ -198,7 +205,7 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Alpha) {
       {0x0300, "COMBINING GRAVE ACCENT", false}};
 
   for (const auto &tc : cases) {
-    bool res = LIBC_NAMESPACE::lookup_properties(tc.wc) &
+    bool res = LIBC_NAMESPACE::lookup_properties(static_cast<wchar_t>(tc.wc)) &
                LIBC_NAMESPACE::PropertyFlag::ALPHA;
     EXPECT_EQ(res, tc.expected) << tc.name << "\n";
   }
@@ -262,7 +269,7 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Punct) {
                       {0x221E, "INFINITY", true}};
 
   for (const auto &tc : cases) {
-    bool res = LIBC_NAMESPACE::lookup_properties(tc.wc) &
+    bool res = LIBC_NAMESPACE::lookup_properties(static_cast<wchar_t>(tc.wc)) &
                LIBC_NAMESPACE::PropertyFlag::PUNCT;
     EXPECT_EQ(res, tc.expected) << tc.name << "\n";
   }
@@ -303,8 +310,10 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Print) {
                       {0xAC00, "HANGUL SYLLABLE GA", true},
 
                       // Emoji and symbols
-                      {0x1F600, "GRINNING FACE", true},
                       {0x2764, "HEAVY BLACK HEART", true},
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
+                      {0x1F600, "GRINNING FACE", true},
+#endif // LIBC_TARGET_OS_IS_WINDOWS
 
                       // Punctuation
                       {0x002E, "FULL STOP", true},
@@ -327,10 +336,13 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Print) {
                       // Private use area
                       {0xE000, "PRIVATE USE AREA (first)", true},
                       {0xF000, "PRIVATE USE AREA (last)", true},
-                      {0x10FFFD, "SUPPLEMENTARY PRIVATE USE AREA B", true}};
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
+                      {0x10FFFD, "SUPPLEMENTARY PRIVATE USE AREA B", true}
+#endif // LIBC_TARGET_OS_IS_WINDOWS
+  };
 
   for (const auto &tc : cases) {
-    bool res = LIBC_NAMESPACE::lookup_properties(tc.wc) &
+    bool res = LIBC_NAMESPACE::lookup_properties(static_cast<wchar_t>(tc.wc)) &
                LIBC_NAMESPACE::PropertyFlag::PRINT;
     EXPECT_EQ(res, tc.expected) << tc.name << "\n";
   }
@@ -375,7 +387,7 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Control) {
                       {0x4E00, "CJK UNIFIED IDEOGRAPH-4E00", false}};
 
   for (const auto &tc : cases) {
-    bool res = LIBC_NAMESPACE::lookup_properties(tc.wc) &
+    bool res = LIBC_NAMESPACE::lookup_properties(static_cast<wchar_t>(tc.wc)) &
                LIBC_NAMESPACE::PropertyFlag::CNTRL;
     EXPECT_EQ(res, tc.expected) << tc.name << "\n";
   }
@@ -421,7 +433,7 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Space) {
                       {0x2764, "HEAVY BLACK HEART", false}};
 
   for (const auto &tc : cases) {
-    bool res = LIBC_NAMESPACE::lookup_properties(tc.wc) &
+    bool res = LIBC_NAMESPACE::lookup_properties(static_cast<wchar_t>(tc.wc)) &
                LIBC_NAMESPACE::PropertyFlag::SPACE;
     EXPECT_EQ(res, tc.expected) << tc.name << "\n";
   }
@@ -463,7 +475,7 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Blank) {
                       {0x2028, "LINE SEPARATOR", false}};
 
   for (const auto &tc : cases) {
-    bool res = LIBC_NAMESPACE::lookup_properties(tc.wc) &
+    bool res = LIBC_NAMESPACE::lookup_properties(static_cast<wchar_t>(tc.wc)) &
                LIBC_NAMESPACE::PropertyFlag::BLANK;
     EXPECT_EQ(res, tc.expected) << tc.name << "\n";
   }
@@ -471,32 +483,31 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Blank) {
 
 TEST(LlvmLibcWctypeClassificationUtilsTest, InvalidCodepoints) {
   struct InvalidTestCase {
-    wchar_t wc;
+    uint32_t wc;
     const char *name;
   };
 
   InvalidTestCase cases[] = {
       // Surrogate pair range
-      {0xD800, "HIGH SURROGATE START"},
-      {0xD900, "HIGH SURROGATE MIDDLE"},
-      {0xDBFF, "HIGH SURROGATE END"},
-      {0xDC00, "LOW SURROGATE START"},
-      {0xDD00, "LOW SURROGATE MIDDLE"},
-      {0xDFFF, "LOW SURROGATE END"},
+      {0xD800, "HIGH SURROGATE START"}, {0xD900, "HIGH SURROGATE MIDDLE"},
+      {0xDBFF, "HIGH SURROGATE END"},   {0xDC00, "LOW SURROGATE START"},
+      {0xDD00, "LOW SURROGATE MIDDLE"}, {0xDFFF, "LOW SURROGATE END"},
 
-      // Beyond Unicode range
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
       {0x110000, "Beyond max Unicode"},
+#endif // LIBC_TARGET_OS_IS_WINDOWS
   };
 
   for (const auto &tc : cases) {
-    uint8_t props = LIBC_NAMESPACE::lookup_properties(tc.wc);
+    uint8_t props =
+        LIBC_NAMESPACE::lookup_properties(static_cast<wchar_t>(tc.wc));
     EXPECT_EQ(props, uint8_t{0}) << tc.name << "\n";
   }
 }
 
 TEST(LlvmLibcWctypeClassificationUtilsTest, Noncharacters) {
   struct NoncharacterTestCase {
-    wchar_t wc;
+    uint32_t wc;
     const char *name;
   };
 
@@ -509,16 +520,19 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Noncharacters) {
       {0xFDD0, "NONCHARACTER U+FDD0"},
       {0xFDD5, "NONCHARACTER U+FDD5"},
 
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
       // Supplementary plane noncharacters
       {0x1FFFE, "PLANE 1 NONCHARACTER"},
       {0x2FFFE, "PLANE 2 NONCHARACTER"},
       {0x3FFFE, "PLANE 3 NONCHARACTER"},
       {0x10FFFE, "PLANE 16 NONCHARACTER"},
       {0x10FFFF, "PLANE 16 NONCHARACTER"},
+#endif // LIBC_TARGET_OS_IS_WINDOWS
   };
 
   for (const auto &tc : cases) {
-    uint8_t props = LIBC_NAMESPACE::lookup_properties(tc.wc);
+    uint8_t props =
+        LIBC_NAMESPACE::lookup_properties(static_cast<wchar_t>(tc.wc));
     EXPECT_EQ(props, uint8_t{0}) << tc.name << "\n";
   }
 }
