@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -stats -passes=instcount -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -passes='thinlto<O3>' -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -passes='thinlto-pre-link<O2>' -disable-output < %s 2>&1 | FileCheck %s
