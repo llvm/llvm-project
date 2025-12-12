@@ -3277,9 +3277,6 @@ bool DependenceInfo::tryDelinearizeFixedSize(
          "Expected equal number of entries in the list of SrcSubscripts and "
          "DstSubscripts.");
 
-  Value *SrcPtr = getLoadStorePointerOperand(Src);
-  Value *DstPtr = getLoadStorePointerOperand(Dst);
-
   // In general we cannot safely assume that the subscripts recovered from GEPs
   // are in the range of values defined for their corresponding array
   // dimensions. For example some C language usage/interpretation make it
@@ -3296,8 +3293,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   }
   LLVM_DEBUG({
     dbgs() << "Delinearized subscripts of fixed-size array\n"
-           << "SrcGEP:" << *SrcPtr << "\n"
-           << "DstGEP:" << *DstPtr << "\n";
+           << "SrcGEP:" << *getLoadStorePointerOperand(Src) << "\n"
+           << "DstGEP:" << *getLoadStorePointerOperand(Dst) << "\n";
   });
   return true;
 }

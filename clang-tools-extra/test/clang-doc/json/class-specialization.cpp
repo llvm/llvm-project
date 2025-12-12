@@ -16,7 +16,10 @@ template<> struct MyClass<int> {};
 // BASE-NEXT:  "TagType": "struct",
 // BASE-NEXT:  "Template": {
 // BASE-NEXT:    "Parameters": [
-// BASE-NEXT:      "typename T"
+// BASE-NEXT:      {
+// BASE-NEXT:        "End": true,
+// BASE-NEXT:        "Param": "typename T"
+// BASE-NEXT:      }
 // BASE-NEXT:    ]
 // BASE-NEXT:  },
 
@@ -30,7 +33,10 @@ template<> struct MyClass<int> {};
 // SPECIALIZATION-NEXT:  "Template": {
 // SPECIALIZATION-NEXT:    "Specialization": {
 // SPECIALIZATION-NEXT:      "Parameters": [
-// SPECIALIZATION-NEXT:        "int"
+// SPECIALIZATION-NEXT:        {
+// SPECIALIZATION-NEXT:          "End": true,
+// SPECIALIZATION-NEXT:          "Param": "int"
+// SPECIALIZATION-NEXT:        }
 // SPECIALIZATION-NEXT:      ],
 // SPECIALIZATION-NEXT:      "SpecializationOf": "{{[0-9A-F]*}}"
 // SPECIALIZATION-NEXT:    }

@@ -1913,17 +1913,15 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         });
     if (!AllSame)
       return false;
-    if (AllSame) {
-      LockstepReverseIterator<true> LRI(UniqueSuccessors.getArrayRef());
-      while (LRI.isValid()) {
-        Instruction *I0 = (*LRI)[0];
-        if (any_of(*LRI, [I0](Instruction *I) {
-              return !areIdenticalUpToCommutativity(I0, I);
-            })) {
-          return false;
-        }
-        --LRI;
+    LockstepReverseIterator<true> LRI(UniqueSuccessors.getArrayRef());
+    while (LRI.isValid()) {
+      Instruction *I0 = (*LRI)[0];
+      if (any_of(*LRI, [I0](Instruction *I) {
+            return !areIdenticalUpToCommutativity(I0, I);
+          })) {
+        return false;
       }
+      --LRI;
     }
     // Now we know that all instructions in all successors can be hoisted. Let
     // the loop below handle the hoisting.

@@ -26,5 +26,8 @@ template<typename T> struct MyClass {
 // CHECK:           "Type": "T"
 // CHECK:         "Template": {
 // CHECK-NEXT:      "Parameters": [
-// CHECK-NEXT:        "typename T"
+// CHECK-NEXT:        {
+// CHECK-NEXT:          "End": true,
+// CHECK-NEXT:          "Param": "typename T"
+// CHECK-NEXT:        }
 // CHECK-NEXT:      ] 

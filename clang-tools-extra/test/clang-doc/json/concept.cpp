@@ -25,7 +25,10 @@ concept Incrementable = requires(T x) {
 // CHECK-NEXT:        "Name": "Incrementable",
 // CHECK-NEXT:        "Template": {
 // CHECK-NEXT:          "Parameters": [
-// CHECK-NEXT:            "typename T"
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "End": true,
+// CHECK-NEXT:              "Param": "typename T"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
