@@ -2594,11 +2594,15 @@ static std::string
 AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
                        const TargetInfo &Target, CodeGenModule &CGM,
                        const AsmStmt &Stmt, const bool EarlyClobber,
-                       std::string *GCCReg = nullptr) {
+                       SmallVector<std::string> *GCCReg = nullptr) {
 
+  StringRef Str(Constraint);
+  StringRef::iterator I = Str.begin(), E = Str.end();
   // Do we have the "hard register" inline asm constraint.
-  bool ApplyHardRegisterConstraint =
-      Constraint[0] == '{' || (EarlyClobber && Constraint[1] == '{');
+  StringRef::iterator HardRegStart = std::find(I, E, '{');
+  StringRef::iterator HardRegEnd = std::find(I, E, '}');
+  // Do we have at least one hard register.
+  bool ApplyHardRegisterConstraint = HardRegStart != E && HardRegEnd != E && HardRegEnd > HardRegStart;
 
   // Do we have "register asm" on a variable.
   std::string Reg = "";
@@ -2628,27 +2632,49 @@ AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
     return Constraint;
   }
 
-  if (ApplyHardRegisterConstraint) {
-    int Start = EarlyClobber ? 2 : 1;
-    int End = Constraint.find('}');
-    Reg = Constraint.substr(Start, End - Start);
-    // If we don't have a valid register name, simply return the constraint.
-    // For example: There are some targets like X86 that use a constraint such
-    // as "@cca", which is validated and then converted into {@cca}. Now this
-    // isn't necessarily a "GCC Register", but in terms of emission, it is
-    // valid since it lowered appropriately in the X86 backend. For the {..}
-    // constraint, we shouldn't be too strict and error out if the register
-    // itself isn't a valid "GCC register".
-    if (!Target.isValidGCCRegisterName(Reg))
-      return Constraint;
+  if (ApplyRegisterVariableConstraint) {
+    StringRef Register(Reg);
+    assert(Target.isValidGCCRegisterName(Register));
+    // Canonicalize the register here before returning it.
+    Register = Target.getNormalizedGCCRegisterName(Register);
+    if (GCCReg)
+      GCCReg->push_back(Register.str());
+    return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
   }
 
-  StringRef Register(Reg);
-  // Canonicalize the register here before returning it.
-  Register = Target.getNormalizedGCCRegisterName(Register);
-  if (GCCReg != nullptr)
-    *GCCReg = Register.str();
-  return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
+  std::string NC;
+  while (I != E) {
+    if (*I == '{') {
+      HardRegEnd = std::find(I+1, E, '}');
+      // No error checking because we already validated this constraint
+      StringRef Register(I+1, HardRegEnd-I-1);
+      // If we don't have a valid register name, simply return the constraint.
+      // For example: There are some targets like X86 that use a constraint such
+      // as "@cca", which is validated and then converted into {@cca}. Now this
+      // isn't necessarily a "GCC Register", but in terms of emission, it is
+      // valid since it lowered appropriately in the X86 backend. For the {..}
+      // constraint, we shouldn't be too strict and error out if the register
+      // itself isn't a valid "GCC register".
+      if (!Target.isValidGCCRegisterName(Register))
+        return Constraint;
+
+      // Canonicalize the register here before returning it.
+      Register = Target.getNormalizedGCCRegisterName(Register);
+      // Do not need to worry about early clobber since the symbol should be
+      // copied from the original constraint string
+      NC += "{" + Register.str() + "}";
+
+      if (GCCReg)
+        GCCReg->push_back(Register.str());
+
+      I = HardRegEnd + 1;
+    }
+    else {
+      NC += *I;
+      ++I;
+    }
+  }
+  return NC;
 }
 
 std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
@@ -3001,14 +3027,18 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     const Expr *OutExpr = S.getOutputExpr(i);
     OutExpr = OutExpr->IgnoreParenNoopCasts(getContext());
 
-    std::string GCCReg;
+    SmallVector<std::string> GCCReg;
     OutputConstraint = AddVariableConstraints(OutputConstraint, *OutExpr,
                                               getTarget(), CGM, S,
                                               Info.earlyClobber(),
                                               &GCCReg);
     // Give an error on multiple outputs to same physreg.
-    if (!GCCReg.empty() && !PhysRegOutputs.insert(GCCReg).second)
-      CGM.Error(S.getAsmLoc(), "multiple outputs to hard register: " + GCCReg);
+    if (!GCCReg.empty()) {
+      for (auto R : GCCReg) {
+        if (!PhysRegOutputs.insert(R).second)
+          CGM.Error(S.getAsmLoc(), "multiple outputs to hard register: " + R);
+      }
+    }
 
     OutputConstraints.push_back(OutputConstraint);
     LValue Dest = EmitLValue(OutExpr);

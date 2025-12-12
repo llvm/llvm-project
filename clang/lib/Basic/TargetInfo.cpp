@@ -842,12 +842,16 @@ bool TargetInfo::validateOutputConstraint(ConstraintInfo &Info) const {
     case '{': {
       // First, check the target parser in case it validates
       // the {...} constraint differently.
-      if (validateAsmConstraint(Name, Info))
-        return true;
+      if (validateAsmConstraint(Name, Info)) {
+        Info.setAllowsRegister();
+        break;
+      }
 
       // If not, that's okay, we will try to validate it
       // using a target agnostic implementation.
-      if (!validateHardRegisterAsmConstraint(Name, Info))
+      if (validateHardRegisterAsmConstraint(Name, Info))
+        Info.setAllowsRegister();
+      else
         return false;
       break;
     }
@@ -881,8 +885,8 @@ bool TargetInfo::validateHardRegisterAsmConstraint(
   while (*Name && *Name != '}')
     Name++;
 
-  // Missing '}' or if there is anything after '}', return false.
-  if (!*Name || *(Name + 1))
+  // Missing '}', return false.
+  if (!*Name)
     return false;
 
   // Now we set the register name.
@@ -1032,11 +1036,13 @@ bool TargetInfo::validateInputConstraint(
       // First, check the target parser in case it validates
       // the {...} constraint differently.
       if (validateAsmConstraint(Name, Info))
-        return true;
+        Info.setAllowsRegister();
 
       // If not, that's okay, we will try to validate it
       // using a target agnostic implementation.
-      if (!validateHardRegisterAsmConstraint(Name, Info))
+      if (validateHardRegisterAsmConstraint(Name, Info))
+        Info.setAllowsRegister();
+      else
         return false;
       break;
     }
