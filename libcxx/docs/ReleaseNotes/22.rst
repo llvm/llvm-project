@@ -128,5 +128,9 @@ ABI Affecting Changes
   ``_LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR``. Please inform the libc++ team if you need this flag, since it will
   be removed in LLVM 24 if there is no evidence that it's required.
 
+- ``bitset::operator[]`` now returns ``bool``, making libc++ conforming. The behaviour can be reverted by defining
+  ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF``. Please inform the libc++ team if you need this flag,
+  since it will be removed in LLVM 24 if there is no evidence that it's required.
+
 Build System Changes
 --------------------

@@ -8,12 +8,16 @@
 
 // constexpr bool operator[](size_t pos) const; // constexpr since C++23
 
+// Make sure that `_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF` reverts to the old behaviour.
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF
+
 #include <bitset>
 #include <cassert>
 #include <cstddef>
 #include <vector>
 
-#include "../bitset_test_cases.h"
+#include "../../../std/utilities/template.bitset/bitset_test_cases.h"
 #include "test_macros.h"
 
 template <std::size_t N>
@@ -25,7 +29,7 @@ TEST_CONSTEXPR_CXX23 void test_index_const() {
       assert(v[N / 2] == v.test(N / 2));
     }
   }
-  ASSERT_SAME_TYPE(decltype(cases[0][0]), bool);
+  ASSERT_SAME_TYPE(decltype(cases[0][0]), typename std::bitset<N>::__const_reference);
 }
 
 TEST_CONSTEXPR_CXX23 bool test() {
@@ -43,7 +47,7 @@ TEST_CONSTEXPR_CXX23 bool test() {
   const auto& set = set_;
   auto b          = set[0];
   set_[0]         = true;
-  assert(!b);
+  assert(b);
 
   return true;
 }
