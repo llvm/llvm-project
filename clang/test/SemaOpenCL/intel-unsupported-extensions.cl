@@ -26,7 +26,7 @@ uchar test3(read_only image2d_t im, int2 i) {
 // expected-error@-3{{use of undeclared identifier 'intel_sub_group_block_read_uc'}}
 #endif
 
-ushort test4(const __local ushort* p) {
+ushort test4(const __global ushort* p) {
   return intel_sub_group_block_read_us(p);
 }
 #if !defined(cl_intel_subgroups_short)
