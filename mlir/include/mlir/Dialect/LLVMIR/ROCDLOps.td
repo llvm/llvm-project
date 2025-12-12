@@ -592,6 +592,21 @@ def ROCDL_smfmac_f32_32x32x32_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.b
 def ROCDL_smfmac_f32_32x32x32_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.bf8.fp8">;
 def ROCDL_smfmac_f32_32x32x32_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.fp8.bf8">;
 def ROCDL_smfmac_f32_32x32x32_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.fp8.fp8">;
+// New in gfx950.
+def ROCDL_smfmac_f32_16x16x64_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.bf16">;
+def ROCDL_smfmac_f32_16x16x64_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.f16">;
+def ROCDL_smfmac_i32_16x16x128_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.16x16x128.i8">;
+def ROCDL_smfmac_f32_16x16x128_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.bf8.bf8">;
+def ROCDL_smfmac_f32_16x16x128_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.bf8.fp8">;
+def ROCDL_smfmac_f32_16x16x128_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.fp8.bf8">;
+def ROCDL_smfmac_f32_16x16x128_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.fp8.fp8">;
+def ROCDL_smfmac_f32_32x32x32_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.bf16">;
+def ROCDL_smfmac_f32_32x32x32_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.f16">;
+def ROCDL_smfmac_i32_32x32x64_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.32x32x64.i8">;
+def ROCDL_smfmac_f32_32x32x64_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.bf8.bf8">;
+def ROCDL_smfmac_f32_32x32x64_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.bf8.fp8">;
+def ROCDL_smfmac_f32_32x32x64_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.fp8.bf8">;
+def ROCDL_smfmac_f32_32x32x64_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.fp8.fp8">;
 
 
 //===---------------------------------------------------------------------===//
@@ -1171,6 +1186,31 @@ def ROCDL_RawBufferAtomicCmpSwap :
   let assemblyFormat = [{
     attr-dict `(` operands `)` `:` type($res) `,` type($rsrc)
   }];
+}
+
+//===---------------------------------------------------------------------===//
+// Memory prefetch intrinsics
+
+def ROCDL_GlobalPrefetchOp :
+  ROCDL_IntrOp<"global.prefetch", [], [], [], 0, 0, 0, 0, [1], ["scope"]>,
+  Arguments<(ins Arg<LLVM_PointerInAddressSpace<1>, "", []>:$ptr, I32Attr:$scope)> {
+  let description = [{
+    Prefetches 1 byte of data per lane from global memory into the WGP-cache or L2-cache.
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr `,` `scope` $scope attr-dict `:` qualified(type($ptr))";
+}
+
+def ROCDL_FlatPrefetchOp :
+  ROCDL_IntrOp<"flat.prefetch", [], [], [], 0, 0, 0, 0, [1], ["scope"]>,
+  Arguments<(ins Arg<LLVM_PointerInAddressSpace<0>, "", []>:$ptr, I32Attr:$scope)> {
+  let description = [{
+    Prefetches 1 byte of data per lane using flat-memory addresses into the WGP-cache or L2-cache.
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr `,` `scope` $scope attr-dict `:` qualified(type($ptr))";
 }
 
 //===---------------------------------------------------------------------===//
@@ -1912,6 +1952,33 @@ def ROCDL_FMed3Op : ROCDL_IntrOp<"fmed3", [0], [], [Pure, AllTypesMatch<["res", 
     $src0 `,` $src1 `,` $src2 attr-dict `:` type($res)
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// Math operations
+//===----------------------------------------------------------------------===//
+
+class ROCDL_Math_IntrOp<string mnemonic, list<Trait> traits = [Pure]> :
+  ROCDL_IntrOp<mnemonic, [0], [], traits, 1>,
+  Arguments<(ins LLVM_AnyFloat:$arg)> {
+  let results = (outs LLVM_AnyFloat:$res);
+  let description = [{
+    Note: In the general case, prefer the conventional `arith`, `math`, or `llvm` ops over this.
+    Use this ROCDL-specific operation only when you fully understand its implication and
+    when it is strictly necessary. This op is usually chosen when a small loss in precision is
+    acceptable in exchange for higher execution speed.
+  }];
+  let assemblyFormat =
+    "$arg qualified(type($arg)) attr-dict `->` qualified(type($res))";
+}
+
+def ROCDLTanh : ROCDL_Math_IntrOp<"tanh">;
+def ROCDLSin : ROCDL_Math_IntrOp<"sin">;
+def ROCDLCos : ROCDL_Math_IntrOp<"cos">;
+def ROCDLRcp : ROCDL_Math_IntrOp<"rcp">;
+def ROCDLExp : ROCDL_Math_IntrOp<"exp">;
+def ROCDLExp2 : ROCDL_Math_IntrOp<"exp2">;
+def ROCDLLog : ROCDL_Math_IntrOp<"log">;
+def ROCDLSqrt : ROCDL_Math_IntrOp<"sqrt">;
 
 //===----------------------------------------------------------------------===//
 // ROCDL target attribute.

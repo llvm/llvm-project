@@ -97,7 +97,7 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%arrayidx>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp eq ir<%arrayidx>, ir<%z>
-; CHECK-NEXT:   WIDEN-SELECT ir<%sel> = select  ir<%cmp>, ir<1.000000e+01>, ir<2.000000e+01>
+; CHECK-NEXT:   WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<1.000000e+01>, ir<2.000000e+01>
 ; CHECK-NEXT:   WIDEN ir<%add> = fadd ir<%lv>, ir<%sel>
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR2:%.+]]> = vector-pointer inbounds ir<%arrayidx2>
@@ -536,7 +536,8 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-last-element ir<%add>
+; CHECK-NEXT:   EMIT vp<[[EXIT_PART:%.+]]> = extract-last-part ir<%add>
+; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-last-lane vp<[[EXIT_PART]]>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
@@ -903,7 +904,8 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%idx>
 ; CHECK-NEXT:    WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:    WIDEN-CAST ir<%zext> = zext nneg ir<%l>
-; CHECK-NEXT:    EMIT vp<[[EXT:%.+]]> = extract-last-element ir<%zext>
+; CHECK-NEXT:    EMIT vp<[[EXT_PART:%.+]]> = extract-last-part ir<%zext>
+; CHECK-NEXT:    EMIT vp<[[EXT:%.+]]> = extract-last-lane vp<[[EXT_PART]]>
 ; CHECK-NEXT:    CLONE store vp<[[EXT]]>, ir<%p1>
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -960,7 +962,8 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-element ir<%for.1.next>
+; CHECK-NEXT:   EMIT vp<[[RESUME_1_PART:%.+]]> = extract-last-part ir<%for.1.next>
+; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-lane vp<[[RESUME_1_PART]]>
 ; CHECK-NEXT:   EMIT vp<[[FOR_RESULT:%.+]]> = extract-penultimate-element ir<%for.1.next>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
@@ -1026,7 +1029,7 @@ define void @print_select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-NEXT:     WIDEN ir<[[LD2:%.+]]> = load vp<[[PTR2]]>
 ; CHECK-NEXT:     WIDEN ir<[[FCMP:%.+]]> = fcmp ogt fast ir<[[LD1]]>, ir<[[LD2]]>
 ; CHECK-NEXT:     WIDEN ir<[[FADD:%.+]]> = fadd fast ir<[[LD1]]>, ir<1.000000e+01>
-; CHECK-NEXT:     WIDEN-SELECT ir<[[SELECT:%.+]]> = select  fast ir<[[FCMP]]>, ir<[[FADD]]>, ir<[[LD2]]>
+; CHECK-NEXT:     WIDEN-SELECT ir<[[SELECT:%.+]]> = select fast ir<[[FCMP]]>, ir<[[FADD]]>, ir<[[LD2]]>
 ; CHECK-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds nuw ir<%a>, vp<[[ST]]>
 ; CHECK-NEXT:     vp<[[PTR3:%.+]]> = vector-pointer inbounds nuw ir<[[GEP3]]>
 ; CHECK-NEXT:     WIDEN store vp<[[PTR3]]>, ir<[[SELECT]]>

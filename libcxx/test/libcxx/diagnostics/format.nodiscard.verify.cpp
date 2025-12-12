@@ -14,7 +14,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <format>
+#include <string>
 
+#include "test_format_context.h"
 #include "test_macros.h"
 
 #ifndef TEST_HAS_NO_LOCALIZATION
@@ -46,4 +48,25 @@ void test() {
 #  endif // TEST_HAS_NO_WIDE_CHARACTERS
 #endif   // TEST_HAS_NO_LOCALIZATION
   // clang-format on
+
+  std::basic_format_args args{std::make_format_args()};
+
+  args.get(0); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  using OutItT = std::back_insert_iterator<std::string>;
+  std::string str;
+  OutItT outIt{str};
+  using FormatCtxT = std::basic_format_context<OutItT, char>;
+  FormatCtxT fCtx  = test_format_context_create<OutItT, char>(outIt, std::make_format_args<FormatCtxT>());
+
+  fCtx.arg(0); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#if !defined(TEST_HAS_NO_LOCALIZATION)
+  fCtx.locale(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
+  fCtx.out(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  std::basic_format_parse_context<char> fpCtx{""};
+
+  fpCtx.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fpCtx.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

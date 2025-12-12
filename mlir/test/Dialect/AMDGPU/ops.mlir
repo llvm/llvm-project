@@ -671,18 +671,20 @@ func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %
 
 // CHECK-LABEL: func @memory_counter_wait
 func.func @memory_counter_wait() {
-  // CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
-  // CHECK: amdgpu.memory_counter_wait load(4) store(2) ds(3) exp(1)
+  // CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4) tensor(5)
+  // CHECK: amdgpu.memory_counter_wait load(4) store(2) ds(3) exp(1) tensor(0)
   // CHECK: amdgpu.memory_counter_wait load(1)
   // CHECK: amdgpu.memory_counter_wait store(2)
   // CHECK: amdgpu.memory_counter_wait ds(3)
   // CHECK: amdgpu.memory_counter_wait exp(4)
-  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
-  amdgpu.memory_counter_wait exp(1) store(2) ds(3) load(4)
+  // CHECK: amdgpu.memory_counter_wait tensor(5)
+  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4) tensor(5)
+  amdgpu.memory_counter_wait tensor(0) exp(1) store(2) ds(3) load(4)
   amdgpu.memory_counter_wait load(1)
   amdgpu.memory_counter_wait store(2)
   amdgpu.memory_counter_wait ds(3)
   amdgpu.memory_counter_wait exp(4)
+  amdgpu.memory_counter_wait tensor(5)
   func.return
 }
 
@@ -695,8 +697,8 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, 
 }
 
 // CHECK-LABEL: func @make_dma_descriptor
-// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[BARRIER:.+]]: memref<8xi32, #gpu.address_space<workgroup>>, %[[IDX:.+]]: index)
-func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8xi32, #gpu.address_space<workgroup>>, %idx: index) {
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[WG_MASK:.+]]: vector<16xi1>, %[[TIMEOUT:.+]]: i1, %[[BARRIER:.+]]: memref<8xi32, #gpu.address_space<workgroup>>, %[[IDX:.+]]: index, %[[I32:.+]]: i32)
+func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: vector<16xi1>, %timeout: i1, %barrier: memref<8xi32, #gpu.address_space<workgroup>>, %idx: index, %i32: i32) {
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
@@ -715,8 +717,34 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
         globalStride [64, 1]
         // CHECK-SAME: sharedSize [64, 64]
         sharedSize [64, 64]
-        // CHECK-SAME: padShared(%[[IDX]] every %[[IDX]])
-        padShared(%idx every %idx)
+        // CHECK-SAME: padShared(%[[I32]] every %[[I32]])
+        padShared(%i32 every %i32)
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
+        // CHECK-SAME: workgroupMask %[[WG_MASK]]
+        workgroupMask %wg_mask
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
+        // CHECK-SAME: workgroupMask %[[WG_MASK]]
+        workgroupMask %wg_mask
+        // CHECK-SAME: earlyTimeout %[[TIMEOUT]]
+        earlyTimeout %timeout
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
@@ -739,10 +767,9 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
         globalStride [64, 1]
         // CHECK-SAME: sharedSize [64, 64]
         sharedSize [64, 64]
-        // CHECK-SAME: iterate %[[IDX]], %[[IDX]], %[[IDX]]
-        iterate %idx, %idx, %idx
+        // CHECK-SAME: iterate %[[IDX]], %[[I32]], %[[IDX]]
+        iterate %idx, %i32, %idx
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   func.return
 }
-

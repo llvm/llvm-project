@@ -48,6 +48,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
+  const LLT s128 = LLT::scalar(128);
 
   const LLT v16s64 = LLT::fixed_vector(16, 64);
   const LLT v16s32 = LLT::fixed_vector(16, 32);
@@ -114,18 +115,19 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                            v4s1, v4s8, v4s16, v4s32, v4s64};
 
   auto allScalarsAndVectors = {
-      s1,   s8,   s16,   s32,   s64,   v2s1,  v2s8,  v2s16,  v2s32,  v2s64,
-      v3s1, v3s8, v3s16, v3s32, v3s64, v4s1,  v4s8,  v4s16,  v4s32,  v4s64,
-      v8s1, v8s8, v8s16, v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
+      s1,    s8,    s16,   s32,   s64,    s128,   v2s1,  v2s8,
+      v2s16, v2s32, v2s64, v3s1,  v3s8,   v3s16,  v3s32, v3s64,
+      v4s1,  v4s8,  v4s16, v4s32, v4s64,  v8s1,   v8s8,  v8s16,
+      v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
 
-  auto allIntScalarsAndVectors = {s8,    s16,   s32,   s64,    v2s8,   v2s16,
-                                  v2s32, v2s64, v3s8,  v3s16,  v3s32,  v3s64,
-                                  v4s8,  v4s16, v4s32, v4s64,  v8s8,   v8s16,
-                                  v8s32, v8s64, v16s8, v16s16, v16s32, v16s64};
+  auto allIntScalarsAndVectors = {
+      s8,    s16,   s32,   s64,   s128,   v2s8,   v2s16, v2s32, v2s64,
+      v3s8,  v3s16, v3s32, v3s64, v4s8,   v4s16,  v4s32, v4s64, v8s8,
+      v8s16, v8s32, v8s64, v16s8, v16s16, v16s32, v16s64};
 
   auto allBoolScalarsAndVectors = {s1, v2s1, v3s1, v4s1, v8s1, v16s1};
 
-  auto allIntScalars = {s8, s16, s32, s64};
+  auto allIntScalars = {s8, s16, s32, s64, s128};
 
   auto allFloatScalarsAndF16Vector2AndVector4s = {s16, s32, s64, v2s16, v4s16};
 
@@ -307,7 +309,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
           typeInSet(1, allPtrsScalarsAndVectors)));
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
-      .legalFor({s1})
+      .legalFor({s1, s128})
       .legalFor(allFloatAndIntScalarsAndPtrs)
       .legalFor(allowedVectorTypes)
       .moreElementsToNextPow2(0)

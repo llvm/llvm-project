@@ -196,6 +196,9 @@ Improvements to clang-tidy
   moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
   in the 24th release.
 
+- Improved :program:`clang-tidy` configuration parsing by allowing the same list
+  syntax in `WarningsAsErrors` as in `Checks`.
+
 New checks
 ^^^^^^^^^^
 
@@ -328,6 +331,11 @@ New check aliases
   <clang-tidy/checks/bugprone/copy-constructor-mutates-argument>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`google-readability-casting <clang-tidy/checks/google/readability-casting>` to
+  :doc:`modernize-avoid-c-style-cast
+  <clang-tidy/checks/modernize/avoid-c-style-cast>`
+  keeping initial check as an alias to the new one.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -440,6 +448,12 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to
   correctly ignore ``std::array`` and other array-like containers when
   `IgnoreArrays` option is set to `true`.
+
+- Improved :doc:`fuchsia-multiple-inheritance
+  <clang-tidy/checks/fuchsia/multiple-inheritance>`
+  by fixing an issue where the check would only analyze the first class with
+  a given name in the program, missing any subsequent classes with that same
+  name (declared in a different scope).
 
 - Improved :doc:`google-readability-casting
   <clang-tidy/checks/google/readability-casting>` check by adding fix-it
@@ -574,6 +588,11 @@ Changes in existing checks
 - Improved :doc:`readability-redundant-casting
   <clang-tidy/checks/readability/redundant-casting>` check by fixing false
   negatives when explicitly cast from function pointer.
+
+- Improved :doc:`readability-redundant-control-flow
+  <clang-tidy/checks/readability/redundant-control-flow>` by fixing an issue
+  where the check would sometimes suggest deleting not only a redundant
+  ``return`` or ``continue``, but also unrelated lines preceding it.
 
 - Improved :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
