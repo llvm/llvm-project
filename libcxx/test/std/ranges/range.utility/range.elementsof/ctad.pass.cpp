@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <memory>
 #include <ranges>
+#include <utility>
 
 #include "min_allocator.h"
 #include "test_allocator.h"
@@ -27,30 +28,33 @@
 
 template <class Allocator, class Range>
 constexpr void test_impl() {
-  Range r;
   Allocator a;
 
   // With a lvalue range
   {
+    Range r;
     std::ranges::elements_of elements(r);
     static_assert(std::same_as<decltype(elements), std::ranges::elements_of<Range&, std::allocator<std::byte>>>);
   }
 
   // With a rvalue range
   {
-    std::ranges::elements_of elements((Range()));
+    Range r;
+    std::ranges::elements_of elements(std::move(r));
     static_assert(std::same_as<decltype(elements), std::ranges::elements_of<Range&&, std::allocator<std::byte>>>);
   }
 
   // With lvalue range and allocator
   {
+    Range r;
     std::ranges::elements_of elements(r, a);
     static_assert(std::same_as<decltype(elements), std::ranges::elements_of<Range&, Allocator>>);
   }
 
   // With rvalue range and allocator
   {
-    std::ranges::elements_of elements((Range()), Allocator());
+    Range r;
+    std::ranges::elements_of elements(std::move(r), Allocator());
     static_assert(std::same_as<decltype(elements), std::ranges::elements_of<Range&&, Allocator>>);
   }
 
@@ -58,13 +62,15 @@ constexpr void test_impl() {
   {
     // lvalues
     {
+      Range r;
       std::ranges::elements_of elements{.range = r, .allocator = a};
       static_assert(std::same_as<decltype(elements), std::ranges::elements_of<Range&, Allocator>>);
     }
 
     // rvalues
     {
-      std::ranges::elements_of elements{.range = Range(), .allocator = Allocator()};
+      Range r;
+      std::ranges::elements_of elements{.range = std::move(r), .allocator = Allocator()};
       static_assert(std::same_as<decltype(elements), std::ranges::elements_of<Range&&, Allocator>>);
     }
   }
