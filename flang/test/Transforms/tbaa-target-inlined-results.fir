@@ -33,8 +33,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: #[[TBAA_TYPE_DESC2:.*]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[TBAA_TYPE_DESC]], 0>}>
 // CHECK: #[[TBAA_TYPE_DESC3:.*]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[TBAA_TYPE_DESC1]], 0>}>
 // CHECK: #[[TBAA_TYPE_DESC4:.*]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[TBAA_TYPE_DESC2]], 0>}>
-// CHECK: #[[TBAA_TYPE_DESC5:.*]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[TBAA_TYPE_DESC3, 0>}>
+// CHECK: #[[TBAA_TYPE_DESC5:.*]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[TBAA_TYPE_DESC3]], 0>}>
 // CHECK: #[[TBAA_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[TBAA_TYPE_DESC5]], access_type = #[[TBAA_TYPE_DESC5]], offset = 0>
 
 // CHECK-LABEL: func.func @_QMmPfoo
-// CHECK: fir.store %{{.*}} to %{{.*}} : !fir.ref<!fir.char<1>> {tbaa = [#[[TBAA_TAG]]]}
+// CHECK: fir.store %{{.*}} to %{{.*}} {tbaa = [#[[TBAA_TAG]]]} : !fir.ref<!fir.char<1>>
