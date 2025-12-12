@@ -200,13 +200,6 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       return arith::NegFOp::create(rewriter, loc, resultTypes, args[0]);
 
     if (isa<IntegerType>(elementTy)) {
-      if (hasInZp && hasOutZp && !inZp && !outZp) {
-        auto constant = arith::ConstantOp::create(
-            rewriter, loc, IntegerAttr::get(elementTy, 0));
-        return arith::SubIOp::create(rewriter, loc, resultTypes, constant,
-                                     args[0]);
-      }
-
       Value zpAddValue;
       Type intermediateType;
       // Compute the maximum value that can occur in the intermediate buffer.
@@ -221,14 +214,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
             std::abs(zpAdd) + 1;
 
         // Convert that maximum value into the maximum bitwidth needed to
-        // represent it. We assume 48-bit numbers may be supported further in
-        // the pipeline.
+        // represent it.
         if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
           intermediateBitWidth = 16;
         } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
           intermediateBitWidth = 32;
-        } else if (maxValue <= APInt::getSignedMaxValue(48).getSExtValue()) {
-          intermediateBitWidth = 48;
         }
 
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
