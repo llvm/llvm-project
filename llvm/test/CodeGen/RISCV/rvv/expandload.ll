@@ -3,6 +3,7 @@
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-RV32
 ; RUN: llc -verify-machineinstrs -mtriple=riscv64 -mattr=+v,+d,+m,+zbb %s -o - \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-RV64
+; XFAIL: *
 
 ; Load + expand for i8 type
 

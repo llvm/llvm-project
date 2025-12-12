@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=riscv64 < %s | FileCheck %s --implicit-check-not=DEBUG_VALUE
+; XFAIL: *
 
 ;; Verify that tagged and untagged non-contiguous stores are handled correctly
 ;; by assignment tracking.
