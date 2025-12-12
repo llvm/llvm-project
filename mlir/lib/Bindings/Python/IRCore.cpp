@@ -26,6 +26,7 @@
 
 #include <iostream>
 #include <optional>
+#include <typeinfo>
 
 namespace nb = nanobind;
 using namespace nb::literals;

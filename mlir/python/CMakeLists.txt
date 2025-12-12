@@ -1006,12 +1006,11 @@ add_mlir_library(MLIRPythonSupport
     ${NB_LIBRARY_TARGET_NAME}
     MLIRPythonCAPI
 )
-nanobind_link_options(MLIRPythonSupport)
-get_target_property(_current_link_options MLIRPythonSupport LINK_OPTIONS)
-if(_current_link_options)
-  string(REPLACE "LINKER:-z,defs" "" _modified_link_options "${_current_link_options}")
-  set_property(TARGET MLIRPythonSupport PROPERTY LINK_OPTIONS "${_modified_link_options}")
+if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND (NOT LLVM_USE_SANITIZER))
+  target_link_options(MLIRPythonSupport PRIVATE "-Wl,-z,undefs")
+  target_link_options(${NB_LIBRARY_TARGET_NAME} PRIVATE "-Wl,-z,undefs")
 endif()
+nanobind_link_options(MLIRPythonSupport)
 set_target_properties(MLIRPythonSupport PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
   BINARY_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"

@@ -1350,12 +1350,12 @@ void registerMLIRErrorInCore();
 
 /// Helper for creating an @classmethod.
 template <class Func, typename... Args>
-static nanobind::object classmethod(Func f, Args... args) {
+nanobind::object classmethod(Func f, Args... args) {
   nanobind::object cf = nanobind::cpp_function(f, args...);
   return nanobind::borrow<nanobind::object>((PyClassMethod_New(cf.ptr())));
 }
 
-static nanobind::object
+inline nanobind::object
 createCustomDialectWrapper(const std::string &dialectNamespace,
                            nanobind::object dialectDescriptor) {
   auto dialectClass = PyGlobals::get().lookupDialectClass(dialectNamespace);
@@ -1368,21 +1368,21 @@ createCustomDialectWrapper(const std::string &dialectNamespace,
   return (*dialectClass)(std::move(dialectDescriptor));
 }
 
-static MlirStringRef toMlirStringRef(const std::string &s) {
+inline MlirStringRef toMlirStringRef(const std::string &s) {
   return mlirStringRefCreate(s.data(), s.size());
 }
 
-static MlirStringRef toMlirStringRef(std::string_view s) {
+inline MlirStringRef toMlirStringRef(std::string_view s) {
   return mlirStringRefCreate(s.data(), s.size());
 }
 
-static MlirStringRef toMlirStringRef(const nanobind::bytes &s) {
+inline MlirStringRef toMlirStringRef(const nanobind::bytes &s) {
   return mlirStringRefCreate(static_cast<const char *>(s.data()), s.size());
 }
 
 /// Create a block, using the current location context if no locations are
 /// specified.
-static MlirBlock
+inline MlirBlock
 createBlock(const nanobind::sequence &pyArgTypes,
             const std::optional<nanobind::sequence> &pyArgLocs) {
   SmallVector<MlirType> argTypes;
@@ -1871,7 +1871,7 @@ public:
 
 /// Returns the list of types of the values held by container.
 template <typename Container>
-static std::vector<nanobind::typed<nanobind::object, PyType>>
+std::vector<nanobind::typed<nanobind::object, PyType>>
 getValueTypes(Container &container, PyMlirContextRef &context) {
   std::vector<nanobind::typed<nanobind::object, PyType>> result;
   result.reserve(container.size());

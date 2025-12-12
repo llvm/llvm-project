@@ -228,14 +228,6 @@ struct nb_format_descriptor<double> {
   static const char *format() { return "d"; }
 };
 
-static MlirStringRef toMlirStringRef(const std::string &s) {
-  return mlirStringRefCreate(s.data(), s.size());
-}
-
-static MlirStringRef toMlirStringRef(const nb::bytes &s) {
-  return mlirStringRefCreate(static_cast<const char *>(s.data()), s.size());
-}
-
 class PyAffineMapAttribute : public PyConcreteAttribute<PyAffineMapAttribute> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAAffineMap;
