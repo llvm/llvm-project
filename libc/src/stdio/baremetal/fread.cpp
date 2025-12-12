@@ -1,4 +1,4 @@
-//===-- Implementation of fwrite for baremetal ------------------*- C++ -*-===//
+//===-- Implementation of fread for baremetal -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/fwrite.h"
+#include "src/stdio/fread.h"
 
 #include "hdr/types/FILE.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/file_internal.h"
 
@@ -17,13 +18,16 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(size_t, fwrite,
-                   (const void *__restrict buffer, size_t size, size_t nmemb,
+LLVM_LIBC_FUNCTION(size_t, fread,
+                   (void *__restrict buffer, size_t size, size_t nmemb,
                     ::FILE *stream)) {
   if (size == 0 || nmemb == 0)
     return 0;
-  return write_internal(reinterpret_cast<const char *>(buffer), size * nmemb,
-                        stream);
+  auto result =
+      read_internal(reinterpret_cast<char *>(buffer), size * nmemb, stream);
+  if (result.has_error())
+    libc_errno = result.error;
+  return result.value / size;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

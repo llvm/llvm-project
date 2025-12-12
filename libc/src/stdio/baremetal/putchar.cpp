@@ -8,12 +8,24 @@
 
 #include "src/stdio/putchar.h"
 
+#include "hdr/stdio_macros.h" // for EOF
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/baremetal/fputc_internal.h"
+#include "src/stdio/baremetal/file_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, putchar, (int c)) { return fputc_internal(c, stdout); }
+LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
+  auto result = write_internal(reinterpret_cast<char *>(&c), 1, stdout);
+  if (result.has_error())
+    libc_errno = result.error;
+  size_t written = result.value;
+  if (1 != written) {
+    // The stream should be in an error state in this case.
+    return EOF;
+  }
+  return 0;
+}
 
 } // namespace LIBC_NAMESPACE_DECL

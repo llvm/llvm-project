@@ -8,15 +8,25 @@
 
 #include "src/stdio/fputc.h"
 
+#include "hdr/stdio_macros.h" // for EOF
 #include "hdr/types/FILE.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/baremetal/fputc_internal.h"
+#include "src/stdio/baremetal/file_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fputc, (int c, ::FILE *stream)) {
-  return fputc_internal(c, stream);
+  auto result = write_internal(reinterpret_cast<char *>(&c), 1, stream);
+  if (result.has_error())
+    libc_errno = result.error;
+  size_t written = result.value;
+  if (1 != written) {
+    // The stream should be in an error state in this case.
+    return EOF;
+  }
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

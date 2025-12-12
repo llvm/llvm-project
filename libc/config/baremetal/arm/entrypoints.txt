@@ -126,9 +126,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.asprintf
     libc.src.stdio.feof
     libc.src.stdio.ferror
+    libc.src.stdio.fgetc
+    libc.src.stdio.fgets
     libc.src.stdio.fprintf
     libc.src.stdio.fputc
     libc.src.stdio.fputs
+    libc.src.stdio.fread
+    libc.src.stdio.fscanf
     libc.src.stdio.fwrite
     libc.src.stdio.getchar
     libc.src.stdio.printf
@@ -142,6 +146,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.sscanf
     libc.src.stdio.vasprintf
     libc.src.stdio.vfprintf
+    libc.src.stdio.vfscanf
     libc.src.stdio.vprintf
     libc.src.stdio.vscanf
     libc.src.stdio.vsnprintf

@@ -7,14 +7,34 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/puts.h"
+
+#include "hdr/stdio_macros.h" // for EOF
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/baremetal/fputs_internal.h"
+#include "src/stdio/baremetal/file_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
-  return fputs_internal(str, stdout);
+  cpp::string_view str_view(str);
+  auto result = write_internal(str_view.data(), str_view.size(), stdout);
+  if (result.has_error())
+    libc_errno = result.error;
+  size_t written = result.value;
+  if (str_view.size() != written) {
+    // The stream should be in an error state in this case.
+    return EOF;
+  }
+  result = write_internal("\n", 1, stdout);
+  if (result.has_error())
+    libc_errno = result.error;
+  written = result.value;
+  if (1 != written) {
+    // The stream should be in an error state in this case.
+    return EOF;
+  }
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
