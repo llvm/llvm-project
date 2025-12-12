@@ -1,7 +1,8 @@
 // RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     readability-identifier-naming.DefaultCase: "lower_case", \
-// RUN:   }}'
+// RUN:   }}' \
+// RUN:   -- -fno-delayed-template-parsing
 
 // DefaultCase enables every type of identifier to be checked with same case
 #define MyMacro
@@ -42,6 +43,8 @@ int MyFunction(int MyArgument) {
 // CHECK-FIXES: return my_variable;
 }
 
+template int MyFunction<int>(int);
+
 }
 
 // These are all already formatted as desired
@@ -62,6 +65,8 @@ int my_function(int my_argument) {
   int my_variable = my_argument;
   return my_variable;
 }
+
+template int my_function<int>(int);
 
 }
 

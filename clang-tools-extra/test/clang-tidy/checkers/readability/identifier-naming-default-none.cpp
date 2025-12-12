@@ -1,5 +1,6 @@
 // RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
-// RUN:   -config='{CheckOptions: {}}'
+// RUN:   -config='{CheckOptions: {}}' \
+// RUN:   -- -fno-delayed-template-parsing
 
 // Empty options effectively disable the check, allowing PascalCase...
 #define MyMacro
@@ -19,6 +20,8 @@ int MyFunction(int MyArgument) {
   int MyVariable = MyArgument;
   return MyVariable;
 }
+
+template int MyFunction<int>(int);
 
 }
 
@@ -40,6 +43,8 @@ int my_function(int my_argument) {
   int my_variable = my_argument;
   return my_variable;
 }
+
+template int my_function<int>(int);
 
 }
 

@@ -3,7 +3,8 @@
 // RUN:     readability-identifier-naming.DefaultCase: "lower_case", \
 // RUN:     readability-identifier-naming.MacroDefinitionCase: "UPPER_CASE", \
 // RUN:     readability-identifier-naming.TemplateParameterCase: "UPPER_CASE", \
-// RUN:   }}'
+// RUN:   }}' \
+// RUN:   -- -fno-delayed-template-parsing
 
 #define MyMacro
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for macro definition 'MyMacro' [readability-identifier-naming]
@@ -43,6 +44,8 @@ int MyFunction(int MyArgument) {
 // CHECK-FIXES: return my_variable;
 }
 
+template int MyFunction<int>(int);
+
 }
 
 #define my_macro_2
@@ -66,6 +69,8 @@ int my_function(int my_argument) {
   int my_variable = my_argument;
   return my_variable;
 }
+
+template int my_function<int>(int);
 
 }
 
