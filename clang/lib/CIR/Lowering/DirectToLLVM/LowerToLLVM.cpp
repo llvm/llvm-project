@@ -2053,6 +2053,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     fn.setAlwaysInline(*inlineKind == cir::InlineKind::AlwaysInline);
   }
 
+  if (std::optional<llvm::StringRef> personality = op.getPersonality())
+    fn.setPersonality(*personality);
+
   fn.setVisibility_(
       lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
 
@@ -3411,22 +3414,6 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
   mlir::Value selector =
       mlir::LLVM::ExtractValueOp::create(rewriter, loc, landingPadOp, 1);
   rewriter.replaceOp(op, mlir::ValueRange{slot, selector});
-
-  // Landing pads are required to be in LLVM functions with personality
-  // attribute.
-  // TODO(cir): for now hardcode personality creation in order to start
-  // adding exception tests, once we annotate CIR with such information,
-  // change it to be in FuncOp lowering instead.
-  mlir::OpBuilder::InsertionGuard guard(rewriter);
-  // Insert personality decl before the current function.
-  rewriter.setInsertionPoint(llvmFn);
-  auto personalityFnTy =
-      mlir::LLVM::LLVMFunctionType::get(rewriter.getI32Type(), {},
-                                        /*isVarArg=*/true);
-
-  const StringRef fnName = "__gxx_personality_v0";
-  createLLVMFuncOpIfNotExist(rewriter, op, fnName, personalityFnTy);
-  llvmFn.setPersonality(fnName);
 
   return mlir::success();
 }
