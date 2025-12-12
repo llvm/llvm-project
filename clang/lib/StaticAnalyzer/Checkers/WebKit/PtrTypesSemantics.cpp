@@ -573,7 +573,7 @@ public:
     });
   }
 
-  bool IsStatementTrivial(const Stmt* S) {
+  bool IsStatementTrivial(const Stmt *S) {
     auto CacheIt = Cache.find(S);
     if (CacheIt != Cache.end())
       return CacheIt->second;
