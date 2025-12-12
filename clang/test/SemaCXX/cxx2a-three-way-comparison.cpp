@@ -67,3 +67,28 @@ struct comparable_t {
                                                                   expected-note {{defaulted 'operator<=>' is implicitly deleted because defaulted comparison of vector types is not supported}}
 };
 } // namespace GH137452
+
+namespace GH170015 {
+// This test ensures that the compiler enforces strict type checking on the 
+// static members of comparison category types.
+// Previously, a mismatch (e.g., equivalent being an int) could crash the compiler.
+}
+
+namespace std {
+  struct partial_ordering {
+    // Malformed: 'equivalent' should be of type 'partial_ordering', not 'int'.
+    static constexpr int equivalent = 0; 
+    static constexpr int less = -1;
+    static constexpr int greater = 1;
+    static constexpr int unordered = 2;
+  };
+}
+
+namespace GH170015 {
+  void f() {
+    float a = 0.0f, b = 0.0f;
+    // We expect the compiler to complain that the type form is wrong 
+    // (because the static members are ints, not objects).
+    auto res = a <=> b; // expected-error {{standard library implementation of 'std::partial_ordering' is not supported; the type does not have the expected form}}
+  }
+}

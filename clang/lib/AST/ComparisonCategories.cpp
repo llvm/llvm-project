@@ -49,7 +49,7 @@ bool ComparisonCategoryInfo::ValueInfo::hasValidIntValue() const {
   // Before we attempt to get the value of the first field, ensure that we
   // actually have one (and only one) field.
   const auto *Record = VD->getType()->getAsCXXRecordDecl();
-  if (Record->getNumFields() != 1 ||
+  if (!Record || Record->getNumFields() != 1 ||
       !Record->field_begin()->getType()->isIntegralOrEnumerationType())
     return false;
 
@@ -83,7 +83,14 @@ ComparisonCategoryInfo::ValueInfo *ComparisonCategoryInfo::lookupValueInfo(
       &Ctx.Idents.get(ComparisonCategories::getResultString(ValueKind)));
   if (Lookup.empty() || !isa<VarDecl>(Lookup.front()))
     return nullptr;
-  Objects.emplace_back(ValueKind, cast<VarDecl>(Lookup.front()));
+  // The static member must have the same type as the comparison category class
+  // itself (e.g., std::partial_ordering::less must be of type partial_ordering).
+  VarDecl *ValueDecl = cast<VarDecl>(Lookup.front());
+  const CXXRecordDecl *ValueDeclRecord = ValueDecl->getType()->getAsCXXRecordDecl();
+  if (!ValueDeclRecord || ValueDeclRecord->getCanonicalDecl() != Record->getCanonicalDecl())
+    return nullptr;
+
+  Objects.emplace_back(ValueKind, ValueDecl);
   return &Objects.back();
 }
 
