@@ -287,37 +287,6 @@ bool RetainTypeChecker::isUnretained(const QualType QT, bool ignoreARC) {
   return RecordlessTypes.contains(QT.getTypePtr());
 }
 
-std::optional<bool> isUnretained(const QualType T, bool IsARCEnabled) {
-  if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(T)) {
-    if (auto *Decl = Subst->getAssociatedDecl()) {
-      if (isRetainPtrOrOSPtr(safeGetName(Decl)))
-        return false;
-    }
-  }
-  if ((ento::cocoa::isCocoaObjectRef(T) && !IsARCEnabled) ||
-      ento::coreFoundation::isCFObjectRef(T))
-    return true;
-
-  // RetainPtr strips typedef for CF*Ref. Manually check for struct __CF* types.
-  auto CanonicalType = T.getCanonicalType();
-  auto *Type = CanonicalType.getTypePtrOrNull();
-  if (!Type)
-    return false;
-  auto Pointee = Type->getPointeeType();
-  auto *PointeeType = Pointee.getTypePtrOrNull();
-  if (!PointeeType)
-    return false;
-  auto *Record = PointeeType->getAsStructureType();
-  if (!Record)
-    return false;
-  auto *Decl = Record->getDecl();
-  if (!Decl)
-    return false;
-  auto TypeName = Decl->getName();
-  return TypeName.starts_with("__CF") || TypeName.starts_with("__CG") ||
-         TypeName.starts_with("__CM");
-}
-
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)
 {
   // Keep isRefCounted first as it's cheaper.
@@ -349,25 +318,6 @@ std::optional<bool> isUncheckedPtr(const QualType T) {
   if (T->isPointerType() || T->isReferenceType()) {
     if (auto *CXXRD = T->getPointeeCXXRecordDecl())
       return isUnchecked(CXXRD);
-  }
-  return false;
-}
-
-std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled) {
-  if (T->isPointerType() || T->isReferenceType()) {
-    if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
-      auto isUncountedPtr = isUncounted(CXXRD);
-      auto isUncheckedPtr = isUnchecked(CXXRD);
-      auto isUnretainedPtr = isUnretained(T, IsArcEnabled);
-      std::optional<bool> result;
-      if (isUncountedPtr)
-        result = *isUncountedPtr;
-      if (isUncheckedPtr)
-        result = result ? *result || *isUncheckedPtr : *isUncheckedPtr;
-      if (isUnretainedPtr)
-        result = result ? *result || *isUnretainedPtr : *isUnretainedPtr;
-      return result;
-    }
   }
   return false;
 }
