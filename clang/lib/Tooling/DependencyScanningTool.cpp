@@ -224,12 +224,17 @@ DependencyScanningTool::initializeCompilerInstanceWithContextOrError(
       std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
 
   if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
+    // The input command line is already a -cc1 invocation; initialize the
+    // compiler instance directly from it.
     if (Worker.initializeCompilerInstanceWithContext(
             CWD, CommandLine, DiagPrinterWithOS->DiagPrinter))
       return llvm::Error::success();
     return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
   }
 
+  // The input command line is either a driver-style command line, or
+  // ill-formed.  In this case, we will call the Driver to build a -cc1 command
+  // line for this compilation or diagnose any ill-formed input.
   auto OverlayFSAndArgs = initVFSForByNameScanning(
       &Worker.getVFS(), CommandLine, CWD, "ScanningByName");
   auto &OverlayFS = OverlayFSAndArgs.first;
