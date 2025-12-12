@@ -3287,8 +3287,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   // iff the subscripts are positive and are less than the range of the
   // dimension.
   if (!DisableDelinearizationChecks) {
-    if (!validateDelinearizationResult(*SE, SrcSizes, SrcSubscripts, SrcPtr) ||
-        !validateDelinearizationResult(*SE, DstSizes, DstSubscripts, DstPtr)) {
+    if (!validateDelinearizationResult(*SE, SrcSizes, SrcSubscripts) ||
+        !validateDelinearizationResult(*SE, DstSizes, DstSubscripts)) {
       SrcSubscripts.clear();
       DstSubscripts.clear();
       return false;
@@ -3307,8 +3307,6 @@ bool DependenceInfo::tryDelinearizeParametricSize(
     const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
     SmallVectorImpl<const SCEV *> &DstSubscripts) {
 
-  Value *SrcPtr = getLoadStorePointerOperand(Src);
-  Value *DstPtr = getLoadStorePointerOperand(Dst);
   const SCEVUnknown *SrcBase =
       dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
   const SCEVUnknown *DstBase =
@@ -3353,8 +3351,8 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   // FIXME: It may be better to record these sizes and add them as constraints
   // to the dependency checks.
   if (!DisableDelinearizationChecks)
-    if (!validateDelinearizationResult(*SE, Sizes, SrcSubscripts, SrcPtr) ||
-        !validateDelinearizationResult(*SE, Sizes, DstSubscripts, DstPtr))
+    if (!validateDelinearizationResult(*SE, Sizes, SrcSubscripts) ||
+        !validateDelinearizationResult(*SE, Sizes, DstSubscripts))
       return false;
 
   return true;
