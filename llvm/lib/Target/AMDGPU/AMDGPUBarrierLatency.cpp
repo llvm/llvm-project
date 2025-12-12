@@ -67,7 +67,7 @@ void addLatencyToEdge(SDep &PredDep, SUnit &SU, unsigned Latency) {
 }
 
 void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
-  const SIInstrInfo *TII = static_cast<const SIInstrInfo*>(DAG->TII);
+  const SIInstrInfo *TII = static_cast<const SIInstrInfo *>(DAG->TII);
   constexpr unsigned FenceLatency = 2000;
   const unsigned BarrierSignalWaitLatency = BarrierSignalWaitLatencyOpt;
 
