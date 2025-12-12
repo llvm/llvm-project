@@ -4077,14 +4077,6 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   if (LHS->getType()->isPointerTy())
     if (auto *C = computePointerICmp(Pred, LHS, RHS, Q))
       return C;
-  if (auto *CLHS = dyn_cast<PtrToIntOperator>(LHS))
-    if (auto *CRHS = dyn_cast<PtrToIntOperator>(RHS))
-      if (CLHS->getPointerOperandType() == CRHS->getPointerOperandType() &&
-          Q.DL.getTypeSizeInBits(CLHS->getPointerOperandType()) ==
-              Q.DL.getTypeSizeInBits(CLHS->getType()))
-        if (auto *C = computePointerICmp(Pred, CLHS->getPointerOperand(),
-                                         CRHS->getPointerOperand(), Q))
-          return C;
 
   // If the comparison is with the result of a select instruction, check whether
   // comparing with either branch of the select always yields the same value.
