@@ -363,10 +363,10 @@ static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
   return builder.createMul(loc, lhs, rhs);
 }
 
-static mlir::Value
-emitCIRX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder, mlir::Location loc,
-                            mlir::Type dstTy,
-                            SmallVectorImpl<mlir::Value> &ops) {
+static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
+                                            mlir::Location loc,
+                                            mlir::Type dstTy,
+                                            SmallVectorImpl<mlir::Value> &ops) {
   auto src = ops[0];
   auto passthru = ops[1];
   auto mask = ops[2];
@@ -1691,16 +1691,16 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     llvm::StringRef intrinsicName;
     switch (builtinID) {
     case X86::BI__builtin_ia32_vcvtph2ps_mask: {
-      return emitCIRX86CvtF16ToFloatExpr(builder, loc,
-                                         convertType(expr->getType()), ops);
+      return emitX86CvtF16ToFloatExpr(builder, loc,
+                                      convertType(expr->getType()), ops);
     }
     case X86::BI__builtin_ia32_vcvtph2ps256_mask: {
-      return emitCIRX86CvtF16ToFloatExpr(builder, loc,
-                                         convertType(expr->getType()), ops);
+      return emitX86CvtF16ToFloatExpr(builder, loc,
+                                      convertType(expr->getType()), ops);
     }
     case X86::BI__builtin_ia32_vcvtph2ps512_mask: {
-      return emitCIRX86CvtF16ToFloatExpr(builder, loc,
-                                         convertType(expr->getType()), ops);
+      return emitX86CvtF16ToFloatExpr(builder, loc,
+                                      convertType(expr->getType()), ops);
     }
     case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
       intrinsicName = "x86.avx512bf16.mask.cvtneps2bf16.128";
