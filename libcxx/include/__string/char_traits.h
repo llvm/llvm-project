@@ -93,8 +93,7 @@ struct char_traits<char> {
     __c1 = __c2;
   }
 
-  // TODO: Make this _LIBCPP_HIDE_FROM_ABI
-  static inline _LIBCPP_HIDDEN _LIBCPP_CONSTEXPR bool eq(char_type __c1, char_type __c2) _NOEXCEPT {
+  static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool eq(char_type __c1, char_type __c2) _NOEXCEPT {
     return __c1 == __c2;
   }
   static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool lt(char_type __c1, char_type __c2) _NOEXCEPT {
