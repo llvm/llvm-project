@@ -71,6 +71,10 @@ ObjCObj *objc_ptr() {
   return objcobj;
 }
 
+void obj_ptr_null_callee(ObjCObj* (*cb)()) {
+  receive_objcobj(cb());
+}
+
 struct WrapperObj {
   Obj* ptr { nullptr };
   // expected-warning@-1{{Member variable 'ptr' uses a forward declared type 'Obj *'}}
