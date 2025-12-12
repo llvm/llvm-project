@@ -4,7 +4,7 @@ add_mlir_library(ArithAndMathToAPFloatUtils
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
-)
+  )
 
 add_mlir_conversion_library(MLIRArithToAPFloat
   ArithToAPFloat.cpp

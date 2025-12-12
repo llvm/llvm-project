@@ -45,6 +45,10 @@ struct AbsFOpToAPFloatConversion final : OpRewritePattern<math::AbsFOp> {
     // Cast operands to 64-bit integers.
     auto operand = op.getOperand();
     auto floatTy = cast<FloatType>(operand.getType());
+    if (floatTy.getIntOrFloatBitWidth() > 64) {
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
+    }
     auto intWType = rewriter.getIntegerType(floatTy.getWidth());
     Value operandBits = arith::ExtUIOp::create(
         rewriter, loc, i64Type,
@@ -93,6 +97,10 @@ struct IsOpToAPFloatConversion final : OpRewritePattern<OpTy> {
     // Cast operands to 64-bit integers.
     auto operand = op.getOperand();
     auto floatTy = cast<FloatType>(operand.getType());
+    if (floatTy.getIntOrFloatBitWidth() > 64) {
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
+    }
     auto intWType = rewriter.getIntegerType(floatTy.getWidth());
     Value operandBits = arith::ExtUIOp::create(
         rewriter, loc, i64Type,
@@ -101,7 +109,7 @@ struct IsOpToAPFloatConversion final : OpRewritePattern<OpTy> {
     // Call APFloat function.
     Value semValue = getAPFloatSemanticsValue(rewriter, loc, floatTy);
     SmallVector<Value> params = {semValue, operandBits};
-    rewriter.replaceOpWithNewOp<func::CallOp>(op, TypeRange(i64Type),
+    rewriter.replaceOpWithNewOp<func::CallOp>(op, TypeRange(i1),
                                               SymbolRefAttr::get(*fn), params);
     return success();
   }
@@ -130,6 +138,10 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
 
     // Cast operands to 64-bit integers.
     auto floatTy = cast<FloatType>(op.getResult().getType());
+    if (floatTy.getIntOrFloatBitWidth() > 64) {
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
+    }
     auto intWType = rewriter.getIntegerType(floatTy.getWidth());
     auto int64Type = rewriter.getI64Type();
     Value operand = arith::ExtUIOp::create(
