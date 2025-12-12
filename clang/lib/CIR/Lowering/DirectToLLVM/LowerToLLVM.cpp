@@ -1653,6 +1653,15 @@ mlir::LogicalResult CIRToLLVMFrameAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMAddrOfReturnAddrOpLowering::matchAndRewrite(
+    cir::AddrOfReturnAddrOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::Type llvmPtrTy = getTypeConverter()->convertType(op.getType());
+  replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm.addressofreturnaddress",
+                                   llvmPtrTy, adaptor.getOperands());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     cir::LoadOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

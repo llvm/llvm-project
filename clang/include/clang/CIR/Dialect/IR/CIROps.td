@@ -3340,6 +3340,29 @@ def CIR_FrameAddrOp : CIR_FuncAddrBuiltinOp<"frame_address"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AddrOfReturnAddrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_AddrOfReturnAddrOp : CIR_Op<"address_of_return_address"> {
+  let summary = "The place stores the return address of the current function";
+
+  let description = [{
+    Represents a call to builtin function `_AddressOfReturnAddress` in CIR.
+    This builtin function returns a pointer to the place in the stack frame
+    where the return address of the current function is stored.
+
+    Examples:
+
+    ```mlir
+    %addr = address_of_return_address() : !cir.ptr<!cir.int<u, 8>>
+    ```
+  }];
+
+  let results = (outs CIR_PointerType:$result);
+  let assemblyFormat = "attr-dict `:` qualified(type($result))";
+}
+
+//===----------------------------------------------------------------------===//
 // StackSaveOp & StackRestoreOp
 //===----------------------------------------------------------------------===//
 
