@@ -16508,7 +16508,9 @@ SDValue SITargetLowering::performFDivCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   EVT VT = N->getValueType(0);
-  if ((VT != MVT::f16 && VT != MVT::bf16) || !Subtarget->has16BitInsts())
+
+  // fsqrt legality correlates to rsq availability.
+  if ((VT != MVT::f16 && VT != MVT::bf16) || !isOperationLegal(ISD::FSQRT, VT))
     return SDValue();
 
   SDValue LHS = N->getOperand(0);

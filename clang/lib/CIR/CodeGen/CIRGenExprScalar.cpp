@@ -840,7 +840,11 @@ public:
     return {};
   }
   mlir::Value VisitTypeTraitExpr(const TypeTraitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: type trait");
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    if (e->isStoredAsBoolean())
+      return builder.getBool(e->getBoolValue(), loc);
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: TypeTraitExpr stored as int");
     return {};
   }
   mlir::Value

@@ -785,8 +785,7 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive"> {
     auto [id, args] = NVVM::MBarrierArriveOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
 
-    int addrSpace = llvm::cast<LLVMPointerType>(op.getAddr().getType()).getAddressSpace();
-    if (addrSpace != static_cast<unsigned>(NVVM::NVVMMemorySpace::SharedCluster))
+    if (op.getNumResults() > 0)
       $res = createIntrinsicCall(builder, id, args);
     else
       createIntrinsicCall(builder, id, args);
@@ -827,8 +826,7 @@ def NVVM_MBarrierArriveDropOp : NVVM_Op<"mbarrier.arrive_drop"> {
     auto [id, args] = NVVM::MBarrierArriveDropOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
 
-    int addrSpace = llvm::cast<LLVMPointerType>(op.getAddr().getType()).getAddressSpace();
-    if (addrSpace != static_cast<unsigned>(NVVM::NVVMMemorySpace::SharedCluster))
+    if (op.getNumResults() > 0)
       $res = createIntrinsicCall(builder, id, args);
     else
       createIntrinsicCall(builder, id, args);

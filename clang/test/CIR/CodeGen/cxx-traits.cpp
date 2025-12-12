@@ -18,3 +18,42 @@ void expression_trait_expr() {
 
 // OGCG: %[[A_ADDR:.*]] = alloca i8, align 1
 // OGCG: store i8 0, ptr %[[A_ADDR]], align 1
+
+void type_trait_expr() {
+  enum E {};
+  bool a = __is_enum(E);
+  bool b = __is_same(int, float);
+  bool c = __is_constructible(int, int, int, int);
+  bool d = __is_array(int);
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
+// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["c", init]
+// CIR: %[[D_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["d", init]
+// CIR: %[[CONST_TRUE:.*]] = cir.const #true
+// CIR: cir.store {{.*}} %[[CONST_TRUE]], %[[A_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR: %[[CONST_FALSE:.*]] = cir.const #false
+// CIR: cir.store {{.*}} %[[CONST_FALSE]], %[[B_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR: %[[CONST_FALSE:.*]] = cir.const #false
+// CIR: cir.store {{.*}} %[[CONST_FALSE]], %[[C_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR: %[[CONST_FALSE:.*]] = cir.const #false
+// CIR: cir.store {{.*}} %[[CONST_FALSE]], %[[D_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
+
+// LLVM: %[[A_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[C_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[D_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: store i8 1, ptr %[[A_ADDR]], align 1
+// LLVM: store i8 0, ptr %[[B_ADDR]], align 1
+// LLVM: store i8 0, ptr %[[C_ADDR]], align 1
+// LLVM: store i8 0, ptr %[[D_ADDR]], align 1
+
+// OGCG: %[[A_ADDR:.*]] = alloca i8, align 1
+// OGCG: %[[B_ADDR:.*]] = alloca i8, align 1
+// OGCG: %[[C_ADDR:.*]] = alloca i8, align 1
+// OGCG: %[[D_ADDR:.*]] = alloca i8, align 1
+// OGCG: store i8 1, ptr %[[A_ADDR]], align 1
+// OGCG: store i8 0, ptr %[[B_ADDR]], align 1
+// OGCG: store i8 0, ptr %[[C_ADDR]], align 1
+// OGCG: store i8 0, ptr %[[D_ADDR]], align 1

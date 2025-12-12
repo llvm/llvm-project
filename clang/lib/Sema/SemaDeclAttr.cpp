@@ -6173,6 +6173,36 @@ static void handleMSConstexprAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) MSConstexprAttr(S.Context, AL));
 }
 
+static void handleMSStructAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (const auto *First = D->getAttr<GCCStructAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+        << AL << First << 0;
+    S.Diag(First->getLocation(), diag::note_conflicting_attribute);
+    return;
+  }
+  if (const auto *Preexisting = D->getAttr<MSStructAttr>()) {
+    if (Preexisting->isImplicit())
+      D->dropAttr<MSStructAttr>();
+  }
+
+  D->addAttr(::new (S.Context) MSStructAttr(S.Context, AL));
+}
+
+static void handleGCCStructAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (const auto *First = D->getAttr<MSStructAttr>()) {
+    if (First->isImplicit()) {
+      D->dropAttr<MSStructAttr>();
+    } else {
+      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+          << AL << First << 0;
+      S.Diag(First->getLocation(), diag::note_conflicting_attribute);
+      return;
+    }
+  }
+
+  D->addAttr(::new (S.Context) GCCStructAttr(S.Context, AL));
+}
+
 static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SmallVector<StringRef, 4> Tags;
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
@@ -7982,6 +8012,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_ModularFormat:
     handleModularFormat(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_MSStruct:
+    handleMSStructAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_GCCStruct:
+    handleGCCStructAttr(S, D, AL);
     break;
   }
 }
