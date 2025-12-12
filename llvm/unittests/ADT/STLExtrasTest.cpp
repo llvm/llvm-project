@@ -722,18 +722,18 @@ TEST(STLExtrasTest, AppendValuesReserve) {
   EXPECT_EQ(Empty.LastReservedSize, 3u);
   EXPECT_THAT(Empty, ElementsAre(1, 2, 3));
 
+  // Appending more values to a now non-empty container should still not
+  // reserve.
+  append_values(Empty, 4, 5);
+  EXPECT_EQ(Empty.ReserveCallCount, 1u);
+  EXPECT_THAT(Empty, ElementsAre(1, 2, 3, 4, 5));
+
   // When non-empty, reserve should NOT be called to avoid preventing
   // exponential growth.
   TrackedVector NonEmpty = {1, 2};
   append_values(NonEmpty, 3, 4);
   EXPECT_EQ(NonEmpty.ReserveCallCount, 0u);
   EXPECT_THAT(NonEmpty, ElementsAre(1, 2, 3, 4));
-
-  // Appending more values to a now non-empty container should still not
-  // reserve.
-  append_values(Empty, 4, 5);
-  EXPECT_EQ(Empty.ReserveCallCount, 1u); // Still 1 from initial call.
-  EXPECT_THAT(Empty, ElementsAre(1, 2, 3, 4, 5));
 }
 
 TEST(STLExtrasTest, ADLTest) {
