@@ -3847,22 +3847,16 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
     Type *SrcTy = SrcOp->getType();
     Type *DstTy = LI->getType();
 
-    // Turn icmp (ptrtoint x), (ptrtoint/constant) into a compare of the input
+    // Turn icmp (ptrtoint x), (ptrtoint y) into a compare of the input
     // if the integer type is the same size as the pointer type.
-    if (MaxRecurse && isa<PtrToIntInst>(LI) &&
+    if (MaxRecurse && isa<PtrToIntInst>(LI) && isa<PtrToIntInst>(RHS) &&
         Q.DL.getTypeSizeInBits(SrcTy) == DstTy->getPrimitiveSizeInBits()) {
-      if (Constant *RHSC = dyn_cast<Constant>(RHS)) {
-        // Transfer the cast to the constant.
-        if (Value *V = simplifyICmpInst(Pred, SrcOp,
-                                        ConstantExpr::getIntToPtr(RHSC, SrcTy),
-                                        Q, MaxRecurse - 1))
+      auto *RI = cast<PtrToIntInst>(RHS);
+      if (RI->getOperand(0)->getType() == SrcTy) {
+        // Compare without the cast.
+        if (Value *V = simplifyICmpInst(Pred, SrcOp, RI->getOperand(0), Q,
+                                        MaxRecurse - 1))
           return V;
-      } else if (PtrToIntInst *RI = dyn_cast<PtrToIntInst>(RHS)) {
-        if (RI->getOperand(0)->getType() == SrcTy)
-          // Compare without the cast.
-          if (Value *V = simplifyICmpInst(Pred, SrcOp, RI->getOperand(0), Q,
-                                          MaxRecurse - 1))
-            return V;
       }
     }
 
