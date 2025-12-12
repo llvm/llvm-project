@@ -5855,8 +5855,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   // Floating-point partial reductions are invalid if `reassoc` and `contract`
   // are not allowed.
-  if (Opcode == Instruction::FAdd &&
-      (!FMF->allowReassoc() || !FMF->allowContract()))
+  if (FMF && (!FMF->allowReassoc() || !FMF->allowContract()))
     return Invalid;
 
   assert((BinOp || (OpBExtend == TTI::PR_None && !InputTypeB)) &&
