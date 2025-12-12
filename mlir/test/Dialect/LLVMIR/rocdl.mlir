@@ -966,6 +966,15 @@ llvm.func @rocdl.flat.prefetch(%ptr : !llvm.ptr) {
   llvm.return
 }
 
+llvm.func @rocdl.atomic.barriers.arrive(%ptr : !llvm.ptr<3>, %val : i64) {
+  // CHECK-LABEL: rocdl.atomic.barriers.arrive
+  // CHECK: rocdl.ds.atomic.async.barrier.arrive.b64 %{{.*}} : !llvm.ptr<3>
+  // CHECK: %{{.*}} = rocdl.ds.atomic.barrier.arrive.rtn.b64 %{{.*}}, %{{.*}} : !llvm.ptr<3>, i64 -> i64
+  rocdl.ds.atomic.async.barrier.arrive.b64 %ptr : !llvm.ptr<3>
+  %res = rocdl.ds.atomic.barrier.arrive.rtn.b64 %ptr, %val : !llvm.ptr<3>, i64 -> i64
+  llvm.return
+}
+
 // -----
 
 llvm.func @rocdl.raw.buffer.f32(%rsrc : vector<4xi32>,
