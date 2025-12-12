@@ -344,13 +344,8 @@ class LLVMPRAutomator:
         )
         return git_env
 
-    def _run_cmd(
-        self, command: List[str], read_only: bool = False, **kwargs
-    ) -> subprocess.CompletedProcess:
-        return self.runner.run_command(command, read_only=read_only, **kwargs)
-
     def _get_current_branch(self) -> str:
-        result = self._run_cmd(
+        result = self.runner.run_command(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
             capture_output=True,
             text=True,
@@ -359,7 +354,7 @@ class LLVMPRAutomator:
         return result.stdout.strip()
 
     def _check_work_tree(self) -> None:
-        result = self._run_cmd(
+        result = self.runner.run_command(
             ["git", "status", "--porcelain"],
             capture_output=True,
             text=True,
@@ -382,10 +377,12 @@ class LLVMPRAutomator:
 
         https_upstream_url = self._get_https_url_for_remote(self.config.upstream_remote)
         refspec = f"refs/heads/{self.config.base_branch}:refs/remotes/{self.config.upstream_remote}/{self.config.base_branch}"
-        self._run_cmd(["git", "fetch", https_upstream_url, refspec], env=git_env)
+        self.runner.run_command(
+            ["git", "fetch", https_upstream_url, refspec], env=git_env
+        )
 
         try:
-            self._run_cmd(["git", "rebase", target], env=git_env)
+            self.runner.run_command(["git", "rebase", target], env=git_env)
         except subprocess.CalledProcessError as e:
             self.runner.print(
                 "Error: The rebase operation failed, likely due to a merge conflict.",
@@ -397,7 +394,7 @@ class LLVMPRAutomator:
                 self.runner.print(f"--- stderr ---\n{e.stderr}", file=sys.stderr)
 
             # Check if rebase is in progress before aborting
-            rebase_status_result = self._run_cmd(
+            rebase_status_result = self.runner.run_command(
                 ["git", "status", "--verify-status=REBASE_HEAD"],
                 check=False,
                 capture_output=True,
@@ -409,12 +406,14 @@ class LLVMPRAutomator:
             # REBASE_HEAD exists, so rebase is in progress
             if rebase_status_result.returncode == 0:
                 self.runner.print("Aborting rebase...", file=sys.stderr)
-                self._run_cmd(["git", "rebase", "--abort"], check=False, env=git_env)
+                self.runner.run_command(
+                    ["git", "rebase", "--abort"], check=False, env=git_env
+                )
             raise LlvmPrError("rebase operation failed.") from e
 
     def _get_https_url_for_remote(self, remote_name: str) -> str:
         """Gets the URL for a remote and converts it to HTTPS if necessary."""
-        remote_url_result = self._run_cmd(
+        remote_url_result = self.runner.run_command(
             ["git", "remote", "get-url", remote_name],
             capture_output=True,
             text=True,
@@ -431,7 +430,7 @@ class LLVMPRAutomator:
 
     def _get_commit_stack(self) -> List[str]:
         target = f"{self.config.upstream_remote}/{self.config.base_branch}"
-        result = self._run_cmd(
+        result = self.runner.run_command(
             ["git", "rev-list", "--reverse", f"{target}..HEAD"],
             capture_output=True,
             text=True,
@@ -442,7 +441,7 @@ class LLVMPRAutomator:
     def _get_commit_details(self, commit_hash: str) -> Tuple[str, str]:
         # Get the subject and body from git show. Insert "\n\n" between to make
         # parsing simple to do w/ split.
-        result = self._run_cmd(
+        result = self.runner.run_command(
             ["git", "show", "-s", "--format=%B", commit_hash],
             capture_output=True,
             text=True,
@@ -490,7 +489,7 @@ class LLVMPRAutomator:
             https_remote_url,
             f"{commit_hash}:refs/heads/{branch_name}",
         ]
-        self._run_cmd(push_command, env=git_env)
+        self.runner.run_command(push_command, env=git_env)
         self.created_branches.append(branch_name)
         return branch_name
 
@@ -558,7 +557,9 @@ class LLVMPRAutomator:
 
     def _cleanup(self) -> None:
         self.runner.print(f"Returning to original branch: {self.original_branch}")
-        self._run_cmd(["git", "checkout", self.original_branch], capture_output=True)
+        self.runner.run_command(
+            ["git", "checkout", self.original_branch], capture_output=True
+        )
         if self.created_branches:
             self.runner.print("Cleaning up temporary remote branches...")
             for branch in self.created_branches:
