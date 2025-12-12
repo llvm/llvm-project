@@ -263,8 +263,14 @@ public:
     return {};
   }
   mlir::Value VisitEmbedExpr(EmbedExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: embed");
-    return {};
+    assert(e->getDataElementCount() == 1);
+    auto it = e->begin();
+    QualType qualTy = e->getType();
+    mlir::Type ty = cgf.convertType(qualTy);
+    llvm::APInt value = (*it)->getValue();
+    uint64_t actualValue = qualTy->isSignedIntegerType() ? value.getSExtValue()
+                                                         : value.getZExtValue();
+    return builder.getConstInt(cgf.getLoc(e->getExprLoc()), ty, actualValue);
   }
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     if (e->isGLValue())
