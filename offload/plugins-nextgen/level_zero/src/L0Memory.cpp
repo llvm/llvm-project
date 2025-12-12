@@ -37,7 +37,7 @@ void *MemAllocatorTy::MemPoolTy::BlockTy::alloc() {
 
   if (FreeSlot != MaxSlots) {
     const uint32_t Slot = FreeSlot;
-    FreeSlot = MaxSlot;
+    FreeSlot = MaxSlots;
     UsedSlots[Slot] = true;
     NumUsedSlots++;
     return reinterpret_cast<void *>(Base + Slot * ChunkSize);

@@ -124,12 +124,12 @@ class MemAllocatorTy {
       /// Total number of slots
       uint32_t NumSlots = 0;
       /// Maximum slot value
-      static constexpr uint32_t MaxSlot =
+      static constexpr uint32_t MaxSlots =
           std::numeric_limits<decltype(NumSlots)>::max();
       /// Number of slots in use
       uint32_t NumUsedSlots = 0;
       /// Cached available slot returned by the last dealloc() call
-      uint32_t FreeSlot = MaxSlot;
+      uint32_t FreeSlot = MaxSlots;
       /// Marker for the currently used slots
       std::vector<bool> UsedSlots;
 
