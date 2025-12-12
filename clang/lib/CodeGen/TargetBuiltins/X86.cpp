@@ -86,18 +86,40 @@ static Value *emitX86Round(CodeGenFunction &CGF, Value *X,
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
   LLVMContext &Ctx = CGF.CGM.getLLVMContext();
-
-  if (UseMXCSR) {
-    ID = Intrinsic::experimental_constrained_nearbyint;
-
-    Value *RoundingMode =
-        MetadataAsValue::get(Ctx, MDString::get(Ctx, "round.dynamic"));
+  if (CGF.Builder.getIsFPConstrained()) {
 
     Value *ExceptMode =
         MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore"));
+    
+    if (UseMXCSR) {
+      ID = Intrinsic::experimental_constrained_nearbyint;
+
+      Value *RoundingMode =
+        MetadataAsValue::get(Ctx, MDString::get(Ctx, "round.dynamic"));
+
+      Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
+      return CGF.Builder.CreateCall(F, {X, RoundingMode, ExceptMode});
+    }
+    
+    switch (RoundingMode) {
+    case 0b00:
+      ID = Intrinsic::experimental_constrained_roundeven;
+      break;
+    case 0b01:
+      ID = Intrinsic::experimental_constrained_floor;
+      break;
+    case 0b10:
+      ID = Intrinsic::experimental_constrained_ceil;
+      break;
+    case 0b11:
+      ID = Intrinsic::experimental_constrained_trunc;
+      break;
+    default:
+      llvm_unreachable("Invalid rounding mode");
+    }
 
     Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
-    return CGF.Builder.CreateCall(F, {X, RoundingMode, ExceptMode});
+    return CGF.Builder.CreateCall(F, {X, ExceptMode});
   }
 
   switch (RoundingMode) {
