@@ -5126,8 +5126,7 @@ static AffineMap inverseWithUnusedDims(AffineMap map) {
   SmallVector<AffineExpr> results(map.getNumInputs(),
                                   getAffineConstantExpr(0, map.getContext()));
   for (auto [idx, result] : llvm::enumerate(map.getResults())) {
-    assert(isa<AffineDimExpr>(result) &&
-           "expected only dim exprs in a projected permutation map");
+    // We should only have dim exprs because this is a projected permutation.
     int64_t pos = cast<AffineDimExpr>(result).getPosition();
     results[pos] = getAffineDimExpr(idx, map.getContext());
   }
@@ -5208,8 +5207,7 @@ struct TransferReadAfterWriteToBroadcast
     // dimensions.
     SmallVector<unsigned> broadcastedDims = composedMap.getBroadcastDims();
     int64_t numBroadcastedDims = broadcastedDims.size();
-    SmallVector<int64_t> invPerm(broadcastedDims.begin(),
-                                 broadcastedDims.end());
+    auto invPerm = llvm::to_vector_of<int64_t>(broadcastedDims);
     invPerm.resize(composedMap.getNumResults());
     for (auto [idx, expr] : llvm::enumerate(composedMap.getResults())) {
       if (auto dim = dyn_cast<AffineDimExpr>(expr)) {
