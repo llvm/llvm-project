@@ -1114,33 +1114,33 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
     switch (T) {
     case LOAD_CNT:
       OS << "    " << (ST->hasExtendedWaitCounts() ? "LOAD" : "VM") << "_CNT("
-         << SR << "): ";
+         << SR << "):";
       break;
     case DS_CNT:
       OS << "    " << (ST->hasExtendedWaitCounts() ? "DS" : "LGKM") << "_CNT("
-         << SR << "): ";
+         << SR << "):";
       break;
     case EXP_CNT:
-      OS << "    EXP_CNT(" << SR << "): ";
+      OS << "    EXP_CNT(" << SR << "):";
       break;
     case STORE_CNT:
       OS << "    " << (ST->hasExtendedWaitCounts() ? "STORE" : "VS") << "_CNT("
-         << SR << "): ";
+         << SR << "):";
       break;
     case SAMPLE_CNT:
-      OS << "    SAMPLE_CNT(" << SR << "): ";
+      OS << "    SAMPLE_CNT(" << SR << "):";
       break;
     case BVH_CNT:
-      OS << "    BVH_CNT(" << SR << "): ";
+      OS << "    BVH_CNT(" << SR << "):";
       break;
     case KM_CNT:
-      OS << "    KM_CNT(" << SR << "): ";
+      OS << "    KM_CNT(" << SR << "):";
       break;
     case X_CNT:
-      OS << "    X_CNT(" << SR << "): ";
+      OS << "    X_CNT(" << SR << "):";
       break;
     default:
-      OS << "    UNKNOWN(" << SR << "): ";
+      OS << "    UNKNOWN(" << SR << "):";
       break;
     }
 
@@ -1154,9 +1154,9 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
           continue;
         unsigned RelScore = RegScore - LB - 1;
         if (J < FIRST_LDS_VGPR) {
-          OS << RelScore << ":v" << J << " ";
+          OS << ' ' << RelScore << ":v" << J;
         } else {
-          OS << RelScore << ":ds ";
+          OS << ' ' << RelScore << ":ds";
         }
       }
       // Also need to print sgpr scores for lgkm_cnt or xcnt.
@@ -1166,11 +1166,11 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
           if (RegScore <= LB)
             continue;
           unsigned RelScore = RegScore - LB - 1;
-          OS << RelScore << ":s" << J << " ";
+          OS << ' ' << RelScore << ":s" << J;
         }
       }
       if (T == KM_CNT && SCCScore > 0)
-        OS << SCCScore << ":scc ";
+        OS << ' ' << SCCScore << ":scc";
     }
     OS << '\n';
   }
@@ -1451,9 +1451,9 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
       assert(ST->hasVMemToLDSLoad());
       LLVM_DEBUG(dbgs() << "Processing S_WAITCNT_lds_direct: " << II
-                        << "Before: " << Wait.LoadCnt << '\n';);
+                        << "Before: " << Wait;);
       ScoreBrackets.determineWait(LOAD_CNT, FIRST_LDS_VGPR, Wait);
-      LLVM_DEBUG(dbgs() << "After: " << Wait.LoadCnt << '\n';);
+      LLVM_DEBUG(dbgs() << "After: " << Wait;);
 
       // It is possible (but unlikely) that this is the only wait instruction,
       // in which case, we exit this loop without a WaitcntInstr to consume
@@ -1540,7 +1540,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
         BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "PreGFX12::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
@@ -1554,7 +1554,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
             .addImm(Wait.StoreCnt);
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "PreGFX12::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
@@ -1821,7 +1821,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
     if (SWaitInst) {
       Modified = true;
 
-      LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+      LLVM_DEBUG(dbgs() << "GFX12Plus::createNewWaitcnt\n";
                  if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                  dbgs() << "New Instr: " << *SWaitInst << '\n');
     }
@@ -1841,7 +1841,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
 
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "GFX12Plus::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
@@ -2297,12 +2297,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(LDS_ACCESS, Inst);
     }
 
-    // If this is a truly flat memory operation, then it accesss both VMEM and
-    // LDS, so note it - it will require that both the VM and LGKM be flushed to
-    // zero if it is pending when a VM or LGKM dependency occurs.
-    //
-    // For example, LDS DMA operations have FLAT set in their TSFlags for
-    // unspecified reasons, but they are not flat operations)
+    // Async/LDSDMA operations have FLAT encoding but do not actually use flat
+    // pointers. They do have two operands that each access global and LDS, thus
+    // making it appear at this point that they are using a flat pointer. Filter
+    // them out, and for the rest, generate a dependency on flat pointers so
+    // that both VM and LGKM counters are flushed.
     if (!SIInstrInfo::isLDSDMA(Inst) && FlatASCount > 1)
       ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&

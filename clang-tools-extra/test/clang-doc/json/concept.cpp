@@ -31,6 +31,6 @@ concept Incrementable = requires(T x) {
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
-// CHECK:        "Name": "",
+// CHECK:        "Name": "Global Namespace",
 // CHECK:        "USR": "0000000000000000000000000000000000000000"
 // CHECK:      }

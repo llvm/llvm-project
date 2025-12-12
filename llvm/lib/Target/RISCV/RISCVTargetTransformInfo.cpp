@@ -1622,16 +1622,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     return Cost;
   }
-  case Intrinsic::experimental_vp_splat: {
-    auto LT = getTypeLegalizationCost(RetTy);
-    // TODO: Lower i1 experimental_vp_splat
-    if (!ST->hasVInstructions() || LT.second.getScalarType() == MVT::i1)
-      return InstructionCost::getInvalid();
-    return LT.first * getRISCVInstructionCost(LT.second.isFloatingPoint()
-                                                  ? RISCV::VFMV_V_F
-                                                  : RISCV::VMV_V_X,
-                                              LT.second, CostKind);
-  }
   case Intrinsic::experimental_vp_splice: {
     // To support type-based query from vectorizer, set the index to 0.
     // Note that index only change the cost from vslide.vx to vslide.vi and in
@@ -2802,7 +2792,10 @@ void RISCVTTIImpl::getUnrollingPreferences(
       // Both auto-vectorized loops and the scalar remainder have the
       // isvectorized attribute, so differentiate between them by the presence
       // of vector instructions.
-      if (IsVectorized && I.getType()->isVectorTy())
+      if (IsVectorized && (I.getType()->isVectorTy() ||
+                           llvm::any_of(I.operand_values(), [](Value *V) {
+                             return V->getType()->isVectorTy();
+                           })))
         return;
 
       if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
@@ -3416,11 +3409,8 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
       continue;
 
-    // We are looking for a splat/vp.splat that can be sunk.
-    bool IsVPSplat = match(Op, m_Intrinsic<Intrinsic::experimental_vp_splat>(
-                                   m_Value(), m_Value(), m_Value()));
-    if (!IsVPSplat &&
-        !match(Op, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),
+    // We are looking for a splat that can be sunk.
+    if (!match(Op, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),
                              m_Value(), m_ZeroMask())))
       continue;
 
@@ -3437,16 +3427,11 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     }
 
     // Sink any fpexts since they might be used in a widening fp pattern.
-    if (IsVPSplat) {
-      if (isa<FPExtInst>(Op->getOperand(0)))
-        Ops.push_back(&Op->getOperandUse(0));
-    } else {
-      Use *InsertEltUse = &Op->getOperandUse(0);
-      auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
-      if (isa<FPExtInst>(InsertElt->getOperand(1)))
-        Ops.push_back(&InsertElt->getOperandUse(1));
-      Ops.push_back(InsertEltUse);
-    }
+    Use *InsertEltUse = &Op->getOperandUse(0);
+    auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
+    if (isa<FPExtInst>(InsertElt->getOperand(1)))
+      Ops.push_back(&InsertElt->getOperandUse(1));
+    Ops.push_back(InsertEltUse);
     Ops.push_back(&OpIdx.value());
   }
   return true;

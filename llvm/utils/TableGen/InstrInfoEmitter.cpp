@@ -959,13 +959,19 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
     OS << "struct " << TargetName << "InstrTable {\n";
     OS << "  MCInstrDesc Insts[" << NumberedInstructions.size() << "];\n";
+    OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCPhysReg), "
+          "\"Unwanted padding between Insts and ImplicitOps\");\n";
+    OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U)
+       << "];\n";
+    // Emit enough padding to make ImplicitOps plus Padding add up to the size
+    // of a whole number of MCOperandInfo structs. This allows us to index into
+    // the OperandInfo array starting from the end of the Insts array, by
+    // biasing the indices by the OpInfoBase value calculated below.
+    OS << "  char Padding[sizeof(MCOperandInfo) - sizeof ImplicitOps % "
+          "sizeof(MCOperandInfo)];\n";
     OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCOperandInfo), "
           "\"Unwanted padding between Insts and OperandInfo\");\n";
     OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
-    OS << "  static_assert(alignof(MCOperandInfo) >= alignof(MCPhysReg), "
-          "\"Unwanted padding between OperandInfo and ImplicitOps\");\n";
-    OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U)
-       << "];\n";
     OS << "};";
   }
 
@@ -991,9 +997,12 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
     // Emit all of the MCInstrDesc records in reverse ENUM ordering.
     Timer.startTimer("Emit InstrDesc records");
-    OS << "static_assert(sizeof(MCOperandInfo) % sizeof(MCPhysReg) == 0);\n";
-    OS << "static constexpr unsigned " << TargetName << "ImpOpBase = sizeof "
-       << TargetName << "InstrTable::OperandInfo / (sizeof(MCPhysReg));\n\n";
+    OS << "static_assert((sizeof " << TargetName
+       << "InstrTable::ImplicitOps + sizeof " << TargetName
+       << "InstrTable::Padding) % sizeof(MCOperandInfo) == 0);\n";
+    OS << "static constexpr unsigned " << TargetName << "OpInfoBase = (sizeof "
+       << TargetName << "InstrTable::ImplicitOps + sizeof " << TargetName
+       << "InstrTable::Padding) / sizeof(MCOperandInfo);\n\n";
 
     OS << "extern const " << TargetName << "InstrTable " << TargetName
        << "Descs = {\n  {\n";
@@ -1013,12 +1022,6 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
     OS << "  }, {\n";
 
-    // Emit all of the operand info records.
-    Timer.startTimer("Emit operand info");
-    EmitOperandInfo(OS, OperandInfoList);
-
-    OS << "  }, {\n";
-
     // Emit all of the instruction's implicit uses and defs.
     Timer.startTimer("Emit uses/defs");
     for (auto &List : ImplicitLists) {
@@ -1027,6 +1030,17 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
         OS << ' ' << getQualifiedName(Reg) << ',';
       OS << '\n';
     }
+
+    OS << "  }, {\n";
+
+    // Emit the padding.
+    OS << "    0\n";
+
+    OS << "  }, {\n";
+
+    // Emit all of the operand info records.
+    Timer.startTimer("Emit operand info");
+    EmitOperandInfo(OS, OperandInfoList);
 
     OS << "  }\n};\n\n";
 
@@ -1102,11 +1116,13 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
           if (FoundMode == ModeSelect.Items.end()) {
             // If a RegClassByHwMode doesn't have an entry corresponding to a
             // mode, pad with default register class.
-            OS << indent(4) << "-1, // Missing mode entry\n";
+            OS << indent(4) << "-1, // Missing mode entry for "
+               << Class->getName() << "\n";
           } else {
             const CodeGenRegisterClass *RegClass =
                 RegBank.getRegClass(FoundMode->second);
-            OS << indent(4) << RegClass->getQualifiedIdName() << ",\n";
+            OS << indent(4) << RegClass->getQualifiedIdName() << ", // "
+               << Class->getName() << "\n";
           }
         }
 
@@ -1291,11 +1307,11 @@ void InstrInfoEmitter::emitRecord(
 
   // Emit the operand info offset.
   OperandInfoTy OperandInfo = GetOperandInfo(Inst);
-  OS << OperandInfoMap.find(OperandInfo)->second << ",\t";
+  OS << Target.getName() << "OpInfoBase + "
+     << OperandInfoMap.find(OperandInfo)->second << ",\t";
 
   // Emit implicit operand base.
-  OS << Target.getName() << "ImpOpBase + " << EmittedLists[ImplicitOps]
-     << ",\t0";
+  OS << EmittedLists[ImplicitOps] << ",\t0";
 
   // Emit all of the target independent flags...
   if (Inst.isPreISelOpcode)
