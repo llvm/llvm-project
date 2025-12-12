@@ -20376,9 +20376,6 @@ non-deterministically either:
  * Return a :ref:`NaN <floatnan>`.
  * Treat the signaling NaN as a quiet NaN.
 
-If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
-assume that NaNs are not present in the input vector.
-
 Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
@@ -20412,9 +20409,6 @@ non-deterministically either:
 
  * Return a :ref:`NaN <floatnan>`.
  * Treat the signaling NaN as a quiet NaN.
-
-If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
-assume that NaNs are not present in the input vector.
 
 Arguments:
 """"""""""
