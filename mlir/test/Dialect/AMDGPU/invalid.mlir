@@ -367,6 +367,31 @@ func.func @make_dma_base_invalid_addressspace(%idx: index, %mem: memref<8xi32>) 
 func.func @make_dma_base_invalid_addressspace(%idx: index, %smem : memref<8xi32, #gpu.address_space<workgroup>>) {
   // expected-error@+1 {{'amdgpu.make_dma_base' op global memref must have global address space attribute.}}
   amdgpu.make_dma_base %smem[%idx], %smem[%idx] : memref<8xi32, #gpu.address_space<workgroup>>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  return
+}
+
+// -----
+
+func.func @make_gather_dma_base_invalid_addressspace(%idx: index, %mem: memref<8xi32>) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_base' op lds memref must have workgroup address space attribute.}}
+  amdgpu.make_gather_dma_base %mem[%idx], %mem[%idx] : memref<8xi32>, memref<8xi32> -> !amdgpu.tdm_gather_base<i32, i16>
+  return
+}
+
+// -----
+
+func.func @make_gather_dma_base_invalid_index_type(%idx: index, %smem: memref<8xi32, #gpu.address_space<workgroup>>, %mem: memref<8xi32>) {
+  // expected-error@+1 {{index type must be i16 or i32 but index type is 'i64'.}}
+  amdgpu.make_gather_dma_base %smem[%idx], %mem[%idx] : memref<8xi32, #gpu.address_space<workgroup>>, memref<8xi32> -> !amdgpu.tdm_gather_base<i32, i64>
+  return
+}
+
+// -----
+
+func.func @make_gather_dma_base_invalid_addressspace(%idx: index, %smem : memref<8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_base' op global memref must have global address space attribute.}}
+  amdgpu.make_gather_dma_base %smem[%idx], %smem[%idx] : memref<8xi32, #gpu.address_space<workgroup>>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_gather_base<i32, i16>
+  return
 }
 
 // -----
@@ -374,6 +399,7 @@ func.func @make_dma_base_invalid_addressspace(%idx: index, %smem : memref<8xi32,
 func.func @make_dma_base_invalid_barrier(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8xi32>, %idx: index) {
   // expected-error@+1 {{'amdgpu.make_dma_descriptor' op atomic barrier address must be in LDS.}}
   amdgpu.make_dma_descriptor %base globalSize [64, 64] globalStride [64, 1] sharedSize [64, 64] atomicBarrier(%barrier[%idx] : memref<8xi32>) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  return
 }
 
 // -----
