@@ -720,20 +720,14 @@ bool CompilerInstanceWithContext::initialize(
   DiagEngineWithCmdAndOpts = std::move(DiagEngineWithDiagOpts);
   DiagConsumer = DiagEngineWithCmdAndOpts->DiagEngine->getClient();
 
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = Worker.DepFS;
-  if (OverlayFS) {
 #ifndef NDEBUG
-    bool SawDepFS = false;
-    OverlayFS->visit([&](llvm::vfs::FileSystem &VFS) {
-      SawDepFS |= &VFS == Worker.DepFS.get();
-    });
-    assert(SawDepFS && "OverlayFS not based on DepFS");
+  assert(OverlayFS && "OverlayFS required!");
+  bool SawDepFS = false;
+  OverlayFS->visit([&](llvm::vfs::FileSystem &VFS) {
+    SawDepFS |= &VFS == Worker.DepFS.get();
+  });
+  assert(SawDepFS && "OverlayFS not based on DepFS");
 #endif
-    FS = std::move(OverlayFS);
-  }
-
-  // Reset what might have been modified in the previous worker invocation.
-  FS->setCurrentWorkingDirectory(CWD);
 
   OriginalInvocation = createCompilerInvocation(
       CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine);
@@ -756,7 +750,7 @@ bool CompilerInstanceWithContext::initialize(
   auto &CI = *CIPtr;
 
   if (!initializeScanCompilerInstance(
-          CI, FS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
+          CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
           Worker.Service, Worker.DepFS))
     return false;
 
