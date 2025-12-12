@@ -1,12 +1,15 @@
 // RUN: cir-opt %s -cir-to-llvm -o %t.cir
 
+!s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 
 module {
 
+cir.func private @__gxx_personality_v0(...) -> !s32i
+
 // CHECK: llvm.func @__gxx_personality_v0(...) -> i32
 
-cir.func @inflight_exception() {
+cir.func @inflight_exception() personality(@__gxx_personality_v0) {
   %exception_ptr, %type_id = cir.eh.inflight_exception
   cir.return
 }
@@ -19,7 +22,7 @@ cir.func @inflight_exception() {
 // CHECK:   llvm.return
 // CHECK: }
 
-cir.func @inflight_exception_with_cleanup() {
+cir.func @inflight_exception_with_cleanup() personality(@__gxx_personality_v0) {
   %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
   cir.return
 }
@@ -35,7 +38,7 @@ cir.func @inflight_exception_with_cleanup() {
 cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
 cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
 
-cir.func @inflight_exception_with_catch_type_list() {
+cir.func @inflight_exception_with_catch_type_list() personality(@__gxx_personality_v0) {
   %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
   cir.return
 }
