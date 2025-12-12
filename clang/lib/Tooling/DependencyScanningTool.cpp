@@ -233,8 +233,8 @@ DependencyScanningTool::initializeCompilerInstanceWithContextOrError(
   }
 
   // The input command line is either a driver-style command line, or
-  // ill-formed.  In this case, we will call the Driver to build a -cc1 command
-  // line for this compilation or diagnose any ill-formed input.
+  // ill-formed. In this case, we will first call the Driver to build a -cc1
+  // command line for this compilation or diagnose any ill-formed input.
   auto OverlayFSAndArgs = initVFSForByNameScanning(
       &Worker.getVFS(), CommandLine, CWD, "ScanningByName");
   auto &OverlayFS = OverlayFSAndArgs.first;
