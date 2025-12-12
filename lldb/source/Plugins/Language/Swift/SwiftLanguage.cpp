@@ -1015,30 +1015,34 @@ SwiftLanguage::GetHardcodedSynthetics() {
     g_formatters.push_back(
         [](lldb_private::ValueObject &valobj, lldb::DynamicValueType dyn_type,
            FormatManager &format_manager) -> lldb::SyntheticChildrenSP {
-          struct IsEligible {
-            static bool Check(ValueObject &valobj, const CompilerType &type) {
-              bool is_imported = false;
-
-              if (type.IsValid()) {
-                auto swift_ast_ctx =
-                    type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
-                if (swift_ast_ctx && swift_ast_ctx->IsImportedType(
-                                         type.GetOpaqueQualType(), nullptr))
-                  is_imported = true;
-              }
-
-              ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
-              if (is_imported && type.GetNumFields(&exe_ctx) == 0)
-                return true;
-              if (valobj.IsBaseClass() && type.IsRuntimeGeneratedType()) {
-                auto parent(valobj.GetParent());
-                if (!parent)
+          // Determine if this is an Objective-C object that benefits
+          // from the ObjC synthetic child provider.
+          std::function<bool(ValueObject &, CompilerType)> is_eligible =
+              [&](ValueObject &valobj, CompilerType type) {
+                if (!type.IsValid())
                   return false;
-                return IsEligible::Check(*parent, parent->GetCompilerType());
-              }
-              return false;
-            }
-          };
+
+                CompilerType clang_type;
+                if (auto ts =
+                    type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>())
+                  if (ts->IsImportedType(type.GetOpaqueQualType(), &clang_type))
+                    // Could be an Objective-C object with no debug info; we
+                    // can get ivars from the runtime.
+                    if (!clang_type)
+                      return true;
+                // Is this an Objective-C object with debug info?
+                if (clang_type && Flags(clang_type.GetTypeClass())
+                                      .AnySet(eTypeClassObjCInterface |
+                                              eTypeClassObjCObjectPointer |
+                                              eTypeClassObjCObject))
+                  return true;
+                if (valobj.IsBaseClass() && type.IsRuntimeGeneratedType()) {
+                  if (ValueObject *parent = valobj.GetParent())
+                    return is_eligible(*parent, parent->GetCompilerType());
+                  return false;
+                }
+                return false;
+              };
 
           if (dyn_type == lldb::eNoDynamicValues)
             return nullptr;
@@ -1048,7 +1052,7 @@ SwiftLanguage::GetHardcodedSynthetics() {
               g_runtime_synths_category_name, can_create));
           if (!category_sp || category_sp->IsEnabled() == false)
             return nullptr;
-          if (IsEligible::Check(valobj, type)) {
+          if (is_eligible(valobj, type)) {
             ProcessSP process_sp(valobj.GetProcessSP());
             if (!process_sp)
               return nullptr;

@@ -3025,6 +3025,7 @@ bool Equivalent(std::optional<T> l, std::optional<T> r) {
   // Assume that any value is "better" than none.
   if (l.has_value() && !r.has_value())
     return true;
+
   llvm::dbgs() << l << " != " << r << "\n";
   return false;
 }
@@ -3037,7 +3038,7 @@ bool Equivalent(std::optional<CompilerType> l, std::optional<CompilerType> r) {
   if (l.has_value() && !r.has_value())
     return true;
   if (!l.has_value() && r.has_value()) {
-    llvm::dbgs() << "{} != <some value>\n";
+    llvm::dbgs() << "{} != " << r->GetMangledTypeName() << "\n";
     return false;
   }
   return Equivalent(*l, *r);
@@ -4096,15 +4097,8 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
       if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
         if (auto *runtime =
                 SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-          return runtime->GetNumChildren(GetCanonicalType(type), exe_scope);
-
-    if (CompilerType clang_type = GetAsClangTypeOrNull(type)) {
-      bool is_signed;
-      // Clang-imported enum types always have one child in Swift.
-      if (clang_type.IsEnumerationType(is_signed))
-        return 1;
-      return clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
-    }
+          return runtime->GetNumChildren(GetCanonicalType(type), exe_scope,
+                                         true, omit_empty_base_classes);
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "incomplete type information");
   };
@@ -4239,7 +4233,10 @@ TypeSystemSwiftTypeRef::ConvertClangTypeToSwiftType(CompilerType clang_type) {
 
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = GetClangTypeTypeNode(dem, clang_type);
-  return RemangleAsType(dem, node, GetManglingFlavor());
+  CompilerType result = RemangleAsType(dem, node, GetManglingFlavor());
+  m_imported_type_map.Insert(result.GetMangledTypeName().AsCString(),
+                             clang_type);
+  return result;  
 }
 
 llvm::Expected<CompilerType>
@@ -4293,7 +4290,7 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
       if (auto *runtime =
               SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
         auto result = runtime->GetChildCompilerTypeAtIndex(
-            {weak_from_this(), type}, idx, transparent_pointers,
+            GetCanonicalType(type), idx, transparent_pointers,
             omit_empty_base_classes, ignore_array_bounds, child_name,
             child_byte_size, child_byte_offset, child_bitfield_bit_size,
             child_bitfield_bit_offset, child_is_base_class,
@@ -4309,109 +4306,6 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
         }
         if (!result)
           error = llvm::toString(result.takeError());
-      }
-      // Clang types can be resolved even without a process.
-      bool is_signed;
-      if (CompilerType clang_type = GetAsClangTypeOrNull(type)) {
-        if (clang_type.IsEnumerationType(is_signed) && idx == 0)
-          // C enums get imported into Swift as structs with a "rawValue" field.
-          if (auto ts = clang_type.GetTypeSystem()
-                            .dyn_cast_or_null<TypeSystemClang>())
-            if (clang::EnumDecl *enum_decl = ts->GetAsEnumDecl(clang_type)) {
-              swift::Demangle::Demangler dem;
-              CompilerType raw_value = CompilerType(
-                  ts, enum_decl->getIntegerType().getAsOpaquePtr());
-              child_name = "rawValue";
-              auto bit_size = raw_value.GetBitSize(
-                  exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
-              if (!bit_size)
-                return bit_size.takeError();
-              child_byte_size = *bit_size / 8;
-              child_byte_offset = 0;
-              child_bitfield_bit_size = 0;
-              child_bitfield_bit_offset = 0;
-              child_is_base_class = false;
-              child_is_deref_of_parent = false;
-              language_flags = 0;
-              return RemangleAsType(dem, GetClangTypeTypeNode(dem, raw_value),
-                                    GetManglingFlavor(exe_ctx));
-            }
-        // Otherwise defer to TypeSystemClang.
-        //
-        // Swift skips bitfields when counting children. Unfortunately
-        // this means we need to do this inefficient linear search here.
-        CompilerType clang_child_type;
-        for (size_t clang_idx = 0, swift_idx = 0; swift_idx <= idx;
-             ++clang_idx) {
-          child_bitfield_bit_size = 0;
-          child_bitfield_bit_offset = 0;
-          auto clang_child_type_or_err = clang_type.GetChildCompilerTypeAtIndex(
-              exe_ctx, clang_idx, transparent_pointers, omit_empty_base_classes,
-              ignore_array_bounds, child_name, child_byte_size,
-              child_byte_offset, child_bitfield_bit_size,
-              child_bitfield_bit_offset, child_is_base_class,
-              child_is_deref_of_parent, valobj, language_flags);
-          if (!clang_child_type_or_err)
-            LLDB_LOG_ERROR(
-                GetLog(LLDBLog::Types), clang_child_type_or_err.takeError(),
-                "could not find child {1} using clang: {0}", clang_idx);
-          else
-            clang_child_type = *clang_child_type_or_err;
-          if (!child_bitfield_bit_size && !child_bitfield_bit_offset)
-            ++swift_idx;
-          // FIXME: Why is this necessary?
-          if (clang_child_type.IsTypedefType() &&
-              clang_child_type.GetTypeName() ==
-                  clang_child_type.GetTypedefedType().GetTypeName())
-            clang_child_type = clang_child_type.GetTypedefedType();
-        }
-        if (clang_child_type) {
-          // TypeSystemSwiftTypeRef can't properly handle C anonymous types, as
-          // the only identifier CompilerTypes backed by this type system carry
-          // is the type's mangled name. This is problematic for anonymous
-          // types, as sibling anonymous types will share the exact same mangled
-          // name, making it impossible to diferentiate between them. For
-          // example, the following two anonymous structs in "MyStruct" share
-          // the same name (which is MyStruct::(anonymous struct)):
-          //
-          // struct MyStruct {
-          //         struct {
-          //             float x;
-          //             float y;
-          //             float z;
-          //         };
-          //         struct {
-          //           int a;
-          //         };
-          // };
-          //
-          // For this reason, forward any lookups of anonymous types to
-          // TypeSystemClang instead, as that type system carries enough
-          // information to handle anonymous types properly.
-          auto ts_clang = clang_child_type.GetTypeSystem()
-                              .dyn_cast_or_null<TypeSystemClang>();
-          if (ts_clang &&
-              ts_clang->IsAnonymousType(clang_child_type.GetOpaqueQualType()))
-            return clang_child_type;
-
-          std::string prefix;
-          swift::Demangle::Demangler dem;
-          swift::Demangle::NodePointer node =
-              GetClangTypeTypeNode(dem, clang_child_type);
-          if (!node)
-            return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                           "object has no address");
-
-          switch (node->getChild(0)->getKind()) {
-          case swift::Demangle::Node::Kind::Class:
-            prefix = "ObjectiveC.";
-            break;
-          default:
-            break;
-          }
-          child_name = prefix + child_name;
-          return RemangleAsType(dem, node, GetManglingFlavor(exe_ctx));
-        }
       }
     }
     if (!exe_scope)
@@ -4523,7 +4417,7 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
     if (auto *runtime =
             SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
       auto found_numidx = runtime->GetIndexOfChildMemberWithName(
-          GetCanonicalType(type), name, exe_ctx, omit_empty_base_classes,
+          GetCanonicalType(type), name, exe_ctx, omit_empty_base_classes, true,
           child_indexes);
       // Only use the SwiftASTContext fallback if there was an
       // error. If the runtime had complete type info and couldn't
@@ -4727,10 +4621,13 @@ bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
     bool ignore_modules = false;
     if (!IsClangImportedType(node, decl_context, ignore_modules))
       return false;
-    if (original_type)
-      if (TypeSP clang_type = LookupClangType(AsMangledName(type), decl_context,
-                                              ignore_modules))
+    if (original_type) {
+      if (auto cached = m_imported_type_map.Lookup(AsMangledName(type)))
+        *original_type = cached;
+      else if (TypeSP clang_type = LookupClangType(
+                   AsMangledName(type), decl_context, ignore_modules))
         *original_type = clang_type->GetForwardCompilerType();
+    }      
     return true;
   };
   // We can't validate the result because ReconstructType may call this

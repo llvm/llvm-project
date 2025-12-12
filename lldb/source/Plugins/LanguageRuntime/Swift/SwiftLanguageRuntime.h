@@ -402,7 +402,7 @@ public:
   llvm::Expected<uint32_t> GetNumChildren(CompilerType type,
                                           ExecutionContextScope *exe_scope,
                                           bool include_superclass = true,
-                                          bool include_clang_types = true);
+                                          bool omit_empty_base_classes = true);
 
   /// Determine the enum case name for the \p data value of the enum \p type.
   /// This is performed using Swift reflection.
@@ -435,11 +435,10 @@ public:
   ///                     don't have an index.
   ///
   /// \returns {true, {num_idexes}} on success.
-  std::pair<LookupResult, std::optional<size_t>>
-  GetIndexOfChildMemberWithName(CompilerType type, llvm::StringRef name,
-                                ExecutionContext *exe_ctx,
-                                bool omit_empty_base_classes,
-                                std::vector<uint32_t> &child_indexes);
+  std::pair<LookupResult, std::optional<size_t>> GetIndexOfChildMemberWithName(
+      CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
+      bool omit_empty_base_classes, bool include_clang_types,
+      std::vector<uint32_t> &child_indexes);
 
   /// Ask Remote Mirrors about a child of a composite type.
   llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
