@@ -1561,10 +1561,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fadd_ph512:
   case X86::BI__builtin_ia32_reduce_fadd_ph256:
   case X86::BI__builtin_ia32_reduce_fadd_ph128: {
-    StringRef intrinsicName = "vector.reduce.fadd";
     assert(!cir::MissingFeatures::fastMathFlags());
     return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               intrinsicName, ops[0].getType(),
+                               "vector.reduce.fadd", ops[0].getType(),
                                mlir::ValueRange{ops[0], ops[1]});
   }
   case X86::BI__builtin_ia32_reduce_fmul_pd512:
@@ -1572,10 +1571,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fmul_ph512:
   case X86::BI__builtin_ia32_reduce_fmul_ph256:
   case X86::BI__builtin_ia32_reduce_fmul_ph128: {
-    StringRef intrinsicName = "vector.reduce.fmul";
     assert(!cir::MissingFeatures::fastMathFlags());
     return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               intrinsicName, ops[0].getType(),
+                               "vector.reduce.fmul", ops[0].getType(),
                                mlir::ValueRange{ops[0], ops[1]});
   }
   case X86::BI__builtin_ia32_reduce_fmax_pd512:
@@ -1583,11 +1581,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fmax_ph512:
   case X86::BI__builtin_ia32_reduce_fmax_ph256:
   case X86::BI__builtin_ia32_reduce_fmax_ph128: {
-    StringRef intrinsicName = "vector.reduce.fmax";
     assert(!cir::MissingFeatures::fastMathFlags());
     cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
     return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               intrinsicName, vecTy.getElementType(),
+                               "vector.reduce.fmax", vecTy.getElementType(),
                                mlir::ValueRange{ops[0]});
   }
   case X86::BI__builtin_ia32_reduce_fmin_pd512:
@@ -1595,11 +1592,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fmin_ph512:
   case X86::BI__builtin_ia32_reduce_fmin_ph256:
   case X86::BI__builtin_ia32_reduce_fmin_ph128: {
-    StringRef intrinsicName = "vector.reduce.fmin";
     assert(!cir::MissingFeatures::fastMathFlags());
     cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
     return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               intrinsicName, vecTy.getElementType(),
+                               "vector.reduce.fmin", vecTy.getElementType(),
                                mlir::ValueRange{ops[0]});
   }
   case X86::BI__builtin_ia32_rdrand16_step:
