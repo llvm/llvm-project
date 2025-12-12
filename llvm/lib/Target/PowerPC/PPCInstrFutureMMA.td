@@ -12,6 +12,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// PowerPC ISA Future specific type constraints.
+//
+
+def SDT_PPCInst512 : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v512i1>, SDTCisVT<1, v256i1>, SDTCisVT<2, v256i1>
+]>;
+
+//===----------------------------------------------------------------------===//
+// ISA Future specific PPCISD nodes.
+//
+
+def PPCInst512   : SDNode<"PPCISD::INST512", SDT_PPCInst512, []>;
+def PPCInst512Hi : SDNode<"PPCISD::INST512HI", SDT_PPCInst512, []>;
+
+//===----------------------------------------------------------------------===//
+
 class XX3Form_AT3_XABp5_P1<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
                            string asmstr, list<dag> pattern>
     : I<opcode, OOL, IOL, asmstr, NoItinerary> {
@@ -429,14 +446,18 @@ let Predicates = [MMA, IsISAFuture] in {
   def DMXXINSTDMR512
       : XX3Form_AT3_XABp5_P1<60, 234, (outs wacc:$AT),
                              (ins vsrprc:$XAp, vsrprc:$XBp),
-                             "dmxxinstdmr512 $AT, $XAp, $XBp, 0", []> {
+                             "dmxxinstdmr512 $AT, $XAp, $XBp, 0",
+                             [(set v512i1:$AT, (PPCInst512 v256i1:$XAp,
+                                                v256i1:$XBp))]> {
     let P = 0;
   }
 
   def DMXXINSTDMR512_HI
       : XX3Form_AT3_XABp5_P1<60, 234, (outs wacc_hi:$AT),
                              (ins vsrprc:$XAp, vsrprc:$XBp),
-                             "dmxxinstdmr512 $AT, $XAp, $XBp, 1", []> {
+                             "dmxxinstdmr512 $AT, $XAp, $XBp, 1",
+                             [(set v512i1:$AT, (PPCInst512Hi v256i1:$XAp,
+                                                v256i1:$XBp))]> {
     let P = 1;
   }
 
