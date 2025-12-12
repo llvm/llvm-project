@@ -674,7 +674,8 @@ static void genDataOperandOperations(
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/false,
             /*genDefaultBounds=*/generateDefaultBounds,
-            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent,
+            /*loadAllocatableAndPointerComponent=*/false);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     bool isWholeSymbol =
@@ -853,7 +854,8 @@ static void genDeclareDataOperandOperations(
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/false,
             /*genDefaultBounds=*/generateDefaultBounds,
-            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent,
+            /*loadAllocatableAndPointerComponent=*/false);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
     EntryOp op = createDataEntryOp<EntryOp>(
         builder, operandLocation, info.addr, asFortran, bounds, structured,
@@ -1410,7 +1412,8 @@ static void genPrivatizationRecipes(
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/false,
             /*genDefaultBounds=*/generateDefaultBounds,
-            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent,
+            /*loadAllocatableAndPointerComponent=*/false);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     bool isWholeSymbol =
@@ -1655,7 +1658,8 @@ static void genReductions(
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/false,
             /*genDefaultBounds=*/generateDefaultBounds,
-            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent,
+            /*loadAllocatableAndPointerComponent=*/false);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     mlir::Type reductionTy = fir::unwrapRefType(info.addr.getType());
