@@ -183,7 +183,7 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Alpha) {
       {0x20000, "CJK UNIFIED IDEOGRAPH-20000", true},
 #endif // LIBC_TARGET_OS_IS_WINDOWS
 
-      // Roman numerals - Category Nl (Letter Numbers)
+      // Roman numerals
       {0x2160, "ROMAN NUMERAL ONE", true},
       {0x2161, "ROMAN NUMERAL TWO", true},
       {0x2162, "ROMAN NUMERAL THREE", true},
