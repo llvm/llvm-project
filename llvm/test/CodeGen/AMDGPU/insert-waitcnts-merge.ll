@@ -13,6 +13,8 @@ define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1) {
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr8_sgpr9, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr17
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   $sgpr22_sgpr23 = S_MOV_B64 $sgpr2_sgpr3, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $sgpr20_sgpr21_sgpr22_sgpr23
   ; CHECK-NEXT:   $sgpr20_sgpr21 = S_MOV_B64 killed $sgpr0_sgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr8_sgpr9, 8, 0 :: (dereferenceable invariant load (s32) from %ir.arg1.kernarg.offset.align.down, align 8, addrspace 4)
