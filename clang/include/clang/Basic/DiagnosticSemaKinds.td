@@ -10818,16 +10818,16 @@ def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 
-def warn_lifetime_safety_private_suggestion
-    : Warning<"param with internal linkage should be marked "
+def warn_lifetime_safety_intra_tu_suggestion
+    : Warning<"parameter in intra-TU function should be marked "
               "[[clang::lifetimebound]]">,
-      InGroup<LifetimeSafetyPrivateSuggestions>,
+      InGroup<LifetimeSafetyIntraTUSuggestions>,
       DefaultIgnore;
 
-def warn_lifetime_safety_public_suggestion
-    : Warning<
-          "externally visible param should be marked [[clang::lifetimebound]]">,
-      InGroup<LifetimeSafetyPublicSuggestions>,
+def warn_lifetime_safety_cross_tu_suggestion
+    : Warning<"parameter in cross-TU function should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyCrossTUSuggestions>,
       DefaultIgnore;
 
 def note_lifetime_safety_suggestion_returned_here : Note<"param returned here">;

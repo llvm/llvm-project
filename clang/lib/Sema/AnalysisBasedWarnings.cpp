@@ -2883,29 +2883,23 @@ public:
         << EscapeExpr->getEndLoc();
   }
 
-  void suggestAnnotationsPrivate(const ParmVarDecl *ParmToAnnotate,
-                                 const Expr *EscapeExpr) override {
+  void suggestAnnotation(SuggestionScope Scope,
+                         const ParmVarDecl *ParmToAnnotate,
+                         const Expr *EscapeExpr) override {
+    unsigned DiagID;
+    switch (Scope) {
+    case SuggestionScope::CrossTU:
+      DiagID = diag::warn_lifetime_safety_cross_tu_suggestion;
+      break;
+    case SuggestionScope::IntraTU:
+      DiagID = diag::warn_lifetime_safety_intra_tu_suggestion;
+      break;
+    }
+
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
         ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
 
-    S.Diag(ParmToAnnotate->getBeginLoc(),
-           diag::warn_lifetime_safety_private_suggestion)
-        << ParmToAnnotate->getSourceRange()
-        << FixItHint::CreateInsertion(InsertionPoint,
-                                      " [[clang::lifetimebound]]");
-
-    S.Diag(EscapeExpr->getBeginLoc(),
-           diag::note_lifetime_safety_suggestion_returned_here)
-        << EscapeExpr->getSourceRange();
-  }
-
-  void suggestAnnotationsPublic(const ParmVarDecl *ParmToAnnotate,
-                                const Expr *EscapeExpr) override {
-    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-
-    S.Diag(ParmToAnnotate->getBeginLoc(),
-           diag::warn_lifetime_safety_public_suggestion)
+    S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint,
                                       " [[clang::lifetimebound]]");

@@ -161,6 +161,18 @@ public:
     }
   }
 
+  /// Returns the declaration of a function that is visible across translation
+  /// units, if such a declaration exists and is different from the definition.
+  static const FunctionDecl *getCrossTUDecl(const FunctionDecl *Definition,
+                                            SourceManager &SM) {
+    const FunctionDecl *CanonicalDecl = Definition->getCanonicalDecl();
+    if (CanonicalDecl != Definition &&
+        SM.getFileID(Definition->getLocation()) !=
+            SM.getFileID(CanonicalDecl->getLocation()))
+      return CanonicalDecl;
+    return nullptr;
+  }
+
   void suggestAnnotations() {
     if (!Reporter)
       return;
@@ -169,19 +181,16 @@ public:
       const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
       if (!FD)
         continue;
-      // For public functions (external linkage), find the header declaration
-      // to annotate; otherwise, treat as private and annotate the definition.
       if (FD->isExternallyVisible()) {
-        const FunctionDecl *CanonicalFD = FD->getCanonicalDecl();
         const ParmVarDecl *ParmToAnnotate = PVD;
-        if (CanonicalFD != FD && SM.getFileID(FD->getLocation()) !=
-                                     SM.getFileID(CanonicalFD->getLocation()))
+        if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(FD, SM))
           if (unsigned Index = PVD->getFunctionScopeIndex();
-              Index < CanonicalFD->getNumParams())
-            ParmToAnnotate = CanonicalFD->getParamDecl(Index);
-        Reporter->suggestAnnotationsPublic(ParmToAnnotate, EscapeExpr);
+              Index < CrossTUDecl->getNumParams())
+            ParmToAnnotate = CrossTUDecl->getParamDecl(Index);
+        Reporter->suggestAnnotation(SuggestionScope::CrossTU, ParmToAnnotate,
+                                    EscapeExpr);
       } else
-        Reporter->suggestAnnotationsPrivate(PVD, EscapeExpr);
+        Reporter->suggestAnnotation(SuggestionScope::IntraTU, PVD, EscapeExpr);
     }
   }
 

@@ -541,14 +541,14 @@ def LifetimeSafety : DiagGroup<"experimental-lifetime-safety",
     Experimental warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
   }];
 }
-def LifetimeSafetyPublicSuggestions
-    : DiagGroup<"experimental-lifetime-safety-public-suggestions">;
-def LifetimeSafetyPrivateSuggestions
-    : DiagGroup<"experimental-lifetime-safety-private-suggestions">;
+def LifetimeSafetyCrossTUSuggestions
+    : DiagGroup<"experimental-lifetime-safety-cross-tu-suggestions">;
+def LifetimeSafetyIntraTUSuggestions
+    : DiagGroup<"experimental-lifetime-safety-intra-tu-suggestions">;
 def LifetimeSafetySuggestions
     : DiagGroup<"experimental-lifetime-safety-suggestions",
-                [LifetimeSafetyPublicSuggestions,
-                 LifetimeSafetyPrivateSuggestions]> {
+                [LifetimeSafetyCrossTUSuggestions,
+                 LifetimeSafetyIntraTUSuggestions]> {
   code Documentation = [{
     Lifetime annotation suggestions for function parameters that should be marked [[clang::lifetimebound]] based on lifetime analysis.
   }];

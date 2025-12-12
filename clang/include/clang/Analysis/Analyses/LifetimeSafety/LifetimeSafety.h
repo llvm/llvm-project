@@ -34,6 +34,12 @@ enum class Confidence : uint8_t {
   Definite // Reported as a definite error (-Wlifetime-safety-permissive)
 };
 
+/// Enum to track functions visible across or within TU.
+enum class SuggestionScope {
+  CrossTU, // For suggestions on declarations visible across Translation Units.
+  IntraTU  // For suggestions on definitions local to a Translation Unit.
+};
+
 class LifetimeSafetyReporter {
 public:
   LifetimeSafetyReporter() = default;
@@ -48,15 +54,10 @@ public:
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
 
-  // Suggest private lifetime bound annotations for function parameters internal
-  // to the existing file.
-  virtual void suggestAnnotationsPrivate(const ParmVarDecl *ParmToAnnotate,
-                                         const Expr *EscapeExpr) {}
-
-  // Suggest public lifetime bound annotations for function parameters external
-  // to other files.
-  virtual void suggestAnnotationsPublic(const ParmVarDecl *ParmToAnnotate,
-                                        const Expr *EscapeExpr) {}
+  // Suggests lifetime bound annotations for function paramters
+  virtual void suggestAnnotation(SuggestionScope Scope,
+                                 const ParmVarDecl *ParmToAnnotate,
+                                 const Expr *EscapeExpr) {}
 };
 
 /// The main entry point for the analysis.
