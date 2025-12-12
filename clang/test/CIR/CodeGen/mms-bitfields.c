@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*}}-linux-gnu
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mms-bitfields -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mms-bitfields -fclangir -emit-llvm %s -o %t-cir.ll
