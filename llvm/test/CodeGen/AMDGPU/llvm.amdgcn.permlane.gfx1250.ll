@@ -5,13 +5,14 @@
 define amdgpu_kernel void @v_permlane_bcast_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; GFX1250-LABEL: v_permlane_bcast_b32_vss:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_load_b32 s4, s[4:5], 0x34
+; GFX1250-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_permlane_bcast_b32 v0, v0, s3, s4
+; GFX1250-NEXT:    v_permlane_bcast_b32 v0, v0, s3, s6
 ; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.permlane.bcast(i32 %src0, i32 %src1, i32 %src2)
@@ -22,6 +23,7 @@ define amdgpu_kernel void @v_permlane_bcast_b32_vss(ptr addrspace(1) %out, i32 %
 define amdgpu_kernel void @v_permlane_bcast_b32_vii(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-LABEL: v_permlane_bcast_b32_vii:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -37,6 +39,7 @@ define amdgpu_kernel void @v_permlane_bcast_b32_vii(ptr addrspace(1) %out, i32 %
 define amdgpu_kernel void @v_permlane_bcast_b32_vll(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-LABEL: v_permlane_bcast_b32_vll:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -53,6 +56,7 @@ define amdgpu_kernel void @v_permlane_bcast_b32_vll(ptr addrspace(1) %out, i32 %
 define amdgpu_kernel void @v_permlane_bcast_b32_vvv(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-SDAG-LABEL: v_permlane_bcast_b32_vvv:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1250-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
@@ -69,6 +73,7 @@ define amdgpu_kernel void @v_permlane_bcast_b32_vvv(ptr addrspace(1) %out, i32 %
 ;
 ; GFX1250-GISEL-LABEL: v_permlane_bcast_b32_vvv:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1250-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
@@ -92,13 +97,14 @@ define amdgpu_kernel void @v_permlane_bcast_b32_vvv(ptr addrspace(1) %out, i32 %
 define amdgpu_kernel void @v_permlane_down_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; GFX1250-LABEL: v_permlane_down_b32_vss:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_load_b32 s4, s[4:5], 0x34
+; GFX1250-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_permlane_down_b32 v0, v0, s3, s4
+; GFX1250-NEXT:    v_permlane_down_b32 v0, v0, s3, s6
 ; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.permlane.down(i32 %src0, i32 %src1, i32 %src2)
@@ -109,6 +115,7 @@ define amdgpu_kernel void @v_permlane_down_b32_vss(ptr addrspace(1) %out, i32 %s
 define amdgpu_kernel void @v_permlane_down_b32_vii(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-LABEL: v_permlane_down_b32_vii:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -124,6 +131,7 @@ define amdgpu_kernel void @v_permlane_down_b32_vii(ptr addrspace(1) %out, i32 %s
 define amdgpu_kernel void @v_permlane_down_b32_vll(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-LABEL: v_permlane_down_b32_vll:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -140,6 +148,7 @@ define amdgpu_kernel void @v_permlane_down_b32_vll(ptr addrspace(1) %out, i32 %s
 define amdgpu_kernel void @v_permlane_down_b32_vvv(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-SDAG-LABEL: v_permlane_down_b32_vvv:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1250-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
@@ -156,6 +165,7 @@ define amdgpu_kernel void @v_permlane_down_b32_vvv(ptr addrspace(1) %out, i32 %s
 ;
 ; GFX1250-GISEL-LABEL: v_permlane_down_b32_vvv:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1250-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
@@ -179,13 +189,14 @@ define amdgpu_kernel void @v_permlane_down_b32_vvv(ptr addrspace(1) %out, i32 %s
 define amdgpu_kernel void @v_permlane_up_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; GFX1250-LABEL: v_permlane_up_b32_vss:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_load_b32 s4, s[4:5], 0x34
+; GFX1250-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s3, s4
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s3, s6
 ; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.permlane.up(i32 %src0, i32 %src1, i32 %src2)
@@ -196,6 +207,7 @@ define amdgpu_kernel void @v_permlane_up_b32_vss(ptr addrspace(1) %out, i32 %src
 define amdgpu_kernel void @v_permlane_up_b32_vii(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-LABEL: v_permlane_up_b32_vii:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -211,6 +223,7 @@ define amdgpu_kernel void @v_permlane_up_b32_vii(ptr addrspace(1) %out, i32 %src
 define amdgpu_kernel void @v_permlane_up_b32_vll(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-LABEL: v_permlane_up_b32_vll:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -227,6 +240,7 @@ define amdgpu_kernel void @v_permlane_up_b32_vll(ptr addrspace(1) %out, i32 %src
 define amdgpu_kernel void @v_permlane_up_b32_vvv(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-SDAG-LABEL: v_permlane_up_b32_vvv:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1250-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
@@ -243,6 +257,7 @@ define amdgpu_kernel void @v_permlane_up_b32_vvv(ptr addrspace(1) %out, i32 %src
 ;
 ; GFX1250-GISEL-LABEL: v_permlane_up_b32_vvv:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1250-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
@@ -266,13 +281,14 @@ define amdgpu_kernel void @v_permlane_up_b32_vvv(ptr addrspace(1) %out, i32 %src
 define amdgpu_kernel void @v_permlane_xor_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; GFX1250-LABEL: v_permlane_xor_b32_vss:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_load_b32 s4, s[4:5], 0x34
+; GFX1250-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_permlane_xor_b32 v0, v0, s3, s4
+; GFX1250-NEXT:    v_permlane_xor_b32 v0, v0, s3, s6
 ; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.permlane.xor(i32 %src0, i32 %src1, i32 %src2)
@@ -283,6 +299,7 @@ define amdgpu_kernel void @v_permlane_xor_b32_vss(ptr addrspace(1) %out, i32 %sr
 define amdgpu_kernel void @v_permlane_xor_b32_vii(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-LABEL: v_permlane_xor_b32_vii:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -298,6 +315,7 @@ define amdgpu_kernel void @v_permlane_xor_b32_vii(ptr addrspace(1) %out, i32 %sr
 define amdgpu_kernel void @v_permlane_xor_b32_vll(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-LABEL: v_permlane_xor_b32_vll:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -314,6 +332,7 @@ define amdgpu_kernel void @v_permlane_xor_b32_vll(ptr addrspace(1) %out, i32 %sr
 define amdgpu_kernel void @v_permlane_xor_b32_vvv(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-SDAG-LABEL: v_permlane_xor_b32_vvv:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1250-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
@@ -330,6 +349,7 @@ define amdgpu_kernel void @v_permlane_xor_b32_vvv(ptr addrspace(1) %out, i32 %sr
 ;
 ; GFX1250-GISEL-LABEL: v_permlane_xor_b32_vvv:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1250-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
@@ -353,6 +373,7 @@ define amdgpu_kernel void @v_permlane_xor_b32_vvv(ptr addrspace(1) %out, i32 %sr
 define amdgpu_kernel void @v_permlane_idx_gen_b32_vs(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
 ; GFX1250-LABEL: v_permlane_idx_gen_b32_vs:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -368,6 +389,7 @@ define amdgpu_kernel void @v_permlane_idx_gen_b32_vs(ptr addrspace(1) %out, i32 
 define amdgpu_kernel void @v_permlane_idx_gen_b32_vi(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-LABEL: v_permlane_idx_gen_b32_vi:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -383,6 +405,7 @@ define amdgpu_kernel void @v_permlane_idx_gen_b32_vi(ptr addrspace(1) %out, i32 
 define amdgpu_kernel void @v_permlane_idx_gen_b32_vl(ptr addrspace(1) %out, i32 %src0) {
 ; GFX1250-LABEL: v_permlane_idx_gen_b32_vl:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -398,6 +421,7 @@ define amdgpu_kernel void @v_permlane_idx_gen_b32_vl(ptr addrspace(1) %out, i32 
 define amdgpu_kernel void @v_permlane_idx_gen_b32_vv(ptr addrspace(1) %out) {
 ; GFX1250-LABEL: v_permlane_idx_gen_b32_vv:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    v_bfe_u32 v1, v0, 10, 10
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0

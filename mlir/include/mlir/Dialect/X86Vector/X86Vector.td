@@ -468,11 +468,6 @@ def DotInt8Op : AVX_Op<"dot.i8", [Pure,
       intr += "." + std::to_string(opBitWidth);
       return intr;
     }
-
-    SmallVector<Value> getIntrinsicOperands(
-        ::mlir::ArrayRef<Value> operands,
-        const ::mlir::LLVMTypeConverter &typeConverter,
-        ::mlir::RewriterBase &rewriter);
   }];
 }
 

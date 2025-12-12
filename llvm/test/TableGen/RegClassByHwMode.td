@@ -1,51 +1,65 @@
-// RUN: llvm-tblgen -gen-instr-info -I %p/../../include %s -o - | FileCheck -check-prefix=INSTRINFO %s
-// RUN: llvm-tblgen -gen-asm-matcher -I %p/../../include %s -o - | FileCheck -check-prefix=ASMMATCHER %s
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s -o - | FileCheck -check-prefix=DISASM %s
-// RUN: llvm-tblgen -gen-dag-isel -I %p/../../include %s -o - | FileCheck -check-prefix=ISEL-SDAG %s
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../include %s -o - | FileCheck -check-prefix=ISEL-GISEL %s
+// RUN: llvm-tblgen -gen-instr-info   -I %S -I %p/../../include %s -o - | FileCheck -check-prefix=INSTRINFO %s
+// RUN: llvm-tblgen -gen-asm-matcher  -I %S -I %p/../../include %s -o - | FileCheck -check-prefix=ASMMATCHER %s
+// RUN: llvm-tblgen -gen-disassembler -I %S -I %p/../../include %s -o - | FileCheck -check-prefix=DISASM %s
+// RUN: llvm-tblgen -gen-dag-isel     -I %S -I %p/../../include %s -o - | FileCheck -check-prefix=ISEL-SDAG %s
+// RUN: llvm-tblgen -gen-global-isel  -I %S -I %p/../../include %s -o - | FileCheck -check-prefix=ISEL-GISEL %s
 
-include "llvm/Target/Target.td"
+include "Common/RegClassByHwModeCommon.td"
 
-// INSTRINFO: #ifdef GET_INSTRINFO_ENUM
+// INSTRINFO:      #ifdef GET_INSTRINFO_ENUM
 // INSTRINFO-NEXT: #undef GET_INSTRINFO_ENUM
+// INSTRINFO-EMPTY:
 // INSTRINFO-NEXT: namespace llvm::MyTarget {
+// INSTRINFO-EMPTY:
 // INSTRINFO-NEXT: enum {
-// INSTRINFO-NEXT: PHI
-// INSTRINFO: };
-// INSTRINFO: enum RegClassByHwModeUses : uint16_t {
+// INSTRINFO-NEXT:   PHI
+// INSTRINFO: LOAD_STACK_GUARD = [[LOAD_STACK_GUARD_OPCODE:[0-9]+]]
+// INSTRINFO:      };
+// INSTRINFO:      enum RegClassByHwModeUses : uint16_t {
 // INSTRINFO-NEXT:   MyPtrRC,
 // INSTRINFO-NEXT:   XRegs_EvenIfRequired,
 // INSTRINFO-NEXT:   YRegs_EvenIfRequired,
 // INSTRINFO-NEXT: };
-// INSTRINFO-NEXT: }
+// INSTRINFO-EMPTY:
+// INSTRINFO-NEXT: } // namespace llvm::MyTarget
+
+
+// INSTRINFO: { [[LOAD_STACK_GUARD_OPCODE]],	1,	1,	0,	0,	0,	0,	MyTargetOpInfoBase + [[LOAD_STACK_GUARD_OP_INDEX:[0-9]+]],	0,	0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::MayLoad)|(1ULL<<MCID::Rematerializable)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
+
+// INSTRINFO: /* [[LOAD_STACK_GUARD_OP_INDEX]] */ { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
+// INSTRINFO: { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { -1, 0, MCOI::OPERAND_IMMEDIATE, 0 }, { -1, 0, MCOI::OPERAND_IMMEDIATE, 0 },
+// INSTRINFO: { -1, 0, MCOI::OPERAND_UNKNOWN, 0 }, { -1, 0, MCOI::OPERAND_IMMEDIATE, 0 },
+// INSTRINFO: { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { -1, 0, MCOI::OPERAND_UNKNOWN, 0 },
+// INSTRINFO: { -1, 0, MCOI::OPERAND_UNKNOWN, 0 }, { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { -1, 0, MCOI::OPERAND_UNKNOWN, 0 },
 
 // INSTRINFO: { MyTarget::XRegsRegClassID, 0, MCOI::OPERAND_REGISTER, 0 },
 // INSTRINFO: { MyTarget::XRegs_EvenRegClassID, 0, MCOI::OPERAND_REGISTER, 0 },
+
 // INSTRINFO: { MyTarget::YRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
-// INSTRINFO: { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
+
 // INSTRINFO: { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { MyTarget::MyPtrRC, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
 // INSTRINFO: { MyTarget::YRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
 
 // INSTRINFO: extern const int16_t MyTargetRegClassByHwModeTables[4][3] = {
 // INSTRINFO-NEXT:  { // DefaultMode
-// INSTRINFO-NEXT:    MyTarget::PtrRegs32RegClassID,
-// INSTRINFO-NEXT:    MyTarget::XRegsRegClassID,
-// INSTRINFO-NEXT:    MyTarget::YRegsRegClassID,
+// INSTRINFO-NEXT:    MyTarget::PtrRegs32RegClassID, // MyPtrRC
+// INSTRINFO-NEXT:    MyTarget::XRegsRegClassID, // XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    MyTarget::YRegsRegClassID, // YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT:  { // EvenMode
-// INSTRINFO-NEXT:    -1, // Missing mode entry
-// INSTRINFO-NEXT:    MyTarget::XRegs_EvenRegClassID,
-// INSTRINFO-NEXT:    MyTarget::YRegs_EvenRegClassID,
+// INSTRINFO-NEXT:    -1, // Missing mode entry for MyPtrRC
+// INSTRINFO-NEXT:    MyTarget::XRegs_EvenRegClassID, // XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    MyTarget::YRegs_EvenRegClassID, // YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT:  { // OddMode
-// INSTRINFO-NEXT:    -1, // Missing mode entry
-// INSTRINFO-NEXT:    MyTarget::XRegs_OddRegClassID,
-// INSTRINFO-NEXT:    -1, // Missing mode entry
+// INSTRINFO-NEXT:    -1, // Missing mode entry for MyPtrRC
+// INSTRINFO-NEXT:    MyTarget::XRegs_OddRegClassID, // XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    -1, // Missing mode entry for YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT:  { // Ptr64
-// INSTRINFO-NEXT:    MyTarget::PtrRegs64RegClassID,
-// INSTRINFO-NEXT:    -1, // Missing mode entry
-// INSTRINFO-NEXT:    -1, // Missing mode entry
+// INSTRINFO-NEXT:    MyTarget::PtrRegs64RegClassID, // MyPtrRC
+// INSTRINFO-NEXT:    -1, // Missing mode entry for XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    -1, // Missing mode entry for YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT: };
 
@@ -78,24 +92,24 @@ include "llvm/Target/Target.td"
 // ASMMATCHER: if (Operand.isReg() && Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
 // ASMMATCHER-NEXT:    static constexpr MatchClassKind RegClassByHwModeMatchTable[4][3] = {
 // ASMMATCHER-NEXT:      { // DefaultMode
-// ASMMATCHER-NEXT:        MCK_PtrRegs32,
-// ASMMATCHER-NEXT:        MCK_XRegs,
-// ASMMATCHER-NEXT:        MCK_YRegs,
+// ASMMATCHER-NEXT:        MCK_PtrRegs32, // MyPtrRC
+// ASMMATCHER-NEXT:        MCK_XRegs, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        MCK_YRegs, // YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:      { // EvenMode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
-// ASMMATCHER-NEXT:        MCK_XRegs_Even,
-// ASMMATCHER-NEXT:        MCK_YRegs_Even,
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for MyPtrRC
+// ASMMATCHER-NEXT:        MCK_XRegs_Even, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        MCK_YRegs_Even, // YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:      { // OddMode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
-// ASMMATCHER-NEXT:        MCK_XRegs_Odd,
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for MyPtrRC
+// ASMMATCHER-NEXT:        MCK_XRegs_Odd, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:      { // Ptr64
-// ASMMATCHER-NEXT:        MCK_PtrRegs64,
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
+// ASMMATCHER-NEXT:        MCK_PtrRegs64, // MyPtrRC
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:    };
 // ASMMATCHER-EMPTY:
@@ -288,8 +302,6 @@ include "llvm/Target/Target.td"
 // ISEL-GISEL-NEXT:   GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE),
 // ISEL-GISEL-NEXT:   GIR_RootConstrainSelectedInstOperands,
 
-
-
 def HasAlignedRegisters : Predicate<"Subtarget->hasAlignedRegisters()">;
 def HasUnalignedRegisters : Predicate<"Subtarget->hasUnalignedRegisters()">;
 def IsPtr64 : Predicate<"Subtarget->isPtr64()">;
@@ -303,34 +315,6 @@ def EvenMode : HwMode<[HasAlignedRegisters]>;
 def OddMode : HwMode<[HasUnalignedRegisters]>;
 def Ptr64 : HwMode<[IsPtr64]>;
 
-class MyReg<string n>
-  : Register<n> {
-  let Namespace = "MyTarget";
-}
-
-class MyClass<int size, list<ValueType> types, dag registers>
-  : RegisterClass<"MyTarget", types, size, registers> {
-  let Size = size;
-}
-
-def X0 : MyReg<"x0">;
-def X1 : MyReg<"x1">;
-def X2 : MyReg<"x2">;
-def X3 : MyReg<"x3">;
-def X4 : MyReg<"x4">;
-def X5 : MyReg<"x5">;
-def X6 : MyReg<"x6">;
-
-def Y0 : MyReg<"y0">;
-def Y1 : MyReg<"y1">;
-def Y2 : MyReg<"y2">;
-def Y3 : MyReg<"y3">;
-def Y4 : MyReg<"y4">;
-def Y5 : MyReg<"y5">;
-def Y6 : MyReg<"y6">;
-
-
-
 def P0_32 : MyReg<"p0">;
 def P1_32 : MyReg<"p1">;
 def P2_32 : MyReg<"p2">;
@@ -342,15 +326,12 @@ def P2_64 : MyReg<"p2_64">;
 def P3_64 : MyReg<"p3_64">;
 
 
-
-def XRegs : RegisterClass<"MyTarget", [i64], 64, (add X0, X1, X2, X3, X4, X5, X6)>;
 def XRegs_Odd : RegisterClass<"MyTarget", [i64], 64, (add X1, X3, X5)>;
 def XRegs_Even : RegisterClass<"MyTarget", [i64], 64, (add X0, X2, X4, X6)>;
 
 def XRegs_EvenIfRequired : RegClassByHwMode<[DefaultMode, EvenMode, OddMode],
-                                           [XRegs, XRegs_Even, XRegs_Odd]>;
+                                            [XRegs, XRegs_Even, XRegs_Odd]>;
 
-def YRegs : RegisterClass<"MyTarget", [i64], 64, (add Y0, Y1, Y2, Y3, Y4, Y5, Y6)>;
 def YRegs_Even : RegisterClass<"MyTarget", [i64], 64, (add Y0, Y2, Y4, Y6)>;
 
 def YRegs_EvenIfRequired : RegClassByHwMode<[DefaultMode, EvenMode],
@@ -369,23 +350,6 @@ def PtrRegOperand : RegisterOperand<MyPtrRC>;
 
 def CustomDecodeYEvenIfRequired : RegisterOperand<YRegs_EvenIfRequired> {
   let DecoderMethod = "YEvenIfRequiredCustomDecoder";
-}
-
-class TestInstruction : Instruction {
-  let Size = 2;
-  let Namespace = "MyTarget";
-  let hasSideEffects = false;
-  let hasExtraSrcRegAllocReq = false;
-  let hasExtraDefRegAllocReq = false;
-
-  field bits<16> Inst;
-  bits<3> dst;
-  bits<3> src;
-  bits<3> opcode;
-
-  let Inst{2-0} = dst;
-  let Inst{5-3} = src;
-  let Inst{7-5} = opcode;
 }
 
 def SpecialOperand : RegisterOperand<XRegs_EvenIfRequired>;
@@ -462,6 +426,8 @@ def : Pat<
   (i64 (load PtrRegOperand:$src)),
   (MY_LOAD $src)
 >;
+
+defm : RemapAllTargetPseudoPointerOperands<XRegs_EvenIfRequired>;
 
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }

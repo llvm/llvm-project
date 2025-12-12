@@ -11,6 +11,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 namespace llvm {
@@ -23,10 +24,12 @@ class BoundsCheckingPass : public PassInfoMixin<BoundsCheckingPass> {
 public:
   struct Options {
     struct Runtime {
-      Runtime(bool MinRuntime, bool MayReturn)
-          : MinRuntime(MinRuntime), MayReturn(MayReturn) {}
+      Runtime(bool MinRuntime, bool MayReturn, bool HandlerPreserveAllRegs)
+          : MinRuntime(MinRuntime), MayReturn(MayReturn),
+            HandlerPreserveAllRegs(HandlerPreserveAllRegs) {}
       bool MinRuntime;
       bool MayReturn;
+      bool HandlerPreserveAllRegs;
     };
     std::optional<Runtime> Rt; // Trap if empty.
     bool Merge = false;

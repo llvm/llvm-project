@@ -223,6 +223,8 @@ struct Configuration {
   bool warnThinArchiveMissingMembers;
   bool disableVerify;
   bool separateCstringLiteralSections;
+  bool tailMergeStrings;
+  unsigned slopScale = 256;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;

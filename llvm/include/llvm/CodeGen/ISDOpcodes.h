@@ -514,6 +514,12 @@ enum NodeType {
   /// separately rounded operations.
   FMAD,
 
+  /// FMULADD - Performs a * b + c, with, or without, intermediate rounding.
+  /// It is expected that this will be illegal for most targets, as it usually
+  /// makes sense to split this or use an FMA. But some targets, such as
+  /// WebAssembly, can directly support these semantics.
+  FMULADD,
+
   /// FCOPYSIGN(X, Y) - Return the value of X with the sign of Y.  NOTE: This
   /// DAG node does not require that X and Y have the same type, just that
   /// they are both floating point.  X and the result must have the same type.
@@ -649,8 +655,8 @@ enum NodeType {
 
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
   /// scalar value into element 0 of the resultant vector type.  The top
-  /// elements 1 to N-1 of the N-element vector are undefined.  The type
-  /// of the operand must match the vector element type, except when they
+  /// elements 1 to N-1 of the N-element vector are poison. The type of
+  /// the operand must match the vector element type, except when they
   /// are integer types.  In this case the operand is allowed to be wider
   /// than the vector element type, and is implicitly truncated to it.
   SCALAR_TO_VECTOR,
@@ -1510,6 +1516,7 @@ enum NodeType {
   PARTIAL_REDUCE_SMLA,  // sext, sext
   PARTIAL_REDUCE_UMLA,  // zext, zext
   PARTIAL_REDUCE_SUMLA, // sext, zext
+  PARTIAL_REDUCE_FMLA,  // fpext, fpext
 
   // The `llvm.experimental.stackmap` intrinsic.
   // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
@@ -1530,6 +1537,9 @@ enum NodeType {
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
 #include "llvm/IR/VPIntrinsics.def"
+
+  // Issue a no-op relocation against a given symbol at the current location.
+  RELOC_NONE,
 
   // The `llvm.experimental.convergence.*` intrinsics.
   CONVERGENCECTRL_ANCHOR,
@@ -1559,8 +1569,21 @@ enum NodeType {
   GET_ACTIVE_LANE_MASK,
 
   // The `llvm.loop.dependence.{war, raw}.mask` intrinsics
-  // Operands: Load pointer, Store pointer, Element size
+  // Operands: Load pointer, Store pointer, Element size, Lane offset
   // Output: Mask
+  //
+  // Note: The semantics of these opcodes differ slightly from the intrinsics.
+  // Wherever "lane" (meaning lane index) occurs in the intrinsic definition, it
+  // is replaced with (lane + lane_offset) for the ISD opcode.
+  //
+  //  E.g., for LOOP_DEPENDENCE_WAR_MASK:
+  //    `elementSize * lane < (ptrB - ptrA)`
+  //  Becomes:
+  //    `elementSize * (lane + lane_offset) < (ptrB - ptrA)`
+  //
+  // This is done to allow for trivial splitting of the operation. Note: The
+  // lane offset is always a constant, for scalable masks, it is implicitly
+  // multiplied by vscale.
   LOOP_DEPENDENCE_WAR_MASK,
   LOOP_DEPENDENCE_RAW_MASK,
 
@@ -1568,6 +1591,10 @@ enum NodeType {
   // Operands: Input Chain, Start Addres, End Address
   // Outputs: Output Chain
   CLEAR_CACHE,
+
+  // Untyped node storing deactivation symbol reference
+  // (DeactivationSymbolSDNode).
+  DEACTIVATION_SYMBOL,
 
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.

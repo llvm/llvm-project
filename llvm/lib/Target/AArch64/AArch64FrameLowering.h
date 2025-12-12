@@ -24,6 +24,11 @@ class AArch64FunctionInfo;
 class AArch64PrologueEmitter;
 class AArch64EpilogueEmitter;
 
+struct SVEStackSizes {
+  uint64_t ZPRStackSize{0};
+  uint64_t PPRStackSize{0};
+};
+
 class AArch64FrameLowering : public TargetFrameLowering {
 public:
   explicit AArch64FrameLowering()
@@ -64,8 +69,9 @@ public:
                                          bool ForSimm) const;
   StackOffset resolveFrameOffsetReference(const MachineFunction &MF,
                                           int64_t ObjectOffset, bool isFixed,
-                                          bool isSVE, Register &FrameReg,
-                                          bool PreferFP, bool ForSimm) const;
+                                          TargetStackID::Value StackID,
+                                          Register &FrameReg, bool PreferFP,
+                                          bool ForSimm) const;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
@@ -82,11 +88,10 @@ public:
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
-  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
-                                   const TargetRegisterInfo *TRI,
-                                   std::vector<CalleeSavedInfo> &CSI,
-                                   unsigned &MinCSFrameIndex,
-                                   unsigned &MaxCSFrameIndex) const override;
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
 
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
@@ -124,6 +129,7 @@ public:
       return false;
     case TargetStackID::Default:
     case TargetStackID::ScalableVector:
+    case TargetStackID::ScalablePredicateVector:
     case TargetStackID::NoAlloc:
       return true;
     }
@@ -132,7 +138,8 @@ public:
   bool isStackIdSafeForLocalArea(unsigned StackId) const override {
     // We don't support putting SVE objects into the pre-allocated local
     // frame block at the moment.
-    return StackId != TargetStackID::ScalableVector;
+    return (StackId != TargetStackID::ScalableVector &&
+            StackId != TargetStackID::ScalablePredicateVector);
   }
 
   void
@@ -145,11 +152,35 @@ public:
 
   bool requiresSaveVG(const MachineFunction &MF) const;
 
-  StackOffset getSVEStackSize(const MachineFunction &MF) const;
+  /// Returns the size of the entire ZPR stackframe (calleesaves + spills).
+  StackOffset getZPRStackSize(const MachineFunction &MF) const;
+
+  /// Returns the size of the entire PPR stackframe (calleesaves + spills +
+  /// hazard padding).
+  StackOffset getPPRStackSize(const MachineFunction &MF) const;
+
+  /// Returns the size of the entire SVE stackframe (PPRs + ZPRs).
+  StackOffset getSVEStackSize(const MachineFunction &MF) const {
+    return getZPRStackSize(MF) + getPPRStackSize(MF);
+  }
 
   friend class AArch64PrologueEpilogueCommon;
   friend class AArch64PrologueEmitter;
   friend class AArch64EpilogueEmitter;
+
+  // Windows unwind can't represent the required stack adjustments if we have
+  // both SVE callee-saves and dynamic stack allocations, and the frame
+  // pointer is before the SVE spills.  The allocation of the frame pointer
+  // must be the last instruction in the prologue so the unwinder can restore
+  // the stack pointer correctly. (And there isn't any unwind opcode for
+  // `addvl sp, x29, -17`.)
+  //
+  // Because of this, we do spills in the opposite order on Windows: first SVE,
+  // then GPRs. The main side-effect of this is that it makes accessing
+  // parameters passed on the stack more expensive.
+  //
+  // We could consider rearranging the spills for simpler cases.
+  bool hasSVECalleeSavesAboveFrameRecord(const MachineFunction &MF) const;
 
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
@@ -165,10 +196,6 @@ private:
   /// Returns true if CSRs should be paired.
   bool producePairRegisters(MachineFunction &MF) const;
 
-  int64_t estimateSVEStackObjectOffsets(MachineFrameInfo &MF) const;
-  int64_t assignSVEStackObjectOffsets(MachineFrameInfo &MF,
-                                      int &MinCSFrameIndex,
-                                      int &MaxCSFrameIndex) const;
   /// Make a determination whether a Hazard slot is used and create it if
   /// needed.
   void determineStackHazardSlot(MachineFunction &MF,

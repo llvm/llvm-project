@@ -660,8 +660,7 @@ define <3 x bfloat> @call_ret_v3bf16(ptr %ptr) #0 {
 ; SSE2-LABEL: call_ret_v3bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    movl 4(%rdi), %eax
-; SSE2-NEXT:    pinsrw $0, %eax, %xmm1
+; SSE2-NEXT:    pinsrw $0, 4(%rdi), %xmm1
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    callq returns_v3bf16@PLT
@@ -725,8 +724,7 @@ define <3 x bfloat> @call_ret_v3bf16(ptr %ptr) #0 {
 ; AVXNECONVERT-LABEL: call_ret_v3bf16:
 ; AVXNECONVERT:       # %bb.0:
 ; AVXNECONVERT-NEXT:    pushq %rax
-; AVXNECONVERT-NEXT:    movl 4(%rdi), %eax
-; AVXNECONVERT-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVXNECONVERT-NEXT:    vpinsrw $0, 4(%rdi), %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVXNECONVERT-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
 ; AVXNECONVERT-NEXT:    callq returns_v3bf16@PLT

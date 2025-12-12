@@ -38,7 +38,7 @@
 ; ALL-NOT: no profile data available for function
 
 ;; Using a memprof-only profile for memprof-use should only give memprof metadata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-print-match-info -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,MEMPROFMATCHINFO,MEMPROFSTATS
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-print-match-info -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,MEMPROFMATCHINFO,MEMPROFSTATS,AMBIG
 ; There should not be any PGO metadata
 ; MEMPROFONLY-NOT: !prof
 
@@ -51,10 +51,10 @@
 ;; Test the same thing but by passing the memory profile through to a default
 ;; pipeline via -memory-profile-file=, which should cause the necessary field
 ;; of the PGOOptions structure to be populated with the profile filename.
-; RUN: opt < %s -passes='default<O2>' -memory-profile-file=%t.memprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
+; RUN: opt < %s -passes='default<O2>' -memory-profile-file=%t.memprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,AMBIG
 
 ;; Using a pgo+memprof profile for memprof-use should only give memprof metadata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,AMBIG
 
 ;; Using a pgo-only profile for memprof-use should give an error
 ; RUN: not opt < %s -passes='memprof-use<profile-filename=%t.pgoprofdata>' -S 2>&1 | FileCheck %s --check-prefixes=MEMPROFWITHPGOONLY
@@ -72,7 +72,7 @@
 
 ;; Using a pgo+memprof profile for both memprof-use and pgo-instr-use should
 ;; give both memprof and pgo metadata.
-; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
+; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO,AMBIG
 
 ;; Check that the total sizes are reported if requested. A message should be
 ;; emitted for the pruned context. Also check that remarks are emitted for the
@@ -108,7 +108,11 @@
 
 ;; However, with the same threshold, but hot hints not enabled, it should be
 ;; notcold again.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-min-ave-lifetime-access-density-hot-threshold=0 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-min-ave-lifetime-access-density-hot-threshold=0 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,AMBIG
+
+;; Test that we don't get an ambiguous memprof attribute when
+;; -memprof-ambiguous-attributes is disabled.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-ambiguous-attributes=false 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,NOAMBIG
 
 ; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched with 1 frames
 ; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched with 1 frames
@@ -140,7 +144,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; PGO: !prof
 define dso_local noundef ptr @_Z3foov() #0 !dbg !10 {
 entry:
-  ; MEMPROF: call {{.*}} @_Znam{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
+  ; MEMPROF: call {{.*}} @_Znam{{.*}} #[[A0:[0-9]+]]{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
   ; MEMPROFNOCOLINFO: call {{.*}} @_Znam{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
   %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6, !dbg !13
   ret ptr %call, !dbg !14
@@ -364,6 +368,9 @@ for.end:                                          ; preds = %for.cond
   ret i32 0, !dbg !103
 }
 
+;; We optionally apply an ambiguous memprof attribute to ambiguous allocations
+; AMBIG: #[[A0]] = { builtin allocsize(0) "memprof"="ambiguous" }
+; NOAMBIG: #[[A0]] = { builtin allocsize(0) }
 ; MEMPROF: #[[A1]] = { builtin allocsize(0) "memprof"="notcold" }
 ; MEMPROF: #[[A2]] = { builtin allocsize(0) "memprof"="cold" }
 ; MEMPROF: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]]}

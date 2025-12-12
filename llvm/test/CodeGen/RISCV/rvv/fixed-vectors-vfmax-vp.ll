@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+v -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN
 
-declare <2 x half> @llvm.vp.maxnum.v2f16(<2 x half>, <2 x half>, <2 x i1>, i32)
-
 define <2 x half> @vfmax_vv_v2f16(<2 x half> %va, <2 x half> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfmax_vv_v2f16:
 ; ZVFH:       # %bb.0:
@@ -51,8 +49,6 @@ define <2 x half> @vfmax_vv_v2f16_unmasked(<2 x half> %va, <2 x half> %vb, i32 z
   %v = call <2 x half> @llvm.vp.maxnum.v2f16(<2 x half> %va, <2 x half> %vb, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x half> %v
 }
-
-declare <4 x half> @llvm.vp.maxnum.v4f16(<4 x half>, <4 x half>, <4 x i1>, i32)
 
 define <4 x half> @vfmax_vv_v4f16(<4 x half> %va, <4 x half> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfmax_vv_v4f16:
@@ -96,8 +92,6 @@ define <4 x half> @vfmax_vv_v4f16_unmasked(<4 x half> %va, <4 x half> %vb, i32 z
   ret <4 x half> %v
 }
 
-declare <8 x half> @llvm.vp.maxnum.v8f16(<8 x half>, <8 x half>, <8 x i1>, i32)
-
 define <8 x half> @vfmax_vv_v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfmax_vv_v8f16:
 ; ZVFH:       # %bb.0:
@@ -139,8 +133,6 @@ define <8 x half> @vfmax_vv_v8f16_unmasked(<8 x half> %va, <8 x half> %vb, i32 z
   %v = call <8 x half> @llvm.vp.maxnum.v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x half> %v
 }
-
-declare <16 x half> @llvm.vp.maxnum.v16f16(<16 x half>, <16 x half>, <16 x i1>, i32)
 
 define <16 x half> @vfmax_vv_v16f16(<16 x half> %va, <16 x half> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfmax_vv_v16f16:
@@ -184,8 +176,6 @@ define <16 x half> @vfmax_vv_v16f16_unmasked(<16 x half> %va, <16 x half> %vb, i
   ret <16 x half> %v
 }
 
-declare <2 x float> @llvm.vp.maxnum.v2f32(<2 x float>, <2 x float>, <2 x i1>, i32)
-
 define <2 x float> @vfmax_vv_v2f32(<2 x float> %va, <2 x float> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v2f32:
 ; CHECK:       # %bb.0:
@@ -205,8 +195,6 @@ define <2 x float> @vfmax_vv_v2f32_unmasked(<2 x float> %va, <2 x float> %vb, i3
   %v = call <2 x float> @llvm.vp.maxnum.v2f32(<2 x float> %va, <2 x float> %vb, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x float> %v
 }
-
-declare <4 x float> @llvm.vp.maxnum.v4f32(<4 x float>, <4 x float>, <4 x i1>, i32)
 
 define <4 x float> @vfmax_vv_v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v4f32:
@@ -228,8 +216,6 @@ define <4 x float> @vfmax_vv_v4f32_unmasked(<4 x float> %va, <4 x float> %vb, i3
   ret <4 x float> %v
 }
 
-declare <8 x float> @llvm.vp.maxnum.v8f32(<8 x float>, <8 x float>, <8 x i1>, i32)
-
 define <8 x float> @vfmax_vv_v8f32(<8 x float> %va, <8 x float> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v8f32:
 ; CHECK:       # %bb.0:
@@ -249,8 +235,6 @@ define <8 x float> @vfmax_vv_v8f32_unmasked(<8 x float> %va, <8 x float> %vb, i3
   %v = call <8 x float> @llvm.vp.maxnum.v8f32(<8 x float> %va, <8 x float> %vb, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x float> %v
 }
-
-declare <16 x float> @llvm.vp.maxnum.v16f32(<16 x float>, <16 x float>, <16 x i1>, i32)
 
 define <16 x float> @vfmax_vv_v16f32(<16 x float> %va, <16 x float> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v16f32:
@@ -272,8 +256,6 @@ define <16 x float> @vfmax_vv_v16f32_unmasked(<16 x float> %va, <16 x float> %vb
   ret <16 x float> %v
 }
 
-declare <2 x double> @llvm.vp.maxnum.v2f64(<2 x double>, <2 x double>, <2 x i1>, i32)
-
 define <2 x double> @vfmax_vv_v2f64(<2 x double> %va, <2 x double> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v2f64:
 ; CHECK:       # %bb.0:
@@ -293,8 +275,6 @@ define <2 x double> @vfmax_vv_v2f64_unmasked(<2 x double> %va, <2 x double> %vb,
   %v = call <2 x double> @llvm.vp.maxnum.v2f64(<2 x double> %va, <2 x double> %vb, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x double> %v
 }
-
-declare <4 x double> @llvm.vp.maxnum.v4f64(<4 x double>, <4 x double>, <4 x i1>, i32)
 
 define <4 x double> @vfmax_vv_v4f64(<4 x double> %va, <4 x double> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v4f64:
@@ -316,8 +296,6 @@ define <4 x double> @vfmax_vv_v4f64_unmasked(<4 x double> %va, <4 x double> %vb,
   ret <4 x double> %v
 }
 
-declare <8 x double> @llvm.vp.maxnum.v8f64(<8 x double>, <8 x double>, <8 x i1>, i32)
-
 define <8 x double> @vfmax_vv_v8f64(<8 x double> %va, <8 x double> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v8f64:
 ; CHECK:       # %bb.0:
@@ -337,8 +315,6 @@ define <8 x double> @vfmax_vv_v8f64_unmasked(<8 x double> %va, <8 x double> %vb,
   %v = call <8 x double> @llvm.vp.maxnum.v8f64(<8 x double> %va, <8 x double> %vb, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x double> %v
 }
-
-declare <15 x double> @llvm.vp.maxnum.v15f64(<15 x double>, <15 x double>, <15 x i1>, i32)
 
 define <15 x double> @vfmax_vv_v15f64(<15 x double> %va, <15 x double> %vb, <15 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v15f64:
@@ -360,8 +336,6 @@ define <15 x double> @vfmax_vv_v15f64_unmasked(<15 x double> %va, <15 x double> 
   ret <15 x double> %v
 }
 
-declare <16 x double> @llvm.vp.maxnum.v16f64(<16 x double>, <16 x double>, <16 x i1>, i32)
-
 define <16 x double> @vfmax_vv_v16f64(<16 x double> %va, <16 x double> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v16f64:
 ; CHECK:       # %bb.0:
@@ -381,8 +355,6 @@ define <16 x double> @vfmax_vv_v16f64_unmasked(<16 x double> %va, <16 x double> 
   %v = call <16 x double> @llvm.vp.maxnum.v16f64(<16 x double> %va, <16 x double> %vb, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x double> %v
 }
-
-declare <32 x double> @llvm.vp.maxnum.v32f64(<32 x double>, <32 x double>, <32 x i1>, i32)
 
 define <32 x double> @vfmax_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v32f64:

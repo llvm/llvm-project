@@ -17,6 +17,7 @@ add_mlir_library(MLIRTestAnalysis
   DataFlow/TestDenseForwardDataFlowAnalysis.cpp
   DataFlow/TestLivenessAnalysis.cpp
   DataFlow/TestSparseBackwardDataFlowAnalysis.cpp
+  DataFlow/TestStridedMetadataRangeAnalysis.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

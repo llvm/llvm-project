@@ -146,12 +146,10 @@ static void packFunctionArguments(Module *module) {
   llvm::IRBuilder<> builder(ctx);
   DenseSet<llvm::Function *> interfaceFunctions;
   for (auto &func : module->getFunctionList()) {
-    if (func.isDeclaration()) {
+    if (func.isDeclaration() || func.hasLocalLinkage())
       continue;
-    }
-    if (interfaceFunctions.count(&func)) {
+    if (interfaceFunctions.count(&func))
       continue;
-    }
 
     // Given a function `foo(<...>)`, define the interface function
     // `mlir_foo(i8**)`.
@@ -239,6 +237,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   // Remember all entry-points if object dumping is enabled.
   if (options.enableObjectDump) {
     for (auto funcOp : m->getRegion(0).getOps<LLVM::LLVMFuncOp>()) {
+      if (funcOp.getBlocks().empty())
+        continue;
       StringRef funcName = funcOp.getSymName();
       engine->functionNames.push_back(funcName.str());
     }

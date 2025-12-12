@@ -4,7 +4,7 @@
 #
 #   docker run --rm -it "$(docker build -f tests/linux/Dockerfile -q .)"
 #
-FROM alpine:latest AS base
+FROM docker.io/alpine:latest AS base
 
 RUN apk add --no-cache bash build-base gcc gmp-dev make python2
 

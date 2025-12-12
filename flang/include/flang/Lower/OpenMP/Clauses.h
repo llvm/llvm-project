@@ -113,6 +113,8 @@ Object makeObject(const parser::Designator &dsg,
                   semantics::SemanticsContext &semaCtx);
 Object makeObject(const parser::StructureComponent &comp,
                   semantics::SemanticsContext &semaCtx);
+Object makeObject(const parser::EntityDecl &decl,
+                  semantics::SemanticsContext &semaCtx);
 
 inline auto makeObjectFn(semantics::SemanticsContext &semaCtx) {
   return [&](auto &&s) { return makeObject(s, semaCtx); };
@@ -172,6 +174,7 @@ std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx);
 
 namespace clause {
+using StylizedInstance = tomp::type::StylizedInstanceT<IdTy, ExprTy>;
 using Range = tomp::type::RangeT<ExprTy>;
 using Mapper = tomp::type::MapperT<IdTy, ExprTy>;
 using Iterator = tomp::type::IteratorT<TypeTy, IdTy, ExprTy>;
@@ -204,6 +207,7 @@ using At = tomp::clause::AtT<TypeTy, IdTy, ExprTy>;
 using Bind = tomp::clause::BindT<TypeTy, IdTy, ExprTy>;
 using Capture = tomp::clause::CaptureT<TypeTy, IdTy, ExprTy>;
 using Collapse = tomp::clause::CollapseT<TypeTy, IdTy, ExprTy>;
+using Collector = tomp::clause::CollectorT<TypeTy, IdTy, ExprTy>;
 using Compare = tomp::clause::CompareT<TypeTy, IdTy, ExprTy>;
 using Contains = tomp::clause::ContainsT<TypeTy, IdTy, ExprTy>;
 using Copyin = tomp::clause::CopyinT<TypeTy, IdTy, ExprTy>;
@@ -214,6 +218,7 @@ using Depend = tomp::clause::DependT<TypeTy, IdTy, ExprTy>;
 using Destroy = tomp::clause::DestroyT<TypeTy, IdTy, ExprTy>;
 using Detach = tomp::clause::DetachT<TypeTy, IdTy, ExprTy>;
 using Device = tomp::clause::DeviceT<TypeTy, IdTy, ExprTy>;
+using DeviceSafesync = tomp::clause::DeviceSafesyncT<TypeTy, IdTy, ExprTy>;
 using DeviceType = tomp::clause::DeviceTypeT<TypeTy, IdTy, ExprTy>;
 using DistSchedule = tomp::clause::DistScheduleT<TypeTy, IdTy, ExprTy>;
 using Doacross = tomp::clause::DoacrossT<TypeTy, IdTy, ExprTy>;
@@ -238,12 +243,13 @@ using If = tomp::clause::IfT<TypeTy, IdTy, ExprTy>;
 using Inbranch = tomp::clause::InbranchT<TypeTy, IdTy, ExprTy>;
 using Inclusive = tomp::clause::InclusiveT<TypeTy, IdTy, ExprTy>;
 using Indirect = tomp::clause::IndirectT<TypeTy, IdTy, ExprTy>;
+using Inductor = tomp::clause::InductorT<TypeTy, IdTy, ExprTy>;
 using Init = tomp::clause::InitT<TypeTy, IdTy, ExprTy>;
 using Initializer = tomp::clause::InitializerT<TypeTy, IdTy, ExprTy>;
 using InReduction = tomp::clause::InReductionT<TypeTy, IdTy, ExprTy>;
 using IsDevicePtr = tomp::clause::IsDevicePtrT<TypeTy, IdTy, ExprTy>;
 using Lastprivate = tomp::clause::LastprivateT<TypeTy, IdTy, ExprTy>;
-using LoopRange = tomp::clause::LoopRangeT<TypeTy, IdTy, ExprTy>;
+using Looprange = tomp::clause::LooprangeT<TypeTy, IdTy, ExprTy>;
 using Linear = tomp::clause::LinearT<TypeTy, IdTy, ExprTy>;
 using Link = tomp::clause::LinkT<TypeTy, IdTy, ExprTy>;
 using Map = tomp::clause::MapT<TypeTy, IdTy, ExprTy>;
@@ -282,6 +288,7 @@ using Replayable = tomp::clause::ReplayableT<TypeTy, IdTy, ExprTy>;
 using ReverseOffload = tomp::clause::ReverseOffloadT<TypeTy, IdTy, ExprTy>;
 using Safelen = tomp::clause::SafelenT<TypeTy, IdTy, ExprTy>;
 using Schedule = tomp::clause::ScheduleT<TypeTy, IdTy, ExprTy>;
+using SelfMaps = tomp::clause::SelfMapsT<TypeTy, IdTy, ExprTy>;
 using SeqCst = tomp::clause::SeqCstT<TypeTy, IdTy, ExprTy>;
 using Severity = tomp::clause::SeverityT<TypeTy, IdTy, ExprTy>;
 using Shared = tomp::clause::SharedT<TypeTy, IdTy, ExprTy>;
@@ -292,6 +299,7 @@ using Permutation = tomp::clause::PermutationT<TypeTy, IdTy, ExprTy>;
 using TaskReduction = tomp::clause::TaskReductionT<TypeTy, IdTy, ExprTy>;
 using ThreadLimit = tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy>;
 using Threads = tomp::clause::ThreadsT<TypeTy, IdTy, ExprTy>;
+using Threadset = tomp::clause::ThreadsetT<TypeTy, IdTy, ExprTy>;
 using Transparent = tomp::clause::TransparentT<TypeTy, IdTy, ExprTy>;
 using To = tomp::clause::ToT<TypeTy, IdTy, ExprTy>;
 using UnifiedAddress = tomp::clause::UnifiedAddressT<TypeTy, IdTy, ExprTy>;

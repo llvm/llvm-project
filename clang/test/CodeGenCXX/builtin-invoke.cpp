@@ -55,7 +55,7 @@ extern "C" void call_memptr(std::reference_wrapper<Callable> wrapper) {
   // CHECK-NEXT:   br label %memptr.end
   // CHECK-EMPTY:
   // CHECK-NEXT: memptr.end:
-  // CHECK-NEXT:   %2 = phi ptr [ %memptr.virtualfn, %memptr.virtual ], [ @_ZN8Callable4funcEv, %memptr.nonvirtual ]
+  // CHECK-NEXT:   %2 = phi ptr [ %memptr.virtualfn, %memptr.virtual ], [ inttoptr (i64 ptrtoint (ptr @_ZN8Callable4funcEv to i64) to ptr), %memptr.nonvirtual ]
   // CHECK-NEXT:   call void %2(ptr noundef nonnull align 1 dereferenceable(1) %0)
   // CHECK-NEXT:   ret void
 }

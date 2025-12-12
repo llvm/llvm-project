@@ -115,5 +115,150 @@ define ptx_kernel void @inlineasm(ptr %p) {
   store <2 x float> %mul, ptr %p, align 8
   ret void
 }
+
+define ptx_kernel void @trunc_v2i32(<2 x i32> %0) {
+; CHECK-SM90A-LABEL: trunc_v2i32(
+; CHECK-SM90A:       {
+; CHECK-SM90A-NEXT:    .reg .b32 %r<7>;
+; CHECK-SM90A-NEXT:    .reg .b64 %rd<2>;
+; CHECK-SM90A-EMPTY:
+; CHECK-SM90A-NEXT:  // %bb.0:
+; CHECK-SM90A-NEXT:    ld.param.v2.b32 {%r1, %r2}, [trunc_v2i32_param_0];
+; CHECK-SM90A-NEXT:    prmt.b32 %r3, %r1, %r2, 0x3340U;
+; CHECK-SM90A-NEXT:    mov.b32 %r4, 0;
+; CHECK-SM90A-NEXT:    prmt.b32 %r5, %r4, 0, 0x3340U;
+; CHECK-SM90A-NEXT:    prmt.b32 %r6, %r5, %r3, 0x5410U;
+; CHECK-SM90A-NEXT:    mov.b64 %rd1, 0;
+; CHECK-SM90A-NEXT:    st.b32 [%rd1], %r6;
+; CHECK-SM90A-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: trunc_v2i32(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b32 %r<7>;
+; CHECK-SM100-NEXT:    .reg .b64 %rd<3>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.b64 %rd1, [trunc_v2i32_param_0];
+; CHECK-SM100-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-SM100-NEXT:    mov.b32 %r3, 0;
+; CHECK-SM100-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
+; CHECK-SM100-NEXT:    prmt.b32 %r5, %r1, %r2, 0x3340U;
+; CHECK-SM100-NEXT:    prmt.b32 %r6, %r4, %r5, 0x5410U;
+; CHECK-SM100-NEXT:    mov.b64 %rd2, 0;
+; CHECK-SM100-NEXT:    st.b32 [%rd2], %r6;
+; CHECK-SM100-NEXT:    ret;
+  %2 = trunc <2 x i32> %0 to <2 x i8>
+  %3 = shufflevector <2 x i8> zeroinitializer, <2 x i8> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x i8> %3, ptr null, align 4
+  ret void
+}
+
+define ptx_kernel void @zextend_to_v2i32(<2 x i8> %0) {
+; CHECK-SM90A-LABEL: zextend_to_v2i32(
+; CHECK-SM90A:       {
+; CHECK-SM90A-NEXT:    .reg .b16 %rs<3>;
+; CHECK-SM90A-NEXT:    .reg .b32 %r<4>;
+; CHECK-SM90A-NEXT:    .reg .b64 %rd<5>;
+; CHECK-SM90A-EMPTY:
+; CHECK-SM90A-NEXT:  // %bb.0:
+; CHECK-SM90A-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [zextend_to_v2i32_param_0];
+; CHECK-SM90A-NEXT:    mov.b32 %r1, {%rs1, %rs2};
+; CHECK-SM90A-NEXT:    cvt.u32.u16 %r2, %rs1;
+; CHECK-SM90A-NEXT:    cvt.u32.u16 %r3, %rs2;
+; CHECK-SM90A-NEXT:    mov.b64 %rd1, 12;
+; CHECK-SM90A-NEXT:    st.b32 [%rd1], %r3;
+; CHECK-SM90A-NEXT:    mov.b64 %rd2, 8;
+; CHECK-SM90A-NEXT:    st.b32 [%rd2], %r2;
+; CHECK-SM90A-NEXT:    mov.b64 %rd3, 4;
+; CHECK-SM90A-NEXT:    st.b32 [%rd3], 0;
+; CHECK-SM90A-NEXT:    mov.b64 %rd4, 0;
+; CHECK-SM90A-NEXT:    st.b32 [%rd4], 0;
+; CHECK-SM90A-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: zextend_to_v2i32(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b16 %rs<3>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<5>;
+; CHECK-SM100-NEXT:    .reg .b64 %rd<8>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [zextend_to_v2i32_param_0];
+; CHECK-SM100-NEXT:    mov.b32 %r1, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r2, %rs2;
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r3, %rs1;
+; CHECK-SM100-NEXT:    mov.b64 %rd1, {%r3, %r2};
+; CHECK-SM100-NEXT:    mov.b32 %r4, 0;
+; CHECK-SM100-NEXT:    mov.b64 %rd2, {%r4, %r4};
+; CHECK-SM100-NEXT:    mov.b64 %rd3, 4;
+; CHECK-SM100-NEXT:    st.b32 [%rd3], %rd2;
+; CHECK-SM100-NEXT:    mov.b64 %rd4, 0;
+; CHECK-SM100-NEXT:    st.b32 [%rd4], %rd2;
+; CHECK-SM100-NEXT:    mov.b64 %rd5, 8;
+; CHECK-SM100-NEXT:    st.b32 [%rd5], %rd1;
+; CHECK-SM100-NEXT:    shr.u64 %rd6, %rd1, 32;
+; CHECK-SM100-NEXT:    mov.b64 %rd7, 12;
+; CHECK-SM100-NEXT:    st.b32 [%rd7], %rd6;
+; CHECK-SM100-NEXT:    ret;
+  %2 = zext <2 x i8> %0 to <2 x i32>
+  %3 = shufflevector <2 x i32> zeroinitializer, <2 x i32> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x i32> %3, ptr null, align 4
+  ret void
+}
+
+define ptx_kernel void @sextend_to_v2i32(<2 x i8> %0) {
+; CHECK-SM90A-LABEL: sextend_to_v2i32(
+; CHECK-SM90A:       {
+; CHECK-SM90A-NEXT:    .reg .b16 %rs<3>;
+; CHECK-SM90A-NEXT:    .reg .b32 %r<6>;
+; CHECK-SM90A-NEXT:    .reg .b64 %rd<5>;
+; CHECK-SM90A-EMPTY:
+; CHECK-SM90A-NEXT:  // %bb.0:
+; CHECK-SM90A-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [sextend_to_v2i32_param_0];
+; CHECK-SM90A-NEXT:    mov.b32 %r1, {%rs1, %rs2};
+; CHECK-SM90A-NEXT:    cvt.u32.u16 %r2, %rs1;
+; CHECK-SM90A-NEXT:    cvt.s32.s8 %r3, %r2;
+; CHECK-SM90A-NEXT:    cvt.u32.u16 %r4, %rs2;
+; CHECK-SM90A-NEXT:    cvt.s32.s8 %r5, %r4;
+; CHECK-SM90A-NEXT:    mov.b64 %rd1, 12;
+; CHECK-SM90A-NEXT:    st.b32 [%rd1], %r5;
+; CHECK-SM90A-NEXT:    mov.b64 %rd2, 8;
+; CHECK-SM90A-NEXT:    st.b32 [%rd2], %r3;
+; CHECK-SM90A-NEXT:    mov.b64 %rd3, 4;
+; CHECK-SM90A-NEXT:    st.b32 [%rd3], 0;
+; CHECK-SM90A-NEXT:    mov.b64 %rd4, 0;
+; CHECK-SM90A-NEXT:    st.b32 [%rd4], 0;
+; CHECK-SM90A-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: sextend_to_v2i32(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b16 %rs<3>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<7>;
+; CHECK-SM100-NEXT:    .reg .b64 %rd<8>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [sextend_to_v2i32_param_0];
+; CHECK-SM100-NEXT:    mov.b32 %r1, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r2, %rs2;
+; CHECK-SM100-NEXT:    cvt.s32.s8 %r3, %r2;
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r4, %rs1;
+; CHECK-SM100-NEXT:    cvt.s32.s8 %r5, %r4;
+; CHECK-SM100-NEXT:    mov.b64 %rd1, {%r5, %r3};
+; CHECK-SM100-NEXT:    mov.b32 %r6, 0;
+; CHECK-SM100-NEXT:    mov.b64 %rd2, {%r6, %r6};
+; CHECK-SM100-NEXT:    mov.b64 %rd3, 4;
+; CHECK-SM100-NEXT:    st.b32 [%rd3], %rd2;
+; CHECK-SM100-NEXT:    mov.b64 %rd4, 0;
+; CHECK-SM100-NEXT:    st.b32 [%rd4], %rd2;
+; CHECK-SM100-NEXT:    mov.b64 %rd5, 8;
+; CHECK-SM100-NEXT:    st.b32 [%rd5], %rd1;
+; CHECK-SM100-NEXT:    shr.u64 %rd6, %rd1, 32;
+; CHECK-SM100-NEXT:    mov.b64 %rd7, 12;
+; CHECK-SM100-NEXT:    st.b32 [%rd7], %rd6;
+; CHECK-SM100-NEXT:    ret;
+  %2 = sext <2 x i8> %0 to <2 x i32>
+  %3 = shufflevector <2 x i32> zeroinitializer, <2 x i32> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x i32> %3, ptr null, align 4
+  ret void
+}
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}

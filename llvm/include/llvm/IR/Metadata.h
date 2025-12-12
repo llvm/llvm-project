@@ -41,6 +41,7 @@
 
 namespace llvm {
 
+enum class CaptureComponents : uint8_t;
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
@@ -1480,6 +1481,13 @@ public:
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
                                                       const MDNode *B);
+
+  /// Convert !captures metadata to CaptureComponents. MD may be nullptr.
+  LLVM_ABI static CaptureComponents toCaptureComponents(const MDNode *MD);
+  /// Convert CaptureComponents to !captures metadata. The return value may be
+  /// nullptr.
+  LLVM_ABI static MDNode *fromCaptureComponents(LLVMContext &Ctx,
+                                                CaptureComponents CC);
 };
 
 /// Tuple of metadata.

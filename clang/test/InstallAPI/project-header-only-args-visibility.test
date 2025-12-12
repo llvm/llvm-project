@@ -1,0 +1,69 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+
+; RUN: clang-installapi \
+; RUN: -target arm64-apple-macos26 -install_name @rpath/libfoo.dylib \
+; RUN: -current_version 1 -compatibility_version 1 \
+; RUN: -Xproject -fvisibility=hidden -I%t/usr/include \
+; RUN: -I%t -dynamiclib  %t/inputs.json \
+; RUN: -o %t/output.tbd 2>&1 | FileCheck %s --allow-empty
+; RUN: llvm-readtapi --compare %t/output.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty
+
+; CHECK-NOT: error
+; CHECK-NOT: warning
+
+//--- usr/include/public.h
+int foo(void);
+
+//--- project.h
+int bar(void);
+
+//--- expected.tbd
+{
+  "main_library": {
+    "exported_symbols": [
+      {
+        "text": {
+          "global": [
+            "_foo"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "@rpath/libfoo.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "26",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+;--- inputs.json.in
+{
+  "headers": [ 
+  {
+    "path" : "DSTROOT/usr/include/public.h",
+    "type" : "public"
+  },
+  {
+    "path" : "DSTROOT/project.h",
+    "type" : "project"
+  }
+  ],
+  "version": "3"
+}

@@ -23,7 +23,7 @@ class PPCInstPrinter : public MCInstPrinter {
 private:
   bool showRegistersWithPercentPrefix(const char *RegName) const;
   bool showRegistersWithPrefix() const;
-  const char *getVerboseConditionRegName(unsigned RegNum,
+  const char *getVerboseConditionRegName(MCRegister Reg,
                                          unsigned RegEncoding) const;
 
 public:
@@ -79,6 +79,8 @@ public:
   void printU12ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printS16ImmOperand(const MCInst *MI, unsigned OpNo,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
+  void printS32ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printS34ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);

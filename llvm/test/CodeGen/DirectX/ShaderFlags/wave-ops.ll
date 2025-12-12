@@ -76,6 +76,20 @@ entry:
   ret i32 %ret
 }
 
+define noundef i32 @wave_reduce_min(i32 noundef %x) {
+entry:
+  ; CHECK: Function wave_reduce_min : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.reduce.min.i32(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @wave_reduce_umin(i32 noundef %x) {
+entry:
+  ; CHECK: Function wave_reduce_umin : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.reduce.umin.i32(i32 %x)
+  ret i32 %ret
+}
+
 define void @wave_active_countbits(i1 %expr) {
 entry:
   ; CHECK: Function wave_active_countbits : [[WAVE_FLAG]]

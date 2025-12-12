@@ -123,6 +123,13 @@ a.bataev@outlook.com (email), [alexey-bataev](https://github.com/alexey-bataev) 
 Chandler Carruth \
 chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
 
+#### DFAJumpThreading
+
+Hongyu Chen \
+xxs\_chy@outlook.com (email), [XChy](https://github.com/XChy) (Github) \
+Usman Nadeem \
+mnadeem@quicinc.com (email), [UsmanNadeem](https://github.com/UsmanNadeem) (Github)
+
 ### Instrumentation and sanitizers
 
 #### Sanitizers not covered by someone else
@@ -190,7 +197,7 @@ david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub
 Amara Emerson (esp. AArch64 GlobalISel) \
 amara@apple.com (email), [aemerson](https://github.com/aemerson) (GitHub) \
 Eli Friedman (esp. ARM64EC) \
-efriedma@quicinc.com (email), [efriedma-quic](https://github.com/efriedma-quic) (GitHub) \
+efriedma@qti.qualcomm.com (email), [efriedma-quic](https://github.com/efriedma-quic) (GitHub) \
 Sjoerd Meijer \
 smeijer@nvidia.com (email), [sjoerdmeijer](https://github.com/sjoerdmeijer) (GitHub) \
 Nashe Mncube \
@@ -239,7 +246,7 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 #### Hexagon backend
 
 Sundeep Kushwaha \
-sundeepk@quicinc.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
+sundeepk@qti.qualcomm.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
 
 #### Lanai backend
 
@@ -504,6 +511,8 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [libclc maintainers](https://github.com/llvm/llvm-project/blob/main/libclc/Maintainers.md)
 
+[libsycl maintainers](https://github.com/llvm/llvm-project/blob/main/libsycl/Maintainers.md)
+
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
 
 [LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.md)
@@ -526,6 +535,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 ### Inactive or former component maintainers
 
 Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
+Owen Anderson (resistor@mac.com, [resistor](https://github.com/resistor)) -- SelectionDAG \
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
 Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support, Inlining, CMake and library layering \
 Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \

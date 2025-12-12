@@ -87,7 +87,7 @@ call_indirect_explicit_tables:
 # CHECK-NEXT:         Mutable:         true
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           66576
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:   - Type:            EXPORT
 # CHECK-NEXT:     Exports:
 # CHECK-NEXT:       - Name:            memory
@@ -127,14 +127,14 @@ call_indirect_explicit_tables:
 # CHECK-NEXT:         Body:            42010B
 # CHECK-NEXT:       - Index:           3
 # CHECK-NEXT:         Locals:          []
-# CHECK-NEXT:         Body:            41002802808880800011818080800083808080001A41002802848880800011828080800083808080001A0B
+# CHECK-NEXT:         Body:            41002802808084800011818080800083808080001A41002802848084800011828080800083808080001A0B
 # CHECK-NEXT:   - Type:            DATA
 # CHECK-NEXT:     Segments:
-# CHECK-NEXT:       - SectionOffset:   7
+# CHECK-NEXT:       - SectionOffset:   8
 # CHECK-NEXT:         InitFlags:       0
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           1024
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:         Content:         '0100000002000000'
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            name

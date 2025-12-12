@@ -717,7 +717,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   RTLIB::Libcall LC = IsPowI ? RTLIB::getPOWI(N->getValueType(0))
                              : RTLIB::getLDEXP(N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
-  if (!TLI.getLibcallName(LC)) {
+  if (TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
     // Some targets don't have a powi libcall; use pow instead.
     // FIXME: Implement this if some target needs it.
     DAG.getContext()->emitError("do not know how to soften fpowi to fpow");
@@ -802,7 +802,8 @@ bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   assert(VT == N->getValueType(1) &&
          "expected both return values to have the same type");
 
-  if (!TLI.getLibcallName(LC))
+  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
     return false;
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
@@ -831,8 +832,9 @@ bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   CallOptions.setTypeListBeforeSoften({OpsVT}, VT)
       .setOpsTypeOverrides(CallOpsTypeOverrides);
 
-  auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, DL,
-                                            /*Chain=*/SDValue());
+  auto [ReturnVal, Chain] =
+      TLI.makeLibCall(DAG, LCImpl, NVT, Ops, CallOptions, DL,
+                      /*Chain=*/SDValue());
 
   auto CreateStackLoad = [&, Chain = Chain](SDValue StackSlot) {
     int FrameIdx = cast<FrameIndexSDNode>(StackSlot)->getIndex();
@@ -862,7 +864,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
   RTLIB::Libcall CosLC = RTLIB::getCOS(VT);
 
   SDValue SoftSin, SoftCos;
-  if (!TLI.getLibcallName(SinLC) || !TLI.getLibcallName(CosLC)) {
+  if (TLI.getLibcallImpl(SinLC) == RTLIB::Unsupported ||
+      TLI.getLibcallImpl(CosLC) == RTLIB::Unsupported) {
     DAG.getContext()->emitError("do not know how to soften fsincos");
 
     EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
@@ -1171,6 +1174,12 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::FCOPYSIGN:   Res = SoftenFloatOp_FCOPYSIGN(N); break;
   case ISD::FAKE_USE:
     Res = SoftenFloatOp_FAKE_USE(N);
+    break;
+  case ISD::STACKMAP:
+    Res = SoftenFloatOp_STACKMAP(N, OpNo);
+    break;
+  case ISD::PATCHPOINT:
+    Res = SoftenFloatOp_PATCHPOINT(N, OpNo);
     break;
   }
 
@@ -1512,6 +1521,20 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FAKE_USE(SDNode *N) {
                      N->getOperand(0), Op1);
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatOp_STACKMAP(SDNode *N, unsigned OpNo) {
+  assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
+  SmallVector<SDValue> NewOps(N->ops());
+  NewOps[OpNo] = GetSoftenedFloat(NewOps[OpNo]);
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
+  assert(OpNo >= 7);
+  SmallVector<SDValue> NewOps(N->ops());
+  NewOps[OpNo] = GetSoftenedFloat(NewOps[OpNo]);
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
 //===----------------------------------------------------------------------===//
 //  Float Result Expansion
 //===----------------------------------------------------------------------===//
@@ -1706,7 +1729,7 @@ void DAGTypeLegalizer::ExpandFloatRes_UnaryWithTwoFPResults(
     SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo) {
   assert(!N->isStrictFPOpcode() && "strictfp not implemented");
   SmallVector<SDValue> Results;
-  DAG.expandMultipleResultFPLibCall(LC, N, Results, CallRetResNo);
+  TLI.expandMultipleResultFPLibCall(DAG, LC, N, Results, CallRetResNo);
   for (auto [ResNo, Res] : enumerate(Results)) {
     SDValue Lo, Hi;
     GetPairElements(Res, Lo, Hi);
@@ -3313,7 +3336,6 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_ROUND:   R = SoftPromoteHalfRes_FP_ROUND(N); break;
 
   // Unary FP Operations
-  case ISD::FABS:
   case ISD::FACOS:
   case ISD::FASIN:
   case ISD::FATAN:
@@ -3329,7 +3351,6 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FLOG2:
   case ISD::FLOG10:
   case ISD::FNEARBYINT:
-  case ISD::FNEG:
   case ISD::FREEZE:
   case ISD::FRINT:
   case ISD::FROUND:
@@ -3341,6 +3362,12 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FTAN:
   case ISD::FTANH:
   case ISD::FCANONICALIZE: R = SoftPromoteHalfRes_UnaryOp(N); break;
+  case ISD::FABS:
+    R = SoftPromoteHalfRes_FABS(N);
+    break;
+  case ISD::FNEG:
+    R = SoftPromoteHalfRes_FNEG(N);
+    break;
   case ISD::AssertNoFPClass:
     R = SoftPromoteHalfRes_AssertNoFPClass(N);
     break;
@@ -3670,6 +3697,24 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UnaryOp(SDNode *N) {
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FABS(SDNode *N) {
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  SDLoc dl(N);
+
+  // Clear the sign bit.
+  return DAG.getNode(ISD::AND, dl, MVT::i16, Op,
+                     DAG.getConstant(0x7fff, dl, MVT::i16));
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FNEG(SDNode *N) {
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  SDLoc dl(N);
+
+  // Invert the sign bit.
+  return DAG.getNode(ISD::XOR, dl, MVT::i16, Op,
+                     DAG.getConstant(0x8000, dl, MVT::i16));
+}
+
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_AssertNoFPClass(SDNode *N) {
   return GetSoftPromotedHalf(N->getOperand(0));
 }
@@ -3740,7 +3785,13 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
-  case ISD::FP_TO_UINT: Res = SoftPromoteHalfOp_FP_TO_XINT(N); break;
+  case ISD::FP_TO_UINT:
+  case ISD::LRINT:
+  case ISD::LLRINT:
+  case ISD::LROUND:
+  case ISD::LLROUND:
+    Res = SoftPromoteHalfOp_Op0WithStrict(N);
+    break;
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
                         Res = SoftPromoteHalfOp_FP_TO_XINT_SAT(N); break;
@@ -3819,7 +3870,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_EXTEND(SDNode *N) {
   return DAG.getNode(GetPromotionOpcode(SVT, RVT), SDLoc(N), RVT, Op);
 }
 
-SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_Op0WithStrict(SDNode *N) {
   EVT RVT = N->getValueType(0);
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);

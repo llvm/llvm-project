@@ -45,6 +45,8 @@ public:
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
+  MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
+
 private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
@@ -332,7 +334,7 @@ public:
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 
@@ -560,11 +562,6 @@ public:
                        unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
   bool denormalsEnabledForType(LLT Ty, const MachineFunction &MF) const;
-
-  bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
-                                 const TargetRegisterInfo *TRI,
-                                 const TargetInstrInfo *TII,
-                                 MCRegister &PhysReg, int &Cost) const override;
 
   bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
                                     const SelectionDAG &DAG, bool SNaN = false,

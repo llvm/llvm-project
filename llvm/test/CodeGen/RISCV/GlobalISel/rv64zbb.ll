@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -global-isel -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZBB
 
-declare i32 @llvm.ctlz.i32(i32, i1)
-
 ; FIXME: We don't need the shift pair before the beqz for RV64I.
 define signext i32 @ctlz_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: ctlz_i32:
@@ -318,8 +316,6 @@ define i32 @ctlz_lshr_i32(i32 signext %a) {
   ret i32 %2
 }
 
-declare i64 @llvm.ctlz.i64(i64, i1)
-
 define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV64I-LABEL: ctlz_i64:
 ; RV64I:       # %bb.0:
@@ -392,8 +388,6 @@ define i64 @ctlz_i64(i64 %a) nounwind {
   %1 = call i64 @llvm.ctlz.i64(i64 %a, i1 false)
   ret i64 %1
 }
-
-declare i32 @llvm.cttz.i32(i32, i1)
 
 define signext i32 @cttz_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: cttz_i32:
@@ -595,8 +589,6 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
   ret i32 %4
 }
 
-declare i64 @llvm.cttz.i64(i64, i1)
-
 define i64 @cttz_i64(i64 %a) nounwind {
 ; RV64I-LABEL: cttz_i64:
 ; RV64I:       # %bb.0:
@@ -658,8 +650,6 @@ define i64 @cttz_i64(i64 %a) nounwind {
   %1 = call i64 @llvm.cttz.i64(i64 %a, i1 false)
   ret i64 %1
 }
-
-declare i32 @llvm.ctpop.i32(i32)
 
 define signext i32 @ctpop_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: ctpop_i32:
@@ -755,8 +745,6 @@ define signext i32 @ctpop_i32_load(ptr %p) nounwind {
   %1 = call i32 @llvm.ctpop.i32(i32 %a)
   ret i32 %1
 }
-
-declare i64 @llvm.ctpop.i64(i64)
 
 define i64 @ctpop_i64(i64 %a) nounwind {
 ; RV64I-LABEL: ctpop_i64:
@@ -1028,8 +1016,6 @@ define i64 @maxu_i64(i64 %a, i64 %b) nounwind {
   ret i64 %cond
 }
 
-declare i32 @llvm.abs.i32(i32, i1 immarg)
-
 define i32 @abs_i32(i32 %x) {
 ; RV64I-LABEL: abs_i32:
 ; RV64I:       # %bb.0:
@@ -1066,8 +1052,6 @@ define signext i32 @abs_i32_sext(i32 signext %x) {
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
   ret i32 %abs
 }
-
-declare i64 @llvm.abs.i64(i64, i1 immarg)
 
 define i64 @abs_i64(i64 %x) {
 ; RV64I-LABEL: abs_i64:
@@ -1115,8 +1099,6 @@ define i64 @zexth_i64(i64 %a) nounwind {
   %and = and i64 %a, 65535
   ret i64 %and
 }
-
-declare i32 @llvm.bswap.i32(i32)
 
 define signext i32 @bswap_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: bswap_i32:
@@ -1172,8 +1154,6 @@ define void @bswap_i32_nosext(i32 signext %a, ptr %x) nounwind {
   store i32 %1, ptr %x
   ret void
 }
-
-declare i64 @llvm.bswap.i64(i64)
 
 define i64 @bswap_i64(i64 %a) {
 ; RV64I-LABEL: bswap_i64:

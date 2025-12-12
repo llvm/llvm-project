@@ -29,9 +29,9 @@
 #include <string>
 #include <utility>
 
-LLVM_ABI extern llvm::cl::opt<bool> NoKernelInfoEndLTO;
-
 namespace llvm {
+
+LLVM_ABI extern llvm::cl::opt<bool> NoKernelInfoEndLTO;
 
 class AAManager;
 using ModulePassManager = PassManager<Module>;

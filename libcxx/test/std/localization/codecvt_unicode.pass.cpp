@@ -2222,10 +2222,11 @@ void test_utf16_ucs2_codecvts() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   test_utf8_utf32_codecvts();
   test_utf8_utf16_codecvts();
   test_utf8_ucs2_codecvts();
   test_utf16_utf32_codecvts();
   test_utf16_ucs2_codecvts();
+  return 0;
 }

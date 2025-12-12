@@ -48,7 +48,7 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 LoadDependentFiles load_dependent_files,
                                 const OptionGroupPlatform *platform_options,
                                 TargetSP &target_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+
   auto result = TargetList::CreateTargetInternal(
       debugger, user_exe_path, triple_str, load_dependent_files,
       platform_options, target_sp);
@@ -63,7 +63,7 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 const ArchSpec &specified_arch,
                                 LoadDependentFiles load_dependent_files,
                                 PlatformSP &platform_sp, TargetSP &target_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+
   auto result = TargetList::CreateTargetInternal(
       debugger, user_exe_path, specified_arch, load_dependent_files,
       platform_sp, target_sp);
@@ -304,13 +304,9 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
 
     ModuleSP exe_module_sp;
     if (platform_sp) {
-      FileSpecList executable_search_paths(
-          Target::GetDefaultExecutableSearchPaths());
       ModuleSpec module_spec(file, arch);
-      error = platform_sp->ResolveExecutable(module_spec, exe_module_sp,
-                                             executable_search_paths.GetSize()
-                                                 ? &executable_search_paths
-                                                 : nullptr);
+      module_spec.SetTarget(target_sp);
+      error = platform_sp->ResolveExecutable(module_spec, exe_module_sp);
     }
 
     if (error.Success() && exe_module_sp) {
@@ -428,6 +424,18 @@ TargetSP TargetList::FindTargetWithProcess(Process *process) const {
   return target_sp;
 }
 
+TargetSP TargetList::FindTargetByGloballyUniqueID(lldb::user_id_t id) const {
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  auto it = llvm::find_if(m_target_list, [id](const TargetSP &item) {
+    return item->GetGloballyUniqueID() == id;
+  });
+
+  if (it != m_target_list.end())
+    return *it;
+
+  return TargetSP();
+}
+
 TargetSP TargetList::GetTargetSP(Target *target) const {
   TargetSP target_sp;
   if (!target)
@@ -513,6 +521,7 @@ uint32_t TargetList::GetIndexOfTarget(lldb::TargetSP target_sp) const {
 }
 
 void TargetList::AddTargetInternal(TargetSP target_sp, bool do_select) {
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   lldbassert(!llvm::is_contained(m_target_list, target_sp) &&
              "target already exists it the list");
   UnregisterInProcessTarget(target_sp);

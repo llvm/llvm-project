@@ -957,8 +957,10 @@ void LoongArchAsmParser::emitLoadAddressAbs(MCInst &Inst, SMLoc IDLoc,
                              : Inst.getOperand(2).getExpr();
   InstSeq Insts;
 
+  // To distinguish between la.abs and %abs_hi20, la.abs will generate
+  // R_LARCH_MARK_LA and R_LARCH_ABS_HI20 relocations.
   Insts.push_back(
-      LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_ABS_HI20));
+      LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_MARK_LA));
   Insts.push_back(
       LoongArchAsmParser::Inst(LoongArch::ORI, ELF::R_LARCH_ABS_LO12));
 

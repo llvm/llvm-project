@@ -70,6 +70,10 @@ static unsigned getSEWOpNum(const MachineInstr &MI) {
   return RISCVII::getSEWOpNum(MI.getDesc());
 }
 
+static unsigned getVecPolicyOpNum(const MachineInstr &MI) {
+  return RISCVII::getVecPolicyOpNum(MI.getDesc());
+}
+
 /// Get the EEW for a load or store instruction.  Return std::nullopt if MI is
 /// not a load or store which ignores SEW.
 static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
@@ -124,7 +128,7 @@ static bool hasUndefinedPassthru(const MachineInstr &MI) {
   // All undefined passthrus should be $noreg: see
   // RISCVDAGToDAGISel::doPeepholeNoRegPassThru
   const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
-  return UseMO.getReg() == RISCV::NoRegister || UseMO.isUndef();
+  return !UseMO.getReg().isValid() || UseMO.isUndef();
 }
 
 /// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
@@ -164,10 +168,13 @@ struct DemandedFields {
   // If this is true, we demand that VTYPE is set to some legal state, i.e. that
   // vill is unset.
   bool VILL = false;
+  bool TWiden = false;
+  bool AltFmt = false;
 
   // Return true if any part of VTYPE was used
   bool usedVTYPE() const {
-    return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy || VILL;
+    return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy || VILL ||
+           TWiden || AltFmt;
   }
 
   // Return true if any property of VL was used
@@ -183,6 +190,8 @@ struct DemandedFields {
     TailPolicy = true;
     MaskPolicy = true;
     VILL = true;
+    TWiden = true;
+    AltFmt = true;
   }
 
   // Mark all VL properties as demanded
@@ -208,6 +217,8 @@ struct DemandedFields {
     TailPolicy |= B.TailPolicy;
     MaskPolicy |= B.MaskPolicy;
     VILL |= B.VILL;
+    AltFmt |= B.AltFmt;
+    TWiden |= B.TWiden;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -254,7 +265,9 @@ struct DemandedFields {
     OS << "SEWLMULRatio=" << SEWLMULRatio << ", ";
     OS << "TailPolicy=" << TailPolicy << ", ";
     OS << "MaskPolicy=" << MaskPolicy << ", ";
-    OS << "VILL=" << VILL;
+    OS << "VILL=" << VILL << ", ";
+    OS << "AltFmt=" << AltFmt << ", ";
+    OS << "TWiden=" << TWiden;
     OS << "}";
   }
 #endif
@@ -323,6 +336,15 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
     return false;
   if (Used.MaskPolicy && RISCVVType::isMaskAgnostic(CurVType) !=
                              RISCVVType::isMaskAgnostic(NewVType))
+    return false;
+  if (Used.TWiden && (RISCVVType::hasXSfmmWiden(CurVType) !=
+                          RISCVVType::hasXSfmmWiden(NewVType) ||
+                      (RISCVVType::hasXSfmmWiden(CurVType) &&
+                       RISCVVType::getXSfmmWiden(CurVType) !=
+                           RISCVVType::getXSfmmWiden(NewVType))))
+    return false;
+  if (Used.AltFmt &&
+      RISCVVType::isAltFmt(CurVType) != RISCVVType::isAltFmt(NewVType))
     return false;
   return true;
 }
@@ -475,6 +497,11 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     Res.TailPolicy = false;
   }
 
+  Res.AltFmt = RISCVII::getAltFmtType(MI.getDesc().TSFlags) !=
+               RISCVII::AltFmtType::DontCare;
+  Res.TWiden = RISCVII::hasTWidenOp(MI.getDesc().TSFlags) ||
+               RISCVInstrInfo::isXSfmmVectorConfigInstr(MI);
+
   return Res;
 }
 
@@ -492,13 +519,13 @@ class VSETVLIInfo {
     unsigned AVLImm;
   };
 
-  enum : uint8_t {
+  enum class AVLState : uint8_t {
     Uninitialized,
     AVLIsReg,
     AVLIsImm,
     AVLIsVLMAX,
     Unknown, // AVL and VTYPE are fully unknown
-  } State = Uninitialized;
+  } State = AVLState::Uninitialized;
 
   // Fields from VTYPE.
   RISCVVType::VLMUL VLMul = RISCVVType::LMUL_1;
@@ -506,11 +533,13 @@ class VSETVLIInfo {
   uint8_t TailAgnostic : 1;
   uint8_t MaskAgnostic : 1;
   uint8_t SEWLMULRatioOnly : 1;
+  uint8_t AltFmt : 1;
+  uint8_t TWiden : 3;
 
 public:
   VSETVLIInfo()
       : AVLImm(0), TailAgnostic(false), MaskAgnostic(false),
-        SEWLMULRatioOnly(false) {}
+        SEWLMULRatioOnly(false), AltFmt(false), TWiden(0) {}
 
   static VSETVLIInfo getUnknown() {
     VSETVLIInfo Info;
@@ -518,27 +547,27 @@ public:
     return Info;
   }
 
-  bool isValid() const { return State != Uninitialized; }
-  void setUnknown() { State = Unknown; }
-  bool isUnknown() const { return State == Unknown; }
+  bool isValid() const { return State != AVLState::Uninitialized; }
+  void setUnknown() { State = AVLState::Unknown; }
+  bool isUnknown() const { return State == AVLState::Unknown; }
 
   void setAVLRegDef(const VNInfo *VNInfo, Register AVLReg) {
     assert(AVLReg.isVirtual());
     AVLRegDef.ValNo = VNInfo;
     AVLRegDef.DefReg = AVLReg;
-    State = AVLIsReg;
+    State = AVLState::AVLIsReg;
   }
 
   void setAVLImm(unsigned Imm) {
     AVLImm = Imm;
-    State = AVLIsImm;
+    State = AVLState::AVLIsImm;
   }
 
-  void setAVLVLMAX() { State = AVLIsVLMAX; }
+  void setAVLVLMAX() { State = AVLState::AVLIsVLMAX; }
 
-  bool hasAVLImm() const { return State == AVLIsImm; }
-  bool hasAVLReg() const { return State == AVLIsReg; }
-  bool hasAVLVLMAX() const { return State == AVLIsVLMAX; }
+  bool hasAVLImm() const { return State == AVLState::AVLIsImm; }
+  bool hasAVLReg() const { return State == AVLState::AVLIsReg; }
+  bool hasAVLVLMAX() const { return State == AVLState::AVLIsVLMAX; }
   Register getAVLReg() const {
     assert(hasAVLReg() && AVLRegDef.DefReg.isVirtual());
     return AVLRegDef.DefReg;
@@ -578,10 +607,38 @@ public:
     }
   }
 
-  unsigned getSEW() const { return SEW; }
-  RISCVVType::VLMUL getVLMUL() const { return VLMul; }
-  bool getTailAgnostic() const { return TailAgnostic; }
-  bool getMaskAgnostic() const { return MaskAgnostic; }
+  bool hasSEWLMULRatioOnly() const { return SEWLMULRatioOnly; }
+
+  unsigned getSEW() const {
+    assert(isValid() && !isUnknown() && !hasSEWLMULRatioOnly() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return SEW;
+  }
+  RISCVVType::VLMUL getVLMUL() const {
+    assert(isValid() && !isUnknown() && !hasSEWLMULRatioOnly() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return VLMul;
+  }
+  bool getTailAgnostic() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return TailAgnostic;
+  }
+  bool getMaskAgnostic() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return MaskAgnostic;
+  }
+  bool getAltFmt() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return AltFmt;
+  }
+  unsigned getTWiden() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return TWiden;
+  }
 
   bool hasNonZeroAVL(const LiveIntervals *LIS) const {
     if (hasAVLImm())
@@ -643,25 +700,34 @@ public:
     SEW = RISCVVType::getSEW(VType);
     TailAgnostic = RISCVVType::isTailAgnostic(VType);
     MaskAgnostic = RISCVVType::isMaskAgnostic(VType);
+    AltFmt = RISCVVType::isAltFmt(VType);
+    TWiden =
+        RISCVVType::hasXSfmmWiden(VType) ? RISCVVType::getXSfmmWiden(VType) : 0;
   }
-  void setVTYPE(RISCVVType::VLMUL L, unsigned S, bool TA, bool MA) {
+  void setVTYPE(RISCVVType::VLMUL L, unsigned S, bool TA, bool MA, bool Altfmt,
+                unsigned W) {
     assert(isValid() && !isUnknown() &&
            "Can't set VTYPE for uninitialized or unknown");
     VLMul = L;
     SEW = S;
     TailAgnostic = TA;
     MaskAgnostic = MA;
+    AltFmt = Altfmt;
+    TWiden = W;
   }
+
+  void setAltFmt(bool AF) { AltFmt = AF; }
 
   void setVLMul(RISCVVType::VLMUL VLMul) { this->VLMul = VLMul; }
 
   unsigned encodeVTYPE() const {
     assert(isValid() && !isUnknown() && !SEWLMULRatioOnly &&
            "Can't encode VTYPE for uninitialized or unknown");
-    return RISCVVType::encodeVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic);
+    if (TWiden != 0)
+      return RISCVVType::encodeXSfmmVType(SEW, TWiden, AltFmt);
+    return RISCVVType::encodeVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic,
+                                   AltFmt);
   }
-
-  bool hasSEWLMULRatioOnly() const { return SEWLMULRatioOnly; }
 
   bool hasSameVTYPE(const VSETVLIInfo &Other) const {
     assert(isValid() && Other.isValid() &&
@@ -670,9 +736,9 @@ public:
            "Can't compare VTYPE in unknown state");
     assert(!SEWLMULRatioOnly && !Other.SEWLMULRatioOnly &&
            "Can't compare when only LMUL/SEW ratio is valid.");
-    return std::tie(VLMul, SEW, TailAgnostic, MaskAgnostic) ==
+    return std::tie(VLMul, SEW, TailAgnostic, MaskAgnostic, AltFmt, TWiden) ==
            std::tie(Other.VLMul, Other.SEW, Other.TailAgnostic,
-                    Other.MaskAgnostic);
+                    Other.MaskAgnostic, Other.AltFmt, Other.TWiden);
   }
 
   unsigned getSEWLMULRatio() const {
@@ -795,33 +861,44 @@ public:
   /// Implement operator<<.
   /// @{
   void print(raw_ostream &OS) const {
-    OS << "{";
-    if (!isValid())
+    OS << '{';
+    switch (State) {
+    case AVLState::Uninitialized:
       OS << "Uninitialized";
-    if (isUnknown())
+      break;
+    case AVLState::Unknown:
       OS << "unknown";
-    if (hasAVLReg())
+      break;
+    case AVLState::AVLIsReg:
       OS << "AVLReg=" << llvm::printReg(getAVLReg());
-    if (hasAVLImm())
+      break;
+    case AVLState::AVLIsImm:
       OS << "AVLImm=" << (unsigned)AVLImm;
-    if (hasAVLVLMAX())
+      break;
+    case AVLState::AVLIsVLMAX:
       OS << "AVLVLMAX";
-    OS << ", ";
+      break;
+    }
+    if (isValid() && !isUnknown()) {
+      OS << ", ";
 
-    unsigned LMul;
-    bool Fractional;
-    std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
+      unsigned LMul;
+      bool Fractional;
+      std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
 
-    OS << "VLMul=";
-    if (Fractional)
-      OS << "mf";
-    else
-      OS << "m";
-    OS << LMul << ", "
-       << "SEW=e" << (unsigned)SEW << ", "
-       << "TailAgnostic=" << (bool)TailAgnostic << ", "
-       << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
-       << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << "}";
+      OS << "VLMul=m";
+      if (Fractional)
+        OS << 'f';
+      OS << LMul << ", "
+         << "SEW=e" << (unsigned)SEW << ", "
+         << "TailAgnostic=" << (bool)TailAgnostic << ", "
+         << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
+         << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << ", "
+         << "TWiden=" << (unsigned)TWiden << ", "
+         << "AltFmt=" << (bool)AltFmt;
+    }
+
+    OS << '}';
   }
 #endif
 };
@@ -847,6 +924,11 @@ struct BlockData {
   bool InQueue = false;
 
   BlockData() = default;
+};
+
+enum TKTMMode {
+  VSETTK = 0,
+  VSETTM = 1,
 };
 
 class RISCVInsertVSETVLI : public MachineFunctionPass {
@@ -904,6 +986,7 @@ private:
   VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) const;
   VSETVLIInfo computeInfoForInstr(const MachineInstr &MI) const;
   void forwardVSETVLIAVL(VSETVLIInfo &Info) const;
+  bool insertVSETMTK(MachineBasicBlock &MBB, TKTMMode Mode) const;
 };
 
 } // end anonymous namespace
@@ -941,6 +1024,18 @@ RISCVInsertVSETVLI::getInfoForVSETVLI(const MachineInstr &MI) const {
   VSETVLIInfo NewInfo;
   if (MI.getOpcode() == RISCV::PseudoVSETIVLI) {
     NewInfo.setAVLImm(MI.getOperand(1).getImm());
+  } else if (RISCVInstrInfo::isXSfmmVectorConfigTNInstr(MI)) {
+    assert(MI.getOpcode() == RISCV::PseudoSF_VSETTNT ||
+           MI.getOpcode() == RISCV::PseudoSF_VSETTNTX0);
+    switch (MI.getOpcode()) {
+    case RISCV::PseudoSF_VSETTNTX0:
+      NewInfo.setAVLVLMAX();
+      break;
+    case RISCV::PseudoSF_VSETTNT:
+      Register ATNReg = MI.getOperand(1).getReg();
+      NewInfo.setAVLRegDef(getVNInfoFromReg(ATNReg, MI, LIS), ATNReg);
+      break;
+    }
   } else {
     assert(MI.getOpcode() == RISCV::PseudoVSETVLI ||
            MI.getOpcode() == RISCV::PseudoVSETVLIX0);
@@ -986,7 +1081,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 
     // If there is a policy operand, use it.
     if (RISCVII::hasVecPolicyOp(TSFlags)) {
-      const MachineOperand &Op = MI.getOperand(MI.getNumExplicitOperands() - 1);
+      const MachineOperand &Op = MI.getOperand(getVecPolicyOpNum(MI));
       uint64_t Policy = Op.getImm();
       assert(Policy <=
                  (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC) &&
@@ -1001,10 +1096,33 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 
   RISCVVType::VLMUL VLMul = RISCVII::getLMul(TSFlags);
 
+  bool AltFmt = RISCVII::getAltFmtType(TSFlags) == RISCVII::AltFmtType::AltFmt;
+  InstrInfo.setAltFmt(AltFmt);
+
   unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
   // A Log2SEW of 0 is an operation on mask registers only.
   unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
   assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
+
+  if (RISCVII::hasTWidenOp(TSFlags)) {
+    const MachineOperand &TWidenOp =
+        MI.getOperand(MI.getNumExplicitOperands() - 1);
+    unsigned TWiden = TWidenOp.getImm();
+
+    InstrInfo.setAVLVLMAX();
+    if (RISCVII::hasVLOp(TSFlags)) {
+      const MachineOperand &TNOp =
+          MI.getOperand(RISCVII::getTNOpNum(MI.getDesc()));
+
+      if (TNOp.getReg().isVirtual())
+        InstrInfo.setAVLRegDef(getVNInfoFromReg(TNOp.getReg(), MI, LIS),
+                               TNOp.getReg());
+    }
+
+    InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic, AltFmt, TWiden);
+
+    return InstrInfo;
+  }
 
   if (RISCVII::hasVLOp(TSFlags)) {
     const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
@@ -1041,7 +1159,9 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
     assert(SEW == EEW && "Initial SEW doesn't match expected EEW");
   }
 #endif
-  InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic);
+  // TODO: Propagate the twiden from previous vtype for potential reuse.
+  InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic, AltFmt,
+                     /*TWiden*/ 0);
 
   forwardVSETVLIAVL(InstrInfo);
 
@@ -1049,10 +1169,33 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 }
 
 void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
-                     MachineBasicBlock::iterator InsertPt, DebugLoc DL,
-                     const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo) {
-
+                                       MachineBasicBlock::iterator InsertPt,
+                                       DebugLoc DL, const VSETVLIInfo &Info,
+                                       const VSETVLIInfo &PrevInfo) {
   ++NumInsertedVSETVL;
+
+  if (Info.getTWiden()) {
+    if (Info.hasAVLVLMAX()) {
+      Register DestReg = MRI->createVirtualRegister(&RISCV::GPRNoX0RegClass);
+      auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoSF_VSETTNTX0))
+                    .addReg(DestReg, RegState::Define | RegState::Dead)
+                    .addReg(RISCV::X0, RegState::Kill)
+                    .addImm(Info.encodeVTYPE());
+      if (LIS) {
+        LIS->InsertMachineInstrInMaps(*MI);
+        LIS->createAndComputeVirtRegInterval(DestReg);
+      }
+    } else {
+      auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoSF_VSETTNT))
+                    .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                    .addReg(Info.getAVLReg())
+                    .addImm(Info.encodeVTYPE());
+      if (LIS)
+        LIS->InsertMachineInstrInMaps(*MI);
+    }
+    return;
+  }
+
   if (PrevInfo.isValid() && !PrevInfo.isUnknown()) {
     // Use X0, X0 form if the AVL is the same and the SEW+LMUL gives the same
     // VLMAX.
@@ -1174,8 +1317,8 @@ static VSETVLIInfo adjustIncoming(const VSETVLIInfo &PrevInfo,
 
   if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
       !PrevInfo.isUnknown()) {
-    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
-            PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
+    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(PrevInfo.getSEWLMULRatio(),
+                                                     Info.getSEW()))
       Info.setVLMul(*NewVLMul);
     Demanded.LMUL = DemandedFields::LMULEqual;
   }
@@ -1194,7 +1337,8 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     // be coalesced into another vsetvli since we won't demand any fields.
     VSETVLIInfo NewInfo; // Need a new VSETVLIInfo to clear SEWLMULRatioOnly
     NewInfo.setAVLImm(1);
-    NewInfo.setVTYPE(RISCVVType::LMUL_1, /*sew*/ 8, /*ta*/ true, /*ma*/ true);
+    NewInfo.setVTYPE(RISCVVType::LMUL_1, /*sew*/ 8, /*ta*/ true, /*ma*/ true,
+                     /*AltFmt*/ false, /*W*/ 0);
     Info = NewInfo;
     return;
   }
@@ -1227,23 +1371,25 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   if (Demanded.VLAny || (Demanded.VLZeroness && !EquallyZero))
     Info.setAVL(IncomingInfo);
 
-  Info.setVTYPE(
-      ((Demanded.LMUL || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
-          .getVLMUL(),
-      ((Demanded.SEW || Demanded.SEWLMULRatio) ? IncomingInfo : Info).getSEW(),
-      // Prefer tail/mask agnostic since it can be relaxed to undisturbed later
-      // if needed.
-      (Demanded.TailPolicy ? IncomingInfo : Info).getTailAgnostic() ||
-          IncomingInfo.getTailAgnostic(),
-      (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
-          IncomingInfo.getMaskAgnostic());
-
-  // If we only knew the sew/lmul ratio previously, replace the VTYPE but keep
-  // the AVL.
+  // If we only knew the sew/lmul ratio previously, replace the VTYPE.
   if (Info.hasSEWLMULRatioOnly()) {
     VSETVLIInfo RatiolessInfo = IncomingInfo;
     RatiolessInfo.setAVL(Info);
     Info = RatiolessInfo;
+  } else {
+    Info.setVTYPE(
+        ((Demanded.LMUL || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
+            .getVLMUL(),
+        ((Demanded.SEW || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
+            .getSEW(),
+        // Prefer tail/mask agnostic since it can be relaxed to undisturbed
+        // later if needed.
+        (Demanded.TailPolicy ? IncomingInfo : Info).getTailAgnostic() ||
+            IncomingInfo.getTailAgnostic(),
+        (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
+            IncomingInfo.getMaskAgnostic(),
+        (Demanded.AltFmt ? IncomingInfo : Info).getAltFmt(),
+        Demanded.TWiden ? IncomingInfo.getTWiden() : 0);
   }
 }
 
@@ -1289,7 +1435,8 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
 
     if (RISCVInstrInfo::isVectorConfigInstr(MI) ||
         RISCVII::hasSEWOp(MI.getDesc().TSFlags) ||
-        isVectorCopy(ST->getRegisterInfo(), MI))
+        isVectorCopy(ST->getRegisterInfo(), MI) ||
+        RISCVInstrInfo::isXSfmmVectorConfigInstr(MI))
       HadVectorOp = true;
 
     transferAfter(Info, MI);
@@ -1450,7 +1597,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
           Register Reg = VLOp.getReg();
 
           // Erase the AVL operand from the instruction.
-          VLOp.setReg(RISCV::NoRegister);
+          VLOp.setReg(Register());
           VLOp.setIsKill(false);
           if (LIS) {
             LiveInterval &LI = LIS->getInterval(Reg);
@@ -1469,7 +1616,10 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
               if (!TII->isAddImmediate(*DeadMI, Reg))
                 continue;
               LIS->RemoveMachineInstrFromMaps(*DeadMI);
+              Register AddReg = DeadMI->getOperand(1).getReg();
               DeadMI->eraseFromParent();
+              if (AddReg.isVirtual())
+                LIS->shrinkToUses(&LIS->getInterval(AddReg));
             }
           }
         }
@@ -1638,6 +1788,14 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
       if (!VNI || !PrevVNI || VNI != PrevVNI)
         return false;
     }
+
+    // If we define VL and need to move the definition up, check we can extend
+    // the live interval upwards from MI to PrevMI.
+    Register VL = MI.getOperand(0).getReg();
+    if (VL.isVirtual() && LIS &&
+        LIS->getInterval(VL).overlaps(LIS->getInstructionIndex(PrevMI),
+                                      LIS->getInstructionIndex(MI)))
+      return false;
   }
 
   assert(PrevMI.getOperand(2).isImm() && MI.getOperand(2).isImm());
@@ -1659,7 +1817,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       return;
     Register OldVLReg = MO.getReg();
-    MO.setReg(RISCV::NoRegister);
+    MO.setReg(Register());
 
     if (LIS)
       LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
@@ -1671,6 +1829,12 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   };
 
   for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
+    // TODO: Support XSfmm.
+    if (RISCVII::hasTWidenOp(MI.getDesc().TSFlags) ||
+        RISCVInstrInfo::isXSfmmVectorConfigInstr(MI)) {
+      NextMI = nullptr;
+      continue;
+    }
 
     if (!RISCVInstrInfo::isVectorConfigInstr(MI)) {
       Used.doUnion(getDemanded(MI, ST));
@@ -1749,11 +1913,15 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   // Loop over the dead AVL values, and delete them now.  This has
   // to be outside the above loop to avoid invalidating iterators.
   for (auto *MI : ToDelete) {
+    assert(MI->getOpcode() == RISCV::ADDI);
+    Register AddReg = MI->getOperand(1).getReg();
     if (LIS) {
       LIS->removeInterval(MI->getOperand(0).getReg());
       LIS->RemoveMachineInstrFromMaps(*MI);
     }
     MI->eraseFromParent();
+    if (LIS && AddReg.isVirtual())
+      LIS->shrinkToUses(&LIS->getInterval(AddReg));
   }
 }
 
@@ -1782,6 +1950,65 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
       MI.addRegisterDefined(RISCV::VL, MRI->getTargetRegisterInfo());
     }
   }
+}
+
+bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
+                                       TKTMMode Mode) const {
+
+  bool Changed = false;
+  for (auto &MI : MBB) {
+    uint64_t TSFlags = MI.getDesc().TSFlags;
+    if (RISCVInstrInfo::isXSfmmVectorConfigTMTKInstr(MI) ||
+        !RISCVII::hasSEWOp(TSFlags) || !RISCVII::hasTWidenOp(TSFlags))
+      continue;
+
+    VSETVLIInfo CurrInfo = computeInfoForInstr(MI);
+
+    if (Mode == VSETTK && !RISCVII::hasTKOp(TSFlags))
+      continue;
+
+    if (Mode == VSETTM && !RISCVII::hasTMOp(TSFlags))
+      continue;
+
+    unsigned OpNum = 0;
+    unsigned Opcode = 0;
+    switch (Mode) {
+    case VSETTK:
+      OpNum = RISCVII::getTKOpNum(MI.getDesc());
+      Opcode = RISCV::PseudoSF_VSETTK;
+      break;
+    case VSETTM:
+      OpNum = RISCVII::getTMOpNum(MI.getDesc());
+      Opcode = RISCV::PseudoSF_VSETTM;
+      break;
+    }
+
+    assert(OpNum && Opcode && "Invalid OpNum or Opcode");
+
+    MachineOperand &Op = MI.getOperand(OpNum);
+
+    auto TmpMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(Opcode))
+                     .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                     .addReg(Op.getReg())
+                     .addImm(Log2_32(CurrInfo.getSEW()))
+                     .addImm(CurrInfo.getTWiden());
+
+    Changed = true;
+    Register Reg = Op.getReg();
+    Op.setReg(Register());
+    Op.setIsKill(false);
+    if (LIS) {
+      LIS->InsertMachineInstrInMaps(*TmpMI);
+      LiveInterval &LI = LIS->getInterval(Reg);
+
+      // Erase the AVL operand from the instruction.
+      LIS->shrinkToUses(&LI);
+      // TODO: Enable this once needVSETVLIPHI is supported.
+      // SmallVector<LiveInterval *> SplitLIs;
+      // LIS->splitSeparateComponents(LI, SplitLIs);
+    }
+  }
+  return Changed;
 }
 
 bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
@@ -1860,6 +2087,11 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // of VLEFF/VLSEGFF.
   for (MachineBasicBlock &MBB : MF)
     insertReadVL(MBB);
+
+  for (MachineBasicBlock &MBB : MF) {
+    insertVSETMTK(MBB, VSETTM);
+    insertVSETMTK(MBB, VSETTK);
+  }
 
   BlockInfo.clear();
   return HaveVectorOp;

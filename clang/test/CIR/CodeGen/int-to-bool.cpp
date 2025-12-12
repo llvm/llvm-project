@@ -10,7 +10,7 @@ bool f1(unsigned char c) {
 }
 
 // CIR: cir.func{{.*}} @_Z2f1h
-// CIR:   cir.cast(int_to_bool, %{{.*}} : !u8i), !cir.bool
+// CIR:   cir.cast int_to_bool %{{.*}} : !u8i -> !cir.bool
 
 // Note: The full zext/store/load/trunc sequence is checked here to show what
 // CIR is being lowered to. There's no need to check it for every function since
@@ -33,7 +33,7 @@ bool f2(short s) {
 }
 
 // CIR: cir.func{{.*}} @_Z2f2s
-// CIR:   cir.cast(int_to_bool, %{{.*}} : !s16i), !cir.bool
+// CIR:   cir.cast int_to_bool %{{.*}} : !s16i -> !cir.bool
 
 // LLVM: define{{.*}} i1 @_Z2f2s
 // LLVM:   %[[CMP:.*]] = icmp ne i16 %4, 0
@@ -48,7 +48,7 @@ bool f3(unsigned u) {
 }
 
 // CIR: cir.func{{.*}} @_Z2f3j
-// CIR:   cir.cast(int_to_bool, %{{.*}} : !u32i), !cir.bool
+// CIR:   cir.cast int_to_bool %{{.*}} : !u32i -> !cir.bool
 
 // LLVM: define{{.*}} i1 @_Z2f3j
 // LLVM:   %[[CMP:.*]] = icmp ne i32 %4, 0
@@ -63,7 +63,7 @@ bool f4(long l) {
 }
 
 // CIR: cir.func{{.*}} @_Z2f4l
-// CIR:   cir.cast(int_to_bool, %{{.*}} : !s64i), !cir.bool
+// CIR:   cir.cast int_to_bool %{{.*}} : !s64i -> !cir.bool
 
 // LLVM: define{{.*}} i1 @_Z2f4l
 // LLVM:   %[[CMP:.*]] = icmp ne i64 %4, 0

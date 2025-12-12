@@ -12,7 +12,7 @@
 module mod_allocatables
   character(10), allocatable :: c(:)
 end module
-  
+
 ! CHECK-LABEL: func @_QPtest_mod_allocatables()
 subroutine test_mod_allocatables()
   use mod_allocatables, only: c

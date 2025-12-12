@@ -1137,7 +1137,7 @@ public:
     MF.setDelegate(this);
   }
 
-  ~SlotIndexUpdateDelegate() {
+  ~SlotIndexUpdateDelegate() override {
     MF.resetDelegate(this);
     for (auto MI : Insertions)
       Indexes->insertMachineInstrInMaps(*MI);
@@ -1425,14 +1425,14 @@ bool MachineBasicBlock::canSplitCriticalEdge(const MachineBasicBlock *Succ,
   // where both sides of the branches are always executed.
 
   if (MF->getTarget().requiresStructuredCFG()) {
-    // If `Succ` is a loop header, splitting the critical edge will not
-    // break structured CFG.
-    if (MLI) {
-      const MachineLoop *L = MLI->getLoopFor(Succ);
-      return L && L->getHeader() == Succ;
-    }
-
-    return false;
+    if (!MLI)
+      return false;
+    const MachineLoop *L = MLI->getLoopFor(Succ);
+    // Only if `Succ` is a loop header, splitting the critical edge will not
+    // break structured CFG. And fallthrough to check if this's terminator is
+    // analyzable.
+    if (!L || L->getHeader() != Succ)
+      return false;
   }
 
   // Do we have an Indirect jump with a jumptable that we can rewrite?

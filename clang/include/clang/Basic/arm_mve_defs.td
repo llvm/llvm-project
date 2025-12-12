@@ -34,7 +34,8 @@ class IRBuilderAddrParam<int index_> : IRBuilderParam<index_>;
 class IRBuilderIntParam<int index_, string type_> : IRBuilderParam<index_> {
   string type = type_;
 }
-class IRBuilderBase {
+class Builder {}
+class IRBuilderBase : Builder {
   // The prefix of the function call, including an open parenthesis.
   string prefix;
 
@@ -74,9 +75,9 @@ def immshr: CGHelperFn<"MVEImmediateShr"> {
   let special_params = [IRBuilderIntParam<1, "unsigned">,
                         IRBuilderIntParam<2, "bool">];
 }
-def fadd: IRBuilder<"CreateFAdd">;
-def fmul: IRBuilder<"CreateFMul">;
-def fsub: IRBuilder<"CreateFSub">;
+def fadd_node: IRBuilder<"CreateFAdd">;
+def fmul_node: IRBuilder<"CreateFMul">;
+def fsub_node: IRBuilder<"CreateFSub">;
 def load: IRBuilder<"CreateLoad"> {
   let special_params = [IRBuilderAddrParam<0>];
 }
@@ -134,6 +135,13 @@ def unzip: CGHelperFn<"VectorUnzip"> {
 }
 def zip: CGHelperFn<"VectorZip">;
 
+def masked_load: IRBuilder<"CreateMaskedLoad"> {
+  let special_params = [IRBuilderIntParam<2, "Align">];
+}
+def masked_store: IRBuilder<"CreateMaskedStore"> {
+  let special_params = [IRBuilderIntParam<2, "Align">];
+}
+
 // Trivial 'codegen' function that just returns its argument. Useful
 // for wrapping up a variable name like $foo into a thing you can pass
 // around as type 'dag'.
@@ -159,7 +167,7 @@ def address;
 // Another node class you can use in the codegen dag. This one corresponds to
 // an IR intrinsic function, which has to be specialized to a particular list
 // of types.
-class IRIntBase<string name_, list<Type> params_ = [], bit appendKind_ = 0> {
+class IRIntBase<string name_, list<Type> params_ = [], bit appendKind_ = 0> : Builder {
   string intname = name_;       // base name of the intrinsic
   list<Type> params = params_;  // list of parameter types
 
@@ -204,6 +212,13 @@ def unsignedflag;
 // 'bitsize' also takes a scalar type, and expands into an integer
 // constant giving its size in bits.
 def bitsize;
+
+// strictFPAlt allows a node to have different code generation under strict-fp.
+// TODO: The standard node can be IRBuilderBase or IRIntBase.
+class strictFPAlt<Builder standard_, IRIntBase strictfp_> : Builder {
+  Builder standard = standard_;
+  IRIntBase strictfp = strictfp_;
+}
 
 // If you put CustomCodegen<"foo"> in an intrinsic's codegen field, it
 // indicates that the IR generation for that intrinsic is done by handwritten
@@ -566,6 +581,18 @@ multiclass IntrinsicMXNameOverride<Type rettype, dag arguments, dag cg,
   }
 }
 
+// StrictFP nodes that choose between standard fadd and llvm.arm.mve.fadd nodes
+// depending on whether we are using strict-fp.
+def fadd: strictFPAlt<fadd_node,
+                      IRInt<"vadd", [Vector]>>;
+def fsub: strictFPAlt<fsub_node,
+                      IRInt<"vsub", [Vector]>>;
+def fmul: strictFPAlt<fmul_node,
+                      IRInt<"vmul", [Vector]>>;
+def fminnm : strictFPAlt<IRIntBase<"minnum", [Vector]>,
+                         IRInt<"vminnm", [Vector]>>;
+def fmaxnm : strictFPAlt<IRIntBase<"maxnum", [Vector]>,
+                         IRInt<"vmaxnm", [Vector]>>;
 
 // -----------------------------------------------------------------------------
 // Convenience lists of parameter types. 'T' is just a container record, so you

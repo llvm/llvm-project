@@ -24,6 +24,7 @@ add_lldb_library(lldbExpression NO_PLUGIN_DEPENDENCIES
 
   LINK_COMPONENTS
     Core
+    DebugInfoDWARF
     ExecutionEngine
     Support
   LINK_LIBS

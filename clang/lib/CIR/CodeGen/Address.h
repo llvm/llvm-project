@@ -16,8 +16,11 @@
 
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/Support/Casting.h"
 
 namespace clang::CIRGen {
 
@@ -74,6 +77,12 @@ public:
     return Address(newPtr, getElementType(), getAlignment());
   }
 
+  /// Return address with different alignment, but same pointer and element
+  /// type.
+  Address withAlignment(clang::CharUnits newAlignment) const {
+    return Address(getPointer(), getElementType(), newAlignment);
+  }
+
   /// Return address with different element type, a bitcast pointer, and
   /// the same alignment.
   Address withElementType(CIRGenBuilderTy &builder, mlir::Type ElemTy) const;
@@ -90,6 +99,13 @@ public:
     return getPointer();
   }
 
+  /// Return the pointer contained in this class after authenticating it and
+  /// adding offset to it if necessary.
+  mlir::Value emitRawPointer() const {
+    assert(!cir::MissingFeatures::addressPointerAuthInfo());
+    return getBasePointer();
+  }
+
   mlir::Type getType() const {
     assert(mlir::cast<cir::PointerType>(
                pointerAndKnownNonNull.getPointer().getType())
@@ -104,6 +120,11 @@ public:
                pointerAndKnownNonNull.getPointer().getType())
                .getPointee() == elementType);
     return elementType;
+  }
+
+  cir::TargetAddressSpaceAttr getAddressSpace() const {
+    auto ptrTy = mlir::dyn_cast<cir::PointerType>(getType());
+    return ptrTy.getAddrSpace();
   }
 
   clang::CharUnits getAlignment() const { return alignment; }
