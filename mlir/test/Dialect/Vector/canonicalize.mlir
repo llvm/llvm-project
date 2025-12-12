@@ -1914,6 +1914,25 @@ func.func @store_to_load_tensor_perm_broadcast(%arg0 : tensor<4x4x4xf32>,
 
 // -----
 
+// CHECK-LABEL: func @store_to_load_tensor_forwarding_unit_dim_broadcast
+//  CHECK-SAME: (%[[V0:.*]]: vector<4x8xf32>, %[[MEM:.*]]: tensor<1x1x4x8xf32>)
+// CHECK-NOT: vector.transfer_write
+// CHECK-NOT: vector.transfer_read
+// CHECK: %[[RET:.+]] = vector.broadcast %[[V0]] : vector<4x8xf32> to vector<1x1x4x8xf32>
+// CHECK: return %[[RET]]
+func.func @store_to_load_tensor_forwarding_unit_dim_broadcast(
+    %vec: vector<4x8xf32>,
+    %mem : tensor<1x1x4x8xf32>
+  ) -> vector<1x1x4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %cst_0 = arith.constant 0.0 : f32
+  %write = vector.transfer_write %vec, %mem[%c0, %c0, %c0, %c0] : vector<4x8xf32>, tensor<1x1x4x8xf32>
+  %read = vector.transfer_read %write[%c0, %c0, %c0, %c0], %cst_0 : tensor<1x1x4x8xf32>, vector<1x1x4x8xf32>
+  return %read : vector<1x1x4x8xf32>
+}
+
+// -----
+
 
 // CHECK-LABEL: func @dead_store_tensor
 //   CHECK-DAG:      %[[C0:.*]] = arith.constant 0 : index
