@@ -167,7 +167,7 @@ here in the order that LLDB will try them.
 Target Definition Script
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-These scripts tell LLDB what registers exist on the debug-server without having
+These scripts tell LLDB what registers exist on the debug server without having
 to ask it. You can check if you are using one by checking the setting:
 
 ::
@@ -200,8 +200,8 @@ switching to a build of LLDB with XML parsing enabled.
    If LLDB was offered an XML document but could not use it, you will see a
    warning in your debug session to alert you to this situation.
 
-If your LLDB has XML support, next check whether the debug-server offered this
-XML document. Enable the GDB remote packet log, then connect to the debug-server
+If your LLDB has XML support, next check whether the debug server offered this
+XML document. Enable the GDB remote packet log, then connect to the debug server
 as you normally would.
 
 ::
