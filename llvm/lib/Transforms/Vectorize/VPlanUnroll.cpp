@@ -383,6 +383,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         continue;
       }
     }
+    // For vector VF, the penultimate element is always extracted from the last part.
     if (match(&R, m_ExtractLastLaneOfLastPart(m_VPValue(Op0))) ||
         match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
