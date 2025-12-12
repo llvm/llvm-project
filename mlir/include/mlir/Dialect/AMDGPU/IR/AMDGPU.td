@@ -1139,7 +1139,7 @@ def AMDGPU_SparseMFMAOp :
     multiply-accumulate operations using 2:4 structured sparsity on matrix A
     with dense matrices B, C, and D.
 
-    On gfx940, smfmac intrinsics support:
+    On gfx942, smfmac intrinsics support:
       - M=N=16, K=32 and M=N=32, K=16 for f16 and bf16 sources
       - M=N=16, K=64 and M=N=32, K=32 for i8 and fp8 sources
 
