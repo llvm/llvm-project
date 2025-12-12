@@ -919,11 +919,11 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_roundsd: {
     unsigned M = cast<ConstantInt>(Ops[2])->getZExtValue();
 
-    Value *idx = Builder.getInt32(0);
-    Value *ValAt0 = Builder.CreateExtractElement(Ops[1], idx);
+    Value *Idx = Builder.getInt32(0);
+    Value *ValAt0 = Builder.CreateExtractElement(Ops[1], Idx);
     Value *RoundedAt0 = emitX86Round(*this, ValAt0, M);
 
-    return Builder.CreateInsertElement(Ops[0], RoundedAt0, idx);
+    return Builder.CreateInsertElement(Ops[0], RoundedAt0, Idx);
   }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
