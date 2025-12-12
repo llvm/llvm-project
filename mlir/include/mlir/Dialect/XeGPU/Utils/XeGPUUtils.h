@@ -113,8 +113,7 @@ void setDistributeLayoutAttr(const OpOperand &opr,
 /// Set the DistributeLayoutAttr for each OpOperand and OpResult of the given
 /// operation. If the operation contains regions, it is also applied recursively
 /// to the contained operations
-void setDistributeLayoutAttrs(
-    Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl);
+void retrieveDistributeLayoutAttrsRecursive(Operation *op);
 
 /// Extract a set of small vectors from a value with a given shape using
 /// vector.extract_stride_slice

@@ -27,7 +27,7 @@ gpu.module @test_kernel {
       //CHECK-COUNT-4: xegpu.load_nd {{.*}} -> vector<16x16xf16>
       %b = xegpu.load_nd %arg1 {layout = #b}: !xegpu.tensor_desc<32x32xf16, #b> -> vector<32x32xf16>
       //CHECK-COUNT-8: xegpu.dpas {{.*}} 
-      %c = xegpu.dpas %a, %b, %arg2 {layout_a=#a, layout_b = #b, layout_cd = #c,layout_result_0 = #c}: vector<16x32xf16>, vector<32x32xf16>, vector<16x32xf32> -> vector<16x32xf32>
+      %c = xegpu.dpas %a, %b, %arg2 {layout_a=#a, layout_b = #b, layout_cd = #c}: vector<16x32xf16>, vector<32x32xf16>, vector<16x32xf32> -> vector<16x32xf32>
       //CHECK-COUNT-4: xegpu.update_nd_offset {{.*}} : !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>>
       %a_next_tdesc = xegpu.update_nd_offset %arg0, [%c0, %c32] : !xegpu.tensor_desc<16x32xf16, #a>
       //CHECK-COUNT-4: xegpu.update_nd_offset {{.*}} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [16, 1]>>
@@ -513,8 +513,8 @@ gpu.module @test_kernel {
   //CHECK: [[c0:%.+]] = arith.constant 0 : index
   //CHECK: [[a:%.+]] = xegpu.create_nd_tdesc [[arg0]][[[c0]], [[c0]]] : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [16, 1]>>
   //CHECK: [[b:%.+]] = xegpu.create_nd_tdesc [[arg1]][[[c0]], [[c0]]] : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [16, 1]>>
-  //CHECK: [[load_a:%.+]] = xegpu.load_nd [[a]] <{layout = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [16, 1]>}>  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [16, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [16, 1]>> -> vector<16x16xf16>
-  //CHECK: [[load_b:%.+]] = xegpu.load_nd [[b]] <{layout = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [16, 1]>}>  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [16, 1]>} : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [16, 1]>> -> vector<16x16xf16>
+  //CHECK: [[load_a:%.+]] = xegpu.load_nd [[a]] <{layout = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [16, 1]>}> : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [16, 1]>> -> vector<16x16xf16>
+  //CHECK: [[load_b:%.+]] = xegpu.load_nd [[b]] <{layout = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [16, 1]>}> : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [16, 1]>> -> vector<16x16xf16>
   //CHECK: [[cvt:%.+]] = xegpu.convert_layout [[load_a]] <{input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [16, 1]>, target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>}> : vector<16x16xf16>
   //CHECK: [[a0:%.+]] = vector.extract_strided_slice [[cvt]] {offsets = [0, 0], sizes = [8, 16], strides = [1, 1]} : vector<16x16xf16> to vector<8x16xf16>
   //CHECK: [[a1:%.+]] = vector.extract_strided_slice [[cvt]] {offsets = [8, 0], sizes = [8, 16], strides = [1, 1]} : vector<16x16xf16> to vector<8x16xf16>

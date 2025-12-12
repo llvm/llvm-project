@@ -1240,20 +1240,24 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
     vector::ExtractStridedSliceOp extractOp =
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
                                               sliceSizes, {1, 1});
+
     int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
+
     vector::ShapeCastOp slice = vector::ShapeCastOp::create(
         rewriter, loc,
         VectorType::get({nSliceElements}, sourceType.getElementType()),
         extractOp.getResult());
+
     // Shape cast is currently handled in xegpu side. So layouts must be
     // retained during lowering. Shape cast output has the same layout as the
     // accumulator. Shape cast source has the same layout as the original
     // reduction source.
     // TODO: other ops generated here may also need layout attributes.
-    xegpu::setDistributeLayoutAttr(slice->getOpOperand(0),
-                                   xegpu::getDistributeLayoutAttr(src));
-    xegpu::setDistributeLayoutAttr(slice->getOpResult(0),
-                                   xegpu::getDistributeLayoutAttr(acc));
+    auto srcLayout = xegpu::getDistributeLayoutAttr(src);
+    auto accLayout = xegpu::getDistributeLayoutAttr(acc);
+
+    xegpu::setDistributeLayoutAttr(slice->getOpOperand(0), srcLayout);
+    xegpu::setDistributeLayoutAttr(slice->getOpResult(0), accLayout);
     // Extract and reduction results in scalars, so no result layout is needed.
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
     Value reduction = vector::ReductionOp::create(

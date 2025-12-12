@@ -1119,7 +1119,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
                            l2_hint = #xegpu.cache_hint<cached>,
                            l3_hint = #xegpu.cache_hint<cached>,
                            layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
-      : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
+      : vector<16xf32>, memref<1024xf32>, vector<16xi1>, vector<16xindex>
   ```
 
   Example 4 (Lane level):
