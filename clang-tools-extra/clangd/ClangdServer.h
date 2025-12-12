@@ -299,8 +299,9 @@ public:
                             Callback<std::vector<CallHierarchyItem>> CB);
 
   /// Resolve incoming calls for a given call hierarchy item.
-  void incomingCalls(const CallHierarchyItem &Item,
-                     Callback<std::vector<CallHierarchyIncomingCall>>);
+  void incomingCalls(PathRef File,
+                     const CallHierarchyItem &Item,
+                     Callback<std::vector<CallHierarchyIncomingCall>> CB);
 
   /// Resolve outgoing calls for a given call hierarchy item.
   void outgoingCalls(const CallHierarchyItem &Item,
