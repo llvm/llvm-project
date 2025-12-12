@@ -178,12 +178,13 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
   }
 };
 
-struct ChecksVariant {
+struct GlobListVariant {
   std::optional<std::string> AsString;
   std::optional<std::vector<std::string>> AsVector;
 };
 
-template <> void yamlize(IO &IO, ChecksVariant &Val, bool, EmptyContext &Ctx) {
+template <>
+void yamlize(IO &IO, GlobListVariant &Val, bool, EmptyContext &Ctx) {
   if (!IO.outputting()) {
     // Special case for reading from YAML
     // Must support reading from both a string or a list
@@ -200,25 +201,26 @@ template <> void yamlize(IO &IO, ChecksVariant &Val, bool, EmptyContext &Ctx) {
   }
 }
 
-static void mapChecks(IO &IO, std::optional<std::string> &Checks) {
+static void mapGlobList(IO &IO, std::optional<std::string> &GlobList,
+                        StringRef Key) {
   if (IO.outputting()) {
     // Output always a string
-    IO.mapOptional("Checks", Checks);
+    IO.mapOptional(Key, GlobList);
   } else {
     // Input as either a string or a list
-    ChecksVariant ChecksAsVariant;
-    IO.mapOptional("Checks", ChecksAsVariant);
-    if (ChecksAsVariant.AsString)
-      Checks = ChecksAsVariant.AsString;
-    else if (ChecksAsVariant.AsVector)
-      Checks = llvm::join(*ChecksAsVariant.AsVector, ",");
+    GlobListVariant GlobListAsVariant;
+    IO.mapOptional(Key, GlobListAsVariant);
+    if (GlobListAsVariant.AsString)
+      GlobList = GlobListAsVariant.AsString;
+    else if (GlobListAsVariant.AsVector)
+      GlobList = llvm::join(*GlobListAsVariant.AsVector, ",");
   }
 }
 
 template <> struct MappingTraits<ClangTidyOptions> {
   static void mapping(IO &IO, ClangTidyOptions &Options) {
-    mapChecks(IO, Options.Checks);
-    IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
+    mapGlobList(IO, Options.Checks, "Checks");
+    mapGlobList(IO, Options.WarningsAsErrors, "WarningsAsErrors");
     IO.mapOptional("HeaderFileExtensions", Options.HeaderFileExtensions);
     IO.mapOptional("ImplementationFileExtensions",
                    Options.ImplementationFileExtensions);
