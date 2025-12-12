@@ -1914,7 +1914,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // arguments in a procedure reference.
   std::size_t dummyArgPatterns{0};
   for (; dummyArgPatterns < maxArguments && dummy[dummyArgPatterns].keyword;
-       ++dummyArgPatterns) {
+      ++dummyArgPatterns) {
   }
   // MAX and MIN (and others that map to them) allow their last argument to
   // be repeated indefinitely.  The actualForDummy vector is sized
@@ -2663,17 +2663,23 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case Rank::dimRemovedOrScalar:
     case Rank::locReduced:
     case Rank::scalarIfDim:
-      if (dummy[*dimArg].optionality == Optionality::required) {
-        if (const Symbol *whole{
-                UnwrapWholeSymbolOrComponentDataRef(actualForDummy[*dimArg])}) {
-          if (IsOptional(*whole) || IsAllocatableOrObjectPointer(whole)) {
-            if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
-              context.Warn(common::UsageWarning::OptionalMustBePresent,
-                  "The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time"_warn_en_US);
-            } else {
-              context.Warn(common::UsageWarning::OptionalMustBePresent,
-                  "The actual argument for DIM= is optional, pointer, or allocatable, and may not be absent during execution; parenthesize to silence this warning"_warn_en_US);
-            }
+      // Check if the actual argument for DIM is an OPTIONAL dummy argument
+      if (const Symbol *whole{
+              UnwrapWholeSymbolOrComponentDataRef(actualForDummy[*dimArg])}) {
+        if (IsOptional(*whole)) {
+          // Fortran 2018 standard: The DIM argument to ALL, ANY, COUNT, etc.
+          // must not be an OPTIONAL dummy argument
+          messages.Say(
+              "The actual argument for DIM= must not be OPTIONAL"_err_en_US);
+          return std::nullopt;
+        } else if (dummy[*dimArg].optionality == Optionality::required &&
+            IsAllocatableOrObjectPointer(whole)) {
+          if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
+            context.Warn(common::UsageWarning::OptionalMustBePresent,
+                "The actual argument for DIM= is pointer or allocatable, and it is assumed to be present and equal to 1 at execution time"_warn_en_US);
+          } else {
+            context.Warn(common::UsageWarning::OptionalMustBePresent,
+                "The actual argument for DIM= is pointer or allocatable, and may not be absent during execution; parenthesize to silence this warning"_warn_en_US);
           }
         }
       }
@@ -2739,7 +2745,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // Rearrange the actual arguments into dummy argument order.
   ActualArguments rearranged(dummies);
   for (std::size_t j{0}; j < dummies; ++j) {
-    if (ActualArgument *arg{actualForDummy[j]}) {
+    if (ActualArgument * arg{actualForDummy[j]}) {
       rearranged[j] = std::move(*arg);
     }
   }
@@ -3636,7 +3642,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   parser::Messages specificBuffer;
   auto specificRange{specificFuncs_.equal_range(call.name)};
   for (auto specIter{specificRange.first}; specIter != specificRange.second;
-       ++specIter) {
+      ++specIter) {
     // We only need to check the cases with distinct generic names.
     if (const char *genericName{specIter->second->generic}) {
       if (auto specificCall{
@@ -3658,13 +3664,13 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::
               UseGenericIntrinsicWhenSpecificDoesntMatch)) {
     for (auto specIter{specificRange.first}; specIter != specificRange.second;
-         ++specIter) {
+        ++specIter) {
       // We only need to check the cases with distinct generic names.
       if (const char *genericName{specIter->second->generic}) {
         if (specIter->second->useGenericAndForceResultType) {
           auto genericRange{genericFuncs_.equal_range(genericName)};
           for (auto genIter{genericRange.first}; genIter != genericRange.second;
-               ++genIter) {
+              ++genIter) {
             if (auto specificCall{
                     matchOrBufferMessages(*genIter->second, specificBuffer)}) {
               // Force the call result type to the specific intrinsic result
