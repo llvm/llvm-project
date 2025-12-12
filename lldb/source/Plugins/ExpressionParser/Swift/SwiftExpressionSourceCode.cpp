@@ -640,15 +640,22 @@ Status SwiftExpressionSourceCode::GetText(
     if (triple.isOSDarwin()) {
       if (auto process_sp = exe_ctx.GetProcessSP()) {
         os_vers << getAvailabilityName(triple) << " ";
-        auto platform = target->GetPlatform();
-        bool is_simulator = platform->GetPluginName().ends_with("-simulator");
-        if (is_simulator) {
-          // The simulators look like the host OS to Process, but Platform
-          // can the version out of an environment variable.
-          os_vers << platform->GetOSVersion(process_sp.get()).getAsString();
+        if (options.GetUseContextFreeSwiftPrintObject()) {
+          // Disable availability by setting the OS version to 9999. This
+          // placeholder OS version used for future OS versions when building
+          // the Swift standard library locally.
+          os_vers << "9999";
         } else {
-          llvm::VersionTuple version = process_sp->GetHostOSVersion();
-          os_vers << version.getAsString();
+          auto platform = target->GetPlatform();
+          bool is_simulator = platform->GetPluginName().ends_with("-simulator");
+          if (is_simulator) {
+            // The simulators look like the host OS to Process, but Platform
+            // can get the version out of an environment variable.
+            os_vers << platform->GetOSVersion(process_sp.get()).getAsString();
+          } else {
+            llvm::VersionTuple version = process_sp->GetHostOSVersion();
+            os_vers << version.getAsString();
+          }
         }
       }
     }

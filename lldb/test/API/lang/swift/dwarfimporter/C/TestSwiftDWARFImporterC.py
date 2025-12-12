@@ -42,6 +42,8 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
+        log = self.getBuildArtifact("types.log")
+        self.runCmd('log enable lldb types -f "%s"' % log)
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("pureSwift"),
                                 value="42")
@@ -56,12 +58,15 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
                              "sub", "x = 1", "y = 2", "z = 3",
                              "swift struct c member"])
         self.expect("target variable typedef", substrs=["x = 5", "y = 6"])
-        #self.expect("target variable union",
-        #            substrs=["(DoubleLongUnion)", "long_val = 42"])
+        self.expect("target variable union",
+                    substrs=["(DoubleLongUnion)", "long_val = 42"])
         self.expect("target variable fromSubmodule",
                     substrs=["(FromSubmodule)", "x = 1", "y = 2", "z = 3"])
         self.expect("target variable withPointer",
                     substrs=["(WithPointer)", "ptr = nil"])
+        self.filecheck('platform shell cat ""%s"' % log, __file__,
+                       '--check-prefix=CHECK-TYPEINFO')
+        # CHECK-TYPEINFO: [LLDBTypeInfoProvider] Looking up debug type info for So4CMYKV
 
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
@@ -107,14 +112,6 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         # This can't be resolved.
         self.expect("expr swiftStructCMember", error=True)
 
-        found = False
-        import io
-        logfile = io.open(log, "r", encoding='utf-8')
-        for line in logfile:
-            if "missing required module" in line:
-                found = True
-        self.assertTrue(found)
-
-        process.Clear()
-        target.Clear()
-        lldb.SBDebugger.MemoryPressureDetected()
+        self.filecheck('platform shell cat ""%s"' % log, __file__,
+                       '--check-prefix=CHECK-MISSING')
+        # CHECK-MISSING: missing required module

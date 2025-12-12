@@ -1,3 +1,3 @@
 SWIFT_SOURCES := main.swift
-SWIFT_BRIDGING_HEADER := bridging-header.h
+SWIFTFLAGS_EXTRAS := -parse-as-library
 include Makefile.rules

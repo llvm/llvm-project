@@ -74,14 +74,16 @@ class TestObjCIVarDiscovery(TestBase):
                 substrs=["Contents/Resources/DWARF/aTestFramework"],
                 matching=False)
 
-        self.runCmd("frame variable -d run --show-types --ptr-depth=1")
+        if self.TraceOn():
+            self.runCmd("log enable lldb types")
+            self.runCmd("frame variable -d run --show-types --ptr-depth=1")
 
         obj = self.prepare_value(self.frame().FindVariable("object"))
 
         mysubclass = self.prepare_value(obj.GetChildAtIndex(0))
         myclass = self.prepare_value(mysubclass.GetChildAtIndex(0))
-
         m_pair = myclass.GetChildMemberWithName("m_pair")
+        self.assertEqual(m_pair.GetNumChildren(), 2)
         m_pair_A = m_pair.GetChildMemberWithName("A")
         m_pair_B = m_pair.GetChildMemberWithName("B")
 
@@ -98,30 +100,29 @@ class TestObjCIVarDiscovery(TestBase):
         m_numbers = self.prepare_value(
             myclass.GetChildMemberWithName("m_myclass_numbers"))
 
-        self.assertTrue(
-            m_numbers.GetSummary() == '3 elements',
+        self.assertEqual(
+            m_numbers.GetSummary(), '3 elements',
             "m_myclass_numbers != 3 elements")
 
         m_subclass_ivar = mysubclass.GetChildMemberWithName("m_subclass_ivar")
-        self.assertTrue(
-            m_subclass_ivar.GetValueAsUnsigned() == 42,
+        self.assertEqual(
+            m_subclass_ivar.GetValueAsUnsigned(), 42,
             "m_subclass_ivar != 42")
 
         m_mysubclass_s = mysubclass.GetChildMemberWithName("m_mysubclass_s")
-        self.assertTrue(
-            m_mysubclass_s.GetSummary() == '"an NSString here"',
+        self.assertEqual(
+            m_mysubclass_s.GetSummary(), '"an NSString here"',
             'm_subclass_s != "an NSString here"')
 
         swiftivar = obj.GetChildMemberWithName("swiftivar")
-        self.assertTrue(
-            swiftivar.GetSummary() == '"Hey Swift!"', "swiftivar != Hey Swift")
+        self.assertEqual(
+            swiftivar.GetSummary(), '"Hey Swift!"', "swiftivar != Hey Swift")
 
         silly = self.prepare_value(obj.GetChildMemberWithName("silly"))
         silly.GetNumChildren()
         
-        # FIXME: SwiftRuntimeTypeVisitor counts but does not return members of ObjC classes.
         silly_x = silly.GetChildMemberWithName("x")
-        silly_x = silly.GetChildAtIndex(1)
         silly_url = silly.GetChildMemberWithName("url")
-        self.assertTrue(silly_x.GetValueAsUnsigned() == 12, "x != 12")
+        self.assertEqual(silly_x.GetValueAsUnsigned(), 12, "x != 12")
+        # FIXME: Private ivars are invisible, but shows up in the frame var output.
         #self.assertTrue(silly_url.GetSummary() == '"http://www.apple.com"', "url != apple.com")

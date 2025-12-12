@@ -1317,13 +1317,14 @@ SwiftExpressionParser::ParseAndImport(
   if (lldb::StackFrameSP this_frame_sp = m_stack_frame_wp.lock())
     process_sp = this_frame_sp->CalculateProcess();
   m_swift_ast_ctx.LoadImplicitModules(m_sc.target_sp, process_sp, *m_exe_scope);
-  if (!m_swift_ast_ctx.GetImplicitImports(m_sc, process_sp, additional_imports,
-                                          implicit_import_error)) {
-    const char *msg = implicit_import_error.AsCString();
-    if (!msg)
-      msg = "error status positive, but import still failed";
-    return make_error<ModuleImportError>(msg);
-  }
+  if (!m_options.GetUseContextFreeSwiftPrintObject())
+    if (!m_swift_ast_ctx.GetImplicitImports(
+            m_sc, process_sp, additional_imports, implicit_import_error)) {
+      const char *msg = implicit_import_error.AsCString();
+      if (!msg)
+        msg = "error status positive, but import still failed";
+      return make_error<ModuleImportError>(msg);
+    }
 
   swift::ImplicitImportInfo importInfo;
   importInfo.StdlibKind = swift::ImplicitStdlibKind::Stdlib;
