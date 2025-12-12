@@ -20771,8 +20771,8 @@ The first two operands are vectors with the same type. For a fixed-width vector
 a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
 the range 0 <= imm < X where X=vscale_range_min * N.
 
-'``llvm.vector.splice.up``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.vector.splice.right``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -20800,9 +20800,9 @@ For example:
 .. code-block:: text
 
  llvm.vector.splice.right(<A,B,C,D>, <E,F,G,H>, 1);
-		   ==> <A,B,C,D,E,F,G,H>
-		   ==> <_,A,B,C,D,E,F,G>
-		   ==>         <D,E,F,G>
+		      ==> <A,B,C,D,E,F,G,H>
+		      ==> <_,A,B,C,D,E,F,G>
+		      ==>         <D,E,F,G>
 
 
 Arguments:

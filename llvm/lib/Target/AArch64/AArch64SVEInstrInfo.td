@@ -2152,7 +2152,7 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(nxv8bf16 (concat_vectors nxv4bf16:$v1, nxv4bf16:$v2)),
             (UZP1_ZZZ_H $v1, $v2)>;
 
-  // Splice up with offset equal to 1
+  // Splice right with offset equal to 1
   def : Pat<(nxv16i8 (vector_splice_right nxv16i8:$Z1, nxv16i8:$Z2, (i64 1))),
             (INSR_ZV_B ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
             (LASTB_VPZ_B (PTRUE_B 31), ZPR:$Z1), bsub))>;
@@ -2166,7 +2166,7 @@ let Predicates = [HasSVE_or_SME] in {
             (INSR_ZV_D ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
             (LASTB_VPZ_D (PTRUE_D 31), ZPR:$Z1), dsub))>;
 
-  // Splice down
+  // Splice left
   foreach VT = [nxv16i8] in {
     def : Pat<(VT(vector_splice_left VT:$Z1, VT:$Z2,
                   (i64(sve_ext_imm_0_255 i32:$index)))),
