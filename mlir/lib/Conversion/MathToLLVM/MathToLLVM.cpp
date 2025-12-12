@@ -47,7 +47,7 @@ using AcosOpLowering = ConvertFMFMathToLLVMPattern<math::AcosOp, LLVM::ACosOp>;
 using CtPopFOpLowering =
     VectorConvertToLLVMPattern<math::CtPopOp, LLVM::CtPopOp,
                                AttrConvertPassThrough,
-                               /*FailOnUnsupportedFP*/ true>;
+                               /*FailOnUnsupportedFP=*/true>;
 using Exp2OpLowering = ConvertFMFMathToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
 using ExpOpLowering = ConvertFMFMathToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
 using FloorOpLowering =
@@ -80,9 +80,9 @@ using ATan2OpLowering =
 // may be better to separate the patterns.
 template <typename MathOp, typename LLVMOp>
 struct IntOpWithFlagLowering
-    : public ConvertOpToLLVMPattern<MathOp, /*FailOnUnsupportedFP*/ true> {
+    : public ConvertOpToLLVMPattern<MathOp, /*FailOnUnsupportedFP=*/true> {
   using ConvertOpToLLVMPattern<
-      MathOp, /*FailOnUnsupportedFP*/ true>::ConvertOpToLLVMPattern;
+      MathOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
   using Super = IntOpWithFlagLowering<MathOp, LLVMOp>;
 
   LogicalResult
@@ -129,9 +129,9 @@ using AbsIOpLowering = IntOpWithFlagLowering<math::AbsIOp, LLVM::AbsOp>;
 // A `sincos` is converted into `llvm.intr.sincos` followed by extractvalue ops.
 struct SincosOpLowering
     : public ConvertOpToLLVMPattern<math::SincosOp,
-                                    /*FailOnUnsupportedFP*/ true> {
+                                    /*FailOnUnsupportedFP=*/true> {
   using ConvertOpToLLVMPattern<
-      math::SincosOp, /*FailOnUnsupportedFP*/ true>::ConvertOpToLLVMPattern;
+      math::SincosOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(math::SincosOp op, OpAdaptor adaptor,
@@ -164,9 +164,9 @@ struct SincosOpLowering
 // A `expm1` is converted into `exp - 1`.
 struct ExpM1OpLowering
     : public ConvertOpToLLVMPattern<math::ExpM1Op,
-                                    /*FailOnUnsupportedFP*/ true> {
+                                    /*FailOnUnsupportedFP=*/true> {
   using ConvertOpToLLVMPattern<
-      math::ExpM1Op, /*FailOnUnsupportedFP*/ true>::ConvertOpToLLVMPattern;
+      math::ExpM1Op, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(math::ExpM1Op op, OpAdaptor adaptor,
@@ -229,9 +229,9 @@ struct ExpM1OpLowering
 // A `log1p` is converted into `log(1 + ...)`.
 struct Log1pOpLowering
     : public ConvertOpToLLVMPattern<math::Log1pOp,
-                                    /*FailOnUnsupportedFP*/ true> {
+                                    /*FailOnUnsupportedFP=*/true> {
   using ConvertOpToLLVMPattern<
-      math::Log1pOp, /*FailOnUnsupportedFP*/ true>::ConvertOpToLLVMPattern;
+      math::Log1pOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(math::Log1pOp op, OpAdaptor adaptor,
@@ -294,9 +294,9 @@ struct Log1pOpLowering
 // A `rsqrt` is converted into `1 / sqrt`.
 struct RsqrtOpLowering
     : public ConvertOpToLLVMPattern<math::RsqrtOp,
-                                    /*FailOnUnsupportedFP*/ true> {
+                                    /*FailOnUnsupportedFP=*/true> {
   using ConvertOpToLLVMPattern<
-      math::RsqrtOp, /*FailOnUnsupportedFP*/ true>::ConvertOpToLLVMPattern;
+      math::RsqrtOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(math::RsqrtOp op, OpAdaptor adaptor,
