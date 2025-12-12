@@ -804,6 +804,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   cgm.errorNYI(expr->getSourceRange(),
               std::string("unimplemented x86 builtin call: ") + 
               getContext().BuiltinInfo.getName(builtinID));
+  return mlir::Value{};
   case X86::BI__builtin_ia32_cvtmask2b128:
   case X86::BI__builtin_ia32_cvtmask2b256:
   case X86::BI__builtin_ia32_cvtmask2b512:
@@ -818,7 +819,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_cvtmask2q512:
     return emitX86SExtMask(*this, this->getBuilder(), 
                           ops[0], convertType(expr->getType()),
-                          getLoc(expr->getExprLoc())).value();
+                          getLoc(expr->getExprLoc()));
   case X86::BI__builtin_ia32_cvtb2mask128:
   case X86::BI__builtin_ia32_cvtb2mask256:
   case X86::BI__builtin_ia32_cvtb2mask512:
@@ -832,7 +833,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_cvtq2mask256:
   case X86::BI__builtin_ia32_cvtq2mask512:
     return emitX86ConvertToMask(*this, this->getBuilder(),
-                               ops[0], getLoc(expr->getExprLoc())).value();
+                               ops[0], getLoc(expr->getExprLoc()));
   case X86::BI__builtin_ia32_cvtdq2ps512_mask:
   case X86::BI__builtin_ia32_cvtqq2ps512_mask:
   case X86::BI__builtin_ia32_cvtqq2pd512_mask:
