@@ -1425,9 +1425,6 @@ define <4 x half> @v_test_fmin_legacy_ule_v4f16_nnan_flag(<4 x half> %a, <4 x ha
 ; GFX12-TRUE16-NEXT:    v_minimum_f16 v0.h, v0.h, v2.h
 ; GFX12-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v2.l
 ; GFX12-TRUE16-NEXT:    v_minimum_f16 v1.l, v1.l, v3.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v1, v1.l, v1.h
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: v_test_fmin_legacy_ule_v4f16_nnan_flag:
@@ -1747,9 +1744,6 @@ define <4 x half> @v_test_fmax_legacy_uge_v4f16_nnan_flag(<4 x half> %a, <4 x ha
 ; GFX12-TRUE16-NEXT:    v_maximum_f16 v0.h, v0.h, v2.h
 ; GFX12-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v2.l
 ; GFX12-TRUE16-NEXT:    v_maximum_f16 v1.l, v1.l, v3.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v1, v1.l, v1.h
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: v_test_fmax_legacy_uge_v4f16_nnan_flag:
