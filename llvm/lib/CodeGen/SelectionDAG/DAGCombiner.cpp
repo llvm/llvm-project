@@ -6685,6 +6685,10 @@ SDValue DAGCombiner::foldLogicSetCCToMul(SDNode *N, const SDLoc &DL) {
       !isNullConstant(C1))
     return SDValue();
 
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isOperationLegalOrCustom(ISD::MUL, A.getValueType()))
+    return SDValue();
+
   unsigned BitWidth = A.getValueSizeInBits();
   KnownBits KnownA = DAG.computeKnownBits(A);
   KnownBits KnownB = DAG.computeKnownBits(B);
@@ -6694,7 +6698,6 @@ SDValue DAGCombiner::foldLogicSetCCToMul(SDNode *N, const SDLoc &DL) {
 
   SDNodeFlags Flags;
   Flags.setNoUnsignedWrap(true);
-  Flags.setNoSignedWrap(true);
 
   SDValue Mul = DAG.getNode(ISD::MUL, DL, A.getValueType(), A, B, Flags);
 

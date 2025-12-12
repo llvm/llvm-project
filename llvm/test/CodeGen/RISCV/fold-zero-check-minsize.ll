@@ -57,8 +57,11 @@ entry:
 
 define i1 @foldLogicSetCCToMul4(i16 zeroext %a, i16 zeroext %b) minsize {
 ; CHECK-LABEL: foldLogicSetCCToMul4:
-; CHECK-NOT: mul
-; CHECK: ret
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    snez a1, a1
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
 entry:
   %cmp1 = icmp eq i16 %a, 0
   %cmp2 = icmp ne i16 %b, 0
@@ -68,8 +71,12 @@ entry:
 
 define i1 @foldLogicSetCCToMul5(i16 zeroext %a, i16 zeroext %b) minsize {
 ; CHECK-LABEL: foldLogicSetCCToMul5:
-; CHECK-NOT: mul
-; CHECK: ret
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
 entry:
   %cmp1 = icmp eq i16 %a, 1;
   %cmp2 = icmp eq i16 %b, 0
@@ -79,8 +86,12 @@ entry:
 
 define i1 @foldLogicSetCCToMul6(i16 zeroext %a, i16 zeroext %b) minsize {
 ; CHECK-LABEL: foldLogicSetCCToMul6:
-; CHECK-NOT: mul
-; CHECK: ret
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
 entry:
   %cmp1 = icmp eq i16 %a, 0;
   %cmp2 = icmp eq i16 %b, 1
@@ -88,13 +99,33 @@ entry:
   ret i1 %or
 }
 
-define i1 @foldLogicSetCCToMul7(i16 zeroext %a, i32 %b) minsize {
+define i1 @foldLogicSetCCToMul7(i16 zeroext %a, i32 signext %b) minsize {
 ; CHECK-LABEL: foldLogicSetCCToMul7:
-; CHECK-NOT: mul
-; CHECK: ret
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
 entry:
   %cmp1 = icmp eq i16 %a, 0
   %cmp2 = icmp eq i32 %b, 0
+  %or = or i1 %cmp1, %cmp2
+  ret i1 %or
+}
+
+define i1 @nsw_unsafe_proof(i8 zeroext %a, i8 zeroext %b) minsize {
+; CHECK-LABEL: nsw_unsafe_proof:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 15
+; CHECK-NEXT:    andi a1, a1, 15
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+entry:
+  %a.masked = and i8 %a, 15
+  %b.masked = and i8 %b, 15
+  %cmp1 = icmp eq i8 %a.masked, 0
+  %cmp2 = icmp eq i8 %b.masked, 0
   %or = or i1 %cmp1, %cmp2
   ret i1 %or
 }
