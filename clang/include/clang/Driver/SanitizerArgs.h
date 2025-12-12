@@ -83,6 +83,7 @@ public:
   SanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                 bool DiagnoseErrors = true);
 
+  bool needsSigsanRt() const { return Sanitizers.has(SanitizerKind::Signal); }
   bool needsSharedRt() const { return SharedRuntime; }
   bool needsStableAbi() const { return StableABI; }
 

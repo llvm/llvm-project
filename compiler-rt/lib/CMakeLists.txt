@@ -42,6 +42,7 @@ if(COMPILER_RT_BUILD_SANITIZERS)
     add_subdirectory(lsan)
     # Contains RTUbsan used even without COMPILER_RT_HAS_UBSAN.
     add_subdirectory(ubsan)
+    add_subdirectory(sigsan)
   endif()
 
   foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})

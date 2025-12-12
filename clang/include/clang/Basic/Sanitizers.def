@@ -88,6 +88,8 @@ SANITIZER("realtime", Realtime)
 // LeakSanitizer
 SANITIZER("leak", Leak)
 
+SANITIZER("signal", Signal)
+
 // UndefinedBehaviorSanitizer
 SANITIZER("alignment", Alignment)
 SANITIZER("array-bounds", ArrayBounds)
