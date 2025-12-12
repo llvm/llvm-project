@@ -289,6 +289,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OMPStripeDirectiveClass:
   case Stmt::ObjCAtCatchStmtClass:
   case Stmt::ObjCAtFinallyStmtClass:
+  case Stmt::DeferStmtClass:
     cgm.errorNYI(s->getSourceRange(),
                  std::string("emitStmt: ") + s->getStmtClassName());
     return mlir::failure();
@@ -1104,6 +1105,8 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
   for (auto caseOp : cases)
     terminateBody(builder, caseOp.getCaseRegion(), caseOp.getLoc());
   terminateBody(builder, swop.getBody(), swop.getLoc());
+
+  swop.setAllEnumCasesCovered(s.isAllEnumCasesCovered());
 
   return res;
 }

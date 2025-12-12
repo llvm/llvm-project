@@ -1671,6 +1671,14 @@ defm named_loops
           PosFlag<SetTrue, [], [CC1Option], "Enable support for named loops">,
           NegFlag<SetFalse>>;
 
+// C '_Defer' TS
+defm defer_ts : BoolFOption<"defer-ts",
+  LangOpts<"DeferTS">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable support for the C '_Defer' Technical Specification">,
+  NegFlag<SetFalse>>,
+  ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
+
 // C++ Coroutines
 defm coroutines : BoolFOption<"coroutines",
   LangOpts<"Coroutines">, Default<cpp20.KeyPath>,
@@ -1955,6 +1963,14 @@ defm lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option],
           " experimental lifetime safety for C++">>;
+
+defm lifetime_safety_inference
+    : BoolFOption<"experimental-lifetime-safety-inference",
+                  LangOpts<"EnableLifetimeSafetyInference">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " experimental lifetime safety inference for C++">>;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
@@ -9587,6 +9603,8 @@ class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<dxc_Group>,
   Visibility<[DXCOption]>;
 
+def dxc_col_major : DXCFlag<"Zpc">, HelpText<"Pack matrices in column-major order">;
+def dxc_row_major : DXCFlag<"Zpr">, HelpText<"Pack matrices in row-major order">;
 def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
