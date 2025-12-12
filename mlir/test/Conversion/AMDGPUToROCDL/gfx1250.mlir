@@ -200,6 +200,11 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>
   // CHECK-DAG: %[[MEMREF_DESC_MEM:.+]] = builtin.unrealized_conversion_cast %[[MEM]] : memref<8xi32, 1>
   // CHECK-DAG: %[[MEMREF_DESC_SMEM:.+]] = builtin.unrealized_conversion_cast %[[SMEM]] : memref<8xi32, 3>
 
+  // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32) : i32
+
   // CHECK-DAG: %[[MEM_BASE_PTR:.+]] = llvm.extractvalue %[[MEMREF_DESC_MEM]][1] : !llvm.struct<(ptr<1>
   // CHECK-DAG: %[[SMEM_BASE_PTR:.+]] = llvm.extractvalue %[[MEMREF_DESC_SMEM]][1] : !llvm.struct<(ptr<3>
 
@@ -216,13 +221,9 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>
   // CHECK-DAG: %[[MASK:.+]] = llvm.mlir.constant(33554431 : i32)
   // CHECK: %[[VALID_MEM_INT_HIGH:.+]] = llvm.and %[[MEM_INT_HIGH]], %[[MASK]]
 
-  // CHECK-DAG: %[[TYPE_FIELD:.+]] = llvm.mlir.constant(-2147483648 : i32)
-  // CHECK: %[[MEM_INT_HIGH_TYPE:.+]] = llvm.or %[[VALID_MEM_INT_HIGH]], %[[TYPE_FIELD]]
-
-  // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
-  // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32) : i32
-  // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(30 : i32)
+  // CHECK: %[[TYPE_FIELD:.+]] = llvm.shl %[[C2]], %[[SHIFT]]
+  // CHECK: %[[MEM_INT_HIGH_TYPE:.+]] = llvm.or disjoint %[[VALID_MEM_INT_HIGH]], %[[TYPE_FIELD]]
 
   // CHECK: %[[V4I32_0_0:.+]] = llvm.mlir.poison : vector<4xi32>
   // CHECK: %[[V4I32_0_1:.+]] = llvm.insertelement %[[C1]], %[[V4I32_0_0]][%[[C0]] : i32]
@@ -233,6 +234,51 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>
   %0 = amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu_global_addrspace>, memref<8xi32, #gpu_lds_addrspace> -> !amdgpu.tdm_base<i32>
 
   func.return %0 : !amdgpu.tdm_base<i32>
+}
+
+// -----
+
+#gpu_global_addrspace = 1
+#gpu_lds_addrspace = 3
+
+// CHECK-LABEL: func @make_gather_dma_base
+// CHECK-SAME: (%[[IDX:.+]]: index, %[[MEM:.+]]: memref<8xi32, 1>, %[[SMEM:.+]]: memref<8xi32, 3>)
+func.func @make_gather_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>, %smem: memref<8xi32,#gpu_lds_addrspace>) -> (!amdgpu.tdm_gather_base<i32, i16>, !amdgpu.tdm_gather_base<i32, i32>) {
+
+  // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32) : i32
+
+  // CHECK-DAG: %[[GATHER_MODE_OFFSET:.+]] = llvm.mlir.constant(30 : i32) : i32
+  // CHECK-DAG: %[[GATHER_MODE_BIT:.+]] = llvm.shl %[[C1]], %[[GATHER_MODE_OFFSET]]
+  // CHECK: %[[SGPR0:.+]] = llvm.or disjoint %[[C1]], %[[GATHER_MODE_BIT]]
+
+  // CHECK: %[[V4I32_0_0:.+]] = llvm.mlir.poison : vector<4xi32>
+  // CHECK: %[[V4I32_0_1:.+]] = llvm.insertelement %[[SGPR0]], %[[V4I32_0_0]][%[[C0]] : i32]
+
+  %0 = amdgpu.make_gather_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu_global_addrspace>, memref<8xi32, #gpu_lds_addrspace> -> !amdgpu.tdm_gather_base<i32, i16>
+
+  // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32) : i32
+
+  // CHECK-DAG: %[[GATHER_MODE_OFFSET:.+]] = llvm.mlir.constant(30 : i32) : i32
+  // CHECK-DAG: %[[GATHER_MODE_BIT:.+]] = llvm.shl %[[C1]], %[[GATHER_MODE_OFFSET]]
+  // CHECK: %[[SGPR0_0:.+]] = llvm.or disjoint %[[C1]], %[[GATHER_MODE_BIT]]
+
+  // CHECK-DAG: %[[INDEX_SIZE_OFFSET:.+]] = llvm.mlir.constant(31 : i32) : i32
+  // CHECK-DAG: %[[INDEX_SIZE_BIT:.+]] = llvm.shl %[[C1]], %[[INDEX_SIZE_OFFSET]]
+  // CHECK: %[[SGPR0:.+]] = llvm.or disjoint %[[SGPR0_0]], %[[INDEX_SIZE_BIT]]
+
+  // CHECK: %[[V4I32_0_0:.+]] = llvm.mlir.poison : vector<4xi32>
+  // CHECK: %[[V4I32_0_1:.+]] = llvm.insertelement %[[SGPR0]], %[[V4I32_0_0]][%[[C0]] : i32]
+
+
+  %1 = amdgpu.make_gather_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu_global_addrspace>, memref<8xi32, #gpu_lds_addrspace> -> !amdgpu.tdm_gather_base<i32, i32>
+
+  func.return %0, %1 : !amdgpu.tdm_gather_base<i32,i16>, !amdgpu.tdm_gather_base<i32,i32>
 }
 
 // -----
@@ -267,7 +313,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK-DAG: %[[TENSOR_DIM_1:.+]] = llvm.mlir.constant(128 : i32)
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[TENSOR_DIM_1_SHIFTED:.+]] = llvm.shl %[[TENSOR_DIM_1]], %[[C16]]
-  // CHECK: %[[SGPR2:.+]] = llvm.or %[[SGPR2_0]], %[[TENSOR_DIM_1_SHIFTED]]
+  // CHECK: %[[SGPR2:.+]] = llvm.or disjoint %[[SGPR2_0]], %[[TENSOR_DIM_1_SHIFTED]]
 
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[SGPR3_0:.+]] = llvm.lshr %[[TENSOR_DIM_1]], %[[C16]]
@@ -275,7 +321,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK-DAG: %[[TILE_DIM_0:.+]] = llvm.mlir.constant(64 : i32)
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[TILE_DIM_0_SHIFTED:.+]] = llvm.shl %[[TILE_DIM_0:.+]], %[[C16]]
-  // CHECK: %[[SGPR3:.+]] = llvm.or %[[SGPR3_0]], %[[TILE_DIM_0_SHIFTED]]
+  // CHECK: %[[SGPR3:.+]] = llvm.or disjoint %[[SGPR3_0]], %[[TILE_DIM_0_SHIFTED]]
 
   // CHECK-DAG: %[[SGPR4:.+]] = llvm.mlir.constant(128 : i32)
 
@@ -294,7 +340,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK-DAG: %[[TENSOR_DIM_1_STRIDE_LOW:.+]] = llvm.trunc %[[TENSOR_DIM_1_STRIDE_MASKED]]
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
   // CHECK: %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED:.+]] = llvm.shl %[[TENSOR_DIM_1_STRIDE_LOW]], %[[SHIFT]]
-  // CHECK-DAG: %[[SGPR6:.+]] = llvm.or %[[SGPR6_0]], %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED]]
+  // CHECK-DAG: %[[SGPR6:.+]] = llvm.or disjoint %[[SGPR6_0]], %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED]]
 
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i64) : i64
   // CHECK: %[[TENSOR_DIM_1_STRIDE_SHIFTED:.+]] = llvm.lshr %[[TENSOR_DIM_1_STRIDE_MASKED]], %[[SHIFT]]
@@ -345,7 +391,7 @@ func.func @make_dma_descriptor_atomic_barrier(%base: !amdgpu.tdm_base<i32>, %bar
 
   // CHECK-DAG: %[[ATOMIC_BARRIER_ENABLE_OFFSET:.+]] = llvm.mlir.constant(18 : i32)
   // CHECK: %[[ATOMIC_BARRIER_ENABLE_FIELD:.+]] = llvm.shl %[[C1]], %[[ATOMIC_BARRIER_ENABLE_OFFSET]]
-  // CHECK: %[[SGPR0:.+]] = llvm.or %[[SGPR0_0]], %[[ATOMIC_BARRIER_ENABLE_FIELD]]
+  // CHECK: %[[SGPR0:.+]] = llvm.or disjoint %[[SGPR0_0]], %[[ATOMIC_BARRIER_ENABLE_FIELD]]
 
   // CHECK: %[[ATOMIC_BARRIER_ALIGNED_PTR:.+]] = llvm.extractvalue %[[BARRIER_MEMREF_DESC]][1]
   // CHECK: %[[ATOMIC_BARRIER_ADDR:.+]] = llvm.getelementptr %[[ATOMIC_BARRIER_ALIGNED_PTR]][%[[INDEX]]
@@ -357,7 +403,7 @@ func.func @make_dma_descriptor_atomic_barrier(%base: !amdgpu.tdm_base<i32>, %bar
   // CHECK-DAG: %[[TENSOR_DIM_0:.+]] = llvm.mlir.constant(64 : i32)
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[SGPR1_0:.+]] = llvm.shl %[[TENSOR_DIM_0]], %[[C16]]
-  // CHECK: %[[SGPR1:.+]] = llvm.or %[[ATOMIC_BARRIER]], %[[SGPR1_0]]
+  // CHECK: %[[SGPR1:.+]] = llvm.or disjoint %[[ATOMIC_BARRIER]], %[[SGPR1_0]]
 
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[SGPR2_0:.+]] = llvm.lshr %[[TENSOR_DIM_0]], %[[C16]]
@@ -393,7 +439,7 @@ func.func @make_dma_descriptor_iterate(%base: !amdgpu.tdm_base<i32>, %idx : inde
 
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(19 : i32)
   // CHECK: %[[ITERATE_ENABLE:.+]] = llvm.shl %[[C1]], %[[SHIFT]]
-  // CHECK: %[[SGPR0:.+]] = llvm.or %[[SGPR0_0]], %[[ITERATE_ENABLE]]
+  // CHECK: %[[SGPR0:.+]] = llvm.or disjoint %[[SGPR0_0]], %[[ITERATE_ENABLE]]
 
   // CHECK: %[[V8I32:.+]] = llvm.mlir.poison : vector<8xi32>
   // CHECK: %[[DGROUP1_0:.+]] = llvm.insertelement %[[SGPR0]], %[[V8I32]][%[[C0]] : i32]
@@ -410,7 +456,7 @@ func.func @make_dma_descriptor_iterate(%base: !amdgpu.tdm_base<i32>, %idx : inde
   // CHECK: %[[ITERATE_COUNT_M1:.+]] = llvm.sub %[[ITERATE_COUNT]], %[[C1]]
   // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[ITERATE_COUNT_SHIFTED:.+]] = llvm.shl %[[ITERATE_COUNT_M1]], %[[SHIFT]]
-  // CHECK: %[[SGPR3:.+]] = llvm.or %[[SGPR3_LOW]], %[[ITERATE_COUNT_SHIFTED]]
+  // CHECK: %[[SGPR3:.+]] = llvm.or disjoint %[[SGPR3_LOW]], %[[ITERATE_COUNT_SHIFTED]]
 
   // CHECK: %[[V4I32:.+]] = llvm.mlir.poison : vector<4xi32>
   // CHECK: %[[DGROUP2_0:.+]] = llvm.insertelement %[[C0]], %[[V4I32]][%[[C0]]
@@ -441,18 +487,18 @@ func.func @make_dma_descriptor_pad_enable(%base: !amdgpu.tdm_base<i32>, %pad_amo
 
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(20 : i32)
   // CHECK: %[[PAD_ENABLE:.+]] = llvm.shl %[[C1]], %[[SHIFT]]
-  // CHECK: %[[SGPR0:.+]] = llvm.or %[[SGPR0_BASE:.+]], %[[PAD_ENABLE]]
+  // CHECK: %[[SGPR0:.+]] = llvm.or disjoint %[[SGPR0_BASE:.+]], %[[PAD_ENABLE]]
 
   // CHECK: %[[PAD_INTERVAL_CTTZ:.+]] = "llvm.intr.cttz"(%[[PAD_INTERVAL]]) <{is_zero_poison = false}> : (i32) -> i32
   // CHECK: %[[PAD_INTERVAL_M1:.+]] = llvm.sub %[[PAD_INTERVAL_CTTZ]], %[[C1]]
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(22 : i32)
   // CHECK: %[[PAD_INTERVAL:.+]] = llvm.shl %[[PAD_INTERVAL_M1]], %[[SHIFT]]
-  // CHECK: %[[SGPR0:.+]] = llvm.or %[[SGPR0_BASE:.+]], %[[PAD_INTERVAL]]
+  // CHECK: %[[SGPR0:.+]] = llvm.or disjoint %[[SGPR0_BASE:.+]], %[[PAD_INTERVAL]]
 
   // CHECK: %[[PAD_AMOUNT_M1:.+]] = llvm.sub %[[PAD_AMOUNT]], %[[C1]]
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(25 : i32)
   // CHECK: %[[PAD_AMOUNT_SHIFTED:.+]] = llvm.shl %[[PAD_AMOUNT_M1]], %[[SHIFT]]
-  // CHECK: llvm.or %[[SGPR0:.+]], %[[PAD_AMOUNT_SHIFTED]]
+  // CHECK: llvm.or disjoint %[[SGPR0:.+]], %[[PAD_AMOUNT_SHIFTED]]
 
   %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] padShared(%pad_amount every %pad_interval) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
   func.return %descriptor : !amdgpu.tdm_descriptor
@@ -537,7 +583,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK-DAG: %[[TENSOR_DIM_1:.+]] = llvm.mlir.constant(128 : i32)
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[TENSOR_DIM_1_SHIFTED:.+]] = llvm.shl %[[TENSOR_DIM_1]], %[[C16]]
-  // CHECK: %[[SGPR2:.+]] = llvm.or %[[SGPR2_0]], %[[TENSOR_DIM_1_SHIFTED]]
+  // CHECK: %[[SGPR2:.+]] = llvm.or disjoint %[[SGPR2_0]], %[[TENSOR_DIM_1_SHIFTED]]
 
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[SGPR3_0:.+]] = llvm.lshr %[[TENSOR_DIM_1]], %[[C16]]
@@ -545,13 +591,13 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK-DAG: %[[TILE_DIM_0:.+]] = llvm.mlir.constant(64 : i32)
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[TILE_DIM_0_SHIFTED:.+]] = llvm.shl %[[TILE_DIM_0]], %[[C16]]
-  // CHECK: %[[SGPR3:.+]] = llvm.or %[[SGPR3_0]], %[[TILE_DIM_0_SHIFTED]]
+  // CHECK: %[[SGPR3:.+]] = llvm.or disjoint %[[SGPR3_0]], %[[TILE_DIM_0_SHIFTED]]
 
   // CHECK-DAG: %[[TILE_DIM_1:.+]] = llvm.mlir.constant(128 : i32)
   // CHECK-DAG: %[[TILE_DIM_2:.+]] = llvm.mlir.constant(64 : i32)
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[TILE_DIM_2_SHIFTED:.+]] = llvm.shl %[[TILE_DIM_2]], %[[C16]]
-  // CHECK: %[[SGPR4:.+]] = llvm.or %[[TILE_DIM_1]], %[[TILE_DIM_2_SHIFTED]]
+  // CHECK: %[[SGPR4:.+]] = llvm.or disjoint %[[TILE_DIM_1]], %[[TILE_DIM_2_SHIFTED]]
 
   // CHECK-DAG: %[[TENSOR_DIM_0_STRIDE:.+]] = llvm.mlir.constant(1 : i64) : i64
   // CHECK-DAG: %[[MASK:.+]] = llvm.mlir.constant(281474976710655 : i64) : i64
@@ -567,7 +613,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK-DAG: %[[TENSOR_DIM_1_STRIDE_LOW:.+]] = llvm.trunc %[[TENSOR_DIM_1_STRIDE_MASKED]]
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
   // CHECK: %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED:.+]] = llvm.shl %[[TENSOR_DIM_1_STRIDE_LOW]], %[[SHIFT]]
-  // CHECK-DAG: %[[SGPR6:.+]] = llvm.or %[[SGPR6_0]], %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED]]
+  // CHECK-DAG: %[[SGPR6:.+]] = llvm.or disjoint %[[SGPR6_0]], %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED]]
 
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i64) : i64
   // CHECK: %[[TENSOR_DIM_1_STRIDE_SHIFTED:.+]] = llvm.lshr %[[TENSOR_DIM_1_STRIDE_MASKED]], %[[SHIFT]]
@@ -599,7 +645,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK-DAG: %[[TILE_DIM_3:.+]] = llvm.mlir.constant(64 : i32) : i32
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
   // CHECK: %[[TILE_DIM_3_SHIFTED:.+]] = llvm.shl %[[TILE_DIM_3]], %[[SHIFT]]
-  // CHECK: %[[SGPR3:.+]] = llvm.or %[[SGPR3_0]], %[[TILE_DIM_3_SHIFTED]]
+  // CHECK: %[[SGPR3:.+]] = llvm.or disjoint %[[SGPR3_0]], %[[TILE_DIM_3_SHIFTED]]
 
   // CHECK-DAG: %[[V4I32:.+]] = llvm.mlir.poison : vector<4xi32>
   // CHECK: %[[DGROUP2_0:.+]] = llvm.insertelement %[[SGPR0]], %[[V4I32]][%[[C0]] : i32]
@@ -618,7 +664,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK-DAG: %[[TENSOR_DIM_4:.+]] = llvm.mlir.constant(64 : i32)
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK-DAG: %[[TENSOR_DIM_4_LOW:.+]] = llvm.shl %[[TENSOR_DIM_4]], %[[SHIFT]]
-  // CHECK: %[[SGPR1:.+]] = llvm.or %[[TENSOR_DIM3_STRIDE_HIGH]], %[[TENSOR_DIM_4_LOW]]
+  // CHECK: %[[SGPR1:.+]] = llvm.or disjoint %[[TENSOR_DIM3_STRIDE_HIGH]], %[[TENSOR_DIM_4_LOW]]
 
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[SGPR2_0:.+]] = llvm.lshr %[[TENSOR_DIM_4]], %[[SHIFT]]
@@ -626,7 +672,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK-DAG: %[[TILE_DIM_4:.+]] = llvm.mlir.constant(64 : i32) : i32
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
   // CHECK: %[[TILE_DIM_4_SHIFTED:.+]] = llvm.shl %[[TILE_DIM_4]], %[[SHIFT]]
-  // CHECK: %[[SGPR2:.+]] = llvm.or %[[SGPR2_0]], %[[TILE_DIM_4_SHIFTED]]
+  // CHECK: %[[SGPR2:.+]] = llvm.or disjoint %[[SGPR2_0]], %[[TILE_DIM_4_SHIFTED]]
 
   // CHECK: %[[V4I32:.+]] = llvm.mlir.poison : vector<4xi32>
   // CHECK: %[[DGROUP3_0:.+]] = llvm.insertelement %[[TENSOR_DIM3_STRIDE_LOW]], %[[V4I32]][%[[C0]] : i32]
@@ -659,11 +705,11 @@ func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_
   // CHECK-DAG: %[[WG_MASK_EXT:.+]] = llvm.zext %[[WG_MASK_CAST]]
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[DATA_SIZE_SHIFTED:.+]] = llvm.shl %[[C2]], %[[C16]]
-  // CHECK: %[[SGPR0_BASE:.+]] = llvm.or %[[WG_MASK_EXT]], %[[DATA_SIZE_SHIFTED]]
+  // CHECK: %[[SGPR0_BASE:.+]] = llvm.or disjoint %[[WG_MASK_EXT]], %[[DATA_SIZE_SHIFTED]]
 
   // CHECK-DAG: %[[C21:.+]] = llvm.mlir.constant(21 : i32)
   // CHECK: %[[TIMEOUT_SHIFTED:.+]] = llvm.shl %[[C1]], %[[C21]]
-  // CHECK: %[[SGPR0:.+]] = llvm.or %[[SGPR0_BASE]], %[[TIMEOUT_SHIFTED]]
+  // CHECK: %[[SGPR0:.+]] = llvm.or disjoint %[[SGPR0_BASE]], %[[TIMEOUT_SHIFTED]]
 
   // CHECK-DAG: %[[TENSOR_DIM_0:.+]] = llvm.mlir.constant(64 : i32)
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
@@ -675,7 +721,7 @@ func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_
   // CHECK-DAG: %[[TENSOR_DIM_1:.+]] = llvm.mlir.constant(128 : i32)
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[TENSOR_DIM_1_SHIFTED:.+]] = llvm.shl %[[TENSOR_DIM_1]], %[[C16]]
-  // CHECK: %[[SGPR2:.+]] = llvm.or %[[SGPR2_0]], %[[TENSOR_DIM_1_SHIFTED]]
+  // CHECK: %[[SGPR2:.+]] = llvm.or disjoint %[[SGPR2_0]], %[[TENSOR_DIM_1_SHIFTED]]
 
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[SGPR3_0:.+]] = llvm.lshr %[[TENSOR_DIM_1]], %[[C16]]
@@ -683,7 +729,7 @@ func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_
   // CHECK-DAG: %[[TILE_DIM_0:.+]] = llvm.mlir.constant(64 : i32)
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[TILE_DIM_0_SHIFTED:.+]] = llvm.shl %[[TILE_DIM_0:.+]], %[[C16]]
-  // CHECK: %[[SGPR3:.+]] = llvm.or %[[SGPR3_0]], %[[TILE_DIM_0_SHIFTED]]
+  // CHECK: %[[SGPR3:.+]] = llvm.or disjoint %[[SGPR3_0]], %[[TILE_DIM_0_SHIFTED]]
 
   // CHECK-DAG: %[[SGPR4:.+]] = llvm.mlir.constant(128 : i32)
 
@@ -703,7 +749,7 @@ func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_
 
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
   // CHECK: %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED:.+]] = llvm.shl %[[TENSOR_DIM_1_STRIDE_LOW]], %[[SHIFT]]
-  // CHECK-DAG: %[[SGPR6:.+]] = llvm.or %[[SGPR6_0]], %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED]]
+  // CHECK-DAG: %[[SGPR6:.+]] = llvm.or disjoint %[[SGPR6_0]], %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED]]
 
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i64) : i64
   // CHECK: %[[TENSOR_DIM_1_STRIDE_SHIFTED:.+]] = llvm.lshr %[[TENSOR_DIM_1_STRIDE_MASKED]], %[[SHIFT]]
