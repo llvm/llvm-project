@@ -310,9 +310,9 @@ constexpr bool test() {
     std::array<int, 3> arr_b{5, 6, 7};
     std::span<const int> s1{arr_a};
     std::span<const int> s2{arr_b};
-    auto v      = std::views::concat(s1, s2);
-    auto i      = v.begin();
-    auto j      = v.begin();
+    auto v = std::views::concat(s1, s2);
+    auto i = v.begin();
+    auto j = v.begin();
     std::ranges::advance(j, arr_a.size());
 
     assert(i < j);
