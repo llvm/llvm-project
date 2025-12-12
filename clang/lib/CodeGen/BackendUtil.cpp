@@ -1018,8 +1018,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 #endif
   }
   // Register plugin callbacks with PB.
-  for (auto &Plugin : CodeGenOpts.PassPlugins)
-    Plugin.registerPassBuilderCallbacks(PB);
+  for (llvm::PassPlugin *Plugin : CodeGenOpts.PassPlugins)
+    Plugin->registerPassBuilderCallbacks(PB);
   for (const auto &PassCallback : CodeGenOpts.PassBuilderCallbacks)
     PassCallback(PB);
 #define HANDLE_EXTENSION(Ext)                                                  \
