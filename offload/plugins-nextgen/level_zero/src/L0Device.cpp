@@ -285,12 +285,11 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
     if (Plugin.getOptions().CommandMode == CommandModeTy::AsyncOrdered) {
       // Only need to wait for the last event
       CALL_ZE_RET_ERROR(zeEventHostSynchronize, WaitEvents.back(),
-                        std::numeric_limits<uint64_t>::max());
+                        L0DefaultTimeout);
       // Synchronize on kernel event to support printf()
       auto KE = AsyncQueue->KernelEvent;
       if (KE && KE != WaitEvents.back()) {
-        CALL_ZE_RET_ERROR(zeEventHostSynchronize, KE,
-                          std::numeric_limits<uint64_t>::max());
+        CALL_ZE_RET_ERROR(zeEventHostSynchronize, KE, L0DefaultTimeout);
       }
       for (auto &Event : WaitEvents) {
         if (auto Err = releaseEvent(Event))
@@ -305,8 +304,7 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
       bool WaitDone = false;
       for (auto Itr = WaitEvents.rbegin(); Itr != WaitEvents.rend(); Itr++) {
         if (!WaitDone) {
-          CALL_ZE_RET_ERROR(zeEventHostSynchronize, *Itr,
-                            std::numeric_limits<uint64_t>::max());
+          CALL_ZE_RET_ERROR(zeEventHostSynchronize, *Itr, L0DefaultTimeout);
           if (*Itr == AsyncQueue->KernelEvent)
             WaitDone = true;
         }
@@ -721,8 +719,7 @@ Error L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
     CmdList = *CmdListOrErr;
     CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
                       nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, CmdList,
-                      std::numeric_limits<uint64_t>::max());
+    CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, CmdList, L0DefaultTimeout);
   } else {
     if (UseCopyEngine) {
       auto CmdListOrErr = getCopyCmdList();
@@ -749,8 +746,7 @@ Error L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
     CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
                           CmdQueue, 1, &CmdList, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue,
-                      std::numeric_limits<uint64_t>::max());
+    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
     CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   }
   return Plugin::success();
@@ -804,8 +800,7 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
     ze_event_handle_t Event = *EventOrErr;
     CALL_ZE_RET_ERROR(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
                       PatternSize, Size, Event, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event,
-                      std::numeric_limits<uint64_t>::max());
+    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, L0DefaultTimeout);
   } else {
     auto CmdListOrErr = getCopyCmdList();
     if (!CmdListOrErr)
@@ -820,8 +815,7 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
     CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
                       nullptr);
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue,
-                      std::numeric_limits<uint64_t>::max());
+    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
     CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   }
   return Plugin::success();

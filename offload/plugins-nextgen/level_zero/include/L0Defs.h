@@ -42,6 +42,9 @@ using namespace error;
 /// Generic L0 handle type
 using ZeHandleTy = void *;
 
+/// Maximum wait time 
+constexpr uint64_t L0DefaultTimeout = std::numeric_limits<uint64_t>::max();
+
 } // namespace llvm::omp::target::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEFS_H

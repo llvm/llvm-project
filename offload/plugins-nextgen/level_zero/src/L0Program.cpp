@@ -278,7 +278,7 @@ Error L0ProgramTy::buildModules(const std::string_view BuildOptions) {
   uint64_t ImageCount = 0;
   struct V1ImageInfo {
     // 0 - native, 1 - SPIR-V
-    uint64_t Format = (std::numeric_limits<uint64_t>::max)();
+    uint64_t Format = std::numeric_limits<uint64_t>::max();
     std::string CompileOpts;
     std::string LinkOpts;
     // We may have multiple sections created from split-kernel mode

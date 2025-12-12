@@ -184,14 +184,13 @@ Error LevelZeroPluginTy::syncBarrierImpl(omp_interop_val_t *Interop) {
     auto ImmCmdList = L0->ImmCmdList;
 
     CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, ImmCmdList,
-                      std::numeric_limits<uint64_t>::max());
+                      L0DefaultTimeout);
   } else {
     DP("LevelZeroPluginTy::sync_barrier: Synchronizing " DPxMOD
        " with queue synchronize\n",
        DPxPTR(Interop));
     auto CmdQueue = L0->CommandQueue;
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue,
-                      std::numeric_limits<uint64_t>::max());
+    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
   }
 
   return Plugin::success();

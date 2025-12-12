@@ -291,8 +291,7 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
     AsyncQueue->WaitEvents.push_back(Event);
     AsyncQueue->KernelEvent = Event;
   } else {
-    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event,
-                      std::numeric_limits<uint64_t>::max());
+    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, L0DefaultTimeout);
     if (auto Err = l0Device.releaseEvent(Event))
       return Err;
   }
@@ -330,8 +329,7 @@ static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
                         CmdQueue, 1, &CmdList, nullptr);
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
-  CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue,
-                    std::numeric_limits<uint64_t>::max());
+  CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
   CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   if (Event) {
     if (auto Err = l0Device.releaseEvent(Event))
