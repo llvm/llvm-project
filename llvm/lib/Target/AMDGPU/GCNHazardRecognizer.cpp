@@ -2224,16 +2224,15 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   MachineBasicBlock *MBB = MI->getParent();
   MachineOperand *Src1 = TII.getNamedOperand(*MI, AMDGPU::OpName::src1);
 
-  /* In:
+  // In:
+  //
+  //    Dst = shiftrev64 Amt, Src1
+  //
+  // if  Dst!=Src1 then avoid the bug with:
+  //
+  //    Dst.sub0 = Amt
+  //    Dst = shift64 Dst.sub0, Src1
 
-        Dst = shiftrev64 Amt, Src1
-
-     if  Dst!=Src1 then avoid the bug with:
-
-        Dst.sub0 = Amt
-        Dst = shift64 Dst.sub0, Src1
-
-  */
   Register DstReg = MI->getOperand(0).getReg();
   if (!Src1->isReg() || Src1->getReg() != DstReg) {
     Register DstLo = TRI.getSubReg(DstReg, AMDGPU::sub0);
