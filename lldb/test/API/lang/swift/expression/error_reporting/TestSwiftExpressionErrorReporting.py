@@ -95,8 +95,6 @@ class TestSwiftExpressionErrorReporting(TestBase):
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
 
-        self.runCmd("settings set target.experimental.swift-use-context-free-po true")
-
         options = lldb.SBExpressionOptions()
         value = self.frame().EvaluateExpression("strct", options)
         def check(value):

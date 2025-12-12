@@ -46,7 +46,7 @@ let Definition = "target_experimental" in {
     DefaultTrue,
     Desc<"Enables caching of task pointers inside the swift tasks plugin">;
   def SwiftUseContextFreePrintObject: Property<"swift-use-context-free-po", "Boolean">,
-    DefaultFalse,
+    DefaultTrue,
     Desc<"If true, use the context-free po implementation for Swift.">;
   def UseDIL : Property<"use-DIL", "Boolean">,
     Global, DefaultTrue,

@@ -4845,8 +4845,8 @@ bool TargetProperties::GetSwiftUseContextFreePrintObject() const {
   if (exp_values)
     return exp_values
         ->GetPropertyAtIndexAs<bool>(ePropertySwiftUseContextFreePrintObject)
-        .value_or(false);
-  return false;
+        .value_or(true);
+  return true;
 }
 
 void TargetProperties::SetUseDIL(ExecutionContext *exe_ctx, bool b) {
