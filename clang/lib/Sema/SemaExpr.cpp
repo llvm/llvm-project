@@ -18655,7 +18655,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
             // Do not defer instantiations of constexpr functions, to avoid the
             // expression evaluator needing to call back into Sema if it sees a
             // call to such a function.
-            InstantiateFunctionDefinition(PointOfInstantiation, Func);
+            InstantiateFunctionDefinition(PointOfInstantiation, Func, true);
           else {
             Func->setInstantiationIsPending(true);
             PendingInstantiations.push_back(
