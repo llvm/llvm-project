@@ -3028,10 +3028,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     OutExpr = OutExpr->IgnoreParenNoopCasts(getContext());
 
     SmallVector<std::string> GCCRegs;
-    OutputConstraint = AddVariableConstraints(OutputConstraint, *OutExpr,
-                                              getTarget(), CGM, S,
-                                              Info.earlyClobber(),
-                                              &GCCRegs);
+    OutputConstraint =
+        AddVariableConstraints(OutputConstraint, *OutExpr, getTarget(), CGM, S,
+                               Info.earlyClobber(), &GCCRegs);
     // Give an error on multiple outputs to same physreg.
     if (!GCCRegs.empty()) {
       for (auto R : GCCRegs) {
