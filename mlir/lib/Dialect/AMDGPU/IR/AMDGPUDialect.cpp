@@ -523,6 +523,62 @@ LogicalResult MFMAOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// SparseMFMAOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SparseMFMAOp::verify() {
+  constexpr uint32_t waveSize = 64;
+
+  auto sparseType = cast<VectorType>(getSourceA().getType());
+  auto denseType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
+
+  Type sparseElem = sparseType.getElementType();
+  Type denseElem = denseType.getElementType();
+  int64_t sparseLen = sparseType.getNumElements();
+  int64_t denseLen = denseType.getNumElements();
+  int64_t destLen = destType.getNumElements();
+
+  if (denseLen != 2 * sparseLen)
+    return emitOpError("expected dense source operand to have exactly double "
+                       "the number of elements of the sparse source operand");
+
+  // Check that source element types are compatible.
+  // For fp8/bf8 mixed operations, element types can differ (e.g., fp8 * bf8).
+  // For other types, element types must match exactly.
+  bool bothFloat8 = sparseElem.isFloat(8) && denseElem.isFloat(8);
+  if (!bothFloat8 && sparseElem != denseElem)
+    return emitOpError(
+        "expected source operands to have the same element type");
+
+  // When CBSZ == 0, ABID selects the index set within the sparse index VGPR.
+  // When CBSZ != 0, the first index set is always used (ABID ignored).
+  bool is8BitSource = sparseElem.isFloat(8) || sparseElem.isInteger(8);
+  if (getCbsz() == 0 && is8BitSource) {
+    // 8-bit source: ABID[0] selects one of two 16-bit index sets.
+    if (getAbid() > 1)
+      return emitOpError(
+          "ABID must be 0 or 1 for 8-bit source data when CBSZ is 0");
+  }
+  // 16-bit source: ABID[1:0] selects one of four 8-bit index sets (0-3 all
+  // valid).
+
+  int64_t expectedSourceElems = (getM() * getK()) / waveSize;
+  if (denseLen != expectedSourceElems)
+    return emitOpError("expected " + Twine(expectedSourceElems) +
+                       " source values for this operation but got " +
+                       Twine(denseLen));
+
+  int64_t expectedDestElems = (getM() * getN()) / waveSize;
+  if (destLen != expectedDestElems)
+    return emitOpError("expected " + Twine(expectedDestElems) +
+                       " result values for this operation but got " +
+                       Twine(destLen));
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DPPOp
 //===----------------------------------------------------------------------===//
 LogicalResult DPPOp::verify() {
