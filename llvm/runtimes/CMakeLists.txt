@@ -262,10 +262,7 @@ function(runtime_default_target)
 
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES "@${LLVM_BINARY_DIR}/runtimes/runtimes-bins/lit.tests")
-    list(APPEND test_targets runtimes-test-depends check-runtimes check-builtins)
-
-    # The default runtimes target can run tests the default builtins target
-    list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_BUILTINS_DIR=${LLVM_BINARY_DIR}/runtimes/builtins-bins/")
+    list(APPEND test_targets runtimes-test-depends check-runtimes)
   endif()
 
   set_enable_per_target_runtime_dir()
@@ -372,15 +369,6 @@ function(runtime_register_target name)
       list(APPEND ${name}_test_targets ${target}-${name})
       list(APPEND test_targets ${target}-${name})
     endforeach()
-
-    # If a builtins-${name} target exists, we'll test those builtins
-    # with this runtimes build
-    if(TARGET builtins-${name})
-      list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_BUILTINS_DIR=${LLVM_BINARY_DIR}/runtimes/builtins-${name}-bins/")
-      set(check-builtins-${name} check-builtins)
-      list(APPEND ${name}_test_targets check-builtins-${name})
-      list(APPEND test_targets check-builtins-${name})
-    endif()
     set(test_targets "${test_targets}" PARENT_SCOPE)
   endif()
 
@@ -446,9 +434,6 @@ function(runtime_register_target name)
   if(LLVM_INCLUDE_TESTS)
     add_dependencies(check-runtimes check-runtimes-${name})
     add_dependencies(runtimes-test-depends runtimes-test-depends-${name})
-    if(TARGET builtins-${name})
-      add_dependencies(check-builtins check-builtins-${name})
-    endif()
   endif()
   foreach(runtime_name ${runtime_names})
     if(NOT TARGET ${runtime_name})
@@ -624,17 +609,6 @@ if(build_runtimes)
           PROPERTIES FOLDER "Runtimes"
         )
         set(test_targets "")
-
-        # NOTE: Currently, the builtins tests are run with the runtimes build,
-        # and the default runtimes target installs a check-builtins target
-        # which forwards to the default builtins build. If the default runtimes
-        # target is not used, we create a custom target which will depend on
-        # each check-builtins-${name}.
-        add_custom_target(check-builtins)
-        set_target_properties(
-          check-builtins
-          PROPERTIES FOLDER "Compiler-RT"
-        )
       endif()
       if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
         foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
