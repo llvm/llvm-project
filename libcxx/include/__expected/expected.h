@@ -1145,8 +1145,8 @@ public:
     requires(!is_void_v<_T2>)
 #  if _LIBCPP_STD_VER >= 26
             && requires {
-                 { *__x == *__y }->__core_convertible_to<bool>;
-                 { __x.error() == __y.error() }->__core_convertible_to<bool>;
+                 { *__x == *__y } -> __core_convertible_to<bool>;
+                 { __x.error() == __y.error() } -> __core_convertible_to<bool>;
                }
 #  endif
   {
