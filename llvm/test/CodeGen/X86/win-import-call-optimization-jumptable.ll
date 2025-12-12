@@ -1,8 +1,15 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s --check-prefix ASM
+; RUN: llc --fast-isel -mtriple=x86_64-pc-windows-msvc -o - %s | FileCheck %s --check-prefix ASM
+; RUN: llc -mtriple=x86_64-pc-windows-msvc  --filetype=obj -o - %s | llvm-objdump - --disassemble \
+; RUN:  | FileCheck %s --check-prefix OBJ
 
-; CHECK-LABEL:  uses_rax:
-; CHECK:        .Limpcall0:
-; CHECK-NEXT:     jmpq    *%rax
+; ASM-LABEL:  uses_rax:
+; ASM:        .Limpcall0:
+; ASM-NEXT:     jmpq    *%rax
+; ASM-NEXT:     int3
+; ASM-NEXT:     int3
+; ASM-NEXT:     int3
+; ASM-NEXT:     int3
 
 define void @uses_rax(i32 %x) {
 entry:
@@ -34,9 +41,13 @@ sw.epilog:
   ret void
 }
 
-; CHECK-LABEL:  uses_rcx:
-; CHECK:        .Limpcall1:
-; CHECK-NEXT:     jmpq    *%rcx
+; ASM-LABEL:  uses_rcx:
+; ASM:        .Limpcall1:
+; ASM-NEXT:     jmpq    *%rcx
+; ASM-NEXT:     int3
+; ASM-NEXT:     int3
+; ASM-NEXT:     int3
+; ASM-NEXT:     int3
 
 define void @uses_rcx(i32 %x) {
 entry:
@@ -70,14 +81,32 @@ sw.epilog:
 
 declare void @g(i32)
 
-; CHECK-LABEL:  .section        .retplne,"yi"
-; CHECK-NEXT:   .asciz  "RetpolineV1"
-; CHECK-NEXT:   .long   24
-; CHECK-NEXT:   .secnum .text
-; CHECK-NEXT:   .long   16
-; CHECK-NEXT:   .secoffset      .Limpcall0
-; CHECK-NEXT:   .long   17
-; CHECK-NEXT:   .secoffset      .Limpcall1
+; ASM-LABEL:  .section        .retplne,"yi"
+; ASM-NEXT:   .asciz  "RetpolineV1"
+; ASM-NEXT:   .long   24
+; ASM-NEXT:   .secnum .text
+; ASM-NEXT:   .long   16
+; ASM-NEXT:   .secoffset      .Limpcall0
+; ASM-NEXT:   .long   17
+; ASM-NEXT:   .secoffset      .Limpcall1
+
+; The loader assumes an exact sequence of instructions/bytes at each marked site since it may
+; replace the instruction(s) with new instruction(s), and the MSVC linker validates these at link
+; time.
+
+; Kind = 16-31 (IMAGE_RETPOLINE_AMD64_SWITCHTABLE_*)
+; OBJ-LABEL:  <uses_rax>:
+; OBJ:        : ff e0                         jmpq    *%rax
+; OBJ-NEXT:   : cc                            int3
+; OBJ-NEXT:   : cc                            int3
+; OBJ-NEXT:   : cc                            int3
+; OBJ-NEXT:   : cc                            int3
+; OBJ-LABEL:  <uses_rcx>:
+; OBJ:        : ff e1                         jmpq    *%rcx
+; OBJ-NEXT:   : cc                            int3
+; OBJ-NEXT:   : cc                            int3
+; OBJ-NEXT:   : cc                            int3
+; OBJ-NEXT:   : cc                            int3
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"import-call-optimization", i32 1}
