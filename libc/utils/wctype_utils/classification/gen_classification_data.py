@@ -223,7 +223,8 @@ def generate_code(lookup_table: StagedLookupTable, llvm_project_root_path: str) 
         f"{llvm_project_root_path}/libc/src/__support/wctype/wctype_classification_utils.h",
         "w",
     ) as f:
-        f.write(f"""//===-- Utils for wctype classification functions ---------------*- C++ -*-===//
+        f.write(
+            f"""//===-- Utils for wctype classification functions ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -263,7 +264,8 @@ inline constexpr uint16_t LEVEL2_SIZE = {len(level2)};
 
 // Level 1 table: indexed by (codepoint >> 8), stores level2 block offsets
 inline constexpr uint16_t level1[LEVEL1_SIZE] = {{
-""")
+"""
+        )
         for i in range(0, len(level1), 11):
             f.write("  ")
             for j in range(i, min(i + 11, len(level1))):
@@ -271,11 +273,13 @@ inline constexpr uint16_t level1[LEVEL1_SIZE] = {{
                 if j + 1 < len(level1):
                     f.write(",")
             f.write("\n")
-        f.write(f"""}};
+        f.write(
+            f"""}};
 
 // Level 2 table: blocks of 256 property flags
 inline constexpr uint8_t level2[LEVEL2_SIZE] = {{
-""")
+"""
+        )
         for i in range(0, len(level2), 11):
             f.write("  ")
             for j in range(i, min(i + 11, len(level2))):
@@ -283,7 +287,8 @@ inline constexpr uint8_t level2[LEVEL2_SIZE] = {{
                 if j + 1 < len(level2):
                     f.write(", ")
             f.write("\n")
-        f.write(f"""}};
+        f.write(
+            f"""}};
 
 // Returns the Unicode property flag for a given wide character.
 inline constexpr uint8_t lookup_properties(const wchar_t wc) {{
@@ -306,4 +311,5 @@ inline constexpr uint8_t lookup_properties(const wchar_t wc) {{
 
 #endif // LLVM_LIBC_SRC___SUPPORT_WCTYPE_WCTYPE_CLASSIFICATION_UTILS_H
 
-""")
+"""
+        )
