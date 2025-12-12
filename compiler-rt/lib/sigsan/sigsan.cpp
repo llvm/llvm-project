@@ -24,7 +24,7 @@ thread_local unsigned int __sigsan_signal_depth = 0;
 // don't cause problems
 static uintptr_t __sigsan_handlers[NSIG];
 
-[[noreturn]] void __sigsan_print_backtrace_and_die() {
+[[noreturn]] static void __sigsan_print_backtrace_and_die() {
   BufferedStackTrace stack;
   GET_CURRENT_PC_BP_SP;
   (void)sp;
@@ -33,7 +33,7 @@ static uintptr_t __sigsan_handlers[NSIG];
   Die();
 }
 
-[[noreturn]] void
+[[noreturn]] static void
 __sigsan_die_from_unsafe_function_call(char const *func_name) {
   __sigsan_signal_depth =
       0; /* To avoid having to make this function async-signal-safe :) */
@@ -46,7 +46,7 @@ __sigsan_die_from_unsafe_function_call(char const *func_name) {
   __sigsan_print_backtrace_and_die();
 }
 
-[[noreturn]] void __sigsan_die_from_modified_errno() {
+[[noreturn]] static void __sigsan_die_from_modified_errno() {
   __sigsan_signal_depth =
       0; /* To avoid having to make this function async-signal-safe :) */
   SanitizerCommonDecorator d;
@@ -56,7 +56,7 @@ __sigsan_die_from_unsafe_function_call(char const *func_name) {
   __sigsan_print_backtrace_and_die();
 }
 
-void __sigsan_handler(int signum) {
+static void __sigsan_handler(int signum) {
   __sigsan_signal_depth++;
   int saved_errno = errno;
   ((signal_handler)(__sigsan_handlers[signum]))(signum);
@@ -66,7 +66,7 @@ void __sigsan_handler(int signum) {
   __sigsan_signal_depth--;
 }
 
-void __sigsan_extended_handler(int signum, siginfo_t *si, void *arg) {
+static void __sigsan_extended_handler(int signum, siginfo_t *si, void *arg) {
   __sigsan_signal_depth++;
   int saved_errno = errno;
   ((extended_signal_handler)(__sigsan_handlers[signum]))(signum, si, arg);
@@ -234,7 +234,7 @@ SIGSAN_INTERCEPTOR(int, pthread_mutex_trylock, (mutex), pthread_mutex_t *mutex)
 SIGSAN_INTERCEPTOR(int, pthread_mutex_unlock, (mutex), pthread_mutex_t *mutex)
 SIGSAN_INTERCEPTOR(int, pthread_mutex_destroy, (mutex), pthread_mutex_t *mutex)
 
-__attribute__((constructor)) void __sigsan_init() {
+static __attribute__((constructor)) void __sigsan_init() {
   SetCommonFlagsDefaults();
   InitializeCommonFlags();
 
