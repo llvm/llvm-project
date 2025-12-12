@@ -93,9 +93,7 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
           continue;
         addLatencyToEdge(PredDep, SU, FenceLatency);
       }
-    }
-
-    else if (Op == AMDGPU::S_BARRIER_WAIT) {
+    } else if (Op == AMDGPU::S_BARRIER_WAIT) {
       for (SDep &PredDep : SU.Preds) {
         SUnit *PredSU = PredDep.getSUnit();
         const MachineInstr *PredMI = PredSU->getInstr();
