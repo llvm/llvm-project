@@ -2376,7 +2376,11 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
         cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
   }
 
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable(
+        "cannot execute this recipe since VPFirstOrderRecurrencePHIRecipe "
+        "should be transformed to VPWidenPHIRecipe");
+  }
 
   /// Return the cost of this first-order recurrence phi recipe.
   InstructionCost computeCost(ElementCount VF,

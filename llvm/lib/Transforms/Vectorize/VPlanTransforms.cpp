@@ -3667,7 +3667,7 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
     R->dissolveToCFGLoop();
 }
 
-void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan, ElementCount VF) {
   VPTypeAnalysis TypeInfo(Plan);
   SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -3692,6 +3692,34 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         }
         expandVPWidenPointerInduction(WidenIVR, TypeInfo);
         ToRemove.push_back(WidenIVR);
+        continue;
+      }
+
+      if (auto *FORPhiR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
+        VPValue *InitVec = FORPhiR->getStartValue();
+        DebugLoc DL = FORPhiR->getDebugLoc();
+        if (VF.isVector()) {
+          VPBuilder PHBuilder(Plan.getVectorPreheader());
+          VPValue *Poison = Plan.getOrAddLiveIn(
+              PoisonValue::get(TypeInfo.inferScalarType(InitVec)));
+          Type *IdxTy = Type::getInt32Ty(Plan.getContext());
+          VPValue *RuntimeVF = PHBuilder.createScalarZExtOrTrunc(
+              &Plan.getVF(), IdxTy, TypeInfo.inferScalarType(&Plan.getVF()),
+              DL);
+          VPValue *LastIdx = PHBuilder.createOverflowingOp(
+              Instruction::Sub, {RuntimeVF, Plan.getConstantInt(IdxTy, 1)},
+              {false, false}, DL);
+          InitVec = PHBuilder.createNaryOp(Instruction::InsertElement,
+                                           {Poison, InitVec, LastIdx}, DL,
+                                           "vector.recur.init");
+        }
+        auto *WidenPhi =
+            new VPWidenPHIRecipe(cast<PHINode>(FORPhiR->getUnderlyingInstr()),
+                                 InitVec, DL, "vector.recur");
+        WidenPhi->addOperand(FORPhiR->getBackedgeValue());
+        WidenPhi->insertBefore(FORPhiR);
+        FORPhiR->replaceAllUsesWith(WidenPhi);
+        ToRemove.push_back(FORPhiR);
         continue;
       }
 
