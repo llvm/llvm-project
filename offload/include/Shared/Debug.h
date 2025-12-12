@@ -44,8 +44,8 @@
 #include <string>
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/circular_raw_ostream.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/circular_raw_ostream.h"
 
 /// 32-Bit field data attributes controlling information presented to the user.
 enum OpenMPInfoType : uint32_t {
