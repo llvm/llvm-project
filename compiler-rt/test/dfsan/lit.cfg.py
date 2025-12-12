@@ -10,6 +10,7 @@ config.test_source_root = os.path.dirname(__file__)
 
 # Setup default compiler flags used with -fsanitize=dataflow option.
 clang_dfsan_cflags = ["-fsanitize=dataflow"] + [config.target_cflags]
+# To print stack backtrace of origin.
 if config.target_arch == "s390x":
     clang_dfsan_cflags.append("-mbackchain")
 

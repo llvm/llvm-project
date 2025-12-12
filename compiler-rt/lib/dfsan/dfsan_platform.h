@@ -69,14 +69,14 @@ const MappingDesc kMemoryLayout[] = {
 #    define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x200000000000ULL)
 #  elif SANITIZER_LINUX && SANITIZER_S390_64
 const MappingDesc kMemoryLayout[] = {
-    {0x000000000000ULL, 0x040000000000ULL, MappingDesc::APP, "low memory"},
+    {0x000000000000ULL, 0x040000000000ULL, MappingDesc::APP, "app-low"},
     {0x040000000000ULL, 0x080000000000ULL, MappingDesc::INVALID, "invalid"},
     {0x080000000000ULL, 0x180000000000ULL, MappingDesc::SHADOW, "shadow"},
     {0x180000000000ULL, 0x1C0000000000ULL, MappingDesc::INVALID, "invalid"},
     {0x1C0000000000ULL, 0x2C0000000000ULL, MappingDesc::ORIGIN, "origin"},
     {0x2C0000000000ULL, 0x440000000000ULL, MappingDesc::INVALID, "invalid"},
     {0x440000000000ULL, 0x460000000000ULL, MappingDesc::ALLOCATOR, "allocator"},
-    {0x460000000000ULL, 0x500000000000ULL, MappingDesc::APP, "high memory"}};
+    {0x460000000000ULL, 0x500000000000ULL, MappingDesc::APP, "app-high"}};
 
 #    define MEM_TO_SHADOW(mem) \
       ((((uptr)(mem)) & ~0xC00000000000ULL) + 0x080000000000ULL)

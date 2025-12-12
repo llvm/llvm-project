@@ -44,37 +44,30 @@ struct DFsanMapUnmapCallback {
 // duplicated as MappingDesc::ALLOCATOR in dfsan_platform.h.
 #if defined(__aarch64__)
 const uptr kAllocatorSpace = 0xE00000000000ULL;
+const uptr kAllocatorSpaceSize = 0x40000000000;  // 4T.
 #elif defined(__s390x__)
 const uptr kAllocatorSpace = 0x440000000000ULL;
+const uptr kAllocatorSpaceSize = 0x020000000000;  // 2T.
 #else
 const uptr kAllocatorSpace = 0x700000000000ULL;
+const uptr kAllocatorSpaceSize = 0x40000000000;  // 4T.
 #endif
 #if defined(__s390x__)
-const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
+const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G.
+#else
+const uptr kMaxAllowedMallocSize = 1ULL << 40;
+#endif
 
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;
-  static const uptr kSpaceSize = 0x020000000000;  // 2T.
+  static const uptr kSpaceSize = kAllocatorSpaceSize;
   static const uptr kMetadataSize = sizeof(Metadata);
   using SizeClassMap = DefaultSizeClassMap;
   using MapUnmapCallback = DFsanMapUnmapCallback;
   static const uptr kFlags = 0;
   using AddressSpaceView = LocalAddressSpaceView;
 };
-#else
-const uptr kMaxAllowedMallocSize = 1ULL << 40;
 
-struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
-  static const uptr kSpaceBeg = kAllocatorSpace;
-  static const uptr kSpaceSize = 0x40000000000;  // 4T.
-  static const uptr kMetadataSize = sizeof(Metadata);
-  typedef DefaultSizeClassMap SizeClassMap;
-  typedef DFsanMapUnmapCallback MapUnmapCallback;
-  static const uptr kFlags = 0;
-  using AddressSpaceView = LocalAddressSpaceView;
-};
-
-#endif
 typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 
 typedef CombinedAllocator<PrimaryAllocator> Allocator;
