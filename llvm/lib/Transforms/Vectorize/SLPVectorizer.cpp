@@ -23184,25 +23184,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   Size = R.getCanonicalGraphSize();
   if (S && S.getOpcode() == Instruction::Load)
     Size = 2; // cut off masked gather small trees
-  InstructionCost Cost = R.getTreeCost();
-
-  LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for VF=" << VF << "\n");
-  if (Cost < -SLPCostThreshold) {
-    LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost = " << Cost << "\n");
-
-    using namespace ore;
-
-    R.getORE()->emit(OptimizationRemark(SV_NAME, "StoresVectorized",
-                                        cast<StoreInst>(Chain[0]))
-                     << "Stores SLP vectorized with cost " << NV("Cost", Cost)
-                     << " and with tree size "
-                     << NV("TreeSize", R.getTreeSize()));
-
-    R.vectorizeTree();
-    return true;
-  }
-
-  return false;
+  return true;
 }
 
 /// Checks if the quadratic mean deviation is less than 90% of the mean size.
@@ -23493,6 +23475,32 @@ bool SLPVectorizerPass::vectorizeStores(
               unsigned TreeSize;
               std::optional<bool> Res =
                   vectorizeStoreChain(Slice, R, SliceStartIdx, MinVF, TreeSize);
+              if (Res && *Res) {
+                if (TreeSize) {
+                  InstructionCost Cost = R.getTreeCost();
+
+                  LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
+                                    << " for VF=" << VF << "\n");
+                  if (Cost < -SLPCostThreshold) {
+                    LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost = "
+                                      << Cost << "\n");
+
+                    using namespace ore;
+
+                    R.getORE()->emit(
+                        OptimizationRemark(SV_NAME, "StoresVectorized",
+                                           cast<StoreInst>(Slice[0]))
+                        << "Stores SLP vectorized with cost "
+                        << NV("Cost", Cost) << " and with tree size "
+                        << NV("TreeSize", R.getTreeSize()));
+
+                    R.vectorizeTree();
+                  } else
+                    *Res = false;
+                } else
+                  *Res = false;
+              }
+
               if (!Res) {
                 // Update the range of non schedulable VFs for slices starting
                 // at SliceStartIdx.
