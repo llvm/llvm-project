@@ -14,6 +14,7 @@
 #include "SPIRV.h"
 #include "SPIRVCBufferAccess.h"
 #include "SPIRVGlobalRegistry.h"
+#include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
@@ -52,6 +53,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVCBufferAccessLegacyPass(PR);
   initializeSPIRVPreLegalizerCombinerPass(PR);
   initializeSPIRVLegalizePointerCastPass(PR);
+  initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
   initializeSPIRVRegularizerPass(PR);
   initializeSPIRVPreLegalizerPass(PR);
   initializeSPIRVPostLegalizerPass(PR);
@@ -210,6 +212,7 @@ void SPIRVPassConfig::addISelPrepare() {
 
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
   addPass(createSPIRVLegalizeImplicitBindingPass());
+  addPass(createSPIRVLegalizeZeroSizeArraysPass());
   addPass(createSPIRVCBufferAccessLegacyPass());
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())

@@ -19,6 +19,6 @@
 
 define spir_func void @foo() {
 entry:
-  %i = alloca [0 x i32], align 4
+  %i = alloca [0 x [ 0 x i32]], align 4
   ret void
 }

@@ -17,6 +17,7 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("spirv-cbuffer-access", SPIRVCBufferAccess())
+MODULE_PASS("spirv-legalize-zero-size-arrays", SPIRVLegalizeZeroSizeArrays())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS
