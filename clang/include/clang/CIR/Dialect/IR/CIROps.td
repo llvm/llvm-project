@@ -2224,7 +2224,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
       cir::GlobalOp op, mlir::Attribute init,
       mlir::ConversionPatternRewriter &rewriter) const;
 
-    void setupRegionInitializedLLVMGlobalOp(
+    mlir::LLVM::GlobalOp setupRegionInitializedLLVMGlobalOp(
         cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
 
     mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
