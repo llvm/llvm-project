@@ -1150,7 +1150,7 @@ gpu.module @test_module_56 {
   }
 }
 
-// Check that nvvm.grid_constant is a valid argument attribute on gpu.kernel.
+// Check that nvvm.grid_constant, llvm.byref, and llvm.byval are valid argument attributes on gpu.kernel.
 gpu.module @test_module_57 {
   // CHECK:       gpu.module @test_module_57
   // CHECK-LABEL:   llvm.func @test_kernel(

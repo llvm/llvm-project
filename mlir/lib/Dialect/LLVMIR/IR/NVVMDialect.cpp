@@ -5448,24 +5448,25 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
   if (!funcOp)
     return success();
 
+  StringAttr attrName = argAttr.getName();
+  if (attrName != NVVM::NVVMDialect::getGridConstantAttrName())
+    return success();
+
   const bool isKernel = op->hasAttr(NVVMDialect::getKernelFuncAttrName()) ||
                         op->hasAttr(gpu::GPUDialect::getKernelFuncAttrName());
-  StringAttr attrName = argAttr.getName();
-  if (attrName == NVVM::NVVMDialect::getGridConstantAttrName()) {
-    if (!isKernel) {
-      return op->emitError()
-             << "'" << attrName
-             << "' attribute must be present only on kernel arguments";
-    }
-    if (!isa<UnitAttr>(argAttr.getValue()))
-      return op->emitError() << "'" << attrName << "' must be a unit attribute";
-    if (!funcOp.getArgAttr(argIndex, LLVM::LLVMDialect::getByValAttrName())) {
-      return op->emitError()
-             << "'" << attrName
-             << "' attribute requires the argument to also have attribute '"
-             << LLVM::LLVMDialect::getByValAttrName() << "'";
-    }
-  }
+  if (!isKernel)
+    return op->emitError()
+           << "'" << attrName
+           << "' attribute must be present only on kernel arguments";
+
+  if (!isa<UnitAttr>(argAttr.getValue()))
+    return op->emitError() << "'" << attrName << "' must be a unit attribute";
+
+  if (!funcOp.getArgAttr(argIndex, LLVM::LLVMDialect::getByValAttrName()))
+    return op->emitError()
+           << "'" << attrName
+           << "' attribute requires the argument to also have attribute '"
+           << LLVM::LLVMDialect::getByValAttrName() << "'";
 
   return success();
 }
