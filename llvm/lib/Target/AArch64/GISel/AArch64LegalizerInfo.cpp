@@ -1943,12 +1943,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_sqshlu: {
     // Check if last operand is constant vector dup
-    auto shiftAmount = isConstantOrConstantSplatVector(
+    auto ShiftAmount = isConstantOrConstantSplatVector(
         *MRI.getVRegDef(MI.getOperand(3).getReg()), MRI);
-    if (shiftAmount) {
+    if (ShiftAmount) {
       // If so, create a new intrinsic with the correct shift amount
       MIB.buildInstr(AArch64::G_SQSHLU, {MI.getOperand(0)}, {MI.getOperand(2)})
-          .addImm(shiftAmount->getSExtValue());
+          .addImm(ShiftAmount->getSExtValue());
       MI.eraseFromParent();
       return true;
     }

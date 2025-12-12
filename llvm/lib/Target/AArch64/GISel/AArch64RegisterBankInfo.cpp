@@ -476,13 +476,11 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_facge:
   case Intrinsic::aarch64_neon_facgt:
   case Intrinsic::aarch64_neon_fabd:
-  case Intrinsic::aarch64_sisd_fabd:
   case Intrinsic::aarch64_neon_sqrdmlah:
   case Intrinsic::aarch64_neon_sqrdmlsh:
   case Intrinsic::aarch64_neon_sqrdmulh:
   case Intrinsic::aarch64_neon_sqadd:
   case Intrinsic::aarch64_neon_sqsub:
-  case Intrinsic::aarch64_crypto_sha1h:
   case Intrinsic::aarch64_neon_srshl:
   case Intrinsic::aarch64_neon_urshl:
   case Intrinsic::aarch64_neon_sqshl:
@@ -497,10 +495,12 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_sqrshrun:
   case Intrinsic::aarch64_neon_uqshrn:
   case Intrinsic::aarch64_neon_uqrshrn:
+  case Intrinsic::aarch64_crypto_sha1h:
   case Intrinsic::aarch64_crypto_sha1c:
   case Intrinsic::aarch64_crypto_sha1p:
   case Intrinsic::aarch64_crypto_sha1m:
   case Intrinsic::aarch64_sisd_fcvtxn:
+  case Intrinsic::aarch64_sisd_fabd:
     return true;
   case Intrinsic::aarch64_neon_saddlv: {
     const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
