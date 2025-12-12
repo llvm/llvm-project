@@ -5429,7 +5429,10 @@ gentbl_cc_library(
     ]},
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/Transforms/Passes.td",
-    deps = [":PassBaseTdFiles"],
+    deps = [
+        ":LLVMOpsTdFiles",
+        ":PassBaseTdFiles",
+    ],
 )
 
 cc_library(
