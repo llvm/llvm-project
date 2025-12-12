@@ -72,6 +72,8 @@
 #include <cstdint>
 #include <deque>
 #include <iterator>
+#include <regex>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -4865,25 +4867,101 @@ MipsTargetLowering::emitPseudoD_SELECT(MachineInstr &MI,
   return BB;
 }
 
+// Copies the function MipsAsmParser::matchCPURegisterName.
+int MipsTargetLowering::getCPURegisterIndex(StringRef Name) const {
+  int CC;
+
+  CC = StringSwitch<unsigned>(Name)
+           .Case("zero", 0)
+           .Case("at", 1)
+           .Case("AT", 1)
+           .Case("a0", 4)
+           .Case("a1", 5)
+           .Case("a2", 6)
+           .Case("a3", 7)
+           .Case("v0", 2)
+           .Case("v1", 3)
+           .Case("s0", 16)
+           .Case("s1", 17)
+           .Case("s2", 18)
+           .Case("s3", 19)
+           .Case("s4", 20)
+           .Case("s5", 21)
+           .Case("s6", 22)
+           .Case("s7", 23)
+           .Case("k0", 26)
+           .Case("k1", 27)
+           .Case("gp", 28)
+           .Case("sp", 29)
+           .Case("fp", 30)
+           .Case("s8", 30)
+           .Case("ra", 31)
+           .Case("t0", 8)
+           .Case("t1", 9)
+           .Case("t2", 10)
+           .Case("t3", 11)
+           .Case("t4", 12)
+           .Case("t5", 13)
+           .Case("t6", 14)
+           .Case("t7", 15)
+           .Case("t8", 24)
+           .Case("t9", 25)
+           .Default(-1);
+
+  if (!(ABI.IsN32() || ABI.IsN64()))
+    return CC;
+
+  // Although SGI documentation just cuts out t0-t3 for n32/n64,
+  // GNU pushes the values of t0-t3 to override the o32/o64 values for t4-t7
+  // We are supporting both cases, so for t0-t3 we'll just push them to t4-t7.
+  if (8 <= CC && CC <= 11)
+    CC += 4;
+
+  if (CC == -1)
+    CC = StringSwitch<unsigned>(Name)
+             .Case("a4", 8)
+             .Case("a5", 9)
+             .Case("a6", 10)
+             .Case("a7", 11)
+             .Case("kt0", 26)
+             .Case("kt1", 27)
+             .Default(-1);
+
+  return CC;
+}
+
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
 Register
 MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                       const MachineFunction &MF) const {
-  // The Linux kernel uses $28 and sp.
-  if (Subtarget.isGP64bit()) {
-    Register Reg = StringSwitch<Register>(RegName)
-                       .Case("$28", Mips::GP_64)
-                       .Case("sp", Mips::SP_64)
-                       .Default(Register());
-    return Reg;
+  // 1. Delete symbol '$'.
+  std::string newRegName = RegName;
+  if (StringRef(RegName).starts_with("$"))
+    newRegName = StringRef(RegName).substr(1);
+
+  // 2. Get register index value.
+  std::smatch matchResult;
+  int regIdx;
+  static const std::regex matchStr("^[0-9]*$");
+  if (std::regex_match(newRegName, matchResult, matchStr))
+    regIdx = std::stoi(newRegName);
+  else {
+    newRegName = StringRef(newRegName).lower();
+    regIdx = getCPURegisterIndex(StringRef(newRegName));
   }
 
-  Register Reg = StringSwitch<Register>(RegName)
-                     .Case("$28", Mips::GP)
-                     .Case("sp", Mips::SP)
-                     .Default(Register());
-  return Reg;
+  // 3. Get register.
+  if (regIdx >= 0 && regIdx < 32) {
+    const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
+    const MCRegisterClass &RC = Subtarget.isGP64bit()
+                                    ? MRI->getRegClass(Mips::GPR64RegClassID)
+                                    : MRI->getRegClass(Mips::GPR32RegClassID);
+    return RC.getRegister(regIdx);
+  }
+
+  report_fatal_error(
+      Twine("Invalid register name \"" + StringRef(RegName) + "\"."));
 }
 
 MachineBasicBlock *MipsTargetLowering::emitLDR_W(MachineInstr &MI,

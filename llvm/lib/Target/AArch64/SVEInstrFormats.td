@@ -6020,13 +6020,13 @@ multiclass sve2_int_while_rr<bits<1> rw, string asm, SDPatternOperator op> {
   def _S : sve2_int_while_rr<0b10, rw, asm, PPR32>;
   def _D : sve2_int_while_rr<0b11, rw, asm, PPR64>;
 
-  def : Pat<(nxv16i1 (op i64:$Op1, i64:$Op2, (i64 1))),
+  def : Pat<(nxv16i1 (op i64:$Op1, i64:$Op2, (i64 1), (i64 0))),
             (!cast<Instruction>(NAME # _B) $Op1, $Op2)>;
-  def : Pat<(nxv8i1 (op i64:$Op1, i64:$Op2, (i64 2))),
+  def : Pat<(nxv8i1 (op i64:$Op1, i64:$Op2, (i64 2), (i64 0))),
             (!cast<Instruction>(NAME # _H) $Op1, $Op2)>;
-  def : Pat<(nxv4i1 (op i64:$Op1, i64:$Op2, (i64 4))),
+  def : Pat<(nxv4i1 (op i64:$Op1, i64:$Op2, (i64 4), (i64 0))),
             (!cast<Instruction>(NAME # _S) $Op1, $Op2)>;
-  def : Pat<(nxv2i1 (op i64:$Op1, i64:$Op2, (i64 8))),
+  def : Pat<(nxv2i1 (op i64:$Op1, i64:$Op2, (i64 8), (i64 0))),
             (!cast<Instruction>(NAME # _D) $Op1, $Op2)>;
 }
 
