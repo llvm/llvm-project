@@ -5918,19 +5918,6 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   return Cost + 2;
 }
 
-TTI::ShuffleKind AArch64TTIImpl::improveShuffleKindFromMask(
-    TTI::ShuffleKind Kind, ArrayRef<int> Mask, VectorType *SrcTy, int &Index,
-    VectorType *&SubTy) const {
-  TTI::ShuffleKind SuperResult = BasicTTIImplBase::improveShuffleKindFromMask(
-      Kind, Mask, SrcTy, Index, SubTy);
-  if (SuperResult == TTI::ShuffleKind::SK_PermuteTwoSrc && !Mask.empty()) {
-    unsigned DummyUnsigned;
-    if (isTRNMask(Mask, Mask.size(), DummyUnsigned, DummyUnsigned))
-      return TTI::ShuffleKind::SK_Transpose;
-  }
-  return SuperResult;
-}
-
 InstructionCost
 AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                                VectorType *SrcTy, ArrayRef<int> Mask,
@@ -6128,6 +6115,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
       LT.second.getVectorNumElements() == Mask.size() &&
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
       (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
+       isTRNMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
        isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        isREVMask(Mask, LT.second.getScalarSizeInBits(),
                  LT.second.getVectorNumElements(), 16) ||
