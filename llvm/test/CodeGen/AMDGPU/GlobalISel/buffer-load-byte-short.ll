@@ -157,7 +157,7 @@ define amdgpu_ps void @test_buffer_load_u8_waterfall_rsrc(<4 x i32> %rsrc, i32 %
 ; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[2:3]
@@ -189,7 +189,7 @@ define amdgpu_ps void @test_buffer_load_i8_waterfall_soffset(<4 x i32> inreg %rs
 ; GFX12-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX12-NEXT:    s_mov_b32 s7, exec_lo
-; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    v_cmpx_eq_u32_e64 s8, v1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_i8 v2, v0, s[0:3], s8 offen
@@ -220,7 +220,7 @@ define amdgpu_ps void @test_buffer_load_u16_waterfall_both(<4 x i32> %rsrc, i32 
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s9, v5
-; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
