@@ -23,12 +23,12 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   if (count < 1)
     return nullptr;
 
-  unsigned char c = '\0';
+  char c = '\0';
   // i is an int because it's frequently compared to count, which is also int.
   int i = 0;
 
   for (; i < (count - 1) && c != '\n'; ++i) {
-    auto result = read_internal(reinterpret_cast<char *>(&c), 1, stream);
+    auto result = read_internal(&c, 1, stream);
     if (result.has_error())
       libc_errno = result.error;
 

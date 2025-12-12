@@ -18,8 +18,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fgetc, (::FILE * stream)) {
-  unsigned char c;
-  auto result = read_internal(reinterpret_cast<char *>(&c), 1, stream);
+  char c;
+  auto result = read_internal(&c, 1, stream);
   if (result.has_error())
     libc_errno = result.error;
 
