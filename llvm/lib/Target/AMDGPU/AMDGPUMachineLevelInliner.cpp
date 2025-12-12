@@ -139,20 +139,21 @@ bool AMDGPUMachineLevelInliner::runOnMachineFunction(MachineFunction &MF) {
 
       const MachineOperand *CalleeOp =
           TII->getNamedOperand(MI, AMDGPU::OpName::callee);
-      if (CalleeOp && CalleeOp->isGlobal()) {
-        if (auto *CalledFunc = dyn_cast<Function>(CalleeOp->getGlobal())) {
-          // Partial inlining is not supported yet, because the inlining pass
-          // manager does not run the rest of the pass pipeline on functions
-          // that get inlined (including outputting code for them).
-          if (CalledFunc == &F)
-            report_fatal_error("Recursive calls in whole wave functions are "
-                               "not supported yet");
+      if (!CalleeOp || !CalleeOp->isGlobal())
+        continue;
 
-          if (mayInlineCallsTo(*CalledFunc)) {
-            CallsToInline.push_back(&MI);
-          }
-        }
-      }
+      auto *CalledFunc = dyn_cast<Function>(CalleeOp->getGlobal());
+      assert(CalledFunc && "Expected global callee operand");
+
+      // Partial inlining is not supported yet, because the inlining pass
+      // manager does not run the rest of the pass pipeline on functions that
+      // get inlined (including outputting code for them).
+      if (CalledFunc == &F)
+        report_fatal_error("Recursive calls in whole wave functions are "
+                           "not supported yet");
+
+      if (mayInlineCallsTo(*CalledFunc))
+        CallsToInline.push_back(&MI);
     }
   }
 
