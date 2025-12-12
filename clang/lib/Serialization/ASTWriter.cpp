@@ -972,6 +972,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PP_ASSUME_NONNULL_LOC);
   RECORD(PP_UNSAFE_BUFFER_USAGE);
   RECORD(VTABLES_TO_EMIT);
+  RECORD(RISCV_VECTOR_INTRINSICS_PRAGMA);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -5232,6 +5233,15 @@ void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
   Stream.ExitBlock();
 }
 
+void ASTWriter::WriteRISCVIntrinsicPragmas(Sema &SemaRef) {
+  RecordData Record;
+  Record.push_back(SemaRef.RISCV().DeclareRVVBuiltins);
+  Record.push_back(SemaRef.RISCV().DeclareSiFiveVectorBuiltins);
+  Record.push_back(SemaRef.RISCV().DeclareAndesVectorBuiltins);
+  Record.push_back(Record.size());
+  Stream.EmitRecord(RISCV_VECTOR_INTRINSICS_PRAGMA, Record);
+}
+
 //===----------------------------------------------------------------------===//
 // General Serialization Routines
 //===----------------------------------------------------------------------===//
@@ -6130,6 +6140,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     WriteFPPragmaOptions(SemaPtr->CurFPFeatureOverrides());
     WriteOpenCLExtensions(*SemaPtr);
     WriteCUDAPragmas(*SemaPtr);
+    WriteRISCVIntrinsicPragmas(*SemaPtr);
   }
 
   // If we're emitting a module, write out the submodule information.

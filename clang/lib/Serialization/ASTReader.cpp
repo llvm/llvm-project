@@ -4447,6 +4447,17 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
         DeclsToCheckForDeferredDiags.insert(ReadDeclID(F, Record, I));
       break;
+
+    case RISCV_VECTOR_INTRINSICS_PRAGMA: {
+      unsigned NumRecords = Record.back();
+      // Last record which is used to keep number of valid records.
+      if (Record.size() - 1 != NumRecords)
+        return llvm::createStringError(std::errc::illegal_byte_sequence,
+                                       "invalid rvv intrinsic pragma record");
+      for (unsigned i = 0; i < NumRecords; ++i)
+        RISCVVecIntrinsicPragma.push_back(Record[i]);
+      break;
+    }
     }
   }
 }
@@ -9063,6 +9074,9 @@ void ASTReader::UpdateSema() {
         PointersToMembersPragmaLocation);
   }
   SemaObj->CUDA().ForceHostDeviceDepth = ForceHostDeviceDepth;
+  SemaObj->RISCV().DeclareRVVBuiltins = RISCVVecIntrinsicPragma[0];
+  SemaObj->RISCV().DeclareSiFiveVectorBuiltins = RISCVVecIntrinsicPragma[1];
+  SemaObj->RISCV().DeclareAndesVectorBuiltins = RISCVVecIntrinsicPragma[2];
 
   if (PragmaAlignPackCurrentValue) {
     // The bottom of the stack might have a default value. It must be adjusted
