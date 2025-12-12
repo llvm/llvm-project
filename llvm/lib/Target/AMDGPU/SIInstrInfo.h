@@ -440,6 +440,8 @@ public:
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
+  unsigned getMemOperandAACheckLimit() const override { return 32; }
+
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
 
   MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,

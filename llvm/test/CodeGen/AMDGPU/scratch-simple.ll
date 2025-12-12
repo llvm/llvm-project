@@ -98,25 +98,20 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:224
 ; SI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:216
 ; SI-NEXT:    buffer_store_dword v14, off, s[4:7], 0 offset:196
-; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; SI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; SI-NEXT:    buffer_load_dword v0, v0, s[4:7], 0 offen
+; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
+; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
+; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
+; SI-NEXT:    s_waitcnt expcnt(2)
+; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:832
 ; SI-NEXT:    buffer_store_dword v11, off, s[4:7], 0 offset:828
 ; SI-NEXT:    buffer_store_dword v10, off, s[4:7], 0 offset:824
 ; SI-NEXT:    buffer_store_dword v9, off, s[4:7], 0 offset:820
 ; SI-NEXT:    s_waitcnt expcnt(3)
 ; SI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
-; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
-; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
-; SI-NEXT:    s_waitcnt expcnt(2)
-; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
-; SI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
-; SI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
-; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
-; SI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:784
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:780
 ; SI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:776
@@ -125,6 +120,11 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:764
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
+; SI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
+; SI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
+; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
+; SI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:760
 ; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:756
 ; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:752
@@ -214,23 +214,18 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:224
 ; VI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:216
 ; VI-NEXT:    buffer_store_dword v14, off, s[4:7], 0 offset:196
-; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; VI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; VI-NEXT:    buffer_load_dword v0, v0, s[4:7], 0 offen
+; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
+; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
+; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
+; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:832
 ; VI-NEXT:    buffer_store_dword v11, off, s[4:7], 0 offset:828
 ; VI-NEXT:    buffer_store_dword v10, off, s[4:7], 0 offset:824
 ; VI-NEXT:    buffer_store_dword v9, off, s[4:7], 0 offset:820
 ; VI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
-; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
-; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
-; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
-; VI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
-; VI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
-; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
-; VI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:784
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:780
 ; VI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:776
@@ -238,6 +233,11 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; VI-NEXT:    buffer_store_dword v16, off, s[4:7], 0 offset:768
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:764
 ; VI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
+; VI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
+; VI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
+; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
+; VI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:760
 ; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:756
 ; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:752
@@ -324,25 +324,19 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:224
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:216
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:196
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; GFX9-MUBUF-NEXT:    v_add_u32_e32 v1, 0x200, v0
 ; GFX9-MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX9-MUBUF-NEXT:    s_nop 0
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:796
+; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:792
+; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:788
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:832
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:828
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:824
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:820
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:796
-; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:792
-; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:788
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:816
-; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:812
-; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:808
-; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:804
-; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:784
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:780
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:776
@@ -350,6 +344,11 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v16, off, s[0:3], 0 offset:768
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:764
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:816
+; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:812
+; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:808
+; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:804
+; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:760
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:756
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:752
@@ -377,21 +376,14 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s2, -1
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s3, 0x31c16000
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    s_add_u32 s0, s0, s4
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W32-MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:320
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:316
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:292
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:288
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:284
@@ -423,7 +415,9 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:228
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:224
@@ -434,6 +428,11 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:208
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:204
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:296
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:200
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:196
@@ -488,21 +487,14 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s2, -1
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s3, 0x31e16000
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    s_add_u32 s0, s0, s4
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W64-MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:320
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:316
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:292
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:288
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:284
@@ -534,7 +526,9 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:228
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:224
@@ -545,6 +539,11 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:208
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:204
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:296
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:200
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:196
@@ -1102,25 +1101,20 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:224
 ; SI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:216
 ; SI-NEXT:    buffer_store_dword v14, off, s[4:7], 0 offset:196
-; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; SI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; SI-NEXT:    buffer_load_dword v0, v0, s[4:7], 0 offen
+; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
+; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
+; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
+; SI-NEXT:    s_waitcnt expcnt(2)
+; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:832
 ; SI-NEXT:    buffer_store_dword v11, off, s[4:7], 0 offset:828
 ; SI-NEXT:    buffer_store_dword v10, off, s[4:7], 0 offset:824
 ; SI-NEXT:    buffer_store_dword v9, off, s[4:7], 0 offset:820
 ; SI-NEXT:    s_waitcnt expcnt(3)
 ; SI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
-; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
-; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
-; SI-NEXT:    s_waitcnt expcnt(2)
-; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
-; SI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
-; SI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
-; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
-; SI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:784
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:780
 ; SI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:776
@@ -1129,6 +1123,11 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:764
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
+; SI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
+; SI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
+; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
+; SI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:760
 ; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:756
 ; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:752
@@ -1218,23 +1217,18 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:224
 ; VI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:216
 ; VI-NEXT:    buffer_store_dword v14, off, s[4:7], 0 offset:196
-; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; VI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; VI-NEXT:    buffer_load_dword v0, v0, s[4:7], 0 offen
+; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
+; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
+; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
+; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:832
 ; VI-NEXT:    buffer_store_dword v11, off, s[4:7], 0 offset:828
 ; VI-NEXT:    buffer_store_dword v10, off, s[4:7], 0 offset:824
 ; VI-NEXT:    buffer_store_dword v9, off, s[4:7], 0 offset:820
 ; VI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
-; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
-; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
-; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
-; VI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
-; VI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
-; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
-; VI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:784
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:780
 ; VI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:776
@@ -1242,6 +1236,11 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; VI-NEXT:    buffer_store_dword v16, off, s[4:7], 0 offset:768
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:764
 ; VI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
+; VI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
+; VI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
+; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
+; VI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:760
 ; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:756
 ; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:752
@@ -1328,25 +1327,19 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:224
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:216
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:196
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; GFX9-MUBUF-NEXT:    v_add_u32_e32 v1, 0x200, v0
 ; GFX9-MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX9-MUBUF-NEXT:    s_nop 0
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:796
+; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:792
+; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:788
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:832
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:828
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:824
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:820
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:796
-; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:792
-; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:788
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:816
-; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:812
-; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:808
-; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:804
-; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:784
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:780
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:776
@@ -1354,6 +1347,11 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v16, off, s[0:3], 0 offset:768
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:764
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:816
+; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:812
+; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:808
+; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:804
+; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:760
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:756
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:752
@@ -1381,21 +1379,14 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s2, -1
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s3, 0x31c16000
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    s_add_u32 s0, s0, s4
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W32-MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:320
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:316
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:292
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:288
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:284
@@ -1427,7 +1418,9 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:228
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:224
@@ -1438,6 +1431,11 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:208
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:204
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:296
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:200
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:196
@@ -1492,21 +1490,14 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s2, -1
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s3, 0x31e16000
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    s_add_u32 s0, s0, s4
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W64-MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:320
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:316
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:292
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:288
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:284
@@ -1538,7 +1529,9 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:228
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:224
@@ -1549,6 +1542,11 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:208
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:204
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:296
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:200
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:196
@@ -2106,25 +2104,20 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:224
 ; SI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:216
 ; SI-NEXT:    buffer_store_dword v14, off, s[4:7], 0 offset:196
-; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; SI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; SI-NEXT:    buffer_load_dword v0, v0, s[4:7], 0 offen
+; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
+; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
+; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
+; SI-NEXT:    s_waitcnt expcnt(2)
+; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:832
 ; SI-NEXT:    buffer_store_dword v11, off, s[4:7], 0 offset:828
 ; SI-NEXT:    buffer_store_dword v10, off, s[4:7], 0 offset:824
 ; SI-NEXT:    buffer_store_dword v9, off, s[4:7], 0 offset:820
 ; SI-NEXT:    s_waitcnt expcnt(3)
 ; SI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
-; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
-; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
-; SI-NEXT:    s_waitcnt expcnt(2)
-; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
-; SI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
-; SI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
-; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
-; SI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:784
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:780
 ; SI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:776
@@ -2133,6 +2126,11 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:764
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
+; SI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
+; SI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
+; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
+; SI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:760
 ; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:756
 ; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:752
@@ -2222,23 +2220,18 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:224
 ; VI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:216
 ; VI-NEXT:    buffer_store_dword v14, off, s[4:7], 0 offset:196
-; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; VI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; VI-NEXT:    buffer_load_dword v0, v0, s[4:7], 0 offen
+; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
+; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
+; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
+; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:832
 ; VI-NEXT:    buffer_store_dword v11, off, s[4:7], 0 offset:828
 ; VI-NEXT:    buffer_store_dword v10, off, s[4:7], 0 offset:824
 ; VI-NEXT:    buffer_store_dword v9, off, s[4:7], 0 offset:820
 ; VI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
-; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
-; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
-; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
-; VI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
-; VI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
-; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
-; VI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:784
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:780
 ; VI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:776
@@ -2246,6 +2239,11 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; VI-NEXT:    buffer_store_dword v16, off, s[4:7], 0 offset:768
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:764
 ; VI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
+; VI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
+; VI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
+; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
+; VI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:760
 ; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:756
 ; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:752
@@ -2332,25 +2330,19 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:224
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:216
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:196
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; GFX9-MUBUF-NEXT:    v_add_u32_e32 v1, 0x200, v0
 ; GFX9-MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX9-MUBUF-NEXT:    s_nop 0
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:796
+; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:792
+; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:788
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:832
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:828
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:824
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:820
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:796
-; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:792
-; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:788
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:816
-; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:812
-; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:808
-; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:804
-; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:784
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:780
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:776
@@ -2358,6 +2350,11 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v16, off, s[0:3], 0 offset:768
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:764
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:816
+; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:812
+; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:808
+; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:804
+; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:760
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:756
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:752
@@ -2385,21 +2382,14 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s2, -1
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s3, 0x31c16000
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    s_add_u32 s0, s0, s4
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W32-MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:320
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:316
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:292
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:288
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:284
@@ -2431,7 +2421,9 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:228
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:224
@@ -2442,6 +2434,11 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:208
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:204
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:296
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:200
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:196
@@ -2496,21 +2493,14 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s2, -1
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s3, 0x31e16000
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    s_add_u32 s0, s0, s4
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W64-MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:320
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:316
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:292
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:288
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:284
@@ -2542,7 +2532,9 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:228
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:224
@@ -2553,6 +2545,11 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:208
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:204
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:296
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:200
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:196
@@ -3110,25 +3107,20 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:224
 ; SI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:216
 ; SI-NEXT:    buffer_store_dword v14, off, s[4:7], 0 offset:196
-; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; SI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; SI-NEXT:    buffer_load_dword v0, v0, s[4:7], 0 offen
+; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
+; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
+; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
+; SI-NEXT:    s_waitcnt expcnt(2)
+; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:832
 ; SI-NEXT:    buffer_store_dword v11, off, s[4:7], 0 offset:828
 ; SI-NEXT:    buffer_store_dword v10, off, s[4:7], 0 offset:824
 ; SI-NEXT:    buffer_store_dword v9, off, s[4:7], 0 offset:820
 ; SI-NEXT:    s_waitcnt expcnt(3)
 ; SI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
-; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
-; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
-; SI-NEXT:    s_waitcnt expcnt(2)
-; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
-; SI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
-; SI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
-; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
-; SI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:784
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:780
 ; SI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:776
@@ -3137,6 +3129,11 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:764
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
+; SI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
+; SI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
+; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
+; SI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:760
 ; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:756
 ; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:752
@@ -3226,23 +3223,18 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:224
 ; VI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:216
 ; VI-NEXT:    buffer_store_dword v14, off, s[4:7], 0 offset:196
-; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; VI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; VI-NEXT:    buffer_load_dword v0, v0, s[4:7], 0 offen
+; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
+; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
+; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
+; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:832
 ; VI-NEXT:    buffer_store_dword v11, off, s[4:7], 0 offset:828
 ; VI-NEXT:    buffer_store_dword v10, off, s[4:7], 0 offset:824
 ; VI-NEXT:    buffer_store_dword v9, off, s[4:7], 0 offset:820
 ; VI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
-; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
-; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
-; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
-; VI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
-; VI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
-; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
-; VI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:784
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:780
 ; VI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:776
@@ -3250,6 +3242,11 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; VI-NEXT:    buffer_store_dword v16, off, s[4:7], 0 offset:768
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:764
 ; VI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
+; VI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
+; VI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
+; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
+; VI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:760
 ; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:756
 ; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:752
@@ -3335,25 +3332,19 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:224
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:216
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:196
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; GFX9-MUBUF-NEXT:    v_add_u32_e32 v1, 0x200, v0
 ; GFX9-MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX9-MUBUF-NEXT:    s_nop 0
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:796
+; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:792
+; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:788
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:832
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:828
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:824
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:820
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:796
-; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:792
-; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:788
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:816
-; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:812
-; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:808
-; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:804
-; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:784
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:780
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:776
@@ -3361,6 +3352,11 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v16, off, s[0:3], 0 offset:768
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:764
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:816
+; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:812
+; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:808
+; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:804
+; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:760
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:756
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:752
@@ -3387,21 +3383,14 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s2, -1
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s3, 0x31c16000
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    s_add_u32 s0, s0, s5
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W32-MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:320
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:316
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:292
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:288
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:284
@@ -3433,7 +3422,9 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:228
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:224
@@ -3444,6 +3435,11 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:208
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:204
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:296
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:200
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:196
@@ -3497,21 +3493,14 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s2, -1
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s3, 0x31e16000
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    s_add_u32 s0, s0, s5
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W64-MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:320
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:316
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:292
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:288
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:284
@@ -3543,7 +3532,9 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:228
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:224
@@ -3554,6 +3545,11 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:208
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:204
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:296
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:200
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:196
@@ -4111,25 +4107,20 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:224
 ; SI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:216
 ; SI-NEXT:    buffer_store_dword v14, off, s[4:7], 0 offset:196
-; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; SI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; SI-NEXT:    buffer_load_dword v0, v0, s[4:7], 0 offen
+; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
+; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
+; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
+; SI-NEXT:    s_waitcnt expcnt(2)
+; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:832
 ; SI-NEXT:    buffer_store_dword v11, off, s[4:7], 0 offset:828
 ; SI-NEXT:    buffer_store_dword v10, off, s[4:7], 0 offset:824
 ; SI-NEXT:    buffer_store_dword v9, off, s[4:7], 0 offset:820
 ; SI-NEXT:    s_waitcnt expcnt(3)
 ; SI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
-; SI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
-; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
-; SI-NEXT:    s_waitcnt expcnt(2)
-; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
-; SI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
-; SI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
-; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
-; SI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:784
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:780
 ; SI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:776
@@ -4138,6 +4129,11 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:764
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; SI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
+; SI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
+; SI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
+; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
+; SI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:760
 ; SI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:756
 ; SI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:752
@@ -4227,23 +4223,18 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:224
 ; VI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:216
 ; VI-NEXT:    buffer_store_dword v14, off, s[4:7], 0 offset:196
-; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; VI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; VI-NEXT:    buffer_load_dword v0, v0, s[4:7], 0 offen
+; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
+; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
+; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
+; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:832
 ; VI-NEXT:    buffer_store_dword v11, off, s[4:7], 0 offset:828
 ; VI-NEXT:    buffer_store_dword v10, off, s[4:7], 0 offset:824
 ; VI-NEXT:    buffer_store_dword v9, off, s[4:7], 0 offset:820
 ; VI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:796
-; VI-NEXT:    buffer_store_dword v13, off, s[4:7], 0 offset:792
-; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:788
-; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
-; VI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
-; VI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
-; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
-; VI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:784
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:780
 ; VI-NEXT:    buffer_store_dword v15, off, s[4:7], 0 offset:776
@@ -4251,6 +4242,11 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; VI-NEXT:    buffer_store_dword v16, off, s[4:7], 0 offset:768
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:764
 ; VI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0 offset:816
+; VI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:812
+; VI-NEXT:    buffer_store_dword v7, off, s[4:7], 0 offset:808
+; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:804
+; VI-NEXT:    buffer_store_dword v12, off, s[4:7], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v5, off, s[4:7], 0 offset:760
 ; VI-NEXT:    buffer_store_dword v4, off, s[4:7], 0 offset:756
 ; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0 offset:752
@@ -4336,25 +4332,19 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:224
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:216
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:196
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; GFX9-MUBUF-NEXT:    v_add_u32_e32 v1, 0x200, v0
 ; GFX9-MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX9-MUBUF-NEXT:    s_nop 0
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:796
+; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:792
+; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:788
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:832
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:828
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:824
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:820
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:796
-; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], 0 offset:792
-; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:788
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:816
-; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:812
-; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:808
-; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:804
-; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:784
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:780
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:776
@@ -4362,6 +4352,11 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v16, off, s[0:3], 0 offset:768
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:764
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:816
+; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:812
+; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:808
+; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:804
+; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:760
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:756
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[0:3], 0 offset:752
@@ -4388,21 +4383,14 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s2, -1
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s3, 0x31c16000
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    s_add_u32 s0, s0, s5
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W32-MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:320
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:316
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:292
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:288
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:284
@@ -4434,7 +4422,9 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:228
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:224
@@ -4445,6 +4435,11 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:208
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:204
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:296
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:200
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:196
@@ -4498,21 +4493,14 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s2, -1
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s3, 0x31e16000
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    s_add_u32 s0, s0, s5
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W64-MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:320
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:316
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:292
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:288
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:284
@@ -4544,7 +4532,9 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:228
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:224
@@ -4555,6 +4545,11 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:208
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:204
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:312
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:308
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:304
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:296
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], 0 offset:200
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v17, off, s[0:3], 0 offset:196
@@ -5116,25 +5111,20 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; SI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:224
 ; SI-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:216
 ; SI-NEXT:    buffer_store_dword v14, off, s[8:11], 0 offset:196
-; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; SI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; SI-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen
+; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; SI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
+; SI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
+; SI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
+; SI-NEXT:    s_waitcnt expcnt(2)
+; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; SI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:832
 ; SI-NEXT:    buffer_store_dword v11, off, s[8:11], 0 offset:828
 ; SI-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:824
 ; SI-NEXT:    buffer_store_dword v9, off, s[8:11], 0 offset:820
 ; SI-NEXT:    s_waitcnt expcnt(3)
 ; SI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; SI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
-; SI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
-; SI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
-; SI-NEXT:    s_waitcnt expcnt(2)
-; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; SI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
-; SI-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
-; SI-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
-; SI-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
-; SI-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:784
 ; SI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:780
 ; SI-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:776
@@ -5143,6 +5133,11 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; SI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:764
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; SI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
+; SI-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
+; SI-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
+; SI-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
+; SI-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:760
 ; SI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:756
 ; SI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:752
@@ -5233,23 +5228,18 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; VI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:224
 ; VI-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:216
 ; VI-NEXT:    buffer_store_dword v14, off, s[8:11], 0 offset:196
-; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; VI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; VI-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen
+; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; VI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
+; VI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
+; VI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
+; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; VI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:832
 ; VI-NEXT:    buffer_store_dword v11, off, s[8:11], 0 offset:828
 ; VI-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:824
 ; VI-NEXT:    buffer_store_dword v9, off, s[8:11], 0 offset:820
 ; VI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; VI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
-; VI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
-; VI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
-; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; VI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
-; VI-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
-; VI-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
-; VI-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
-; VI-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:784
 ; VI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:780
 ; VI-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:776
@@ -5257,6 +5247,11 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; VI-NEXT:    buffer_store_dword v16, off, s[8:11], 0 offset:768
 ; VI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:764
 ; VI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; VI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
+; VI-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
+; VI-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
+; VI-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
+; VI-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:760
 ; VI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:756
 ; VI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:752
@@ -5343,25 +5338,19 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:224
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:216
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v14, off, s[8:11], 0 offset:196
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; GFX9-MUBUF-NEXT:    v_add_u32_e32 v1, 0x200, v0
 ; GFX9-MUBUF-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen
-; GFX9-MUBUF-NEXT:    s_nop 0
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
+; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
+; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:832
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v11, off, s[8:11], 0 offset:828
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:824
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[8:11], 0 offset:820
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
-; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
-; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
-; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
-; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
-; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
-; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:784
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:780
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:776
@@ -5369,6 +5358,11 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v16, off, s[8:11], 0 offset:768
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:764
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
+; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
+; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
+; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
+; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:760
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:756
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:752
@@ -5397,19 +5391,12 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s11, 0x31c16000
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    s_add_u32 s8, s8, s5
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W32-MUBUF-NEXT:    s_addc_u32 s9, s9, 0
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:320
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:316
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:312
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:308
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:304
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:292
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:288
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:284
@@ -5441,7 +5428,9 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:228
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:224
@@ -5452,6 +5441,11 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:208
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v14, off, s[8:11], 0 offset:204
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:316
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:312
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:308
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:304
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:296
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:200
@@ -5508,19 +5502,12 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s11, 0x31e16000
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    s_add_u32 s8, s8, s5
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W64-MUBUF-NEXT:    s_addc_u32 s9, s9, 0
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:320
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:316
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:312
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:308
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:304
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:292
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:288
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:284
@@ -5552,7 +5539,9 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:228
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:224
@@ -5563,6 +5552,11 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:208
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v14, off, s[8:11], 0 offset:204
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:316
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:312
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:308
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:304
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:296
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:200
@@ -6127,25 +6121,20 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; SI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:224
 ; SI-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:216
 ; SI-NEXT:    buffer_store_dword v14, off, s[8:11], 0 offset:196
-; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; SI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; SI-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen
+; SI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; SI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
+; SI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
+; SI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
+; SI-NEXT:    s_waitcnt expcnt(2)
+; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; SI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:832
 ; SI-NEXT:    buffer_store_dword v11, off, s[8:11], 0 offset:828
 ; SI-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:824
 ; SI-NEXT:    buffer_store_dword v9, off, s[8:11], 0 offset:820
 ; SI-NEXT:    s_waitcnt expcnt(3)
 ; SI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; SI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
-; SI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
-; SI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
-; SI-NEXT:    s_waitcnt expcnt(2)
-; SI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; SI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
-; SI-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
-; SI-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
-; SI-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
-; SI-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:784
 ; SI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:780
 ; SI-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:776
@@ -6154,6 +6143,11 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; SI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:764
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; SI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
+; SI-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
+; SI-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
+; SI-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
+; SI-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; SI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:760
 ; SI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:756
 ; SI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:752
@@ -6244,23 +6238,18 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; VI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:224
 ; VI-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:216
 ; VI-NEXT:    buffer_store_dword v14, off, s[8:11], 0 offset:196
-; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; VI-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; VI-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen
+; VI-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; VI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
+; VI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
+; VI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
+; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; VI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:832
 ; VI-NEXT:    buffer_store_dword v11, off, s[8:11], 0 offset:828
 ; VI-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:824
 ; VI-NEXT:    buffer_store_dword v9, off, s[8:11], 0 offset:820
 ; VI-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; VI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
-; VI-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
-; VI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
-; VI-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; VI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
-; VI-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
-; VI-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
-; VI-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
-; VI-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:784
 ; VI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:780
 ; VI-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:776
@@ -6268,6 +6257,11 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; VI-NEXT:    buffer_store_dword v16, off, s[8:11], 0 offset:768
 ; VI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:764
 ; VI-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; VI-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
+; VI-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
+; VI-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
+; VI-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
+; VI-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; VI-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:760
 ; VI-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:756
 ; VI-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:752
@@ -6354,25 +6348,19 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:224
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:216
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v14, off, s[8:11], 0 offset:196
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0x3f3d349c
 ; GFX9-MUBUF-NEXT:    v_add_u32_e32 v1, 0x200, v0
 ; GFX9-MUBUF-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen
-; GFX9-MUBUF-NEXT:    s_nop 0
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3f20e7f4
+; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
+; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
+; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
+; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:832
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v11, off, s[8:11], 0 offset:828
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:824
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[8:11], 0 offset:820
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v17, 0x3703c499
-; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:796
-; GFX9-MUBUF-NEXT:    buffer_store_dword v13, off, s[8:11], 0 offset:792
-; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:788
-; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v18, 0xbf523be1
-; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
-; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
-; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
-; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
-; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:784
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:780
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:776
@@ -6380,6 +6368,11 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v16, off, s[8:11], 0 offset:768
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:764
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v5, 0xbf5f2ee2
+; GFX9-MUBUF-NEXT:    buffer_store_dword v17, off, s[8:11], 0 offset:816
+; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:812
+; GFX9-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:808
+; GFX9-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:804
+; GFX9-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:800
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:760
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:756
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v18, off, s[8:11], 0 offset:752
@@ -6408,19 +6401,12 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
 ; GFX10_W32-MUBUF-NEXT:    s_mov_b32 s11, 0x31c16000
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    s_add_u32 s8, s8, s5
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W32-MUBUF-NEXT:    s_addc_u32 s9, s9, 0
-; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:320
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:316
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:312
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:308
-; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:304
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:292
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:288
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:284
@@ -6452,7 +6438,9 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:228
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:224
@@ -6463,6 +6451,11 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:208
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v14, off, s[8:11], 0 offset:204
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:316
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:312
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:308
+; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:304
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:300
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:296
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:200
@@ -6519,19 +6512,12 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v2, 0x3f3d349e
 ; GFX10_W64-MUBUF-NEXT:    s_mov_b32 s11, 0x31e16000
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    s_add_u32 s8, s8, s5
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v7, 0xbefcd8a3
 ; GFX10_W64-MUBUF-NEXT:    s_addc_u32 s9, s9, 0
-; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbefcd89f
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:320
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:316
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:312
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:308
-; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:304
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:292
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:288
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:284
@@ -6563,7 +6549,9 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0xbf3d349e
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3f5f2ee2
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3f523be1
 ; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:228
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:224
@@ -6574,6 +6562,11 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v15, off, s[8:11], 0 offset:208
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v14, off, s[8:11], 0 offset:204
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f4
+; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:316
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:312
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:308
+; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v5, off, s[8:11], 0 offset:304
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v4, off, s[8:11], 0 offset:300
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:296
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v12, off, s[8:11], 0 offset:200
