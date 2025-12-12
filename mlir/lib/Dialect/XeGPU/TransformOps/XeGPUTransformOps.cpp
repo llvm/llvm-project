@@ -291,7 +291,7 @@ void transform::SetOpLayoutAttrOp::build(
     OpBuilder &builder, OperationState &ostate, Value target, int64_t index,
     ArrayRef<OpFoldResult> mixedSgLayout, ArrayRef<OpFoldResult> mixedSgData,
     ArrayRef<OpFoldResult> mixedInstData, ArrayRef<int64_t> sliceDims,
-    bool result) {
+    bool result, bool operand) {
   SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
   SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
   dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
@@ -307,7 +307,8 @@ void transform::SetOpLayoutAttrOp::build(
         /*static_sg_data=*/staticSgData,
         /*static_inst_data=*/staticInstData,
         /*slice_dims=*/sliceDims,
-        /*result=*/result);
+        /*result=*/result,
+        /*operand=*/operand);
 }
 
 DiagnosedSilenceableFailure
@@ -322,13 +323,19 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
   Operation *target = *targetOps.begin();
 
   bool resultTarget = getResult();
+  bool operandTarget = getOperand();
+
+  if (resultTarget && operandTarget) {
+    return emitSilenceableFailure(getLoc())
+           << "Cannot set both result and operand layout attributes.";
+  }
 
   int64_t index = getIndex();
   if (resultTarget && index >= target->getNumResults()) {
     return emitSilenceableFailure(getLoc())
            << "Index exceeds the number of op results";
   }
-  if (!resultTarget && index >= target->getNumOperands()) {
+  if (operandTarget && index >= target->getNumOperands()) {
     return emitSilenceableFailure(getLoc())
            << "Index exceeds the number of op operands";
   }
@@ -349,10 +356,26 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Set layout attribute for the op result or operand
-  if (resultTarget)
+  if (resultTarget) {
     xegpu::setDistributeLayoutAttr(target->getResult(index), layout);
-  else
+  } else if (operandTarget) {
     xegpu::setDistributeLayoutAttr(target->getOpOperand(index), layout);
+  } else {
+    // Set anchor layout if requested.
+    // TODO use AnchorLayoutInterface when available.
+    if (!isa<xegpu::LoadNdOp>(target)) {
+      auto diag = emitSilenceableFailure(getLoc())
+                  << "Cannot set anchor layout to op: " << target->getName();
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+    auto loadOp = dyn_cast<xegpu::LoadNdOp>(target);
+    if (loadOp)
+      loadOp.setLayoutAttr(layout);
+    auto prefetchOp = dyn_cast<xegpu::PrefetchOp>(target);
+    if (prefetchOp)
+      prefetchOp.setLayoutAttr(layout);
+  }
   return DiagnosedSilenceableFailure::success();
 }
 
