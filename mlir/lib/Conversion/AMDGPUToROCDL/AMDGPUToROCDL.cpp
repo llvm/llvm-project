@@ -1426,7 +1426,7 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
     if (!outType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
-    // smfmac is supported on gfx942 and gfx950
+    // smfmac is supported on gfx942 and gfx950.
     if (chipset.majorVersion != 9 || chipset < kGfx942)
       return op->emitOpError("sparse MFMA (smfmac) only supported on gfx942+");
     bool isGfx950 = chipset >= kGfx950;
