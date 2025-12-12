@@ -1412,6 +1412,17 @@ define <vscale x 2 x double> @fscale_d(<vscale x 2 x i1> %pg, <vscale x 2 x doub
   ret <vscale x 2 x double> %out
 }
 
+define <vscale x 8 x half> @bfscale_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: bfscale_h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fscale z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fscale.nxv8bf16(<vscale x 8 x i1> %pg,
+                                                                    <vscale x 8 x half> %a,
+                                                                    <vscale x 8 x i16> %b)
+  ret <vscale x 8 x half> %out
+}
+
 ;
 ; FSQRT
 ;
