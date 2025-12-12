@@ -431,18 +431,8 @@ class LLVMPRAutomator:
 
     def _get_commit_stack(self) -> List[str]:
         target = f"{self.config.upstream_remote}/{self.config.base_branch}"
-        merge_base_result = self._run_cmd(
-            ["git", "merge-base", "HEAD", target],
-            capture_output=True,
-            text=True,
-            read_only=True,
-        )
-        merge_base = merge_base_result.stdout.strip()
-        if not merge_base:
-            raise LlvmPrError(f"Could not find a merge base between HEAD and {target}.")
-
         result = self._run_cmd(
-            ["git", "rev-list", "--reverse", f"{merge_base}..HEAD"],
+            ["git", "rev-list", "--reverse", f"{target}..HEAD"],
             capture_output=True,
             text=True,
             read_only=True,
