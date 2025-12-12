@@ -8958,12 +8958,20 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   for (unsigned i = 0; i < NumMemOps; i++) {
     EVT VT = MemOps[i];
     unsigned VTSize = VT.getSizeInBits() / 8;
-    // Skip stores when Size is already 0. This can happen when an oversized
-    // store was added to MemOps but the actual memset size was already
-    // covered by previous stores (e.g., when using extraction from a larger
-    // vector splat).
-    if (Size == 0)
+    // The target should specify store types that exactly cover the memset size
+    // (with the last store potentially being oversized for overlapping stores).
+    // If Size is 0, all bytes have been written by previous stores. The only
+    // valid case for Size == 0 is when the last store in MemOps is oversized
+    // and was added only to ensure LargestVT selection for value generation.
+    // Skip emitting such stores.
+    if (Size == 0) {
+      assert(i == NumMemOps - 1 &&
+             "Target's findOptimalMemOpLowering added more stores than needed");
       continue;
+    }
+    // For stores that will be emitted, we must have remaining bytes to write.
+    assert(Size > 0 && "Target specified more stores than needed in "
+                       "findOptimalMemOpLowering");
     if (VTSize > Size) {
       // Issuing an unaligned load / store pair  that overlaps with the previous
       // pair. Adjust the offset accordingly.
@@ -9004,8 +9012,21 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
         NewAAInfo);
     OutChains.push_back(Store);
     DstOff += VT.getSizeInBits() / 8;
-    Size -= VTSize;
+    // For oversized overlapping stores, only subtract the remaining bytes.
+    // For normal stores, subtract the full store size.
+    if (VTSize > Size) {
+      Size = 0;
+    } else {
+      Size -= VTSize;
+    }
   }
+
+  // After processing all stores, Size should be exactly 0. Any remaining bytes
+  // indicate a bug in the target's findOptimalMemOpLowering implementation.
+  // Note: Oversized stores added only for LargestVT selection are skipped when
+  // Size == 0, so Size remains 0, which is correct.
+  assert(Size == 0 && "Target's findOptimalMemOpLowering did not specify "
+                      "stores that exactly cover the memset size");
 
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 }

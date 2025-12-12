@@ -18527,15 +18527,14 @@ bool AArch64TargetLowering::findOptimalMemOpLowering(
     }
 
     // If we successfully decomposed the entire size, add v16i8 as LargestVT
-    // and return. Otherwise, fall back to default implementation.
+    // to ensure getMemsetValue generates the efficient vector splat (DUP).
+    // We add v16i8 as an oversized store (larger than RemainingSize which is 0)
+    // to ensure it becomes LargestVT. Since Size will be 0 when we reach it,
+    // getMemsetStores will skip emitting it (it's only used for LargestVT
+    // selection). This satisfies getMemsetStores' requirement that oversized
+    // stores be last with at least 2 operations.
     if (RemainingSize == 0 && !MemOps.empty()) {
-      // To generate the vector splat (DUP), we need v16i8 to be the LargestVT.
-      // getMemsetStores requires oversized stores to be last with at least 2
-      // operations. We add v16i8 last (satisfies assertion, and is LargestVT
-      // for splat generation). After all actual stores, Size becomes 0, so the
-      // oversized store is skipped by the early continue in getMemsetStores,
-      // avoiding redundant stores.
-      MemOps.push_back(VT); // Last: v16i8 (LargestVT, oversized)
+      MemOps.push_back(VT); // Last: v16i8 (LargestVT, oversized, not emitted)
       return true;
     }
 
