@@ -2797,6 +2797,13 @@ void MicrosoftRecordLayoutBuilder::initializeLayout(const RecordDecl *RD) {
     UseExternalLayout = Source->layoutRecordType(
         RD, External.Size, External.Align, External.FieldOffsets,
         External.BaseOffsets, External.VirtualBaseOffsets);
+
+  if (!RD->isMsStruct(Context)) {
+    auto Location = RD->getLocation();
+    if (Location.isValid())
+      Context.getDiagnostics().Report(Location,
+                                      diag::err_itanium_layout_unimplemented);
+  }
 }
 
 void
@@ -3359,6 +3366,11 @@ void MicrosoftRecordLayoutBuilder::computeVtorDispSet(
         RequiresVtordisp(BasesWithOverriddenMethods, BaseDecl))
       HasVtordispSet.insert(BaseDecl);
   }
+}
+
+bool ASTContext::defaultsToMsStruct() const {
+  return getTargetInfo().hasMicrosoftRecordLayout() ||
+         getTargetInfo().getTriple().isWindowsGNUEnvironment();
 }
 
 /// getASTRecordLayout - Get or compute information about the layout of the
