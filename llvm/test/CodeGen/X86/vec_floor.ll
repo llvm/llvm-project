@@ -821,7 +821,8 @@ define <4 x float> @const_trunc_v4f32() {
 define <4 x float> @floor_ss(<4 x float> %x, <4 x float> %y) nounwind {
 ; SSE41-LABEL: floor_ss:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundss $9, %xmm0, %xmm1
+; SSE41-NEXT:    roundss $9, %xmm0, %xmm0
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: floor_ss:
@@ -845,7 +846,8 @@ declare float @llvm.floor.f32(float %s)
 define <2 x double> @floor_sd(<2 x double> %x, <2 x double> %y) nounwind {
 ; SSE41-LABEL: floor_sd:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundsd $9, %xmm0, %xmm1
+; SSE41-NEXT:    roundsd $9, %xmm0, %xmm0
+; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: floor_sd:
@@ -1809,7 +1811,8 @@ define <2 x double> @floor_maskz_sd_mask8(<2 x double> %x, <2 x double> %y) noun
 define <4 x float> @ceil_ss(<4 x float> %x, <4 x float> %y) nounwind {
 ; SSE41-LABEL: ceil_ss:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundss $10, %xmm0, %xmm1
+; SSE41-NEXT:    roundss $10, %xmm0, %xmm0
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: ceil_ss:
@@ -1833,7 +1836,8 @@ declare float @llvm.ceil.f32(float %s)
 define <2 x double> @ceil_sd(<2 x double> %x, <2 x double> %y) nounwind {
 ; SSE41-LABEL: ceil_sd:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundsd $10, %xmm0, %xmm1
+; SSE41-NEXT:    roundsd $10, %xmm0, %xmm0
+; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: ceil_sd:

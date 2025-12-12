@@ -5707,28 +5707,6 @@ let Predicates = [UseSSE41, OptForSize] in {
             (ROUNDSDmi addr:$src1, timm:$src2)>;
 }
 
-multiclass test<SDPatternOperator OpNode, string OpcPrefix, SDNode Move,
-                ValueType VT, Predicate BasePredicate> {
-  let Predicates = [BasePredicate] in {
-    def : Pat<(VT(Move VT:$dst, (scalar_to_vector(OpNode
-                                    (extractelt VT:$src, (i64 0)),
-                                    i32:$imm)))),
-              (!cast<Instruction>(OpcPrefix#ri_Int) VT:$dst, VT:$src,
-                  i32:$imm)>;
-  }
-
-  // Repeat for AVX versions of the instructions.
-  let Predicates = [UseAVX] in {
-    def : Pat<(VT(Move VT:$dst, (scalar_to_vector(OpNode
-                                    (extractelt VT:$src, (i64 0)),
-                                    i32:$imm)))),
-              (!cast<Instruction>("V"#OpcPrefix#ri_Int) VT:$dst, VT:$src,
-                  i32:$imm)>;
-  }
-}
-defm : test<X86any_VRndScale, "ROUNDSS", X86Movss, v4f32, UseSSE41>;
-defm : test<X86any_VRndScale, "ROUNDSD", X86Movsd, v2f64, UseSSE41>;
-
 //===----------------------------------------------------------------------===//
 // SSE4.1 - Packed Bit Test
 //===----------------------------------------------------------------------===//
