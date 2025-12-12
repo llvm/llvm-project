@@ -185,6 +185,18 @@ const EHPersonality &EHPersonality::get(CIRGenFunction &cgf) {
   return get(cgf.cgm, dyn_cast_or_null<FunctionDecl>(fg));
 }
 
+static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
+                                        const EHPersonality &personality) {
+  // Create the personality function type: i32 (...)
+  mlir::Type i32Ty = cgm.getBuilder().getI32Type();
+  auto funcTy = cir::FuncType::get({}, i32Ty, /*isVarArg=*/true);
+
+  cir::FuncOp personalityFn = cgm.createRuntimeFunction(
+      funcTy, personality.personalityFn, mlir::ArrayAttr(), /*isLocal=*/true);
+
+  return personalityFn.getSymName();
+}
+
 void CIRGenFunction::emitCXXThrowExpr(const CXXThrowExpr *e) {
   const llvm::Triple &triple = getTarget().getTriple();
   if (cgm.getLangOpts().OpenMPIsTargetDevice &&
@@ -641,10 +653,14 @@ void CIRGenFunction::populateCatchHandlersIfRequired(cir::TryOp tryOp) {
   assert(ehStack.requiresCatchOrCleanup());
   assert(!ehStack.empty());
 
-  assert(!cir::MissingFeatures::setFunctionPersonality());
+  const EHPersonality &personality = EHPersonality::get(*this);
+
+  // Set personality function if not already set
+  auto funcOp = mlir::cast<cir::FuncOp>(curFn);
+  if (!funcOp.getPersonality())
+    funcOp.setPersonality(getPersonalityFn(cgm, personality));
 
   // CIR does not cache landing pads.
-  const EHPersonality &personality = EHPersonality::get(*this);
   if (personality.usesFuncletPads()) {
     cgm.errorNYI("getInvokeDestImpl: usesFuncletPads");
   } else {

@@ -1020,7 +1020,7 @@ struct RankReduceToUnBatched : RankReduceContractionOps<FromOpTy, ToOpTy> {
       LLVM_DEBUG(llvm::dbgs() << "could not infer contraction dims");
       return failure();
     }
-    ContractionDimensions contractionDims = maybeContractionDims.value();
+    const ContractionDimensions &contractionDims = maybeContractionDims.value();
 
     if (contractionDims.batch.size() != 1)
       return failure();
@@ -1065,7 +1065,7 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
       LLVM_DEBUG(llvm::dbgs() << "could not infer contraction dims");
       return failure();
     }
-    ContractionDimensions contractionDims = maybeContractionDims.value();
+    const ContractionDimensions &contractionDims = maybeContractionDims.value();
 
     if constexpr (reduceLeft) {
       auto m = contractionDims.m[0];

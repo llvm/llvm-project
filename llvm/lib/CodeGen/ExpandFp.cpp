@@ -811,7 +811,7 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Sub24 = Builder.CreateAdd(
       FloatWidth == 128 ? Call : Cast,
       ConstantInt::getSigned(Builder.getIntNTy(BitWidthNew),
-                             -(BitWidth - FPMantissaWidth - 1)));
+                             -(int)(BitWidth - FPMantissaWidth - 1)));
   Value *ShProm25 = Builder.CreateZExt(Sub24, IntTy);
   Value *Shl26 = Builder.CreateShl(IsSigned ? Sub : IntVal,
                                    FloatWidth == 128 ? Sub24 : ShProm25);

@@ -1042,7 +1042,8 @@ namespace llvm {
     /// Check if Op is a load operation that could be folded into some other x86
     /// instruction as a memory operand. Example: vpaddd (%rdi), %xmm0, %xmm0.
     bool mayFoldLoad(SDValue Op, const X86Subtarget &Subtarget,
-                     bool AssumeSingleUse = false);
+                     bool AssumeSingleUse = false,
+                     bool IgnoreAlignment = false);
 
     /// Check if Op is a load operation that could be folded into a vector splat
     /// instruction as a memory operand. Example: vbroadcastss 16(%rdi), %xmm2.
