@@ -59,9 +59,7 @@ struct __locale_guard {
 #define _LIBCPP_LC_ALL LC_ALL
 
 // Get MB_CUE_MAX before __locale_t is defined because it uses a defferent definition in <sys/localedef.h>.
-static inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __mb_cur_max() {
-  return MB_CUR_MAX;
-}
+static inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __mb_cur_max() { return MB_CUR_MAX; }
 
 using __locale_t _LIBCPP_NODEBUG = ::locale_t;
 
@@ -232,8 +230,8 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI
+size_t __strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
   return strftime_l(__s, __max, __format, __tm, __loc);
 }
 
