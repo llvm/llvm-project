@@ -1,8 +1,14 @@
 // RUN: mlir-opt -test-last-modified %s 2>&1 | FileCheck %s
 
 // Test that RegionBranchOpInterface implementations for OpenACC single-region
-// ops (here: acc.parallel and acc.serial) allow LastModifiedAnalysis to
-// propagate modifications performed inside the region to uses after the op.
+// ops behave reasonably under LastModifiedAnalysis.
+//
+// For acc.parallel / acc.serial, which only have value-based memory effects
+// coming from their bodies, the analysis can track the last writer precisely.
+// For other OpenACC region ops (e.g. acc.kernels, acc.data, acc.host_data),
+// which currently only report resource-only memory effects at the op level,
+// LastModifiedAnalysis cannot attribute a precise last writer and falls back
+// to "<unknown>" after the op for values not directly touched in the region.
 
 
 // CHECK-LABEL: test_tag: acc_parallel_after:
@@ -49,3 +55,91 @@ func.func @last_mod_openacc_serial(%arg0: memref<f32>) -> memref<f32> {
 
   return {tag = "acc_serial_return"} %arg0 : memref<f32>
 }
+
+// -----
+
+// CHECK-LABEL: test_tag: acc_kernels_before:
+// CHECK:  operand #0
+// CHECK-NEXT:   - pre
+// CHECK-LABEL: test_tag: acc_kernels_after:
+// CHECK:  operand #0
+// CHECK-NEXT:   - <unknown>
+func.func @last_mod_openacc_kernels(%arg0: memref<f32>) -> memref<f32> {
+  %zero = arith.constant 0.0 : f32
+
+  // Single store before the region.
+  memref.store %zero, %arg0[] {tag_name = "pre"} : memref<f32>
+  memref.load %arg0[] {tag = "acc_kernels_before"} : memref<f32>
+
+  // The acc.kernels region does not touch %arg0.
+  acc.kernels {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.terminator
+  }
+
+  // After acc.kernels, LastModifiedAnalysis cannot prove that "pre" still
+  // dominates all paths and therefore reports the last modifier conservatively
+  // as "<unknown>" for this load.
+  memref.load %arg0[] {tag = "acc_kernels_after"} : memref<f32>
+  return %arg0 : memref<f32>
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: acc_data_before:
+// CHECK:  operand #0
+// CHECK-NEXT:   - pre
+// CHECK-LABEL: test_tag: acc_data_after:
+// CHECK:  operand #0
+// CHECK-NEXT:   - <unknown>
+func.func @last_mod_openacc_data(%arg0: memref<f32>, %mapped: memref<f32>) -> memref<f32> {
+  %zero = arith.constant 0.0 : f32
+
+  // Single store to %arg0 before the region.
+  memref.store %zero, %arg0[] {tag_name = "pre"} : memref<f32>
+  memref.load %arg0[] {tag = "acc_data_before"} : memref<f32>
+
+  // Map an unrelated buffer into device memory and run an acc.data region that
+  // does not touch %arg0.
+  %create = acc.create varPtr(%mapped : memref<f32>) varType(tensor<f32>) -> memref<f32>
+  acc.data dataOperands(%create : memref<f32>) {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.terminator
+  }
+
+  // After acc.data, LastModifiedAnalysis cannot prove that "pre" still
+  // dominates all paths for %arg0 and reports "<unknown>" for this load.
+  memref.load %arg0[] {tag = "acc_data_after"} : memref<f32>
+  return %arg0 : memref<f32>
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: acc_host_before:
+// CHECK:  operand #0
+// CHECK-NEXT:   - pre
+// CHECK-LABEL: test_tag: acc_host_after:
+// CHECK:  operand #0
+// CHECK-NEXT:   - <unknown>
+func.func @last_mod_openacc_host_data(%arg0: memref<f32>, %mapped: memref<f32>) -> memref<f32> {
+  %zero = arith.constant 0.0 : f32
+
+  // Single store to %arg0 before the region.
+  memref.store %zero, %arg0[] {tag_name = "pre"} : memref<f32>
+  memref.load %arg0[] {tag = "acc_host_before"} : memref<f32>
+
+  // Map %mapped into device memory and run an acc.host_data region that does
+  // not touch %arg0.
+  %devptr = acc.use_device varPtr(%mapped : memref<f32>) varType(tensor<f32>) -> memref<f32>
+  acc.host_data dataOperands(%devptr : memref<f32>) {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.terminator
+  }
+
+  // After acc.host_data, the analysis cannot prove "pre" still dominates and
+  // reports "<unknown>" for the last writer on %arg0.
+  memref.load %arg0[] {tag = "acc_host_after"} : memref<f32>
+  return %arg0 : memref<f32>
+}
+
+
