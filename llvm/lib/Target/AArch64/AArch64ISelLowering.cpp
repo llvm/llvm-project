@@ -7457,17 +7457,17 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
       ISD::isConstantSplatVectorAllZeros(Passthru.getNode()))
     return Compressed;
 
-  SDValue Offset = DAG.getNode(
+  SDValue CntActive = DAG.getNode(
       ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), Mask,
       Mask);
 
-  SDValue IndexMask = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, MaskVT,
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo, DL, MVT::i64),
-      DAG.getConstant(0, DL, MVT::i64), Offset);
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue CompressedMask =
+      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MaskVT, Zero, CntActive);
 
-  return DAG.getNode(ISD::VSELECT, DL, VT, IndexMask, Compressed, Passthru);
+  return DAG.getNode(ISD::VSELECT, DL, VT, CompressedMask, Compressed,
+                     Passthru);
 }
 
 // Generate SUBS and CSEL for integer abs.

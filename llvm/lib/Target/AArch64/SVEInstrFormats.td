@@ -9506,7 +9506,7 @@ multiclass sve_fp8_dot<bit bf, ZPRRegOp dstrc, string asm, ValueType vt,
     let mayLoad  = 1;
     let mayStore = 0;
   }
-  
+
   def : SVE_3_Op_Pat<vt, op, vt, nxv16i8, nxv16i8, !cast<Instruction>(NAME)>;
 }
 
@@ -10992,7 +10992,7 @@ class sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic,
 
 multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic, ValueType vtd, SDPatternOperator op> {
   def _BtoH : sve2_fp8_cvt_single<L, opc, mnemonic, ZPR16, ZPR8>;
-  
+
   def : SVE_1_Op_Pat<vtd, op, nxv16i8, !cast<Instruction>(NAME # _BtoH)>;
 }
 
@@ -11037,7 +11037,7 @@ class sve2_fp8_down_cvt_single_top<bits<2> opc, string mnemonic, RegisterOperand
   let Constraints = "$Zd = $_Zd";
   let DestructiveInstType = DestructiveOther;
   let ElementSize         = ZPR8.ElementSize;
-  
+
   let Uses     = [FPMR, FPCR];
   let mayLoad  = 1;
   let mayStore = 0;
