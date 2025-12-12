@@ -15,9 +15,11 @@
 
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
+#include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Support/Fortran.h"
@@ -34,7 +36,6 @@ class StateStack;
 
 namespace fir {
 class KindMapping;
-class FirOpBuilder;
 } // namespace fir
 
 namespace Fortran {
