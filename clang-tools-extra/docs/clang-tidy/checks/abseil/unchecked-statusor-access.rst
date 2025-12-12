@@ -30,9 +30,15 @@ snippet, please `report it <http://github.com/llvm/llvm-project/issues/new>`__.
 False negatives
 ---------------
 
-This check generally does **not** generate false negatives. If it cannot
-prove an access safe, it is assumed to be unsafe. That being said, there
-are some heuristics used that in very rare cases might be incorrect:
+This check generally does **not** generate false negatives. That means that if
+an access is not marked as unsafe, it is provably safe. If it cannot prove an
+access safe, it is assumed to be unsafe. In some cases, the static analysis
+cannot prove an access safe even though it is, for a variety of reasons (e.g.
+unmodelled invariants of functions called). In these cases, the analysis does
+produce false positive reports.
+
+That being said, there are some heuristics used that in very rare cases might
+be incorrect:
 
 -  `a const method accessor (without arguments) that returns different
    values when called multiple times <#functionstability>`__.
