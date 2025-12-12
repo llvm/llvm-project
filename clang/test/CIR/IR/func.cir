@@ -44,6 +44,14 @@ cir.func @intfunc() -> !s32i {
 cir.func @a_empty() alias(@empty)
 // CHECK: cir.func @a_empty() alias(@empty)
 
+// Should print/parse function personality.
+cir.func @personality_func() personality(@__gxx_personality_v0) {
+  cir.return
+}
+// CHECK: cir.func @personality_func() personality(@__gxx_personality_v0) {
+// CHECK:   cir.return
+// CHECK: }
+
 // int scopes() {
 //  {
 //    {

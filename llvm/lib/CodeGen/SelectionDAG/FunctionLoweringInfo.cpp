@@ -442,7 +442,7 @@ FunctionLoweringInfo::GetLiveOutRegInfo(Register Reg, unsigned BitWidth) {
 /// register based on the LiveOutInfo of its operands.
 void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   Type *Ty = PN->getType();
-  if (!Ty->isIntegerTy() || Ty->isVectorTy())
+  if (!Ty->isIntegerTy())
     return;
 
   SmallVector<EVT, 1> ValueVTs;
@@ -517,8 +517,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
       else
         Val = CI->getValue().zext(BitWidth);
       DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, Val.getNumSignBits());
-      DestLOI.Known.Zero &= ~Val;
-      DestLOI.Known.One &= Val;
+      DestLOI.Known = DestLOI.Known.intersectWith(KnownBits::makeConstant(Val));
       continue;
     }
 

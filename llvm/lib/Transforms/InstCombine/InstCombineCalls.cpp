@@ -3095,11 +3095,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // ldexp(x, K) -> fmul x, 2^K
       const fltSemantics &FPTy =
           Src->getType()->getScalarType()->getFltSemantics();
-      Constant *FPConst =
-          ConstantFP::get(Src->getType(), scalbn(APFloat::getOne(FPTy),
-                                                 static_cast<int>(ConstExp),
-                                                 APFloat::rmNearestTiesToEven));
-      return BinaryOperator::CreateFMulFMF(Src, FPConst, II);
+
+      APFloat Scaled = scalbn(APFloat::getOne(FPTy), static_cast<int>(ConstExp),
+                              APFloat::rmNearestTiesToEven);
+      if (!Scaled.isZero() && !Scaled.isInfinity()) {
+        // Skip overflow and underflow cases.
+        Constant *FPConst = ConstantFP::get(Src->getType(), Scaled);
+        return BinaryOperator::CreateFMulFMF(Src, FPConst, II);
+      }
     }
 
     Value *InnerSrc;
