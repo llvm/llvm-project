@@ -3555,7 +3555,7 @@ static void mcpuHelp() {
       for (auto &C : A->children(Err)) {
         Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
         if (!ChildOrErr)
-          // We don't report error here because we don't disassemble it here.
+          // We don't report error because we don't disassemble it here.
           continue;
         if (ObjectFile *Obj = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
           TheTriple = Obj->makeTriple();
