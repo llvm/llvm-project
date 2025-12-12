@@ -2606,7 +2606,6 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   }
   const SCEV *DstConst = Coefficients;
 
-  APInt ExtraGCD = APInt::getZero(BitWidth);
   const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
   if (!Delta)
     return false;
@@ -2633,11 +2632,6 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   // which is infeasible, so we can disallow the = direction for the i level.
   // Setting j = j' doesn't help matters, so we end up with a direction vector
   // of [<>, *]
-  //
-  // Given A[5*i + 10*j*M + 9*M*N] and A[15*i + 20*j*M - 21*N*M + 5],
-  // we need to remember that the constant part is 5 and the RunningGCD should
-  // be initialized to ExtraGCD = 30.
-  LLVM_DEBUG(dbgs() << "    ExtraGCD = " << ExtraGCD << '\n');
 
   bool Improved = false;
   Coefficients = Src;
@@ -2645,7 +2639,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
              dyn_cast<SCEVAddRecExpr>(Coefficients)) {
     Coefficients = AddRec->getStart();
     const Loop *CurLoop = AddRec->getLoop();
-    RunningGCD = ExtraGCD;
+    RunningGCD = 0;
     const SCEV *SrcCoeff = AddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = SE->getMinusSCEV(SrcCoeff, SrcCoeff);
 
