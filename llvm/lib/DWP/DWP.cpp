@@ -826,9 +826,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
                     "debug_info", OverflowOptValue, AnySectionOverflow))
               return Err;
             if (AnySectionOverflow) {
-              if (Header.Version < 5 ||
-                  Header.UnitType == dwarf::DW_UT_split_compile)
-                FoundCUUnit = true;
+              FoundCUUnit = true;
               break;
             }
           }

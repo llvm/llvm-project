@@ -44,6 +44,7 @@
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
+using namespace SCEVPatternMatch;
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan,
@@ -139,14 +140,77 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
   return true;
 }
 
-// Check if a memory operation doesn't alias with memory operations in blocks
-// between FirstBB and LastBB using scoped noalias metadata.
-// For load hoisting, we only check writes in one direction.
-// For store sinking, we check both reads and writes bidirectionally.
-static bool canHoistOrSinkWithNoAliasCheck(
-    const MemoryLocation &MemLoc, VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
-    bool CheckReads,
-    const SmallPtrSetImpl<VPRecipeBase *> *ExcludeRecipes = nullptr) {
+/// Helper for extra no-alias checks via known-safe recipe and SCEV.
+class SinkStoreInfo {
+  const SmallPtrSetImpl<VPRecipeBase *> &ExcludeRecipes;
+  VPReplicateRecipe &GroupLeader;
+  ScalarEvolution &SE;
+  const Loop &L;
+  VPTypeAnalysis &TypeInfo;
+
+  // Return true if \p A and \p B are known to not alias for all VFs in the
+  // plan, checked via the distance between the accesses
+  bool isNoAliasViaDistance(VPReplicateRecipe *A, VPReplicateRecipe *B) const {
+    if (A->getOpcode() != Instruction::Store ||
+        B->getOpcode() != Instruction::Store)
+      return false;
+
+    VPValue *AddrA = A->getOperand(1);
+    const SCEV *SCEVA = vputils::getSCEVExprForVPValue(AddrA, SE, &L);
+    VPValue *AddrB = B->getOperand(1);
+    const SCEV *SCEVB = vputils::getSCEVExprForVPValue(AddrB, SE, &L);
+    if (isa<SCEVCouldNotCompute>(SCEVA) || isa<SCEVCouldNotCompute>(SCEVB))
+      return false;
+
+    const APInt *Distance;
+    if (!match(SE.getMinusSCEV(SCEVA, SCEVB), m_scev_APInt(Distance)))
+      return false;
+
+    const DataLayout &DL = SE.getDataLayout();
+    Type *TyA = TypeInfo.inferScalarType(A->getOperand(0));
+    uint64_t SizeA = DL.getTypeStoreSize(TyA);
+    Type *TyB = TypeInfo.inferScalarType(B->getOperand(0));
+    uint64_t SizeB = DL.getTypeStoreSize(TyB);
+
+    // Use the maximum store size to ensure no overlap from either direction.
+    // Currently only handles fixed sizes, as it is only used for
+    // replicating VPReplicateRecipes.
+    uint64_t MaxStoreSize = std::max(SizeA, SizeB);
+
+    auto VFs = B->getParent()->getPlan()->vectorFactors();
+    ElementCount MaxVF = *max_element(VFs, ElementCount::isKnownLT);
+    return Distance->abs().uge(
+        MaxVF.multiplyCoefficientBy(MaxStoreSize).getFixedValue());
+  }
+
+public:
+  SinkStoreInfo(const SmallPtrSetImpl<VPRecipeBase *> &ExcludeRecipes,
+                VPReplicateRecipe &GroupLeader, ScalarEvolution &SE,
+                const Loop &L, VPTypeAnalysis &TypeInfo)
+      : ExcludeRecipes(ExcludeRecipes), GroupLeader(GroupLeader), SE(SE), L(L),
+        TypeInfo(TypeInfo) {}
+
+  /// Return true if \p R should be skipped during alias checking, either
+  /// because it's in the exclude set or because no-alias can be proven via
+  /// SCEV.
+  bool shouldSkip(VPRecipeBase &R) const {
+    auto *Store = dyn_cast<VPReplicateRecipe>(&R);
+    return ExcludeRecipes.contains(&R) ||
+           (Store && isNoAliasViaDistance(Store, &GroupLeader));
+  }
+};
+
+/// Check if a memory operation doesn't alias with memory operations in blocks
+/// between \p FirstBB and \p LastBB using scoped noalias metadata. If
+/// \p SinkInfo is std::nullopt, only recipes that may write to memory are
+/// checked (for load hoisting). Otherwise recipes that both read and write
+/// memory are checked, and SCEV is used to prove no-alias between the group
+/// leader and other replicate recipes (for store sinking).
+static bool
+canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
+                               VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
+                               std::optional<SinkStoreInfo> SinkInfo = {}) {
+  bool CheckReads = SinkInfo.has_value();
   if (!MemLoc.AATags.Scope)
     return false;
 
@@ -158,7 +222,7 @@ static bool canHoistOrSinkWithNoAliasCheck(
            "Expected at most one successor in block chain");
     auto *VPBB = cast<VPBasicBlock>(Block);
     for (VPRecipeBase &R : *VPBB) {
-      if (ExcludeRecipes && ExcludeRecipes->contains(&R))
+      if (SinkInfo && SinkInfo->shouldSkip(R))
         continue;
 
       // Skip recipes that don't need checking.
@@ -757,6 +821,31 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     if (!PhiR)
       continue;
 
+    // Try to narrow wide and replicating recipes to uniform recipes, based on
+    // VPlan analysis.
+    // TODO: Apply to all recipes in the future, to replace legacy uniformity
+    // analysis.
+    auto Users = collectUsersRecursively(PhiR);
+    for (VPUser *U : reverse(Users)) {
+      auto *Def = dyn_cast<VPRecipeWithIRFlags>(U);
+      auto *RepR = dyn_cast<VPReplicateRecipe>(U);
+      // Skip recipes that shouldn't be narrowed.
+      if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
+          Def->getNumUsers() == 0 || !Def->getUnderlyingValue() ||
+          (RepR && (RepR->isSingleScalar() || RepR->isPredicated())))
+        continue;
+
+      // Skip recipes that may have other lanes than their first used.
+      if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
+        continue;
+
+      auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
+                                          Def->operands(), /*IsUniform*/ true,
+                                          /*Mask*/ nullptr, /*Flags*/ *Def);
+      Clone->insertAfter(Def);
+      Def->replaceAllUsesWith(Clone);
+    }
+
     // Replace wide pointer inductions which have only their scalars used by
     // PtrAdd(IndStart, ScalarIVSteps (0, Step)).
     if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(&Phi)) {
@@ -921,7 +1010,7 @@ static VPValue *optimizeLatchExitInductionUser(
     VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
     DenseMap<VPValue *, VPValue *> &EndValues, ScalarEvolution &SE) {
   VPValue *Incoming;
-  if (!match(Op, m_ExtractLastElement(m_VPValue(Incoming))))
+  if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming, SE);
@@ -942,7 +1031,8 @@ static VPValue *optimizeLatchExitInductionUser(
   VPValue *Step = WideIV->getStepValue();
   Type *ScalarTy = TypeInfo.inferScalarType(WideIV);
   if (ScalarTy->isIntegerTy())
-    return B.createNaryOp(Instruction::Sub, {EndValue, Step}, {}, "ind.escape");
+    return B.createNaryOp(Instruction::Sub, {EndValue, Step},
+                          DebugLoc::getUnknown(), "ind.escape");
   if (ScalarTy->isPointerTy()) {
     Type *StepTy = TypeInfo.inferScalarType(Step);
     auto *Zero = Plan.getConstantInt(StepTy, 0);
@@ -1359,13 +1449,16 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // Look through ExtractLastElement (BuildVector ....).
-  if (match(Def, m_CombineOr(m_ExtractLastElement(m_BuildVector()),
-                             m_ExtractLastLanePerPart(m_BuildVector())))) {
-    auto *BuildVector = cast<VPInstruction>(Def->getOperand(0));
-    Def->replaceAllUsesWith(
-        BuildVector->getOperand(BuildVector->getNumOperands() - 1));
-    return;
+  // Look through ExtractLastLane.
+  if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
+    if (match(A, m_BuildVector())) {
+      auto *BuildVector = cast<VPInstruction>(A);
+      Def->replaceAllUsesWith(
+          BuildVector->getOperand(BuildVector->getNumOperands() - 1));
+      return;
+    }
+    if (Plan->hasScalarVFOnly())
+      return Def->replaceAllUsesWith(A);
   }
 
   // Look through ExtractPenultimateElement (BuildVector ....).
@@ -1449,15 +1542,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  if (match(Def,
-            m_CombineOr(m_ExtractLastElement(m_Broadcast(m_VPValue(A))),
-                        m_ExtractLastLanePerPart(m_Broadcast(m_VPValue(A)))))) {
+  if (match(Def, m_ExtractLastLane(m_Broadcast(m_VPValue(A))))) {
     Def->replaceAllUsesWith(A);
     return;
   }
 
-  if (match(Def, m_CombineOr(m_ExtractLastElement(m_VPValue(A)),
-                             m_ExtractLastLanePerPart(m_VPValue(A)))) &&
+  if (match(Def, m_ExtractLastLane(m_VPValue(A))) &&
       ((isa<VPInstruction>(A) && vputils::isSingleScalar(A)) ||
        (isa<VPReplicateRecipe>(A) &&
         cast<VPReplicateRecipe>(A)->isSingleScalar())) &&
@@ -1466,11 +1556,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(A);
   }
 
-  if (Plan->getUF() == 1 &&
-      match(Def, m_ExtractLastLanePerPart(m_VPValue(A)))) {
-    return Def->replaceAllUsesWith(
-        Builder.createNaryOp(VPInstruction::ExtractLastElement, {A}));
-  }
+  if (Plan->getUF() == 1 && match(Def, m_ExtractLastPart(m_VPValue(A))))
+    return Def->replaceAllUsesWith(A);
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
@@ -1510,22 +1597,20 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
             true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Flags*/,
             *RepR /*Metadata*/, RepR->getDebugLoc());
         Clone->insertBefore(RepOrWidenR);
-        unsigned ExtractOpc =
-            vputils::isUniformAcrossVFsAndUFs(RepR->getOperand(1))
-                ? VPInstruction::ExtractLastElement
-                : VPInstruction::ExtractLastLanePerPart;
-        auto *Ext = new VPInstruction(ExtractOpc, {Clone->getOperand(0)});
-        Ext->insertBefore(Clone);
-        Clone->setOperand(0, Ext);
+        VPBuilder Builder(Clone);
+        VPValue *ExtractOp = Clone->getOperand(0);
+        if (vputils::isUniformAcrossVFsAndUFs(RepR->getOperand(1)))
+          ExtractOp =
+              Builder.createNaryOp(VPInstruction::ExtractLastPart, ExtractOp);
+        ExtractOp =
+            Builder.createNaryOp(VPInstruction::ExtractLastLane, ExtractOp);
+        Clone->setOperand(0, ExtractOp);
         RepR->eraseFromParent();
         continue;
       }
 
-      // Skip recipes that aren't single scalars and don't just have their first
-      // lane used.
-      if (!vputils::isSingleScalar(RepOrWidenR) &&
-          (!vputils::onlyFirstLaneUsed(RepOrWidenR) ||
-           RepOrWidenR->getNumUsers() == 0))
+      // Skip recipes that aren't single scalars.
+      if (!vputils::isSingleScalar(RepOrWidenR))
         continue;
 
       // Skip recipes for which conversion to single-scalar does introduce
@@ -1537,8 +1622,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
                   [RepOrWidenR](const VPUser *U) {
                     if (auto *VPI = dyn_cast<VPInstruction>(U)) {
                       unsigned Opcode = VPI->getOpcode();
-                      if (Opcode == VPInstruction::ExtractLastElement ||
-                          Opcode == VPInstruction::ExtractLastLanePerPart ||
+                      if (Opcode == VPInstruction::ExtractLastLane ||
+                          Opcode == VPInstruction::ExtractLastPart ||
                           Opcode == VPInstruction::ExtractPenultimateElement)
                         return true;
                     }
@@ -2126,8 +2211,13 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
       if (Op == FOR)
         return false;
 
-      if (auto *R = NeedsHoisting(Op))
+      if (auto *R = NeedsHoisting(Op)) {
+        // Bail out if the recipe defines multiple values.
+        // TODO: Hoisting such recipes requires additional handling.
+        if (R->getNumDefinedValues() != 1)
+          return false;
         HoistCandidates.push_back(R);
+      }
     }
   }
 
@@ -2209,7 +2299,8 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
           B.createNaryOp(VPInstruction::ExtractLane,
                          {PenultimateIndex, FOR->getBackedgeValue()});
       VPValue *LastPrevIter =
-          B.createNaryOp(VPInstruction::ExtractLastElement, FOR);
+          B.createNaryOp(VPInstruction::ExtractLastLane, FOR);
+
       VPValue *Cmp = B.createICmp(CmpInst::ICMP_EQ, LastActiveLane, Zero);
       VPValue *Sel = B.createSelect(Cmp, LastPrevIter, PenultimateLastIter);
       cast<VPInstruction>(U)->replaceAllUsesWith(Sel);
@@ -3740,19 +3831,19 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
     unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
     if (ExitIRI->getNumOperands() != 1) {
       // The first of two operands corresponds to the latch exit, via MiddleVPBB
-      // predecessor. Extract its last lane.
-      ExitIRI->extractLastLaneOfFirstOperand(MiddleBuilder);
+      // predecessor. Extract its final lane.
+      ExitIRI->extractLastLaneOfLastPartOfFirstOperand(MiddleBuilder);
     }
 
     VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
     if (!IncomingFromEarlyExit->isLiveIn()) {
       // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
-          VPInstruction::FirstActiveLane, {CondToEarlyExit}, nullptr,
-          "first.active.lane");
+          VPInstruction::FirstActiveLane, {CondToEarlyExit},
+          DebugLoc::getUnknown(), "first.active.lane");
       IncomingFromEarlyExit = EarlyExitB.createNaryOp(
           VPInstruction::ExtractLane, {FirstActiveLane, IncomingFromEarlyExit},
-          nullptr, "early.exit.value");
+          DebugLoc::getUnknown(), "early.exit.value");
       ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExit);
     }
   }
@@ -4246,8 +4337,7 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
 
     // Check that the load doesn't alias with stores between first and last.
     auto LoadLoc = vputils::getMemoryLocation(*EarliestLoad);
-    if (!LoadLoc || !canHoistOrSinkWithNoAliasCheck(*LoadLoc, FirstBB, LastBB,
-                                                    /*CheckReads=*/false))
+    if (!LoadLoc || !canHoistOrSinkWithNoAliasCheck(*LoadLoc, FirstBB, LastBB))
       continue;
 
     // Collect common metadata from all loads in the group.
@@ -4274,7 +4364,9 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
 }
 
 static bool
-canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink) {
+canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink,
+                             ScalarEvolution &SE, const Loop &L,
+                             VPTypeAnalysis &TypeInfo) {
   auto StoreLoc = vputils::getMemoryLocation(*StoresToSink.front());
   if (!StoreLoc || !StoreLoc->AATags.Scope)
     return false;
@@ -4286,8 +4378,8 @@ canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink) {
 
   VPBasicBlock *FirstBB = StoresToSink.front()->getParent();
   VPBasicBlock *LastBB = StoresToSink.back()->getParent();
-  return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB,
-                                        /*CheckReads=*/true, &StoresToSinkSet);
+  SinkStoreInfo SinkInfo(StoresToSinkSet, *StoresToSink[0], SE, L, TypeInfo);
+  return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB, SinkInfo);
 }
 
 void VPlanTransforms::sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
@@ -4298,13 +4390,14 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
     return;
 
   VPDominatorTree VPDT(Plan);
+  VPTypeAnalysis TypeInfo(Plan);
 
   for (auto &Group : Groups) {
     sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
       return VPDT.properlyDominates(A, B);
     });
 
-    if (!canSinkStoreWithNoAliasCheck(Group))
+    if (!canSinkStoreWithNoAliasCheck(Group, SE, *L, TypeInfo))
       continue;
 
     // Use the last (most dominated) store's location for the unconditional
@@ -4570,14 +4663,14 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   VF.replaceAllUsesWith(RuntimeVF);
 
   VPValue *UF = Plan.getConstantInt(TCTy, Plan.getUF());
-  VPValue *MulByUF = Builder.createNaryOp(Instruction::Mul, {RuntimeVF, UF});
+  VPValue *MulByUF = Builder.createOverflowingOp(
+      Instruction::Mul, {RuntimeVF, UF}, {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
 }
 
 DenseMap<const SCEV *, Value *>
 VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
-  const DataLayout &DL = SE.getDataLayout();
-  SCEVExpander Expander(SE, DL, "induction", /*PreserveLCSSA=*/false);
+  SCEVExpander Expander(SE, "induction", /*PreserveLCSSA=*/false);
 
   auto *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
   BasicBlock *EntryBB = Entry->getIRBasicBlock();
@@ -4858,7 +4951,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   if (VF.isScalable()) {
     VPValue *VScale = PHBuilder.createElementCount(
         VectorLoop->getCanonicalIVType(), ElementCount::getScalable(1));
-    VPValue *VScaleUF = PHBuilder.createNaryOp(Instruction::Mul, {VScale, UF});
+    VPValue *VScaleUF = PHBuilder.createOverflowingOp(
+        Instruction::Mul, {VScale, UF}, {true, false});
     Inc->setOperand(1, VScaleUF);
     Plan.getVF().replaceAllUsesWith(VScale);
   } else {
@@ -4966,10 +5060,13 @@ void VPlanTransforms::updateScalarResumePhis(
     auto *ResumeFromVectorLoop = VectorPhiR->getBackedgeValue();
     assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
            "Cannot handle loops with uncountable early exits");
-    if (IsFOR)
+    if (IsFOR) {
+      auto *ExtractPart = MiddleBuilder.createNaryOp(
+          VPInstruction::ExtractLastPart, ResumeFromVectorLoop);
       ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractLastElement, {ResumeFromVectorLoop}, {},
+          VPInstruction::ExtractLastLane, ExtractPart, DebugLoc::getUnknown(),
           "vector.recur.extract");
+    }
     ResumePhiR->setName(IsFOR ? "scalar.recur.init" : "bc.merge.rdx");
     ResumePhiR->setOperand(0, ResumeFromVectorLoop);
   }
@@ -5065,10 +5162,11 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
     // Now update VPIRInstructions modeling LCSSA phis in the exit block.
     // Extract the penultimate value of the recurrence and use it as operand for
     // the VPIRInstruction modeling the phi.
-    for (VPUser *U : FOR->users()) {
-      using namespace llvm::VPlanPatternMatch;
-      if (!match(U, m_ExtractLastElement(m_Specific(FOR))))
+    for (VPRecipeBase &R : make_early_inc_range(
+             make_range(MiddleVPBB->getFirstNonPhi(), MiddleVPBB->end()))) {
+      if (!match(&R, m_ExtractLastLaneOfLastPart(m_Specific(FOR))))
         continue;
+
       // For VF vscale x 1, if vscale = 1, we are unable to extract the
       // penultimate value of the recurrence. Instead we rely on the existing
       // extract of the last element from the result of
@@ -5078,9 +5176,9 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
                                                              Range))
         return;
       VPValue *PenultimateElement = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractPenultimateElement, {FOR->getBackedgeValue()},
-          {}, "vector.recur.extract.for.phi");
-      cast<VPInstruction>(U)->replaceAllUsesWith(PenultimateElement);
+          VPInstruction::ExtractPenultimateElement, FOR->getBackedgeValue(), {},
+          "vector.recur.extract.for.phi");
+      cast<VPInstruction>(&R)->replaceAllUsesWith(PenultimateElement);
     }
   }
 }

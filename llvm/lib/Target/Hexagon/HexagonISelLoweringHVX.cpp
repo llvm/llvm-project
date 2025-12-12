@@ -184,10 +184,18 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v64bf16, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v64bf16, Custom);
 
+      setOperationAction(ISD::LOAD, MVT::v128bf16, Custom);
+      setOperationAction(ISD::STORE, MVT::v128bf16, Custom);
+
       setOperationAction(ISD::MLOAD, MVT::v64bf16, Custom);
       setOperationAction(ISD::MSTORE, MVT::v64bf16, Custom);
       setOperationAction(ISD::BUILD_VECTOR, MVT::v64bf16, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, MVT::v64bf16, Custom);
+
+      setOperationAction(ISD::MLOAD, MVT::v128bf16, Custom);
+      setOperationAction(ISD::MSTORE, MVT::v128bf16, Custom);
+      setOperationAction(ISD::BUILD_VECTOR, MVT::v128bf16, Custom);
+      setOperationAction(ISD::CONCAT_VECTORS, MVT::v128bf16, Custom);
 
       setOperationAction(ISD::SPLAT_VECTOR, MVT::bf16, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::bf16, Custom);
@@ -469,7 +477,7 @@ HexagonTargetLowering::initializeHVXLowering() {
         setOperationAction(ISD::TRUNCATE,     VecTy, Custom);
         setOperationAction(ISD::ANY_EXTEND,   VecTy, Custom);
         setOperationAction(ISD::SIGN_EXTEND,  VecTy, Custom);
-        setOperationAction(ISD::ZERO_EXTEND,  VecTy, Custom);
+        setOperationAction(ISD::ZERO_EXTEND, VecTy, Custom);
         if (Subtarget.useHVXFloatingPoint()) {
           setOperationAction(ISD::FP_TO_SINT,   VecTy, Custom);
           setOperationAction(ISD::FP_TO_UINT,   VecTy, Custom);

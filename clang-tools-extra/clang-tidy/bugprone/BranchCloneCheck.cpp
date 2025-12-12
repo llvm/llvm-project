@@ -237,6 +237,12 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
       return false;
     return true;
   }
+  case Stmt::DeferStmtClass: {
+    const auto *DefStmt1 = cast<DeferStmt>(Stmt1);
+    const auto *DefStmt2 = cast<DeferStmt>(Stmt2);
+    return isIdenticalStmt(Ctx, DefStmt1->getBody(), DefStmt2->getBody(),
+                           IgnoreSideEffects);
+  }
   case Stmt::CompoundStmtClass: {
     const auto *CompStmt1 = cast<CompoundStmt>(Stmt1);
     const auto *CompStmt2 = cast<CompoundStmt>(Stmt2);

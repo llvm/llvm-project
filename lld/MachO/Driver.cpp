@@ -2015,6 +2015,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
                    OPT_no_separate_cstring_literal_sections, false);
   config->tailMergeStrings =
       args.hasFlag(OPT_tail_merge_strings, OPT_no_tail_merge_strings, false);
+  if (auto *arg = args.getLastArg(OPT_slop_scale_eq)) {
+    StringRef v(arg->getValue());
+    unsigned slop = 0;
+    if (!llvm::to_integer(v, slop))
+      error(arg->getSpelling() +
+            ": expected a non-negative integer, but got '" + v + "'");
+    config->slopScale = slop;
+  }
 
   auto IncompatWithCGSort = [&](StringRef firstArgStr) {
     // Throw an error only if --call-graph-profile-sort is explicitly specified

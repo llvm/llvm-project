@@ -9,7 +9,6 @@
 #include "TransformerClangTidyCheck.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/STLExtras.h"
 #include <optional>
 
 namespace clang::tidy::utils {
