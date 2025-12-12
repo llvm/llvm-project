@@ -1243,9 +1243,8 @@ static Value reductionOpKind(ConversionPatternRewriter &rewriter, Location loc,
     return arith::MinimumFOp::create(rewriter, loc, lhs, rhs).getResult();
   case vector::CombiningKind::MAXIMUMF:
     return arith::MaximumFOp::create(rewriter, loc, lhs, rhs).getResult();
-  default:
-    llvm_unreachable("Unsupported reduction kind");
   }
+  llvm_unreachable("unsupported OpKind");
 }
 
 /// This pattern transforms vector.multi_dim_reduction operations from
