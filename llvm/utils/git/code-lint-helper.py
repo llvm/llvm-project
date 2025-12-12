@@ -36,6 +36,7 @@ class LintArgs:
     issue_number: int = 0
     build_path: str = "build"
     clang_tidy_binary: str = "clang-tidy"
+    doc8_binary: str = "doc8"
 
     def __init__(self, args: argparse.Namespace) -> None:
         if args is not None:
@@ -50,6 +51,7 @@ class LintArgs:
             self.verbose = args.verbose
             self.build_path = args.build_path
             self.clang_tidy_binary = args.clang_tidy_binary
+            self.doc8_binary = args.doc8_binary
 
 
 class LintHelper:
@@ -289,8 +291,59 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
         return ""
 
 
+class Doc8LintHelper(LintHelper):
+    name: Final = "doc8"
+    friendly_name: Final = "documentation linter"
 
-ALL_LINTERS = (ClangTidyLintHelper(),)
+    def instructions(self, files_to_lint: Sequence[str], args: LintArgs) -> str:
+        files_str = " ".join(files_to_lint)
+        return f"doc8 -q {files_str}"
+
+    def filter_changed_files(self, changed_files: Sequence[str]) -> Sequence[str]:
+        filtered_files = []
+        for filepath in changed_files:
+            _, ext = os.path.splitext(filepath)
+            if ext != ".rst":
+                continue
+            if not filepath.startswith("clang-tools-extra/docs/clang-tidy/"):
+                continue
+            if os.path.exists(filepath):
+                filtered_files.append(filepath)
+        return filtered_files
+
+    def run_linter_tool(self, files_to_lint: Sequence[str], args: LintArgs) -> str:
+        if not files_to_lint:
+            return ""
+
+        doc8_cmd = [args.doc8_binary, "-q"]
+        doc8_cmd.extend(files_to_lint)
+
+        if args.verbose:
+            print(f"Running doc8: {' '.join(doc8_cmd)}")
+
+        proc = subprocess.run(
+            doc8_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+
+        if proc.returncode == 0:
+            return ""
+
+        output = proc.stdout.strip()
+        if output:
+            return output
+
+        error_output = proc.stderr.strip()
+        if error_output:
+            return error_output
+
+        return f"doc8 exited with return code {proc.returncode} but no output."
+
+
+ALL_LINTERS = (ClangTidyLintHelper(), Doc8LintHelper())
 
 
 if __name__ == "__main__":
@@ -330,6 +383,12 @@ if __name__ == "__main__":
         type=str,
         default="clang-tidy",
         help="Path to clang-tidy binary",
+    )
+    parser.add_argument(
+        "--doc8-binary",
+        type=str,
+        default="doc8",
+        help="Path to doc8 binary",
     )
     parser.add_argument(
         "--verbose", action="store_true", default=True, help="Verbose output"
