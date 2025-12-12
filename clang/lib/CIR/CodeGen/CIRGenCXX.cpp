@@ -25,10 +25,10 @@ using namespace clang::CIRGen;
 
 /// Emit code to cause the variable at the given address to be considered as
 /// constant from this point onwards.
-static void emitDeclInvariant(CIRGenFunction &CGF, const VarDecl *D) {
-  mlir::Value addr = CGF.cgm.getAddrOfGlobalVar(D);
-  CGF.emitInvariantStart(CGF.getContext().getTypeSizeInChars(D->getType()),
-                         addr, CGF.getLoc(D->getSourceRange()));
+static void emitDeclInvariant(CIRGenFunction &cgf, const VarDecl *d) {
+  mlir::Value addr = cgf.cgm.getAddrOfGlobalVar(d);
+  cgf.emitInvariantStart(cgf.getContext().getTypeSizeInChars(d->getType()),
+                         addr, cgf.getLoc(d->getSourceRange()));
 }
 
 void CIRGenFunction::emitInvariantStart(CharUnits Size, mlir::Value Addr,
