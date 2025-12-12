@@ -1721,6 +1721,71 @@ static std::string getMangledNameImpl(CIRGenModule &cgm, GlobalDecl gd,
   return std::string(out.str());
 }
 
+static FunctionDecl *
+createOpenACCBindTempFunction(ASTContext &ctx, const IdentifierInfo *bindName,
+                              const FunctionDecl *protoFunc) {
+  // If this is a C no-prototype function, we can take the 'easy' way out and
+  // just create a function with no arguments/functions, etc.
+  if (!protoFunc->hasPrototype())
+    return FunctionDecl::Create(
+        ctx, /*DC=*/ctx.getTranslationUnitDecl(),
+        /*StartLoc=*/SourceLocation{}, /*NLoc=*/SourceLocation{}, bindName,
+        protoFunc->getType(), /*TInfo=*/nullptr, StorageClass::SC_None);
+
+  QualType funcTy = protoFunc->getType();
+  auto *fpt = cast<FunctionProtoType>(protoFunc->getType());
+
+  // If this is a member function, add an explicit 'this' to the function type.
+  if (auto *methodDecl = dyn_cast<CXXMethodDecl>(protoFunc);
+      methodDecl && methodDecl->isImplicitObjectMemberFunction()) {
+    llvm::SmallVector<QualType> paramTypes{fpt->getParamTypes()};
+    paramTypes.insert(paramTypes.begin(), methodDecl->getThisType());
+
+    funcTy = ctx.getFunctionType(fpt->getReturnType(), paramTypes,
+                                 fpt->getExtProtoInfo());
+    fpt = cast<FunctionProtoType>(funcTy);
+  }
+
+  auto *tempFunc =
+      FunctionDecl::Create(ctx, /*DC=*/ctx.getTranslationUnitDecl(),
+                           /*StartLoc=*/SourceLocation{},
+                           /*NLoc=*/SourceLocation{}, bindName, funcTy,
+                           /*TInfo=*/nullptr, StorageClass::SC_None);
+
+  SmallVector<ParmVarDecl *> params;
+  params.reserve(fpt->getNumParams());
+
+  // Add all of the parameters.
+  for (unsigned i = 0, e = fpt->getNumParams(); i != e; ++i) {
+    ParmVarDecl *parm = ParmVarDecl::Create(
+        ctx, tempFunc, /*StartLoc=*/SourceLocation{},
+        /*IdLoc=*/SourceLocation{},
+        /*Id=*/nullptr, fpt->getParamType(i), /*TInfo=*/nullptr,
+        StorageClass::SC_None, /*DefArg=*/nullptr);
+    parm->setScopeInfo(0, i);
+    params.push_back(parm);
+  }
+
+  tempFunc->setParams(params);
+
+  return tempFunc;
+}
+
+std::string
+CIRGenModule::getOpenACCBindMangledName(const IdentifierInfo *bindName,
+                                        const FunctionDecl *attachedFunction) {
+  FunctionDecl *tempFunc = createOpenACCBindTempFunction(
+      getASTContext(), bindName, attachedFunction);
+
+  std::string ret = getMangledNameImpl(*this, GlobalDecl(tempFunc), tempFunc);
+
+  // This does nothing (it is a do-nothing function), since this is a
+  // slab-allocator, but leave a call in to immediately destroy this in case we
+  // ever come up with a way of getting allocations back.
+  getASTContext().Deallocate(tempFunc);
+  return ret;
+}
+
 StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
   GlobalDecl canonicalGd = gd.getCanonicalDecl();
 
