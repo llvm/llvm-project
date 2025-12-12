@@ -1572,6 +1572,9 @@ static void expandSchedPredicates(const Record *Rec, PredicateExpander &PE,
   } else if (Rec->isSubClassOf("SchedPredicateCombiner")) {
     std::vector<const Record *> SubPreds =
         Rec->getValueAsListOfDefs("Predicates");
+    if (SubPreds.empty())
+      PrintFatalError(Rec, "Empty SchedPredicateCombiner is not allowed");
+
     StringRef Sep;
     if (Rec->isSubClassOf("AllOfSchedPreds"))
       Sep = " && ";
@@ -1579,7 +1582,7 @@ static void expandSchedPredicates(const Record *Rec, PredicateExpander &PE,
              Rec->isSubClassOf("NoneOfSchedPreds"))
       Sep = " || ";
     else
-      llvm_unreachable("Unrecognized SchedPredicateCombiner");
+      PrintFatalError(Rec, "Unrecognized SchedPredicateCombiner");
 
     if (Rec->isSubClassOf("NoneOfSchedPreds")) {
       WrapPredicate = true;
@@ -1666,10 +1669,10 @@ static bool hasMCSchedPredicate(const Record *Rec) {
     return true;
 
   if (Rec->isSubClassOf("SchedPredicateCombiner")) {
-    // Validate its sub-predicates recursively.
+    // Check its sub-predicates recursively.
     std::vector<const Record *> SubPreds =
         Rec->getValueAsListOfDefs("Predicates");
-    return SubPreds.empty() || all_of(SubPreds, hasMCSchedPredicate);
+    return all_of(SubPreds, hasMCSchedPredicate);
   }
 
   return false;
