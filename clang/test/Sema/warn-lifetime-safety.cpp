@@ -20,6 +20,9 @@ class TriviallyDestructedClass {
   View a, b;
 };
 
+MyObj temporary();
+void use(View);
+
 //===----------------------------------------------------------------------===//
 // Basic Definite Use-After-Free (-W...permissive)
 // These are cases where the pointer is guaranteed to be dangling at the use site.
@@ -1064,7 +1067,15 @@ void parentheses(bool cond) {
               : &(((cond ? c : d)))));  // expected-warning 2 {{object whose reference is captured does not live long enough}}.
   }  // expected-note 4 {{destroyed here}}
   (void)*p;  // expected-note 4 {{later used here}}
+
 }
+
+void use_temporary_after_destruction() {
+    View a;
+    a = temporary(); // expected-warning {{object whose reference is captured does not live long enough}} \
+                    expected-note {{destroyed here}}
+    use(a); // expected-note {{later used here}}
+}  
 
 namespace GH162834 {
 // https://github.com/llvm/llvm-project/issues/162834

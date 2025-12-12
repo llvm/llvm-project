@@ -71,6 +71,12 @@ static const PathLoan *createLoan(FactManager &FactMgr,
   return nullptr;
 }
 
+static const PathLoan *createLoan(FactManager &FactMgr,
+                                  const CXXBindTemporaryExpr *BTE) {
+  AccessPath Path(BTE);
+  return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, BTE);
+}
+
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
@@ -90,6 +96,9 @@ void FactsGenerator::run() {
       else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
                    Element.getAs<CFGLifetimeEnds>())
         handleLifetimeEnds(*LifetimeEnds);
+      else if (std::optional<CFGTemporaryDtor> TemporaryDtor =
+                   Element.getAs<CFGTemporaryDtor>())
+        handleTemporaryDtor(*TemporaryDtor);
     }
     CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
                              EscapesInCurrentBlock.end());
@@ -363,9 +372,31 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
     if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
-      if (BL->getAccessPath().D == LifetimeEndsVD)
+      const AccessPath AP = BL->getAccessPath();
+      const ValueDecl *Path = AP.getAsValueDecl();
+      if (Path == LifetimeEndsVD)
         CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
             BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc()));
+    }
+  }
+}
+
+void FactsGenerator::handleTemporaryDtor(
+    const CFGTemporaryDtor &TemporaryDtor) {
+  const CXXBindTemporaryExpr *BTE = TemporaryDtor.getBindTemporaryExpr();
+  if (!BTE) {
+    return;
+  }
+  // Iterate through all loans to see if any expire.
+  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
+    if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
+      // Check if the loan is for a temporary materialization and if that storage
+      // location is the one being destructed.
+      const AccessPath AP = BL->getAccessPath();
+      const CXXBindTemporaryExpr *Path = AP.getAsCXXBindTemporaryExpr();
+      if (Path == BTE)
+        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+            BL->getID(), TemporaryDtor.getBindTemporaryExpr()->getEndLoc()));
     }
   }
 }
