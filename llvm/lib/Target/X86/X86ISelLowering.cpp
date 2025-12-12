@@ -50515,9 +50515,11 @@ static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG,
       }
       if ((Op00 == Op10) && (Op01 == Op11)) {
         const int Map[4] = {0, 2, 1, 3};
-        SmallVector<int, 4> ShuffleMask(
-            {Map[ScaledMask0[0]], Map[ScaledMask1[0]], Map[ScaledMask0[1]],
-             Map[ScaledMask1[1]]});
+        int ShuffleMask[] = {ScaledMask0[0], ScaledMask1[0], ScaledMask0[1],
+                             ScaledMask1[1]};
+        for (int &M : ShuffleMask)
+          if (0 <= M)
+            M = Map[M];
         MVT ShufVT = VT.isFloatingPoint() ? MVT::v4f64 : MVT::v4i64;
         SDValue Res = DAG.getNode(Opcode, DL, VT, DAG.getBitcast(SrcVT, Op00),
                                   DAG.getBitcast(SrcVT, Op01));
