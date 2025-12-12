@@ -111,7 +111,7 @@ struct HardwareLimits {
 };
 
 #define AMDGPU_DECLARE_WAIT_EVENTS(DECL)                                       \
-  DECL(VMEM_READ_ACCESS)         /* vmem read */                               \
+  DECL(VMEM_ACCESS) /* vmem read & write (pre-gfx10), vmem read (gfx10+) */    \
   DECL(VMEM_SAMPLER_READ_ACCESS) /* vmem SAMPLER read (gfx12+ only) */         \
   DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */             \
   DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */          \
@@ -362,7 +362,7 @@ public:
 
     static const unsigned WaitEventMaskForInstPreGFX12[NUM_INST_CNTS] = {
         eventMask(
-            {VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS}),
+            {VMEM_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS}),
         eventMask({SMEM_ACCESS, LDS_ACCESS, GDS_ACCESS, SQ_MESSAGE}),
         eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
                    EXP_POS_ACCESS, EXP_LDS_ACCESS}),
@@ -398,7 +398,7 @@ public:
     assert(ST);
 
     static const unsigned WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
-        eventMask({VMEM_READ_ACCESS}),
+        eventMask({VMEM_ACCESS}),
         eventMask({LDS_ACCESS, GDS_ACCESS}),
         eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
                    EXP_POS_ACCESS, EXP_LDS_ACCESS}),
@@ -532,7 +532,7 @@ public:
     switch (Inst.getOpcode()) {
     // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
     case AMDGPU::GLOBAL_INV:
-      return VMEM_READ_ACCESS; // tracked using loadcnt
+      return VMEM_ACCESS; // tracked using loadcnt
     case AMDGPU::GLOBAL_WB:
     case AMDGPU::GLOBAL_WBINV:
       return VMEM_WRITE_ACCESS; // tracked using storecnt
@@ -542,13 +542,13 @@ public:
 
     // Maps VMEM access types to their corresponding WaitEventType.
     static const WaitEventType VmemReadMapping[NUM_VMEM_TYPES] = {
-        VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS};
+        VMEM_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS};
 
     assert(SIInstrInfo::isVMEM(Inst));
     // LDS DMA loads are also stores, but on the LDS side. On the VMEM side
     // these should use VM_CNT.
     if (!ST->hasVscnt() || SIInstrInfo::mayWriteLDSThroughDMA(Inst))
-      return VMEM_READ_ACCESS;
+      return VMEM_ACCESS;
     if (Inst.mayStore() &&
         (!Inst.mayLoad() || SIInstrInfo::isAtomicNoRet(Inst))) {
       // FLAT and SCRATCH instructions may access scratch. Other VMEM
@@ -558,7 +558,7 @@ public:
       return VMEM_WRITE_ACCESS;
     }
     if (!ST->hasExtendedWaitCounts() || SIInstrInfo::isFLAT(Inst))
-      return VMEM_READ_ACCESS;
+      return VMEM_ACCESS;
     return VmemReadMapping[getVmemType(Inst)];
   }
 
