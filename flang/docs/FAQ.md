@@ -6,11 +6,6 @@
 
 -->
 
-<!-- TODO: remove this after adding this page to ToC -->
-```{eval-rst}
-:orphan:
-```
-
 # Frequently Asked Questions (FAQ)
 
 ```{contents}
