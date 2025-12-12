@@ -194,6 +194,7 @@ set(files
   __algorithm/simd_utils.h
   __algorithm/sort.h
   __algorithm/sort_heap.h
+  __algorithm/specialized_algorithms.h
   __algorithm/stable_partition.h
   __algorithm/stable_sort.h
   __algorithm/swap_ranges.h
@@ -520,7 +521,6 @@ set(files
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/ibm.h
-  __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/messages.h
   __locale_dir/money.h
@@ -533,6 +533,7 @@ set(files
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
   __locale_dir/support/netbsd.h
+  __locale_dir/support/newlib.h
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
@@ -570,7 +571,6 @@ set(files
   __mdspan/mdspan.h
   __memory/addressof.h
   __memory/align.h
-  __memory/aligned_alloc.h
   __memory/allocate_at_least.h
   __memory/allocation_guard.h
   __memory/allocator.h
@@ -1751,10 +1751,8 @@ if (LIBCXX_INSTALL_HEADERS)
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-cxx-headers
-                      DEPENDS cxx-headers
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx-headers
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      DEPENDS cxx-headers
+      COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx-headers)
     # Stripping is a no-op for headers
     add_custom_target(install-cxx-headers-stripped DEPENDS install-cxx-headers)
   endif()

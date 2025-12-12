@@ -17,11 +17,11 @@ define <4 x i32> @callee(i32 signext %count, ...) {
   ; CHECK:   [[COPY6:%[0-9]+]]:g8rc = COPY $x4
   ; CHECK:   STD [[COPY6]], 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0)
   ; CHECK:   STD [[COPY5]], 8, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 8)
-  ; CHECK:   STD [[COPY4]], 16, %fixed-stack.0 :: (store (s64))
-  ; CHECK:   STD [[COPY3]], 24, %fixed-stack.0 :: (store (s64))
-  ; CHECK:   STD [[COPY2]], 32, %fixed-stack.0 :: (store (s64))
-  ; CHECK:   STD [[COPY1]], 40, %fixed-stack.0 :: (store (s64))
-  ; CHECK:   STD [[COPY]], 48, %fixed-stack.0 :: (store (s64))
+  ; CHECK:   STD [[COPY4]], 16, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 16)
+  ; CHECK:   STD [[COPY3]], 24, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 24)
+  ; CHECK:   STD [[COPY2]], 32, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 32)
+  ; CHECK:   STD [[COPY1]], 40, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 40)
+  ; CHECK:   STD [[COPY]], 48, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 48)
   ; CHECK:   LIFETIME_START %stack.0.arg_list
   ; CHECK:   [[ADDI8_:%[0-9]+]]:g8rc = ADDI8 %fixed-stack.0, 0
   ; CHECK:   STD killed [[ADDI8_]], 0, %stack.0.arg_list :: (store (s64) into %ir.arg_list)

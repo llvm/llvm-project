@@ -2249,6 +2249,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::ShuffleVector: {
+    if (auto *Splat = getSplatValue(I)) {
+      computeKnownBits(Splat, Known, Q, Depth + 1);
+      break;
+    }
+
     auto *Shuf = dyn_cast<ShuffleVectorInst>(I);
     // FIXME: Do we need to handle ConstantExpr involving shufflevectors?
     if (!Shuf) {
@@ -5641,6 +5646,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     KnownFPClass KnownLHS, KnownRHS;
     computeKnownFPClass(Op->getOperand(1), DemandedElts, NeedForNan, KnownRHS,
                         Q, Depth + 1);
+
+    const APFloat *CRHS;
+    if (match(Op->getOperand(1), m_APFloat(CRHS))) {
+      // Match denormal scaling pattern, similar to the case in ldexp. If the
+      // constant's exponent is sufficiently large, the result cannot be
+      // subnormal.
+
+      // TODO: Should do general ConstantFPRange analysis.
+      const fltSemantics &Flt =
+          Op->getType()->getScalarType()->getFltSemantics();
+      unsigned Precision = APFloat::semanticsPrecision(Flt);
+      const int MantissaBits = Precision - 1;
+
+      int MinKnownExponent = ilogb(*CRHS);
+      if (MinKnownExponent >= MantissaBits)
+        Known.knownNot(fcSubnormal);
+    }
+
     if (!KnownRHS.isKnownNeverNaN())
       break;
 
@@ -5877,6 +5900,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::ShuffleVector: {
+    // Handle vector splat idiom
+    if (Value *Splat = getSplatValue(V)) {
+      computeKnownFPClass(Splat, Known, InterestedClasses, Q, Depth + 1);
+      break;
+    }
+
     // For undef elements, we don't know anything about the common state of
     // the shuffle result.
     APInt DemandedLHS, DemandedRHS;
@@ -7275,15 +7304,15 @@ OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
                                                    const Value *RHS,
                                                    const SimplifyQuery &SQ,
                                                    bool IsNSW) {
-  KnownBits LHSKnown = computeKnownBits(LHS, SQ);
-  KnownBits RHSKnown = computeKnownBits(RHS, SQ);
+  ConstantRange LHSRange =
+      computeConstantRangeIncludingKnownBits(LHS, /*ForSigned=*/false, SQ);
+  ConstantRange RHSRange =
+      computeConstantRangeIncludingKnownBits(RHS, /*ForSigned=*/false, SQ);
 
   // mul nsw of two non-negative numbers is also nuw.
-  if (IsNSW && LHSKnown.isNonNegative() && RHSKnown.isNonNegative())
+  if (IsNSW && LHSRange.isAllNonNegative() && RHSRange.isAllNonNegative())
     return OverflowResult::NeverOverflows;
 
-  ConstantRange LHSRange = ConstantRange::fromKnownBits(LHSKnown, false);
-  ConstantRange RHSRange = ConstantRange::fromKnownBits(RHSKnown, false);
   return mapOverflowResult(LHSRange.unsignedMulMayOverflow(RHSRange));
 }
 

@@ -243,8 +243,15 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
     // Some versions of the rocm llvm package install to /opt/rocm/llvm/bin
     // Some versions of the aomp package install to /opt/rocm/aomp/bin
-    if (ParentName == "llvm" || ParentName.starts_with("aomp"))
+    if (ParentName == "llvm" || ParentName.starts_with("aomp")) {
       ParentDir = llvm::sys::path::parent_path(ParentDir);
+      ParentName = llvm::sys::path::filename(ParentDir);
+
+      // Some versions of the rocm llvm package install to
+      // /opt/rocm/lib/llvm/bin, so also back up if within the lib dir still
+      if (ParentName == "lib")
+        ParentDir = llvm::sys::path::parent_path(ParentDir);
+    }
 
     return Candidate(ParentDir.str(), /*StrictChecking=*/true);
   };
@@ -960,6 +967,10 @@ void ROCMToolChain::addClangTargetOptions(
                           true))
     return;
 
+  // For SPIR-V (SPIRVAMDToolChain) we must not link any device libraries so we
+  // skip it.
+  if (this->getEffectiveTriple().isSPIRV())
+    return;
   // Get the device name and canonicalize it
   const StringRef GpuArch = getGPUArch(DriverArgs);
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);

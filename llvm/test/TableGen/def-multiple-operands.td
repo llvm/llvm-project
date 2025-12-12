@@ -35,3 +35,5 @@ def InstA : Instruction {
   field bits<8> SoftFail = 0;
   let hasSideEffects = false;
 }
+
+defm : RemapAllTargetPseudoPointerOperands<P1>;

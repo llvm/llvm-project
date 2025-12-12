@@ -27,7 +27,6 @@ MatchesAnyListedTypeNameMatcher::~MatchesAnyListedTypeNameMatcher() = default;
 bool MatchesAnyListedTypeNameMatcher::matches(
     const QualType &Node, ast_matchers::internal::ASTMatchFinder *Finder,
     ast_matchers::internal::BoundNodesTreeBuilder *Builder) const {
-
   if (NameMatchers.empty())
     return false;
 

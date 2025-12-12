@@ -114,6 +114,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::ContinueStmtClass:
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
+  case Stmt::DeferStmtClass:
   case Stmt::SEHLeaveStmtClass:
   case Stmt::SYCLKernelCallStmtClass:
     llvm_unreachable("should have emitted these statements as simple");
@@ -538,6 +539,9 @@ bool CodeGenFunction::EmitSimpleStmt(const Stmt *S,
     break;
   case Stmt::CaseStmtClass:
     EmitCaseStmt(cast<CaseStmt>(*S), Attrs);
+    break;
+  case Stmt::DeferStmtClass:
+    EmitDeferStmt(cast<DeferStmt>(*S));
     break;
   case Stmt::SEHLeaveStmtClass:
     EmitSEHLeaveStmt(cast<SEHLeaveStmt>(*S));
@@ -1998,6 +2002,87 @@ void CodeGenFunction::EmitDefaultStmt(const DefaultStmt &S,
   EmitBlockWithFallThrough(DefaultBlock, &S);
 
   EmitStmt(S.getSubStmt());
+}
+
+namespace {
+struct EmitDeferredStatement final : EHScopeStack::Cleanup {
+  const DeferStmt &Stmt;
+  EmitDeferredStatement(const DeferStmt *Stmt) : Stmt(*Stmt) {}
+
+  void Emit(CodeGenFunction &CGF, Flags) override {
+    // Take care that any cleanups pushed by the body of a '_Defer' statement
+    // don't clobber the current cleanup slot value.
+    //
+    // Assume we have a scope that pushes a cleanup; when that scope is exited,
+    // we need to run that cleanup; this is accomplished by emitting the cleanup
+    // into a separate block and then branching to that block at scope exit.
+    //
+    // Where this gets complicated is if we exit the scope in multiple different
+    // ways; e.g. in a 'for' loop, we may exit the scope of its body by falling
+    // off the end (in which case we need to run the cleanup and then branch to
+    // the increment), or by 'break'ing out of the loop (in which case we need
+    // to run the cleanup and then branch to the loop exit block); in both cases
+    // we first branch to the cleanup block to run the cleanup, but the block we
+    // need to jump to *after* running the cleanup is different.
+    //
+    // This is accomplished using a local integer variable called the 'cleanup
+    // slot': before branching to the cleanup block, we store a value into that
+    // slot. Then, in the cleanup block, after running the cleanup, we load the
+    // value of that variable and 'switch' on it to branch to the appropriate
+    // continuation block.
+    //
+    // The problem that arises once '_Defer' statements are involved is that the
+    // body of a '_Defer' is an arbitrary statement which itself can create more
+    // cleanups. This means we may end up overwriting the cleanup slot before we
+    // ever have a chance to 'switch' on it, which means that once we *do* get
+    // to the 'switch', we end up in whatever block the cleanup code happened to
+    // pick as the default 'switch' exit label!
+    //
+    // That is, what is normally supposed to happen is something like:
+    //
+    //   1. Store 'X' to cleanup slot.
+    //   2. Branch to cleanup block.
+    //   3. Execute cleanup.
+    //   4. Read value from cleanup slot.
+    //   5. Branch to the block associated with 'X'.
+    //
+    // But if we encounter a _Defer' statement that contains a cleanup, then
+    // what might instead happen is:
+    //
+    //   1. Store 'X' to cleanup slot.
+    //   2. Branch to cleanup block.
+    //   3. Execute cleanup; this ends up pushing another cleanup, so:
+    //       3a. Store 'Y' to cleanup slot.
+    //       3b. Run steps 2–5 recursively.
+    //   4. Read value from cleanup slot, which is now 'Y' instead of 'X'.
+    //   5. Branch to the block associated with 'Y'... which doesn't even
+    //      exist because the value 'Y' is only meaningful for the inner
+    //      cleanup. The result is we just branch 'somewhere random'.
+    //
+    // The rest of the cleanup code simply isn't prepared to handle this case
+    // because most other cleanups can't push more cleanups, and thus, emitting
+    // other cleanups generally cannot clobber the cleanup slot.
+    //
+    // To prevent this from happening, save the current cleanup slot value and
+    // restore it after emitting the '_Defer' statement.
+    llvm::Value *SavedCleanupDest = nullptr;
+    if (CGF.NormalCleanupDest.isValid())
+      SavedCleanupDest =
+          CGF.Builder.CreateLoad(CGF.NormalCleanupDest, "cleanup.dest.saved");
+
+    CGF.EmitStmt(Stmt.getBody());
+
+    if (SavedCleanupDest && CGF.HaveInsertPoint())
+      CGF.Builder.CreateStore(SavedCleanupDest, CGF.NormalCleanupDest);
+
+    // Cleanups must end with an insert point.
+    CGF.EnsureInsertPoint();
+  }
+};
+} // namespace
+
+void CodeGenFunction::EmitDeferStmt(const DeferStmt &S) {
+  EHStack.pushCleanup<EmitDeferredStatement>(NormalAndEHCleanup, &S);
 }
 
 /// CollectStatementsForCase - Given the body of a 'switch' statement and a

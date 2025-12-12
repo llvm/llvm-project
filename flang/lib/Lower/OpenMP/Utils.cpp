@@ -189,7 +189,7 @@ bool requiresImplicitDefaultDeclareMapper(
 
     semantics::DirectComponentIterator directComponents{spec};
     for (const semantics::Symbol &component : directComponents) {
-      if (semantics::IsAllocatableOrPointer(component))
+      if (component.attrs().test(semantics::Attr::ALLOCATABLE))
         return true;
 
       if (const semantics::DeclTypeSpec *declType = component.GetType())
@@ -796,6 +796,28 @@ static void processTileSizesFromOpenMPConstruct(
   }
 }
 
+pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
+  for (pft::Evaluation &nested : eval.getNestedEvaluations()) {
+    // In an OpenMPConstruct there can be compiler directives:
+    // 1 <<OpenMPConstruct>>
+    //     2 CompilerDirective: !unroll
+    //     <<DoConstruct>> -> 8
+    if (nested.getIf<parser::CompilerDirective>())
+      continue;
+    // Within a DoConstruct, there can be compiler directives, plus
+    // there is a DoStmt before the body:
+    // <<DoConstruct>> -> 8
+    //     3 NonLabelDoStmt -> 7: do i = 1, n
+    //     <<DoConstruct>> -> 7
+    if (nested.getIf<parser::NonLabelDoStmt>())
+      continue;
+    assert(nested.getIf<parser::DoConstruct>() &&
+           "Unexpected construct in the nested evaluations");
+    return &nested;
+  }
+  llvm_unreachable("Expected do loop to be in the nested evaluations");
+}
+
 /// Populates the sizes vector with values if the given OpenMPConstruct
 /// contains a loop construct with an inner tiling construct.
 void collectTileSizesFromOpenMPConstruct(
@@ -818,7 +840,7 @@ int64_t collectLoopRelatedInfo(
   int64_t numCollapse = 1;
 
   // Collect the loops to collapse.
-  lower::pft::Evaluation *doConstructEval = &eval.getFirstNestedEvaluation();
+  lower::pft::Evaluation *doConstructEval = getNestedDoConstruct(eval);
   if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
     TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
   }
@@ -844,7 +866,7 @@ void collectLoopRelatedInfo(
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // Collect the loops to collapse.
-  lower::pft::Evaluation *doConstructEval = &eval.getFirstNestedEvaluation();
+  lower::pft::Evaluation *doConstructEval = getNestedDoConstruct(eval);
   if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
     TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
   }
@@ -885,9 +907,8 @@ void collectLoopRelatedInfo(
     iv.push_back(bounds->name.thing.symbol);
     loopVarTypeSize = std::max(loopVarTypeSize,
                                bounds->name.thing.symbol->GetUltimate().size());
-    collapseValue--;
-    doConstructEval =
-        &*std::next(doConstructEval->getNestedEvaluations().begin());
+    if (--collapseValue)
+      doConstructEval = getNestedDoConstruct(*doConstructEval);
   } while (collapseValue > 0);
 
   convertLoopBounds(converter, currentLocation, result, loopVarTypeSize);

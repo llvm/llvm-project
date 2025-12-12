@@ -216,12 +216,13 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
   }
 
   return OM.map("adapterID", IRA.adapterID) &&
-         OM.map("clientID", IRA.clientID) &&
-         OM.map("clientName", IRA.clientName) && OM.map("locale", IRA.locale) &&
-         OM.map("linesStartAt1", IRA.linesStartAt1) &&
-         OM.map("columnsStartAt1", IRA.columnsStartAt1) &&
+         OM.mapOptional("clientID", IRA.clientID) &&
+         OM.mapOptional("clientName", IRA.clientName) &&
+         OM.mapOptional("locale", IRA.locale) &&
+         OM.mapOptional("linesStartAt1", IRA.linesStartAt1) &&
+         OM.mapOptional("columnsStartAt1", IRA.columnsStartAt1) &&
          OM.mapOptional("pathFormat", IRA.pathFormat) &&
-         OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
+         OM.mapOptional("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
 }
 
 bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
@@ -317,7 +318,9 @@ bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
          O.mapOptional("waitFor", ARA.waitFor) &&
          O.mapOptional("gdb-remote-port", ARA.gdbRemotePort) &&
          O.mapOptional("gdb-remote-hostname", ARA.gdbRemoteHostname) &&
-         O.mapOptional("coreFile", ARA.coreFile);
+         O.mapOptional("coreFile", ARA.coreFile) &&
+         O.mapOptional("targetId", ARA.targetId) &&
+         O.mapOptional("debuggerId", ARA.debuggerId);
 }
 
 bool fromJSON(const json::Value &Params, ContinueArguments &CA, json::Path P) {
@@ -512,7 +515,7 @@ bool fromJSON(const llvm::json::Value &Params, DisassembleArguments &DA,
   json::ObjectMapper O(Params, P);
   return O &&
          DecodeMemoryReference(Params, "memoryReference", DA.memoryReference, P,
-                               /*required=*/true) &&
+                               /*required=*/true, /*allow_empty*/ true) &&
          O.mapOptional("offset", DA.offset) &&
          O.mapOptional("instructionOffset", DA.instructionOffset) &&
          O.map("instructionCount", DA.instructionCount) &&
@@ -690,6 +693,12 @@ llvm::json::Value toJSON(const EvaluateResponseBody &Body) {
     result.insert({"valueLocationReference", Body.valueLocationReference});
 
   return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, PauseArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId);
 }
 
 } // namespace lldb_dap::protocol

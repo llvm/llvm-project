@@ -64,7 +64,7 @@
   SANITIZER_CHECK(SubOverflow, sub_overflow, 0,                                \
                   "Integer subtraction overflowed")                            \
   SANITIZER_CHECK(TypeMismatch, type_mismatch, 1,                              \
-                  "Type mismatch in operation")                                \
+                  "Alignment, null, or object-size error")                     \
   SANITIZER_CHECK(AlignmentAssumption, alignment_assumption, 0,                \
                   "Alignment assumption violated")                             \
   SANITIZER_CHECK(                                                             \

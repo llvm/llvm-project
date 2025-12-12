@@ -219,9 +219,9 @@ define void @non_primary_iv_loop_inv_trunc(ptr %a, i64 %n, i64 %step) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[STEP]] to i32
 ; CHECK-NEXT:    [[DOTSPLATINSERT5:%.*]] = insertelement <8 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT6:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT5]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT6]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add nuw nsw <8 x i32> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw i32 [[TMP3]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT6]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i32> zeroinitializer, [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP3]], 8
 ; CHECK-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <8 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT9:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT8]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -231,7 +231,7 @@ define void @non_primary_iv_loop_inv_trunc(ptr %a, i64 %n, i64 %step) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    store <8 x i32> [[VEC_IND10]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP6]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND10]], [[DOTSPLAT9]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND10]], [[DOTSPLAT9]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
