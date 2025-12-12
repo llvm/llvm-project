@@ -5,7 +5,10 @@
 define void @f(ptr %a, i32 %n, i64 %n2) {
 ; CHECK-LABEL: 'f'
 ; CHECK-NEXT:  Src: %v = load i32, ptr %arrayidx1, align 4 --> Dst: %v = load i32, ptr %arrayidx1, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {8,+,4}<nuw><%for.body> to i128) == {8,+,4}<nuw><nsw><%for.body>
+; CHECK-NEXT:    Equal predicate: {7,+,4}<nuw><nsw><%for.body> == (-1 + (sext i64 {8,+,4}<nuw><%for.body> to i128))<nsw>
 ; CHECK-NEXT:  Src: %v = load i32, ptr %arrayidx1, align 4 --> Dst: store i32 %add, ptr %a.lcssa, align 4
 ; CHECK-NEXT:    da analyze - anti [*|<]!
 ; CHECK-NEXT:  Src: store i32 %add, ptr %a.lcssa, align 4 --> Dst: store i32 %add, ptr %a.lcssa, align 4

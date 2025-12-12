@@ -16,7 +16,11 @@ define void @sext_nsw(ptr %a, i8 %start, i8 %step) {
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Compare predicate: (sext i8 %step to i64) ne) 0
+; CHECK-NEXT:    Compare predicate: (sext i8 %start to i64) sge) 0
+; CHECK-NEXT:    Compare predicate: (sext i8 %start to i64) slt) (sext i8 %step to i64)
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,(sext i8 %step to i64)}<%loop> to i128) == {0,+,(sext i8 %step to i128)}<%loop>
+; CHECK-NEXT:    Equal predicate: (sext i64 {(sext i8 %step to i64),+,(sext i8 %step to i64)}<%loop> to i128) == ((sext i64 {0,+,(sext i8 %step to i64)}<%loop> to i128) + (sext i8 %step to i128))
+; CHECK-NEXT:    Equal predicate: (sext i64 {(-1 + (sext i8 %step to i64))<nsw>,+,(sext i8 %step to i64)}<%loop> to i128) == (-1 + (sext i64 {(sext i8 %step to i64),+,(sext i8 %step to i64)}<%loop> to i128))<nsw>
 ;
 entry:
   br label %loop

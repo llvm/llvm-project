@@ -25,7 +25,11 @@ define void @symbolicrdiv0(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,4}<%for.body4> to i128) == {0,+,4}<nuw><nsw><%for.body4>
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<%for.body4> to i128) == (4 + (sext i64 {0,+,4}<%for.body4> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {0,+,4}<%for.body4> to i128))<nuw><nsw> == (-1 + (sext i64 {4,+,4}<%for.body4> to i128))<nsw>
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0
@@ -94,7 +98,11 @@ define void @symbolicrdiv1(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx9, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,4}<%for.body5> to i128) == {0,+,4}<nuw><nsw><%for.body5>
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<%for.body5> to i128) == (4 + (sext i64 {0,+,4}<%for.body5> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {0,+,4}<%for.body5> to i128))<nuw><nsw> == (-1 + (sext i64 {4,+,4}<%for.body5> to i128))<nsw>
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0
@@ -165,7 +173,11 @@ define void @symbolicrdiv2(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,4}<%for.body4> to i128) == {0,+,4}<nuw><nsw><%for.body4>
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<%for.body4> to i128) == (4 + (sext i64 {0,+,4}<%for.body4> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {0,+,4}<%for.body4> to i128))<nuw><nsw> == (-1 + (sext i64 {4,+,4}<%for.body4> to i128))<nsw>
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0
@@ -234,7 +246,11 @@ define void @symbolicrdiv3(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx6, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,4}<%for.body4> to i128) == {0,+,4}<nuw><nsw><%for.body4>
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<%for.body4> to i128) == (4 + (sext i64 {0,+,4}<%for.body4> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {0,+,4}<%for.body4> to i128))<nuw><nsw> == (-1 + (sext i64 {4,+,4}<%for.body4> to i128))<nsw>
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0
@@ -301,7 +317,11 @@ define void @symbolicrdiv4(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,4}<%for.body4> to i128) == {0,+,4}<nuw><nsw><%for.body4>
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<%for.body4> to i128) == (4 + (sext i64 {0,+,4}<%for.body4> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {0,+,4}<%for.body4> to i128))<nuw><nsw> == (-1 + (sext i64 {4,+,4}<%for.body4> to i128))<nsw>
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0
@@ -369,7 +389,11 @@ define void @symbolicrdiv5(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,4}<%for.body4> to i128) == {0,+,4}<nuw><nsw><%for.body4>
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<%for.body4> to i128) == (4 + (sext i64 {0,+,4}<%for.body4> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {0,+,4}<%for.body4> to i128))<nuw><nsw> == (-1 + (sext i64 {4,+,4}<%for.body4> to i128))<nsw>
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0

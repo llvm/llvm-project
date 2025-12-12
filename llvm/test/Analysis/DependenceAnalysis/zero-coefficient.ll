@@ -15,7 +15,9 @@ define void @test_zero_coefficient(ptr noalias %A, i64 %k) {
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx, align 1 --> Dst: store i8 42, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Compare predicate: %k ne) 0
+; CHECK-NEXT:    Compare predicate: 0 slt) %k
+; CHECK-NEXT:    Equal predicate: (sext i64 {%k,+,%k}<nw><%loop> to i128) == {(sext i64 %k to i128),+,(sext i64 %k to i128)}<nw><%loop>
+; CHECK-NEXT:    Equal predicate: (sext i64 {(-1 + %k),+,%k}<nw><%loop> to i128) == (-1 + (sext i64 {%k,+,%k}<nw><%loop> to i128))<nsw>
 ;
 entry:
   br label %loop

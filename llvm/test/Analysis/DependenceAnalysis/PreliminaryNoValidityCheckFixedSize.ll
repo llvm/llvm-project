@@ -32,13 +32,34 @@ define void @p2(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ;
 ; LIN-LABEL: 'p2'
 ; LIN-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %i.011, ptr %arrayidx8, align 8
-; LIN-NEXT:    da analyze - output [* * *]!
+; LIN-NEXT:    da analyze - consistent output [0 0 0]!
+; LIN-NEXT:    Runtime Assumptions:
+; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond4.preheader> slt) 100
+; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body6> slt) 100
+; LIN-NEXT:    Equal predicate: (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128) == {80000,+,80000}<nuw><nsw><%for.cond1.preheader>
+; LIN-NEXT:    Equal predicate: (127 + (sext i64 {79872,+,80000}<nw><%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128))<nsw>
 ; LIN-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
-; LIN-NEXT:    da analyze - flow [* *|<]!
+; LIN-NEXT:    da analyze - flow [-3 -2] / assuming 1 loop level(s) fused: [-3 -2 -1]!
+; LIN-NEXT:    Runtime Assumptions:
+; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond4.preheader> slt) 100
+; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body6> slt) 100
+; LIN-NEXT:    Equal predicate: (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128) == {80000,+,80000}<nuw><nsw><%for.cond1.preheader>
+; LIN-NEXT:    Equal predicate: (127 + (sext i64 {79872,+,80000}<nw><%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128))<nsw>
+; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><%for.cond4.preheader> slt) 100
+; LIN-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body12> slt) 100
+; LIN-NEXT:    Equal predicate: (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128) == (80000 * (sext i64 {3,+,1}<nuw><%for.cond1.preheader> to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128) == (80000 + (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (127 + (sext i64 {319872,+,80000}<%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128))<nsw>
 ; LIN-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; LIN-NEXT:    da analyze - confused!
 ; LIN-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
-; LIN-NEXT:    da analyze - input [* * *]!
+; LIN-NEXT:    da analyze - consistent input [0 0 0]!
+; LIN-NEXT:    Runtime Assumptions:
+; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><%for.cond4.preheader> slt) 100
+; LIN-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body12> slt) 100
+; LIN-NEXT:    Equal predicate: (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128) == (80000 * (sext i64 {3,+,1}<nuw><%for.cond1.preheader> to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128) == (80000 + (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (127 + (sext i64 {319872,+,80000}<%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128))<nsw>
 ; LIN-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; LIN-NEXT:    da analyze - confused!
 ; LIN-NEXT:  Src: store i64 %0, ptr %B.addr.24, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8

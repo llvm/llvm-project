@@ -59,13 +59,34 @@ entry:
 define void @p2(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'p2'
 ; CHECK-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %i.011, ptr %arrayidx8, align 8
-; CHECK-NEXT:    da analyze - output [* * *]!
+; CHECK-NEXT:    da analyze - consistent output [0 0 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond4.preheader> slt) 100
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body6> slt) 100
+; CHECK-NEXT:    Equal predicate: (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128) == {80000,+,80000}<nuw><nsw><%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (127 + (sext i64 {79872,+,80000}<nw><%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128))<nsw>
 ; CHECK-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
-; CHECK-NEXT:    da analyze - flow [* *|<]!
+; CHECK-NEXT:    da analyze - flow [-3 -2] / assuming 1 loop level(s) fused: [-3 -2 -1]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond4.preheader> slt) 100
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body6> slt) 100
+; CHECK-NEXT:    Equal predicate: (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128) == {80000,+,80000}<nuw><nsw><%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (127 + (sext i64 {79872,+,80000}<nw><%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128))<nsw>
+; CHECK-NEXT:    Compare predicate: {2,+,1}<nuw><%for.cond4.preheader> slt) 100
+; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body12> slt) 100
+; CHECK-NEXT:    Equal predicate: (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128) == (80000 * (sext i64 {3,+,1}<nuw><%for.cond1.preheader> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128) == (80000 + (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (127 + (sext i64 {319872,+,80000}<%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128))<nsw>
 ; CHECK-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
-; CHECK-NEXT:    da analyze - input [* * *]!
+; CHECK-NEXT:    da analyze - consistent input [0 0 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {2,+,1}<nuw><%for.cond4.preheader> slt) 100
+; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body12> slt) 100
+; CHECK-NEXT:    Equal predicate: (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128) == (80000 * (sext i64 {3,+,1}<nuw><%for.cond1.preheader> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128) == (80000 + (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (127 + (sext i64 {319872,+,80000}<%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128))<nsw>
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i64 %0, ptr %B.addr.24, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
@@ -448,7 +469,11 @@ define void @p4(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx5, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,4}<%for.body> to i128) == (4 * (sext i64 {0,+,1}<%for.body> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<%for.body> to i128) == (4 + (sext i64 {0,+,4}<%for.body> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {0,+,4}<%for.body> to i128))<nuw><nsw> == (-1 + (sext i64 {4,+,4}<%for.body> to i128))<nsw>
 ;
 entry:
   %cmp1 = icmp sgt i64 %n, 0
@@ -501,7 +526,11 @@ define void @p5(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx5, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,4}<%for.body> to i128) == (4 * (sext i64 {0,+,1}<%for.body> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<%for.body> to i128) == (4 + (sext i64 {0,+,4}<%for.body> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {0,+,4}<%for.body> to i128))<nuw><nsw> == (-1 + (sext i64 {4,+,4}<%for.body> to i128))<nsw>
 ;
 entry:
   %cmp1 = icmp sgt i64 %n, 0
@@ -544,17 +573,31 @@ for.end:                                          ; preds = %for.end.loopexit, %
 define void @p6(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'p6'
 ; CHECK-NEXT:  Src: store i32 %1, ptr %arrayidx, align 4 --> Dst: store i32 %1, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {12,+,4}<nuw><%for.body> to i128) == {12,+,4}<nuw><nsw><%for.body>
+; CHECK-NEXT:    Equal predicate: {11,+,4}<nuw><nsw><%for.body> == (-1 + (sext i64 {12,+,4}<nuw><%for.body> to i128))<nsw>
 ; CHECK-NEXT:  Src: store i32 %1, ptr %arrayidx, align 4 --> Dst: %2 = load i32, ptr %arrayidx3, align 4
 ; CHECK-NEXT:    da analyze - consistent flow [2]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {12,+,4}<nuw><%for.body> to i128) == {12,+,4}<nuw><nsw><%for.body>
+; CHECK-NEXT:    Equal predicate: {11,+,4}<nuw><nsw><%for.body> == (-1 + (sext i64 {12,+,4}<nuw><%for.body> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<nuw><%for.body> to i128) == {4,+,4}<nuw><nsw><%for.body>
+; CHECK-NEXT:    Equal predicate: {3,+,4}<nuw><nsw><%for.body> == (-1 + (sext i64 {4,+,4}<nuw><%for.body> to i128))<nsw>
 ; CHECK-NEXT:  Src: store i32 %1, ptr %arrayidx, align 4 --> Dst: store i32 %2, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx3, align 4 --> Dst: %2 = load i32, ptr %arrayidx3, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<nuw><%for.body> to i128) == {4,+,4}<nuw><nsw><%for.body>
+; CHECK-NEXT:    Equal predicate: {3,+,4}<nuw><nsw><%for.body> == (-1 + (sext i64 {4,+,4}<nuw><%for.body> to i128))<nsw>
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx3, align 4 --> Dst: store i32 %2, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %2, ptr %B.addr.02, align 4 --> Dst: store i32 %2, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<nuw><%for.body> to i128) == {4,+,4}<nuw><nsw><%for.body>
+; CHECK-NEXT:    Equal predicate: {3,+,4}<nuw><nsw><%for.body> == (-1 + (sext i64 {4,+,4}<nuw><%for.body> to i128))<nsw>
 ;
 entry:
   %cmp1 = icmp sgt i64 %n, 0
@@ -727,11 +770,26 @@ entry:
 define void @foo(ptr %s, i32 %size) nounwind uwtable ssp {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %0, align 4 --> Dst: %1 = load i32, ptr %0, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<%while.body> to i128) == {4,+,4}<nuw><nsw><%while.body>
+; CHECK-NEXT:    Equal predicate: (sext i64 {8,+,4}<%while.body> to i128) == (4 + (sext i64 {4,+,4}<%while.body> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {4,+,4}<%while.body> to i128))<nuw><nsw> == (-1 + (sext i64 {8,+,4}<%while.body> to i128))<nsw>
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %0, align 4 --> Dst: store i32 %1, ptr %i.02, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [1]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<nw><%while.body> to i128) == {4,+,4}<nuw><nsw><%while.body>
+; CHECK-NEXT:    Equal predicate: (sext i64 {8,+,4}<%while.body> to i128) == (4 + (sext i64 {4,+,4}<nw><%while.body> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {4,+,4}<nw><%while.body> to i128))<nuw><nsw> == (-1 + (sext i64 {8,+,4}<%while.body> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,4}<nuw><%while.body> to i128) == {0,+,4}<nuw><nsw><%while.body>
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<nw><%while.body> to i128) == (4 + (sext i64 {0,+,4}<nuw><%while.body> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {0,+,4}<nuw><%while.body> to i128))<nuw><nsw> == (-1 + (sext i64 {4,+,4}<nw><%while.body> to i128))<nsw>
 ; CHECK-NEXT:  Src: store i32 %1, ptr %i.02, align 4 --> Dst: store i32 %1, ptr %i.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,4}<nuw><%while.body> to i128) == {0,+,4}<nuw><nsw><%while.body>
+; CHECK-NEXT:    Equal predicate: (sext i64 {4,+,4}<nw><%while.body> to i128) == (4 + (sext i64 {0,+,4}<nuw><%while.body> to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (3 + (sext i64 {0,+,4}<nuw><%while.body> to i128))<nuw><nsw> == (-1 + (sext i64 {4,+,4}<nw><%while.body> to i128))<nsw>
 ;
 entry:
   %idx.ext = zext i32 %size to i64

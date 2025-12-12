@@ -753,37 +753,104 @@ static bool isKnownLessThan(ScalarEvolution *SE, const SCEV *S,
   return SE->isKnownNegative(LimitedBound);
 }
 
-bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
-                                         ArrayRef<const SCEV *> Sizes,
-                                         ArrayRef<const SCEV *> Subscripts,
-                                         const Value *Ptr) {
+bool llvm::validateDelinearizationResult(
+    ScalarEvolution &SE, ArrayRef<const SCEV *> Sizes,
+    ArrayRef<const SCEV *> Subscripts, const Value *Ptr,
+    SmallVectorImpl<const SCEVPredicate *> *Assume) {
   // Sizes and Subscripts are as follows:
-  //
   //   Sizes:      [UNK][S_2]...[S_n]
   //   Subscripts: [I_1][I_2]...[I_n]
   //
   // where the size of the outermost dimension is unknown (UNK).
 
-  auto AddOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
-    if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/true, A, B))
-      return nullptr;
+  // Helper to add a predicate only if it's not already in the list.
+  // SCEV interns predicates, so pointer comparison is sufficient.
+  auto AddPredicate = [&](const SCEVPredicate *Pred) {
+    if (!Pred || !Assume)
+      return;
+    if (!llvm::is_contained(*Assume, Pred))
+      Assume->push_back(Pred);
+  };
+
+  // Unify types of two SCEVs to the wider type.
+  auto UnifyTypes =
+      [&](const SCEV *&A,
+          const SCEV *&B) -> std::pair<const SCEV *, const SCEV *> {
+    Type *WiderType = SE.getWiderType(A->getType(), B->getType());
+    return {SE.getNoopOrSignExtend(A, WiderType),
+            SE.getNoopOrSignExtend(B, WiderType)};
+  };
+
+  // Check if the result of A + B (signed) does not overflow. If it can be
+  // proven at compile-time, return the result. If it might overflow and Assume
+  // is provided, add a runtime equality predicate and return the result.
+  // Otherwise return nullptr.
+  auto AddNoOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
+    std::tie(A, B) = UnifyTypes(A, B);
+    if (const auto *Pred = SE.getNoOverflowPredicate(Instruction::Add,
+                                                     /*Signed=*/true, A, B)) {
+      if (!Assume)
+        return nullptr;
+      AddPredicate(Pred);
+    }
     return SE.getAddExpr(A, B);
   };
 
-  auto MulOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
-    if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/true, A, B))
-      return nullptr;
+  // Check if the result of A * B (signed) does not overflow. If it can be
+  // proven at compile-time, return the result. If it might overflow and Assume
+  // is provided, add a runtime equality predicate and return the result.
+  // Otherwise return nullptr.
+  auto MulNoOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
+    std::tie(A, B) = UnifyTypes(A, B);
+    if (const auto *Pred = SE.getNoOverflowPredicate(Instruction::Mul,
+                                                     /*Signed=*/true, A, B)) {
+      if (!Assume)
+        return nullptr;
+      AddPredicate(Pred);
+    }
     return SE.getMulExpr(A, B);
+  };
+
+  // Check if the result of A - B (signed) does not overflow. If it can be
+  // proven at compile-time or if Assume is provided (adding a runtime
+  // predicate), return true. Otherwise return false.
+  auto SubNoOverflow = [&](const SCEV *A, const SCEV *B) -> bool {
+    std::tie(A, B) = UnifyTypes(A, B);
+    if (const auto *Pred = SE.getNoOverflowPredicate(Instruction::Sub,
+                                                     /*Signed=*/true, A, B)) {
+      if (!Assume)
+        return false;
+      AddPredicate(Pred);
+    }
+    return true;
   };
 
   // Range check: 0 <= I_k < S_k for k = 2..n.
   for (size_t I = 1; I < Sizes.size(); ++I) {
     const SCEV *Size = Sizes[I - 1];
     const SCEV *Subscript = Subscripts[I];
-    if (!isKnownNonNegative(&SE, Subscript, Ptr))
-      return false;
-    if (!isKnownLessThan(&SE, Subscript, Size))
-      return false;
+
+    // Check Subscript >= 0.
+    if (!isKnownNonNegative(&SE, Subscript, Ptr)) {
+      if (!Assume)
+        return false;
+      const SCEVPredicate *Pred = SE.getComparePredicate(
+          ICmpInst::ICMP_SGE, Subscript, SE.getZero(Subscript->getType()));
+      AddPredicate(Pred);
+    }
+
+    // Check Subscript < Size.
+    if (!isKnownLessThan(&SE, Subscript, Size)) {
+      if (!Assume)
+        return false;
+      // Need to unify types before creating the predicate.
+      Type *WiderType = SE.getWiderType(Subscript->getType(), Size->getType());
+      const SCEV *SubscriptExt = SE.getNoopOrSignExtend(Subscript, WiderType);
+      const SCEV *SizeExt = SE.getNoopOrSignExtend(Size, WiderType);
+      const SCEVPredicate *Pred =
+          SE.getComparePredicate(ICmpInst::ICMP_SLT, SubscriptExt, SizeExt);
+      AddPredicate(Pred);
+    }
   }
 
   // The offset computation is as follows:
@@ -811,21 +878,20 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
   // NOTE: I_1 can be negative, so Min is not just 0.
   const SCEV *Prod = SE.getOne(Sizes[0]->getType());
   for (const SCEV *Size : Sizes) {
-    Prod = MulOverflow(Prod, Size);
+    Prod = MulNoOverflow(Prod, Size);
     if (!Prod)
       return false;
   }
-  const SCEV *Min = MulOverflow(Prod, Subscripts[0]);
+  const SCEV *Min = MulNoOverflow(Prod, Subscripts[0]);
   if (!Min)
     return false;
 
   // We have already checked that Min and Prod don't overflow, so it's enough
   // to check whether Min + Prod - 1 doesn't overflow.
-  const SCEV *MaxPlusOne = AddOverflow(Min, Prod);
+  const SCEV *MaxPlusOne = AddNoOverflow(Min, Prod);
   if (!MaxPlusOne)
     return false;
-  if (!SE.willNotOverflow(Instruction::Sub, /*IsSigned=*/true, MaxPlusOne,
-                          SE.getOne(MaxPlusOne->getType())))
+  if (!SubNoOverflow(MaxPlusOne, SE.getOne(MaxPlusOne->getType())))
     return false;
 
   return true;

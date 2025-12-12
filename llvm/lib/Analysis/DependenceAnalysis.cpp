@@ -3176,8 +3176,9 @@ const SCEV *DependenceInfo::getUpperBound(BoundInfo *Bound) const {
 /// source and destination array references are recurrences on a nested loop,
 /// this function flattens the nested recurrences into separate recurrences
 /// for each loop level.
-bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
-                                    SmallVectorImpl<Subscript> &Pair) {
+bool DependenceInfo::tryDelinearize(
+    Instruction *Src, Instruction *Dst, SmallVectorImpl<Subscript> &Pair,
+    SmallVectorImpl<const SCEVPredicate *> &Assume) {
   assert(isLoadOrStore(Src) && "instruction is not load or store");
   assert(isLoadOrStore(Dst) && "instruction is not load or store");
   Value *SrcPtr = getLoadStorePointerOperand(Src);
@@ -3197,9 +3198,9 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   SmallVector<const SCEV *, 4> SrcSubscripts, DstSubscripts;
 
   if (!tryDelinearizeFixedSize(Src, Dst, SrcAccessFn, DstAccessFn,
-                               SrcSubscripts, DstSubscripts) &&
+                               SrcSubscripts, DstSubscripts, Assume) &&
       !tryDelinearizeParametricSize(Src, Dst, SrcAccessFn, DstAccessFn,
-                                    SrcSubscripts, DstSubscripts))
+                                    SrcSubscripts, DstSubscripts, Assume))
     return false;
 
   assert(isLoopInvariant(SrcBase, SrcLoop) &&
@@ -3245,7 +3246,8 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
 bool DependenceInfo::tryDelinearizeFixedSize(
     Instruction *Src, Instruction *Dst, const SCEV *SrcAccessFn,
     const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
-    SmallVectorImpl<const SCEV *> &DstSubscripts) {
+    SmallVectorImpl<const SCEV *> &DstSubscripts,
+    SmallVectorImpl<const SCEVPredicate *> &Assume) {
   LLVM_DEBUG({
     const SCEVUnknown *SrcBase =
         dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
@@ -3285,10 +3287,12 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   // dimensions. For example some C language usage/interpretation make it
   // impossible to verify this at compile-time. As such we can only delinearize
   // iff the subscripts are positive and are less than the range of the
-  // dimension.
+  // dimension. If compile-time checks fail, add runtime predicates.
   if (!DisableDelinearizationChecks) {
-    if (!validateDelinearizationResult(*SE, SrcSizes, SrcSubscripts, SrcPtr) ||
-        !validateDelinearizationResult(*SE, DstSizes, DstSubscripts, DstPtr)) {
+    if (!validateDelinearizationResult(*SE, SrcSizes, SrcSubscripts, SrcPtr,
+                                       &Assume) ||
+        !validateDelinearizationResult(*SE, DstSizes, DstSubscripts, DstPtr,
+                                       &Assume)) {
       SrcSubscripts.clear();
       DstSubscripts.clear();
       return false;
@@ -3305,7 +3309,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
 bool DependenceInfo::tryDelinearizeParametricSize(
     Instruction *Src, Instruction *Dst, const SCEV *SrcAccessFn,
     const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
-    SmallVectorImpl<const SCEV *> &DstSubscripts) {
+    SmallVectorImpl<const SCEV *> &DstSubscripts,
+    SmallVectorImpl<const SCEVPredicate *> &Assume) {
 
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
@@ -3346,15 +3351,13 @@ bool DependenceInfo::tryDelinearizeParametricSize(
       SrcSubscripts.size() != DstSubscripts.size())
     return false;
 
-  // Statically check that the array bounds are in-range. The first subscript we
-  // don't have a size for and it cannot overflow into another subscript, so is
-  // always safe. The others need to be 0 <= subscript[i] < bound, for both src
-  // and dst.
-  // FIXME: It may be better to record these sizes and add them as constraints
-  // to the dependency checks.
+  // Check that the array bounds are in-range. If compile-time checks fail,
+  // add runtime predicates.
   if (!DisableDelinearizationChecks)
-    if (!validateDelinearizationResult(*SE, Sizes, SrcSubscripts, SrcPtr) ||
-        !validateDelinearizationResult(*SE, Sizes, DstSubscripts, DstPtr))
+    if (!validateDelinearizationResult(*SE, Sizes, SrcSubscripts, SrcPtr,
+                                       &Assume) ||
+        !validateDelinearizationResult(*SE, Sizes, DstSubscripts, DstPtr,
+                                       &Assume))
       return false;
 
   return true;
@@ -3507,7 +3510,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                                           SCEVUnionPredicate(Assume, *SE));
 
   if (Delinearize) {
-    if (tryDelinearize(Src, Dst, Pair)) {
+    if (tryDelinearize(Src, Dst, Pair, Assume)) {
       LLVM_DEBUG(dbgs() << "    delinearized\n");
       Pairs = Pair.size();
     }
