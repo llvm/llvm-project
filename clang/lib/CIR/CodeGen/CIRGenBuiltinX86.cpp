@@ -20,6 +20,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
@@ -360,6 +361,24 @@ static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
     rhs = builder.createAnd(loc, rhs, mask);
   }
   return builder.createMul(loc, lhs, rhs);
+}
+
+static mlir::Value
+emitCIRX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder, mlir::Location loc,
+                            mlir::Type dstTy,
+                            SmallVectorImpl<mlir::Value> &ops) {
+  auto src = ops[0];
+  auto passthru = ops[1];
+  auto mask = ops[2];
+
+  auto vecType = llvm::cast<mlir::VectorType>(src.getType());
+  auto numElts = vecType.getNumElements();
+  auto halfTy = mlir::VectorType::get({numElts}, builder.getF16Type());
+  auto srcF16 = builder.createBitcast(loc, src, halfTy);
+
+  auto res = builder.createFloatingCast(srcF16, dstTy);
+
+  return emitX86Select(builder, loc, mask, res, passthru);
 }
 
 static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
@@ -1667,7 +1686,43 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vcvtph2ps512_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
-  case X86::BI__builtin_ia32_cvtneps2bf16_512_mask:
+  case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    llvm::StringRef intrinsicName;
+    switch (builtinID) {
+    case X86::BI__builtin_ia32_vcvtph2ps_mask: {
+      return emitCIRX86CvtF16ToFloatExpr(builder, loc,
+                                         convertType(expr->getType()), ops);
+    }
+    case X86::BI__builtin_ia32_vcvtph2ps256_mask: {
+      return emitCIRX86CvtF16ToFloatExpr(builder, loc,
+                                         convertType(expr->getType()), ops);
+    }
+    case X86::BI__builtin_ia32_vcvtph2ps512_mask: {
+      return emitCIRX86CvtF16ToFloatExpr(builder, loc,
+                                         convertType(expr->getType()), ops);
+    }
+    case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
+      intrinsicName = "x86.avx512bf16.mask.cvtneps2bf16.128";
+      break;
+    case X86::BI__builtin_ia32_cvtneps2bf16_256_mask: {
+      intrinsicName = "x86.avx512bf16.cvtneps2bf16.256";
+      auto intrinsicResult = emitIntrinsicCallOp(
+          builder, loc, intrinsicName, convertType(expr->getType()), ops);
+      return emitX86Select(builder, loc, ops[2], intrinsicResult, ops[1]);
+    }
+    case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
+      intrinsicName = "x86.avx512bf16.cvtneps2bf16.512";
+      auto intrinsicResult = emitIntrinsicCallOp(
+          builder, loc, intrinsicName, convertType(expr->getType()), ops);
+      return emitX86Select(builder, loc, ops[2], intrinsicResult, ops[1]);
+    }
+    default:
+      llvm_unreachable("Unexpected builtinID");
+    }
+    return emitIntrinsicCallOp(builder, loc, intrinsicName,
+                               convertType(expr->getType()), ops);
+  }
   case X86::BI__cpuid:
   case X86::BI__cpuidex:
   case X86::BI__emul:
