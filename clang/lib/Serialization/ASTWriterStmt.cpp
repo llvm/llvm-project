@@ -330,6 +330,13 @@ void ASTStmtWriter::VisitBreakStmt(BreakStmt *S) {
   Code = serialization::STMT_BREAK;
 }
 
+void ASTStmtWriter::VisitDeferStmt(DeferStmt *S) {
+  VisitStmt(S);
+  Record.AddSourceLocation(S->getDeferLoc());
+  Record.AddStmt(S->getBody());
+  Code = serialization::STMT_DEFER;
+}
+
 void ASTStmtWriter::VisitReturnStmt(ReturnStmt *S) {
   VisitStmt(S);
 

@@ -10,8 +10,13 @@
 #define MLIR_DIALECT_OPENACC_OPENACCUTILS_H_
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/Remarks.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace mlir {
+class DominanceInfo;
+class PostDominanceInfo;
 namespace acc {
 
 /// Used to obtain the enclosing compute construct operation that contains
@@ -61,6 +66,33 @@ mlir::Value getBaseEntity(mlir::Value val);
 /// \return true if the symbol use is valid, false otherwise
 bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
                       mlir::Operation **definingOpPtr = nullptr);
+
+/// Collects all data clauses that dominate the compute construct.
+/// This includes data clauses from:
+/// - The compute construct itself
+/// - Enclosing data constructs
+/// - Applicable declare directives (those that dominate and post-dominate)
+/// This is used to determine if a variable is already covered by an existing
+/// data clause.
+/// \param computeConstructOp The compute construct operation
+/// \param domInfo Dominance information
+/// \param postDomInfo Post-dominance information
+/// \return Vector of data clause values that dominate the compute construct
+llvm::SmallVector<mlir::Value>
+getDominatingDataClauses(mlir::Operation *computeConstructOp,
+                         mlir::DominanceInfo &domInfo,
+                         mlir::PostDominanceInfo &postDomInfo);
+
+/// Emit an OpenACC remark for the given operation with the given message.
+///
+/// \param op The operation to emit the remark for.
+/// \param message The remark message.
+/// \param category Optional category for the remark. Defaults to "openacc".
+/// \return An in-flight remark object that can be used to append
+///         additional information to the remark.
+remark::detail::InFlightRemark emitRemark(mlir::Operation *op,
+                                          const llvm::Twine &message,
+                                          llvm::StringRef category = "openacc");
 
 } // namespace acc
 } // namespace mlir

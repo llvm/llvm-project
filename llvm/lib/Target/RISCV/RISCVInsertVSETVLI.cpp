@@ -607,13 +607,15 @@ public:
     }
   }
 
+  bool hasSEWLMULRatioOnly() const { return SEWLMULRatioOnly; }
+
   unsigned getSEW() const {
-    assert(isValid() && !isUnknown() &&
+    assert(isValid() && !isUnknown() && !hasSEWLMULRatioOnly() &&
            "Can't use VTYPE for uninitialized or unknown");
     return SEW;
   }
   RISCVVType::VLMUL getVLMUL() const {
-    assert(isValid() && !isUnknown() &&
+    assert(isValid() && !isUnknown() && !hasSEWLMULRatioOnly() &&
            "Can't use VTYPE for uninitialized or unknown");
     return VLMul;
   }
@@ -726,8 +728,6 @@ public:
     return RISCVVType::encodeVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic,
                                    AltFmt);
   }
-
-  bool hasSEWLMULRatioOnly() const { return SEWLMULRatioOnly; }
 
   bool hasSameVTYPE(const VSETVLIInfo &Other) const {
     assert(isValid() && Other.isValid() &&
@@ -1317,8 +1317,8 @@ static VSETVLIInfo adjustIncoming(const VSETVLIInfo &PrevInfo,
 
   if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
       !PrevInfo.isUnknown()) {
-    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
-            PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
+    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(PrevInfo.getSEWLMULRatio(),
+                                                     Info.getSEW()))
       Info.setVLMul(*NewVLMul);
     Demanded.LMUL = DemandedFields::LMULEqual;
   }
@@ -1371,25 +1371,25 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   if (Demanded.VLAny || (Demanded.VLZeroness && !EquallyZero))
     Info.setAVL(IncomingInfo);
 
-  Info.setVTYPE(
-      ((Demanded.LMUL || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
-          .getVLMUL(),
-      ((Demanded.SEW || Demanded.SEWLMULRatio) ? IncomingInfo : Info).getSEW(),
-      // Prefer tail/mask agnostic since it can be relaxed to undisturbed later
-      // if needed.
-      (Demanded.TailPolicy ? IncomingInfo : Info).getTailAgnostic() ||
-          IncomingInfo.getTailAgnostic(),
-      (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
-          IncomingInfo.getMaskAgnostic(),
-      (Demanded.AltFmt ? IncomingInfo : Info).getAltFmt(),
-      Demanded.TWiden ? IncomingInfo.getTWiden() : 0);
-
-  // If we only knew the sew/lmul ratio previously, replace the VTYPE but keep
-  // the AVL.
+  // If we only knew the sew/lmul ratio previously, replace the VTYPE.
   if (Info.hasSEWLMULRatioOnly()) {
     VSETVLIInfo RatiolessInfo = IncomingInfo;
     RatiolessInfo.setAVL(Info);
     Info = RatiolessInfo;
+  } else {
+    Info.setVTYPE(
+        ((Demanded.LMUL || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
+            .getVLMUL(),
+        ((Demanded.SEW || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
+            .getSEW(),
+        // Prefer tail/mask agnostic since it can be relaxed to undisturbed
+        // later if needed.
+        (Demanded.TailPolicy ? IncomingInfo : Info).getTailAgnostic() ||
+            IncomingInfo.getTailAgnostic(),
+        (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
+            IncomingInfo.getMaskAgnostic(),
+        (Demanded.AltFmt ? IncomingInfo : Info).getAltFmt(),
+        Demanded.TWiden ? IncomingInfo.getTWiden() : 0);
   }
 }
 
@@ -1991,7 +1991,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
                      .addReg(RISCV::X0, RegState::Define | RegState::Dead)
                      .addReg(Op.getReg())
                      .addImm(Log2_32(CurrInfo.getSEW()))
-                     .addImm(Log2_32(CurrInfo.getTWiden()) + 1);
+                     .addImm(CurrInfo.getTWiden());
 
     Changed = true;
     Register Reg = Op.getReg();

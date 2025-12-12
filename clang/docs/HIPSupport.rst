@@ -457,9 +457,12 @@ corresponding constructors in the usual C++ way.
 .. note::
 
    Explicit HIP target attributes such as ``__host__`` or ``__device__``
-   are not allowed on deduction guides. Clang treats all deduction guides
-   as if they were ``__host__ __device__`` and diagnoses any explicit
-   target attributes on them as errors.
+   are currently only permitted on deduction guides when both are present
+   (``__host__ __device__``). This usage is deprecated and will be rejected
+   in a future version of Clang; prefer omitting HIP target attributes on
+   deduction guides entirely. Clang treats all deduction guides as if they
+   were ``__host__ __device__``, so ``__host__``-only, ``__device__``-only,
+   or ``__global__`` deduction guides are rejected as ill-formed.
 
 Host and Device Attributes of Default Destructors
 ===================================================

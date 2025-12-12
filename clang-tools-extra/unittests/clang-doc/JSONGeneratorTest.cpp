@@ -13,7 +13,9 @@ static std::unique_ptr<Generator> getJSONGenerator() {
   return std::move(G.get());
 }
 
-TEST(JSONGeneratorTest, emitRecordJSON) {
+class JSONGeneratorTest : public ClangDocContextTest {};
+
+TEST_F(JSONGeneratorTest, emitRecordJSON) {
   RecordInfo I;
   I.Name = "Foo";
   I.IsTypeDef = false;
@@ -55,7 +57,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected = R"raw({
   "Bases": [
@@ -88,6 +90,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
       ],
       "PublicMembers": [
         {
+          "IsStatic": false,
           "Name": "N",
           "Type": "int"
         }
@@ -113,8 +116,10 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
     }
   ],
   "HasEnums": true,
+  "HasParents": true,
   "HasPublicFunctions": true,
   "HasRecords": true,
+  "HasVirtualParents": true,
   "InfoType": "record",
   "IsTypedef": false,
   "Location": {
@@ -138,6 +143,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   "Path": "GlobalNamespace",
   "ProtectedMembers": [
     {
+      "IsStatic": false,
       "Name": "X",
       "Type": "int"
     }
@@ -186,7 +192,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(JSONGeneratorTest, emitNamespaceJSON) {
+TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
   NamespaceInfo I;
   I.Name = "Namespace";
   I.Path = "path/to/A";
@@ -208,7 +214,7 @@ TEST(JSONGeneratorTest, emitNamespaceJSON) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected = R"raw({
   "Enums": [
@@ -239,7 +245,7 @@ TEST(JSONGeneratorTest, emitNamespaceJSON) {
   "HasEnums": true,
   "HasRecords": true,
   "InfoType": "namespace",
-  "Name": "Namespace",
+  "Name": "Global Namespace",
   "Namespace": [
     "A"
   ],

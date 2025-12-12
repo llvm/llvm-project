@@ -908,6 +908,7 @@ def HasVInstructionsF16Minimal : Predicate<"Subtarget->hasVInstructionsF16Minima
 
 def HasVInstructionsBF16Minimal : Predicate<"Subtarget->hasVInstructionsBF16Minimal()">;
 def HasVInstructionsF16 : Predicate<"Subtarget->hasVInstructionsF16()">;
+def HasVInstructionsBF16 : Predicate<"Subtarget->hasVInstructionsBF16()">;
 def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 
 def HasVInstructionsFullMultiply : Predicate<"Subtarget->hasVInstructionsFullMultiply()">;
@@ -1106,35 +1107,15 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 
 // Packed SIMD Extensions
 def FeatureStdExtP
-    : RISCVExperimentalExtension<0, 15,
+    : RISCVExperimentalExtension<0, 18,
                                  "'Base P' (Packed SIMD)">;
 def HasStdExtP : Predicate<"Subtarget->hasStdExtP()">,
                  AssemblerPredicate<(all_of FeatureStdExtP),
                                     "'Base P' (Packed SIMD)">;
 
-def HasStdExtZbaOrP
-    : Predicate<"Subtarget->hasStdExtZba() || Subtarget->hasStdExtP()">,
-      AssemblerPredicate<(any_of FeatureStdExtZba, FeatureStdExtP),
-                         "'Zba' (Address Generation Instructions) or "
-                         "'Base P' (Packed-SIMD)">;
-
-def HasStdExtZbbOrP
-    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtP()">,
-      AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtP),
-                         "'Zbb' (Basic Bit-Manipulation) or "
-                         "'Base P' (Packed-SIMD)">;
-
 def HasStdExtZbkbOrP
     : Predicate<"Subtarget->hasStdExtZbkb() || Subtarget->hasStdExtP()">,
       AssemblerPredicate<(any_of FeatureStdExtZbkb, FeatureStdExtP),
-                         "'Zbkb' (Bitmanip instructions for Cryptography) or "
-                         "'Base P' (Packed-SIMD)">;
-
-def HasStdExtZbbOrZbkbOrP
-    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbkb() || "
-                "Subtarget->hasStdExtP()">,
-      AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbkb, FeatureStdExtP),
-                         "'Zbb' (Basic Bit-Manipulation) or "
                          "'Zbkb' (Bitmanip instructions for Cryptography) or "
                          "'Base P' (Packed-SIMD)">;
 
@@ -1791,6 +1772,45 @@ def FeatureUnalignedVectorMem
                       "true", "Has reasonably performant unaligned vector "
                       "loads and stores">;
 
+// Assume that lock-free native-width atomics are available, even if the target
+// and operating system combination would not usually provide them. The user
+// is responsible for providing any necessary __sync implementations. Code
+// built with this feature is not ABI-compatible with code built without this
+// feature, if atomic variables are exposed across the ABI boundary.
+def FeatureForcedAtomics : SubtargetFeature<
+    "forced-atomics", "HasForcedAtomics", "true",
+    "Assume that lock-free native-width atomics are available">;
+def HasAtomicLdSt
+    : Predicate<"Subtarget->hasStdExtZalrsc() || Subtarget->hasForcedAtomics()">;
+
+// The RISC-V Unprivileged Architecture - ISA Volume 1 (Version: 20250508)
+// [https://docs.riscv.org/reference/isa/_attachments/riscv-unprivileged.pdf]
+// in section 13.3. Eventual Success of Store-Conditional Instructions, defines
+// _constrained_ LR/SC loops:
+//   The dynamic code executed between the LR and SC instructions can only
+//   contain instructions from the base ''I'' instruction set, excluding loads,
+//   stores, backward jumps, taken backward branches, JALR, FENCE, and SYSTEM
+//   instructions. Compressed forms of the aforementioned ''I'' instructions in
+//   the Zca and Zcb extensions are also permitted.
+// LR/SC loops that do not adhere to the above are _unconstrained_ LR/SC loops,
+// and success is implementation specific. For implementations which know that
+// non-base instructions (such as the ''B'' extension) will not violate any
+// forward progress guarantees, using these instructions to reduce the LR/SC
+// sequence length is desirable.
+def FeaturePermissiveZalrsc
+    : SubtargetFeature<
+          "permissive-zalrsc", "HasPermissiveZalrsc", "true",
+          "Implementation permits non-base instructions between LR/SC pairs">;
+
+def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
+    "AllowTaggedGlobals",
+    "true", "Use an instruction sequence for taking the address of a global "
+    "that allows a memory tag in the upper address bits">;
+
+//===----------------------------------------------------------------------===//
+// Tuning features
+//===----------------------------------------------------------------------===//
+
 def TuneNLogNVRGather
    : SubtargetFeature<"log-vrgather", "RISCVVRGatherCostModel", "NLog2N",
                       "Has vrgather.vv with LMUL*log2(LMUL) latency">;
@@ -1911,6 +1931,22 @@ def TuneHasSingleElementVecFP64
                        "Certain vector FP64 operations produce a single result "
                        "element per cycle">;
 
+def TuneVXRMPipelineFlush : SubtargetFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
+                                             "true", "VXRM writes causes pipeline flush">;
+
+def TunePreferVsetvliOverReadVLENB
+    : SubtargetFeature<"prefer-vsetvli-over-read-vlenb",
+                       "PreferVsetvliOverReadVLENB",
+                       "true",
+                       "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
+
+//===----------------------------------------------------------------------===//
+// CPU Families (alphabetized by vendor).
+//===----------------------------------------------------------------------===//
+
+def TuneAndes45 : SubtargetFeature<"andes45", "RISCVProcFamily", "Andes45",
+                                   "Andes 45-Series processors">;
+
 def TuneMIPSP8700
     : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "MIPSP8700",
                        "MIPS p8700 processor">;
@@ -1921,49 +1957,3 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
 
-def TuneAndes45 : SubtargetFeature<"andes45", "RISCVProcFamily", "Andes45",
-                                   "Andes 45-Series processors">;
-
-def TuneVXRMPipelineFlush : SubtargetFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
-                                             "true", "VXRM writes causes pipeline flush">;
-
-def TunePreferVsetvliOverReadVLENB
-    : SubtargetFeature<"prefer-vsetvli-over-read-vlenb",
-                       "PreferVsetvliOverReadVLENB",
-                       "true",
-                       "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
-
-// Assume that lock-free native-width atomics are available, even if the target
-// and operating system combination would not usually provide them. The user
-// is responsible for providing any necessary __sync implementations. Code
-// built with this feature is not ABI-compatible with code built without this
-// feature, if atomic variables are exposed across the ABI boundary.
-def FeatureForcedAtomics : SubtargetFeature<
-    "forced-atomics", "HasForcedAtomics", "true",
-    "Assume that lock-free native-width atomics are available">;
-def HasAtomicLdSt
-    : Predicate<"Subtarget->hasStdExtZalrsc() || Subtarget->hasForcedAtomics()">;
-
-// The RISC-V Unprivileged Architecture - ISA Volume 1 (Version: 20250508)
-// [https://docs.riscv.org/reference/isa/_attachments/riscv-unprivileged.pdf]
-// in section 13.3. Eventual Success of Store-Conditional Instructions, defines
-// _constrained_ LR/SC loops:
-//   The dynamic code executed between the LR and SC instructions can only
-//   contain instructions from the base ''I'' instruction set, excluding loads,
-//   stores, backward jumps, taken backward branches, JALR, FENCE, and SYSTEM
-//   instructions. Compressed forms of the aforementioned ''I'' instructions in
-//   the Zca and Zcb extensions are also permitted.
-// LR/SC loops that do not adhere to the above are _unconstrained_ LR/SC loops,
-// and success is implementation specific. For implementations which know that
-// non-base instructions (such as the ''B'' extension) will not violate any
-// forward progress guarantees, using these instructions to reduce the LR/SC
-// sequence length is desirable.
-def FeaturePermissiveZalrsc
-    : SubtargetFeature<
-          "permissive-zalrsc", "HasPermissiveZalrsc", "true",
-          "Implementation permits non-base instructions between LR/SC pairs">;
-
-def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
-    "AllowTaggedGlobals",
-    "true", "Use an instruction sequence for taking the address of a global "
-    "that allows a memory tag in the upper address bits">;

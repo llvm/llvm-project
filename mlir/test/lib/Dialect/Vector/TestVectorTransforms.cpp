@@ -181,6 +181,14 @@ struct TestVectorUnrollingPatterns
     populateVectorUnrollPatterns(
         patterns,
         UnrollVectorOptions()
+            .setNativeShape(ArrayRef<int64_t>{8, 8})
+            .setFilterConstraint([](Operation *op) {
+              return success(
+                  isa<vector::CreateMaskOp, vector::ConstantMaskOp>(op));
+            }));
+    populateVectorUnrollPatterns(
+        patterns,
+        UnrollVectorOptions()
             .setNativeShapeFn(
                 [](Operation *op) -> std::optional<SmallVector<int64_t>> {
                   auto shapeCast = dyn_cast<vector::ShapeCastOp>(op);

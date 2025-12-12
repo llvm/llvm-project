@@ -61,14 +61,11 @@ void LoopVersioning::versionLoop(
   BasicBlock *RuntimeCheckBB = VersionedLoop->getLoopPreheader();
   const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
 
-  SCEVExpander Exp2(*RtPtrChecking.getSE(),
-                    VersionedLoop->getHeader()->getDataLayout(),
-                    "induction");
+  SCEVExpander Exp2(*RtPtrChecking.getSE(), "induction");
   MemRuntimeCheck = addRuntimeChecks(RuntimeCheckBB->getTerminator(),
                                      VersionedLoop, AliasChecks, Exp2);
 
-  SCEVExpander Exp(*SE, RuntimeCheckBB->getDataLayout(),
-                   "scev.check");
+  SCEVExpander Exp(*SE, "scev.check");
   SCEVRuntimeCheck =
       Exp.expandCodeForPredicate(&Preds, RuntimeCheckBB->getTerminator());
 
