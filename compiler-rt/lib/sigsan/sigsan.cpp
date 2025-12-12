@@ -216,6 +216,12 @@ INTERCEPTOR(void, syslog, int priority, const char *format, ...) {
   va_end(ap);
 }
 
+SIGSAN_INTERCEPTOR(int, pthread_mutex_init, (mutex, mutexattr), pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr)
+SIGSAN_INTERCEPTOR(int, pthread_mutex_lock, (mutex), pthread_mutex_t *mutex)
+SIGSAN_INTERCEPTOR(int, pthread_mutex_trylock, (mutex), pthread_mutex_t *mutex)
+SIGSAN_INTERCEPTOR(int, pthread_mutex_unlock, (mutex), pthread_mutex_t *mutex)
+SIGSAN_INTERCEPTOR(int, pthread_mutex_destroy, (mutex), pthread_mutex_t *mutex)
+
 __attribute__((constructor)) void __sigsan_init() {
   SetCommonFlagsDefaults();
   InitializeCommonFlags();
@@ -256,6 +262,13 @@ __attribute__((constructor)) void __sigsan_init() {
   INTERCEPT_FUNCTION(closelog);
   INTERCEPT_FUNCTION(vsyslog);
   INTERCEPT_FUNCTION(syslog);
+
+  // pthreads
+  INTERCEPT_FUNCTION(pthread_mutex_init);
+  INTERCEPT_FUNCTION(pthread_mutex_lock);
+  INTERCEPT_FUNCTION(pthread_mutex_trylock);
+  INTERCEPT_FUNCTION(pthread_mutex_unlock);
+  INTERCEPT_FUNCTION(pthread_mutex_destroy);
 
   // TODO: Fix race conditions.
   // (signal/sigaction called while this loop is running)
