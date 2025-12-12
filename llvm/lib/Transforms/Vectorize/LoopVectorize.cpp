@@ -7081,6 +7081,11 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
           return true;
       }
 
+      // The legacy cost model costs non-header phis with a scalar VF as a phi,
+      // but scalar unrolled VPlans will have VPBlendRecipes which emit selects.
+      if (VF.isScalar() && isa<VPBlendRecipe>(&R))
+        return true;
+
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
       /// but the original instruction wasn't uniform-after-vectorization in the
       /// legacy cost model, the legacy cost overestimates the actual cost.
@@ -9357,13 +9362,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // one exists.
   TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
 
-  // If the expected trip count is less than the VF, the vector loop will only
-  // execute a single iteration. Then the middle block is executed the same
-  // number of times as the vector region.
-  // TODO: Extend logic to always account for the cost of the middle block.
-  auto ExpectedTC = getSmallBestKnownTC(PSE, L);
-  if (ExpectedTC && ElementCount::isKnownLE(*ExpectedTC, VF.Width))
-    TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
+  TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
 
   // When interleaving only scalar and vector cost will be equal, which in turn
   // would lead to a divide by 0. Fall back to hard threshold.

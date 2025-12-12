@@ -3855,10 +3855,18 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_unpackhalf2x16: {
     return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
   }
+  case Intrinsic::spv_ddx:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdx);
+  case Intrinsic::spv_ddy:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdy);
   case Intrinsic::spv_ddx_coarse:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdxCoarse);
   case Intrinsic::spv_ddy_coarse:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdyCoarse);
+  case Intrinsic::spv_ddx_fine:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdxFine);
+  case Intrinsic::spv_ddy_fine:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdyFine);
   case Intrinsic::spv_fwidth:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpFwidth);
   default: {
