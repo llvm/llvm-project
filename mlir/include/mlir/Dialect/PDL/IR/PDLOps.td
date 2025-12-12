@@ -16,6 +16,7 @@
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -393,7 +394,8 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
 
 def PDL_PatternOp : PDL_Op<"pattern", [
     IsolatedFromAbove, SingleBlock, Symbol,
-    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getDefaultDialect"]>
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getDefaultDialect"]>,
+    CallableOpInterface
   ]> {
   let summary = "Define a rewrite pattern";
   let description = [{
@@ -449,6 +451,67 @@ def PDL_PatternOp : PDL_Op<"pattern", [
 
     /// Returns the rewrite operation of this pattern.
     RewriteOp getRewriter();
+  
+    //===------------------------------------------------------------------===//
+    // ArgAndResultAttrsOpInterface Methods
+    //===------------------------------------------------------------------===//
+    /// Get the arguments attributes.
+    ArrayAttr getArgAttrsAttr() {
+      return nullptr;
+    }
+
+    /// Get the result attributes.
+    ArrayAttr getResAttrsAttr() {
+      return nullptr;
+    }
+
+    /// Set the argument attributes.
+    /// NOTE: PDL patterns do not support argument attributes, calling this
+    /// method will assert.
+    void setArgAttrsAttr(Attribute attrs) {
+        (void)attrs;
+        assert(false && "PDL patterns do not support argument attributes.");
+    }
+  
+    /// Set the result attributes.
+    /// NOTE: PDL patterns do not support argument attributes, calling this
+    /// method will assert.
+    void setResAttrsAttr(Attribute attrs) {
+      (void)attrs;
+      assert(false && "PDL patterns do not support result attributes.");
+    }
+
+    /// Remove the argument attributes.
+    /// NOTE: this method is a no-op for PDL patterns.
+    Attribute removeArgAttrsAttr() {
+      return nullptr;
+    }
+
+    /// Remove the result attributes.
+    /// NOTE: this method is a no-op for PDL patterns.
+    Attribute removeResAttrsAttr() {
+      return nullptr;
+    }
+
+    //===------------------------------------------------------------------===//
+    // CallableOpInterface Methods
+    //===------------------------------------------------------------------===//
+    /// Get the callable region.
+    Region * getCallableRegion() {
+      return &getBodyRegion();
+    }
+
+    /// Get the argument types.
+    ArrayRef<Type> getArgumentTypes() {
+      // Patterns take no arguments.
+      return {};
+    }
+
+    /// Get the result types.
+    ArrayRef<Type> getResultTypes() {
+      // Patterns return no results.
+      return {};
+    }
   }];
   let hasRegionVerifier = 1;
 }

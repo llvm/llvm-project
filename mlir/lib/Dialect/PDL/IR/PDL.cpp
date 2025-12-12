@@ -11,6 +11,7 @@
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <optional>
 
@@ -23,12 +24,31 @@ using namespace mlir::pdl;
 // PDLDialect
 //===----------------------------------------------------------------------===//
 
+namespace {
+/// This class defines the interface for handling inlining for pdl
+/// dialect operations.
+struct PDLInlinerInterface : public DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  // Everything can be inlined.
+  bool isLegalToInline(Operation *, Operation *, bool) const final {
+    return true;
+  }
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+  bool isLegalToInline(Region *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 void PDLDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/PDL/IR/PDLOps.cpp.inc"
       >();
   registerTypes();
+  addInterfaces<PDLInlinerInterface>();
 }
 
 //===----------------------------------------------------------------------===//
