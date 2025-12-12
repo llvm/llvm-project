@@ -135,8 +135,8 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
         orc::ExecutorAddr EdgeAddr = B->getAddress() + E.getOffset();
         orc::ExecutorAddr TargetAddr = GOTTarget.getAddress();
 
-        int64_t Displacement = TargetAddr - EdgeAddr;
-        if (isInt<32>(Displacement)) {
+        int64_t Displacement = TargetAddr + E.getAddend() - EdgeAddr;
+        if (isInt<33>(Displacement)) {
           E.setKind(systemz::Delta32dbl);
           E.setTarget(GOTTarget);
           LLVM_DEBUG({

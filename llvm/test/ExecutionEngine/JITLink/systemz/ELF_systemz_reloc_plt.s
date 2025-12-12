@@ -6,8 +6,8 @@
 # RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0xffff0000 -slab-page-size 4096 \
 # RUN:     -abs external_data=0x1 \
-# RUN:    -abs foo=0x6ff04040 \
-# RUN:    -abs bar=0x6ff04048 \
+# RUN:    -abs foo=0x76ff04040 \
+# RUN:    -abs bar=0x76ff04048 \
 # RUN:     -check %s %t/elf_reloc.o
 
 # Check R_390_PLT32/64 relocations.

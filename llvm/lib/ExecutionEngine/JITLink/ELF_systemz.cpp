@@ -474,7 +474,7 @@ void link_ELF_systemz(std::unique_ptr<LinkGraph> G,
         createDefineExternalSectionStartAndEndSymbolsPass(
             identifyELFSectionStartAndEndSymbols));
 
-    // TODO: Add GOT/Stubs optimizer pass.
+    // Add GOT/Stubs optimizer pass.
     Config.PreFixupPasses.push_back(systemz::optimizeGOTAndStubAccesses);
   }
 
