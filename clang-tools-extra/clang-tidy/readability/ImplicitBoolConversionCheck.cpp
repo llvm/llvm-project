@@ -352,9 +352,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                                        BoolOpAssignment, BitfieldAssignment)))),
               // Exclude logical operators in C
               unless(allOf(isC(), hasParent(binaryOperator(
-                                      hasAnyOperatorName("&&", "||"),
-                                      hasLHS(ImplicitCastFromBool),
-                                      hasRHS(ImplicitCastFromBool))))),
+                                      hasAnyOperatorName("&&", "||"))))),
               implicitCastExpr().bind("implicitCastFromBool"),
               unless(hasParent(BitfieldConstruct)),
               // Check also for nested casts, for example: bool -> int -> float.

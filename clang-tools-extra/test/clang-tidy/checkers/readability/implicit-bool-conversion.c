@@ -77,8 +77,6 @@ void implicitConversionFromBoolInComplexBoolExpressions() {
   int integer = boolean && anotherBoolean;
   float floating = (boolean || anotherBoolean) * 0.3f;
   double doubleFloating = (boolean && (anotherBoolean || boolean)) * 0.3;
-  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-FIXES: double doubleFloating = ((int)boolean && (anotherBoolean || boolean)) * 0.3;
 }
 
 void implicitConversionFromBoolLiterals() {
@@ -367,17 +365,9 @@ bool returns_bool(void) { return true; }
 void implicitConversionFromBoolInLogicalOps(int len) {
   while (returns_bool()) {}
   while ((len > 0) && returns_bool()) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-FIXES: while ((len > 0) && (int)returns_bool()) {}
   while (returns_bool() && (len > 0)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-FIXES: while ((int)returns_bool() && (len > 0)) {}
   while ((len > 0) || returns_bool()) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-FIXES: while ((len > 0) || (int)returns_bool()) {}
   while (returns_bool() || (len > 0)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-FIXES: while ((int)returns_bool() || (len > 0)) {}
 }
 
 void checkResultAssignment(void) {
@@ -393,10 +383,5 @@ void checkNestedLogic(void) {
   bool c = true;
 
   if ((a && b) || c) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: implicit conversion 'bool' -> 'int' [readability-implicit-bool-conversion]
-  // CHECK-FIXES: if ((a && b) || (int)c) {}
-
   if (c && (a || b)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: implicit conversion 'bool' -> 'int' [readability-implicit-bool-conversion]
-  // CHECK-FIXES: if ((int)c && (a || b)) {}
 }

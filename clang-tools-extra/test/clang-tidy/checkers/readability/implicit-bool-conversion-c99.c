@@ -11,10 +11,7 @@ void test_c99_logical_ops(void) {
   _Bool b2 = false;
 
   if (b1 && b2) {}
-
   if (b1 && returns_int()) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: implicit conversion 'bool' -> 'int' [readability-implicit-bool-conversion]
-  // CHECK-FIXES: if ((int)b1 && returns_int()) {}
 }
 
 void test_c99_comparison(void) {

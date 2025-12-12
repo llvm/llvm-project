@@ -118,6 +118,11 @@ Some additional accommodations are made for pre-C++11 dialects:
 
 - instead of ``nullptr`` literal, ``0`` is proposed as replacement.
 
+Some additional accommodations are made for C:
+
+- ``bool`` (or ``_Bool``) operands in logical operators (``&&``, ``||``) are
+  ignored.
+
 Occurrences of implicit conversions inside macros and template instantiations
 are deliberately ignored, as it is not clear how to deal with such cases.
 
