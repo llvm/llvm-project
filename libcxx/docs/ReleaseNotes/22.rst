@@ -86,6 +86,8 @@ Improvements and New Features
   This is guarded behind the ABI Macro ``_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE``.
 - The performance of ``vector<bool>::reserve()`` has been improved by up to 2x.
 
+- ``std::for_each`` and ``ranges::for_each`` have been optimized to iterate more efficiently over the associative
+  containers, resulting in performance improvements of up to 2x.
 - The ``num_get::do_get`` integral overloads have been optimized, resulting in a performance improvement of up to 2.8x.
 
 Deprecations and Removals
