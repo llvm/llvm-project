@@ -76,6 +76,7 @@ static bool lowerAllowChecks(Function &F, const BlockFrequencyInfo &BFI,
                              const ProfileSummaryInfo *PSI,
                              OptimizationRemarkEmitter &ORE,
                              const LowerAllowCheckPass::Options &Opts) {
+  // List of intrinsics and the constant value they should be lowered to.
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
@@ -123,26 +124,41 @@ static bool lowerAllowChecks(Function &F, const BlockFrequencyInfo &BFI,
     switch (ID) {
     case Intrinsic::allow_ubsan_check:
     case Intrinsic::allow_runtime_check: {
-      ++NumChecksTotal;
-
       bool ToRemove = ShouldRemove(II);
 
       ReplaceWithValue.push_back({
           II,
-          ToRemove,
+          !ToRemove,
       });
-      if (ToRemove)
-        ++NumChecksRemoved;
       emitRemark(II, ORE, ToRemove);
       break;
     }
+    case Intrinsic::allow_sanitize_address:
+      ReplaceWithValue.push_back(
+          {II, F.hasFnAttribute(Attribute::SanitizeAddress)});
+      break;
+    case Intrinsic::allow_sanitize_thread:
+      ReplaceWithValue.push_back(
+          {II, F.hasFnAttribute(Attribute::SanitizeThread)});
+      break;
+    case Intrinsic::allow_sanitize_memory:
+      ReplaceWithValue.push_back(
+          {II, F.hasFnAttribute(Attribute::SanitizeMemory)});
+      break;
+    case Intrinsic::allow_sanitize_hwaddress:
+      ReplaceWithValue.push_back(
+          {II, F.hasFnAttribute(Attribute::SanitizeHWAddress)});
+      break;
     default:
       break;
     }
   }
 
   for (auto [I, V] : ReplaceWithValue) {
-    I->replaceAllUsesWith(ConstantInt::getBool(I->getType(), !V));
+    ++NumChecksTotal;
+    if (!V) // If the final value is false, the check is considered removed
+      ++NumChecksRemoved;
+    I->replaceAllUsesWith(ConstantInt::getBool(I->getType(), V));
     I->eraseFromParent();
   }
 
