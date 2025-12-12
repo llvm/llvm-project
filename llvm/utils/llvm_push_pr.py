@@ -339,9 +339,9 @@ class LLVMPRAutomator:
         git_env["GIT_TERMINAL_PROMPT"] = "0"
         git_env["GIT_CONFIG_COUNT"] = "1"
         git_env["GIT_CONFIG_KEY_0"] = "credential.helper"
-        git_env["GIT_CONFIG_VALUE_0"] = (
-            f"!{sys.executable} -c \"import os; print('username=x'); print('password=' + os.environ['{LLVM_GITHUB_TOKEN_VAR}']);\""
-        )
+        git_env[
+            "GIT_CONFIG_VALUE_0"
+        ] = f"!{sys.executable} -c \"import os; print('username=x'); print('password=' + os.environ['{LLVM_GITHUB_TOKEN_VAR}']);\""
         return git_env
 
     def _get_current_branch(self) -> str:
