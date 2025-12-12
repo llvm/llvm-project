@@ -1175,8 +1175,8 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   // V instructions. All V instructions are modeled as the masked version.
   const MCInstrDesc &OutMCID = TII->get(OutMI.getOpcode());
   if (OutMI.getNumOperands() < OutMCID.getNumOperands()) {
-    assert(OutMCID.operands()[OutMI.getNumOperands()].RegClass ==
-               RISCV::VMV0RegClassID &&
+    assert(OutMCID.operands()[OutMI.getNumOperands()].OperandType ==
+               RISCVOp::OPERAND_VMASK &&
            "Expected only mask operand to be missing");
     OutMI.addOperand(MCOperand::createReg(RISCV::NoRegister));
   }

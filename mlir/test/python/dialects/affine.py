@@ -333,3 +333,31 @@ def testAffineIfWithElse():
             affine.AffineYieldOp([x_false, y_false])
         add = arith.AddIOp(if_op.results[0], if_op.results[1])
         return
+
+
+# CHECK-LABEL: TEST: testAffineIfOpInsertionPoint
+@constructAndPrintInModule
+def testAffineIfOpInsertionPoint():
+    index = IndexType.get()
+    i32 = IntegerType.get_signless(32)
+    d0 = AffineDimExpr.get(0)
+    cond = IntegerSet.get(1, 0, [d0 - 5], [False])
+
+    # CHECK: func.func @affine_if_insertion_point_test
+    @func.FuncOp.from_py_func(index)
+    def affine_if_insertion_point_test(cond_operands):
+        first_const = arith.ConstantOp(i32, 42)
+        ip_before = InsertionPoint(first_const)
+        second_const = arith.ConstantOp(i32, 100)
+
+        # Now create AffineIfOp with ip pointing BEFORE first_const
+        # If ip works correctly, the if_op should appear BEFORE first_const
+        if_op = affine.AffineIfOp(cond, cond_operands=[cond_operands], ip=ip_before)
+        with InsertionPoint(if_op.then_block):
+            affine.AffineYieldOp([])
+
+        # CHECK: affine.if
+        # CHECK-NEXT: }
+        # CHECK-NEXT: %c42_i32 = arith.constant 42 : i32
+        # CHECK-NEXT: %c100_i32 = arith.constant 100 : i32
+        return
