@@ -107,6 +107,9 @@
             <div class="resizer" id="resizer"></div>
             <div class="content">
                 <section class="hero section-container">
+                    {{#Template}}
+                    <pre><code class="language-cpp code-clang-doc">template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;</code></pre>
+                    {{/Template}}
                     <div class="hero__title">
                         <h1 class="hero__title-large">{{TagType}} {{Name}}</h1>
                         <p>Defined at line {{Location.LineNumber}} of file {{Location.Filename}}</p>
