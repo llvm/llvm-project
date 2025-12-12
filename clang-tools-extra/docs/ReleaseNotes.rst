@@ -196,6 +196,9 @@ Improvements to clang-tidy
   moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
   in the 24th release.
 
+- Improved :program:`clang-tidy` configuration parsing by allowing the same list
+  syntax in `WarningsAsErrors` as in `Checks`.
+
 New checks
 ^^^^^^^^^^
 
