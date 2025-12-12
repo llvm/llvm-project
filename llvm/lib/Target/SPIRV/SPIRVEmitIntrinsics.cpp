@@ -360,6 +360,17 @@ static void emitAssignName(Instruction *I, IRBuilder<> &B) {
   if (!I->hasName() || I->getType()->isAggregateType() ||
       expectIgnoredInIRTranslation(I))
     return;
+
+  if (isa<CallBase>(I)) {
+    // TODO: this is a temporary workaround meant to prevent inserting internal
+    //       noise into the generated binary; remove once we rework the entire
+    //       aggregate removal machinery.
+    StringRef Name = I->getName();
+    if (Name.starts_with("spv.mutated_callsite"))
+      return;
+    if (Name.starts_with("spv.named_mutated_callsite"))
+      I->setName(Name.substr(Name.rfind('.') + 1));
+  }
   reportFatalOnTokenType(I);
   setInsertPointAfterDef(B, I);
   LLVMContext &Ctx = I->getContext();
@@ -759,10 +770,15 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     if (Type *ElemTy = getPointeeType(KnownTy))
       maybeAssignPtrType(Ty, I, ElemTy, UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<GlobalValue>(I)) {
-    Ty = deduceElementTypeByValueDeep(
-        Ref->getValueType(),
-        Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr, Visited,
-        UnknownElemTypeI8);
+    if (auto *Fn = dyn_cast<Function>(Ref)) {
+      Ty = SPIRV::getOriginalFunctionType(*Fn);
+      GR->addDeducedElementType(I, Ty);
+    } else {
+      Ty = deduceElementTypeByValueDeep(
+          Ref->getValueType(),
+          Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr, Visited,
+          UnknownElemTypeI8);
+    }
   } else if (auto *Ref = dyn_cast<AddrSpaceCastInst>(I)) {
     Type *RefTy = deduceElementTypeHelper(Ref->getPointerOperand(), Visited,
                                           UnknownElemTypeI8);
@@ -1063,10 +1079,10 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
   if (!Op || !isPointerTy(Op->getType()))
     return;
   Ops.push_back(std::make_pair(Op, std::numeric_limits<unsigned>::max()));
-  FunctionType *FTy = CI->getFunctionType();
+  FunctionType *FTy = SPIRV::getOriginalFunctionType(*CI);
   bool IsNewFTy = false, IsIncomplete = false;
   SmallVector<Type *, 4> ArgTys;
-  for (Value *Arg : CI->args()) {
+  for (auto &&[ParmIdx, Arg] : llvm::enumerate(CI->args())) {
     Type *ArgTy = Arg->getType();
     if (ArgTy->isPointerTy()) {
       if (Type *ElemTy = GR->findDeducedElementType(Arg)) {
@@ -1077,6 +1093,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
       } else {
         IsIncomplete = true;
       }
+    } else {
+      ArgTy = FTy->getFunctionParamType(ParmIdx);
     }
     ArgTys.push_back(ArgTy);
   }
@@ -2815,13 +2833,11 @@ SPIRVEmitIntrinsics::simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP) {
   ArrayType *ArrTy = dyn_cast<ArrayType>(SrcTy);
   if (ArrTy && ArrTy->getNumElements() == 0 &&
       PatternMatch::match(Indices[0], PatternMatch::m_Zero())) {
-    IRBuilder<> Builder(GEP);
     Indices.erase(Indices.begin());
     SrcTy = ArrTy->getElementType();
-    Value *NewGEP = Builder.CreateGEP(SrcTy, GEP->getPointerOperand(), Indices,
-                                      "", GEP->getNoWrapFlags());
-    assert(llvm::isa<GetElementPtrInst>(NewGEP) && "NewGEP should be a GEP");
-    return cast<GetElementPtrInst>(NewGEP);
+    return GetElementPtrInst::Create(SrcTy, GEP->getPointerOperand(), Indices,
+                                     GEP->getNoWrapFlags(), "",
+                                     GEP->getIterator());
   }
   return nullptr;
 }

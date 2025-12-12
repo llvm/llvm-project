@@ -41,7 +41,8 @@
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
 
-#if defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
+#if defined(_LIBUNWIND_TARGET_HAIKU) &&                                        \
+    (defined(_LIBUNWIND_TARGET_I386) || defined(_LIBUNWIND_TARGET_X86_64))
 #include <OS.h>
 #include <signal.h>
 #define _LIBUNWIND_CHECK_HAIKU_SIGRETURN 1
@@ -1366,7 +1367,7 @@ private:
   bool             _unwindInfoMissing;
   bool             _isSignalFrame;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   bool             _isSigReturn = false;
 #endif
 #ifdef _LIBUNWIND_TRACE_RET_INJECT

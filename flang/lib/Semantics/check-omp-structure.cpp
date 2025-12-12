@@ -2800,7 +2800,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPCancelConstruct &) {
 void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
   const parser::OmpBeginDirective &beginSpec{x.BeginDir()};
   const std::optional<parser::OmpEndDirective> &endSpec{x.EndDir()};
-  PushContextAndClauseSets(beginSpec.DirName().source, beginSpec.DirName().v);
+  PushContextAndClauseSets(beginSpec.DirName().source, beginSpec.DirId());
 
   const auto &block{std::get<parser::Block>(x.t)};
   CheckNoBranching(
@@ -5363,6 +5363,82 @@ void OmpStructureChecker::Enter(const parser::OmpClause::SelfMaps &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_self_maps);
 }
 
+void OmpStructureChecker::CheckDimsModifier(parser::CharBlock source,
+    size_t numValues, const parser::OmpDimsModifier &x) {
+  std::string name{OmpGetDescriptor<parser::OmpDimsModifier>().name.str()};
+
+  if (auto dimsVal{GetIntValue(x.v)}) {
+    if (*dimsVal > 0) {
+      if (static_cast<size_t>(*dimsVal) < numValues) {
+        context_.Say(source,
+            "The %s specifies %d dimensions but %zu values were provided"_err_en_US,
+            name, *dimsVal, numValues);
+      }
+    } else {
+      context_.Say(
+          source, "The argument to the %s should be positive"_err_en_US, name);
+    }
+  }
+  // The non-constant expression case is diagnosed elsewhere.
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::NumTeams &x) {
+  constexpr auto clauseId{llvm::omp::Clause::OMPC_num_teams};
+  CheckAllowedClause(clauseId);
+  parser::CharBlock source{GetContext().clauseSource};
+  auto &values{std::get<std::list<parser::ScalarIntExpr>>(x.v.t)};
+
+  if (OmpVerifyModifiers(x.v, clauseId, source, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (auto *dims{OmpGetUniqueModifier<parser::OmpDimsModifier>(modifiers)}) {
+      CheckDimsModifier(
+          OmpGetModifierSource(modifiers, dims), values.size(), *dims);
+    }
+  }
+
+  for (auto &val : values) {
+    RequiresPositiveParameter(clauseId, val);
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::NumThreads &x) {
+  constexpr auto clauseId{llvm::omp::Clause::OMPC_num_threads};
+  CheckAllowedClause(clauseId);
+  parser::CharBlock source{GetContext().clauseSource};
+  auto &values{std::get<std::list<parser::ScalarIntExpr>>(x.v.t)};
+
+  if (OmpVerifyModifiers(x.v, clauseId, source, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (auto *dims{OmpGetUniqueModifier<parser::OmpDimsModifier>(modifiers)}) {
+      CheckDimsModifier(
+          OmpGetModifierSource(modifiers, dims), values.size(), *dims);
+    }
+  }
+
+  for (auto &val : values) {
+    RequiresPositiveParameter(clauseId, val);
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::ThreadLimit &x) {
+  constexpr auto clauseId{llvm::omp::Clause::OMPC_thread_limit};
+  CheckAllowedClause(clauseId);
+  parser::CharBlock source{GetContext().clauseSource};
+  auto &values{std::get<std::list<parser::ScalarIntExpr>>(x.v.t)};
+
+  if (OmpVerifyModifiers(x.v, clauseId, source, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (auto *dims{OmpGetUniqueModifier<parser::OmpDimsModifier>(modifiers)}) {
+      CheckDimsModifier(
+          OmpGetModifierSource(modifiers, dims), values.size(), *dims);
+    }
+  }
+
+  for (auto &val : values) {
+    RequiresPositiveParameter(clauseId, val);
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
   bool isDependClauseOccured{false};
   int targetCount{0}, targetSyncCount{0};
@@ -5382,7 +5458,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
                     OmpGetRepeatableModifier<parser::OmpInteropType>(
                         modifiers)};
                 for (const auto &it : interopTypeModifier) {
-                  if (it->v == parser::OmpInteropType::Value::TargetSync) {
+                  if (it->v == parser::OmpInteropType::Value::Targetsync) {
                     ++targetSyncCount;
                   } else {
                     ++targetCount;
@@ -5569,11 +5645,8 @@ CHECK_SIMPLE_CLAUSE(UsesAllocators, OMPC_uses_allocators)
 CHECK_SIMPLE_CLAUSE(Weak, OMPC_weak)
 CHECK_SIMPLE_CLAUSE(Write, OMPC_write)
 
-CHECK_REQ_SCALAR_INT_CLAUSE(NumTeams, OMPC_num_teams)
-CHECK_REQ_SCALAR_INT_CLAUSE(NumThreads, OMPC_num_threads)
 CHECK_REQ_SCALAR_INT_CLAUSE(OmpxDynCgroupMem, OMPC_ompx_dyn_cgroup_mem)
 CHECK_REQ_SCALAR_INT_CLAUSE(Priority, OMPC_priority)
-CHECK_REQ_SCALAR_INT_CLAUSE(ThreadLimit, OMPC_thread_limit)
 
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Collapse, OMPC_collapse)
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Safelen, OMPC_safelen)

@@ -163,12 +163,6 @@ Transforms/GCOVProfiling/reset.ll
 Transforms/GCOVProfiling/split-indirectbr-critical-edges.ll
 Transforms/GCOVProfiling/three-element-mdnode.ll
 Transforms/GCOVProfiling/version.ll
-Transforms/GlobalOpt/disable-globals-aa.ll
-Transforms/GlobalOpt/global-demotion.ll
-Transforms/GlobalOpt/globalvar-code-model.ll
-Transforms/GlobalOpt/large-int-crash.ll
-Transforms/GlobalOpt/shrink-global-to-bool-check-debug.ll
-Transforms/GlobalOpt/shrink-global-to-bool-opaque-ptrs.ll
 Transforms/GVN/debugloc-load-select.ll
 Transforms/GVN/load-through-select-dbg.ll
 Transforms/GVN/opaque-ptr.ll
@@ -490,8 +484,6 @@ Transforms/LowerSwitch/do-not-handle-impossible-values.ll
 Transforms/LowerSwitch/feature.ll
 Transforms/LowerSwitch/fold-popular-case-to-unreachable-default.ll
 Transforms/LowerSwitch/pr59316.ll
-Transforms/LowerTypeTests/import.ll
-Transforms/LowerTypeTests/simple.ll
 Transforms/MergeFunc/2011-02-08-RemoveEqual.ll
 Transforms/MergeFunc/apply_function_attributes.ll
 Transforms/MergeFunc/call-and-invoke-with-ranges-attr.ll

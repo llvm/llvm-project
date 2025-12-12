@@ -4,7 +4,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangTidyGoogleModule STATIC
-  AvoidCStyleCastsCheck.cpp
   AvoidNSObjectNewCheck.cpp
   AvoidThrowingObjCExceptionCheck.cpp
   AvoidUnderscoreInGoogletestNameCheck.cpp
@@ -25,6 +24,7 @@ add_clang_library(clangTidyGoogleModule STATIC
 
   LINK_LIBS
   clangTidy
+  clangTidyModernizeModule
   clangTidyReadabilityModule
   clangTidyUtils
 
