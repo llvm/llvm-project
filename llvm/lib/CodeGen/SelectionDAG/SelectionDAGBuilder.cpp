@@ -12892,7 +12892,7 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
   SDLoc DL = getCurSDLoc();
   SDValue V1 = getValue(I.getOperand(0));
   SDValue V2 = getValue(I.getOperand(1));
-  uint64_t Imm = cast<ConstantInt>(I.getOperand(2))->getSExtValue();
+  uint64_t Imm = cast<ConstantInt>(I.getOperand(2))->getZExtValue();
   const bool IsLeft = I.getIntrinsicID() == Intrinsic::vector_splice_left;
 
   // VECTOR_SHUFFLE doesn't support a scalable mask so use a dedicated node.
