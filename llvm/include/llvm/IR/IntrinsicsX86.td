@@ -5505,20 +5505,6 @@ let TargetPrefix = "x86" in {
                         [ImmArg<ArgIndex<0>>,
                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
-  // AMX-MORVS, AMX-TRANSPOSE
-  def int_x86_t2rpntlvwz0rs : ClangBuiltin<"__builtin_ia32_t2rpntlvwz0rs">,
-              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [ImmArg<ArgIndex<0>>]>;
-  def int_x86_t2rpntlvwz0rst1 : ClangBuiltin<"__builtin_ia32_t2rpntlvwz0rst1">,
-              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [ImmArg<ArgIndex<0>>]>;
-  def int_x86_t2rpntlvwz1rs : ClangBuiltin<"__builtin_ia32_t2rpntlvwz1rs">,
-              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [ImmArg<ArgIndex<0>>]>;
-  def int_x86_t2rpntlvwz1rst1 : ClangBuiltin<"__builtin_ia32_t2rpntlvwz1rst1">,
-              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [ImmArg<ArgIndex<0>>]>;
-
   // AMX-AVX512
   def int_x86_tcvtrowd2ps : ClangBuiltin<"__builtin_ia32_tcvtrowd2ps">,
               Intrinsic<[llvm_v16f32_ty], [llvm_i8_ty, llvm_i32_ty],
@@ -5626,24 +5612,6 @@ let TargetPrefix = "x86" in {
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
                          llvm_x86amx_ty, llvm_x86amx_ty,
                          llvm_x86amx_ty], []>;
-
-  // AMX-MORVS, AMX-TRANSPOSE - internal intrinsics
-  def int_x86_t2rpntlvwz0rs_internal :
-              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [IntrArgMemOnly, IntrReadMem]>;
-  def int_x86_t2rpntlvwz0rst1_internal :
-              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [IntrArgMemOnly]>;
-  def int_x86_t2rpntlvwz1rs_internal :
-              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [IntrArgMemOnly]>;
-  def int_x86_t2rpntlvwz1rst1_internal :
-              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [IntrArgMemOnly]>;
 
   def int_x86_tcvtrowd2ps_internal :
               ClangBuiltin<"__builtin_ia32_tcvtrowd2ps_internal">,
