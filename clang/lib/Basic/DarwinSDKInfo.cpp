@@ -85,6 +85,52 @@ static llvm::Triple::OSType parseOS(const llvm::json::Object &Obj) {
       .Default(llvm::Triple::UnknownOS);
 }
 
+static std::unordered_map<llvm::Triple, std::string>
+parseSystemPrefixes(const llvm::json::Object &Obj, llvm::Triple::OSType SDKOS,
+                    VersionTuple Version) {
+  std::unordered_map<llvm::Triple, std::string> SystemPrefixes;
+  auto SupportedTargets = Obj.getObject("SupportedTargets");
+  if (!SupportedTargets)
+    return SystemPrefixes;
+  for (auto SupportedTargetPair : *SupportedTargets) {
+    StringRef PlatformOrVariant = SupportedTargetPair.getFirst();
+    if ((PlatformOrVariant == "iosmac") && (Version < VersionTuple(99)))
+      // iosmac has an invalid SystemPrefix, skip it.
+      continue;
+
+    llvm::json::Object *SupportedTarget =
+        SupportedTargetPair.getSecond().getAsObject();
+    auto Archs = SupportedTarget->getArray("Archs");
+    auto Vendor = SupportedTarget->getString("LLVMTargetTripleVendor");
+    auto OS = SupportedTarget->getString("LLVMTargetTripleSys");
+    auto SystemPrefix = SupportedTarget->getString("SystemPrefix");
+    if (!SystemPrefix) {
+      // Older SDKs don't have SystemPrefix in SupportedTargets, manually add
+      // their prefixes.
+      if ((SDKOS == llvm::Triple::DriverKit) && (Version < VersionTuple(22, 1)))
+        SystemPrefix = "/System/DriverKit";
+    }
+    if (!Archs || !Vendor || !OS || !SystemPrefix)
+      continue;
+
+    auto Environment =
+        SupportedTarget->getString("LLVMTargetTripleEnvironment");
+
+    for (auto Arch : *Archs) {
+      auto ArchString = Arch.getAsString();
+      if (!ArchString)
+        continue;
+      llvm::Triple Triple;
+      if (Environment)
+        Triple = llvm::Triple(*ArchString, *Vendor, *OS, *Environment);
+      else
+        Triple = llvm::Triple(*ArchString, *Vendor, *OS);
+      SystemPrefixes[Triple] = *SystemPrefix;
+    }
+  }
+  return SystemPrefixes;
+}
+
 static std::optional<VersionTuple> getVersionKey(const llvm::json::Object &Obj,
                                                  StringRef Key) {
   auto Value = Obj.getString(Key);
@@ -106,6 +152,8 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
   if (!MaximumDeploymentVersion)
     return std::nullopt;
   llvm::Triple::OSType OS = parseOS(*Obj);
+  std::unordered_map<llvm::Triple, std::string> SystemPrefixes =
+      parseSystemPrefixes(*Obj, OS, *Version);
   llvm::DenseMap<OSEnvPair::StorageType,
                  std::optional<RelatedTargetVersionMapping>>
       VersionMappings;
@@ -149,7 +197,7 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
 
   return DarwinSDKInfo(std::move(*Version),
                        std::move(*MaximumDeploymentVersion), OS,
-                       std::move(VersionMappings));
+                       std::move(SystemPrefixes), std::move(VersionMappings));
 }
 
 Expected<std::optional<DarwinSDKInfo>>

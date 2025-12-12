@@ -3325,6 +3325,20 @@ TEST(TripleTest, isCompatibleWith) {
   }
 }
 
+TEST(TripleTest, equalsAndHash) {
+  EXPECT_EQ(Triple("arm64-apple-ios26.0"), Triple("arm64-apple-ios26.0"));
+  EXPECT_EQ(Triple("arm64-apple-ios26.0"), Triple("arm64-apple-ios26.1"));
+  EXPECT_NE(Triple("arm64-apple-ios26.0"), Triple("arm64-apple-macos26.0"));
+  EXPECT_NE(Triple("arm64-apple-ios26.0"),
+            Triple("arm64-apple-ios26.0-macabi"));
+
+  std::hash<Triple> Hasher;
+  EXPECT_EQ(Hasher(Triple("arm64-apple-ios26.0")),
+            Hasher(Triple("arm64-apple-ios26.0")));
+  EXPECT_EQ(Hasher(Triple("arm64-apple-ios26.0")),
+            Hasher(Triple("arm64-apple-ios26.1")));
+}
+
 TEST(DataLayoutTest, UEFI) {
   Triple TT = Triple("x86_64-unknown-uefi");
 

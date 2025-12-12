@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
+#include <functional>
 
 // Some system headers or GCC predefined macros conflict with identifiers in
 // this file.  Undefine them here.
@@ -1366,5 +1367,14 @@ public:
 
 } // End llvm namespace
 
+namespace std {
+template <> struct hash<llvm::Triple> {
+  size_t operator()(const llvm::Triple &Val) const {
+    return hash_combine(Val.getArch(), Val.getSubArch(), Val.getVendor(),
+                        Val.getOS(), Val.getEnvironment(),
+                        Val.getObjectFormat());
+  }
+};
+} // namespace std
 
 #endif
