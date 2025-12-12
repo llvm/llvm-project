@@ -10,6 +10,7 @@
 // RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=html
 // RUN: cat %t/docs/json/GlobalNamespace/index.json | FileCheck %s --check-prefix=JSON
 // RUN: cat %t/docs/html/GlobalNamespace/_ZTV5tuple.html | FileCheck %s --check-prefix=HTML-STRUCT
+// RUN: cat %t/docs/html/GlobalNamespace/index.html | FileCheck %s --check-prefix=HTML
 
 // YAML: ---
 // YAML-NEXT: USR:             '{{([0-9A-F]{40})}}'
@@ -72,6 +73,15 @@ void ParamPackFunction(T... args);
 // JSON-NEXT:        ]
 // JSON-NEXT:      },
 
+// HTML:       <div class="delimiter-container">
+// HTML-NEXT:      <div id="{{([0-9A-F]{40})}}">
+// HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">template &lt;class... T&gt;</code></pre>
+// HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">void ParamPackFunction (T... args)</code></pre>
+// COM:                FIXME: Omit defined line if not defined, or emit declaration line.
+// HTML-NEXT:          <p>Defined at line of file </p>
+// HTML-NEXT:      </div>
+// HTML-NEXT:  </div>
+
 template <typename T, int U = 1>
 void function(T x) {}
 
@@ -124,6 +134,15 @@ void function(T x) {}
 // JSON-NEXT:          }
 // JSON-NEXT:        ]
 // JSON-NEXT:      }
+
+// HTML:       <div class="delimiter-container">
+// HTML-NEXT:      <div id="{{([0-9A-F]{40})}}">
+// HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">template &lt;typename T, int U = 1&gt;</code></pre>
+// HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">void function (T x)</code></pre>
+// HTML-NEXT:          <p>Defined at line [[# @LINE - 56]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:      </div>
+// HTML-NEXT:  </div>
+
 
 template <>
 void function<bool, 0>(bool x) {}
@@ -182,6 +201,14 @@ void function<bool, 0>(bool x) {}
 // JSON-NEXT:          "SpecializationOf": "{{([0-9A-F]{40})}}"
 // JSON-NEXT:        }
 // JSON-NEXT:      },
+
+// HTML:       <div class="delimiter-container">
+// HTML-NEXT:      <div id="{{([0-9A-F]{40})}}">
+// HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">template &lt;&gt;</code></pre>
+// HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">void function&lt;bool, 0&gt; (bool x)</code></pre>
+// HTML-NEXT:          <p>Defined at line [[# @LINE - 62]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:      </div>
+// HTML-NEXT:  </div>
 
 /// A Tuple type
 ///
@@ -272,3 +299,19 @@ tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t;
 // JSON-NEXT:        "QualName": "tuple<int, int, bool>",
 // JSON-NEXT:        "USR": "{{([0-9A-F]{40})}}"
 // JSON-NEXT:      },
+
+// HTML:       <div class="delimiter-container">
+// HTML-NEXT:      <div id="{{([0-9A-F]{40})}}">
+// HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">tuple func_with_tuple_param (tuple t)</code></pre>
+// HTML-NEXT:          <div>
+// HTML-NEXT:              <div>
+// HTML-NEXT:                  <p> A function with a tuple parameter</p>
+// HTML-NEXT:              </div>
+// HTML-NEXT:              <h3>Parameters</h3>
+// HTML-NEXT:              <div>
+// HTML-NEXT:                  <b>t</b>   The input to func_with_tuple_param
+// HTML-NEXT:              </div> 
+// HTML-NEXT:          </div>
+// HTML-NEXT:          <p>Defined at line [[# @LINE - 77]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:      </div>
+// HTML-NEXT:  </div>
