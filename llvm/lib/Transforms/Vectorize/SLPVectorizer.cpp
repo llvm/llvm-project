@@ -2019,14 +2019,15 @@ public:
 
   /// Return the scalars of the root node.
   ArrayRef<Value *> getRootNodeScalars() const {
-    assert(!VectorizableTree.empty() && "No graph to get the first node from");
-    return VectorizableTree.front()->Scalars;
+    assert(!VectorizableTree.back().empty() &&
+           "No graph to get the first node from");
+    return VectorizableTree.back().front()->Scalars;
   }
 
   /// Returns the type/is-signed info for the root node in the graph without
   /// casting.
   std::optional<std::pair<Type *, bool>> getRootNodeTypeWithNoCast() const {
-    const TreeEntry &Root = *VectorizableTree.front();
+    const TreeEntry &Root = *VectorizableTree.back().front();
     if (Root.State != TreeEntry::Vectorize || Root.isAltShuffle() ||
         !Root.Scalars.front()->getType()->isIntegerTy())
       return std::nullopt;
@@ -2045,24 +2046,28 @@ public:
   /// Checks if the root graph node can be emitted with narrower bitwidth at
   /// codegen and returns it signedness, if so.
   bool isSignedMinBitwidthRootNode() const {
-    return MinBWs.at(VectorizableTree.front().get()).second;
+    return MinBWs.at(VectorizableTree.back().front().get()).second;
   }
 
   /// Returns reduction type after minbitdth analysis.
   FixedVectorType *getReductionType() const {
     if (ReductionBitWidth == 0 ||
-        !VectorizableTree.front()->Scalars.front()->getType()->isIntegerTy() ||
+        !VectorizableTree.back()
+             .front()
+             ->Scalars.front()
+             ->getType()
+             ->isIntegerTy() ||
         ReductionBitWidth >=
             DL->getTypeSizeInBits(
-                VectorizableTree.front()->Scalars.front()->getType()))
+                VectorizableTree.back().front()->Scalars.front()->getType()))
       return getWidenedType(
-          VectorizableTree.front()->Scalars.front()->getType(),
-          VectorizableTree.front()->getVectorFactor());
+          VectorizableTree.back().front()->Scalars.front()->getType(),
+          VectorizableTree.back().front()->getVectorFactor());
     return getWidenedType(
         IntegerType::get(
-            VectorizableTree.front()->Scalars.front()->getContext(),
+            VectorizableTree.back().front()->Scalars.front()->getContext(),
             ReductionBitWidth),
-        VectorizableTree.front()->getVectorFactor());
+        VectorizableTree.back().front()->getVectorFactor());
   }
 
   /// Builds external uses of the vectorized scalars, i.e. the list of
@@ -2108,7 +2113,7 @@ public:
     TreeEntryToStridedPtrInfoMap.clear();
   }
 
-  unsigned getTreeSize() const { return VectorizableTree.size(); }
+  unsigned getTreeSize() const { return VectorizableTree.back().size(); }
 
   /// Returns the base graph size, before any transformations.
   unsigned getCanonicalGraphSize() const { return BaseGraphSize; }
@@ -4361,9 +4366,10 @@ private:
         S.getOpcode() == Instruction::Load && UserTreeIdx.EdgeIdx == UINT_MAX &&
         !UserTreeIdx.UserTE)
       return nullptr;
-    VectorizableTree.push_back(std::make_unique<TreeEntry>(VectorizableTree));
-    TreeEntry *Last = VectorizableTree.back().get();
-    Last->Idx = VectorizableTree.size() - 1;
+    VectorizableTree.back().push_back(
+        std::make_unique<TreeEntry>(VectorizableTree.back()));
+    TreeEntry *Last = VectorizableTree.back().back().get();
+    Last->Idx = VectorizableTree.back().size() - 1;
     Last->State = EntryState;
     if (UserTreeIdx.UserTE)
       OperandsToTreeEntry.try_emplace(
@@ -4482,13 +4488,13 @@ private:
 
   /// -- Vectorization State --
   /// Holds all of the tree entries.
-  VecTreeTy VectorizableTree;
+  SmallVector<VecTreeTy> VectorizableTree;
 
 #ifndef NDEBUG
   /// Debug printer.
   LLVM_DUMP_METHOD void dumpVectorizableTree() const {
     for (unsigned Id = 0, IdE = VectorizableTree.size(); Id != IdE; ++Id) {
-      VectorizableTree[Id]->dump();
+      VectorizableTree.back()[Id]->dump();
       dbgs() << "\n";
     }
   }
@@ -6131,7 +6137,7 @@ template <> struct llvm::GraphTraits<BoUpSLP *> {
   };
 
   static NodeRef getEntryNode(BoUpSLP &R) {
-    return R.VectorizableTree[0].get();
+    return R.VectorizableTree.back()[0].get();
   }
 
   static ChildIteratorType child_begin(NodeRef N) {
@@ -6159,14 +6165,14 @@ template <> struct llvm::GraphTraits<BoUpSLP *> {
   };
 
   static nodes_iterator nodes_begin(BoUpSLP *R) {
-    return nodes_iterator(R->VectorizableTree.begin());
+    return nodes_iterator(R->VectorizableTree.back().begin());
   }
 
   static nodes_iterator nodes_end(BoUpSLP *R) {
-    return nodes_iterator(R->VectorizableTree.end());
+    return nodes_iterator(R->VectorizableTree.back().end());
   }
 
-  static unsigned size(BoUpSLP *R) { return R->VectorizableTree.size(); }
+  static unsigned size(BoUpSLP *R) { return R->VectorizableTree.back().size(); }
 };
 
 template <>
@@ -8054,30 +8060,31 @@ bool BoUpSLP::isProfitableToReorder() const {
   constexpr unsigned TinyTree = 10;
   constexpr unsigned PhiOpsLimit = 12;
   constexpr unsigned GatherLoadsLimit = 2;
-  if (VectorizableTree.size() <= TinyTree)
+  if (VectorizableTree.back().size() <= TinyTree)
     return true;
-  if (VectorizableTree.front()->hasState() &&
-      !VectorizableTree.front()->isGather() &&
-      (VectorizableTree.front()->getOpcode() == Instruction::Store ||
-       VectorizableTree.front()->getOpcode() == Instruction::PHI ||
-       (VectorizableTree.front()->getVectorFactor() <= TinyVF &&
-        (VectorizableTree.front()->getOpcode() == Instruction::PtrToInt ||
-         VectorizableTree.front()->getOpcode() == Instruction::ICmp))) &&
-      VectorizableTree.front()->ReorderIndices.empty()) {
+  if (VectorizableTree.back().front()->hasState() &&
+      !VectorizableTree.back().front()->isGather() &&
+      (VectorizableTree.back().front()->getOpcode() == Instruction::Store ||
+       VectorizableTree.back().front()->getOpcode() == Instruction::PHI ||
+       (VectorizableTree.back().front()->getVectorFactor() <= TinyVF &&
+        (VectorizableTree.back().front()->getOpcode() ==
+             Instruction::PtrToInt ||
+         VectorizableTree.back().front()->getOpcode() == Instruction::ICmp))) &&
+      VectorizableTree.back().front()->ReorderIndices.empty()) {
     // Check if the tree has only single store and single (unordered) load node,
     // other nodes are phis or geps/binops, combined with phis, and/or single
     // gather load node
-    if (VectorizableTree.front()->hasState() &&
-        VectorizableTree.front()->getOpcode() == Instruction::PHI &&
-        VectorizableTree.front()->Scalars.size() == TinyVF &&
-        VectorizableTree.front()->getNumOperands() > PhiOpsLimit)
+    if (VectorizableTree.back().front()->hasState() &&
+        VectorizableTree.back().front()->getOpcode() == Instruction::PHI &&
+        VectorizableTree.back().front()->Scalars.size() == TinyVF &&
+        VectorizableTree.back().front()->getNumOperands() > PhiOpsLimit)
       return false;
     // Single node, which require reorder - skip.
-    if (VectorizableTree.front()->hasState() &&
-        VectorizableTree.front()->getOpcode() == Instruction::Store &&
-        VectorizableTree.front()->ReorderIndices.empty()) {
-      const unsigned ReorderedSplitsCnt =
-          count_if(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+    if (VectorizableTree.back().front()->hasState() &&
+        VectorizableTree.back().front()->getOpcode() == Instruction::Store &&
+        VectorizableTree.back().front()->ReorderIndices.empty()) {
+      const unsigned ReorderedSplitsCnt = count_if(
+          VectorizableTree.back(), [&](const std::unique_ptr<TreeEntry> &TE) {
             return TE->State == TreeEntry::SplitVectorize &&
                    !TE->ReorderIndices.empty() && TE->UserTreeIndex.UserTE &&
                    TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
@@ -8085,7 +8092,8 @@ bool BoUpSLP::isProfitableToReorder() const {
           });
       if (ReorderedSplitsCnt <= 1 &&
           static_cast<unsigned>(count_if(
-              VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+              VectorizableTree.back(),
+              [&](const std::unique_ptr<TreeEntry> &TE) {
                 return ((!TE->isGather() &&
                          (TE->ReorderIndices.empty() ||
                           (TE->UserTreeIndex.UserTE &&
@@ -8098,25 +8106,26 @@ bool BoUpSLP::isProfitableToReorder() const {
                           TE->getOpcode() == Instruction::Load ||
                           TE->getOpcode() == Instruction::ZExt ||
                           TE->getOpcode() == Instruction::SExt))) &&
-                       (VectorizableTree.front()->getVectorFactor() > TinyVF ||
+                       (VectorizableTree.back().front()->getVectorFactor() >
+                            TinyVF ||
                         !TE->isGather() || none_of(TE->Scalars, [&](Value *V) {
                           return !isConstant(V) && isVectorized(V);
                         }));
-              })) >= VectorizableTree.size() - ReorderedSplitsCnt)
+              })) >= VectorizableTree.back().size() - ReorderedSplitsCnt)
         return false;
     }
     bool HasPhis = false;
     bool HasLoad = true;
     unsigned GatherLoads = 0;
     for (const std::unique_ptr<TreeEntry> &TE :
-         ArrayRef(VectorizableTree).drop_front()) {
+         ArrayRef(VectorizableTree.back()).drop_front()) {
       if (TE->State == TreeEntry::SplitVectorize)
         continue;
       if (!TE->hasState()) {
         if (all_of(TE->Scalars, IsaPred<Constant, PHINode>) ||
             all_of(TE->Scalars, IsaPred<BinaryOperator, PHINode>))
           continue;
-        if (VectorizableTree.front()->Scalars.size() == TinyVF &&
+        if (VectorizableTree.back().front()->Scalars.size() == TinyVF &&
             any_of(TE->Scalars, IsaPred<PHINode, GEPOperator>))
           continue;
         return true;
@@ -8140,7 +8149,7 @@ bool BoUpSLP::isProfitableToReorder() const {
            static_cast<unsigned>(count_if(TE->Scalars, IsaPred<PHINode>)) <
                TE->Scalars.size() / 2))
         return true;
-      if (VectorizableTree.front()->Scalars.size() == TinyVF &&
+      if (VectorizableTree.back().front()->Scalars.size() == TinyVF &&
           TE->getNumOperands() > PhiOpsLimit)
         return false;
       HasPhis = true;
@@ -8194,8 +8203,8 @@ void BoUpSLP::reorderTopToBottom() {
   // Find all reorderable nodes with the given VF.
   // Currently the are vectorized stores,loads,extracts + some gathering of
   // extracts.
-  for_each(VectorizableTree, [&, &TTIRef = *TTI](
-                                 const std::unique_ptr<TreeEntry> &TE) {
+  for_each(VectorizableTree.back(), [&, &TTIRef = *TTI](
+                                        const std::unique_ptr<TreeEntry> &TE) {
     // Look for external users that will probably be vectorized.
     SmallVector<OrdersType, 1> ExternalUserReorderIndices =
         findExternalStoreUsersReorderIndices(TE.get());
@@ -8225,9 +8234,10 @@ void BoUpSLP::reorderTopToBottom() {
     }
 
     bool IgnoreReorder =
-        !UserIgnoreList && VectorizableTree.front()->hasState() &&
-        (VectorizableTree.front()->getOpcode() == Instruction::InsertElement ||
-         VectorizableTree.front()->getOpcode() == Instruction::Store);
+        !UserIgnoreList && VectorizableTree.back().front()->hasState() &&
+        (VectorizableTree.back().front()->getOpcode() ==
+             Instruction::InsertElement ||
+         VectorizableTree.back().front()->getOpcode() == Instruction::Store);
     if (std::optional<OrdersType> CurrentOrder =
             getReorderingData(*TE, /*TopToBottom=*/true, IgnoreReorder)) {
       // Do not include ordering for nodes used in the alt opcode vectorization,
@@ -8263,7 +8273,7 @@ void BoUpSLP::reorderTopToBottom() {
   });
 
   // Reorder the graph nodes according to their vectorization factor.
-  for (unsigned VF = VectorizableTree.front()->getVectorFactor();
+  for (unsigned VF = VectorizableTree.back().front()->getVectorFactor();
        !VFToOrderedEntries.empty() && VF > 1; VF -= 2 - (VF & 1U)) {
     auto It = VFToOrderedEntries.find(VF);
     if (It == VFToOrderedEntries.end())
@@ -8387,7 +8397,7 @@ void BoUpSLP::reorderTopToBottom() {
       return I < E ? static_cast<int>(I) : PoisonMaskElem;
     });
     // Do an actual reordering, if profitable.
-    for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    for (std::unique_ptr<TreeEntry> &TE : VectorizableTree.back()) {
       // Just do the reordering for the nodes with the given VF.
       if (TE->Scalars.size() != VF) {
         if (TE->ReuseShuffleIndices.size() == VF) {
@@ -8530,7 +8540,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
   // Currently the are vectorized loads,extracts without alternate operands +
   // some gathering of extracts.
   SmallPtrSet<const TreeEntry *, 4> NonVectorized;
-  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree.back()) {
     if (TE->State != TreeEntry::Vectorize &&
         TE->State != TreeEntry::StridedVectorize &&
         TE->State != TreeEntry::CompressVectorize &&
@@ -8594,7 +8604,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         assert(Data.first->CombinedEntriesWithIndices.size() == 2 &&
                "Expected exactly 2 entries.");
         for (const auto &P : Data.first->CombinedEntriesWithIndices) {
-          TreeEntry &OpTE = *VectorizableTree[P.first];
+          TreeEntry &OpTE = *VectorizableTree.back()[P.first];
           OrdersType Order = OpTE.ReorderIndices;
           if (Order.empty() || !OpTE.ReuseShuffleIndices.empty()) {
             if (!OpTE.isGather() && OpTE.ReuseShuffleIndices.empty())
@@ -8872,7 +8882,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
                 TE->ReorderIndices.empty()) &&
                "Non-matching sizes of user/operand entries.");
         reorderOrder(TE->ReorderIndices, Mask);
-        if (IgnoreReorder && TE == VectorizableTree.front().get())
+        if (IgnoreReorder && TE == VectorizableTree.back().front().get())
           IgnoreReorder = false;
       }
       // For gathers just need to reorder its scalars.
@@ -8919,9 +8929,10 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
     }
   }
   // If the reordering is unnecessary, just remove the reorder.
-  if (IgnoreReorder && !VectorizableTree.front()->ReorderIndices.empty() &&
-      VectorizableTree.front()->ReuseShuffleIndices.empty())
-    VectorizableTree.front()->ReorderIndices.clear();
+  if (IgnoreReorder &&
+      !VectorizableTree.back().front()->ReorderIndices.empty() &&
+      VectorizableTree.back().front()->ReuseShuffleIndices.empty())
+    VectorizableTree.back().front()->ReorderIndices.clear();
 }
 
 Instruction *BoUpSLP::getRootEntryInstruction(const TreeEntry &Entry) const {
@@ -8939,7 +8950,7 @@ void BoUpSLP::buildExternalUses(
   const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   DenseMap<Value *, unsigned> ScalarToExtUses;
   // Collect the values that we need to extract from the tree.
-  for (auto &TEPtr : VectorizableTree) {
+  for (auto &TEPtr : VectorizableTree.back()) {
     TreeEntry *Entry = TEPtr.get();
 
     // No need to handle users of gathered values.
@@ -9185,6 +9196,7 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
   deleteTree();
   assert(TreeEntryToStridedPtrInfoMap.empty() &&
          "TreeEntryToStridedPtrInfoMap is not cleared");
+  VectorizableTree.emplace_back();
   UserIgnoreList = &UserIgnoreLst;
   if (!allSameType(Roots))
     return;
@@ -9195,6 +9207,7 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
   deleteTree();
   assert(TreeEntryToStridedPtrInfoMap.empty() &&
          "TreeEntryToStridedPtrInfoMap is not cleared");
+  VectorizableTree.emplace_back();
   if (!allSameType(Roots))
     return;
   buildTreeRec(Roots, 0, EdgeInfo());
@@ -9359,12 +9372,12 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
         std::tuple<BasicBlock *, Value *, Type *>,
         SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>>, 8>
         &GatheredLoads) {
-  GatheredLoadsEntriesFirst = VectorizableTree.size();
+  GatheredLoadsEntriesFirst = VectorizableTree.back().size();
 
   SmallVector<SmallPtrSet<const Value *, 4>> LoadSetsToVectorize(
       LoadEntriesToVectorize.size());
   for (auto [Idx, Set] : zip(LoadEntriesToVectorize, LoadSetsToVectorize))
-    Set.insert_range(VectorizableTree[Idx]->Scalars);
+    Set.insert_range(VectorizableTree.back()[Idx]->Scalars);
 
   // Sort loads by distance.
   auto LoadSorter = [](const std::pair<LoadInst *, int64_t> &L1,
@@ -9700,7 +9713,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                            if (It == Slice.end())
                              return false;
                            const TreeEntry &TE =
-                               *VectorizableTree[std::get<0>(P)];
+                               *VectorizableTree.back()[std::get<0>(P)];
                            ArrayRef<Value *> VL = TE.Scalars;
                            OrdersType Order;
                            SmallVector<Value *> PointerOps;
@@ -9746,14 +9759,14 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                 if (any_of(zip(LoadEntriesToVectorize, LoadSetsToVectorize),
                            [&](const auto &P) {
                              return !SubSlice.equals(
-                                        VectorizableTree[std::get<0>(P)]
+                                        VectorizableTree.back()[std::get<0>(P)]
                                             ->Scalars) &&
                                     set_is_subset(SubSlice, std::get<1>(P));
                            }))
                   continue;
-                unsigned Sz = VectorizableTree.size();
+                unsigned Sz = VectorizableTree.back().size();
                 buildTreeRec(SubSlice, 0, EdgeInfo(), InterleaveFactor);
-                if (Sz == VectorizableTree.size()) {
+                if (Sz == VectorizableTree.back().size()) {
                   IsVectorized = false;
                   // Try non-interleaved vectorization with smaller vector
                   // factor.
@@ -9797,7 +9810,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
   }
   // Try to vectorize postponed load entries, previously marked as gathered.
   for (unsigned Idx : LoadEntriesToVectorize) {
-    const TreeEntry &E = *VectorizableTree[Idx];
+    const TreeEntry &E = *VectorizableTree.back()[Idx];
     SmallVector<Value *> GatheredScalars(E.Scalars.begin(), E.Scalars.end());
     // Avoid reordering, if possible.
     if (!E.ReorderIndices.empty()) {
@@ -9812,7 +9825,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
   // If no new entries created, consider it as no gathered loads entries must be
   // handled.
   if (static_cast<unsigned>(*GatheredLoadsEntriesFirst) ==
-      VectorizableTree.size())
+      VectorizableTree.back().size())
     GatheredLoadsEntriesFirst.reset();
 }
 
@@ -10191,25 +10204,25 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     case LoadsState::Vectorize:
       return TreeEntry::Vectorize;
     case LoadsState::CompressVectorize:
-      if (!IsGraphTransformMode && !VectorizableTree.empty()) {
+      if (!IsGraphTransformMode && !VectorizableTree.back().empty()) {
         // Delay slow vectorized nodes for better vectorization attempts.
-        LoadEntriesToVectorize.insert(VectorizableTree.size());
+        LoadEntriesToVectorize.insert(VectorizableTree.back().size());
         return TreeEntry::NeedToGather;
       }
       return IsGatheredNode() ? TreeEntry::NeedToGather
                               : TreeEntry::CompressVectorize;
     case LoadsState::ScatterVectorize:
-      if (!IsGraphTransformMode && !VectorizableTree.empty()) {
+      if (!IsGraphTransformMode && !VectorizableTree.back().empty()) {
         // Delay slow vectorized nodes for better vectorization attempts.
-        LoadEntriesToVectorize.insert(VectorizableTree.size());
+        LoadEntriesToVectorize.insert(VectorizableTree.back().size());
         return TreeEntry::NeedToGather;
       }
       return IsGatheredNode() ? TreeEntry::NeedToGather
                               : TreeEntry::ScatterVectorize;
     case LoadsState::StridedVectorize:
-      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
+      if (!IsGraphTransformMode && VectorizableTree.back().size() > 1) {
         // Delay slow vectorized nodes for better vectorization attempts.
-        LoadEntriesToVectorize.insert(VectorizableTree.size());
+        LoadEntriesToVectorize.insert(VectorizableTree.back().size());
         return TreeEntry::NeedToGather;
       }
       return IsGatheredNode() ? TreeEntry::NeedToGather
@@ -10843,8 +10856,10 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
         TTI->getArithmeticInstrCost(Opcode1, Op2VecTy, Kind);
     InstructionCost NewCost =
         NewVecOpsCost + InsertCost +
-        (!VectorizableTree.empty() && VectorizableTree.front()->hasState() &&
-                 VectorizableTree.front()->getOpcode() == Instruction::Store
+        (!VectorizableTree.back().empty() &&
+                 VectorizableTree.back().front()->hasState() &&
+                 VectorizableTree.back().front()->getOpcode() ==
+                     Instruction::Store
              ? NewShuffleCost
              : 0);
     // If not profitable to split - exit.
@@ -11446,7 +11461,7 @@ BoUpSLP::ScalarsVectorizationLegality BoUpSLP::getScalarsVectorizationLegality(
   auto NotProfitableForVectorization = [&S, this, Depth](ArrayRef<Value *> VL) {
     if (!S || !S.isAltShuffle() || VL.size() > 2)
       return false;
-    if (VectorizableTree.size() < MinTreeSize)
+    if (VectorizableTree.back().size() < MinTreeSize)
       return false;
     if (Depth >= RecursionMaxDepth - 1)
       return true;
@@ -11606,12 +11621,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       if (S && (isa<LoadInst>(S.getMainOp()) ||
                 getSameValuesTreeEntry(S.getMainOp(), Op, /*SameVF=*/true))) {
         // Build gather node for loads, they will be gathered later.
-        TE->CombinedEntriesWithIndices.emplace_back(VectorizableTree.size(),
-                                                    Idx == 0 ? 0 : Op1.size());
+        TE->CombinedEntriesWithIndices.emplace_back(
+            VectorizableTree.back().size(), Idx == 0 ? 0 : Op1.size());
         (void)newTreeEntry(Op, TreeEntry::NeedToGather, Invalid, S, {TE, Idx});
       } else {
-        TE->CombinedEntriesWithIndices.emplace_back(VectorizableTree.size(),
-                                                    Idx == 0 ? 0 : Op1.size());
+        TE->CombinedEntriesWithIndices.emplace_back(
+            VectorizableTree.back().size(), Idx == 0 ? 0 : Op1.size());
         buildTreeRec(Op, Depth, {TE, Idx});
       }
     };
@@ -12811,7 +12826,7 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
     return;
 
   if (any_of(seq<unsigned>(TE.Idx), [&](unsigned Idx) {
-        return VectorizableTree[Idx]->isSame(TE.Scalars);
+        return VectorizableTree.back()[Idx]->isSame(TE.Scalars);
       }))
     return;
 
@@ -13045,7 +13060,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
 
 void BoUpSLP::transformNodes() {
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-  BaseGraphSize = VectorizableTree.size();
+  BaseGraphSize = VectorizableTree.back().size();
   // Turn graph transforming mode on and off, when done.
   class GraphTransformModeRAAI {
     bool &SavedIsGraphTransformMode;
@@ -13083,7 +13098,7 @@ void BoUpSLP::transformNodes() {
 
   // Try to reorder gather nodes for better vectorization opportunities.
   for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
-    TreeEntry &E = *VectorizableTree[Idx];
+    TreeEntry &E = *VectorizableTree.back()[Idx];
     if (E.isGather())
       reorderGatherNode(E);
   }
@@ -13092,11 +13107,12 @@ void BoUpSLP::transformNodes() {
   // gathered nodes each having less than 16 elements.
   constexpr unsigned VFLimit = 16;
   bool ForceLoadGather =
-      count_if(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
-        return TE->isGather() && TE->hasState() &&
-               TE->getOpcode() == Instruction::Load &&
-               TE->getVectorFactor() < VFLimit;
-      }) == 2;
+      count_if(VectorizableTree.back(),
+               [&](const std::unique_ptr<TreeEntry> &TE) {
+                 return TE->isGather() && TE->hasState() &&
+                        TE->getOpcode() == Instruction::Load &&
+                        TE->getVectorFactor() < VFLimit;
+               }) == 2;
 
   // Checks if the scalars are used in other node.
   auto AreReusedScalars = [&](const TreeEntry *TE, ArrayRef<Value *> VL,
@@ -13153,7 +13169,7 @@ void BoUpSLP::transformNodes() {
   };
   // The tree may grow here, so iterate over nodes, built before.
   for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
-    TreeEntry &E = *VectorizableTree[Idx];
+    TreeEntry &E = *VectorizableTree.back()[Idx];
     if (E.isGather()) {
       ArrayRef<Value *> VL = E.Scalars;
       const unsigned Sz = getVectorElementSize(VL.front());
@@ -13287,19 +13303,19 @@ void BoUpSLP::transformNodes() {
             // If any instruction is vectorized already - do not try again.
             SameTE = getSameValuesTreeEntry(*It, Slice);
           }
-          unsigned PrevSize = VectorizableTree.size();
+          unsigned PrevSize = VectorizableTree.back().size();
           [[maybe_unused]] unsigned PrevEntriesSize =
               LoadEntriesToVectorize.size();
           buildTreeRec(Slice, 0, EdgeInfo(&E, UINT_MAX));
-          if (PrevSize + 1 == VectorizableTree.size() && !SameTE &&
-              VectorizableTree[PrevSize]->isGather() &&
-              VectorizableTree[PrevSize]->hasState() &&
-              VectorizableTree[PrevSize]->getOpcode() !=
+          if (PrevSize + 1 == VectorizableTree.back().size() && !SameTE &&
+              VectorizableTree.back()[PrevSize]->isGather() &&
+              VectorizableTree.back()[PrevSize]->hasState() &&
+              VectorizableTree.back()[PrevSize]->getOpcode() !=
                   Instruction::ExtractElement &&
               !isSplat(Slice)) {
             if (UserIgnoreList && E.Idx == 0 && VF == 2)
               analyzedReductionVals(Slice);
-            VectorizableTree.pop_back();
+            VectorizableTree.back().pop_back();
             assert(PrevEntriesSize == LoadEntriesToVectorize.size() &&
                    "LoadEntriesToVectorize expected to remain the same");
             continue;
@@ -13452,21 +13468,23 @@ void BoUpSLP::transformNodes() {
 
   if (LoadEntriesToVectorize.empty()) {
     // Single load node - exit.
-    if (VectorizableTree.size() <= 1 && VectorizableTree.front()->hasState() &&
-        VectorizableTree.front()->getOpcode() == Instruction::Load)
+    if (VectorizableTree.back().size() <= 1 &&
+        VectorizableTree.back().front()->hasState() &&
+        VectorizableTree.back().front()->getOpcode() == Instruction::Load)
       return;
     // Small graph with small VF - exit.
     constexpr unsigned SmallTree = 3;
     constexpr unsigned SmallVF = 2;
-    if ((VectorizableTree.size() <= SmallTree &&
-         VectorizableTree.front()->Scalars.size() == SmallVF) ||
-        (VectorizableTree.size() <= 2 && UserIgnoreList))
+    if ((VectorizableTree.back().size() <= SmallTree &&
+         VectorizableTree.back().front()->Scalars.size() == SmallVF) ||
+        (VectorizableTree.back().size() <= 2 && UserIgnoreList))
       return;
 
-    if (VectorizableTree.front()->isNonPowOf2Vec() &&
+    if (VectorizableTree.back().front()->isNonPowOf2Vec() &&
         getCanonicalGraphSize() != getTreeSize() && UserIgnoreList &&
         getCanonicalGraphSize() <= SmallTree &&
-        count_if(ArrayRef(VectorizableTree).drop_front(getCanonicalGraphSize()),
+        count_if(ArrayRef(VectorizableTree.back())
+                     .drop_front(getCanonicalGraphSize()),
                  [](const std::unique_ptr<TreeEntry> &TE) {
                    return TE->isGather() && TE->hasState() &&
                           TE->getOpcode() == Instruction::Load &&
@@ -13481,7 +13499,7 @@ void BoUpSLP::transformNodes() {
                  SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>>, 8>
       GatheredLoads;
 
-  for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+  for (std::unique_ptr<TreeEntry> &TE : VectorizableTree.back()) {
     TreeEntry &E = *TE;
     if (E.isGather() &&
         ((E.hasState() && E.getOpcode() == Instruction::Load) ||
@@ -14072,7 +14090,7 @@ public:
     // Check if it can be considered reused if same extractelements were
     // vectorized already.
     bool PrevNodeFound = any_of(
-        ArrayRef(R.VectorizableTree).take_front(E->Idx),
+        ArrayRef(R.VectorizableTree.back()).take_front(E->Idx),
         [&](const std::unique_ptr<TreeEntry> &TE) {
           return ((TE->hasState() && !TE->isAltShuffle() &&
                    TE->getOpcode() == Instruction::ExtractElement) ||
@@ -14508,16 +14526,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       VectorCost = ::getShuffleCost(
           *TTI, TTI::SK_InsertSubvector, FinalVecTy, {}, CostKind,
           E->CombinedEntriesWithIndices.back().second,
-          getWidenedType(
-              ScalarTy,
-              VectorizableTree[E->CombinedEntriesWithIndices.back().first]
-                  ->getVectorFactor()));
+          getWidenedType(ScalarTy,
+                         VectorizableTree
+                             .back()[E->CombinedEntriesWithIndices.back().first]
+                             ->getVectorFactor()));
     } else {
-      unsigned CommonVF =
-          std::max(VectorizableTree[E->CombinedEntriesWithIndices.front().first]
-                       ->getVectorFactor(),
-                   VectorizableTree[E->CombinedEntriesWithIndices.back().first]
-                       ->getVectorFactor());
+      unsigned CommonVF = std::max(
+          VectorizableTree.back()[E->CombinedEntriesWithIndices.front().first]
+              ->getVectorFactor(),
+          VectorizableTree.back()[E->CombinedEntriesWithIndices.back().first]
+              ->getVectorFactor());
       VectorCost = ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc,
                                     getWidenedType(ScalarTy, CommonVF),
                                     E->getSplitMask(), CostKind);
@@ -15323,7 +15341,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     // Try to find the previous shuffle node with the same operands and same
     // main/alternate ops.
     auto TryFindNodeWithEqualOperands = [=]() {
-      for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+      for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree.back()) {
         if (TE.get() == E)
           break;
         if (TE->hasState() && TE->isAltShuffle() &&
@@ -15482,7 +15500,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
 bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
   LLVM_DEBUG(dbgs() << "SLP: Check whether the tree with height "
-                    << VectorizableTree.size() << " is fully vectorizable .\n");
+                    << VectorizableTree.back().size()
+                    << " is fully vectorizable .\n");
 
   auto &&AreVectorizableGathers = [this](const TreeEntry *TE, unsigned Limit) {
     SmallVector<int> Mask;
@@ -15501,34 +15520,34 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
   };
 
   // We only handle trees of heights 1 and 2.
-  if (VectorizableTree.size() == 1 &&
-      (VectorizableTree[0]->State == TreeEntry::Vectorize ||
-       VectorizableTree[0]->State == TreeEntry::StridedVectorize ||
-       VectorizableTree[0]->State == TreeEntry::CompressVectorize ||
+  if (VectorizableTree.back().size() == 1 &&
+      (VectorizableTree.back()[0]->State == TreeEntry::Vectorize ||
+       VectorizableTree.back()[0]->State == TreeEntry::StridedVectorize ||
+       VectorizableTree.back()[0]->State == TreeEntry::CompressVectorize ||
        (ForReduction &&
-        AreVectorizableGathers(VectorizableTree[0].get(),
-                               VectorizableTree[0]->Scalars.size()) &&
-        VectorizableTree[0]->getVectorFactor() > 2)))
+        AreVectorizableGathers(VectorizableTree.back()[0].get(),
+                               VectorizableTree.back()[0]->Scalars.size()) &&
+        VectorizableTree.back()[0]->getVectorFactor() > 2)))
     return true;
 
-  if (VectorizableTree.size() != 2)
+  if (VectorizableTree.back().size() != 2)
     return false;
 
   // Handle splat and all-constants stores. Also try to vectorize tiny trees
   // with the second gather nodes if they have less scalar operands rather than
   // the initial tree element (may be profitable to shuffle the second gather)
   // or they are extractelements, which form shuffle.
-  if (VectorizableTree[0]->State == TreeEntry::Vectorize &&
-      AreVectorizableGathers(VectorizableTree[1].get(),
-                             VectorizableTree[0]->Scalars.size()))
+  if (VectorizableTree.back()[0]->State == TreeEntry::Vectorize &&
+      AreVectorizableGathers(VectorizableTree.back()[1].get(),
+                             VectorizableTree.back()[0]->Scalars.size()))
     return true;
 
   // Gathering cost would be too much for tiny trees.
-  if (VectorizableTree[0]->isGather() ||
-      (VectorizableTree[1]->isGather() &&
-       VectorizableTree[0]->State != TreeEntry::ScatterVectorize &&
-       VectorizableTree[0]->State != TreeEntry::StridedVectorize &&
-       VectorizableTree[0]->State != TreeEntry::CompressVectorize))
+  if (VectorizableTree.back()[0]->isGather() ||
+      (VectorizableTree.back()[1]->isGather() &&
+       VectorizableTree.back()[0]->State != TreeEntry::ScatterVectorize &&
+       VectorizableTree.back()[0]->State != TreeEntry::StridedVectorize &&
+       VectorizableTree.back()[0]->State != TreeEntry::CompressVectorize))
     return false;
 
   return true;
@@ -15578,8 +15597,8 @@ bool BoUpSLP::isLoadCombineReductionCandidate(RecurKind RdxKind) const {
   if (RdxKind != RecurKind::Or)
     return false;
 
-  unsigned NumElts = VectorizableTree[0]->Scalars.size();
-  Value *FirstReduced = VectorizableTree[0]->Scalars[0];
+  unsigned NumElts = VectorizableTree.back()[0]->Scalars.size();
+  Value *FirstReduced = VectorizableTree.back()[0]->Scalars[0];
   return isLoadCombineCandidateImpl(FirstReduced, NumElts, TTI,
                                     /* MatchOr */ false);
 }
@@ -15602,19 +15621,19 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
     return true;
 
   // Graph is empty - do nothing.
-  if (VectorizableTree.empty()) {
+  if (VectorizableTree.back().empty()) {
     assert(ExternalUses.empty() && "We shouldn't have any external users");
 
     return true;
   }
 
   // No need to vectorize inserts of gathered values.
-  if (VectorizableTree.size() == 2 &&
-      isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
-      VectorizableTree[1]->isGather() &&
-      (VectorizableTree[1]->getVectorFactor() <= 2 ||
-       !(isSplat(VectorizableTree[1]->Scalars) ||
-         allConstant(VectorizableTree[1]->Scalars))))
+  if (VectorizableTree.back().size() == 2 &&
+      isa<InsertElementInst>(VectorizableTree.back()[0]->Scalars[0]) &&
+      VectorizableTree.back()[1]->isGather() &&
+      (VectorizableTree.back()[1]->getVectorFactor() <= 2 ||
+       !(isSplat(VectorizableTree.back()[1]->Scalars) ||
+         allConstant(VectorizableTree.back()[1]->Scalars))))
     return true;
 
   // If the graph includes only PHI nodes and gathers, it is defnitely not
@@ -15623,8 +15642,9 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // gathers/buildvectors.
   constexpr int Limit = 4;
   if (!ForReduction && !SLPCostThreshold.getNumOccurrences() &&
-      !VectorizableTree.empty() &&
-      all_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+      !VectorizableTree.back().empty() &&
+      all_of(VectorizableTree.back(), [&](const std::unique_ptr<TreeEntry>
+                                              &TE) {
         return (TE->isGather() &&
                 (!TE->hasState() ||
                  TE->getOpcode() != Instruction::ExtractElement) &&
@@ -15636,8 +15656,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // Do not vectorize small tree of phis only, if all vector phis are also
   // gathered.
   if (!ForReduction && SLPCostThreshold.getNumOccurrences() &&
-      VectorizableTree.size() <= Limit &&
-      all_of(VectorizableTree,
+      VectorizableTree.back().size() <= Limit &&
+      all_of(VectorizableTree.back(),
              [&](const std::unique_ptr<TreeEntry> &TE) {
                return (TE->isGather() &&
                        (!TE->hasState() ||
@@ -15651,10 +15671,11 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
                            return isa<PoisonValue>(V) || MustGather.contains(V);
                          }))));
              }) &&
-      any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
-        return TE->State == TreeEntry::Vectorize &&
-               TE->getOpcode() == Instruction::PHI;
-      }))
+      any_of(VectorizableTree.back(),
+             [&](const std::unique_ptr<TreeEntry> &TE) {
+               return TE->State == TreeEntry::Vectorize &&
+                      TE->getOpcode() == Instruction::PHI;
+             }))
     return true;
 
   // If the tree contains only phis, buildvectors, split nodes and
@@ -15663,7 +15684,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   unsigned NumGathers = 0;
   constexpr int LimitTreeSize = 36;
   if (!ForReduction && !SLPCostThreshold.getNumOccurrences() &&
-      all_of(VectorizableTree,
+      all_of(VectorizableTree.back(),
              [&](const std::unique_ptr<TreeEntry> &TE) {
                if (!TE->isGather() && TE->hasState() &&
                    (TE->getOpcode() == Instruction::Load ||
@@ -15676,7 +15697,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
                return TE->State == TreeEntry::SplitVectorize ||
                       (TE->Idx == 0 && TE->Scalars.size() == 2 &&
                        TE->hasState() && TE->getOpcode() == Instruction::ICmp &&
-                       VectorizableTree.size() > LimitTreeSize) ||
+                       VectorizableTree.back().size() > LimitTreeSize) ||
                       (TE->isGather() &&
                        none_of(TE->Scalars, IsaPred<ExtractElementInst>)) ||
                       (TE->hasState() &&
@@ -15690,7 +15711,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
                          TE->Scalars.size() == 2)));
              }) &&
       (StoreLoadNodes.empty() ||
-       (VectorizableTree.size() > LimitTreeSize * StoreLoadNodes.size() &&
+       (VectorizableTree.back().size() >
+            LimitTreeSize * StoreLoadNodes.size() &&
         (NumGathers > 0 || none_of(StoreLoadNodes, [&](const TreeEntry *TE) {
            return TE->getOpcode() == Instruction::Store ||
                   all_of(TE->Scalars, [&](Value *V) {
@@ -15703,9 +15725,9 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // If the tree contains only buildvector, 2 non-buildvectors (with root user
   // tree node) and other buildvectors, we can skip it.
   if (!ForReduction && SLPCostThreshold.getNumOccurrences() &&
-      VectorizableTree.front()->State == TreeEntry::SplitVectorize &&
-      VectorizableTree.size() >= Limit &&
-      count_if(ArrayRef(VectorizableTree).drop_front(),
+      VectorizableTree.back().front()->State == TreeEntry::SplitVectorize &&
+      VectorizableTree.back().size() >= Limit &&
+      count_if(ArrayRef(VectorizableTree.back()).drop_front(),
                [&](const std::unique_ptr<TreeEntry> &TE) {
                  return !TE->isGather() && TE->UserTreeIndex.UserTE &&
                         TE->UserTreeIndex.UserTE->Idx == 0;
@@ -15715,19 +15737,20 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // If the tree contains only vectorization of the phi node from the
   // buildvector - skip it.
   if (!ForReduction && SLPCostThreshold.getNumOccurrences() &&
-      VectorizableTree.size() > 2 &&
-      VectorizableTree.front()->State == TreeEntry::Vectorize &&
-      VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
-      VectorizableTree[1]->State == TreeEntry::Vectorize &&
-      VectorizableTree[1]->getOpcode() == Instruction::PHI &&
+      VectorizableTree.back().size() > 2 &&
+      VectorizableTree.back().front()->State == TreeEntry::Vectorize &&
+      VectorizableTree.back().front()->getOpcode() ==
+          Instruction::InsertElement &&
+      VectorizableTree.back()[1]->State == TreeEntry::Vectorize &&
+      VectorizableTree.back()[1]->getOpcode() == Instruction::PHI &&
       all_of(
-          ArrayRef(VectorizableTree).drop_front(2),
+          ArrayRef(VectorizableTree.back()).drop_front(2),
           [&](const std::unique_ptr<TreeEntry> &TE) { return TE->isGather(); }))
     return true;
 
   // We can vectorize the tree if its size is greater than or equal to the
   // minimum size specified by the MinTreeSize command line option.
-  if (VectorizableTree.size() >= MinTreeSize)
+  if (VectorizableTree.back().size() >= MinTreeSize)
     return false;
 
   // If we have a tiny tree (a tree whose size is less than MinTreeSize), we
@@ -15738,13 +15761,16 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // Check if any of the gather node forms an insertelement buildvector
   // somewhere.
   bool IsAllowedSingleBVNode =
-      VectorizableTree.size() > 1 ||
-      (VectorizableTree.size() == 1 && VectorizableTree.front()->hasState() &&
-       !VectorizableTree.front()->isAltShuffle() &&
-       VectorizableTree.front()->getOpcode() != Instruction::PHI &&
-       VectorizableTree.front()->getOpcode() != Instruction::GetElementPtr &&
-       allSameBlock(VectorizableTree.front()->Scalars));
-  if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+      VectorizableTree.back().size() > 1 ||
+      (VectorizableTree.back().size() == 1 &&
+       VectorizableTree.back().front()->hasState() &&
+       !VectorizableTree.back().front()->isAltShuffle() &&
+       VectorizableTree.back().front()->getOpcode() != Instruction::PHI &&
+       VectorizableTree.back().front()->getOpcode() !=
+           Instruction::GetElementPtr &&
+       allSameBlock(VectorizableTree.back().front()->Scalars));
+  if (any_of(VectorizableTree.back(), [&](const std::unique_ptr<TreeEntry>
+                                              &TE) {
         return TE->isGather() && all_of(TE->Scalars, [&](Value *V) {
                  return isa<ExtractElementInst, Constant>(V) ||
                         (IsAllowedSingleBVNode &&
@@ -15754,16 +15780,21 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
       }))
     return false;
 
-  if (VectorizableTree.back()->isGather() &&
-      VectorizableTree.back()->hasState() &&
-      VectorizableTree.back()->isAltShuffle() &&
-      VectorizableTree.back()->getVectorFactor() > 2 &&
-      allSameBlock(VectorizableTree.back()->Scalars) &&
-      !VectorizableTree.back()->Scalars.front()->getType()->isVectorTy() &&
+  if (VectorizableTree.back().back()->isGather() &&
+      VectorizableTree.back().back()->hasState() &&
+      VectorizableTree.back().back()->isAltShuffle() &&
+      VectorizableTree.back().back()->getVectorFactor() > 2 &&
+      allSameBlock(VectorizableTree.back().back()->Scalars) &&
+      !VectorizableTree.back()
+           .back()
+           ->Scalars.front()
+           ->getType()
+           ->isVectorTy() &&
       TTI->getScalarizationOverhead(
-          getWidenedType(VectorizableTree.back()->Scalars.front()->getType(),
-                         VectorizableTree.back()->getVectorFactor()),
-          APInt::getAllOnes(VectorizableTree.back()->getVectorFactor()),
+          getWidenedType(
+              VectorizableTree.back().back()->Scalars.front()->getType(),
+              VectorizableTree.back().back()->getVectorFactor()),
+          APInt::getAllOnes(VectorizableTree.back().back()->getVectorFactor()),
           /*Insert=*/true, /*Extract=*/false,
           TTI::TCK_RecipThroughput) > -SLPCostThreshold)
     return false;
@@ -15776,9 +15807,10 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
 bool BoUpSLP::isTreeNotExtendable() const {
   if (getCanonicalGraphSize() != getTreeSize()) {
     constexpr unsigned SmallTree = 3;
-    if (VectorizableTree.front()->isNonPowOf2Vec() &&
+    if (VectorizableTree.back().front()->isNonPowOf2Vec() &&
         getCanonicalGraphSize() <= SmallTree &&
-        count_if(ArrayRef(VectorizableTree).drop_front(getCanonicalGraphSize()),
+        count_if(ArrayRef(VectorizableTree.back())
+                     .drop_front(getCanonicalGraphSize()),
                  [](const std::unique_ptr<TreeEntry> &TE) {
                    return TE->isGather() && TE->hasState() &&
                           TE->getOpcode() == Instruction::Load &&
@@ -15789,7 +15821,7 @@ bool BoUpSLP::isTreeNotExtendable() const {
   }
   bool Res = false;
   for (unsigned Idx : seq<unsigned>(getTreeSize())) {
-    TreeEntry &E = *VectorizableTree[Idx];
+    TreeEntry &E = *VectorizableTree.back()[Idx];
     if (E.State == TreeEntry::SplitVectorize)
       return false;
     if (!E.isGather())
@@ -15813,7 +15845,7 @@ InstructionCost BoUpSLP::getSpillCost() {
   // query TTI to see if there is a cost to keeping values live over it
   // (for example, if spills and fills are required).
 
-  const TreeEntry *Root = VectorizableTree.front().get();
+  const TreeEntry *Root = VectorizableTree.back().front().get();
   if (Root->isGather())
     return 0;
 
@@ -15822,7 +15854,7 @@ InstructionCost BoUpSLP::getSpillCost() {
       EntriesToOperands;
   SmallDenseMap<const TreeEntry *, Instruction *> EntriesToLastInstruction;
   SmallPtrSet<const Instruction *, 8> LastInstructions;
-  for (const auto &TEPtr : VectorizableTree) {
+  for (const auto &TEPtr : VectorizableTree.back()) {
     if (!TEPtr->isGather()) {
       Instruction *LastInst = &getLastInstructionInBundle(TEPtr.get());
       EntriesToLastInstruction.try_emplace(TEPtr.get(), LastInst);
@@ -15853,7 +15885,7 @@ InstructionCost BoUpSLP::getSpillCost() {
       CheckedInstructions;
   unsigned Budget = 0;
   const unsigned BudgetLimit =
-      ScheduleRegionSizeBudget / VectorizableTree.size();
+      ScheduleRegionSizeBudget / VectorizableTree.back().size();
   auto CheckForNonVecCallsInSameBlock = [&](Instruction *First,
                                             const Instruction *Last) {
     assert(First->getParent() == Last->getParent() &&
@@ -16204,11 +16236,11 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
                                      InstructionCost ReductionCost) {
   InstructionCost Cost = ReductionCost;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
-                    << VectorizableTree.size() << ".\n");
+                    << VectorizableTree.back().size() << ".\n");
 
   SmallPtrSet<Value *, 4> CheckedExtracts;
-  for (unsigned I = 0, E = VectorizableTree.size(); I < E; ++I) {
-    TreeEntry &TE = *VectorizableTree[I];
+  for (unsigned I = 0, E = VectorizableTree.back().size(); I < E; ++I) {
+    TreeEntry &TE = *VectorizableTree.back()[I];
     // No need to count the cost for combined entries, they are combined and
     // just skip their cost.
     if (TE.State == TreeEntry::CombinedVectorize) {
@@ -16464,21 +16496,23 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
         // block as the root phis, currently vectorized. It allows to keep
         // better ordering info of PHIs, being vectorized currently.
         bool IsProfitablePHIUser =
-            (KeepScalar || (ScalarCost - ExtraCost <= TTI::TCC_Basic &&
-                            VectorizableTree.front()->Scalars.size() > 2)) &&
-            VectorizableTree.front()->hasState() &&
-            VectorizableTree.front()->getOpcode() == Instruction::PHI &&
+            (KeepScalar ||
+             (ScalarCost - ExtraCost <= TTI::TCC_Basic &&
+              VectorizableTree.back().front()->Scalars.size() > 2)) &&
+            VectorizableTree.back().front()->hasState() &&
+            VectorizableTree.back().front()->getOpcode() == Instruction::PHI &&
             !Inst->hasNUsesOrMore(UsesLimit) &&
-            none_of(Inst->users(),
-                    [&](User *U) {
-                      auto *PHIUser = dyn_cast<PHINode>(U);
-                      return (!PHIUser ||
-                              PHIUser->getParent() !=
-                                  cast<Instruction>(
-                                      VectorizableTree.front()->getMainOp())
-                                      ->getParent()) &&
-                             !isVectorized(U);
-                    }) &&
+            none_of(
+                Inst->users(),
+                [&](User *U) {
+                  auto *PHIUser = dyn_cast<PHINode>(U);
+                  return (!PHIUser ||
+                          PHIUser->getParent() !=
+                              cast<Instruction>(
+                                  VectorizableTree.back().front()->getMainOp())
+                                  ->getParent()) &&
+                         !isVectorized(U);
+                }) &&
             count_if(Entry->Scalars, [&](Value *V) {
               return ValueToExtUses->contains(V);
             }) <= 2;
@@ -16546,7 +16580,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   }
   // Add reduced value cost, if resized.
   if (!VectorizedVals.empty()) {
-    const TreeEntry &Root = *VectorizableTree.front();
+    const TreeEntry &Root = *VectorizableTree.back().front();
     auto BWIt = MinBWs.find(&Root);
     if (BWIt != MinBWs.end()) {
       Type *DstTy = Root.Scalars.front()->getType();
@@ -16679,7 +16713,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   // Add the cost for reduced value resize (if required).
   if (ReductionBitWidth != 0) {
     assert(UserIgnoreList && "Expected reduction tree.");
-    const TreeEntry &E = *VectorizableTree.front();
+    const TreeEntry &E = *VectorizableTree.back().front();
     auto It = MinBWs.find(&E);
     if (It != MinBWs.end() && It->second.first != ReductionBitWidth) {
       unsigned SrcSize = It->second.first;
@@ -16898,7 +16932,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   auto GetUserEntry = [&](const TreeEntry *TE) {
     while (TE->UserTreeIndex && TE->UserTreeIndex.EdgeIdx == UINT_MAX)
       TE = TE->UserTreeIndex.UserTE;
-    if (TE == VectorizableTree.front().get())
+    if (TE == VectorizableTree.back().front().get())
       return EdgeInfo(const_cast<TreeEntry *>(TE), 0);
     return TE->UserTreeIndex;
   };
@@ -17556,9 +17590,9 @@ BoUpSLP::isGatherShuffledEntry(
          "Expected positive number of registers.");
   Entries.clear();
   // No need to check for the topmost gather node.
-  if (TE == VectorizableTree.front().get() &&
+  if (TE == VectorizableTree.back().front().get() &&
       (!GatheredLoadsEntriesFirst.has_value() ||
-       none_of(ArrayRef(VectorizableTree).drop_front(),
+       none_of(ArrayRef(VectorizableTree.back()).drop_front(),
                [](const std::unique_ptr<TreeEntry> &TE) {
                  return !TE->isGather();
                })))
@@ -17568,7 +17602,7 @@ BoUpSLP::isGatherShuffledEntry(
   if (TE->hasNonWholeRegisterOrNonPowerOf2Vec(*TTI))
     return {};
   Mask.assign(VL.size(), PoisonMaskElem);
-  assert((TE->UserTreeIndex || TE == VectorizableTree.front().get()) &&
+  assert((TE->UserTreeIndex || TE == VectorizableTree.back().front().get()) &&
          "Expected only single user of the gather node.");
   assert(VL.size() % NumParts == 0 &&
          "Number of scalars must be divisible by NumParts.");
@@ -18073,9 +18107,10 @@ Value *BoUpSLP::gather(
       Vec = CreateShuffle(Root, Vec, Mask);
       if (auto *OI = dyn_cast<Instruction>(OriginalRoot);
           OI && OI->use_empty() &&
-          none_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
-            return TE->VectorizedValue == OI;
-          }))
+          none_of(VectorizableTree.back(),
+                  [&](const std::unique_ptr<TreeEntry> &TE) {
+                    return TE->VectorizedValue == OI;
+                  }))
         eraseInstruction(OI);
     }
   }
@@ -18300,7 +18335,7 @@ public:
                    (isa<GetElementPtrInst>(U) &&
                     !R.areAllUsersVectorized(cast<Instruction>(U))) ||
                    (!UTEs.empty() &&
-                    count_if(R.VectorizableTree,
+                    count_if(R.VectorizableTree.back(),
                              [&](const std::unique_ptr<TreeEntry> &TE) {
                                return TE->UserTreeIndex.UserTE ==
                                           UTEs.front() &&
@@ -18669,14 +18704,14 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   // Clear values, to be replaced by insertvector instructions.
   for (auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
     for_each(MutableArrayRef(GatheredScalars)
-                 .slice(Idx, VectorizableTree[EIdx]->getVectorFactor()),
+                 .slice(Idx, VectorizableTree.back()[EIdx]->getVectorFactor()),
              [&](Value *&V) { V = PoisonValue::get(V->getType()); });
   SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
       E->CombinedEntriesWithIndices.size());
-  transform(E->CombinedEntriesWithIndices, SubVectors.begin(),
-            [&](const auto &P) {
-              return std::make_pair(VectorizableTree[P.first].get(), P.second);
-            });
+  transform(
+      E->CombinedEntriesWithIndices, SubVectors.begin(), [&](const auto &P) {
+        return std::make_pair(VectorizableTree.back()[P.first].get(), P.second);
+      });
   // Build a mask out of the reorder indices and reorder scalars per this
   // mask.
   SmallVector<int> ReorderMask(E->ReorderIndices.begin(),
@@ -18707,12 +18742,13 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     if (UserTE->getNumOperands() != 2)
       return false;
     if (!IsNotPoisonous) {
-      auto *It = find_if(ArrayRef(VectorizableTree).drop_front(UserTE->Idx + 1),
-                         [=](const std::unique_ptr<TreeEntry> &TE) {
-                           return TE->UserTreeIndex.UserTE == UserTE &&
-                                  TE->UserTreeIndex.EdgeIdx != EdgeIdx;
-                         });
-      if (It == VectorizableTree.end())
+      auto *It =
+          find_if(ArrayRef(VectorizableTree.back()).drop_front(UserTE->Idx + 1),
+                  [=](const std::unique_ptr<TreeEntry> &TE) {
+                    return TE->UserTreeIndex.UserTE == UserTE &&
+                           TE->UserTreeIndex.EdgeIdx != EdgeIdx;
+                  });
+      if (It == VectorizableTree.back().end())
         return false;
       SmallVector<Value *> GS((*It)->Scalars.begin(), (*It)->Scalars.end());
       if (!(*It)->ReorderIndices.empty()) {
@@ -19208,7 +19244,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
 
 Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
   for (auto [EIdx, _] : E->CombinedEntriesWithIndices)
-    (void)vectorizeTree(VectorizableTree[EIdx].get());
+    (void)vectorizeTree(VectorizableTree.back()[EIdx].get());
   return processBuildVector<ShuffleInstructionBuilder, Value *>(E, ScalarTy,
                                                                 Builder, *this);
 }
@@ -19259,13 +19295,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            "Expected exactly 2 combined entries.");
     setInsertPointAfterBundle(E);
     TreeEntry &OpTE1 =
-        *VectorizableTree[E->CombinedEntriesWithIndices.front().first];
+        *VectorizableTree.back()[E->CombinedEntriesWithIndices.front().first];
     assert(OpTE1.isSame(
                ArrayRef(E->Scalars).take_front(OpTE1.getVectorFactor())) &&
            "Expected same first part of scalars.");
     Value *Op1 = vectorizeTree(&OpTE1);
     TreeEntry &OpTE2 =
-        *VectorizableTree[E->CombinedEntriesWithIndices.back().first];
+        *VectorizableTree.back()[E->CombinedEntriesWithIndices.back().first];
     assert(
         OpTE2.isSame(ArrayRef(E->Scalars).take_back(OpTE2.getVectorFactor())) &&
         "Expected same second part of scalars.");
@@ -19358,10 +19394,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
         E->CombinedEntriesWithIndices.size());
-    transform(
-        E->CombinedEntriesWithIndices, SubVectors.begin(), [&](const auto &P) {
-          return std::make_pair(VectorizableTree[P.first].get(), P.second);
-        });
+    transform(E->CombinedEntriesWithIndices, SubVectors.begin(),
+              [&](const auto &P) {
+                return std::make_pair(VectorizableTree.back()[P.first].get(),
+                                      P.second);
+              });
     assert(
         (E->CombinedEntriesWithIndices.empty() || E->ReorderIndices.empty()) &&
         "Expected either combined subnodes or reordering");
@@ -19389,7 +19426,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   switch (ShuffleOrOp) {
     case Instruction::PHI: {
       assert((E->ReorderIndices.empty() || !E->ReuseShuffleIndices.empty() ||
-              E != VectorizableTree.front().get() || E->UserTreeIndex) &&
+              E != VectorizableTree.back().front().get() || E->UserTreeIndex) &&
              "PHI reordering is free.");
       auto *PH = cast<PHINode>(VL0);
       Builder.SetInsertPoint(PH->getParent(),
@@ -20321,7 +20358,7 @@ Value *BoUpSLP::vectorizeTree(
     scheduleBlock(*this, BSIter.second.get());
   // Cache last instructions for the nodes to avoid side effects, which may
   // appear during vectorization, like extra uses, etc.
-  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree.back()) {
     if (TE->isGather())
       continue;
     (void)getLastInstructionInBundle(TE.get());
@@ -20335,7 +20372,7 @@ Value *BoUpSLP::vectorizeTree(
 
   // Vectorize gather operands of the nodes with the external uses only.
   SmallVector<std::pair<TreeEntry *, Instruction *>> GatherEntries;
-  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree.back()) {
     if (TE->isGather() && !TE->VectorizedValue && TE->UserTreeIndex.UserTE &&
         TE->UserTreeIndex.UserTE->hasState() &&
         TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
@@ -20357,7 +20394,7 @@ Value *BoUpSLP::vectorizeTree(
   }
   // Emit gathered loads first to emit better code for the users of those
   // gathered loads.
-  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree.back()) {
     if (GatheredLoadsEntriesFirst.has_value() &&
         TE->Idx >= *GatheredLoadsEntriesFirst && !TE->VectorizedValue &&
         (!TE->isGather() || TE->UserTreeIndex)) {
@@ -20367,7 +20404,7 @@ Value *BoUpSLP::vectorizeTree(
       (void)vectorizeTree(TE.get());
     }
   }
-  (void)vectorizeTree(VectorizableTree[0].get());
+  (void)vectorizeTree(VectorizableTree.back()[0].get());
   // Run through the list of postponed gathers and emit them, replacing the temp
   // emitted allocas with actual vector instructions.
   ArrayRef<const TreeEntry *> PostponedNodes = PostponedGathers.getArrayRef();
@@ -20867,7 +20904,7 @@ Value *BoUpSLP::vectorizeTree(
 
   SmallVector<Instruction *> RemovedInsts;
   // For each vectorized value:
-  for (auto &TEPtr : VectorizableTree) {
+  for (auto &TEPtr : VectorizableTree.back()) {
     TreeEntry *Entry = TEPtr.get();
 
     // No need to handle users of gathered values.
@@ -20911,7 +20948,8 @@ Value *BoUpSLP::vectorizeTree(
 
   // Merge the DIAssignIDs from the about-to-be-deleted instructions into the
   // new vector instruction.
-  if (auto *V = dyn_cast<Instruction>(VectorizableTree[0]->VectorizedValue))
+  if (auto *V =
+          dyn_cast<Instruction>(VectorizableTree.back()[0]->VectorizedValue))
     V->mergeDIAssignID(RemovedInsts);
 
   // Clear up reduction references, if any.
@@ -20919,20 +20957,22 @@ Value *BoUpSLP::vectorizeTree(
     for (Instruction *I : RemovedInsts) {
       const TreeEntry *IE = getTreeEntries(I).front();
       if (IE->Idx != 0 &&
-          !(VectorizableTree.front()->isGather() && IE->UserTreeIndex &&
+          !(VectorizableTree.back().front()->isGather() && IE->UserTreeIndex &&
             (ValueToGatherNodes.lookup(I).contains(
-                 VectorizableTree.front().get()) ||
-             (IE->UserTreeIndex.UserTE == VectorizableTree.front().get() &&
+                 VectorizableTree.back().front().get()) ||
+             (IE->UserTreeIndex.UserTE ==
+                  VectorizableTree.back().front().get() &&
               IE->UserTreeIndex.EdgeIdx == UINT_MAX))) &&
-          !(VectorizableTree.front()->State == TreeEntry::SplitVectorize &&
+          !(VectorizableTree.back().front()->State ==
+                TreeEntry::SplitVectorize &&
             IE->UserTreeIndex &&
-            is_contained(VectorizableTree.front()->Scalars, I)) &&
+            is_contained(VectorizableTree.back().front()->Scalars, I)) &&
           !(GatheredLoadsEntriesFirst.has_value() &&
             IE->Idx >= *GatheredLoadsEntriesFirst &&
-            VectorizableTree.front()->isGather() &&
-            is_contained(VectorizableTree.front()->Scalars, I)) &&
-          !(!VectorizableTree.front()->isGather() &&
-            VectorizableTree.front()->isCopyableElement(I)))
+            VectorizableTree.back().front()->isGather() &&
+            is_contained(VectorizableTree.back().front()->Scalars, I)) &&
+          !(!VectorizableTree.back().front()->isGather() &&
+            VectorizableTree.back().front()->isCopyableElement(I)))
         continue;
       SmallVector<SelectInst *> LogicalOpSelects;
       I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
@@ -20962,7 +21002,7 @@ Value *BoUpSLP::vectorizeTree(
   Builder.ClearInsertionPoint();
   InstrElementSize.clear();
 
-  const TreeEntry &RootTE = *VectorizableTree.front();
+  const TreeEntry &RootTE = *VectorizableTree.back().front();
   Value *Vec = RootTE.VectorizedValue;
   if (auto It = MinBWs.find(&RootTE); ReductionBitWidth != 0 &&
                                       It != MinBWs.end() &&
@@ -22400,8 +22440,10 @@ bool BoUpSLP::collectValuesToDemote(
   if (E.State == TreeEntry::SplitVectorize)
     return TryProcessInstruction(
         BitWidth,
-        {VectorizableTree[E.CombinedEntriesWithIndices.front().first].get(),
-         VectorizableTree[E.CombinedEntriesWithIndices.back().first].get()});
+        {VectorizableTree.back()[E.CombinedEntriesWithIndices.front().first]
+             .get(),
+         VectorizableTree.back()[E.CombinedEntriesWithIndices.back().first]
+             .get()});
 
   if (E.isAltShuffle()) {
     // Combining these opcodes may lead to incorrect analysis, skip for now.
@@ -22644,9 +22686,10 @@ static RecurKind getRdxKind(Value *V);
 void BoUpSLP::computeMinimumValueSizes() {
   // We only attempt to truncate integer expressions.
   bool IsStoreOrInsertElt =
-      VectorizableTree.front()->hasState() &&
-      (VectorizableTree.front()->getOpcode() == Instruction::Store ||
-       VectorizableTree.front()->getOpcode() == Instruction::InsertElement);
+      VectorizableTree.back().front()->hasState() &&
+      (VectorizableTree.back().front()->getOpcode() == Instruction::Store ||
+       VectorizableTree.back().front()->getOpcode() ==
+           Instruction::InsertElement);
   if ((IsStoreOrInsertElt || UserIgnoreList) &&
       ExtraBitWidthNodes.size() <= 1 &&
       (!CastMaxMinBWSizes || CastMaxMinBWSizes->second == 0 ||
@@ -22654,12 +22697,12 @@ void BoUpSLP::computeMinimumValueSizes() {
     return;
 
   unsigned NodeIdx = 0;
-  if (IsStoreOrInsertElt && !VectorizableTree.front()->isGather())
+  if (IsStoreOrInsertElt && !VectorizableTree.back().front()->isGather())
     NodeIdx = 1;
 
   // Ensure the roots of the vectorizable tree don't form a cycle.
-  assert((VectorizableTree[NodeIdx]->isGather() || NodeIdx != 0 ||
-          !VectorizableTree[NodeIdx]->UserTreeIndex) &&
+  assert((VectorizableTree.back()[NodeIdx]->isGather() || NodeIdx != 0 ||
+          !VectorizableTree.back()[NodeIdx]->UserTreeIndex) &&
          "Unexpected tree is graph.");
 
   // The first value node for store/insertelement is sext/zext/trunc? Skip it,
@@ -22669,8 +22712,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   SmallVector<unsigned> RootDemotes;
   SmallDenseSet<unsigned, 8> NodesToKeepBWs;
   if (NodeIdx != 0 &&
-      VectorizableTree[NodeIdx]->State == TreeEntry::Vectorize &&
-      VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc) {
+      VectorizableTree.back()[NodeIdx]->State == TreeEntry::Vectorize &&
+      VectorizableTree.back()[NodeIdx]->getOpcode() == Instruction::Trunc) {
     assert(IsStoreOrInsertElt && "Expected store/insertelement seeded graph.");
     IsTruncRoot = true;
     RootDemotes.push_back(NodeIdx);
@@ -22679,7 +22722,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   }
 
   // Analyzed the reduction already and not profitable - exit.
-  if (AnalyzedMinBWVals.contains(VectorizableTree[NodeIdx]->Scalars.front()))
+  if (AnalyzedMinBWVals.contains(
+          VectorizableTree.back()[NodeIdx]->Scalars.front()))
     return;
 
   SmallVector<unsigned> ToDemote;
@@ -22859,7 +22903,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   // modify.
   // Add reduction ops sizes, if any.
   if (UserIgnoreList &&
-      isa<IntegerType>(VectorizableTree.front()->Scalars.front()->getType())) {
+      isa<IntegerType>(
+          VectorizableTree.back().front()->Scalars.front()->getType())) {
     // Convert vector_reduce_add(ZExt(<n x i1>)) to ZExtOrTrunc(ctpop(bitcast <n
     // x i1> to in)).
     if (all_of(*UserIgnoreList,
@@ -22867,10 +22912,10 @@ void BoUpSLP::computeMinimumValueSizes() {
                  return isa<PoisonValue>(V) ||
                         cast<Instruction>(V)->getOpcode() == Instruction::Add;
                }) &&
-        VectorizableTree.front()->State == TreeEntry::Vectorize &&
-        VectorizableTree.front()->getOpcode() == Instruction::ZExt &&
-        cast<CastInst>(VectorizableTree.front()->getMainOp())->getSrcTy() ==
-            Builder.getInt1Ty()) {
+        VectorizableTree.back().front()->State == TreeEntry::Vectorize &&
+        VectorizableTree.back().front()->getOpcode() == Instruction::ZExt &&
+        cast<CastInst>(VectorizableTree.back().front()->getMainOp())
+                ->getSrcTy() == Builder.getInt1Ty()) {
       ReductionBitWidth = 1;
     } else {
       for (Value *V : *UserIgnoreList) {
@@ -22896,9 +22941,9 @@ void BoUpSLP::computeMinimumValueSizes() {
     }
   }
   bool IsTopRoot = NodeIdx == 0;
-  while (NodeIdx < VectorizableTree.size() &&
-         VectorizableTree[NodeIdx]->State == TreeEntry::Vectorize &&
-         VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc) {
+  while (NodeIdx < VectorizableTree.back().size() &&
+         VectorizableTree.back()[NodeIdx]->State == TreeEntry::Vectorize &&
+         VectorizableTree.back()[NodeIdx]->getOpcode() == Instruction::Trunc) {
     RootDemotes.push_back(NodeIdx);
     ++NodeIdx;
     IsTruncRoot = true;
@@ -22909,17 +22954,17 @@ void BoUpSLP::computeMinimumValueSizes() {
              match_fn(m_CombineOr(m_SMin(m_Value(), m_Value()),
                                   m_SMax(m_Value(), m_Value())))))
     IsSignedCmp = true;
-  while (NodeIdx < VectorizableTree.size()) {
-    ArrayRef<Value *> TreeRoot = VectorizableTree[NodeIdx]->Scalars;
+  while (NodeIdx < VectorizableTree.back().size()) {
+    ArrayRef<Value *> TreeRoot = VectorizableTree.back()[NodeIdx]->Scalars;
     unsigned Limit = 2;
     if (IsTopRoot &&
         ReductionBitWidth ==
             DL->getTypeSizeInBits(
-                VectorizableTree.front()->Scalars.front()->getType()))
+                VectorizableTree.back().front()->Scalars.front()->getType()))
       Limit = 3;
     unsigned MaxBitWidth = ComputeMaxBitWidth(
-        *VectorizableTree[NodeIdx], IsTopRoot, IsProfitableToDemoteRoot, Limit,
-        IsTruncRoot, IsSignedCmp);
+        *VectorizableTree.back()[NodeIdx], IsTopRoot, IsProfitableToDemoteRoot,
+        Limit, IsTruncRoot, IsSignedCmp);
     if (ReductionBitWidth != 0 && (IsTopRoot || !RootDemotes.empty())) {
       if (MaxBitWidth != 0 && ReductionBitWidth < MaxBitWidth)
         ReductionBitWidth = bit_ceil(MaxBitWidth);
@@ -22928,7 +22973,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     }
 
     for (unsigned Idx : RootDemotes) {
-      if (all_of(VectorizableTree[Idx]->Scalars, [&](Value *V) {
+      if (all_of(VectorizableTree.back()[Idx]->Scalars, [&](Value *V) {
             uint32_t OrigBitWidth =
                 DL->getTypeSizeInBits(V->getType()->getScalarType());
             if (OrigBitWidth > MaxBitWidth) {
@@ -22944,7 +22989,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     IsProfitableToDemoteRoot = true;
 
     if (ExtraBitWidthNodes.empty()) {
-      NodeIdx = VectorizableTree.size();
+      NodeIdx = VectorizableTree.back().size();
     } else {
       unsigned NewIdx = 0;
       do {
@@ -22953,21 +22998,22 @@ void BoUpSLP::computeMinimumValueSizes() {
       } while (NewIdx <= NodeIdx && !ExtraBitWidthNodes.empty());
       NodeIdx = NewIdx;
       IsTruncRoot =
-          NodeIdx < VectorizableTree.size() &&
-          VectorizableTree[NodeIdx]->UserTreeIndex &&
-          VectorizableTree[NodeIdx]->UserTreeIndex.EdgeIdx == 0 &&
-          VectorizableTree[NodeIdx]->UserTreeIndex.UserTE->hasState() &&
-          VectorizableTree[NodeIdx]->UserTreeIndex.UserTE->getOpcode() ==
+          NodeIdx < VectorizableTree.back().size() &&
+          VectorizableTree.back()[NodeIdx]->UserTreeIndex &&
+          VectorizableTree.back()[NodeIdx]->UserTreeIndex.EdgeIdx == 0 &&
+          VectorizableTree.back()[NodeIdx]->UserTreeIndex.UserTE->hasState() &&
+          VectorizableTree.back()[NodeIdx]->UserTreeIndex.UserTE->getOpcode() ==
               Instruction::Trunc &&
-          !VectorizableTree[NodeIdx]->UserTreeIndex.UserTE->isAltShuffle();
+          !VectorizableTree.back()[NodeIdx]
+               ->UserTreeIndex.UserTE->isAltShuffle();
       IsSignedCmp =
-          NodeIdx < VectorizableTree.size() &&
-          VectorizableTree[NodeIdx]->UserTreeIndex &&
-          VectorizableTree[NodeIdx]->UserTreeIndex.UserTE->hasState() &&
-          VectorizableTree[NodeIdx]->UserTreeIndex.UserTE->getOpcode() ==
+          NodeIdx < VectorizableTree.back().size() &&
+          VectorizableTree.back()[NodeIdx]->UserTreeIndex &&
+          VectorizableTree.back()[NodeIdx]->UserTreeIndex.UserTE->hasState() &&
+          VectorizableTree.back()[NodeIdx]->UserTreeIndex.UserTE->getOpcode() ==
               Instruction::ICmp &&
           any_of(
-              VectorizableTree[NodeIdx]->UserTreeIndex.UserTE->Scalars,
+              VectorizableTree.back()[NodeIdx]->UserTreeIndex.UserTE->Scalars,
               [&](Value *V) {
                 auto *IC = dyn_cast<ICmpInst>(V);
                 return IC && (IC->isSigned() ||
@@ -22993,7 +23039,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     // Finally, map the values we can demote to the maximum bit with we
     // computed.
     for (unsigned Idx : ToDemote) {
-      TreeEntry *TE = VectorizableTree[Idx].get();
+      TreeEntry *TE = VectorizableTree.back()[Idx].get();
       if (MinBWs.contains(TE))
         continue;
       bool IsSigned = any_of(TE->Scalars, [&](Value *R) {
