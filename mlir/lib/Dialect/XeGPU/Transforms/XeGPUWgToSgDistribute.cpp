@@ -425,10 +425,11 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
     if (resultTy.getRank() != 2)
       return failure();
 
-    auto originalLayout = xegpu::getDistributeLayoutAttr(op.getResult());
-    if (!originalLayout)
+    auto layoutCd = op.getLayoutCdAttr();
+    auto layoutA = op.getLayoutAAttr();
+    auto layoutB = op.getLayoutBAttr();
+    if (!layoutCd || !layoutA || !layoutB)
       return failure();
-
     size_t i = 0;
     SmallVector<Value> newDpasOps;
     for (auto aVec : adaptor.getLhs()) {
@@ -447,11 +448,12 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
             llvm::cast<VectorType>(bVec.getType()).getShape();
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
-        tmpC = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
-        xegpu::setDistributeLayoutAttr(cast<OpResult>(tmpC),
-                                       originalLayout.dropSgLayoutAndData());
+        auto newDpasOp = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
+        newDpasOp.setLayoutCdAttr(layoutCd.dropSgLayoutAndData());
+        newDpasOp.setLayoutAAttr(layoutA.dropSgLayoutAndData());
+        newDpasOp.setLayoutBAttr(layoutB.dropSgLayoutAndData());
 
-        newDpasOps.push_back(tmpC);
+        newDpasOps.push_back(newDpasOp);
       }
     }
     rewriter.replaceOpWithMultiple(op, {newDpasOps});

@@ -95,9 +95,11 @@ gpu.module @test_1_1_assignment {
       -> !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], lane_layout = [1, 16], lane_data = [2, 1]>>
     %load_b =  xegpu.load_nd %tdesc_b {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], lane_layout = [1, 16], lane_data = [2, 1]>} : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], lane_layout = [1, 16], lane_data = [2, 1]>>
       -> vector<128x128xf16>
-    // CHECK: %[[DPAS:.*]] = xegpu.dpas %{{.*}}, %{{.*}} {layout_cd =  #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x128xf16>, vector<128x16xf16> -> vector<16x16xf32>
+    // CHECK: %[[DPAS:.*]] = xegpu.dpas %{{.*}}, %{{.*}} {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x128xf16>, vector<128x16xf16> -> vector<16x16xf32>
     %dpas = xegpu.dpas %load_a, %load_b
-      {layout_cd =  #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>}
+      {layout_a = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 1]>,
+       layout_b = #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], lane_layout = [1, 16], lane_data = [2, 1]>,
+       layout_cd =  #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>}
       : vector<128x128xf16>, vector<128x128xf16> -> vector<128x128xf32>
     gpu.return
   }
@@ -116,9 +118,11 @@ gpu.module @test_1_1_assignment {
     %load_b =  xegpu.load_nd %tdesc_b {layout = #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [2, 1], order = [1, 0]>} : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [2, 1],
       order = [1, 0]>>
       -> vector<128x128xf16>
-    // CHECK: %[[DPAS:.*]] = xegpu.dpas %{{.*}}, %{{.*}} {layout_cd =  #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>} : vector<16x16xf16>, vector<16x16xf16> -> vector<16x16xf32>
+    // CHECK: %[[DPAS:.*]] = xegpu.dpas %{{.*}}, %{{.*}} {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1], order = [1, 0]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>} : vector<16x16xf16>, vector<16x16xf16> -> vector<16x16xf32>
     %dpas = xegpu.dpas %load_a, %load_b
-      {layout_cd =  #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>}
+      {layout_a = #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>,
+       layout_b = #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [2, 1], order = [1, 0]>,
+       layout_cd =  #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>}
       : vector<128x128xf16>, vector<128x128xf16> -> vector<128x128xf32>
     gpu.return
   }
@@ -141,7 +145,9 @@ gpu.module @test_1_1_assignment {
   gpu.func @dpas_with_no_create_nd_desc(%a: vector<256x128xf32>, %b: vector<128x256xf32>) {
     // CHECK-NOT: vector<32x32xf32>
     %dpas = xegpu.dpas %a, %b
-      {layout =  #xegpu.layout<sg_layout = [2, 2], sg_data = [12, 12], lane_layout = [2, 2], lane_data = [1, 1]>}
+      {layout_a = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], inst_data=[8, 8], lane_layout = [2, 8], lane_data = [1, 1]>,
+       layout_b = #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], inst_data=[8, 16], lane_layout = [1, 16], lane_data = [1, 1]>,
+       layout_cd =  #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16], inst_data=[8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}
       : vector<256x128xf32>, vector<128x256xf32> -> vector<256x256xf32>
     gpu.return
   }
@@ -207,8 +213,11 @@ gpu.module @test_1_1_assignment {
         -> (!xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128]>>, !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16]>>, vector<128x128xf32>) {
       %8 = xegpu.load_nd %arg4 {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128]>} : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128]>> -> vector<128x128xf16>
       %9 = xegpu.load_nd %arg5 {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16]>} : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16]>> -> vector<128x128xf16>
-      %10 = xegpu.dpas %8, %9, %arg6 {layout_cd = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>}
-                          : vector<128x128xf16>, vector<128x128xf16>, vector<128x128xf32> -> vector<128x128xf32>
+      %10 = xegpu.dpas %8, %9, %arg6 
+        {layout_a = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128]>,
+         layout_b = #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16]>,
+         layout_cd = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>}
+        : vector<128x128xf16>, vector<128x128xf16>, vector<128x128xf32> -> vector<128x128xf32>
       %11 = xegpu.update_nd_offset %arg4, [%c0, %c128] : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128]>>
       %12 = xegpu.update_nd_offset %arg5, [%c128, %c0] : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16]>>
       scf.yield %11, %12, %10 : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128]>>,
