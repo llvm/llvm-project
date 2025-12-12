@@ -180,6 +180,7 @@ struct MissingFeatures {
   static bool atomicInfoGetAtomicAddress() { return false; }
   static bool atomicScope() { return false; }
   static bool atomicSyncScopeID() { return false; }
+  static bool atomicMapTargetSyncScope() { return false; }
   static bool atomicTypes() { return false; }
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
@@ -188,6 +189,10 @@ struct MissingFeatures {
   // Global ctor handling
   static bool globalCtorLexOrder() { return false; }
   static bool globalCtorAssociatedData() { return false; }
+
+  // LowerModule handling
+  static bool lowerModuleCodeGenOpts() { return false; }
+  static bool lowerModuleLangOpts() { return false; }
 
   // Misc
   static bool aarch64SIMDIntrinsics() { return false; }
@@ -227,7 +232,6 @@ struct MissingFeatures {
   static bool countedBySize() { return false; }
   static bool cgFPOptionsRAII() { return false; }
   static bool checkBitfieldClipping() { return false; }
-  static bool cleanupDestroyNRVOVariable() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cleanupAppendInsts() { return false; }
@@ -255,7 +259,7 @@ struct MissingFeatures {
   static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
-  static bool ehCleanupFlags() { return false; }
+  static bool ehCleanupActiveFlag() { return false; }
   static bool ehCleanupHasPrebranchedFallthrough() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
@@ -293,6 +297,7 @@ struct MissingFeatures {
   static bool lowerModeOptLevel() { return false; }
   static bool loweringPrepareX86CXXABI() { return false; }
   static bool loweringPrepareAArch64XXABI() { return false; }
+  static bool makeTripleAlwaysPresent() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
   static bool metaDataNode() { return false; }
@@ -335,6 +340,7 @@ struct MissingFeatures {
   static bool thunks() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool typeChecks() { return false; }
+  static bool useEHCleanupForArray() { return false; }
   static bool vaArgABILowering() { return false; }
   static bool vectorConstants() { return false; }
   static bool vlas() { return false; }
@@ -374,6 +380,9 @@ struct MissingFeatures {
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }
+
+  // Maybe only needed for Windows exception handling
+  static bool currentFuncletPad() { return false; }
 };
 
 } // namespace cir
