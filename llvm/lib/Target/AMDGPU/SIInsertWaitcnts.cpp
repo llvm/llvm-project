@@ -605,6 +605,7 @@ public:
   std::optional<unsigned> getOptimalDSWaitCount(MachineBasicBlock *LoopHeader,
                                                 const MachineInstr &MI) const;
   bool applyDSLoopWaitOpt(MachineInstr &MI, AMDGPU::Waitcnt &Wait);
+  bool insertDSPreheaderFlushes(MachineFunction &MF);
 };
 
 // This objects maintains the current score brackets of each wait counter, and
@@ -2904,6 +2905,68 @@ bool SIInsertWaitcnts::applyDSLoopWaitOpt(MachineInstr &MI,
   return true;
 }
 
+// Insert DS_CNT flush in preheaders of loops where DS wait relaxation was
+// applied. This is necessary because the relaxed wait counts inside the loop
+// are computed based on the DS loads issued at the end of the previous
+// iteration (via backedge), but the first iteration enters via the preheader.
+// We must ensure all DS loads from the preheader are complete before entering
+// the loop.
+bool SIInsertWaitcnts::insertDSPreheaderFlushes(MachineFunction &MF) {
+  bool Modified = false;
+
+  for (auto &[LoopHeader, Info] : LoopDSWaitOptCache) {
+    if (!Info.Valid || !Info.RelaxationApplied)
+      continue;
+
+    MachineLoop *ML = MLI->getLoopFor(LoopHeader);
+    if (!ML)
+      continue;
+
+    MachineBasicBlock *Preheader = ML->getLoopPreheader();
+    if (!Preheader)
+      continue;
+
+    // Insert s_wait_dscnt 0 at the end of the preheader (before the terminator)
+    MachineBasicBlock::iterator InsertPos = Preheader->getFirstTerminator();
+    if (InsertPos == Preheader->end() && !Preheader->empty())
+      InsertPos = std::prev(Preheader->end());
+
+    // Check if there's already a DS wait at this position
+    bool NeedInsert = true;
+    if (InsertPos != Preheader->end() && InsertPos != Preheader->begin()) {
+      auto CheckPos = std::prev(InsertPos);
+      if (CheckPos->getOpcode() == AMDGPU::S_WAIT_DSCNT_soft ||
+          CheckPos->getOpcode() == AMDGPU::S_WAIT_DSCNT) {
+        if (CheckPos->getOperand(0).getImm() == 0)
+          NeedInsert = false;
+        else {
+          // Change existing wait to 0
+          CheckPos->getOperand(0).setImm(0);
+          NeedInsert = false;
+          Modified = true;
+          LLVM_DEBUG(dbgs() << "DS Loop Opt: Changed existing DS_CNT wait to 0"
+                            << " in preheader ";
+                     Preheader->printName(dbgs()); dbgs() << "\n");
+        }
+      }
+    }
+
+    if (NeedInsert) {
+      DebugLoc DL;
+      if (InsertPos != Preheader->end())
+        DL = InsertPos->getDebugLoc();
+      BuildMI(*Preheader, InsertPos, DL, TII->get(AMDGPU::S_WAIT_DSCNT_soft))
+          .addImm(0);
+      Modified = true;
+      LLVM_DEBUG(dbgs() << "DS Loop Opt: Inserted DS_CNT flush in preheader ";
+                 Preheader->printName(dbgs()); dbgs() << " for loop at ";
+                 LoopHeader->printName(dbgs()); dbgs() << "\n");
+    }
+  }
+
+  return Modified;
+}
+
 // Return true if it is better to flush the vmcnt counter in the preheader of
 // the given loop. We currently decide to flush in two situations:
 // 1. The loop contains vmem store(s), no vmem load and at least one use of a
@@ -3250,6 +3313,10 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
       }
     }
   }
+
+  // Insert DS_CNT flushes in preheaders of loops that had wait counts relaxed.
+  Modified |= insertDSPreheaderFlushes(MF);
+
   ReleaseVGPRInsts.clear();
   PreheadersToFlush.clear();
   LoopDSWaitOptCache.clear();

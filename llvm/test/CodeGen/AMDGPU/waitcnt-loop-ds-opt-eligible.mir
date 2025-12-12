@@ -17,6 +17,7 @@
 # DBG: Loop DS Wait Opt: Loop at bb.1 - 16 DS loads, 8 WMMA/MFMA, {{[0-9]+}} total insts, eligible
 # DBG: Loop DS Wait Opt: Analyzed loop at bb.1 - 16 DS loads, HasBarrier=1, Valid=1
 # DBG: DS Loop Opt: Relaxing DsCnt from 0 to 12 for:
+# DBG: DS Loop Opt: Inserted DS_CNT flush in preheader bb.0 for loop at bb.1
 
 --- |
   define amdgpu_kernel void @ds_loop_eligible() { ret void }
@@ -31,9 +32,10 @@ machineFunctionInfo:
   isEntryFunction: true
   waveLimiter: false
 body: |
+  ; Check preheader: OPT adds S_WAIT_DSCNT 0 flush, NOOPT does not
   ; OPT: bb.0:
-  ; OPT-NOT: S_WAIT_DSCNT
-  ; OPT: S_BRANCH %bb.1
+  ; OPT: S_WAIT_DSCNT_soft 0
+  ; OPT-NEXT: S_BRANCH %bb.1
 
   ; NOOPT: bb.0:
   ; NOOPT-NOT: S_WAIT_DSCNT
