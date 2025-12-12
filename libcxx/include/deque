@@ -1785,9 +1785,9 @@ template <class _Tp, class _Allocator>
 template <class _Iterator, class _Sentinel>
 _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __p, _Iterator __f, _Sentinel __l) {
-  __split_buffer<value_type, allocator_type&> __buf(__alloc());
+  __split_buffer<value_type, allocator_type> __buf(__alloc());
   __buf.__construct_at_end_with_sentinel(std::move(__f), std::move(__l));
-  typedef typename __split_buffer<value_type, allocator_type&>::iterator __bi;
+  typedef typename __split_buffer<value_type, allocator_type>::iterator __bi;
   return insert(__p, move_iterator<__bi>(__buf.begin()), move_iterator<__bi>(__buf.end()));
 }
 
@@ -1802,9 +1802,9 @@ template <class _Tp, class _Allocator>
 template <class _Iterator>
 _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::__insert_with_size(const_iterator __p, _Iterator __f, size_type __n) {
-  __split_buffer<value_type, allocator_type&> __buf(__n, 0, __alloc());
+  __split_buffer<value_type, allocator_type> __buf(__n, 0, __alloc());
   __buf.__construct_at_end_with_size(__f, __n);
-  typedef typename __split_buffer<value_type, allocator_type&>::iterator __fwd;
+  typedef typename __split_buffer<value_type, allocator_type>::iterator __fwd;
   return insert(__p, move_iterator<__fwd>(__buf.begin()), move_iterator<__fwd>(__buf.end()));
 }
 
@@ -1982,7 +1982,7 @@ void deque<_Tp, _Allocator>::__add_front_capacity() {
   }
   // Else need to allocate 1 buffer, *and* we need to reallocate __map_.
   else {
-    __split_buffer<pointer, __pointer_allocator&> __buf(
+    __split_buffer<pointer, __pointer_allocator> __buf(
         std::max<size_type>(2 * __map_.capacity(), 1), 0, __map_.__get_allocator());
 
     typedef __allocator_destructor<_Allocator> _Dp;
@@ -2042,7 +2042,7 @@ void deque<_Tp, _Allocator>::__add_front_capacity(size_type __n) {
   // Else need to allocate __nb buffers, *and* we need to reallocate __map_.
   else {
     size_type __ds = (__nb + __back_capacity) * __block_size - __map_.empty();
-    __split_buffer<pointer, __pointer_allocator&> __buf(
+    __split_buffer<pointer, __pointer_allocator> __buf(
         std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()), 0, __map_.__get_allocator());
     auto __guard = std::__make_exception_guard([&] {
       __annotate_delete();
@@ -2094,7 +2094,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity() {
   }
   // Else need to allocate 1 buffer, *and* we need to reallocate __map_.
   else {
-    __split_buffer<pointer, __pointer_allocator&> __buf(
+    __split_buffer<pointer, __pointer_allocator> __buf(
         std::max<size_type>(2 * __map_.capacity(), 1), __map_.size(), __map_.__get_allocator());
 
     typedef __allocator_destructor<_Allocator> _Dp;
@@ -2154,7 +2154,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
   // Else need to allocate __nb buffers, *and* we need to reallocate __map_.
   else {
     size_type __ds = __front_capacity * __block_size;
-    __split_buffer<pointer, __pointer_allocator&> __buf(
+    __split_buffer<pointer, __pointer_allocator> __buf(
         std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()),
         __map_.size() - __front_capacity,
         __map_.__get_allocator());
