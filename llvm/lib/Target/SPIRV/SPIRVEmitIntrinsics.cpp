@@ -667,7 +667,10 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
       OnLiteralIndexing(CurType, Element);
     } else if (auto *VT = dyn_cast<FixedVectorType>(CurType)) {
       Type *EltTy = VT->getElementType();
-      uint32_t EltTypeSize = DL.getTypeSizeInBits(EltTy) / 8;
+      TypeSize EltSizeBits = DL.getTypeSizeInBits(EltTy);
+      assert(EltSizeBits % 8 == 0 &&
+             "Element type size in bits must be a multiple of 8.");
+      uint32_t EltTypeSize = EltSizeBits / 8;
       assert(Offset < VT->getNumElements() * EltTypeSize);
       uint64_t Index = Offset / EltTypeSize;
       Offset -= Index * EltTypeSize;
