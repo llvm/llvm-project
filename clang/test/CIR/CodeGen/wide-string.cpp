@@ -38,8 +38,6 @@ const char32_t *test_zero32() {
 // LLVM: @{{.+}} = private constant [5 x i32] zeroinitializer
 // OGCG: @{{.+}} = private unnamed_addr constant [5 x i32] zeroinitializer
 
-typedef __WCHAR_TYPE__ wchar_t;
-
 const wchar_t *test_wchar() {
   return L"1234";
 }
@@ -55,9 +53,6 @@ const wchar_t *test_wchar_zero() {
 // CIR: cir.global "private" constant cir_private dso_local @{{.+}} = #cir.zero : !cir.array<!s32i x 1>
 // LLVM: @{{.+}} = private constant [1 x i32] zeroinitializer
 // OGCG: @{{.+}} = private unnamed_addr constant [1 x i32] zeroinitializer
-
-// Test with typedef'd char16_t to ensure typedef path works correctly
-typedef __CHAR16_TYPE__ char16_t;
 
 const char16_t *test_char16_typedef() {
   return u"test";
