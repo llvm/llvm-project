@@ -637,7 +637,7 @@ Context::Context(LLVMContext &LLVMCtx)
     : LLVMCtx(LLVMCtx), IRTracker(*this),
       LLVMIRBuilder(LLVMCtx, ConstantFolder()) {}
 
-Context::~Context() {}
+Context::~Context() = default;
 
 void Context::clear() {
   // TODO: Ideally we should clear only function-scope objects, and keep global

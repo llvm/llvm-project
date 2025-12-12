@@ -7,8 +7,6 @@
 ; FIXME: We're missing canonicalizations of ISD::VP_SETCC equivalent to those
 ; for ISD::SETCC, e.g., splats aren't moved to the RHS.
 
-declare <vscale x 1 x i1> @llvm.vp.icmp.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i8>, metadata, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i1> @icmp_eq_vv_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv1i8:
 ; CHECK:       # %bb.0:
@@ -498,8 +496,6 @@ define <vscale x 1 x i1> @icmp_sle_vi_swap_nxv1i8(<vscale x 1 x i8> %va, <vscale
   ret <vscale x 1 x i1> %v
 }
 
-declare <vscale x 3 x i1> @llvm.vp.icmp.nxv3i8(<vscale x 3 x i8>, <vscale x 3 x i8>, metadata, <vscale x 3 x i1>, i32)
-
 define <vscale x 3 x i1> @icmp_eq_vv_nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %vb, <vscale x 3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv3i8:
 ; CHECK:       # %bb.0:
@@ -533,8 +529,6 @@ define <vscale x 3 x i1> @icmp_eq_vx_swap_nxv3i8(<vscale x 3 x i8> %va, i8 %b, <
   %v = call <vscale x 3 x i1> @llvm.vp.icmp.nxv3i8(<vscale x 3 x i8> %vb, <vscale x 3 x i8> %va, metadata !"eq", <vscale x 3 x i1> %m, i32 %evl)
   ret <vscale x 3 x i1> %v
 }
-
-declare <vscale x 8 x i1> @llvm.vp.icmp.nxv8i7(<vscale x 8 x i7>, <vscale x 8 x i7>, metadata, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i1> @icmp_eq_vv_nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv8i7:
@@ -580,8 +574,6 @@ define <vscale x 8 x i1> @icmp_eq_vx_swap_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <
   %v = call <vscale x 8 x i1> @llvm.vp.icmp.nxv8i7(<vscale x 8 x i7> %vb, <vscale x 8 x i7> %va, metadata !"eq", <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i1> %v
 }
-
-declare <vscale x 8 x i1> @llvm.vp.icmp.nxv8i8(<vscale x 8 x i8>, <vscale x 8 x i8>, metadata, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i1> @icmp_eq_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv8i8:
@@ -1072,8 +1064,6 @@ define <vscale x 8 x i1> @icmp_sle_vi_swap_nxv8i8(<vscale x 8 x i8> %va, <vscale
   ret <vscale x 8 x i1> %v
 }
 
-declare <vscale x 128 x i1> @llvm.vp.icmp.nxv128i8(<vscale x 128 x i8>, <vscale x 128 x i8>, metadata, <vscale x 128 x i1>, i32)
-
 define <vscale x 128 x i1> @icmp_eq_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> %vb, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv128i8:
 ; CHECK:       # %bb.0:
@@ -1180,8 +1170,6 @@ define <vscale x 128 x i1> @icmp_eq_vx_swap_nxv128i8(<vscale x 128 x i8> %va, i8
   %v = call <vscale x 128 x i1> @llvm.vp.icmp.nxv128i8(<vscale x 128 x i8> %vb, <vscale x 128 x i8> %va, metadata !"eq", <vscale x 128 x i1> %m, i32 %evl)
   ret <vscale x 128 x i1> %v
 }
-
-declare <vscale x 1 x i1> @llvm.vp.icmp.nxv1i32(<vscale x 1 x i32>, <vscale x 1 x i32>, metadata, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i1> @icmp_eq_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i32> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv1i32:
@@ -1671,8 +1659,6 @@ define <vscale x 1 x i1> @icmp_sle_vi_swap_nxv1i32(<vscale x 1 x i32> %va, <vsca
   %v = call <vscale x 1 x i1> @llvm.vp.icmp.nxv1i32(<vscale x 1 x i32> splat (i32 4), <vscale x 1 x i32> %va, metadata !"sle", <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i1> %v
 }
-
-declare <vscale x 8 x i1> @llvm.vp.icmp.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, metadata, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i1> @icmp_eq_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv8i32:
@@ -2208,8 +2194,6 @@ define <vscale x 8 x i1> @icmp_sle_vi_swap_nxv8i32(<vscale x 8 x i32> %va, <vsca
   ret <vscale x 8 x i1> %v
 }
 
-declare <vscale x 32 x i1> @llvm.vp.icmp.nxv32i32(<vscale x 32 x i32>, <vscale x 32 x i32>, metadata, <vscale x 32 x i1>, i32)
-
 define <vscale x 32 x i1> @icmp_eq_vv_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv32i32:
 ; CHECK:       # %bb.0:
@@ -2323,8 +2307,6 @@ define <vscale x 32 x i1> @icmp_eq_vx_swap_nxv32i32(<vscale x 32 x i32> %va, i32
   %v = call <vscale x 32 x i1> @llvm.vp.icmp.nxv32i32(<vscale x 32 x i32> %vb, <vscale x 32 x i32> %va, metadata !"eq", <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i1> %v
 }
-
-declare <vscale x 1 x i1> @llvm.vp.icmp.nxv1i64(<vscale x 1 x i64>, <vscale x 1 x i64>, metadata, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i1> @icmp_eq_vv_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv1i64:
@@ -3066,8 +3048,6 @@ define <vscale x 1 x i1> @icmp_sle_vi_swap_nxv1i64(<vscale x 1 x i64> %va, <vsca
   %v = call <vscale x 1 x i1> @llvm.vp.icmp.nxv1i64(<vscale x 1 x i64> splat (i64 4), <vscale x 1 x i64> %va, metadata !"sle", <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i1> %v
 }
-
-declare <vscale x 8 x i1> @llvm.vp.icmp.nxv8i64(<vscale x 8 x i64>, <vscale x 8 x i64>, metadata, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i1> @icmp_eq_vv_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv8i64:

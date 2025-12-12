@@ -6,7 +6,7 @@ subroutine defaultmap_allocatable_present()
     integer, dimension(:), allocatable :: arr
 
 ! CHECK: %[[MAP_1:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, i32) map_clauses(implicit, present) capture(ByRef) var_ptr_ptr({{.*}}) bounds({{.*}}) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
-! CHECK: %[[MAP_2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(implicit, to) capture(ByRef) members({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "arr"}
+! CHECK: %[[MAP_2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, implicit, to) capture(ByRef) members({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "arr"}
 !$omp target defaultmap(present: allocatable)
     arr(1) = 10
 !$omp end target
@@ -34,7 +34,7 @@ subroutine defaultmap_all_default()
 
 ! CHECK: %[[MAP_1:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = "scalar_int"}
 ! CHECK: %[[MAP_2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, i32) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr({{.*}}) bounds({{.*}}) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
-! CHECK: %[[MAP_3:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(implicit, to) capture(ByRef) members({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "arr"}
+! CHECK: %[[MAP_3:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, implicit, to) capture(ByRef) members({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "arr"}
 ! CHECK: %[[MAP_4:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.array<16xi32>>, !fir.array<16xi32>) map_clauses(implicit, tofrom) capture(ByRef) bounds({{.*}}) -> !fir.ref<!fir.array<16xi32>> {name = "aggregate"}
 
    !$omp target defaultmap(default: all)
@@ -52,7 +52,7 @@ subroutine defaultmap_pointer_to()
 
 ! CHECK-NO-FPRIV: %[[MAP_1:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, i32) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr({{.*}}) bounds({{.*}}) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
 ! CHECK-FPRIV: %[[MAP_1:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, i32) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr({{.*}}) bounds({{.*}}) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
-! CHECK: %[[MAP_2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(implicit, to) capture(ByRef) members({{.*}}) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "arr_ptr"}
+! CHECK: %[[MAP_2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(always, implicit, to) capture(ByRef) members({{.*}}) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "arr_ptr"}
 ! CHECK-FPRIV: %[[MAP_3:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
 ! CHECK-NO-FPRIV: %[[MAP_3:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = "scalar_int"}
     !$omp target defaultmap(to: pointer)

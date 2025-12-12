@@ -1024,6 +1024,16 @@ findValuesAffectedByCondition(Value *Cond, bool IsAssume,
 LLVM_ABI Value *stripNullTest(Value *V);
 LLVM_ABI const Value *stripNullTest(const Value *V);
 
+/// Enumerates all possible immediate values of V and inserts them into the set
+/// \p Constants. If \p AllowUndefOrPoison is false, it fails when V may contain
+/// undef/poison elements. Returns true if the result is complete. Otherwise,
+/// the result is incomplete (more than MaxCount values).
+/// NOTE: The constant values are not distinct.
+LLVM_ABI bool
+collectPossibleValues(const Value *V,
+                      SmallPtrSetImpl<const Constant *> &Constants,
+                      unsigned MaxCount, bool AllowUndefOrPoison = true);
+
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_VALUETRACKING_H

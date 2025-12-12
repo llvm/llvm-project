@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_work_dim.h>
 #include <clc/workitem/clc_get_work_dim.h>
 
 _CLC_DEF _CLC_OVERLOAD uint get_work_dim() { return __clc_get_work_dim(); }

@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+v < %s | FileCheck %s
 
-declare <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i16> @vzext_nxv2i8_nxv2i16(<vscale x 2 x i8> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0:
@@ -25,8 +23,6 @@ define <vscale x 2 x i16> @vzext_nxv2i8_nxv2i16_unmasked(<vscale x 2 x i8> %a, i
   %v = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i16> %v
 }
-
-declare <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i32> @vzext_nxv2i8_nxv2i32(<vscale x 2 x i8> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i8_nxv2i32:
@@ -50,8 +46,6 @@ define <vscale x 2 x i32> @vzext_nxv2i8_nxv2i32_unmasked(<vscale x 2 x i8> %a, i
   ret <vscale x 2 x i32> %v
 }
 
-declare <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i64> @vzext_nxv2i8_nxv2i64(<vscale x 2 x i8> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i8_nxv2i64:
 ; CHECK:       # %bb.0:
@@ -73,8 +67,6 @@ define <vscale x 2 x i64> @vzext_nxv2i8_nxv2i64_unmasked(<vscale x 2 x i8> %a, i
   %v = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i64> %v
 }
-
-declare <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i32> @vzext_nxv2i16_nxv2i32(<vscale x 2 x i16> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i16_nxv2i32:
@@ -98,8 +90,6 @@ define <vscale x 2 x i32> @vzext_nxv2i16_nxv2i32_unmasked(<vscale x 2 x i16> %a,
   ret <vscale x 2 x i32> %v
 }
 
-declare <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i64> @vzext_nxv2i16_nxv2i64(<vscale x 2 x i16> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i16_nxv2i64:
 ; CHECK:       # %bb.0:
@@ -122,8 +112,6 @@ define <vscale x 2 x i64> @vzext_nxv2i16_nxv2i64_unmasked(<vscale x 2 x i16> %a,
   ret <vscale x 2 x i64> %v
 }
 
-declare <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i64> @vzext_nxv2i32_nxv2i64(<vscale x 2 x i32> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0:
@@ -145,8 +133,6 @@ define <vscale x 2 x i64> @vzext_nxv2i32_nxv2i64_unmasked(<vscale x 2 x i32> %a,
   %v = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i64> %v
 }
-
-declare <vscale x 32 x i32> @llvm.vp.zext.nxv32i32.nxv32i8(<vscale x 32 x i8>, <vscale x 32 x i1>, i32)
 
 define <vscale x 32 x i32> @vzext_nxv32i8_nxv32i32(<vscale x 32 x i8> %a, <vscale x 32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv32i8_nxv32i32:

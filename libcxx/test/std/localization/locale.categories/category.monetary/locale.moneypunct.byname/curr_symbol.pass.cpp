@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
@@ -117,11 +114,7 @@ int main(int, char**)
 
     {
         Fnf f(LOCALE_fr_FR_UTF_8, 1);
-#ifdef __APPLE__
-        assert(f.curr_symbol() == " Eu");
-#else
         assert(f.curr_symbol() == " \u20ac");
-#endif
     }
     {
         Fnt f(LOCALE_fr_FR_UTF_8, 1);
@@ -130,11 +123,7 @@ int main(int, char**)
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f(LOCALE_fr_FR_UTF_8, 1);
-#ifdef __APPLE__
-        assert(f.curr_symbol() == L" Eu");
-#else
         assert(f.curr_symbol() == L" \u20ac");
-#endif
     }
     {
         Fwt f(LOCALE_fr_FR_UTF_8, 1);
@@ -164,7 +153,7 @@ int main(int, char**)
 
     {
         Fnf f(LOCALE_zh_CN_UTF_8, 1);
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
         assert(f.curr_symbol() == "\xC2\xA5"); // \u00A5
 #else
         assert(f.curr_symbol() == "\xEF\xBF\xA5"); // \uFFE5
@@ -177,7 +166,7 @@ int main(int, char**)
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f(LOCALE_zh_CN_UTF_8, 1);
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
         assert(f.curr_symbol() == L"\u00A5");
 #else
         assert(f.curr_symbol() == L"\uFFE5");

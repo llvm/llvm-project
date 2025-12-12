@@ -19,7 +19,7 @@ deallocate(r)
 
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> attributes {byref_element_type = !fir.array<?xi32>} alloc {
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK-LABEL:   } init {

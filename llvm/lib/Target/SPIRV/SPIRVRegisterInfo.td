@@ -15,7 +15,7 @@ let Namespace = "SPIRV" in {
   def p64 : PtrValueType <i64, 0>;
 
   class VTPtrVec<int nelem, PtrValueType ptr>
-      : VTVec<nelem, ValueType<ptr.Size, ptr.Value>, ptr.Value> {
+      : VTVec<nelem, ValueType<ptr.Size, ptr.LLVMName>, ptr.LLVMName> {
     int isPointer = true;
   }
 

@@ -858,8 +858,7 @@ define i1 @_gep_phi2(ptr %str1, i64 %val2) {
 ; CHECK:       while.end.i:
 ; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
 ; CHECK:       _Z3fooPKc.exit:
-; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 1, [[WHILE_END_I]] ], [ 0, [[LOR_LHS_FALSE_I]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[RETVAL_0_I]], [[VAL2:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 1, [[WHILE_END_I]] ], [ [[VAL2:%.*]], [[LOR_LHS_FALSE_I]] ], [ [[VAL2]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;

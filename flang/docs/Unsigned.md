@@ -6,7 +6,7 @@
   
 -->
 
-# Fortran Extensions supported by Flang
+# Flang support for UNSIGNED type
 
 ```{contents}
 ---

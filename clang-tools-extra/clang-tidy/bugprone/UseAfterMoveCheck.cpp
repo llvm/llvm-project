@@ -19,6 +19,7 @@
 
 #include "../utils/ExprSequence.h"
 #include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include <optional>
 
 using namespace clang::ast_matchers;
@@ -48,7 +49,8 @@ struct UseAfterMove {
 /// various internal helper functions).
 class UseAfterMoveFinder {
 public:
-  UseAfterMoveFinder(ASTContext *TheContext);
+  UseAfterMoveFinder(ASTContext *TheContext,
+                     llvm::ArrayRef<StringRef> InvalidationFunctions);
 
   // Within the given code block, finds the first use of 'MovedVariable' that
   // occurs after 'MovingCall' (the expression that performs the move). If a
@@ -71,12 +73,18 @@ private:
                   llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs);
 
   ASTContext *Context;
+  llvm::ArrayRef<StringRef> InvalidationFunctions;
   std::unique_ptr<ExprSequence> Sequence;
   std::unique_ptr<StmtToBlockMap> BlockMap;
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
 };
 
 } // namespace
+
+static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
+  return anyOf(hasAnyName("::std::move", "::std::forward"),
+               matchers::matchesAnyListedName(InvalidationFunctions));
+}
 
 // Matches nodes that are
 // - Part of a decltype argument or class template argument (we check this by
@@ -92,8 +100,9 @@ static StatementMatcher inDecltypeOrTemplateArg() {
                hasAncestor(expr(hasUnevaluatedContext())));
 }
 
-UseAfterMoveFinder::UseAfterMoveFinder(ASTContext *TheContext)
-    : Context(TheContext) {}
+UseAfterMoveFinder::UseAfterMoveFinder(
+    ASTContext *TheContext, llvm::ArrayRef<StringRef> InvalidationFunctions)
+    : Context(TheContext), InvalidationFunctions(InvalidationFunctions) {}
 
 std::optional<UseAfterMove>
 UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
@@ -255,7 +264,7 @@ static bool isStandardSmartPointer(const ValueDecl *VD) {
   if (!ID)
     return false;
 
-  StringRef Name = ID->getName();
+  const StringRef Name = ID->getName();
   if (Name != "unique_ptr" && Name != "shared_ptr" && Name != "weak_ptr")
     return false;
 
@@ -359,7 +368,7 @@ void UseAfterMoveFinder::getReinits(
                             unless(parmVarDecl(hasType(
                                 references(qualType(isConstQualified())))))),
                         unless(callee(functionDecl(
-                            hasAnyName("::std::move", "::std::forward")))))))
+                            getNameMatcher(InvalidationFunctions)))))))
           .bind("reinit");
 
   Stmts->clear();
@@ -369,7 +378,7 @@ void UseAfterMoveFinder::getReinits(
     if (!S)
       continue;
 
-    SmallVector<BoundNodes, 1> Matches =
+    const SmallVector<BoundNodes, 1> Matches =
         match(findAll(ReinitMatcher), *S->getStmt(), *Context);
 
     for (const auto &Match : Matches) {
@@ -388,18 +397,21 @@ void UseAfterMoveFinder::getReinits(
   }
 }
 
-enum class MoveType {
-  Move,    // std::move
-  Forward, // std::forward
+enum MoveType {
+  Forward = 0,      // std::forward
+  Move = 1,         // std::move
+  Invalidation = 2, // other
 };
 
 static MoveType determineMoveType(const FunctionDecl *FuncDecl) {
-  if (FuncDecl->getName() == "move")
-    return MoveType::Move;
-  if (FuncDecl->getName() == "forward")
-    return MoveType::Forward;
+  if (FuncDecl->isInStdNamespace()) {
+    if (FuncDecl->getName() == "move")
+      return MoveType::Move;
+    if (FuncDecl->getName() == "forward")
+      return MoveType::Forward;
+  }
 
-  llvm_unreachable("Invalid move type");
+  return MoveType::Invalidation;
 }
 
 static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
@@ -408,27 +420,36 @@ static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
   const SourceLocation UseLoc = Use.DeclRef->getExprLoc();
   const SourceLocation MoveLoc = MovingCall->getExprLoc();
 
-  const bool IsMove = (Type == MoveType::Move);
-
-  Check->diag(UseLoc, "'%0' used after it was %select{forwarded|moved}1")
-      << MoveArg->getDecl()->getName() << IsMove;
-  Check->diag(MoveLoc, "%select{forward|move}0 occurred here",
+  Check->diag(UseLoc,
+              "'%0' used after it was %select{forwarded|moved|invalidated}1")
+      << MoveArg->getDecl()->getName() << Type;
+  Check->diag(MoveLoc, "%select{forward|move|invalidation}0 occurred here",
               DiagnosticIDs::Note)
-      << IsMove;
+      << Type;
   if (Use.EvaluationOrderUndefined) {
     Check->diag(
         UseLoc,
-        "the use and %select{forward|move}0 are unsequenced, i.e. "
+        "the use and %select{forward|move|invalidation}0 are unsequenced, i.e. "
         "there is no guarantee about the order in which they are evaluated",
         DiagnosticIDs::Note)
-        << IsMove;
+        << Type;
   } else if (Use.UseHappensInLaterLoopIteration) {
     Check->diag(UseLoc,
                 "the use happens in a later loop iteration than the "
-                "%select{forward|move}0",
+                "%select{forward|move|invalidation}0",
                 DiagnosticIDs::Note)
-        << IsMove;
+        << Type;
   }
+}
+
+UseAfterMoveCheck::UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      InvalidationFunctions(utils::options::parseStringList(
+          Options.get("InvalidationFunctions", ""))) {}
+
+void UseAfterMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "InvalidationFunctions",
+                utils::options::serializeStringList(InvalidationFunctions));
 }
 
 void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
@@ -438,11 +459,14 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
   // the bool.
   auto TryEmplaceMatcher =
       cxxMemberCallExpr(callee(cxxMethodDecl(hasName("try_emplace"))));
+  auto Arg = declRefExpr().bind("arg");
+  auto IsMemberCallee = callee(functionDecl(unless(isStaticStorageClass())));
   auto CallMoveMatcher =
-      callExpr(argumentCountIs(1),
-               callee(functionDecl(hasAnyName("::std::move", "::std::forward"))
+      callExpr(callee(functionDecl(getNameMatcher(InvalidationFunctions))
                           .bind("move-decl")),
-               hasArgument(0, declRefExpr().bind("arg")),
+               anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),
+                     callExpr(unless(cxxMemberCallExpr(IsMemberCallee)),
+                              hasArgument(0, Arg))),
                unless(inDecltypeOrTemplateArg()),
                unless(hasParent(TryEmplaceMatcher)), expr().bind("call-move"),
                anyOf(hasAncestor(compoundStmt(
@@ -506,7 +530,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
     if (ContainingCtorInit) {
       // Collect the constructor initializer expressions.
       bool BeforeMove{true};
-      for (CXXCtorInitializer *Init : ContainingCtor->inits()) {
+      for (const CXXCtorInitializer *Init : ContainingCtor->inits()) {
         if (BeforeMove && Init->getInit()->IgnoreImplicit() ==
                               ContainingCtorInit->IgnoreImplicit())
           BeforeMove = false;
@@ -521,7 +545,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   for (Stmt *CodeBlock : CodeBlocks) {
-    UseAfterMoveFinder Finder(Result.Context);
+    UseAfterMoveFinder Finder(Result.Context, InvalidationFunctions);
     if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
       emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
                      determineMoveType(MoveDecl));

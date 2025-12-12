@@ -20,8 +20,6 @@
 
 using namespace llvm;
 
-constexpr uint32_t BranchProbability::D;
-
 raw_ostream &BranchProbability::print(raw_ostream &OS) const {
   if (isUnknown())
     return OS << "?%";
@@ -60,6 +58,11 @@ BranchProbability::getBranchProbability(uint64_t Numerator,
     Scale++;
   }
   return BranchProbability(Numerator >> Scale, Denominator);
+}
+
+BranchProbability BranchProbability::getBranchProbability(double Prob) {
+  assert(0 <= Prob && Prob <= 1 && "Probability must be between 0 and 1!");
+  return BranchProbability(std::round(Prob * D), D);
 }
 
 // If ConstD is not zero, then replace D by ConstD so that division and modulo
@@ -110,4 +113,11 @@ uint64_t BranchProbability::scale(uint64_t Num) const {
 
 uint64_t BranchProbability::scaleByInverse(uint64_t Num) const {
   return ::scale<0>(Num, D, N);
+}
+
+BranchProbability BranchProbability::pow(unsigned N) const {
+  BranchProbability Res = BranchProbability::getOne();
+  for (unsigned I = 0; I < N; ++I)
+    Res *= *this;
+  return Res;
 }

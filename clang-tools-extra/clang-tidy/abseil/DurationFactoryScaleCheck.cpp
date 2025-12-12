@@ -158,7 +158,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
   if (!MaybeScale)
     return;
 
-  DurationScale Scale = *MaybeScale;
+  const DurationScale Scale = *MaybeScale;
   const Expr *Remainder = nullptr;
   std::optional<DurationScale> NewScale;
 

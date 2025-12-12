@@ -17,7 +17,7 @@
 # CHECK-NEXT:     Name:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Version: 1
+# CHECK-NEXT:     Version: 0
 # CHECK-NEXT:     Name: und
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {

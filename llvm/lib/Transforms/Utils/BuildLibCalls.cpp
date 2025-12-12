@@ -1227,9 +1227,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_atanhf:
   case LibFunc_atanhl:
   case LibFunc_atanl:
-  case LibFunc_ceil:
-  case LibFunc_ceilf:
-  case LibFunc_ceill:
   case LibFunc_cos:
   case LibFunc_cosh:
   case LibFunc_coshf:
@@ -1283,6 +1280,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_ilogbl:
   case LibFunc_logf:
   case LibFunc_logl:
+  case LibFunc_nextafter:
+  case LibFunc_nextafterf:
+  case LibFunc_nextafterl:
+  case LibFunc_nexttoward:
+  case LibFunc_nexttowardf:
+  case LibFunc_nexttowardl:
   case LibFunc_pow:
   case LibFunc_powf:
   case LibFunc_powl:
@@ -1292,9 +1295,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_rint:
   case LibFunc_rintf:
   case LibFunc_rintl:
-  case LibFunc_round:
-  case LibFunc_roundf:
-  case LibFunc_roundl:
   case LibFunc_scalbln:
   case LibFunc_scalblnf:
   case LibFunc_scalblnl:
@@ -1332,6 +1332,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_copysign:
   case LibFunc_copysignf:
   case LibFunc_copysignl:
+  case LibFunc_ceil:
+  case LibFunc_ceilf:
+  case LibFunc_ceill:
   case LibFunc_fabs:
   case LibFunc_fabsf:
   case LibFunc_fabsl:
@@ -1350,11 +1353,23 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fmin:
   case LibFunc_fminf:
   case LibFunc_fminl:
+  case LibFunc_fmaximum_num:
+  case LibFunc_fmaximum_numf:
+  case LibFunc_fmaximum_numl:
+  case LibFunc_fminimum_num:
+  case LibFunc_fminimum_numf:
+  case LibFunc_fminimum_numl:
   case LibFunc_labs:
   case LibFunc_llabs:
   case LibFunc_nearbyint:
   case LibFunc_nearbyintf:
   case LibFunc_nearbyintl:
+  case LibFunc_round:
+  case LibFunc_roundf:
+  case LibFunc_roundl:
+  case LibFunc_roundeven:
+  case LibFunc_roundevenf:
+  case LibFunc_roundevenl:
   case LibFunc_toascii:
   case LibFunc_trunc:
   case LibFunc_truncf:

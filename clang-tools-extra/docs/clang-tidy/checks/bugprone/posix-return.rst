@@ -13,7 +13,8 @@ Example buggy usage looks like:
 
   if (posix_fadvise(...) < 0) {
 
-This will never happen as the return value is always non-negative. A simple fix could be:
+This will never happen as the return value is always non-negative.
+A simple fix could be:
 
 .. code-block:: c
 

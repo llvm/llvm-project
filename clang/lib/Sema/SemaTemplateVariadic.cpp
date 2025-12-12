@@ -844,7 +844,7 @@ bool Sema::CheckParameterPacksForExpansion(
     ArrayRef<UnexpandedParameterPack> Unexpanded,
     const MultiLevelTemplateArgumentList &TemplateArgs,
     bool FailOnPackProducingTemplates, bool &ShouldExpand,
-    bool &RetainExpansion, UnsignedOrNone &NumExpansions) {
+    bool &RetainExpansion, UnsignedOrNone &NumExpansions, bool Diagnose) {
   ShouldExpand = true;
   RetainExpansion = false;
   IdentifierLoc FirstPack;
@@ -873,6 +873,9 @@ bool Sema::CheckParameterPacksForExpansion(
       ShouldExpand = false;
       if (!FailOnPackProducingTemplates)
         continue;
+
+      if (!Diagnose)
+        return true;
 
       // It is not yet supported in certain contexts.
       return Diag(PatternRange.getBegin().isValid() ? PatternRange.getBegin()
@@ -1015,7 +1018,9 @@ bool Sema::CheckParameterPacksForExpansion(
       // C++0x [temp.variadic]p5:
       //   All of the parameter packs expanded by a pack expansion shall have
       //   the same number of arguments specified.
-      if (HaveFirstPack)
+      if (!Diagnose)
+        ;
+      else if (HaveFirstPack)
         Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict)
             << FirstPack.getIdentifierInfo() << Name << *NumExpansions
             << (LeastNewPackSize != NewPackSize) << LeastNewPackSize
@@ -1041,6 +1046,8 @@ bool Sema::CheckParameterPacksForExpansion(
     if (NumExpansions && *NumExpansions < *NumPartialExpansions) {
       NamedDecl *PartialPack =
           CurrentInstantiationScope->getPartiallySubstitutedPack();
+      if (!Diagnose)
+        return true;
       Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict_partial)
           << PartialPack << *NumPartialExpansions << *NumExpansions
           << SourceRange(PartiallySubstitutedPackLoc);

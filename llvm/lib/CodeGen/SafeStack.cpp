@@ -69,7 +69,6 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::safestack;
@@ -195,8 +194,6 @@ public:
   // Returns whether the function was changed.
   bool run();
 };
-
-constexpr Align SafeStack::StackAlignment;
 
 uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
   uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
@@ -688,8 +685,8 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
                           StackAlignment);
 
     Value *NewTop = IRB.CreateIntToPtr(
-        IRB.CreateAnd(SP,
-                      ConstantInt::get(IntPtrTy, ~uint64_t(Align.value() - 1))),
+        IRB.CreateAnd(
+            SP, ConstantInt::getSigned(IntPtrTy, ~uint64_t(Align.value() - 1))),
         StackPtrTy);
 
     // Save the stack pointer.

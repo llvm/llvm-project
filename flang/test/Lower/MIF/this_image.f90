@@ -5,7 +5,7 @@ program test
   integer :: i
   type(team_type) :: team
 
-  ! CHECK: mif.this_image : () -> i32 
+  ! CHECK: mif.this_image : () -> i32
   i = this_image()
 
   ! CHECK: mif.this_image team %[[TEAM:.*]] : ({{.*}}) -> i32

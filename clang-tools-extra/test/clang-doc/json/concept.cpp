@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/json/index.json
+// RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
 
 // Requires that T suports post and pre-incrementing.
 template<typename T>
@@ -31,6 +31,6 @@ concept Incrementable = requires(T x) {
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
-// CHECK:        "Name": "",
+// CHECK:        "Name": "Global Namespace",
 // CHECK:        "USR": "0000000000000000000000000000000000000000"
 // CHECK:      }
