@@ -2341,6 +2341,36 @@ void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
                Item.uri.file());
 }
 
+// Tries to find a NamedDecl in the AST that matches the given Symbol.
+// Returns nullptr if the symbol is not found in the current AST.
+const NamedDecl *getNamedDeclFromSymbol(const Symbol &Sym,
+                                        const ParsedAST &AST) {
+  // Try to convert the symbol to a location and find the decl at that location
+  auto SymLoc = symbolToLocation(Sym, AST.tuPath());
+  if (!SymLoc)
+    return nullptr;
+
+  // Check if the symbol location is in the main file
+  if (SymLoc->uri.file() != AST.tuPath())
+    return nullptr;
+
+  // Convert LSP position to source location
+  const auto &SM = AST.getSourceManager();
+  auto CurLoc = sourceLocationInMainFile(SM, SymLoc->range.start);
+  if (!CurLoc) {
+    llvm::consumeError(CurLoc.takeError());
+    return nullptr;
+  }
+
+  // Get all decls at this location
+  auto Decls = getDeclAtPosition(const_cast<ParsedAST &>(AST), *CurLoc, {});
+  if (Decls.empty())
+    return nullptr;
+
+  // Return the first decl (usually the most specific one)
+  return Decls[0];
+}
+
 std::vector<CallHierarchyItem>
 prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
   std::vector<CallHierarchyItem> Result;
@@ -2368,8 +2398,10 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
 }
 
 std::vector<CallHierarchyIncomingCall>
-incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
+incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
+              const ParsedAST &AST) {
   std::vector<CallHierarchyIncomingCall> Results;
+
   if (!Index || Item.data.empty())
     return Results;
   auto ID = SymbolID::fromStr(Item.data);
@@ -2413,14 +2445,27 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
     Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
       auto It = CallsIn.find(Caller.ID);
       assert(It != CallsIn.end());
-      if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
+      if (auto *ND = getNamedDeclFromSymbol(Caller, AST)) {
+        if (auto CHI = declToCallHierarchyItem(*ND, AST.tuPath())) {
+          std::vector<Range> FromRanges;
+          for (const Location &L : It->second) {
+            if (L.uri != CHI->uri) {
+              // Call location not in same file as caller.
+              // This can happen in some edge cases. There's not much we can do,
+              // since the protocol only allows returning ranges interpreted as
+              // being in the caller's file.
+              continue;
+            }
+            FromRanges.push_back(L.range);
+          }
+          Results.push_back(CallHierarchyIncomingCall{
+              std::move(*CHI), std::move(FromRanges), MightNeverCall});
+        }
+      } else if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
+        // Fallback to using symbol if NamedDecl is not available
         std::vector<Range> FromRanges;
         for (const Location &L : It->second) {
           if (L.uri != CHI->uri) {
-            // Call location not in same file as caller.
-            // This can happen in some edge cases. There's not much we can do,
-            // since the protocol only allows returning ranges interpreted as
-            // being in the caller's file.
             continue;
           }
           FromRanges.push_back(L.range);
