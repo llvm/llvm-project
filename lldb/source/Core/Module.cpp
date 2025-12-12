@@ -494,17 +494,19 @@ uint32_t Module::ResolveSymbolContextForAddress(
         !(resolved_flags & eSymbolContextSymbol)) {
       Symtab *symtab = symfile->GetSymtab();
       if (symtab && so_addr.IsSectionOffset()) {
-        Symbol *matching_symbol = nullptr;
+        addr_t file_address = so_addr.GetFileAddress();
+        Symbol *matching_symbol = symtab->FindSymbolAtFileAddress(file_address);
 
-        symtab->ForEachSymbolContainingFileAddress(
-            so_addr.GetFileAddress(),
-            [&matching_symbol](Symbol *symbol) -> bool {
-              if (symbol->GetType() != eSymbolTypeInvalid) {
-                matching_symbol = symbol;
-                return false; // Stop iterating
-              }
-              return true; // Keep iterating
-            });
+        if (!matching_symbol) {
+          symtab->ForEachSymbolContainingFileAddress(
+              file_address, [&matching_symbol](Symbol *symbol) -> bool {
+                if (symbol->GetType() != eSymbolTypeInvalid) {
+                  matching_symbol = symbol;
+                  return false; // Stop iterating
+                }
+                return true; // Keep iterating
+              });
+        }
         sc.symbol = matching_symbol;
         if (!sc.symbol && resolve_scope & eSymbolContextFunction &&
             !(resolved_flags & eSymbolContextFunction)) {

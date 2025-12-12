@@ -123,3 +123,50 @@ Symbols:
   ASSERT_EQ(name, "std::vector<int>::size()");
   ASSERT_EQ(result.GetLanguage(), eLanguageTypeC_plus_plus);
 }
+
+TEST(ModuleTest, ResolveSymbolContextForAddressExactMatch) {
+  // Test that ResolveSymbolContextForAddress prefers exact symbol matches
+  // over symbols that merely contain the address.
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
+      subsystems;
+
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x10
+    Size:            0x200
+Symbols:
+  - Name:            outer_function
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1000
+    Size:            0x100
+  - Name:            inner_function
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1050
+    Size:            0x10
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+
+  Address addr(module_sp->GetSectionList()->GetSectionAtIndex(0), 0x50);
+  SymbolContext sc;
+  uint32_t resolved =
+      module_sp->ResolveSymbolContextForAddress(addr, eSymbolContextSymbol, sc);
+
+  ASSERT_TRUE(resolved & eSymbolContextSymbol);
+  ASSERT_NE(sc.symbol, nullptr);
+  EXPECT_STREQ(sc.symbol->GetName().GetCString(), "inner_function");
+}
