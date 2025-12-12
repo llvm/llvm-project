@@ -25,7 +25,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 
 #include "VPlanValue.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
@@ -910,7 +910,7 @@ private:
 public:
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
-  bool flagsValidForOpcode(unsigned Opcode) const;
+  LLVM_ABI_FOR_TEST bool flagsValidForOpcode(unsigned Opcode) const;
 #endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1074,12 +1074,10 @@ public:
     ComputeAnyOfResult,
     ComputeFindIVResult,
     ComputeReductionResult,
-    // Extracts the last lane from its operand if it is a vector, or the last
-    // part if scalar. In the latter case, the recipe will be removed during
-    // unrolling.
-    ExtractLastElement,
-    // Extracts the last lane for each part from its operand.
-    ExtractLastLanePerPart,
+    // Extracts the last part of its operand. Removed during unrolling.
+    ExtractLastPart,
+    // Extracts the last lane of its vector operand, per part.
+    ExtractLastLane,
     // Extracts the second-to-last lane from its operand or the second-to-last
     // part if it is scalar. In the latter case, the recipe will be removed
     // during unrolling.
@@ -1466,10 +1464,10 @@ public:
     return true;
   }
 
-  /// Update the recipes first operand to the last lane of the operand using \p
-  /// Builder. Must only be used for VPIRInstructions with at least one operand
-  /// wrapping a PHINode.
-  void extractLastLaneOfFirstOperand(VPBuilder &Builder);
+  /// Update the recipe's first operand to the last lane of the last part of the
+  /// operand using \p Builder. Must only be used for VPIRInstructions with at
+  /// least one operand wrapping a PHINode.
+  void extractLastLaneOfLastPartOfFirstOperand(VPBuilder &Builder);
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1581,11 +1579,11 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPWidenCastSC)
 
   /// Produce widened copies of the cast.
-  void execute(VPTransformState &State) override;
+  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPWidenCastRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
+  LLVM_ABI_FOR_TEST InstructionCost
+  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
 
   Instruction::CastOps getOpcode() const { return Opcode; }
 
@@ -1595,8 +1593,8 @@ public:
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void printRecipe(raw_ostream &O, const Twine &Indent,
-                   VPSlotTracker &SlotTracker) const override;
+  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -1665,11 +1663,11 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPWidenIntrinsicSC)
 
   /// Produce a widened version of the vector intrinsic.
-  void execute(VPTransformState &State) override;
+  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
 
   /// Return the cost of this vector intrinsic.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
+  LLVM_ABI_FOR_TEST InstructionCost
+  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
 
   /// Return the ID of the intrinsic.
   Intrinsic::ID getVectorIntrinsicID() const { return VectorIntrinsicID; }
@@ -1689,13 +1687,13 @@ public:
   /// Returns true if the intrinsic may have side-effects.
   bool mayHaveSideEffects() const { return MayHaveSideEffects; }
 
-  bool usesFirstLaneOnly(const VPValue *Op) const override;
+  LLVM_ABI_FOR_TEST bool usesFirstLaneOnly(const VPValue *Op) const override;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void printRecipe(raw_ostream &O, const Twine &Indent,
-                   VPSlotTracker &SlotTracker) const override;
+  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -3393,11 +3391,11 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPValue *getEVL() const { return getOperand(1); }
 
   /// Generate the wide load or gather.
-  void execute(VPTransformState &State) override;
+  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPWidenLoadEVLRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
+  LLVM_ABI_FOR_TEST InstructionCost
+  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -3411,8 +3409,8 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void printRecipe(raw_ostream &O, const Twine &Indent,
-                   VPSlotTracker &SlotTracker) const override;
+  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -3479,11 +3477,11 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   VPValue *getEVL() const { return getOperand(2); }
 
   /// Generate the wide store or scatter.
-  void execute(VPTransformState &State) override;
+  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPWidenStoreEVLRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
+  LLVM_ABI_FOR_TEST InstructionCost
+  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -3502,8 +3500,8 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void printRecipe(raw_ostream &O, const Twine &Indent,
-                   VPSlotTracker &SlotTracker) const override;
+  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -3602,8 +3600,6 @@ protected:
 
 /// A recipe for generating the active lane mask for the vector loop that is
 /// used to predicate the vector operations.
-/// TODO: It would be good to use the existing VPWidenPHIRecipe instead and
-/// remove VPActiveLaneMaskPHIRecipe.
 class VPActiveLaneMaskPHIRecipe : public VPHeaderPHIRecipe {
 public:
   VPActiveLaneMaskPHIRecipe(VPValue *StartMask, DebugLoc DL)
@@ -4329,13 +4325,9 @@ class VPlan {
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPValue VFxUF;
 
-  /// Holds a mapping between Values and their corresponding VPValue inside
-  /// VPlan.
-  Value2VPValueTy Value2VPValue;
-
-  /// Contains all the external definitions created for this VPlan. External
-  /// definitions are VPValues that hold a pointer to their underlying IR.
-  SmallVector<VPValue *, 16> VPLiveIns;
+  /// Contains all the external definitions created for this VPlan, as a mapping
+  /// from IR Values to VPValues.
+  SmallMapVector<Value *, VPValue *, 16> LiveIns;
 
   /// Blocks allocated and owned by the VPlan. They will be deleted once the
   /// VPlan is destroyed.
@@ -4532,10 +4524,9 @@ public:
   ///  yet) for \p V.
   VPValue *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPValue of a null Value");
-    auto [It, Inserted] = Value2VPValue.try_emplace(V);
+    auto [It, Inserted] = LiveIns.try_emplace(V);
     if (Inserted) {
       VPValue *VPV = new VPValue(V);
-      VPLiveIns.push_back(VPV);
       assert(VPV->isLiveIn() && "VPV must be a live-in.");
       It->second = VPV;
     }
@@ -4567,17 +4558,10 @@ public:
   }
 
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
-  VPValue *getLiveIn(Value *V) const { return Value2VPValue.lookup(V); }
+  VPValue *getLiveIn(Value *V) const { return LiveIns.lookup(V); }
 
   /// Return the list of live-in VPValues available in the VPlan.
-  ArrayRef<VPValue *> getLiveIns() const {
-    assert(all_of(Value2VPValue,
-                  [this](const auto &P) {
-                    return is_contained(VPLiveIns, P.second);
-                  }) &&
-           "all VPValues in Value2VPValue must also be in VPLiveIns");
-    return VPLiveIns;
-  }
+  auto getLiveIns() const { return LiveIns.values(); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the live-ins of this VPlan to \p O.

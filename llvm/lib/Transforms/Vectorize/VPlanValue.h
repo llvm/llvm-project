@@ -20,10 +20,8 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
@@ -195,9 +193,6 @@ public:
     UnderlyingVal = Val;
   }
 };
-
-typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
-typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
 
 LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
                                           const VPRecipeBase &R);

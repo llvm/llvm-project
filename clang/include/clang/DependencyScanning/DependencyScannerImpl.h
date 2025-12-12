@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNER_H
-#define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNER_H
+#ifndef LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNERIMPL_H
+#define LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNERIMPL_H
 
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
@@ -63,15 +63,15 @@ private:
 std::unique_ptr<DiagnosticOptions>
 createDiagOptions(ArrayRef<std::string> CommandLine);
 
-struct DignosticsEngineWithDiagOpts {
+struct DiagnosticsEngineWithDiagOpts {
   // We need to bound the lifetime of the DiagOpts used to create the
   // DiganosticsEngine with the DiagnosticsEngine itself.
   std::unique_ptr<DiagnosticOptions> DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine;
 
-  DignosticsEngineWithDiagOpts(ArrayRef<std::string> CommandLine,
-                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                               DiagnosticConsumer &DC);
+  DiagnosticsEngineWithDiagOpts(ArrayRef<std::string> CommandLine,
+                                IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                                DiagnosticConsumer &DC);
 };
 
 struct TextDiagnosticsPrinterWithOutput {
@@ -151,7 +151,7 @@ class CompilerInstanceWithContext {
   // DiagConsumer may points to DiagPrinterWithOS->DiagPrinter, or a custom
   // DiagnosticConsumer passed in from initialize.
   DiagnosticConsumer *DiagConsumer = nullptr;
-  std::unique_ptr<DignosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
+  std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
 
   // Context - compiler invocation
   // Compilation's command's arguments may be owned by Alloc when expanded from
@@ -193,4 +193,4 @@ public:
 } // namespace dependencies
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNERIMPL_H

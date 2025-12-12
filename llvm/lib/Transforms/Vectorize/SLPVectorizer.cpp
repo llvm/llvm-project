@@ -10930,13 +10930,21 @@ class InstructionsCompatibilityAnalysis {
     }
     unsigned BestOpcodeNum = 0;
     MainOp = nullptr;
+    bool UsedOutside = false;
     for (const auto &P : Candidates) {
+      bool PUsedOutside = all_of(P.second, isUsedOutsideBlock);
+      if (UsedOutside && !PUsedOutside)
+        continue;
+      if (!UsedOutside && PUsedOutside)
+        BestOpcodeNum = 0;
       if (P.second.size() < BestOpcodeNum)
         continue;
       // If have inner dependencies - skip.
-      if (any_of(P.second,
-                 [&](Instruction *I) { return Operands.contains(I); }))
+      if (!PUsedOutside && any_of(P.second, [&](Instruction *I) {
+            return Operands.contains(I);
+          }))
         continue;
+      UsedOutside = PUsedOutside;
       for (Instruction *I : P.second) {
         if (IsSupportedInstruction(I, AnyUndef)) {
           MainOp = I;

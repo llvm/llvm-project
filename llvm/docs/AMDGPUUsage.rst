@@ -1527,11 +1527,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    The iglp_opt strategy implementations are subject to change.
 
-  llvm.amdgcn.atomic.cond.sub.u32                  Provides direct access to flat_atomic_cond_sub_u32, global_atomic_cond_sub_u32
-                                                   and ds_cond_sub_u32 based on address space on gfx12 targets. This
-                                                   performs a subtraction only if the memory value is greater than or
-                                                   equal to the data value.
-
   llvm.amdgcn.s.barrier.signal.isfirst             Provides access to the s_barrier_signal_first instruction;
                                                    additionally ensures that the result value is valid even when the
                                                    intrinsic is used from a wave that is not running in a workgroup.

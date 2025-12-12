@@ -412,6 +412,7 @@ bool ClauseProcessor::processInitializer(
       }
       // Lower the expression/function call
       lower::StatementContext stmtCtx;
+      const semantics::SomeExpr &initExpr = clause->v.front();
       mlir::Value result = common::visit(
           common::visitors{
               [&](const evaluate::ProcedureRef &procRef) -> mlir::Value {
@@ -422,7 +423,7 @@ bool ClauseProcessor::processInitializer(
               },
               [&](const auto &expr) -> mlir::Value {
                 mlir::Value exprResult = fir::getBase(convertExprToValue(
-                    loc, converter, clause->v, symMap, stmtCtx));
+                    loc, converter, initExpr, symMap, stmtCtx));
                 // Conversion can either give a value or a refrence to a value,
                 // we need to return the reduction type, so an optional load may
                 // be generated.
@@ -432,7 +433,7 @@ bool ClauseProcessor::processInitializer(
                     exprResult = fir::LoadOp::create(builder, loc, exprResult);
                 return exprResult;
               }},
-          clause->v.u);
+          initExpr.u);
       stmtCtx.finalizeAndPop();
       return result;
     };
@@ -1232,11 +1233,20 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
       omp::clause::Linear>([&](const omp::clause::Linear &clause,
                                const parser::CharBlock &) {
     auto &objects = std::get<omp::ObjectList>(clause.t);
+    static std::vector<mlir::Attribute> typeAttrs;
+
+    if (!result.linearVars.size())
+      typeAttrs.clear();
+
     for (const omp::Object &object : objects) {
       semantics::Symbol *sym = object.sym();
       const mlir::Value variable = converter.getSymbolAddress(*sym);
       result.linearVars.push_back(variable);
+      mlir::Type ty = converter.genType(*sym);
+      typeAttrs.push_back(mlir::TypeAttr::get(ty));
     }
+    result.linearVarTypes =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
     if (objects.size()) {
       if (auto &mod =
               std::get<std::optional<omp::clause::Linear::StepComplexModifier>>(
