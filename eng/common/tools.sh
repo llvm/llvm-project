@@ -115,9 +115,6 @@ function InitializeDotNetCli {
 
   local install=$1
 
-  # Don't resolve runtime, shared framework, or SDK from other locations to ensure build determinism
-  export DOTNET_MULTILEVEL_LOOKUP=0
-
   # Disable first run since we want to control all package sources
   export DOTNET_NOLOGO=1
 
@@ -166,7 +163,6 @@ function InitializeDotNetCli {
   # build steps from using anything other than what we've downloaded.
   Write-PipelinePrependPath -path "$dotnet_root"
 
-  Write-PipelineSetVariable -name "DOTNET_MULTILEVEL_LOOKUP" -value "0"
   Write-PipelineSetVariable -name "DOTNET_NOLOGO" -value "1"
 
   # return value

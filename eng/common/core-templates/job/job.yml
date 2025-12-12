@@ -73,6 +73,8 @@ jobs:
     templateContext: ${{ parameters.templateContext }}
 
   variables:
+  - name: AllowPtrToDetectTestRunRetryFiles
+    value: true
   - ${{ if ne(parameters.enableTelemetry, 'false') }}:
     - name: DOTNET_CLI_TELEMETRY_PROFILE
       value: '$(Build.Repository.Uri)'

@@ -3,7 +3,7 @@ parameters:
   sourceIndexBuildCommand: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "eng/common/build.ps1 -restore -build -binarylog -ci"
   preSteps: []
   binlogPath: artifacts/log/Debug/Build.binlog
-  condition: ''
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
   dependsOn: ''
   pool: ''
   is1ESPipeline: ''
@@ -25,10 +25,10 @@ jobs:
     pool:
       ${{ if eq(variables['System.TeamProject'], 'public') }}:
         name: $(DncEngPublicBuildPool)
-        image: windows.vs2022.amd64.open
+        image: windows.vs2026preview.scout.amd64.open
       ${{ if eq(variables['System.TeamProject'], 'internal') }}:
         name: $(DncEngInternalBuildPool)
-        image: windows.vs2022.amd64
+        image: windows.vs2026preview.scout.amd64
 
   steps:
   - ${{ if eq(parameters.is1ESPipeline, '') }}:
