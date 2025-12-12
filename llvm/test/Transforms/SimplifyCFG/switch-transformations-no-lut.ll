@@ -24,7 +24,7 @@ define i32 @linear_transform_with_default(i32 %x) {
 ; TTINOLUT-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i32 [[SWITCH_IDX_MULT]], 1
 ; TTINOLUT-NEXT:    br label %[[END]]
 ; TTINOLUT:       [[END]]:
-; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ 13, %[[ENTRY]] ], [ [[SWITCH_OFFSET]], %[[SWITCH_LOOKUP]] ]
+; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ [[SWITCH_OFFSET]], %[[SWITCH_LOOKUP]] ], [ 13, %[[ENTRY]] ]
 ; TTINOLUT-NEXT:    ret i32 [[IDX]]
 ;
 entry:
