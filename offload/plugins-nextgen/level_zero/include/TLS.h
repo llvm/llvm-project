@@ -38,7 +38,7 @@ public:
   L0ThreadTLSTy(L0ThreadTLSTy &&) = delete;
   L0ThreadTLSTy &operator=(const L0ThreadTLSTy &) = delete;
   L0ThreadTLSTy &operator=(const L0ThreadTLSTy &&) = delete;
-  ~L0ThreadTLSTy() {}
+  ~L0ThreadTLSTy() = default;
 
   AsyncQueueTy *getAsyncQueue() {
     AsyncQueueTy *Ret = nullptr;

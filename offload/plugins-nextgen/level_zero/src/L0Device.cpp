@@ -202,7 +202,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   IndirectAccessFlags = Flags;
 
   // Get the UUID
-  std::string uid = "";
+  std::string uid;
   for (int n = 0; n < ZE_MAX_DEVICE_UUID_SIZE; n++)
     uid += std::to_string(DeviceProperties.uuid.id[n]);
   DeviceUuid = std::move(uid);
@@ -278,7 +278,7 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
 
   auto &Plugin = getPlugin();
 
-  AsyncQueueTy *AsyncQueue = (AsyncQueueTy *)AsyncInfo.Queue;
+  AsyncQueueTy *AsyncQueue = reinterpret_cast<AsyncQueueTy *>(AsyncInfo.Queue);
 
   if (!AsyncQueue->WaitEvents.empty()) {
     const auto &WaitEvents = AsyncQueue->WaitEvents;
@@ -456,15 +456,14 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
   if (TgtPtrType == ZE_MEMORY_TYPE_HOST ||
       TgtPtrType == ZE_MEMORY_TYPE_SHARED) {
     bool CopyNow = true;
-    if (IsAsync) {
-      if (AsyncQueue->KernelEvent) {
-        // Delay Host/Shared USM to host memory copy since it must wait for
-        // kernel completion.
-        AsyncQueue->USM2MList.emplace_back(TgtPtr, HstPtr, Size);
-        CopyNow = false;
-      }
+    if (IsAsync && AsyncQueue->KernelEvent) {
+      // Delay Host/Shared USM to host memory copy since it must wait for
+      // kernel completion.
+      AsyncQueue->USM2MList.emplace_back(TgtPtr, HstPtr, Size);
+      CopyNow = false;
     }
     if (CopyNow) {
+      // scope code to ease integration with downstream custom code
       std::copy_n(static_cast<const char *>(TgtPtr), Size,
                   static_cast<char *>(HstPtr));
     }
@@ -631,15 +630,14 @@ interop_spec_t L0DeviceTy::selectInteropPreference(int32_t InteropType,
   // non-ordered unless is targetsync
   return interop_spec_t{
       tgt_fr_level_zero,
-      {InteropType == kmp_interop_type_targetsync ? true : false /*inorder*/,
-       0},
+      {InteropType == kmp_interop_type_targetsync /*inorder*/, 0},
       0};
 }
 
 Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
                                                  interop_spec_t &InteropSpec) {
-  auto Ret =
-      new omp_interop_val_t(DeviceId, (kmp_interop_type_t)InteropContext);
+  auto Ret = new omp_interop_val_t(
+      DeviceId, static_cast<kmp_interop_type_t>(InteropContext));
   Ret->fr_id = tgt_fr_level_zero;
   Ret->vendor_id = omp_vendor_intel;
 
@@ -685,7 +683,7 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
 Error L0DeviceTy::releaseInterop(OmpInteropTy Interop) {
   const auto DeviceId = getDeviceId();
 
-  if (!Interop || Interop->device_id != (intptr_t)DeviceId) {
+  if (!Interop || Interop->device_id != static_cast<intptr_t>(DeviceId)) {
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Invalid/inconsistent OpenMP interop " DPxMOD "\n",
                          DPxPTR(Interop));

@@ -42,7 +42,7 @@ struct AsyncQueueTy {
   }
 };
 
-typedef ObjPool<AsyncQueueTy> AsyncQueuePoolTy;
+using AsyncQueuePoolTy = ObjPool<AsyncQueueTy>;
 
 } // namespace plugin
 } // namespace target

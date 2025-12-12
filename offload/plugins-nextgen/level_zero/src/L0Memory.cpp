@@ -50,7 +50,7 @@ void *MemAllocatorTy::MemPoolTy::BlockTy::alloc() {
     return reinterpret_cast<void *>(Base + I * ChunkSize);
   }
   // Should not reach here.
-  assert(0 && "Inconsistent memory pool state");
+  assert(false && "Inconsistent memory pool state");
   return nullptr;
 }
 
@@ -399,7 +399,7 @@ Error MemAllocatorTy::initHostPool(L0ContextTy &Driver,
                                    const L0OptionsTy &Option) {
   SupportsLargeMem = Driver.supportsLargeMem();
   IsHostMem = true;
-  this->L0Context = &Driver;
+  L0Context = &Driver;
   if (Option.MemPoolConfig[TARGET_ALLOC_HOST].Use) {
     std::lock_guard<std::mutex> Lock(Mtx);
     Pools[TARGET_ALLOC_HOST] = std::make_unique<MemPoolTy>();
@@ -601,7 +601,7 @@ Error MemAllocatorTy::deallocLocked(void *Ptr) {
                          "Cannot find base address of " DPxMOD "\n",
                          DPxPTR(Ptr));
   }
-  log(0, Info.AllocSize, Info.Kind);
+  log(/*NoReqSize*/ 0, Info.AllocSize, Info.Kind);
 
   if (auto Err = deallocFromL0(Info.Base))
     return Err;
@@ -636,25 +636,25 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
     HostDesc.pNext = &RelaxedDesc;
   }
 
-  auto zeDevice = Device ? Device->getZeDevice() : 0;
-  auto zeContext = L0Context->getZeContext();
-  bool makeResident = false;
+  auto ZeDevice = Device ? Device->getZeDevice() : nullptr;
+  auto ZeContext = L0Context->getZeContext();
+  bool MakeResident = false;
   switch (Kind) {
   case TARGET_ALLOC_DEVICE:
-    makeResident = true;
-    CALL_ZE_RET_ERROR(zeMemAllocDevice, zeContext, &DeviceDesc, Size, Align,
-                      zeDevice, &Mem);
+    MakeResident = true;
+    CALL_ZE_RET_ERROR(zeMemAllocDevice, ZeContext, &DeviceDesc, Size, Align,
+                      ZeDevice, &Mem);
     DP("Allocated %" PRId64 " bytes of device memory " DPxMOD "\n", Size,
        DPxPTR(Mem));
     break;
   case TARGET_ALLOC_HOST:
-    CALL_ZE_RET_ERROR(zeMemAllocHost, zeContext, &HostDesc, Size, Align, &Mem);
+    CALL_ZE_RET_ERROR(zeMemAllocHost, ZeContext, &HostDesc, Size, Align, &Mem);
     DP("Allocated %" PRId64 " bytes of host memory " DPxMOD "\n", Size,
        DPxPTR(Mem));
     break;
   case TARGET_ALLOC_SHARED:
-    CALL_ZE_RET_ERROR(zeMemAllocShared, zeContext, &DeviceDesc, &HostDesc, Size,
-                      Align, zeDevice, &Mem);
+    CALL_ZE_RET_ERROR(zeMemAllocShared, ZeContext, &DeviceDesc, &HostDesc, Size,
+                      Align, ZeDevice, &Mem);
     DP("Allocated %" PRId64 " bytes of shared memory " DPxMOD "\n", Size,
        DPxPTR(Mem));
     break;
@@ -662,7 +662,7 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
     assert(0 && "Invalid target data allocation kind");
   }
 
-  if (makeResident) {
+  if (MakeResident) {
     assert(Device &&
            "Device is not set for memory allocation. Is this a Device Pool?");
     if (auto Err = Device->makeMemoryResident(Mem, Size)) {

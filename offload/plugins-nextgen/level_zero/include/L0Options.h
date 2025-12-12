@@ -39,7 +39,7 @@ public:
       : ConstantIds(std::move(Other.ConstantIds)),
         ConstantValues(std::move(Other.ConstantValues)),
         Allocator(Other.Allocator) {}
-  ~SpecConstantsTy() {}
+  ~SpecConstantsTy() = default;
 
   template <typename T> void addConstant(uint32_t Id, T Val) {
     T *ValuePtr =

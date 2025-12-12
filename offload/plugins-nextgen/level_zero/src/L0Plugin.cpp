@@ -43,7 +43,7 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
 
   struct RootInfoTy {
     uint32_t OrderId;
-    ze_device_handle_t zeDevice;
+    ze_device_handle_t ZeDevice;
     L0ContextTy *Driver;
     bool IsDiscrete;
   };
@@ -87,10 +87,10 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
             });
 
   for (size_t RootId = 0; RootId < RootDevices.size(); RootId++) {
-    const auto zeDevice = RootDevices[RootId].zeDevice;
+    const auto ZeDevice = RootDevices[RootId].ZeDevice;
     auto *RootDriver = RootDevices[RootId].Driver;
     DetectedDevices.push_back(DeviceInfoTy{
-        {zeDevice, static_cast<int32_t>(RootId), -1, -1}, RootDriver});
+        {ZeDevice, static_cast<int32_t>(RootId), -1, -1}, RootDriver});
   }
   int32_t NumDevices = DetectedDevices.size();
 

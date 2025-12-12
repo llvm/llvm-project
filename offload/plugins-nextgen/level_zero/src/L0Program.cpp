@@ -135,10 +135,9 @@ Error L0ProgramTy::linkModules() {
     return Plugin::success();
   }
 
-  if (Modules.empty()) {
+  if (Modules.empty())
     return Plugin::error(ErrorCode::UNKNOWN,
                          "Invalid number of modules when linking modules");
-  }
 
   ze_module_build_log_handle_t LinkLog = nullptr;
   CALL_ZE_RET_ERROR(zeModuleDynamicLink,
@@ -534,7 +533,8 @@ Error L0ProgramTy::loadModuleKernels() {
   // don't know which module contains a specific kernel with a name.
   for (auto Module : Modules) {
     uint32_t Count = 0;
-    CALL_ZE_RET_ERROR(zeModuleGetKernelNames, Module, &Count, nullptr);
+    CALL_ZE_RET_ERROR(zeModuleGetKernelNames, Module, &Count,
+                      /*Names=*/nullptr);
     if (Count == 0)
       continue;
 

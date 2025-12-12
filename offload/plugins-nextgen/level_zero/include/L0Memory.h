@@ -100,7 +100,6 @@ class MemAllocatorTy {
     size_t InUse[2] = {0, 0};     // Current memory in use
     size_t PeakUse[2] = {0, 0};   // Peak bytes used
     size_t NumAllocs[2] = {0, 0}; // Number of allocations
-    MemStatTy() = default;
   };
 
   /// Memory pool which enables reuse of already allocated blocks
@@ -139,7 +138,7 @@ class MemAllocatorTy {
         ChunkSize = _ChunkSize;
         NumSlots = Size / ChunkSize;
         NumUsedSlots = 0;
-        UsedSlots.resize(NumSlots, false);
+        UsedSlots.resize(NumSlots, /*InitValue=*/false);
       }
 
       /// Check if the current block is fully used
@@ -214,7 +213,7 @@ class MemAllocatorTy {
     MemPoolTy(MemPoolTy &&) = delete;
     MemPoolTy &operator=(const MemPoolTy &) = delete;
     MemPoolTy &operator=(const MemPoolTy &&) = delete;
-    ~MemPoolTy() {}
+    ~MemPoolTy() = default;
 
     void printUsage();
 
@@ -268,9 +267,12 @@ class MemAllocatorTy {
       if (I == Map.begin())
         return false;
       --I;
-      bool Ret = (uintptr_t)I->first <= (uintptr_t)Ptr &&
-                 (uintptr_t)Ptr + (uintptr_t)Size <=
-                     (uintptr_t)I->first + (uintptr_t)I->second.ReqSize;
+
+      uintptr_t PtrAsInt = reinterpret_cast<uintptr_t>(Ptr);
+      uintptr_t MapBase = reinterpret_cast<uintptr_t>(I->first);
+      uintptr_t MapSize = static_cast<uintptr_t>(I->second.ReqSize);
+
+      bool Ret = MapBase <= PtrAsInt && PtrAsInt + Size <= MapBase + MapSize;
       return Ret;
     }
 
@@ -373,7 +375,7 @@ public:
   MemAllocatorTy(MemAllocatorTy &&) = delete;
   MemAllocatorTy &operator=(const MemAllocatorTy &) = delete;
   MemAllocatorTy &operator=(const MemAllocatorTy &&) = delete;
-  ~MemAllocatorTy() {}
+  ~MemAllocatorTy() = default;
 
   Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option);
   Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option);
@@ -454,8 +456,8 @@ public:
   }
 
   ~ObjPool() {
-    for (auto object : Objects)
-      delete object;
+    for (auto Object : Objects)
+      delete Object;
   }
 };
 
@@ -543,8 +545,7 @@ public:
   StagingBufferTy(StagingBufferTy &&) = delete;
   StagingBufferTy &operator=(const StagingBufferTy &) = delete;
   StagingBufferTy &operator=(const StagingBufferTy &&) = delete;
-
-  ~StagingBufferTy() {}
+  ~StagingBufferTy() = default;
 
   Error clear() {
     ze_result_t Rc;

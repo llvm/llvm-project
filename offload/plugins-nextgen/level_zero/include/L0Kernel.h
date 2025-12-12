@@ -112,7 +112,7 @@ class L0KernelTy : public GenericKernelTy {
 public:
   /// Create a L0 kernel with a name and an execution mode.
   L0KernelTy(const char *Name) : GenericKernelTy(Name), zeKernel(nullptr) {}
-  ~L0KernelTy() {}
+  ~L0KernelTy() = default;
   L0KernelTy(const L0KernelTy &) = delete;
   L0KernelTy(L0KernelTy &&) = delete;
   L0KernelTy &operator=(const L0KernelTy &) = delete;

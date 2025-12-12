@@ -258,8 +258,10 @@ public:
   static L0DeviceTy &makeL0Device(GenericDeviceTy &Device) {
     return static_cast<L0DeviceTy &>(Device);
   }
+  LevelZeroPluginTy &getPlugin() {
+    return reinterpret_cast<LevelZeroPluginTy &>(Plugin);
+  }
 
-  LevelZeroPluginTy &getPlugin() { return (LevelZeroPluginTy &)Plugin; }
   L0DeviceTLSTy &getTLS();
 
   Error setContext() override { return Plugin::success(); }

@@ -57,7 +57,7 @@ private:
 
 public:
   LevelZeroPluginTy() : GenericPluginTy(getTripleArch()) {}
-  virtual ~LevelZeroPluginTy() {}
+  virtual ~LevelZeroPluginTy() = default;
 
   L0DeviceTLSTy &getDeviceTLS(int32_t DeviceId) {
     return DeviceTLSTable.get(DeviceId);

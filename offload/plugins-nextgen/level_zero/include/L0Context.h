@@ -81,9 +81,9 @@ public:
   L0ContextTy &operator=(const L0ContextTy &&) = delete;
 
   /// Release resources
-  ~L0ContextTy() {}
+  ~L0ContextTy() = default;
 
-  Error init();
+      Error init();
   Error deinit();
 
   LevelZeroPluginTy &getPlugin() const { return Plugin; }
@@ -92,15 +92,16 @@ public:
 
   /// Add imported external pointer region.
   void addImported(void *Ptr, size_t Size) {
-    (void)ImportedPtrs.try_emplace((uintptr_t)Ptr, Size);
+    (void)ImportedPtrs.try_emplace(reinterpret_cast<uintptr_t>(Ptr), Size);
   }
 
   /// Remove imported external pointer region
-  void removeImported(void *Ptr) { (void)ImportedPtrs.erase((uintptr_t)Ptr); }
-
+  void removeImported(void *Ptr) {
+    (void)ImportedPtrs.erase(reinterpret_cast<uintptr_t>(Ptr));
+  }
   /// Check if imported regions contain the specified region.
   int32_t checkImported(void *Ptr, size_t Size) const {
-    uintptr_t LB = (uintptr_t)Ptr;
+    uintptr_t LB = reinterpret_cast<uintptr_t>(Ptr);
     uintptr_t UB = LB + Size;
     // We do not expect a large number of user-directed imports, so use simple
     // logic.

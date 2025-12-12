@@ -187,7 +187,8 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
   const auto &KernelPR = getProperties();
 
   // Read the most recent global thread limit and max teams.
-  const auto [NumTeamsICV, ThreadLimitICV] = std::make_tuple(0, 0);
+  const int32_t NumTeamsICV = 0;
+  const int32_t ThreadLimitICV = 0;
 
   bool IsXeHPG = Device.isDeviceArch(DeviceArchTy::DeviceArch_XeHPG);
   KEnv.HalfNumThreads =
@@ -212,9 +213,8 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
 
   size_t MaxThreadLimit = Device.getMaxGroupSize();
   // Set correct max group size if the kernel was compiled with explicit SIMD
-  if (SIMDWidth == 1) {
+  if (SIMDWidth == 1)
     MaxThreadLimit = Device.getNumThreadsPerSubslice();
-  }
 
   if (KernelPR.MaxThreadGroupSize < MaxThreadLimit) {
     MaxThreadLimit = KernelPR.MaxThreadGroupSize;
@@ -227,6 +227,7 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
     DP("Max team size execceds current maximum %zu. Adjusted\n",
        MaxThreadLimit);
   }
+  // scope code to ease integration with downstream custom code
   {
     if (NumTeams > 0) {
       DP("Number of teams is set to %" PRId32
@@ -446,6 +447,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   // Set kernel arguments
   for (int32_t I = 0; I < NumArgs; I++) {
+    // scope code to ease integration with downstream custom code
     {
       void *Arg = (static_cast<void **>(LaunchParams.Data))[I];
       CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, sizeof(Arg),
