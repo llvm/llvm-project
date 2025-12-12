@@ -1959,6 +1959,7 @@ public:
   using StoreList = SmallVector<StoreInst *, 8>;
   using ExtraValueToDebugLocsMap = SmallDenseSet<Value *, 4>;
   using OrdersType = SmallVector<unsigned, 4>;
+  using VecTreeTy = SmallVector<std::unique_ptr<TreeEntry>, 8>;
 
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
           TargetLibraryInfo *TLi, AAResults *Aa, LoopInfo *Li,
@@ -3882,8 +3883,7 @@ private:
 
   class TreeEntry {
   public:
-    using VecTreeTy = SmallVector<std::unique_ptr<TreeEntry>, 8>;
-    TreeEntry(VecTreeTy &Container) : Container(Container) {}
+    TreeEntry(BoUpSLP::VecTreeTy &Container) : Container(Container) {}
 
     /// \returns Common mask for reorder indices and reused scalars.
     SmallVector<int> getCommonMask() const {
@@ -4482,7 +4482,7 @@ private:
 
   /// -- Vectorization State --
   /// Holds all of the tree entries.
-  TreeEntry::VecTreeTy VectorizableTree;
+  VecTreeTy VectorizableTree;
 
 #ifndef NDEBUG
   /// Debug printer.
@@ -6114,7 +6114,7 @@ template <> struct llvm::GraphTraits<BoUpSLP *> {
   /// NodeRef has to be a pointer per the GraphWriter.
   using NodeRef = TreeEntry *;
 
-  using ContainerTy = BoUpSLP::TreeEntry::VecTreeTy;
+  using ContainerTy = BoUpSLP::VecTreeTy;
 
   /// Add the VectorizableTree to the index iterator to be able to return
   /// TreeEntry pointers.
