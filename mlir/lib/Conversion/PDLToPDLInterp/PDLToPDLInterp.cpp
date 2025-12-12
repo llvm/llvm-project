@@ -991,6 +991,16 @@ struct PDLToPDLInterpPass
 void PDLToPDLInterpPass::runOnOperation() {
   ModuleOp module = getOperation();
 
+  // Check there are no non-materializable patterns.
+  for (pdl::PatternOp pattern : module.getOps<pdl::PatternOp>()) {
+    if (pattern.getNonmaterializable()) {
+      pattern.emitError()
+          << "pdl_interp backend does not support non-materializable "
+             "patterns";
+      return signalPassFailure();
+    }
+  }
+
   // Create the main matcher function This function contains all of the match
   // related functionality from patterns in the module.
   OpBuilder builder = OpBuilder::atBlockBegin(module.getBody());

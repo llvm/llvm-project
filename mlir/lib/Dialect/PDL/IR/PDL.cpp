@@ -322,6 +322,10 @@ LogicalResult PatternOp::verifyRegions() {
         .append("see terminator defined here");
   }
 
+  // Skip if the pattern is marked non-materializable.
+  if (getNonmaterializable())
+    return success();
+
   // Check that all values defined in the top-level pattern belong to the PDL
   // dialect.
   WalkResult result = body.walk([&](Operation *op) -> WalkResult {
@@ -385,9 +389,10 @@ LogicalResult PatternOp::verifyRegions() {
 
 void PatternOp::build(OpBuilder &builder, OperationState &state,
                       std::optional<uint16_t> benefit,
-                      std::optional<StringRef> name) {
+                      std::optional<StringRef> name, bool nonmaterializable) {
   build(builder, state, builder.getI16IntegerAttr(benefit.value_or(0)),
-        name ? builder.getStringAttr(*name) : StringAttr());
+        name ? builder.getStringAttr(*name) : StringAttr(),
+        nonmaterializable ? builder.getUnitAttr() : UnitAttr());
   state.regions[0]->emplaceBlock();
 }
 

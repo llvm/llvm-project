@@ -30,7 +30,7 @@ class PDL_Op<string mnemonic, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def PDL_ApplyNativeConstraintOp
-    : PDL_Op<"apply_native_constraint", [HasParent<"pdl::PatternOp">]> {
+    : PDL_Op<"apply_native_constraint", [HasParentNotOf<"pdl::RewriteOp">]> {
   let summary = "Apply a native constraint to a set of provided entities";
   let description = [{
     `pdl.apply_native_constraint` operations apply a native C++ constraint, that
@@ -62,7 +62,7 @@ def PDL_ApplyNativeConstraintOp
 //===----------------------------------------------------------------------===//
 
 def PDL_ApplyNativeRewriteOp
-    : PDL_Op<"apply_native_rewrite", [HasParent<"pdl::RewriteOp">]> {
+    : PDL_Op<"apply_native_rewrite", [HasParentNotOf<"pdl::PatternOp">]> {
   let summary = "Apply a native rewrite method inside of pdl.rewrite region";
   let description = [{
     `pdl.apply_native_rewrite` operations apply a native C++ function, that has
@@ -150,7 +150,7 @@ def PDL_AttributeOp : PDL_Op<"attribute"> {
 // pdl::EraseOp
 //===----------------------------------------------------------------------===//
 
-def PDL_EraseOp : PDL_Op<"erase", [HasParent<"pdl::RewriteOp">]> {
+def PDL_EraseOp : PDL_Op<"erase", [HasParentNotOf<"pdl::PatternOp">]> {
   let summary = "Mark an input operation as `erased`";
   let description = [{
     `pdl.erase` operations are used within `pdl.rewrite` regions to specify that
@@ -172,7 +172,7 @@ def PDL_EraseOp : PDL_Op<"erase", [HasParent<"pdl::RewriteOp">]> {
 //===----------------------------------------------------------------------===//
 
 def PDL_OperandOp
-    : PDL_Op<"operand", [HasParent<"pdl::PatternOp">]> {
+    : PDL_Op<"operand", [HasParentNotOf<"pdl::RewriteOp">]> {
   let summary = "Define an external input operand in a pattern";
   let description = [{
     `pdl.operand` operations capture external operand edges into an operation
@@ -211,7 +211,7 @@ def PDL_OperandOp
 //===----------------------------------------------------------------------===//
 
 def PDL_OperandsOp
-    : PDL_Op<"operands", [HasParent<"pdl::PatternOp">]> {
+    : PDL_Op<"operands", [HasParentNotOf<"pdl::RewriteOp">]> {
   let summary = "Define a range of input operands in a pattern";
   let description = [{
     `pdl.operands` operations capture external operand range edges into an
@@ -403,6 +403,11 @@ def PDL_PatternOp : PDL_Op<"pattern", [
     the pattern is specified within the region body, with the rewrite provided
     by a terminating `pdl.rewrite`.
 
+    The `nonmaterializable` attribute indicates that the pattern cannot be
+    materialized in a PDL backend. This is used for patterns that require
+    further transformations before they can be lowered, e.g. patterns that
+    contain non-PDL operations.
+
     Example:
 
     ```mlir
@@ -420,15 +425,19 @@ def PDL_PatternOp : PDL_Op<"pattern", [
   }];
 
   let arguments = (ins ConfinedAttr<I16Attr, [IntNonNegative]>:$benefit,
-                       OptionalAttr<SymbolNameAttr>:$sym_name);
+                       OptionalAttr<SymbolNameAttr>:$sym_name,
+                       UnitAttr:$nonmaterializable);
   let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = [{
-    ($sym_name^)? `:` `benefit` `(` $benefit `)` attr-dict-with-keyword $bodyRegion
+    ($sym_name^)? `:` `benefit` `(` $benefit `)`
+    (`nonmaterializable` $nonmaterializable^)?
+    attr-dict-with-keyword $bodyRegion
   }];
 
   let builders = [
     OpBuilder<(ins CArg<"std::optional<uint16_t>", "1">:$benefit,
-                   CArg<"std::optional<StringRef>", "std::nullopt">:$name)>,
+                   CArg<"std::optional<StringRef>", "std::nullopt">:$name,
+                   CArg<"bool", "false">:$nonmaterializable)>,
   ];
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//
@@ -448,7 +457,7 @@ def PDL_PatternOp : PDL_Op<"pattern", [
 // pdl::RangeOp
 //===----------------------------------------------------------------------===//
 
-def PDL_RangeOp : PDL_Op<"range", [Pure, HasParent<"pdl::RewriteOp">]> {
+def PDL_RangeOp : PDL_Op<"range", [Pure, HasParentNotOf<"pdl::PatternOp">]> {
   let summary = "Construct a range of pdl entities";
   let description = [{
     `pdl.range` operations construct a range from a given set of PDL entities,
@@ -491,7 +500,7 @@ def PDL_RangeOp : PDL_Op<"range", [Pure, HasParent<"pdl::RewriteOp">]> {
 //===----------------------------------------------------------------------===//
 
 def PDL_ReplaceOp : PDL_Op<"replace", [
-    AttrSizedOperandSegments, HasParent<"pdl::RewriteOp">
+    AttrSizedOperandSegments, HasParentNotOf<"pdl::PatternOp">
   ]> {
   let summary = "Mark an input operation as `replaced`";
   let description = [{
