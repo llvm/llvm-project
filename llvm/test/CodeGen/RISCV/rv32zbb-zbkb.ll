@@ -171,8 +171,8 @@ define i32 @disjoint_or_xnor_knownbits_i32(i32 %x, i32 %y, i32 %z) nounwind {
 define i64 @disjoint_or_xnor_knownbits_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV32I-LABEL: disjoint_or_xnor_knownbits_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 126
 ; RV32I-NEXT:    andi a1, a2, -127
+; RV32I-NEXT:    andi a0, a0, 126
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    not a1, a3
@@ -180,8 +180,8 @@ define i64 @disjoint_or_xnor_knownbits_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ;
 ; RV32ZBB-ZBKB-LABEL: disjoint_or_xnor_knownbits_i64:
 ; RV32ZBB-ZBKB:       # %bb.0:
-; RV32ZBB-ZBKB-NEXT:    andi a0, a0, 126
 ; RV32ZBB-ZBKB-NEXT:    andi a1, a2, -127
+; RV32ZBB-ZBKB-NEXT:    andi a0, a0, 126
 ; RV32ZBB-ZBKB-NEXT:    xnor a0, a0, a1
 ; RV32ZBB-ZBKB-NEXT:    not a1, a3
 ; RV32ZBB-ZBKB-NEXT:    ret
@@ -245,8 +245,6 @@ define i64 @inverted_masked_merge_i64(i64 %x, i64 %y, i64 %z) nounwind {
   ret i64 %not
 }
 
-declare i32 @llvm.fshl.i32(i32, i32, i32)
-
 define i32 @rol_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: rol_i32:
 ; RV32I:       # %bb.0:
@@ -266,8 +264,6 @@ define i32 @rol_i32(i32 %a, i32 %b) nounwind {
 
 ; This test is presented here in case future expansions of the Bitmanip
 ; extensions introduce instructions suitable for this pattern.
-
-declare i64 @llvm.fshl.i64(i64, i64, i64)
 
 define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: rol_i64:
@@ -297,8 +293,6 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
   ret i64 %or
 }
 
-declare i32 @llvm.fshr.i32(i32, i32, i32)
-
 define i32 @ror_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: ror_i32:
 ; RV32I:       # %bb.0:
@@ -318,8 +312,6 @@ define i32 @ror_i32(i32 %a, i32 %b) nounwind {
 
 ; This test is presented here in case future expansions of the Bitmanip
 ; extensions introduce instructions suitable for this pattern.
-
-declare i64 @llvm.fshr.i64(i64, i64, i64)
 
 define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: ror_i64:
@@ -429,16 +421,16 @@ define i32 @not_shl_one_i32(i32 %x) {
 define i64 @not_shl_one_i64(i64 %x) {
 ; CHECK-LABEL: not_shl_one_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -32
-; CHECK-NEXT:    srli a1, a1, 31
-; CHECK-NEXT:    li a2, 1
-; CHECK-NEXT:    neg a3, a1
-; CHECK-NEXT:    sll a0, a2, a0
-; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    addi a2, a0, -32
+; CHECK-NEXT:    srli a2, a2, 31
+; CHECK-NEXT:    neg a3, a2
+; CHECK-NEXT:    sll a0, a1, a0
+; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a3, a3, a0
-; CHECK-NEXT:    and a1, a1, a0
+; CHECK-NEXT:    and a2, a2, a0
 ; CHECK-NEXT:    not a0, a3
-; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    not a1, a2
 ; CHECK-NEXT:    ret
   %1 = shl i64 1, %x
   %2 = xor i64 %1, -1

@@ -7,10 +7,11 @@ define i32 @signed(i32 %0, ptr %1) {
 ; CHECK-NEXT:    sraiw a2, a0, 31
 ; CHECK-NEXT:    srliw a2, a2, 24
 ; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    andi a2, a2, -256
-; CHECK-NEXT:    sub a2, a0, a2
-; CHECK-NEXT:    sraiw a0, a0, 8
-; CHECK-NEXT:    sw a2, 0(a1)
+; CHECK-NEXT:    andi a3, a2, -256
+; CHECK-NEXT:    sraiw a2, a0, 8
+; CHECK-NEXT:    sub a3, a0, a3
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    sw a3, 0(a1)
 ; CHECK-NEXT:    ret
   %rem = srem i32 %0, 256
   store i32 %rem, ptr %1, align 4
@@ -32,9 +33,9 @@ define i32 @unsigned(i32 %0, ptr %1) {
 ; CHECK-NEXT:    slli a4, a3, 3
 ; CHECK-NEXT:    slli a3, a3, 4
 ; CHECK-NEXT:    add a3, a3, a4
-; CHECK-NEXT:    sub a0, a0, a3
-; CHECK-NEXT:    sw a0, 0(a1)
+; CHECK-NEXT:    sub a3, a0, a3
 ; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    sw a3, 0(a1)
 ; CHECK-NEXT:    ret
   %rem = urem i32 %0, 24
   store i32 %rem, ptr %1, align 4
@@ -47,12 +48,12 @@ define i32 @signed_div_first(i32 %0, ptr %1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sraiw a2, a0, 31
 ; CHECK-NEXT:    srliw a2, a2, 24
-; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    andi a3, a2, -256
-; CHECK-NEXT:    sraiw a2, a2, 8
-; CHECK-NEXT:    sub a0, a0, a3
-; CHECK-NEXT:    sw a0, 0(a1)
+; CHECK-NEXT:    add a3, a0, a2
+; CHECK-NEXT:    sraiw a2, a3, 8
+; CHECK-NEXT:    andi a3, a3, -256
+; CHECK-NEXT:    sub a3, a0, a3
 ; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    sw a3, 0(a1)
 ; CHECK-NEXT:    ret
   %div = sdiv exact i32 %0, 256
   %rem = srem i32 %0, 256
@@ -72,9 +73,9 @@ define i32 @unsigned_div_first(i32 %0, ptr %1) {
 ; CHECK-NEXT:    slli a3, a2, 3
 ; CHECK-NEXT:    slli a4, a2, 4
 ; CHECK-NEXT:    add a3, a4, a3
-; CHECK-NEXT:    sub a0, a0, a3
-; CHECK-NEXT:    sw a0, 0(a1)
+; CHECK-NEXT:    sub a3, a0, a3
 ; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    sw a3, 0(a1)
 ; CHECK-NEXT:    ret
   %div = udiv exact i32 %0, 24
   %rem = urem i32 %0, 24

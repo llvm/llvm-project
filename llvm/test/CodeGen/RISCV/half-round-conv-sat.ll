@@ -47,8 +47,8 @@ define signext i32 @test_floor_si32(half %x) {
 ;
 ; CHECKIZFHMIN-LABEL: test_floor_si32:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -222,8 +222,8 @@ define i64 @test_floor_si64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_floor_si64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -274,8 +274,8 @@ define i64 @test_floor_si64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_floor_si64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -418,8 +418,8 @@ define signext i32 @test_floor_ui32(half %x) {
 ;
 ; RV32IZFHMIN-LABEL: test_floor_ui32:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -440,8 +440,8 @@ define signext i32 @test_floor_ui32(half %x) {
 ;
 ; RV64IZFHMIN-LABEL: test_floor_ui32:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -610,8 +610,8 @@ define i64 @test_floor_ui64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_floor_ui64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -649,8 +649,8 @@ define i64 @test_floor_ui64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_floor_ui64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -761,8 +761,8 @@ define signext i32 @test_ceil_si32(half %x) {
 ;
 ; CHECKIZFHMIN-LABEL: test_ceil_si32:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -936,8 +936,8 @@ define i64 @test_ceil_si64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_ceil_si64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -988,8 +988,8 @@ define i64 @test_ceil_si64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_ceil_si64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -1132,8 +1132,8 @@ define signext i32 @test_ceil_ui32(half %x) {
 ;
 ; RV32IZFHMIN-LABEL: test_ceil_ui32:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -1154,8 +1154,8 @@ define signext i32 @test_ceil_ui32(half %x) {
 ;
 ; RV64IZFHMIN-LABEL: test_ceil_ui32:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -1324,8 +1324,8 @@ define i64 @test_ceil_ui64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_ceil_ui64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -1363,8 +1363,8 @@ define i64 @test_ceil_ui64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_ceil_ui64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -1475,8 +1475,8 @@ define signext i32 @test_trunc_si32(half %x) {
 ;
 ; CHECKIZFHMIN-LABEL: test_trunc_si32:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -1650,8 +1650,8 @@ define i64 @test_trunc_si64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_trunc_si64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -1702,8 +1702,8 @@ define i64 @test_trunc_si64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_trunc_si64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -1846,8 +1846,8 @@ define signext i32 @test_trunc_ui32(half %x) {
 ;
 ; RV32IZFHMIN-LABEL: test_trunc_ui32:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -1868,8 +1868,8 @@ define signext i32 @test_trunc_ui32(half %x) {
 ;
 ; RV64IZFHMIN-LABEL: test_trunc_ui32:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2038,8 +2038,8 @@ define i64 @test_trunc_ui64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_trunc_ui64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2077,8 +2077,8 @@ define i64 @test_trunc_ui64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_trunc_ui64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2189,8 +2189,8 @@ define signext i32 @test_round_si32(half %x) {
 ;
 ; CHECKIZFHMIN-LABEL: test_round_si32:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2364,8 +2364,8 @@ define i64 @test_round_si64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_round_si64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2416,8 +2416,8 @@ define i64 @test_round_si64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_round_si64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2560,8 +2560,8 @@ define signext i32 @test_round_ui32(half %x) {
 ;
 ; RV32IZFHMIN-LABEL: test_round_ui32:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2582,8 +2582,8 @@ define signext i32 @test_round_ui32(half %x) {
 ;
 ; RV64IZFHMIN-LABEL: test_round_ui32:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2752,8 +2752,8 @@ define i64 @test_round_ui64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_round_ui64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2791,8 +2791,8 @@ define i64 @test_round_ui64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_round_ui64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2903,8 +2903,8 @@ define signext i32 @test_roundeven_si32(half %x) {
 ;
 ; CHECKIZFHMIN-LABEL: test_roundeven_si32:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -3078,8 +3078,8 @@ define i64 @test_roundeven_si64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_roundeven_si64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -3130,8 +3130,8 @@ define i64 @test_roundeven_si64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_roundeven_si64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -3274,8 +3274,8 @@ define signext i32 @test_roundeven_ui32(half %x) {
 ;
 ; RV32IZFHMIN-LABEL: test_roundeven_ui32:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -3296,8 +3296,8 @@ define signext i32 @test_roundeven_ui32(half %x) {
 ;
 ; RV64IZFHMIN-LABEL: test_roundeven_ui32:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -3466,8 +3466,8 @@ define i64 @test_roundeven_ui64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_roundeven_ui64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -3505,8 +3505,8 @@ define i64 @test_roundeven_ui64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_roundeven_ui64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -3617,8 +3617,8 @@ define signext i32 @test_rint_si32(half %x) {
 ;
 ; CHECKIZFHMIN-LABEL: test_rint_si32:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -3792,8 +3792,8 @@ define i64 @test_rint_si64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_rint_si64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -3844,8 +3844,8 @@ define i64 @test_rint_si64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_rint_si64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -3988,8 +3988,8 @@ define signext i32 @test_rint_ui32(half %x) {
 ;
 ; RV32IZFHMIN-LABEL: test_rint_ui32:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -4010,8 +4010,8 @@ define signext i32 @test_rint_ui32(half %x) {
 ;
 ; RV64IZFHMIN-LABEL: test_rint_ui32:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -4180,8 +4180,8 @@ define i64 @test_rint_ui64(half %x) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: test_rint_ui64:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    lui a0, 307200
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV32IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV32IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV32IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -4219,8 +4219,8 @@ define i64 @test_rint_ui64(half %x) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: test_rint_ui64:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    lui a0, 307200
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; RV64IZFHMIN-NEXT:    fabs.s fa3, fa5
 ; RV64IZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -4300,13 +4300,3 @@ define i64 @test_rint_ui64(half %x) nounwind {
   ret i64 %b
 }
 
-declare half @llvm.floor.f16(half)
-declare half @llvm.ceil.f16(half)
-declare half @llvm.trunc.f16(half)
-declare half @llvm.round.f16(half)
-declare half @llvm.roundeven.f16(half)
-declare half @llvm.rint.f16(half)
-declare i32 @llvm.fptosi.sat.i32.f16(half)
-declare i64 @llvm.fptosi.sat.i64.f16(half)
-declare i32 @llvm.fptoui.sat.i32.f16(half)
-declare i64 @llvm.fptoui.sat.i64.f16(half)

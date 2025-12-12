@@ -217,19 +217,19 @@ define void @add_sext_shl_moreOneUse_add_inSelect_addexceedsign12(ptr %array1, i
 ; NO-ZBA-LABEL: add_sext_shl_moreOneUse_add_inSelect_addexceedsign12:
 ; NO-ZBA:       # %bb.0: # %entry
 ; NO-ZBA-NEXT:    addi a4, a1, 2047
-; NO-ZBA-NEXT:    slli a5, a1, 2
-; NO-ZBA-NEXT:    addi a1, a4, 1
-; NO-ZBA-NEXT:    lui a4, 2
+; NO-ZBA-NEXT:    addi a4, a4, 1
+; NO-ZBA-NEXT:    slli a1, a1, 2
+; NO-ZBA-NEXT:    lui a5, 2
+; NO-ZBA-NEXT:    add a0, a0, a1
 ; NO-ZBA-NEXT:    add a0, a0, a5
-; NO-ZBA-NEXT:    add a0, a0, a4
-; NO-ZBA-NEXT:    mv a4, a1
+; NO-ZBA-NEXT:    mv a1, a4
 ; NO-ZBA-NEXT:    bgtz a3, .LBB4_2
 ; NO-ZBA-NEXT:  # %bb.1: # %entry
-; NO-ZBA-NEXT:    mv a4, a2
+; NO-ZBA-NEXT:    mv a1, a2
 ; NO-ZBA-NEXT:  .LBB4_2: # %entry
-; NO-ZBA-NEXT:    sw a4, 0(a0)
-; NO-ZBA-NEXT:    sw a4, 4(a0)
-; NO-ZBA-NEXT:    sw a1, 120(a0)
+; NO-ZBA-NEXT:    sw a1, 0(a0)
+; NO-ZBA-NEXT:    sw a1, 4(a0)
+; NO-ZBA-NEXT:    sw a4, 120(a0)
 ; NO-ZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: add_sext_shl_moreOneUse_add_inSelect_addexceedsign12:

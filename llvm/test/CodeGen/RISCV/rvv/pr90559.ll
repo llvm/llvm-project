@@ -27,17 +27,17 @@
 define void @f(ptr %p) vscale_range(2,2) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    lw a1, 84(a0)
-; CHECK-NEXT:    addi a2, a0, 80
-; CHECK-NEXT:    vs1r.v v12, (a2)
-; CHECK-NEXT:    addi a2, a0, 64
-; CHECK-NEXT:    vs1r.v v12, (a2)
+; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    addi a1, a0, 80
+; CHECK-NEXT:    lw a2, 84(a0)
+; CHECK-NEXT:    vs1r.v v12, (a1)
+; CHECK-NEXT:    addi a1, a0, 64
+; CHECK-NEXT:    vs1r.v v12, (a1)
+; CHECK-NEXT:    sw a2, 84(a0)
 ; CHECK-NEXT:    vs4r.v v8, (a0)
-; CHECK-NEXT:    sw a1, 84(a0)
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i64 84
   %x = load i32, ptr %q

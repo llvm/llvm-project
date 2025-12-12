@@ -7,25 +7,25 @@ define void @evl_tail_folded(ptr %p, ptr %q) {
 ; CHECK-LABEL: evl_tail_folded:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    csrr a3, vlenb
-; CHECK-NEXT:    srli a3, a3, 2
-; CHECK-NEXT:    addi a4, a3, 1023
-; CHECK-NEXT:    neg a5, a3
-; CHECK-NEXT:    and a4, a4, a5
-; CHECK-NEXT:    li a5, 1024
+; CHECK-NEXT:    li a3, 1024
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    srli a4, a4, 2
+; CHECK-NEXT:    addi a5, a4, 1023
+; CHECK-NEXT:    neg a6, a4
+; CHECK-NEXT:    and a5, a5, a6
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub a6, a5, a2
+; CHECK-NEXT:    sub a6, a3, a2
 ; CHECK-NEXT:    slli a7, a2, 3
 ; CHECK-NEXT:    vsetvli a6, a6, e64, m2, ta, ma
 ; CHECK-NEXT:    add t0, a0, a7
 ; CHECK-NEXT:    vle64.v v8, (t0)
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
 ; CHECK-NEXT:    add a7, a1, a7
-; CHECK-NEXT:    sub a4, a4, a3
+; CHECK-NEXT:    sub a5, a5, a4
 ; CHECK-NEXT:    vse64.v v8, (a7)
 ; CHECK-NEXT:    add a2, a2, a6
-; CHECK-NEXT:    bnez a4, .LBB0_1
+; CHECK-NEXT:    bnez a5, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    ret
 entry:

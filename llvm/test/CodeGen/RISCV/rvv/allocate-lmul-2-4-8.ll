@@ -1639,17 +1639,17 @@ define void @lmul_16_align() nounwind {
 ; NOZBA-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; NOZBA-NEXT:    vmv.v.i v8, 0
 ; NOZBA-NEXT:    csrr a0, vlenb
-; NOZBA-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; NOZBA-NEXT:    vmv.v.i v16, 0
-; NOZBA-NEXT:    csrr a1, vlenb
-; NOZBA-NEXT:    add a1, sp, a1
-; NOZBA-NEXT:    addi a1, a1, 128
-; NOZBA-NEXT:    slli a0, a0, 3
-; NOZBA-NEXT:    vs8r.v v8, (a1)
-; NOZBA-NEXT:    add a0, a1, a0
+; NOZBA-NEXT:    add a0, sp, a0
+; NOZBA-NEXT:    addi a0, a0, 128
 ; NOZBA-NEXT:    vs8r.v v8, (a0)
+; NOZBA-NEXT:    csrr a1, vlenb
+; NOZBA-NEXT:    slli a1, a1, 3
+; NOZBA-NEXT:    add a0, a0, a1
+; NOZBA-NEXT:    vs8r.v v8, (a0)
+; NOZBA-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; NOZBA-NEXT:    vmv.v.i v8, 0
 ; NOZBA-NEXT:    addi a0, sp, 128
-; NOZBA-NEXT:    vs1r.v v16, (a0)
+; NOZBA-NEXT:    vs1r.v v8, (a0)
 ; NOZBA-NEXT:    addi sp, s0, -144
 ; NOZBA-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; NOZBA-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
@@ -1672,14 +1672,14 @@ define void @lmul_16_align() nounwind {
 ; ZBA-NEXT:    csrr a0, vlenb
 ; ZBA-NEXT:    add a0, sp, a0
 ; ZBA-NEXT:    addi a0, a0, 128
-; ZBA-NEXT:    csrr a1, vlenb
-; ZBA-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
-; ZBA-NEXT:    vmv.v.i v16, 0
-; ZBA-NEXT:    sh3add a1, a1, a0
 ; ZBA-NEXT:    vs8r.v v8, (a0)
-; ZBA-NEXT:    vs8r.v v8, (a1)
+; ZBA-NEXT:    csrr a1, vlenb
+; ZBA-NEXT:    sh3add a0, a1, a0
+; ZBA-NEXT:    vs8r.v v8, (a0)
+; ZBA-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; ZBA-NEXT:    vmv.v.i v8, 0
 ; ZBA-NEXT:    addi a0, sp, 128
-; ZBA-NEXT:    vs1r.v v16, (a0)
+; ZBA-NEXT:    vs1r.v v8, (a0)
 ; ZBA-NEXT:    addi sp, s0, -144
 ; ZBA-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; ZBA-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
@@ -1702,17 +1702,17 @@ define void @lmul_16_align() nounwind {
 ; NOMUL-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; NOMUL-NEXT:    vmv.v.i v8, 0
 ; NOMUL-NEXT:    csrr a0, vlenb
-; NOMUL-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; NOMUL-NEXT:    vmv.v.i v16, 0
-; NOMUL-NEXT:    csrr a1, vlenb
-; NOMUL-NEXT:    add a1, sp, a1
-; NOMUL-NEXT:    addi a1, a1, 128
-; NOMUL-NEXT:    slli a0, a0, 3
-; NOMUL-NEXT:    vs8r.v v8, (a1)
-; NOMUL-NEXT:    add a0, a1, a0
+; NOMUL-NEXT:    add a0, sp, a0
+; NOMUL-NEXT:    addi a0, a0, 128
 ; NOMUL-NEXT:    vs8r.v v8, (a0)
+; NOMUL-NEXT:    csrr a1, vlenb
+; NOMUL-NEXT:    slli a1, a1, 3
+; NOMUL-NEXT:    add a0, a0, a1
+; NOMUL-NEXT:    vs8r.v v8, (a0)
+; NOMUL-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; NOMUL-NEXT:    vmv.v.i v8, 0
 ; NOMUL-NEXT:    addi a0, sp, 128
-; NOMUL-NEXT:    vs1r.v v16, (a0)
+; NOMUL-NEXT:    vs1r.v v8, (a0)
 ; NOMUL-NEXT:    addi sp, s0, -144
 ; NOMUL-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; NOMUL-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
@@ -1733,17 +1733,17 @@ define void @lmul_16_align() nounwind {
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    vmv.v.i v8, 0
 ; CHECK-NOZBA-VSETVLI-NEXT:    csrr a0, vlenb
-; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; CHECK-NOZBA-VSETVLI-NEXT:    vmv.v.i v16, 0
-; CHECK-NOZBA-VSETVLI-NEXT:    csrr a1, vlenb
-; CHECK-NOZBA-VSETVLI-NEXT:    add a1, sp, a1
-; CHECK-NOZBA-VSETVLI-NEXT:    addi a1, a1, 128
-; CHECK-NOZBA-VSETVLI-NEXT:    slli a0, a0, 3
-; CHECK-NOZBA-VSETVLI-NEXT:    vs8r.v v8, (a1)
-; CHECK-NOZBA-VSETVLI-NEXT:    add a0, a1, a0
+; CHECK-NOZBA-VSETVLI-NEXT:    add a0, sp, a0
+; CHECK-NOZBA-VSETVLI-NEXT:    addi a0, a0, 128
 ; CHECK-NOZBA-VSETVLI-NEXT:    vs8r.v v8, (a0)
+; CHECK-NOZBA-VSETVLI-NEXT:    csrr a1, vlenb
+; CHECK-NOZBA-VSETVLI-NEXT:    slli a1, a1, 3
+; CHECK-NOZBA-VSETVLI-NEXT:    add a0, a0, a1
+; CHECK-NOZBA-VSETVLI-NEXT:    vs8r.v v8, (a0)
+; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NOZBA-VSETVLI-NEXT:    vmv.v.i v8, 0
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi a0, sp, 128
-; CHECK-NOZBA-VSETVLI-NEXT:    vs1r.v v16, (a0)
+; CHECK-NOZBA-VSETVLI-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -144
 ; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
@@ -1766,14 +1766,14 @@ define void @lmul_16_align() nounwind {
 ; CHECK-ZBA-VSETVLI-NEXT:    csrr a0, vlenb
 ; CHECK-ZBA-VSETVLI-NEXT:    add a0, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    addi a0, a0, 128
-; CHECK-ZBA-VSETVLI-NEXT:    csrr a1, vlenb
-; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
-; CHECK-ZBA-VSETVLI-NEXT:    vmv.v.i v16, 0
-; CHECK-ZBA-VSETVLI-NEXT:    sh3add a1, a1, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    vs8r.v v8, (a0)
-; CHECK-ZBA-VSETVLI-NEXT:    vs8r.v v8, (a1)
+; CHECK-ZBA-VSETVLI-NEXT:    csrr a1, vlenb
+; CHECK-ZBA-VSETVLI-NEXT:    sh3add a0, a1, a0
+; CHECK-ZBA-VSETVLI-NEXT:    vs8r.v v8, (a0)
+; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-ZBA-VSETVLI-NEXT:    vmv.v.i v8, 0
 ; CHECK-ZBA-VSETVLI-NEXT:    addi a0, sp, 128
-; CHECK-ZBA-VSETVLI-NEXT:    vs1r.v v16, (a0)
+; CHECK-ZBA-VSETVLI-NEXT:    vs1r.v v8, (a0)
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -144
 ; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
@@ -1796,17 +1796,17 @@ define void @lmul_16_align() nounwind {
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    vmv.v.i v8, 0
 ; CHECK-NOMUL-VSETVLI-NEXT:    csrr a0, vlenb
-; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; CHECK-NOMUL-VSETVLI-NEXT:    vmv.v.i v16, 0
-; CHECK-NOMUL-VSETVLI-NEXT:    csrr a1, vlenb
-; CHECK-NOMUL-VSETVLI-NEXT:    add a1, sp, a1
-; CHECK-NOMUL-VSETVLI-NEXT:    addi a1, a1, 128
-; CHECK-NOMUL-VSETVLI-NEXT:    slli a0, a0, 3
-; CHECK-NOMUL-VSETVLI-NEXT:    vs8r.v v8, (a1)
-; CHECK-NOMUL-VSETVLI-NEXT:    add a0, a1, a0
+; CHECK-NOMUL-VSETVLI-NEXT:    add a0, sp, a0
+; CHECK-NOMUL-VSETVLI-NEXT:    addi a0, a0, 128
 ; CHECK-NOMUL-VSETVLI-NEXT:    vs8r.v v8, (a0)
+; CHECK-NOMUL-VSETVLI-NEXT:    csrr a1, vlenb
+; CHECK-NOMUL-VSETVLI-NEXT:    slli a1, a1, 3
+; CHECK-NOMUL-VSETVLI-NEXT:    add a0, a0, a1
+; CHECK-NOMUL-VSETVLI-NEXT:    vs8r.v v8, (a0)
+; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NOMUL-VSETVLI-NEXT:    vmv.v.i v8, 0
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi a0, sp, 128
-; CHECK-NOMUL-VSETVLI-NEXT:    vs1r.v v16, (a0)
+; CHECK-NOMUL-VSETVLI-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -144
 ; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload

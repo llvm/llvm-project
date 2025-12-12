@@ -816,9 +816,9 @@ define i64 @mask_test_eq_simm12(i64 %x) nounwind {
 define i64 @mask_test_eq_multiuse(i64 %x, ptr %p) nounwind {
 ; RV64I-LABEL: mask_test_eq_multiuse:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 2
-; RV64I-NEXT:    srli a2, a0, 2
-; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    slli a2, a0, 2
+; RV64I-NEXT:    seqz a0, a2
+; RV64I-NEXT:    srli a2, a2, 2
 ; RV64I-NEXT:    sd a2, 0(a1)
 ; RV64I-NEXT:    ret
   %y = and i64 %x, 4611686018427387903
@@ -828,4 +828,3 @@ define i64 @mask_test_eq_multiuse(i64 %x, ptr %p) nounwind {
   ret i64 %ext
 }
 
-declare i64 @llvm.umin.i64(i64, i64)

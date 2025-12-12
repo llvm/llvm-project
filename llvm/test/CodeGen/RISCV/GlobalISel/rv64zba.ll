@@ -403,8 +403,8 @@ define zeroext i32 @sext_ashr_zext_i8(i8 %a) nounwind {
 define i64 @sh6_sh3_add1(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
 ; RV64I-LABEL: sh6_sh3_add1:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    slli a1, a1, 6
+; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -448,8 +448,8 @@ entry:
 define i64 @sh6_sh3_add3(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
 ; RV64I-LABEL: sh6_sh3_add3:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    slli a1, a1, 6
+; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -471,8 +471,8 @@ entry:
 define i64 @sh6_sh3_add4(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
 ; RV64I-LABEL: sh6_sh3_add4:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    slli a1, a1, 6
+; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -1429,19 +1429,19 @@ define i64 @array_index_sh4_sh3(ptr %p, i64 %idx1, i64 %idx2) {
 define ptr @gep_lshr_i32(ptr %0, i64 %1) {
 ; RV64I-LABEL: gep_lshr_i32:
 ; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    li a2, 80
 ; RV64I-NEXT:    srli a1, a1, 2
 ; RV64I-NEXT:    slli a1, a1, 32
 ; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    li a2, 80
 ; RV64I-NEXT:    mul a1, a1, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: gep_lshr_i32:
 ; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    li a2, 80
 ; RV64ZBA-NEXT:    srli a1, a1, 2
 ; RV64ZBA-NEXT:    zext.w a1, a1
-; RV64ZBA-NEXT:    li a2, 80
 ; RV64ZBA-NEXT:    mul a1, a1, a2
 ; RV64ZBA-NEXT:    add a0, a0, a1
 ; RV64ZBA-NEXT:    ret

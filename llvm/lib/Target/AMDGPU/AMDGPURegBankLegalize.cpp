@@ -173,6 +173,14 @@ Register AMDGPURegBankLegalizeCombiner::getReadAnyLaneSrc(Register Src) {
   if (mi_match(Src, MRI, m_GAMDGPUReadAnyLane(m_Reg(RALSrc))))
     return RALSrc;
 
+  // RALSrc = G_ANYEXT S16Src
+  // TruncSrc = G_AMDGPU_READANYLANE RALSrc
+  // Src = G_TRUNC TruncSrc
+  if (mi_match(Src, MRI,
+               m_GTrunc(m_GAMDGPUReadAnyLane(m_GAnyExt(m_Reg(RALSrc)))))) {
+    return RALSrc;
+  }
+
   // TruncSrc = G_AMDGPU_READANYLANE RALSrc
   // AextSrc = G_TRUNC TruncSrc
   // Src = G_ANYEXT AextSrc
@@ -427,7 +435,8 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     unsigned Opc = MI->getOpcode();
     // Insert point for use operands needs some calculation.
     if (Opc == AMDGPU::G_PHI) {
-      RBLHelper.applyMappingPHI(*MI);
+      if (!RBLHelper.applyMappingPHI(*MI))
+        return false;
       continue;
     }
 
@@ -458,7 +467,8 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
       // S1 rules are in RegBankLegalizeRules.
     }
 
-    RBLHelper.findRuleAndApplyMapping(*MI);
+    if (!RBLHelper.findRuleAndApplyMapping(*MI))
+      return false;
   }
 
   // Sgpr S1 clean up combines:

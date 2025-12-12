@@ -7,7 +7,7 @@
 ; RUN:   | FileCheck %s --check-prefixes=RV32-XQCICM
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcics -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32-XQCICS
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-opt,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV64
@@ -132,11 +132,12 @@ define signext i32 @select_i32_param(i1 signext %cond, i32 signext %x, i32 signe
 define signext i32 @select_i32_eq(i32 signext %a, i32 signext %b, i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: select_i32_eq:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    beq a0, a1, .LBB2_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB2_2:
+; RV32-NEXT:    mv a4, a0
 ; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    beq a4, a1, .LBB2_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:  .LBB2_2:
 ; RV32-NEXT:    ret
 ;
 ; RV32-THEAD-LABEL: select_i32_eq:
@@ -154,11 +155,12 @@ define signext i32 @select_i32_eq(i32 signext %a, i32 signext %b, i32 signext %x
 ;
 ; RV32-XQCICS-LABEL: select_i32_eq:
 ; RV32-XQCICS:       # %bb.0:
-; RV32-XQCICS-NEXT:    beq a0, a1, .LBB2_2
-; RV32-XQCICS-NEXT:  # %bb.1:
-; RV32-XQCICS-NEXT:    mv a2, a3
-; RV32-XQCICS-NEXT:  .LBB2_2:
+; RV32-XQCICS-NEXT:    mv a4, a0
 ; RV32-XQCICS-NEXT:    mv a0, a2
+; RV32-XQCICS-NEXT:    beq a4, a1, .LBB2_2
+; RV32-XQCICS-NEXT:  # %bb.1:
+; RV32-XQCICS-NEXT:    mv a0, a3
+; RV32-XQCICS-NEXT:  .LBB2_2:
 ; RV32-XQCICS-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_i32_eq:
@@ -169,11 +171,12 @@ define signext i32 @select_i32_eq(i32 signext %a, i32 signext %b, i32 signext %x
 ;
 ; RV64-LABEL: select_i32_eq:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    beq a0, a1, .LBB2_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB2_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    beq a4, a1, .LBB2_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB2_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i32_eq:
@@ -189,11 +192,12 @@ define signext i32 @select_i32_eq(i32 signext %a, i32 signext %b, i32 signext %x
 define signext i32 @select_i32_ne(i32 signext %a, i32 signext %b, i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: select_i32_ne:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bne a0, a1, .LBB3_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB3_2:
+; RV32-NEXT:    mv a4, a0
 ; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bne a4, a1, .LBB3_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:  .LBB3_2:
 ; RV32-NEXT:    ret
 ;
 ; RV32-THEAD-LABEL: select_i32_ne:
@@ -211,11 +215,12 @@ define signext i32 @select_i32_ne(i32 signext %a, i32 signext %b, i32 signext %x
 ;
 ; RV32-XQCICS-LABEL: select_i32_ne:
 ; RV32-XQCICS:       # %bb.0:
-; RV32-XQCICS-NEXT:    bne a0, a1, .LBB3_2
-; RV32-XQCICS-NEXT:  # %bb.1:
-; RV32-XQCICS-NEXT:    mv a2, a3
-; RV32-XQCICS-NEXT:  .LBB3_2:
+; RV32-XQCICS-NEXT:    mv a4, a0
 ; RV32-XQCICS-NEXT:    mv a0, a2
+; RV32-XQCICS-NEXT:    bne a4, a1, .LBB3_2
+; RV32-XQCICS-NEXT:  # %bb.1:
+; RV32-XQCICS-NEXT:    mv a0, a3
+; RV32-XQCICS-NEXT:  .LBB3_2:
 ; RV32-XQCICS-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_i32_ne:
@@ -226,11 +231,12 @@ define signext i32 @select_i32_ne(i32 signext %a, i32 signext %b, i32 signext %x
 ;
 ; RV64-LABEL: select_i32_ne:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bne a0, a1, .LBB3_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB3_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bne a4, a1, .LBB3_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB3_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i32_ne:
@@ -246,11 +252,12 @@ define signext i32 @select_i32_ne(i32 signext %a, i32 signext %b, i32 signext %x
 define signext i32 @select_i32_ugt(i32 signext %a, i32 signext %b, i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: select_i32_ugt:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bltu a1, a0, .LBB4_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB4_2:
+; RV32-NEXT:    mv a4, a0
 ; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bltu a1, a4, .LBB4_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:  .LBB4_2:
 ; RV32-NEXT:    ret
 ;
 ; RV32-THEAD-LABEL: select_i32_ugt:
@@ -268,11 +275,12 @@ define signext i32 @select_i32_ugt(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICS-LABEL: select_i32_ugt:
 ; RV32-XQCICS:       # %bb.0:
-; RV32-XQCICS-NEXT:    bltu a1, a0, .LBB4_2
-; RV32-XQCICS-NEXT:  # %bb.1:
-; RV32-XQCICS-NEXT:    mv a2, a3
-; RV32-XQCICS-NEXT:  .LBB4_2:
+; RV32-XQCICS-NEXT:    mv a4, a0
 ; RV32-XQCICS-NEXT:    mv a0, a2
+; RV32-XQCICS-NEXT:    bltu a1, a4, .LBB4_2
+; RV32-XQCICS-NEXT:  # %bb.1:
+; RV32-XQCICS-NEXT:    mv a0, a3
+; RV32-XQCICS-NEXT:  .LBB4_2:
 ; RV32-XQCICS-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_i32_ugt:
@@ -283,11 +291,12 @@ define signext i32 @select_i32_ugt(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV64-LABEL: select_i32_ugt:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bltu a1, a0, .LBB4_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB4_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bltu a1, a4, .LBB4_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB4_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i32_ugt:
@@ -303,11 +312,12 @@ define signext i32 @select_i32_ugt(i32 signext %a, i32 signext %b, i32 signext %
 define signext i32 @select_i32_uge(i32 signext %a, i32 signext %b, i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: select_i32_uge:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bgeu a0, a1, .LBB5_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB5_2:
+; RV32-NEXT:    mv a4, a0
 ; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bgeu a4, a1, .LBB5_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:  .LBB5_2:
 ; RV32-NEXT:    ret
 ;
 ; RV32-THEAD-LABEL: select_i32_uge:
@@ -325,11 +335,12 @@ define signext i32 @select_i32_uge(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICS-LABEL: select_i32_uge:
 ; RV32-XQCICS:       # %bb.0:
-; RV32-XQCICS-NEXT:    bgeu a0, a1, .LBB5_2
-; RV32-XQCICS-NEXT:  # %bb.1:
-; RV32-XQCICS-NEXT:    mv a2, a3
-; RV32-XQCICS-NEXT:  .LBB5_2:
+; RV32-XQCICS-NEXT:    mv a4, a0
 ; RV32-XQCICS-NEXT:    mv a0, a2
+; RV32-XQCICS-NEXT:    bgeu a4, a1, .LBB5_2
+; RV32-XQCICS-NEXT:  # %bb.1:
+; RV32-XQCICS-NEXT:    mv a0, a3
+; RV32-XQCICS-NEXT:  .LBB5_2:
 ; RV32-XQCICS-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_i32_uge:
@@ -340,11 +351,12 @@ define signext i32 @select_i32_uge(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV64-LABEL: select_i32_uge:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bgeu a0, a1, .LBB5_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB5_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bgeu a4, a1, .LBB5_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB5_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i32_uge:
@@ -360,11 +372,12 @@ define signext i32 @select_i32_uge(i32 signext %a, i32 signext %b, i32 signext %
 define signext i32 @select_i32_ult(i32 signext %a, i32 signext %b, i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: select_i32_ult:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bltu a0, a1, .LBB6_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB6_2:
+; RV32-NEXT:    mv a4, a0
 ; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bltu a4, a1, .LBB6_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:  .LBB6_2:
 ; RV32-NEXT:    ret
 ;
 ; RV32-THEAD-LABEL: select_i32_ult:
@@ -382,11 +395,12 @@ define signext i32 @select_i32_ult(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICS-LABEL: select_i32_ult:
 ; RV32-XQCICS:       # %bb.0:
-; RV32-XQCICS-NEXT:    bltu a0, a1, .LBB6_2
-; RV32-XQCICS-NEXT:  # %bb.1:
-; RV32-XQCICS-NEXT:    mv a2, a3
-; RV32-XQCICS-NEXT:  .LBB6_2:
+; RV32-XQCICS-NEXT:    mv a4, a0
 ; RV32-XQCICS-NEXT:    mv a0, a2
+; RV32-XQCICS-NEXT:    bltu a4, a1, .LBB6_2
+; RV32-XQCICS-NEXT:  # %bb.1:
+; RV32-XQCICS-NEXT:    mv a0, a3
+; RV32-XQCICS-NEXT:  .LBB6_2:
 ; RV32-XQCICS-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_i32_ult:
@@ -397,11 +411,12 @@ define signext i32 @select_i32_ult(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV64-LABEL: select_i32_ult:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bltu a0, a1, .LBB6_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB6_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bltu a4, a1, .LBB6_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB6_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i32_ult:
@@ -417,11 +432,12 @@ define signext i32 @select_i32_ult(i32 signext %a, i32 signext %b, i32 signext %
 define signext i32 @select_i32_ule(i32 signext %a, i32 signext %b, i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: select_i32_ule:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bgeu a1, a0, .LBB7_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB7_2:
+; RV32-NEXT:    mv a4, a0
 ; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bgeu a1, a4, .LBB7_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:  .LBB7_2:
 ; RV32-NEXT:    ret
 ;
 ; RV32-THEAD-LABEL: select_i32_ule:
@@ -439,11 +455,12 @@ define signext i32 @select_i32_ule(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICS-LABEL: select_i32_ule:
 ; RV32-XQCICS:       # %bb.0:
-; RV32-XQCICS-NEXT:    bgeu a1, a0, .LBB7_2
-; RV32-XQCICS-NEXT:  # %bb.1:
-; RV32-XQCICS-NEXT:    mv a2, a3
-; RV32-XQCICS-NEXT:  .LBB7_2:
+; RV32-XQCICS-NEXT:    mv a4, a0
 ; RV32-XQCICS-NEXT:    mv a0, a2
+; RV32-XQCICS-NEXT:    bgeu a1, a4, .LBB7_2
+; RV32-XQCICS-NEXT:  # %bb.1:
+; RV32-XQCICS-NEXT:    mv a0, a3
+; RV32-XQCICS-NEXT:  .LBB7_2:
 ; RV32-XQCICS-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_i32_ule:
@@ -454,11 +471,12 @@ define signext i32 @select_i32_ule(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV64-LABEL: select_i32_ule:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bgeu a1, a0, .LBB7_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB7_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bgeu a1, a4, .LBB7_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB7_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i32_ule:
@@ -474,11 +492,12 @@ define signext i32 @select_i32_ule(i32 signext %a, i32 signext %b, i32 signext %
 define signext i32 @select_i32_sgt(i32 signext %a, i32 signext %b, i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: select_i32_sgt:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    blt a1, a0, .LBB8_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB8_2:
+; RV32-NEXT:    mv a4, a0
 ; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    blt a1, a4, .LBB8_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:  .LBB8_2:
 ; RV32-NEXT:    ret
 ;
 ; RV32-THEAD-LABEL: select_i32_sgt:
@@ -496,11 +515,12 @@ define signext i32 @select_i32_sgt(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICS-LABEL: select_i32_sgt:
 ; RV32-XQCICS:       # %bb.0:
-; RV32-XQCICS-NEXT:    blt a1, a0, .LBB8_2
-; RV32-XQCICS-NEXT:  # %bb.1:
-; RV32-XQCICS-NEXT:    mv a2, a3
-; RV32-XQCICS-NEXT:  .LBB8_2:
+; RV32-XQCICS-NEXT:    mv a4, a0
 ; RV32-XQCICS-NEXT:    mv a0, a2
+; RV32-XQCICS-NEXT:    blt a1, a4, .LBB8_2
+; RV32-XQCICS-NEXT:  # %bb.1:
+; RV32-XQCICS-NEXT:    mv a0, a3
+; RV32-XQCICS-NEXT:  .LBB8_2:
 ; RV32-XQCICS-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_i32_sgt:
@@ -511,11 +531,12 @@ define signext i32 @select_i32_sgt(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV64-LABEL: select_i32_sgt:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    blt a1, a0, .LBB8_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB8_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    blt a1, a4, .LBB8_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB8_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i32_sgt:
@@ -531,11 +552,12 @@ define signext i32 @select_i32_sgt(i32 signext %a, i32 signext %b, i32 signext %
 define signext i32 @select_i32_sge(i32 signext %a, i32 signext %b, i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: select_i32_sge:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bge a0, a1, .LBB9_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB9_2:
+; RV32-NEXT:    mv a4, a0
 ; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bge a4, a1, .LBB9_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:  .LBB9_2:
 ; RV32-NEXT:    ret
 ;
 ; RV32-THEAD-LABEL: select_i32_sge:
@@ -553,11 +575,12 @@ define signext i32 @select_i32_sge(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICS-LABEL: select_i32_sge:
 ; RV32-XQCICS:       # %bb.0:
-; RV32-XQCICS-NEXT:    bge a0, a1, .LBB9_2
-; RV32-XQCICS-NEXT:  # %bb.1:
-; RV32-XQCICS-NEXT:    mv a2, a3
-; RV32-XQCICS-NEXT:  .LBB9_2:
+; RV32-XQCICS-NEXT:    mv a4, a0
 ; RV32-XQCICS-NEXT:    mv a0, a2
+; RV32-XQCICS-NEXT:    bge a4, a1, .LBB9_2
+; RV32-XQCICS-NEXT:  # %bb.1:
+; RV32-XQCICS-NEXT:    mv a0, a3
+; RV32-XQCICS-NEXT:  .LBB9_2:
 ; RV32-XQCICS-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_i32_sge:
@@ -568,11 +591,12 @@ define signext i32 @select_i32_sge(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV64-LABEL: select_i32_sge:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bge a0, a1, .LBB9_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB9_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bge a4, a1, .LBB9_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB9_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i32_sge:
@@ -588,11 +612,12 @@ define signext i32 @select_i32_sge(i32 signext %a, i32 signext %b, i32 signext %
 define signext i32 @select_i32_slt(i32 signext %a, i32 signext %b, i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: select_i32_slt:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    blt a0, a1, .LBB10_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB10_2:
+; RV32-NEXT:    mv a4, a0
 ; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    blt a4, a1, .LBB10_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:  .LBB10_2:
 ; RV32-NEXT:    ret
 ;
 ; RV32-THEAD-LABEL: select_i32_slt:
@@ -610,11 +635,12 @@ define signext i32 @select_i32_slt(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICS-LABEL: select_i32_slt:
 ; RV32-XQCICS:       # %bb.0:
-; RV32-XQCICS-NEXT:    blt a0, a1, .LBB10_2
-; RV32-XQCICS-NEXT:  # %bb.1:
-; RV32-XQCICS-NEXT:    mv a2, a3
-; RV32-XQCICS-NEXT:  .LBB10_2:
+; RV32-XQCICS-NEXT:    mv a4, a0
 ; RV32-XQCICS-NEXT:    mv a0, a2
+; RV32-XQCICS-NEXT:    blt a4, a1, .LBB10_2
+; RV32-XQCICS-NEXT:  # %bb.1:
+; RV32-XQCICS-NEXT:    mv a0, a3
+; RV32-XQCICS-NEXT:  .LBB10_2:
 ; RV32-XQCICS-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_i32_slt:
@@ -625,11 +651,12 @@ define signext i32 @select_i32_slt(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV64-LABEL: select_i32_slt:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    blt a0, a1, .LBB10_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB10_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    blt a4, a1, .LBB10_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB10_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i32_slt:
@@ -645,11 +672,12 @@ define signext i32 @select_i32_slt(i32 signext %a, i32 signext %b, i32 signext %
 define signext i32 @select_i32_sle(i32 signext %a, i32 signext %b, i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: select_i32_sle:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bge a1, a0, .LBB11_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB11_2:
+; RV32-NEXT:    mv a4, a0
 ; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bge a1, a4, .LBB11_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:  .LBB11_2:
 ; RV32-NEXT:    ret
 ;
 ; RV32-THEAD-LABEL: select_i32_sle:
@@ -667,11 +695,12 @@ define signext i32 @select_i32_sle(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICS-LABEL: select_i32_sle:
 ; RV32-XQCICS:       # %bb.0:
-; RV32-XQCICS-NEXT:    bge a1, a0, .LBB11_2
-; RV32-XQCICS-NEXT:  # %bb.1:
-; RV32-XQCICS-NEXT:    mv a2, a3
-; RV32-XQCICS-NEXT:  .LBB11_2:
+; RV32-XQCICS-NEXT:    mv a4, a0
 ; RV32-XQCICS-NEXT:    mv a0, a2
+; RV32-XQCICS-NEXT:    bge a1, a4, .LBB11_2
+; RV32-XQCICS-NEXT:  # %bb.1:
+; RV32-XQCICS-NEXT:    mv a0, a3
+; RV32-XQCICS-NEXT:  .LBB11_2:
 ; RV32-XQCICS-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_i32_sle:
@@ -682,11 +711,12 @@ define signext i32 @select_i32_sle(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV64-LABEL: select_i32_sle:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bge a1, a0, .LBB11_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB11_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bge a1, a4, .LBB11_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB11_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i32_sle:
@@ -895,11 +925,12 @@ define i64 @select_i64_eq(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: select_i64_eq:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    beq a0, a1, .LBB14_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB14_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    beq a4, a1, .LBB14_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB14_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i64_eq:
@@ -972,11 +1003,12 @@ define i64 @select_i64_ne(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: select_i64_ne:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bne a0, a1, .LBB15_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB15_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bne a4, a1, .LBB15_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB15_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i64_ne:
@@ -1058,11 +1090,12 @@ define i64 @select_i64_ugt(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: select_i64_ugt:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bltu a1, a0, .LBB16_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB16_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bltu a1, a4, .LBB16_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB16_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i64_ugt:
@@ -1144,11 +1177,12 @@ define i64 @select_i64_uge(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: select_i64_uge:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bgeu a0, a1, .LBB17_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB17_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bgeu a4, a1, .LBB17_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB17_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i64_uge:
@@ -1230,11 +1264,12 @@ define i64 @select_i64_ult(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: select_i64_ult:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bltu a0, a1, .LBB18_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB18_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bltu a4, a1, .LBB18_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB18_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i64_ult:
@@ -1316,11 +1351,12 @@ define i64 @select_i64_ule(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: select_i64_ule:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bgeu a1, a0, .LBB19_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB19_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bgeu a1, a4, .LBB19_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB19_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i64_ule:
@@ -1402,11 +1438,12 @@ define i64 @select_i64_sgt(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: select_i64_sgt:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    blt a1, a0, .LBB20_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB20_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    blt a1, a4, .LBB20_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB20_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i64_sgt:
@@ -1488,11 +1525,12 @@ define i64 @select_i64_sge(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: select_i64_sge:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bge a0, a1, .LBB21_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB21_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bge a4, a1, .LBB21_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB21_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i64_sge:
@@ -1574,11 +1612,12 @@ define i64 @select_i64_slt(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: select_i64_slt:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    blt a0, a1, .LBB22_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB22_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    blt a4, a1, .LBB22_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB22_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i64_slt:
@@ -1660,11 +1699,12 @@ define i64 @select_i64_sle(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: select_i64_sle:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bge a1, a0, .LBB23_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a3
-; RV64-NEXT:  .LBB23_2:
+; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    bge a1, a4, .LBB23_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:  .LBB23_2:
 ; RV64-NEXT:    ret
 ;
 ; RV64-MIPS-LABEL: select_i64_sle:

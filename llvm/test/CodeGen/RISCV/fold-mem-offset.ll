@@ -503,8 +503,8 @@ entry:
 define signext i32 @test_medium_offset(ptr %p, iXLen %x, iXLen %y) {
 ; RV32I-LABEL: test_medium_offset:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    addi a0, a0, 2047
 ; RV32I-NEXT:    slli a1, a1, 2
+; RV32I-NEXT:    addi a0, a0, 2047
 ; RV32I-NEXT:    slli a2, a2, 2
 ; RV32I-NEXT:    add a1, a0, a1
 ; RV32I-NEXT:    add a0, a2, a0
@@ -515,8 +515,8 @@ define signext i32 @test_medium_offset(ptr %p, iXLen %x, iXLen %y) {
 ;
 ; RV64I-LABEL: test_medium_offset:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    addi a0, a0, 2047
 ; RV64I-NEXT:    slli a1, a1, 2
+; RV64I-NEXT:    addi a0, a0, 2047
 ; RV64I-NEXT:    slli a2, a2, 2
 ; RV64I-NEXT:    add a1, a0, a1
 ; RV64I-NEXT:    add a0, a2, a0

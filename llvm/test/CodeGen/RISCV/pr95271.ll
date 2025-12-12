@@ -5,9 +5,9 @@
 define i32 @PR95271(ptr %p) {
 ; RV32I-LABEL: PR95271:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 349525
 ; RV32I-NEXT:    lw a0, 0(a0)
 ; RV32I-NEXT:    addi a0, a0, 1
-; RV32I-NEXT:    lui a1, 349525
 ; RV32I-NEXT:    srli a2, a0, 1
 ; RV32I-NEXT:    addi a1, a1, 1365
 ; RV32I-NEXT:    and a1, a2, a1
@@ -32,13 +32,13 @@ define i32 @PR95271(ptr %p) {
 ;
 ; RV64I-LABEL: PR95271:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 349525
 ; RV64I-NEXT:    lw a0, 0(a0)
-; RV64I-NEXT:    addi a1, a0, 1
-; RV64I-NEXT:    lui a2, 349525
-; RV64I-NEXT:    srli a1, a1, 1
-; RV64I-NEXT:    addi a2, a2, 1365
+; RV64I-NEXT:    addi a2, a0, 1
+; RV64I-NEXT:    srli a2, a2, 1
+; RV64I-NEXT:    addi a1, a1, 1365
 ; RV64I-NEXT:    addiw a0, a0, 1
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    and a1, a2, a1
 ; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    lui a1, 209715
 ; RV64I-NEXT:    addi a1, a1, 819

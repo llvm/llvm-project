@@ -5,10 +5,6 @@
 ; RUN: llc --mtriple=riscv32 --mattr=+d,+zfh < %s | FileCheck %s --check-prefixes=CHECK,CHECK-FP16-RV32
 ; RUN: llc --mtriple=riscv32 --mattr=+d,-zfh < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16-RV32
 
-declare half @llvm.fcanonicalize.f16(half)
-declare float @llvm.fcanonicalize.f32(float)
-declare double @llvm.fcanonicalize.f64(double)
-
 define half @fcanonicalize_f16(half %x) {
 ; CHECK-FP16-RV64-LABEL: fcanonicalize_f16:
 ; CHECK-FP16-RV64:       # %bb.0:

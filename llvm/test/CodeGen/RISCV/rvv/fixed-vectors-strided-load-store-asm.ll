@@ -301,9 +301,9 @@ define void @scatter(ptr noalias nocapture %A, ptr noalias nocapture readonly %B
 ; CHECK-NEXT:    vsetvli zero, a4, e8, m1, ta, ma
 ; CHECK-NEXT:  .LBB6_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vle8.v v8, (a1)
-; CHECK-NEXT:    vlse8.v v9, (a0), a3
-; CHECK-NEXT:    vadd.vv v8, v9, v8
+; CHECK-NEXT:    vlse8.v v8, (a0), a3
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    addi a1, a1, 32
 ; CHECK-NEXT:    vsse8.v v8, (a0), a3
 ; CHECK-NEXT:    addi a0, a0, 160
@@ -345,10 +345,10 @@ define void @scatter_masked(ptr noalias nocapture %A, ptr noalias nocapture read
 ; CHECK-NEXT:  .LBB7_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
-; CHECK-NEXT:    vle8.v v9, (a1)
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vlse8.v v10, (a0), a4, v0.t
-; CHECK-NEXT:    vadd.vv v9, v10, v9
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vlse8.v v9, (a0), a4, v0.t
+; CHECK-NEXT:    vle8.v v10, (a1)
+; CHECK-NEXT:    vadd.vv v9, v9, v10
 ; CHECK-NEXT:    addi a1, a1, 32
 ; CHECK-NEXT:    vsse8.v v9, (a0), a4, v0.t
 ; CHECK-NEXT:    addi a0, a0, 160
@@ -436,13 +436,14 @@ define void @scatter_pow2(ptr noalias nocapture %A, ptr noalias nocapture readon
 ; CHECK-NEXT:    add a2, a1, a2
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    li a4, 16
+; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
 ; CHECK-NEXT:  .LBB9_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vlse32.v v8, (a0), a4
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vle8.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; CHECK-NEXT:    vlse32.v v9, (a0), a4
-; CHECK-NEXT:    vadd.vv v8, v9, v8
+; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    addi a1, a1, 32
 ; CHECK-NEXT:    vsse32.v v8, (a0), a4
 ; CHECK-NEXT:    addi a0, a0, 128
@@ -482,25 +483,25 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define void @struct_gather(ptr noalias nocapture %A, ptr noalias nocapture readonly %B) {
 ; CHECK-LABEL: struct_gather:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a1, a1, 132
 ; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    addi a1, a1, 132
 ; CHECK-NEXT:    add a2, a0, a2
 ; CHECK-NEXT:    li a3, 16
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
 ; CHECK-NEXT:  .LBB10_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    addi a4, a1, -128
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    addi a5, a0, 32
-; CHECK-NEXT:    vlse32.v v9, (a4), a3
-; CHECK-NEXT:    vlse32.v v10, (a1), a3
-; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    vle32.v v9, (a5)
-; CHECK-NEXT:    vadd.vv v9, v9, v10
+; CHECK-NEXT:    vlse32.v v8, (a4), a3
+; CHECK-NEXT:    vlse32.v v9, (a1), a3
+; CHECK-NEXT:    vle32.v v10, (a0)
+; CHECK-NEXT:    addi a4, a0, 32
+; CHECK-NEXT:    vle32.v v11, (a4)
+; CHECK-NEXT:    vadd.vv v8, v10, v8
+; CHECK-NEXT:    vadd.vv v9, v11, v9
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 64
-; CHECK-NEXT:    vse32.v v9, (a5)
 ; CHECK-NEXT:    addi a1, a1, 256
+; CHECK-NEXT:    vse32.v v9, (a4)
 ; CHECK-NEXT:    bne a0, a2, .LBB10_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
@@ -552,8 +553,8 @@ define void @gather_unroll(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    vlse32.v v8, (a1), a3
 ; CHECK-NEXT:    vlse32.v v9, (a0), a4
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
-; CHECK-NEXT:    addi a5, a1, 16
 ; CHECK-NEXT:    vsse32.v v8, (a0), a4
+; CHECK-NEXT:    addi a5, a1, 16
 ; CHECK-NEXT:    vlse32.v v8, (a5), a3
 ; CHECK-NEXT:    addi a5, a0, 4
 ; CHECK-NEXT:    vlse32.v v9, (a5), a4
@@ -571,9 +572,9 @@ define void @gather_unroll(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    vlse32.v v9, (a5), a4
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
 ; CHECK-NEXT:    addi a2, a2, -8
-; CHECK-NEXT:    vsse32.v v8, (a5), a4
 ; CHECK-NEXT:    addi a1, a1, 512
 ; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vsse32.v v8, (a5), a4
 ; CHECK-NEXT:    bnez a2, .LBB11_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
@@ -623,11 +624,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr>, i32 immarg, <32 x i1>, <32 x i8>)
-declare <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr>, i32 immarg, <8 x i1>, <8 x i32>)
-declare void @llvm.masked.scatter.v32i8.v32p0(<32 x i8>, <32 x ptr>, i32 immarg, <32 x i1>)
-declare void @llvm.masked.scatter.v8i32.v8p0(<8 x i32>, <8 x ptr>, i32 immarg, <8 x i1>)
-
 ; Make sure we don't crash in getTgtMemIntrinsic for a vector of pointers.
 define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocapture readonly %arg1) {
 ; V-LABEL: gather_of_pointers:
@@ -638,14 +634,14 @@ define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptur
 ; V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; V-NEXT:  .LBB12_1: # %bb2
 ; V-NEXT:    # =>This Inner Loop Header: Depth=1
-; V-NEXT:    addi a4, a1, 80
 ; V-NEXT:    vlse64.v v8, (a1), a3
-; V-NEXT:    addi a5, a0, 16
+; V-NEXT:    addi a4, a1, 80
 ; V-NEXT:    vlse64.v v9, (a4), a3
 ; V-NEXT:    vse64.v v8, (a0)
+; V-NEXT:    addi a4, a0, 16
 ; V-NEXT:    addi a0, a0, 32
-; V-NEXT:    vse64.v v9, (a5)
 ; V-NEXT:    addi a1, a1, 160
+; V-NEXT:    vse64.v v9, (a4)
 ; V-NEXT:    bne a0, a2, .LBB12_1
 ; V-NEXT:  # %bb.2: # %bb18
 ; V-NEXT:    ret
@@ -689,14 +685,14 @@ define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptur
 ; OPTZVE32F-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; OPTZVE32F-NEXT:  .LBB12_1: # %bb2
 ; OPTZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1
-; OPTZVE32F-NEXT:    addi a4, a1, 80
 ; OPTZVE32F-NEXT:    vlse64.v v8, (a1), a3
-; OPTZVE32F-NEXT:    addi a5, a0, 16
+; OPTZVE32F-NEXT:    addi a4, a1, 80
 ; OPTZVE32F-NEXT:    vlse64.v v9, (a4), a3
 ; OPTZVE32F-NEXT:    vse64.v v8, (a0)
+; OPTZVE32F-NEXT:    addi a4, a0, 16
 ; OPTZVE32F-NEXT:    addi a0, a0, 32
-; OPTZVE32F-NEXT:    vse64.v v9, (a5)
 ; OPTZVE32F-NEXT:    addi a1, a1, 160
+; OPTZVE32F-NEXT:    vse64.v v9, (a4)
 ; OPTZVE32F-NEXT:    bne a0, a2, .LBB12_1
 ; OPTZVE32F-NEXT:  # %bb.2: # %bb18
 ; OPTZVE32F-NEXT:    ret
@@ -757,8 +753,6 @@ bb18:                                             ; preds = %bb2
   ret void
 }
 
-declare <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr>, i32 immarg, <2 x i1>, <2 x ptr>)
-
 ; Make sure we don't crash in getTgtMemIntrinsic for a vector of pointers.
 define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocapture readonly %arg1) {
 ; V-LABEL: scatter_of_pointers:
@@ -769,14 +763,14 @@ define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptu
 ; V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; V-NEXT:  .LBB13_1: # %bb2
 ; V-NEXT:    # =>This Inner Loop Header: Depth=1
-; V-NEXT:    addi a4, a1, 16
 ; V-NEXT:    vle64.v v8, (a1)
+; V-NEXT:    addi a4, a1, 16
 ; V-NEXT:    vle64.v v9, (a4)
-; V-NEXT:    addi a4, a0, 80
 ; V-NEXT:    vsse64.v v8, (a0), a3
+; V-NEXT:    addi a4, a0, 80
 ; V-NEXT:    addi a1, a1, 32
-; V-NEXT:    vsse64.v v9, (a4), a3
 ; V-NEXT:    addi a0, a0, 160
+; V-NEXT:    vsse64.v v9, (a4), a3
 ; V-NEXT:    bne a1, a2, .LBB13_1
 ; V-NEXT:  # %bb.2: # %bb18
 ; V-NEXT:    ret
@@ -820,14 +814,14 @@ define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptu
 ; OPTZVE32F-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; OPTZVE32F-NEXT:  .LBB13_1: # %bb2
 ; OPTZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1
-; OPTZVE32F-NEXT:    addi a4, a1, 16
 ; OPTZVE32F-NEXT:    vle64.v v8, (a1)
+; OPTZVE32F-NEXT:    addi a4, a1, 16
 ; OPTZVE32F-NEXT:    vle64.v v9, (a4)
-; OPTZVE32F-NEXT:    addi a4, a0, 80
 ; OPTZVE32F-NEXT:    vsse64.v v8, (a0), a3
+; OPTZVE32F-NEXT:    addi a4, a0, 80
 ; OPTZVE32F-NEXT:    addi a1, a1, 32
-; OPTZVE32F-NEXT:    vsse64.v v9, (a4), a3
 ; OPTZVE32F-NEXT:    addi a0, a0, 160
+; OPTZVE32F-NEXT:    vsse64.v v9, (a4), a3
 ; OPTZVE32F-NEXT:    bne a1, a2, .LBB13_1
 ; OPTZVE32F-NEXT:  # %bb.2: # %bb18
 ; OPTZVE32F-NEXT:    ret
@@ -887,8 +881,6 @@ bb2:                                              ; preds = %bb2, %bb
 bb18:                                             ; preds = %bb2
   ret void
 }
-
-declare void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr>, <2 x ptr>, i32 immarg, <2 x i1>)
 
 define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, ptr noalias nocapture readonly %arg1, i32 signext %arg2) {
 ; CHECK-LABEL: strided_load_startval_add_with_splat:
@@ -1009,9 +1001,6 @@ bb35:                                             ; preds = %bb35, %bb32
   %i45 = icmp eq i32 %i44, 1024
   br i1 %i45, label %bb34, label %bb35
 }
-
-declare <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr>, i32 immarg, <16 x i1>, <16 x i8>)
-declare void @llvm.masked.scatter.v16i8.v16p0(<16 x i8>, <16 x ptr>, i32 immarg, <16 x i1>)
 
 define void @gather_no_scalar_remainder(ptr noalias nocapture noundef %arg, ptr noalias nocapture noundef readonly %arg1, i64 noundef %arg2) {
 ; CHECK-LABEL: gather_no_scalar_remainder:

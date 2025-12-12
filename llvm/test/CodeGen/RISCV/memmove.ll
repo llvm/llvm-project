@@ -600,7 +600,6 @@ entry:
 ; ------------------------------------------------------------------------
 ; A few partially aligned cases
 
-
 define void @memmove16_align4(ptr nocapture %dest, ptr nocapture %src) nounwind {
 ; RV32-BOTH-LABEL: memmove16_align4:
 ; RV32-BOTH:       # %bb.0: # %entry
@@ -641,30 +640,31 @@ entry:
 define i32 @memmove11_align8(ptr nocapture %dest, ptr %src) {
 ; RV32-BOTH-LABEL: memmove11_align8:
 ; RV32-BOTH:       # %bb.0: # %entry
-; RV32-BOTH-NEXT:    lw a2, 0(a1)
-; RV32-BOTH-NEXT:    lh a3, 8(a1)
-; RV32-BOTH-NEXT:    lbu a4, 10(a1)
-; RV32-BOTH-NEXT:    sw a2, 0(a0)
-; RV32-BOTH-NEXT:    lw a1, 4(a1)
-; RV32-BOTH-NEXT:    sw a1, 4(a0)
-; RV32-BOTH-NEXT:    sh a3, 8(a0)
-; RV32-BOTH-NEXT:    sb a4, 10(a0)
+; RV32-BOTH-NEXT:    mv a2, a0
 ; RV32-BOTH-NEXT:    li a0, 0
+; RV32-BOTH-NEXT:    lw a3, 0(a1)
+; RV32-BOTH-NEXT:    lh a4, 8(a1)
+; RV32-BOTH-NEXT:    lbu a5, 10(a1)
+; RV32-BOTH-NEXT:    sw a3, 0(a2)
+; RV32-BOTH-NEXT:    lw a1, 4(a1)
+; RV32-BOTH-NEXT:    sw a1, 4(a2)
+; RV32-BOTH-NEXT:    sh a4, 8(a2)
+; RV32-BOTH-NEXT:    sb a5, 10(a2)
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: memmove11_align8:
 ; RV64-BOTH:       # %bb.0: # %entry
-; RV64-BOTH-NEXT:    ld a2, 0(a1)
-; RV64-BOTH-NEXT:    lh a3, 8(a1)
-; RV64-BOTH-NEXT:    lbu a1, 10(a1)
-; RV64-BOTH-NEXT:    sd a2, 0(a0)
-; RV64-BOTH-NEXT:    sh a3, 8(a0)
-; RV64-BOTH-NEXT:    sb a1, 10(a0)
+; RV64-BOTH-NEXT:    mv a2, a0
 ; RV64-BOTH-NEXT:    li a0, 0
+; RV64-BOTH-NEXT:    ld a3, 0(a1)
+; RV64-BOTH-NEXT:    lh a4, 8(a1)
+; RV64-BOTH-NEXT:    lbu a1, 10(a1)
+; RV64-BOTH-NEXT:    sd a3, 0(a2)
+; RV64-BOTH-NEXT:    sh a4, 8(a2)
+; RV64-BOTH-NEXT:    sb a1, 10(a2)
 ; RV64-BOTH-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 8 %dest, ptr align 8 %src, i64 11, i1 false)
   ret i32 0
 }
 
-declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind

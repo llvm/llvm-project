@@ -48,7 +48,6 @@ define i32 @fcmp_oeq(half %a, half %b) nounwind strictfp {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
-declare i1 @llvm.experimental.constrained.fcmp.f16(half, half, metadata, metadata)
 
 define i32 @fcmp_ogt(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_ogt:
@@ -61,11 +60,11 @@ define i32 @fcmp_ogt(half %a, half %b) nounwind strictfp {
 ;
 ; CHECKIZHINX-LABEL: fcmp_ogt:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    mv a2, a0
 ; CHECKIZHINX-NEXT:    frflags a3
-; CHECKIZHINX-NEXT:    flt.h a2, a1, a0
+; CHECKIZHINX-NEXT:    flt.h a0, a1, a0
 ; CHECKIZHINX-NEXT:    fsflags a3
-; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    feq.h zero, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ogt:
@@ -101,11 +100,11 @@ define i32 @fcmp_oge(half %a, half %b) nounwind strictfp {
 ;
 ; CHECKIZHINX-LABEL: fcmp_oge:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    mv a2, a0
 ; CHECKIZHINX-NEXT:    frflags a3
-; CHECKIZHINX-NEXT:    fle.h a2, a1, a0
+; CHECKIZHINX-NEXT:    fle.h a0, a1, a0
 ; CHECKIZHINX-NEXT:    fsflags a3
-; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    feq.h zero, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_oge:
@@ -141,11 +140,11 @@ define i32 @fcmp_olt(half %a, half %b) nounwind strictfp {
 ;
 ; CHECKIZHINX-LABEL: fcmp_olt:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    mv a2, a0
 ; CHECKIZHINX-NEXT:    frflags a3
-; CHECKIZHINX-NEXT:    flt.h a2, a0, a1
+; CHECKIZHINX-NEXT:    flt.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    fsflags a3
-; CHECKIZHINX-NEXT:    feq.h zero, a0, a1
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    feq.h zero, a2, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_olt:
@@ -181,11 +180,11 @@ define i32 @fcmp_ole(half %a, half %b) nounwind strictfp {
 ;
 ; CHECKIZHINX-LABEL: fcmp_ole:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    mv a2, a0
 ; CHECKIZHINX-NEXT:    frflags a3
-; CHECKIZHINX-NEXT:    fle.h a2, a0, a1
+; CHECKIZHINX-NEXT:    fle.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    fsflags a3
-; CHECKIZHINX-NEXT:    feq.h zero, a0, a1
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    feq.h zero, a2, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ole:
@@ -228,16 +227,16 @@ define i32 @fcmp_one(half %a, half %b) nounwind strictfp {
 ;
 ; CHECKIZHINX-LABEL: fcmp_one:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    frflags a2
-; CHECKIZHINX-NEXT:    flt.h a3, a0, a1
-; CHECKIZHINX-NEXT:    fsflags a2
-; CHECKIZHINX-NEXT:    feq.h zero, a0, a1
+; CHECKIZHINX-NEXT:    mv a2, a0
+; CHECKIZHINX-NEXT:    frflags a0
+; CHECKIZHINX-NEXT:    flt.h a3, a2, a1
+; CHECKIZHINX-NEXT:    fsflags a0
+; CHECKIZHINX-NEXT:    feq.h zero, a2, a1
 ; CHECKIZHINX-NEXT:    frflags a4
-; CHECKIZHINX-NEXT:    flt.h a2, a1, a0
-; CHECKIZHINX-NEXT:    or a2, a2, a3
+; CHECKIZHINX-NEXT:    flt.h a0, a1, a2
+; CHECKIZHINX-NEXT:    or a0, a0, a3
 ; CHECKIZHINX-NEXT:    fsflags a4
-; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    feq.h zero, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_one:
@@ -326,17 +325,17 @@ define i32 @fcmp_ueq(half %a, half %b) nounwind strictfp {
 ;
 ; CHECKIZHINX-LABEL: fcmp_ueq:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    frflags a2
-; CHECKIZHINX-NEXT:    flt.h a3, a0, a1
-; CHECKIZHINX-NEXT:    fsflags a2
-; CHECKIZHINX-NEXT:    feq.h zero, a0, a1
+; CHECKIZHINX-NEXT:    mv a2, a0
+; CHECKIZHINX-NEXT:    frflags a0
+; CHECKIZHINX-NEXT:    flt.h a3, a2, a1
+; CHECKIZHINX-NEXT:    fsflags a0
+; CHECKIZHINX-NEXT:    feq.h zero, a2, a1
 ; CHECKIZHINX-NEXT:    frflags a4
-; CHECKIZHINX-NEXT:    flt.h a2, a1, a0
-; CHECKIZHINX-NEXT:    or a2, a2, a3
-; CHECKIZHINX-NEXT:    xori a2, a2, 1
+; CHECKIZHINX-NEXT:    flt.h a0, a1, a2
+; CHECKIZHINX-NEXT:    or a0, a0, a3
+; CHECKIZHINX-NEXT:    xori a0, a0, 1
 ; CHECKIZHINX-NEXT:    fsflags a4
-; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    feq.h zero, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ueq:
@@ -385,12 +384,12 @@ define i32 @fcmp_ugt(half %a, half %b) nounwind strictfp {
 ;
 ; CHECKIZHINX-LABEL: fcmp_ugt:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    mv a2, a0
 ; CHECKIZHINX-NEXT:    frflags a3
-; CHECKIZHINX-NEXT:    fle.h a2, a0, a1
-; CHECKIZHINX-NEXT:    xori a2, a2, 1
+; CHECKIZHINX-NEXT:    fle.h a0, a0, a1
+; CHECKIZHINX-NEXT:    xori a0, a0, 1
 ; CHECKIZHINX-NEXT:    fsflags a3
-; CHECKIZHINX-NEXT:    feq.h zero, a0, a1
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    feq.h zero, a2, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ugt:
@@ -429,12 +428,12 @@ define i32 @fcmp_uge(half %a, half %b) nounwind strictfp {
 ;
 ; CHECKIZHINX-LABEL: fcmp_uge:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    mv a2, a0
 ; CHECKIZHINX-NEXT:    frflags a3
-; CHECKIZHINX-NEXT:    flt.h a2, a0, a1
-; CHECKIZHINX-NEXT:    xori a2, a2, 1
+; CHECKIZHINX-NEXT:    flt.h a0, a0, a1
+; CHECKIZHINX-NEXT:    xori a0, a0, 1
 ; CHECKIZHINX-NEXT:    fsflags a3
-; CHECKIZHINX-NEXT:    feq.h zero, a0, a1
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    feq.h zero, a2, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_uge:
@@ -473,12 +472,12 @@ define i32 @fcmp_ult(half %a, half %b) nounwind strictfp {
 ;
 ; CHECKIZHINX-LABEL: fcmp_ult:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    mv a2, a0
 ; CHECKIZHINX-NEXT:    frflags a3
-; CHECKIZHINX-NEXT:    fle.h a2, a1, a0
-; CHECKIZHINX-NEXT:    xori a2, a2, 1
+; CHECKIZHINX-NEXT:    fle.h a0, a1, a0
+; CHECKIZHINX-NEXT:    xori a0, a0, 1
 ; CHECKIZHINX-NEXT:    fsflags a3
-; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    feq.h zero, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ult:
@@ -517,12 +516,12 @@ define i32 @fcmp_ule(half %a, half %b) nounwind strictfp {
 ;
 ; CHECKIZHINX-LABEL: fcmp_ule:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    mv a2, a0
 ; CHECKIZHINX-NEXT:    frflags a3
-; CHECKIZHINX-NEXT:    flt.h a2, a1, a0
-; CHECKIZHINX-NEXT:    xori a2, a2, 1
+; CHECKIZHINX-NEXT:    flt.h a0, a1, a0
+; CHECKIZHINX-NEXT:    xori a0, a0, 1
 ; CHECKIZHINX-NEXT:    fsflags a3
-; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    feq.h zero, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ule:
@@ -653,7 +652,6 @@ define i32 @fcmps_oeq(half %a, half %b) nounwind strictfp {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
-declare i1 @llvm.experimental.constrained.fcmps.f16(half, half, metadata, metadata)
 
 define i32 @fcmps_ogt(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fcmps_ogt:

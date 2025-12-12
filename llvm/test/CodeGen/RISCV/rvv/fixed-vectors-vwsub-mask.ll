@@ -5,9 +5,9 @@
 define <8 x i64> @vwsub_wv_mask_v8i32(<8 x i32> %x, <8 x i64> %y) {
 ; CHECK-LABEL: vwsub_wv_mask_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 42
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv2r.v v16, v8
+; CHECK-NEXT:    li a0, 42
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
@@ -23,9 +23,9 @@ define <8 x i64> @vwsub_wv_mask_v8i32(<8 x i32> %x, <8 x i64> %y) {
 define <8 x i64> @vwsubu_wv_mask_v8i32(<8 x i32> %x, <8 x i64> %y) {
 ; CHECK-LABEL: vwsubu_wv_mask_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 42
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv2r.v v16, v8
+; CHECK-NEXT:    li a0, 42
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu

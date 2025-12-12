@@ -92,8 +92,8 @@ define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V512-NEXT:    vslideup.vi v10, v9, 1
 ; V512-NEXT:    vslideup.vi v10, v9, 2
 ; V512-NEXT:    vmv1r.v v9, v8
-; V512-NEXT:    vslideup.vi v9, v8, 1
 ; V512-NEXT:    vmv.v.i v0, 10
+; V512-NEXT:    vslideup.vi v9, v8, 1
 ; V512-NEXT:    vmerge.vvm v8, v9, v10, v0
 ; V512-NEXT:    ret
 ;
@@ -473,8 +473,8 @@ define <64 x i8> @interleave_v32i8(<32 x i8> %x, <32 x i8> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; V128-NEXT:    vmv2r.v v12, v10
-; V128-NEXT:    li a0, 32
 ; V128-NEXT:    vmv2r.v v14, v8
+; V128-NEXT:    li a0, 32
 ; V128-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; V128-NEXT:    vwaddu.vv v8, v14, v12
 ; V128-NEXT:    li a0, -1
@@ -509,8 +509,8 @@ define <64 x i16> @interleave_v32i16(<32 x i16> %x, <32 x i16> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; V128-NEXT:    vmv4r.v v16, v12
-; V128-NEXT:    li a0, 32
 ; V128-NEXT:    vmv4r.v v20, v8
+; V128-NEXT:    li a0, 32
 ; V128-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; V128-NEXT:    vwaddu.vv v8, v20, v16
 ; V128-NEXT:    li a0, -1
@@ -521,8 +521,8 @@ define <64 x i16> @interleave_v32i16(<32 x i16> %x, <32 x i16> %y) {
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; V512-NEXT:    vmv1r.v v10, v9
-; V512-NEXT:    li a0, 32
 ; V512-NEXT:    vmv1r.v v11, v8
+; V512-NEXT:    li a0, 32
 ; V512-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; V512-NEXT:    vwaddu.vv v8, v11, v10
 ; V512-NEXT:    li a0, -1
@@ -559,13 +559,13 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; V128-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; V128-NEXT:    vzext.vf2 v8, v24
 ; V128-NEXT:    li a0, 32
-; V128-NEXT:    vsll.vx v8, v8, a0
-; V128-NEXT:    vzext.vf2 v24, v0
+; V128-NEXT:    vsll.vx v24, v8, a0
+; V128-NEXT:    vzext.vf2 v8, v0
 ; V128-NEXT:    lui a1, 699051
 ; V128-NEXT:    addi a1, a1, -1366
 ; V128-NEXT:    vmv.s.x v0, a1
 ; V128-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; V128-NEXT:    vmerge.vvm v24, v24, v8, v0
+; V128-NEXT:    vmerge.vvm v24, v8, v24, v0
 ; V128-NEXT:    addi a0, sp, 16
 ; V128-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; V128-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
@@ -586,8 +586,8 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; V512-NEXT:    vmv2r.v v12, v10
-; V512-NEXT:    li a0, 32
 ; V512-NEXT:    vmv2r.v v14, v8
+; V512-NEXT:    li a0, 32
 ; V512-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; V512-NEXT:    vwaddu.vv v8, v14, v12
 ; V512-NEXT:    li a0, -1

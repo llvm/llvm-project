@@ -601,16 +601,16 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-NEXT:    .cfi_offset t6, -80
 ; QCI-NEXT:    addi sp, sp, -16
 ; QCI-NEXT:    .cfi_def_cfa_offset 112
-; QCI-NEXT:    li a0, 4
+; QCI-NEXT:    li t0, 4
 ; QCI-NEXT:    li a2, 1
 ; QCI-NEXT:    li a4, 2
 ; QCI-NEXT:    li a6, 3
-; QCI-NEXT:    sw a0, 0(sp)
 ; QCI-NEXT:    li a0, 0
 ; QCI-NEXT:    li a1, 0
 ; QCI-NEXT:    li a3, 0
 ; QCI-NEXT:    li a5, 0
 ; QCI-NEXT:    li a7, 0
+; QCI-NEXT:    sw t0, 0(sp)
 ; QCI-NEXT:    call function_with_one_stack_arg
 ; QCI-NEXT:    call use_i64
 ; QCI-NEXT:    addi sp, sp, 16
@@ -641,16 +641,16 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-FP-NEXT:    addi sp, sp, -16
 ; QCI-FP-NEXT:    .cfi_def_cfa_offset 112
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
-; QCI-FP-NEXT:    li a0, 4
+; QCI-FP-NEXT:    li t0, 4
 ; QCI-FP-NEXT:    li a2, 1
 ; QCI-FP-NEXT:    li a4, 2
 ; QCI-FP-NEXT:    li a6, 3
-; QCI-FP-NEXT:    sw a0, 0(sp)
 ; QCI-FP-NEXT:    li a0, 0
 ; QCI-FP-NEXT:    li a1, 0
 ; QCI-FP-NEXT:    li a3, 0
 ; QCI-FP-NEXT:    li a5, 0
 ; QCI-FP-NEXT:    li a7, 0
+; QCI-FP-NEXT:    sw t0, 0(sp)
 ; QCI-FP-NEXT:    call function_with_one_stack_arg
 ; QCI-FP-NEXT:    call use_i64
 ; QCI-FP-NEXT:    .cfi_def_cfa sp, 112
@@ -681,16 +681,16 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-PUSH-POP-NEXT:    .cfi_offset t6, -80
 ; QCI-PUSH-POP-NEXT:    addi sp, sp, -16
 ; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 112
-; QCI-PUSH-POP-NEXT:    li a0, 4
+; QCI-PUSH-POP-NEXT:    li t0, 4
 ; QCI-PUSH-POP-NEXT:    li a2, 1
 ; QCI-PUSH-POP-NEXT:    li a4, 2
 ; QCI-PUSH-POP-NEXT:    li a6, 3
-; QCI-PUSH-POP-NEXT:    sw a0, 0(sp)
 ; QCI-PUSH-POP-NEXT:    li a0, 0
 ; QCI-PUSH-POP-NEXT:    li a1, 0
 ; QCI-PUSH-POP-NEXT:    li a3, 0
 ; QCI-PUSH-POP-NEXT:    li a5, 0
 ; QCI-PUSH-POP-NEXT:    li a7, 0
+; QCI-PUSH-POP-NEXT:    sw t0, 0(sp)
 ; QCI-PUSH-POP-NEXT:    call function_with_one_stack_arg
 ; QCI-PUSH-POP-NEXT:    call use_i64
 ; QCI-PUSH-POP-NEXT:    addi sp, sp, 16
@@ -720,16 +720,16 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t6, -80
 ; QCI-QCCMP-PUSH-POP-NEXT:    addi sp, sp, -16
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 112
-; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 4
+; QCI-QCCMP-PUSH-POP-NEXT:    li t0, 4
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a4, 2
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
-; QCI-QCCMP-PUSH-POP-NEXT:    sw a0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a3, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a5, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a7, 0
+; QCI-QCCMP-PUSH-POP-NEXT:    sw t0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-NEXT:    call function_with_one_stack_arg
 ; QCI-QCCMP-PUSH-POP-NEXT:    call use_i64
 ; QCI-QCCMP-PUSH-POP-NEXT:    addi sp, sp, 16
@@ -760,16 +760,16 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    addi sp, sp, -16
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 112
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa s0, 0
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 4
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li t0, 4
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a4, 2
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw a0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a3, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a5, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a7, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw t0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    call function_with_one_stack_arg
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    call use_i64
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa sp, 112
@@ -805,16 +805,16 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-NEXT:    .cfi_offset t6, -80
 ; QCI-NEXT:    addi sp, sp, -16
 ; QCI-NEXT:    .cfi_def_cfa_offset 112
-; QCI-NEXT:    li a0, 4
+; QCI-NEXT:    li t0, 4
 ; QCI-NEXT:    li a2, 1
 ; QCI-NEXT:    li a4, 2
 ; QCI-NEXT:    li a6, 3
-; QCI-NEXT:    sw a0, 0(sp)
 ; QCI-NEXT:    li a0, 0
 ; QCI-NEXT:    li a1, 0
 ; QCI-NEXT:    li a3, 0
 ; QCI-NEXT:    li a5, 0
 ; QCI-NEXT:    li a7, 0
+; QCI-NEXT:    sw t0, 0(sp)
 ; QCI-NEXT:    call function_with_one_stack_arg
 ; QCI-NEXT:    call use_i64
 ; QCI-NEXT:    addi sp, sp, 16
@@ -845,16 +845,16 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-FP-NEXT:    addi sp, sp, -16
 ; QCI-FP-NEXT:    .cfi_def_cfa_offset 112
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
-; QCI-FP-NEXT:    li a0, 4
+; QCI-FP-NEXT:    li t0, 4
 ; QCI-FP-NEXT:    li a2, 1
 ; QCI-FP-NEXT:    li a4, 2
 ; QCI-FP-NEXT:    li a6, 3
-; QCI-FP-NEXT:    sw a0, 0(sp)
 ; QCI-FP-NEXT:    li a0, 0
 ; QCI-FP-NEXT:    li a1, 0
 ; QCI-FP-NEXT:    li a3, 0
 ; QCI-FP-NEXT:    li a5, 0
 ; QCI-FP-NEXT:    li a7, 0
+; QCI-FP-NEXT:    sw t0, 0(sp)
 ; QCI-FP-NEXT:    call function_with_one_stack_arg
 ; QCI-FP-NEXT:    call use_i64
 ; QCI-FP-NEXT:    .cfi_def_cfa sp, 112
@@ -885,16 +885,16 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-PUSH-POP-NEXT:    .cfi_offset t6, -80
 ; QCI-PUSH-POP-NEXT:    addi sp, sp, -16
 ; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 112
-; QCI-PUSH-POP-NEXT:    li a0, 4
+; QCI-PUSH-POP-NEXT:    li t0, 4
 ; QCI-PUSH-POP-NEXT:    li a2, 1
 ; QCI-PUSH-POP-NEXT:    li a4, 2
 ; QCI-PUSH-POP-NEXT:    li a6, 3
-; QCI-PUSH-POP-NEXT:    sw a0, 0(sp)
 ; QCI-PUSH-POP-NEXT:    li a0, 0
 ; QCI-PUSH-POP-NEXT:    li a1, 0
 ; QCI-PUSH-POP-NEXT:    li a3, 0
 ; QCI-PUSH-POP-NEXT:    li a5, 0
 ; QCI-PUSH-POP-NEXT:    li a7, 0
+; QCI-PUSH-POP-NEXT:    sw t0, 0(sp)
 ; QCI-PUSH-POP-NEXT:    call function_with_one_stack_arg
 ; QCI-PUSH-POP-NEXT:    call use_i64
 ; QCI-PUSH-POP-NEXT:    addi sp, sp, 16
@@ -924,16 +924,16 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t6, -80
 ; QCI-QCCMP-PUSH-POP-NEXT:    addi sp, sp, -16
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 112
-; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 4
+; QCI-QCCMP-PUSH-POP-NEXT:    li t0, 4
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a4, 2
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
-; QCI-QCCMP-PUSH-POP-NEXT:    sw a0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a3, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a5, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a7, 0
+; QCI-QCCMP-PUSH-POP-NEXT:    sw t0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-NEXT:    call function_with_one_stack_arg
 ; QCI-QCCMP-PUSH-POP-NEXT:    call use_i64
 ; QCI-QCCMP-PUSH-POP-NEXT:    addi sp, sp, 16
@@ -964,16 +964,16 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    addi sp, sp, -16
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 112
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa s0, 0
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 4
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li t0, 4
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a4, 2
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw a0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a3, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a5, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a7, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw t0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    call function_with_one_stack_arg
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    call use_i64
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa sp, 112
@@ -2452,16 +2452,16 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-NEXT:    lw s9, 116(s0)
 ; QCI-NEXT:    lw s10, 120(s0)
 ; QCI-NEXT:    lw s11, 124(s0)
-; QCI-NEXT:    li a0, 4
+; QCI-NEXT:    li t0, 4
 ; QCI-NEXT:    li a2, 1
 ; QCI-NEXT:    li a4, 2
 ; QCI-NEXT:    li a6, 3
-; QCI-NEXT:    sw a0, 0(sp)
 ; QCI-NEXT:    li a0, 0
 ; QCI-NEXT:    li a1, 0
 ; QCI-NEXT:    li a3, 0
 ; QCI-NEXT:    li a5, 0
 ; QCI-NEXT:    li a7, 0
+; QCI-NEXT:    sw t0, 0(sp)
 ; QCI-NEXT:    call function_with_one_stack_arg
 ; QCI-NEXT:    call use_i64
 ; QCI-NEXT:    sw s11, 124(s0)
@@ -2645,16 +2645,16 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-FP-NEXT:    lw s11, 116(s1)
 ; QCI-FP-NEXT:    lw s2, 120(s1)
 ; QCI-FP-NEXT:    lw s3, 124(s1)
-; QCI-FP-NEXT:    li a0, 4
+; QCI-FP-NEXT:    li t0, 4
 ; QCI-FP-NEXT:    li a2, 1
 ; QCI-FP-NEXT:    li a4, 2
 ; QCI-FP-NEXT:    li a6, 3
-; QCI-FP-NEXT:    sw a0, 0(sp)
 ; QCI-FP-NEXT:    li a0, 0
 ; QCI-FP-NEXT:    li a1, 0
 ; QCI-FP-NEXT:    li a3, 0
 ; QCI-FP-NEXT:    li a5, 0
 ; QCI-FP-NEXT:    li a7, 0
+; QCI-FP-NEXT:    sw t0, 0(sp)
 ; QCI-FP-NEXT:    call function_with_one_stack_arg
 ; QCI-FP-NEXT:    call use_i64
 ; QCI-FP-NEXT:    sw s3, 124(s1)
@@ -2829,16 +2829,16 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-PUSH-POP-NEXT:    lw s9, 116(s0)
 ; QCI-PUSH-POP-NEXT:    lw s10, 120(s0)
 ; QCI-PUSH-POP-NEXT:    lw s11, 124(s0)
-; QCI-PUSH-POP-NEXT:    li a0, 4
+; QCI-PUSH-POP-NEXT:    li t0, 4
 ; QCI-PUSH-POP-NEXT:    li a2, 1
 ; QCI-PUSH-POP-NEXT:    li a4, 2
 ; QCI-PUSH-POP-NEXT:    li a6, 3
-; QCI-PUSH-POP-NEXT:    sw a0, 0(sp)
 ; QCI-PUSH-POP-NEXT:    li a0, 0
 ; QCI-PUSH-POP-NEXT:    li a1, 0
 ; QCI-PUSH-POP-NEXT:    li a3, 0
 ; QCI-PUSH-POP-NEXT:    li a5, 0
 ; QCI-PUSH-POP-NEXT:    li a7, 0
+; QCI-PUSH-POP-NEXT:    sw t0, 0(sp)
 ; QCI-PUSH-POP-NEXT:    call function_with_one_stack_arg
 ; QCI-PUSH-POP-NEXT:    call use_i64
 ; QCI-PUSH-POP-NEXT:    sw s11, 124(s0)
@@ -3002,16 +3002,16 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    lw s9, 116(s0)
 ; QCI-QCCMP-PUSH-POP-NEXT:    lw s10, 120(s0)
 ; QCI-QCCMP-PUSH-POP-NEXT:    lw s11, 124(s0)
-; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 4
+; QCI-QCCMP-PUSH-POP-NEXT:    li t0, 4
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a4, 2
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
-; QCI-QCCMP-PUSH-POP-NEXT:    sw a0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a3, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a5, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a7, 0
+; QCI-QCCMP-PUSH-POP-NEXT:    sw t0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-NEXT:    call function_with_one_stack_arg
 ; QCI-QCCMP-PUSH-POP-NEXT:    call use_i64
 ; QCI-QCCMP-PUSH-POP-NEXT:    sw s11, 124(s0)
@@ -3177,16 +3177,16 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    lw s11, 116(s1)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    lw s2, 120(s1)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    lw s3, 124(s1)
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 4
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li t0, 4
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a4, 2
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw a0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a3, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a5, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a7, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw t0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    call function_with_one_stack_arg
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    call use_i64
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw s3, 124(s1)
@@ -3368,16 +3368,16 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-NEXT:    lw s9, 116(s0)
 ; QCI-NEXT:    lw s10, 120(s0)
 ; QCI-NEXT:    lw s11, 124(s0)
-; QCI-NEXT:    li a0, 4
+; QCI-NEXT:    li t0, 4
 ; QCI-NEXT:    li a2, 1
 ; QCI-NEXT:    li a4, 2
 ; QCI-NEXT:    li a6, 3
-; QCI-NEXT:    sw a0, 0(sp)
 ; QCI-NEXT:    li a0, 0
 ; QCI-NEXT:    li a1, 0
 ; QCI-NEXT:    li a3, 0
 ; QCI-NEXT:    li a5, 0
 ; QCI-NEXT:    li a7, 0
+; QCI-NEXT:    sw t0, 0(sp)
 ; QCI-NEXT:    call function_with_one_stack_arg
 ; QCI-NEXT:    call use_i64
 ; QCI-NEXT:    sw s11, 124(s0)
@@ -3561,16 +3561,16 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-FP-NEXT:    lw s11, 116(s1)
 ; QCI-FP-NEXT:    lw s2, 120(s1)
 ; QCI-FP-NEXT:    lw s3, 124(s1)
-; QCI-FP-NEXT:    li a0, 4
+; QCI-FP-NEXT:    li t0, 4
 ; QCI-FP-NEXT:    li a2, 1
 ; QCI-FP-NEXT:    li a4, 2
 ; QCI-FP-NEXT:    li a6, 3
-; QCI-FP-NEXT:    sw a0, 0(sp)
 ; QCI-FP-NEXT:    li a0, 0
 ; QCI-FP-NEXT:    li a1, 0
 ; QCI-FP-NEXT:    li a3, 0
 ; QCI-FP-NEXT:    li a5, 0
 ; QCI-FP-NEXT:    li a7, 0
+; QCI-FP-NEXT:    sw t0, 0(sp)
 ; QCI-FP-NEXT:    call function_with_one_stack_arg
 ; QCI-FP-NEXT:    call use_i64
 ; QCI-FP-NEXT:    sw s3, 124(s1)
@@ -3745,16 +3745,16 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-PUSH-POP-NEXT:    lw s9, 116(s0)
 ; QCI-PUSH-POP-NEXT:    lw s10, 120(s0)
 ; QCI-PUSH-POP-NEXT:    lw s11, 124(s0)
-; QCI-PUSH-POP-NEXT:    li a0, 4
+; QCI-PUSH-POP-NEXT:    li t0, 4
 ; QCI-PUSH-POP-NEXT:    li a2, 1
 ; QCI-PUSH-POP-NEXT:    li a4, 2
 ; QCI-PUSH-POP-NEXT:    li a6, 3
-; QCI-PUSH-POP-NEXT:    sw a0, 0(sp)
 ; QCI-PUSH-POP-NEXT:    li a0, 0
 ; QCI-PUSH-POP-NEXT:    li a1, 0
 ; QCI-PUSH-POP-NEXT:    li a3, 0
 ; QCI-PUSH-POP-NEXT:    li a5, 0
 ; QCI-PUSH-POP-NEXT:    li a7, 0
+; QCI-PUSH-POP-NEXT:    sw t0, 0(sp)
 ; QCI-PUSH-POP-NEXT:    call function_with_one_stack_arg
 ; QCI-PUSH-POP-NEXT:    call use_i64
 ; QCI-PUSH-POP-NEXT:    sw s11, 124(s0)
@@ -3918,16 +3918,16 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    lw s9, 116(s0)
 ; QCI-QCCMP-PUSH-POP-NEXT:    lw s10, 120(s0)
 ; QCI-QCCMP-PUSH-POP-NEXT:    lw s11, 124(s0)
-; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 4
+; QCI-QCCMP-PUSH-POP-NEXT:    li t0, 4
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a4, 2
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
-; QCI-QCCMP-PUSH-POP-NEXT:    sw a0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a3, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a5, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a7, 0
+; QCI-QCCMP-PUSH-POP-NEXT:    sw t0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-NEXT:    call function_with_one_stack_arg
 ; QCI-QCCMP-PUSH-POP-NEXT:    call use_i64
 ; QCI-QCCMP-PUSH-POP-NEXT:    sw s11, 124(s0)
@@ -4093,16 +4093,16 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    lw s11, 116(s1)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    lw s2, 120(s1)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    lw s3, 124(s1)
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 4
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li t0, 4
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a4, 2
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw a0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a3, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a5, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a7, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw t0, 0(sp)
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    call function_with_one_stack_arg
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    call use_i64
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw s3, 124(s1)

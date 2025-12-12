@@ -4,10 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfh,+v,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,RV64 %s
 
-declare <vscale x 1 x double> @llvm.vp.fma.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x double> @llvm.vp.fneg.nxv1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x i1>, i32)
-
 ; (-N0 * -N1) + N2 --> (N0 * N1) + N2
 define <vscale x 1 x double> @test1(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x double> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: test1:
@@ -29,10 +25,10 @@ define <vscale x 1 x double> @test2(<vscale x 1 x double> %a, <vscale x 1 x i1> 
 ; RV32-NEXT:    lui a1, %hi(.LCPI1_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI1_0)(a1)
 ; RV32-NEXT:    lui a1, %hi(.LCPI1_1)
-; RV32-NEXT:    fld fa4, %lo(.LCPI1_1)(a1)
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vfmv.v.f v9, fa5
-; RV32-NEXT:    vfadd.vf v9, v9, fa4, v0.t
+; RV32-NEXT:    fld fa5, %lo(.LCPI1_1)(a1)
+; RV32-NEXT:    vfadd.vf v9, v9, fa5, v0.t
 ; RV32-NEXT:    vfmul.vv v8, v8, v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -60,10 +56,10 @@ define <vscale x 1 x double> @test3(<vscale x 1 x double> %a, <vscale x 1 x doub
 ; RV32-NEXT:    lui a1, %hi(.LCPI2_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI2_0)(a1)
 ; RV32-NEXT:    lui a1, %hi(.LCPI2_1)
-; RV32-NEXT:    fld fa4, %lo(.LCPI2_1)(a1)
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vfmv.v.f v10, fa5
-; RV32-NEXT:    vfmul.vf v10, v10, fa4, v0.t
+; RV32-NEXT:    fld fa5, %lo(.LCPI2_1)(a1)
+; RV32-NEXT:    vfmul.vf v10, v10, fa5, v0.t
 ; RV32-NEXT:    vfmadd.vv v10, v8, v9, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    ret

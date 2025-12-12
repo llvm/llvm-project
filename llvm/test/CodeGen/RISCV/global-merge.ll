@@ -23,12 +23,12 @@ define void @f1(i32 %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.L_MergedGlobals)
 ; CHECK-NEXT:    addi a1, a1, %lo(.L_MergedGlobals)
-; CHECK-NEXT:    lui a2, %hi(eg1)
 ; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:    sw a0, 4(a1)
-; CHECK-NEXT:    lui a1, %hi(eg2)
-; CHECK-NEXT:    sw a0, %lo(eg1)(a2)
-; CHECK-NEXT:    sw a0, %lo(eg2)(a1)
+; CHECK-NEXT:    lui a1, %hi(eg1)
+; CHECK-NEXT:    lui a2, %hi(eg2)
+; CHECK-NEXT:    sw a0, %lo(eg1)(a1)
+; CHECK-NEXT:    sw a0, %lo(eg2)(a2)
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-WEXTERN-LABEL: f1:

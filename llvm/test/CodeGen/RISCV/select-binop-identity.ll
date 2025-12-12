@@ -46,15 +46,15 @@ define signext i32 @and_select_all_ones_i32(i1 zeroext %c, i32 signext %x, i32 s
 ;
 ; VTCONDOPS64-LABEL: and_select_all_ones_i32:
 ; VTCONDOPS64:       # %bb.0:
-; VTCONDOPS64-NEXT:    vt.maskcn a0, a2, a0
 ; VTCONDOPS64-NEXT:    and a1, a2, a1
+; VTCONDOPS64-NEXT:    vt.maskcn a0, a2, a0
 ; VTCONDOPS64-NEXT:    or a0, a1, a0
 ; VTCONDOPS64-NEXT:    ret
 ;
 ; ZICOND-LABEL: and_select_all_ones_i32:
 ; ZICOND:       # %bb.0:
-; ZICOND-NEXT:    czero.nez a0, a2, a0
 ; ZICOND-NEXT:    and a1, a2, a1
+; ZICOND-NEXT:    czero.nez a0, a2, a0
 ; ZICOND-NEXT:    or a0, a1, a0
 ; ZICOND-NEXT:    ret
 ;
@@ -119,8 +119,8 @@ define signext i32 @and_select_all_ones_i32_cmp(i32 signext %x, i32 signext %y, 
 ;
 ; CMV-FUSION-LABEL: and_select_all_ones_i32_cmp:
 ; CMV-FUSION:       # %bb.0:
-; CMV-FUSION-NEXT:    and a0, a0, a1
 ; CMV-FUSION-NEXT:    li a3, 4
+; CMV-FUSION-NEXT:    and a0, a0, a1
 ; CMV-FUSION-NEXT:    beq a2, a3, .LBB1_2
 ; CMV-FUSION-NEXT:  # %bb.1:
 ; CMV-FUSION-NEXT:    mv a0, a1
@@ -177,8 +177,8 @@ define signext i32 @and_select_all_ones_i32_cmp2(i32 signext %x, i32 signext %y,
 ;
 ; CMV-FUSION-LABEL: and_select_all_ones_i32_cmp2:
 ; CMV-FUSION:       # %bb.0:
-; CMV-FUSION-NEXT:    and a0, a0, a1
 ; CMV-FUSION-NEXT:    li a3, 4
+; CMV-FUSION-NEXT:    and a0, a0, a1
 ; CMV-FUSION-NEXT:    blt a2, a3, .LBB2_2
 ; CMV-FUSION-NEXT:  # %bb.1:
 ; CMV-FUSION-NEXT:    mv a0, a1
@@ -218,15 +218,15 @@ define i64 @and_select_all_ones_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ;
 ; VTCONDOPS64-LABEL: and_select_all_ones_i64:
 ; VTCONDOPS64:       # %bb.0:
-; VTCONDOPS64-NEXT:    vt.maskc a0, a2, a0
 ; VTCONDOPS64-NEXT:    and a1, a2, a1
+; VTCONDOPS64-NEXT:    vt.maskc a0, a2, a0
 ; VTCONDOPS64-NEXT:    or a0, a1, a0
 ; VTCONDOPS64-NEXT:    ret
 ;
 ; ZICOND64-LABEL: and_select_all_ones_i64:
 ; ZICOND64:       # %bb.0:
-; ZICOND64-NEXT:    czero.eqz a0, a2, a0
 ; ZICOND64-NEXT:    and a1, a2, a1
+; ZICOND64-NEXT:    czero.eqz a0, a2, a0
 ; ZICOND64-NEXT:    or a0, a1, a0
 ; ZICOND64-NEXT:    ret
 ;
@@ -294,8 +294,8 @@ define i64 @and_select_all_ones_i64_cmp(i64 %x, i64 %y, i64 %z) {
 ;
 ; CMV-FUSION-LABEL: and_select_all_ones_i64_cmp:
 ; CMV-FUSION:       # %bb.0:
-; CMV-FUSION-NEXT:    and a0, a0, a1
 ; CMV-FUSION-NEXT:    li a3, 4
+; CMV-FUSION-NEXT:    and a0, a0, a1
 ; CMV-FUSION-NEXT:    beq a2, a3, .LBB4_2
 ; CMV-FUSION-NEXT:  # %bb.1:
 ; CMV-FUSION-NEXT:    mv a0, a1
@@ -374,8 +374,8 @@ define i64 @and_select_all_ones_i64_cmp2(i64 %x, i64 %y, i64 %z) {
 ;
 ; CMV-FUSION-LABEL: and_select_all_ones_i64_cmp2:
 ; CMV-FUSION:       # %bb.0:
-; CMV-FUSION-NEXT:    and a0, a0, a1
 ; CMV-FUSION-NEXT:    li a3, 4
+; CMV-FUSION-NEXT:    and a0, a0, a1
 ; CMV-FUSION-NEXT:    blt a2, a3, .LBB5_2
 ; CMV-FUSION-NEXT:  # %bb.1:
 ; CMV-FUSION-NEXT:    mv a0, a1

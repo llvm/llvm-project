@@ -23,39 +23,37 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x09, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 9 * vlenb
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_49)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_49)
-; CHECK-NEXT:    lui a1, %hi(.L__const._Z3foov.var_48)
-; CHECK-NEXT:    addi a1, a1, %lo(.L__const._Z3foov.var_48)
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vle8.v v10, (a1)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_46)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_46)
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_45)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_45)
 ; CHECK-NEXT:    vle16.v v12, (a0)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    #APP
-; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_40)
-; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_40)
-; CHECK-NEXT:    lui a1, 1048572
-; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    addi a0, a1, 928
-; CHECK-NEXT:    vmsbc.vx v0, v8, a0
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_48)
+; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_48)
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_40)
+; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_40)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    lui a0, 1048572
+; CHECK-NEXT:    addi a0, a0, 928
+; CHECK-NEXT:    vmsbc.vx v0, v8, a0
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, mu
 ; CHECK-NEXT:    vsext.vf2 v8, v14, v0.t
@@ -95,16 +93,3 @@ entry:
   ret void
 }
 
-declare <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16>, ptr nocapture, i64)
-
-declare <vscale x 8 x i8> @llvm.riscv.vle.nxv8i8.i64(<vscale x 8 x i8>, ptr nocapture, i64)
-
-declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
-
-declare <vscale x 8 x i1> @llvm.riscv.vmsbc.nxv8i16.i16.i64(<vscale x 8 x i16>, i16, i64)
-
-declare <vscale x 8 x i16> @llvm.riscv.vsext.mask.nxv8i16.nxv8i8.i64(<vscale x 8 x i16>, <vscale x 8 x i8>, <vscale x 8 x i1>, i64, i64 immarg)
-
-declare target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.tuple.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4), <vscale x 8 x i16>, i32)
-
-declare void @llvm.riscv.vsseg4.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4), ptr nocapture, i64, i64)

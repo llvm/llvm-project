@@ -4,12 +4,6 @@
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+zbb | FileCheck %s --check-prefix=RV32IZbb
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+zbb | FileCheck %s --check-prefix=RV64IZbb
 
-declare i4 @llvm.usub.sat.i4(i4, i4)
-declare i8 @llvm.usub.sat.i8(i8, i8)
-declare i16 @llvm.usub.sat.i16(i16, i16)
-declare i32 @llvm.usub.sat.i32(i32, i32)
-declare i64 @llvm.usub.sat.i64(i64, i64)
-
 define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; RV32I-LABEL: func32:
 ; RV32I:       # %bb.0:
@@ -23,11 +17,11 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; RV64I-LABEL: func32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mul a1, a1, a2
-; RV64I-NEXT:    subw a1, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    addi a0, a0, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    sext.w a2, a0
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    sltu a1, a2, a0
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZbb-LABEL: func32:

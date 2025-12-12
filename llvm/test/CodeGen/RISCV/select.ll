@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+xventanacondops -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,RV64IMXVTCONDOPS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+zicond -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,CHECKZICOND,RV32IMZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+zicond -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,CHECKZICOND,RV64IMZICOND %s
-; RUN: llc -mtriple=riscv32 -mattr=+m,+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-opt,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+m,+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 
 define i16 @select_xor_1(i16 %A, i8 %cond) {
@@ -1077,13 +1077,13 @@ define i64 @select_add_5(i1 zeroext %cond, i64 %x) {
 define i64 @select_add_6(i1 zeroext %cond, i64 %x) {
 ; RV32IM-LABEL: select_add_6:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    addi a3, a0, -1
-; RV32IM-NEXT:    lui a0, 14
-; RV32IM-NEXT:    and a1, a3, a1
-; RV32IM-NEXT:    addi a0, a0, 1005
+; RV32IM-NEXT:    lui a3, 14
+; RV32IM-NEXT:    addi a4, a0, -1
+; RV32IM-NEXT:    and a1, a4, a1
+; RV32IM-NEXT:    addi a0, a3, 1005
 ; RV32IM-NEXT:    add a0, a1, a0
 ; RV32IM-NEXT:    sltu a1, a0, a1
-; RV32IM-NEXT:    and a2, a3, a2
+; RV32IM-NEXT:    and a2, a4, a2
 ; RV32IM-NEXT:    add a1, a2, a1
 ; RV32IM-NEXT:    ret
 ;
@@ -1404,20 +1404,22 @@ entry:
 define i32 @select_and_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IM-LABEL: select_and_2:
 ; RV32IM:       # %bb.0: # %entry
-; RV32IM-NEXT:    bnez a0, .LBB29_2
-; RV32IM-NEXT:  # %bb.1: # %entry
-; RV32IM-NEXT:    and a1, a1, a2
-; RV32IM-NEXT:  .LBB29_2: # %entry
+; RV32IM-NEXT:    mv a3, a0
 ; RV32IM-NEXT:    mv a0, a1
+; RV32IM-NEXT:    bnez a3, .LBB29_2
+; RV32IM-NEXT:  # %bb.1: # %entry
+; RV32IM-NEXT:    and a0, a0, a2
+; RV32IM-NEXT:  .LBB29_2: # %entry
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_and_2:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    bnez a0, .LBB29_2
-; RV64IM-NEXT:  # %bb.1: # %entry
-; RV64IM-NEXT:    and a1, a1, a2
-; RV64IM-NEXT:  .LBB29_2: # %entry
+; RV64IM-NEXT:    mv a3, a0
 ; RV64IM-NEXT:    mv a0, a1
+; RV64IM-NEXT:    bnez a3, .LBB29_2
+; RV64IM-NEXT:  # %bb.1: # %entry
+; RV64IM-NEXT:    and a0, a0, a2
+; RV64IM-NEXT:  .LBB29_2: # %entry
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_and_2:
@@ -1451,20 +1453,22 @@ entry:
 define i32 @select_and_3(i1 zeroext %cond, i32 %a) {
 ; RV32IM-LABEL: select_and_3:
 ; RV32IM:       # %bb.0: # %entry
-; RV32IM-NEXT:    bnez a0, .LBB30_2
-; RV32IM-NEXT:  # %bb.1: # %entry
-; RV32IM-NEXT:    andi a1, a1, 42
-; RV32IM-NEXT:  .LBB30_2: # %entry
+; RV32IM-NEXT:    mv a2, a0
 ; RV32IM-NEXT:    mv a0, a1
+; RV32IM-NEXT:    bnez a2, .LBB30_2
+; RV32IM-NEXT:  # %bb.1: # %entry
+; RV32IM-NEXT:    andi a0, a0, 42
+; RV32IM-NEXT:  .LBB30_2: # %entry
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_and_3:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    bnez a0, .LBB30_2
-; RV64IM-NEXT:  # %bb.1: # %entry
-; RV64IM-NEXT:    andi a1, a1, 42
-; RV64IM-NEXT:  .LBB30_2: # %entry
+; RV64IM-NEXT:    mv a2, a0
 ; RV64IM-NEXT:    mv a0, a1
+; RV64IM-NEXT:    bnez a2, .LBB30_2
+; RV64IM-NEXT:  # %bb.1: # %entry
+; RV64IM-NEXT:    andi a0, a0, 42
+; RV64IM-NEXT:  .LBB30_2: # %entry
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_and_3:
@@ -1553,20 +1557,22 @@ entry:
 define i32 @select_udiv_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IM-LABEL: select_udiv_2:
 ; RV32IM:       # %bb.0: # %entry
-; RV32IM-NEXT:    bnez a0, .LBB32_2
-; RV32IM-NEXT:  # %bb.1: # %entry
-; RV32IM-NEXT:    divu a1, a1, a2
-; RV32IM-NEXT:  .LBB32_2: # %entry
+; RV32IM-NEXT:    mv a3, a0
 ; RV32IM-NEXT:    mv a0, a1
+; RV32IM-NEXT:    bnez a3, .LBB32_2
+; RV32IM-NEXT:  # %bb.1: # %entry
+; RV32IM-NEXT:    divu a0, a0, a2
+; RV32IM-NEXT:  .LBB32_2: # %entry
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_udiv_2:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    bnez a0, .LBB32_2
-; RV64IM-NEXT:  # %bb.1: # %entry
-; RV64IM-NEXT:    divuw a1, a1, a2
-; RV64IM-NEXT:  .LBB32_2: # %entry
+; RV64IM-NEXT:    mv a3, a0
 ; RV64IM-NEXT:    mv a0, a1
+; RV64IM-NEXT:    bnez a3, .LBB32_2
+; RV64IM-NEXT:  # %bb.1: # %entry
+; RV64IM-NEXT:    divuw a0, a0, a2
+; RV64IM-NEXT:  .LBB32_2: # %entry
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_udiv_2:
@@ -1608,28 +1614,30 @@ entry:
 define i32 @select_udiv_3(i1 zeroext %cond, i32 %a) {
 ; RV32IM-LABEL: select_udiv_3:
 ; RV32IM:       # %bb.0: # %entry
-; RV32IM-NEXT:    bnez a0, .LBB33_2
-; RV32IM-NEXT:  # %bb.1: # %entry
-; RV32IM-NEXT:    lui a0, 199729
-; RV32IM-NEXT:    srli a1, a1, 1
-; RV32IM-NEXT:    addi a0, a0, -975
-; RV32IM-NEXT:    mulhu a1, a1, a0
-; RV32IM-NEXT:    srli a1, a1, 2
-; RV32IM-NEXT:  .LBB33_2: # %entry
+; RV32IM-NEXT:    mv a2, a0
 ; RV32IM-NEXT:    mv a0, a1
+; RV32IM-NEXT:    bnez a2, .LBB33_2
+; RV32IM-NEXT:  # %bb.1: # %entry
+; RV32IM-NEXT:    lui a1, 199729
+; RV32IM-NEXT:    srli a0, a0, 1
+; RV32IM-NEXT:    addi a1, a1, -975
+; RV32IM-NEXT:    mulhu a0, a0, a1
+; RV32IM-NEXT:    srli a0, a0, 2
+; RV32IM-NEXT:  .LBB33_2: # %entry
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_udiv_3:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    bnez a0, .LBB33_2
-; RV64IM-NEXT:  # %bb.1: # %entry
-; RV64IM-NEXT:    lui a0, 199729
-; RV64IM-NEXT:    srliw a1, a1, 1
-; RV64IM-NEXT:    addi a0, a0, -975
-; RV64IM-NEXT:    mul a1, a1, a0
-; RV64IM-NEXT:    srli a1, a1, 34
-; RV64IM-NEXT:  .LBB33_2: # %entry
+; RV64IM-NEXT:    mv a2, a0
 ; RV64IM-NEXT:    mv a0, a1
+; RV64IM-NEXT:    bnez a2, .LBB33_2
+; RV64IM-NEXT:  # %bb.1: # %entry
+; RV64IM-NEXT:    lui a1, 199729
+; RV64IM-NEXT:    srliw a0, a0, 1
+; RV64IM-NEXT:    addi a1, a1, -975
+; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    srli a0, a0, 34
+; RV64IM-NEXT:  .LBB33_2: # %entry
 ; RV64IM-NEXT:    ret
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_udiv_3:

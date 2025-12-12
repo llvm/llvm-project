@@ -20,14 +20,14 @@ define half @vpreduce_fmin_nxv4f16(half %start, <vscale x 4 x half> %val, <vscal
 ;
 ; ZVFHMIN-LABEL: vpreduce_fmin_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmv.s.f v9, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmin.vs v9, v10, v9, v0.t
-; ZVFHMIN-NEXT:    vfmv.f.s fa5, v9
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfredmin.vs v8, v10, v8, v0.t
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
   %s = call half @llvm.vp.reduce.fmin.nxv4f16(half %start, <vscale x 4 x half> %val, <vscale x 4 x i1> %m, i32 %evl)
@@ -46,14 +46,14 @@ define half @vpreduce_fmax_nxv4f16(half %start, <vscale x 4 x half> %val, <vscal
 ;
 ; ZVFHMIN-LABEL: vpreduce_fmax_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmv.s.f v9, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmax.vs v9, v10, v9, v0.t
-; ZVFHMIN-NEXT:    vfmv.f.s fa5, v9
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfredmax.vs v8, v10, v8, v0.t
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
   %s = call half @llvm.vp.reduce.fmax.nxv4f16(half %start, <vscale x 4 x half> %val, <vscale x 4 x i1> %m, i32 %evl)
@@ -72,14 +72,14 @@ define half @vpreduce_fmin_nnan_nxv4f16(half %start, <vscale x 4 x half> %val, <
 ;
 ; ZVFHMIN-LABEL: vpreduce_fmin_nnan_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmv.s.f v9, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmin.vs v9, v10, v9, v0.t
-; ZVFHMIN-NEXT:    vfmv.f.s fa5, v9
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfredmin.vs v8, v10, v8, v0.t
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
   %s = call nnan half @llvm.vp.reduce.fmin.nxv4f16(half %start, <vscale x 4 x half> %val, <vscale x 4 x i1> %m, i32 %evl)
@@ -98,14 +98,14 @@ define half @vpreduce_fmax_nnan_nxv4f16(half %start, <vscale x 4 x half> %val, <
 ;
 ; ZVFHMIN-LABEL: vpreduce_fmax_nnan_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmv.s.f v9, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmax.vs v9, v10, v9, v0.t
-; ZVFHMIN-NEXT:    vfmv.f.s fa5, v9
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfredmax.vs v8, v10, v8, v0.t
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
   %s = call nnan half @llvm.vp.reduce.fmax.nxv4f16(half %start, <vscale x 4 x half> %val, <vscale x 4 x i1> %m, i32 %evl)
@@ -116,9 +116,9 @@ define half @vpreduce_fminimum_nxv4f16(half %start, <vscale x 4 x half> %val, <v
 ; ZVFH-LABEL: vpreduce_fminimum_nxv4f16:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fcvt.s.h fa5, fa0
-; ZVFH-NEXT:    feq.s a1, fa5, fa5
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFH-NEXT:    vmfne.vv v9, v8, v8, v0.t
+; ZVFH-NEXT:    feq.s a1, fa5, fa5
 ; ZVFH-NEXT:    vcpop.m a2, v9, v0.t
 ; ZVFH-NEXT:    xori a1, a1, 1
 ; ZVFH-NEXT:    or a1, a2, a1
@@ -138,12 +138,12 @@ define half @vpreduce_fminimum_nxv4f16(half %start, <vscale x 4 x half> %val, <v
 ;
 ; ZVFHMIN-LABEL: vpreduce_fminimum_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    feq.s a1, fa5, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v10, v10, v0.t
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZVFHMIN-NEXT:    feq.s a1, fa5, fa5
 ; ZVFHMIN-NEXT:    vcpop.m a2, v8, v0.t
 ; ZVFHMIN-NEXT:    xori a1, a1, 1
 ; ZVFHMIN-NEXT:    or a1, a2, a1
@@ -169,9 +169,9 @@ define half @vpreduce_fmaximum_nxv4f16(half %start, <vscale x 4 x half> %val, <v
 ; ZVFH-LABEL: vpreduce_fmaximum_nxv4f16:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fcvt.s.h fa5, fa0
-; ZVFH-NEXT:    feq.s a1, fa5, fa5
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFH-NEXT:    vmfne.vv v9, v8, v8, v0.t
+; ZVFH-NEXT:    feq.s a1, fa5, fa5
 ; ZVFH-NEXT:    vcpop.m a2, v9, v0.t
 ; ZVFH-NEXT:    xori a1, a1, 1
 ; ZVFH-NEXT:    or a1, a2, a1
@@ -191,12 +191,12 @@ define half @vpreduce_fmaximum_nxv4f16(half %start, <vscale x 4 x half> %val, <v
 ;
 ; ZVFHMIN-LABEL: vpreduce_fmaximum_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    feq.s a1, fa5, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v10, v10, v0.t
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZVFHMIN-NEXT:    feq.s a1, fa5, fa5
 ; ZVFHMIN-NEXT:    vcpop.m a2, v8, v0.t
 ; ZVFHMIN-NEXT:    xori a1, a1, 1
 ; ZVFHMIN-NEXT:    or a1, a2, a1
@@ -230,14 +230,14 @@ define half @vpreduce_fminimum_nnan_nxv4f16(half %start, <vscale x 4 x half> %va
 ;
 ; ZVFHMIN-LABEL: vpreduce_fminimum_nnan_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmv.s.f v9, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmin.vs v9, v10, v9, v0.t
-; ZVFHMIN-NEXT:    vfmv.f.s fa5, v9
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfredmin.vs v8, v10, v8, v0.t
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
   %s = call nnan half @llvm.vp.reduce.fminimum.nxv4f16(half %start, <vscale x 4 x half> %val, <vscale x 4 x i1> %m, i32 %evl)
@@ -256,14 +256,14 @@ define half @vpreduce_fmaximum_nnan_nxv4f16(half %start, <vscale x 4 x half> %va
 ;
 ; ZVFHMIN-LABEL: vpreduce_fmaximum_nnan_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmv.s.f v9, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmax.vs v9, v10, v9, v0.t
-; ZVFHMIN-NEXT:    vfmv.f.s fa5, v9
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vfredmax.vs v8, v10, v8, v0.t
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
   %s = call nnan half @llvm.vp.reduce.fmaximum.nxv4f16(half %start, <vscale x 4 x half> %val, <vscale x 4 x i1> %m, i32 %evl)

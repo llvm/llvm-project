@@ -9,8 +9,8 @@ define <512 x i8> @bitcast_1024B(<256 x i16> %a, <512 x i8> %b) {
 ; VLEN256-NEXT:    li a1, 256
 ; VLEN256-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; VLEN256-NEXT:    vle8.v v24, (a0)
-; VLEN256-NEXT:    vadd.vv v8, v24, v8
 ; VLEN256-NEXT:    addi a0, a0, 256
+; VLEN256-NEXT:    vadd.vv v8, v24, v8
 ; VLEN256-NEXT:    vle8.v v24, (a0)
 ; VLEN256-NEXT:    vadd.vv v16, v24, v16
 ; VLEN256-NEXT:    ret

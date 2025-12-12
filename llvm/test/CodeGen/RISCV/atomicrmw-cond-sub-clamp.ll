@@ -198,29 +198,29 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; RV32I-NEXT:    .cfi_offset s1, -12
 ; RV32I-NEXT:    .cfi_offset s2, -16
 ; RV32I-NEXT:    .cfi_offset s3, -20
-; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    lhu a3, 0(a0)
+; RV32I-NEXT:    mv s0, a1
+; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui s2, 16
 ; RV32I-NEXT:    addi s2, s2, -1
-; RV32I-NEXT:    mv s1, a1
-; RV32I-NEXT:    and s3, a1, s2
+; RV32I-NEXT:    and s3, s0, s2
 ; RV32I-NEXT:  .LBB1_1: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a3, s2
+; RV32I-NEXT:    and a0, a1, s2
 ; RV32I-NEXT:    sltu a0, a0, s3
 ; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    and a0, a0, s1
-; RV32I-NEXT:    sub a2, a3, a0
-; RV32I-NEXT:    sh a3, 10(sp)
+; RV32I-NEXT:    and a0, a0, s0
+; RV32I-NEXT:    sub a2, a1, a0
+; RV32I-NEXT:    sh a1, 10(sp)
 ; RV32I-NEXT:    addi a1, sp, 10
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
-; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
-; RV32I-NEXT:    lh a3, 10(sp)
+; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    beqz a0, .LBB1_1
 ; RV32I-NEXT:  # %bb.2: # %atomicrmw.end
-; RV32I-NEXT:    mv a0, a3
+; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -288,29 +288,29 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; RV64I-NEXT:    .cfi_offset s1, -24
 ; RV64I-NEXT:    .cfi_offset s2, -32
 ; RV64I-NEXT:    .cfi_offset s3, -40
-; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lhu a3, 0(a0)
+; RV64I-NEXT:    mv s0, a1
+; RV64I-NEXT:    mv s1, a0
+; RV64I-NEXT:    lhu a1, 0(a0)
 ; RV64I-NEXT:    lui s2, 16
 ; RV64I-NEXT:    addi s2, s2, -1
-; RV64I-NEXT:    mv s1, a1
-; RV64I-NEXT:    and s3, a1, s2
+; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:  .LBB1_1: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    and a0, a3, s2
+; RV64I-NEXT:    and a0, a1, s2
 ; RV64I-NEXT:    sltu a0, a0, s3
 ; RV64I-NEXT:    addi a0, a0, -1
-; RV64I-NEXT:    and a0, a0, s1
-; RV64I-NEXT:    sub a2, a3, a0
-; RV64I-NEXT:    sh a3, 6(sp)
+; RV64I-NEXT:    and a0, a0, s0
+; RV64I-NEXT:    sub a2, a1, a0
+; RV64I-NEXT:    sh a1, 6(sp)
 ; RV64I-NEXT:    addi a1, sp, 6
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
-; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
-; RV64I-NEXT:    lh a3, 6(sp)
+; RV64I-NEXT:    lh a1, 6(sp)
 ; RV64I-NEXT:    beqz a0, .LBB1_1
 ; RV64I-NEXT:  # %bb.2: # %atomicrmw.end
-; RV64I-NEXT:    mv a0, a3
+; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload

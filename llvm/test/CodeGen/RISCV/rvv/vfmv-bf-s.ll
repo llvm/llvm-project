@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+v,+experimental-zvfbfa -target-abi lp64d -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+v,+experimental-zvfbfa -target-abi ilp32d -verify-machineinstrs < %s | FileCheck %s
 
-declare bfloat @llvm.riscv.vfmv.f.s.nxv1bf16(<vscale x 1 x bfloat>)
-
 define bfloat @intrinsic_vfmv.f.s_s_nxv1bf16(<vscale x 1 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv1bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -14,8 +12,6 @@ entry:
   %a = call bfloat @llvm.riscv.vfmv.f.s.nxv1bf16(<vscale x 1 x bfloat> %0)
   ret bfloat %a
 }
-
-declare bfloat @llvm.riscv.vfmv.f.s.nxv2bf16(<vscale x 2 x bfloat>)
 
 define bfloat @intrinsic_vfmv.f.s_s_nxv2bf16(<vscale x 2 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv2bf16:
@@ -28,8 +24,6 @@ entry:
   ret bfloat %a
 }
 
-declare bfloat @llvm.riscv.vfmv.f.s.nxv4bf16(<vscale x 4 x bfloat>)
-
 define bfloat @intrinsic_vfmv.f.s_s_nxv4bf16(<vscale x 4 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv4bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -40,8 +34,6 @@ entry:
   %a = call bfloat @llvm.riscv.vfmv.f.s.nxv4bf16(<vscale x 4 x bfloat> %0)
   ret bfloat %a
 }
-
-declare bfloat @llvm.riscv.vfmv.f.s.nxv8bf16(<vscale x 8 x bfloat>)
 
 define bfloat @intrinsic_vfmv.f.s_s_nxv8bf16(<vscale x 8 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv8bf16:
@@ -54,8 +46,6 @@ entry:
   ret bfloat %a
 }
 
-declare bfloat @llvm.riscv.vfmv.f.s.nxv16bf16(<vscale x 16 x bfloat>)
-
 define bfloat @intrinsic_vfmv.f.s_s_nxv16bf16(<vscale x 16 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv16bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -66,8 +56,6 @@ entry:
   %a = call bfloat @llvm.riscv.vfmv.f.s.nxv16bf16(<vscale x 16 x bfloat> %0)
   ret bfloat %a
 }
-
-declare bfloat @llvm.riscv.vfmv.f.s.nxv32bf16(<vscale x 32 x bfloat>)
 
 define bfloat @intrinsic_vfmv.f.s_s_nxv32bf16(<vscale x 32 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv32bf16:

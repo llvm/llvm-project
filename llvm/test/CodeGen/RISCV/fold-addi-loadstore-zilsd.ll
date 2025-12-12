@@ -44,8 +44,7 @@ define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
 ; CHECK-NEXT:  # %bb.1: # %for.body.lr.ph
 ; CHECK-NEXT:    mv s2, a2
 ; CHECK-NEXT:    mv s3, a1
-; CHECK-NEXT:    li s0, 0
-; CHECK-NEXT:    li s1, 0
+; CHECK-NEXT:    fmv.d s0, zero
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add s4, a2, a0
 ; CHECK-NEXT:  .LBB2_2: # %for.body
@@ -58,8 +57,7 @@ define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
 ; CHECK-NEXT:    bnez s3, .LBB2_2
 ; CHECK-NEXT:    j .LBB2_4
 ; CHECK-NEXT:  .LBB2_3:
-; CHECK-NEXT:    li s0, 0
-; CHECK-NEXT:    li s1, 0
+; CHECK-NEXT:    fmv.d s0, zero
 ; CHECK-NEXT:  .LBB2_4: # %for.cond.cleanup
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    mv a1, s1
@@ -100,8 +98,8 @@ define void @split_offset(ptr %dest, double %x) {
 ; CHECK-LABEL: split_offset:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    addi a0, a0, 2047
 ; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    addi a0, a0, 2047
 ; CHECK-NEXT:    sd a2, 1(a0)
 ; CHECK-NEXT:    sd a2, 9(a0)
 ; CHECK-NEXT:    sd a2, 17(a0)

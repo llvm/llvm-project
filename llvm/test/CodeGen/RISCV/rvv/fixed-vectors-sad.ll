@@ -98,35 +98,35 @@ define signext i32 @sad_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stridea
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v9, (a1)
-; CHECK-NEXT:    vminu.vv v10, v8, v9
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    vminu.vv v11, v8, v9
+; CHECK-NEXT:    vle8.v v12, (a1)
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vle8.v v11, (a1)
-; CHECK-NEXT:    vsub.vv v8, v8, v10
-; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vsub.vv v8, v8, v11
 ; CHECK-NEXT:    add a1, a1, a3
-; CHECK-NEXT:    vminu.vv v10, v9, v11
-; CHECK-NEXT:    vle8.v v12, (a0)
+; CHECK-NEXT:    vle8.v v11, (a1)
+; CHECK-NEXT:    vminu.vv v13, v10, v12
+; CHECK-NEXT:    vmaxu.vv v10, v10, v12
+; CHECK-NEXT:    vminu.vv v12, v9, v11
 ; CHECK-NEXT:    vmaxu.vv v9, v9, v11
-; CHECK-NEXT:    vle8.v v11, (a1)
-; CHECK-NEXT:    vminu.vv v13, v12, v11
-; CHECK-NEXT:    vmaxu.vv v11, v12, v11
-; CHECK-NEXT:    vsub.vv v9, v9, v10
-; CHECK-NEXT:    vsub.vv v10, v11, v13
-; CHECK-NEXT:    vwaddu.vv v12, v9, v8
+; CHECK-NEXT:    vsub.vv v10, v10, v13
+; CHECK-NEXT:    vsub.vv v9, v9, v12
+; CHECK-NEXT:    vwaddu.vv v12, v10, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v14, v10
-; CHECK-NEXT:    vwaddu.vv v8, v14, v12
+; CHECK-NEXT:    vzext.vf2 v14, v9
 ; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vle8.v v16, (a0)
+; CHECK-NEXT:    vwaddu.vv v8, v14, v12
 ; CHECK-NEXT:    add a1, a1, a3
-; CHECK-NEXT:    vle8.v v12, (a0)
-; CHECK-NEXT:    vle8.v v13, (a1)
+; CHECK-NEXT:    vle8.v v12, (a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vminu.vv v14, v12, v13
-; CHECK-NEXT:    vmaxu.vv v12, v12, v13
-; CHECK-NEXT:    vsub.vv v14, v12, v14
+; CHECK-NEXT:    vminu.vv v13, v16, v12
+; CHECK-NEXT:    vmaxu.vv v12, v16, v12
+; CHECK-NEXT:    vsub.vv v14, v12, v13
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v12, v14
 ; CHECK-NEXT:    vwaddu.wv v8, v8, v12
@@ -178,12 +178,3 @@ entry:
   ret i32 %op.rdx.3
 }
 
-declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
-declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-declare <4 x i16> @llvm.abs.v4i16(<4 x i16>, i1)
-declare i16 @llvm.vector.reduce.add.v4i16(<4 x i16>)
-
-declare <16 x i32> @llvm.abs.v16i32(<16 x i32>, i1)
-declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
-declare <16 x i16> @llvm.abs.v16i16(<16 x i16>, i1)
-declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)

@@ -2,19 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+f,+d,+a,+c,+v -verify-machineinstrs -O2 < %s | FileCheck %s --check-prefixes=CHECK,NODEPVL
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+f,+d,+a,+c,+v,+vl-dependent-latency -verify-machineinstrs -O2 < %s | FileCheck %s --check-prefixes=CHECK,DEPVL
 
-declare i64 @llvm.riscv.vsetvli(i64, i64, i64)
-declare i64 @llvm.riscv.vsetvlimax(i64, i64)
-declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-  <vscale x 1 x double>,
-  <vscale x 1 x double>,
-  <vscale x 1 x double>,
-  i64, i64)
-declare <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
-  <vscale x 1 x i64>,
-  ptr,
-  <vscale x 1 x i1>,
-  i64, i64)
-
 define <vscale x 1 x double> @test1(i64 %avl, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
@@ -95,8 +82,6 @@ entry:
   %b = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1> %a, <vscale x 1 x i1> %2, i64 %vl)
   ret <vscale x 1 x i1> %b
 }
-declare <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, i64)
-declare <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1>, <vscale x 1 x i1>, i64)
 
 ; Make sure we don't insert a vsetvli for the vmor instruction.
 define void @test6(ptr nocapture readonly %A, ptr nocapture %B, i64 %n) {
@@ -283,6 +268,7 @@ define <vscale x 1 x double> @test15(i64 %avl, <vscale x 1 x double> %a, <vscale
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
@@ -299,7 +285,6 @@ entry:
     i64 7, i64 %vsetvli)
   ret <vscale x 1 x double> %f2
 }
-
 
 @gdouble = external global double
 
@@ -345,7 +330,6 @@ entry:
   %c3 = fadd double %c1, %c2
   ret double %c3
 }
-
 
 define <vscale x 1 x double> @test18(<vscale x 1 x double> %a, double %b) nounwind {
 ; CHECK-LABEL: test18:
@@ -393,9 +377,9 @@ entry:
 define i64 @avl_forward1(<vscale x 2 x i32> %v, ptr %p) nounwind {
 ; CHECK-LABEL: avl_forward1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli a1, 6, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    vsetivli a0, 6, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 6, i64 2, i64 0)
@@ -407,10 +391,10 @@ entry:
 define i64 @avl_forward1b_neg(<vscale x 2 x i32> %v, ptr %p) nounwind {
 ; CHECK-LABEL: avl_forward1b_neg:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli a1, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    vsetivli a0, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 6, i64 1, i64 0)
@@ -421,16 +405,15 @@ entry:
 define i64 @avl_forward2(<vscale x 2 x i32> %v, ptr %p) nounwind {
 ; CHECK-LABEL: avl_forward2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvlimax(i64 2, i64 0)
   call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, ptr %p, i64 %vl)
   ret i64 %vl
 }
-
 
 ; %vl is intentionally used only once
 define void @avl_forward3(<vscale x 2 x i32> %v, ptr %p, i64 %reg) nounwind {
@@ -449,9 +432,9 @@ entry:
 define i64 @avl_forward3b(<vscale x 2 x i32> %v, ptr %p, i64 %reg) nounwind {
 ; CHECK-LABEL: avl_forward3b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    vsetvli a0, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 %reg, i64 2, i64 0)
@@ -477,10 +460,10 @@ entry:
 define i64 @avl_forward4b(<vscale x 2 x i32> %v, ptr %p, i64 %reg) nounwind {
 ; CHECK-LABEL: avl_forward4b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    vsetvli a0, a1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 %reg, i64 1, i64 0)
@@ -529,12 +512,6 @@ entry:
   ret <vscale x 1 x i64> %5
 }
 
-declare { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(
-  <vscale x 1 x i64>, ptr nocapture, i64)
-
-declare <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i64.i64.i64(
-  <vscale x 1 x i64>, i64, i64)
-
 ; Ensure AVL register is alive when forwarding an AVL immediate that does not fit in 5 bits
 define <vscale x 2 x i32> @avl_forward5(ptr %addr) {
 ; CHECK-LABEL: avl_forward5:
@@ -548,8 +525,6 @@ define <vscale x 2 x i32> @avl_forward5(ptr %addr) {
   %ret = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32> poison, ptr %addr, i64 %gvl)
   ret <vscale x 2 x i32> %ret
 }
-
-declare <vscale x 1 x double> @llvm.riscv.vfwadd.nxv1f64.nxv1f32.nxv1f32(<vscale x 1 x double>, <vscale x 1 x float>, <vscale x 1 x float>, i64, i64)
 
 define <vscale x 1 x double> @test20(i64 %avl, <vscale x 1 x float> %a, <vscale x 1 x float> %b, <vscale x 1 x double> %c) nounwind {
 ; CHECK-LABEL: test20:
@@ -589,7 +564,6 @@ bb:
   %tmp2 = add i64 %tmp, %tmp1
   ret i64 %tmp2
 }
-
 
 define void @add_v128i8(ptr %x, ptr %y) vscale_range(2,2) {
 ; CHECK-LABEL: add_v128i8:
@@ -648,55 +622,6 @@ define dso_local <vscale x 2 x i32> @int_reduction_vmv_s_x(i32 signext %0, <vsca
   %6 = tail call <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv8i32.i64(<vscale x 2 x i32> poison, <vscale x 8 x i32> %1, <vscale x 2 x i32> %5, i64 %2)
   ret <vscale x 2 x i32> %6
 }
-
-declare <vscale x 8 x float> @llvm.riscv.vfmv.s.f.nxv8f32.i64(<vscale x 8 x float>, float, i64)
-declare <vscale x 2 x float> @llvm.vector.extract.nxv2f32.nxv8f32(<vscale x 8 x float>, i64)
-declare <vscale x 2 x float> @llvm.riscv.vfredusum.nxv2f32.nxv8f32.i64(<vscale x 2 x float>, <vscale x 8 x float>, <vscale x 2 x float>, i64, i64)
-
-declare <vscale x 8 x i32> @llvm.riscv.vmv.s.x.nxv8i32.i64(<vscale x 8 x i32>, i32, i64) #1
-declare <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv8i32(<vscale x 8 x i32>, i64 immarg) #2
-declare <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv8i32.i64(<vscale x 2 x i32>, <vscale x 8 x i32>, <vscale x 2 x i32>, i64) #1
-
-declare <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(
-  <vscale x 1 x i64>,
-  <vscale x 1 x i64>,
-  <vscale x 1 x i64>,
-  <vscale x 1 x i1>,
-  i64,
-  i64);
-
-declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.i64.i64(
-  <vscale x 1 x i64>,
-  <vscale x 1 x i64>,
-  i64,
-  i64);
-
-declare <vscale x 1 x double> @llvm.riscv.vfadd.mask.nxv1f64.f64(
-  <vscale x 1 x double>,
-  <vscale x 1 x double>,
-  <vscale x 1 x double>,
-  <vscale x 1 x i1>,
-  i64,
-  i64,
-  i64);
-
-declare <vscale x 1 x i64> @llvm.riscv.vmv.s.x.nxv1i64(
-  <vscale x 1 x i64>,
-  i64,
-  i64);
-
-declare <vscale x 1 x double> @llvm.riscv.vfmv.s.f.nxv1f64
-  (<vscale x 1 x double>,
-  double,
-  i64)
-
-declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
-declare <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, i64)
-declare <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.i32.i64(<vscale x 2 x i32>, i32, i64)
-declare <vscale x 2 x i1> @llvm.riscv.vmsgt.nxv2i32.i32.i64(<vscale x 2 x i32>, i32, i64)
-declare <vscale x 2 x i1> @llvm.riscv.vmor.nxv2i1.i64(<vscale x 2 x i1>, <vscale x 2 x i1>, i64)
-declare void @llvm.riscv.vse.mask.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, <vscale x 2 x i1>, i64)
-declare void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, i64)
 
 define <vscale x 2 x i32> @avl_undef1(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>) {
 ; CHECK-LABEL: avl_undef1:
@@ -814,7 +739,6 @@ entry:
   ret <vscale x 1 x i64> %2
 }
 
-
 define <vscale x 1 x i64> @vmv.v.x_vl1() nounwind {
 ; NODEPVL-LABEL: vmv.v.x_vl1:
 ; NODEPVL:       # %bb.0: # %entry
@@ -888,8 +812,8 @@ define void @coalesce_vl_clobber(ptr %p) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    vsetivli zero, 0, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vmclr.m v8
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    li a2, 0

@@ -5,13 +5,13 @@
 ; RUN:   | FileCheck -check-prefixes=CMOV,CMOV-NOZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+conditional-cmv-fusion,+c,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CMOV,CMOV-ZICOND %s
-; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-ialu -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND,SFB-NOZICOND-NOC %s
-; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+c -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-ialu,+c -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND,SFB-NOZICOND-C %s
-; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+zicond -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-ialu,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-ZICOND %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-opt,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 
 ; The conditional move optimization in sifive-p450 requires that only a
@@ -113,8 +113,8 @@ define signext i32 @test3(i32 signext %v, i32 signext %w, i32 signext %x, i32 si
 ;
 ; CMOV-LABEL: test3:
 ; CMOV:       # %bb.0:
-; CMOV-NEXT:    xor a1, a1, a0
 ; CMOV-NEXT:    xor a3, a3, a2
+; CMOV-NEXT:    xor a1, a1, a0
 ; CMOV-NEXT:    bnez a4, .LBB2_2
 ; CMOV-NEXT:  # %bb.1:
 ; CMOV-NEXT:    mv a1, a0
@@ -130,11 +130,11 @@ define signext i32 @test3(i32 signext %v, i32 signext %w, i32 signext %x, i32 si
 ; SHORT_FORWARD:       # %bb.0:
 ; SHORT_FORWARD-NEXT:    beqz a4, .LBB2_2
 ; SHORT_FORWARD-NEXT:  # %bb.1:
-; SHORT_FORWARD-NEXT:    xor a0, a0, a1
+; SHORT_FORWARD-NEXT:    xor a2, a2, a3
 ; SHORT_FORWARD-NEXT:  .LBB2_2:
 ; SHORT_FORWARD-NEXT:    beqz a4, .LBB2_4
 ; SHORT_FORWARD-NEXT:  # %bb.3:
-; SHORT_FORWARD-NEXT:    xor a2, a2, a3
+; SHORT_FORWARD-NEXT:    xor a0, a0, a1
 ; SHORT_FORWARD-NEXT:  .LBB2_4:
 ; SHORT_FORWARD-NEXT:    addw a0, a0, a2
 ; SHORT_FORWARD-NEXT:    ret
@@ -143,11 +143,11 @@ define signext i32 @test3(i32 signext %v, i32 signext %w, i32 signext %x, i32 si
 ; RV32IXQCI:       # %bb.0:
 ; RV32IXQCI-NEXT:    beqz a4, .LBB2_2
 ; RV32IXQCI-NEXT:  # %bb.1:
-; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:    xor a2, a2, a3
 ; RV32IXQCI-NEXT:  .LBB2_2:
 ; RV32IXQCI-NEXT:    beqz a4, .LBB2_4
 ; RV32IXQCI-NEXT:  # %bb.3:
-; RV32IXQCI-NEXT:    xor a2, a2, a3
+; RV32IXQCI-NEXT:    xor a0, a0, a1
 ; RV32IXQCI-NEXT:  .LBB2_4:
 ; RV32IXQCI-NEXT:    add a0, a0, a2
 ; RV32IXQCI-NEXT:    ret
@@ -170,8 +170,8 @@ define signext i32 @test4(i32 signext %x, i32 signext %y, i32 signext %z) {
 ;
 ; CMOV-NOZICOND-LABEL: test4:
 ; CMOV-NOZICOND:       # %bb.0:
-; CMOV-NOZICOND-NEXT:    li a0, 3
 ; CMOV-NOZICOND-NEXT:    li a1, 0
+; CMOV-NOZICOND-NEXT:    li a0, 3
 ; CMOV-NOZICOND-NEXT:    beqz a2, .LBB3_2
 ; CMOV-NOZICOND-NEXT:  # %bb.1:
 ; CMOV-NOZICOND-NEXT:    mv a0, a1

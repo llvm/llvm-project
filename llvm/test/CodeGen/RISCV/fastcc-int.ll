@@ -24,6 +24,7 @@ define i32 @caller(<16 x i32> %A) nounwind {
 ; RV32-NEXT:    addi sp, sp, -32
 ; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    lw t0, 0(a0)
 ; RV32-NEXT:    lw a1, 4(a0)
 ; RV32-NEXT:    lw a2, 8(a0)
@@ -39,23 +40,25 @@ define i32 @caller(<16 x i32> %A) nounwind {
 ; RV32-NEXT:    lw t1, 48(a0)
 ; RV32-NEXT:    lw t2, 52(a0)
 ; RV32-NEXT:    lw s0, 56(a0)
-; RV32-NEXT:    lw a0, 60(a0)
+; RV32-NEXT:    lw s1, 60(a0)
 ; RV32-NEXT:    sw t1, 0(sp)
 ; RV32-NEXT:    sw t2, 4(sp)
-; RV32-NEXT:    sw s0, 8(sp)
-; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    mv a0, t0
+; RV32-NEXT:    sw s0, 8(sp)
+; RV32-NEXT:    sw s1, 12(sp)
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: caller:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -48
-; RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64-NEXT:    addi sp, sp, -64
+; RV64-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    ld t0, 0(a0)
 ; RV64-NEXT:    ld a1, 8(a0)
 ; RV64-NEXT:    ld a2, 16(a0)
@@ -71,16 +74,17 @@ define i32 @caller(<16 x i32> %A) nounwind {
 ; RV64-NEXT:    ld t1, 96(a0)
 ; RV64-NEXT:    ld t2, 104(a0)
 ; RV64-NEXT:    ld s0, 112(a0)
-; RV64-NEXT:    ld a0, 120(a0)
+; RV64-NEXT:    ld s1, 120(a0)
 ; RV64-NEXT:    sd t1, 0(sp)
 ; RV64-NEXT:    sd t2, 8(sp)
-; RV64-NEXT:    sd s0, 16(sp)
-; RV64-NEXT:    sd a0, 24(sp)
 ; RV64-NEXT:    mv a0, t0
+; RV64-NEXT:    sd s0, 16(sp)
+; RV64-NEXT:    sd s1, 24(sp)
 ; RV64-NEXT:    call callee
-; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 48
+; RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 64
 ; RV64-NEXT:    ret
 	%C = call fastcc i32 @callee(<16 x i32> %A)
 	ret i32 %C

@@ -86,8 +86,8 @@ exit:
 define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-SMALL-LABEL: above_threshold:
 ; RV32I-SMALL:       # %bb.0: # %entry
-; RV32I-SMALL-NEXT:    addi a0, a0, -1
 ; RV32I-SMALL-NEXT:    li a2, 5
+; RV32I-SMALL-NEXT:    addi a0, a0, -1
 ; RV32I-SMALL-NEXT:    bltu a2, a0, .LBB1_9
 ; RV32I-SMALL-NEXT:  # %bb.1: # %entry
 ; RV32I-SMALL-NEXT:    slli a0, a0, 2
@@ -120,8 +120,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ;
 ; RV32IXQCILI-SMALL-LABEL: above_threshold:
 ; RV32IXQCILI-SMALL:       # %bb.0: # %entry
-; RV32IXQCILI-SMALL-NEXT:    addi a0, a0, -1
 ; RV32IXQCILI-SMALL-NEXT:    li a2, 5
+; RV32IXQCILI-SMALL-NEXT:    addi a0, a0, -1
 ; RV32IXQCILI-SMALL-NEXT:    bltu a2, a0, .LBB1_9
 ; RV32IXQCILI-SMALL-NEXT:  # %bb.1: # %entry
 ; RV32IXQCILI-SMALL-NEXT:    slli a0, a0, 2
@@ -153,8 +153,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ;
 ; RV32I-MEDIUM-LABEL: above_threshold:
 ; RV32I-MEDIUM:       # %bb.0: # %entry
-; RV32I-MEDIUM-NEXT:    addi a0, a0, -1
 ; RV32I-MEDIUM-NEXT:    li a2, 5
+; RV32I-MEDIUM-NEXT:    addi a0, a0, -1
 ; RV32I-MEDIUM-NEXT:    bltu a2, a0, .LBB1_9
 ; RV32I-MEDIUM-NEXT:  # %bb.1: # %entry
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi0:
@@ -188,8 +188,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ;
 ; RV32I-PIC-LABEL: above_threshold:
 ; RV32I-PIC:       # %bb.0: # %entry
-; RV32I-PIC-NEXT:    addi a0, a0, -1
 ; RV32I-PIC-NEXT:    li a2, 5
+; RV32I-PIC-NEXT:    addi a0, a0, -1
 ; RV32I-PIC-NEXT:    bltu a2, a0, .LBB1_9
 ; RV32I-PIC-NEXT:  # %bb.1: # %entry
 ; RV32I-PIC-NEXT:  .Lpcrel_hi0:
@@ -224,8 +224,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ;
 ; RV64I-SMALL-LABEL: above_threshold:
 ; RV64I-SMALL:       # %bb.0: # %entry
-; RV64I-SMALL-NEXT:    addi a0, a0, -1
 ; RV64I-SMALL-NEXT:    li a2, 5
+; RV64I-SMALL-NEXT:    addi a0, a0, -1
 ; RV64I-SMALL-NEXT:    bltu a2, a0, .LBB1_9
 ; RV64I-SMALL-NEXT:  # %bb.1: # %entry
 ; RV64I-SMALL-NEXT:    slli a0, a0, 2
@@ -258,8 +258,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ;
 ; RV64I-MEDIUM-LABEL: above_threshold:
 ; RV64I-MEDIUM:       # %bb.0: # %entry
-; RV64I-MEDIUM-NEXT:    addi a0, a0, -1
 ; RV64I-MEDIUM-NEXT:    li a2, 5
+; RV64I-MEDIUM-NEXT:    addi a0, a0, -1
 ; RV64I-MEDIUM-NEXT:    bltu a2, a0, .LBB1_9
 ; RV64I-MEDIUM-NEXT:  # %bb.1: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi0:
@@ -293,8 +293,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ;
 ; RV64I-PIC-LABEL: above_threshold:
 ; RV64I-PIC:       # %bb.0: # %entry
-; RV64I-PIC-NEXT:    addi a0, a0, -1
 ; RV64I-PIC-NEXT:    li a2, 5
+; RV64I-PIC-NEXT:    addi a0, a0, -1
 ; RV64I-PIC-NEXT:    bltu a2, a0, .LBB1_9
 ; RV64I-PIC-NEXT:  # %bb.1: # %entry
 ; RV64I-PIC-NEXT:  .Lpcrel_hi0:

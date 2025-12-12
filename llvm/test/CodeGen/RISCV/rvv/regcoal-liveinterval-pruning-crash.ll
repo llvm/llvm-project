@@ -46,8 +46,8 @@ define i32 @pr134424(i64 %input_value, i32 %base_value, i1 %cond_flag1, i1 %cond
 ; CHECK-NEXT:  .LBB0_9: # %for.body.us.preheader.i
 ; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:  .LBB0_10: # %for.body.us.preheader.i
-; CHECK-NEXT:    sw a3, 0(zero)
 ; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    sw a3, 0(zero)
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_11: # %for.body.us.preheader.i
 ; CHECK-NEXT:    mv a3, a2

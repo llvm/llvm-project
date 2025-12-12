@@ -312,13 +312,13 @@ define i64 @test8(i64 %a) {
 ; RV32I-LABEL: test8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 1044480
-; RV32I-NEXT:    zext.b a0, a0
-; RV32I-NEXT:    lui a3, 9
 ; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    lui a2, 496944
-; RV32I-NEXT:    addi a3, a3, -170
-; RV32I-NEXT:    or a0, a0, a2
-; RV32I-NEXT:    or a1, a1, a3
+; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    lui a2, 9
+; RV32I-NEXT:    lui a3, 496944
+; RV32I-NEXT:    addi a2, a2, -170
+; RV32I-NEXT:    or a0, a0, a3
+; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCIBM-LABEL: test8:

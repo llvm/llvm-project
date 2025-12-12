@@ -210,11 +210,9 @@ void ProcessGDBRemote::Terminate() {
 lldb::ProcessSP ProcessGDBRemote::CreateInstance(
     lldb::TargetSP target_sp, ListenerSP listener_sp,
     const FileSpec *crash_file_path, bool can_connect) {
-  lldb::ProcessSP process_sp;
-  if (crash_file_path == nullptr)
-    process_sp = std::shared_ptr<ProcessGDBRemote>(
-        new ProcessGDBRemote(target_sp, listener_sp));
-  return process_sp;
+  if (crash_file_path)
+    return nullptr; // Cannot create a GDBRemote process from a crash_file.
+  return lldb::ProcessSP(new ProcessGDBRemote(target_sp, listener_sp));
 }
 
 void ProcessGDBRemote::DumpPluginHistory(Stream &s) {
@@ -441,8 +439,16 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   if (!arch_to_use.IsValid())
     arch_to_use = target_arch;
 
-  if (GetGDBServerRegisterInfo(arch_to_use))
+  llvm::Error register_info_err = GetGDBServerRegisterInfo(arch_to_use);
+  if (!register_info_err) {
+    // We got the registers from target XML.
     return;
+  }
+
+  Log *log = GetLog(GDBRLog::Process);
+  LLDB_LOG_ERROR(log, std::move(register_info_err),
+                 "Failed to read register information from target XML: {0}");
+  LLDB_LOG(log, "Now trying to use qRegisterInfo instead.");
 
   char packet[128];
   std::vector<DynamicRegisterInfo::Register> registers;
@@ -541,15 +547,36 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
         assert(reg_info.byte_size != 0);
         registers.push_back(reg_info);
       } else {
-        break; // ensure exit before reg_num is incremented
+        // Only warn if we were offered Target XML and could not use it, and
+        // the qRegisterInfo fallback failed. This is something a user could
+        // take action on by getting an lldb with libxml2.
+        //
+        // It's possible we weren't offered Target XML and qRegisterInfo failed,
+        // but there's no much a user can do about that. It may be the intended
+        // way the debug stub works, so we do not warn for that case.
+        if (response_type == StringExtractorGDBRemote::eUnsupported &&
+            m_gdb_comm.GetQXferFeaturesReadSupported() &&
+            !XMLDocument::XMLEnabled()) {
+          Debugger::ReportWarning(
+              "the debug server supports Target Description XML but LLDB does "
+              "not have XML parsing enabled. Using \"qRegisterInfo\" was also "
+              "not possible. Register information may be incorrect or missing.",
+              GetTarget().GetDebugger().GetID());
+        }
+        break;
       }
     } else {
       break;
     }
   }
 
-  if (registers.empty())
+  if (registers.empty()) {
     registers = GetFallbackRegisters(arch_to_use);
+    if (!registers.empty())
+      LLDB_LOG(
+          log,
+          "All other methods failed, using fallback register information.");
+  }
 
   AddRemoteRegisters(registers, arch_to_use);
 }
@@ -2780,15 +2807,14 @@ ProcessGDBRemote::ReadMemoryRanges(
 
   llvm::StringRef response_str = response->GetStringRef();
   const unsigned expected_num_ranges = ranges.size();
-  llvm::Expected<llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>>
-      parsed_response =
-          ParseMultiMemReadPacket(response_str, buffer, expected_num_ranges);
-  if (!parsed_response) {
-    LLDB_LOG_ERROR(GetLog(GDBRLog::Process), parsed_response.takeError(),
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> memory_regions;
+  if (llvm::Error error = ParseMultiMemReadPacket(
+          response_str, buffer, expected_num_ranges, memory_regions)) {
+    LLDB_LOG_ERROR(GetLog(GDBRLog::Process), std::move(error),
                    "MultiMemRead error parsing response: {0}");
     return Process::ReadMemoryRanges(ranges, buffer);
   }
-  return std::move(*parsed_response);
+  return memory_regions;
 }
 
 llvm::Expected<StringExtractorGDBRemote>
@@ -2824,18 +2850,16 @@ ProcessGDBRemote::SendMultiMemReadPacket(
   return response;
 }
 
-llvm::Expected<llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>>
-ProcessGDBRemote::ParseMultiMemReadPacket(llvm::StringRef response_str,
-                                          llvm::MutableArrayRef<uint8_t> buffer,
-                                          unsigned expected_num_ranges) {
+llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
+    llvm::StringRef response_str, llvm::MutableArrayRef<uint8_t> buffer,
+    unsigned expected_num_ranges,
+    llvm::SmallVectorImpl<llvm::MutableArrayRef<uint8_t>> &memory_regions) {
   // The sizes and the data are separated by a `;`.
   auto [sizes_str, memory_data] = response_str.split(';');
   if (sizes_str.size() == response_str.size())
     return llvm::createStringError(llvm::formatv(
         "MultiMemRead response missing field separator ';' in: '{0}'",
         response_str));
-
-  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results;
 
   // Sizes are separated by a `,`.
   for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
@@ -2859,10 +2883,10 @@ ProcessGDBRemote::ParseMultiMemReadPacket(llvm::StringRef response_str,
     buffer = buffer.drop_front(read_size);
 
     memcpy(region_to_write.data(), region_to_read.data(), read_size);
-    read_results.push_back(region_to_write);
+    memory_regions.push_back(region_to_write);
   }
 
-  return read_results;
+  return llvm::Error::success();
 }
 
 bool ProcessGDBRemote::SupportsMemoryTagging() {
@@ -5137,14 +5161,19 @@ void ProcessGDBRemote::AddRemoteRegisters(
 
 // query the target of gdb-remote for extended target information returns
 // true on success (got register definitions), false on failure (did not).
-bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
-  // Make sure LLDB has an XML parser it can use first
-  if (!XMLDocument::XMLEnabled())
-    return false;
-
-  // check that we have extended feature read support
+llvm::Error ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
+  // If the remote does not offer XML, does not matter if we would have been
+  // able to parse it.
   if (!m_gdb_comm.GetQXferFeaturesReadSupported())
-    return false;
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "the debug server does not support \"qXfer:features:read\"");
+
+  if (!XMLDocument::XMLEnabled())
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "the debug server supports \"qXfer:features:read\", but LLDB does not "
+        "have XML parsing enabled (check LLLDB_ENABLE_LIBXML2)");
 
   // These hold register type information for the whole of target.xml.
   // target.xml may include further documents that
@@ -5161,7 +5190,11 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
       !registers.empty())
     AddRemoteRegisters(registers, arch_to_use);
 
-  return m_register_info_sp->GetNumRegisters() > 0;
+  return m_register_info_sp->GetNumRegisters() > 0
+             ? llvm::ErrorSuccess()
+             : llvm::createStringError(
+                   llvm::inconvertibleErrorCode(),
+                   "the debug server did not describe any registers");
 }
 
 llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {

@@ -82,7 +82,8 @@ define i32 @caller_many_scalars() nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    li a4, 8
+; RV64I-NEXT:    li a4, 0
+; RV64I-NEXT:    li t0, 8
 ; RV64I-NEXT:    li a0, 1
 ; RV64I-NEXT:    li a1, 2
 ; RV64I-NEXT:    li a2, 3
@@ -91,8 +92,7 @@ define i32 @caller_many_scalars() nounwind {
 ; RV64I-NEXT:    li a6, 6
 ; RV64I-NEXT:    li a7, 7
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    sd a4, 8(sp)
-; RV64I-NEXT:    li a4, 0
+; RV64I-NEXT:    sd t0, 8(sp)
 ; RV64I-NEXT:    call callee_many_scalars
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
@@ -356,13 +356,14 @@ define void @caller_aligned_stack() nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -64
 ; RV64I-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    li a6, 0
 ; RV64I-NEXT:    li a0, 12
 ; RV64I-NEXT:    li a1, 11
 ; RV64I-NEXT:    sd a1, 40(sp)
 ; RV64I-NEXT:    sd a0, 48(sp)
-; RV64I-NEXT:    li a6, 10
-; RV64I-NEXT:    li t0, 9
-; RV64I-NEXT:    li t1, 8
+; RV64I-NEXT:    li t0, 10
+; RV64I-NEXT:    li t1, 9
+; RV64I-NEXT:    li t2, 8
 ; RV64I-NEXT:    li a0, 1
 ; RV64I-NEXT:    li a1, 2
 ; RV64I-NEXT:    li a2, 3
@@ -370,11 +371,10 @@ define void @caller_aligned_stack() nounwind {
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    li a5, 6
 ; RV64I-NEXT:    li a7, 7
-; RV64I-NEXT:    sd t1, 0(sp)
-; RV64I-NEXT:    sd t0, 16(sp)
+; RV64I-NEXT:    sd t2, 0(sp)
+; RV64I-NEXT:    sd t1, 16(sp)
 ; RV64I-NEXT:    sd zero, 24(sp)
-; RV64I-NEXT:    sd a6, 32(sp)
-; RV64I-NEXT:    li a6, 0
+; RV64I-NEXT:    sd t0, 32(sp)
 ; RV64I-NEXT:    call callee_aligned_stack
 ; RV64I-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 64

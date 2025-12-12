@@ -87,19 +87,19 @@ define void @store_v6i1(ptr %p, <6 x i1> %v) {
 ; CHECK-LABEL: store_v6i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.x.s a1, v0
-; CHECK-NEXT:    vfirst.m a2, v0
-; CHECK-NEXT:    seqz a2, a2
-; CHECK-NEXT:    andi a3, a1, 2
-; CHECK-NEXT:    andi a4, a1, 4
-; CHECK-NEXT:    andi a5, a1, 8
-; CHECK-NEXT:    or a2, a2, a3
+; CHECK-NEXT:    vfirst.m a1, v0
+; CHECK-NEXT:    vmv.x.s a2, v0
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    andi a3, a2, 2
+; CHECK-NEXT:    andi a4, a2, 4
+; CHECK-NEXT:    andi a5, a2, 8
+; CHECK-NEXT:    or a1, a1, a3
 ; CHECK-NEXT:    or a4, a4, a5
-; CHECK-NEXT:    andi a3, a1, 16
-; CHECK-NEXT:    andi a1, a1, -32
-; CHECK-NEXT:    or a2, a2, a4
-; CHECK-NEXT:    or a1, a3, a1
-; CHECK-NEXT:    or a1, a2, a1
+; CHECK-NEXT:    andi a3, a2, 16
+; CHECK-NEXT:    andi a2, a2, -32
+; CHECK-NEXT:    or a1, a1, a4
+; CHECK-NEXT:    or a2, a3, a2
+; CHECK-NEXT:    or a1, a1, a2
 ; CHECK-NEXT:    andi a1, a1, 63
 ; CHECK-NEXT:    sb a1, 0(a0)
 ; CHECK-NEXT:    ret

@@ -51,18 +51,18 @@ define i32 @caller_double_in_fpr_exhausted_gprs() nounwind {
 ; RV32-ILP32D:       # %bb.0:
 ; RV32-ILP32D-NEXT:    addi sp, sp, -16
 ; RV32-ILP32D-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ILP32D-NEXT:    li t0, 5
 ; RV32-ILP32D-NEXT:    lui a0, %hi(.LCPI3_0)
 ; RV32-ILP32D-NEXT:    fld fa0, %lo(.LCPI3_0)(a0)
-; RV32-ILP32D-NEXT:    li a1, 5
 ; RV32-ILP32D-NEXT:    li a0, 1
 ; RV32-ILP32D-NEXT:    li a2, 2
 ; RV32-ILP32D-NEXT:    li a4, 3
 ; RV32-ILP32D-NEXT:    li a6, 4
-; RV32-ILP32D-NEXT:    sw a1, 0(sp)
 ; RV32-ILP32D-NEXT:    li a1, 0
 ; RV32-ILP32D-NEXT:    li a3, 0
 ; RV32-ILP32D-NEXT:    li a5, 0
 ; RV32-ILP32D-NEXT:    li a7, 0
+; RV32-ILP32D-NEXT:    sw t0, 0(sp)
 ; RV32-ILP32D-NEXT:    call callee_double_in_fpr_exhausted_gprs
 ; RV32-ILP32D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-ILP32D-NEXT:    addi sp, sp, 16
@@ -147,6 +147,7 @@ define i32 @caller_double_in_gpr_and_stack_almost_exhausted_gprs_fprs() nounwind
 ; RV32-ILP32D:       # %bb.0:
 ; RV32-ILP32D-NEXT:    addi sp, sp, -16
 ; RV32-ILP32D-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ILP32D-NEXT:    lui t0, 262816
 ; RV32-ILP32D-NEXT:    lui a0, %hi(.LCPI7_0)
 ; RV32-ILP32D-NEXT:    lui a1, %hi(.LCPI7_1)
 ; RV32-ILP32D-NEXT:    fld fa0, %lo(.LCPI7_0)(a0)
@@ -163,16 +164,15 @@ define i32 @caller_double_in_gpr_and_stack_almost_exhausted_gprs_fprs() nounwind
 ; RV32-ILP32D-NEXT:    lui a1, %hi(.LCPI7_7)
 ; RV32-ILP32D-NEXT:    fld fa6, %lo(.LCPI7_6)(a0)
 ; RV32-ILP32D-NEXT:    fld fa7, %lo(.LCPI7_7)(a1)
-; RV32-ILP32D-NEXT:    lui a1, 262816
 ; RV32-ILP32D-NEXT:    li a0, 1
 ; RV32-ILP32D-NEXT:    li a2, 3
 ; RV32-ILP32D-NEXT:    li a4, 5
 ; RV32-ILP32D-NEXT:    li a6, 7
-; RV32-ILP32D-NEXT:    sw a1, 0(sp)
 ; RV32-ILP32D-NEXT:    li a1, 0
 ; RV32-ILP32D-NEXT:    li a3, 0
 ; RV32-ILP32D-NEXT:    li a5, 0
 ; RV32-ILP32D-NEXT:    li a7, 0
+; RV32-ILP32D-NEXT:    sw t0, 0(sp)
 ; RV32-ILP32D-NEXT:    call callee_double_in_gpr_and_stack_almost_exhausted_gprs_fprs
 ; RV32-ILP32D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-ILP32D-NEXT:    addi sp, sp, 16
@@ -203,33 +203,33 @@ define i32 @caller_double_on_stack_exhausted_gprs_fprs() nounwind {
 ; RV32-ILP32D:       # %bb.0:
 ; RV32-ILP32D-NEXT:    addi sp, sp, -16
 ; RV32-ILP32D-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ILP32D-NEXT:    li a1, 0
+; RV32-ILP32D-NEXT:    li a3, 0
+; RV32-ILP32D-NEXT:    li a5, 0
+; RV32-ILP32D-NEXT:    li a7, 0
+; RV32-ILP32D-NEXT:    lui t0, 262816
 ; RV32-ILP32D-NEXT:    lui a0, %hi(.LCPI9_0)
-; RV32-ILP32D-NEXT:    lui a1, %hi(.LCPI9_1)
+; RV32-ILP32D-NEXT:    lui a2, %hi(.LCPI9_1)
 ; RV32-ILP32D-NEXT:    fld fa0, %lo(.LCPI9_0)(a0)
-; RV32-ILP32D-NEXT:    fld fa1, %lo(.LCPI9_1)(a1)
+; RV32-ILP32D-NEXT:    fld fa1, %lo(.LCPI9_1)(a2)
 ; RV32-ILP32D-NEXT:    lui a0, %hi(.LCPI9_2)
-; RV32-ILP32D-NEXT:    lui a1, %hi(.LCPI9_3)
+; RV32-ILP32D-NEXT:    lui a2, %hi(.LCPI9_3)
 ; RV32-ILP32D-NEXT:    fld fa2, %lo(.LCPI9_2)(a0)
-; RV32-ILP32D-NEXT:    fld fa3, %lo(.LCPI9_3)(a1)
+; RV32-ILP32D-NEXT:    fld fa3, %lo(.LCPI9_3)(a2)
 ; RV32-ILP32D-NEXT:    lui a0, %hi(.LCPI9_4)
-; RV32-ILP32D-NEXT:    lui a1, %hi(.LCPI9_5)
+; RV32-ILP32D-NEXT:    lui a2, %hi(.LCPI9_5)
 ; RV32-ILP32D-NEXT:    fld fa4, %lo(.LCPI9_4)(a0)
-; RV32-ILP32D-NEXT:    fld fa5, %lo(.LCPI9_5)(a1)
+; RV32-ILP32D-NEXT:    fld fa5, %lo(.LCPI9_5)(a2)
 ; RV32-ILP32D-NEXT:    lui a0, %hi(.LCPI9_6)
-; RV32-ILP32D-NEXT:    lui a1, %hi(.LCPI9_7)
+; RV32-ILP32D-NEXT:    lui a2, %hi(.LCPI9_7)
 ; RV32-ILP32D-NEXT:    fld fa6, %lo(.LCPI9_6)(a0)
-; RV32-ILP32D-NEXT:    fld fa7, %lo(.LCPI9_7)(a1)
-; RV32-ILP32D-NEXT:    lui a1, 262816
+; RV32-ILP32D-NEXT:    fld fa7, %lo(.LCPI9_7)(a2)
 ; RV32-ILP32D-NEXT:    li a0, 1
 ; RV32-ILP32D-NEXT:    li a2, 3
 ; RV32-ILP32D-NEXT:    li a4, 5
 ; RV32-ILP32D-NEXT:    li a6, 7
 ; RV32-ILP32D-NEXT:    sw zero, 0(sp)
-; RV32-ILP32D-NEXT:    sw a1, 4(sp)
-; RV32-ILP32D-NEXT:    li a1, 0
-; RV32-ILP32D-NEXT:    li a3, 0
-; RV32-ILP32D-NEXT:    li a5, 0
-; RV32-ILP32D-NEXT:    li a7, 0
+; RV32-ILP32D-NEXT:    sw t0, 4(sp)
 ; RV32-ILP32D-NEXT:    call callee_double_on_stack_exhausted_gprs_fprs
 ; RV32-ILP32D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-ILP32D-NEXT:    addi sp, sp, 16

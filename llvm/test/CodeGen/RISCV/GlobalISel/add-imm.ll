@@ -171,16 +171,16 @@ define signext i32 @add32_sext_reject_on_rv64(i32 signext %a) nounwind {
 ; RV32I-LABEL: add32_sext_reject_on_rv64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a0, a0, 2047
-; RV32I-NEXT:    lui a1, %hi(gv0)
 ; RV32I-NEXT:    addi a0, a0, 953
+; RV32I-NEXT:    lui a1, %hi(gv0)
 ; RV32I-NEXT:    sw a0, %lo(gv0)(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add32_sext_reject_on_rv64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a0, a0, 2047
-; RV64I-NEXT:    lui a1, %hi(gv0)
 ; RV64I-NEXT:    addiw a0, a0, 953
+; RV64I-NEXT:    lui a1, %hi(gv0)
 ; RV64I-NEXT:    sw a0, %lo(gv0)(a1)
 ; RV64I-NEXT:    ret
   %b = add nsw i32 %a, 3000

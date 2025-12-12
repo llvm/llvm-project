@@ -1399,15 +1399,15 @@ define signext i32 @rotl_32_mask_shared(i32 signext %a, i32 signext %b, i32 sign
 ;
 ; RV32ZBB-LABEL: rotl_32_mask_shared:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    rol a0, a0, a2
 ; RV32ZBB-NEXT:    sll a1, a1, a2
+; RV32ZBB-NEXT:    rol a0, a0, a2
 ; RV32ZBB-NEXT:    add a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: rotl_32_mask_shared:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rolw a0, a0, a2
 ; RV64ZBB-NEXT:    sllw a1, a1, a2
+; RV64ZBB-NEXT:    rolw a0, a0, a2
 ; RV64ZBB-NEXT:    addw a0, a0, a1
 ; RV64ZBB-NEXT:    ret
 ;
@@ -1436,7 +1436,6 @@ define signext i32 @rotl_32_mask_shared(i32 signext %a, i32 signext %b, i32 sign
   %3 = add i32 %1, %2
   ret i32 %3
 }
-declare i32 @llvm.fshl.i32(i32, i32, i32)
 
 define signext i64 @rotl_64_mask_shared(i64 signext %a, i64 signext %b, i64 signext %amt) nounwind {
 ; RV32I-LABEL: rotl_64_mask_shared:
@@ -1539,8 +1538,8 @@ define signext i64 @rotl_64_mask_shared(i64 signext %a, i64 signext %b, i64 sign
 ;
 ; RV64ZBB-LABEL: rotl_64_mask_shared:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rol a0, a0, a2
 ; RV64ZBB-NEXT:    sll a1, a1, a2
+; RV64ZBB-NEXT:    rol a0, a0, a2
 ; RV64ZBB-NEXT:    add a0, a0, a1
 ; RV64ZBB-NEXT:    ret
 ;
@@ -1602,7 +1601,6 @@ define signext i64 @rotl_64_mask_shared(i64 signext %a, i64 signext %b, i64 sign
   %3 = add i64 %1, %2
   ret i64 %3
 }
-declare i64 @llvm.fshl.i64(i64, i64, i64)
 
 define signext i32 @rotr_32_mask_shared(i32 signext %a, i32 signext %b, i32 signext %amt) nounwind {
 ; RV32I-LABEL: rotr_32_mask_shared:
@@ -1627,15 +1625,15 @@ define signext i32 @rotr_32_mask_shared(i32 signext %a, i32 signext %b, i32 sign
 ;
 ; RV32ZBB-LABEL: rotr_32_mask_shared:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    ror a0, a0, a2
 ; RV32ZBB-NEXT:    sll a1, a1, a2
+; RV32ZBB-NEXT:    ror a0, a0, a2
 ; RV32ZBB-NEXT:    add a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: rotr_32_mask_shared:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rorw a0, a0, a2
 ; RV64ZBB-NEXT:    sllw a1, a1, a2
+; RV64ZBB-NEXT:    rorw a0, a0, a2
 ; RV64ZBB-NEXT:    addw a0, a0, a1
 ; RV64ZBB-NEXT:    ret
 ;
@@ -1664,7 +1662,6 @@ define signext i32 @rotr_32_mask_shared(i32 signext %a, i32 signext %b, i32 sign
   %3 = add i32 %1, %2
   ret i32 %3
 }
-declare i32 @llvm.fshr.i32(i32, i32, i32)
 
 define signext i64 @rotr_64_mask_shared(i64 signext %a, i64 signext %b, i64 signext %amt) nounwind {
 ; RV32I-LABEL: rotr_64_mask_shared:
@@ -1765,8 +1762,8 @@ define signext i64 @rotr_64_mask_shared(i64 signext %a, i64 signext %b, i64 sign
 ;
 ; RV64ZBB-LABEL: rotr_64_mask_shared:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    ror a0, a0, a2
 ; RV64ZBB-NEXT:    sll a1, a1, a2
+; RV64ZBB-NEXT:    ror a0, a0, a2
 ; RV64ZBB-NEXT:    add a0, a0, a1
 ; RV64ZBB-NEXT:    ret
 ;
@@ -1828,7 +1825,6 @@ define signext i64 @rotr_64_mask_shared(i64 signext %a, i64 signext %b, i64 sign
   %3 = add i64 %1, %2
   ret i64 %3
 }
-declare i64 @llvm.fshr.i64(i64, i64, i64)
 
 define signext i32 @rotl_32_mask_multiple(i32 signext %a, i32 signext %b, i32 signext %amt) nounwind {
 ; RV32I-LABEL: rotl_32_mask_multiple:
@@ -1857,15 +1853,15 @@ define signext i32 @rotl_32_mask_multiple(i32 signext %a, i32 signext %b, i32 si
 ;
 ; RV32ZBB-LABEL: rotl_32_mask_multiple:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    rol a0, a0, a2
 ; RV32ZBB-NEXT:    rol a1, a1, a2
+; RV32ZBB-NEXT:    rol a0, a0, a2
 ; RV32ZBB-NEXT:    add a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: rotl_32_mask_multiple:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rolw a0, a0, a2
 ; RV64ZBB-NEXT:    rolw a1, a1, a2
+; RV64ZBB-NEXT:    rolw a0, a0, a2
 ; RV64ZBB-NEXT:    addw a0, a0, a1
 ; RV64ZBB-NEXT:    ret
 ;
@@ -1913,13 +1909,13 @@ define i64 @rotl_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ; RV32I-NEXT:  # %bb.3:
 ; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:  .LBB21_4:
-; RV32I-NEXT:    sll a7, a6, a4
 ; RV32I-NEXT:    srli t0, a0, 1
 ; RV32I-NEXT:    not a1, a4
+; RV32I-NEXT:    sll a7, a6, a4
 ; RV32I-NEXT:    srl t0, t0, a1
-; RV32I-NEXT:    srli a6, a6, 1
 ; RV32I-NEXT:    sll t1, a0, a4
-; RV32I-NEXT:    srl t2, a6, a1
+; RV32I-NEXT:    srli a0, a6, 1
+; RV32I-NEXT:    srl t2, a0, a1
 ; RV32I-NEXT:    mv a0, a3
 ; RV32I-NEXT:    bnez a5, .LBB21_6
 ; RV32I-NEXT:  # %bb.5:
@@ -1970,13 +1966,13 @@ define i64 @rotl_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ; RV32ZBB-NEXT:  # %bb.3:
 ; RV32ZBB-NEXT:    mv a0, a1
 ; RV32ZBB-NEXT:  .LBB21_4:
-; RV32ZBB-NEXT:    sll a7, a6, a4
 ; RV32ZBB-NEXT:    srli t0, a0, 1
 ; RV32ZBB-NEXT:    not a1, a4
+; RV32ZBB-NEXT:    sll a7, a6, a4
 ; RV32ZBB-NEXT:    srl t0, t0, a1
-; RV32ZBB-NEXT:    srli a6, a6, 1
 ; RV32ZBB-NEXT:    sll t1, a0, a4
-; RV32ZBB-NEXT:    srl t2, a6, a1
+; RV32ZBB-NEXT:    srli a0, a6, 1
+; RV32ZBB-NEXT:    srl t2, a0, a1
 ; RV32ZBB-NEXT:    mv a0, a3
 ; RV32ZBB-NEXT:    bnez a5, .LBB21_6
 ; RV32ZBB-NEXT:  # %bb.5:
@@ -2004,8 +2000,8 @@ define i64 @rotl_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ;
 ; RV64ZBB-LABEL: rotl_64_mask_multiple:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rol a0, a0, a2
 ; RV64ZBB-NEXT:    rol a1, a1, a2
+; RV64ZBB-NEXT:    rol a0, a0, a2
 ; RV64ZBB-NEXT:    add a0, a0, a1
 ; RV64ZBB-NEXT:    ret
 ;
@@ -2021,13 +2017,13 @@ define i64 @rotl_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ; RV32XTHEADBB-NEXT:  # %bb.3:
 ; RV32XTHEADBB-NEXT:    mv a0, a1
 ; RV32XTHEADBB-NEXT:  .LBB21_4:
-; RV32XTHEADBB-NEXT:    sll a7, a6, a4
 ; RV32XTHEADBB-NEXT:    srli t0, a0, 1
 ; RV32XTHEADBB-NEXT:    not a1, a4
+; RV32XTHEADBB-NEXT:    sll a7, a6, a4
 ; RV32XTHEADBB-NEXT:    srl t0, t0, a1
-; RV32XTHEADBB-NEXT:    srli a6, a6, 1
 ; RV32XTHEADBB-NEXT:    sll t1, a0, a4
-; RV32XTHEADBB-NEXT:    srl t2, a6, a1
+; RV32XTHEADBB-NEXT:    srli a0, a6, 1
+; RV32XTHEADBB-NEXT:    srl t2, a0, a1
 ; RV32XTHEADBB-NEXT:    mv a0, a3
 ; RV32XTHEADBB-NEXT:    bnez a5, .LBB21_6
 ; RV32XTHEADBB-NEXT:  # %bb.5:
@@ -2098,15 +2094,15 @@ define signext i32 @rotr_32_mask_multiple(i32 signext %a, i32 signext %b, i32 si
 ;
 ; RV32ZBB-LABEL: rotr_32_mask_multiple:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    ror a0, a0, a2
 ; RV32ZBB-NEXT:    ror a1, a1, a2
+; RV32ZBB-NEXT:    ror a0, a0, a2
 ; RV32ZBB-NEXT:    add a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: rotr_32_mask_multiple:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rorw a0, a0, a2
 ; RV64ZBB-NEXT:    rorw a1, a1, a2
+; RV64ZBB-NEXT:    rorw a0, a0, a2
 ; RV64ZBB-NEXT:    addw a0, a0, a1
 ; RV64ZBB-NEXT:    ret
 ;
@@ -2153,20 +2149,20 @@ define i64 @rotr_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ; RV32I-NEXT:  # %bb.3:
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:  .LBB23_4:
-; RV32I-NEXT:    srl t0, a6, a4
 ; RV32I-NEXT:    slli a7, a1, 1
 ; RV32I-NEXT:    not a0, a4
+; RV32I-NEXT:    srl t0, a6, a4
 ; RV32I-NEXT:    sll t1, a7, a0
-; RV32I-NEXT:    slli a7, a6, 1
-; RV32I-NEXT:    srl a6, a1, a4
-; RV32I-NEXT:    sll t2, a7, a0
+; RV32I-NEXT:    srl t2, a1, a4
+; RV32I-NEXT:    slli a6, a6, 1
+; RV32I-NEXT:    sll a6, a6, a0
 ; RV32I-NEXT:    mv a7, a2
 ; RV32I-NEXT:    beqz a5, .LBB23_6
 ; RV32I-NEXT:  # %bb.5:
 ; RV32I-NEXT:    mv a7, a3
 ; RV32I-NEXT:  .LBB23_6:
 ; RV32I-NEXT:    or a1, t1, t0
-; RV32I-NEXT:    or a6, t2, a6
+; RV32I-NEXT:    or a6, a6, t2
 ; RV32I-NEXT:    srl t0, a7, a4
 ; RV32I-NEXT:    beqz a5, .LBB23_8
 ; RV32I-NEXT:  # %bb.7:
@@ -2209,20 +2205,20 @@ define i64 @rotr_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ; RV32ZBB-NEXT:  # %bb.3:
 ; RV32ZBB-NEXT:    mv a1, a0
 ; RV32ZBB-NEXT:  .LBB23_4:
-; RV32ZBB-NEXT:    srl t0, a6, a4
 ; RV32ZBB-NEXT:    slli a7, a1, 1
 ; RV32ZBB-NEXT:    not a0, a4
+; RV32ZBB-NEXT:    srl t0, a6, a4
 ; RV32ZBB-NEXT:    sll t1, a7, a0
-; RV32ZBB-NEXT:    slli a7, a6, 1
-; RV32ZBB-NEXT:    srl a6, a1, a4
-; RV32ZBB-NEXT:    sll t2, a7, a0
+; RV32ZBB-NEXT:    srl t2, a1, a4
+; RV32ZBB-NEXT:    slli a6, a6, 1
+; RV32ZBB-NEXT:    sll a6, a6, a0
 ; RV32ZBB-NEXT:    mv a7, a2
 ; RV32ZBB-NEXT:    beqz a5, .LBB23_6
 ; RV32ZBB-NEXT:  # %bb.5:
 ; RV32ZBB-NEXT:    mv a7, a3
 ; RV32ZBB-NEXT:  .LBB23_6:
 ; RV32ZBB-NEXT:    or a1, t1, t0
-; RV32ZBB-NEXT:    or a6, t2, a6
+; RV32ZBB-NEXT:    or a6, a6, t2
 ; RV32ZBB-NEXT:    srl t0, a7, a4
 ; RV32ZBB-NEXT:    beqz a5, .LBB23_8
 ; RV32ZBB-NEXT:  # %bb.7:
@@ -2243,8 +2239,8 @@ define i64 @rotr_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ;
 ; RV64ZBB-LABEL: rotr_64_mask_multiple:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    ror a0, a0, a2
 ; RV64ZBB-NEXT:    ror a1, a1, a2
+; RV64ZBB-NEXT:    ror a0, a0, a2
 ; RV64ZBB-NEXT:    add a0, a0, a1
 ; RV64ZBB-NEXT:    ret
 ;
@@ -2260,20 +2256,20 @@ define i64 @rotr_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ; RV32XTHEADBB-NEXT:  # %bb.3:
 ; RV32XTHEADBB-NEXT:    mv a1, a0
 ; RV32XTHEADBB-NEXT:  .LBB23_4:
-; RV32XTHEADBB-NEXT:    srl t0, a6, a4
 ; RV32XTHEADBB-NEXT:    slli a7, a1, 1
 ; RV32XTHEADBB-NEXT:    not a0, a4
+; RV32XTHEADBB-NEXT:    srl t0, a6, a4
 ; RV32XTHEADBB-NEXT:    sll t1, a7, a0
-; RV32XTHEADBB-NEXT:    slli a7, a6, 1
-; RV32XTHEADBB-NEXT:    srl a6, a1, a4
-; RV32XTHEADBB-NEXT:    sll t2, a7, a0
+; RV32XTHEADBB-NEXT:    srl t2, a1, a4
+; RV32XTHEADBB-NEXT:    slli a6, a6, 1
+; RV32XTHEADBB-NEXT:    sll a6, a6, a0
 ; RV32XTHEADBB-NEXT:    mv a7, a2
 ; RV32XTHEADBB-NEXT:    beqz a5, .LBB23_6
 ; RV32XTHEADBB-NEXT:  # %bb.5:
 ; RV32XTHEADBB-NEXT:    mv a7, a3
 ; RV32XTHEADBB-NEXT:  .LBB23_6:
 ; RV32XTHEADBB-NEXT:    or a1, t1, t0
-; RV32XTHEADBB-NEXT:    or a6, t2, a6
+; RV32XTHEADBB-NEXT:    or a6, a6, t2
 ; RV32XTHEADBB-NEXT:    srl t0, a7, a4
 ; RV32XTHEADBB-NEXT:    beqz a5, .LBB23_8
 ; RV32XTHEADBB-NEXT:  # %bb.7:

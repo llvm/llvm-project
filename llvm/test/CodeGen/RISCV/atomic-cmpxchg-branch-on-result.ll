@@ -96,8 +96,8 @@ exit:
 define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %val) nounwind {
 ; RV32IA-LABEL: cmpxchg_masked_and_branch1:
 ; RV32IA:       # %bb.0: # %entry
-; RV32IA-NEXT:    slli a4, a0, 3
 ; RV32IA-NEXT:    li a3, 255
+; RV32IA-NEXT:    slli a4, a0, 3
 ; RV32IA-NEXT:    andi a0, a0, -4
 ; RV32IA-NEXT:    sll a3, a3, a4
 ; RV32IA-NEXT:    zext.b a1, a1
@@ -126,8 +126,8 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ;
 ; RV32IA-ZACAS-LABEL: cmpxchg_masked_and_branch1:
 ; RV32IA-ZACAS:       # %bb.0: # %entry
-; RV32IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV32IA-ZACAS-NEXT:    li a3, 255
+; RV32IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV32IA-ZACAS-NEXT:    andi a0, a0, -4
 ; RV32IA-ZACAS-NEXT:    sll a3, a3, a4
 ; RV32IA-ZACAS-NEXT:    zext.b a1, a1
@@ -156,8 +156,8 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ;
 ; RV64IA-LABEL: cmpxchg_masked_and_branch1:
 ; RV64IA:       # %bb.0: # %entry
-; RV64IA-NEXT:    slli a4, a0, 3
 ; RV64IA-NEXT:    li a3, 255
+; RV64IA-NEXT:    slli a4, a0, 3
 ; RV64IA-NEXT:    andi a0, a0, -4
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    zext.b a1, a1
@@ -186,8 +186,8 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ;
 ; RV64IA-ZACAS-LABEL: cmpxchg_masked_and_branch1:
 ; RV64IA-ZACAS:       # %bb.0: # %entry
-; RV64IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV64IA-ZACAS-NEXT:    li a3, 255
+; RV64IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV64IA-ZACAS-NEXT:    andi a0, a0, -4
 ; RV64IA-ZACAS-NEXT:    sllw a3, a3, a4
 ; RV64IA-ZACAS-NEXT:    zext.b a1, a1
@@ -237,8 +237,8 @@ exit:
 define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %val) nounwind {
 ; RV32IA-LABEL: cmpxchg_masked_and_branch2:
 ; RV32IA:       # %bb.0: # %entry
-; RV32IA-NEXT:    slli a4, a0, 3
 ; RV32IA-NEXT:    li a3, 255
+; RV32IA-NEXT:    slli a4, a0, 3
 ; RV32IA-NEXT:    andi a0, a0, -4
 ; RV32IA-NEXT:    sll a3, a3, a4
 ; RV32IA-NEXT:    zext.b a1, a1
@@ -270,8 +270,8 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ;
 ; RV32IA-ZACAS-LABEL: cmpxchg_masked_and_branch2:
 ; RV32IA-ZACAS:       # %bb.0: # %entry
-; RV32IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV32IA-ZACAS-NEXT:    li a3, 255
+; RV32IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV32IA-ZACAS-NEXT:    andi a0, a0, -4
 ; RV32IA-ZACAS-NEXT:    sll a3, a3, a4
 ; RV32IA-ZACAS-NEXT:    zext.b a1, a1
@@ -303,8 +303,8 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ;
 ; RV64IA-LABEL: cmpxchg_masked_and_branch2:
 ; RV64IA:       # %bb.0: # %entry
-; RV64IA-NEXT:    slli a4, a0, 3
 ; RV64IA-NEXT:    li a3, 255
+; RV64IA-NEXT:    slli a4, a0, 3
 ; RV64IA-NEXT:    andi a0, a0, -4
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    zext.b a1, a1
@@ -336,8 +336,8 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ;
 ; RV64IA-ZACAS-LABEL: cmpxchg_masked_and_branch2:
 ; RV64IA-ZACAS:       # %bb.0: # %entry
-; RV64IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV64IA-ZACAS-NEXT:    li a3, 255
+; RV64IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV64IA-ZACAS-NEXT:    andi a0, a0, -4
 ; RV64IA-ZACAS-NEXT:    sllw a3, a3, a4
 ; RV64IA-ZACAS-NEXT:    zext.b a1, a1

@@ -7,8 +7,6 @@
 ; FIXME: We're missing canonicalizations of ISD::VP_SETCC equivalent to those
 ; for ISD::SETCC, e.g., splats aren't moved to the RHS.
 
-declare <vscale x 1 x i1> @llvm.vp.icmp.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i8>, metadata, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i1> @icmp_eq_vv_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv1i8:
 ; CHECK:       # %bb.0:
@@ -498,8 +496,6 @@ define <vscale x 1 x i1> @icmp_sle_vi_swap_nxv1i8(<vscale x 1 x i8> %va, <vscale
   ret <vscale x 1 x i1> %v
 }
 
-declare <vscale x 3 x i1> @llvm.vp.icmp.nxv3i8(<vscale x 3 x i8>, <vscale x 3 x i8>, metadata, <vscale x 3 x i1>, i32)
-
 define <vscale x 3 x i1> @icmp_eq_vv_nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %vb, <vscale x 3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv3i8:
 ; CHECK:       # %bb.0:
@@ -533,8 +529,6 @@ define <vscale x 3 x i1> @icmp_eq_vx_swap_nxv3i8(<vscale x 3 x i8> %va, i8 %b, <
   %v = call <vscale x 3 x i1> @llvm.vp.icmp.nxv3i8(<vscale x 3 x i8> %vb, <vscale x 3 x i8> %va, metadata !"eq", <vscale x 3 x i1> %m, i32 %evl)
   ret <vscale x 3 x i1> %v
 }
-
-declare <vscale x 8 x i1> @llvm.vp.icmp.nxv8i7(<vscale x 8 x i7>, <vscale x 8 x i7>, metadata, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i1> @icmp_eq_vv_nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv8i7:
@@ -580,8 +574,6 @@ define <vscale x 8 x i1> @icmp_eq_vx_swap_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <
   %v = call <vscale x 8 x i1> @llvm.vp.icmp.nxv8i7(<vscale x 8 x i7> %vb, <vscale x 8 x i7> %va, metadata !"eq", <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i1> %v
 }
-
-declare <vscale x 8 x i1> @llvm.vp.icmp.nxv8i8(<vscale x 8 x i8>, <vscale x 8 x i8>, metadata, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i1> @icmp_eq_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv8i8:
@@ -1072,22 +1064,20 @@ define <vscale x 8 x i1> @icmp_sle_vi_swap_nxv8i8(<vscale x 8 x i8> %va, <vscale
   ret <vscale x 8 x i1> %v
 }
 
-declare <vscale x 128 x i1> @llvm.vp.icmp.nxv128i8(<vscale x 128 x i8>, <vscale x 128 x i8>, metadata, <vscale x 128 x i1>, i32)
-
 define <vscale x 128 x i1> @icmp_eq_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> %vb, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv128i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v7, v0
+; CHECK-NEXT:    vlm.v v0, (a2)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    sub a4, a3, a1
-; CHECK-NEXT:    add a5, a0, a1
-; CHECK-NEXT:    sltu a6, a3, a4
-; CHECK-NEXT:    vl8r.v v24, (a5)
-; CHECK-NEXT:    addi a6, a6, -1
-; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    and a2, a6, a4
+; CHECK-NEXT:    add a2, a0, a1
+; CHECK-NEXT:    vl8r.v v24, (a2)
+; CHECK-NEXT:    sub a2, a3, a1
+; CHECK-NEXT:    sltu a4, a3, a2
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a2, a4, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vv v6, v16, v24, v0.t
 ; CHECK-NEXT:    vl8r.v v24, (a0)
@@ -1110,18 +1100,18 @@ define <vscale x 128 x i1> @icmp_eq_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    csrr a3, vlenb
-; CHECK-NEXT:    slli a3, a3, 3
-; CHECK-NEXT:    sub a4, a2, a3
-; CHECK-NEXT:    sltu a5, a2, a4
-; CHECK-NEXT:    addi a5, a5, -1
 ; CHECK-NEXT:    vlm.v v0, (a1)
-; CHECK-NEXT:    and a4, a5, a4
-; CHECK-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    sub a3, a2, a1
+; CHECK-NEXT:    sltu a4, a2, a3
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v25, v16, a0, v0.t
-; CHECK-NEXT:    bltu a2, a3, .LBB97_2
+; CHECK-NEXT:    bltu a2, a1, .LBB97_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB97_2:
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
@@ -1140,18 +1130,18 @@ define <vscale x 128 x i1> @icmp_eq_vx_swap_nxv128i8(<vscale x 128 x i8> %va, i8
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    csrr a3, vlenb
-; CHECK-NEXT:    slli a3, a3, 3
-; CHECK-NEXT:    sub a4, a2, a3
-; CHECK-NEXT:    sltu a5, a2, a4
-; CHECK-NEXT:    addi a5, a5, -1
 ; CHECK-NEXT:    vlm.v v0, (a1)
-; CHECK-NEXT:    and a4, a5, a4
-; CHECK-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    sub a3, a2, a1
+; CHECK-NEXT:    sltu a4, a2, a3
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v25, v16, a0, v0.t
-; CHECK-NEXT:    bltu a2, a3, .LBB98_2
+; CHECK-NEXT:    bltu a2, a1, .LBB98_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB98_2:
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
@@ -1164,8 +1154,6 @@ define <vscale x 128 x i1> @icmp_eq_vx_swap_nxv128i8(<vscale x 128 x i8> %va, i8
   %v = call <vscale x 128 x i1> @llvm.vp.icmp.nxv128i8(<vscale x 128 x i8> %vb, <vscale x 128 x i8> %va, metadata !"eq", <vscale x 128 x i1> %m, i32 %evl)
   ret <vscale x 128 x i1> %v
 }
-
-declare <vscale x 1 x i1> @llvm.vp.icmp.nxv1i32(<vscale x 1 x i32>, <vscale x 1 x i32>, metadata, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i1> @icmp_eq_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i32> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv1i32:
@@ -1655,8 +1643,6 @@ define <vscale x 1 x i1> @icmp_sle_vi_swap_nxv1i32(<vscale x 1 x i32> %va, <vsca
   %v = call <vscale x 1 x i1> @llvm.vp.icmp.nxv1i32(<vscale x 1 x i32> splat (i32 4), <vscale x 1 x i32> %va, metadata !"sle", <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i1> %v
 }
-
-declare <vscale x 8 x i1> @llvm.vp.icmp.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, metadata, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i1> @icmp_eq_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv8i32:
@@ -2192,24 +2178,22 @@ define <vscale x 8 x i1> @icmp_sle_vi_swap_nxv8i32(<vscale x 8 x i32> %va, <vsca
   ret <vscale x 8 x i1> %v
 }
 
-declare <vscale x 32 x i1> @llvm.vp.icmp.nxv32i32(<vscale x 32 x i32>, <vscale x 32 x i32>, metadata, <vscale x 32 x i1>, i32)
-
 define <vscale x 32 x i1> @icmp_eq_vv_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv32i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v7, v0
-; CHECK-NEXT:    csrr a4, vlenb
-; CHECK-NEXT:    srli a1, a4, 2
-; CHECK-NEXT:    slli a3, a4, 1
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a1, a3, 3
+; CHECK-NEXT:    add a1, a0, a1
+; CHECK-NEXT:    vl8re32.v v24, (a1)
+; CHECK-NEXT:    srli a1, a3, 2
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a1
-; CHECK-NEXT:    sub a5, a2, a3
-; CHECK-NEXT:    slli a4, a4, 3
-; CHECK-NEXT:    sltu a6, a2, a5
-; CHECK-NEXT:    add a4, a0, a4
-; CHECK-NEXT:    addi a6, a6, -1
-; CHECK-NEXT:    vl8re32.v v24, (a4)
-; CHECK-NEXT:    and a4, a6, a5
+; CHECK-NEXT:    slli a3, a3, 1
+; CHECK-NEXT:    sub a4, a2, a3
+; CHECK-NEXT:    sltu a5, a2, a4
+; CHECK-NEXT:    addi a5, a5, -1
+; CHECK-NEXT:    and a4, a5, a4
 ; CHECK-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vv v6, v16, v24, v0.t
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
@@ -2235,8 +2219,8 @@ define <vscale x 32 x i1> @icmp_eq_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, 
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    srli a2, a3, 2
-; CHECK-NEXT:    slli a3, a3, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
+; CHECK-NEXT:    slli a3, a3, 1
 ; CHECK-NEXT:    sub a4, a1, a3
 ; CHECK-NEXT:    sltu a5, a1, a4
 ; CHECK-NEXT:    addi a5, a5, -1
@@ -2267,8 +2251,8 @@ define <vscale x 32 x i1> @icmp_eq_vx_swap_nxv32i32(<vscale x 32 x i32> %va, i32
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    srli a2, a3, 2
-; CHECK-NEXT:    slli a3, a3, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
+; CHECK-NEXT:    slli a3, a3, 1
 ; CHECK-NEXT:    sub a4, a1, a3
 ; CHECK-NEXT:    sltu a5, a1, a4
 ; CHECK-NEXT:    addi a5, a5, -1
@@ -2292,8 +2276,6 @@ define <vscale x 32 x i1> @icmp_eq_vx_swap_nxv32i32(<vscale x 32 x i32> %va, i32
   ret <vscale x 32 x i1> %v
 }
 
-declare <vscale x 1 x i1> @llvm.vp.icmp.nxv1i64(<vscale x 1 x i64>, <vscale x 1 x i64>, metadata, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i1> @icmp_eq_vv_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv1i64:
 ; CHECK:       # %bb.0:
@@ -2309,8 +2291,8 @@ define <vscale x 1 x i1> @icmp_eq_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <vs
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2335,8 +2317,8 @@ define <vscale x 1 x i1> @icmp_eq_vx_swap_nxv1i64(<vscale x 1 x i64> %va, i64 %b
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2391,8 +2373,8 @@ define <vscale x 1 x i1> @icmp_ne_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <vs
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2417,8 +2399,8 @@ define <vscale x 1 x i1> @icmp_ne_vx_swap_nxv1i64(<vscale x 1 x i64> %va, i64 %b
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2473,8 +2455,8 @@ define <vscale x 1 x i1> @icmp_ugt_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2499,8 +2481,8 @@ define <vscale x 1 x i1> @icmp_ugt_vx_swap_nxv1i64(<vscale x 1 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2555,8 +2537,8 @@ define <vscale x 1 x i1> @icmp_uge_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2582,8 +2564,8 @@ define <vscale x 1 x i1> @icmp_uge_vx_swap_nxv1i64(<vscale x 1 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2638,8 +2620,8 @@ define <vscale x 1 x i1> @icmp_ult_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2664,8 +2646,8 @@ define <vscale x 1 x i1> @icmp_ult_vx_swap_nxv1i64(<vscale x 1 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2720,8 +2702,8 @@ define <vscale x 1 x i1> @icmp_sgt_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2746,8 +2728,8 @@ define <vscale x 1 x i1> @icmp_sgt_vx_swap_nxv1i64(<vscale x 1 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2802,8 +2784,8 @@ define <vscale x 1 x i1> @icmp_sge_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2829,8 +2811,8 @@ define <vscale x 1 x i1> @icmp_sge_vx_swap_nxv1i64(<vscale x 1 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2885,8 +2867,8 @@ define <vscale x 1 x i1> @icmp_slt_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2911,8 +2893,8 @@ define <vscale x 1 x i1> @icmp_slt_vx_swap_nxv1i64(<vscale x 1 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2967,8 +2949,8 @@ define <vscale x 1 x i1> @icmp_sle_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2993,8 +2975,8 @@ define <vscale x 1 x i1> @icmp_sle_vx_swap_nxv1i64(<vscale x 1 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -3035,8 +3017,6 @@ define <vscale x 1 x i1> @icmp_sle_vi_swap_nxv1i64(<vscale x 1 x i64> %va, <vsca
   ret <vscale x 1 x i1> %v
 }
 
-declare <vscale x 8 x i1> @llvm.vp.icmp.nxv8i64(<vscale x 8 x i64>, <vscale x 8 x i64>, metadata, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i1> @icmp_eq_vv_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv8i64:
 ; CHECK:       # %bb.0:
@@ -3053,8 +3033,8 @@ define <vscale x 8 x i1> @icmp_eq_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <vs
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3081,8 +3061,8 @@ define <vscale x 8 x i1> @icmp_eq_vx_swap_nxv8i64(<vscale x 8 x i64> %va, i64 %b
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3142,8 +3122,8 @@ define <vscale x 8 x i1> @icmp_ne_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <vs
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3170,8 +3150,8 @@ define <vscale x 8 x i1> @icmp_ne_vx_swap_nxv8i64(<vscale x 8 x i64> %va, i64 %b
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3231,8 +3211,8 @@ define <vscale x 8 x i1> @icmp_ugt_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3259,8 +3239,8 @@ define <vscale x 8 x i1> @icmp_ugt_vx_swap_nxv8i64(<vscale x 8 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3320,8 +3300,8 @@ define <vscale x 8 x i1> @icmp_uge_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3349,8 +3329,8 @@ define <vscale x 8 x i1> @icmp_uge_vx_swap_nxv8i64(<vscale x 8 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3410,8 +3390,8 @@ define <vscale x 8 x i1> @icmp_ult_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3438,8 +3418,8 @@ define <vscale x 8 x i1> @icmp_ult_vx_swap_nxv8i64(<vscale x 8 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3499,8 +3479,8 @@ define <vscale x 8 x i1> @icmp_sgt_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3527,8 +3507,8 @@ define <vscale x 8 x i1> @icmp_sgt_vx_swap_nxv8i64(<vscale x 8 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3588,8 +3568,8 @@ define <vscale x 8 x i1> @icmp_sge_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3617,8 +3597,8 @@ define <vscale x 8 x i1> @icmp_sge_vx_swap_nxv8i64(<vscale x 8 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3678,8 +3658,8 @@ define <vscale x 8 x i1> @icmp_slt_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3706,8 +3686,8 @@ define <vscale x 8 x i1> @icmp_slt_vx_swap_nxv8i64(<vscale x 8 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3767,8 +3747,8 @@ define <vscale x 8 x i1> @icmp_sle_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <v
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -3795,8 +3775,8 @@ define <vscale x 8 x i1> @icmp_sle_vx_swap_nxv8i64(<vscale x 8 x i64> %va, i64 %
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero

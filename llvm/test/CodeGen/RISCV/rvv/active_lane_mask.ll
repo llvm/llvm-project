@@ -66,9 +66,9 @@ define <vscale x 1 x i1> @constant_both(ptr %p) {
 define <vscale x 1 x i1> @above_maxvl(ptr %p) {
 ; CHECK-LABEL: above_maxvl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    slli a0, a0, 11
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
@@ -199,10 +199,3 @@ define <128 x i1> @fv128(ptr %p, i64 %index, i64 %tc) {
   ret <128 x i1> %mask
 }
 
-
-declare <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i64(i64, i64)
-declare <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64, i64)
-declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64, i64)
-declare <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64, i64)
-declare <64 x i1> @llvm.get.active.lane.mask.v64i1.i64(i64, i64)
-declare <128 x i1> @llvm.get.active.lane.mask.v128i1.i64(i64, i64)

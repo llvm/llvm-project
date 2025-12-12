@@ -242,9 +242,9 @@ define i32 @orc_b_i32_sub_shl8x_x_b1_shl_used(i32 %x, ptr %arr) {
 ; RV32ZBB:       # %bb.0: # %entry
 ; RV32ZBB-NEXT:    lui a2, 8224
 ; RV32ZBB-NEXT:    addi a2, a2, 514
-; RV32ZBB-NEXT:    and a0, a0, a2
-; RV32ZBB-NEXT:    srli a2, a0, 1
-; RV32ZBB-NEXT:    orc.b a0, a0
+; RV32ZBB-NEXT:    and a2, a0, a2
+; RV32ZBB-NEXT:    orc.b a0, a2
+; RV32ZBB-NEXT:    srli a2, a2, 1
 ; RV32ZBB-NEXT:    sw a2, 0(a1)
 ; RV32ZBB-NEXT:    ret
 entry:
@@ -272,9 +272,9 @@ define i32 @orc_b_i32_sub_shl8x_x_b1_srl_used(i32  %x, ptr %arr) {
 ; RV32ZBB:       # %bb.0: # %entry
 ; RV32ZBB-NEXT:    lui a2, 8224
 ; RV32ZBB-NEXT:    addi a2, a2, 514
-; RV32ZBB-NEXT:    and a0, a0, a2
-; RV32ZBB-NEXT:    slli a2, a0, 7
-; RV32ZBB-NEXT:    orc.b a0, a0
+; RV32ZBB-NEXT:    and a2, a0, a2
+; RV32ZBB-NEXT:    orc.b a0, a2
+; RV32ZBB-NEXT:    slli a2, a2, 7
 ; RV32ZBB-NEXT:    sw a2, 0(a1)
 ; RV32ZBB-NEXT:    ret
 entry:

@@ -60,10 +60,10 @@ define dso_local void @fsd(ptr %a, double %b, double %c) nounwind {
 ; RV32IZFINXZDINX-LABEL: fsd:
 ; RV32IZFINXZDINX:       # %bb.0:
 ; RV32IZFINXZDINX-NEXT:    mv a5, a4
-; RV32IZFINXZDINX-NEXT:    mv a7, a2
 ; RV32IZFINXZDINX-NEXT:    mv a4, a3
-; RV32IZFINXZDINX-NEXT:    mv a6, a1
-; RV32IZFINXZDINX-NEXT:    fadd.d a2, a6, a4
+; RV32IZFINXZDINX-NEXT:    mv a3, a2
+; RV32IZFINXZDINX-NEXT:    mv a2, a1
+; RV32IZFINXZDINX-NEXT:    fadd.d a2, a2, a4
 ; RV32IZFINXZDINX-NEXT:    sw a2, 0(a0)
 ; RV32IZFINXZDINX-NEXT:    sw a3, 4(a0)
 ; RV32IZFINXZDINX-NEXT:    sw a2, 64(a0)
@@ -80,10 +80,10 @@ define dso_local void @fsd(ptr %a, double %b, double %c) nounwind {
 ; RV32IZFINXZDINXZILSD-LABEL: fsd:
 ; RV32IZFINXZDINXZILSD:       # %bb.0:
 ; RV32IZFINXZDINXZILSD-NEXT:    mv a5, a4
-; RV32IZFINXZDINXZILSD-NEXT:    mv a7, a2
 ; RV32IZFINXZDINXZILSD-NEXT:    mv a4, a3
-; RV32IZFINXZDINXZILSD-NEXT:    mv a6, a1
-; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a2, a6, a4
+; RV32IZFINXZDINXZILSD-NEXT:    mv a3, a2
+; RV32IZFINXZDINXZILSD-NEXT:    mv a2, a1
+; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a2, a2, a4
 ; RV32IZFINXZDINXZILSD-NEXT:    sd a2, 0(a0)
 ; RV32IZFINXZDINXZILSD-NEXT:    sd a2, 64(a0)
 ; RV32IZFINXZDINXZILSD-NEXT:    ret
@@ -113,17 +113,17 @@ define dso_local double @fld_fsd_global(double %a, double %b) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fld_fsd_global:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    lui a4, %hi(G)
-; RV32IZFINXZDINX-NEXT:    addi a4, a4, %lo(G)
 ; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    lw zero, 0(a4)
-; RV32IZFINXZDINX-NEXT:    lw zero, 4(a4)
-; RV32IZFINXZDINX-NEXT:    sw a0, 0(a4)
-; RV32IZFINXZDINX-NEXT:    sw a1, 4(a4)
-; RV32IZFINXZDINX-NEXT:    lw zero, 72(a4)
-; RV32IZFINXZDINX-NEXT:    lw zero, 76(a4)
-; RV32IZFINXZDINX-NEXT:    sw a0, 72(a4)
-; RV32IZFINXZDINX-NEXT:    sw a1, 76(a4)
+; RV32IZFINXZDINX-NEXT:    lui a2, %hi(G)
+; RV32IZFINXZDINX-NEXT:    addi a2, a2, %lo(G)
+; RV32IZFINXZDINX-NEXT:    lw zero, 0(a2)
+; RV32IZFINXZDINX-NEXT:    lw zero, 4(a2)
+; RV32IZFINXZDINX-NEXT:    sw a0, 0(a2)
+; RV32IZFINXZDINX-NEXT:    sw a1, 4(a2)
+; RV32IZFINXZDINX-NEXT:    lw zero, 72(a2)
+; RV32IZFINXZDINX-NEXT:    lw zero, 76(a2)
+; RV32IZFINXZDINX-NEXT:    sw a0, 72(a2)
+; RV32IZFINXZDINX-NEXT:    sw a1, 76(a2)
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fld_fsd_global:

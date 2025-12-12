@@ -4576,8 +4576,8 @@ entry:
 define i64 @srai_lui_and(i64 %x) nounwind {
 ; CHECK-LABEL: srai_lui_and:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    srai a0, a0, 8
 ; CHECK-NEXT:    lui a1, 1048574
+; CHECK-NEXT:    srai a0, a0, 8
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
 entry:
@@ -4906,15 +4906,15 @@ define i64 @append_32ones(i64 %x) {
 ;
 ; RV64ZBA-LABEL: append_32ones:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a0, a0, 32
 ; RV64ZBA-NEXT:    li a1, -1
+; RV64ZBA-NEXT:    slli a0, a0, 32
 ; RV64ZBA-NEXT:    add.uw a0, a1, a0
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: append_32ones:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    slli a0, a0, 32
 ; RV64XANDESPERF-NEXT:    li a1, -1
+; RV64XANDESPERF-NEXT:    slli a0, a0, 32
 ; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, a0, a1
 ; RV64XANDESPERF-NEXT:    ret
   %s = shl i64 %x, 32
@@ -5041,8 +5041,8 @@ define i64 @exactashr1mul6(i64 %a) {
 define i64 @exactlshr3mul22(i64 %a) {
 ; RV64I-LABEL: exactlshr3mul22:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a0, a0, 3
 ; RV64I-NEXT:    li a1, 22
+; RV64I-NEXT:    srli a0, a0, 3
 ; RV64I-NEXT:    mul a0, a0, a1
 ; RV64I-NEXT:    ret
 ;

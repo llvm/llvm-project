@@ -175,11 +175,11 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    lui a2, 349525
 ; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    lui a1, 349525
-; RV64I-NEXT:    lui a2, 209715
-; RV64I-NEXT:    addi s0, a1, 1365
-; RV64I-NEXT:    addi s1, a2, 819
+; RV64I-NEXT:    lui a1, 209715
+; RV64I-NEXT:    addi s0, a2, 1365
+; RV64I-NEXT:    addi s1, a1, 819
 ; RV64I-NEXT:    lui a1, 61681
 ; RV64I-NEXT:    lui a2, 4112
 ; RV64I-NEXT:    addi s2, a1, -241
@@ -256,8 +256,6 @@ bb7:                                              ; preds = %bb2
   ret void
 }
 
-declare i32 @llvm.ctpop.i32(i32)
-
 define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %bb
@@ -322,11 +320,11 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    lui a2, 349525
 ; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    lui a1, 349525
-; RV64I-NEXT:    lui a2, 209715
-; RV64I-NEXT:    addi s0, a1, 1365
-; RV64I-NEXT:    addi s1, a2, 819
+; RV64I-NEXT:    lui a1, 209715
+; RV64I-NEXT:    addi s0, a2, 1365
+; RV64I-NEXT:    addi s1, a1, 819
 ; RV64I-NEXT:    slli a1, s0, 32
 ; RV64I-NEXT:    slli a2, s1, 32
 ; RV64I-NEXT:    add s0, s0, a1
@@ -409,8 +407,6 @@ bb2:                                              ; preds = %bb2, %bb
 bb7:                                              ; preds = %bb2
   ret void
 }
-
-declare i64 @llvm.ctpop.i64(i64)
 
 define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test8:
@@ -714,7 +710,6 @@ bb7:                                              ; preds = %bb2
   %i8 = trunc i64 %i5 to i32
   ret i32 %i8
 }
-
 
 ; int test14(int a, int n) {
 ;   for (int i = 1; i < n; ++i) {
@@ -1323,7 +1318,6 @@ bb2:                                              ; preds = %bb2, %bb
 bb7:                                              ; preds = %bb2
   ret void
 }
-declare i32 @llvm.riscv.sha256sig0(i32)
 
 ; The type promotion of %7 forms a sext_inreg, but %7 and %6 are combined to
 ; form a sh2add. This leaves behind a sext.w that isn't needed.
@@ -1499,18 +1493,16 @@ bb7:                                              ; preds = %bb2
   ret void
 }
 
-declare i32 @llvm.riscv.vmv.x.s.nxv1i32( <vscale x 1 x i32>)
-
 ; Test that we can look through brev8 in hasAllNBitUsers.
 define signext i32 @test21(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; RV64I-LABEL: test21:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    lui a3, 61681
-; RV64I-NEXT:    lui a4, 209715
 ; RV64I-NEXT:    addi a3, a3, -241
-; RV64I-NEXT:    addi a4, a4, 819
+; RV64I-NEXT:    lui a4, 209715
 ; RV64I-NEXT:    slli a5, a3, 32
+; RV64I-NEXT:    addi a4, a4, 819
 ; RV64I-NEXT:    add a3, a3, a5
 ; RV64I-NEXT:    slli a5, a4, 32
 ; RV64I-NEXT:    add a4, a4, a5

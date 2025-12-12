@@ -5,25 +5,25 @@ define <2 x i8> @fp4(<4 x i4> %0) nounwind {
 ; CHECK-LABEL: fp4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vmv.x.s a1, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    vslidedown.vi v8, v8, 3
-; CHECK-NEXT:    vmv.x.s a3, v8
-; CHECK-NEXT:    andi a0, a0, 15
-; CHECK-NEXT:    andi a1, a1, 15
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    andi a2, a2, 15
-; CHECK-NEXT:    slli a2, a2, 8
-; CHECK-NEXT:    slli a3, a3, 12
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    or a2, a2, a3
-; CHECK-NEXT:    or a0, a0, a2
-; CHECK-NEXT:    sh a0, 14(sp)
 ; CHECK-NEXT:    addi a0, sp, 14
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vmv.x.s a2, v9
+; CHECK-NEXT:    vslidedown.vi v9, v8, 2
+; CHECK-NEXT:    vmv.x.s a3, v9
+; CHECK-NEXT:    vslidedown.vi v8, v8, 3
+; CHECK-NEXT:    vmv.x.s a4, v8
+; CHECK-NEXT:    andi a1, a1, 15
+; CHECK-NEXT:    andi a2, a2, 15
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    andi a3, a3, 15
+; CHECK-NEXT:    slli a3, a3, 8
+; CHECK-NEXT:    slli a4, a4, 12
+; CHECK-NEXT:    or a1, a1, a2
+; CHECK-NEXT:    or a3, a3, a4
+; CHECK-NEXT:    or a1, a1, a3
+; CHECK-NEXT:    sh a1, 14(sp)
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 16

@@ -524,9 +524,9 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
   debugIntrinsics.insert(intrinsic);
 }
 
-void ModuleImport::addDebugRecord(llvm::DbgRecord *debugRecord) {
-  if (!debugRecords.contains(debugRecord))
-    debugRecords.insert(debugRecord);
+void ModuleImport::addDebugRecord(llvm::DbgVariableRecord *dbgRecord) {
+  if (!dbgRecords.contains(dbgRecord))
+    dbgRecords.insert(dbgRecord);
 }
 
 static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
@@ -1221,7 +1221,7 @@ static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
                                          llvm::Constant *constScalar) {
   MLIRContext *context = builder.getContext();
 
-  // Convert scalar intergers.
+  // Convert scalar integers.
   if (auto *constInt = dyn_cast<llvm::ConstantInt>(constScalar)) {
     return builder.getIntegerAttr(
         IntegerType::get(context, constInt->getBitWidth()),
@@ -1765,22 +1765,21 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return lookupValue(inst);
   }
 
+  // Convert zero-initialized aggregates to ZeroOp.
+  if (auto *aggregateZero = dyn_cast<llvm::ConstantAggregateZero>(constant)) {
+    Type type = convertType(aggregateZero->getType());
+    return ZeroOp::create(builder, loc, type).getResult();
+  }
+
   // Convert aggregate constants.
-  if (isa<llvm::ConstantAggregate>(constant) ||
-      isa<llvm::ConstantAggregateZero>(constant)) {
+  if (auto *constAgg = dyn_cast<llvm::ConstantAggregate>(constant)) {
     // Lookup the aggregate elements that have been converted before.
     SmallVector<Value> elementValues;
-    if (auto *constAgg = dyn_cast<llvm::ConstantAggregate>(constant)) {
-      elementValues.reserve(constAgg->getNumOperands());
-      for (llvm::Value *operand : constAgg->operands())
-        elementValues.push_back(lookupValue(operand));
-    }
-    if (auto *constAgg = dyn_cast<llvm::ConstantAggregateZero>(constant)) {
-      unsigned numElements = constAgg->getElementCount().getFixedValue();
-      elementValues.reserve(numElements);
-      for (unsigned i = 0, e = numElements; i != e; ++i)
-        elementValues.push_back(lookupValue(constAgg->getElementValue(i)));
-    }
+
+    elementValues.reserve(constAgg->getNumOperands());
+    for (llvm::Value *operand : constAgg->operands())
+      elementValues.push_back(lookupValue(operand));
+
     assert(llvm::count(elementValues, nullptr) == 0 &&
            "expected all elements have been converted before");
 
@@ -2557,10 +2556,40 @@ LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   if (auto *intrinsic = dyn_cast<llvm::IntrinsicInst>(inst))
     return convertIntrinsic(intrinsic);
 
-  // Capture instruction with attached debug markers for later processing.
-  if (inst->DebugMarker)
-    for (llvm::DbgRecord &debugRecord : inst->DebugMarker->getDbgRecordRange())
-      addDebugRecord(&debugRecord);
+  // Process debug records attached to this instruction. Debug variable records
+  // are stored for later processing after all SSA values are converted, while
+  // debug label records can be converted immediately.
+  if (inst->DebugMarker) {
+    for (llvm::DbgRecord &dbgRecord : inst->DebugMarker->getDbgRecordRange()) {
+      // Store debug variable records for later processing.
+      if (auto *dbgVariableRecord =
+              dyn_cast<llvm::DbgVariableRecord>(&dbgRecord)) {
+        addDebugRecord(dbgVariableRecord);
+        continue;
+      }
+      Location loc = translateLoc(dbgRecord.getDebugLoc());
+      auto emitUnsupportedWarning = [&]() -> LogicalResult {
+        if (!emitExpensiveWarnings)
+          return success();
+        std::string options;
+        llvm::raw_string_ostream optionsStream(options);
+        dbgRecord.print(optionsStream);
+        emitWarning(loc) << "unhandled debug record " << optionsStream.str();
+        return success();
+      };
+      // Convert the debug label records in-place.
+      if (auto *dbgLabelRecord = dyn_cast<llvm::DbgLabelRecord>(&dbgRecord)) {
+        DILabelAttr labelAttr =
+            debugImporter->translate(dbgLabelRecord->getLabel());
+        if (!labelAttr)
+          return emitUnsupportedWarning();
+        LLVM::DbgLabelOp::create(builder, loc, labelAttr);
+        continue;
+      }
+      // Warn if an unsupported debug record is encountered.
+      return emitUnsupportedWarning();
+    }
+  }
 
   // Convert all remaining LLVM instructions to MLIR operations.
   return convertInstruction(inst);
@@ -3047,10 +3076,12 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   return success();
 }
 
-/// Checks if a kill location holds metadata instead of an SSA value.
-static bool isMetadataKillLocation(bool isKillLocation, llvm::Value *value) {
-  if (!isKillLocation)
+/// Checks if `dbgIntr` is a kill location that holds metadata instead of an SSA
+/// value.
+static bool isMetadataKillLocation(llvm::DbgVariableIntrinsic *dbgIntr) {
+  if (!dbgIntr->isKillLocation())
     return false;
+  llvm::Value *value = dbgIntr->getArgOperand(0);
   auto *nodeAsVal = dyn_cast<llvm::MetadataAsValue>(value);
   if (!nodeAsVal)
     return false;
@@ -3095,23 +3126,13 @@ static LogicalResult setDebugIntrinsicBuilderInsertionPoint(
 
 std::tuple<DILocalVariableAttr, DIExpressionAttr, Value>
 ModuleImport::processDebugOpArgumentsAndInsertionPt(
-    Location loc, bool hasArgList, bool isKillLocation,
+    Location loc,
     llvm::function_ref<FailureOr<Value>()> convertArgOperandToValue,
     llvm::Value *address,
     llvm::PointerUnion<llvm::Value *, llvm::DILocalVariable *> variable,
     llvm::DIExpression *expression, DominanceInfo &domInfo) {
-  // Drop debug intrinsics with arg lists.
-  // TODO: Support debug intrinsics that have arg lists.
-  if (hasArgList)
-    return {};
-  // Kill locations can have metadata nodes as location operand. This
-  // cannot be converted to poison as the type cannot be reconstructed.
-  // TODO: find a way to support this case.
-  if (isMetadataKillLocation(isKillLocation, address))
-    return {};
-  // Drop debug intrinsics if the associated variable information cannot be
-  // translated due to cyclic debug metadata.
-  // TODO: Support cyclic debug metadata.
+  // Drop debug intrinsics if the associated debug information cannot be
+  // translated due to an unsupported construct.
   DILocalVariableAttr localVarAttr = matchLocalVariableAttr(variable);
   if (!localVarAttr)
     return {};
@@ -3144,10 +3165,21 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
     return convertMetadataValue(dbgIntr->getArgOperand(0));
   };
 
+  // Drop debug intrinsics with an argument list.
+  // TODO: Support this case.
+  if (dbgIntr->hasArgList())
+    return emitUnsupportedWarning();
+
+  // Drop debug intrinsics with kill locations that have metadata nodes as
+  // location operand, which cannot be converted to poison as the type cannot be
+  // reconstructed.
+  // TODO: Support this case.
+  if (isMetadataKillLocation(dbgIntr))
+    return emitUnsupportedWarning();
+
   auto [localVariableAttr, locationExprAttr, locVal] =
       processDebugOpArgumentsAndInsertionPt(
-          loc, dbgIntr->hasArgList(), dbgIntr->isKillLocation(),
-          convertArgOperandToValue, dbgIntr->getArgOperand(0),
+          loc, convertArgOperandToValue, dbgIntr->getArgOperand(0),
           dbgIntr->getArgOperand(1), dbgIntr->getExpression(), domInfo);
 
   if (!localVariableAttr)
@@ -3171,26 +3203,35 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   return success();
 }
 
-LogicalResult ModuleImport::processDebugRecord(llvm::DbgRecord &debugRecord,
-                                               DominanceInfo &domInfo) {
-  Location loc = translateLoc(debugRecord.getDebugLoc());
-  auto emitUnsupportedWarning = [&]() {
+LogicalResult
+ModuleImport::processDebugRecord(llvm::DbgVariableRecord &dbgRecord,
+                                 DominanceInfo &domInfo) {
+  OpBuilder::InsertionGuard guard(builder);
+  Location loc = translateLoc(dbgRecord.getDebugLoc());
+  auto emitUnsupportedWarning = [&]() -> LogicalResult {
     if (!emitExpensiveWarnings)
       return success();
     std::string options;
     llvm::raw_string_ostream optionsStream(options);
-    debugRecord.print(optionsStream);
-    emitWarning(loc) << "unhandled debug record " << optionsStream.str();
+    dbgRecord.print(optionsStream);
+    emitWarning(loc) << "unhandled debug variable record "
+                     << optionsStream.str();
     return success();
   };
 
-  OpBuilder::InsertionGuard guard(builder);
-  auto *dbgVar = dyn_cast<llvm::DbgVariableRecord>(&debugRecord);
-  if (!dbgVar)
+  // Drop debug records with an argument list.
+  // TODO: Support this case.
+  if (dbgRecord.hasArgList())
+    return emitUnsupportedWarning();
+
+  // Drop all other debug records with a address operand that cannot be
+  // converted to an SSA value such as an empty metadata node.
+  // TODO: Support this case.
+  if (!dbgRecord.getAddress())
     return emitUnsupportedWarning();
 
   auto convertArgOperandToValue = [&]() -> FailureOr<Value> {
-    llvm::Value *value = dbgVar->getAddress();
+    llvm::Value *value = dbgRecord.getAddress();
 
     // Return the mapped value if it has been converted before.
     auto it = valueMapping.find(value);
@@ -3205,9 +3246,8 @@ LogicalResult ModuleImport::processDebugRecord(llvm::DbgRecord &debugRecord,
 
   auto [localVariableAttr, locationExprAttr, locVal] =
       processDebugOpArgumentsAndInsertionPt(
-          loc, dbgVar->hasArgList(), dbgVar->isKillLocation(),
-          convertArgOperandToValue, dbgVar->getAddress(), dbgVar->getVariable(),
-          dbgVar->getExpression(), domInfo);
+          loc, convertArgOperandToValue, dbgRecord.getAddress(),
+          dbgRecord.getVariable(), dbgRecord.getExpression(), domInfo);
 
   if (!localVariableAttr)
     return emitUnsupportedWarning();
@@ -3215,10 +3255,10 @@ LogicalResult ModuleImport::processDebugRecord(llvm::DbgRecord &debugRecord,
   if (!locVal) // Expected if localVariableAttr is present.
     return failure();
 
-  if (dbgVar->isDbgDeclare())
+  if (dbgRecord.isDbgDeclare())
     LLVM::DbgDeclareOp::create(builder, loc, locVal, localVariableAttr,
                                locationExprAttr);
-  else if (dbgVar->isDbgValue())
+  else if (dbgRecord.isDbgValue())
     LLVM::DbgValueOp::create(builder, loc, locVal, localVariableAttr,
                              locationExprAttr);
   else // isDbgAssign
@@ -3239,11 +3279,10 @@ LogicalResult ModuleImport::processDebugIntrinsics() {
 
 LogicalResult ModuleImport::processDebugRecords() {
   DominanceInfo domInfo;
-  for (llvm::DbgRecord *debugRecord : debugRecords) {
-    if (failed(processDebugRecord(*debugRecord, domInfo)))
+  for (llvm::DbgVariableRecord *dbgRecord : dbgRecords)
+    if (failed(processDebugRecord(*dbgRecord, domInfo)))
       return failure();
-  }
-  debugRecords.clear();
+  dbgRecords.clear();
   return success();
 }
 

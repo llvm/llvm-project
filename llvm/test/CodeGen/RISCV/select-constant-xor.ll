@@ -48,10 +48,10 @@ define i64 @selecti64i64(i64 %a) {
 define i32 @selecti64i32(i64 %a) {
 ; RV32-LABEL: selecti64i32:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    srli a1, a1, 31
-; RV32-NEXT:    xori a0, a1, 1
-; RV32-NEXT:    lui a1, 524288
-; RV32-NEXT:    sub a0, a1, a0
+; RV32-NEXT:    xori a1, a1, 1
+; RV32-NEXT:    sub a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: selecti64i32:
@@ -163,11 +163,12 @@ define i32 @selecti8i32(i8 %a) {
 define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ; RV32-LABEL: icmpasreq:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bltz a0, .LBB8_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:  .LBB8_2:
+; RV32-NEXT:    mv a3, a0
 ; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    bltz a3, .LBB8_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB8_2:
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: icmpasreq:
@@ -188,11 +189,12 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; RV32-LABEL: icmpasrne:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bgez a0, .LBB9_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:  .LBB9_2:
+; RV32-NEXT:    mv a3, a0
 ; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    bgez a3, .LBB9_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB9_2:
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: icmpasrne:

@@ -120,8 +120,8 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV64-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    addi a3, a0, 16
-; RV64-NEXT:    srli a4, a1, 56
+; RV64-NEXT:    srli a3, a1, 56
+; RV64-NEXT:    addi a4, a0, 16
 ; RV64-NEXT:    srli a5, a1, 48
 ; RV64-NEXT:    srli a6, a1, 40
 ; RV64-NEXT:    srli a7, a1, 32
@@ -140,7 +140,7 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV64-NEXT:    sb a7, 4(a0)
 ; RV64-NEXT:    sb a6, 5(a0)
 ; RV64-NEXT:    sb a5, 6(a0)
-; RV64-NEXT:    sb a4, 7(a0)
+; RV64-NEXT:    sb a3, 7(a0)
 ; RV64-NEXT:    sb a1, 0(a0)
 ; RV64-NEXT:    sb t2, 1(a0)
 ; RV64-NEXT:    sb t1, 2(a0)
@@ -154,7 +154,7 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV64-NEXT:    sb s1, 10(a0)
 ; RV64-NEXT:    sb s0, 11(a0)
 ; RV64-NEXT:    addi a0, a0, 16
-; RV64-NEXT:    bne a0, a3, .LBB1_1
+; RV64-NEXT:    bne a0, a4, .LBB1_1
 ; RV64-NEXT:  # %bb.2: # %split
 ; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload

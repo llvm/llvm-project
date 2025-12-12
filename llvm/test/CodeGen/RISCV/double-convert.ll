@@ -251,7 +251,6 @@ start:
   %0 = tail call i32 @llvm.fptosi.sat.i32.f64(double %a)
   ret i32 %0
 }
-declare i32 @llvm.fptosi.sat.i32.f64(double)
 
 ; For RV64D, fcvt.lu.d is semantically equivalent to fcvt.wu.d in this case
 ; because fptosi will produce poison if the result doesn't fit into an i32.
@@ -460,7 +459,6 @@ start:
   %0 = tail call i32 @llvm.fptoui.sat.i32.f64(double %a)
   ret i32 %0
 }
-declare i32 @llvm.fptoui.sat.i32.f64(double)
 
 define double @fcvt_d_w(i32 %a) nounwind {
 ; CHECKIFD-LABEL: fcvt_d_w:
@@ -798,35 +796,35 @@ define i64 @fcvt_l_d_sat(double %a) nounwind {
 ; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    call __gedf2
-; RV32I-NEXT:    mv s3, a0
+; RV32I-NEXT:    mv s5, a0
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    call __fixdfdi
-; RV32I-NEXT:    mv s5, a0
-; RV32I-NEXT:    mv s4, a1
+; RV32I-NEXT:    mv s4, a0
+; RV32I-NEXT:    mv s3, a1
 ; RV32I-NEXT:    lui a0, 524288
-; RV32I-NEXT:    bgez s3, .LBB12_2
+; RV32I-NEXT:    bgez s5, .LBB12_2
 ; RV32I-NEXT:  # %bb.1: # %start
-; RV32I-NEXT:    lui s4, 524288
+; RV32I-NEXT:    lui s3, 524288
 ; RV32I-NEXT:  .LBB12_2: # %start
 ; RV32I-NEXT:    blez s2, .LBB12_4
 ; RV32I-NEXT:  # %bb.3: # %start
-; RV32I-NEXT:    addi s4, a0, -1
+; RV32I-NEXT:    addi s3, a0, -1
 ; RV32I-NEXT:  .LBB12_4: # %start
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    mv a2, s1
 ; RV32I-NEXT:    mv a3, s0
 ; RV32I-NEXT:    call __unorddf2
+; RV32I-NEXT:    srli a1, s5, 31
 ; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    srli a1, s3, 31
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    sgtz a2, s2
-; RV32I-NEXT:    and a1, a1, s5
+; RV32I-NEXT:    and a1, a1, s4
 ; RV32I-NEXT:    neg a2, a2
 ; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    or a2, a2, a1
-; RV32I-NEXT:    and a1, a0, s4
+; RV32I-NEXT:    and a1, a0, s3
 ; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -885,7 +883,6 @@ start:
   %0 = tail call i64 @llvm.fptosi.sat.i64.f64(double %a)
   ret i64 %0
 }
-declare i64 @llvm.fptosi.sat.i64.f64(double)
 
 define i64 @fcvt_lu_d(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_lu_d:
@@ -1077,7 +1074,6 @@ start:
   %0 = tail call i64 @llvm.fptoui.sat.i64.f64(double %a)
   ret i64 %0
 }
-declare i64 @llvm.fptoui.sat.i64.f64(double)
 
 define i64 @fmv_x_d(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fmv_x_d:
@@ -1472,9 +1468,10 @@ define signext i32 @fcvt_d_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV32I-NEXT:    addi s1, a0, 1
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call __floatsidf
-; RV32I-NEXT:    sw a0, 0(s0)
-; RV32I-NEXT:    sw a1, 4(s0)
+; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    sw a2, 0(s0)
+; RV32I-NEXT:    sw a1, 4(s0)
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -1491,8 +1488,9 @@ define signext i32 @fcvt_d_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64I-NEXT:    addiw s1, a0, 1
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __floatsidf
-; RV64I-NEXT:    sd a0, 0(s0)
+; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    sd a1, 0(s0)
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -1545,9 +1543,10 @@ define signext i32 @fcvt_d_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV32I-NEXT:    addi s1, a0, 1
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call __floatunsidf
-; RV32I-NEXT:    sw a0, 0(s0)
-; RV32I-NEXT:    sw a1, 4(s0)
+; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    sw a2, 0(s0)
+; RV32I-NEXT:    sw a1, 4(s0)
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -1564,8 +1563,9 @@ define signext i32 @fcvt_d_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64I-NEXT:    addiw s1, a0, 1
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __floatunsidf
-; RV64I-NEXT:    sd a0, 0(s0)
+; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    sd a1, 0(s0)
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -1783,7 +1783,6 @@ start:
   %0 = tail call i16 @llvm.fptosi.sat.i16.f64(double %a)
   ret i16 %0
 }
-declare i16 @llvm.fptosi.sat.i16.f64(double)
 
 define zeroext i16 @fcvt_wu_s_i16(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_wu_s_i16:
@@ -1954,7 +1953,6 @@ start:
   %0 = tail call i16 @llvm.fptoui.sat.i16.f64(double %a)
   ret i16 %0
 }
-declare i16 @llvm.fptoui.sat.i16.f64(double)
 
 define signext i8 @fcvt_w_s_i8(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_w_s_i8:
@@ -2158,7 +2156,6 @@ start:
   %0 = tail call i8 @llvm.fptosi.sat.i8.f64(double %a)
   ret i8 %0
 }
-declare i8 @llvm.fptosi.sat.i8.f64(double)
 
 define zeroext i8 @fcvt_wu_s_i8(double %a) nounwind {
 ;
@@ -2327,7 +2324,6 @@ start:
   %0 = tail call i8 @llvm.fptoui.sat.i8.f64(double %a)
   ret i8 %0
 }
-declare i8 @llvm.fptoui.sat.i8.f64(double)
 
 define zeroext i32 @fcvt_wu_d_sat_zext(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_wu_d_sat_zext:

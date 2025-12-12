@@ -2,8 +2,6 @@
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+v -verify-machineinstrs | FileCheck %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs | FileCheck %s
 
-declare <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, iXLen)
-
 define <vscale x 4 x i32> @different_imm_vl_with_ta(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
 ; CHECK-LABEL: different_imm_vl_with_ta:
 ; CHECK:       # %bb.0:
@@ -183,9 +181,9 @@ define void @optimize_ternary_use(<vscale x 4 x i16> %a, <vscale x 4 x i32> %b, 
 define void @fadd_fcmp_select_copy(<vscale x 4 x float> %v, <vscale x 4 x i1> %c, ptr %p, iXLen %vl) {
 ; CHECK-LABEL: fadd_fcmp_select_copy:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmv.w.x fa5, zero
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
+; CHECK-NEXT:    fmv.w.x fa5, zero
 ; CHECK-NEXT:    vmflt.vf v10, v8, fa5
 ; CHECK-NEXT:    vmand.mm v10, v0, v10
 ; CHECK-NEXT:    vse32.v v8, (a0)

@@ -19,8 +19,8 @@ define i8 @out8(i8 %x, i8 %y, i8 %mask) {
 ;
 ; CHECK-ZBB-LABEL: out8:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    and a0, a0, a2
 ; CHECK-ZBB-NEXT:    andn a1, a1, a2
+; CHECK-ZBB-NEXT:    and a0, a0, a2
 ; CHECK-ZBB-NEXT:    or a0, a0, a1
 ; CHECK-ZBB-NEXT:    ret
   %mx = and i8 %x, %mask
@@ -40,8 +40,8 @@ define i16 @out16(i16 %x, i16 %y, i16 %mask) {
 ;
 ; CHECK-ZBB-LABEL: out16:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    and a0, a0, a2
 ; CHECK-ZBB-NEXT:    andn a1, a1, a2
+; CHECK-ZBB-NEXT:    and a0, a0, a2
 ; CHECK-ZBB-NEXT:    or a0, a0, a1
 ; CHECK-ZBB-NEXT:    ret
   %mx = and i16 %x, %mask
@@ -61,8 +61,8 @@ define i32 @out32(i32 %x, i32 %y, i32 %mask) {
 ;
 ; CHECK-ZBB-LABEL: out32:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    and a0, a0, a2
 ; CHECK-ZBB-NEXT:    andn a1, a1, a2
+; CHECK-ZBB-NEXT:    and a0, a0, a2
 ; CHECK-ZBB-NEXT:    or a0, a0, a1
 ; CHECK-ZBB-NEXT:    ret
   %mx = and i32 %x, %mask
@@ -102,8 +102,8 @@ define i64 @out64(i64 %x, i64 %y, i64 %mask) {
 ;
 ; RV64ZBB-LABEL: out64:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    and a0, a0, a2
 ; RV64ZBB-NEXT:    andn a1, a1, a2
+; RV64ZBB-NEXT:    and a0, a0, a2
 ; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %mx = and i64 %x, %mask
@@ -292,8 +292,8 @@ define i32 @in_commutativity_1_0_0(i32 %x, i32 %y, i32 %mask) {
 ;
 ; CHECK-ZBB-LABEL: in_commutativity_1_0_0:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    andn a0, a0, a2
 ; CHECK-ZBB-NEXT:    and a1, a1, a2
+; CHECK-ZBB-NEXT:    andn a0, a0, a2
 ; CHECK-ZBB-NEXT:    or a0, a1, a0
 ; CHECK-ZBB-NEXT:    ret
   %n0 = xor i32 %x, %y
@@ -312,8 +312,8 @@ define i32 @in_commutativity_1_0_1(i32 %x, i32 %y, i32 %mask) {
 ;
 ; CHECK-ZBB-LABEL: in_commutativity_1_0_1:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    andn a0, a0, a2
 ; CHECK-ZBB-NEXT:    and a1, a1, a2
+; CHECK-ZBB-NEXT:    andn a0, a0, a2
 ; CHECK-ZBB-NEXT:    or a0, a1, a0
 ; CHECK-ZBB-NEXT:    ret
   %n0 = xor i32 %x, %y
@@ -332,8 +332,8 @@ define i32 @in_commutativity_1_1_0(i32 %x, i32 %y, i32 %mask) {
 ;
 ; CHECK-ZBB-LABEL: in_commutativity_1_1_0:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    andn a0, a0, a2
 ; CHECK-ZBB-NEXT:    and a1, a1, a2
+; CHECK-ZBB-NEXT:    andn a0, a0, a2
 ; CHECK-ZBB-NEXT:    or a0, a1, a0
 ; CHECK-ZBB-NEXT:    ret
   %n0 = xor i32 %x, %y
@@ -352,8 +352,8 @@ define i32 @in_commutativity_1_1_1(i32 %x, i32 %y, i32 %mask) {
 ;
 ; CHECK-ZBB-LABEL: in_commutativity_1_1_1:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    andn a0, a0, a2
 ; CHECK-ZBB-NEXT:    and a1, a1, a2
+; CHECK-ZBB-NEXT:    andn a0, a0, a2
 ; CHECK-ZBB-NEXT:    or a0, a1, a0
 ; CHECK-ZBB-NEXT:    ret
   %n0 = xor i32 %x, %y

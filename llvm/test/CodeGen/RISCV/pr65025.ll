@@ -4,28 +4,28 @@
 define ptr @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %val) nounwind {
 ; CHECK-LABEL: cmpxchg_masked_and_branch1:
 ; CHECK:       # %bb.0: # %do_cmpxchg
-; CHECK-NEXT:    slli a3, a0, 3
-; CHECK-NEXT:    li a4, 255
+; CHECK-NEXT:    li a3, 255
+; CHECK-NEXT:    slli a4, a0, 3
 ; CHECK-NEXT:    andi a5, a0, -4
-; CHECK-NEXT:    sllw a4, a4, a3
+; CHECK-NEXT:    sllw a3, a3, a4
 ; CHECK-NEXT:    zext.b a1, a1
 ; CHECK-NEXT:    zext.b a2, a2
-; CHECK-NEXT:    sllw a1, a1, a3
-; CHECK-NEXT:    sllw a2, a2, a3
+; CHECK-NEXT:    sllw a1, a1, a4
+; CHECK-NEXT:    sllw a2, a2, a4
 ; CHECK-NEXT:  .LBB0_3: # %do_cmpxchg
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lr.w.aqrl a3, (a5)
-; CHECK-NEXT:    and a6, a3, a4
+; CHECK-NEXT:    lr.w.aqrl a4, (a5)
+; CHECK-NEXT:    and a6, a4, a3
 ; CHECK-NEXT:    bne a6, a1, .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %do_cmpxchg
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    xor a6, a3, a2
-; CHECK-NEXT:    and a6, a6, a4
-; CHECK-NEXT:    xor a6, a3, a6
+; CHECK-NEXT:    xor a6, a4, a2
+; CHECK-NEXT:    and a6, a6, a3
+; CHECK-NEXT:    xor a6, a4, a6
 ; CHECK-NEXT:    sc.w.rl a6, a6, (a5)
 ; CHECK-NEXT:    bnez a6, .LBB0_3
 ; CHECK-NEXT:  .LBB0_5: # %do_cmpxchg
-; CHECK-NEXT:    and a2, a3, a4
+; CHECK-NEXT:    and a2, a4, a3
 ; CHECK-NEXT:    bne a1, a2, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %returnptr
 ; CHECK-NEXT:    xor a1, a1, a2

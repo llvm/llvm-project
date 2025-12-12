@@ -235,8 +235,8 @@ define <vscale x 8 x i64> @vsplat_nxv8i64_14(i32 %a) {
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    addi sp, sp, -16
 ; RV32V-NEXT:    .cfi_def_cfa_offset 16
-; RV32V-NEXT:    sw a0, 8(sp)
 ; RV32V-NEXT:    sw zero, 12(sp)
+; RV32V-NEXT:    sw a0, 8(sp)
 ; RV32V-NEXT:    addi a0, sp, 8
 ; RV32V-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32V-NEXT:    vlse64.v v8, (a0), zero

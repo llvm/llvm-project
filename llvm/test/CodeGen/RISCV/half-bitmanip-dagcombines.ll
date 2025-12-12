@@ -77,16 +77,14 @@ define half @fneg(half %a) nounwind {
 ;
 ; RVIZHINXMIN-LABEL: fneg:
 ; RVIZHINXMIN:       # %bb.0:
-; RVIZHINXMIN-NEXT:    lui a1, 1048568
 ; RVIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
+; RVIZHINXMIN-NEXT:    lui a1, 1048568
 ; RVIZHINXMIN-NEXT:    xor a0, a0, a1
 ; RVIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RVIZHINXMIN-NEXT:    ret
   %1 = fneg half %a
   ret half %1
 }
-
-declare half @llvm.fabs.f16(half)
 
 define half @fabs(half %a) nounwind {
 ; RV32I-LABEL: fabs:
@@ -153,8 +151,6 @@ define half @fabs(half %a) nounwind {
   %1 = call half @llvm.fabs.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.copysign.f16(half, half)
 
 ; DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN will convert to bitwise
 ; operations if half precision floating point isn't supported. A combine could

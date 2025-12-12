@@ -129,9 +129,9 @@ define i32 @overflow_add_const_limit(i8 zeroext %a, i8 zeroext %b) {
 define i32 @overflow_add_positive_const_limit(i8 zeroext %a) {
 ; CHECK-LABEL: overflow_add_positive_const_limit:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, -1
 ; CHECK-NEXT:    slli a0, a0, 56
 ; CHECK-NEXT:    srai a0, a0, 56
-; CHECK-NEXT:    li a1, -1
 ; CHECK-NEXT:    blt a0, a1, .LBB6_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
@@ -178,8 +178,8 @@ define i32 @safe_add_underflow(i8 zeroext %a) {
 define i32 @safe_add_underflow_neg(i8 zeroext %a) {
 ; CHECK-LABEL: safe_add_underflow_neg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -2
 ; CHECK-NEXT:    li a1, 251
+; CHECK-NEXT:    addi a0, a0, -2
 ; CHECK-NEXT:    bltu a0, a1, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
@@ -196,9 +196,9 @@ define i32 @safe_add_underflow_neg(i8 zeroext %a) {
 define i32 @overflow_sub_negative_const_limit(i8 zeroext %a) {
 ; CHECK-LABEL: overflow_sub_negative_const_limit:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, -1
 ; CHECK-NEXT:    slli a0, a0, 56
 ; CHECK-NEXT:    srai a0, a0, 56
-; CHECK-NEXT:    li a1, -1
 ; CHECK-NEXT:    blt a0, a1, .LBB10_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
@@ -215,8 +215,8 @@ define i32 @overflow_sub_negative_const_limit(i8 zeroext %a) {
 define i32 @sext_sub_underflow(i8 zeroext %a) {
 ; CHECK-LABEL: sext_sub_underflow:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -6
 ; CHECK-NEXT:    li a1, -6
+; CHECK-NEXT:    addi a0, a0, -6
 ; CHECK-NEXT:    bltu a1, a0, .LBB11_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
@@ -248,8 +248,8 @@ define i32 @safe_sub_underflow(i8 zeroext %a) {
 define i32 @safe_sub_underflow_neg(i8 zeroext %a) {
 ; CHECK-LABEL: safe_sub_underflow_neg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -4
 ; CHECK-NEXT:    li a1, 250
+; CHECK-NEXT:    addi a0, a0, -4
 ; CHECK-NEXT:    bltu a1, a0, .LBB13_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
@@ -267,8 +267,8 @@ define i32 @safe_sub_underflow_neg(i8 zeroext %a) {
 define i32 @sext_sub_underflow_neg(i8 zeroext %a) {
 ; CHECK-LABEL: sext_sub_underflow_neg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -4
 ; CHECK-NEXT:    li a1, -3
+; CHECK-NEXT:    addi a0, a0, -4
 ; CHECK-NEXT:    bltu a0, a1, .LBB14_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
@@ -328,8 +328,8 @@ entry:
 define i8 @convert_add_order(i8 zeroext %arg) {
 ; CHECK-LABEL: convert_add_order:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ori a1, a0, 1
 ; CHECK-NEXT:    li a2, 50
+; CHECK-NEXT:    ori a1, a0, 1
 ; CHECK-NEXT:    bltu a1, a2, .LBB19_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 255

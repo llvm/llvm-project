@@ -19,9 +19,9 @@ define dso_local signext i32 @undef_early_clobber_chain() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 400
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v9, v8, 0
-; CHECK-NEXT:    mv a0, sp
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    mv a1, sp
 ; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    vse32.v v9, (a1)
 ; CHECK-NEXT:    addi sp, sp, 400
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
@@ -143,15 +143,6 @@ loopIR3.i.i:                                      ; preds = %loopIR3.i.i, %loopI
   store <vscale x 8 x i8> %v60, ptr addrspace(1) null, align 4
   br label %loopIR3.i.i
 }
-
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i64(<vscale x 2 x float>, <vscale x 2 x float>, i64, i64) #2
-declare void @llvm.riscv.vse.nxv2f32.i64(<vscale x 2 x float>, ptr nocapture, i64)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
-declare <vscale x 1 x i16> @llvm.stepvector.nxv1i16()
-declare <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16>, <vscale x 1 x i16>, i64 immarg)
-declare <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i16>, i64)
-
 
 define void @repeat_shuffle(<2 x double> %v, ptr noalias %q) {
 ; CHECK-LABEL: repeat_shuffle:

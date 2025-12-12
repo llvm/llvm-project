@@ -176,7 +176,6 @@ define void @extract_v2i32_nxv16i32_0(<vscale x 16 x i32> %x, ptr %y) {
   ret void
 }
 
-
 define void @extract_v2i32_nxv16i32_2(<vscale x 16 x i32> %x, ptr %y) {
 ; CHECK-LABEL: extract_v2i32_nxv16i32_2:
 ; CHECK:       # %bb.0:
@@ -479,9 +478,9 @@ define void @extract_v2i1_v64i1_2(ptr %x, ptr %y) {
 ; VLA-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; VLA-NEXT:    vslidedown.vi v8, v8, 2
 ; VLA-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; VLA-NEXT:    vmv.v.i v9, 0
 ; VLA-NEXT:    vmsne.vi v0, v8, 0
-; VLA-NEXT:    vmerge.vim v8, v9, 1, v0
+; VLA-NEXT:    vmv.v.i v8, 0
+; VLA-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLA-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VLA-NEXT:    vmv.v.i v9, 0
 ; VLA-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
@@ -500,9 +499,9 @@ define void @extract_v2i1_v64i1_2(ptr %x, ptr %y) {
 ; VLS-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; VLS-NEXT:    vslidedown.vi v8, v8, 2
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; VLS-NEXT:    vmv.v.i v9, 0
 ; VLS-NEXT:    vmsne.vi v0, v8, 0
-; VLS-NEXT:    vmerge.vim v8, v9, 1, v0
+; VLS-NEXT:    vmv.v.i v8, 0
+; VLS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLS-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VLS-NEXT:    vmv.v.i v9, 0
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
@@ -529,9 +528,9 @@ define void @extract_v2i1_v64i1_42(ptr %x, ptr %y) {
 ; VLA-NEXT:    vsetivli zero, 2, e8, m4, ta, ma
 ; VLA-NEXT:    vslidedown.vx v8, v8, a0
 ; VLA-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; VLA-NEXT:    vmv.v.i v9, 0
 ; VLA-NEXT:    vmsne.vi v0, v8, 0
-; VLA-NEXT:    vmerge.vim v8, v9, 1, v0
+; VLA-NEXT:    vmv.v.i v8, 0
+; VLA-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLA-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VLA-NEXT:    vmv.v.i v9, 0
 ; VLA-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
@@ -550,9 +549,9 @@ define void @extract_v2i1_v64i1_42(ptr %x, ptr %y) {
 ; VLS-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; VLS-NEXT:    vslidedown.vi v8, v10, 10
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; VLS-NEXT:    vmv.v.i v9, 0
 ; VLS-NEXT:    vmsne.vi v0, v8, 0
-; VLS-NEXT:    vmerge.vim v8, v9, 1, v0
+; VLS-NEXT:    vmv.v.i v8, 0
+; VLS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLS-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VLS-NEXT:    vmv.v.i v9, 0
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
@@ -595,9 +594,9 @@ define void @extract_v2i1_nxv2i1_2(<vscale x 2 x i1> %x, ptr %y) {
 ; VLA-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; VLA-NEXT:    vslidedown.vi v8, v8, 2
 ; VLA-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; VLA-NEXT:    vmv.v.i v9, 0
 ; VLA-NEXT:    vmsne.vi v0, v8, 0
-; VLA-NEXT:    vmerge.vim v8, v9, 1, v0
+; VLA-NEXT:    vmv.v.i v8, 0
+; VLA-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLA-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VLA-NEXT:    vmv.v.i v9, 0
 ; VLA-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
@@ -615,9 +614,9 @@ define void @extract_v2i1_nxv2i1_2(<vscale x 2 x i1> %x, ptr %y) {
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; VLS-NEXT:    vslidedown.vi v8, v8, 2
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; VLS-NEXT:    vmv.v.i v9, 0
 ; VLS-NEXT:    vmsne.vi v0, v8, 0
-; VLS-NEXT:    vmerge.vim v8, v9, 1, v0
+; VLS-NEXT:    vmv.v.i v8, 0
+; VLS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLS-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VLS-NEXT:    vmv.v.i v9, 0
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
@@ -659,9 +658,9 @@ define void @extract_v2i1_nxv64i1_2(<vscale x 64 x i1> %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v9, 1, v0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
@@ -705,9 +704,9 @@ define void @extract_v2i1_nxv64i1_42(<vscale x 64 x i1> %x, ptr %y) {
 ; VLS-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; VLS-NEXT:    vslidedown.vi v8, v10, 10
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; VLS-NEXT:    vmv.v.i v9, 0
 ; VLS-NEXT:    vmsne.vi v0, v8, 0
-; VLS-NEXT:    vmerge.vim v8, v9, 1, v0
+; VLS-NEXT:    vmv.v.i v8, 0
+; VLS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLS-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VLS-NEXT:    vmv.v.i v9, 0
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
@@ -750,9 +749,9 @@ define void @extract_v2i1_nxv32i1_26(<vscale x 32 x i1> %x, ptr %y) {
 ; VLS-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; VLS-NEXT:    vslidedown.vi v8, v9, 10
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; VLS-NEXT:    vmv.v.i v9, 0
 ; VLS-NEXT:    vmsne.vi v0, v8, 0
-; VLS-NEXT:    vmerge.vim v8, v9, 1, v0
+; VLS-NEXT:    vmv.v.i v8, 0
+; VLS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLS-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VLS-NEXT:    vmv.v.i v9, 0
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
@@ -836,25 +835,3 @@ define void @extract_v2f16_v4f16_2(ptr %x, ptr %y) {
   ret void
 }
 
-declare <2 x i1> @llvm.vector.extract.v2i1.v64i1(<64 x i1> %vec, i64 %idx)
-declare <8 x i1> @llvm.vector.extract.v8i1.v64i1(<64 x i1> %vec, i64 %idx)
-
-declare <2 x i1> @llvm.vector.extract.v2i1.nxv2i1(<vscale x 2 x i1> %vec, i64 %idx)
-declare <8 x i1> @llvm.vector.extract.v8i1.nxv2i1(<vscale x 2 x i1> %vec, i64 %idx)
-
-declare <2 x i1> @llvm.vector.extract.v2i1.nxv32i1(<vscale x 32 x i1> %vec, i64 %idx)
-declare <8 x i1> @llvm.vector.extract.v8i1.nxv32i1(<vscale x 32 x i1> %vec, i64 %idx)
-
-declare <2 x i1> @llvm.vector.extract.v2i1.nxv64i1(<vscale x 64 x i1> %vec, i64 %idx)
-declare <8 x i1> @llvm.vector.extract.v8i1.nxv64i1(<vscale x 64 x i1> %vec, i64 %idx)
-
-declare <2 x i8> @llvm.vector.extract.v2i8.v4i8(<4 x i8> %vec, i64 %idx)
-declare <2 x i8> @llvm.vector.extract.v2i8.v8i8(<8 x i8> %vec, i64 %idx)
-
-declare <1 x i32> @llvm.vector.extract.v1i32.v8i32(<8 x i32> %vec, i64 %idx)
-declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32> %vec, i64 %idx)
-
-declare <2 x i8> @llvm.vector.extract.v2i8.nxv2i8(<vscale x 2 x i8> %vec, i64 %idx)
-
-declare <2 x i32> @llvm.vector.extract.v2i32.nxv16i32(<vscale x 16 x i32> %vec, i64 %idx)
-declare <8 x i32> @llvm.vector.extract.v8i32.nxv16i32(<vscale x 16 x i32> %vec, i64 %idx)

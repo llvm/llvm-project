@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+zvfhmin < %s \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,ZVFHMIN
 
-declare <4 x half> @llvm.vp.uitofp.v4f16.v4i7(<4 x i7>, <4 x i1>, i32)
-
 define <4 x half> @vuitofp_v4f16_v4i7(<4 x i7> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vuitofp_v4f16_v4i7:
 ; ZVFH:       # %bb.0:
@@ -34,8 +32,6 @@ define <4 x half> @vuitofp_v4f16_v4i7(<4 x i7> %va, <4 x i1> %m, i32 zeroext %ev
   %v = call <4 x half> @llvm.vp.uitofp.v4f16.v4i7(<4 x i7> %va, <4 x i1> %m, i32 %evl)
   ret <4 x half> %v
 }
-
-declare <4 x half> @llvm.vp.uitofp.v4f16.v4i8(<4 x i8>, <4 x i1>, i32)
 
 define <4 x half> @vuitofp_v4f16_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vuitofp_v4f16_v4i8:
@@ -77,8 +73,6 @@ define <4 x half> @vuitofp_v4f16_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
   ret <4 x half> %v
 }
 
-declare <4 x half> @llvm.vp.uitofp.v4f16.v4i16(<4 x i16>, <4 x i1>, i32)
-
 define <4 x half> @vuitofp_v4f16_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vuitofp_v4f16_v4i16:
 ; ZVFH:       # %bb.0:
@@ -114,8 +108,6 @@ define <4 x half> @vuitofp_v4f16_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl)
   %v = call <4 x half> @llvm.vp.uitofp.v4f16.v4i16(<4 x i16> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x half> %v
 }
-
-declare <4 x half> @llvm.vp.uitofp.v4f16.v4i32(<4 x i32>, <4 x i1>, i32)
 
 define <4 x half> @vuitofp_v4f16_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vuitofp_v4f16_v4i32:
@@ -154,8 +146,6 @@ define <4 x half> @vuitofp_v4f16_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl)
   %v = call <4 x half> @llvm.vp.uitofp.v4f16.v4i32(<4 x i32> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x half> %v
 }
-
-declare <4 x half> @llvm.vp.uitofp.v4f16.v4i64(<4 x i64>, <4 x i1>, i32)
 
 define <4 x half> @vuitofp_v4f16_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vuitofp_v4f16_v4i64:
@@ -197,8 +187,6 @@ define <4 x half> @vuitofp_v4f16_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl)
   ret <4 x half> %v
 }
 
-declare <4 x float> @llvm.vp.uitofp.v4f32.v4i8(<4 x i8>, <4 x i1>, i32)
-
 define <4 x float> @vuitofp_v4f32_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f32_v4i8:
 ; CHECK:       # %bb.0:
@@ -220,8 +208,6 @@ define <4 x float> @vuitofp_v4f32_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) 
   %v = call <4 x float> @llvm.vp.uitofp.v4f32.v4i8(<4 x i8> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x float> %v
 }
-
-declare <4 x float> @llvm.vp.uitofp.v4f32.v4i16(<4 x i16>, <4 x i1>, i32)
 
 define <4 x float> @vuitofp_v4f32_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f32_v4i16:
@@ -245,8 +231,6 @@ define <4 x float> @vuitofp_v4f32_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl
   ret <4 x float> %v
 }
 
-declare <4 x float> @llvm.vp.uitofp.v4f32.v4i32(<4 x i32>, <4 x i1>, i32)
-
 define <4 x float> @vuitofp_v4f32_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f32_v4i32:
 ; CHECK:       # %bb.0:
@@ -266,8 +250,6 @@ define <4 x float> @vuitofp_v4f32_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl
   %v = call <4 x float> @llvm.vp.uitofp.v4f32.v4i32(<4 x i32> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x float> %v
 }
-
-declare <4 x float> @llvm.vp.uitofp.v4f32.v4i64(<4 x i64>, <4 x i1>, i32)
 
 define <4 x float> @vuitofp_v4f32_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f32_v4i64:
@@ -291,8 +273,6 @@ define <4 x float> @vuitofp_v4f32_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl
   ret <4 x float> %v
 }
 
-declare <4 x double> @llvm.vp.uitofp.v4f64.v4i8(<4 x i8>, <4 x i1>, i32)
-
 define <4 x double> @vuitofp_v4f64_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f64_v4i8:
 ; CHECK:       # %bb.0:
@@ -314,8 +294,6 @@ define <4 x double> @vuitofp_v4f64_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl)
   %v = call <4 x double> @llvm.vp.uitofp.v4f64.v4i8(<4 x i8> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x double> %v
 }
-
-declare <4 x double> @llvm.vp.uitofp.v4f64.v4i16(<4 x i16>, <4 x i1>, i32)
 
 define <4 x double> @vuitofp_v4f64_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f64_v4i16:
@@ -339,8 +317,6 @@ define <4 x double> @vuitofp_v4f64_v4i16_unmasked(<4 x i16> %va, i32 zeroext %ev
   ret <4 x double> %v
 }
 
-declare <4 x double> @llvm.vp.uitofp.v4f64.v4i32(<4 x i32>, <4 x i1>, i32)
-
 define <4 x double> @vuitofp_v4f64_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f64_v4i32:
 ; CHECK:       # %bb.0:
@@ -363,8 +339,6 @@ define <4 x double> @vuitofp_v4f64_v4i32_unmasked(<4 x i32> %va, i32 zeroext %ev
   ret <4 x double> %v
 }
 
-declare <4 x double> @llvm.vp.uitofp.v4f64.v4i64(<4 x i64>, <4 x i1>, i32)
-
 define <4 x double> @vuitofp_v4f64_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f64_v4i64:
 ; CHECK:       # %bb.0:
@@ -385,8 +359,6 @@ define <4 x double> @vuitofp_v4f64_v4i64_unmasked(<4 x i64> %va, i32 zeroext %ev
   ret <4 x double> %v
 }
 
-declare <32 x double> @llvm.vp.uitofp.v32f64.v32i64(<32 x i64>, <32 x i1>, i32)
-
 define <32 x double> @vuitofp_v32f64_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v32f64_v32i64:
 ; CHECK:       # %bb.0:
@@ -398,12 +370,12 @@ define <32 x double> @vuitofp_v32f64_v32i64(<32 x i64> %va, <32 x i1> %m, i32 ze
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:  .LBB25_2:
-; CHECK-NEXT:    addi a2, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a2
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
-; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    addi a1, a0, -16
+; CHECK-NEXT:    sltu a0, a0, a1
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.f.xu.v v16, v16, v0.t
@@ -421,12 +393,12 @@ define <32 x double> @vuitofp_v32f64_v32i64_unmasked(<32 x i64> %va, i32 zeroext
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:  .LBB26_2:
-; CHECK-NEXT:    addi a2, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a2
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    addi a1, a0, -16
+; CHECK-NEXT:    sltu a0, a0, a1
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.f.xu.v v16, v16
 ; CHECK-NEXT:    ret

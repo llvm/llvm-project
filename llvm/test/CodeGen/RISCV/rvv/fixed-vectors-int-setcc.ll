@@ -317,9 +317,9 @@ define void @setuge_vx_v128i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vle8.v v16, (a0)
-; CHECK-NEXT:    vmsleu.vv v24, v8, v16
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vmv.v.x v16, a1
+; CHECK-NEXT:    vmsleu.vv v24, v16, v8
 ; CHECK-NEXT:    vsm.v v24, (a2)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x

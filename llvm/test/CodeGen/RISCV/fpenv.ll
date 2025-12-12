@@ -130,8 +130,8 @@ define void @func_02(i32 %rm) {
 ;
 ; RV64IF-LABEL: func_02:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    slli a0, a0, 32
 ; RV64IF-NEXT:    lui a1, 66
+; RV64IF-NEXT:    slli a0, a0, 32
 ; RV64IF-NEXT:    srli a0, a0, 30
 ; RV64IF-NEXT:    addi a1, a1, 769
 ; RV64IF-NEXT:    srl a0, a1, a0
@@ -214,7 +214,5 @@ define void @func_07() {
 
 attributes #0 = { strictfp }
 
-declare void @llvm.set.rounding(i32)
-declare i32 @llvm.get.rounding()
 declare i32 @fesetround(i32 noundef)
 

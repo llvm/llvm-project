@@ -189,18 +189,18 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; RV32-NEXT:    addi s0, sp, 384
 ; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    andi sp, sp, -128
+; RV32-NEXT:    addi a2, sp, 128
+; RV32-NEXT:    li a3, 32
+; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
+; RV32-NEXT:    vse32.v v16, (a2)
+; RV32-NEXT:    mv a3, sp
+; RV32-NEXT:    vse32.v v8, (a3)
 ; RV32-NEXT:    andi a1, a1, 63
-; RV32-NEXT:    mv a2, sp
-; RV32-NEXT:    addi a3, sp, 128
 ; RV32-NEXT:    slli a1, a1, 2
-; RV32-NEXT:    li a4, 32
-; RV32-NEXT:    add a1, a2, a1
-; RV32-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
-; RV32-NEXT:    vse32.v v16, (a3)
-; RV32-NEXT:    vse32.v v8, (a2)
+; RV32-NEXT:    add a1, a3, a1
 ; RV32-NEXT:    sw a0, 0(a1)
-; RV32-NEXT:    vle32.v v8, (a2)
-; RV32-NEXT:    vle32.v v16, (a3)
+; RV32-NEXT:    vle32.v v8, (a3)
+; RV32-NEXT:    vle32.v v16, (a2)
 ; RV32-NEXT:    addi sp, s0, -384
 ; RV32-NEXT:    .cfi_def_cfa sp, 384
 ; RV32-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
@@ -222,18 +222,18 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; RV64-NEXT:    addi s0, sp, 384
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    andi sp, sp, -128
+; RV64-NEXT:    addi a2, sp, 128
+; RV64-NEXT:    li a3, 32
+; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
+; RV64-NEXT:    vse32.v v16, (a2)
+; RV64-NEXT:    mv a3, sp
+; RV64-NEXT:    vse32.v v8, (a3)
 ; RV64-NEXT:    andi a1, a1, 63
-; RV64-NEXT:    mv a2, sp
-; RV64-NEXT:    addi a3, sp, 128
 ; RV64-NEXT:    slli a1, a1, 2
-; RV64-NEXT:    li a4, 32
-; RV64-NEXT:    add a1, a2, a1
-; RV64-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
-; RV64-NEXT:    vse32.v v16, (a3)
-; RV64-NEXT:    vse32.v v8, (a2)
+; RV64-NEXT:    add a1, a3, a1
 ; RV64-NEXT:    sw a0, 0(a1)
-; RV64-NEXT:    vle32.v v8, (a2)
-; RV64-NEXT:    vle32.v v16, (a3)
+; RV64-NEXT:    vle32.v v8, (a3)
+; RV64-NEXT:    vle32.v v16, (a2)
 ; RV64-NEXT:    addi sp, s0, -384
 ; RV64-NEXT:    .cfi_def_cfa sp, 384
 ; RV64-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
@@ -255,18 +255,18 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; VISNI-NEXT:    addi s0, sp, 384
 ; VISNI-NEXT:    .cfi_def_cfa s0, 0
 ; VISNI-NEXT:    andi sp, sp, -128
+; VISNI-NEXT:    addi a2, sp, 128
+; VISNI-NEXT:    li a3, 32
+; VISNI-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
+; VISNI-NEXT:    vse32.v v16, (a2)
+; VISNI-NEXT:    mv a3, sp
+; VISNI-NEXT:    vse32.v v8, (a3)
 ; VISNI-NEXT:    andi a1, a1, 63
-; VISNI-NEXT:    mv a2, sp
-; VISNI-NEXT:    addi a3, sp, 128
 ; VISNI-NEXT:    slli a1, a1, 2
-; VISNI-NEXT:    li a4, 32
-; VISNI-NEXT:    add a1, a2, a1
-; VISNI-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
-; VISNI-NEXT:    vse32.v v16, (a3)
-; VISNI-NEXT:    vse32.v v8, (a2)
+; VISNI-NEXT:    add a1, a3, a1
 ; VISNI-NEXT:    sw a0, 0(a1)
-; VISNI-NEXT:    vle32.v v8, (a2)
-; VISNI-NEXT:    vle32.v v16, (a3)
+; VISNI-NEXT:    vle32.v v8, (a3)
+; VISNI-NEXT:    vle32.v v16, (a2)
 ; VISNI-NEXT:    addi sp, s0, -384
 ; VISNI-NEXT:    .cfi_def_cfa sp, 384
 ; VISNI-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
@@ -788,11 +788,11 @@ define void @insertelt_c6_v8i64_0_add(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    li a2, 6
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
-; CHECK-NEXT:    vmv.s.x v8, a2
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v12, (a1)
+; CHECK-NEXT:    li a1, 6
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a1
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -801,11 +801,11 @@ define void @insertelt_c6_v8i64_0_add(ptr %x, ptr %y) {
 ; VISNI:       # %bb.0:
 ; VISNI-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; VISNI-NEXT:    vle64.v v8, (a0)
-; VISNI-NEXT:    li a2, 6
-; VISNI-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
-; VISNI-NEXT:    vmv.s.x v8, a2
-; VISNI-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; VISNI-NEXT:    vle64.v v12, (a1)
+; VISNI-NEXT:    li a1, 6
+; VISNI-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
+; VISNI-NEXT:    vmv.s.x v8, a1
+; VISNI-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; VISNI-NEXT:    vadd.vv v8, v8, v12
 ; VISNI-NEXT:    vse64.v v8, (a0)
 ; VISNI-NEXT:    ret
@@ -1144,6 +1144,32 @@ define <4 x half> @insertelt_v4f16_idx(<4 x half> %a, half %y, i32 zeroext %idx)
   %b = insertelement <4 x half> %a, half %y, i32 %idx
   ret <4 x half> %b
 }
+
+define <2 x i8> @pr169017(<4 x i16> %vecinit, <2 x i8> %dst_vec) {
+; CHECK-LABEL: pr169017:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    ret
+;
+; VISNI-LABEL: pr169017:
+; VISNI:       # %bb.0: # %entry
+; VISNI-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; VISNI-NEXT:    vmv.x.s a0, v8
+; VISNI-NEXT:    vmv1r.v v8, v9
+; VISNI-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
+; VISNI-NEXT:    vmv.s.x v8, a0
+; VISNI-NEXT:    ret
+entry:
+  %cast = bitcast <4 x i16> %vecinit to i64
+  %trunc = trunc i64 %cast to i8
+  %2 = insertelement <2 x i8> %dst_vec, i8 %trunc, i64 0
+  ret <2 x i8> %2
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; ZVFHMINRV32: {{.*}}
 ; ZVFHMINRV64: {{.*}}

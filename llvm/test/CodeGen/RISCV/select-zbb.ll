@@ -13,19 +13,20 @@ define i32 @select_umin_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IM-LABEL: select_umin_1:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    addi a0, a0, -1
-; RV32IM-NEXT:    or a1, a0, a1
-; RV32IM-NEXT:    mv a0, a2
-; RV32IM-NEXT:    bltu a2, a1, .LBB0_2
+; RV32IM-NEXT:    or a0, a0, a1
+; RV32IM-NEXT:    bltu a2, a0, .LBB0_2
 ; RV32IM-NEXT:  # %bb.1: # %entry
-; RV32IM-NEXT:    mv a0, a1
+; RV32IM-NEXT:    mv a2, a0
 ; RV32IM-NEXT:  .LBB0_2: # %entry
+; RV32IM-NEXT:    mv a0, a2
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_umin_1:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    addi a0, a0, -1
-; RV64IM-NEXT:    or a1, a0, a1
+; RV64IM-NEXT:    mv a3, a0
 ; RV64IM-NEXT:    sext.w a0, a2
+; RV64IM-NEXT:    addi a3, a3, -1
+; RV64IM-NEXT:    or a1, a3, a1
 ; RV64IM-NEXT:    sext.w a1, a1
 ; RV64IM-NEXT:    bltu a0, a1, .LBB0_2
 ; RV64IM-NEXT:  # %bb.1: # %entry
@@ -42,9 +43,9 @@ define i32 @select_umin_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMZBB-LABEL: select_umin_1:
 ; RV64IMZBB:       # %bb.0: # %entry
+; RV64IMZBB-NEXT:    sext.w a2, a2
 ; RV64IMZBB-NEXT:    addi a0, a0, -1
 ; RV64IMZBB-NEXT:    or a0, a0, a1
-; RV64IMZBB-NEXT:    sext.w a2, a2
 ; RV64IMZBB-NEXT:    sext.w a0, a0
 ; RV64IMZBB-NEXT:    minu a0, a2, a0
 ; RV64IMZBB-NEXT:    ret
@@ -61,9 +62,9 @@ define i32 @select_umin_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMZICOND-LABEL: select_umin_1:
 ; RV64IMZICOND:       # %bb.0: # %entry
+; RV64IMZICOND-NEXT:    sext.w a2, a2
 ; RV64IMZICOND-NEXT:    addi a0, a0, -1
 ; RV64IMZICOND-NEXT:    or a0, a0, a1
-; RV64IMZICOND-NEXT:    sext.w a2, a2
 ; RV64IMZICOND-NEXT:    sext.w a0, a0
 ; RV64IMZICOND-NEXT:    sltu a1, a2, a0
 ; RV64IMZICOND-NEXT:    czero.nez a0, a0, a1
@@ -80,9 +81,9 @@ define i32 @select_umin_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMBOTH-LABEL: select_umin_1:
 ; RV64IMBOTH:       # %bb.0: # %entry
+; RV64IMBOTH-NEXT:    sext.w a2, a2
 ; RV64IMBOTH-NEXT:    addi a0, a0, -1
 ; RV64IMBOTH-NEXT:    or a0, a0, a1
-; RV64IMBOTH-NEXT:    sext.w a2, a2
 ; RV64IMBOTH-NEXT:    sext.w a0, a0
 ; RV64IMBOTH-NEXT:    minu a0, a2, a0
 ; RV64IMBOTH-NEXT:    ret
@@ -96,20 +97,21 @@ define i32 @select_umin_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IM-LABEL: select_umin_2:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    neg a0, a0
-; RV32IM-NEXT:    or a2, a0, a2
-; RV32IM-NEXT:    mv a0, a1
-; RV32IM-NEXT:    bltu a1, a2, .LBB1_2
+; RV32IM-NEXT:    or a0, a0, a2
+; RV32IM-NEXT:    bltu a1, a0, .LBB1_2
 ; RV32IM-NEXT:  # %bb.1: # %entry
-; RV32IM-NEXT:    mv a0, a2
+; RV32IM-NEXT:    mv a1, a0
 ; RV32IM-NEXT:  .LBB1_2: # %entry
+; RV32IM-NEXT:    mv a0, a1
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_umin_2:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    neg a0, a0
-; RV64IM-NEXT:    or a2, a0, a2
+; RV64IM-NEXT:    mv a3, a0
 ; RV64IM-NEXT:    sext.w a0, a1
-; RV64IM-NEXT:    sext.w a1, a2
+; RV64IM-NEXT:    neg a1, a3
+; RV64IM-NEXT:    or a1, a1, a2
+; RV64IM-NEXT:    sext.w a1, a1
 ; RV64IM-NEXT:    bltu a0, a1, .LBB1_2
 ; RV64IM-NEXT:  # %bb.1: # %entry
 ; RV64IM-NEXT:    mv a0, a1
@@ -125,9 +127,9 @@ define i32 @select_umin_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMZBB-LABEL: select_umin_2:
 ; RV64IMZBB:       # %bb.0: # %entry
+; RV64IMZBB-NEXT:    sext.w a1, a1
 ; RV64IMZBB-NEXT:    neg a0, a0
 ; RV64IMZBB-NEXT:    or a0, a0, a2
-; RV64IMZBB-NEXT:    sext.w a1, a1
 ; RV64IMZBB-NEXT:    sext.w a0, a0
 ; RV64IMZBB-NEXT:    minu a0, a1, a0
 ; RV64IMZBB-NEXT:    ret
@@ -144,9 +146,9 @@ define i32 @select_umin_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMZICOND-LABEL: select_umin_2:
 ; RV64IMZICOND:       # %bb.0: # %entry
+; RV64IMZICOND-NEXT:    sext.w a1, a1
 ; RV64IMZICOND-NEXT:    neg a0, a0
 ; RV64IMZICOND-NEXT:    or a0, a0, a2
-; RV64IMZICOND-NEXT:    sext.w a1, a1
 ; RV64IMZICOND-NEXT:    sext.w a0, a0
 ; RV64IMZICOND-NEXT:    sltu a2, a1, a0
 ; RV64IMZICOND-NEXT:    czero.nez a0, a0, a2
@@ -163,9 +165,9 @@ define i32 @select_umin_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMBOTH-LABEL: select_umin_2:
 ; RV64IMBOTH:       # %bb.0: # %entry
+; RV64IMBOTH-NEXT:    sext.w a1, a1
 ; RV64IMBOTH-NEXT:    neg a0, a0
 ; RV64IMBOTH-NEXT:    or a0, a0, a2
-; RV64IMBOTH-NEXT:    sext.w a1, a1
 ; RV64IMBOTH-NEXT:    sext.w a0, a0
 ; RV64IMBOTH-NEXT:    minu a0, a1, a0
 ; RV64IMBOTH-NEXT:    ret
@@ -179,12 +181,12 @@ define i32 @select_umin_3(i1 zeroext %cond, i32 %a) {
 ; RV32IM-LABEL: select_umin_3:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    neg a0, a0
-; RV32IM-NEXT:    ori a2, a0, 32
-; RV32IM-NEXT:    mv a0, a1
-; RV32IM-NEXT:    bltu a1, a2, .LBB2_2
+; RV32IM-NEXT:    ori a0, a0, 32
+; RV32IM-NEXT:    bltu a1, a0, .LBB2_2
 ; RV32IM-NEXT:  # %bb.1: # %entry
-; RV32IM-NEXT:    mv a0, a2
+; RV32IM-NEXT:    mv a1, a0
 ; RV32IM-NEXT:  .LBB2_2: # %entry
+; RV32IM-NEXT:    mv a0, a1
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_umin_3:
@@ -341,19 +343,20 @@ define i32 @select_umax_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IM-LABEL: select_umax_1:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    neg a0, a0
-; RV32IM-NEXT:    and a1, a0, a1
-; RV32IM-NEXT:    mv a0, a2
-; RV32IM-NEXT:    bltu a1, a2, .LBB4_2
+; RV32IM-NEXT:    and a0, a0, a1
+; RV32IM-NEXT:    bltu a0, a2, .LBB4_2
 ; RV32IM-NEXT:  # %bb.1: # %entry
-; RV32IM-NEXT:    mv a0, a1
+; RV32IM-NEXT:    mv a2, a0
 ; RV32IM-NEXT:  .LBB4_2: # %entry
+; RV32IM-NEXT:    mv a0, a2
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_umax_1:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    neg a0, a0
-; RV64IM-NEXT:    and a1, a0, a1
+; RV64IM-NEXT:    mv a3, a0
 ; RV64IM-NEXT:    sext.w a0, a2
+; RV64IM-NEXT:    neg a2, a3
+; RV64IM-NEXT:    and a1, a2, a1
 ; RV64IM-NEXT:    sext.w a1, a1
 ; RV64IM-NEXT:    bltu a1, a0, .LBB4_2
 ; RV64IM-NEXT:  # %bb.1: # %entry
@@ -370,9 +373,9 @@ define i32 @select_umax_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMZBB-LABEL: select_umax_1:
 ; RV64IMZBB:       # %bb.0: # %entry
+; RV64IMZBB-NEXT:    sext.w a2, a2
 ; RV64IMZBB-NEXT:    neg a0, a0
 ; RV64IMZBB-NEXT:    and a0, a0, a1
-; RV64IMZBB-NEXT:    sext.w a2, a2
 ; RV64IMZBB-NEXT:    sext.w a0, a0
 ; RV64IMZBB-NEXT:    maxu a0, a2, a0
 ; RV64IMZBB-NEXT:    ret
@@ -388,8 +391,8 @@ define i32 @select_umax_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMZICOND-LABEL: select_umax_1:
 ; RV64IMZICOND:       # %bb.0: # %entry
-; RV64IMZICOND-NEXT:    czero.eqz a0, a1, a0
 ; RV64IMZICOND-NEXT:    sext.w a2, a2
+; RV64IMZICOND-NEXT:    czero.eqz a0, a1, a0
 ; RV64IMZICOND-NEXT:    sext.w a0, a0
 ; RV64IMZICOND-NEXT:    sltu a1, a0, a2
 ; RV64IMZICOND-NEXT:    czero.nez a0, a0, a1
@@ -405,8 +408,8 @@ define i32 @select_umax_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMBOTH-LABEL: select_umax_1:
 ; RV64IMBOTH:       # %bb.0: # %entry
-; RV64IMBOTH-NEXT:    czero.eqz a0, a1, a0
 ; RV64IMBOTH-NEXT:    sext.w a2, a2
+; RV64IMBOTH-NEXT:    czero.eqz a0, a1, a0
 ; RV64IMBOTH-NEXT:    sext.w a0, a0
 ; RV64IMBOTH-NEXT:    maxu a0, a2, a0
 ; RV64IMBOTH-NEXT:    ret
@@ -420,20 +423,21 @@ define i32 @select_umax_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IM-LABEL: select_umax_2:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    addi a0, a0, -1
-; RV32IM-NEXT:    and a2, a0, a2
-; RV32IM-NEXT:    mv a0, a1
-; RV32IM-NEXT:    bltu a2, a1, .LBB5_2
+; RV32IM-NEXT:    and a0, a0, a2
+; RV32IM-NEXT:    bltu a0, a1, .LBB5_2
 ; RV32IM-NEXT:  # %bb.1: # %entry
-; RV32IM-NEXT:    mv a0, a2
+; RV32IM-NEXT:    mv a1, a0
 ; RV32IM-NEXT:  .LBB5_2: # %entry
+; RV32IM-NEXT:    mv a0, a1
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_umax_2:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    addi a0, a0, -1
-; RV64IM-NEXT:    and a2, a0, a2
+; RV64IM-NEXT:    mv a3, a0
 ; RV64IM-NEXT:    sext.w a0, a1
-; RV64IM-NEXT:    sext.w a1, a2
+; RV64IM-NEXT:    addi a3, a3, -1
+; RV64IM-NEXT:    and a1, a3, a2
+; RV64IM-NEXT:    sext.w a1, a1
 ; RV64IM-NEXT:    bltu a1, a0, .LBB5_2
 ; RV64IM-NEXT:  # %bb.1: # %entry
 ; RV64IM-NEXT:    mv a0, a1
@@ -449,9 +453,9 @@ define i32 @select_umax_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMZBB-LABEL: select_umax_2:
 ; RV64IMZBB:       # %bb.0: # %entry
+; RV64IMZBB-NEXT:    sext.w a1, a1
 ; RV64IMZBB-NEXT:    addi a0, a0, -1
 ; RV64IMZBB-NEXT:    and a0, a0, a2
-; RV64IMZBB-NEXT:    sext.w a1, a1
 ; RV64IMZBB-NEXT:    sext.w a0, a0
 ; RV64IMZBB-NEXT:    maxu a0, a1, a0
 ; RV64IMZBB-NEXT:    ret
@@ -467,8 +471,8 @@ define i32 @select_umax_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMZICOND-LABEL: select_umax_2:
 ; RV64IMZICOND:       # %bb.0: # %entry
-; RV64IMZICOND-NEXT:    czero.nez a0, a2, a0
 ; RV64IMZICOND-NEXT:    sext.w a1, a1
+; RV64IMZICOND-NEXT:    czero.nez a0, a2, a0
 ; RV64IMZICOND-NEXT:    sext.w a0, a0
 ; RV64IMZICOND-NEXT:    sltu a2, a0, a1
 ; RV64IMZICOND-NEXT:    czero.nez a0, a0, a2
@@ -484,8 +488,8 @@ define i32 @select_umax_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IMBOTH-LABEL: select_umax_2:
 ; RV64IMBOTH:       # %bb.0: # %entry
-; RV64IMBOTH-NEXT:    czero.nez a0, a2, a0
 ; RV64IMBOTH-NEXT:    sext.w a1, a1
+; RV64IMBOTH-NEXT:    czero.nez a0, a2, a0
 ; RV64IMBOTH-NEXT:    sext.w a0, a0
 ; RV64IMBOTH-NEXT:    maxu a0, a1, a0
 ; RV64IMBOTH-NEXT:    ret
@@ -499,12 +503,12 @@ define i32 @select_umax_3(i1 zeroext %cond, i32 %a) {
 ; RV32IM-LABEL: select_umax_3:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    addi a0, a0, -1
-; RV32IM-NEXT:    andi a2, a0, 32
-; RV32IM-NEXT:    mv a0, a1
-; RV32IM-NEXT:    bltu a2, a1, .LBB6_2
+; RV32IM-NEXT:    andi a0, a0, 32
+; RV32IM-NEXT:    bltu a0, a1, .LBB6_2
 ; RV32IM-NEXT:  # %bb.1: # %entry
-; RV32IM-NEXT:    mv a0, a2
+; RV32IM-NEXT:    mv a1, a0
 ; RV32IM-NEXT:  .LBB6_2: # %entry
+; RV32IM-NEXT:    mv a0, a1
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: select_umax_3:
@@ -789,22 +793,24 @@ define i32 @select_smin_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV32IMZBB-LABEL: select_smin_2:
 ; RV32IMZBB:       # %bb.0: # %entry
-; RV32IMZBB-NEXT:    bnez a0, .LBB9_2
-; RV32IMZBB-NEXT:  # %bb.1: # %entry
-; RV32IMZBB-NEXT:    min a1, a1, a2
-; RV32IMZBB-NEXT:  .LBB9_2: # %entry
+; RV32IMZBB-NEXT:    mv a3, a0
 ; RV32IMZBB-NEXT:    mv a0, a1
+; RV32IMZBB-NEXT:    bnez a3, .LBB9_2
+; RV32IMZBB-NEXT:  # %bb.1: # %entry
+; RV32IMZBB-NEXT:    min a0, a0, a2
+; RV32IMZBB-NEXT:  .LBB9_2: # %entry
 ; RV32IMZBB-NEXT:    ret
 ;
 ; RV64IMZBB-LABEL: select_smin_2:
 ; RV64IMZBB:       # %bb.0: # %entry
-; RV64IMZBB-NEXT:    bnez a0, .LBB9_2
+; RV64IMZBB-NEXT:    mv a3, a0
+; RV64IMZBB-NEXT:    mv a0, a1
+; RV64IMZBB-NEXT:    bnez a3, .LBB9_2
 ; RV64IMZBB-NEXT:  # %bb.1: # %entry
 ; RV64IMZBB-NEXT:    sext.w a2, a2
-; RV64IMZBB-NEXT:    sext.w a1, a1
-; RV64IMZBB-NEXT:    min a1, a1, a2
+; RV64IMZBB-NEXT:    sext.w a0, a0
+; RV64IMZBB-NEXT:    min a0, a0, a2
 ; RV64IMZBB-NEXT:  .LBB9_2: # %entry
-; RV64IMZBB-NEXT:    mv a0, a1
 ; RV64IMZBB-NEXT:    ret
 ;
 ; RV32IMZICOND-LABEL: select_smin_2:
@@ -874,8 +880,8 @@ define i32 @select_smin_3(i1 zeroext %cond, i32 %a) {
 ;
 ; RV64IM-LABEL: select_smin_3:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    sext.w a2, a1
 ; RV64IM-NEXT:    li a3, 32
+; RV64IM-NEXT:    sext.w a2, a1
 ; RV64IM-NEXT:    bge a2, a3, .LBB10_3
 ; RV64IM-NEXT:  # %bb.1: # %entry
 ; RV64IM-NEXT:    beqz a0, .LBB10_4
@@ -891,23 +897,25 @@ define i32 @select_smin_3(i1 zeroext %cond, i32 %a) {
 ;
 ; RV32IMZBB-LABEL: select_smin_3:
 ; RV32IMZBB:       # %bb.0: # %entry
-; RV32IMZBB-NEXT:    bnez a0, .LBB10_2
-; RV32IMZBB-NEXT:  # %bb.1: # %entry
-; RV32IMZBB-NEXT:    li a0, 32
-; RV32IMZBB-NEXT:    min a1, a1, a0
-; RV32IMZBB-NEXT:  .LBB10_2: # %entry
+; RV32IMZBB-NEXT:    mv a2, a0
 ; RV32IMZBB-NEXT:    mv a0, a1
+; RV32IMZBB-NEXT:    bnez a2, .LBB10_2
+; RV32IMZBB-NEXT:  # %bb.1: # %entry
+; RV32IMZBB-NEXT:    li a1, 32
+; RV32IMZBB-NEXT:    min a0, a0, a1
+; RV32IMZBB-NEXT:  .LBB10_2: # %entry
 ; RV32IMZBB-NEXT:    ret
 ;
 ; RV64IMZBB-LABEL: select_smin_3:
 ; RV64IMZBB:       # %bb.0: # %entry
-; RV64IMZBB-NEXT:    bnez a0, .LBB10_2
-; RV64IMZBB-NEXT:  # %bb.1: # %entry
-; RV64IMZBB-NEXT:    sext.w a1, a1
-; RV64IMZBB-NEXT:    li a0, 32
-; RV64IMZBB-NEXT:    min a1, a1, a0
-; RV64IMZBB-NEXT:  .LBB10_2: # %entry
+; RV64IMZBB-NEXT:    mv a2, a0
 ; RV64IMZBB-NEXT:    mv a0, a1
+; RV64IMZBB-NEXT:    bnez a2, .LBB10_2
+; RV64IMZBB-NEXT:  # %bb.1: # %entry
+; RV64IMZBB-NEXT:    sext.w a0, a0
+; RV64IMZBB-NEXT:    li a1, 32
+; RV64IMZBB-NEXT:    min a0, a0, a1
+; RV64IMZBB-NEXT:  .LBB10_2: # %entry
 ; RV64IMZBB-NEXT:    ret
 ;
 ; RV32IMZICOND-LABEL: select_smin_3:
@@ -976,19 +984,19 @@ define i32 @select_smin_4(i1 zeroext %cond, i32 %x) {
 ;
 ; RV64IM-LABEL: select_smin_4:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    sext.w a2, a1
-; RV64IM-NEXT:    li a1, 128
-; RV64IM-NEXT:    bge a2, a1, .LBB11_3
+; RV64IM-NEXT:    li a2, 128
+; RV64IM-NEXT:    sext.w a1, a1
+; RV64IM-NEXT:    bge a1, a2, .LBB11_3
 ; RV64IM-NEXT:  # %bb.1:
 ; RV64IM-NEXT:    beqz a0, .LBB11_4
 ; RV64IM-NEXT:  .LBB11_2:
-; RV64IM-NEXT:    mv a0, a1
+; RV64IM-NEXT:    mv a0, a2
 ; RV64IM-NEXT:    ret
 ; RV64IM-NEXT:  .LBB11_3:
-; RV64IM-NEXT:    li a2, 128
+; RV64IM-NEXT:    li a1, 128
 ; RV64IM-NEXT:    bnez a0, .LBB11_2
 ; RV64IM-NEXT:  .LBB11_4:
-; RV64IM-NEXT:    mv a0, a2
+; RV64IM-NEXT:    mv a0, a1
 ; RV64IM-NEXT:    ret
 ;
 ; RV32IMZBB-LABEL: select_smin_4:
@@ -1190,22 +1198,24 @@ define i32 @select_smax_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV32IMZBB-LABEL: select_smax_2:
 ; RV32IMZBB:       # %bb.0: # %entry
-; RV32IMZBB-NEXT:    bnez a0, .LBB13_2
-; RV32IMZBB-NEXT:  # %bb.1: # %entry
-; RV32IMZBB-NEXT:    max a1, a1, a2
-; RV32IMZBB-NEXT:  .LBB13_2: # %entry
+; RV32IMZBB-NEXT:    mv a3, a0
 ; RV32IMZBB-NEXT:    mv a0, a1
+; RV32IMZBB-NEXT:    bnez a3, .LBB13_2
+; RV32IMZBB-NEXT:  # %bb.1: # %entry
+; RV32IMZBB-NEXT:    max a0, a0, a2
+; RV32IMZBB-NEXT:  .LBB13_2: # %entry
 ; RV32IMZBB-NEXT:    ret
 ;
 ; RV64IMZBB-LABEL: select_smax_2:
 ; RV64IMZBB:       # %bb.0: # %entry
-; RV64IMZBB-NEXT:    bnez a0, .LBB13_2
+; RV64IMZBB-NEXT:    mv a3, a0
+; RV64IMZBB-NEXT:    mv a0, a1
+; RV64IMZBB-NEXT:    bnez a3, .LBB13_2
 ; RV64IMZBB-NEXT:  # %bb.1: # %entry
 ; RV64IMZBB-NEXT:    sext.w a2, a2
-; RV64IMZBB-NEXT:    sext.w a1, a1
-; RV64IMZBB-NEXT:    max a1, a1, a2
+; RV64IMZBB-NEXT:    sext.w a0, a0
+; RV64IMZBB-NEXT:    max a0, a0, a2
 ; RV64IMZBB-NEXT:  .LBB13_2: # %entry
-; RV64IMZBB-NEXT:    mv a0, a1
 ; RV64IMZBB-NEXT:    ret
 ;
 ; RV32IMZICOND-LABEL: select_smax_2:
@@ -1275,8 +1285,8 @@ define i32 @select_smax_3(i1 zeroext %cond, i32 %a) {
 ;
 ; RV64IM-LABEL: select_smax_3:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    sext.w a2, a1
 ; RV64IM-NEXT:    li a3, 32
+; RV64IM-NEXT:    sext.w a2, a1
 ; RV64IM-NEXT:    bge a3, a2, .LBB14_3
 ; RV64IM-NEXT:  # %bb.1: # %entry
 ; RV64IM-NEXT:    beqz a0, .LBB14_4
@@ -1292,23 +1302,25 @@ define i32 @select_smax_3(i1 zeroext %cond, i32 %a) {
 ;
 ; RV32IMZBB-LABEL: select_smax_3:
 ; RV32IMZBB:       # %bb.0: # %entry
-; RV32IMZBB-NEXT:    bnez a0, .LBB14_2
-; RV32IMZBB-NEXT:  # %bb.1: # %entry
-; RV32IMZBB-NEXT:    li a0, 32
-; RV32IMZBB-NEXT:    max a1, a1, a0
-; RV32IMZBB-NEXT:  .LBB14_2: # %entry
+; RV32IMZBB-NEXT:    mv a2, a0
 ; RV32IMZBB-NEXT:    mv a0, a1
+; RV32IMZBB-NEXT:    bnez a2, .LBB14_2
+; RV32IMZBB-NEXT:  # %bb.1: # %entry
+; RV32IMZBB-NEXT:    li a1, 32
+; RV32IMZBB-NEXT:    max a0, a0, a1
+; RV32IMZBB-NEXT:  .LBB14_2: # %entry
 ; RV32IMZBB-NEXT:    ret
 ;
 ; RV64IMZBB-LABEL: select_smax_3:
 ; RV64IMZBB:       # %bb.0: # %entry
-; RV64IMZBB-NEXT:    bnez a0, .LBB14_2
-; RV64IMZBB-NEXT:  # %bb.1: # %entry
-; RV64IMZBB-NEXT:    sext.w a1, a1
-; RV64IMZBB-NEXT:    li a0, 32
-; RV64IMZBB-NEXT:    max a1, a1, a0
-; RV64IMZBB-NEXT:  .LBB14_2: # %entry
+; RV64IMZBB-NEXT:    mv a2, a0
 ; RV64IMZBB-NEXT:    mv a0, a1
+; RV64IMZBB-NEXT:    bnez a2, .LBB14_2
+; RV64IMZBB-NEXT:  # %bb.1: # %entry
+; RV64IMZBB-NEXT:    sext.w a0, a0
+; RV64IMZBB-NEXT:    li a1, 32
+; RV64IMZBB-NEXT:    max a0, a0, a1
+; RV64IMZBB-NEXT:  .LBB14_2: # %entry
 ; RV64IMZBB-NEXT:    ret
 ;
 ; RV32IMZICOND-LABEL: select_smax_3:
@@ -1377,19 +1389,19 @@ define i32 @select_smax_4(i1 zeroext %cond, i32 %x) {
 ;
 ; RV64IM-LABEL: select_smax_4:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    sext.w a2, a1
-; RV64IM-NEXT:    li a1, 128
-; RV64IM-NEXT:    bge a1, a2, .LBB15_3
+; RV64IM-NEXT:    li a2, 128
+; RV64IM-NEXT:    sext.w a1, a1
+; RV64IM-NEXT:    bge a2, a1, .LBB15_3
 ; RV64IM-NEXT:  # %bb.1:
 ; RV64IM-NEXT:    beqz a0, .LBB15_4
 ; RV64IM-NEXT:  .LBB15_2:
-; RV64IM-NEXT:    mv a0, a1
+; RV64IM-NEXT:    mv a0, a2
 ; RV64IM-NEXT:    ret
 ; RV64IM-NEXT:  .LBB15_3:
-; RV64IM-NEXT:    li a2, 128
+; RV64IM-NEXT:    li a1, 128
 ; RV64IM-NEXT:    bnez a0, .LBB15_2
 ; RV64IM-NEXT:  .LBB15_4:
-; RV64IM-NEXT:    mv a0, a2
+; RV64IM-NEXT:    mv a0, a1
 ; RV64IM-NEXT:    ret
 ;
 ; RV32IMZBB-LABEL: select_smax_4:

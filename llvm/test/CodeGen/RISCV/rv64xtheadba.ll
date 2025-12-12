@@ -2107,8 +2107,8 @@ entry:
 define i64 @srai_lui_and(i64 %x) nounwind {
 ; CHECK-LABEL: srai_lui_and:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    srai a0, a0, 8
 ; CHECK-NEXT:    lui a1, 1048574
+; CHECK-NEXT:    srai a0, a0, 8
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
 entry:

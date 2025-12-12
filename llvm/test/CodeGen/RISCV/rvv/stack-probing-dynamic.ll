@@ -373,11 +373,11 @@ define void @no_reserved_call_frame(i64 %n) #0 {
 ; RV64I-NEXT:    .cfi_offset s0, -16
 ; RV64I-NEXT:    addi s0, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
+; RV64I-NEXT:    lui a1, 1
 ; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    addi a0, a0, 15
 ; RV64I-NEXT:    andi a0, a0, -16
 ; RV64I-NEXT:    sub a0, sp, a0
-; RV64I-NEXT:    lui a1, 1
 ; RV64I-NEXT:  .LBB4_1: # %entry
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    sub sp, sp, a1
@@ -412,11 +412,11 @@ define void @no_reserved_call_frame(i64 %n) #0 {
 ; RV32I-NEXT:    .cfi_offset s0, -8
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    .cfi_def_cfa s0, 0
+; RV32I-NEXT:    lui a1, 1
 ; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    addi a0, a0, 15
 ; RV32I-NEXT:    andi a0, a0, -16
 ; RV32I-NEXT:    sub a0, sp, a0
-; RV32I-NEXT:    lui a1, 1
 ; RV32I-NEXT:  .LBB4_1: # %entry
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    sub sp, sp, a1

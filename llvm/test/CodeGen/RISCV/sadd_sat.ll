@@ -4,12 +4,6 @@
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+zbb | FileCheck %s --check-prefixes=RV32,RV32IZbb
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+zbb | FileCheck %s --check-prefixes=RV64,RV64IZbb
 
-declare i4 @llvm.sadd.sat.i4(i4, i4)
-declare i8 @llvm.sadd.sat.i8(i8, i8)
-declare i16 @llvm.sadd.sat.i16(i16, i16)
-declare i32 @llvm.sadd.sat.i32(i32, i32)
-declare i64 @llvm.sadd.sat.i64(i64, i64)
-
 define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: func:
 ; RV32:       # %bb.0:
@@ -54,16 +48,16 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32I-LABEL: func2:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a4, a1
-; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    mv a4, a0
+; RV32I-NEXT:    mv a5, a1
 ; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    add a2, a4, a3
-; RV32I-NEXT:    sltu a1, a0, a1
-; RV32I-NEXT:    add a1, a2, a1
-; RV32I-NEXT:    xor a3, a4, a3
-; RV32I-NEXT:    xor a4, a4, a1
+; RV32I-NEXT:    add a1, a1, a3
+; RV32I-NEXT:    sltu a2, a0, a4
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    xor a3, a5, a3
+; RV32I-NEXT:    xor a5, a5, a1
 ; RV32I-NEXT:    not a2, a3
-; RV32I-NEXT:    and a2, a2, a4
+; RV32I-NEXT:    and a2, a2, a5
 ; RV32I-NEXT:    bgez a2, .LBB1_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    srai a0, a1, 31
@@ -89,14 +83,14 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ;
 ; RV32IZbb-LABEL: func2:
 ; RV32IZbb:       # %bb.0:
-; RV32IZbb-NEXT:    mv a4, a1
-; RV32IZbb-NEXT:    mv a1, a0
+; RV32IZbb-NEXT:    mv a4, a0
+; RV32IZbb-NEXT:    mv a5, a1
 ; RV32IZbb-NEXT:    add a0, a0, a2
-; RV32IZbb-NEXT:    add a2, a4, a3
-; RV32IZbb-NEXT:    sltu a1, a0, a1
-; RV32IZbb-NEXT:    add a1, a2, a1
-; RV32IZbb-NEXT:    xor a2, a4, a1
-; RV32IZbb-NEXT:    xor a3, a4, a3
+; RV32IZbb-NEXT:    add a1, a1, a3
+; RV32IZbb-NEXT:    sltu a2, a0, a4
+; RV32IZbb-NEXT:    add a1, a1, a2
+; RV32IZbb-NEXT:    xor a2, a5, a1
+; RV32IZbb-NEXT:    xor a3, a5, a3
 ; RV32IZbb-NEXT:    andn a2, a2, a3
 ; RV32IZbb-NEXT:    bgez a2, .LBB1_2
 ; RV32IZbb-NEXT:  # %bb.1:

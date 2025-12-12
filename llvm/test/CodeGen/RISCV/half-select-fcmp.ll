@@ -911,8 +911,8 @@ define half @CascadedSelect(half noundef %a) {
 ;
 ; CHECKIZFHMIN-LABEL: CascadedSelect:
 ; CHECKIZFHMIN:       # %bb.0: # %entry
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 260096
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa3, a0
 ; CHECKIZFHMIN-NEXT:    flt.s a1, fa5, fa4
@@ -934,10 +934,10 @@ define half @CascadedSelect(half noundef %a) {
 ; CHECKIZHINXMIN-LABEL: CascadedSelect:
 ; CHECKIZHINXMIN:       # %bb.0: # %entry
 ; CHECKIZHINXMIN-NEXT:    mv a1, a0
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKIZHINXMIN-NEXT:    lui a2, 260096
-; CHECKIZHINXMIN-NEXT:    flt.s a3, a0, zero
-; CHECKIZHINXMIN-NEXT:    flt.s a2, a2, a0
+; CHECKIZHINXMIN-NEXT:    lui a0, 260096
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a1
+; CHECKIZHINXMIN-NEXT:    flt.s a3, a2, zero
+; CHECKIZHINXMIN-NEXT:    flt.s a2, a0, a2
 ; CHECKIZHINXMIN-NEXT:    li a0, 0
 ; CHECKIZHINXMIN-NEXT:    beqz a3, .LBB20_3
 ; CHECKIZHINXMIN-NEXT:  # %bb.1: # %entry

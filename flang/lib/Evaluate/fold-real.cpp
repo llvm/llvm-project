@@ -425,8 +425,14 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             [](const Scalar<T> &x) -> Scalar<T> { return x.SPACING(); }));
   } else if (name == "sqrt") {
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
-        ScalarFunc<T, T>(
-            [](const Scalar<T> &x) -> Scalar<T> { return x.SQRT().value; }));
+        ScalarFunc<T, T>([&context](const Scalar<T> &x) -> Scalar<T> {
+          ValueWithRealFlags<Scalar<T>> result{x.SQRT()};
+          if (result.flags.test(RealFlag::InvalidArgument)) {
+            context.Warn(common::UsageWarning::FoldingValueChecks,
+                "Invalid argument to SQRT()"_warn_en_US);
+          }
+          return result.value;
+        }));
   } else if (name == "sum") {
     return FoldSum<T>(context, std::move(funcRef));
   } else if (name == "tiny") {

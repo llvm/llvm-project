@@ -307,9 +307,9 @@ define <4 x float> @vfwmaccbf16_vf_v4f32_scalar_extend(<4 x float> %rd, bfloat %
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fmv.x.w a0, fa0
 ; ZVFBFMIN-NEXT:    slli a0, a0, 16
-; ZVFBFMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFBFMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFBFMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFBFMIN-NEXT:    vfmacc.vf v8, fa5, v10
 ; ZVFBFMIN-NEXT:    ret

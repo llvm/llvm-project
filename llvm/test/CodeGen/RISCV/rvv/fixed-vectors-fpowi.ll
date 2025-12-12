@@ -34,7 +34,6 @@ define <1 x float> @powi_v1f32(<1 x float> %x, i32 %y) nounwind {
   %a = call <1 x float> @llvm.powi.v1f32.i32(<1 x float> %x, i32 %y)
   ret <1 x float> %a
 }
-declare <1 x float> @llvm.powi.v1f32.i32(<1 x float>, i32)
 
 define <2 x float> @powi_v2f32(<2 x float> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v2f32:
@@ -100,7 +99,6 @@ define <2 x float> @powi_v2f32(<2 x float> %x, i32 %y) nounwind {
   %a = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> %x, i32 %y)
   ret <2 x float> %a
 }
-declare <2 x float> @llvm.powi.v2f32.i32(<2 x float>, i32)
 
 define <3 x float> @powi_v3f32(<3 x float> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v3f32:
@@ -208,7 +206,6 @@ define <3 x float> @powi_v3f32(<3 x float> %x, i32 %y) nounwind {
   %a = call <3 x float> @llvm.powi.v3f32.i32(<3 x float> %x, i32 %y)
   ret <3 x float> %a
 }
-declare <3 x float> @llvm.powi.v3f32.i32(<3 x float>, i32)
 
 define <4 x float> @powi_v4f32(<4 x float> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v4f32:
@@ -340,7 +337,6 @@ define <4 x float> @powi_v4f32(<4 x float> %x, i32 %y) nounwind {
   %a = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %x, i32 %y)
   ret <4 x float> %a
 }
-declare <4 x float> @llvm.powi.v4f32.i32(<4 x float>, i32)
 
 define <8 x float> @powi_v8f32(<8 x float> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v8f32:
@@ -602,7 +598,6 @@ define <8 x float> @powi_v8f32(<8 x float> %x, i32 %y) nounwind {
   %a = call <8 x float> @llvm.powi.v8f32.i32(<8 x float> %x, i32 %y)
   ret <8 x float> %a
 }
-declare <8 x float> @llvm.powi.v8f32.i32(<8 x float>, i32)
 
 define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v16f32:
@@ -617,9 +612,9 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    andi sp, sp, -64
 ; RV32-NEXT:    mv s2, a0
+; RV32-NEXT:    addi a0, sp, 256
+; RV32-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    addi a0, sp, 64
-; RV32-NEXT:    addi a1, sp, 256
-; RV32-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vse32.v v8, (a0)
 ; RV32-NEXT:    flw fa0, 124(sp)
@@ -716,8 +711,8 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vfmv.f.s fa0, v8
 ; RV32-NEXT:    mv a0, s2
 ; RV32-NEXT:    call __powisf2
-; RV32-NEXT:    fsw fa0, 144(sp)
 ; RV32-NEXT:    addi a0, sp, 128
+; RV32-NEXT:    fsw fa0, 144(sp)
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -272
@@ -738,9 +733,9 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    slli a1, a1, 2
 ; RV64-NEXT:    sub sp, sp, a1
 ; RV64-NEXT:    andi sp, sp, -64
+; RV64-NEXT:    addi a1, sp, 240
+; RV64-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
 ; RV64-NEXT:    addi a1, sp, 64
-; RV64-NEXT:    addi a2, sp, 240
-; RV64-NEXT:    vs4r.v v8, (a2) # vscale x 32-byte Folded Spill
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vse32.v v8, (a1)
 ; RV64-NEXT:    flw fa0, 124(sp)
@@ -838,8 +833,8 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vfmv.f.s fa0, v8
 ; RV64-NEXT:    mv a0, s2
 ; RV64-NEXT:    call __powisf2
-; RV64-NEXT:    fsw fa0, 144(sp)
 ; RV64-NEXT:    addi a0, sp, 128
+; RV64-NEXT:    fsw fa0, 144(sp)
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -272
@@ -851,7 +846,6 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
   %a = call <16 x float> @llvm.powi.v16f32.i32(<16 x float> %x, i32 %y)
   ret <16 x float> %a
 }
-declare <16 x float> @llvm.powi.v16f32.i32(<16 x float>, i32)
 
 define <1 x double> @powi_v1f64(<1 x double> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v1f64:
@@ -883,7 +877,6 @@ define <1 x double> @powi_v1f64(<1 x double> %x, i32 %y) nounwind {
   %a = call <1 x double> @llvm.powi.v1f64.i32(<1 x double> %x, i32 %y)
   ret <1 x double> %a
 }
-declare <1 x double> @llvm.powi.v1f64.i32(<1 x double>, i32)
 
 define <2 x double> @powi_v2f64(<2 x double> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v2f64:
@@ -949,7 +942,6 @@ define <2 x double> @powi_v2f64(<2 x double> %x, i32 %y) nounwind {
   %a = call <2 x double> @llvm.powi.v2f64.i32(<2 x double> %x, i32 %y)
   ret <2 x double> %a
 }
-declare <2 x double> @llvm.powi.v2f64.i32(<2 x double>, i32)
 
 define <4 x double> @powi_v4f64(<4 x double> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v4f64:
@@ -1095,7 +1087,6 @@ define <4 x double> @powi_v4f64(<4 x double> %x, i32 %y) nounwind {
   %a = call <4 x double> @llvm.powi.v4f64.i32(<4 x double> %x, i32 %y)
   ret <4 x double> %a
 }
-declare <4 x double> @llvm.powi.v4f64.i32(<4 x double>, i32)
 
 define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v8f64:
@@ -1110,9 +1101,9 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    andi sp, sp, -64
 ; RV32-NEXT:    mv s2, a0
+; RV32-NEXT:    addi a0, sp, 256
+; RV32-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    addi a0, sp, 64
-; RV32-NEXT:    addi a1, sp, 256
-; RV32-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    fld fa0, 120(sp)
@@ -1161,8 +1152,8 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV32-NEXT:    vfmv.f.s fa0, v8
 ; RV32-NEXT:    mv a0, s2
 ; RV32-NEXT:    call __powidf2
-; RV32-NEXT:    fsd fa0, 144(sp)
 ; RV32-NEXT:    addi a0, sp, 128
+; RV32-NEXT:    fsd fa0, 144(sp)
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -272
@@ -1183,9 +1174,9 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV64-NEXT:    slli a1, a1, 2
 ; RV64-NEXT:    sub sp, sp, a1
 ; RV64-NEXT:    andi sp, sp, -64
+; RV64-NEXT:    addi a1, sp, 240
+; RV64-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
 ; RV64-NEXT:    addi a1, sp, 64
-; RV64-NEXT:    addi a2, sp, 240
-; RV64-NEXT:    vs4r.v v8, (a2) # vscale x 32-byte Folded Spill
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a1)
 ; RV64-NEXT:    fld fa0, 120(sp)
@@ -1235,8 +1226,8 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV64-NEXT:    vfmv.f.s fa0, v8
 ; RV64-NEXT:    mv a0, s2
 ; RV64-NEXT:    call __powidf2
-; RV64-NEXT:    fsd fa0, 144(sp)
 ; RV64-NEXT:    addi a0, sp, 128
+; RV64-NEXT:    fsd fa0, 144(sp)
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -272
@@ -1248,4 +1239,3 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
   %a = call <8 x double> @llvm.powi.v8f64.i32(<8 x double> %x, i32 %y)
   ret <8 x double> %a
 }
-declare <8 x double> @llvm.powi.v8f64.i32(<8 x double>, i32)

@@ -264,9 +264,10 @@ define i32 @masked_merge_no_transform1(i32 %a0, i32 %a1, i32 %a2, ptr %p1) {
 ; CHECK-ZBB:       # %bb.0:
 ; CHECK-ZBB-NEXT:    and a1, a0, a1
 ; CHECK-ZBB-NEXT:    andn a2, a2, a0
-; CHECK-ZBB-NEXT:    not a4, a0
-; CHECK-ZBB-NEXT:    or a0, a1, a2
-; CHECK-ZBB-NEXT:    sw a4, 0(a3)
+; CHECK-ZBB-NEXT:    or a1, a1, a2
+; CHECK-ZBB-NEXT:    not a2, a0
+; CHECK-ZBB-NEXT:    mv a0, a1
+; CHECK-ZBB-NEXT:    sw a2, 0(a3)
 ; CHECK-ZBB-NEXT:    ret
   %and0 = and i32 %a0, %a1
   %not = xor i32 %a0, -1

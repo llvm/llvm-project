@@ -15,61 +15,62 @@ define <2 x i32> @main(ptr %0) {
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    lui a1, 7
-; CHECK-NEXT:    lw a2, -188(a1)
+; CHECK-NEXT:    lw a2, 1244(a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    lw a3, 1244(a1)
+; CHECK-NEXT:    lw a3, -188(a1)
+; CHECK-NEXT:    vmv.s.x v14, a2
+; CHECK-NEXT:    lw a2, 1244(a1)
 ; CHECK-NEXT:    lw a4, -188(a1)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v14, a2
-; CHECK-NEXT:    lw a2, 1244(a1)
 ; CHECK-NEXT:    vmv.v.x v15, a3
-; CHECK-NEXT:    lw a3, -304(a1)
-; CHECK-NEXT:    vslide1down.vx v14, v14, zero
+; CHECK-NEXT:    vmv.v.x v16, a2
+; CHECK-NEXT:    lw a2, -304(a1)
 ; CHECK-NEXT:    vslide1down.vx v15, v15, zero
+; CHECK-NEXT:    vslide1down.vx v16, v16, zero
 ; CHECK-NEXT:    lw a1, -304(a1)
-; CHECK-NEXT:    vmv.v.x v16, a3
-; CHECK-NEXT:    vmin.vv v14, v15, v14
-; CHECK-NEXT:    vslide1down.vx v15, v16, zero
-; CHECK-NEXT:    vmv.s.x v16, a2
-; CHECK-NEXT:    vmin.vv v14, v14, v15
-; CHECK-NEXT:    vid.v v15
-; CHECK-NEXT:    vadd.vi v15, v15, -1
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v17, 0
+; CHECK-NEXT:    vmv.v.x v17, a2
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (zero)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmin.vx v8, v16, a4
+; CHECK-NEXT:    vmin.vv v8, v16, v15
+; CHECK-NEXT:    vslide1down.vx v9, v17, zero
+; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    vmin.vv v8, v8, v9
+; CHECK-NEXT:    vadd.vi v9, v10, -1
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vse32.v v12, (a0)
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vmin.vx v11, v14, a4
 ; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v17, (a2)
+; CHECK-NEXT:    vse32.v v10, (a2)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vand.vv v9, v14, v15
+; CHECK-NEXT:    vand.vv v8, v8, v9
 ; CHECK-NEXT:    sw zero, 80(zero)
 ; CHECK-NEXT:    lui a2, 1
 ; CHECK-NEXT:    sh zero, -392(a2)
-; CHECK-NEXT:    vmin.vx v10, v8, a1
-; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:    vmv.v.i v11, 0
+; CHECK-NEXT:    vmin.vx v9, v11, a1
 ; CHECK-NEXT:    sh zero, 534(a2)
-; CHECK-NEXT:    vse32.v v9, (a1)
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    sh zero, 1460(a2)
 ; CHECK-NEXT:    lui a1, 2
 ; CHECK-NEXT:    sh zero, -1710(a1)
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    li a2, 24
-; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    vse32.v v11, (a2)
-; CHECK-NEXT:    vslideup.vi v8, v10, 1
+; CHECK-NEXT:    vslideup.vi v8, v9, 1
+; CHECK-NEXT:    vse32.v v10, (a2)
 ; CHECK-NEXT:    sh zero, -784(a1)
-; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    sh zero, 142(a1)
-; CHECK-NEXT:    vse32.v v11, (a2)
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vse32.v v10, (a1)
 ; CHECK-NEXT:    sh zero, 0(a0)
 ; CHECK-NEXT:    li a0, 40
-; CHECK-NEXT:    vse32.v v11, (a0)
+; CHECK-NEXT:    vse32.v v10, (a0)
 ; CHECK-NEXT:    sh zero, 0(zero)
 ; CHECK-NEXT:    ret
 entry:

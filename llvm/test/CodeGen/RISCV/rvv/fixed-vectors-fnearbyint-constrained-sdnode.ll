@@ -4,18 +4,16 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfh,+v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,RV64 %s
 
-declare <2 x half> @llvm.experimental.constrained.nearbyint.v2f16(<2 x half>, metadata, metadata)
-
 define <2 x half> @nearbyint_v2f16(<2 x half> %v) strictfp {
 ; CHECK-LABEL: nearbyint_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    slli a0, a0, 10
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
+; CHECK-NEXT:    slli a0, a0, 10
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
@@ -29,18 +27,16 @@ define <2 x half> @nearbyint_v2f16(<2 x half> %v) strictfp {
   ret <2 x half> %r
 }
 
-declare <4 x half> @llvm.experimental.constrained.nearbyint.v4f16(<4 x half>, metadata, metadata)
-
 define <4 x half> @nearbyint_v4f16(<4 x half> %v) strictfp {
 ; CHECK-LABEL: nearbyint_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    slli a0, a0, 10
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
+; CHECK-NEXT:    slli a0, a0, 10
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -54,18 +50,16 @@ define <4 x half> @nearbyint_v4f16(<4 x half> %v) strictfp {
   ret <4 x half> %r
 }
 
-declare <8 x half> @llvm.experimental.constrained.nearbyint.v8f16(<8 x half>, metadata, metadata)
-
 define <8 x half> @nearbyint_v8f16(<8 x half> %v) strictfp {
 ; CHECK-LABEL: nearbyint_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    slli a0, a0, 10
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
+; CHECK-NEXT:    slli a0, a0, 10
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -79,18 +73,16 @@ define <8 x half> @nearbyint_v8f16(<8 x half> %v) strictfp {
   ret <8 x half> %r
 }
 
-declare <16 x half> @llvm.experimental.constrained.nearbyint.v16f16(<16 x half>, metadata, metadata)
-
 define <16 x half> @nearbyint_v16f16(<16 x half> %v) strictfp {
 ; CHECK-LABEL: nearbyint_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    slli a0, a0, 10
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
+; CHECK-NEXT:    slli a0, a0, 10
 ; CHECK-NEXT:    vfabs.v v10, v8
+; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
@@ -104,19 +96,17 @@ define <16 x half> @nearbyint_v16f16(<16 x half> %v) strictfp {
   ret <16 x half> %r
 }
 
-declare <32 x half> @llvm.experimental.constrained.nearbyint.v32f16(<32 x half>, metadata, metadata)
-
 define <32 x half> @nearbyint_v32f16(<32 x half> %v) strictfp {
 ; CHECK-LABEL: nearbyint_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    slli a0, a0, 10
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    fmv.h.x fa5, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; CHECK-NEXT:    vfabs.v v12, v8
+; CHECK-NEXT:    li a0, 25
+; CHECK-NEXT:    slli a0, a0, 10
+; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -130,17 +120,15 @@ define <32 x half> @nearbyint_v32f16(<32 x half> %v) strictfp {
   ret <32 x half> %r
 }
 
-declare <2 x float> @llvm.experimental.constrained.nearbyint.v2f32(<2 x float>, metadata, metadata)
-
 define <2 x float> @nearbyint_v2f32(<2 x float> %v) strictfp {
 ; CHECK-LABEL: nearbyint_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, 307200
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -154,17 +142,15 @@ define <2 x float> @nearbyint_v2f32(<2 x float> %v) strictfp {
   ret <2 x float> %r
 }
 
-declare <4 x float> @llvm.experimental.constrained.nearbyint.v4f32(<4 x float>, metadata, metadata)
-
 define <4 x float> @nearbyint_v4f32(<4 x float> %v) strictfp {
 ; CHECK-LABEL: nearbyint_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, 307200
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
@@ -178,17 +164,15 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %v) strictfp {
   ret <4 x float> %r
 }
 
-declare <8 x float> @llvm.experimental.constrained.nearbyint.v8f32(<8 x float>, metadata, metadata)
-
 define <8 x float> @nearbyint_v8f32(<8 x float> %v) strictfp {
 ; CHECK-LABEL: nearbyint_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, 307200
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; CHECK-NEXT:    vfabs.v v10, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
@@ -202,17 +186,15 @@ define <8 x float> @nearbyint_v8f32(<8 x float> %v) strictfp {
   ret <8 x float> %r
 }
 
-declare <16 x float> @llvm.experimental.constrained.nearbyint.v16f32(<16 x float>, metadata, metadata)
-
 define <16 x float> @nearbyint_v16f32(<16 x float> %v) strictfp {
 ; CHECK-LABEL: nearbyint_v16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 307200
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; CHECK-NEXT:    vfabs.v v12, v8
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
@@ -226,17 +208,15 @@ define <16 x float> @nearbyint_v16f32(<16 x float> %v) strictfp {
   ret <16 x float> %r
 }
 
-declare <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double>, metadata, metadata)
-
 define <2 x double> @nearbyint_v2f64(<2 x double> %v) strictfp {
 ; RV32-LABEL: nearbyint_v2f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, %hi(.LCPI9_0)
-; RV32-NEXT:    fld fa5, %lo(.LCPI9_0)(a0)
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v9, v8
+; RV32-NEXT:    fld fa5, %lo(.LCPI9_0)(a0)
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    frflags a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
@@ -250,12 +230,12 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %v) strictfp {
 ; RV64-LABEL: nearbyint_v2f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 1075
-; RV64-NEXT:    slli a0, a0, 52
-; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    vmfne.vv v0, v8, v8
 ; RV64-NEXT:    vfadd.vv v8, v8, v8, v0.t
+; RV64-NEXT:    slli a0, a0, 52
 ; RV64-NEXT:    vfabs.v v9, v8
+; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    frflags a0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
@@ -269,17 +249,15 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %v) strictfp {
   ret <2 x double> %r
 }
 
-declare <4 x double> @llvm.experimental.constrained.nearbyint.v4f64(<4 x double>, metadata, metadata)
-
 define <4 x double> @nearbyint_v4f64(<4 x double> %v) strictfp {
 ; RV32-LABEL: nearbyint_v4f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, %hi(.LCPI10_0)
-; RV32-NEXT:    fld fa5, %lo(.LCPI10_0)(a0)
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v10, v8
+; RV32-NEXT:    fld fa5, %lo(.LCPI10_0)(a0)
 ; RV32-NEXT:    vmflt.vf v0, v10, fa5
 ; RV32-NEXT:    frflags a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
@@ -293,12 +271,12 @@ define <4 x double> @nearbyint_v4f64(<4 x double> %v) strictfp {
 ; RV64-LABEL: nearbyint_v4f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 1075
-; RV64-NEXT:    slli a0, a0, 52
-; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV64-NEXT:    vmfne.vv v0, v8, v8
 ; RV64-NEXT:    vfadd.vv v8, v8, v8, v0.t
+; RV64-NEXT:    slli a0, a0, 52
 ; RV64-NEXT:    vfabs.v v10, v8
+; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vmflt.vf v0, v10, fa5
 ; RV64-NEXT:    frflags a0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
@@ -312,17 +290,15 @@ define <4 x double> @nearbyint_v4f64(<4 x double> %v) strictfp {
   ret <4 x double> %r
 }
 
-declare <8 x double> @llvm.experimental.constrained.nearbyint.v8f64(<8 x double>, metadata, metadata)
-
 define <8 x double> @nearbyint_v8f64(<8 x double> %v) strictfp {
 ; RV32-LABEL: nearbyint_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(.LCPI11_0)
-; RV32-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v12, v8
+; RV32-NEXT:    lui a0, %hi(.LCPI11_0)
+; RV32-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32-NEXT:    frflags a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
@@ -335,13 +311,13 @@ define <8 x double> @nearbyint_v8f64(<8 x double> %v) strictfp {
 ;
 ; RV64-LABEL: nearbyint_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 1075
-; RV64-NEXT:    slli a0, a0, 52
-; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vmfne.vv v0, v8, v8
 ; RV64-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV64-NEXT:    vfabs.v v12, v8
+; RV64-NEXT:    li a0, 1075
+; RV64-NEXT:    slli a0, a0, 52
+; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64-NEXT:    frflags a0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, ma

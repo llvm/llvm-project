@@ -8,9 +8,9 @@ define float @add_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: add_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    vfredusum.vs v8, v8, v10
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vfredusum.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %a)
@@ -24,15 +24,15 @@ define float @fmul_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vslidedown.vi v11, v9, 2
 ; CHECK-NEXT:    vfmul.vv v8, v8, v10
+; CHECK-NEXT:    vslidedown.vi v10, v9, 2
+; CHECK-NEXT:    vfmul.vv v9, v9, v10
 ; CHECK-NEXT:    vrgather.vi v10, v8, 1
-; CHECK-NEXT:    vfmul.vv v9, v9, v11
-; CHECK-NEXT:    vrgather.vi v11, v9, 1
 ; CHECK-NEXT:    vfmul.vv v8, v8, v10
+; CHECK-NEXT:    vrgather.vi v10, v9, 1
+; CHECK-NEXT:    vfmul.vv v9, v9, v10
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    vfmul.vv v8, v9, v11
-; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    vfmv.f.s fa4, v9
 ; CHECK-NEXT:    fmul.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %a)
@@ -68,7 +68,6 @@ define float @fmax_f32(<4 x float> %a, <4 x float> %b) {
   %r = call float @llvm.maxnum.f32(float %r1, float %r2)
   ret float %r
 }
-
 
 define i32 @add_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: add_i32:
@@ -261,24 +260,3 @@ define i32 @smax_i32(<4 x i32> %a, <4 x i32> %b) {
   ret i32 %r
 }
 
-declare float @llvm.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
-declare float @llvm.vector.reduce.fmul.f32.v4f32(float, <4 x float>)
-declare float @llvm.vector.reduce.fmin.v4f32(<4 x float>)
-declare float @llvm.vector.reduce.fmax.v4f32(<4 x float>)
-declare i32 @llvm.vector.reduce.add.i32.v4i32(<4 x i32>)
-declare i16 @llvm.vector.reduce.add.i16.v32i16(<32 x i16>)
-declare i16 @llvm.vector.reduce.add.i16.v16i16(<16 x i16>)
-declare i32 @llvm.vector.reduce.mul.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.and.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.or.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.xor.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.umin.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.umax.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.smin.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.smax.i32.v4i32(<4 x i32>)
-declare float @llvm.minnum.f32(float, float)
-declare float @llvm.maxnum.f32(float, float)
-declare i32 @llvm.umin.i32(i32, i32)
-declare i32 @llvm.umax.i32(i32, i32)
-declare i32 @llvm.smin.i32(i32, i32)
-declare i32 @llvm.smax.i32(i32, i32)

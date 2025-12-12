@@ -10,11 +10,11 @@
 define {<3 x i32>, <3 x i32>} @load_factor2_v3(ptr %ptr) {
 ; CHECK-LABEL: load_factor2_v3:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v10, (a0)
-; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wx v9, v10, a0
+; CHECK-NEXT:    vnsrl.wx v9, v10, a1
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0
 ; CHECK-NEXT:    ret
   %interleaved.vec = load <6 x i32>, ptr %ptr
@@ -534,61 +534,69 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    mul a2, a2, a3
 ; RV32-NEXT:    sub sp, sp, a2
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0xd8, 0x00, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 88 * vlenb
-; RV32-NEXT:    addi a3, a1, 256
 ; RV32-NEXT:    li a2, 32
+; RV32-NEXT:    addi a3, a1, 256
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vle32.v v24, (a3)
+; RV32-NEXT:    vle32.v v16, (a3)
 ; RV32-NEXT:    csrr a3, vlenb
 ; RV32-NEXT:    slli a3, a3, 6
 ; RV32-NEXT:    add a3, sp, a3
 ; RV32-NEXT:    addi a3, a3, 16
-; RV32-NEXT:    vs8r.v v24, (a3) # vscale x 64-byte Folded Spill
+; RV32-NEXT:    vs8r.v v16, (a3) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v24, 16
+; RV32-NEXT:    vslidedown.vi v8, v16, 16
 ; RV32-NEXT:    csrr a3, vlenb
 ; RV32-NEXT:    li a4, 72
 ; RV32-NEXT:    mul a3, a3, a4
 ; RV32-NEXT:    add a3, sp, a3
 ; RV32-NEXT:    addi a3, a3, 16
-; RV32-NEXT:    vs8r.v v16, (a3) # vscale x 64-byte Folded Spill
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
-; RV32-NEXT:    vslideup.vi v8, v24, 4
-; RV32-NEXT:    lui a3, 12
-; RV32-NEXT:    vmv.s.x v24, a3
-; RV32-NEXT:    vmv1r.v v0, v24
-; RV32-NEXT:    vslideup.vi v8, v16, 10, v0.t
-; RV32-NEXT:    csrr a4, vlenb
-; RV32-NEXT:    li a5, 52
-; RV32-NEXT:    mul a4, a4, a5
-; RV32-NEXT:    add a4, sp, a4
-; RV32-NEXT:    addi a4, a4, 16
-; RV32-NEXT:    vs4r.v v8, (a4) # vscale x 32-byte Folded Spill
-; RV32-NEXT:    lui a4, 12291
-; RV32-NEXT:    addi a4, a4, 3
-; RV32-NEXT:    vmv.s.x v0, a4
-; RV32-NEXT:    addi a4, a1, 128
+; RV32-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a1)
+; RV32-NEXT:    csrr a3, vlenb
+; RV32-NEXT:    li a4, 80
+; RV32-NEXT:    mul a3, a3, a4
+; RV32-NEXT:    add a3, sp, a3
+; RV32-NEXT:    addi a3, a3, 16
+; RV32-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV32-NEXT:    vslideup.vi v8, v16, 4
+; RV32-NEXT:    lui a3, 12
+; RV32-NEXT:    vmv.s.x v0, a3
+; RV32-NEXT:    addi a1, a1, 128
+; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; RV32-NEXT:    vle32.v v16, (a1)
 ; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    li a5, 80
-; RV32-NEXT:    mul a1, a1, a5
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; RV32-NEXT:    vle32.v v16, (a4)
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    li a4, 56
+; RV32-NEXT:    li a4, 72
 ; RV32-NEXT:    mul a1, a1, a4
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; RV32-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
+; RV32-NEXT:    vslideup.vi v8, v24, 10, v0.t
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    li a4, 52
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    add a1, sp, a1
+; RV32-NEXT:    addi a1, a1, 16
+; RV32-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
+; RV32-NEXT:    lui a1, 12291
+; RV32-NEXT:    addi a1, a1, 3
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a4, 80
 ; RV32-NEXT:    mul a1, a1, a4
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV32-NEXT:    vmerge.vvm v8, v16, v8, v0
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    li a4, 56
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    add a1, sp, a1
+; RV32-NEXT:    addi a1, a1, 16
+; RV32-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    lui a1, %hi(.LCPI27_0)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI27_0)
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
@@ -604,22 +612,23 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    slli a1, a1, 6
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
-; RV32-NEXT:    vslideup.vi v8, v16, 2
-; RV32-NEXT:    vmv1r.v v0, v24
+; RV32-NEXT:    vslideup.vi v28, v24, 2
+; RV32-NEXT:    vmv.s.x v0, a3
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a4, 72
 ; RV32-NEXT:    mul a1, a1, a4
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    vslideup.vi v8, v16, 8, v0.t
+; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vslideup.vi v28, v8, 8, v0.t
 ; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 5
+; RV32-NEXT:    li a4, 24
+; RV32-NEXT:    mul a1, a1, a4
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
+; RV32-NEXT:    vs4r.v v28, (a1) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    lui a1, 49164
 ; RV32-NEXT:    addi a1, a1, 12
 ; RV32-NEXT:    vmv.s.x v0, a1
@@ -629,25 +638,19 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    li a4, 56
-; RV32-NEXT:    mul a1, a1, a4
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV32-NEXT:    vmerge.vvm v8, v16, v8, v0
 ; RV32-NEXT:    lui a1, %hi(.LCPI27_1)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI27_1)
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vle16.v v2, (a1)
-; RV32-NEXT:    vrgatherei16.vv v24, v8, v2
+; RV32-NEXT:    vrgatherei16.vv v16, v8, v2
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a4, 36
 ; RV32-NEXT:    mul a1, a1, a4
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
+; RV32-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    lui a1, 3
 ; RV32-NEXT:    addi a1, a1, 3
 ; RV32-NEXT:    vmv.s.x v0, a1
@@ -656,14 +659,9 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    mul a1, a1, a4
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 6
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32-NEXT:    vmerge.vvm v8, v8, v24, v0
+; RV32-NEXT:    vmerge.vvm v8, v16, v24, v0
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a4, 12
 ; RV32-NEXT:    mul a1, a1, a4
@@ -679,30 +677,38 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    li a4, 56
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    add a1, sp, a1
+; RV32-NEXT:    addi a1, a1, 16
+; RV32-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vmerge.vvm v16, v16, v8, v0
+; RV32-NEXT:    vmerge.vvm v8, v24, v8, v0
 ; RV32-NEXT:    lui a1, %hi(.LCPI27_3)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI27_3)
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vle16.v v2, (a1)
-; RV32-NEXT:    vrgatherei16.vv v8, v16, v2
+; RV32-NEXT:    vrgatherei16.vv v24, v8, v2
 ; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    li a4, 24
+; RV32-NEXT:    li a4, 28
 ; RV32-NEXT:    mul a1, a1, a4
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; RV32-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    addi a3, a3, 12
 ; RV32-NEXT:    vmv.s.x v0, a3
 ; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    li a3, 72
-; RV32-NEXT:    mul a1, a1, a3
+; RV32-NEXT:    slli a1, a1, 6
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32-NEXT:    vmerge.vvm v8, v8, v24, v0
-; RV32-NEXT:    addi a1, sp, 16
+; RV32-NEXT:    vmerge.vvm v8, v16, v8, v0
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    slli a1, a1, 3
+; RV32-NEXT:    add a1, sp, a1
+; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    lui a1, 786624
 ; RV32-NEXT:    addi a1, a1, 192
@@ -718,9 +724,9 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    mul a1, a1, a3
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vmerge.vvm v16, v16, v8, v0
+; RV32-NEXT:    vmerge.vvm v16, v24, v8, v0
 ; RV32-NEXT:    lui a1, %hi(.LCPI27_5)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI27_5)
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
@@ -734,18 +740,18 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    li a1, 48
 ; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    li a3, 72
-; RV32-NEXT:    mul a1, a1, a3
+; RV32-NEXT:    slli a1, a1, 6
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 6
+; RV32-NEXT:    li a3, 72
+; RV32-NEXT:    mul a1, a1, a3
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32-NEXT:    vmerge.vvm v4, v8, v16, v0
+; RV32-NEXT:    vmerge.vvm v4, v16, v8, v0
 ; RV32-NEXT:    lui a1, 768
 ; RV32-NEXT:    addi a1, a1, 768
 ; RV32-NEXT:    vmv.s.x v0, a1
@@ -755,12 +761,6 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    li a3, 56
-; RV32-NEXT:    mul a1, a1, a3
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV32-NEXT:    vmerge.vvm v8, v24, v8, v0
 ; RV32-NEXT:    lui a1, %hi(.LCPI27_7)
@@ -768,26 +768,23 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vle16.v v2, (a1)
 ; RV32-NEXT:    vrgatherei16.vv v16, v8, v2
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 2
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
+; RV32-NEXT:    addi a1, sp, 16
 ; RV32-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    li a1, 192
 ; RV32-NEXT:    vmv.s.x v0, a1
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    slli a1, a1, 6
+; RV32-NEXT:    add a1, sp, a1
+; RV32-NEXT:    addi a1, a1, 16
+; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a3, 72
 ; RV32-NEXT:    mul a1, a1, a3
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 6
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32-NEXT:    vmerge.vvm v8, v8, v16, v0
+; RV32-NEXT:    vmerge.vvm v8, v16, v8, v0
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a3, 72
 ; RV32-NEXT:    mul a1, a1, a3
@@ -824,7 +821,10 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    lui a1, %hi(.LCPI27_4)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI27_4)
 ; RV32-NEXT:    vle16.v v20, (a1)
-; RV32-NEXT:    addi a1, sp, 16
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    slli a1, a1, 3
+; RV32-NEXT:    add a1, sp, a1
+; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vl4r.v v24, (a1) # vscale x 32-byte Folded Reload
 ; RV32-NEXT:    vrgatherei16.vv v16, v24, v20
 ; RV32-NEXT:    lui a1, %hi(.LCPI27_6)
@@ -841,65 +841,69 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vl4r.v v24, (a1) # vscale x 32-byte Folded Reload
 ; RV32-NEXT:    vrgatherei16.vv v0, v24, v7
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 5
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl4r.v v4, (a1) # vscale x 32-byte Folded Reload
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    li a2, 36
-; RV32-NEXT:    mul a1, a1, a2
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    vsetivli zero, 12, e32, m4, tu, ma
-; RV32-NEXT:    vmv.v.v v4, v24
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    li a2, 24
-; RV32-NEXT:    mul a1, a1, a2
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetivli zero, 10, e32, m4, tu, ma
-; RV32-NEXT:    vmv.v.v v12, v24
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 4
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    vmv.v.v v16, v24
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 2
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    vmv.v.v v20, v24
 ; RV32-NEXT:    vmv.v.v v0, v8
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    li a2, 52
-; RV32-NEXT:    mul a1, a1, a2
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl4r.v v8, (a1) # vscale x 32-byte Folded Reload
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    li a2, 44
-; RV32-NEXT:    mul a1, a1, a2
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    vsetivli zero, 12, e32, m4, tu, ma
-; RV32-NEXT:    vmv.v.v v8, v24
 ; RV32-NEXT:    addi a1, a0, 320
+; RV32-NEXT:    addi a2, sp, 16
+; RV32-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vmv.v.v v20, v24
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vse32.v v0, (a1)
 ; RV32-NEXT:    addi a1, a0, 256
+; RV32-NEXT:    csrr a2, vlenb
+; RV32-NEXT:    slli a2, a2, 4
+; RV32-NEXT:    add a2, sp, a2
+; RV32-NEXT:    addi a2, a2, 16
+; RV32-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vsetivli zero, 10, e32, m4, tu, ma
+; RV32-NEXT:    vmv.v.v v16, v24
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vse32.v v20, (a1)
 ; RV32-NEXT:    addi a1, a0, 192
+; RV32-NEXT:    csrr a2, vlenb
+; RV32-NEXT:    li a3, 28
+; RV32-NEXT:    mul a2, a2, a3
+; RV32-NEXT:    add a2, sp, a2
+; RV32-NEXT:    addi a2, a2, 16
+; RV32-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vsetivli zero, 10, e32, m4, tu, ma
+; RV32-NEXT:    vmv.v.v v12, v24
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vse32.v v16, (a1)
 ; RV32-NEXT:    addi a1, a0, 128
+; RV32-NEXT:    csrr a2, vlenb
+; RV32-NEXT:    li a3, 36
+; RV32-NEXT:    mul a2, a2, a3
+; RV32-NEXT:    add a2, sp, a2
+; RV32-NEXT:    addi a2, a2, 16
+; RV32-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    csrr a2, vlenb
+; RV32-NEXT:    li a3, 24
+; RV32-NEXT:    mul a2, a2, a3
+; RV32-NEXT:    add a2, sp, a2
+; RV32-NEXT:    addi a2, a2, 16
+; RV32-NEXT:    vl4r.v v24, (a2) # vscale x 32-byte Folded Reload
+; RV32-NEXT:    vsetivli zero, 12, e32, m4, tu, ma
+; RV32-NEXT:    vmv.v.v v24, v16
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vse32.v v12, (a1)
 ; RV32-NEXT:    addi a1, a0, 64
-; RV32-NEXT:    vse32.v v4, (a1)
+; RV32-NEXT:    csrr a2, vlenb
+; RV32-NEXT:    li a3, 52
+; RV32-NEXT:    mul a2, a2, a3
+; RV32-NEXT:    add a2, sp, a2
+; RV32-NEXT:    addi a2, a2, 16
+; RV32-NEXT:    vl4r.v v8, (a2) # vscale x 32-byte Folded Reload
+; RV32-NEXT:    csrr a2, vlenb
+; RV32-NEXT:    li a3, 44
+; RV32-NEXT:    mul a2, a2, a3
+; RV32-NEXT:    add a2, sp, a2
+; RV32-NEXT:    addi a2, a2, 16
+; RV32-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vsetivli zero, 12, e32, m4, tu, ma
+; RV32-NEXT:    vmv.v.v v8, v16
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV32-NEXT:    vse32.v v24, (a1)
 ; RV32-NEXT:    vse32.v v8, (a0)
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 88
@@ -915,255 +919,252 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    li a3, 81
+; RV64-NEXT:    li a3, 76
 ; RV64-NEXT:    mul a2, a2, a3
 ; RV64-NEXT:    sub sp, sp, a2
-; RV64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0xd1, 0x00, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 81 * vlenb
+; RV64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0xcc, 0x00, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 76 * vlenb
 ; RV64-NEXT:    addi a2, a1, 256
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v16, (a2)
 ; RV64-NEXT:    vsetivli zero, 8, e64, m8, ta, ma
-; RV64-NEXT:    vslidedown.vi v24, v16, 8
+; RV64-NEXT:    vslidedown.vi v8, v16, 8
 ; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    li a3, 57
+; RV64-NEXT:    li a3, 52
 ; RV64-NEXT:    mul a2, a2, a3
 ; RV64-NEXT:    add a2, sp, a2
 ; RV64-NEXT:    addi a2, a2, 16
-; RV64-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vle64.v v8, (a1)
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 68
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v16, 2
 ; RV64-NEXT:    li a2, 128
 ; RV64-NEXT:    vmv.s.x v22, a2
-; RV64-NEXT:    vmv1r.v v0, v22
-; RV64-NEXT:    vslideup.vi v8, v24, 5, v0.t
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    li a3, 49
-; RV64-NEXT:    mul a2, a2, a3
-; RV64-NEXT:    add a2, sp, a2
-; RV64-NEXT:    addi a2, a2, 16
-; RV64-NEXT:    vs4r.v v8, (a2) # vscale x 32-byte Folded Spill
-; RV64-NEXT:    lui a2, 1
-; RV64-NEXT:    addi a3, a2, 65
-; RV64-NEXT:    vmv.s.x v0, a3
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV64-NEXT:    vle64.v v8, (a1)
-; RV64-NEXT:    csrr a3, vlenb
-; RV64-NEXT:    li a4, 73
-; RV64-NEXT:    mul a3, a3, a4
-; RV64-NEXT:    add a3, sp, a3
-; RV64-NEXT:    addi a3, a3, 16
-; RV64-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
 ; RV64-NEXT:    addi a1, a1, 128
-; RV64-NEXT:    vle64.v v8, (a1)
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vle64.v v24, (a1)
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a3, a1, 6
-; RV64-NEXT:    add a1, a3, a1
+; RV64-NEXT:    li a2, 60
+; RV64-NEXT:    mul a1, a1, a2
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; RV64-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
+; RV64-NEXT:    vmv1r.v v0, v22
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 73
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a3, a1, 6
-; RV64-NEXT:    add a1, a3, a1
+; RV64-NEXT:    li a2, 52
+; RV64-NEXT:    mul a1, a1, a2
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
 ; RV64-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    vmerge.vvm v8, v24, v8, v0
-; RV64-NEXT:    lui a1, %hi(.LCPI27_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI27_0)
-; RV64-NEXT:    vle16.v v20, (a1)
-; RV64-NEXT:    vrgatherei16.vv v0, v8, v20
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vslideup.vi v8, v24, 5, v0.t
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 41
-; RV64-NEXT:    mul a1, a1, a3
+; RV64-NEXT:    li a2, 48
+; RV64-NEXT:    mul a1, a1, a2
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
+; RV64-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
+; RV64-NEXT:    lui a1, 1
+; RV64-NEXT:    addi a2, a1, 65
+; RV64-NEXT:    vmv.s.x v0, a2
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 68
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v8, (a2) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 60
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vmerge.vvm v8, v24, v8, v0
+; RV64-NEXT:    lui a2, %hi(.LCPI27_0)
+; RV64-NEXT:    addi a2, a2, %lo(.LCPI27_0)
+; RV64-NEXT:    vle16.v v20, (a2)
+; RV64-NEXT:    vrgatherei16.vv v0, v8, v20
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 40
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vs8r.v v0, (a2) # vscale x 64-byte Folded Spill
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vslideup.vi v8, v16, 1
 ; RV64-NEXT:    vmv1r.v v0, v22
 ; RV64-NEXT:    vmv1r.v v5, v22
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 57
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 52
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    vslideup.vi v8, v24, 4, v0.t
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 37
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
-; RV64-NEXT:    lui a1, 2
-; RV64-NEXT:    addi a1, a1, 130
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 73
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a3, a1, 6
-; RV64-NEXT:    add a1, a3, a1
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 36
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vs4r.v v8, (a2) # vscale x 32-byte Folded Spill
+; RV64-NEXT:    lui a2, 2
+; RV64-NEXT:    addi a2, a2, 130
+; RV64-NEXT:    vmv.s.x v0, a2
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 68
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v8, (a2) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 60
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vmerge.vvm v8, v24, v8, v0
-; RV64-NEXT:    lui a1, %hi(.LCPI27_1)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI27_1)
-; RV64-NEXT:    vle16.v v20, (a1)
+; RV64-NEXT:    lui a2, %hi(.LCPI27_1)
+; RV64-NEXT:    addi a2, a2, %lo(.LCPI27_1)
+; RV64-NEXT:    vle16.v v20, (a2)
 ; RV64-NEXT:    vrgatherei16.vv v24, v8, v20
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 29
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; RV64-NEXT:    lui a1, 4
-; RV64-NEXT:    addi a1, a1, 260
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 73
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a3, a1, 6
-; RV64-NEXT:    add a1, a3, a1
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 28
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
+; RV64-NEXT:    lui a2, 4
+; RV64-NEXT:    addi a2, a2, 260
+; RV64-NEXT:    vmv.s.x v0, a2
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 68
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v8, (a2) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 60
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    vmerge.vvm v8, v24, v8, v0
-; RV64-NEXT:    lui a1, %hi(.LCPI27_2)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI27_2)
-; RV64-NEXT:    vle16.v v20, (a1)
+; RV64-NEXT:    lui a2, %hi(.LCPI27_2)
+; RV64-NEXT:    addi a2, a2, %lo(.LCPI27_2)
+; RV64-NEXT:    vle16.v v20, (a2)
 ; RV64-NEXT:    vrgatherei16.vv v24, v8, v20
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 21
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; RV64-NEXT:    li a1, 32
-; RV64-NEXT:    vmv.s.x v2, a1
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 20
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
+; RV64-NEXT:    li a2, 32
+; RV64-NEXT:    vmv.s.x v2, a2
 ; RV64-NEXT:    vmv4r.v v8, v16
 ; RV64-NEXT:    vmv1r.v v0, v2
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vslideup.vi v8, v16, 5, v0.t
 ; RV64-NEXT:    vslidedown.vi v20, v16, 1
 ; RV64-NEXT:    vmv1r.v v0, v5
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 57
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 52
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    vrgather.vi v8, v24, 4, v0.t
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a3, a1, 4
-; RV64-NEXT:    add a1, a3, a1
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    slli a2, a2, 4
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vs4r.v v8, (a2) # vscale x 32-byte Folded Spill
 ; RV64-NEXT:    vmv1r.v v0, v2
 ; RV64-NEXT:    vslideup.vi v20, v16, 4, v0.t
 ; RV64-NEXT:    vmv1r.v v0, v5
 ; RV64-NEXT:    vrgather.vi v20, v24, 5, v0.t
-; RV64-NEXT:    lui a1, 8
-; RV64-NEXT:    addi a1, a1, 520
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 73
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a3, a1, 6
-; RV64-NEXT:    add a1, a3, a1
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    lui a2, 8
+; RV64-NEXT:    addi a2, a2, 520
+; RV64-NEXT:    vmv.s.x v0, a2
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 68
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v8, (a2) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 60
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vmerge.vvm v8, v24, v8, v0
-; RV64-NEXT:    lui a1, %hi(.LCPI27_3)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI27_3)
-; RV64-NEXT:    vle16.v v6, (a1)
+; RV64-NEXT:    lui a2, %hi(.LCPI27_3)
+; RV64-NEXT:    addi a2, a2, %lo(.LCPI27_3)
+; RV64-NEXT:    vle16.v v6, (a2)
 ; RV64-NEXT:    vrgatherei16.vv v24, v8, v6
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a3, a1, 3
-; RV64-NEXT:    add a1, a3, a1
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 57
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    slli a2, a2, 3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 52
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vslideup.vi v8, v24, 6
 ; RV64-NEXT:    vmv1r.v v0, v5
 ; RV64-NEXT:    vslideup.vi v8, v24, 1, v0.t
 ; RV64-NEXT:    vrgather.vi v12, v16, 2
-; RV64-NEXT:    li a1, 192
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs1r.v v0, (a1) # vscale x 8-byte Folded Spill
-; RV64-NEXT:    vmerge.vvm v8, v12, v8, v0
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 53
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
-; RV64-NEXT:    li a1, 1040
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a3, 73
-; RV64-NEXT:    mul a1, a1, a3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a3, a1, 6
-; RV64-NEXT:    add a1, a3, a1
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    li a2, 192
+; RV64-NEXT:    vmv.s.x v3, a2
+; RV64-NEXT:    vmv1r.v v0, v3
+; RV64-NEXT:    vmerge.vvm v4, v12, v8, v0
+; RV64-NEXT:    li a2, 1040
+; RV64-NEXT:    vmv.s.x v0, a2
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 68
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v8, (a2) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 60
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vmerge.vvm v8, v24, v8, v0
-; RV64-NEXT:    lui a1, %hi(.LCPI27_4)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI27_4)
-; RV64-NEXT:    vle16.v v0, (a1)
+; RV64-NEXT:    lui a2, %hi(.LCPI27_4)
+; RV64-NEXT:    addi a2, a2, %lo(.LCPI27_4)
+; RV64-NEXT:    vle16.v v0, (a2)
 ; RV64-NEXT:    vrgatherei16.vv v24, v8, v0
-; RV64-NEXT:    addi a1, sp, 16
-; RV64-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; RV64-NEXT:    addi a1, a2, -2016
+; RV64-NEXT:    addi a2, sp, 16
+; RV64-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
+; RV64-NEXT:    addi a1, a1, -2016
 ; RV64-NEXT:    vmv.s.x v0, a1
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a2, 73
+; RV64-NEXT:    li a2, 68
 ; RV64-NEXT:    mul a1, a1, a2
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
 ; RV64-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a2, a1, 6
-; RV64-NEXT:    add a1, a2, a1
+; RV64-NEXT:    li a2, 60
+; RV64-NEXT:    mul a1, a1, a2
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
 ; RV64-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
@@ -1173,7 +1174,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vle16.v v0, (a1)
 ; RV64-NEXT:    vrgatherei16.vv v24, v8, v0
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a2, 73
+; RV64-NEXT:    li a2, 68
 ; RV64-NEXT:    mul a1, a1, a2
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
@@ -1181,7 +1182,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    li a1, 64
 ; RV64-NEXT:    vmv.s.x v0, a1
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a2, 57
+; RV64-NEXT:    li a2, 52
 ; RV64-NEXT:    mul a1, a1, a2
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
@@ -1189,106 +1190,86 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vmv4r.v v8, v24
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vslideup.vi v8, v24, 5, v0.t
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a2, 37
-; RV64-NEXT:    mul a1, a1, a2
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl4r.v v24, (a1) # vscale x 32-byte Folded Reload
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a2, 29
-; RV64-NEXT:    mul a1, a1, a2
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    vsetivli zero, 6, e64, m4, tu, ma
-; RV64-NEXT:    vmv.v.v v24, v0
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a2, a1, 4
-; RV64-NEXT:    add a1, a2, a1
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl4r.v v28, (a1) # vscale x 32-byte Folded Reload
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a2, 21
-; RV64-NEXT:    mul a1, a1, a2
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    vsetivli zero, 5, e64, m4, tu, ma
-; RV64-NEXT:    vmv.v.v v28, v0
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a2, a1, 3
-; RV64-NEXT:    add a1, a2, a1
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    vmv.v.v v20, v0
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a2, 53
-; RV64-NEXT:    mul a1, a1, a2
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl4r.v v12, (a1) # vscale x 32-byte Folded Reload
-; RV64-NEXT:    addi a1, sp, 16
-; RV64-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    vmv.v.v v12, v0
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a2, 53
-; RV64-NEXT:    mul a1, a1, a2
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs4r.v v12, (a1) # vscale x 32-byte Folded Spill
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vrgather.vi v12, v16, 3
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl1r.v v0, (a1) # vscale x 8-byte Folded Reload
+; RV64-NEXT:    vmv1r.v v0, v3
 ; RV64-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a2, 73
+; RV64-NEXT:    li a2, 68
 ; RV64-NEXT:    mul a1, a1, a2
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    vsetivli zero, 5, e64, m4, tu, ma
-; RV64-NEXT:    vmv.v.v v8, v0
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a2, 49
-; RV64-NEXT:    mul a1, a1, a2
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl4r.v v12, (a1) # vscale x 32-byte Folded Reload
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    li a2, 41
-; RV64-NEXT:    mul a1, a1, a2
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    vsetivli zero, 6, e64, m4, tu, ma
-; RV64-NEXT:    vmv.v.v v12, v0
+; RV64-NEXT:    vmv.v.v v8, v24
 ; RV64-NEXT:    addi a1, a0, 320
+; RV64-NEXT:    addi a2, sp, 16
+; RV64-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    vmv.v.v v4, v24
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a1)
 ; RV64-NEXT:    addi a1, a0, 256
 ; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    li a3, 53
+; RV64-NEXT:    slli a2, a2, 3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v8, (a2) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    vsetivli zero, 5, e64, m4, tu, ma
+; RV64-NEXT:    vmv.v.v v20, v8
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vse64.v v4, (a1)
+; RV64-NEXT:    addi a1, a0, 192
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 20
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v8, (a2) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    slli a2, a2, 4
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl4r.v v24, (a2) # vscale x 32-byte Folded Reload
+; RV64-NEXT:    vsetivli zero, 5, e64, m4, tu, ma
+; RV64-NEXT:    vmv.v.v v24, v8
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vse64.v v20, (a1)
+; RV64-NEXT:    addi a1, a0, 128
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 36
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl4r.v v12, (a2) # vscale x 32-byte Folded Reload
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 28
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    vsetivli zero, 6, e64, m4, tu, ma
+; RV64-NEXT:    vmv.v.v v12, v16
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vse64.v v24, (a1)
+; RV64-NEXT:    addi a1, a0, 64
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 48
 ; RV64-NEXT:    mul a2, a2, a3
 ; RV64-NEXT:    add a2, sp, a2
 ; RV64-NEXT:    addi a2, a2, 16
 ; RV64-NEXT:    vl4r.v v8, (a2) # vscale x 32-byte Folded Reload
-; RV64-NEXT:    vse64.v v8, (a1)
-; RV64-NEXT:    addi a1, a0, 192
-; RV64-NEXT:    vse64.v v20, (a1)
-; RV64-NEXT:    addi a1, a0, 128
-; RV64-NEXT:    vse64.v v28, (a1)
-; RV64-NEXT:    addi a1, a0, 64
-; RV64-NEXT:    vse64.v v24, (a1)
-; RV64-NEXT:    vse64.v v12, (a0)
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 40
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    vsetivli zero, 6, e64, m4, tu, ma
+; RV64-NEXT:    vmv.v.v v8, v16
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vse64.v v12, (a1)
+; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    li a1, 81
+; RV64-NEXT:    li a1, 76
 ; RV64-NEXT:    mul a0, a0, a1
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    .cfi_def_cfa sp, 16
@@ -1645,8 +1626,8 @@ define <4 x i32> @load_factor5_one_active(ptr %ptr) {
 define <2 x i16> @load_factor6_one_active(ptr %ptr) {
 ; CHECK-LABEL: load_factor6_one_active:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, 10
 ; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    addi a0, a0, 10
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlse16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
@@ -1658,8 +1639,8 @@ define <2 x i16> @load_factor6_one_active(ptr %ptr) {
 define <4 x i8> @load_factor7_one_active(ptr %ptr) vscale_range(8,1024) {
 ; CHECK-LABEL: load_factor7_one_active:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    li a1, 7
+; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
 ; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
@@ -1851,9 +1832,9 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_mask(ptr %ptr) {
 ; RV32-NEXT:    addi a1, a1, -43
 ; RV32-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    li a1, 73
-; RV32-NEXT:    vmv.s.x v10, a1
 ; RV32-NEXT:    vle32.v v12, (a0), v0.t
+; RV32-NEXT:    li a0, 73
+; RV32-NEXT:    vmv.s.x v10, a0
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vcompress.vm v8, v12, v10
 ; RV32-NEXT:    li a0, 146
@@ -1882,9 +1863,9 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_mask(ptr %ptr) {
 ; RV64-NEXT:    addi a1, a1, -43
 ; RV64-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
 ; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    li a1, 73
-; RV64-NEXT:    vmv.s.x v10, a1
 ; RV64-NEXT:    vle32.v v12, (a0), v0.t
+; RV64-NEXT:    li a0, 73
+; RV64-NEXT:    vmv.s.x v10, a0
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-NEXT:    vcompress.vm v8, v12, v10
 ; RV64-NEXT:    li a0, 146
@@ -1921,10 +1902,10 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_mask(ptr %ptr) {
 define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_evl(ptr %ptr) {
 ; RV32-LABEL: invalid_vp_evl:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 73
 ; RV32-NEXT:    vsetivli zero, 10, e32, m4, ta, ma
-; RV32-NEXT:    vmv.s.x v10, a1
 ; RV32-NEXT:    vle32.v v12, (a0)
+; RV32-NEXT:    li a0, 73
+; RV32-NEXT:    vmv.s.x v10, a0
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vcompress.vm v8, v12, v10
 ; RV32-NEXT:    li a0, 146
@@ -1949,10 +1930,10 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_evl(ptr %ptr) {
 ;
 ; RV64-LABEL: invalid_vp_evl:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 73
 ; RV64-NEXT:    vsetivli zero, 10, e32, m4, ta, ma
-; RV64-NEXT:    vmv.s.x v10, a1
 ; RV64-NEXT:    vle32.v v12, (a0)
+; RV64-NEXT:    li a0, 73
+; RV64-NEXT:    vmv.s.x v10, a0
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-NEXT:    vcompress.vm v8, v12, v10
 ; RV64-NEXT:    li a0, 146
@@ -2184,9 +2165,9 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_invalid_skip_field(
 ; RV32-NEXT:    addi a1, a1, -1171
 ; RV32-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    li a1, 73
-; RV32-NEXT:    vmv.s.x v10, a1
 ; RV32-NEXT:    vle32.v v12, (a0), v0.t
+; RV32-NEXT:    li a0, 73
+; RV32-NEXT:    vmv.s.x v10, a0
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vcompress.vm v8, v12, v10
 ; RV32-NEXT:    li a0, 146
@@ -2215,9 +2196,9 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_invalid_skip_field(
 ; RV64-NEXT:    addi a1, a1, -1171
 ; RV64-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
 ; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    li a1, 73
-; RV64-NEXT:    vmv.s.x v10, a1
 ; RV64-NEXT:    vle32.v v12, (a0), v0.t
+; RV64-NEXT:    li a0, 73
+; RV64-NEXT:    vmv.s.x v10, a0
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-NEXT:    vcompress.vm v8, v12, v10
 ; RV64-NEXT:    li a0, 146

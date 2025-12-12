@@ -5,9 +5,9 @@
 define <vscale x 8 x i64> @vwsub_wv_mask_v8i32(<vscale x 8 x i32> %x, <vscale x 8 x i64> %y) {
 ; CHECK-LABEL: vwsub_wv_mask_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 42
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv4r.v v24, v8
+; CHECK-NEXT:    li a0, 42
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, tu, mu
@@ -23,9 +23,9 @@ define <vscale x 8 x i64> @vwsub_wv_mask_v8i32(<vscale x 8 x i32> %x, <vscale x 
 define <vscale x 8 x i64> @vwsubu_wv_mask_v8i32(<vscale x 8 x i32> %x, <vscale x 8 x i64> %y) {
 ; CHECK-LABEL: vwsubu_wv_mask_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 42
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv4r.v v24, v8
+; CHECK-NEXT:    li a0, 42
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, tu, mu

@@ -30,7 +30,6 @@ define <vscale x 1 x i8> @ctpop_nxv1i8(<vscale x 1 x i8> %va) {
   %a = call <vscale x 1 x i8> @llvm.ctpop.nxv1i8(<vscale x 1 x i8> %va)
   ret <vscale x 1 x i8> %a
 }
-declare <vscale x 1 x i8> @llvm.ctpop.nxv1i8(<vscale x 1 x i8>)
 
 define <vscale x 2 x i8> @ctpop_nxv2i8(<vscale x 2 x i8> %va) {
 ; CHECK-LABEL: ctpop_nxv2i8:
@@ -58,7 +57,6 @@ define <vscale x 2 x i8> @ctpop_nxv2i8(<vscale x 2 x i8> %va) {
   %a = call <vscale x 2 x i8> @llvm.ctpop.nxv2i8(<vscale x 2 x i8> %va)
   ret <vscale x 2 x i8> %a
 }
-declare <vscale x 2 x i8> @llvm.ctpop.nxv2i8(<vscale x 2 x i8>)
 
 define <vscale x 4 x i8> @ctpop_nxv4i8(<vscale x 4 x i8> %va) {
 ; CHECK-LABEL: ctpop_nxv4i8:
@@ -86,7 +84,6 @@ define <vscale x 4 x i8> @ctpop_nxv4i8(<vscale x 4 x i8> %va) {
   %a = call <vscale x 4 x i8> @llvm.ctpop.nxv4i8(<vscale x 4 x i8> %va)
   ret <vscale x 4 x i8> %a
 }
-declare <vscale x 4 x i8> @llvm.ctpop.nxv4i8(<vscale x 4 x i8>)
 
 define <vscale x 8 x i8> @ctpop_nxv8i8(<vscale x 8 x i8> %va) {
 ; CHECK-LABEL: ctpop_nxv8i8:
@@ -114,7 +111,6 @@ define <vscale x 8 x i8> @ctpop_nxv8i8(<vscale x 8 x i8> %va) {
   %a = call <vscale x 8 x i8> @llvm.ctpop.nxv8i8(<vscale x 8 x i8> %va)
   ret <vscale x 8 x i8> %a
 }
-declare <vscale x 8 x i8> @llvm.ctpop.nxv8i8(<vscale x 8 x i8>)
 
 define <vscale x 16 x i8> @ctpop_nxv16i8(<vscale x 16 x i8> %va) {
 ; CHECK-LABEL: ctpop_nxv16i8:
@@ -142,7 +138,6 @@ define <vscale x 16 x i8> @ctpop_nxv16i8(<vscale x 16 x i8> %va) {
   %a = call <vscale x 16 x i8> @llvm.ctpop.nxv16i8(<vscale x 16 x i8> %va)
   ret <vscale x 16 x i8> %a
 }
-declare <vscale x 16 x i8> @llvm.ctpop.nxv16i8(<vscale x 16 x i8>)
 
 define <vscale x 32 x i8> @ctpop_nxv32i8(<vscale x 32 x i8> %va) {
 ; CHECK-LABEL: ctpop_nxv32i8:
@@ -170,7 +165,6 @@ define <vscale x 32 x i8> @ctpop_nxv32i8(<vscale x 32 x i8> %va) {
   %a = call <vscale x 32 x i8> @llvm.ctpop.nxv32i8(<vscale x 32 x i8> %va)
   ret <vscale x 32 x i8> %a
 }
-declare <vscale x 32 x i8> @llvm.ctpop.nxv32i8(<vscale x 32 x i8>)
 
 define <vscale x 64 x i8> @ctpop_nxv64i8(<vscale x 64 x i8> %va) {
 ; CHECK-LABEL: ctpop_nxv64i8:
@@ -198,7 +192,6 @@ define <vscale x 64 x i8> @ctpop_nxv64i8(<vscale x 64 x i8> %va) {
   %a = call <vscale x 64 x i8> @llvm.ctpop.nxv64i8(<vscale x 64 x i8> %va)
   ret <vscale x 64 x i8> %a
 }
-declare <vscale x 64 x i8> @llvm.ctpop.nxv64i8(<vscale x 64 x i8>)
 
 define <vscale x 1 x i16> @ctpop_nxv1i16(<vscale x 1 x i16> %va) {
 ; CHECK-LABEL: ctpop_nxv1i16:
@@ -233,7 +226,6 @@ define <vscale x 1 x i16> @ctpop_nxv1i16(<vscale x 1 x i16> %va) {
   %a = call <vscale x 1 x i16> @llvm.ctpop.nxv1i16(<vscale x 1 x i16> %va)
   ret <vscale x 1 x i16> %a
 }
-declare <vscale x 1 x i16> @llvm.ctpop.nxv1i16(<vscale x 1 x i16>)
 
 define <vscale x 2 x i16> @ctpop_nxv2i16(<vscale x 2 x i16> %va) {
 ; CHECK-LABEL: ctpop_nxv2i16:
@@ -268,7 +260,6 @@ define <vscale x 2 x i16> @ctpop_nxv2i16(<vscale x 2 x i16> %va) {
   %a = call <vscale x 2 x i16> @llvm.ctpop.nxv2i16(<vscale x 2 x i16> %va)
   ret <vscale x 2 x i16> %a
 }
-declare <vscale x 2 x i16> @llvm.ctpop.nxv2i16(<vscale x 2 x i16>)
 
 define <vscale x 4 x i16> @ctpop_nxv4i16(<vscale x 4 x i16> %va) {
 ; CHECK-LABEL: ctpop_nxv4i16:
@@ -303,7 +294,6 @@ define <vscale x 4 x i16> @ctpop_nxv4i16(<vscale x 4 x i16> %va) {
   %a = call <vscale x 4 x i16> @llvm.ctpop.nxv4i16(<vscale x 4 x i16> %va)
   ret <vscale x 4 x i16> %a
 }
-declare <vscale x 4 x i16> @llvm.ctpop.nxv4i16(<vscale x 4 x i16>)
 
 define <vscale x 8 x i16> @ctpop_nxv8i16(<vscale x 8 x i16> %va) {
 ; CHECK-LABEL: ctpop_nxv8i16:
@@ -338,7 +328,6 @@ define <vscale x 8 x i16> @ctpop_nxv8i16(<vscale x 8 x i16> %va) {
   %a = call <vscale x 8 x i16> @llvm.ctpop.nxv8i16(<vscale x 8 x i16> %va)
   ret <vscale x 8 x i16> %a
 }
-declare <vscale x 8 x i16> @llvm.ctpop.nxv8i16(<vscale x 8 x i16>)
 
 define <vscale x 16 x i16> @ctpop_nxv16i16(<vscale x 16 x i16> %va) {
 ; CHECK-LABEL: ctpop_nxv16i16:
@@ -373,7 +362,6 @@ define <vscale x 16 x i16> @ctpop_nxv16i16(<vscale x 16 x i16> %va) {
   %a = call <vscale x 16 x i16> @llvm.ctpop.nxv16i16(<vscale x 16 x i16> %va)
   ret <vscale x 16 x i16> %a
 }
-declare <vscale x 16 x i16> @llvm.ctpop.nxv16i16(<vscale x 16 x i16>)
 
 define <vscale x 32 x i16> @ctpop_nxv32i16(<vscale x 32 x i16> %va) {
 ; CHECK-LABEL: ctpop_nxv32i16:
@@ -408,7 +396,6 @@ define <vscale x 32 x i16> @ctpop_nxv32i16(<vscale x 32 x i16> %va) {
   %a = call <vscale x 32 x i16> @llvm.ctpop.nxv32i16(<vscale x 32 x i16> %va)
   ret <vscale x 32 x i16> %a
 }
-declare <vscale x 32 x i16> @llvm.ctpop.nxv32i16(<vscale x 32 x i16>)
 
 define <vscale x 1 x i32> @ctpop_nxv1i32(<vscale x 1 x i32> %va) {
 ; CHECK-LABEL: ctpop_nxv1i32:
@@ -444,7 +431,6 @@ define <vscale x 1 x i32> @ctpop_nxv1i32(<vscale x 1 x i32> %va) {
   %a = call <vscale x 1 x i32> @llvm.ctpop.nxv1i32(<vscale x 1 x i32> %va)
   ret <vscale x 1 x i32> %a
 }
-declare <vscale x 1 x i32> @llvm.ctpop.nxv1i32(<vscale x 1 x i32>)
 
 define <vscale x 2 x i32> @ctpop_nxv2i32(<vscale x 2 x i32> %va) {
 ; CHECK-LABEL: ctpop_nxv2i32:
@@ -480,7 +466,6 @@ define <vscale x 2 x i32> @ctpop_nxv2i32(<vscale x 2 x i32> %va) {
   %a = call <vscale x 2 x i32> @llvm.ctpop.nxv2i32(<vscale x 2 x i32> %va)
   ret <vscale x 2 x i32> %a
 }
-declare <vscale x 2 x i32> @llvm.ctpop.nxv2i32(<vscale x 2 x i32>)
 
 define <vscale x 4 x i32> @ctpop_nxv4i32(<vscale x 4 x i32> %va) {
 ; CHECK-LABEL: ctpop_nxv4i32:
@@ -516,7 +501,6 @@ define <vscale x 4 x i32> @ctpop_nxv4i32(<vscale x 4 x i32> %va) {
   %a = call <vscale x 4 x i32> @llvm.ctpop.nxv4i32(<vscale x 4 x i32> %va)
   ret <vscale x 4 x i32> %a
 }
-declare <vscale x 4 x i32> @llvm.ctpop.nxv4i32(<vscale x 4 x i32>)
 
 define <vscale x 8 x i32> @ctpop_nxv8i32(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: ctpop_nxv8i32:
@@ -552,7 +536,6 @@ define <vscale x 8 x i32> @ctpop_nxv8i32(<vscale x 8 x i32> %va) {
   %a = call <vscale x 8 x i32> @llvm.ctpop.nxv8i32(<vscale x 8 x i32> %va)
   ret <vscale x 8 x i32> %a
 }
-declare <vscale x 8 x i32> @llvm.ctpop.nxv8i32(<vscale x 8 x i32>)
 
 define <vscale x 16 x i32> @ctpop_nxv16i32(<vscale x 16 x i32> %va) {
 ; CHECK-LABEL: ctpop_nxv16i32:
@@ -670,14 +653,12 @@ define <vscale x 16 x i1> @ctpop_nxv16i32_ne_one(<vscale x 16 x i32> %va) {
   ret <vscale x 16 x i1> %cmp
 }
 
-declare <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32>)
-
 define <vscale x 1 x i64> @ctpop_nxv1i64(<vscale x 1 x i64> %va) {
 ; RV32-LABEL: ctpop_nxv1i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; RV32-NEXT:    vsrl.vi v9, v8, 1
 ; RV32-NEXT:    lui a0, 349525
+; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; RV32-NEXT:    vsrl.vi v9, v8, 1
 ; RV32-NEXT:    addi a0, a0, 1365
 ; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a0
@@ -713,9 +694,9 @@ define <vscale x 1 x i64> @ctpop_nxv1i64(<vscale x 1 x i64> %va) {
 ;
 ; RV64-LABEL: ctpop_nxv1i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; RV64-NEXT:    vsrl.vi v9, v8, 1
 ; RV64-NEXT:    lui a0, 349525
+; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; RV64-NEXT:    vsrl.vi v9, v8, 1
 ; RV64-NEXT:    addi a0, a0, 1365
 ; RV64-NEXT:    slli a1, a0, 32
 ; RV64-NEXT:    add a0, a0, a1
@@ -753,14 +734,13 @@ define <vscale x 1 x i64> @ctpop_nxv1i64(<vscale x 1 x i64> %va) {
   %a = call <vscale x 1 x i64> @llvm.ctpop.nxv1i64(<vscale x 1 x i64> %va)
   ret <vscale x 1 x i64> %a
 }
-declare <vscale x 1 x i64> @llvm.ctpop.nxv1i64(<vscale x 1 x i64>)
 
 define <vscale x 2 x i64> @ctpop_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV32-LABEL: ctpop_nxv2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; RV32-NEXT:    vsrl.vi v10, v8, 1
 ; RV32-NEXT:    lui a0, 349525
+; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; RV32-NEXT:    vsrl.vi v10, v8, 1
 ; RV32-NEXT:    addi a0, a0, 1365
 ; RV32-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
@@ -796,9 +776,9 @@ define <vscale x 2 x i64> @ctpop_nxv2i64(<vscale x 2 x i64> %va) {
 ;
 ; RV64-LABEL: ctpop_nxv2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; RV64-NEXT:    vsrl.vi v10, v8, 1
 ; RV64-NEXT:    lui a0, 349525
+; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; RV64-NEXT:    vsrl.vi v10, v8, 1
 ; RV64-NEXT:    addi a0, a0, 1365
 ; RV64-NEXT:    slli a1, a0, 32
 ; RV64-NEXT:    add a0, a0, a1
@@ -836,14 +816,13 @@ define <vscale x 2 x i64> @ctpop_nxv2i64(<vscale x 2 x i64> %va) {
   %a = call <vscale x 2 x i64> @llvm.ctpop.nxv2i64(<vscale x 2 x i64> %va)
   ret <vscale x 2 x i64> %a
 }
-declare <vscale x 2 x i64> @llvm.ctpop.nxv2i64(<vscale x 2 x i64>)
 
 define <vscale x 4 x i64> @ctpop_nxv4i64(<vscale x 4 x i64> %va) {
 ; RV32-LABEL: ctpop_nxv4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; RV32-NEXT:    vsrl.vi v12, v8, 1
 ; RV32-NEXT:    lui a0, 349525
+; RV32-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
+; RV32-NEXT:    vsrl.vi v12, v8, 1
 ; RV32-NEXT:    addi a0, a0, 1365
 ; RV32-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a0
@@ -919,14 +898,13 @@ define <vscale x 4 x i64> @ctpop_nxv4i64(<vscale x 4 x i64> %va) {
   %a = call <vscale x 4 x i64> @llvm.ctpop.nxv4i64(<vscale x 4 x i64> %va)
   ret <vscale x 4 x i64> %a
 }
-declare <vscale x 4 x i64> @llvm.ctpop.nxv4i64(<vscale x 4 x i64>)
 
 define <vscale x 8 x i64> @ctpop_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-LABEL: ctpop_nxv8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; RV32-NEXT:    vsrl.vi v16, v8, 1
 ; RV32-NEXT:    lui a0, 349525
+; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV32-NEXT:    vsrl.vi v16, v8, 1
 ; RV32-NEXT:    addi a0, a0, 1365
 ; RV32-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.x v24, a0
@@ -1084,4 +1062,3 @@ define <vscale x 8 x i1> @ctpop_nxv8i64_ne_one(<vscale x 8 x i64> %va) {
   ret <vscale x 8 x i1> %cmp
 }
 
-declare <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64>)

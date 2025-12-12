@@ -2983,10 +2983,36 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   : RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
                                                   MI, false, 0, !UseSGPR);
 
-      // TODO: for flat scratch another attempt can be made with a VGPR index
-      //       if no SGPRs can be scavenged.
-      if ((!TmpSReg && !FrameReg) || (!TmpReg && !UseSGPR))
+      if ((!TmpSReg && !FrameReg) || (!TmpReg && !UseSGPR)) {
+        int SVOpcode = AMDGPU::getFlatScratchInstSVfromSS(MI->getOpcode());
+        if (ST.hasFlatScratchSVSMode() && SVOpcode != -1) {
+          Register TmpVGPR = RS->scavengeRegisterBackwards(
+              AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
+
+          // Materialize the frame register.
+          auto MIB =
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR);
+          if (FrameReg)
+            MIB.addReg(FrameReg);
+          else
+            MIB.addImm(Offset);
+
+          // Add the offset to the frame register.
+          if (FrameReg && Offset)
+            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e32), FrameReg)
+                .addReg(FrameReg, RegState::Kill)
+                .addImm(Offset);
+
+          BuildMI(*MBB, MI, DL, TII->get(SVOpcode))
+              .add(MI->getOperand(0)) // $vdata
+              .addReg(TmpVGPR)        // $vaddr
+              .addImm(0)              // Offset
+              .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::cpol));
+          MI->eraseFromParent();
+          return true;
+        }
         report_fatal_error("Cannot scavenge register in FI elimination!");
+      }
 
       if (!TmpSReg) {
         // Use frame register and restore it after.
@@ -3753,20 +3779,6 @@ bool SIRegisterInfo::isAGPR(const MachineRegisterInfo &MRI,
 
   // Registers without classes are unaddressable, SGPR-like registers.
   return RC && isAGPRClass(RC);
-}
-
-bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
-                                    const TargetRegisterClass *SrcRC,
-                                    unsigned SubReg,
-                                    const TargetRegisterClass *DstRC,
-                                    unsigned DstSubReg,
-                                    const TargetRegisterClass *NewRC,
-                                    LiveIntervals &LIS) const {
-  // TODO: This should be more aggressive, but be more cautious with very wide
-  // tuples.
-  unsigned NewSize = getRegSizeInBits(*NewRC);
-  return NewSize <= 128 || NewSize <= getRegSizeInBits(*SrcRC) ||
-         NewSize <= getRegSizeInBits(*DstRC);
 }
 
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,

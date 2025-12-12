@@ -33,8 +33,8 @@
 define void @test(i32 signext %i) nounwind {
 ; RV32-LABEL: test:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    slli a1, a0, 1
 ; RV32-NEXT:    lui a3, 2
+; RV32-NEXT:    slli a1, a0, 1
 ; RV32-NEXT:    blt a3, a1, .LBB0_3
 ; RV32-NEXT:  # %bb.1: # %bb.preheader
 ; RV32-NEXT:    lui a2, %hi(flags2)
@@ -51,8 +51,8 @@ define void @test(i32 signext %i) nounwind {
 ;
 ; RV64-LABEL: test:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    slliw a1, a0, 1
 ; RV64-NEXT:    lui a3, 2
+; RV64-NEXT:    slliw a1, a0, 1
 ; RV64-NEXT:    blt a3, a1, .LBB0_3
 ; RV64-NEXT:  # %bb.1: # %bb.preheader
 ; RV64-NEXT:    lui a2, %hi(flags2)

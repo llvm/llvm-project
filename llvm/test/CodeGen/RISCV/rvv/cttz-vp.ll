@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+zvbb,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
 
-declare <vscale x 1 x i8> @llvm.vp.cttz.nxv1i8(<vscale x 1 x i8>, i1 immarg, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i8> @vp_cttz_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv1i8:
 ; CHECK:       # %bb.0:
@@ -69,8 +67,6 @@ define <vscale x 1 x i8> @vp_cttz_nxv1i8_unmasked(<vscale x 1 x i8> %va, i32 zer
   %v = call <vscale x 1 x i8> @llvm.vp.cttz.nxv1i8(<vscale x 1 x i8> %va, i1 false, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i8> %v
 }
-
-declare <vscale x 2 x i8> @llvm.vp.cttz.nxv2i8(<vscale x 2 x i8>, i1 immarg, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i8> @vp_cttz_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv2i8:
@@ -132,8 +128,6 @@ define <vscale x 2 x i8> @vp_cttz_nxv2i8_unmasked(<vscale x 2 x i8> %va, i32 zer
   ret <vscale x 2 x i8> %v
 }
 
-declare <vscale x 4 x i8> @llvm.vp.cttz.nxv4i8(<vscale x 4 x i8>, i1 immarg, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x i8> @vp_cttz_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv4i8:
 ; CHECK:       # %bb.0:
@@ -193,8 +187,6 @@ define <vscale x 4 x i8> @vp_cttz_nxv4i8_unmasked(<vscale x 4 x i8> %va, i32 zer
   %v = call <vscale x 4 x i8> @llvm.vp.cttz.nxv4i8(<vscale x 4 x i8> %va, i1 false, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i8> %v
 }
-
-declare <vscale x 8 x i8> @llvm.vp.cttz.nxv8i8(<vscale x 8 x i8>, i1 immarg, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i8> @vp_cttz_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv8i8:
@@ -256,8 +248,6 @@ define <vscale x 8 x i8> @vp_cttz_nxv8i8_unmasked(<vscale x 8 x i8> %va, i32 zer
   ret <vscale x 8 x i8> %v
 }
 
-declare <vscale x 16 x i8> @llvm.vp.cttz.nxv16i8(<vscale x 16 x i8>, i1 immarg, <vscale x 16 x i1>, i32)
-
 define <vscale x 16 x i8> @vp_cttz_nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv16i8:
 ; CHECK:       # %bb.0:
@@ -317,8 +307,6 @@ define <vscale x 16 x i8> @vp_cttz_nxv16i8_unmasked(<vscale x 16 x i8> %va, i32 
   %v = call <vscale x 16 x i8> @llvm.vp.cttz.nxv16i8(<vscale x 16 x i8> %va, i1 false, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i8> %v
 }
-
-declare <vscale x 32 x i8> @llvm.vp.cttz.nxv32i8(<vscale x 32 x i8>, i1 immarg, <vscale x 32 x i1>, i32)
 
 define <vscale x 32 x i8> @vp_cttz_nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv32i8:
@@ -380,8 +368,6 @@ define <vscale x 32 x i8> @vp_cttz_nxv32i8_unmasked(<vscale x 32 x i8> %va, i32 
   ret <vscale x 32 x i8> %v
 }
 
-declare <vscale x 64 x i8> @llvm.vp.cttz.nxv64i8(<vscale x 64 x i8>, i1 immarg, <vscale x 64 x i1>, i32)
-
 define <vscale x 64 x i8> @vp_cttz_nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv64i8:
 ; CHECK:       # %bb.0:
@@ -441,8 +427,6 @@ define <vscale x 64 x i8> @vp_cttz_nxv64i8_unmasked(<vscale x 64 x i8> %va, i32 
   %v = call <vscale x 64 x i8> @llvm.vp.cttz.nxv64i8(<vscale x 64 x i8> %va, i1 false, <vscale x 64 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 64 x i8> %v
 }
-
-declare <vscale x 1 x i16> @llvm.vp.cttz.nxv1i16(<vscale x 1 x i16>, i1 immarg, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i16> @vp_cttz_nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv1i16:
@@ -518,8 +502,6 @@ define <vscale x 1 x i16> @vp_cttz_nxv1i16_unmasked(<vscale x 1 x i16> %va, i32 
   ret <vscale x 1 x i16> %v
 }
 
-declare <vscale x 2 x i16> @llvm.vp.cttz.nxv2i16(<vscale x 2 x i16>, i1 immarg, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i16> @vp_cttz_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv2i16:
 ; CHECK:       # %bb.0:
@@ -593,8 +575,6 @@ define <vscale x 2 x i16> @vp_cttz_nxv2i16_unmasked(<vscale x 2 x i16> %va, i32 
   %v = call <vscale x 2 x i16> @llvm.vp.cttz.nxv2i16(<vscale x 2 x i16> %va, i1 false, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i16> %v
 }
-
-declare <vscale x 4 x i16> @llvm.vp.cttz.nxv4i16(<vscale x 4 x i16>, i1 immarg, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x i16> @vp_cttz_nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv4i16:
@@ -670,8 +650,6 @@ define <vscale x 4 x i16> @vp_cttz_nxv4i16_unmasked(<vscale x 4 x i16> %va, i32 
   ret <vscale x 4 x i16> %v
 }
 
-declare <vscale x 8 x i16> @llvm.vp.cttz.nxv8i16(<vscale x 8 x i16>, i1 immarg, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i16> @vp_cttz_nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv8i16:
 ; CHECK:       # %bb.0:
@@ -745,8 +723,6 @@ define <vscale x 8 x i16> @vp_cttz_nxv8i16_unmasked(<vscale x 8 x i16> %va, i32 
   %v = call <vscale x 8 x i16> @llvm.vp.cttz.nxv8i16(<vscale x 8 x i16> %va, i1 false, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i16> %v
 }
-
-declare <vscale x 16 x i16> @llvm.vp.cttz.nxv16i16(<vscale x 16 x i16>, i1 immarg, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x i16> @vp_cttz_nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv16i16:
@@ -822,8 +798,6 @@ define <vscale x 16 x i16> @vp_cttz_nxv16i16_unmasked(<vscale x 16 x i16> %va, i
   ret <vscale x 16 x i16> %v
 }
 
-declare <vscale x 32 x i16> @llvm.vp.cttz.nxv32i16(<vscale x 32 x i16>, i1 immarg, <vscale x 32 x i1>, i32)
-
 define <vscale x 32 x i16> @vp_cttz_nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv32i16:
 ; CHECK:       # %bb.0:
@@ -897,8 +871,6 @@ define <vscale x 32 x i16> @vp_cttz_nxv32i16_unmasked(<vscale x 32 x i16> %va, i
   %v = call <vscale x 32 x i16> @llvm.vp.cttz.nxv32i16(<vscale x 32 x i16> %va, i1 false, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i16> %v
 }
-
-declare <vscale x 1 x i32> @llvm.vp.cttz.nxv1i32(<vscale x 1 x i32>, i1 immarg, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i32> @vp_cttz_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv1i32:
@@ -976,8 +948,6 @@ define <vscale x 1 x i32> @vp_cttz_nxv1i32_unmasked(<vscale x 1 x i32> %va, i32 
   ret <vscale x 1 x i32> %v
 }
 
-declare <vscale x 2 x i32> @llvm.vp.cttz.nxv2i32(<vscale x 2 x i32>, i1 immarg, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i32> @vp_cttz_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv2i32:
 ; CHECK:       # %bb.0:
@@ -1053,8 +1023,6 @@ define <vscale x 2 x i32> @vp_cttz_nxv2i32_unmasked(<vscale x 2 x i32> %va, i32 
   %v = call <vscale x 2 x i32> @llvm.vp.cttz.nxv2i32(<vscale x 2 x i32> %va, i1 false, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i32> %v
 }
-
-declare <vscale x 4 x i32> @llvm.vp.cttz.nxv4i32(<vscale x 4 x i32>, i1 immarg, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x i32> @vp_cttz_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv4i32:
@@ -1132,8 +1100,6 @@ define <vscale x 4 x i32> @vp_cttz_nxv4i32_unmasked(<vscale x 4 x i32> %va, i32 
   ret <vscale x 4 x i32> %v
 }
 
-declare <vscale x 8 x i32> @llvm.vp.cttz.nxv8i32(<vscale x 8 x i32>, i1 immarg, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i32> @vp_cttz_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv8i32:
 ; CHECK:       # %bb.0:
@@ -1210,8 +1176,6 @@ define <vscale x 8 x i32> @vp_cttz_nxv8i32_unmasked(<vscale x 8 x i32> %va, i32 
   ret <vscale x 8 x i32> %v
 }
 
-declare <vscale x 16 x i32> @llvm.vp.cttz.nxv16i32(<vscale x 16 x i32>, i1 immarg, <vscale x 16 x i1>, i32)
-
 define <vscale x 16 x i32> @vp_cttz_nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv16i32:
 ; CHECK:       # %bb.0:
@@ -1287,8 +1251,6 @@ define <vscale x 16 x i32> @vp_cttz_nxv16i32_unmasked(<vscale x 16 x i32> %va, i
   %v = call <vscale x 16 x i32> @llvm.vp.cttz.nxv16i32(<vscale x 16 x i32> %va, i1 false, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i32> %v
 }
-
-declare <vscale x 1 x i64> @llvm.vp.cttz.nxv1i64(<vscale x 1 x i64>, i1 immarg, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i64> @vp_cttz_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_nxv1i64:
@@ -1384,14 +1346,14 @@ define <vscale x 1 x i64> @vp_cttz_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32 
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vadd.vi v9, v8, -1
 ; RV32-NEXT:    vnot.v v8, v8
-; RV32-NEXT:    vand.vv v8, v8, v9
 ; RV32-NEXT:    lui a1, 349525
-; RV32-NEXT:    vsrl.vi v9, v8, 1
+; RV32-NEXT:    vand.vv v8, v8, v9
 ; RV32-NEXT:    addi a1, a1, 1365
 ; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.x v10, a1
+; RV32-NEXT:    vmv.v.x v9, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV32-NEXT:    vand.vv v9, v9, v10
+; RV32-NEXT:    vsrl.vi v10, v8, 1
+; RV32-NEXT:    vand.vv v9, v10, v9
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    vsub.vv v8, v8, v9
 ; RV32-NEXT:    addi a1, a1, 819
@@ -1465,8 +1427,6 @@ define <vscale x 1 x i64> @vp_cttz_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32 
   %v = call <vscale x 1 x i64> @llvm.vp.cttz.nxv1i64(<vscale x 1 x i64> %va, i1 false, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i64> %v
 }
-
-declare <vscale x 2 x i64> @llvm.vp.cttz.nxv2i64(<vscale x 2 x i64>, i1 immarg, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i64> @vp_cttz_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_nxv2i64:
@@ -1644,8 +1604,6 @@ define <vscale x 2 x i64> @vp_cttz_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32 
   ret <vscale x 2 x i64> %v
 }
 
-declare <vscale x 4 x i64> @llvm.vp.cttz.nxv4i64(<vscale x 4 x i64>, i1 immarg, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x i64> @vp_cttz_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_nxv4i64:
 ; RV32:       # %bb.0:
@@ -1821,8 +1779,6 @@ define <vscale x 4 x i64> @vp_cttz_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32 
   %v = call <vscale x 4 x i64> @llvm.vp.cttz.nxv4i64(<vscale x 4 x i64> %va, i1 false, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i64> %v
 }
-
-declare <vscale x 7 x i64> @llvm.vp.cttz.nxv7i64(<vscale x 7 x i64>, i1 immarg, <vscale x 7 x i1>, i32)
 
 define <vscale x 7 x i64> @vp_cttz_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_nxv7i64:
@@ -2000,8 +1956,6 @@ define <vscale x 7 x i64> @vp_cttz_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32 
   ret <vscale x 7 x i64> %v
 }
 
-declare <vscale x 8 x i64> @llvm.vp.cttz.nxv8i64(<vscale x 8 x i64>, i1 immarg, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i64> @vp_cttz_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_nxv8i64:
 ; RV32:       # %bb.0:
@@ -2178,8 +2132,6 @@ define <vscale x 8 x i64> @vp_cttz_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32 
   ret <vscale x 8 x i64> %v
 }
 
-declare <vscale x 16 x i64> @llvm.vp.cttz.nxv16i64(<vscale x 16 x i64>, i1 immarg, <vscale x 16 x i1>, i32)
-
 define <vscale x 16 x i64> @vp_cttz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_nxv16i64:
 ; RV32:       # %bb.0:
@@ -2192,29 +2144,29 @@ define <vscale x 16 x i64> @vp_cttz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x28, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 40 * vlenb
 ; RV32-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv1r.v v7, v0
+; RV32-NEXT:    lui a3, 349525
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    srli a2, a1, 3
-; RV32-NEXT:    sub a3, a0, a1
 ; RV32-NEXT:    vslidedown.vx v0, v0, a2
-; RV32-NEXT:    sltu a2, a0, a3
-; RV32-NEXT:    addi a2, a2, -1
-; RV32-NEXT:    and a2, a2, a3
+; RV32-NEXT:    sub a2, a0, a1
+; RV32-NEXT:    sltu a4, a0, a2
+; RV32-NEXT:    addi a4, a4, -1
+; RV32-NEXT:    and a2, a4, a2
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vadd.vi v24, v16, -1, v0.t
 ; RV32-NEXT:    vnot.v v16, v16, v0.t
 ; RV32-NEXT:    vand.vv v16, v16, v24, v0.t
-; RV32-NEXT:    csrr a3, vlenb
-; RV32-NEXT:    slli a3, a3, 4
-; RV32-NEXT:    add a3, sp, a3
-; RV32-NEXT:    addi a3, a3, 16
-; RV32-NEXT:    vs8r.v v16, (a3) # vscale x 64-byte Folded Spill
+; RV32-NEXT:    csrr a4, vlenb
+; RV32-NEXT:    slli a4, a4, 4
+; RV32-NEXT:    add a4, sp, a4
+; RV32-NEXT:    addi a4, a4, 16
+; RV32-NEXT:    vs8r.v v16, (a4) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    vsrl.vi v16, v16, 1, v0.t
-; RV32-NEXT:    csrr a3, vlenb
-; RV32-NEXT:    slli a3, a3, 5
-; RV32-NEXT:    add a3, sp, a3
-; RV32-NEXT:    addi a3, a3, 16
-; RV32-NEXT:    vs8r.v v16, (a3) # vscale x 64-byte Folded Spill
-; RV32-NEXT:    lui a3, 349525
+; RV32-NEXT:    csrr a4, vlenb
+; RV32-NEXT:    slli a4, a4, 5
+; RV32-NEXT:    add a4, sp, a4
+; RV32-NEXT:    addi a4, a4, 16
+; RV32-NEXT:    vs8r.v v16, (a4) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    addi a3, a3, 1365
 ; RV32-NEXT:    vsetvli a4, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.x v24, a3
@@ -2363,11 +2315,11 @@ define <vscale x 16 x i64> @vp_cttz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ; RV64-NEXT:    vmv1r.v v7, v0
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    srli a2, a1, 3
-; RV64-NEXT:    sub a3, a0, a1
 ; RV64-NEXT:    vslidedown.vx v0, v0, a2
-; RV64-NEXT:    sltu a2, a0, a3
-; RV64-NEXT:    addi a2, a2, -1
-; RV64-NEXT:    and a2, a2, a3
+; RV64-NEXT:    sub a2, a0, a1
+; RV64-NEXT:    sltu a3, a0, a2
+; RV64-NEXT:    addi a3, a3, -1
+; RV64-NEXT:    and a2, a3, a2
 ; RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV64-NEXT:    vadd.vi v24, v16, -1, v0.t
 ; RV64-NEXT:    vnot.v v16, v16, v0.t
@@ -2699,7 +2651,6 @@ define <vscale x 1 x i8> @vp_cttz_zero_undef_nxv1i8_unmasked(<vscale x 1 x i8> %
   ret <vscale x 1 x i8> %v
 }
 
-
 define <vscale x 2 x i8> @vp_cttz_zero_undef_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv2i8:
 ; CHECK:       # %bb.0:
@@ -2752,7 +2703,6 @@ define <vscale x 2 x i8> @vp_cttz_zero_undef_nxv2i8_unmasked(<vscale x 2 x i8> %
   %v = call <vscale x 2 x i8> @llvm.vp.cttz.nxv2i8(<vscale x 2 x i8> %va, i1 true, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i8> %v
 }
-
 
 define <vscale x 4 x i8> @vp_cttz_zero_undef_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv4i8:
@@ -2807,7 +2757,6 @@ define <vscale x 4 x i8> @vp_cttz_zero_undef_nxv4i8_unmasked(<vscale x 4 x i8> %
   ret <vscale x 4 x i8> %v
 }
 
-
 define <vscale x 8 x i8> @vp_cttz_zero_undef_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv8i8:
 ; CHECK:       # %bb.0:
@@ -2861,7 +2810,6 @@ define <vscale x 8 x i8> @vp_cttz_zero_undef_nxv8i8_unmasked(<vscale x 8 x i8> %
   ret <vscale x 8 x i8> %v
 }
 
-
 define <vscale x 16 x i8> @vp_cttz_zero_undef_nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv16i8:
 ; CHECK:       # %bb.0:
@@ -2914,7 +2862,6 @@ define <vscale x 16 x i8> @vp_cttz_zero_undef_nxv16i8_unmasked(<vscale x 16 x i8
   %v = call <vscale x 16 x i8> @llvm.vp.cttz.nxv16i8(<vscale x 16 x i8> %va, i1 true, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i8> %v
 }
-
 
 define <vscale x 32 x i8> @vp_cttz_zero_undef_nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv32i8:
@@ -2976,7 +2923,6 @@ define <vscale x 32 x i8> @vp_cttz_zero_undef_nxv32i8_unmasked(<vscale x 32 x i8
   ret <vscale x 32 x i8> %v
 }
 
-
 define <vscale x 64 x i8> @vp_cttz_zero_undef_nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv64i8:
 ; CHECK:       # %bb.0:
@@ -3037,7 +2983,6 @@ define <vscale x 64 x i8> @vp_cttz_zero_undef_nxv64i8_unmasked(<vscale x 64 x i8
   ret <vscale x 64 x i8> %v
 }
 
-
 define <vscale x 1 x i16> @vp_cttz_zero_undef_nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv1i16:
 ; CHECK:       # %bb.0:
@@ -3082,7 +3027,6 @@ define <vscale x 1 x i16> @vp_cttz_zero_undef_nxv1i16_unmasked(<vscale x 1 x i16
   %v = call <vscale x 1 x i16> @llvm.vp.cttz.nxv1i16(<vscale x 1 x i16> %va, i1 true, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i16> %v
 }
-
 
 define <vscale x 2 x i16> @vp_cttz_zero_undef_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv2i16:
@@ -3129,7 +3073,6 @@ define <vscale x 2 x i16> @vp_cttz_zero_undef_nxv2i16_unmasked(<vscale x 2 x i16
   ret <vscale x 2 x i16> %v
 }
 
-
 define <vscale x 4 x i16> @vp_cttz_zero_undef_nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv4i16:
 ; CHECK:       # %bb.0:
@@ -3174,7 +3117,6 @@ define <vscale x 4 x i16> @vp_cttz_zero_undef_nxv4i16_unmasked(<vscale x 4 x i16
   %v = call <vscale x 4 x i16> @llvm.vp.cttz.nxv4i16(<vscale x 4 x i16> %va, i1 true, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i16> %v
 }
-
 
 define <vscale x 8 x i16> @vp_cttz_zero_undef_nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv8i16:
@@ -3221,7 +3163,6 @@ define <vscale x 8 x i16> @vp_cttz_zero_undef_nxv8i16_unmasked(<vscale x 8 x i16
   ret <vscale x 8 x i16> %v
 }
 
-
 define <vscale x 16 x i16> @vp_cttz_zero_undef_nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv16i16:
 ; CHECK:       # %bb.0:
@@ -3266,7 +3207,6 @@ define <vscale x 16 x i16> @vp_cttz_zero_undef_nxv16i16_unmasked(<vscale x 16 x 
   %v = call <vscale x 16 x i16> @llvm.vp.cttz.nxv16i16(<vscale x 16 x i16> %va, i1 true, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i16> %v
 }
-
 
 define <vscale x 32 x i16> @vp_cttz_zero_undef_nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv32i16:
@@ -3342,7 +3282,6 @@ define <vscale x 32 x i16> @vp_cttz_zero_undef_nxv32i16_unmasked(<vscale x 32 x 
   ret <vscale x 32 x i16> %v
 }
 
-
 define <vscale x 1 x i32> @vp_cttz_zero_undef_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv1i32:
 ; CHECK:       # %bb.0:
@@ -3389,7 +3328,6 @@ define <vscale x 1 x i32> @vp_cttz_zero_undef_nxv1i32_unmasked(<vscale x 1 x i32
   %v = call <vscale x 1 x i32> @llvm.vp.cttz.nxv1i32(<vscale x 1 x i32> %va, i1 true, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i32> %v
 }
-
 
 define <vscale x 2 x i32> @vp_cttz_zero_undef_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv2i32:
@@ -3438,7 +3376,6 @@ define <vscale x 2 x i32> @vp_cttz_zero_undef_nxv2i32_unmasked(<vscale x 2 x i32
   ret <vscale x 2 x i32> %v
 }
 
-
 define <vscale x 4 x i32> @vp_cttz_zero_undef_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv4i32:
 ; CHECK:       # %bb.0:
@@ -3485,7 +3422,6 @@ define <vscale x 4 x i32> @vp_cttz_zero_undef_nxv4i32_unmasked(<vscale x 4 x i32
   %v = call <vscale x 4 x i32> @llvm.vp.cttz.nxv4i32(<vscale x 4 x i32> %va, i1 true, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i32> %v
 }
-
 
 define <vscale x 8 x i32> @vp_cttz_zero_undef_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv8i32:
@@ -3534,7 +3470,6 @@ define <vscale x 8 x i32> @vp_cttz_zero_undef_nxv8i32_unmasked(<vscale x 8 x i32
   ret <vscale x 8 x i32> %v
 }
 
-
 define <vscale x 16 x i32> @vp_cttz_zero_undef_nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv16i32:
 ; CHECK:       # %bb.0:
@@ -3580,7 +3515,6 @@ define <vscale x 16 x i32> @vp_cttz_zero_undef_nxv16i32_unmasked(<vscale x 16 x 
   %v = call <vscale x 16 x i32> @llvm.vp.cttz.nxv16i32(<vscale x 16 x i32> %va, i1 true, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i32> %v
 }
-
 
 define <vscale x 1 x i64> @vp_cttz_zero_undef_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv1i64:
@@ -3630,7 +3564,6 @@ define <vscale x 1 x i64> @vp_cttz_zero_undef_nxv1i64_unmasked(<vscale x 1 x i64
   ret <vscale x 1 x i64> %v
 }
 
-
 define <vscale x 2 x i64> @vp_cttz_zero_undef_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv2i64:
 ; CHECK:       # %bb.0:
@@ -3678,7 +3611,6 @@ define <vscale x 2 x i64> @vp_cttz_zero_undef_nxv2i64_unmasked(<vscale x 2 x i64
   %v = call <vscale x 2 x i64> @llvm.vp.cttz.nxv2i64(<vscale x 2 x i64> %va, i1 true, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i64> %v
 }
-
 
 define <vscale x 4 x i64> @vp_cttz_zero_undef_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv4i64:
@@ -3728,7 +3660,6 @@ define <vscale x 4 x i64> @vp_cttz_zero_undef_nxv4i64_unmasked(<vscale x 4 x i64
   ret <vscale x 4 x i64> %v
 }
 
-
 define <vscale x 7 x i64> @vp_cttz_zero_undef_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv7i64:
 ; CHECK:       # %bb.0:
@@ -3776,7 +3707,6 @@ define <vscale x 7 x i64> @vp_cttz_zero_undef_nxv7i64_unmasked(<vscale x 7 x i64
   %v = call <vscale x 7 x i64> @llvm.vp.cttz.nxv7i64(<vscale x 7 x i64> %va, i1 true, <vscale x 7 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 7 x i64> %v
 }
-
 
 define <vscale x 8 x i64> @vp_cttz_zero_undef_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_zero_undef_nxv8i64:
@@ -3941,7 +3871,6 @@ define <vscale x 16 x i64> @vp_cttz_zero_undef_nxv16i64_unmasked(<vscale x 16 x 
 }
 
 ; Test promotion.
-declare <vscale x 1 x i9> @llvm.vp.cttz.nxv1i9(<vscale x 1 x i9>, i1 immarg, <vscale x 1 x i1>, i32)
 define <vscale x 1 x i9> @vp_cttz_nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_nxv1i9:
 ; CHECK:       # %bb.0:

@@ -41,20 +41,20 @@ define void @add_shl_moreOneUse_inStore(ptr %array1, i32 %a, i32 %b)  {
 ;
 ; ZBA-LABEL: add_shl_moreOneUse_inStore:
 ; ZBA:       # %bb.0: # %entry
+; ZBA-NEXT:    addi a3, a1, 5
 ; ZBA-NEXT:    sh2add a0, a1, a0
-; ZBA-NEXT:    addi a1, a1, 5
 ; ZBA-NEXT:    sw a2, 20(a0)
 ; ZBA-NEXT:    sw a2, 24(a0)
-; ZBA-NEXT:    sw a1, 140(a0)
+; ZBA-NEXT:    sw a3, 140(a0)
 ; ZBA-NEXT:    ret
 ;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_inStore:
 ; XANDESPERF:       # %bb.0: # %entry
+; XANDESPERF-NEXT:    addi a3, a1, 5
 ; XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
-; XANDESPERF-NEXT:    addi a1, a1, 5
 ; XANDESPERF-NEXT:    sw a2, 20(a0)
 ; XANDESPERF-NEXT:    sw a2, 24(a0)
-; XANDESPERF-NEXT:    sw a1, 140(a0)
+; XANDESPERF-NEXT:    sw a3, 140(a0)
 ; XANDESPERF-NEXT:    ret
 entry:
   %add = add nsw i32 %a, 5

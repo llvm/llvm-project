@@ -817,9 +817,9 @@ define i32 @nocompress(i32 signext %size) {
 ; RV32IZCMP-NEXT:    sw s7, 16(s1)
 ; RV32IZCMP-NEXT:    sw s6, 12(s1)
 ; RV32IZCMP-NEXT:    sw s5, 8(s1)
+; RV32IZCMP-NEXT:    mv a0, s2
 ; RV32IZCMP-NEXT:    sw s4, 4(s1)
 ; RV32IZCMP-NEXT:    sw s3, 0(s1)
-; RV32IZCMP-NEXT:    mv a0, s2
 ; RV32IZCMP-NEXT:    addi sp, s0, -48
 ; RV32IZCMP-NEXT:    .cfi_def_cfa sp, 48
 ; RV32IZCMP-NEXT:    cm.pop {ra, s0-s7}, 48
@@ -868,9 +868,9 @@ define i32 @nocompress(i32 signext %size) {
 ; RV64IZCMP-NEXT:    sw s7, 16(s1)
 ; RV64IZCMP-NEXT:    sw s6, 12(s1)
 ; RV64IZCMP-NEXT:    sw s5, 8(s1)
+; RV64IZCMP-NEXT:    mv a0, s2
 ; RV64IZCMP-NEXT:    sw s4, 4(s1)
 ; RV64IZCMP-NEXT:    sw s3, 0(s1)
-; RV64IZCMP-NEXT:    mv a0, s2
 ; RV64IZCMP-NEXT:    addi sp, s0, -80
 ; RV64IZCMP-NEXT:    .cfi_def_cfa sp, 80
 ; RV64IZCMP-NEXT:    cm.pop {ra, s0-s7}, 80
@@ -917,9 +917,9 @@ define i32 @nocompress(i32 signext %size) {
 ; RV32IZCMP-SR-NEXT:    sw s7, 16(s1)
 ; RV32IZCMP-SR-NEXT:    sw s6, 12(s1)
 ; RV32IZCMP-SR-NEXT:    sw s5, 8(s1)
+; RV32IZCMP-SR-NEXT:    mv a0, s2
 ; RV32IZCMP-SR-NEXT:    sw s4, 4(s1)
 ; RV32IZCMP-SR-NEXT:    sw s3, 0(s1)
-; RV32IZCMP-SR-NEXT:    mv a0, s2
 ; RV32IZCMP-SR-NEXT:    addi sp, s0, -48
 ; RV32IZCMP-SR-NEXT:    .cfi_def_cfa sp, 48
 ; RV32IZCMP-SR-NEXT:    cm.pop {ra, s0-s7}, 48
@@ -968,9 +968,9 @@ define i32 @nocompress(i32 signext %size) {
 ; RV64IZCMP-SR-NEXT:    sw s7, 16(s1)
 ; RV64IZCMP-SR-NEXT:    sw s6, 12(s1)
 ; RV64IZCMP-SR-NEXT:    sw s5, 8(s1)
+; RV64IZCMP-SR-NEXT:    mv a0, s2
 ; RV64IZCMP-SR-NEXT:    sw s4, 4(s1)
 ; RV64IZCMP-SR-NEXT:    sw s3, 0(s1)
-; RV64IZCMP-SR-NEXT:    mv a0, s2
 ; RV64IZCMP-SR-NEXT:    addi sp, s0, -80
 ; RV64IZCMP-SR-NEXT:    .cfi_def_cfa sp, 80
 ; RV64IZCMP-SR-NEXT:    cm.pop {ra, s0-s7}, 80
@@ -1026,9 +1026,9 @@ define i32 @nocompress(i32 signext %size) {
 ; RV32I-NEXT:    sw s7, 16(s2)
 ; RV32I-NEXT:    sw s6, 12(s2)
 ; RV32I-NEXT:    sw s5, 8(s2)
+; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    sw s4, 4(s2)
 ; RV32I-NEXT:    sw s3, 0(s2)
-; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    addi sp, s0, -48
 ; RV32I-NEXT:    .cfi_def_cfa sp, 48
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
@@ -1095,9 +1095,9 @@ define i32 @nocompress(i32 signext %size) {
 ; RV64I-NEXT:    sw s7, 16(s2)
 ; RV64I-NEXT:    sw s6, 12(s2)
 ; RV64I-NEXT:    sw s5, 8(s2)
+; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    sw s4, 4(s2)
 ; RV64I-NEXT:    sw s3, 0(s2)
-; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    addi sp, s0, -80
 ; RV64I-NEXT:    .cfi_def_cfa sp, 80
 ; RV64I-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
@@ -1132,9 +1132,6 @@ entry:
 
 ; Check that functions with varargs do not use save/restore code
 
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_end(ptr)
-
 define i32 @varargs(ptr %fmt, ...) {
 ; RV32IZCMP-LABEL: varargs:
 ; RV32IZCMP:       # %bb.0:
@@ -1144,10 +1141,10 @@ define i32 @varargs(ptr %fmt, ...) {
 ; RV32IZCMP-NEXT:    sw a5, 36(sp)
 ; RV32IZCMP-NEXT:    sw a6, 40(sp)
 ; RV32IZCMP-NEXT:    sw a7, 44(sp)
-; RV32IZCMP-NEXT:    addi a1, sp, 24
-; RV32IZCMP-NEXT:    sw a0, 20(sp)
+; RV32IZCMP-NEXT:    sw a1, 20(sp)
 ; RV32IZCMP-NEXT:    sw a2, 24(sp)
 ; RV32IZCMP-NEXT:    sw a3, 28(sp)
+; RV32IZCMP-NEXT:    addi a1, sp, 24
 ; RV32IZCMP-NEXT:    sw a4, 32(sp)
 ; RV32IZCMP-NEXT:    sw a1, 12(sp)
 ; RV32IZCMP-NEXT:    addi sp, sp, 48
@@ -1180,10 +1177,10 @@ define i32 @varargs(ptr %fmt, ...) {
 ; RV32IZCMP-SR-NEXT:    sw a5, 36(sp)
 ; RV32IZCMP-SR-NEXT:    sw a6, 40(sp)
 ; RV32IZCMP-SR-NEXT:    sw a7, 44(sp)
-; RV32IZCMP-SR-NEXT:    addi a1, sp, 24
-; RV32IZCMP-SR-NEXT:    sw a0, 20(sp)
+; RV32IZCMP-SR-NEXT:    sw a1, 20(sp)
 ; RV32IZCMP-SR-NEXT:    sw a2, 24(sp)
 ; RV32IZCMP-SR-NEXT:    sw a3, 28(sp)
+; RV32IZCMP-SR-NEXT:    addi a1, sp, 24
 ; RV32IZCMP-SR-NEXT:    sw a4, 32(sp)
 ; RV32IZCMP-SR-NEXT:    sw a1, 12(sp)
 ; RV32IZCMP-SR-NEXT:    addi sp, sp, 48
@@ -1216,10 +1213,10 @@ define i32 @varargs(ptr %fmt, ...) {
 ; RV32I-NEXT:    sw a5, 36(sp)
 ; RV32I-NEXT:    sw a6, 40(sp)
 ; RV32I-NEXT:    sw a7, 44(sp)
-; RV32I-NEXT:    addi a1, sp, 24
-; RV32I-NEXT:    sw a0, 20(sp)
+; RV32I-NEXT:    sw a1, 20(sp)
 ; RV32I-NEXT:    sw a2, 24(sp)
 ; RV32I-NEXT:    sw a3, 28(sp)
+; RV32I-NEXT:    addi a1, sp, 24
 ; RV32I-NEXT:    sw a4, 32(sp)
 ; RV32I-NEXT:    sw a1, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 48
@@ -1579,8 +1576,6 @@ entry:
 
 ; Check that dynamic allocation calculations remain correct
 
-declare ptr @llvm.stacksave()
-declare void @llvm.stackrestore(ptr)
 declare void @notdead(ptr)
 
 define void @alloca(i32 %n) {
@@ -4004,7 +3999,6 @@ define void @callee_no_irq() {
 }
 
 declare void @bar(ptr, ptr)
-declare ptr @llvm.frameaddress.p0(i32 immarg)
 
 define i32 @use_fp(i32 %x) {
 ; RV32IZCMP-LABEL: use_fp:

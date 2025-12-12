@@ -4,11 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+vl-dependent-latency -verify-machineinstrs \
 ; RUN:   < %s | FileCheck %s --check-prefix=VLDEP
 
-declare <2 x i1> @llvm.experimental.vp.splice.v2i1(<2 x i1>, <2 x i1>, i32, <2 x i1>, i32, i32)
-declare <4 x i1> @llvm.experimental.vp.splice.v4i1(<4 x i1>, <4 x i1>, i32, <4 x i1>, i32, i32)
-declare <8 x i1> @llvm.experimental.vp.splice.v8i1(<8 x i1>, <8 x i1>, i32, <8 x i1>, i32, i32)
-declare <16 x i1> @llvm.experimental.vp.splice.v16i1(<16 x i1>, <16 x i1>, i32, <16 x i1>, i32, i32)
-
 define <2 x i1> @test_vp_splice_v2i1(<2 x i1> %va, <2 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; NOVLDEP-LABEL: test_vp_splice_v2i1:
 ; NOVLDEP:       # %bb.0:
@@ -138,8 +133,8 @@ define <2 x i1> @test_vp_splice_v2i1_masked(<2 x i1> %va, <2 x i1> %vb, <2 x i1>
 ; VLDEP-NEXT:    vmv1r.v v0, v10
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLDEP-NEXT:    vmerge.vim v10, v12, 1, v0
-; VLDEP-NEXT:    addi a0, a0, -1
 ; VLDEP-NEXT:    vmv1r.v v0, v9
+; VLDEP-NEXT:    addi a0, a0, -1
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLDEP-NEXT:    vslidedown.vi v9, v10, 1, v0.t
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
@@ -280,8 +275,8 @@ define <4 x i1> @test_vp_splice_v4i1_masked(<4 x i1> %va, <4 x i1> %vb, <4 x i1>
 ; VLDEP-NEXT:    vmv1r.v v0, v10
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; VLDEP-NEXT:    vmerge.vim v10, v12, 1, v0
-; VLDEP-NEXT:    addi a0, a0, -3
 ; VLDEP-NEXT:    vmv1r.v v0, v9
+; VLDEP-NEXT:    addi a0, a0, -3
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; VLDEP-NEXT:    vslidedown.vi v9, v10, 3, v0.t
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
@@ -422,8 +417,8 @@ define <8 x i1> @test_vp_splice_v8i1_masked(<8 x i1> %va, <8 x i1> %vb, <8 x i1>
 ; VLDEP-NEXT:    vmv1r.v v0, v10
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; VLDEP-NEXT:    vmerge.vim v10, v12, 1, v0
-; VLDEP-NEXT:    addi a0, a0, -5
 ; VLDEP-NEXT:    vmv1r.v v0, v9
+; VLDEP-NEXT:    addi a0, a0, -5
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; VLDEP-NEXT:    vslidedown.vi v9, v10, 5, v0.t
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
@@ -564,8 +559,8 @@ define <16 x i1> @test_vp_splice_v16i1_masked(<16 x i1> %va, <16 x i1> %vb, <16 
 ; VLDEP-NEXT:    vmv1r.v v0, v10
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; VLDEP-NEXT:    vmerge.vim v10, v12, 1, v0
-; VLDEP-NEXT:    addi a0, a0, -5
 ; VLDEP-NEXT:    vmv1r.v v0, v9
+; VLDEP-NEXT:    addi a0, a0, -5
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; VLDEP-NEXT:    vslidedown.vi v9, v10, 5, v0.t
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, m1, ta, mu

@@ -455,8 +455,8 @@ entry:
 define void @test_vector_tuple_type2(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) %val, target("riscv.vector.tuple", <vscale x 8 x i8>, 7) %val2, target("riscv.vector.tuple", <vscale x 8 x i8>, 7) %val3, ptr %base) nounwind {
 ; CHECK-LABEL: test_vector_tuple_type2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    vl1r.v v23, (a0)
+; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    vl1r.v v24, (a0)
 ; CHECK-NEXT:    add a0, a0, a2

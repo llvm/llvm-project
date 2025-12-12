@@ -518,8 +518,8 @@ define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16
 ; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v7, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmand.mm v7, v0, v7
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a2, a0, 3
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v7, a2
@@ -527,8 +527,8 @@ define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16
 ; CHECK-NEXT:    vmerge.vvm v16, v24, v16, v0
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
-; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    vs8r.v v8, (a1)
+; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    vs8r.v v16, (a0)
 ; CHECK-NEXT:    ret

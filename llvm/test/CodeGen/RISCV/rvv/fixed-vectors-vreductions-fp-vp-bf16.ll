@@ -8,13 +8,13 @@ define bfloat @vpreduce_fmin_nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 x i1>
 ; CHECK-LABEL: vpreduce_fmin_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa5
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfredmin.vs v9, v10, v9, v0.t
-; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfredmin.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %s = call bfloat @llvm.vp.reduce.fmin.nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 x i1> %m, i32 %evl)
@@ -25,13 +25,13 @@ define bfloat @vpreduce_fmax_nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 x i1>
 ; CHECK-LABEL: vpreduce_fmax_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa5
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfredmax.vs v9, v10, v9, v0.t
-; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfredmax.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %s = call bfloat @llvm.vp.reduce.fmax.nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 x i1> %m, i32 %evl)
@@ -42,13 +42,13 @@ define bfloat @vpreduce_fmin_nnan_nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 
 ; CHECK-LABEL: vpreduce_fmin_nnan_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa5
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfredmin.vs v9, v10, v9, v0.t
-; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfredmin.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %s = call nnan bfloat @llvm.vp.reduce.fmin.nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 x i1> %m, i32 %evl)
@@ -59,13 +59,13 @@ define bfloat @vpreduce_fmax_nnan_nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 
 ; CHECK-LABEL: vpreduce_fmax_nnan_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa5
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfredmax.vs v9, v10, v9, v0.t
-; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfredmax.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %s = call nnan bfloat @llvm.vp.reduce.fmax.nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 x i1> %m, i32 %evl)
@@ -75,12 +75,12 @@ define bfloat @vpreduce_fmax_nnan_nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 
 define bfloat @vpreduce_fminimum_nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fminimum_nxv4bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    feq.s a1, fa5, fa5
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmfne.vv v8, v9, v9, v0.t
+; CHECK-NEXT:    feq.s a1, fa5, fa5
 ; CHECK-NEXT:    vcpop.m a2, v8, v0.t
 ; CHECK-NEXT:    xori a1, a1, 1
 ; CHECK-NEXT:    or a1, a2, a1
@@ -105,12 +105,12 @@ define bfloat @vpreduce_fminimum_nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 x
 define bfloat @vpreduce_fmaximum_nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fmaximum_nxv4bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    feq.s a1, fa5, fa5
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmfne.vv v8, v9, v9, v0.t
+; CHECK-NEXT:    feq.s a1, fa5, fa5
 ; CHECK-NEXT:    vcpop.m a2, v8, v0.t
 ; CHECK-NEXT:    xori a1, a1, 1
 ; CHECK-NEXT:    or a1, a2, a1
@@ -136,13 +136,13 @@ define bfloat @vpreduce_fminimum_nnan_nxv4bf16(bfloat %start, <4 x bfloat> %val,
 ; CHECK-LABEL: vpreduce_fminimum_nnan_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa5
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfredmin.vs v9, v10, v9, v0.t
-; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfredmin.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %s = call nnan bfloat @llvm.vp.reduce.fminimum.nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 x i1> %m, i32 %evl)
@@ -153,13 +153,13 @@ define bfloat @vpreduce_fmaximum_nnan_nxv4bf16(bfloat %start, <4 x bfloat> %val,
 ; CHECK-LABEL: vpreduce_fmaximum_nnan_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa5
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfredmax.vs v9, v10, v9, v0.t
-; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfredmax.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %s = call nnan bfloat @llvm.vp.reduce.fmaximum.nxv4bf16(bfloat %start, <4 x bfloat> %val, <4 x i1> %m, i32 %evl)

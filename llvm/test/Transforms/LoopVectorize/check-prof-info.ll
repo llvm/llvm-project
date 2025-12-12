@@ -41,7 +41,7 @@ define void @_Z3foov() {
 ; CHECK-SCALABLE:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-SCALABLE:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SCALABLE:  vector.body:
-; CHECK-SCALABLE:    [[VEC_IND_NEXT:%.*]] = add nuw nsw <vscale x 4 x i32> [[VEC_IND:%.*]], [[BROADCAST_SPLAT]]
+; CHECK-SCALABLE:    [[VEC_IND_NEXT:%.*]] = add <vscale x 4 x i32> [[VEC_IND:%.*]], [[BROADCAST_SPLAT]]
 ; CHECK-SCALABLE:    br i1 [[TMP11:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK-SCALABLE:  middle.block:
 ; CHECK-SCALABLE:    br i1 [[CMP_N:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]], !prof [[PROF6:![0-9]+]]
@@ -112,7 +112,7 @@ define void @_Z3foo2v() {
 ; CHECK-SCALABLE:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-SCALABLE:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SCALABLE:  vector.body:
-; CHECK-SCALABLE:    [[VEC_IND_NEXT:%.*]] = add nuw nsw <vscale x 4 x i32> [[VEC_IND:%.*]], [[BROADCAST_SPLAT]]
+; CHECK-SCALABLE:    [[VEC_IND_NEXT:%.*]] = add <vscale x 4 x i32> [[VEC_IND:%.*]], [[BROADCAST_SPLAT]]
 ; CHECK-SCALABLE:    br i1 [[TMP11:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-SCALABLE:  middle.block:
 ; CHECK-SCALABLE:    br i1 [[CMP_N:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]], !prof [[PROF6]]

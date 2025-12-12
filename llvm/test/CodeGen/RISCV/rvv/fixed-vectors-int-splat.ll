@@ -405,12 +405,12 @@ define void @vadd_vx_v16i64(ptr %a, i64 %b, ptr %c) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    addi a4, sp, 8
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    sw a1, 8(sp)
 ; RV32-NEXT:    sw a2, 12(sp)
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v16, (a0), zero
+; RV32-NEXT:    vlse64.v v16, (a4), zero
 ; RV32-NEXT:    vadd.vv v8, v8, v16
 ; RV32-NEXT:    vse64.v v8, (a3)
 ; RV32-NEXT:    addi sp, sp, 16

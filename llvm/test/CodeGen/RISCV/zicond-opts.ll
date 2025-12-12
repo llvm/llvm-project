@@ -174,17 +174,17 @@ define i64 @rotate_l_nez(i64 %x, i64 %rot.amt, i1 %cond) {
 ; RV32ZICOND-NEXT:    czero.eqz a5, a1, a3
 ; RV32ZICOND-NEXT:    czero.nez a1, a1, a3
 ; RV32ZICOND-NEXT:    czero.eqz a0, a0, a3
-; RV32ZICOND-NEXT:    not a3, a2
 ; RV32ZICOND-NEXT:    or a4, a5, a4
 ; RV32ZICOND-NEXT:    or a0, a0, a1
 ; RV32ZICOND-NEXT:    sll a1, a4, a2
-; RV32ZICOND-NEXT:    srli a5, a0, 1
+; RV32ZICOND-NEXT:    srli a3, a0, 1
+; RV32ZICOND-NEXT:    not a5, a2
+; RV32ZICOND-NEXT:    srl a3, a3, a5
 ; RV32ZICOND-NEXT:    srli a4, a4, 1
-; RV32ZICOND-NEXT:    srl a5, a5, a3
 ; RV32ZICOND-NEXT:    sll a2, a0, a2
-; RV32ZICOND-NEXT:    srl a3, a4, a3
-; RV32ZICOND-NEXT:    or a0, a1, a5
-; RV32ZICOND-NEXT:    or a1, a2, a3
+; RV32ZICOND-NEXT:    srl a4, a4, a5
+; RV32ZICOND-NEXT:    or a0, a1, a3
+; RV32ZICOND-NEXT:    or a1, a2, a4
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: rotate_l_nez:
@@ -209,17 +209,17 @@ define i64 @rotate_l_eqz(i64 %x, i64 %rot.amt, i1 %cond) {
 ; RV32ZICOND-NEXT:    czero.eqz a5, a1, a3
 ; RV32ZICOND-NEXT:    czero.nez a1, a1, a3
 ; RV32ZICOND-NEXT:    czero.eqz a0, a0, a3
-; RV32ZICOND-NEXT:    not a3, a2
 ; RV32ZICOND-NEXT:    or a4, a5, a4
 ; RV32ZICOND-NEXT:    or a0, a0, a1
 ; RV32ZICOND-NEXT:    sll a1, a4, a2
-; RV32ZICOND-NEXT:    srli a5, a0, 1
+; RV32ZICOND-NEXT:    srli a3, a0, 1
+; RV32ZICOND-NEXT:    not a5, a2
+; RV32ZICOND-NEXT:    srl a3, a3, a5
 ; RV32ZICOND-NEXT:    srli a4, a4, 1
-; RV32ZICOND-NEXT:    srl a5, a5, a3
 ; RV32ZICOND-NEXT:    sll a2, a0, a2
-; RV32ZICOND-NEXT:    srl a3, a4, a3
-; RV32ZICOND-NEXT:    or a0, a1, a5
-; RV32ZICOND-NEXT:    or a1, a2, a3
+; RV32ZICOND-NEXT:    srl a4, a4, a5
+; RV32ZICOND-NEXT:    or a0, a1, a3
+; RV32ZICOND-NEXT:    or a1, a2, a4
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: rotate_l_eqz:

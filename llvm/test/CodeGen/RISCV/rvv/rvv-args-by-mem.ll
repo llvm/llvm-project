@@ -6,9 +6,9 @@ define <vscale x 16 x i32> @bar(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld a0, 0(sp)
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v24
 ; CHECK-NEXT:    ld a0, 8(sp)
+; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v24
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vadd.vv v16, v16, v24
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
@@ -39,16 +39,16 @@ define <vscale x 16 x i32> @foo(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, 
 ; CHECK-NEXT:    mv s1, sp
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    addi t0, s1, 64
+; CHECK-NEXT:    vs8r.v v8, (t0)
 ; CHECK-NEXT:    csrr t1, vlenb
 ; CHECK-NEXT:    slli t1, t1, 3
 ; CHECK-NEXT:    add t1, s1, t1
 ; CHECK-NEXT:    addi t1, t1, 64
-; CHECK-NEXT:    vs8r.v v8, (t0)
 ; CHECK-NEXT:    vs8r.v v8, (t1)
-; CHECK-NEXT:    sd t1, 0(sp)
-; CHECK-NEXT:    sd t0, 8(sp)
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    sd t1, 0(sp)
+; CHECK-NEXT:    sd t0, 8(sp)
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    addi sp, s0, -96

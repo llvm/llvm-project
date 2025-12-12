@@ -17,8 +17,8 @@ define i32 @add(i32 %a, i32 %b) {
 ;
 ; RV32XQCILIA-LABEL: add:
 ; RV32XQCILIA:       # %bb.0:
-; RV32XQCILIA-NEXT:    qc.e.addi a1, a1, 2345678
 ; RV32XQCILIA-NEXT:    qc.e.addai a0, 268435456
+; RV32XQCILIA-NEXT:    qc.e.addi a1, a1, 2345678
 ; RV32XQCILIA-NEXT:    and a0, a0, a1
 ; RV32XQCILIA-NEXT:    addi a0, a0, 13
 ; RV32XQCILIA-NEXT:    ret
@@ -43,8 +43,8 @@ define i32 @and(i32 %a, i32 %b) {
 ;
 ; RV32XQCILIA-LABEL: and:
 ; RV32XQCILIA:       # %bb.0:
-; RV32XQCILIA-NEXT:    qc.e.andi a1, a1, 2345678
 ; RV32XQCILIA-NEXT:    qc.e.andai a0, 268435456
+; RV32XQCILIA-NEXT:    qc.e.andi a1, a1, 2345678
 ; RV32XQCILIA-NEXT:    srl a0, a1, a0
 ; RV32XQCILIA-NEXT:    andi a0, a0, 10
 ; RV32XQCILIA-NEXT:    ret
@@ -69,8 +69,8 @@ define i32 @or(i32 %a, i32 %b) {
 ;
 ; RV32XQCILIA-LABEL: or:
 ; RV32XQCILIA:       # %bb.0:
-; RV32XQCILIA-NEXT:    qc.e.ori a1, a1, 2345678
 ; RV32XQCILIA-NEXT:    qc.e.orai a0, 268435456
+; RV32XQCILIA-NEXT:    qc.e.ori a1, a1, 2345678
 ; RV32XQCILIA-NEXT:    add a0, a0, a1
 ; RV32XQCILIA-NEXT:    ori a0, a0, 13
 ; RV32XQCILIA-NEXT:    ret
@@ -95,8 +95,8 @@ define i32 @xor(i32 %a, i32 %b) {
 ;
 ; RV32XQCILIA-LABEL: xor:
 ; RV32XQCILIA:       # %bb.0:
-; RV32XQCILIA-NEXT:    qc.e.xori a1, a1, 2345678
 ; RV32XQCILIA-NEXT:    qc.e.xorai a0, 268435456
+; RV32XQCILIA-NEXT:    qc.e.xori a1, a1, 2345678
 ; RV32XQCILIA-NEXT:    add a0, a0, a1
 ; RV32XQCILIA-NEXT:    xori a0, a0, 13
 ; RV32XQCILIA-NEXT:    ret

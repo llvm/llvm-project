@@ -31,9 +31,6 @@
 ; The nounwind attribute is omitted for some of the tests, to check that CFI
 ; directives are correctly generated.
 
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_end(ptr)
-
 declare void @notdead(ptr)
 
 ; Although frontends are recommended to not generate va_arg due to the lack of
@@ -1213,8 +1210,6 @@ define void @va3_caller() nounwind {
  %1 = call i64 (i32, i64, ...) @va3(i32 2, i64 1111, i32 20000)
  ret void
 }
-
-declare void @llvm.va_copy(ptr, ptr)
 
 define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32-LABEL: va4_va_copy:

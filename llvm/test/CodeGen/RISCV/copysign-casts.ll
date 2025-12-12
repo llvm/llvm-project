@@ -37,10 +37,6 @@
 ; Test fcopysign scenarios where the sign argument is casted to the type of the
 ; magnitude argument. Those casts can be folded away by the DAGCombiner.
 
-declare double @llvm.copysign.f64(double, double)
-declare float @llvm.copysign.f32(float, float)
-declare half @llvm.copysign.f16(half, half)
-
 define double @fold_promote_d_s(double %a, float %b) nounwind {
 ; RV32I-LABEL: fold_promote_d_s:
 ; RV32I:       # %bb.0:
@@ -635,8 +631,8 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ; RV32IZDINX-NEXT:    # kill: def $x11_w killed $x11_w def $x11
 ; RV32IZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; RV32IZDINX-NEXT:    lui a2, 524288
-; RV32IZDINX-NEXT:    slli a0, a0, 17
 ; RV32IZDINX-NEXT:    and a1, a1, a2
+; RV32IZDINX-NEXT:    slli a0, a0, 17
 ; RV32IZDINX-NEXT:    srli a0, a0, 17
 ; RV32IZDINX-NEXT:    lui a2, 1048560
 ; RV32IZDINX-NEXT:    srli a1, a1, 16
@@ -650,8 +646,8 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ; RV64IZDINX-NEXT:    # kill: def $x11_w killed $x11_w def $x11
 ; RV64IZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; RV64IZDINX-NEXT:    lui a2, 524288
-; RV64IZDINX-NEXT:    slli a0, a0, 49
 ; RV64IZDINX-NEXT:    and a1, a1, a2
+; RV64IZDINX-NEXT:    slli a0, a0, 49
 ; RV64IZDINX-NEXT:    srli a0, a0, 49
 ; RV64IZDINX-NEXT:    lui a2, 1048560
 ; RV64IZDINX-NEXT:    srli a1, a1, 16
@@ -793,8 +789,8 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV32IZDINX:       # %bb.0:
 ; RV32IZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; RV32IZDINX-NEXT:    lui a1, 524288
-; RV32IZDINX-NEXT:    slli a0, a0, 17
 ; RV32IZDINX-NEXT:    and a1, a2, a1
+; RV32IZDINX-NEXT:    slli a0, a0, 17
 ; RV32IZDINX-NEXT:    srli a0, a0, 17
 ; RV32IZDINX-NEXT:    lui a2, 1048560
 ; RV32IZDINX-NEXT:    srli a1, a1, 16

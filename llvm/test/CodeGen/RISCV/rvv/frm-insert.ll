@@ -3,12 +3,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs -target-abi=lp64d \
 ; RUN: -riscv-disable-frm-insert-opt < %s | FileCheck %s --check-prefix=UNOPT
 
-declare <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-  <vscale x 1 x float>,
-  <vscale x 1 x float>,
-  <vscale x 1 x float>,
-  i64, i64)
-
 ; Test only save/restore frm once.
 define <vscale x 1 x float> @test(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
 ; CHECK-LABEL: test:
@@ -452,7 +446,6 @@ entry:
 ; Test restoring frm before reading frm and doing nothing with following
 ; dynamic rounding mode operations.
 ; TODO: The frrm could be elided.
-declare i32 @llvm.get.rounding()
 define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2, ptr %p) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
@@ -460,13 +453,13 @@ define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float>
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    fsrm a2
+; CHECK-NEXT:    vfadd.vv v8, v8, v8
 ; CHECK-NEXT:    frrm a0
 ; CHECK-NEXT:    lui a2, 66
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    addi a2, a2, 769
 ; CHECK-NEXT:    srl a0, a2, a0
 ; CHECK-NEXT:    andi a0, a0, 7
-; CHECK-NEXT:    vfadd.vv v8, v8, v8
 ; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:    ret
 ;
@@ -476,13 +469,13 @@ define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float>
 ; UNOPT-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; UNOPT-NEXT:    vfadd.vv v8, v8, v9
 ; UNOPT-NEXT:    fsrm a2
+; UNOPT-NEXT:    vfadd.vv v8, v8, v8
 ; UNOPT-NEXT:    frrm a0
 ; UNOPT-NEXT:    lui a2, 66
 ; UNOPT-NEXT:    slli a0, a0, 2
 ; UNOPT-NEXT:    addi a2, a2, 769
 ; UNOPT-NEXT:    srl a0, a2, a0
 ; UNOPT-NEXT:    andi a0, a0, 7
-; UNOPT-NEXT:    vfadd.vv v8, v8, v8
 ; UNOPT-NEXT:    sw a0, 0(a1)
 ; UNOPT-NEXT:    ret
 entry:
@@ -502,7 +495,6 @@ entry:
 }
 
 ; Test not set FRM for vfadd with DYN after WriteFRMImm.
-declare void @llvm.set.rounding(i32)
 define <vscale x 1 x float> @after_fsrm1(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
 ; CHECK-LABEL: after_fsrm1:
 ; CHECK:       # %bb.0: # %entry

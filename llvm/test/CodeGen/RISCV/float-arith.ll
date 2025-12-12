@@ -145,8 +145,6 @@ define float @fdiv_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.sqrt.f32(float)
-
 define float @fsqrt_s(float %a) nounwind {
 ; CHECKIF-LABEL: fsqrt_s:
 ; CHECKIF:       # %bb.0:
@@ -178,8 +176,6 @@ define float @fsqrt_s(float %a) nounwind {
   %1 = call float @llvm.sqrt.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.copysign.f32(float, float)
 
 define float @fsgnj_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fsgnj_s:
@@ -282,8 +278,8 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    call __addsf3
-; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    slli s0, s0, 1
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    srli s0, s0, 1
@@ -300,8 +296,8 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    call __addsf3
-; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    slli s0, s0, 33
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    srli s0, s0, 33
@@ -315,8 +311,6 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
   %3 = call float @llvm.copysign.f32(float %a, float %2)
   ret float %3
 }
-
-declare float @llvm.fabs.f32(float)
 
 define float @fabs_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fabs_s:
@@ -364,8 +358,6 @@ define float @fabs_s(float %a, float %b) nounwind {
   ret float %3
 }
 
-declare float @llvm.minnum.f32(float, float)
-
 define float @fmin_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fmin_s:
 ; CHECKIF:       # %bb.0:
@@ -398,8 +390,6 @@ define float @fmin_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.maxnum.f32(float, float)
-
 define float @fmax_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fmax_s:
 ; CHECKIF:       # %bb.0:
@@ -431,8 +421,6 @@ define float @fmax_s(float %a, float %b) nounwind {
   %1 = call float @llvm.maxnum.f32(float %a, float %b)
   ret float %1
 }
-
-declare float @llvm.fma.f32(float, float, float)
 
 define float @fmadd_s(float %a, float %b, float %c) nounwind {
 ; CHECKIF-LABEL: fmadd_s:
@@ -1201,8 +1189,8 @@ define float @fnmadd_s_contract(float %a, float %b, float %c) nounwind {
 ;
 ; CHECKIZFINX-LABEL: fnmadd_s_contract:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    fadd.s a0, a0, zero
 ; CHECKIZFINX-NEXT:    fadd.s a1, a1, zero
+; CHECKIZFINX-NEXT:    fadd.s a0, a0, zero
 ; CHECKIZFINX-NEXT:    fadd.s a2, a2, zero
 ; CHECKIZFINX-NEXT:    fnmadd.s a0, a0, a1, a2
 ; CHECKIZFINX-NEXT:    ret

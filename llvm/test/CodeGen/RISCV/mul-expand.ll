@@ -636,10 +636,10 @@ define i32 @muli32_0xdeadbeef(i32 %a) nounwind {
 ; RV32I-NEXT:    slli a3, a0, 14
 ; RV32I-NEXT:    add a1, a0, a1
 ; RV32I-NEXT:    add a2, a2, a3
+; RV32I-NEXT:    slli a3, a0, 17
 ; RV32I-NEXT:    add a1, a1, a2
-; RV32I-NEXT:    slli a2, a0, 17
-; RV32I-NEXT:    slli a3, a0, 20
-; RV32I-NEXT:    add a2, a2, a3
+; RV32I-NEXT:    slli a2, a0, 20
+; RV32I-NEXT:    add a2, a3, a2
 ; RV32I-NEXT:    slli a3, a0, 22
 ; RV32I-NEXT:    slli a4, a0, 24
 ; RV32I-NEXT:    slli a0, a0, 29
@@ -657,10 +657,10 @@ define i32 @muli32_0xdeadbeef(i32 %a) nounwind {
 ; RV64I-NEXT:    slli a3, a0, 14
 ; RV64I-NEXT:    add a1, a0, a1
 ; RV64I-NEXT:    add a2, a2, a3
+; RV64I-NEXT:    slli a3, a0, 17
 ; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    slli a2, a0, 17
-; RV64I-NEXT:    slli a3, a0, 20
-; RV64I-NEXT:    add a2, a2, a3
+; RV64I-NEXT:    slli a2, a0, 20
+; RV64I-NEXT:    add a2, a3, a2
 ; RV64I-NEXT:    slli a3, a0, 22
 ; RV64I-NEXT:    slli a4, a0, 24
 ; RV64I-NEXT:    slli a0, a0, 29

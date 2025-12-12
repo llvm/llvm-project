@@ -566,8 +566,6 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    sw a0, 0(sp)
-; CHECK-NEXT:    sw a0, 4(sp)
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    mv a3, a0
@@ -575,6 +573,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; CHECK-NEXT:    mv a5, a0
 ; CHECK-NEXT:    mv a6, a0
 ; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    sw a0, 0(sp)
+; CHECK-NEXT:    sw a0, 4(sp)
 ; CHECK-NEXT:    call external_many_args
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -588,8 +588,6 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    sd a0, 0(sp)
-; RV64I-NEXT:    sd a0, 8(sp)
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    mv a3, a0
@@ -597,6 +595,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-NEXT:    mv a5, a0
 ; RV64I-NEXT:    mv a6, a0
 ; RV64I-NEXT:    mv a7, a0
+; RV64I-NEXT:    sd a0, 0(sp)
+; RV64I-NEXT:    sd a0, 8(sp)
 ; RV64I-NEXT:    call external_many_args
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -610,8 +610,6 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-SMALL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-SMALL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-SMALL-NEXT:    mv s0, a0
-; RV64I-SMALL-NEXT:    sd a0, 0(sp)
-; RV64I-SMALL-NEXT:    sd a0, 8(sp)
 ; RV64I-SMALL-NEXT:    mv a1, a0
 ; RV64I-SMALL-NEXT:    mv a2, a0
 ; RV64I-SMALL-NEXT:    mv a3, a0
@@ -619,6 +617,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-SMALL-NEXT:    mv a5, a0
 ; RV64I-SMALL-NEXT:    mv a6, a0
 ; RV64I-SMALL-NEXT:    mv a7, a0
+; RV64I-SMALL-NEXT:    sd a0, 0(sp)
+; RV64I-SMALL-NEXT:    sd a0, 8(sp)
 ; RV64I-SMALL-NEXT:    call external_many_args
 ; RV64I-SMALL-NEXT:    mv a0, s0
 ; RV64I-SMALL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -632,8 +632,6 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-MEDIUM-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-MEDIUM-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-MEDIUM-NEXT:    mv s0, a0
-; RV64I-MEDIUM-NEXT:    sd a0, 0(sp)
-; RV64I-MEDIUM-NEXT:    sd a0, 8(sp)
 ; RV64I-MEDIUM-NEXT:    mv a1, a0
 ; RV64I-MEDIUM-NEXT:    mv a2, a0
 ; RV64I-MEDIUM-NEXT:    mv a3, a0
@@ -641,6 +639,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-MEDIUM-NEXT:    mv a5, a0
 ; RV64I-MEDIUM-NEXT:    mv a6, a0
 ; RV64I-MEDIUM-NEXT:    mv a7, a0
+; RV64I-MEDIUM-NEXT:    sd a0, 0(sp)
+; RV64I-MEDIUM-NEXT:    sd a0, 8(sp)
 ; RV64I-MEDIUM-NEXT:    call external_many_args
 ; RV64I-MEDIUM-NEXT:    mv a0, s0
 ; RV64I-MEDIUM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -657,8 +657,6 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi4:
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI8_0)
 ; RV64I-LARGE-NEXT:    ld t1, %pcrel_lo(.Lpcrel_hi4)(a0)
-; RV64I-LARGE-NEXT:    sd s0, 0(sp)
-; RV64I-LARGE-NEXT:    sd s0, 8(sp)
 ; RV64I-LARGE-NEXT:    mv a0, s0
 ; RV64I-LARGE-NEXT:    mv a1, s0
 ; RV64I-LARGE-NEXT:    mv a2, s0
@@ -667,6 +665,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-NEXT:    mv a5, s0
 ; RV64I-LARGE-NEXT:    mv a6, s0
 ; RV64I-LARGE-NEXT:    mv a7, s0
+; RV64I-LARGE-NEXT:    sd s0, 0(sp)
+; RV64I-LARGE-NEXT:    sd s0, 8(sp)
 ; RV64I-LARGE-NEXT:    jalr t1
 ; RV64I-LARGE-NEXT:    mv a0, s0
 ; RV64I-LARGE-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -684,8 +684,6 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP-NEXT:  .Lpcrel_hi4:
 ; RV64I-LARGE-ZICFILP-NEXT:    auipc a0, %pcrel_hi(.LCPI8_0)
 ; RV64I-LARGE-ZICFILP-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi4)(a0)
-; RV64I-LARGE-ZICFILP-NEXT:    sd s0, 0(sp)
-; RV64I-LARGE-ZICFILP-NEXT:    sd s0, 8(sp)
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a0, s0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a1, s0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a2, s0
@@ -694,6 +692,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a5, s0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a6, s0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a7, s0
+; RV64I-LARGE-ZICFILP-NEXT:    sd s0, 0(sp)
+; RV64I-LARGE-ZICFILP-NEXT:    sd s0, 8(sp)
 ; RV64I-LARGE-ZICFILP-NEXT:    jalr t2
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a0, s0
 ; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -751,8 +751,6 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw a0, 0(sp)
-; CHECK-NEXT:    sw a0, 4(sp)
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    mv a3, a0
@@ -760,6 +758,8 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; CHECK-NEXT:    mv a5, a0
 ; CHECK-NEXT:    mv a6, a0
 ; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    sw a0, 0(sp)
+; CHECK-NEXT:    sw a0, 4(sp)
 ; CHECK-NEXT:    call defined_many_args
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -769,8 +769,6 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a0, 0(sp)
-; RV64I-NEXT:    sd a0, 8(sp)
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    mv a3, a0
@@ -778,6 +776,8 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-NEXT:    mv a5, a0
 ; RV64I-NEXT:    mv a6, a0
 ; RV64I-NEXT:    mv a7, a0
+; RV64I-NEXT:    sd a0, 0(sp)
+; RV64I-NEXT:    sd a0, 8(sp)
 ; RV64I-NEXT:    call defined_many_args
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
@@ -787,8 +787,6 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-SMALL:       # %bb.0:
 ; RV64I-SMALL-NEXT:    addi sp, sp, -32
 ; RV64I-SMALL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-SMALL-NEXT:    sd a0, 0(sp)
-; RV64I-SMALL-NEXT:    sd a0, 8(sp)
 ; RV64I-SMALL-NEXT:    mv a1, a0
 ; RV64I-SMALL-NEXT:    mv a2, a0
 ; RV64I-SMALL-NEXT:    mv a3, a0
@@ -796,6 +794,8 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-SMALL-NEXT:    mv a5, a0
 ; RV64I-SMALL-NEXT:    mv a6, a0
 ; RV64I-SMALL-NEXT:    mv a7, a0
+; RV64I-SMALL-NEXT:    sd a0, 0(sp)
+; RV64I-SMALL-NEXT:    sd a0, 8(sp)
 ; RV64I-SMALL-NEXT:    call defined_many_args
 ; RV64I-SMALL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-SMALL-NEXT:    addi sp, sp, 32
@@ -805,8 +805,6 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, -32
 ; RV64I-MEDIUM-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-MEDIUM-NEXT:    sd a0, 0(sp)
-; RV64I-MEDIUM-NEXT:    sd a0, 8(sp)
 ; RV64I-MEDIUM-NEXT:    mv a1, a0
 ; RV64I-MEDIUM-NEXT:    mv a2, a0
 ; RV64I-MEDIUM-NEXT:    mv a3, a0
@@ -814,6 +812,8 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-MEDIUM-NEXT:    mv a5, a0
 ; RV64I-MEDIUM-NEXT:    mv a6, a0
 ; RV64I-MEDIUM-NEXT:    mv a7, a0
+; RV64I-MEDIUM-NEXT:    sd a0, 0(sp)
+; RV64I-MEDIUM-NEXT:    sd a0, 8(sp)
 ; RV64I-MEDIUM-NEXT:    call defined_many_args
 ; RV64I-MEDIUM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, 32
@@ -826,8 +826,6 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi5:
 ; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.LCPI10_0)
 ; RV64I-LARGE-NEXT:    ld t1, %pcrel_lo(.Lpcrel_hi5)(a1)
-; RV64I-LARGE-NEXT:    sd a0, 0(sp)
-; RV64I-LARGE-NEXT:    sd a0, 8(sp)
 ; RV64I-LARGE-NEXT:    mv a1, a0
 ; RV64I-LARGE-NEXT:    mv a2, a0
 ; RV64I-LARGE-NEXT:    mv a3, a0
@@ -835,6 +833,8 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-NEXT:    mv a5, a0
 ; RV64I-LARGE-NEXT:    mv a6, a0
 ; RV64I-LARGE-NEXT:    mv a7, a0
+; RV64I-LARGE-NEXT:    sd a0, 0(sp)
+; RV64I-LARGE-NEXT:    sd a0, 8(sp)
 ; RV64I-LARGE-NEXT:    jalr t1
 ; RV64I-LARGE-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-LARGE-NEXT:    addi sp, sp, 32
@@ -848,8 +848,6 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP-NEXT:  .Lpcrel_hi5:
 ; RV64I-LARGE-ZICFILP-NEXT:    auipc a1, %pcrel_hi(.LCPI10_0)
 ; RV64I-LARGE-ZICFILP-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi5)(a1)
-; RV64I-LARGE-ZICFILP-NEXT:    sd a0, 0(sp)
-; RV64I-LARGE-ZICFILP-NEXT:    sd a0, 8(sp)
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a1, a0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a2, a0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a3, a0
@@ -857,6 +855,8 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a5, a0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a6, a0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a7, a0
+; RV64I-LARGE-ZICFILP-NEXT:    sd a0, 0(sp)
+; RV64I-LARGE-ZICFILP-NEXT:    sd a0, 8(sp)
 ; RV64I-LARGE-ZICFILP-NEXT:    jalr t2
 ; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, 32

@@ -133,15 +133,15 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    li a3, 477
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v24, a3
-; CHECK-NEXT:    vmv.s.x v24, a2
+; CHECK-NEXT:    lui a1, %hi(.LCPI2_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI2_0)
+; CHECK-NEXT:    vmv.s.x v0, a2
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vle8.v v24, (a1)
 ; CHECK-NEXT:    li a1, 501
 ; CHECK-NEXT:    li a2, 500
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v24, a2
-; CHECK-NEXT:    lui a1, %hi(.LCPI2_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI2_0)
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vle8.v v24, (a1)
+; CHECK-NEXT:    vslideup.vx v8, v0, a2
 ; CHECK-NEXT:    lui a1, %hi(.LCPI2_1)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI2_1)
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma

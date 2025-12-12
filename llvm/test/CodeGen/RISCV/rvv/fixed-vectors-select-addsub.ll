@@ -146,11 +146,11 @@ define <64 x i32> @select_addsub_v64i32(<64 x i1> %cc, <64 x i32> %a, <64 x i32>
 ; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vrsub.vi v24, v24, 0, v0.t
 ; CHECK-NEXT:    vadd.vv v8, v8, v24
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 4
-; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
-; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vrsub.vi v24, v24, 0, v0.t
 ; CHECK-NEXT:    vadd.vv v16, v16, v24
 ; CHECK-NEXT:    ret

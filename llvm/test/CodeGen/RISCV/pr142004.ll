@@ -9,8 +9,8 @@ define i32 @foo(i32 %x) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, %hi(f)
-; CHECK-NEXT:    lui a2, %hi(d)
 ; CHECK-NEXT:    lbu a1, %lo(f)(a1)
+; CHECK-NEXT:    lui a2, %hi(d)
 ; CHECK-NEXT:    lhu a2, %lo(d)(a2)
 ; CHECK-NEXT:    xori a1, a1, 255
 ; CHECK-NEXT:    slli a3, a0, 48

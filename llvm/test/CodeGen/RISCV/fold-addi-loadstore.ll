@@ -1376,9 +1376,9 @@ define i32 @crash() {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(g+401)
 ; RV32I-NEXT:    lbu a0, %lo(g+401)(a0)
-; RV32I-NEXT:    seqz a0, a0
-; RV32I-NEXT:    sw a0, 0(zero)
+; RV32I-NEXT:    seqz a1, a0
 ; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    sw a1, 0(zero)
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILI-LABEL: crash:
@@ -1387,9 +1387,9 @@ define i32 @crash() {
 ; RV32IXQCILI-NEXT:    qc.e.li a1, g
 ; RV32IXQCILI-NEXT:    add a0, a0, a1
 ; RV32IXQCILI-NEXT:    lbu a0, 400(a0)
-; RV32IXQCILI-NEXT:    seqz a0, a0
-; RV32IXQCILI-NEXT:    sw a0, 0(zero)
+; RV32IXQCILI-NEXT:    seqz a1, a0
 ; RV32IXQCILI-NEXT:    li a0, 0
+; RV32IXQCILI-NEXT:    sw a1, 0(zero)
 ; RV32IXQCILI-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: crash:
@@ -1397,18 +1397,18 @@ define i32 @crash() {
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi14:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g+401)
 ; RV32I-MEDIUM-NEXT:    lbu a0, %pcrel_lo(.Lpcrel_hi14)(a0)
-; RV32I-MEDIUM-NEXT:    seqz a0, a0
-; RV32I-MEDIUM-NEXT:    sw a0, 0(zero)
+; RV32I-MEDIUM-NEXT:    seqz a1, a0
 ; RV32I-MEDIUM-NEXT:    li a0, 0
+; RV32I-MEDIUM-NEXT:    sw a1, 0(zero)
 ; RV32I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LABEL: crash:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a0, %hi(g+401)
 ; RV64I-NEXT:    lbu a0, %lo(g+401)(a0)
-; RV64I-NEXT:    seqz a0, a0
-; RV64I-NEXT:    sw a0, 0(zero)
+; RV64I-NEXT:    seqz a1, a0
 ; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    sw a1, 0(zero)
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-MEDIUM-LABEL: crash:
@@ -1416,9 +1416,9 @@ define i32 @crash() {
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi14:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g+401)
 ; RV64I-MEDIUM-NEXT:    lbu a0, %pcrel_lo(.Lpcrel_hi14)(a0)
-; RV64I-MEDIUM-NEXT:    seqz a0, a0
-; RV64I-MEDIUM-NEXT:    sw a0, 0(zero)
+; RV64I-MEDIUM-NEXT:    seqz a1, a0
 ; RV64I-MEDIUM-NEXT:    li a0, 0
+; RV64I-MEDIUM-NEXT:    sw a1, 0(zero)
 ; RV64I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LARGE-LABEL: crash:
@@ -1429,9 +1429,9 @@ define i32 @crash() {
 ; RV64I-LARGE-NEXT:    ld a1, %pcrel_lo(.Lpcrel_hi15)(a1)
 ; RV64I-LARGE-NEXT:    add a0, a1, a0
 ; RV64I-LARGE-NEXT:    lbu a0, 400(a0)
-; RV64I-LARGE-NEXT:    seqz a0, a0
-; RV64I-LARGE-NEXT:    sw a0, 0(zero)
+; RV64I-LARGE-NEXT:    seqz a1, a0
 ; RV64I-LARGE-NEXT:    li a0, 0
+; RV64I-LARGE-NEXT:    sw a1, 0(zero)
 ; RV64I-LARGE-NEXT:    ret
 entry:
   %idxprom7.peel = sext i32 1 to i64

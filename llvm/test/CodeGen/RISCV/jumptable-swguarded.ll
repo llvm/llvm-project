@@ -9,8 +9,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; CHECK-LABEL: above_threshold:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lpad 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    li a2, 5
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    bltu a2, a0, .LBB0_9
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    slli a0, a0, 2
@@ -43,8 +43,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ;
 ; NO-ZICFILP-LABEL: above_threshold:
 ; NO-ZICFILP:       # %bb.0: # %entry
-; NO-ZICFILP-NEXT:    addi a0, a0, -1
 ; NO-ZICFILP-NEXT:    li a2, 5
+; NO-ZICFILP-NEXT:    addi a0, a0, -1
 ; NO-ZICFILP-NEXT:    bltu a2, a0, .LBB0_9
 ; NO-ZICFILP-NEXT:  # %bb.1: # %entry
 ; NO-ZICFILP-NEXT:    slli a0, a0, 2

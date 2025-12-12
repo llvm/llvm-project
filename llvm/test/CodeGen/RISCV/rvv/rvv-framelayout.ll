@@ -19,8 +19,8 @@ define void @rvv_vla(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    sub a2, s0, a2
 ; CHECK-NEXT:    addi a2, a2, -32
-; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    vl1re64.v v8, (a2)
+; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 2
 ; CHECK-NEXT:    sub a2, s0, a2
@@ -109,8 +109,8 @@ define void @rvv_vla_and_overaligned(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    vl1re64.v v8, (a2)
 ; CHECK-NEXT:    addi a2, s1, 112
 ; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    vl2re64.v v8, (a2)
 ; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    vl2re64.v v8, (a2)
 ; CHECK-NEXT:    lw zero, 64(s1)
 ; CHECK-NEXT:    lw zero, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -144

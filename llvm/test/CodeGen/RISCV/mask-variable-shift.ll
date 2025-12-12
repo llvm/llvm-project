@@ -58,27 +58,27 @@ define i128 @mask_pair_128(i128 %x, i128 %y) {
 ; RV32-NEXT:    addi sp, sp, -32
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
 ; RV32-NEXT:    lw a3, 0(a2)
+; RV32-NEXT:    li a4, -1
 ; RV32-NEXT:    lw a2, 0(a1)
 ; RV32-NEXT:    lw a5, 4(a1)
-; RV32-NEXT:    lw a4, 8(a1)
+; RV32-NEXT:    lw a6, 8(a1)
 ; RV32-NEXT:    lw a1, 12(a1)
-; RV32-NEXT:    li a6, -1
 ; RV32-NEXT:    srli a7, a3, 3
-; RV32-NEXT:    sw a6, 16(sp)
-; RV32-NEXT:    sw a6, 20(sp)
-; RV32-NEXT:    sw a6, 24(sp)
-; RV32-NEXT:    sw a6, 28(sp)
-; RV32-NEXT:    andi a6, a7, 12
+; RV32-NEXT:    sw a4, 16(sp)
+; RV32-NEXT:    sw a4, 20(sp)
+; RV32-NEXT:    sw a4, 24(sp)
+; RV32-NEXT:    sw a4, 28(sp)
+; RV32-NEXT:    andi a4, a7, 12
 ; RV32-NEXT:    addi a7, sp, 16
 ; RV32-NEXT:    sw zero, 0(sp)
 ; RV32-NEXT:    sw zero, 4(sp)
 ; RV32-NEXT:    sw zero, 8(sp)
 ; RV32-NEXT:    sw zero, 12(sp)
-; RV32-NEXT:    sub a6, a7, a6
-; RV32-NEXT:    lw a7, 8(a6)
-; RV32-NEXT:    lw t0, 12(a6)
-; RV32-NEXT:    lw t1, 4(a6)
-; RV32-NEXT:    lw a6, 0(a6)
+; RV32-NEXT:    sub a4, a7, a4
+; RV32-NEXT:    lw a7, 8(a4)
+; RV32-NEXT:    lw t0, 12(a4)
+; RV32-NEXT:    lw t1, 4(a4)
+; RV32-NEXT:    lw a4, 0(a4)
 ; RV32-NEXT:    andi t2, a3, 31
 ; RV32-NEXT:    srli t3, a7, 1
 ; RV32-NEXT:    xori t2, t2, 31
@@ -89,18 +89,18 @@ define i128 @mask_pair_128(i128 %x, i128 %y) {
 ; RV32-NEXT:    sll a7, a7, a3
 ; RV32-NEXT:    srl t3, t3, t2
 ; RV32-NEXT:    or a7, a7, t3
-; RV32-NEXT:    srli t3, a6, 1
+; RV32-NEXT:    srli t3, a4, 1
 ; RV32-NEXT:    sll t1, t1, a3
 ; RV32-NEXT:    srl t2, t3, t2
 ; RV32-NEXT:    or t1, t1, t2
-; RV32-NEXT:    sll a3, a6, a3
-; RV32-NEXT:    and a5, t1, a5
-; RV32-NEXT:    and a4, a7, a4
+; RV32-NEXT:    sll a3, a4, a3
+; RV32-NEXT:    and a4, t1, a5
+; RV32-NEXT:    and a5, a7, a6
 ; RV32-NEXT:    and a1, t0, a1
 ; RV32-NEXT:    and a2, a3, a2
 ; RV32-NEXT:    sw a2, 0(a0)
-; RV32-NEXT:    sw a5, 4(a0)
-; RV32-NEXT:    sw a4, 8(a0)
+; RV32-NEXT:    sw a4, 4(a0)
+; RV32-NEXT:    sw a5, 8(a0)
 ; RV32-NEXT:    sw a1, 12(a0)
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    .cfi_def_cfa_offset 0

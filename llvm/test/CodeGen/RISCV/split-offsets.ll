@@ -150,8 +150,8 @@ entry:
 define void @test4(ptr %dest) {
 ; RV32I-LABEL: test4:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a0, a0, 2047
 ; RV32I-NEXT:    li a1, 1
+; RV32I-NEXT:    addi a0, a0, 2047
 ; RV32I-NEXT:    sb a1, 1(a0)
 ; RV32I-NEXT:    sb a1, 2(a0)
 ; RV32I-NEXT:    sb a1, 3(a0)
@@ -160,8 +160,8 @@ define void @test4(ptr %dest) {
 ;
 ; RV64I-LABEL: test4:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, a0, 2047
 ; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    addi a0, a0, 2047
 ; RV64I-NEXT:    sb a1, 1(a0)
 ; RV64I-NEXT:    sb a1, 2(a0)
 ; RV64I-NEXT:    sb a1, 3(a0)

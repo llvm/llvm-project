@@ -142,15 +142,15 @@ define void @orarray100(ptr %a) {
 ;
 ; RV64-LABEL: orarray100:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a1, a0, 400
-; RV64-NEXT:    lui a2, 1048560
+; RV64-NEXT:    lui a1, 1048560
+; RV64-NEXT:    addi a2, a0, 400
 ; RV64-NEXT:  .LBB8_1: # %for.body
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    lw a3, 0(a0)
-; RV64-NEXT:    orn a3, a3, a2
+; RV64-NEXT:    orn a3, a3, a1
 ; RV64-NEXT:    sw a3, 0(a0)
 ; RV64-NEXT:    addi a0, a0, 4
-; RV64-NEXT:    bne a0, a1, .LBB8_1
+; RV64-NEXT:    bne a0, a2, .LBB8_1
 ; RV64-NEXT:  # %bb.2: # %for.cond.cleanup
 ; RV64-NEXT:    ret
 entry:
@@ -173,16 +173,16 @@ for.body:
 define void @orarray3(ptr %a) {
 ; CHECK-LABEL: orarray3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lw a1, 0(a0)
-; CHECK-NEXT:    lw a2, 4(a0)
-; CHECK-NEXT:    lw a3, 8(a0)
-; CHECK-NEXT:    lui a4, 1048560
-; CHECK-NEXT:    orn a1, a1, a4
-; CHECK-NEXT:    orn a2, a2, a4
-; CHECK-NEXT:    orn a3, a3, a4
-; CHECK-NEXT:    sw a1, 0(a0)
-; CHECK-NEXT:    sw a2, 4(a0)
-; CHECK-NEXT:    sw a3, 8(a0)
+; CHECK-NEXT:    lui a1, 1048560
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    lw a3, 4(a0)
+; CHECK-NEXT:    lw a4, 8(a0)
+; CHECK-NEXT:    orn a2, a2, a1
+; CHECK-NEXT:    orn a3, a3, a1
+; CHECK-NEXT:    orn a1, a4, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    sw a3, 4(a0)
+; CHECK-NEXT:    sw a1, 8(a0)
 ; CHECK-NEXT:    ret
   %1 = load i32, ptr %a, align 4
   %or = or i32 %1, 65535

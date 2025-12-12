@@ -5,7 +5,7 @@
 ; RUN:   | FileCheck -check-prefixes=RV32,RV32IF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zicond -target-abi=ilp32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32,RV32ZICOND %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-opt,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64,RV64I %s
@@ -1088,8 +1088,8 @@ define i32 @zext_or_constant2(i32 signext %x) {
 ;
 ; RV32ZICOND-LABEL: zext_or_constant2:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    lui a1, 140
+; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    xori a2, a0, 1
 ; RV32ZICOND-NEXT:    addi a1, a1, 417
 ; RV32ZICOND-NEXT:    czero.nez a1, a1, a0
@@ -1135,8 +1135,8 @@ define i32 @zext_or_constant2(i32 signext %x) {
 ;
 ; RV64ZICOND-LABEL: zext_or_constant2:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    lui a1, 140
+; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    xori a2, a0, 1
 ; RV64ZICOND-NEXT:    addi a1, a1, 417
 ; RV64ZICOND-NEXT:    czero.nez a1, a1, a0
@@ -1176,8 +1176,8 @@ define i32 @sext_or_constant(i32 signext %x) {
 ;
 ; RV32ZICOND-LABEL: sext_or_constant:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    lui a1, 140
+; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    addi a2, a0, -1
 ; RV32ZICOND-NEXT:    addi a1, a1, 417
 ; RV32ZICOND-NEXT:    czero.eqz a1, a1, a0
@@ -1223,8 +1223,8 @@ define i32 @sext_or_constant(i32 signext %x) {
 ;
 ; RV64ZICOND-LABEL: sext_or_constant:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    lui a1, 140
+; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    addi a2, a0, -1
 ; RV64ZICOND-NEXT:    addi a1, a1, 417
 ; RV64ZICOND-NEXT:    czero.eqz a1, a1, a0
@@ -1264,8 +1264,8 @@ define i32 @sext_or_constant2(i32 signext %x) {
 ;
 ; RV32ZICOND-LABEL: sext_or_constant2:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    lui a1, 140
+; RV32ZICOND-NEXT:    srli a0, a0, 31
 ; RV32ZICOND-NEXT:    addi a2, a0, -1
 ; RV32ZICOND-NEXT:    addi a1, a1, 417
 ; RV32ZICOND-NEXT:    czero.nez a1, a1, a0
@@ -1311,8 +1311,8 @@ define i32 @sext_or_constant2(i32 signext %x) {
 ;
 ; RV64ZICOND-LABEL: sext_or_constant2:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    lui a1, 140
+; RV64ZICOND-NEXT:    srli a0, a0, 63
 ; RV64ZICOND-NEXT:    addi a2, a0, -1
 ; RV64ZICOND-NEXT:    addi a1, a1, 417
 ; RV64ZICOND-NEXT:    czero.nez a1, a1, a0

@@ -56,8 +56,6 @@
 ; RUN:   -mattr=+zhinxmin -verify-machineinstrs -target-abi lp64 | \
 ; RUN:   FileCheck -check-prefixes=CHECKIZHINXMIN,RV64IZHINXMIN %s
 
-declare half @llvm.sqrt.f16(half)
-
 define half @sqrt_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: sqrt_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -111,8 +109,6 @@ define half @sqrt_f16(half %a) nounwind {
   %1 = call half @llvm.sqrt.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.powi.f16.i32(half, i32)
 
 define half @powi_f16(half %a, i32 %b) nounwind {
 ; RV32IZFH-LABEL: powi_f16:
@@ -244,8 +240,6 @@ define half @powi_f16(half %a, i32 %b) nounwind {
   ret half %1
 }
 
-declare half @llvm.sin.f16(half)
-
 define half @sin_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: sin_f16:
 ; RV32IZFH:       # %bb.0:
@@ -363,8 +357,6 @@ define half @sin_f16(half %a) nounwind {
   %1 = call half @llvm.sin.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.cos.f16(half)
 
 define half @cos_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: cos_f16:
@@ -688,10 +680,10 @@ define half @sincos_f16(half %a) nounwind {
 ; RV32IFZFHMIN-NEXT:    fcvt.h.s fs1, fa0
 ; RV32IFZFHMIN-NEXT:    fmv.s fa0, fs0
 ; RV32IFZFHMIN-NEXT:    call cosf
-; RV32IFZFHMIN-NEXT:    fcvt.h.s fa5, fa0
-; RV32IFZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV32IFZFHMIN-NEXT:    fcvt.s.h fa4, fs1
-; RV32IFZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; RV32IFZFHMIN-NEXT:    fcvt.s.h fa5, fs1
+; RV32IFZFHMIN-NEXT:    fcvt.h.s fa4, fa0
+; RV32IFZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; RV32IFZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32IFZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV32IFZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFZFHMIN-NEXT:    flw fs0, 8(sp) # 4-byte Folded Reload
@@ -711,10 +703,10 @@ define half @sincos_f16(half %a) nounwind {
 ; RV64IFZFHMIN-NEXT:    fcvt.h.s fs1, fa0
 ; RV64IFZFHMIN-NEXT:    fmv.s fa0, fs0
 ; RV64IFZFHMIN-NEXT:    call cosf
-; RV64IFZFHMIN-NEXT:    fcvt.h.s fa5, fa0
-; RV64IFZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV64IFZFHMIN-NEXT:    fcvt.s.h fa4, fs1
-; RV64IFZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; RV64IFZFHMIN-NEXT:    fcvt.s.h fa5, fs1
+; RV64IFZFHMIN-NEXT:    fcvt.h.s fa4, fa0
+; RV64IFZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; RV64IFZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64IFZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IFZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFZFHMIN-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
@@ -734,10 +726,10 @@ define half @sincos_f16(half %a) nounwind {
 ; RV32IDZFHMIN-NEXT:    fcvt.h.s fs1, fa0
 ; RV32IDZFHMIN-NEXT:    fmv.s fa0, fs0
 ; RV32IDZFHMIN-NEXT:    call cosf
-; RV32IDZFHMIN-NEXT:    fcvt.h.s fa5, fa0
-; RV32IDZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV32IDZFHMIN-NEXT:    fcvt.s.h fa4, fs1
-; RV32IDZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; RV32IDZFHMIN-NEXT:    fcvt.s.h fa5, fs1
+; RV32IDZFHMIN-NEXT:    fcvt.h.s fa4, fa0
+; RV32IDZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; RV32IDZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32IDZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV32IDZFHMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IDZFHMIN-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
@@ -757,10 +749,10 @@ define half @sincos_f16(half %a) nounwind {
 ; RV64IDZFHMIN-NEXT:    fcvt.h.s fs1, fa0
 ; RV64IDZFHMIN-NEXT:    fmv.s fa0, fs0
 ; RV64IDZFHMIN-NEXT:    call cosf
-; RV64IDZFHMIN-NEXT:    fcvt.h.s fa5, fa0
-; RV64IDZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV64IDZFHMIN-NEXT:    fcvt.s.h fa4, fs1
-; RV64IDZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; RV64IDZFHMIN-NEXT:    fcvt.s.h fa5, fs1
+; RV64IDZFHMIN-NEXT:    fcvt.h.s fa4, fa0
+; RV64IDZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; RV64IDZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64IDZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IDZFHMIN-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IDZFHMIN-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
@@ -780,9 +772,9 @@ define half @sincos_f16(half %a) nounwind {
 ; RV32IZHINXMIN-NEXT:    fcvt.h.s s1, a0
 ; RV32IZHINXMIN-NEXT:    mv a0, s0
 ; RV32IZHINXMIN-NEXT:    call cosf
+; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, s1
 ; RV32IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, s1
 ; RV32IZHINXMIN-NEXT:    fadd.s a0, a1, a0
 ; RV32IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV32IZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -803,9 +795,9 @@ define half @sincos_f16(half %a) nounwind {
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s s1, a0
 ; RV64IZHINXMIN-NEXT:    mv a0, s0
 ; RV64IZHINXMIN-NEXT:    call cosf
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, s1
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, s1
 ; RV64IZHINXMIN-NEXT:    fadd.s a0, a1, a0
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -818,8 +810,6 @@ define half @sincos_f16(half %a) nounwind {
   %3 = fadd half %1, %2
   ret half %3
 }
-
-declare half @llvm.pow.f16(half, half)
 
 define half @pow_f16(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: pow_f16:
@@ -973,8 +963,6 @@ define half @pow_f16(half %a, half %b) nounwind {
   ret half %1
 }
 
-declare half @llvm.exp.f16(half)
-
 define half @exp_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: exp_f16:
 ; RV32IZFH:       # %bb.0:
@@ -1092,8 +1080,6 @@ define half @exp_f16(half %a) nounwind {
   %1 = call half @llvm.exp.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.exp2.f16(half)
 
 define half @exp2_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: exp2_f16:
@@ -1331,8 +1317,6 @@ define half @exp10_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.log.f16(half)
-
 define half @log_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: log_f16:
 ; RV32IZFH:       # %bb.0:
@@ -1450,8 +1434,6 @@ define half @log_f16(half %a) nounwind {
   %1 = call half @llvm.log.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.log10.f16(half)
 
 define half @log10_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: log10_f16:
@@ -1571,8 +1553,6 @@ define half @log10_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.log2.f16(half)
-
 define half @log2_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: log2_f16:
 ; RV32IZFH:       # %bb.0:
@@ -1691,8 +1671,6 @@ define half @log2_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.fma.f16(half, half, half)
-
 define half @fma_f16(half %a, half %b, half %c) nounwind {
 ; CHECKIZFH-LABEL: fma_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -1790,8 +1768,6 @@ define half @fma_f16(half %a, half %b, half %c) nounwind {
   %1 = call half @llvm.fma.f16(half %a, half %b, half %c)
   ret half %1
 }
-
-declare half @llvm.fmuladd.f16(half, half, half)
 
 define half @fmuladd_f16(half %a, half %b, half %c) nounwind {
 ; CHECKIZFH-LABEL: fmuladd_f16:
@@ -1907,8 +1883,6 @@ define half @fmuladd_f16(half %a, half %b, half %c) nounwind {
   ret half %1
 }
 
-declare half @llvm.fabs.f16(half)
-
 define half @fabs_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: fabs_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -1966,8 +1940,6 @@ define half @fabs_f16(half %a) nounwind {
   %1 = call half @llvm.fabs.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.minnum.f16(half, half)
 
 define half @minnum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: minnum_f16:
@@ -2051,8 +2023,6 @@ define half @minnum_f16(half %a, half %b) nounwind {
   ret half %1
 }
 
-declare half @llvm.maxnum.f16(half, half)
-
 define half @maxnum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: maxnum_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -2135,8 +2105,6 @@ define half @maxnum_f16(half %a, half %b) nounwind {
   ret half %1
 }
 
-declare half @llvm.copysign.f16(half, half)
-
 define half @copysign_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: copysign_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -2217,8 +2185,6 @@ define half @copysign_f16(half %a, half %b) nounwind {
   ret half %1
 }
 
-declare half @llvm.floor.f16(half)
-
 define half @floor_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: floor_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -2277,8 +2243,8 @@ define half @floor_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: floor_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2308,8 +2274,6 @@ define half @floor_f16(half %a) nounwind {
   %1 = call half @llvm.floor.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.ceil.f16(half)
 
 define half @ceil_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: ceil_f16:
@@ -2369,8 +2333,8 @@ define half @ceil_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: ceil_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2400,8 +2364,6 @@ define half @ceil_f16(half %a) nounwind {
   %1 = call half @llvm.ceil.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.trunc.f16(half)
 
 define half @trunc_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: trunc_f16:
@@ -2461,8 +2423,8 @@ define half @trunc_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: trunc_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2492,8 +2454,6 @@ define half @trunc_f16(half %a) nounwind {
   %1 = call half @llvm.trunc.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.rint.f16(half)
 
 define half @rint_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: rint_f16:
@@ -2553,8 +2513,8 @@ define half @rint_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: rint_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2584,8 +2544,6 @@ define half @rint_f16(half %a) nounwind {
   %1 = call half @llvm.rint.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.nearbyint.f16(half)
 
 define half @nearbyint_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: nearbyint_f16:
@@ -2705,8 +2663,6 @@ define half @nearbyint_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.round.f16(half)
-
 define half @round_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: round_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -2765,8 +2721,8 @@ define half @round_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: round_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2796,8 +2752,6 @@ define half @round_f16(half %a) nounwind {
   %1 = call half @llvm.round.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.roundeven.f16(half)
 
 define half @roundeven_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: roundeven_f16:
@@ -2857,8 +2811,8 @@ define half @roundeven_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: roundeven_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
@@ -2889,7 +2843,6 @@ define half @roundeven_f16(half %a) nounwind {
   ret half %1
 }
 
-declare i1 @llvm.is.fpclass.f16(half, i32)
 define i1 @isnan_d_fpclass(half %x) {
 ; CHECKIZFH-LABEL: isnan_d_fpclass:
 ; CHECKIZFH:       # %bb.0:
@@ -2907,8 +2860,8 @@ define i1 @isnan_d_fpclass(half %x) {
 ;
 ; RV32I-LABEL: isnan_d_fpclass:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 17
 ; RV32I-NEXT:    li a1, 31
+; RV32I-NEXT:    slli a0, a0, 17
 ; RV32I-NEXT:    srli a0, a0, 17
 ; RV32I-NEXT:    slli a1, a1, 10
 ; RV32I-NEXT:    slt a0, a1, a0
@@ -2916,8 +2869,8 @@ define i1 @isnan_d_fpclass(half %x) {
 ;
 ; RV64I-LABEL: isnan_d_fpclass:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 49
 ; RV64I-NEXT:    li a1, 31
+; RV64I-NEXT:    slli a0, a0, 49
 ; RV64I-NEXT:    srli a0, a0, 49
 ; RV64I-NEXT:    slli a1, a1, 10
 ; RV64I-NEXT:    slt a0, a1, a0
@@ -2925,29 +2878,29 @@ define i1 @isnan_d_fpclass(half %x) {
 ;
 ; RV32IZFHMIN-LABEL: isnan_d_fpclass:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fmv.x.h a0, fa0
-; RV32IZFHMIN-NEXT:    slli a0, a0, 17
-; RV32IZFHMIN-NEXT:    li a1, 31
-; RV32IZFHMIN-NEXT:    srli a0, a0, 17
-; RV32IZFHMIN-NEXT:    slli a1, a1, 10
-; RV32IZFHMIN-NEXT:    slt a0, a1, a0
+; RV32IZFHMIN-NEXT:    li a0, 31
+; RV32IZFHMIN-NEXT:    fmv.x.h a1, fa0
+; RV32IZFHMIN-NEXT:    slli a1, a1, 17
+; RV32IZFHMIN-NEXT:    srli a1, a1, 17
+; RV32IZFHMIN-NEXT:    slli a0, a0, 10
+; RV32IZFHMIN-NEXT:    slt a0, a0, a1
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: isnan_d_fpclass:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fmv.x.h a0, fa0
-; RV64IZFHMIN-NEXT:    slli a0, a0, 49
-; RV64IZFHMIN-NEXT:    li a1, 31
-; RV64IZFHMIN-NEXT:    srli a0, a0, 49
-; RV64IZFHMIN-NEXT:    slli a1, a1, 10
-; RV64IZFHMIN-NEXT:    slt a0, a1, a0
+; RV64IZFHMIN-NEXT:    li a0, 31
+; RV64IZFHMIN-NEXT:    fmv.x.h a1, fa0
+; RV64IZFHMIN-NEXT:    slli a1, a1, 49
+; RV64IZFHMIN-NEXT:    srli a1, a1, 49
+; RV64IZFHMIN-NEXT:    slli a0, a0, 10
+; RV64IZFHMIN-NEXT:    slt a0, a0, a1
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-LABEL: isnan_d_fpclass:
 ; RV32IZHINXMIN:       # %bb.0:
 ; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
-; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    li a1, 31
+; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    slli a1, a1, 10
 ; RV32IZHINXMIN-NEXT:    slt a0, a1, a0
@@ -2956,8 +2909,8 @@ define i1 @isnan_d_fpclass(half %x) {
 ; RV64IZHINXMIN-LABEL: isnan_d_fpclass:
 ; RV64IZHINXMIN:       # %bb.0:
 ; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
-; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    li a1, 31
+; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    slli a1, a1, 10
 ; RV64IZHINXMIN-NEXT:    slt a0, a1, a0
@@ -2965,8 +2918,6 @@ define i1 @isnan_d_fpclass(half %x) {
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3)  ; nan
   ret i1 %1
 }
-
-declare half @llvm.tan.f16(half)
 
 define half @tan_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: tan_f16:
@@ -3086,8 +3037,6 @@ define half @tan_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.maximumnum.f16(half, half)
-
 define half @maximumnum_half(half %x, half %y) {
 ; CHECKIZFH-LABEL: maximumnum_half:
 ; CHECKIZFH:       # %bb.0:
@@ -3189,8 +3138,6 @@ define half @maximumnum_half(half %x, half %y) {
   %z = call half @llvm.maximumnum.f16(half %x, half %y)
   ret half %z
 }
-
-declare half @llvm.minimumnum.f16(half, half)
 
 define half @minimumnum_half(half %x, half %y) {
 ; CHECKIZFH-LABEL: minimumnum_half:
@@ -3428,8 +3375,8 @@ define {half, i32} @frexp_half(half %x) nounwind {
 ; RV32IZFH-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFH-NEXT:    addi a0, sp, 8
 ; RV32IZFH-NEXT:    call frexpf
-; RV32IZFH-NEXT:    fcvt.h.s fa0, fa0
 ; RV32IZFH-NEXT:    lw a0, 8(sp)
+; RV32IZFH-NEXT:    fcvt.h.s fa0, fa0
 ; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFH-NEXT:    addi sp, sp, 16
 ; RV32IZFH-NEXT:    ret
@@ -3441,8 +3388,8 @@ define {half, i32} @frexp_half(half %x) nounwind {
 ; RV64IZFH-NEXT:    fcvt.s.h fa0, fa0
 ; RV64IZFH-NEXT:    mv a0, sp
 ; RV64IZFH-NEXT:    call frexpf
-; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
 ; RV64IZFH-NEXT:    ld a0, 0(sp)
+; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
 ; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFH-NEXT:    addi sp, sp, 16
 ; RV64IZFH-NEXT:    ret
@@ -3454,8 +3401,8 @@ define {half, i32} @frexp_half(half %x) nounwind {
 ; RV32IZHINX-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINX-NEXT:    addi a1, sp, 8
 ; RV32IZHINX-NEXT:    call frexpf
-; RV32IZHINX-NEXT:    fcvt.h.s a0, a0
 ; RV32IZHINX-NEXT:    lw a1, 8(sp)
+; RV32IZHINX-NEXT:    fcvt.h.s a0, a0
 ; RV32IZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZHINX-NEXT:    addi sp, sp, 16
 ; RV32IZHINX-NEXT:    ret
@@ -3467,8 +3414,8 @@ define {half, i32} @frexp_half(half %x) nounwind {
 ; RV64IZHINX-NEXT:    fcvt.s.h a0, a0
 ; RV64IZHINX-NEXT:    mv a1, sp
 ; RV64IZHINX-NEXT:    call frexpf
-; RV64IZHINX-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINX-NEXT:    ld a1, 0(sp)
+; RV64IZHINX-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZHINX-NEXT:    addi sp, sp, 16
 ; RV64IZHINX-NEXT:    ret
@@ -3510,8 +3457,8 @@ define {half, i32} @frexp_half(half %x) nounwind {
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFHMIN-NEXT:    addi a0, sp, 8
 ; RV32IZFHMIN-NEXT:    call frexpf
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
 ; RV32IZFHMIN-NEXT:    lw a0, 8(sp)
+; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
 ; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
@@ -3523,8 +3470,8 @@ define {half, i32} @frexp_half(half %x) nounwind {
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV64IZFHMIN-NEXT:    mv a0, sp
 ; RV64IZFHMIN-NEXT:    call frexpf
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
 ; RV64IZFHMIN-NEXT:    ld a0, 0(sp)
+; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
 ; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
@@ -3536,8 +3483,8 @@ define {half, i32} @frexp_half(half %x) nounwind {
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINXMIN-NEXT:    addi a1, sp, 8
 ; RV32IZHINXMIN-NEXT:    call frexpf
-; RV32IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV32IZHINXMIN-NEXT:    lw a1, 8(sp)
+; RV32IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV32IZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-NEXT:    ret
@@ -3549,8 +3496,8 @@ define {half, i32} @frexp_half(half %x) nounwind {
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV64IZHINXMIN-NEXT:    mv a1, sp
 ; RV64IZHINXMIN-NEXT:    call frexpf
-; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    ld a1, 0(sp)
+; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZHINXMIN-NEXT:    ret

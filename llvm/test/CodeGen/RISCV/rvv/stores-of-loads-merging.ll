@@ -353,11 +353,11 @@ define void @v2i8_v4i8(ptr %p, ptr %q) {
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 1 * vlenb
-; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
@@ -403,12 +403,12 @@ define void @v16i8_v32i8(ptr %p, ptr %q) {
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 2 * vlenb
-; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    li s1, 32
 ; CHECK-NEXT:    vsetvli zero, s1, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    addi a0, sp, 32
 ; CHECK-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
+; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    addi a0, sp, 32
 ; CHECK-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload

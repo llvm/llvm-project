@@ -1987,9 +1987,6 @@ entry:
   ret i64 %conv6
 }
 
-
-
-
 ; i32 saturate
 
 define i32 @stest_f64i32_mm(double %x) {
@@ -3875,12 +3872,3 @@ define i32 @ustest_f16i32_nsat(half %x) {
   ret i32 %spec.store.select7
 }
 
-declare i32 @llvm.smin.i32(i32, i32)
-declare i32 @llvm.smax.i32(i32, i32)
-declare i32 @llvm.umin.i32(i32, i32)
-declare i64 @llvm.smin.i64(i64, i64)
-declare i64 @llvm.smax.i64(i64, i64)
-declare i64 @llvm.umin.i64(i64, i64)
-declare i128 @llvm.smin.i128(i128, i128)
-declare i128 @llvm.smax.i128(i128, i128)
-declare i128 @llvm.umin.i128(i128, i128)

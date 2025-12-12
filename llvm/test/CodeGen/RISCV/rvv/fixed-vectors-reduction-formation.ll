@@ -260,8 +260,8 @@ define i32 @reduce_sum_16xi32_prefix9(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix9:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 9, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -290,8 +290,8 @@ define i32 @reduce_sum_16xi32_prefix13(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix13:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 13, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -324,13 +324,12 @@ define i32 @reduce_sum_16xi32_prefix13(ptr %p) {
   ret i32 %add11
 }
 
-
 define i32 @reduce_sum_16xi32_prefix14(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix14:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 14, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -369,8 +368,8 @@ define i32 @reduce_sum_16xi32_prefix15(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix15:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 15, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -585,11 +584,6 @@ define i32 @reduce_or_16xi32_prefix5(ptr %p) {
   ret i32 %or3
 }
 
-declare i32 @llvm.smax.i32(i32 %a, i32 %b)
-declare i32 @llvm.smin.i32(i32 %a, i32 %b)
-declare i32 @llvm.umax.i32(i32 %a, i32 %b)
-declare i32 @llvm.umin.i32(i32 %a, i32 %b)
-
 define i32 @reduce_smax_16xi32_prefix2(ptr %p) {
 ; CHECK-LABEL: reduce_smax_16xi32_prefix2:
 ; CHECK:       # %bb.0:
@@ -649,8 +643,8 @@ define i32 @reduce_smin_16xi32_prefix5(ptr %p) {
 ; CHECK-NEXT:    lui a1, 524288
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vredmin.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -773,8 +767,8 @@ define float @reduce_fadd_16xi32_prefix5(ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, 524288
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v10
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -846,7 +840,6 @@ define float @reduce_fadd_2xf32_ninf_only(ptr %p) {
   %fadd0 = fadd ninf float %e0, %e1
   ret float %fadd0
 }
-
 
 ; Negative test - last fadd is not associative
 define float @reduce_fadd_4xi32_non_associative(ptr %p) {

@@ -11,8 +11,8 @@ define i16 @ctz_v4i32(<4 x i32> %a) {
 ; RV32-NEXT:    vmsne.vi v0, v8, 0
 ; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV32-NEXT:    vid.v v9
+; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV32-NEXT:    vrsub.vi v9, v9, 4
 ; RV32-NEXT:    vand.vv v8, v8, v9
 ; RV32-NEXT:    vredmaxu.vs v8, v8, v8
@@ -28,8 +28,8 @@ define i16 @ctz_v4i32(<4 x i32> %a) {
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV64-NEXT:    vid.v v9
+; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV64-NEXT:    vrsub.vi v9, v9, 4
 ; RV64-NEXT:    vand.vv v8, v8, v9
 ; RV64-NEXT:    vredmaxu.vs v8, v8, v8
@@ -60,5 +60,3 @@ define i32 @ctz_v2i1_poison(<2 x i1> %a) {
   ret i32 %res
 }
 
-declare i32 @llvm.experimental.cttz.elts.i32.v2i1(<2 x i1>, i1)
-declare i16 @llvm.experimental.cttz.elts.i16.v4i32(<4 x i32>, i1)

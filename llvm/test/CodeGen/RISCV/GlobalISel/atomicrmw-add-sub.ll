@@ -530,9 +530,9 @@ define i16 @atomicrmw_sub_i16_constant(ptr %a) nounwind {
 ; RV32IA-LABEL: atomicrmw_sub_i16_constant:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    lui a1, 16
+; RV32IA-NEXT:    addi a1, a1, -1
 ; RV32IA-NEXT:    li a2, 1
 ; RV32IA-NEXT:    andi a3, a0, 3
-; RV32IA-NEXT:    addi a1, a1, -1
 ; RV32IA-NEXT:    andi a0, a0, -4
 ; RV32IA-NEXT:    slli a3, a3, 3
 ; RV32IA-NEXT:    sll a1, a1, a3
@@ -570,9 +570,9 @@ define i16 @atomicrmw_sub_i16_constant(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i16_constant:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    lui a1, 16
+; RV64IA-NEXT:    addi a1, a1, -1
 ; RV64IA-NEXT:    li a2, 1
 ; RV64IA-NEXT:    andi a3, a0, 3
-; RV64IA-NEXT:    addi a1, a1, -1
 ; RV64IA-NEXT:    andi a0, a0, -4
 ; RV64IA-NEXT:    slli a3, a3, 3
 ; RV64IA-NEXT:    sllw a1, a1, a3

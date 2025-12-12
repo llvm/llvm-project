@@ -168,13 +168,13 @@ define dso_local i16 @load_sext_zext_anyext_i1_i16(ptr %a) nounwind {
 define dso_local i32 @lw_sw_global(i32 %a) nounwind {
 ; RV32I-LABEL: lw_sw_global:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    lui a2, %hi(G)
 ; RV32I-NEXT:    addi a2, a2, %lo(G)
-; RV32I-NEXT:    lw a1, 0(a2)
-; RV32I-NEXT:    sw a0, 0(a2)
+; RV32I-NEXT:    lw a0, 0(a2)
+; RV32I-NEXT:    sw a1, 0(a2)
 ; RV32I-NEXT:    lw zero, 36(a2)
-; RV32I-NEXT:    sw a0, 36(a2)
-; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    sw a1, 36(a2)
 ; RV32I-NEXT:    ret
   %1 = load volatile i32, ptr @G
   store i32 %a, ptr @G
@@ -188,10 +188,11 @@ define dso_local i32 @lw_sw_global(i32 %a) nounwind {
 define dso_local i32 @lw_sw_constant(i32 %a) nounwind {
 ; RV32I-LABEL: lw_sw_constant:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 912092
-; RV32I-NEXT:    lw a1, -273(a2)
-; RV32I-NEXT:    sw a0, -273(a2)
+; RV32I-NEXT:    lui a3, 912092
+; RV32I-NEXT:    lw a1, -273(a3)
+; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    sw a2, -273(a3)
 ; RV32I-NEXT:    ret
   %1 = inttoptr i32 3735928559 to ptr
   %2 = load volatile i32, ptr %1
