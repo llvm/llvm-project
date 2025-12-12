@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-insert-waitcnts -amdgpu-waitcnt-loop-ds-opt=true -debug-only=si-insert-waitcnts -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-insert-waitcnts -amdgpu-waitcnt-loop-ds-opt -debug-only=si-insert-waitcnts -filetype-null %s 2>&1 | FileCheck %s
 
 # Test for DS loop wait optimization eligibility check.
 # Verifies that the pass correctly identifies single-block loops with
