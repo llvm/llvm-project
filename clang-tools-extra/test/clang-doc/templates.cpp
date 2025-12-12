@@ -7,6 +7,9 @@
 // RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=md
 // RUN: cat %t/docs/GlobalNamespace/index.md | FileCheck %s --check-prefix=MD
 
+// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=json
+// RUN: cat %t/docs/json/GlobalNamespace/index.json | FileCheck %s --check-prefix=JSON
+
 // YAML: ---
 // YAML-NEXT: USR:             '{{([0-9A-F]{40})}}'
 // YAML-NEXT: ChildRecords:
@@ -44,6 +47,27 @@ void ParamPackFunction(T... args);
 // MD: ### ParamPackFunction
 // MD: *void ParamPackFunction(T... args)*
 
+// JSON:           "Name": "ParamPackFunction",
+// JSON-NEXT:      "Params": [
+// JSON-NEXT:        {
+// JSON-NEXT:          "End": true,
+// JSON-NEXT:          "Name": "args",
+// JSON-NEXT:          "Type": "T..."
+// JSON-NEXT:        }
+// JSON-NEXT:      ],
+// JSON-NEXT:      "ReturnType": {
+// JSON-NEXT:        "IsBuiltIn": true,
+// JSON-NEXT:        "IsTemplate": false,
+// JSON-NEXT:        "Name": "void",
+// JSON-NEXT:        "QualName": "void",
+// JSON-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:      },
+// JSON-NEXT:      "Template": {
+// JSON-NEXT:        "Parameters": [
+// JSON-NEXT:          "class... T"
+// JSON-NEXT:        ]
+// JSON-NEXT:      },
+
 template <typename T, int U = 1>
 void function(T x) {}
 
@@ -69,6 +93,28 @@ void function(T x) {}
 // MD: ### function
 // MD: *void function(T x)*
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 23]]*
+
+// JSON:           "Name": "function",
+// JSON-NEXT:      "Params": [
+// JSON-NEXT:        {
+// JSON-NEXT:          "End": true,
+// JSON-NEXT:          "Name": "x",
+// JSON-NEXT:          "Type": "T"
+// JSON-NEXT:        }
+// JSON-NEXT:      ],
+// JSON-NEXT:      "ReturnType": {
+// JSON-NEXT:        "IsBuiltIn": true,
+// JSON-NEXT:        "IsTemplate": false,
+// JSON-NEXT:        "Name": "void",
+// JSON-NEXT:        "QualName": "void",
+// JSON-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:      },
+// JSON-NEXT:      "Template": {
+// JSON-NEXT:        "Parameters": [
+// JSON-NEXT:          "typename T",
+// JSON-NEXT:          "int U = 1"
+// JSON-NEXT:        ]
+// JSON-NEXT:      },
 
 template <>
 void function<bool, 0>(bool x) {}
@@ -97,6 +143,31 @@ void function<bool, 0>(bool x) {}
 // MD: ### function
 // MD: *void function(bool x)*
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 26]]*
+
+// JSON:           "Name": "function",
+// JSON-NEXT:      "Params": [
+// JSON-NEXT:        {
+// JSON-NEXT:          "End": true,
+// JSON-NEXT:          "Name": "x",
+// JSON-NEXT:          "Type": "bool"
+// JSON-NEXT:        }
+// JSON-NEXT:      ],
+// JSON-NEXT:      "ReturnType": {
+// JSON-NEXT:        "IsBuiltIn": true,
+// JSON-NEXT:        "IsTemplate": false,
+// JSON-NEXT:        "Name": "void",
+// JSON-NEXT:        "QualName": "void",
+// JSON-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:      },
+// JSON-NEXT:      "Template": {
+// JSON-NEXT:        "Specialization": {
+// JSON-NEXT:          "Parameters": [
+// JSON-NEXT:            "bool",
+// JSON-NEXT:            "0"
+// JSON-NEXT:          ],
+// JSON-NEXT:          "SpecializationOf": "{{([0-9A-F]{40})}}"
+// JSON-NEXT:        }
+// JSON-NEXT:      },
 
 /// A Tuple type
 ///
@@ -154,3 +225,20 @@ tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t;
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 44]]*
 // MD:  A function with a tuple parameter
 // MD: **t** The input to func_with_tuple_param
+
+// JSON:           "Name": "func_with_tuple_param",
+// COM:            FIXME: Add type info to parameters
+// JSON-NEXT:      "Params": [
+// JSON-NEXT:        {
+// JSON-NEXT:          "End": true,
+// JSON-NEXT:          "Name": "t",
+// JSON-NEXT:          "Type": "tuple"
+// JSON-NEXT:        }
+// JSON-NEXT:      ],
+// JSON-NEXT:      "ReturnType": {
+// JSON-NEXT:        "IsBuiltIn": false,
+// JSON-NEXT:        "IsTemplate": false,
+// JSON-NEXT:        "Name": "tuple",
+// JSON-NEXT:        "QualName": "tuple<int, int, bool>",
+// JSON-NEXT:        "USR": "{{([0-9A-F]{40})}}"
+// JSON-NEXT:      },
