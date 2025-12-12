@@ -43,7 +43,7 @@ public:
   }
 
 private:
-  bool shouldInlineCallsTo(const Function &Callee) {
+  bool mayInlineCallsTo(const Function &Callee) {
     return Callee.getCallingConv() == CallingConv::AMDGPU_Gfx_WholeWave;
   }
 

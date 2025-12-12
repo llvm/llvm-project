@@ -154,16 +154,16 @@ public:
            (IsAOneAddressSpace == IsBOneAddressSpace || !IsAOneAddressSpace);
   }
 
-  void addMachineInlinedFunction(Function &F) {
+  void addMachineInliningCandidate(Function &F) {
     MachineInlinedFunctions.push_back(&F);
   }
 
-  bool isMachineInlinedFunction(Function &F) const {
+  bool isMachineInliningCandidate(Function &F) const {
     return llvm::find(MachineInlinedFunctions, &F) !=
            MachineInlinedFunctions.end();
   }
 
-  ArrayRef<Function *> getMachineInlinedFunctions() const {
+  ArrayRef<Function *> getMachineInliningCandidates() const {
     return MachineInlinedFunctions;
   }
 };

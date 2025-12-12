@@ -112,11 +112,11 @@ bool AMDGPUMachineLevelInliner::runOnMachineFunction(MachineFunction &MF) {
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
   Function &F = MF.getFunction();
-  if (shouldInlineCallsTo(F)) {
+  if (mayInlineCallsTo(F)) {
     // Mark the function as machine-inlined in AMDGPUMachineModuleInfo. This
     // tells the inlining pass manager to stop processing it.
     auto &AMMMI = MMI.getObjFileInfo<AMDGPUMachineModuleInfo>();
-    AMMMI.addMachineInlinedFunction(F);
+    AMMMI.addMachineInliningCandidate(F);
 
     return false;
   }
@@ -148,7 +148,7 @@ bool AMDGPUMachineLevelInliner::runOnMachineFunction(MachineFunction &MF) {
             report_fatal_error("Recursive calls in whole wave functions are "
                                "not supported yet");
 
-          if (shouldInlineCallsTo(*CalledFunc)) {
+          if (mayInlineCallsTo(*CalledFunc)) {
             CallsToInline.push_back(&MI);
           }
         }
@@ -304,7 +304,7 @@ bool AMDGPUInliningPassManager::runOnFunction(Function &F) {
   auto &AMMMI = MMI.getObjFileInfo<AMDGPUMachineModuleInfo>();
 
   // Don't run anything on functions that have already been inlined.
-  if (AMMMI.isMachineInlinedFunction(F))
+  if (AMMMI.isMachineInliningCandidate(F))
     return false;
 
   bool Changed = false;
@@ -342,7 +342,7 @@ bool AMDGPUInliningPassManager::runOnFunction(Function &F) {
     dumpUsedSet(FP);
 
     // If the pass has marked the function for inlining, skip remaining passes.
-    if (AMMMI.isMachineInlinedFunction(F))
+    if (AMMMI.isMachineInliningCandidate(F))
       break;
 
     verifyPreservedAnalysis(FP);
@@ -367,7 +367,7 @@ bool AMDGPUInliningPassManager::doFinalization(Module &M) {
   // emitted. This way they can be in their inlining-ready form until we're done
   // processing all their callers, and then still go through the rest of the
   // pipeline.
-  for (Function *F : AMMMI.getMachineInlinedFunctions())
+  for (Function *F : AMMMI.getMachineInliningCandidates())
     MMI.deleteMachineFunctionFor(*F);
 
   return FPPassManager::doFinalization(M);
