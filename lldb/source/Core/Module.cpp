@@ -497,7 +497,8 @@ uint32_t Module::ResolveSymbolContextForAddress(
         addr_t file_address = so_addr.GetFileAddress();
         Symbol *matching_symbol = symtab->FindSymbolAtFileAddress(file_address);
 
-        if (!matching_symbol) {
+        if (!matching_symbol ||
+            matching_symbol->GetType() == eSymbolTypeInvalid) {
           symtab->ForEachSymbolContainingFileAddress(
               file_address, [&matching_symbol](Symbol *symbol) -> bool {
                 if (symbol->GetType() != eSymbolTypeInvalid) {
