@@ -705,6 +705,8 @@ int isAArch64FrameOffsetLegal(const MachineInstr &MI, StackOffset &Offset,
                               unsigned *OutUnscaledOp = nullptr,
                               int64_t *EmittableOffset = nullptr);
 
+bool optimizeTerminators(MachineBasicBlock *MBB, const TargetInstrInfo &TII);
+
 static inline bool isUncondBranchOpcode(int Opc) { return Opc == AArch64::B; }
 
 static inline bool isCondBranchOpcode(int Opc) {
