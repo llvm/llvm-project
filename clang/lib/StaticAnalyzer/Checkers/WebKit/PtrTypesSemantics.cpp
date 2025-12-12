@@ -523,6 +523,15 @@ public:
     });
   }
 
+  bool IsStatementTrivial(const Stmt *S) {
+    auto CacheIt = Cache.find(S);
+    if (CacheIt != Cache.end())
+      return CacheIt->second;
+    bool Result = Visit(S);
+    Cache[S] = Result;
+    return Result;
+  }
+
   bool VisitStmt(const Stmt *S) {
     // All statements are non-trivial unless overriden later.
     // Don't even recurse into children by default.
@@ -826,9 +835,7 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
 bool TrivialFunctionAnalysis::isTrivialImpl(
     const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache) {
   TrivialFunctionAnalysisVisitor V(Cache);
-  bool Result = V.Visit(S);
-  assert(Cache.contains(S) && "Top-level statement not properly cached!");
-  return Result;
+  return V.IsStatementTrivial(S);
 }
 
 } // namespace clang
