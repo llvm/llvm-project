@@ -208,6 +208,11 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Implemented the ``defer`` draft Technical Specification
+  (`WG14 N3734 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3734.pdf>`_); it is enabled in C mode by
+  passing ``-fdefer-ts``. Note, the details of this feature are subject to change given that the Technical
+  Specification is not yet ratified.
+
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - No longer triggering ``-Wstatic-in-inline`` in C2y mode; use of a static
@@ -589,6 +594,7 @@ Bug Fixes to C++ Support
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 - Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
 - Fixed spurious diagnoses of certain nested lambda expressions. (#GH149121) (#GH156579)
+- Fix the result of ``__is_pointer_interconvertible_base_of`` when arguments are qualified and passed via template parameters. (#GH135273)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -777,6 +783,8 @@ Crash and bug fixes
 - Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
 - Fixed a crash when parsing invalid nested name specifier sequences
   containing a single colon. (#GH167905)
+- Fixed a crash when parsing malformed #pragma clang loop vectorize_width(4,8,16)
+  by diagnosing invalid comma-separated argument lists. (#GH166325)
 
 Improvements
 ^^^^^^^^^^^^

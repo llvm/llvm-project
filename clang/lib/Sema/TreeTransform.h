@@ -8552,6 +8552,14 @@ TreeTransform<Derived>::TransformBreakStmt(BreakStmt *S) {
       BreakStmt(S->getKwLoc(), S->getLabelLoc(), cast<LabelDecl>(LD));
 }
 
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformDeferStmt(DeferStmt *S) {
+  StmtResult Result = getDerived().TransformStmt(S->getBody());
+  if (!Result.isUsable())
+    return StmtError();
+  return DeferStmt::Create(getSema().Context, S->getDeferLoc(), Result.get());
+}
+
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformReturnStmt(ReturnStmt *S) {

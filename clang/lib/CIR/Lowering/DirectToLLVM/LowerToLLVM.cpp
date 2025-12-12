@@ -249,16 +249,18 @@ class CIRAttrToValue {
 public:
   CIRAttrToValue(mlir::Operation *parentOp,
                  mlir::ConversionPatternRewriter &rewriter,
-                 const mlir::TypeConverter *converter)
-      : parentOp(parentOp), rewriter(rewriter), converter(converter) {}
+                 const mlir::TypeConverter *converter,
+                 cir::LowerModule *lowerMod)
+      : parentOp(parentOp), rewriter(rewriter), converter(converter),
+        lowerMod(lowerMod) {}
 
   mlir::Value visit(mlir::Attribute attr) {
     return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)
         .Case<cir::IntAttr, cir::FPAttr, cir::ConstComplexAttr,
               cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
-              cir::ConstPtrAttr, cir::GlobalViewAttr, cir::TypeInfoAttr,
-              cir::UndefAttr, cir::VTableAttr, cir::ZeroAttr>(
-            [&](auto attrT) { return visitCirAttr(attrT); })
+              cir::ConstPtrAttr, cir::DataMemberAttr, cir::GlobalViewAttr,
+              cir::TypeInfoAttr, cir::UndefAttr, cir::VTableAttr,
+              cir::ZeroAttr>([&](auto attrT) { return visitCirAttr(attrT); })
         .Default([&](auto attrT) { return mlir::Value(); });
   }
 
@@ -269,6 +271,7 @@ public:
   mlir::Value visitCirAttr(cir::ConstArrayAttr attr);
   mlir::Value visitCirAttr(cir::ConstRecordAttr attr);
   mlir::Value visitCirAttr(cir::ConstVectorAttr attr);
+  mlir::Value visitCirAttr(cir::DataMemberAttr attr);
   mlir::Value visitCirAttr(cir::GlobalViewAttr attr);
   mlir::Value visitCirAttr(cir::TypeInfoAttr attr);
   mlir::Value visitCirAttr(cir::UndefAttr attr);
@@ -279,14 +282,16 @@ private:
   mlir::Operation *parentOp;
   mlir::ConversionPatternRewriter &rewriter;
   const mlir::TypeConverter *converter;
+  cir::LowerModule *lowerMod;
 };
 
 /// Switches on the type of attribute and calls the appropriate conversion.
 mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
                                 const mlir::Attribute attr,
                                 mlir::ConversionPatternRewriter &rewriter,
-                                const mlir::TypeConverter *converter) {
-  CIRAttrToValue valueConverter(parentOp, rewriter, converter);
+                                const mlir::TypeConverter *converter,
+                                cir::LowerModule *lowerMod) {
+  CIRAttrToValue valueConverter(parentOp, rewriter, converter, lowerMod);
   mlir::Value value = valueConverter.visit(attr);
   if (!value)
     llvm_unreachable("unhandled attribute type");
@@ -519,6 +524,15 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstVectorAttr attr) {
       rewriter, loc, llvmTy,
       mlir::DenseElementsAttr::get(mlir::cast<mlir::ShapedType>(llvmTy),
                                    mlirValues));
+}
+
+mlir::Value CIRAttrToValue::visitCirAttr(cir::DataMemberAttr attr) {
+  assert(lowerMod && "lower module is not available");
+  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
+  mlir::TypedAttr init =
+      lowerMod->getCXXABI().lowerDataMemberConstant(attr, layout, *converter);
+  // Recursively lower the CIR attribute produced by the C++ ABI.
+  return visit(init);
 }
 
 // GlobalViewAttr visitor.
@@ -868,8 +882,8 @@ mlir::LogicalResult CIRToLLVMAtomicClearOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMAtomicFenceLowering::matchAndRewrite(
-    cir::AtomicFence op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMAtomicFenceOpLowering::matchAndRewrite(
+    cir::AtomicFenceOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getOrdering());
 
@@ -1684,13 +1698,16 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   // Convert adapted value to its memory type if needed.
   mlir::Value value = emitToMemory(rewriter, dataLayout,
                                    op.getValue().getType(), adaptor.getValue());
-  // TODO: nontemporal, syncscope.
+  // TODO: nontemporal.
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
+  std::optional<llvm::StringRef> syncScope =
+      getLLVMSyncScope(op.getSyncScope());
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
       op.getIsVolatile(),
-      /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder);
+      /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder,
+      syncScope.value_or(llvm::StringRef()));
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
@@ -1753,7 +1770,8 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     }
     // Lower GlobalViewAttr to llvm.mlir.addressof
     if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(op.getValue())) {
-      auto newOp = lowerCirAttrAsValue(op, gv, rewriter, getTypeConverter());
+      auto newOp =
+          lowerCirAttrAsValue(op, gv, rewriter, getTypeConverter(), lowerMod);
       rewriter.replaceOp(op, newOp);
       return mlir::success();
     }
@@ -1773,32 +1791,33 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
 
     std::optional<mlir::Attribute> denseAttr;
     if (constArr && hasTrailingZeros(constArr)) {
-      const mlir::Value newOp =
-          lowerCirAttrAsValue(op, constArr, rewriter, getTypeConverter());
+      const mlir::Value newOp = lowerCirAttrAsValue(
+          op, constArr, rewriter, getTypeConverter(), lowerMod);
       rewriter.replaceOp(op, newOp);
       return mlir::success();
     } else if (constArr &&
                (denseAttr = lowerConstArrayAttr(constArr, typeConverter))) {
       attr = denseAttr.value();
     } else {
-      const mlir::Value initVal =
-          lowerCirAttrAsValue(op, op.getValue(), rewriter, typeConverter);
+      const mlir::Value initVal = lowerCirAttrAsValue(
+          op, op.getValue(), rewriter, typeConverter, lowerMod);
       rewriter.replaceOp(op, initVal);
       return mlir::success();
     }
   } else if (const auto recordAttr =
                  mlir::dyn_cast<cir::ConstRecordAttr>(op.getValue())) {
-    auto initVal = lowerCirAttrAsValue(op, recordAttr, rewriter, typeConverter);
+    auto initVal =
+        lowerCirAttrAsValue(op, recordAttr, rewriter, typeConverter, lowerMod);
     rewriter.replaceOp(op, initVal);
     return mlir::success();
   } else if (const auto vecTy = mlir::dyn_cast<cir::VectorType>(op.getType())) {
     rewriter.replaceOp(op, lowerCirAttrAsValue(op, op.getValue(), rewriter,
-                                               getTypeConverter()));
+                                               getTypeConverter(), lowerMod));
     return mlir::success();
   } else if (auto recTy = mlir::dyn_cast<cir::RecordType>(op.getType())) {
     if (mlir::isa<cir::ZeroAttr, cir::UndefAttr>(attr)) {
       mlir::Value initVal =
-          lowerCirAttrAsValue(op, attr, rewriter, typeConverter);
+          lowerCirAttrAsValue(op, attr, rewriter, typeConverter, lowerMod);
       rewriter.replaceOp(op, initVal);
       return mlir::success();
     }
@@ -2106,18 +2125,17 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
     cir::GlobalOp op, mlir::Attribute init,
     mlir::ConversionPatternRewriter &rewriter) const {
   // TODO: Generalize this handling when more types are needed here.
-  assert(
-      (isa<cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
-           cir::ConstPtrAttr, cir::ConstComplexAttr, cir::GlobalViewAttr,
-           cir::TypeInfoAttr, cir::UndefAttr, cir::VTableAttr, cir::ZeroAttr>(
-          init)));
+  assert((isa<cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
+              cir::ConstPtrAttr, cir::ConstComplexAttr, cir::DataMemberAttr,
+              cir::GlobalViewAttr, cir::TypeInfoAttr, cir::UndefAttr,
+              cir::VTableAttr, cir::ZeroAttr>(init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
   // should be updated. For now, we use a custom op to initialize globals
   // to the appropriate value.
   const mlir::Location loc = op.getLoc();
   setupRegionInitializedLLVMGlobalOp(op, rewriter);
-  CIRAttrToValue valueConverter(op, rewriter, typeConverter);
+  CIRAttrToValue valueConverter(op, rewriter, typeConverter, lowerMod);
   mlir::Value value = valueConverter.visit(init);
   mlir::LLVM::ReturnOp::create(rewriter, loc, value);
   return mlir::success();
@@ -2166,9 +2184,9 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       }
     } else if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
                          cir::ConstRecordAttr, cir::ConstPtrAttr,
-                         cir::ConstComplexAttr, cir::GlobalViewAttr,
-                         cir::TypeInfoAttr, cir::UndefAttr, cir::VTableAttr,
-                         cir::ZeroAttr>(init.value())) {
+                         cir::ConstComplexAttr, cir::DataMemberAttr,
+                         cir::GlobalViewAttr, cir::TypeInfoAttr, cir::UndefAttr,
+                         cir::VTableAttr, cir::ZeroAttr>(init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.
@@ -3226,6 +3244,17 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
                                                        adaptor.getAddr());
     return mlir::success();
   }
+}
+
+mlir::LogicalResult CIRToLLVMGetRuntimeMemberOpLowering::matchAndRewrite(
+    cir::GetRuntimeMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(lowerMod && "lowering module is not available");
+  mlir::Type llvmResTy = getTypeConverter()->convertType(op.getType());
+  mlir::Operation *llvmOp = lowerMod->getCXXABI().lowerGetRuntimeMember(
+      op, llvmResTy, adaptor.getAddr(), adaptor.getMember(), rewriter);
+  rewriter.replaceOp(op, llvmOp);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMUnreachableOpLowering::matchAndRewrite(
