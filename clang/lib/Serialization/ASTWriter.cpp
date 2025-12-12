@@ -5706,8 +5706,13 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
     GetDeclRef(SemaRef.getStdAlignValT());
   }
 
-  if (Context.getcudaConfigureCallDecl())
+  if (Context.getcudaConfigureCallDecl() ||
+      Context.getcudaGetParameterBufferDecl() ||
+      Context.getcudaLaunchDeviceDecl()) {
     GetDeclRef(Context.getcudaConfigureCallDecl());
+    GetDeclRef(Context.getcudaGetParameterBufferDecl());
+    GetDeclRef(Context.getcudaLaunchDeviceDecl());
+  }
 
   // Writing all of the known namespaces.
   for (const auto &I : SemaRef.KnownNamespaces)
@@ -5834,19 +5839,19 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
       Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
   }
 
+  auto AddEmittedDeclRefOrZero = [this](RecordData &Refs, Decl *D) {
+    if (!D || !wasDeclEmitted(D))
+      Refs.push_back(0);
+    else
+      AddDeclRef(D, Refs);
+  };
+
   // Write the record containing declaration references of Sema.
   RecordData SemaDeclRefs;
   if (SemaRef.StdNamespace || SemaRef.StdBadAlloc || SemaRef.StdAlignValT) {
-    auto AddEmittedDeclRefOrZero = [this, &SemaDeclRefs](Decl *D) {
-      if (!D || !wasDeclEmitted(D))
-        SemaDeclRefs.push_back(0);
-      else
-        AddDeclRef(D, SemaDeclRefs);
-    };
-
-    AddEmittedDeclRefOrZero(SemaRef.getStdNamespace());
-    AddEmittedDeclRefOrZero(SemaRef.getStdBadAlloc());
-    AddEmittedDeclRefOrZero(SemaRef.getStdAlignValT());
+    AddEmittedDeclRefOrZero(SemaDeclRefs, SemaRef.getStdNamespace());
+    AddEmittedDeclRefOrZero(SemaDeclRefs, SemaRef.getStdBadAlloc());
+    AddEmittedDeclRefOrZero(SemaDeclRefs, SemaRef.getStdAlignValT());
   }
   if (!SemaDeclRefs.empty())
     Stream.EmitRecord(SEMA_DECL_REFS, SemaDeclRefs);
@@ -5862,9 +5867,13 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
 
   // Write the record containing CUDA-specific declaration references.
   RecordData CUDASpecialDeclRefs;
-  if (auto *CudaCallDecl = Context.getcudaConfigureCallDecl();
-      CudaCallDecl && wasDeclEmitted(CudaCallDecl)) {
-    AddDeclRef(CudaCallDecl, CUDASpecialDeclRefs);
+  if (auto *CudaCallDecl = Context.getcudaConfigureCallDecl(),
+      *CudaGetParamDecl = Context.getcudaGetParameterBufferDecl(),
+      *CudaLaunchDecl = Context.getcudaLaunchDeviceDecl();
+      CudaCallDecl || CudaGetParamDecl || CudaLaunchDecl) {
+    AddEmittedDeclRefOrZero(CUDASpecialDeclRefs, CudaCallDecl);
+    AddEmittedDeclRefOrZero(CUDASpecialDeclRefs, CudaGetParamDecl);
+    AddEmittedDeclRefOrZero(CUDASpecialDeclRefs, CudaLaunchDecl);
     Stream.EmitRecord(CUDA_SPECIAL_DECL_REFS, CUDASpecialDeclRefs);
   }
 
@@ -8453,6 +8462,8 @@ void OMPClauseWriter::VisitOMPToClause(OMPToClause *C) {
   for (unsigned I = 0; I < NumberOfOMPMotionModifiers; ++I) {
     Record.push_back(C->getMotionModifier(I));
     Record.AddSourceLocation(C->getMotionModifierLoc(I));
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      Record.AddStmt(C->getIteratorModifier());
   }
   Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
   Record.AddDeclarationNameInfo(C->getMapperIdInfo());
@@ -8483,6 +8494,8 @@ void OMPClauseWriter::VisitOMPFromClause(OMPFromClause *C) {
   for (unsigned I = 0; I < NumberOfOMPMotionModifiers; ++I) {
     Record.push_back(C->getMotionModifier(I));
     Record.AddSourceLocation(C->getMotionModifierLoc(I));
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      Record.AddStmt(C->getIteratorModifier());
   }
   Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
   Record.AddDeclarationNameInfo(C->getMapperIdInfo());

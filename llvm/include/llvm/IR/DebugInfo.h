@@ -44,6 +44,8 @@ class Module;
 LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRDeclares(Value *V);
 /// As above, for DVRValues.
 LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRValues(Value *V);
+/// As above, for DVRDeclareValues.
+LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRDeclareValues(Value *V);
 
 /// Finds the debug info records describing a value.
 LLVM_ABI void

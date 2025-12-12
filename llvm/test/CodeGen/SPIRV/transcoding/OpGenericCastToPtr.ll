@@ -45,6 +45,12 @@ entry:
   %GE = call spir_func ptr addrspace(1) @_Z41__spirv_GenericCastToPtrExplicit_ToGlobalPvi(ptr addrspace(4) %var1, i32 5)
   %LE = call spir_func ptr addrspace(3) @_Z40__spirv_GenericCastToPtrExplicit_ToLocalPvi(ptr addrspace(4) %var2, i32 4)
   %PE = call spir_func ptr @_Z42__spirv_GenericCastToPtrExplicit_ToPrivatePvi(ptr addrspace(4) %var3, i32 7)
+  store i32 0, ptr addrspace(1) %G, align 4
+  store i8 0, ptr addrspace(3) %L, align 1
+  store i32 0, ptr %P, align 4
+  store i32 0, ptr addrspace(1) %GE, align 4
+  store i8 0, ptr addrspace(3) %LE, align 1
+  store i32 0, ptr %PE, align 4
   ret void
 }
 
@@ -70,6 +76,9 @@ entry:
   %G = call spir_func ptr addrspace(1) @_Z9to_globalPv(ptr addrspace(4) %var1)
   %L = call spir_func ptr addrspace(3) @_Z8to_localPv(ptr addrspace(4) %var2)
   %P = call spir_func ptr @_Z10to_privatePv(ptr addrspace(4) %var3)
+  store i32 0, ptr addrspace(1) %G, align 4
+  store i8 0, ptr addrspace(3) %L, align 1
+  store i32 0, ptr %P, align 4
   ret void
 }
 
@@ -114,6 +123,12 @@ entry:
   %GE = call spir_func ptr addrspace(1) @__spirv_GenericCastToPtrExplicit_ToGlobal(ptr addrspace(4) %var1, i32 5)
   %LE = call spir_func ptr addrspace(3) @__spirv_GenericCastToPtrExplicit_ToLocal(ptr addrspace(4) %var2, i32 4)
   %PE = call spir_func ptr @__spirv_GenericCastToPtrExplicit_ToPrivate(ptr addrspace(4) %var3, i32 7)
+  store i32 0, ptr addrspace(1) %G, align 4
+  store i8 0, ptr addrspace(3) %L, align 1
+  store i32 0, ptr %P, align 4
+  store i32 0, ptr addrspace(1) %GE, align 4
+  store i8 0, ptr addrspace(3) %LE, align 1
+  store i32 0, ptr %PE, align 4
   ret void
 }
 
@@ -139,6 +154,9 @@ entry:
   %G = call spir_func ptr addrspace(1) @to_global(ptr addrspace(4) %var1)
   %L = call spir_func ptr addrspace(3) @to_local(ptr addrspace(4) %var2)
   %P = call spir_func ptr @to_private(ptr addrspace(4) %var3)
+  store i32 0, ptr addrspace(1) %G, align 4
+  store i8 0, ptr addrspace(3) %L, align 1
+  store i32 0, ptr %P, align 4
   ret void
 }
 

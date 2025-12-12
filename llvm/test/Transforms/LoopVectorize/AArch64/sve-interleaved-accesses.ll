@@ -391,7 +391,7 @@ define void @test_reversed_load2_store2(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[REVERSE2]], <vscale x 4 x i32> [[REVERSE3]])
 ; CHECK-NEXT:    store <vscale x 8 x i32> [[INTERLEAVED_VEC]], ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
@@ -1197,8 +1197,8 @@ define void @PR27626_5(ptr %a, i32 %x, i32 %y, i32 %z, i64 %n) #1 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = add <vscale x 4 x i64> [[VEC_IND]], splat (i64 -1)
-; CHECK-NEXT:    [[TMP14:%.*]] = add <vscale x 4 x i64> [[VEC_IND]], splat (i64 -3)
+; CHECK-NEXT:    [[TMP13:%.*]] = add nsw <vscale x 4 x i64> [[VEC_IND]], splat (i64 -1)
+; CHECK-NEXT:    [[TMP14:%.*]] = add nsw <vscale x 4 x i64> [[VEC_IND]], splat (i64 -3)
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], <vscale x 4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], <vscale x 4 x i64> [[TMP13]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[A]], <vscale x 4 x i64> [[TMP14]]
@@ -1286,7 +1286,7 @@ define void @PR34743(ptr %a, ptr %b, i64 %n) #1 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 4 x i16> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[WIDE_MASKED_GATHER4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP15]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    [[TMP18:%.*]] = or disjoint <vscale x 4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP19:%.*]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i16, ptr [[A]], <vscale x 4 x i64> [[TMP18]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP20]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i16> poison), !alias.scope [[META34:![0-9]+]]
@@ -1590,7 +1590,7 @@ define void @interleave_deinterleave_reverse(ptr noalias nocapture readonly %A, 
 ; CHECK-NEXT:    [[INTERLEAVED_VEC11:%.*]] = call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> [[REVERSE6]], <vscale x 4 x i32> [[REVERSE7]], <vscale x 4 x i32> [[REVERSE8]], <vscale x 4 x i32> [[REVERSE9]])
 ; CHECK-NEXT:    store <vscale x 16 x i32> [[INTERLEAVED_VEC11]], ptr [[TMP26]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP45:![0-9]+]]
 ; CHECK:       middle.block:

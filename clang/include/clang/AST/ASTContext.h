@@ -382,6 +382,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
       GlobalArrayOperatorDeletesForVirtualDtor;
 
+  /// To remember which types did require a vector deleting dtor.
+  llvm::DenseSet<const CXXRecordDecl *> RequireVectorDeletingDtor;
+
   /// The next string literal "version" to allocate during constant evaluation.
   /// This is used to distinguish between repeated evaluations of the same
   /// string literal.
@@ -500,6 +503,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   /// Declaration for the CUDA cudaConfigureCall function.
   FunctionDecl *cudaConfigureCallDecl = nullptr;
+  /// Declaration for the CUDA cudaGetParameterBuffer function.
+  FunctionDecl *cudaGetParameterBufferDecl = nullptr;
+  /// Declaration for the CUDA cudaLaunchDevice function.
+  FunctionDecl *cudaLaunchDeviceDecl = nullptr;
 
   /// Keeps track of all declaration attributes.
   ///
@@ -1653,6 +1660,18 @@ public:
     return cudaConfigureCallDecl;
   }
 
+  void setcudaGetParameterBufferDecl(FunctionDecl *FD) {
+    cudaGetParameterBufferDecl = FD;
+  }
+
+  FunctionDecl *getcudaGetParameterBufferDecl() {
+    return cudaGetParameterBufferDecl;
+  }
+
+  void setcudaLaunchDeviceDecl(FunctionDecl *FD) { cudaLaunchDeviceDecl = FD; }
+
+  FunctionDecl *getcudaLaunchDeviceDecl() { return cudaLaunchDeviceDecl; }
+
   /// Returns true iff we need copy/dispose helpers for the given type.
   bool BlockRequiresCopying(QualType Ty, const VarDecl *D);
 
@@ -2791,6 +2810,10 @@ public:
   /// runtime, such as those using the Itanium C++ ABI.
   CharUnits getExnObjectAlignment() const;
 
+  /// Return whether unannotated records are treated as if they have
+  /// [[gnu::ms_struct]].
+  bool defaultsToMsStruct() const;
+
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field
   /// position information.
@@ -3494,6 +3517,8 @@ public:
                                           OperatorDeleteKind K) const;
   bool dtorHasOperatorDelete(const CXXDestructorDecl *Dtor,
                              OperatorDeleteKind K) const;
+  void setClassNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
+  bool classNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
 
   /// Retrieve the context for computing mangling numbers in the given
   /// DeclContext.

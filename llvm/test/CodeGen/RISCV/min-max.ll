@@ -5,16 +5,14 @@
 ; RUN:   FileCheck %s --check-prefixes=ZBB,RV32ZBB
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+zbb | \
 ; RUN:   FileCheck %s --check-prefixes=ZBB,RV64ZBB
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-opt,+conditional-cmv-fusion -verify-machineinstrs < %s | \
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s | \
 ; RUN:   FileCheck %s --check-prefixes=XQCI
-; RUN: llc < %s -mtriple=riscv32 -mattr=+short-forward-branch-opt | \
+; RUN: llc < %s -mtriple=riscv32 -mattr=+short-forward-branch-ialu | \
 ; RUN:   FileCheck %s --check-prefixes=RV32I-SFB
-; RUN: llc < %s -mtriple=riscv64 -mattr=+short-forward-branch-opt | \
+; RUN: llc < %s -mtriple=riscv64 -mattr=+short-forward-branch-ialu | \
 ; RUN:   FileCheck %s --check-prefixes=RV64I-SFB
 
 ; Basic tests.
-
-declare i8 @llvm.smax.i8(i8 %a, i8 %b) readnone
 
 define signext i8 @smax_i8(i8 signext %a, i8 signext %b) {
 ; NOZBB-LABEL: smax_i8:
@@ -54,8 +52,6 @@ define signext i8 @smax_i8(i8 signext %a, i8 signext %b) {
   ret i8 %c
 }
 
-declare i16 @llvm.smax.i16(i16 %a, i16 %b) readnone
-
 define signext i16 @smax_i16(i16 signext %a, i16 signext %b) {
 ; NOZBB-LABEL: smax_i16:
 ; NOZBB:       # %bb.0:
@@ -94,8 +90,6 @@ define signext i16 @smax_i16(i16 signext %a, i16 signext %b) {
   ret i16 %c
 }
 
-declare i32 @llvm.smax.i32(i32 %a, i32 %b) readnone
-
 define signext i32 @smax_i32(i32 signext %a, i32 signext %b) {
 ; NOZBB-LABEL: smax_i32:
 ; NOZBB:       # %bb.0:
@@ -133,8 +127,6 @@ define signext i32 @smax_i32(i32 signext %a, i32 signext %b) {
   %c = call i32 @llvm.smax.i32(i32 %a, i32 %b)
   ret i32 %c
 }
-
-declare i64 @llvm.smax.i64(i64 %a, i64 %b) readnone
 
 define i64 @smax_i64(i64 %a, i64 %b) {
 ; RV32I-LABEL: smax_i64:
@@ -220,8 +212,6 @@ define i64 @smax_i64(i64 %a, i64 %b) {
   ret i64 %c
 }
 
-declare i8 @llvm.smin.i8(i8 %a, i8 %b) readnone
-
 define signext i8 @smin_i8(i8 signext %a, i8 signext %b) {
 ; NOZBB-LABEL: smin_i8:
 ; NOZBB:       # %bb.0:
@@ -259,8 +249,6 @@ define signext i8 @smin_i8(i8 signext %a, i8 signext %b) {
   %c = call i8 @llvm.smin.i8(i8 %a, i8 %b)
   ret i8 %c
 }
-
-declare i16 @llvm.smin.i16(i16 %a, i16 %b) readnone
 
 define signext i16 @smin_i16(i16 signext %a, i16 signext %b) {
 ; NOZBB-LABEL: smin_i16:
@@ -300,8 +288,6 @@ define signext i16 @smin_i16(i16 signext %a, i16 signext %b) {
   ret i16 %c
 }
 
-declare i32 @llvm.smin.i32(i32 %a, i32 %b) readnone
-
 define signext i32 @smin_i32(i32 signext %a, i32 signext %b) {
 ; NOZBB-LABEL: smin_i32:
 ; NOZBB:       # %bb.0:
@@ -339,8 +325,6 @@ define signext i32 @smin_i32(i32 signext %a, i32 signext %b) {
   %c = call i32 @llvm.smin.i32(i32 %a, i32 %b)
   ret i32 %c
 }
-
-declare i64 @llvm.smin.i64(i64 %a, i64 %b) readnone
 
 define i64 @smin_i64(i64 %a, i64 %b) {
 ; RV32I-LABEL: smin_i64:
@@ -426,8 +410,6 @@ define i64 @smin_i64(i64 %a, i64 %b) {
   ret i64 %c
 }
 
-declare i8 @llvm.umax.i8(i8 %a, i8 %b) readnone
-
 define i8 @umax_i8(i8 zeroext %a, i8 zeroext %b) {
 ; NOZBB-LABEL: umax_i8:
 ; NOZBB:       # %bb.0:
@@ -465,8 +447,6 @@ define i8 @umax_i8(i8 zeroext %a, i8 zeroext %b) {
   %c = call i8 @llvm.umax.i8(i8 %a, i8 %b)
   ret i8 %c
 }
-
-declare i16 @llvm.umax.i16(i16 %a, i16 %b) readnone
 
 define i16 @umax_i16(i16 zeroext %a, i16 zeroext %b) {
 ; NOZBB-LABEL: umax_i16:
@@ -506,8 +486,6 @@ define i16 @umax_i16(i16 zeroext %a, i16 zeroext %b) {
   ret i16 %c
 }
 
-declare i32 @llvm.umax.i32(i32 %a, i32 %b) readnone
-
 define signext i32 @umax_i32(i32 signext %a, i32 signext %b) {
 ; NOZBB-LABEL: umax_i32:
 ; NOZBB:       # %bb.0:
@@ -545,8 +523,6 @@ define signext i32 @umax_i32(i32 signext %a, i32 signext %b) {
   %c = call i32 @llvm.umax.i32(i32 %a, i32 %b)
   ret i32 %c
 }
-
-declare i64 @llvm.umax.i64(i64 %a, i64 %b) readnone
 
 define i64 @umax_i64(i64 %a, i64 %b) {
 ; RV32I-LABEL: umax_i64:
@@ -632,8 +608,6 @@ define i64 @umax_i64(i64 %a, i64 %b) {
   ret i64 %c
 }
 
-declare i8 @llvm.umin.i8(i8 %a, i8 %b) readnone
-
 define zeroext i8 @umin_i8(i8 zeroext %a, i8 zeroext %b) {
 ; NOZBB-LABEL: umin_i8:
 ; NOZBB:       # %bb.0:
@@ -671,8 +645,6 @@ define zeroext i8 @umin_i8(i8 zeroext %a, i8 zeroext %b) {
   %c = call i8 @llvm.umin.i8(i8 %a, i8 %b)
   ret i8 %c
 }
-
-declare i16 @llvm.umin.i16(i16 %a, i16 %b) readnone
 
 define zeroext i16 @umin_i16(i16 zeroext %a, i16 zeroext %b) {
 ; NOZBB-LABEL: umin_i16:
@@ -712,8 +684,6 @@ define zeroext i16 @umin_i16(i16 zeroext %a, i16 zeroext %b) {
   ret i16 %c
 }
 
-declare i32 @llvm.umin.i32(i32 %a, i32 %b) readnone
-
 define signext i32 @umin_i32(i32 signext %a, i32 signext %b) {
 ; NOZBB-LABEL: umin_i32:
 ; NOZBB:       # %bb.0:
@@ -751,8 +721,6 @@ define signext i32 @umin_i32(i32 signext %a, i32 signext %b) {
   %c = call i32 @llvm.umin.i32(i32 %a, i32 %b)
   ret i32 %c
 }
-
-declare i64 @llvm.umin.i64(i64 %a, i64 %b) readnone
 
 define i64 @umin_i64(i64 %a, i64 %b) {
 ; RV32I-LABEL: umin_i64:

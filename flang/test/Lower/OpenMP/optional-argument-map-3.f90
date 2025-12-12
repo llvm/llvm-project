@@ -33,7 +33,7 @@ end module
 ! CHECK:             }
 ! CHECK:             %[[VAL_3:.*]] = fir.box_offset %[[VAL_0]] base_addr : (!fir.ref<!fir.box<!fir.array<?xf32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>
 ! CHECK:             %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.array<?xf32>>>, f32) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_3]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) bounds(%{{.*}}) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>> {name = ""}
-! CHECK:             %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.box<!fir.array<?xf32>>) map_clauses(implicit, to) capture(ByRef) members(%[[VAL_4]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) -> !fir.ref<!fir.array<?xf32>> {name = "dt"}
+! CHECK:             %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.box<!fir.array<?xf32>>) map_clauses(always, implicit, to) capture(ByRef) members(%[[VAL_4]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) -> !fir.ref<!fir.array<?xf32>> {name = "dt"}
 ! CHECK:             omp.target host_eval({{.*}}) map_entries({{.*}}%[[VAL_5]] -> {{.*}}, %[[VAL_4]] -> {{.*}} : {{.*}}) {
 ! CHECK:           } else {
 ! CHECK:             %[[VAL_6:.*]] = fir.is_present %[[VAL_1]]#1 : (!fir.box<!fir.array<?xf32>>) -> i1
@@ -42,5 +42,5 @@ end module
 ! CHECK:             }
 ! CHECK:             %[[VAL_7:.*]] = fir.box_offset %[[VAL_0]] base_addr : (!fir.ref<!fir.box<!fir.array<?xf32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>
 ! CHECK:             %[[VAL_8:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.array<?xf32>>>, f32) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_7]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) bounds(%{{.*}}) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>> {name = ""}
-! CHECK:             %[[VAL_9:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.box<!fir.array<?xf32>>) map_clauses(implicit, to) capture(ByRef) members(%[[VAL_8]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) -> !fir.ref<!fir.array<?xf32>> {name = "dt"}
+! CHECK:             %[[VAL_9:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.box<!fir.array<?xf32>>) map_clauses(always, implicit, to) capture(ByRef) members(%[[VAL_8]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) -> !fir.ref<!fir.array<?xf32>> {name = "dt"}
 ! CHECK:             omp.target host_eval({{.*}}) map_entries({{.*}}, %[[VAL_9]] ->{{.*}}, %[[VAL_8]] -> {{.*}} : {{.*}}) {

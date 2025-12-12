@@ -1090,11 +1090,17 @@ define half @stofp_load_i16_f16(ptr %p) {
 ; CHECK-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-NOFP16-NEXT:    ret
 ;
-; CHECK-FP16-LABEL: stofp_load_i16_f16:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    ldrsh w8, [x0]
-; CHECK-FP16-NEXT:    scvtf h0, w8
-; CHECK-FP16-NEXT:    ret
+; CHECK-FP16-SD-LABEL: stofp_load_i16_f16:
+; CHECK-FP16-SD:       // %bb.0: // %entry
+; CHECK-FP16-SD-NEXT:    ldr h0, [x0]
+; CHECK-FP16-SD-NEXT:    scvtf h0, h0
+; CHECK-FP16-SD-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: stofp_load_i16_f16:
+; CHECK-FP16-GI:       // %bb.0: // %entry
+; CHECK-FP16-GI-NEXT:    ldrsh w8, [x0]
+; CHECK-FP16-GI-NEXT:    scvtf h0, w8
+; CHECK-FP16-GI-NEXT:    ret
 entry:
   %a = load i16, ptr %p
   %c = sitofp i16 %a to half
@@ -1109,11 +1115,17 @@ define half @utofp_load_i16_f16(ptr %p) {
 ; CHECK-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-NOFP16-NEXT:    ret
 ;
-; CHECK-FP16-LABEL: utofp_load_i16_f16:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    ldrh w8, [x0]
-; CHECK-FP16-NEXT:    ucvtf h0, w8
-; CHECK-FP16-NEXT:    ret
+; CHECK-FP16-SD-LABEL: utofp_load_i16_f16:
+; CHECK-FP16-SD:       // %bb.0: // %entry
+; CHECK-FP16-SD-NEXT:    ldr h0, [x0]
+; CHECK-FP16-SD-NEXT:    ucvtf h0, h0
+; CHECK-FP16-SD-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: utofp_load_i16_f16:
+; CHECK-FP16-GI:       // %bb.0: // %entry
+; CHECK-FP16-GI-NEXT:    ldrh w8, [x0]
+; CHECK-FP16-GI-NEXT:    ucvtf h0, w8
+; CHECK-FP16-GI-NEXT:    ret
 entry:
   %a = load i16, ptr %p
   %c = uitofp i16 %a to half
@@ -1149,8 +1161,8 @@ define half @utofp_load_i8_f16(ptr %p) {
 ;
 ; CHECK-FP16-LABEL: utofp_load_i8_f16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    ldrb w8, [x0]
-; CHECK-FP16-NEXT:    ucvtf h0, w8
+; CHECK-FP16-NEXT:    ldr b0, [x0]
+; CHECK-FP16-NEXT:    ucvtf h0, h0
 ; CHECK-FP16-NEXT:    ret
 entry:
   %a = load i8, ptr %p

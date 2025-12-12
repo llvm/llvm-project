@@ -22,12 +22,6 @@ define <vscale x 1 x i64> @access_fixed_object(ptr %val) {
   ret <vscale x 1 x i64> %v
 }
 
-declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(
-  <vscale x 1 x i64>,
-  <vscale x 1 x i64>,
-  <vscale x 1 x i64>,
-  i64);
-
 define <vscale x 1 x i64> @access_fixed_and_vector_objects(ptr %val) {
 ; RV64IV-LABEL: access_fixed_and_vector_objects:
 ; RV64IV:       # %bb.0:
