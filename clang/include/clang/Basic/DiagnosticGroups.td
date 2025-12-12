@@ -535,7 +535,16 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
 
-def LifetimeSafety : DiagGroup<"experimental-lifetime-safety">;
+def LifetimeSafetyPermissive : DiagGroup<"experimental-lifetime-safety-permissive">;
+def LifetimeSafetyStrict : DiagGroup<"experimental-lifetime-safety-strict">;
+def LifetimeSafety : DiagGroup<"experimental-lifetime-safety",
+                               [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
+  code Documentation = [{
+    Experimental warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
+  }];
+}
+def LifetimeSafetySuggestions
+    : DiagGroup<"experimental-lifetime-safety-suggestions">;
 
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def DllexportExplicitInstantiationDecl : DiagGroup<"dllexport-explicit-instantiation-decl">;
