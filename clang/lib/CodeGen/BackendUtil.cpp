@@ -985,8 +985,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 #endif
   }
   // Register plugin callbacks with PB.
-  for (auto &Plugin : CodeGenOpts.PassPlugins)
-    Plugin.registerPassBuilderCallbacks(PB);
+  for (llvm::PassPlugin *Plugin : CodeGenOpts.PassPlugins)
+    Plugin->registerPassBuilderCallbacks(PB);
   for (const auto &PassCallback : CodeGenOpts.PassBuilderCallbacks)
     PassCallback(PB);
 #define HANDLE_EXTENSION(Ext)                                                  \
@@ -1234,8 +1234,8 @@ void EmitAssemblyHelper::RunCodegenPipeline(
 
   // Invoke pre-codegen callback from plugin, which might want to take over the
   // entire code generation itself.
-  for (auto &Plugin : CodeGenOpts.PassPlugins) {
-    if (Plugin.invokePreCodeGenCallback(*TheModule, *TM, CGFT, *OS))
+  for (llvm::PassPlugin *Plugin : CodeGenOpts.PassPlugins) {
+    if (Plugin->invokePreCodeGenCallback(*TheModule, *TM, CGFT, *OS))
       return;
   }
 

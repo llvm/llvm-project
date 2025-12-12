@@ -1077,15 +1077,6 @@ void CompilerInstance::LoadRequestedPlugins() {
           << Path << Error;
   }
 
-  // Load and store pass plugins for back-end.
-  for (const std::string &Path : getCodeGenOpts().PassPluginNames) {
-    if (auto PassPlugin = llvm::PassPlugin::Load(Path))
-      getCodeGenOpts().PassPlugins.push_back(*PassPlugin);
-    else
-      getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
-          << Path << toString(PassPlugin.takeError());
-  }
-
   // Check if any of the loaded plugins replaces the main AST action
   for (const FrontendPluginRegistry::entry &Plugin :
        FrontendPluginRegistry::entries()) {
