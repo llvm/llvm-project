@@ -2594,7 +2594,7 @@ static std::string
 AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
                        const TargetInfo &Target, CodeGenModule &CGM,
                        const AsmStmt &Stmt, const bool EarlyClobber,
-                       SmallVector<std::string> *GCCReg = nullptr) {
+                       SmallVector<std::string> *GCCRegs = nullptr) {
 
   StringRef Str(Constraint);
   StringRef::iterator I = Str.begin(), E = Str.end();
@@ -2638,8 +2638,8 @@ AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
     assert(Target.isValidGCCRegisterName(Register));
     // Canonicalize the register here before returning it.
     Register = Target.getNormalizedGCCRegisterName(Register);
-    if (GCCReg)
-      GCCReg->push_back(Register.str());
+    if (GCCRegs)
+      GCCRegs->push_back(Register.str());
     return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
   }
 
@@ -2665,8 +2665,8 @@ AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
       // copied from the original constraint string
       NC += "{" + Register.str() + "}";
 
-      if (GCCReg)
-        GCCReg->push_back(Register.str());
+      if (GCCRegs)
+        GCCRegs->push_back(Register.str());
 
       I = HardRegEnd + 1;
     } else {
@@ -3027,14 +3027,14 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     const Expr *OutExpr = S.getOutputExpr(i);
     OutExpr = OutExpr->IgnoreParenNoopCasts(getContext());
 
-    SmallVector<std::string> GCCReg;
+    SmallVector<std::string> GCCRegs;
     OutputConstraint = AddVariableConstraints(OutputConstraint, *OutExpr,
                                               getTarget(), CGM, S,
                                               Info.earlyClobber(),
-                                              &GCCReg);
+                                              &GCCRegs);
     // Give an error on multiple outputs to same physreg.
-    if (!GCCReg.empty()) {
-      for (auto R : GCCReg) {
+    if (!GCCRegs.empty()) {
+      for (auto R : GCCRegs) {
         if (!PhysRegOutputs.insert(R).second)
           CGM.Error(S.getAsmLoc(), "multiple outputs to hard register: " + R);
       }
@@ -3149,7 +3149,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
             std::max((uint64_t)LargestVectorWidth,
                      VT->getPrimitiveSizeInBits().getKnownMinValue());
       // Only tie earlyclobber physregs.
-      if (Info.allowsRegister() && (GCCReg.empty() || Info.earlyClobber()))
+      if (Info.allowsRegister() && (GCCRegs.empty() || Info.earlyClobber()))
         InOutConstraints += llvm::utostr(i);
       else
         InOutConstraints += OutputConstraint;

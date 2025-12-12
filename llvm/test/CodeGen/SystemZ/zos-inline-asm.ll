@@ -12,6 +12,11 @@
 ;         : "={r1}"(a)
 ;         : "{r2}"(b)
 ;         :);
+;
+;   __asm(" lgr %0,%1\n"
+;         : "=r{r1}{r2}"(a)
+;         : "{r4}{r5}"(b)
+;         :);
 ; }
 ;
 ; void f2() {
@@ -111,6 +116,9 @@ define hidden void @f1() {
 ; CHECK: *APP
 ; CHECK-NEXT: lgr 1,2
 ; CHECK: *NO_APP
+; CHECK: *APP
+; CHECK-NEXT: lgr 0,4
+; CHECK: *NO_APP
 entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
@@ -119,6 +127,9 @@ entry:
   %1 = load i32, ptr %b, align 4
   %2 = call i32 asm " lgr $0,$1\0A", "={r1},{r2}"(i32 %1)
   store i32 %2, ptr %a, align 4
+  %3 = load i32, ptr %b, align 4
+  %4 = call i32 asm " lgr $0,$1\0A", "=r{r1}{r2},{r4}{r5}"(i32 %3)
+  store i32 %4, ptr %a, align 4
   ret void
 }
 

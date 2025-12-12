@@ -3,7 +3,6 @@
 
 void f1() {
   int a, b;
-  register int c asm("r2");
   __asm("lhi %0,5\n"
         : "={r2}"(a)
         :);

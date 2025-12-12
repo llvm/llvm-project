@@ -15,5 +15,13 @@ int test_physreg_defs(void) {
   __asm__(""
           : "+{r6}"(m), "={r6}"(m));
 
+  // CHECK: error: multiple outputs to hard register: r6
+  __asm__(""
+          : "+{r1}{r2}{r6}"(m), "={r6}"(m));
+
+  // CHECK: error: multiple outputs to hard register: r6
+  __asm__(""
+          : "+{r6}"(m), "={r6}{r1}{r2}"(m));
+
   return l + m;
 }
