@@ -269,11 +269,11 @@ public:
 
   // TODO: ADD MISSING
 
-  LLVM_ABI static Type *getInt64Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt32Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt16Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt8Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt1Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt64Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt32Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt16Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt8Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt1Ty(Context &Ctx);
   LLVM_ABI static Type *getDoubleTy(Context &Ctx);
   LLVM_ABI static Type *getFloatTy(Context &Ctx);
   LLVM_ABI static Type *getHalfTy(Context &Ctx);

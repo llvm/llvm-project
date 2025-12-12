@@ -62,6 +62,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -535,9 +536,11 @@ class Slice {
 public:
   Slice() = default;
 
-  Slice(uint64_t BeginOffset, uint64_t EndOffset, Use *U, bool IsSplittable)
+  Slice(uint64_t BeginOffset, uint64_t EndOffset, Use *U, bool IsSplittable,
+        Value *ProtectedFieldDisc)
       : BeginOffset(BeginOffset), EndOffset(EndOffset),
-        UseAndIsSplittable(U, IsSplittable) {}
+        UseAndIsSplittable(U, IsSplittable),
+        ProtectedFieldDisc(ProtectedFieldDisc) {}
 
   uint64_t beginOffset() const { return BeginOffset; }
   uint64_t endOffset() const { return EndOffset; }
@@ -549,6 +552,10 @@ public:
 
   bool isDead() const { return getUse() == nullptr; }
   void kill() { UseAndIsSplittable.setPointer(nullptr); }
+
+  // When this access is via an llvm.protected.field.ptr intrinsic, contains
+  // the second argument to the intrinsic, the discriminator.
+  Value *ProtectedFieldDisc;
 
   /// Support for ordering ranges.
   ///
@@ -641,6 +648,10 @@ public:
   /// Access the dead users for this alloca.
   ArrayRef<Instruction *> getDeadUsers() const { return DeadUsers; }
 
+  /// Access the users for this alloca that are llvm.protected.field.ptr
+  /// intrinsics.
+  ArrayRef<IntrinsicInst *> getPFPUsers() const { return PFPUsers; }
+
   /// Access Uses that should be dropped if the alloca is promotable.
   ArrayRef<Use *> getDeadUsesIfPromotable() const {
     return DeadUseIfPromotable;
@@ -700,6 +711,10 @@ private:
   /// all these instructions can simply be removed and replaced with poison as
   /// they come from outside of the allocated space.
   SmallVector<Instruction *, 8> DeadUsers;
+
+  /// Users that are llvm.protected.field.ptr intrinsics. These will be RAUW'd
+  /// to their first argument if we rewrite the alloca.
+  SmallVector<IntrinsicInst *, 0> PFPUsers;
 
   /// Uses which will become dead if can promote the alloca.
   SmallVector<Use *, 8> DeadUseIfPromotable;
@@ -1029,6 +1044,10 @@ class AllocaSlices::SliceBuilder : public PtrUseVisitor<SliceBuilder> {
   /// Set to de-duplicate dead instructions found in the use walk.
   SmallPtrSet<Instruction *, 4> VisitedDeadInsts;
 
+  // When this access is via an llvm.protected.field.ptr intrinsic, contains
+  // the second argument to the intrinsic, the discriminator.
+  Value *ProtectedFieldDisc = nullptr;
+
 public:
   SliceBuilder(const DataLayout &DL, AllocaInst &AI, AllocaSlices &AS)
       : PtrUseVisitor<SliceBuilder>(DL),
@@ -1074,7 +1093,8 @@ private:
       EndOffset = AllocSize;
     }
 
-    AS.Slices.push_back(Slice(BeginOffset, EndOffset, U, IsSplittable));
+    AS.Slices.push_back(
+        Slice(BeginOffset, EndOffset, U, IsSplittable, ProtectedFieldDisc));
   }
 
   void visitBitCastInst(BitCastInst &BC) {
@@ -1271,6 +1291,27 @@ private:
 
     if (II.isLifetimeStartOrEnd()) {
       insertUse(II, Offset, AllocSize, true);
+      return;
+    }
+
+    if (II.getIntrinsicID() == Intrinsic::protected_field_ptr) {
+      // We only handle loads and stores as users of llvm.protected.field.ptr.
+      // Other uses may add items to the worklist, which will cause
+      // ProtectedFieldDisc to be tracked incorrectly.
+      AS.PFPUsers.push_back(&II);
+      ProtectedFieldDisc = II.getArgOperand(1);
+      for (Use &U : II.uses()) {
+        this->U = &U;
+        if (auto *LI = dyn_cast<LoadInst>(U.getUser()))
+          visitLoadInst(*LI);
+        else if (auto *SI = dyn_cast<StoreInst>(U.getUser()))
+          visitStoreInst(*SI);
+        else
+          PI.setAborted(&II);
+        if (PI.isAborted())
+          break;
+      }
+      ProtectedFieldDisc = nullptr;
       return;
     }
 
@@ -2178,35 +2219,6 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
   return true;
 }
 
-/// Test whether a vector type is viable for promotion.
-///
-/// This implements the necessary checking for \c checkVectorTypesForPromotion
-/// (and thus isVectorPromotionViable) over all slices of the alloca for the
-/// given VectorType.
-static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
-                                        const DataLayout &DL, unsigned VScale) {
-  uint64_t ElementSize =
-      DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
-
-  // While the definition of LLVM vectors is bitpacked, we don't support sizes
-  // that aren't byte sized.
-  if (ElementSize % 8)
-    return false;
-  assert((DL.getTypeSizeInBits(VTy).getFixedValue() % 8) == 0 &&
-         "vector size not a multiple of element size?");
-  ElementSize /= 8;
-
-  for (const Slice &S : P)
-    if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL, VScale))
-      return false;
-
-  for (const Slice *S : P.splitSliceTails())
-    if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL, VScale))
-      return false;
-
-  return true;
-}
-
 /// Test whether any vector type in \p CandidateTys is viable for promotion.
 ///
 /// This implements the necessary checking for \c isVectorPromotionViable over
@@ -2291,11 +2303,30 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
            std::numeric_limits<unsigned short>::max();
   });
 
-  for (VectorType *VTy : CandidateTys)
-    if (checkVectorTypeForPromotion(P, VTy, DL, VScale))
-      return VTy;
+  // Find a vector type viable for promotion by iterating over all slices.
+  auto *VTy = llvm::find_if(CandidateTys, [&](VectorType *VTy) -> bool {
+    uint64_t ElementSize =
+        DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
 
-  return nullptr;
+    // While the definition of LLVM vectors is bitpacked, we don't support sizes
+    // that aren't byte sized.
+    if (ElementSize % 8)
+      return false;
+    assert((DL.getTypeSizeInBits(VTy).getFixedValue() % 8) == 0 &&
+           "vector size not a multiple of element size?");
+    ElementSize /= 8;
+
+    for (const Slice &S : P)
+      if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL, VScale))
+        return false;
+
+    for (const Slice *S : P.splitSliceTails())
+      if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL, VScale))
+        return false;
+
+    return true;
+  });
+  return VTy != CandidateTys.end() ? *VTy : nullptr;
 }
 
 static VectorType *createAndCheckVectorTypesForPromotion(
@@ -4958,7 +4989,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       NewSlices.push_back(
           Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
                 &PLoad->getOperandUse(PLoad->getPointerOperandIndex()),
-                /*IsSplittable*/ false));
+                /*IsSplittable*/ false, nullptr));
       LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
                         << ", " << NewSlices.back().endOffset()
                         << "): " << *PLoad << "\n");
@@ -5114,10 +5145,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
                                  LLVMContext::MD_access_group});
 
       // Now build a new slice for the alloca.
+      // ProtectedFieldDisc==nullptr is a lie, but it doesn't matter because we
+      // already determined that all accesses are consistent.
       NewSlices.push_back(
           Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
                 &PStore->getOperandUse(PStore->getPointerOperandIndex()),
-                /*IsSplittable*/ false));
+                /*IsSplittable*/ false, nullptr));
       LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
                         << ", " << NewSlices.back().endOffset()
                         << "): " << *PStore << "\n");
@@ -5205,7 +5238,6 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // won't always succeed, in which case we fall back to a legal integer type
   // or an i8 array of an appropriate size.
   Type *SliceTy = nullptr;
-  VectorType *SliceVecTy = nullptr;
   const DataLayout &DL = AI.getDataLayout();
   unsigned VScale = AI.getFunction()->getVScaleValue();
 
@@ -5214,10 +5246,8 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // Do all uses operate on the same type?
   if (CommonUseTy.first) {
     TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy.first);
-    if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size()) {
+    if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size())
       SliceTy = CommonUseTy.first;
-      SliceVecTy = dyn_cast<VectorType>(SliceTy);
-    }
   }
   // If not, can we find an appropriate subtype in the original allocated type?
   if (!SliceTy)
@@ -5227,26 +5257,13 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
 
   // If still not, can we use the largest bitwidth integer type used?
   if (!SliceTy && CommonUseTy.second)
-    if (DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size()) {
+    if (DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size())
       SliceTy = CommonUseTy.second;
-      SliceVecTy = dyn_cast<VectorType>(SliceTy);
-    }
   if ((!SliceTy || (SliceTy->isArrayTy() &&
                     SliceTy->getArrayElementType()->isIntegerTy())) &&
       DL.isLegalInteger(P.size() * 8)) {
     SliceTy = Type::getIntNTy(*C, P.size() * 8);
   }
-
-  // If the common use types are not viable for promotion then attempt to find
-  // another type that is viable.
-  if (SliceVecTy && !checkVectorTypeForPromotion(P, SliceVecTy, DL, VScale))
-    if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
-                                                 P.beginOffset(), P.size())) {
-      VectorType *TypePartitionVecTy = dyn_cast<VectorType>(TypePartitionTy);
-      if (TypePartitionVecTy &&
-          checkVectorTypeForPromotion(P, TypePartitionVecTy, DL, VScale))
-        SliceTy = TypePartitionTy;
-    }
 
   if (!SliceTy)
     SliceTy = ArrayType::get(Type::getInt8Ty(*C), P.size());
@@ -5901,6 +5918,30 @@ SROA::runOnAlloca(AllocaInst &AI) {
     return {Changed, CFGChanged};
   }
 
+  for (auto &P : AS.partitions()) {
+    // For now, we can't split if a field is accessed both via protected field
+    // and not, because that would mean that we would need to introduce sign and
+    // auth operations to convert between the protected and non-protected uses,
+    // and this pass doesn't know how to do that. Also, this case is unlikely to
+    // occur in normal code.
+    std::optional<Value *> ProtectedFieldDisc;
+    auto SliceHasMismatch = [&](Slice &S) {
+      if (auto *II = dyn_cast<IntrinsicInst>(S.getUse()->getUser()))
+        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+            II->getIntrinsicID() == Intrinsic::lifetime_end)
+          return false;
+      if (!ProtectedFieldDisc)
+        ProtectedFieldDisc = S.ProtectedFieldDisc;
+      return *ProtectedFieldDisc != S.ProtectedFieldDisc;
+    };
+    for (Slice &S : P)
+      if (SliceHasMismatch(S))
+        return {Changed, CFGChanged};
+    for (Slice *S : P.splitSliceTails())
+      if (SliceHasMismatch(*S))
+        return {Changed, CFGChanged};
+  }
+
   // Delete all the dead users of this alloca before splitting and rewriting it.
   for (Instruction *DeadUser : AS.getDeadUsers()) {
     // Free up everything used by this instruction.
@@ -5916,6 +5957,12 @@ SROA::runOnAlloca(AllocaInst &AI) {
   }
   for (Use *DeadOp : AS.getDeadOperands()) {
     clobberUse(*DeadOp);
+    Changed = true;
+  }
+  for (IntrinsicInst *PFPUser : AS.getPFPUsers()) {
+    PFPUser->replaceAllUsesWith(PFPUser->getArgOperand(0));
+
+    DeadInsts.push_back(PFPUser);
     Changed = true;
   }
 

@@ -354,6 +354,9 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
     if (!AR->isAffine())
       return;
 
+  // Clear output vector.
+  Subscripts.clear();
+
   LLVM_DEBUG(dbgs() << "\ncomputeAccessFunctions\n"
                     << "Memory Access Function: " << *Expr << "\n");
 
@@ -461,6 +464,10 @@ void llvm::delinearize(ScalarEvolution &SE, const SCEV *Expr,
                        SmallVectorImpl<const SCEV *> &Subscripts,
                        SmallVectorImpl<const SCEV *> &Sizes,
                        const SCEV *ElementSize) {
+  // Clear output vectors.
+  Subscripts.clear();
+  Sizes.clear();
+
   // First step: collect parametric terms.
   SmallVector<const SCEV *, 4> Terms;
   collectParametricTerms(SE, Expr, Terms);
@@ -638,6 +645,9 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                                      SmallVectorImpl<const SCEV *> &Subscripts,
                                      SmallVectorImpl<const SCEV *> &Sizes,
                                      const SCEV *ElementSize) {
+  // Clear output vectors.
+  Subscripts.clear();
+  Sizes.clear();
 
   // First step: find the fixed array size.
   SmallVector<uint64_t, 4> ConstSizes;
@@ -654,26 +664,6 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
   computeAccessFunctions(SE, Expr, Subscripts, Sizes);
 
   return !Subscripts.empty();
-}
-
-static bool isKnownNonNegative(ScalarEvolution *SE, const SCEV *S,
-                               const Value *Ptr) {
-  bool Inbounds = false;
-  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(Ptr))
-    Inbounds = SrcGEP->isInBounds();
-  if (Inbounds) {
-    if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
-      if (AddRec->isAffine()) {
-        // We know S is for Ptr, the operand on a load/store, so doesn't wrap.
-        // If both parts are NonNegative, the end result will be NonNegative
-        if (SE->isKnownNonNegative(AddRec->getStart()) &&
-            SE->isKnownNonNegative(AddRec->getOperand(1)))
-          return true;
-      }
-    }
-  }
-
-  return SE->isKnownNonNegative(S);
 }
 
 /// Compare to see if S is less than Size, using
@@ -745,8 +735,7 @@ static bool isKnownLessThan(ScalarEvolution *SE, const SCEV *S,
 
 bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
                                          ArrayRef<const SCEV *> Sizes,
-                                         ArrayRef<const SCEV *> Subscripts,
-                                         const Value *Ptr) {
+                                         ArrayRef<const SCEV *> Subscripts) {
   // Sizes and Subscripts are as follows:
   //
   //   Sizes:      [UNK][S_2]...[S_n]
@@ -770,7 +759,7 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
   for (size_t I = 1; I < Sizes.size(); ++I) {
     const SCEV *Size = Sizes[I - 1];
     const SCEV *Subscript = Subscripts[I];
-    if (!isKnownNonNegative(&SE, Subscript, Ptr))
+    if (!SE.isKnownNonNegative(Subscript))
       return false;
     if (!isKnownLessThan(&SE, Subscript, Size))
       return false;
@@ -824,12 +813,13 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
 bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
                                       const GetElementPtrInst *GEP,
                                       SmallVectorImpl<const SCEV *> &Subscripts,
-                                      SmallVectorImpl<int> &Sizes) {
+                                      SmallVectorImpl<const SCEV *> &Sizes) {
   assert(Subscripts.empty() && Sizes.empty() &&
          "Expected output lists to be empty on entry to this function.");
   assert(GEP && "getIndexExpressionsFromGEP called with a null GEP");
   LLVM_DEBUG(dbgs() << "\nGEP to delinearize: " << *GEP << "\n");
   Type *Ty = nullptr;
+  Type *IndexTy = SE.getEffectiveSCEVType(GEP->getPointerOperandType());
   bool DroppedFirstDim = false;
   for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
     const SCEV *Expr = SE.getSCEV(GEP->getOperand(i));
@@ -855,7 +845,7 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
 
     Subscripts.push_back(Expr);
     if (!(DroppedFirstDim && i == 2))
-      Sizes.push_back(ArrayTy->getNumElements());
+      Sizes.push_back(SE.getConstant(IndexTy, ArrayTy->getNumElements()));
 
     Ty = ArrayTy->getElementType();
   }
@@ -932,8 +922,7 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
         O << "[" << *Subscripts[i] << "]";
       O << "\n";
 
-      bool IsValid = validateDelinearizationResult(
-          *SE, Sizes, Subscripts, getLoadStorePointerOperand(&Inst));
+      bool IsValid = validateDelinearizationResult(*SE, Sizes, Subscripts);
       O << "Delinearization validation: " << (IsValid ? "Succeeded" : "Failed")
         << "\n";
   }

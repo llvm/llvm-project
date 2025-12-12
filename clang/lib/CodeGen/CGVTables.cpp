@@ -775,7 +775,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
   case VTableComponent::CK_FunctionPointer:
   case VTableComponent::CK_CompleteDtorPointer:
   case VTableComponent::CK_DeletingDtorPointer: {
-    GlobalDecl GD = component.getGlobalDecl();
+    GlobalDecl GD = component.getGlobalDecl(
+        CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+            CGM.getContext().getLangOpts()));
 
     const bool IsThunk =
         nextVTableThunkIndex < layout.vtable_thunks().size() &&
@@ -1363,10 +1365,12 @@ llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(
 void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
                                            llvm::GlobalVariable *VTable,
                                            const VTableLayout &VTLayout) {
-  // Emit type metadata on vtables with LTO or IR instrumentation.
+  // Emit type metadata on vtables with LTO or IR instrumentation or
+  // speculative devirtualization.
   // In IR instrumentation, the type metadata is used to find out vtable
   // definitions (for type profiling) among all global variables.
-  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr())
+  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr() &&
+      !getCodeGenOpts().DevirtualizeSpeculatively)
     return;
 
   CharUnits ComponentWidth = GetTargetTypeStoreSize(getVTableComponentType());

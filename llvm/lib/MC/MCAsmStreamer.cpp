@@ -2452,7 +2452,7 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
 
   // Show the MCInst if enabled.
   if (ShowInst) {
-    Inst.dump_pretty(getCommentOS(), InstPrinter.get(), "\n ");
+    Inst.dump_pretty(getCommentOS(), InstPrinter.get(), "\n ", &getContext());
     getCommentOS() << "\n";
   }
 

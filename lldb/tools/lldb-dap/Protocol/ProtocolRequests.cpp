@@ -515,7 +515,7 @@ bool fromJSON(const llvm::json::Value &Params, DisassembleArguments &DA,
   json::ObjectMapper O(Params, P);
   return O &&
          DecodeMemoryReference(Params, "memoryReference", DA.memoryReference, P,
-                               /*required=*/true) &&
+                               /*required=*/true, /*allow_empty*/ true) &&
          O.mapOptional("offset", DA.offset) &&
          O.mapOptional("instructionOffset", DA.instructionOffset) &&
          O.map("instructionCount", DA.instructionCount) &&
@@ -693,6 +693,12 @@ llvm::json::Value toJSON(const EvaluateResponseBody &Body) {
     result.insert({"valueLocationReference", Body.valueLocationReference});
 
   return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, PauseArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId);
 }
 
 } // namespace lldb_dap::protocol

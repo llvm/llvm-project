@@ -580,6 +580,43 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // CHECK-LABEL: vector_create_mask_1D
+  gpu.func @vector_create_mask_1D() {
+    // CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
+    // CHECK-DAG: %[[REMU:.*]] = arith.remui %[[SGID]], %[[C2:.*]]
+    // CHECK-DAG: %[[MUL:.*]] = arith.muli %[[REMU]], %[[C16:.*]]
+    // CHECK-DAG: %[[REMU2:.*]] = arith.remui %[[MUL]], %[[C32:.*]]
+    // CHECK-DAG: %[[SUB:.*]] = arith.subi %[[C8:.*]], %[[REMU2]] : index
+    // CHECK-DAG: %[[MAX:.*]] = arith.maxsi %[[SUB]], %[[C0:.*]] : index
+    // CHECK-DAG: %[[MIN:.*]] = arith.minsi %[[MAX]], %[[C16:.*]] : index
+    // CHECK-DAG: %[[MASK:.*]] = vector.create_mask %[[MIN]] : vector<16xi1>
+    %cst8 = arith.constant 8 : index
+    %constant_mask = vector.create_mask %cst8 {layout_result_0 = #xegpu.layout<sg_layout = [2], sg_data = [16]>} : vector<32xi1>
+    gpu.return
+  }
+
+  // CHECK-LABEL: vector_create_mask_2D
+  gpu.func @vector_create_mask_2D() {
+    // CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
+    // CHECK-DAG: %[[SGIDX:.*]] = arith.remui %[[SGID]], %[[C4:.*]]
+    // CHECK-DAG: %[[SGIDY_TMP:.*]] = arith.divui %[[SGID]], %[[C4:.*]]
+    // CHECK-DAG: %[[SGIDY:.*]] = arith.remui %[[SGIDY_TMP]], %[[C8:.*]]
+    // CHECK-DAG: %[[ROW:.*]] = arith.muli %[[SGIDY]], %[[C32:.*]]
+    // CHECK-DAG: %[[COL:.*]] = arith.muli %[[SGIDX]], %[[C32:.*]]
+    // CHECK-DAG: %[[MODROW:.*]] = arith.remui %[[ROW]], %[[C256:.*]]
+    // CHECK-DAG: %[[MODCOL:.*]] = arith.remui %[[COL]], %[[C128:.*]]
+    // CHECK-DAG: %[[SUBROW:.*]] = arith.subi %[[C16:.*]], %[[MODROW]] : index
+    // CHECK-DAG: %[[MAXROW:.*]] = arith.maxsi %[[SUBROW]], %[[C0:.*]] : index
+    // CHECK-DAG: %[[MINROW:.*]] = arith.minsi %[[MAXROW]], %[[C32:.*]] : index
+    // CHECK-DAG: %[[SUBCOL:.*]] = arith.subi %[[C16:.*]], %[[MODCOL]] : index
+    // CHECK-DAG: %[[MAXCOL:.*]] = arith.maxsi %[[SUBCOL]], %[[C0:.*]] : index
+    // CHECK-DAG: %[[MINCOL:.*]] = arith.minsi %[[MAXCOL]], %[[C32:.*]] : index
+    // CHECK-DAG: %[[MASK:.*]] = vector.create_mask %[[MINROW]], %[[MINCOL]] : vector<32x32xi1>
+    %cst16 = arith.constant 16 : index
+    %constant_mask = vector.create_mask %cst16, %cst16 {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>} : vector<256x128xi1>
+    gpu.return
+  }
+
   // CHECK-LABEL: distribute_load_slice_attr
   gpu.func @distribute_load_slice_attr() {
     %2 = memref.alloca() {alignment = 1024} : memref<4096xf32>
@@ -594,6 +631,19 @@ gpu.module @test_distribution {
     // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : vector<32xf32> to vector<32x32xf32>
     %4 = vector.broadcast %3 {layout_result_0 =
         #xegpu.layout<sg_layout = [8, 8], sg_data = [32, 32], inst_data = [8, 16]>} : vector<256xf32> to vector<256x256xf32>
+    gpu.return
+  }
+
+  // CHECK-LABEL: load_nd_tdesc_with_anchor_layout
+  gpu.func @load_nd_tdesc_with_anchor_layout(%src: memref<256x128xf32>) {
+    //CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32>
+      -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
+    // CHECK: xegpu.load_nd %[[TDESC]][{{%.*}}, {{%.*}}] <{layout = #xegpu.layout<inst_data = [32, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+    // CHECK-SAME: : !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<32x32xf32>
+    %load =  xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], inst_data = [32, 16],lane_layout = [1, 16], lane_data = [1, 1]>}>
+      : !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
+      -> vector<256x128xf32>
     gpu.return
   }
 }

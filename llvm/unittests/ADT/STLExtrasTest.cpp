@@ -1693,6 +1693,30 @@ TEST(STLExtrasTest, ProductOf) {
   EXPECT_EQ(product_of(V3), 2.0f);
 }
 
+TEST(STLExtrasTest, ReverseConditionally) {
+  std::vector<char> foo = {'a', 'b', 'c'};
+
+  // Test backwards.
+  std::vector<char> ReverseResults;
+  for (char Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/true)) {
+    ReverseResults.emplace_back(Value);
+  }
+  EXPECT_THAT(ReverseResults, ElementsAre('c', 'b', 'a'));
+
+  // Test forwards.
+  std::vector<char> ForwardResults;
+  for (char Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/false)) {
+    ForwardResults.emplace_back(Value);
+  }
+  EXPECT_THAT(ForwardResults, ElementsAre('a', 'b', 'c'));
+
+  // Test modifying collection.
+  for (char &Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/true)) {
+    ++Value;
+  }
+  EXPECT_THAT(foo, ElementsAre('b', 'c', 'd'));
+}
+
 struct Foo;
 struct Bar {};
 

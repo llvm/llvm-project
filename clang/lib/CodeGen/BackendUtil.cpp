@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -46,6 +47,7 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
@@ -655,6 +657,11 @@ bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
       llvm::driver::createTLII(TargetTriple, CodeGenOpts.getVecLib()));
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(*TLII));
 
+  const llvm::TargetOptions &Options = TM->Options;
+  CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
+      TargetTriple, Options.ExceptionModel, Options.FloatABIType,
+      Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
+
   // Normal mode, emit a .s or .o file by running the code generator. Note,
   // this also adds codegenerator level optimization passes.
   CodeGenFileType CGFT = getCodeGenFileType(Action);
@@ -940,6 +947,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // non-integrated assemblers don't recognize .cgprofile section.
   PTO.CallGraphProfile = !CodeGenOpts.DisableIntegratedAS;
   PTO.UnifiedLTO = CodeGenOpts.UnifiedLTO;
+  PTO.DevirtualizeSpeculatively = CodeGenOpts.DevirtualizeSpeculatively;
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -1457,6 +1465,8 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
 
   std::unique_ptr<llvm::Module> EmptyModule;
   if (!CGOpts.ThinLTOIndexFile.empty()) {
+    // FIXME(sandboxing): Figure out how to support distributed indexing.
+    auto BypassSandbox = sys::sandbox::scopedDisable();
     // If we are performing a ThinLTO importing compile, load the function index
     // into memory and pass it into runThinLTOBackend, which will run the
     // function importer and invoke LTO passes.
