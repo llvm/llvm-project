@@ -83,7 +83,7 @@ public:
   /// Release resources
   ~L0ContextTy() = default;
 
-      Error init();
+  Error init();
   Error deinit();
 
   LevelZeroPluginTy &getPlugin() const { return Plugin; }

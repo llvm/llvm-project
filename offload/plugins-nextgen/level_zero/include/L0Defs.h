@@ -37,14 +37,12 @@ constexpr size_t L0StagingBufferCount = 64;
 constexpr size_t L0UsmPreAllocThreshold = (128 << 20);
 /// Host USM allocation threshold where preallocation does not pay off (8MB)
 constexpr size_t L0HostUsmPreAllocThreshold = (8 << 20);
-
-using error::ErrorCode;
+/// Maximum wait time
+constexpr uint64_t L0DefaultTimeout = std::numeric_limits<uint64_t>::max();
 /// Generic L0 handle type
 using ZeHandleTy = void *;
 
-/// Maximum wait time 
-constexpr uint64_t L0DefaultTimeout = std::numeric_limits<uint64_t>::max();
-
+using error::ErrorCode;
 } // namespace llvm::omp::target::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEFS_H
