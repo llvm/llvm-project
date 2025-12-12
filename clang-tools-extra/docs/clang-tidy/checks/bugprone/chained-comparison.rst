@@ -77,5 +77,5 @@ Options
 .. option:: IgnoreMacros
 
     If `true`, the check will not warn on chained comparisons inside macros.
-    Default is ``false``.
+    Default is `false`.
 
