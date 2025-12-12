@@ -281,7 +281,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
     PersistentExpressionState *expression_state =
         target->GetPersistentExpressionStateForLanguage(LanguageType());
     if (expression_state)
-      result = expression_state->CreatePersistentVariable(
+      result_sp = expression_state->CreatePersistentVariable(
           error_backstop_result_sp);
 
     return lldb::eExpressionCompleted;
