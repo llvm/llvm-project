@@ -34,8 +34,14 @@ using namespace lldb_private::formatters::swift;
 bool lldb_private::formatters::swift::Date_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   static ConstString g__time("_time");
+  static ConstString g__timeIntervalSinceReferenceDate(
+      "_timeIntervalSinceReferenceDate");
 
   ValueObjectSP time_sp(valobj.GetChildAtNamePath({g__time}));
+
+  if (!time_sp)
+    time_sp = valobj.GetChildAtNamePath(
+        {g__timeIntervalSinceReferenceDate, "_value"});
 
   if (!time_sp)
     return false;
