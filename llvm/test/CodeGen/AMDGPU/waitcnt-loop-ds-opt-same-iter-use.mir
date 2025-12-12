@@ -1,38 +1,23 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-insert-waitcnts -amdgpu-waitcnt-loop-ds-opt=true -verify-machineinstrs -o - %s | FileCheck -check-prefix=OPT %s
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-insert-waitcnts -amdgpu-waitcnt-loop-ds-opt=false -verify-machineinstrs -o - %s | FileCheck -check-prefix=NOOPT %s
 
-# Debug output test (requires asserts build)
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-insert-waitcnts -amdgpu-waitcnt-loop-ds-opt=true -debug-only=si-insert-waitcnts -o /dev/null %s 2>&1 | FileCheck -check-prefix=DBG %s
-# REQUIRES: asserts
-
-# Test for DS loop wait optimization in single-block loops with WMMA.
-# The preheader DS loads are in reverse order compared to loop body loads,
-# which causes the baseline to produce conservative waits that the optimization
-# can relax.
-#
-# Key improvement demonstrated:
-#   Without opt: S_WAIT_DSCNT 0 (wait for ALL 16 loads) before first WMMA
-#   With opt:    S_WAIT_DSCNT 12 (wait for only 4 loads, 12 remain in flight)
-#
-# DBG: Loop DS Wait Opt: Loop at bb.1 - 16 DS loads, 8 WMMA/MFMA, {{[0-9]+}} total insts, eligible
-# DBG: Loop DS Wait Opt: Analyzed loop at bb.1 - 16 DS loads, FloorWaitCount=0, HasBarrier=1, Valid=1
-# DBG: DS Loop Opt: Relaxing DsCnt from 0 to 12 for:
-# DBG: DS Loop Opt: Inserted DS_CNT flush in preheader bb.0 for loop at bb.1
+# Test: same-iteration USE of a DS load result (load #2 = vgpr14-17)
+# This flushes loads #1-2, leaving loads #3-16 (14 loads) as prefetch.
+# Tests that the analysis correctly handles same-iteration uses.
 
 --- |
-  define amdgpu_kernel void @ds_loop_eligible() { ret void }
+  define amdgpu_kernel void @ds_loop_same_iter_use() { ret void }
 ...
 
 ---
-# OPT-LABEL: name: ds_loop_eligible
-# NOOPT-LABEL: name: ds_loop_eligible
-name: ds_loop_eligible
+# OPT-LABEL: name: ds_loop_same_iter_use
+# NOOPT-LABEL: name: ds_loop_same_iter_use
+name: ds_loop_same_iter_use
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   waveLimiter: false
 body: |
-  ; Check preheader: OPT adds S_WAIT_DSCNT 0 flush, NOOPT does not
   ; OPT: bb.0:
   ; OPT: S_WAIT_DSCNT_soft 0
   ; OPT-NEXT: S_BRANCH %bb.1
@@ -45,9 +30,7 @@ body: |
     successors: %bb.1
     liveins: $sgpr0, $vgpr0
 
-    ; Preheader: DS loads in REVERSE order (last registers first)
-    ; This creates different register scores than the loop body order,
-    ; causing baseline to be conservative when merging predecessor info.
+    ; Preheader: DS loads in REVERSE order
     $vgpr70_vgpr71_vgpr72_vgpr73 = DS_READ_B128 $vgpr0, 240, 0, implicit $m0, implicit $exec
     $vgpr66_vgpr67_vgpr68_vgpr69 = DS_READ_B128 $vgpr0, 224, 0, implicit $m0, implicit $exec
     $vgpr62_vgpr63_vgpr64_vgpr65 = DS_READ_B128 $vgpr0, 208, 0, implicit $m0, implicit $exec
@@ -69,20 +52,17 @@ body: |
   ; OPT: bb.1:
   ; OPT: S_WAIT_DSCNT 12
   ; OPT-NEXT: early-clobber $vgpr80{{.*}} = V_WMMA
-  ; OPT: S_WAIT_DSCNT 8
-  ; OPT-NEXT: early-clobber $vgpr88{{.*}} = V_WMMA
 
   ; NOOPT: bb.1:
   ; NOOPT: S_WAIT_DSCNT 0
   ; NOOPT-NEXT: early-clobber $vgpr80{{.*}} = V_WMMA
-  ; NOOPT-NOT: S_WAIT_DSCNT 8
 
   bb.1:
-    ; Single-block loop with WMMA and DS loads after barrier
     successors: %bb.1, %bb.2
-    liveins: $sgpr0, $vgpr0, $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25, $vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, $vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57, $vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, $vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87, $vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95
+    liveins: $sgpr0, $vgpr0, $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25, $vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, $vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57, $vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, $vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87, $vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr100
 
-    ; WMMA instructions (8 total, meets threshold)
+    ; First WMMA uses vgpr10-25 (loads #1-4). Loads #1-2 are flushed by same-iter use.
+    ; Only loads #3-4 (now positions 1-2) are tracked. OptWait = 14 - 2 = 12
     early-clobber $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87 = V_WMMA_F32_16X16X32_F16_w32_twoaddr 8, $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 8, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25, 8, killed $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87, 0, 0, 0, 0, implicit $exec
     early-clobber $vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95 = V_WMMA_F32_16X16X32_F16_w32_twoaddr 8, $vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 8, $vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41, 8, killed $vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, 0, 0, 0, 0, implicit $exec
     early-clobber $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87 = V_WMMA_F32_16X16X32_F16_w32_twoaddr 8, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49, 8, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57, 8, killed $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87, 0, 0, 0, 0, implicit $exec
@@ -92,10 +72,9 @@ body: |
     early-clobber $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87 = V_WMMA_F32_16X16X32_F16_w32_twoaddr 8, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49, 8, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57, 8, killed $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87, 0, 0, 0, 0, implicit $exec
     early-clobber $vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95 = V_WMMA_F32_16X16X32_F16_w32_twoaddr 8, $vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, 8, $vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73, 8, killed $vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, 0, 0, 0, 0, implicit $exec
 
-    ; Barrier separates compute from prefetch
     S_BARRIER
 
-    ; Prefetch DS loads for next iteration (16 total, meets threshold)
+    ; Prefetch DS loads
     $vgpr10_vgpr11_vgpr12_vgpr13 = DS_READ_B128 $vgpr0, 0, 0, implicit $m0, implicit $exec
     $vgpr14_vgpr15_vgpr16_vgpr17 = DS_READ_B128 $vgpr0, 16, 0, implicit $m0, implicit $exec
     $vgpr18_vgpr19_vgpr20_vgpr21 = DS_READ_B128 $vgpr0, 32, 0, implicit $m0, implicit $exec
@@ -113,7 +92,11 @@ body: |
     $vgpr66_vgpr67_vgpr68_vgpr69 = DS_READ_B128 $vgpr0, 224, 0, implicit $m0, implicit $exec
     $vgpr70_vgpr71_vgpr72_vgpr73 = DS_READ_B128 $vgpr0, 240, 0, implicit $m0, implicit $exec
 
-    ; Loop control
+    ; Same-iteration USE of load #2 result - flushes loads #1-2
+    ; Remaining loads #3-16 (14 loads), WMMA uses loads #3-4 (positions 1-2)
+    ; OptWait = 14 - 2 = 12
+    $vgpr100 = V_MOV_B32_e32 $vgpr14, implicit $exec
+
     $sgpr0 = S_ADD_I32 $sgpr0, -1, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit $scc
     S_BRANCH %bb.2

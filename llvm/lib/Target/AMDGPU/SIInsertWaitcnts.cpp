@@ -468,6 +468,11 @@ private:
     mutable bool RelaxationApplied = false;
     // Pointer to the last barrier in the loop (found during eligibility check)
     const MachineInstr *LastBarrier = nullptr;
+    // The wait count "floor" established by same-iteration uses/overwrites.
+    // When a DS load result is used in the same iteration, the baseline inserts
+    // a wait. This floor indicates the expected counter state after that wait.
+    // WMMAs that only use flushed loads can rely on this floor.
+    unsigned FloorWaitCount = 0;
   };
 
   // Cache of loop DS wait optimization info, keyed by loop header MBB.
@@ -2775,9 +2780,21 @@ void SIInsertWaitcnts::analyzeSingleBBLoopDSLoads(MachineLoop *ML) {
   // if one exists. LastBarrier was already found during eligibility check.
   // These are likely to be prefetch loads whose results are used in the next
   // iteration.
+  //
+  // If a load result is used or overwritten within the same iteration, the
+  // baseline will insert a wait before that instruction. Since DS loads
+  // complete in FIFO order, that wait also completes all earlier loads. So we
+  // can drop those "flushed" loads from our tracking and only consider
+  // subsequent loads as true prefetch loads. Overwrites also require the load
+  // to complete first to avoid write-after-write races.
   const MachineInstr *LastBarrier = Info.LastBarrier;
 
+  // Single pass: track DS load destinations, handle uses (which flush prior
+  // loads) and detect overwrites (which invalidate our analysis).
+  // TrackedLoads: (Register, Position) pairs for checking uses/overwrites
+  SmallVector<std::pair<Register, unsigned>, 64> TrackedLoads;
   unsigned LoadPosition = 0;
+  unsigned LastFlushedPosition = 0; // Loads up to this position will be flushed
   bool AfterLastBarrier = (LastBarrier == nullptr); // If no barrier, track all
 
   for (const MachineInstr &MI : *MBB) {
@@ -2788,6 +2805,42 @@ void SIInsertWaitcnts::analyzeSingleBBLoopDSLoads(MachineLoop *ML) {
 
     if (!AfterLastBarrier)
       continue;
+
+    // Check for instructions that write to LDS through DMA (global_load_lds,
+    // etc). These write to LDS but aren't DS instructions.
+    // Bail out if any appear after the barrier.
+    if (SIInstrInfo::mayWriteLDSThroughDMA(MI)) {
+      LLVM_DEBUG(
+          dbgs() << "Loop DS Wait Opt: LDS DMA write after last barrier, "
+                 << "skipping\n");
+      Info.Valid = false;
+      return;
+    }
+
+    // Check for tensor_load_to_lds instructions (MIMG, not caught by above)
+    if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS ||
+        MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS_D2) {
+      LLVM_DEBUG(dbgs() << "Loop DS Wait Opt: tensor_load_to_lds after last "
+                        << "barrier, skipping\n");
+      Info.Valid = false;
+      return;
+    }
+
+    // Check if this instruction uses or overwrites any tracked DS load
+    // destination. If so, baseline will have inserted a wait that flushes
+    // all loads up to that position (since DS loads complete in order).
+    // Overwrites also require the load to complete first to avoid races.
+    for (auto &[Reg, Position] : TrackedLoads) {
+      if (Position <= LastFlushedPosition)
+        continue; // Already flushed
+
+      if (MI.readsRegister(Reg, TRI) || MI.modifiesRegister(Reg, TRI)) {
+        LLVM_DEBUG(dbgs() << "Loop DS Wait Opt: DS load at position "
+                          << Position << " used/overwritten in same iteration, "
+                          << "flushing positions 1-" << Position << "\n");
+        LastFlushedPosition = std::max(LastFlushedPosition, Position);
+      }
+    }
 
     // Check DS instructions
     if (SIInstrInfo::isDS(MI)) {
@@ -2806,6 +2859,7 @@ void SIInsertWaitcnts::analyzeSingleBBLoopDSLoads(MachineLoop *ML) {
         for (const MachineOperand &Op : MI.defs()) {
           if (Op.isReg() && Op.getReg().isPhysical() &&
               TRI->isVGPR(*MRI, Op.getReg())) {
+            TrackedLoads.emplace_back(Op.getReg(), LoadPosition);
             for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
               Info.VGPRToLoadPosition[static_cast<unsigned>(Unit)] =
                   LoadPosition;
@@ -2816,12 +2870,32 @@ void SIInsertWaitcnts::analyzeSingleBBLoopDSLoads(MachineLoop *ML) {
     }
   }
 
-  Info.TotalDSLoads = LoadPosition;
+  // Filter out flushed loads and renumber remaining ones
+  // Also compute the floor wait count - the wait established by same-iteration
+  // use
+  if (LastFlushedPosition > 0) {
+    DenseMap<unsigned, unsigned> NewMap;
+    for (auto &[RegUnit, Position] : Info.VGPRToLoadPosition) {
+      if (Position > LastFlushedPosition) {
+        NewMap[RegUnit] = Position - LastFlushedPosition;
+      }
+    }
+    Info.VGPRToLoadPosition = std::move(NewMap);
+    // FloorWaitCount: when same-iteration use waits for load N, it leaves
+    // (TotalLoads - N) loads in flight. For the next iteration's WMMAs,
+    // any that only use flushed loads are already covered by this wait.
+    Info.FloorWaitCount = LoadPosition - LastFlushedPosition;
+  } else {
+    Info.FloorWaitCount = 0;
+  }
+
+  Info.TotalDSLoads = LoadPosition - LastFlushedPosition;
   Info.Valid = Info.TotalDSLoads > 0;
 
   LLVM_DEBUG(dbgs() << "Loop DS Wait Opt: Analyzed loop at ";
              MBB->printName(dbgs());
-             dbgs() << " - " << Info.TotalDSLoads << " DS loads"
+             dbgs() << " - " << Info.TotalDSLoads << " DS loads, "
+                    << "FloorWaitCount=" << Info.FloorWaitCount
                     << ", HasBarrier=" << (LastBarrier != nullptr)
                     << ", Valid=" << Info.Valid << "\n");
 }
@@ -2851,13 +2925,26 @@ SIInsertWaitcnts::getOptimalDSWaitCount(MachineBasicBlock *LoopHeader,
     }
   }
 
-  if (MaxLoadPosition == 0)
-    return std::nullopt;
-
   // Optimal wait = TotalDSLoads - MaxLoadPosition
   // This means we wait until all loads up to and including MaxLoadPosition
   // have completed, but loads after it can still be in flight.
-  return Info.TotalDSLoads - MaxLoadPosition;
+  unsigned OptimalWait = Info.TotalDSLoads - MaxLoadPosition;
+
+  // If MaxLoadPosition == 0, this instruction only uses flushed loads
+  // (whose results are used in the same iteration). The same-iteration use
+  // will insert a wait that leaves FloorWaitCount loads in flight.
+  // So this instruction's needs are covered if OptimalWait >= FloorWaitCount.
+  // We return FloorWaitCount to indicate "can relax to this level".
+  if (MaxLoadPosition == 0 && Info.FloorWaitCount > 0) {
+    // All operands are from flushed loads - covered by same-iteration use's
+    // wait
+    return Info.FloorWaitCount;
+  }
+
+  if (MaxLoadPosition == 0)
+    return std::nullopt;
+
+  return OptimalWait;
 }
 
 // Try to apply DS loop wait optimization to relax conservative wait counts.
