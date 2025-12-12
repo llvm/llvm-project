@@ -36,6 +36,17 @@ latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or the
 
 Potentially Breaking Changes
 ============================
+- When exceptions are disabled, Clang is now more precise with regards to the
+  lifetime of temporary objects such as when aggregates are passed by value to
+  a function, resulting in better sharing of stack slots and reduced stack
+  usage. This change can lead to use-after-scope related issues in code that
+  unintentionally relied on the previous behavior. If recompiling with
+  ``-fsanitize=address`` shows a use-after-scope warning, then this is likely
+  the case, and the report printed should be able to help users pinpoint where
+  the use-after-scope is occurring. Users can use ``-Xclang
+  -sloppy-temporary-lifetimes`` to retain the old behavior until they are able
+  to find and resolve issues in their code.
+
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------

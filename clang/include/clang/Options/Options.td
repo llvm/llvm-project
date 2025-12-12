@@ -8331,6 +8331,11 @@ def import_call_optimization : Flag<["-"], "import-call-optimization">,
 def replaceable_function: Joined<["-"], "loader-replaceable-function=">,
   MarshallingInfoStringVector<CodeGenOpts<"LoaderReplaceableFunctionNames">>;
 
+def sloppy_temporary_lifetimes
+    : Flag<["-"], "sloppy-temporary-lifetimes">,
+      HelpText<"Don't emit lifetime markers for temporary objects">,
+      MarshallingInfoFlag<CodeGenOpts<"NoLifetimeMarkersForTemporaries">>;
+
 } // let Visibility = [CC1Option]
 
 //===----------------------------------------------------------------------===//
