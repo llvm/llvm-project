@@ -902,6 +902,11 @@ void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
   }
 }
 
+void mlirOperationReplaceUsesOfWith(MlirOperation op, MlirValue oldValue,
+                                    MlirValue newValue) {
+  unwrap(op)->replaceUsesOfWith(unwrap(oldValue), unwrap(newValue));
+}
+
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//
