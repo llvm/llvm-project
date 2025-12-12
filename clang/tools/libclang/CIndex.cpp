@@ -5342,7 +5342,7 @@ CXString clang_getCursorSpelling(CXCursor C) {
 
       PrintingPolicy Policy = Ctx.getPrintingPolicy();
       Policy.FullyQualifiedName = true;
-      Policy.SuppressTagKeyword = false;
+      Policy.SuppressTagKeywordInElaboratedNames = false;
       return cxstring::createDup(T.getAsString(Policy));
     }
     case CXCursor_TemplateRef: {
@@ -5642,7 +5642,7 @@ clang_PrintingPolicy_getProperty(CXPrintingPolicy Policy,
   case CXPrintingPolicy_SuppressSpecifiers:
     return P->SuppressSpecifiers;
   case CXPrintingPolicy_SuppressTagKeyword:
-    return P->SuppressTagKeyword;
+    return P->SuppressTagKeywordInElaboratedNames;
   case CXPrintingPolicy_IncludeTagDefinition:
     return P->IncludeTagDefinition;
   case CXPrintingPolicy_SuppressScope:
@@ -5710,7 +5710,7 @@ void clang_PrintingPolicy_setProperty(CXPrintingPolicy Policy,
     P->SuppressSpecifiers = Value;
     return;
   case CXPrintingPolicy_SuppressTagKeyword:
-    P->SuppressTagKeyword = Value;
+    P->SuppressTagKeywordInElaboratedNames = Value;
     return;
   case CXPrintingPolicy_IncludeTagDefinition:
     P->IncludeTagDefinition = Value;

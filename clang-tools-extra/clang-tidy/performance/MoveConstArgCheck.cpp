@@ -187,7 +187,7 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
 
       QualType NoRefType = (*InvocationParmType)->getPointeeType();
       PrintingPolicy PolicyWithSuppressedTag(getLangOpts());
-      PolicyWithSuppressedTag.SuppressTagKeyword = true;
+      PolicyWithSuppressedTag.SuppressTagKeywordInElaboratedNames = true;
       PolicyWithSuppressedTag.SuppressUnwrittenScope = true;
       std::string ExpectParmTypeName =
           NoRefType.getAsString(PolicyWithSuppressedTag);

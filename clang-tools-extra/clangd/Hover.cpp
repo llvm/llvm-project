@@ -176,7 +176,8 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   // tag for extra clarity. This isn't very idiomatic, so don't attempt it for
   // complex cases, including pointers/references, template specializations,
   // etc.
-  if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
+  if (!QT.isNull() && !QT.hasQualifiers() &&
+      PP.SuppressTagKeywordInElaboratedNames) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
         TT && TT->isCanonicalUnqualified())
       OS << TT->getDecl()->getKindName() << " ";
