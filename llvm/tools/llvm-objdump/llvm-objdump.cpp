@@ -3548,9 +3548,24 @@ static void mcpuHelp() {
     }
 
     Binary *Bin = OBinary->getBinary();
-    if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin))
+    if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin)) {
       TheTriple = Obj->makeTriple();
-    else
+    } else if (Archive *A = dyn_cast<Archive>(Bin)) {
+      Error Err = Error::success();
+      for (auto &C : A->children(Err)) {
+        Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
+        if (!ChildOrErr)
+          // We don't report error here because we don't disassemble it here.
+          continue;
+        if (ObjectFile *Obj = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
+          TheTriple = Obj->makeTriple();
+          break;
+        }
+      }
+      if (Err)
+        reportError(std::move(Err), A->getFileName());
+    }
+    if (TheTriple.empty())
       reportError(InputFilenames[0], "input file is not an object file");
   }
 

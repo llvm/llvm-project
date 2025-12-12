@@ -25,11 +25,17 @@
 # RUN:   | FileCheck %s --check-prefix=CHECK-MISSING-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
 
 # RUN: yaml2obj --docnum=2 %s -o %t.minidump
-## We report an error when the binary file cannot be convert to a recognized object.
+## We report an error when the binary file isn't an object file format.
 # RUN: not llvm-objdump --mattr=help %t.minidump 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.minidump
 # RUN: not llvm-objdump --mcpu=help %t.minidump 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.minidump
+
+# RUN: llvm-ar rcs %t.a %t
+# RUN: llvm-objdump -d --mcpu=help %t.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE,CHECK-ARCHIVE-ERROR -DFILE=%t.a
+# RUN: llvm-objdump -d --mattr=help %t.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE,CHECK-ARCHIVE-ERROR -DFILE=%t.a
 
 # CHECK: Available CPUs for this target:
 # CHECK: Available features for this target:
@@ -43,6 +49,8 @@
 # CHECK-MISSING-ERROR: llvm-objdump{{.*}}: error: 'a.out': triple was not specified and could not be inferred from the input file: [[MSG]]
 
 # CHECK-UNSUPPORTED-ERROR: llvm-objdump{{.*}}: error: '[[FILE]]': input file is not an object file
+
+# CHECK-ARCHIVE-ERROR-NOT: llvm-objdump{{.*}}: error: '[[FILE]]': input file is not an object file
 
 --- !ELF
 FileHeader:
