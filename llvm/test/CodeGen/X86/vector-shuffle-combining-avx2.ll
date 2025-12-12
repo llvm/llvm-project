@@ -1215,3 +1215,36 @@ entry:
   %shuffle5 = shufflevector <32 x i16> zeroinitializer, <32 x i16> %not, <32 x i32> <i32 3, i32 9, i32 3, i32 1, i32 9, i32 8, i32 9, i32 2, i32 0, i32 8, i32 48, i32 8, i32 35, i32 3, i32 0, i32 4, i32 4, i32 7, i32 4, i32 39, i32 9, i32 0, i32 59, i32 6, i32 0, i32 4, i32 9, i32 1, i32 1, i32 2, i32 8, i32 9>
   ret <32 x i16> %shuffle5
 }
+
+define <9 x i16> @PR172010(<4 x i64> %a0) {
+; AVX2-LABEL: PR172010:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[1,1,1,1]
+; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,1,1,3]
+; AVX2-NEXT:    vpackusdw %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[14,15,4,5,8,9,0,1],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: PR172010:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[0,1,0,1,2,3,6,7]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AVX512-NEXT:    vpbroadcastq %xmm0, %zmm0
+; AVX512-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,2,1]
+; AVX512-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,4,6,7]
+; AVX512-NEXT:    vprolq $16, %zmm0, %zmm0
+; AVX512-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512-NEXT:    ret{{[l|q]}}
+  %shuffle = shufflevector <4 x i64> %a0, <4 x i64> zeroinitializer, <16 x i32> <i32 5, i32 3, i32 0, i32 5, i32 2, i32 2, i32 1, i32 1, i32 4, i32 6, i32 5, i32 3, i32 1, i32 7, i32 2, i32 1>
+  %trunc = trunc nuw <16 x i64> %shuffle to <16 x i16>
+  %result = shufflevector <16 x i16> zeroinitializer, <16 x i16> %trunc, <9 x i32> <i32 31, i32 18, i32 28, i32 20, i32 7, i32 5, i32 8, i32 4, i32 7>
+  ret <9 x i16> %result
+}
