@@ -2980,7 +2980,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
             LLVM::ZExtOp::create(rewriter, loc, i32, index));
       }
       if ((targetSize % 2) != 0)
-        // add padding when not divisible by two.
+        // Add padding when not divisible by two.
         indicesI32Vector.push_back(consts[0]);
     }
 
