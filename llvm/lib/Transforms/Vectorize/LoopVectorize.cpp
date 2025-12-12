@@ -8297,9 +8297,10 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
          "all accumulators in chain must have same scale factor");
 
   auto *ReductionI = Reduction->getUnderlyingInstr();
-  if (Reduction->getOpcode() == Instruction::FAdd &&
-      (!ReductionI->hasAllowReassoc() || !ReductionI->hasAllowContract()))
-    return nullptr;
+  assert(
+      Reduction->getOpcode() != Instruction::FAdd ||
+      (ReductionI->hasAllowReassoc() && ReductionI->hasAllowContract()) &&
+          "FAdd partial reduction requires allow-reassoc and allow-contract");
   if (Reduction->getOpcode() == Instruction::Sub) {
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getConstantInt(ReductionI->getType(), 0));

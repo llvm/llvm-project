@@ -4179,7 +4179,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
       return new VPExpressionRecipe(RecipeA, RecipeB, FMul, Red);
     }
   }
-  if (Ctx.Types.inferScalarType(VecOp)->isFloatingPointTy())
+  if (RedTy->isFloatingPointTy())
     return nullptr;
 
   // Sub reductions could have a sub between the add reduction and vec op.
