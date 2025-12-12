@@ -437,9 +437,7 @@ GccIRCompiler::GccIRCompiler(Ctx &ctx) : IRCompiler(ctx) {
   loadPlugin();
 }
 
-GccIRCompiler::~GccIRCompiler() {
-  gcc = nullptr;
-}
+GccIRCompiler::~GccIRCompiler() { gcc = nullptr; }
 
 void GccIRCompiler::loadPlugin() {
   std::string Error;

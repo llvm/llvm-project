@@ -2718,8 +2718,7 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
       mb.dontNeedIfMmap();
 }
 
-template <class ELFT>
-void LinkerDriver::compileFiles() {
+template <class ELFT> void LinkerDriver::compileFiles() {
   ltoObjectFiles = lto->compile();
   for (auto &file : ltoObjectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
@@ -2751,7 +2750,6 @@ void LinkerDriver::compileFiles() {
     ctx.objectFiles.push_back(obj);
   }
 }
-
 
 // This function is where all the optimizations of link-time
 // optimization takes place. When LLVM LTO is in use, some input files are
