@@ -530,8 +530,8 @@ namespace vardecl_in_if_condition {
     return nullptr;
   }
 
-  RefCountable* get_non_trivial_else() {
-    if (auto* obj = provide(); !obj) // expected-warning@{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  RefCountable* get_non_trivial_else2() {
+    if (auto* obj = provide(); !obj) // expected-warning{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
       return nullptr;
     else
       return obj->next();
