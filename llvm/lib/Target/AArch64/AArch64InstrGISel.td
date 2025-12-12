@@ -252,19 +252,19 @@ def G_USDOT : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_SQSHLU : AArch64GenericInstruction {
+def G_SQSHLU_I : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = 0;
 }
 
-def G_SRSHR: AArch64GenericInstruction {
+def G_SRSHR_I: AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = 0;
 }
 
-def G_URSHR: AArch64GenericInstruction {
+def G_URSHR_I: AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = 0;
@@ -318,9 +318,9 @@ def : GINodeEquiv<G_UDOT, AArch64udot>;
 def : GINodeEquiv<G_SDOT, AArch64sdot>;
 def : GINodeEquiv<G_USDOT, AArch64usdot>;
 
-def : GINodeEquiv<G_SQSHLU, AArch64sqshlui>;
-def : GINodeEquiv<G_SRSHR, AArch64srshri>;
-def : GINodeEquiv<G_URSHR, AArch64urshri>;
+def : GINodeEquiv<G_SQSHLU_I, AArch64sqshlui>;
+def : GINodeEquiv<G_SRSHR_I, AArch64srshri>;
+def : GINodeEquiv<G_URSHR_I, AArch64urshri>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 

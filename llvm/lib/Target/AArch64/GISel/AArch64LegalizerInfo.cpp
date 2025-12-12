@@ -1894,7 +1894,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       return false;
     // Create right shift instruction. Get v. register the output is written
     // to
-    auto Shr = MIB.buildInstr(AArch64::G_SRSHR,
+    auto Shr = MIB.buildInstr(AArch64::G_SRSHR_I,
                               {MRI.getType(MI.getOperand(2).getReg())},
                               {MI.getOperand(2), MI.getOperand(3).getImm()});
     // Build the narrow intrinsic, taking in the v. register of the shift
@@ -1907,7 +1907,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       return false;
     // Create right shift instruction. Get v. register the output is written
     // to
-    auto Shr = MIB.buildInstr(AArch64::G_SRSHR,
+    auto Shr = MIB.buildInstr(AArch64::G_SRSHR_I,
                               {MRI.getType(MI.getOperand(2).getReg())},
                               {MI.getOperand(2), MI.getOperand(3).getImm()});
     // Build the narrow intrinsic, taking in the v. register of the shift
@@ -1920,7 +1920,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       return false;
     // Create right shift instruction. Get v. register the output is written
     // to
-    auto Shr = MIB.buildInstr(AArch64::G_URSHR,
+    auto Shr = MIB.buildInstr(AArch64::G_URSHR_I,
                               {MRI.getType(MI.getOperand(2).getReg())},
                               {MI.getOperand(2), MI.getOperand(3).getImm()});
     // Build the narrow intrinsic, taking in the v. register of the shift
@@ -1947,7 +1947,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         *MRI.getVRegDef(MI.getOperand(3).getReg()), MRI);
     if (ShiftAmount) {
       // If so, create a new intrinsic with the correct shift amount
-      MIB.buildInstr(AArch64::G_SQSHLU, {MI.getOperand(0)}, {MI.getOperand(2)})
+      MIB.buildInstr(AArch64::G_SQSHLU_I, {MI.getOperand(0)}, {MI.getOperand(2)})
           .addImm(ShiftAmount->getSExtValue());
       MI.eraseFromParent();
       return true;
