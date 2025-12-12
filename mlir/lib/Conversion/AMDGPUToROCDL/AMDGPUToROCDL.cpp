@@ -666,21 +666,18 @@ static Value convertSparseMFMAVectorOperand(ConversionPatternRewriter &rewriter,
                                             Location loc, Value input,
                                             bool allowBf16 = true) {
   Type inputType = input.getType();
-  if (auto vectorType = dyn_cast<VectorType>(inputType)) {
-    // bf16 -> i16 when not allowed (pre-gfx950).
-    if (vectorType.getElementType().isBF16() && !allowBf16)
-      return LLVM::BitcastOp::create(
-          rewriter, loc, vectorType.clone(rewriter.getI16Type()), input);
-    // i8/fp8 vectors -> vector<Nxi32>.
-    if (isa<IntegerType>(vectorType.getElementType()) &&
-        vectorType.getElementTypeBitWidth() <= 8) {
-      int64_t numWords = llvm::divideCeil(
-          vectorType.getNumElements() * vectorType.getElementTypeBitWidth(),
-          32);
-      return LLVM::BitcastOp::create(
-          rewriter, loc, VectorType::get(numWords, rewriter.getI32Type()),
-          input);
-    }
+  auto vectorType = cast<VectorType>(inputType);
+  // bf16 -> i16 when not allowed (pre-gfx950).
+  if (vectorType.getElementType().isBF16() && !allowBf16)
+    return LLVM::BitcastOp::create(
+        rewriter, loc, vectorType.clone(rewriter.getI16Type()), input);
+  // i8/fp8 vectors -> vector<Nxi32>.
+  if (isa<IntegerType>(vectorType.getElementType()) &&
+      vectorType.getElementTypeBitWidth() <= 8) {
+    int64_t numWords = llvm::divideCeil(
+        vectorType.getNumElements() * vectorType.getElementTypeBitWidth(), 32);
+    return LLVM::BitcastOp::create(
+        rewriter, loc, VectorType::get(numWords, rewriter.getI32Type()), input);
   }
   return input;
 }
@@ -1164,9 +1161,10 @@ static std::optional<StringRef> wmmaOpToIntrinsicGfx1250(Type elemSourceType,
 /// operation if one exists. This includes checking to ensure the intrinsic is
 /// supported on the architecture you are compiling for.
 static std::optional<StringRef> smfmacOpToIntrinsic(SparseMFMAOp op,
-                                                    bool isGfx950) {
-  using fp8 = Float8E4M3FNType;
-  using bf8 = Float8E5M2Type;
+                                                    Chipset chipset) {
+  bool isGfx950 = chipset >= kGfx950;
+  auto isFp8 = [&](Type t) { return typeIsExpectedFp8ForChipset(chipset, t); };
+  auto isBf8 = [&](Type t) { return typeIsExpectedBf8ForChipset(chipset, t); };
 
   uint32_t m = op.getM(), n = op.getN(), k = op.getK();
   Type sourceAElem = getElementTypeOrSelf(op.getSourceA().getType());
@@ -1190,13 +1188,13 @@ static std::optional<StringRef> smfmacOpToIntrinsic(SparseMFMAOp op,
     if (sourceAElem.isInteger(8) && sourceBElem.isInteger(8) &&
         destElem.isInteger(32))
       return ROCDL::smfmac_i32_16x16x64_i8::getOperationName();
-    if (isa<fp8>(sourceAElem) && isa<fp8>(sourceBElem) && destElem.isF32())
+    if (isFp8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_16x16x64_fp8_fp8::getOperationName();
-    if (isa<fp8>(sourceAElem) && isa<bf8>(sourceBElem) && destElem.isF32())
+    if (isFp8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_16x16x64_fp8_bf8::getOperationName();
-    if (isa<bf8>(sourceAElem) && isa<fp8>(sourceBElem) && destElem.isF32())
+    if (isBf8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_16x16x64_bf8_fp8::getOperationName();
-    if (isa<bf8>(sourceAElem) && isa<bf8>(sourceBElem) && destElem.isF32())
+    if (isBf8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_16x16x64_bf8_bf8::getOperationName();
   }
 
@@ -1204,13 +1202,13 @@ static std::optional<StringRef> smfmacOpToIntrinsic(SparseMFMAOp op,
     if (sourceAElem.isInteger(8) && sourceBElem.isInteger(8) &&
         destElem.isInteger(32))
       return ROCDL::smfmac_i32_16x16x128_i8::getOperationName();
-    if (isa<fp8>(sourceAElem) && isa<fp8>(sourceBElem) && destElem.isF32())
+    if (isFp8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_16x16x128_fp8_fp8::getOperationName();
-    if (isa<fp8>(sourceAElem) && isa<bf8>(sourceBElem) && destElem.isF32())
+    if (isFp8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_16x16x128_fp8_bf8::getOperationName();
-    if (isa<bf8>(sourceAElem) && isa<fp8>(sourceBElem) && destElem.isF32())
+    if (isBf8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_16x16x128_bf8_fp8::getOperationName();
-    if (isa<bf8>(sourceAElem) && isa<bf8>(sourceBElem) && destElem.isF32())
+    if (isBf8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_16x16x128_bf8_bf8::getOperationName();
   }
 
@@ -1231,13 +1229,13 @@ static std::optional<StringRef> smfmacOpToIntrinsic(SparseMFMAOp op,
     if (sourceAElem.isInteger(8) && sourceBElem.isInteger(8) &&
         destElem.isInteger(32))
       return ROCDL::smfmac_i32_32x32x32_i8::getOperationName();
-    if (isa<fp8>(sourceAElem) && isa<fp8>(sourceBElem) && destElem.isF32())
+    if (isFp8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_32x32x32_fp8_fp8::getOperationName();
-    if (isa<fp8>(sourceAElem) && isa<bf8>(sourceBElem) && destElem.isF32())
+    if (isFp8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_32x32x32_fp8_bf8::getOperationName();
-    if (isa<bf8>(sourceAElem) && isa<fp8>(sourceBElem) && destElem.isF32())
+    if (isBf8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_32x32x32_bf8_fp8::getOperationName();
-    if (isa<bf8>(sourceAElem) && isa<bf8>(sourceBElem) && destElem.isF32())
+    if (isBf8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_32x32x32_bf8_bf8::getOperationName();
   }
 
@@ -1245,13 +1243,13 @@ static std::optional<StringRef> smfmacOpToIntrinsic(SparseMFMAOp op,
     if (sourceAElem.isInteger(8) && sourceBElem.isInteger(8) &&
         destElem.isInteger(32))
       return ROCDL::smfmac_i32_32x32x64_i8::getOperationName();
-    if (isa<fp8>(sourceAElem) && isa<fp8>(sourceBElem) && destElem.isF32())
+    if (isFp8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_32x32x64_fp8_fp8::getOperationName();
-    if (isa<fp8>(sourceAElem) && isa<bf8>(sourceBElem) && destElem.isF32())
+    if (isFp8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_32x32x64_fp8_bf8::getOperationName();
-    if (isa<bf8>(sourceAElem) && isa<fp8>(sourceBElem) && destElem.isF32())
+    if (isBf8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_32x32x64_bf8_fp8::getOperationName();
-    if (isa<bf8>(sourceAElem) && isa<bf8>(sourceBElem) && destElem.isF32())
+    if (isBf8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
       return ROCDL::smfmac_f32_32x32x64_bf8_bf8::getOperationName();
   }
 
@@ -1439,8 +1437,7 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
                                              adaptor.getSourceB(), isGfx950);
     Value c = adaptor.getDestC();
 
-    std::optional<StringRef> maybeIntrinsic = smfmacOpToIntrinsic(op, isGfx950);
-
+    std::optional<StringRef> maybeIntrinsic = smfmacOpToIntrinsic(op, chipset);
     if (!maybeIntrinsic.has_value())
       return op.emitOpError(
           "no intrinsic matching sparse MFMA on the given chipset");

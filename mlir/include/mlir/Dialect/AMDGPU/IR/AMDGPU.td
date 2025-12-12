@@ -964,14 +964,16 @@ def SMFMACSparseInTypes : AnyTypeOf<[
     VectorOfLengthAndType<[4, 8], [F16]>,
     VectorOfLengthAndType<[4, 8], [BF16]>,
     VectorOfLengthAndType<[8, 16], [I8]>,
-    VectorOfLengthAndType<[8, 16], [F8E4M3FN, F8E5M2]>
+    VectorOfLengthAndType<[8, 16], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[8, 16], [F8E4M3FNUZ, F8E5M2FNUZ]>
 ]>;
 
 def SMFMACDenseInTypes : AnyTypeOf<[
     VectorOfLengthAndType<[8, 16], [F16]>,
     VectorOfLengthAndType<[8, 16], [BF16]>,
     VectorOfLengthAndType<[16, 32], [I8]>,
-    VectorOfLengthAndType<[16, 32], [F8E4M3FN, F8E5M2]>
+    VectorOfLengthAndType<[16, 32], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[16, 32], [F8E4M3FNUZ, F8E5M2FNUZ]>
 ]>;
 
 def SMFMACOutTypes : AnyTypeOf<[
