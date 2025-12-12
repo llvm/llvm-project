@@ -1302,14 +1302,14 @@ inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
 template <typename... PatternTs> struct ReassociatableOpc_match {
   unsigned Opcode;
   std::tuple<PatternTs...> Patterns;
+  constexpr static size_t NumPatterns =
+      std::tuple_size_v<std::tuple<PatternTs...>>;
 
   ReassociatableOpc_match(unsigned Opcode, const PatternTs &...Patterns)
       : Opcode(Opcode), Patterns(Patterns...) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    constexpr size_t NumPatterns = std::tuple_size_v<std::tuple<PatternTs...>>;
-
     std::array<SDValue, NumPatterns> Leaves;
     size_t LeavesIdx = 0;
     if (!(collectLeaves(N, Leaves, LeavesIdx) && (LeavesIdx == NumPatterns)))
@@ -1318,13 +1318,11 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
     Bitset<NumPatterns> Used;
     return std::apply(
         [&](auto &...P) -> bool {
-          return reassociatableMatchHelper<NumPatterns>(Ctx, Leaves, Used,
-                                                        P...);
+          return reassociatableMatchHelper(Ctx, Leaves, Used, P...);
         },
         Patterns);
   }
 
-  template <std::size_t NumPatterns>
   bool collectLeaves(SDValue V, std::array<SDValue, NumPatterns> &Leaves,
                      std::size_t &LeafIdx) {
     if (V->getOpcode() == Opcode) {
@@ -1340,8 +1338,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   }
 
   // Searchs for a matching leaf for every sub-pattern.
-  template <std::size_t NumPatterns, typename MatchContext, typename PatternHd,
-            typename... PatternTl>
+  template <typename MatchContext, typename PatternHd, typename... PatternTl>
   [[nodiscard]] inline bool
   reassociatableMatchHelper(const MatchContext &Ctx, ArrayRef<SDValue> Leaves,
                             Bitset<NumPatterns> &Used, PatternHd &HeadPattern,
@@ -1350,15 +1347,14 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
       if (Used[Match] || !(sd_context_match(Leaves[Match], Ctx, HeadPattern)))
         continue;
       Used.set(Match);
-      if (reassociatableMatchHelper<NumPatterns>(Ctx, Leaves, Used,
-                                                 TailPatterns...))
+      if (reassociatableMatchHelper(Ctx, Leaves, Used, TailPatterns...))
         return true;
       Used.reset(Match);
     }
     return false;
   }
 
-  template <std::size_t NumPatterns, typename MatchContext>
+  template <typename MatchContext>
   [[nodiscard]] inline bool
   reassociatableMatchHelper(const MatchContext &Ctx, ArrayRef<SDValue> Leaves,
                             Bitset<NumPatterns> &Used) {
