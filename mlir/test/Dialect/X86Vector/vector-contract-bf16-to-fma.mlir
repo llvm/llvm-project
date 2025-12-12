@@ -230,6 +230,52 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+!vecA = vector<8x1x2xbf16>
+!vecB = vector<1x1x2xbf16>
+!vecC = vector<8x1xf32>
+!memrefA = memref<32x1x2xbf16>
+!memrefB = memref<1x4x2xbf16>
+#map = affine_map<(d4, d1, d2, d3) -> (d1, d3, d4)>
+#map1 = affine_map<(d4, d1, d2, d3) -> (d3, d2, d4)>
+#map2 = affine_map<(d4, d1, d2, d3) -> (d1, d2)>
+func.func @matmul_to_fma_load_bcst_B(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !vecC) -> !vecC
+{
+  %c0 = arith.constant 0 : index
+  %0 = ub.poison : bf16
+  %1 = vector.load %arg0[%c0, %c0, %c0] :
+        !memrefA, !vecA
+  %2 = vector.load %arg1[%c0, %c0, %c0] :
+        !memrefB, !vecB
+  %3 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %arg2
+    : !vecA, !vecB into !vecC
+  return %3 : !vecC
+}
+
+// CHECK-LABEL: @matmul_to_fma_load_bcst_B
+// CHECK: x86vector.avx.bcst_to_f32.packed
+// CHECK: x86vector.avx.cvt.packed.odd.indexed_to_f32
+// CHECK: vector.fma
+// CHECK: x86vector.avx.bcst_to_f32.packed
+// CHECK: x86vector.avx.cvt.packed.even.indexed_to_f32
+// CHECK: vector.fma
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.vector_contract_bf16_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 !vecA = vector<1x1x1x1x2xbf16>
 !vecB = vector<1x1x1x8x2xbf16>
 !vecC = vector<1x8xf32>
@@ -276,26 +322,29 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-#map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d2, d4, d1)>
-#map1 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d4, d3, d1)>
-#map2 = affine_map<(d0, d1, d2, d3, d4) -> (d2, d3)>
-
-func.func @negative_tensor_type(%arg0: tensor<4x64x32x2xbf16>, %arg1: tensor<4x32x64x2xbf16>, %arg2: vector<1x16xf32>) -> vector<1x16xf32> {
+!vecA = vector<1x1x2xbf16>
+!vecB = vector<1x8x2xbf16>
+!vecC = vector<1x8xf32>
+!tensorA = tensor<4x1x2xbf16>
+!tensorB = tensor<1x32x2xbf16>
+#map = affine_map<(d1, d2, d3, d4) -> (d2, d4, d1)>
+#map1 = affine_map<(d1, d2, d3, d4) -> (d4, d3, d1)>
+#map2 = affine_map<(d1, d2, d3, d4) -> (d2, d3)>
+func.func @negative_tensor_type(%arg0: !tensorA, %arg1: !tensorB, %arg2: !vecC) -> !vecC {
   %0 = ub.poison : bf16
   %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %c16 = arith.constant 16 : index
-  %extracted_slice = tensor.extract_slice %arg0[%c0, %c0, %c0, 0] [1, 4, 1, 2] [1, 1, 1, 1] : tensor<4x64x32x2xbf16> to tensor<1x4x1x2xbf16>
-  %extracted_slice_0 = tensor.extract_slice %arg1[%c0, %c0, %c0, 0] [1, 1, 32, 2] [1, 1, 1, 1] : tensor<4x32x64x2xbf16> to tensor<1x1x32x2xbf16>
-  %1 = vector.transfer_read %extracted_slice[%c0, %c0, %c0, %c0], %0 {in_bounds = [true, true, true, true]} : tensor<1x4x1x2xbf16>, vector<1x1x1x2xbf16>
-  %2 = vector.transfer_read %extracted_slice[%c0, %c1, %c0, %c0], %0 {in_bounds = [true, true, true, true]} : tensor<1x4x1x2xbf16>, vector<1x1x1x2xbf16>
-  %3 = vector.transfer_read %extracted_slice_0[%c0, %c0, %c0, %c0], %0 {in_bounds = [true, true, true, true]} : tensor<1x1x32x2xbf16>, vector<1x1x16x2xbf16>
-  %4 = vector.transfer_read %extracted_slice_0[%c0, %c0, %c16, %c0], %0 {in_bounds = [true, true, true, true]} : tensor<1x1x32x2xbf16>, vector<1x1x16x2xbf16>
-  %5 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %1, %3, %arg2 {unroll_shape = array<i64: 1, 2, 1, 16, 1>} : vector<1x1x1x2xbf16>, vector<1x1x16x2xbf16> into vector<1x16xf32>
-  %6 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %1, %4, %5 {unroll_shape = array<i64: 1, 2, 1, 16, 1>} : vector<1x1x1x2xbf16>, vector<1x1x16x2xbf16> into vector<1x16xf32>
-  %7 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %2, %3, %6 {unroll_shape = array<i64: 1, 2, 1, 16, 1>} : vector<1x1x1x2xbf16>, vector<1x1x16x2xbf16> into vector<1x16xf32>
-  %8 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %2, %4, %7 {unroll_shape = array<i64: 1, 2, 1, 16, 1>} : vector<1x1x1x2xbf16>, vector<1x1x16x2xbf16> into vector<1x16xf32>
-  return %8 : vector<1x16xf32>
+  %c8 = arith.constant 8 : index
+  %1 = vector.transfer_read %arg0[%c0, %c0, %c0], %0 {in_bounds = [true, true, true]} :
+        !tensorA, !vecA
+  %2 = vector.transfer_read %arg1[%c0, %c8, %c0], %0 {in_bounds = [true, true, true]} :
+        !tensorB, !vecB
+  %3 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %arg2
+    : !vecA, !vecB into !vecC
+  return %3 : !vecC
 }
 
 // CHECK-LABEL: @negative_tensor_type

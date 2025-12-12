@@ -48,48 +48,61 @@ using namespace mlir::x86vector;
 // ```
 static FailureOr<SmallVector<memref::SubViewOp>>
 getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
-                          int64_t mnDimSize, int64_t vnniDimSize,
-                          int64_t mnDimIdx) {
+                          ArrayRef<int64_t> nonUnitDimShape, bool isUnitDim) {
 
   Operation *defOp = prodOp.getDefiningOp();
   if (!defOp)
     return failure();
 
-  Value srcOperation;
+  Value srcBuff;
   SmallVector<OpFoldResult> indexVals;
   llvm::TypeSwitch<Operation *>(defOp).Case<TransferReadOp, LoadOp>(
       [&](auto readOp) {
-        srcOperation = readOp.getOperand(0);
+        srcBuff = readOp.getOperand(0);
         indexVals = SmallVector<OpFoldResult>(readOp.getIndices().begin(),
                                               readOp.getIndices().end());
       });
 
-  if (!srcOperation)
+  if (!srcBuff)
     return failure();
 
-  Type srcType = srcOperation.getType();
+  Type srcType = srcBuff.getType();
   if (!llvm::isa<MemRefType>(srcType))
     return failure();
+
+  int64_t mnDimSize = 1;
+  unsigned mnDimIdx = 0;
+
+  if (!isUnitDim) {
+    for (auto it : llvm::enumerate(nonUnitDimShape)) {
+      if (it.value() != 1) {
+        mnDimSize = it.value();
+        mnDimIdx = it.index();
+        break;
+      }
+    }
+  }
+
+  int vnniDimSize = isUnitDim ? 1 : 2;
 
   auto nonVNNIDimSize = indexVals.size() - 1;
   // Create the size and stride offsets.
   auto one = rewriter.getIndexAttr(1);
-  SmallVector<OpFoldResult> strides(nonVNNIDimSize, one);
+  SmallVector<OpFoldResult> strides(indexVals.size(), one);
   SmallVector<OpFoldResult> sizes(nonVNNIDimSize, one);
 
-  strides.push_back(rewriter.getIndexAttr(1));
   sizes.push_back(rewriter.getIndexAttr(vnniDimSize));
 
   // update the unit/nonUnit Dim size either it is A(LHS) or B(RHS).
   sizes[mnDimIdx] = rewriter.getIndexAttr(mnDimSize);
 
   // for unitDim, first broadcast odd element, so index is set to 1.
-  if (mnDimSize == 1)
+  if (isUnitDim)
     indexVals[indexVals.size() - 1] = rewriter.getIndexAttr(1);
 
   llvm::SmallVector<memref::SubViewOp> subviews;
-  auto subview = memref::SubViewOp::create(rewriter, loc, srcOperation,
-                                           indexVals, sizes, strides);
+  auto subview = memref::SubViewOp::create(rewriter, loc, srcBuff, indexVals,
+                                           sizes, strides);
   subviews.push_back(subview);
 
   // For unit-dims, two subviews should be created for the odd and even
@@ -97,6 +110,7 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
   // op loads and broadcast the first BF16 element into packed F32. It
   // cannot distinguish between even and odd BF16 elements within a
   // packed pair.
+  //
   // Example:
   // memref.subview %arg0[%c0,%c1]:memref<1x2xbf16> to memref<1x1xbf16> // Odd
   // memref.subview %arg0[%c0,%c0]:memref<1x2xbf16> to memref<1x1xbf16> // Even
@@ -105,7 +119,7 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
     sizes[indexVals.size() - 1] = rewriter.getIndexAttr(1);
 
     auto unitDimEvenIdxSubview = memref::SubViewOp::create(
-        rewriter, loc, srcOperation, indexVals, sizes, strides);
+        rewriter, loc, srcBuff, indexVals, sizes, strides);
     subviews.push_back(unitDimEvenIdxSubview);
   }
 
@@ -165,26 +179,14 @@ struct VectorContractBF16ToFMA
 
     ArrayRef<int64_t> lhsShape = lhsTy.getShape();
     llvm::SmallVector<int64_t> nonUnitDimLhs;
-    llvm::SmallVector<unsigned> nonUnitIndicesLhs;
-
-    for (auto it : llvm::enumerate(lhsShape)) {
-      if (it.value() != 1) {
-        nonUnitDimLhs.push_back(it.value());
-        nonUnitIndicesLhs.push_back(it.index());
-      }
-    }
+    llvm::copy_if(lhsShape, std::back_inserter(nonUnitDimLhs),
+                  [](int64_t dim) { return dim != 1; });
 
     VectorType rhsTy = contractOp.getRhsType();
     ArrayRef<int64_t> rhsShape = rhsTy.getShape();
     llvm::SmallVector<int64_t> nonUnitDimRhs;
-    llvm::SmallVector<unsigned> nonUnitIndicesRhs;
-
-    for (auto it : llvm::enumerate(rhsShape)) {
-      if (it.value() != 1) {
-        nonUnitDimRhs.push_back(it.value());
-        nonUnitIndicesRhs.push_back(it.index());
-      }
-    }
+    llvm::copy_if(rhsShape, std::back_inserter(nonUnitDimRhs),
+                  [](int64_t dim) { return dim != 1; });
 
     if ((nonUnitDimLhs.size() - 1) > 0 && (nonUnitDimRhs.size() - 1) > 0)
       return rewriter.notifyMatchFailure(contractOp,
@@ -229,25 +231,15 @@ struct VectorContractBF16ToFMA
     Value nonUnitSrc =
         rhsHasMultipleNonUnitDims ? contractOp.getRhs() : contractOp.getLhs();
 
-    // mnDim index differs depending on the orientation.
-    int mnDimIdx = rhsHasMultipleNonUnitDims
-                       ? nonUnitIndicesRhs.front()
-                       : nonUnitIndicesLhs.front(); // A or B
-
-    // VNNI factor: always 1 for unit dims, 2 for non-unit dims.
-    int unitVnni = 1;
-    int nonUnitVnni = 2;
-
-    // Non-unit dim size.
-    int nonUnitSize = nonUnitDimRhs.front();
+    ArrayRef<int64_t> nonUnitDimShape =
+        rhsHasMultipleNonUnitDims ? rhsShape : lhsShape;
 
     // Build subviews.
-    auto unitSubview = getSubviewFromVectorInput(
-        loc, rewriter, unitSrc, /*size=*/1, unitVnni, mnDimIdx);
+    auto unitSubview = getSubviewFromVectorInput(loc, rewriter, unitSrc,
+                                                 nonUnitDimShape, true);
 
-    auto nonUnitSubview =
-        getSubviewFromVectorInput(loc, rewriter, nonUnitSrc,
-                                  /*size=*/nonUnitSize, nonUnitVnni, mnDimIdx);
+    auto nonUnitSubview = getSubviewFromVectorInput(loc, rewriter, nonUnitSrc,
+                                                    nonUnitDimShape, false);
 
     // Check failures once.
     if (failed(unitSubview) || failed(nonUnitSubview))
