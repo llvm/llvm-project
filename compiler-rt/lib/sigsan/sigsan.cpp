@@ -204,7 +204,8 @@ SIGSAN_INTERCEPTOR(FILE *, freopen, (path, mode, stream), const char *path,
                    const char *mode, FILE *stream)
 
 // GNU stdio
-SIGSAN_INTERCEPTOR(int, vasprintf, (strp, fmt, ap), char **strp, const char *fmt, va_list ap)
+SIGSAN_INTERCEPTOR(int, vasprintf, (strp, fmt, ap), char **strp,
+                   const char *fmt, va_list ap)
 INTERCEPTOR(int, asprintf, char **strp, const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
@@ -226,7 +227,8 @@ INTERCEPTOR(void, syslog, int priority, const char *format, ...) {
   va_end(ap);
 }
 
-SIGSAN_INTERCEPTOR(int, pthread_mutex_init, (mutex, mutexattr), pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr)
+SIGSAN_INTERCEPTOR(int, pthread_mutex_init, (mutex, mutexattr),
+                   pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr)
 SIGSAN_INTERCEPTOR(int, pthread_mutex_lock, (mutex), pthread_mutex_t *mutex)
 SIGSAN_INTERCEPTOR(int, pthread_mutex_trylock, (mutex), pthread_mutex_t *mutex)
 SIGSAN_INTERCEPTOR(int, pthread_mutex_unlock, (mutex), pthread_mutex_t *mutex)
