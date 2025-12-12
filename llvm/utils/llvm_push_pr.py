@@ -619,11 +619,11 @@ def main() -> None:
     parser.add_argument(
         "--draft", action="store_true", help="Create pull requests as drafts."
     )
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
+    merging = parser.add_mutually_exclusive_group()
+    merging.add_argument(
         "--no-merge", action="store_true", help="Create PRs but do not merge them."
     )
-    group.add_argument(
+    merging.add_argument(
         "--auto-merge",
         action="store_true",
         help="Enable auto-merge for each PR instead of attempting to merge immediately.",
@@ -631,11 +631,11 @@ def main() -> None:
     parser.add_argument(
         "--dry-run", action="store_true", help="Print commands without executing them."
     )
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
+    verbosity = parser.add_mutually_exclusive_group()
+    verbosity.add_argument(
         "-v", "--verbose", action="store_true", help="Print all commands being run."
     )
-    group.add_argument(
+    verbosity.add_argument(
         "-q",
         "--quiet",
         action="store_true",
