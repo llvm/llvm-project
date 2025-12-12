@@ -9903,13 +9903,6 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
     return true;
   }
 
-  // For an anonymous struct or union, the copy and assignment special members
-  // will never be used, so skip the check. For an anonymous union declared at
-  // namespace scope, the constructor and destructor are used.
-  if (CSM != CXXSpecialMemberKind::DefaultConstructor &&
-      CSM != CXXSpecialMemberKind::Destructor && RD->isAnonymousStructOrUnion())
-    return false;
-
   // C++11 [class.copy]p7, p18:
   //   If the class definition declares a move constructor or move assignment
   //   operator, an implicitly declared copy constructor or copy assignment

@@ -163,7 +163,7 @@ namespace test_union {
   struct S1 {
     union {
       union { // expected-note-re {{copy constructor of 'S1' is implicitly deleted because field 'test_union::S1::(anonymous union)::(anonymous union at {{.*}})' has a deleted copy constructor}} expected-note-re {{copy assignment operator of 'S1' is implicitly deleted because field 'test_union::S1::(anonymous union)::(anonymous union at {{.*}})' has a deleted copy assignment operator}} expected-note-re 4 {{'S1' is implicitly deleted because field 'test_union::S1::(anonymous union)::(anonymous union at {{.*}})' has a deleted}}
-        id f0; // expected-note-re 2 {{{{.*}} of '(anonymous union at {{.*}}' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
+        id f0; // expected-note-re 6 {{{{.*}} of '(anonymous union at {{.*}}' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
         char f1;
       };
       int f2;
