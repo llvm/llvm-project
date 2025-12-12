@@ -2602,7 +2602,8 @@ AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
   StringRef::iterator HardRegStart = std::find(I, E, '{');
   StringRef::iterator HardRegEnd = std::find(I, E, '}');
   // Do we have at least one hard register.
-  bool ApplyHardRegisterConstraint = HardRegStart != E && HardRegEnd != E && HardRegEnd > HardRegStart;
+  bool ApplyHardRegisterConstraint =
+      HardRegStart != E && HardRegEnd != E && HardRegEnd > HardRegStart;
 
   // Do we have "register asm" on a variable.
   std::string Reg = "";
@@ -2645,9 +2646,9 @@ AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
   std::string NC;
   while (I != E) {
     if (*I == '{') {
-      HardRegEnd = std::find(I+1, E, '}');
+      HardRegEnd = std::find(I + 1, E, '}');
       // No error checking because we already validated this constraint
-      StringRef Register(I+1, HardRegEnd-I-1);
+      StringRef Register(I + 1, HardRegEnd - I - 1);
       // If we don't have a valid register name, simply return the constraint.
       // For example: There are some targets like X86 that use a constraint such
       // as "@cca", which is validated and then converted into {@cca}. Now this
@@ -2668,8 +2669,7 @@ AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
         GCCReg->push_back(Register.str());
 
       I = HardRegEnd + 1;
-    }
-    else {
+    } else {
       NC += *I;
       ++I;
     }
