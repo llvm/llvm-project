@@ -577,6 +577,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__algorithm/equal.h>
 #  include <__algorithm/lexicographical_compare.h>
 #  include <__algorithm/lexicographical_compare_three_way.h>
+#  include <__algorithm/specialized_algorithms.h>
 #  include <__assert>
 #  include <__config>
 #  include <__functional/binary_function.h>
@@ -818,7 +819,26 @@ public:
   friend class multimap;
   template <class>
   friend class __map_const_iterator;
+
+  template <class, class...>
+  friend struct __specialized_algorithm;
 };
+
+#  ifndef _LIBCPP_CXX03_LANG
+template <class _Alg, class _TreeIterator>
+struct __specialized_algorithm<_Alg, __iterator_pair<__map_iterator<_TreeIterator>, __map_iterator<_TreeIterator>>> {
+  using __base _LIBCPP_NODEBUG = __specialized_algorithm<_Alg, __iterator_pair<_TreeIterator, _TreeIterator>>;
+
+  static const bool __has_algorithm = __base::__has_algorithm;
+
+  using __iterator _LIBCPP_NODEBUG = __map_iterator<_TreeIterator>;
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI static void operator()(__iterator __first, __iterator __last, _Args&&... __args) {
+    __base()(__first.__i_, __last.__i_, std::forward<_Args>(__args)...);
+  }
+};
+#  endif
 
 template <class _TreeIterator>
 class __map_const_iterator {
@@ -873,7 +893,28 @@ public:
   friend class multimap;
   template <class, class, class>
   friend class __tree_const_iterator;
+
+  template <class, class...>
+  friend struct __specialized_algorithm;
 };
+
+#  ifndef _LIBCPP_CXX03_LANG
+template <class _Alg, class _TreeIterator>
+struct __specialized_algorithm<
+    _Alg,
+    __iterator_pair<__map_const_iterator<_TreeIterator>, __map_const_iterator<_TreeIterator>>> {
+  using __base _LIBCPP_NODEBUG = __specialized_algorithm<_Alg, __iterator_pair<_TreeIterator, _TreeIterator>>;
+
+  static const bool __has_algorithm = __base::__has_algorithm;
+
+  using __iterator _LIBCPP_NODEBUG = __map_const_iterator<_TreeIterator>;
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI static void operator()(__iterator __first, __iterator __last, _Args&&... __args) {
+    __base()(__first.__i_, __last.__i_, std::forward<_Args>(__args)...);
+  }
+};
+#  endif
 
 template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
 class multimap;
@@ -1371,6 +1412,8 @@ private:
 #  ifdef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI __node_holder __construct_node_with_key(const key_type& __k);
 #  endif
+
+  friend struct __specialized_algorithm<_Algorithm::__for_each, __single_range<map> >;
 };
 
 #  if _LIBCPP_STD_VER >= 17
@@ -1421,6 +1464,22 @@ map(from_range_t, _Range&&, _Allocator)
 template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 map(initializer_list<pair<_Key, _Tp>>, _Allocator)
     -> map<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
+#  endif
+
+#  if _LIBCPP_STD_VER >= 14
+template <class _Key, class _Tp, class _Compare, class _Allocator>
+struct __specialized_algorithm<_Algorithm::__for_each, __single_range<map<_Key, _Tp, _Compare, _Allocator>>> {
+  using __map _LIBCPP_NODEBUG = map<_Key, _Tp, _Compare, _Allocator>;
+
+  static const bool __has_algorithm = true;
+
+  template <class _Map, class _Func, class _Proj>
+  _LIBCPP_HIDE_FROM_ABI static auto operator()(_Map&& __map, _Func __func, _Proj __proj) {
+    auto [_, __func2] = __specialized_algorithm<_Algorithm::__for_each, __single_range<typename __map::__base>>()(
+        __map.__tree_, std::move(__func), std::move(__proj));
+    return std::make_pair(__map.end(), std::move(__func2));
+  }
+};
 #  endif
 
 #  ifndef _LIBCPP_CXX03_LANG
@@ -1922,6 +1981,8 @@ private:
 
   typedef __map_node_destructor<__node_allocator> _Dp;
   typedef unique_ptr<__node, _Dp> __node_holder;
+
+  friend struct __specialized_algorithm<_Algorithm::__for_each, __single_range<multimap> >;
 };
 
 #  if _LIBCPP_STD_VER >= 17
@@ -1972,6 +2033,22 @@ multimap(from_range_t, _Range&&, _Allocator)
 template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 multimap(initializer_list<pair<_Key, _Tp>>, _Allocator)
     -> multimap<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
+#  endif
+
+#  if _LIBCPP_STD_VER >= 14
+template <class _Key, class _Tp, class _Compare, class _Allocator>
+struct __specialized_algorithm<_Algorithm::__for_each, __single_range<multimap<_Key, _Tp, _Compare, _Allocator>>> {
+  using __map _LIBCPP_NODEBUG = multimap<_Key, _Tp, _Compare, _Allocator>;
+
+  static const bool __has_algorithm = true;
+
+  template <class _Map, class _Func, class _Proj>
+  _LIBCPP_HIDE_FROM_ABI static auto operator()(_Map&& __map, _Func __func, _Proj __proj) {
+    auto [_, __func2] = __specialized_algorithm<_Algorithm::__for_each, __single_range<typename __map::__base>>()(
+        __map.__tree_, std::move(__func), std::move(__proj));
+    return std::make_pair(__map.end(), std::move(__func2));
+  }
+};
 #  endif
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>

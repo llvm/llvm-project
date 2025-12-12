@@ -518,6 +518,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__algorithm/equal.h>
 #  include <__algorithm/lexicographical_compare.h>
 #  include <__algorithm/lexicographical_compare_three_way.h>
+#  include <__algorithm/specialized_algorithms.h>
 #  include <__assert>
 #  include <__config>
 #  include <__functional/is_transparent.h>
@@ -909,6 +910,9 @@ public:
     return __tree_.__equal_range_multi(__k);
   }
 #  endif
+
+  template <class, class...>
+  friend struct __specialized_algorithm;
 };
 
 #  if _LIBCPP_STD_VER >= 17
@@ -953,6 +957,23 @@ set(from_range_t, _Range&&, _Allocator)
 
 template <class _Key, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 set(initializer_list<_Key>, _Allocator) -> set<_Key, less<_Key>, _Allocator>;
+#  endif
+
+#  if _LIBCPP_STD_VER >= 14
+template <class _Alg, class _Key, class _Compare, class _Allocator>
+struct __specialized_algorithm<_Alg, __single_range<set<_Key, _Compare, _Allocator>>> {
+  using __set _LIBCPP_NODEBUG = set<_Key, _Compare, _Allocator>;
+
+  static const bool __has_algorithm =
+      __specialized_algorithm<_Alg, __single_range<typename __set::__base>>::__has_algorithm;
+
+  // set's begin() and end() are identical with and without const qualification
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI static auto operator()(const __set& __set, _Args&&... __args) {
+    return __specialized_algorithm<_Alg, __single_range<typename __set::__base>>()(
+        __set.__tree_, std::forward<_Args>(__args)...);
+  }
+};
 #  endif
 
 template <class _Key, class _Compare, class _Allocator>
@@ -1354,6 +1375,9 @@ public:
     return __tree_.__equal_range_multi(__k);
   }
 #  endif
+
+  template <class, class...>
+  friend struct __specialized_algorithm;
 };
 
 #  if _LIBCPP_STD_VER >= 17
@@ -1399,6 +1423,23 @@ multiset(from_range_t, _Range&&, _Allocator)
 
 template <class _Key, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 multiset(initializer_list<_Key>, _Allocator) -> multiset<_Key, less<_Key>, _Allocator>;
+#  endif
+
+#  if _LIBCPP_STD_VER >= 14
+template <class _Alg, class _Key, class _Compare, class _Allocator>
+struct __specialized_algorithm<_Alg, __single_range<multiset<_Key, _Compare, _Allocator>>> {
+  using __set _LIBCPP_NODEBUG = multiset<_Key, _Compare, _Allocator>;
+
+  static const bool __has_algorithm =
+      __specialized_algorithm<_Alg, __single_range<typename __set::__base>>::__has_algorithm;
+
+  // set's begin() and end() are identical with and without const qualification
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI static auto operator()(const __set& __set, _Args&&... __args) {
+    return __specialized_algorithm<_Alg, __single_range<typename __set::__base>>()(
+        __set.__tree_, std::forward<_Args>(__args)...);
+  }
+};
 #  endif
 
 template <class _Key, class _Compare, class _Allocator>
