@@ -554,14 +554,12 @@ LogicalResult SparseMFMAOp::verify() {
   // When CBSZ == 0, ABID selects the index set within the sparse index VGPR.
   // When CBSZ != 0, the first index set is always used (ABID ignored).
   bool is8BitSource = sparseElem.isFloat(8) || sparseElem.isInteger(8);
-  if (getCbsz() == 0 && is8BitSource) {
-    // 8-bit source: ABID[0] selects one of two 16-bit index sets.
-    if (getAbid() > 1)
-      return emitOpError(
-          "ABID must be 0 or 1 for 8-bit source data when CBSZ is 0");
-  }
-  // 16-bit source: ABID[1:0] selects one of four 8-bit index sets (0-3 all
-  // valid).
+  // 8-bit source: ABID selects one of two 16-bit index sets.
+  if (getCbsz() == 0 && is8BitSource && getAbid() > 1)
+    return emitOpError("ABID must be 0 or 1 for 8-bit source data");
+  // 16-bit source: ABID selects one of four 8-bit index sets (0-3 all valid).
+  if (getCbsz() == 0 && !is8BitSource && getAbid() > 3)
+    return emitOpError("ABID must be between 0 and 3 for 16-bit source data");
 
   int64_t expectedSourceElems = (getM() * getK()) / waveSize;
   if (denseLen != expectedSourceElems)
