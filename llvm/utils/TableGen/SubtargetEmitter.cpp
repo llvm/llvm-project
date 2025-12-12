@@ -1551,6 +1551,58 @@ static bool isTruePredicate(const Record *Rec) {
          Rec->getValueAsDef("Pred")->isSubClassOf("MCTrue");
 }
 
+static void expandSchedPredicates(const Record *Rec, PredicateExpander &PE,
+                                  bool WrapPredicate, raw_ostream &OS) {
+  if (Rec->isSubClassOf("MCSchedPredicate")) {
+    PE.expandPredicate(OS, Rec->getValueAsDef("Pred"));
+  } else if (Rec->isSubClassOf("FeatureSchedPredicate")) {
+    const Record *FR = Rec->getValueAsDef("Feature");
+    if (PE.shouldExpandForMC()) {
+      // MC version of this predicate will be emitted into
+      // resolveVariantSchedClassImpl, which accesses MCSubtargetInfo
+      // through argument STI.
+      OS << "STI.";
+    } else {
+      // Otherwise, this predicate will be emitted directly into
+      // TargetGenSubtargetInfo::resolveSchedClass, which can just access
+      // TargetSubtargetInfo / MCSubtargetInfo through `this`.
+      OS << "this->";
+    }
+    OS << "hasFeature(" << PE.getTargetName() << "::" << FR->getName() << ")";
+  } else if (Rec->isSubClassOf("SchedPredicateCombiner")) {
+    std::vector<const Record *> SubPreds =
+        Rec->getValueAsListOfDefs("Predicates");
+    StringRef Sep;
+    if (Rec->isSubClassOf("AllOfSchedPreds"))
+      Sep = " && ";
+    else if (Rec->isSubClassOf("AnyOfSchedPreds") ||
+             Rec->isSubClassOf("NoneOfSchedPreds"))
+      Sep = " || ";
+    else
+      llvm_unreachable("Unrecognized SchedPredicateCombiner");
+
+    if (Rec->isSubClassOf("NoneOfSchedPreds")) {
+      WrapPredicate = true;
+      OS << "!";
+    }
+
+    if (WrapPredicate)
+      OS << "(";
+
+    ListSeparator LS(Sep);
+    for (const Record *SubP : SubPreds)
+      expandSchedPredicates(SubP, PE, /*WrapPredicate=*/true, OS << LS);
+
+    if (WrapPredicate)
+      OS << ")";
+  } else {
+    // Expand this legacy predicate and wrap it around braces if there is more
+    // than one predicate to expand.
+    OS << (WrapPredicate ? "(" : "") << Rec->getValueAsString("Predicate")
+       << (WrapPredicate ? ")" : "");
+  }
+}
+
 static void emitPredicates(const CodeGenSchedTransition &T,
                            const CodeGenSchedClass &SC, PredicateExpander &PE,
                            raw_ostream &OS) {
@@ -1582,34 +1634,7 @@ static void emitPredicates(const CodeGenSchedTransition &T,
         SS << "&& ";
       }
 
-      if (Rec->isSubClassOf("MCSchedPredicate")) {
-        PE.expandPredicate(SS, Rec->getValueAsDef("Pred"));
-        continue;
-      }
-
-      if (Rec->isSubClassOf("FeatureSchedPredicate")) {
-        const Record *FR = Rec->getValueAsDef("Feature");
-        if (PE.shouldExpandForMC()) {
-          // MC version of this predicate will be emitted into
-          // resolveVariantSchedClassImpl, which accesses MCSubtargetInfo
-          // through argument STI.
-          SS << "STI.";
-        } else {
-          // Otherwise, this predicate will be emitted directly into
-          // TargetGenSubtargetInfo::resolveSchedClass, which can just access
-          // TargetSubtargetInfo / MCSubtargetInfo through `this`.
-          SS << "this->";
-        }
-        SS << "hasFeature(" << PE.getTargetName() << "::" << FR->getName()
-           << ")";
-        continue;
-      }
-
-      // Expand this legacy predicate and wrap it around braces if there is more
-      // than one predicate to expand.
-      SS << ((NumNonTruePreds > 1) ? "(" : "")
-         << Rec->getValueAsString("Predicate")
-         << ((NumNonTruePreds > 1) ? ")" : "");
+      expandSchedPredicates(Rec, PE, /*WrapPredicate=*/NumNonTruePreds > 1, SS);
     }
 
     SS << ")\n"; // end of if-stmt
@@ -1635,11 +1660,22 @@ static void emitSchedModelHelperEpilogue(raw_ostream &OS,
   OS << "  report_fatal_error(\"Expected a variant SchedClass\");\n";
 }
 
+static bool hasMCSchedPredicate(const Record *Rec) {
+  if (Rec->isSubClassOf("MCSchedPredicate") ||
+      Rec->isSubClassOf("FeatureSchedPredicate"))
+    return true;
+
+  if (Rec->isSubClassOf("SchedPredicateCombiner")) {
+    // Validate its sub-predicates recursively.
+    std::vector<const Record *> SubPreds =
+        Rec->getValueAsListOfDefs("Predicates");
+    return SubPreds.empty() || all_of(SubPreds, hasMCSchedPredicate);
+  }
+
+  return false;
+}
 static bool hasMCSchedPredicates(const CodeGenSchedTransition &T) {
-  return all_of(T.PredTerm, [](const Record *Rec) {
-    return Rec->isSubClassOf("MCSchedPredicate") ||
-           Rec->isSubClassOf("FeatureSchedPredicate");
-  });
+  return all_of(T.PredTerm, hasMCSchedPredicate);
 }
 
 static void collectVariantClasses(const CodeGenSchedModels &SchedModels,
