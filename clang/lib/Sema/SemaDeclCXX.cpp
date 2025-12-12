@@ -11136,9 +11136,11 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
     else
       Loc = RD->getLocation();
 
+    DeclarationName Name =
+        Context.DeclarationNames.getCXXOperatorName(OO_Delete);
     // If we have a virtual destructor, look up the deallocation function
     if (FunctionDecl *OperatorDelete = FindDeallocationFunctionForDestructor(
-            Loc, RD, /*Diagnose=*/true, /*LookForGlobal=*/false)) {
+            Loc, RD, /*Diagnose=*/true, /*LookForGlobal=*/false, Name)) {
       Expr *ThisArg = nullptr;
 
       // If the notional 'delete this' expression requires a non-trivial
@@ -11186,8 +11188,38 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
         // delete calls that require it.
         FunctionDecl *GlobalOperatorDelete =
             FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
-                                                  /*LookForGlobal*/ true);
-        Destructor->setOperatorGlobalDelete(GlobalOperatorDelete);
+                                                  /*LookForGlobal*/ true, Name);
+        if (GlobalOperatorDelete) {
+          MarkFunctionReferenced(Loc, GlobalOperatorDelete);
+          Destructor->setOperatorGlobalDelete(GlobalOperatorDelete);
+        }
+      }
+
+      if (Context.getTargetInfo().emitVectorDeletingDtors(
+              Context.getLangOpts())) {
+        // Lookup delete[] too in case we have to emit a vector deleting dtor.
+        DeclarationName VDeleteName =
+            Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
+        FunctionDecl *ArrOperatorDelete = FindDeallocationFunctionForDestructor(
+            Loc, RD, /*Diagnose*/ false,
+            /*LookForGlobal*/ false, VDeleteName);
+        if (ArrOperatorDelete && isa<CXXMethodDecl>(ArrOperatorDelete)) {
+          FunctionDecl *GlobalArrOperatorDelete =
+              FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
+                                                    /*LookForGlobal*/ true,
+                                                    VDeleteName);
+          Destructor->setGlobalOperatorArrayDelete(GlobalArrOperatorDelete);
+          if (GlobalArrOperatorDelete &&
+              Context.classNeedsVectorDeletingDestructor(RD))
+            MarkFunctionReferenced(Loc, GlobalArrOperatorDelete);
+        } else if (!ArrOperatorDelete) {
+          ArrOperatorDelete = FindDeallocationFunctionForDestructor(
+              Loc, RD, /*Diagnose*/ false,
+              /*LookForGlobal*/ true, VDeleteName);
+        }
+        Destructor->setOperatorArrayDelete(ArrOperatorDelete);
+        if (ArrOperatorDelete && Context.classNeedsVectorDeletingDestructor(RD))
+          MarkFunctionReferenced(Loc, ArrOperatorDelete);
       }
     }
   }

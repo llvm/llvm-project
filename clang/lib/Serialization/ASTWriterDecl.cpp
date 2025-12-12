@@ -1809,6 +1809,8 @@ void ASTDeclWriter::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
   if (D->getOperatorDelete())
     Record.AddStmt(D->getOperatorDeleteThisArg());
   Record.AddDeclRef(D->getOperatorGlobalDelete());
+  Record.AddDeclRef(D->getArrayOperatorDelete());
+  Record.AddDeclRef(D->getGlobalArrayOperatorDelete());
 
   Code = serialization::DECL_CXX_DESTRUCTOR;
 }
