@@ -2177,6 +2177,155 @@ join:
   ret i32 %phi
 }
 
+define i8 @gep_in_same_parent(i32 %cond, ptr %ptr) {
+; CHECK-LABEL: @gep_in_same_parent(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 0
+; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr i8, ptr [[PTR]], i64 32
+; CHECK-NEXT:    switch i32 [[COND:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[CASE0:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:      i32 3, label [[CASE3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case0:
+; CHECK-NEXT:    [[LOAD0:%.*]] = load i8, ptr [[GEP_0]], align 1
+; CHECK-NEXT:    br label [[SWITCH_MERGE:%.*]]
+; CHECK:       case1:
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR]], i64 8
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GEP_1]], align 1
+; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK:       case2:
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i8, ptr [[PTR]], i64 16
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GEP_2]], align 1
+; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK:       case3:
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i8, ptr [[PTR]], i64 24
+; CHECK-NEXT:    [[LOAD3:%.*]] = load i8, ptr [[GEP_3]], align 1
+; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK:       default:
+; CHECK-NEXT:    [[LOAD_DEFAULT:%.*]] = load i8, ptr [[GEP_DEFAULT]], align 1
+; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK:       switch.merge:
+; CHECK-NEXT:    [[LOAD_PHI:%.*]] = phi i8 [ [[LOAD0]], [[CASE0]] ], [ [[LOAD1]], [[CASE1]] ], [ [[LOAD2]], [[CASE2]] ], [ [[LOAD3]], [[CASE3]] ], [ [[LOAD_DEFAULT]], [[DEFAULT]] ]
+; CHECK-NEXT:    ret i8 [[LOAD_PHI]]
+;
+entry:
+  %gep.0 = getelementptr i8, ptr %ptr, i64 0
+  %gep.default = getelementptr i8, ptr %ptr, i64 32
+  br label %switch.bb
+
+switch.bb:
+  switch i32 %cond, label %default [
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  i32 3, label %case3
+  ]
+
+case0:
+  %load0 = load i8, ptr %gep.0
+  br label %switch.merge
+
+case1:
+  %gep.1 = getelementptr i8, ptr %ptr, i64 8
+  %load1 = load i8, ptr %gep.1
+  br label %switch.merge
+
+case2:
+  %gep.2 = getelementptr i8, ptr %ptr, i64 16
+  %load2 = load i8, ptr %gep.2
+  br label %switch.merge
+
+case3:
+  %gep.3 = getelementptr i8, ptr %ptr, i64 24
+  %load3 = load i8, ptr %gep.3
+  br label %switch.merge
+
+default:
+  %load.default = load i8, ptr %gep.default
+  br label %switch.merge
+
+switch.merge:
+  %load.phi = phi i8 [ %load0, %case0 ], [ %load1, %case1 ], [ %load2, %case2], [ %load3, %case3 ], [ %load.default, %default ]
+  ret i8 %load.phi
+
+}
+
+define i8 @gep_in_entry(i32 %cond, ptr %ptr) {
+; CHECK-LABEL: @gep_in_entry(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 0
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR]], i64 8
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i8, ptr [[PTR]], i64 16
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i8, ptr [[PTR]], i64 24
+; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr i8, ptr [[PTR]], i64 32
+; CHECK-NEXT:    switch i32 [[COND:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[CASE0:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:      i32 3, label [[CASE3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case0:
+; CHECK-NEXT:    [[LOAD0:%.*]] = load i8, ptr [[GEP_0]], align 1
+; CHECK-NEXT:    br label [[SWITCH_MERGE:%.*]]
+; CHECK:       case1:
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GEP_1]], align 1
+; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK:       case2:
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GEP_2]], align 1
+; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK:       case3:
+; CHECK-NEXT:    [[LOAD3:%.*]] = load i8, ptr [[GEP_3]], align 1
+; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK:       default:
+; CHECK-NEXT:    [[LOAD_DEFAULT:%.*]] = load i8, ptr [[GEP_DEFAULT]], align 1
+; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK:       switch.merge:
+; CHECK-NEXT:    [[GEP_LOAD:%.*]] = phi i8 [ [[LOAD0]], [[CASE0]] ], [ [[LOAD1]], [[CASE1]] ], [ [[LOAD2]], [[CASE2]] ], [ [[LOAD3]], [[CASE3]] ], [ [[LOAD_DEFAULT]], [[DEFAULT]] ]
+; CHECK-NEXT:    ret i8 [[GEP_LOAD]]
+;
+entry:
+  %gep.0 = getelementptr i8, ptr %ptr, i64 0
+  %gep.1 = getelementptr i8, ptr %ptr, i64 8
+  %gep.2 = getelementptr i8, ptr %ptr, i64 16
+  %gep.3 = getelementptr i8, ptr %ptr, i64 24
+  %gep.default = getelementptr i8, ptr %ptr, i64 32
+  br label %switch.bb
+
+switch.bb:
+  switch i32 %cond, label %default [
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  i32 3, label %case3
+  ]
+
+case0:
+  %load0 = load i8, ptr %gep.0
+  br label %switch.merge
+
+case1:
+  %load1 = load i8, ptr %gep.1
+  br label %switch.merge
+
+case2:
+  %load2 = load i8, ptr %gep.2
+  br label %switch.merge
+
+case3:
+  %load3 = load i8, ptr %gep.3
+  br label %switch.merge
+
+default:
+  %load.default = load i8, ptr %gep.default
+  br label %switch.merge
+
+switch.merge:
+  %load.phi = phi i8 [ %load0, %case0 ], [ %load1, %case1 ], [ %load2, %case2], [ %load3, %case3 ], [ %load.default, %default ]
+  ret i8 %load.phi
+}
+
 declare void @dummy()
 declare void @use.ptr(ptr)
 
