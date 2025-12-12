@@ -21,7 +21,9 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -30,6 +32,8 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
+
+#include <algorithm>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -962,9 +966,39 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
     return builder.getString(str, eltTy, finalSize);
   }
 
-  errorNYI(e->getSourceRange(),
-           "getConstantArrayFromStringLiteral: wide characters");
-  return mlir::Attribute();
+  auto arrayTy = mlir::cast<cir::ArrayType>(convertType(e->getType()));
+
+  auto arrayEltTy = mlir::cast<cir::IntType>(arrayTy.getElementType());
+
+  uint64_t arraySize = arrayTy.getSize();
+  unsigned literalSize = e->getLength();
+  assert(arraySize == literalSize + 1 &&
+         "wide string literal array size must be literal length plus null "
+         "terminator");
+
+  // Check if the string is all null bytes before building the vector.
+  // In most non-zero cases, this will break out on the first element.
+  bool isAllZero = true;
+  for (unsigned i = 0; i < literalSize; ++i) {
+    if (e->getCodeUnit(i) != 0) {
+      isAllZero = false;
+      break;
+    }
+  }
+
+  if (isAllZero)
+    return cir::ZeroAttr::get(arrayTy);
+
+  // Otherwise emit a constant array holding the characters.
+  SmallVector<mlir::Attribute> elements;
+  elements.reserve(arraySize);
+  for (unsigned i = 0; i < literalSize; ++i)
+    elements.push_back(cir::IntAttr::get(arrayEltTy, e->getCodeUnit(i)));
+  // Add null terminator
+  elements.push_back(cir::IntAttr::get(arrayEltTy, 0));
+
+  auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
+  return builder.getConstArray(elementsAttr, arrayTy);
 }
 
 bool CIRGenModule::supportsCOMDAT() const {
