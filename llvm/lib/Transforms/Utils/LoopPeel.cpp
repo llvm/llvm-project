@@ -447,10 +447,10 @@ static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
   const DataLayout &DL = L.getHeader()->getDataLayout();
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
-      // Don't consider llvm.assume as writing to memory.
+      // Calls that only access inaccessible memory can never alias with loads.
       if (I.mayWriteToMemory() &&
-          !(isa<IntrinsicInst>(I) &&
-            cast<IntrinsicInst>(I).getIntrinsicID() == Intrinsic::assume))
+          !(isa<CallBase>(I) &&
+            cast<CallBase>(I).onlyAccessesInaccessibleMemory()))
         return 0;
 
       if (LoadUsers.contains(&I))
