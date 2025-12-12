@@ -630,6 +630,10 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
     FuncH.indent(31) << "const " << TargetName << "Subtarget &STI) {\n";
   }
+  // HwModeId is used if we have any RegClassByHwMode patterns
+  if (!Target.getAllRegClassByHwMode().empty())
+    FuncH.indent(2) << "[[maybe_unused]] unsigned HwModeId = "
+                    << "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);";
 
   if (CompressPatterns.empty()) {
     OS << FH;
@@ -798,12 +802,13 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
                 CondStream << " && MI.getOperand(" << OpIdx
                            << ").getReg().isPhysical()";
               CondStream << CondSep << TargetName << "MCRegisterClasses[";
-              if (ClassRec->isSubClassOf("RegClassByHwMode"))
-                CondStream << "STI.getInstrInfo().getOpRegClassID("
-                           << "MI.getDesc().operands()[" << OpIdx << "])";
-              else
+              if (ClassRec->isSubClassOf("RegClassByHwMode")) {
+                CondStream << TargetName << "RegClassByHwModeTables[HwModeId]["
+                           << TargetName << "::" << ClassRec->getName() << "]";
+              } else {
                 CondStream << TargetName << "::" << ClassRec->getName()
                            << "RegClassID";
+              }
               CondStream << "].contains(MI.getOperand(" << OpIdx
                          << ").getReg())";
             }

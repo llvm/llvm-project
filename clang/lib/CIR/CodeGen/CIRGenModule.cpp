@@ -682,8 +682,11 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
     setLinkageForGV(gv, d);
 
-    if (d->getTLSKind())
-      errorNYI(d->getSourceRange(), "thread local global variable");
+    if (d->getTLSKind()) {
+      if (d->getTLSKind() == VarDecl::TLS_Dynamic)
+        errorNYI(d->getSourceRange(), "TLS dynamic");
+      setTLSMode(gv, *d);
+    }
 
     setGVProperties(gv, d);
 
@@ -738,12 +741,11 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
   if (!ty)
     ty = getTypes().convertTypeForMem(astTy);
 
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
-
+  bool tlsAccess = d->getTLSKind() != VarDecl::TLS_None;
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
   mlir::Type ptrTy = builder.getPointerTo(g.getSymType());
   return cir::GetGlobalOp::create(builder, getLoc(d->getSourceRange()), ptrTy,
-                                  g.getSymName());
+                                  g.getSymNameAttr(), tlsAccess);
 }
 
 cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
@@ -1412,7 +1414,11 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
     // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
     // we need to do that explicitly.
     std::string uniqueName = getUniqueGlobalName(name.str());
-    mlir::Location loc = getLoc(s->getSourceRange());
+    // Synthetic string literals (e.g., from SourceLocExpr) may not have valid
+    // source locations. Use unknown location in those cases.
+    mlir::Location loc = s->getBeginLoc().isValid()
+                             ? getLoc(s->getSourceRange())
+                             : builder.getUnknownLoc();
     auto typedC = llvm::cast<mlir::TypedAttr>(c);
     gv = generateStringLiteral(loc, typedC,
                                cir::GlobalLinkageKind::PrivateLinkage, *this,
@@ -1462,6 +1468,26 @@ void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,
 
   assert(!cir::MissingFeatures::generateDebugInfo() &&
          "emitExplicitCastExprType");
+}
+
+mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
+  assert(!cir::MissingFeatures::cxxABI());
+
+  mlir::Location loc = getLoc(e->getSourceRange());
+
+  const auto *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
+
+  // A member function pointer.
+  if (isa<CXXMethodDecl>(decl)) {
+    errorNYI(e->getSourceRange(), "emitMemberPointerConstant: method pointer");
+    return {};
+  }
+
+  // Otherwise, a member data pointer.
+  auto ty = mlir::cast<cir::DataMemberType>(convertType(e->getType()));
+  const auto *fieldDecl = cast<FieldDecl>(decl);
+  return cir::ConstantOp::create(
+      builder, loc, builder.getDataMemberAttr(ty, fieldDecl->getFieldIndex()));
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {
@@ -1933,6 +1959,33 @@ void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
   assert(!cir::MissingFeatures::opGlobalPartition());
 }
 
+cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
+  switch (getCodeGenOpts().getDefaultTLSModel()) {
+  case CodeGenOptions::GeneralDynamicTLSModel:
+    return cir::TLS_Model::GeneralDynamic;
+  case CodeGenOptions::LocalDynamicTLSModel:
+    return cir::TLS_Model::LocalDynamic;
+  case CodeGenOptions::InitialExecTLSModel:
+    return cir::TLS_Model::InitialExec;
+  case CodeGenOptions::LocalExecTLSModel:
+    return cir::TLS_Model::LocalExec;
+  }
+  llvm_unreachable("Invalid TLS model!");
+}
+
+void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
+  assert(d.getTLSKind() && "setting TLS mode on non-TLS var!");
+
+  cir::TLS_Model tlm = getDefaultCIRTLSModel();
+
+  // Override the TLS model if it is explicitly specified.
+  if (d.getAttr<TLSModelAttr>())
+    errorNYI(d.getSourceRange(), "TLS model attribute");
+
+  auto global = cast<cir::GlobalOp>(op);
+  global.setTlsModel(tlm);
+}
+
 void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
                                          cir::FuncOp func,
                                          bool isIncompleteFunction,
@@ -2301,14 +2354,27 @@ void CIRGenModule::setCXXSpecialMemberAttr(
   }
 }
 
+static void setWindowsItaniumDLLImport(CIRGenModule &cgm, bool isLocal,
+                                       cir::FuncOp funcOp, StringRef name) {
+  // In Windows Itanium environments, try to mark runtime functions
+  // dllimport. For Mingw and MSVC, don't. We don't really know if the user
+  // will link their standard library statically or dynamically. Marking
+  // functions imported when they are not imported can cause linker errors
+  // and warnings.
+  if (!isLocal && cgm.getTarget().getTriple().isWindowsItaniumEnvironment() &&
+      !cgm.getCodeGenOpts().LTOVisibilityPublicStd) {
+    assert(!cir::MissingFeatures::getRuntimeFunctionDecl());
+    assert(!cir::MissingFeatures::setDLLStorageClass());
+    assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+  }
+}
+
 cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
                                                 StringRef name, mlir::ArrayAttr,
-                                                [[maybe_unused]] bool isLocal,
+                                                bool isLocal,
                                                 bool assumeConvergent) {
   if (assumeConvergent)
     errorNYI("createRuntimeFunction: assumeConvergent");
-  if (isLocal)
-    errorNYI("createRuntimeFunction: local");
 
   cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
                                              /*forVtable=*/false);
@@ -2317,7 +2383,7 @@ cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
     // TODO(cir): set the attributes of the function.
     assert(!cir::MissingFeatures::setLLVMFunctionFEnvAttributes());
     assert(!cir::MissingFeatures::opFuncCallingConv());
-    assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+    setWindowsItaniumDLLImport(*this, isLocal, entry, name);
     entry.setDSOLocal(true);
   }
 

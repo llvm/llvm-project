@@ -2858,19 +2858,21 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
   for (const auto &[Index, Operand] : enumerate(Desc.operands())) {
     const MachineOperand &MO = MI.getOperand(Index);
     unsigned OpType = Operand.OperandType;
-    if (OpType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
-        OpType <= RISCVOp::OPERAND_LAST_RISCV_IMM) {
-      if (!MO.isImm()) {
-        ErrInfo = "Expected an immediate operand.";
-        return false;
-      }
-      int64_t Imm = MO.getImm();
-      bool Ok;
-      switch (OpType) {
-      default:
-        llvm_unreachable("Unexpected operand type");
+    switch (OpType) {
+    default:
+      if (OpType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
+          OpType <= RISCVOp::OPERAND_LAST_RISCV_IMM) {
+        if (!MO.isImm()) {
+          ErrInfo = "Expected an immediate operand.";
+          return false;
+        }
+        int64_t Imm = MO.getImm();
+        bool Ok;
+        switch (OpType) {
+        default:
+          llvm_unreachable("Unexpected operand type");
 
-        // clang-format off
+          // clang-format off
 #define CASE_OPERAND_UIMM(NUM)                                                 \
   case RISCVOp::OPERAND_UIMM##NUM:                                             \
     Ok = isUInt<NUM>(Imm);                                                     \
@@ -2879,176 +2881,184 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
   case RISCVOp::OPERAND_SIMM##NUM:                                             \
     Ok = isInt<NUM>(Imm);                                                      \
     break;
-      CASE_OPERAND_UIMM(1)
-      CASE_OPERAND_UIMM(2)
-      CASE_OPERAND_UIMM(3)
-      CASE_OPERAND_UIMM(4)
-      CASE_OPERAND_UIMM(5)
-      CASE_OPERAND_UIMM(6)
-      CASE_OPERAND_UIMM(7)
-      CASE_OPERAND_UIMM(8)
-      CASE_OPERAND_UIMM(9)
-      CASE_OPERAND_UIMM(10)
-      CASE_OPERAND_UIMM(12)
-      CASE_OPERAND_UIMM(16)
-      CASE_OPERAND_UIMM(32)
-      CASE_OPERAND_UIMM(48)
-      CASE_OPERAND_UIMM(64)
+        CASE_OPERAND_UIMM(1)
+        CASE_OPERAND_UIMM(2)
+        CASE_OPERAND_UIMM(3)
+        CASE_OPERAND_UIMM(4)
+        CASE_OPERAND_UIMM(5)
+        CASE_OPERAND_UIMM(6)
+        CASE_OPERAND_UIMM(7)
+        CASE_OPERAND_UIMM(8)
+        CASE_OPERAND_UIMM(9)
+        CASE_OPERAND_UIMM(10)
+        CASE_OPERAND_UIMM(12)
+        CASE_OPERAND_UIMM(16)
+        CASE_OPERAND_UIMM(32)
+        CASE_OPERAND_UIMM(48)
+        CASE_OPERAND_UIMM(64)
+          // clang-format on
+        case RISCVOp::OPERAND_UIMM2_LSB0:
+          Ok = isShiftedUInt<1, 1>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM5_LSB0:
+          Ok = isShiftedUInt<4, 1>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM5_NONZERO:
+          Ok = isUInt<5>(Imm) && (Imm != 0);
+          break;
+        case RISCVOp::OPERAND_UIMM5_GT3:
+          Ok = isUInt<5>(Imm) && (Imm > 3);
+          break;
+        case RISCVOp::OPERAND_UIMM5_PLUS1:
+          Ok = Imm >= 1 && Imm <= 32;
+          break;
+        case RISCVOp::OPERAND_UIMM6_LSB0:
+          Ok = isShiftedUInt<5, 1>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM7_LSB00:
+          Ok = isShiftedUInt<5, 2>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM7_LSB000:
+          Ok = isShiftedUInt<4, 3>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM8_LSB00:
+          Ok = isShiftedUInt<6, 2>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM8_LSB000:
+          Ok = isShiftedUInt<5, 3>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM8_GE32:
+          Ok = isUInt<8>(Imm) && Imm >= 32;
+          break;
+        case RISCVOp::OPERAND_UIMM9_LSB000:
+          Ok = isShiftedUInt<6, 3>(Imm);
+          break;
+        case RISCVOp::OPERAND_SIMM8_UNSIGNED:
+          Ok = isInt<8>(Imm);
+          break;
+        case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
+          Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
+          break;
+        case RISCVOp::OPERAND_UIMM10_LSB00_NONZERO:
+          Ok = isShiftedUInt<8, 2>(Imm) && (Imm != 0);
+          break;
+        case RISCVOp::OPERAND_UIMM16_NONZERO:
+          Ok = isUInt<16>(Imm) && (Imm != 0);
+          break;
+        case RISCVOp::OPERAND_THREE:
+          Ok = Imm == 3;
+          break;
+        case RISCVOp::OPERAND_FOUR:
+          Ok = Imm == 4;
+          break;
+        case RISCVOp::OPERAND_IMM5_ZIBI:
+          Ok = (isUInt<5>(Imm) && Imm != 0) || Imm == -1;
+          break;
+          // clang-format off
+        CASE_OPERAND_SIMM(5)
+        CASE_OPERAND_SIMM(6)
+        CASE_OPERAND_SIMM(10)
+        CASE_OPERAND_SIMM(11)
+        CASE_OPERAND_SIMM(26)
         // clang-format on
-      case RISCVOp::OPERAND_UIMM2_LSB0:
-        Ok = isShiftedUInt<1, 1>(Imm);
-        break;
-      case RISCVOp::OPERAND_UIMM5_LSB0:
-        Ok = isShiftedUInt<4, 1>(Imm);
-        break;
-      case RISCVOp::OPERAND_UIMM5_NONZERO:
-        Ok = isUInt<5>(Imm) && (Imm != 0);
-        break;
-      case RISCVOp::OPERAND_UIMM5_GT3:
-        Ok = isUInt<5>(Imm) && (Imm > 3);
-        break;
-      case RISCVOp::OPERAND_UIMM5_PLUS1:
-        Ok = Imm >= 1 && Imm <= 32;
-        break;
-      case RISCVOp::OPERAND_UIMM6_LSB0:
-        Ok = isShiftedUInt<5, 1>(Imm);
-        break;
-      case RISCVOp::OPERAND_UIMM7_LSB00:
-        Ok = isShiftedUInt<5, 2>(Imm);
-        break;
-      case RISCVOp::OPERAND_UIMM7_LSB000:
-        Ok = isShiftedUInt<4, 3>(Imm);
-        break;
-      case RISCVOp::OPERAND_UIMM8_LSB00:
-        Ok = isShiftedUInt<6, 2>(Imm);
-        break;
-      case RISCVOp::OPERAND_UIMM8_LSB000:
-        Ok = isShiftedUInt<5, 3>(Imm);
-        break;
-      case RISCVOp::OPERAND_UIMM8_GE32:
-        Ok = isUInt<8>(Imm) && Imm >= 32;
-        break;
-      case RISCVOp::OPERAND_UIMM9_LSB000:
-        Ok = isShiftedUInt<6, 3>(Imm);
-        break;
-      case RISCVOp::OPERAND_SIMM8_UNSIGNED:
-        Ok = isInt<8>(Imm);
-        break;
-      case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
-        Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
-        break;
-      case RISCVOp::OPERAND_UIMM10_LSB00_NONZERO:
-        Ok = isShiftedUInt<8, 2>(Imm) && (Imm != 0);
-        break;
-      case RISCVOp::OPERAND_UIMM16_NONZERO:
-        Ok = isUInt<16>(Imm) && (Imm != 0);
-        break;
-      case RISCVOp::OPERAND_THREE:
-        Ok = Imm == 3;
-        break;
-      case RISCVOp::OPERAND_FOUR:
-        Ok = Imm == 4;
-        break;
-      case RISCVOp::OPERAND_IMM5_ZIBI:
-        Ok = (isUInt<5>(Imm) && Imm != 0) || Imm == -1;
-        break;
-        // clang-format off
-      CASE_OPERAND_SIMM(5)
-      CASE_OPERAND_SIMM(6)
-      CASE_OPERAND_SIMM(10)
-      CASE_OPERAND_SIMM(11)
-      CASE_OPERAND_SIMM(26)
-      // clang-format on
-      case RISCVOp::OPERAND_SIMM5_PLUS1:
-        Ok = Imm >= -15 && Imm <= 16;
-        break;
-      case RISCVOp::OPERAND_SIMM5_NONZERO:
-        Ok = isInt<5>(Imm) && (Imm != 0);
-        break;
-      case RISCVOp::OPERAND_SIMM6_NONZERO:
-        Ok = Imm != 0 && isInt<6>(Imm);
-        break;
-      case RISCVOp::OPERAND_VTYPEI10:
-        Ok = isUInt<10>(Imm);
-        break;
-      case RISCVOp::OPERAND_VTYPEI11:
-        Ok = isUInt<11>(Imm);
-        break;
-      case RISCVOp::OPERAND_SIMM12_LSB00000:
-        Ok = isShiftedInt<7, 5>(Imm);
-        break;
-      case RISCVOp::OPERAND_SIMM16_NONZERO:
-        Ok = isInt<16>(Imm) && (Imm != 0);
-        break;
-      case RISCVOp::OPERAND_SIMM20_LI:
-        Ok = isInt<20>(Imm);
-        break;
-      case RISCVOp::OPERAND_UIMMLOG2XLEN:
-        Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
-        break;
-      case RISCVOp::OPERAND_UIMMLOG2XLEN_NONZERO:
-        Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
-        Ok = Ok && Imm != 0;
-        break;
-      case RISCVOp::OPERAND_CLUI_IMM:
-        Ok = (isUInt<5>(Imm) && Imm != 0) || (Imm >= 0xfffe0 && Imm <= 0xfffff);
-        break;
-      case RISCVOp::OPERAND_RVKRNUM:
-        Ok = Imm >= 0 && Imm <= 10;
-        break;
-      case RISCVOp::OPERAND_RVKRNUM_0_7:
-        Ok = Imm >= 0 && Imm <= 7;
-        break;
-      case RISCVOp::OPERAND_RVKRNUM_1_10:
-        Ok = Imm >= 1 && Imm <= 10;
-        break;
-      case RISCVOp::OPERAND_RVKRNUM_2_14:
-        Ok = Imm >= 2 && Imm <= 14;
-        break;
-      case RISCVOp::OPERAND_RLIST:
-        Ok = Imm >= RISCVZC::RA && Imm <= RISCVZC::RA_S0_S11;
-        break;
-      case RISCVOp::OPERAND_RLIST_S0:
-        Ok = Imm >= RISCVZC::RA_S0 && Imm <= RISCVZC::RA_S0_S11;
-        break;
-      case RISCVOp::OPERAND_STACKADJ:
-        Ok = Imm >= 0 && Imm <= 48 && Imm % 16 == 0;
-        break;
-      case RISCVOp::OPERAND_FRMARG:
-        Ok = RISCVFPRndMode::isValidRoundingMode(Imm);
-        break;
-      case RISCVOp::OPERAND_RTZARG:
-        Ok = Imm == RISCVFPRndMode::RTZ;
-        break;
-      case RISCVOp::OPERAND_COND_CODE:
-        Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;
-        break;
-      case RISCVOp::OPERAND_VEC_POLICY:
-        Ok = (Imm & (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC)) ==
-             Imm;
-        break;
-      case RISCVOp::OPERAND_SEW:
-        Ok = (isUInt<5>(Imm) && RISCVVType::isValidSEW(1 << Imm));
-        break;
-      case RISCVOp::OPERAND_SEW_MASK:
-        Ok = Imm == 0;
-        break;
-      case RISCVOp::OPERAND_VEC_RM:
-        assert(RISCVII::hasRoundModeOp(Desc.TSFlags));
-        if (RISCVII::usesVXRM(Desc.TSFlags))
-          Ok = isUInt<2>(Imm);
-        else
+        case RISCVOp::OPERAND_SIMM5_PLUS1:
+          Ok = Imm >= -15 && Imm <= 16;
+          break;
+        case RISCVOp::OPERAND_SIMM5_NONZERO:
+          Ok = isInt<5>(Imm) && (Imm != 0);
+          break;
+        case RISCVOp::OPERAND_SIMM6_NONZERO:
+          Ok = Imm != 0 && isInt<6>(Imm);
+          break;
+        case RISCVOp::OPERAND_VTYPEI10:
+          Ok = isUInt<10>(Imm);
+          break;
+        case RISCVOp::OPERAND_VTYPEI11:
+          Ok = isUInt<11>(Imm);
+          break;
+        case RISCVOp::OPERAND_SIMM12_LSB00000:
+          Ok = isShiftedInt<7, 5>(Imm);
+          break;
+        case RISCVOp::OPERAND_SIMM16_NONZERO:
+          Ok = isInt<16>(Imm) && (Imm != 0);
+          break;
+        case RISCVOp::OPERAND_SIMM20_LI:
+          Ok = isInt<20>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMMLOG2XLEN:
+          Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMMLOG2XLEN_NONZERO:
+          Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
+          Ok = Ok && Imm != 0;
+          break;
+        case RISCVOp::OPERAND_CLUI_IMM:
+          Ok = (isUInt<5>(Imm) && Imm != 0) || (Imm >= 0xfffe0 && Imm <= 0xfffff);
+          break;
+        case RISCVOp::OPERAND_RVKRNUM:
+          Ok = Imm >= 0 && Imm <= 10;
+          break;
+        case RISCVOp::OPERAND_RVKRNUM_0_7:
+          Ok = Imm >= 0 && Imm <= 7;
+          break;
+        case RISCVOp::OPERAND_RVKRNUM_1_10:
+          Ok = Imm >= 1 && Imm <= 10;
+          break;
+        case RISCVOp::OPERAND_RVKRNUM_2_14:
+          Ok = Imm >= 2 && Imm <= 14;
+          break;
+        case RISCVOp::OPERAND_RLIST:
+          Ok = Imm >= RISCVZC::RA && Imm <= RISCVZC::RA_S0_S11;
+          break;
+        case RISCVOp::OPERAND_RLIST_S0:
+          Ok = Imm >= RISCVZC::RA_S0 && Imm <= RISCVZC::RA_S0_S11;
+          break;
+        case RISCVOp::OPERAND_STACKADJ:
+          Ok = Imm >= 0 && Imm <= 48 && Imm % 16 == 0;
+          break;
+        case RISCVOp::OPERAND_FRMARG:
           Ok = RISCVFPRndMode::isValidRoundingMode(Imm);
-        break;
-      case RISCVOp::OPERAND_XSFMM_VTYPE:
-        Ok = RISCVVType::isValidXSfmmVType(Imm);
-        break;
+          break;
+        case RISCVOp::OPERAND_RTZARG:
+          Ok = Imm == RISCVFPRndMode::RTZ;
+          break;
+        case RISCVOp::OPERAND_COND_CODE:
+          Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;
+          break;
+        case RISCVOp::OPERAND_ATOMIC_ORDERING:
+          Ok = isValidAtomicOrdering(Imm);
+          break;
+        case RISCVOp::OPERAND_VEC_POLICY:
+          Ok = (Imm & (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC)) ==
+               Imm;
+          break;
+        case RISCVOp::OPERAND_SEW:
+          Ok = (isUInt<5>(Imm) && RISCVVType::isValidSEW(1 << Imm));
+          break;
+        case RISCVOp::OPERAND_SEW_MASK:
+          Ok = Imm == 0;
+          break;
+        case RISCVOp::OPERAND_VEC_RM:
+          assert(RISCVII::hasRoundModeOp(Desc.TSFlags));
+          if (RISCVII::usesVXRM(Desc.TSFlags))
+            Ok = isUInt<2>(Imm);
+          else
+            Ok = RISCVFPRndMode::isValidRoundingMode(Imm);
+          break;
+        case RISCVOp::OPERAND_XSFMM_VTYPE:
+          Ok = RISCVVType::isValidXSfmmVType(Imm);
+          break;
+        case RISCVOp::OPERAND_XSFMM_TWIDEN:
+          Ok = Imm == 1 || Imm == 2 || Imm == 4;
+          break;
+        }
+        if (!Ok) {
+          ErrInfo = "Invalid immediate";
+          return false;
+        }
       }
-      if (!Ok) {
-        ErrInfo = "Invalid immediate";
-        return false;
-      }
-    } else if (OpType == RISCVOp::OPERAND_SIMM12_LO) {
+      break;
+    case RISCVOp::OPERAND_SIMM12_LO:
       // TODO: We could be stricter about what non-register operands are
       // allowed.
       if (MO.isReg()) {
@@ -3059,8 +3069,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "Invalid immediate";
         return false;
       }
-    } else if (OpType == RISCVOp::OPERAND_UIMM20_LUI ||
-               OpType == RISCVOp::OPERAND_UIMM20_AUIPC) {
+      break;
+    case RISCVOp::OPERAND_UIMM20_LUI:
+    case RISCVOp::OPERAND_UIMM20_AUIPC:
       // TODO: We could be stricter about what non-register operands are
       // allowed.
       if (MO.isReg()) {
@@ -3071,7 +3082,8 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "Invalid immediate";
         return false;
       }
-    } else if (OpType == RISCVOp::OPERAND_BARE_SIMM32) {
+      break;
+    case RISCVOp::OPERAND_BARE_SIMM32:
       // TODO: We could be stricter about what non-register operands are
       // allowed.
       if (MO.isReg()) {
@@ -3082,7 +3094,8 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "Invalid immediate";
         return false;
       }
-    } else if (OpType == RISCVOp::OPERAND_AVL) {
+      break;
+    case RISCVOp::OPERAND_AVL:
       if (MO.isImm()) {
         int64_t Imm = MO.getImm();
         // VLMAX is represented as -1.
@@ -3094,6 +3107,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "Expected a register or immediate operand.";
         return false;
       }
+      break;
     }
   }
 
@@ -3765,6 +3779,11 @@ std::string RISCVInstrInfo::createMIROperandComment(
   case RISCVOp::OPERAND_XSFMM_VTYPE: {
     unsigned Imm = Op.getImm();
     RISCVVType::printXSfmmVType(Imm, OS);
+    break;
+  }
+  case RISCVOp::OPERAND_XSFMM_TWIDEN: {
+    unsigned Imm = Op.getImm();
+    OS << "w" << Imm;
     break;
   }
   case RISCVOp::OPERAND_SEW:
