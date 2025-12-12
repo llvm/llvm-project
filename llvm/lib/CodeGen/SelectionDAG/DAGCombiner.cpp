@@ -5787,7 +5787,7 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
       DAG.SignBitIsZero(N0) && DAG.SignBitIsZero(N1))
     return DAG.getNode(ISD::ABDU, DL, VT, N1, N0);
 
-  // fold (abds (?ext x), (?ext y)) -> (zext (abd? x, y))
+  // fold (abd? (?ext x), (?ext y)) -> (zext (abd? x, y))
   if (sd_match(N, m_BinOp(ISD::ABDU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) ||
       sd_match(N, m_BinOp(ISD::ABDS, m_SExt(m_Value(X)), m_SExt(m_Value(Y))))) {
     EVT SmallVT = X.getScalarValueSizeInBits() > Y.getScalarValueSizeInBits()
