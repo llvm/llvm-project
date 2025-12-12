@@ -3549,6 +3549,38 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         llvm::MetadataAsValue::get(Ctx, llvm::MDString::get(Ctx, Kind)));
     return RValue::get(Allow);
   }
+  case Builtin::BI__builtin_allow_sanitize_check: {
+    Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
+    StringRef SanitizerName =
+        cast<StringLiteral>(E->getArg(0)->IgnoreParenCasts())->getString();
+
+    if (SanitizerName == "address" || SanitizerName == "kernel-address") {
+      if (CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
+                                              SanitizerKind::KernelAddress))
+        IntrID = Intrinsic::allow_sanitize_address;
+    } else if (SanitizerName == "thread") {
+      if (CGM.getLangOpts().Sanitize.has(SanitizerKind::Thread))
+        IntrID = Intrinsic::allow_sanitize_thread;
+    } else if (SanitizerName == "memory" || SanitizerName == "kernel-memory") {
+      if (CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Memory |
+                                              SanitizerKind::KernelMemory))
+        IntrID = Intrinsic::allow_sanitize_memory;
+    } else if (SanitizerName == "hwaddress" ||
+               SanitizerName == "kernel-hwaddress") {
+      if (CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::HWAddress |
+                                              SanitizerKind::KernelHWAddress))
+        IntrID = Intrinsic::allow_sanitize_hwaddress;
+    }
+
+    if (IntrID != Intrinsic::not_intrinsic) {
+      llvm::Value *Allow = Builder.CreateCall(CGM.getIntrinsic(IntrID));
+      return RValue::get(Allow);
+    }
+    // If the checked sanitizer is not enabled, we can safely lower to false
+    // right away. This is also more efficient, since the LowerAllowCheckPass
+    // must not always be enabled if none of the above sanitizers are enabled.
+    return RValue::get(Builder.getFalse());
+  }
   case Builtin::BI__arithmetic_fence: {
     // Create the builtin call if FastMath is selected, and the target
     // supports the builtin, otherwise just return the argument.

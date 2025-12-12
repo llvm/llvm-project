@@ -254,6 +254,40 @@ AddressSanitizer also supports
 works similarly to ``__attribute__((no_sanitize("address")))``, but it also
 prevents instrumentation performed by other sanitizers.
 
+Conditional Sanitizer Checks with ``__builtin_allow_sanitize_check``
+--------------------------------------------------------------------
+
+The ``__builtin_allow_sanitize_check("address")`` builtin can be used to
+conditionally execute code only when AddressSanitizer is active for the current
+function (after inlining). This is particularly useful for inserting explicit,
+sanitizer-specific checks around operations like syscalls or inline assembly,
+which might otherwise be unchecked by the sanitizer.
+
+Example:
+
+.. code-block:: c
+
+    inline __attribute__((always_inline))
+    void copy_to_device(void *addr, size_t size) {
+      if (__builtin_allow_sanitize_check("address")) {
+        // Custom checks that address range is valid.
+      }
+      // ... actual device memory copy logic, potentially a syscall ...
+    }
+
+    void instrumented_function() {
+      ...
+      copy_to_device(buf, sizeof(buf)); // checks are active
+      ...
+    }
+
+    __attribute__((no_sanitize("address")))
+    void uninstrumented_function() {
+      ...
+      copy_to_device(buf, sizeof(buf)); // checks are skipped
+      ...
+    }
+
 Disabling container overflow checks
 -----------------------------------
 
