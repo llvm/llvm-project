@@ -104,6 +104,7 @@
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -354,6 +355,12 @@ static cl::opt<bool> EnableLoadStoreVectorizer(
   cl::desc("Enable load store vectorizer"),
   cl::init(true),
   cl::Hidden);
+
+// Option to enable DSE in backend.
+static cl::opt<bool>
+    EnableDeadStoreElimination("amdgpu-dead-store-elimination",
+                               cl::desc("Enable dead store elimination"),
+                               cl::init(false), cl::Hidden);
 
 // Option to control global loads scalarization
 static cl::opt<bool> ScalarizeGlobal(
@@ -1413,6 +1420,10 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
     addPass(createAMDGPULowerKernelArgumentsPass());
 
   TargetPassConfig::addCodeGenPrepare();
+  // TODO: Remove DSE when LoadStoreVectorizer is enhanced to handle
+  // partially overlapping vector-stores.
+  if (isPassEnabled(EnableDeadStoreElimination))
+    addPass(createDeadStoreEliminationPass());
 
   if (isPassEnabled(EnableLoadStoreVectorizer))
     addPass(createLoadStoreVectorizerPass());
@@ -2183,6 +2194,10 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
     addPass(AMDGPULowerKernelArgumentsPass(TM));
 
   Base::addCodeGenPrepare(addPass);
+  // TODO: Remove DSE when LoadStoreVectorizer is enhanced to handle
+  // partially overlapping vector-stores.
+  if (isPassEnabled(EnableDeadStoreElimination))
+    addPass(DSEPass());
 
   if (isPassEnabled(EnableLoadStoreVectorizer))
     addPass(LoadStoreVectorizerPass());
