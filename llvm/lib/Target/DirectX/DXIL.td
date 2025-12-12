@@ -948,6 +948,24 @@ def DerivCoarseY : DXILOp<84, unary> {
   let stages = [Stages<DXIL1_0, [library, pixel]>];
 }
 
+def DerivFineX : DXILOp<85, unary> {
+  let Doc = "computes the rate of change per stamp in x direction";
+  let intrinsics = [IntrinSelect<int_dx_ddx_fine>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>];
+}
+
+def DerivFineY : DXILOp<86, unary> {
+  let Doc = "computes the rate of change per stamp in y direction";
+  let intrinsics = [IntrinSelect<int_dx_ddy_fine>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>];
+}
+
 def ThreadId : DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
   let intrinsics = [IntrinSelect<int_dx_thread_id>];
