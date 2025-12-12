@@ -262,10 +262,9 @@ void CIRGenFunction::populateUnwindResumeBlock(bool isCleanup,
     return;
 
   // Emit cir.resume into the unwind region last block
-  cir::CIRBaseBuilderTy::InsertPoint ip = builder.saveInsertionPoint();
+  mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(unwindResumeBlock);
   cir::ResumeOp::create(builder, tryOp.getLoc());
-  builder.restoreInsertionPoint(ip);
 }
 
 mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
@@ -590,7 +589,6 @@ void CIRGenFunction::populateCatchHandlers(cir::TryOp tryOp) {
   // with function local static initializers).
   mlir::ArrayAttr handlerTypesAttr = tryOp.getHandlerTypesAttr();
   if (!handlerTypesAttr || handlerTypesAttr.empty()) {
-    // Accumulate all the handlers in scope.
     // Accumulate all the handlers in scope.
     bool hasCatchAll = false;
     llvm::SmallPtrSet<mlir::Attribute, 4> catchTypes;
