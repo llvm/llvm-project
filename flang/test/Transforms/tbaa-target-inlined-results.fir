@@ -1,7 +1,7 @@
-// Test that add alias does not crash when it cannot find a name for a local
-// target allocation. This can happen after compiling code with TARGET
-// character results with -mllvm -inline-all where the allocation for the
-// result is an unamed temp that is given the target attribute inside the
+// Test that fir-add-alias-tags pass does not crash when it cannot find a name
+// for a local target allocation. This can happen after compiling code with
+// TARGET character results with `-mllvm -inline-all` where the allocation for
+// the result is an unnamed temp that is given the target attribute inside the
 // function being called.
 
 // RUN: fir-opt --fir-add-alias-tags %s | FileCheck %s
