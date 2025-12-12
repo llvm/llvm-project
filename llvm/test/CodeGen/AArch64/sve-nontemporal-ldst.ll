@@ -175,8 +175,8 @@ define void @store_nxv8f16(<vscale x 8 x half> %x, ptr %a) nounwind {
   ret void
 }
 
-define void @store_nxv8bfl16(<vscale x 8 x bfloat> %x, ptr %a) nounwind {
-; CHECK-LABEL: store_nxv8bfl16:
+define void @store_nxv8bf16(<vscale x 8 x bfloat> %x, ptr %a) nounwind {
+; CHECK-LABEL: store_nxv8bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    stnt1h { z0.h }, p0, [x0]
@@ -248,4 +248,5 @@ define void @store_nxv2f64_imm(<vscale x 2 x double> %x, ptr %a) nounwind {
   store <vscale x 2 x double> %x, ptr %ptr, !nontemporal !0
   ret void
 }
+
 !0 = !{i32 1}
