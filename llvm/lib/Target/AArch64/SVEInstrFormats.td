@@ -7981,6 +7981,7 @@ multiclass sve_int_perm_compact_sd<string asm, SDPatternOperator op> {
   def : SVE_2_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<nxv2i64, op, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _D)>;
   def : SVE_2_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
+  def : SVE_2_Op_Pat<nxv2f32, op, nxv2i1, nxv2f32, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve_int_perm_compact_bh<string asm, SDPatternOperator op> {

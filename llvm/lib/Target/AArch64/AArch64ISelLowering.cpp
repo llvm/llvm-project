@@ -1994,13 +1994,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     // We can lower types that have <vscale x {2|4}> elements to compact.
     for (auto VT :
-         {MVT::nxv2i64, MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i32, MVT::nxv4f32})
+         {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
 
     // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
     // bits of the SVE register.
-    for (auto VT : {MVT::v2i32, MVT::v2i64, MVT::v2f32, MVT::v2f64, MVT::v4i32,
-                    MVT::v4f32})
+    for (auto VT : {MVT::v2i32, MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32,
+                    MVT::v2f64})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
 
     for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
@@ -7416,37 +7416,6 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   return SDValue();
 }
 
-// Convert to ContainerVT with no-op casts where possible.
-static SDValue convertToSVEContainerType(SDLoc DL, SDValue Vec, EVT ContainerVT,
-                                         SelectionDAG &DAG) {
-  EVT VecVT = Vec.getValueType();
-  if (VecVT.isFloatingPoint()) {
-    // Use no-op casts for floating-point types.
-    EVT PackedVT = getPackedSVEVectorVT(VecVT.getScalarType());
-    Vec = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, PackedVT, Vec);
-    Vec = DAG.getNode(AArch64ISD::NVCAST, DL, ContainerVT, Vec);
-  } else {
-    // Extend integers (may not be a no-op).
-    Vec = DAG.getNode(ISD::ANY_EXTEND, DL, ContainerVT, Vec);
-  }
-  return Vec;
-}
-
-// Convert to VecVT with no-op casts where possible.
-static SDValue convertFromSVEContainerType(SDLoc DL, SDValue Vec, EVT VecVT,
-                                           SelectionDAG &DAG) {
-  if (VecVT.isFloatingPoint()) {
-    // Use no-op casts for floating-point types.
-    EVT PackedVT = getPackedSVEVectorVT(VecVT.getScalarType());
-    Vec = DAG.getNode(AArch64ISD::NVCAST, DL, PackedVT, Vec);
-    Vec = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VecVT, Vec);
-  } else {
-    // Truncate integers (may not be a no-op).
-    Vec = DAG.getNode(ISD::TRUNCATE, DL, VecVT, Vec);
-  }
-  return Vec;
-}
-
 SDValue AArch64TargetLowering::LowerFixedLengthVectorCompressToSVE(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -7478,38 +7447,27 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
   SDValue Passthru = Op.getOperand(2);
   EVT MaskVT = Mask.getValueType();
 
-  assert(VT.isVector() && "Input to VECTOR_COMPRESS must be vector.");
-
-  // Get legal type for compact instruction
-  EVT ContainerVT = getSVEContainerType(VT);
-  assert(ContainerVT == MVT::nxv4i32 || ContainerVT == MVT::nxv2i64);
-
-  // Convert to a packed 32/64-bit SVE vector of the same element count as VT.
-  Vec = convertToSVEContainerType(DL, Vec, ContainerVT, DAG);
-
   SDValue Compressed = DAG.getNode(
       ISD::INTRINSIC_WO_CHAIN, DL, Vec.getValueType(),
       DAG.getTargetConstant(Intrinsic::aarch64_sve_compact, DL, MVT::i64), Mask,
       Vec);
 
   // compact fills with 0s, so if our passthru is all 0s, do nothing here.
-  if (!Passthru.isUndef() &&
-      !ISD::isConstantSplatVectorAllZeros(Passthru.getNode())) {
-    SDValue Offset = DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
-        DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), Mask,
-        Mask);
+  if (Passthru.isUndef() ||
+      ISD::isConstantSplatVectorAllZeros(Passthru.getNode()))
+    return Compressed;
 
-    SDValue IndexMask = DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, MaskVT,
-        DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo, DL, MVT::i64),
-        DAG.getConstant(0, DL, MVT::i64), Offset);
+  SDValue Offset = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), Mask,
+      Mask);
 
-    Compressed =
-        DAG.getNode(ISD::VSELECT, DL, VT, IndexMask, Compressed, Passthru);
-  }
+  SDValue IndexMask = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MaskVT,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo, DL, MVT::i64),
+      DAG.getConstant(0, DL, MVT::i64), Offset);
 
-  return convertFromSVEContainerType(DL, Compressed, VT, DAG);
+  return DAG.getNode(ISD::VSELECT, DL, VT, IndexMask, Compressed, Passthru);
 }
 
 // Generate SUBS and CSEL for integer abs.
