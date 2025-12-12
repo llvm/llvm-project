@@ -49,12 +49,23 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
 ### Flang Biweekly Call
 
 -   Technical discussions as well as general updates on the Flang project.
--   Join the [Flang Biweekly Call](https://lanl-us.webex.com/lanl-us/j.php?MTID=mdce13c9bd55202e8071d8128fb953614)
-    - If you prefer to join using a meeting number and password, those can be
-      found in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/). Alternative methods of joining, such as call-in numbers, are also available there.
+-   Join the [Flang Biweekly Call](https://lanl-us.webex.com/lanl-us/j.php?MTID=m0fcaebfcf6b4b4f506efd792a71a015c)   
+    - Alternative ways to join the call:
+        - Join by meeting number
+	    - Meeting number (access code): 177 400 7047  
+  	    - Meeting password: 6PCdCYKmN43  
+ 	    - Tap to join from a mobile device (attendees only)  
+  	    - [\+1-415-655-0002,,1774007047\#\#](tel:%2B1-415-655-0002,,*01*1774007047%23%23*01*) US Toll  
+	- Join by phone  
+  	    - [\+1-415-655-0002](tel:+14156550002) US Toll  
+  	    - [Global call-in numbers](https://lanl-us.webex.com/lanl-us/globalcallin.php?MTID=ma8c4fc1f538bce541415427fbe89c85b)  
+	- Join from a video system or application  
+  	    - Dial [1774007047@lanl-us.webex.com](mailto:1774007047@lanl-us.webex.com)  
+  	    - You can also dial 173.243.2.68 and enter your meeting number
 -   Time: Every other Wednesday, 8:30 a.m. Pacific Time
 -   Calendar invite: https://drive.google.com/file/d/1rkfWCtIvQFcxN0Uz8YVwQGoX_BbzT8oc/view?usp=drive_link
--   Meeting minutes are available in this [Google Doc](https://docs.google.com/document/d/18DHhXjdzPQP20rmQiDsWbv1tHfqz8TjJiSPwI-wYbY8/edit).
+-   Working agenda is available in this [Google Doc](https://docs.google.com/document/d/18DHhXjdzPQP20rmQiDsWbv1tHfqz8TjJiSPwI-wYbY8/edit).
+-   Meeting minutes are available in the [MeetingNotes](https://github.com/llvm/llvm-project/blob/main/flang/docs/MeetingNotes) directory
 -   Minutes from older meetings were posted on the [Flang forum](https://discourse.llvm.org/c/subprojects/flang). Search for `Flang Biweekly Sync - Notes`.
 
 ### LLVM Alias Analysis Technical Call
