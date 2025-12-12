@@ -6179,17 +6179,26 @@ static void handleMSStructAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(First->getLocation(), diag::note_conflicting_attribute);
     return;
   }
+  if (const auto *Preexisting = D->getAttr<MSStructAttr>()) {
+    if (Preexisting->isImplicit())
+      D->dropAttr<MSStructAttr>();
+  }
 
   D->addAttr(::new (S.Context) MSStructAttr(S.Context, AL));
 }
 
 static void handleGCCStructAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (const auto *First = D->getAttr<MSStructAttr>()) {
-    S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-        << AL << First << 0;
-    S.Diag(First->getLocation(), diag::note_conflicting_attribute);
-    return;
+    if (First->isImplicit()) {
+      D->dropAttr<MSStructAttr>();
+    } else {
+      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+          << AL << First << 0;
+      S.Diag(First->getLocation(), diag::note_conflicting_attribute);
+      return;
+    }
   }
+
   D->addAttr(::new (S.Context) GCCStructAttr(S.Context, AL));
 }
 
