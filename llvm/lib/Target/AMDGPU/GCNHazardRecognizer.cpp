@@ -2237,8 +2237,7 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   if (!Src1->isReg() || Src1->getReg() != DstReg) {
     Register DstLo = TRI.getSubReg(DstReg, AMDGPU::sub0);
     runOnInstruction(
-        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MOV_B32_e32), DstLo)
-            .addReg(AmtReg, Amt->isKill() ? RegState::Kill : 0));
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MOV_B32_e32), DstLo).add(*Amt));
     Amt->setReg(DstLo);
     Amt->setIsKill(true);
     return true;
