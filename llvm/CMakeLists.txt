@@ -144,6 +144,8 @@ foreach(proj ${LLVM_ENABLE_PROJECTS})
   endif()
 endforeach()
 
+option(LLVM_MSAN_SHADOW_OFFSET_2MB "Add 2MB offset to MSan shadow to avoid AMD Zen cache conflicts" OFF)
+
 # Select the runtimes to build
 #
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes

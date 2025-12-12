@@ -443,8 +443,13 @@ static const MemoryMapParams Linux_I386_MemoryMapParams = {
 static const MemoryMapParams Linux_X86_64_MemoryMapParams = {
     0,              // AndMask (not used)
     0x500000000000, // XorMask
+#if LLVM_MSAN_SHADOW_OFFSET_2MB == 1
+    0x200000,       // ShadowBase (== kShadowOffset)
+    0x100000200000, // OriginBase
+#else
     0,              // ShadowBase (not used)
     0x100000000000, // OriginBase
+#endif
 };
 
 // mips32 Linux
@@ -531,8 +536,13 @@ static const MemoryMapParams FreeBSD_X86_64_MemoryMapParams = {
 static const MemoryMapParams NetBSD_X86_64_MemoryMapParams = {
     0,              // AndMask
     0x500000000000, // XorMask
+#if LLVM_MSAN_SHADOW_OFFSET_2MB == 1
+    0x200000,       // ShadowBase (== kShadowOffset)
+    0x100000200000, // OriginBase
+#else
     0,              // ShadowBase
     0x100000000000, // OriginBase
+#endif
 };
 
 static const PlatformMemoryMapParams Linux_X86_MemoryMapParams = {
