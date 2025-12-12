@@ -859,9 +859,7 @@ public:
     return {};
   }
   mlir::Value VisitExpressionTraitExpr(const ExpressionTraitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: expression trait");
-    return {};
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
   mlir::Value VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -1340,13 +1338,11 @@ public:
   }
 
   mlir::Value VisitBinPtrMemD(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: ptr mem d");
-    return {};
+    return emitLoadOfLValue(e);
   }
 
   mlir::Value VisitBinPtrMemI(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: ptr mem i");
-    return {};
+    return emitLoadOfLValue(e);
   }
 
   // Other Operators.

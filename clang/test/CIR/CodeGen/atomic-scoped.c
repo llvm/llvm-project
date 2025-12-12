@@ -38,3 +38,35 @@ void scoped_atomic_load_n(int *ptr) {
   // LLVM: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
   // OGCG: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
 }
+
+void scoped_atomic_store(int *ptr, int value) {
+  // CIR-LABEL: @scoped_atomic_store
+  // LLVM-LABEL: @scoped_atomic_store
+  // OGCG-LABEL: @scoped_atomic_store
+
+  __scoped_atomic_store(ptr, &value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
+  // CIR: cir.store align(4) syncscope(single_thread) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // LLVM: store atomic i32 %{{.+}}, ptr %{{.+}} syncscope("singlethread") monotonic, align 4
+  // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
+
+  __scoped_atomic_store(ptr, &value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  // CIR: cir.store align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // LLVM: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
+  // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
+}
+
+void scoped_atomic_store_n(int *ptr, int value) {
+  // CIR-LABEL: @scoped_atomic_store_n
+  // LLVM-LABEL: @scoped_atomic_store_n
+  // OGCG-LABEL: @scoped_atomic_store_n
+
+  __scoped_atomic_store_n(ptr, value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
+  // CIR: cir.store align(4) syncscope(single_thread) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // LLVM: store atomic i32 %{{.+}}, ptr %{{.+}} syncscope("singlethread") monotonic, align 4
+  // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
+
+  __scoped_atomic_store_n(ptr, value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  // CIR: cir.store align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // LLVM: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
+  // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
+}
