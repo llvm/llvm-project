@@ -241,6 +241,7 @@ def generate_code(lookup_table: StagedLookupTable, llvm_project_root_path: str) 
 #include "hdr/types/wchar_t.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/CPP/limits.h"
 
 namespace LIBC_NAMESPACE_DECL {{
                 
