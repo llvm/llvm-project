@@ -11,6 +11,11 @@ struct Point {
   int z;
 };
 
+int Point::*pt_member = &Point::z;
+// CIR: cir.global external @pt_member = #cir.data_member<2> : !cir.data_member<!s32i in !rec_Point>
+// LLVM: @pt_member = global i64 8
+// OGCG: @pt_member = global i64 8
+
 auto test1() -> int Point::* {
   return &Point::y;
 }
