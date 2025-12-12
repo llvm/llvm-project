@@ -35,9 +35,9 @@ static_assert(__cplusplus >= 201703L, "Libsycl requires C++17 or later.");
 // when linking to a release build of libsycl and with the /MDd option when
 // linking to a debug build.
 #  define ERROR_MESSAGE                                                        \
-    "Libsycl is designed to work safely with dynamic C++ runtime."             \
-    "Please use /MD switch with sycl.dll, /MDd switch with sycld.dll, "        \
-    "or -fsycl switch to set C++ runtime automatically."
+    "Libsycl requires use of a DLL version of the MSVC RT library. "           \
+    "Please use /MD to link with a release build of libsycl or /MDd to link"   \
+    " with a debug build."
 #  if defined(_MSC_VER)
 #    pragma message(ERROR_MESSAGE)
 #  else
