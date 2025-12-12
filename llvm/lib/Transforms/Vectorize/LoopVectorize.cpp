@@ -2907,6 +2907,10 @@ uint64_t LoopVectorizationCostModel::getPredBlockCostDivisor(
   uint64_t BBFreq = getBFI().getBlockFreq(BB).getFrequency();
   assert(HeaderFreq >= BBFreq &&
          "Header has smaller block freq than dominated BB?");
+  // Guard against division by zero when BBFreq is 0.
+  // In such cases, return 1 to avoid undefined behavior.
+  if (BBFreq == 0)
+    return 1;
   return std::round((double)HeaderFreq / BBFreq);
 }
 
