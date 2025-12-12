@@ -26,6 +26,9 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
+#if LLD_ENABLE_GNU_LTO
+#include "GnuLTO.h"
+#endif
 #include <memory>
 #include <vector>
 
@@ -79,8 +82,6 @@ private:
 };
 
 #if LLD_ENABLE_GNU_LTO
-#include <plugin-api.h>
-
 class GccIRCompiler : public IRCompiler {
 protected:
   void addObject(IRFile &f,
@@ -92,25 +93,19 @@ public:
 
   void add(ELFFileBase &f);
   SmallVector<std::unique_ptr<InputFile>, 0> compile() override;
-  static enum ld_plugin_status message(int level, const char *format, ...);
-  static enum ld_plugin_status registerClaimFile(ld_plugin_claim_file_handler handler);
-#if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
-  enum ld_plugin_status
-  static registerClaimFileV2(ld_plugin_claim_file_handler_v2 handler);
-#endif
-  enum ld_plugin_status
-  registerAllSymbolsRead(ld_plugin_all_symbols_read_handler handler);
+  static PluginStatus message(int level, const char *format, ...);
+  static PluginStatus registerClaimFile(pluginClaimFileHandler handler);
+  static PluginStatus registerClaimFileV2(pluginClaimFileHandlerV2 handler);
+  PluginStatus registerAllSymbolsRead(pluginAllSymbolsReadHandler handler);
   void loadPlugin();
   bool addCompiledFile(StringRef path);
 
 private:
   std::vector<std::unique_ptr<MemoryBuffer>> files;
-  SmallVector<struct ld_plugin_tv> tv;
-  ld_plugin_claim_file_handler claimFileHandler;
-#if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
-  ld_plugin_claim_file_handler_v2 claimFileHandlerV2;
-#endif
-  ld_plugin_all_symbols_read_handler allSymbolsReadHandler;
+  SmallVector<PluginTV> tv;
+  pluginClaimFileHandler *claimFileHandler;
+  pluginClaimFileHandlerV2 *claimFileHandlerV2;
+  pluginAllSymbolsReadHandler *allSymbolsReadHandler;
   // Handle for the shared library created via dlopen().
   llvm::sys::DynamicLibrary plugin;
 

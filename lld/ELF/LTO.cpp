@@ -448,47 +448,38 @@ void GccIRCompiler::loadPlugin() {
     Err(ctx) << Error;
     return;
   }
-  void *tmp = plugin.getAddressOfSymbol("onload");
-  if (!tmp) {
+  pluginOnLoad *onload = (pluginOnLoad *)plugin.getAddressOfSymbol("onload");
+  if (!onload) {
     Err(ctx) << "Plugin does not provide onload()";
     return;
   }
 
-  ld_plugin_onload onload;
-  // Ensure source and destination types have the same size.
-  assert(sizeof(ld_plugin_onload) == sizeof(void *));
-  std::memcpy(&onload, &tmp, sizeof(ld_plugin_onload));
-
   (*onload)(tv.data());
 }
 
-enum ld_plugin_status
-GccIRCompiler::registerClaimFile(ld_plugin_claim_file_handler handler) {
+PluginStatus GccIRCompiler::registerClaimFile(pluginClaimFileHandler handler) {
   gcc->claimFileHandler = handler;
   return LDPS_OK;
 }
 
-#if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
-enum ld_plugin_status
-GccIRCompiler::registerClaimFileV2(ld_plugin_claim_file_handler_v2 handler) {
+PluginStatus
+GccIRCompiler::registerClaimFileV2(pluginClaimFileHandlerV2 handler) {
   gcc->claimFileHandlerV2 = handler;
   return LDPS_OK;
 }
-#endif
 
-enum ld_plugin_status
-regAllSymbolsRead(ld_plugin_all_symbols_read_handler handler) {
+PluginStatus regAllSymbolsRead(pluginAllSymbolsReadHandler handler) {
   return gcc->registerAllSymbolsRead(handler);
 }
 
-enum ld_plugin_status GccIRCompiler::registerAllSymbolsRead(
-    ld_plugin_all_symbols_read_handler handler) {
+PluginStatus
+GccIRCompiler::registerAllSymbolsRead(pluginAllSymbolsReadHandler handler) {
   allSymbolsReadHandler = handler;
   return LDPS_OK;
 }
 
-static enum ld_plugin_status addSymbols(void *handle, int nsyms,
-                                        const struct ld_plugin_symbol *syms) {
+static PluginStatus addSymbols(void *handle, int nsyms,
+                               const struct PluginSymbol *syms) {
   ELFFileBase *f = (ELFFileBase *)handle;
   if (f == NULL)
     return LDPS_ERR;
@@ -502,8 +493,8 @@ static enum ld_plugin_status addSymbols(void *handle, int nsyms,
   return LDPS_OK;
 }
 
-static enum ld_plugin_status getSymbols(const void *handle, int nsyms,
-                                        struct ld_plugin_symbol *syms) {
+static PluginStatus getSymbols(const void *handle, int nsyms,
+                               struct PluginSymbol *syms) {
   for (int i = 0; i < nsyms; i++) {
     syms[i].resolution = LDPR_UNDEF;
     // TODO: Implement other scenarios.
@@ -511,7 +502,7 @@ static enum ld_plugin_status getSymbols(const void *handle, int nsyms,
   return LDPS_OK;
 }
 
-ld_plugin_status addInputFile(const char *pathname) {
+PluginStatus addInputFile(const char *pathname) {
   if (gcc->addCompiledFile(StringRef(pathname)))
     return LDPS_OK;
   else
@@ -519,20 +510,11 @@ ld_plugin_status addInputFile(const char *pathname) {
 }
 
 void GccIRCompiler::initializeTv() {
-#define TVU_SETTAG(t, f, v)                                                    \
-  {                                                                            \
-    ld_plugin_tv a;                                                            \
-    a.tv_tag = t;                                                              \
-    a.tv_u.tv_##f = v;                                                         \
-    tv.push_back(a);                                                           \
-  }
-
-  TVU_SETTAG(LDPT_MESSAGE, message, message);
-  TVU_SETTAG(LDPT_API_VERSION, val, LD_PLUGIN_API_VERSION);
-  for (std::string &s : ctx.arg.pluginOpt) {
-    TVU_SETTAG(LDPT_OPTION, string, s.c_str());
-  }
-  ld_plugin_output_file_type o;
+  tv.push_back(PluginTV(LDPT_MESSAGE, &message));
+  tv.push_back(PluginTV(LDPT_API_VERSION, LD_PLUGIN_API_VERSION));
+  for (std::string &s : ctx.arg.pluginOpt)
+    tv.push_back(PluginTV(LDPT_OPTION, s.c_str()));
+  PluginFileType o;
   if (ctx.arg.pie)
     o = LDPO_PIE;
   else if (ctx.arg.relocatable)
@@ -541,25 +523,23 @@ void GccIRCompiler::initializeTv() {
     o = LDPO_DYN;
   else
     o = LDPO_EXEC;
-  TVU_SETTAG(LDPT_LINKER_OUTPUT, val, o);
-  TVU_SETTAG(LDPT_OUTPUT_NAME, string, ctx.arg.outputFile.data());
+  tv.push_back(PluginTV(LDPT_LINKER_OUTPUT, o));
+  tv.push_back(PluginTV(LDPT_OUTPUT_NAME, ctx.arg.outputFile.data()));
   // Share the address of a C wrapper that is API-compatible with
   // plugin-api.h.
-  TVU_SETTAG(LDPT_REGISTER_CLAIM_FILE_HOOK, register_claim_file, registerClaimFile);
-#if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
-  TVU_SETTAG(LDPT_REGISTER_CLAIM_FILE_HOOK_V2, registerClaimFileV2,
-             regClaimFileV2);
-#endif
+  tv.push_back(PluginTV(LDPT_REGISTER_CLAIM_FILE_HOOK, &registerClaimFile));
+  tv.push_back(
+      PluginTV(LDPT_REGISTER_CLAIM_FILE_HOOK_V2, &registerClaimFileV2));
 
-  TVU_SETTAG(LDPT_ADD_SYMBOLS, add_symbols, addSymbols);
-  TVU_SETTAG(LDPT_REGISTER_ALL_SYMBOLS_READ_HOOK, register_all_symbols_read,
-             regAllSymbolsRead);
-  TVU_SETTAG(LDPT_GET_SYMBOLS, get_symbols, getSymbols);
-  TVU_SETTAG(LDPT_ADD_INPUT_FILE, add_input_file, addInputFile);
+  tv.push_back(PluginTV(LDPT_ADD_SYMBOLS, &addSymbols));
+  tv.push_back(
+      PluginTV(LDPT_REGISTER_ALL_SYMBOLS_READ_HOOK, &regAllSymbolsRead));
+  tv.push_back(PluginTV(LDPT_GET_SYMBOLS, &getSymbols));
+  tv.push_back(PluginTV(LDPT_ADD_INPUT_FILE, &addInputFile));
 }
 
 void GccIRCompiler::add(ELFFileBase &f) {
-  struct ld_plugin_input_file file;
+  PluginInputFile file;
 
   std::string name = f.getName().str();
   file.name = f.getName().data();
@@ -582,11 +562,7 @@ void GccIRCompiler::add(ELFFileBase &f) {
     file.filesize = size;
 
   int claimed;
-#if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
-  ld_plugin_status status = claimFileHandler(&file, &claimed, 1);
-#else
-  ld_plugin_status status = claimFileHandler(&file, &claimed);
-#endif
+  PluginStatus status = claimFileHandlerV2(&file, &claimed, 1);
 
   if (status != LDPS_OK)
     Err(ctx) << "liblto returned " + std::to_string(status);
@@ -599,7 +575,7 @@ void GccIRCompiler::add(ELFFileBase &f) {
 
 SmallVector<std::unique_ptr<InputFile>, 0> GccIRCompiler::compile() {
   SmallVector<std::unique_ptr<InputFile>, 0> ret;
-  ld_plugin_status status = allSymbolsReadHandler();
+  PluginStatus status = allSymbolsReadHandler();
   if (status != LDPS_OK)
     Err(ctx) << "The plugin returned an error after all symbols were read.";
 
@@ -614,8 +590,7 @@ void GccIRCompiler::addObject(IRFile &f,
   // TODO: Implement this.
 }
 
-enum ld_plugin_status GccIRCompiler::message(int level, const char *format,
-                                             ...) {
+enum PluginStatus GccIRCompiler::message(int level, const char *format, ...) {
   // TODO: Implement this function.
   return LDPS_OK;
 }
