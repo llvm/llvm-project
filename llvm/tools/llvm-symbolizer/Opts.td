@@ -15,6 +15,7 @@ class F<string name, string help>: Flag<["--"], name>, HelpText<help>;
 
 def grp_mach_o : OptionGroup<"kind">,
                  HelpText<"llvm-symbolizer Mach-O Specific Options">;
+
 def grp_gsym : OptionGroup<"kind">,
                HelpText<"llvm-symbolizer GSYM Related Options">;
 
