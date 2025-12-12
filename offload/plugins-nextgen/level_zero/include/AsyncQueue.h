@@ -17,10 +17,7 @@
 
 #include "L0Memory.h"
 
-namespace llvm {
-namespace omp {
-namespace target {
-namespace plugin {
+namespace llvm::omp::target::plugin {
 
 /// Abstract queue that supports asynchronous command submission
 struct AsyncQueueTy {
@@ -44,9 +41,5 @@ struct AsyncQueueTy {
 
 using AsyncQueuePoolTy = ObjPool<AsyncQueueTy>;
 
-} // namespace plugin
-} // namespace target
-} // namespace omp
-} // namespace llvm
-
+} // namespace llvm::omp::target::plugin
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H

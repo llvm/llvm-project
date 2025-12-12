@@ -20,10 +20,7 @@
 #include "L0Trace.h"
 #include "PerThreadTable.h"
 
-namespace llvm {
-namespace omp {
-namespace target {
-namespace plugin {
+namespace llvm::omp::target::plugin {
 
 /// All thread-local data used by the Plugin
 class L0ThreadTLSTy {
@@ -69,9 +66,6 @@ public:
 
 using L0ThreadTblTy = PerThread<L0ThreadTLSTy>;
 
-} // namespace plugin
-} // namespace target
-} // namespace omp
-} // namespace llvm
+} // namespace llvm::omp::target::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_TLS_H

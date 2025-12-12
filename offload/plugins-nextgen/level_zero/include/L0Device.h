@@ -23,10 +23,7 @@
 #include "PluginInterface.h"
 #include "TLS.h"
 
-namespace llvm {
-namespace omp {
-namespace target {
-namespace plugin {
+namespace llvm::omp::target::plugin {
 
 using OmpInteropTy = omp_interop_val_t *;
 class LevelZeroPluginTy;
@@ -380,6 +377,10 @@ public:
 
   static bool isDiscrete(uint32_t PCIId) {
     switch (static_cast<PCIIdTy>(PCIId & 0xFF00)) {
+    case PCIIdTy::DG1:
+    case PCIIdTy::PVC:
+    case PCIIdTy::DG2_ATS_M:
+    case PCIIdTy::DG2_ATS_M_2:
     case PCIIdTy::BMG:
       return true;
     default:
@@ -407,7 +408,8 @@ public:
   uint32_t getMainCopyEngine() const { return CopyOrdinal.first; }
 
   bool deviceRequiresImmCmdList() const {
-    return isDeviceIPorNewer(0x05004000);
+    constexpr uint32_t BMGIP = 0x05003000;
+    return isDeviceIPorNewer(BMGIP);
   }
   bool asyncEnabled() const { return IsAsyncEnabled; }
   bool useImmForCompute() const { return true; }
@@ -638,8 +640,5 @@ public:
                                          interop_spec_t *Prefers) override;
 };
 
-} // namespace plugin
-} // namespace target
-} // namespace omp
-} // namespace llvm
+} // namespace llvm::omp::target::plugin
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEVICE_H

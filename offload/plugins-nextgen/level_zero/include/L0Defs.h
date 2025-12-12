@@ -38,7 +38,7 @@ constexpr size_t L0UsmPreAllocThreshold = (128 << 20);
 /// Host USM allocation threshold where preallocation does not pay off (8MB)
 constexpr size_t L0HostUsmPreAllocThreshold = (8 << 20);
 
-using namespace error;
+using error::ErrorCode;
 /// Generic L0 handle type
 using ZeHandleTy = void *;
 
