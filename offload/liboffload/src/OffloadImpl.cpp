@@ -1214,5 +1214,58 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                                 Queue->AsyncInfo);
 }
 
+Error olCreateInterop_impl(ol_device_handle_t Device, int32_t InteropContext, void *InteropSpec,
+                           void **Interop) {
+  auto Rc = Device->Device->createInterop(InteropContext, 
+                                          *static_cast<interop_spec_t *>(InteropSpec));
+  if (!Rc)
+    return Rc.takeError();
+  *Interop = *Rc;
+  return Error::success();
+}
+
+Error olReleaseInterop_impl(ol_device_handle_t Device, void *InteropSpec) {
+  auto Rc = Device->Device->releaseInterop(static_cast<omp_interop_val_t *>(InteropSpec));
+  if (Rc)
+    return Rc;
+  return Error::success();
+}
+
+Error olSelectInterop_impl(ol_device_handle_t Device, int32_t InteropType,
+                           int32_t InteropPreferencesSize, 
+                           void *InteropPreferences, void *InteropSpec) {
+  *static_cast<interop_spec_t *>(InteropSpec) = Device->Device->selectInteropPreference(
+      InteropType, InteropPreferencesSize, 
+      static_cast<interop_spec_t *>(InteropPreferences));
+  return Error::success();
+}
+
+Error olFlushQueueInterop_impl(ol_device_handle_t Device, void *Interop) {
+  Expected<int32_t> Rc =
+      Device->Device->Plugin.flush_queue(static_cast<omp_interop_val_t *>(Interop));
+  if (Rc) {
+    return Rc.takeError();
+  }
+  return Error::success();
+}
+
+Error olSyncBarrierInterop_impl(ol_device_handle_t Device, void *Interop) {
+  Expected<int32_t> Rc =
+      Device->Device->Plugin.sync_barrier(static_cast<omp_interop_val_t *>(Interop));
+  if (Rc) {
+    return Rc.takeError();
+  }
+  return Error::success();
+}
+
+Error olAsyncBarrierInterop_impl(ol_device_handle_t Device, void *Interop) {
+
+  Expected<int32_t> Rc = Device->Device->Plugin.async_barrier(static_cast<omp_interop_val_t *>(Interop));
+  if (Rc){
+    return Rc.takeError();
+  }
+  return Error::success();
+}
+
 } // namespace offload
 } // namespace llvm
