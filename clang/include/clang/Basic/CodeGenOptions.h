@@ -20,7 +20,6 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Hash.h"
 #include "llvm/Support/Regex.h"
@@ -33,6 +32,7 @@
 
 namespace llvm {
 class PassBuilder;
+class PassPlugin;
 }
 namespace clang {
 
@@ -479,7 +479,7 @@ public:
   std::vector<std::string> PassPluginNames;
 
   /// List of loaded pass plugins.
-  std::vector<llvm::PassPlugin> PassPlugins;
+  std::vector<llvm::PassPlugin *> PassPlugins;
 
   /// List of pass builder callbacks.
   std::vector<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks;
