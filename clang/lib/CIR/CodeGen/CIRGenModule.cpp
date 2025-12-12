@@ -1414,7 +1414,11 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
     // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
     // we need to do that explicitly.
     std::string uniqueName = getUniqueGlobalName(name.str());
-    mlir::Location loc = getLoc(s->getSourceRange());
+    // Synthetic string literals (e.g., from SourceLocExpr) may not have valid
+    // source locations. Use unknown location in those cases.
+    mlir::Location loc = s->getBeginLoc().isValid()
+                             ? getLoc(s->getSourceRange())
+                             : builder.getUnknownLoc();
     auto typedC = llvm::cast<mlir::TypedAttr>(c);
     gv = generateStringLiteral(loc, typedC,
                                cir::GlobalLinkageKind::PrivateLinkage, *this,
@@ -2350,14 +2354,27 @@ void CIRGenModule::setCXXSpecialMemberAttr(
   }
 }
 
+static void setWindowsItaniumDLLImport(CIRGenModule &cgm, bool isLocal,
+                                       cir::FuncOp funcOp, StringRef name) {
+  // In Windows Itanium environments, try to mark runtime functions
+  // dllimport. For Mingw and MSVC, don't. We don't really know if the user
+  // will link their standard library statically or dynamically. Marking
+  // functions imported when they are not imported can cause linker errors
+  // and warnings.
+  if (!isLocal && cgm.getTarget().getTriple().isWindowsItaniumEnvironment() &&
+      !cgm.getCodeGenOpts().LTOVisibilityPublicStd) {
+    assert(!cir::MissingFeatures::getRuntimeFunctionDecl());
+    assert(!cir::MissingFeatures::setDLLStorageClass());
+    assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+  }
+}
+
 cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
                                                 StringRef name, mlir::ArrayAttr,
-                                                [[maybe_unused]] bool isLocal,
+                                                bool isLocal,
                                                 bool assumeConvergent) {
   if (assumeConvergent)
     errorNYI("createRuntimeFunction: assumeConvergent");
-  if (isLocal)
-    errorNYI("createRuntimeFunction: local");
 
   cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
                                              /*forVtable=*/false);
@@ -2366,7 +2383,7 @@ cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
     // TODO(cir): set the attributes of the function.
     assert(!cir::MissingFeatures::setLLVMFunctionFEnvAttributes());
     assert(!cir::MissingFeatures::opFuncCallingConv());
-    assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+    setWindowsItaniumDLLImport(*this, isLocal, entry, name);
     entry.setDSOLocal(true);
   }
 

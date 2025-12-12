@@ -1359,44 +1359,6 @@ void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
 // SwitchOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseSwitchOp(OpAsmParser &parser, mlir::Region &regions,
-                                 mlir::OpAsmParser::UnresolvedOperand &cond,
-                                 mlir::Type &condType) {
-  cir::IntType intCondType;
-
-  if (parser.parseLParen())
-    return mlir::failure();
-
-  if (parser.parseOperand(cond))
-    return mlir::failure();
-  if (parser.parseColon())
-    return mlir::failure();
-  if (parser.parseCustomTypeWithFallback(intCondType))
-    return mlir::failure();
-  condType = intCondType;
-
-  if (parser.parseRParen())
-    return mlir::failure();
-  if (parser.parseRegion(regions, /*arguments=*/{}, /*argTypes=*/{}))
-    return failure();
-
-  return mlir::success();
-}
-
-static void printSwitchOp(OpAsmPrinter &p, cir::SwitchOp op,
-                          mlir::Region &bodyRegion, mlir::Value condition,
-                          mlir::Type condType) {
-  p << "(";
-  p << condition;
-  p << " : ";
-  p.printStrippedAttrOrType(condType);
-  p << ")";
-
-  p << ' ';
-  p.printRegion(bodyRegion, /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/true);
-}
-
 void cir::SwitchOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &region) {
   if (!point.isParent()) {
@@ -1948,6 +1910,19 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     hasAlias = true;
   }
 
+  mlir::StringAttr personalityNameAttr = getPersonalityAttrName(state.name);
+  if (parser.parseOptionalKeyword("personality").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    mlir::StringAttr personalityAttr;
+    if (parser.parseOptionalSymbolName(personalityAttr).failed())
+      return failure();
+    state.addAttribute(personalityNameAttr,
+                       FlatSymbolRefAttr::get(personalityAttr));
+    if (parser.parseRParen().failed())
+      return failure();
+  }
+
   auto parseGlobalDtorCtor =
       [&](StringRef keyword,
           llvm::function_ref<void(std::optional<int> prio)> createAttr)
@@ -2149,6 +2124,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << ")";
   }
 
+  if (std::optional<StringRef> personalityName = getPersonality()) {
+    p << " personality(";
+    p.printSymbolName(*personalityName);
+    p << ")";
+  }
+
   if (auto specialMemberAttr = getCxxSpecialMember()) {
     p << " special_member<";
     p.printAttribute(*specialMemberAttr);
@@ -2340,6 +2321,25 @@ OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+LogicalResult cir::SelectOp::verify() {
+  // AllTypesMatch already guarantees trueVal and falseVal have matching types.
+  auto condTy = dyn_cast<cir::VectorType>(getCondition().getType());
+
+  // If condition is not a vector, no further checks are needed.
+  if (!condTy)
+    return success();
+
+  // When condition is a vector, both other operands must also be vectors.
+  if (!isa<cir::VectorType>(getTrueValue().getType()) ||
+      !isa<cir::VectorType>(getFalseValue().getType())) {
+    return emitOpError()
+           << "expected both true and false operands to be vector types "
+              "when the condition is a vector boolean type";
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // ShiftOp
 //===----------------------------------------------------------------------===//
@@ -2501,6 +2501,21 @@ LogicalResult cir::CopyOp::verify() {
   if (getSrc() == getDst())
     return emitError() << "source and destination are the same";
 
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetRuntimeMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::GetRuntimeMemberOp::verify() {
+  auto recordTy = mlir::cast<RecordType>(getAddr().getType().getPointee());
+  cir::DataMemberType memberPtrTy = getMember().getType();
+
+  if (recordTy != memberPtrTy.getClassTy())
+    return emitError() << "record type does not match the member pointer type";
+  if (getType().getPointee() != memberPtrTy.getMemberTy())
+    return emitError() << "result type does not match the member pointer type";
   return mlir::success();
 }
 

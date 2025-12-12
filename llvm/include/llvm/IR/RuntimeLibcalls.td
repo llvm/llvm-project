@@ -227,7 +227,7 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def FMA_#S : RuntimeLibcall;
   def FMAX_#S : RuntimeLibcall;
   def FMIN_#S : RuntimeLibcall;
-  def FMOD_#S : RuntimeLibcall;
+  def REM_#S : RuntimeLibcall; // "fmod"
   def HYPOT_#S : RuntimeLibcall;
   def ILOGB_#S : RuntimeLibcall;
   def LDEXP_#S : RuntimeLibcall;
@@ -3919,7 +3919,7 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_VF2_VECFUNCS = {
   def _ZGVnN2vv_fdim : RuntimeLibcallImpl<FDIM_V2F64>;
   def _ZGVnN2vv_fmax : RuntimeLibcallImpl<FMAX_V2F64>;
   def _ZGVnN2vv_fmin : RuntimeLibcallImpl<FMIN_V2F64>;
-  def _ZGVnN2vv_fmod : RuntimeLibcallImpl<FMOD_V2F64>;
+  def _ZGVnN2vv_fmod : RuntimeLibcallImpl<REM_V2F64>;
   def _ZGVnN2vv_hypot : RuntimeLibcallImpl<HYPOT_V2F64>;
   def _ZGVnN2vv_ldexp : RuntimeLibcallImpl<LDEXP_V2F64>;
   def _ZGVnN2vv_nextafter : RuntimeLibcallImpl<NEXTAFTER_V2F64>;
@@ -3965,7 +3965,7 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_VF4_VECFUNCS = {
   def _ZGVnN4vv_fdimf : RuntimeLibcallImpl<FDIM_V4F32>;
   def _ZGVnN4vv_fmaxf : RuntimeLibcallImpl<FMAX_V4F32>;
   def _ZGVnN4vv_fminf : RuntimeLibcallImpl<FMIN_V4F32>;
-  def _ZGVnN4vv_fmodf : RuntimeLibcallImpl<FMOD_V4F32>;
+  def _ZGVnN4vv_fmodf : RuntimeLibcallImpl<REM_V4F32>;
   def _ZGVnN4vv_hypotf : RuntimeLibcallImpl<HYPOT_V4F32>;
   def _ZGVnN4vv_ldexpf : RuntimeLibcallImpl<LDEXP_V4F32>;
   def _ZGVnN4vv_nextafterf : RuntimeLibcallImpl<NEXTAFTER_V4F32>;
@@ -4042,8 +4042,8 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS = {
   def _ZGVsMxvv_fmaxf : RuntimeLibcallImpl<FMAX_NXV4F32>;
   def _ZGVsMxvv_fmin : RuntimeLibcallImpl<FMIN_NXV2F64>;
   def _ZGVsMxvv_fminf : RuntimeLibcallImpl<FMIN_NXV4F32>;
-  def _ZGVsMxvv_fmod : RuntimeLibcallImpl<FMOD_NXV2F64>;
-  def _ZGVsMxvv_fmodf : RuntimeLibcallImpl<FMOD_NXV4F32>;
+  def _ZGVsMxvv_fmod : RuntimeLibcallImpl<REM_NXV2F64>;
+  def _ZGVsMxvv_fmodf : RuntimeLibcallImpl<REM_NXV4F32>;
   def _ZGVsMxvv_hypot : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def _ZGVsMxvv_hypotf : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def _ZGVsMxvv_ldexp : RuntimeLibcallImpl<LDEXP_NXV2F64>;
@@ -4107,8 +4107,8 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV = {
   def Sleef_fmaxfx_rvvm2 : RuntimeLibcallImpl<FMAX_NXV4F32>;
   def Sleef_fmindx_u10rvvm2 : RuntimeLibcallImpl<FMIN_NXV2F64>;
   def Sleef_fminfx_u10rvvm2 : RuntimeLibcallImpl<FMIN_NXV4F32>;
-  def Sleef_fmoddx_rvvm2 : RuntimeLibcallImpl<FMOD_NXV2F64>;
-  def Sleef_fmodfx_rvvm2 : RuntimeLibcallImpl<FMOD_NXV4F32>;
+  def Sleef_fmoddx_rvvm2 : RuntimeLibcallImpl<REM_NXV2F64>;
+  def Sleef_fmodfx_rvvm2 : RuntimeLibcallImpl<REM_NXV4F32>;
   def Sleef_hypotdx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def Sleef_hypotfx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def Sleef_ilogbdx_rvvm2 : RuntimeLibcallImpl<ILOGB_NXV2F64>;
@@ -4200,8 +4200,8 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
   def armpl_svfmax_f64_x : RuntimeLibcallImpl<FMAX_NXV2F64>;
   def armpl_svfmin_f32_x : RuntimeLibcallImpl<FMIN_NXV4F32>;
   def armpl_svfmin_f64_x : RuntimeLibcallImpl<FMIN_NXV2F64>;
-  def armpl_svfmod_f32_x : RuntimeLibcallImpl<FMOD_NXV4F32>;
-  def armpl_svfmod_f64_x : RuntimeLibcallImpl<FMOD_NXV2F64>;
+  def armpl_svfmod_f32_x : RuntimeLibcallImpl<REM_NXV4F32>;
+  def armpl_svfmod_f64_x : RuntimeLibcallImpl<REM_NXV2F64>;
   def armpl_svhypot_f32_x : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def armpl_svhypot_f64_x : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def armpl_svilogb_f32_x : RuntimeLibcallImpl<ILOGB_NXV4F32>;
@@ -4286,8 +4286,8 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
   def armpl_vfmaxq_f64 : RuntimeLibcallImpl<FMAX_V2F64>;
   def armpl_vfminq_f32 : RuntimeLibcallImpl<FMIN_V4F32>;
   def armpl_vfminq_f64 : RuntimeLibcallImpl<FMIN_V2F64>;
-  def armpl_vfmodq_f32 : RuntimeLibcallImpl<FMOD_V4F32>;
-  def armpl_vfmodq_f64 : RuntimeLibcallImpl<FMOD_V2F64>;
+  def armpl_vfmodq_f32 : RuntimeLibcallImpl<REM_V4F32>;
+  def armpl_vfmodq_f64 : RuntimeLibcallImpl<REM_V2F64>;
   def armpl_vhypotq_f32 : RuntimeLibcallImpl<HYPOT_V4F32>;
   def armpl_vhypotq_f64 : RuntimeLibcallImpl<HYPOT_V2F64>;
   def armpl_vilogbq_f32 : RuntimeLibcallImpl<ILOGB_V4F32>;
