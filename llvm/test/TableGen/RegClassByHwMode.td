@@ -42,24 +42,24 @@ include "Common/RegClassByHwModeCommon.td"
 
 // INSTRINFO: extern const int16_t MyTargetRegClassByHwModeTables[4][3] = {
 // INSTRINFO-NEXT:  { // DefaultMode
-// INSTRINFO-NEXT:    MyTarget::PtrRegs32RegClassID,
-// INSTRINFO-NEXT:    MyTarget::XRegsRegClassID,
-// INSTRINFO-NEXT:    MyTarget::YRegsRegClassID,
+// INSTRINFO-NEXT:    MyTarget::PtrRegs32RegClassID, // MyPtrRC
+// INSTRINFO-NEXT:    MyTarget::XRegsRegClassID, // XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    MyTarget::YRegsRegClassID, // YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT:  { // EvenMode
-// INSTRINFO-NEXT:    -1, // Missing mode entry
-// INSTRINFO-NEXT:    MyTarget::XRegs_EvenRegClassID,
-// INSTRINFO-NEXT:    MyTarget::YRegs_EvenRegClassID,
+// INSTRINFO-NEXT:    -1, // Missing mode entry for MyPtrRC
+// INSTRINFO-NEXT:    MyTarget::XRegs_EvenRegClassID, // XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    MyTarget::YRegs_EvenRegClassID, // YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT:  { // OddMode
-// INSTRINFO-NEXT:    -1, // Missing mode entry
-// INSTRINFO-NEXT:    MyTarget::XRegs_OddRegClassID,
-// INSTRINFO-NEXT:    -1, // Missing mode entry
+// INSTRINFO-NEXT:    -1, // Missing mode entry for MyPtrRC
+// INSTRINFO-NEXT:    MyTarget::XRegs_OddRegClassID, // XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    -1, // Missing mode entry for YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT:  { // Ptr64
-// INSTRINFO-NEXT:    MyTarget::PtrRegs64RegClassID,
-// INSTRINFO-NEXT:    -1, // Missing mode entry
-// INSTRINFO-NEXT:    -1, // Missing mode entry
+// INSTRINFO-NEXT:    MyTarget::PtrRegs64RegClassID, // MyPtrRC
+// INSTRINFO-NEXT:    -1, // Missing mode entry for XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    -1, // Missing mode entry for YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT: };
 
@@ -92,24 +92,24 @@ include "Common/RegClassByHwModeCommon.td"
 // ASMMATCHER: if (Operand.isReg() && Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
 // ASMMATCHER-NEXT:    static constexpr MatchClassKind RegClassByHwModeMatchTable[4][3] = {
 // ASMMATCHER-NEXT:      { // DefaultMode
-// ASMMATCHER-NEXT:        MCK_PtrRegs32,
-// ASMMATCHER-NEXT:        MCK_XRegs,
-// ASMMATCHER-NEXT:        MCK_YRegs,
+// ASMMATCHER-NEXT:        MCK_PtrRegs32, // MyPtrRC
+// ASMMATCHER-NEXT:        MCK_XRegs, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        MCK_YRegs, // YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:      { // EvenMode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
-// ASMMATCHER-NEXT:        MCK_XRegs_Even,
-// ASMMATCHER-NEXT:        MCK_YRegs_Even,
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for MyPtrRC
+// ASMMATCHER-NEXT:        MCK_XRegs_Even, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        MCK_YRegs_Even, // YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:      { // OddMode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
-// ASMMATCHER-NEXT:        MCK_XRegs_Odd,
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for MyPtrRC
+// ASMMATCHER-NEXT:        MCK_XRegs_Odd, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:      { // Ptr64
-// ASMMATCHER-NEXT:        MCK_PtrRegs64,
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
+// ASMMATCHER-NEXT:        MCK_PtrRegs64, // MyPtrRC
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:    };
 // ASMMATCHER-EMPTY:

@@ -71,7 +71,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI ~directory_iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI const directory_entry& operator*() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const directory_entry& operator*() const {
     // Note: this check duplicates a check in `__dereference()`.
     _LIBCPP_ASSERT_NON_NULL(__imp_, "The end iterator cannot be dereferenced");
     return __dereference();
@@ -121,9 +121,13 @@ operator!=(const directory_iterator& __lhs, const directory_iterator& __rhs) noe
 }
 
 // enable directory_iterator range-based for statements
-inline _LIBCPP_HIDE_FROM_ABI directory_iterator begin(directory_iterator __iter) noexcept { return __iter; }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI directory_iterator begin(directory_iterator __iter) noexcept {
+  return __iter;
+}
 
-inline _LIBCPP_HIDE_FROM_ABI directory_iterator end(directory_iterator) noexcept { return directory_iterator(); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI directory_iterator end(directory_iterator) noexcept {
+  return directory_iterator();
+}
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

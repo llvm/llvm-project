@@ -44,15 +44,16 @@ public:
     __create_what(2);
   }
 
-  _LIBCPP_HIDE_FROM_ABI const path& path1() const noexcept { return __storage_->__p1_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const path& path1() const noexcept { return __storage_->__p1_; }
 
-  _LIBCPP_HIDE_FROM_ABI const path& path2() const noexcept { return __storage_->__p2_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const path& path2() const noexcept { return __storage_->__p2_; }
 
-  _LIBCPP_HIDE_FROM_ABI filesystem_error(const filesystem_error&) = default;
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI filesystem_error(const filesystem_error&) = default;
   ~filesystem_error() override; // key function
 
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL
-  const char* what() const noexcept override { return __storage_->__what_.c_str(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI_VIRTUAL const char* what() const noexcept override {
+    return __storage_->__what_.c_str();
+  }
 
   void __create_what(int __num_paths);
 

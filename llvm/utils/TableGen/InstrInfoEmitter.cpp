@@ -1116,11 +1116,13 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
           if (FoundMode == ModeSelect.Items.end()) {
             // If a RegClassByHwMode doesn't have an entry corresponding to a
             // mode, pad with default register class.
-            OS << indent(4) << "-1, // Missing mode entry\n";
+            OS << indent(4) << "-1, // Missing mode entry for "
+               << Class->getName() << "\n";
           } else {
             const CodeGenRegisterClass *RegClass =
                 RegBank.getRegClass(FoundMode->second);
-            OS << indent(4) << RegClass->getQualifiedIdName() << ",\n";
+            OS << indent(4) << RegClass->getQualifiedIdName() << ", // "
+               << Class->getName() << "\n";
           }
         }
 
