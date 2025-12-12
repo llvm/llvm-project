@@ -28350,18 +28350,15 @@ static SDValue performCTPOPCombine(SDNode *N,
 //   where r = frsqrte(x) is the initial estimate.
 //
 // We convert this to use FRSQRTS: r * frsqrts(x * r, r).
-static SDValue performRSQRTRefinementCombine(SDNode *N, SelectionDAG &DAG,
-                                             const AArch64Subtarget *Subtarget) {
+static SDValue
+performRSQRTRefinementCombine(SDNode *N, SelectionDAG &DAG,
+                              const AArch64Subtarget *Subtarget) {
   using namespace SDPatternMatch;
 
   if (!Subtarget->useRSqrt())
     return SDValue();
 
   if (N->getOpcode() != ISD::FMA)
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-  if (!VT.getScalarType().isFloatingPoint())
     return SDValue();
 
   auto IsFRSQRTE = [](SDValue V) {
@@ -28372,21 +28369,14 @@ static SDValue performRSQRTRefinementCombine(SDNode *N, SelectionDAG &DAG,
     return false;
   };
 
-  auto IsConstant = [](SDValue V, double Expected) {
-    return ISD::matchUnaryFpPredicate(V, [Expected](const ConstantFPSDNode *C) {
-      return C && C->isExactlyValue(Expected);
-    });
-  };
-
   // Match: fma(Est, 1.5, MulChain) where Est = frsqrte(x).
-  SDValue Op0 = N->getOperand(0);
+  SDValue Est = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue MulChain = N->getOperand(2);
+  EVT VT = N->getValueType(0);
 
-  SDValue Est;
-  if (IsFRSQRTE(Op0) && IsConstant(Op1, 1.5))
-    Est = Op0;
-  else
+  if (!IsFRSQRTE(Est) ||
+      !sd_match(Op1, m_SpecificFP(APFloat(VT.getFltSemantics(), "1.5"))))
     return SDValue();
 
   // Match: MulChain = (X * -0.5 * Est) * (Est * Est).
@@ -28401,16 +28391,10 @@ static SDValue performRSQRTRefinementCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Match XNegHalf = X * -0.5.
-  SDValue LHS, RHS;
-  if (!sd_match(XNegHalf, m_FMul(m_Value(LHS), m_Value(RHS))))
-    return SDValue();
-
   SDValue X;
-  if (IsConstant(LHS, -0.5))
-    X = RHS;
-  else if (IsConstant(RHS, -0.5))
-    X = LHS;
-  else
+  if (!sd_match(XNegHalf,
+                m_FMul(m_Value(X),
+                       m_SpecificFP(APFloat(VT.getFltSemantics(), "-0.5")))))
     return SDValue();
 
   // Build the replacement: Est * frsqrts(X * Est, Est).
