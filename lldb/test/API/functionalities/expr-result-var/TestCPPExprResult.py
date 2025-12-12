@@ -95,9 +95,11 @@ class TestCPPResultVariables(TestBase):
         )
         self.assertEqual(method_result.signed, 500, "Got the right result value")
 
+    @skipIfWindows # Dynamic type resolution on Windows doesn't work
     def test_virtual_dynamic_results(self):
         self.do_test_dynamic_results(True)
 
+    @skipIfWindows # Dynamic type resolution on Windows doesn't work
     def test_non_virtual_dynamic_results(self):
         self.do_test_dynamic_results(False)
 
