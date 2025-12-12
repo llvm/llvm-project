@@ -265,7 +265,7 @@ function(runtime_default_target)
     list(APPEND test_targets runtimes-test-depends check-runtimes check-builtins)
 
     # The default runtimes target can run tests the default builtins target
-    list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_BUILTINS_DIR=${LLVM_BINARY_DIR}/runtimes/builtins-bins/")
+    list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_FORCE_TEST_BUILTINS_DIR=${LLVM_BINARY_DIR}/runtimes/builtins-bins/")
   endif()
 
   set_enable_per_target_runtime_dir()
@@ -376,7 +376,7 @@ function(runtime_register_target name)
     # If a builtins-${name} target exists, we'll test those builtins
     # with this runtimes build
     if(TARGET builtins-${name})
-      list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_BUILTINS_DIR=${LLVM_BINARY_DIR}/runtimes/builtins-${name}-bins/")
+      list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_FORCE_TEST_BUILTINS_DIR=${LLVM_BINARY_DIR}/runtimes/builtins-${name}-bins/")
       set(check-builtins-${name} check-builtins)
       list(APPEND ${name}_test_targets check-builtins-${name})
       list(APPEND test_targets check-builtins-${name})
