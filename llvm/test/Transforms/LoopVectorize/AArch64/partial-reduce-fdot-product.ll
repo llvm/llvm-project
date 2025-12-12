@@ -453,12 +453,12 @@ define double @fdotp_f32_f64(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVE1-NEXT:  [[ENTRY:.*]]:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP4]], 2
+; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP4]], 1
 ; CHECK-INTERLEAVE1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-INTERLEAVE1:       [[VECTOR_PH]]:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP11]], 4
+; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP11]], 2
 ; CHECK-INTERLEAVE1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-INTERLEAVE1-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-INTERLEAVE1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -466,13 +466,13 @@ define double @fdotp_f32_f64(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> splat (double -0.000000e+00), double 0.000000e+00, i32 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP0]], align 1
+; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>, ptr [[TMP0]], align 1
+; CHECK-INTERLEAVE1-NEXT:    [[TMP12:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD]] to <vscale x 2 x double>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
-; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x float>, ptr [[TMP2]], align 1
-; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD1]] to <vscale x 4 x double>
-; CHECK-INTERLEAVE1-NEXT:    [[TMP12:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD]] to <vscale x 4 x double>
-; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = fmul <vscale x 4 x double> [[TMP7]], [[TMP12]]
-; CHECK-INTERLEAVE1-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <vscale x 2 x double> @llvm.vector.partial.reduce.fadd.nxv2f64.nxv4f64(<vscale x 2 x double> [[VEC_PHI]], <vscale x 4 x double> [[TMP8]])
+; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x float>, ptr [[TMP2]], align 1
+; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD1]] to <vscale x 2 x double>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = fmul <vscale x 2 x double> [[TMP7]], [[TMP12]]
+; CHECK-INTERLEAVE1-NEXT:    [[PARTIAL_REDUCE]] = fadd reassoc contract <vscale x 2 x double> [[TMP8]], [[VEC_PHI]]
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT1]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT1]], [[N_VEC]]
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -506,39 +506,39 @@ define double @fdotp_f32_f64(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVED-NEXT:  [[ENTRY:.*]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP20]], 3
+; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP20]], 2
 ; CHECK-INTERLEAVED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
+; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_BODY]]:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> splat (double -0.000000e+00), double 0.000000e+00, i32 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> splat (double -0.000000e+00), double -0.000000e+00, i32 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
+; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[TMP0]], i64 [[TMP6]]
-; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP0]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x float>, ptr [[TMP7]], align 1
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>, ptr [[TMP0]], align 1
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 2 x float>, ptr [[TMP7]], align 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD]] to <vscale x 2 x double>
+; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD2]] to <vscale x 2 x double>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP21]], 2
+; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP21]], 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[TMP4]], i64 [[TMP12]]
-; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>, ptr [[TMP4]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x float>, ptr [[TMP13]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD3]] to <vscale x 4 x double>
-; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD]] to <vscale x 4 x double>
-; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = fmul <vscale x 4 x double> [[TMP14]], [[TMP8]]
-; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <vscale x 2 x double> @llvm.vector.partial.reduce.fadd.nxv2f64.nxv4f64(<vscale x 2 x double> [[VEC_PHI]], <vscale x 4 x double> [[TMP16]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD4]] to <vscale x 4 x double>
-; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD2]] to <vscale x 4 x double>
-; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = fmul <vscale x 4 x double> [[TMP15]], [[TMP22]]
-; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE5]] = call reassoc contract <vscale x 2 x double> @llvm.vector.partial.reduce.fadd.nxv2f64.nxv4f64(<vscale x 2 x double> [[VEC_PHI1]], <vscale x 4 x double> [[TMP17]])
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 2 x float>, ptr [[TMP4]], align 1
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 2 x float>, ptr [[TMP13]], align 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD3]] to <vscale x 2 x double>
+; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD4]] to <vscale x 2 x double>
+; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = fmul <vscale x 2 x double> [[TMP14]], [[TMP8]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = fmul <vscale x 2 x double> [[TMP15]], [[TMP9]]
+; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE]] = fadd reassoc contract <vscale x 2 x double> [[TMP16]], [[VEC_PHI]]
+; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE5]] = fadd reassoc contract <vscale x 2 x double> [[TMP17]], [[VEC_PHI1]]
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT1]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT1]], [[N_VEC]]
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -573,12 +573,12 @@ define double @fdotp_f32_f64(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-MAXBW-NEXT:  [[ENTRY:.*]]:
 ; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-MAXBW:       [[VECTOR_PH]]:
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; CHECK-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-MAXBW-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -586,13 +586,13 @@ define double @fdotp_f32_f64(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> splat (double -0.000000e+00), double 0.000000e+00, i32 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP4]], align 1
+; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>, ptr [[TMP4]], align 1
+; CHECK-MAXBW-NEXT:    [[TMP5:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD]] to <vscale x 2 x double>
 ; CHECK-MAXBW-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
-; CHECK-MAXBW-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 1
-; CHECK-MAXBW-NEXT:    [[TMP7:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD1]] to <vscale x 4 x double>
-; CHECK-MAXBW-NEXT:    [[TMP5:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD]] to <vscale x 4 x double>
-; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = fmul <vscale x 4 x double> [[TMP7]], [[TMP5]]
-; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <vscale x 2 x double> @llvm.vector.partial.reduce.fadd.nxv2f64.nxv4f64(<vscale x 2 x double> [[VEC_PHI]], <vscale x 4 x double> [[TMP8]])
+; CHECK-MAXBW-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x float>, ptr [[TMP6]], align 1
+; CHECK-MAXBW-NEXT:    [[TMP7:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD1]] to <vscale x 2 x double>
+; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = fmul <vscale x 2 x double> [[TMP7]], [[TMP5]]
+; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE]] = fadd reassoc contract <vscale x 2 x double> [[TMP8]], [[VEC_PHI]]
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]

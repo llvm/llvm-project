@@ -5855,7 +5855,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   // Floating-point partial reductions are invalid if `reassoc` and `contract`
   // are not allowed.
-  if (FMF && (!FMF->allowReassoc() || !FMF->allowContract()))
+  assert(!AccumType->isFloatingPointTy() ||
+         FMF && "Missing FastMathFlags for floating-point partial reduction");
+  if ((FMF && (!FMF->allowReassoc() || !FMF->allowContract())))
     return Invalid;
 
   assert((BinOp || (OpBExtend == TTI::PR_None && !InputTypeB)) &&
@@ -5944,8 +5946,13 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   // f16 -> f32 is natively supported for fdot
   if (Opcode == Instruction::FAdd && (ST->hasSME2() || ST->hasSVE2p1())) {
     if (AccumLT.second.getScalarType() == MVT::f32 &&
-        InputLT.second.getScalarType() == MVT::f16)
+        InputLT.second.getScalarType() == MVT::f16 &&
+        AccumLT.second.getVectorMinNumElements() == 4 &&
+        InputLT.second.getVectorMinNumElements() == 8)
       return Cost;
+    // Floating-point types aren't promoted, so expanding the partial reduction
+    // is more expensive.
+    return Cost + 20;
   }
 
   // Add additional cost for the extends that would need to be inserted.
