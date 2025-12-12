@@ -131,3 +131,26 @@ def olMemFill : Function {
     Return<"OL_ERRC_INVALID_SIZE", ["`FillSize % PatternSize != 0`"]>
   ];
 }
+
+def olMemDataMappedNotify : Function {
+  let desc = "Notifies device about mapping of memory block.";
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
+    Param<"void *", "Ptr", "Host Pointer", PARAM_IN>,
+    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`Size == 0`"
+    ]>
+  ];
+}
+
+def olMemDataUnMappedNotify : Function {
+  let desc = "Notifies device about unmapping of memory block.";
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
+    Param<"void *", "Ptr", "Host Pointer", PARAM_IN>
+  ];
+  let returns = [];
+}

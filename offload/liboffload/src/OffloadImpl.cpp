@@ -1214,5 +1214,15 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                                 Queue->AsyncInfo);
 }
 
+Error olMemDataMappedNotify_impl(ol_device_handle_t Device, void *Ptr,
+                                 size_t Size) {
+  return Device->Device->notifyDataMapped(Ptr, Size);
+}
+
+Error olMemDataUnMappedNotify_impl(ol_device_handle_t Device, void *Ptr) {
+  return Device->Device->notifyDataUnmapped(Ptr);
+}
+
+
 } // namespace offload
 } // namespace llvm
