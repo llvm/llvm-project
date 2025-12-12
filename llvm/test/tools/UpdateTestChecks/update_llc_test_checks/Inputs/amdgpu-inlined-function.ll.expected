@@ -16,8 +16,8 @@ define amdgpu_cs void @caller(i32 %input, ptr addrspace(1) %output) {
 ;
 ; INLINE-ASM-LABEL: caller:
 ; INLINE-ASM:       ; %bb.0:
-; INLINE-ASM-NEXT:    s_mov_b32 s32, 0
 ; INLINE-ASM-NEXT:    v_dual_mov_b32 v41, v2 :: v_dual_mov_b32 v40, v1
+; INLINE-ASM-NEXT:    s_mov_b32 s32, 0
 ; INLINE-ASM-NEXT:  ; %bb.1:
 ; INLINE-ASM-NEXT:    s_xor_saveexec_b32 s0, -1
 ; INLINE-ASM-NEXT:    global_wb scope:SCOPE_SYS
@@ -58,7 +58,7 @@ define amdgpu_cs void @caller(i32 %input, ptr addrspace(1) %output) {
 ; INLINE-MIR-NEXT: {{  $}}
 ; INLINE-MIR-NEXT: bb.2 (%ir-block.<ir-block badref>):
 ; INLINE-MIR-NEXT:   successors: %bb.1(0x80000000)
-; INLINE-MIR-NEXT:   liveins: $vgpr0, $vgpr0
+; INLINE-MIR-NEXT:   liveins: $vgpr0, $vgpr40_vgpr41
 ; INLINE-MIR-NEXT: {{  $}}
 ; INLINE-MIR-NEXT:   $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
 ; INLINE-MIR-NEXT:   SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr

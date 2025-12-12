@@ -215,6 +215,13 @@ void AMDGPUMachineLevelInliner::inlineMachineFunction(MachineFunction *CallerMF,
     for (auto &LiveIn : OrigMBB.liveins())
       ClonedMBB->addLiveIn(LiveIn);
 
+    // Also add the registers that are live across the call. We can get them
+    // from ContinuationMBB because it was split with `UpdateLiveIns` set to
+    // true.
+    for (const auto &LiveIn : ContinuationMBB->liveins())
+      ClonedMBB->addLiveIn(LiveIn);
+    ClonedMBB->sortUniqueLiveIns();
+
     for (const MachineInstr &OrigMI : OrigMBB) {
       // Bundled instructions are handled by the bundle header.
       if (OrigMI.isBundledWithPred())

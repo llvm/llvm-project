@@ -6,8 +6,8 @@ declare !callback !0 i32 @llvm.amdgcn.call.whole.wave.i32.p0(ptr, ...)
 define amdgpu_cs void @inline_simple_wwf(i32 %input, ptr addrspace(1) %output) {
 ; CHECK-LABEL: inline_simple_wwf:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    v_dual_mov_b32 v41, v2 :: v_dual_mov_b32 v40, v1
+; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    s_xor_saveexec_b32 s0, -1
 ; CHECK-NEXT:    global_wb scope:SCOPE_SYS
@@ -45,10 +45,10 @@ define amdgpu_gfx_whole_wave i32 @another_whole_wave_func(i1 %active, i32 %a, i3
 define amdgpu_cs void @inline_multiple_wwf(i32 %x, i32 %y, ptr addrspace(1) %out1, ptr addrspace(1) %out2) {
 ; CHECK-LABEL: inline_multiple_wwf:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    v_dual_mov_b32 v41, v5 :: v_dual_mov_b32 v44, v0
 ; CHECK-NEXT:    v_dual_mov_b32 v40, v4 :: v_dual_mov_b32 v43, v3
 ; CHECK-NEXT:    v_dual_mov_b32 v42, v2 :: v_dual_mov_b32 v45, v1
+; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    s_xor_saveexec_b32 s0, -1
 ; CHECK-NEXT:    global_wb scope:SCOPE_SYS
@@ -113,8 +113,8 @@ exit:
 define amdgpu_cs void @inline_multiblock_function(i32 %input, ptr addrspace(1) %output) {
 ; CHECK-LABEL: inline_multiblock_function:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    v_dual_mov_b32 v41, v2 :: v_dual_mov_b32 v40, v1
+; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    s_xor_saveexec_b32 s0, -1
 ; CHECK-NEXT:    global_wb scope:SCOPE_SYS
