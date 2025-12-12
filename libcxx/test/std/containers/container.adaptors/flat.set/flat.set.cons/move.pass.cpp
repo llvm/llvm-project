@@ -123,7 +123,6 @@ constexpr void test_move_noexcept() {
     C c;
     C d = std::move(c);
   }
-#endif // _LIBCPP_VERSION
   {
     // Comparator fails to be nothrow-move-constructible
     using C = std::flat_set<int, ThrowingMoveComp, KeyContainer<int>>;
@@ -131,6 +130,7 @@ constexpr void test_move_noexcept() {
     C c;
     C d = std::move(c);
   }
+#endif // _LIBCPP_VERSION
 }
 
 constexpr bool test() {

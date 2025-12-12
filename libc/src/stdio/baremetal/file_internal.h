@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDIO_BAREMETAL_FILE_H
-#define LLVM_LIBC_SRC_STDIO_BAREMETAL_FILE_H
+#ifndef LLVM_LIBC_SRC_STDIO_BAREMETAL_FILE_INTERNAL_H
+#define LLVM_LIBC_SRC_STDIO_BAREMETAL_FILE_INTERNAL_H
 
 #include "hdr/types/FILE.h"
 #include "src/__support/CPP/string_view.h"
@@ -48,4 +48,4 @@ LIBC_INLINE FileIOResult write_internal(const char *buf, size_t size,
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STDIO_BAREMETAL_FPUTS_INTERNAL_H
+#endif // LLVM_LIBC_SRC_STDIO_BAREMETAL_FILE_INTERNAL_H

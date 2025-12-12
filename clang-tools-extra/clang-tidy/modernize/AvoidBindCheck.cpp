@@ -259,7 +259,6 @@ buildBindArguments(const MatchFinder::MatchResult &Result,
   // Start at index 1 as first argument to bind is the function name.
   unsigned CaptureIndex = 0;
   for (size_t I = 1, ArgCount = BindCall->getNumArgs(); I < ArgCount; ++I) {
-
     const Expr *E = BindCall->getArg(I);
     BindArgument &B = BindArguments.emplace_back();
 
@@ -327,7 +326,6 @@ static int findPositionOfPlaceholderUse(ArrayRef<BindArgument> Args,
 static void addPlaceholderArgs(const LambdaProperties &LP,
                                llvm::raw_ostream &Stream,
                                bool PermissiveParameterList) {
-
   ArrayRef<BindArgument> Args = LP.BindArguments;
 
   const auto *MaxPlaceholderIt = llvm::max_element(
@@ -465,7 +463,6 @@ static const FunctionDecl *getCallOperator(const CXXRecordDecl *Callable,
 static const FunctionDecl *
 getCallMethodDecl(const MatchFinder::MatchResult &Result, CallableType Type,
                   CallableMaterializationKind Materialization) {
-
   const Expr *Callee = Result.Nodes.getNodeAs<Expr>("ref");
   const Expr *CallExpression = ignoreTemporariesAndPointers(Callee);
 

@@ -153,8 +153,8 @@ define void @multiple_incoming_phi_with_blend_mask(i64 %a, ptr noalias %dst) {
 ; CHECK-NEXT:    store <2 x i16> [[TMP9]], ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
-; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add nuw nsw <2 x i16> [[VEC_IND1]], splat (i16 2)
-; CHECK-NEXT:    [[VEC_IND_NEXT4]] = add nuw nsw <2 x i16> [[VEC_IND3]], splat (i16 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add <2 x i16> [[VEC_IND1]], splat (i16 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT4]] = add <2 x i16> [[VEC_IND3]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:

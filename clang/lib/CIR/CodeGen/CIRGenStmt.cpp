@@ -159,6 +159,10 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitCXXTryStmt(cast<CXXTryStmt>(*s));
   case Stmt::CXXForRangeStmtClass:
     return emitCXXForRangeStmt(cast<CXXForRangeStmt>(*s), attr);
+  case Stmt::CoroutineBodyStmtClass:
+    return emitCoroutineBody(cast<CoroutineBodyStmt>(*s));
+  case Stmt::IndirectGotoStmtClass:
+    return emitIndirectGotoStmt(cast<IndirectGotoStmt>(*s));
   case Stmt::OpenACCComputeConstructClass:
     return emitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*s));
   case Stmt::OpenACCLoopConstructClass:
@@ -199,10 +203,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
   case Stmt::SYCLKernelCallStmtClass:
-  case Stmt::CoroutineBodyStmtClass:
-    return emitCoroutineBody(cast<CoroutineBodyStmt>(*s));
   case Stmt::CoreturnStmtClass:
-  case Stmt::IndirectGotoStmtClass:
   case Stmt::OMPParallelDirectiveClass:
   case Stmt::OMPTaskwaitDirectiveClass:
   case Stmt::OMPTaskyieldDirectiveClass:
@@ -288,6 +289,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OMPStripeDirectiveClass:
   case Stmt::ObjCAtCatchStmtClass:
   case Stmt::ObjCAtFinallyStmtClass:
+  case Stmt::DeferStmtClass:
     cgm.errorNYI(s->getSourceRange(),
                  std::string("emitStmt: ") + s->getStmtClassName());
     return mlir::failure();
@@ -458,7 +460,14 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     if (getContext().getLangOpts().ElideConstructors && s.getNRVOCandidate() &&
         s.getNRVOCandidate()->isNRVOVariable()) {
       assert(!cir::MissingFeatures::openMP());
-      assert(!cir::MissingFeatures::nrvo());
+      // Apply the named return value optimization for this return statement,
+      // which means doing nothing: the appropriate result has already been
+      // constructed into the NRVO variable.
+
+      // If there is an NRVO flag for this variable, set it to 1 into indicate
+      // that the cleanup code should not destroy the variable.
+      if (auto nrvoFlag = nrvoFlags[s.getNRVOCandidate()])
+        builder.createFlagStore(loc, true, nrvoFlag);
     } else if (!rv) {
       // No return expression. Do nothing.
     } else if (rv->getType()->isVoidType()) {
@@ -556,6 +565,17 @@ mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
 }
 
 mlir::LogicalResult
+CIRGenFunction::emitIndirectGotoStmt(const IndirectGotoStmt &s) {
+  mlir::Value val = emitScalarExpr(s.getTarget());
+  assert(indirectGotoBlock &&
+         "If you jumping to a indirect branch should be alareadye emitted");
+  cir::BrOp::create(builder, getLoc(s.getSourceRange()), indirectGotoBlock,
+                    val);
+  builder.createBlock(builder.getBlock()->getParent());
+  return mlir::success();
+}
+
+mlir::LogicalResult
 CIRGenFunction::emitContinueStmt(const clang::ContinueStmt &s) {
   builder.createContinue(getLoc(s.getKwLoc()));
 
@@ -581,9 +601,14 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   }
 
   builder.setInsertionPointToEnd(labelBlock);
-  cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
+  cir::LabelOp label =
+      cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
   builder.setInsertionPointToEnd(labelBlock);
-
+  auto func = cast<cir::FuncOp>(curFn);
+  cgm.mapBlockAddress(cir::BlockAddrInfoAttr::get(builder.getContext(),
+                                                  func.getSymNameAttr(),
+                                                  label.getLabelAttr()),
+                      label);
   //  FIXME: emit debug info for labels, incrementProfileCounter
   assert(!cir::MissingFeatures::ehstackBranches());
   assert(!cir::MissingFeatures::incrementProfileCounter());
@@ -1080,6 +1105,8 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
   for (auto caseOp : cases)
     terminateBody(builder, caseOp.getCaseRegion(), caseOp.getLoc());
   terminateBody(builder, swop.getBody(), swop.getLoc());
+
+  swop.setAllEnumCasesCovered(s.isAllEnumCasesCovered());
 
   return res;
 }

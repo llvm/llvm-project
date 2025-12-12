@@ -62,7 +62,7 @@ static cl::opt<bool> ClOutlineInstrumentation(
     "tysan-outline-instrumentation",
     cl::desc("Uses function calls for all TySan instrumentation, reducing "
              "ELF size"),
-    cl::Hidden, cl::init(false));
+    cl::Hidden, cl::init(true));
 
 static cl::opt<bool> ClVerifyOutlinedInstrumentation(
     "tysan-verify-outlined-instrumentation",

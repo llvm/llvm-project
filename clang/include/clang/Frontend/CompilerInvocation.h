@@ -67,6 +67,11 @@ bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
                          DiagnosticsEngine *Diags = nullptr,
                          bool DefaultDiagColor = true);
 
+unsigned getOptimizationLevel(const llvm::opt::ArgList &Args, InputKind IK,
+                              DiagnosticsEngine &Diags);
+
+unsigned getOptimizationLevelSize(const llvm::opt::ArgList &Args);
+
 /// The base class of CompilerInvocation. It keeps individual option objects
 /// behind reference-counted pointers, which is useful for clients that want to
 /// keep select option objects alive (even after CompilerInvocation gets
@@ -293,16 +298,6 @@ public:
                              ArrayRef<const char *> CommandLineArgs,
                              DiagnosticsEngine &Diags,
                              const char *Argv0 = nullptr);
-
-  /// Get the directory where the compiler headers
-  /// reside, relative to the compiler binary (found by the passed in
-  /// arguments).
-  ///
-  /// \param Argv0 - The program path (from argv[0]), for finding the builtin
-  /// compiler path.
-  /// \param MainAddr - The address of main (or some other function in the main
-  /// executable), for finding the builtin compiler path.
-  static std::string GetResourcesPath(const char *Argv0, void *MainAddr);
 
   /// Populate \p Opts with the default set of pointer authentication-related
   /// options given \p LangOpts and \p Triple.

@@ -2115,7 +2115,7 @@ static Value *getUnderLyingObjectForBrevLdIntr(Value *V) {
 /// true and store the intrinsic information into the IntrinsicInfo that was
 /// passed to the function.
 bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                               const CallInst &I,
+                                               const CallBase &I,
                                                MachineFunction &MF,
                                                unsigned Intrinsic) const {
   switch (Intrinsic) {
@@ -2527,7 +2527,7 @@ HexagonTargetLowering::getBuildVectorConstInts(ArrayRef<SDValue> Values,
     // Make sure to always cast to IntTy.
     if (auto *CN = dyn_cast<ConstantSDNode>(V.getNode())) {
       const ConstantInt *CI = CN->getConstantIntValue();
-      Consts[i] = ConstantInt::get(IntTy, CI->getValue().getSExtValue());
+      Consts[i] = ConstantInt::getSigned(IntTy, CI->getValue().getSExtValue());
     } else if (auto *CN = dyn_cast<ConstantFPSDNode>(V.getNode())) {
       const ConstantFP *CF = CN->getConstantFPValue();
       APInt A = CF->getValueAPF().bitcastToAPInt();

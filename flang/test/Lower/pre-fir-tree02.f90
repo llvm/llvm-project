@@ -148,7 +148,7 @@ end
 module test
   !! When derived type processing is implemented, remove all instances of:
   !!  - !![disable]
-  !!  -  COM: 
+  !!  -  COM:
   !![disable]type :: a_type
   !![disable]  integer :: x
   !![disable]end type

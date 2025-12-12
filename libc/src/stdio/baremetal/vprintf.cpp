@@ -23,6 +23,7 @@ LLVM_LIBC_FUNCTION(int, vprintf,
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
+
   return vfprintf_internal(stdout, format, args);
 }
 

@@ -25,7 +25,6 @@ LLVM_LIBC_FUNCTION(int, vfscanf,
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
-  va_end(vlist);
 
   int ret_val = vfscanf_internal(stream, format, args);
   // This is done to avoid including stdio.h in the internals. On most systems

@@ -1,6 +1,7 @@
 # RUN: not --crash llc %s -mtriple=riscv64 \
 # RUN: -run-pass=cfi-instr-inserter \
-# RUN: -riscv-enable-cfi-instr-inserter=true 2>&1 | FileCheck %s
+# RUN: -riscv-enable-cfi-instr-inserter=true \
+# RUN: -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: LLVM ERROR: Different saved locations for the same CSR
 

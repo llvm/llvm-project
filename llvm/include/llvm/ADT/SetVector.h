@@ -39,8 +39,7 @@ namespace llvm {
 ///
 /// The key and value types are derived from the Set and Vector types
 /// respectively. This allows the vector-type operations and set-type operations
-/// to have different types. In particular, this is useful when storing pointers
-/// as "Foo *" values but looking them up as "const Foo *" keys.
+/// to have different types.
 ///
 /// No constraint is placed on the key and value types, although it is assumed
 /// that value_type can be converted into key_type for insertion. Users must be
@@ -59,6 +58,9 @@ class SetVector {
   // Much like in SmallPtrSet, this value should not be too high to prevent
   // excessively long linear scans from occuring.
   static_assert(N <= 32, "Small size should be less than or equal to 32!");
+
+  using const_arg_type =
+      typename const_pointer_or_const_ref<typename Set::key_type>::type;
 
 public:
   using value_type = typename Vector::value_type;
@@ -247,17 +249,17 @@ public:
   }
 
   /// Check if the SetVector contains the given key.
-  [[nodiscard]] bool contains(const key_type &key) const {
+  [[nodiscard]] bool contains(const_arg_type key) const {
     if constexpr (canBeSmall())
       if (isSmall())
         return is_contained(vector_, key);
 
-    return set_.find(key) != set_.end();
+    return is_contained(set_, key);
   }
 
   /// Count the number of elements of a given key in the SetVector.
   /// \returns 0 if the element is not in the SetVector, 1 if it is.
-  [[nodiscard]] size_type count(const key_type &key) const {
+  [[nodiscard]] size_type count(const_arg_type key) const {
     return contains(key) ? 1 : 0;
   }
 

@@ -222,7 +222,9 @@ template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
 
 inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
 
-inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
+inline auto m_Undef() {
+  return m_AnyOf(Opcode_match(ISD::UNDEF), Opcode_match(ISD::POISON));
+}
 
 inline Opcode_match m_Poison() { return Opcode_match(ISD::POISON); }
 
@@ -1149,6 +1151,28 @@ inline SpecificInt_match m_SpecificInt(uint64_t V) {
   return SpecificInt_match(APInt(64, V));
 }
 
+struct SpecificFP_match {
+  APFloat Val;
+
+  explicit SpecificFP_match(APFloat V) : Val(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue V) {
+    if (const auto *CFP = dyn_cast<ConstantFPSDNode>(V.getNode()))
+      return CFP->isExactlyValue(Val);
+    if (ConstantFPSDNode *C = isConstOrConstSplatFP(V, /*AllowUndefs=*/true))
+      return C->getValueAPF().compare(Val) == APFloat::cmpEqual;
+    return false;
+  }
+};
+
+/// Match a specific float constant.
+inline SpecificFP_match m_SpecificFP(APFloat V) { return SpecificFP_match(V); }
+
+inline SpecificFP_match m_SpecificFP(double V) {
+  return SpecificFP_match(APFloat(V));
+}
+
 struct Zero_match {
   bool AllowUndefs;
 
@@ -1291,19 +1315,12 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
     if (Leaves.size() != NumPatterns)
       return false;
 
-    // Matches[I][J] == true iff sd_context_match(Leaves[I], Ctx,
-    // std::get<J>(Patterns)) == true
-    std::array<SmallBitVector, NumPatterns> Matches;
-    for (size_t I = 0; I != NumPatterns; I++) {
-      std::apply(
-          [&](auto &...P) {
-            (Matches[I].push_back(sd_context_match(Leaves[I], Ctx, P)), ...);
-          },
-          Patterns);
-    }
-
     SmallBitVector Used(NumPatterns);
-    return reassociatableMatchHelper(Matches, Used);
+    return std::apply(
+        [&](auto &...P) -> bool {
+          return reassociatableMatchHelper(Ctx, Leaves, Used, P...);
+        },
+        Patterns);
   }
 
   void collectLeaves(SDValue V, SmallVector<SDValue> &Leaves) {
@@ -1315,20 +1332,28 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
     }
   }
 
+  // Searchs for a matching leaf for every sub-pattern.
+  template <typename MatchContext, typename PatternHd, typename... PatternTl>
   [[nodiscard]] inline bool
-  reassociatableMatchHelper(ArrayRef<SmallBitVector> Matches,
-                            SmallBitVector &Used, size_t Curr = 0) {
-    if (Curr == Matches.size())
-      return true;
-    for (size_t Match = 0, N = Matches[Curr].size(); Match < N; Match++) {
-      if (!Matches[Curr][Match] || Used[Match])
+  reassociatableMatchHelper(const MatchContext &Ctx, ArrayRef<SDValue> Leaves,
+                            SmallBitVector &Used, PatternHd &HeadPattern,
+                            PatternTl &...TailPatterns) {
+    for (size_t Match = 0, N = Used.size(); Match < N; Match++) {
+      if (Used[Match] || !(sd_context_match(Leaves[Match], Ctx, HeadPattern)))
         continue;
       Used[Match] = true;
-      if (reassociatableMatchHelper(Matches, Used, Curr + 1))
+      if (reassociatableMatchHelper(Ctx, Leaves, Used, TailPatterns...))
         return true;
       Used[Match] = false;
     }
     return false;
+  }
+
+  template <typename MatchContext>
+  [[nodiscard]] inline bool reassociatableMatchHelper(const MatchContext &Ctx,
+                                                      ArrayRef<SDValue> Leaves,
+                                                      SmallBitVector &Used) {
+    return true;
   }
 };
 

@@ -243,7 +243,6 @@ void MinMaxUseInitializerListCheck::registerPPCallbacks(
 
 void MinMaxUseInitializerListCheck::check(
     const MatchFinder::MatchResult &Match) {
-
   const auto *TopCall = Match.Nodes.getNodeAs<CallExpr>("topCall");
 
   const FindArgsResult Result = findArgs(TopCall);
