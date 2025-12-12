@@ -450,13 +450,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{s32, s32}, {s32, s64}, {s64, s32}, {s64, s64}})
       .legalFor(HasFP16, {{s32, s16}, {s64, s16}})
       .minScalar(1, s32)
-      .libcallFor({{s64, s128}});
+      .libcallFor({{s64, s128}})
+      .lower();
   getActionDefinitionsBuilder({G_LLROUND, G_INTRINSIC_LLRINT})
       .legalFor({{s64, s32}, {s64, s64}})
       .legalFor(HasFP16, {{s64, s16}})
       .minScalar(0, s64)
       .minScalar(1, s32)
-      .libcallFor({{s64, s128}});
+      .libcallFor({{s64, s128}})
+      .lower();
 
   // TODO: Custom legalization for mismatched types.
   getActionDefinitionsBuilder(G_FCOPYSIGN)
