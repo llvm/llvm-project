@@ -1214,5 +1214,20 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                                 Queue->AsyncInfo);
 }
 
+Error olInitializeRecordReplay_impl(ol_device_handle_t Device,
+                                    uint64_t MemorySize, void *VAddr,
+                                    bool IsRecord, bool SaveOutput,
+                                    uint64_t *ReqPtrArgOffset) {
+  uint64_t ReqPtrArgOffsetOut = 0;
+  Expected<int> Rc = Device->Device->Plugin.initialize_record_replay(
+      Device->DeviceNum, MemorySize, VAddr, IsRecord, SaveOutput,
+      ReqPtrArgOffsetOut);
+  if (Rc) {
+    return Rc.takeError();
+  }
+  *ReqPtrArgOffset = ReqPtrArgOffsetOut;
+  return Error::success();
+}
+
 } // namespace offload
 } // namespace llvm

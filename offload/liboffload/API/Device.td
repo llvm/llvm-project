@@ -131,3 +131,16 @@ def olGetDeviceInfoSize : Function {
     Return<"OL_ERRC_INVALID_DEVICE">
   ];
 }
+
+def olInitializeRecordReplay : Function {
+  let desc = "Initializes the record and replay mechanism.";
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+    Param<"uint64_t", "MemorySize", " The number of bytes to be (pre-)allocated by the bump allocator", PARAM_IN>,
+    Param<"void *", "VAddr", "handle of the destination device", PARAM_IN>,
+    Param<"bool", "IsRecord", "Activates the record replay mechanism in 'record' mode or 'replay' mode", PARAM_IN>,
+    Param<"bool", "SaveOutput", "Store the device memory after kernel execution on persistent storage", PARAM_IN>,
+    Param<"uint64_t *", "ReqPtrArgOffset", "handle of the destination device", PARAM_OUT>,
+  ];
+  let returns = [];
+}
