@@ -849,9 +849,7 @@ public:
   }
   mlir::Value
   VisitConceptSpecializationExpr(const ConceptSpecializationExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: concept specialization");
-    return {};
+    return builder.getBool(e->isSatisfied(), cgf.getLoc(e->getExprLoc()));
   }
   mlir::Value VisitRequiresExpr(const RequiresExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: requires");
