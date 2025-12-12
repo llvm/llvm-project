@@ -1149,3 +1149,19 @@ gpu.module @test_module_56 {
     func.return %sin16, %cos16, %sin32, %cos32, %sin64, %cos64 : f16, f16, f32, f32, f64, f64
   }
 }
+
+// Check that nvvm.grid_constant is a valid argument attribute on gpu.kernel.
+gpu.module @test_module_57 {
+  // CHECK:       gpu.module @test_module_57
+  // CHECK-LABEL:   llvm.func @test_kernel(
+  // CHECK-SAME:      %[[VAL_0:.*]]: !llvm.ptr {llvm.byval = i64, nvvm.grid_constant}
+  // CHECK-SAME:      %[[VAL_1:.*]]: !llvm.ptr {llvm.byref = i64}
+  // CHECK:           llvm.return
+  // CHECK:         }
+  // CHECK:       }
+  gpu.func @test_kernel(
+      %arg0: !llvm.ptr {nvvm.grid_constant, llvm.byval = i64},
+      %arg1: !llvm.ptr {llvm.byref = i64}) kernel {
+    gpu.return
+  }
+}

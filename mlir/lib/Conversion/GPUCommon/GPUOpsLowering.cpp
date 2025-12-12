@@ -11,6 +11,7 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -369,7 +370,10 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     }
 
     if (lowersToPointer) {
+      copyPointerAttribute(mlir::NVVM::NVVMDialect::getGridConstantAttrName());
       copyPointerAttribute(LLVM::LLVMDialect::getNoAliasAttrName());
+      copyPointerAttribute(LLVM::LLVMDialect::getByValAttrName());
+      copyPointerAttribute(LLVM::LLVMDialect::getByRefAttrName());
       copyPointerAttribute(LLVM::LLVMDialect::getNoCaptureAttrName());
       copyPointerAttribute(LLVM::LLVMDialect::getNoFreeAttrName());
       copyPointerAttribute(LLVM::LLVMDialect::getAlignAttrName());

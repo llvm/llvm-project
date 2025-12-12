@@ -5448,7 +5448,8 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
   if (!funcOp)
     return success();
 
-  bool isKernel = op->hasAttr(NVVMDialect::getKernelFuncAttrName());
+  const bool isKernel = op->hasAttr(NVVMDialect::getKernelFuncAttrName()) ||
+                        op->hasAttr(gpu::GPUDialect::getKernelFuncAttrName());
   StringAttr attrName = argAttr.getName();
   if (attrName == NVVM::NVVMDialect::getGridConstantAttrName()) {
     if (!isKernel) {
