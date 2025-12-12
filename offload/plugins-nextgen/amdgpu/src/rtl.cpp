@@ -5819,36 +5819,38 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
     setKernelLaunchId(LaunchId);
 
     // Print Launch Id after Device Id.
-    fprintf(stderr,
-            "DEVID: %2d LaunchId: %u SGN:%d ConstWGSize:%-4d args:%2d "
-            "teamsXthrds:(%4uX%4d) "
-            "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
-            "agpr_count:%u "
-            "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d "
-            "md:%d md_LB:%ld md_UB:%ld Max Occupancy: %u Achieved Occupancy: "
-            "%d%% n:%s\n",
-            GenericDevice.getDeviceId(), LaunchId, getExecutionModeFlags(),
-            ConstWGSize, KernelArgs.NumArgs, NumBlocks[0], NumThreads[0], 0, 0,
-            GroupSegmentSize, SGPRCount, VGPRCount, AGPRCount, SGPRSpillCount,
-            VGPRSpillCount, KernelArgs.Tripcount, HasRPC, isMultiDeviceKernel(),
-            MultiDeviceLB, MultiDeviceUB, MaxOccupancy, AchievedOccupancy,
-            getName());
+    fprintf(
+        stderr,
+        "DEVID: %2d LaunchId: %u SGN:%d ConstWGSize:%-4d args:%2d "
+        "teamsXthrds:(%4uX%4d) "
+        "reqd:(%4dX%4d) lds_usage:%uB scratch:%uB sgpr_count:%u vgpr_count:%u "
+        "agpr_count:%u "
+        "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d "
+        "md:%d md_LB:%ld md_UB:%ld Max Occupancy: %u Achieved Occupancy: "
+        "%d%% n:%s\n",
+        GenericDevice.getDeviceId(), LaunchId, getExecutionModeFlags(),
+        ConstWGSize, KernelArgs.NumArgs, NumBlocks[0], NumThreads[0], 0, 0,
+        GroupSegmentSize, getPrivateSize(), SGPRCount, VGPRCount, AGPRCount,
+        SGPRSpillCount, VGPRSpillCount, KernelArgs.Tripcount, HasRPC,
+        isMultiDeviceKernel(), MultiDeviceLB, MultiDeviceUB, MaxOccupancy,
+        AchievedOccupancy, getName());
   } else {
 
     // This line should print exactly as the one in the old plugin.
-    fprintf(stderr,
-            "DEVID: %2d SGN:%d ConstWGSize:%-4d args:%2d teamsXthrds:(%4uX%4d) "
-            "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
-            "agpr_count:%u "
-            "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d "
-            "md:%d md_LB:%ld md_UB:%ld Max Occupancy: %u Achieved Occupancy: "
-            "%d%% n:%s\n",
-            GenericDevice.getDeviceId(), getExecutionModeFlags(), ConstWGSize,
-            KernelArgs.NumArgs, NumBlocks[0], NumThreads[0], 0, 0,
-            GroupSegmentSize, SGPRCount, VGPRCount, AGPRCount, SGPRSpillCount,
-            VGPRSpillCount, KernelArgs.Tripcount, HasRPC, isMultiDeviceKernel(),
-            MultiDeviceLB, MultiDeviceUB, MaxOccupancy, AchievedOccupancy,
-            getName());
+    fprintf(
+        stderr,
+        "DEVID: %2d SGN:%d ConstWGSize:%-4d args:%2d teamsXthrds:(%4uX%4d) "
+        "reqd:(%4dX%4d) lds_usage:%uB scratch:%uB sgpr_count:%u vgpr_count:%u "
+        "agpr_count:%u "
+        "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d "
+        "md:%d md_LB:%ld md_UB:%ld Max Occupancy: %u Achieved Occupancy: "
+        "%d%% n:%s\n",
+        GenericDevice.getDeviceId(), getExecutionModeFlags(), ConstWGSize,
+        KernelArgs.NumArgs, NumBlocks[0], NumThreads[0], 0, 0, GroupSegmentSize,
+        getPrivateSize(), SGPRCount, VGPRCount, AGPRCount, SGPRSpillCount,
+        VGPRSpillCount, KernelArgs.Tripcount, HasRPC, isMultiDeviceKernel(),
+        MultiDeviceLB, MultiDeviceUB, MaxOccupancy, AchievedOccupancy,
+        getName());
   }
 }
 
@@ -5903,12 +5905,13 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   // Tripcount: loop tripcount for the kernel
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
        "#Args: %d Teams x Thrds: %4ux%4u (MaxFlatWorkGroupSize: %u) LDS "
-       "Usage: %uB #SGPRs/VGPRs: %u/%u #SGPR/VGPR Spills: %u/%u Tripcount: "
+       "Usage: %uB Scratch: %uB #SGPRs/VGPRs: %u/%u #SGPR/VGPR Spills: %u/%u "
+       "Tripcount: "
        "%lu\n",
        ArgNum, NumGroups[0] * NumGroups[1] * NumGroups[2],
        ThreadsPerGroup[0] * ThreadsPerGroup[1] * ThreadsPerGroup[2],
-       MaxFlatWorkgroupSize, GroupSegmentSize, SGPRCount, VGPRCount,
-       SGPRSpillCount, VGPRSpillCount, LoopTripCount);
+       MaxFlatWorkgroupSize, GroupSegmentSize, getPrivateSize(), SGPRCount,
+       VGPRCount, SGPRSpillCount, VGPRSpillCount, LoopTripCount);
 
   return Plugin::success();
 }
