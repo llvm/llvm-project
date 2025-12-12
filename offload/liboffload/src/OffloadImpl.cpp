@@ -1214,5 +1214,20 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                                 Queue->AsyncInfo);
 }
 
+Error olMemDataLock_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
+                         void** LockedPtr) {
+  Expected<void*> LockedPtrOrErr = Device->Device->dataLock(Ptr, Size);
+  if (!LockedPtrOrErr)
+    return LockedPtrOrErr.takeError();
+
+  *LockedPtr = *LockedPtrOrErr;
+
+  return Error::success();
+}
+
+Error olMemDataUnLock_impl(ol_device_handle_t Device, void *Ptr) {
+  return Device->Device->dataUnlock(Ptr);
+}
+
 } // namespace offload
 } // namespace llvm

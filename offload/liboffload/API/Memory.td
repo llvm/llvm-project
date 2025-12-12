@@ -131,3 +131,27 @@ def olMemFill : Function {
     Return<"OL_ERRC_INVALID_SIZE", ["`FillSize % PatternSize != 0`"]>
   ];
 }
+
+def olMemDataLock : Function {
+  let desc = "Locks / pins host memory using the plugin runtime.";
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
+    Param<"void *", "Ptr", "Host Pointer", PARAM_IN>,
+    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
+    Param<"void**", "LockedPtr", "output for the allocated pointer", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`Size == 0`"
+    ]>
+  ];
+}
+
+def olMemDataUnLock : Function {
+  let desc = "Unlocks / unpins host memory using the plugin runtime.";
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
+    Param<"void *", "Ptr", "Host Pointer", PARAM_IN>
+  ];
+  let returns = [];
+}
