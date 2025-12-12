@@ -402,6 +402,8 @@ def AMDGPU_FatRawBufferCastOp :
     AMDGPU_Op<"fat_raw_buffer_cast",
       [Pure,
        DeclareOpInterfaceMethods<InferTypeOpInterface>,
+       DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+                                 ["reifyDimOfResult"]>,
        ViewLikeOpInterface, AttrSizedOperandSegments]>,
     Arguments<(ins AnyMemRef:$source,
       Optional<I64>:$validBytes,
