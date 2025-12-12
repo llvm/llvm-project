@@ -150,7 +150,7 @@ private:
   llvm::Error ParseMultiMemReadPacket(
       llvm::StringRef response_str, llvm::MutableArrayRef<uint8_t> buffer,
       unsigned expected_num_ranges,
-      llvm::SmallVectorImpl<llvm::MutableArrayRef<uint8_t>> &parsed_ranges);
+      llvm::SmallVectorImpl<llvm::MutableArrayRef<uint8_t>> &memory_regions);
 
 public:
   Status
