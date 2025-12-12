@@ -17,13 +17,13 @@ define i32 @main(i32 signext %argc, ptr %argv) {
 ; CHECK-PIC: addiu
 ; CHECK-PIC: jrc
 ; CHECK-PIC: bc
-; CHECK-PIC: bnezc
+; CHECK-PIC: bltc
 ; CHECK-PIC: nop
 ; CHECK-PIC: bc
 
 ; CHECK-STATIC: bc
 ; CHECK-STATIC: j
-; CHECK-STATIC: bnezc
+; CHECK-STATIC: bltc
 ; CHECK-STATIC: nop
 ; CHECK-STATIC: j
 entry:

@@ -207,6 +207,9 @@ class Sema;
     // HLSL vector splat from scalar or boolean type.
     ICK_HLSL_Vector_Splat,
 
+    /// HLSL matrix splat from scalar or boolean type.
+    ICK_HLSL_Matrix_Splat,
+
     /// The number of conversion kinds
     ICK_Num_Conversion_Kinds,
   };

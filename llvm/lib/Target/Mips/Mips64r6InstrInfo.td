@@ -338,3 +338,41 @@ let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                                                                  GPR64Opnd>,
                                       ISA_MIPS64R6;
 }
+
+// Combining branch and set instructions into one compact branch instruction
+let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
+  def : MipsPat<(brcond (i32 (setlt i64:$rs, 0)), bb:$offset),
+                (BLTZC64 GPR64Opnd:$rs, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setlt i64:$rs, 1)), bb:$offset),
+                (BLEZC64 GPR64Opnd:$rs, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setge i64:$rs, 0)), bb:$offset),
+                (BGEZC64 GPR64Opnd:$rs, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setge i64:$rs, 1)), bb:$offset),
+                (BGTZC64 GPR64Opnd:$rs, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setgt i64:$rs, 0)), bb:$offset),
+                (BGTZC64 GPR64Opnd:$rs, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setgt i64:$rs, -1)), bb:$offset),
+                (BGEZC64 GPR64Opnd:$rs, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setle i64:$rs, 0)), bb:$offset),
+                (BLEZC64 GPR64Opnd:$rs, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setle i64:$rs, -1)), bb:$offset),
+                (BLTZC64 GPR64Opnd:$rs, bb:$offset)>, ISA_MIPS64R6;
+
+  def : MipsPat<(brcond (i32 (setlt GPR64:$rs, GPR64:$rt)), bb:$offset),
+                (BLTC64 GPR64:$rs, GPR64:$rt, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setge GPR64:$rs, GPR64:$rt)), bb:$offset),
+                (BGEC64 GPR64:$rs, GPR64:$rt, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setgt GPR64:$rs, GPR64:$rt)), bb:$offset),
+                (BLTC64 GPR64:$rt, GPR64:$rs, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setle GPR64:$rs, GPR64:$rt)), bb:$offset),
+                (BGEC64 GPR64:$rt, GPR64:$rs, bb:$offset)>, ISA_MIPS64R6;
+
+  def : MipsPat<(brcond (i32 (setult GPR64:$rs, GPR64:$rt)), bb:$offset),
+                (BLTUC64 GPR64:$rs, GPR64:$rt, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setuge GPR64:$rs, GPR64:$rt)), bb:$offset),
+                (BGEUC64 GPR64:$rs, GPR64:$rt, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setugt GPR64:$rs, GPR64:$rt)), bb:$offset),
+                (BLTUC64 GPR64:$rt, GPR64:$rs, bb:$offset)>, ISA_MIPS64R6;
+  def : MipsPat<(brcond (i32 (setule GPR64:$rs, GPR64:$rt)), bb:$offset),
+                (BGEUC64 GPR64:$rt, GPR64:$rs, bb:$offset)>, ISA_MIPS64R6;
+}
