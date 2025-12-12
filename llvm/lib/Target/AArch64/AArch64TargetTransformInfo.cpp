@@ -5878,9 +5878,6 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (VF.getKnownMinValue() <= Ratio)
     return Invalid;
 
-  if (Opcode == Instruction::FAdd && Ratio <= 1)
-    return Invalid;
-
   VectorType *InputVectorType = VectorType::get(InputTypeA, VF);
   VectorType *AccumVectorType =
       VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));

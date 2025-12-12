@@ -2921,7 +2921,9 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
                      TargetTransformInfo::getPartialReductionExtendKind(
                          ExtR->getOpcode()),
                      TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
-                     std::nullopt)
+                     RedTy->isFloatingPointTy()
+                         ? std::optional{ExtR->getFastMathFlags()}
+                         : std::nullopt)
                : Ctx.TTI.getExtendedReductionCost(
                      Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy,
                      SrcVecTy, std::nullopt, Ctx.CostKind);

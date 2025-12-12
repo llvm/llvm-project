@@ -4164,6 +4164,24 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   VPRecipeBase *Sub = nullptr;
   VPValue *A, *B;
   VPValue *Tmp = nullptr;
+
+  // Try to match reduce.fadd(fmul(...)).
+  if (match(VecOp, m_FMul(m_VPValue(A), m_VPValue(B)))) {
+    assert(Opcode == Instruction::FAdd);
+    auto *RecipeA = dyn_cast_if_present<VPWidenCastRecipe>(A);
+    auto *RecipeB = dyn_cast_if_present<VPWidenCastRecipe>(B);
+    auto *FMul = dyn_cast<VPWidenRecipe>(VecOp);
+
+    // Match reduce.fadd(fmul(ext, ext)).
+    if (FMul && RecipeA && RecipeB && match(RecipeA, m_FPExt(m_VPValue())) &&
+        match(RecipeB, m_FPExt(m_VPValue())) &&
+        IsMulAccValidAndClampRange(FMul, RecipeA, RecipeB, nullptr)) {
+      return new VPExpressionRecipe(RecipeA, RecipeB, FMul, Red);
+    }
+  }
+  if (Ctx.Types.inferScalarType(VecOp)->isFloatingPointTy())
+    return nullptr;
+
   // Sub reductions could have a sub between the add reduction and vec op.
   if (match(VecOp, m_Sub(m_ZeroInt(), m_VPValue(Tmp)))) {
     Sub = VecOp->getDefiningRecipe();
@@ -4199,22 +4217,6 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     ValB = ExtB = Builder.createWidenCast(ExtOpc, Trunc, WideTy);
     Mul->setOperand(1, ExtB);
   };
-
-  // Try to match reduce.add(fmul(...)).
-  if (match(VecOp, m_FMul(m_VPValue(A), m_VPValue(B)))) {
-    auto *RecipeA = dyn_cast_if_present<VPWidenCastRecipe>(A);
-    auto *RecipeB = dyn_cast_if_present<VPWidenCastRecipe>(B);
-    auto *FMul = dyn_cast<VPWidenRecipe>(VecOp);
-
-    // Match reduce.fadd(fmul(ext, ext)).
-    if (FMul && RecipeA && RecipeB && match(RecipeA, m_FPExt(m_VPValue())) &&
-        match(RecipeB, m_FPExt(m_VPValue())) &&
-        IsMulAccValidAndClampRange(FMul, RecipeA, RecipeB, nullptr)) {
-      return new VPExpressionRecipe(RecipeA, RecipeB, FMul, Red);
-    }
-  }
-  if (Opcode == Instruction::FAdd)
-    return nullptr;
 
   // Try to match reduce.add(mul(...)).
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
