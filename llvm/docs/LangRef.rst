@@ -24474,7 +24474,7 @@ The element of the result mask is active when loading from %ptrA then storing to
 %ptrB is safe and doesn't result in a write-after-read hazard, meaning that:
 
 * (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores), or
-* (ptrB - ptrA) > elementSize * lane (guarantees that this lane is loaded
+* elementSize * lane < (ptrB - ptrA) (guarantees that this lane is loaded
   before the store to the same address)
 
 Examples:
@@ -24574,7 +24574,7 @@ or ``%ptrB + VF * %elementSize`` wrap.
 The element of the result mask is active when storing to %ptrA then loading from
 %ptrB is safe and doesn't result in aliasing, meaning that:
 
-* abs(ptrB - ptrA) > elementSize * lane (guarantees that the store of this lane
+* elementSize * lane < abs(ptrB - ptrA) (guarantees that the store of this lane
   occurs before loading from this address), or
 * ptrA == ptrB (doesn't introduce any new hazards that weren't in the scalar
   code)
