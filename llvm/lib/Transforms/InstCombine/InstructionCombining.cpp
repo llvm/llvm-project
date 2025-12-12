@@ -2831,13 +2831,8 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
 
       APInt NewTrueVal = *ConstOffset + *TrueVal;
       APInt NewFalseVal = *ConstOffset + *FalseVal;
-      Constant *NewTrue = Builder.getInt(NewTrueVal);
-      Constant *NewFalse = Builder.getInt(NewFalseVal);
-      // Consider vector splat.
-      if (auto *VT = dyn_cast<VectorType>(Select->getType())) {
-        NewTrue = ConstantVector::getSplat(VT->getElementCount(), NewTrue);
-        NewFalse = ConstantVector::getSplat(VT->getElementCount(), NewFalse);
-      }
+      Constant *NewTrue = ConstantInt::get(Select->getType(), NewTrueVal);
+      Constant *NewFalse = ConstantInt::get(Select->getType(), NewFalseVal);
       Value *NewSelect = Builder.CreateSelect(Cond, NewTrue, NewFalse);
       GEPNoWrapFlags Flags =
           getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));

@@ -46,8 +46,8 @@ define ptr @src_inbounds_nuw(i32 %arg0, ptr %arg1) {
 define ptr @src_swap(i32 %arg0, ptr %arg1) {
 ; CHECK-LABEL: @src_swap(
 ; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 3
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V1]], i64 63252, i64 29452
-; CHECK-NEXT:    [[V0:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[V2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[V1]], i64 63252, i64 29452
+; CHECK-NEXT:    [[V0:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[V0]]
 ;
   %v1 = icmp sgt i32 %arg0, 3
@@ -155,6 +155,24 @@ define ptr @src_fail_source_gep_multiple_use(i32 %arg0, ptr %arg1, ptr %arg2) {
   call void @use(ptr %v0)
   %v3 = getelementptr i8, ptr %v0, i64 %v2
   ret ptr %v3
+}
+
+define ptr @src_fail_source_gep_multiple_swap(i32 %arg0, ptr %arg1) {
+; CHECK-LABEL: @src_fail_source_gep_multiple_swap(
+; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 3
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V1]], i64 55104, i64 21304
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG1:%.*]], i64 [[V2]]
+; CHECK-NEXT:    call void @use(ptr nonnull [[GEP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[V1]], i64 63252, i64 29452
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[ARG1]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[GEP2]]
+;
+  %v1 = icmp sgt i32 %arg0, 3
+  %v2 = select i1 %v1, i64 55104, i64 21304
+  %gep1 = getelementptr inbounds nuw i8, ptr %arg1, i64 %v2
+  call void @use(ptr %gep1)
+  %gep2 = getelementptr i8, ptr %gep1, i64 8148
+  ret ptr %gep2
 }
 
 ; TODO: constant vector index
