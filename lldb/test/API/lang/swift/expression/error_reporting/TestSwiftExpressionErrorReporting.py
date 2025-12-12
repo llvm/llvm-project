@@ -68,6 +68,8 @@ class TestSwiftExpressionErrorReporting(TestBase):
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
 
+        self.runCmd("settings set target.experimental.swift-use-context-free-po true")
+
         options = lldb.SBExpressionOptions()
         value = self.frame().EvaluateExpression("strct", options)
         def check(value):
@@ -81,12 +83,14 @@ class TestSwiftExpressionErrorReporting(TestBase):
 
         check(value)
 
+        # This succeeds using stringForPrintObject(_:mangledTypeName:), which
+        # doesn't require the type to be available.
+        # Note: (?s)^(?!.*<pattern>) checks that the pattern is not found.
         self.expect(
             "dwim-print -O -- strct",
-            substrs=["error: Missing type", "properties = true"],
+            patterns=["(?s)^(?!.*error: Missing type)", "properties : true"],
         )
 
         process.Continue()
         self.expect('expression -O -- number', error=True,
                     substrs=['self', 'not', 'found'])
-
