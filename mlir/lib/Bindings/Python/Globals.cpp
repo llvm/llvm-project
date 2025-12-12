@@ -267,7 +267,4 @@ bool PyGlobals::TracebackLoc::isUserTracebackFilename(
   }
   return isUserTracebackFilenameCache[file];
 }
-
-nanobind::ft_mutex PyGlobalDebugFlag::mutex;
-
 } // namespace mlir::python

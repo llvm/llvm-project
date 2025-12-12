@@ -201,50 +201,6 @@ private:
   TracebackLoc tracebackLoc;
   TypeIDAllocator typeIDAllocator;
 };
-
-/// Wrapper for the global LLVM debugging flag.
-struct PyGlobalDebugFlag {
-  static void set(nanobind::object &o, bool enable) {
-    nanobind::ft_lock_guard lock(mutex);
-    mlirEnableGlobalDebug(enable);
-  }
-
-  static bool get(const nanobind::object &) {
-    nanobind::ft_lock_guard lock(mutex);
-    return mlirIsGlobalDebugEnabled();
-  }
-
-  static void bind(nanobind::module_ &m) {
-    // Debug flags.
-    nanobind::class_<PyGlobalDebugFlag>(m, "_GlobalDebug")
-        .def_prop_rw_static("flag", &PyGlobalDebugFlag::get,
-                            &PyGlobalDebugFlag::set, "LLVM-wide debug flag.")
-        .def_static(
-            "set_types",
-            [](const std::string &type) {
-              nanobind::ft_lock_guard lock(mutex);
-              mlirSetGlobalDebugType(type.c_str());
-            },
-            nanobind::arg("types"),
-            "Sets specific debug types to be produced by LLVM.")
-        .def_static(
-            "set_types",
-            [](const std::vector<std::string> &types) {
-              std::vector<const char *> pointers;
-              pointers.reserve(types.size());
-              for (const std::string &str : types)
-                pointers.push_back(str.c_str());
-              nanobind::ft_lock_guard lock(mutex);
-              mlirSetGlobalDebugTypes(pointers.data(), pointers.size());
-            },
-            nanobind::arg("types"),
-            "Sets multiple specific debug types to be produced by LLVM.");
-  }
-
-private:
-  static nanobind::ft_mutex mutex;
-};
-
 } // namespace python
 } // namespace mlir
 
