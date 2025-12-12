@@ -41,30 +41,22 @@ UdtRecordCompleter::UdtRecordCompleter(
     llvm::DenseMap<lldb::opaque_compiler_type_t,
                    llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
         &cxx_record_map)
-    : m_id(id), m_derived_ct(derived_ct), m_tag_decl(tag_decl),
+    : m_cv_tag_record(CVTagRecord::create(index.tpi().getType(id.index))),
+      m_id(id), m_derived_ct(derived_ct), m_tag_decl(tag_decl),
       m_ast_builder(ast_builder), m_index(index),
       m_decl_to_status(decl_to_status), m_cxx_record_map(cxx_record_map) {
-  CVType cvt = m_index.tpi().getType(m_id.index);
-  switch (cvt.kind()) {
-  case LF_ENUM:
-    m_cvr.er.Options = ClassOptions::None;
-    llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, m_cvr.er));
+  switch (m_cv_tag_record.kind()) {
+  case CVTagRecord::Enum:
     break;
-  case LF_UNION:
-    m_cvr.ur.Options = ClassOptions::None;
-    llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, m_cvr.ur));
-    m_layout.bit_size = m_cvr.ur.getSize() * 8;
+  case CVTagRecord::Union:
+    m_layout.bit_size = m_cv_tag_record.asUnion().getSize() * 8;
     m_record.record.kind = Member::Union;
     break;
-  case LF_CLASS:
-  case LF_STRUCTURE:
-    m_cvr.cr.Options = ClassOptions::None;
-    llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, m_cvr.cr));
-    m_layout.bit_size = m_cvr.cr.getSize() * 8;
+  case CVTagRecord::Class:
+  case CVTagRecord::Struct:
+    m_layout.bit_size = m_cv_tag_record.asClass().getSize() * 8;
     m_record.record.kind = Member::Struct;
     break;
-  default:
-    llvm_unreachable("unreachable!");
   }
 }
 
@@ -168,7 +160,11 @@ Error UdtRecordCompleter::visitKnownMember(
   // Static constant members may be a const[expr] declaration.
   // Query the symbol's value as the variable initializer if valid.
   if (member_ct.IsConst() && member_ct.IsCompleteType()) {
-    std::string qual_name = decl->getQualifiedNameAsString();
+    // Reconstruct the full name for the static member. Use the names as given
+    // in the PDB. This ensures we match the compiler's style of names (e.g.
+    // "A<B<int> >::Foo" vs "A<B<int>>::Foo").
+    std::string qual_name =
+        (m_cv_tag_record.name() + "::" + static_data_member.Name).str();
 
     auto results =
         m_index.globals().findRecordsByName(qual_name, m_index.symrecords());
