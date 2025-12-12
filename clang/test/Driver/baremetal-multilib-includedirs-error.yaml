@@ -1,0 +1,28 @@
+# UNSUPPORTED: system-windows
+
+# This test demonstrates the new "IncludeDirs" field.
+# This field allows specifying include directories through
+# multilib.yaml configuration using relative paths.
+# Absolute paths should be rejected by the driver
+# with an appropriate diagnostic message.
+#
+# This test verifies that passing an absolute path
+# (/include) to IncludeDirs triggers the expected
+# error.
+
+# RUN: not %clang --target=aarch64-none-elf --multi-lib-config=%s %s -o /dev/null 2>&1 \
+# RUN: | FileCheck %s --check-prefix=CHECK-ERROR
+# CHECK-ERROR: error: paths must be relative but "/include" starts with "/"
+
+---
+MultilibVersion: 1.0
+Variants:
+- Dir: aarch64-none-elf/aarch64a_exn_rtti_unaligned
+  Flags:
+  - --target=aarch64-unknown-none-elf
+  - -munaligned-access
+  IncludeDirs:
+  - /include
+  - aarch64-none-elf/include
+
+...

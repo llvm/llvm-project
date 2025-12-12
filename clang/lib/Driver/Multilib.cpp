@@ -29,9 +29,11 @@ using namespace llvm::sys;
 
 Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
                    StringRef IncludeSuffix, const flags_list &Flags,
+                   const includedirs_list &IncludeDirs,
                    StringRef ExclusiveGroup, std::optional<StringRef> Error)
     : GCCSuffix(GCCSuffix), OSSuffix(OSSuffix), IncludeSuffix(IncludeSuffix),
-      Flags(Flags), ExclusiveGroup(ExclusiveGroup), Error(Error) {
+      Flags(Flags), IncludeDirs(IncludeDirs), ExclusiveGroup(ExclusiveGroup),
+      Error(Error) {
   assert(GCCSuffix.empty() ||
          (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
   assert(OSSuffix.empty() ||
@@ -299,6 +301,7 @@ struct MultilibSerialization {
   std::string Dir;        // if this record successfully selects a library dir
   std::string Error;      // if this record reports a fatal error message
   std::vector<std::string> Flags;
+  std::vector<std::string> IncludeDirs;
   std::string Group;
 };
 
@@ -350,6 +353,7 @@ template <> struct llvm::yaml::MappingTraits<MultilibSerialization> {
     io.mapOptional("Dir", V.Dir);
     io.mapOptional("Error", V.Error);
     io.mapRequired("Flags", V.Flags);
+    io.mapOptional("IncludeDirs", V.IncludeDirs);
     io.mapOptional("Group", V.Group);
   }
   static std::string validate(IO &io, MultilibSerialization &V) {
@@ -359,6 +363,10 @@ template <> struct llvm::yaml::MappingTraits<MultilibSerialization> {
       return "the 'Dir' and 'Error' keys may not both be specified";
     if (StringRef(V.Dir).starts_with("/"))
       return "paths must be relative but \"" + V.Dir + "\" starts with \"/\"";
+    for (const auto &Path : V.IncludeDirs) {
+      if (StringRef(Path).starts_with("/"))
+        return "paths must be relative but \"" + Path + "\" starts with \"/\"";
+    }
     return std::string{};
   }
 };
@@ -489,7 +497,8 @@ MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
   Multilibs.reserve(MS.Multilibs.size());
   for (const auto &M : MS.Multilibs) {
     if (!M.Error.empty()) {
-      Multilibs.emplace_back("", "", "", M.Flags, M.Group, M.Error);
+      Multilibs.emplace_back("", "", "", M.Flags, M.IncludeDirs, M.Group,
+                             M.Error);
     } else {
       std::string Dir;
       if (M.Dir != ".")
@@ -498,7 +507,7 @@ MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
       // Multilib constructor. If we later support more than one type of group,
       // we'll have to look up the group name in MS.Groups, check its type, and
       // decide what to do here.
-      Multilibs.emplace_back(Dir, Dir, Dir, M.Flags, M.Group);
+      Multilibs.emplace_back(Dir, Dir, Dir, M.Flags, M.IncludeDirs, M.Group);
     }
   }
 
