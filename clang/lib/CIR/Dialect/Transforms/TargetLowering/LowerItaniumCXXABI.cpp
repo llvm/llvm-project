@@ -161,11 +161,16 @@ static mlir::Value lowerDataMemberCast(mlir::Operation *op,
       builder, loc, ty, mlir::IntegerAttr::get(ty, offset));
   mlir::Value adjustedPtr;
   if (isDerivedToBase)
-    adjustedPtr = mlir::LLVM::SubOp::create(builder, loc, loweredSrc, offsetValue, mlir::LLVM::IntegerOverflowFlags::nsw);
+    adjustedPtr =
+        mlir::LLVM::SubOp::create(builder, loc, loweredSrc, offsetValue,
+                                  mlir::LLVM::IntegerOverflowFlags::nsw);
   else
-    adjustedPtr = mlir::LLVM::AddOp::create(builder, loc, loweredSrc, offsetValue, mlir::LLVM::IntegerOverflowFlags::nsw);
+    adjustedPtr =
+        mlir::LLVM::AddOp::create(builder, loc, loweredSrc, offsetValue,
+                                  mlir::LLVM::IntegerOverflowFlags::nsw);
 
-  return mlir::LLVM::SelectOp::create(builder, loc, isNull, loweredSrc, adjustedPtr);
+  return mlir::LLVM::SelectOp::create(builder, loc, isNull, loweredSrc,
+                                      adjustedPtr);
 }
 
 mlir::Value

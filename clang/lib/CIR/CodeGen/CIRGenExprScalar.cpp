@@ -2257,8 +2257,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     const Type *qualifierType = qualifier.getAsType();
     assert(qualifierType && "member pointer qualifier is not a type");
     const CXXRecordDecl *derivedClass = qualifierType->getAsCXXRecordDecl();
-    CharUnits offset = cgf.cgm.computeNonVirtualBaseClassOffset(
-        derivedClass, ce->path());
+    CharUnits offset =
+        cgf.cgm.computeNonVirtualBaseClassOffset(derivedClass, ce->path());
 
     mlir::Location loc = cgf.getLoc(subExpr->getExprLoc());
     mlir::Type resultTy = cgf.convertType(destTy);
