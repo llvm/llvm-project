@@ -3445,19 +3445,20 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 static void handleTargetVersionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Param;
   SourceLocation Loc;
+  SmallString<64> NewParam;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Param, &Loc))
     return;
 
   if (S.Context.getTargetInfo().getTriple().isAArch64()) {
-    if (S.ARM().checkTargetVersionAttr(Param, Loc))
+    if (S.ARM().checkTargetVersionAttr(Param, Loc, NewParam))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isRISCV()) {
-    if (S.RISCV().checkTargetVersionAttr(Param, Loc))
+    if (S.RISCV().checkTargetVersionAttr(Param, Loc, NewParam))
       return;
   }
 
   TargetVersionAttr *NewAttr =
-      ::new (S.Context) TargetVersionAttr(S.Context, AL, Param);
+      ::new (S.Context) TargetVersionAttr(S.Context, AL, NewParam);
   D->addAttr(NewAttr);
 }
 
@@ -8055,6 +8056,30 @@ void Sema::ProcessDeclAttributeList(
       D->setInvalidDecl();
     }
   }
+
+  // CUDA/HIP: restrict explicit CUDA target attributes on deduction guides.
+  //
+  // Deduction guides are not callable functions and never participate in
+  // codegen; they are always treated as host+device for CUDA/HIP semantic
+  // checks.  We therefore allow either no CUDA target attributes or an explicit
+  // '__host__ __device__' annotation, but reject guides that are host-only,
+  // device-only, or marked '__global__'.  The use of explicit CUDA/HIP target
+  // attributes on deduction guides is deprecated and will be rejected in a
+  // future Clang version.
+  if (getLangOpts().CUDA)
+    if (auto *Guide = dyn_cast<CXXDeductionGuideDecl>(D)) {
+      bool HasHost = Guide->hasAttr<CUDAHostAttr>();
+      bool HasDevice = Guide->hasAttr<CUDADeviceAttr>();
+      bool HasGlobal = Guide->hasAttr<CUDAGlobalAttr>();
+
+      if (HasGlobal || HasHost != HasDevice) {
+        Diag(Guide->getLocation(), diag::err_deduction_guide_target_attr);
+        Guide->setInvalidDecl();
+      } else if (HasHost && HasDevice) {
+        Diag(Guide->getLocation(),
+             diag::warn_deduction_guide_target_attr_deprecated);
+      }
+    }
 
   // Do not permit 'constructor' or 'destructor' attributes on __device__ code.
   if (getLangOpts().CUDAIsDevice && D->hasAttr<CUDADeviceAttr>() &&

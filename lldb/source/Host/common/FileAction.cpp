@@ -25,10 +25,6 @@ void FileAction::Clear() {
   m_file_spec.Clear();
 }
 
-llvm::StringRef FileAction::GetPath() const {
-  return m_file_spec.GetPathAsConstString().AsCString();
-}
-
 const FileSpec &FileAction::GetFileSpec() const { return m_file_spec; }
 
 bool FileAction::Open(int fd, const FileSpec &file_spec, bool read,

@@ -1451,7 +1451,7 @@ def : GCNPat <
 
 // Don't allow source modifiers. If there are any source modifiers then it's
 // better to select fma instead of fmac.
-let SubtargetPredicate = HasFmaLegacy32 in
+let SubtargetPredicate = HasFmacLegacy32 in
 def : GCNPat <
       (f32 (int_amdgcn_fma_legacy (VOP3NoMods f32:$src0),
                                   (VOP3NoMods f32:$src1),
@@ -3859,9 +3859,6 @@ class PackB32Pat<Instruction inst> : GCNPat <
 let SubtargetPredicate = isGFX9Plus in {
 let True16Predicate = NotHasTrue16BitInsts in
   def : PackB32Pat<V_PACK_B32_F16_e64>;
-
-let True16Predicate = UseRealTrue16Insts in
-  def : PackB32Pat<V_PACK_B32_F16_t16_e64>;
 
 let True16Predicate = UseFakeTrue16Insts in
   def : PackB32Pat<V_PACK_B32_F16_fake16_e64>;

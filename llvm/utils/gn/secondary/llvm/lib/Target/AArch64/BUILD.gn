@@ -154,6 +154,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64PostCoalescerPass.cpp",
     "AArch64PrologueEpilogue.cpp",
     "AArch64PromoteConstant.cpp",
+    "AArch64RedundantCondBranchPass.cpp",
     "AArch64RedundantCopyElimination.cpp",
     "AArch64RegisterInfo.cpp",
     "AArch64SIMDInstrOpt.cpp",

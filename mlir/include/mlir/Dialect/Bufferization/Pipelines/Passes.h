@@ -47,6 +47,7 @@ struct BufferDeallocationPipelineOptions
 /// One-Shot bufferization pass.
 void buildBufferDeallocationPipeline(
     OpPassManager &pm, const BufferDeallocationPipelineOptions &options);
+void buildBufferDeallocationPipeline(OpPassManager &pm);
 
 /// Registers all pipelines for the `bufferization` dialect. Currently,
 /// this includes only the "buffer-deallocation-pipeline".

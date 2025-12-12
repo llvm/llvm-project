@@ -51,16 +51,7 @@ void SendMemoryEvent(DAP &dap, lldb::SBValue variable);
 /// \param client_name The client name for thread naming/logging purposes.
 /// \param log The log instance for logging.
 void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
-                 llvm::StringRef client_name, Log *log);
-
-/// Event handler functions called by EventThread.
-/// These handlers extract the necessary objects from events and find the
-/// appropriate DAP instance to handle them.
-void HandleProcessEvent(const lldb::SBEvent &event, bool &done, Log *log);
-void HandleTargetEvent(const lldb::SBEvent &event, Log *log);
-void HandleBreakpointEvent(const lldb::SBEvent &event, Log *log);
-void HandleThreadEvent(const lldb::SBEvent &event, Log *log);
-void HandleDiagnosticEvent(const lldb::SBEvent &event, Log *log);
+                 llvm::StringRef client_name, Log &log);
 
 } // namespace lldb_dap
 

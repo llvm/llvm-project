@@ -30,6 +30,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
 using namespace sema;
@@ -1182,6 +1183,10 @@ bool Sema::CheckConstraintSatisfaction(
     const MultiLevelTemplateArgumentList &TemplateArgsLists,
     SourceRange TemplateIDRange, ConstraintSatisfaction &OutSatisfaction,
     const ConceptReference *TopLevelConceptId, Expr **ConvertedExpr) {
+  llvm::TimeTraceScope TimeScope(
+      "CheckConstraintSatisfaction", [TemplateIDRange, this] {
+        return TemplateIDRange.printToString(getSourceManager());
+      });
   if (AssociatedConstraints.empty()) {
     OutSatisfaction.IsSatisfied = true;
     return false;

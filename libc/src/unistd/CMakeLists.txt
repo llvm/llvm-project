@@ -140,6 +140,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpagesize
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpagesize
+)
+
+add_entrypoint_object(
   getpid
   ALIAS
   DEPENDS
