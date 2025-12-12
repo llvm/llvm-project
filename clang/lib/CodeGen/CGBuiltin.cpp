@@ -566,6 +566,7 @@ static Value *EmitISOVolatileLoad(CodeGenFunction &CGF, const CallExpr *E) {
   llvm::Type *ITy =
       llvm::IntegerType::get(CGF.getLLVMContext(), LoadSize.getQuantity() * 8);
   llvm::LoadInst *Load = CGF.Builder.CreateAlignedLoad(ITy, Ptr, LoadSize);
+  Load->setAtomic(llvm::AtomicOrdering::Monotonic);
   Load->setVolatile(true);
   return Load;
 }
@@ -578,6 +579,7 @@ static Value *EmitISOVolatileStore(CodeGenFunction &CGF, const CallExpr *E) {
   CharUnits StoreSize = CGF.getContext().getTypeSizeInChars(ElTy);
   llvm::StoreInst *Store =
       CGF.Builder.CreateAlignedStore(Value, Ptr, StoreSize);
+  Store->setAtomic(llvm::AtomicOrdering::Monotonic);
   Store->setVolatile(true);
   return Store;
 }
