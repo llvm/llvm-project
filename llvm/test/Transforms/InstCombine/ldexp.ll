@@ -641,7 +641,7 @@ define float @ldexp_ldexp_0(float %x, i32 %y) {
 define float @ldexp_neg150(float %x) {
 ; CHECK-LABEL: define float @ldexp_neg150
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 -150)
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 -150)
@@ -830,10 +830,80 @@ define float @ldexp_127(float %x) {
 define float @ldexp_128(float %x) {
 ; CHECK-LABEL: define float @ldexp_128
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul float [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 128)
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 128)
+  ret float %ldexp
+}
+
+define float @ldexp_254(float %x) {
+; CHECK-LABEL: define float @ldexp_254
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 254)
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 254)
+  ret float %ldexp
+}
+
+define float @ldexp_255(float %x) {
+; CHECK-LABEL: define float @ldexp_255
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 255)
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 255)
+  ret float %ldexp
+}
+
+define float @ldexp_256(float %x) {
+; CHECK-LABEL: define float @ldexp_256
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 256)
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 256)
+  ret float %ldexp
+}
+
+define float @ldexp_neg254(float %x) {
+; CHECK-LABEL: define float @ldexp_neg254
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 -254)
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 -254)
+  ret float %ldexp
+}
+
+define float @ldexp_neg255(float %x) {
+; CHECK-LABEL: define float @ldexp_neg255
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 -255)
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 -255)
+  ret float %ldexp
+}
+
+define float @ldexp_neg256(float %x) {
+; CHECK-LABEL: define float @ldexp_neg256
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 -256)
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 -256)
+  ret float %ldexp
+}
+
+define float @ldexp_neg260(float %x) {
+; CHECK-LABEL: define float @ldexp_neg260
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 -260)
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 -260)
   ret float %ldexp
 }
 
