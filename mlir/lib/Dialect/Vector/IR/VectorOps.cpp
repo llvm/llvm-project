@@ -6100,11 +6100,22 @@ public:
   using Base::Base;
   LogicalResult matchAndRewrite(ScatterOp scatter,
                                 PatternRewriter &rewriter) const override {
+    ShapedType baseType = scatter.getBaseType();
+    bool isMemRef = isa<MemRefType>(baseType);
+    if (!isMemRef && !isa<RankedTensorType>(baseType))
+      return failure();
+
+    // Memrefs have no result, so an all-false mask can simply erase the op.
+    // Tensors carry the updated value, so we must replace uses with the
+    // original base tensor instead of erasing.
     switch (getMaskFormat(scatter.getMask())) {
     case MaskFormat::AllTrue:
       return failure(); // no unmasked equivalent
     case MaskFormat::AllFalse:
-      rewriter.eraseOp(scatter);
+      if (isMemRef)
+        rewriter.eraseOp(scatter);
+      else
+        rewriter.replaceOp(scatter, scatter.getBase());
       return success();
     case MaskFormat::Unknown:
       return failure();
@@ -6120,6 +6131,11 @@ public:
   using Base::Base;
   LogicalResult matchAndRewrite(ScatterOp op,
                                 PatternRewriter &rewriter) const override {
+    // Fold only for memrefs: the replacement uses maskedstore, which does not
+    // support tensor bases. Tensor cases intentionally bail out.
+    if (!isa<MemRefType>(op.getBase().getType()))
+      return failure();
+
     if (failed(isZeroBasedContiguousSeq(op.getIndices())))
       return failure();
 
