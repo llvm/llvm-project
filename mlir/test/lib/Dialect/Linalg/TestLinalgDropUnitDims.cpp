@@ -37,12 +37,15 @@ LogicalResult dropOutermostUnitDims(RewriterBase &rewriter,
 LogicalResult dropOutermostUnitDimsWithEncoding(RewriterBase &rewriter,
                                                 linalg::GenericOp genericOp) {
   linalg::ControlDropUnitDims options;
+  linalg::ControlDropUnitDims::CollapseFnTy defaultCollapseFn =
+      options.collapseFn;
+  linalg::ControlDropUnitDims::ExpandFnTy defaultExpandFn = options.expandFn;
   options.controlFn = [](Operation *op) { return SmallVector<unsigned>{0}; };
   options.collapseFn =
-      [](RewriterBase &rewriter, Location loc, Value operand,
-         ArrayRef<int64_t> targetShape,
-         ArrayRef<ReassociationIndices> reassociation,
-         const linalg::ControlDropUnitDims &control) -> FailureOr<Value> {
+      [=](RewriterBase &rewriter, Location loc, Value operand,
+          ArrayRef<int64_t> targetShape,
+          ArrayRef<ReassociationIndices> reassociation,
+          const linalg::ControlDropUnitDims &control) -> FailureOr<Value> {
     if (auto tensorType = dyn_cast<RankedTensorType>(operand.getType())) {
       if (tensorType.getEncoding()) {
         assert(control.rankReductionStrategy ==
@@ -56,13 +59,13 @@ LogicalResult dropOutermostUnitDimsWithEncoding(RewriterBase &rewriter,
             .getResult();
       }
     }
-    return linalg::collapseValue(rewriter, loc, operand, targetShape,
-                                 reassociation, control);
+    return defaultCollapseFn(rewriter, loc, operand, targetShape, reassociation,
+                             control);
   };
   options.expandFn =
-      [](RewriterBase &rewriter, Location loc, Value result, Value origDest,
-         ArrayRef<ReassociationIndices> reassociation,
-         const linalg::ControlDropUnitDims &control) -> FailureOr<Value> {
+      [=](RewriterBase &rewriter, Location loc, Value result, Value origDest,
+          ArrayRef<ReassociationIndices> reassociation,
+          const linalg::ControlDropUnitDims &control) -> FailureOr<Value> {
     if (auto tensorType = dyn_cast<RankedTensorType>(origDest.getType())) {
       if (tensorType.getEncoding()) {
         assert(control.rankReductionStrategy ==
@@ -74,8 +77,8 @@ LogicalResult dropOutermostUnitDimsWithEncoding(RewriterBase &rewriter,
             .getResult();
       }
     }
-    return linalg::expandValue(rewriter, loc, result, origDest, reassociation,
-                               control);
+    return defaultExpandFn(rewriter, loc, result, origDest, reassociation,
+                           control);
   };
 
   FailureOr<linalg::DropUnitDimsResult> result =

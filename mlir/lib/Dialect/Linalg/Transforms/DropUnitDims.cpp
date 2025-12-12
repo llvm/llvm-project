@@ -246,13 +246,12 @@ replaceUnitDimIndexOps(GenericOp genericOp,
 }
 
 FailureOr<Value>
-linalg::expandValue(RewriterBase &rewriter, Location loc, Value result,
-                    Value origDest,
-                    ArrayRef<ReassociationIndices> reassociation,
-                    const ControlDropUnitDims &control) {
+ControlDropUnitDims::expandValue(RewriterBase &rewriter, Location loc,
+                                 Value result, Value origDest,
+                                 ArrayRef<ReassociationIndices> reassociation,
+                                 const ControlDropUnitDims &control) {
   // There are no results for memref outputs.
   auto origResultType = cast<RankedTensorType>(origDest.getType());
-  origResultType.dump();
   if (origResultType.getEncoding() != nullptr) {
     // Do not expand tensors with encoding.
     return failure();
@@ -277,10 +276,10 @@ linalg::expandValue(RewriterBase &rewriter, Location loc, Value result,
 }
 
 FailureOr<Value>
-linalg::collapseValue(RewriterBase &rewriter, Location loc, Value operand,
-                      ArrayRef<int64_t> targetShape,
-                      ArrayRef<ReassociationIndices> reassociation,
-                      const ControlDropUnitDims &control) {
+ControlDropUnitDims::collapseValue(RewriterBase &rewriter, Location loc,
+                                   Value operand, ArrayRef<int64_t> targetShape,
+                                   ArrayRef<ReassociationIndices> reassociation,
+                                   const ControlDropUnitDims &control) {
   if (auto memrefType = dyn_cast<MemRefType>(operand.getType())) {
     if (!memrefType.getLayout().isIdentity()) {
       // Do not collapse memrefs with a non-identity layout.

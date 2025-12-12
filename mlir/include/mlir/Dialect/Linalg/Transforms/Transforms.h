@@ -516,28 +516,6 @@ LogicalResult vectorizeOpPrecondition(Operation *op,
 
 using LinalgLoops = SmallVector<Operation *, 4>;
 
-// Forward declaration
-struct ControlDropUnitDims;
-
-/// Collapse the given \p value to \p targetShape. The \p reassociation is used
-/// when `rankReductionStrategy` of \p control is set to
-/// `RankReductionStrategy::ReassociativeReshape`. Will return failure if the
-/// operand has memref type with a non-identity layout or tensor type with an
-/// encoding.
-FailureOr<Value> collapseValue(RewriterBase &rewriter, Location loc,
-                               Value operand, ArrayRef<int64_t> targetShape,
-                               ArrayRef<ReassociationIndices> reassociation,
-                               const ControlDropUnitDims &control);
-
-/// Expand the given \p value so that the type matches the type of \p origDest.
-/// The \p reassociation is used when `rankReductionStrategy` of \p control is
-/// set to `RankReductionStrategy::ReassociativeReshape`. Will return failure if
-/// the original destination has tensor type with an encoding.
-FailureOr<Value> expandValue(RewriterBase &rewriter, Location loc, Value result,
-                             Value origDest,
-                             ArrayRef<ReassociationIndices> reassociation,
-                             const ControlDropUnitDims &control);
-
 /// Transformation to drop unit-extent dimensions from `linalg.generic`
 /// operations.
 struct ControlDropUnitDims {
@@ -592,8 +570,8 @@ struct ControlDropUnitDims {
          ArrayRef<int64_t> targetShape,
          ArrayRef<ReassociationIndices> reassociation,
          const ControlDropUnitDims &control) -> FailureOr<Value> {
-    return linalg::collapseValue(rewriter, loc, operand, targetShape,
-                                 reassociation, control);
+    return collapseValue(rewriter, loc, operand, targetShape, reassociation,
+                         control);
   };
 
   /// Instances of this type are used to control how result values are expanded
@@ -618,9 +596,30 @@ struct ControlDropUnitDims {
       [](RewriterBase &rewriter, Location loc, Value result, Value origDest,
          ArrayRef<ReassociationIndices> reassociation,
          const ControlDropUnitDims &control) -> FailureOr<Value> {
-    return linalg::expandValue(rewriter, loc, result, origDest, reassociation,
-                               control);
+    return expandValue(rewriter, loc, result, origDest, reassociation, control);
   };
+
+private:
+  /// Collapse the given \p value to \p targetShape. The \p reassociation is
+  /// used when `rankReductionStrategy` of \p control is set to
+  /// `RankReductionStrategy::ReassociativeReshape`. Will return failure if the
+  /// operand has memref type with a non-identity layout or tensor type with an
+  /// encoding.
+  static FailureOr<Value>
+  collapseValue(RewriterBase &rewriter, Location loc, Value operand,
+                ArrayRef<int64_t> targetShape,
+                ArrayRef<ReassociationIndices> reassociation,
+                const ControlDropUnitDims &control);
+
+  /// Expand the given \p value so that the type matches the type of \p
+  /// origDest. The \p reassociation is used when `rankReductionStrategy` of \p
+  /// control is set to `RankReductionStrategy::ReassociativeReshape`. Will
+  /// return failure if the original destination has tensor type with an
+  /// encoding.
+  static FailureOr<Value>
+  expandValue(RewriterBase &rewriter, Location loc, Value result,
+              Value origDest, ArrayRef<ReassociationIndices> reassociation,
+              const ControlDropUnitDims &control);
 };
 
 struct DropUnitDimsResult {
