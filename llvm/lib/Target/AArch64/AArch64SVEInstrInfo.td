@@ -3066,7 +3066,6 @@ let Predicates = [HasSVE_or_SME] in {
       def _imm : Pat<(Store Ty:$val, (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
                      (RegImmInst ZPR:$val, (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
     }
-
     let AddedComplexity = 1 in {
       def _reg : Pat<(Store Ty:$val, (AddrCP GPR64sp:$base, GPR64:$offset)),
                      (RegRegInst ZPR:$val, (PTrue 31), GPR64sp:$base, GPR64:$offset)>;
