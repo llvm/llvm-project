@@ -48,9 +48,15 @@ public:
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
 
-  // Suggests lifetime bound annotations for function paramters
-  virtual void suggestAnnotation(const ParmVarDecl *PVD,
-                                 const Expr *EscapeExpr) {}
+  // Suggest private lifetime bound annotations for function parameters internal
+  // to the existing file.
+  virtual void suggestAnnotationsPrivate(const ParmVarDecl *ParmToAnnotate,
+                                         const Expr *EscapeExpr) {}
+
+  // Suggest public lifetime bound annotations for function parameters external
+  // to other files.
+  virtual void suggestAnnotationsPublic(const ParmVarDecl *ParmToAnnotate,
+                                        const Expr *EscapeExpr) {}
 };
 
 /// The main entry point for the analysis.

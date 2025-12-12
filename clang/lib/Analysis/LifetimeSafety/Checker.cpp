@@ -20,6 +20,7 @@
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -163,8 +164,25 @@ public:
   void suggestAnnotations() {
     if (!Reporter)
       return;
-    for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap)
-      Reporter->suggestAnnotation(PVD, EscapeExpr);
+    SourceManager &SM = AST.getSourceManager();
+    for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap) {
+      const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
+      if (!FD)
+        continue;
+      // For public functions (external linkage), find the header declaration
+      // to annotate; otherwise, treat as private and annotate the definition.
+      if (FD->isExternallyVisible()) {
+        const FunctionDecl *CanonicalFD = FD->getCanonicalDecl();
+        const ParmVarDecl *ParmToAnnotate = PVD;
+        if (CanonicalFD != FD && SM.getFileID(FD->getLocation()) !=
+                                     SM.getFileID(CanonicalFD->getLocation()))
+          if (unsigned Index = PVD->getFunctionScopeIndex();
+              Index < CanonicalFD->getNumParams())
+            ParmToAnnotate = CanonicalFD->getParamDecl(Index);
+        Reporter->suggestAnnotationsPublic(ParmToAnnotate, EscapeExpr);
+      } else
+        Reporter->suggestAnnotationsPrivate(PVD, EscapeExpr);
+    }
   }
 
   void inferAnnotations() {

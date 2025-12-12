@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -verify %s
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions  -Wexperimental-lifetime-safety -I%t -verify %t/test_source.cpp
 
 struct MyObj {
   int id;
@@ -12,14 +14,52 @@ struct [[gsl::Pointer()]] View {
   void use() const;
 };
 
-View return_view_directly (View a) {    // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+//===----------------------------------------------------------------------===//
+// Public Annotation Test Cases
+//===----------------------------------------------------------------------===//
+
+//--- test_header.h
+#ifndef TEST_HEADER_H
+#define TEST_HEADER_H
+
+struct MyObj {
+  int id;
+  ~MyObj() {}  // Non-trivial destructor
+  MyObj operator+(MyObj);
+};
+
+struct [[gsl::Pointer()]] View {
+  View(const MyObj&); // Borrows from MyObj
+  View();
+  void use() const;
+};
+
+View return_view_directly(View a); // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}
+
+View conditional_return_view(
+  View a,        // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}
+  View b,        // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}
+  bool c);
+
+int* return_pointer_directly(int* a);  // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}
+
+MyObj* return_pointer_object(MyObj* a); // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}
+
+inline View inline_header_return_view(View a) { // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}
+  return a;                                     // expected-note {{param returned here}}
+}
+
+#endif // TEST_HEADER_H
+
+//--- test_source.cpp
+
+#include "test_header.h"
+
+View return_view_directly(View a) {
   return a;                             // expected-note {{param returned here}}
 }
 
-View conditional_return_view (
-    View a,         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
-    View b,         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
-    bool c) {
+View conditional_return_view(View a, View b, bool c) {
   View res;
   if (c)  
     res = a;                    
@@ -28,29 +68,20 @@ View conditional_return_view (
   return res;  // expected-note 2 {{param returned here}} 
 }
 
-// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
-MyObj& return_reference (MyObj& a, MyObj& b, bool c) {
-  if(c) {
-    return a;   
-  }
-  return b;     
-}
-
-// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
-View return_view_from_reference (MyObj& p) {
-  return p; 
-}
-
-int* return_pointer_directly (int* a) {    // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+int* return_pointer_directly(int* a) {   
   return a;                                // expected-note {{param returned here}} 
 }
 
-MyObj* return_pointer_object (MyObj* a) {  // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+MyObj* return_pointer_object(MyObj* a) {
   return a;                                // expected-note {{param returned here}} 
 }
 
+//===----------------------------------------------------------------------===//
+// Private Annotation Test Cases
+//===----------------------------------------------------------------------===//
+namespace {
 View only_one_paramter_annotated (View a [[clang::lifetimebound]], 
-  View b,         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  View b,         // expected-warning {{param with internal linkage should be marked [[clang::lifetimebound]]}}.
   bool c) {
  if(c)
   return a;
@@ -59,10 +90,24 @@ View only_one_paramter_annotated (View a [[clang::lifetimebound]],
 
 View reassigned_to_another_parameter (
     View a,
-    View b) {     // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+    View b) {     // expected-warning {{param with internal linkage should be marked [[clang::lifetimebound]]}}.
   a = b;
   return a;       // expected-note {{param returned here}} 
 }
+
+View private_func_redecl (View a);
+View private_func_redecl (View a) { // expected-warning {{param with internal linkage should be marked [[clang::lifetimebound]]}}.
+  return a;                        // expected-note {{param returned here}} 
+}
+}
+
+static View return_view_static (View a) { // expected-warning {{param with internal linkage should be marked [[clang::lifetimebound]]}}.
+  return a;                              // expected-note {{param returned here}} 
+}
+
+//===----------------------------------------------------------------------===//
+// FIXME Test Cases
+//===----------------------------------------------------------------------===//
 
 struct ReturnsSelf {
   const ReturnsSelf& get() const {
@@ -89,16 +134,29 @@ void test_getView_on_temporary() {
   (void)sv;
 }
 
+// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
+MyObj& return_reference (MyObj& a, MyObj& b, bool c) {
+  if(c) {
+    return a;   
+  }
+  return b;     
+}
+
+// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
+View return_view_from_reference (MyObj& p) {
+  return p; 
+}
+
 //===----------------------------------------------------------------------===//
 // Annotation Inference Test Cases
 //===----------------------------------------------------------------------===//
 
 namespace correct_order_inference {
-View return_view_by_func (View a) {    // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+View return_view_by_func (View a) {    // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}.
   return return_view_directly(a);      // expected-note {{param returned here}}
 }
 
-MyObj* return_pointer_by_func (MyObj* a) {         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+MyObj* return_pointer_by_func (MyObj* a) {         // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}.
   return return_pointer_object(a);                 // expected-note {{param returned here}} 
 }
 } // namespace correct_order_inference
@@ -111,7 +169,7 @@ View return_view_caller(View a) {
   return return_view_callee(a);
 }
 
-View return_view_callee(View a) {     // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+View return_view_callee(View a) {     // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}.
   return a;                           // expected-note {{param returned here}}
 }   
 } // namespace incorrect_order_inference_view
@@ -124,17 +182,17 @@ MyObj* return_object_caller(MyObj* a) {
   return return_object_callee(a);
 }
 
-MyObj* return_object_callee(MyObj* a) {      // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+MyObj* return_object_callee(MyObj* a) {      // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}.
   return a;                                  // expected-note {{param returned here}}
 }   
 } // namespace incorrect_order_inference_object
 
 namespace simple_annotation_inference {
-View inference_callee_return_identity(View a) { // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+View inference_callee_return_identity(View a) { // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}.
   return a;                                     // expected-note {{param returned here}}
 }
 
-View inference_caller_forwards_callee(View a) { // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+View inference_caller_forwards_callee(View a) { // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}.
   return inference_callee_return_identity(a);   // expected-note {{param returned here}}
 }
 
@@ -147,12 +205,12 @@ View inference_top_level_return_stack_view() {
 
 namespace inference_in_order_with_redecls {
 View inference_callee_return_identity(View a);
-View inference_callee_return_identity(View a) {   // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+View inference_callee_return_identity(View a) {   // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}.
   return a;                                       // expected-note {{param returned here}}
 }
 
 View inference_caller_forwards_callee(View a);
-View inference_caller_forwards_callee(View a) {   // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+View inference_caller_forwards_callee(View a) {   // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}.
   return inference_callee_return_identity(a);     // expected-note {{param returned here}}
 }
   
@@ -165,7 +223,7 @@ View inference_top_level_return_stack_view() {
 
 namespace inference_with_templates {
 template<typename T>  
-T* template_identity(T* a) {            // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+T* template_identity(T* a) {            // expected-warning {{externally visible param should be marked [[clang::lifetimebound]]}}.
   return a;                             // expected-note {{param returned here}}
 }
 

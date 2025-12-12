@@ -2883,14 +2883,33 @@ public:
         << EscapeExpr->getEndLoc();
   }
 
-  void suggestAnnotation(const ParmVarDecl *PVD,
-                         const Expr *EscapeExpr) override {
+  void suggestAnnotationsPrivate(const ParmVarDecl *ParmToAnnotate,
+                                 const Expr *EscapeExpr) override {
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        PVD->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-    S.Diag(PVD->getBeginLoc(), diag::warn_lifetime_safety_suggest_lifetimebound)
-        << PVD->getSourceRange()
+        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+
+    S.Diag(ParmToAnnotate->getBeginLoc(),
+           diag::warn_lifetime_safety_private_suggestion)
+        << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint,
                                       " [[clang::lifetimebound]]");
+
+    S.Diag(EscapeExpr->getBeginLoc(),
+           diag::note_lifetime_safety_suggestion_returned_here)
+        << EscapeExpr->getSourceRange();
+  }
+
+  void suggestAnnotationsPublic(const ParmVarDecl *ParmToAnnotate,
+                                const Expr *EscapeExpr) override {
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+
+    S.Diag(ParmToAnnotate->getBeginLoc(),
+           diag::warn_lifetime_safety_public_suggestion)
+        << ParmToAnnotate->getSourceRange()
+        << FixItHint::CreateInsertion(InsertionPoint,
+                                      " [[clang::lifetimebound]]");
+
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();
