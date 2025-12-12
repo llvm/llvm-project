@@ -123,7 +123,7 @@ struct L0OptionsTy {
   static constexpr std::string_view CompilationOptions = "-cl-std=CL2.0 ";
   static constexpr std::string_view InternalCompilationOptions =
       "-cl-take-global-address";
-  std::string UserCompilationOptions = "";
+  std::string UserCompilationOptions;
 
   /// Spec constants used for all modules.
   SpecConstantsTy CommonSpecConstants;

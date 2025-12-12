@@ -434,7 +434,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
       IsAsync = false; // Couldn't get a queue, revert to sync
   }
   auto *AsyncQueue =
-      IsAsync ? static_cast<AsyncQueueTy *>(AsyncInfo->Queue) : NULL;
+      IsAsync ? static_cast<AsyncQueueTy *>(AsyncInfo->Queue) : nullptr;
   auto &KernelPR = getProperties();
 
   L0LaunchEnvTy KEnv(IsAsync, AsyncQueue, KernelPR);

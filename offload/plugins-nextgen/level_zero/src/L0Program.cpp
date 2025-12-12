@@ -177,9 +177,8 @@ void L0ProgramTy::replaceDriverOptsWithBackendOpts(const L0DeviceTy &Device,
 
   for (const auto &OptPair : OptionTranslationTable) {
     const size_t Pos = Options.find(OptPair.Option);
-    if (Pos != std::string::npos) {
+    if (Pos != std::string::npos)
       Options.replace(Pos, OptPair.Option.length(), OptPair.BackendOption);
-    }
   }
 }
 
