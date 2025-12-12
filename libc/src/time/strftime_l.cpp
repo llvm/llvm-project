@@ -22,9 +22,7 @@ LLVM_LIBC_FUNCTION(size_t, strftime_l,
                    (char *__restrict buffer, size_t buffsz,
                     const char *__restrict format, const tm *timeptr,
                     locale_t)) {
-  printf_core::WriteBuffer<printf_core::Mode<
-      printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
-      wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
+  printf_core::DropOverflowBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
   printf_core::Writer writer(wb);
   auto ret = strftime_core::strftime_main(&writer, format, timeptr);
   if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
