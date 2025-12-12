@@ -203,6 +203,16 @@ SIGSAN_INTERCEPTOR(FILE *, fdopen, (fd, mode), int fd, const char *mode)
 SIGSAN_INTERCEPTOR(FILE *, freopen, (path, mode, stream), const char *path,
                    const char *mode, FILE *stream)
 
+// GNU stdio
+SIGSAN_INTERCEPTOR(int, vasprintf, (strp, fmt, ap), char **strp, const char *fmt, va_list ap)
+INTERCEPTOR(int, asprintf, char **strp, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  auto const result = REAL(vasprintf)(strp, fmt, ap);
+  va_end(ap);
+  return result;
+}
+
 // syslog
 SIGSAN_INTERCEPTOR(void, openlog, (ident, option, facility), const char *ident,
                    int option, int facility)
@@ -256,6 +266,10 @@ __attribute__((constructor)) void __sigsan_init() {
   INTERCEPT_FUNCTION(fopen);
   INTERCEPT_FUNCTION(fdopen);
   INTERCEPT_FUNCTION(freopen);
+
+  // GNU stdio
+  INTERCEPT_FUNCTION(vasprintf);
+  INTERCEPT_FUNCTION(asprintf);
 
   // syslog
   INTERCEPT_FUNCTION(openlog);

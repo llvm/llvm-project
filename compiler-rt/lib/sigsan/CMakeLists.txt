@@ -1,10 +1,10 @@
 include_directories(..)
 
-# Runtime library sources and build flags.
 set(SIGSAN_SOURCES
   sigsan.cpp
 )
 
+# TODO: support other architectures
 add_compiler_rt_component(sigsan)
 add_compiler_rt_runtime(clang_rt.sigsan
     STATIC
