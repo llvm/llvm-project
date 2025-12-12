@@ -18,9 +18,10 @@ subroutine test()
   call vadd(b)
   !$acc end host_data
 ! CHECK: %[[C:.*]] = acc.use_device var(%[[A]]#0 : !fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>> {name = "b"}
-! CHECK: %[[D:.*]] = acc.use_device varPtr(%[[A]]#1 : !fir.ref<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>> {name = "b"}
-! CHECK: acc.host_data dataOperands(%[[C]], %[[D]] : !fir.box<!fir.array<?xf64>>, !fir.ref<!fir.array<?xf64>>) {
-! CHECK: fir.call @_QPvadd(%[[A]]#1) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>) -> ()
+! CHECK: acc.host_data dataOperands(%[[C]] : !fir.box<!fir.array<?xf64>>) {
+! CHECK: %[[ADDR:.*]] = fir.box_addr %[[C]] 
+! CHECK: %[[REDCLARE:.*]]:2 = hlfir.declare %[[ADDR]]
+! CHECK: fir.call @_QPvadd(%[[REDCLARE]]#1) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>) -> ()
   !$acc end data
 ! CHECK: acc.copyout accVar(%[[B]] : !fir.box<!fir.array<?xf64>>) to var(%[[A]]#0 : !fir.box<!fir.array<?xf64>>) {dataClause = #acc<data_clause acc_copy>, name = "b"}
 end
@@ -46,12 +47,9 @@ subroutine test2(a, b, c)
   !$acc end host_data
 
 ! CHECK: %[[H:.*]] = acc.use_device varPtr(%[[E]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {name = "a"}
-! CHECK: %[[I:.*]] = acc.use_device varPtr(%[[E]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {name = "a"}
 ! CHECK: %[[J:.*]] = acc.use_device var(%[[F]]#0 : !fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>> {name = "b"}
-! CHECK: %[[K:.*]] = acc.use_device var(%[[F]]#1 : !fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>> {name = "b"}
 ! CHECK: %[[L:.*]] = acc.use_device varPtr(%[[G]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>> {name = "c"}
-! CHECK: %[[M:.*]] = acc.use_device varPtr(%[[G]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>> {name = "c"}
-! CHECK: acc.host_data dataOperands(%[[H]], %[[I]], %[[J]], %[[K]], %[[L]], %[[M]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) {
+! CHECK: acc.host_data dataOperands(%[[H]], %[[J]], %[[L]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) {
 
 
 
