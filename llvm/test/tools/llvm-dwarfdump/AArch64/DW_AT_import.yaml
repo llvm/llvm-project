@@ -5,6 +5,9 @@
 # CHECK: DW_AT_import ({{.*}} "Foo")
 # CHECK: DW_AT_import ({{.*}} "")
 # CHECK: DW_AT_import ({{.*}})
+# CHECK: DW_AT_import ({{.*}} "FooLinkage")
+# CHECK: DW_AT_import ({{.*}} "JustLinkage")
+# CHECK: DW_AT_import ({{.*}} "NoLinkage")
 
 --- !ELF
 FileHeader:
@@ -37,6 +40,26 @@ DWARF:
         - Code:            0x4
           Tag:             DW_TAG_module
           Children:        DW_CHILDREN_no
+        - Code:            0x5
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_linkage_name
+              Form:      DW_FORM_string
+        - Code:            0x6
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_linkage_name
+              Form:      DW_FORM_string
+        - Code:            0x7
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
 
   debug_info:
      - Version:  5
@@ -50,15 +73,27 @@ DWARF:
 
         - AbbrCode: 0x2
           Values:
-            - Value: 0x1e
+            - Value: 0x2d
 
         - AbbrCode: 0x2
           Values:
-            - Value: 0x23
+            - Value: 0x32
 
         - AbbrCode: 0x2
           Values:
-            - Value: 0x19
+            - Value: 0x34
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x35
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x45
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x52
 
         - AbbrCode: 0x3
           Values:
@@ -69,5 +104,19 @@ DWARF:
             - CStr: ''
 
         - AbbrCode: 0x4
+
+        - AbbrCode: 0x5
+          Values:
+            - CStr: Foo
+            - CStr: FooLinkage
+
+        - AbbrCode: 0x6
+          Values:
+            - CStr: JustLinkage
+
+        - AbbrCode: 0x7
+          Values:
+            - CStr: NoLinkage
+
         - AbbrCode: 0x0
 ...
