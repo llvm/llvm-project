@@ -2076,8 +2076,7 @@ ReadVector(Process &process, ValueObject &valobj,
            const SIMDElementFormatter &formatter, unsigned num_elements) {
   Status error;
   static ConstString g_storage("_storage");
-  static ConstString g_value("_value");
-  ValueObjectSP value_sp = valobj.GetChildAtNamePath({g_storage, g_value});
+  ValueObjectSP value_sp = valobj.GetChildMemberWithName(g_storage);
   if (!value_sp)
     return std::nullopt;
 
