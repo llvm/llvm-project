@@ -709,3 +709,60 @@ unreachable.exit:
   call void @foo()
   unreachable
 }
+
+define i32 @peel_readonly_to_make_loads_derefenceable_sideeffect(ptr %ptr, i32 %N, ptr %inv, i1 %c.1) {
+; CHECK-LABEL: @peel_readonly_to_make_loads_derefenceable_sideeffect(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER1:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[UNREACHABLE_EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[INV:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.sideeffect()
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 [[I]], 2
+; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[UNREACHABLE_EXIT]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[IV]], 1000
+; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_HEADER1]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[SUM_NEXT_LCSSA1:%.*]] = phi i32 [ [[SUM_NEXT]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA1]]
+; CHECK:       unreachable.exit:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop.latch ]
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop.latch ]
+  br i1 %c.1, label %then, label %unreachable.exit
+
+then:
+  %i = load i32, ptr %inv
+  call void @llvm.sideeffect()
+  %c.2 = icmp ult i32 %i, 2
+  br i1 %c.2, label %loop.latch, label %unreachable.exit
+
+loop.latch:
+  %gep = getelementptr i32, ptr %ptr, i32 %iv
+  %lv = load i32, ptr %gep
+  %sum.next = add i32 %sum, %lv
+  %iv.next = add nuw nsw i32  %iv, 1
+  %c.3 = icmp ult i32 %iv, 1000
+  br i1 %c.3, label %loop.header, label %exit
+
+exit:
+  ret i32 %sum.next
+
+unreachable.exit:
+  call void @foo()
+  unreachable
+}
