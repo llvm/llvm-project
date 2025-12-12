@@ -368,15 +368,17 @@ def fir_PrefetchOp : fir_Op<"prefetch", []> {
 
   /// `memref' is the address to be prefetched
   /// `rw'          : rw specifier >
-  ///                  read is 0 (default), write is 1
+  ///                  represented as read (default) or write with values
+  ///                  0 and 1, respectively
   /// `localityHint': temporal locality specifier >
   ///                  value ranging from 0 - no locality to 3 - extremely local
   /// `cacheType'   : cache type specifier >
-  ///                  instruction cache is 0, data cache is 1 (default)
+  ///                  represented as instruction or data (default) with values
+  ///                  0 and 1, respectively
   /// NOTE: The numerical values used here is in reference to the LLVM LangRef
   let arguments =
       (ins Arg<AnyReferenceLike,
-               "prefetch memory address", [MemRead]> : $memref,
+               "prefetch memory address", [MemWrite]> : $memref,
        UnitAttr : $rw,
        ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]> : $localityHint,
        UnitAttr : $cacheType);
