@@ -3932,9 +3932,9 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
 
 llvm::DILocation *
 CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
-                                     llvm::DISubprogram *SynthSP) {
+                                     llvm::DISubprogram *SynthSubprogram) {
   return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
-                               SynthSP, ParentLocation);
+                               SynthSubprogram, ParentLocation);
 }
 
 llvm::DILocation *
@@ -6652,7 +6652,7 @@ llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
 
   if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); })) {
     // Use ubsan header file to have the same filename for all checks. There is
-    // noting special in that file, we just want to make tools to count all
+    // nothing special in that file, we just want to make tools to count all
     // syntetic functions of a check as the same.
     llvm::DIFile *File = llvm::DIFile::get(CGM.getLLVMContext(),
                                            /*Filename=*/"ubsan_interface.h",
