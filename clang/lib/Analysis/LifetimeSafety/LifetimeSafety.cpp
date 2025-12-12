@@ -28,36 +28,30 @@
 #include "llvm/Support/TimeProfiler.h"
 #include <memory>
 
-#undef DEBUG_TYPE
-#define DEBUG_TYPE "lifetime-safety"
-
 namespace clang::lifetimes {
 namespace internal {
 
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter,
-                                               uint32_t CfgBlocknumThreshold)
-    : CfgBlocknumThreshold(CfgBlocknumThreshold), AC(AC), Reporter(Reporter) {
-  FactMgr.setBlockNumThreshold(CfgBlocknumThreshold);
-}
-
-bool LifetimeSafetyAnalysis::shouldBailOutCFGPreFactGeneration(const CFG& Cfg) const {
-  if ((CfgBlocknumThreshold > 0) &&
-      (Cfg.getNumBlockIDs() > CfgBlocknumThreshold)) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "Aborting Lifetime Safety analysis for current CFG as it has "
-                  "blocks exceeding the thresold. Number of blocks: "
-               << Cfg.getNumBlockIDs() << "\n");
-    return true;
-  }
-  return false;
+                                               size_t MaxCFGBlocks)
+    : MaxCFGBlocks(MaxCFGBlocks), AC(AC), Reporter(Reporter) {
+  FactMgr.setMaxCFGBlocksThreshold(MaxCFGBlocks);
 }
 
 void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
 
   const CFG &Cfg = *AC.getCFG();
-  if (shouldBailOutCFGPreFactGeneration(Cfg)) {
+  if (MaxCFGBlocks > 0 && Cfg.getNumBlockIDs() > MaxCFGBlocks) {
+    std::string FuncName = "<unknown>";
+    if (const Decl *D = AC.getDecl())
+      if (const auto *ND = dyn_cast<NamedDecl>(D))
+        FuncName = ND->getQualifiedNameAsString();
+    DEBUG_WITH_TYPE("LifetimeSafety",
+                    llvm::dbgs()
+                        << "LifetimeSafety: Skipping function " << FuncName
+                        << "due to large CFG: <count> blocks (threshold: "
+                        << MaxCFGBlocks << ")\n");
     return;
   }
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
@@ -67,7 +61,6 @@ void LifetimeSafetyAnalysis::run() {
   FactsGenerator FactGen(FactMgr, AC);
   FactGen.run();
   DEBUG_WITH_TYPE("LifetimeFacts", FactMgr.dump(Cfg, AC));
-  DEBUG_WITH_TYPE("LifetimeCFGSizes", FactMgr.dumpBlockSizes(Cfg, AC));
 
   /// TODO(opt): Consider optimizing individual blocks before running the
   /// dataflow analysis.
@@ -93,9 +86,10 @@ void LifetimeSafetyAnalysis::run() {
 } // namespace internal
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter,
-                               uint32_t CfgBlocknumThreshold) {
-  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter, CfgBlocknumThreshold);
+                               LifetimeSafetyReporter *Reporter) {
+  internal::LifetimeSafetyAnalysis Analysis(
+      AC, Reporter,
+      AC.getASTContext().getLangOpts().LifetimeSafetyMaxCFGBlocks);
   Analysis.run();
 }
 } // namespace clang::lifetimes

@@ -1955,6 +1955,14 @@ defm lifetime_safety : BoolFOption<
   BothFlags<[], [CC1Option],
           " experimental lifetime safety for C++">>;
 
+def fexperimental_lifetime_safety_max_cfg_blocks
+    : Joined<["-"], "fexperimental-lifetime-safety-max-cfg-blocks=">,
+      Group<m_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Skip LifetimeSafety analysis for functions with CFG block "
+               "count exceeding this threshold. Specify 0 for no limit.">,
+      MarshallingInfoInt<LangOpts<"LifetimeSafetyMaxCFGBlocks">>;
+
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Emit">,
@@ -5163,17 +5171,10 @@ def mmlir : Separate<["-"], "mmlir">,
   HelpText<"Additional arguments to forward to MLIR's option processing">,
   MarshallingInfoStringVector<FrontendOpts<"MLIRArgs">>;
 def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
-  Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Set Fuchsia API level">,
-  MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
-def fcfg_block_num_threshold
-    : Joined<["-"], "fcfg-block-num-threshold=">,
-      Group<m_Group>,
-      Visibility<[ClangOption, CC1Option]>,
-      HelpText<
-          "Set Threshold for number of blocks above which lifetime analysis "
-          "will be skipped for a CFG">,
-      MarshallingInfoInt<LangOpts<"CfgBlocknumThreshold">>;
+                            Group<m_Group>,
+                            Visibility<[ClangOption, CC1Option]>,
+                            HelpText<"Set Fuchsia API level">,
+                            MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
 def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
   Visibility<[ClangOption, CC1Option, FlangOption]>,
   Group<m_Group>, HelpText<"Set macOS deployment target">;
