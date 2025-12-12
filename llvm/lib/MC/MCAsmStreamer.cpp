@@ -1744,7 +1744,7 @@ void MCAsmStreamer::emitDwarfLocDirectiveSuffix(unsigned FileNo, unsigned Line,
       OS << Comment;
   }
 
-  // Emit end of line and update parent state
+  // Emit end of line and update the baseclass state
   EmitEOL();
   MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
                                     Discriminator, FileName, Comment);

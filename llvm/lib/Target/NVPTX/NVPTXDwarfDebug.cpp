@@ -35,36 +35,6 @@ static cl::opt<bool> LineInfoWithInlinedAt(
 
 NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {}
 
-// Collect all inlined_at locations for the current function.
-void NVPTXDwarfDebug::collectInlinedAtLocations(const MachineFunction &MF) {
-  const DISubprogram *SP = MF.getFunction().getSubprogram();
-  assert(SP && "expecting valid subprogram here");
-
-  // inlined_at support requires PTX 7.2 or later.
-  const NVPTXSubtarget &STI = MF.getSubtarget<NVPTXSubtarget>();
-  if (STI.getPTXVersion() < 72)
-    return;
-
-  if (!(SP->getUnit()->isDebugDirectivesOnly() ||
-        SP->getUnit()->getEmissionKind() == DICompileUnit::LineTablesOnly) ||
-      !LineInfoWithInlinedAt) // No enhanced lineinfo, we are done.
-    return;
-
-  for (const MachineBasicBlock &MBB : MF) {
-    for (const MachineInstr &MI : MBB) {
-      const DebugLoc &DL = MI.getDebugLoc();
-      if (!DL)
-        continue;
-      const DILocation *InlinedAt = DL.getInlinedAt();
-      while (InlinedAt) {
-        if (!InlinedAtLocs.insert(InlinedAt).second)
-          break;
-        InlinedAt = InlinedAt->getInlinedAt();
-      }
-    }
-  }
-}
-
 // NVPTX-specific source line recording with inlined_at support.
 void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
                                                    unsigned Flags) {
@@ -73,7 +43,7 @@ void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
   // inlined_at directive, we might need to emit additional .loc prior
   // to it for the location contained in the inlined_at.
   SmallVector<const DILocation *, 8> WorkList;
-  DenseSet<const DILocation *> WorkListSet;
+  SmallDenseSet<const DILocation *, 8> WorkListSet;
   const DILocation *EmitLoc = DL.get();
 
   const DISubprogram *SP = MI.getMF()->getFunction().getSubprogram();
@@ -101,9 +71,10 @@ void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
       break;
 
     const DILocation *IA = EmitLoc->getInlinedAt();
-    // Check if this has inlined_at information, and if we have not yet
-    // emitted the .loc for the inlined_at location.
-    if (IA && InlinedAtLocs.contains(IA))
+    // Check if this has inlined_at information, and if the parent location
+    // has not yet been emitted. If already emitted, we don't need to
+    // re-emit the parent chain.
+    if (IA && !EmittedInlinedAtLocs.contains(IA))
       EmitLoc = IA;
     else // We are done
       break;
@@ -129,10 +100,6 @@ void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
 
     const unsigned FileNo = static_cast<DwarfCompileUnit &>(*getUnits()[CUID])
                                 .getOrCreateSourceID(Scope->getFile());
-    // Remove this location from the work list if it is in the inlined_at
-    // locations set.
-    if (EnhancedLineinfo && InlinedAtLocs.contains(Current))
-      InlinedAtLocs.erase(Current);
 
     if (EnhancedLineinfo && InlinedAt) {
       const unsigned FileIA = static_cast<DwarfCompileUnit &>(*getUnits()[CUID])
@@ -148,13 +115,17 @@ void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
       Asm->OutStreamer->emitDwarfLocDirective(FileNo, Line, Col, Flags, 0,
                                               Discriminator, Fn);
     }
+    // Mark this location as emitted so we don't re-emit the parent chain
+    // for subsequent instructions that share the same inlined_at parent.
+    if (EnhancedLineinfo)
+      EmittedInlinedAtLocs.insert(Current);
   }
 }
 
 // NVPTX-specific debug info initialization.
 void NVPTXDwarfDebug::initializeTargetDebugInfo(const MachineFunction &MF) {
-  InlinedAtLocs.clear();
-  collectInlinedAtLocations(MF);
+  // Clear the set of emitted inlined_at locations for each new function.
+  EmittedInlinedAtLocs.clear();
 }
 
 // NVPTX-specific source line recording with inlined_at support.

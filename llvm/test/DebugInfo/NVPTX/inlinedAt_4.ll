@@ -165,15 +165,11 @@ entry:
 attributes #0 = { alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none) "target-cpu"="sm_75" }
 
 !llvm.dbg.cu = !{!0}
-!nvvmir.version = !{!2, !3, !4}
 !nvvm.annotations = !{!5, !6, !7, !8}
 !llvm.module.flags = !{!9}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: DebugDirectivesOnly)
 !1 = !DIFile(filename: "t4.cu", directory: "")
-!2 = !{i32 2, i32 0, i32 3, i32 2}
-!3 = !{i32 2, i32 0}
-!4 = !{i32 2, i32 0, i32 3, i32 1}
 !5 = !{ptr @_Z7kernel1ii, !"kernel", i32 1}
 !6 = !{ptr @_Z7kernel2ii, !"kernel", i32 1}
 !7 = !{ptr @_Z7kernel3ii, !"kernel", i32 1}

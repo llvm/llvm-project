@@ -25,15 +25,13 @@ namespace llvm {
 /// inlined_at support.
 class NVPTXDwarfDebug : public DwarfDebug {
 private:
-  /// Set of InlinedAt locations, used to track if these have been emitted.
-  DenseSet<const DILocation *> InlinedAtLocs;
+  /// Set of inlined_at locations that have already been emitted.
+  /// Used to avoid redundant emission of parent chain .loc directives.
+  DenseSet<const DILocation *> EmittedInlinedAtLocs;
 
 public:
   /// Constructor - Pass through to DwarfDebug constructor.
   NVPTXDwarfDebug(AsmPrinter *A);
-
-  /// Collect all inlined_at locations for the current function.
-  void collectInlinedAtLocations(const MachineFunction &MF);
 
 protected:
   /// Override to collect inlined_at locations.

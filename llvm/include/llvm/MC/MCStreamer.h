@@ -904,7 +904,7 @@ public:
                                      StringRef FileName,
                                      StringRef Comment = {});
 
-  /// This is same as emitDwarfLocDirective, except has capability to
+  /// This is same as emitDwarfLocDirective, except it has the capability to
   /// add inlined_at information.
   virtual void emitDwarfLocDirectiveWithInlinedAt(
       unsigned FileNo, unsigned Line, unsigned Column, unsigned FileIA,
