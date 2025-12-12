@@ -78,7 +78,8 @@ static void DescribeAddressBriefly(Stream &strm, const Address &addr,
 }
 
 std::optional<addr_t> StopInfoMachException::GetTagFaultAddress() const {
-  bool bad_access = (m_value == 1);              // EXC_BAD_ACCESS
+  bool bad_access =
+      (m_value == 1 || m_value == 12);           // EXC_BAD_ACCESS or EXC_GUARD
   bool tag_fault = (m_exc_code == 0x106);        // EXC_ARM_MTE_TAG_FAULT
   bool has_fault_addr = (m_exc_data_count >= 2); // m_exc_subcode -> fault addr
 
@@ -497,6 +498,8 @@ const char *StopInfoMachException::GetDescription() {
 #endif
     break;
   case 12:
+    if (DetermineTagMismatch())
+      return m_description.c_str();
     exc_desc = "EXC_GUARD";
     break;
   }
