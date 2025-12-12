@@ -11,7 +11,8 @@ import time
 import urllib.error
 import urllib.request
 
-from typing import List, Optional
+# TODO: Remove typing workarounds when we use a newer python.
+from typing import List, Optional, Tuple
 from http.client import HTTPResponse
 from dataclasses import dataclass
 
