@@ -9,9 +9,9 @@ _Bool check() {
   return __builtin_allow_sanitize_check("address");
 }
 
-// CHECK-LABEL: @test
+// CHECK-LABEL: @test_sanitize
 // CHECK: ret i1 true
-_Bool test() {
+_Bool test_sanitize() {
   return check();
 }
 
