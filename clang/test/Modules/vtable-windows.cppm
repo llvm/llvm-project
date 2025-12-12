@@ -23,4 +23,4 @@ void test() {
 
 // Check that the virtual table is an unnamed_addr constant in comdat that can
 // be merged with the virtual table with other TUs.
-// CHECK: unnamed_addr constant {{.*}}[ptr @"??_R4Fruit@@6B@", ptr @"??_GFruit@@UAEPAXI@Z", ptr @"?eval@Fruit@@UAEXXZ"{{.*}}comdat($"??_7Fruit@@6B@")
+// CHECK: unnamed_addr constant {{.*}}[ptr @"??_R4Fruit@@6B@", ptr @"??_EFruit@@UAEPAXI@Z", ptr @"?eval@Fruit@@UAEXXZ"{{.*}}comdat($"??_7Fruit@@6B@")

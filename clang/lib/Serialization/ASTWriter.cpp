@@ -6540,6 +6540,14 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
         Record.AddDeclRef(Update.getDecl());
         break;
 
+      case DeclUpdateKind::CXXResolvedDtorArrayDelete:
+        Record.AddDeclRef(Update.getDecl());
+        break;
+
+      case DeclUpdateKind::CXXResolvedDtorGlobArrayDelete:
+        Record.AddDeclRef(Update.getDecl());
+        break;
+
       case DeclUpdateKind::CXXResolvedExceptionSpec: {
         auto prototype =
           cast<FunctionDecl>(D)->getType()->castAs<FunctionProtoType>();
@@ -7610,6 +7618,34 @@ void ASTWriter::ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
   Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
     DeclUpdates[D].push_back(
         DeclUpdate(DeclUpdateKind::CXXResolvedDtorGlobDelete, GlobDelete));
+  });
+}
+
+void ASTWriter::ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                            const FunctionDecl *ArrayDelete) {
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
+  assert(!WritingAST && "Already writing the AST!");
+  assert(ArrayDelete && "Not given an operator delete");
+  if (!Chain)
+    return;
+  Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
+    DeclUpdates[D].push_back(
+        DeclUpdate(DeclUpdateKind::CXXResolvedDtorArrayDelete, ArrayDelete));
+  });
+}
+
+void ASTWriter::ResolvedOperatorGlobArrayDelete(
+    const CXXDestructorDecl *DD, const FunctionDecl *GlobArrayDelete) {
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
+  assert(!WritingAST && "Already writing the AST!");
+  assert(GlobArrayDelete && "Not given an operator delete");
+  if (!Chain)
+    return;
+  Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
+    DeclUpdates[D].push_back(DeclUpdate(
+        DeclUpdateKind::CXXResolvedDtorGlobArrayDelete, GlobArrayDelete));
   });
 }
 

@@ -515,7 +515,7 @@ bool fromJSON(const llvm::json::Value &Params, DisassembleArguments &DA,
   json::ObjectMapper O(Params, P);
   return O &&
          DecodeMemoryReference(Params, "memoryReference", DA.memoryReference, P,
-                               /*required=*/true) &&
+                               /*required=*/true, /*allow_empty*/ true) &&
          O.mapOptional("offset", DA.offset) &&
          O.mapOptional("instructionOffset", DA.instructionOffset) &&
          O.map("instructionCount", DA.instructionCount) &&
