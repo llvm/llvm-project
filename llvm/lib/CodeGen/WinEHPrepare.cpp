@@ -1014,27 +1014,26 @@ bool WinEHPrepareImpl::cloneCommonBlocks(Function &F) {
     }
 
     auto UpdatePHIOnClonedBlock = [&](PHINode *PN, bool IsForOldBlock) {
-      // Remove incoming values in the reverse order to prevent invalidating
-      // index for the incoming values.
-      for (int64_t PredIdx = PN->getNumIncomingValues() - 1; PredIdx >= 0;
-           --PredIdx) {
-        BasicBlock *IncomingBlock = PN->getIncomingBlock(PredIdx);
-        bool EdgeTargetsFunclet;
-        if (auto *CRI =
-                dyn_cast<CatchReturnInst>(IncomingBlock->getTerminator())) {
-          EdgeTargetsFunclet = (CRI->getCatchSwitchParentPad() == FuncletToken);
-        } else {
-          ColorVector &IncomingColors = BlockColors[IncomingBlock];
-          assert(!IncomingColors.empty() && "Block not colored!");
-          assert((IncomingColors.size() == 1 ||
-                  !llvm::is_contained(IncomingColors, FuncletPadBB)) &&
-                 "Cloning should leave this funclet's blocks monochromatic");
-          EdgeTargetsFunclet = (IncomingColors.front() == FuncletPadBB);
-        }
-        if (IsForOldBlock != EdgeTargetsFunclet)
-          continue;
-        PN->removeIncomingValue(PredIdx, /*DeletePHIIfEmpty=*/false);
-      }
+      PN->removeIncomingValueIf(
+          [&](unsigned Idx) {
+            BasicBlock *IncomingBlock = PN->getIncomingBlock(Idx);
+            bool EdgeTargetsFunclet;
+            if (auto *CRI =
+                    dyn_cast<CatchReturnInst>(IncomingBlock->getTerminator())) {
+              EdgeTargetsFunclet =
+                  (CRI->getCatchSwitchParentPad() == FuncletToken);
+            } else {
+              ColorVector &IncomingColors = BlockColors[IncomingBlock];
+              assert(!IncomingColors.empty() && "Block not colored!");
+              assert(
+                  (IncomingColors.size() == 1 ||
+                   !llvm::is_contained(IncomingColors, FuncletPadBB)) &&
+                  "Cloning should leave this funclet's blocks monochromatic");
+              EdgeTargetsFunclet = (IncomingColors.front() == FuncletPadBB);
+            }
+            return IsForOldBlock == EdgeTargetsFunclet;
+          },
+          /*DeletePHIIfEmpty=*/false);
     };
 
     for (auto &BBMapping : Orig2Clone) {
