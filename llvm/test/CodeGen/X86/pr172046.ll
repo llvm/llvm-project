@@ -26,7 +26,6 @@ define i32 @shl_nsw_zext(i16 %x) {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $256, %eax # imm = 0x100
 ; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shl_nsw_zext:
@@ -35,7 +34,6 @@ define i32 @shl_nsw_zext(i16 %x) {
 ; X64-NEXT:    movl $256, %eax # imm = 0x100
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
   %shl = shl nsw i16 256, %x
   %sext = sext i16 %shl to i32
