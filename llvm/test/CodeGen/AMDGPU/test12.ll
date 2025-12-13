@@ -341,7 +341,7 @@ define amdgpu_ps i32 @test12 (ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr ad
 ; CHECK-NEXT: Next-use distance of Register [[Reg27]] = 94088
 ; CHECK-NEXT: Next-use distance of Register [[Reg26]] = 38
 ; CHECK-NEXT: Next-use distance of Register [[Reg25]] = 196070
-; CHECK-NEXT: Next-use distance of Register [[Reg24]] = 111105
+; CHECK-NEXT: Next-use distance of Register [[Reg24]] = 69105
 ; CHECK-NEXT: Next-use distance of Register [[Reg23]] = 106
 ; CHECK-NEXT: Next-use distance of Register [[Reg22]] = 27088
 ; CHECK-NEXT: Next-use distance of Register [[Reg21]] = 94086
@@ -385,8 +385,8 @@ define amdgpu_ps i32 @test12 (ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr ad
 ; CHECK-NEXT: Next-use distance of Register [[Reg46]] = 58
 ; CHECK-NEXT: Next-use distance of Register [[Reg47]] = 196020
 ; CHECK-NEXT: Next-use distance of Register [[Reg48]] = 94042
-; CHECK-NEXT: Next-use distance of Register [[Reg49]] = 111052
-; CHECK-NEXT: Next-use distance of Register [[Reg50]] = 111046
+; CHECK-NEXT: Next-use distance of Register [[Reg49]] = 69052
+; CHECK-NEXT: Next-use distance of Register [[Reg50]] = 69046
 ; CHECK-NEXT: Next-use distance of Register [[Reg51]] = 40
 ; CHECK-NEXT: Next-use distance of Register [[Reg52]] = 2
 ; CHECK-NEXT: Next-use distance of Register [[Reg53]] = 1
@@ -401,7 +401,7 @@ define amdgpu_ps i32 @test12 (ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr ad
 ; CHECK-NEXT: Next-use distance of Register [[Reg62]] = 94032
 ; CHECK-NEXT: Next-use distance of Register [[Reg64]] = 19
 ; CHECK-NEXT: Next-use distance of Register [[Reg66]] = 2
-; CHECK-NEXT: Next-use distance of Register [[Reg68]] = 111026
+; CHECK-NEXT: Next-use distance of Register [[Reg68]] = 69026
 ; CHECK-NEXT: Next-use distance of Register [[Reg70]] = 1
 ; CHECK-NEXT: Next-use distance of Register [[Reg71]] = 1
 ; CHECK-NEXT: Next-use distance of Register [[Reg72]] = 1
@@ -421,7 +421,7 @@ define amdgpu_ps i32 @test12 (ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr ad
 ; CHECK-NEXT: Next-use distance of Register [[Reg86]] = 27012
 ; CHECK-NEXT: Next-use distance of Register [[Reg88]] = 17
 ; CHECK-NEXT: Next-use distance of Register [[Reg90]] = 5
-; CHECK-NEXT: Next-use distance of Register [[Reg92]] = 111016
+; CHECK-NEXT: Next-use distance of Register [[Reg92]] = 69016
 ; CHECK-NEXT: Next-use distance of Register [[Reg94]] = 1
 ; CHECK-NEXT: Next-use distance of Register [[Reg95]] = 24
 ; CHECK-NEXT: Next-use distance of Register [[Reg97]] = 1
@@ -441,14 +441,14 @@ define amdgpu_ps i32 @test12 (ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr ad
 ; CHECK-NEXT: Next-use distance of Register [[Reg69]] = 6
 ; CHECK-NEXT: Next-use distance of Register [[Reg112]] = 5
 ; CHECK-NEXT: Next-use distance of Register [[Reg93]] = 2
-; CHECK-NEXT: Next-use distance of Register [[Reg113]] = 111010
+; CHECK-NEXT: Next-use distance of Register [[Reg113]] = 69010
 ; CHECK-NEXT: Next-use distance of Register [[Reg114]] = 1
 ; CHECK-NEXT: Next-use distance of Register [[Reg98]] = 1
 ; CHECK-NEXT: Next-use distance of Register [[Reg115]] = 1
 ; CHECK-NEXT: Next-use distance of Register [[Reg116]] = 1
 ; CHECK-NEXT: Next-use distance of Register [[Reg96]] = 1
 ; CHECK-NEXT: Next-use distance of Register [[Reg91]] = 2
-; CHECK-NEXT: Next-use distance of Register [[Reg117]] = 111011
+; CHECK-NEXT: Next-use distance of Register [[Reg117]] = 69011
 ; CHECK-NEXT: Next-use distance of Register [[Reg118]] = 1
 ; CHECK-NEXT: Next-use distance of Register [[Reg89]] = 6
 ; CHECK-NEXT: Next-use distance of Register [[Reg119]] = 1

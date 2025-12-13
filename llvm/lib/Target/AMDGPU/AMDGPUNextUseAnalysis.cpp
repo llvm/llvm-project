@@ -91,24 +91,48 @@ AMDGPUNextUseAnalysis::getShortestPath(MachineBasicBlock *FromMBB,
       if (isBackedge(CurMBB, Succ))
         continue;
 
-      auto GetDistance = [this, ToMBB](MachineBasicBlock *BB) -> uint64_t {
+      auto GetEffectiveLoopDepth = [&](MachineBasicBlock *BB) -> unsigned {
+        MachineLoop *LoopBB = MLI->getLoopFor(BB);
+        unsigned LoopDepth = 0;
+        for (MachineLoop *TmpLoop = LoopBB,
+                         *End = LoopBB->getOutermostLoop()->getParentLoop();
+             TmpLoop != End; TmpLoop = TmpLoop->getParentLoop()) {
+          if (TmpLoop->contains(ToMBB))
+            continue;
+          LoopDepth++;
+        }
+        return LoopDepth;
+      };
+
+      auto GetLoopWeight = [&](MachineBasicBlock *BB) -> uint64_t {
+
         MachineLoop *LoopBB = MLI->getLoopFor(BB);
         MachineLoop *LoopTo = MLI->getLoopFor(ToMBB);
+	if (!LoopBB && !LoopTo)
+	  return 0;
+
         if (LoopBB && LoopTo &&
-            (LoopTo->contains(LoopBB) && (LoopTo != LoopBB))) {
-          return BB->size() * LoopWeight *
+            (LoopTo->contains(LoopBB) && (LoopTo != LoopBB)))
+          return LoopWeight *
                  (MLI->getLoopDepth(BB) - MLI->getLoopDepth(ToMBB));
-        }
-        if ((LoopBB && LoopTo && LoopBB->contains(LoopTo))) {
-          return BB->size();
-        }
-        if ((!LoopTo && LoopBB) ||
-            (LoopBB && LoopTo && !LoopTo->contains(LoopBB))) {
-          return BB->size() * LoopWeight * MLI->getLoopDepth(BB);
-        } else
-          return BB->size();
+
+	if ((LoopBB && LoopTo && LoopBB->contains(LoopTo)))
+          return 1;
+
+	if ((!LoopTo && LoopBB) ||
+            (LoopBB && LoopTo && !LoopTo->contains(LoopBB)))
+          return LoopWeight * GetEffectiveLoopDepth(BB);
+
+        return 0;
       };
-      uint64_t NewSuccDist = CurrMBBDist + GetDistance(Succ);
+
+      auto GetWeightedSize = [&](MachineBasicBlock *BB) -> uint64_t {
+        unsigned LoopWeight = GetLoopWeight(BB);
+        if (LoopWeight!=0)
+          return BB->size() * LoopWeight;
+        return BB->size();
+      };
+      uint64_t NewSuccDist = CurrMBBDist + GetWeightedSize(Succ);
 
       auto &[SuccPred, SuccDist] = MBBData[Succ];
       if (NewSuccDist < SuccDist) {
@@ -224,13 +248,27 @@ AMDGPUNextUseAnalysis::getNestedLoopDistanceAndExitingLatch(
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   MachineLoop *UseLoop = MLI->getLoopFor(UseMBB);
 
+  auto GetEffectiveLoopDepth = [&](MachineBasicBlock *BB) -> unsigned {
+    MachineLoop *LoopBB = MLI->getLoopFor(BB);
+    unsigned LoopDepth = 0;
+    for (MachineLoop *TmpLoop = LoopBB,
+                     *End = LoopBB->getOutermostLoop()->getParentLoop();
+         TmpLoop != End; TmpLoop = TmpLoop->getParentLoop()) {
+      if (TmpLoop->contains(UseLoop))
+        continue;
+      LoopDepth++;
+    }
+    return LoopDepth;
+  };
+
   auto GetLoopDistance =
       [&](MachineLoop *ML) -> std::pair<uint64_t, MachineBasicBlock *> {
     uint64_t ShortestDistance = 0;
     uint64_t TmpDist = 0;
     MachineBasicBlock *ExitingLatch = nullptr;
+    unsigned EffectiveLoopDepth = GetEffectiveLoopDepth(CurMBB);
     unsigned UseLoopDepth =
-        IsUseOutsideOfTheCurrentLoopNest ? 0 : MLI->getLoopDepth(UseMBB);
+        !IsUseOutsideOfTheCurrentLoopNest ? MLI->getLoopDepth(UseMBB) : 0;
     if (ML->getNumBlocks() == 1) {
       ShortestDistance = ML->getHeader()->size() *
                          (MLI->getLoopDepth(ML->getHeader()) - UseLoopDepth) *
@@ -240,9 +278,14 @@ AMDGPUNextUseAnalysis::getNestedLoopDistanceAndExitingLatch(
     std::tie(TmpDist, ExitingLatch) =
         getLoopDistanceAndExitingLatch(ML->getHeader());
     for (MachineBasicBlock *MBB :
-         getShortestPathFromTable(ML->getHeader(), ExitingLatch))
-      ShortestDistance +=
-          MBB->size() * (MLI->getLoopDepth(MBB) - UseLoopDepth) * LoopWeight;
+         getShortestPathFromTable(ML->getHeader(), ExitingLatch)) {
+      if (UseLoopDepth == 0 && EffectiveLoopDepth != 0)
+        ShortestDistance +=
+            MBB->size() * GetEffectiveLoopDepth(MBB) * LoopWeight;
+      else
+        ShortestDistance +=
+            MBB->size() * (MLI->getLoopDepth(MBB) - UseLoopDepth) * LoopWeight;
+    }
     return std::make_pair(ShortestDistance, ExitingLatch);
   };
 
