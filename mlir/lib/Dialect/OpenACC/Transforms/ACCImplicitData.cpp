@@ -237,11 +237,6 @@ public:
   void runOnOperation() override;
 
 private:
-  /// Collects all data clauses that dominate the compute construct.
-  /// Needed to determine if a variable is already covered by an existing data
-  /// clause.
-  SmallVector<Value> getDominatingDataClauses(Operation *computeConstructOp);
-
   /// Looks through the `dominatingDataClauses` to find the original data clause
   /// op for an alias. Returns nullptr if no original data clause op is found.
   template <typename OpT>
@@ -259,9 +254,10 @@ private:
 
   /// Generates the implicit data ops for a compute construct.
   template <typename OpT>
-  void generateImplicitDataOps(
-      ModuleOp &module, OpT computeConstructOp,
-      std::optional<acc::ClauseDefaultValue> &defaultClause);
+  void
+  generateImplicitDataOps(ModuleOp &module, OpT computeConstructOp,
+                          std::optional<acc::ClauseDefaultValue> &defaultClause,
+                          acc::OpenACCSupport &accSupport);
 
   /// Generates a private recipe for a variable.
   acc::PrivateRecipeOp generatePrivateRecipe(ModuleOp &module, Value var,
@@ -282,10 +278,14 @@ private:
 
 /// Determines if a variable is a candidate for implicit data mapping.
 /// Returns true if the variable is a candidate, false otherwise.
-static bool isCandidateForImplicitData(Value val, Region &accRegion) {
+static bool isCandidateForImplicitData(Value val, Region &accRegion,
+                                       acc::OpenACCSupport &accSupport) {
   // Ensure the variable is an allowed type for data clause.
   if (!acc::isPointerLikeType(val.getType()) &&
       !acc::isMappableType(val.getType()))
+    return false;
+
+  if (accSupport.isValidValueUse(val, accRegion))
     return false;
 
   // If this is already coming from a data clause, we do not need to generate
@@ -298,62 +298,6 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion) {
     return false;
 
   return true;
-}
-
-SmallVector<Value>
-ACCImplicitData::getDominatingDataClauses(Operation *computeConstructOp) {
-  llvm::SmallSetVector<Value, 8> dominatingDataClauses;
-
-  llvm::TypeSwitch<Operation *>(computeConstructOp)
-      .Case<acc::ParallelOp, acc::KernelsOp, acc::SerialOp>([&](auto op) {
-        for (auto dataClause : op.getDataClauseOperands()) {
-          dominatingDataClauses.insert(dataClause);
-        }
-      })
-      .Default([](Operation *) {});
-
-  // Collect the data clauses from enclosing data constructs.
-  Operation *currParentOp = computeConstructOp->getParentOp();
-  while (currParentOp) {
-    if (isa<acc::DataOp>(currParentOp)) {
-      for (auto dataClause :
-           dyn_cast<acc::DataOp>(currParentOp).getDataClauseOperands()) {
-        dominatingDataClauses.insert(dataClause);
-      }
-    }
-    currParentOp = currParentOp->getParentOp();
-  }
-
-  // Find the enclosing function/subroutine
-  auto funcOp = computeConstructOp->getParentOfType<FunctionOpInterface>();
-  if (!funcOp)
-    return dominatingDataClauses.takeVector();
-
-  // Walk the function to find `acc.declare_enter`/`acc.declare_exit` pairs that
-  // dominate and post-dominate the compute construct and add their data
-  // clauses to the list.
-  auto &domInfo = this->getAnalysis<DominanceInfo>();
-  auto &postDomInfo = this->getAnalysis<PostDominanceInfo>();
-  funcOp->walk([&](acc::DeclareEnterOp declareEnterOp) {
-    if (domInfo.dominates(declareEnterOp.getOperation(), computeConstructOp)) {
-      // Collect all `acc.declare_exit` ops for this token.
-      SmallVector<acc::DeclareExitOp> exits;
-      for (auto *user : declareEnterOp.getToken().getUsers())
-        if (auto declareExit = dyn_cast<acc::DeclareExitOp>(user))
-          exits.push_back(declareExit);
-
-      // Only add clauses if every `acc.declare_exit` op post-dominates the
-      // compute construct.
-      if (!exits.empty() && llvm::all_of(exits, [&](acc::DeclareExitOp exitOp) {
-            return postDomInfo.postDominates(exitOp, computeConstructOp);
-          })) {
-        for (auto dataClause : declareEnterOp.getDataClauseOperands())
-          dominatingDataClauses.insert(dataClause);
-      }
-    }
-  });
-
-  return dominatingDataClauses.takeVector();
 }
 
 template <typename OpT>
@@ -744,7 +688,8 @@ static void insertInSortedOrder(SmallVector<Value> &sortedDataClauseOperands,
 template <typename OpT>
 void ACCImplicitData::generateImplicitDataOps(
     ModuleOp &module, OpT computeConstructOp,
-    std::optional<acc::ClauseDefaultValue> &defaultClause) {
+    std::optional<acc::ClauseDefaultValue> &defaultClause,
+    acc::OpenACCSupport &accSupport) {
   // Implicit data attributes are only applied if "[t]here is no default(none)
   // clause visible at the compute construct."
   if (defaultClause.has_value() &&
@@ -760,7 +705,7 @@ void ACCImplicitData::generateImplicitDataOps(
 
   // 2) Run the filtering to find relevant pointers that need copied.
   auto isCandidate{[&](Value val) -> bool {
-    return isCandidateForImplicitData(val, accRegion);
+    return isCandidateForImplicitData(val, accRegion, accSupport);
   }};
   auto candidateVars(
       llvm::to_vector(llvm::make_filter_range(liveInValues, isCandidate)));
@@ -775,7 +720,10 @@ void ACCImplicitData::generateImplicitDataOps(
     LLVM_DEBUG(llvm::dbgs() << "== Generating clauses for ==\n"
                             << computeConstructOp << "\n");
   }
-  auto dominatingDataClauses = getDominatingDataClauses(computeConstructOp);
+  auto &domInfo = this->getAnalysis<DominanceInfo>();
+  auto &postDomInfo = this->getAnalysis<PostDominanceInfo>();
+  auto dominatingDataClauses =
+      acc::getDominatingDataClauses(computeConstructOp, domInfo, postDomInfo);
   for (auto var : candidateVars) {
     auto newDataClauseOp = generateDataClauseOpForCandidate(
         var, module, builder, computeConstructOp, dominatingDataClauses,
@@ -821,6 +769,9 @@ void ACCImplicitData::generateImplicitDataOps(
 
 void ACCImplicitData::runOnOperation() {
   ModuleOp module = this->getOperation();
+
+  acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
+
   module.walk([&](Operation *op) {
     if (isa<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(op)) {
       assert(op->getNumRegions() == 1 && "must have 1 region");
@@ -829,7 +780,7 @@ void ACCImplicitData::runOnOperation() {
       llvm::TypeSwitch<Operation *, void>(op)
           .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
               [&](auto op) {
-                generateImplicitDataOps(module, op, defaultClause);
+                generateImplicitDataOps(module, op, defaultClause, accSupport);
               })
           .Default([&](Operation *) {});
     }

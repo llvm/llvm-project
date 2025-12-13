@@ -22,41 +22,14 @@ declare <8 x double> @llvm.maxnum.v8f64(<8 x double>, <8 x double>)
 ; FIXME: As the vector tests show, the SSE run shouldn't need this many moves.
 
 define float @test_fmaxf(float %x, float %y) {
-; SSE2-LABEL: test_fmaxf:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    cmpunordss %xmm0, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm3
-; SSE2-NEXT:    andps %xmm1, %xmm3
-; SSE2-NEXT:    maxss %xmm0, %xmm1
-; SSE2-NEXT:    andnps %xmm1, %xmm2
-; SSE2-NEXT:    orps %xmm3, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE4-LABEL: test_fmaxf:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    movaps %xmm1, %xmm2
-; SSE4-NEXT:    maxss %xmm0, %xmm2
-; SSE4-NEXT:    cmpunordss %xmm0, %xmm0
-; SSE4-NEXT:    blendvps %xmm0, %xmm1, %xmm2
-; SSE4-NEXT:    movaps %xmm2, %xmm0
-; SSE4-NEXT:    retq
-;
-; AVX1-LABEL: test_fmaxf:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmaxss %xmm0, %xmm1, %xmm2
-; AVX1-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: test_fmaxf:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmaxss %xmm0, %xmm1, %xmm2
-; AVX512-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vmovaps %xmm2, %xmm0
-; AVX512-NEXT:    retq
+; CHECK-LABEL: test_fmaxf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq fmaxf@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
   %z = call float @fmaxf(float %x, float %y) readnone
   ret float %z
 }
@@ -64,7 +37,12 @@ define float @test_fmaxf(float %x, float %y) {
 define float @test_fmaxf_minsize(float %x, float %y) minsize {
 ; CHECK-LABEL: test_fmaxf_minsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp fmaxf@PLT # TAILCALL
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq fmaxf@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
   %z = call float @fmaxf(float %x, float %y) readnone
   ret float %z
 }
@@ -72,41 +50,14 @@ define float @test_fmaxf_minsize(float %x, float %y) minsize {
 ; FIXME: As the vector tests show, the SSE run shouldn't need this many moves.
 
 define double @test_fmax(double %x, double %y) {
-; SSE2-LABEL: test_fmax:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movapd %xmm0, %xmm2
-; SSE2-NEXT:    cmpunordsd %xmm0, %xmm2
-; SSE2-NEXT:    movapd %xmm2, %xmm3
-; SSE2-NEXT:    andpd %xmm1, %xmm3
-; SSE2-NEXT:    maxsd %xmm0, %xmm1
-; SSE2-NEXT:    andnpd %xmm1, %xmm2
-; SSE2-NEXT:    orpd %xmm3, %xmm2
-; SSE2-NEXT:    movapd %xmm2, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE4-LABEL: test_fmax:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    movapd %xmm1, %xmm2
-; SSE4-NEXT:    maxsd %xmm0, %xmm2
-; SSE4-NEXT:    cmpunordsd %xmm0, %xmm0
-; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
-; SSE4-NEXT:    movapd %xmm2, %xmm0
-; SSE4-NEXT:    retq
-;
-; AVX1-LABEL: test_fmax:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmaxsd %xmm0, %xmm1, %xmm2
-; AVX1-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: test_fmax:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmaxsd %xmm0, %xmm1, %xmm2
-; AVX512-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vmovapd %xmm2, %xmm0
-; AVX512-NEXT:    retq
+; CHECK-LABEL: test_fmax:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq fmax@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
   %z = call double @fmax(double %x, double %y) readnone
   ret double %z
 }
