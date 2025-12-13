@@ -293,7 +293,7 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
 
 class Doc8LintHelper(LintHelper):
     name: Final = "doc8"
-    friendly_name: Final = "documentation linter"
+    friendly_name: Final = "RST documentation linter"
 
     def instructions(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
         return f"doc8 -q {' '.join(files_to_lint)}"
