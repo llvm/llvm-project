@@ -1810,6 +1810,59 @@ acc.routine @acc_func_rout9 func(@acc_func) bind("acc_func_gpu_gang_dim1") gang(
 
 // -----
 
+// Test acc.specialized_routine attribute for specialized device functions
+acc.routine @routine_seq func(@device_func_seq) seq
+acc.routine @routine_gang func(@device_func_gang) gang
+acc.routine @routine_gang_dim2 func(@device_func_gang_dim2) gang(dim: 2 : i64)
+acc.routine @routine_gang_dim3 func(@device_func_gang_dim3) gang(dim: 3 : i64)
+acc.routine @routine_worker func(@device_func_worker) worker
+acc.routine @routine_vector func(@device_func_vector) vector
+
+func.func @device_func_seq() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_seq, <seq>, "host_func_seq">} {
+  return
+}
+
+func.func @device_func_gang() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang, <gang_dim1>, "host_func_gang">} {
+  return
+}
+
+func.func @device_func_gang_dim2() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang_dim2, <gang_dim2>, "host_func_gang_dim2">} {
+  return
+}
+
+func.func @device_func_gang_dim3() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang_dim3, <gang_dim3>, "host_func_gang_dim3">} {
+  return
+}
+
+func.func @device_func_worker() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_worker, <worker>, "host_func_worker">} {
+  return
+}
+
+func.func @device_func_vector() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_vector, <vector>, "host_func_vector">} {
+  return
+}
+
+// CHECK: acc.routine @routine_seq func(@device_func_seq) seq
+// CHECK: acc.routine @routine_gang func(@device_func_gang) gang
+// CHECK: acc.routine @routine_gang_dim2 func(@device_func_gang_dim2) gang(dim: 2 : i64)
+// CHECK: acc.routine @routine_gang_dim3 func(@device_func_gang_dim3) gang(dim: 3 : i64)
+// CHECK: acc.routine @routine_worker func(@device_func_worker) worker
+// CHECK: acc.routine @routine_vector func(@device_func_vector) vector
+// CHECK-LABEL: func.func @device_func_seq()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_seq, <seq>, "host_func_seq">}
+// CHECK-LABEL: func.func @device_func_gang()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang, <gang_dim1>, "host_func_gang">}
+// CHECK-LABEL: func.func @device_func_gang_dim2()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang_dim2, <gang_dim2>, "host_func_gang_dim2">}
+// CHECK-LABEL: func.func @device_func_gang_dim3()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang_dim3, <gang_dim3>, "host_func_gang_dim3">}
+// CHECK-LABEL: func.func @device_func_worker()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_worker, <worker>, "host_func_worker">}
+// CHECK-LABEL: func.func @device_func_vector()
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_vector, <vector>, "host_func_vector">}
+
+// -----
+
 func.func @acc_func() -> () {
   "test.openacc_dummy_op"() {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_alloc>} : () -> ()
   return

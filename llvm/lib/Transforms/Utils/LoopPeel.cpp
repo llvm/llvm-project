@@ -419,9 +419,9 @@ std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
 // the remainder loop after peeling. The load must also be used (transitively)
 // by an exit condition. Returns the number of iterations to peel off (at the
 // moment either 0 or 1).
-static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
-                                                      DominatorTree &DT,
-                                                      AssumptionCache *AC) {
+static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
+                                                        DominatorTree &DT,
+                                                        AssumptionCache *AC) {
   // Skip loops with a single exiting block, because there should be no benefit
   // for the heuristic below.
   if (L.getExitingBlock())
@@ -447,7 +447,10 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
   const DataLayout &DL = L.getHeader()->getDataLayout();
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
-      if (I.mayWriteToMemory())
+      // Calls that only access inaccessible memory can never alias with loads.
+      if (I.mayWriteToMemory() &&
+          !(isa<CallBase>(I) &&
+            cast<CallBase>(I).onlyAccessesInaccessibleMemory()))
         return 0;
 
       if (LoadUsers.contains(&I))
@@ -495,7 +498,7 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
                     m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
           (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
-         Bound->getType()->isIntegerTy() && 
+         Bound->getType()->isIntegerTy() &&
          SE.isLoopInvariant(SE.getSCEV(Bound), &L) &&
          match(SE.getSCEV(Inc),
                m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));
@@ -512,7 +515,7 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
     return false;
 
   const SCEV *BTC = SE.getBackedgeTakenCount(&L);
-  SCEVExpander Expander(SE, L.getHeader()->getDataLayout(), "loop-peel");
+  SCEVExpander Expander(SE, "loop-peel");
   if (!SE.isKnownNonZero(BTC) &&
       Expander.isHighCostExpansion(BTC, &L, SCEVCheapExpansionBudget, &TTI,
                                    L.getLoopPredecessor()->getTerminator()))
@@ -816,7 +819,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   DesiredPeelCount = std::max(DesiredPeelCount, CountToEliminateCmps);
 
   if (DesiredPeelCount == 0)
-    DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT, AC);
+    DesiredPeelCount = peelToTurnInvariantLoadsDereferenceable(*L, DT, AC);
 
   if (DesiredPeelCount > 0) {
     DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
@@ -1212,7 +1215,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
       }
     } else {
       NewPreHeader = SplitEdge(PreHeader, Header, &DT, LI);
-      SCEVExpander Expander(*SE, Latch->getDataLayout(), "loop-peel");
+      SCEVExpander Expander(*SE, "loop-peel");
 
       BranchInst *PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
       Value *BTCValue =

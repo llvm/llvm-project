@@ -84,18 +84,12 @@ public:
       // All vector types are default aligned on an 8-byte boundary, even if the
       // vector facility is not available. That is different from Linux.
       MaxVectorAlign = 64;
-      // Compared to Linux/ELF, the data layout differs only in some details:
-      // - name mangling is GOFF.
-      // - 32 bit pointers, either as default or special address space
-      resetDataLayout("E-m:l-p1:32:32-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-"
-                      "a:8:16-n32:64");
     } else {
       // Support _Float16.
       HasFloat16 = true;
       TLSSupported = true;
-      resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
-                      "-v128:64-a:8:16-n32:64");
     }
+    resetDataLayout();
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 128;
 
     // True if the backend supports operations on the half LLVM IR type.
