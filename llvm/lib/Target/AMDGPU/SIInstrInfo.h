@@ -457,7 +457,7 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SALU;
   }
 
-  static bool isProgramStatetSALU(const MachineInstr &MI) {
+  static bool isProgramStateSALU(const MachineInstr &MI) {
     return MI.getOpcode() == AMDGPU::S_DELAY_ALU ||
            MI.getOpcode() == AMDGPU::S_SET_VGPR_MSB ||
            MI.getOpcode() == AMDGPU::ATOMIC_FENCE;

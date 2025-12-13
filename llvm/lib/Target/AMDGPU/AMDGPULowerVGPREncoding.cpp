@@ -299,17 +299,17 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
     return I;
 
   MachineBasicBlock::instr_iterator Prev = std::prev(I);
-  auto isProgramStatetSALU = [this](MachineInstr *MI) {
+  auto isProgramStateSALU = [this](MachineInstr *MI) {
     return TII->isBarrier(MI->getOpcode()) ||
-           TII->isWaitcnt(MI || (SIInstrInfo::isProgramStatetSALU(*MI) &&
+           TII->isWaitcnt(MI || (SIInstrInfo::isProgramStateSALU(*MI) &&
                                  MI->getOpcode() != AMDGPU::S_SET_VGPR_MSB));
   };
 
-  if (!isProgramStatetSALU(&*Prev))
+  if (!isProgramStateSALU(&*Prev))
     return I;
 
   while (!Prev.isEnd() && (Prev != Prev->getParent()->begin()) &&
-         isProgramStatetSALU(&*Prev)) {
+         isProgramStateSALU(&*Prev)) {
     --Prev;
   }
   return Prev;
