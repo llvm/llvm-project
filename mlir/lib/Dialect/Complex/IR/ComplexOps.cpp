@@ -19,9 +19,7 @@ using namespace mlir::complex;
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) {
-  return getValue();
-}
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 void ConstantOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
@@ -167,34 +165,6 @@ struct MergeArithBitcast final : OpRewritePattern<arith::BitcastOp> {
 void BitcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<MergeComplexBitcast, MergeArithBitcast>(context);
-}
-
-struct FoldComplexDivWithNaN final : OpRewritePattern<complex::DivOp> {
-  using OpRewritePattern<complex::DivOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(complex::DivOp op,
-                                PatternRewriter &rewriter) const override {
-    if (auto constant = op->getOperand(0).getDefiningOp<ConstantOp>()) {
-      mlir::ArrayAttr arrayAttr = constant.getValue();
-      if (!arrayAttr || arrayAttr.size() != 2)
-        return failure();
-
-      APFloat real = cast<FloatAttr>(arrayAttr[0]).getValue();
-      APFloat imag = cast<FloatAttr>(arrayAttr[1]).getValue();
-      if (real.isNaN() || imag.isNaN()) {
-        Attribute nanValue = real.isNaN() ? arrayAttr[0] : arrayAttr[1];
-        rewriter.replaceOpWithNewOp<complex::ConstantOp>(
-            op, op.getType(), rewriter.getArrayAttr({nanValue, nanValue}));
-        return success();
-      }
-    }
-    return failure();
-  };
-};
-
-void DivOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                        MLIRContext *context) {
-  results.add<FoldComplexDivWithNaN>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -420,8 +390,10 @@ OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
 
   APFloat lhsReal = cast<FloatAttr>(lhsArrayAttr[0]).getValue();
   APFloat lhsImag = cast<FloatAttr>(lhsArrayAttr[1]).getValue();
-  if (lhsReal.isNaN() || lhsImag.isNaN())
-    return {};
+  if (lhsReal.isNaN() || lhsImag.isNaN()) {
+    Attribute nanValue = lhsReal.isNaN() ? lhsArrayAttr[0] : lhsArrayAttr[1];
+    return ArrayAttr::get(getContext(), {nanValue, nanValue});
+  }
 
   // complex.div(a, complex.constant<1.0, 0.0>) -> a
   APFloat rhsReal = cast<FloatAttr>(rhsArrayAttr[0]).getValue();

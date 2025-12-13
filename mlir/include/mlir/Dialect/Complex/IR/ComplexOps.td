@@ -227,7 +227,6 @@ def DivOp : ComplexArithmeticOp<"div"> {
   }];
 
   let hasFolder = 1;
-  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
