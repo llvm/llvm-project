@@ -796,6 +796,9 @@ public:
   LLVM_ABI SDValue getExternalSymbol(RTLIB::LibcallImpl LCImpl, EVT VT);
   LLVM_ABI SDValue getTargetExternalSymbol(const char *Sym, EVT VT,
                                            unsigned TargetFlags = 0);
+  LLVM_ABI SDValue getTargetExternalSymbol(RTLIB::LibcallImpl LCImpl, EVT VT,
+                                           unsigned TargetFlags = 0);
+
   LLVM_ABI SDValue getMCSymbol(MCSymbol *Sym, EVT VT);
 
   LLVM_ABI SDValue getValueType(EVT);
