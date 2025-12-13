@@ -2049,23 +2049,18 @@ private:
     if (!IsMacroResult)
       return Filter->match(C.Name);
 
-    // macros with leading and trailing underscore are probably spammy
-    switch (Opts.MacroFilter) {
-    case MacroFilterPolicy::ExactPrefix:
-      if (C.Name.starts_with_insensitive(Filter->pattern()))
-        return Filter->match(C.Name);
-      else
-        return std::nullopt;
-    case MacroFilterPolicy::FuzzyMatch:
-      if (!C.Name.starts_with_insensitive("_") &&
-          !C.Name.ends_with_insensitive("_"))
-        return Filter->match(C.Name);
-      else
-        return std::nullopt;
-    }
-    llvm_unreachable("Unhandled MacroFilter option in fuzzyScore.");
+    // macros with underscores are probably noisy, so don't suggest them
+    bool RequireExactPrefix =
+        Opts.MacroFilter == MacroFilterPolicy::ExactPrefix ||
+        C.Name.starts_with_insensitive("_") ||
+        C.Name.ends_with_insensitive("_");
 
-    return std::nullopt;
+    if (RequireExactPrefix &&
+        !C.Name.starts_with_insensitive(Filter->pattern())) {
+      return std::nullopt;
+    }
+
+    return Filter->match(C.Name);
   }
 
   CodeCompletion::Scores

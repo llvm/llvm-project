@@ -4693,31 +4693,60 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
 }
 
 TEST(CompletionTest, FuzzyMatchMacro) {
-  const auto *const Code = R"cpp(
+  Annotations Code(R"cpp(
   #define gl_foo() 42
   #define _gl_foo() 42
+  #define glfbar() 42
+
   int gl_frob();
+  int _gl_frob();
 
   int main() {
-    int x = glf^
+    int y = glf$c1^;
+    int y = _gl$c2^;
   }
-  )cpp";
+  )cpp");
 
+  auto TU = TestTU::withCode(Code.code());
+
+  // Exact prefix should match macro or symbol
   {
     CodeCompleteOptions Opts{};
     EXPECT_EQ(Opts.MacroFilter, Config::MacroFilterPolicy::ExactPrefix);
 
-    auto Results = completions(Code, {}, Opts);
-    EXPECT_THAT(Results.Completions, ElementsAre(named("gl_frob")));
+    {
+      auto Results = completions(TU, Code.point("c1"), {}, Opts);
+      EXPECT_THAT(
+          Results.Completions,
+          ElementsAre(named("gl_frob"), named("_gl_frob"), named("glfbar")));
+    }
+
+    {
+      auto Results = completions(TU, Code.point("c2"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("_gl_frob"), named("_gl_foo")));
+    }
   }
 
+  // but with fuzzy match
   {
     CodeCompleteOptions Opts{};
     Opts.MacroFilter = Config::MacroFilterPolicy::FuzzyMatch;
 
-    auto Results = completions(Code, {}, Opts);
-    EXPECT_THAT(Results.Completions,
-                ElementsAre(named("gl_frob"), named("gl_foo")));
+    // don't suggest underscore macros in general,
+    {
+      auto Results = completions(TU, Code.point("c1"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("gl_frob"), named("_gl_frob"),
+                              named("glfbar"), named("gl_foo")));
+    }
+
+    // but do suggest when macro contains exact prefix
+    {
+      auto Results = completions(TU, Code.point("c2"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("_gl_frob"), named("_gl_foo")));
+    }
   }
 }
 
