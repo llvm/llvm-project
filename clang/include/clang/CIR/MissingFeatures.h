@@ -93,7 +93,6 @@ struct MissingFeatures {
   static bool opFuncNoReturn() { return false; }
   static bool setFunctionAttributes() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
-  static bool setFunctionPersonality() { return false; }
 
   // CallOp handling
   static bool opCallAggregateArgs() { return false; }
@@ -279,6 +278,7 @@ struct MissingFeatures {
 
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
+  static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIndices() { return false; }
   static bool globalViewIntLowering() { return false; }
   static bool handleBuiltinICEArguments() { return false; }

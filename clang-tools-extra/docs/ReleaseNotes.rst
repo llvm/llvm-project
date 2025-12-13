@@ -196,6 +196,9 @@ Improvements to clang-tidy
   moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
   in the 24th release.
 
+- Improved :program:`clang-tidy` configuration parsing by allowing the same list
+  syntax in `WarningsAsErrors` as in `Checks`.
+
 New checks
 ^^^^^^^^^^
 
@@ -326,6 +329,11 @@ New check aliases
 - Renamed :doc:`cert-oop58-cpp <clang-tidy/checks/cert/oop58-cpp>` to
   :doc:`bugprone-copy-constructor-mutates-argument
   <clang-tidy/checks/bugprone/copy-constructor-mutates-argument>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`fuchsia-multiple-inheritance <clang-tidy/checks/fuchsia/multiple-inheritance>` to
+  :doc:`misc-multiple-inheritance
+  <clang-tidy/checks/misc/multiple-inheritance>`
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`google-readability-casting <clang-tidy/checks/google/readability-casting>` to

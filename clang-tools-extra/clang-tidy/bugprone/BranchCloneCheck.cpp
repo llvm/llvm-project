@@ -29,21 +29,14 @@ using SwitchBranch = llvm::SmallVector<const Stmt *, 2>;
 static bool areSwitchBranchesIdentical(const SwitchBranch &LHS,
                                        const SwitchBranch &RHS,
                                        const ASTContext &Context) {
-  if (LHS.size() != RHS.size())
-    return false;
-
-  for (size_t I = 0, Size = LHS.size(); I < Size; I++) {
+  return llvm::equal(LHS, RHS, [&](const Stmt *S1, const Stmt *S2) {
     // NOTE: We strip goto labels and annotations in addition to stripping
     // the `case X:` or `default:` labels, but it is very unlikely that this
     // would cause false positives in real-world code.
-    if (!tidy::utils::areStatementsIdentical(LHS[I]->stripLabelLikeStatements(),
-                                             RHS[I]->stripLabelLikeStatements(),
-                                             Context)) {
-      return false;
-    }
-  }
-
-  return true;
+    return tidy::utils::areStatementsIdentical(S1->stripLabelLikeStatements(),
+                                               S2->stripLabelLikeStatements(),
+                                               Context);
+  });
 }
 
 static bool isFallthroughSwitchBranch(const SwitchBranch &Branch) {
@@ -137,19 +130,10 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
       return false;
 
     // If all children of two expressions are identical, return true.
-    Expr::const_child_iterator I1 = Expr1->child_begin();
-    Expr::const_child_iterator I2 = Expr2->child_begin();
-    while (I1 != Expr1->child_end() && I2 != Expr2->child_end()) {
-      if (!isIdenticalStmt(Ctx, *I1, *I2, IgnoreSideEffects))
-        return false;
-      ++I1;
-      ++I2;
-    }
-    // If there are different number of children in the statements, return
-    // false.
-    if (I1 != Expr1->child_end())
-      return false;
-    if (I2 != Expr2->child_end())
+    if (!llvm::equal(Expr1->children(), Expr2->children(),
+                     [&](const Stmt *S1, const Stmt *S2) {
+                       return isIdenticalStmt(Ctx, S1, S2, IgnoreSideEffects);
+                     }))
       return false;
   }
 
@@ -246,22 +230,10 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
   case Stmt::CompoundStmtClass: {
     const auto *CompStmt1 = cast<CompoundStmt>(Stmt1);
     const auto *CompStmt2 = cast<CompoundStmt>(Stmt2);
-
-    if (CompStmt1->size() != CompStmt2->size())
-      return false;
-
-    if (!llvm::all_of(llvm::zip(CompStmt1->body(), CompStmt2->body()),
-                      [&Ctx, IgnoreSideEffects](
-                          std::tuple<const Stmt *, const Stmt *> StmtPair) {
-                        const Stmt *Stmt0 = std::get<0>(StmtPair);
-                        const Stmt *Stmt1 = std::get<1>(StmtPair);
-                        return isIdenticalStmt(Ctx, Stmt0, Stmt1,
-                                               IgnoreSideEffects);
-                      })) {
-      return false;
-    }
-
-    return true;
+    return llvm::equal(CompStmt1->body(), CompStmt2->body(),
+                       [&](const Stmt *S1, const Stmt *S2) {
+                         return isIdenticalStmt(Ctx, S1, S2, IgnoreSideEffects);
+                       });
   }
   case Stmt::CompoundAssignOperatorClass:
   case Stmt::BinaryOperatorClass: {
@@ -456,7 +428,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
 
       diag(BeginCurrent->front()->getBeginLoc(),
            "switch has %0 consecutive identical branches")
-          << static_cast<int>(std::distance(BeginCurrent, EndCurrent));
+          << std::distance(BeginCurrent, EndCurrent);
 
       SourceLocation EndLoc = (EndCurrent - 1)->back()->getEndLoc();
       // If the case statement is generated from a macro, it's SourceLocation

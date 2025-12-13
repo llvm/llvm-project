@@ -5553,6 +5553,44 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       // TODO: Copy inf handling from instructions
       break;
+    case Intrinsic::amdgcn_rsq: {
+      KnownFPClass KnownSrc;
+      // The only negative value that can be returned is -inf for -0 inputs.
+      Known.knownNot(fcNegZero | fcNegSubnormal | fcNegNormal);
+
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+
+      // Negative -> nan
+      if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
+        Known.knownNot(fcNan);
+      else if (KnownSrc.isKnownNever(fcSNan))
+        Known.knownNot(fcSNan);
+
+      // +inf -> +0
+      if (KnownSrc.isKnownNeverPosInfinity())
+        Known.knownNot(fcPosZero);
+
+      Type *EltTy = II->getType()->getScalarType();
+
+      // f32 denormal always flushed.
+      if (EltTy->isFloatTy())
+        Known.knownNot(fcPosSubnormal);
+
+      if (const Function *F = II->getFunction()) {
+        DenormalMode Mode = F->getDenormalMode(EltTy->getFltSemantics());
+
+        // -0 -> -inf
+        if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+          Known.knownNot(fcNegInf);
+
+        // +0 -> +inf
+        if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+          Known.knownNot(fcPosInf);
+      }
+
+      break;
+    }
     default:
       break;
     }
@@ -5646,6 +5684,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     KnownFPClass KnownLHS, KnownRHS;
     computeKnownFPClass(Op->getOperand(1), DemandedElts, NeedForNan, KnownRHS,
                         Q, Depth + 1);
+
+    const APFloat *CRHS;
+    if (match(Op->getOperand(1), m_APFloat(CRHS))) {
+      // Match denormal scaling pattern, similar to the case in ldexp. If the
+      // constant's exponent is sufficiently large, the result cannot be
+      // subnormal.
+
+      // TODO: Should do general ConstantFPRange analysis.
+      const fltSemantics &Flt =
+          Op->getType()->getScalarType()->getFltSemantics();
+      unsigned Precision = APFloat::semanticsPrecision(Flt);
+      const int MantissaBits = Precision - 1;
+
+      int MinKnownExponent = ilogb(*CRHS);
+      if (MinKnownExponent >= MantissaBits)
+        Known.knownNot(fcSubnormal);
+    }
+
     if (!KnownRHS.isKnownNeverNaN())
       break;
 
