@@ -1770,7 +1770,6 @@ def err_user_defined_msg_constexpr : Error<
 def note_unsatisfied_trait
     : Note<"%0 is not %enum_select<TraitName>{"
            "%TriviallyRelocatable{trivially relocatable}|"
-           "%Replaceable{replaceable}|"
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
            "%StandardLayout{standard-layout}|"
@@ -1792,8 +1791,6 @@ def note_unsatisfied_trait_reason
            "class type}|"
            "%NTRBase{has a non-trivially-relocatable base %1}|"
            "%NTRField{has a non-trivially-relocatable member %1 of type %2}|"
-           "%NonReplaceableBase{has a non-replaceable base %1}|"
-           "%NonReplaceableField{has a non-replaceable member %1 of type %2}|"
            "%NTCBase{has a non-trivially-copyable base %1}|"
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%NonEmptyMember{has a non-static data member %1 of type %2}|"

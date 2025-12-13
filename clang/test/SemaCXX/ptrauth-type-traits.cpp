@@ -320,26 +320,6 @@ static_assert( __builtin_is_cpp_trivially_relocatable(RelocatableAddressDiscrimi
 static_assert(!__builtin_is_cpp_trivially_relocatable(EmbdeddedAddressDiscriminatedPolymorphicClass));
 static_assert(!__builtin_is_cpp_trivially_relocatable(RelocatableEmbdeddedAddressDiscriminatedPolymorphicClass));
 
-static_assert( __builtin_is_replaceable(AddressDiscriminatedPtr));
-static_assert( __builtin_is_replaceable(AddressDiscriminatedInt64));
-static_assert( __builtin_is_replaceable(AddressDiscriminatedFields));
-static_assert( __builtin_is_replaceable(RelocatableAddressDiscriminatedFields));
-static_assert( __builtin_is_replaceable(AddressDiscriminatedFieldInBaseClass));
-static_assert(!__builtin_is_replaceable(NonAddressDiscriminatedVTablePtr));
-static_assert(!__builtin_is_replaceable(NonAddressDiscriminatedVTablePtr2));
-static_assert(!__builtin_is_replaceable(RelocatableNonAddressDiscriminatedVTablePtr));
-static_assert(!__builtin_is_replaceable(RelocatableNonAddressDiscriminatedVTablePtr2));
-static_assert(!__builtin_is_replaceable(AddressDiscriminatedVTablePtr));
-static_assert(!__builtin_is_replaceable(RelocatableAddressDiscriminatedVTablePtr));
-static_assert(!__builtin_is_replaceable(NoAddressDiscriminatedBaseClasses));
-static_assert(!__builtin_is_replaceable(RelocatableNoAddressDiscriminatedBaseClasses));
-static_assert(!__builtin_is_replaceable(AddressDiscriminatedPrimaryBase));
-static_assert(!__builtin_is_replaceable(AddressDiscriminatedSecondaryBase));
-static_assert(!__builtin_is_replaceable(RelocatableAddressDiscriminatedPrimaryBase));
-static_assert(!__builtin_is_replaceable(RelocatableAddressDiscriminatedSecondaryBase));
-static_assert(!__builtin_is_replaceable(EmbdeddedAddressDiscriminatedPolymorphicClass));
-static_assert(!__builtin_is_replaceable(RelocatableEmbdeddedAddressDiscriminatedPolymorphicClass));
-
 static_assert( __is_bitwise_cloneable(AddressDiscriminatedPtr) == !ADDR_DISC_ENABLED);
 static_assert( __is_bitwise_cloneable(AddressDiscriminatedInt64) == !ADDR_DISC_ENABLED);
 static_assert( __is_bitwise_cloneable(AddressDiscriminatedFields) == !ADDR_DISC_ENABLED);

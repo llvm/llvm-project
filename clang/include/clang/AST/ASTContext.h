@@ -666,7 +666,6 @@ private:
 public:
   struct CXXRecordDeclRelocationInfo {
     unsigned IsRelocatable;
-    unsigned IsReplaceable;
   };
   std::optional<CXXRecordDeclRelocationInfo>
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;

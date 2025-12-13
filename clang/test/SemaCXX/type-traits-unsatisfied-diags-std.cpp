@@ -591,24 +591,3 @@ void test() {
     // expected-note@#concept10 {{because it is a cv void type}}
 }
 }
-
-
-namespace std {
-template <typename T>
-struct is_replaceable {
-    static constexpr bool value = __builtin_is_replaceable(T);
-};
-
-template <typename T>
-constexpr bool is_replaceable_v = __builtin_is_replaceable(T);
-
-}
-
-static_assert(std::is_replaceable<int&>::value);
-// expected-error@-1 {{static assertion failed due to requirement 'std::is_replaceable<int &>::value'}} \
-// expected-note@-1 {{'int &' is not replaceable}} \
-// expected-note@-1 {{because it is a reference type}}
-static_assert(std::is_replaceable_v<int&>);
-// expected-error@-1 {{static assertion failed due to requirement 'std::is_replaceable_v<int &>'}} \
-// expected-note@-1 {{'int &' is not replaceable}} \
-// expected-note@-1 {{because it is a reference type}}
