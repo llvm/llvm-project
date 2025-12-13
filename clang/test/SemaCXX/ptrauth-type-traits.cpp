@@ -427,7 +427,15 @@ namespace GH159505 {
     static_assert(PTRAUTH_ENABLED != __is_trivially_copyable(Ptr<T>));
   }
 
-  auto f = test<int>;
+  auto * __ptrauth(1,1,1) f = test<int>;
+  void (*__ptrauth(1,0,0) f1)() = test<int>;
+  void (*__ptrauth(1,1,0) f2)() = test<int>;
+  void (*__ptrauth(1,1,1) f3)() = test<int>;
+
+  struct Foo {
+    void (*field)();
+  };
+  Foo object;
   static_assert(!__is_trivially_copyable(B<1>));
   static_assert(PTRAUTH_ENABLED != __is_trivially_copyable(C<1>));
 

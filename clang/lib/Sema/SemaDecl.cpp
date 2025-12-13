@@ -15053,6 +15053,13 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   // Build the bindings if this is a structured binding declaration.
   if (auto *DD = dyn_cast<DecompositionDecl>(var))
     CheckCompleteDecompositionDeclaration(DD);
+
+  if (GlobalStorage && Context.isPointerAuthenticationAvailable() &&
+      !Diags.isIgnored(diag::warn_ptrauth_weak_global_function_pointer, var->getLocation())) {
+    if (Context.containsDefaultAuthenticatedFunctionPointer(var->getType())) {
+      Diag(var->getLocation(), diag::warn_ptrauth_weak_global_function_pointer) << var << var->getSourceRange();
+    }
+  }
 }
 
 void Sema::CheckStaticLocalForDllExport(VarDecl *VD) {

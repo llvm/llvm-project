@@ -994,6 +994,10 @@ void Sema::getUndefinedButUsed(
   }
 }
 
+static void checkQuestionableGlobalFunctionPointers(Sema &S) {
+  
+}
+
 /// checkUndefinedButUsed - Check for undefined objects with internal linkage
 /// or that are inline.
 static void checkUndefinedButUsed(Sema &S) {
@@ -1624,6 +1628,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     TUScope = nullptr;
 
   checkExposure(Context.getTranslationUnitDecl());
+  checkQuestionableGlobalFunctionPointers(*this);
 }
 
 
