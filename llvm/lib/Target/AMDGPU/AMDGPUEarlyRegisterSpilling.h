@@ -66,11 +66,11 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>
   getWhereToSpill(MachineInstr *CurMI, Register DefRegToSpill);
 
-  /// Return the uses that are dominated by SpillInstruction.
+  /// Return the uses that need a restore instruction.
   SetVectorType
-  collectUsesDominatedBySpill(Register DefRegToSpill,
-                              MachineInstr *SpillInstruction,
-                              const SetVectorType &UnreachableUses);
+  collectUsesThatNeedRestoreInstrs(Register DefRegToSpill,
+                                   MachineInstr *SpillInstruction,
+                                   const SetVectorType &UnreachableUses);
 
   /// Find the restore locations, emit the restore instructions and maintain
   /// SSA when needed.
@@ -108,13 +108,13 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   MachineBasicBlock *
   findCommonDominatorToSpill(MachineBasicBlock *SpillBlock,
                              Register DefRegToSpill,
-                             const SetVectorType &ReachableUses);
+                             const SetVectorType &NonDominatedReachableUses);
 
-  /// Collect Reachable and Unreachable uses.
+  /// Collect Non Dominated Reachable and Unreachable uses.
   std::pair<SetVectorType, SetVectorType>
-  collectReachableAndUnreachableUses(MachineBasicBlock *SpillBlock,
-                                     Register DefRegToSpill,
-                                     MachineInstr *CurMI);
+  collectNonDominatedReachableAndUnreachableUses(MachineBasicBlock *SpillBlock,
+                                                 Register DefRegToSpill,
+                                                 MachineInstr *CurMI);
 
   /// Helper functions to update the live interval analysis which is used by
   /// the Register Pressure Tracker.

@@ -447,7 +447,7 @@ void AMDGPUEarlyRegisterSpilling::emitRestoreInstrsForDominatedUses(
   }
 }
 
-SetVectorType AMDGPUEarlyRegisterSpilling::collectUsesDominatedBySpill(
+SetVectorType AMDGPUEarlyRegisterSpilling::collectUsesThatNeedRestoreInstrs(
     Register DefRegToSpill, MachineInstr *SpillInstruction,
     const SetVectorType &UnreachableUses) {
   SetVectorType DominatedUses;
@@ -482,7 +482,7 @@ void AMDGPUEarlyRegisterSpilling::emitRestores(
       MRI->getOneDef(DefRegToSpill)->getParent();
 
   // Collect the uses that are dominated by SpillInstruction
-  SetVectorType DominatedUses = collectUsesDominatedBySpill(
+  SetVectorType DominatedUses = collectUsesThatNeedRestoreInstrs(
       DefRegToSpill, SpillInstruction, UnreachableUses);
 
   SmallVector<MachineInstr *> RestoreInstrs;
@@ -517,11 +517,11 @@ void AMDGPUEarlyRegisterSpilling::emitRestores(
 // This is due to the fact that some unreachable uses might become reachable if
 // we spill in common dominator.
 std::pair<SetVectorType, SetVectorType>
-AMDGPUEarlyRegisterSpilling::collectReachableAndUnreachableUses(
+AMDGPUEarlyRegisterSpilling::collectNonDominatedReachableAndUnreachableUses(
     MachineBasicBlock *SpillBlock, Register DefRegToSpill,
     MachineInstr *CurMI) {
   // The reachable uses are the ones that can be reached by the SpillBlock.
-  SetVectorType ReachableUses;
+  SetVectorType NonDominatedReachableUses;
   // The non-dominated uses are the uses that cannot be reached by the
   // SpillBlock.
   SetVectorType UnreachableUses;
@@ -532,7 +532,7 @@ AMDGPUEarlyRegisterSpilling::collectReachableAndUnreachableUses(
           continue;
         if (isReachable(SpillBlock, PhiOpMBB)) {
           if (!DT->dominates(SpillBlock, PhiOpMBB))
-            ReachableUses.insert(&U);
+            NonDominatedReachableUses.insert(&U);
         } else if (PhiOpMBB != SpillBlock)
           UnreachableUses.insert(&U);
       }
@@ -543,21 +543,21 @@ AMDGPUEarlyRegisterSpilling::collectReachableAndUnreachableUses(
 
       if (isReachable(SpillBlock, UMBB)) {
         if (!DT->dominates(SpillBlock, UMBB))
-          ReachableUses.insert(&U);
+          NonDominatedReachableUses.insert(&U);
       } else
         UnreachableUses.insert(&U);
     }
   }
-  return {ReachableUses, UnreachableUses};
+  return {NonDominatedReachableUses, UnreachableUses};
 }
 
 // Find the common dominator of the reachable uses and the block that we
 // intend to spill(SpillBlock).
 MachineBasicBlock *AMDGPUEarlyRegisterSpilling::findCommonDominatorToSpill(
     MachineBasicBlock *SpillBlock, Register DefRegToSpill,
-    const SetVectorType &ReachableUses) {
+    const SetVectorType &NonDominatedReachableUses) {
   SmallPtrSet<MachineBasicBlock *, 2> Blocks;
-  for (auto *RU : ReachableUses) {
+  for (auto *RU : NonDominatedReachableUses) {
     if (RU->isPHI()) {
       for (auto *PhiOpMBB : getPhiBlocksOfSpillReg(RU, DefRegToSpill))
         Blocks.insert(PhiOpMBB);
@@ -691,14 +691,15 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
     // from the SpillBlock. In this case, we have to emit the spill in the
     // common dominator of the SpillBlock and the blocks of the reachable
     // uses.
-    SetVectorType ReachableUses;
+    SetVectorType NonDominatedReachableUses;
     SetVectorType UnreachableUses;
-    std::tie(ReachableUses, UnreachableUses) =
-        collectReachableAndUnreachableUses(SpillBlock, DefRegToSpill, CurMI);
+    std::tie(NonDominatedReachableUses, UnreachableUses) =
+        collectNonDominatedReachableAndUnreachableUses(SpillBlock,
+                                                       DefRegToSpill, CurMI);
     MachineBasicBlock *CommonDominatorToSpill = nullptr;
-    if (!ReachableUses.empty())
-      CommonDominatorToSpill =
-          findCommonDominatorToSpill(SpillBlock, DefRegToSpill, ReachableUses);
+    if (!NonDominatedReachableUses.empty())
+      CommonDominatorToSpill = findCommonDominatorToSpill(
+          SpillBlock, DefRegToSpill, NonDominatedReachableUses);
     if (CommonDominatorToSpill && CommonDominatorToSpill != SpillBlock) {
       SpillBlock = CommonDominatorToSpill;
       WhereToSpill = SpillBlock->getFirstTerminator();
