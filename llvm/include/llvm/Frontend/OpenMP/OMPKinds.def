@@ -1484,6 +1484,38 @@ __OMP_PROC_BIND_KIND(unknown, 7)
 
 ///}
 
+
+/// Callback information in OpenMP Runtime Functions
+///
+///{
+
+#define Indices(...) ArrayRef<int>({__VA_ARGS__})
+
+#ifndef OMP_RTL_CB_INFO
+#define OMP_RTL_CB_INFO(Enum, Str, ArgNo, ArgIndices, IsVarArg)
+#endif
+
+#define __OMP_RTL_CB_INFO(Name, ArgNo, ArgIndices, IsVarArg)                                      \
+  OMP_RTL_CB_INFO(OMPRTL_##Name, #Name, ArgNo, ArgIndices, IsVarArg)
+
+__OMP_RTL_CB_INFO(__kmpc_distribute_static_loop_4, 1, Indices(-1, -1), false)
+__OMP_RTL_CB_INFO(__kmpc_distribute_static_loop_4u, 1, Indices(-1, -1), false)
+__OMP_RTL_CB_INFO(__kmpc_distribute_static_loop_8, 1, Indices(-1, -1), false)
+__OMP_RTL_CB_INFO(__kmpc_distribute_static_loop_8u, 1, Indices(-1, -1), false)
+__OMP_RTL_CB_INFO(__kmpc_distribute_for_static_loop_4, 1, Indices(-1, -1), false)
+__OMP_RTL_CB_INFO(__kmpc_distribute_for_static_loop_4u, 1, Indices(-1, -1), false)
+__OMP_RTL_CB_INFO(__kmpc_distribute_for_static_loop_8, 1, Indices(-1, -1), false)
+__OMP_RTL_CB_INFO(__kmpc_distribute_for_static_loop_8u, 1, Indices(-1, -1), false)
+__OMP_RTL_CB_INFO(__kmpc_for_static_loop_4, 1, Indices(-1, -1), false)
+__OMP_RTL_CB_INFO(__kmpc_for_static_loop_4u, 1, Indices(-1, -1), false)
+__OMP_RTL_CB_INFO(__kmpc_for_static_loop_8, 1, Indices(-1, -1), false)
+__OMP_RTL_CB_INFO(__kmpc_for_static_loop_8u, 1, Indices(-1, -1), false)
+
+#undef __OMP_RTL_CB_INFO
+#undef OMP_RTL_CB_INFO
+
+///}
+
 /// OpenMP context related definitions:
 ///  - trait set selector
 ///  - trait selector
