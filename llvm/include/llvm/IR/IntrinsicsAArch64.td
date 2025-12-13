@@ -2435,6 +2435,7 @@ def int_aarch64_sve_stnt1_scatter_scalar_offset  : AdvSIMD_ScatterStore_VS_Intri
 def int_aarch64_sve_saba          : AdvSIMD_3VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_shsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsubr        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sli           : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqabs         : AdvSIMD_Merged1VectorArg_Intrinsic<[IntrSpeculatable]>;
@@ -2467,6 +2468,7 @@ def int_aarch64_sve_suqadd        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpecul
 def int_aarch64_sve_uaba          : AdvSIMD_3VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uhadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uhsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_uhsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uhsubr        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqrshl        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
