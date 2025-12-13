@@ -158,8 +158,7 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
       bool skipLeadingUnitDimRemoval =
           definingOp &&
           (isa<xegpu::CreateNdDescOp, xegpu::LoadNdOp, xegpu::DpasOp,
-               xegpu::StoreNdOp, xegpu::PrefetchNdOp, vector::BroadcastOp>(
-              definingOp));
+               xegpu::StoreNdOp, xegpu::PrefetchNdOp>(definingOp));
       if (!skipLeadingUnitDimRemoval) {
         auto it = llvm::find_if(instData, [](auto val) { return val != 1; });
         instData.erase(instData.begin(), it);
@@ -284,6 +283,8 @@ void XeGPUBlockingPass::runOnOperation() {
   // Preserve the LayoutAttr for each operand to the owner's DictionaryAttr.
   // This ensures that the LayoutAttr remains accessible even if the defining
   // operation is replaced.
+  // TODO-LayoutRefactor: unify the local propagation for layout preprocessing
+  // replace the function with localPropagateLayoutsFromAnchor
   xegpu::retrieveDistributeLayoutAttrsRecursive(op);
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,

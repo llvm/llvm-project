@@ -76,20 +76,10 @@ std::string getTempLayoutName(const OpResult result);
 /// found.
 DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
 
-template <typename AttrTy>
-AttrTy getDistributeLayoutAttrOfType(const Value value) {
-  return dyn_cast_if_present<AttrTy>(getDistributeLayoutAttr(value));
-}
-
 /// Retrieves the DistributeLayoutAttr associated with a given OpOperand. It
 /// will first check the operand_layout_{id} of the owner operation. If not
 /// found, it will check the operand itself and its defining op.
 DistributeLayoutAttr getDistributeLayoutAttr(const OpOperand &opr);
-
-template <typename AttrTy>
-AttrTy getDistributeLayoutAttrOfType(const OpOperand &opr) {
-  return dyn_cast_if_present<AttrTy>(getDistributeLayoutAttr(opr));
-}
 
 /// Removes the LayoutAttr for a given OpOperand or OpResult if it exists.
 template <typename T,
@@ -110,10 +100,28 @@ void setDistributeLayoutAttr(const OpResult &Result,
 void setDistributeLayoutAttr(const OpOperand &opr,
                              const DistributeLayoutAttr layout);
 
+/// get and set distribute layout attribute for non-anchor operations
+/// (and offsets/masks of load/store ops before we get rid of their temp attrs)
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                      std::is_same_v<T, OpResult>>>
+DistributeLayoutAttr getTempDistributeLayoutAttr(const T &operandOrResult);
+
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                      std::is_same_v<T, OpResult>>>
+void setTempDistributeLayoutAttr(const T &operandOrResult,
+                                 const DistributeLayoutAttr layout);
+
 /// Set the DistributeLayoutAttr for each OpOperand and OpResult of the given
 /// operation. If the operation contains regions, it is also applied recursively
 /// to the contained operations
 void retrieveDistributeLayoutAttrsRecursive(Operation *op);
+
+/// Attach layout attributes to all vector-type operands of operations within
+/// the given operation's region. Reports an error if any vector operand lacks
+/// a layout attribute.
+bool localPropagateLayoutsFromAnchor(Operation *rootOp);
 
 /// Extract a set of small vectors from a value with a given shape using
 /// vector.extract_stride_slice

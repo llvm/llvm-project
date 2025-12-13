@@ -114,27 +114,21 @@ std::string xegpu::getTempLayoutName(const OpResult result) {
 
 xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   if (!value) {
-    llvm::errs() << "getDistributeLayoutAttr: value is null\n";
     return nullptr;
   }
-
-  llvm::errs() << "Getting layout for value: " << value << "\n";
 
   if (auto tdescTy =
           dyn_cast_if_present<xegpu::TensorDescType>(value.getType())) {
     auto layoutAttr = tdescTy.getLayoutAttr();
-    llvm::errs() << "  Found TensorDescType with layout\n";
     return layoutAttr;
   }
 
   if (auto result = dyn_cast<OpResult>(value)) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
-    llvm::errs() << "  Value is OpResult from: " << *defOp << "\n";
 
     if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(defOp)) {
       auto layout = anchorOp.getAnchorLayout();
-      llvm::errs() << "  Returning anchor layout from defining op\n";
       return layout;
     }
 
@@ -142,55 +136,39 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     if (defOp->hasAttr(layoutName)) {
       auto layout =
           defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
-      llvm::errs() << "  Returning temp layout from attribute: " << layoutName
-                   << "\n";
       return layout;
     }
-    llvm::errs() << "  No layout found for OpResult\n";
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
     auto *parentOp = arg.getOwner()->getParentOp();
-    llvm::errs() << "  Value is BlockArgument, parent op: " << *parentOp
-                 << "\n";
     if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
       if (tiedInit) {
-        llvm::errs() << "  Following tied loop init\n";
         auto layout = getDistributeLayoutAttr(tiedInit->get());
         return layout;
       }
     }
-    llvm::errs() << "  No tied loop init found\n";
   }
 
-  llvm::errs() << "  Returning nullptr\n";
   return nullptr;
 }
-
 xegpu::DistributeLayoutAttr
 xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
   unsigned idx = const_cast<OpOperand &>(opr).getOperandNumber();
 
-  llvm::errs() << "Getting layout for operand " << idx << " of op: " << *op
-               << "\n";
-
   if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(op)) {
     if (auto dpasOp = dyn_cast<xegpu::DpasOp>(op)) {
       if (idx == 0) {
-        llvm::errs() << "  Returning DpasOp layout A\n";
         return dpasOp.getLayoutAAttr();
       } else if (idx == 1) {
-        llvm::errs() << "  Returning DpasOp layout B\n";
         return dpasOp.getLayoutBAttr();
       } else if (idx == 2) {
-        llvm::errs() << "  Returning DpasOp layout CD\n";
         return dpasOp.getLayoutCdAttr();
       }
     }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
-      llvm::errs() << "  Returning ConvertLayoutOp input layout\n";
       return convertOp.getInputLayoutAttr();
     }
     auto layout = anchorOp.getAnchorLayout();
@@ -200,12 +178,10 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     if (isa<xegpu::StoreScatterOp, xegpu::StoreNdOp, xegpu::StoreMatrixOp>(
             op)) {
       if (idx < 2) {
-        llvm::errs() << "  Returning anchor layout for store op\n";
         return layout;
       }
     } else {
       if (idx == 0) {
-        llvm::errs() << "  Returning anchor layout\n";
         return layout;
       }
     }
@@ -214,13 +190,10 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   std::string layoutName = xegpu::getTempLayoutName(opr);
   if (op->hasAttr(layoutName)) {
     auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
-    llvm::errs() << "  Returning temp layout from attribute: " << layoutName
-                 << "\n";
     return layout;
   }
 
   auto layout = getDistributeLayoutAttr(opr.get());
-  llvm::errs() << "  Returning layout from operand value\n";
   return layout;
 }
 
@@ -264,14 +237,10 @@ void xegpu::setDistributeLayoutAttr(
     const mlir::xegpu::DistributeLayoutAttr layout) {
   Operation *owner = result.getOwner();
 
-  llvm::errs() << "Setting layout for result of op: " << *owner << "\n";
-
   if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(owner)) {
     if (anchorOp.getAnchorLayout() == layout)
       return;
-    llvm::errs() << "  Setting anchor layout\n";
     anchorOp.setAnchorLayout(layout);
-    llvm::errs() << "  After setting anchor layout, op: " << *owner << "\n";
     return;
   }
 
@@ -280,18 +249,14 @@ void xegpu::setDistributeLayoutAttr(
     return;
   }
   if (layout) {
-    llvm::errs() << "  Setting temp layout attribute: " << name << "\n";
     owner->setAttr(name, layout);
-    llvm::errs() << "  After setting temp layout, op: " << *owner << "\n";
   }
 }
+
 void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
                                     const DistributeLayoutAttr layout) {
   Operation *owner = operand.getOwner();
   unsigned idx = const_cast<OpOperand &>(operand).getOperandNumber();
-
-  llvm::errs() << "Setting layout for operand 1" << idx << " of op: " << *owner
-               << " with layout: " << layout << "\n";
 
   if (!layout) {
     return;
@@ -299,18 +264,14 @@ void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
   if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(owner)) {
     if (auto dpasOp = dyn_cast<xegpu::DpasOp>(owner)) {
       if (idx == 0) {
-        llvm::errs() << "  Setting DpasOp layout A\n";
         return dpasOp.setLayoutAAttr(layout);
       } else if (idx == 1) {
-        llvm::errs() << "  Setting DpasOp layout B\n";
         return dpasOp.setLayoutBAttr(layout);
       } else if (idx == 2) {
-        llvm::errs() << "  Setting DpasOp layout CD\n";
         return dpasOp.setLayoutCdAttr(layout);
       }
     }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(owner)) {
-      llvm::errs() << "  Setting ConvertLayoutOp input layout\n";
       return convertOp.setInputLayoutAttr(layout);
     }
 
@@ -320,15 +281,11 @@ void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
     if (isa<xegpu::StoreScatterOp, xegpu::StoreNdOp, xegpu::StoreMatrixOp>(
             owner)) {
       if (idx < 2) {
-        llvm::errs() << "  Setting anchor layout for store op\n";
         anchorOp.setAnchorLayout(layout);
-        llvm::errs() << "  After setting anchor layout, op: " << *owner << "\n";
       }
     } else {
       if (idx == 0) {
-        llvm::errs() << "  Setting anchor layout\n";
         anchorOp.setAnchorLayout(layout);
-        llvm::errs() << "  After setting anchor layout, op: " << *owner << "\n";
       }
     }
   }
@@ -338,28 +295,84 @@ void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
     return;
   }
   if (layout) {
-    llvm::errs() << "  Setting temp layout attribute: " << name << "\n";
     owner->setAttr(name, layout);
-    llvm::errs() << "  After setting temp layout, op: " << *owner << "\n";
   }
 }
+
+template <typename T, typename>
+xegpu::DistributeLayoutAttr
+xegpu::getTempDistributeLayoutAttr(const T &operandOrResult) {
+  Operation *op = operandOrResult.getOwner();
+
+  std::string layoutName = xegpu::getTempLayoutName(operandOrResult);
+  if (op->hasAttr(layoutName)) {
+    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+    return layout;
+  }
+
+  return nullptr;
+}
+
+template xegpu::DistributeLayoutAttr
+xegpu::getTempDistributeLayoutAttr<mlir::OpResult>(const OpResult &result);
+template xegpu::DistributeLayoutAttr
+xegpu::getTempDistributeLayoutAttr<mlir::OpOperand>(const OpOperand &operand);
+
+template <typename T, typename>
+void xegpu::setTempDistributeLayoutAttr(
+    const T &operandOrResult, const xegpu::DistributeLayoutAttr layout) {
+  Operation *owner = operandOrResult.getOwner();
+  std::string name = xegpu::getTempLayoutName(operandOrResult);
+  if (owner->hasAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
+    return;
+  }
+  if (layout) {
+    owner->setAttr(name, layout);
+  }
+}
+
+template void xegpu::setTempDistributeLayoutAttr<mlir::OpResult>(
+    const mlir::OpResult &result,
+    const mlir::xegpu::DistributeLayoutAttr layout);
+
+template void xegpu::setTempDistributeLayoutAttr<mlir::OpOperand>(
+    const mlir::OpOperand &operand,
+    const mlir::xegpu::DistributeLayoutAttr layout);
 
 void xegpu::retrieveDistributeLayoutAttrsRecursive(Operation *op) {
   op->walk([&](Operation *nestOp) {
     for (OpOperand &opr : nestOp->getOpOperands()) {
       auto layout = getDistributeLayoutAttr(opr.get());
-      llvm::errs() << "Setting layout for operand " << opr.getOperandNumber()
-                   << " of op: " << *nestOp << "\n";
       setDistributeLayoutAttr(opr, layout);
     }
 
     for (OpResult result : nestOp->getOpResults()) {
       auto layout = getDistributeLayoutAttr(result);
-      llvm::errs() << "Setting layout for result " << result.getResultNumber()
-                   << " of op: " << *nestOp << "\n";
       setDistributeLayoutAttr(result, layout);
     }
   });
+}
+
+/// Attach layout attributes to all vector-type operands of operations within
+/// the given operation's region. Reports an error if any vector operand lacks
+/// a layout attribute.
+bool xegpu::localPropagateLayoutsFromAnchor(Operation *rootOp) {
+  auto result = rootOp->walk([&](Operation *op) {
+    for (OpOperand &operand : op->getOpOperands()) {
+      // Layouts are needed for vector type only.
+      if (!isa<VectorType>(operand.get().getType()))
+        continue;
+      auto layout = xegpu::getDistributeLayoutAttr(operand.get());
+      if (!layout) {
+        op->emitError("Could not find layout attribute for operand ")
+            << operand.getOperandNumber() << " of operation " << op->getName();
+        return WalkResult::interrupt();
+      }
+      xegpu::setDistributeLayoutAttr(operand, layout);
+    }
+    return WalkResult::advance();
+  });
+  return !result.wasInterrupted();
 }
 
 template <typename T, typename>
@@ -468,11 +481,6 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
         .getResult(0);
   };
 
-  llvm::errs()
-      << "\n=== Stage 1: Converting VectorType to RankedTensorType ===\n";
-  llvm::errs() << "Before conversion:\n";
-  op->dump();
-
   { // convert VectorType to RankedTensorType for SCF Structural ops
     TypeConverter converter;
     converter.addConversion([](Type type) -> Type { return type; });
@@ -490,12 +498,6 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
                                                          target);
     (void)mlir::applyPartialConversion(op, target, std::move(patterns));
   }
-
-  llvm::errs() << "\nAfter Stage 1:\n";
-  op->dump();
-
-  llvm::errs() << "\n=== Stage 2: Propagating layout attributes to "
-                  "RankedTensorType ===\n";
 
   { // propagate the layout attribute to RankedTensorType by checking
     // BuiltInUnrealizedCastOps
@@ -550,12 +552,6 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
       }
     });
   }
-
-  llvm::errs() << "\nAfter Stage 2:\n";
-  op->dump();
-
-  llvm::errs()
-      << "\n=== Stage 3: Converting RankedTensorType back to VectorType ===\n";
 
   { // perform the conversion from RankedTensorType to VectorType based on the
     // DistributeLayoutAttr
@@ -620,10 +616,6 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
                                                          target);
     (void)mlir::applyPartialConversion(op, target, std::move(patterns));
   }
-
-  llvm::errs() << "\nAfter Stage 3 (final):\n";
-  op->dump();
-  llvm::errs() << "\n=== Transformation complete ===\n\n";
 }
 
 std::optional<std::string> xegpu::getChipStr(Operation *op) {
