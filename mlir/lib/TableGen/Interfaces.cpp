@@ -229,8 +229,7 @@ bool DialectInterface::classof(const Interface *interface) {
 }
 
 // Return the interfaces extra class declaration code.
-llvm::StringMap<StringRef>
-DialectInterface::getAliasDeclarations() const {
+llvm::StringMap<StringRef> DialectInterface::getAliasDeclarations() const {
   llvm::StringMap<StringRef> aliasDeclarations;
 
   for (auto &aliasDef : getDef().getValueAsListOfDefs("aliasDeclarations")) {
