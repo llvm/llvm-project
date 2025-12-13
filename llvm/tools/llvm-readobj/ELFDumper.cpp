@@ -446,10 +446,10 @@ protected:
   // information.
   SmallVector<FunctionCallgraphInfo, 16> FuncCGInfos;
 
-  // Read the .llvm.callgraph section and process its contents to populate
-  // call graph related data structures which will be used to dump call graph
-  // info. Returns false if there is no .llvm.callgraph section in the input
-  // file.
+  // Read the SHT_LLVM_CALL_GRAPH type section and process its contents to
+  // populate call graph related data structures which will be used to dump call
+  // graph info. Returns false if there is no SHT_LLVM_CALL_GRAPH type section
+  // in the input file.
   bool processCallGraphSection();
 
   void getCallGraphRelocations(std::vector<Relocation<ELFT>> &Relocations,
@@ -5323,8 +5323,9 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
       Obj.getSectionContents(*CGSection);
   if (!SectionBytesOrErr) {
-    reportWarning(createError("unable to read the .llvm.callgraph section"),
-                  FileName);
+    reportWarning(
+        createError("unable to read the SHT_LLVM_CALL_GRAPH type section"),
+        FileName);
     return false;
   }
 
@@ -5342,7 +5343,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     if (FormatVersionNumber != 0) {
       reportWarning(createError("unknown format version value [" +
                                 std::to_string(FormatVersionNumber) +
-                                "] in .llvm.callgraph section"),
+                                "] in SHT_LLVM_CALL_GRAPH type section"),
                     FileName);
       return false;
     }
@@ -5437,8 +5438,9 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   }
 
   if (UnknownCount)
-    reportUniqueWarning(".llvm.callgraph section has unknown type id for " +
-                        std::to_string(UnknownCount) + " indirect targets.");
+    reportUniqueWarning(
+        "SHT_LLVM_CALL_GRAPH type section has unknown type id for " +
+        std::to_string(UnknownCount) + " indirect targets.");
   return true;
 }
 

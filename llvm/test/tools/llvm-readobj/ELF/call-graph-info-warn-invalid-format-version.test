@@ -1,11 +1,11 @@
-## Tests that --call-graph-info fails if .llvm.callgraph section has unknown format
+## Tests that --call-graph-info fails if SHT_LLVM_CALL_GRAPH type section has unknown format
 ## version number.
 
 # RUN: yaml2obj --docnum=1 %s -o %t
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
 
-# WARN: warning: '[[FILE]]': unknown format version value [1] in .llvm.callgraph section
+# WARN: warning: '[[FILE]]': unknown format version value [1] in SHT_LLVM_CALL_GRAPH type section
 
 ## YAML content was generated from this assembly using obj2yaml.
 ##    .text

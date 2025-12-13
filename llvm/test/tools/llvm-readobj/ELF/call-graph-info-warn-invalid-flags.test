@@ -1,4 +1,4 @@
-## Tests that --call-graph-info fails if .llvm.callgraph section has invalid
+## Tests that --call-graph-info fails if SHT_LLVM_CALL_GRAPH type section has invalid
 ## value for flags field.
 
 # RUN: yaml2obj --docnum=1 %s -o %t

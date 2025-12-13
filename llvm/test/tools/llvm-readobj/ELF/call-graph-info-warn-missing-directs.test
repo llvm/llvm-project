@@ -1,4 +1,4 @@
-## Tests that --call-graph-info fails if .llvm.callgraph section has flags
+## Tests that --call-graph-info fails if SHT_LLVM_CALL_GRAPH type section has flags
 ## that indicate there are direct calls but the direct call info is missing.
 
 # RUN: yaml2obj --docnum=1 %s -o %t

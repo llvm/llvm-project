@@ -1,4 +1,4 @@
-## Tests that --call-graph-info fails if .llvm.callgraph section does not have
+## Tests that --call-graph-info fails if SHT_LLVM_CALL_GRAPH type section does not have
 ## an expected value, e.g., not as much call sites as the given count.
 
 # RUN: yaml2obj --docnum=1 %s -o %t

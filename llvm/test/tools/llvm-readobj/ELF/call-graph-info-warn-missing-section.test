@@ -1,4 +1,4 @@
-## Tests that --call-graph-info warns if there is no .llvm.callgraph section.
+## Tests that --call-graph-info warns if there is no section of type SHT_LLVM_CALL_GRAPH.
 
 # RUN: yaml2obj --docnum=1 %s -o %t
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
