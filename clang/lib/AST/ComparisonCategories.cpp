@@ -84,10 +84,13 @@ ComparisonCategoryInfo::ValueInfo *ComparisonCategoryInfo::lookupValueInfo(
   if (Lookup.empty() || !isa<VarDecl>(Lookup.front()))
     return nullptr;
   // The static member must have the same type as the comparison category class
-  // itself (e.g., std::partial_ordering::less must be of type partial_ordering).
+  // itself (e.g., std::partial_ordering::less must be of type
+  // partial_ordering).
   VarDecl *ValueDecl = cast<VarDecl>(Lookup.front());
-  const CXXRecordDecl *ValueDeclRecord = ValueDecl->getType()->getAsCXXRecordDecl();
-  if (!ValueDeclRecord || ValueDeclRecord->getCanonicalDecl() != Record->getCanonicalDecl())
+  const CXXRecordDecl *ValueDeclRecord =
+      ValueDecl->getType()->getAsCXXRecordDecl();
+  if (!ValueDeclRecord ||
+      ValueDeclRecord->getCanonicalDecl() != Record->getCanonicalDecl())
     return nullptr;
 
   Objects.emplace_back(ValueKind, ValueDecl);
