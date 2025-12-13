@@ -3614,6 +3614,8 @@ def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
   }];
 
   let hasVerifier = 1;
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
