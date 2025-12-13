@@ -13,7 +13,7 @@
 using namespace clang;
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::fuchsia {
+namespace clang::tidy::misc {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, hasBases) {
@@ -74,4 +74,4 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
                           "pure virtual is discouraged");
 }
 
-} // namespace clang::tidy::fuchsia
+} // namespace clang::tidy::misc
