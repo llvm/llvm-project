@@ -37,7 +37,7 @@ struct Foo {
 };
 void conditional_inside_dependent_context(void) {
   auto lambda = [](auto result) { // opens a dependent context
-    Foo::static_method(result ? 1 : 2);
+    Foo::static_method(result ? 1 : 2); // no-crash
   };
   (void)lambda;
 }
