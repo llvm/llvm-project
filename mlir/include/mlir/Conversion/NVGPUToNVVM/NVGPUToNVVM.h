@@ -14,10 +14,11 @@ namespace mlir {
 
 class Attribute;
 class LLVMTypeConverter;
-class MemRefType;
 class MLIRContext;
-class RewritePatternSet;
+class MemRefType;
 class Pass;
+class RewritePatternSet;
+class TypeConverter;
 
 #define GEN_PASS_DECL_CONVERTNVGPUTONVVMPASS
 #include "mlir/Conversion/Passes.h.inc"
@@ -33,6 +34,11 @@ Attribute getMbarrierMemorySpace(MLIRContext *context,
 MemRefType getMBarrierMemrefType(MLIRContext *context,
                                  MBarrierGroupType barrierType);
 } // namespace nvgpu
+
+/// Remap common GPU memory spaces (Workgroup, Private, etc) to LLVM address
+/// spaces.
+void populateCommonNVGPUTypeAndAttributeConversions(
+    TypeConverter &typeConverter);
 
 void populateNVGPUToNVVMConversionPatterns(const LLVMTypeConverter &converter,
                                            RewritePatternSet &patterns);
