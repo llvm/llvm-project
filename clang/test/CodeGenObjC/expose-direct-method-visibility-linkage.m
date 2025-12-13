@@ -5,16 +5,16 @@
 
 // Test 1: Check IR from library implementation (visibility attributes)
 // RUN: %clang -target arm64-apple-darwin -fobjc-arc \
-// RUN:   -fobjc-expose-direct-methods -S -emit-llvm -o - %t/foo.m \
+// RUN:   -fobjc-direct-precondition-thunk -S -emit-llvm -o - %t/foo.m \
 // RUN:   -I %t | FileCheck %s --check-prefix=FOO_M
 
 // Test 2: Check IR from main (consumer)
 // RUN: %clang -target arm64-apple-darwin -fobjc-arc \
-// RUN:   -fobjc-expose-direct-methods -S -emit-llvm -o - %t/main.m \
+// RUN:   -fobjc-direct-precondition-thunk -S -emit-llvm -o - %t/main.m \
 // RUN:   -I %t | FileCheck %s --check-prefix=MAIN_M
 
 // Test 3: Build libFoo.dylib from foo.m
-// RUN: %clang -fobjc-expose-direct-methods -target arm64-apple-darwin \
+// RUN: %clang -fobjc-direct-precondition-thunk -target arm64-apple-darwin \
 // RUN:   -fobjc-arc -dynamiclib %t/foo.m -I %t \
 // RUN:   -framework Foundation \
 // RUN:   -install_name @rpath/libFoo.dylib \
@@ -36,7 +36,7 @@
 // DYLIB: {{[0-9a-f]+}} T _-[Foo setExportedValue:]
 
 // Test 5: Compile main.m
-// RUN: %clang -fobjc-expose-direct-methods -target arm64-apple-darwin \
+// RUN: %clang -fobjc-direct-precondition-thunk -target arm64-apple-darwin \
 // RUN:   -fobjc-arc -c %t/main.m -I %t -o %t/main.o
 
 // Test 6: Link main with libFoo.dylib

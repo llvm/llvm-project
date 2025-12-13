@@ -1,6 +1,6 @@
 // This test consolidates tests for basic functionality, stub dispatch, and thunk generation
 // RUN: %clang_cc1 -emit-llvm -fobjc-arc -triple arm64-apple-darwin10 \
-// RUN:   -fobjc-expose-direct-methods %s -o - | FileCheck %s
+// RUN:   -fobjc-direct-precondition-thunk %s -o - | FileCheck %s
 
 struct my_complex_struct {
   int a, b;
