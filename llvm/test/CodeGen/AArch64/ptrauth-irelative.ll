@@ -1,4 +1,9 @@
-; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth -filetype=asm -o - %s | FileCheck %s
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth -filetype=asm -o - %t/unsigned-got.ll | FileCheck %t/unsigned-got.ll
+; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth -filetype=asm -o - %t/signed-got.ll | FileCheck %t/signed-got.ll
+
+;--- unsigned-got.ll
 
 ; CHECK: nullref:
 ; CHECK-NEXT: [[PLACE:.*]]:
@@ -127,3 +132,56 @@ $comdat = comdat any
 ; CHECK: comdat:
 ; CHECK-NEXT: [[PLACE:.*]]:
 ; CHECK-NEXT: .section	.text.startup,"axG",@progbits,comdat,comdat
+
+;--- signed-got.ll
+
+@global = external global i8
+
+; CHECK: globalref:
+; CHECK-NEXT: [[PLACE:.*]]:
+; CHECK-NEXT: .section .text.startup
+; CHECK-NEXT: [[FUNC:.*]]:
+; CHECK-NEXT: adrp x16, :got_auth:global
+; CHECK-NEXT: add x16, x16, :got_auth_lo12:global
+; CHECK-NEXT: ldr x0, [x16]
+; CHECK-NEXT: autda x0, x16
+; CHECK-NEXT: mov x1, #4
+; CHECK-NEXT: b __emupac_pacda
+; CHECK-NEXT: .section .rodata
+; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
+@globalref = constant ptr ptrauth (ptr @global, i32 2, i64 4, ptr null), align 8
+
+; CHECK: globalref8:
+; CHECK-NEXT: [[PLACE:.*]]:
+; CHECK-NEXT: .section .text.startup
+; CHECK-NEXT: [[FUNC:.*]]:
+; CHECK-NEXT: adrp x16, :got_auth:global
+; CHECK-NEXT: add x16, x16, :got_auth_lo12:global
+; CHECK-NEXT: ldr x0, [x16]
+; CHECK-NEXT: autda x0, x16
+; CHECK-NEXT: add x0, x0, #8
+; CHECK-NEXT: mov x1, #5
+; CHECK-NEXT: b __emupac_pacda
+; CHECK-NEXT: .section .rodata
+; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
+@globalref8 = constant ptr ptrauth (ptr getelementptr (i8, ptr @global, i64 8), i32 2, i64 5, ptr null), align 8
+
+; CHECK: globalref16777216:
+; CHECK-NEXT: [[PLACE:.*]]:
+; CHECK-NEXT: .section .text.startup
+; CHECK-NEXT: [[FUNC:.*]]:
+; CHECK-NEXT: adrp x16, :got_auth:global
+; CHECK-NEXT: add x16, x16, :got_auth_lo12:global
+; CHECK-NEXT: ldr x0, [x16]
+; CHECK-NEXT: autda x0, x16
+; CHECK-NEXT: mov x16, #0
+; CHECK-NEXT: movk x16, #256, lsl #16
+; CHECK-NEXT: add x0, x0, x16
+; CHECK-NEXT: mov x1, #5
+; CHECK-NEXT: b __emupac_pacda
+; CHECK-NEXT: .section .rodata
+; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
+@globalref16777216 = constant ptr ptrauth (ptr getelementptr (i8, ptr @global, i64 16777216), i32 2, i64 5, ptr null), align 8
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ptrauth-elf-got", i32 1}
