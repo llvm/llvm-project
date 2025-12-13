@@ -1206,10 +1206,12 @@ ObjectFile *Module::GetObjectFile() {
         m_did_load_objfile = true;
         // FindPlugin will modify its data_sp argument. Do not let it
         // modify our m_data_sp member.
-        auto data_sp = m_data_sp;
+        DataExtractorSP extractor_sp;
+        if (m_data_sp)
+          extractor_sp = std::make_shared<DataExtractor>(m_data_sp);
         m_objfile_sp = ObjectFile::FindPlugin(
             shared_from_this(), &m_file, m_object_offset,
-            file_size - m_object_offset, data_sp, data_offset);
+            file_size - m_object_offset, extractor_sp, data_offset);
         if (m_objfile_sp) {
           // Once we get the object file, update our module with the object
           // file's architecture since it might differ in vendor/os if some
@@ -1569,7 +1571,9 @@ void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
 
   if (!sdk_path_or_err) {
     Debugger::ReportError("Error while searching for Xcode SDK: " +
-                          toString(sdk_path_or_err.takeError()));
+                              toString(sdk_path_or_err.takeError()),
+                          /*debugger_id=*/std::nullopt,
+                          GetDiagnosticOnceFlag(sdk_name));
     return;
   }
 

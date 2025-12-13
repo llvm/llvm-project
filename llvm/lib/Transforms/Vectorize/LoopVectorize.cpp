@@ -1807,10 +1807,10 @@ class GeneratedRTChecks {
 public:
   GeneratedRTChecks(PredicatedScalarEvolution &PSE, DominatorTree *DT,
                     LoopInfo *LI, TargetTransformInfo *TTI,
-                    const DataLayout &DL, TTI::TargetCostKind CostKind)
+                    TTI::TargetCostKind CostKind)
       : DT(DT), LI(LI), TTI(TTI),
-        SCEVExp(*PSE.getSE(), DL, "scev.check", /*PreserveLCSSA=*/false),
-        MemCheckExp(*PSE.getSE(), DL, "scev.check", /*PreserveLCSSA=*/false),
+        SCEVExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
+        MemCheckExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
         PSE(PSE), CostKind(CostKind) {}
 
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
@@ -9249,7 +9249,7 @@ static bool processLoopInVPlanNativePath(
   VPlan &BestPlan = LVP.getPlanFor(VF.Width);
 
   {
-    GeneratedRTChecks Checks(PSE, DT, LI, TTI, F->getDataLayout(), CM.CostKind);
+    GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM.CostKind);
     InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, /*UF=*/1, &CM,
                            Checks, BestPlan);
     LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
@@ -9342,7 +9342,7 @@ static InstructionCost calculateEarlyExitCost(VPCostContext &CostCtx,
 ///  2. In the case of loops with uncountable early exits, we may have to do
 ///     extra work when exiting the loop early, such as calculating the final
 ///     exit values of variables used outside the loop.
-///  3. The middle block, if expected TC <= VF.Width.
+///  3. The middle block.
 static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
                                         VectorizationFactor &VF, Loop *L,
                                         PredicatedScalarEvolution &PSE,
@@ -9357,13 +9357,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // one exists.
   TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
 
-  // If the expected trip count is less than the VF, the vector loop will only
-  // execute a single iteration. Then the middle block is executed the same
-  // number of times as the vector region.
-  // TODO: Extend logic to always account for the cost of the middle block.
-  auto ExpectedTC = getSmallBestKnownTC(PSE, L);
-  if (ExpectedTC && ElementCount::isKnownLE(*ExpectedTC, VF.Width))
-    TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
+  TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
 
   // When interleaving only scalar and vector cost will be equal, which in turn
   // would lead to a divide by 0. Fall back to hard threshold.
@@ -10085,7 +10079,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (ORE->allowExtraAnalysis(LV_NAME))
     LVP.emitInvalidCostRemarks(ORE);
 
-  GeneratedRTChecks Checks(PSE, DT, LI, TTI, F->getDataLayout(), CM.CostKind);
+  GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM.CostKind);
   if (LVP.hasPlanWithVF(VF.Width)) {
     // Select the interleave count.
     IC = LVP.selectInterleaveCount(LVP.getPlanFor(VF.Width), VF.Width, VF.Cost);

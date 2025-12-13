@@ -388,11 +388,11 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
 
 // To support current approach and limitations wrt. bit width here we widen a
 // scalar register with a bit width greater than 1 to valid sizes and cap it to
-// 64 width.
+// 128 width.
 static unsigned widenBitWidthToNextPow2(unsigned BitWidth) {
   if (BitWidth == 1)
     return 1; // No need to widen 1-bit values
-  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 64u);
+  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 128u);
 }
 
 static void widenScalarType(Register Reg, MachineRegisterInfo &MRI) {
