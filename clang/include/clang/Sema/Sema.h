@@ -6035,7 +6035,11 @@ public:
   void ActOnFinishDelayedCXXMethodDeclaration(Scope *S, Decl *Method);
   void ActOnFinishDelayedMemberInitializers(Decl *Record);
 
-  enum class StringEvaluationContext { StaticAssert = 0, Asm = 1 };
+  enum class StringEvaluationContext {
+    StaticAssert = 0,
+    Asm = 1,
+    PointerAuthOptions = 2
+  };
 
   bool EvaluateAsString(Expr *Message, APValue &Result, ASTContext &Ctx,
                         StringEvaluationContext EvalContext,
@@ -6043,6 +6047,14 @@ public:
   bool EvaluateAsString(Expr *Message, std::string &Result, ASTContext &Ctx,
                         StringEvaluationContext EvalContext,
                         bool ErrorOnInvalidMessage);
+
+  // In addition to failing to work out a good name for this, I worked out how
+  // to make diagnostics that point to the evaluated string, but the ~proof~
+  // implementation is too large to fit in this PR.
+  std::optional<std::string>
+  EvaluateAsAnyKindOfConstantStringYo(Expr *String,
+                                      StringEvaluationContext EvalContext,
+                                      bool ErrorOnInvalidMessage);
 
   Decl *ActOnStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                      Expr *AssertExpr, Expr *AssertMessageExpr,

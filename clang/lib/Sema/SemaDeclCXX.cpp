@@ -17918,6 +17918,22 @@ bool Sema::EvaluateAsString(Expr *Message, std::string &Result, ASTContext &Ctx,
                               ErrorOnInvalidMessage);
 }
 
+std::optional<std::string>
+Sema::EvaluateAsAnyKindOfConstantStringYo(Expr *StrExpr,
+                                          StringEvaluationContext EvalContext,
+                                          bool ErrorOnInvalidMessage) {
+  if (StringLiteral *Literal = dyn_cast<StringLiteral>(StrExpr))
+    return Literal->getString().str();
+
+  std::string EvaluationBuffer;
+  if (auto EvaluatedString = StrExpr->tryEvaluateString(Context))
+    EvaluationBuffer.swap(*EvaluatedString);
+  else if (EvaluateAsString(StrExpr, EvaluationBuffer, Context, EvalContext,
+                            ErrorOnInvalidMessage))
+    return std::nullopt;
+  return EvaluationBuffer;
+}
+
 Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                          Expr *AssertExpr, Expr *AssertMessage,
                                          SourceLocation RParenLoc,

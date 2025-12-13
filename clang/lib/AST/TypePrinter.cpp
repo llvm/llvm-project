@@ -2623,7 +2623,31 @@ void PointerAuthQualifier::print(raw_ostream &OS,
   OS << "__ptrauth(";
   OS << getKey();
   OS << "," << unsigned(isAddressDiscriminated()) << ","
-     << getExtraDiscriminator() << ")";
+     << getExtraDiscriminator();
+
+  llvm::SmallVector<StringRef, 3> Options;
+  PointerAuthenticationMode AuthenticationMode = getAuthenticationMode();
+  assert(AuthenticationMode != PointerAuthenticationMode::None &&
+         "Mode is unauthenticated but claims to be present");
+  // We only include none default authentication modes
+  if (AuthenticationMode != clang::PointerAuthenticationMode::SignAndAuth)
+    Options.push_back(stringForAuthenticationMode(getAuthenticationMode()));
+  if (isIsaPointer())
+    Options.push_back(PointerAuthenticationOptionIsaPointer);
+  if (authenticatesNullValues())
+    Options.push_back(PointerAuthenticationOptionAuthenticatesNullValues);
+  if (Options.size()) {
+    OS << ",";
+    OS << "\"";
+    for (unsigned Idx = 0; Idx < Options.size(); ++Idx) {
+      if (Idx > 0)
+        OS << ",";
+      OS << Options[Idx];
+    }
+    OS << "\"";
+  }
+
+  OS << ")";
 }
 
 std::string Qualifiers::getAsString() const {

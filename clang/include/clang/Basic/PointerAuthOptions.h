@@ -58,6 +58,55 @@ constexpr unsigned PointerAuthKeyNone = -1;
 /// the vtable type discriminator for classes derived from std::type_info.
 constexpr uint16_t StdTypeInfoVTablePointerConstantDiscrimination = 0xB1EA;
 
+enum class PointerAuthenticationMode : unsigned {
+  None,
+  Strip,
+  SignAndStrip,
+  SignAndAuth
+};
+
+// For reviewers: Where should I actually put this? We don't really have any
+// pre-CG pointer auth specific impl files. I'm almost thinking that we should
+// have Basic/PointerAuth.cpp or something?
+
+static constexpr llvm::StringLiteral PointerAuthenticationOptionStrip = "strip";
+static constexpr llvm::StringLiteral PointerAuthenticationOptionSignAndStrip =
+    "sign-and-strip";
+static constexpr llvm::StringLiteral PointerAuthenticationOptionSignAndAuth =
+    "sign-and-auth";
+static constexpr llvm::StringLiteral PointerAuthenticationOptionIsaPointer =
+    "isa-pointer";
+static constexpr llvm::StringLiteral
+    PointerAuthenticationOptionAuthenticatesNullValues =
+        "authenticates-null-values";
+
+inline std::optional<PointerAuthenticationMode>
+authenticationModeFromString(StringRef Option) {
+  return llvm::StringSwitch<std::optional<PointerAuthenticationMode>>(Option)
+      .Case(PointerAuthenticationOptionStrip, PointerAuthenticationMode::Strip)
+      .Case(PointerAuthenticationOptionSignAndStrip,
+            PointerAuthenticationMode::SignAndStrip)
+      .Case(PointerAuthenticationOptionSignAndAuth,
+            PointerAuthenticationMode::SignAndAuth)
+      .Default(std::nullopt);
+}
+
+inline StringRef stringForAuthenticationMode(PointerAuthenticationMode Mode) {
+  switch (Mode) {
+  case clang::PointerAuthenticationMode::Strip:
+    return PointerAuthenticationOptionStrip;
+  case clang::PointerAuthenticationMode::SignAndStrip:
+    return PointerAuthenticationOptionSignAndStrip;
+  case PointerAuthenticationMode::None:
+    // llvm_unreachable means that this path is assumed unreachable so the
+    // branch can be removed which is much worse that just defaulting to
+    // sign+auth
+    assert(0 && "We should not be stringify disabled pointer auth qualifiers");
+  case clang::PointerAuthenticationMode::SignAndAuth:
+    return PointerAuthenticationOptionSignAndAuth;
+  }
+}
+
 class PointerAuthSchema {
 public:
   enum class Kind : unsigned {

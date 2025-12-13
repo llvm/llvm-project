@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -DIS_DARWIN -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
 
+// #include <ptrauth.h>
+
 #if defined(IS_DARWIN) && !__has_extension(ptrauth_qualifier)
 // This error means that the __ptrauth qualifier availability test says  that it
 // is not available. This error is not expected in the output, if it is seen
@@ -46,19 +48,40 @@ int * __ptrauth(VALID_DATA_KEY, 1, -1) invalid9; // expected-error {{invalid ext
 int * __ptrauth(VALID_DATA_KEY, 1, 100000) invalid10; // expected-error {{invalid extra discriminator flag '100000'; '__ptrauth' requires a value between '0' and '65535'}}
 int * __ptrauth(VALID_DATA_KEY, 1, nonConstantGlobal) invalid12; // expected-error {{argument to '__ptrauth' must be an integer constant expression}}
 int * __ptrauth(VALID_DATA_KEY, nonConstantGlobal, 1000) invalid13; // expected-error {{argument to '__ptrauth' must be an integer constant expression}}
-int * __ptrauth(nonConstantGlobal, 1, 1000) invalid14; // expected-error{{expression is not an integer constant expression}}
+int * __ptrauth(nonConstantGlobal, 1, 1000) invalid14; // expected-error {{expression is not an integer constant expression}}
 
+int *__ptrauth(VALID_DATA_KEY, 1, 65535, 41) invalid11;          // expected-error {{the expression in '__ptrauth' options must be a string literal or an object with 'data()' and 'size()' member functions}}
+int *__ptrauth(VALID_DATA_KEY, 1, nonConstantGlobal) invalid12;  // expected-error {{argument to '__ptrauth' must be an integer constant expression}}
+int *__ptrauth(VALID_DATA_KEY, 1, 65535, "Foo") invalid13;       // expected-error {{unknown '__ptrauth' authentication option 'Foo'}}
+int *__ptrauth(VALID_DATA_KEY, 1, 65535, "strip", 41) invalid14; // expected-error {{'__ptrauth' qualifier must take between 1 and 4 arguments}}
+int *__ptrauth(VALID_DATA_KEY, 1, 65535, "strip,sign-and-strip") invalid15;     // expected-error {{repeated '__ptrauth' authentication mode 'sign-and-strip', prior mode was 'strip'}}
+int *__ptrauth(VALID_DATA_KEY, 1, 65535, "strip,") invalid19;                   // expected-error {{unexpected trailing comma in '__ptrauth' options argument}}
+int *__ptrauth(VALID_DATA_KEY, 1, 65535, ",") invalid20;                        // expected-error {{unexpected comma in '__ptrauth' options argument}}
+int *__ptrauth(VALID_DATA_KEY, 1, 65535, ",,") invalid21;                       // expected-error {{unexpected comma in '__ptrauth' options argument}}
+int *__ptrauth(VALID_DATA_KEY, 1, 65535, "isa-pointer,isa-pointer") invalid22;  // expected-error {{repeated '__ptrauth' authentication option 'isa-pointer'}}
+int *__ptrauth(VALID_DATA_KEY, 1, 65535, "strip isa-pointer") invalid23;        // expected-error {{expected a comma after 'strip' in '__ptrauth' options argument}}
+int *__ptrauth(VALID_DATA_KEY, 1, 65535, "strip"                                // expected-error {{expected a comma after 'strip' in '__ptrauth' options argument}}
+                                         " isa-pointer") invalid24;
+int *__ptrauth(VALID_DATA_KEY, 1, 0, "sign-and-strip,,isa-pointer") invalid25; // expected-error {{unexpected comma in '__ptrauth' options argument}}
+int *__ptrauth(VALID_DATA_KEY, 1, 0, "sign-and-strip,isa-pointer,") invalid26; // expected-error {{unexpected trailing comma in '__ptrauth' options argument}}
 int * __ptrauth(VALID_DATA_KEY) valid0;
 int * __ptrauth(VALID_DATA_KEY) *valid1;
 __ptrauth(VALID_DATA_KEY) intp valid2;
 __ptrauth(VALID_DATA_KEY) intp *valid3;
 intp __ptrauth(VALID_DATA_KEY) valid4;
 intp __ptrauth(VALID_DATA_KEY) *valid5;
-int * __ptrauth(VALID_DATA_KEY, 0) valid6;
-int * __ptrauth(VALID_DATA_KEY, 1) valid7;
-int * __ptrauth(VALID_DATA_KEY, (_Bool) 1) valid8;
-int * __ptrauth(VALID_DATA_KEY, 1, 0) valid9;
-int * __ptrauth(VALID_DATA_KEY, 1, 65535) valid10;
+int *__ptrauth(VALID_DATA_KEY, 0) valid6;
+int *__ptrauth(VALID_DATA_KEY, 1) valid7;
+int *__ptrauth(VALID_DATA_KEY, (_Bool) 1) valid8;
+int *__ptrauth(VALID_DATA_KEY, 1, 0) valid9;
+int *__ptrauth(VALID_DATA_KEY, 1, 65535) valid10;
+int *__ptrauth(VALID_DATA_KEY, 1, 0, "strip") valid12;
+int *__ptrauth(VALID_DATA_KEY, 1, 0, "sign-and-strip") valid13;
+int *__ptrauth(VALID_DATA_KEY, 1, 0, "sign-and-auth") valid14;
+int *__ptrauth(VALID_DATA_KEY, 1, 0, " strip") valid22;
+int *__ptrauth(VALID_DATA_KEY, 1, 0, "strip ") valid23;
+int *__ptrauth(VALID_DATA_KEY, 1, 0, " strip ") valid24;
+int *__ptrauth(VALID_DATA_KEY, 1, 0, "") valid29;
 
 int * __ptrauth(VALID_DATA_KEY) array0[10];
 int (* __ptrauth(VALID_DATA_KEY) array1)[10];

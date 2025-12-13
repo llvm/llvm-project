@@ -16,6 +16,7 @@
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Lex/CodeCompletionHandler.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCodeCompletion.h"
@@ -318,6 +319,19 @@ public:
     if (N == 0 || Tok.is(tok::eof))
       return Tok;
     return PP.LookAhead(N - 1);
+  }
+
+  template <class... TokT> bool NextTokenIsStringLiteral(TokT... FollowSet) {
+    static_assert(sizeof...(TokT) > 0, "Follow set cnanot be empty");
+    for (unsigned TokenIdx = 0;; ++TokenIdx) {
+      const Token &LookAheadToken = GetLookAheadToken(TokenIdx);
+      if (LookAheadToken.isOneOf(FollowSet...))
+        return TokenIdx != 0;
+      if (!tokenIsLikeStringLiteral(LookAheadToken, getLangOpts()) ||
+          LookAheadToken.hasUDSuffix())
+        return false;
+    }
+    return true;
   }
 
   /// NextToken - This peeks ahead one token and returns it without

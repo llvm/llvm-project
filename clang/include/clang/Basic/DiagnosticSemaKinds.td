@@ -1054,6 +1054,21 @@ def err_ptrauth_extra_discriminator_invalid : Error<
   "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between "
   "'0' and '%1'">;
 
+// __ptrauth qualifier options string
+def err_ptrauth_dependent_options_string : Error<
+  "'__ptrauth' options argument cannot be a dependent value">;
+def err_ptrauth_options_parse_error : Error<
+  "%select{unexpected trailing comma|unexpected comma"
+  "|unexpected character %quoted1|expected a comma after %quoted1}0 in "
+  "'__ptrauth' options argument">;
+def err_ptrauth_unknown_authentication_option: Error<
+  "unknown '__ptrauth' authentication option %quoted0">;
+def err_ptrauth_repeated_authentication_option : Error<
+  "repeated '__ptrauth' authentication %select{mode|option}0 %quoted1"
+  "%select{, prior mode was %quoted2|}0">;
+def note_ptrauth_evaluated_options : Note<
+  "options parameter evaluated to %quoted0">;
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
@@ -1759,15 +1774,15 @@ def note_expr_evaluates_to : Note<
 
 
 def subst_user_defined_msg : TextSubstitution<
-  "%select{the message|the expression}0 in "
-  "%select{a static assertion|this asm operand}0">;
+  "%select{the message|the expression|the expression}0 in "
+  "%select{a static assertion|this asm operand|'__ptrauth' options}0">;
 
 def err_user_defined_msg_invalid : Error<
   "%sub{subst_user_defined_msg}0 must be a string literal or an "
   "object with 'data()' and 'size()' member functions">;
 def err_user_defined_msg_missing_member_function : Error<
-  "the %select{message|string}0 object in "
-  "%select{this static assertion|this asm operand}0 is missing %select{"
+  "the %select{message|string|options}0 object in "
+  "%select{this static assertion|this asm operand|this '__ptrauth' options argument}0 is missing %select{"
   "a 'size()' member function|"
   "a 'data()' member function|"
   "'data()' and 'size()' member functions}1">;
@@ -1775,7 +1790,7 @@ def err_user_defined_msg_invalid_mem_fn_ret_ty : Error<
   "%sub{subst_user_defined_msg}0 must have a '%select{size|data}1()' member "
   "function returning an object convertible to '%select{std::size_t|const char *}1'">;
 def warn_user_defined_msg_constexpr : Warning<
-  "%select{the message|the expression}0 in "
+  "%select{the message|the expression|the expression}0 in "
   "%select{this static assertion|this asm operand}0 is not a constant expression">,
   DefaultError, InGroup<DiagGroup<"invalid-static-assert-message">>;
 def err_user_defined_msg_constexpr : Error<

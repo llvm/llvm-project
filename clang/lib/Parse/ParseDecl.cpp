@@ -20,6 +20,7 @@
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -3160,18 +3161,25 @@ void Parser::ParsePtrauthQualifier(ParsedAttributes &Attrs) {
 
   ArgsVector ArgExprs;
   do {
-    ExprResult ER = ParseAssignmentExpression();
-    if (ER.isInvalid()) {
+    ExprResult ArgumentExpr;
+    if (NextTokenIsStringLiteral(tok::r_paren, tok::comma))
+      ArgumentExpr = ParseUnevaluatedStringLiteralExpression();
+    else {
+      EnterExpressionEvaluationContext ConstantEvaluated(
+          Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      ArgumentExpr = ParseConstantExpressionInExprEvalContext();
+    }
+    if (ArgumentExpr.isInvalid()) {
       T.skipToEnd();
       return;
     }
-    ArgExprs.push_back(ER.get());
+    ArgExprs.push_back(ArgumentExpr.get());
   } while (TryConsumeToken(tok::comma));
 
   T.consumeClose();
   SourceLocation EndLoc = T.getCloseLocation();
 
-  if (ArgExprs.empty() || ArgExprs.size() > 3) {
+  if (ArgExprs.empty() || ArgExprs.size() > 4) {
     Diag(KwLoc, diag::err_ptrauth_qualifier_bad_arg_count);
     return;
   }
