@@ -959,7 +959,7 @@ enum NodeType {
 
   /// Set rounding mode.
   /// The first operand is a chain pointer. The second specifies the required
-  /// rounding mode, encoded in the same way as used in '``GET_ROUNDING``'.
+  /// rounding mode, encoded in the same way as used in GET_ROUNDING.
   SET_ROUNDING,
 
   /// X = FP_EXTEND(Y) - Extend a smaller FP type into a larger FP type.
