@@ -508,8 +508,8 @@ struct WgToSgVectorBroadcastOp
     for (auto operand : adaptor.getOperands().front()) {
       auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
                                                       newResultType, operand);
-      xegpu::setDistributeLayoutAttr(newBroadcast->getResult(0),
-                                     layout.dropSgLayoutAndData());
+      xegpu::setTempDistributeLayoutAttr(newBroadcast->getResult(0),
+                                         layout.dropSgLayoutAndData());
 
       newBroadcastOps.push_back(newBroadcast.getResult());
     }
@@ -756,8 +756,8 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     auto eltType = vecType.getElementType();
 
     auto setLayout = [&](Value val) {
-      xegpu::setDistributeLayoutAttr(llvm::dyn_cast<OpResult>(val),
-                                     layout.dropSgLayoutAndData());
+      xegpu::setTempDistributeLayoutAttr(llvm::dyn_cast<OpResult>(val),
+                                         layout.dropSgLayoutAndData());
     };
 
     if (vecAttr.isSplat()) {
@@ -932,7 +932,7 @@ struct WgToSgLoadGatherOpWithOffset
           rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
           op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
           newLayout);
-      xegpu::setDistributeLayoutAttr(newLoadOp->getResult(0), newLayout);
+      newLoadOp.setAnchorLayout(newLayout);
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -987,7 +987,8 @@ struct WgToSgStoreScatterOpWithOffset
         // Skip for operand one (memref)
         if (operand.getOperandNumber() == 1)
           continue;
-        xegpu::setDistributeLayoutAttr(operand, layout.dropSgLayoutAndData());
+        xegpu::setTempDistributeLayoutAttr(operand,
+                                           layout.dropSgLayoutAndData());
       }
     }
     rewriter.eraseOp(op);
@@ -1080,12 +1081,12 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
           vector::BroadcastOp::create(rewriter, loc, newTy, offsets[0]);
       auto finalSteps =
           arith::AddIOp::create(rewriter, loc, steps, bcastOffset);
-      xegpu::setDistributeLayoutAttr(steps->getResult(0),
-                                     layout.dropSgLayoutAndData());
-      xegpu::setDistributeLayoutAttr(bcastOffset->getResult(0),
-                                     layout.dropSgLayoutAndData());
-      xegpu::setDistributeLayoutAttr(finalSteps->getResult(0),
-                                     layout.dropSgLayoutAndData());
+      xegpu::setTempDistributeLayoutAttr(steps->getResult(0),
+                                         layout.dropSgLayoutAndData());
+      xegpu::setTempDistributeLayoutAttr(bcastOffset->getResult(0),
+                                         layout.dropSgLayoutAndData());
+      xegpu::setTempDistributeLayoutAttr(finalSteps->getResult(0),
+                                         layout.dropSgLayoutAndData());
       newOps.push_back(finalSteps);
     }
 
@@ -1154,8 +1155,8 @@ struct WgToSgVectorShapeCastOp
     for (auto src : adaptor.getSource()) {
       auto newShapeCast = vector::ShapeCastOp::create(rewriter, op.getLoc(),
                                                       newResultType, src);
-      xegpu::setDistributeLayoutAttr(newShapeCast->getResult(0),
-                                     layout.dropSgLayoutAndData());
+      xegpu::setTempDistributeLayoutAttr(newShapeCast->getResult(0),
+                                         layout.dropSgLayoutAndData());
       newShapeCastOps.push_back(newShapeCast.getResult());
     }
 
@@ -1216,8 +1217,8 @@ struct WgToSgMultiDimReductionOp
       auto newOp = vector::MultiDimReductionOp::create(
           rewriter, op.getLoc(), newDstType, op.getKind(), sgSrc,
           adaptor.getAcc()[0], op.getReductionDims());
-      xegpu::setDistributeLayoutAttr(newOp->getResult(0),
-                                     layout.dropSgLayoutAndData());
+      xegpu::setTempDistributeLayoutAttr(newOp->getResult(0),
+                                         layout.dropSgLayoutAndData());
       newReductions.push_back(newOp.getResult());
     }
 
@@ -1280,8 +1281,8 @@ struct WgToSgVectorTransposeOp
     for (auto src : adaptor.getVector()) {
       auto newTranspose = vector::TransposeOp::create(
           rewriter, op.getLoc(), newResultType, src, permutation);
-      xegpu::setDistributeLayoutAttr(newTranspose->getResult(0),
-                                     layout.dropSgLayoutAndData());
+      xegpu::setTempDistributeLayoutAttr(newTranspose->getResult(0),
+                                         layout.dropSgLayoutAndData());
       newTransposeOps.push_back(newTranspose.getResult());
     }
 
@@ -1350,8 +1351,8 @@ struct WgToSgVectorMaskOp : public OpConversionPattern<MaskOpType> {
 
       auto newCreateMaskOp =
           vector::CreateMaskOp::create(rewriter, loc, resultType, maskOperands);
-      xegpu::setDistributeLayoutAttr(newCreateMaskOp->getResult(0),
-                                     layout.dropSgLayoutAndData());
+      xegpu::setTempDistributeLayoutAttr(newCreateMaskOp->getResult(0),
+                                         layout.dropSgLayoutAndData());
       newCreateMaskOps.push_back(newCreateMaskOp.getResult());
     }
 
