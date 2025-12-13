@@ -81,7 +81,8 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
         errs() << "Unicode conversion issue\n";
         break;
       }
-      Skeleton.append((char *)BufferStart, (char *)IBuffer);
+      Skeleton.append(reinterpret_cast<char *>(BufferStart),
+                      reinterpret_cast<char *>(IBuffer));
     }
   }
   return Skeleton;

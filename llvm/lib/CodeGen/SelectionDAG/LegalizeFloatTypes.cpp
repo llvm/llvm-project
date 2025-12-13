@@ -802,7 +802,8 @@ bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   assert(VT == N->getValueType(1) &&
          "expected both return values to have the same type");
 
-  if (TLI.getLibcallImpl(LC) == RTLIB::Unsupported)
+  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
     return false;
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
@@ -831,8 +832,9 @@ bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   CallOptions.setTypeListBeforeSoften({OpsVT}, VT)
       .setOpsTypeOverrides(CallOpsTypeOverrides);
 
-  auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, DL,
-                                            /*Chain=*/SDValue());
+  auto [ReturnVal, Chain] =
+      TLI.makeLibCall(DAG, LCImpl, NVT, Ops, CallOptions, DL,
+                      /*Chain=*/SDValue());
 
   auto CreateStackLoad = [&, Chain = Chain](SDValue StackSlot) {
     int FrameIdx = cast<FrameIndexSDNode>(StackSlot)->getIndex();

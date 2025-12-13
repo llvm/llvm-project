@@ -127,10 +127,11 @@ Error MustacheGenerator::generateDocumentation(
 
       auto File = MemoryBuffer::getFile(Path);
       if (EC = File.getError(); EC) {
-        // TODO: Buffer errors to report later, look into using Clang
-        // diagnostics.
-        llvm::errs() << "Failed to open file: " << Path << " " << EC.message()
-                     << '\n';
+        unsigned ID = CDCtx.Diags.getCustomDiagID(DiagnosticsEngine::Warning,
+                                                  "Failed to open file: %0 %1");
+        CDCtx.Diags.Report(ID) << Path << EC.message();
+        JSONIter.increment(EC);
+        continue;
       }
 
       auto Parsed = json::parse((*File)->getBuffer());
@@ -242,8 +243,6 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
 [[maybe_unused]] static int YAMLGeneratorAnchorDest = YAMLGeneratorAnchorSource;
 [[maybe_unused]] static int MDGeneratorAnchorDest = MDGeneratorAnchorSource;
 [[maybe_unused]] static int HTMLGeneratorAnchorDest = HTMLGeneratorAnchorSource;
-[[maybe_unused]] static int MHTMLGeneratorAnchorDest =
-    MHTMLGeneratorAnchorSource;
 [[maybe_unused]] static int JSONGeneratorAnchorDest = JSONGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang

@@ -1810,9 +1810,8 @@ static LinalgOp createCollapsedOp(LinalgOp op,
                                   RewriterBase &rewriter) {
   if (GenericOp genericOp = dyn_cast<GenericOp>(op.getOperation())) {
     return cloneToCollapsedOp(rewriter, genericOp, collapsingInfo);
-  } else {
-    return cloneToCollapsedOp(rewriter, op, collapsingInfo);
   }
+  return cloneToCollapsedOp(rewriter, op, collapsingInfo);
 }
 
 /// Implementation of fusion with reshape operation by collapsing dimensions.

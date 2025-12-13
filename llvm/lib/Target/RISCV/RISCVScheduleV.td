@@ -19,6 +19,14 @@ defvar SchedMxListFW = !listremove(SchedMxList, ["M8", "MF8"]);
 defvar SchedMxListF = !listremove(SchedMxList, ["MF8"]);
 // Used for widening floating-point Reduction as it doesn't contain MF8.
 defvar SchedMxListFWRed = SchedMxListF;
+// Used for indexed and strided loads of 8 bit lanes, same as full MX list
+defvar SchedMxListEEW8 = SchedMxList;
+// Used for indexed and strided loads of 16 bit lanes
+defvar SchedMxListEEW16 = SchedMxListF;
+// Used for indexed and strided loads of 32 bit lanes
+defvar SchedMxListEEW32 = !listremove(SchedMxListEEW16, ["MF4"]);
+// Used for indexed and strided loads of 64 bit lanes
+defvar SchedMxListEEW64 = !listremove(SchedMxListEEW32, ["MF2"]);
 
 class SchedSEWSet<string mx, bit isF = 0, bit isWidening = 0> {
   assert !or(!not(isF), !ne(mx, "MF8")), "LMUL shouldn't be MF8 for floating-point";
