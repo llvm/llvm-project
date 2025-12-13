@@ -450,10 +450,7 @@ protected:
   // populate call graph related data structures which will be used to dump call
   // graph info. Returns false if there is no SHT_LLVM_CALL_GRAPH type section
   // in the input file.
-  bool processCallGraphSection();
-
-  void getCallGraphRelocations(std::vector<Relocation<ELFT>> &Relocations,
-                               const Elf_Shdr *&RelocSymTab);
+  bool processCallGraphSection(const Elf_Shdr *CGSection);
 
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
@@ -5308,18 +5305,8 @@ enum Flags : uint8_t {
 };
 } // namespace callgraph
 
-template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
-  auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
-    return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
-  };
-  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
-      Obj.getSectionAndRelocations(IsMatch);
-  if (!MapOrErr || MapOrErr->empty()) {
-    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found"),
-                  FileName);
-    return false;
-  }
-  const Elf_Shdr *CGSection = MapOrErr->begin()->first;
+template <class ELFT>
+bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
   Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
       Obj.getSectionContents(*CGSection);
   if (!SectionBytesOrErr) {
@@ -5442,33 +5429,6 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
         "SHT_LLVM_CALL_GRAPH type section has unknown type id for " +
         std::to_string(UnknownCount) + " indirect targets.");
   return true;
-}
-
-template <class ELFT>
-void ELFDumper<ELFT>::getCallGraphRelocations(
-    std::vector<Relocation<ELFT>> &Relocations, const Elf_Shdr *&RelocSymTab) {
-  auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
-    return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
-  };
-  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
-      Obj.getSectionAndRelocations(IsMatch);
-  if (!MapOrErr || MapOrErr->empty()) {
-    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found"),
-                  "missing section");
-    return;
-  }
-  const Elf_Shdr *CGRelSection = MapOrErr->front().second;
-  if (CGRelSection) {
-    forEachRelocationDo(*CGRelSection,
-                        [&](const Relocation<ELFT> &R, unsigned Ndx,
-                            const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
-                          RelocSymTab = SymTab;
-                          Relocations.push_back(R);
-                        });
-    llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
-      return LHS.Offset < RHS.Offset;
-    });
-  }
 }
 
 template <class ELFT>
@@ -8303,8 +8263,39 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
-  if (!this->processCallGraphSection() || this->FuncCGInfos.empty())
+  // Call graph section is of type SHT_LLVM_CALL_GRAPH. Typically named
+  // ".llvm.callgraph". First fetch the section by its type.
+  using Elf_Shdr = typename ELFT::Shdr;
+  auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
+    return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
+  };
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
+      this->Obj.getSectionAndRelocations(IsMatch);
+  if (!MapOrErr || MapOrErr->empty()) {
+    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found"),
+                  this->FileName);
     return;
+  }
+  if (!this->processCallGraphSection(MapOrErr->begin()->first) ||
+      this->FuncCGInfos.empty())
+    return;
+
+  std::vector<Relocation<ELFT>> Relocations;
+  const Elf_Shdr *RelocSymTab = nullptr;
+  if (this->Obj.getHeader().e_type == ELF::ET_REL) {
+    const Elf_Shdr *CGRelSection = MapOrErr->front().second;
+    if (CGRelSection) {
+      this->forEachRelocationDo(
+          *CGRelSection, [&](const Relocation<ELFT> &R, unsigned Ndx,
+                             const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
+            RelocSymTab = SymTab;
+            Relocations.push_back(R);
+          });
+      llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
+        return LHS.Offset < RHS.Offset;
+      });
+    }
+  }
 
   auto PrintNonRelocatableFuncSymbol = [&](uint64_t FuncEntryPC) {
     SmallVector<std::string> FuncSymNames = this->getFunctionNames(FuncEntryPC);
@@ -8312,11 +8303,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       W.printList("Names", FuncSymNames);
     W.printHex("Address", FuncEntryPC);
   };
-
-  std::vector<Relocation<ELFT>> Relocations;
-  const Elf_Shdr *RelocSymTab = nullptr;
-  if (this->Obj.getHeader().e_type == ELF::ET_REL)
-    this->getCallGraphRelocations(Relocations, RelocSymTab);
 
   auto PrintRelocatableFuncSymbol = [&](uint64_t RelocOffset) {
     auto R = llvm::find_if(Relocations, [&](const Relocation<ELFT> &R) {
