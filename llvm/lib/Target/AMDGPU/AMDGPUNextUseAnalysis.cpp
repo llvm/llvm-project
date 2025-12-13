@@ -22,15 +22,19 @@ static cl::opt<bool> DumpNextUseDistance("dump-next-use-distance",
 
 bool AMDGPUNextUseAnalysis::isBackedge(MachineBasicBlock *From,
                                        MachineBasicBlock *To) const {
+  if (!From->isSuccessor(To))
+    return false;
   MachineLoop *Loop1 = MLI->getLoopFor(From);
   MachineLoop *Loop2 = MLI->getLoopFor(To);
   if (!Loop1 || !Loop2 || Loop1 != Loop2)
     return false;
+  MachineBasicBlock *LoopHeader = Loop1->getHeader();
+  if (To != LoopHeader)
+    return false;
   SmallVector<MachineBasicBlock *, 2> Latches;
   Loop1->getLoopLatches(Latches);
   auto It = llvm::find(Latches, From);
-  MachineBasicBlock *LoopHeader = Loop1->getHeader();
-  return It != Latches.end() && From->isSuccessor(To) && To == LoopHeader;
+  return It != Latches.end();
 }
 
 // Calculate the shortest distance between two blocks using Dijkstra algorithm.
@@ -81,7 +85,7 @@ AMDGPUNextUseAnalysis::getShortestPath(MachineBasicBlock *FromMBB,
 
     auto Pair = MBBData.try_emplace(
         CurMBB, Data{nullptr, std::numeric_limits<uint64_t>::max()});
-    int CurrMBBDist = Pair.first->second.ShortestDistance;
+    uint64_t CurrMBBDist = Pair.first->second.ShortestDistance;
 
     for (MachineBasicBlock *Succ : CurMBB->successors()) {
       if (isBackedge(CurMBB, Succ))
@@ -140,8 +144,8 @@ uint64_t AMDGPUNextUseAnalysis::calculateShortestDistance(MachineInstr *CurMI,
 
   uint64_t CurMIDistanceToBBEnd =
       getInstrId(&*(std::prev(CurMBB->instr_end()))) - getInstrId(CurMI);
-  uint64_t UseDistanceFromBBBegin = getInstrId(&*(UseMI->getIterator())) -
-                                    getInstrId(&*(UseMBB->instr_begin())) + 1;
+  uint64_t UseDistanceFromBBBegin =
+      getInstrId(UseMI) - getInstrId(&*(UseMBB->instr_begin())) + 1;
   auto Dst = getShortestDistanceFromTable(CurMBB, UseMBB);
   assert(Dst != std::numeric_limits<uint64_t>::max());
   return CurMIDistanceToBBEnd + Dst + UseDistanceFromBBBegin;
@@ -453,6 +457,7 @@ void AMDGPUNextUseAnalysis::printAllDistances(MachineFunction &MF) {
   }
 }
 
+// TODO: Remove it. It is only used for testing.
 std::optional<uint64_t>
 AMDGPUNextUseAnalysis::getNextUseDistance(Register DefReg) {
   assert(!DefReg.isPhysical() && !TRI->isAGPR(*MRI, DefReg) &&
@@ -460,20 +465,20 @@ AMDGPUNextUseAnalysis::getNextUseDistance(Register DefReg) {
          "Next-use distance is calculated for SGPRs and VGPRs");
   uint64_t NextUseDistance = std::numeric_limits<uint64_t>::max();
   uint64_t CurrentNextUseDistance = std::numeric_limits<uint64_t>::max();
+  MachineInstr *CurMI = &*MRI->def_instr_begin(DefReg);
+  MachineBasicBlock *CurMBB = CurMI->getParent();
+  MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   for (auto &UseMI : MRI->use_nodbg_instructions(DefReg)) {
-    MachineInstr *CurMI = &*MRI->def_instr_begin(DefReg);
-    MachineBasicBlock *CurMBB = CurMI->getParent();
     MachineBasicBlock *UseMBB = UseMI.getParent();
-    MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
     MachineLoop *UseLoop = MLI->getLoopFor(UseMBB);
 
-    bool IsUseOutsideOfTheDefintionLoop =
+    bool IsUseOutsideOfTheDefinitionLoop =
         (CurLoop && !UseLoop) ||
         (CurLoop && UseLoop &&
          ((!UseLoop->contains(CurLoop) && !CurLoop->contains(UseLoop)) ||
           (UseLoop->contains(CurLoop) && (UseLoop != CurLoop))));
 
-    if (IsUseOutsideOfTheDefintionLoop) {
+    if (IsUseOutsideOfTheDefinitionLoop) {
       CurrentNextUseDistance = calculateCurLoopDistance(DefReg, CurMI, &UseMI);
     } else if (isIncomingValFromBackedge(CurMI, &UseMI, DefReg)) {
       CurrentNextUseDistance = calculateBackedgeDistance(CurMI, &UseMI);
@@ -497,10 +502,10 @@ AMDGPUNextUseAnalysis::getNextUseDistance(Register DefReg, MachineInstr *CurMI,
          "Next-use distance is calculated for SGPRs and VGPRs");
   uint64_t NextUseDistance = std::numeric_limits<uint64_t>::max();
   uint64_t CurrentNextUseDistance = std::numeric_limits<uint64_t>::max();
+  MachineBasicBlock *CurMBB = CurMI->getParent();
+  MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   for (auto *UseMI : Uses) {
-    MachineBasicBlock *CurMBB = CurMI->getParent();
     MachineBasicBlock *UseMBB = UseMI->getParent();
-    MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
     MachineLoop *UseLoop = MLI->getLoopFor(UseMBB);
 
     bool IsUseOutsideOfCurLoop =

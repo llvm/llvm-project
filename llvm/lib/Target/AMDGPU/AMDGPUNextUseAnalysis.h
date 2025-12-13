@@ -57,7 +57,7 @@ class AMDGPUNextUseAnalysis {
       ShortestPathTable;
   /// We assume an approximate trip count of 1000 for all loops.
   static constexpr const uint64_t LoopWeight = 1000;
-  /// Returns the shortest ditance from ShortestPathTable. Will crash if
+  /// Returns the shortest distance from ShortestPathTable. Will crash if
   /// {FromMBB,ToMBB} not found.
   uint64_t getShortestDistanceFromTable(MachineBasicBlock *FromMBB,
                                         MachineBasicBlock *ToMBB) const {
@@ -79,8 +79,8 @@ class AMDGPUNextUseAnalysis {
   /// Goes over all MBB pairs in \p MF, calculates the shortest path between
   /// them and fills in \p ShortestPathTable.
   void calculateShortestPaths(MachineFunction &MF);
-  /// If the path from \p MI to \p UseMI does not cross any loops, then this
-  /// \returns the shortest instruction distance between them.
+  /// Returns the shortest instruction distance between \p MI and \p UseMI.
+  /// It only works if \p MI and \p UseMI are not inside a loop.
   uint64_t calculateShortestDistance(MachineInstr *MI, MachineInstr *UseMI);
   /// /Returns the shortest distance between a given basic block \p CurMBB and
   /// its closest exiting latch of \p CurLoop.
@@ -96,8 +96,8 @@ class AMDGPUNextUseAnalysis {
   /// Given \p CurMI in a loop and \p UseMI outside the loop, this function
   /// returns the minimum instruction path between \p CurMI and \p UseMI.
   /// Please note that since \p CurMI is in a loop we don't care about the
-  /// exact position of the instruction in the block because we making a rough
-  /// estimate of the dynamic instruction path length, given that the loop
+  /// exact position of the instruction in the block because we are making a
+  /// rough estimate of the dynamic instruction path length, given that the loop
   /// iterates multiple times.
   uint64_t calculateCurLoopDistance(Register DefReg, MachineInstr *CurMI,
                                     MachineInstr *UseMI);
@@ -139,7 +139,6 @@ public:
   std::pair<uint64_t, MachineBasicBlock *>
   getLoopDistanceAndExitingLatch(MachineBasicBlock *CurMBB) const;
 
-  /// Returns the shortest ditance from ShortestPathTable.
   uint64_t getShortestDistance(MachineBasicBlock *FromMBB,
                                MachineBasicBlock *ToMBB) const {
     auto It = ShortestPathTable.find({FromMBB, ToMBB});
