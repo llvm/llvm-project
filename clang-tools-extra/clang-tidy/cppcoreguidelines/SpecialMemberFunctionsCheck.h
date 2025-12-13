@@ -93,7 +93,7 @@ struct DenseMapInfo<
             "TOMBSTONE"};
   }
 
-  static unsigned getHashValue(ClassDefId Val) {
+  static unsigned getHashValue(const ClassDefId &Val) {
     assert(Val != getEmptyKey() && "Cannot hash the empty key!");
     assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
 

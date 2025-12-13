@@ -25,8 +25,6 @@ using namespace llvm;
 STATISTIC(HasDependences,
           "Cannot move across instructions that has memory dependences");
 STATISTIC(MayThrowException, "Cannot move across instructions that may throw");
-STATISTIC(NotControlFlowEquivalent,
-          "Instructions are not control flow equivalent");
 STATISTIC(NotMovedPHINode, "Movement of PHINodes are not supported");
 STATISTIC(NotMovedTerminator, "Movement of Terminator are not supported");
 
@@ -228,44 +226,6 @@ bool ControlConditions::isInverse(const Value &V1, const Value &V2) {
   return false;
 }
 
-bool llvm::isControlFlowEquivalent(const Instruction &I0, const Instruction &I1,
-                                   const DominatorTree &DT,
-                                   const PostDominatorTree &PDT) {
-  return isControlFlowEquivalent(*I0.getParent(), *I1.getParent(), DT, PDT);
-}
-
-bool llvm::isControlFlowEquivalent(const BasicBlock &BB0, const BasicBlock &BB1,
-                                   const DominatorTree &DT,
-                                   const PostDominatorTree &PDT) {
-  if (&BB0 == &BB1)
-    return true;
-
-  if ((DT.dominates(&BB0, &BB1) && PDT.dominates(&BB1, &BB0)) ||
-      (PDT.dominates(&BB0, &BB1) && DT.dominates(&BB1, &BB0)))
-    return true;
-
-  // If the set of conditions required to execute BB0 and BB1 from their common
-  // dominator are the same, then BB0 and BB1 are control flow equivalent.
-  const BasicBlock *CommonDominator = DT.findNearestCommonDominator(&BB0, &BB1);
-  LLVM_DEBUG(dbgs() << "The nearest common dominator of " << BB0.getName()
-                    << " and " << BB1.getName() << " is "
-                    << CommonDominator->getName() << "\n");
-
-  const std::optional<ControlConditions> BB0Conditions =
-      ControlConditions::collectControlConditions(BB0, *CommonDominator, DT,
-                                                  PDT);
-  if (BB0Conditions == std::nullopt)
-    return false;
-
-  const std::optional<ControlConditions> BB1Conditions =
-      ControlConditions::collectControlConditions(BB1, *CommonDominator, DT,
-                                                  PDT);
-  if (BB1Conditions == std::nullopt)
-    return false;
-
-  return BB0Conditions->isEquivalent(*BB1Conditions);
-}
-
 static bool reportInvalidCandidate(const Instruction &I,
                                    llvm::Statistic &Stat) {
   ++Stat;
@@ -329,10 +289,6 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
 
   if (I.isTerminator())
     return reportInvalidCandidate(I, NotMovedTerminator);
-
-  // TODO remove this limitation.
-  if (!isControlFlowEquivalent(I, InsertPoint, DT, *PDT))
-    return reportInvalidCandidate(I, NotControlFlowEquivalent);
 
   if (isReachedBefore(&I, &InsertPoint, &DT, PDT))
     for (const Use &U : I.uses())
@@ -450,8 +406,6 @@ bool llvm::nonStrictlyPostDominate(const BasicBlock *ThisBlock,
                                    const BasicBlock *OtherBlock,
                                    const DominatorTree *DT,
                                    const PostDominatorTree *PDT) {
-  assert(isControlFlowEquivalent(*ThisBlock, *OtherBlock, *DT, *PDT) &&
-         "ThisBlock and OtherBlock must be CFG equivalent!");
   const BasicBlock *CommonDominator =
       DT->findNearestCommonDominator(ThisBlock, OtherBlock);
   if (CommonDominator == nullptr)

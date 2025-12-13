@@ -66,7 +66,10 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
       constexpr auto noModRef = mlir::LLVM::ModRefInfo::NoModRef;
       auto memAttr = b.getAttr<LLVM::MemoryEffectsAttr>(
           /*other=*/noModRef,
-          /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef);
+          /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef,
+          /*errnoMem=*/noModRef,
+          /*targetMem0=*/noModRef,
+          /*targetMem1=*/noModRef);
       func.setMemoryEffectsAttr(memAttr);
     }
 

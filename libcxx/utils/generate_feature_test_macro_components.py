@@ -14,7 +14,7 @@ from typing import (
 )
 import functools
 import json
-from libcxx.header_information import module_c_headers, module_headers, header_restrictions, headers_not_available, libcxx_root
+from libcxx.header_information import headers_not_available
 
 
 def get_libcxx_paths():
@@ -1017,6 +1017,7 @@ feature_test_macros = [
                 "c++17": 201606,
                 "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
                 "c++23": 202110,  # P0798R8 Monadic operations for std::optional + LWG3621 Remove feature-test macro __cpp_lib_monadic_optional
+                "c++26": 202506,  # P2988R12: std::optional<T&>
             },
             "headers": ["optional"],
         },

@@ -450,7 +450,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; ARM7-NEXT:    .short 9 @ 0x9
 ; ARM7-NEXT:    .short 10 @ 0xa
 ; ARM7-NEXT:    .short 10 @ 0xa
-; ARM7-NEXT:    .short 10 @ 0xa
+; ARM7-NEXT:    .short 0 @ 0x0
 ; ARM7-NEXT:  .LCPI4_4:
 ; ARM7-NEXT:    .short 341 @ 0x155
 ; ARM7-NEXT:    .short 292 @ 0x124
@@ -502,7 +502,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; ARM8-NEXT:    .short 9 @ 0x9
 ; ARM8-NEXT:    .short 10 @ 0xa
 ; ARM8-NEXT:    .short 10 @ 0xa
-; ARM8-NEXT:    .short 10 @ 0xa
+; ARM8-NEXT:    .short 0 @ 0x0
 ; ARM8-NEXT:  .LCPI4_4:
 ; ARM8-NEXT:    .short 341 @ 0x155
 ; ARM8-NEXT:    .short 292 @ 0x124
@@ -554,7 +554,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; NEON7-NEXT:    .short 9 @ 0x9
 ; NEON7-NEXT:    .short 10 @ 0xa
 ; NEON7-NEXT:    .short 10 @ 0xa
-; NEON7-NEXT:    .short 10 @ 0xa
+; NEON7-NEXT:    .short 0 @ 0x0
 ; NEON7-NEXT:  .LCPI4_4:
 ; NEON7-NEXT:    .short 341 @ 0x155
 ; NEON7-NEXT:    .short 292 @ 0x124
@@ -606,7 +606,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; NEON8-NEXT:    .short 9 @ 0x9
 ; NEON8-NEXT:    .short 10 @ 0xa
 ; NEON8-NEXT:    .short 10 @ 0xa
-; NEON8-NEXT:    .short 10 @ 0xa
+; NEON8-NEXT:    .short 0 @ 0x0
 ; NEON8-NEXT:  .LCPI4_4:
 ; NEON8-NEXT:    .short 341 @ 0x155
 ; NEON8-NEXT:    .short 292 @ 0x124

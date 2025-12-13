@@ -1110,6 +1110,9 @@ bool IsArraySection(const Expr<SomeType> &expr);
 // Predicate: does an expression contain constant?
 bool HasConstant(const Expr<SomeType> &);
 
+// Predicate: Does an expression contain a component
+bool HasStructureComponent(const Expr<SomeType> &expr);
+
 // Utilities for attaching the location of the declaration of a symbol
 // of interest to a message.  Handles the case of USE association gracefully.
 parser::Message *AttachDeclaration(parser::Message &, const Symbol &);

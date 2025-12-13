@@ -423,6 +423,34 @@ def G_ABDU : GenericInstruction {
   let isCommutable = true;
 }
 
+// Generic vector average truncated unsigned.
+def G_UAVGFLOOR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+// Generic vector average rounded unsigned.
+def G_UAVGCEIL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+// Generic vector average truncated signed.
+def G_SAVGFLOOR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+// Generic vector average rounded signed.
+def G_SAVGCEIL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
 /// Funnel 'double' shifts take 3 operands, 2 inputs and the shift amount.
 /// fshl(X,Y,Z): (X << (Z % bitwidth)) | (Y >> (bitwidth - (Z % bitwidth)))
 def G_FSHL : GenericInstruction {

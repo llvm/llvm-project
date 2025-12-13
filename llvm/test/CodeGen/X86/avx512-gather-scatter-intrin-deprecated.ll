@@ -255,8 +255,8 @@ define void @gather_qps(<8 x i64> %ind, <8 x float> %src, ptr %base, ptr %stbuf)
 ; CHECK-LABEL: gather_qps:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    kxnorw %k0, %k0, %k2
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k2
 ; CHECK-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm1 {%k2}
 ; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    vscatterqps %ymm1, (%rsi,%zmm0,4) {%k1}
@@ -520,7 +520,7 @@ define <8 x float>@test_int_x86_avx512_gather3siv8_sf(<8 x float> %x0, ptr %x1, 
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,4), %ymm0 {%k1}
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,2), %ymm2 {%k1}
 ; CHECK-NEXT:    vaddps %ymm2, %ymm0, %ymm0
@@ -772,7 +772,7 @@ define void@test_int_x86_avx512_scattersiv8_sf(ptr %x0, i8 %x1, <8 x i32> %x2, <
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vscatterdps %ymm1, (%rdi,%ymm0,2) {%k1}
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vscatterdps %ymm1, (%rdi,%ymm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -788,7 +788,7 @@ define void@test_int_x86_avx512_scattersiv8_si(ptr %x0, i8 %x1, <8 x i32> %x2, <
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,2) {%k1}
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -800,9 +800,9 @@ define void@test_int_x86_avx512_scattersiv8_si(ptr %x0, i8 %x1, <8 x i32> %x2, <
 define void @scatter_mask_test(ptr %x0, <8 x i32> %x2, <8 x i32> %x3) {
 ; CHECK-LABEL: scatter_mask_test:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,2) {%k1}
-; CHECK-NEXT:    kxorw %k0, %k0, %k1
+; CHECK-NEXT:    kxorb %k0, %k0, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,4) {%k1}
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    kmovd %eax, %k1

@@ -121,6 +121,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fchown
+  SRCS
+    fchown.cpp
+  HDRS
+    ../fchown.h
+  DEPENDS
+    libc.hdr.types.uid_t
+    libc.hdr.types.gid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fork
   SRCS
     fork.cpp
@@ -233,6 +247,16 @@ add_entrypoint_object(
     libc.include.sys_utsname
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getpagesize
+  SRCS
+    getpagesize.cpp
+  HDRS
+    ../getpagesize.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.auxv
 )
 
 add_entrypoint_object(

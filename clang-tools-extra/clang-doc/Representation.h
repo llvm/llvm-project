@@ -15,11 +15,10 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_REPRESENTATION_H
 
 #include "clang/AST/Type.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Tooling/StandaloneExecution.h"
-#include "llvm/ADT/APSInt.h"
+#include "clang/Tooling/Execution.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include <array>
 #include <optional>
 #include <string>
@@ -87,6 +86,19 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
+  std::vector<std::unique_ptr<CommentInfo>>
+      Children;              // List of child comments for this CommentInfo.
+  SmallString<8> Direction;  // Parameter direction (for (T)ParamCommand).
+  SmallString<16> Name;      // Name of the comment (for Verbatim and HTML).
+  SmallString<16> ParamName; // Parameter name (for (T)ParamCommand).
+  SmallString<16> CloseName; // Closing tag name (for VerbatimBlock).
+  SmallString<64> Text;      // Text of the comment.
+  llvm::SmallVector<SmallString<16>, 4>
+      AttrKeys; // List of attribute keys (for HTML).
+  llvm::SmallVector<SmallString<16>, 4>
+      AttrValues; // List of attribute values for each key (for HTML).
+  llvm::SmallVector<SmallString<16>, 4>
+      Args; // List of arguments to commands (for InlineCommand).
   CommentKind Kind = CommentKind::
       CK_Unknown; // Kind of comment (FullComment, ParagraphComment,
                   // TextComment, InlineCommandComment, HTMLStartTagComment,
@@ -94,22 +106,9 @@ struct CommentInfo {
                   // ParamCommandComment, TParamCommandComment,
                   // VerbatimBlockComment, VerbatimBlockLineComment,
                   // VerbatimLineComment).
-  SmallString<64> Text;      // Text of the comment.
-  SmallString<16> Name;      // Name of the comment (for Verbatim and HTML).
-  SmallString<8> Direction;  // Parameter direction (for (T)ParamCommand).
-  SmallString<16> ParamName; // Parameter name (for (T)ParamCommand).
-  SmallString<16> CloseName; // Closing tag name (for VerbatimBlock).
-  bool SelfClosing = false;  // Indicates if tag is self-closing (for HTML).
-  bool Explicit = false; // Indicates if the direction of a param is explicit
-                         // (for (T)ParamCommand).
-  llvm::SmallVector<SmallString<16>, 4>
-      AttrKeys; // List of attribute keys (for HTML).
-  llvm::SmallVector<SmallString<16>, 4>
-      AttrValues; // List of attribute values for each key (for HTML).
-  llvm::SmallVector<SmallString<16>, 4>
-      Args; // List of arguments to commands (for InlineCommand).
-  std::vector<std::unique_ptr<CommentInfo>>
-      Children; // List of child comments for this CommentInfo.
+  bool SelfClosing = false; // Indicates if tag is self-closing (for HTML).
+  bool Explicit = false;    // Indicates if the direction of a param is explicit
+                            // (for (T)ParamCommand).
 };
 
 struct Reference {
@@ -120,13 +119,13 @@ struct Reference {
   // "GlobalNamespace" as the name, but an empty QualName).
   Reference(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
             InfoType IT = InfoType::IT_default)
-      : USR(USR), Name(Name), QualName(Name), RefType(IT) {}
+      : USR(USR), RefType(IT), Name(Name), QualName(Name) {}
   Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
             StringRef Path = StringRef())
-      : USR(USR), Name(Name), QualName(QualName), RefType(IT), Path(Path) {}
+      : USR(USR), RefType(IT), Name(Name), QualName(QualName), Path(Path) {}
   Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
             StringRef Path, SmallString<16> DocumentationFileName)
-      : USR(USR), Name(Name), QualName(QualName), RefType(IT), Path(Path),
+      : USR(USR), RefType(IT), Name(Name), QualName(QualName), Path(Path),
         DocumentationFileName(DocumentationFileName) {}
 
   bool operator==(const Reference &Other) const {
@@ -146,6 +145,10 @@ struct Reference {
 
   SymbolID USR = SymbolID(); // Unique identifier for referenced decl
 
+  InfoType RefType = InfoType::IT_default; // Indicates the type of this
+                                           // Reference (namespace, record,
+                                           // function, enum, default).
+
   // Name of type (possibly unresolved). Not including namespaces or template
   // parameters (so for a std::vector<int> this would be "vector"). See also
   // QualName.
@@ -156,9 +159,6 @@ struct Reference {
   // Name.
   SmallString<16> QualName;
 
-  InfoType RefType = InfoType::IT_default; // Indicates the type of this
-                                           // Reference (namespace, record,
-                                           // function, enum, default).
   // Path of directory where the clang-doc generated file will be saved
   // (possibly unresolved)
   llvm::SmallString<128> Path;
@@ -278,21 +278,21 @@ struct MemberTypeInfo : public FieldTypeInfo {
                     Other.Description);
   }
 
+  std::vector<CommentInfo> Description;
+
   // Access level associated with this info (public, protected, private, none).
   // AS_public is set as default because the bitcode writer requires the enum
   // with value 0 to be used as the default.
   // (AS_public = 0, AS_protected = 1, AS_private = 2, AS_none = 3)
   AccessSpecifier Access = AccessSpecifier::AS_public;
-
-  std::vector<CommentInfo> Description; // Comment description of this field.
   bool IsStatic = false;
 };
 
 struct Location {
   Location(int StartLineNumber = 0, int EndLineNumber = 0,
            StringRef Filename = StringRef(), bool IsFileInRootDir = false)
-      : StartLineNumber(StartLineNumber), EndLineNumber(EndLineNumber),
-        Filename(Filename), IsFileInRootDir(IsFileInRootDir) {}
+      : Filename(Filename), StartLineNumber(StartLineNumber),
+        EndLineNumber(EndLineNumber), IsFileInRootDir(IsFileInRootDir) {}
 
   bool operator==(const Location &Other) const {
     return std::tie(StartLineNumber, EndLineNumber, Filename) ==
@@ -310,39 +310,23 @@ struct Location {
            std::tie(Other.StartLineNumber, Other.EndLineNumber, Other.Filename);
   }
 
-  int StartLineNumber = 0; // Line number of this Location.
+  SmallString<32> Filename;
+  int StartLineNumber = 0;
   int EndLineNumber = 0;
-  SmallString<32> Filename;     // File for this Location.
-  bool IsFileInRootDir = false; // Indicates if file is inside root directory
+  bool IsFileInRootDir = false;
 };
 
 /// A base struct for Infos.
 struct Info {
   Info(InfoType IT = InfoType::IT_default, SymbolID USR = SymbolID(),
        StringRef Name = StringRef(), StringRef Path = StringRef())
-      : USR(USR), IT(IT), Name(Name), Path(Path) {}
+      : Path(Path), Name(Name), USR(USR), IT(IT) {}
 
   Info(const Info &Other) = delete;
   Info(Info &&Other) = default;
-
   virtual ~Info() = default;
 
   Info &operator=(Info &&Other) = default;
-
-  SymbolID USR =
-      SymbolID(); // Unique identifier for the decl described by this Info.
-  InfoType IT = InfoType::IT_default; // InfoType of this particular Info.
-  SmallString<16> Name;               // Unqualified name of the decl.
-  llvm::SmallVector<Reference, 4>
-      Namespace; // List of parent namespaces for this decl.
-  std::vector<CommentInfo> Description; // Comment description of this decl.
-  llvm::SmallString<128> Path;          // Path of directory where the clang-doc
-                                        // generated file will be saved
-
-  // The name used for the file that this info is documented in.
-  // In the JSON generator, infos are documented in files with mangled names.
-  // Thus, we keep track of the physical filename for linking purposes.
-  SmallString<16> DocumentationFileName;
 
   void mergeBase(Info &&I);
   bool mergeable(const Info &Other);
@@ -354,6 +338,29 @@ struct Info {
 
   /// Returns the basename that should be used for this Info.
   llvm::SmallString<16> getFileBaseName() const;
+
+  // Path of directory where the clang-doc generated file will be saved.
+  llvm::SmallString<128> Path;
+
+  // Unqualified name of the decl.
+  SmallString<16> Name;
+
+  // The name used for the file that this info is documented in.
+  // In the JSON generator, infos are documented in files with mangled names.
+  // Thus, we keep track of the physical filename for linking purposes.
+  SmallString<16> DocumentationFileName;
+
+  // List of parent namespaces for this decl.
+  llvm::SmallVector<Reference, 4> Namespace;
+
+  // Unique identifier for the decl described by this Info.
+  SymbolID USR = SymbolID();
+
+  // InfoType of this particular Info.
+  InfoType IT = InfoType::IT_default;
+
+  // Comment description of this decl.
+  std::vector<CommentInfo> Description;
 };
 
 // Info for namespaces.
@@ -427,21 +434,21 @@ struct FunctionInfo : public SymbolInfo {
 
   void merge(FunctionInfo &&I);
 
-  bool IsMethod = false; // Indicates whether this function is a class method.
-  Reference Parent;      // Reference to the parent class decl for this method.
-  TypeInfo ReturnType;   // Info about the return type of this function.
-  llvm::SmallVector<FieldTypeInfo, 4> Params; // List of parameters.
+  Reference Parent;
+  TypeInfo ReturnType;
+  llvm::SmallVector<FieldTypeInfo, 4> Params;
+  SmallString<256> Prototype;
+
+  // When present, this function is a template or specialization.
+  std::optional<TemplateInfo> Template;
+
   // Access level for this method (public, private, protected, none).
   // AS_public is set as default because the bitcode writer requires the enum
   // with value 0 to be used as the default.
   // (AS_public = 0, AS_protected = 1, AS_private = 2, AS_none = 3)
   AccessSpecifier Access = AccessSpecifier::AS_public;
 
-  // Function Prototype
-  SmallString<256> Prototype;
-
-  // When present, this function is a template or specialization.
-  std::optional<TemplateInfo> Template;
+  bool IsMethod = false;
 };
 
 // TODO: Expand to allow for documenting templating, inheritance access,
@@ -456,14 +463,14 @@ struct RecordInfo : public SymbolInfo {
   // Type of this record (struct, class, union, interface).
   TagTypeKind TagType = TagTypeKind::Struct;
 
-  // When present, this record is a template or specialization.
-  std::optional<TemplateInfo> Template;
-
   // Indicates if the record was declared using a typedef. Things like anonymous
   // structs in a typedef:
   //   typedef struct { ... } foo_t;
   // are converted into records with the typedef as the Name + this flag set.
   bool IsTypeDef = false;
+
+  // When present, this record is a template or specialization.
+  std::optional<TemplateInfo> Template;
 
   llvm::SmallVector<MemberTypeInfo, 4>
       Members;                             // List of info about record members.
@@ -509,11 +516,11 @@ struct BaseRecordInfo : public RecordInfo {
   BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path, bool IsVirtual,
                  AccessSpecifier Access, bool IsParent);
 
-  // Indicates if base corresponds to a virtual inheritance
-  bool IsVirtual = false;
   // Access level associated with this inherited info (public, protected,
   // private).
   AccessSpecifier Access = AccessSpecifier::AS_public;
+  // Indicates if base corresponds to a virtual inheritance
+  bool IsVirtual = false;
   bool IsParent = false; // Indicates if this base is a direct parent
 };
 
@@ -600,17 +607,13 @@ llvm::Expected<std::unique_ptr<Info>>
 mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
 
 struct ClangDocContext {
-  ClangDocContext() = default;
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
                   StringRef Base, std::vector<std::string> UserStylesheets,
-                  bool FTimeTrace = false);
+                  clang::DiagnosticsEngine &Diags, bool FTimeTrace = false);
   tooling::ExecutionContext *ECtx;
-  std::string ProjectName; // Name of project clang-doc is documenting.
-  bool PublicOnly; // Indicates if only public declarations are documented.
-  bool FTimeTrace; // Indicates if ftime trace is turned on
-  int Granularity; // Granularity of ftime trace
+  std::string ProjectName;  // Name of project clang-doc is documenting.
   std::string OutDirectory; // Directory for outputting generated files.
   std::string SourceRoot;   // Directory where processed files are stored. Links
                             // to definition locations will only be generated if
@@ -629,7 +632,12 @@ struct ClangDocContext {
   // Maps mustache template types to specific mustache template files.
   // Ex.    comment-template -> /path/to/comment-template.mustache
   llvm::StringMap<std::string> MustacheTemplates;
+  // A pointer to a DiagnosticsEngine for error reporting.
+  clang::DiagnosticsEngine &Diags;
   Index Idx;
+  int Granularity; // Granularity of ftime trace
+  bool PublicOnly; // Indicates if only public declarations are documented.
+  bool FTimeTrace; // Indicates if ftime trace is turned on
 };
 
 } // namespace doc

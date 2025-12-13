@@ -320,7 +320,7 @@ subroutine f21(x, y)
   integer :: x(10)
   integer :: y
   integer, parameter :: p = 23
-  !$omp target map(mapper(xx), from: x)
+  !$omp target map(mapper(default), from: x)
   x = x + 1
   !$omp end target
 end
@@ -329,7 +329,7 @@ end
 !UNPARSE:  INTEGER x(10_4)
 !UNPARSE:  INTEGER y
 !UNPARSE:  INTEGER, PARAMETER :: p = 23_4
-!UNPARSE: !$OMP TARGET  MAP(MAPPER(XX), FROM: X)
+!UNPARSE: !$OMP TARGET  MAP(MAPPER(DEFAULT), FROM: X)
 !UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
@@ -337,7 +337,7 @@ end
 !PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | Modifier -> OmpMapper -> Name = 'xx'
+!PARSE-TREE: | | Modifier -> OmpMapper -> Name = 'default'
 !PARSE-TREE: | | Modifier -> OmpMapType -> Value = From
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 
@@ -375,4 +375,3 @@ end
 !PARSE-TREE: | | SectionSubscript -> Integer -> Expr = 'i'
 !PARSE-TREE: | | | Designator -> DataRef -> Name = 'i'
 !PARSE-TREE: | bool = 'true'
-

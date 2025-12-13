@@ -14,6 +14,7 @@
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -280,6 +281,7 @@ ConstantOpLowering::matchAndRewrite(arith::ConstantOp op, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
   return LLVM::detail::oneToOneRewrite(op, LLVM::ConstantOp::getOperationName(),
                                        adaptor.getOperands(), op->getAttrs(),
+                                       /*propAttr=*/Attribute{},
                                        *getTypeConverter(), rewriter);
 }
 
@@ -481,6 +483,10 @@ CmpIOpLowering::matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
 LogicalResult
 CmpFOpLowering::matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &rewriter) const {
+  if (LLVM::detail::isUnsupportedFloatingPointType(*this->getTypeConverter(),
+                                                   op.getLhs().getType()))
+    return rewriter.notifyMatchFailure(op, "unsupported floating point type");
+
   Type operandType = adaptor.getLhs().getType();
   Type resultType = op.getResult().getType();
   LLVM::FastmathFlags fmf =

@@ -734,8 +734,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   if (const Record *RV = R->getValueAsOptionalDef("RegInfos"))
     RSI = RegSizeInfoByHwMode(RV, RegBank.getHwModes());
   unsigned Size = R->getValueAsInt("Size");
-  assert((RSI.hasDefault() || Size != 0 || VTs[0].isSimple()) &&
-         "Impossible to determine register size");
+  if (!RSI.hasDefault() && Size == 0 && !VTs[0].isSimple())
+    PrintFatalError(R->getLoc(), "Impossible to determine register size");
   if (!RSI.hasDefault()) {
     RegSizeInfo RI;
     RI.RegSize = RI.SpillSize =
@@ -1316,11 +1316,19 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
   return {&RegClasses.back(), true};
 }
 
-CodeGenRegisterClass *CodeGenRegBank::getRegClass(const Record *Def) const {
+CodeGenRegisterClass *CodeGenRegBank::getRegClass(const Record *Def,
+                                                  ArrayRef<SMLoc> Loc) const {
+  assert(Def->isSubClassOf("RegisterClassLike"));
   if (CodeGenRegisterClass *RC = Def2RC.lookup(Def))
     return RC;
 
-  PrintFatalError(Def->getLoc(), "Not a known RegisterClass!");
+  ArrayRef<SMLoc> DiagLoc = Loc.empty() ? Def->getLoc() : Loc;
+  // TODO: Ideally we should update the API to allow resolving HwMode.
+  if (Def->isSubClassOf("RegClassByHwMode"))
+    PrintError(DiagLoc, "cannot resolve HwMode for " + Def->getName());
+  else
+    PrintError(DiagLoc, Def->getName() + " is not a known RegisterClass!");
+  PrintFatalNote(Def->getLoc(), Def->getName() + " defined here");
 }
 
 CodeGenSubRegIndex *
@@ -2163,7 +2171,7 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
     CodeGenRegister::RegUnitLaneMaskList RegUnitLaneMasks(
         RegUnits.count(), LaneBitmask::getAll());
     // Iterate through SubRegisters.
-    typedef CodeGenRegister::SubRegMap SubRegMap;
+    using SubRegMap = CodeGenRegister::SubRegMap;
     const SubRegMap &SubRegs = Register.getSubRegs();
     for (auto [SubRegIndex, SubReg] : SubRegs) {
       // Ignore non-leaf subregisters, their lane masks are fully covered by
@@ -2282,9 +2290,8 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
 //
 void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
   // Map SubRegIndex to set of registers in RC supporting that SubRegIndex.
-  typedef std::map<const CodeGenSubRegIndex *, CodeGenRegister::Vec,
-                   deref<std::less<>>>
-      SubReg2SetMap;
+  using SubReg2SetMap = std::map<const CodeGenSubRegIndex *,
+                                 CodeGenRegister::Vec, deref<std::less<>>>;
 
   // Compute the set of registers supporting each SubRegIndex.
   SubReg2SetMap SRSets;

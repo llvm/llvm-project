@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCExpr.h"
-#include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -315,30 +313,6 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createTotalNumVGPR(const MCExpr *NumAGPR,
                                                      const MCExpr *NumVGPR,
                                                      MCContext &Ctx) {
   return create(AGVK_TotalNumVGPRs, {NumAGPR, NumVGPR}, Ctx);
-}
-
-/// Mimics GCNSubtarget::computeOccupancy for MCExpr.
-///
-/// Remove dependency on GCNSubtarget and depend only only the necessary values
-/// for said occupancy computation. Should match computeOccupancy implementation
-/// without passing \p STM on.
-const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(
-    unsigned InitOcc, const MCExpr *NumSGPRs, const MCExpr *NumVGPRs,
-    unsigned DynamicVGPRBlockSize, const GCNSubtarget &STM, MCContext &Ctx) {
-  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(&STM);
-  unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM, DynamicVGPRBlockSize);
-  unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(&STM);
-  unsigned Generation = STM.getGeneration();
-
-  auto CreateExpr = [&Ctx](unsigned Value) {
-    return MCConstantExpr::create(Value, Ctx);
-  };
-
-  return create(AGVK_Occupancy,
-                {CreateExpr(MaxWaves), CreateExpr(Granule),
-                 CreateExpr(TargetTotalNumVGPRs), CreateExpr(Generation),
-                 CreateExpr(InitOcc), NumSGPRs, NumVGPRs},
-                Ctx);
 }
 
 const AMDGPUMCExpr *AMDGPUMCExpr::createLit(LitModifier Lit, int64_t Value,

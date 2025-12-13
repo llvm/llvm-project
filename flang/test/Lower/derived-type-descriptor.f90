@@ -39,7 +39,7 @@ end subroutine
 ! CHECK: }
 
 subroutine char_comp_init()
-  implicit none  
+  implicit none
   type t
      character(8) :: name='Empty'
   end type t

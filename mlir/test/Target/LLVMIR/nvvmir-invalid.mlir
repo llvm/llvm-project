@@ -1,26 +1,5 @@
 // RUN: mlir-translate -verify-diagnostics -split-input-file -mlir-to-llvmir %s
 
-llvm.func @pmevent_no_id() {
-  // expected-error @below {{either `id` or `mask` must be set}}
-  nvvm.pmevent 
-}
-
-// -----
-
-llvm.func @pmevent_bigger15() {
-  // expected-error @below {{`id` must be between 0 and 15}}
-  nvvm.pmevent id  = 141
-}
-
-// -----
-
-llvm.func @pmevent_many_ids() {
-  // expected-error @below {{`id` and `mask` cannot be set at the same time}}
-  nvvm.pmevent id = 1 mask = 1
-}
-
-// -----
-
 llvm.func @kernel_func(%numberOfThreads : i32) {
   // expected-error @below {{'nvvm.barrier' op barrier id is missing, it should be set between 0 to 15}}
   nvvm.barrier number_of_threads = %numberOfThreads
@@ -573,14 +552,6 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
 llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
   // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is a structure of 2 elements of type i32}}
   %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType  = #nvvm.ld_st_matrix_elt_type<b8>} : (!llvm.ptr<3>) -> i32
-  llvm.return
-}
-
-// -----
-
-llvm.func @nanosleep() {
-  // expected-error@+1 {{integer constant out of range for attribute}}
-  nvvm.nanosleep 100000000000000
   llvm.return
 }
 

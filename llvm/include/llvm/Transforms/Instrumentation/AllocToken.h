@@ -25,7 +25,7 @@ class Module;
 
 struct AllocTokenOptions {
   AllocTokenMode Mode = DefaultAllocTokenMode;
-  std::optional<uint64_t> MaxTokens;
+  uint64_t MaxTokens = 0;
   bool FastABI = false;
   bool Extended = false;
   AllocTokenOptions() = default;

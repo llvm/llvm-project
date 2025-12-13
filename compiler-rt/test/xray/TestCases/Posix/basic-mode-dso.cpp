@@ -4,8 +4,9 @@
 // RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -shared -std=c++11 %t/testlib.cpp -o %t/testlib.so
 // RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -std=c++11 %t/main.cpp %t/testlib.so -Wl,-rpath,%t -o %t/main.o
 
-// RUN: XRAY_OPTIONS="patch_premain=false,xray_mode=xray-basic,xray_logfile_base=basic-mode-dso-,verbosity=1" XRAY_BASIC_OPTIONS="func_duration_threshold_us=0" %run %t/main.o 2>&1 | FileCheck %s
-// RUN: %llvm_xray account --format=csv --sort=funcid "`ls basic-mode-dso-* | head -1`" | FileCheck --check-prefix=ACCOUNT %s
+// RUN: env XRAY_OPTIONS="patch_premain=false,xray_mode=xray-basic,xray_logfile_base=basic-mode-dso-,verbosity=1" XRAY_BASIC_OPTIONS="func_duration_threshold_us=0" %run %t/main.o 2>&1 | FileCheck %s
+// RUN: ls basic-mode-dso-* | head -1 | tr -d '\n' > %t.log
+// RUN: %llvm_xray account --format=csv --sort=funcid "%{readfile:%t.log}" | FileCheck --check-prefix=ACCOUNT %s
 // RUN: rm basic-mode-dso-*
 
 // REQUIRES: target={{(aarch64|x86_64)-.*}}

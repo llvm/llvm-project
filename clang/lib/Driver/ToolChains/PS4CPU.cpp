@@ -11,8 +11,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -488,6 +488,9 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
   // control of header or library search. If we're not linking, don't check
   // for missing libraries.
   auto CheckSDKPartExists = [&](StringRef Dir, StringRef Desc) {
+    // In ThinLTO code generation mode SDK files are not required.
+    if (Args.hasArgNoClaim(options::OPT_fthinlto_index_EQ))
+      return true;
     if (llvm::sys::fs::exists(Dir))
       return true;
     D.Diag(clang::diag::warn_drv_unable_to_find_directory_expected)

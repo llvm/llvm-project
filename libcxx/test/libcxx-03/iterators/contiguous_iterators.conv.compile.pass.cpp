@@ -54,12 +54,3 @@ static_assert(!std::is_constructible<std::vector<Base>::iterator, std::vector<De
 static_assert(!std::is_constructible<std::vector<Base>::const_iterator, std::vector<Derived>::iterator>::value, "");
 static_assert(!std::is_constructible<std::vector<Base>::const_iterator, std::vector<Derived>::const_iterator>::value,
               "");
-
-#if TEST_STD_VER >= 20
-static_assert(!std::is_convertible_v<std::span<Derived>::iterator, std::span<Base>::iterator>);
-static_assert(!std::is_convertible_v<std::span<Derived>::iterator, std::span<const Base>::iterator>);
-static_assert(!std::is_convertible_v<std::span<const Derived>::iterator, std::span<Base>::iterator>);
-static_assert(!std::is_constructible_v<std::span<Base>::iterator, std::span<Derived>::iterator>);
-static_assert(!std::is_constructible_v<std::span<Base>::iterator, std::span<const Derived>::iterator>);
-static_assert(!std::is_constructible_v<std::span<const Base>::iterator, std::span<const Derived>::iterator>);
-#endif

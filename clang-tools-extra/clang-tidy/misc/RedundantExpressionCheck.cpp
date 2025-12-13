@@ -890,7 +890,6 @@ static bool areStringsSameIgnoreSpaces(const llvm::StringRef Left,
 
 static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
                                        const ASTContext *Context) {
-
   if (!BinOp)
     return false;
 
@@ -1147,16 +1146,18 @@ void RedundantExpressionCheck::checkArithmeticExpr(
   }
 }
 
-static bool exprEvaluatesToZero(BinaryOperatorKind Opcode, APSInt Value) {
+static bool exprEvaluatesToZero(BinaryOperatorKind Opcode,
+                                const APSInt &Value) {
   return (Opcode == BO_And || Opcode == BO_AndAssign) && Value == 0;
 }
 
 static bool exprEvaluatesToBitwiseNegatedZero(BinaryOperatorKind Opcode,
-                                              APSInt Value) {
+                                              const APSInt &Value) {
   return (Opcode == BO_Or || Opcode == BO_OrAssign) && ~Value == 0;
 }
 
-static bool exprEvaluatesToSymbolic(BinaryOperatorKind Opcode, APSInt Value) {
+static bool exprEvaluatesToSymbolic(BinaryOperatorKind Opcode,
+                                    const APSInt &Value) {
   return ((Opcode == BO_Or || Opcode == BO_OrAssign) && Value == 0) ||
          ((Opcode == BO_And || Opcode == BO_AndAssign) && ~Value == 0);
 }

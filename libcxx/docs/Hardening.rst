@@ -328,6 +328,20 @@ following options to the compiler:
 All the :ref:`same notes <notes-for-users>` apply to setting this macro as for
 setting ``_LIBCPP_HARDENING_MODE``.
 
+Notes for vendors
+-----------------
+
+Similarly to hardening modes, vendors can set the default assertion semantic by
+providing ``LIBCXX_ASSERTION_SEMANTIC`` as a configuration option, with the
+possible values of ``hardening_dependent``, ``ignore``, ``observe``,
+``quick_enforce`` and ``enforce``. The default value is ``hardening_dependent``
+which is a special value that instructs the library to select the semantic based
+on the hardening mode in effect (the mapping is described in
+:ref:`the main section on assertion semantics <assertion-semantics>`).
+
+This option controls both the assertion semantic that the precompiled library is
+built with and the default assertion semantic that users will build with.
+
 .. _override-assertion-handler:
 
 Overriding the assertion failure handler
@@ -446,6 +460,13 @@ The first character of an ABI tag encodes the hardening mode:
 - ``s`` -- extensive ("[s]afe") mode;
 - ``d`` -- [d]ebug mode;
 - ``n`` -- [n]one mode.
+
+The second character of an ABI tag encodes the assertion semantic:
+
+- ``i`` -- [i]gnore semantic;
+- ``o`` -- [o]bserve semantic;
+- ``q`` -- [q]uick-enforce semantic;
+- ``e`` -- [e]nforce semantic.
 
 Hardened containers status
 ==========================

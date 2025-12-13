@@ -120,6 +120,14 @@ public:
   /// @}
 };
 
+MCAsmParserExtension *createDarwinAsmParser();
+MCAsmParserExtension *createELFAsmParser();
+MCAsmParserExtension *createCOFFAsmParser();
+MCAsmParserExtension *createCOFFMasmParser();
+MCAsmParserExtension *createGOFFAsmParser();
+MCAsmParserExtension *createXCOFFAsmParser();
+MCAsmParserExtension *createWasmAsmParser();
+
 } // end namespace llvm
 
 #endif // LLVM_MC_MCPARSER_MCASMPARSEREXTENSION_H
