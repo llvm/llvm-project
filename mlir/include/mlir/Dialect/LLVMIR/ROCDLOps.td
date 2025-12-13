@@ -1192,25 +1192,81 @@ def ROCDL_RawBufferAtomicCmpSwap :
 // Memory prefetch intrinsics
 
 def ROCDL_GlobalPrefetchOp :
-  ROCDL_IntrOp<"global.prefetch", [], [], [], 0, 0, 0, 0, [1], ["scope"]>,
-  Arguments<(ins Arg<LLVM_PointerInAddressSpace<1>, "", []>:$ptr, I32Attr:$scope)> {
+  ROCDL_IntrOp<"global.prefetch", [], [], [], 0, 0, 1, 0, [1], ["scope"]> {
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<1>, "", [MemRead]>:$ptr,
+                  I32Attr:$scope);
+  let arguments = !con(args, baseArgs);
   let description = [{
     Prefetches 1 byte of data per lane from global memory into the WGP-cache or L2-cache.
     Available on gfx1250+.
   }];
   let results = (outs);
   let assemblyFormat = "$ptr `,` `scope` $scope attr-dict `:` qualified(type($ptr))";
+  let extraClassDefinition = [{
+    SmallVector<Value> $cppClass::getAccessedOperands() {
+      return {getPtr()};
+    }
+  }];
 }
 
 def ROCDL_FlatPrefetchOp :
-  ROCDL_IntrOp<"flat.prefetch", [], [], [], 0, 0, 0, 0, [1], ["scope"]>,
-  Arguments<(ins Arg<LLVM_PointerInAddressSpace<0>, "", []>:$ptr, I32Attr:$scope)> {
+  ROCDL_IntrOp<"flat.prefetch", [], [], [], 0, 0, 1, 0, [1], ["scope"]> {
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<0>, "", [MemRead]>:$ptr,
+                  I32Attr:$scope);
+  let arguments = !con(args, baseArgs);
   let description = [{
     Prefetches 1 byte of data per lane using flat-memory addresses into the WGP-cache or L2-cache.
     Available on gfx1250+.
   }];
   let results = (outs);
   let assemblyFormat = "$ptr `,` `scope` $scope attr-dict `:` qualified(type($ptr))";
+  let extraClassDefinition = [{
+    SmallVector<Value> $cppClass::getAccessedOperands() {
+      return {getPtr()};
+    }
+  }];
+}
+
+//===---------------------------------------------------------------------===//
+// Atomic barrier intrinsic (LDS memory barriers).
+
+def ROCDL_DsAtomicBarrierArriveRtnOp :
+  ROCDL_IntrOp<"ds.atomic.barrier.arrive.rtn.b64", [], [], [], 1, 0, 1, 0, [], []> {
+  dag args = (ins Arg<ROCDLBufferLDS, "", [MemRead, MemWrite]>:$barrierPtr,
+                  I64:$val);
+  let arguments = !con(args, baseArgs);
+  let description = [{
+    Waits on a given DS barrier and decrements its pending count by a given value. Note, the barrier state
+    is given as a 64-bit structure containing pending count, phase and init count. The op returns the old
+    barrier state. The op is executed as an ordinary LDS operations and it is ordered with other LDS operations.
+    Thus, check DSCNT to determine when this instruction has executed.
+    Available on gfx1250+.
+  }];
+  let results = (outs I64:$res);
+  let assemblyFormat = "$barrierPtr `,` $val attr-dict `:` qualified(type($barrierPtr)) `,` type($val) `->` type($res)";
+  let extraClassDefinition = [{
+    SmallVector<Value> $cppClass::getAccessedOperands() {
+      return {getBarrierPtr()};
+    }
+  }];
+}
+
+def ROCDL_DsAtomicAsyncBarrierArriveOp :
+  ROCDL_IntrOp<"ds.atomic.async.barrier.arrive.b64", [], [], [], 0, 0, 1, 0, [], []> {
+  dag args = (ins Arg<ROCDLBufferLDS, "", [MemWrite]>:$barrierPtr);
+  let arguments = !con(args, baseArgs);
+  let description = [{
+    Waits on a given DS barrier and decrements pending count by -1. 
+    Stays in order with ASYNC loads to LDS, and uses ASYNCcnt to track its completion.
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$barrierPtr attr-dict `:` qualified(type($barrierPtr))";
+  let extraClassDefinition = [{
+    SmallVector<Value> $cppClass::getAccessedOperands() {
+      return {getBarrierPtr()};
+    }
+  }];
 }
 
 //===---------------------------------------------------------------------===//
