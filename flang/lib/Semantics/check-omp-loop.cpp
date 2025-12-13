@@ -271,7 +271,7 @@ void OmpStructureChecker::CheckNestedBlock(const parser::OpenMPLoopConstruct &x,
     } else if (parser::Unwrap<parser::DoConstruct>(stmt)) {
       ++nestedCount;
     } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(stmt)}) {
-      if (!IsLoopTransforming(omp->BeginDir().DirName().v)) {
+      if (!IsLoopTransforming(omp->BeginDir().DirId())) {
         context_.Say(omp->source,
             "Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs"_err_en_US);
       }
@@ -290,6 +290,25 @@ void OmpStructureChecker::CheckNestedConstruct(
     const parser::OpenMPLoopConstruct &x) {
   size_t nestedCount{0};
 
+  // End-directive is not allowed in such cases:
+  //   do 100 i = ...
+  //     !$omp do
+  //     do 100 j = ...
+  //   100 continue
+  //   !$omp end do    ! error
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  auto &flags{std::get<parser::OmpDirectiveSpecification::Flags>(beginSpec.t)};
+  if (flags.test(parser::OmpDirectiveSpecification::Flag::CrossesLabelDo)) {
+    if (auto &endSpec{x.EndDir()}) {
+      parser::CharBlock beginSource{beginSpec.DirName().source};
+      context_
+          .Say(endSpec->DirName().source,
+              "END %s directive is not allowed when the construct does not contain all loops that share a loop-terminating statement"_err_en_US,
+              parser::ToUpperCaseLetters(beginSource.ToString()))
+          .Attach(beginSource, "The construct starts here"_en_US);
+    }
+  }
+
   auto &body{std::get<parser::Block>(x.t)};
   if (body.empty()) {
     context_.Say(x.source,
@@ -305,7 +324,7 @@ void OmpStructureChecker::CheckFullUnroll(
   // since it won't contain a loop.
   if (const parser::OpenMPLoopConstruct *nested{x.GetNestedConstruct()}) {
     auto &nestedSpec{nested->BeginDir()};
-    if (nestedSpec.DirName().v == llvm::omp::Directive::OMPD_unroll) {
+    if (nestedSpec.DirId() == llvm::omp::Directive::OMPD_unroll) {
       bool isPartial{
           llvm::any_of(nestedSpec.Clauses().v, [](const parser::OmpClause &c) {
             return c.Id() == llvm::omp::Clause::OMPC_partial;

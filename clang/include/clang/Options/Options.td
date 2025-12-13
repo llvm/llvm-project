@@ -320,7 +320,8 @@ def mno_mpx : Flag<["-"], "mno-mpx">, Group<clang_ignored_legacy_options_Group>;
 
 // Group that ignores all gcc optimizations that won't be implemented
 def clang_ignored_gcc_optimization_f_Group : OptionGroup<
-  "<clang_ignored_gcc_optimization_f_Group>">, Group<f_Group>, Flags<[Ignored]>;
+  "<clang_ignored_gcc_optimization_f_Group>">,
+  Group<f_Group>, Flags<[Ignored]>, Visibility<[ClangOption, FlangOption]>;
 
 class DiagnosticOpts<string base>
   : KeyPathAndMacro<"DiagnosticOpts->", base, "DIAG_"> {}
@@ -1670,6 +1671,14 @@ defm named_loops
           PosFlag<SetTrue, [], [CC1Option], "Enable support for named loops">,
           NegFlag<SetFalse>>;
 
+// C '_Defer' TS
+defm defer_ts : BoolFOption<"defer-ts",
+  LangOpts<"DeferTS">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable support for the C '_Defer' Technical Specification">,
+  NegFlag<SetFalse>>,
+  ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
+
 // C++ Coroutines
 defm coroutines : BoolFOption<"coroutines",
   LangOpts<"Coroutines">, Default<cpp20.KeyPath>,
@@ -1954,6 +1963,14 @@ defm lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option],
           " experimental lifetime safety for C++">>;
+
+defm lifetime_safety_inference
+    : BoolFOption<"experimental-lifetime-safety-inference",
+                  LangOpts<"EnableLifetimeSafetyInference">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " experimental lifetime safety inference for C++">>;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
@@ -4522,6 +4539,13 @@ defm new_infallible : BoolFOption<"new-infallible",
   BothFlags<[], [ClangOption, CC1Option],
           " treating throwing global C++ operator new as always returning valid memory "
   "(annotates with __attribute__((returns_nonnull)) and throw()). This is detectable in source.">>;
+defm devirtualize_speculatively
+    : BoolFOption<"devirtualize-speculatively",
+                  CodeGenOpts<"DevirtualizeSpeculatively">, DefaultFalse,
+                  PosFlag<SetTrue, [], [],
+                          "Enables speculative devirtualization optimization.">,
+                  NegFlag<SetFalse>,
+                  BothFlags<[], [ClangOption, CLOption, CC1Option]>>;
 defm whole_program_vtables : BoolFOption<"whole-program-vtables",
   CodeGenOpts<"WholeProgramVTables">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -4683,6 +4707,12 @@ def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
     HelpText<"Enable matrix data type and related builtin functions">,
     MarshallingInfoFlag<LangOpts<"MatrixTypes">, hlsl.KeyPath>;
+
+def fmatrix_memory_layout_EQ : Joined<["-"], "fmatrix-memory-layout=">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Sets the matrix memory layout (row-major or column-major)">,
+    Values<"row-major,column-major">,
+    Group<f_Group>;
 
 defm raw_string_literals : BoolFOption<"raw-string-literals",
     LangOpts<"RawStringLiterals">, Default<std#".hasRawStringLiterals()">,
@@ -5189,9 +5219,7 @@ def : Joined<["-"], "mmacosx-version-min=">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   Group<m_Group>, Alias<mmacos_version_min_EQ>;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">,
-  MarshallingInfoFlag<LangOpts<"MSBitfields">>;
+  HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">;
 def moutline : Flag<["-"], "moutline">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Enable function outlining (AArch64 only)">;
@@ -5200,6 +5228,12 @@ def mno_outline : Flag<["-"], "mno-outline">, Group<f_clang_Group>,
     HelpText<"Disable function outlining (AArch64 only)">;
 def mno_ms_bitfields : Flag<["-"], "mno-ms-bitfields">, Group<m_Group>,
   HelpText<"Do not set the default structure layout to be compatible with the Microsoft compiler standard">;
+def fms_layout_compatibility_EQ : Joined<["-"], "fms-layout-compatibility=">,
+  Visibility<[CC1Option]>,
+  HelpText<"Structure layout compatibility with Microsoft C++ ABI">,
+  Values<"default,itanium,microsoft">,
+  NormalizedValues<["Default", "Itanium", "Microsoft"]>, NormalizedValuesScope<"LangOptions::LayoutCompatibilityKind">,
+  MarshallingInfoEnum<LangOpts<"LayoutCompatibility">, "Default">;
 def mskip_rax_setup : Flag<["-"], "mskip-rax-setup">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Skip setting up RAX register when passing variable arguments (x86 only)">,
@@ -7132,9 +7166,8 @@ defm variable_expansion_in_unroller : BooleanFFlag<"variable-expansion-in-unroll
     Group<clang_ignored_gcc_optimization_f_Group>;
 defm web : BooleanFFlag<"web">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm whole_program : BooleanFFlag<"whole-program">, Group<clang_ignored_gcc_optimization_f_Group>;
-defm devirtualize : BooleanFFlag<"devirtualize">, Group<clang_ignored_gcc_optimization_f_Group>;
-defm devirtualize_speculatively : BooleanFFlag<"devirtualize-speculatively">,
-    Group<clang_ignored_gcc_optimization_f_Group>;
+defm devirtualize : BooleanFFlag<"devirtualize">,
+                    Group<clang_ignored_gcc_optimization_f_Group>;
 
 // Generic gfortran options.
 def A_DASH : Joined<["-"], "A-">, Group<gfortran_Group>;
@@ -9574,6 +9607,8 @@ class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<dxc_Group>,
   Visibility<[DXCOption]>;
 
+def dxc_col_major : DXCFlag<"Zpc">, HelpText<"Pack matrices in column-major order">;
+def dxc_row_major : DXCFlag<"Zpr">, HelpText<"Pack matrices in row-major order">;
 def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
