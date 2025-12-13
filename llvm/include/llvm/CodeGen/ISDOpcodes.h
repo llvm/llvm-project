@@ -1504,15 +1504,15 @@ enum NodeType {
   /// Accumulator before multiplying their results.
   /// This result is concatenated to the Accumulator, and this is then reduced,
   /// using addition, to the result type.
-  /// The output is only expected to either be given to another partial reduction
-  /// operation or an equivalent vector reduce operation, so the order in which
-  /// the elements are reduced is deliberately not specified.
-  /// Input1 and Input2 must be the same type. Accumulator and the output must be
-  /// the same type.
+  /// The output is only expected to either be given to another partial
+  /// reduction operation or an equivalent vector reduce operation, so the order
+  /// in which the elements are reduced is deliberately not specified.
+  /// Input1 and Input2 must be the same type. Accumulator and the output must
+  /// be the same type.
   /// The number of elements in Input1 and Input2 must be a positive integer
   /// multiple of the number of elements in the Accumulator / output type.
-  /// Input1 and Input2 must have an element type which is the same as or smaller
-  /// than the element type of the Accumulator and output.
+  /// Input1 and Input2 must have an element type which is the same as or
+  /// smaller than the element type of the Accumulator and output.
   PARTIAL_REDUCE_SMLA,  // sext, sext
   PARTIAL_REDUCE_UMLA,  // zext, zext
   PARTIAL_REDUCE_SUMLA, // sext, zext
@@ -1573,8 +1573,8 @@ enum NodeType {
   /// Output: Mask
   ///
   /// Note: The semantics of these opcodes differ slightly from the intrinsics.
-  /// Wherever "lane" (meaning lane index) occurs in the intrinsic definition, it
-  /// is replaced with (lane + lane_offset) for the ISD opcode.
+  /// Wherever "lane" (meaning lane index) occurs in the intrinsic definition,
+  /// it is replaced with (lane + lane_offset) for the ISD opcode.
   ///
   ///  E.g., for LOOP_DEPENDENCE_WAR_MASK:
   ///    `elementSize * lane < (ptrB - ptrA)`
