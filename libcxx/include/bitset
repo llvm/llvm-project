@@ -680,7 +680,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset& flip(size_t __pos);
 
   // element access:
-#  ifdef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
+  // TODO(LLVM 24): Remove the opt-out
+#  ifndef _LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator[](size_t __p) const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__p < _Size, "bitset::operator[] index out of bounds");
     return __base::__make_ref(__p);
