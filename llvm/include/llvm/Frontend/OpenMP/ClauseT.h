@@ -50,7 +50,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <iterator>
 #include <optional>
 #include <tuple>
@@ -191,6 +190,14 @@ template <typename I, typename E> using ObjectListT = ListT<ObjectT<I, E>>;
 using DirectiveName = llvm::omp::Directive;
 
 template <typename I, typename E> //
+struct StylizedInstanceT {
+  using Variables = ObjectListT<I, E>;
+  using Instance = E;
+  using TupleTrait = std::true_type;
+  std::tuple<Variables, Instance> t;
+};
+
+template <typename I, typename E> //
 struct DefinedOperatorT {
   struct DefinedOpName {
     using WrapperTrait = std::true_type;
@@ -242,7 +249,7 @@ ENUM(MotionExpectation, Present);
 // V5.2: [15.9.1] `task-dependence-type` modifier
 ENUM(DependenceType, Depobj, In, Inout, Inoutset, Mutexinoutset, Out, Sink,
      Source);
-ENUM(Prescriptiveness, Strict, Fallback);
+ENUM(Prescriptiveness, Strict);
 
 template <typename I, typename E> //
 struct LoopIterationT {
@@ -592,10 +599,10 @@ struct DynamicAllocatorsT {
 template <typename T, typename I, typename E> //
 struct DynGroupprivateT {
   ENUM(AccessGroup, Cgroup);
-  using Prescriptiveness = type::Prescriptiveness;
+  ENUM(Fallback, Abort, Default_Mem, Null);
   using Size = E;
   using TupleTrait = std::true_type;
-  std::tuple<OPT(AccessGroup), OPT(Prescriptiveness), Size> t;
+  std::tuple<OPT(AccessGroup), OPT(Fallback), Size> t;
 };
 
 // V5.2: [5.8.4] `enter` clause
@@ -763,9 +770,9 @@ struct InitT {
 // V5.2: [5.5.4] `initializer` clause
 template <typename T, typename I, typename E> //
 struct InitializerT {
-  using InitializerExpr = E;
+  using List = ListT<type::StylizedInstanceT<I, E>>;
   using WrapperTrait = std::true_type;
-  InitializerExpr v;
+  List v;
 };
 
 // V5.2: [5.5.10] `in_reduction` clause
@@ -1308,7 +1315,7 @@ struct WriteT {
 };
 
 // V6: [6.4.7] Looprange clause
-template <typename T, typename I, typename E> struct LoopRangeT {
+template <typename T, typename I, typename E> struct LooprangeT {
   using Begin = E;
   using End = E;
 
@@ -1347,7 +1354,7 @@ using TupleClausesT =
                  DoacrossT<T, I, E>, DynGroupprivateT<T, I, E>, FromT<T, I, E>,
                  GrainsizeT<T, I, E>, IfT<T, I, E>, InitT<T, I, E>,
                  InReductionT<T, I, E>, LastprivateT<T, I, E>, LinearT<T, I, E>,
-                 LoopRangeT<T, I, E>, MapT<T, I, E>, NumTasksT<T, I, E>,
+                 LooprangeT<T, I, E>, MapT<T, I, E>, NumTasksT<T, I, E>,
                  OrderT<T, I, E>, ReductionT<T, I, E>, ScheduleT<T, I, E>,
                  TaskReductionT<T, I, E>, ToT<T, I, E>>;
 

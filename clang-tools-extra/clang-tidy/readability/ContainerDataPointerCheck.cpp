@@ -107,8 +107,11 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
       Lexer::getSourceText(CharSourceRange::getTokenRange(SrcRange),
                            *Result.SourceManager, getLangOpts())};
 
-  if (!isa<DeclRefExpr, ArraySubscriptExpr, CXXOperatorCallExpr, CallExpr,
-           MemberExpr>(CE))
+  const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(CE);
+  const bool NeedsParens =
+      OpCall ? (OpCall->getOperator() != OO_Subscript)
+             : !isa<DeclRefExpr, MemberExpr, ArraySubscriptExpr, CallExpr>(CE);
+  if (NeedsParens)
     ReplacementText = "(" + ReplacementText + ")";
 
   if (CE->getType()->isPointerType())

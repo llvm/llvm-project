@@ -162,7 +162,9 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_C_Conversion_Extension,
       ICR_Conversion,
       ICR_HLSL_Dimension_Reduction,
+      ICR_HLSL_Dimension_Reduction,
       ICR_Conversion,
+      ICR_HLSL_Scalar_Widening,
       ICR_HLSL_Scalar_Widening,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
@@ -224,8 +226,10 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
       "Incompatible pointer conversion",
       "Fixed point conversion",
       "HLSL vector truncation",
+      "HLSL matrix truncation",
       "Non-decaying array conversion",
       "HLSL vector splat",
+      "HLSL matrix splat",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -1825,20 +1829,34 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
     return ICS;
   }
 
-  if (S.getLangOpts().HLSL && ToType->isHLSLAttributedResourceType() &&
-      FromType->isHLSLAttributedResourceType()) {
-    auto *ToResType = cast<HLSLAttributedResourceType>(ToType);
-    auto *FromResType = cast<HLSLAttributedResourceType>(FromType);
-    if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
-                                         FromResType->getWrappedType()) &&
-        S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
-                                         FromResType->getContainedType()) &&
-        ToResType->getAttrs() == FromResType->getAttrs()) {
-      ICS.setStandard();
-      ICS.Standard.setAsIdentityConversion();
-      ICS.Standard.setFromType(FromType);
-      ICS.Standard.setAllToTypes(ToType);
-      return ICS;
+  if (S.getLangOpts().HLSL) {
+    // Handle conversion of the HLSL resource types.
+    const Type *FromTy = FromType->getUnqualifiedDesugaredType();
+    if (FromTy->isHLSLAttributedResourceType()) {
+      // Attributed resource types can convert to other attributed
+      // resource types with the same attributes and contained types,
+      // or to __hlsl_resource_t without any attributes.
+      bool CanConvert = false;
+      const Type *ToTy = ToType->getUnqualifiedDesugaredType();
+      if (ToTy->isHLSLAttributedResourceType()) {
+        auto *ToResType = cast<HLSLAttributedResourceType>(ToTy);
+        auto *FromResType = cast<HLSLAttributedResourceType>(FromTy);
+        if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
+                                             FromResType->getWrappedType()) &&
+            S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
+                                             FromResType->getContainedType()) &&
+            ToResType->getAttrs() == FromResType->getAttrs())
+          CanConvert = true;
+      } else if (ToTy->isHLSLResourceType()) {
+        CanConvert = true;
+      }
+      if (CanConvert) {
+        ICS.setStandard();
+        ICS.Standard.setAsIdentityConversion();
+        ICS.Standard.setFromType(FromType);
+        ICS.Standard.setAllToTypes(ToType);
+        return ICS;
+      }
     }
   }
 
@@ -2046,9 +2064,10 @@ static bool IsFloatingPointConversion(Sema &S, QualType FromType,
   return true;
 }
 
-static bool IsVectorElementConversion(Sema &S, QualType FromType,
-                                      QualType ToType,
-                                      ImplicitConversionKind &ICK, Expr *From) {
+static bool IsVectorOrMatrixElementConversion(Sema &S, QualType FromType,
+                                              QualType ToType,
+                                              ImplicitConversionKind &ICK,
+                                              Expr *From) {
   if (S.Context.hasSameUnqualifiedType(FromType, ToType))
     return true;
 
@@ -2083,6 +2102,66 @@ static bool IsVectorElementConversion(Sema &S, QualType FromType,
       ToType->isIntegralType(S.Context)) {
     ICK = ICK_Integral_Conversion;
     return true;
+  }
+
+  return false;
+}
+
+/// Determine whether the conversion from FromType to ToType is a valid
+/// matrix conversion.
+///
+/// \param ICK Will be set to the matrix conversion kind, if this is a matrix
+/// conversion.
+static bool IsMatrixConversion(Sema &S, QualType FromType, QualType ToType,
+                               ImplicitConversionKind &ICK,
+                               ImplicitConversionKind &ElConv, Expr *From,
+                               bool InOverloadResolution, bool CStyle) {
+  // Implicit conversions for matrices are an HLSL feature not present in C/C++.
+  if (!S.getLangOpts().HLSL)
+    return false;
+
+  auto *ToMatrixType = ToType->getAs<ConstantMatrixType>();
+  auto *FromMatrixType = FromType->getAs<ConstantMatrixType>();
+
+  // If both arguments are matrix, handle possible matrix truncation and
+  // element conversion.
+  if (ToMatrixType && FromMatrixType) {
+    unsigned FromCols = FromMatrixType->getNumColumns();
+    unsigned ToCols = ToMatrixType->getNumColumns();
+    if (FromCols < ToCols)
+      return false;
+
+    unsigned FromRows = FromMatrixType->getNumRows();
+    unsigned ToRows = ToMatrixType->getNumRows();
+    if (FromRows < ToRows)
+      return false;
+
+    if (FromRows == ToRows && FromCols == ToCols)
+      ElConv = ICK_Identity;
+    else
+      ElConv = ICK_HLSL_Matrix_Truncation;
+
+    QualType FromElTy = FromMatrixType->getElementType();
+    QualType ToElTy = ToMatrixType->getElementType();
+    if (S.Context.hasSameUnqualifiedType(FromElTy, ToElTy))
+      return true;
+    return IsVectorOrMatrixElementConversion(S, FromElTy, ToElTy, ICK, From);
+  }
+
+  // Matrix splat from any arithmetic type to a matrix.
+  if (ToMatrixType && FromType->isArithmeticType()) {
+    ElConv = ICK_HLSL_Matrix_Splat;
+    QualType ToElTy = ToMatrixType->getElementType();
+    return IsVectorOrMatrixElementConversion(S, FromType, ToElTy, ICK, From);
+    ICK = ICK_HLSL_Matrix_Splat;
+    return true;
+  }
+  if (FromMatrixType && !ToMatrixType) {
+    ElConv = ICK_HLSL_Matrix_Truncation;
+    QualType FromElTy = FromMatrixType->getElementType();
+    if (S.Context.hasSameUnqualifiedType(FromElTy, ToType))
+      return true;
+    return IsVectorOrMatrixElementConversion(S, FromElTy, ToType, ICK, From);
   }
 
   return false;
@@ -2127,14 +2206,14 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
       QualType ToElTy = ToExtType->getElementType();
       if (S.Context.hasSameUnqualifiedType(FromElTy, ToElTy))
         return true;
-      return IsVectorElementConversion(S, FromElTy, ToElTy, ICK, From);
+      return IsVectorOrMatrixElementConversion(S, FromElTy, ToElTy, ICK, From);
     }
     if (FromExtType && !ToExtType) {
       ElConv = ICK_HLSL_Vector_Truncation;
       QualType FromElTy = FromExtType->getElementType();
       if (S.Context.hasSameUnqualifiedType(FromElTy, ToType))
         return true;
-      return IsVectorElementConversion(S, FromElTy, ToType, ICK, From);
+      return IsVectorOrMatrixElementConversion(S, FromElTy, ToType, ICK, From);
     }
     // Fallthrough for the case where ToType is a vector and FromType is not.
   }
@@ -2161,7 +2240,8 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
       if (S.getLangOpts().HLSL) {
         ElConv = ICK_HLSL_Vector_Splat;
         QualType ToElTy = ToExtType->getElementType();
-        return IsVectorElementConversion(S, FromType, ToElTy, ICK, From);
+        return IsVectorOrMatrixElementConversion(S, FromType, ToElTy, ICK,
+                                                 From);
       }
       ICK = ICK_Vector_Splat;
       return true;
@@ -2456,6 +2536,11 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // Pointer to member conversions (4.11).
     SCS.Second = ICK_Pointer_Member;
   } else if (IsVectorConversion(S, FromType, ToType, SecondICK, DimensionICK,
+                                From, InOverloadResolution, CStyle)) {
+    SCS.Second = SecondICK;
+    SCS.Dimension = DimensionICK;
+    FromType = ToType.getUnqualifiedType();
+  } else if (IsMatrixConversion(S, FromType, ToType, SecondICK, DimensionICK,
                                 From, InOverloadResolution, CStyle)) {
     SCS.Second = SecondICK;
     SCS.Dimension = DimensionICK;
@@ -6227,6 +6312,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_SVE_Vector_Conversion:
   case ICK_RVV_Vector_Conversion:
   case ICK_HLSL_Vector_Splat:
+  case ICK_HLSL_Matrix_Splat:
   case ICK_Vector_Splat:
   case ICK_Complex_Real:
   case ICK_Block_Pointer_Conversion:
@@ -6237,6 +6323,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Incompatible_Pointer_Conversion:
   case ICK_Fixed_Point_Conversion:
   case ICK_HLSL_Vector_Truncation:
+  case ICK_HLSL_Matrix_Truncation:
     return false;
 
   case ICK_Lvalue_To_Rvalue:

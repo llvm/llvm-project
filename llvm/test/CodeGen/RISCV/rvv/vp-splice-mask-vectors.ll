@@ -2,14 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s | FileCheck %s --check-prefix=NOVLDEP
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+vl-dependent-latency -verify-machineinstrs < %s | FileCheck %s --check-prefix=VLDEP
 
-declare <vscale x 1 x i1> @llvm.experimental.vp.splice.nxv1i1(<vscale x 1 x i1>, <vscale x 1 x i1>, i32, <vscale x 1 x i1>, i32, i32)
-declare <vscale x 2 x i1> @llvm.experimental.vp.splice.nxv2i1(<vscale x 2 x i1>, <vscale x 2 x i1>, i32, <vscale x 2 x i1>, i32, i32)
-declare <vscale x 4 x i1> @llvm.experimental.vp.splice.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>, i32, <vscale x 4 x i1>, i32, i32)
-declare <vscale x 8 x i1> @llvm.experimental.vp.splice.nxv8i1(<vscale x 8 x i1>, <vscale x 8 x i1>, i32, <vscale x 8 x i1>, i32, i32)
-declare <vscale x 16 x i1> @llvm.experimental.vp.splice.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, i32, <vscale x 16 x i1>, i32, i32)
-declare <vscale x 32 x i1> @llvm.experimental.vp.splice.nxv32i1(<vscale x 32 x i1>, <vscale x 32 x i1>, i32, <vscale x 32 x i1>, i32, i32)
-declare <vscale x 64 x i1> @llvm.experimental.vp.splice.nxv64i1(<vscale x 64 x i1>, <vscale x 64 x i1>, i32, <vscale x 64 x i1>, i32, i32)
-
 define <vscale x 1 x i1> @test_vp_splice_nxv1i1(<vscale x 1 x i1> %va, <vscale x 1 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) #0 {
 ; NOVLDEP-LABEL: test_vp_splice_nxv1i1:
 ; NOVLDEP:       # %bb.0:

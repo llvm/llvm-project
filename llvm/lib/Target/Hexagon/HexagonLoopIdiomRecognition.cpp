@@ -2021,7 +2021,7 @@ bool HexagonLoopIdiomRecognize::processCopyingStore(Loop *CurLoop,
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   Instruction *ExpPt = Preheader->getTerminator();
   IRBuilder<> Builder(ExpPt);
-  SCEVExpander Expander(*SE, *DL, "hexagon-loop-idiom");
+  SCEVExpander Expander(*SE, "hexagon-loop-idiom");
 
   Type *IntPtrTy = Builder.getIntPtrTy(*DL, SI->getPointerAddressSpace());
 

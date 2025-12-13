@@ -14,10 +14,6 @@
 #define _LIBCXXABI_ARM_EHABI
 #endif
 
-#if !defined(__has_attribute)
-#define __has_attribute(_attribute_) 0
-#endif
-
 #if defined(__clang__)
 #  define _LIBCXXABI_COMPILER_CLANG
 #  ifndef __apple_build_version__
@@ -25,10 +21,6 @@
 #  endif
 #elif defined(__GNUC__)
 #  define _LIBCXXABI_COMPILER_GCC
-#elif defined(_MSC_VER)
-#  define _LIBCXXABI_COMPILER_MSVC
-#elif defined(__IBMCPP__)
-#  define _LIBCXXABI_COMPILER_IBM
 #endif
 
 #if defined(_WIN32)
@@ -66,17 +58,7 @@
  #endif
 #endif
 
-#if defined(_LIBCXXABI_COMPILER_MSVC)
-#define _LIBCXXABI_WEAK
-#else
 #define _LIBCXXABI_WEAK __attribute__((__weak__))
-#endif
-
-#if defined(__clang__)
-#define _LIBCXXABI_COMPILER_CLANG
-#elif defined(__GNUC__)
-#define _LIBCXXABI_COMPILER_GCC
-#endif
 
 #if __has_attribute(__no_sanitize__) && defined(_LIBCXXABI_COMPILER_CLANG)
 #define _LIBCXXABI_NO_CFI __attribute__((__no_sanitize__("cfi")))
@@ -89,11 +71,7 @@
 #  define _LIBCXXABI_GUARD_ABI_ARM
 #endif
 
-#if defined(_LIBCXXABI_COMPILER_CLANG)
-#  if !__has_feature(cxx_exceptions)
-#    define _LIBCXXABI_NO_EXCEPTIONS
-#  endif
-#elif defined(_LIBCXXABI_COMPILER_GCC) && !defined(__EXCEPTIONS)
+#if !defined(__cpp_exceptions) || __cpp_exceptions < 199711L
 #  define _LIBCXXABI_NO_EXCEPTIONS
 #endif
 

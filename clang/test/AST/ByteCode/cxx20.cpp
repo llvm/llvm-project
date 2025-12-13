@@ -1201,3 +1201,27 @@ namespace NonPureVirtualCall {
 
   int main() { check(); }
 }
+
+namespace DyamicCast {
+  struct X {
+    virtual constexpr ~X() {}
+  };
+  struct Y : X {};
+  constexpr Y y;
+  constexpr const X *p = &y;
+  constexpr const Y *q = dynamic_cast<const Y*>(p);
+}
+
+namespace ConditionalTemporaries {
+  class F {
+  public:
+    constexpr F(int a ) {this->a = a;}
+    constexpr ~F() {}
+    int a;
+  };
+  constexpr int foo(bool b) {
+    return b ? F{12}.a : F{13}.a;
+  }
+  static_assert(foo(false)== 13);
+  static_assert(foo(true)== 12);
+}

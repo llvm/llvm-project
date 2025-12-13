@@ -1144,6 +1144,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("apple-a17", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m4", "armv8.7-a"),
                       AArch64CPUTestParams("apple-a18", "armv8.7-a"),
+                      AArch64CPUTestParams("apple-m5", "armv8.7-a"),
                       AArch64CPUTestParams("exynos-m3", "armv8-a"),
                       AArch64CPUTestParams("exynos-m4", "armv8.2-a"),
                       AArch64CPUTestParams("exynos-m5", "armv8.2-a"),
@@ -1260,11 +1261,12 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
                       AArch64CPUAliasTestParams({"apple-a16", "apple-m3",
                                                  "apple-s9", "apple-s10"}),
-                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"})),
+                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"}),
+                      AArch64CPUAliasTestParams({"apple-m5", "apple-a19"})),
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 91;
+static constexpr unsigned NumAArch64CPUArchs = 93;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1413,7 +1415,6 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SSBS,         AArch64::AEK_SB,
       AArch64::AEK_PREDRES,      AArch64::AEK_BF16,
       AArch64::AEK_I8MM,         AArch64::AEK_F32MM,
-      AArch64::AEK_F64MM,        AArch64::AEK_TME,
       AArch64::AEK_LS64,         AArch64::AEK_BRBE,
       AArch64::AEK_PAUTH,        AArch64::AEK_FLAGM,
       AArch64::AEK_SME,          AArch64::AEK_SMEF64F64,
@@ -1452,7 +1453,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_GCIE,         AArch64::AEK_SME2P3,
       AArch64::AEK_SVE2P3,       AArch64::AEK_SVE_B16MM,
       AArch64::AEK_F16MM,        AArch64::AEK_F16F32DOT,
-      AArch64::AEK_F16F32MM,
+      AArch64::AEK_F16F32MM,     AArch64::AEK_MOPS_GO,
+      AArch64::AEK_POE2,         AArch64::AEK_TEV,
+      AArch64::AEK_BTIE,         AArch64::AEK_F64MM,
   };
 
   std::vector<StringRef> Features;
@@ -1511,7 +1514,6 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+i8mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f32mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f64mm"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+tme"));
   EXPECT_TRUE(llvm::is_contained(Features, "+ls64"));
   EXPECT_TRUE(llvm::is_contained(Features, "+brbe"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pauth"));
@@ -1576,6 +1578,10 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+f16mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f16f32dot"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f16f32mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mops-go"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+poe2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+tev"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+btie"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1696,7 +1702,6 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"rcpc", "norcpc", "+rcpc", "-rcpc"},
       {"rng", "norng", "+rand", "-rand"},
       {"memtag", "nomemtag", "+mte", "-mte"},
-      {"tme", "notme", "+tme", "-tme"},
       {"pauth", "nopauth", "+pauth", "-pauth"},
       {"ssbs", "nossbs", "+ssbs", "-ssbs"},
       {"sb", "nosb", "+sb", "-sb"},
@@ -1754,6 +1759,10 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"f16mm", "nof16mm", "+f16mm", "-f16mm"},
       {"f16f32dot", "nof16f32dot", "+f16f32dot", "-f16f32dot"},
       {"f16f32mm", "nof16f32mm", "+f16f32mm", "-f16f32mm"},
+      {"mops-go", "nomops-go", "+mops-go", "-mops-go"},
+      {"poe2", "nopoe2", "+poe2", "-poe2"},
+      {"tev", "notev", "+tev", "-tev"},
+      {"btie", "nobtie", "+btie", "-btie"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {

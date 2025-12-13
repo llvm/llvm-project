@@ -366,9 +366,10 @@ its enabled sub-projects. Nearly all of these variable names begin with
   ``LLVM_ENABLE_SPHINX`` and ``LLVM_ENABLE_DOXYGEN``.
 
 **LLVM_BUILD_EXAMPLES**:BOOL
-  Build LLVM examples. Defaults to OFF. Targets for building each example are
-  generated in any case. See documentation for *LLVM_BUILD_TOOLS* above for more
-  details.
+  Include LLVM examples in the 'all' build target and install them as part of
+  the ``install`` target. Defaults to OFF. Targets for building examples are
+  still generated, this is controlled by *LLVM_INCLUDE_EXAMPLES*. Note that some
+  examples might still be built as dependencies for tests.
 
 **LLVM_BUILD_INSTRUMENTED_COVERAGE**:BOOL
   If enabled, `source-based code coverage
@@ -477,6 +478,12 @@ its enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_ENABLE_BINDINGS**:BOOL
   If disabled, do not try to build the OCaml bindings.
+
+**LLVM_ENABLE_CURL**:
+  Used to decide if LLVM tools, should support downloading information
+  (particularly debug info from ``llvm-debuginfod``) over HTTP. Allowed
+  values are ``OFF`` (default), ``ON``, and ``FORCE_ON`` (error if libcurl
+  is not found).
 
 **LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING**:STRING
   Enhances Debugify's ability to detect line number errors by storing extra
@@ -1200,3 +1207,14 @@ Windows
   When compiling with clang-cl, CMake may use ``llvm-mt`` as the Manifest Tool
   when available. ```llvm-mt``` is only present when libxml2 is found at build-time.
   To ensure using Microsoft's Manifest Tool set `CMAKE_MT=mt`.
+
+Apple/OSX
+---------
+
+**CMAKE_OSX_SYSROOT**:STRING
+  When compiling for OSX, in order for the test suite to find libSystem to link
+  dylib tests you'll need to run CMake with ```xcrun --show-sdk-path``` as the
+  string to pass in so that the testsuite can find your os libraries.
+
+  This will show up as ```ld: library not found for -lSystem``` when running
+  tests.

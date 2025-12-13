@@ -181,7 +181,7 @@ Membership Review
 
 To ensure the group remains active and focused, member participation will be reviewed every six months. Inactive members may be removed following this review.
 
-Decision Taking
+Decision Making
 ---------------
 
 The LLVM Qualification Working Group aims to make decisions transparently, collaboratively, and without unnecessary formality. The goal is to maintain efficiency while encouraging broad participation and mutual understanding.
@@ -241,15 +241,8 @@ Agendas, meeting notes, and presentation slides for the sync-ups are shared to e
 Upcoming and past meeting agendas, and meeting minutes are published in a dedicated thread
 on the LLVM Discourse forum: `Meeting Agendas and Minutes <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`_ 
 
-Slides used to support discussions during sync-up meetings are stored in LLVM's GitHub repository.
-
-Available slides:
-
-* (add future entries here)
-* `October 2025 <https://docs.google.com/presentation/d/1ND2SkjgcHvcEbQmMd8ExL-PpRXouP49T-wfy3xf2yRQ/edit?usp=sharing>`_
-* `September 2025 <https://docs.google.com/presentation/d/1SZAE-QHfJED6CxJCCtBkPDxcw7XU9ORX54TJyXe1ppc/edit?usp=sharing>`_
-* `August 2025 <https://docs.google.com/presentation/d/1K8GWoRm8ZAeyyGvTeV5f-sMOhMr7WHiEk6_Nm5Fk10o/edit?usp=sharing>`_
-* `July 2025 <https://docs.google.com/presentation/d/1ktURe9qz5ggbdOQYK-2ISpiC18B-Y_35WvGyAnnxEpw/edit?usp=sharing>`_
+Slides used to support discussions during sync-up meetings are stored in a dedicated Google Drive folder: `Link <https://drive.google.com/drive/u/1/folders/1nu3JAanE0gqQDll0S9ofVy4FOFezc6Mm>`_.
+Note that the naming convention for these slides is *YYYYMM*\_llvm_qual_wg.
 
 AI Transcription Policy
 =======================

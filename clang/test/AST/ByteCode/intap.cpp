@@ -305,6 +305,46 @@ namespace UnderlyingInt128 {
   static_assert(foo() == 0, ""); // both-error {{not an integral constant expression}} \
                                  // both-note {{in call to}}
 }
+
+namespace CompoundAssignOperators {
+  constexpr unsigned __int128 foo() {
+    long b = 10;
+
+    b += (__int128)1;
+    b -= (__int128)1;
+    b *= (__int128)1;
+    b /= (__int128)1;
+
+    b += (unsigned __int128)1;
+    b -= (unsigned __int128)1;
+    b *= (unsigned __int128)1;
+    b /= (unsigned __int128)1;
+
+    __int128 i = 10;
+    i += (__int128)1;
+    i -= (__int128)1;
+    i *= (__int128)1;
+    i /= (__int128)1;
+    i += (unsigned __int128)1;
+    i -= (unsigned __int128)1;
+    i *= (unsigned __int128)1;
+    i /= (unsigned __int128)1;
+
+    unsigned __int128 i2 = 10;
+    i2 += (__int128)1;
+    i2 -= (__int128)1;
+    i2 *= (__int128)1;
+    i2 /= (__int128)1;
+    i2 += (unsigned __int128)1;
+    i2 -= (unsigned __int128)1;
+    i2 *= (unsigned __int128)1;
+    i2 /= (unsigned __int128)1;
+
+    return (int)b;
+  }
+  static_assert(foo() == 10);
+}
+
 #endif
 
 #endif

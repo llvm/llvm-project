@@ -258,6 +258,9 @@ def BufferResultsToOutParamsPass
               /*default=*/"false", "Hoist static allocations to call sites.">,
        Option<"hoistDynamicAllocs", "hoist-dynamic-allocs", "bool",
               /*default=*/"false", "Hoist dynamic allocations to call sites.">,
+       Option<"modifyPublicFunctions", "modify-public-functions", "bool",
+              /*default=*/"false", "Modify function signatures of public "
+              "functions.">,
   ];
   let dependentDialects = ["memref::MemRefDialect"];
 }

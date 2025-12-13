@@ -206,8 +206,7 @@ void X86FastPreTileConfig::spill(MachineBasicBlock::iterator Before,
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   // Don't need shape information for tile store, becasue it is adjacent to
   // the tile def instruction.
-  TII->storeRegToStackSlot(*MBB, Before, VirtReg, Kill, FI, &RC, TRI,
-                           Register());
+  TII->storeRegToStackSlot(*MBB, Before, VirtReg, Kill, FI, &RC, Register());
   ++NumStores;
 
   // TODO: update DBG_VALUEs

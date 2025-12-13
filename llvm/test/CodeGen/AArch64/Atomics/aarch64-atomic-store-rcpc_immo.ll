@@ -357,12 +357,10 @@ define void @store_atomic_i128_unaligned_seq_cst(i128 %value, ptr %ptr) {
     ret void
 }
 
-; TODO: missed opportunity to emit a stlurb w/ GISel
 define void @store_atomic_i8_from_gep() {
 ; GISEL-LABEL: store_atomic_i8_from_gep:
 ; GISEL:    bl init
-; GISEL:    add x9, x8, #1
-; GISEL:    stlrb w8, [x9]
+; GISEL:    stlurb w8, [x9, #1]
 ;
 ; SDAG-LABEL: store_atomic_i8_from_gep:
 ; SDAG:    bl init
@@ -374,12 +372,10 @@ define void @store_atomic_i8_from_gep() {
   ret void
 }
 
-; TODO: missed opportunity to emit a stlurh w/ GISel
 define void @store_atomic_i16_from_gep() {
 ; GISEL-LABEL: store_atomic_i16_from_gep:
 ; GISEL:    bl init
-; GISEL:    add x9, x8, #2
-; GISEL:    stlrh w8, [x9]
+; GISEL:    stlurh w8, [x9, #2]
 ;
 ; SDAG-LABEL: store_atomic_i16_from_gep:
 ; SDAG:    bl init

@@ -162,7 +162,8 @@ public:
 
   /// emit - Print out the table as the body of an array initializer.
   /// Use the Print function to print elements.
-  void emit(raw_ostream &OS, void (*Print)(raw_ostream &, ElemT)) const {
+  void emit(raw_ostream &OS,
+            function_ref<void(raw_ostream &, ElemT)> Print) const {
     assert(IsLaidOut && "Call layout() before emit()");
     for (const auto &[Seq, Offset] : Seqs) {
       OS << "  /* " << Offset << " */ ";

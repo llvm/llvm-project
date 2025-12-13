@@ -8,7 +8,6 @@
 
 #include "llvm/ADT/IntervalMap.h"
 #include "gtest/gtest.h"
-#include <type_traits>
 
 using namespace llvm;
 

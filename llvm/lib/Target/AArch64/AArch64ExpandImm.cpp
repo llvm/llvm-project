@@ -549,6 +549,8 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   // Prefer MOVZ/MOVN over ORR because of the rules for the "mov" alias.
   if ((BitSize / 16) - OneChunks <= 1 || (BitSize / 16) - ZeroChunks <= 1) {
     expandMOVImmSimple(Imm, BitSize, OneChunks, ZeroChunks, Insn);
+    assert(Insn.size() == 1 &&
+           "Move of immediate should have expanded to a single MOVZ/MOVN");
     return;
   }
 

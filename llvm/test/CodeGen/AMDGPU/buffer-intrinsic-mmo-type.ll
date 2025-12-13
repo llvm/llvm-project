@@ -50,8 +50,7 @@ define amdgpu_ps void @buffer_store_v8f16(ptr addrspace(8) inreg %rsrc, <8 x hal
   ; GCN-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY12]], %subreg.sub0, killed [[COPY11]], %subreg.sub1, killed [[COPY10]], %subreg.sub2, killed [[COPY9]], %subreg.sub3
   ; GCN-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY1]], %subreg.sub3
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GCN-NEXT:   [[COPY13:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE3]]
-  ; GCN-NEXT:   BUFFER_STORE_DWORDX4_OFFEN_exact killed [[COPY13]], [[COPY]], killed [[REG_SEQUENCE2]], killed [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s128) into %ir.rsrc, align 1, addrspace 8)
+  ; GCN-NEXT:   BUFFER_STORE_DWORDX4_OFFEN_exact killed [[REG_SEQUENCE3]], [[COPY]], killed [[REG_SEQUENCE2]], killed [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s128) into %ir.rsrc, align 1, addrspace 8)
   ; GCN-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.ptr.buffer.store.v8f16(<8 x half> %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
   ret void

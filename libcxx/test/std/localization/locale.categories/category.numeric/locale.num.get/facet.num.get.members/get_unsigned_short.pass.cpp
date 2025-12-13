@@ -68,6 +68,17 @@ int main(int, char**)
         assert(err == ios.goodbit);
         assert(v == 1);
     }
+    {
+        const char str[] = "-1";
+        std::ios_base::iostate err = ios.goodbit;
+        cpp17_input_iterator<const char*> iter =
+            f.get(cpp17_input_iterator<const char*>(str),
+                  cpp17_input_iterator<const char*>(str+sizeof(str)),
+                  ios, err, v);
+        assert(base(iter) == str+sizeof(str)-1);
+        assert(err == ios.goodbit);
+        assert(v == std::numeric_limits<unsigned short>::max());
+    }
     std::hex(ios);
     {
         const char str[] = "0xFFFF";

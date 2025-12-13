@@ -18,7 +18,7 @@ entry:
 for.cond:                                         ; preds = %for.cond, %entry
   %i.0 = phi i32 [ poison, %entry ], [ %inc, %for.cond ]
   %cmp = icmp slt i32 %i.0, 0
-  %fsub = fsub double undef, undef
+  %fsub = fsub double 0.0e+00, 0.0e+00
   %fadd = fadd double %fsub, 1.000000e+00
   %call = tail call i32 @fn2(double %fadd) #2
   %inc = add nsw i32 %i.0, 1

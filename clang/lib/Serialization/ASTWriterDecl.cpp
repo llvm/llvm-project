@@ -903,7 +903,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back(D->getODRHash());
 
   if (D->isDefaulted() || D->isDeletedAsWritten()) {
-    if (auto *FDI = D->getDefalutedOrDeletedInfo()) {
+    if (auto *FDI = D->getDefaultedOrDeletedInfo()) {
       // Store both that there is an DefaultedOrDeletedInfo and whether it
       // contains a DeletedMessage.
       StringLiteral *DeletedMessage = FDI->getDeletedMessage();
@@ -1794,6 +1794,8 @@ void ASTDeclWriter::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
   if (D->getOperatorDelete())
     Record.AddStmt(D->getOperatorDeleteThisArg());
   Record.AddDeclRef(D->getOperatorGlobalDelete());
+  Record.AddDeclRef(D->getArrayOperatorDelete());
+  Record.AddDeclRef(D->getGlobalArrayOperatorDelete());
 
   Code = serialization::DECL_CXX_DESTRUCTOR;
 }

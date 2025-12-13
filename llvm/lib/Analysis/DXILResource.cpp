@@ -23,7 +23,6 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
-#include <optional>
 
 #define DEBUG_TYPE "dxil-resource"
 

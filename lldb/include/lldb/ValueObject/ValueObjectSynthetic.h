@@ -123,6 +123,11 @@ public:
 
   void SetLanguageFlags(uint64_t flags) override;
 
+  void
+  GetExpressionPath(Stream &stream,
+                    GetExpressionPathFormat epformat =
+                        eGetExpressionPathFormatDereferencePointers) override;
+
 protected:
   bool UpdateValue() override;
 
