@@ -1211,14 +1211,13 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_permdf256:
   case X86::BI__builtin_ia32_permdi512:
   case X86::BI__builtin_ia32_permdf512: {
-    unsigned imm = ops[1].getDefiningOp<cir::ConstantOp>()
-                       .getIntValue()
-                       .getZExtValue();
+    unsigned imm =
+        ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
     unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
 
     // These intrinsics operate on 256-bit lanes of four 64-bit elements.
     int64_t Indices[8];
-    
+
     for (unsigned l = 0; l != numElts; l += 4)
       for (unsigned i = 0; i != 4; ++i)
         Indices[l + i] = l + ((imm >> (2 * i)) & 0x3);
