@@ -121,3 +121,28 @@ define <4 x i64> @test_mul_52bit_ymm(<4 x i64> %a, <4 x i64> %b) {
   %res = mul <4 x i64> %a_masked, %b_masked
   ret <4 x i64> %res
 }
+
+; ============================================================================
+; Case 1.5: 32-bit Signed Optimization (vpmuldq)
+; ============================================================================
+
+define <8 x i64> @test_mul_32bit_signed(<8 x i32> %a, <8 x i32> %b) {
+; CNL-LABEL: test_mul_32bit_signed:
+; CNL:       # %bb.0:
+; CNL-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; CNL-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
+; CNL-NEXT:    vpmuldq %zmm1, %zmm0, %zmm0
+; CNL-NEXT:    retq
+;
+; NOVLX-LABEL: test_mul_32bit_signed:
+; NOVLX:       # %bb.0:
+; NOVLX-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; NOVLX-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
+; NOVLX-NEXT:    vpmuldq %zmm1, %zmm0, %zmm0
+; NOVLX-NEXT:    retq
+  %a_ = sext <8 x i32> %a to <8 x i64>
+  %b_ = sext <8 x i32> %b to <8 x i64>
+
+  %res = mul <8 x i64> %a_, %b_
+  ret <8 x i64> %res
+}
