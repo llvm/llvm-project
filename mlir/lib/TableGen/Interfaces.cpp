@@ -229,14 +229,14 @@ bool DialectInterface::classof(const Interface *interface) {
 }
 
 // Return the interfaces extra class declaration code.
-SmallVector<std::pair<StringRef, StringRef>>
+llvm::StringMap<StringRef>
 DialectInterface::getAliasDeclarations() const {
-  SmallVector<std::pair<StringRef, StringRef>, 1> aliasDeclarations;
+  llvm::StringMap<StringRef> aliasDeclarations;
 
   for (auto &aliasDef : getDef().getValueAsListOfDefs("aliasDeclarations")) {
     auto alias = aliasDef->getValueAsString("name");
     auto typeId = aliasDef->getValueAsString("aliased");
-    aliasDeclarations.push_back(std::make_pair(alias, typeId));
+    aliasDeclarations[alias] = typeId;
   }
   return aliasDeclarations;
 }

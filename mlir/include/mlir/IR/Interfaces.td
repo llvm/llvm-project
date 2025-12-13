@@ -157,9 +157,9 @@ class TypeInterface<string name, list<Interface> baseInterfaces = []>
 			!if(!empty(cppNamespace),"", cppNamespace # "::") # name
     >;
 
-// AliasDeclaration represents an Alias Declaration in a Dialect Interface
+// AliasDeclaration represents an Alias Declaration in a Dialect Interface.
 class AliasDeclaration<string alias, string typeId> {
-	string name = alias;
+  string name = alias;
   string aliased = typeId;
 }
 

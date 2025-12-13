@@ -135,8 +135,9 @@ static void emitInterfaceAliasDeclarations(const DialectInterface &interface,
   raw_indented_ostream ios(os);
   ios.indent(2);
 
-  for (auto [alias, typeId] : interface.getAliasDeclarations()) {
-    ios << "using " << alias << " = " << typeId << ";\n";
+
+  for (auto &alias : interface.getAliasDeclarations()) {
+    ios << "using " << alias.getKey() << " = " << alias.getValue() << ";\n";
   }
 }
 

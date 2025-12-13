@@ -15,7 +15,7 @@ def OpAsmDialectInterface : DialectInterface<"OpAsmDialectInterface"> {
         Hooks for getting an alias identifier alias for a given symbol, that is
         not necessarily a part of this dialect. The identifier is used in place of
         the symbol when printing textual IR. These aliases must not contain `.` or
-        end with a numeric digit([0-9]+).
+        end with a numeric digit ([0-9]+).
       }],
       "AliasResult", "getAlias",
       (ins "::mlir::Attribute":$attr, "::llvm::raw_ostream &":$os),
@@ -35,7 +35,7 @@ def OpAsmDialectInterface : DialectInterface<"OpAsmDialectInterface"> {
         of `getResourceKey` on the returned handle is permitted to be different
         than `key`.
       }],
-      "::mlir::FailureOr<AsmDialectResourceHandle>", "declareResource",
+      "::mlir::FailureOr<::mlir::AsmDialectResourceHandle>", "declareResource",
       (ins "::mlir::StringRef":$key),
       [{
         return failure();

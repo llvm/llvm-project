@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 
@@ -168,7 +169,7 @@ struct DialectInterface : public Interface {
   using Interface::Interface;
 
   // Return alias declarations
-  SmallVector<std::pair<StringRef, StringRef>> getAliasDeclarations() const;
+  llvm::StringMap<StringRef> getAliasDeclarations() const;
 
   static bool classof(const Interface *interface);
 };
