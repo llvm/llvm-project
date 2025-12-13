@@ -12043,6 +12043,12 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           OutVal = DAG.getNode(ISD::AssertNoFPClass, dl, OutVal.getValueType(),
                                OutVal, SDNoFPClass);
         }
+
+        if (Arg.hasAttribute(Attribute::Alignment)) {
+          OutVal =
+              DAG.getAssertAlign(dl, OutVal, Arg.getParamAlign().valueOrOne());
+        }
+
         ArgValues.push_back(OutVal);
       }
 
