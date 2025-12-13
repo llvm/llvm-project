@@ -83,8 +83,10 @@ export namespace std {
     // [range.dangling], dangling iterator handling
     using std::ranges::dangling;
 
+#if _LIBCPP_STD_VER >= 23
     // [range.elementsof], class template elements_­of
-    // using std::ranges::elements_of;
+    using std::ranges::elements_of;
+#endif
 
     using std::ranges::borrowed_iterator_t;
 
