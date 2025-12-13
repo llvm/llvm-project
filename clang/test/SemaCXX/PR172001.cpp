@@ -38,4 +38,6 @@ void f() {
   // test3-error@-3 {{incomplete type 'std::partial_ordering' where a complete type is required}}
   // test4-error@-4 {{cannot use builtin operator '<=>' because type 'std::partial_ordering' was not found; include <compare>}}
 }
+
+
  
