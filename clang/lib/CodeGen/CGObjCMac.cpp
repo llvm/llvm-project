@@ -4032,11 +4032,7 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
     const ObjCContainerDecl *CD) {
   // Generate precondition checks (class realization + nil check) if needed
-  // Without flag: precondition checks are in the implementation
-  // With flag: precondition checks will be in the thunk (not here)
-  if (!CGM.shouldExposeSymbol(OMD)) {
-    GenerateDirectMethodsPreconditionCheck(CGF, Fn, OMD, CD);
-  }
+  GenerateDirectMethodsPreconditionCheck(CGF, Fn, OMD, CD);
 
   auto &Builder = CGF.Builder;
   // Only synthesize _cmd if it's referenced
