@@ -18,7 +18,7 @@
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 using new_handler = void (*)();
 _LIBCPP_EXPORTED_FROM_ABI new_handler set_new_handler(new_handler) _NOEXCEPT;
-[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI new_handler get_new_handler() _NOEXCEPT;
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI new_handler get_new_handler() _NOEXCEPT;
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___NEW_NEW_HANDLER_H
