@@ -15,7 +15,7 @@
 // void swap(flat_map& y) noexcept;
 // friend void swap(flat_map& x, flat_map& y) noexcept
 
-// Test that the variants are hold if any exception is thrown during swap
+// Test that the invariants are maintained if any exception is thrown during swap
 
 #include <flat_map>
 #include <cassert>
