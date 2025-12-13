@@ -1,6 +1,6 @@
 // Test variadic direct methods - should get exposed symbols but not use thunks
 // RUN: %clang_cc1 -emit-llvm -fobjc-arc -triple arm64-apple-darwin10 \
-// RUN:   -fobjc-expose-direct-methods %s -o - | FileCheck %s
+// RUN:   -fobjc-direct-precondition-thunk %s -o - | FileCheck %s
 
 __attribute__((objc_root_class))
 @interface Root

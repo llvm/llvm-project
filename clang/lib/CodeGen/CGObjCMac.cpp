@@ -2152,7 +2152,7 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
   if (!RequiresNullCheck && Method && Method->hasParamDestroyedInCallee())
     RequiresNullCheck = true;
 
-  if (CGM.shouldHaveNilCheckInline(Method)) {
+  if (CGM.shouldHavePreconditionInline(Method)) {
     // For variadic class methods, we need to inline pre condition checks. That
     // include two things:
     // 1. if this is a class method, we have to realize the class if we are not
@@ -3943,8 +3943,6 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
   llvm::FunctionType *MethodTy =
       Types.GetFunctionType(Types.arrangeObjCMethodDeclaration(OMD));
 
-  bool ExposeSymbol = CGM.shouldExposeSymbol(OMD);
-
   if (OldFn) {
     Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
                                 "", &CGM.getModule());
@@ -3973,9 +3971,10 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
       I->second.Thunk = NewThunk;
     }
   } else {
+    bool removePrefixByte = CGM.usePreconditionThunk(OMD);
     // Generate symbol without \01 prefix when optimization enabled
     auto Name = getSymbolNameForMethod(OMD, /*include category*/ false,
-                                       /*includePrefixByte*/ !ExposeSymbol);
+                                       /*includePrefixByte*/ !removePrefixByte);
 
     // ALWAYS use ExternalLinkage for true implementation
     Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
@@ -4056,7 +4055,7 @@ CGObjCCommonMac::GenerateObjCDirectThunk(const ObjCMethodDecl *OMD,
                                          const ObjCContainerDecl *CD,
                                          llvm::Function *Implementation) {
 
-  assert(CGM.shouldHaveNilCheckThunk(OMD) &&
+  assert(CGM.shouldHavePreconditionThunk(OMD) &&
          "Should only generate thunk when optimization enabled");
   assert(Implementation && "Implementation must exist");
 
@@ -4138,12 +4137,12 @@ llvm::Function *CGObjCCommonMac::GetDirectMethodCallee(
 
   // If optimization not enabled, always use implementation (which includes the
   // nil check)
-  if (!CGM.shouldExposeSymbol(OMD)) {
+  if (!CGM.usePreconditionThunk(OMD)) {
     return Info.Implementation;
   }
 
   // Varidic methods doesn't have thunk, the caller need to inline the nil check
-  if (CGM.shouldHaveNilCheckInline(OMD)) {
+  if (CGM.shouldHavePreconditionInline(OMD)) {
     return Info.Implementation;
   }
 
@@ -4154,7 +4153,7 @@ llvm::Function *CGObjCCommonMac::GetDirectMethodCallee(
     return Info.Thunk;
   };
 
-  assert(CGM.shouldHaveNilCheckThunk(OMD) &&
+  assert(CGM.shouldHavePreconditionThunk(OMD) &&
          "a method either has nil check thunk or have thunk inlined when "
          "exposing its symbol");
 
@@ -4267,7 +4266,8 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
     const ObjCContainerDecl *CD) {
   // Generate precondition checks (class realization + nil check) if needed
-  GenerateDirectMethodsPreconditionCheck(CGF, Fn, OMD, CD);
+  if (!CGM.usePreconditionThunk(OMD))
+    GenerateDirectMethodsPreconditionCheck(CGF, Fn, OMD, CD);
 
   auto &Builder = CGF.Builder;
   // Only synthesize _cmd if it's referenced
