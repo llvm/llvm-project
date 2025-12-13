@@ -116,6 +116,10 @@ namespace std::ranges {
   // [range.dangling], dangling iterator handling
   struct dangling;
 
+  // [range.elementsof], class template elements_of
+  template<range R, class Allocator = allocator<byte>>
+    struct elements_of;
+
   template<range R>
     using borrowed_iterator_t = see below;
 
@@ -419,6 +423,7 @@ namespace std {
 #    include <__ranges/data.h>
 #    include <__ranges/drop_view.h>
 #    include <__ranges/drop_while_view.h>
+#    include <__ranges/elements_of.h>
 #    include <__ranges/elements_view.h>
 #    include <__ranges/empty.h>
 #    include <__ranges/empty_view.h>
