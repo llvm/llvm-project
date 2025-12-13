@@ -1609,7 +1609,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   }
 
   if (!opts::PrintSortedBy.empty()) {
-    std::vector<BinaryFunction *> Functions;
+    BinaryFunctionListType Functions;
     std::map<const BinaryFunction *, DynoStats> Stats;
 
     for (auto &BFI : BC.getBinaryFunctions()) {
@@ -1700,7 +1700,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
 
   // Collect and print information about suboptimal code layout on input.
   if (opts::ReportBadLayout) {
-    std::vector<BinaryFunction *> SuboptimalFuncs;
+    BinaryFunctionListType SuboptimalFuncs;
     for (auto &BFI : BC.getBinaryFunctions()) {
       BinaryFunction &BF = BFI.second;
       if (!BF.hasValidProfile())
