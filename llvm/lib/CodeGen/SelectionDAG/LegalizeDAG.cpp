@@ -2399,7 +2399,7 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee,
+      .setLibCallee(TLI.getLibcallImplCallingConv(LibcallImpl), RetTy, Callee,
                     std::move(Args))
       .setSExtResult(isSigned)
       .setZExtResult(!isSigned);

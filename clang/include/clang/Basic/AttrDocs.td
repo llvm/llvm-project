@@ -4140,7 +4140,7 @@ of 2.
    .. code-block:: c
 
      typedef double * aligned_double_ptr __attribute__((align_value(64)));
-     void foo(double & x  __attribute__((align_value(128)),
+     void foo(double & x  __attribute__((align_value(128))),
               aligned_double_ptr y) { ... }
 
 If the pointer value does not have the specified alignment at runtime, the
