@@ -8032,7 +8032,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_PointerFieldProtection:
     if (!S.getLangOpts().PointerFieldProtectionAttr)
-      S.Diag(AL.getLoc(), diag::err_attribute_pointer_field_protection_experimental)
+      S.Diag(AL.getLoc(),
+             diag::err_attribute_pointer_field_protection_experimental)
           << AL << AL.isRegularKeywordAttribute() << D->getLocation();
     handleSimpleAttribute<PointerFieldProtectionAttr>(S, D, AL);
     break;
