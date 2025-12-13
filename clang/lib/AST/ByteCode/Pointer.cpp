@@ -413,7 +413,8 @@ size_t Pointer::computeOffsetForComparison() const {
     }
 
     // Fields, etc.
-    Result += P.getInlineDesc()->Offset;
+    if (unsigned FO = P.getInlineDesc()->Offset; FO != sizeof(InlineDescriptor))
+      Result += FO;
     if (P.isOnePastEnd())
       ++Result;
 

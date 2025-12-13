@@ -1225,3 +1225,25 @@ namespace ConditionalTemporaries {
   static_assert(foo(false)== 13);
   static_assert(foo(true)== 12);
 }
+
+namespace FirstRecordMemberCmp {
+
+  struct tuple {
+    int a;
+    int b;
+  };
+
+  constexpr tuple tpl{1,2};
+  static_assert((void*)&tpl == (void*)&tpl.a);
+
+
+  struct B {
+    int a;
+  };
+
+  struct tuple2 : public B {
+    int b;
+  };
+  constexpr tuple2 tpl2{1,2};
+  static_assert((void*)&tpl2 == (void*)&tpl2.a);
+}
