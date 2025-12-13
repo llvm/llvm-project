@@ -16,7 +16,7 @@
 #endif
 
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
-typedef void (*new_handler)();
+using new_handler = void (*)();
 _LIBCPP_EXPORTED_FROM_ABI new_handler set_new_handler(new_handler) _NOEXCEPT;
 _LIBCPP_EXPORTED_FROM_ABI new_handler get_new_handler() _NOEXCEPT;
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
