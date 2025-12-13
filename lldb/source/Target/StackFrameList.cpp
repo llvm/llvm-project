@@ -64,6 +64,8 @@ SyntheticStackFrameList::SyntheticStackFrameList(
 
 bool SyntheticStackFrameList::FetchFramesUpTo(
     uint32_t end_idx, InterruptionControl allow_interrupt) {
+
+  size_t num_synthetic_frames = 0;
   // Check if the thread has a synthetic frame provider.
   if (auto provider_sp = m_thread.GetFrameProvider()) {
     // Use the synthetic frame provider to generate frames lazily.
@@ -81,6 +83,9 @@ bool SyntheticStackFrameList::FetchFramesUpTo(
         break;
       }
       StackFrameSP frame_sp = *frame_or_err;
+      if (frame_sp->IsSynthetic())
+        frame_sp->GetStackID().SetCFA(num_synthetic_frames++,
+                                      GetThread().GetProcess().get());
       // Set the frame list weak pointer so ExecutionContextRef can resolve
       // the frame without calling Thread::GetStackFrameList().
       frame_sp->m_frame_list_wp = shared_from_this();

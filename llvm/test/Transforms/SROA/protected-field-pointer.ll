@@ -44,6 +44,26 @@ define ptr @mixed(ptr %ptr) {
   ret ptr %ptr1a
 }
 
+define ptr @mixed2(ptr %ptr) {
+; CHECK-LABEL: define ptr @mixed2(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[PROTPTRPTR1_2:%.*]] = call ptr @llvm.protected.field.ptr.p0(ptr [[ALLOCA]], i64 1, i1 true)
+; CHECK-NEXT:    store ptr [[PTR]], ptr [[PROTPTRPTR1_2]], align 8
+; CHECK-NEXT:    [[PROTPTRPTR2_2:%.*]] = call ptr @llvm.protected.field.ptr.p0(ptr [[ALLOCA]], i64 2, i1 true)
+; CHECK-NEXT:    [[PTR1A:%.*]] = load ptr, ptr [[PROTPTRPTR2_2]], align 8
+; CHECK-NEXT:    ret ptr [[PTR1A]]
+;
+  %alloca = alloca ptr
+
+  %protptrptr1.2 = call ptr @llvm.protected.field.ptr.p0(ptr %alloca, i64 1, i1 true)
+  store ptr %ptr, ptr %protptrptr1.2
+  %protptrptr2.2 = call ptr @llvm.protected.field.ptr.p0(ptr %alloca, i64 2, i1 true)
+  %ptr1a = load ptr, ptr %protptrptr2.2
+
+  ret ptr %ptr1a
+}
+
 define void @split_non_promotable(ptr %ptr1, ptr %ptr2, ptr %out1, ptr %out2) {
 ; CHECK-LABEL: define void @split_non_promotable(
 ; CHECK-SAME: ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], ptr [[OUT1:%.*]], ptr [[OUT2:%.*]]) {
