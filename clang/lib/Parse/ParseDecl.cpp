@@ -3172,7 +3172,7 @@ void Parser::ParsePtrauthQualifier(ParsedAttributes &Attrs) {
   T.consumeClose();
   SourceLocation EndLoc = T.getCloseLocation();
 
-  if (ArgExprs.empty() || ArgExprs.size() > 3) {
+  if (ArgExprs.empty() || ArgExprs.size() > 4) {
     Diag(KwLoc, diag::err_ptrauth_qualifier_bad_arg_count);
     return;
   }
