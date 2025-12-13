@@ -280,11 +280,12 @@ void XeGPUBlockingPass::runOnOperation() {
   MLIRContext *ctx = &getContext();
   Operation *op = getOperation();
 
-  // Preserve the LayoutAttr for each operand to the owner's DictionaryAttr.
-  // This ensures that the LayoutAttr remains accessible even if the defining
-  // operation is replaced.
   // TODO-LayoutRefactor: unify the local propagation for layout preprocessing
   // replace the function with localPropagateLayoutsFromAnchor
+  // if (!xegpu::localPropagateLayoutsFromAnchor(op)) {
+  //   signalPassFailure();
+  //   return;
+  // }
   xegpu::retrieveDistributeLayoutAttrsRecursive(op);
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,

@@ -630,15 +630,12 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand = getWarpResult(warpOp, llvm::IsaPred<xegpu::DpasOp>);
-    if (!operand) {
-      DBGS() << "No dpas op result found in warp op\n";
+    if (!operand)
       return rewriter.notifyMatchFailure(warpOp,
                                          "warp result is not a xegpu::Dpas op");
-    }
 
     auto dpasOp = operand->get().getDefiningOp<xegpu::DpasOp>();
     unsigned operandIdx = operand->getOperandNumber();
-    DBGS() << "Found dpas op: " << *dpasOp << "\n";
 
     xegpu::LayoutAttr layoutA =
         dyn_cast<xegpu::LayoutAttr>(dpasOp.getLayoutAAttr());
@@ -646,9 +643,6 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
         dyn_cast<xegpu::LayoutAttr>(dpasOp.getLayoutBAttr());
     xegpu::LayoutAttr layoutOut =
         dyn_cast<xegpu::LayoutAttr>(dpasOp.getLayoutCdAttr());
-
-    DBGS() << "Layout A: " << layoutA << ", Layout B: " << layoutB
-           << ", Layout Out: " << layoutOut << "\n";
 
     if (!layoutA || !layoutB || !layoutOut)
       return rewriter.notifyMatchFailure(
@@ -661,23 +655,6 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
         getDistVecTypeBasedOnLaneLayout(layoutB, dpasOp.getRhsType());
     FailureOr<VectorType> distResultTypeByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutOut, dpasOp.getResultType());
-
-    DBGS() << "Original LHS type: " << dpasOp.getLhsType() << ", distributed: "
-           << (succeeded(distLhsTypeByWarpOpOrFailure)
-                   ? distLhsTypeByWarpOpOrFailure.value()
-                   : Type())
-           << "\n";
-    DBGS() << "Original RHS type: " << dpasOp.getRhsType() << ", distributed: "
-           << (succeeded(distRhsTypeByWarpOpOrFailure)
-                   ? distRhsTypeByWarpOpOrFailure.value()
-                   : Type())
-           << "\n";
-    DBGS() << "Original Result type: " << dpasOp.getResultType()
-           << ", distributed: "
-           << (succeeded(distResultTypeByWarpOpOrFailure)
-                   ? distResultTypeByWarpOpOrFailure.value()
-                   : Type())
-           << "\n";
 
     if (failed(distLhsTypeByWarpOpOrFailure) ||
         failed(distRhsTypeByWarpOpOrFailure) ||
@@ -693,14 +670,11 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
         distRhsTypeByWarpOpOrFailure.value()};
     // Dpas acc operand is optional.
     if (dpasOp.getAcc()) {
-      DBGS() << "Dpas has accumulator operand\n";
       newYieldValues.push_back(dpasOp.getAcc());
       newYieldTypes.push_back(distResultTypeByWarpOpOrFailure.value());
     }
     // Create a new warp op without the dpas.
     SmallVector<size_t> newRetIndices;
-    DBGS() << "Creating new warp op with " << newYieldValues.size()
-           << " yielded values\n";
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, newYieldValues, newYieldTypes, newRetIndices);
 
@@ -710,22 +684,6 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
         xegpu::getDistributedVectorType(dpasOp.getRhsType(), layoutB);
     FailureOr<VectorType> expectedDistResultTyOrFailure =
         xegpu::getDistributedVectorType(dpasOp.getResultType(), layoutOut);
-
-    DBGS() << "Expected dist LHS type: "
-           << (succeeded(expectedDistLhsTyOrFailure)
-                   ? expectedDistLhsTyOrFailure.value()
-                   : Type())
-           << "\n";
-    DBGS() << "Expected dist RHS type: "
-           << (succeeded(expectedDistRhsTyOrFailure)
-                   ? expectedDistRhsTyOrFailure.value()
-                   : Type())
-           << "\n";
-    DBGS() << "Expected dist Result type: "
-           << (succeeded(expectedDistResultTyOrFailure)
-                   ? expectedDistResultTyOrFailure.value()
-                   : Type())
-           << "\n";
 
     if (failed(expectedDistLhsTyOrFailure) ||
         failed(expectedDistRhsTyOrFailure) ||
@@ -746,9 +704,6 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
       newDpasOperandExpectedTypes.push_back(distributedResultTy);
 
     for (unsigned i = 0; i < newRetIndices.size(); i++) {
-      DBGS() << "Resolving operand " << i << " with type "
-             << newWarpOp.getResult(newRetIndices[i]).getType() << " to "
-             << newDpasOperandExpectedTypes[i] << "\n";
       newDpasOperands.push_back(
           resolveDistributedTy(newWarpOp.getResult(newRetIndices[i]),
                                newDpasOperandExpectedTypes[i], rewriter));
@@ -756,17 +711,13 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
     auto newDpasOp = xegpu::DpasOp::create(rewriter, newWarpOp->getLoc(),
                                            distributedResultTy, newDpasOperands,
                                            dpasOp->getAttrs());
-    DBGS() << "Created new dpas op: " << *newDpasOp << "\n";
     xegpu::removeLayoutAttrs(newDpasOp);
     Value distributedVal = newWarpOp.getResult(operandIdx);
     // Resolve the output type.
-    DBGS() << "Resolving output from " << newDpasOp.getResult().getType()
-           << " to " << distResultTypeByWarpOpOrFailure.value() << "\n";
     Value typeResolved =
         resolveDistributedTy(newDpasOp.getResult(),
                              distResultTypeByWarpOpOrFailure.value(), rewriter);
     rewriter.replaceAllUsesWith(distributedVal, typeResolved);
-    DBGS() << "Successfully distributed dpas op\n";
     return success();
   }
 };

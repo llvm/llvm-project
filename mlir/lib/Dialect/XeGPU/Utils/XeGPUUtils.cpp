@@ -113,15 +113,12 @@ std::string xegpu::getTempLayoutName(const OpResult result) {
 }
 
 xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
-  if (!value) {
+  if (!value)
     return nullptr;
-  }
 
   if (auto tdescTy =
-          dyn_cast_if_present<xegpu::TensorDescType>(value.getType())) {
-    auto layoutAttr = tdescTy.getLayoutAttr();
-    return layoutAttr;
-  }
+          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
+    return tdescTy.getLayoutAttr();
 
   if (auto result = dyn_cast<OpResult>(value)) {
     Operation *defOp = result.getDefiningOp();
@@ -232,6 +229,8 @@ maybePickPermanentLayout(xegpu::DistributeLayoutAttr layout,
   return candidate;
 }
 
+// TODO-LayoutRefactor: Remove this function after replacing use
+//  with setTempDistributeLayoutAttr or setAnchorLayout
 void xegpu::setDistributeLayoutAttr(
     const mlir::OpResult &result,
     const mlir::xegpu::DistributeLayoutAttr layout) {
@@ -253,6 +252,8 @@ void xegpu::setDistributeLayoutAttr(
   }
 }
 
+// TODO-LayoutRefactor: Remove this function after replacing use
+//  with setTempDistributeLayoutAttr or setAnchorLayout
 void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
                                     const DistributeLayoutAttr layout) {
   Operation *owner = operand.getOwner();
