@@ -7448,8 +7448,20 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       return (0 <= BaseIdx && BaseIdx < (int)NumElems && LoadMask[BaseIdx] &&
               Loads[BaseIdx] == Ld && ByteOffsets[BaseIdx] == 0);
     }
-    return DAG.areNonVolatileConsecutiveLoads(Ld, Base, BaseSizeInBytes,
-                                              EltIdx - FirstLoadedElt);
+    int Stride = EltIdx - FirstLoadedElt;
+    if (DAG.areNonVolatileConsecutiveLoads(Ld, Base, BaseSizeInBytes, Stride))
+      return true;
+    // Try again using the memory load size (we might have broken a large load
+    // into smaller elements), ensure the stride is the full memory load size
+    // apart and a whole number of elements fit in each memory load.
+    unsigned BaseMemSizeInBits = Base->getMemoryVT().getSizeInBits();
+    if (((Stride * BaseSizeInBits) % BaseMemSizeInBits) == 0 &&
+        (BaseMemSizeInBits % BaseSizeInBits) == 0) {
+      unsigned Scale = BaseMemSizeInBits / BaseSizeInBits;
+      return DAG.areNonVolatileConsecutiveLoads(Ld, Base, BaseMemSizeInBits / 8,
+                                                Stride / Scale);
+    }
+    return false;
   };
 
   // Consecutive loads can contain UNDEFS but not ZERO elements.
