@@ -3241,6 +3241,18 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
     if (TLI->has(Func))
       return ConstantFoldBinaryFP(atan2, Op1V, Op2V, Ty);
     break;
+  case LibFunc_fdim:
+  case LibFunc_fdimf:
+  case LibFunc_fdiml:
+      if (TLI->has(Func)){
+    APFloat Difference = Op1V;
+    Difference.subtract(Op2V, RoundingMode::NearestTiesToEven);
+
+    APFloat MaxVal =
+        maximum(Difference, APFloat::getZero(Ty->getFltSemantics()));
+    return ConstantFP::get(Ty->getContext(), MaxVal);
+  }
+  break;
   }
 
   return nullptr;

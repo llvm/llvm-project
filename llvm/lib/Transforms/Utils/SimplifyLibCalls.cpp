@@ -3201,18 +3201,8 @@ Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
   if (isa<PoisonValue>(CI->getArgOperand(1)))
     return CI->getArgOperand(1);
 
-  const APFloat *X, *Y;
-  // Check if both values are constants
-  if (!match(CI->getArgOperand(0), m_APFloat(X)) ||
-      !match(CI->getArgOperand(1), m_APFloat(Y)))
-    return nullptr;
-
-  APFloat Difference = *X;
-  Difference.subtract(*Y, RoundingMode::NearestTiesToEven);
-
-  APFloat MaxVal =
-      maximum(Difference, APFloat::getZero(CI->getType()->getFltSemantics()));
-  return ConstantFP::get(CI->getType(), MaxVal);
+  // Constant folding will be handled by ConstantFoldLibCall2
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
