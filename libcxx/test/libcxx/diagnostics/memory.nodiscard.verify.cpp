@@ -6,37 +6,65 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// <memory>
 
-// check that <memory> functions are marked [[nodiscard]]
+// Check that functions are marked [[nodiscard]]
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
-
-// clang-format off
 
 #include <memory>
 
 #include "test_macros.h"
 
 void test() {
-  std::get_temporary_buffer<int>(0); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-}
+  int i = 0;
 
-void test_allocator_traits() {
-  std::allocator<int> allocator;
-  std::allocator_traits<std::allocator<int>> allocator_traits;
-  allocator_traits.allocate(allocator, 1);          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  allocator_traits.allocate(allocator, 1, nullptr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-}
-
-void test_allocator() {
-  std::allocator<int> allocator;
-  allocator.allocate(1);          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#if TEST_STD_VER <= 17
-  allocator.allocate(1, nullptr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  {
+    std::addressof(i); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::get_temporary_buffer<int>(0);
+#if _LIBCPP_STD_VER >= 26
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::is_sufficiently_aligned<2>(&i);
 #endif
+  }
+
+  std::allocator<int> allocator;
+
+  {
+    std::allocator_traits<std::allocator<int> > allocator_traits;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    allocator_traits.allocate(allocator, 1);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    allocator_traits.allocate(allocator, 1, nullptr);
+  }
+
 #if TEST_STD_VER >= 23
-  allocator.allocate_at_least(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  allocator.allocate_at_least(1);
+#endif
+
+#if TEST_STD_VER <= 17
+  {
+    const int ci = 0;
+
+    allocator.address(i);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    allocator.address(ci); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    allocator.allocate(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    allocator.allocate(1, nullptr);
+    allocator.max_size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+#endif // TEST_STD_VER <= 17
+
+#if TEST_STD_VER >= 14
+  {
+    std::raw_storage_iterator<int*, int> it{nullptr};
+
+    it.base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
 #endif
 }

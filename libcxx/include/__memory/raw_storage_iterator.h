@@ -67,7 +67,7 @@ public:
     return __t;
   }
 #  if _LIBCPP_STD_VER >= 14
-  _LIBCPP_HIDE_FROM_ABI _OutputIterator base() const { return __x_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _OutputIterator base() const { return __x_; }
 #  endif
 };
 
