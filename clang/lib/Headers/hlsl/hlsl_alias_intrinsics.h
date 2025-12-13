@@ -3014,5 +3014,73 @@ float3 ddy_coarse(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
 float4 ddy_coarse(float4);
 
+//===----------------------------------------------------------------------===//
+// ddx_fine builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddx_fine(T value)
+/// \brief Computes a high precision partial derivative with respect to the
+/// screen-space x-coordinate.
+/// \param value The input value.
+///
+/// The return value is a floating point scalar or vector containing the high
+/// prevision partial derivative of the input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_fine)
+half ddx_fine(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_fine)
+half2 ddx_fine(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_fine)
+half3 ddx_fine(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_fine)
+half4 ddx_fine(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_fine)
+float ddx_fine(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_fine)
+float2 ddx_fine(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_fine)
+float3 ddx_fine(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_fine)
+float4 ddx_fine(float4);
+
+//===----------------------------------------------------------------------===//
+// ddy_fine builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddy_fine(T value)
+/// \brief Computes a high precision partial derivative with respect to the
+/// screen-space y-coordinate.
+/// \param value The input value.
+///
+/// The return value is a floating point scalar or vector containing the high
+/// prevision partial derivative of the input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_fine)
+half ddy_fine(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_fine)
+half2 ddy_fine(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_fine)
+half3 ddy_fine(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_fine)
+half4 ddy_fine(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_fine)
+float ddy_fine(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_fine)
+float2 ddy_fine(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_fine)
+float3 ddy_fine(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_fine)
+float4 ddy_fine(float4);
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_ALIAS_INTRINSICS_H_

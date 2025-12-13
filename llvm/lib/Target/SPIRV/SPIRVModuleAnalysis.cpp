@@ -14,6 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: uses or report_fatal_error (which is also deprecated) /
+//       ReportFatalUsageError in this file should be refactored, as per LLVM
+//       best practices, to rely on the Diagnostic infrastructure.
+
 #include "SPIRVModuleAnalysis.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
@@ -1071,6 +1075,39 @@ static bool isBFloat16Type(const SPIRVType *TypeDef) {
 #define ATOM_FLT_REQ_EXT_MSG(ExtName)                                          \
   "The atomic float instruction requires the following SPIR-V "                \
   "extension: SPV_EXT_shader_atomic_float" ExtName
+static void AddAtomicVectorFloatRequirements(const MachineInstr &MI,
+                                             SPIRV::RequirementHandler &Reqs,
+                                             const SPIRVSubtarget &ST) {
+  SPIRVType *VecTypeDef =
+      MI.getMF()->getRegInfo().getVRegDef(MI.getOperand(1).getReg());
+
+  const unsigned Rank = VecTypeDef->getOperand(2).getImm();
+  if (Rank != 2 && Rank != 4)
+    reportFatalUsageError("Result type of an atomic vector float instruction "
+                          "must be a 2-component or 4 component vector");
+
+  SPIRVType *EltTypeDef =
+      MI.getMF()->getRegInfo().getVRegDef(VecTypeDef->getOperand(1).getReg());
+
+  if (EltTypeDef->getOpcode() != SPIRV::OpTypeFloat ||
+      EltTypeDef->getOperand(1).getImm() != 16)
+    reportFatalUsageError(
+        "The element type for the result type of an atomic vector float "
+        "instruction must be a 16-bit floating-point scalar");
+
+  if (isBFloat16Type(EltTypeDef))
+    reportFatalUsageError(
+        "The element type for the result type of an atomic vector float "
+        "instruction cannot be a bfloat16 scalar");
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_NV_shader_atomic_fp16_vector))
+    reportFatalUsageError(
+        "The atomic float16 vector instruction requires the following SPIR-V "
+        "extension: SPV_NV_shader_atomic_fp16_vector");
+
+  Reqs.addExtension(SPIRV::Extension::SPV_NV_shader_atomic_fp16_vector);
+  Reqs.addCapability(SPIRV::Capability::AtomicFloat16VectorNV);
+}
+
 static void AddAtomicFloatRequirements(const MachineInstr &MI,
                                        SPIRV::RequirementHandler &Reqs,
                                        const SPIRVSubtarget &ST) {
@@ -1078,6 +1115,10 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
          "Expect register operand in atomic float instruction");
   Register TypeReg = MI.getOperand(1).getReg();
   SPIRVType *TypeDef = MI.getMF()->getRegInfo().getVRegDef(TypeReg);
+
+  if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+    return AddAtomicVectorFloatRequirements(MI, Reqs, ST);
+
   if (TypeDef->getOpcode() != SPIRV::OpTypeFloat)
     report_fatal_error("Result type of an atomic float instruction must be a "
                        "floating-point type scalar");
@@ -1395,6 +1436,21 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Int16);
     else if (BitWidth == 8)
       Reqs.addCapability(SPIRV::Capability::Int8);
+    else if (BitWidth == 4 &&
+             ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_int4);
+      Reqs.addCapability(SPIRV::Capability::Int4TypeINTEL);
+    } else if (BitWidth != 32) {
+      if (!ST.canUseExtension(
+              SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers))
+        reportFatalUsageError(
+            "OpTypeInt type with a width other than 8, 16, 32 or 64 bits "
+            "requires the following SPIR-V extension: "
+            "SPV_ALTERA_arbitrary_precision_integers");
+      Reqs.addExtension(
+          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers);
+      Reqs.addCapability(SPIRV::Capability::ArbitraryPrecisionIntegersALTERA);
+    }
     break;
   }
   case SPIRV::OpDot: {
@@ -2171,7 +2227,9 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpDPdxCoarse:
-  case SPIRV::OpDPdyCoarse: {
+  case SPIRV::OpDPdyCoarse:
+  case SPIRV::OpDPdxFine:
+  case SPIRV::OpDPdyFine: {
     Reqs.addCapability(SPIRV::Capability::DerivativeControl);
     break;
   }

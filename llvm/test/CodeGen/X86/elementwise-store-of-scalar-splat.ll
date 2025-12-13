@@ -621,17 +621,41 @@ define void @vec256_double(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 }
 
 define void @vec256_i128(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
-; ALL-LABEL: vec256_i128:
-; ALL:       # %bb.0:
-; ALL-NEXT:    movq (%rdi), %rax
-; ALL-NEXT:    movq 8(%rdi), %rcx
-; ALL-NEXT:    notq %rcx
-; ALL-NEXT:    notq %rax
-; ALL-NEXT:    movq %rax, (%rsi)
-; ALL-NEXT:    movq %rcx, 8(%rsi)
-; ALL-NEXT:    movq %rcx, 24(%rsi)
-; ALL-NEXT:    movq %rax, 16(%rsi)
-; ALL-NEXT:    retq
+; SCALAR-LABEL: vec256_i128:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    notq %rax
+; SCALAR-NEXT:    movq %rax, (%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
+; SCALAR-NEXT:    movq %rcx, 24(%rsi)
+; SCALAR-NEXT:    movq %rax, 16(%rsi)
+; SCALAR-NEXT:    retq
+;
+; SSE-LABEL: vec256_i128:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    pxor (%rdi), %xmm0
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vec256_i128:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: vec256_i128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX512-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX512-NEXT:    retq
   %in.elt.not = load i128, ptr %in.elt.ptr, align 64
   %in.elt = xor i128 %in.elt.not, -1
   %out.elt0.ptr = getelementptr i128, ptr %out.vec.ptr, i64 0
@@ -1034,19 +1058,46 @@ define void @vec384_double(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 }
 
 define void @vec384_i128(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
-; ALL-LABEL: vec384_i128:
-; ALL:       # %bb.0:
-; ALL-NEXT:    movq (%rdi), %rax
-; ALL-NEXT:    movq 8(%rdi), %rcx
-; ALL-NEXT:    notq %rcx
-; ALL-NEXT:    notq %rax
-; ALL-NEXT:    movq %rax, (%rsi)
-; ALL-NEXT:    movq %rcx, 8(%rsi)
-; ALL-NEXT:    movq %rcx, 24(%rsi)
-; ALL-NEXT:    movq %rax, 16(%rsi)
-; ALL-NEXT:    movq %rcx, 40(%rsi)
-; ALL-NEXT:    movq %rax, 32(%rsi)
-; ALL-NEXT:    retq
+; SCALAR-LABEL: vec384_i128:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    notq %rax
+; SCALAR-NEXT:    movq %rax, (%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
+; SCALAR-NEXT:    movq %rcx, 24(%rsi)
+; SCALAR-NEXT:    movq %rax, 16(%rsi)
+; SCALAR-NEXT:    movq %rcx, 40(%rsi)
+; SCALAR-NEXT:    movq %rax, 32(%rsi)
+; SCALAR-NEXT:    retq
+;
+; SSE-LABEL: vec384_i128:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    pxor (%rdi), %xmm0
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vec384_i128:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: vec384_i128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX512-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX512-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX512-NEXT:    retq
   %in.elt.not = load i128, ptr %in.elt.ptr, align 64
   %in.elt = xor i128 %in.elt.not, -1
   %out.elt0.ptr = getelementptr i128, ptr %out.vec.ptr, i64 0
@@ -1559,21 +1610,60 @@ define void @vec512_double(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 }
 
 define void @vec512_i128(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
-; ALL-LABEL: vec512_i128:
-; ALL:       # %bb.0:
-; ALL-NEXT:    movq (%rdi), %rax
-; ALL-NEXT:    movq 8(%rdi), %rcx
-; ALL-NEXT:    notq %rcx
-; ALL-NEXT:    notq %rax
-; ALL-NEXT:    movq %rax, (%rsi)
-; ALL-NEXT:    movq %rcx, 8(%rsi)
-; ALL-NEXT:    movq %rcx, 24(%rsi)
-; ALL-NEXT:    movq %rax, 16(%rsi)
-; ALL-NEXT:    movq %rcx, 40(%rsi)
-; ALL-NEXT:    movq %rax, 32(%rsi)
-; ALL-NEXT:    movq %rcx, 56(%rsi)
-; ALL-NEXT:    movq %rax, 48(%rsi)
-; ALL-NEXT:    retq
+; SCALAR-LABEL: vec512_i128:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    notq %rax
+; SCALAR-NEXT:    movq %rax, (%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
+; SCALAR-NEXT:    movq %rcx, 24(%rsi)
+; SCALAR-NEXT:    movq %rax, 16(%rsi)
+; SCALAR-NEXT:    movq %rcx, 40(%rsi)
+; SCALAR-NEXT:    movq %rax, 32(%rsi)
+; SCALAR-NEXT:    movq %rcx, 56(%rsi)
+; SCALAR-NEXT:    movq %rax, 48(%rsi)
+; SCALAR-NEXT:    retq
+;
+; SSE-LABEL: vec512_i128:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    pxor (%rdi), %xmm0
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE-NEXT:    movdqa %xmm0, 48(%rsi)
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: vec512_i128:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vec512_i128:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: vec512_i128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
+; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %in.elt.not = load i128, ptr %in.elt.ptr, align 64
   %in.elt = xor i128 %in.elt.not, -1
   %out.elt0.ptr = getelementptr i128, ptr %out.vec.ptr, i64 0
@@ -1588,25 +1678,71 @@ define void @vec512_i128(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 }
 
 define void @vec512_i256(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
-; ALL-LABEL: vec512_i256:
-; ALL:       # %bb.0:
-; ALL-NEXT:    movq 16(%rdi), %rax
-; ALL-NEXT:    movq 24(%rdi), %rcx
-; ALL-NEXT:    movq (%rdi), %rdx
-; ALL-NEXT:    movq 8(%rdi), %rdi
-; ALL-NEXT:    notq %rdi
-; ALL-NEXT:    notq %rdx
-; ALL-NEXT:    notq %rcx
-; ALL-NEXT:    notq %rax
-; ALL-NEXT:    movq %rax, 16(%rsi)
-; ALL-NEXT:    movq %rcx, 24(%rsi)
-; ALL-NEXT:    movq %rdx, (%rsi)
-; ALL-NEXT:    movq %rdi, 8(%rsi)
-; ALL-NEXT:    movq %rax, 48(%rsi)
-; ALL-NEXT:    movq %rcx, 56(%rsi)
-; ALL-NEXT:    movq %rdx, 32(%rsi)
-; ALL-NEXT:    movq %rdi, 40(%rsi)
-; ALL-NEXT:    retq
+; SCALAR-LABEL: vec512_i256:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    movq 16(%rdi), %rax
+; SCALAR-NEXT:    movq 24(%rdi), %rcx
+; SCALAR-NEXT:    movq (%rdi), %rdx
+; SCALAR-NEXT:    movq 8(%rdi), %rdi
+; SCALAR-NEXT:    notq %rdi
+; SCALAR-NEXT:    notq %rdx
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    notq %rax
+; SCALAR-NEXT:    movq %rax, 16(%rsi)
+; SCALAR-NEXT:    movq %rcx, 24(%rsi)
+; SCALAR-NEXT:    movq %rdx, (%rsi)
+; SCALAR-NEXT:    movq %rdi, 8(%rsi)
+; SCALAR-NEXT:    movq %rax, 48(%rsi)
+; SCALAR-NEXT:    movq %rcx, 56(%rsi)
+; SCALAR-NEXT:    movq %rdx, 32(%rsi)
+; SCALAR-NEXT:    movq %rdi, 40(%rsi)
+; SCALAR-NEXT:    retq
+;
+; SSE-LABEL: vec512_i256:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    movdqa (%rdi), %xmm1
+; SSE-NEXT:    pxor %xmm0, %xmm1
+; SSE-NEXT:    pxor 16(%rdi), %xmm0
+; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE-NEXT:    movdqa %xmm1, (%rsi)
+; SSE-NEXT:    movdqa %xmm1, 32(%rsi)
+; SSE-NEXT:    movdqa %xmm0, 48(%rsi)
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: vec512_i256:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, 16(%rsi)
+; AVX1-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX1-NEXT:    vextractf128 $1, %ymm0, 48(%rsi)
+; AVX1-NEXT:    vmovaps %xmm0, 32(%rsi)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vec512_i256:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, 16(%rsi)
+; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX2-NEXT:    vextracti128 $1, %ymm0, 48(%rsi)
+; AVX2-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: vec512_i256:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vpxor (%rdi), %ymm0, %ymm0
+; AVX512-NEXT:    vextracti128 $1, %ymm0, 16(%rsi)
+; AVX512-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX512-NEXT:    vextracti128 $1, %ymm0, 48(%rsi)
+; AVX512-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %in.elt.not = load i256, ptr %in.elt.ptr, align 64
   %in.elt = xor i256 %in.elt.not, -1
   %out.elt0.ptr = getelementptr i256, ptr %out.vec.ptr, i64 0
@@ -1616,14 +1752,8 @@ define void @vec512_i256(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX: {{.*}}
-; AVX1: {{.*}}
-; AVX2: {{.*}}
-; AVX512: {{.*}}
 ; AVX512BW: {{.*}}
 ; AVX512F: {{.*}}
-; SCALAR: {{.*}}
-; SSE: {{.*}}
 ; SSE2: {{.*}}
 ; SSE2-ONLY: {{.*}}
 ; SSE3: {{.*}}

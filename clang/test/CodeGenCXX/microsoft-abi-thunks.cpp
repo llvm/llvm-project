@@ -63,8 +63,7 @@ C::C() {}  // Emits vftable and forces thunk generation.
 
 // CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??_EC@@W3AEPAXI@Z"(ptr noundef %this, i32 noundef %should_call_delete) {{.*}} comdat
 // CODEGEN:   getelementptr i8, ptr {{.*}}, i32 -4
-// FIXME: should actually call _EC, not _GC.
-// CODEGEN:   call x86_thiscallcc noundef ptr @"??_GC@@UAEPAXI@Z"
+// CODEGEN:   call x86_thiscallcc noundef ptr @"??_EC@@UAEPAXI@Z"
 // CODEGEN: ret
 
 // CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?public_f@C@@W3AEXXZ"(ptr

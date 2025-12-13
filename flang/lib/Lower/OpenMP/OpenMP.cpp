@@ -1636,8 +1636,7 @@ static void genSimdClauses(
   cp.processReduction(loc, clauseOps, reductionSyms);
   cp.processSafelen(clauseOps);
   cp.processSimdlen(clauseOps);
-
-  cp.processTODO<clause::Linear>(loc, llvm::omp::Directive::OMPD_simd);
+  cp.processLinear(clauseOps);
 }
 
 static void genSingleClauses(lower::AbstractConverter &converter,
@@ -1831,9 +1830,9 @@ static void genWsloopClauses(
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, reductionSyms);
   cp.processSchedule(stmtCtx, clauseOps);
+  cp.processLinear(clauseOps);
 
-  cp.processTODO<clause::Allocate, clause::Linear>(
-      loc, llvm::omp::Directive::OMPD_do);
+  cp.processTODO<clause::Allocate>(loc, llvm::omp::Directive::OMPD_do);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3765,9 +3764,7 @@ static void genOMP(
     List<Clause> clauses = makeClauses(initializer, semaCtx);
     ReductionProcessor::GenInitValueCBTy genInitValueCB;
     ClauseProcessor cp(converter, semaCtx, clauses);
-    const parser::OmpClause::Initializer &iclause{
-        std::get<parser::OmpClause::Initializer>(initializer.v.front().u)};
-    cp.processInitializer(symTable, iclause, genInitValueCB);
+    cp.processInitializer(symTable, genInitValueCB);
     const auto &identifier =
         std::get<parser::OmpReductionIdentifier>(specifier.t);
     const auto &designator =
