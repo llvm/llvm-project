@@ -95,13 +95,15 @@ define void @extract_i8_15(ptr nocapture %dst, <16 x i8> %foo) nounwind {
 ; SSE2-X86:       # %bb.0:
 ; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-X86-NEXT:    pextrw $7, %xmm0, %ecx
-; SSE2-X86-NEXT:    movb %ch, (%eax)
+; SSE2-X86-NEXT:    shrl $8, %ecx
+; SSE2-X86-NEXT:    movb %cl, (%eax)
 ; SSE2-X86-NEXT:    retl
 ;
 ; SSE2-X64-LABEL: extract_i8_15:
 ; SSE2-X64:       # %bb.0:
 ; SSE2-X64-NEXT:    pextrw $7, %xmm0, %eax
-; SSE2-X64-NEXT:    movb %ah, (%rdi)
+; SSE2-X64-NEXT:    shrl $8, %eax
+; SSE2-X64-NEXT:    movb %al, (%rdi)
 ; SSE2-X64-NEXT:    retq
 ;
 ; SSE41-X86-LABEL: extract_i8_15:

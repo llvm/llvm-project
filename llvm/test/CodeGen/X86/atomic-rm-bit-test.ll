@@ -3581,6 +3581,7 @@ define zeroext i16 @atomic_shl1_or_16_const_valnz(ptr %v) nounwind {
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB55_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    shrl $4, %eax
 ; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -3599,6 +3600,7 @@ define zeroext i16 @atomic_shl1_or_16_const_valnz(ptr %v) nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB55_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    shrl $4, %eax
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax

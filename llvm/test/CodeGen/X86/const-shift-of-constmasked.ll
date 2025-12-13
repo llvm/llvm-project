@@ -582,7 +582,7 @@ define i16 @test_i16_2032_mask_lshr_4(i16 %a0) {
 ;
 ; X64-LABEL: test_i16_2032_mask_lshr_4:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    shrl $4, %eax
 ; X64-NEXT:    andl $127, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -602,7 +602,7 @@ define i16 @test_i16_2032_mask_lshr_5(i16 %a0) {
 ;
 ; X64-LABEL: test_i16_2032_mask_lshr_5:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    shrl $5, %eax
 ; X64-NEXT:    andl $63, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -622,7 +622,7 @@ define i16 @test_i16_2032_mask_lshr_6(i16 %a0) {
 ;
 ; X64-LABEL: test_i16_2032_mask_lshr_6:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    shrl $6, %eax
 ; X64-NEXT:    andl $31, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -763,7 +763,7 @@ define i16 @test_i16_2032_mask_ashr_4(i16 %a0) {
 ;
 ; X64-LABEL: test_i16_2032_mask_ashr_4:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    shrl $4, %eax
 ; X64-NEXT:    andl $127, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -783,7 +783,7 @@ define i16 @test_i16_2032_mask_ashr_5(i16 %a0) {
 ;
 ; X64-LABEL: test_i16_2032_mask_ashr_5:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    shrl $5, %eax
 ; X64-NEXT:    andl $63, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -803,7 +803,7 @@ define i16 @test_i16_2032_mask_ashr_6(i16 %a0) {
 ;
 ; X64-LABEL: test_i16_2032_mask_ashr_6:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    shrl $6, %eax
 ; X64-NEXT:    andl $31, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -819,7 +819,7 @@ define i16 @test_i16_65024_mask_ashr_1(i16 %a0) {
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl $65024, %eax # imm = 0xFE00
 ; X86-NEXT:    cwtl
-; X86-NEXT:    shrl %eax
+; X86-NEXT:    sarl %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -827,7 +827,7 @@ define i16 @test_i16_65024_mask_ashr_1(i16 %a0) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    andl $65024, %edi # imm = 0xFE00
 ; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    shrl %eax
+; X64-NEXT:    sarl %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %t0 = and i16 %a0, 65024
@@ -840,7 +840,7 @@ define i16 @test_i16_65024_mask_ashr_8(i16 %a0) {
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl $65024, %eax # imm = 0xFE00
 ; X86-NEXT:    cwtl
-; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    sarl $8, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -848,7 +848,7 @@ define i16 @test_i16_65024_mask_ashr_8(i16 %a0) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    andl $65024, %edi # imm = 0xFE00
 ; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    shrl $8, %eax
+; X64-NEXT:    sarl $8, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %t0 = and i16 %a0, 65024
@@ -859,14 +859,14 @@ define i16 @test_i16_65024_mask_ashr_9(i16 %a0) {
 ; X86-LABEL: test_i16_65024_mask_ashr_9:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl $9, %eax
+; X86-NEXT:    sarl $9, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_i16_65024_mask_ashr_9:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    shrl $9, %eax
+; X64-NEXT:    sarl $9, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %t0 = and i16 %a0, 65024
@@ -877,14 +877,14 @@ define i16 @test_i16_65024_mask_ashr_10(i16 %a0) {
 ; X86-LABEL: test_i16_65024_mask_ashr_10:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl $10, %eax
+; X86-NEXT:    sarl $10, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_i16_65024_mask_ashr_10:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    shrl $10, %eax
+; X64-NEXT:    sarl $10, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %t0 = and i16 %a0, 65024

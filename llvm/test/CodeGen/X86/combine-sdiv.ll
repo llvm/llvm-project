@@ -3134,7 +3134,7 @@ define i16 @combine_i16_sdiv_pow2(i16 %x) {
 ; CHECK-NEXT:    testw %di, %di
 ; CHECK-NEXT:    cmovnsl %edi, %eax
 ; CHECK-NEXT:    cwtl
-; CHECK-NEXT:    shrl $4, %eax
+; CHECK-NEXT:    sarl $4, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %1 = sdiv i16 %x, 16

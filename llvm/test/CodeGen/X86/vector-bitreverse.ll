@@ -83,19 +83,18 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; SSE-LABEL: test_bitreverse_i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE-NEXT:    rolw $8, %di
-; SSE-NEXT:    movl %edi, %eax
-; SSE-NEXT:    andl $3855, %eax # imm = 0xF0F
-; SSE-NEXT:    shll $4, %eax
-; SSE-NEXT:    shrl $4, %edi
+; SSE-NEXT:    movzwl %di, %eax
 ; SSE-NEXT:    andl $3855, %edi # imm = 0xF0F
-; SSE-NEXT:    orl %eax, %edi
-; SSE-NEXT:    movl %edi, %eax
+; SSE-NEXT:    shll $4, %edi
+; SSE-NEXT:    shrl $4, %eax
+; SSE-NEXT:    andl $3855, %eax # imm = 0xF0F
+; SSE-NEXT:    orl %edi, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    andl $13107, %ecx # imm = 0x3333
+; SSE-NEXT:    shrl $2, %eax
 ; SSE-NEXT:    andl $13107, %eax # imm = 0x3333
-; SSE-NEXT:    shrl $2, %edi
-; SSE-NEXT:    andl $13107, %edi # imm = 0x3333
-; SSE-NEXT:    leal (%rdi,%rax,4), %eax
+; SSE-NEXT:    leal (%rax,%rcx,4), %eax
 ; SSE-NEXT:    movl %eax, %ecx
 ; SSE-NEXT:    andl $21845, %ecx # imm = 0x5555
 ; SSE-NEXT:    shrl %eax
@@ -106,19 +105,18 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ;
 ; AVX-LABEL: test_bitreverse_i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX-NEXT:    rolw $8, %di
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    andl $3855, %eax # imm = 0xF0F
-; AVX-NEXT:    shll $4, %eax
-; AVX-NEXT:    shrl $4, %edi
+; AVX-NEXT:    movzwl %di, %eax
 ; AVX-NEXT:    andl $3855, %edi # imm = 0xF0F
-; AVX-NEXT:    orl %eax, %edi
-; AVX-NEXT:    movl %edi, %eax
+; AVX-NEXT:    shll $4, %edi
+; AVX-NEXT:    shrl $4, %eax
+; AVX-NEXT:    andl $3855, %eax # imm = 0xF0F
+; AVX-NEXT:    orl %edi, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    andl $13107, %ecx # imm = 0x3333
+; AVX-NEXT:    shrl $2, %eax
 ; AVX-NEXT:    andl $13107, %eax # imm = 0x3333
-; AVX-NEXT:    shrl $2, %edi
-; AVX-NEXT:    andl $13107, %edi # imm = 0x3333
-; AVX-NEXT:    leal (%rdi,%rax,4), %eax
+; AVX-NEXT:    leal (%rax,%rcx,4), %eax
 ; AVX-NEXT:    movl %eax, %ecx
 ; AVX-NEXT:    andl $21845, %ecx # imm = 0x5555
 ; AVX-NEXT:    shrl %eax

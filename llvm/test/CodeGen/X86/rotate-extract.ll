@@ -223,26 +223,28 @@ define i16 @no_extract_mul(i16 %i) nounwind {
 define i8 @no_extract_udiv(i8 %i) nounwind {
 ; X86-LABEL: no_extract_udiv:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    imull $171, %eax, %ecx
-; X86-NEXT:    imull $79, %eax, %edx
-; X86-NEXT:    subb %dh, %al
-; X86-NEXT:    shrb %al
-; X86-NEXT:    addb %dh, %al
-; X86-NEXT:    shrb $5, %al
-; X86-NEXT:    shlb $3, %ch
-; X86-NEXT:    orb %al, %ch
-; X86-NEXT:    andb $-9, %ch
-; X86-NEXT:    movb %ch, %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    imull $171, %ecx, %eax
+; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    imull $79, %ecx, %edx
+; X86-NEXT:    shrl $8, %edx
+; X86-NEXT:    subb %dl, %cl
+; X86-NEXT:    shrb %cl
+; X86-NEXT:    addb %dl, %cl
+; X86-NEXT:    shrb $5, %cl
+; X86-NEXT:    shlb $3, %al
+; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    andb $-9, %al
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: no_extract_udiv:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %ecx
 ; X64-NEXT:    imull $171, %ecx, %eax
-; X64-NEXT:    shrl $8, %eax
+; X64-NEXT:    movzbl %ah, %eax
 ; X64-NEXT:    imull $79, %ecx, %edx
-; X64-NEXT:    shrl $8, %edx
+; X64-NEXT:    movzbl %dh, %edx
 ; X64-NEXT:    subb %dl, %cl
 ; X64-NEXT:    shrb %cl
 ; X64-NEXT:    addb %dl, %cl

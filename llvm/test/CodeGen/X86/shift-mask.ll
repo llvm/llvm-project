@@ -150,9 +150,9 @@ define i16 @test_i16_shl_lshr_2(i16 %a0) {
 ;
 ; X64-MASK-LABEL: test_i16_shl_lshr_2:
 ; X64-MASK:       # %bb.0:
-; X64-MASK-NEXT:    movl %edi, %eax
+; X64-MASK-NEXT:    movzwl %di, %eax
 ; X64-MASK-NEXT:    shrl $2, %eax
-; X64-MASK-NEXT:    andl $16376, %eax # imm = 0x3FF8
+; X64-MASK-NEXT:    andl $-8, %eax
 ; X64-MASK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-MASK-NEXT:    retq
 ;
@@ -419,7 +419,7 @@ define i16 @test_i16_lshr_lshr_1(i16 %a0) {
 ;
 ; X64-MASK-LABEL: test_i16_lshr_lshr_1:
 ; X64-MASK:       # %bb.0:
-; X64-MASK-NEXT:    movl %edi, %eax
+; X64-MASK-NEXT:    movzwl %di, %eax
 ; X64-MASK-NEXT:    shrl $2, %eax
 ; X64-MASK-NEXT:    andl $2047, %eax # imm = 0x7FF
 ; X64-MASK-NEXT:    # kill: def $ax killed $ax killed $eax

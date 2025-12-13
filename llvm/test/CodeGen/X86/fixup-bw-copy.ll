@@ -76,19 +76,29 @@ define i16 @test_movw(i16 %a0) {
 define i8 @test_movb_hreg(i16 %a0) {
 ; X64-LABEL: test_movb_hreg:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrl $8, %eax
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    movzbl %ch, %eax
+; X64-NEXT:    addb %cl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: test_movb_hreg:
-; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    addb %al, %ah
-; X86-NEXT:    movb %ah, %al
-; X86-NEXT:    retl
+; X86-BWON-LABEL: test_movb_hreg:
+; X86-BWON:       # %bb.0:
+; X86-BWON-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-BWON-NEXT:    movl %eax, %ecx
+; X86-BWON-NEXT:    shrl $8, %eax
+; X86-BWON-NEXT:    addb %cl, %al
+; X86-BWON-NEXT:    # kill: def $al killed $al killed $eax
+; X86-BWON-NEXT:    retl
+;
+; X86-BWOFF-LABEL: test_movb_hreg:
+; X86-BWOFF:       # %bb.0:
+; X86-BWOFF-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-BWOFF-NEXT:    movb %al, %cl
+; X86-BWOFF-NEXT:    shrl $8, %eax
+; X86-BWOFF-NEXT:    addb %cl, %al
+; X86-BWOFF-NEXT:    # kill: def $al killed $al killed $eax
+; X86-BWOFF-NEXT:    retl
   %tmp0 = trunc i16 %a0 to i8
   %tmp1 = lshr i16 %a0, 8
   %tmp2 = trunc i16 %tmp1 to i8

@@ -152,8 +152,9 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    shll $8, %esi
 ; X64-NEXT:    movswl %si, %ecx
+; X64-NEXT:    sarl %ecx
 ; X64-NEXT:    addl %edi, %edi
-; X64-NEXT:    shrl $4, %ecx
+; X64-NEXT:    sarl $3, %ecx
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    cwtd
 ; X64-NEXT:    idivw %cx
@@ -187,8 +188,9 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    movswl %ax, %esi
+; X86-NEXT:    sarl %esi
 ; X86-NEXT:    addl %ecx, %ecx
-; X86-NEXT:    shrl $4, %esi
+; X86-NEXT:    sarl $3, %esi
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    cwtd
 ; X86-NEXT:    idivw %si

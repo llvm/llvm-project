@@ -150,6 +150,8 @@ define i16 @ctpop_shifted_mask3(i16 %x) nounwind readnone {
 ; X86-NO-POPCOUNT:       # %bb.0:
 ; X86-NO-POPCOUNT-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NO-POPCOUNT-NEXT:    andl $14, %ecx
+; X86-NO-POPCOUNT-NEXT:    shrl %ecx
+; X86-NO-POPCOUNT-NEXT:    addl %ecx, %ecx
 ; X86-NO-POPCOUNT-NEXT:    movl $59796, %eax # imm = 0xE994
 ; X86-NO-POPCOUNT-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NO-POPCOUNT-NEXT:    shrl %cl, %eax
@@ -159,8 +161,10 @@ define i16 @ctpop_shifted_mask3(i16 %x) nounwind readnone {
 ;
 ; X64-NO-POPCOUNT-LABEL: ctpop_shifted_mask3:
 ; X64-NO-POPCOUNT:       # %bb.0:
-; X64-NO-POPCOUNT-NEXT:    movl %edi, %ecx
-; X64-NO-POPCOUNT-NEXT:    andl $14, %ecx
+; X64-NO-POPCOUNT-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NO-POPCOUNT-NEXT:    andl $14, %edi
+; X64-NO-POPCOUNT-NEXT:    shrl %edi
+; X64-NO-POPCOUNT-NEXT:    leal (%rdi,%rdi), %ecx
 ; X64-NO-POPCOUNT-NEXT:    movl $59796, %eax # imm = 0xE994
 ; X64-NO-POPCOUNT-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NO-POPCOUNT-NEXT:    shrl %cl, %eax

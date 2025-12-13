@@ -101,12 +101,11 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; X64-NEXT:    sarb $4, %dil
 ; X64-NEXT:    shlb $4, %sil
 ; X64-NEXT:    sarb $4, %sil
-; X64-NEXT:    movsbl %sil, %ecx
-; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    imull %ecx, %eax
-; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    movsbl %sil, %eax
+; X64-NEXT:    movsbl %dil, %ecx
+; X64-NEXT:    imull %eax, %ecx
 ; X64-NEXT:    shrb $2, %cl
-; X64-NEXT:    shrl $8, %eax
+; X64-NEXT:    movzbl %ch, %eax
 ; X64-NEXT:    shlb $6, %al
 ; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
@@ -120,12 +119,13 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shlb $4, %cl
 ; X86-NEXT:    sarb $4, %cl
-; X86-NEXT:    movsbl %cl, %ecx
-; X86-NEXT:    movsbl %al, %eax
-; X86-NEXT:    imull %ecx, %eax
-; X86-NEXT:    shlb $6, %ah
-; X86-NEXT:    shrb $2, %al
-; X86-NEXT:    orb %ah, %al
+; X86-NEXT:    movsbl %cl, %edx
+; X86-NEXT:    movsbl %al, %ecx
+; X86-NEXT:    imull %edx, %ecx
+; X86-NEXT:    shrb $2, %cl
+; X86-NEXT:    movzbl %ch, %eax
+; X86-NEXT:    shlb $6, %al
+; X86-NEXT:    orb %cl, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
   %tmp = call i4 @llvm.smul.fix.i4(i4 %x, i4 %y, i32 2)

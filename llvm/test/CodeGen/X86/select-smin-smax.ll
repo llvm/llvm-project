@@ -111,7 +111,7 @@ define i16 @test_i16_smin(i16 %a) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shrl $15, %eax
+; X86-NEXT:    sarl $15, %eax
 ; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl

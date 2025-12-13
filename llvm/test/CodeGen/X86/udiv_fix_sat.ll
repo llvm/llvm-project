@@ -57,7 +57,7 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X64-NEXT:    cmovbl %eax, %ecx
 ; X64-NEXT:    addl %ecx, %ecx
 ; X64-NEXT:    movswl %cx, %eax
-; X64-NEXT:    shrl %eax
+; X64-NEXT:    sarl %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
@@ -75,7 +75,7 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X86-NEXT:    cmovbl %eax, %ecx
 ; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    movswl %cx, %eax
-; X86-NEXT:    shrl %eax
+; X86-NEXT:    sarl %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
   %x2 = sext i8 %x to i15
@@ -102,7 +102,7 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X64-NEXT:    cmovbl %eax, %ecx
 ; X64-NEXT:    addl %ecx, %ecx
 ; X64-NEXT:    movswl %cx, %eax
-; X64-NEXT:    shrl %eax
+; X64-NEXT:    sarl %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
@@ -123,7 +123,7 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X86-NEXT:    cmovbl %eax, %ecx
 ; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    movswl %cx, %eax
-; X86-NEXT:    shrl %eax
+; X86-NEXT:    sarl %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
   %y2 = sext i8 %y to i15

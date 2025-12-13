@@ -14,9 +14,9 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; X86-LABEL: test_bitreverse_v2i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    rolw $8, %dx
+; X86-NEXT:    movzwl %dx, %eax
 ; X86-NEXT:    andl $3855, %edx # imm = 0xF0F
 ; X86-NEXT:    shll $4, %edx
 ; X86-NEXT:    shrl $4, %eax
@@ -33,17 +33,17 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; X86-NEXT:    andl $21845, %eax # imm = 0x5555
 ; X86-NEXT:    leal (%eax,%edx,2), %eax
 ; X86-NEXT:    rolw $8, %cx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    andl $3855, %edx # imm = 0xF0F
-; X86-NEXT:    shll $4, %edx
-; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    movzwl %cx, %edx
 ; X86-NEXT:    andl $3855, %ecx # imm = 0xF0F
-; X86-NEXT:    orl %edx, %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    andl $13107, %edx # imm = 0x3333
-; X86-NEXT:    shrl $2, %ecx
+; X86-NEXT:    shll $4, %ecx
+; X86-NEXT:    shrl $4, %edx
+; X86-NEXT:    andl $3855, %edx # imm = 0xF0F
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    andl $13107, %ecx # imm = 0x3333
-; X86-NEXT:    leal (%ecx,%edx,4), %ecx
+; X86-NEXT:    shrl $2, %edx
+; X86-NEXT:    andl $13107, %edx # imm = 0x3333
+; X86-NEXT:    leal (%edx,%ecx,4), %ecx
 ; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    andl $21845, %edx # imm = 0x5555
 ; X86-NEXT:    shrl %ecx
@@ -354,9 +354,9 @@ declare i16 @llvm.bitreverse.i16(i16) readnone
 define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; X86-LABEL: test_bitreverse_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    rolw $8, %cx
+; X86-NEXT:    movzwl %cx, %eax
 ; X86-NEXT:    andl $3855, %ecx # imm = 0xF0F
 ; X86-NEXT:    shll $4, %ecx
 ; X86-NEXT:    shrl $4, %eax
@@ -377,19 +377,18 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ;
 ; X64-LABEL: test_bitreverse_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    rolw $8, %di
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andl $3855, %eax # imm = 0xF0F
-; X64-NEXT:    shll $4, %eax
-; X64-NEXT:    shrl $4, %edi
+; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    andl $3855, %edi # imm = 0xF0F
-; X64-NEXT:    orl %eax, %edi
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shll $4, %edi
+; X64-NEXT:    shrl $4, %eax
+; X64-NEXT:    andl $3855, %eax # imm = 0xF0F
+; X64-NEXT:    orl %edi, %eax
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    andl $13107, %ecx # imm = 0x3333
+; X64-NEXT:    shrl $2, %eax
 ; X64-NEXT:    andl $13107, %eax # imm = 0x3333
-; X64-NEXT:    shrl $2, %edi
-; X64-NEXT:    andl $13107, %edi # imm = 0x3333
-; X64-NEXT:    leal (%rdi,%rax,4), %eax
+; X64-NEXT:    leal (%rax,%rcx,4), %eax
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    andl $21845, %ecx # imm = 0x5555
 ; X64-NEXT:    shrl %eax

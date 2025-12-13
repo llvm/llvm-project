@@ -14,6 +14,15 @@ target triple = "i386-unknown-linux-gnu"
 ; CHECK:       sub_8bit_hi
 ; CHECK-LABEL: bb.2.endif1:
 
+; FAIL
+; %5:gr32 = MOVZX32rr16 %0
+; %6:gr32 = SHR32ri %5, 8, implicit-def dead $eflags
+; %7:gr32_abcd = COPY killed %6
+; %8:gr8 = COPY %7.sub_8bit
+; MOV8mr %2, 1, $noreg, 0, $noreg, killed %8 :: (store (s8) into %ir.dst)
+; %9:gr32 = MOV32r0 implicit-def dead $eflags
+; %4:gr16 = COPY %9.sub_16bit
+
 define i16 @foo4(i32 %prec, ptr%dst, ptr%src) {
 entry:
   %cnd = icmp ne i32 %prec, 0

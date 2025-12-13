@@ -14,6 +14,7 @@ define i8 @test_fixed_i8(i8 %a0, i8 %a1) nounwind {
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    leal 1(%ecx,%eax), %eax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
@@ -23,6 +24,7 @@ define i8 @test_fixed_i8(i8 %a0, i8 %a1) nounwind {
 ; X64-NEXT:    movsbl %sil, %eax
 ; X64-NEXT:    movsbl %dil, %ecx
 ; X64-NEXT:    leal 1(%rcx,%rax), %eax
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    shrl %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -39,6 +41,7 @@ define i8 @test_ext_i8(i8 %a0, i8 %a1) nounwind {
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    leal 1(%ecx,%eax), %eax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
@@ -48,6 +51,7 @@ define i8 @test_ext_i8(i8 %a0, i8 %a1) nounwind {
 ; X64-NEXT:    movsbl %sil, %eax
 ; X64-NEXT:    movsbl %dil, %ecx
 ; X64-NEXT:    leal 1(%rcx,%rax), %eax
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    shrl %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

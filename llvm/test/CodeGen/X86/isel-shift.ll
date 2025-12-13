@@ -843,7 +843,7 @@ define i16 @ashr_imm1_i16(i16 %a) {
 ; SDAG-X86-LABEL: ashr_imm1_i16:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    shrl %eax
+; SDAG-X86-NEXT:    sarl %eax
 ; SDAG-X86-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; SDAG-X86-NEXT:    retl
 ;
@@ -856,7 +856,7 @@ define i16 @ashr_imm1_i16(i16 %a) {
 ; SDAG-X64-LABEL: ashr_imm1_i16:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    movswl %di, %eax
-; SDAG-X64-NEXT:    shrl %eax
+; SDAG-X64-NEXT:    sarl %eax
 ; SDAG-X64-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; SDAG-X64-NEXT:    retq
 ;
@@ -1134,7 +1134,7 @@ define i16 @ashr_imm4_i16(i16 %a) {
 ; SDAG-X86-LABEL: ashr_imm4_i16:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    shrl $4, %eax
+; SDAG-X86-NEXT:    sarl $4, %eax
 ; SDAG-X86-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; SDAG-X86-NEXT:    retl
 ;
@@ -1147,7 +1147,7 @@ define i16 @ashr_imm4_i16(i16 %a) {
 ; SDAG-X64-LABEL: ashr_imm4_i16:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    movswl %di, %eax
-; SDAG-X64-NEXT:    shrl $4, %eax
+; SDAG-X64-NEXT:    sarl $4, %eax
 ; SDAG-X64-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; SDAG-X64-NEXT:    retq
 ;

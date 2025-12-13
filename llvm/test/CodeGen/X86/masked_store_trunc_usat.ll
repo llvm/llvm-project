@@ -932,7 +932,8 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-NEXT:    testb $32, %al
 ; SSE2-NEXT:    je .LBB2_12
 ; SSE2-NEXT:  # %bb.11: # %cond.store9
-; SSE2-NEXT:    movb %ch, 5(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 5(%rdi)
 ; SSE2-NEXT:  .LBB2_12: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm1, %ecx
@@ -962,7 +963,8 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-NEXT:    testb $-128, %al
 ; SSE2-NEXT:    je .LBB2_16
 ; SSE2-NEXT:  .LBB2_15: # %cond.store13
-; SSE2-NEXT:    movb %ch, 7(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 7(%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: truncstore_v8i64_v8i8:
@@ -3552,7 +3554,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-NEXT:    testb $32, %al
 ; SSE2-NEXT:    je .LBB10_12
 ; SSE2-NEXT:  # %bb.11: # %cond.store9
-; SSE2-NEXT:    movb %ch, 5(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 5(%rdi)
 ; SSE2-NEXT:  .LBB10_12: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm1, %ecx
@@ -3563,7 +3566,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-NEXT:    testb %al, %al
 ; SSE2-NEXT:    jns .LBB10_16
 ; SSE2-NEXT:  # %bb.15: # %cond.store13
-; SSE2-NEXT:    movb %ch, 7(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 7(%rdi)
 ; SSE2-NEXT:  .LBB10_16: # %else14
 ; SSE2-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE2-NEXT:    pextrw $4, %xmm1, %ecx
@@ -3574,7 +3578,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-NEXT:    testl $512, %eax # imm = 0x200
 ; SSE2-NEXT:    je .LBB10_20
 ; SSE2-NEXT:  # %bb.19: # %cond.store17
-; SSE2-NEXT:    movb %ch, 9(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 9(%rdi)
 ; SSE2-NEXT:  .LBB10_20: # %else18
 ; SSE2-NEXT:    testl $1024, %eax # imm = 0x400
 ; SSE2-NEXT:    pextrw $5, %xmm1, %ecx
@@ -3585,7 +3590,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-NEXT:    testl $2048, %eax # imm = 0x800
 ; SSE2-NEXT:    je .LBB10_24
 ; SSE2-NEXT:  # %bb.23: # %cond.store21
-; SSE2-NEXT:    movb %ch, 11(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 11(%rdi)
 ; SSE2-NEXT:  .LBB10_24: # %else22
 ; SSE2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE2-NEXT:    pextrw $6, %xmm1, %ecx
@@ -3596,7 +3602,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-NEXT:    testl $8192, %eax # imm = 0x2000
 ; SSE2-NEXT:    je .LBB10_28
 ; SSE2-NEXT:  # %bb.27: # %cond.store25
-; SSE2-NEXT:    movb %ch, 13(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 13(%rdi)
 ; SSE2-NEXT:  .LBB10_28: # %else26
 ; SSE2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; SSE2-NEXT:    pextrw $7, %xmm1, %ecx
@@ -3626,7 +3633,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    je .LBB10_32
 ; SSE2-NEXT:  .LBB10_31: # %cond.store29
-; SSE2-NEXT:    movb %ch, 15(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 15(%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: truncstore_v16i32_v16i8:
@@ -4812,7 +4820,8 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-NEXT:    testb $32, %al
 ; SSE2-NEXT:    je .LBB12_12
 ; SSE2-NEXT:  # %bb.11: # %cond.store9
-; SSE2-NEXT:    movb %ch, 5(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 5(%rdi)
 ; SSE2-NEXT:  .LBB12_12: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm4, %ecx
@@ -4842,7 +4851,8 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-NEXT:    testb $-128, %al
 ; SSE2-NEXT:    je .LBB12_16
 ; SSE2-NEXT:  .LBB12_15: # %cond.store13
-; SSE2-NEXT:    movb %ch, 7(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 7(%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: truncstore_v8i32_v8i8:
@@ -5781,7 +5791,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testb $32, %al
 ; SSE2-NEXT:    je .LBB15_12
 ; SSE2-NEXT:  # %bb.11: # %cond.store9
-; SSE2-NEXT:    movb %ch, 5(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 5(%rdi)
 ; SSE2-NEXT:  .LBB15_12: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm0, %ecx
@@ -5792,7 +5803,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testb %al, %al
 ; SSE2-NEXT:    jns .LBB15_16
 ; SSE2-NEXT:  # %bb.15: # %cond.store13
-; SSE2-NEXT:    movb %ch, 7(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 7(%rdi)
 ; SSE2-NEXT:  .LBB15_16: # %else14
 ; SSE2-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE2-NEXT:    pextrw $4, %xmm0, %ecx
@@ -5803,7 +5815,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testl $512, %eax # imm = 0x200
 ; SSE2-NEXT:    je .LBB15_20
 ; SSE2-NEXT:  # %bb.19: # %cond.store17
-; SSE2-NEXT:    movb %ch, 9(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 9(%rdi)
 ; SSE2-NEXT:  .LBB15_20: # %else18
 ; SSE2-NEXT:    testl $1024, %eax # imm = 0x400
 ; SSE2-NEXT:    pextrw $5, %xmm0, %ecx
@@ -5814,7 +5827,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testl $2048, %eax # imm = 0x800
 ; SSE2-NEXT:    je .LBB15_24
 ; SSE2-NEXT:  # %bb.23: # %cond.store21
-; SSE2-NEXT:    movb %ch, 11(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 11(%rdi)
 ; SSE2-NEXT:  .LBB15_24: # %else22
 ; SSE2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE2-NEXT:    pextrw $6, %xmm0, %ecx
@@ -5829,7 +5843,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testl $8192, %eax # imm = 0x2000
 ; SSE2-NEXT:    je .LBB15_28
 ; SSE2-NEXT:  # %bb.27: # %cond.store25
-; SSE2-NEXT:    movb %ch, 13(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 13(%rdi)
 ; SSE2-NEXT:  .LBB15_28: # %else26
 ; SSE2-NEXT:    psubw %xmm1, %xmm3
 ; SSE2-NEXT:    psubw %xmm4, %xmm2
@@ -5843,7 +5858,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testw %ax, %ax
 ; SSE2-NEXT:    jns .LBB15_32
 ; SSE2-NEXT:  # %bb.31: # %cond.store29
-; SSE2-NEXT:    movb %ch, 15(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 15(%rdi)
 ; SSE2-NEXT:  .LBB15_32: # %else30
 ; SSE2-NEXT:    testl $65536, %eax # imm = 0x10000
 ; SSE2-NEXT:    movd %xmm2, %ecx
@@ -5870,7 +5886,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testl $2097152, %eax # imm = 0x200000
 ; SSE2-NEXT:    je .LBB15_44
 ; SSE2-NEXT:  # %bb.43: # %cond.store41
-; SSE2-NEXT:    movb %ch, 21(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 21(%rdi)
 ; SSE2-NEXT:  .LBB15_44: # %else42
 ; SSE2-NEXT:    testl $4194304, %eax # imm = 0x400000
 ; SSE2-NEXT:    pextrw $3, %xmm2, %ecx
@@ -5881,7 +5898,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testl $8388608, %eax # imm = 0x800000
 ; SSE2-NEXT:    je .LBB15_48
 ; SSE2-NEXT:  # %bb.47: # %cond.store45
-; SSE2-NEXT:    movb %ch, 23(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 23(%rdi)
 ; SSE2-NEXT:  .LBB15_48: # %else46
 ; SSE2-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; SSE2-NEXT:    pextrw $4, %xmm2, %ecx
@@ -5892,7 +5910,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testl $33554432, %eax # imm = 0x2000000
 ; SSE2-NEXT:    je .LBB15_52
 ; SSE2-NEXT:  # %bb.51: # %cond.store49
-; SSE2-NEXT:    movb %ch, 25(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 25(%rdi)
 ; SSE2-NEXT:  .LBB15_52: # %else50
 ; SSE2-NEXT:    testl $67108864, %eax # imm = 0x4000000
 ; SSE2-NEXT:    pextrw $5, %xmm2, %ecx
@@ -5903,7 +5922,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testl $134217728, %eax # imm = 0x8000000
 ; SSE2-NEXT:    je .LBB15_56
 ; SSE2-NEXT:  # %bb.55: # %cond.store53
-; SSE2-NEXT:    movb %ch, 27(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 27(%rdi)
 ; SSE2-NEXT:  .LBB15_56: # %else54
 ; SSE2-NEXT:    testl $268435456, %eax # imm = 0x10000000
 ; SSE2-NEXT:    pextrw $6, %xmm2, %ecx
@@ -5914,7 +5934,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testl $536870912, %eax # imm = 0x20000000
 ; SSE2-NEXT:    je .LBB15_60
 ; SSE2-NEXT:  # %bb.59: # %cond.store57
-; SSE2-NEXT:    movb %ch, 29(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 29(%rdi)
 ; SSE2-NEXT:  .LBB15_60: # %else58
 ; SSE2-NEXT:    testl $1073741824, %eax # imm = 0x40000000
 ; SSE2-NEXT:    pextrw $7, %xmm2, %ecx
@@ -5959,7 +5980,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
 ; SSE2-NEXT:    je .LBB15_64
 ; SSE2-NEXT:  .LBB15_63: # %cond.store61
-; SSE2-NEXT:    movb %ch, 31(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 31(%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: truncstore_v32i16_v32i8:
@@ -7230,7 +7252,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE2-NEXT:    testb $32, %al
 ; SSE2-NEXT:    je .LBB16_12
 ; SSE2-NEXT:  # %bb.11: # %cond.store9
-; SSE2-NEXT:    movb %ch, 5(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 5(%rdi)
 ; SSE2-NEXT:  .LBB16_12: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm0, %ecx
@@ -7241,7 +7264,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE2-NEXT:    testb %al, %al
 ; SSE2-NEXT:    jns .LBB16_16
 ; SSE2-NEXT:  # %bb.15: # %cond.store13
-; SSE2-NEXT:    movb %ch, 7(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 7(%rdi)
 ; SSE2-NEXT:  .LBB16_16: # %else14
 ; SSE2-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE2-NEXT:    pextrw $4, %xmm0, %ecx
@@ -7252,7 +7276,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE2-NEXT:    testl $512, %eax # imm = 0x200
 ; SSE2-NEXT:    je .LBB16_20
 ; SSE2-NEXT:  # %bb.19: # %cond.store17
-; SSE2-NEXT:    movb %ch, 9(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 9(%rdi)
 ; SSE2-NEXT:  .LBB16_20: # %else18
 ; SSE2-NEXT:    testl $1024, %eax # imm = 0x400
 ; SSE2-NEXT:    pextrw $5, %xmm0, %ecx
@@ -7263,7 +7288,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE2-NEXT:    testl $2048, %eax # imm = 0x800
 ; SSE2-NEXT:    je .LBB16_24
 ; SSE2-NEXT:  # %bb.23: # %cond.store21
-; SSE2-NEXT:    movb %ch, 11(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 11(%rdi)
 ; SSE2-NEXT:  .LBB16_24: # %else22
 ; SSE2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE2-NEXT:    pextrw $6, %xmm0, %ecx
@@ -7274,7 +7300,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE2-NEXT:    testl $8192, %eax # imm = 0x2000
 ; SSE2-NEXT:    je .LBB16_28
 ; SSE2-NEXT:  # %bb.27: # %cond.store25
-; SSE2-NEXT:    movb %ch, 13(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 13(%rdi)
 ; SSE2-NEXT:  .LBB16_28: # %else26
 ; SSE2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; SSE2-NEXT:    pextrw $7, %xmm0, %ecx
@@ -7304,7 +7331,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    je .LBB16_32
 ; SSE2-NEXT:  .LBB16_31: # %cond.store29
-; SSE2-NEXT:    movb %ch, 15(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 15(%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: truncstore_v16i16_v16i8:
@@ -7990,7 +8018,8 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, ptr %p, <8 x i16> %mask) {
 ; SSE2-NEXT:    testb $32, %al
 ; SSE2-NEXT:    je .LBB17_12
 ; SSE2-NEXT:  # %bb.11: # %cond.store9
-; SSE2-NEXT:    movb %ch, 5(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 5(%rdi)
 ; SSE2-NEXT:  .LBB17_12: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm0, %ecx
@@ -8020,7 +8049,8 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, ptr %p, <8 x i16> %mask) {
 ; SSE2-NEXT:    testb $-128, %al
 ; SSE2-NEXT:    je .LBB17_16
 ; SSE2-NEXT:  .LBB17_15: # %cond.store13
-; SSE2-NEXT:    movb %ch, 7(%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, 7(%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: truncstore_v8i16_v8i8:

@@ -81,8 +81,9 @@ define i16 @test5(i16 %f12) nounwind {
 ;
 ; x86_64-LABEL: test5:
 ; x86_64:       # %bb.0:
-; x86_64-NEXT:    shrl $6, %edi
-; x86_64-NEXT:    movsbl %dil, %eax
+; x86_64-NEXT:    movzwl %di, %eax
+; x86_64-NEXT:    shrl $6, %eax
+; x86_64-NEXT:    movsbl %al, %eax
 ; x86_64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; x86_64-NEXT:    retq
 	%f11 = shl i16 %f12, 2

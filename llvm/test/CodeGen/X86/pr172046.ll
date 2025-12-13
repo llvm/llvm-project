@@ -5,9 +5,8 @@
 define i32 @_Z1ft(i16 zeroext %0) {
 ; X86-LABEL: _Z1ft:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll $3, %eax
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _Z1ft:
@@ -24,19 +23,18 @@ entry:
 define i32 @_Z1gt(i16 zeroext %x) {
 ; X86-LABEL: _Z1gt:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $8191, %ecx # imm = 0x1FFF
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (,%eax,8), %ecx
 ; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    leal (%eax,%ecx,8), %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _Z1gt:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    leal (,%rdi,8), %eax
 ; X64-NEXT:    shll $16, %edi
-; X64-NEXT:    leal (%rdi,%rax,8), %eax
+; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    retq
 entry:
   %conv = zext nneg i16 %x to i32

@@ -34,14 +34,14 @@ define void @passing2(i64 %str.0, i64 %str.1, i16 signext  %s, i32 %j, i8 signex
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    shll $7, %eax
 ; CHECK-NEXT:    cwtl
-; CHECK-NEXT:    shrl $7, %eax
+; CHECK-NEXT:    sarl $7, %eax
 ; CHECK-NEXT:    cmpw {{[0-9]+}}(%rsp), %ax
 ; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  ## %bb.3: ## %bb51
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    shll $7, %eax
 ; CHECK-NEXT:    cwtl
-; CHECK-NEXT:    shrl $7, %eax
+; CHECK-NEXT:    sarl $7, %eax
 ; CHECK-NEXT:    cmpw {{[0-9]+}}(%rsp), %ax
 ; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  ## %bb.4: ## %bb67

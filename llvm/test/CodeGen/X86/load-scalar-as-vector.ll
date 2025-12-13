@@ -315,15 +315,15 @@ define <8 x i16> @ashr_op1_constant(ptr %p) nounwind {
 ; SSE-LABEL: ashr_op1_constant:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movswl (%rdi), %eax
+; SSE-NEXT:    sarl $7, %eax
 ; SSE-NEXT:    movd %eax, %xmm0
-; SSE-NEXT:    psrad $7, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ashr_op1_constant:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movswl (%rdi), %eax
+; AVX-NEXT:    sarl $7, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vpsrad $7, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = load i16, ptr %p
   %b = ashr i16 %x, 7

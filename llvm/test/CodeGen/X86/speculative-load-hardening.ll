@@ -542,7 +542,7 @@ define void @test_basic_eh(i32 %a, ptr %ptr1, ptr %ptr2) speculative_load_harden
 ; X64-NEXT:    cmpq $.Lslh_ret_addr4, %rdx
 ; X64-NEXT:    cmovneq %rbx, %rcx
 ; X64-NEXT:    movl %ebp, (%rax)
-; X64-NEXT:  .Ltmp0:
+; X64-NEXT:  .Ltmp0: # EH_LABEL
 ; X64-NEXT:    shlq $47, %rcx
 ; X64-NEXT:    movq %rax, %rdi
 ; X64-NEXT:    xorl %esi, %esi
@@ -555,7 +555,7 @@ define void @test_basic_eh(i32 %a, ptr %ptr1, ptr %ptr2) speculative_load_harden
 ; X64-NEXT:    sarq $63, %rax
 ; X64-NEXT:    cmpq $.Lslh_ret_addr5, %rcx
 ; X64-NEXT:    cmovneq %rbx, %rax
-; X64-NEXT:  .Ltmp1:
+; X64-NEXT:  .Ltmp1: # EH_LABEL
 ; X64-NEXT:    jmp .LBB4_3
 ; X64-NEXT:  .LBB4_1:
 ; X64-NEXT:    cmovleq %rbx, %rax
@@ -575,7 +575,7 @@ define void @test_basic_eh(i32 %a, ptr %ptr1, ptr %ptr2) speculative_load_harden
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB4_4: # %lpad
 ; X64-NEXT:    .cfi_def_cfa_offset 48
-; X64-NEXT:  .Ltmp2:
+; X64-NEXT:  .Ltmp2: # EH_LABEL
 ; X64-NEXT:    movq %rsp, %rcx
 ; X64-NEXT:    sarq $63, %rcx
 ; X64-NEXT:    movl (%rax), %eax
@@ -616,12 +616,12 @@ define void @test_basic_eh(i32 %a, ptr %ptr1, ptr %ptr2) speculative_load_harden
 ; X64-LFENCE-NEXT:    movl $4, %edi
 ; X64-LFENCE-NEXT:    callq __cxa_allocate_exception@PLT
 ; X64-LFENCE-NEXT:    movl %ebp, (%rax)
-; X64-LFENCE-NEXT:  .Ltmp0:
+; X64-LFENCE-NEXT:  .Ltmp0: # EH_LABEL
 ; X64-LFENCE-NEXT:    movq %rax, %rdi
 ; X64-LFENCE-NEXT:    xorl %esi, %esi
 ; X64-LFENCE-NEXT:    xorl %edx, %edx
 ; X64-LFENCE-NEXT:    callq __cxa_throw@PLT
-; X64-LFENCE-NEXT:  .Ltmp1:
+; X64-LFENCE-NEXT:  .Ltmp1: # EH_LABEL
 ; X64-LFENCE-NEXT:  .LBB4_2: # %exit
 ; X64-LFENCE-NEXT:    lfence
 ; X64-LFENCE-NEXT:    popq %rbx
@@ -633,7 +633,7 @@ define void @test_basic_eh(i32 %a, ptr %ptr1, ptr %ptr2) speculative_load_harden
 ; X64-LFENCE-NEXT:    retq
 ; X64-LFENCE-NEXT:  .LBB4_3: # %lpad
 ; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 32
-; X64-LFENCE-NEXT:  .Ltmp2:
+; X64-LFENCE-NEXT:  .Ltmp2: # EH_LABEL
 ; X64-LFENCE-NEXT:    movl (%rax), %eax
 ; X64-LFENCE-NEXT:    addl (%r14), %eax
 ; X64-LFENCE-NEXT:    cltq
@@ -1049,8 +1049,8 @@ define void @test_deferred_hardening(ptr %ptr1, ptr %ptr2, i32 %x) nounwind spec
 ; X64-NEXT:    cmpq $.Lslh_ret_addr23, %rcx
 ; X64-NEXT:    cmovneq %r15, %rax
 ; X64-NEXT:    movswl (%rbx), %edi
+; X64-NEXT:    sarl $7, %edi
 ; X64-NEXT:    notl %edi
-; X64-NEXT:    shrl $7, %edi
 ; X64-NEXT:    orl $-65536, %edi # imm = 0xFFFF0000
 ; X64-NEXT:    orl %eax, %edi
 ; X64-NEXT:    shlq $47, %rax
@@ -1102,8 +1102,8 @@ define void @test_deferred_hardening(ptr %ptr1, ptr %ptr2, i32 %x) nounwind spec
 ; X64-LFENCE-NEXT:    shll $7, %edi
 ; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    movswl (%rbx), %edi
+; X64-LFENCE-NEXT:    sarl $7, %edi
 ; X64-LFENCE-NEXT:    notl %edi
-; X64-LFENCE-NEXT:    shrl $7, %edi
 ; X64-LFENCE-NEXT:    orl $-65536, %edi # imm = 0xFFFF0000
 ; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    movzwl (%rbx), %eax

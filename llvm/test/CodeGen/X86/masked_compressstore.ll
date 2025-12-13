@@ -3621,7 +3621,8 @@ define void @compressstore_v16i8_v16i8(ptr %base, <16 x i8> %V, <16 x i8> %trigg
 ; SSE2-NEXT:    testb $32, %al
 ; SSE2-NEXT:    je LBB12_12
 ; SSE2-NEXT:  ## %bb.11: ## %cond.store13
-; SSE2-NEXT:    movb %ch, (%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    incq %rdi
 ; SSE2-NEXT:  LBB12_12: ## %else14
 ; SSE2-NEXT:    testb $64, %al
@@ -3634,7 +3635,8 @@ define void @compressstore_v16i8_v16i8(ptr %base, <16 x i8> %V, <16 x i8> %trigg
 ; SSE2-NEXT:    testb %al, %al
 ; SSE2-NEXT:    jns LBB12_16
 ; SSE2-NEXT:  ## %bb.15: ## %cond.store19
-; SSE2-NEXT:    movb %ch, (%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    incq %rdi
 ; SSE2-NEXT:  LBB12_16: ## %else20
 ; SSE2-NEXT:    testl $256, %eax ## imm = 0x100
@@ -3647,7 +3649,8 @@ define void @compressstore_v16i8_v16i8(ptr %base, <16 x i8> %V, <16 x i8> %trigg
 ; SSE2-NEXT:    testl $512, %eax ## imm = 0x200
 ; SSE2-NEXT:    je LBB12_20
 ; SSE2-NEXT:  ## %bb.19: ## %cond.store25
-; SSE2-NEXT:    movb %ch, (%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    incq %rdi
 ; SSE2-NEXT:  LBB12_20: ## %else26
 ; SSE2-NEXT:    testl $1024, %eax ## imm = 0x400
@@ -3660,7 +3663,8 @@ define void @compressstore_v16i8_v16i8(ptr %base, <16 x i8> %V, <16 x i8> %trigg
 ; SSE2-NEXT:    testl $2048, %eax ## imm = 0x800
 ; SSE2-NEXT:    je LBB12_24
 ; SSE2-NEXT:  ## %bb.23: ## %cond.store31
-; SSE2-NEXT:    movb %ch, (%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    incq %rdi
 ; SSE2-NEXT:  LBB12_24: ## %else32
 ; SSE2-NEXT:    testl $4096, %eax ## imm = 0x1000
@@ -3673,7 +3677,8 @@ define void @compressstore_v16i8_v16i8(ptr %base, <16 x i8> %V, <16 x i8> %trigg
 ; SSE2-NEXT:    testl $8192, %eax ## imm = 0x2000
 ; SSE2-NEXT:    je LBB12_28
 ; SSE2-NEXT:  ## %bb.27: ## %cond.store37
-; SSE2-NEXT:    movb %ch, (%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    incq %rdi
 ; SSE2-NEXT:  LBB12_28: ## %else38
 ; SSE2-NEXT:    testl $16384, %eax ## imm = 0x4000
@@ -3708,7 +3713,8 @@ define void @compressstore_v16i8_v16i8(ptr %base, <16 x i8> %V, <16 x i8> %trigg
 ; SSE2-NEXT:    testl $32768, %eax ## imm = 0x8000
 ; SSE2-NEXT:    je LBB12_32
 ; SSE2-NEXT:  LBB12_31: ## %cond.store43
-; SSE2-NEXT:    movb %ch, (%rdi)
+; SSE2-NEXT:    shrl $8, %ecx
+; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: compressstore_v16i8_v16i8:

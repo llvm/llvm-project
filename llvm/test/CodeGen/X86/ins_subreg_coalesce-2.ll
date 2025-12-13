@@ -4,8 +4,9 @@
 define i16 @test5(i16 %f12) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl $6, %edi
-; CHECK-NEXT:    movsbl %dil, %eax
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    shrl $6, %eax
+; CHECK-NEXT:    movsbl %al, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 	%f11 = shl i16 %f12, 2		; <i16> [#uses=1]

@@ -159,14 +159,18 @@ define i64 @fun8(i16 zeroext %v) {
 ; X86-LABEL: fun8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $1048560, %eax # imm = 0xFFFF0
+; X86-NEXT:    sarl $4, %eax
+; X86-NEXT:    movzwl %ax, %eax
+; X86-NEXT:    shll $4, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fun8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    andl $1048560, %eax # imm = 0xFFFF0
+; X64-NEXT:    sarl $4, %eax
+; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    shll $4, %eax
 ; X64-NEXT:    retq
 entry:
   %shr = ashr i16 %v, 4
@@ -233,10 +237,10 @@ entry:
 define i64 @fun11(i16 zeroext %v) {
 ; X86-LABEL: fun11:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shrl $4, %ecx
-; X86-NEXT:    andl $-16, %eax
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shll $4, %eax
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
@@ -246,6 +250,7 @@ define i64 @fun11(i16 zeroext %v) {
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrl $4, %eax
+; X64-NEXT:    movl %eax, %eax
 ; X64-NEXT:    andl $-16, %edi
 ; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    retq

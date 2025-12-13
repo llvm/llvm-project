@@ -55,41 +55,41 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X86-NEXT:    shrl %ecx
 ; X86-NEXT:    andl $21845, %ecx # imm = 0x5555
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $13107, %ecx # imm = 0x3333
-; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    movzwl %ax, %ecx
 ; X86-NEXT:    andl $13107, %eax # imm = 0x3333
-; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    shrl $2, %ecx
+; X86-NEXT:    andl $13107, %ecx # imm = 0x3333
 ; X86-NEXT:    addl %eax, %ecx
-; X86-NEXT:    andl $3855, %ecx # imm = 0xF0F
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    shrl $4, %eax
 ; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    andl $3855, %eax # imm = 0xF0F
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    addl %eax, %ecx
+; X86-NEXT:    movzbl %cl, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-BASE-LABEL: cnt16:
 ; X64-BASE:       # %bb.0:
-; X64-BASE-NEXT:    movl %edi, %eax
+; X64-BASE-NEXT:    movzwl %di, %eax
 ; X64-BASE-NEXT:    shrl %eax
 ; X64-BASE-NEXT:    andl $21845, %eax # imm = 0x5555
 ; X64-BASE-NEXT:    subl %eax, %edi
-; X64-BASE-NEXT:    movl %edi, %eax
-; X64-BASE-NEXT:    andl $13107, %eax # imm = 0x3333
-; X64-BASE-NEXT:    shrl $2, %edi
+; X64-BASE-NEXT:    movzwl %di, %eax
 ; X64-BASE-NEXT:    andl $13107, %edi # imm = 0x3333
-; X64-BASE-NEXT:    addl %eax, %edi
-; X64-BASE-NEXT:    movl %edi, %eax
-; X64-BASE-NEXT:    shrl $4, %eax
+; X64-BASE-NEXT:    shrl $2, %eax
+; X64-BASE-NEXT:    andl $13107, %eax # imm = 0x3333
 ; X64-BASE-NEXT:    addl %edi, %eax
-; X64-BASE-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; X64-BASE-NEXT:    movl %eax, %ecx
-; X64-BASE-NEXT:    shrl $8, %ecx
+; X64-BASE-NEXT:    shrl $4, %ecx
 ; X64-BASE-NEXT:    addl %eax, %ecx
-; X64-BASE-NEXT:    movzbl %cl, %eax
+; X64-BASE-NEXT:    andl $3855, %ecx # imm = 0xF0F
+; X64-BASE-NEXT:    movl %ecx, %eax
+; X64-BASE-NEXT:    shrl $8, %eax
+; X64-BASE-NEXT:    addl %ecx, %eax
+; X64-BASE-NEXT:    movzbl %al, %eax
 ; X64-BASE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-BASE-NEXT:    retq
 ;
@@ -1828,19 +1828,19 @@ define i32 @popcount_i16_zext(i16 zeroext %x) {
 ; X86-NEXT:    shrl %ecx
 ; X86-NEXT:    andl $21845, %ecx # imm = 0x5555
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $13107, %ecx # imm = 0x3333
-; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    movzwl %ax, %ecx
 ; X86-NEXT:    andl $13107, %eax # imm = 0x3333
-; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    shrl $2, %ecx
+; X86-NEXT:    andl $13107, %ecx # imm = 0x3333
 ; X86-NEXT:    addl %eax, %ecx
-; X86-NEXT:    andl $3855, %ecx # imm = 0xF0F
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    shrl $4, %eax
 ; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    andl $3855, %eax # imm = 0xF0F
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    addl %eax, %ecx
+; X86-NEXT:    movzbl %cl, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-BASE-LABEL: popcount_i16_zext:
@@ -1849,19 +1849,19 @@ define i32 @popcount_i16_zext(i16 zeroext %x) {
 ; X64-BASE-NEXT:    shrl %eax
 ; X64-BASE-NEXT:    andl $21845, %eax # imm = 0x5555
 ; X64-BASE-NEXT:    subl %eax, %edi
-; X64-BASE-NEXT:    movl %edi, %eax
-; X64-BASE-NEXT:    andl $13107, %eax # imm = 0x3333
-; X64-BASE-NEXT:    shrl $2, %edi
+; X64-BASE-NEXT:    movzwl %di, %eax
 ; X64-BASE-NEXT:    andl $13107, %edi # imm = 0x3333
-; X64-BASE-NEXT:    addl %eax, %edi
-; X64-BASE-NEXT:    movl %edi, %eax
-; X64-BASE-NEXT:    shrl $4, %eax
+; X64-BASE-NEXT:    shrl $2, %eax
+; X64-BASE-NEXT:    andl $13107, %eax # imm = 0x3333
 ; X64-BASE-NEXT:    addl %edi, %eax
-; X64-BASE-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; X64-BASE-NEXT:    movl %eax, %ecx
-; X64-BASE-NEXT:    shrl $8, %ecx
+; X64-BASE-NEXT:    shrl $4, %ecx
 ; X64-BASE-NEXT:    addl %eax, %ecx
-; X64-BASE-NEXT:    movzbl %cl, %eax
+; X64-BASE-NEXT:    andl $3855, %ecx # imm = 0xF0F
+; X64-BASE-NEXT:    movl %ecx, %eax
+; X64-BASE-NEXT:    shrl $8, %eax
+; X64-BASE-NEXT:    addl %ecx, %eax
+; X64-BASE-NEXT:    movzbl %al, %eax
 ; X64-BASE-NEXT:    retq
 ;
 ; X86-POPCNT-LABEL: popcount_i16_zext:

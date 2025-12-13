@@ -54,18 +54,18 @@ define i1 @canonical_parity_noncanonical_pred(<16 x i1> %x) {
 ; NOPOPCNT-NEXT:    shrl %ecx
 ; NOPOPCNT-NEXT:    andl $21845, %ecx # imm = 0x5555
 ; NOPOPCNT-NEXT:    subl %ecx, %eax
-; NOPOPCNT-NEXT:    movl %eax, %ecx
-; NOPOPCNT-NEXT:    andl $13107, %ecx # imm = 0x3333
-; NOPOPCNT-NEXT:    shrl $2, %eax
+; NOPOPCNT-NEXT:    movzwl %ax, %ecx
 ; NOPOPCNT-NEXT:    andl $13107, %eax # imm = 0x3333
-; NOPOPCNT-NEXT:    addl %ecx, %eax
-; NOPOPCNT-NEXT:    movl %eax, %ecx
-; NOPOPCNT-NEXT:    shrl $4, %ecx
+; NOPOPCNT-NEXT:    shrl $2, %ecx
+; NOPOPCNT-NEXT:    andl $13107, %ecx # imm = 0x3333
 ; NOPOPCNT-NEXT:    addl %eax, %ecx
-; NOPOPCNT-NEXT:    andl $3855, %ecx # imm = 0xF0F
-; NOPOPCNT-NEXT:    movl %ecx, %eax
+; NOPOPCNT-NEXT:    movl %ecx, %edx
+; NOPOPCNT-NEXT:    shrl $4, %edx
+; NOPOPCNT-NEXT:    addl %ecx, %edx
+; NOPOPCNT-NEXT:    andl $3855, %edx # imm = 0xF0F
+; NOPOPCNT-NEXT:    movl %edx, %eax
 ; NOPOPCNT-NEXT:    shrl $8, %eax
-; NOPOPCNT-NEXT:    addl %ecx, %eax
+; NOPOPCNT-NEXT:    addl %edx, %eax
 ; NOPOPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; NOPOPCNT-NEXT:    retq
 ;

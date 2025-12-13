@@ -48,7 +48,7 @@ define void @computeNumSignBits_shl_zext_2(i8 %x, ptr %p) nounwind {
 ; X64-NEXT:    addl $32767, %edx # imm = 0x7FFF
 ; X64-NEXT:    shll $14, %eax
 ; X64-NEXT:    movswl %ax, %edi
-; X64-NEXT:    shrl $4, %edi
+; X64-NEXT:    sarl $4, %edi
 ; X64-NEXT:    cmpw %di, %cx
 ; X64-NEXT:    cmovnel %edx, %eax
 ; X64-NEXT:    movw %ax, (%rsi)

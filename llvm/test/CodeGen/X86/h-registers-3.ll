@@ -8,7 +8,9 @@ define zeroext i8 @foo() nounwind ssp {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    calll bar@PLT
-; X86-NEXT:    movb %ah, %al
+; X86-NEXT:    movzwl %ax, %eax
+; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 ;
@@ -17,7 +19,7 @@ define zeroext i8 @foo() nounwind ssp {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    callq bar@PLT
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    shrl $8, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    popq %rcx
@@ -28,7 +30,7 @@ define zeroext i8 @foo() nounwind ssp {
 ; X32-NEXT:    pushq %rax
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    callq bar@PLT
-; X32-NEXT:    # kill: def $ax killed $ax def $eax
+; X32-NEXT:    movzwl %ax, %eax
 ; X32-NEXT:    shrl $8, %eax
 ; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    popq %rcx
