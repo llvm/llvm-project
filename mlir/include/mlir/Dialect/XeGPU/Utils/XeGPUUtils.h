@@ -105,13 +105,12 @@ void setDistributeLayoutAttr(const OpOperand &opr,
 template <typename T,
           typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
                                       std::is_same_v<T, OpResult>>>
-DistributeLayoutAttr getTempLayoutAttr(const T &operandOrResult);
+DistributeLayoutAttr getTempLayout(const T &operandOrResult);
 
 template <typename T,
           typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
                                       std::is_same_v<T, OpResult>>>
-void setTempLayoutAttr(const T &operandOrResult,
-                       const DistributeLayoutAttr layout);
+void setTempLayout(const T &operandOrResult, const DistributeLayoutAttr layout);
 
 /// Set the DistributeLayoutAttr for each OpOperand and OpResult of the given
 /// operation. If the operation contains regions, it is also applied recursively
