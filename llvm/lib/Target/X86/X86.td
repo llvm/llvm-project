@@ -485,7 +485,7 @@ def TuningSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
 def TuningSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
                                         "PMULLD instruction is slow (compared to PMULLW/PMULHW and PMULUDQ)">;
 
-def TuningSlowPMULLQ : SubtargetFeature<"slow-pmullq", "HasSlowPMULLQ", "true",
+def TuningSlowPMULLQ : SubtargetFeature<"slow-pmullq", "IsPMULLQSlow", "true",
                                         "PMULLQ instruction is slow">;
 
 def TuningSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
@@ -1052,11 +1052,14 @@ def ProcessorFeatures {
                                                   FeatureVBMI,
                                                   FeatureIFMA,
                                                   FeatureSHA];
-  list<SubtargetFeature> CNLTuning = [TuningFastGather, TuningMacroFusion,
-                                      TuningSlow3OpsLEA, TuningSlowDivide64,
+  list<SubtargetFeature> CNLTuning = [TuningFastGather,
+                                      TuningMacroFusion,
+                                      TuningSlow3OpsLEA,
+                                      TuningSlowDivide64,
                                       TuningFastScalarFSQRT,
                                       TuningFastVectorFSQRT,
-                                      TuningFastSHLDRotate, TuningFast15ByteNOP,
+                                      TuningFastSHLDRotate,
+                                      TuningFast15ByteNOP,
                                       TuningFastVariableCrossLaneShuffle,
                                       TuningFastVariablePerLaneShuffle,
                                       TuningPrefer256Bit,
@@ -1080,10 +1083,13 @@ def ProcessorFeatures {
                                                   FeatureGFNI,
                                                   FeatureRDPID,
                                                   FeatureFSRM];
-  list<SubtargetFeature> ICLTuning = [TuningFastGather, TuningMacroFusion,
-                                      TuningSlowDivide64, TuningFastScalarFSQRT,
+  list<SubtargetFeature> ICLTuning = [TuningFastGather,
+                                      TuningMacroFusion,
+                                      TuningSlowDivide64,
+                                      TuningFastScalarFSQRT,
                                       TuningFastVectorFSQRT,
-                                      TuningFastSHLDRotate, TuningFast15ByteNOP,
+                                      TuningFastSHLDRotate,
+                                      TuningFast15ByteNOP,
                                       TuningFastVariableCrossLaneShuffle,
                                       TuningFastVariablePerLaneShuffle,
                                       TuningPrefer256Bit,
