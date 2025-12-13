@@ -847,11 +847,16 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "Found reference to POINTER allocation at " << *op << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
-    } else if (source.isTarget() && state.attachLocalAllocTag()) {
+    } else if (name && source.isTarget() && state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "Found reference to TARGET allocation at " << *op << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp)
                 .targetDataTree.getTag(*name);
+    } else if (source.isTarget() && state.attachLocalAllocTag()) {
+      LLVM_DEBUG(llvm::dbgs().indent(2)
+                 << "WARN: couldn't find a name for TARGET allocation " << *op
+                 << "\n");
+      tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
     } else if (name && state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to allocation "
                                         << name << " at " << *op << "\n");
