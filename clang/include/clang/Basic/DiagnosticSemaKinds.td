@@ -1018,6 +1018,9 @@ def err_ptrauth_string_not_literal : Error<
 def err_ptrauth_type_disc_undiscriminated : Error<
   "cannot pass undiscriminated type %0 to "
   "'__builtin_ptrauth_type_discriminator'">;
+def warn_ptrauth_weak_global_function_pointer :
+  Warning<"global pointer %0 uses the default pointer authentication schema">,
+  InGroup<PtrAuthWeakSchema>;
 
 def note_ptrauth_virtual_function_pointer_incomplete_arg_ret :
   Note<"cannot take an address of a virtual member function if its return or "

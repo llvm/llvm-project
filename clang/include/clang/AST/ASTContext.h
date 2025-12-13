@@ -681,7 +681,7 @@ public:
   bool containsAddressDiscriminatedPointerAuth(QualType T) const {
     if (!isPointerAuthenticationAvailable())
       return false;
-    return findPointerAuthContent(T) != PointerAuthContent::None;
+    return (findPointerAuthContent(T) & PointerAuthContent::ContainsAddressDiscriminatedData) != PointerAuthContent::ContainsNone;
   }
 
   /// Examines a given type, and returns whether the type itself
@@ -692,7 +692,18 @@ public:
   bool containsNonRelocatablePointerAuth(QualType T) {
     if (!isPointerAuthenticationAvailable())
       return false;
-    return findPointerAuthContent(T) != PointerAuthContent::None;
+    return (findPointerAuthContent(T) & PointerAuthContent::ContainsAddressDiscriminatedData) != PointerAuthContent::ContainsNone;
+  }
+
+  bool containsDefaultAuthenticatedFunctionPointer(QualType T) {
+    if (!isPointerAuthenticationAvailable())
+      return false;
+    return (findPointerAuthContent(T) & PointerAuthContent::ContainsDefaultAuthenticatedFunction) != PointerAuthContent::ContainsNone;
+  }
+
+  // A simple helper function to short circuit pointer auth checks.
+  bool isPointerAuthenticationAvailable() const {
+    return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
   }
 
 private:
@@ -701,15 +712,14 @@ private:
 
   // FIXME: store in RecordDeclBitfields in future?
   enum class PointerAuthContent : uint8_t {
-    None,
-    AddressDiscriminatedVTable,
-    AddressDiscriminatedData
+    ContainsNone = 0,
+    ContainsAddressDiscriminatedVTable = 1 << 0,
+    ContainsAddressDiscriminatedData = 1 << 1,
+    ContainsDefaultAuthenticatedFunction = 1 << 2,
+    ContainsAllFlags = ContainsAddressDiscriminatedVTable | ContainsAddressDiscriminatedData | ContainsDefaultAuthenticatedFunction,
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ContainsDefaultAuthenticatedFunction)
   };
 
-  // A simple helper function to short circuit pointer auth checks.
-  bool isPointerAuthenticationAvailable() const {
-    return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
-  }
   PointerAuthContent findPointerAuthContent(QualType T) const;
   mutable llvm::DenseMap<const RecordDecl *, PointerAuthContent>
       RecordContainsAddressDiscriminatedPointerAuth;
