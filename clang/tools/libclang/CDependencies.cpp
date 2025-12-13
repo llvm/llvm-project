@@ -356,15 +356,20 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
 
   bool Result = false;
   if (ModuleName) {
-    Result = Worker->initializeCompilerInstanceWithContext(
-        WorkingDirectory, Compilation, SerialDiagConsumer.get());
-    if (!Result)
+    Result = DependencyScanningTool::initializeWorkCIWithContextFromCommandline(
+        *Worker, WorkingDirectory, Compilation, *SerialDiagConsumer);
+
+    if (!Result) {
+      Worker->finalizeCompilerInstanceWithContext();
       return CXError_Failure;
+    }
     Result = Worker->computeDependenciesByNameWithContext(
         StringRef(ModuleName), DepConsumer, *Controller);
-    if (!Result)
+    if (!Result) {
+      Worker->finalizeCompilerInstanceWithContext();
       return CXError_Failure;
-    Result = Worker->finalizeCompilerInstance();
+    }
+    Result = Worker->finalizeCompilerInstanceWithContext();
     if (!Result)
       return CXError_Failure;
   } else {

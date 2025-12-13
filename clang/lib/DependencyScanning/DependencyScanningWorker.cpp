@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang;
 using namespace dependencies;
@@ -211,33 +214,29 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
                              PCHContainerOps, &DiagsConsumer);
 }
 
-llvm::Error
-DependencyScanningWorker::initializeCompilerInstanceWithContextOrError(
-    StringRef CWD, ArrayRef<std::string> CommandLine) {
-  bool Success = initializeCompilerInstanceWithContext(CWD, CommandLine);
-  return CIWithContext->handleReturnStatus(Success);
-}
+bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
+    StringRef CWD, ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
+  auto OverlayFSAndArgs =
+      initVFSForByNameScanning(DepFS, CommandLine, CWD, "ScanningByName", CAS);
+  auto &OverlayFS = OverlayFSAndArgs.first;
+  const auto &ModifiedCommandLine = OverlayFSAndArgs.second;
 
-llvm::Error
-DependencyScanningWorker::computeDependenciesByNameWithContextOrError(
-    StringRef ModuleName, DependencyConsumer &Consumer,
-    DependencyActionController &Controller) {
-  bool Success =
-      computeDependenciesByNameWithContext(ModuleName, Consumer, Controller);
-  return CIWithContext->handleReturnStatus(Success);
-}
+  auto DiagEngineWithCmdAndOpts =
+      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
+                                                      OverlayFS, DC);
 
-llvm::Error
-DependencyScanningWorker::finalizeCompilerInstanceWithContextOrError() {
-  bool Success = finalizeCompilerInstance();
-  return CIWithContext->handleReturnStatus(Success);
+  return initializeCompilerInstanceWithContext(
+      CWD, ModifiedCommandLine, std::move(DiagEngineWithCmdAndOpts), OverlayFS);
 }
 
 bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
-    StringRef CWD, ArrayRef<std::string> CommandLine, DiagnosticConsumer *DC) {
+    StringRef CWD, ArrayRef<std::string> CommandLine,
+    std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
+    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
   CIWithContext =
       std::make_unique<CompilerInstanceWithContext>(*this, CWD, CommandLine);
-  return CIWithContext->initialize(DC);
+  return CIWithContext->initialize(std::move(DiagEngineWithDiagOpts),
+                                   OverlayFS);
 }
 
 bool DependencyScanningWorker::computeDependenciesByNameWithContext(
@@ -247,6 +246,8 @@ bool DependencyScanningWorker::computeDependenciesByNameWithContext(
   return CIWithContext->computeDependencies(ModuleName, Consumer, Controller);
 }
 
-bool DependencyScanningWorker::finalizeCompilerInstance() {
-  return CIWithContext->finalize();
+bool DependencyScanningWorker::finalizeCompilerInstanceWithContext() {
+  bool Result = CIWithContext->finalize();
+  CIWithContext.reset();
+  return Result;
 }
