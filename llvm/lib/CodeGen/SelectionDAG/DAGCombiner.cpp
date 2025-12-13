@@ -1659,7 +1659,6 @@ SDValue DAGCombiner::PromoteIntShiftOp(SDValue Op) {
 
     LLVM_DEBUG(dbgs() << "\nPromoting "; Op.dump(&DAG));
 
-    SDNodeFlags Flags;
     bool Replace = false;
     SDValue N0 = Op.getOperand(0);
     if (Opc == ISD::SRA)
@@ -1667,13 +1666,11 @@ SDValue DAGCombiner::PromoteIntShiftOp(SDValue Op) {
     else if (Opc == ISD::SRL)
       N0 = ZExtPromoteOperand(N0, PVT);
     else {
-      if (Op->getFlags().hasNoUnsignedWrap()) {
-        Flags = SDNodeFlags::NoUnsignedWrap;
+      if (Op->getFlags().hasNoUnsignedWrap())
         N0 = ZExtPromoteOperand(N0, PVT);
-      } else if (Op->getFlags().hasNoSignedWrap()) {
-        Flags = SDNodeFlags::NoSignedWrap;
+      else if (Op->getFlags().hasNoSignedWrap())
         N0 = SExtPromoteOperand(N0, PVT);
-      } else
+      else
         N0 = PromoteOperand(N0, PVT, Replace);
     }
 
@@ -1682,9 +1679,14 @@ SDValue DAGCombiner::PromoteIntShiftOp(SDValue Op) {
 
     SDLoc DL(Op);
     SDValue N1 = Op.getOperand(1);
-
-    SDValue RV = DAG.getNode(ISD::TRUNCATE, DL, VT,
-                             DAG.getNode(Opc, DL, PVT, N0, N1), Flags);
+    SDValue POp = DAG.getNode(Opc, DL, PVT, N0, N1);
+    if (Opc == ISD::SRL ||
+        (Opc == ISD::SHL && Op->getFlags().hasNoUnsignedWrap()))
+      POp = DAG.getNode(ISD::AssertZext, DL, PVT, POp, DAG.getValueType(VT));
+    else if (Opc == ISD::SRA ||
+             (Opc == ISD::SHL && Op->getFlags().hasNoSignedWrap()))
+      POp = DAG.getNode(ISD::AssertSext, DL, PVT, POp, DAG.getValueType(VT));
+    SDValue RV = DAG.getNode(ISD::TRUNCATE, DL, VT, POp);
 
     if (Replace)
       ReplaceLoadWithPromotedLoad(Op.getOperand(0).getNode(), N0.getNode());
