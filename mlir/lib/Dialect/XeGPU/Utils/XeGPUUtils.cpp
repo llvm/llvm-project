@@ -230,7 +230,7 @@ maybePickPermanentLayout(xegpu::DistributeLayoutAttr layout,
 }
 
 // TODO-LayoutRefactor: Remove this function after replacing use
-//  with setTempDistributeLayoutAttr or setAnchorLayout
+//  with setTempLayoutAttr or setAnchorLayout
 void xegpu::setDistributeLayoutAttr(
     const mlir::OpResult &result,
     const mlir::xegpu::DistributeLayoutAttr layout) {
@@ -253,7 +253,7 @@ void xegpu::setDistributeLayoutAttr(
 }
 
 // TODO-LayoutRefactor: Remove this function after replacing use
-//  with setTempDistributeLayoutAttr or setAnchorLayout
+//  with setTempLayoutAttr or setAnchorLayout
 void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
                                     const DistributeLayoutAttr layout) {
   Operation *owner = operand.getOwner();
@@ -301,8 +301,7 @@ void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
 }
 
 template <typename T, typename>
-xegpu::DistributeLayoutAttr
-xegpu::getTempDistributeLayoutAttr(const T &operandOrResult) {
+xegpu::DistributeLayoutAttr xegpu::getTempLayoutAttr(const T &operandOrResult) {
   Operation *op = operandOrResult.getOwner();
 
   std::string layoutName = xegpu::getTempLayoutName(operandOrResult);
@@ -315,13 +314,13 @@ xegpu::getTempDistributeLayoutAttr(const T &operandOrResult) {
 }
 
 template xegpu::DistributeLayoutAttr
-xegpu::getTempDistributeLayoutAttr<mlir::OpResult>(const OpResult &result);
+xegpu::getTempLayoutAttr<mlir::OpResult>(const OpResult &result);
 template xegpu::DistributeLayoutAttr
-xegpu::getTempDistributeLayoutAttr<mlir::OpOperand>(const OpOperand &operand);
+xegpu::getTempLayoutAttr<mlir::OpOperand>(const OpOperand &operand);
 
 template <typename T, typename>
-void xegpu::setTempDistributeLayoutAttr(
-    const T &operandOrResult, const xegpu::DistributeLayoutAttr layout) {
+void xegpu::setTempLayoutAttr(const T &operandOrResult,
+                              const xegpu::DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getTempLayoutName(operandOrResult);
   if (owner->hasAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
@@ -332,11 +331,11 @@ void xegpu::setTempDistributeLayoutAttr(
   }
 }
 
-template void xegpu::setTempDistributeLayoutAttr<mlir::OpResult>(
+template void xegpu::setTempLayoutAttr<mlir::OpResult>(
     const mlir::OpResult &result,
     const mlir::xegpu::DistributeLayoutAttr layout);
 
-template void xegpu::setTempDistributeLayoutAttr<mlir::OpOperand>(
+template void xegpu::setTempLayoutAttr<mlir::OpOperand>(
     const mlir::OpOperand &operand,
     const mlir::xegpu::DistributeLayoutAttr layout);
 
