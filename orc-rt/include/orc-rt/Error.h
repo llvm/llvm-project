@@ -9,6 +9,7 @@
 #ifndef ORC_RT_ERROR_H
 #define ORC_RT_ERROR_H
 
+#include "orc-rt/CallableTraitsHelper.h"
 #include "orc-rt/Compiler.h"
 #include "orc-rt/RTTI.h"
 
@@ -137,18 +138,15 @@ template <typename ErrT, typename... ArgTs> Error make_error(ArgTs &&...Args) {
   return make_error(std::make_unique<ErrT>(std::forward<ArgTs>(Args)...));
 }
 
-/// Traits class for selecting and applying error handlers.
-template <typename HandlerT>
-struct ErrorHandlerTraits
-    : public ErrorHandlerTraits<
-          decltype(&std::remove_reference_t<HandlerT>::operator())> {};
+namespace detail {
 
-// Specialization functions of the form 'Error (const ErrT&)'.
-template <typename ErrT> struct ErrorHandlerTraits<Error (&)(ErrT &)> {
+template <typename RetT, typename ArgT> struct ErrorHandlerTraitsImpl;
+
+// Specialization for Error(ErrT&).
+template <typename ErrT> struct ErrorHandlerTraitsImpl<Error, ErrT &> {
   static bool appliesTo(const ErrorInfoBase &E) {
     return E.template isA<ErrT>();
   }
-
   template <typename HandlerT>
   static Error apply(HandlerT &&H, std::unique_ptr<ErrorInfoBase> E) {
     assert(appliesTo(*E) && "Applying incorrect handler");
@@ -156,12 +154,11 @@ template <typename ErrT> struct ErrorHandlerTraits<Error (&)(ErrT &)> {
   }
 };
 
-// Specialization functions of the form 'void (const ErrT&)'.
-template <typename ErrT> struct ErrorHandlerTraits<void (&)(ErrT &)> {
+// Specialization for void(ErrT&).
+template <typename ErrT> struct ErrorHandlerTraitsImpl<void, ErrT &> {
   static bool appliesTo(const ErrorInfoBase &E) {
     return E.template isA<ErrT>();
   }
-
   template <typename HandlerT>
   static Error apply(HandlerT &&H, std::unique_ptr<ErrorInfoBase> E) {
     assert(appliesTo(*E) && "Applying incorrect handler");
@@ -170,13 +167,12 @@ template <typename ErrT> struct ErrorHandlerTraits<void (&)(ErrT &)> {
   }
 };
 
-/// Specialization for functions of the form 'Error (std::unique_ptr<ErrT>)'.
+// Specialization for Error(std::unique_ptr<ErrT>).
 template <typename ErrT>
-struct ErrorHandlerTraits<Error (&)(std::unique_ptr<ErrT>)> {
+struct ErrorHandlerTraitsImpl<Error, std::unique_ptr<ErrT>> {
   static bool appliesTo(const ErrorInfoBase &E) {
     return E.template isA<ErrT>();
   }
-
   template <typename HandlerT>
   static Error apply(HandlerT &&H, std::unique_ptr<ErrorInfoBase> E) {
     assert(appliesTo(*E) && "Applying incorrect handler");
@@ -185,13 +181,12 @@ struct ErrorHandlerTraits<Error (&)(std::unique_ptr<ErrT>)> {
   }
 };
 
-/// Specialization for functions of the form 'void (std::unique_ptr<ErrT>)'.
+// Specialization for void(std::unique_ptr<ErrT>).
 template <typename ErrT>
-struct ErrorHandlerTraits<void (&)(std::unique_ptr<ErrT>)> {
+struct ErrorHandlerTraitsImpl<void, std::unique_ptr<ErrT>> {
   static bool appliesTo(const ErrorInfoBase &E) {
     return E.template isA<ErrT>();
   }
-
   template <typename HandlerT>
   static Error apply(HandlerT &&H, std::unique_ptr<ErrorInfoBase> E) {
     assert(appliesTo(*E) && "Applying incorrect handler");
@@ -201,37 +196,11 @@ struct ErrorHandlerTraits<void (&)(std::unique_ptr<ErrT>)> {
   }
 };
 
-// Specialization for member functions of the form 'RetT (const ErrT&)'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(ErrT &)>
-    : public ErrorHandlerTraits<RetT (&)(ErrT &)> {};
+} // namespace detail.
 
-// Specialization for member functions of the form 'RetT (const ErrT&) const'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(ErrT &) const>
-    : public ErrorHandlerTraits<RetT (&)(ErrT &)> {};
-
-// Specialization for member functions of the form 'RetT (const ErrT&)'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(const ErrT &)>
-    : public ErrorHandlerTraits<RetT (&)(ErrT &)> {};
-
-// Specialization for member functions of the form 'RetT (const ErrT&) const'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(const ErrT &) const>
-    : public ErrorHandlerTraits<RetT (&)(ErrT &)> {};
-
-/// Specialization for member functions of the form
-/// 'RetT (std::unique_ptr<ErrT>)'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(std::unique_ptr<ErrT>)>
-    : public ErrorHandlerTraits<RetT (&)(std::unique_ptr<ErrT>)> {};
-
-/// Specialization for member functions of the form
-/// 'RetT (std::unique_ptr<ErrT>) const'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(std::unique_ptr<ErrT>) const>
-    : public ErrorHandlerTraits<RetT (&)(std::unique_ptr<ErrT>)> {};
+template <typename C>
+struct ErrorHandlerTraits
+    : public CallableTraitsHelper<detail::ErrorHandlerTraitsImpl, C> {};
 
 inline Error handleErrorsImpl(std::unique_ptr<ErrorInfoBase> Payload) {
   return make_error(std::move(Payload));
