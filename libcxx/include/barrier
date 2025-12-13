@@ -57,8 +57,6 @@ namespace std
 #    include <__atomic/memory_order.h>
 #    include <__cstddef/ptrdiff_t.h>
 #    include <__memory/unique_ptr.h>
-#    include <__thread/poll_with_backoff.h>
-#    include <__thread/timed_backoff_policy.h>
 #    include <__utility/move.h>
 #    include <cstdint>
 #    include <limits>
