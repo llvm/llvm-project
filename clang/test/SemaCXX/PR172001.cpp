@@ -39,5 +39,3 @@ void f() {
   // test4-error@-4 {{cannot use builtin operator '<=>' because type 'std::partial_ordering' was not found; include <compare>}}
 }
 
-
- 
