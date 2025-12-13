@@ -315,7 +315,7 @@ define x86_fp80 @si129tox86_fp80(i129 %a) {
 ; CHECK-NEXT:    [[TMP33:%.*]] = trunc i129 [[TMP6]] to i64
 ; CHECK-NEXT:    br label [[ITOFP_IF_END26]]
 ; CHECK:       itofp-if-else:
-; CHECK-NEXT:    [[TMP34:%.*]] = add i129 [[TMP4]], 4294967280
+; CHECK-NEXT:    [[TMP34:%.*]] = add i129 [[TMP4]], -16
 ; CHECK-NEXT:    [[TMP35:%.*]] = shl i129 [[TMP3]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = trunc i129 [[TMP35]] to i128
 ; CHECK-NEXT:    [[TMP37:%.*]] = lshr i129 [[TMP35]], 32
@@ -399,7 +399,7 @@ define fp128 @si129tofp128(i129 %a) {
 ; CHECK-NEXT:    [[TMP33:%.*]] = trunc i129 [[TMP6]] to i64
 ; CHECK-NEXT:    br label [[ITOFP_IF_END26]]
 ; CHECK:       itofp-if-else:
-; CHECK-NEXT:    [[TMP34:%.*]] = add i129 [[TMP4]], 4294967280
+; CHECK-NEXT:    [[TMP34:%.*]] = add i129 [[TMP4]], -16
 ; CHECK-NEXT:    [[TMP35:%.*]] = shl i129 [[TMP3]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = trunc i129 [[TMP35]] to i128
 ; CHECK-NEXT:    [[TMP37:%.*]] = lshr i129 [[TMP35]], 32

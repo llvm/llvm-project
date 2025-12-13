@@ -17,6 +17,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
+#include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUBarrierLatency.h"
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
@@ -575,7 +576,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerExecSyncLegacyPass(*PR);
   initializeAMDGPUSwLowerLDSLegacyPass(*PR);
   initializeAMDGPUAnnotateUniformValuesLegacyPass(*PR);
-  initializeAMDGPUArgumentUsageInfoPass(*PR);
+  initializeAMDGPUArgumentUsageInfoWrapperLegacyPass(*PR);
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
@@ -2207,6 +2208,9 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
 
 void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
 
+  // Require AMDGPUArgumentUsageAnalysis so that it's available during ISel.
+  addPass(RequireAnalysisPass<AMDGPUArgumentUsageAnalysis, Module>());
+
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(FlattenCFGPass());
     addPass(SinkingPass());
@@ -2394,11 +2398,10 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   addPass(SIMemoryLegalizerPass());
   addPass(SIInsertWaitcntsPass());
 
-  // TODO: addPass(SIModeRegisterPass());
+  addPass(SIModeRegisterPass());
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
-    // TODO: addPass(SIInsertHardClausesPass());
-  }
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(SIInsertHardClausesPass());
 
   addPass(SILateBranchLoweringPass());
 

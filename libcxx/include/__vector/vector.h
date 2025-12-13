@@ -687,9 +687,9 @@ private:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v);
+  __swap_out_circular_buffer(__split_buffer<value_type, allocator_type>& __v);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer
-  __swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v, pointer __p);
+  __swap_out_circular_buffer(__split_buffer<value_type, allocator_type>& __v, pointer __p);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __move_range(pointer __from_s, pointer __from_e, pointer __to);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, true_type)
@@ -810,7 +810,7 @@ private:
     return __p;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(__split_buffer<_Tp, allocator_type&>& __sb) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(__split_buffer<_Tp, allocator_type>& __sb) {
     auto __vector_begin    = __begin_;
     auto __vector_sentinel = __end_;
     auto __vector_cap      = __cap_;
@@ -855,7 +855,7 @@ vector(from_range_t, _Range&&, _Alloc = _Alloc()) -> vector<ranges::range_value_
 // function has a strong exception guarantee.
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v) {
+vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type>& __v) {
   __annotate_delete();
   auto __new_begin = __v.begin() - size();
   std::__uninitialized_allocator_relocate(
@@ -874,7 +874,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
 // function has a strong exception guarantee if __begin_ == __p || __end_ == __p.
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::pointer
-vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v, pointer __p) {
+vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type>& __v, pointer __p) {
   __annotate_delete();
   pointer __ret = __v.begin();
 
@@ -1074,7 +1074,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::reserve(size_type __
   if (__n > capacity()) {
     if (__n > max_size())
       this->__throw_length_error();
-    __split_buffer<value_type, allocator_type&> __v(__n, size(), this->__alloc_);
+    __split_buffer<value_type, allocator_type> __v(__n, size(), this->__alloc_);
     __swap_out_circular_buffer(__v);
   }
 }
@@ -1085,7 +1085,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
 #if _LIBCPP_HAS_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
-      __split_buffer<value_type, allocator_type&> __v(size(), size(), this->__alloc_);
+      __split_buffer<value_type, allocator_type> __v(size(), size(), this->__alloc_);
       // The Standard mandates shrink_to_fit() does not increase the capacity.
       // With equal capacity keep the existing buffer. This avoids extra work
       // due to swapping the elements.
@@ -1102,7 +1102,7 @@ template <class _Tp, class _Allocator>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::pointer
 vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
-  __split_buffer<value_type, allocator_type&> __v(__recommend(size() + 1), size(), this->__alloc_);
+  __split_buffer<value_type, allocator_type> __v(__recommend(size() + 1), size(), this->__alloc_);
   //    __v.emplace_back(std::forward<_Args>(__args)...);
   pointer __end = __v.end();
   __alloc_traits::construct(this->__alloc_, std::__to_address(__end), std::forward<_Args>(__args)...);
@@ -1205,7 +1205,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x) 
       *__p = *__xr;
     }
   } else {
-    __split_buffer<value_type, allocator_type&> __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
+    __split_buffer<value_type, allocator_type> __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
     __v.emplace_back(__x);
     __p = __swap_out_circular_buffer(__v, __p);
   }
@@ -1224,7 +1224,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x) {
       *__p = std::move(__x);
     }
   } else {
-    __split_buffer<value_type, allocator_type&> __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
+    __split_buffer<value_type, allocator_type> __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
     __v.emplace_back(std::move(__x));
     __p = __swap_out_circular_buffer(__v, __p);
   }
@@ -1245,7 +1245,7 @@ vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
       *__p = std::move(__tmp.get());
     }
   } else {
-    __split_buffer<value_type, allocator_type&> __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
+    __split_buffer<value_type, allocator_type> __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
     __v.emplace_back(std::forward<_Args>(__args)...);
     __p = __swap_out_circular_buffer(__v, __p);
   }
@@ -1273,7 +1273,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_
         std::fill_n(__p, __n, *__xr);
       }
     } else {
-      __split_buffer<value_type, allocator_type&> __v(__recommend(size() + __n), __p - this->__begin_, this->__alloc_);
+      __split_buffer<value_type, allocator_type> __v(__recommend(size() + __n), __p - this->__begin_, this->__alloc_);
       __v.__construct_at_end(__n, __x);
       __p = __swap_out_circular_buffer(__v, __p);
     }
@@ -1294,11 +1294,11 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
   if (__first == __last)
     (void)std::rotate(__p, __old_last, this->__end_);
   else {
-    __split_buffer<value_type, allocator_type&> __v(__alloc_);
+    __split_buffer<value_type, allocator_type> __v(__alloc_);
     auto __guard = std::__make_exception_guard(
         _AllocatorDestroyRangeReverse<allocator_type, pointer>(__alloc_, __old_last, this->__end_));
     __v.__construct_at_end_with_sentinel(std::move(__first), std::move(__last));
-    __split_buffer<value_type, allocator_type&> __merged(
+    __split_buffer<value_type, allocator_type> __merged(
         __recommend(size() + __v.size()), __off, __alloc_); // has `__off` positions available at the front
     std::__uninitialized_allocator_relocate(
         __alloc_, std::__to_address(__old_last), std::__to_address(this->__end_), std::__to_address(__merged.end()));
@@ -1344,7 +1344,7 @@ vector<_Tp, _Allocator>::__insert_with_size(
         __insert_assign_n_unchecked<_AlgPolicy>(std::move(__first), __n, __p);
       }
     } else {
-      __split_buffer<value_type, allocator_type&> __v(__recommend(size() + __n), __p - this->__begin_, this->__alloc_);
+      __split_buffer<value_type, allocator_type> __v(__recommend(size() + __n), __p - this->__begin_, this->__alloc_);
       __v.__construct_at_end_with_size(std::move(__first), __n);
       __p = __swap_out_circular_buffer(__v, __p);
     }
@@ -1359,7 +1359,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __n
     if (__new_size <= capacity()) {
       __construct_at_end(__new_size - __current_size);
     } else {
-      __split_buffer<value_type, allocator_type&> __v(__recommend(__new_size), __current_size, __alloc_);
+      __split_buffer<value_type, allocator_type> __v(__recommend(__new_size), __current_size, __alloc_);
       __v.__construct_at_end(__new_size - __current_size);
       __swap_out_circular_buffer(__v);
     }
@@ -1375,7 +1375,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __n
     if (__new_size <= capacity())
       __construct_at_end(__new_size - __current_size, __x);
     else {
-      __split_buffer<value_type, allocator_type&> __v(__recommend(__new_size), __current_size, __alloc_);
+      __split_buffer<value_type, allocator_type> __v(__recommend(__new_size), __current_size, __alloc_);
       __v.__construct_at_end(__new_size - __current_size, __x);
       __swap_out_circular_buffer(__v);
     }

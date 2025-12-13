@@ -820,31 +820,22 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
   }
 }
 
-void Module::FindFunctions(const Module::LookupInfo &lookup_info,
+void Module::FindFunctions(llvm::ArrayRef<Module::LookupInfo> lookup_infos,
                            const CompilerDeclContext &parent_decl_ctx,
                            const ModuleFunctionSearchOptions &options,
                            SymbolContextList &sc_list) {
-  // Find all the functions (not symbols, but debug information functions...
-  if (SymbolFile *symbols = GetSymbolFile()) {
+  for (auto &lookup_info : lookup_infos) {
+    SymbolFile *symbols = GetSymbolFile();
+    if (!symbols)
+      continue;
+
     symbols->FindFunctions(lookup_info, parent_decl_ctx,
                            options.include_inlines, sc_list);
-    // Now check our symbol table for symbols that are code symbols if
-    // requested
-    if (options.include_symbols) {
-      if (Symtab *symtab = symbols->GetSymtab()) {
+    if (options.include_symbols)
+      if (Symtab *symtab = symbols->GetSymtab())
         symtab->FindFunctionSymbols(lookup_info.GetLookupName(),
                                     lookup_info.GetNameTypeMask(), sc_list);
-      }
-    }
   }
-}
-
-void Module::FindFunctions(const std::vector<Module::LookupInfo> &lookup_infos,
-                           const CompilerDeclContext &parent_decl_ctx,
-                           const ModuleFunctionSearchOptions &options,
-                           SymbolContextList &sc_list) {
-  for (auto &lookup_info : lookup_infos)
-    FindFunctions(lookup_info, parent_decl_ctx, options, sc_list);
 }
 
 void Module::FindFunctions(ConstString name,
@@ -1215,10 +1206,12 @@ ObjectFile *Module::GetObjectFile() {
         m_did_load_objfile = true;
         // FindPlugin will modify its data_sp argument. Do not let it
         // modify our m_data_sp member.
-        auto data_sp = m_data_sp;
+        DataExtractorSP extractor_sp;
+        if (m_data_sp)
+          extractor_sp = std::make_shared<DataExtractor>(m_data_sp);
         m_objfile_sp = ObjectFile::FindPlugin(
             shared_from_this(), &m_file, m_object_offset,
-            file_size - m_object_offset, data_sp, data_offset);
+            file_size - m_object_offset, extractor_sp, data_offset);
         if (m_objfile_sp) {
           // Once we get the object file, update our module with the object
           // file's architecture since it might differ in vendor/os if some
@@ -1578,7 +1571,9 @@ void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
 
   if (!sdk_path_or_err) {
     Debugger::ReportError("Error while searching for Xcode SDK: " +
-                          toString(sdk_path_or_err.takeError()));
+                              toString(sdk_path_or_err.takeError()),
+                          /*debugger_id=*/std::nullopt,
+                          GetDiagnosticOnceFlag(sdk_name));
     return;
   }
 

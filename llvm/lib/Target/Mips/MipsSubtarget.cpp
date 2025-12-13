@@ -27,6 +27,16 @@
 
 using namespace llvm;
 
+cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
+    "mips-compact-branches", cl::Optional, cl::init(CB_Optimal),
+    cl::desc("MIPS Specific: Compact branch policy."),
+    cl::values(clEnumValN(CB_Never, "never",
+                          "Do not use compact branches if possible."),
+               clEnumValN(CB_Optimal, "optimal",
+                          "Use compact branches where appropriate (default)."),
+               clEnumValN(CB_Always, "always",
+                          "Always use compact branches if possible.")));
+
 #define DEBUG_TYPE "mips-subtarget"
 
 #define GET_SUBTARGETINFO_TARGET_DESC
@@ -84,6 +94,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       UseTCCInDIV(false), HasSym32(false), HasEVA(false), DisableMadd4(false),
       HasMT(false), HasCRC(false), HasVirt(false), HasGINV(false),
       UseIndirectJumpsHazard(false), StrictAlign(false),
+      UseCompactBranches(MipsCompactBranchPolicy != CB_Never),
       StackAlignOverride(StackAlignOverride), TM(TM), TargetTriple(TT),
       InstrInfo(
           MipsInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
