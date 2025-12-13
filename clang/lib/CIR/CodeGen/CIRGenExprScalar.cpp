@@ -265,12 +265,9 @@ public:
   mlir::Value VisitEmbedExpr(EmbedExpr *e) {
     assert(e->getDataElementCount() == 1);
     auto it = e->begin();
-    QualType qualTy = e->getType();
-    mlir::Type ty = cgf.convertType(qualTy);
     llvm::APInt value = (*it)->getValue();
-    uint64_t actualValue = qualTy->isSignedIntegerType() ? value.getSExtValue()
-                                                         : value.getZExtValue();
-    return builder.getConstInt(cgf.getLoc(e->getExprLoc()), ty, actualValue);
+    return builder.getConstInt(cgf.getLoc(e->getExprLoc()), value,
+                               e->getType()->isUnsignedIntegerType());
   }
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     if (e->isGLValue())
