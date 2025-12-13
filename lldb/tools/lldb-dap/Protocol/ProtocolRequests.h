@@ -108,23 +108,23 @@ struct InitializeRequestArguments {
   std::string adapterID;
 
   /// The ID of the client using this adapter.
-  std::optional<std::string> clientID;
+  std::string clientID;
 
   /// The human-readable name of the client using this adapter.
-  std::optional<std::string> clientName;
+  std::string clientName;
 
   /// The ISO-639 locale of the client using this adapter, e.g. en-US or de-CH.
-  std::optional<std::string> locale;
+  std::string locale;
 
   /// Determines in what format paths are specified. The default is `path`,
   /// which is the native format.
   PathFormat pathFormat = ePatFormatPath;
 
   /// If true all line numbers are 1-based (default).
-  std::optional<bool> linesStartAt1;
+  bool linesStartAt1 = true;
 
   /// If true all column numbers are 1-based (default).
-  std::optional<bool> columnsStartAt1;
+  bool columnsStartAt1 = true;
 
   /// The set of supported features reported by the client.
   llvm::DenseSet<ClientFeature> supportedFeatures;
@@ -133,7 +133,7 @@ struct InitializeRequestArguments {
   /// @{
 
   /// Source init files when initializing lldb::SBDebugger.
-  std::optional<bool> lldbExtSourceInitFile;
+  bool lldbExtSourceInitFile = true;
 
   /// @}
 };
@@ -1183,6 +1183,17 @@ struct EvaluateResponseBody {
   uint64_t valueLocationReference = LLDB_DAP_INVALID_VALUE_LOC;
 };
 llvm::json::Value toJSON(const EvaluateResponseBody &);
+
+/// Arguments for `pause` request.
+struct PauseArguments {
+  /// Pause execution for this thread.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+};
+bool fromJSON(const llvm::json::Value &, PauseArguments &, llvm::json::Path);
+
+/// Response to `pause` request. This is just an acknowledgement, so no body
+/// field is required.
+using PauseResponse = VoidResponse;
 
 } // namespace lldb_dap::protocol
 

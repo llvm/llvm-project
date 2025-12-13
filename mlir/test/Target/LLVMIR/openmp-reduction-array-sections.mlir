@@ -127,8 +127,6 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_36]])
 // CHECK:         br label %[[VAL_37:.*]]
 // CHECK:       omp_section_loop.after:                           ; preds = %[[VAL_35]]
-// CHECK:         br label %[[VAL_38:.*]]
-// CHECK:       omp_section_loop.aftersections.fini:              ; preds = %[[VAL_37]]
 // CHECK:         %[[VAL_39:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_14]], i64 0, i64 0
 // CHECK:         store ptr %[[VAL_21]], ptr %[[VAL_39]], align 8
 // CHECK:         %[[VAL_40:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
@@ -137,9 +135,9 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:           i32 1, label %[[VAL_43:.*]]
 // CHECK:           i32 2, label %[[VAL_44:.*]]
 // CHECK:         ]
-// CHECK:       reduce.switch.atomic:                             ; preds = %[[VAL_38]]
+// CHECK:       reduce.switch.atomic:                             ; preds = %[[VAL_37]]
 // CHECK:         unreachable
-// CHECK:       reduce.switch.nonatomic:                          ; preds = %[[VAL_38]]
+// CHECK:       reduce.switch.nonatomic:                          ; preds = %[[VAL_37]]
 // CHECK:         %[[VAL_45:.*]] = load ptr, ptr %[[VAL_21]], align 8
 // CHECK:         br label %[[VAL_46:.*]]
 // CHECK:       omp.reduction.nonatomic.body:                     ; preds = %[[VAL_43]]
@@ -157,7 +155,7 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:       omp.reduction.nonatomic.body17:                   ; preds = %[[VAL_47]]
 // CHECK:         %[[VAL_50]] = sub i64 %[[VAL_49]], 1
 // CHECK:         br label %[[VAL_47]]
-// CHECK:       reduce.finalize:                                  ; preds = %[[VAL_53]], %[[VAL_38]]
+// CHECK:       reduce.finalize:                                  ; preds = %[[VAL_53]], %[[VAL_37]]
 // CHECK:         %[[VAL_55:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_55]])
 // CHECK:         %[[VAL_56:.*]] = load ptr, ptr %[[VAL_21]], align 8
@@ -173,7 +171,9 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_62]]
 // CHECK:         br label %[[VAL_64:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_63]]
-// CHECK:         br label %[[VAL_65:.*]]
+// CHECK:         br label %[[FINI:.fini.*]]
+// CHECK:       [[FINI]]:
+// CHECK:         br label %[[EXIT:.*]]
 // CHECK:       omp.reduction.cleanup21:                          ; preds = %[[VAL_57]]
 // CHECK:         br label %[[VAL_61]]
 // CHECK:       omp_section_loop.body:                            ; preds = %[[VAL_32]]
@@ -219,5 +219,5 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:       omp_section_loop.inc:                             ; preds = %[[VAL_69]]
 // CHECK:         %[[VAL_31]] = add nuw i32 %[[VAL_30]], 1
 // CHECK:         br label %[[VAL_28]]
-// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_64]]
+// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[FINI]]
 // CHECK:         ret void

@@ -68,23 +68,6 @@ void test_push_back() {
   assert(is_contiguous_container_asan_correct(v));
 }
 
-void test_emplace_back() {
-#if TEST_STD_VER >= 11
-  std::vector<X> v;
-  v.reserve(2);
-  v.push_back(X(2));
-  assert(v.size() == 1);
-  try {
-    v.emplace_back(42);
-    assert(0);
-  } catch (int e) {
-    assert(v.size() == 1);
-  }
-  assert(v.size() == 1);
-  assert(is_contiguous_container_asan_correct(v));
-#endif
-}
-
 void test_insert_range() {
   std::vector<X> v;
   v.reserve(4);
@@ -117,24 +100,6 @@ void test_insert() {
   }
   assert(v.size() == 2);
   assert(is_contiguous_container_asan_correct(v));
-}
-
-void test_emplace() {
-#if TEST_STD_VER >= 11
-  std::vector<X> v;
-  v.reserve(3);
-  v.insert(v.end(), X(1));
-  v.insert(v.begin(), X(2));
-  assert(v.size() == 2);
-  try {
-    v.emplace(v.end(), 42);
-    assert(0);
-  } catch (int e) {
-    assert(v.size() == 2);
-  }
-  assert(v.size() == 2);
-  assert(is_contiguous_container_asan_correct(v));
-#endif
 }
 
 void test_insert_range2() {
@@ -219,10 +184,8 @@ void test_resize_param() {
 
 int main(int, char**) {
   test_push_back();
-  test_emplace_back();
   test_insert_range();
   test_insert();
-  test_emplace();
   test_insert_range2();
   test_insert_n();
   test_insert_n2();

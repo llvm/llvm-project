@@ -131,9 +131,9 @@ public:
     return false;
   }
 
-  virtual bool isSourceOfDivergence(const Value *V) const { return false; }
-
-  virtual bool isAlwaysUniform(const Value *V) const { return false; }
+  virtual InstructionUniformity getInstructionUniformity(const Value *V) const {
+    return InstructionUniformity::Default;
+  }
 
   virtual bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
     return false;
@@ -845,34 +845,6 @@ public:
     return 1;
   }
 
-  virtual InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const {
-    return 1;
-  }
-
-  virtual InstructionCost
-  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const {
-    return 1;
-  }
-
-  virtual InstructionCost getExpandCompressMemoryOpCost(
-      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
-      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) const {
-    return 1;
-  }
-
-  virtual InstructionCost
-  getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const {
-    return InstructionCost::getInvalid();
-  }
-
   virtual InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -927,6 +899,23 @@ public:
       return 0;
     }
     return 1;
+  }
+
+  virtual InstructionCost
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const {
+    switch (MICA.getID()) {
+    case Intrinsic::masked_scatter:
+    case Intrinsic::masked_gather:
+    case Intrinsic::masked_load:
+    case Intrinsic::masked_store:
+    case Intrinsic::vp_scatter:
+    case Intrinsic::vp_gather:
+    case Intrinsic::masked_compressstore:
+    case Intrinsic::masked_expandload:
+      return 1;
+    }
+    return InstructionCost::getInvalid();
   }
 
   virtual InstructionCost getCallInstrCost(Function *F, Type *RetTy,
@@ -1138,6 +1127,10 @@ public:
   virtual bool hasArmWideBranch(bool) const { return false; }
 
   virtual APInt getFeatureMask(const Function &F) const {
+    return APInt::getZero(32);
+  }
+
+  virtual APInt getPriorityMask(const Function &F) const {
     return APInt::getZero(32);
   }
 

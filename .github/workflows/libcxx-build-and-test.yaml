@@ -54,7 +54,7 @@ jobs:
             cc: 'gcc-15'
             cxx: 'g++-15'
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -99,7 +99,7 @@ jobs:
             cc: 'clang-20'
             cxx: 'clang++-20'
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -163,7 +163,7 @@ jobs:
           machine: llvm-premerge-libcxx-runners
     runs-on: ${{ matrix.machine }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -211,7 +211,7 @@ jobs:
           os: macos-15
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
         with:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
@@ -223,6 +223,9 @@ jobs:
           source .venv/bin/activate
           python -m pip install psutil
           xcrun bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        env:
+          CC: clang
+          CXX: clang++
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
@@ -241,19 +244,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - { config: clang-cl-dll, mingw: false }
-        - { config: clang-cl-static, mingw: false }
-        - { config: clang-cl-no-vcruntime, mingw: false }
-        - { config: clang-cl-debug, mingw: false }
-        - { config: clang-cl-static-crt, mingw: false }
-        - { config: mingw-dll, mingw: true }
-        - { config: mingw-static, mingw: true }
-        - { config: mingw-dll-i686, mingw: true }
-        - { config: mingw-incomplete-sysroot, mingw: true }
-        - { config: mingw-static, mingw: true, runner: windows-11-arm }
+        - { config: clang-cl-dll,             mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-static,          mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-no-vcruntime,    mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-debug,           mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-static-crt,      mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: mingw-dll,                mingw: true,  cc: cc,       cxx: c++ }
+        - { config: mingw-dll,                mingw: true,  cc: i686-w64-mingw32-clang, cxx: i686-w64-mingw32-clang++ }
+        - { config: mingw-static,             mingw: true,  cc: cc,       cxx: c++ }
+        - { config: mingw-incomplete-sysroot, mingw: true,  cc: cc,       cxx: c++ }
+        - { config: mingw-static,             mingw: true,  cc: cc,       cxx: c++, runner: windows-11-arm }
     runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: Install dependencies
         run: |
           pip install psutil
@@ -286,5 +289,7 @@ jobs:
         run: |
           echo "c:\Program Files\LLVM\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
       - name: Build and test
-        run: |
-          bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        run: bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
