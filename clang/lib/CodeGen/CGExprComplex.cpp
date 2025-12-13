@@ -533,6 +533,8 @@ ComplexPairTy ComplexExprEmitter::EmitScalarToComplexCast(llvm::Value *Val,
                                                           QualType DestType,
                                                           SourceLocation Loc) {
   // Convert the input element to the element type of the complex.
+  if (DestType->isAtomicType())
+    DestType = DestType->castAs<AtomicType>()->getValueType();
   DestType = DestType->castAs<ComplexType>()->getElementType();
   Val = CGF.EmitScalarConversion(Val, SrcType, DestType, Loc);
 

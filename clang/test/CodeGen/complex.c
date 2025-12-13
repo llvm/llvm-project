@@ -593,3 +593,18 @@ void imag_on_scalar_with_type_promotion() {
   _Float16 _Complex a;
   _Float16 b = __real__(__imag__ a);
 }
+
+// CHECK-LABEL: define dso_local void @explicit_cast_scalar_to_atomic_complex(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[A:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    store float 2.000000e+00, ptr [[A_REALP]], align 8
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[A_IMAGP]], align 4
+// CHECK-NEXT:    ret void
+//
+void explicit_cast_scalar_to_atomic_complex() {
+  _Atomic _Complex float a = (_Atomic _Complex float)2.0f;
+}
+
