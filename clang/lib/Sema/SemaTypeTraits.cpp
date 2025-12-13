@@ -236,6 +236,22 @@ static bool IsEligibleForReplacement(Sema &SemaRef, const CXXRecordDecl *D) {
   return !D->hasDeletedDestructor();
 }
 
+static bool IsImplementationDefinedNonRelocatable(Sema &SemaRef,
+                                                  const CXXRecordDecl *D) {
+  // The implementation-defined carveout only exists for polymorphic types.
+  if (!D->isPolymorphic())
+    return false;
+
+  std::vector<PFPField> pfpFields;
+  SemaRef.Context.findPFPFields(SemaRef.Context.getCanonicalTagType(D),
+                                CharUnits::Zero(), pfpFields, true);
+  for (PFPField f : pfpFields)
+    if (f.isWithinUnion)
+      return true;
+
+  return false;
+}
+
 ASTContext::CXXRecordDeclRelocationInfo
 Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
   ASTContext::CXXRecordDeclRelocationInfo Info{false, false};
@@ -275,6 +291,11 @@ Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
 
     // if it is eligible for trivial relocation
     if (!IsEligibleForTrivialRelocation(*this, D))
+      return false;
+
+    // if it does not meet implementation-defined criteria for inhibiting
+    // trivially-relocatable,
+    if (IsImplementationDefinedNonRelocatable(*this, D))
       return false;
 
     // has the trivially_relocatable_if_eligible class-property-specifier,

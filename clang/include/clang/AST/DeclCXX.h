@@ -1235,6 +1235,12 @@ public:
   /// Determine whether this class has any variant members.
   bool hasVariantMembers() const { return data().HasVariantMembers; }
 
+  /// Returns whether the pointer fields in this class should have pointer field
+  /// protection (PFP) by default, either because of an attribute, the
+  /// -fexperimental-pointer-field-protection-abi compiler flag or inheritance
+  /// from a base or member with PFP.
+  bool isPFPType() const { return data().IsPFPType; }
+
   /// Determine whether this class has a trivial default constructor
   /// (C++11 [class.ctor]p5).
   bool hasTrivialDefaultConstructor() const {

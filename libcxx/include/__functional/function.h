@@ -420,7 +420,7 @@ template <class _Fp>
 class __policy_func;
 
 template <class _Rp, class... _ArgTypes>
-class __policy_func<_Rp(_ArgTypes...)> {
+class _LIBCPP_PFP __policy_func<_Rp(_ArgTypes...)> {
   // Inline storage for small objects.
   __policy_storage __buf_;
 

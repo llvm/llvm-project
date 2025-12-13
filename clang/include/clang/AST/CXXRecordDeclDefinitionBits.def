@@ -253,4 +253,10 @@ FIELD(IsAnyDestructorNoReturn, 1, NO_MERGE)
 /// type that is intangible). HLSL only.
 FIELD(IsHLSLIntangible, 1, NO_MERGE)
 
+/// Whether the pointer fields in this class should have pointer field
+/// protection (PFP) by default, either because of an attribute, the
+/// -fexperimental-pointer-field-protection-abi compiler flag or inheritance
+/// from a base or member with PFP.
+FIELD(IsPFPType, 1, NO_MERGE)
+
 #undef FIELD

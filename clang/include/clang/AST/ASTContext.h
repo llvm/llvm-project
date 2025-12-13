@@ -215,6 +215,12 @@ struct TypeInfoChars {
   }
 };
 
+struct PFPField {
+  CharUnits offset;
+  FieldDecl *field;
+  bool isWithinUnion;
+};
+
 /// Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
 class ASTContext : public RefCountedBase<ASTContext> {
@@ -3801,6 +3807,22 @@ public:
                                StringRef MangledName);
 
   StringRef getCUIDHash() const;
+
+  void findPFPFields(QualType Ty, CharUnits Offset,
+                     std::vector<PFPField> &Fields, bool IncludeVBases,
+                     bool IsWithinUnion = false) const;
+  bool hasPFPFields(QualType ty) const;
+  bool isPFPField(const FieldDecl *field) const;
+
+  /// Returns whether this record's PFP fields (if any) are trivially
+  /// copyable (i.e. may be memcpy'd). This may also return true if the
+  /// record does not have any PFP fields, so it may be necessary for the caller
+  /// to check for PFP fields, e.g. by calling hasPFPFields().
+  bool arePFPFieldsTriviallyCopyable(const RecordDecl *RD) const;
+
+  llvm::SetVector<const FieldDecl *> PFPFieldsWithEvaluatedOffset;
+  void recordMemberDataPointerEvaluation(const ValueDecl *VD);
+  void recordOffsetOfEvaluation(const OffsetOfExpr *E);
 
 private:
   /// All OMPTraitInfo objects live in this collection, one per
