@@ -106,7 +106,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
           cir::ConstantOp falseNVRO = builder.getFalse(loc);
           Address nrvoFlag = createTempAlloca(falseNVRO.getType(),
                                               CharUnits::One(), loc, "nrvo",
-                                              /*arraySize=*/nullptr, &address);
+                                              /*arraySize=*/nullptr);
           assert(builder.getInsertionBlock());
           builder.createStore(loc, falseNVRO, nrvoFlag);
 
@@ -454,7 +454,8 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   if (supportsCOMDAT() && gv.isWeakForLinker())
     gv.setComdat(true);
 
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  if (d.getTLSKind())
+    errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: TLS");
 
   setGVProperties(gv, &d);
 
@@ -812,13 +813,16 @@ namespace {
 struct DestroyObject final : EHScopeStack::Cleanup {
   DestroyObject(Address addr, QualType type,
                 CIRGenFunction::Destroyer *destroyer)
-      : addr(addr), type(type), destroyer(destroyer) {}
+      : addr(addr), type(type), destroyer(destroyer) {
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
+  }
 
   Address addr;
   QualType type;
   CIRGenFunction::Destroyer *destroyer;
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     cgf.emitDestroy(addr, type, destroyer);
   }
 };
@@ -831,8 +835,25 @@ template <class Derived> struct DestroyNRVOVariable : EHScopeStack::Cleanup {
   Address addr;
   QualType ty;
 
-  void emit(CIRGenFunction &cgf) override {
-    assert(!cir::MissingFeatures::cleanupDestroyNRVOVariable());
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    // Along the exceptions path we always execute the dtor.
+    bool nrvo = flags.isForNormalCleanup() && nrvoFlag;
+
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    if (nrvo) {
+      // If we exited via NRVO, we skip the destructor call.
+      mlir::Location loc = addr.getPointer().getLoc();
+      mlir::Value didNRVO = builder.createFlagLoad(loc, nrvoFlag);
+      mlir::Value notNRVO = builder.createNot(didNRVO);
+      cir::IfOp::create(builder, loc, notNRVO, /*withElseRegion=*/false,
+                        [&](mlir::OpBuilder &b, mlir::Location) {
+                          static_cast<Derived *>(this)->emitDestructorCall(cgf);
+                          builder.createYield(loc);
+                        });
+    } else {
+      static_cast<Derived *>(this)->emitDestructorCall(cgf);
+    }
   }
 
   virtual ~DestroyNRVOVariable() = default;
@@ -848,14 +869,16 @@ struct DestroyNRVOVariableCXX final
   const CXXDestructorDecl *dtor;
 
   void emitDestructorCall(CIRGenFunction &cgf) {
-    assert(!cir::MissingFeatures::cleanupDestroyNRVOVariable());
+    cgf.emitCXXDestructorCall(dtor, Dtor_Complete,
+                              /*forVirtualBase=*/false,
+                              /*delegating=*/false, addr, ty);
   }
 };
 
 struct CallStackRestore final : EHScopeStack::Cleanup {
   Address stack;
   CallStackRestore(Address stack) : stack(stack) {}
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     mlir::Location loc = stack.getPointer().getLoc();
     mlir::Value v = cgf.getBuilder().createLoad(loc, stack);
     cgf.getBuilder().createStackRestore(loc, v);
@@ -957,6 +980,7 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
     return;
 
   mlir::Value begin = addr.getPointer();
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
   emitArrayDestroy(begin, length, type, elementAlign, destroyer);
 
   // If the array destroy didn't use the length op, we can erase it.
@@ -1029,7 +1053,7 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
   if (!destroyer)
     destroyer = getDestroyer(dtorKind);
 
-  assert(!cir::MissingFeatures::ehCleanupFlags());
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
   ehStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
 }
 

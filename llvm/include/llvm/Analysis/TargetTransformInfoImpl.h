@@ -131,9 +131,9 @@ public:
     return false;
   }
 
-  virtual bool isSourceOfDivergence(const Value *V) const { return false; }
-
-  virtual bool isAlwaysUniform(const Value *V) const { return false; }
+  virtual InstructionUniformity getInstructionUniformity(const Value *V) const {
+    return InstructionUniformity::Default;
+  }
 
   virtual bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
     return false;
@@ -1127,6 +1127,10 @@ public:
   virtual bool hasArmWideBranch(bool) const { return false; }
 
   virtual APInt getFeatureMask(const Function &F) const {
+    return APInt::getZero(32);
+  }
+
+  virtual APInt getPriorityMask(const Function &F) const {
     return APInt::getZero(32);
   }
 

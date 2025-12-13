@@ -1439,8 +1439,7 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
     OS << printJumpTableEntryReference(i) << ':';
     for (const MachineBasicBlock *MBB : JumpTables[i].MBBs)
       OS << ' ' << printMBBReference(*MBB);
-    if (i != e)
-      OS << '\n';
+    OS << '\n';
   }
 
   OS << '\n';

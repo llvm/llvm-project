@@ -20,22 +20,13 @@
 namespace llvm::orc {
 
 namespace detail {
-template <typename RetT, typename... ArgTs> struct SPSCallSerializationImpl {
-  using RetSerialization = shared::SPSArgList<RetT>;
-  using ArgSerialization = shared::SPSArgList<ArgTs...>;
-};
-} // namespace detail
+template <typename SPSRetT, typename... SPSArgTs>
+struct SPSCallSerializationImpl {
+  using RetSerialization = shared::SPSArgList<SPSRetT>;
+  using ArgSerialization = shared::SPSArgList<SPSArgTs...>;
 
-template <typename SPSSig>
-struct SPSCallSerialization
-    : public CallableTraitsHelper<detail::SPSCallSerializationImpl, SPSSig> {};
-
-template <typename SPSSig> class SPSCallSerializer {
-public:
   template <typename... ArgTs>
   Expected<shared::WrapperFunctionResult> serialize(ArgTs &&...Args) {
-    using ArgSerialization =
-        typename SPSCallSerialization<SPSSig>::ArgSerialization;
     auto Buffer = shared::WrapperFunctionResult::allocate(
         ArgSerialization::size(Args...));
     shared::SPSOutputBuffer OB(Buffer.data(), Buffer.size());
@@ -44,17 +35,42 @@ public:
                                      inconvertibleErrorCode());
     return std::move(Buffer);
   }
+};
+
+template <typename SPSSig>
+struct SPSCallSerialization
+    : public CallableTraitsHelper<detail::SPSCallSerializationImpl, SPSSig> {};
+
+} // namespace detail
+
+/// SPS serialization for non-void calls.
+template <typename SPSSig>
+struct SPSCallSerializer : public detail::SPSCallSerialization<SPSSig> {
 
   template <typename RetT>
   Expected<RetT> deserialize(shared::WrapperFunctionResult ResultBytes) {
     using RetDeserialization =
-        typename SPSCallSerialization<SPSSig>::RetSerialization;
+        typename detail::SPSCallSerialization<SPSSig>::RetSerialization;
     shared::SPSInputBuffer IB(ResultBytes.data(), ResultBytes.size());
     RetT ReturnValue;
     if (!RetDeserialization::deserialize(IB, ReturnValue))
       return make_error<StringError>("Could not deserialize return value",
                                      inconvertibleErrorCode());
     return ReturnValue;
+  }
+};
+
+/// SPS serialization for void calls.
+template <typename... SPSArgTs>
+struct SPSCallSerializer<void(SPSArgTs...)>
+    : public detail::SPSCallSerialization<void(SPSArgTs...)> {
+  template <typename RetT>
+  std::enable_if_t<std::is_void_v<RetT>, Error>
+  deserialize(shared::WrapperFunctionResult ResultBytes) {
+    if (!ResultBytes.empty())
+      return make_error<StringError>("Could not deserialize return value",
+                                     inconvertibleErrorCode());
+    return Error::success();
   }
 };
 

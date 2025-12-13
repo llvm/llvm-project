@@ -78,6 +78,9 @@ protected:
                           bool IsLog10, SDNodeFlags Flags) const;
   SDValue lowerFEXP2(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue lowerFEXPUnsafeImpl(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
+                              SDNodeFlags Flags, bool IsExp10) const;
+
   SDValue lowerFEXPUnsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
                           SDNodeFlags Flags) const;
   SDValue lowerFEXP10Unsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
