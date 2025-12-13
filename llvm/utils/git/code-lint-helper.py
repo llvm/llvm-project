@@ -295,11 +295,10 @@ class Doc8LintHelper(LintHelper):
     name: Final = "doc8"
     friendly_name: Final = "documentation linter"
 
-    def instructions(self, files_to_lint: Sequence[str], args: LintArgs) -> str:
-        files_str = " ".join(files_to_lint)
-        return f"doc8 -q {files_str}"
+    def instructions(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
+        return f"doc8 -q {' '.join(files_to_lint)}"
 
-    def filter_changed_files(self, changed_files: Sequence[str]) -> Sequence[str]:
+    def filter_changed_files(self, changed_files: Iterable[str]) -> Sequence[str]:
         filtered_files = []
         for filepath in changed_files:
             _, ext = os.path.splitext(filepath)
@@ -311,7 +310,7 @@ class Doc8LintHelper(LintHelper):
                 filtered_files.append(filepath)
         return filtered_files
 
-    def run_linter_tool(self, files_to_lint: Sequence[str], args: LintArgs) -> str:
+    def run_linter_tool(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
         if not files_to_lint:
             return ""
 
@@ -332,12 +331,10 @@ class Doc8LintHelper(LintHelper):
         if proc.returncode == 0:
             return ""
 
-        output = proc.stdout.strip()
-        if output:
+        if output := proc.stdout.strip():
             return output
 
-        error_output = proc.stderr.strip()
-        if error_output:
+        if error_output := proc.stderr.strip():
             return error_output
 
         return f"doc8 exited with return code {proc.returncode} but no output."
