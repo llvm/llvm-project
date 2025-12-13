@@ -2314,7 +2314,6 @@ void VPWidenIntOrFpInductionRecipe::printRecipe(
   printAsOperand(O, SlotTracker);
   O << " = WIDEN-INDUCTION";
   printFlags(O);
-  O << " ";
   printOperands(O, SlotTracker);
 
   if (auto *TI = getTruncInst())
@@ -2503,7 +2502,8 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   // LastLane = Stride * (RunTimeVF - 1)
   Value *LastLane = Builder.CreateSub(RunTimeVF, ConstantInt::get(IndexTy, 1));
   if (Stride != 1)
-    LastLane = Builder.CreateMul(ConstantInt::get(IndexTy, Stride), LastLane);
+    LastLane =
+        Builder.CreateMul(ConstantInt::getSigned(IndexTy, Stride), LastLane);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   Value *ResultPtr =
       Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
@@ -2551,11 +2551,6 @@ void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
-  // Handle cases where only the first lane is used the same way as the legacy
-  // cost model.
-  if (vputils::onlyFirstLaneUsed(this))
-    return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
-
   Type *ResultTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
   Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);
   return (getNumIncomingValues() - 1) *
