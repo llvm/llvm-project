@@ -304,11 +304,14 @@ class Doc8LintHelper(LintHelper):
             _, ext = os.path.splitext(filepath)
             if ext != ".rst":
                 continue
-            if not filepath.startswith("clang-tools-extra/docs/clang-tidy/"):
+            if not self._should_lint_file(filepath):
                 continue
             if os.path.exists(filepath):
                 filtered_files.append(filepath)
         return filtered_files
+
+    def _should_lint_file(self, filepath: str) -> bool:
+        return filepath.startswith("clang-tools-extra/docs/clang-tidy/")
 
     def run_linter_tool(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
         if not files_to_lint:
@@ -331,13 +334,19 @@ class Doc8LintHelper(LintHelper):
         if proc.returncode == 0:
             return ""
 
-        if output := proc.stdout.strip():
-            return output
+        output = proc.stdout.strip()
+        error_output = proc.stderr.strip()
 
-        if error_output := proc.stderr.strip():
-            return error_output
+        parts: List[str] = []
+        if output:
+            parts.append(output)
+        if error_output:
+            parts.append(f"stderr:\n{error_output}")
 
-        return f"doc8 exited with return code {proc.returncode} but no output."
+        if parts:
+            return "\n\n".join(parts)
+        else:
+            return f"doc8 exited with return code {proc.returncode} but no output."
 
 
 ALL_LINTERS = (ClangTidyLintHelper(), Doc8LintHelper())
