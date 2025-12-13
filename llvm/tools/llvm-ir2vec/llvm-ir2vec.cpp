@@ -282,7 +282,7 @@ public:
 
   /// Collect triplets for the module and dump output to stream
   /// Output format: MAX_RELATION=N header followed by relationships
-  void generateTriplets(raw_ostream &OS) const {
+  void streamTriplets(raw_ostream &OS) const {
     auto Result = generateTriplets();
     OS << "MAX_RELATION=" << Result.MaxRelation << '\n';
     for (const auto &T : Result.Triplets)
@@ -300,7 +300,7 @@ public:
   }
 
   /// Dump entity ID to string mappings
-  static void generateEntityMappings(raw_ostream &OS) {
+  static void streamEntityMappings(raw_ostream &OS) {
     auto Entities = collectEntityMappings();
     OS << Entities.size() << "\n";
     for (unsigned EntityID = 0; EntityID < Entities.size(); ++EntityID)
@@ -308,7 +308,7 @@ public:
   }
 
   /// Generate embeddings for the entire module
-  void generateEmbeddings(raw_ostream &OS) const {
+  void streamEmbeddings(raw_ostream &OS) const {
     if (!Vocab->isValid()) {
       WithColor::error(errs(), ToolName)
           << "Vocabulary is not valid. IR2VecTool not initialized.\n";
@@ -316,11 +316,11 @@ public:
     }
 
     for (const Function &F : M.getFunctionDefs())
-      generateEmbeddings(F, OS);
+      streamEmbeddings(F, OS);
   }
 
   /// Generate embeddings for a single function
-  void generateEmbeddings(const Function &F, raw_ostream &OS) const {
+  void streamEmbeddings(const Function &F, raw_ostream &OS) const {
     if (!Vocab || !Vocab->isValid()) {
       WithColor::error(errs(), ToolName)
           << "Vocabulary is not valid. IR2VecTool not initialized.\n";
@@ -379,18 +379,18 @@ Error processModule(Module &M, raw_ostream &OS) {
     if (!FunctionName.empty()) {
       // Process single function
       if (const Function *F = M.getFunction(FunctionName))
-        Tool.generateEmbeddings(*F, OS);
+        Tool.streamEmbeddings(*F, OS);
       else
         return createStringError(errc::invalid_argument,
                                  "Function '%s' not found",
                                  FunctionName.c_str());
     } else {
       // Process all functions
-      Tool.generateEmbeddings(OS);
+      Tool.streamEmbeddings(OS);
     }
   } else {
     // Both triplets and entities use triplet generation
-    Tool.generateTriplets(OS);
+    Tool.streamTriplets(OS);
   }
   return Error::success();
 }
@@ -546,9 +546,9 @@ public:
     return Result;
   }
 
-  /// Generate triplets for the module and write to output stream
+  /// Collect triplets for the module and write to output stream
   /// Output format: MAX_RELATION=N header followed by relationships
-  void generateTriplets(const Module &M, raw_ostream &OS) const {
+  void streamTriplets(const Module &M, raw_ostream &OS) const {
     auto Result = generateTriplets(M);
     OS << "MAX_RELATION=" << Result.MaxRelation << '\n';
     for (const auto &T : Result.Triplets)
@@ -572,7 +572,7 @@ public:
   }
 
   /// Generate entity mappings and write to output stream
-  void generateEntityMappings(raw_ostream &OS) const {
+  void streamEntityMappings(raw_ostream &OS) const {
     auto Entities = collectEntityMappings();
     if (Entities.empty())
       return;
@@ -583,7 +583,7 @@ public:
   }
 
   /// Generate embeddings for all machine functions in the module
-  void generateEmbeddings(const Module &M, raw_ostream &OS) const {
+  void streamEmbeddings(const Module &M, raw_ostream &OS) const {
     if (!Vocab) {
       WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
       return;
@@ -598,12 +598,12 @@ public:
         continue;
       }
 
-      generateEmbeddings(*MF, OS);
+      streamEmbeddings(*MF, OS);
     }
   }
 
   /// Generate embeddings for a specific machine function
-  void generateEmbeddings(MachineFunction &MF, raw_ostream &OS) const {
+  void streamEmbeddings(MachineFunction &MF, raw_ostream &OS) const {
     if (!Vocab) {
       WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
       return;
@@ -683,7 +683,7 @@ int main(int argc, char **argv) {
   if (IRMode == IRKind::LLVMIR) {
     if (EntitiesSubCmd) {
       // Just dump entity mappings without processing any IR
-      IR2VecTool::generateEntityMappings(OS);
+      IR2VecTool::streamEntityMappings(OS);
       return 0;
     }
 
@@ -783,9 +783,9 @@ int main(int argc, char **argv) {
 
     // Handle subcommands
     if (TripletsSubCmd) {
-      Tool.generateTriplets(*M, OS);
+      Tool.streamTriplets(*M, OS);
     } else if (EntitiesSubCmd) {
-      Tool.generateEntityMappings(OS);
+      Tool.streamEntityMappings(OS);
     } else if (EmbeddingsSubCmd) {
       if (!FunctionName.empty()) {
         // Process single function
@@ -803,10 +803,10 @@ int main(int argc, char **argv) {
           return 1;
         }
 
-        Tool.generateEmbeddings(*MF, OS);
+        Tool.streamEmbeddings(*MF, OS);
       } else {
         // Process all functions
-        Tool.generateEmbeddings(*M, OS);
+        Tool.streamEmbeddings(*M, OS);
       }
     } else {
       WithColor::error(errs(), ToolName)
