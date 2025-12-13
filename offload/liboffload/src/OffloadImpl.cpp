@@ -1214,5 +1214,14 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                                 Queue->AsyncInfo);
 }
 
+Error olDataFence_impl(ol_queue_handle_t Queue) {
+  if (Queue->AsyncInfo->Queue) {
+    if (auto Err = Queue->Device->Device->dataFence(Queue->AsyncInfo))
+      return Err;
+  }
+
+  return Error::success();
+}
+
 } // namespace offload
 } // namespace llvm

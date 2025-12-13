@@ -125,3 +125,12 @@ def olLaunchHostFunction : Function {
   ];
   let returns = [];
 }
+
+def olDataFence : Function {
+    let desc = "Insert a data fence between previous data operations and the following operations if necessary for the device.";
+    let details = [];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
+    ];
+    let returns = [];
+}
