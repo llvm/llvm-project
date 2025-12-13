@@ -4063,6 +4063,11 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   Args.ClaimAllArgs(options::OPT_fmodules_reduced_bmi);
   Args.ClaimAllArgs(options::OPT_fno_modules_reduced_bmi);
 
+  if (Args.hasArg(options::OPT_no_scan_ipc)) {
+    CmdArgs.push_back("-noScanIPC");
+    Args.claimAllArgs(options::OPT_no_scan_ipc);
+  }
+
   // We need to include the case the input file is a module file here.
   // Since the default compilation model for C++ module interface unit will
   // create temporary module file and compile the temporary module file

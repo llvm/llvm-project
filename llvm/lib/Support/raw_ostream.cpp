@@ -887,7 +887,7 @@ void raw_fd_ostream::anchor() {}
 //  outs(), errs(), nulls()
 //===----------------------------------------------------------------------===//
 
-raw_fd_ostream &llvm::outs() {
+raw_ostream &llvm::outs() {
   // Set buffer settings to model stdout behavior.
   std::error_code EC;
 
@@ -901,7 +901,7 @@ raw_fd_ostream &llvm::outs() {
   return S;
 }
 
-raw_fd_ostream &llvm::errs() {
+raw_ostream &llvm::errs() {
   // On z/OS we need to enable auto conversion
   static std::error_code EC = enableAutoConversion(STDERR_FILENO);
   assert(!EC);

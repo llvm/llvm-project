@@ -3382,6 +3382,9 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
 
   for (const std::string &F : Opts.VFSOverlayFiles)
     GenerateArg(Consumer, OPT_ivfsoverlay, F);
+
+  if (Opts.NoScanIPC)
+    GenerateArg(Consumer, OPT_no_scan_ipc);
 }
 
 static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
@@ -3501,6 +3504,8 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   for (const auto *A : Args.filtered(OPT_ivfsoverlay, OPT_vfsoverlay))
     Opts.AddVFSOverlayFile(A->getValue());
+
+  Opts.NoScanIPC = Args.hasArg(OPT_no_scan_ipc);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }

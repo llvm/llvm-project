@@ -277,6 +277,11 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesIncludeVFSUsage : 1;
 
+  /// Whether to coordinate with build-system for building of C++20 Modules \
+  /// and header-units.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned NoScanIPC : 1;
+
   /// Whether we should look for a module in module maps only in provided
   /// header search paths or if we are allowed to look for module maps in
   /// subdirectories of provided paths too.

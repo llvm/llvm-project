@@ -67,6 +67,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Basic/Version.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/MacroInfo.h"
@@ -3425,9 +3426,26 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       // explicit name to file mappings. Also, we will still verify the
       // size/signature making sure it is essentially the same file but
       // perhaps in a different location.
-      if (ImportedKind == MK_PrebuiltModule || ImportedKind == MK_ExplicitModule)
-        ImportedFile = PP.getHeaderSearchInfo().getPrebuiltModuleFileName(
-            ImportedName, /*FileMapOnly*/ !IsImportingStdCXXModule);
+      if (ImportedKind == MK_PrebuiltModule ||
+          ImportedKind == MK_ExplicitModule) {
+        if (N2978::managerCompiler) {
+          if (IsImportingStdCXXModule) {
+            // In case of header-units ImportedFile will be initialized with
+            // ImportedName
+            const auto &Result = N2978::managerCompiler->findResponse(
+                std::string(ImportedName), IsImportingStdCXXModule
+                                               ? N2978::FileType::MODULE
+                                               : N2978::FileType::HEADER_UNIT);
+            if (!Result) {
+              // error happened in receiving message
+            }
+            ImportedFile = Result->filePath;
+          }
+        } else {
+          ImportedFile = PP.getHeaderSearchInfo().getPrebuiltModuleFileName(
+              ImportedName, /*FileMapOnly*/ !IsImportingStdCXXModule);
+        }
+      }
 
       if (IsImportingStdCXXModule && ImportedFile.empty()) {
         Diag(diag::err_failed_to_find_module_file) << ImportedName;

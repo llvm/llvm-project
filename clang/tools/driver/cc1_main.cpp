@@ -25,6 +25,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Options/Options.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/Statistic.h"
@@ -279,6 +280,17 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     return llvm::vfs::getRealFileSystem();
   }();
   Clang->createVirtualFileSystem(std::move(VFS), DiagsBuffer);
+  if (Clang->getHeaderSearchOpts().NoScanIPC) {
+    FrontendOptions &Options = Clang->getFrontendOpts();
+    std::string OutputPath = Options.OutputFile.empty()
+                                 ? Options.ModuleOutputPath
+                                 : Options.OutputFile;
+    if (const auto &r = N2978::makeIPCManagerCompiler(OutputPath); r) {
+      N2978::managerCompiler = new N2978::IPCManagerCompiler(r.value());
+    } else {
+      // making manager failed
+    }
+  }
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
@@ -306,19 +318,15 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
-  {
-    // This isn't a formal input or output of the compiler.
-    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
-    std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
-    if (Clang->getCodeGenOpts().TimePassesJson) {
-      *IOFile << "{\n";
-      llvm::TimerGroup::printAllJSONValues(*IOFile, "");
-      *IOFile << "\n}\n";
-    } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
-      llvm::TimerGroup::printAll(*IOFile);
-    }
-    llvm::TimerGroup::clearAll();
+  std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
+  if (Clang->getCodeGenOpts().TimePassesJson) {
+    *IOFile << "{\n";
+    llvm::TimerGroup::printAllJSONValues(*IOFile, "");
+    *IOFile << "\n}\n";
+  } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
+    llvm::TimerGroup::printAll(*IOFile);
   }
+  llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
     if (auto profilerOutput = Clang->createOutputFile(
