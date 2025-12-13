@@ -23,7 +23,7 @@ import json
 import os
 import subprocess
 import sys
-from typing import Any, Dict, Final, List, Sequence
+from typing import Any, Dict, Final, Iterable, List, Sequence
 
 
 class LintArgs:
@@ -194,7 +194,7 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
             arg for arg in changed_files if "third-party" not in arg
         ]
 
-        filtered_files = []
+        filtered_files: List[str] = []
         for filepath in clang_tidy_changed_files:
             _, ext = os.path.splitext(filepath)
             if ext not in (".c", ".cpp", ".cxx", ".h", ".hpp", ".hxx"):
@@ -298,8 +298,8 @@ class Doc8LintHelper(LintHelper):
     def instructions(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
         return f"doc8 -q {' '.join(files_to_lint)}"
 
-    def filter_changed_files(self, changed_files: Iterable[str]) -> Sequence[str]:
-        filtered_files = []
+    def filter_changed_files(self, changed_files: Sequence[str]) -> Sequence[str]:
+        filtered_files: List[str] = []
         for filepath in changed_files:
             _, ext = os.path.splitext(filepath)
             if ext != ".rst":
