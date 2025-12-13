@@ -362,7 +362,7 @@ static cl::list<std::string> RemovedArgs("removed-arg", desc(R"(
 List of arguments to remove from the command
 line sent to the compiler. Please note that
 removing arguments might change the semantic
-of the analzed code, possibly leading to
+of the analyzed code, possibly leading to
 compiler errors, false positives or
 false negatives. This option is applied 
 before --extra-arg and --extra-arg-before)"),
