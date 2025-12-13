@@ -482,9 +482,9 @@ public:
   /// True if the method is tagged as objc_direct
   bool isDirectMethod() const;
 
-  /// Check if this direct method can move nil-check to thunk.
+  /// Check if this direct method can move precondition-check to thunk.
   /// Variadic functions cannot use thunks (musttail incompatible with va_arg)
-  bool canHaveNilCheckThunk() const {
+  bool canHavePreconditionThunk() const {
     return isDirectMethod() && !isVariadic();
   }
 

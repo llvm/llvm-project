@@ -717,30 +717,30 @@ public:
   /// Return true iff an Objective-C runtime has been configured.
   bool hasObjCRuntime() { return !!ObjCRuntime; }
 
-  /// Check if a direct method should have its symbol exposed (no \01 prefix).
+  /// Check if a direct method should use precondition thunks (exposed symbols).
   /// This applies to ALL direct methods (including variadic).
   /// Returns false if OMD is null or not a direct method.
-  bool shouldExposeSymbol(const ObjCMethodDecl *OMD) const {
+  bool usePreconditionThunk(const ObjCMethodDecl *OMD) const {
     return OMD && OMD->isDirectMethod() &&
            getLangOpts().ObjCRuntime.isNeXTFamily() &&
-           getCodeGenOpts().ObjCExposeDirectMethods;
+           getCodeGenOpts().ObjCDirectPreconditionThunk;
   }
 
-  /// Check if a direct method should use nil-check thunks at call sites.
+  /// Check if a direct method should use precondition thunks at call sites.
   /// This applies only to non-variadic direct methods.
-  /// Variadic methods cannot use thunks (musttail incompatible with va_arg).
-  /// Returns false if OMD is null or not eligible for thunks.
-  bool shouldHaveNilCheckThunk(const ObjCMethodDecl *OMD) const {
-    return OMD && shouldExposeSymbol(OMD) && OMD->canHaveNilCheckThunk();
+  /// Returns false if OMD is null or not eligible for thunks (e.g. variadic
+  /// methods).
+  bool shouldHavePreconditionThunk(const ObjCMethodDecl *OMD) const {
+    return OMD && usePreconditionThunk(OMD) && OMD->canHavePreconditionThunk();
   }
 
-  /// Check if a direct method should have inline nil checks at call sites.
-  /// This applies to direct methods that cannot use thunks (e.g., variadic
-  /// methods). These methods get exposed symbols but need inline nil checks
-  /// instead of thunks. Returns false if OMD is null or not eligible for inline
-  /// nil checks.
-  bool shouldHaveNilCheckInline(const ObjCMethodDecl *OMD) const {
-    return OMD && shouldExposeSymbol(OMD) && !OMD->canHaveNilCheckThunk();
+  /// Check if a direct method should have inline precondition checks at call
+  /// sites. This applies to direct methods that cannot use thunks (e.g.,
+  /// variadic methods). These methods get exposed symbols but need inline
+  /// precondition checks instead of thunks.
+  /// Returns false if OMD is null or not eligible.
+  bool shouldHavePreconditionInline(const ObjCMethodDecl *OMD) const {
+    return OMD && usePreconditionThunk(OMD) && !OMD->canHavePreconditionThunk();
   }
 
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
