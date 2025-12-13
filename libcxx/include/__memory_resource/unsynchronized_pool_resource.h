@@ -76,16 +76,17 @@ public:
 
   void release();
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
 
-  [[__gnu__::__pure__]] pool_options options() const;
+  [[nodiscard]] [[__gnu__::__pure__]] pool_options options() const;
 
 protected:
-  void* do_allocate(size_t __bytes, size_t __align) override; // key function
+  [[nodiscard]] void* do_allocate(size_t __bytes, size_t __align) override; // key function
 
   void do_deallocate(void* __p, size_t __bytes, size_t __align) override;
 
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool do_is_equal(const memory_resource& __other) const _NOEXCEPT override {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool
+  do_is_equal(const memory_resource& __other) const _NOEXCEPT override {
     return &__other == this;
   }
 

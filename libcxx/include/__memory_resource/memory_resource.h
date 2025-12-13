@@ -42,7 +42,9 @@ public:
     do_deallocate(__p, __bytes, __align);
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_equal(const memory_resource& __other) const noexcept { return do_is_equal(__other); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_equal(const memory_resource& __other) const noexcept {
+    return do_is_equal(__other);
+  }
 
 private:
   virtual void* do_allocate(size_t, size_t)                       = 0;
@@ -68,17 +70,19 @@ operator!=(const memory_resource& __lhs, const memory_resource& __rhs) noexcept 
 
 // [mem.res.global]
 
-[[__gnu__::__returns_nonnull__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
+[[nodiscard]] [[__gnu__::__returns_nonnull__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
 get_default_resource() noexcept;
 
 [[__gnu__::__returns_nonnull__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
 set_default_resource(memory_resource*) noexcept;
 
-[[using __gnu__: __returns_nonnull__, __const__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
-new_delete_resource() noexcept;
+[[nodiscard]] [[using __gnu__: __returns_nonnull__, __const__]] _LIBCPP_AVAILABILITY_PMR
+    _LIBCPP_EXPORTED_FROM_ABI memory_resource*
+    new_delete_resource() noexcept;
 
-[[using __gnu__: __returns_nonnull__, __const__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
-null_memory_resource() noexcept;
+[[nodiscard]] [[using __gnu__: __returns_nonnull__, __const__]] _LIBCPP_AVAILABILITY_PMR
+    _LIBCPP_EXPORTED_FROM_ABI memory_resource*
+    null_memory_resource() noexcept;
 
 } // namespace pmr
 

@@ -56,12 +56,14 @@ public:
     __unsync_.release();
   }
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __unsync_.upstream_resource(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const {
+    return __unsync_.upstream_resource();
+  }
 
-  _LIBCPP_HIDE_FROM_ABI pool_options options() const { return __unsync_.options(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI pool_options options() const { return __unsync_.options(); }
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void* do_allocate(size_t __bytes, size_t __align) override {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI_VIRTUAL void* do_allocate(size_t __bytes, size_t __align) override {
 #  if _LIBCPP_HAS_THREADS
     unique_lock<mutex> __lk(__mut_);
 #  endif
@@ -75,7 +77,7 @@ protected:
     return __unsync_.deallocate(__p, __bytes, __align);
   }
 
-  bool do_is_equal(const memory_resource& __other) const noexcept override; // key function
+  [[nodiscard]] bool do_is_equal(const memory_resource& __other) const noexcept override; // key function
 
 private:
 #  if _LIBCPP_HAS_THREADS
