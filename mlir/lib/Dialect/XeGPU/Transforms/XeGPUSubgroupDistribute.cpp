@@ -1224,7 +1224,7 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
   // Reduction result should have the same layout as the accumulator.
-  xegpu::setDistributeLayoutAttr(
+  xegpu::setTempDistributeLayoutAttr(
       cast<OpResult>(reductionResult),
       xegpu::getTempDistributeLayoutAttr(dyn_cast<OpResult>(acc)));
   // For each slice of the source, extract the slice vector, do a reduction
@@ -1259,8 +1259,8 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
     auto accLayout =
         xegpu::getTempDistributeLayoutAttr(dyn_cast<OpResult>(acc));
 
-    xegpu::setDistributeLayoutAttr(slice->getOpOperand(0), srcLayout);
-    xegpu::setDistributeLayoutAttr(slice->getOpResult(0), accLayout);
+    xegpu::setTempDistributeLayoutAttr(slice->getOpOperand(0), srcLayout);
+    xegpu::setTempDistributeLayoutAttr(slice->getOpResult(0), accLayout);
     // Extract and reduction results in scalars, so no result layout is needed.
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
     Value reduction = vector::ReductionOp::create(
