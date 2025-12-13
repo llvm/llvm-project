@@ -186,3 +186,18 @@ svfloat64_t test_svinsr_n_f64(svfloat64_t op1, float64_t op2) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svinsr,_n_f64,,)(op1, op2);
 }
+
+// CHECK-LABEL: @test_svinsr_n_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.insr.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], bfloat [[OP2:%.*]])
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z18test_svinsr_n_bf16u14__SVBfloat16_tu6__bf16(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.insr.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], bfloat [[OP2:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+//
+svbfloat16_t test_svinsr_n_bf16(svbfloat16_t op1, bfloat16_t op2) MODE_ATTR {
+  // expected-warning@+1 {{implicit declaration of function 'svinsr_n_bf16'}}
+  return SVE_ACLE_FUNC(svinsr, _n_bf16, , )(op1, op2);
+}

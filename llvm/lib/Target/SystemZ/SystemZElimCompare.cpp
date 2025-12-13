@@ -65,16 +65,13 @@ class SystemZElimCompare : public MachineFunctionPass {
 public:
   static char ID;
 
-  SystemZElimCompare() : MachineFunctionPass(ID) {
-    initializeSystemZElimComparePass(*PassRegistry::getPassRegistry());
-  }
+  SystemZElimCompare() : MachineFunctionPass(ID) {}
 
   bool processBlock(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &F) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:

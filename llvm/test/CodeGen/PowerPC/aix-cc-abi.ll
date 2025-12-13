@@ -1213,14 +1213,14 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
 ; ASM32PWR4-NEXT:    addc 3, 3, 6
 ; ASM32PWR4-NEXT:    addze 6, 7
 ; ASM32PWR4-NEXT:    addc 3, 3, 9
-; ASM32PWR4-NEXT:    lwz 5, 84(1)
+; ASM32PWR4-NEXT:    lwz 7, 84(1)
 ; ASM32PWR4-NEXT:    addze 6, 6
 ; ASM32PWR4-NEXT:    addc 3, 3, 31
-; ASM32PWR4-NEXT:    lwz 7, 80(1)
+; ASM32PWR4-NEXT:    lwz 5, 80(1)
 ; ASM32PWR4-NEXT:    adde 6, 6, 30
-; ASM32PWR4-NEXT:    addc 3, 3, 5
+; ASM32PWR4-NEXT:    addc 3, 3, 7
 ; ASM32PWR4-NEXT:    lbz 8, 91(1)
-; ASM32PWR4-NEXT:    adde 5, 6, 7
+; ASM32PWR4-NEXT:    adde 5, 6, 5
 ; ASM32PWR4-NEXT:    addc 3, 3, 8
 ; ASM32PWR4-NEXT:    lbz 6, 103(1)
 ; ASM32PWR4-NEXT:    addze 5, 5
@@ -1667,7 +1667,6 @@ define void @caller_fpr_stack() {
 ; ASM64PWR4-NEXT:    lis 7, 16313
 ; ASM64PWR4-NEXT:    lwz 3, 0(3)
 ; ASM64PWR4-NEXT:    ld 4, 0(4)
-; ASM64PWR4-NEXT:    lwz 5, 0(5)
 ; ASM64PWR4-NEXT:    stw 3, 152(1)
 ; ASM64PWR4-NEXT:    ld 3, L..C22(2) # %const.0
 ; ASM64PWR4-NEXT:    std 4, 160(1)
@@ -1686,6 +1685,7 @@ define void @caller_fpr_stack() {
 ; ASM64PWR4-NEXT:    ld 4, L..C29(2) # %const.7
 ; ASM64PWR4-NEXT:    lfd 9, 0(3)
 ; ASM64PWR4-NEXT:    ld 3, L..C30(2) # %const.8
+; ASM64PWR4-NEXT:    lwz 5, 0(5)
 ; ASM64PWR4-NEXT:    lfd 1, 0(4)
 ; ASM64PWR4-NEXT:    lis 4, 16320
 ; ASM64PWR4-NEXT:    ori 4, 4, 41943

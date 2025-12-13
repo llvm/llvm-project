@@ -12,8 +12,8 @@
 #include "llvm/XRay/FDRTraceWriter.h"
 #include <tuple>
 
-namespace llvm {
-namespace xray {
+using namespace llvm;
+using namespace llvm::xray;
 
 namespace {
 
@@ -37,9 +37,10 @@ template <size_t Index> struct IndexedWriter {
     return 0;
   }
 };
+} // namespace
 
 template <uint8_t Kind, class... Values>
-Error writeMetadata(support::endian::Writer &OS, Values &&... Ds) {
+static Error writeMetadata(support::endian::Writer &OS, Values &&...Ds) {
   // The first bit in the first byte of metadata records is always set to 1, so
   // we ensure this is the case when we write out the first byte of the record.
   uint8_t FirstByte = (static_cast<uint8_t>(Kind) << 1) | uint8_t{0x01u};
@@ -53,8 +54,6 @@ Error writeMetadata(support::endian::Writer &OS, Values &&... Ds) {
     OS.write('\0');
   return Error::success();
 }
-
-} // namespace
 
 FDRTraceWriter::FDRTraceWriter(raw_ostream &O, const XRayFileHeader &H)
     : OS(O, llvm::endianness::native) {
@@ -96,7 +95,7 @@ Error FDRTraceWriter::visit(CustomEventRecord &R) {
   if (auto E = writeMetadata<5u>(OS, R.size(), R.tsc(), R.cpu()))
     return E;
   auto D = R.data();
-  ArrayRef<char> Bytes(D.data(), D.size());
+  ArrayRef<char> Bytes(D);
   OS.write(Bytes);
   return Error::success();
 }
@@ -105,7 +104,7 @@ Error FDRTraceWriter::visit(CustomEventRecordV5 &R) {
   if (auto E = writeMetadata<5u>(OS, R.size(), R.delta()))
     return E;
   auto D = R.data();
-  ArrayRef<char> Bytes(D.data(), D.size());
+  ArrayRef<char> Bytes(D);
   OS.write(Bytes);
   return Error::success();
 }
@@ -114,7 +113,7 @@ Error FDRTraceWriter::visit(TypedEventRecord &R) {
   if (auto E = writeMetadata<8u>(OS, R.size(), R.delta(), R.eventType()))
     return E;
   auto D = R.data();
-  ArrayRef<char> Bytes(D.data(), D.size());
+  ArrayRef<char> Bytes(D);
   OS.write(Bytes);
   return Error::success();
 }
@@ -146,6 +145,3 @@ Error FDRTraceWriter::visit(FunctionRecord &R) {
   OS.write(R.delta());
   return Error::success();
 }
-
-} // namespace xray
-} // namespace llvm

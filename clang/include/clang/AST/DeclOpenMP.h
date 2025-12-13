@@ -110,7 +110,7 @@ public:
 class OMPThreadPrivateDecl final : public OMPDeclarativeDirective<Decl> {
   friend class OMPDeclarativeDirective<Decl>;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   OMPThreadPrivateDecl(DeclContext *DC = nullptr,
                        SourceLocation L = SourceLocation())
@@ -118,12 +118,12 @@ class OMPThreadPrivateDecl final : public OMPDeclarativeDirective<Decl> {
 
   ArrayRef<const Expr *> getVars() const {
     auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
-    return llvm::ArrayRef(Storage, Data->getNumChildren());
+    return {Storage, Data->getNumChildren()};
   }
 
   MutableArrayRef<Expr *> getVars() {
     auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
-    return llvm::MutableArrayRef(Storage, Data->getNumChildren());
+    return {Storage, Data->getNumChildren()};
   }
 
   void setVars(ArrayRef<Expr *> VL);
@@ -156,6 +156,68 @@ public:
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == OMPThreadPrivate; }
+};
+
+/// This represents '#pragma omp groupprivate ...' directive.
+/// For example, in the following, both 'a' and 'A::b' are groupprivate:
+///
+/// \code
+/// int a;
+/// #pragma omp groupprivate(a)
+/// struct A {
+///   static int b;
+/// #pragma omp groupprivate(b)
+/// };
+/// \endcode
+///
+class OMPGroupPrivateDecl final : public OMPDeclarativeDirective<Decl> {
+  friend class OMPDeclarativeDirective<Decl>;
+
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
+
+  OMPGroupPrivateDecl(DeclContext *DC = nullptr,
+                      SourceLocation L = SourceLocation())
+      : OMPDeclarativeDirective<Decl>(OMPGroupPrivate, DC, L) {}
+
+  ArrayRef<const Expr *> getVars() const {
+    auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
+    return {Storage, Data->getNumChildren()};
+  }
+
+  MutableArrayRef<Expr *> getVars() {
+    auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
+    return {Storage, Data->getNumChildren()};
+  }
+
+  void setVars(ArrayRef<Expr *> VL);
+
+public:
+  static OMPGroupPrivateDecl *Create(ASTContext &C, DeclContext *DC,
+                                     SourceLocation L, ArrayRef<Expr *> VL);
+  static OMPGroupPrivateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                                 unsigned N);
+
+  typedef MutableArrayRef<Expr *>::iterator varlist_iterator;
+  typedef ArrayRef<const Expr *>::iterator varlist_const_iterator;
+  typedef llvm::iterator_range<varlist_iterator> varlist_range;
+  typedef llvm::iterator_range<varlist_const_iterator> varlist_const_range;
+
+  unsigned varlist_size() const { return Data->getNumChildren(); }
+  bool varlist_empty() const { return Data->getChildren().empty(); }
+
+  varlist_range varlist() {
+    return varlist_range(varlist_begin(), varlist_end());
+  }
+  varlist_const_range varlist() const {
+    return varlist_const_range(varlist_begin(), varlist_end());
+  }
+  varlist_iterator varlist_begin() { return getVars().begin(); }
+  varlist_iterator varlist_end() { return getVars().end(); }
+  varlist_const_iterator varlist_begin() const { return getVars().begin(); }
+  varlist_const_iterator varlist_end() const { return getVars().end(); }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == OMPGroupPrivate; }
 };
 
 enum class OMPDeclareReductionInitKind {
@@ -418,7 +480,7 @@ class OMPRequiresDecl final : public OMPDeclarativeDirective<Decl> {
   friend class OMPDeclarativeDirective<Decl>;
   friend class ASTDeclReader;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   OMPRequiresDecl(DeclContext *DC, SourceLocation L)
       : OMPDeclarativeDirective<Decl>(OMPRequires, DC, L) {}
@@ -475,19 +537,19 @@ class OMPAllocateDecl final : public OMPDeclarativeDirective<Decl> {
   friend class OMPDeclarativeDirective<Decl>;
   friend class ASTDeclReader;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   OMPAllocateDecl(DeclContext *DC, SourceLocation L)
       : OMPDeclarativeDirective<Decl>(OMPAllocate, DC, L) {}
 
   ArrayRef<const Expr *> getVars() const {
     auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
-    return llvm::ArrayRef(Storage, Data->getNumChildren());
+    return {Storage, Data->getNumChildren()};
   }
 
   MutableArrayRef<Expr *> getVars() {
     auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
-    return llvm::MutableArrayRef(Storage, Data->getNumChildren());
+    return {Storage, Data->getNumChildren()};
   }
 
   void setVars(ArrayRef<Expr *> VL);

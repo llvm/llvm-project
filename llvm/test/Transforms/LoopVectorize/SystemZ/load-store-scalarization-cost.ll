@@ -27,7 +27,6 @@ for.end:
 ; CHECK: LV: Scalarizing:  %tmp1 = load i32, ptr %tmp0, align 4
 ; CHECK: LV: Scalarizing:  store i32 %tmp2, ptr %tmp0, align 4
 
-; CHECK: LV: Found an estimated cost of 4 for VF 4 For instruction:   %tmp1 = load i32, ptr %tmp0, align 4
-; CHECK: LV: Found an estimated cost of 4 for VF 4 For instruction:   store i32 %tmp2, ptr %tmp0, align 4
+; CHECK: Cost of 4 for VF 4: REPLICATE ir<%tmp1> = load ir<%tmp0>
+; CHECK: Cost of 4 for VF 4: REPLICATE store ir<%tmp2>, ir<%tmp0>
 }
-

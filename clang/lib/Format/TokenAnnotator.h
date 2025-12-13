@@ -224,9 +224,7 @@ class TokenAnnotator {
 public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
       : Style(Style), IsCpp(Style.isCpp()),
-        LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords) {
-    assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
-  }
+        LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords) {}
 
   /// Adapts the indent levels of comment lines to the indent of the
   /// subsequent line.

@@ -30,12 +30,14 @@ NORETURN void RTNAME(ProgramEndStatement)(NO_ARGUMENTS);
 
 // Extensions
 NORETURN void RTNAME(Exit)(int status DEFAULT_VALUE(EXIT_SUCCESS));
+RT_OFFLOAD_API_GROUP_BEGIN
 NORETURN void RTNAME(Abort)(NO_ARGUMENTS);
+RT_OFFLOAD_API_GROUP_END
 void FORTRAN_PROCEDURE_NAME(backtrace)(NO_ARGUMENTS);
 
 // Crash with an error message when the program dynamically violates a Fortran
 // constraint.
-NORETURN void RTNAME(ReportFatalUserError)(
+NORETURN RT_API_ATTRS void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line);
 
 FORTRAN_EXTERN_C_END

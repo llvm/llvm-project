@@ -12,7 +12,7 @@ RUN: opt test1.bc -passes=lowertypetests -lowertypetests-read-summary=in.yaml \
 RUN:   -lowertypetests-summary-action=export -lowertypetests-write-summary=exported.yaml \
 RUN:   -S -o - | FileCheck %s --check-prefix=REGULAR
 REGULAR: @__typeid__ZTSFvvE_global_addr = hidden alias i8, ptr @.cfi.jumptable
-REGULAR: @f = alias void (), ptr @.cfi.jumptable
+REGULAR: @f = alias [8 x i8], ptr @.cfi.jumptable
 REGULAR: define private void @.cfi.jumptable()
 
 ;; CHECK that @llvm.type.test() is lowered to an actual check.

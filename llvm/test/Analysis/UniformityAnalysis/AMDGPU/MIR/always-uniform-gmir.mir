@@ -1,10 +1,11 @@
 # NOTE: This file is Generic MIR translation of test/Analysis/UniformityAnalysis/AMDGPU/always_uniform.ll test file
 # RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 ---
 name:            readfirstlane
 body:             |
   bb.1:
-    ; CHECK-LABEL: MachineUniformityInfo for function: readfirstlane
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @readfirstlane
     ; CHECK: DIVERGENT: %{{[0-9]+}}
     ; CHECK-SAME:llvm.amdgcn.workitem.id.x
     ; CHECK-NOT: DIVERGENT: {{.*}}llvm.amdgcn.readfirstlane
@@ -19,7 +20,7 @@ name:            icmp
 body:             |
   bb.1:
     liveins: $sgpr4_sgpr5
-    ; CHECK-LABEL: MachineUniformityInfo for function: icmp
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @icmp
     ; CHECK-NEXT: ALL VALUES UNIFORM
 
     %3:_(p4) = COPY $sgpr4_sgpr5
@@ -39,7 +40,7 @@ name:            fcmp
 body:             |
   bb.1:
     liveins: $sgpr4_sgpr5
-    ; CHECK-LABEL: MachineUniformityInfo for function: fcmp
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @fcmp
     ; CHECK-NEXT: ALL VALUES UNIFORM
 
     %3:_(p4) = COPY $sgpr4_sgpr5
@@ -62,7 +63,7 @@ name:            ballot
 body:             |
   bb.1:
     liveins: $sgpr4_sgpr5
-    ; CHECK-LABEL: MachineUniformityInfo for function: ballot
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @ballot
     ; CHECK-NEXT: ALL VALUES UNIFORM
 
     %2:_(p4) = COPY $sgpr4_sgpr5
@@ -85,7 +86,7 @@ registers:
 body:             |
   bb.0:
     liveins: $vgpr0
-    ; CHECK-LABEL: MachineUniformityInfo for function: asm_sgpr
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @asm_sgpr
     ; CHECK-NOT: DIVERGENT: %1
 
     %0:_(s32) = COPY $vgpr0
@@ -112,7 +113,7 @@ frameInfo:
 body:             |
   bb.0:
     liveins: $vgpr0
-    ; CHECK-LABEL: MachineUniformityInfo for function: asm_mixed_sgpr_vgpr
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @asm_mixed_sgpr_vgpr
     ; CHECK: DIVERGENT: %0:
     ; CHECK: DIVERGENT: %3:
     ; CHECK-NOT: DIVERGENT: %1:

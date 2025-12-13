@@ -766,7 +766,7 @@ void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
   // On Linux systems it seems /etc/timezone is deprecated and being phased out.
   // This file is used when /etc/localtime does not exist, or when it exists but
   // is not a symlink. For more information and links see
-  // https://github.com/llvm/llvm-project/issues/105634
+  // https://llvm.org/PR105634
 
   string __name = chrono::__current_zone_environment();
 

@@ -33,12 +33,20 @@ class UnitMap;
 class ChildIo;
 class ExternalFileUnit;
 
+enum FseekWhence {
+  FseekSet = 0,
+  FseekCurrent = 1,
+  FseekEnd = 2,
+};
+
 RT_OFFLOAD_VAR_GROUP_BEGIN
 // Predefined file units.
 extern RT_VAR_ATTRS ExternalFileUnit *defaultInput; // unit 5
 extern RT_VAR_ATTRS ExternalFileUnit *defaultOutput; // unit 6
 extern RT_VAR_ATTRS ExternalFileUnit *errorOutput; // unit 0 extension
 RT_OFFLOAD_VAR_GROUP_END
+
+RT_OFFLOAD_API_GROUP_BEGIN
 
 #if defined(RT_USE_PSEUDO_FILE_UNIT)
 // A flavor of OpenFile class that pretends to be a terminal,
@@ -51,6 +59,7 @@ class PseudoOpenFile {
 public:
   using FileOffset = std::int64_t;
 
+  RT_API_ATTRS int fd() const { return 1 /*stdout*/; }
   RT_API_ATTRS const char *path() const { return nullptr; }
   RT_API_ATTRS std::size_t pathLength() const { return 0; }
   RT_API_ATTRS void set_path(OwningPtr<char> &&, std::size_t bytes) {}
@@ -63,10 +72,10 @@ public:
   // at the end of IO statement.
   RT_API_ATTRS bool isTerminal() const { return true; }
   RT_API_ATTRS bool isWindowsTextFile() const { return false; }
-  RT_API_ATTRS Fortran::common::optional<FileOffset> knownSize() const;
+  RT_API_ATTRS common::optional<FileOffset> knownSize() const;
   RT_API_ATTRS bool IsConnected() const { return false; }
-  RT_API_ATTRS void Open(OpenStatus, Fortran::common::optional<Action>,
-      Position, IoErrorHandler &);
+  RT_API_ATTRS void Open(
+      OpenStatus, common::optional<Action>, Position, IoErrorHandler &);
   RT_API_ATTRS void Predefine(int fd) {}
   RT_API_ATTRS void Close(CloseStatus, IoErrorHandler &);
   RT_API_ATTRS std::size_t Read(FileOffset, char *, std::size_t minBytes,
@@ -80,7 +89,7 @@ public:
       FileOffset, const char *, std::size_t, IoErrorHandler &);
   RT_API_ATTRS void Wait(int id, IoErrorHandler &);
   RT_API_ATTRS void WaitAll(IoErrorHandler &);
-  RT_API_ATTRS Position InquirePosition() const;
+  RT_API_ATTRS Position InquirePosition(FileOffset) const;
 };
 #endif // defined(RT_USE_PSEUDO_FILE_UNIT)
 
@@ -90,14 +99,18 @@ using FileFrameClass = FileFrame<ExternalFileUnit>;
 #else // defined(RT_USE_PSEUDO_FILE_UNIT)
 using OpenFileClass = PseudoOpenFile;
 // Use not so big buffer for the pseudo file unit frame.
-using FileFrameClass = FileFrame<ExternalFileUnit, 1024>;
+using FileFrameClass = FileFrame<ExternalFileUnit, 256>;
 #endif // defined(RT_USE_PSEUDO_FILE_UNIT)
 
 class ExternalFileUnit : public ConnectionState,
                          public OpenFileClass,
                          public FileFrameClass {
 public:
+#ifdef RT_USE_PSEUDO_FILE_UNIT
+  static constexpr int maxAsyncIds{64};
+#else
   static constexpr int maxAsyncIds{64 * 16};
+#endif
 
   explicit RT_API_ATTRS ExternalFileUnit(int unitNumber)
       : unitNumber_{unitNumber} {
@@ -119,8 +132,7 @@ public:
   static RT_API_ATTRS ExternalFileUnit *LookUpOrCreate(
       int unit, const Terminator &, bool &wasExtant);
   static RT_API_ATTRS ExternalFileUnit *LookUpOrCreateAnonymous(int unit,
-      Direction, Fortran::common::optional<bool> isUnformatted,
-      IoErrorHandler &);
+      Direction, common::optional<bool> isUnformatted, IoErrorHandler &);
   static RT_API_ATTRS ExternalFileUnit *LookUp(
       const char *path, std::size_t pathLen);
   static RT_API_ATTRS ExternalFileUnit &CreateNew(int unit, const Terminator &);
@@ -131,11 +143,11 @@ public:
   static RT_API_ATTRS void FlushAll(IoErrorHandler &);
 
   // Returns true if an existing unit was closed
-  RT_API_ATTRS bool OpenUnit(Fortran::common::optional<OpenStatus>,
-      Fortran::common::optional<Action>, Position, OwningPtr<char> &&path,
+  RT_API_ATTRS bool OpenUnit(common::optional<OpenStatus>,
+      common::optional<Action>, Position, OwningPtr<char> &&path,
       std::size_t pathLength, Convert, IoErrorHandler &);
-  RT_API_ATTRS bool OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
-      Fortran::common::optional<Action>, Position, Convert, IoErrorHandler &);
+  RT_API_ATTRS bool OpenAnonymousUnit(common::optional<OpenStatus>,
+      common::optional<Action>, Position, Convert, IoErrorHandler &);
   RT_API_ATTRS void CloseUnit(CloseStatus, IoErrorHandler &);
   RT_API_ATTRS void DestroyClosed();
 
@@ -153,9 +165,6 @@ public:
     lock_.Take();
 #endif
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
-    if constexpr (!std::is_same_v<A, OpenStatementState>) {
-      state.mutableModes() = ConnectionState::modes;
-    }
     directAccessRecWasSet_ = false;
     io_.emplace(state);
     return *io_;
@@ -176,8 +185,9 @@ public:
   RT_API_ATTRS void Endfile(IoErrorHandler &);
   RT_API_ATTRS void Rewind(IoErrorHandler &);
   RT_API_ATTRS void EndIoStatement();
-  RT_API_ATTRS bool SetStreamPos(
-      std::int64_t, IoErrorHandler &); // one-based, for POS=
+  RT_API_ATTRS bool SetStreamPos(std::int64_t oneBasedPos, IoErrorHandler &);
+  RT_API_ATTRS bool Fseek(
+      std::int64_t zeroBasedPos, enum FseekWhence, IoErrorHandler &);
   RT_API_ATTRS bool SetDirectRec(
       std::int64_t, IoErrorHandler &); // one-based, for REC=
   RT_API_ATTRS std::int64_t InquirePos() const {
@@ -191,12 +201,17 @@ public:
 
   RT_API_ATTRS int GetAsynchronousId(IoErrorHandler &);
   RT_API_ATTRS bool Wait(int);
+  RT_API_ATTRS Position InquirePosition() const {
+    return OpenFileClass::InquirePosition(
+        static_cast<std::int64_t>(frameOffsetInFile_ + recordOffsetInFrame_));
+  }
 
 private:
   static RT_API_ATTRS UnitMap &CreateUnitMap();
   static RT_API_ATTRS UnitMap &GetUnitMap();
   RT_API_ATTRS const char *FrameNextInput(IoErrorHandler &, std::size_t);
-  RT_API_ATTRS void SetPosition(std::int64_t, IoErrorHandler &); // zero-based
+  RT_API_ATTRS void SetPosition(std::int64_t zeroBasedPos);
+  RT_API_ATTRS void Sought(std::int64_t zeroBasedPos);
   RT_API_ATTRS void BeginSequentialVariableUnformattedInputRecord(
       IoErrorHandler &);
   RT_API_ATTRS void BeginVariableFormattedInputRecord(IoErrorHandler &);
@@ -243,7 +258,7 @@ private:
       u_;
 
   // Points to the active alternative (if any) in u_ for use as a Cookie
-  Fortran::common::optional<IoStatementState> io_;
+  common::optional<IoStatementState> io_;
 
   // A stack of child I/O pseudo-units for defined I/O that have this
   // unit number.
@@ -287,8 +302,10 @@ private:
       ChildUnformattedIoStatementState<Direction::Input>, InquireUnitState,
       ErroneousIoStatementState, ExternalMiscIoStatementState>
       u_;
-  Fortran::common::optional<IoStatementState> io_;
+  common::optional<IoStatementState> io_;
 };
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io
 #endif // FLANG_RT_RUNTIME_UNIT_H_

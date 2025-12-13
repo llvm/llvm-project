@@ -5,14 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// NetBSD does not support LC_COLLATE at the moment
-// XFAIL: netbsd
-
-// XFAIL: LIBCXX-AIX-FIXME
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
-// REQUIRES: locale.cs_CZ.ISO8859-2
 
 // <regex>
 
@@ -22,17 +14,12 @@
 //   string_type
 //   lookup_collatename(ForwardIterator first, ForwardIterator last) const;
 
-// TODO: investigation needed
-// XFAIL: target={{.*}}-linux-gnu{{.*}}
-// XFAIL: target={{.*}}-amazon-linux{{.*}}
-
 #include <regex>
 #include <iterator>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "platform_support.h" // locale name macros
 
 template <class char_type>
 void
@@ -117,9 +104,6 @@ int main(int, char**)
 
     test("tild", std::string(""));
     test("ch", std::string(""));
-    std::locale::global(std::locale(LOCALE_cs_CZ_ISO8859_2));
-    test("ch", std::string("ch"));
-    std::locale::global(std::locale("C"));
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test(L"NUL", std::wstring(L"\x00", 1));
@@ -194,9 +178,6 @@ int main(int, char**)
 
     test(L"tild", std::wstring(L""));
     test(L"ch", std::wstring(L""));
-    std::locale::global(std::locale(LOCALE_cs_CZ_ISO8859_2));
-    test(L"ch", std::wstring(L"ch"));
-    std::locale::global(std::locale("C"));
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;

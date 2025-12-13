@@ -348,8 +348,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
   // Find the common bits from all possible shifts.
   unsigned ShiftAmtZeroMask = RHS.Zero.zextOrTrunc(32).getZExtValue();
   unsigned ShiftAmtOneMask = RHS.One.zextOrTrunc(32).getZExtValue();
-  Known.Zero.setAllBits();
-  Known.One.setAllBits();
+  Known.setAllConflict();
   for (unsigned ShiftAmt = MinShiftAmount; ShiftAmt <= MaxShiftAmount;
        ++ShiftAmt) {
     // Skip if the shift amount is impossible.
@@ -372,8 +371,7 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
   unsigned BitWidth = LHS.getBitWidth();
   auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
     KnownBits Known = LHS;
-    Known.Zero.lshrInPlace(ShiftAmt);
-    Known.One.lshrInPlace(ShiftAmt);
+    Known >>= ShiftAmt;
     // High bits are known zero.
     Known.Zero.setHighBits(ShiftAmt);
     return Known;
@@ -406,8 +404,7 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
 
   unsigned ShiftAmtZeroMask = RHS.Zero.zextOrTrunc(32).getZExtValue();
   unsigned ShiftAmtOneMask = RHS.One.zextOrTrunc(32).getZExtValue();
-  Known.Zero.setAllBits();
-  Known.One.setAllBits();
+  Known.setAllConflict();
   for (unsigned ShiftAmt = MinShiftAmount; ShiftAmt <= MaxShiftAmount;
        ++ShiftAmt) {
     // Skip if the shift amount is impossible.
@@ -466,8 +463,7 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
 
   unsigned ShiftAmtZeroMask = RHS.Zero.zextOrTrunc(32).getZExtValue();
   unsigned ShiftAmtOneMask = RHS.One.zextOrTrunc(32).getZExtValue();
-  Known.Zero.setAllBits();
-  Known.One.setAllBits();
+  Known.setAllConflict();
   for (unsigned ShiftAmt = MinShiftAmount; ShiftAmt <= MaxShiftAmount;
       ++ShiftAmt) {
     // Skip if the shift amount is impossible.
@@ -888,11 +884,19 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   Res.Zero |= (~BottomKnown).getLoBits(ResultBitsKnown);
   Res.One = BottomKnown.getLoBits(ResultBitsKnown);
 
-  // If we're self-multiplying then bit[1] is guaranteed to be zero.
-  if (NoUndefSelfMultiply && BitWidth > 1) {
-    assert(Res.One[1] == 0 &&
-           "Self-multiplication failed Quadratic Reciprocity!");
-    Res.Zero.setBit(1);
+  if (NoUndefSelfMultiply) {
+    // If X has at least TZ trailing zeroes, then bit (2 * TZ + 1) must be zero.
+    unsigned TwoTZP1 = 2 * TrailZero0 + 1;
+    if (TwoTZP1 < BitWidth)
+      Res.Zero.setBit(TwoTZP1);
+
+    // If X has exactly TZ trailing zeros, then bit (2 * TZ + 2) must also be
+    // zero.
+    if (TrailZero0 < BitWidth && LHS.One[TrailZero0]) {
+      unsigned TwoTZP2 = TwoTZP1 + 1;
+      if (TwoTZP2 < BitWidth)
+        Res.Zero.setBit(TwoTZP2);
+    }
   }
 
   return Res;
@@ -1152,7 +1156,10 @@ void KnownBits::print(raw_ostream &OS) const {
       OS << "?";
   }
 }
-void KnownBits::dump() const {
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void KnownBits::dump() const {
   print(dbgs());
   dbgs() << "\n";
 }
+#endif

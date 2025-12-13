@@ -49,9 +49,9 @@ program test
   realToRealProcPtr => noInterfaceExternal ! ok
   intToRealProcPtr => noInterfaceExternal !ok
   call sub1(noInterfaceExternal) ! ok
-  !WARNING: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
+  !WARNING: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface [-Wimplicit-interface-actual]
   call sub2(noInterfaceExternal)
-  !WARNING: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
+  !WARNING: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface [-Wimplicit-interface-actual]
   call sub3(noInterfaceExternal)
 
   !ERROR: Procedure pointer 'nointerfaceprocptr' with implicit interface may not be associated with procedure designator 'userelemental' with explicit interface that cannot be called via an implicit interface

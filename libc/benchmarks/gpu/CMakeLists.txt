@@ -22,8 +22,6 @@ function(add_benchmark benchmark_name)
       ${BENCHMARK_LINK_LIBRARIES}
     DEPENDS
       libc.src.stdio.printf
-      libc.src.stdlib.srand
-      libc.src.stdlib.rand
       ${BENCHMARK_DEPENDS}
     ${BENCHMARK_UNPARSED_ARGUMENTS}
     COMPILE_OPTIONS
@@ -40,33 +38,31 @@ add_unittest_framework_library(
   SRCS
     LibcGpuBenchmark.cpp
     LibcGpuBenchmarkMain.cpp
-    BenchmarkLogger.cpp
   HDRS
     LibcGpuBenchmark.h
-    BenchmarkLogger.h
+    Random.h
   DEPENDS
-    libc.src.__support.big_int
-    libc.src.__support.c_string
+    libc.benchmarks.gpu.timing.timing
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
-    libc.src.__support.CPP.functional
-    libc.src.__support.CPP.limits
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.array
-    libc.src.__support.fixed_point.fx_rep
-    libc.src.__support.macros.properties.types
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.uint128
+    libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.FPUtil.sqrt
+    libc.src.__support.sign
     libc.src.__support.fixedvector
-    libc.src.time.clock
-    libc.src.stdlib.rand
-    libc.src.stdlib.srand
-    libc.benchmarks.gpu.timing.timing
+    libc.src.__support.GPU.utils
+    libc.src.__support.time.gpu.time_utils
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
     libc.src.stdio.printf
+    libc.src.time.clock
 )
 
 add_subdirectory(src)

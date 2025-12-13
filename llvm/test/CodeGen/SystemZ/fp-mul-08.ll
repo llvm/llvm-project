@@ -3,7 +3,24 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 \
 ; RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK-VECTOR %s
 
+declare half @llvm.fma.f16(half %f1, half %f2, half %f3)
 declare float @llvm.fma.f32(float %f1, float %f2, float %f3)
+
+define half @f0(half %f1, half %f2, half %acc) {
+; CHECK-LABEL: f0:
+; CHECK-NOT: brasl
+; CHECK: lcdfr %f{{[0-9]+}}, %f4
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK-SCALAR: maebr %f0, %f8, %f10
+; CHECK-VECTOR: wfmasb %f0, %f0, %f8, %f10
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %negacc = fneg half %acc
+  %res = call half @llvm.fma.f16 (half %f1, half %f2, half %negacc)
+  ret half %res
+}
 
 define float @f1(float %f1, float %f2, float %acc) {
 ; CHECK-LABEL: f1:

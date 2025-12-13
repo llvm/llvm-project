@@ -2,6 +2,7 @@
 # for use by Lit, and delegates to LLVM's lit test handlers.
 
 llvm_canonicalize_cmake_booleans(
+  BUILD_SHARED_LIBS
   CLANG_BUILD_EXAMPLES
   CLANG_BUILT_STANDALONE
   CLANG_DEFAULT_PIE_ON_LINUX
@@ -10,6 +11,7 @@ llvm_canonicalize_cmake_booleans(
   CLANG_SPAWN_CC1
   CLANG_ENABLE_CIR
   CLANG_ENABLE_OBJC_REWRITER
+  CLANG_LINK_CLANG_DYLIB
   ENABLE_BACKTRACES
   LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS
@@ -19,11 +21,32 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_THREADS
   LLVM_ENABLE_REVERSE_ITERATION
+  LLVM_LINK_LLVM_DYLIB
   LLVM_WITH_Z3
   PPC_LINUX_DEFAULT_IEEELONGDOUBLE
   LLVM_TOOL_LLVM_DRIVER_BUILD
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   )
+
+# Run tests requiring Z3 headers only if LLVM was built with Z3
+# and the headers are available while building Clang -- the latter may
+# not be the case when building standalone against installed LLVM.
+set(TEST_WITH_Z3_MOCK 0)
+if(LLVM_WITH_Z3 AND Z3_FOUND AND CMAKE_SYSTEM_NAME MATCHES "Linux")
+  llvm_add_library(
+    MockZ3SolverCheck
+    MODULE Analysis/z3/Inputs/MockZ3_solver_check.cpp
+    DISABLE_LLVM_LINK_LLVM_DYLIB)
+
+  if(TARGET MockZ3SolverCheck)
+    list(APPEND CLANG_TEST_DEPS
+      MockZ3SolverCheck)
+    target_include_directories(
+      MockZ3SolverCheck
+      PRIVATE ${Z3_INCLUDE_DIR})
+    set(TEST_WITH_Z3_MOCK 1)
+  endif()
+endif()
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
@@ -80,7 +103,6 @@ list(APPEND CLANG_TEST_DEPS
   clang-linker-wrapper
   clang-nvlink-wrapper
   clang-offload-bundler
-  clang-offload-packager
   clang-sycl-linker
   diagtool
   hmaptool
@@ -90,6 +112,7 @@ if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
     cir-translate
+    mlir-translate
     )
 endif()
 
@@ -120,10 +143,6 @@ if(LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
     )
 endif()    
 
-set(CLANG_TEST_PARAMS
-  USE_Z3_SOLVER=0
-  )
-
 if( NOT CLANG_BUILT_STANDALONE )
   list(APPEND CLANG_TEST_DEPS
     llvm-config
@@ -153,6 +172,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-strip
     llvm-symbolizer
     llvm-windres
+    llvm-offload-binary
     obj2yaml
     opt
     split-file
@@ -191,13 +211,11 @@ set_target_properties(clang-test-depends PROPERTIES FOLDER "Clang/Tests")
 add_lit_testsuite(check-clang "Running the Clang regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   #LIT ${LLVM_LIT}
-  PARAMS ${CLANG_TEST_PARAMS}
   DEPENDS ${CLANG_TEST_DEPS}
   ARGS ${CLANG_TEST_EXTRA_ARGS}
   )
 
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
-  PARAMS ${CLANG_TEST_PARAMS}
   DEPENDS ${CLANG_TEST_DEPS}
   FOLDER "Clang tests/Suites"
 )
@@ -215,3 +233,5 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests)
     add_subdirectory(debuginfo-tests)
   endif()
 endif()
+
+add_subdirectory(Analysis/LifetimeSafety)

@@ -66,6 +66,9 @@ public:
     LLVM_MARK_AS_BITMASK_ENUM(/* largest_value= */ eOpenOptionInvalid)
   };
 
+  static constexpr OpenOptions OpenOptionsModeMask =
+      eOpenOptionReadOnly | eOpenOptionWriteOnly | eOpenOptionReadWrite;
+
   static mode_t ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options);
   static llvm::Expected<OpenOptions> GetOptionsFromMode(llvm::StringRef mode);
   static bool DescriptorIsValid(int descriptor) { return descriptor >= 0; };
@@ -382,15 +385,11 @@ public:
     Unowned = false,
   };
 
-  NativeFile() : m_descriptor(kInvalidDescriptor), m_stream(kInvalidStream) {}
+  NativeFile();
 
-  NativeFile(FILE *fh, bool transfer_ownership)
-      : m_descriptor(kInvalidDescriptor), m_own_descriptor(false), m_stream(fh),
-        m_options(), m_own_stream(transfer_ownership) {}
+  NativeFile(FILE *fh, OpenOptions options, bool transfer_ownership);
 
-  NativeFile(int fd, OpenOptions options, bool transfer_ownership)
-      : m_descriptor(fd), m_own_descriptor(transfer_ownership),
-        m_stream(kInvalidStream), m_options(options), m_own_stream(false) {}
+  NativeFile(int fd, OpenOptions options, bool transfer_ownership);
 
   ~NativeFile() override { Close(); }
 
@@ -444,16 +443,18 @@ protected:
     return ValueGuard(m_stream_mutex, StreamIsValidUnlocked());
   }
 
-  int m_descriptor;
+  int m_descriptor = kInvalidDescriptor;
   bool m_own_descriptor = false;
   mutable std::mutex m_descriptor_mutex;
 
-  FILE *m_stream;
+  FILE *m_stream = kInvalidStream;
   mutable std::mutex m_stream_mutex;
 
   OpenOptions m_options{};
   bool m_own_stream = false;
   std::mutex offset_access_mutex;
+
+  bool is_windows_console = false;
 
 private:
   NativeFile(const NativeFile &) = delete;

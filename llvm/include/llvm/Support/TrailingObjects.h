@@ -46,6 +46,7 @@
 #ifndef LLVM_SUPPORT_TRAILINGOBJECTS_H
 #define LLVM_SUPPORT_TRAILINGOBJECTS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
@@ -56,25 +57,9 @@
 namespace llvm {
 
 namespace trailing_objects_internal {
-/// Helper template to calculate the max alignment requirement for a set of
-/// objects.
-template <typename First, typename... Rest> class AlignmentCalcHelper {
-private:
-  enum {
-    FirstAlignment = alignof(First),
-    RestAlignment = AlignmentCalcHelper<Rest...>::Alignment,
-  };
 
-public:
-  enum {
-    Alignment = FirstAlignment > RestAlignment ? FirstAlignment : RestAlignment
-  };
-};
-
-template <typename First> class AlignmentCalcHelper<First> {
-public:
-  enum { Alignment = alignof(First) };
-};
+template <typename... T>
+inline constexpr size_t MaxAlignment = std::max({alignof(T)...});
 
 /// The base class for TrailingObjects* classes.
 class TrailingObjectsBase {
@@ -91,7 +76,7 @@ protected:
 // number of a different type. e.g.:
 //   ExtractSecondType<Foo..., int>::type
 template <typename Ty1, typename Ty2> struct ExtractSecondType {
-  typedef Ty2 type;
+  using type = Ty2;
 };
 
 // TrailingObjectsImpl is somewhat complicated, because it is a
@@ -116,8 +101,8 @@ class TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy, NextTy,
     : public TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, NextTy,
                                  MoreTys...> {
 
-  typedef TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, NextTy, MoreTys...>
-      ParentType;
+  using ParentType =
+      TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, NextTy, MoreTys...>;
 
   struct RequiresRealignment {
     static const bool value = alignof(PrevTy) < alignof(NextTy);
@@ -197,8 +182,6 @@ protected:
   static constexpr size_t additionalSizeToAllocImpl(size_t SizeSoFar) {
     return SizeSoFar;
   }
-
-  template <bool CheckAlignment> static void verifyTrailingObjectsAlignment() {}
 };
 
 } // end namespace trailing_objects_internal
@@ -208,31 +191,33 @@ protected:
 /// See the file comment for details on the usage of the
 /// TrailingObjects type.
 template <typename BaseTy, typename... TrailingTys>
-class TrailingObjects : private trailing_objects_internal::TrailingObjectsImpl<
-                            trailing_objects_internal::AlignmentCalcHelper<
-                                TrailingTys...>::Alignment,
-                            BaseTy, TrailingObjects<BaseTy, TrailingTys...>,
-                            BaseTy, TrailingTys...> {
+class TrailingObjects
+    : private trailing_objects_internal::TrailingObjectsImpl<
+          trailing_objects_internal::MaxAlignment<TrailingTys...>, BaseTy,
+          TrailingObjects<BaseTy, TrailingTys...>, BaseTy, TrailingTys...> {
 
   template <int A, typename B, typename T, typename P, typename... M>
   friend class trailing_objects_internal::TrailingObjectsImpl;
 
   template <typename... Tys> class Foo {};
 
-  typedef trailing_objects_internal::TrailingObjectsImpl<
-      trailing_objects_internal::AlignmentCalcHelper<TrailingTys...>::Alignment,
-      BaseTy, TrailingObjects<BaseTy, TrailingTys...>, BaseTy, TrailingTys...>
-      ParentType;
+  using ParentType = typename TrailingObjects::TrailingObjectsImpl;
   using TrailingObjectsBase = trailing_objects_internal::TrailingObjectsBase;
 
   using ParentType::getTrailingObjectsImpl;
 
-  // This function contains only a static_assert BaseTy is final. The
-  // static_assert must be in a function, and not at class-level
-  // because BaseTy isn't complete at class instantiation time, but
-  // will be by the time this function is instantiated.
-  static void verifyTrailingObjectsAssertions() {
+  template <bool Strict> static void verifyTrailingObjectsAssertions() {
+    // The static_assert for BaseTy must be in a function, and not at
+    // class-level  because BaseTy isn't complete at class instantiation time,
+    // but will be by the time this function is instantiated.
     static_assert(std::is_final<BaseTy>(), "BaseTy must be final.");
+
+    // Verify that templated getTrailingObjects() is used only with multiple
+    // trailing types. Use getTrailingObjectsNonStrict() which does not check
+    // this.
+    static_assert(!Strict || sizeof...(TrailingTys) > 1,
+                  "Use templated getTrailingObjects() only when there are "
+                  "multiple trailing types");
   }
 
   // These two methods are the base of the recursion for this method.
@@ -282,7 +267,7 @@ public:
   /// (which must be one of those specified in the class template). The
   /// array may have zero or more elements in it.
   template <typename T> const T *getTrailingObjects() const {
-    verifyTrailingObjectsAssertions();
+    verifyTrailingObjectsAssertions<true>();
     // Forwards to an impl function with overloads, since member
     // function templates can't be specialized.
     return this->getTrailingObjectsImpl(
@@ -294,11 +279,68 @@ public:
   /// (which must be one of those specified in the class template). The
   /// array may have zero or more elements in it.
   template <typename T> T *getTrailingObjects() {
-    verifyTrailingObjectsAssertions();
-    // Forwards to an impl function with overloads, since member
-    // function templates can't be specialized.
+    return const_cast<T *>(
+        static_cast<const TrailingObjects *>(this)->getTrailingObjects<T>());
+  }
+
+  // getTrailingObjects() specialization for a single trailing type.
+  using FirstTrailingType =
+      typename std::tuple_element_t<0, std::tuple<TrailingTys...>>;
+
+  const FirstTrailingType *getTrailingObjects() const {
+    static_assert(sizeof...(TrailingTys) == 1,
+                  "Can use non-templated getTrailingObjects() only when there "
+                  "is a single trailing type");
+    verifyTrailingObjectsAssertions<false>();
     return this->getTrailingObjectsImpl(
-        static_cast<BaseTy *>(this), TrailingObjectsBase::OverloadToken<T>());
+        static_cast<const BaseTy *>(this),
+        TrailingObjectsBase::OverloadToken<FirstTrailingType>());
+  }
+
+  FirstTrailingType *getTrailingObjects() {
+    return const_cast<FirstTrailingType *>(
+        static_cast<const TrailingObjects *>(this)->getTrailingObjects());
+  }
+
+  // Functions that return the trailing objects as ArrayRefs.
+  template <typename T> MutableArrayRef<T> getTrailingObjects(size_t N) {
+    return MutableArrayRef(getTrailingObjects<T>(), N);
+  }
+
+  template <typename T> ArrayRef<T> getTrailingObjects(size_t N) const {
+    return ArrayRef(getTrailingObjects<T>(), N);
+  }
+
+  MutableArrayRef<FirstTrailingType> getTrailingObjects(size_t N) {
+    return MutableArrayRef(getTrailingObjects(), N);
+  }
+
+  ArrayRef<FirstTrailingType> getTrailingObjects(size_t N) const {
+    return ArrayRef(getTrailingObjects(), N);
+  }
+
+  // Non-strict forms of templated `getTrailingObjects` that work with single
+  // trailing type.
+  template <typename T> const T *getTrailingObjectsNonStrict() const {
+    verifyTrailingObjectsAssertions<false>();
+    return this->getTrailingObjectsImpl(
+        static_cast<const BaseTy *>(this),
+        TrailingObjectsBase::OverloadToken<T>());
+  }
+
+  template <typename T> T *getTrailingObjectsNonStrict() {
+    return const_cast<T *>(static_cast<const TrailingObjects *>(this)
+                               ->getTrailingObjectsNonStrict<T>());
+  }
+
+  template <typename T>
+  MutableArrayRef<T> getTrailingObjectsNonStrict(size_t N) {
+    return MutableArrayRef(getTrailingObjectsNonStrict<T>(), N);
+  }
+
+  template <typename T>
+  ArrayRef<T> getTrailingObjectsNonStrict(size_t N) const {
+    return ArrayRef(getTrailingObjectsNonStrict<T>(), N);
   }
 
   /// Returns the size of the trailing data, if an object were

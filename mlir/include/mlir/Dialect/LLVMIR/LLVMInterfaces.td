@@ -14,6 +14,7 @@
 #define LLVMIR_INTERFACES
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
   let description = [{
@@ -165,42 +166,6 @@ def NonNegFlagInterface : OpInterface<"NonNegFlagInterface"> {
     }], "StringRef", "getNonNegName", (ins), [{}], [{
       return "nonNeg";
     }]>,
-  ];
-}
-
-def BranchWeightOpInterface : OpInterface<"BranchWeightOpInterface"> {
-  let description = [{
-    An interface for operations that can carry branch weights metadata. It
-    provides setters and getters for the operation's branch weights attribute.
-    The default implementation of the interface methods expect the operation to
-    have an attribute of type DenseI32ArrayAttr named branch_weights.
-  }];
-
-  let cppNamespace = "::mlir::LLVM";
-
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/        "Returns the branch weights attribute or nullptr",
-      /*returnType=*/  "::mlir::DenseI32ArrayAttr",
-      /*methodName=*/  "getBranchWeightsOrNull",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        return op.getBranchWeightsAttr();
-      }]
-      >,
-    InterfaceMethod<
-      /*desc=*/        "Sets the branch weights attribute",
-      /*returnType=*/  "void",
-      /*methodName=*/  "setBranchWeights",
-      /*args=*/        (ins "::mlir::DenseI32ArrayAttr":$attr),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        op.setBranchWeightsAttr(attr);
-      }]
-      >
   ];
 }
 
@@ -435,6 +400,57 @@ def RoundingModeOpInterface : OpInterface<"RoundingModeOpInterface"> {
   ];
 }
 
+def OneToOneIntrinsicOpInterface : OpInterface<"OneToOneIntrinsicOpInterface"> {
+  let description = [{
+    An interface for operations modelling LLVM intrinsics suitable for
+    1-to-1 conversion.
+
+    An op implementing this interface can be directly replaced by a call
+    to a matching intrinsic function.
+    The op must ensure that the combinations of its arguments and results
+    have valid intrinsic counterparts.
+
+    For example, an operation supporting different inputs:
+    ```mlir
+      %res_v8 = intr.op %value_v8 : vector<8xf32>
+      %res_v16 = intr.op %value_v16 : vector<16xf32>
+    ```
+    can be converted to the following intrinsic calls:
+    ```mlir
+      %res_v8 = llvm.call_intrinsic "llvm.x86.op.intr.256"(%value_v8)
+      %res_v16 = llvm.call_intrinsic "llvm.x86.op.intr.512"(%value_v16)
+    ```
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns mangled LLVM intrinsic function name matching the operation
+        variant.
+      }],
+      /*retType=*/"std::string",
+      /*methodName=*/"getIntrinsicName"
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns operands for a corresponding LLVM intrinsic.
+
+        Additional operations may be created to facilitate mapping
+        between the source operands and the target intrinsic.
+      }],
+      /*retType=*/"SmallVector<Value>",
+      /*methodName=*/"getIntrinsicOperands",
+      /*args=*/(ins "::mlir::ArrayRef<Value>":$operands,
+                    "const ::mlir::LLVMTypeConverter &":$typeConverter,
+                    "::mlir::RewriterBase &":$rewriter),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return SmallVector<Value>(operands);"
+    >,
+  ];
+}
+
 //===----------------------------------------------------------------------===//
 // LLVM dialect type interfaces.
 //===----------------------------------------------------------------------===//
@@ -514,6 +530,61 @@ def LLVM_DIRecursiveTypeAttrInterface
       Build a rec-self instance using the provided `recId`.
     }], "DIRecursiveTypeAttrInterface", "getRecSelf",
     (ins "DistinctAttr":$recId)>
+  ];
+}
+
+def LLVM_LLVMAddrSpaceAttrInterface :
+    AttrInterface<"LLVMAddrSpaceAttrInterface"> {
+  let description = [{
+    An interface for attributes that represent LLVM address spaces.
+    Implementing attributes should provide access to the address space value
+    as an unsigned integer.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the address space as an unsigned integer.",
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getAddressSpace",
+      /*args=*/(ins)
+    >
+  ];
+}
+
+def LLVM_TargetAttrInterface
+  : AttrInterface<"TargetAttrInterface", [DLTIQueryInterface]> {
+  let description = [{
+    Interface for attributes that describe LLVM targets.
+
+    These attributes should be able to return the specified target `triple`,
+    `chip` and `features`.
+
+    Implementing attributes should provide a `DLTIQueryInterface::query()`
+    implementation which responds to keys `"triple"`, `"chip"` and `"features"`
+    by returning appropriate `StringAttr`s.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the target triple identifier.",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getTriple",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target chip (i.e. \"cpu\") identifier.",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getChip",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target features as a TargetFeaturesAttr.",
+      /*retTy=*/"Attribute", // NB: will be a LLVM::TargetFeaturesAttr, though
+                             // need to work around a cyclic dependency on
+                             // LLVMInterfaces.td and LLVMAttrDefs.td.
+      /*methodName=*/"getFeatures",
+      /*args=*/(ins)
+    >
   ];
 }
 

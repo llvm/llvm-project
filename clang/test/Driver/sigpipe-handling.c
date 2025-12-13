@@ -1,4 +1,4 @@
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 // RUN: %clang -E -fno-integrated-cc1 %s | head | FileCheck %s
 
 // Test that the parent clang driver process doesn't crash when the child cc1

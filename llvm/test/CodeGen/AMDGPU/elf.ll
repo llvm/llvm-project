@@ -1,12 +1,12 @@
-; RUN: llc < %s -mtriple=amdgcn -verify-machineinstrs -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn -verify-machineinstrs -o - | FileCheck --check-prefix=CONFIG --check-prefix=TYPICAL %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -o - | FileCheck --check-prefix=CONFIG --check-prefix=TONGA %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-flat-for-global -verify-machineinstrs -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-flat-for-global -verify-machineinstrs -o - | FileCheck --check-prefix=CONFIG --check-prefix=TYPICAL %s
+; RUN: llc < %s -mtriple=amdgcn -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgcn -o - | FileCheck --check-prefix=CONFIG --check-prefix=TYPICAL %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -o - | FileCheck --check-prefix=CONFIG --check-prefix=TONGA %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-flat-for-global -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-flat-for-global -o - | FileCheck --check-prefix=CONFIG --check-prefix=TYPICAL %s
 
 ; Test that we don't try to produce a COFF file on windows
-; RUN: llc < %s -mtriple=amdgcn-pc-mingw -verify-machineinstrs -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgcn-pc-mingw -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
 
 ; ELF: Format: elf64-amdgpu
 ; ELF: OS/ABI: SystemV (0x0)

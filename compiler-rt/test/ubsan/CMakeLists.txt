@@ -49,11 +49,9 @@ foreach(arch ${UBSAN_TEST_ARCH})
   add_ubsan_testsuites("Standalone" ubsan ${arch})
 
   if(COMPILER_RT_HAS_ASAN AND ";${ASAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
-    # TODO(wwchrome): Re-enable ubsan for asan win 64-bit when ready.
-    # Disable ubsan with AddressSanitizer tests for Windows 64-bit,
-    # 64-bit Solaris/x86 and 64-bit SPARC.
-    if((NOT (OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)) AND
-       (NOT (OS_NAME MATCHES "SunOS" AND ${arch} MATCHES x86_64)) AND
+    # Disable ubsan with AddressSanitizer tests for 64-bit Solaris/x86 and
+    # 64-bit SPARC.
+    if((NOT (OS_NAME MATCHES "SunOS" AND ${arch} MATCHES x86_64)) AND
        (NOT ${arch} MATCHES sparcv9))
       add_ubsan_testsuites("AddressSanitizer" asan ${arch})
     endif()
@@ -63,6 +61,9 @@ foreach(arch ${UBSAN_TEST_ARCH})
   endif()
   if(COMPILER_RT_HAS_TSAN AND ";${TSAN_SUPPORTED_ARCH};" MATCHES ";${arch};" AND NOT ANDROID)
     add_ubsan_testsuites("ThreadSanitizer" tsan ${arch})
+  endif()
+  if(COMPILER_RT_HAS_TYSAN AND ";${TYSAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
+    add_ubsan_testsuites("TypeSanitizer" tysan ${arch})
   endif()
 endforeach()
 
@@ -125,6 +126,10 @@ if(APPLE)
 
       if(COMPILER_RT_HAS_TSAN AND ";${TSAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
         add_ubsan_device_testsuite("ThreadSanitizer" tsan ${platform} ${arch})
+      endif()
+
+      if(COMPILER_RT_HAS_TYSAN AND ";${TYSAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
+        add_ubsan_device_testsuite("TypeSanitizer" tysan ${platform} ${arch})
       endif()
     endforeach()
   endforeach()

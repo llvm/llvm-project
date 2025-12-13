@@ -1,0 +1,84 @@
+# Test that we warn the user about truncated output
+# when target.max-children-depth wasn't explicitly set.
+
+# RUN: split-file %s %t
+# RUN: %clangxx_host -g %t/main.cpp -o %t.out
+# RUN: %lldb -x -b -s %t/dwim-commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=DWIM
+#
+# RUN: %lldb -x -b -s %t/expr-commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=EXPR
+#
+# RUN: %lldb -x -b -s %t/frame-var-commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=VAR
+#
+# RUN: %lldb -x -b -s %t/with-setting-commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=SETTING
+
+#--- main.cpp
+
+struct L1 {
+    int w;
+    struct L2 {
+        int x;
+        struct L3 {
+            int y;
+            struct L4 {
+              int z;
+                struct L5 {
+                  int a;
+                } l5;
+            } l4;
+        } l3;
+    } l2;
+};
+
+int main() {
+  L1 nested;
+  __builtin_debugtrap();
+}
+
+#--- dwim-commands.input
+
+run
+dwim-print nested
+frame variable nested
+
+DWIM:      (lldb) dwim-print nested
+DWIM:      *** Some of the displayed variables have a greater depth of members
+DWIM-SAME: use the --depth option to dwim-print
+DWIM:      (lldb) frame variable nested
+DWIM-NOT:  *** Some of the displayed variables have a greater depth of members
+
+#--- expr-commands.input
+
+run
+expression nested
+frame variable nested
+
+EXPR:      (lldb) expression nested
+EXPR:      *** Some of the displayed variables have a greater depth of members
+EXPR-SAME: use the --depth option to expression
+EXPR:      (lldb) frame variable nested
+EXPR-NOT:  *** Some of the displayed variables have a greater depth of members
+
+#--- frame-var-commands.input
+
+run
+frame variable nested
+frame variable nested
+
+VAR:      (lldb) frame variable nested
+VAR:      *** Some of the displayed variables have a greater depth of members
+VAR-SAME: use the --depth option to frame variable
+VAR:      (lldb) frame variable nested
+VAR-NOT:  *** Some of the displayed variables have a greater depth of members
+
+#--- with-setting-commands.input
+
+run
+settings set target.max-children-depth 1
+frame variable nested
+
+SETTING:      (lldb) frame variable nested
+SETTING-NOT:  *** Some of the displayed variables have a greater depth of members

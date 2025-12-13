@@ -68,7 +68,6 @@ public:
     uint32_t fdeVARel;
   };
 
-  SmallVector<FdeData, 0> getFdeData() const;
   ArrayRef<CieRecord *> getCieRecords() const { return cieRecords; }
   template <class ELFT>
   void iterateFDEWithLSDA(llvm::function_ref<void(InputSection &)> fn);
@@ -78,21 +77,14 @@ private:
   // allocating one for each EhInputSection.
   llvm::DenseMap<size_t, CieRecord *> offsetToCie;
 
-  uint64_t size = 0;
-
-  template <class ELFT, class RelTy>
-  void addRecords(EhInputSection *s, llvm::ArrayRef<RelTy> rels);
-  template <class ELFT> void addSectionAux(EhInputSection *s);
-  template <class ELFT, class RelTy>
-  void iterateFDEWithLSDAAux(EhInputSection &sec, ArrayRef<RelTy> rels,
+  template <llvm::endianness E> void addRecords(EhInputSection *s);
+  template <class ELFT>
+  void iterateFDEWithLSDAAux(EhInputSection &sec,
                              llvm::DenseSet<size_t> &ciesWithLSDA,
                              llvm::function_ref<void(InputSection &)> fn);
 
-  template <class ELFT, class RelTy>
-  CieRecord *addCie(EhSectionPiece &piece, ArrayRef<RelTy> rels);
-
-  template <class ELFT, class RelTy>
-  Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<RelTy> rels);
+  CieRecord *addCie(EhSectionPiece &piece, ArrayRef<Relocation> rels);
+  Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<Relocation> rels);
 
   uint64_t getFdePc(uint8_t *buf, size_t off, uint8_t enc) const;
 
@@ -100,6 +92,17 @@ private:
 
   // CIE records are uniquified by their contents and personality functions.
   llvm::DenseMap<std::pair<ArrayRef<uint8_t>, Symbol *>, CieRecord *> cieMap;
+};
+
+// .eh_frame_hdr contains a binary search table for .eh_frame FDEs. The section
+// is covered by a PT_GNU_EH_FRAME segment, which allows the runtime unwinder to
+// locate it via functions like `dl_iterate_phdr`.
+class EhFrameHeader final : public SyntheticSection {
+public:
+  EhFrameHeader(Ctx &);
+  void writeTo(uint8_t *buf) override;
+  size_t getSize() const override;
+  bool isNeeded() const override;
 };
 
 class GotSection final : public SyntheticSection {
@@ -132,7 +135,6 @@ public:
 protected:
   size_t numEntries = 0;
   uint32_t tlsIndexOff = -1;
-  uint64_t size = 0;
   struct AuthEntryInfo {
     size_t offset;
     bool isSymbolFunc;
@@ -187,7 +189,6 @@ public:
   static bool classof(const SectionBase *s) {
     return isa<SyntheticSection>(s) && cast<SyntheticSection>(s)->bss;
   }
-  uint64_t size;
 };
 
 class MipsGotSection final : public SyntheticSection {
@@ -317,8 +318,6 @@ private:
   // Number of "Header" entries.
   static const unsigned headerEntriesNum = 2;
 
-  uint64_t size = 0;
-
   // Symbol and addend.
   using GotEntry = std::pair<Symbol *, int64_t>;
 
@@ -327,9 +326,11 @@ private:
     size_t startIndex = 0;
 
     struct PageBlock {
+      Symbol *repSym; // Representative symbol for the OutputSection
       size_t firstIndex;
       size_t count;
-      PageBlock() : firstIndex(0), count(0) {}
+      PageBlock(Symbol *repSym = nullptr)
+          : repSym(repSym), firstIndex(0), count(0) {}
     };
 
     // Map output sections referenced by MIPS GOT relocations
@@ -410,69 +411,37 @@ public:
 private:
   const bool dynamic;
 
-  uint64_t size = 0;
-
   llvm::DenseMap<llvm::CachedHashStringRef, unsigned> stringMap;
   SmallVector<StringRef, 0> strings;
 };
 
 class DynamicReloc {
 public:
-  enum Kind {
-    /// The resulting dynamic relocation does not reference a symbol (#sym must
-    /// be nullptr) and uses #addend as the result of computeAddend(ctx).
-    AddendOnly,
-    /// The resulting dynamic relocation will not reference a symbol: #sym is
-    /// only used to compute the addend with InputSection::getRelocTargetVA().
-    /// Useful for various relative and TLS relocations (e.g. R_X86_64_TPOFF64).
-    AddendOnlyWithTargetVA,
-    /// The resulting dynamic relocation references symbol #sym from the dynamic
-    /// symbol table and uses #addend as the value of computeAddend(ctx).
-    AgainstSymbol,
-    /// The resulting dynamic relocation references symbol #sym from the dynamic
-    /// symbol table and uses InputSection::getRelocTargetVA() + #addend for the
-    /// final addend. It can be used for relocations that write the symbol VA as
-    // the addend (e.g. R_MIPS_TLS_TPREL64) but still reference the symbol.
-    AgainstSymbolWithTargetVA,
-    /// This is used by the MIPS multi-GOT implementation. It relocates
-    /// addresses of 64kb pages that lie inside the output section.
-    MipsMultiGotPage,
-  };
-  /// This constructor records a relocation against a symbol.
+  /// This constructor records a normal relocation.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
-               uint64_t offsetInSec, Kind kind, Symbol &sym, int64_t addend,
-               RelExpr expr)
+               uint64_t offsetInSec, bool isAgainstSymbol, Symbol &sym,
+               int64_t addend, RelExpr expr)
       : sym(&sym), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
-        addend(addend), kind(kind), expr(expr) {}
+        addend(addend), isAgainstSymbol(isAgainstSymbol), isFinal(false),
+        expr(expr) {}
   /// This constructor records a relative relocation with no symbol.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, int64_t addend = 0)
-      : sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
-        addend(addend), kind(AddendOnly), expr(R_ADDEND) {}
-  /// This constructor records dynamic relocation settings used by the MIPS
-  /// multi-GOT implementation.
-  DynamicReloc(RelType type, const InputSectionBase *inputSec,
-               uint64_t offsetInSec, const OutputSection *outputSec,
-               int64_t addend)
-      : sym(nullptr), outputSec(outputSec), inputSec(inputSec),
-        offsetInSec(offsetInSec), type(type), addend(addend),
-        kind(MipsMultiGotPage), expr(R_ADDEND) {}
+      : DynamicReloc(type, inputSec, offsetInSec, false,
+                     *inputSec->getCtx().dummySym, addend, R_ADDEND) {}
 
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
-  bool needsDynSymIndex() const {
-    return kind == AgainstSymbol || kind == AgainstSymbolWithTargetVA;
-  }
+  bool needsDynSymIndex() const { return isAgainstSymbol; }
 
   /// Computes the addend of the dynamic relocation. Note that this is not the
   /// same as the #addend member variable as it may also include the symbol
   /// address/the address of the corresponding GOT entry/etc.
   int64_t computeAddend(Ctx &) const;
 
-  void computeRaw(Ctx &, SymbolTableBaseSection *symt);
+  void finalize(Ctx &, SymbolTableBaseSection *symt);
 
   Symbol *sym;
-  const OutputSection *outputSec = nullptr;
   const InputSectionBase *inputSec;
   uint64_t offsetInSec;
   uint64_t r_offset;
@@ -483,7 +452,15 @@ public:
   int64_t addend;
 
 private:
-  Kind kind;
+  /// Whether this was constructed with a Kind of AgainstSymbol.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isAgainstSymbol : 1;
+
+  /// The resulting dynamic relocation has already had its addend computed.
+  /// Calling computeAddend() is an error.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isFinal : 1;
+
   // The kind of expression used to calculate the added (required e.g. for
   // relative GOT relocations).
   RelExpr expr;
@@ -500,7 +477,6 @@ public:
 
 private:
   std::vector<std::pair<int32_t, uint64_t>> computeContents();
-  uint64_t size = 0;
 };
 
 class RelocationBaseSection : public SyntheticSection {
@@ -528,8 +504,8 @@ public:
                         uint64_t offsetInSec, Symbol &sym, int64_t addend,
                         RelType addendRelType, RelExpr expr) {
     assert(expr != R_ADDEND && "expected non-addend relocation expression");
-    addReloc<shard>(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec,
-                    offsetInSec, sym, addend, expr, addendRelType);
+    addReloc<shard>(false, dynType, isec, offsetInSec, sym, addend, expr,
+                    addendRelType);
   }
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
@@ -538,14 +514,15 @@ public:
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
   template <bool shard = false>
-  void addReloc(DynamicReloc::Kind kind, RelType dynType, InputSectionBase &sec,
+  void addReloc(bool isAgainstSymbol, RelType dynType, InputSectionBase &sec,
                 uint64_t offsetInSec, Symbol &sym, int64_t addend, RelExpr expr,
                 RelType addendRelType) {
     // Write the addends to the relocated address if required. We skip
     // it if the written value would be zero.
     if (ctx.arg.writeAddends && (expr != R_ADDEND || addend != 0))
       sec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
-    addReloc<shard>({dynType, &sec, offsetInSec, kind, sym, addend, expr});
+    addReloc<shard>(
+        {dynType, &sec, offsetInSec, isAgainstSymbol, sym, addend, expr});
   }
   bool isNeeded() const override {
     return !relocs.empty() ||
@@ -803,11 +780,9 @@ public:
   void writeTo(uint8_t *buf) override {}
 };
 
-class RandomizePaddingSection final : public SyntheticSection {
-  uint64_t size;
-
+class PaddingSection final : public SyntheticSection {
 public:
-  RandomizePaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
+  PaddingSection(Ctx &ctx, uint64_t amount, OutputSection *parent);
   size_t getSize() const override { return size; }
   void writeTo(uint8_t *buf) override;
 };
@@ -1000,24 +975,6 @@ private:
   SmallVector<GdbSymbol, 0> symbols;
 
   size_t size;
-};
-
-// --eh-frame-hdr option tells linker to construct a header for all the
-// .eh_frame sections. This header is placed to a section named .eh_frame_hdr
-// and also to a PT_GNU_EH_FRAME segment.
-// At runtime the unwinder then can find all the PT_GNU_EH_FRAME segments by
-// calling dl_iterate_phdr.
-// This section contains a lookup table for quick binary search of FDEs.
-// Detailed info about internals can be found in Ian Lance Taylor's blog:
-// http://www.airs.com/blog/archives/460 (".eh_frame")
-// http://www.airs.com/blog/archives/462 (".eh_frame_hdr")
-class EhFrameHeader final : public SyntheticSection {
-public:
-  EhFrameHeader(Ctx &);
-  void write();
-  void writeTo(uint8_t *buf) override;
-  size_t getSize() const override;
-  bool isNeeded() const override;
 };
 
 // For more information about .gnu.version and .gnu.version_r see:
@@ -1324,7 +1281,7 @@ public:
                   std::optional<uint64_t> addr = std::nullopt)
       : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
   static const size_t size{ACLESESYM_SIZE};
-  const std::optional<uint64_t> getAddr() const { return entAddr; };
+  std::optional<uint64_t> getAddr() const { return entAddr; };
 
   Symbol *sym;
   Symbol *acleSeSym;

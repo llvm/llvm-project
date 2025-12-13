@@ -72,7 +72,7 @@ struct C {
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-12]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-12]]:3)':'C::(unnamed struct at {{.*}}:[[@LINE-12]]:3)'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-12]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-12]]:3)'
 
   union {
     // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+12]]:3> line:[[@LINE-1]]:3 union definition
@@ -179,7 +179,7 @@ union E {
 };
 
 union G {
-  // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+71]]:1> line:[[@LINE-1]]:7 union G definition
+  // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+69]]:1> line:[[@LINE-1]]:7 union G definition
   // CHECK-NEXT: DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
   // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
   // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -202,9 +202,7 @@ union G {
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
-  // FIXME: note that it talks about 'struct G' below; the same happens in
-  // other cases with union G as well.
-  // CHECK: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-15]]:3, line:[[@LINE-3]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-15]]:3)':'G::(unnamed struct at {{.*}}:[[@LINE-15]]:3)'
+  // CHECK: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-13]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-13]]:3)'
 
   union {
     // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+13]]:3> line:[[@LINE-1]]:3 union definition

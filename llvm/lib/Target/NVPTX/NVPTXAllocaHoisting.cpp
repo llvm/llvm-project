@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXAllocaHoisting.h"
+#include "NVPTX.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -56,10 +57,6 @@ bool NVPTXAllocaHoisting::runOnFunction(Function &function) {
 }
 
 char NVPTXAllocaHoisting::ID = 0;
-
-namespace llvm {
-void initializeNVPTXAllocaHoistingPass(PassRegistry &);
-}
 
 INITIALIZE_PASS(
     NVPTXAllocaHoisting, "alloca-hoisting",

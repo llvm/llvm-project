@@ -38,7 +38,7 @@ namespace profileCollectorService {
 ///
 void post(BufferQueue *Q, FunctionCallTrie &&T,
           FunctionCallTrie::Allocators &&A,
-          FunctionCallTrie::Allocators::Buffers &&B, tid_t TId);
+          FunctionCallTrie::Allocators::Buffers &&B, ThreadID TId);
 
 /// The serialize will process all FunctionCallTrie instances in memory, and
 /// turn those into specifically formatted blocks, each describing the

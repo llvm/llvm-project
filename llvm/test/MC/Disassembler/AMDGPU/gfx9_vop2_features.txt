@@ -1,0 +1,93 @@
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx908 -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx90a -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx942 -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
+
+# CHECK-MI: v_pk_fmac_f16_e32 v5, v1, v2
+0x01,0x05,0x0a,0x78
+
+# CHECK-MI: v_pk_fmac_f16_dpp v5, v1, v2 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf
+0xfa,0x04,0x0a,0x78,0x01,0xe4,0x00,0xff
+
+# CHECK-MI: v_pk_fmac_f16_dpp v5, v1, v2 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+0xfa,0x04,0x0a,0x78,0x01,0xe4,0x00,0x00
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:BYTE_0 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x00,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x01,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:BYTE_2 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x02,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x03,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:WORD_0 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x04,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x05,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_SEXT src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x0e,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x16,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x16,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x00,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x01,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x02,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x03,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x04,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x05,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x06
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x00
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x01
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x02
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x03
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x04
+
+# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x05
+
+# FIXME: The instruction gets printed using the wrong function (AMDGPUInstPrinter::printOperandAndIntInputMods) and hence the "-" modifier is not printed.
+# COM: v_pk_fmac_f16_sdwa v5, v1, -v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x16
+

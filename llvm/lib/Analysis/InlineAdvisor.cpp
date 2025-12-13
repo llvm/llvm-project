@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/EphemeralValuesCache.h"
+#include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -63,6 +64,13 @@ static cl::opt<bool>
     AnnotateInlinePhase("annotate-inline-phase", cl::Hidden, cl::init(false),
                         cl::desc("If true, annotate inline advisor remarks "
                                  "with LTO and pass information."));
+
+// This flag is used to enable IR2Vec embeddings in the ML inliner; Only valid
+// with ML inliner. The vocab file is used to initialize the embeddings.
+static cl::opt<std::string> IR2VecVocabFile(
+    "ml-inliner-ir2vec-vocab-file", cl::Hidden,
+    cl::desc("Vocab file for IR2Vec; Setting this enables "
+             "configuring the model to use IR2Vec embeddings."));
 
 namespace llvm {
 extern cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats;
@@ -206,6 +214,20 @@ void InlineAdvice::recordInliningWithCalleeDeleted() {
 AnalysisKey InlineAdvisorAnalysis::Key;
 AnalysisKey PluginInlineAdvisorAnalysis::Key;
 
+bool InlineAdvisorAnalysis::initializeIR2VecVocabIfRequested(
+    Module &M, ModuleAnalysisManager &MAM) {
+  if (!IR2VecVocabFile.empty()) {
+    auto &IR2VecVocabResult = MAM.getResult<IR2VecVocabAnalysis>(M);
+    if (!IR2VecVocabResult.isValid()) {
+      M.getContext().emitError("Failed to load IR2Vec vocabulary");
+      return false;
+    }
+  }
+  // No vocab file specified is OK; We just don't use IR2Vec
+  // embeddings.
+  return true;
+}
+
 bool InlineAdvisorAnalysis::Result::tryCreate(
     InlineParams Params, InliningAdvisorMode Mode,
     const ReplayInlinerSettings &ReplaySettings, InlineContext IC) {
@@ -231,14 +253,21 @@ bool InlineAdvisorAnalysis::Result::tryCreate(
                                              /* EmitRemarks =*/true, IC);
     }
     break;
+    // Run IR2VecVocabAnalysis once per module to get the vocabulary.
+    // We run it here because it is immutable and we want to avoid running it
+    // multiple times.
   case InliningAdvisorMode::Development:
 #ifdef LLVM_HAVE_TFLITE
     LLVM_DEBUG(dbgs() << "Using development-mode inliner policy.\n");
+    if (!InlineAdvisorAnalysis::initializeIR2VecVocabIfRequested(M, MAM))
+      return false;
     Advisor = llvm::getDevelopmentModeAdvisor(M, MAM, GetDefaultAdvice);
 #endif
     break;
   case InliningAdvisorMode::Release:
     LLVM_DEBUG(dbgs() << "Using release-mode inliner policy.\n");
+    if (!InlineAdvisorAnalysis::initializeIR2VecVocabIfRequested(M, MAM))
+      return false;
     Advisor = llvm::getReleaseModeAdvisor(M, MAM, GetDefaultAdvice);
     break;
   }

@@ -15,14 +15,8 @@ endif()
 # Add cmake directory to search for custom cmake functions
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
-# Set libomp version
-set(LIBOMP_VERSION_MAJOR 5)
-set(LIBOMP_VERSION_MINOR 0)
-
 # These include files are in the cmake/ subdirectory
-include(LibompUtils)
 include(LibompGetArchitecture)
-include(LibompHandleFlags)
 include(LibompDefinitions)
 
 # Determine the target architecture
@@ -30,7 +24,7 @@ if(${OPENMP_STANDALONE_BUILD})
   # If adding a new architecture, take a look at cmake/LibompGetArchitecture.cmake
   libomp_get_architecture(LIBOMP_DETECTED_ARCH)
   set(LIBOMP_ARCH ${LIBOMP_DETECTED_ARCH} CACHE STRING
-    "The architecture to build for (x86_64/i386/arm/ppc/ppc64/ppc64le/aarch64/aarch64_32/mic/mips/mips64/riscv64/loongarch64/ve/s390x/wasm32).")
+    "The architecture to build for (x86_64/i386/arm/ppc/ppc64/ppc64le/aarch64/aarch64_32/mic/mips/mips64/riscv64/loongarch64/ve/s390x/sparc/sparcv9/wasm32).")
   # Should assertions be enabled?  They are on by default.
   set(LIBOMP_ENABLE_ASSERTIONS TRUE CACHE BOOL
     "enable assertions?")
@@ -71,6 +65,10 @@ else() # Part of LLVM build
     set(LIBOMP_ARCH ve)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "s390x")
     set(LIBOMP_ARCH s390x)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "sparcv9")
+    set(LIBOMP_ARCH sparcv9)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "sparc")
+    set(LIBOMP_ARCH sparc)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "wasm")
     set(LIBOMP_ARCH wasm32)
   else()
@@ -93,20 +91,17 @@ if(LIBOMP_ARCH STREQUAL "aarch64")
   endif()
 endif()
 
-libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x wasm32)
+libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x sparc sparcv9 wasm32)
 
 set(LIBOMP_LIB_TYPE normal CACHE STRING
   "Performance,Profiling,Stubs library (normal/profile/stubs)")
 libomp_check_variable(LIBOMP_LIB_TYPE normal profile stubs)
-# Set the OpenMP Year and Month associated with version
-set(LIBOMP_OMP_YEAR_MONTH 201611)
 set(LIBOMP_MIC_ARCH knc CACHE STRING
   "Intel(R) Many Integrated Core Architecture (Intel(R) MIC Architecture) (knf/knc).  Ignored if not Intel(R) MIC Architecture build.")
 if("${LIBOMP_ARCH}" STREQUAL "mic")
   libomp_check_variable(LIBOMP_MIC_ARCH knf knc)
 endif()
-set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
-  "Create Fortran module files? (requires fortran compiler)")
+
 
 # - Support for universal fat binary builds on Mac
 # - Having this extra variable allows people to build this library as a universal library
@@ -132,7 +127,7 @@ set(LIBOMP_ASMFLAGS "" CACHE STRING
   "Appended user specified assembler flags.")
 set(LIBOMP_LDFLAGS "" CACHE STRING
   "Appended user specified linker flags.")
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LIBOMP_LIBFLAGS "-lperfstat" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
   if("${LIBOMP_ARCH}" STREQUAL "ppc")
@@ -143,8 +138,6 @@ else()
   set(LIBOMP_LIBFLAGS "" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
 endif()
-set(LIBOMP_FFLAGS "" CACHE STRING
-  "Appended user specified Fortran compiler flags.  These are only used if LIBOMP_FORTRAN_MODULES==TRUE.")
 
 # Should the libomp library and generated headers be copied into the original source exports/ directory
 # Turning this to FALSE aids parallel builds to not interfere with each other.
@@ -158,14 +151,6 @@ set(LIBOMP_USE_HWLOC FALSE CACHE BOOL
   "Use Hwloc (http://www.open-mpi.org/projects/hwloc/) library for affinity?")
 set(LIBOMP_HWLOC_INSTALL_DIR /usr/local CACHE PATH
   "Install path for hwloc library")
-
-# Get the build number from kmp_version.cpp
-libomp_get_build_number("${CMAKE_CURRENT_SOURCE_DIR}" LIBOMP_VERSION_BUILD)
-math(EXPR LIBOMP_VERSION_BUILD_YEAR "${LIBOMP_VERSION_BUILD}/10000")
-math(EXPR LIBOMP_VERSION_BUILD_MONTH_DAY "${LIBOMP_VERSION_BUILD}%10000")
-
-# Currently don't record any timestamps
-set(LIBOMP_BUILD_DATE "No_Timestamp")
 
 # Architecture
 set(IA32 FALSE)
@@ -186,6 +171,8 @@ set(VE FALSE)
 set(S390X FALSE)
 set(WASM FALSE)
 set(PPC FALSE)
+set(SPARC FALSE)
+set(SPARCV9 FALSE)
 if("${LIBOMP_ARCH}" STREQUAL "i386" OR "${LIBOMP_ARCH}" STREQUAL "32")    # IA-32 architecture
   set(IA32 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "x86_64" OR "${LIBOMP_ARCH}" STREQUAL "32e") # Intel(R) 64 architecture
@@ -222,6 +209,10 @@ elseif("${LIBOMP_ARCH}" STREQUAL "s390x") # S390x (Z) architecture
     set(S390X TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "wasm32") # WebAssembly architecture
     set(WASM TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "sparc") # SPARC architecture
+    set(SPARC TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "sparcv9") # SPARC V9 architecture
+    set(SPARCV9 TRUE)
 endif()
 
 # Set some flags based on build_type
@@ -262,10 +253,6 @@ set(LIBOMP_TOOLS_DIR ${LIBOMP_BASE_DIR}/tools)
 set(LIBOMP_INC_DIR ${LIBOMP_SRC_DIR}/include)
 set(LIBOMP_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-# Enabling Fortran if it is needed
-if(${LIBOMP_FORTRAN_MODULES})
-  enable_language(Fortran)
-endif()
 # Enable MASM Compiler if it is needed (Windows only)
 if(WIN32)
   enable_language(ASM_MASM)

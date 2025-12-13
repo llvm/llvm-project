@@ -654,7 +654,9 @@ void HexagonDAGToDAGISel::SelectIntrinsicWChain(SDNode *N) {
       IntNo == Intrinsic::hexagon_V6_vgathermh ||
       IntNo == Intrinsic::hexagon_V6_vgathermh_128B ||
       IntNo == Intrinsic::hexagon_V6_vgathermhw ||
-      IntNo == Intrinsic::hexagon_V6_vgathermhw_128B) {
+      IntNo == Intrinsic::hexagon_V6_vgathermhw_128B ||
+      IntNo == Intrinsic::hexagon_V6_vgather_vscattermh ||
+      IntNo == Intrinsic::hexagon_V6_vgather_vscattermh_128B) {
     SelectV65Gather(N);
     return;
   }
@@ -1640,6 +1642,15 @@ bool HexagonDAGToDAGISel::DetectUseSxtw(SDValue &N, SDValue &R) {
       R = N;
       break;
     }
+    case ISD::AssertSext: {
+      EVT T = cast<VTSDNode>(N.getOperand(1))->getVT();
+      if (T.getSizeInBits() == 32)
+        R = N.getOperand(0);
+      else
+        return false;
+      break;
+    }
+
     default:
       return false;
   }
@@ -1804,7 +1815,7 @@ struct WeightedLeaf {
   int Weight;
   int InsertionOrder;
 
-  WeightedLeaf() {}
+  WeightedLeaf() = default;
 
   WeightedLeaf(SDValue Value, int Weight, int InsertionOrder) :
     Value(Value), Weight(Weight), InsertionOrder(InsertionOrder) {

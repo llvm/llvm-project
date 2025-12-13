@@ -1,6 +1,11 @@
 ; RUN: llc -mtriple=amdgcn -amdgpu-set-wave-priority=true -o - %s | \
 ; RUN:   FileCheck %s
 
+; RUN: llc -mtriple=amdgcn -stop-after=si-late-branch-lowering -o - %s | \
+; RUN:   llc -x mir -mtriple=amdgcn -passes=amdgpu-set-wave-priority -o - | \
+; RUN:   llc -x mir -mtriple=amdgcn -start-after=si-late-branch-lowering -o - | \
+; RUN:   FileCheck %s
+
 ; CHECK-LABEL: no_setprio:
 ; CHECK-NOT:       s_setprio
 ; CHECK:           ; return to shader part epilog

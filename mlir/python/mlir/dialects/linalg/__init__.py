@@ -203,6 +203,19 @@ def batch_matmul(
     )
 
 
+def batch_reduce_matmul(
+    *ins: Union[Operation, OpView, Value],
+    outs: Sequence[Union[Operation, OpView, Value]],
+    indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
+    cast: Optional[Union[TypeFn, Attribute]] = None,
+):
+    return _get_op_result_or_op_results(
+        _create_matmul_like_op(
+            BatchReduceMatmulOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast
+        )
+    )
+
+
 def contract(
     *ins: Union[Operation, OpView, Value],
     outs: Sequence[Union[Operation, OpView, Value]],
@@ -214,6 +227,67 @@ def contract(
             ContractOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast
         )
     )
+
+
+# Extend and shadow the TableGen-derived version to make sure correct default
+# indexing_maps are derived (as there is no mechanism for doing so given the
+# Python API bypasses the C++-builders).
+class ElementwiseOp_(ElementwiseOp):
+    def __init__(
+        self,
+        result_tensors,
+        inputs,
+        outputs,
+        kind,
+        *,
+        indexing_maps=None,
+        loc=None,
+        ip=None,
+    ):
+        if indexing_maps is None:
+            inputs = [_get_op_result_or_value(in_) for in_ in inputs]
+            for in0, in1 in zip(inputs[:-1], inputs[1:]):
+                assert in0.type == in1.type
+            output = _get_op_result_or_value(outputs[0])
+            assert inputs[0].type == output.type
+            num_args = len(inputs) + 1
+            indexing_maps = [AffineMap.get_identity(output.type.rank)] * num_args
+
+        super().__init__(
+            result_tensors=result_tensors,
+            inputs=inputs,
+            outputs=outputs,
+            kind=kind,
+            indexing_maps=indexing_maps,
+            loc=loc,
+            ip=ip,
+        )
+
+
+ElementwiseOp = ElementwiseOp_
+
+
+def elementwise(
+    *ins: Union[Operation, OpView, Value],
+    outs: Sequence[Union[Operation, OpView, Value]],
+    kind: Union[ElementwiseKind, Attribute],
+    indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
+):
+    ins = [_get_op_result_or_value(input) for input in ins]
+    if len(outs) != 1:
+        raise ValueError(f"{outs=} must have length 1.")
+    init = _get_op_result_or_value(outs[0])
+    result_types = [init.type] if isinstance(init.type, RankedTensorType) else []
+
+    op = ElementwiseOp(
+        result_tensors=result_types,
+        inputs=ins,
+        outputs=[init],
+        kind=kind,
+        indexing_maps=indexing_maps,
+    )
+    fill_builtin_region(op.operation)
+    return _get_op_result_or_op_results(op)
 
 
 def pack(
@@ -278,3 +352,7 @@ def unpack(
             ip=ip,
         )
     )
+
+
+reduce = region_op(ReduceOp, terminator=YieldOp)
+map = region_op(MapOp, terminator=YieldOp)

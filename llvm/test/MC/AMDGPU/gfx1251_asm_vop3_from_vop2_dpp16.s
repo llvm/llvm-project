@@ -1,0 +1,34 @@
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1251 -show-encoding < %s | FileCheck --check-prefix=GFX1251 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
+
+v_add_nc_u64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1
+// GFX1251: v_add_nc_u64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0x04,0x00,0x28,0xd5,0xfa,0x08,0x02,0x00,0x02,0x51,0x01,0xff]
+// GFX1250-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_sub_nc_u64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1
+// GFX1251: v_sub_nc_u64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0x04,0x00,0x29,0xd5,0xfa,0x08,0x02,0x00,0x02,0x51,0x01,0xff]
+// GFX1250-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_fmac_f64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1
+// GFX1251: v_fmac_f64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0x04,0x00,0x17,0xd5,0xfa,0x08,0x02,0x00,0x02,0x51,0x01,0xff]
+// GFX1250-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_add_f64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1
+// GFX1251: v_add_f64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0x04,0x00,0x02,0xd5,0xfa,0x08,0x02,0x00,0x02,0x51,0x01,0xff]
+// GFX1250-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_mul_f64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1
+// GFX1251: v_mul_f64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0x04,0x00,0x06,0xd5,0xfa,0x08,0x02,0x00,0x02,0x51,0x01,0xff]
+// GFX1250-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_max_num_f64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1
+// GFX1251: v_max_num_f64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0x04,0x00,0x0e,0xd5,0xfa,0x08,0x02,0x00,0x02,0x51,0x01,0xff]
+// GFX1250-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_min_num_f64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1
+// GFX1251: v_min_num_f64_e64_dpp v[4:5], v[2:3], v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0x04,0x00,0x0d,0xd5,0xfa,0x08,0x02,0x00,0x02,0x51,0x01,0xff]
+// GFX1250-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_lshlrev_b64_e64_dpp v[4:5], v2, v[4:5] row_share:1
+// GFX1251: v_lshlrev_b64_e64_dpp v[4:5], v2, v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0x04,0x00,0x1f,0xd5,0xfa,0x08,0x02,0x00,0x02,0x51,0x01,0xff]
+// GFX1250-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported

@@ -12,8 +12,8 @@
 #include "src/__support/common.h"
 
 #include "hdr/fcntl_macros.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
@@ -23,7 +23,7 @@ LLVM_LIBC_FUNCTION(int, access, (const char *path, int mode)) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_access, path, mode);
 #elif defined(SYS_faccessat)
   int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_faccessat, AT_FDCWD, path, mode, 0);
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_faccessat, AT_FDCWD, path, mode);
 #else
 #error "access and faccessat syscalls not available."
 #endif

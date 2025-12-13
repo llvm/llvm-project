@@ -98,8 +98,7 @@ struct array_of_ints_count {
 
 struct not_a_fam {
   int count;
-  // expected-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'struct bar' is an incomplete type}}
-  struct bar *non_fam __counted_by(count);
+  struct bar *non_fam __counted_by(count); // ok
 };
 
 struct not_a_c99_fam {

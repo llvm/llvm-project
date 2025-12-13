@@ -802,6 +802,7 @@ public:
   using size_type = size_t;
 
   NamedAttrList() : dictionarySorted({}, true) {}
+  LLVM_DEPRECATED("Use NamedAttrList() instead", "NamedAttrList()")
   NamedAttrList(std::nullopt_t none) : NamedAttrList() {}
   NamedAttrList(ArrayRef<NamedAttribute> attributes);
   NamedAttrList(DictionaryAttr attributes);
@@ -985,9 +986,9 @@ public:
                  BlockRange successors = {},
                  MutableArrayRef<std::unique_ptr<Region>> regions = {});
   OperationState(OperationState &&other) = default;
-  OperationState(const OperationState &other) = default;
   OperationState &operator=(OperationState &&other) = default;
-  OperationState &operator=(const OperationState &other) = default;
+  OperationState(const OperationState &other) = delete;
+  OperationState &operator=(const OperationState &other) = delete;
   ~OperationState();
 
   /// Get (or create) a properties of the provided type to be set on the
@@ -1175,6 +1176,7 @@ private:
 class OpPrintingFlags {
 public:
   OpPrintingFlags();
+  LLVM_DEPRECATED("Use OpPrintingFlags() instead", "OpPrintingFlags()")
   OpPrintingFlags(std::nullopt_t) : OpPrintingFlags() {}
 
   /// Enables the elision of large elements attributes by printing a lexically
@@ -1322,7 +1324,14 @@ struct OperationEquivalence {
     // When provided, the location attached to the operation are ignored.
     IgnoreLocations = 1,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreLocations)
+    // When provided, the discardable attributes attached to the operation are
+    // ignored.
+    IgnoreDiscardableAttrs = 2,
+
+    // When provided, the properties attached to the operation are ignored.
+    IgnoreProperties = 4,
+
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreProperties)
   };
 
   /// Compute a hash for the given operation.

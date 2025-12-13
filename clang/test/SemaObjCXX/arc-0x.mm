@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fobjc-arc -fobjc-runtime-has-weak -fobjc-weak -verify -fblocks -fobjc-exceptions %s
+// RUN: %clang_cc1 -std=c++11 -fobjc-arc -fobjc-runtime-has-weak -fobjc-weak -verify -fblocks -fobjc-exceptions -emit-llvm -o - %s
 
 // "Move" semantics, trivial version.
 void move_it(__strong id &&from) {
@@ -13,6 +13,11 @@ void move_it(__strong id &&from) {
 
 // don't warn about this
 extern "C" A* MakeA();
+
+void test_nonexistent_method(A *a) {
+  // This used to crash in codegen.
+  auto a1 = [a foo]; // expected-error {{no visible @interface for 'A' declares the selector 'foo'}}
+}
 
 // Ensure that deduction works with lifetime qualifiers.
 void deduction(id obj) {
@@ -157,8 +162,8 @@ namespace test_union {
 
   struct S1 {
     union {
-      union { // expected-note-re {{copy constructor of 'S1' is implicitly deleted because field 'test_union::S1::(anonymous union at {{.*}})' has a deleted copy constructor}} expected-note-re {{copy assignment operator of 'S1' is implicitly deleted because field 'test_union::S1::(anonymous union at {{.*}})' has a deleted copy assignment operator}} expected-note-re 4 {{'S1' is implicitly deleted because field 'test_union::S1::(anonymous union at {{.*}})' has a deleted}}
-        id f0; // expected-note-re 2 {{{{.*}} of '(anonymous union at {{.*}}' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
+      union { // expected-note-re {{copy constructor of 'S1' is implicitly deleted because field 'test_union::S1::(anonymous union)::(anonymous union at {{.*}})' has a deleted copy constructor}} expected-note-re {{copy assignment operator of 'S1' is implicitly deleted because field 'test_union::S1::(anonymous union)::(anonymous union at {{.*}})' has a deleted copy assignment operator}} expected-note-re 4 {{'S1' is implicitly deleted because field 'test_union::S1::(anonymous union)::(anonymous union at {{.*}})' has a deleted}}
+        id f0; // expected-note-re 6 {{{{.*}} of '(anonymous union at {{.*}}' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
         char f1;
       };
       int f2;
@@ -168,7 +173,7 @@ namespace test_union {
   struct S2 {
     union {
       // FIXME: the note should say 'f0' is causing the special functions to be deleted.
-      struct { // expected-note-re 6 {{'S2' is implicitly deleted because variant field 'test_union::S2::(anonymous struct at {{.*}})' has a non-trivial}}
+      struct { // expected-note-re 6 {{'S2' is implicitly deleted because variant field 'test_union::S2::(anonymous union)::(anonymous struct at {{.*}})' has a non-trivial}}
         id f0;
         int f1;
       };
@@ -190,8 +195,8 @@ namespace test_union {
   };
 
   static union { // expected-error {{call to implicitly-deleted default constructor of}}
-    union { // expected-note-re {{default constructor of '(unnamed union at {{.*}}' is implicitly deleted because field 'test_union::(anonymous union at {{.*}})' has a deleted default constructor}}
-      union { // expected-note-re {{default constructor of '(anonymous union at {{.*}}' is implicitly deleted because field 'test_union::(anonymous union at {{.*}})' has a deleted default constructor}}
+    union { // expected-note-re {{default constructor of '(unnamed union at {{.*}}' is implicitly deleted because field 'test_union::(anonymous union)::(anonymous union at {{.*}})' has a deleted default constructor}}
+      union { // expected-note-re {{default constructor of '(anonymous union at {{.*}}' is implicitly deleted because field 'test_union::(anonymous union)::(anonymous union)::(anonymous union at {{.*}})' has a deleted default constructor}}
         __weak id g1; // expected-note-re {{default constructor of '(anonymous union at {{.*}}' is implicitly deleted because variant field 'g1' is an ObjC pointer}}
         int g2;
       };

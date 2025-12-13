@@ -13,14 +13,14 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: no_erase_local_escape
     ; CHECK: LOCAL_ESCAPE <mcsymbol .Llocal_escape$frame_escape_0>, %stack.0
-    ; CHECK: LOCAL_ESCAPE <mcsymbol .Llocal_escape$frame_escape_1>, %stack.1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 13
-    ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-    ; CHECK: [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-    ; CHECK: G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32))
-    ; CHECK: G_STORE [[C1]](s32), [[FRAME_INDEX1]](p0) :: (store (s32))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: LOCAL_ESCAPE <mcsymbol .Llocal_escape$frame_escape_1>, %stack.1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 13
+    ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+    ; CHECK-NEXT: [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+    ; CHECK-NEXT: G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32))
+    ; CHECK-NEXT: G_STORE [[C1]](s32), [[FRAME_INDEX1]](p0) :: (store (s32))
+    ; CHECK-NEXT: RET_ReallyLR
     LOCAL_ESCAPE <mcsymbol .Llocal_escape$frame_escape_0>, %stack.0
     LOCAL_ESCAPE <mcsymbol .Llocal_escape$frame_escape_1>, %stack.1
     %2:_(s32) = G_CONSTANT i32 42

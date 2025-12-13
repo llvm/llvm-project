@@ -35,6 +35,14 @@ module _Builtin_intrinsics [system] [extern_c] {
     }
   }
 
+  explicit module arm64 {
+    requires arm64
+    requires windows
+
+    header "arm64intr.h"
+    export *
+  }
+
   explicit module intel {
     requires x86
     export *
@@ -163,8 +171,22 @@ module _Builtin_intrinsics [system] [extern_c] {
 // that module. The system float.h (if present) will be treated
 // as a textual header in the sytem module.
 module _Builtin_float [system] {
-  header "float.h"
-  export *
+  textual header "float.h"
+
+  explicit module float {
+    header "__float_float.h"
+    export *
+  }
+
+  explicit module header_macro {
+    header "__float_header_macro.h"
+    export *
+  }
+
+  explicit module infinity_nan {
+    header "__float_infinity_nan.h"
+    export *
+  }
 }
 
 module _Builtin_inttypes [system] {
@@ -228,6 +250,16 @@ module _Builtin_stdatomic [system] {
 
 module _Builtin_stdbool [system] {
   header "stdbool.h"
+  export *
+}
+
+module _Builtin_stdckdint [system] {
+  header "stdckdint.h"
+  export *
+}
+
+module _Builtin_stdcountof [system] {
+  header "stdcountof.h"
   export *
 }
 
@@ -316,13 +348,13 @@ module _Builtin_unwind [system] {
 }
 // End -fbuiltin-headers-in-system-modules affected modules
 
-module opencl_c {
+module opencl_c [system] {
   requires opencl
   header "opencl-c.h"
   header "opencl-c-base.h"
 }
 
-module ptrauth {
+module ptrauth [system] {
   header "ptrauth.h"
   export *
 }

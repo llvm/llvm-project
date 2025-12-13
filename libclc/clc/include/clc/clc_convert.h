@@ -9,7 +9,7 @@
 #ifndef __CLC_CLC_CONVERT_H__
 #define __CLC_CLC_CONVERT_H__
 
-#include <clc/clcmacro.h>
+#include <clc/internal/clc.h>
 
 #define _CLC_CONVERT_DECL(FROM_TYPE, TO_TYPE, SUFFIX)                          \
   _CLC_OVERLOAD _CLC_DECL TO_TYPE __clc_convert_##TO_TYPE##SUFFIX(FROM_TYPE x);

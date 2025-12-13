@@ -26,7 +26,7 @@ void NormalUses() {
   // CHECK-NEXT: wait clause
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: NullStmt
-#pragma acc enter data copyin(I) wait()
+#pragma acc enter data copyin(I) wait
   // CHECK: OpenACCEnterDataConstruct{{.*}}enter data
   // CHECK-NEXT: copyin clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'I' 'int'
@@ -119,7 +119,7 @@ void TemplUses(U u) {
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: NullStmt
 
-#pragma acc enter data copyin(I) wait()
+#pragma acc enter data copyin(I) wait
   // CHECK: OpenACCEnterDataConstruct{{.*}}enter data
   // CHECK-NEXT: copyin clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'I' 'U'

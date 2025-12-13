@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2c -triple=x86_64-linux -fsyntax-only %s -verify
+// RUN: %clang_cc1 -std=c++2c -triple=x86_64-linux -fsyntax-only %s -verify -fexperimental-new-constant-interpreter
 
 static_assert(true, "");
 static_assert(true, 0); // expected-error {{the message in a static assertion must be a string literal or an object with 'data()' and 'size()' member functions}}
@@ -18,7 +19,7 @@ struct InvalidSize {
     const char* data() const;
 };
 static_assert(true, InvalidSize{}); // expected-error {{the message in a static assertion must have a 'size()' member function returning an object convertible to 'std::size_t'}} \
-                                    // expected-error {{value of type 'const char *' is not implicitly convertible to 'unsigned long'}}
+                                    // expected-error {{value of type 'const char *' is not implicitly convertible to '__size_t' (aka 'unsigned long')}}
 struct InvalidData {
     unsigned long size() const;
     unsigned long data() const;
@@ -370,13 +371,13 @@ struct E {
 
 static_assert(true, A{}); // expected-error {{the message in this static assertion is not a constant expression}}
                           // expected-note@-1 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
-static_assert(true, B{}); // expected-error {{call to 'size()' evaluates to -1, which cannot be narrowed to type 'unsigned long'}}
+static_assert(true, B{}); // expected-error {{call to 'size()' evaluates to -1, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
                           // expected-error@-1 {{the message in this static assertion is not a constant expression}}
                           // expected-note@-2 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
-static_assert(true, C{}); // expected-error {{call to 'size()' evaluates to -1, which cannot be narrowed to type 'unsigned long'}}
+static_assert(true, C{}); // expected-error {{call to 'size()' evaluates to -1, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
                           // expected-error@-1 {{the message in this static assertion is not a constant expression}}
                           // expected-note@-2 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
-static_assert(true, D{}); // expected-error {{call to 'size()' evaluates to 340282366920938463463374607431768211455, which cannot be narrowed to type 'unsigned long'}}
+static_assert(true, D{}); // expected-error {{call to 'size()' evaluates to 340282366920938463463374607431768211455, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
                           // expected-error@-1 {{the message in this static assertion is not a constant expression}}
                           // expected-note@-2 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
 static_assert(true, E{}); // expected-error {{the message in this static assertion is not a constant expression}}
@@ -390,21 +391,21 @@ static_assert(
 
 static_assert(
   false, // expected-error {{static assertion failed}}
-  B{} // expected-error {{call to 'size()' evaluates to -1, which cannot be narrowed to type 'unsigned long'}}
+  B{} // expected-error {{call to 'size()' evaluates to -1, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
       // expected-error@-1 {{the message in a static assertion must be produced by a constant expression}}
       // expected-note@-2 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
 );
 
 static_assert(
   false, // expected-error {{static assertion failed}}
-  C{} // expected-error {{call to 'size()' evaluates to -1, which cannot be narrowed to type 'unsigned long'}}
+  C{} // expected-error {{call to 'size()' evaluates to -1, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
       // expected-error@-1 {{the message in a static assertion must be produced by a constant expression}}
       // expected-note@-2 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
 );
 
 static_assert(
   false, // expected-error {{static assertion failed}}
-  D{} // expected-error {{call to 'size()' evaluates to 340282366920938463463374607431768211455, which cannot be narrowed to type 'unsigned long'}}
+  D{} // expected-error {{call to 'size()' evaluates to 340282366920938463463374607431768211455, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
       // expected-error@-1 {{the message in a static assertion must be produced by a constant expression}}
       // expected-note@-2 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
 );

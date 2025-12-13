@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-pc-win32 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-uefi %s -emit-llvm -o - | FileCheck %s
 
 // CHECK: foo{{[^#]*}}#[[ATTRS:[0-9]+]]
 __attribute__((no_caller_saved_registers)) void foo() {}

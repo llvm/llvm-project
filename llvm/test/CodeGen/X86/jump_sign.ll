@@ -215,15 +215,12 @@ define i32 @func_n(i32 %x, i32 %y) nounwind {
 define void @func_o() nounwind uwtable {
 ; CHECK-LABEL: func_o:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB12_1
 ; CHECK-NEXT:  # %bb.2: # %if.end.i
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB12_5
 ; CHECK-NEXT:  # %bb.3: # %sw.bb
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB12_8
 ; CHECK-NEXT:  # %bb.4: # %if.end29
@@ -234,13 +231,11 @@ define void @func_o() nounwind uwtable {
 ; CHECK-NEXT:    cmpl $6554, %eax # imm = 0x199A
 ; CHECK-NEXT:    jae .LBB12_5
 ; CHECK-NEXT:  .LBB12_8: # %if.then44
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB12_9
 ; CHECK-NEXT:  # %bb.10: # %if.else.i104
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB12_5: # %sw.default
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB12_7
 ; CHECK-NEXT:  # %bb.6: # %if.then.i96

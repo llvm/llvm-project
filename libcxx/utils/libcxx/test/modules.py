@@ -93,7 +93,7 @@ ExtraHeader["ranges"] = "v1/__fwd/subrange.h$"
 ExtraHeader["functional"] = "v1/__compare/compare_three_way.h$"
 
 # <flat_set> reuses some functionality defined inside <flat_map>
-ExtraHeader["flat_set"] = "v1/__flat_map/sorted_unique.h$"
+ExtraHeader["flat_set"] = "v1/__flat_map/sorted_.+.h$"
 
 # Some C compatibility headers define std::size_t, which is in <__cstddef/size_t.h>
 for header in ("cstdio", "cstdlib", "cstring", "ctime", "cuchar", "cwchar"):
@@ -166,7 +166,7 @@ class module_test_generator:
             f'" > {self.tmp_prefix}.{header}.cppm'
         )
 
-        # Extract the information of the module partition using lang-tidy
+        # Extract the information of the module partition using clang-tidy
         print(
             f"// RUN: {self.clang_tidy} {self.tmp_prefix}.{header}.cppm "
             "  --checks='-*,libcpp-header-exportable-declarations' "
@@ -222,6 +222,7 @@ class module_test_generator:
         print(f'// RUN: echo -e "' f"{include}" f'" > {self.tmp_prefix}.{header}.cpp')
         print(
             f"// RUN: {self.clang_tidy} {self.tmp_prefix}.{header}.cpp "
+            "  --system-headers "
             "  --checks='-*,libcpp-header-exportable-declarations' "
             "  -config='{CheckOptions: [ "
             "    {"

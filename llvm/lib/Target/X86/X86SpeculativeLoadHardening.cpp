@@ -54,7 +54,6 @@
 #include <cassert>
 #include <iterator>
 #include <optional>
-#include <utility>
 
 using namespace llvm;
 
@@ -836,13 +835,12 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughCFG(
 /// a way to unfold into a newly created vreg rather than requiring a register
 /// input.
 static const TargetRegisterClass *
-getRegClassForUnfoldedLoad(MachineFunction &MF, const X86InstrInfo &TII,
-                           unsigned Opcode) {
+getRegClassForUnfoldedLoad(const X86InstrInfo &TII, unsigned Opcode) {
   unsigned Index;
   unsigned UnfoldedOpc = TII.getOpcodeAfterMemoryUnfold(
       Opcode, /*UnfoldLoad*/ true, /*UnfoldStore*/ false, &Index);
   const MCInstrDesc &MCID = TII.get(UnfoldedOpc);
-  return TII.getRegClass(MCID, Index, &TII.getRegisterInfo(), MF);
+  return TII.getRegClass(MCID, Index);
 }
 
 void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
@@ -893,11 +891,12 @@ void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
       case X86::TAILJMPm64_REX:
       case X86::TAILJMPm:
       case X86::TCRETURNmi64:
+      case X86::TCRETURN_WINmi64:
       case X86::TCRETURNmi: {
         // Use the generic unfold logic now that we know we're dealing with
         // expected instructions.
         // FIXME: We don't have test coverage for all of these!
-        auto *UnfoldedRC = getRegClassForUnfoldedLoad(MF, *TII, MI.getOpcode());
+        auto *UnfoldedRC = getRegClassForUnfoldedLoad(*TII, MI.getOpcode());
         if (!UnfoldedRC) {
           LLVM_DEBUG(dbgs()
                          << "ERROR: Unable to unfold load from instruction:\n";

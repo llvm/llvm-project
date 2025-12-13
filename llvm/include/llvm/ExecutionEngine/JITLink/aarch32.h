@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -24,7 +25,7 @@ namespace jitlink {
 namespace aarch32 {
 
 /// Check whether the given target flags are set for this Symbol.
-bool hasTargetFlags(Symbol &Sym, TargetFlagsType Flags);
+LLVM_ABI bool hasTargetFlags(Symbol &Sym, TargetFlagsType Flags);
 
 /// JITLink-internal AArch32 fixup kinds
 enum EdgeKind_aarch32 : Edge::Kind {
@@ -117,10 +118,10 @@ enum TargetFlags_aarch32 : TargetFlagsType {
 };
 
 /// Human-readable name for a given CPU architecture kind
-const char *getCPUArchName(ARMBuildAttrs::CPUArch K);
+LLVM_ABI const char *getCPUArchName(ARMBuildAttrs::CPUArch K);
 
 /// Get a human-readable name for the given AArch32 edge kind.
-const char *getEdgeKindName(Edge::Kind K);
+LLVM_ABI const char *getEdgeKindName(Edge::Kind K);
 
 /// AArch32 uses stubs for a number of purposes, like branch range extension
 /// or interworking between Arm and Thumb instruction subsets.
@@ -173,8 +174,8 @@ struct HalfWords {
 
 /// FixupInfo base class is required for dynamic lookups.
 struct FixupInfoBase {
-  static const FixupInfoBase *getDynFixupInfo(Edge::Kind K);
-  virtual ~FixupInfoBase() {}
+  LLVM_ABI static const FixupInfoBase *getDynFixupInfo(Edge::Kind K);
+  virtual ~FixupInfoBase() = default;
 };
 
 /// FixupInfo checks for Arm edge kinds work on 32-bit words
@@ -270,16 +271,18 @@ template <> struct FixupInfo<Thumb_MovwPrelNC> : public FixupInfoThumbMov {
 };
 
 /// Helper function to read the initial addend for Data-class relocations.
-Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
-                                 Edge::Kind Kind);
+LLVM_ABI Expected<int64_t>
+readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset, Edge::Kind Kind);
 
 /// Helper function to read the initial addend for Arm-class relocations.
-Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, Edge::OffsetT Offset,
-                                Edge::Kind Kind);
+LLVM_ABI Expected<int64_t> readAddendArm(LinkGraph &G, Block &B,
+                                         Edge::OffsetT Offset, Edge::Kind Kind);
 
 /// Helper function to read the initial addend for Thumb-class relocations.
-Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, Edge::OffsetT Offset,
-                                  Edge::Kind Kind, const ArmConfig &ArmCfg);
+LLVM_ABI Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B,
+                                           Edge::OffsetT Offset,
+                                           Edge::Kind Kind,
+                                           const ArmConfig &ArmCfg);
 
 /// Read the initial addend for a REL-type relocation. It's the value encoded
 /// in the immediate field of the fixup location by the compiler.
@@ -300,14 +303,14 @@ inline Expected<int64_t> readAddend(LinkGraph &G, Block &B,
 }
 
 /// Helper function to apply the fixup for Data-class relocations.
-Error applyFixupData(LinkGraph &G, Block &B, const Edge &E);
+LLVM_ABI Error applyFixupData(LinkGraph &G, Block &B, const Edge &E);
 
 /// Helper function to apply the fixup for Arm-class relocations.
-Error applyFixupArm(LinkGraph &G, Block &B, const Edge &E);
+LLVM_ABI Error applyFixupArm(LinkGraph &G, Block &B, const Edge &E);
 
 /// Helper function to apply the fixup for Thumb-class relocations.
-Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
-                      const ArmConfig &ArmCfg);
+LLVM_ABI Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
+                               const ArmConfig &ArmCfg);
 
 /// Apply fixup expression for edge to block content.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
@@ -332,8 +335,8 @@ class GOTBuilder : public TableManager<GOTBuilder> {
 public:
   static StringRef getSectionName() { return "$__GOT"; }
 
-  bool visitEdge(LinkGraph &G, Block *B, Edge &E);
-  Symbol &createEntry(LinkGraph &G, Symbol &Target);
+  LLVM_ABI bool visitEdge(LinkGraph &G, Block *B, Edge &E);
+  LLVM_ABI Symbol &createEntry(LinkGraph &G, Symbol &Target);
 
 private:
   Section *GOTSection = nullptr;
@@ -353,7 +356,7 @@ public:
   }
 
   /// Implements link-graph traversal via visitExistingEdges()
-  bool visitEdge(LinkGraph &G, Block *B, Edge &E);
+  LLVM_ABI bool visitEdge(LinkGraph &G, Block *B, Edge &E);
 
 private:
   // Each stub uses a single block that can have 2 entryponts, one for Arm and
@@ -387,7 +390,7 @@ public:
   }
 
   /// Implements link-graph traversal via visitExistingEdges().
-  bool visitEdge(LinkGraph &G, Block *B, Edge &E);
+  LLVM_ABI bool visitEdge(LinkGraph &G, Block *B, Edge &E);
 
 private:
   // Two slots per external: Arm and Thumb

@@ -13,7 +13,7 @@ module m1
   function iptr(n)
     integer, intent(in), target :: n
     integer, pointer :: iptr
-    !WARNING: Pointer target is not a definable variable
+    !WARNING: Pointer target is not a definable variable [-Wpointer-to-undefinable]
     !BECAUSE: 'n' is an INTENT(IN) dummy argument
     iptr => n
   end function

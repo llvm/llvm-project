@@ -16,7 +16,7 @@ entry:
 }
 
 ; CHECK-LABEL: __unnamed_2:
-; CHECK: .set __unnamed_2.num_vgpr, max(32, __unnamed_1.num_vgpr)
+; CHECK: .set __unnamed_2.num_vgpr, max(1, __unnamed_1.num_vgpr)
 ; CHECK: .set __unnamed_2.num_agpr, max(0, __unnamed_1.num_agpr)
 ; CHECK: .set __unnamed_2.numbered_sgpr, max(34, __unnamed_1.numbered_sgpr)
 ; CHECK: .set __unnamed_2.private_seg_size, 16+max(__unnamed_1.private_seg_size)

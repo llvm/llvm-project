@@ -79,6 +79,53 @@
 // Limitation: The pass cannot handle switch statements and indirect
 //             branches. Both must be lowered to plain branches first.
 //
+// CallBr support: CallBr is handled as a more general branch instruction which
+// can have multiple successors. The pass redirects the edges to intermediate
+// target blocks that unconditionally branch to the original callbr target
+// blocks. This allows the control flow hub to know to which of the original
+// target blocks to jump to.
+// Example input CFG:
+//                        Entry (callbr)
+//                       /     \
+//                      v       v
+//                      H ----> B
+//                      ^      /|
+//                       `----' |
+//                              v
+//                             Exit
+//
+// becomes:
+//                        Entry (callbr)
+//                       /     \
+//                      v       v
+//                 target.H   target.B
+//                      |       |
+//                      v       v
+//                      H ----> B
+//                      ^      /|
+//                       `----' |
+//                              v
+//                             Exit
+//
+// Note
+// OUTPUT CFG: Converted to a natural loop with a new header N.
+//
+//                        Entry (callbr)
+//                       /     \
+//                      v       v
+//                 target.H   target.B
+//                      \       /
+//                       \     /
+//                        v   v
+//                          N <---.
+//                         / \     \
+//                        /   \     |
+//                       v     v    /
+//                       H --> B --'
+//                             |
+//                             v
+//                            Exit
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/FixIrreducible.h"
@@ -135,10 +182,9 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
                                     : LI.getTopLevelLoopsVector();
   // Any candidate is a child iff its header is owned by the new loop. Move all
   // the children to a new vector.
-  auto FirstChild = std::partition(
-      CandidateLoops.begin(), CandidateLoops.end(), [&](Loop *L) {
-        return NewLoop == L || !NewLoop->contains(L->getHeader());
-      });
+  auto FirstChild = llvm::partition(CandidateLoops, [&](Loop *L) {
+    return NewLoop == L || !NewLoop->contains(L->getHeader());
+  });
   SmallVector<Loop *, 8> ChildLoops(FirstChild, CandidateLoops.end());
   CandidateLoops.erase(FirstChild, CandidateLoops.end());
 
@@ -232,6 +278,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
     return false;
   LLVM_DEBUG(dbgs() << "Processing cycle:\n" << CI.print(&C) << "\n";);
 
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   ControlFlowHub CHub;
   SetVector<BasicBlock *> Predecessors;
 
@@ -243,18 +290,32 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   }
 
   for (BasicBlock *P : Predecessors) {
-    auto *Branch = cast<BranchInst>(P->getTerminator());
-    // Exactly one of the two successors is the header.
-    BasicBlock *Succ0 = Branch->getSuccessor(0) == Header ? Header : nullptr;
-    BasicBlock *Succ1 = Succ0 ? nullptr : Header;
-    if (!Succ0)
-      assert(Branch->getSuccessor(1) == Header);
-    assert(Succ0 || Succ1);
-    CHub.addBranch(P, Succ0, Succ1);
+    if (BranchInst *Branch = dyn_cast<BranchInst>(P->getTerminator())) {
+      // Exactly one of the two successors is the header.
+      BasicBlock *Succ0 = Branch->getSuccessor(0) == Header ? Header : nullptr;
+      BasicBlock *Succ1 = Succ0 ? nullptr : Header;
+      assert(Succ0 || Branch->getSuccessor(1) == Header);
+      assert(Succ0 || Succ1);
+      CHub.addBranch(P, Succ0, Succ1);
 
-    LLVM_DEBUG(dbgs() << "Added internal branch: " << P->getName() << " -> "
-                      << (Succ0 ? Succ0->getName() : "") << " "
-                      << (Succ1 ? Succ1->getName() : "") << "\n");
+      LLVM_DEBUG(dbgs() << "Added internal branch: " << printBasicBlock(P)
+                        << " -> " << printBasicBlock(Succ0)
+                        << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
+                        << '\n');
+    } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator())) {
+      for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
+        BasicBlock *Succ = CallBr->getSuccessor(I);
+        if (Succ != Header)
+          continue;
+        BasicBlock *NewSucc = SplitCallBrEdge(P, Succ, I, &DTU, &CI, LI);
+        CHub.addBranch(NewSucc, Succ);
+        LLVM_DEBUG(dbgs() << "Added internal branch: "
+                          << printBasicBlock(NewSucc) << " -> "
+                          << printBasicBlock(Succ) << '\n');
+      }
+    } else {
+      llvm_unreachable("unsupported block terminator");
+    }
   }
 
   // Redirect external incoming edges. This includes the edges on the header.
@@ -267,17 +328,32 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   }
 
   for (BasicBlock *P : Predecessors) {
-    auto *Branch = cast<BranchInst>(P->getTerminator());
-    BasicBlock *Succ0 = Branch->getSuccessor(0);
-    Succ0 = C.contains(Succ0) ? Succ0 : nullptr;
-    BasicBlock *Succ1 =
-        Branch->isUnconditional() ? nullptr : Branch->getSuccessor(1);
-    Succ1 = Succ1 && C.contains(Succ1) ? Succ1 : nullptr;
-    CHub.addBranch(P, Succ0, Succ1);
+    if (BranchInst *Branch = dyn_cast<BranchInst>(P->getTerminator()); Branch) {
+      BasicBlock *Succ0 = Branch->getSuccessor(0);
+      Succ0 = C.contains(Succ0) ? Succ0 : nullptr;
+      BasicBlock *Succ1 =
+          Branch->isUnconditional() ? nullptr : Branch->getSuccessor(1);
+      Succ1 = Succ1 && C.contains(Succ1) ? Succ1 : nullptr;
+      CHub.addBranch(P, Succ0, Succ1);
 
-    LLVM_DEBUG(dbgs() << "Added external branch: " << P->getName() << " -> "
-                      << (Succ0 ? Succ0->getName() : "") << " "
-                      << (Succ1 ? Succ1->getName() : "") << "\n");
+      LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
+                        << " -> " << printBasicBlock(Succ0)
+                        << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
+                        << '\n');
+    } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator())) {
+      for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
+        BasicBlock *Succ = CallBr->getSuccessor(I);
+        if (!C.contains(Succ))
+          continue;
+        BasicBlock *NewSucc = SplitCallBrEdge(P, Succ, I, &DTU, &CI, LI);
+        CHub.addBranch(NewSucc, Succ);
+        LLVM_DEBUG(dbgs() << "Added external branch: "
+                          << printBasicBlock(NewSucc) << " -> "
+                          << printBasicBlock(Succ) << '\n');
+      }
+    } else {
+      llvm_unreachable("unsupported block terminator");
+    }
   }
 
   // Redirect all the backedges through a "hub" consisting of a series
@@ -293,7 +369,6 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   SetVector<BasicBlock *> Entries;
   Entries.insert(C.entry_rbegin(), C.entry_rend());
 
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   CHub.finalize(&DTU, GuardBlocks, "irr");
 #if defined(EXPENSIVE_CHECKS)
   assert(DT.verify(DominatorTree::VerificationLevel::Full));
@@ -325,8 +400,6 @@ static bool FixIrreducibleImpl(Function &F, CycleInfo &CI, DominatorTree &DT,
                                LoopInfo *LI) {
   LLVM_DEBUG(dbgs() << "===== Fix irreducible control-flow in function: "
                     << F.getName() << "\n");
-
-  assert(hasOnlySimpleTerminator(F) && "Unsupported block terminator.");
 
   bool Changed = false;
   for (Cycle *TopCycle : CI.toplevel_cycles()) {

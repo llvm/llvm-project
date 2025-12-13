@@ -69,10 +69,7 @@ INITIALIZE_PASS_END(BranchProbabilityInfoWrapperPass, "branch-prob",
                     "Branch Probability Analysis", false, true)
 
 BranchProbabilityInfoWrapperPass::BranchProbabilityInfoWrapperPass()
-    : FunctionPass(ID) {
-  initializeBranchProbabilityInfoWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : FunctionPass(ID) {}
 
 char BranchProbabilityInfoWrapperPass::ID = 0;
 
@@ -669,7 +666,6 @@ BranchProbabilityInfo::getEstimatedEdgeWeight(const LoopEdge &Edge) const {
 template <class IterT>
 std::optional<uint32_t> BranchProbabilityInfo::getMaxEstimatedEdgeWeight(
     const LoopBlock &SrcLoopBB, iterator_range<IterT> Successors) const {
-  SmallVector<uint32_t, 4> Weights;
   std::optional<uint32_t> MaxWeight;
   for (const BasicBlock *DstBB : Successors) {
     const LoopBlock DstLoopBB = getLoopBlock(DstBB);
@@ -802,8 +798,9 @@ BranchProbabilityInfo::getInitialEstimatedBlockWeight(const BasicBlock *BB) {
 // Does RPO traversal over all blocks in \p F and assigns weights to
 // 'unreachable', 'noreturn', 'cold', 'unwind' blocks. In addition it does its
 // best to propagate the weight to up/down the IR.
-void BranchProbabilityInfo::computeEestimateBlockWeight(
-    const Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
+void BranchProbabilityInfo::estimateBlockWeights(const Function &F,
+                                                 DominatorTree *DT,
+                                                 PostDominatorTree *PDT) {
   SmallVector<BasicBlock *, 8> BlockWorkList;
   SmallVector<LoopBlock, 8> LoopWorkList;
   SmallDenseMap<LoopData, SmallVector<BasicBlock *, 4>> LoopExitBlocks;
@@ -990,7 +987,7 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
           return false;
 
   // Check if the LHS is the return value of a library function
-  LibFunc Func = NumLibFuncs;
+  LibFunc Func = LibFunc::NotLibFunc;
   if (TLI)
     if (CallInst *Call = dyn_cast<CallInst>(CI->getOperand(0)))
       if (Function *CalledFn = Call->getCalledFunction())
@@ -1248,7 +1245,7 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
     PDT = PDTPtr.get();
   }
 
-  computeEestimateBlockWeight(F, DT, PDT);
+  estimateBlockWeights(F, DT, PDT);
 
   // Walk the basic blocks in post-order so that we can build up state about
   // the successors of a block iteratively.

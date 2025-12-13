@@ -18,7 +18,7 @@ subroutine minloc_test(arr,res)
   ! CHECK-DAG: %[[a14:.*]] = fir.box_addr %[[a12]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK-DAG: fir.freemem %[[a14]]
   end subroutine
-  
+
   ! CHECK-LABEL: func @_QPminloc_test2(
   ! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xi32>>{{.*}}, %[[arg1:.*]]: !fir.box<!fir.array<?xi32>>{{.*}}, %[[arg2:.*]]: !fir.ref<i32>
   subroutine minloc_test2(arr,res,d)
@@ -39,7 +39,7 @@ subroutine minloc_test(arr,res)
   ! CHECK:  %[[a13:.*]] = fir.box_addr %[[a12]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
   ! CHECK:  fir.freemem %[[a13]]
   end subroutine
-  
+
   ! CHECK-LABEL: func @_QPtest_minloc_optional_scalar_mask(
   ! CHECK-SAME:  %[[VAL_0:[^:]+]]: !fir.ref<!fir.logical<4>>
   ! CHECK-SAME:  %[[VAL_1:.*]]: !fir.ref<!fir.logical<4>>
@@ -65,7 +65,7 @@ subroutine minloc_test(arr,res)
   ! CHECK:  %[[VAL_30:.*]] = fir.convert %[[VAL_14]] : (!fir.logical<4>) -> i1
   ! CHECK:  fir.call @_FortranAMinlocInteger4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_29]], %[[VAL_30]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   end subroutine
-  
+
   ! CHECK-LABEL: func @_QPtest_minloc_optional_array_mask(
   ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>
   ! CHECK-SAME:  %[[VAL_1:.*]]: !fir.ref<!fir.logical<4>>

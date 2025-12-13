@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx908 -Rpass-analysis=kernel-resource-usage -S -O0 -verify %s -o /dev/null
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx908 -Rpass-analysis=kernel-resource-usage -S -O1 -verify %s -o /dev/null
 
 // expected-remark@+10 {{Function Name: foo}}
 // expected-remark@+9 {{    TotalSGPRs: 13}}

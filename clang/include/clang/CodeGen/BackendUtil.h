@@ -49,7 +49,7 @@ void EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
                   llvm::MemoryBufferRef Buf);
 
 void EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
-                 DiagnosticsEngine &Diags);
+                 llvm::vfs::FileSystem &VFS, DiagnosticsEngine &Diags);
 } // namespace clang
 
 #endif

@@ -1,6 +1,8 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux -o %t.o
 # RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s
 # RUN: llvm-dwarfdump -debug-info %t.o -v | FileCheck --check-prefix=VERBOSE %s
+# RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux -o %t.o -crel
+# RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s
 
 # CHECK: DW_TAG_compile_unit
 # CHECK:   DW_AT_low_pc                                              (0x0000000000000000)

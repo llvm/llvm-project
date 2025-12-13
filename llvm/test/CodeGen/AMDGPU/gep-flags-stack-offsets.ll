@@ -18,8 +18,8 @@ define void @gep_noflags_alloca(i32 %idx, i32 %val) #0 {
 ; GFX9-LABEL: gep_noflags_alloca:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e64 v2, 6, s32
-; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, v2
+; GFX9-NEXT:    s_lshr_b32 s4, s32, 6
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, s4
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -45,8 +45,8 @@ define void @gep_inbounds_alloca(i32 %idx, i32 %val) #0 {
 ; GFX9-LABEL: gep_inbounds_alloca:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e64 v2, 6, s32
-; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, v2
+; GFX9-NEXT:    s_lshr_b32 s4, s32, 6
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, s4
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -72,8 +72,8 @@ define void @gep_nuw_alloca(i32 %idx, i32 %val) #0 {
 ; GFX9-LABEL: gep_nuw_alloca:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e64 v2, 6, s32
-; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, v2
+; GFX9-NEXT:    s_lshr_b32 s4, s32, 6
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, s4
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -99,8 +99,8 @@ define void @gep_nusw_alloca(i32 %idx, i32 %val) #0 {
 ; GFX9-LABEL: gep_nusw_alloca:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e64 v2, 6, s32
-; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, v2
+; GFX9-NEXT:    s_lshr_b32 s4, s32, 6
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, s4
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -126,8 +126,8 @@ define void @gep_inbounds_nuw_alloca(i32 %idx, i32 %val) #0 {
 ; GFX9-LABEL: gep_inbounds_nuw_alloca:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e64 v2, 6, s32
-; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, v2
+; GFX9-NEXT:    s_lshr_b32 s4, s32, 6
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, s4
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -153,8 +153,8 @@ define void @gep_nusw_nuw_alloca(i32 %idx, i32 %val) #0 {
 ; GFX9-LABEL: gep_nusw_nuw_alloca:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e64 v2, 6, s32
-; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, v2
+; GFX9-NEXT:    s_lshr_b32 s4, s32, 6
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, s4
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]

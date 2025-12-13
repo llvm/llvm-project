@@ -93,12 +93,6 @@ class LVBinaryReader : public LVReader {
       SectionAddresses.emplace(Section.getAddress(), Section);
   }
 
-  // Scopes with ranges for current compile unit. It is used to find a line
-  // giving its exact or closest address. To support comdat functions, all
-  // addresses for the same section are recorded in the same map.
-  using LVSectionRanges = std::map<LVSectionIndex, std::unique_ptr<LVRange>>;
-  LVSectionRanges SectionRanges;
-
   // Image base and virtual address for Executable file.
   uint64_t ImageBaseAddress = 0;
   uint64_t VirtualAddress = 0;
@@ -165,7 +159,8 @@ protected:
   LVAddress WasmCodeSectionOffset = 0;
 
   // Loads all info for the architecture of the provided object file.
-  Error loadGenericTargetInfo(StringRef TheTriple, StringRef TheFeatures);
+  Error loadGenericTargetInfo(StringRef TheTriple, StringRef TheFeatures,
+                              StringRef TheCPU);
 
   virtual void mapRangeAddress(const object::ObjectFile &Obj) {}
   virtual void mapRangeAddress(const object::ObjectFile &Obj,
@@ -178,11 +173,6 @@ protected:
 
   Expected<std::pair<LVSectionIndex, object::SectionRef>>
   getSection(LVScope *Scope, LVAddress Address, LVSectionIndex SectionIndex);
-
-  void addSectionRange(LVSectionIndex SectionIndex, LVScope *Scope);
-  void addSectionRange(LVSectionIndex SectionIndex, LVScope *Scope,
-                       LVAddress LowerAddress, LVAddress UpperAddress);
-  LVRange *getSectionRanges(LVSectionIndex SectionIndex);
 
   void includeInlineeLines(LVSectionIndex SectionIndex, LVScope *Function);
 
@@ -202,7 +192,7 @@ public:
       : LVReader(Filename, FileFormatName, W, BinaryType) {}
   LVBinaryReader(const LVBinaryReader &) = delete;
   LVBinaryReader &operator=(const LVBinaryReader &) = delete;
-  virtual ~LVBinaryReader() = default;
+  ~LVBinaryReader() override = default;
 
   void addInlineeLines(LVScope *Scope, LVLines &Lines) {
     CUInlineeLines.emplace(Scope, std::make_unique<LVLines>(std::move(Lines)));

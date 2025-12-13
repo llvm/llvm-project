@@ -64,6 +64,13 @@ bool IsInitialProcedureTarget(const Symbol &);
 bool IsInitialProcedureTarget(const ProcedureDesignator &);
 bool IsInitialProcedureTarget(const Expr<SomeType> &);
 
+// Emit warnings about default REAL literal constants in contexts that
+// will be converted to a higher precision REAL kind than the default.
+void CheckRealWidening(
+    const Expr<SomeType> &, const DynamicType &toType, FoldingContext &);
+void CheckRealWidening(const Expr<SomeType> &,
+    const std::optional<DynamicType> &, FoldingContext &);
+
 // Validate the value of a named constant, the static initial
 // value of a non-pointer non-allocatable non-dummy variable, or the
 // default initializer of a component of a derived type (or instantiation
@@ -113,21 +120,32 @@ extern template void CheckSpecificationExpr(
 // read-only data.
 template <typename A>
 std::optional<bool> IsContiguous(const A &, FoldingContext &,
-    bool namedConstantSectionsAreContiguous = true);
+    bool namedConstantSectionsAreContiguous = true,
+    bool firstDimensionStride1 = false);
 extern template std::optional<bool> IsContiguous(const Expr<SomeType> &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
+extern template std::optional<bool> IsContiguous(const ActualArgument &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const ArrayRef &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const Substring &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const Component &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const ComplexPart &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const CoarrayRef &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
-extern template std::optional<bool> IsContiguous(
-    const Symbol &, FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
+extern template std::optional<bool> IsContiguous(const Symbol &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 static inline std::optional<bool> IsContiguous(const SymbolRef &s,
     FoldingContext &c, bool namedConstantSectionsAreContiguous = true) {
   return IsContiguous(s.get(), c, namedConstantSectionsAreContiguous);
@@ -144,6 +162,9 @@ extern template bool IsErrorExpr(const Expr<SomeType> &);
 
 std::optional<parser::Message> CheckStatementFunction(
     const Symbol &, const Expr<SomeType> &, FoldingContext &);
+
+std::optional<bool> ActualArgNeedsCopy(const ActualArgument *,
+    const characteristics::DummyArgument *, FoldingContext &, bool forCopyOut);
 
 } // namespace Fortran::evaluate
 #endif

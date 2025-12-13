@@ -1,4 +1,4 @@
-//===--- TypeTraitsCheck.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +15,9 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+// FIXME: Add chrono::treat_as_floating_point_v and chrono::is_clock_v.
+// This will require restructuring the code to handle type traits not
+// defined directly in std.
 static const llvm::StringSet<> ValueTraits = {
     "alignment_of",
     "conjunction",
@@ -28,6 +31,7 @@ static const llvm::StringSet<> ValueTraits = {
     "is_array",
     "is_assignable",
     "is_base_of",
+    "is_bind_expression",
     "is_bounded_array",
     "is_class",
     "is_compound",
@@ -40,10 +44,14 @@ static const llvm::StringSet<> ValueTraits = {
     "is_destructible",
     "is_empty",
     "is_enum",
+    "is_error_code_enum",
+    "is_error_condition_enum",
+    "is_execution_policy",
     "is_final",
     "is_floating_point",
     "is_function",
     "is_fundamental",
+    "is_implicit_lifetime",
     "is_integral",
     "is_invocable",
     "is_invocable_r",
@@ -65,14 +73,17 @@ static const llvm::StringSet<> ValueTraits = {
     "is_nothrow_invocable_r",
     "is_nothrow_move_assignable",
     "is_nothrow_move_constructible",
+    "is_nothrow_relocatable",
     "is_nothrow_swappable",
     "is_nothrow_swappable_with",
     "is_null_pointer",
     "is_object",
+    "is_placeholder",
     "is_pointer",
     "is_pointer_interconvertible_base_of",
     "is_polymorphic",
     "is_reference",
+    "is_replaceable",
     "is_rvalue_reference",
     "is_same",
     "is_scalar",
@@ -91,15 +102,26 @@ static const llvm::StringSet<> ValueTraits = {
     "is_trivially_destructible",
     "is_trivially_move_assignable",
     "is_trivially_move_constructible",
+    "is_trivially_relocatable",
     "is_unbounded_array",
     "is_union",
     "is_unsigned",
+    "is_virtual_base_of",
     "is_void",
     "is_volatile",
     "negation",
     "rank",
+    "ratio_equal",
+    "ratio_greater_equal",
+    "ratio_greater",
+    "ratio_less_equal",
+    "ratio_less",
+    "ratio_not_equal",
     "reference_constructs_from_temporary",
     "reference_converts_from_temporary",
+    "tuple_size",
+    "uses_allocator",
+    "variant_size",
 };
 
 static const llvm::StringSet<> TypeTraits = {
@@ -130,6 +152,12 @@ static const llvm::StringSet<> TypeTraits = {
     "result_of",
     "invoke_result",
     "type_identity",
+    "compare_three_way_result",
+    "common_comparison_category",
+    "unwrap_ref_decay",
+    "unwrap_reference",
+    "tuple_element",
+    "variant_alternative",
 };
 
 static DeclarationName getName(const DependentScopeDeclRefExpr &D) {
@@ -140,19 +168,6 @@ static DeclarationName getName(const DeclRefExpr &D) {
   return D.getDecl()->getDeclName();
 }
 
-static bool isNamedType(const ElaboratedTypeLoc &ETL) {
-  if (const auto *TFT =
-          ETL.getNamedTypeLoc().getTypePtr()->getAs<TypedefType>()) {
-    const TypedefNameDecl *Decl = TFT->getDecl();
-    return Decl->getDeclName().isIdentifier() && Decl->getName() == "type";
-  }
-  return false;
-}
-
-static bool isNamedType(const DependentNameTypeLoc &DTL) {
-  return DTL.getTypePtr()->getIdentifier()->getName() == "type";
-}
-
 namespace {
 AST_POLYMORPHIC_MATCHER(isValue, AST_POLYMORPHIC_SUPPORTED_TYPES(
                                      DeclRefExpr, DependentScopeDeclRefExpr)) {
@@ -160,25 +175,20 @@ AST_POLYMORPHIC_MATCHER(isValue, AST_POLYMORPHIC_SUPPORTED_TYPES(
   return Ident && Ident->isStr("value");
 }
 
-AST_POLYMORPHIC_MATCHER(isType,
-                        AST_POLYMORPHIC_SUPPORTED_TYPES(ElaboratedTypeLoc,
-                                                        DependentNameTypeLoc)) {
-  return Node.getBeginLoc().isValid() && isNamedType(Node);
+AST_MATCHER(TypeLoc, isType) {
+  if (auto TL = Node.getAs<TypedefTypeLoc>()) {
+    const auto *TD = TL.getDecl();
+    return TD->getDeclName().isIdentifier() && TD->getName() == "type";
+  }
+  if (auto TL = Node.getAs<DependentNameTypeLoc>())
+    return TL.getTypePtr()->getIdentifier()->getName() == "type";
+  return false;
 }
 } // namespace
 
 static constexpr char Bind[] = "";
 
 void TypeTraitsCheck::registerMatchers(MatchFinder *Finder) {
-  const ast_matchers::internal::VariadicDynCastAllOfMatcher<
-      Stmt,
-      DependentScopeDeclRefExpr>
-      dependentScopeDeclRefExpr; // NOLINT(readability-identifier-naming)
-  const ast_matchers::internal::VariadicDynCastAllOfMatcher<
-      TypeLoc,
-      DependentNameTypeLoc>
-      dependentNameTypeLoc; // NOLINT(readability-identifier-naming)
-
   // Only register matchers for trait<...>::value in c++17 mode.
   if (getLangOpts().CPlusPlus17) {
     Finder->addMatcher(mapAnyOf(declRefExpr, dependentScopeDeclRefExpr)
@@ -186,10 +196,7 @@ void TypeTraitsCheck::registerMatchers(MatchFinder *Finder) {
                            .bind(Bind),
                        this);
   }
-  Finder->addMatcher(mapAnyOf(elaboratedTypeLoc, dependentNameTypeLoc)
-                         .with(isType())
-                         .bind(Bind),
-                     this);
+  Finder->addMatcher(typeLoc(isType()).bind(Bind), this);
 }
 
 static bool isNamedDeclInStdTraitsSet(const NamedDecl *ND,
@@ -198,14 +205,11 @@ static bool isNamedDeclInStdTraitsSet(const NamedDecl *ND,
          Set.contains(ND->getName());
 }
 
-static bool checkTemplatedDecl(const NestedNameSpecifier *NNS,
+static bool checkTemplatedDecl(NestedNameSpecifier NNS,
                                const llvm::StringSet<> &Set) {
-  if (!NNS)
+  if (NNS.getKind() != NestedNameSpecifier::Kind::Type)
     return false;
-  const Type *NNST = NNS->getAsType();
-  if (!NNST)
-    return false;
-  const auto *TST = NNST->getAs<TemplateSpecializationType>();
+  const auto *TST = NNS.getAsType()->getAs<TemplateSpecializationType>();
   if (!TST)
     return false;
   if (const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl()) {
@@ -216,14 +220,14 @@ static bool checkTemplatedDecl(const NestedNameSpecifier *NNS,
 
 TypeTraitsCheck::TypeTraitsCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", false)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
   auto EmitValueWarning = [this, &Result](const NestedNameSpecifierLoc &QualLoc,
                                           SourceLocation EndLoc) {
     SourceLocation TemplateNameEndLoc;
-    if (auto TSTL = QualLoc.getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
-        !TSTL.isNull())
+    if (auto TSTL =
+            QualLoc.getAsTypeLoc().getAs<TemplateSpecializationTypeLoc>())
       TemplateNameEndLoc = Lexer::getLocForEndOfToken(
           TSTL.getTemplateNameLoc(), 0, *Result.SourceManager,
           Result.Context->getLangOpts());
@@ -246,8 +250,8 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
                                          SourceLocation EndLoc,
                                          SourceLocation TypenameLoc) {
     SourceLocation TemplateNameEndLoc;
-    if (auto TSTL = QualLoc.getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
-        !TSTL.isNull())
+    if (auto TSTL =
+            QualLoc.getAsTypeLoc().getAs<TemplateSpecializationTypeLoc>())
       TemplateNameEndLoc = Lexer::getLocForEndOfToken(
           TSTL.getTemplateNameLoc(), 0, *Result.SourceManager,
           Result.Context->getLangOpts());
@@ -273,23 +277,21 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
     if (!DRE->hasQualifier())
       return;
     if (const auto *CTSD = dyn_cast_if_present<ClassTemplateSpecializationDecl>(
-            DRE->getQualifier()->getAsRecordDecl())) {
+            DRE->getQualifier().getAsRecordDecl())) {
       if (isNamedDeclInStdTraitsSet(CTSD, ValueTraits))
         EmitValueWarning(DRE->getQualifierLoc(), DRE->getEndLoc());
     }
     return;
   }
 
-  if (const auto *ETL = Result.Nodes.getNodeAs<ElaboratedTypeLoc>(Bind)) {
-    const NestedNameSpecifierLoc QualLoc = ETL->getQualifierLoc();
-    const auto *NNS = QualLoc.getNestedNameSpecifier();
-    if (!NNS)
-      return;
+  if (const auto *TL = Result.Nodes.getNodeAs<TypedefTypeLoc>(Bind)) {
+    const NestedNameSpecifierLoc QualLoc = TL->getQualifierLoc();
+    const NestedNameSpecifier NNS = QualLoc.getNestedNameSpecifier();
     if (const auto *CTSD = dyn_cast_if_present<ClassTemplateSpecializationDecl>(
-            NNS->getAsRecordDecl())) {
+            NNS.getAsRecordDecl())) {
       if (isNamedDeclInStdTraitsSet(CTSD, TypeTraits))
-        EmitTypeWarning(ETL->getQualifierLoc(), ETL->getEndLoc(),
-                        ETL->getElaboratedKeywordLoc());
+        EmitTypeWarning(TL->getQualifierLoc(), TL->getEndLoc(),
+                        TL->getElaboratedKeywordLoc());
     }
     return;
   }
@@ -302,7 +304,7 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (const auto *DNTL = Result.Nodes.getNodeAs<DependentNameTypeLoc>(Bind)) {
-    NestedNameSpecifierLoc QualLoc = DNTL->getQualifierLoc();
+    const NestedNameSpecifierLoc QualLoc = DNTL->getQualifierLoc();
     if (checkTemplatedDecl(QualLoc.getNestedNameSpecifier(), TypeTraits))
       EmitTypeWarning(QualLoc, DNTL->getEndLoc(),
                       DNTL->getElaboratedKeywordLoc());

@@ -1,9 +1,10 @@
 # RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 
 ---
 name:            f1
 body:             |
-  ; CHECK-LABEL: MachineUniformityInfo for function: f1
+  ; CHECK-LABEL: MachineUniformityInfo for function:  @f1
   bb.0:
     successors: %bb.1, %bb.2
 
@@ -23,7 +24,7 @@ body:             |
 ---
 name:            f2
 body:             |
-  ; CHECK-LABEL: MachineUniformityInfo for function: f2
+  ; CHECK-LABEL: MachineUniformityInfo for function:  @f2
   bb.0:
     successors: %bb.1, %bb.2
 

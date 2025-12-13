@@ -57,5 +57,3 @@ define amdgpu_kernel void @test_aligned_to_eight(i64 %eight)  {
 
 declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

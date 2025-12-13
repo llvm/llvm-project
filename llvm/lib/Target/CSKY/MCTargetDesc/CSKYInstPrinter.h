@@ -34,7 +34,7 @@ public:
   void printRegName(raw_ostream &O, MCRegister Reg) override;
 
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O, const char *Modifier = nullptr);
+                    raw_ostream &O);
 
   void printFPRRegName(raw_ostream &O, unsigned RegNo) const;
 

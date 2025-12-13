@@ -28,7 +28,6 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -149,7 +148,7 @@ static FailureOr<APInt> getIntOrSplatIntValue(Attribute attr) {
 
 static Attribute getBoolAttribute(Type type, bool value) {
   auto boolAttr = BoolAttr::get(type.getContext(), value);
-  ShapedType shapedType = llvm::dyn_cast_or_null<ShapedType>(type);
+  ShapedType shapedType = dyn_cast_or_null<ShapedType>(type);
   if (!shapedType)
     return boolAttr;
   return DenseElementsAttr::get(shapedType, boolAttr);
@@ -170,7 +169,7 @@ namespace {
 /// Return the type of the same shape (scalar, vector or tensor) containing i1.
 static Type getI1SameShape(Type type) {
   auto i1Type = IntegerType::get(type.getContext(), 1);
-  if (auto shapedType = llvm::dyn_cast<ShapedType>(type))
+  if (auto shapedType = dyn_cast<ShapedType>(type))
     return shapedType.cloneWith(std::nullopt, i1Type);
   if (llvm::isa<UnrankedTensorType>(type))
     return UnrankedTensorType::get(i1Type);
@@ -184,8 +183,8 @@ static Type getI1SameShape(Type type) {
 void arith::ConstantOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   auto type = getType();
-  if (auto intCst = llvm::dyn_cast<IntegerAttr>(getValue())) {
-    auto intType = llvm::dyn_cast<IntegerType>(type);
+  if (auto intCst = dyn_cast<IntegerAttr>(getValue())) {
+    auto intType = dyn_cast<IntegerType>(type);
 
     // Sugar i1 constants with 'true' and 'false'.
     if (intType && intType.getWidth() == 1)
@@ -207,11 +206,6 @@ void arith::ConstantOp::getAsmResultNames(
 /// or float like.
 LogicalResult arith::ConstantOp::verify() {
   auto type = getType();
-  // The value's type must match the return type.
-  if (getValue().getType() != type) {
-    return emitOpError() << "value type " << getValue().getType()
-                         << " must match return type: " << type;
-  }
   // Integer values must be signless.
   if (llvm::isa<IntegerType>(type) &&
       !llvm::cast<IntegerType>(type).isSignless())
@@ -234,7 +228,7 @@ LogicalResult arith::ConstantOp::verify() {
 
 bool arith::ConstantOp::isBuildableWith(Attribute value, Type type) {
   // The value's type must be the same as the provided type.
-  auto typedAttr = llvm::dyn_cast<TypedAttr>(value);
+  auto typedAttr = dyn_cast<TypedAttr>(value);
   if (!typedAttr || typedAttr.getType() != type)
     return false;
   // Integer values must be signless.
@@ -248,7 +242,7 @@ bool arith::ConstantOp::isBuildableWith(Attribute value, Type type) {
 ConstantOp arith::ConstantOp::materialize(OpBuilder &builder, Attribute value,
                                           Type type, Location loc) {
   if (isBuildableWith(value, type))
-    return builder.create<arith::ConstantOp>(loc, cast<TypedAttr>(value));
+    return arith::ConstantOp::create(builder, loc, cast<TypedAttr>(value));
   return nullptr;
 }
 
@@ -261,12 +255,64 @@ void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
                            builder.getIntegerAttr(type, value));
 }
 
+arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
+                                                  Location location,
+                                                  int64_t value,
+                                                  unsigned width) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, value, width);
+  auto result = dyn_cast<ConstantIntOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
+arith::ConstantIntOp arith::ConstantIntOp::create(ImplicitLocOpBuilder &builder,
+                                                  int64_t value,
+                                                  unsigned width) {
+  return create(builder, builder.getLoc(), value, width);
+}
+
 void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
-                                 int64_t value, Type type) {
-  assert(type.isSignlessInteger() &&
-         "ConstantIntOp can only have signless integer type values");
+                                 Type type, int64_t value) {
   arith::ConstantOp::build(builder, result, type,
                            builder.getIntegerAttr(type, value));
+}
+
+arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
+                                                  Location location, Type type,
+                                                  int64_t value) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, type, value);
+  auto result = dyn_cast<ConstantIntOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
+arith::ConstantIntOp arith::ConstantIntOp::create(ImplicitLocOpBuilder &builder,
+                                                  Type type, int64_t value) {
+  return create(builder, builder.getLoc(), type, value);
+}
+
+void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
+                                 Type type, const APInt &value) {
+  arith::ConstantOp::build(builder, result, type,
+                           builder.getIntegerAttr(type, value));
+}
+
+arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
+                                                  Location location, Type type,
+                                                  const APInt &value) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, type, value);
+  auto result = dyn_cast<ConstantIntOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
+arith::ConstantIntOp arith::ConstantIntOp::create(ImplicitLocOpBuilder &builder,
+                                                  Type type,
+                                                  const APInt &value) {
+  return create(builder, builder.getLoc(), type, value);
 }
 
 bool arith::ConstantIntOp::classof(Operation *op) {
@@ -276,9 +322,26 @@ bool arith::ConstantIntOp::classof(Operation *op) {
 }
 
 void arith::ConstantFloatOp::build(OpBuilder &builder, OperationState &result,
-                                   const APFloat &value, FloatType type) {
+                                   FloatType type, const APFloat &value) {
   arith::ConstantOp::build(builder, result, type,
                            builder.getFloatAttr(type, value));
+}
+
+arith::ConstantFloatOp arith::ConstantFloatOp::create(OpBuilder &builder,
+                                                      Location location,
+                                                      FloatType type,
+                                                      const APFloat &value) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, type, value);
+  auto result = dyn_cast<ConstantFloatOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
+arith::ConstantFloatOp
+arith::ConstantFloatOp::create(ImplicitLocOpBuilder &builder, FloatType type,
+                               const APFloat &value) {
+  return create(builder, builder.getLoc(), type, value);
 }
 
 bool arith::ConstantFloatOp::classof(Operation *op) {
@@ -293,10 +356,35 @@ void arith::ConstantIndexOp::build(OpBuilder &builder, OperationState &result,
                            builder.getIndexAttr(value));
 }
 
+arith::ConstantIndexOp arith::ConstantIndexOp::create(OpBuilder &builder,
+                                                      Location location,
+                                                      int64_t value) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, value);
+  auto result = dyn_cast<ConstantIndexOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
+arith::ConstantIndexOp
+arith::ConstantIndexOp::create(ImplicitLocOpBuilder &builder, int64_t value) {
+  return create(builder, builder.getLoc(), value);
+}
+
 bool arith::ConstantIndexOp::classof(Operation *op) {
   if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(op))
     return constOp.getType().isIndex();
   return false;
+}
+
+Value mlir::arith::getZeroConstant(OpBuilder &builder, Location loc,
+                                   Type type) {
+  // TODO: Incorporate this check to `FloatAttr::get*`.
+  assert(!isa<Float8E8M0FNUType>(getElementTypeOrSelf(type)) &&
+         "type doesn't have a zero representation");
+  TypedAttr zeroAttr = builder.getZeroAttr(type);
+  assert(zeroAttr && "unsupported type for zero attribute");
+  return arith::ConstantOp::create(builder, loc, zeroAttr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -335,7 +423,7 @@ void arith::AddIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 std::optional<SmallVector<int64_t, 4>>
 arith::AddUIExtendedOp::getShapeForUnroll() {
-  if (auto vt = llvm::dyn_cast<VectorType>(getType(0)))
+  if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
 }
@@ -481,7 +569,7 @@ void arith::MulIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 std::optional<SmallVector<int64_t, 4>>
 arith::MulSIExtendedOp::getShapeForUnroll() {
-  if (auto vt = llvm::dyn_cast<VectorType>(getType(0)))
+  if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
 }
@@ -527,7 +615,7 @@ void arith::MulSIExtendedOp::getCanonicalizationPatterns(
 
 std::optional<SmallVector<int64_t, 4>>
 arith::MulUIExtendedOp::getShapeForUnroll() {
-  if (auto vt = llvm::dyn_cast<VectorType>(getType(0)))
+  if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
 }
@@ -1194,6 +1282,13 @@ OpFoldResult arith::MulFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_OneFloat()))
     return getLhs();
 
+  if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::nnan |
+                                                   arith::FastMathFlags::nsz)) {
+    // mulf(x, 0) -> 0
+    if (matchPattern(adaptor.getRhs(), m_AnyZeroFloat()))
+      return getRhs();
+  }
+
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(),
       [](const APFloat &a, const APFloat &b) { return a * b; });
@@ -1457,6 +1552,19 @@ bool arith::ExtFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 LogicalResult arith::ExtFOp::verify() { return verifyExtOp<FloatType>(*this); }
 
 //===----------------------------------------------------------------------===//
+// ScalingExtFOp
+//===----------------------------------------------------------------------===//
+
+bool arith::ScalingExtFOp::areCastCompatible(TypeRange inputs,
+                                             TypeRange outputs) {
+  return checkWidthChangeCast<std::greater, FloatType>(inputs.front(), outputs);
+}
+
+LogicalResult arith::ScalingExtFOp::verify() {
+  return verifyExtOp<FloatType>(*this);
+}
+
+//===----------------------------------------------------------------------===//
 // TruncIOp
 //===----------------------------------------------------------------------===//
 
@@ -1501,9 +1609,9 @@ bool arith::TruncIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 
 void arith::TruncIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                   MLIRContext *context) {
-  patterns.add<TruncIExtSIToExtSI, TruncIExtUIToExtUI, TruncIShrSIToTrunciShrUI,
-               TruncIShrUIMulIToMulSIExtended, TruncIShrUIMulIToMulUIExtended>(
-      context);
+  patterns
+      .add<TruncIExtSIToExtSI, TruncIExtUIToExtUI, TruncIShrSIToTrunciShrUI>(
+          context);
 }
 
 LogicalResult arith::TruncIOp::verify() {
@@ -1557,11 +1665,29 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
       });
 }
 
+void arith::TruncFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                  MLIRContext *context) {
+  patterns.add<TruncFSIToFPToSIToFP, TruncFUIToFPToUIToFP>(context);
+}
+
 bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::less, FloatType>(inputs, outputs);
 }
 
 LogicalResult arith::TruncFOp::verify() {
+  return verifyTruncateOp<FloatType>(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// ScalingTruncFOp
+//===----------------------------------------------------------------------===//
+
+bool arith::ScalingTruncFOp::areCastCompatible(TypeRange inputs,
+                                               TypeRange outputs) {
+  return checkWidthChangeCast<std::less, FloatType>(inputs.front(), outputs);
+}
+
+LogicalResult arith::ScalingTruncFOp::verify() {
   return verifyTruncateOp<FloatType>(*this);
 }
 
@@ -1776,7 +1902,7 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
     return {};
 
   /// Bitcast dense elements.
-  if (auto denseAttr = llvm::dyn_cast_or_null<DenseElementsAttr>(operand))
+  if (auto denseAttr = dyn_cast_or_null<DenseElementsAttr>(operand))
     return denseAttr.bitcast(llvm::cast<ShapedType>(resType).getElementType());
   /// Other shaped types unhandled.
   if (llvm::isa<ShapedType>(resType))
@@ -1793,7 +1919,7 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
   assert(resType.getIntOrFloatBitWidth() == bits.getBitWidth() &&
          "trying to fold on broken IR: operands have incompatible types");
 
-  if (auto resFloatType = llvm::dyn_cast<FloatType>(resType))
+  if (auto resFloatType = dyn_cast<FloatType>(resType))
     return FloatAttr::get(resType,
                           APFloat(resFloatType.getFloatSemantics(), bits));
   return IntegerAttr::get(resType, bits);
@@ -1857,10 +1983,10 @@ static bool applyCmpPredicateToEqualOperands(arith::CmpIPredicate predicate) {
 }
 
 static std::optional<int64_t> getIntegerWidth(Type t) {
-  if (auto intType = llvm::dyn_cast<IntegerType>(t)) {
+  if (auto intType = dyn_cast<IntegerType>(t)) {
     return intType.getWidth();
   }
-  if (auto vectorIntType = llvm::dyn_cast<VectorType>(t)) {
+  if (auto vectorIntType = dyn_cast<VectorType>(t)) {
     return llvm::cast<IntegerType>(vectorIntType.getElementType()).getWidth();
   }
   return std::nullopt;
@@ -1930,7 +2056,7 @@ OpFoldResult arith::CmpIOp::fold(FoldAdaptor adaptor) {
 
   // We are moving constants to the right side; So if lhs is constant rhs is
   // guaranteed to be a constant.
-  if (auto lhs = llvm::dyn_cast_if_present<TypedAttr>(adaptor.getLhs())) {
+  if (auto lhs = dyn_cast_if_present<TypedAttr>(adaptor.getLhs())) {
     return constFoldBinaryOp<IntegerAttr>(
         adaptor.getOperands(), getI1SameShape(lhs.getType()),
         [pred = getPredicate()](const APInt &lhs, const APInt &rhs) {
@@ -2000,8 +2126,8 @@ bool mlir::arith::applyCmpPredicate(arith::CmpFPredicate predicate,
 }
 
 OpFoldResult arith::CmpFOp::fold(FoldAdaptor adaptor) {
-  auto lhs = llvm::dyn_cast_if_present<FloatAttr>(adaptor.getLhs());
-  auto rhs = llvm::dyn_cast_if_present<FloatAttr>(adaptor.getRhs());
+  auto lhs = dyn_cast_if_present<FloatAttr>(adaptor.getLhs());
+  auto rhs = dyn_cast_if_present<FloatAttr>(adaptor.getRhs());
 
   // If one operand is NaN, making them both NaN does not change the result.
   if (lhs && lhs.getValue().isNaN())
@@ -2018,7 +2144,7 @@ OpFoldResult arith::CmpFOp::fold(FoldAdaptor adaptor) {
 
 class CmpFIntToFPConst final : public OpRewritePattern<CmpFOp> {
 public:
-  using OpRewritePattern<CmpFOp>::OpRewritePattern;
+  using Base::Base;
 
   static CmpIPredicate convertToIntegerPredicate(CmpFPredicate pred,
                                                  bool isUnsigned) {
@@ -2295,9 +2421,8 @@ public:
     // comparison.
     rewriter.replaceOpWithNewOp<CmpIOp>(
         op, pred, intVal,
-        rewriter.create<ConstantOp>(
-            op.getLoc(), intVal.getType(),
-            rewriter.getIntegerAttr(intVal.getType(), rhsInt)));
+        ConstantOp::create(rewriter, op.getLoc(), intVal.getType(),
+                           rewriter.getIntegerAttr(intVal.getType(), rhsInt)));
     return success();
   }
 };
@@ -2313,7 +2438,7 @@ void arith::CmpFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 //  select %arg, %c1, %c0 => extui %arg
 struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
-  using OpRewritePattern<arith::SelectOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::SelectOp op,
                                 PatternRewriter &rewriter) const override {
@@ -2334,10 +2459,10 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
         matchPattern(op.getFalseValue(), m_One())) {
       rewriter.replaceOpWithNewOp<arith::ExtUIOp>(
           op, op.getType(),
-          rewriter.create<arith::XOrIOp>(
-              op.getLoc(), op.getCondition(),
-              rewriter.create<arith::ConstantIntOp>(
-                  op.getLoc(), 1, op.getCondition().getType())));
+          arith::XOrIOp::create(
+              rewriter, op.getLoc(), op.getCondition(),
+              arith::ConstantIntOp::create(rewriter, op.getLoc(),
+                                           op.getCondition().getType(), 1)));
       return success();
     }
 
@@ -2380,7 +2505,7 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
       matchPattern(adaptor.getFalseValue(), m_Zero()))
     return condition;
 
-  if (auto cmp = dyn_cast_or_null<arith::CmpIOp>(condition.getDefiningOp())) {
+  if (auto cmp = condition.getDefiningOp<arith::CmpIOp>()) {
     auto pred = cmp.getPredicate();
     if (pred == arith::CmpIPredicate::eq || pred == arith::CmpIPredicate::ne) {
       auto cmpLhs = cmp.getLhs();
@@ -2401,11 +2526,11 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
   // Constant-fold constant operands over non-splat constant condition.
   // select %cst_vec, %cst0, %cst1 => %cst2
   if (auto cond =
-          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getCondition())) {
+          dyn_cast_if_present<DenseElementsAttr>(adaptor.getCondition())) {
     if (auto lhs =
-            llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getTrueValue())) {
+            dyn_cast_if_present<DenseElementsAttr>(adaptor.getTrueValue())) {
       if (auto rhs =
-              llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getFalseValue())) {
+              dyn_cast_if_present<DenseElementsAttr>(adaptor.getFalseValue())) {
         SmallVector<Attribute> results;
         results.reserve(static_cast<size_t>(cond.getNumElements()));
         auto condVals = llvm::make_range(cond.value_begin<BoolAttr>(),
@@ -2454,8 +2579,7 @@ void arith::SelectOp::print(OpAsmPrinter &p) {
   p << " " << getOperands();
   p.printOptionalAttrDict((*this)->getAttrs());
   p << " : ";
-  if (ShapedType condType =
-          llvm::dyn_cast<ShapedType>(getCondition().getType()))
+  if (ShapedType condType = dyn_cast<ShapedType>(getCondition().getType()))
     p << condType << ", ";
   p << getType();
 }
@@ -2561,6 +2685,7 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::addi:
   case AtomicRMWKind::maxu:
   case AtomicRMWKind::ori:
+  case AtomicRMWKind::xori:
     return builder.getZeroAttr(resultType);
   case AtomicRMWKind::andi:
     return builder.getIntegerAttr(
@@ -2605,7 +2730,7 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   return nullptr;
 }
 
-/// Return the identity numeric value associated to the give op.
+/// Returns the identity numeric value of the given op.
 std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
   std::optional<AtomicRMWKind> maybeKind =
       llvm::TypeSwitch<Operation *, std::optional<AtomicRMWKind>>(op)
@@ -2619,14 +2744,14 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
           // Integer operations.
           .Case([](arith::AddIOp op) { return AtomicRMWKind::addi; })
           .Case([](arith::OrIOp op) { return AtomicRMWKind::ori; })
-          .Case([](arith::XOrIOp op) { return AtomicRMWKind::ori; })
+          .Case([](arith::XOrIOp op) { return AtomicRMWKind::xori; })
           .Case([](arith::AndIOp op) { return AtomicRMWKind::andi; })
           .Case([](arith::MaxUIOp op) { return AtomicRMWKind::maxu; })
           .Case([](arith::MinUIOp op) { return AtomicRMWKind::minu; })
           .Case([](arith::MaxSIOp op) { return AtomicRMWKind::maxs; })
           .Case([](arith::MinSIOp op) { return AtomicRMWKind::mins; })
           .Case([](arith::MulIOp op) { return AtomicRMWKind::muli; })
-          .Default([](Operation *op) { return std::nullopt; });
+          .Default(std::nullopt);
   if (!maybeKind) {
     return std::nullopt;
   }
@@ -2653,7 +2778,7 @@ Value mlir::arith::getIdentityValue(AtomicRMWKind op, Type resultType,
                                     bool useOnlyFiniteValue) {
   auto attr =
       getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue);
-  return builder.create<arith::ConstantOp>(loc, attr);
+  return arith::ConstantOp::create(builder, loc, attr);
 }
 
 /// Return the value obtained by applying the reduction operation kind
@@ -2662,33 +2787,35 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
                                   Location loc, Value lhs, Value rhs) {
   switch (op) {
   case AtomicRMWKind::addf:
-    return builder.create<arith::AddFOp>(loc, lhs, rhs);
+    return arith::AddFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::addi:
-    return builder.create<arith::AddIOp>(loc, lhs, rhs);
+    return arith::AddIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::mulf:
-    return builder.create<arith::MulFOp>(loc, lhs, rhs);
+    return arith::MulFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::muli:
-    return builder.create<arith::MulIOp>(loc, lhs, rhs);
+    return arith::MulIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::maximumf:
-    return builder.create<arith::MaximumFOp>(loc, lhs, rhs);
+    return arith::MaximumFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::minimumf:
-    return builder.create<arith::MinimumFOp>(loc, lhs, rhs);
-   case AtomicRMWKind::maxnumf:
-    return builder.create<arith::MaxNumFOp>(loc, lhs, rhs);
+    return arith::MinimumFOp::create(builder, loc, lhs, rhs);
+  case AtomicRMWKind::maxnumf:
+    return arith::MaxNumFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::minnumf:
-    return builder.create<arith::MinNumFOp>(loc, lhs, rhs);
+    return arith::MinNumFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::maxs:
-    return builder.create<arith::MaxSIOp>(loc, lhs, rhs);
+    return arith::MaxSIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::mins:
-    return builder.create<arith::MinSIOp>(loc, lhs, rhs);
+    return arith::MinSIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::maxu:
-    return builder.create<arith::MaxUIOp>(loc, lhs, rhs);
+    return arith::MaxUIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::minu:
-    return builder.create<arith::MinUIOp>(loc, lhs, rhs);
+    return arith::MinUIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::ori:
-    return builder.create<arith::OrIOp>(loc, lhs, rhs);
+    return arith::OrIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::andi:
-    return builder.create<arith::AndIOp>(loc, lhs, rhs);
+    return arith::AndIOp::create(builder, loc, lhs, rhs);
+  case AtomicRMWKind::xori:
+    return arith::XOrIOp::create(builder, loc, lhs, rhs);
   // TODO: Add remaining reduction operations.
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");

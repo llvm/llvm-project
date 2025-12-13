@@ -22,6 +22,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "pgo-icall-prom-analysis"
 
+namespace llvm {
+
 // The percent threshold for the direct-call target (this call site vs the
 // remaining call count) for it to be considered as the promotion target.
 static cl::opt<unsigned> ICPRemainingPercentThreshold(
@@ -31,11 +33,17 @@ static cl::opt<unsigned> ICPRemainingPercentThreshold(
 
 // The percent threshold for the direct-call target (this call site vs the
 // total call count) for it to be considered as the promotion target.
-static cl::opt<unsigned>
+static cl::opt<uint64_t>
     ICPTotalPercentThreshold("icp-total-percent-threshold", cl::init(5),
                              cl::Hidden,
                              cl::desc("The percentage threshold against total "
                                       "count for the promotion"));
+
+// Set the minimum absolute count threshold for indirect call promotion.
+// Candidates with counts below this threshold will not be promoted.
+static cl::opt<unsigned> ICPMinimumCountThreshold(
+    "icp-minimum-count-threshold", cl::init(0), cl::Hidden,
+    cl::desc("Minimum absolute count for promotion candidate"));
 
 // Set the maximum number of targets to promote for a single indirect-call
 // callsite.
@@ -48,10 +56,13 @@ cl::opt<unsigned> MaxNumVTableAnnotations(
     "icp-max-num-vtables", cl::init(6), cl::Hidden,
     cl::desc("Max number of vtables annotated for a vtable load instruction."));
 
+} // end namespace llvm
+
 bool ICallPromotionAnalysis::isPromotionProfitable(uint64_t Count,
                                                    uint64_t TotalCount,
                                                    uint64_t RemainingCount) {
-  return Count * 100 >= ICPRemainingPercentThreshold * RemainingCount &&
+  return Count >= ICPMinimumCountThreshold &&
+         Count * 100 >= ICPRemainingPercentThreshold * RemainingCount &&
          Count * 100 >= ICPTotalPercentThreshold * TotalCount;
 }
 

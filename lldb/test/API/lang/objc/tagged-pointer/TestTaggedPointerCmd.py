@@ -8,8 +8,20 @@ class TestTaggedPointerCommand(TestBase):
     @no_debug_info_test
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.m")
+        )
+
+        n1 = thread.GetSelectedFrame().FindVariable("n1")
+        self.expect(
+            f"lang objc tagged-pointer info {n1.addr}",
+            substrs=[
+                f"{n1.addr} is tagged",
+                "payload = 0x0000000000000012",
+                "value = 0x0000000000000001",
+                "info bits = 0x0000000000000002",
+                "class = __NSCFNumber",
+            ],
         )
 
         self.expect(

@@ -54,9 +54,9 @@ entry:
 ; USE_BASE_32-NEXT: movq [[SAVE_rbx]], %rbx
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
-; NO_BASE_64: movl %r8d, %ebx
 ; NO_BASE_64: movl %ecx, %eax
 ; NO_BASE_64: movl %edx, %ecx
+; NO_BASE_64: movl %r8d, %ebx
 ; No need to save base pointer.
 ; NO_BASE_64-NOT: movq %rbx
 ; NO_BASE_64: mwaitx
@@ -65,9 +65,9 @@ entry:
 ; NO_BASE_64-NEXT: {{.+$}}
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
-; NO_BASE_32: movl %r8d, %ebx
 ; NO_BASE_32: movl %ecx, %eax
 ; NO_BASE_32: movl %edx, %ecx
+; NO_BASE_32: movl %r8d, %ebx
 ; No need to save base pointer.
 ; NO_BASE_32-NOT: movl %ebx
 ; NO_BASE_32: mwaitx
@@ -123,9 +123,9 @@ if.end:
 ; USE_BASE_32-NEXT: movq [[SAVE_rbx]], %rbx
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
-; NO_BASE_64: movl %edx, %ebx
 ; NO_BASE_64: movl %esi, %eax
 ; NO_BASE_64: movl %edi, %ecx
+; NO_BASE_64: movl %edx, %ebx
 ; No need to save base pointer.
 ; NO_BASE_64-NOT: movq %rbx
 ; NO_BASE_64: mwaitx
@@ -133,9 +133,9 @@ if.end:
 ; NO_BASE_64-NEXT: {{.+$}}
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
-; NO_BASE_32: movl %edx, %ebx
 ; NO_BASE_32: movl %esi, %eax
 ; NO_BASE_32: movl %edi, %ecx
+; NO_BASE_32: movl %edx, %ebx
 ; No need to save base pointer.
 ; NO_BASE_32-NOT: movl %ebx
 ; NO_BASE_32: mwaitx
@@ -191,9 +191,9 @@ if.end:
 ; USE_BASE_32-NEXT: movq [[SAVE_rbx]], %rbx
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
-; NO_BASE_64: movl %edx, %ebx
 ; NO_BASE_64: movl %esi, %eax
 ; NO_BASE_64: movl %edi, %ecx
+; NO_BASE_64: movl %edx, %ebx
 ; No need to save base pointer.
 ; NO_BASE_64-NOT: movq %rbx
 ; NO_BASE_64: mwaitx
@@ -201,9 +201,9 @@ if.end:
 ; NO_BASE_64-NEXT: {{.+$}}
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
-; NO_BASE_32: movl %edx, %ebx
 ; NO_BASE_32: movl %esi, %eax
 ; NO_BASE_32: movl %edi, %ecx
+; NO_BASE_32: movl %edx, %ebx
 ; No need to save base pointer.
 ; NO_BASE_32-NOT: movl %ebx
 ; NO_BASE_32: mwaitx

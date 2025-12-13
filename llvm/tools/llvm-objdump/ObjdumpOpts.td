@@ -241,16 +241,22 @@ defm prefix_strip
                          "paths. No effect without --prefix">,
       MetaVarName<"prefix">;
 
+def debug_indent_EQ : Joined<["--"], "debug-indent=">,
+  HelpText<"Distance to indent the source-level variable and inlined function display, "
+           "relative to the start of the disassembly">;
+
+def debug_inlined_funcs_EQ : Joined<["--"], "debug-inlined-funcs=">,
+  HelpText<"Print the locations of inlined functions alongside disassembly. "
+           "Supported formats: ascii, limits-only, and unicode (default)">,
+  Values<"ascii,limits-only,unicode">;
+def : Flag<["--"], "debug-inlined-funcs">, Alias<debug_inlined_funcs_EQ>, AliasArgs<["unicode"]>;
+
 def debug_vars_EQ : Joined<["--"], "debug-vars=">,
   HelpText<"Print the locations (in registers or memory) of "
            "source-level variables alongside disassembly. "
            "Supported formats: ascii, unicode (default)">,
-  Values<"unicode,ascii">;
+  Values<"ascii,unicode">;
 def : Flag<["--"], "debug-vars">, Alias<debug_vars_EQ>, AliasArgs<["unicode"]>;
-
-def debug_vars_indent_EQ : Joined<["--"], "debug-vars-indent=">,
-  HelpText<"Distance to indent the source-level variable display, "
-           "relative to the start of the disassembly">;
 
 def x86_asm_syntax_att : Flag<["--"], "x86-asm-syntax=att">,
   HelpText<"Emit AT&T-style disassembly">;

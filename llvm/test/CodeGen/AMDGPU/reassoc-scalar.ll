@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,GFX8 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: reassoc_i32:
 ; GCN: s_add_i32 [[ADD1:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}

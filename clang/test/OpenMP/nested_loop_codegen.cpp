@@ -889,6 +889,8 @@ int inline_decl() {
 // CHECK4-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON:%.*]], align 8
 // CHECK4-NEXT:    [[AGG_CAPTURED1:%.*]] = alloca [[STRUCT_ANON_0:%.*]], align 4
 // CHECK4-NEXT:    [[DOTCOUNT_ADDR:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:      #dbg_declare(ptr [[LOADGEP_I]], [[META24:![0-9]+]], !DIExpression(), [[META25:![0-9]+]])
+// CHECK4-NEXT:      #dbg_declare(ptr [[LOADGEP_K]], [[META26:![0-9]+]], !DIExpression(), [[META25]])
 // CHECK4-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK4:       omp.par.region:
 // CHECK4-NEXT:    store i32 0, ptr [[LOADGEP_I]], align 4, !dbg [[DBG23:![0-9]+]]
@@ -902,6 +904,8 @@ int inline_decl() {
 // CHECK4:       omp.par.region.parallel.after:
 // CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
+// CHECK4-NEXT:    br label [[FINI:%.*]]
+// CHECK4:       .fini:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG27]]
 // CHECK4:       for.body:
 // CHECK4-NEXT:    store i32 0, ptr [[LOADGEP_K]], align 4, !dbg [[DBG28:![0-9]+]]
@@ -1066,6 +1070,8 @@ int inline_decl() {
 // CHECK4-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_1:%.*]], align 8
 // CHECK4-NEXT:    [[AGG_CAPTURED1:%.*]] = alloca [[STRUCT_ANON_2:%.*]], align 4
 // CHECK4-NEXT:    [[DOTCOUNT_ADDR:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:      #dbg_declare(ptr [[LOADGEP_I]], [[META91:![0-9]+]], !DIExpression(), [[META92:![0-9]+]])
+// CHECK4-NEXT:      #dbg_declare(ptr [[LOADGEP_RES]], [[META93:![0-9]+]], !DIExpression(), [[META92]])
 // CHECK4-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK4:       omp.par.region:
 // CHECK4-NEXT:    store i32 0, ptr [[LOADGEP_I]], align 4, !dbg [[DBG86:![0-9]+]]
@@ -1079,6 +1085,8 @@ int inline_decl() {
 // CHECK4:       omp.par.region.parallel.after:
 // CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
+// CHECK4-NEXT:    br label [[FINI:%.*]]
+// CHECK4:       .fini:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG90]]
 // CHECK4:       for.body:
 // CHECK4-NEXT:      #dbg_declare(ptr [[K]], [[META91:![0-9]+]], !DIExpression(), [[META95:![0-9]+]])

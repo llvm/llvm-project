@@ -35,3 +35,23 @@ class TestInterruptThreadNames(TestBase):
         for bp in bps:
             num_resolved += bp.GetNumResolvedLocations()
         self.assertGreater(num_resolved, 0)
+
+    @skipUnlessDarwin
+    def test_internal_bps_deleted_on_relaunch(self):
+        self.build()
+
+        source_file = lldb.SBFileSpec("main.c")
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "initial hello", source_file
+        )
+
+        self.runCmd("break list --internal")
+        output = self.res.GetOutput()
+        self.assertEqual(output.count("thread-creation"), 1)
+
+        process.Kill()
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        self.runCmd("break list --internal")
+        output = self.res.GetOutput()
+        self.assertEqual(output.count("thread-creation"), 1)

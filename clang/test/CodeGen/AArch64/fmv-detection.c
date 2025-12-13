@@ -97,7 +97,7 @@ __attribute__((target_version("wfxt"))) int fmv(void) { return 0; }
 
 __attribute__((target_version("cssc+fp"))) int fmv(void);
 
-__attribute__((target_version("default"))) int fmv(void);
+__attribute__((target_version("default"))) int fmv(void) { return 0; }
 
 int caller() {
   return fmv();
@@ -121,7 +121,323 @@ int caller() {
 // CHECK-NEXT:    ret i32 0
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv.resolver() comdat {
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mbti
+// CHECK-SAME: () #[[ATTR2:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mcrc
+// CHECK-SAME: () #[[ATTR3:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mcssc
+// CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mdit
+// CHECK-SAME: () #[[ATTR5:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mdotprod
+// CHECK-SAME: () #[[ATTR6:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mdpb
+// CHECK-SAME: () #[[ATTR7:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mdpb2
+// CHECK-SAME: () #[[ATTR8:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mf32mm
+// CHECK-SAME: () #[[ATTR9:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mf64mm
+// CHECK-SAME: () #[[ATTR10:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mfcma
+// CHECK-SAME: () #[[ATTR11:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mflagm
+// CHECK-SAME: () #[[ATTR12:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mflagm2
+// CHECK-SAME: () #[[ATTR13:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mfp
+// CHECK-SAME: () #[[ATTR14:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mfp16
+// CHECK-SAME: () #[[ATTR15:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mfp16fml
+// CHECK-SAME: () #[[ATTR16:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mfrintts
+// CHECK-SAME: () #[[ATTR17:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mi8mm
+// CHECK-SAME: () #[[ATTR18:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mjscvt
+// CHECK-SAME: () #[[ATTR19:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mlse
+// CHECK-SAME: () #[[ATTR20:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mmemtag
+// CHECK-SAME: () #[[ATTR21:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mmops
+// CHECK-SAME: () #[[ATTR22:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mrcpc
+// CHECK-SAME: () #[[ATTR23:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mrcpc2
+// CHECK-SAME: () #[[ATTR24:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mrcpc3
+// CHECK-SAME: () #[[ATTR25:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mrdm
+// CHECK-SAME: () #[[ATTR26:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mrng
+// CHECK-SAME: () #[[ATTR27:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msb
+// CHECK-SAME: () #[[ATTR28:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msha2
+// CHECK-SAME: () #[[ATTR29:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msha3
+// CHECK-SAME: () #[[ATTR30:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msimd
+// CHECK-SAME: () #[[ATTR31:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msm4
+// CHECK-SAME: () #[[ATTR32:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msme
+// CHECK-SAME: () #[[ATTR33:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msme-f64f64
+// CHECK-SAME: () #[[ATTR34:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msme-i16i64
+// CHECK-SAME: () #[[ATTR35:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msme2
+// CHECK-SAME: () #[[ATTR36:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mssbs
+// CHECK-SAME: () #[[ATTR37:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msve
+// CHECK-SAME: () #[[ATTR38:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msve2
+// CHECK-SAME: () #[[ATTR39:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msve2-aes
+// CHECK-SAME: () #[[ATTR40:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msve2-bitperm
+// CHECK-SAME: () #[[ATTR41:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msve2-sha3
+// CHECK-SAME: () #[[ATTR42:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK-LABEL: define {{[^@]+}}@fmv._Msve2-sm4
+// CHECK-SAME: () #[[ATTR43:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv._Mwfxt
+// CHECK-SAME: () #[[ATTR44:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv.default
+// CHECK-SAME: () #[[ATTR45:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@caller
+// CHECK-SAME: () #[[ATTR46:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @fmv()
+// CHECK-NEXT:    ret i32 [[CALL]]
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@fmv.resolver() {{[#0-9]* }}comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -493,322 +809,6 @@ int caller() {
 // CHECK-NEXT:    ret ptr @fmv._Mrng
 // CHECK:       resolver_else90:
 // CHECK-NEXT:    ret ptr @fmv.default
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mbti
-// CHECK-SAME: () #[[ATTR2:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mcrc
-// CHECK-SAME: () #[[ATTR3:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mcssc
-// CHECK-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mdit
-// CHECK-SAME: () #[[ATTR5:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mdotprod
-// CHECK-SAME: () #[[ATTR6:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mdpb
-// CHECK-SAME: () #[[ATTR7:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mdpb2
-// CHECK-SAME: () #[[ATTR8:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mf32mm
-// CHECK-SAME: () #[[ATTR9:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mf64mm
-// CHECK-SAME: () #[[ATTR10:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mfcma
-// CHECK-SAME: () #[[ATTR11:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mflagm
-// CHECK-SAME: () #[[ATTR12:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mflagm2
-// CHECK-SAME: () #[[ATTR13:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mfp
-// CHECK-SAME: () #[[ATTR14:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mfp16
-// CHECK-SAME: () #[[ATTR15:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mfp16fml
-// CHECK-SAME: () #[[ATTR16:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mfrintts
-// CHECK-SAME: () #[[ATTR17:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mi8mm
-// CHECK-SAME: () #[[ATTR18:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mjscvt
-// CHECK-SAME: () #[[ATTR19:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mlse
-// CHECK-SAME: () #[[ATTR20:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mmemtag
-// CHECK-SAME: () #[[ATTR21:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mmops
-// CHECK-SAME: () #[[ATTR22:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mrcpc
-// CHECK-SAME: () #[[ATTR23:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mrcpc2
-// CHECK-SAME: () #[[ATTR24:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mrcpc3
-// CHECK-SAME: () #[[ATTR25:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mrdm
-// CHECK-SAME: () #[[ATTR26:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mrng
-// CHECK-SAME: () #[[ATTR27:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msb
-// CHECK-SAME: () #[[ATTR28:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msha2
-// CHECK-SAME: () #[[ATTR29:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msha3
-// CHECK-SAME: () #[[ATTR30:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msimd
-// CHECK-SAME: () #[[ATTR31:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msm4
-// CHECK-SAME: () #[[ATTR32:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msme
-// CHECK-SAME: () #[[ATTR33:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msme-f64f64
-// CHECK-SAME: () #[[ATTR34:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msme-i16i64
-// CHECK-SAME: () #[[ATTR35:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msme2
-// CHECK-SAME: () #[[ATTR36:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mssbs
-// CHECK-SAME: () #[[ATTR37:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msve
-// CHECK-SAME: () #[[ATTR38:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msve2
-// CHECK-SAME: () #[[ATTR39:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msve2-aes
-// CHECK-SAME: () #[[ATTR40:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msve2-bitperm
-// CHECK-SAME: () #[[ATTR41:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msve2-sha3
-// CHECK-SAME: () #[[ATTR42:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Msve2-sm4
-// CHECK-SAME: () #[[ATTR43:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv._Mwfxt
-// CHECK-SAME: () #[[ATTR44:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@caller
-// CHECK-SAME: () #[[ATTR45:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @fmv()
-// CHECK-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv.default
-// CHECK-SAME: () #[[ATTR46:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
 //
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}

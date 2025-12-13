@@ -3,8 +3,6 @@
 ; Test that loops with different maximum offsets for different address
 ; spaces are correctly handled.
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
-
 ; OPT-LABEL: @test_global_addressing_loop_uniform_index_max_offset_i32(
 ; OPT: .lr.ph.preheader:
 ; OPT: %scevgep2 = getelementptr i8, ptr addrspace(1) %arg1, i64 4095
@@ -159,4 +157,4 @@ bb:
   br i1 %exitcond, label %._crit_edge.loopexit, label %.lr.ph
 }
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hawaii" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hawaii" "use-soft-float"="false" }

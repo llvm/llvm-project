@@ -1,9 +1,7 @@
 ; RUN: opt -S -mtriple=amdgcn- -passes=sroa %s -o %t.sroa.ll
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-promote-alloca -verify-machineinstrs < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-ALLOCA %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=+promote-alloca -verify-machineinstrs < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-PROMOTE %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-promote-alloca < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-ALLOCA %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=+promote-alloca < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-PROMOTE %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes='sroa,amdgpu-promote-alloca,instcombine' < %s | FileCheck -check-prefix=OPT %s
-
-target datalayout = "A5"
 
 ; OPT-LABEL: @vector_read_alloca_bitcast(
 ; OPT-NOT:   alloca
@@ -74,7 +72,8 @@ entry:
 ; OPT-NOT:   alloca
 ; OPT: bb2:
 ; OPT:  %promotealloca = phi <6 x float> [ zeroinitializer, %bb ], [ %0, %bb2 ]
-; OPT:  %0 = insertelement <6 x float> %promotealloca, float %tmp71, i32 %tmp10
+; OPT: [[TMP:%tmp7.*]] = load float, ptr addrspace(1) %tmp5, align 4
+; OPT:  %0 = insertelement <6 x float> %promotealloca, float [[TMP]], i32 %tmp10
 ; OPT: .preheader:
 ; OPT:  %bc = bitcast <6 x float> %0 to <6 x i32>
 ; OPT:  %1 = extractelement <6 x i32> %bc, i32 %tmp20
@@ -134,7 +133,8 @@ bb15:                                             ; preds = %.preheader
 ; OPT-NOT:   alloca
 ; OPT: bb2:
 ; OPT:  %promotealloca = phi <6 x double> [ zeroinitializer, %bb ], [ %0, %bb2 ]
-; OPT:  %0 = insertelement <6 x double> %promotealloca, double %tmp71, i32 %tmp10
+; OPT:  [[TMP:%tmp7.*]] = load double, ptr addrspace(1) %tmp5, align 8
+; OPT:  %0 = insertelement <6 x double> %promotealloca, double [[TMP]], i32 %tmp10
 ; OPT: .preheader:
 ; OPT:  %bc = bitcast <6 x double> %0 to <6 x i64>
 ; OPT:  %1 = extractelement <6 x i64> %bc, i32 %tmp20

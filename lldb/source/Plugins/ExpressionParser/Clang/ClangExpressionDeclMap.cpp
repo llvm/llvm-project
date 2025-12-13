@@ -18,6 +18,7 @@
 #include "NameSearchContext.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Expression/DiagnosticManager.h"
@@ -35,6 +36,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -56,7 +58,6 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
@@ -218,7 +219,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
                                                    bool is_result,
                                                    bool is_lvalue) {
   assert(m_parser_vars.get());
-  auto ast = parser_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto ast = parser_type.GetTypeSystem<TypeSystemClang>();
   if (ast == nullptr)
     return false;
 
@@ -838,7 +839,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
 
     clang::CXXRecordDecl *class_decl = method_decl->getParent();
 
-    QualType class_qual_type(class_decl->getTypeForDecl(), 0);
+    QualType class_qual_type = m_ast_context->getCanonicalTagType(class_decl);
 
     TypeFromUser class_user_type(
         class_qual_type.getAsOpaquePtr(),
@@ -1022,13 +1023,14 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
 
   bool append = false;
   uint32_t max_matches = 1;
-  std::vector<clang::NamedDecl *> decls;
+  std::vector<CompilerDecl> decls;
 
   if (!modules_decl_vendor->FindDecls(name, append, max_matches, decls))
     return;
 
   assert(!decls.empty() && "FindDecls returned true but no decls?");
-  clang::NamedDecl *const decl_from_modules = decls[0];
+  auto *const decl_from_modules =
+      llvm::cast<NamedDecl>(ClangUtil::GetDecl(decls[0]));
 
   LLDB_LOG(log,
            "  CAS::FEVD Matching decl found for "
@@ -1046,8 +1048,6 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
     MaybeRegisterFunctionBody(copied_function);
 
     context.AddNamedDecl(copied_function);
-
-    context.m_found_function_with_type_info = true;
   } else if (auto copied_var = dyn_cast<clang::VarDecl>(copied_decl)) {
     context.AddNamedDecl(copied_var);
     context.m_found_variable = true;
@@ -1216,15 +1216,15 @@ SymbolContextList ClangExpressionDeclMap::SearchFunctionsInSymbolContexts(
   return sc_func_list;
 }
 
-void ClangExpressionDeclMap::LookupFunction(
+bool ClangExpressionDeclMap::LookupFunction(
     NameSearchContext &context, lldb::ModuleSP module_sp, ConstString name,
     const CompilerDeclContext &namespace_decl) {
   if (!m_parser_vars)
-    return;
+    return false;
 
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
 
-  std::vector<clang::NamedDecl *> decls_from_modules;
+  std::vector<CompilerDecl> decls_from_modules;
 
   if (target) {
     if (std::shared_ptr<ClangModulesDeclVendor> decl_vendor =
@@ -1280,6 +1280,8 @@ void ClangExpressionDeclMap::LookupFunction(
     }
   }
 
+  bool found_function_with_type_info = false;
+
   if (sc_list.GetSize()) {
     Symbol *extern_symbol = nullptr;
     Symbol *non_extern_symbol = nullptr;
@@ -1296,7 +1298,7 @@ void ClangExpressionDeclMap::LookupFunction(
           continue;
 
         AddOneFunction(context, sym_ctx.function, nullptr);
-        context.m_found_function_with_type_info = true;
+        found_function_with_type_info = true;
       } else if (sym_ctx.symbol) {
         Symbol *symbol = sym_ctx.symbol;
         if (target && symbol->GetType() == eSymbolTypeReExported) {
@@ -1312,20 +1314,21 @@ void ClangExpressionDeclMap::LookupFunction(
       }
     }
 
-    if (!context.m_found_function_with_type_info) {
-      for (clang::NamedDecl *decl : decls_from_modules) {
+    if (!found_function_with_type_info) {
+      for (const CompilerDecl &compiler_decl : decls_from_modules) {
+        clang::Decl *decl = ClangUtil::GetDecl(compiler_decl);
         if (llvm::isa<clang::FunctionDecl>(decl)) {
           clang::NamedDecl *copied_decl =
               llvm::cast_or_null<FunctionDecl>(CopyDecl(decl));
           if (copied_decl) {
             context.AddNamedDecl(copied_decl);
-            context.m_found_function_with_type_info = true;
+            found_function_with_type_info = true;
           }
         }
       }
     }
 
-    if (!context.m_found_function_with_type_info) {
+    if (!found_function_with_type_info) {
       if (extern_symbol) {
         AddOneFunction(context, nullptr, extern_symbol);
       } else if (non_extern_symbol) {
@@ -1333,6 +1336,8 @@ void ClangExpressionDeclMap::LookupFunction(
       }
     }
   }
+
+  return found_function_with_type_info;
 }
 
 void ClangExpressionDeclMap::FindExternalVisibleDecls(
@@ -1431,10 +1436,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     }
   }
 
-  LookupFunction(context, module_sp, name, namespace_decl);
-
-  // Try the modules next.
-  if (!context.m_found_function_with_type_info)
+  if (!LookupFunction(context, module_sp, name, namespace_decl))
     LookupInModulesDeclVendor(context, name);
 
   if (target && !context.m_found_variable && !namespace_decl) {
@@ -1485,8 +1487,8 @@ bool ClangExpressionDeclMap::GetVariableValue(VariableSP &var,
     return false;
   }
 
-  auto ts = var_type->GetForwardCompilerType().GetTypeSystem();
-  auto clang_ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto clang_ast =
+      var_type->GetForwardCompilerType().GetTypeSystem<TypeSystemClang>();
 
   if (!clang_ast) {
     LLDB_LOG(log, "Skipped a definition because it has no Clang AST");
@@ -1561,7 +1563,7 @@ ClangExpressionDeclMap::AddExpressionVariable(NameSearchContext &context,
 
   if (const clang::Type *parser_type = parser_opaque_type.getTypePtr()) {
     if (const TagType *tag_type = dyn_cast<TagType>(parser_type))
-      CompleteType(tag_type->getDecl());
+      CompleteType(tag_type->getDecl()->getDefinitionOrSelf());
     if (const ObjCObjectPointerType *objc_object_ptr_type =
             dyn_cast<ObjCObjectPointerType>(parser_type))
       CompleteType(objc_object_ptr_type->getInterfaceDecl());
@@ -1605,8 +1607,7 @@ void ClangExpressionDeclMap::AddOneVariable(
 
   TypeFromUser user_type = valobj->GetCompilerType();
 
-  auto clang_ast =
-      user_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto clang_ast = user_type.GetTypeSystem<TypeSystemClang>();
 
   if (!clang_ast) {
     LLDB_LOG(log, "Skipped a definition because it has no Clang AST");
@@ -1809,10 +1810,10 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
 
     const auto lang = function->GetCompileUnit()->GetLanguage();
     const auto name = function->GetMangled().GetMangledName().AsCString();
-    const bool extern_c = (Language::LanguageIsC(lang) &&
-                           !CPlusPlusLanguage::IsCPPMangledName(name)) ||
-                          (Language::LanguageIsObjC(lang) &&
-                           !Language::LanguageIsCPlusPlus(lang));
+    const bool extern_c =
+        (Language::LanguageIsC(lang) && !Mangled::IsMangledName(name)) ||
+        (Language::LanguageIsObjC(lang) &&
+         !Language::LanguageIsCPlusPlus(lang));
 
     if (!extern_c) {
       TypeSystem *type_system = function->GetDeclContext().GetTypeSystem();
@@ -1979,10 +1980,10 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
       copied_clang_type.GetCompleteType()) {
     CompilerType void_clang_type =
         m_clang_ast_context->GetBasicType(eBasicTypeVoid);
-    CompilerType void_ptr_clang_type = void_clang_type.GetPointerType();
+    std::array<CompilerType, 1> args{void_clang_type.GetPointerType()};
 
     CompilerType method_type = m_clang_ast_context->CreateFunctionType(
-        void_clang_type, &void_ptr_clang_type, 1, false, 0);
+        void_clang_type, args, false, 0);
 
     const bool is_virtual = false;
     const bool is_static = false;
@@ -1992,7 +1993,7 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
     const bool is_artificial = false;
 
     CXXMethodDecl *method_decl = m_clang_ast_context->AddMethodToCXXRecordType(
-        copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", nullptr,
+        copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", /*asm_label=*/{},
         method_type, lldb::eAccessPublic, is_virtual, is_static, is_inline,
         is_explicit, is_attr_used, is_artificial);
 

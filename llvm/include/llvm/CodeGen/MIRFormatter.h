@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_MIRFORMATTER_H
 
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -73,15 +74,16 @@ public:
   /// Helper functions to print IR value as MIR serialization format which will
   /// be useful for target specific printer, e.g. for printing IR value in
   /// custom pseudo source value.
-  static void printIRValue(raw_ostream &OS, const Value &V,
-                           ModuleSlotTracker &MST);
+  LLVM_ABI static void printIRValue(raw_ostream &OS, const Value &V,
+                                    ModuleSlotTracker &MST);
 
   /// Helper functions to parse IR value from MIR serialization format which
   /// will be useful for target specific parser, e.g. for parsing IR value for
   /// custom pseudo source value.
-  static bool parseIRValue(StringRef Src, MachineFunction &MF,
-                           PerFunctionMIParsingState &PFS, const Value *&V,
-                           ErrorCallbackType ErrorCallback);
+  LLVM_ABI static bool parseIRValue(StringRef Src, MachineFunction &MF,
+                                    PerFunctionMIParsingState &PFS,
+                                    const Value *&V,
+                                    ErrorCallbackType ErrorCallback);
 };
 
 } // end namespace llvm

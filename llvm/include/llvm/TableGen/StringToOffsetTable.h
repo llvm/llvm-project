@@ -12,8 +12,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 namespace llvm {
@@ -26,8 +24,17 @@ class StringToOffsetTable {
   StringMap<unsigned> StringOffset;
   std::string AggregateString;
 
+  /// If this is to be a static class member, the prefix to use (i.e. class name
+  /// plus ::)
+  const StringRef ClassPrefix;
+  const bool AppendZero;
+  const bool UsePrefixForStorageMember;
+
 public:
-  StringToOffsetTable() {
+  StringToOffsetTable(bool AppendZero = true, StringRef ClassPrefix = "",
+                      bool UsePrefixForStorageMember = true)
+      : ClassPrefix(ClassPrefix), AppendZero(AppendZero),
+        UsePrefixForStorageMember(UsePrefixForStorageMember) {
     // Ensure we always put the empty string at offset zero. That lets empty
     // initialization also be zero initialization for offsets into the table.
     GetOrAddStringOffset("");
@@ -36,17 +43,7 @@ public:
   bool empty() const { return StringOffset.empty(); }
   size_t size() const { return AggregateString.size(); }
 
-  unsigned GetOrAddStringOffset(StringRef Str, bool appendZero = true) {
-    auto [II, Inserted] = StringOffset.insert({Str, size()});
-    if (Inserted) {
-      // Add the string to the aggregate if this is the first time found.
-      AggregateString.append(Str.begin(), Str.end());
-      if (appendZero)
-        AggregateString += '\0';
-    }
-
-    return II->second;
-  }
+  unsigned GetOrAddStringOffset(StringRef Str);
 
   // Returns the offset of `Str` in the table if its preset, else return
   // std::nullopt.
@@ -57,7 +54,7 @@ public:
     return II->second;
   }
 
-  // Emit a string table definition with the provided name and indent.
+  // Emit a string table definition with the provided name.
   //
   // When possible, this uses string-literal concatenation to emit the string
   // contents in a readable and searchable way. However, for (very) large string
@@ -68,97 +65,10 @@ public:
   // The string table, and its input string contents, are always emitted as both
   // `static` and `constexpr`. Both `Name` and (`Name` + "Storage") must be
   // valid identifiers to declare.
-  void EmitStringTableDef(raw_ostream &OS, const Twine &Name,
-                          const Twine &Indent = "") const {
-    OS << formatv(R"(
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Woverlength-strings"
-#endif
-{0}static constexpr char {1}Storage[] = )",
-                  Indent, Name);
-
-    // MSVC silently miscompiles string literals longer than 64k in some
-    // circumstances. When the string table is longer, emit it as an array of
-    // character literals.
-    bool UseChars = AggregateString.size() > (64 * 1024);
-    OS << (UseChars ? "{\n" : "\n");
-
-    llvm::ListSeparator LineSep(UseChars ? ",\n" : "\n");
-    llvm::SmallVector<StringRef> Strings(split(AggregateString, '\0'));
-    // We should always have an empty string at the start, and because these are
-    // null terminators rather than separators, we'll have one at the end as
-    // well. Skip the end one.
-    assert(Strings.front().empty() && "Expected empty initial string!");
-    assert(Strings.back().empty() &&
-           "Expected empty string at the end due to terminators!");
-    Strings.pop_back();
-    for (StringRef Str : Strings) {
-      OS << LineSep << Indent << "  ";
-      // If we can, just emit this as a string literal to be concatenated.
-      if (!UseChars) {
-        OS << "\"";
-        OS.write_escaped(Str);
-        OS << "\\0\"";
-        continue;
-      }
-
-      llvm::ListSeparator CharSep(", ");
-      for (char C : Str) {
-        OS << CharSep << "'";
-        OS.write_escaped(StringRef(&C, 1));
-        OS << "'";
-      }
-      OS << CharSep << "'\\0'";
-    }
-    OS << LineSep << Indent << (UseChars ? "};" : "  ;");
-
-    OS << formatv(R"(
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-
-{0}static constexpr llvm::StringTable {1} =
-{0}    {1}Storage;
-)",
-                  Indent, Name);
-  }
+  void EmitStringTableDef(raw_ostream &OS, const Twine &Name) const;
 
   // Emit the string as one single string.
-  void EmitString(raw_ostream &O) const {
-    // Escape the string.
-    SmallString<256> EscapedStr;
-    raw_svector_ostream(EscapedStr).write_escaped(AggregateString);
-
-    O << "    \"";
-    unsigned CharsPrinted = 0;
-    for (unsigned i = 0, e = EscapedStr.size(); i != e; ++i) {
-      if (CharsPrinted > 70) {
-        O << "\"\n    \"";
-        CharsPrinted = 0;
-      }
-      O << EscapedStr[i];
-      ++CharsPrinted;
-
-      // Print escape sequences all together.
-      if (EscapedStr[i] != '\\')
-        continue;
-
-      assert(i + 1 < EscapedStr.size() && "Incomplete escape sequence!");
-      if (isDigit(EscapedStr[i + 1])) {
-        assert(isDigit(EscapedStr[i + 2]) && isDigit(EscapedStr[i + 3]) &&
-               "Expected 3 digit octal escape!");
-        O << EscapedStr[++i];
-        O << EscapedStr[++i];
-        O << EscapedStr[++i];
-        CharsPrinted += 3;
-      } else {
-        O << EscapedStr[++i];
-        ++CharsPrinted;
-      }
-    }
-    O << "\"";
-  }
+  void EmitString(raw_ostream &O) const;
 };
 
 } // end namespace llvm

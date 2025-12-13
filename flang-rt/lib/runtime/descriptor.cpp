@@ -13,8 +13,9 @@
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
-#include "flang-rt/runtime/tools.h"
 #include "flang-rt/runtime/type-info.h"
+#include "flang/Common/type-kinds.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -26,13 +27,13 @@ RT_OFFLOAD_API_GROUP_BEGIN
 RT_API_ATTRS Descriptor::Descriptor(const Descriptor &that) { *this = that; }
 
 RT_API_ATTRS Descriptor &Descriptor::operator=(const Descriptor &that) {
-  std::memcpy(reinterpret_cast<void *>(this), &that, that.SizeInBytes());
+  runtime::memcpy(reinterpret_cast<void *>(this), &that, that.SizeInBytes());
   return *this;
 }
 
 RT_API_ATTRS void Descriptor::Establish(TypeCode t, std::size_t elementBytes,
     void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute, bool addendum) {
+    ISO::CFI_attribute_t attribute, bool addendum, int allocatorIdx) {
   Terminator terminator{__FILE__, __LINE__};
   int cfiStatus{ISO::VerifyEstablishParameters(&raw_, p, attribute, t.raw(),
       elementBytes, rank, extent, /*external=*/false)};
@@ -59,45 +60,57 @@ RT_API_ATTRS void Descriptor::Establish(TypeCode t, std::size_t elementBytes,
   if (a) {
     new (a) DescriptorAddendum{};
   }
+  SetAllocIdx(allocatorIdx);
 }
-
-namespace {
-template <TypeCategory CAT, int KIND> struct TypeSizeGetter {
-  constexpr RT_API_ATTRS std::size_t operator()() const {
-    CppTypeFor<CAT, KIND> arr[2];
-    return sizeof arr / 2;
-  }
-};
-} // namespace
 
 RT_API_ATTRS std::size_t Descriptor::BytesFor(TypeCategory category, int kind) {
   Terminator terminator{__FILE__, __LINE__};
-  return ApplyType<TypeSizeGetter, std::size_t>(category, kind, terminator);
+  int bytes{common::TypeSizeInBytes(category, kind)};
+  RUNTIME_CHECK(terminator, bytes > 0);
+  return bytes;
 }
 
 RT_API_ATTRS void Descriptor::Establish(TypeCategory c, int kind, void *p,
     int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
-    bool addendum) {
+    bool addendum, int allocatorIdx) {
   Establish(TypeCode(c, kind), BytesFor(c, kind), p, rank, extent, attribute,
-      addendum);
+      addendum, allocatorIdx);
 }
 
 RT_API_ATTRS void Descriptor::Establish(int characterKind,
     std::size_t characters, void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute, bool addendum) {
+    ISO::CFI_attribute_t attribute, bool addendum, int allocatorIdx) {
   Establish(TypeCode{TypeCategory::Character, characterKind},
-      characterKind * characters, p, rank, extent, attribute, addendum);
+      characterKind * characters, p, rank, extent, attribute, addendum,
+      allocatorIdx);
 }
 
 RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt,
     void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute) {
-  Establish(TypeCode{TypeCategory::Derived, 0}, dt.sizeInBytes(), p, rank,
-      extent, attribute, true);
-  DescriptorAddendum *a{Addendum()};
-  Terminator terminator{__FILE__, __LINE__};
-  RUNTIME_CHECK(terminator, a != nullptr);
-  new (a) DescriptorAddendum{&dt};
+    ISO::CFI_attribute_t attribute, int allocatorIdx) {
+  auto elementBytes{static_cast<std::size_t>(dt.sizeInBytes())};
+  ISO::EstablishDescriptor(
+      &raw_, p, attribute, CFI_type_struct, elementBytes, rank, extent);
+  if (elementBytes == 0) {
+    raw_.elem_len = 0;
+    // Reset byte strides of the dimensions, since EstablishDescriptor()
+    // only does that when the base address is not nullptr.
+    for (int j{0}; j < rank; ++j) {
+      GetDimension(j).SetByteStride(0);
+    }
+  }
+  SetHasAddendum();
+  new (Addendum()) DescriptorAddendum{&dt};
+  SetAllocIdx(allocatorIdx);
+}
+
+RT_API_ATTRS void Descriptor::UncheckedScalarEstablish(
+    const typeInfo::DerivedType &dt, void *p) {
+  auto elementBytes{static_cast<std::size_t>(dt.sizeInBytes())};
+  ISO::EstablishDescriptor(
+      &raw_, p, CFI_attribute_other, CFI_type_struct, elementBytes, 0, nullptr);
+  SetHasAddendum();
+  new (Addendum()) DescriptorAddendum{&dt};
 }
 
 RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(TypeCode t,
@@ -148,24 +161,10 @@ RT_API_ATTRS std::size_t Descriptor::SizeInBytes() const {
 }
 
 RT_API_ATTRS std::size_t Descriptor::Elements() const {
-  int n{rank()};
-  std::size_t elements{1};
-  for (int j{0}; j < n; ++j) {
-    elements *= GetDimension(j).Extent();
-  }
-  return elements;
+  return InlineElements();
 }
 
-RT_API_ATTRS static inline int MapAllocIdx(const Descriptor &desc) {
-#ifdef RT_DEVICE_COMPILATION
-  // Force default allocator in device code.
-  return kDefaultAllocator;
-#else
-  return desc.GetAllocIdx();
-#endif
-}
-
-RT_API_ATTRS int Descriptor::Allocate() {
+RT_API_ATTRS int Descriptor::Allocate(std::int64_t *asyncObject) {
   std::size_t elementBytes{ElementBytes()};
   if (static_cast<std::int64_t>(elementBytes) < 0) {
     // F'2023 7.4.4.2 p5: "If the character length parameter value evaluates
@@ -173,11 +172,11 @@ RT_API_ATTRS int Descriptor::Allocate() {
     elementBytes = raw_.elem_len = 0;
   }
   std::size_t byteSize{Elements() * elementBytes};
-  AllocFct alloc{allocatorRegistry.GetAllocator(MapAllocIdx(*this))};
+  AllocFct alloc{allocatorRegistry.GetAllocator(MapAllocIdx())};
   // Zero size allocation is possible in Fortran and the resulting
   // descriptor must be allocated/associated. Since std::malloc(0)
   // result is implementation defined, always allocate at least one byte.
-  void *p{alloc(byteSize ? byteSize : 1)};
+  void *p{alloc(byteSize ? byteSize : 1, asyncObject)};
   if (!p) {
     return CFI_ERROR_MEM_ALLOCATION;
   }
@@ -214,18 +213,6 @@ RT_API_ATTRS int Descriptor::Destroy(
   }
 }
 
-RT_API_ATTRS int Descriptor::Deallocate() {
-  ISO::CFI_cdesc_t &descriptor{raw()};
-  if (!descriptor.base_addr) {
-    return CFI_ERROR_BASE_ADDR_NULL;
-  } else {
-    FreeFct free{allocatorRegistry.GetDeallocator(MapAllocIdx(*this))};
-    free(descriptor.base_addr);
-    descriptor.base_addr = nullptr;
-    return CFI_SUCCESS;
-  }
-}
-
 RT_API_ATTRS bool Descriptor::DecrementSubscripts(
     SubscriptValue *subscript, const int *permutation) const {
   for (int j{raw_.rank - 1}; j >= 0; --j) {
@@ -257,6 +244,7 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
     const SubscriptValue *stride) {
   *this = source;
   raw_.attribute = CFI_attribute_pointer;
+  SetAllocIdx(source.GetAllocIdx());
   int newRank{raw_.rank};
   for (int j{0}; j < raw_.rank; ++j) {
     if (!stride || stride[j] == 0) {
@@ -268,6 +256,9 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
     }
   }
   raw_.rank = newRank;
+  if (CFI_section(&raw_, &source.raw_, lower, upper, stride) != CFI_SUCCESS) {
+    return false;
+  }
   if (const auto *sourceAddendum = source.Addendum()) {
     if (auto *addendum{Addendum()}) {
       *addendum = *sourceAddendum;
@@ -275,21 +266,24 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
       return false;
     }
   }
-  return CFI_section(&raw_, &source.raw_, lower, upper, stride) == CFI_SUCCESS;
+  return true;
 }
 
-RT_API_ATTRS void Descriptor::ApplyMold(const Descriptor &mold, int rank) {
-  raw_.elem_len = mold.raw_.elem_len;
+RT_API_ATTRS void Descriptor::ApplyMold(
+    const Descriptor &mold, int rank, bool isMonomorphic) {
   raw_.rank = rank;
-  raw_.type = mold.raw_.type;
   for (int j{0}; j < rank && j < mold.raw_.rank; ++j) {
     GetDimension(j) = mold.GetDimension(j);
   }
-  if (auto *addendum{Addendum()}) {
-    if (auto *moldAddendum{mold.Addendum()}) {
-      *addendum = *moldAddendum;
-    } else {
-      INTERNAL_CHECK(!addendum->derivedType());
+  if (!isMonomorphic) {
+    raw_.elem_len = mold.raw_.elem_len;
+    raw_.type = mold.raw_.type;
+    if (auto *addendum{Addendum()}) {
+      if (auto *moldAddendum{mold.Addendum()}) {
+        *addendum = *moldAddendum;
+      } else {
+        INTERNAL_CHECK(!addendum->derivedType());
+      }
     }
   }
 }
@@ -298,14 +292,161 @@ RT_API_ATTRS void Descriptor::Check() const {
   // TODO
 }
 
-void Descriptor::Dump(FILE *f) const {
+static const char *GetTypeStr(ISO::CFI_type_t type, bool dumpRawType) {
+  if (dumpRawType) {
+#define CASE(x) \
+  case (x): \
+    return #x;
+    switch (type) {
+      CASE(CFI_type_signed_char)
+      CASE(CFI_type_short)
+      CASE(CFI_type_int)
+      CASE(CFI_type_long)
+      CASE(CFI_type_long_long)
+      CASE(CFI_type_size_t)
+      CASE(CFI_type_int8_t)
+      CASE(CFI_type_int16_t)
+      CASE(CFI_type_int32_t)
+      CASE(CFI_type_int64_t)
+      CASE(CFI_type_int128_t)
+      CASE(CFI_type_int_least8_t)
+      CASE(CFI_type_int_least16_t)
+      CASE(CFI_type_int_least32_t)
+      CASE(CFI_type_int_least64_t)
+      CASE(CFI_type_int_least128_t)
+      CASE(CFI_type_int_fast8_t)
+      CASE(CFI_type_int_fast16_t)
+      CASE(CFI_type_int_fast32_t)
+      CASE(CFI_type_int_fast64_t)
+      CASE(CFI_type_int_fast128_t)
+      CASE(CFI_type_intmax_t)
+      CASE(CFI_type_intptr_t)
+      CASE(CFI_type_ptrdiff_t)
+      CASE(CFI_type_half_float)
+      CASE(CFI_type_bfloat)
+      CASE(CFI_type_float)
+      CASE(CFI_type_double)
+      CASE(CFI_type_extended_double)
+      CASE(CFI_type_long_double)
+      CASE(CFI_type_float128)
+      CASE(CFI_type_half_float_Complex)
+      CASE(CFI_type_bfloat_Complex)
+      CASE(CFI_type_float_Complex)
+      CASE(CFI_type_double_Complex)
+      CASE(CFI_type_extended_double_Complex)
+      CASE(CFI_type_long_double_Complex)
+      CASE(CFI_type_float128_Complex)
+      CASE(CFI_type_Bool)
+      CASE(CFI_type_char)
+      CASE(CFI_type_cptr)
+      CASE(CFI_type_struct)
+      CASE(CFI_type_char16_t)
+      CASE(CFI_type_char32_t)
+      CASE(CFI_type_uint8_t)
+      CASE(CFI_type_uint16_t)
+      CASE(CFI_type_uint32_t)
+      CASE(CFI_type_uint64_t)
+      CASE(CFI_type_uint128_t)
+    default:
+      return nullptr;
+    }
+#undef CASE
+  }
+  TypeCode code{type};
+  if (!code.IsValid()) {
+    return "invalid";
+  }
+  auto categoryAndKind{code.GetCategoryAndKind()};
+  if (!categoryAndKind) {
+    return nullptr;
+  }
+  TypeCategory tcat{categoryAndKind->first};
+  int kind{categoryAndKind->second};
+
+#define CASE(cat, k) \
+  case (k): \
+    return #cat "(kind=" #k ")";
+  switch (tcat) {
+  case TypeCategory::Integer:
+    switch (kind) {
+      CASE(INTEGER, 1)
+      CASE(INTEGER, 2)
+      CASE(INTEGER, 4)
+      CASE(INTEGER, 8)
+      CASE(INTEGER, 16)
+    }
+    break;
+  case TypeCategory::Unsigned:
+    switch (kind) {
+      CASE(UNSIGNED, 1)
+      CASE(UNSIGNED, 2)
+      CASE(UNSIGNED, 4)
+      CASE(UNSIGNED, 8)
+      CASE(UNSIGNED, 16)
+    }
+    break;
+  case TypeCategory::Real:
+    switch (kind) {
+      CASE(REAL, 2)
+      CASE(REAL, 3)
+      CASE(REAL, 4)
+      CASE(REAL, 8)
+      CASE(REAL, 10)
+      CASE(REAL, 16)
+    }
+    break;
+  case TypeCategory::Complex:
+    switch (kind) {
+      CASE(COMPLEX, 2)
+      CASE(COMPLEX, 3)
+      CASE(COMPLEX, 4)
+      CASE(COMPLEX, 8)
+      CASE(COMPLEX, 10)
+      CASE(COMPLEX, 16)
+    }
+    break;
+  case TypeCategory::Character:
+    switch (kind) {
+      CASE(CHARACTER, 1)
+      CASE(CHARACTER, 2)
+      CASE(CHARACTER, 4)
+    }
+    break;
+  case TypeCategory::Logical:
+    switch (kind) {
+      CASE(LOGICAL, 1)
+      CASE(LOGICAL, 2)
+      CASE(LOGICAL, 4)
+      CASE(LOGICAL, 8)
+    }
+    break;
+  case TypeCategory::Derived:
+    return "DERIVED";
+  }
+#undef CASE
+  return nullptr;
+}
+
+void Descriptor::Dump(FILE *f, bool dumpRawType) const {
   std::fprintf(f, "Descriptor @ %p:\n", reinterpret_cast<const void *>(this));
   std::fprintf(f, "  base_addr %p\n", raw_.base_addr);
-  std::fprintf(f, "  elem_len  %zd\n", static_cast<std::size_t>(raw_.elem_len));
+  std::fprintf(f, "  elem_len  %zd\n", ElementBytes());
   std::fprintf(f, "  version   %d\n", static_cast<int>(raw_.version));
-  std::fprintf(f, "  rank      %d\n", static_cast<int>(raw_.rank));
-  std::fprintf(f, "  type      %d\n", static_cast<int>(raw_.type));
-  std::fprintf(f, "  attribute %d\n", static_cast<int>(raw_.attribute));
+  std::fprintf(f, "  rank      %d%s\n", rank(), rank() ? "" : " (scalar)");
+  int ty{static_cast<int>(raw_.type)};
+  if (const char *tyStr{GetTypeStr(raw_.type, dumpRawType)}) {
+    std::fprintf(f, "  type      %d \"%s\"\n", ty, tyStr);
+  } else {
+    std::fprintf(f, "  type      %d\n", ty);
+  }
+  int attr{static_cast<int>(raw_.attribute)};
+  if (IsPointer()) {
+    std::fprintf(f, "  attribute %d (pointer) \n", attr);
+  } else if (IsAllocatable()) {
+    std::fprintf(f, "  attribute %d (allocatable)\n", attr);
+  } else {
+    std::fprintf(f, "  attribute %d\n", attr);
+  }
   std::fprintf(f, "  extra     %d\n", static_cast<int>(raw_.extra));
   std::fprintf(f, "    addendum  %d\n", static_cast<int>(HasAddendum()));
   std::fprintf(f, "    alloc_idx %d\n", static_cast<int>(GetAllocIdx()));

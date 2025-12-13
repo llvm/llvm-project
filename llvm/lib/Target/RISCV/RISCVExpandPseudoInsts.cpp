@@ -46,6 +46,8 @@ private:
                 MachineBasicBlock::iterator &NextMBBI);
   bool expandCCOp(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                   MachineBasicBlock::iterator &NextMBBI);
+  bool expandCCOpToCMov(MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator MBBI);
   bool expandVMSET_VMCLR(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, unsigned Opcode);
   bool expandMV_FPR16INX(MachineBasicBlock &MBB,
@@ -125,6 +127,14 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoCCAND:
   case RISCV::PseudoCCOR:
   case RISCV::PseudoCCXOR:
+  case RISCV::PseudoCCMAX:
+  case RISCV::PseudoCCMAXU:
+  case RISCV::PseudoCCMIN:
+  case RISCV::PseudoCCMINU:
+  case RISCV::PseudoCCMUL:
+  case RISCV::PseudoCCLUI:
+  case RISCV::PseudoCCQC_LI:
+  case RISCV::PseudoCCQC_E_LI:
   case RISCV::PseudoCCADDW:
   case RISCV::PseudoCCSUBW:
   case RISCV::PseudoCCSLL:
@@ -147,6 +157,8 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoCCANDN:
   case RISCV::PseudoCCORN:
   case RISCV::PseudoCCXNOR:
+  case RISCV::PseudoCCNDS_BFOS:
+  case RISCV::PseudoCCNDS_BFOZ:
     return expandCCOp(MBB, MBBI, NextMBBI);
   case RISCV::PseudoVMCLR_M_B1:
   case RISCV::PseudoVMCLR_M_B2:
@@ -176,6 +188,9 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
 bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
                                    MachineBasicBlock::iterator &NextMBBI) {
+  // First try expanding to a Conditional Move rather than a branch+mv
+  if (expandCCOpToCMov(MBB, MBBI))
+    return true;
 
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
@@ -191,10 +206,10 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   // we need to invert the branch condition to jump over TrueBB when the
   // condition is false.
   auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
-  CC = RISCVCC::getOppositeBranchCondition(CC);
+  CC = RISCVCC::getInverseBranchCondition(CC);
 
   // Insert branch instruction.
-  BuildMI(MBB, MBBI, DL, TII->getBrCond(CC))
+  BuildMI(MBB, MBBI, DL, TII->get(RISCVCC::getBrCond(CC)))
       .addReg(MI.getOperand(1).getReg())
       .addReg(MI.getOperand(2).getReg())
       .addMBB(MergeBB);
@@ -210,6 +225,7 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
         .addImm(0);
   } else {
     unsigned NewOpc;
+    // clang-format off
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected opcode!");
@@ -221,6 +237,14 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     case RISCV::PseudoCCAND:   NewOpc = RISCV::AND;   break;
     case RISCV::PseudoCCOR:    NewOpc = RISCV::OR;    break;
     case RISCV::PseudoCCXOR:   NewOpc = RISCV::XOR;   break;
+    case RISCV::PseudoCCMAX:   NewOpc = RISCV::MAX;   break;
+    case RISCV::PseudoCCMIN:   NewOpc = RISCV::MIN;   break;
+    case RISCV::PseudoCCMAXU:  NewOpc = RISCV::MAXU;  break;
+    case RISCV::PseudoCCMINU:  NewOpc = RISCV::MINU;  break;
+    case RISCV::PseudoCCMUL:   NewOpc = RISCV::MUL;   break;
+    case RISCV::PseudoCCLUI:   NewOpc = RISCV::LUI;   break;
+    case RISCV::PseudoCCQC_LI:  NewOpc = RISCV::QC_LI;   break;
+    case RISCV::PseudoCCQC_E_LI: NewOpc = RISCV::QC_E_LI;   break;
     case RISCV::PseudoCCADDI:  NewOpc = RISCV::ADDI;  break;
     case RISCV::PseudoCCSLLI:  NewOpc = RISCV::SLLI;  break;
     case RISCV::PseudoCCSRLI:  NewOpc = RISCV::SRLI;  break;
@@ -240,10 +264,24 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     case RISCV::PseudoCCANDN:  NewOpc = RISCV::ANDN;  break;
     case RISCV::PseudoCCORN:   NewOpc = RISCV::ORN;   break;
     case RISCV::PseudoCCXNOR:  NewOpc = RISCV::XNOR;  break;
+    case RISCV::PseudoCCNDS_BFOS: NewOpc = RISCV::NDS_BFOS; break;
+    case RISCV::PseudoCCNDS_BFOZ: NewOpc = RISCV::NDS_BFOZ; break;
     }
-    BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
-        .add(MI.getOperand(5))
-        .add(MI.getOperand(6));
+    // clang-format on
+
+    if (NewOpc == RISCV::NDS_BFOZ || NewOpc == RISCV::NDS_BFOS) {
+      BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
+          .add(MI.getOperand(5))
+          .add(MI.getOperand(6))
+          .add(MI.getOperand(7));
+    } else if (NewOpc == RISCV::LUI || NewOpc == RISCV::QC_LI ||
+               NewOpc == RISCV::QC_E_LI) {
+      BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg).add(MI.getOperand(5));
+    } else {
+      BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
+          .add(MI.getOperand(5))
+          .add(MI.getOperand(6));
+    }
   }
 
   TrueBB->addSuccessor(MergeBB);
@@ -262,6 +300,86 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   computeAndAddLiveIns(LiveRegs, *TrueBB);
   computeAndAddLiveIns(LiveRegs, *MergeBB);
 
+  return true;
+}
+
+bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI) {
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  if (MI.getOpcode() != RISCV::PseudoCCMOVGPR &&
+      MI.getOpcode() != RISCV::PseudoCCMOVGPRNoX0)
+    return false;
+
+  if (!STI->hasVendorXqcicm())
+    return false;
+
+  // FIXME: Would be wonderful to support LHS=X0, but not very easy.
+  if (MI.getOperand(1).getReg() == RISCV::X0 ||
+      MI.getOperand(4).getReg() == RISCV::X0 ||
+      MI.getOperand(5).getReg() == RISCV::X0)
+    return false;
+
+  auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
+
+  unsigned CMovOpcode, CMovIOpcode;
+  switch (CC) {
+  default:
+    llvm_unreachable("Unhandled CC");
+  case RISCVCC::COND_EQ:
+    CMovOpcode = RISCV::QC_MVEQ;
+    CMovIOpcode = RISCV::QC_MVEQI;
+    break;
+  case RISCVCC::COND_NE:
+    CMovOpcode = RISCV::QC_MVNE;
+    CMovIOpcode = RISCV::QC_MVNEI;
+    break;
+  case RISCVCC::COND_LT:
+    CMovOpcode = RISCV::QC_MVLT;
+    CMovIOpcode = RISCV::QC_MVLTI;
+    break;
+  case RISCVCC::COND_GE:
+    CMovOpcode = RISCV::QC_MVGE;
+    CMovIOpcode = RISCV::QC_MVGEI;
+    break;
+  case RISCVCC::COND_LTU:
+    CMovOpcode = RISCV::QC_MVLTU;
+    CMovIOpcode = RISCV::QC_MVLTUI;
+    break;
+  case RISCVCC::COND_GEU:
+    CMovOpcode = RISCV::QC_MVGEU;
+    CMovIOpcode = RISCV::QC_MVGEUI;
+    break;
+  }
+
+  if (MI.getOperand(2).getReg() == RISCV::X0) {
+    // $dst = PseudoCCMOVGPR $lhs, X0, $cc, $falsev (=$dst), $truev
+    // $dst = PseudoCCMOVGPRNoX0 $lhs, X0, $cc, $falsev (=$dst), $truev
+    // =>
+    // $dst = QC_MVccI $falsev (=$dst), $lhs, 0, $truev
+    BuildMI(MBB, MBBI, DL, TII->get(CMovIOpcode))
+        .addDef(MI.getOperand(0).getReg())
+        .addReg(MI.getOperand(4).getReg())
+        .addReg(MI.getOperand(1).getReg())
+        .addImm(0)
+        .addReg(MI.getOperand(5).getReg());
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // $dst = PseudoCCMOVGPR $lhs, $rhs, $cc, $falsev (=$dst), $truev
+  // $dst = PseudoCCMOVGPRNoX0 $lhs, $rhs, $cc, $falsev (=$dst), $truev
+  // =>
+  // $dst = QC_MVcc $falsev (=$dst), $lhs, $rhs, $truev
+  BuildMI(MBB, MBBI, DL, TII->get(CMovOpcode))
+      .addDef(MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(4).getReg())
+      .addReg(MI.getOperand(1).getReg())
+      .addReg(MI.getOperand(2).getReg())
+      .addReg(MI.getOperand(5).getReg());
+  MI.eraseFromParent();
   return true;
 }
 
@@ -323,6 +441,8 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_even);
   Register Hi =
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
+  if (Hi == RISCV::DUMMY_REG_PAIR_WITH_X0)
+    Hi = RISCV::X0;
 
   auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
                    .addReg(Lo, getKillRegState(MBBI->getOperand(0).isKill()))
@@ -370,6 +490,7 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_even);
   Register Hi =
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
+  assert(Hi != RISCV::DUMMY_REG_PAIR_WITH_X0 && "Cannot write to X0_Pair");
 
   MachineInstrBuilder MIBLo, MIBHi;
 

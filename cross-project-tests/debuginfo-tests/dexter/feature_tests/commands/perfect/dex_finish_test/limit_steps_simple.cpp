@@ -7,15 +7,16 @@
 // The dbgeng driver doesn't support \DexLimitSteps yet.
 // UNSUPPORTED: system-windows, system-darwin
 //
-// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: limit_steps_simple.cpp
 
 int main() {
-    int x = 0; // DexLabel('start')
-    x = 1;
+    int x = 0;
+    x = 1; // DexLabel('start')
     x = 2; // DexLabel('finish_line')
-} // DexLabel('finish')
+    return 0; // DexLabel('finish')
+}
 
 // DexLimitSteps(from_line=ref('start'), to_line=ref('finish'))
 // DexFinishTest(on_line=ref('finish_line'))

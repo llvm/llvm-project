@@ -180,7 +180,7 @@ are needed by native object files. In the example above, the linker reports
 that only ``foo1()`` is used by native object files using
 ``lto_codegen_add_must_preserve_symbol()``. Next the linker invokes the LLVM
 optimizer and code generators using ``lto_codegen_compile()`` which returns a
-native object file creating by merging the LLVM bitcode files and applying
+native object file created by merging the LLVM bitcode files and applying
 various optimization passes.
 
 Phase 4 : Symbol Resolution after optimization

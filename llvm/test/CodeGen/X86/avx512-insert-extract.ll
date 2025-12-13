@@ -2164,7 +2164,7 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    kmovw %eax, %k0
-; KNL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
+; KNL-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; KNL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; KNL-NEXT:    vucomiss %xmm2, %xmm0
 ; KNL-NEXT:    setb %al

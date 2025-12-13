@@ -22,8 +22,8 @@ namespace llvm {
 
 /// StringSet - A wrapper for StringMap that provides set-like functionality.
 template <class AllocatorTy = MallocAllocator>
-class StringSet : public StringMap<std::nullopt_t, AllocatorTy> {
-  using Base = StringMap<std::nullopt_t, AllocatorTy>;
+class StringSet : public StringMap<EmptyStringSetTag, AllocatorTy> {
+  using Base = StringMap<EmptyStringSetTag, AllocatorTy>;
 
 public:
   StringSet() = default;
@@ -57,7 +57,9 @@ public:
   }
 
   /// Check if the set contains the given \c key.
-  bool contains(StringRef key) const { return Base::FindKey(key) != -1; }
+  [[nodiscard]] bool contains(StringRef key) const {
+    return Base::contains(key);
+  }
 };
 
 } // end namespace llvm

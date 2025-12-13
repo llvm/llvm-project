@@ -549,6 +549,8 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   // Prefer MOVZ/MOVN over ORR because of the rules for the "mov" alias.
   if ((BitSize / 16) - OneChunks <= 1 || (BitSize / 16) - ZeroChunks <= 1) {
     expandMOVImmSimple(Imm, BitSize, OneChunks, ZeroChunks, Insn);
+    assert(Insn.size() == 1 &&
+           "Move of immediate should have expanded to a single MOVZ/MOVN");
     return;
   }
 
@@ -585,7 +587,7 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
     uint64_t ShiftedMask = (0xFFFFULL << Shift);
     uint64_t ZeroChunk = UImm & ~ShiftedMask;
     uint64_t OneChunk = UImm | ShiftedMask;
-    uint64_t RotatedImm = (UImm << 32) | (UImm >> 32);
+    uint64_t RotatedImm = llvm::rotl(UImm, 32);
     uint64_t ReplicateChunk = ZeroChunk | (RotatedImm & ShiftedMask);
     if (AArch64_AM::processLogicalImmediate(ZeroChunk, BitSize, Encoding) ||
         AArch64_AM::processLogicalImmediate(OneChunk, BitSize, Encoding) ||

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-vla -fms-extensions -std=c++11 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-vla -fms-extensions -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -Wno-vla -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++20 -fms-extensions -Wno-vla -verify=ref,both %s
+// RUN: %clang_cc1 -Wno-vla -fms-extensions -std=c++11 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -Wno-vla -fms-extensions -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -Wno-vla -fms-extensions -std=c++11                                         -verify=ref,both %s
+// RUN: %clang_cc1 -Wno-vla -fms-extensions -std=c++20                                         -verify=ref,both %s
 
 #define INT_MIN (~__INT_MAX__)
 #define INT_MAX __INT_MAX__
@@ -27,6 +27,8 @@ static_assert(number != 10, ""); // both-error{{failed}} \
 
 static_assert(__objc_yes, "");
 static_assert(!__objc_no, "");
+
+static_assert((long long)0x00000000FFFF0000 == 4294901760, "");
 
 constexpr bool b = number;
 static_assert(b, "");
@@ -546,16 +548,14 @@ namespace IncDec {
              // expected-note 2{{increment of uninitialized}} \
              // expected-note {{read of uninitialized}}
       else
-        a++; // ref-note 2{{increment of uninitialized}} \
-             // expected-note 2{{increment of uninitialized}}
+        a++; // both-note 2{{increment of uninitialized}}
     } else {
       if (Pre)
         --a; // ref-note 3{{decrement of uninitialized}} \
              // expected-note 2{{decrement of uninitialized}} \
              // expected-note {{read of uninitialized}}
       else
-        a--; // ref-note 2{{decrement of uninitialized}} \
-             // expected-note 2{{decrement of uninitialized}}
+        a--; // both-note 2{{decrement of uninitialized}}
     }
     return 1;
   }
@@ -910,7 +910,8 @@ namespace CompoundLiterals {
   constexpr int f2(int *x =(int[]){1,2,3}) {
     return x[0];
   }
-  constexpr int g = f2(); // Should evaluate to 1?
+  // Should evaluate to 1?
+  constexpr int g = f2(); // #g_decl
   static_assert(g == 1, "");
 
   // This example should be rejected because the lifetime of the compound
@@ -920,7 +921,7 @@ namespace CompoundLiterals {
   // null pointer suggests we're doing something odd during constant expression
   // evaluation: I think it's still taking 'x' as being null from the call to
   // f3() rather than tracking the assignment happening in the VLA.
-  constexpr int f3(int *x, int (*y)[*(x=(int[]){1,2,3})]) { // both-warning {{object backing the pointer x will be destroyed at the end of the full-expression}}
+  constexpr int f3(int *x, int (*y)[*(x=(int[]){1,2,3})]) { // both-warning {{object backing the pointer 'x' will be destroyed at the end of the full-expression}}
     return x[0]; // both-note {{read of dereferenced null pointer is not allowed in a constant expression}}
   }
   constexpr int h = f3(0,0); // both-error {{constexpr variable 'h' must be initialized by a constant expression}} \
@@ -1269,6 +1270,17 @@ namespace StmtExprs {
   namespace CrossFuncLabelDiff {
     constexpr long a(bool x) { return x ? 0 : (intptr_t)&&lbl + (0 && ({lbl: 0;})); }
   }
+
+  /// GCC agrees with the bytecode interpreter here.
+  void switchInSE() {
+    static_assert(({ // ref-error {{not an integral constant expression}}
+          int i = 20;
+           switch(10) {
+             case 10: i = 300; // ref-note {{a constant expression cannot modify an object that is visible outside that expression}}
+           }
+           i;
+        }) == 300);
+  }
 }
 #endif
 
@@ -1347,7 +1359,10 @@ namespace NTTP {
 namespace UnaryOpError {
   constexpr int foo() {
     int f = 0;
-    ++g; // both-error {{use of undeclared identifier 'g'}}
+    ++g; // both-error {{use of undeclared identifier 'g'}} \
+            both-error {{cannot assign to variable 'g' with const-qualified type 'const int'}} \
+            both-note@#g_decl {{'CompoundLiterals::g' declared here}} \
+            both-note@#g_decl {{variable 'g' declared const here}}
     return f;
   }
 }
@@ -1357,6 +1372,30 @@ namespace VolatileReads {
   const volatile int b = 1;
   static_assert(b, ""); // both-error {{not an integral constant expression}} \
                         // both-note {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
+
+
+  constexpr int a = 12;
+  constexpr volatile int c = (volatile int&)a; // both-error {{must be initialized by a constant expression}} \
+                                               // both-note {{read of volatile-qualified type 'volatile int'}}
+
+  volatile constexpr int n1 = 0; // both-note {{here}}
+  volatile const int n2 = 0; // both-note {{here}}
+  constexpr int m1 = n1; // both-error {{constant expression}} \
+                         // both-note {{read of volatile-qualified type 'const volatile int'}}
+  constexpr int m2 = n2; // both-error {{constant expression}} \
+                         // both-note {{read of volatile-qualified type 'const volatile int'}}
+  constexpr int m1b = const_cast<const int&>(n1); // both-error {{constant expression}} \
+                                                  // both-note {{read of volatile object 'n1'}}
+  constexpr int m2b = const_cast<const int&>(n2); // both-error {{constant expression}} \
+                                                  // both-note {{read of volatile object 'n2'}}
+
+  struct S {
+    constexpr S(int=0) : i(1) {}
+    int i;
+  };
+  constexpr volatile S vs; // both-note {{here}}
+  static_assert(const_cast<int&>(vs.i), ""); // both-error {{constant expression}} \
+                                             // both-note {{read of volatile object 'vs'}}
 }
 #if __cplusplus >= 201703L
 namespace {
@@ -1390,3 +1429,22 @@ constexpr int usingDirectiveDecl() {
   return FB;
 }
 static_assert(usingDirectiveDecl() == 10, "");
+
+namespace OnePastEndCmp {
+  struct S {
+   int a;
+   int b;
+  };
+
+  constexpr S s{12,13};
+  constexpr const int *p = &s.a;
+  constexpr const int *q = &s.a + 1;
+  static_assert(p != q, "");
+}
+
+namespace ExternRedecl {
+  extern const int a;
+  constexpr const int *p = &a;
+  constexpr int a = 10;
+  static_assert(*p == 10, "");
+}

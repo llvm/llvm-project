@@ -28,7 +28,7 @@ template<typename T> struct MyBuffer2 {
   __hlsl_resource_t [[hlsl::resource_class(UAV)]] h;
 };
 
-// CHECK: ClassTemplateSpecializationDecl 0x{{[0-9a-f]+}} <line:[[# @LINE - 4]]:1, line:[[# @LINE - 2]]:1> line:[[# @LINE - 4]]:29 struct MyBuffer2 definition implicit_instantiation
+// CHECK: ClassTemplateSpecializationDecl 0x{{[0-9a-f]+}} <line:[[# @LINE - 4]]:1, line:[[# @LINE - 2]]:1> line:[[# @LINE - 4]]:29 struct MyBuffer2 definition instantiated_from 0x{{.+}} implicit_instantiation
 // CHECK: TemplateArgument type 'float'
 // CHECK: BuiltinType 0x{{[0-9a-f]+}} 'float'
 // CHECK: CXXRecordDecl 0x{{[0-9a-f]+}} <col:22, col:29> col:29 implicit struct MyBuffer2

@@ -358,7 +358,7 @@ TEST_F(LinkModuleTest, RemangleIntrinsics) {
   // types, so they must be uniquified by linker. Check that they use the same
   // intrinsic definition.
   Function *F = Foo->getFunction("llvm.ssa.copy.s_struct.rtx_defs");
-  ASSERT_EQ(F->getNumUses(), (unsigned)2);
+  ASSERT_TRUE(F->hasNUses(2));
 }
 
 } // end anonymous namespace

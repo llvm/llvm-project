@@ -274,11 +274,13 @@ void LVBinaryReader::mapVirtualAddress(const object::COFFObjectFile &COFFObj) {
   });
 }
 
-Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
-                                            StringRef TheFeatures) {
+Error LVBinaryReader::loadGenericTargetInfo(StringRef TripleName,
+                                            StringRef TheFeatures,
+                                            StringRef TheCPU) {
+  Triple TheTriple(TripleName);
   std::string TargetLookupError;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(std::string(TheTriple), TargetLookupError);
+      TargetRegistry::lookupTarget(TheTriple, TargetLookupError);
   if (!TheTarget)
     return createStringError(errc::invalid_argument, TargetLookupError.c_str());
 
@@ -286,7 +288,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
   MCRegisterInfo *RegisterInfo = TheTarget->createMCRegInfo(TheTriple);
   if (!RegisterInfo)
     return createStringError(errc::invalid_argument,
-                             "no register info for target " + TheTriple);
+                             "no register info for target " + TripleName);
   MRI.reset(RegisterInfo);
 
   // Assembler properties and features.
@@ -294,23 +296,22 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
   MCAsmInfo *AsmInfo(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
     return createStringError(errc::invalid_argument,
-                             "no assembly info for target " + TheTriple);
+                             "no assembly info for target " + TripleName);
   MAI.reset(AsmInfo);
 
   // Target subtargets.
-  StringRef CPU;
   MCSubtargetInfo *SubtargetInfo(
-      TheTarget->createMCSubtargetInfo(TheTriple, CPU, TheFeatures));
+      TheTarget->createMCSubtargetInfo(TheTriple, TheCPU, TheFeatures));
   if (!SubtargetInfo)
     return createStringError(errc::invalid_argument,
-                             "no subtarget info for target " + TheTriple);
+                             "no subtarget info for target " + TripleName);
   STI.reset(SubtargetInfo);
 
   // Instructions Info.
   MCInstrInfo *InstructionInfo(TheTarget->createMCInstrInfo());
   if (!InstructionInfo)
     return createStringError(errc::invalid_argument,
-                             "no instruction info for target " + TheTriple);
+                             "no instruction info for target " + TripleName);
   MII.reset(InstructionInfo);
 
   MC = std::make_unique<MCContext>(Triple(TheTriple), MAI.get(), MRI.get(),
@@ -320,7 +321,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
   MCDisassembler *DisAsm(TheTarget->createMCDisassembler(*STI, *MC));
   if (!DisAsm)
     return createStringError(errc::invalid_argument,
-                             "no disassembler for target " + TheTriple);
+                             "no disassembler for target " + TripleName);
   MD.reset(DisAsm);
 
   MCInstPrinter *InstructionPrinter(TheTarget->createMCInstPrinter(
@@ -328,7 +329,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
   if (!InstructionPrinter)
     return createStringError(errc::invalid_argument,
                              "no target assembly language printer for target " +
-                                 TheTriple);
+                                 TripleName);
   MIP.reset(InstructionPrinter);
   InstructionPrinter->setPrintImmHex(true);
 
@@ -365,30 +366,6 @@ LVBinaryReader::getSection(LVScope *Scope, LVAddress Address,
   if (Iter != SectionAddresses.begin())
     --Iter;
   return std::make_pair(Iter->first, Iter->second);
-}
-
-void LVBinaryReader::addSectionRange(LVSectionIndex SectionIndex,
-                                     LVScope *Scope) {
-  LVRange *ScopesWithRanges = getSectionRanges(SectionIndex);
-  ScopesWithRanges->addEntry(Scope);
-}
-
-void LVBinaryReader::addSectionRange(LVSectionIndex SectionIndex,
-                                     LVScope *Scope, LVAddress LowerAddress,
-                                     LVAddress UpperAddress) {
-  LVRange *ScopesWithRanges = getSectionRanges(SectionIndex);
-  ScopesWithRanges->addEntry(Scope, LowerAddress, UpperAddress);
-}
-
-LVRange *LVBinaryReader::getSectionRanges(LVSectionIndex SectionIndex) {
-  // Check if we already have a mapping for this section index.
-  LVSectionRanges::iterator IterSection = SectionRanges.find(SectionIndex);
-  if (IterSection == SectionRanges.end())
-    IterSection =
-        SectionRanges.emplace(SectionIndex, std::make_unique<LVRange>()).first;
-  LVRange *Range = IterSection->second.get();
-  assert(Range && "Range is null.");
-  return Range;
 }
 
 Error LVBinaryReader::createInstructions(LVScope *Scope,
@@ -433,6 +410,15 @@ Error LVBinaryReader::createInstructions(LVScope *Scope,
 
   ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(*SectionContentsOrErr);
   uint64_t Offset = Address - SectionAddress;
+  if (Offset > Bytes.size()) {
+    LLVM_DEBUG({
+      dbgs() << "offset (" << hexValue(Offset) << ") is beyond section size ("
+             << hexValue(Bytes.size()) << "); malformed input?\n";
+    });
+    return createStringError(
+        errc::bad_address,
+        "Failed to parse instructions; offset beyond section size");
+  }
   uint8_t const *Begin = Bytes.data() + Offset;
   uint8_t const *End = Bytes.data() + Offset + Size;
 
@@ -801,9 +787,8 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
 
   // Find the indexes for the lines whose address is zero.
   std::vector<size_t> AddressZero;
-  LVLines::iterator It =
-      std::find_if(std::begin(*DebugLines), std::end(*DebugLines),
-                   [](LVLine *Line) { return !Line->getAddress(); });
+  LVLines::iterator It = llvm::find_if(
+      *DebugLines, [](LVLine *Line) { return !Line->getAddress(); });
   while (It != std::end(*DebugLines)) {
     AddressZero.emplace_back(std::distance(std::begin(*DebugLines), It));
     It = std::find_if(std::next(It), std::end(*DebugLines),
@@ -930,8 +915,8 @@ void LVBinaryReader::includeInlineeLines(LVSectionIndex SectionIndex,
     if (InlineeLines->size()) {
       // First address of inlinee code.
       uint64_t InlineeStart = (InlineeLines->front())->getAddress();
-      LVLines::iterator Iter = std::find_if(
-          CULines.begin(), CULines.end(), [&](LVLine *Item) -> bool {
+      LVLines::iterator Iter =
+          llvm::find_if(CULines, [&](LVLine *Item) -> bool {
             return Item->getAddress() == InlineeStart;
           });
       if (Iter != CULines.end()) {

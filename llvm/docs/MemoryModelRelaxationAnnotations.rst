@@ -338,7 +338,7 @@ In the above figure, ``X`` and ``Y`` are atomic operations on a
 location in the ``global``  address space. If ``X`` synchronizes with
 ``Y``, then ``B`` happens-before ``C`` in the ``local`` address
 space. But no such statement can be made about operations ``A`` and
-``D``, although they are peformed on a location in the ``global``
+``D``, although they are performed on a location in the ``global``
 address space.
 
 Implementation Example: Adding Address Space Information to Fences
@@ -412,7 +412,7 @@ not break other constraints as single location coherence.
 Static reordering is one consequence of breaking *happens-before*,
 but is not the most interesting one.
 
-Run-time consequences are more interesting. When there is an
+Run-time consequences are more interesting. When there is a
 *happens-before* relation between instructions, the target has to emit
 synchronization code to ensure other threads will observe the effects of
 the instructions in the right order.
@@ -440,7 +440,7 @@ For every unique tag prefix P present in A or B:
   P from both sets are added to U.
 
 Passes should avoid aggressively combining MMRAs, as this can result
-in significant losses of information. While this cannot affect
+in significant loss of information. While this cannot affect
 correctness, it may affect performance.
 
 As a general rule of thumb, common passes such as SimplifyCFG that

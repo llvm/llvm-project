@@ -135,7 +135,7 @@ alive:
 
 ; This is reduced test case catching regression in the first version of the
 ; fix for invariant loads (https://reviews.llvm.org/D64405).
-define void @test4() {
+define void @test4() null_pointer_is_valid {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr inttoptr (i64 8 to ptr), align 4

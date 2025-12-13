@@ -488,7 +488,7 @@ Error ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
                                  "': " + toString(std::move(E)));
 
   uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
-  std::copy(Decompressed.begin(), Decompressed.end(), Buf);
+  llvm::copy(Decompressed, Buf);
 
   return Error::success();
 }
@@ -536,7 +536,7 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   Elf_Chdr_Impl<ELFT> Chdr = {};
   switch (Sec.CompressionType) {
   case DebugCompressionType::None:
-    std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(), Buf);
+    llvm::copy(Sec.OriginalData, Buf);
     return Error::success();
   case DebugCompressionType::Zlib:
     Chdr.ch_type = ELF::ELFCOMPRESS_ZLIB;
@@ -550,7 +550,7 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   memcpy(Buf, &Chdr, sizeof(Chdr));
   Buf += sizeof(Chdr);
 
-  std::copy(Sec.CompressedData.begin(), Sec.CompressedData.end(), Buf);
+  llvm::copy(Sec.CompressedData, Buf);
   return Error::success();
 }
 
@@ -1306,6 +1306,9 @@ Error BasicELFBuilder::initSections() {
 
   return Error::success();
 }
+
+BasicELFBuilder::BasicELFBuilder() : Obj(std::make_unique<Object>()) {}
+BasicELFBuilder::~BasicELFBuilder() = default;
 
 void BinaryELFBuilder::addData(SymbolTableSection *SymTab) {
   auto Data = ArrayRef<uint8_t>(

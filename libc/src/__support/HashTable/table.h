@@ -9,7 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_HASHTABLE_TABLE_H
 #define LLVM_LIBC_SRC___SUPPORT_HASHTABLE_TABLE_H
 
-#include "include/llvm-libc-types/ENTRY.h"
+#include "hdr/stdint_proxy.h"
+#include "hdr/types/ENTRY.h"
 #include "src/__support/CPP/bit.h" // bit_ceil
 #include "src/__support/CPP/new.h"
 #include "src/__support/HashTable/bitmask.h"
@@ -18,11 +19,9 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/memory_size.h"
-#include "src/string/memset.h"
-#include "src/string/strcmp.h"
-#include "src/string/strlen.h"
+#include "src/string/memory_utils/inline_strcmp.h"
+#include "src/string/string_utils.h"
 #include <stddef.h>
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -158,7 +157,9 @@ private:
       for (size_t i : masks) {
         size_t index = (pos + i) & entries_mask;
         ENTRY &entry = this->entry(index);
-        if (LIBC_LIKELY(entry.key != nullptr && strcmp(entry.key, key) == 0))
+        auto comp = [](char l, char r) -> int { return l - r; };
+        if (LIBC_LIKELY(entry.key != nullptr &&
+                        inline_strcmp(entry.key, key, comp) == 0))
           return index;
       }
       BitMask available = ctrls.mask_available();
@@ -176,7 +177,7 @@ private:
 
   LIBC_INLINE uint64_t oneshot_hash(const char *key) const {
     LIBC_NAMESPACE::internal::HashState hasher = state;
-    hasher.update(key, strlen(key));
+    hasher.update(key, internal::string_length(key));
     return hasher.finish();
   }
 
@@ -282,8 +283,8 @@ public:
       table->entries_mask = entries - 1u;
       table->available_slots = entries / 8 * 7;
       table->state = HashState{randomness};
-      memset(&table->control(0), 0x80, ctrl_sizes);
-      memset(mem, 0, table->offset_from_entries());
+      __builtin_memset(&table->control(0), 0x80, ctrl_sizes);
+      __builtin_memset(mem, 0, table->offset_from_entries());
     }
     return table;
   }

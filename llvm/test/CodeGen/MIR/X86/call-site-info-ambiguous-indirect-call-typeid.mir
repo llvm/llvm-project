@@ -1,0 +1,31 @@
+# Test MIR printer and parser to check if a call instruction with multiple
+# callee types are handled correctly.
+
+# RUN: llc -mtriple=x86_64 --call-graph-section %s -run-pass=none -o - | FileCheck --match-full-lines %s
+# CHECK: name: ambiguous_caller
+# CHECK: callSites:
+# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: {{.*}}, calleeTypeIds:
+# CHECK-NEXT: [ 1234, 5678 ] }
+
+--- |
+  define ptr @ambiguous_caller() {
+  entry:
+    %fn = alloca ptr, align 8
+    %call1 = call ptr %fn(i64 4), !callee_type !0
+    ret ptr %call1
+  }
+  
+  !0 = !{!1, !2}
+  !1 = !{i64 0, !"callee_type0.generalized"}
+  !2 = !{i64 0, !"callee_type2.generalized"}
+...
+---
+name:            ambiguous_caller
+callSites:
+  - { bb: 0, offset: 1, fwdArgRegs: [], calleeTypeIds: [ 1234, 5678 ] }
+body:             |
+  bb.0.entry:
+    %0:gr64 = MOV32ri64 4
+    CALL64r killed %0, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    RET 0, $rax
+...

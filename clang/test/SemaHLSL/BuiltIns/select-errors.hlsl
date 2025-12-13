@@ -15,7 +15,7 @@ int2 test_select_vector_vals_not_vecs(bool2 p0, int t0,
 }
 
 int1 test_select_vector_vals_wrong_size(bool2 p0, int1 t0, int1 f0) {
-  return select<int,1>(p0, t0, f0); // expected-warning{{implicit conversion truncates vector: 'bool2' (aka 'vector<bool, 2>') to 'vector<bool, 1>' (vector of 1 'bool' value)}}
+  return select<int1>(p0, t0, f0); // No diagnostic expected.
 }
 
 int test_select_no_args() {
@@ -61,5 +61,5 @@ int2 test_select_builtin_second_arg_not_vector(bool2 p0, int2 t0, int f0) {
 
 // if vector last 2 aren't same type (so both are vectors but wrong type)
 int1 test_select_builtin_diff_types(bool1 p0, int1 t0, float1 f0) {
-  return __builtin_hlsl_select(p0, t0, f0); // expected-error{{second and third arguments to __builtin_hlsl_select must be of scalar or vector type with matching scalar element type: 'vector<int, [...]>' vs 'vector<float, [...]>'}}
+  return __builtin_hlsl_select(p0, t0, f0); // expected-error{{second and third arguments to '__builtin_hlsl_select' must be of scalar or vector type with matching scalar element type: 'vector<int, [...]>' vs 'vector<float, [...]>'}}
 }

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -13,13 +13,13 @@ target triple = "x86_64-unknown-linux-gnu"
 @global2 = external unnamed_addr constant [79 x i8], align 1
 @global3 = external unnamed_addr constant [57 x i8], align 1
 
-declare void @widget() #0
+declare void @widget()
 
 ; Function Attrs: nounwind
-declare void @quux(ptr, i64, ptr, ...) #1
+declare void @quux(ptr, i64, ptr, ...)
 
 ; Function Attrs: nounwind uwtable
-define void @hoge(ptr %A) #2 {
+define void @hoge(ptr %A) {
 bb:
   br label %bb15
 
@@ -39,7 +39,7 @@ bb19:                                             ; preds = %bb15
   br i1 %tmp22, label %bb24, label %bb23
 
 bb23:                                             ; preds = %bb19
-  call void @widget() #3
+  call void @widget()
   br label %bb24
 
 bb24:                                             ; preds = %bb23, %bb19, %bb15
@@ -57,7 +57,7 @@ bb29:                                             ; preds = %bb24
   br i1 %tmp32, label %bb33, label %bb34
 
 bb33:                                             ; preds = %bb29
-  call void (ptr, i64, ptr, ...) @quux(ptr @global, i64 300, ptr @global2, i32 144) #3
+  call void (ptr, i64, ptr, ...) @quux(ptr @global, i64 300, ptr @global2, i32 144)
   br label %bb34
 
 bb34:                                             ; preds = %bb33, %bb29, %bb24
@@ -84,7 +84,7 @@ bb43:                                             ; preds = %bb39
   br i1 %tmp47, label %bb48, label %bb49
 
 bb48:                                             ; preds = %bb43
-  call void @widget() #3
+  call void @widget()
   br label %bb49
 
 bb49:                                             ; preds = %bb48, %bb43, %bb39, %bb34
@@ -103,7 +103,7 @@ bb54:                                             ; preds = %bb49
   br i1 %tmp57, label %bb58, label %bb59
 
 bb58:                                             ; preds = %bb54
-  call void (ptr, i64, ptr, ...) @quux(ptr @global, i64 300, ptr @global3) #3
+  call void (ptr, i64, ptr, ...) @quux(ptr @global, i64 300, ptr @global3)
   br label %bb59
 
 bb59:                                             ; preds = %bb58, %bb54, %bb49
@@ -120,11 +120,6 @@ bb64:                                             ; preds = %bb59
 bb65:                                             ; preds = %bb64, %bb59
   ret void
 }
-
-attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind }
 
 !llvm.ident = !{!0}
 

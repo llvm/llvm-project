@@ -1,4 +1,4 @@
-//===--- TaggedUnionMemberCountCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -52,9 +52,8 @@ AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsOne,
     if (InnerMatcher.matches(*Field, Finder, &TempBuilder)) {
       if (FirstMatch) {
         return false;
-      } else {
-        FirstMatch = Field;
       }
+      FirstMatch = Field;
     }
   }
 
@@ -105,18 +104,21 @@ void TaggedUnionMemberCountCheck::storeOptions(
 }
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
+  auto NotFromSystemHeaderOrStdNamespace =
+      unless(anyOf(isExpansionInSystemHeader(), isInStdNamespace()));
 
-  auto UnionField = fieldDecl(hasType(qualType(
-      hasCanonicalType(recordType(hasDeclaration(recordDecl(isUnion())))))));
+  auto UnionField =
+      fieldDecl(hasType(qualType(hasCanonicalType(recordType(hasDeclaration(
+          recordDecl(isUnion(), NotFromSystemHeaderOrStdNamespace)))))));
 
-  auto EnumField = fieldDecl(hasType(
-      qualType(hasCanonicalType(enumType(hasDeclaration(enumDecl()))))));
+  auto EnumField = fieldDecl(hasType(qualType(hasCanonicalType(
+      enumType(hasDeclaration(enumDecl(NotFromSystemHeaderOrStdNamespace)))))));
 
-  auto hasOneUnionField = fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
-  auto hasOneEnumField = fieldCountOfKindIsOne(EnumField, TagMatchBindName);
+  auto HasOneUnionField = fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
+  auto HasOneEnumField = fieldCountOfKindIsOne(EnumField, TagMatchBindName);
 
-  Finder->addMatcher(recordDecl(anyOf(isStruct(), isClass()), hasOneUnionField,
-                                hasOneEnumField, unless(isImplicit()))
+  Finder->addMatcher(recordDecl(anyOf(isStruct(), isClass()), HasOneUnionField,
+                                HasOneEnumField, unless(isImplicit()))
                          .bind(RootMatchBindName),
                      this);
 }
@@ -145,7 +147,8 @@ TaggedUnionMemberCountCheck::getNumberOfEnumValues(const EnumDecl *ED) {
 
   if (EnableCountingEnumHeuristic && LastEnumConstant &&
       isCountingEnumLikeName(LastEnumConstant->getName()) &&
-      (LastEnumConstant->getInitVal() == (EnumValues.size() - 1))) {
+      llvm::APSInt::isSameValue(LastEnumConstant->getInitVal(),
+                                llvm::APSInt::get(EnumValues.size() - 1))) {
     return {EnumValues.size() - 1, LastEnumConstant};
   }
 
@@ -165,15 +168,8 @@ void TaggedUnionMemberCountCheck::check(
   if (!Root || !UnionField || !TagField)
     return;
 
-  const auto *UnionDef =
-      UnionField->getType().getCanonicalType().getTypePtr()->getAsRecordDecl();
-  const auto *EnumDef = llvm::dyn_cast<EnumDecl>(
-      TagField->getType().getCanonicalType().getTypePtr()->getAsTagDecl());
-
-  assert(UnionDef && "UnionDef is missing!");
-  assert(EnumDef && "EnumDef is missing!");
-  if (!UnionDef || !EnumDef)
-    return;
+  const auto *UnionDef = UnionField->getType()->castAsRecordDecl();
+  const auto *EnumDef = TagField->getType()->castAsEnumDecl();
 
   const std::size_t UnionMemberCount = llvm::range_size(UnionDef->fields());
   auto [TagCount, CountingEnumConstantDecl] = getNumberOfEnumValues(EnumDef);

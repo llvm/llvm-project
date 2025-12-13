@@ -19,6 +19,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 
@@ -28,6 +29,13 @@ class SValExplainer : public FullSValVisitor<SValExplainer, std::string> {
 private:
   ASTContext &ACtx;
   ProgramStateRef State;
+
+  std::string printCFGElementRef(ConstCFGElementRef Elem) {
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    Elem->dumpToStream(OS, /*TerminateWithNewLine=*/false);
+    return Str;
+  }
 
   std::string printStmt(const Stmt *S) {
     std::string Str;
@@ -114,7 +122,8 @@ public:
 
   std::string VisitSymbolConjured(const SymbolConjured *S) {
     return "symbol of type '" + S->getType().getAsString() +
-           "' conjured at statement '" + printStmt(S->getStmt()) + "'";
+           "' conjured at CFG element '" +
+           printCFGElementRef(S->getCFGElementRef()) + "'";
   }
 
   std::string VisitSymbolDerived(const SymbolDerived *S) {

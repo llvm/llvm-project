@@ -1,0 +1,47 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+block-vgpr-csr -start-before=si-lower-sgpr-spills -stop-after=prologepilog -verify-machineinstrs -o - %s | FileCheck %s
+
+# The spill slot for the VGPR block needs to hold v40 and v43, so it needs to be
+# 16 bytes large.
+---
+name: locals
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: $sgpr32
+stack:
+- { id: 0, type: default, offset: 0, size: 12, alignment: 4,
+    stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+    local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+    debug-info-location: '' }
+- { id: 1, type: default, offset: 12, size: 20, alignment: 4,
+    stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+    local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+    debug-info-location: '' }
+# CHECK-LABEL: name: locals
+# CHECK: frameInfo:
+# CHECK: stackSize: 52
+# CHECK: stack:
+# CHECK-NEXT:   - { id: 0, name: '', type: default, offset: 16, size: 12, alignment: 4,
+# CHECK-NEXT:       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT:       local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT:       debug-info-location: '' }
+# CHECK-NEXT:   - { id: 1, name: '', type: default, offset: 28, size: 20, alignment: 4,
+# CHECK-NEXT:       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT:       local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT:       debug-info-location: '' }
+# CHECK-NEXT:   - { id: 2, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4,
+# CHECK-NEXT:       stack-id: default, callee-saved-register: '$vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71',
+# CHECK-NEXT:       callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT:       debug-info-location: '' }
+# CHECK-NEXT:   - { id: 3, name: '', type: default, offset: 48, size: 4, alignment: 4,
+# CHECK-NEXT:       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK: machineFunctionInfo:
+# CHECK: hasSpilledVGPRs: true
+body: |
+  bb.0:
+    liveins: $sgpr30_sgpr31, $vgpr48
+    SCRATCH_STORE_DWORD_SADDR $vgpr48, %stack.0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    SCRATCH_STORE_DWORD_SADDR $vgpr48, %stack.1, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr43
+    S_SETPC_B64_return $sgpr30_sgpr31
+...

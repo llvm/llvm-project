@@ -80,10 +80,10 @@ if is_msvc:
         config.compiler_rt_libdir, "clang_rt.builtins%s.lib " % config.target_suffix
     )
     config.substitutions.append(("%librt ", base_lib))
-elif config.host_os == "Darwin":
+elif config.target_os == "Darwin":
     base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.osx.a ")
     config.substitutions.append(("%librt ", base_lib + " -lSystem "))
-elif config.host_os == "Windows":
+elif config.target_os == "Windows":
     base_lib = os.path.join(
         config.compiler_rt_libdir, "libclang_rt.builtins%s.a" % config.target_suffix
     )
@@ -104,7 +104,7 @@ else:
     if sys.platform in ["win32"] and execute_external:
         # Don't pass dosish path separator to msys bash.exe.
         base_lib = base_lib.replace("\\", "/")
-    if config.host_os == "Haiku":
+    if config.target_os == "Haiku":
         config.substitutions.append(("%librt ", base_lib + " -lroot "))
     else:
         config.substitutions.append(("%librt ", base_lib + " -lc -lm "))

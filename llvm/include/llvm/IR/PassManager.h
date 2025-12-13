@@ -43,10 +43,10 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManagerInternal.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
-#include <iterator>
 #include <list>
 #include <memory>
 #include <tuple>
@@ -229,18 +229,19 @@ template <typename IRUnitT>
 void printIRUnitNameForStackTrace(raw_ostream &OS, const IRUnitT &IR);
 
 template <>
-void printIRUnitNameForStackTrace<Module>(raw_ostream &OS, const Module &IR);
+LLVM_ABI void printIRUnitNameForStackTrace<Module>(raw_ostream &OS,
+                                                   const Module &IR);
 
-extern template class PassManager<Module>;
+extern template class LLVM_TEMPLATE_ABI PassManager<Module>;
 
 /// Convenience typedef for a pass manager over modules.
 using ModulePassManager = PassManager<Module>;
 
 template <>
-void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
-                                            const Function &IR);
+LLVM_ABI void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
+                                                     const Function &IR);
 
-extern template class PassManager<Function>;
+extern template class LLVM_TEMPLATE_ABI PassManager<Function>;
 
 /// Convenience typedef for a pass manager over functions.
 using FunctionPassManager = PassManager<Function>;
@@ -489,6 +490,22 @@ public:
   /// invalidate them, unless they are preserved by the PreservedAnalyses set.
   void invalidate(IRUnitT &IR, const PreservedAnalyses &PA);
 
+  /// Directly clear a cached analysis for an IR unit.
+  ///
+  /// Using invalidate() over this is preferred unless you are really
+  /// sure you want to *only* clear this analysis without asking if it is
+  /// invalid.
+  template <typename AnalysisT> void clearAnalysis(IRUnitT &IR) {
+    AnalysisResultListT &ResultsList = AnalysisResultLists[&IR];
+    AnalysisKey *ID = AnalysisT::ID();
+
+    auto I =
+        llvm::find_if(ResultsList, [&ID](auto &E) { return E.first == ID; });
+    assert(I != ResultsList.end() && "Analysis must be available");
+    ResultsList.erase(I);
+    AnalysisResults.erase({ID, &IR});
+  }
+
 private:
   /// Look up a registered analysis pass.
   PassConceptT &lookUpPass(AnalysisKey *ID) {
@@ -535,12 +552,12 @@ private:
   AnalysisResultMapT AnalysisResults;
 };
 
-extern template class AnalysisManager<Module>;
+extern template class LLVM_TEMPLATE_ABI AnalysisManager<Module>;
 
 /// Convenience typedef for the Module analysis manager.
 using ModuleAnalysisManager = AnalysisManager<Module>;
 
-extern template class AnalysisManager<Function>;
+extern template class LLVM_TEMPLATE_ABI AnalysisManager<Function>;
 
 /// Convenience typedef for the Function analysis manager.
 using FunctionAnalysisManager = AnalysisManager<Function>;
@@ -562,7 +579,7 @@ using FunctionAnalysisManager = AnalysisManager<Function>;
 /// Note that the proxy's result is a move-only RAII object.  The validity of
 /// the analyses in the inner analysis manager is tied to its lifetime.
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
-class InnerAnalysisManagerProxy
+class LLVM_TEMPLATE_ABI InnerAnalysisManagerProxy
     : public AnalysisInfoMixin<
           InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT>> {
 public:
@@ -639,8 +656,14 @@ private:
   AnalysisManagerT *InnerAM;
 };
 
+// NOTE: The LLVM_ABI annotation cannot be used here because MSVC disallows
+// storage-class specifiers on class members outside of the class declaration
+// (C2720). LLVM_ATTRIBUTE_VISIBILITY_DEFAULT only applies to non-Windows
+// targets so it is used instead. Without this annotation, compiling LLVM as a
+// shared library with -fvisibility=hidden using GCC fails to export the symbol
+// even though InnerAnalysisManagerProxy is already annotated with LLVM_ABI.
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
-AnalysisKey
+LLVM_ATTRIBUTE_VISIBILITY_DEFAULT AnalysisKey
     InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>::Key;
 
 /// Provide the \c FunctionAnalysisManager to \c Module proxy.
@@ -650,7 +673,7 @@ using FunctionAnalysisManagerModuleProxy =
 /// Specialization of the invalidate method for the \c
 /// FunctionAnalysisManagerModuleProxy's result.
 template <>
-bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
+LLVM_ABI bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
     Module &M, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &Inv);
 
@@ -795,8 +818,8 @@ template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
 AnalysisKey
     OuterAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>::Key;
 
-extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                                Function>;
+extern template class LLVM_TEMPLATE_ABI
+    OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
 /// Provide the \c ModuleAnalysisManager to \c Function proxy.
 using ModuleAnalysisManagerFunctionProxy =
     OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
@@ -834,9 +857,10 @@ public:
       : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
 
   /// Runs the function pass across every function in the module.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
 

@@ -135,7 +135,7 @@ TEST(ToAPValue, FunctionPointers) {
 
   {
     const Pointer &GP = getGlobalPtr("func");
-    const FunctionPointer &FP = GP.deref<FunctionPointer>();
+    const Pointer &FP = GP.deref<Pointer>();
     ASSERT_FALSE(FP.isZero());
     APValue A = FP.toAPValue(ASTCtx);
     ASSERT_TRUE(A.hasValue());
@@ -193,7 +193,7 @@ TEST(ToAPValue, FunctionPointersC) {
     const ValueDecl *D = getDecl("func");
     const Pointer &GP = getGlobalPtr("func");
     ASSERT_TRUE(GP.isLive());
-    const FunctionPointer &FP = GP.deref<FunctionPointer>();
+    const Pointer &FP = GP.deref<Pointer>();
     ASSERT_FALSE(FP.isZero());
     APValue A = FP.toAPValue(ASTCtx);
     ASSERT_TRUE(A.hasValue());

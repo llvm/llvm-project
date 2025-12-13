@@ -476,6 +476,8 @@ public:
 
   void UpdatePrompt(llvm::StringRef prompt);
 
+  void UpdateUseColor(bool use_color);
+
   bool Confirm(llvm::StringRef message, bool default_answer);
 
   void LoadCommandDictionary();
@@ -727,6 +729,12 @@ private:
 
   bool EchoCommandNonInteractive(llvm::StringRef line,
                                  const Flags &io_handler_flags) const;
+
+  /// Return the language specific command object for the current frame.
+  ///
+  /// For example, when stopped on a C++ frame, this returns the command object
+  /// for "language cplusplus" (`CommandObjectMultiwordItaniumABI`).
+  lldb::CommandObjectSP GetFrameLanguageCommand() const;
 
   // A very simple state machine which models the command handling transitions
   enum class CommandHandlingState {

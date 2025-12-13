@@ -50,40 +50,40 @@ far:
 
 # CHECK:      - Type:            DATA
 # CHECK-NEXT:    Segments:
-# CHECK-NEXT:      - SectionOffset:   7
+# CHECK-NEXT:      - SectionOffset:   8
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           1024
+# CHECK-NEXT:          Value:           65536
 # CHECK-NEXT:        Content:         68656C6C6F0A00
-# CHECK-NEXT:      - SectionOffset:   20
+# CHECK-NEXT:      - SectionOffset:   22
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           1031
+# CHECK-NEXT:          Value:           65543
 # CHECK-NEXT:        Content:         000000002A000000
-# CHECK-NEXT:      - SectionOffset:   34
+# CHECK-NEXT:      - SectionOffset:   37
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           1039
+# CHECK-NEXT:          Value:           65551
 # CHECK-NEXT:        Content:         FCFFFFFFFCFFFFFF
-# CHECK-NEXT:      - SectionOffset:   48
+# CHECK-NEXT:      - SectionOffset:   52
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           1047
+# CHECK-NEXT:          Value:           65559
 # CHECK-NEXT:        Content:         E9FFFFFFE9FFFFFF
-# CHECK-NEXT:      - SectionOffset:   62
+# CHECK-NEXT:      - SectionOffset:   67
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           1055
+# CHECK-NEXT:          Value:           65567
 # CHECK-NEXT:        Content:         '0800000008000000'
-# CHECK-NEXT:      - SectionOffset:   76
+# CHECK-NEXT:      - SectionOffset:   82
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           1063
+# CHECK-NEXT:          Value:           65575
 # CHECK-NEXT:        Content:         '15000000'
 

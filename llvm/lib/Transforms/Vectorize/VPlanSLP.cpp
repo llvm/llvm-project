@@ -58,7 +58,9 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
     for (VPRecipeBase &VPI : *VPBB) {
       if (isa<VPWidenPHIRecipe>(&VPI))
         continue;
-      auto *VPInst = cast<VPInstruction>(&VPI);
+      auto *VPInst = dyn_cast<VPInstruction>(&VPI);
+      if (!VPInst)
+        continue;
       auto *Inst = dyn_cast_or_null<Instruction>(VPInst->getUnderlyingValue());
       if (!Inst)
         continue;
@@ -167,10 +169,10 @@ bool VPlanSlp::areVectorizable(ArrayRef<VPValue *> Operands) const {
   if (Opcode == Instruction::Load) {
     unsigned LoadsSeen = 0;
     VPBasicBlock *Parent = cast<VPInstruction>(Operands[0])->getParent();
-    for (auto &I : *Parent) {
+    for (auto &I : make_range(Parent->getFirstNonPhi(), Parent->end())) {
       auto *VPI = dyn_cast<VPInstruction>(&I);
       if (!VPI)
-        break;
+        return false;
       if (VPI->getOpcode() == Instruction::Load &&
           llvm::is_contained(Operands, VPI))
         LoadsSeen++;
@@ -462,7 +464,8 @@ VPInstruction *VPlanSlp::buildGraph(ArrayRef<VPValue *> Values) {
         LLVM_DEBUG(dbgs() << "    Adding multinode Ops\n");
         // Create dummy VPInstruction, which will we replace later by the
         // re-ordered operand.
-        VPInstruction *Op = new VPInstruction(0, {});
+        VPInstruction *Op =
+            new VPInstruction(VPInstruction::Broadcast, {Values[0]});
         CombinedOperands.push_back(Op);
         MultiNodeOps.emplace_back(Op, Operands);
       }
@@ -514,10 +517,11 @@ VPInstruction *VPlanSlp::buildGraph(ArrayRef<VPValue *> Values) {
 
   assert(CombinedOperands.size() > 0 && "Need more some operands");
   auto *Inst = cast<VPInstruction>(Values[0])->getUnderlyingInstr();
-  auto *VPI = new VPInstruction(Opcode, CombinedOperands, Inst->getDebugLoc());
+  auto *VPI =
+      new VPInstruction(Opcode, CombinedOperands, {}, {}, Inst->getDebugLoc());
 
-  LLVM_DEBUG(dbgs() << "Create VPInstruction " << *VPI << " "
-                    << *cast<VPInstruction>(Values[0]) << "\n");
+  LLVM_DEBUG(dbgs() << "Create VPInstruction " << *VPI << " " << Values[0]
+                    << "\n");
   addCombined(Values, VPI);
   return VPI;
 }

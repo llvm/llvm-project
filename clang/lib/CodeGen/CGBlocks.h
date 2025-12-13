@@ -146,6 +146,7 @@ public:
 enum class BlockCaptureEntityKind {
   None,
   CXXRecord, // Copy or destroy
+  AddressDiscriminatedPointerAuth,
   ARCWeak,
   ARCStrong,
   NonTrivialCStruct,

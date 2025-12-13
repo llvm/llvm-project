@@ -24,9 +24,16 @@ namespace {
 class AArch64ABIInfo : public ABIInfo {
   AArch64ABIKind Kind;
 
+  std::unique_ptr<TargetCodeGenInfo> WinX86_64CodegenInfo;
+
 public:
-  AArch64ABIInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
-      : ABIInfo(CGT), Kind(Kind) {}
+  AArch64ABIInfo(CodeGenModule &CGM, AArch64ABIKind Kind)
+      : ABIInfo(CGM.getTypes()), Kind(Kind) {
+    if (getTarget().getTriple().isWindowsArm64EC()) {
+      WinX86_64CodegenInfo =
+          createWinX86_64TargetCodeGenInfo(CGM, X86AVXABILevel::None);
+    }
+  }
 
   bool isSoftFloat() const { return Kind == AArch64ABIKind::AAPCSSoft; }
 
@@ -119,9 +126,9 @@ public:
 
 class AArch64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  AArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
-      : TargetCodeGenInfo(std::make_unique<AArch64ABIInfo>(CGT, Kind)) {
-    SwiftInfo = std::make_unique<AArch64SwiftABIInfo>(CGT);
+  AArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind Kind)
+      : TargetCodeGenInfo(std::make_unique<AArch64ABIInfo>(CGM, Kind)) {
+    SwiftInfo = std::make_unique<AArch64SwiftABIInfo>(CGM.getTypes());
   }
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
@@ -136,13 +143,15 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
-    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD)
+    auto *Fn = dyn_cast<llvm::Function>(GV);
+    if (!Fn)
       return;
 
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
 
-    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+    if (FD && FD->hasAttr<TargetAttr>()) {
+      const auto *TA = FD->getAttr<TargetAttr>();
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
@@ -152,8 +161,8 @@ public:
         assert(Error.empty());
       }
     }
-    auto *Fn = cast<llvm::Function>(GV);
     setBranchProtectionFnAttributes(BPI, *Fn);
+    setPointerAuthFnAttributes(CGM.getCodeGenOpts().PointerAuth, *Fn);
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
@@ -198,8 +207,8 @@ private:
 
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
 public:
-  WindowsAArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIKind K)
-      : AArch64TargetCodeGenInfo(CGT, K) {}
+  WindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind K)
+      : AArch64TargetCodeGenInfo(CGM, K) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override;
@@ -366,14 +375,20 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
                                                 unsigned &NPRN) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
+  if (IsVariadicFn && getTarget().getTriple().isWindowsArm64EC()) {
+    // Arm64EC varargs functions use the x86_64 classification rules,
+    // not the AArch64 ABI rules.
+    return WinX86_64CodegenInfo->getABIInfo().classifyArgForArm64ECVarArg(Ty);
+  }
+
   // Handle illegal vector types here.
   if (isIllegalVectorType(Ty))
     return coerceIllegalVector(Ty, NSRN, NPRN);
 
   if (!passAsAggregateType(Ty)) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getDecl()->getIntegerType();
+    if (const auto *ED = Ty->getAsEnumDecl())
+      Ty = ED->getIntegerType();
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
@@ -420,6 +435,12 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   }
 
   // Empty records:
+  // AAPCS64 does not say that empty records are ignored as arguments,
+  // but other compilers do so in certain situations, and we copy that behavior.
+  // Those situations are in fact language-mode-specific, which seems really
+  // unfortunate, but it's something we just have to accept. If this doesn't
+  // apply, just fall through to the standard argument-handling path.
+  // Darwin overrides the psABI here to ignore all empty records in all modes.
   uint64_t Size = getContext().getTypeSize(Ty);
   bool IsEmpty = isEmptyRecord(getContext(), Ty, true);
   if (!Ty->isSVESizelessBuiltinType() && (IsEmpty || Size == 0)) {
@@ -432,9 +453,6 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     // behaviour here.
     if (Size == 0)
       return ABIArgInfo::getIgnore();
-
-    // Otherwise, they are passed as if they have a size of 1 byte.
-    return ABIArgInfo::getDirect(llvm::Type::getInt8Ty(getVMContext()));
   }
 
   // Homogeneous Floating-point Aggregates (HFAs) need to be expanded.
@@ -485,9 +503,37 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     }
     Size = llvm::alignTo(Size, Alignment);
 
+    // If the Aggregate is made up of pointers, use an array of pointers for the
+    // coerced type. This prevents having to convert ptr2int->int2ptr through
+    // the call, allowing alias analysis to produce better code.
+    auto ContainsOnlyPointers = [&](const auto &Self, QualType Ty) {
+      if (isEmptyRecord(getContext(), Ty, true))
+        return false;
+      const auto *RD = Ty->getAsRecordDecl();
+      if (!RD)
+        return false;
+      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        for (const auto &I : CXXRD->bases())
+          if (!Self(Self, I.getType()))
+            return false;
+      }
+      return all_of(RD->fields(), [&](FieldDecl *FD) {
+        QualType FDTy = FD->getType();
+        if (FDTy->isArrayType())
+          FDTy = getContext().getBaseElementType(FDTy);
+        return (FDTy->isPointerOrReferenceType() &&
+                getContext().getTypeSize(FDTy) == 64 &&
+                !FDTy->getPointeeType().hasAddressSpace()) ||
+               Self(Self, FDTy);
+      });
+    };
+
     // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
     // For aggregates with 16-byte alignment, we use i128.
     llvm::Type *BaseTy = llvm::Type::getIntNTy(getVMContext(), Alignment);
+    if ((Size == 64 || Size == 128) && Alignment == 64 &&
+        ContainsOnlyPointers(ContainsOnlyPointers, Ty))
+      BaseTy = llvm::PointerType::getUnqual(getVMContext());
     return ABIArgInfo::getDirect(
         Size == Alignment ? BaseTy
                           : llvm::ArrayType::get(BaseTy, Size / Alignment));
@@ -516,8 +562,8 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 
   if (!passAsAggregateType(RetTy)) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy = EnumTy->getDecl()->getIntegerType();
+    if (const auto *ED = RetTy->getAsEnumDecl())
+      RetTy = ED->getIntegerType();
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
@@ -699,21 +745,21 @@ bool AArch64ABIInfo::passAsPureScalableType(
       return false;
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltCoerceToSeq, std::back_inserter(CoerceToSeq));
+      llvm::append_range(CoerceToSeq, EltCoerceToSeq);
 
     NVec += NElt * NV;
     NPred += NElt * NP;
     return true;
   }
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+  if (const RecordType *RT = Ty->getAsCanonical<RecordType>()) {
     // If the record cannot be passed in registers, then it's not a PST.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
         RAA != CGCXXABI::RAA_Default)
       return false;
 
     // Pure scalable types are never unions and never contain unions.
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     if (RD->isUnion())
       return false;
 
@@ -772,8 +818,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
   case BuiltinType::Id:                                                        \
     isPredicate = true;                                                        \
     break;
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
   default:
     return false;
   }
@@ -818,7 +863,7 @@ void AArch64ABIInfo::flattenType(
     flattenType(AT->getElementType(), EltFlattened);
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltFlattened, std::back_inserter(Flattened));
+      llvm::append_range(Flattened, EltFlattened);
     return;
   }
 
@@ -1121,9 +1166,16 @@ RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                    QualType Ty, AggValueSlot Slot) const {
   bool IsIndirect = false;
 
-  // Composites larger than 16 bytes are passed by reference.
-  if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
-    IsIndirect = true;
+  if (getTarget().getTriple().isWindowsArm64EC()) {
+    // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
+    // not 1, 2, 4, or 8 bytes, must be passed by reference."
+    uint64_t Width = getContext().getTypeSize(Ty);
+    IsIndirect = Width > 64 || !llvm::isPowerOf2_64(Width);
+  } else {
+    // Composites larger than 16 bytes are passed by reference.
+    if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
+      IsIndirect = true;
+  }
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
@@ -1307,19 +1359,20 @@ void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
 
   llvm::SmallDenseSet<StringRef, 8> UniqueFeats;
   for (auto &Feat : Features)
-    if (auto Ext = llvm::AArch64::parseFMVExtension(Feat))
-      if (UniqueFeats.insert(Ext->Name).second)
-        Out << 'M' << Ext->Name;
+    if (getTarget().doesFeatureAffectCodeGen(Feat))
+      if (auto Ext = llvm::AArch64::parseFMVExtension(Feat))
+        if (UniqueFeats.insert(Ext->Name).second)
+          Out << 'M' << Ext->Name;
 }
 
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createAArch64TargetCodeGenInfo(CodeGenModule &CGM,
                                         AArch64ABIKind Kind) {
-  return std::make_unique<AArch64TargetCodeGenInfo>(CGM.getTypes(), Kind);
+  return std::make_unique<AArch64TargetCodeGenInfo>(CGM, Kind);
 }
 
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createWindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM,
                                                AArch64ABIKind K) {
-  return std::make_unique<WindowsAArch64TargetCodeGenInfo>(CGM.getTypes(), K);
+  return std::make_unique<WindowsAArch64TargetCodeGenInfo>(CGM, K);
 }

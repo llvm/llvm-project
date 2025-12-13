@@ -88,7 +88,7 @@ def _executeWithFakeConfig(test, commands):
     litConfig = lit.LitConfig.LitConfig(
         progname="lit",
         path=[],
-        quiet=False,
+        diagnostic_level="note",
         useValgrind=False,
         valgrindLeakCheck=False,
         valgrindArgs=[],
@@ -111,8 +111,8 @@ def _makeConfigTest(config):
             os.makedirs(supportDir)
 
     # Create a dummy test suite and single dummy test inside it. As part of
-    # the Lit configuration, automatically do the equivalent of 'mkdir %T'
-    # and 'rm -r %T' to avoid cluttering the build directory.
+    # the Lit configuration, automatically do the equivalent of 'mkdir %{temp}'
+    # and 'rm -r %{temp}' to avoid cluttering the build directory.
     suite = lit.Test.TestSuite("__config__", sourceRoot, execRoot, config)
     tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix=".cpp")
     tmp.close()
@@ -296,7 +296,7 @@ def hasAnyLocale(config, locales):
         + name_string_literals
         + """, nullptr,
       };
-      int main() {
+      int main(int, char**) {
         for (size_t i = 0; test_locale_names[i]; i++) {
           if (::setlocale(LC_ALL, test_locale_names[i]) != NULL) {
             return 0;

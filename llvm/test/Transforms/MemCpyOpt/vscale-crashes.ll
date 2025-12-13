@@ -71,7 +71,7 @@ define void @callslotoptzn(<vscale x 4 x float> %val, ptr %out) {
 ; CHECK-NEXT:    [[ALLOC:%.*]] = alloca <vscale x 4 x float>, align 16
 ; CHECK-NEXT:    [[IDX:%.*]] = tail call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; CHECK-NEXT:    [[STRIDE:%.*]] = getelementptr inbounds float, ptr [[ALLOC]], <vscale x 4 x i32> [[IDX]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VAL:%.*]], <vscale x 4 x ptr> [[STRIDE]], i32 4, <vscale x 4 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VAL:%.*]], <vscale x 4 x ptr> align 4 [[STRIDE]], <vscale x 4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[LI:%.*]] = load <vscale x 4 x float>, ptr [[ALLOC]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x float> [[LI]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -102,7 +102,7 @@ define void @memmove_vector(ptr %a, ptr %b) {
 define void @memmove_agg1(ptr %a, ptr %b) {
 ; CHECK-LABEL: @memmove_agg1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 8
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[B:%.*]], ptr align 1 [[A:%.*]], i64 [[TMP2]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -114,7 +114,7 @@ define void @memmove_agg1(ptr %a, ptr %b) {
 define void @memmove_agg2(ptr %a, ptr %b) {
 ; CHECK-LABEL: @memmove_agg2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 16
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[B:%.*]], ptr align 1 [[A:%.*]], i64 [[TMP2]], i1 false)
 ; CHECK-NEXT:    ret void
 ;

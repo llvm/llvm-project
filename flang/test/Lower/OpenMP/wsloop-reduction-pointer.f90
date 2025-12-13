@@ -18,7 +18,7 @@ program reduce_pointer
   deallocate(v)
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>> {{.*}} alloc {
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
 ! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK-LABEL:   } init {
@@ -64,7 +64,7 @@ end program
 ! CHECK:           omp.yield
 ! CHECK:         }
 
-! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "reduce_pointer"} {
+! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "REDUCE_POINTER"} {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "v", uniq_name = "_QFEv"}

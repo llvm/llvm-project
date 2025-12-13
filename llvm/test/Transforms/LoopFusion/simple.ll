@@ -298,42 +298,55 @@ bb23:                                             ; preds = %bb17, %bb
   ret void
 }
 
+; The following IR is a representation of the provided code below. With PR
+; #146383, loop fusion is able to utilize the information from dependence
+; analysis, enabling the loops in the function to be fused.
+;
+; void forward_dep(int *arg) {
+;     for (int i = 0; i < 100; i++) {
+;         int tmp = i - 3;
+;         int val = tmp * (i + 3) % i;
+;         arg[i] = val;
+;     }
+; 
+;     for (int j = 0; j < 100; j++) {
+;         int val = arg[j - 3];
+;         arg[j] = val * 3;
+;     }
+; }
+;
 define void @forward_dep(ptr noalias %arg) {
 ; CHECK-LABEL: @forward_dep(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label [[BB7:%.*]]
+; CHECK-NEXT:  [[BB:.*]]:
+; CHECK-NEXT:    br label %[[BB7:.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[DOT013:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ [[TMP15:%.*]], [[BB14:%.*]] ]
-; CHECK-NEXT:    [[INDVARS_IV22:%.*]] = phi i64 [ 0, [[BB]] ], [ [[INDVARS_IV_NEXT3:%.*]], [[BB14]] ]
+; CHECK-NEXT:    [[DOT013:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[TMP15:%.*]], %[[BB25:.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV22:%.*]] = phi i64 [ 0, %[[BB]] ], [ [[INDVARS_IV_NEXT3:%.*]], %[[BB25]] ]
+; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[BB25]] ], [ 0, %[[BB]] ]
 ; CHECK-NEXT:    [[TMP:%.*]] = add nsw i32 [[DOT013]], -3
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i64 [[INDVARS_IV22]], 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul nsw i32 [[TMP]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[INDVARS_IV22]] to i32
 ; CHECK-NEXT:    [[TMP12:%.*]] = srem i32 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[ARG:%.*]], i64 [[INDVARS_IV22]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 [[INDVARS_IV22]]
 ; CHECK-NEXT:    store i32 [[TMP12]], ptr [[TMP13]], align 4
-; CHECK-NEXT:    br label [[BB14]]
+; CHECK-NEXT:    br label %[[BB14:.*]]
 ; CHECK:       bb14:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV22]], 1
-; CHECK-NEXT:    [[TMP15]] = add nuw nsw i32 [[DOT013]], 1
-; CHECK-NEXT:    [[EXITCOND4:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT3]], 100
-; CHECK-NEXT:    br i1 [[EXITCOND4]], label [[BB7]], label [[BB19_PREHEADER:%.*]]
-; CHECK:       bb19.preheader:
-; CHECK-NEXT:    br label [[BB19:%.*]]
-; CHECK:       bb19:
-; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BB25:%.*]] ], [ 0, [[BB19_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = add nsw i64 [[INDVARS_IV1]], -3
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = mul nsw i32 [[TMP22]], 3
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 [[INDVARS_IV1]]
 ; CHECK-NEXT:    store i32 [[TMP23]], ptr [[TMP24]], align 4
-; CHECK-NEXT:    br label [[BB25]]
+; CHECK-NEXT:    br label %[[BB25]]
 ; CHECK:       bb25:
+; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV22]], 1
+; CHECK-NEXT:    [[TMP15]] = add nuw nsw i32 [[DOT013]], 1
+; CHECK-NEXT:    [[EXITCOND4:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT3]], 100
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB19]], label [[BB26:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[BB7]], label %[[BB26:.*]]
 ; CHECK:       bb26:
 ; CHECK-NEXT:    ret void
 ;

@@ -22,26 +22,36 @@ typedef _Float16 __m512h_u __attribute__((__vector_size__(64), __aligned__(1)));
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS512                                                  \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512fp16,evex512"), __min_vector_width__(512)))
+  __attribute__((__always_inline__, __nodebug__, __target__("avx512fp16"),     \
+                 __min_vector_width__(512)))
 #define __DEFAULT_FN_ATTRS256                                                  \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512fp16,no-evex512"),                          \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx512fp16"),     \
                  __min_vector_width__(256)))
 #define __DEFAULT_FN_ATTRS128                                                  \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512fp16,no-evex512"),                          \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx512fp16"),     \
                  __min_vector_width__(128)))
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS512 _mm512_cvtsh_h(__m512h __a) {
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512 constexpr
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#else
+#define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
+#endif
+
+static __inline__ _Float16 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_cvtsh_h(__m512h __a) {
   return __a[0];
 }
 
-static __inline __m128h __DEFAULT_FN_ATTRS128 _mm_setzero_ph(void) {
+static __inline __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_setzero_ph(void) {
   return (__m128h){0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 }
 
-static __inline __m256h __DEFAULT_FN_ATTRS256 _mm256_setzero_ph(void) {
+static __inline __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_setzero_ph(void) {
   return (__m256h){0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 }
@@ -50,7 +60,8 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_undefined_ph(void) {
   return (__m256h)__builtin_ia32_undef256();
 }
 
-static __inline __m512h __DEFAULT_FN_ATTRS512 _mm512_setzero_ph(void) {
+static __inline __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_setzero_ph(void) {
   return (__m512h){0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -64,14 +75,15 @@ static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_undefined_ph(void) {
   return (__m512h)__builtin_ia32_undef512();
 }
 
-static __inline __m512h __DEFAULT_FN_ATTRS512 _mm512_set1_ph(_Float16 __h) {
+static __inline __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_set1_ph(_Float16 __h) {
   return (__m512h)(__v32hf){__h, __h, __h, __h, __h, __h, __h, __h,
                             __h, __h, __h, __h, __h, __h, __h, __h,
                             __h, __h, __h, __h, __h, __h, __h, __h,
                             __h, __h, __h, __h, __h, __h, __h, __h};
 }
 
-static __inline __m512h __DEFAULT_FN_ATTRS512
+static __inline __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
               _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8,
               _Float16 __h9, _Float16 __h10, _Float16 __h11, _Float16 __h12,
@@ -87,15 +99,20 @@ _mm512_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
                             __h4,  __h3,  __h2,  __h1};
 }
 
-#define _mm512_setr_ph(h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, \
-                       h14, h15, h16, h17, h18, h19, h20, h21, h22, h23, h24,  \
-                       h25, h26, h27, h28, h29, h30, h31, h32)                 \
-  _mm512_set_ph((h32), (h31), (h30), (h29), (h28), (h27), (h26), (h25), (h24), \
-                (h23), (h22), (h21), (h20), (h19), (h18), (h17), (h16), (h15), \
-                (h14), (h13), (h12), (h11), (h10), (h9), (h8), (h7), (h6),     \
-                (h5), (h4), (h3), (h2), (h1))
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_setr_ph(
+    _Float16 e0, _Float16 e1, _Float16 e2, _Float16 e3, _Float16 e4,
+    _Float16 e5, _Float16 e6, _Float16 e7, _Float16 e8, _Float16 e9,
+    _Float16 e10, _Float16 e11, _Float16 e12, _Float16 e13, _Float16 e14,
+    _Float16 e15, _Float16 e16, _Float16 e17, _Float16 e18, _Float16 e19,
+    _Float16 e20, _Float16 e21, _Float16 e22, _Float16 e23, _Float16 e24,
+    _Float16 e25, _Float16 e26, _Float16 e27, _Float16 e28, _Float16 e29,
+    _Float16 e30, _Float16 e31) {
+  return _mm512_set_ph(e31, e30, e29, e28, e27, e26, e25, e24, e23, e22, e21,
+                       e20, e19, e18, e17, e16, e15, e14, e13, e12, e11, e10,
+                       e9, e8, e7, e6, e5, e4, e3, e2, e1, e0);
+}
 
-static __inline __m512h __DEFAULT_FN_ATTRS512
+static __inline __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_set1_pch(_Float16 _Complex __h) {
   return (__m512h)_mm512_set1_ps(__builtin_bit_cast(float, __h));
 }
@@ -176,17 +193,17 @@ _mm512_castsi512_ph(__m512i __a) {
   return (__m512h)__a;
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS256
+static __inline__ __m128h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_castph256_ph128(__m256h __a) {
   return __builtin_shufflevector(__a, __a, 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS512
+static __inline__ __m128h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castph512_ph128(__m512h __a) {
   return __builtin_shufflevector(__a, __a, 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
-static __inline__ __m256h __DEFAULT_FN_ATTRS512
+static __inline__ __m256h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castph512_ph256(__m512h __a) {
   return __builtin_shufflevector(__a, __a, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
                                  12, 13, 14, 15);
@@ -229,7 +246,7 @@ _mm512_castph256_ph512(__m256h __a) {
 ///    A 128-bit vector of [8 x half].
 /// \returns A 512-bit floating-point vector of [16 x half]. The lower 128 bits
 ///    contain the value of the parameter. The upper 384 bits are set to zero.
-static __inline__ __m256h __DEFAULT_FN_ATTRS256
+static __inline__ __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_zextph128_ph256(__m128h __a) {
   return __builtin_shufflevector(__a, (__v8hf)_mm_setzero_ph(), 0, 1, 2, 3, 4,
                                  5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
@@ -248,7 +265,7 @@ _mm256_zextph128_ph256(__m128h __a) {
 ///    A 128-bit vector of [8 x half].
 /// \returns A 512-bit floating-point vector of [32 x half]. The lower 128 bits
 ///    contain the value of the parameter. The upper 384 bits are set to zero.
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_zextph128_ph512(__m128h __a) {
   return __builtin_shufflevector(
       __a, (__v8hf)_mm_setzero_ph(), 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
@@ -268,7 +285,7 @@ _mm512_zextph128_ph512(__m128h __a) {
 ///    A 256-bit vector of [16 x half].
 /// \returns A 512-bit floating-point vector of [32 x half]. The lower 256 bits
 ///    contain the value of the parameter. The upper 256 bits are set to zero.
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_zextph256_ph512(__m256h __a) {
   return __builtin_shufflevector(__a, (__v16hf)_mm256_setzero_ph(), 0, 1, 2, 3,
                                  4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
@@ -548,12 +565,14 @@ _mm512_maskz_max_ph(__mmask32 __U, __m512h __A, __m512h __B) {
       (__mmask32)(U), (__v32hf)_mm512_max_round_ph((A), (B), (R)),             \
       (__v32hf)_mm512_setzero_ph()))
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_abs_ph(__m512h __A) {
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_abs_ph(__m512h __A) {
   return (__m512h)_mm512_and_epi32(_mm512_set1_epi32(0x7FFF7FFF), (__m512i)__A);
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_conj_pch(__m512h __A) {
-  return (__m512h)_mm512_xor_ps((__m512)__A, _mm512_set1_ps(-0.0f));
+  return (__m512h)_mm512_xor_epi32((__m512i)__A,
+                                   _mm512_set1_epi32(-2147483648));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
@@ -569,23 +588,20 @@ _mm512_maskz_conj_pch(__mmask16 __U, __m512h __A) {
                                               (__v16sf)_mm512_setzero_ps());
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_add_sh(__m128h __A,
-                                                           __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_add_sh(__m128h __A, __m128h __B) {
   __A[0] += __B[0];
   return __A;
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_mask_add_sh(__m128h __W,
-                                                                __mmask8 __U,
-                                                                __m128h __A,
-                                                                __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_add_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B) {
   __A = _mm_add_sh(__A, __B);
   return __builtin_ia32_selectsh_128(__U, __A, __W);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_maskz_add_sh(__mmask8 __U,
-                                                                 __m128h __A,
-                                                                 __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_maskz_add_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   __A = _mm_add_sh(__A, __B);
   return __builtin_ia32_selectsh_128(__U, __A, _mm_setzero_ph());
 }
@@ -605,23 +621,20 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_maskz_add_sh(__mmask8 __U,
       (__v8hf)(__m128h)(A), (__v8hf)(__m128h)(B), (__v8hf)_mm_setzero_ph(),    \
       (__mmask8)(U), (int)(R)))
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_sub_sh(__m128h __A,
-                                                           __m128h __B) {
+static __inline__ __m128h
+    __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_sub_sh(__m128h __A, __m128h __B) {
   __A[0] -= __B[0];
   return __A;
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_mask_sub_sh(__m128h __W,
-                                                                __mmask8 __U,
-                                                                __m128h __A,
-                                                                __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_sub_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B) {
   __A = _mm_sub_sh(__A, __B);
   return __builtin_ia32_selectsh_128(__U, __A, __W);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_maskz_sub_sh(__mmask8 __U,
-                                                                 __m128h __A,
-                                                                 __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_maskz_sub_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   __A = _mm_sub_sh(__A, __B);
   return __builtin_ia32_selectsh_128(__U, __A, _mm_setzero_ph());
 }
@@ -641,23 +654,20 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_maskz_sub_sh(__mmask8 __U,
       (__v8hf)(__m128h)(A), (__v8hf)(__m128h)(B), (__v8hf)_mm_setzero_ph(),    \
       (__mmask8)(U), (int)(R)))
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_mul_sh(__m128h __A,
-                                                           __m128h __B) {
+static __inline__ __m128h
+    __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_mul_sh(__m128h __A, __m128h __B) {
   __A[0] *= __B[0];
   return __A;
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_mask_mul_sh(__m128h __W,
-                                                                __mmask8 __U,
-                                                                __m128h __A,
-                                                                __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_mul_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B) {
   __A = _mm_mul_sh(__A, __B);
   return __builtin_ia32_selectsh_128(__U, __A, __W);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_maskz_mul_sh(__mmask8 __U,
-                                                                 __m128h __A,
-                                                                 __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_maskz_mul_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   __A = _mm_mul_sh(__A, __B);
   return __builtin_ia32_selectsh_128(__U, __A, _mm_setzero_ph());
 }
@@ -677,23 +687,20 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_maskz_mul_sh(__mmask8 __U,
       (__v8hf)(__m128h)(A), (__v8hf)(__m128h)(B), (__v8hf)_mm_setzero_ph(),    \
       (__mmask8)(U), (int)(R)))
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_div_sh(__m128h __A,
-                                                           __m128h __B) {
+static __inline__ __m128h
+    __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_div_sh(__m128h __A, __m128h __B) {
   __A[0] /= __B[0];
   return __A;
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_mask_div_sh(__m128h __W,
-                                                                __mmask8 __U,
-                                                                __m128h __A,
-                                                                __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_div_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B) {
   __A = _mm_div_sh(__A, __B);
   return __builtin_ia32_selectsh_128(__U, __A, __W);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_maskz_div_sh(__mmask8 __U,
-                                                                 __m128h __A,
-                                                                 __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_maskz_div_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   __A = _mm_div_sh(__A, __B);
   return __builtin_ia32_selectsh_128(__U, __A, _mm_setzero_ph());
 }
@@ -941,22 +948,19 @@ static __inline__ void __DEFAULT_FN_ATTRS128 _mm_storeu_ph(void *__P,
 }
 
 // moves with vmovsh:
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_move_sh(__m128h __a,
-                                                            __m128h __b) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_move_sh(__m128h __a, __m128h __b) {
   __a[0] = __b[0];
   return __a;
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_mask_move_sh(__m128h __W,
-                                                                 __mmask8 __U,
-                                                                 __m128h __A,
-                                                                 __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_move_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B) {
   return __builtin_ia32_selectsh_128(__U, _mm_move_sh(__A, __B), __W);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_maskz_move_sh(__mmask8 __U,
-                                                                  __m128h __A,
-                                                                  __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_maskz_move_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   return __builtin_ia32_selectsh_128(__U, _mm_move_sh(__A, __B),
                                      _mm_setzero_ph());
 }
@@ -1382,24 +1386,20 @@ _mm_maskz_scalef_sh(__mmask8 __U, __m128h __A, __m128h __B) {
       (__v32hf)_mm512_setzero_ph()))
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_sqrt_ph(__m512h __A) {
-  return (__m512h)__builtin_ia32_sqrtph512((__v32hf)__A,
-                                           _MM_FROUND_CUR_DIRECTION);
+  return (__m512h)__builtin_elementwise_sqrt((__v32hf)__A);
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_mask_sqrt_ph(__m512h __W, __mmask32 __U, __m512h __A) {
   return (__m512h)__builtin_ia32_selectph_512(
-      (__mmask32)(__U),
-      (__v32hf)__builtin_ia32_sqrtph512((__A), (_MM_FROUND_CUR_DIRECTION)),
-      (__v32hf)(__m512h)(__W));
+      (__mmask32)(__U), (__v32hf)_mm512_sqrt_ph(__A), (__v32hf)(__m512h)(__W));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_maskz_sqrt_ph(__mmask32 __U, __m512h __A) {
-  return (__m512h)__builtin_ia32_selectph_512(
-      (__mmask32)(__U),
-      (__v32hf)__builtin_ia32_sqrtph512((__A), (_MM_FROUND_CUR_DIRECTION)),
-      (__v32hf)_mm512_setzero_ph());
+  return (__m512h)__builtin_ia32_selectph_512((__mmask32)(__U),
+                                              (__v32hf)_mm512_sqrt_ph(__A),
+                                              (__v32hf)_mm512_setzero_ph());
 }
 
 #define _mm_sqrt_round_sh(A, B, R)                                             \
@@ -3291,19 +3291,19 @@ _mm512_reduce_min_ph(__m512h __V) {
   return __builtin_ia32_reduce_fmin_ph512(__V);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mask_blend_ph(__mmask32 __U, __m512h __A, __m512h __W) {
   return (__m512h)__builtin_ia32_selectph_512((__mmask32)__U, (__v32hf)__W,
                                               (__v32hf)__A);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_permutex2var_ph(__m512h __A, __m512i __I, __m512h __B) {
   return (__m512h)__builtin_ia32_vpermi2varhi512((__v32hi)__A, (__v32hi)__I,
                                                  (__v32hi)__B);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_permutexvar_ph(__m512i __A, __m512h __B) {
   return (__m512h)__builtin_ia32_permvarhi512((__v32hi)__B, (__v32hi)__A);
 }
@@ -3347,6 +3347,9 @@ _mm512_permutexvar_ph(__m512i __A, __m512h __B) {
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
 #undef __DEFAULT_FN_ATTRS512
+#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS256_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS512_CONSTEXPR
 
 #endif
 #endif

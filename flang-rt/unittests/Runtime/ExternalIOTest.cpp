@@ -16,7 +16,6 @@
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <string_view>
 
@@ -184,7 +183,7 @@ TEST(ExternalIOTests, TestSequentialFixedUnformatted) {
   io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
   for (int j{1}; j <= 3; ++j) {
     ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc))
-        << "OutputDescriptor() for InquireIoLength";
+        << "OutputDescriptor() for InquireIoLength " << j;
   }
   ASSERT_EQ(IONAME(GetIoLength)(io), 3 * recl) << "GetIoLength";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)

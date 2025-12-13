@@ -8,7 +8,19 @@ macros:
   - macro_name: roundfx
     macro_header: stdfix-macros.h
 types:
-  - type_name: stdfix-types
+  - type_name: int_hk_t
+  - type_name: int_hr_t
+  - type_name: int_k_t
+  - type_name: int_lk_t
+  - type_name: int_lr_t
+  - type_name: int_r_t
+  - type_name: uint_uhk_t
+  - type_name: uint_uhr_t
+  - type_name: uint_uk_t
+  - type_name: uint_ulk_t
+  - type_name: uint_ulr_t
+  - type_name: uint_ur_t
+
 enums: []
 objects: []
 functions:
@@ -236,6 +248,70 @@ functions:
       - stdc_ext
     return_type: uint_ulk_t
     arguments:
+      - type: unsigned long accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivr
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: fract
+      - type: fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivlr
+    standards:
+      - stdc_ext
+    return_type: long int
+    arguments:
+      - type: long fract
+      - type: long fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivk
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: accum
+      - type: accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivlk
+    standards:
+      - stdc_ext
+    return_type: long int
+    arguments:
+      - type: long accum
+      - type: long accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivur
+    standards:
+      - stdc_ext
+    return_type: unsigned int
+    arguments:
+      - type: unsigned fract
+      - type: unsigned fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivulr
+    standards:
+      - stdc_ext
+    return_type: unsigned long int
+    arguments:
+      - type: unsigned long fract
+      - type: unsigned long fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivuk
+    standards:
+      - stdc_ext
+    return_type: unsigned int
+    arguments:
+      - type: unsigned accum
+      - type: unsigned accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivulk
+    standards:
+      - stdc_ext
+    return_type: unsigned long int
+    arguments:
+      - type: unsigned long accum
       - type: unsigned long accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
   - name: roundhk
@@ -479,4 +555,12 @@ functions:
     return_type: int
     arguments:
       - type: unsigned long accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: rdivi
+    standards:
+      - stdc_ext
+    return_type: fract
+    arguments:
+      - type: int
+      - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT

@@ -131,7 +131,7 @@ static void emityProperties(std::string PropertyName,
   // Generate the macro that the user needs to define before including the
   // *.inc file.
   std::string NeededMacro = "LLDB_PROPERTIES_" + PropertyName;
-  std::replace(NeededMacro.begin(), NeededMacro.end(), ' ', '_');
+  llvm::replace(NeededMacro, ' ', '_');
 
   // All options are in one file, so we need put them behind macros and ask the
   // user to define the macro for the options that are needed.
@@ -154,7 +154,7 @@ static void emitPropertyEnum(std::string PropertyName,
   // Generate the macro that the user needs to define before including the
   // *.inc file.
   std::string NeededMacro = "LLDB_PROPERTIES_" + PropertyName;
-  std::replace(NeededMacro.begin(), NeededMacro.end(), ' ', '_');
+  llvm::replace(NeededMacro, ' ', '_');
 
   // All options are in one file, so we need put them behind macros and ask the
   // user to define the macro for the options that are needed.

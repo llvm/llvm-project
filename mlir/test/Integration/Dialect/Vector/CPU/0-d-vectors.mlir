@@ -4,27 +4,20 @@
 // RUN: FileCheck %s
 
 func.func @extract_element_0d(%a: vector<f32>) {
-  %1 = vector.extractelement %a[] : vector<f32>
+  %1 = vector.extract %a[] : f32 from vector<f32>
   // CHECK: 42
   vector.print %1: f32
   return
 }
 
 func.func @insert_element_0d(%a: f32, %b: vector<f32>) -> (vector<f32>) {
-  %1 = vector.insertelement %a, %b[] : vector<f32>
+  %1 = vector.insert %a, %b[] : f32 into vector<f32>
   return %1: vector<f32>
 }
 
 func.func @print_vector_0d(%a: vector<f32>) {
   // CHECK: ( 42 )
   vector.print %a: vector<f32>
-  return
-}
-
-func.func @splat_0d(%a: f32) {
-  %1 = vector.splat %a : vector<f32>
-  // CHECK: ( 42 )
-  vector.print %1: vector<f32>
   return
 }
 
@@ -58,9 +51,9 @@ func.func @broadcast_0d(%a: f32) {
 func.func @bitcast_0d() {
   %0 = arith.constant 42 : i32
   %1 = arith.constant dense<0> : vector<i32>
-  %2 = vector.insertelement %0, %1[] : vector<i32>
+  %2 = vector.insert %0, %1[] : i32 into vector<i32>
   %3 = vector.bitcast %2 : vector<i32> to vector<f32>
-  %4 = vector.extractelement %3[] : vector<f32>
+  %4 = vector.extract %3[] : f32 from vector<f32>
   %5 = arith.bitcast %4 : f32 to i32
   // CHECK: 42
   vector.print %5: i32
@@ -147,7 +140,6 @@ func.func @entry() {
 
   // Warning: these must be called in their textual order of definition in the
   // file to not mess up FileCheck.
-  call  @splat_0d(%4) : (f32) -> ()
   call  @broadcast_0d(%4) : (f32) -> ()
   call  @bitcast_0d() : () -> ()
   call  @constant_mask_0d() : () -> ()

@@ -11,21 +11,23 @@
 
 #include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/CommonConfig.h"
+#include "llvm/ObjCopy/DXContainer/DXContainerConfig.h"
 #include "llvm/ObjCopy/ELF/ELFConfig.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/ObjCopy/MultiFormatConfig.h"
-#include "llvm/ObjCopy/wasm/WasmConfig.h"
 #include "llvm/ObjCopy/XCOFF/XCOFFConfig.h"
+#include "llvm/ObjCopy/wasm/WasmConfig.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace objcopy {
 
-struct ConfigManager : public MultiFormatConfig {
-  virtual ~ConfigManager() {}
+struct LLVM_ABI ConfigManager : public MultiFormatConfig {
+  ~ConfigManager() override = default;
 
   const CommonConfig &getCommonConfig() const override { return Common; }
 
-  Expected<const ELFConfig &> getELFConfig() const override { return ELF; }
+  Expected<const ELFConfig &> getELFConfig() const override;
 
   Expected<const COFFConfig &> getCOFFConfig() const override;
 
@@ -35,6 +37,8 @@ struct ConfigManager : public MultiFormatConfig {
 
   Expected<const XCOFFConfig &> getXCOFFConfig() const override;
 
+  Expected<const DXContainerConfig &> getDXContainerConfig() const override;
+
   // All configs.
   CommonConfig Common;
   ELFConfig ELF;
@@ -42,6 +46,7 @@ struct ConfigManager : public MultiFormatConfig {
   MachOConfig MachO;
   WasmConfig Wasm;
   XCOFFConfig XCOFF;
+  DXContainerConfig DXContainer;
 };
 
 } // namespace objcopy

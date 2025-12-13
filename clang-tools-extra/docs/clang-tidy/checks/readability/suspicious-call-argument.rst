@@ -235,8 +235,8 @@ Parameter names are the identifiers as written in the source code.
 Argument names are:
 
   * If a variable is passed, the variable's name.
-  * If a subsequent function call's return value is used as argument, the called
-    function's name.
+  * If a subsequent function call's return value is used as argument, the
+    called function's name.
   * Otherwise, empty string.
 
 Empty argument or parameter names are ignored by the heuristics.

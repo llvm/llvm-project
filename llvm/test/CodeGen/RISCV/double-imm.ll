@@ -47,17 +47,19 @@ define double @double_imm_op(double %a) nounwind {
 ;
 ; CHECK64D-LABEL: double_imm_op:
 ; CHECK64D:       # %bb.0:
-; CHECK64D-NEXT:    lui a0, %hi(.LCPI1_0)
-; CHECK64D-NEXT:    fld fa5, %lo(.LCPI1_0)(a0)
+; CHECK64D-NEXT:    li a0, 1023
+; CHECK64D-NEXT:    slli a0, a0, 52
+; CHECK64D-NEXT:    fmv.d.x fa5, a0
 ; CHECK64D-NEXT:    fadd.d fa0, fa0, fa5
 ; CHECK64D-NEXT:    ret
 ;
 ; CHECKRV32ZDINX-LABEL: double_imm_op:
 ; CHECKRV32ZDINX:       # %bb.0:
 ; CHECKRV32ZDINX-NEXT:    lui a2, %hi(.LCPI1_0)
-; CHECKRV32ZDINX-NEXT:    lw a3, %lo(.LCPI1_0+4)(a2)
-; CHECKRV32ZDINX-NEXT:    lw a2, %lo(.LCPI1_0)(a2)
-; CHECKRV32ZDINX-NEXT:    fadd.d a0, a0, a2
+; CHECKRV32ZDINX-NEXT:    lw a4, %lo(.LCPI1_0)(a2)
+; CHECKRV32ZDINX-NEXT:    addi a2, a2, %lo(.LCPI1_0)
+; CHECKRV32ZDINX-NEXT:    lw a5, 4(a2)
+; CHECKRV32ZDINX-NEXT:    fadd.d a0, a0, a4
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: double_imm_op:
@@ -145,8 +147,7 @@ define dso_local double @negzero_sel(i16 noundef %a, double noundef %d) nounwind
 ; CHECKRV32ZDINX-NEXT:    slli a0, a0, 16
 ; CHECKRV32ZDINX-NEXT:    beqz a0, .LBB4_2
 ; CHECKRV32ZDINX-NEXT:  # %bb.1: # %entry
-; CHECKRV32ZDINX-NEXT:    fcvt.d.w a0, zero
-; CHECKRV32ZDINX-NEXT:    fneg.d a2, a0
+; CHECKRV32ZDINX-NEXT:    fneg.d a2, zero
 ; CHECKRV32ZDINX-NEXT:    j .LBB4_3
 ; CHECKRV32ZDINX-NEXT:  .LBB4_2:
 ; CHECKRV32ZDINX-NEXT:    mv a3, a2

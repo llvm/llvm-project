@@ -611,15 +611,15 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   Value *A = nullptr, *B = nullptr;
   MaxMinT m_MaxMin(m_Value(A), m_Value(B));
 
+  if (!match(LHS, m_MaxMin))
+    return nullptr;
+
   if (LHS->hasNUsesOrMore(3) ||
       // The optimization is profitable only if LHS can be removed in the end.
       // In other words LHS should be used (directly or indirectly) by I only.
-      llvm::any_of(LHS->users(),
-                    [&](auto *U) {
-                      return U != I &&
-                             !(U->hasOneUser() && *U->users().begin() == I);
-                    }) ||
-      !match(LHS, m_MaxMin))
+      llvm::any_of(LHS->users(), [&](auto *U) {
+        return U != I && !(U->hasOneUser() && *U->users().begin() == I);
+      }))
     return nullptr;
 
   auto tryCombination = [&](Value *A, const SCEV *AExpr, Value *B,
@@ -640,7 +640,7 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
                                       SE->getUnknown(R1MinMax)};
     const SCEV *R2Expr = SE->getMinMaxExpr(SCEVType, Ops2);
 
-    SCEVExpander Expander(*SE, *DL, "nary-reassociate");
+    SCEVExpander Expander(*SE, "nary-reassociate");
     Value *NewMinMax = Expander.expandCodeFor(R2Expr, I->getType(), I);
     NewMinMax->setName(Twine(I->getName()).concat(".nary"));
 

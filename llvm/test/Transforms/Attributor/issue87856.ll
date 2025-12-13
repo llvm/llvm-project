@@ -4,7 +4,7 @@
 define void @null_ptr_is_valid_call_with_null() #0 {
 ; CHECK-LABEL: define void @null_ptr_is_valid_call_with_null(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    call void @store_as0(ptr nofree noundef writeonly align 4294967296 null) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @store_as0(ptr noalias nofree noundef writeonly null) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @store_as0(ptr null)
@@ -34,7 +34,7 @@ define void @store_as0(ptr %0) {
 define void @call_store_as1() {
 ; CHECK-LABEL: define void @call_store_as1(
 ; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    call void @store_as1(ptr addrspace(1) nofree noundef writeonly align 4294967296 captures(none) null) #[[ATTR4]]
+; CHECK-NEXT:    call void @store_as1(ptr addrspace(1) nofree noundef writeonly captures(none) null) #[[ATTR4]]
 ; CHECK-NEXT:    ret void
 ;
   call void @store_as1(ptr addrspace(1) null)

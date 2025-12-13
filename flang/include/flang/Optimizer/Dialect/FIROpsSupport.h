@@ -15,13 +15,26 @@
 
 namespace fir {
 
-/// Return true iff the Operation is a non-volatile LoadOp or ArrayLoadOp.
-inline bool nonVolatileLoad(mlir::Operation *op) {
-  if (auto load = mlir::dyn_cast<fir::LoadOp>(op))
-    return !load->getAttr("volatile");
-  if (auto arrLoad = mlir::dyn_cast<fir::ArrayLoadOp>(op))
-    return !arrLoad->getAttr("volatile");
-  return false;
+/// The LLVM dialect represents volatile memory accesses as read and write
+/// effects to an unknown memory location, but this may be overly conservative.
+/// LLVM Language Reference only specifies that volatile memory accesses
+/// must not be reordered relative to other volatile memory accesses, so it
+/// is more precise to use a separate memory resource for volatile memory
+/// accesses.
+inline void addVolatileMemoryEffects(
+    mlir::TypeRange type,
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  for (mlir::Type t : type) {
+    if (fir::isa_volatile_type(t)) {
+      effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                           fir::VolatileMemoryResource::get());
+      effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                           fir::VolatileMemoryResource::get());
+      break;
+    }
+  }
 }
 
 /// Return true iff the Operation is a call.
@@ -110,6 +123,12 @@ static constexpr llvm::StringRef getHostSymbolAttrName() {
 /// ExternalNameConverision pass runs
 static constexpr llvm::StringRef getInternalFuncNameAttrName() {
   return "fir.internal_name";
+}
+
+/// Attribute to mark alloca that have been given a lifetime marker so that
+/// later pass do not try adding new ones.
+static constexpr llvm::StringRef getHasLifetimeMarkerAttrName() {
+  return "fir.has_lifetime";
 }
 
 /// Does the function, \p func, have a host-associations tuple argument?
@@ -207,6 +226,31 @@ inline bool hasProcedureAttr(mlir::Operation *op) {
 inline bool hasBindcAttr(mlir::Operation *op) {
   return hasProcedureAttr<fir::FortranProcedureFlagsEnum::bind_c>(op);
 }
+
+/// Get the allocation size of a given alloca if it has compile time constant
+/// size.
+std::optional<int64_t> getAllocaByteSize(fir::AllocaOp alloca,
+                                         const mlir::DataLayout &dl,
+                                         const fir::KindMapping &kindMap);
+
+/// Return true, if \p rebox operation keeps the input array
+/// continuous if it is initially continuous.
+/// When \p checkWhole is false, then the checking is only done
+/// for continuity in the innermost dimension, otherwise,
+/// the checking is done for continuity of the whole result of rebox.
+/// The caller may specify \p mayHaveNonDefaultLowerBounds, if it is known,
+/// to allow better handling of the rebox operations representing
+/// full array slices.
+bool reboxPreservesContinuity(fir::ReboxOp rebox,
+                              bool mayHaveNonDefaultLowerBounds = true,
+                              bool checkWhole = true);
+
+/// Return true, if \p embox operation produces a contiguous
+/// entity.
+/// When \p checkWhole is false, then the checking is only done
+/// for continuity in the innermost dimension, otherwise,
+/// the checking is done for continuity of the whole result of embox
+bool isContiguousEmbox(fir::EmboxOp embox, bool checkWhole = true);
 
 } // namespace fir
 

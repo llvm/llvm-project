@@ -301,3 +301,13 @@ TEST_F(ContextTest, Dump) {
   EXPECT_EQ(W2.FlatsWritten, 1);
   EXPECT_EQ(W2.ExitedFlatCount, 1);
 }
+
+TEST_F(ContextTest, MustNotBeRoot) {
+  FunctionData FData;
+  FData.CtxRoot = reinterpret_cast<ContextRoot *>(1U);
+  int FakeCalleeAddress = 0;
+  __llvm_ctx_profile_start_collection();
+  auto *Subctx =
+      __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
+  EXPECT_TRUE(isScratch(Subctx));
+}

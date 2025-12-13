@@ -177,6 +177,57 @@ exit:
   ret void
 }
 
+define void @steps_match_two_loadstores_different_access_sizes(ptr %src.1, ptr %src.2, ptr %dst.1, ptr %dst.2, i64 %n) {
+; CHECK-LABEL: define void @steps_match_two_loadstores_different_access_sizes(
+; CHECK-SAME: ptr [[SRC_1:%.*]], ptr [[SRC_2:%.*]], ptr [[DST_1:%.*]], ptr [[DST_2:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SRC_25:%.*]] = ptrtoint ptr [[SRC_2]] to i64
+; CHECK-NEXT:    [[SRC_13:%.*]] = ptrtoint ptr [[SRC_1]] to i64
+; CHECK-NEXT:    [[DST_12:%.*]] = ptrtoint ptr [[DST_1]] to i64
+; CHECK-NEXT:    [[DST_21:%.*]] = ptrtoint ptr [[DST_2]] to i64
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST_21]], [[DST_12]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[DST_12]], [[SRC_13]]
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_12]], [[SRC_25]]
+; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[TMP2]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX7:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[DST_21]], [[SRC_13]]
+; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP3]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX7]], [[DIFF_CHECK8]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[DST_21]], [[SRC_25]]
+; CHECK-NEXT:    [[DIFF_CHECK10:%.*]] = icmp ult i64 [[TMP4]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX11:%.*]] = or i1 [[CONFLICT_RDX9]], [[DIFF_CHECK10]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX11]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.src.1 = getelementptr i64, ptr %src.1, i64 %iv
+  %ld.src.1 = load i64, ptr %gep.src.1
+  %ld.src.1.i32 = trunc i64 %ld.src.1 to i32
+  %gep.src.2 = getelementptr i64, ptr %src.2, i64 %iv
+  %ld.src.2 = load i64, ptr %gep.src.2
+  %add = add i64 %ld.src.1, %ld.src.2
+  %gep.dst.1 = getelementptr nusw i64, ptr %dst.1, i64 %iv
+  store i32 %ld.src.1.i32, ptr %gep.dst.1
+  %gep.dst.2 = getelementptr nusw i64, ptr %dst.2, i64 %iv
+  store i64 %add, ptr %gep.dst.2
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cond = icmp ult i64 %iv.next, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 ; Full no-overlap checks are required instead of difference checks, as
 ; one of the add-recs used is invariant in the inner loop.
 ; Test case for PR57315.
@@ -339,7 +390,7 @@ define void @use_diff_checks_when_retrying_with_rt_checks(i64 %off, ptr %dst, pt
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[OFF]], -8
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
@@ -360,7 +411,7 @@ define void @use_diff_checks_when_retrying_with_rt_checks(i64 %off, ptr %dst, pt
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[SRC2]]
 ; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP9]], 32
 ; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX7]], [[DIFF_CHECK8]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], [[SCALAR_PH:label %.*]], [[VECTOR_PH:label %.*]]
 ;
 entry:
   br label %loop
@@ -378,6 +429,65 @@ loop:
   store i64 %l.1, ptr %gep.dst.iv, align 8
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
+define void @remove_diff_checks_via_guards(i32 %x, i32 %y, ptr %A) {
+; CHECK-LABEL: define void @remove_diff_checks_via_guards(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[OFFSET:%.*]] = sub i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[OFFSET]], 0
+; CHECK-NEXT:    br i1 [[CMP]], [[EXIT:label %.*]], label %[[LOOP_PREHEADER:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP1]], i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[SMAX2]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i32 [[TMP2]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP3]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK:       [[VECTOR_SCEVCHECK]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP5]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[SMAX]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[TMP6]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[SMAX]], 4294967295
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[SMAX]] to i32
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp slt i32 [[TMP11]], [[OFFSET]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[SMAX]], 4294967295
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP9]], [[TMP14]]
+; CHECK-NEXT:    br i1 [[TMP15]], [[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = sext i32 [[OFFSET]] to i64
+; CHECK-NEXT:    [[TMP17:%.*]] = shl nsw i64 [[TMP16]], 2
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP17]], 16
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], [[VECTOR_PH1:label %.*]]
+;
+entry:
+  %offset = sub i32 %x, %y
+  %cmp = icmp sge i32 %offset, 0
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.ext = sext i32 %iv to i64
+  %gep.A = getelementptr i32, ptr %A, i64 %iv.ext
+  %l = load i32, ptr %gep.A, align 1
+  %iv.offset = add i32 %iv, %offset
+  %iv.offset.ext = sext i32 %iv.offset to i64
+  %gep.A.offset = getelementptr i32, ptr %A, i64 %iv.offset.ext
+  store i32 %l, ptr %gep.A.offset, align 1
+  %iv.next = add i32 %iv, 1
+  %ec = icmp sgt i32 %iv, %x
   br i1 %ec, label %exit, label %loop
 
 exit:

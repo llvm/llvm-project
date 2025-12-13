@@ -402,7 +402,7 @@ TEST_F(EnvironmentTest,
   // `Target<&S::accessor>`.
   Environment Env(DAContext, *Fun);
   Env.initialize();
-  EXPECT_THAT(DAContext.getModeledFields(QualType(Struct->getTypeForDecl(), 0)),
+  EXPECT_THAT(DAContext.getModeledFields(Context.getCanonicalTagType(Struct)),
               Contains(Member));
 }
 

@@ -14,14 +14,14 @@
 ; CHECK: [[G:@[0-9]+]] = private constant { [2048 x i8] } zeroinitializer
 ; CHECK: [[B:@[0-9]+]] = private constant [258 x i8] c"\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01"
 
-; CHECK: @__typeid_typeid1_global_addr = hidden alias i8, ptr [[G]]
-; X86: @__typeid_typeid1_align = hidden alias i8, inttoptr (i8 1 to ptr)
+; CHECK: @__typeid_typeid1_global_addr = hidden alias i8, getelementptr (i8, ptr [[G]], i64 130)
+; X86: @__typeid_typeid1_align = hidden alias i8, inttoptr (i64 1 to ptr)
 ; X86: @__typeid_typeid1_size_m1 = hidden alias i8, inttoptr (i64 65 to ptr)
 ; CHECK: @__typeid_typeid1_byte_array = hidden alias i8, ptr @bits.1
 ; X86: @__typeid_typeid1_bit_mask = hidden alias i8, inttoptr (i8 2 to ptr)
 
-; CHECK: @__typeid_typeid2_global_addr = hidden alias i8, getelementptr (i8, ptr [[G]], i64 4)
-; X86: @__typeid_typeid2_align = hidden alias i8, inttoptr (i8 2 to ptr)
+; CHECK: @__typeid_typeid2_global_addr = hidden alias i8, getelementptr (i8, ptr [[G]], i64 1032)
+; X86: @__typeid_typeid2_align = hidden alias i8, inttoptr (i64 2 to ptr)
 ; X86: @__typeid_typeid2_size_m1 = hidden alias i8, inttoptr (i64 257 to ptr)
 ; CHECK: @__typeid_typeid2_byte_array = hidden alias i8, ptr @bits
 ; X86: @__typeid_typeid2_bit_mask = hidden alias i8, inttoptr (i8 1 to ptr)

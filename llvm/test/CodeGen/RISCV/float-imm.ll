@@ -4,31 +4,24 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64f | FileCheck %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfinx -verify-machineinstrs < %s \
-; RUN:   -target-abi=ilp32 | FileCheck --check-prefixes=CHECKZFINX,RV32ZFINX %s
+; RUN:   -target-abi=ilp32 | FileCheck --check-prefixes=CHECKZFINX %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfinx -verify-machineinstrs < %s \
-; RUN:   -target-abi=lp64 | FileCheck --check-prefixes=CHECKZFINX,RV64ZFINX %s
+; RUN:   -target-abi=lp64 | FileCheck --check-prefixes=CHECKZFINX %s
 
-; TODO: constant pool shouldn't be necessary for RV64IF.
 define float @float_imm() nounwind {
 ; CHECK-LABEL: float_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI0_0)
-; CHECK-NEXT:    flw fa0, %lo(.LCPI0_0)(a0)
+; CHECK-NEXT:    lui a0, 263313
+; CHECK-NEXT:    addi a0, a0, -37
+; CHECK-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NEXT:    ret
 ;
-; RV32ZFINX-LABEL: float_imm:
-; RV32ZFINX:       # %bb.0:
-; RV32ZFINX-NEXT:    lui a0, 263313
-; RV32ZFINX-NEXT:    addi a0, a0, -37
-; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
-; RV32ZFINX-NEXT:    ret
-;
-; RV64ZFINX-LABEL: float_imm:
-; RV64ZFINX:       # %bb.0:
-; RV64ZFINX-NEXT:    lui a0, 263313
-; RV64ZFINX-NEXT:    addiw a0, a0, -37
-; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
-; RV64ZFINX-NEXT:    ret
+; CHECKZFINX-LABEL: float_imm:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    lui a0, 263313
+; CHECKZFINX-NEXT:    addi a0, a0, -37
+; CHECKZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; CHECKZFINX-NEXT:    ret
   ret float 3.14159274101257324218750
 }
 

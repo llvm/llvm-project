@@ -90,6 +90,14 @@ def err_unterminated___pragma : Error<"missing terminating ')' character">;
 
 def err_conflict_marker : Error<"version control conflict marker in file">;
 
+def err_counter_overflow : Error<
+  "'__COUNTER__' value cannot exceed 2'147'483'647">;
+def ext_counter : Extension<
+  "'__COUNTER__' is a C2y extension">, InGroup<C2y>;
+def warn_counter : Warning<
+  "'__COUNTER__' is incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
+
 def err_raw_delim_too_long : Error<
   "raw string delimiter longer than 16 characters"
   "; use PREFIX( )PREFIX to delimit raw string">;
@@ -421,6 +429,9 @@ def warn_pp_macro_is_reserved_attribute_id : Warning<
 def warn_pp_objc_macro_redef_ignored : Warning<
   "ignoring redefinition of Objective-C qualifier macro">,
   InGroup<DiagGroup<"objc-macro-redefinition">>;
+def warn_pp_identifier_is_cpp_keyword : Warning<
+  "identifier %0 conflicts with a C++ keyword">,
+  InGroup<CppKeywordInC>, DefaultIgnore;
 
 def pp_invalid_string_literal : Warning<
   "invalid string literal, ignoring final '\\'">;
@@ -458,6 +469,8 @@ def warn_compat_pp_embed_directive : Warning<
   InGroup<CPre23Compat>, DefaultIgnore;
 def err_pp_embed_dup_params : Error<
   "cannot specify parameter '%0' twice in the same '#embed' directive">;
+def err_pp_embed_device_file : Error<
+  "device files are not yet supported by '#embed' directive">;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
@@ -689,6 +702,9 @@ def err_pragma_push_pop_macro_malformed : Error<
 def warn_pragma_pop_macro_no_push : Warning<
    "pragma pop_macro could not pop '%0', no matching push_macro">,
   InGroup<IgnoredPragmas>;
+def warn_pargma_push_pop_macro_empty_string : Warning<
+   "'#pragma %select{push_macro|pop_macro}0' expected a non-empty string">,
+  InGroup<IgnoredPragmas>;
 def warn_pragma_message : Warning<"%0">,
    InGroup<PoundPragmaMessage>, DefaultWarnNoWerror;
 def err_pragma_message : Error<"%0">;
@@ -836,6 +852,12 @@ def warn_pp_date_time : Warning<
   ShowInSystemHeader, DefaultIgnore, InGroup<DiagGroup<"date-time">>;
 
 // Module map parsing
+def remark_mmap_parse : Remark<
+  "parsing modulemap '%0'">, ShowInSystemHeader, InGroup<ModuleMap>;
+def remark_mmap_load : Remark<
+  "loading modulemap '%0'">, ShowInSystemHeader, InGroup<ModuleMap>;
+def remark_mmap_load_module : Remark<
+  "loading parsed module '%0'">, ShowInSystemHeader, InGroup<ModuleMap>;
 def err_mmap_unknown_token : Error<"skipping stray token">;
 def err_mmap_expected_module : Error<"expected module declaration">;
 def err_mmap_expected_module_name : Error<"expected module name">;
@@ -937,6 +959,10 @@ def warn_quoted_include_in_framework_header : Warning<
 def warn_framework_include_private_from_public : Warning<
   "public framework header includes private framework header '%0'"
   >, InGroup<FrameworkIncludePrivateFromPublic>;
+def warn_header_shadowing : Warning<
+  "multiple candidates for header '%0' found; "
+  "directory '%1' chosen, ignoring others including '%2'">,
+  InGroup<ShadowHeader>, DefaultIgnore;
 def warn_deprecated_module_dot_map : Warning<
   "'%0' as a module map name is deprecated, rename it to %select{module.modulemap|module.private.modulemap}1%select{| in the 'Modules' directory of the framework}2">,
   InGroup<DeprecatedModuleDotMap>;

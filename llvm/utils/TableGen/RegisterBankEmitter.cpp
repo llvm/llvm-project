@@ -30,7 +30,7 @@ namespace {
 class RegisterBank {
 
   /// A vector of register classes that are included in the register bank.
-  typedef std::vector<const CodeGenRegisterClass *> RegisterClassesTy;
+  using RegisterClassesTy = std::vector<const CodeGenRegisterClass *>;
 
 private:
   const Record &TheDef;
@@ -100,9 +100,8 @@ public:
     return RCsWithLargestRegSize[HwMode];
   }
 
-  iterator_range<typename RegisterClassesTy::const_iterator>
-  register_classes() const {
-    return llvm::make_range(RCs.begin(), RCs.end());
+  iterator_range<RegisterClassesTy::const_iterator> register_classes() const {
+    return RCs;
   }
 };
 
@@ -179,7 +178,7 @@ static void visitRegisterBankClasses(
     const CodeGenRegBank &RegisterClassHierarchy,
     const CodeGenRegisterClass *RC, const Twine &Kind,
     std::function<void(const CodeGenRegisterClass *, StringRef)> VisitFn,
-    SmallPtrSetImpl<const CodeGenRegisterClass *> &VisitedRCs) {
+    DenseSet<const CodeGenRegisterClass *> &VisitedRCs) {
 
   // Make sure we only visit each class once to avoid infinite loops.
   if (!VisitedRCs.insert(RC).second)
@@ -370,8 +369,9 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   if (HasAmbigousOrMissingEntry) {
     OS << "    if (RegBankID != InvalidRegBankID)\n"
           "      return getRegBank(RegBankID);\n";
-  } else
+  } else {
     OS << "    return getRegBank(RegBankID);\n";
+  }
   OS << "  }\n"
         "  llvm_unreachable(llvm::Twine(\"Target needs to handle register "
         "class ID "
@@ -390,7 +390,7 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
   Timer.startTimer("Analyze records");
   std::vector<RegisterBank> Banks;
   for (const auto &V : Records.getAllDerivedDefinitions("RegisterBank")) {
-    SmallPtrSet<const CodeGenRegisterClass *, 8> VisitedRCs;
+    DenseSet<const CodeGenRegisterClass *> VisitedRCs;
     RegisterBank Bank(*V, CGH.getNumModeIds());
 
     for (const CodeGenRegisterClass *RC :
