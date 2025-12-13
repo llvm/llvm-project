@@ -49,7 +49,7 @@ void ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
   /// device-side async tokens cannot be materialized in nvvm. We just
   /// convert them to a dummy i32 type in order to easily drop them during
   /// conversion.
-  populateCommonNVGPUTypeAndAttributeConversions(llvmTypeConverter);
+  nvgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
   llvmTypeConverter.addConversion([&](DeviceAsyncTokenType type) -> Type {
     return llvmTypeConverter.convertType(
         IntegerType::get(type.getContext(), 32));

@@ -63,7 +63,7 @@ using namespace mlir::transform::gpu;
 void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
-  populateCommonNVGPUTypeAndAttributeConversions(llvmTypeConverter);
+  nvgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
   // Used in GPUToNVVM/WmmaOpsToNvvm.cpp so attaching here for now.
   // TODO: We should have a single to_nvvm_type_converter.
   llvmTypeConverter.addConversion(
@@ -112,7 +112,7 @@ LogicalResult transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
 void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
-  populateCommonAMDGPUTypeAndAttributeConversions(llvmTypeConverter);
+  amdgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
   FailureOr<amdgpu::Chipset> maybeChipset =
       amdgpu::Chipset::parse(getChipset());
   assert(llvm::succeeded(maybeChipset) && "expected valid chipset");

@@ -447,7 +447,7 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
 }
 
 void mlir::configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter) {
-  populateCommonNVGPUTypeAndAttributeConversions(converter);
+  nvgpu::populateCommonGPUTypeAndAttributeConversions(converter);
 
   // Lowering for MMAMatrixType.
   converter.addConversion([&](gpu::MMAMatrixType type) -> Type {

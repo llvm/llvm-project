@@ -35,10 +35,11 @@ MemRefType getMBarrierMemrefType(MLIRContext *context,
                                  MBarrierGroupType barrierType);
 } // namespace nvgpu
 
+namespace nvgpu {
 /// Remap common GPU memory spaces (Workgroup, Private, etc) to LLVM address
 /// spaces.
-void populateCommonNVGPUTypeAndAttributeConversions(
-    TypeConverter &typeConverter);
+void populateCommonGPUTypeAndAttributeConversions(TypeConverter &typeConverter);
+} // namespace nvgpu
 
 void populateNVGPUToNVVMConversionPatterns(const LLVMTypeConverter &converter,
                                            RewritePatternSet &patterns);

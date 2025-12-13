@@ -401,7 +401,7 @@ struct ConvertNVGPUToNVVMPass
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext(), options);
     IRRewriter rewriter(&getContext());
-    populateCommonNVGPUTypeAndAttributeConversions(converter);
+    nvgpu::populateCommonGPUTypeAndAttributeConversions(converter);
 
     /// device-side async tokens cannot be materialized in nvvm. We just
     /// convert them to a dummy i32 type in order to easily drop them during
@@ -1708,7 +1708,7 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
 };
 } // namespace
 
-void mlir::populateCommonNVGPUTypeAndAttributeConversions(
+void mlir::nvgpu::populateCommonGPUTypeAndAttributeConversions(
     TypeConverter &typeConverter) {
   // NVVM uses alloca in the default address space to represent private
   // memory allocations, so drop private annotations. NVVM uses address
