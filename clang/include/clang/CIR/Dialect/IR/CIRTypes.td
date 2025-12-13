@@ -422,8 +422,9 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 ]> {
   let summary = "CIR vector type";
   let description = [{
-    The `!cir.vector` type represents a fixed-size, one-dimensional vector.
-    It takes two parameters: the element type and the number of elements.
+    The `!cir.vector` type represents a one-dimensional vector.
+    It takes three parameters: the element type, the number of elements and the
+    scalability flag (optional, defaults to `false`).
 
     Syntax:
 
@@ -445,7 +446,8 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
   let parameters = (ins
     CIR_VectorElementType:$elementType,
-    "uint64_t":$size
+    "uint64_t":$size,
+    OptionalParameter<"bool">:$isScalable
   );
 
   let assemblyFormat = [{
@@ -454,9 +456,10 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$elementType, "uint64_t":$size
+      "mlir::Type":$elementType, "uint64_t":$size, CArg<"bool",
+      "false">:$isScalable
     ), [{
-        return $_get(elementType.getContext(), elementType, size);
+        return $_get(elementType.getContext(), elementType, size, isScalable);
     }]>,
   ];
 
@@ -467,6 +470,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   }];
 
   let genVerifyDecl = 1;
+  let skipDefaultBuilders = 1;
 }
 
 //===----------------------------------------------------------------------===//

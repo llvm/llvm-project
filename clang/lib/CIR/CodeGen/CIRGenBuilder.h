@@ -628,8 +628,8 @@ public:
   createVecShuffle(mlir::Location loc, mlir::Value vec1, mlir::Value vec2,
                    llvm::ArrayRef<mlir::Attribute> maskAttrs) {
     auto vecType = mlir::cast<cir::VectorType>(vec1.getType());
-    auto resultTy = cir::VectorType::get(getContext(), vecType.getElementType(),
-                                         maskAttrs.size());
+    auto resultTy =
+        cir::VectorType::get(vecType.getElementType(), maskAttrs.size());
     return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, vec2,
                                      getArrayAttr(maskAttrs));
   }

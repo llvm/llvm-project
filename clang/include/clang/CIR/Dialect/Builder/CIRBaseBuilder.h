@@ -596,8 +596,7 @@ public:
     VectorType vecCast = mlir::cast<VectorType>(lhs.getType());
     IntType integralTy =
         getSIntNTy(getCIRIntOrFloatBitWidth(vecCast.getElementType()));
-    VectorType integralVecTy =
-        VectorType::get(context, integralTy, vecCast.getSize());
+    VectorType integralVecTy = VectorType::get(integralTy, vecCast.getSize());
     return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs);
   }
 
