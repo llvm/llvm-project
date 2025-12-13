@@ -1,5 +1,4 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1030 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
-// XFAIL: *
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1031 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1032 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1033 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
