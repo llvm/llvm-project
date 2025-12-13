@@ -25,8 +25,8 @@ class MachineInstr;
 namespace rdf {
 
   struct CopyPropagation {
-    CopyPropagation(DataFlowGraph &dfg) : MDT(dfg.getDT()), DFG(dfg),
-        RDefMap(std::less<RegisterRef>(DFG.getPRI())) {}
+    CopyPropagation(DataFlowGraph &dfg)
+        : MDT(dfg.getDT()), DFG(dfg), RDefMap(RegisterRefLess(DFG.getPRI())) {}
 
     virtual ~CopyPropagation() = default;
 
@@ -35,7 +35,7 @@ namespace rdf {
     bool trace() const { return Trace; }
     DataFlowGraph &getDFG() { return DFG; }
 
-    using EqualityMap = std::map<RegisterRef, RegisterRef>;
+    using EqualityMap = std::map<RegisterRef, RegisterRef, RegisterRefLess>;
     virtual bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM);
 
   private:
@@ -45,7 +45,7 @@ namespace rdf {
     bool Trace = false;
 
     // map: register -> (map: stmt -> reaching def)
-    std::map<RegisterRef,std::map<NodeId,NodeId>> RDefMap;
+    std::map<RegisterRef, std::map<NodeId, NodeId>, RegisterRefLess> RDefMap;
     // map: statement -> (map: dst reg -> src reg)
     std::map<NodeId, EqualityMap> CopyMap;
     std::vector<NodeId> Copies;

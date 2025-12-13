@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/opencl-base.h>
 
 uint __clc_r600_get_global_size_x(void) __asm("llvm.r600.read.global.size.x");
 uint __clc_r600_get_global_size_y(void) __asm("llvm.r600.read.global.size.y");

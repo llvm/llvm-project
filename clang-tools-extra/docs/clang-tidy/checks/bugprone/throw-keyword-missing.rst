@@ -3,9 +3,10 @@
 bugprone-throw-keyword-missing
 ==============================
 
-Warns about a potentially missing ``throw`` keyword. If a temporary object is created, but the
-object's type derives from (or is the same as) a class that has 'EXCEPTION', 'Exception' or
-'exception' in its name, we can assume that the programmer's intention was to throw that object.
+Warns about a potentially missing ``throw`` keyword. If a temporary object
+is created, but the object's type derives from (or is the same as) a class
+that has 'EXCEPTION', 'Exception' or 'exception' in its name, we can assume
+that the programmer's intention was to throw that object.
 
 Example:
 

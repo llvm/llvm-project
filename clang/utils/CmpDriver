@@ -5,6 +5,7 @@ A simple utility that compares tool invocations and exit codes issued by
 compiler drivers that support -### (e.g. gcc and clang).
 """
 
+from itertools import zip_longest
 import subprocess
 
 def splitArgs(s):
@@ -22,7 +23,7 @@ def splitArgs(s):
         elif inQuote:
             if c == '\\':
                 current += c
-                current += it.next()
+                current += next(it)
             else:
                 current += c
         elif not c.isspace():
@@ -135,77 +136,77 @@ def main():
 
     # Compare stdout.
     if infoA.stdout != infoB.stdout:
-        print '-- STDOUT DIFFERS -'
-        print 'A OUTPUT: ',infoA.stdout
-        print 'B OUTPUT: ',infoB.stdout
-        print
+        print('-- STDOUT DIFFERS -')
+        print('A OUTPUT: ',infoA.stdout)
+        print('B OUTPUT: ',infoB.stdout)
+        print()
 
         diff = ZipperDiff(infoA.stdout.split('\n'),
                           infoB.stdout.split('\n'))
         for i,(aElt,bElt) in enumerate(diff.getDiffs()):
             if aElt is None:
-                print 'A missing: %s' % bElt
+                print('A missing: %s' % bElt)
             elif bElt is None:
-                print 'B missing: %s' % aElt
+                print('B missing: %s' % aElt)
             else:
-                print 'mismatch: A: %s' % aElt
-                print '          B: %s' % bElt
+                print('mismatch: A: %s' % aElt)
+                print('          B: %s' % bElt)
 
         differ = True
 
     # Compare stderr.
     if infoA.stderr != infoB.stderr:
-        print '-- STDERR DIFFERS -'
-        print 'A STDERR: ',infoA.stderr
-        print 'B STDERR: ',infoB.stderr
-        print
+        print('-- STDERR DIFFERS -')
+        print('A STDERR: ',infoA.stderr)
+        print('B STDERR: ',infoB.stderr)
+        print()
 
         diff = ZipperDiff(infoA.stderr.split('\n'),
                           infoB.stderr.split('\n'))
         for i,(aElt,bElt) in enumerate(diff.getDiffs()):
             if aElt is None:
-                print 'A missing: %s' % bElt
+                print('A missing: %s' % bElt)
             elif bElt is None:
-                print 'B missing: %s' % aElt
+                print('B missing: %s' % aElt)
             else:
-                print 'mismatch: A: %s' % aElt
-                print '          B: %s' % bElt
+                print('mismatch: A: %s' % aElt)
+                print('          B: %s' % bElt)
 
         differ = True
 
     # Compare commands.
-    for i,(a,b) in enumerate(map(None, infoA.commands, infoB.commands)):
+    for i,(a,b) in enumerate(zip_longest(infoA.commands, infoB.commands, fillvalue=None)):
         if a is None:
-            print 'A MISSING:',' '.join(b)
+            print('A MISSING:',' '.join(b))
             differ = True
             continue
         elif b is None:
-            print 'B MISSING:',' '.join(a)
+            print('B MISSING:',' '.join(a))
             differ = True
             continue
 
         diff = DriverZipperDiff(a,b)
         diffs = list(diff.getDiffs())
         if diffs:
-            print '-- COMMAND %d DIFFERS -' % i
-            print 'A COMMAND:',' '.join(a)
-            print 'B COMMAND:',' '.join(b)
-            print
+            print('-- COMMAND %d DIFFERS -' % i)
+            print('A COMMAND:',' '.join(a))
+            print('B COMMAND:',' '.join(b))
+            print()
             for i,(aElt,bElt) in enumerate(diffs):
                 if aElt is None:
-                    print 'A missing: %s' % bElt
+                    print('A missing: %s' % bElt)
                 elif bElt is None:
-                    print 'B missing: %s' % aElt
+                    print('B missing: %s' % aElt)
                 else:
-                    print 'mismatch: A: %s' % aElt
-                    print '          B: %s' % bElt
+                    print('mismatch: A: %s' % aElt)
+                    print('          B: %s' % bElt)
             differ = True
     
     # Compare result codes.
     if infoA.exitCode != infoB.exitCode:
-        print '-- EXIT CODES DIFFER -'
-        print 'A: ',infoA.exitCode
-        print 'B: ',infoB.exitCode
+        print('-- EXIT CODES DIFFER -')
+        print('A: ',infoA.exitCode)
+        print('B: ',infoB.exitCode)
         differ = True
 
     if differ:

@@ -1,0 +1,457 @@
+UNSUPPORTED: true
+## Marking as unsupported for now, as this test needs an extra 8GB of disk space.
+## This test verifies that llvm-dwp does not trigger a "no compile unit found" error 
+## in 'soft-stop' scenario, specifically when the overflow happens to be in a type unit. 
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t/main.dwo -dwarf-version=5 %t/main.s -o %t/main.o
+RUN: llvm-dwp %t/main.dwo -continue-on-cu-index-overflow=soft-stop -o %t/main.dwp 2>&1 | FileCheck %s
+
+CHECK: warning: debug_info Section Contribution Offset overflow 4G. Previous Offset {{.*}}, After overflow offset {{.*}}.
+CHECK-NOT: error: no compile unit found in file: {{.*}}
+
+#--- main.s
+# Note: This file is compiled from the following code, for 
+# 		the purpose of creating an overflowed dwo section.
+#       Add a '.fill' directive after the first TU to force
+#       an overflow in the subsequent TU.
+#
+# clang++ -g -gsplit-dwarf -gdwarf-5 -fdebug-types-section -S main.cpp
+#
+#enum class DebugType {
+#    INFO,
+#    WARNING,
+#    ERROR,
+#    CRITICAL,
+#    DEBUG
+#} g = DebugType::INFO; 
+#
+#int main() {
+#    return 0;
+#}
+
+	.file	"main.cpp"
+	.file	0 "main.cpp" md5 1234567890123456789
+	.section	.debug_info.dwo,"e",@progbits
+	.long	.Overflow_TU_end-.Overflow_TU_start # Length of Unit
+.Overflow_TU_start:
+	.short	5                               # DWARF version number
+	.byte	6                               # DWARF Unit Type
+	.byte	8                               # Address Size (in bytes)
+	.long	0                               # Offset Into Abbrev. Section
+	.quad	1234567890123456789             # Type Signature
+	.long	33                              # Type DIE Offset
+	.byte	1                               # Abbrev [1] 0x18:0x27 DW_TAG_type_unit
+	.short	33                              # DW_AT_language
+	.byte	1                               # DW_AT_comp_dir
+	.byte	2                               # DW_AT_dwo_name
+	.long	0                               # DW_AT_stmt_list
+	.byte	2                               # Abbrev [2] 0x21:0x19 DW_TAG_enumeration_type
+	.long	58                              # DW_AT_type
+	.fill   4294967233 # 2^32 - 1 - 44, padding with `.fill` directive to make an offset overflow
+.Overflow_TU_end:
+	.section	.debug_info.dwo,"e",@progbits
+	.long	.Ldebug_info_dwo_end0-.Ldebug_info_dwo_start0 # Length of Unit
+.Ldebug_info_dwo_start0:
+	.short	5                               # DWARF version number
+	.byte	6                               # DWARF Unit Type
+	.byte	8                               # Address Size (in bytes)
+	.long	0                               # Offset Into Abbrev. Section
+	.quad	2124196671656770956             # Type Signature
+	.long	33                              # Type DIE Offset
+	.byte	1                               # Abbrev [1] 0x18:0x27 DW_TAG_type_unit
+	.short	33                              # DW_AT_language
+	.byte	1                               # DW_AT_comp_dir
+	.byte	2                               # DW_AT_dwo_name
+	.long	0                               # DW_AT_stmt_list
+	.byte	2                               # Abbrev [2] 0x21:0x19 DW_TAG_enumeration_type
+	.long	58                              # DW_AT_type
+                                        # DW_AT_enum_class
+	.byte	9                               # DW_AT_name
+	.byte	4                               # DW_AT_byte_size
+	.byte	0                               # DW_AT_decl_file
+	.byte	1                               # DW_AT_decl_line
+	.byte	3                               # Abbrev [3] 0x2a:0x3 DW_TAG_enumerator
+	.byte	4                               # DW_AT_name
+	.byte	0                               # DW_AT_const_value
+	.byte	3                               # Abbrev [3] 0x2d:0x3 DW_TAG_enumerator
+	.byte	5                               # DW_AT_name
+	.byte	1                               # DW_AT_const_value
+	.byte	3                               # Abbrev [3] 0x30:0x3 DW_TAG_enumerator
+	.byte	6                               # DW_AT_name
+	.byte	2                               # DW_AT_const_value
+	.byte	3                               # Abbrev [3] 0x33:0x3 DW_TAG_enumerator
+	.byte	7                               # DW_AT_name
+	.byte	3                               # DW_AT_const_value
+	.byte	3                               # Abbrev [3] 0x36:0x3 DW_TAG_enumerator
+	.byte	8                               # DW_AT_name
+	.byte	4                               # DW_AT_const_value
+	.byte	0                               # End Of Children Mark
+	.byte	4                               # Abbrev [4] 0x3a:0x4 DW_TAG_base_type
+	.byte	3                               # DW_AT_name
+	.byte	5                               # DW_AT_encoding
+	.byte	4                               # DW_AT_byte_size
+	.byte	0                               # End Of Children Mark
+.Ldebug_info_dwo_end0:
+	.text
+	.globl	main                            # -- Begin function main
+	.p2align	4
+	.type	main,@function
+main:                                   # @main
+.Lfunc_begin0:
+	.cfi_startproc
+# %bb.0:                                # %entry
+	.loc	0 10 5 prologue_end             # main.cpp:10:5
+	xorl	%eax, %eax
+	retq
+.Ltmp0:
+.Lfunc_end0:
+	.size	main, .Lfunc_end0-main
+	.cfi_endproc
+                                        # -- End function
+	.section	.debug_abbrev,"",@progbits
+	.byte	1                               # Abbreviation Code
+	.byte	74                              # DW_TAG_skeleton_unit
+	.byte	0                               # DW_CHILDREN_no
+	.byte	16                              # DW_AT_stmt_list
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	114                             # DW_AT_str_offsets_base
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	27                              # DW_AT_comp_dir
+	.byte	37                              # DW_FORM_strx1
+	.ascii	"\264B"                         # DW_AT_GNU_pubnames
+	.byte	25                              # DW_FORM_flag_present
+	.byte	118                             # DW_AT_dwo_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	17                              # DW_AT_low_pc
+	.byte	27                              # DW_FORM_addrx
+	.byte	18                              # DW_AT_high_pc
+	.byte	6                               # DW_FORM_data4
+	.byte	115                             # DW_AT_addr_base
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	0                               # EOM(3)
+	.section	.debug_info,"",@progbits
+.Lcu_begin0:
+	.long	.Ldebug_info_end0-.Ldebug_info_start0 # Length of Unit
+.Ldebug_info_start0:
+	.short	5                               # DWARF version number
+	.byte	4                               # DWARF Unit Type
+	.byte	8                               # Address Size (in bytes)
+	.long	.debug_abbrev                   # Offset Into Abbrev. Section
+	.quad	9071746638605020729
+	.byte	1                               # Abbrev [1] 0x14:0x14 DW_TAG_skeleton_unit
+	.long	.Lline_table_start0             # DW_AT_stmt_list
+	.long	.Lstr_offsets_base0             # DW_AT_str_offsets_base
+	.byte	0                               # DW_AT_comp_dir
+                                        # DW_AT_GNU_pubnames
+	.byte	1                               # DW_AT_dwo_name
+	.byte	0                               # DW_AT_low_pc
+	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
+	.long	.Laddr_table_base0              # DW_AT_addr_base
+.Ldebug_info_end0:
+	.section	.debug_str_offsets,"",@progbits
+	.long	12                              # Length of String Offsets Set
+	.short	5
+	.short	0
+.Lstr_offsets_base0:
+	.section	.debug_str,"MS",@progbits,1
+.Lskel_string0:
+	.asciz	"build" # string offset=0
+.Lskel_string1:
+	.asciz	"main.dwo"                      # string offset=45
+	.section	.debug_str_offsets,"",@progbits
+	.long	.Lskel_string0
+	.long	.Lskel_string1
+	.section	.debug_str_offsets.dwo,"e",@progbits
+	.long	56                              # Length of String Offsets Set
+	.short	5
+	.short	0
+	.section	.debug_str.dwo,"eMS",@progbits,1
+.Linfo_string0:
+	.asciz	"g"                             # string offset=0
+.Linfo_string1:
+	.asciz	"build" # string offset=2
+.Linfo_string2:
+	.asciz	"main.dwo"                      # string offset=47
+.Linfo_string3:
+	.asciz	"int"                           # string offset=56
+.Linfo_string4:
+	.asciz	"INFO"                          # string offset=60
+.Linfo_string5:
+	.asciz	"WARNING"                       # string offset=65
+.Linfo_string6:
+	.asciz	"ERROR"                         # string offset=73
+.Linfo_string7:
+	.asciz	"CRITICAL"                      # string offset=79
+.Linfo_string8:
+	.asciz	"DEBUG"                         # string offset=88
+.Linfo_string9:
+	.asciz	"DebugType"                     # string offset=94
+.Linfo_string10:
+	.asciz	"main"                          # string offset=104
+.Linfo_string11:
+	.asciz	"clang version 22.0.0git" # string offset=109
+.Linfo_string12:
+	.asciz	"main.cpp"                      # string offset=216
+	.section	.debug_str_offsets.dwo,"e",@progbits
+	.long	0
+	.long	2
+	.long	47
+	.long	56
+	.long	60
+	.long	65
+	.long	73
+	.long	79
+	.long	88
+	.long	94
+	.long	104
+	.long	109
+	.long	216
+	.section	.debug_info.dwo,"e",@progbits
+	.long	.Ldebug_info_dwo_end1-.Ldebug_info_dwo_start1 # Length of Unit
+.Ldebug_info_dwo_start1:
+	.short	5                               # DWARF version number
+	.byte	5                               # DWARF Unit Type
+	.byte	8                               # Address Size (in bytes)
+	.long	0                               # Offset Into Abbrev. Section
+	.quad	9071746638605020729
+	.byte	5                               # Abbrev [5] 0x14:0x2b DW_TAG_compile_unit
+	.byte	11                              # DW_AT_producer
+	.short	33                              # DW_AT_language
+	.byte	12                              # DW_AT_name
+	.byte	2                               # DW_AT_dwo_name
+	.byte	6                               # Abbrev [6] 0x1a:0x8 DW_TAG_variable
+	.byte	0                               # DW_AT_name
+	.long	34                              # DW_AT_type
+                                        # DW_AT_external
+	.byte	0                               # DW_AT_decl_file
+	.byte	7                               # DW_AT_decl_line
+	.byte	7                               # Abbrev [7] 0x22:0x9 DW_TAG_enumeration_type
+                                        # DW_AT_declaration
+	.quad	2124196671656770956             # DW_AT_signature
+	.byte	8                               # Abbrev [8] 0x2b:0xf DW_TAG_subprogram
+	.byte	0                               # DW_AT_low_pc
+	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
+	.byte	1                               # DW_AT_frame_base
+	.byte	87
+                                        # DW_AT_call_all_calls
+	.byte	10                              # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	9                               # DW_AT_decl_line
+	.long	58                              # DW_AT_type
+                                        # DW_AT_external
+	.byte	4                               # Abbrev [4] 0x3a:0x4 DW_TAG_base_type
+	.byte	3                               # DW_AT_name
+	.byte	5                               # DW_AT_encoding
+	.byte	4                               # DW_AT_byte_size
+	.byte	0                               # End Of Children Mark
+.Ldebug_info_dwo_end1:
+	.section	.debug_abbrev.dwo,"e",@progbits
+	.byte	1                               # Abbreviation Code
+	.byte	65                              # DW_TAG_type_unit
+	.byte	1                               # DW_CHILDREN_yes
+	.byte	19                              # DW_AT_language
+	.byte	5                               # DW_FORM_data2
+	.byte	27                              # DW_AT_comp_dir
+	.byte	37                              # DW_FORM_strx1
+	.byte	118                             # DW_AT_dwo_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	16                              # DW_AT_stmt_list
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	2                               # Abbreviation Code
+	.byte	4                               # DW_TAG_enumeration_type
+	.byte	1                               # DW_CHILDREN_yes
+	.byte	73                              # DW_AT_type
+	.byte	19                              # DW_FORM_ref4
+	.byte	109                             # DW_AT_enum_class
+	.byte	25                              # DW_FORM_flag_present
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	11                              # DW_AT_byte_size
+	.byte	11                              # DW_FORM_data1
+	.byte	58                              # DW_AT_decl_file
+	.byte	11                              # DW_FORM_data1
+	.byte	59                              # DW_AT_decl_line
+	.byte	11                              # DW_FORM_data1
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	3                               # Abbreviation Code
+	.byte	40                              # DW_TAG_enumerator
+	.byte	0                               # DW_CHILDREN_no
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	28                              # DW_AT_const_value
+	.byte	13                              # DW_FORM_sdata
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	4                               # Abbreviation Code
+	.byte	36                              # DW_TAG_base_type
+	.byte	0                               # DW_CHILDREN_no
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	62                              # DW_AT_encoding
+	.byte	11                              # DW_FORM_data1
+	.byte	11                              # DW_AT_byte_size
+	.byte	11                              # DW_FORM_data1
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	5                               # Abbreviation Code
+	.byte	17                              # DW_TAG_compile_unit
+	.byte	1                               # DW_CHILDREN_yes
+	.byte	37                              # DW_AT_producer
+	.byte	37                              # DW_FORM_strx1
+	.byte	19                              # DW_AT_language
+	.byte	5                               # DW_FORM_data2
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	118                             # DW_AT_dwo_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	6                               # Abbreviation Code
+	.byte	52                              # DW_TAG_variable
+	.byte	0                               # DW_CHILDREN_no
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	73                              # DW_AT_type
+	.byte	19                              # DW_FORM_ref4
+	.byte	63                              # DW_AT_external
+	.byte	25                              # DW_FORM_flag_present
+	.byte	58                              # DW_AT_decl_file
+	.byte	11                              # DW_FORM_data1
+	.byte	59                              # DW_AT_decl_line
+	.byte	11                              # DW_FORM_data1
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	7                               # Abbreviation Code
+	.byte	4                               # DW_TAG_enumeration_type
+	.byte	0                               # DW_CHILDREN_no
+	.byte	60                              # DW_AT_declaration
+	.byte	25                              # DW_FORM_flag_present
+	.byte	105                             # DW_AT_signature
+	.byte	32                              # DW_FORM_ref_sig8
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	8                               # Abbreviation Code
+	.byte	46                              # DW_TAG_subprogram
+	.byte	0                               # DW_CHILDREN_no
+	.byte	17                              # DW_AT_low_pc
+	.byte	27                              # DW_FORM_addrx
+	.byte	18                              # DW_AT_high_pc
+	.byte	6                               # DW_FORM_data4
+	.byte	64                              # DW_AT_frame_base
+	.byte	24                              # DW_FORM_exprloc
+	.byte	122                             # DW_AT_call_all_calls
+	.byte	25                              # DW_FORM_flag_present
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	58                              # DW_AT_decl_file
+	.byte	11                              # DW_FORM_data1
+	.byte	59                              # DW_AT_decl_line
+	.byte	11                              # DW_FORM_data1
+	.byte	73                              # DW_AT_type
+	.byte	19                              # DW_FORM_ref4
+	.byte	63                              # DW_AT_external
+	.byte	25                              # DW_FORM_flag_present
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	0                               # EOM(3)
+	.section	.debug_line.dwo,"e",@progbits
+.Ltmp1:
+	.long	.Ldebug_line_end0-.Ldebug_line_start0 # unit length
+.Ldebug_line_start0:
+	.short	5
+	.byte	8
+	.byte	0
+	.long	.Lprologue_end0-.Lprologue_start0
+.Lprologue_start0:
+	.byte	1
+	.byte	1
+	.byte	1
+	.byte	-5
+	.byte	14
+	.byte	1
+	.byte	1
+	.byte	1
+	.byte	8
+	.byte	1
+	.ascii	"build"
+	.byte	0
+	.byte	3
+	.byte	1
+	.byte	8
+	.byte	2
+	.byte	15
+	.byte	5
+	.byte	30
+	.byte	1
+	.ascii	"main.cpp"
+	.byte	0
+	.byte	0
+	.byte	0xd1, 0x75, 0xf8, 0xd5
+	.byte	0x53, 0x73, 0x15, 0x7c
+	.byte	0x7f, 0x54, 0x3d, 0xd9
+	.byte	0x1d, 0x3c, 0xa8, 0xb5
+.Lprologue_end0:
+.Ldebug_line_end0:
+	.section	.debug_addr,"",@progbits
+	.long	.Ldebug_addr_end0-.Ldebug_addr_start0 # Length of contribution
+.Ldebug_addr_start0:
+	.short	5                               # DWARF version number
+	.byte	8                               # Address size
+	.byte	0                               # Segment selector size
+.Laddr_table_base0:
+	.quad	.Lfunc_begin0
+.Ldebug_addr_end0:
+	.section	.debug_gnu_pubnames,"",@progbits
+	.long	.LpubNames_end0-.LpubNames_start0 # Length of Public Names Info
+.LpubNames_start0:
+	.short	2                               # DWARF Version
+	.long	.Lcu_begin0                     # Offset of Compilation Unit Info
+	.long	40                              # Compilation Unit Length
+	.long	20                              # DIE offset
+	.byte	16                              # Attributes: TYPE, EXTERNAL
+	.asciz	"INFO"                          # External Name
+	.long	20                              # DIE offset
+	.byte	16                              # Attributes: TYPE, EXTERNAL
+	.asciz	"CRITICAL"                      # External Name
+	.long	20                              # DIE offset
+	.byte	16                              # Attributes: TYPE, EXTERNAL
+	.asciz	"ERROR"                         # External Name
+	.long	20                              # DIE offset
+	.byte	16                              # Attributes: TYPE, EXTERNAL
+	.asciz	"DEBUG"                         # External Name
+	.long	20                              # DIE offset
+	.byte	16                              # Attributes: TYPE, EXTERNAL
+	.asciz	"WARNING"                       # External Name
+	.long	26                              # DIE offset
+	.byte	32                              # Attributes: VARIABLE, EXTERNAL
+	.asciz	"g"                             # External Name
+	.long	43                              # DIE offset
+	.byte	48                              # Attributes: FUNCTION, EXTERNAL
+	.asciz	"main"                          # External Name
+	.long	0                               # End Mark
+.LpubNames_end0:
+	.section	.debug_gnu_pubtypes,"",@progbits
+	.long	.LpubTypes_end0-.LpubTypes_start0 # Length of Public Types Info
+.LpubTypes_start0:
+	.short	2                               # DWARF Version
+	.long	.Lcu_begin0                     # Offset of Compilation Unit Info
+	.long	40                              # Compilation Unit Length
+	.long	34                              # DIE offset
+	.byte	16                              # Attributes: TYPE, EXTERNAL
+	.asciz	"DebugType"                     # External Name
+	.long	58                              # DIE offset
+	.byte	144                             # Attributes: TYPE, STATIC
+	.asciz	"int"                           # External Name
+	.long	0                               # End Mark
+.LpubTypes_end0:
+	.ident	"clang version 22.0.0"
+	.section	".note.GNU-stack","",@progbits
+	.addrsig
+	.section	.debug_line,"",@progbits
+.Lline_table_start0:

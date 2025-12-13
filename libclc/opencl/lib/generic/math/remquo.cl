@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_remquo.h>
-#include <clc/opencl/clc.h>
 
 #define __CLC_BODY <remquo.inc>
 #include <clc/math/gentype.inc>

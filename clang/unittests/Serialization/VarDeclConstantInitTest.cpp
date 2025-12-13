@@ -9,6 +9,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -106,7 +107,7 @@ export namespace Fibonacci
   Invocation->getFrontendOpts().DisableFree = false;
 
   CompilerInstance Instance(std::move(Invocation));
-  Instance.setDiagnostics(Diags.get());
+  Instance.setDiagnostics(Diags);
 
   std::string CacheBMIPath = llvm::Twine(TestDir + "/Cached.pcm").str();
   Instance.getFrontendOpts().OutputFile = CacheBMIPath;

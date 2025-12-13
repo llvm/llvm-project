@@ -11,21 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCWasmStreamer.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
@@ -39,7 +35,7 @@ using namespace llvm;
 MCWasmStreamer::~MCWasmStreamer() = default; // anchor.
 
 void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
-  auto *Symbol = cast<MCSymbolWasm>(S);
+  auto *Symbol = static_cast<MCSymbolWasm *>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
   const MCSectionWasm &Section =
@@ -48,9 +44,9 @@ void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
     Symbol->setTLS();
 }
 
-void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
+void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
                                     uint64_t Offset) {
-  auto *Symbol = cast<MCSymbolWasm>(S);
+  auto *Symbol = static_cast<MCSymbolWasm *>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
 
   const MCSectionWasm &Section =
@@ -61,7 +57,7 @@ void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
 
 void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
-  auto *SectionWasm = cast<MCSectionWasm>(Section);
+  auto *SectionWasm = static_cast<const MCSectionWasm *>(Section);
   const MCSymbol *Grp = SectionWasm->getGroup();
   if (Grp)
     Asm.registerSymbol(*Grp);
@@ -72,8 +68,7 @@ void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 
 bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   assert(Attribute != MCSA_IndirectSymbol && "indirect symbols not supported");
-
-  auto *Symbol = cast<MCSymbolWasm>(S);
+  auto *Symbol = static_cast<MCSymbolWasm *>(S);
 
   // Adding a symbol attribute always introduces the symbol; note that an
   // important side effect of calling registerSymbol here is to register the
@@ -138,7 +133,7 @@ void MCWasmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 }
 
 void MCWasmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
-  cast<MCSymbolWasm>(Symbol)->setSize(Value);
+  static_cast<MCSymbolWasm *>(Symbol)->setSize(Value);
 }
 
 void MCWasmStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
@@ -151,28 +146,8 @@ void MCWasmStreamer::emitIdent(StringRef IdentString) {
   // sections in the object format
 }
 
-void MCWasmStreamer::emitInstToData(const MCInst &Inst,
-                                    const MCSubtargetInfo &STI) {
-  MCAssembler &Assembler = getAssembler();
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  Assembler.getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // Append the encoded instruction to the current data fragment (or create a
-  // new such fragment if the current fragment is not a data fragment).
-  MCDataFragment *DF = getOrCreateDataFragment();
-
-  // Add the fixups and data.
-  for (MCFixup &Fixup : Fixups) {
-    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixup);
-  }
-  DF->setHasInstructions(STI);
-  DF->appendContents(Code);
-}
-
 void MCWasmStreamer::finishImpl() {
-  emitFrames(nullptr);
+  emitFrames();
 
   this->MCObjectStreamer::finishImpl();
 }

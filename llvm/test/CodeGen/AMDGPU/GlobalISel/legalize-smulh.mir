@@ -80,8 +80,7 @@ body: |
     ; GFX8-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[SEXT_INREG]], [[SEXT_INREG1]]
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[MUL]], [[C]](s32)
-    ; GFX8-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ASHR]], 16
-    ; GFX8-NEXT: $vgpr0 = COPY [[SEXT_INREG2]](s32)
+    ; GFX8-NEXT: $vgpr0 = COPY [[ASHR]](s32)
     ;
     ; GFX9-LABEL: name: test_smulh_s16
     ; GFX9: liveins: $vgpr0, $vgpr1
@@ -93,8 +92,7 @@ body: |
     ; GFX9-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[SEXT_INREG]], [[SEXT_INREG1]]
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX9-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[MUL]], [[C]](s32)
-    ; GFX9-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ASHR]], 16
-    ; GFX9-NEXT: $vgpr0 = COPY [[SEXT_INREG2]](s32)
+    ; GFX9-NEXT: $vgpr0 = COPY [[ASHR]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s16) = G_TRUNC %0
@@ -200,9 +198,7 @@ body: |
     ; GFX9-NEXT: [[SEXT_INREG3:%[0-9]+]]:_(s32) = G_SEXT_INREG [[UV3]], 16
     ; GFX9-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[SEXT_INREG2]], [[SEXT_INREG3]]
     ; GFX9-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[MUL1]], [[C]](s32)
-    ; GFX9-NEXT: [[SEXT_INREG4:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ASHR]], 16
-    ; GFX9-NEXT: [[SEXT_INREG5:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ASHR1]], 16
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG4]](s32), [[SEXT_INREG5]](s32)
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ASHR]](s32), [[ASHR1]](s32)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr2_vgpr3

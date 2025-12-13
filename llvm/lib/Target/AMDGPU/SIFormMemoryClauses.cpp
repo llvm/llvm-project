@@ -197,7 +197,9 @@ bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   // pointer becomes dead and could otherwise be reused for destination.
   RPT.advanceToNext();
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
-  unsigned Occupancy = MaxPressure.getOccupancy(*ST);
+  unsigned Occupancy = MaxPressure.getOccupancy(
+      *ST,
+      MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
 
   // Don't push over half the register budget. We don't want to introduce
   // spilling just to form a soft clause.

@@ -149,10 +149,10 @@ exit:
 ;;      for (int k = 0; k < 19; k++)
 ;;        b[i][j][k] = b[i][5][k + 1];
 ;;
-;; The direction vector of `b` is [= * <]. We cannot interchange all the loops.
+;; The direction vector of `b` is [= * *]. We cannot interchange all the loops.
 
 ; CHECK:      Dependency matrix before interchange:
-; CHECK-NEXT: = * <
+; CHECK-NEXT: = * *
 ; CHECK-NEXT: Processing InnerLoopId = 2 and OuterLoopId = 1
 ; CHECK-NEXT: Failed interchange InnerLoopId = 2 and OuterLoopId = 1 due to dependence
 ; CHECK-NEXT: Not interchanging loops. Cannot prove legality.
@@ -175,8 +175,8 @@ for.j.header:
 for.k:
   %k = phi i32 [ 0, %for.j.header ], [ %k.inc, %for.k ]
   %k.inc = add nuw nsw i32 %k, 1
-  %idx.store = getelementptr inbounds [20 x [20 x [20 x i32]]], ptr @b, i32 %i, i32 %j, i32 %k
-  %idx.load = getelementptr inbounds [20 x [20 x [20 x i32]]], ptr @b, i32 %i, i32 5, i32 %k.inc
+  %idx.store = getelementptr inbounds [20 x [20 x [20 x i32]]], ptr @b, i32 0, i32 %i, i32 %j, i32 %k
+  %idx.load = getelementptr inbounds [20 x [20 x [20 x i32]]], ptr @b, i32 0, i32 %i, i32 5, i32 %k.inc
   %0 = load i32, ptr %idx.load, align 4
   store i32 %0, ptr %idx.store, align 4
   %cmp.k = icmp slt i32 %k.inc, 19

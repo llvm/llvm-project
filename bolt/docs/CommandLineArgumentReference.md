@@ -138,6 +138,12 @@
   Dump function CFGs to graphviz format after each stage;enable '-print-loops'
   for color-coded blocks
 
+- `--dump-dot-func=<func1,func2,func3...>`
+
+  Dump function CFGs to graphviz format for specified functions only;
+  takes function name patterns (regex supported). Note: C++ function names
+  must be passed using their mangled names
+
 - `--dump-linux-exceptions`
 
   Dump Linux kernel exception table
@@ -369,16 +375,11 @@
 
 - `--use-old-text`
 
-  Re-use space in old .text if possible (relocation mode)
+  Reuse space in old .text if possible (relocation mode)
 
 - `-v <uint>`
 
   Set verbosity level for diagnostic output
-
-- `--write-dwp`
-
-  Output a single dwarf package file (dwp) instead of multiple non-relocatable
-  dwarf object files (dwo).
 
 ### BOLT optimization options:
 
@@ -631,7 +632,7 @@
 
 - `--inline-memcpy`
 
-  Inline memcpy using 'rep movsb' instruction (X86-only)
+  Inline memcpy using optimized instruction sequences (X86: 'rep movsb', AArch64: width-optimized register operations)
 
 - `--inline-small-functions`
 
@@ -809,6 +810,15 @@
 - `--runtime-instrumentation-lib=<string>`
 
   Specify file name of the runtime instrumentation library
+
+- `--runtime-lib-init-hook=<value>`
+
+  Primary target for hooking runtime library initialization, used in
+  fallback order of availability in input binary (entry_point -> init
+   -> init_array) (default: entry_point)
+  - `entry_point`: use ELF Header Entry Point
+  - `init`: use ELF DT_INIT entry
+  - `init_array`: use ELF .init_array entry
 
 - `--sctc-mode=<value>`
 

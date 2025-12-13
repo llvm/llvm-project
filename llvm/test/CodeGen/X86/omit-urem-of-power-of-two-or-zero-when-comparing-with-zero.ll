@@ -93,20 +93,18 @@ define <4 x i1> @p4_vector_urem_by_const__splat(<4 x i32> %x, <4 x i32> %y) {
 ; SSE2-NEXT:    psrld $1, %xmm0
 ; SSE2-NEXT:    pslld $31, %xmm3
 ; SSE2-NEXT:    por %xmm0, %xmm3
-; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm3, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [715827883,715827883,715827883,715827883]
+; SSE2-NEXT:    pcmpgtd %xmm3, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: p4_vector_urem_by_const__splat:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2863311531,2863311531,2863311531,2863311531]
 ; SSE4-NEXT:    psrld $1, %xmm0
-; SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [715827882,715827882,715827882,715827882]
-; SSE4-NEXT:    pminud %xmm0, %xmm1
-; SSE4-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [715827883,715827883,715827883,715827883]
+; SSE4-NEXT:    pcmpgtd %xmm0, %xmm1
+; SSE4-NEXT:    movdqa %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX2-LABEL: p4_vector_urem_by_const__splat:
@@ -116,9 +114,8 @@ define <4 x i1> @p4_vector_urem_by_const__splat(<4 x i32> %x, <4 x i32> %y) {
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2863311531,2863311531,2863311531,2863311531]
 ; AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrld $1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [715827882,715827882,715827882,715827882]
-; AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [715827883,715827883,715827883,715827883]
+; AVX2-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
   %t0 = and <4 x i32> %x, <i32 128, i32 128, i32 128, i32 128> ; clearly a power-of-two or zero
   %t1 = urem <4 x i32> %t0, <i32 6, i32 6, i32 6, i32 6> ; '6' is clearly not a power of two
@@ -131,10 +128,10 @@ define <4 x i1> @p5_vector_urem_by_const__nonsplat(<4 x i32> %x, <4 x i32> %y) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [3435973837,u,954437177,u]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2863311531,3435973837,2863311531,954437177]
+; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,u,2147483648,u]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,2,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; SSE2-NEXT:    psrlq $32, %xmm0
@@ -148,7 +145,7 @@ define <4 x i1> @p5_vector_urem_by_const__nonsplat(<4 x i32> %x, <4 x i32> %y) {
 ; SSE4-LABEL: p5_vector_urem_by_const__nonsplat:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2863311531,3435973837,2863311531,954437177]
 ; SSE4-NEXT:    pmovzxdq {{.*#+}} xmm1 = [1,2147483648]
 ; SSE4-NEXT:    pmuludq %xmm0, %xmm1
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
@@ -162,7 +159,7 @@ define <4 x i1> @p5_vector_urem_by_const__nonsplat(<4 x i32> %x, <4 x i32> %y) {
 ; AVX2-LABEL: p5_vector_urem_by_const__nonsplat:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2863311531,3435973837,2863311531,954437177]
 ; AVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX2-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
@@ -199,7 +196,7 @@ define <4 x i1> @p6_vector_urem_by_const__nonsplat_undef0(<4 x i32> %x, <4 x i32
 ; SSE4-LABEL: p6_vector_urem_by_const__nonsplat_undef0:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2863311531,2863311531,2863311531,2863311531]
 ; SSE4-NEXT:    movdqa %xmm0, %xmm1
 ; SSE4-NEXT:    psrld $1, %xmm1
 ; SSE4-NEXT:    pslld $31, %xmm0
@@ -315,7 +312,7 @@ define <4 x i1> @p8_vector_urem_by_const__nonsplat_undef3(<4 x i32> %x, <4 x i32
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
 ; SSE4-NEXT:    psrld $2, %xmm2
-; SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [6,6,6,6]
 ; SSE4-NEXT:    psubd %xmm2, %xmm0
 ; SSE4-NEXT:    pxor %xmm1, %xmm1
 ; SSE4-NEXT:    pcmpeqd %xmm1, %xmm0

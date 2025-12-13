@@ -39,7 +39,7 @@ define void @test_nocallback_definition() nocallback {
 declare void @test_nocallback_call_site()
 
 ; Test that checks that nocallback attribute on an intrinsic is NOT dropped.
-; CHECK: ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn
+; CHECK: ; Function Attrs: nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn
 ; CHECK-NEXT: declare float @llvm.sqrt.f32(float) #0
 declare float @llvm.sqrt.f32(float) nocallback
 

@@ -57,35 +57,35 @@ std::wstring return_wtemporary();
 void std_format(const std::string &s1, const std::string &s2, const std::string &s3) {
   auto r1 = std::format("One:{}\n", s1.c_str());
   // CHECK-MESSAGES-STDFORMAT: :[[@LINE-1]]:37: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDFORMAT: {{^  }}auto r1 = std::format("One:{}\n", s1);
+  // CHECK-FIXES-STDFORMAT: auto r1 = std::format("One:{}\n", s1);
 
   auto r2 = std::format("One:{} Two:{} Three:{} Four:{}\n", s1.c_str(), s2, s3.c_str(), return_temporary().c_str());
   // CHECK-MESSAGES-STDFORMAT: :[[@LINE-1]]:61: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES-STDFORMAT: :[[@LINE-2]]:77: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES-STDFORMAT: :[[@LINE-3]]:89: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDFORMAT: {{^  }}auto r2 = std::format("One:{} Two:{} Three:{} Four:{}\n", s1, s2, s3, return_temporary());
+  // CHECK-FIXES-STDFORMAT: auto r2 = std::format("One:{} Two:{} Three:{} Four:{}\n", s1, s2, s3, return_temporary());
 
   using namespace std;
   auto r3 = format("Four:{}\n", s1.c_str());
   // CHECK-MESSAGES-STDFORMAT: :[[@LINE-1]]:33: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDFORMAT: {{^  }}auto r3 = format("Four:{}\n", s1);
+  // CHECK-FIXES-STDFORMAT: auto r3 = format("Four:{}\n", s1);
 }
 
 void std_format_wide(const std::wstring &s1, const std::wstring &s2, const std::wstring &s3) {
   auto r1 = std::format(L"One:{}\n", s1.c_str());
   // CHECK-MESSAGES-STDFORMAT: :[[@LINE-1]]:38: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDFORMAT: {{^  }}auto r1 = std::format(L"One:{}\n", s1);
+  // CHECK-FIXES-STDFORMAT: auto r1 = std::format(L"One:{}\n", s1);
 
   auto r2 = std::format(L"One:{} Two:{} Three:{} Four:{}\n", s1.c_str(), s2, s3.c_str(), return_wtemporary().c_str());
   // CHECK-MESSAGES-STDFORMAT: :[[@LINE-1]]:62: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES-STDFORMAT: :[[@LINE-2]]:78: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES-STDFORMAT: :[[@LINE-3]]:90: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDFORMAT: {{^  }}auto r2 = std::format(L"One:{} Two:{} Three:{} Four:{}\n", s1, s2, s3, return_wtemporary());
+  // CHECK-FIXES-STDFORMAT: auto r2 = std::format(L"One:{} Two:{} Three:{} Four:{}\n", s1, s2, s3, return_wtemporary());
 
   using namespace std;
   auto r3 = format(L"Four:{}\n", s1.c_str());
   // CHECK-MESSAGES-STDFORMAT: :[[@LINE-1]]:34: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDFORMAT: {{^  }}auto r3 = format(L"Four:{}\n", s1);
+  // CHECK-FIXES-STDFORMAT: auto r3 = format(L"Four:{}\n", s1);
 }
 
 // There's are c_str() calls here, so it shouldn't be touched.
@@ -119,35 +119,35 @@ std::string not_std_format_wide(const std::string &s1) {
 void std_print(const std::string &s1, const std::string &s2, const std::string &s3) {
   std::print("One:{}\n", s1.c_str());
   // CHECK-MESSAGES-STDPRINT: :[[@LINE-1]]:26: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDPRINT: {{^  }}std::print("One:{}\n", s1);
+  // CHECK-FIXES-STDPRINT: std::print("One:{}\n", s1);
 
   std::print("One:{} Two:{} Three:{} Four:{}\n", s1.c_str(), s2, s3.c_str(), return_temporary().c_str());
   // CHECK-MESSAGES-STDPRINT: :[[@LINE-1]]:50: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES-STDPRINT: :[[@LINE-2]]:66: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES-STDPRINT: :[[@LINE-3]]:78: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDPRINT: {{^  }}std::print("One:{} Two:{} Three:{} Four:{}\n", s1, s2, s3, return_temporary());
+  // CHECK-FIXES-STDPRINT: std::print("One:{} Two:{} Three:{} Four:{}\n", s1, s2, s3, return_temporary());
 
   using namespace std;
   print("Four:{}\n", s1.c_str());
   // CHECK-MESSAGES-STDPRINT: :[[@LINE-1]]:22: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDPRINT: {{^  }}print("Four:{}\n", s1);
+  // CHECK-FIXES-STDPRINT: print("Four:{}\n", s1);
 }
 
 void std_print_wide(const std::wstring &s1, const std::wstring &s2, const std::wstring &s3) {
   std::print(L"One:{}\n", s1.c_str());
   // CHECK-MESSAGES-STDPRINT: :[[@LINE-1]]:27: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDPRINT: {{^  }}std::print(L"One:{}\n", s1);
+  // CHECK-FIXES-STDPRINT: std::print(L"One:{}\n", s1);
 
   std::print(L"One:{} Two:{} Three:{} Four:{}\n", s1.c_str(), s2, s3.c_str(), return_wtemporary().c_str());
   // CHECK-MESSAGES-STDPRINT: :[[@LINE-1]]:51: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES-STDPRINT: :[[@LINE-2]]:67: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES-STDPRINT: :[[@LINE-3]]:79: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDPRINT: {{^  }}std::print(L"One:{} Two:{} Three:{} Four:{}\n", s1, s2, s3, return_wtemporary());
+  // CHECK-FIXES-STDPRINT: std::print(L"One:{} Two:{} Three:{} Four:{}\n", s1, s2, s3, return_wtemporary());
 
   using namespace std;
   print(L"Four:{}\n", s1.c_str());
   // CHECK-MESSAGES-STDPRINT: :[[@LINE-1]]:23: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES-STDPRINT: {{^  }}print(L"Four:{}\n", s1);
+  // CHECK-FIXES-STDPRINT: print(L"Four:{}\n", s1);
 }
 
 // There's no c_str() call here, so it shouldn't be touched.

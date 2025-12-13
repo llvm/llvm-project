@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_shared_library", "cc_test")
 load("//mlir:tblgen.bzl", "gentbl_cc_library")
 
 package(
@@ -132,6 +133,7 @@ cc_test(
         "//llvm:AsmParser",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:FrontendHLSL",
         "//llvm:Instrumentation",
         "//llvm:Passes",
         "//llvm:Support",
@@ -406,7 +408,7 @@ cc_test(
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
         ],
     }),
     deps = [
@@ -421,6 +423,7 @@ cc_test(
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Object",
+        "//llvm:ObjectYAML",
         "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
@@ -511,6 +514,7 @@ cc_test(
         "//llvm:Analysis",
         "//llvm:Core",
         "//llvm:FrontendHLSL",
+        "//llvm:FrontendOffloading",
         "//llvm:FrontendOpenACC",
         "//llvm:FrontendOpenMP",
         "//llvm:Passes",
@@ -648,6 +652,15 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "sub_command_opts_tests_gen",
+    strip_include_prefix = "Option",
+    tbl_outs = {"Option/SubCommandOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "Option/SubCommandOpts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "automata_gen",
     strip_include_prefix = "TableGen",
     tbl_outs = {
@@ -668,6 +681,7 @@ cc_test(
     ),
     deps = [
         ":option_tests_gen",
+        ":sub_command_opts_tests_gen",
         "//llvm:Option",
         "//llvm:Support",
         "//third-party/unittest:gtest",
@@ -785,6 +799,23 @@ cc_test(
         "//llvm:AllTargetsCodeGens",
         "//llvm:Support",
         "//llvm:config",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "SupportLSPTests",
+    size = "small",
+    srcs = glob(["Support/LSP/*.cpp"]),
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    linkstatic = 1,
+    deps = [
+        "//llvm:Support",
+        "//llvm:config",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

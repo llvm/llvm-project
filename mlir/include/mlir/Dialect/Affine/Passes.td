@@ -203,12 +203,10 @@ def AffineLoopUnroll : InterfacePass<"affine-loop-unroll", "FunctionOpInterface"
   let summary = "Unroll affine loops";
   let constructor = "mlir::affine::createLoopUnrollPass()";
   let options = [
-    Option<"unrollFactor", "unroll-factor", "unsigned", /*default=*/"4",
+    Option<"unrollFactor", "unroll-factor", "int64_t", /*default=*/"4",
            "Use this unroll factor for all loops being unrolled">,
     Option<"unrollUpToFactor", "unroll-up-to-factor", "bool",
            /*default=*/"false", "Allow unrolling up to the factor specified">,
-    Option<"unrollFull", "unroll-full", "bool", /*default=*/"false",
-           "Fully unroll loops">,
     Option<"numRepetitions", "unroll-num-reps", "unsigned", /*default=*/"1",
            "Unroll innermost loops repeatedly this many times">,
     Option<"unrollFullThreshold", "unroll-full-threshold", "unsigned",
@@ -412,6 +410,23 @@ def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"
   let summary = "Simplify affine expressions in maps/sets and normalize "
                 "memrefs";
   let constructor = "mlir::affine::createSimplifyAffineStructuresPass()";
+}
+
+def SimplifyAffineMinMaxPass : InterfacePass<"affine-simplify-min-max", "FunctionOpInterface"> {
+  let summary = "Simplify affine min/max/apply";
+  let description = [{
+    Apply the SimplifyAffineMaxOp, SimplifyAffineMinOp and SimplifyAffineApplyOp
+    patterns in addition to AffineMin/Max canonicalization patterns until a
+    fixed point is reached.
+    These patterns apply ValueBoundsOp interface on AffineMin/Max ops and
+    additional simplifications such as:
+    ```
+       min(x, y, cst) / cst -> 1
+    ```
+    when x, y, cst are all >= 0.
+    This is typically useful to extract more static informationfrom IR after
+    tiling but can also come at a cost due to Presburger-style analysis.
+  }];
 }
 
 def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {

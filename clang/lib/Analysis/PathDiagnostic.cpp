@@ -24,6 +24,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -323,8 +324,8 @@ static bool compareCrossTUSourceLocs(FullSourceLoc XL, FullSourceLoc YL) {
     return true;
   if (XL.isValid() && YL.isInvalid())
     return false;
-  std::pair<FileID, unsigned> XOffs = XL.getDecomposedLoc();
-  std::pair<FileID, unsigned> YOffs = YL.getDecomposedLoc();
+  FileIDAndOffset XOffs = XL.getDecomposedLoc();
+  FileIDAndOffset YOffs = YL.getDecomposedLoc();
   const SourceManager &SM = XL.getManager();
   std::pair<bool, bool> InSameTU = SM.isInTheSameTranslationUnit(XOffs, YOffs);
   if (InSameTU.first)
@@ -1075,6 +1076,19 @@ unsigned PathDiagnostic::full_size() {
   return size;
 }
 
+SmallString<32>
+PathDiagnostic::getIssueHash(const SourceManager &SrcMgr,
+                             const LangOptions &LangOpts) const {
+  PathDiagnosticLocation UPDLoc = getUniqueingLoc();
+  FullSourceLoc FullLoc(
+      SrcMgr.getExpansionLoc(UPDLoc.isValid() ? UPDLoc.asLocation()
+                                              : getLocation().asLocation()),
+      SrcMgr);
+
+  return clang::getIssueHash(FullLoc, getCheckerName(), getBugType(),
+                             getDeclWithIssue(), LangOpts);
+}
+
 //===----------------------------------------------------------------------===//
 // FoldingSet profiling methods.
 //===----------------------------------------------------------------------===//
@@ -1146,9 +1160,9 @@ void PathDiagnostic::FullProfile(llvm::FoldingSetNodeID &ID) const {
 
 LLVM_DUMP_METHOD void PathPieces::dump() const {
   unsigned index = 0;
-  for (PathPieces::const_iterator I = begin(), E = end(); I != E; ++I) {
+  for (const PathDiagnosticPieceRef &Piece : *this) {
     llvm::errs() << "[" << index++ << "]  ";
-    (*I)->dump();
+    Piece->dump();
     llvm::errs() << "\n";
   }
 }

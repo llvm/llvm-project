@@ -88,7 +88,7 @@ void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
   // are %p and %s, which use to know if we
   // are either storing a literal string or a
   // pointer to the printf buffer.
-  static const char ConvSpecifiers[] = "cdieEfgGaosuxXp";
+  static const char ConvSpecifiers[] = "cdieEfFgGaAosuxXp";
   size_t CurFmtSpecifierIdx = 0;
   size_t PrevFmtSpecifierIdx = 0;
 
@@ -129,7 +129,7 @@ static StringRef getAsConstantStr(Value *V) {
 
 static void diagnoseInvalidFormatString(const CallBase *CI) {
   CI->getContext().diagnose(DiagnosticInfoUnsupported(
-      *CI->getParent()->getParent(),
+      *CI->getFunction(),
       "printf format string must be a trivially resolved constant string "
       "global variable",
       CI->getDebugLoc()));

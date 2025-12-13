@@ -84,6 +84,15 @@ public:
     return true;
   }
 
+  void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *VD) override {
+    Gen->HandleCXXStaticMemberVarInstantiation(VD);
+  }
+
+  void HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                     const OpenACCRoutineDecl *RD) override {
+    Gen->HandleOpenACCRoutineReference(FD, RD);
+  }
+
   void HandleInlineFunctionDefinition(FunctionDecl *D) override {
     Gen->HandleInlineFunctionDefinition(D);
   }
@@ -140,9 +149,22 @@ public:
     }
   }
 
+  void HandleTagDeclDefinition(TagDecl *D) override {
+    PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
+                                   Context->getSourceManager(),
+                                   "CIR generation of declaration");
+    Gen->HandleTagDeclDefinition(D);
+  }
+
+  void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
+    Gen->HandleTagDeclRequiredDefinition(D);
+  }
+
   void CompleteTentativeDefinition(VarDecl *D) override {
     Gen->CompleteTentativeDefinition(D);
   }
+
+  void HandleVTable(CXXRecordDecl *RD) override { Gen->HandleVTable(RD); }
 };
 } // namespace cir
 

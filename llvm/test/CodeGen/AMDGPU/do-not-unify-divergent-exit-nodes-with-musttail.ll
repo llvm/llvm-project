@@ -3,6 +3,7 @@
 
 declare void @foo(ptr)
 declare i1 @bar(ptr)
+declare i32 @bar32(ptr)
 
 define void @musttail_call_without_return_value(ptr %p) {
 ; CHECK-LABEL: define void @musttail_call_without_return_value(
@@ -19,6 +20,31 @@ define void @musttail_call_without_return_value(ptr %p) {
 entry:
   %load = load i1, ptr %p, align 1
   br i1 %load, label %bb.0, label %bb.1
+
+bb.0:
+  musttail call void @foo(ptr %p)
+  ret void
+
+bb.1:
+  ret void
+}
+
+define void @musttail_call_without_return_value_callbr(ptr %p) {
+; CHECK-LABEL: define void @musttail_call_without_return_value_callbr(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P]], align 1
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i32 [[LOAD]])
+; CHECK-NEXT:            to label %[[BB_0:.*]] [label %bb.1]
+; CHECK:       [[BB_0]]:
+; CHECK-NEXT:    musttail call void @foo(ptr [[P]])
+; CHECK-NEXT:    ret void
+; CHECK:       [[BB_1:.*:]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %load = load i32, ptr %p, align 1
+  callbr void asm "", "r,!i"(i32 %load) to label %bb.0 [label %bb.1]
 
 bb.0:
   musttail call void @foo(ptr %p)
@@ -50,4 +76,29 @@ bb.0:
 
 bb.1:
   ret i1 %load
+}
+
+define i32 @musttail_call_with_return_value_callbr(ptr %p) {
+; CHECK-LABEL: define i32 @musttail_call_with_return_value_callbr(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P]], align 1
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i32 [[LOAD]])
+; CHECK-NEXT:            to label %[[BB_0:.*]] [label %bb.1]
+; CHECK:       [[BB_0]]:
+; CHECK-NEXT:    [[RET:%.*]] = musttail call i32 @bar32(ptr [[P]])
+; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK:       [[BB_1:.*:]]
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+entry:
+  %load = load i32, ptr %p, align 1
+  callbr void asm "", "r,!i"(i32 %load) to label %bb.0 [label %bb.1]
+
+bb.0:
+  %ret = musttail call i32 @bar32(ptr %p)
+  ret i32 %ret
+
+bb.1:
+  ret i32 %load
 }

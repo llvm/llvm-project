@@ -49,7 +49,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ [[VTC]], middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
@@ -76,7 +76,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     EMIT [[IV:.*]] = CANONICAL-INDUCTION ir<0>, [[IV_NEXT:.*]]
 ; CHECK-NEXT:     [[STEPS:vp.*]] = SCALAR-STEPS [[IV]], ir<1>, [[VF]]
 ; CHECK-NEXT:     CLONE [[GEP_IDX:.*]] = getelementptr inbounds ir<%indices>, [[STEPS]]
-; CHECK-NEXT:     [[VECP_IDX:vp.*]] = vector-pointer [[GEP_IDX]]
+; CHECK-NEXT:     [[VECP_IDX:vp.*]] = vector-pointer inbounds [[GEP_IDX]]
 ; CHECK-NEXT:     WIDEN [[IDX:.*]] = load [[VECP_IDX]]
 ; CHECK-NEXT:     WIDEN-CAST [[EXT_IDX:.*]] = zext [[IDX]] to i64
 ; CHECK-NEXT:     WIDEN-GEP Inv[Var] [[GEP_BUCKET:.*]] = getelementptr inbounds ir<%buckets>, [[EXT_IDX]]
@@ -96,7 +96,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ [[VTC]], middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:

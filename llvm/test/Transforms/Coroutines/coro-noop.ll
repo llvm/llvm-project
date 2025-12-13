@@ -26,7 +26,7 @@ declare ptr @llvm.coro.noop()
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 
 
-; CHECK: define private fastcc void @__NoopCoro_ResumeDestroy(ptr %0) !dbg ![[RESUME:[0-9]+]] {
+; CHECK: define internal fastcc void @__NoopCoro_ResumeDestroy(ptr %0) !dbg ![[RESUME:[0-9]+]] {
 ; CHECK-NEXT: entry
 ; CHECK-NEXT:    ret void
 

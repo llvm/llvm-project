@@ -756,7 +756,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1, implicit $w1_hi :: (load (s32))
-    ; CHECK-NEXT: renamable $w2 = LDRWui renamable $x1, 1, implicit-def $x2, implicit $w2_hi :: (load (s32))
+    ; CHECK-NEXT: renamable $w2 = LDRWui renamable $x1, 1, implicit-def $x2 :: (load (s32))
     ; CHECK-NEXT: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr
     early-clobber renamable $x1, renamable $x0 = LDRSWpre killed renamable $x1, 40 :: (load (s32))

@@ -14,12 +14,12 @@ class EXPORT InheritedBase {
 class Derived : public Base {
   virtual EXPORT void a();
   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: prefer using 'override' or (rarely) 'final' instead of 'virtual' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  EXPORT void a() override;
+  // CHECK-FIXES: EXPORT void a() override;
 };
 
 class EXPORT InheritedDerived : public InheritedBase {
   virtual void a();
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using 'override' or (rarely) 'final' instead of 'virtual' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  void a() override;
+  // CHECK-FIXES: void a() override;
 };
 

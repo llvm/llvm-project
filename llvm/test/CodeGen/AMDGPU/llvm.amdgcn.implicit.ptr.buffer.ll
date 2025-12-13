@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d < %s | FileCheck -check-prefix=GCN %s
 
 ; FIXME: Requires stack object to not assert
 ; GCN-LABEL: {{^}}test_ps:

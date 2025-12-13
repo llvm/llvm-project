@@ -115,7 +115,7 @@ void usage() {
   S();    // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
   S('A'); // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't let that S-Char go!}}
   S(1);
-  S(2.2);
+  S(2.2); // expected-warning {{ignoring temporary created by a constructor declared with 'gnu::warn_unused_result' attribute}}
   Y(); // expected-warning {{ignoring temporary of type 'Y' declared with 'nodiscard' attribute: Don't throw me away either!}}
   S s;
   ConvertTo{}; // expected-warning {{ignoring return value of type 'ConvertTo' declared with 'nodiscard' attribute: Don't throw me away!}}

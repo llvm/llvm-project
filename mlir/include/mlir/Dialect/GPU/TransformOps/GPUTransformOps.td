@@ -54,6 +54,20 @@ def ApplyGPUSubgroupReduceToNVVMConversionPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyGPUToROCDLConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.gpu.gpu_to_rocdl",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+                               ["verifyTypeConverter"]>]> {
+  let description = [{
+    Collects patterns that convert GPU dialect ops to ROCDL dialect ops. These
+    patterns require an "LLVMTypeConverter".
+  }];
+  let arguments = (ins StrAttr:$chipset);
+  let assemblyFormat = [{
+    `chipset` `=` $chipset attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Apply...PatternsOp
 //===----------------------------------------------------------------------===//
@@ -317,7 +331,10 @@ def ApplyGPUPromoteShuffleToAMDGPUPatternsOp : Op<Transform_Dialect,
     Collects patterns that are tryin to promote `gpu.shuffle`s to specialized
     AMDGPU intrinsics.
   }];
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins OptionalAttr<StrAttr>:$chipset);
+  let assemblyFormat = [{
+    (`chipset` `=` $chipset^)? attr-dict
+  }];
 }
 
 

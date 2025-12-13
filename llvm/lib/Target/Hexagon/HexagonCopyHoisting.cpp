@@ -34,7 +34,7 @@ class HexagonCopyHoisting : public MachineFunctionPass {
 
 public:
   static char ID;
-  HexagonCopyHoisting() : MachineFunctionPass(ID), MFN(nullptr), MRI(nullptr) {}
+  HexagonCopyHoisting() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Hexagon Copy Hoisting"; }
 
@@ -56,8 +56,8 @@ public:
   void moveCopyInstr(MachineBasicBlock *DestBB,
                      std::pair<Register, Register> Key, MachineInstr *MI);
 
-  MachineFunction *MFN;
-  MachineRegisterInfo *MRI;
+  MachineFunction *MFN = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
   std::vector<DenseMap<std::pair<Register, Register>, MachineInstr *>>
       CopyMIList;
 };

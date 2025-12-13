@@ -14,11 +14,13 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 namespace {
 class VPPredicator {
@@ -42,11 +44,6 @@ class VPPredicator {
   /// possibly inserting new recipes at \p Dst (using Builder's insertion point)
   VPValue *createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst);
 
-  /// Returns the *entry* mask for \p VPBB.
-  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
-    return BlockMaskCache.lookup(VPBB);
-  }
-
   /// Record \p Mask as the *entry* mask of \p VPBB, which is expected to not
   /// already have a mask.
   void setBlockInMask(VPBasicBlock *VPBB, VPValue *Mask) {
@@ -66,6 +63,11 @@ class VPPredicator {
   }
 
 public:
+  /// Returns the *entry* mask for \p VPBB.
+  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
+    return BlockMaskCache.lookup(VPBB);
+  }
+
   /// Returns the precomputed predicate of the edge from \p Src to \p Dst.
   VPValue *getEdgeMask(const VPBasicBlock *Src, const VPBasicBlock *Dst) const {
     return EdgeMaskCache.lookup({Src, Dst});
@@ -166,7 +168,8 @@ void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
   // non-phi instructions.
 
   auto &Plan = *HeaderVPBB->getPlan();
-  auto *IV = new VPWidenCanonicalIVRecipe(Plan.getCanonicalIV());
+  auto *IV =
+      new VPWidenCanonicalIVRecipe(HeaderVPBB->getParent()->getCanonicalIV());
   Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   Builder.insert(IV);
 
@@ -184,8 +187,7 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
   VPValue *Cond = SI->getOperand(0);
   VPBasicBlock *DefaultDst = cast<VPBasicBlock>(Src->getSuccessors()[0]);
   MapVector<VPBasicBlock *, SmallVector<VPValue *>> Dst2Compares;
-  for (const auto &[Idx, Succ] :
-       enumerate(ArrayRef(Src->getSuccessors()).drop_front())) {
+  for (const auto &[Idx, Succ] : enumerate(drop_begin(Src->getSuccessors()))) {
     VPBasicBlock *Dst = cast<VPBasicBlock>(Succ);
     assert(!getEdgeMask(Src, Dst) && "Edge masks already created");
     //  Cases whose destination is the same as default are redundant and can
@@ -206,7 +208,7 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
     // cases with destination == Dst are taken. Join the conditions for each
     // case whose destination == Dst using an OR.
     VPValue *Mask = Conds[0];
-    for (VPValue *V : ArrayRef<VPValue *>(Conds).drop_front())
+    for (VPValue *V : drop_begin(Conds))
       Mask = Builder.createOr(Mask, V);
     if (SrcMask)
       Mask = Builder.createLogicalAnd(SrcMask, Mask);
@@ -228,32 +230,30 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
 }
 
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
-  SmallVector<VPWidenPHIRecipe *> Phis;
+  SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
-    Phis.push_back(cast<VPWidenPHIRecipe>(&R));
-  for (VPWidenPHIRecipe *PhiR : Phis) {
+    Phis.push_back(cast<VPPhi>(&R));
+  for (VPPhi *PhiR : Phis) {
     // The non-header Phi is converted into a Blend recipe below,
     // so we don't have to worry about the insertion order and we can just use
     // the builder. At this point we generate the predication tree. There may
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
 
-    SmallVector<VPValue *, 2> OperandsWithMask;
-    unsigned NumIncoming = PhiR->getNumIncoming();
-    for (unsigned In = 0; In < NumIncoming; In++) {
-      const VPBasicBlock *Pred = PhiR->getIncomingBlock(In);
-      OperandsWithMask.push_back(PhiR->getIncomingValue(In));
-      VPValue *EdgeMask = getEdgeMask(Pred, VPBB);
-      if (!EdgeMask) {
-        assert(In == 0 && "Both null and non-null edge masks found");
-        assert(all_equal(PhiR->operands()) &&
-               "Distinct incoming values with one having a full mask");
-        break;
-      }
-      OperandsWithMask.push_back(EdgeMask);
+    if (all_equal(PhiR->incoming_values())) {
+      PhiR->replaceAllUsesWith(PhiR->getIncomingValue(0));
+      PhiR->eraseFromParent();
+      continue;
     }
-    PHINode *IRPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-    auto *Blend = new VPBlendRecipe(IRPhi, OperandsWithMask);
+
+    SmallVector<VPValue *, 2> OperandsWithMask;
+    for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
+      OperandsWithMask.push_back(InVPV);
+      OperandsWithMask.push_back(getEdgeMask(InVPBB, VPBB));
+    }
+    PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
+    auto *Blend =
+        new VPBlendRecipe(IRPhi, OperandsWithMask, PhiR->getDebugLoc());
     Builder.insert(Blend);
     PhiR->replaceAllUsesWith(Blend);
     PhiR->eraseFromParent();
@@ -299,6 +299,33 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
 
     PrevVPBB = VPBB;
+  }
+
+  // If we folded the tail and introduced a header mask, any extract of the
+  // last element must be updated to extract from the last active lane of the
+  // header mask instead (i.e., the lane corresponding to the last active
+  // iteration).
+  if (FoldTail) {
+    assert(Plan.getExitBlocks().size() == 1 &&
+           "only a single-exit block is supported currently");
+    assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
+               Plan.getMiddleBlock() &&
+           "the exit block must have middle block as single predecessor");
+
+    VPBuilder B(Plan.getMiddleBlock()->getTerminator());
+    for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
+      VPValue *Op;
+      if (!match(&R, m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op)))))
+        continue;
+
+      // Compute the index of the last active lane.
+      VPValue *HeaderMask = Predicator.getBlockInMask(Header);
+      VPValue *LastActiveLane =
+          B.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
+      auto *Ext =
+          B.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
+      R.getVPSingleValue()->replaceAllUsesWith(Ext);
+    }
   }
   return Predicator.getBlockMaskCache();
 }

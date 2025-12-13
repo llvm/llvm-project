@@ -17,7 +17,7 @@ int aaaa;
 // OGCG: @dddd = weak_odr global i32 0, comdat
 
 static int bbbb;
-// CIR: cir.global "private" internal dsolocal @_ZL4bbbb
+// CIR: cir.global "private" internal dso_local @_ZL4bbbb
 // LLVM: @_ZL4bbbb = internal global i32 0
 // OGCG: @_ZL4bbbb = internal global i32 0
 

@@ -71,7 +71,7 @@ for.end19:
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test01
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
+; CHECK-NEXT:   - String:          All loops have dependencies in all directions.
 ; CHECK-NEXT: ...
 
 ; DELIN: --- !Analysis
@@ -147,7 +147,7 @@ define void @test02(i32 %k, i32 %N) {
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test02
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
+; CHECK-NEXT:   - String:          All loops have dependencies in all directions.
 ; CHECK-NEXT: ...
 
 ; DELIN: --- !Analysis
@@ -290,7 +290,7 @@ for.end17:
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test04
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
+; CHECK-NEXT:   - String:          All loops have dependencies in all directions.
 ; CHECK-NEXT: ...
 
 ; DELIN: --- !Missed

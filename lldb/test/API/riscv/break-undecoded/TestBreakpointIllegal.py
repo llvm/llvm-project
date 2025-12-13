@@ -17,7 +17,7 @@ class TestBreakpointIllegal(TestBase):
         )
         self.runCmd("thread step-inst")
         # we need to step more, as some compilers do not set appropriate debug info.
-        while cur_thread.GetStopDescription(256) == "instruction step into":
+        while cur_thread.stop_description == "instruction step into":
             self.runCmd("thread step-inst")
         # The stop reason of the thread should be illegal opcode.
         self.expect(
@@ -34,7 +34,7 @@ class TestBreakpointIllegal(TestBase):
         )
         self.runCmd("thread step-inst")
         # we need to step more, as some compilers do not set appropriate debug info.
-        while cur_thread.GetStopDescription(256) == "instruction step into":
+        while cur_thread.stop_description == "instruction step into":
             self.runCmd("thread step-inst")
         # The stop reason of the thread should be illegal opcode.
         self.expect(

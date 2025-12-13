@@ -99,6 +99,9 @@ public:
   bool operator>=(Integral RHS) const { return V >= RHS.V; }
   bool operator==(Integral RHS) const { return V == RHS.V; }
   bool operator!=(Integral RHS) const { return V != RHS.V; }
+  bool operator>=(unsigned RHS) const {
+    return static_cast<unsigned>(V) >= RHS;
+  }
 
   bool operator>(unsigned RHS) const {
     return V >= 0 && static_cast<unsigned>(V) > RHS;
@@ -199,28 +202,19 @@ public:
 
   static Integral min(unsigned NumBits) { return Integral(Min); }
   static Integral max(unsigned NumBits) { return Integral(Max); }
+  static Integral zero(unsigned BitWidth = 0) { return from(0); }
 
-  template <typename ValT> static Integral from(ValT Value) {
-    if constexpr (std::is_integral<ValT>::value)
+  template <typename ValT>
+  static Integral from(ValT Value, unsigned NumBits = 0) {
+    if constexpr (std::is_integral_v<ValT>)
       return Integral(Value);
     else
-      return Integral::from(static_cast<Integral::ReprT>(Value));
+      return Integral(static_cast<Integral::ReprT>(Value));
   }
 
   template <unsigned SrcBits, bool SrcSign>
-  static std::enable_if_t<SrcBits != 0, Integral>
-  from(Integral<SrcBits, SrcSign> Value) {
+  static Integral from(Integral<SrcBits, SrcSign> Value) {
     return Integral(Value.V);
-  }
-
-  static Integral zero(unsigned BitWidth = 0) { return from(0); }
-
-  template <typename T> static Integral from(T Value, unsigned NumBits) {
-    return Integral(Value);
-  }
-
-  static bool inRange(int64_t Value, unsigned NumBits) {
-    return CheckRange<ReprT, Min, Max>(Value);
   }
 
   static bool increment(Integral A, Integral *R) {
@@ -315,16 +309,14 @@ private:
   template <typename T> static bool CheckMulUB(T A, T B, T &R) {
     if constexpr (std::is_signed_v<T>) {
       return llvm::MulOverflow<T>(A, B, R);
+    } else if constexpr (sizeof(T) < sizeof(int)) {
+      // Silly integer promotion rules will convert both A and B to int,
+      // even it T is unsigned. Prevent that by manually casting to uint first.
+      R = static_cast<T>(static_cast<unsigned>(A) * static_cast<unsigned>(B));
+      return false;
     } else {
       R = A * B;
       return false;
-    }
-  }
-  template <typename T, T Min, T Max> static bool CheckRange(int64_t V) {
-    if constexpr (std::is_signed_v<T>) {
-      return Min <= V && V <= Max;
-    } else {
-      return V >= 0 && static_cast<uint64_t>(V) <= Max;
     }
   }
 };

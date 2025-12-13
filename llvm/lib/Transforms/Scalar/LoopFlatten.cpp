@@ -862,7 +862,7 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
   }
 
-  SCEVExpander Rewriter(*SE, DL, "loopflatten");
+  SCEVExpander Rewriter(*SE, "loopflatten");
   SmallVector<WeakTrackingVH, 4> DeadInsts;
   unsigned ElimExt = 0;
   unsigned Widened = 0;
@@ -1009,7 +1009,8 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // in simplified form, and also needs LCSSA. Running
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
-  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr);
+  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr,
+                             &AR.AC);
   for (Loop *InnerLoop : LN.getLoops()) {
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)

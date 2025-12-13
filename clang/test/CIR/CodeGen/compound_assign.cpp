@@ -20,7 +20,7 @@ int compound_assign(int b) {
   return x;
 }
 
-// CIR: cir.func @_Z15compound_assigni
+// CIR: cir.func{{.*}} @_Z15compound_assigni
 // CIR:   %[[MUL:.*]] = cir.binop(mul, %{{.*}}, %{{.*}}) nsw : !s32i
 // CIR:   cir.store{{.*}} %[[MUL]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[DIV:.*]] = cir.binop(div, %{{.*}}, %{{.*}}) : !s32i

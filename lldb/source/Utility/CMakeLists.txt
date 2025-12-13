@@ -38,7 +38,6 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   DataEncoder.cpp
   DataExtractor.cpp
   Diagnostics.cpp
-  DiagnosticsRendering.cpp
   Environment.cpp
   ErrorMessages.cpp
   Event.cpp
@@ -78,9 +77,12 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   UserIDResolver.cpp
   VASprintf.cpp
   VMRange.cpp
+  VirtualDataExtractor.cpp
   XcodeSDK.cpp
   ZipFile.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Utility
   LINK_COMPONENTS
     BinaryFormat
     Support

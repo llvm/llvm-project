@@ -117,6 +117,12 @@ template <typename A, typename B> const A *Unwrap(const B &x) {
 template <typename A, typename B> A *Unwrap(B &x) {
   return const_cast<A *>(Unwrap<A, B>(const_cast<const B &>(x)));
 }
+template <typename A, typename B> const A &UnwrapRef(const B &x) {
+  return DEREF(Unwrap<A>(x));
+}
+template <typename A, typename B> A &UnwrapRef(B &x) {
+  return DEREF(Unwrap<A>(x));
+}
 
 // Get the CoindexedNamedObject if the entity is a coindexed object.
 const CoindexedNamedObject *GetCoindexedNamedObject(const AllocateObject &);
@@ -249,6 +255,11 @@ template <typename A> std::optional<CharBlock> GetLastSource(const A &x) {
 template <typename A> std::optional<CharBlock> GetLastSource(A &x) {
   return GetSourceHelper<false>::GetSource(const_cast<const A &>(x));
 }
+
+// Checks whether the assignment statement has a single variable on the RHS.
+bool CheckForSingleVariableOnRHS(const AssignmentStmt &);
+
+const Name *GetDesignatorNameIfDataRef(const Designator &);
 
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_TOOLS_H_

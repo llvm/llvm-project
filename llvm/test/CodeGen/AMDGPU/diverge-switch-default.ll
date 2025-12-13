@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -print-after=si-annotate-control-flow %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -print-after=si-annotate-control-flow %s -filetype=null 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: @switch_unreachable_default
 

@@ -1,15 +1,20 @@
-# Flang |version| (In-Progress) Release Notes
+<!-- If you want to modify sections/contents permanently, you should modify both
+ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
-> **warning**
->
-> These are in-progress notes for the upcoming LLVM |version| release.
-> Release notes for previous releases can be found on [the Download
-> Page](https://releases.llvm.org/download.html).
+# Flang {{version}} {{in_progress}}Release Notes
+
+````{only} PreRelease
+```{warning}
+ These are in-progress notes for the upcoming LLVM {{version}} release.
+ Release notes for previous releases can be found on [the Download
+ Page](https://releases.llvm.org/download.html).
+```
+````
 
 ## Introduction
 
 This document contains the release notes for the Flang Fortran frontend,
-part of the LLVM Compiler Infrastructure, release |version|. Here we
+part of the LLVM Compiler Infrastructure, release {{version}}. Here we
 describe the status of Flang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see [the LLVM
@@ -24,7 +29,7 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
-* Initial support for VOLATILE variables and procedure interface arguments has been added.
+* Support for LOWER= argument for C_F_POINTER.
 
 ## Bug Fixes
 
@@ -32,8 +37,7 @@ page](https://llvm.org/releases/).
 
 ## New Compiler Flags
 
-* -floop-interchange is now recognized by flang.
-* -floop-interchange is enabled by default at -O2 and above.
+* -fexperimental-loop-fusion is now recognized by flang.
 
 ## Windows Support
 
@@ -41,21 +45,7 @@ page](https://llvm.org/releases/).
 
 ## Build System Changes
 
- * The FortranRuntime library has been renamed to `flang_rt.runtime`.
-
- * The FortranFloat128Math library has been renamed to `flang_rt.quadmath`.
-
- * The CufRuntime_cuda_${version} library has been renamed to
-   `flang_rt.cuda_${version}`.
-
- * The Fortran Runtime library has been move to a new top-level directory
-   named "flang-rt". It now supports the LLVM_ENABLE_RUNTIMES mechanism to
-   build Flang-RT for multiple target triples. libflang_rt.runtime.{a|so} will
-   now be emitted into Clang's per-target resource directory
-   (next to libclang_rt.*.*) where it is also found by Flang's driver.
-
 ## New Issues Found
-
 
 ## Additional Information
 

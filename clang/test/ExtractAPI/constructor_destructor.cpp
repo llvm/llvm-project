@@ -213,7 +213,7 @@ class Foo {
         "subHeading": [
           {
             "kind": "identifier",
-            "spelling": "Foo"
+            "spelling": "~Foo"
           }
         ],
         "title": "~Foo"

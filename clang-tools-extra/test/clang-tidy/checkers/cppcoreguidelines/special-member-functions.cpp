@@ -70,3 +70,29 @@ struct TemplateClass {
 // This should not cause problems.
 TemplateClass<int> InstantiationWithInt;
 TemplateClass<double> InstantiationWithDouble;
+
+#define DEFINE_DESTRUCTOR_ONLY(ClassName) \
+  class ClassName { \
+    ~ClassName(); \
+  };
+
+#define DEFINE_COPY_CTOR_ONLY(ClassName) \
+  class ClassName { \
+    ClassName(const ClassName &); \
+  };
+
+#define DEFINE_CLASS_WITH_DTOR(ClassName) \
+  class ClassName { \
+    ~ClassName(); \
+  };
+
+DEFINE_DESTRUCTOR_ONLY(MacroDefinedClass1)
+DEFINE_COPY_CTOR_ONLY(MacroDefinedClass2)
+DEFINE_CLASS_WITH_DTOR(MacroDefinedClass3)
+
+// Test partial macro expansion
+#define CLASS_NAME MacroNamedClass
+class CLASS_NAME {
+  ~MacroNamedClass();
+};
+// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'MacroNamedClass' defines a destructor but does not define a copy constructor, a copy assignment operator, a move constructor or a move assignment operator

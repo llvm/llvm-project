@@ -11,12 +11,10 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -25,12 +23,14 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/Support/DebugLog.h"
 
 #include <deque>
 #include <iterator>
 
 using namespace mlir;
+
+#define DEBUG_TYPE "region-utils"
 
 void mlir::replaceAllUsesInRegionWith(Value orig, Value replacement,
                                       Region &region) {
@@ -185,19 +185,34 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
 // TODO: We could likely merge this with the DCE algorithm below.
 LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
                                            MutableArrayRef<Region> regions) {
+  LDBG() << "Starting eraseUnreachableBlocks with " << regions.size()
+         << " regions";
+
   // Set of blocks found to be reachable within a given region.
   llvm::df_iterator_default_set<Block *, 16> reachable;
   // If any blocks were found to be dead.
-  bool erasedDeadBlocks = false;
+  int erasedDeadBlocks = 0;
 
   SmallVector<Region *, 1> worklist;
   worklist.reserve(regions.size());
   for (Region &region : regions)
     worklist.push_back(&region);
+
+  LDBG(2) << "Initial worklist size: " << worklist.size();
+
   while (!worklist.empty()) {
     Region *region = worklist.pop_back_val();
-    if (region->empty())
+    if (region->empty()) {
+      LDBG(2) << "Skipping empty region";
       continue;
+    }
+
+    LDBG(2) << "Processing region with " << region->getBlocks().size()
+            << " blocks";
+    if (region->getParentOp())
+      LDBG(2) << " -> for operation:  "
+              << OpWithFlags(region->getParentOp(),
+                             OpPrintingFlags().skipRegions());
 
     // If this is a single block region, just collect the nested regions.
     if (region->hasOneBlock()) {
@@ -212,13 +227,17 @@ LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
     for (Block *block : depth_first_ext(&region->front(), reachable))
       (void)block /* Mark all reachable blocks */;
 
+    LDBG(2) << "Found " << reachable.size() << " reachable blocks out of "
+            << region->getBlocks().size() << " total blocks";
+
     // Collect all of the dead blocks and push the live regions onto the
     // worklist.
     for (Block &block : llvm::make_early_inc_range(*region)) {
       if (!reachable.count(&block)) {
+        LDBG() << "Erasing unreachable block: " << &block;
         block.dropAllDefinedValueUses();
         rewriter.eraseBlock(&block);
-        erasedDeadBlocks = true;
+        ++erasedDeadBlocks;
         continue;
       }
 
@@ -229,7 +248,10 @@ LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
     }
   }
 
-  return success(erasedDeadBlocks);
+  LDBG() << "Finished eraseUnreachableBlocks, erased " << erasedDeadBlocks
+         << " dead blocks";
+
+  return success(erasedDeadBlocks > 0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -420,7 +442,7 @@ static LogicalResult deleteDeadness(RewriterBase &rewriter,
   for (Region &region : regions) {
     if (region.empty())
       continue;
-    bool hasSingleBlock = llvm::hasSingleElement(region);
+    bool hasSingleBlock = region.hasOneBlock();
 
     // Delete every operation that is not live. Graph regions may have cycles
     // in the use-def graph, so we must explicitly dropAllUses() from each
@@ -853,7 +875,7 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
 /// failure otherwise.
 static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
                                           Region &region) {
-  if (region.empty() || llvm::hasSingleElement(region))
+  if (region.empty() || region.hasOneBlock())
     return failure();
 
   // Identify sets of blocks, other than the entry block, that branch to the
@@ -1127,9 +1149,8 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
   // Remove the values that already dominate the insertion point.
   SmallVector<Value> prunedValues;
   for (auto value : values) {
-    if (dominance.properlyDominates(value, insertionPoint)) {
+    if (dominance.properlyDominates(value, insertionPoint))
       continue;
-    }
     // Block arguments are not supported.
     if (isa<BlockArgument>(value)) {
       return rewriter.notifyMatchFailure(
@@ -1156,8 +1177,13 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
   // Since current support is to only move within a same basic block,
   // the slices dont need to look past block arguments.
   options.omitBlockArguments = true;
+  bool dependsOnSideEffectingOp = false;
   options.filter = [&](Operation *sliceBoundaryOp) {
-    return !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
+    bool mustMove =
+        !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
+    if (mustMove && !isPure(sliceBoundaryOp))
+      dependsOnSideEffectingOp = true;
+    return mustMove;
   };
   llvm::SetVector<Operation *> slice;
   for (auto value : prunedValues) {
@@ -1165,6 +1191,10 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
     assert(result.succeeded() && "expected a backward slice");
     (void)result;
   }
+
+  // Check if any operation in the slice is side-effecting.
+  if (dependsOnSideEffectingOp)
+    return failure();
 
   // If the slice contains `insertionPoint` cannot move the dependencies.
   if (slice.contains(insertionPoint)) {
@@ -1176,9 +1206,8 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
   // Sort operations topologically before moving.
   mlir::topologicalSort(slice);
 
-  for (Operation *op : slice) {
+  for (Operation *op : slice)
     rewriter.moveOpBefore(op, insertionPoint);
-  }
   return success();
 }
 

@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SEMAOPENACC_H
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenACCKinds.h"
@@ -36,8 +37,16 @@ class Scope;
 class SemaOpenACC : public SemaBase {
 public:
   using DeclGroupPtrTy = OpaquePtr<DeclGroupRef>;
+  using RoutineRefListTy = std::pair<FunctionDecl *, OpenACCRoutineDecl *>;
 
 private:
+  // We save a list of routine clauses that refer to a different function(that
+  // is, routine-with-a-name) so that we can do the emission at the 'end'.  We
+  // have to do this, since functions can be emitted before they are referenced,
+  // and the OpenACCRoutineDecl isn't necessarily emitted, as it might be in a
+  // function/etc. So we do these emits at the end of the TU.
+  llvm::SmallVector<RoutineRefListTy> RoutineRefList;
+
   struct ComputeConstructInfo {
     /// Which type of compute construct we are inside of, which we can use to
     /// determine whether we should add loops to the above collection.  We can
@@ -117,6 +126,15 @@ private:
     OpenACCDirectiveKind DirectiveKind = OpenACCDirectiveKind::Invalid;
   } TileInfo;
 
+  /// The 'cache' var-list requires some additional work to track variable
+  /// references to make sure they are on the 'other' side of a `loop`. This
+  /// structure is used during parse time to track vardecl use while parsing a
+  /// cache var list.
+  struct CacheParseInfo {
+    bool ParsingCacheVarList = false;
+    bool IsInvalidCacheRef = false;
+  } CacheInfo;
+
   /// A list of the active reduction clauses, which allows us to check that all
   /// vars on nested constructs for the same reduction var have the same
   /// reduction operator. Currently this is enforced against all constructs
@@ -167,10 +185,6 @@ private:
 
     void checkFor();
 
-    //  void checkRangeFor(); ?? ERICH
-    //  const ValueDecl *checkInit();
-    //  void checkCond(const ValueDecl *Init);
-    //  void checkInc(const ValueDecl *Init);
   public:
     // Checking for non-instantiation version of a Range-for.
     ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
@@ -222,6 +236,11 @@ private:
 
   bool DiagnoseAllowedClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                               SourceLocation ClauseLoc);
+  bool CreateReductionCombinerRecipe(
+      SourceLocation loc, OpenACCReductionOperator ReductionOperator,
+      QualType VarTy,
+      llvm::SmallVectorImpl<OpenACCReductionRecipe::CombinerRecipe>
+          &CombinerRecipes);
 
 public:
   // Needed from the visitor, so should be public.
@@ -231,6 +250,12 @@ public:
   bool DiagnoseExclusiveClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                 SourceLocation ClauseLoc,
                                 ArrayRef<const OpenACCClause *> Clauses);
+
+  OpenACCPrivateRecipe CreatePrivateInitRecipe(const Expr *VarExpr);
+  OpenACCFirstPrivateRecipe CreateFirstPrivateInitRecipe(const Expr *VarExpr);
+  OpenACCReductionRecipeWithStorage
+  CreateReductionInitRecipe(OpenACCReductionOperator ReductionOperator,
+                            const Expr *VarExpr);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -735,6 +760,7 @@ public:
   };
 
   SemaOpenACC(Sema &S);
+  void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
 
   // Called when we encounter a 'while' statement, before looking at its 'body'.
   void ActOnWhileStmt(SourceLocation WhileLoc);
@@ -861,6 +887,12 @@ public:
   ExprResult ActOnIntExpr(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                           SourceLocation Loc, Expr *IntExpr);
 
+  /// Called right before a 'var' is parsed, so we can set the state for parsing
+  /// a 'cache' var.
+  void ActOnStartParseVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK);
+  /// Called only if the parse of a 'var' was invalid, else 'ActOnVar' should be
+  /// called.
+  void ActOnInvalidParseVar();
   /// Called when encountering a 'var' for OpenACC, ensures it is actually a
   /// declaration reference to a variable of the correct type.
   ExprResult ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
@@ -893,6 +925,7 @@ public:
   ExprResult CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
                                OpenACCReductionOperator ReductionOp,
                                Expr *VarExpr);
+  bool CheckReductionVarType(Expr *VarExpr);
 
   /// Called to check the 'var' type is a variable of pointer type, necessary
   /// for 'deviceptr' and 'attach' clauses. Returns true on success.
@@ -913,6 +946,10 @@ public:
                            OpenACCDirectiveKind DK, OpenACCGangKind GK,
                            Expr *E);
 
+  // Called when a declaration is referenced, so that we can make sure certain
+  // clauses don't do the 'wrong' thing/have incorrect references.
+  void CheckDeclReference(SourceLocation Loc, Expr *E, Decl *D);
+
   // Does the checking for a 'gang' clause that needs to be done in dependent
   // and not dependent cases.
   OpenACCClause *
@@ -928,7 +965,9 @@ public:
                        OpenACCDirectiveKind DirectiveKind,
                        SourceLocation BeginLoc, SourceLocation LParenLoc,
                        OpenACCReductionOperator ReductionOp,
-                       ArrayRef<Expr *> Vars, SourceLocation EndLoc);
+                       ArrayRef<Expr *> Vars,
+                       ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
+                       SourceLocation EndLoc);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);

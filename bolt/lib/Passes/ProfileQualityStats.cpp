@@ -37,7 +37,7 @@ static cl::opt<unsigned> PercentileForProfileQualityCheck(
 } // namespace opts
 
 namespace {
-using FunctionListType = std::vector<const BinaryFunction *>;
+using FunctionListType = ConstBinaryFunctionListType;
 using function_iterator = FunctionListType::iterator;
 
 // Function number -> vector of flows for BBs in the function
@@ -531,6 +531,9 @@ void computeFlowMappings(const BinaryContext &BC, FlowInfo &TotalFlowMap) {
     uint64_t FunctionNum = Function->getFunctionNumber();
     std::vector<uint64_t> &MaxCountMap = TotalMaxCountMaps[FunctionNum];
     std::vector<uint64_t> &MinCountMap = TotalMinCountMaps[FunctionNum];
+
+    // Record external entry count into CallGraphIncomingFlows
+    CallGraphIncomingFlows[FunctionNum] += Function->getExternEntryCount();
 
     // Update MaxCountMap, MinCountMap, and CallGraphIncomingFlows
     auto recordCall = [&](const BinaryBasicBlock *SourceBB,

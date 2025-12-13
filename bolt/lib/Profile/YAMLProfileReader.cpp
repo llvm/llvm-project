@@ -176,6 +176,7 @@ bool YAMLProfileReader::parseFunctionProfile(
   uint64_t FunctionExecutionCount = 0;
 
   BF.setExecutionCount(YamlBF.ExecCount);
+  BF.setExternEntryCount(YamlBF.ExternEntryCount);
 
   uint64_t FuncRawBranchCount = 0;
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks)
@@ -348,9 +349,6 @@ bool YAMLProfileReader::parseFunctionProfile(
       errs() << "BOLT-WARNING: " << MismatchedBlocks << " blocks, "
              << MismatchedCalls << " calls, and " << MismatchedEdges
              << " edges in profile did not match function " << BF << '\n';
-
-    if (YamlBF.NumBasicBlocks != BF.size())
-      ++BC.Stats.NumStaleFuncsWithEqualBlockCount;
 
     if (!opts::InferStaleProfile)
       return false;
@@ -561,7 +559,7 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
     auto BFsWithSameHashOpt = CGMatcher.getBFsWithNeighborHash(Hash);
     if (!BFsWithSameHashOpt)
       continue;
-    std::vector<BinaryFunction *> BFsWithSameHash = BFsWithSameHashOpt.value();
+    BinaryFunctionListType BFsWithSameHash = BFsWithSameHashOpt.value();
     // Finds the binary function with the longest common prefix to the profiled
     // function and matches.
     BinaryFunction *ClosestBF = nullptr;
@@ -727,7 +725,7 @@ size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
     NamespaceToProfiledBFSizes[YamlBFNamespace].insert(YamlBF.NumBasicBlocks);
   }
 
-  StringMap<std::vector<BinaryFunction *>> NamespaceToBFs;
+  StringMap<BinaryFunctionListType> NamespaceToBFs;
 
   // Maps namespaces to BFs excluding binary functions with no equal sized
   // profiled functions belonging to the same namespace.
@@ -762,7 +760,7 @@ size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
       continue;
 
     std::string &YamlBFDemangledName = ProfileBFDemangledNames[I];
-    std::vector<BinaryFunction *> BFs = It->second;
+    BinaryFunctionListType BFs = It->second;
     unsigned MinEditDistance = UINT_MAX;
     BinaryFunction *ClosestNameBF = nullptr;
 

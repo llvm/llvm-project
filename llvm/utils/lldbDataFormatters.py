@@ -3,11 +3,11 @@ LLDB Formatters for LLVM data types.
 
 Load into LLDB with 'command script import /path/to/lldbDataFormatters.py'
 """
+
 from __future__ import annotations
 
 import collections
 import lldb
-import json
 
 
 def __lldb_init_module(debugger, internal_dict):
@@ -82,11 +82,21 @@ def __lldb_init_module(debugger, internal_dict):
         f"-l {__name__}.DenseMapSynthetic "
         '-x "^llvm::DenseMap<.+>$"'
     )
+    debugger.HandleCommand(
+        "type synthetic add -w llvm "
+        f"-l {__name__}.DenseSetSynthetic "
+        '-x "^llvm::DenseSet<.+>$"'
+    )
 
     debugger.HandleCommand(
         "type synthetic add -w llvm "
         f"-l {__name__}.ExpectedSynthetic "
         '-x "^llvm::Expected<.+>$"'
+    )
+    debugger.HandleCommand(
+        "type summary add -w llvm "
+        f"-F {__name__}.SmallBitVectorSummary "
+        "llvm::SmallBitVector"
     )
 
 
@@ -181,28 +191,24 @@ def SmallStringSummaryProvider(valobj, internal_dict):
 
 
 def StringRefSummaryProvider(valobj, internal_dict):
-    if valobj.GetNumChildren() == 2:
-        # StringRef's are also used to point at binary blobs in memory,
-        # so filter out suspiciously long strings.
-        max_length = 1024
-        actual_length = valobj.GetChildAtIndex(1).GetValueAsUnsigned()
-        truncate = actual_length > max_length
-        length = min(max_length, actual_length)
-        if length == 0:
-            return '""'
+    data_pointer = valobj.GetChildMemberWithName("Data")
+    length = valobj.GetChildMemberWithName("Length").unsigned
+    if data_pointer.unsigned == 0 or length == 0:
+        return '""'
 
-        data = valobj.GetChildAtIndex(0).GetPointeeData(item_count=length)
-        error = lldb.SBError()
-        string = data.ReadRawData(error, 0, data.GetByteSize()).decode()
-        if error.Fail():
-            return "<error: %s>" % error.description
-
-        # json.dumps conveniently escapes the string for us.
-        string = json.dumps(string)
-        if truncate:
-            string += "..."
-        return string
-    return None
+    data = data_pointer.deref
+    # StringRef may be uninitialized with length exceeding available memory,
+    # potentially causing bad_alloc exceptions. Limit the length to max string summary setting.
+    limit_obj = valobj.target.debugger.GetSetting("target.max-string-summary-length")
+    if limit_obj:
+        length = min(length, limit_obj.GetUnsignedIntegerValue())
+    # Get a char[N] type, from the underlying char type.
+    array_type = data.type.GetArrayType(length)
+    # Cast the char* string data to a char[N] array.
+    char_array = data.Cast(array_type)
+    # Use the builtin summary for its support of max-string-summary-length and
+    # display of non-printable bytes.
+    return char_array.summary
 
 
 def ConstStringSummaryProvider(valobj, internal_dict):
@@ -372,7 +378,8 @@ class DenseMapSynthetic:
         # For each key, collect a list of buckets it appears in.
         key_buckets: dict[str, list[int]] = collections.defaultdict(list)
         for index in range(num_buckets):
-            key = buckets.GetValueForExpressionPath(f"[{index}].first")
+            bucket = buckets.GetValueForExpressionPath(f"[{index}]")
+            key = bucket.GetChildAtIndex(0)
             key_buckets[str(key.data)].append(index)
 
         # Heuristic: This is not a multi-map, any repeated (non-unique) keys are
@@ -381,6 +388,26 @@ class DenseMapSynthetic:
         for indexes in key_buckets.values():
             if len(indexes) == 1:
                 self.child_buckets.append(indexes[0])
+
+
+class DenseSetSynthetic:
+    valobj: lldb.SBValue
+    map: lldb.SBValue
+
+    def __init__(self, valobj: lldb.SBValue, _) -> None:
+        self.valobj = valobj
+
+    def num_children(self) -> int:
+        return self.map.num_children
+
+    def get_child_at_index(self, idx: int) -> lldb.SBValue:
+        map_entry = self.map.child[idx]
+        set_entry = map_entry.GetChildAtIndex(0)
+        return set_entry.Clone(f"[{idx}]")
+
+    def update(self):
+        raw_map = self.valobj.GetChildMemberWithName("TheMap")
+        self.map = raw_map.GetSyntheticValue()
 
 
 class ExpectedSynthetic:
@@ -421,3 +448,28 @@ class ExpectedSynthetic:
         if idx == 0:
             return self.stored_value
         return lldb.SBValue()
+
+
+def SmallBitVectorSummary(valobj, _):
+    underlyingValue = valobj.GetChildMemberWithName("X").unsigned
+    numBaseBits = valobj.target.addr_size * 8
+    smallNumRawBits = numBaseBits - 1
+    smallNumSizeBits = None
+    if numBaseBits == 32:
+        smallNumSizeBits = 5
+    elif numBaseBits == 64:
+        smallNumSizeBits = 6
+    else:
+        smallNumSizeBits = smallNumRawBits
+    smallNumDataBits = smallNumRawBits - smallNumSizeBits
+
+    # If our underlying value is not small, print we can not dump large values.
+    isSmallMask = 1
+    if underlyingValue & isSmallMask == 0:
+        return "<can not read large SmallBitVector>"
+
+    smallRawBits = underlyingValue >> 1
+    smallSize = smallRawBits >> smallNumDataBits
+    bits = smallRawBits & ((1 << (smallSize + 1)) - 1)
+    # format `bits` in binary (b), with 0 padding, of width `smallSize`, and left aligned (>)
+    return f"[{bits:0>{smallSize}b}]"

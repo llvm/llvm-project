@@ -6,7 +6,7 @@
 ; The shader is free to use any of the VGPRs mapped to a %inactive.vgpr as long as it only touches its active lanes.
 ; In that case, the VGPR should be included in the .vgpr_count
 ; CHECK-LABEL: _miss_1:
-; CHECK: .vgpr_count:{{.*}}0xd{{$}}
+; CHECK: .vgpr_count: 0xd{{$}}
 
 define amdgpu_cs_chain void @_miss_1(ptr inreg %next.callee, i32 inreg %global.table, i32 inreg %max.outgoing.vgpr.count,
                                     i32 %vcr, { i32 } %system.data,
@@ -24,7 +24,7 @@ shader:
   %system.data.extract = extractvalue { i32 } %system.data, 0
   %data.mul = mul i32 %system.data.extract, 2
   %data.add = add i32 %data.mul, 1
-  call void asm sideeffect "; use VGPR for %inactive.vgpr2", "~{v12}"()
+  call void asm sideeffect "; clobber VGPR for %inactive.vgpr2", "~{v12}"()
   br label %tail
 
 tail:

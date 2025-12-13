@@ -1521,5 +1521,4 @@ debugging features are supported.
 
     * Enable debugging assertions in the device. ``0x01``
     * Enable diagnosing common problems during offloading . ``0x4``
-    * Enable device malloc statistics (amdgpu only). ``0x8``
     * Dump device PGO counters (only if PGO on GPU is enabled). ``0x10``

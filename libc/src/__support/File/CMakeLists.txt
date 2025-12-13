@@ -12,13 +12,14 @@ add_object_library(
   HDRS
     file.h
   DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.func.realloc
+    libc.hdr.types.off_t
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
     libc.src.__support.threads.mutex
     libc.src.__support.error_or
-    libc.hdr.types.off_t
-    libc.hdr.stdio_macros
-    libc.hdr.func.realloc
 )
 
 add_object_library(

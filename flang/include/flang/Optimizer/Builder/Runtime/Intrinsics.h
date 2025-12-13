@@ -37,15 +37,21 @@ void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
                          mlir::Value pointer, mlir::Value target);
 void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
                                   mlir::Value pointer, mlir::Value target,
-                                  mlir::Value bounds);
+                                  mlir::Value bounds, bool isMonomorphic);
 
 mlir::Value genCpuTime(fir::FirOpBuilder &, mlir::Location);
 void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
                     std::optional<fir::CharBoxValue> date,
                     std::optional<fir::CharBoxValue> time,
                     std::optional<fir::CharBoxValue> zone, mlir::Value values);
+
+mlir::Value genDsecnds(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value refTime);
+
 void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value values, mlir::Value time);
+
+void genFlush(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value unit);
 
 void genFree(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value ptr);
 
@@ -69,6 +75,9 @@ void genRandomSeed(fir::FirOpBuilder &, mlir::Location, mlir::Value size,
 /// generate rename runtime call
 void genRename(fir::FirOpBuilder &builder, mlir::Location loc,
                mlir::Value path1, mlir::Value path2, mlir::Value status);
+
+mlir::Value genSecnds(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value refTime);
 
 /// generate time runtime call
 mlir::Value genTime(fir::FirOpBuilder &builder, mlir::Location loc);
@@ -101,6 +110,15 @@ void genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
 /// generate chdir runtime call
 mlir::Value genChdir(fir::FirOpBuilder &builder, mlir::Location loc,
                      mlir::Value name);
+
+mlir::Value genIrand(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value i);
+mlir::Value genRand(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value i);
+
+/// generate dump of a descriptor
+void genShowDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value descriptor);
 
 } // namespace runtime
 } // namespace fir

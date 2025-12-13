@@ -1994,7 +1994,7 @@ define amdgpu_kernel void @v_sdiv_i25(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_mul_lo_u32 v1, v3, v2
 ; GCN-NEXT:    v_add_i32_e32 v4, vcc, 1, v3
 ; GCN-NEXT:    v_sub_i32_e32 v1, vcc, v5, v1
-; GCN-NEXT:    v_subrev_i32_e32 v5, vcc, v2, v1
+; GCN-NEXT:    v_sub_i32_e32 v5, vcc, v1, v2
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v2
 ; GCN-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
@@ -2041,7 +2041,7 @@ define amdgpu_kernel void @v_sdiv_i25(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_mul_lo_u32 v1, v3, v2
 ; TONGA-NEXT:    v_add_u32_e32 v4, vcc, 1, v3
 ; TONGA-NEXT:    v_sub_u32_e32 v1, vcc, v5, v1
-; TONGA-NEXT:    v_subrev_u32_e32 v5, vcc, v2, v1
+; TONGA-NEXT:    v_sub_u32_e32 v5, vcc, v1, v2
 ; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v2
 ; TONGA-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
 ; TONGA-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc

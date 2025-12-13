@@ -37,12 +37,16 @@ struct VecUtilsTest : public testing::Test {
   void parseIR(const char *IR) {
     SMDiagnostic Err;
     M = parseAssemblyString(IR, Err, C);
-    if (!M)
+    if (!M) {
       Err.print("VecUtilsTest", errs());
-  }
-  ScalarEvolution &getSE(llvm::Function &LLVMF) {
-    TLII = std::make_unique<TargetLibraryInfoImpl>();
+      return;
+    }
+
+    TLII = std::make_unique<TargetLibraryInfoImpl>(M->getTargetTriple());
     TLI = std::make_unique<TargetLibraryInfo>(*TLII);
+  }
+
+  ScalarEvolution &getSE(llvm::Function &LLVMF) {
     AC = std::make_unique<AssumptionCache>(LLVMF);
     DT = std::make_unique<DominatorTree>(LLVMF);
     LI = std::make_unique<LoopInfo>(*DT);

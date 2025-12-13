@@ -37,3 +37,13 @@ func.func @array_tdesc(%array : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.t
 // CHECK-SAME: ptr {{[^%]*}}%[[BOX:.*]]){{.*}}{
 // CHECK:    %[[VAL_0:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[BOX]], i32 0, i32 8
 // CHECK:    ret ptr %[[VAL_0]]
+
+func.func @boxchar_addr(%boxchar : !fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>> {
+  %addr = fir.box_offset %boxchar base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
+  return %addr : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
+}
+
+// CHECK-LABEL: define ptr @boxchar_addr(
+// CHECK-SAME: ptr {{.*}}%[[BOXCHAR:.*]]){{.*}} {
+// CHECK: %[[VAL_0:.*]] = getelementptr { ptr, i64 }, ptr %[[BOXCHAR]], i32 0, i32 0
+// CHECK: ret ptr %[[VAL_0]]

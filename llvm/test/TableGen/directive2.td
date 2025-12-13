@@ -46,34 +46,40 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #define LLVM_Tdl_INC
 // CHECK-EMPTY:
 // CHECK-NEXT:  #include "llvm/ADT/ArrayRef.h"
+// CHECK-NEXT:  #include "llvm/ADT/Sequence.h"
 // CHECK-NEXT:  #include "llvm/ADT/StringRef.h"
+// CHECK-NEXT:  #include "llvm/Frontend/Directive/Spelling.h"
 // CHECK-NEXT:  #include "llvm/Support/Compiler.h"
 // CHECK-NEXT:  #include <cstddef>
 // CHECK-NEXT:  #include <utility>
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
-// CHECK-NEXT:  namespace tdl {
 // CHECK-EMPTY:
-// CHECK-NEXT:  struct VersionRange { int Min = 1; int Max = 0x7fffffff; };
+// CHECK-NEXT:  namespace tdl {
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Association {
 // CHECK-NEXT:    Block,
+// CHECK-NEXT:    First_ = Block,
 // CHECK-NEXT:    Declaration,
 // CHECK-NEXT:    Delimited,
-// CHECK-NEXT:    Loop,
+// CHECK-NEXT:    LoopNest,
+// CHECK-NEXT:    LoopSeq,
 // CHECK-NEXT:    None,
 // CHECK-NEXT:    Separating,
+// CHECK-NEXT:    Last_ = Separating,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 6;
+// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 7;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Category {
 // CHECK-NEXT:    Declarative,
+// CHECK-NEXT:    First_ = Declarative,
 // CHECK-NEXT:    Executable,
 // CHECK-NEXT:    Informational,
 // CHECK-NEXT:    Meta,
 // CHECK-NEXT:    Subsidiary,
 // CHECK-NEXT:    Utility,
+// CHECK-NEXT:    Last_ = Utility,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Category_enumSize = 6;
@@ -88,28 +94,32 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Directive {
 // CHECK-NEXT:    TDLD_dira,
+// CHECK-NEXT:    First_ = TDLD_dira,
+// CHECK-NEXT:    Last_ = TDLD_dira,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Directive_enumSize = 1;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Clause {
 // CHECK-NEXT:    TDLC_clausea,
+// CHECK-NEXT:    First_ = TDLC_clausea,
 // CHECK-NEXT:    TDLC_clauseb,
 // CHECK-NEXT:    TDLC_clausec,
 // CHECK-NEXT:    TDLC_claused,
+// CHECK-NEXT:    Last_ = TDLC_claused,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 4;
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
-// CHECK-NEXT:  LLVM_ABI std::pair<Directive, VersionRange> getTdlDirectiveKindAndVersions(StringRef Str);
+// CHECK-NEXT:  LLVM_ABI std::pair<Directive, directive::VersionRange> getTdlDirectiveKindAndVersions(StringRef Str);
 // CHECK-NEXT:  inline Directive getTdlDirectiveKind(StringRef Str) {
 // CHECK-NEXT:    return getTdlDirectiveKindAndVersions(Str).first;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  LLVM_ABI StringRef getTdlDirectiveName(Directive D, unsigned Ver = 0);
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_ABI std::pair<Clause, VersionRange> getTdlClauseKindAndVersions(StringRef Str);
+// CHECK-NEXT:  LLVM_ABI std::pair<Clause, directive::VersionRange> getTdlClauseKindAndVersions(StringRef Str);
 // CHECK-EMPTY:
 // CHECK-NEXT:  inline Clause getTdlClauseKind(StringRef Str) {
 // CHECK-NEXT:    return getTdlClauseKindAndVersions(Str).first;
@@ -124,15 +134,33 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  LLVM_ABI Association getDirectiveAssociation(Directive D);
 // CHECK-NEXT:  LLVM_ABI Category getDirectiveCategory(Directive D);
 // CHECK-NEXT:  LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace tdl
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Association> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Category> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Directive> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Clause> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm
+// CHECK-EMPTY:
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC
 
 // IMPL:      #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-NEXT: #undef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:
-// IMPL-NEXT: namespace llvm {
-// IMPL-NEXT: namespace tdl {
+// IMPL-NEXT: namespace llvm::tdl {
 // IMPL-EMPTY:
 // IMPL-NEXT:   // Sets for dira
 // IMPL-EMPTY:
@@ -149,8 +177,8 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-EMPTY:
 // IMPL-NEXT:   static  requiredClauses_TDLD_dira {
 // IMPL-NEXT:   };
-// IMPL-NEXT: } // namespace tdl
-// IMPL-NEXT: } // namespace llvm
+// IMPL-EMPTY:
+// IMPL-NEXT: } // namespace llvm::tdl
 // IMPL-EMPTY:
 // IMPL-NEXT: #endif // GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:
@@ -267,17 +295,18 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL:       #ifdef GEN_DIRECTIVES_IMPL
 // IMPL-NEXT:  #undef GEN_DIRECTIVES_IMPL
 // IMPL-EMPTY:
+// IMPL-NEXT:  #include "llvm/Frontend/Directive/Spelling.h"
 // IMPL-NEXT:  #include "llvm/Support/ErrorHandling.h"
 // IMPL-NEXT:  #include <utility>
 // IMPL-EMPTY:
-// IMPL-NEXT: std::pair<llvm::tdl::Directive, llvm::tdl::VersionRange> llvm::tdl::getTdlDirectiveKindAndVersions(llvm::StringRef Str) {
-// IMPL-NEXT:   VersionRange All{}; // Default-initialized to "all-versions"
-// IMPL-NEXT:   return StringSwitch<std::pair<Directive, VersionRange>>(Str)
+// IMPL-NEXT: std::pair<llvm::tdl::Directive, llvm::directive::VersionRange> llvm::tdl::getTdlDirectiveKindAndVersions(llvm::StringRef Str) {
+// IMPL-NEXT:   directive::VersionRange All; // Default-initialized to "all versions"
+// IMPL-NEXT:   return StringSwitch<std::pair<Directive, directive::VersionRange>>(Str)
 // IMPL-NEXT:     .Case("dira", {TDLD_dira, All})
 // IMPL-NEXT:     .Default({TDLD_dira, All});
 // IMPL-NEXT: }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlDirectiveName(llvm::tdl::Directive Kind, unsigned) {
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlDirectiveName(llvm::tdl::Directive Kind, unsigned Version) {
 // IMPL-NEXT:    switch (Kind) {
 // IMPL-NEXT:      case TDLD_dira:
 // IMPL-NEXT:        return "dira";
@@ -285,9 +314,9 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT: std::pair<llvm::tdl::Clause, llvm::tdl::VersionRange> llvm::tdl::getTdlClauseKindAndVersions(llvm::StringRef Str) {
-// IMPL-NEXT:   VersionRange All{}; // Default-initialized to "all-versions"
-// IMPL-NEXT:   return StringSwitch<std::pair<Clause, VersionRange>>(Str)
+// IMPL-NEXT: std::pair<llvm::tdl::Clause, llvm::directive::VersionRange> llvm::tdl::getTdlClauseKindAndVersions(llvm::StringRef Str) {
+// IMPL-NEXT:   directive::VersionRange All; // Default-initialized to "all versions"
+// IMPL-NEXT:   return StringSwitch<std::pair<Clause, directive::VersionRange>>(Str)
 // IMPL-NEXT:     .Case("clausea", {TDLC_clauseb, All})
 // IMPL-NEXT:     .Case("clauseb", {TDLC_clauseb, All})
 // IMPL-NEXT:     .Case("clausec", {TDLC_clausec, All})
@@ -295,7 +324,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:     .Default({TDLC_clauseb, All});
 // IMPL-NEXT: }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlClauseName(llvm::tdl::Clause Kind, unsigned) {
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlClauseName(llvm::tdl::Clause Kind, unsigned Version) {
 // IMPL-NEXT:    switch (Kind) {
 // IMPL-NEXT:      case TDLC_clausea:
 // IMPL-NEXT:        return "clausea";

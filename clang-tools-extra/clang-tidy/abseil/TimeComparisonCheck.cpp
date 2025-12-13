@@ -1,5 +1,4 @@
-//===--- TimeComparisonCheck.cpp - clang-tidy
-//--------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +18,7 @@ namespace clang::tidy::abseil {
 void TimeComparisonCheck::registerMatchers(MatchFinder *Finder) {
   auto Matcher =
       expr(comparisonOperatorWithCallee(functionDecl(
-               functionDecl(TimeConversionFunction()).bind("function_decl"))))
+               functionDecl(timeConversionFunction()).bind("function_decl"))))
           .bind("binop");
 
   Finder->addMatcher(Matcher, this);
@@ -40,9 +39,9 @@ void TimeComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   // want to handle the case of rewriting both sides. This is much simpler if
   // we unconditionally try and rewrite both, and let the rewriter determine
   // if nothing needs to be done.
-  std::string LhsReplacement =
+  const std::string LhsReplacement =
       rewriteExprFromNumberToTime(Result, *Scale, Binop->getLHS());
-  std::string RhsReplacement =
+  const std::string RhsReplacement =
       rewriteExprFromNumberToTime(Result, *Scale, Binop->getRHS());
 
   diag(Binop->getBeginLoc(), "perform comparison in the time domain")

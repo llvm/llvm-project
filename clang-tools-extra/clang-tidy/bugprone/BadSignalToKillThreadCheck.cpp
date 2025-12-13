@@ -1,4 +1,4 @@
-//===--- BadSignalToKillThreadCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,7 +40,7 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
     const Token &T = MI->tokens().back();
     if (!T.isLiteral() || !T.getLiteralData())
       return std::nullopt;
-    StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
+    const StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
 
     llvm::APInt IntValue;
     constexpr unsigned AutoSenseRadix = 0;

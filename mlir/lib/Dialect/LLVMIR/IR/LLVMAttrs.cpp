@@ -12,14 +12,14 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/PtrEnums.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -50,6 +50,89 @@ void LLVMDialect::registerAttributes() {
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
 
       >();
+}
+
+//===----------------------------------------------------------------------===//
+// AddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+/// Checks whether the given type is an LLVM type that can be loaded or stored.
+bool LLVM::detail::isValidLoadStoreImpl(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) {
+  if (!isLoadableType(type)) {
+    if (emitError)
+      emitError() << "type must be LLVM type with size, but got " << type;
+    return false;
+  }
+  if (ordering == ptr::AtomicOrdering::not_atomic)
+    return true;
+
+  // To check atomic validity we need a datalayout.
+  if (!dataLayout) {
+    if (emitError)
+      emitError() << "expected a valid data layout";
+    return false;
+  }
+  if (!isTypeCompatibleWithAtomicOp(type, *dataLayout)) {
+    if (emitError)
+      emitError() << "unsupported type " << type << " for atomic access";
+    return false;
+  }
+  return true;
+}
+
+bool AddressSpaceAttr::isValidLoad(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return detail::isValidLoadStoreImpl(type, ordering, alignment, dataLayout,
+                                      emitError);
+}
+
+bool AddressSpaceAttr::isValidStore(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return detail::isValidLoadStoreImpl(type, ordering, alignment, dataLayout,
+                                      emitError);
+}
+
+bool AddressSpaceAttr::isValidAtomicOp(
+    ptr::AtomicBinOp op, Type type, ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once `ptr.atomic_rmw` is implemented.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool AddressSpaceAttr::isValidAtomicXchg(
+    Type type, ptr::AtomicOrdering successOrdering,
+    ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once `ptr.atomic_cmpxchg` is implemented.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool AddressSpaceAttr::isValidAddrSpaceCast(
+    Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once the `ptr.addrspace_cast` op is added to the
+  // dialect.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool AddressSpaceAttr::isValidPtrIntCast(
+    Type intLikeTy, Type ptrLikeTy,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once the int-cast ops are added to the `ptr`
+  // dialect.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -136,11 +219,16 @@ bool TBAANodeAttr::classof(Attribute attr) {
 MemoryEffectsAttr MemoryEffectsAttr::get(MLIRContext *context,
                                          ArrayRef<ModRefInfo> memInfoArgs) {
   if (memInfoArgs.empty())
-    return MemoryEffectsAttr::get(context, ModRefInfo::ModRef,
-                                  ModRefInfo::ModRef, ModRefInfo::ModRef);
-  if (memInfoArgs.size() == 3)
+    return MemoryEffectsAttr::get(context, /*other=*/ModRefInfo::ModRef,
+                                  /*argMem=*/ModRefInfo::ModRef,
+                                  /*inaccessibleMem=*/ModRefInfo::ModRef,
+                                  /*errnoMem=*/ModRefInfo::ModRef,
+                                  /*targetMem0=*/ModRefInfo::ModRef,
+                                  /*targetMem1=*/ModRefInfo::ModRef);
+  if (memInfoArgs.size() == 6)
     return MemoryEffectsAttr::get(context, memInfoArgs[0], memInfoArgs[1],
-                                  memInfoArgs[2]);
+                                  memInfoArgs[2], memInfoArgs[3],
+                                  memInfoArgs[4], memInfoArgs[5]);
   return {};
 }
 
@@ -150,6 +238,12 @@ bool MemoryEffectsAttr::isReadWrite() {
   if (this->getInaccessibleMem() != ModRefInfo::ModRef)
     return false;
   if (this->getOther() != ModRefInfo::ModRef)
+    return false;
+  if (this->getErrnoMem() != ModRefInfo::ModRef)
+    return false;
+  if (this->getTargetMem0() != ModRefInfo::ModRef)
+    return false;
+  if (this->getTargetMem1() != ModRefInfo::ModRef)
     return false;
   return true;
 }
@@ -225,8 +319,8 @@ DICompositeTypeAttr::withRecId(DistinctAttr recId) {
   return DICompositeTypeAttr::get(
       getContext(), recId, getIsRecSelf(), getTag(), getName(), getFile(),
       getLine(), getScope(), getBaseType(), getFlags(), getSizeInBits(),
-      getAlignInBits(), getElements(), getDataLocation(), getRank(),
-      getAllocated(), getAssociated());
+      getAlignInBits(), getDataLocation(), getRank(), getAllocated(),
+      getAssociated(), getElements());
 }
 
 DIRecursiveTypeAttrInterface
@@ -375,6 +469,43 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
   return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
       getAttributeName());
 }
+
+FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {
+  auto stringKey = dyn_cast<StringAttr>(key);
+  if (!stringKey)
+    return failure();
+
+  if (contains(stringKey))
+    return UnitAttr::get(getContext());
+
+  if (contains((std::string("+") + stringKey.strref()).str()))
+    return BoolAttr::get(getContext(), true);
+
+  if (contains((std::string("-") + stringKey.strref()).str()))
+    return BoolAttr::get(getContext(), false);
+
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAttr
+//===----------------------------------------------------------------------===//
+
+FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
+  if (auto stringAttrKey = dyn_cast<StringAttr>(key)) {
+    if (stringAttrKey.getValue() == "triple")
+      return getTriple();
+    if (stringAttrKey.getValue() == "chip")
+      return getChip();
+    if (stringAttrKey.getValue() == "features" && getFeatures())
+      return getFeatures();
+  }
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// ModuleFlagAttr
+//===----------------------------------------------------------------------===//
 
 LogicalResult
 ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,

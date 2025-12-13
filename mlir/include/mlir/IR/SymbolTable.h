@@ -411,7 +411,8 @@ public:
   /// Return the users of the provided symbol operation.
   ArrayRef<Operation *> getUsers(Operation *symbol) const {
     auto it = symbolToUsers.find(symbol);
-    return it != symbolToUsers.end() ? it->second.getArrayRef() : std::nullopt;
+    return it != symbolToUsers.end() ? it->second.getArrayRef()
+                                     : ArrayRef<Operation *>();
   }
 
   /// Return true if the given symbol has no uses.
@@ -498,5 +499,6 @@ ParseResult parseOptionalVisibilityKeyword(OpAsmParser &parser,
 
 /// Include the generated symbol interfaces.
 #include "mlir/IR/SymbolInterfaces.h.inc"
+#include "mlir/IR/SymbolInterfacesAttrInterface.h.inc"
 
 #endif // MLIR_IR_SYMBOLTABLE_H

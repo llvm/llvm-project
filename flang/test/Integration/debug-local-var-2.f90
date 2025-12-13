@@ -1,6 +1,5 @@
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --experimental-debuginfo-iterators=true -o - | FileCheck %s --check-prefixes=BOTH,RECORDS
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --experimental-debuginfo-iterators=false -o - | FileCheck --check-prefix=LINEONLY %s
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --experimental-debuginfo-iterators=true -o - | FileCheck --check-prefix=LINEONLY %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -o - | FileCheck %s --check-prefixes=BOTH,RECORDS
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -o - | FileCheck --check-prefix=LINEONLY %s
 
 ! This tests checks the debug information for local variables in llvm IR.
 
@@ -38,14 +37,14 @@
 ! BOTH-LABEL: }
 
 program mn
-! BOTH-DAG: ![[MAIN:.*]] = distinct !DISubprogram(name: "mn", {{.*}})
+! BOTH-DAG: ![[MAIN:.*]] = distinct !DISubprogram(name: "MN", {{.*}})
 
 ! BOTH-DAG: ![[TYI32:.*]] = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
-! BOTH-DAG: ![[TYI64:.*]] = !DIBasicType(name: "integer", size: 64, encoding: DW_ATE_signed)
-! BOTH-DAG: ![[TYL8:.*]]  = !DIBasicType(name: "logical", size: 8, encoding: DW_ATE_boolean)
+! BOTH-DAG: ![[TYI64:.*]] = !DIBasicType(name: "integer(kind=8)", size: 64, encoding: DW_ATE_signed)
+! BOTH-DAG: ![[TYL8:.*]]  = !DIBasicType(name: "logical(kind=1)", size: 8, encoding: DW_ATE_boolean)
 ! BOTH-DAG: ![[TYL32:.*]] = !DIBasicType(name: "logical", size: 32, encoding: DW_ATE_boolean)
 ! BOTH-DAG: ![[TYR32:.*]] = !DIBasicType(name: "real", size: 32, encoding: DW_ATE_float)
-! BOTH-DAG: ![[TYR64:.*]] = !DIBasicType(name: "real", size: 64, encoding: DW_ATE_float)
+! BOTH-DAG: ![[TYR64:.*]] = !DIBasicType(name: "real(kind=8)", size: 64, encoding: DW_ATE_float)
 
 ! BOTH-DAG: ![[I4]] = !DILocalVariable(name: "i4", scope: ![[MAIN]], file: !{{.*}}, line: [[@LINE+6]], type: ![[TYI32]])
 ! BOTH-DAG: ![[I8]] = !DILocalVariable(name: "i8", scope: ![[MAIN]], file: !{{.*}}, line: [[@LINE+6]], type: ![[TYI64]])

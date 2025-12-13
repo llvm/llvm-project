@@ -10,7 +10,7 @@
 subroutine firstprivate()
   class(*), allocatable, save :: x
 
-  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in FIRSTPRIVATE clause, the behavior is unspecified
+  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in FIRSTPRIVATE clause, the behavior is unspecified [-Wportability]
   !$omp parallel firstprivate(x)
     call sub()
   !$omp end parallel
@@ -20,7 +20,7 @@ end
 subroutine lastprivate()
   class(*), allocatable, save :: x
 
-  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in LASTPRIVATE clause, the behavior is unspecified
+  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in LASTPRIVATE clause, the behavior is unspecified [-Wportability]
   !$omp do lastprivate(x)
   do i = 1, 10
     call sub()
@@ -33,7 +33,7 @@ subroutine copyin()
   class(*), allocatable, save :: x
   !$omp threadprivate(x)
 
-  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in COPYIN clause, the behavior is unspecified
+  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in COPYIN clause, the behavior is unspecified [-Wportability]
   !$omp parallel copyin(x)
     call sub()
   !$omp end parallel
@@ -46,7 +46,7 @@ subroutine copyprivate()
 
   !$omp single
     call sub()
-  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in COPYPRIVATE clause, the behavior is unspecified
+  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in COPYPRIVATE clause, the behavior is unspecified [-Wportability]
   !$omp end single copyprivate(x)
 
 end

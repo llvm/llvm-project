@@ -44,13 +44,6 @@ int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, int64_t *stream,
 int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t *stream,
     bool *pinned, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
-  if (desc.HasAddendum()) {
-    Terminator terminator{sourceFile, sourceLine};
-    // TODO: This require a bit more work to set the correct type descriptor
-    // address
-    terminator.Crash(
-        "not yet implemented: CUDA descriptor allocation with addendum");
-  }
   // Perform the standard allocation.
   int stat{RTNAME(AllocatableAllocate)(
       desc, stream, hasStat, errMsg, sourceFile, sourceLine)};
@@ -64,26 +57,34 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t *stream,
 
 int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
     const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine,
+    bool sourceIsDevice) {
   int stat{RTNAME(CUFAllocatableAllocate)(
       alloc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
-    Fortran::runtime::DoFromSourceAssign(
-        alloc, source, terminator, &MemmoveHostToDevice);
+    Fortran::runtime::DoFromSourceAssign(alloc, source, terminator,
+        sourceIsDevice ? &MemmoveDeviceToHost : &MemmoveHostToDevice);
   }
   return stat;
 }
 
 int RTDEF(CUFAllocatableAllocateSourceSync)(Descriptor &alloc,
     const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
-  int stat{RTNAME(CUFAllocatableAllocateSync)(
-      alloc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine,
+    bool sourceIsDevice) {
+  int stat;
+  if (sourceIsDevice) {
+    stat = RTNAME(CUFAllocatableAllocate)(
+        alloc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine);
+  } else {
+    stat = RTNAME(CUFAllocatableAllocateSync)(
+        alloc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine);
+  }
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
-    Fortran::runtime::DoFromSourceAssign(
-        alloc, source, terminator, &MemmoveHostToDevice);
+    Fortran::runtime::DoFromSourceAssign(alloc, source, terminator,
+        sourceIsDevice ? &MemmoveDeviceToHost : &MemmoveHostToDevice);
   }
   return stat;
 }

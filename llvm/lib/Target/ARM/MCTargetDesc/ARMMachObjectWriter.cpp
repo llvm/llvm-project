@@ -20,7 +20,6 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -144,7 +143,7 @@ void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
     return;
   }
 
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
   unsigned Type = MachO::ARM_RELOC_HALF;
 
   // See <reloc.h>.
@@ -192,7 +191,7 @@ void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
   // relocation entry in the low 16 bits of r_address field.
   unsigned ThumbBit = 0;
   unsigned MovtBit = 0;
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default: break;
   case ARM::fixup_arm_movt_hi16:
     MovtBit = 1;
@@ -251,7 +250,7 @@ void ARMMachObjectWriter::recordARMScatteredRelocation(
     return;
   }
 
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
 
   // See <reloc.h>.
   const MCSymbol *A = Target.getAddSym();
@@ -358,7 +357,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
                                            const MCFragment *Fragment,
                                            const MCFixup &Fixup, MCValue Target,
                                            uint64_t &FixedValue) {
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
   unsigned Log2Size;
   unsigned RelocType = MachO::ARM_RELOC_VANILLA;
   if (!getARMFixupKindMachOInfo(Fixup.getKind(), RelocType, Log2Size)) {
@@ -465,7 +464,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
     // PAIR. I.e. it's correct that we insert the high bits of the addend in the
     // MOVW case here.  relocation entries.
     uint32_t Value = 0;
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
     default: break;
     case ARM::fixup_arm_movw_lo16:
     case ARM::fixup_t2_movw_lo16:
@@ -505,7 +504,7 @@ public:
     // Remember that the function is a thumb function. Fixup and relocation
     // values will need adjusted.
     getStreamer().getAssembler().setIsThumbFunc(Symbol);
-    cast<MCSymbolMachO>(Symbol)->setThumbFunc();
+    static_cast<MCSymbolMachO *>(Symbol)->setThumbFunc();
   }
 };
 } // namespace

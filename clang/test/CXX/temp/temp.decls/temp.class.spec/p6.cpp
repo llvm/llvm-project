@@ -38,7 +38,7 @@ A<short>::C::B<int*> absip;
 template<typename T, typename U>
 struct Outer {
   template<typename X, typename Y> struct Inner;
-  template<typename Y> struct Inner<T, Y> {}; // expected-note{{previous declaration of class template partial specialization 'Inner<int, Y>' is here}}
+  template<typename Y> struct Inner<T, Y> {}; // expected-note{{previous declaration of class template partial specialization 'Outer<int, int>::Inner<int, Y>' is here}}
   template<typename Y> struct Inner<U, Y> {}; // expected-error{{cannot be redeclared}}
 };
 
@@ -80,7 +80,7 @@ namespace print_dependent_TemplateSpecializationType {
 template <class T, class U> struct Foo {
   template <unsigned long, class X, class Y> struct Bar;
   template <class Y> struct Bar<0, T, Y> {};
-  // expected-note-re@-1 {{previous declaration {{.*}} 'Bar<0, int, Y>' is here}}
+  // expected-note-re@-1 {{previous declaration {{.*}} 'print_dependent_TemplateSpecializationType::Foo<int, int>::Bar<0, int, Y>' is here}}
   template <class Y> struct Bar<0, U, Y> {};
   // expected-error@-1 {{partial specialization 'Bar<0, int, Y>' cannot be redeclared}}
 };

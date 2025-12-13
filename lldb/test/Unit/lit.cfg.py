@@ -33,6 +33,7 @@ llvm_config.with_system_environment(
     ]
 )
 llvm_config.with_environment("PATH", os.path.dirname(sys.executable), append_path=True)
+config.environment["PYTHONHOME"] = config.python_root_dir
 
 # Enable sanitizer runtime flags.
 if config.llvm_use_sanitizer:

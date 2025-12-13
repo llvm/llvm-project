@@ -11,8 +11,9 @@
 
 #include "Cuda.h"
 #include "Gnu.h"
-#include "LazyDetector.h"
-#include "ROCm.h"
+#include "clang/Driver/CudaInstallationDetector.h"
+#include "clang/Driver/LazyDetector.h"
+#include "clang/Driver/RocmInstallationDetector.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/Support/ErrorOr.h"

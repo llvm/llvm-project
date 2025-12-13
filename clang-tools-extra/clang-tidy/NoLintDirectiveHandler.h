@@ -1,4 +1,4 @@
-//===-- clang-tools-extra/clang-tidy/NoLintDirectiveHandler.h ----*- C++ *-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,8 +31,6 @@ class NoLintDirectiveHandler {
 public:
   NoLintDirectiveHandler();
   ~NoLintDirectiveHandler();
-  NoLintDirectiveHandler(const NoLintDirectiveHandler &) = delete;
-  NoLintDirectiveHandler &operator=(const NoLintDirectiveHandler &) = delete;
 
   bool shouldSuppress(DiagnosticsEngine::Level DiagLevel,
                       const Diagnostic &Diag, llvm::StringRef DiagName,

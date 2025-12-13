@@ -72,9 +72,7 @@ public:
   /// \}
 
 protected:
-  const MCSymbol *CurSymbol;
-
-  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+  MCSymbol *CurSymbol;
 
   void finalizeCGProfileEntry(const MCSymbolRefExpr *&S);
 

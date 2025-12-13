@@ -75,6 +75,31 @@ struct ShuffleVectorPseudo {
   ShuffleVectorPseudo() = default;
 };
 
+/// Return true if a G_FCONSTANT instruction is known to be better-represented
+/// as a G_CONSTANT.
+bool matchFConstantToConstant(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
+  Register DstReg = MI.getOperand(0).getReg();
+  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
+  if (DstSize != 16 && DstSize != 32 && DstSize != 64)
+    return false;
+
+  // When we're storing a value, it doesn't matter what register bank it's on.
+  // Since not all floating point constants can be materialized using a fmov,
+  // it makes more sense to just use a GPR.
+  return all_of(MRI.use_nodbg_instructions(DstReg),
+                [](const MachineInstr &Use) { return Use.mayStore(); });
+}
+
+/// Change a G_FCONSTANT into a G_CONSTANT.
+void applyFConstantToConstant(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
+  MachineIRBuilder MIB(MI);
+  const APFloat &ImmValAPF = MI.getOperand(1).getFPImm()->getValueAPF();
+  MIB.buildConstant(MI.getOperand(0).getReg(), ImmValAPF.bitcastToAPInt());
+  MI.eraseFromParent();
+}
+
 /// Check if a G_EXT instruction can handle a shuffle mask \p M when the vector
 /// sources of the shuffle are different.
 std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
@@ -190,14 +215,15 @@ bool matchTRN(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
+  unsigned OperandOrder;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isTRNMask(ShuffleMask, NumElts, WhichResult))
+  if (!isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_TRN1 : AArch64::G_TRN2;
-  Register V1 = MI.getOperand(1).getReg();
-  Register V2 = MI.getOperand(2).getReg();
+  Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -227,14 +253,15 @@ bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
+  unsigned OperandOrder;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isZIPMask(ShuffleMask, NumElts, WhichResult))
+  if (!isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_ZIP1 : AArch64::G_ZIP2;
-  Register V1 = MI.getOperand(1).getReg();
-  Register V2 = MI.getOperand(2).getReg();
+  Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -556,8 +583,7 @@ void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned NewOpc =
       Opc == TargetOpcode::G_ASHR ? AArch64::G_VASHR : AArch64::G_VLSHR;
   MachineIRBuilder MIB(MI);
-  auto ImmDef = MIB.buildConstant(LLT::scalar(32), Imm);
-  MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1), ImmDef});
+  MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1)}).addImm(Imm);
   MI.eraseFromParent();
 }
 
@@ -614,8 +640,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x uge c => x ugt c - 1
     //
     // When c is not zero.
-    if (C == 0)
-      return std::nullopt;
+    assert(C != 0 && "C should not be zero here!");
     P = (P == CmpInst::ICMP_ULT) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
     C -= 1;
     break;
@@ -656,14 +681,13 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   if (isLegalArithImmed(C))
     return {{C, P}};
 
-  auto IsMaterializableInSingleInstruction = [=](uint64_t Imm) {
+  auto NumberOfInstrToLoadImm = [=](uint64_t Imm) {
     SmallVector<AArch64_IMM::ImmInsnModel> Insn;
     AArch64_IMM::expandMOVImm(Imm, 32, Insn);
-    return Insn.size() == 1;
+    return Insn.size();
   };
 
-  if (!IsMaterializableInSingleInstruction(OriginalC) &&
-      IsMaterializableInSingleInstruction(C))
+  if (NumberOfInstrToLoadImm(OriginalC) > NumberOfInstrToLoadImm(C))
     return {{C, P}};
 
   return std::nullopt;

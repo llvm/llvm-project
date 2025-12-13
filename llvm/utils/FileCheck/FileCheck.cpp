@@ -193,7 +193,7 @@ struct MarkerStyle {
   std::string Note;
   /// Does this marker indicate inclusion by -dump-input-filter=error?
   bool FiltersAsError;
-  MarkerStyle() {}
+  MarkerStyle() = default;
   MarkerStyle(char Lead, raw_ostream::Colors Color,
               const std::string &Note = "", bool FiltersAsError = false)
       : Lead(Lead), Color(Color), Note(Note), FiltersAsError(FiltersAsError) {
@@ -384,7 +384,7 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
                       std::vector<InputAnnotation> &Annotations,
                       unsigned &LabelWidth) {
   struct CompareSMLoc {
-    bool operator()(const SMLoc &LHS, const SMLoc &RHS) const {
+    bool operator()(SMLoc LHS, SMLoc RHS) const {
       return LHS.getPointer() < RHS.getPointer();
     }
   };
@@ -735,7 +735,7 @@ int main(int argc, char **argv) {
 
   InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv, /*Overview*/ "", /*Errs*/ nullptr,
-                              "FILECHECK_OPTS");
+                              /*VFS*/ nullptr, "FILECHECK_OPTS");
 
   // Select -dump-input* values.  The -help documentation specifies the default
   // value and which value to choose if an option is specified multiple times.

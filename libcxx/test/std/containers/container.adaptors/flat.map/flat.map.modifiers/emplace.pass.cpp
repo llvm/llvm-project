@@ -18,6 +18,7 @@
 #include <deque>
 #include <tuple>
 #include <functional>
+#include <type_traits>
 #include <vector>
 
 #include "MinSequenceContainer.h"
@@ -39,7 +40,7 @@ static_assert(!CanEmplace<Map, Emplaceable>);
 static_assert(!CanEmplace<Map, int, double>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
@@ -117,7 +118,7 @@ void test() {
 }
 
 template <class KeyContainer, class ValueContainer>
-void test_emplaceable() {
+constexpr void test_emplaceable() {
   using M = std::flat_map<int, Emplaceable, std::less<int>, KeyContainer, ValueContainer>;
   using R = std::pair<typename M::iterator, bool>;
 
@@ -143,23 +144,38 @@ void test_emplaceable() {
   assert(m.begin()->second == Emplaceable(2, 3.5));
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<double>>();
-  test<std::deque<int>, std::vector<double>>();
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
   test_emplaceable<std::vector<int>, std::vector<Emplaceable>>();
-  test_emplaceable<std::deque<int>, std::vector<Emplaceable>>();
   test_emplaceable<MinSequenceContainer<int>, MinSequenceContainer<Emplaceable>>();
   test_emplaceable<std::vector<int, min_allocator<int>>, std::vector<Emplaceable, min_allocator<Emplaceable>>>();
 
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
   {
+    test<std::deque<int>, std::vector<double>>();
+    test_emplaceable<std::deque<int>, std::vector<Emplaceable>>();
+  }
+
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto emplace_func = [](auto& m, auto key_arg, auto value_arg) {
       m.emplace(std::piecewise_construct, std::tuple(key_arg), std::tuple(value_arg));
     };
     test_emplace_exception_guarantee(emplace_func);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

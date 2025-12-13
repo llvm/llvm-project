@@ -24,9 +24,6 @@
 using namespace llvm;
 using namespace IRSimilarity;
 
-LLVM_ABI extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
-
 static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
                                               StringRef ModuleStr) {
   SMDiagnostic Err;
@@ -51,6 +48,9 @@ void getSimilarities(
   IRSimilarityIdentifier Identifier(/*EnableBranchMatching = */false);
   SimilarityCandidates = Identifier.findSimilarity(M);
 }
+
+// TODO: All these tests could probably become IR LIT tests like
+// IROutliner/outlining-special-state.ll
 
 // Checks that different opcodes are mapped to different values
 TEST(IRInstructionMapper, OpcodeDifferentiation) {

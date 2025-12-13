@@ -450,7 +450,12 @@ namespace std {
 #  include <__config>
 
 #  if _LIBCPP_STD_VER >= 23
-#    include <__fwd/mdspan.h>
+#    include <__fwd/mdspan.h> // TODO(boomanaiden154): This is currently a
+                              // non-standard extension to include
+                              // std::dynamic_extent tracked by LWG issue 4275.
+                              // This comment should be deleted or the include
+                              // deleted upon resolution.
+#    include <__fwd/span.h>
 #    include <__mdspan/default_accessor.h>
 #    include <__mdspan/extents.h>
 #    include <__mdspan/layout_left.h>

@@ -1,6 +1,6 @@
 ! RUN: %if aarch64-registered-target %{ %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fno-pie 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-STATIC,CHECK-STATIC-IR %}
 
-! RUN: %if aarch64-registered-target %{ %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIE-LEVEL2,CHECK-PIE-LEVEL2-IR %}
+! RUN: %if aarch64-registered-target && clang_default_pie_on_linux %{ %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIE-LEVEL2,CHECK-PIE-LEVEL2-IR %}
 ! RUN: %if aarch64-registered-target %{ %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fpie 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIE-LEVEL1,CHECK-PIE-LEVEL1-IR %}
 ! RUN: %if aarch64-registered-target %{ %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fPIE 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIE-LEVEL2,CHECK-PIE-LEVEL2-IR %}
 

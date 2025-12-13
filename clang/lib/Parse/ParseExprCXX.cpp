@@ -195,9 +195,10 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     if (DS.getTypeSpecType() == DeclSpec::TST_error)
       return false;
 
-    QualType Type = Actions.ActOnPackIndexingType(
-        DS.getRepAsType().get(), DS.getPackIndexingExpr(), DS.getBeginLoc(),
-        DS.getEllipsisLoc());
+    QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType());
+    QualType Type =
+        Actions.ActOnPackIndexingType(Pattern, DS.getPackIndexingExpr(),
+                                      DS.getBeginLoc(), DS.getEllipsisLoc());
 
     if (Type.isNull())
       return false;
@@ -421,8 +422,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       // like we never saw it.
       Token Identifier = Tok; // Stash away the identifier.
       ConsumeToken();         // Eat the identifier, current token is now '::'.
-      Diag(PP.getLocForEndOfToken(ConsumeToken()), diag::err_expected)
-          << tok::identifier;
+      ConsumeToken();
+      Diag(getEndOfPreviousToken(), diag::err_expected) << tok::identifier;
       UnconsumeToken(Identifier); // Stick the identifier back.
       Next = NextToken();         // Point Next at the '{' token.
     }
@@ -771,9 +772,11 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
   // Produce a diagnostic if we're not tentatively parsing; otherwise track
   // that our parse has failed.
-  auto Invalid = [&](llvm::function_ref<void()> Action) {
+  auto Result = [&](llvm::function_ref<void()> Action,
+                    LambdaIntroducerTentativeParse State =
+                        LambdaIntroducerTentativeParse::Invalid) {
     if (Tentative) {
-      *Tentative = LambdaIntroducerTentativeParse::Invalid;
+      *Tentative = State;
       return false;
     }
     Action();
@@ -823,7 +826,7 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           break;
         }
 
-        return Invalid([&] {
+        return Result([&] {
           Diag(Tok.getLocation(), diag::err_expected_comma_or_rsquare);
         });
       }
@@ -860,7 +863,7 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         ConsumeToken();
         Kind = LCK_StarThis;
       } else {
-        return Invalid([&] {
+        return Result([&] {
           Diag(Tok.getLocation(), diag::err_expected_star_this_capture);
         });
       }
@@ -874,8 +877,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       // or the start of a capture (in the "&" case) with the rest of the
       // capture missing. Both are an error but a misplaced capture-default
       // is more likely if we don't already have a capture default.
-      return Invalid(
-          [&] { Diag(Tok.getLocation(), diag::err_capture_default_first); });
+      return Result(
+          [&] { Diag(Tok.getLocation(), diag::err_capture_default_first); },
+          LambdaIntroducerTentativeParse::Incomplete);
     } else {
       TryConsumeToken(tok::ellipsis, EllipsisLocs[0]);
 
@@ -898,14 +902,13 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         Id = Tok.getIdentifierInfo();
         Loc = ConsumeToken();
       } else if (Tok.is(tok::kw_this)) {
-        return Invalid([&] {
+        return Result([&] {
           // FIXME: Suggest a fixit here.
           Diag(Tok.getLocation(), diag::err_this_captured_by_reference);
         });
       } else {
-        return Invalid([&] {
-          Diag(Tok.getLocation(), diag::err_expected_capture);
-        });
+        return Result(
+            [&] { Diag(Tok.getLocation(), diag::err_expected_capture); });
       }
 
       TryConsumeToken(tok::ellipsis, EllipsisLocs[2]);
@@ -972,8 +975,6 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           SourceLocation StartLoc = Tok.getLocation();
           InMessageExpressionRAIIObject MaybeInMessageExpression(*this, true);
           Init = ParseInitializer();
-          if (!Init.isInvalid())
-            Init = Actions.CorrectDelayedTyposInExpr(Init.get());
 
           if (Tok.getLocation() != StartLoc) {
             // Back out the lexing of the token after the initializer.
@@ -1065,8 +1066,6 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     // enclosing the lambda-expression, rather than in the context of the
     // lambda-expression itself.
     ParsedType InitCaptureType;
-    if (Init.isUsable())
-      Init = Actions.CorrectDelayedTyposInExpr(Init.get());
     if (Init.isUsable()) {
       NonTentativeAction([&] {
         // Get the pointer and store it in an lvalue, so we can use it as an
@@ -1238,8 +1237,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       if (Tok.is(tok::kw___noinline__)) {
         IdentifierInfo *AttrName = Tok.getIdentifierInfo();
         SourceLocation AttrNameLoc = ConsumeToken();
-        Attributes.addNew(AttrName, AttrNameLoc, /*ScopeName=*/nullptr,
-                          AttrNameLoc, /*ArgsUnion=*/nullptr,
+        Attributes.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(),
+                          /*ArgsUnion=*/nullptr,
                           /*numArgs=*/0, tok::kw___noinline__);
       } else if (Tok.is(tok::kw___attribute))
         ParseGNUAttributes(Attributes, /*LatePArsedAttrList=*/nullptr, &D);
@@ -1247,7 +1246,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
         break;
     }
 
-    D.takeAttributes(Attributes);
+    D.takeAttributesAppending(Attributes);
   }
 
   MultiParseScope TemplateParamScope(*this);
@@ -1302,7 +1301,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     Diag(Tok, getLangOpts().CPlusPlus23
                   ? diag::warn_cxx20_compat_decl_attrs_on_lambda
                   : diag::ext_decl_attrs_on_lambda)
-        << Tok.getIdentifierInfo() << Tok.isRegularKeywordAttribute();
+        << Tok.isRegularKeywordAttribute() << Tok.getIdentifierInfo();
     MaybeParseCXX11Attributes(D);
   }
 
@@ -1935,15 +1934,13 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    ExprResult Expr = [&] {
-      EnterExpressionEvaluationContext Eval(
-          Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-          /*LambdaContextDecl=*/nullptr,
-          /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
-          /*ShouldEnter=*/CK == Sema::ConditionKind::ConstexprIf);
-      // Parse the expression.
-      return ParseExpression(); // expression
-    }();
+    EnterExpressionEvaluationContext Eval(
+        Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        /*LambdaContextDecl=*/nullptr,
+        /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
+        /*ShouldEnter=*/CK == Sema::ConditionKind::ConstexprIf);
+
+    ExprResult Expr = ParseExpression();
 
     if (Expr.isInvalid())
       return Sema::ConditionError();
@@ -2361,8 +2358,10 @@ bool Parser::ParseUnqualifiedIdTemplateId(
 
   // Constructor and destructor names.
   TypeResult Type = Actions.ActOnTemplateIdType(
-      getCurScope(), SS, TemplateKWLoc, Template, Name, NameLoc, LAngleLoc,
-      TemplateArgsPtr, RAngleLoc, /*IsCtorOrDtorName=*/true);
+      getCurScope(), ElaboratedTypeKeyword::None,
+      /*ElaboratedKeywordLoc=*/SourceLocation(), SS, TemplateKWLoc, Template,
+      Name, NameLoc, LAngleLoc, TemplateArgsPtr, RAngleLoc,
+      /*IsCtorOrDtorName=*/true);
   if (Type.isInvalid())
     return true;
 
@@ -3202,8 +3201,9 @@ ExprResult Parser::ParseRequiresExpression() {
         //             cv-qualifier-seq[opt] abstract-declarator[opt]
         BalancedDelimiterTracker ExprBraces(*this, tok::l_brace);
         ExprBraces.consumeOpen();
-        ExprResult Expression =
-            Actions.CorrectDelayedTyposInExpr(ParseExpression());
+        ExprResult Expression = ParseExpression();
+        if (Expression.isUsable())
+          Expression = Actions.CheckPlaceholderExpr(Expression.get());
         if (!Expression.isUsable()) {
           ExprBraces.skipToEnd();
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
@@ -3306,8 +3306,7 @@ ExprResult Parser::ParseRequiresExpression() {
             // C++ [expr.prim.req.nested]
             //     nested-requirement:
             //         'requires' constraint-expression ';'
-            ExprResult ConstraintExpr =
-                Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
+            ExprResult ConstraintExpr = ParseConstraintExpression();
             if (ConstraintExpr.isInvalid() || !ConstraintExpr.isUsable()) {
               SkipUntil(tok::semi, tok::r_brace,
                         SkipUntilFlags::StopBeforeMatch);
@@ -3373,8 +3372,9 @@ ExprResult Parser::ParseRequiresExpression() {
         //     simple-requirement:
         //         expression ';'
         SourceLocation StartLoc = Tok.getLocation();
-        ExprResult Expression =
-            Actions.CorrectDelayedTyposInExpr(ParseExpression());
+        ExprResult Expression = ParseExpression();
+        if (Expression.isUsable())
+          Expression = Actions.CheckPlaceholderExpr(Expression.get());
         if (!Expression.isUsable()) {
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
           break;
@@ -3614,7 +3614,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
       Result = ParseCastExpression(CastParseKind::AnyCastExpr,
                                    false /*isAddressofOperand*/, NotCastExpr,
                                    // type-id has priority.
-                                   TypeCastState::IsTypeCast);
+                                   TypoCorrectionTypeBehavior::AllowTypes);
     }
 
     // If we parsed a cast-expression, it's really a type-id, otherwise it's

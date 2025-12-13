@@ -1,4 +1,4 @@
-//===--- AvoidUnderscoreInGoogletestNameCheck.cpp - clang-tidy --*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,10 +39,11 @@ public:
   void MacroExpands(const Token &MacroNameToken,
                     const MacroDefinition &MacroDefinition, SourceRange Range,
                     const MacroArgs *Args) override {
-    IdentifierInfo *NameIdentifierInfo = MacroNameToken.getIdentifierInfo();
+    const IdentifierInfo *NameIdentifierInfo =
+        MacroNameToken.getIdentifierInfo();
     if (!NameIdentifierInfo)
       return;
-    StringRef MacroName = NameIdentifierInfo->getName();
+    const StringRef MacroName = NameIdentifierInfo->getName();
     if (!isGoogletestTestMacro(MacroName) || !Args ||
         Args->getNumMacroArguments() < 2)
       return;
@@ -50,7 +51,7 @@ public:
     const Token *TestNameToken = Args->getUnexpArgument(1);
     if (!TestSuiteNameToken || !TestNameToken)
       return;
-    std::string TestSuiteNameMaybeDisabled =
+    const std::string TestSuiteNameMaybeDisabled =
         PP->getSpelling(*TestSuiteNameToken);
     StringRef TestSuiteName = TestSuiteNameMaybeDisabled;
     TestSuiteName.consume_front(KDisabledTestPrefix);
@@ -60,7 +61,7 @@ public:
                   "Googletest FAQ")
           << TestSuiteName;
 
-    std::string TestNameMaybeDisabled = PP->getSpelling(*TestNameToken);
+    const std::string TestNameMaybeDisabled = PP->getSpelling(*TestNameToken);
     StringRef TestName = TestNameMaybeDisabled;
     TestName.consume_front(KDisabledTestPrefix);
     if (TestName.contains('_'))

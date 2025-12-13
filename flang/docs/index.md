@@ -16,6 +16,22 @@ on how to get in touch with us and to learn more about the current status.
    ReleaseNotes
 ```
 
+# Using Flang
+
+```{eval-rst}
+.. toctree::
+   :titlesonly:
+
+   GettingStarted
+   FlangCommandLineReference
+   FortranStandardsSupport
+   Extensions
+   Directives
+   OpenMPSupport
+   Real16MathSupport
+   Unsigned
+```
+
 # Contributing to Flang
 
 ```{eval-rst}
@@ -26,11 +42,8 @@ on how to get in touch with us and to learn more about the current status.
    C++style
    DesignGuideline
    FortranForCProgrammers
-   FortranStandardsSupport
    GettingInvolved
-   GettingStarted
    ImplementingASemanticCheck
-   OpenMPSupport
    PullRequestChecklist
 ```
 
@@ -51,14 +64,11 @@ on how to get in touch with us and to learn more about the current status.
    ComplexOperations
    ControlFlowGraph
    DebugGeneration
-   Directives
    DoConcurrent
    DoConcurrentConversionToOpenMP
-   Extensions
    F202X
    FIRArrayOperations
    FIRLangRef
-   FlangCommandLineReference
    FlangDriver
    FortranFeatureHistory
    FortranIR
@@ -78,6 +88,7 @@ on how to get in touch with us and to learn more about the current status.
    OpenMP-semantics
    OptionComparison
    Overview
+   ParallelMultiImageFortranRuntime
    ParameterizedDerivedTypes
    ParserCombinators
    Parsing
@@ -90,8 +101,6 @@ on how to get in touch with us and to learn more about the current status.
    Semantics
    f2018-grammar.md
    fstack-arrays
-   Real16MathSupport
-   Unsigned
 ```
 
 # Indices and tables

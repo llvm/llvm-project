@@ -153,7 +153,7 @@ constexpr bool test() {
     assert(std::to_address(&p11) == &p11);
     ASSERT_SAME_TYPE(decltype(std::to_address(&p11)), int(**)());
 
-    // See https://github.com/llvm/llvm-project/issues/67449
+    // See https://llvm.org/PR67449
     {
         struct S { };
         S* p = nullptr;

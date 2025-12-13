@@ -1,4 +1,4 @@
-//===--- ProTypeVarargCheck.cpp - clang-tidy-------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,9 +65,9 @@ static constexpr StringRef VaArgWarningMessage =
 
 namespace {
 AST_MATCHER(QualType, isVAList) {
-  ASTContext &Context = Finder->getASTContext();
-  QualType Desugar = Node.getDesugaredType(Context);
-  QualType NodeTy = Node.getUnqualifiedType();
+  const ASTContext &Context = Finder->getASTContext();
+  const QualType Desugar = Node.getDesugaredType(Context);
+  const QualType NodeTy = Node.getUnqualifiedType();
 
   auto CheckVaList = [](QualType NodeTy, QualType Expected,
                         const ASTContext &Context) {
@@ -88,7 +88,8 @@ AST_MATCHER(QualType, isVAList) {
   // type. Some targets implements va_list as 'char *' or 'void *'.
   // In these cases we need to remove all typedefs one by one to check this.
   using BuiltinVaListKind = TargetInfo::BuiltinVaListKind;
-  BuiltinVaListKind VaListKind = Context.getTargetInfo().getBuiltinVaListKind();
+  const BuiltinVaListKind VaListKind =
+      Context.getTargetInfo().getBuiltinVaListKind();
   if (VaListKind == BuiltinVaListKind::CharPtrBuiltinVaList ||
       VaListKind == BuiltinVaListKind::VoidPtrBuiltinVaList) {
     if (CheckVaList(NodeTy, Context.getBuiltinVaListType(), Context))

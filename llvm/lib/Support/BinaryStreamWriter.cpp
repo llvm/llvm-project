@@ -89,7 +89,7 @@ BinaryStreamWriter::split(uint64_t Off) const {
   First = First.keep_front(Off);
   BinaryStreamWriter W1{First};
   BinaryStreamWriter W2{Second};
-  return std::make_pair(W1, W2);
+  return {W1, W2};
 }
 
 Error BinaryStreamWriter::padToAlignment(uint32_t Align) {

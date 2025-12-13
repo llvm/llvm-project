@@ -9,25 +9,25 @@ define float @test1(i32 %hash, float %x, float %y, float %z, float %w) {
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[HASH:%.*]], 2
 ; CHECK-NEXT:    [[T5:%.*]] = and i32 [[T3]], 124
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[T5]] to i64
-; CHECK-NEXT:    [[T753:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[T753:%.*]] = getelementptr float, ptr @C.0.1248, i64 [[TMP0]]
 ; CHECK-NEXT:    [[T9:%.*]] = load float, ptr [[T753]], align 4
 ; CHECK-NEXT:    [[T11:%.*]] = fmul float [[T9]], [[X:%.*]]
 ; CHECK-NEXT:    [[T13:%.*]] = fadd float [[T11]], 0.000000e+00
-; CHECK-NEXT:    [[T17_SUM52:%.*]] = or disjoint i32 [[T5]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[T17_SUM52]] to i64
-; CHECK-NEXT:    [[T1851:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[T5]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr @C.0.1248, i64 [[TMP1]]
+; CHECK-NEXT:    [[T1851:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[T19:%.*]] = load float, ptr [[T1851]], align 4
 ; CHECK-NEXT:    [[T21:%.*]] = fmul float [[T19]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T23:%.*]] = fadd float [[T21]], [[T13]]
-; CHECK-NEXT:    [[T27_SUM50:%.*]] = or disjoint i32 [[T5]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[T27_SUM50]] to i64
-; CHECK-NEXT:    [[T2849:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[T5]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr @C.0.1248, i64 [[TMP3]]
+; CHECK-NEXT:    [[T2849:%.*]] = getelementptr i8, ptr [[TMP4]], i64 8
 ; CHECK-NEXT:    [[T29:%.*]] = load float, ptr [[T2849]], align 4
 ; CHECK-NEXT:    [[T31:%.*]] = fmul float [[T29]], [[Z:%.*]]
 ; CHECK-NEXT:    [[T33:%.*]] = fadd float [[T31]], [[T23]]
-; CHECK-NEXT:    [[T37_SUM48:%.*]] = or disjoint i32 [[T5]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[T37_SUM48]] to i64
-; CHECK-NEXT:    [[T3847:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[T5]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr @C.0.1248, i64 [[TMP5]]
+; CHECK-NEXT:    [[T3847:%.*]] = getelementptr i8, ptr [[TMP6]], i64 12
 ; CHECK-NEXT:    [[T39:%.*]] = load float, ptr [[T3847]], align 4
 ; CHECK-NEXT:    [[T41:%.*]] = fmul float [[T39]], [[W:%.*]]
 ; CHECK-NEXT:    [[T43:%.*]] = fadd float [[T41]], [[T33]]
@@ -139,19 +139,34 @@ define void @test2_addrspacecast() {
   ret void
 }
 
-declare void @bar(ptr)
-declare void @bar_as1(ptr addrspace(1))
+declare void @bar(ptr nocapture)
+declare void @bar_may_capture(ptr)
+declare void @bar_as1(ptr addrspace(1) nocapture)
 
 
 ;; Should be able to eliminate the alloca.
-define void @test3() {
-; CHECK-LABEL: @test3(
+define void @test3_nocapture() {
+; CHECK-LABEL: @test3_nocapture(
 ; CHECK-NEXT:    call void @bar(ptr nonnull @G) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @G, i64 124, i1 false)
   call void @bar(ptr %A) readonly
+  ret void
+}
+
+; Can not eliminate the alloca, as the function may capture its address.
+define void @test3_may_capture() {
+; CHECK-LABEL: @test3_may_capture(
+; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[A]], ptr noundef nonnull align 16 dereferenceable(124) @G, i64 124, i1 false)
+; CHECK-NEXT:    call void @bar_may_capture(ptr nonnull [[A]]) #[[ATTR3]]
+; CHECK-NEXT:    ret void
+;
+  %A = alloca %T
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @G, i64 124, i1 false)
+  call void @bar_may_capture(ptr %A) readonly
   ret void
 }
 
@@ -178,14 +193,14 @@ define void @test4() {
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
 define void @test5() {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    call void @baz(ptr nonnull byval(i8) @G)
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %A)
+  call void @llvm.lifetime.start.p0(ptr %A)
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @G, i64 124, i1 false)
   call void @baz(ptr byval(i8) %A)
   ret void
@@ -308,7 +323,7 @@ define float @test11(i64 %i) {
 
 entry:
   %a = alloca [4 x float], align 4
-  call void @llvm.lifetime.start.p0(i64 16, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   call void @llvm.memcpy.p0.p1.i64(ptr align 4 %a, ptr addrspace(1) align 4 @I, i64 16, i1 false)
   %g = getelementptr inbounds [4 x float], ptr %a, i64 0, i64 %i
   %r = load float, ptr %g, align 4
@@ -320,16 +335,16 @@ define float @test11_volatile(i64 %i) {
 ; CHECK-LABEL: @test11_volatile(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x float], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr align 4 [[A]], ptr addrspace(1) align 4 @I, i64 16, i1 true)
-; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds [4 x float], ptr [[A]], i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[I:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[G]], align 4
 ; CHECK-NEXT:    ret float [[R]]
 ;
 
 entry:
   %a = alloca [4 x float], align 4
-  call void @llvm.lifetime.start.p0(i64 16, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   call void @llvm.memcpy.p0.p1.i64(ptr align 4 %a, ptr addrspace(1) align 4 @I, i64 16, i1 true)
   %g = getelementptr inbounds [4 x float], ptr %a, i64 0, i64 %i
   %r = load float, ptr %g, align 4
@@ -395,12 +410,12 @@ define void @memcpy_to_capturing_readonly() {
 ; CHECK-LABEL: @memcpy_to_capturing_readonly(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i1 false)
-; CHECK-NEXT:    call void @bar(ptr nonnull readonly [[A]])
+; CHECK-NEXT:    call void @bar_may_capture(ptr nonnull readonly [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @H, i64 20, i1 false)
-  call void @bar(ptr readonly %A)
+  call void @bar_may_capture(ptr readonly %A)
   ret void
 }
 

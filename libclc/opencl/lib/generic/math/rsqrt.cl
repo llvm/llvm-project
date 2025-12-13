@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_rsqrt.h>
-#include <clc/opencl/clc.h>
 
-#define FUNCTION rsqrt
+#define __CLC_FUNCTION rsqrt
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

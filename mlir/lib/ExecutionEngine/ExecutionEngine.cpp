@@ -106,7 +106,7 @@ void ExecutionEngine::dumpToObjectFile(StringRef filename) {
   }
   // Compilation is lazy and it doesn't populate object cache unless requested.
   // In case object dump is requested before cache is populated, we need to
-  // force compilation manually. 
+  // force compilation manually.
   if (cache->isEmpty()) {
     for (std::string &functionName : functionNames) {
       auto result = lookupPacked(functionName);
@@ -146,12 +146,10 @@ static void packFunctionArguments(Module *module) {
   llvm::IRBuilder<> builder(ctx);
   DenseSet<llvm::Function *> interfaceFunctions;
   for (auto &func : module->getFunctionList()) {
-    if (func.isDeclaration()) {
+    if (func.isDeclaration() || func.hasLocalLinkage())
       continue;
-    }
-    if (interfaceFunctions.count(&func)) {
+    if (interfaceFunctions.count(&func))
       continue;
-    }
 
     // Given a function `foo(<...>)`, define the interface function
     // `mlir_foo(i8**)`.
@@ -239,6 +237,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   // Remember all entry-points if object dumping is enabled.
   if (options.enableObjectDump) {
     for (auto funcOp : m->getRegion(0).getOps<LLVM::LLVMFuncOp>()) {
+      if (funcOp.getBlocks().empty())
+        continue;
       StringRef funcName = funcOp.getSymName();
       engine->functionNames.push_back(funcName.str());
     }
@@ -400,13 +400,6 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     return symbolMap;
   };
   engine->registerSymbols(runtimeSymbolMap);
-
-  // Execute the global constructors from the module being processed.
-  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
-  // crash for AArch64 see related issue #71963.
-  if (!engine->jit->getTargetTriple().isAArch64())
-    cantFail(engine->jit->initialize(engine->jit->getMainJITDylib()));
-
   return std::move(engine);
 }
 
@@ -442,6 +435,7 @@ Expected<void *> ExecutionEngine::lookup(StringRef name) const {
 
 Error ExecutionEngine::invokePacked(StringRef name,
                                     MutableArrayRef<void *> args) {
+  initialize();
   auto expectedFPtr = lookupPacked(name);
   if (!expectedFPtr)
     return expectedFPtr.takeError();
@@ -450,4 +444,14 @@ Error ExecutionEngine::invokePacked(StringRef name,
   (*fptr)(args.data());
 
   return Error::success();
+}
+
+void ExecutionEngine::initialize() {
+  if (isInitialized)
+    return;
+  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  if (!jit->getTargetTriple().isAArch64())
+    cantFail(jit->initialize(jit->getMainJITDylib()));
+  isInitialized = true;
 }

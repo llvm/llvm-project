@@ -3,12 +3,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs -target-abi=lp64d \
 ; RUN: -riscv-disable-frm-insert-opt < %s | FileCheck %s --check-prefix=UNOPT
 
-declare <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-  <vscale x 1 x float>,
-  <vscale x 1 x float>,
-  <vscale x 1 x float>,
-  i64, i64)
-
 ; Test only save/restore frm once.
 define <vscale x 1 x float> @test(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
 ; CHECK-LABEL: test:
@@ -32,12 +26,12 @@ define <vscale x 1 x float> @test(<vscale x 1 x float> %0, <vscale x 1 x float> 
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 0, i64 %2)
   %b = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %a,
     <vscale x 1 x float> %a,
     i64 0, i64 %2)
@@ -68,12 +62,12 @@ define <vscale x 1 x float> @test2(<vscale x 1 x float> %0, <vscale x 1 x float>
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 0, i64 %2)
   %b = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %a,
     <vscale x 1 x float> %a,
     i64 1, i64 %2)
@@ -164,7 +158,7 @@ define <vscale x 1 x float> @before_call1(<vscale x 1 x float> %0, <vscale x 1 x
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 0, i64 %2)
@@ -212,7 +206,7 @@ define <vscale x 1 x float> @before_call2(<vscale x 1 x float> %0, <vscale x 1 x
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 7, i64 %2)
@@ -264,7 +258,7 @@ define <vscale x 1 x float> @after_call1(<vscale x 1 x float> %0, <vscale x 1 x 
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 0, i64 %2)
@@ -312,7 +306,7 @@ define <vscale x 1 x float> @after_call2(<vscale x 1 x float> %0, <vscale x 1 x 
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 7, i64 %2)
@@ -359,7 +353,7 @@ define <vscale x 1 x float> @before_asm1(<vscale x 1 x float> %0, <vscale x 1 x 
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 0, i64 %2)
@@ -385,7 +379,7 @@ define <vscale x 1 x float> @before_asm2(<vscale x 1 x float> %0, <vscale x 1 x 
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 7, i64 %2)
@@ -415,7 +409,7 @@ define <vscale x 1 x float> @after_asm1(<vscale x 1 x float> %0, <vscale x 1 x f
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 0, i64 %2)
@@ -441,7 +435,7 @@ define <vscale x 1 x float> @after_asm2(<vscale x 1 x float> %0, <vscale x 1 x f
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 7, i64 %2)
@@ -452,7 +446,6 @@ entry:
 ; Test restoring frm before reading frm and doing nothing with following
 ; dynamic rounding mode operations.
 ; TODO: The frrm could be elided.
-declare i32 @llvm.get.rounding()
 define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2, ptr %p) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
@@ -487,14 +480,14 @@ define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float>
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 0, i64 %2)
   %rm = call i32 @llvm.get.rounding()
   store i32 %rm, ptr %p, align 4
   %b = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %a,
     <vscale x 1 x float> %a,
     i64 7, i64 %2)
@@ -502,7 +495,6 @@ entry:
 }
 
 ; Test not set FRM for vfadd with DYN after WriteFRMImm.
-declare void @llvm.set.rounding(i32)
 define <vscale x 1 x float> @after_fsrm1(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
 ; CHECK-LABEL: after_fsrm1:
 ; CHECK:       # %bb.0: # %entry
@@ -520,7 +512,7 @@ define <vscale x 1 x float> @after_fsrm1(<vscale x 1 x float> %0, <vscale x 1 x 
 entry:
   call void @llvm.set.rounding(i32 4)
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 7, i64 %2)
@@ -547,7 +539,7 @@ define <vscale x 1 x float> @after_fsrm2(<vscale x 1 x float> %0, <vscale x 1 x 
 entry:
   call void @llvm.set.rounding(i32 4)
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 4, i64 %2)
@@ -576,7 +568,7 @@ define <vscale x 1 x float> @after_fsrm3(<vscale x 1 x float> %0, <vscale x 1 x 
 entry:
   call void @llvm.set.rounding(i32 4)
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 3, i64 %2)
@@ -613,7 +605,7 @@ define <vscale x 1 x float> @after_fsrm4(<vscale x 1 x float> %0, <vscale x 1 x 
 entry:
   call void @llvm.set.rounding(i32 %rm)
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 7, i64 %2)

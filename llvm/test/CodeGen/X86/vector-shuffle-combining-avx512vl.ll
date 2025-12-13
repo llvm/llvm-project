@@ -137,3 +137,31 @@ define void @PR142995(ptr %p0, ptr %p1, ptr %p2) nounwind #0 {
 }
 declare <5 x i32> @llvm.masked.load.v5i32.p0(ptr captures(none), i32 immarg, <5 x i1>, <5 x i32>)
 declare <64 x i32> @llvm.masked.load.v64i32.p0(ptr captures(none), i32 immarg, <64 x i1>, <64 x i32>)
+
+define <8 x double> @PR143606(ptr %px, ptr %py) {
+; X86-LABEL: PR143606:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovapd (%ecx), %ymm0
+; X86-NEXT:    vblendpd {{.*#+}} ymm1 = ymm0[0],mem[1,2],ymm0[3]
+; X86-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],mem[0],ymm0[2],mem[3]
+; X86-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR143606:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovapd (%rdi), %ymm0
+; X64-NEXT:    vblendpd {{.*#+}} ymm1 = ymm0[0],mem[1,2],ymm0[3]
+; X64-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],mem[0],ymm0[2],mem[3]
+; X64-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; X64-NEXT:    retq
+  %x = load <4 x double>, ptr %px, align 32
+  %y.lo = load <4 x double>, ptr %py, align 32
+  %py.hi = getelementptr inbounds nuw i8, ptr %py, i64 32
+  %y.hi = load <4 x double>, ptr %py.hi, align 32
+  %lo = shufflevector <4 x double> %x, <4 x double> %y.lo, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+  %hi = call <4 x double> @llvm.x86.avx512.vpermi2var.pd.256(<4 x double> %x, <4 x i64> <i64 1, i64 4, i64 2, i64 7>, <4 x double> %y.hi)
+  %res = shufflevector <4 x double> %lo, <4 x double> %hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x double> %res
+}

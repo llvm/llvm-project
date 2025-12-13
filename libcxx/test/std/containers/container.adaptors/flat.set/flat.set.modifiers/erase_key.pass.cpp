@@ -26,7 +26,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer, class Compare = std::less<>>
-void test_one() {
+constexpr void test_one() {
   using M = std::flat_set<int, Compare, KeyContainer>;
 
   auto make = [](std::initializer_list<int> il) {
@@ -74,12 +74,17 @@ void test_one() {
   assert(m.empty());
 }
 
-void test() {
+constexpr bool test() {
   test_one<std::vector<int>>();
   test_one<std::vector<int>, std::greater<>>();
-  test_one<std::deque<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test_one<std::deque<int>>();
   test_one<MinSequenceContainer<int>>();
   test_one<std::vector<int, min_allocator<int>>>();
+
+  return true;
 }
 
 void test_exception() {
@@ -95,6 +100,9 @@ void test_exception() {
 int main(int, char**) {
   test();
   test_exception();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

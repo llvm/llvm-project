@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s -DBYTECODE
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify=ref,both %s
 
+typedef __INT64_TYPE__ int64_t;
 namespace std {
   using size_t = decltype(sizeof(0));
   template<typename T> struct allocator {
@@ -67,31 +68,14 @@ consteval int ok5() {
   } s;
   new (&s) S[1]{{12, 13}};
 
+  /// FIXME: Broken in the current interpreter.
+#if BYTECODE
+  return s.a + s.b;
+#else
   return 25;
-  // return s.a + s.b; FIXME: Broken in the current interpreter.
+#endif
 }
 static_assert(ok5() == 25);
-
-/// FIXME: Broken in both interpreters.
-#if 0
-consteval int ok5() {
-    int i;
-    new (&i) int[1]{1}; // expected-note {{assignment to dereferenced one-past-the-end pointer}}
-    return i;
-}
-static_assert(ok5() == 1); // expected-error {{not an integral constant expression}} \
-                           // expected-note {{in call to}}
-#endif
-
-/// FIXME: Crashes the current interpreter.
-#if 0
-consteval int ok6() {
-    int i[2];
-    new (&i) int(100);
-    return i[0];
-}
-static_assert(ok6() == 100);
-#endif
 
 consteval int ok6() {
     int i[2];
@@ -101,6 +85,22 @@ consteval int ok6() {
 }
 static_assert(ok6() == 300);
 
+/// FIXME: Broken in the current interpreter.
+#if BYTECODE
+consteval int ok7() {
+    int i;
+    new (&i) int[1]{1};
+    return i;
+}
+static_assert(ok7() == 1);
+
+consteval int ok8() {
+    int i[2];
+    new (&i) int(100);
+    return i[0];
+}
+static_assert(ok8() == 100);
+#endif
 
 consteval auto fail1() {
   int b;
@@ -465,3 +465,60 @@ namespace ArrayRoot {
 
   static_assert(foo() == 0);
 }
+
+namespace bitcast {
+  template <typename F, typename T>
+  constexpr T bit_cast(const F &f) {
+    return __builtin_bit_cast(T, f);
+  }
+  constexpr int foo() {
+    double *d = std::allocator<double>{}.allocate(2);
+    std::construct_at<double>(d, 0);
+
+    double &dd = *d;
+
+    int64_t i = bit_cast<double, int64_t>(*d);
+
+
+    std::allocator<double>{}.deallocate(d);
+    return i;
+  }
+  static_assert(foo() == 0);
+}
+
+constexpr int modify_const_variable() {
+  const int a = 10;
+  new ((int *)&a) int(12); // both-note {{modification of object of const-qualified type 'const int' is not allowed in a constant expression}}
+  return a;
+}
+static_assert(modify_const_variable()); // both-error {{not an integral constant expression}} \
+                                        // both-note {{in call to}}
+
+constexpr int nullDest() {
+  new (nullptr) int{12}; // both-note {{construction of dereferenced null pointer}}
+  return 0;
+}
+static_assert(nullDest() == 0); // both-error {{not an integral constant expression}} \
+                                // both-note {{in call to}}
+
+constexpr int nullArrayDest() {
+  new (nullptr) int{12}; // both-note {{construction of dereferenced null pointer}}
+  return 0;
+}
+static_assert(nullArrayDest() == 0); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
+
+constexpr int intDest() {
+  new ((void*)2) int{3}; // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  return 0;
+}
+static_assert(intDest() == 0); // both-error {{not an integral constant expression}} \
+                               // both-note {{in call to}}
+
+constexpr int intDestArray() {
+  new ((void*)2) int[4]; // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  return 0;
+}
+static_assert(intDestArray() == 0); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+

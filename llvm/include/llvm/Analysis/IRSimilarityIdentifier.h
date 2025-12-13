@@ -509,11 +509,10 @@ struct IRInstructionMapper {
       : InstDataAllocator(IDA), IDLAllocator(IDLA) {
     // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
     // changed.
-    assert(DenseMapInfo<unsigned>::getEmptyKey() == static_cast<unsigned>(-1) &&
-           "DenseMapInfo<unsigned>'s empty key isn't -1!");
-    assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
-               static_cast<unsigned>(-2) &&
-           "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
+    static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
+                  static_cast<unsigned>(-1));
+    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
+                  static_cast<unsigned>(-2));
 
     IDL = new (IDLAllocator->Allocate())
         IRInstructionDataList();
@@ -545,10 +544,6 @@ struct IRInstructionMapper {
     // dependent.
     InstrType visitLandingPadInst(LandingPadInst &LPI) { return Illegal; }
     InstrType visitFuncletPadInst(FuncletPadInst &FPI) { return Illegal; }
-    // DebugInfo should be included in the regions, but should not be
-    // analyzed for similarity as it has no bearing on the outcome of the
-    // program.
-    InstrType visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) { return Invisible; }
     InstrType visitIntrinsicInst(IntrinsicInst &II) {
       // These are disabled due to complications in the CodeExtractor when
       // outlining these instructions.  For instance, It is unclear what we

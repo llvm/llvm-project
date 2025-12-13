@@ -342,3 +342,59 @@ define <16 x i32> @concat_sext_zext_v8i16_v16i32(<8 x i16> %a0, <8 x i16> %a1) {
   %r = shufflevector <8 x i32> %x0, <8 x i32> %x1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i32> %r
 }
+
+; Unary shuffles
+
+define <4 x i16> @unary_shuffle_zext_v8i8_v4i16(<8 x i8> %a0) {
+; CHECK-LABEL: define <4 x i16> @unary_shuffle_zext_v8i8_v4i16(
+; CHECK-SAME: <8 x i8> [[A0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT: [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i8> [[A0]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT: [[X1:%.*]] = zext <4 x i8> [[VEC_SHUFFLE]] to <4 x i16>
+; CHECK-NEXT: ret <4 x i16> [[X1]]
+;
+  %x1 = zext <8 x i8> %a0 to <8 x i16>
+  %vec.shuffle = shufflevector <8 x i16> %x1, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i16> %vec.shuffle
+}
+
+define <4 x i16> @unary_shuffle_sext_v8i8_v4i16(<8 x i8> %a0) {
+; CHECK-LABEL: define <4 x i16> @unary_shuffle_sext_v8i8_v4i16(
+; CHECK-SAME: <8 x i8> [[A0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT: [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i8> [[A0]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT: [[X1:%.*]] = sext <4 x i8> [[VEC_SHUFFLE]] to <4 x i16>
+; CHECK-NEXT: ret <4 x i16> [[X1]]
+;
+  %x1 = sext <8 x i8> %a0 to <8 x i16>
+  %vec.shuffle = shufflevector <8 x i16> %x1, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i16> %vec.shuffle
+}
+
+; negative - avoid loop with foldBitcastOfShuffle
+
+define <2 x i32> @unary_shuffle_bitcast_v8i8_v2i32(<8 x i8> %a0) {
+; CHECK-LABEL: define <2 x i32> @unary_shuffle_bitcast_v8i8_v2i32(
+; CHECK-SAME: <8 x i8> [[A0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT: [[X1:%.*]] = bitcast <8 x i8> [[A0]] to <2 x i32>
+; CHECK-NEXT: [[VEC_SHUFFLE:%.*]] = shufflevector <2 x i32> [[X1]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT: ret <2 x i32> [[VEC_SHUFFLE]]
+;
+  %x1 = bitcast <8 x i8> %a0 to <2 x i32>
+  %vec.shuffle = shufflevector <2 x i32> %x1, <2 x i32> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x i32> %vec.shuffle
+}
+
+; negative - multiuse
+
+define <4 x i16> @unary_shuffle_sext_v8i8_v4i16_multiuse(<8 x i8> %a0, ptr %a1) {
+; CHECK-LABEL: define <4 x i16> @unary_shuffle_sext_v8i8_v4i16_multiuse(
+; CHECK-SAME: <8 x i8> [[A0:%.*]], ptr [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT: [[X1:%.*]] = sext <8 x i8> [[A0]] to <8 x i16>
+; CHECK-NEXT: [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i16> [[X1]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT: store <8 x i16> [[X1]], ptr [[A1]], align 16
+; CHECK-NEXT: ret <4 x i16> [[VEC_SHUFFLE]]
+;
+  %x1 = sext <8 x i8> %a0 to <8 x i16>
+  %vec.shuffle = shufflevector <8 x i16> %x1, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <8 x i16> %x1, ptr %a1, align 16
+  ret <4 x i16> %vec.shuffle
+}

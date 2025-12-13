@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CheckExprLifetime.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
@@ -157,8 +157,8 @@ void Sema::inferGslPointerAttribute(TypedefNameDecl *TD) {
     if (auto *TST =
             dyn_cast<TemplateSpecializationType>(Canonical.getTypePtr())) {
 
-      RD = dyn_cast_or_null<CXXRecordDecl>(
-          TST->getTemplateName().getAsTemplateDecl()->getTemplatedDecl());
+      if (const auto *TD = TST->getTemplateName().getAsTemplateDecl())
+        RD = dyn_cast_or_null<CXXRecordDecl>(TD->getTemplatedDecl());
     }
   }
 
@@ -289,7 +289,7 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
       // We only apply the lifetime_capture_by attribute to parameters of
       // pointer-like reference types (`const T&`, `T&&`).
       if (PVD->getType()->isReferenceType() &&
-          sema::isGLSPointerType(PVD->getType().getNonReferenceType())) {
+          lifetimes::isGslPointerType(PVD->getType().getNonReferenceType())) {
         int CaptureByThis[] = {LifetimeCaptureByAttr::This};
         PVD->addAttr(
             LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
@@ -436,7 +436,7 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc,
 }
 
 void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
-                           StringRef SlotLabel, Expr *alignment) {
+                           StringRef SlotLabel, Expr *Alignment) {
   bool IsXLPragma = getLangOpts().XLPragmaPack;
   // XL pragma pack does not support identifier syntax.
   if (IsXLPragma && !SlotLabel.empty()) {
@@ -445,7 +445,6 @@ void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
   }
 
   const AlignPackInfo CurVal = AlignPackStack.CurrentValue;
-  Expr *Alignment = static_cast<Expr *>(alignment);
 
   // If specified then alignment must be a "small" power of two.
   unsigned AlignmentVal = 0;

@@ -305,7 +305,7 @@ static bool isFunctionMacroExpansion(SourceLocation Loc,
     return false;
   while (SM.isMacroArgExpansion(Loc))
     Loc = SM.getImmediateExpansionRange(Loc).getBegin();
-  std::pair<FileID, unsigned> TLInfo = SM.getDecomposedLoc(Loc);
+  FileIDAndOffset TLInfo = SM.getDecomposedLoc(Loc);
   SrcMgr::SLocEntry SE = SM.getSLocEntry(TLInfo.first);
   const SrcMgr::ExpansionInfo &EInfo = SE.getExpansion();
   return EInfo.isFunctionMacroExpansion();
@@ -1950,7 +1950,7 @@ class TrackControlDependencyCondBRVisitor final
     : public TrackingBugReporterVisitor {
   const ExplodedNode *Origin;
   ControlDependencyCalculator ControlDeps;
-  llvm::SmallSet<const CFGBlock *, 32> VisitedBlocks;
+  llvm::SmallPtrSet<const CFGBlock *, 32> VisitedBlocks;
 
 public:
   TrackControlDependencyCondBRVisitor(TrackerRef ParentTracker,
@@ -2793,9 +2793,14 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTerminator(
   // more tricky because there are more than two branches to account for.
   default:
     return nullptr;
-  case Stmt::IfStmtClass:
-    Cond = cast<IfStmt>(Term)->getCond();
+  case Stmt::IfStmtClass: {
+    const auto *IfStatement = cast<IfStmt>(Term);
+    // Handle if consteval which doesn't have a traditional condition.
+    if (IfStatement->isConsteval())
+      return nullptr;
+    Cond = IfStatement->getCond();
     break;
+  }
   case Stmt::ConditionalOperatorClass:
     Cond = cast<ConditionalOperator>(Term)->getCond();
     break;
@@ -3248,9 +3253,6 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
 
   return true;
 }
-
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericTrueMessage;
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericFalseMessage;
 
 bool ConditionBRVisitor::isPieceMessageGeneric(
     const PathDiagnosticPiece *Piece) {

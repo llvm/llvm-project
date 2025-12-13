@@ -30,12 +30,12 @@
 
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512vl,avx512vp2intersect,no-evex512"),         \
+                 __target__("avx512vl,avx512vp2intersect"),                    \
                  __min_vector_width__(128)))
 
 #define __DEFAULT_FN_ATTRS256                                                  \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512vl,avx512vp2intersect,no-evex512"),         \
+                 __target__("avx512vl,avx512vp2intersect"),                    \
                  __min_vector_width__(256)))
 /// Store, in an even/odd pair of mask registers, the indicators of the
 /// locations of value matches between dwords in operands __a and __b.

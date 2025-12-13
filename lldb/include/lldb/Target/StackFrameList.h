@@ -20,13 +20,13 @@ namespace lldb_private {
 
 class ScriptedThread;
 
-class StackFrameList {
+class StackFrameList : public std::enable_shared_from_this<StackFrameList> {
 public:
   // Constructors and Destructors
   StackFrameList(Thread &thread, const lldb::StackFrameListSP &prev_frames_sp,
                  bool show_inline_frames);
 
-  ~StackFrameList();
+  virtual ~StackFrameList();
 
   /// Get the number of visible frames. Frames may be created if \p can_create
   /// is true. Synthetic (inline) frames expanded from the concrete frame #0
@@ -45,6 +45,9 @@ public:
 
   /// Mark a stack frame as the currently selected frame and return its index.
   uint32_t SetSelectedFrame(lldb_private::StackFrame *frame);
+
+  /// Resets the selected frame index of this object.
+  void ClearSelectedFrameIndex();
 
   /// Get the currently selected frame index.
   /// We should only call SelectMostRelevantFrame if (a) the user hasn't already
@@ -98,8 +101,12 @@ public:
   /// Returns whether we have currently fetched all the frames of a stack.
   bool WereAllFramesFetched() const;
 
+  /// Get the thread associated with this frame list.
+  Thread &GetThread() const { return m_thread; }
+
 protected:
   friend class Thread;
+  friend class ScriptedFrameProvider;
   friend class ScriptedThread;
 
   /// Use this API to build a stack frame list (used for scripted threads, for
@@ -172,7 +179,21 @@ protected:
   /// The currently selected frame. An optional is used to record whether anyone
   /// has set the selected frame on this stack yet. We only let recognizers
   /// change the frame if this is the first time GetSelectedFrame is called.
+  ///
+  /// Thread-safety:
+  /// This member is not protected by a mutex.
+  /// LLDB really only should have an opinion about the selected frame index
+  /// when a process stops, before control gets handed back to the user.
+  /// After that, it's up to them to change it whenever they feel like it.
+  /// If two parts of lldb decided they wanted to be in control of the selected
+  /// frame index on stop the right way to fix it would need to be some explicit
+  /// negotiation for who gets to control this.
   std::optional<uint32_t> m_selected_frame_idx;
+
+  /// Protect access to m_selected_frame_idx. Always acquire after m_list_mutex
+  /// to avoid lock inversion. A recursive mutex because GetSelectedFrameIndex
+  /// may indirectly call SetSelectedFrame.
+  std::recursive_mutex m_selected_frame_mutex;
 
   /// The number of concrete frames fetched while filling the frame list. This
   /// is only used when synthetic frames are enabled.
@@ -191,24 +212,49 @@ protected:
   /// Whether or not to show synthetic (inline) frames. Immutable.
   const bool m_show_inlined_frames;
 
+  /// Returns true if fetching frames was interrupted, false otherwise.
+  virtual bool FetchFramesUpTo(uint32_t end_idx,
+                               InterruptionControl allow_interrupt);
+
 private:
   uint32_t SetSelectedFrameNoLock(lldb_private::StackFrame *frame);
   lldb::StackFrameSP
   GetFrameAtIndexNoLock(uint32_t idx,
                         std::shared_lock<std::shared_mutex> &guard);
 
+  /// @{
   /// These two Fetch frames APIs and SynthesizeTailCallFrames are called in
   /// GetFramesUpTo, they are the ones that actually add frames.  They must be
   /// called with the writer end of the list mutex held.
-
-  /// Returns true if fetching frames was interrupted, false otherwise.
-  bool FetchFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt);
+  ///
   /// Not currently interruptible so returns void.
+  /// }@
   void FetchOnlyConcreteFramesUpTo(uint32_t end_idx);
   void SynthesizeTailCallFrames(StackFrame &next_frame);
 
   StackFrameList(const StackFrameList &) = delete;
   const StackFrameList &operator=(const StackFrameList &) = delete;
+};
+
+/// A StackFrameList that wraps another StackFrameList and uses a
+/// SyntheticFrameProvider to lazily provide frames from either the provider
+/// or the underlying real stack frame list.
+class SyntheticStackFrameList : public StackFrameList {
+public:
+  SyntheticStackFrameList(Thread &thread, lldb::StackFrameListSP input_frames,
+                          const lldb::StackFrameListSP &prev_frames_sp,
+                          bool show_inline_frames);
+
+protected:
+  /// Override FetchFramesUpTo to lazily return frames from the provider
+  /// or from the actual stack frame list.
+  bool FetchFramesUpTo(uint32_t end_idx,
+                       InterruptionControl allow_interrupt) override;
+
+private:
+  /// The input stack frame list that the provider transforms.
+  /// This could be a real StackFrameList or another SyntheticStackFrameList.
+  lldb::StackFrameListSP m_input_frames;
 };
 
 } // namespace lldb_private

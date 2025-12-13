@@ -48,7 +48,7 @@ define signext i32 @test3(i32 signext %x, i1 %y) #0 {
 define signext i32 @test4(i32 signext %x, i1 %y) #0 {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1 x i32], ptr @f.c, i64 0, i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr @f.c, i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

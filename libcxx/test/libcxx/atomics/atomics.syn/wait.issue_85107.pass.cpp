@@ -13,11 +13,8 @@
 // the test is a no-op (and would XPASS) on some targets.
 // UNSUPPORTED: using-built-library-before-llvm-19
 
-// XFAIL: availability-synchronization_library-missing
-
-// This is a regression test for https://github.com/llvm/llvm-project/issues/85107, which describes
-// how we were using UL_COMPARE_AND_WAIT instead of UL_COMPARE_AND_WAIT64 in the implementation of
-// atomic::wait, leading to potential infinite hangs.
+// This is a regression test for https://llvm.org/PR85107, which describes how we were using UL_COMPARE_AND_WAIT instead
+// of UL_COMPARE_AND_WAIT64 in the implementation of atomic::wait, leading to potential infinite hangs.
 
 #include <atomic>
 #include <cassert>
@@ -36,7 +33,7 @@ int main(int, char**) {
       }
     });
 
-    // https://github.com/llvm/llvm-project/issues/85107
+    // https://llvm.org/PR85107
     // [libc++] atomic_wait uses UL_COMPARE_AND_WAIT when it should use UL_COMPARE_AND_WAIT64 on Darwin
     constexpr std::__cxx_contention_t old_val = 0;
     constexpr std::__cxx_contention_t new_val = old_val + (1ll << 32);
@@ -44,7 +41,11 @@ int main(int, char**) {
 
     // This would hang forever if the bug is present, but the test will fail in a bounded amount of
     // time due to the timeout above.
+#if _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
+    std::__atomic_wait_native<sizeof(std::__cxx_atomic_contention_t)>(&ct, &old_val);
+#else
     std::__libcpp_atomic_wait(&ct, old_val);
+#endif
 
     done = true;
     timeout_thread.join();

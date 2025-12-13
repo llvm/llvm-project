@@ -572,7 +572,11 @@ public:
   CallEventManager &getCallEventManager() { return *CallEventMgr; }
 
   StoreManager &getStoreManager() { return *StoreMgr; }
+  const StoreManager &getStoreManager() const { return *StoreMgr; }
   ConstraintManager &getConstraintManager() { return *ConstraintMgr; }
+  const ConstraintManager &getConstraintManager() const {
+    return *ConstraintMgr;
+  }
   ExprEngine &getOwningEngine() { return *Eng; }
 
   ProgramStateRef

@@ -359,6 +359,7 @@ public:
     SmallVector<ResolvedDbgOp> ResolvedDbgOps;
     bool IsValueValid = true;
     unsigned LastUseBeforeDef = 0;
+    bool DbgLocAvailableAndIsEntryVal = false;
 
     // If every value used by the incoming DbgValue is available at block
     // entry, ResolvedDbgOps will contain the machine locations/constants for
@@ -412,6 +413,8 @@ public:
       // live range.
       LocIdx M = ValuesPreferredLoc->second.getLoc();
       ResolvedDbgOps.push_back(M);
+      if (Value.Properties.DIExpr->isEntryValue())
+        DbgLocAvailableAndIsEntryVal = true;
     }
 
     // If we cannot produce a valid value for the LiveIn value within this
@@ -425,6 +428,16 @@ public:
       return;
     }
 
+    auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
+    PendingDbgValues.push_back(
+        std::make_pair(VarID, &*MTracker->emitLoc(ResolvedDbgOps, Var, DILoc,
+                                                  Value.Properties)));
+
+    // If the location is available at block entry and is an entry value, skip
+    // tracking and recording thr transfer.
+    if (DbgLocAvailableAndIsEntryVal)
+      return;
+
     // The LiveIn value is available at block entry, begin tracking and record
     // the transfer.
     for (const ResolvedDbgOp &Op : ResolvedDbgOps)
@@ -434,10 +447,6 @@ public:
     auto Result = ActiveVLocs.insert(std::make_pair(VarID, NewValue));
     if (!Result.second)
       Result.first->second = NewValue;
-    auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
-    PendingDbgValues.push_back(
-        std::make_pair(VarID, &*MTracker->emitLoc(ResolvedDbgOps, Var, DILoc,
-                                                  Value.Properties)));
   }
 
   /// Load object with live-in variable values. \p mlocs contains the live-in
@@ -668,6 +677,16 @@ public:
 
     auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
 
+    // If the expression is a DW_OP_entry_value, emit the variable location
+    // as-is.
+    if (DIExpr->isEntryValue()) {
+      Register Reg = MTracker->LocIdxToLocID[Num.getLoc()];
+      MachineOperand MO = MachineOperand::CreateReg(Reg, false);
+      PendingDbgValues.push_back(std::make_pair(
+          VarID, &*emitMOLoc(MO, Var, {DIExpr, Prop.Indirect, false})));
+      return true;
+    }
+
     // Is the variable appropriate for entry values (i.e., is a parameter).
     if (!isEntryValueVariable(Var, DIExpr))
       return false;
@@ -694,7 +713,7 @@ public:
     DebugVariableID VarID = DVMap.getDVID(Var);
 
     // Ignore non-register locations, we don't transfer those.
-    if (MI.isUndefDebugValue() ||
+    if (MI.isUndefDebugValue() || MI.getDebugExpression()->isEntryValue() ||
         all_of(MI.debug_operands(),
                [](const MachineOperand &MO) { return !MO.isReg(); })) {
       auto It = ActiveVLocs.find(VarID);
@@ -1584,8 +1603,8 @@ std::optional<ValueIDNum> InstrRefBasedLDV::getValueForInstrRef(
       unsigned MainRegSize = TRI->getRegSizeInBits(*TRC);
       if (Size != MainRegSize || Offset) {
         // Enumerate all subregisters, searching.
-        Register NewReg = 0;
-        for (MCPhysReg SR : TRI->subregs(Reg)) {
+        Register NewReg = Register();
+        for (MCRegister SR : TRI->subregs(Reg)) {
           unsigned Subreg = TRI->getSubRegIndex(Reg, SR);
           unsigned SubregSize = TRI->getSubRegIdxSize(Subreg);
           unsigned SubregOffset = TRI->getSubRegIdxOffset(Subreg);
@@ -1601,7 +1620,8 @@ std::optional<ValueIDNum> InstrRefBasedLDV::getValueForInstrRef(
         } else {
           // Re-state the value as being defined within the subregister
           // that we found.
-          LocIdx NewLoc = MTracker->lookupOrTrackRegister(NewReg);
+          LocIdx NewLoc =
+              MTracker->lookupOrTrackRegister(MTracker->getLocID(NewReg));
           NewID = ValueIDNum(NewID->getBlock(), NewID->getInst(), NewLoc);
         }
       }
@@ -1799,12 +1819,13 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     Register Reg = MO.getReg();
     ValueIDNum Num = MTracker->readReg(Reg);
     auto PHIRec = DebugPHIRecord(
-        {InstrNum, MI.getParent(), Num, MTracker->lookupOrTrackRegister(Reg)});
+        {InstrNum, MI.getParent(), Num,
+         MTracker->lookupOrTrackRegister(MTracker->getLocID(Reg))});
     DebugPHINumToValue.push_back(PHIRec);
 
     // Ensure this register is tracked.
     for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
-      MTracker->lookupOrTrackRegister(*RAI);
+      MTracker->lookupOrTrackRegister(MTracker->getLocID(*RAI));
   } else if (MO.isFI()) {
     // The value is whatever's in this stack slot.
     unsigned FI = MO.getIndex();
@@ -1930,8 +1951,8 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
   // different location.
 
   // Inform TTracker about any direct clobbers.
-  for (uint32_t DeadReg : DeadRegs) {
-    LocIdx Loc = MTracker->lookupOrTrackRegister(DeadReg);
+  for (MCRegister DeadReg : DeadRegs) {
+    LocIdx Loc = MTracker->lookupOrTrackRegister(MTracker->getLocID(DeadReg));
     TTracker->clobberMloc(Loc, MI.getIterator(), false);
   }
 
@@ -1976,9 +1997,9 @@ void InstrRefBasedLDV::performCopy(Register SrcRegNum, Register DstRegNum) {
 
   // Copy subregisters from one location to another.
   for (MCSubRegIndexIterator SRI(SrcRegNum, TRI); SRI.isValid(); ++SRI) {
-    unsigned SrcSubReg = SRI.getSubReg();
+    MCRegister SrcSubReg = SRI.getSubReg();
     unsigned SubRegIdx = SRI.getSubRegIndex();
-    unsigned DstSubReg = TRI->getSubReg(DstRegNum, SubRegIdx);
+    MCRegister DstSubReg = TRI->getSubReg(DstRegNum, SubRegIdx);
     if (!DstSubReg)
       continue;
 
@@ -1987,8 +2008,10 @@ void InstrRefBasedLDV::performCopy(Register SrcRegNum, Register DstRegNum) {
     // yet.
     // This will force SrcSubReg to be tracked, if it isn't yet. Will read
     // mphi values if it wasn't tracked.
-    LocIdx SrcL = MTracker->lookupOrTrackRegister(SrcSubReg);
-    LocIdx DstL = MTracker->lookupOrTrackRegister(DstSubReg);
+    LocIdx SrcL =
+        MTracker->lookupOrTrackRegister(MTracker->getLocID(SrcSubReg));
+    LocIdx DstL =
+        MTracker->lookupOrTrackRegister(MTracker->getLocID(DstSubReg));
     (void)SrcL;
     (void)DstL;
     ValueIDNum CpyValue = MTracker->readReg(SrcSubReg);
@@ -2111,7 +2134,7 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
     // Then, transfer subreg bits.
     for (MCPhysReg SR : TRI->subregs(Reg)) {
       // Ensure this reg is tracked,
-      (void)MTracker->lookupOrTrackRegister(SR);
+      (void)MTracker->lookupOrTrackRegister(MTracker->getLocID(SR));
       unsigned SubregIdx = TRI->getSubRegIndex(Reg, SR);
       unsigned SpillID = MTracker->getLocID(Loc, SubregIdx);
       DoTransfer(SR, SpillID);
@@ -2643,7 +2666,7 @@ void InstrRefBasedLDV::placeMLocPHIs(
 
   // For reg units, place PHIs, and then place them for any aliasing registers.
   for (Register R : RegUnitsToPHIUp) {
-    LocIdx L = MTracker->lookupOrTrackRegister(R);
+    LocIdx L = MTracker->lookupOrTrackRegister(MTracker->getLocID(R));
     CollectPHIsForLoc(L);
 
     // Install those PHI values into the live-in value array.
@@ -2656,7 +2679,8 @@ void InstrRefBasedLDV::placeMLocPHIs(
       if (!MTracker->isRegisterTracked(*RAI))
         continue;
 
-      LocIdx AliasLoc = MTracker->lookupOrTrackRegister(*RAI);
+      LocIdx AliasLoc =
+          MTracker->lookupOrTrackRegister(MTracker->getLocID(*RAI));
       InstallPHIsAtLoc(AliasLoc);
     }
   }
@@ -3702,7 +3726,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   TFI = MF.getSubtarget().getFrameLowering();
   TFI->getCalleeSaves(MF, CalleeSavedRegs);
   MFI = &MF.getFrameInfo();
-  LS.initialize(MF);
+  LS.scanFunction(MF);
 
   const auto &STI = MF.getSubtarget();
   AdjustsStackInCalls = MFI->adjustsStack() &&

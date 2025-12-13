@@ -78,12 +78,14 @@ static_library("builtins") {
       cflags += [ "-fomit-frame-pointer" ]
     }
     cflags_c = [ "-std=c11" ]
+    cflags_cc = [ "-nostdinc++" ]
   }
 
   defines = builtins_defines
   sources = builtins_sources
 
   deps = lse_targets
+  include_dirs = [ "//third-party/siphash/include" ]
 }
 
 # Currently unused but necessary to make sync_source_lists_from_cmake.py happy.
@@ -94,5 +96,11 @@ source_set("_unused") {
     "arm/comparesf2.S",
     "arm/divsi3.S",
     "arm/udivsi3.S",
+    "arm/fnan2.c",
+    "arm/fnorm2.c",
+    "arm/funder.c",
+    "arm/mulsf3.S",
+    "arm/divsf3.S",
+    "arm/thumb1/mulsf3.S",
   ]
 }

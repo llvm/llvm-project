@@ -159,6 +159,36 @@ def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
     let cppFunctionName = "isAnyIntegerOrFloatingPointType";
 }
 
+def CIR_AnyIntOrBoolOrFloatType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyFloatType, CIR_AnyIntType],
+                "integer, boolean or floating point type"> {
+  let cppFunctionName = "isAnyIntegerOrBooleanOrFloatingPointType";
+}
+
+//===----------------------------------------------------------------------===//
+// Complex Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyComplexType : CIR_TypeBase<"::cir::ComplexType", "complex type">;
+
+def CIR_AnyComplexOrIntOrBoolOrFloatType
+    : AnyTypeOf<[CIR_AnyComplexType, CIR_AnyIntOrBoolOrFloatType],
+                "complex, integer, boolean or floating point type"> {
+  let cppFunctionName = "isComplexOrIntegerOrBoolOrFloatingPointType";
+}
+
+//===----------------------------------------------------------------------===//
+// Record Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyRecordType : CIR_TypeBase<"::cir::RecordType", "record type">;
+
+//===----------------------------------------------------------------------===//
+// Array Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyArrayType : CIR_TypeBase<"::cir::ArrayType", "array type">;
+
 //===----------------------------------------------------------------------===//
 // Pointer Type predicates
 //===----------------------------------------------------------------------===//
@@ -180,6 +210,17 @@ class CIR_PtrToPtrTo<code type, string summary>
     : CIR_ConfinedType<CIR_AnyPtrType, [CIR_IsPtrToPtrToPred<type>],
         "pointer to pointer to " # summary>;
 
+// Pointee type constraint bases
+class CIR_PointeePred<Pred pred> : SubstLeaves<"$_self",
+      "::mlir::cast<::cir::PointerType>($_self).getPointee()", pred>;
+
+class CIR_PtrToAnyOf<list<Type> types, string summary = "">
+: CIR_ConfinedType<CIR_AnyPtrType,
+  [Or<!foreach(type, types, CIR_PointeePred<type.predicate>)>],
+  !if(!empty(summary),
+      "pointer to " # CIR_TypeSummaries<types>.value,
+      summary)>;
+
 // Void pointer type constraints
 def CIR_VoidPtrType
     : CIR_PtrTo<"::cir::VoidType", "void type">,
@@ -192,16 +233,27 @@ def CIR_PtrToVoidPtrType
         "$_builder.getType<" # cppType # ">("
         "cir::VoidType::get($_builder.getContext())))">;
 
+class CIR_PtrToType<Type type> : CIR_PtrToAnyOf<[type]>;
+
+// Pointer to type constraints
+def CIR_PtrToIntOrFloatType : CIR_PtrToType<CIR_AnyIntOrFloatType>;
+
+def CIR_PtrToComplexType : CIR_PtrToType<CIR_AnyComplexType>;
+
+def CIR_PtrToRecordType : CIR_PtrToType<CIR_AnyRecordType>;
+
+def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
+
 //===----------------------------------------------------------------------===//
 // Vector Type predicates
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyVectorType : CIR_TypeBase<"::cir::VectorType", "vector type">;
 
-def CIR_VectorElementType : AnyTypeOf<[CIR_AnyIntOrFloatType, CIR_AnyPtrType],
-    "any cir integer, floating point or pointer type"
-> {
-    let cppFunctionName = "isValidVectorTypeElementType";
+def CIR_VectorElementType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType, CIR_AnyPtrType],
+                "any cir boolean, integer, floating point or pointer type"> {
+  let cppFunctionName = "isValidVectorTypeElementType";
 }
 
 class CIR_ElementTypePred<Pred pred> : SubstLeaves<"$_self",
@@ -213,6 +265,9 @@ class CIR_VectorTypeOf<list<Type> types, string summary = "">
         !if(!empty(summary),
             "vector of " # CIR_TypeSummaries<types>.value,
             summary)>;
+
+// Type constraint accepting a either a type T or a vector of type T
+class CIR_ScalarOrVectorOf<Type T> : AnyTypeOf<[T, CIR_VectorTypeOf<[T]>]>;
 
 // Vector of integral type
 def IntegerVector : Type<
@@ -258,11 +313,27 @@ def CIR_AnyFloatOrVecOfFloatType
 }
 
 //===----------------------------------------------------------------------===//
+// Data member type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyDataMemberType : CIR_TypeBase<"::cir::DataMemberType",
+    "data member type">;
+
+//===----------------------------------------------------------------------===//
+// VPtr type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyVPtrType : CIR_TypeBase<"::cir::VPtrType", "vptr type">;
+
+def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>;
+
+//===----------------------------------------------------------------------===//
 // Scalar Type predicates
 //===----------------------------------------------------------------------===//
 
 defvar CIR_ScalarTypes = [
-    CIR_AnyBoolType, CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType
+    CIR_AnyBoolType, CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType,
+    CIR_AnyDataMemberType, CIR_AnyVPtrType
 ];
 
 def CIR_AnyScalarType : AnyTypeOf<CIR_ScalarTypes, "cir scalar type"> {

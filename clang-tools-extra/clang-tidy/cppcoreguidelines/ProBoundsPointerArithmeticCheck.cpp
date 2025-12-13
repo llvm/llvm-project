@@ -1,4 +1,4 @@
-//===--- ProBoundsPointerArithmeticCheck.cpp - clang-tidy------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,17 +14,26 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
+ProBoundsPointerArithmeticCheck::ProBoundsPointerArithmeticCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AllowIncrementDecrementOperators(
+          Options.get("AllowIncrementDecrementOperators", false)) {}
 
+void ProBoundsPointerArithmeticCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowIncrementDecrementOperators",
+                AllowIncrementDecrementOperators);
+}
+
+void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
   const auto AllPointerTypes =
-      anyOf(hasType(pointerType()),
+      anyOf(hasType(hasUnqualifiedDesugaredType(pointerType())),
             hasType(autoType(
                 hasDeducedType(hasUnqualifiedDesugaredType(pointerType())))),
             hasType(decltypeType(hasUnderlyingType(pointerType()))));
 
-  // Flag all operators +, -, +=, -=, ++, -- that result in a pointer
+  // Flag all operators +, -, +=, -= that result in a pointer
   Finder->addMatcher(
       binaryOperator(
           hasAnyOperatorName("+", "-", "+=", "-="), AllPointerTypes,
@@ -32,17 +41,23 @@ void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
           .bind("expr"),
       this);
 
-  Finder->addMatcher(
-      unaryOperator(hasAnyOperatorName("++", "--"), hasType(pointerType()))
-          .bind("expr"),
-      this);
+  // Flag all operators ++, -- that result in a pointer
+  if (!AllowIncrementDecrementOperators)
+    Finder->addMatcher(
+        unaryOperator(hasAnyOperatorName("++", "--"),
+                      hasType(hasUnqualifiedDesugaredType(pointerType())),
+                      unless(hasUnaryOperand(
+                          ignoringImpCasts(declRefExpr(to(isImplicit()))))))
+            .bind("expr"),
+        this);
 
   // Array subscript on a pointer (not an array) is also pointer arithmetic
   Finder->addMatcher(
       arraySubscriptExpr(
           hasBase(ignoringImpCasts(
               anyOf(AllPointerTypes,
-                    hasType(decayedType(hasDecayedType(pointerType())))))))
+                    hasType(decayedType(hasDecayedType(pointerType())))))),
+          hasIndex(hasType(isInteger())))
           .bind("expr"),
       this);
 }

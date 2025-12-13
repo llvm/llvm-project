@@ -15,5 +15,6 @@
 // around the definitions of macros like _IO, _IOR, _IOW, and _IOWR that I don't
 // think is worth digging into right now.
 #define TIOCGETD 0x5424
+#define FIONREAD 0x541B
 
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_IOCTL_MACROS_H

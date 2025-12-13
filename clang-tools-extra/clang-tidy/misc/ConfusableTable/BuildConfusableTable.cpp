@@ -1,4 +1,4 @@
-//===--- BuildConfusableTable.cpp - clang-tidy---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 
   std::vector<std::pair<llvm::UTF32, SmallVector<llvm::UTF32>>> Entries;
   SmallVector<StringRef> Values;
-  for (StringRef Line : Lines) {
+  for (const StringRef Line : Lines) {
     if (Line.starts_with("#"))
       continue;
 
@@ -37,14 +37,14 @@ int main(int argc, char *argv[]) {
       return 2;
     }
 
-    llvm::StringRef From = Values[0].trim();
+    const llvm::StringRef From = Values[0].trim();
     llvm::UTF32 CodePoint = 0;
     From.getAsInteger(16, CodePoint);
 
     SmallVector<llvm::UTF32> To;
     SmallVector<StringRef> ToN;
     Values[1].split(ToN, ' ', -1, false);
-    for (StringRef ToI : ToN) {
+    for (const StringRef ToI : ToN) {
       llvm::UTF32 ToCodePoint = 0;
       ToI.trim().getAsInteger(16, ToCodePoint);
       To.push_back(ToCodePoint);
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
   }
   llvm::sort(Entries);
 
-  unsigned LargestValue =
+  const unsigned LargestValue =
       llvm::max_element(Entries, [](const auto &Entry0, const auto &Entry1) {
         return Entry0.second.size() < Entry1.second.size();
       })->second.size();

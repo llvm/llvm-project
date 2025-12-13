@@ -42,7 +42,8 @@ protected:
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<LoopInfo> LI;
 
-  ScalarEvolutionExpanderTest() : M("", Context), TLII(), TLI(TLII) {}
+  ScalarEvolutionExpanderTest()
+      : M("", Context), TLII(M.getTargetTriple()), TLI(TLII) {}
 
   ScalarEvolution buildSE(Function &F) {
     AC.reset(new AssumptionCache(F));
@@ -120,18 +121,18 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
 TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
   /*
    * Create the following code:
-   * func(i64 addrspace(10)* %arg)
+   * func(ptr addrspace(10) %arg)
    * top:
    *  br label %L.ph
    * L.ph:
-   *  %gepbase = getelementptr i64 addrspace(10)* %arg, i64 1
+   *  %gepbase = getelementptr ptr addrspace(10) %arg, i64 1
    *  br label %L
    * L:
    *  %phi = phi i64 [i64 0, %L.ph], [ %add, %L2 ]
    *  %add = add i64 %phi2, 1
    *  br i1 undef, label %post, label %L2
    * post:
-   *  #= %gep = getelementptr i64 addrspace(10)* %gepbase, i64 %add =#
+   *  #= %gep = getelementptr ptr addrspace(10) %gepbase, i64 %add =#
    *  ret void
    *
    * We will create the appropriate SCEV expression for %gep and expand it,
@@ -184,7 +185,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
       SE.getAddRecExpr(SE.getUnknown(GepBase), SE.getConstant(T_int64, 1),
                        LI->getLoopFor(L), SCEV::FlagNUW);
 
-  SCEVExpander Exp(SE, NIM.getDataLayout(), "expander");
+  SCEVExpander Exp(SE, "expander");
   Exp.disableCanonicalMode();
   Exp.expandCodeFor(AddRec, T_pint64, Ret);
 
@@ -198,7 +199,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
 TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderIsSafeToExpandAt) {
   /*
    * Create the following code:
-   * func(i64 addrspace(10)* %arg)
+   * func(ptr addrspace(10) %arg)
    * top:
    *  br label %L.ph
    * L.ph:
@@ -254,7 +255,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderIsSafeToExpandAt) {
   Instruction *Ret = Builder.CreateRetVoid();
 
   ScalarEvolution SE = buildSE(*F);
-  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
+  SCEVExpander Exp(SE, "expander");
   const SCEV *S = SE.getSCEV(Phi);
   EXPECT_TRUE(isa<SCEVAddRecExpr>(S));
   const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(S);
@@ -316,7 +317,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderNUW) {
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S = SE.getSCEV(S1);
   EXPECT_TRUE(isa<SCEVAddExpr>(S));
-  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
+  SCEVExpander Exp(SE, "expander");
   auto *I = cast<Instruction>(Exp.expandCodeFor(S, nullptr, R));
   EXPECT_FALSE(I->hasNoUnsignedWrap());
 }
@@ -368,7 +369,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderNSW) {
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S = SE.getSCEV(S1);
   EXPECT_TRUE(isa<SCEVAddExpr>(S));
-  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
+  SCEVExpander Exp(SE, "expander");
   auto *I = cast<Instruction>(Exp.expandCodeFor(S, nullptr, R));
   EXPECT_FALSE(I->hasNoSignedWrap());
 }
@@ -419,7 +420,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVCacheNUW) {
   EXPECT_TRUE(isa<SCEVAddExpr>(SC1));
   // Expand for S1, it should use S1 not S2 in spite S2
   // first in the cache.
-  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
+  SCEVExpander Exp(SE, "expander");
   auto *I = cast<Instruction>(Exp.expandCodeFor(SC1, nullptr, R));
   EXPECT_FALSE(I->hasNoUnsignedWrap());
 }
@@ -470,7 +471,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVCacheNSW) {
   EXPECT_TRUE(isa<SCEVAddExpr>(SC1));
   // Expand for S1, it should use S1 not S2 in spite S2
   // first in the cache.
-  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
+  SCEVExpander Exp(SE, "expander");
   auto *I = cast<Instruction>(Exp.expandCodeFor(SC1, nullptr, R));
   EXPECT_FALSE(I->hasNoSignedWrap());
 }
@@ -511,7 +512,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandInsertCanonicalIV) {
               unsigned ExpectedCanonicalIVWidth =
                   SE.getTypeSizeInBits(AR->getType());
 
-              SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+              SCEVExpander Exp(SE, "expander");
               auto *InsertAt = I.getNextNode();
               Exp.expandCodeFor(AR, nullptr, InsertAt);
               PHINode *CanonicalIV = Loop->getCanonicalInductionVariable();
@@ -562,7 +563,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandInsertCanonicalIV) {
           cast<IntegerType>(CanonicalIV->getType())->getBitWidth();
       EXPECT_LT(CanonicalIVBitWidth, ExpectedCanonicalIVWidth);
 
-      SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+      SCEVExpander Exp(SE, "expander");
       auto *InsertAt = I.getNextNode();
       Exp.expandCodeFor(AR, nullptr, InsertAt);
 
@@ -644,7 +645,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandInsertCanonicalIV) {
               EXPECT_EQ(ARBitWidth, SE.getTypeSizeInBits(AR->getType()));
               EXPECT_EQ(CanonicalIVBitWidth, ARBitWidth);
 
-              SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+              SCEVExpander Exp(SE, "expander");
               auto *InsertAt = I.getNextNode();
               Exp.expandCodeFor(AR, nullptr, InsertAt);
 
@@ -697,20 +698,20 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderShlNSW) {
     EXPECT_TRUE(isa<SCEVMulExpr>(AndSCEV));
     EXPECT_TRUE(cast<SCEVMulExpr>(AndSCEV)->hasNoSignedWrap());
 
-    SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+    SCEVExpander Exp(SE, "expander");
     auto *I = cast<Instruction>(Exp.expandCodeFor(AndSCEV, nullptr, And));
     EXPECT_EQ(I->getOpcode(), Instruction::Shl);
     EXPECT_FALSE(I->hasNoSignedWrap());
   };
 
-  checkOneCase("define void @f(i16* %arrayidx) { "
-               "  %1 = load i16, i16* %arrayidx "
+  checkOneCase("define void @f(ptr %arrayidx) { "
+               "  %1 = load i16, ptr %arrayidx "
                "  %2 = and i16 %1, -32768 "
                "  ret void "
                "} ");
 
-  checkOneCase("define void @f(i8* %arrayidx) { "
-               "  %1 = load i8, i8* %arrayidx "
+  checkOneCase("define void @f(ptr %arrayidx) { "
+               "  %1 = load i8, ptr %arrayidx "
                "  %2 = and i8 %1, -128 "
                "  ret void "
                "} ");
@@ -754,7 +755,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
                     auto *AR = GetAddRec(SE, Loop);
                     EXPECT_FALSE(AR->isAffine());
 
-                    SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+                    SCEVExpander Exp(SE, "expander");
                     auto *InsertAt = I.getNextNode();
                     Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
                     const SCEV *ExpandedAR = SE.getSCEV(V);
@@ -803,7 +804,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
           cast<IntegerType>(CanonicalIV->getType())->getBitWidth();
       EXPECT_LT(CanonicalIVBitWidth, ExpectedCanonicalIVWidth);
 
-      SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+      SCEVExpander Exp(SE, "expander");
       auto *InsertAt = I.getNextNode();
       Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
       const SCEV *ExpandedAR = SE.getSCEV(V);
@@ -858,7 +859,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
               EXPECT_EQ(ARBitWidth, SE.getTypeSizeInBits(AR->getType()));
               EXPECT_EQ(CanonicalIVBitWidth, ARBitWidth);
 
-              SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+              SCEVExpander Exp(SE, "expander");
               auto *InsertAt = I.getNextNode();
               Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
               const SCEV *ExpandedAR = SE.getSCEV(V);
@@ -925,7 +926,7 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandNonIntegralPtrWithNullBase) {
     auto &I = GetInstByName(F, "ptr");
     auto PtrPlus1 =
         SE.getAddExpr(SE.getSCEV(&I), SE.getConstant(I.getType(), 1));
-    SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+    SCEVExpander Exp(SE, "expander");
 
     Value *V = Exp.expandCodeFor(PtrPlus1, I.getType(), &I);
     I.replaceAllUsesWith(V);
@@ -977,7 +978,7 @@ TEST_F(ScalarEvolutionExpanderTest, GEPFlags) {
   const SCEV *X = SE.getSCEV(F->getArg(1));
   const SCEV *PtrX = SE.getAddExpr(Ptr, X);
 
-  SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+  SCEVExpander Exp(SE, "expander");
   auto *I = cast<Instruction>(
       Exp.expandCodeFor(PtrX, nullptr, Entry.getTerminator()));
   // Check that the GEP is reused, but the inbounds flag cleared. We don't

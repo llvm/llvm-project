@@ -16,17 +16,17 @@ body:             |
     ; CHECK: Bad machine code: G_BUILD_VECTOR must produce a vector from scalar operands
     %3:_(<2 x s32>) = G_BUILD_VECTOR %2
 
-    ; CHECK: Bad machine code: G_BUILD_VECTOR must have an operand for each elemement
+    ; CHECK: Bad machine code: G_BUILD_VECTOR must have an operand for each element
     %4:_(<2 x s32>) = G_BUILD_VECTOR %0, %0, %0, %0
 
     ; CHECK: Bad machine code: G_BUILD_VECTOR result element type must match source type
-    ; CHECK: Bad machine code: G_BUILD_VECTOR must have an operand for each elemement
+    ; CHECK: Bad machine code: G_BUILD_VECTOR must have an operand for each element
     %5:_(<4 x s16>) = G_BUILD_VECTOR %0, %0
 
     %6:_(s16) = IMPLICIT_DEF
 
     ; CHECK: Bad machine code: G_BUILD_VECTOR result element type must match source type
-    ; CHECK: Bad machine code: G_BUILD_VECTOR must have an operand for each elemement
+    ; CHECK: Bad machine code: G_BUILD_VECTOR must have an operand for each element
     %7:_(<2 x s32>) = G_BUILD_VECTOR %6, %6, %6, %6
 
     %8:_(p0) = IMPLICIT_DEF

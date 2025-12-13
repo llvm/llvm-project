@@ -17,7 +17,7 @@ struct D1 : virtual B1 { // expected-note {{virtual base class declared here}}
     [[msvc::constexpr]] D1() {} // expected-error {{constexpr constructor not allowed in struct with virtual base class}}
 };
 
-struct [[msvc::constexpr]] S2{}; // expected-error {{'constexpr' attribute only applies to functions and return statements}}
+struct [[msvc::constexpr]] S2{}; // expected-error {{'msvc::constexpr' attribute only applies to functions and return statements}}
 
 // Check invalid code mixed with valid code
 
@@ -38,10 +38,10 @@ static_assert(f7()); // expected-error {{static assertion expression is not an i
                      // expected-note {{in call to 'f7()'}}
 
 constexpr bool f8() { // expected-error {{constexpr function never produces a constant expression}}
-    [[msvc::constexpr]] f4(32); // expected-error {{'constexpr' attribute only applies to functions and return statements}} \
+    [[msvc::constexpr]] f4(32); // expected-error {{'msvc::constexpr' attribute only applies to functions and return statements}} \
                                 // expected-note {{non-constexpr function 'f4' cannot be used in a constant expression}} \
                                 // expected-note {{non-constexpr function 'f4' cannot be used in a constant expression}}
-    [[msvc::constexpr]] int i5 = f4(32); // expected-error {{'constexpr' attribute only applies to functions and return statements}}
+    [[msvc::constexpr]] int i5 = f4(32); // expected-error {{'msvc::constexpr' attribute only applies to functions and return statements}}
     return i5 == 5;
 }
 static_assert(f8()); // expected-error {{static assertion expression is not an integral constant expression}} \

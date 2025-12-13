@@ -11,10 +11,9 @@ use omp_lib
   integer :: a, b, x
   real, dimension (:,:), allocatable :: darray
 
-  !ERROR: List items specified in the ALLOCATE directive must not have the ALLOCATABLE attribute unless the directive is associated with an ALLOCATE statement
+  !ERROR: A list item in a declarative ALLOCATE cannot have the ALLOCATABLE or POINTER attribute
   !$omp allocate(darray) allocator(omp_default_mem_alloc)
-
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
+  continue
   !$omp allocate(darray) allocator(omp_default_mem_alloc)
     allocate(darray(a, b))
 

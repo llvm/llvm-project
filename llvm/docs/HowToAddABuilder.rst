@@ -28,7 +28,7 @@ There are two buildmasters running.
   commits from the llvm-zorg repository.
 
 In order to remain connected to the main buildmaster (and thus notify
-developers of failures), a builbot must:
+developers of failures), a buildbot must:
 
 * Be building a supported configuration.  Builders for experimental backends
   should generally be attached to staging buildmaster.
@@ -74,9 +74,9 @@ Here are the steps you can follow to do so:
    of parallelism (-j param) would give the fastest build.  You can build
    multiple configurations on one computer.
 
-#. Install buildbot-worker (currently we are using buildbot version 2.8.4).
+#. Install buildbot-worker (currently we are using buildbot version 3.11.7).
    This specific version can be installed using ``pip``, with a command such
-   as ``pip3 install buildbot-worker==2.8.4``.
+   as ``pip3 install buildbot-worker==3.11.7``.
 
 #. Create a designated user account, your buildbot-worker will be running under,
    and set appropriate permissions.
@@ -414,4 +414,3 @@ Some tasks don't give immediate feedback, so if nothing happens within a short
 time, try again with the browser's web console open. Sometimes you will see
 403 errors and other messages that might indicate you don't have the correct
 details set up.
-

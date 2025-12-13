@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -o - | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s8i = !cir.int<s, 8>
 !s16i = !cir.int<s, 16>

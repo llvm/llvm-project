@@ -43,7 +43,7 @@ struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
   X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~X86MachineFunctionInfo() = default;
+  ~X86MachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<X86MachineFunctionInfo> {
@@ -149,7 +149,7 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// other tools to detect the extended record.
   bool HasSwiftAsyncContext = false;
 
-  /// Ajust stack for push2/pop2
+  /// Adjust stack for push2/pop2
   bool PadForPush2Pop2 = false;
 
   /// Candidate registers for push2/pop2

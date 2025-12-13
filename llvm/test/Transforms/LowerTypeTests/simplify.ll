@@ -10,7 +10,7 @@ define i1 @bytearray7(ptr %p) {
 ; CHECK-LABEL: define i1 @bytearray7(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], ptrtoint (ptr @__typeid_bytearray7_global_addr to i64)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr @__typeid_bytearray7_global_addr to i64), [[TMP1]] 
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 ptrtoint (ptr @__typeid_bytearray7_align to i64))
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ule i64 [[TMP7]], ptrtoint (ptr @__typeid_bytearray7_size_m1 to i64)
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[TMP9:.*]], label %[[F:.*]]

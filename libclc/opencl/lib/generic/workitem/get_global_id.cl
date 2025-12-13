@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/opencl-base.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t get_global_id(uint dim) {
   return get_group_id(dim) * get_local_size(dim) + get_local_id(dim) +
