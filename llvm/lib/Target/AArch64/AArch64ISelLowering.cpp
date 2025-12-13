@@ -27857,9 +27857,65 @@ static SDValue removeRedundantInsertVectorElt(SDNode *N) {
   return ExtractVec;
 }
 
+// On Darwin, instead of explictly inserting 0 into a vector, which results in
+// a costly move from an integer to a vector register, use a bitmask to zero
+// out the corresponding lane.
+static SDValue convertInsertVectorEltToAnd(SDNode *N, SelectionDAG &DAG,
+                                           const AArch64Subtarget *Subtarget) {
+  assert(N->getOpcode() == ISD::INSERT_VECTOR_ELT && "Unexpected node!");
+
+  if (!Subtarget->isTargetDarwin())
+    return SDValue();
+
+  SDValue InsertVec = N->getOperand(0);
+  SDValue InsertVal = N->getOperand(1);
+  SDValue InsertIdx = N->getOperand(2);
+
+  ConstantSDNode *ConstIdx = dyn_cast<ConstantSDNode>(InsertIdx);
+
+  // Only handle constant 0 insertion into a known index.
+  if (!(isNullConstant(InsertVal) || isNullFPConstant(InsertVal)))
+    return SDValue();
+  if (!ConstIdx)
+    return SDValue();
+
+  unsigned Lane = ConstIdx->getZExtValue();
+
+  EVT VecVT = N->getValueType(0);
+  EVT IntVecVT = VecVT.changeVectorElementTypeToInteger();
+  EVT IntEltVT = IntVecVT.getVectorElementType();
+
+  if (DAG.NewNodesMustHaveLegalTypes)
+    IntEltVT = DAG.getTargetLoweringInfo().getTypeToTransformTo(
+        *DAG.getContext(), IntEltVT);
+
+  unsigned BitWidth = IntEltVT.getSizeInBits();
+  SDLoc DL(N);
+
+  // Bitcast original vector to integer type.
+  SDValue IntVec = DAG.getBitcast(IntVecVT, InsertVec);
+
+  // Build bitmask and AND.
+  SmallVector<SDValue> MaskElts;
+  for (unsigned I = 0; I < VecVT.getVectorNumElements(); ++I) {
+    APInt Val =
+        (I == Lane) ? APInt::getZero(BitWidth) : APInt::getAllOnes(BitWidth);
+    MaskElts.push_back(DAG.getConstant(Val, DL, IntEltVT));
+  }
+  SDValue Mask = DAG.getBuildVector(IntVecVT, DL, MaskElts);
+  SDValue AndVec = DAG.getNode(ISD::AND, DL, IntVecVT, IntVec, Mask);
+
+  // Bitcast result back to original type.
+  return DAG.getBitcast(VecVT, AndVec);
+}
+
 static SDValue
-performInsertVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+performInsertVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              const AArch64Subtarget *Subtarget) {
   if (SDValue Res = removeRedundantInsertVectorElt(N))
+    return Res;
+
+  if (SDValue Res = convertInsertVectorEltToAnd(N, DCI.DAG, Subtarget))
     return Res;
 
   return performPostLD1Combine(N, DCI, true);
@@ -28512,7 +28568,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::BSP:
     return performBSPExpandForSVE(N, DAG, Subtarget);
   case ISD::INSERT_VECTOR_ELT:
-    return performInsertVectorEltCombine(N, DCI);
+    return performInsertVectorEltCombine(N, DCI, Subtarget);
   case ISD::EXTRACT_VECTOR_ELT:
     return performExtractVectorEltCombine(N, DCI, Subtarget);
   case ISD::VECREDUCE_ADD:

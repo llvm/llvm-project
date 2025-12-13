@@ -350,16 +350,17 @@ define i4 @convert_to_bitmask_with_unknown_type_in_long_chain(<4 x i32> %vec1, <
 ; CHECK-SD-NEXT:    cmeq.4s v1, v1, #0
 ; CHECK-SD-NEXT:    adrp x8, lCPI8_0@PAGE
 ; CHECK-SD-NEXT:    movi d2, #0x000000ffffffff
-; CHECK-SD-NEXT:    movi d3, #0x00ffffffffffff
+; CHECK-SD-NEXT:    movi d3, #0x00ffffffff0000
+; CHECK-SD-NEXT:    movi d4, #0x00ffffffffffff
 ; CHECK-SD-NEXT:    bic.16b v0, v1, v0
 ; CHECK-SD-NEXT:    movi d1, #0xffff0000ffff0000
 ; CHECK-SD-NEXT:    xtn.4h v0, v0
 ; CHECK-SD-NEXT:    orr.8b v0, v0, v2
-; CHECK-SD-NEXT:    movi d2, #0x00ffffffff0000
+; CHECK-SD-NEXT:    movi d2, #0xffff0000ffffffff
 ; CHECK-SD-NEXT:    eor.8b v1, v0, v1
-; CHECK-SD-NEXT:    eor.8b v0, v0, v2
-; CHECK-SD-NEXT:    mov.h v1[2], wzr
-; CHECK-SD-NEXT:    orr.8b v0, v0, v3
+; CHECK-SD-NEXT:    eor.8b v0, v0, v3
+; CHECK-SD-NEXT:    and.8b v1, v1, v2
+; CHECK-SD-NEXT:    orr.8b v0, v0, v4
 ; CHECK-SD-NEXT:    orr.8b v0, v1, v0
 ; CHECK-SD-NEXT:    ldr d1, [x8, lCPI8_0@PAGEOFF]
 ; CHECK-SD-NEXT:    shl.4h v0, v0, #15
