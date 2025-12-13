@@ -1021,8 +1021,10 @@ private:
     /// The set of modules that are visible within the submodule.
     VisibleModuleSet VisibleModules;
 
-    /// The files that have been included.
+    /// The files that have been included. This set includes the headers
+    /// that have been included and visible in this submodule.
     IncludedFilesSet IncludedFiles;
+
     // FIXME: CounterValue?
     // FIXME: PragmaPushMacroInfo?
   };
@@ -1521,26 +1523,22 @@ public:
     bool AlreadyIncluded = alreadyIncluded(File);
     HeaderInfo.getFileInfo(File).IsLocallyIncluded = true;
     CurSubmoduleState->IncludedFiles.insert(File);
-    if (!BuildingSubmoduleStack.empty())
-      BuildingSubmoduleStack.back().M->Includes.insert(File);
-    else if (Module *M = getCurrentModule())
+
+    Module *M = BuildingSubmoduleStack.empty()
+                    ? getCurrentModule()
+                    : BuildingSubmoduleStack.back().M;
+    if (M)
       M->Includes.insert(File);
     else
       Includes.insert(File);
+
     return !AlreadyIncluded;
   }
 
   /// Return true if this header has already been included.
   bool alreadyIncluded(FileEntryRef File) const {
     HeaderInfo.getFileInfo(File);
-    if (CurSubmoduleState->IncludedFiles.contains(File))
-      return true;
-    // TODO: Do this more efficiently.
-    for (const auto &[Name, M] : HeaderInfo.getModuleMap().modules())
-      if (CurSubmoduleState->VisibleModules.isVisible(M))
-        if (M->Includes.contains(File))
-          return true;
-    return false;
+    return CurSubmoduleState->IncludedFiles.contains(File);
   }
 
   void markIncludedOnTopLevel(const FileEntry *File) {
@@ -1550,6 +1548,9 @@ public:
 
   void markIncludedInModule(Module *M, const FileEntry *File) {
     M->Includes.insert(File);
+
+    if (CurSubmoduleState->VisibleModules.isVisible(M))
+      CurSubmoduleState->IncludedFiles.insert(File);
   }
 
   const IncludedFilesSet &getTopLevelIncludes() const { return Includes; }

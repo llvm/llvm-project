@@ -2386,6 +2386,7 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
     // implicit module import.
     SubmoduleID GlobalSMID = Reader.getGlobalSubmoduleID(M, LocalSMID);
     Module *Mod = Reader.getSubmodule(GlobalSMID);
+    PP.markIncludedInModule(Mod, *FE);
 
     if (FE) {
       // FIXME: NameAsWritten
