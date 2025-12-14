@@ -521,7 +521,7 @@ class VPseudoVLN8Mask<VReg RetClass, bit U> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         GPRMemZeroOffset:$rs1,
-                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                        VMV0:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
                    []>,
       RISCVNDSVLN</*Masked*/1, /*Unsigned*/U, !logtwo(8), VLMul> {
   let mayLoad = 1;
@@ -912,7 +912,7 @@ defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
 // Pseudo-instructions for SFB (Short Forward Branch)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasShortForwardBranchOpt], hasSideEffects = 0,
+let Predicates = [HasShortForwardBranchIALU], hasSideEffects = 0,
     mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
 def PseudoCCNDS_BFOS : Pseudo<(outs GPR:$dst),
                               (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,

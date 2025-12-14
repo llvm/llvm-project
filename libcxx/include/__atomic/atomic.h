@@ -206,6 +206,8 @@ struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
 // __atomic_base<int, false>. So specializing __atomic_base<_Tp> does not work
 template <class _Tp, bool _IsIntegral>
 struct __atomic_waitable_traits<__atomic_base<_Tp, _IsIntegral> > {
+  using __value_type _LIBCPP_NODEBUG = _Tp;
+
   static _LIBCPP_HIDE_FROM_ABI _Tp __atomic_load(const __atomic_base<_Tp, _IsIntegral>& __a, memory_order __order) {
     return __a.load(__order);
   }
