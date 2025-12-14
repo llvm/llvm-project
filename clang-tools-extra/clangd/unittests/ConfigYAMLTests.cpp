@@ -228,6 +228,20 @@ TEST(ParseYAML, CodePatterns) {
   EXPECT_THAT(Results[0].Completion.CodePatterns, llvm::ValueIs(val("None")));
 }
 
+TEST(ParseYAML, MacroFilter) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+    Completion:
+      MacroFilter: FuzzyMatch
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Completion.MacroFilter,
+              llvm::ValueIs(val("FuzzyMatch")));
+}
+
 TEST(ParseYAML, Hover) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(
