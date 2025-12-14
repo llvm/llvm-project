@@ -10,6 +10,7 @@
 
 // check that <regex> functions are marked [[nodiscard]]
 
+#include <locale>
 #include <regex>
 #include <string>
 
@@ -20,7 +21,8 @@ void test() {
     re.mark_count(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     re.flags();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-    re.imbue({}); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    re.imbue(std::locale());
 
     re.getloc(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
@@ -33,7 +35,7 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     sm.compare(sm);
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sm.compare(std::string{});
+    sm.compare(std::string());
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     sm.compare("");
   }
@@ -58,7 +60,7 @@ void test() {
     m.cend();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    m.format(std::string{});
+    m.format(std::string());
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     m.format("");
   }
@@ -73,7 +75,7 @@ void test() {
     *rti; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
   {
-    std::regex_error err{std::regex_constants::error_backref};
+    std::regex_error err(std::regex_constants::error_backref);
 
     err.code(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
