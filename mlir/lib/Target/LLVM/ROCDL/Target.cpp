@@ -334,42 +334,30 @@ mlir::ROCDL::assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
   return std::move(result);
 }
 
-std::optional<SmallVector<char, 0>>
-SerializeGPUModuleBase::compileToBinary(const std::string &serializedISA) {
-  // Assemble the ISA.
-  FailureOr<SmallVector<char, 0>> isaBinary = ROCDL::assembleIsa(
-      serializedISA, this->triple, this->chip, this->features,
-      [&]() { return getOperation().emitError(); });
-
-  if (failed(isaBinary)) {
-    getOperation().emitError() << "failed during ISA assembling";
-    return std::nullopt;
-  }
-
+FailureOr<SmallVector<char, 0>>
+mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
+                            function_ref<InFlightDiagnostic()> emitError) {
   // Save the ISA binary to a temp file.
   int tempIsaBinaryFd = -1;
   SmallString<128> tempIsaBinaryFilename;
   if (llvm::sys::fs::createTemporaryFile("kernel%%", "o", tempIsaBinaryFd,
-                                         tempIsaBinaryFilename)) {
-    getOperation().emitError()
-        << "failed to create a temporary file for dumping the ISA binary";
-    return std::nullopt;
-  }
+                                         tempIsaBinaryFilename))
+    return emitError()
+           << "failed to create a temporary file for dumping the ISA binary";
+
   llvm::FileRemover cleanupIsaBinary(tempIsaBinaryFilename);
   {
     llvm::raw_fd_ostream tempIsaBinaryOs(tempIsaBinaryFd, true);
-    tempIsaBinaryOs << StringRef(isaBinary->data(), isaBinary->size());
+    tempIsaBinaryOs << StringRef(objectCode.data(), objectCode.size());
     tempIsaBinaryOs.flush();
   }
 
   // Create a temp file for HSA code object.
   SmallString<128> tempHsacoFilename;
-  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco",
-                                         tempHsacoFilename)) {
-    getOperation().emitError()
-        << "failed to create a temporary file for the HSA code object";
-    return std::nullopt;
-  }
+  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco", tempHsacoFilename))
+    return emitError()
+           << "failed to create a temporary file for the HSA code object";
+
   llvm::FileRemover cleanupHsaco(tempHsacoFilename);
 
   llvm::SmallString<128> lldPath(toolkitPath);
@@ -377,23 +365,38 @@ SerializeGPUModuleBase::compileToBinary(const std::string &serializedISA) {
   int lldResult = llvm::sys::ExecuteAndWait(
       lldPath,
       {"ld.lld", "-shared", tempIsaBinaryFilename, "-o", tempHsacoFilename});
-  if (lldResult != 0) {
-    getOperation().emitError() << "lld invocation failed";
-    return std::nullopt;
-  }
+  if (lldResult != 0)
+    return emitError() << "lld invocation failed";
 
   // Load the HSA code object.
   auto hsacoFile =
       llvm::MemoryBuffer::getFile(tempHsacoFilename, /*IsText=*/false);
-  if (!hsacoFile) {
-    getOperation().emitError()
-        << "failed to read the HSA code object from the temp file";
-    return std::nullopt;
-  }
+  if (!hsacoFile)
+    return emitError()
+           << "failed to read the HSA code object from the temp file";
 
   StringRef buffer = (*hsacoFile)->getBuffer();
 
   return SmallVector<char, 0>(buffer.begin(), buffer.end());
+}
+
+std::optional<SmallVector<char, 0>>
+SerializeGPUModuleBase::compileToBinary(const std::string &serializedISA) {
+  auto errCallback = [&]() { return getOperation().emitError(); };
+  // Assemble the ISA.
+  FailureOr<SmallVector<char, 0>> isaBinary = ROCDL::assembleIsa(
+      serializedISA, this->triple, this->chip, this->features, errCallback);
+
+  if (failed(isaBinary))
+    return std::nullopt;
+
+  // Link the object code.
+  FailureOr<SmallVector<char, 0>> linkedCode =
+      ROCDL::linkObjectCode(*isaBinary, toolkitPath, errCallback);
+  if (failed(linkedCode))
+    return std::nullopt;
+
+  return linkedCode;
 }
 
 std::optional<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(

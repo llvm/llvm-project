@@ -48,6 +48,10 @@ FailureOr<SmallVector<char, 0>>
 assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
             StringRef features, function_ref<InFlightDiagnostic()> emitError);
 
+FailureOr<SmallVector<char, 0>>
+linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
+               function_ref<InFlightDiagnostic()> emitError);
+
 /// Base class for all ROCDL serializations from GPU modules into binary
 /// strings. By default this class serializes into LLVM bitcode.
 class SerializeGPUModuleBase : public LLVM::ModuleToObject {
