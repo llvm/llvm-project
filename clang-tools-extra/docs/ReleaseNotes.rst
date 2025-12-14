@@ -107,6 +107,11 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+- Added a new ``MacroFilter`` configuration option to ``Completion`` to 
+  allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting 
+  macros. ``ExactPrefix`` is the default, which retains previous 
+  behavior of suggesting macros which match the prefix exactly.  
+
 Code actions
 ^^^^^^^^^^^^
 
