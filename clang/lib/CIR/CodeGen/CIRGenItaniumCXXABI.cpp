@@ -2412,7 +2412,8 @@ void CIRGenItaniumCXXABI::emitBeginCatch(CIRGenFunction &cgf,
   }
 
   auto getCatchParamAllocaIP = [&]() {
-    auto currIns = cgf.getBuilder().saveInsertionPoint();
+    cir::CIRBaseBuilderTy::InsertPoint currIns =
+        cgf.getBuilder().saveInsertionPoint();
     mlir::Operation *currParent = currIns.getBlock()->getParentOp();
 
     mlir::Block *insertBlock = nullptr;

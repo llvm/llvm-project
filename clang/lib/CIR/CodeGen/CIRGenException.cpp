@@ -381,41 +381,26 @@ static void emitCatchDispatchBlock(CIRGenFunction &cgf,
     return;
   }
 
-  unsigned int numHandlers = catchScope.getNumHandlers();
-  if (numHandlers == 1 && catchScope.getHandler(0).isCatchAll()) {
-    return;
-  }
-
-  // In traditional LLVM codegen, the right handler is selected (with
   // calls to eh_typeid_for) and the selector value is loaded. After that,
   // blocks get connected for later codegen. In CIR, these are all
   // implicit behaviors of cir.catch - not a lot of work to do.
   //
   // Test against each of the exception types we claim to catch.
-  for (unsigned i = 0;; ++i) {
-    assert(i < numHandlers && "ran off end of handlers!");
-    const EHCatchScope::Handler &handler = catchScope.getHandler(i);
+  for (const EHCatchScope::Handler &handler : catchScope) {
+    if (handler.isCatchAll())
+      return;
 
-    [[maybe_unused]] mlir::TypedAttr typeValue = handler.type.rtti;
+    mlir::TypedAttr typeValue = handler.type.rtti;
     assert(handler.type.flags == 0 && "catch handler flags not supported");
     assert(typeValue && "fell into catch-all case!");
 
     // Check for address space mismatch
     assert(!cir::MissingFeatures::addressSpace());
-
-    // If this is the last handler, we're at the end, and the next
-    // block is the block for the enclosing EH scope. Make sure to call
-    // populateEHCatchRegions for caching it.
-    if (i + 1 == numHandlers) {
-      cgf.populateEHCatchRegions(catchScope.getEnclosingEHScope(), tryOp);
-      return;
-    }
-
-    // If the next handler is a catch-all, we're at the end, and the
-    // next block is that handler.
-    if (catchScope.getHandler(i + 1).isCatchAll())
-      return;
   }
+
+  // There was no catch all handler, populate th EH regions for the enclosing
+  // scope.
+  cgf.populateEHCatchRegions(catchScope.getEnclosingEHScope(), tryOp);
 }
 
 void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
@@ -635,15 +620,13 @@ void CIRGenFunction::populateCatchHandlers(cir::TryOp tryOp) {
         break;
     }
 
-    if (hasCatchAll) {
+    if (hasCatchAll)
       handlerAttrs.push_back(cir::CatchAllAttr::get(&getMLIRContext()));
-    }
 
     // If there's no catch_all, attach the unwind region. This needs to be the
     // last region in the TryOp catch list.
-    if (!hasCatchAll) {
+    if (!hasCatchAll)
       handlerAttrs.push_back(cir::UnwindAttr::get(&getMLIRContext()));
-    }
 
     // Add final array of clauses into TryOp.
     tryOp.setHandlerTypesAttr(
@@ -702,13 +685,8 @@ void CIRGenFunction::populateEHCatchRegions(EHScopeStack::stable_iterator scope,
       }
 
       assert(callWithExceptionCtx && "expected call information");
-      {
-        mlir::OpBuilder::InsertionGuard guard(builder);
-        assert(callWithExceptionCtx.getCleanup().empty() &&
-               "one per call: expected empty region at this point");
-        builder.createBlock(&callWithExceptionCtx.getCleanup());
-        builder.createYield(callWithExceptionCtx.getLoc());
-      }
+      // TODO(cir): In the incubator we create a new basic block with YieldOp
+      // inside the attached cleanup region, but this part will be redesigned
       break;
     }
     case EHScope::Cleanup: {

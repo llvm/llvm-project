@@ -12,6 +12,7 @@ void call_function_inside_try_catch_all() {
   }
 }
 
+// CIR: cir.func {{.*}} @_Z34call_function_inside_try_catch_allv() personality(@__gxx_personality_v0)
 // CIR: cir.scope {
 // CIR:   cir.try {
 // CIR:       %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> !s32i
@@ -22,6 +23,8 @@ void call_function_inside_try_catch_all() {
 // CIR:   }
 // CIR: }
 
+
+// OGCG: define {{.*}} void @_Z34call_function_inside_try_catch_allv() #0 personality ptr @__gxx_personality_v0
 // OGCG:   %[[EXN_OBJ_ADDR:.*]] = alloca ptr, align 8
 // OGCG:   %[[EH_SELECTOR_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
@@ -51,6 +54,7 @@ void call_function_inside_try_catch_with_exception_type() {
   }
 }
 
+// CIR: cir.func {{.*}} @_Z50call_function_inside_try_catch_with_exception_typev() personality(@__gxx_personality_v0)
 // CIR: cir.scope {
 // CIR:   cir.try {
 // CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> !s32i
@@ -63,6 +67,7 @@ void call_function_inside_try_catch_with_exception_type() {
 // CIR:   }
 // CIR: }
 
+// OGCG: define {{.*}} void @_Z50call_function_inside_try_catch_with_exception_typev() #0 personality ptr @__gxx_personality_v0
 // OGCG:   %[[EXCEPTION_ADDR:.*]] = alloca ptr, align 8
 // OGCG:   %[[EH_TYPE_ID_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[E_ADDR:.*]] = alloca i32, align 4
