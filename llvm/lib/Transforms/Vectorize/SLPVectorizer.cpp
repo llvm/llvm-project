@@ -5365,15 +5365,15 @@ private:
           // reordered.
           // Same applies even for non-commutative cmps, because we can invert
           // their predicate potentially and, thus, reorder the operands.
-          constexpr unsigned NumCommutativeOps = 2;
           bool IsCommutativeUser =
-              U.getOperandNo() < NumCommutativeOps &&
               (::isCommutative(User) ||
-               ::isCommutative(TE->getMatchingMainOpOrAltOp(User), User));
+               ::isCommutative(TE->getMatchingMainOpOrAltOp(User), User)) &&
+              User->isCommutableOperand(U.getOperandNo());
+          // The commutative user with the same operands can be safely
+          // considered as non-commutative, operands reordering does not change
+          // the semantics.
           bool IsCommutativeWithSameOps =
-              IsCommutativeUser &&
-              User->getNumOperands() >= NumCommutativeOps &&
-              User->getOperand(0) == User->getOperand(1);
+              IsCommutativeUser && User->getOperand(0) == User->getOperand(1);
           if ((!IsCommutativeUser || IsCommutativeWithSameOps) &&
               !isa<CmpInst>(User)) {
             EdgeInfo EI(TE, U.getOperandNo());
@@ -10929,13 +10929,21 @@ class InstructionsCompatibilityAnalysis {
     }
     unsigned BestOpcodeNum = 0;
     MainOp = nullptr;
+    bool UsedOutside = false;
     for (const auto &P : Candidates) {
+      bool PUsedOutside = all_of(P.second, isUsedOutsideBlock);
+      if (UsedOutside && !PUsedOutside)
+        continue;
+      if (!UsedOutside && PUsedOutside)
+        BestOpcodeNum = 0;
       if (P.second.size() < BestOpcodeNum)
         continue;
       // If have inner dependencies - skip.
-      if (any_of(P.second,
-                 [&](Instruction *I) { return Operands.contains(I); }))
+      if (!PUsedOutside && any_of(P.second, [&](Instruction *I) {
+            return Operands.contains(I);
+          }))
         continue;
+      UsedOutside = PUsedOutside;
       for (Instruction *I : P.second) {
         if (IsSupportedInstruction(I, AnyUndef)) {
           MainOp = I;
@@ -19916,7 +19924,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         if (!Stride) {
           const SCEV *StrideSCEV = SPtrInfo.StrideSCEV;
           assert(StrideSCEV && "Neither StrideVal nor StrideSCEV were set.");
-          SCEVExpander Expander(*SE, *DL, "strided-load-vec");
+          SCEVExpander Expander(*SE, "strided-load-vec");
           Stride = Expander.expandCodeFor(StrideSCEV, StrideSCEV->getType(),
                                           &*Builder.GetInsertPoint());
         }

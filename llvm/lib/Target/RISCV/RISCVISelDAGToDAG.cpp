@@ -1500,8 +1500,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           if (tryUnsignedBitfieldInsertInZero(Node, DL, VT, X, Msb, Lsb))
             return;
 
-          // (srli (slli c2+c3), c3)
           if (OneUseOrZExtW && !IsCANDI) {
+            // (packh x0, X)
+            if (Subtarget->hasStdExtZbkb() && C1 == 0xff00 && C2 == 8) {
+              SDNode *PACKH = CurDAG->getMachineNode(
+                  RISCV::PACKH, DL, VT,
+                  CurDAG->getRegister(RISCV::X0, Subtarget->getXLenVT()), X);
+              ReplaceNode(Node, PACKH);
+              return;
+            }
+            // (srli (slli c2+c3), c3)
             SDNode *SLLI = CurDAG->getMachineNode(
                 RISCV::SLLI, DL, VT, X,
                 CurDAG->getTargetConstant(C2 + Leading, DL, VT));
@@ -1893,7 +1901,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                 0);
 
     MachineSDNode *PackDH = CurDAG->getMachineNode(
-        RISCV::PPACK_DH, DL, MVT::Untyped, {RegPair0, RegPair1});
+        RISCV::PPAIRE_DB, DL, MVT::Untyped, {RegPair0, RegPair1});
 
     SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
                                                 MVT::i32, SDValue(PackDH, 0));
@@ -2600,8 +2608,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       MachineSDNode *TileLoad =
           CurDAG->getMachineNode(PseudoInst, DL, Node->getVTList(), Operands);
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(TileLoad, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(TileLoad,
+                             {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, TileLoad);
       return;

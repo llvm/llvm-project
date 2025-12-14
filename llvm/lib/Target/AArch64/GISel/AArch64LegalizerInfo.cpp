@@ -432,11 +432,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalar(0, s32)
       .scalarize(0);
 
-  getActionDefinitionsBuilder({G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT})
-      .legalFor({{s64, MinFPScalar}, {s64, s32}, {s64, s64}})
-      .libcallFor({{s64, s128}})
-      .minScalarOrElt(1, MinFPScalar);
-
   getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2,
                                G_FLOG10, G_FTAN, G_FEXP, G_FEXP2, G_FEXP10,
                                G_FACOS, G_FASIN, G_FATAN, G_FATAN2, G_FCOSH,
@@ -451,12 +446,19 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalar(0, s32)
       .libcallFor({{s32, s32}, {s64, s32}, {s128, s32}});
 
-  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+  getActionDefinitionsBuilder({G_LROUND, G_INTRINSIC_LRINT})
+      .legalFor({{s32, s32}, {s32, s64}, {s64, s32}, {s64, s64}})
+      .legalFor(HasFP16, {{s32, s16}, {s64, s16}})
+      .minScalar(1, s32)
+      .libcallFor({{s64, s128}})
+      .lower();
+  getActionDefinitionsBuilder({G_LLROUND, G_INTRINSIC_LLRINT})
       .legalFor({{s64, s32}, {s64, s64}})
       .legalFor(HasFP16, {{s64, s16}})
       .minScalar(0, s64)
       .minScalar(1, s32)
-      .libcallFor({{s64, s128}});
+      .libcallFor({{s64, s128}})
+      .lower();
 
   // TODO: Custom legalization for mismatched types.
   getActionDefinitionsBuilder(G_FCOPYSIGN)
@@ -568,6 +570,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return Query.Types[0] == s128 &&
                Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic;
       })
+      .widenScalarIf(
+          all(scalarNarrowerThan(0, 32),
+              atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Release)),
+          changeTo(0, s32))
       .legalForTypesWithMemDesc(
           {{s8, p0, s8, 8},     {s16, p0, s8, 8},  // truncstorei8 from s16
            {s32, p0, s8, 8},                       // truncstorei8 from s32
