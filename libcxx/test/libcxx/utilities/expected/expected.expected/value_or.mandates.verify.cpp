@@ -36,7 +36,8 @@ void test() {
   // !is_copy_constructible_v<T>,
   {
     const std::expected<NonCopyable, int> f1{5};
-    f1.value_or(5); // expected-note{{in instantiation of function template specialization 'std::expected<NonCopyable, int>::value_or<int>' requested here}}
+    // expected-note@+1 {{in instantiation of function template specialization 'std::expected<NonCopyable, int>::value_or<int>' requested here}}
+    (void)f1.value_or(5);
     // expected-error-re@*:* {{static assertion failed {{.*}}value_type has to be copy constructible}}
   }
 
@@ -44,7 +45,8 @@ void test() {
   // !is_convertible_v<U, T>
   {
     const std::expected<NotConvertibleFromInt, int> f1{std::in_place};
-    f1.value_or(5); // expected-note{{in instantiation of function template specialization 'std::expected<NotConvertibleFromInt, int>::value_or<int>' requested here}}
+    // expected-note@+1 {{in instantiation of function template specialization 'std::expected<NotConvertibleFromInt, int>::value_or<int>' requested here}}
+    (void)f1.value_or(5);
     //expected-error-re@*:* {{static assertion failed {{.*}}argument has to be convertible to value_type}}
   }
 
@@ -52,7 +54,8 @@ void test() {
   // !is_move_constructible_v<T>,
   {
     std::expected<NonMovable, int> f1{5};
-    std::move(f1).value_or(5); // expected-note{{in instantiation of function template specialization 'std::expected<NonMovable, int>::value_or<int>' requested here}}
+    // expected-note@+1 {{in instantiation of function template specialization 'std::expected<NonMovable, int>::value_or<int>' requested here}}
+    (void)std::move(f1).value_or(5);
     //expected-error-re@*:* {{static assertion failed {{.*}}value_type has to be move constructible}}
   }
 
@@ -60,7 +63,8 @@ void test() {
   // !is_convertible_v<U, T>
   {
     std::expected<NotConvertibleFromInt, int> f1{std::in_place};
-    std::move(f1).value_or(5); // expected-note{{in instantiation of function template specialization 'std::expected<NotConvertibleFromInt, int>::value_or<int>' requested here}}
+    // expected-note@+1 {{in instantiation of function template specialization 'std::expected<NotConvertibleFromInt, int>::value_or<int>' requested here}}
+    (void)std::move(f1).value_or(5);
     //expected-error-re@*:* {{static assertion failed {{.*}}argument has to be convertible to value_type}}
   }
 }
