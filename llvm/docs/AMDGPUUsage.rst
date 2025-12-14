@@ -1428,7 +1428,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    with two i32 operands (holding a vector of 8 4bit values), summed
                                                    with the third i32 operand. The i1 fourth operand is used to clamp
                                                    the output.
-
   llvm.amdgcn.sdot2                                Provides direct access to v_dot2_i32_i16 across targets which
                                                    support such instructions. This performs a signed dot product
                                                    with two v2i16 operands, summed with the third i32 operand. The
@@ -1601,6 +1600,14 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 .. TODO::
 
    List AMDGPU intrinsics.
+
+WMMA clamp operand
+~~~~~~~~~~~~~~~~~~
+
+The WMMA integer matrix multiply intrinsics and C builtins (IU4/IU8, wave32 and
+wave64 forms) accept an optional boolean clamp operand. It defaults to 0 (no
+saturation) for backward compatibility. When set, the hardware clamps the
+32-bit accumulation result instead of allowing wraparound.
 
 '``llvm.amdgcn.cooperative.atomic``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
