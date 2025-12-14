@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 // UNSUPPORTED: no-localization
 
 // check that <regex> functions are marked [[nodiscard]]
