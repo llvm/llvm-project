@@ -33,6 +33,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
@@ -1282,6 +1283,12 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           return true;
         }
         break; // No other 'amdgcn.atomic.*'
+      }
+
+      if (Name.starts_with("wmma.i32.16x16x64.iu8") && F->arg_size() == 7) {
+        // Legacy wmma iu8 intrinsic without the optional clamp operand.
+        NewFn = nullptr;
+        return true;
       }
 
       if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
@@ -4613,6 +4620,21 @@ static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 //
 static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
                                          Function *F, IRBuilder<> &Builder) {
+  if (Name.starts_with("wmma.i32.16x16x64.iu8")) {
+    // Legacy WMMA IU8 intrinsic lacked the optional clamp operand. Append
+    // clamp=false for compatibility.
+    if (CI->arg_size() != 7)
+      return nullptr;
+
+    SmallVector<Value *, 8> Args(CI->args().begin(), CI->args().end());
+    Args.push_back(Builder.getFalse());
+
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+      F->getParent(), Intrinsic::amdgcn_wmma_i32_16x16x64_iu8,
+      {CI->getArgOperand(4)->getType(), CI->getArgOperand(1)->getType()});
+    return Builder.CreateCall(NewDecl, Args);
+  }
+
   AtomicRMWInst::BinOp RMWOp =
       StringSwitch<AtomicRMWInst::BinOp>(Name)
           .StartsWith("ds.fadd", AtomicRMWInst::FAdd)

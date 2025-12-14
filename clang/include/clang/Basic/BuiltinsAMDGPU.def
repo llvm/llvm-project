@@ -857,7 +857,7 @@ TARGET_BUILTIN(__builtin_amdgcn_wmma_f16_16x16x64_fp8_fp8, "V8hV8iV8iIsV8hIbIb",
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f16_16x16x64_fp8_bf8, "V8hV8iV8iIsV8hIbIb", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f16_16x16x64_bf8_fp8, "V8hV8iV8iIsV8hIbIb", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f16_16x16x64_bf8_bf8, "V8hV8iV8iIsV8hIbIb", "nc", "gfx1250-insts,wavefrontsize32")
-TARGET_BUILTIN(__builtin_amdgcn_wmma_i32_16x16x64_iu8, "V8iIbV8iIbV8iV8iIbIbIb", "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_wmma_i32_16x16x64_iu8, "V8iIbV8iIbV8iV8iIbIb.", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f16_16x16x128_fp8_fp8, "V8hV16iV16iIsV8hIbIb", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f16_16x16x128_fp8_bf8, "V8hV16iV16iIsV8hIbIb", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f16_16x16x128_bf8_fp8, "V8hV16iV16iIsV8hIbIb", "nc", "gfx1250-insts,wavefrontsize32")

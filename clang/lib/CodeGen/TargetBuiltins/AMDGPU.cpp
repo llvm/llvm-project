@@ -1665,6 +1665,24 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     if (AppendFalseForOpselArg)
       Args.push_back(Builder.getFalse());
 
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8) {
+      if (Args.size() == 7)
+        Args.push_back(Builder.getFalse());
+
+      auto ToBool = [&](Value *V) {
+        if (V->getType()->isIntegerTy(1))
+          return V;
+        return Builder.CreateIntCast(V, Builder.getInt1Ty(), false);
+      };
+
+      // Ensure predicate-like operands are i1 to match intrinsic signature.
+      Args[0] = ToBool(Args[0]);
+      Args[2] = ToBool(Args[2]);
+      Args[5] = ToBool(Args[5]);
+      Args[6] = ToBool(Args[6]);
+      Args[7] = ToBool(Args[7]);
+    }
+
     SmallVector<llvm::Type *, 6> ArgTypes;
     if (NeedReturnType)
       ArgTypes.push_back(ConvertType(E->getType()));
