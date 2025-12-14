@@ -9489,7 +9489,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                "-lclang_rt.builtins"));
       bool HasFlangRT = HasCompilerRT && C.getDriver().IsFlangMode();
       bool UseFlangRT = Args.hasFlag(options::OPT_fgpu_flang_rt,
-                                     options::OPT_fno_gpu_flang_rt, true);
+                                     options::OPT_fno_gpu_flang_rt,
+                                     !isTargetFastUsed(Args));
       if (HasFlangRT && UseFlangRT)
         CmdArgs.push_back(
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
