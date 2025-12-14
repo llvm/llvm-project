@@ -4575,9 +4575,8 @@ define double @v_rsq_f64__afn_nnan(double %x) {
 ; SI-SDAG-IR:       ; %bb.0:
 ; SI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
-; SI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
-; SI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x7ff00000
-; SI-SDAG-IR-NEXT:    v_cmp_eq_f64_e32 vcc, s[4:5], v[0:1]
+; SI-SDAG-IR-NEXT:    v_mov_b32_e32 v4, 0x260
+; SI-SDAG-IR-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v4
 ; SI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-IR-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; SI-SDAG-IR-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
@@ -4593,9 +4592,8 @@ define double @v_rsq_f64__afn_nnan(double %x) {
 ; SI-GISEL-IR:       ; %bb.0:
 ; SI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x7ff00000
-; SI-GISEL-IR-NEXT:    v_cmp_eq_f64_e32 vcc, v[0:1], v[4:5]
+; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0x260
+; SI-GISEL-IR-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v4
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
 ; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
@@ -4611,9 +4609,8 @@ define double @v_rsq_f64__afn_nnan(double %x) {
 ; VI-SDAG-IR:       ; %bb.0:
 ; VI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
-; VI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
-; VI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x7ff00000
-; VI-SDAG-IR-NEXT:    v_cmp_eq_f64_e32 vcc, s[4:5], v[0:1]
+; VI-SDAG-IR-NEXT:    v_mov_b32_e32 v4, 0x260
+; VI-SDAG-IR-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v4
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x3fd80000
 ; VI-SDAG-IR-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
@@ -4629,9 +4626,8 @@ define double @v_rsq_f64__afn_nnan(double %x) {
 ; VI-GISEL-IR:       ; %bb.0:
 ; VI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x7ff00000
-; VI-GISEL-IR-NEXT:    v_cmp_eq_f64_e32 vcc, v[0:1], v[4:5]
+; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0x260
+; VI-GISEL-IR-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v4
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
 ; VI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc

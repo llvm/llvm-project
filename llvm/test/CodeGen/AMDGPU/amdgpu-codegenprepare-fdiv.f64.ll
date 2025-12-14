@@ -44,7 +44,7 @@ define double @rsq_f64_nnan(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_nnan(
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan contract double @llvm.amdgcn.rsq.f64(double [[X]])
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp nnan contract oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.is.fpclass.f64(double [[X]], i32 608)
 ; CHECK-NEXT:    [[TMP3:%.*]] = select nnan contract i1 [[TMP2]], double [[TMP1]], double [[X]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fneg nnan contract double [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan contract double [[TMP4]], [[TMP3]]
@@ -63,7 +63,7 @@ define double @neg_rsq_f64_nnan(double %x) {
 ; CHECK-LABEL: define double @neg_rsq_f64_nnan(
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan contract double @llvm.amdgcn.rsq.f64(double [[X]])
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp nnan contract oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.is.fpclass.f64(double [[X]], i32 608)
 ; CHECK-NEXT:    [[TMP3:%.*]] = select nnan contract i1 [[TMP2]], double [[TMP1]], double [[X]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fneg nnan contract double [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan contract double [[TMP4]], [[TMP3]]
@@ -662,7 +662,7 @@ define double @rsq_f64_nnan_fdiv(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_nnan_fdiv(
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan contract double @llvm.amdgcn.rsq.f64(double [[X]])
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp nnan contract oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.is.fpclass.f64(double [[X]], i32 608)
 ; CHECK-NEXT:    [[TMP3:%.*]] = select nnan contract i1 [[TMP2]], double [[TMP1]], double [[X]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fneg nnan contract double [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan contract double [[TMP4]], [[TMP3]]
@@ -717,8 +717,10 @@ define double @rsq_f64_ninf_sqrt_nnan_fdiv(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_ninf_sqrt_nnan_fdiv(
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP7:%.*]] = fcmp nnan ninf contract oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP8:%.*]] = select nnan ninf contract i1 [[TMP7]], double [[TMP1]], double [[X]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fneg nnan ninf contract double [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf contract double [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf contract double [[TMP2]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP3]], double [[TMP1]], double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan ninf contract double [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP4]], double 3.750000e-01, double 5.000000e-01)
