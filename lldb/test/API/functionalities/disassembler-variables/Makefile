@@ -19,7 +19,7 @@ dummy_main.c:
 
 # Assemble .s → .o using the configured compiler.
 %.o: %.s
-	$(CC) -c -x assembler $< -o $@
+	$(CC) $(CFLAGS) -c -x assembler $< -o $@
 
 # Default target: build all .o fixtures and the dummy exe.
 .PHONY: all
