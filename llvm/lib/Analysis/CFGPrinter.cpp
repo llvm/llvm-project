@@ -93,9 +93,14 @@ static void viewCFG(Function &F, const BlockFrequencyInfo *BFI,
 
 DOTFuncInfo::DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
                          const BranchProbabilityInfo *BPI, uint64_t MaxFreq,
-                         std::optional<NodeIdFormatterTy> NodeIdFormatter)
+                         std::optional<NodeIdFormatterTy> NodeIdFormatter,
+                         std::optional<bool> HideDeoptimizePaths,
+                         std::optional<bool> HideUnreachablePaths)
     : F(F), BFI(BFI), BPI(BPI), MaxFreq(MaxFreq),
-      NodeIdFormatter(NodeIdFormatter) {
+      NodeIdFormatter(NodeIdFormatter),
+      HideDeoptimizePaths(HideDeoptimizePaths.value_or(::HideDeoptimizePaths)),
+      HideUnreachablePaths(
+          HideUnreachablePaths.value_or(::HideUnreachablePaths)) {
   ShowHeat = false;
   EdgeWeights = !!BPI; // Print EdgeWeights when BPI is available.
   RawWeights = !!BFI;  // Print RawWeights when BFI is available.
@@ -190,13 +195,14 @@ void Function::viewCFGOnly(const BlockFrequencyInfo *BFI,
 /// or unreachable). These paths are hidden if the corresponding cl::opts
 /// are enabled.
 void DOTGraphTraits<DOTFuncInfo *>::computeDeoptOrUnreachablePaths(
-    const Function *F) {
+    const Function *F, const DOTFuncInfo *CFGInfo) {
   auto evaluateBB = [&](const BasicBlock *Node) {
     if (succ_empty(Node)) {
       const Instruction *TI = Node->getTerminator();
       isOnDeoptOrUnreachablePath[Node] =
-          (HideUnreachablePaths && isa<UnreachableInst>(TI)) ||
-          (HideDeoptimizePaths && Node->getTerminatingDeoptimizeCall());
+          (CFGInfo->hideUnreachablePaths() && isa<UnreachableInst>(TI)) ||
+          (CFGInfo->hideDeoptimizePaths() &&
+           Node->getTerminatingDeoptimizeCall());
       return;
     }
     isOnDeoptOrUnreachablePath[Node] =
@@ -220,9 +226,9 @@ bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,
           HideColdPaths)
         return true;
     }
-  if (HideUnreachablePaths || HideDeoptimizePaths) {
+  if (CFGInfo->hideUnreachablePaths() || CFGInfo->hideDeoptimizePaths()) {
     if (!isOnDeoptOrUnreachablePath.contains(Node))
-      computeDeoptOrUnreachablePaths(Node->getParent());
+      computeDeoptOrUnreachablePaths(Node->getParent(), CFGInfo);
     return isOnDeoptOrUnreachablePath[Node];
   }
   return false;
