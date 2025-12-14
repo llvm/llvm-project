@@ -540,12 +540,12 @@ options are
 - Authentication mode: This is one of ``strip``, ``sign-and-strip``, and
   ``sign-and-auth``. The ability to modify this behavior is intended to support
   staging ABI changes. The ``strip`` mode results in the PAC bits of a value
-  being stripped from any value and disabled any other authentication
+  being stripped from any value and disabling any other authentication
   operations. ``sign-and-strip`` strips an authenticated on read, but will
   ensure a correct signature is set on assignment. Finally ``sign-and-auth`` is
   the default mode, and provides full protection for the value.
 
-- ``authenticates-null-values``: By default the __ptrauth qualifier does not
+- ``authenticates-null-values``: By default the ``__ptrauth`` qualifier does not
   sign the zero value. This permits fast implementation of null checks in the
   common case where a null value is safe. The ``authenticates-null-values``
   option overrides this behavior, and permits null values to be protected with
