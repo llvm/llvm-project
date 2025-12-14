@@ -8234,11 +8234,11 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     if ((Recipe = tryToOptimizeInductionPHI(PhiR)))
       return Recipe;
 
-    VPHeaderPHIRecipe *PhiRecipe = nullptr;
     assert((Legal->isReductionVariable(Phi) ||
             Legal->isFixedOrderRecurrence(Phi)) &&
            "can only widen reductions and fixed-order recurrences here");
     VPValue *StartV = R->getOperand(0);
+    VPValue *BackedgeValue = R->getOperand(1);
     if (Legal->isReductionVariable(Phi)) {
       const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(Phi);
       assert(RdxDesc.getRecurrenceStartValue() ==
@@ -8250,22 +8250,20 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       unsigned ScaleFactor =
           getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
 
-      PhiRecipe = new VPReductionPHIRecipe(
-          Phi, RdxDesc.getRecurrenceKind(), *StartV,
+      return new VPReductionPHIRecipe(
+          Phi, RdxDesc.getRecurrenceKind(), *StartV, *BackedgeValue,
           getReductionStyle(UseInLoopReduction, UseOrderedReductions,
                             ScaleFactor),
           RdxDesc.hasUsesOutsideReductionChain());
-    } else {
-      // TODO: Currently fixed-order recurrences are modeled as chains of
-      // first-order recurrences. If there are no users of the intermediate
-      // recurrences in the chain, the fixed order recurrence should be modeled
-      // directly, enabling more efficient codegen.
-      PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
     }
-    // Add backedge value.
-    PhiRecipe->addOperand(R->getOperand(1));
-    return PhiRecipe;
+
+    // TODO: Currently fixed-order recurrences are modeled as chains of
+    // first-order recurrences. If there are no users of the intermediate
+    // recurrences in the chain, the fixed order recurrence should be modeled
+    // directly, enabling more efficient codegen.
+    return new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV, *BackedgeValue);
   }
+
   assert(!R->isPhi() && "only VPPhi nodes expected at this point");
 
   auto *VPI = cast<VPInstruction>(R);

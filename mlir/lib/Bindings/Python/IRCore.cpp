@@ -1519,12 +1519,12 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_prop_ro(
         "owner",
-        [](PyOpResult &self) -> nb::typed<nb::object, PyOpView> {
+        [](PyOpResult &self) -> nb::typed<nb::object, PyOperation> {
           assert(mlirOperationEqual(self.getParentOperation()->get(),
                                     mlirOpResultGetOwner(self.get())) &&
                  "expected the owner of the value in Python to match that in "
                  "the IR");
-          return self.getParentOperation()->createOpView();
+          return self.getParentOperation().getObject();
         },
         "Returns the operation that produces this result.");
     c.def_prop_ro(
@@ -4646,7 +4646,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           kDumpDocstring)
       .def_prop_ro(
           "owner",
-          [](PyValue &self) -> nb::typed<nb::object, PyOpView> {
+          [](PyValue &self) -> nb::object {
             MlirValue v = self.get();
             if (mlirValueIsAOpResult(v)) {
               assert(mlirOperationEqual(self.getParentOperation()->get(),
@@ -4654,7 +4654,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                      "expected the owner of the value in Python to match "
                      "that in "
                      "the IR");
-              return self.getParentOperation()->createOpView();
+              return self.getParentOperation().getObject();
             }
 
             if (mlirValueIsABlockArgument(v)) {

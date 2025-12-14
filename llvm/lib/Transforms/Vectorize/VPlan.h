@@ -2366,14 +2366,17 @@ protected:
 /// first operand of the recipe and the incoming value from the backedge is the
 /// second operand.
 struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
-  VPFirstOrderRecurrencePHIRecipe(PHINode *Phi, VPValue &Start)
-      : VPHeaderPHIRecipe(VPDef::VPFirstOrderRecurrencePHISC, Phi, &Start) {}
+  VPFirstOrderRecurrencePHIRecipe(PHINode *Phi, VPValue &Start,
+                                  VPValue &BackedgeValue)
+      : VPHeaderPHIRecipe(VPDef::VPFirstOrderRecurrencePHISC, Phi, &Start) {
+    addOperand(&BackedgeValue);
+  }
 
   VP_CLASSOF_IMPL(VPDef::VPFirstOrderRecurrencePHISC)
 
   VPFirstOrderRecurrencePHIRecipe *clone() override {
     return new VPFirstOrderRecurrencePHIRecipe(
-        cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
+        cast<PHINode>(getUnderlyingInstr()), *getOperand(0), *getOperand(1));
   }
 
   void execute(VPTransformState &State) override;
@@ -2439,20 +2442,21 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
-                       ReductionStyle Style,
+                       VPValue &BackedgeValue, ReductionStyle Style,
                        bool HasUsesOutsideReductionChain = false)
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start), Kind(Kind),
         Style(Style),
-        HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {}
+        HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {
+    addOperand(&BackedgeValue);
+  }
 
   ~VPReductionPHIRecipe() override = default;
 
   VPReductionPHIRecipe *clone() override {
-    auto *R = new VPReductionPHIRecipe(
+    return new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getOperand(0), Style, HasUsesOutsideReductionChain);
-    R->addOperand(getBackedgeValue());
-    return R;
+        *getOperand(0), *getBackedgeValue(), Style,
+        HasUsesOutsideReductionChain);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReductionPHISC)
