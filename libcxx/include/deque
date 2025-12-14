@@ -269,6 +269,9 @@ struct __deque_block_size {
   static const _DiffType value = sizeof(_ValueType) < 256 ? 4096 / sizeof(_ValueType) : 16;
 };
 
+// When using fancy pointers, _MapPointer can be FancyPtr<const FancyPtr<const _ValueType>>, which causes strict
+// aliasing violation in direct dereferencing because the internal map stores FancyPtr<_ValueType> objects.
+// We need to transform the type to something like FancyPtr<const FancyPtr<_ValueType>>.
 template <class _ValueType, class _MapPointer>
 using __get_deque_map_iterator _LIBCPP_NODEBUG =
     __conditional_t<is_const<__libcpp_remove_reference_t<decltype(**_MapPointer())> >::value,
@@ -290,13 +293,7 @@ template <class _ValueType,
 #  endif
           >
 class __deque_iterator {
-  // When using fancy pointers, _MapPointer can be FancyPtr<const FancyPtr<const _ValueType>>, which causes strict
-  // aliasing violation in direct dereferencing because the internal map stores FancyPtr<_ValueType> objects.
-  // We need to transform the type to something like FancyPtr<const FancyPtr<_ValueType>>.
-  using __map_iterator _LIBCPP_NODEBUG =
-      __conditional_t<is_const<__libcpp_remove_reference_t<decltype(**_MapPointer())> >::value,
-                      __rebind_pointer_t<_MapPointer, const __rebind_pointer_t<_MapPointer, _ValueType> >,
-                      _MapPointer>;
+  using __map_iterator _LIBCPP_NODEBUG = __get_deque_map_iterator<_ValueType, _MapPointer>;
 
 // TODO(LLVM 24): Remove this check
 #  ifndef _LIBCPP_ABI_DEQUE_CONST_ITERATOR
@@ -308,15 +305,6 @@ class __deque_iterator {
       "used. If you don't care about your ABI being broken, define the _LIBCPP_ABI_DEQUE_CONST_ITERATOR macro to "
       "silence this diagnostic.");
 #  endif
-
-  template <bool _IsSamePointer = is_same<_MapPointer, __map_iterator>::value, __enable_if_t<_IsSamePointer, int> = 0>
-  [[__nodiscard__]] static _LIBCPP_HIDE_FROM_ABI __map_iterator __to_stored_pointer(_MapPointer __mp) _NOEXCEPT {
-    return __mp;
-  }
-  template <bool _IsSamePointer = is_same<_MapPointer, __map_iterator>::value, __enable_if_t<!_IsSamePointer, int> = 0>
-  [[__nodiscard__]] static _LIBCPP_HIDE_FROM_ABI __map_iterator __to_stored_pointer(_MapPointer __mp) _NOEXCEPT {
-    return __mp ? pointer_traits<__map_iterator>::pointer_to(*__mp) : nullptr;
-  }
 
 public:
   typedef _Pointer pointer;
@@ -471,8 +459,13 @@ public:
 #  endif // _LIBCPP_STD_VER >= 20
 
 private:
+  _LIBCPP_HIDE_FROM_ABI explicit __deque_iterator(__map_iterator __m, pointer __p) _NOEXCEPT
+      : __m_iter_(__m),
+        __ptr_(__p) {}
+
+  template <bool _IsSamePointer = is_same<_MapPointer, __map_iterator>::value, __enable_if_t<!_IsSamePointer, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit __deque_iterator(_MapPointer __m, pointer __p) _NOEXCEPT
-      : __m_iter_(__to_stored_pointer(__m)),
+      : __m_iter_(__m ? pointer_traits<__map_iterator>::pointer_to(*__m) : nullptr),
         __ptr_(__p) {}
 
   template <class _Tp, class _Ap>
@@ -755,7 +748,7 @@ public:
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT {
-    __map_const_pointer __mp = static_cast<__map_const_pointer>(__map_.begin() + __start_ / __block_size);
+    auto __mp = __map_.begin() + __start_ / __block_size;
     return const_iterator(__mp, __map_.empty() ? 0 : *__mp + __start_ % __block_size);
   }
 
@@ -766,8 +759,8 @@ public:
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT {
-    size_type __p            = size() + __start_;
-    __map_const_pointer __mp = static_cast<__map_const_pointer>(__map_.begin() + __p / __block_size);
+    size_type __p = size() + __start_;
+    auto __mp     = __map_.begin() + __p / __block_size;
     return const_iterator(__mp, __map_.empty() ? 0 : *__mp + __p % __block_size);
   }
 
@@ -2259,7 +2252,7 @@ deque<_Tp, _Allocator>::__move_and_check(iterator __f, iterator __l, iterator __
       __fe = __fb + __bs;
     }
     if (__fb <= __vt && __vt < __fe)
-      __vt = (const_iterator(static_cast<__map_const_pointer>(__f.__m_iter_), __vt) -= __f - __r).__ptr_;
+      __vt = (const_iterator(__f.__m_iter_, __vt) -= __f - __r).__ptr_;
     __r = std::move(__fb, __fe, __r);
     __n -= __bs;
     __f += __bs;
@@ -2286,7 +2279,7 @@ deque<_Tp, _Allocator>::__move_backward_and_check(iterator __f, iterator __l, it
       __lb = __le - __bs;
     }
     if (__lb <= __vt && __vt < __le)
-      __vt = (const_iterator(static_cast<__map_const_pointer>(__l.__m_iter_), __vt) += __r - __l - 1).__ptr_;
+      __vt = (const_iterator(__l.__m_iter_, __vt) += __r - __l - 1).__ptr_;
     __r = std::move_backward(__lb, __le, __r);
     __n -= __bs;
     __l -= __bs - 1;
@@ -2312,7 +2305,7 @@ void deque<_Tp, _Allocator>::__move_construct_and_check(iterator __f, iterator _
       __fe = __fb + __bs;
     }
     if (__fb <= __vt && __vt < __fe)
-      __vt = (const_iterator(static_cast<__map_const_pointer>(__f.__m_iter_), __vt) += __r - __f).__ptr_;
+      __vt = (const_iterator(__f.__m_iter_, __vt) += __r - __f).__ptr_;
     for (; __fb != __fe; ++__fb, ++__r, ++__size())
       __alloc_traits::construct(__a, std::addressof(*__r), std::move(*__fb));
     __n -= __bs;
@@ -2344,7 +2337,7 @@ void deque<_Tp, _Allocator>::__move_construct_backward_and_check(
       __lb = __le - __bs;
     }
     if (__lb <= __vt && __vt < __le)
-      __vt = (const_iterator(static_cast<__map_const_pointer>(__l.__m_iter_), __vt) -= __l - __r + 1).__ptr_;
+      __vt = (const_iterator(__l.__m_iter_, __vt) -= __l - __r + 1).__ptr_;
     while (__le != __lb) {
       __alloc_traits::construct(__a, std::addressof(*--__r), std::move(*--__le));
       --__start_;
