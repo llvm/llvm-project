@@ -637,17 +637,14 @@ void VPlanTransforms::createHeaderPhiRecipes(
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
     const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering) {
-
+  // Retrieve the header manually from the intial plain-CFG VPlan.
   VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(
       Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  assert(VPDominatorTree(Plan).dominates(HeaderVPBB,
+                                         HeaderVPBB->getPredecessors()[1]) &&
+         "header must dominate its latch");
 
-  for (VPRecipeBase &R : make_early_inc_range(*HeaderVPBB)) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
-    auto *PhiR = dyn_cast<VPPhi>(&R);
-    if (!PhiR)
-      break;
-
+  auto CreateHeaderPhiRecipe = [&](VPPhi *PhiR) -> VPHeaderPHIRecipe * {
     // TODO: Gradually replace uses of underlying instruction by analyses on
     // VPlan.
     auto *Phi = cast<PHINode>(PhiR->getUnderlyingInstr());
@@ -657,39 +654,43 @@ void VPlanTransforms::createHeaderPhiRecipes(
     // Extract common values once.
     VPValue *Start = PhiR->getOperand(0);
     VPValue *BackedgeValue = PhiR->getOperand(1);
-    DebugLoc DL = PhiR->getDebugLoc();
 
-    VPHeaderPHIRecipe *HeaderPhiR = nullptr;
-    auto InductionIt = Inductions.find(Phi);
-    if (InductionIt != Inductions.end()) {
-      HeaderPhiR = createWidenInductionRecipe(
-          Phi, PhiR, Start, InductionIt->second, Plan, SE, OrigLoop, DL);
-    } else {
-      auto ReductionIt = Reductions.find(Phi);
-      if (ReductionIt != Reductions.end()) {
-        const RecurrenceDescriptor &RdxDesc = ReductionIt->second;
-        assert(RdxDesc.getRecurrenceStartValue() ==
-               Phi->getIncomingValueForBlock(OrigLoop.getLoopPreheader()));
-
-        bool UseOrderedReductions = !AllowReordering && RdxDesc.isOrdered();
-
-        HeaderPhiR = new VPReductionPHIRecipe(
-            Phi, RdxDesc.getRecurrenceKind(), *Start,
-            getReductionStyle(InLoopReductions.contains(Phi),
-                              UseOrderedReductions, 1),
-            RdxDesc.hasUsesOutsideReductionChain());
-        HeaderPhiR->addOperand(BackedgeValue);
-      } else {
-        assert(FixedOrderRecurrences.contains(Phi) &&
-               "can only widen reductions and fixed-order recurrences here");
-        // TODO: Currently fixed-order recurrences are modeled as chains of
-        // first-order recurrences. If there are no users of the intermediate
-        // recurrences in the chain, the fixed order recurrence should be
-        // modeled directly, enabling more efficient codegen.
-        HeaderPhiR = new VPFirstOrderRecurrencePHIRecipe(Phi, *Start);
-        HeaderPhiR->addOperand(BackedgeValue);
-      }
+    if (FixedOrderRecurrences.contains(Phi)) {
+      // TODO: Currently fixed-order recurrences are modeled as chains of
+      // first-order recurrences. If there are no users of the intermediate
+      // recurrences in the chain, the fixed order recurrence should be
+      // modeled directly, enabling more efficient codegen.
+      return new VPFirstOrderRecurrencePHIRecipe(Phi, *Start, *BackedgeValue);
     }
+
+    auto InductionIt = Inductions.find(Phi);
+    if (InductionIt != Inductions.end())
+      return createWidenInductionRecipe(Phi, PhiR, Start, InductionIt->second,
+                                        Plan, SE, OrigLoop,
+                                        PhiR->getDebugLoc());
+
+    assert(Reductions.contains(Phi) &&
+           "can only widen reductions and fixed-order recurrences here");
+    const RecurrenceDescriptor &RdxDesc = Reductions.lookup(Phi);
+    assert(RdxDesc.getRecurrenceStartValue() ==
+               Phi->getIncomingValueForBlock(OrigLoop.getLoopPreheader()) &&
+           "incoming value must match start value");
+    bool UseOrderedReductions = !AllowReordering && RdxDesc.isOrdered();
+    return new VPReductionPHIRecipe(
+        Phi, RdxDesc.getRecurrenceKind(), *Start, *BackedgeValue,
+        getReductionStyle(InLoopReductions.contains(Phi), UseOrderedReductions,
+                          1),
+        RdxDesc.hasUsesOutsideReductionChain());
+  };
+
+  for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
+    if (isa<VPCanonicalIVPHIRecipe>(&R))
+      continue;
+    auto *PhiR = dyn_cast<VPPhi>(&R);
+    if (!PhiR)
+      break;
+
+    VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(HeaderPhiR);
     PhiR->eraseFromParent();

@@ -2472,7 +2472,7 @@ public:
   }
 
   /// Set the VFScaleFactor for this reduction phi. Can only be set to a factor
-  /// > 1
+  /// > 1.
   void setVFScaleFactor(unsigned ScaleFactor) {
     assert(ScaleFactor > 1 && "must set to scale factor > 1");
     Style = RdxUnordered{ScaleFactor};
