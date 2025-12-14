@@ -24,7 +24,7 @@ class TargetMachine;
 namespace mlir {
 namespace LLVM {
 
-/// Utility function for translating to ISA.
+/// Translate LLVM module to textual ISA.
 FailureOr<std::string>
 translateModuleToISA(llvm::Module &llvmModule,
                      llvm::TargetMachine &targetMachine,
