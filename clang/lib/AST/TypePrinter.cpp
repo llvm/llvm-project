@@ -2620,24 +2620,22 @@ void PointerAuthQualifier::print(raw_ostream &OS,
     HasAppendedOption = true;
     OS << Option;
   };
-  switch (getAuthenticationMode()) {
+  switch (auto AuthenticationMode = getAuthenticationMode()) {
   case PointerAuthenticationMode::None:
     llvm_unreachable("Mode is unauthenticated but claims to be present");
     return;
   case PointerAuthenticationMode::Strip:
-    AppendOption(PointerAuthenticationOptionStrip);
-    break;
   case PointerAuthenticationMode::SignAndStrip:
-    AppendOption(PointerAuthenticationOptionSignAndStrip);
+    AppendOption(nameOfPointerAuthenticationMode(AuthenticationMode));
     break;
   case clang::PointerAuthenticationMode::SignAndAuth:
-    // Don't emit default auth
+    // Don't emit default authentication mode
     break;
   }
   if (isIsaPointer())
-    AppendOption(PointerAuthenticationOptionIsaPointer);
+    AppendOption(PointerAuthenticationOption::IsaPointerName);
   if (authenticatesNullValues())
-    AppendOption(PointerAuthenticationOptionAuthenticatesNullValues);
+    AppendOption(PointerAuthenticationOption::AuthenticatesNullValuesName);
 
   if (HasAppendedOption)
     OS << '"';

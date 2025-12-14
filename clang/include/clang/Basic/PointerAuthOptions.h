@@ -58,6 +58,28 @@ constexpr unsigned PointerAuthKeyNone = -1;
 /// the vtable type discriminator for classes derived from std::type_info.
 constexpr uint16_t StdTypeInfoVTablePointerConstantDiscrimination = 0xB1EA;
 
+enum class PointerAuthenticationMode : unsigned {
+  None,
+  Strip,
+  SignAndStrip,
+  SignAndAuth
+};
+llvm::StringRef nameOfPointerAuthenticationMode(PointerAuthenticationMode);
+
+struct PointerAuthenticationOption {
+  enum OptionKind : unsigned {
+    AuthenticationMode,
+    IsaPointer,
+    AuthenticatesNullValues
+  };
+  static const llvm::StringLiteral AuthenticatesNullValuesName;
+  static const llvm::StringLiteral IsaPointerName;
+  static std::optional<PointerAuthenticationOption> from(llvm::StringRef);
+
+  OptionKind Kind;
+  PointerAuthenticationMode Mode;
+};
+
 class PointerAuthSchema {
 public:
   enum class Kind : unsigned {

@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
 
-_Static_assert(__has_extension(ptrauth_qualifier), "the ptrauth qualifier should be available");
+#ifndef __PTRAUTH__
+#error "the ptrauth qualifier should be available"
+#endif
 
 #if __aarch64__
 #define VALID_CODE_KEY 0

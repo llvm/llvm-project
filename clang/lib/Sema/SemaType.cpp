@@ -8552,9 +8552,10 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
     if (!OptionsString.empty())
       OptionsString.split(Options, ',');
 
-    auto OptionHandler = [&](auto Value, auto *Option,
-                             std::string *LastOption = nullptr) {
-      return [&, Value, Option, LastOption](StringRef OptionString) {
+    for (unsigned Idx = 0; Idx < Options.size(); ++Idx) {
+      StringRef OptionString = Options[Idx].trim();
+      auto HandleOption = [&](auto Value, auto *Option,
+                              std::string *LastOption = nullptr) {
         if (!*Option) {
           *Option = Value;
           if (LastOption)
@@ -8569,48 +8570,40 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
             << (LastOption ? *LastOption : "");
         return false;
       };
-    };
 
-    for (unsigned Idx = 0; Idx < Options.size(); ++Idx) {
-      StringRef Option = Options[Idx].trim();
-      if (Option.empty()) {
+      if (OptionString.empty()) {
         bool IsLastOption = Idx == (Options.size() - 1);
         DiagnoseInvalidOptionsParameter(
             IsLastOption ? "has a trailing comma" : "contains an empty option");
         continue;
       }
-      auto SelectedHandler =
-          llvm::StringSwitch<std::function<bool(StringRef)>>(Option)
-              .Case(PointerAuthenticationOptionStrip,
-                    OptionHandler(PointerAuthenticationMode::Strip,
-                                  &AuthenticationMode, &LastAuthenticationMode))
-              .Case(PointerAuthenticationOptionSignAndStrip,
-                    OptionHandler(PointerAuthenticationMode::SignAndStrip,
-                                  &AuthenticationMode, &LastAuthenticationMode))
-              .Case(PointerAuthenticationOptionSignAndAuth,
-                    OptionHandler(PointerAuthenticationMode::SignAndAuth,
-                                  &AuthenticationMode, &LastAuthenticationMode))
-              .Case(PointerAuthenticationOptionIsaPointer,
-                    OptionHandler(true, &IsIsaPointer))
-              .Case(PointerAuthenticationOptionAuthenticatesNullValues,
-                    OptionHandler(true, &AuthenticatesNullValues))
-              .Default([&](StringRef Option) {
-                if (size_t WhitespaceIndex =
-                        Option.find_first_of(" \t\n\v\f\r");
-                    WhitespaceIndex != Option.npos) {
-                  StringRef LeadingOption = Option.slice(0, WhitespaceIndex);
-                  S.Diag(AuthenticationOptionsRange.getBegin(),
-                         diag::err_ptrauth_option_missing_comma)
-                      << LeadingOption;
-                } else {
-                  S.Diag(AuthenticationOptionsRange.getBegin(),
-                         diag::err_ptrauth_unknown_authentication_option)
-                      << Option;
-                }
-                return false;
-              });
-      if (!SelectedHandler(Option))
+      std::optional<PointerAuthenticationOption> Option =
+          PointerAuthenticationOption::from(OptionString);
+      if (!Option) {
+        auto TrailingOption = OptionString.drop_until(isWhitespace).trim();
+        if (TrailingOption.empty()) {
+          S.Diag(AuthenticationOptionsRange.getBegin(),
+                 diag::err_ptrauth_unknown_authentication_option)
+              << OptionString;
+        } else
+          S.Diag(AuthenticationOptionsRange.getBegin(),
+                 diag::err_ptrauth_option_missing_comma)
+              << OptionString.take_until(isWhitespace);
+
         IsInvalid = true;
+      }
+      switch (Option->Kind) {
+      case PointerAuthenticationOption::AuthenticationMode:
+        IsInvalid |= !HandleOption(Option->Mode, &AuthenticationMode,
+                                   &LastAuthenticationMode);
+        break;
+      case PointerAuthenticationOption::IsaPointer:
+        IsInvalid |= !HandleOption(true, &IsIsaPointer);
+        break;
+      case PointerAuthenticationOption::AuthenticatesNullValues:
+        IsInvalid |= !HandleOption(true, &AuthenticatesNullValues);
+        break;
+      }
     }
   }
 

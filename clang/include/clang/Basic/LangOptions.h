@@ -19,6 +19,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/Visibility.h"
@@ -59,24 +60,6 @@ enum class ShaderStage {
   Amplification,
   Invalid,
 };
-
-enum class PointerAuthenticationMode : unsigned {
-  None,
-  Strip,
-  SignAndStrip,
-  SignAndAuth
-};
-
-static constexpr llvm::StringLiteral PointerAuthenticationOptionStrip = "strip";
-static constexpr llvm::StringLiteral PointerAuthenticationOptionSignAndStrip =
-    "sign-and-strip";
-static constexpr llvm::StringLiteral PointerAuthenticationOptionSignAndAuth =
-    "sign-and-auth";
-static constexpr llvm::StringLiteral PointerAuthenticationOptionIsaPointer =
-    "isa-pointer";
-static constexpr llvm::StringLiteral
-    PointerAuthenticationOptionAuthenticatesNullValues =
-        "authenticates-null-values";
 
 /// Bitfields of LangOptions, split out from LangOptions in order to ensure that
 /// this large collection of bitfields is a trivial class type.

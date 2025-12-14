@@ -1055,7 +1055,8 @@ def err_ptrauth_invalid_option : Error<"'__ptrauth' options parameter %0">;
 def err_ptrauth_unknown_authentication_option
     : Error<"unknown '__ptrauth' authentication option '%0'">;
 def err_ptrauth_repeated_authentication_option
-    : Error<"repeated '__ptrauth' authentication %select{mode|option}0%select{, prior "
+    : Error<"repeated '__ptrauth' authentication "
+            "%select{mode|option}0%select{, prior "
             "mode was '%2'| '%1'}0">;
 def err_ptrauth_option_missing_comma
     : Error<"missing comma after '%0' option in '__ptrauth' qualifier">;
