@@ -36,6 +36,7 @@
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/UnicodeCharRanges.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -1929,7 +1930,7 @@ fastParseASCIIIdentifierScalar(const char *CurPtr,
   return CurPtr;
 }
 
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__) && !defined(_WIN32)
 
 __attribute__((target("sse4.2"))) static const char *
 fastParseASCIIIdentifierSSE42(const char *CurPtr,
@@ -1966,7 +1967,7 @@ static bool supportsSSE42() {
 
 static const char *fastParseASCIIIdentifier(const char *CurPtr,
                                             const char *BufferEnd) {
-#if !defined(__i386__) && !defined(__x86_64__)
+#if !defined(__i386__) && !defined(__x86_64__) || defined(_WIN32)
   return fastParseASCIIIdentifierScalar(CurPtr, BufferEnd);
 #else
 
