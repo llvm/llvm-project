@@ -111,7 +111,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         std::holds_alternative<_Iter>(__hold_), "Attempted to dereference a non-dereferenceable common_iterator");
     return *std::__unchecked_get<_Iter>(__hold_);
@@ -237,7 +237,7 @@ public:
     return std::__unchecked_get<_Sent>(__x.__hold_) - std::__unchecked_get<_I2>(__y.__hold_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
   iter_move(const common_iterator& __i) noexcept(noexcept(ranges::iter_move(std::declval<const _Iter&>())))
     requires input_iterator<_Iter>
   {

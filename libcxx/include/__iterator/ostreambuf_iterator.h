@@ -54,10 +54,10 @@ public:
       __sbuf_ = nullptr;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator*() { return *this; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator*() { return *this; }
   _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator++() { return *this; }
   _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator++(int) { return *this; }
-  _LIBCPP_HIDE_FROM_ABI bool failed() const _NOEXCEPT { return __sbuf_ == nullptr; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool failed() const _NOEXCEPT { return __sbuf_ == nullptr; }
 
 #if _LIBCPP_HAS_LOCALIZATION
   template <class _Ch, class _Tr>
