@@ -19,5 +19,5 @@
 
 void test() {
   std::index_sequence<1> seq;
-  get<0>(seq);    // expected-warning {{ignoring return value of function}}
+  get<0>(seq); // expected-warning {{ignoring return value of function}}
 }
