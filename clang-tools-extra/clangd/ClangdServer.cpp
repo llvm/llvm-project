@@ -933,12 +933,16 @@ void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
 }
 
 void ClangdServer::outgoingCalls(
+    PathRef File,
     const CallHierarchyItem &Item,
     Callback<std::vector<CallHierarchyOutgoingCall>> CB) {
-  WorkScheduler->run("Outgoing Calls", "",
-                     [CB = std::move(CB), Item, this]() mutable {
-                       CB(clangd::outgoingCalls(Item, Index));
-                     });
+  auto Action = [Item, CB = std::move(CB), this](
+      llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::outgoingCalls(Item, Index, InpAST->AST));
+  };
+  WorkScheduler->runWithAST("Outgoing Calls", File, std::move(Action));
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

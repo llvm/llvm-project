@@ -296,29 +296,29 @@ TEST(CallHierarchy, OutgoingOneFile) {
   std::vector<CallHierarchyItem> Items =
       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
   ASSERT_THAT(Items, ElementsAre(withName("caller3")));
-  auto OugoingLevel1 = outgoingCalls(Items[0], Index.get());
+  auto OugoingLevel1 = outgoingCalls(Items[0], Index.get(), AST);
   ASSERT_THAT(
       OugoingLevel1,
       ElementsAre(
-          AllOf(to(AllOf(withName("caller1"), withDetail("ns::Foo::caller1"))),
+          AllOf(to(AllOf(withName("Foo::caller1"), withDetail("ns::Foo::caller1"))),
                 oFromRanges(Source.range("Caller1C"))),
           AllOf(to(AllOf(withName("caller2"), withDetail("caller2"))),
                 oFromRanges(Source.range("Caller2")))));
 
-  auto OutgoingLevel2 = outgoingCalls(OugoingLevel1[1].to, Index.get());
+  auto OutgoingLevel2 = outgoingCalls(OugoingLevel1[1].to, Index.get(), AST);
   ASSERT_THAT(
       OutgoingLevel2,
       ElementsAre(AllOf(
-          to(AllOf(withName("caller1"), withDetail("ns::Foo::caller1"))),
+          to(AllOf(withName("Foo::caller1"), withDetail("ns::Foo::caller1"))),
           oFromRanges(Source.range("Caller1A"), Source.range("Caller1B")))));
 
-  auto OutgoingLevel3 = outgoingCalls(OutgoingLevel2[0].to, Index.get());
+  auto OutgoingLevel3 = outgoingCalls(OutgoingLevel2[0].to, Index.get(), AST);
   ASSERT_THAT(
       OutgoingLevel3,
       ElementsAre(AllOf(to(AllOf(withName("callee"), withDetail("callee"))),
                         oFromRanges(Source.range("Callee")))));
 
-  auto OutgoingLevel4 = outgoingCalls(OutgoingLevel3[0].to, Index.get());
+  auto OutgoingLevel4 = outgoingCalls(OutgoingLevel3[0].to, Index.get(), AST);
   EXPECT_THAT(OutgoingLevel4, IsEmpty());
 }
 
@@ -430,7 +430,7 @@ TEST(CallHierarchy, MultiFileCpp) {
         ElementsAre(AllOf(
             withName("caller3"),
             withFile(testPath(IsDeclaration ? "caller3.hh" : "caller3.cc")))));
-    auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get());
+    auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), AST);
     ASSERT_THAT(
         OutgoingLevel1,
         // fromRanges are interpreted in the context of Items[0]'s file.
@@ -444,19 +444,19 @@ TEST(CallHierarchy, MultiFileCpp) {
                   IsDeclaration ? oFromRanges()
                                 : oFromRanges(Caller3C.range("Caller2")))));
 
-    auto OutgoingLevel2 = outgoingCalls(OutgoingLevel1[1].to, Index.get());
+    auto OutgoingLevel2 = outgoingCalls(OutgoingLevel1[1].to, Index.get(), AST);
     ASSERT_THAT(OutgoingLevel2,
                 ElementsAre(AllOf(
                     to(AllOf(withName("caller1"), withDetail("nsa::caller1"))),
                     oFromRanges(Caller2C.range("A"), Caller2C.range("B")))));
 
-    auto OutgoingLevel3 = outgoingCalls(OutgoingLevel2[0].to, Index.get());
+    auto OutgoingLevel3 = outgoingCalls(OutgoingLevel2[0].to, Index.get(), AST);
     ASSERT_THAT(
         OutgoingLevel3,
         ElementsAre(AllOf(to(AllOf(withName("callee"), withDetail("callee"))),
                           oFromRanges(Caller1C.range()))));
 
-    auto OutgoingLevel4 = outgoingCalls(OutgoingLevel3[0].to, Index.get());
+    auto OutgoingLevel4 = outgoingCalls(OutgoingLevel3[0].to, Index.get(), AST);
     EXPECT_THAT(OutgoingLevel4, IsEmpty());
   };
 

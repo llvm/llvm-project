@@ -2445,27 +2445,21 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
     Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
       auto It = CallsIn.find(Caller.ID);
       assert(It != CallsIn.end());
+
+      std::optional<CallHierarchyItem> CHI;
       if (auto *ND = getNamedDeclFromSymbol(Caller, AST)) {
-        if (auto CHI = declToCallHierarchyItem(*ND, AST.tuPath())) {
-          std::vector<Range> FromRanges;
-          for (const Location &L : It->second) {
-            if (L.uri != CHI->uri) {
-              // Call location not in same file as caller.
-              // This can happen in some edge cases. There's not much we can do,
-              // since the protocol only allows returning ranges interpreted as
-              // being in the caller's file.
-              continue;
-            }
-            FromRanges.push_back(L.range);
-          }
-          Results.push_back(CallHierarchyIncomingCall{
-              std::move(*CHI), std::move(FromRanges), MightNeverCall});
-        }
-      } else if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
-        // Fallback to using symbol if NamedDecl is not available
+        CHI = declToCallHierarchyItem(*ND, AST.tuPath());
+      } else {
+        CHI = symbolToCallHierarchyItem(Caller, Item.uri.file());
+      }
+      if (CHI) {
         std::vector<Range> FromRanges;
         for (const Location &L : It->second) {
           if (L.uri != CHI->uri) {
+            // Call location not in same file as caller.
+            // This can happen in some edge cases. There's not much we can do,
+            // since the protocol only allows returning ranges interpreted as
+            // being in the caller's file.
             continue;
           }
           FromRanges.push_back(L.range);
@@ -2495,7 +2489,8 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
 }
 
 std::vector<CallHierarchyOutgoingCall>
-outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
+outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
+              const ParsedAST &AST) {
   std::vector<CallHierarchyOutgoingCall> Results;
   if (!Index || Item.data.empty())
     return Results;
@@ -2541,7 +2536,16 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
 
     auto It = CallsOut.find(Callee.ID);
     assert(It != CallsOut.end());
-    if (auto CHI = symbolToCallHierarchyItem(Callee, Item.uri.file())) {
+
+    std::optional<CallHierarchyItem> CHI;
+
+    if (auto *ND = getNamedDeclFromSymbol(Callee, AST)) {
+      CHI = declToCallHierarchyItem(*ND, AST.tuPath());
+    } else {
+      CHI = symbolToCallHierarchyItem(Callee, Item.uri.file());
+    }
+
+    if (CHI) {
       std::vector<Range> FromRanges;
       for (const Location &L : It->second) {
         if (L.uri != Item.uri) {
