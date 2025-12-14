@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++11
-
 // Check that functions are marked [[nodiscard]]
 
 #include <unordered_set>
@@ -25,8 +23,8 @@ struct StoredKey {
 struct TransparentKeyHash {
   using is_transparent = void;
 
-  constexpr std::size_t operator()(TransparentKey const&) const { return 0; }
-  constexpr std::size_t operator()(StoredKey const&) const { return 0; }
+  std::size_t operator()(TransparentKey const&) const { return 0; }
+  std::size_t operator()(StoredKey const&) const { return 0; }
 };
 
 void test() {
