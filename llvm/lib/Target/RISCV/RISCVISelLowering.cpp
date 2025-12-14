@@ -16624,6 +16624,42 @@ static SDValue reduceANDOfAtomicLoad(SDNode *N,
   return SDValue(N, 0);
 }
 
+// Sometimes a mask is applied after a shift. If that shift was fed by a
+// load, there is sometimes the opportunity to narrow the load, which is
+// hidden by the intermediate shift. Detect that case and commute the
+// shift/and in order to enable load narrowing.
+static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (N0.getOpcode() != ISD::SHL || !N0.hasOneUse() ||
+      !isa<ConstantSDNode>(N1) || !isa<ConstantSDNode>(N0.getOperand(1))) {
+    return SDValue();
+  }
+
+  EVT VT = N->getValueType(0);
+  uint64_t ShiftAmt = N0.getConstantOperandVal(1);
+
+  if (ShiftAmt > VT.getSizeInBits())
+    return SDValue();
+
+  const APInt &MaskVal = N1->getAsAPIntVal();
+  // Calculate the appropriate mask if it were applied before the shift.
+  APInt InnerMask = MaskVal.lshr(ShiftAmt);
+  bool IsNarrowable =
+      InnerMask == 0xff || InnerMask == 0xffff || InnerMask == 0xffffffff;
+
+  if (!IsNarrowable || !isa<LoadSDNode>(N0.getOperand(0)))
+    return SDValue();
+
+  // AND the loaded value and change the shift appropriately, allowing
+  // the load to be narrowed.
+  SDLoc DL(N);
+  SDValue LoadNode = N0.getOperand(0);
+  SDValue InnerAnd = DAG.getNode(ISD::AND, DL, VT, LoadNode,
+                                 DAG.getConstant(InnerMask, DL, VT));
+  return DAG.getNode(ISD::SHL, DL, VT, InnerAnd, N0.getOperand(1));
+}
+
 // Combines two comparison operation and logic operation to one selection
 // operation(min, max) and logic operation. Returns new constructed Node if
 // conditions for optimization are satisfied.
@@ -16631,38 +16667,7 @@ static SDValue performANDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
-
   SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  // Sometimes a mask is applied after a shift. If that shift was fed by a
-  // load, there is sometimes the opportunity to narrow the load, which is
-  // hidden by the intermediate shift. Detect that case and commute the
-  // shift/and in order to enable load narrowing.
-  if (N0.getOpcode() == ISD::SHL && N0.hasOneUse() && isa<ConstantSDNode>(N1) &&
-      isa<ConstantSDNode>(N0.getOperand(1))) {
-
-    EVT VT = N->getValueType(0);
-    uint64_t ShiftAmt = N0.getConstantOperandVal(1);
-    if (ShiftAmt < VT.getSizeInBits()) {
-      const APInt &MaskVal = N1->getAsAPIntVal();
-      // Calculate the mask if it were applied before the shift.
-      APInt InnerMask = MaskVal.lshr(ShiftAmt);
-
-      bool IsNarrowable =
-          InnerMask == 0xff || InnerMask == 0xffff || InnerMask == 0xffffffff;
-
-      if (IsNarrowable && isa<LoadSDNode>(N0.getOperand(0))) {
-        // AND the loaded value and change the shift appropriately, allowing
-        // the load to be narrowed.
-        SDLoc DL(N);
-        SDValue LoadNode = N0.getOperand(0);
-        SDValue InnerAnd = DAG.getNode(ISD::AND, DL, VT, LoadNode,
-                                       DAG.getConstant(InnerMask, DL, VT));
-        return DAG.getNode(ISD::SHL, DL, VT, InnerAnd, N0.getOperand(1));
-      }
-    }
-  }
 
   // Pre-promote (i32 (and (srl X, Y), 1)) on RV64 with Zbs without zero
   // extending X. This is safe since we only need the LSB after the shift and
@@ -16682,6 +16687,8 @@ static SDValue performANDCombine(SDNode *N,
     return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, And);
   }
 
+  if (SDValue V = combineNarrowableShiftedLoad(N, DAG))
+    return V;
   if (SDValue V = reverseZExtICmpCombine(N, DAG, Subtarget))
     return V;
   if (DCI.isAfterLegalizeDAG())
