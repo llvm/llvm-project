@@ -24,9 +24,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
@@ -485,7 +485,7 @@ hasAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
 /// Creates a new BoundNodesTreeBuilder that extends the given builder.
 /// This is a helper to simplify the pattern of creating a new builder,
 /// adding the current builder's matches to it, and then using it for matching.
-static BoundNodesTreeBuilder extendBuilder(BoundNodesTreeBuilder&& Builder) {
+static BoundNodesTreeBuilder extendBuilder(BoundNodesTreeBuilder &&Builder) {
   BoundNodesTreeBuilder Extended;
   Extended.addMatch(std::move(Builder));
   return Extended;
@@ -510,7 +510,8 @@ bool HasAdjSubstatementsMatcher<T, ArgT>::matches(
   // Try each possible starting position
   for (auto StartIt = BodyBegin; StartIt != BodyEnd; ++StartIt) {
     // Check if there are enough statements remaining
-    if (std::distance(StartIt, BodyEnd) < static_cast<ptrdiff_t>(Matchers.size()))
+    if (std::distance(StartIt, BodyEnd) <
+        static_cast<ptrdiff_t>(Matchers.size()))
       break;
 
     BoundNodesTreeBuilder CurrentBuilder;
