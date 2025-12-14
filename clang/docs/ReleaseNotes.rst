@@ -211,6 +211,10 @@ C++17 Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Implement DR1693 and DR3079 by allowing extra semicolons inside class member
+  declaration lists even in -pedantic mode. The warnings are still available
+  with -Wextra-semi. (#GH155538)
+
 C Language Changes
 ------------------
 

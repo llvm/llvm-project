@@ -205,27 +205,40 @@ void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
     ConsumeToken();
   }
 
+  if (Kind == ExtraSemiKind::AfterMemberFunctionDefinition &&
+      !HadMultipleSemis) {
+    // A single semicolon is valid after a member function definition.
+    Diag(StartLoc, diag::warn_extra_semi_after_mem_fn_def)
+        << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
+    return;
+  }
+
   // C++11 allows extra semicolons at namespace scope, but not in any of the
   // other contexts.
-  if (Kind == ExtraSemiKind::OutsideFunction && getLangOpts().CPlusPlus) {
+  // DR 1693 and DR 3079 extend this to class scope as well.
+  if ((Kind == ExtraSemiKind::OutsideFunction ||
+       Kind == ExtraSemiKind::InsideStruct ||
+       Kind == ExtraSemiKind::AfterMemberFunctionDefinition) &&
+      getLangOpts().CPlusPlus) {
     if (getLangOpts().CPlusPlus11)
-      Diag(StartLoc, diag::warn_cxx98_compat_top_level_semi)
+      Diag(StartLoc, diag::warn_cxx98_compat_extra_semi)
+          << Kind
+          << DeclSpec::getSpecifierName(
+                 TST, Actions.getASTContext().getPrintingPolicy())
           << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
     else
       Diag(StartLoc, diag::ext_extra_semi_cxx11)
+          << Kind
+          << DeclSpec::getSpecifierName(
+                 TST, Actions.getASTContext().getPrintingPolicy())
           << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
     return;
   }
 
-  if (Kind != ExtraSemiKind::AfterMemberFunctionDefinition || HadMultipleSemis)
-    Diag(StartLoc, diag::ext_extra_semi)
-        << Kind
-        << DeclSpec::getSpecifierName(
-               TST, Actions.getASTContext().getPrintingPolicy())
-        << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
-  else
-    // A single semicolon is valid after a member function definition.
-    Diag(StartLoc, diag::warn_extra_semi_after_mem_fn_def)
+  Diag(StartLoc, diag::ext_extra_semi)
+      << Kind
+      << DeclSpec::getSpecifierName(TST,
+                                    Actions.getASTContext().getPrintingPolicy())
       << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
 }
 
