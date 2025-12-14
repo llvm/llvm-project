@@ -23,7 +23,7 @@ The following functions are reported if :option:`ReportDefaultFunctions`
 is enabled.
 
 If *Annex K.* is available, a replacement from *Annex K.* is suggested for the
-following functions:
+following functions
 
 ``asctime``, ``asctime_r``, ``bsearch``, ``ctime``, ``fopen``, ``fprintf``,
 ``freopen``, ``fscanf``, ``fwprintf``, ``fwscanf``, ``getenv``, ``gets``,
