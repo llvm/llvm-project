@@ -2143,6 +2143,12 @@ void ValueObject::GetExpressionPath(Stream &s,
     const CompilerType parentType = parent->GetCompilerType();
     if (parentType.IsPointerType() &&
         parentType.GetPointeeType().IsArrayType(nullptr, nullptr, nullptr)) {
+      // When the parent is a pointer to an array, then we have to:
+      // - follow the expression path of the parent with "[0]"
+      //   (that will indicate dereferencing the pointer to the array)
+      // - and then follow that with this ValueObject's name
+      //   (which will be something like "[i]" to indicate
+      //    the i-th element of the array)
       s.PutCString("[0]");
       s.PutCString(GetName().GetCString());
       return;
