@@ -24,12 +24,6 @@ class TargetMachine;
 namespace mlir {
 namespace LLVM {
 
-/// Translate LLVM module to textual ISA.
-FailureOr<std::string>
-translateModuleToISA(llvm::Module &llvmModule,
-                     llvm::TargetMachine &targetMachine,
-                     function_ref<InFlightDiagnostic()> emitError);
-
 class ModuleTranslation;
 /// Utility base class for transforming operations into binary objects, by
 /// default it returns the serialized LLVM bitcode for the module. The
@@ -50,6 +44,13 @@ public:
 
   /// Runs the serialization pipeline, returning `std::nullopt` on error.
   virtual std::optional<SmallVector<char, 0>> run();
+
+  /// Translate LLVM module to textual ISA.
+  /// TODO: switch to SmallString
+  static FailureOr<std::string>
+  translateModuleToISA(llvm::Module &llvmModule,
+                       llvm::TargetMachine &targetMachine,
+                       function_ref<InFlightDiagnostic()> emitError);
 
 protected:
   // Hooks to be implemented by derived classes.

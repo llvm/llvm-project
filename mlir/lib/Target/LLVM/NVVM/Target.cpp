@@ -698,9 +698,8 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   }
   moduleToObjectTimer.startTimer();
   FailureOr<std::string> serializedISA =
-      mlir::LLVM::translateModuleToISA(llvmModule, **targetMachine, [&]() {
-        return getOperation().emitError();
-      });
+      translateModuleToISA(llvmModule, **targetMachine,
+                           [&]() { return getOperation().emitError(); });
   moduleToObjectTimer.stopTimer();
   llvmToISATimeInMs = moduleToObjectTimer.getTotalTime().getWallTime() * 1000;
   moduleToObjectTimer.clear();
