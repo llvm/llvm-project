@@ -700,7 +700,8 @@ let params = [s16, s32] in {
 
 multiclass vrnd<IRIntBase ir_int, string suffix> {
   let params = T.Float in {
-    def "": Intrinsic<Vector, (args Vector:$a), (ir_int $a)>;
+    def "": Intrinsic<Vector, (args Vector:$a),
+                              (strictFPAlt<ir_int, IRInt<"vrint"#suffix, [Vector]>> $a)>;
     defm "": IntrinsicMX<Vector, (args Vector:$a, Predicate:$pred),
         (IRInt<"vrint"#suffix#"_predicated", [Vector, Predicate]>
             $a, $pred, $inactive)>;
