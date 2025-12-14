@@ -803,6 +803,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
   SDValue ADD = DAG->getNode(ISD::ADD, DL, Int32VT, ADD01, ADD23);
 
   EXPECT_FALSE(sd_match(ADD01, m_ReassociatableAdd(m_Value())));
+  EXPECT_FALSE(
+      sd_match(ADD01, m_ReassociatableAdd(m_Value(), m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(ADD01, m_ReassociatableAdd(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(ADD23, m_ReassociatableAdd(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(
