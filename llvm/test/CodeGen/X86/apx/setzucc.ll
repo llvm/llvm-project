@@ -89,15 +89,3 @@ bb1:
 bb2:
   ret i32 0
 }
-
-define i32 @highmask_i32_mask32(i32 %val) {
-; CHECK-LABEL: highmask_i32_mask32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl $-1048576, %edi # imm = 0xFFF00000
-; CHECK-NEXT:    setzune %al
-; CHECK-NEXT:    retq
-  %and = and i32 %val, -1048576
-  %cmp = icmp ne i32 %and, 0
-  %ret = zext i1 %cmp to i32
-  ret i32 %ret
-}

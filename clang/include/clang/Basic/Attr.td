@@ -4387,8 +4387,13 @@ def CFGuard : InheritableAttr, TargetSpecificAttr<TargetWindows> {
 def MSStruct : InheritableAttr {
   let Spellings = [GCC<"ms_struct">];
   let Subjects = SubjectList<[Record]>;
-  let Documentation = [Undocumented];
-  let SimpleHandler = 1;
+  let Documentation = [MSStructDocs];
+}
+
+def GCCStruct : InheritableAttr {
+  let Spellings = [GCC<"gcc_struct">];
+  let Subjects = SubjectList<[Record]>;
+  let Documentation = [MSStructDocs]; // Covers this attribute too.
 }
 
 def DLLExport : InheritableAttr, TargetSpecificAttr<TargetHasDLLImportExport> {

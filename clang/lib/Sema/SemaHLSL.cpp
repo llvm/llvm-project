@@ -3338,7 +3338,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
   case Builtin::BI__builtin_hlsl_elementwise_frac:
   case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse:
-  case Builtin::BI__builtin_hlsl_elementwise_ddy_coarse: {
+  case Builtin::BI__builtin_hlsl_elementwise_ddy_coarse:
+  case Builtin::BI__builtin_hlsl_elementwise_ddx_fine:
+  case Builtin::BI__builtin_hlsl_elementwise_ddy_fine: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,

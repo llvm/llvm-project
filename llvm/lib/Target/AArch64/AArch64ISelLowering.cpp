@@ -1878,7 +1878,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       // 128bit results imply a bigger than NEON input.
       for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
         setOperationAction(ISD::TRUNCATE, VT, Custom);
-      for (auto VT : {MVT::v8f16, MVT::v4f32})
+      for (auto VT : {MVT::v8f16, MVT::v4f32, MVT::v8bf16})
         setOperationAction(ISD::FP_ROUND, VT, Custom);
 
       // These operations are not supported on NEON but SVE can do them.
@@ -6005,7 +6005,7 @@ SDValue AArch64TargetLowering::getRuntimePStateSM(SelectionDAG &DAG,
                                                   SDValue Chain, SDLoc DL,
                                                   EVT VT) const {
   RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE;
-  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
+  SDValue Callee = DAG.getExternalSymbol(getLibcallImpl(LC),
                                          getPointerTy(DAG.getDataLayout()));
   Type *Int64Ty = Type::getInt64Ty(*DAG.getContext());
   Type *RetTy = StructType::get(Int64Ty, Int64Ty);
@@ -8413,7 +8413,7 @@ static SDValue emitSMEStateSaveRestore(const AArch64TargetLowering &TLI,
 
   RTLIB::Libcall LC =
       IsSave ? RTLIB::SMEABI_SME_SAVE : RTLIB::SMEABI_SME_RESTORE;
-  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
+  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallImpl(LC),
                                          TLI.getPointerTy(DAG.getDataLayout()));
   auto *RetTy = Type::getVoidTy(*DAG.getContext());
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -8433,7 +8433,7 @@ static SDValue emitRestoreZALazySave(SDValue Chain, SDLoc DL,
   SDValue RegMask = DAG.getRegisterMask(TRI.getCallPreservedMask(
       DAG.getMachineFunction(), TLI.getLibcallCallingConv(LC)));
   SDValue RestoreRoutine = DAG.getTargetExternalSymbol(
-      TLI.getLibcallName(LC), TLI.getPointerTy(DAG.getDataLayout()));
+      TLI.getLibcallImpl(LC), TLI.getPointerTy(DAG.getDataLayout()));
   SDValue TPIDR2_EL0 = DAG.getNode(
       ISD::INTRINSIC_W_CHAIN, DL, MVT::i64, Chain,
       DAG.getTargetConstant(Intrinsic::aarch64_sme_get_tpidr2, DL, MVT::i32));
@@ -8944,7 +8944,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       } else if (Attrs.hasAgnosticZAInterface()) {
         RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE_SIZE;
         SDValue Callee = DAG.getExternalSymbol(
-            getLibcallName(LC), getPointerTy(DAG.getDataLayout()));
+            getLibcallImpl(LC), getPointerTy(DAG.getDataLayout()));
         auto *RetTy = EVT(MVT::i64).getTypeForEVT(*DAG.getContext());
         TargetLowering::CallLoweringInfo CLI(DAG);
         CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(

@@ -107,6 +107,11 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+- Added a new ``MacroFilter`` configuration option to ``Completion`` to 
+  allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting 
+  macros. ``ExactPrefix`` is the default, which retains previous 
+  behavior of suggesting macros which match the prefix exactly.  
+
 Code actions
 ^^^^^^^^^^^^
 
@@ -331,6 +336,11 @@ New check aliases
   <clang-tidy/checks/bugprone/copy-constructor-mutates-argument>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`fuchsia-multiple-inheritance <clang-tidy/checks/fuchsia/multiple-inheritance>` to
+  :doc:`misc-multiple-inheritance
+  <clang-tidy/checks/misc/multiple-inheritance>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`google-readability-casting <clang-tidy/checks/google/readability-casting>` to
   :doc:`modernize-avoid-c-style-cast
   <clang-tidy/checks/modernize/avoid-c-style-cast>`
@@ -338,6 +348,11 @@ New check aliases
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-chained-comparison
+  <clang-tidy/checks/bugprone/chained-comparison>` check by adding a
+  new option `IgnoreMacros` to suppress warnings within macro
+  expansions.
 
 - Improved :doc:`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
