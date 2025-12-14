@@ -3119,104 +3119,105 @@ def StrLen : LibBuiltin<"string.h"> {
 // FIXME: This list is incomplete.
 def Printf : LibBuiltin<"stdio.h"> {
   let Spellings = ["printf"];
-  let Attributes = [PrintfFormat<0>];
+  let Attributes = [PrintfFormat<0>, NonNull<NonOptimizing, [0]>];
   let Prototype = "int(char const*, ...)";
 }
 
 // FIXME: The builtin and library function should have the same signature.
 def BuiltinPrintf : Builtin {
   let Spellings = ["__builtin_printf"];
-  let Attributes = [NoThrow, PrintfFormat<0>, FunctionWithBuiltinPrefix];
+  let Attributes = [NoThrow, PrintfFormat<0>, FunctionWithBuiltinPrefix,
+                    NonNull<NonOptimizing, [0]>];
   let Prototype = "int(char const* restrict, ...)";
 }
 
 def FPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["fprintf"];
-  let Attributes = [NoThrow, PrintfFormat<1>];
+  let Attributes = [NoThrow, PrintfFormat<1>, NonNull<NonOptimizing, [0, 1]>];
   let Prototype = "int(FILE* restrict, char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def SnPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["snprintf"];
-  let Attributes = [NoThrow, PrintfFormat<2>];
+  let Attributes = [NoThrow, PrintfFormat<2>, NonNull<NonOptimizing, [2]>];
   let Prototype = "int(char* restrict, size_t, char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def SPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["sprintf"];
-  let Attributes = [NoThrow, PrintfFormat<1>];
+  let Attributes = [NoThrow, PrintfFormat<1>, NonNull<NonOptimizing, [0, 1]>];
   let Prototype = "int(char* restrict, char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def VPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vprintf"];
-  let Attributes = [NoThrow, VPrintfFormat<0>];
+  let Attributes = [NoThrow, VPrintfFormat<0>, NonNull<NonOptimizing, [0]>];
   let Prototype = "int(char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def VfPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vfprintf"];
-  let Attributes = [NoThrow, VPrintfFormat<1>];
+  let Attributes = [NoThrow, VPrintfFormat<1>, NonNull<NonOptimizing, [0, 1]>];
   let Prototype = "int(FILE* restrict, char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def VsnPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vsnprintf"];
-  let Attributes = [NoThrow, VPrintfFormat<2>];
+  let Attributes = [NoThrow, VPrintfFormat<2>, NonNull<NonOptimizing, [2]>];
   let Prototype = "int(char* restrict, size_t, char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def VsPrintf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vsprintf"];
-  let Attributes = [NoThrow, VPrintfFormat<1>];
+  let Attributes = [NoThrow, VPrintfFormat<1>, NonNull<NonOptimizing, [0, 1]>];
   let Prototype = "int(char* restrict, char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def Scanf : LibBuiltin<"stdio.h"> {
   let Spellings = ["scanf"];
-  let Attributes = [ScanfFormat<0>];
+  let Attributes = [ScanfFormat<0>, NonNull<NonOptimizing, [0]>];
   let Prototype = "int(char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def FScanf : LibBuiltin<"stdio.h"> {
   let Spellings = ["fscanf"];
-  let Attributes = [ScanfFormat<1>];
+  let Attributes = [ScanfFormat<1>, NonNull<NonOptimizing, [0, 1]>];
   let Prototype = "int(FILE* restrict, char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def SScanf : LibBuiltin<"stdio.h"> {
   let Spellings = ["sscanf"];
-  let Attributes = [ScanfFormat<1>];
+  let Attributes = [ScanfFormat<1>, NonNull<NonOptimizing, [0, 1]>];
   let Prototype = "int(char const* restrict, char const* restrict, ...)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def VScanf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vscanf"];
-  let Attributes = [VScanfFormat<0>];
+  let Attributes = [VScanfFormat<0>, NonNull<NonOptimizing, [0]>];
   let Prototype = "int(char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def VFScanf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vfscanf"];
-  let Attributes = [VScanfFormat<1>];
+  let Attributes = [VScanfFormat<1>, NonNull<NonOptimizing, [0, 1]>];
   let Prototype = "int(FILE* restrict, char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def VSScanf : LibBuiltin<"stdio.h"> {
   let Spellings = ["vsscanf"];
-  let Attributes = [VScanfFormat<1>];
+  let Attributes = [VScanfFormat<1>, NonNull<NonOptimizing, [0, 1]>];
   let Prototype = "int(char const* restrict, char const* restrict, __builtin_va_list)";
   let AddBuiltinPrefixedAlias = 1;
 }
@@ -5279,6 +5280,18 @@ def HLSLDdxCoarse : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLDdyCoarse : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_ddy_coarse"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLDdxFine : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_ddx_fine"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLDdyFine : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_ddy_fine"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }

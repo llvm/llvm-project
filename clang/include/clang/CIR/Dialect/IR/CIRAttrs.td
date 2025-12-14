@@ -448,6 +448,57 @@ def CIR_ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// DataMemberAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DataMemberAttr : CIR_Attr<"DataMember", "data_member", [
+  TypedAttrInterface
+]> {
+  let summary = "Holds a constant data member pointer value";
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "cir::DataMemberType">:$type,
+                        OptionalParameter<
+                            "std::optional<unsigned>">:$member_index);
+  let description = [{
+    A data member attribute is a literal attribute that represents a constant
+    pointer-to-data-member value.
+
+    The `member_index` parameter represents the index of the pointed-to member
+    within its containing record. It is an optional parameter; lack of this
+    parameter indicates a null pointer-to-data-member value.
+
+    Example:
+    ```
+    #ptr = #cir.data_member<1> : !cir.data_member<!s32i in !rec_22Point22>
+
+    #null = #cir.data_member<null> : !cir.data_member<!s32i in !rec_22Point22>
+    ```
+  }];
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type), [{
+      return $_get(type.getContext(), type, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
+                                        "unsigned":$member_index), [{
+      return $_get(type.getContext(), type, member_index);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<` ($member_index^):(`null`)? `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isNullPtr() const {
+      return !getMemberIndex().has_value();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 
@@ -1085,44 +1136,10 @@ def CIR_TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
 //===----------------------------------------------------------------------===//
 
 def CIR_InlineKind : CIR_I32EnumAttr<"InlineKind", "inlineKind", [
-  I32EnumAttrCase<"NoInline", 1, "never">,
-  I32EnumAttrCase<"AlwaysInline", 2, "always">,
-  I32EnumAttrCase<"InlineHint", 3, "hint">
-]> {
-  let genSpecializedAttr = 0;
-}
-
-def CIR_InlineAttr : CIR_EnumAttr<CIR_InlineKind, "inline"> {
-  let summary = "Inline attribute";
-  let description = [{
-    Inline attribute represents user directives for inlining behavior.
-    This attribute is only used by `cir.func` operations.
-
-    Values:
-    - `never`: Prevents the function from being inlined (__attribute__((noinline)))
-    - `always`: Forces the function to be inlined (__attribute__((always_inline)))
-    - `hint`: Suggests the function should be inlined (inline keyword)
-
-    Example:
-    ```
-    cir.func @noinline_func(%arg0: !s32i) -> !s32i inline(never) {
-      cir.return %arg0 : !s32i
-    }
-    cir.func @always_inline_func() -> !s32i inline(always) {
-      %0 = cir.const #cir.int<42> : !s32i
-      cir.return %0 : !s32i
-    }
-    ```
-  }];
-
-  let cppClassName = "InlineAttr";
-
-  let extraClassDeclaration = [{
-    bool isNoInline() const { return getValue() == InlineKind::NoInline; };
-    bool isAlwaysInline() const { return getValue() == InlineKind::AlwaysInline; };
-    bool isInlineHint() const { return getValue() == InlineKind::InlineHint; };
-  }];
-}
+  I32EnumAttrCase<"NoInline", 1, "no_inline">,
+  I32EnumAttrCase<"AlwaysInline", 2, "always_inline">,
+  I32EnumAttrCase<"InlineHint", 3, "inline_hint">
+]>;
 
 //===----------------------------------------------------------------------===//
 // CatchAllAttr & UnwindAttr

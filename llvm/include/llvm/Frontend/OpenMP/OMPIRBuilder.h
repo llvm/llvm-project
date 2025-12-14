@@ -576,16 +576,33 @@ public:
   using FinalizeCallbackTy = std::function<Error(InsertPointTy CodeGenIP)>;
 
   struct FinalizationInfo {
+    FinalizationInfo(FinalizeCallbackTy FiniCB, omp::Directive DK,
+                     bool IsCancellable)
+        : DK(DK), IsCancellable(IsCancellable), FiniCB(std::move(FiniCB)) {}
+    /// The directive kind of the innermost directive that has an associated
+    /// region which might require finalization when it is left.
+    const omp::Directive DK;
+
+    /// Flag to indicate if the directive is cancellable.
+    const bool IsCancellable;
+
+    /// The basic block to which control should be transferred to
+    /// implement the FiniCB. Memoized to avoid generating finalization
+    /// multiple times.
+    Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
+
+    /// For cases where there is an unavoidable existing finalization block
+    /// (e.g. loop finialization after omp sections). The existing finalization
+    /// block must not contain any non-finalization code.
+    Error mergeFiniBB(IRBuilderBase &Builder, BasicBlock *ExistingFiniBB);
+
+  private:
+    /// Access via getFiniBB.
+    BasicBlock *FiniBB = nullptr;
+
     /// The finalization callback provided by the last in-flight invocation of
     /// createXXXX for the directive of kind DK.
     FinalizeCallbackTy FiniCB;
-
-    /// The directive kind of the innermost directive that has an associated
-    /// region which might require finalization when it is left.
-    omp::Directive DK;
-
-    /// Flag to indicate if the directive is cancellable.
-    bool IsCancellable;
   };
 
   /// Push a finalization callback on the finalization stack.
@@ -1751,9 +1768,10 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The ListToGlobalCopy function.
-  Function *emitListToGlobalCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
-                                         Type *ReductionsBufferTy,
-                                         AttributeList FuncAttrs);
+  Expected<Function *>
+  emitListToGlobalCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                               Type *ReductionsBufferTy,
+                               AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that copies all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1768,9 +1786,10 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The GlobalToList function.
-  Function *emitGlobalToListCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
-                                         Type *ReductionsBufferTy,
-                                         AttributeList FuncAttrs);
+  Expected<Function *>
+  emitGlobalToListCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                               Type *ReductionsBufferTy,
+                               AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that reduces all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1789,10 +1808,11 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The ListToGlobalReduce function.
-  Function *
+  Expected<Function *>
   emitListToGlobalReduceFunction(ArrayRef<ReductionInfo> ReductionInfos,
                                  Function *ReduceFn, Type *ReductionsBufferTy,
-                                 AttributeList FuncAttrs);
+                                 AttributeList FuncAttrs,
+                                 ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that reduces all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1811,10 +1831,11 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The GlobalToListReduce function.
-  Function *
+  Expected<Function *>
   emitGlobalToListReduceFunction(ArrayRef<ReductionInfo> ReductionInfos,
                                  Function *ReduceFn, Type *ReductionsBufferTy,
-                                 AttributeList FuncAttrs);
+                                 AttributeList FuncAttrs,
+                                 ArrayRef<bool> IsByRef);
 
   /// Get the function name of a reduction function.
   std::string getReductionFuncName(StringRef Name) const;
@@ -2246,8 +2267,7 @@ public:
   ///
   /// \return an error, if any were triggered during execution.
   LLVM_ABI Error emitCancelationCheckImpl(Value *CancelFlag,
-                                          omp::Directive CanceledDirective,
-                                          FinalizeCallbackTy ExitCB = {});
+                                          omp::Directive CanceledDirective);
 
   /// Generate a target region entry call.
   ///
@@ -3402,7 +3422,8 @@ private:
   /// Common interface to finalize the region
   ///
   /// \param OMPD Directive to generate exiting code for
-  /// \param FinIP Insertion point for emitting Finalization code and exit call
+  /// \param FinIP Insertion point for emitting Finalization code and exit call.
+  ///              This block must not contain any non-finalization code.
   /// \param ExitCall Call to the ending OMP Runtime Function
   /// \param HasFinalize indicate if the directive will require finalization
   ///         and has a finalization callback in the stack that

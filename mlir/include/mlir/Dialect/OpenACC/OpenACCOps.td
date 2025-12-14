@@ -152,6 +152,32 @@ def OpenACC_LoopParMode : I32EnumAttr<
   let genSpecializedAttr = 0;
 }
 
+// Parallelism level (gang/worker/vector/seq).
+// GangDim1 is the default gang level (equivalent to just "gang").
+// GangDim2/GangDim3 are for gang(dim:2) and gang(dim:3).
+def OpenACC_ParLevelSeq      : I32EnumAttrCase<"seq", 0>;
+def OpenACC_ParLevelGangDim1 : I32EnumAttrCase<"gang_dim1", 1>;
+def OpenACC_ParLevelGangDim2 : I32EnumAttrCase<"gang_dim2", 2>;
+def OpenACC_ParLevelGangDim3 : I32EnumAttrCase<"gang_dim3", 3>;
+def OpenACC_ParLevelWorker   : I32EnumAttrCase<"worker", 4>;
+def OpenACC_ParLevelVector   : I32EnumAttrCase<"vector", 5>;
+
+def OpenACC_ParLevel : I32EnumAttr<"ParLevel",
+    "Parallelism level (gang/worker/vector/seq)",
+    [OpenACC_ParLevelSeq,
+     OpenACC_ParLevelGangDim1, OpenACC_ParLevelGangDim2,
+     OpenACC_ParLevelGangDim3,
+     OpenACC_ParLevelWorker, OpenACC_ParLevelVector]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::acc";
+}
+
+def OpenACC_ParLevelAttr : EnumAttr<OpenACC_Dialect,
+                                    OpenACC_ParLevel,
+                                    "par_level"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
+
 def OpenACC_PrivateRecipe : I32EnumAttrCase<"private_recipe", 0>;
 def OpenACC_FirstprivateRecipe : I32EnumAttrCase<"firstprivate_recipe", 1>;
 def OpenACC_ReductionRecipe : I32EnumAttrCase<"reduction_recipe", 2>;
@@ -1394,6 +1420,19 @@ def OpenACC_PrivateRecipeOp
         ::mlir::Type varType,
         ::llvm::StringRef varName = "",
         ::mlir::ValueRange bounds = {});
+
+    /// Creates a PrivateRecipeOp using the same variable type as an existing
+    /// FirstprivateRecipeOp. This is a useful in cases where we promote private variables to firstprivate by analysis
+    /// This function reuses the init region from a firstprivate recipe when building a private
+    /// recipe. Callers thus must ensure that this is semantically valid for the language
+    /// lowering (e.g. that private does not perform extra default initialization
+    /// that firstprivate intentionally omits, such as for C++ classes or Fortran
+    /// derived types with default initialization).
+    static std::optional<PrivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::acc::FirstprivateRecipeOp firstprivRecipe);
   }];
 }
 
@@ -1639,12 +1678,14 @@ def OpenACC_ReductionRecipeOp
 // 2.5.1 parallel Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_ParallelOp : OpenACC_Op<"parallel",
-    [AttrSizedOperandSegments, AutomaticAllocationScope,
-     RecursiveMemoryEffects,
-     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_ParallelOp
+    : OpenACC_Op<"parallel",
+                 [AttrSizedOperandSegments, AutomaticAllocationScope,
+                  RecursiveMemoryEffects,
+                  DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "parallel construct";
   let description = [{
     The "acc.parallel" operation represents a parallel construct block. It has
@@ -1837,12 +1878,14 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
 // 2.5.2 serial Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_SerialOp : OpenACC_Op<"serial",
-    [AttrSizedOperandSegments, AutomaticAllocationScope,
-     RecursiveMemoryEffects,
-     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_SerialOp
+    : OpenACC_Op<"serial",
+                 [AttrSizedOperandSegments, AutomaticAllocationScope,
+                  RecursiveMemoryEffects,
+                  DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "serial construct";
   let description = [{
     The "acc.serial" operation represents a serial construct block. It has
@@ -1975,12 +2018,14 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
 // 2.5.1 kernels Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_KernelsOp : OpenACC_Op<"kernels",
-    [AttrSizedOperandSegments, AutomaticAllocationScope,
-     RecursiveMemoryEffects,
-     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_KernelsOp
+    : OpenACC_Op<"kernels",
+                 [AttrSizedOperandSegments, AutomaticAllocationScope,
+                  RecursiveMemoryEffects,
+                  DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "kernels construct";
   let description = [{
     The "acc.kernels" operation represents a kernels construct block. It has
@@ -2002,8 +2047,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     corresponding `device_type` attributes must be modified as well.
   }];
 
-  let arguments = (ins
-      Variadic<IntOrIndex>:$asyncOperands,
+  let arguments = (ins Variadic<IntOrIndex>:$asyncOperands,
       OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
       OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
       Variadic<IntOrIndex>:$waitOperands,
@@ -2018,12 +2062,12 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
       OptionalAttr<DeviceTypeArrayAttr>:$numWorkersDeviceType,
       Variadic<IntOrIndex>:$vectorLength,
       OptionalAttr<DeviceTypeArrayAttr>:$vectorLengthDeviceType,
-      Optional<I1>:$ifCond,
-      Optional<I1>:$selfCond,
-      UnitAttr:$selfAttr,
+      Optional<I1>:$ifCond, Optional<I1>:$selfCond, UnitAttr:$selfAttr,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$reductionOperands,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$dataClauseOperands,
-      OptionalAttr<DefaultValueAttr>:$defaultAttr,
-      UnitAttr:$combined);
+      OptionalAttr<DefaultValueAttr>:$defaultAttr, UnitAttr:$combined);
 
   let regions = (region AnyRegion:$region);
 
@@ -2111,6 +2155,18 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
+
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
@@ -2119,10 +2175,12 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
+      | `firstprivate` `(` $firstprivateOperands `:` type($firstprivateOperands) `)`
       | `num_gangs` `(` custom<NumGangs>($numGangs,
             type($numGangs), $numGangsDeviceType, $numGangsSegments) `)`
       | `num_workers` `(` custom<DeviceTypeOperands>($numWorkers,
             type($numWorkers), $numWorkersDeviceType) `)`
+      | `private` `(` $privateOperands `:` type($privateOperands) `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
@@ -2130,6 +2188,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
           $waitOnly)
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )
     $region attr-dict-with-keyword
   }];
@@ -2141,11 +2200,13 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
 // acc.kernel_environment
 //===----------------------------------------------------------------------===//
 
-def OpenACC_KernelEnvironmentOp : OpenACC_Op<"kernel_environment",
-    [AttrSizedOperandSegments, RecursiveMemoryEffects, SingleBlock,
-     NoTerminator,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_KernelEnvironmentOp
+    : OpenACC_Op<"kernel_environment",
+                 [AttrSizedOperandSegments, RecursiveMemoryEffects, SingleBlock,
+                  NoTerminator,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "Decomposition of compute constructs to capture data mapping "
                 "and asynchronous behavior information";
   let description = [{
@@ -2193,10 +2254,12 @@ def OpenACC_KernelEnvironmentOp : OpenACC_Op<"kernel_environment",
 // 2.6.5 data Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_DataOp : OpenACC_Op<"data",
-    [AttrSizedOperandSegments, RecursiveMemoryEffects,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_DataOp
+    : OpenACC_Op<
+          "data", [AttrSizedOperandSegments, RecursiveMemoryEffects,
+                   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "data construct";
 
   let description = [{
@@ -2464,10 +2527,12 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data",
 // 2.8 Host_Data Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_HostDataOp : OpenACC_Op<"host_data",
-    [AttrSizedOperandSegments,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_HostDataOp
+    : OpenACC_Op<"host_data",
+                 [AttrSizedOperandSegments,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "host_data construct";
 
   let description = [{
@@ -2505,12 +2570,13 @@ def OpenACC_HostDataOp : OpenACC_Op<"host_data",
 // 2.9 loop Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_LoopOp : OpenACC_Op<"loop",
-    [AttrSizedOperandSegments, AutomaticAllocationScope,
-     RecursiveMemoryEffects,
-     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface>,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {
+def OpenACC_LoopOp
+    : OpenACC_Op<
+          "loop", [AttrSizedOperandSegments, AutomaticAllocationScope,
+                   RecursiveMemoryEffects,
+                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
+                   DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {
   let summary = "loop construct";
 
   let description = [{
@@ -3232,6 +3298,18 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
       OptionalAttr<DeviceTypeArrayAttr>:$gangDimDeviceType);
 
   let extraClassDeclaration = [{
+    // 'create' function to generate an 'empty' routine.
+    static RoutineOp create(::mlir::OpBuilder & builder,
+                            ::mlir::Location location,
+                            ::llvm::StringRef sym_name,
+                            mlir::SymbolRefAttr func_name, bool implicit) {
+      return create(builder, location, sym_name, func_name, /*bindIDName=*/{},
+                    /*bindStrName=*/{}, /*bindIdNameDeviceType=*/{},
+                    /*bindStrnameDeviceType=*/{}, /*worker=*/{}, /*vector=*/{},
+                    /*seq=*/{}, /*nohost=*/false, implicit, /*gang=*/{},
+                    /*gangDim=*/{}, /*gangDimDeviceType=*/{});
+    }
+
     static StringRef getGangDimKeyword() { return "dim"; }
 
     /// Return true if the op has the worker attribute for the
@@ -3267,6 +3345,26 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
 
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
+
+    // Add an entry to the 'seq' attribute for each additional device types.
+    void addSeq(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'vector' attribute for each additional device types.
+    void addVector(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'worker' attribute for each additional device types.
+    void addWorker(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'gang' attribute for each additional device type.
+    void addGang(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'gang' attribute with a value for each additional
+    // device type.
+    void addGang(MLIRContext *, llvm::ArrayRef<DeviceType>, uint64_t);
+    // Add an entry to the 'bind' string-name attribute for each additional
+    // device_type.
+    void addBindStrName(MLIRContext *, llvm::ArrayRef<DeviceType>,
+                        mlir::StringAttr);
+    // Add an entry to the 'bind' ID-name attribute for each additional
+    // device_type.
+    void addBindIDName(MLIRContext *, llvm::ArrayRef<DeviceType>,
+                       mlir::SymbolRefAttr);
   }];
 
   let assemblyFormat = [{
@@ -3296,6 +3394,58 @@ def RoutineInfoAttr : OpenACC_Attr<"RoutineInfo", "routine_info"> {
 
   let parameters = (ins ArrayRefParameter<"SymbolRefAttr", "">:$accRoutines);
   let assemblyFormat = "`<` `[` `` $accRoutines `]` `>`";
+}
+
+def SpecializedRoutineAttr : OpenACC_Attr<"SpecializedRoutine",
+                                          "specialized_routine"> {
+  let summary = "Marks a specialized device version of an acc routine";
+
+  let description = [{
+    This attribute is attached to a function that was specialized from a host
+    function marked with `acc.routine_info`. It captures the parallelism level,
+    a reference to the original `acc.routine` operation, and the original
+    function name (since the specialized function may be renamed).
+
+    Example - before specialization:
+    ```mlir
+    acc.routine @routine_gang func(@foo) gang
+    acc.routine @routine_vector func(@foo) vector
+
+    func.func @foo() attributes {
+      acc.routine_info = #acc.routine_info<[@routine_gang, @routine_vector]>
+    } { ... }
+    ```
+
+    After specialization, there are three functions: the original function and
+    two specialized versions (one per parallelism level):
+    ```mlir
+    acc.routine @routine_gang func(@foo) gang
+    acc.routine @routine_vector func(@foo) vector
+
+    // Original function (unchanged)
+    func.func @foo() attributes {
+      acc.routine_info = #acc.routine_info<[@routine_gang, @routine_vector]>
+    } { ... }
+
+    // Specialized for gang parallelism
+    func.func @foo_gang() attributes {
+      acc.specialized_routine = #acc.specialized_routine<@routine_gang, <gang_dim1>, "foo">
+    } { ... }
+
+    // Specialized for vector parallelism
+    func.func @foo_vector() attributes {
+      acc.specialized_routine = #acc.specialized_routine<@routine_vector, <vector>, "foo">
+    } { ... }
+    ```
+  }];
+
+  let parameters = (ins
+    "SymbolRefAttr":$routine,
+    "ParLevelAttr":$level,
+    "StringAttr":$funcName
+  );
+
+  let assemblyFormat = "`<` $routine `,` $level `,` $funcName `>`";
 }
 
 //===----------------------------------------------------------------------===//
