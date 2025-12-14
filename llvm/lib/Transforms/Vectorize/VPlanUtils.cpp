@@ -155,8 +155,8 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
 
 bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
                                    const Loop *L) {
-  // If address is an SCEVAddExpr, all operands must be either be invariant or a
-  // (possibly sign-extend) affine AddRec.
+  // If address is an SCEVAddExpr, we require that all operands must be either
+  // be invariant or a (possibly sign-extend) affine AddRec.
   if (auto *PtrAdd = dyn_cast<SCEVAddExpr>(Addr)) {
     return all_of(PtrAdd->operands(), [&SE, L](const SCEV *Op) {
       return SE.isLoopInvariant(Op, L) ||
