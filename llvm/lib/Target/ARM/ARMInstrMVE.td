@@ -400,6 +400,25 @@ def vmaxnm : PatFrags<(ops node:$lhs, node:$rhs),
                     [(fmaxnum node:$lhs, node:$rhs),
                      (int_arm_mve_vmaxnm node:$lhs, node:$rhs)]>;
 
+def fcmpeq : PatFrags<(ops node:$a, node:$b),
+                      [(ARMvcmp node:$a, node:$b, ARMCCeq),
+                       (int_arm_mve_cmp_eq node:$a, node:$b)]>;
+def fcmpne : PatFrags<(ops node:$a, node:$b),
+                      [(ARMvcmp node:$a, node:$b, ARMCCne),
+                       (int_arm_mve_cmp_ne node:$a, node:$b)]>;
+def fcmpge : PatFrags<(ops node:$a, node:$b),
+                      [(ARMvcmp node:$a, node:$b, ARMCCge),
+                       (int_arm_mve_cmp_ge node:$a, node:$b)]>;
+def fcmplt : PatFrags<(ops node:$a, node:$b),
+                      [(ARMvcmp node:$a, node:$b, ARMCClt),
+                       (int_arm_mve_cmp_lt node:$a, node:$b)]>;
+def fcmpgt : PatFrags<(ops node:$a, node:$b),
+                      [(ARMvcmp node:$a, node:$b, ARMCCgt),
+                       (int_arm_mve_cmp_gt node:$a, node:$b)]>;
+def fcmple : PatFrags<(ops node:$a, node:$b),
+                      [(ARMvcmp node:$a, node:$b, ARMCCle),
+                       (int_arm_mve_cmp_le node:$a, node:$b)]>;
+
 // --------- Start of base classes for the instructions themselves
 
 class MVE_MI<dag oops, dag iops, InstrItinClass itin, string asm,
@@ -4389,25 +4408,25 @@ multiclass unpred_vcmpf_z<PatLeaf fc> {
             (v4i1 (MVE_VCMPf32r (v4f32 MQPR:$v1), ZR, fc, ARMVCCThen, VCCR:$p1, zero_reg))>;
 }
 
-multiclass unpred_vcmpf_r<PatLeaf fc> {
-  def : Pat<(v8i1 (ARMvcmp (v8f16 MQPR:$v1), (v8f16 MQPR:$v2), fc)),
+multiclass unpred_vcmpf_r<SDPatternOperator cmp, PatLeaf fc> {
+  def : Pat<(v8i1 (cmp (v8f16 MQPR:$v1), (v8f16 MQPR:$v2))),
             (v8i1 (MVE_VCMPf16 (v8f16 MQPR:$v1), (v8f16 MQPR:$v2), fc))>;
-  def : Pat<(v4i1 (ARMvcmp (v4f32 MQPR:$v1), (v4f32 MQPR:$v2), fc)),
+  def : Pat<(v4i1 (cmp (v4f32 MQPR:$v1), (v4f32 MQPR:$v2))),
             (v4i1 (MVE_VCMPf32 (v4f32 MQPR:$v1), (v4f32 MQPR:$v2), fc))>;
 
-  def : Pat<(v8i1 (ARMvcmp (v8f16 MQPR:$v1), (v8f16 (ARMvdup rGPR:$v2)), fc)),
+  def : Pat<(v8i1 (cmp (v8f16 MQPR:$v1), (v8f16 (ARMvdup rGPR:$v2)))),
             (v8i1 (MVE_VCMPf16r (v8f16 MQPR:$v1), (i32 rGPR:$v2), fc))>;
-  def : Pat<(v4i1 (ARMvcmp (v4f32 MQPR:$v1), (v4f32 (ARMvdup rGPR:$v2)), fc)),
+  def : Pat<(v4i1 (cmp (v4f32 MQPR:$v1), (v4f32 (ARMvdup rGPR:$v2)))),
             (v4i1 (MVE_VCMPf32r (v4f32 MQPR:$v1), (i32 rGPR:$v2), fc))>;
 
-  def : Pat<(v8i1 (and (v8i1 VCCR:$p1), (v8i1 (ARMvcmp (v8f16 MQPR:$v1), (v8f16 MQPR:$v2), fc)))),
+  def : Pat<(v8i1 (and (v8i1 VCCR:$p1), (v8i1 (cmp (v8f16 MQPR:$v1), (v8f16 MQPR:$v2))))),
             (v8i1 (MVE_VCMPf16 (v8f16 MQPR:$v1), (v8f16 MQPR:$v2), fc, ARMVCCThen, VCCR:$p1, zero_reg))>;
-  def : Pat<(v4i1 (and (v4i1 VCCR:$p1), (v4i1 (ARMvcmp (v4f32 MQPR:$v1), (v4f32 MQPR:$v2), fc)))),
+  def : Pat<(v4i1 (and (v4i1 VCCR:$p1), (v4i1 (cmp (v4f32 MQPR:$v1), (v4f32 MQPR:$v2))))),
             (v4i1 (MVE_VCMPf32 (v4f32 MQPR:$v1), (v4f32 MQPR:$v2), fc, ARMVCCThen, VCCR:$p1, zero_reg))>;
 
-  def : Pat<(v8i1 (and (v8i1 VCCR:$p1), (v8i1 (ARMvcmp (v8f16 MQPR:$v1), (v8f16 (ARMvdup rGPR:$v2)), fc)))),
+  def : Pat<(v8i1 (and (v8i1 VCCR:$p1), (v8i1 (cmp (v8f16 MQPR:$v1), (v8f16 (ARMvdup rGPR:$v2)))))),
             (v8i1 (MVE_VCMPf16r (v8f16 MQPR:$v1), (i32 rGPR:$v2), fc, ARMVCCThen, VCCR:$p1, zero_reg))>;
-  def : Pat<(v4i1 (and (v4i1 VCCR:$p1), (v4i1 (ARMvcmp (v4f32 MQPR:$v1), (v4f32 (ARMvdup rGPR:$v2)), fc)))),
+  def : Pat<(v4i1 (and (v4i1 VCCR:$p1), (v4i1 (cmp (v4f32 MQPR:$v1), (v4f32 (ARMvdup rGPR:$v2)))))),
             (v4i1 (MVE_VCMPf32r (v4f32 MQPR:$v1), (i32 rGPR:$v2), fc, ARMVCCThen, VCCR:$p1, zero_reg))>;
 }
 
@@ -4439,12 +4458,12 @@ let Predicates = [HasMVEFloat] in {
   defm MVE_VFCGTZ  : unpred_vcmpf_z<ARMCCgt>;
   defm MVE_VFCLEZ  : unpred_vcmpf_z<ARMCCle>;
 
-  defm MVE_VFCEQ   : unpred_vcmpf_r<ARMCCeq>;
-  defm MVE_VFCNE   : unpred_vcmpf_r<ARMCCne>;
-  defm MVE_VFCGE   : unpred_vcmpf_r<ARMCCge>;
-  defm MVE_VFCLT   : unpred_vcmpf_r<ARMCClt>;
-  defm MVE_VFCGT   : unpred_vcmpf_r<ARMCCgt>;
-  defm MVE_VFCLE   : unpred_vcmpf_r<ARMCCle>;
+  defm MVE_VFCEQ   : unpred_vcmpf_r<fcmpeq, ARMCCeq>;
+  defm MVE_VFCNE   : unpred_vcmpf_r<fcmpne, ARMCCne>;
+  defm MVE_VFCGE   : unpred_vcmpf_r<fcmpge, ARMCCge>;
+  defm MVE_VFCLT   : unpred_vcmpf_r<fcmplt, ARMCClt>;
+  defm MVE_VFCGT   : unpred_vcmpf_r<fcmpgt, ARMCCgt>;
+  defm MVE_VFCLE   : unpred_vcmpf_r<fcmple, ARMCCle>;
 }
 
 
