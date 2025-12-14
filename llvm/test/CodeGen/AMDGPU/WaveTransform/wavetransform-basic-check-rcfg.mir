@@ -1,0 +1,104 @@
+# REQUIRES: asserts
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -amdgpu-late-wave-transform=1 -run-pass=amdgpu-wave-transform -amdgpu-wave-transform-print-final=1 -o - %S%{fs-sep}wavetransform-basic.mir 2>&1 | FileCheck -check-prefixes=CFG %s
+
+---
+
+# CFG-LABEL: Wave CFG for if_then_divergent:
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) bb.2(*) [LatestPostDom: bb.2] [divergent]
+# CFG-NEXT:    bb.1 (#1) -> bb.2(*)
+# CFG-NEXT:    bb.2 (#2) [secondary]
+
+
+# CFG-LABEL: Wave CFG for if_then_divergent_with_no_terminator:
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) bb.2(*) [LatestPostDom: bb.2] [divergent]
+# CFG-NEXT:    bb.1 (#1) -> bb.2(*)
+# CFG-NEXT:    bb.2 (#2) [secondary]
+
+
+# CFG-LABEL: Wave CFG for if_then_else_divergent:
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) <flow-1>(bb.2) [LatestPostDom: <flow-1>] [divergent]
+# CFG-NEXT:    bb.1 (#1) -> <flow-1>(bb.3)
+# CFG-NEXT:    <flow-1> (#2) -> bb.2(*) bb.3(*) [LatestPostDom: bb.3] [divergent] [secondary]
+# CFG-NEXT:    bb.2 (#2) -> bb.3(*)
+# CFG-NEXT:    bb.3 (#3) [secondary]
+
+
+# CFG-LABEL: Wave CFG for if_then_else_uniform:
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) bb.2(*)
+# CFG-NEXT:    bb.1 (#1) -> bb.3(*)
+# CFG-NEXT:    bb.2 (#2) -> bb.3(*)
+# CFG-NEXT:    bb.3 (#3)
+
+
+#
+#       0
+#      / \
+#     /   \
+#    1     2
+#   / \   / \
+#   3 4   5 6
+#    \ \ / /
+#     ->7<-
+#
+
+# CFG-LABEL: Wave CFG for if_then_else_nested_divergent_divergent
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) <flow-2>(bb.2) [LatestPostDom: <flow-2>] [divergent]
+# CFG-NEXT:    bb.1 (#1) -> bb.3(*) <flow-1>(bb.4) [LatestPostDom: <flow-1>] [divergent]
+# CFG-NEXT:    bb.3 (#2) -> <flow-1>(bb.7)
+# CFG-NEXT:    <flow-1> (#3) -> bb.4(*) <flow-2>(bb.7) [divergent] [secondary]
+# CFG-NEXT:    bb.4 (#3) -> <flow-2>(bb.7)
+# CFG-NEXT:    <flow-2> (#4) -> bb.2(*) bb.7(*) [LatestPostDom: bb.7] [divergent] [secondary]
+# CFG-NEXT:    bb.2 (#4) -> bb.5(*) <flow-3>(bb.6) [LatestPostDom: <flow-3>] [divergent]
+# CFG-NEXT:    bb.5 (#5) -> <flow-3>(bb.7)
+# CFG-NEXT:    <flow-3> (#6) -> bb.6(*) bb.7(*) [LatestPostDom: bb.7] [divergent] [secondary]
+# CFG-NEXT:    bb.6 (#6) -> bb.7(*)
+# CFG-NEXT:    bb.7 (#7) [secondary]
+
+
+#
+#       0
+#      / \
+#     /   \
+#    1     2
+#   / \   / \
+#   3 4   5 6
+#    \ \ / /
+#     ->7<-
+#
+
+# CFG-LABEL: Wave CFG for  if_then_else_nested_uniform_divergent
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) bb.2(*)
+# CFG-NEXT:    bb.1 (#1) -> bb.3(*) <flow-1>(bb.4) [LatestPostDom: <flow-1>] [divergent]
+# CFG-NEXT:    bb.3 (#2) -> <flow-1>(bb.7)
+# CFG-NEXT:    <flow-1> (#3) -> bb.4(*) bb.7(*) [LatestPostDom: bb.7] [divergent] [secondary]
+# CFG-NEXT:    bb.4 (#3) -> bb.7(*)
+# CFG-NEXT:    bb.2 (#4) -> bb.5(*) <flow-2>(bb.6) [LatestPostDom: <flow-2>] [divergent]
+# CFG-NEXT:    bb.5 (#5) -> <flow-2>(bb.7)
+# CFG-NEXT:    <flow-2> (#6) -> bb.6(*) bb.7(*) [LatestPostDom: bb.7] [divergent] [secondary]
+# CFG-NEXT:    bb.6 (#6) -> bb.7(*)
+# CFG-NEXT:    bb.7 (#7) [secondary]
+
+
+#
+#       0
+#      / \
+#     /   \
+#    1     2
+#   / \   / \
+#   3 4   5 6
+#    \ \ / /
+#     ->7<-
+#
+
+
+# CFG-LABEL: Wave CFG for if_then_else_nested_divergent_uniform:
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) <flow-1>(bb.2) [LatestPostDom: <flow-1>] [divergent]
+# CFG-NEXT:    bb.1 (#1) -> bb.3(*) bb.4(*)
+# CFG-NEXT:    bb.3 (#2) -> <flow-1>(bb.7)
+# CFG-NEXT:    bb.4 (#3) -> <flow-1>(bb.7)
+# CFG-NEXT:   <flow-1> (#4) -> bb.2(*) bb.7(*) [LatestPostDom: bb.7] [divergent] [secondary]
+# CFG-NEXT:    bb.2 (#4) -> bb.5(*) bb.6(*)
+# CFG-NEXT:    bb.5 (#5) -> bb.7(*)
+# CFG-NEXT:    bb.6 (#6) -> bb.7(*)
+# CFG-NEXT:    bb.7 (#7) [secondary]
+
