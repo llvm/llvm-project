@@ -9631,8 +9631,8 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   else
     LC = VT == MVT::i32 ? RTLIB::UDIVREM_I32 : RTLIB::UDIVREM_I64;
 
-  const char *Name = getLibcallName(LC);
-  SDValue ES = DAG.getExternalSymbol(Name, getPointerTy(DL));
+  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
+  SDValue ES = DAG.getExternalSymbol(LCImpl, getPointerTy(DL));
 
   ARMTargetLowering::ArgListTy Args;
 
@@ -9643,10 +9643,9 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   }
 
   CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl)
-    .setChain(Chain)
-    .setCallee(CallingConv::ARM_AAPCS_VFP, VT.getTypeForEVT(*DAG.getContext()),
-               ES, std::move(Args));
+  CLI.setDebugLoc(dl).setChain(Chain).setCallee(
+      getLibcallImplCallingConv(LCImpl), VT.getTypeForEVT(*DAG.getContext()),
+      ES, std::move(Args));
 
   return LowerCallTo(CLI).first;
 }
@@ -20423,8 +20422,9 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
                                                     DAG.getContext(),
                                                     Subtarget);
 
-  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
-                                         getPointerTy(DAG.getDataLayout()));
+  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
+  SDValue Callee =
+      DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = StructType::get(Ty, Ty);
 
@@ -20432,9 +20432,13 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
     InChain = WinDBZCheckDenominator(DAG, Op.getNode(), InChain);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl).setChain(InChain)
-    .setCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
-    .setInRegister().setSExtResult(isSigned).setZExtResult(!isSigned);
+  CLI.setDebugLoc(dl)
+      .setChain(InChain)
+      .setCallee(getLibcallImplCallingConv(LCImpl), RetTy, Callee,
+                 std::move(Args))
+      .setInRegister()
+      .setSExtResult(isSigned)
+      .setZExtResult(!isSigned);
 
   std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
   return CallInfo.first;
@@ -20475,8 +20479,10 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
   TargetLowering::ArgListTy Args = getDivRemArgList(N, DAG.getContext(),
                                                     Subtarget);
   bool isSigned = N->getOpcode() == ISD::SREM;
-  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
-                                         getPointerTy(DAG.getDataLayout()));
+
+  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
+  SDValue Callee =
+      DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
   if (Subtarget->isTargetWindows())
     InChain = WinDBZCheckDenominator(DAG, N, InChain);
@@ -20484,8 +20490,11 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
   // Lower call
   CallLoweringInfo CLI(DAG);
   CLI.setChain(InChain)
-     .setCallee(CallingConv::ARM_AAPCS, RetTy, Callee, std::move(Args))
-     .setSExtResult(isSigned).setZExtResult(!isSigned).setDebugLoc(SDLoc(N));
+      .setCallee(getLibcallImplCallingConv(LCImpl), RetTy, Callee,
+                 std::move(Args))
+      .setSExtResult(isSigned)
+      .setZExtResult(!isSigned)
+      .setDebugLoc(SDLoc(N));
   std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
 
   // Return second (rem) result operand (first contains div)

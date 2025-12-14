@@ -2860,12 +2860,13 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
 }
 
 // Return true if its cheap to bitcast this to a vector type.
-static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget) {
+static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget,
+                              bool AssumeSingleUse = false) {
   if (peekThroughBitcasts(Op).getValueType().isVector())
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
-  return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/false,
+  return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
                           /*IgnoreAlignment=*/true);
 }
 
@@ -7448,8 +7449,20 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       return (0 <= BaseIdx && BaseIdx < (int)NumElems && LoadMask[BaseIdx] &&
               Loads[BaseIdx] == Ld && ByteOffsets[BaseIdx] == 0);
     }
-    return DAG.areNonVolatileConsecutiveLoads(Ld, Base, BaseSizeInBytes,
-                                              EltIdx - FirstLoadedElt);
+    int Stride = EltIdx - FirstLoadedElt;
+    if (DAG.areNonVolatileConsecutiveLoads(Ld, Base, BaseSizeInBytes, Stride))
+      return true;
+    // Try again using the memory load size (we might have broken a large load
+    // into smaller elements), ensure the stride is the full memory load size
+    // apart and a whole number of elements fit in each memory load.
+    unsigned BaseMemSizeInBits = Base->getMemoryVT().getSizeInBits();
+    if (((Stride * BaseSizeInBits) % BaseMemSizeInBits) == 0 &&
+        (BaseMemSizeInBits % BaseSizeInBits) == 0) {
+      unsigned Scale = BaseMemSizeInBits / BaseSizeInBits;
+      return DAG.areNonVolatileConsecutiveLoads(Ld, Base, BaseMemSizeInBits / 8,
+                                                Stride / Scale);
+    }
+    return false;
   };
 
   // Consecutive loads can contain UNDEFS but not ZERO elements.
@@ -23110,12 +23123,9 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
     return SDValue();
 
   // Don't perform this combine if constructing the vector will be expensive.
-  auto IsVectorBitCastCheap = [](SDValue X) {
-    X = peekThroughBitcasts(X);
-    return isa<ConstantSDNode>(X) || X.getValueType().isVector() ||
-           X.getOpcode() == ISD::LOAD;
-  };
-  if ((!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y)) &&
+  // TODO: Drop AssumeSingleUse = true override.
+  if ((!mayFoldIntoVector(X, Subtarget, /*AssumeSingleUse=*/true) ||
+       !mayFoldIntoVector(Y, Subtarget, /*AssumeSingleUse=*/true)) &&
       !IsOrXorXorTreeCCZero)
     return SDValue();
 
