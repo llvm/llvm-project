@@ -20,7 +20,7 @@
 #include <cassert>
 #include <utility>
 
-constexpr bool test_structured_bindings() {
+constexpr bool test() {
   auto [elt0, elt1, elt2, elt3] = std::make_index_sequence<4>();
 
   assert(elt0 == 0);
@@ -47,7 +47,7 @@ constexpr bool test_structured_bindings() {
 }
 
 int main(int, char**) {
-  test_structured_bindings();
-  static_assert(test_structured_bindings());
+  test();
+  static_assert(test());
   return 0;
 }

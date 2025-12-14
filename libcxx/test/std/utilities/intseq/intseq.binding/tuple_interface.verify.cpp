@@ -21,7 +21,7 @@
 
 #include <utility>
 
-void f() {
+void test() {
   // expected-error-re@*:* {{static assertion failed{{.*}}Index out of bounds in std::tuple_element<> (std::integer_sequence)}}
   using test1 = std::tuple_element_t<0, std::integer_sequence<int>>;
   // expected-error-re@*:* {{static assertion failed{{.*}}Index out of bounds in std::tuple_element<> (const std::integer_sequence)}}
