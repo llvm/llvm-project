@@ -173,15 +173,6 @@ StructuredData::ObjectSP CommandReturnObject::GetErrorData() {
   return Serialize(m_diagnostics);
 }
 
-// Similar to AppendError, but do not prepend 'Status: ' to message, and don't
-// append "\n" to the end of it.
-
-void CommandReturnObject::AppendRawError(llvm::StringRef in_string) {
-  SetStatus(eReturnStatusFailed);
-  assert(!in_string.empty() && "Expected a non-empty error message");
-  GetErrorStream() << in_string;
-}
-
 void CommandReturnObject::SetStatus(ReturnStatus status) { m_status = status; }
 
 ReturnStatus CommandReturnObject::GetStatus() const { return m_status; }
