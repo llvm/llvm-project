@@ -23125,7 +23125,7 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
   auto IsVectorBitCastCheap = [](SDValue X) {
     X = peekThroughBitcasts(X);
     return isa<ConstantSDNode>(X) || X.getValueType().isVector() ||
-           X.getOpcode() == ISD::LOAD;
+           ISD::isNormalLoad(X.getNode());
   };
   if ((!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y)) &&
       !IsOrXorXorTreeCCZero)
