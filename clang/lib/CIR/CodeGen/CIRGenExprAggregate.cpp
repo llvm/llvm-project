@@ -339,13 +339,13 @@ public:
     if (!argTy->isIntegralOrEnumerationType() && !argTy->isRealFloatingType() &&
         !argTy->isNullPtrType() && !argTy->isPointerType() &&
         !argTy->isMemberPointerType() && !argTy->isAnyComplexType())
-      llvm_unreachable("aggregate three-way comparison");
+      cgf.cgm.errorNYI(e->getBeginLoc(), "aggregate three-way comparison");
 
     mlir::Location loc = cgf.getLoc(e->getSourceRange());
     CIRGenBuilderTy builder = cgf.getBuilder();
 
     if (e->getType()->isAnyComplexType())
-      llvm_unreachable("NYI");
+      cgf.cgm.errorNYI(e->getBeginLoc(), "VisitBinCmp: complex type");
 
     mlir::Value lhs = cgf.emitAnyExpr(e->getLHS()).getValue();
     mlir::Value rhs = cgf.emitAnyExpr(e->getRHS()).getValue();

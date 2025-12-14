@@ -1267,16 +1267,18 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
     ```mlir
     !s32i = !cir.int<s, 32>
 
-    #cmp3way_strong = #cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
-    #cmp3way_partial = #cmp3way_info<strong, lt = -1, eq = 0, gt = 1, unordered = 2>
+    #cmp3way_info_partial_ltn1eq0gt1unn127 =
+      #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
+    #cmp3way_info_strong_ltn1eq0gt1 =
+      #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
 
     %0 = cir.const #cir.int<0> : !s32i
     %1 = cir.const #cir.int<1> : !s32i
-    %2 = cir.cmp3way(%0 : !s32i, %1, #cmp3way_strong) : !s8i
+    %2 = cir.cmp3way #cmp3way_info_strong_ltn1eq0gt1 %0, %1 : !s32i -> !s8i
 
     %3 = cir.const #cir.fp<0.0> : !cir.float
     %4 = cir.const #cir.fp<1.0> : !cir.float
-    %5 = cir.cmp3way(%3 : !cir.float, %4, #cmp3way_partial) : !s8i
+    %5 = cir.cmp3way #cmp3way_info_partial_ltn1eq0gt1unn127 %3, %4 : !cir.float -> !s8i
     ```
   }];
 
@@ -1289,8 +1291,8 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
   let results = (outs CIR_AnySIntType:$result);
 
   let assemblyFormat = [{
-    `(` $lhs `:` type($lhs) `,` $rhs `,` qualified($info) `)`
-    `:` type($result) attr-dict
+    qualified($info) $lhs, $rhs `:` qualified(type($lhs))
+    `->` qualified(type($result)) attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -1304,8 +1306,6 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
       return mlir::isa<cir::IntType>(getLhs().getType());
     }
   }];
-
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

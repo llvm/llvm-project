@@ -13,6 +13,7 @@
 #include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
@@ -680,7 +681,7 @@ public:
            ltRes.getBitWidth() == gtRes.getBitWidth() &&
            ltRes.getBitWidth() == unorderedRes.getBitWidth() &&
            "the four comparison results must have the same bit width");
-    auto cmpResultTy = getSIntNTy(ltRes.getBitWidth());
+    cir::IntType cmpResultTy = getSIntNTy(ltRes.getBitWidth());
     auto infoAttr = cir::CmpThreeWayInfoAttr::get(
         getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(),
         gtRes.getSExtValue(), unorderedRes.getSExtValue());

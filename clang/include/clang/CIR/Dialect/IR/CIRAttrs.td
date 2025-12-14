@@ -584,10 +584,10 @@ def CIR_CmpOrdering : CIR_I32EnumAttr<
   let genSpecializedAttr = 0;
 }
 
-def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmp3way_info"> {
+def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmpinfo"> {
   let summary = "Holds information about a three-way comparison operation";
   let description = [{
-    The `#cmp3way_info` attribute contains information about a three-way
+    The `#cmpinfo` attribute contains information about a three-way
     comparison operation `cir.cmp3way`.
 
     The `ordering` parameter gives the ordering kind of the three-way comparison
@@ -598,6 +598,23 @@ def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmp3way_info"> {
     value that should be produced by the three-way comparison operation when the
     ordering between `lhs` and `rhs` is `lhs < rhs`, `lhs == rhs`, `lhs > rhs`,
     or neither, respectively.
+
+    Example:
+
+    ```mlir
+    !s32i = !cir.int<s, 32>
+
+    #cmp3way_info_partial_ltn1eq0gt1unn127 = #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
+    #cmp3way_info_strong_ltn1eq0gt1 = #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
+
+    %0 = cir.const #cir.int<0> : !s32i
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.cmp3way(%0 : !s32i, %1, #cmp3way_info_strong_ltn1eq0gt1) : !s8i
+
+    %3 = cir.const #cir.fp<0.0> : !cir.float
+    %4 = cir.const #cir.fp<1.0> : !cir.float
+    %5 = cir.cmp3way(%3 : !cir.float, %4, #cmp3way_info_partial_ltn1eq0gt1unn127) : !s8
+    ```
   }];
 
   let parameters = (ins
