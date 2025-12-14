@@ -193,3 +193,53 @@ TEST(ProtocolRequestsTest, PauseRequestArguments) {
   EXPECT_THAT_EXPECTED(parse<PauseArguments>(R"({})"),
                        FailedWithMessage("missing value at (root).threadId"));
 }
+
+TEST(ProtocolRequestsTest, LocationsArguments) {
+  llvm::Expected<LocationsArguments> expected =
+      parse<LocationsArguments>(R"({"locationReference": 123})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->locationReference, 123U);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(
+      parse<LocationsArguments>(R"({})"),
+      FailedWithMessage("missing value at (root).locationReference"));
+}
+
+TEST(ProtocolRequestsTest, LocationsResponseBody) {
+  LocationsResponseBody body;
+  body.source.sourceReference = 123;
+  body.source.name = "test.cpp";
+  body.line = 42;
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({
+    "source": {
+      "sourceReference": 123,
+      "name": "test.cpp"
+    },
+    "line": 42
+  })");
+
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+
+  // Check optional keys.
+  body.column = 2;
+  body.endLine = 43;
+  body.endColumn = 4;
+
+  expected = parse(R"({
+    "source": {
+      "sourceReference": 123,
+      "name": "test.cpp"
+    },
+    "line": 42,
+    "column": 2,
+    "endLine": 43,
+    "endColumn": 4
+  })");
+
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+}
