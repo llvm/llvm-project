@@ -66,19 +66,21 @@ runs:
       with:
         subject-path: ${{ steps.download-artifact.outputs.download-path }}/*
 
+    # Generate an attestation copy for each file to make it easier for users to verify
+    # the files.
     - name: Rename attestation file
       shell: bash
-      env:
-        INPUTS_ATTESTATION_NAME: ${{ inputs.attestation-name }}
       run: |
-        mv ${{ steps.provenance.outputs.bundle-path }} "$INPUTS_ATTESTATION_NAME".jsonl
+        for f in ${{ steps.download-artifact.outputs.download-path }}/*; do
+          cp ${{ steps.provenance.outputs.bundle-path }} $(basename $f).jsonl
+        done
 
     - name: Upload Build Provenance
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ${{ inputs.attestation-name }}
         path: |
-          ${{ inputs.attestation-name }}.jsonl
+          *.jsonl
 
     - name: Install Python Requirements
       if: inputs.upload == 'true'
@@ -102,4 +104,4 @@ runs:
         --token ${{ github.token }} \
         --release ${{ inputs.release-version }} \
         upload \
-        --files ${{ steps.download-artifact.outputs.download-path }}/* ${{ steps.vars.outputs.attestation-name}}.jsonl
+        --files ${{ steps.download-artifact.outputs.download-path }}/* *.jsonl

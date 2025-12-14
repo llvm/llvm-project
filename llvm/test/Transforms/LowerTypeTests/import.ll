@@ -92,7 +92,7 @@ define i1 @bytearray7(ptr %p) {
 ; X86-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr @__typeid_bytearray7_global_addr to i64), [[TMP1]]
 ; X86-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 ptrtoint (ptr @__typeid_bytearray7_align to i64))
 ; X86-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], ptrtoint (ptr @__typeid_bytearray7_size_m1 to i64)
-; X86-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]]
+; X86-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]], !prof [[PROF6:![0-9]+]]
 ; X86:       5:
 ; X86-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr @__typeid_bytearray7_byte_array, i64 [[TMP3]]
 ; X86-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
@@ -109,7 +109,7 @@ define i1 @bytearray7(ptr %p) {
 ; ARM-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr @__typeid_bytearray7_global_addr to i64), [[TMP1]]
 ; ARM-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 3)
 ; ARM-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 43
-; ARM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]]
+; ARM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]], !prof [[PROF0:![0-9]+]]
 ; ARM:       5:
 ; ARM-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr @__typeid_bytearray7_byte_array, i64 [[TMP3]]
 ; ARM-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
@@ -131,7 +131,7 @@ define i1 @bytearray32(ptr %p) {
 ; X86-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr @__typeid_bytearray32_global_addr to i64), [[TMP1]]
 ; X86-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 ptrtoint (ptr @__typeid_bytearray32_align to i64))
 ; X86-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], ptrtoint (ptr @__typeid_bytearray32_size_m1 to i64)
-; X86-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]]
+; X86-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]], !prof [[PROF6]]
 ; X86:       5:
 ; X86-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr @__typeid_bytearray32_byte_array, i64 [[TMP3]]
 ; X86-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
@@ -148,7 +148,7 @@ define i1 @bytearray32(ptr %p) {
 ; ARM-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr @__typeid_bytearray32_global_addr to i64), [[TMP1]]
 ; ARM-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 4)
 ; ARM-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 12346
-; ARM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]]
+; ARM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
 ; ARM:       5:
 ; ARM-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr @__typeid_bytearray32_byte_array, i64 [[TMP3]]
 ; ARM-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
@@ -170,7 +170,7 @@ define i1 @inline5(ptr %p) {
 ; X86-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr @__typeid_inline5_global_addr to i64), [[TMP1]]
 ; X86-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 ptrtoint (ptr @__typeid_inline5_align to i64))
 ; X86-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], ptrtoint (ptr @__typeid_inline5_size_m1 to i64)
-; X86-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP11:%.*]]
+; X86-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP11:%.*]], !prof [[PROF6]]
 ; X86:       5:
 ; X86-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP3]] to i32
 ; X86-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 31
@@ -188,7 +188,7 @@ define i1 @inline5(ptr %p) {
 ; ARM-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr @__typeid_inline5_global_addr to i64), [[TMP1]]
 ; ARM-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 5)
 ; ARM-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 31
-; ARM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP11:%.*]]
+; ARM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP11:%.*]], !prof [[PROF0]]
 ; ARM:       5:
 ; ARM-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP3]] to i32
 ; ARM-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 31
@@ -211,7 +211,7 @@ define i1 @inline6(ptr %p) {
 ; X86-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr @__typeid_inline6_global_addr to i64), [[TMP1]]
 ; X86-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 ptrtoint (ptr @__typeid_inline6_align to i64))
 ; X86-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], ptrtoint (ptr @__typeid_inline6_size_m1 to i64)
-; X86-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]]
+; X86-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]], !prof [[PROF6]]
 ; X86:       5:
 ; X86-NEXT:    [[TMP6:%.*]] = and i64 [[TMP3]], 63
 ; X86-NEXT:    [[TMP7:%.*]] = shl i64 1, [[TMP6]]
@@ -228,7 +228,7 @@ define i1 @inline6(ptr %p) {
 ; ARM-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr @__typeid_inline6_global_addr to i64), [[TMP1]]
 ; ARM-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 6)
 ; ARM-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 63
-; ARM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]]
+; ARM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
 ; ARM:       5:
 ; ARM-NEXT:    [[TMP6:%.*]] = and i64 [[TMP3]], 63
 ; ARM-NEXT:    [[TMP7:%.*]] = shl i64 1, [[TMP6]]
@@ -257,13 +257,16 @@ define i1 @single(ptr %p) {
 ; X86: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; X86: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
+; ARM: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; ARM: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+;.
 ; X86: [[META0]] = !{i64 0, i64 256}
 ; X86: [[META1]] = !{i64 0, i64 64}
 ; X86: [[META2]] = !{i64 -1, i64 -1}
 ; X86: [[META3]] = !{i64 0, i64 32}
 ; X86: [[META4]] = !{i64 0, i64 4294967296}
 ; X86: [[META5]] = !{i64 0, i64 128}
+; X86: [[PROF6]] = !{!"branch_weights", i32 1048575, i32 1}
 ;.
-; ARM: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; ARM: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; ARM: [[PROF0]] = !{!"branch_weights", i32 1048575, i32 1}
 ;.

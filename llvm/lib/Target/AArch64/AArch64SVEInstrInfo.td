@@ -3165,7 +3165,7 @@ let Predicates = [HasSVE_or_SME] in {
   }
 
   // Allow using LDR/STR to avoid the predicate dependence.
-  let Predicates = [HasSVE_or_SME, IsLE, AllowMisalignedMemAccesses] in
+  let Predicates = [HasSVE_or_SME, IsLE, AllowMisalignedMemAccesses, AllowUnpredicatedLdStLower] in
     foreach Ty = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in {
       let AddedComplexity = 2 in {
         def : Pat<(Ty (load (am_sve_indexed_s9 GPR64sp:$base, simm9:$offset))),
@@ -3838,12 +3838,15 @@ let Predicates = [HasSVE2_or_SME] in {
   // SVE2 integer halving add/subtract (predicated)
   defm SHADD_ZPmZ  : sve2_int_arith_pred<0b100000, "shadd",  AArch64shadd>;
   defm UHADD_ZPmZ  : sve2_int_arith_pred<0b100010, "uhadd",  AArch64uhadd>;
-  defm SHSUB_ZPmZ  : sve2_int_arith_pred<0b100100, "shsub",  int_aarch64_sve_shsub>;
-  defm UHSUB_ZPmZ  : sve2_int_arith_pred<0b100110, "uhsub",  int_aarch64_sve_uhsub>;
+  defm SHSUB_ZPmZ  : sve2_int_arith_pred<0b100100, "shsub",  int_aarch64_sve_shsub, "SHSUB_ZPZZ", DestructiveBinaryCommWithRev, "SHSUBR_ZPmZ">;
+  defm UHSUB_ZPmZ  : sve2_int_arith_pred<0b100110, "uhsub",  int_aarch64_sve_uhsub, "UHSUB_ZPZZ", DestructiveBinaryCommWithRev, "UHSUBR_ZPmZ">;
   defm SRHADD_ZPmZ : sve2_int_arith_pred<0b101000, "srhadd", AArch64srhadd>;
   defm URHADD_ZPmZ : sve2_int_arith_pred<0b101010, "urhadd", AArch64urhadd>;
-  defm SHSUBR_ZPmZ : sve2_int_arith_pred<0b101100, "shsubr", int_aarch64_sve_shsubr>;
-  defm UHSUBR_ZPmZ : sve2_int_arith_pred<0b101110, "uhsubr", int_aarch64_sve_uhsubr>;
+  defm SHSUBR_ZPmZ : sve2_int_arith_pred<0b101100, "shsubr", int_aarch64_sve_shsubr, "SHSUBR_ZPZZ", DestructiveBinaryCommWithRev, "SHSUB_ZPmZ", /*isReverseInstr*/ 1>;
+  defm UHSUBR_ZPmZ : sve2_int_arith_pred<0b101110, "uhsubr", int_aarch64_sve_uhsubr, "UHSUBR_ZPZZ", DestructiveBinaryCommWithRev, "UHSUB_ZPmZ", /*isReverseInstr*/ 1>;
+
+  defm SHSUB_ZPZZ  : sve_int_bin_pred_bhsd<int_aarch64_sve_shsub_u>;
+  defm UHSUB_ZPZZ  : sve_int_bin_pred_bhsd<int_aarch64_sve_uhsub_u>;
 
   // SVE2 integer pairwise add and accumulate long
   defm SADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<0, "sadalp", int_aarch64_sve_sadalp>;

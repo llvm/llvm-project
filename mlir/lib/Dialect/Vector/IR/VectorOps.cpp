@@ -5118,6 +5118,22 @@ Speculation::Speculatability TransferReadOp::getSpeculatability() {
   return Speculation::NotSpeculatable;
 }
 
+/// Given a projected permutation, inverse an affine map, making the unused dims
+/// 0 in the result.
+static AffineMap inverseWithUnusedDims(AffineMap map) {
+  assert(map.isProjectedPermutation() &&
+         "expected a projected permutation map");
+  SmallVector<AffineExpr> results(map.getNumInputs(),
+                                  getAffineConstantExpr(0, map.getContext()));
+  for (auto [idx, result] : llvm::enumerate(map.getResults())) {
+    // We should only have dim exprs because this is a projected permutation.
+    int64_t pos = cast<AffineDimExpr>(result).getPosition();
+    results[pos] = getAffineDimExpr(idx, map.getContext());
+  }
+  return AffineMap::get(/*dimCount=*/map.getNumResults(), /*symbolCount=*/0,
+                        results, map.getContext());
+}
+
 namespace {
 /// Store to load forwarding for transfer operations with permuation maps.
 /// Even if the permutation maps are different we can still propagate the store
@@ -5153,6 +5169,13 @@ struct TransferReadAfterWriteToBroadcast
     // Bail if we need an alias analysis.
     if (!readOp.hasPureTensorSemantics() || !defWrite.hasPureTensorSemantics())
       return failure();
+    // Bail in the masked case (too complex atm and needed to properly account
+    // for padding).
+    if (readOp.getMask() || defWrite.getMask())
+      return failure();
+    // If indices are not the same a shift may be required, bail.
+    if (readOp.getIndices() != defWrite.getIndices())
+      return failure();
     // Bail if we need a bounds analysis.
     if (readOp.hasOutOfBoundsDim() || defWrite.hasOutOfBoundsDim())
       return failure();
@@ -5161,60 +5184,50 @@ struct TransferReadAfterWriteToBroadcast
     if (readOp.getTransferChunkAccessed() !=
         defWrite.getTransferChunkAccessed())
       return failure();
-    // TODO: Support cases where a dim is explicitly written but implicitly
-    // read (i.e., a unit dim that is rank reduced).
-    if (getUnusedDimsBitVector({readOp.getPermutationMap()}) !=
-        getUnusedDimsBitVector({defWrite.getPermutationMap()}))
+    // WriteMap: tensor -> w_vec
+    // ReadMap: tensor -> r_vec
+    //
+    // inv(WriteMap): w_vec -> tensor
+    // inv(WriteMap) o ReadMap: w_vec -> r_vec
+    AffineMap readMap = readOp.getPermutationMap();
+    AffineMap writeMap = defWrite.getPermutationMap();
+    AffineMap invWriteMap = inverseWithUnusedDims(writeMap);
+    AffineMap composedMap = readMap.compose(invWriteMap);
+    // If there are any unused dims in the composedMap, we have to drop some
+    // unit dims from the written vector before we can do transpose(broadcast).
+    // TODO: Support this case.
+    if (getUnusedDimsBitVector(composedMap).any())
       return failure();
-    // This pattern should only catch the broadcast case, the non-broadcast case
-    // should be done separately to keep application conditions clean and
-    // separate.
-    AffineMap readMap = compressUnusedDims(readOp.getPermutationMap());
-    AffineMap writeMap = compressUnusedDims(defWrite.getPermutationMap());
-    bool bcast = !readMap.getBroadcastDims().empty() ||
-                 !writeMap.getBroadcastDims().empty();
-    if (!bcast)
-      return failure();
-    // At this point, we know we have a bcast.
-    // Bail in the masked case (too complex atm and needed to properly account
-    // for padding).
-    if (readOp.getMask() || defWrite.getMask())
-      return failure();
-    // If indices are not the same a shift may be required, bail.
-    if (readOp.getIndices() != defWrite.getIndices())
-      return failure();
-
-    Value vec = defWrite.getVector();
-    // TODO: loop through the chain of transfer_write if we can prove that they
-    // don't overlap with the transfer_read. This requires improving
-    // `isDisjointTransferIndices` helper.
-    AffineMap map = readMap.compose(writeMap);
-    if (map.getNumResults() == 0)
-      return failure();
-    // Calculate the permutation to apply to go from the vector stored to the
-    // vector read.
-    SmallVector<unsigned> permutation;
-    if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
-      return failure();
-
-    Location loc = readOp.getLoc();
-    // Calculate the broadcast shape by applying the reverse permutation to the
-    // final shape we want.
-    ArrayRef<int64_t> destShape = readOp.getVectorType().getShape();
-    SmallVector<int64_t> broadcastShape(destShape.size());
-    SmallVector<bool> broadcastScalableFlags(destShape.size());
-    for (const auto &pos : llvm::enumerate(permutation)) {
-      broadcastShape[pos.value()] = destShape[pos.index()];
-      broadcastScalableFlags[pos.value()] =
-          readOp.getVectorType().getScalableDims()[pos.index()];
+    // readVec = transpose(broadcast(writeVec))
+    //
+    // Build a transpose permutation for the above transpose operation.
+    //
+    // Treat the composed map as having extra leading dimensions which are
+    // the broadcasted dimensions, and treat the zeros as these new broadcasted
+    // dimensions.
+    SmallVector<unsigned> broadcastedDims = composedMap.getBroadcastDims();
+    int64_t numBroadcastedDims = broadcastedDims.size();
+    auto invPerm = llvm::to_vector_of<int64_t>(broadcastedDims);
+    invPerm.resize(composedMap.getNumResults());
+    for (auto [idx, expr] : llvm::enumerate(composedMap.getResults())) {
+      if (auto dim = dyn_cast<AffineDimExpr>(expr)) {
+        int64_t effectiveDim = dim.getPosition() + numBroadcastedDims;
+        invPerm[effectiveDim] = idx;
+      }
     }
-    VectorType broadcastedType = VectorType::get(
-        broadcastShape, defWrite.getVectorType().getElementType(),
-        broadcastScalableFlags);
-    vec = vector::BroadcastOp::create(rewriter, loc, broadcastedType, vec);
-    SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
-    rewriter.replaceOpWithNewOp<vector::TransposeOp>(readOp, vec,
-                                                     transposePerm);
+    // Applying the inverse permutation on the readVecTy will give us the
+    // broadcast result type.
+    VectorType readVecTy = readOp.getVectorType();
+    SmallVector<int64_t> permutation = invertPermutationVector(invPerm);
+    auto broadcastedVecTy =
+        VectorType::get(applyPermutation(readVecTy.getShape(), invPerm),
+                        readVecTy.getElementType(),
+                        applyPermutation(readVecTy.getScalableDims(), invPerm));
+    // Build the transpose(broadcast) transformation.
+    Value vec = defWrite.getVector();
+    Location loc = readOp.getLoc();
+    vec = vector::BroadcastOp::create(rewriter, loc, broadcastedVecTy, vec);
+    rewriter.replaceOpWithNewOp<vector::TransposeOp>(readOp, vec, permutation);
     return success();
   }
 };
@@ -6087,11 +6100,22 @@ public:
   using Base::Base;
   LogicalResult matchAndRewrite(ScatterOp scatter,
                                 PatternRewriter &rewriter) const override {
+    ShapedType baseType = scatter.getBaseType();
+    bool isMemRef = isa<MemRefType>(baseType);
+    if (!isMemRef && !isa<RankedTensorType>(baseType))
+      return failure();
+
+    // Memrefs have no result, so an all-false mask can simply erase the op.
+    // Tensors carry the updated value, so we must replace uses with the
+    // original base tensor instead of erasing.
     switch (getMaskFormat(scatter.getMask())) {
     case MaskFormat::AllTrue:
       return failure(); // no unmasked equivalent
     case MaskFormat::AllFalse:
-      rewriter.eraseOp(scatter);
+      if (isMemRef)
+        rewriter.eraseOp(scatter);
+      else
+        rewriter.replaceOp(scatter, scatter.getBase());
       return success();
     case MaskFormat::Unknown:
       return failure();
@@ -6107,6 +6131,11 @@ public:
   using Base::Base;
   LogicalResult matchAndRewrite(ScatterOp op,
                                 PatternRewriter &rewriter) const override {
+    // Fold only for memrefs: the replacement uses maskedstore, which does not
+    // support tensor bases. Tensor cases intentionally bail out.
+    if (!isa<MemRefType>(op.getBase().getType()))
+      return failure();
+
     if (failed(isZeroBasedContiguousSeq(op.getIndices())))
       return failure();
 

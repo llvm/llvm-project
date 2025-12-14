@@ -1878,7 +1878,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       // 128bit results imply a bigger than NEON input.
       for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
         setOperationAction(ISD::TRUNCATE, VT, Custom);
-      for (auto VT : {MVT::v8f16, MVT::v4f32})
+      for (auto VT : {MVT::v8f16, MVT::v4f32, MVT::v8bf16})
         setOperationAction(ISD::FP_ROUND, VT, Custom);
 
       // These operations are not supported on NEON but SVE can do them.
@@ -5440,9 +5440,9 @@ SDValue
 AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  uint64_t EltSize = Op.getConstantOperandVal(2);
   EVT VT = Op.getValueType();
-  switch (EltSize) {
+  SDValue EltSize = Op.getOperand(2);
+  switch (EltSize->getAsZExtVal()) {
   case 1:
     if (VT != MVT::v16i8 && VT != MVT::nxv16i1)
       return SDValue();
@@ -5464,11 +5464,15 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
     return SDValue();
   }
 
+  SDValue LaneOffset = Op.getOperand(3);
+  if (LaneOffset->getAsZExtVal())
+    return SDValue();
+
   SDValue PtrA = Op.getOperand(0);
   SDValue PtrB = Op.getOperand(1);
 
   if (VT.isScalableVT())
-    return DAG.getNode(Op.getOpcode(), DL, VT, PtrA, PtrB, Op.getOperand(2));
+    return DAG.getNode(Op.getOpcode(), DL, VT, PtrA, PtrB, EltSize, LaneOffset);
 
   // We can use the SVE whilewr/whilerw instruction to lower this
   // intrinsic by creating the appropriate sequence of scalable vector
@@ -5480,7 +5484,7 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
 
   SDValue Mask =
-      DAG.getNode(Op.getOpcode(), DL, WhileVT, PtrA, PtrB, Op.getOperand(2));
+      DAG.getNode(Op.getOpcode(), DL, WhileVT, PtrA, PtrB, EltSize, LaneOffset);
   SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
   return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, MaskAsInt,
                      DAG.getVectorIdxConstant(0, DL));
@@ -6001,7 +6005,7 @@ SDValue AArch64TargetLowering::getRuntimePStateSM(SelectionDAG &DAG,
                                                   SDValue Chain, SDLoc DL,
                                                   EVT VT) const {
   RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE;
-  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
+  SDValue Callee = DAG.getExternalSymbol(getLibcallImpl(LC),
                                          getPointerTy(DAG.getDataLayout()));
   Type *Int64Ty = Type::getInt64Ty(*DAG.getContext());
   Type *RetTy = StructType::get(Int64Ty, Int64Ty);
@@ -6251,35 +6255,43 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_whilewr_b:
     return DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(1, DL, MVT::i64));
+                       DAG.getConstant(1, DL, MVT::i64),
+                       DAG.getConstant(0, DL, MVT::i64));
   case Intrinsic::aarch64_sve_whilewr_h:
     return DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(2, DL, MVT::i64));
+                       DAG.getConstant(2, DL, MVT::i64),
+                       DAG.getConstant(0, DL, MVT::i64));
   case Intrinsic::aarch64_sve_whilewr_s:
     return DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(4, DL, MVT::i64));
+                       DAG.getConstant(4, DL, MVT::i64),
+                       DAG.getConstant(0, DL, MVT::i64));
   case Intrinsic::aarch64_sve_whilewr_d:
     return DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(8, DL, MVT::i64));
+                       DAG.getConstant(8, DL, MVT::i64),
+                       DAG.getConstant(0, DL, MVT::i64));
   case Intrinsic::aarch64_sve_whilerw_b:
     return DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(1, DL, MVT::i64));
+                       DAG.getConstant(1, DL, MVT::i64),
+                       DAG.getConstant(0, DL, MVT::i64));
   case Intrinsic::aarch64_sve_whilerw_h:
     return DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(2, DL, MVT::i64));
+                       DAG.getConstant(2, DL, MVT::i64),
+                       DAG.getConstant(0, DL, MVT::i64));
   case Intrinsic::aarch64_sve_whilerw_s:
     return DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(4, DL, MVT::i64));
+                       DAG.getConstant(4, DL, MVT::i64),
+                       DAG.getConstant(0, DL, MVT::i64));
   case Intrinsic::aarch64_sve_whilerw_d:
     return DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(8, DL, MVT::i64));
+                       DAG.getConstant(8, DL, MVT::i64),
+                       DAG.getConstant(0, DL, MVT::i64));
   case Intrinsic::aarch64_neon_abs: {
     EVT Ty = Op.getValueType();
     if (Ty == MVT::i64) {
@@ -8401,7 +8413,7 @@ static SDValue emitSMEStateSaveRestore(const AArch64TargetLowering &TLI,
 
   RTLIB::Libcall LC =
       IsSave ? RTLIB::SMEABI_SME_SAVE : RTLIB::SMEABI_SME_RESTORE;
-  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
+  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallImpl(LC),
                                          TLI.getPointerTy(DAG.getDataLayout()));
   auto *RetTy = Type::getVoidTy(*DAG.getContext());
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -8421,7 +8433,7 @@ static SDValue emitRestoreZALazySave(SDValue Chain, SDLoc DL,
   SDValue RegMask = DAG.getRegisterMask(TRI.getCallPreservedMask(
       DAG.getMachineFunction(), TLI.getLibcallCallingConv(LC)));
   SDValue RestoreRoutine = DAG.getTargetExternalSymbol(
-      TLI.getLibcallName(LC), TLI.getPointerTy(DAG.getDataLayout()));
+      TLI.getLibcallImpl(LC), TLI.getPointerTy(DAG.getDataLayout()));
   SDValue TPIDR2_EL0 = DAG.getNode(
       ISD::INTRINSIC_W_CHAIN, DL, MVT::i64, Chain,
       DAG.getTargetConstant(Intrinsic::aarch64_sme_get_tpidr2, DL, MVT::i32));
@@ -8932,7 +8944,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       } else if (Attrs.hasAgnosticZAInterface()) {
         RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE_SIZE;
         SDValue Callee = DAG.getExternalSymbol(
-            getLibcallName(LC), getPointerTy(DAG.getDataLayout()));
+            getLibcallImpl(LC), getPointerTy(DAG.getDataLayout()));
         auto *RetTy = EVT(MVT::i64).getTypeForEVT(*DAG.getContext());
         TargetLowering::CallLoweringInfo CLI(DAG);
         CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
@@ -14965,9 +14977,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V2);
   }
-  if (isTRNMask(ShuffleMask, NumElts, WhichResult)) {
+  if (isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
-    return DAG.getNode(Opc, DL, V1.getValueType(), V1, V2);
+    return DAG.getNode(Opc, DL, V1.getValueType(), OperandOrder == 0 ? V1 : V2,
+                       OperandOrder == 0 ? V2 : V1);
   }
 
   if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
@@ -16679,7 +16692,7 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isREVMask(M, EltSize, NumElts, 16) ||
           isEXTMask(M, VT, DummyBool, DummyUnsigned) ||
           isSingletonEXTMask(M, VT, DummyUnsigned) ||
-          isTRNMask(M, NumElts, DummyUnsigned) ||
+          isTRNMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
           isUZPMask(M, NumElts, DummyUnsigned) ||
           isZIPMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
           isTRN_v_undef_Mask(M, VT, DummyUnsigned) ||
@@ -24758,7 +24771,12 @@ static SDValue performPostLD1Combine(SDNode *N,
 static bool performTBISimplification(SDValue Addr,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      SelectionDAG &DAG) {
-  APInt DemandedMask = APInt::getLowBitsSet(64, 56);
+  const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  // If MTE is enabled, TBI only applies to the top 4 bits.
+  // Both arm64 and arm64e processes on Darwin may run with MTE enabled.
+  unsigned NumIgnoreBits =
+      Subtarget.hasMTE() || Subtarget.isTargetDarwin() ? 4 : 8;
+  APInt DemandedMask = APInt::getLowBitsSet(64, 64 - NumIgnoreBits);
   KnownBits Known;
   TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                                         !DCI.isBeforeLegalizeOps());
@@ -29759,12 +29777,26 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
                                AI->getOperation() == AtomicRMWInst::FMinimum))
     return AtomicExpansionKind::None;
 
-  // Nand is not supported in LSE.
   // Leave 128 bits to LLSC or CmpXChg.
-  if (AI->getOperation() != AtomicRMWInst::Nand && Size < 128 &&
-      !AI->isFloatingPointOperation()) {
-    if (Subtarget->hasLSE())
-      return AtomicExpansionKind::None;
+  if (Size < 128 && !AI->isFloatingPointOperation()) {
+    if (Subtarget->hasLSE()) {
+      // Nand is not supported in LSE.
+      switch (AI->getOperation()) {
+      case AtomicRMWInst::Xchg:
+      case AtomicRMWInst::Add:
+      case AtomicRMWInst::Sub:
+      case AtomicRMWInst::And:
+      case AtomicRMWInst::Or:
+      case AtomicRMWInst::Xor:
+      case AtomicRMWInst::Max:
+      case AtomicRMWInst::Min:
+      case AtomicRMWInst::UMax:
+      case AtomicRMWInst::UMin:
+        return AtomicExpansionKind::None;
+      default:
+        break;
+      }
+    }
     if (Subtarget->outlineAtomics()) {
       // [U]Min/[U]Max RWM atomics are used in __sync_fetch_ libcalls so far.
       // Don't outline them unless
@@ -31777,17 +31809,20 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
   unsigned OperandOrder;
   if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
                 OperandOrder) &&
-      WhichResult == 0)
-    return convertFromScalableVector(
-        DAG, VT,
-        DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT,
-                    OperandOrder == 0 ? Op1 : Op2,
-                    OperandOrder == 0 ? Op2 : Op1));
+      WhichResult == 0) {
+    SDValue ZIP = DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT,
+                              OperandOrder == 0 ? Op1 : Op2,
+                              OperandOrder == 0 ? Op2 : Op1);
+    return convertFromScalableVector(DAG, VT, ZIP);
+  }
 
-  if (isTRNMask(ShuffleMask, VT.getVectorNumElements(), WhichResult)) {
+  if (isTRNMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
+                OperandOrder)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
-    return convertFromScalableVector(
-        DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op2));
+    SDValue TRN =
+        DAG.getNode(Opc, DL, ContainerVT, OperandOrder == 0 ? Op1 : Op2,
+                    OperandOrder == 0 ? Op2 : Op1);
+    return convertFromScalableVector(DAG, VT, TRN);
   }
 
   if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult) && WhichResult == 0)
@@ -31829,12 +31864,12 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
 
     if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
                   OperandOrder) &&
-        WhichResult != 0)
-      return convertFromScalableVector(
-          DAG, VT,
-          DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT,
-                      OperandOrder == 0 ? Op1 : Op2,
-                      OperandOrder == 0 ? Op2 : Op1));
+        WhichResult != 0) {
+      SDValue ZIP = DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT,
+                                OperandOrder == 0 ? Op1 : Op2,
+                                OperandOrder == 0 ? Op2 : Op1);
+      return convertFromScalableVector(DAG, VT, ZIP);
+    }
 
     if (isUZPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult)) {
       unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
