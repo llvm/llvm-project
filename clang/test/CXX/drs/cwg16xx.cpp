@@ -438,6 +438,26 @@ namespace cwg1692 { // cwg1692: 9
   }
 } // namespace cwg1692
 
+namespace cwg1693 { // cwg1693: 22
+  namespace issue_example {
+#if __cplusplus >= 201103L
+    struct A {
+      void f1() = delete;
+      void f2() = delete;;
+      void f3() = delete;;;
+    };
+#endif
+  }
+  struct A {
+    ; // cxx98-error{{extra ';' inside a struct is a C++11 extension}}
+    struct B {};; // cxx98-error{{extra ';' inside a struct is a C++11 extension}}
+    int a;; // cxx98-error{{extra ';' inside a struct is a C++11 extension}}
+    void f();; // cxx98-error{{extra ';' inside a struct is a C++11 extension}}
+    void h(){
+    };; // cxx98-error{{multiple extra ';' after member function definition is a C++11 extension}}
+  };
+} // namespace cwg1693
+
 namespace cwg1696 { // cwg1696: 7
   namespace std_examples {
 #if __cplusplus >= 201402L
