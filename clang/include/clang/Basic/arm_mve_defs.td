@@ -34,7 +34,8 @@ class IRBuilderAddrParam<int index_> : IRBuilderParam<index_>;
 class IRBuilderIntParam<int index_, string type_> : IRBuilderParam<index_> {
   string type = type_;
 }
-class IRBuilderBase {
+class Builder {}
+class IRBuilderBase : Builder {
   // The prefix of the function call, including an open parenthesis.
   string prefix;
 
@@ -113,12 +114,12 @@ def icmp_sgt: IRBuilder<"CreateICmpSGT">;
 def icmp_sge: IRBuilder<"CreateICmpSGE">;
 def icmp_slt: IRBuilder<"CreateICmpSLT">;
 def icmp_sle: IRBuilder<"CreateICmpSLE">;
-def fcmp_eq: IRBuilder<"CreateFCmpOEQ">;
-def fcmp_ne: IRBuilder<"CreateFCmpUNE">; // not O: it must return true on NaNs
-def fcmp_gt: IRBuilder<"CreateFCmpOGT">;
-def fcmp_ge: IRBuilder<"CreateFCmpOGE">;
-def fcmp_ult: IRBuilder<"CreateFCmpULT">;
-def fcmp_ule: IRBuilder<"CreateFCmpULE">;
+def fcmp_eq_node: IRBuilder<"CreateFCmpOEQ">;
+def fcmp_ne_node: IRBuilder<"CreateFCmpUNE">; // not O: it must return true on NaNs
+def fcmp_gt_node: IRBuilder<"CreateFCmpOGT">;
+def fcmp_ge_node: IRBuilder<"CreateFCmpOGE">;
+def fcmp_ult_node: IRBuilder<"CreateFCmpULT">;
+def fcmp_ule_node: IRBuilder<"CreateFCmpULE">;
 def splat: CGHelperFn<"ARMMVEVectorSplat">;
 def select: IRBuilder<"CreateSelect">;
 def fneg: IRBuilder<"CreateFNeg">;
@@ -166,7 +167,7 @@ def address;
 // Another node class you can use in the codegen dag. This one corresponds to
 // an IR intrinsic function, which has to be specialized to a particular list
 // of types.
-class IRIntBase<string name_, list<Type> params_ = [], bit appendKind_ = 0> {
+class IRIntBase<string name_, list<Type> params_ = [], bit appendKind_ = 0> : Builder {
   string intname = name_;       // base name of the intrinsic
   list<Type> params = params_;  // list of parameter types
 
@@ -214,8 +215,8 @@ def bitsize;
 
 // strictFPAlt allows a node to have different code generation under strict-fp.
 // TODO: The standard node can be IRBuilderBase or IRIntBase.
-class strictFPAlt<IRBuilderBase standard_, IRIntBase strictfp_> {
-  IRBuilderBase standard = standard_;
+class strictFPAlt<Builder standard_, IRIntBase strictfp_> : Builder {
+  Builder standard = standard_;
   IRIntBase strictfp = strictfp_;
 }
 
@@ -588,6 +589,22 @@ def fsub: strictFPAlt<fsub_node,
                       IRInt<"vsub", [Vector]>>;
 def fmul: strictFPAlt<fmul_node,
                       IRInt<"vmul", [Vector]>>;
+def fminnm : strictFPAlt<IRIntBase<"minnum", [Vector]>,
+                         IRInt<"vminnm", [Vector]>>;
+def fmaxnm : strictFPAlt<IRIntBase<"maxnum", [Vector]>,
+                         IRInt<"vmaxnm", [Vector]>>;
+def fcmp_eq  : strictFPAlt<fcmp_eq_node,
+                           IRInt<"cmp_eq", [Predicate, Vector]>>;
+def fcmp_ne  : strictFPAlt<fcmp_ne_node,
+                           IRInt<"cmp_ne", [Predicate, Vector]>>;
+def fcmp_gt  : strictFPAlt<fcmp_gt_node,
+                           IRInt<"cmp_gt", [Predicate, Vector]>>;
+def fcmp_ge  : strictFPAlt<fcmp_ge_node,
+                           IRInt<"cmp_ge", [Predicate, Vector]>>;
+def fcmp_ult : strictFPAlt<fcmp_ult_node,
+                           IRInt<"cmp_lt", [Predicate, Vector]>>;
+def fcmp_ule : strictFPAlt<fcmp_ule_node,
+                           IRInt<"cmp_le", [Predicate, Vector]>>;
 
 // -----------------------------------------------------------------------------
 // Convenience lists of parameter types. 'T' is just a container record, so you

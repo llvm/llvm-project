@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/DependencyScanning/DependencyScanningService.h"
+#include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
@@ -40,7 +40,8 @@
 #include "Opts.inc"
 
 using namespace clang;
-using namespace tooling::dependencies;
+using namespace tooling;
+using namespace dependencies;
 
 namespace {
 
@@ -284,11 +285,9 @@ public:
     if (CachedResourceDir != Cache.end())
       return CachedResourceDir->second;
 
-    std::vector<StringRef> PrintResourceDirArgs{ClangBinaryName};
-    if (ClangCLMode)
-      PrintResourceDirArgs.push_back("/clang:-print-resource-dir");
-    else
-      PrintResourceDirArgs.push_back("-print-resource-dir");
+    const std::array<StringRef, 2> PrintResourceDirArgs{
+        ClangBinaryName,
+        ClangCLMode ? "/clang:-print-resource-dir" : "-print-resource-dir"};
 
     llvm::SmallString<64> OutputFile, ErrorFile;
     llvm::sys::fs::createTemporaryFile("print-resource-dir-output",
@@ -1106,7 +1105,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
             HadErrors = true;
         } else {
           if (llvm::Error Err =
-                  WorkerTool.initializeCompilerInstanceWithContext(
+                  WorkerTool.initializeCompilerInstanceWithContextOrError(
                       CWD, Input->CommandLine)) {
             handleErrorWithInfoString(
                 "Compiler instance with context setup error", std::move(Err),
@@ -1117,7 +1116,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
           for (auto N : Names) {
             auto MaybeModuleDepsGraph =
-                WorkerTool.computeDependenciesByNameWithContext(
+                WorkerTool.computeDependenciesByNameWithContextOrError(
                     N, AlreadySeenModules, LookupOutput);
             if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
                                    DependencyOS, Errs)) {
@@ -1127,7 +1126,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           }
 
           if (llvm::Error Err =
-                  WorkerTool.finalizeCompilerInstanceWithContext()) {
+                  WorkerTool.finalizeCompilerInstanceWithContextOrError()) {
             handleErrorWithInfoString(
                 "Compiler instance with context finialization error",
                 std::move(Err), DependencyOS, Errs);

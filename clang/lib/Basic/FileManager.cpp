@@ -22,6 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -347,12 +348,15 @@ llvm::Expected<FileEntryRef> FileManager::getSTDIN() {
   if (STDIN)
     return *STDIN;
 
-  std::unique_ptr<llvm::MemoryBuffer> Content;
-  if (auto ContentOrError = llvm::MemoryBuffer::getSTDIN())
-    Content = std::move(*ContentOrError);
-  else
+  auto ContentOrError = [] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::MemoryBuffer::getSTDIN();
+  }();
+
+  if (!ContentOrError)
     return llvm::errorCodeToError(ContentOrError.getError());
 
+  auto Content = std::move(*ContentOrError);
   STDIN = getVirtualFileRef(Content->getBufferIdentifier(),
                             Content->getBufferSize(), 0);
   FileEntry &FE = const_cast<FileEntry &>(STDIN->getFileEntry());
