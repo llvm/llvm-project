@@ -641,7 +641,7 @@ Value *AMDGPUCodeGenPrepareImpl::emitRsqF64(IRBuilder<> &Builder, Value *X,
   if (MaybeZero)
     Interested = fcZero;
   if (MaybePosInf)
-    Interested = fcPosInf;
+    Interested |= fcPosInf;
 
   if (Interested != fcNone) {
     KnownFPClass KnownSrc = computeKnownFPClass(X, Interested, CtxI);
