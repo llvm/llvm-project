@@ -455,11 +455,6 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.write<uint64_t>(Mem);
   } break;
 
-  case OL_DEVICE_INFO_ID:
-    return Info.write<int32_t>(Device->DeviceNum);
-  case OL_DEVICE_INFO_USE_AUTO_ZERO_COPY:
-    return Info.write<bool>(Device->Device->useAutoZeroCopy());
-
   default:
     break;
   }
@@ -610,10 +605,6 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
   case OL_DEVICE_INFO_GLOBAL_MEM_SIZE:
   case OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE:
     return Info.write<uint64_t>(0);
-  case OL_DEVICE_INFO_ID:
-    return Info.write<int32_t>(Device->DeviceNum);
-  case OL_DEVICE_INFO_USE_AUTO_ZERO_COPY:
-    return Info.write<bool>(Device->Device->useAutoZeroCopy());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
@@ -1227,110 +1218,6 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                 void *UserData) {
   return Queue->Device->Device->enqueueHostCall(Callback, UserData,
                                                 Queue->AsyncInfo);
-}
-
-Error olDataFence_impl(ol_queue_handle_t Queue) {
-  if (Queue->AsyncInfo->Queue) {
-    if (auto Err = Queue->Device->Device->dataFence(Queue->AsyncInfo))
-      return Err; 
-  }
-
-  return Error::success();
-}
-
-Error olQueryAsync_impl(ol_queue_handle_t Queue) {
-  if (Queue->AsyncInfo->Queue) {
-    if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo))
-      return Err; 
-  }
-
-  return Error::success();
-}
-
-Error olMemDataMappedNotify_impl(ol_device_handle_t Device, void *Ptr, size_t Size) {
-  return Device->Device->notifyDataMapped(Ptr, Size);
-}
-
-Error olMemDataUnMappedNotify_impl(ol_device_handle_t Device, void *Ptr) {
-  return Device->Device->notifyDataUnmapped(Ptr);
-}
-
-Error olMemDataLock_impl(ol_device_handle_t Device, void *Ptr, size_t Size, void** LockedPtr) {
-  Expected<void*> LockedPtrOrErr = Device->Device->dataLock(Ptr, Size);
-  if (!LockedPtrOrErr)
-    return LockedPtrOrErr.takeError();
-
-  *LockedPtr = *LockedPtrOrErr;
-
-  return Error::success();
-}
-
-Error olMemDataUnLock_impl(ol_device_handle_t Device, void *Ptr) {
-  return Device->Device->dataUnlock(Ptr);
-}
-
-Error olCreateInterop_impl(ol_device_handle_t Device, int32_t InteropContext, void* InteropSpec, void **Interop) {
-  auto Rc = Device->Device->createInterop(InteropContext, *(interop_spec_t *)InteropSpec);
-  if (!Rc)
-    return Rc.takeError();
-  *Interop = *Rc;
-  return Error::success();
-}
-
-Error olReleaseInterop_impl(ol_device_handle_t Device, void* InteropSpec) {
-  auto Rc = Device->Device->releaseInterop((omp_interop_val_t *)InteropSpec);
-  if (Rc)
-    return Rc;
-  return Error::success();
-}
-
-Error olSelectInterop_impl(ol_device_handle_t Device, int32_t InteropType, int32_t InteropPreferencesSize, 
-        void *InteropPreferences, void* InteropSpec) {
-  *(interop_spec_t*)InteropSpec = Device->Device->selectInteropPreference(
-      InteropType, InteropPreferencesSize, (interop_spec_t *)InteropPreferences);
-  return Error::success();
-}
-
-Error olFlushQueueInterop_impl(ol_device_handle_t Device, void *Interop) {
-
-  Expected<int32_t> Rc = Device->Device->Plugin.flush_queue((omp_interop_val_t *)Interop);
-  if (Rc){
-    return Rc.takeError();
-  }
-  return Error::success();
-}
-
-Error olSyncBarrierInterop_impl(ol_device_handle_t Device, void *Interop) {
-
-  Expected<int32_t> Rc = Device->Device->Plugin.sync_barrier((omp_interop_val_t *)Interop);
-  if (Rc){
-    return Rc.takeError();
-  }
-  return Error::success();
-}
-
-Error olAsyncBarrierInterop_impl(ol_device_handle_t Device, void *Interop) {
-
-  Expected<int32_t> Rc = Device->Device->Plugin.async_barrier((omp_interop_val_t *)Interop);
-  if (Rc){
-    return Rc.takeError();
-  }
-  return Error::success();
-}
-
-Error olInitializeRecordReplay_impl(ol_device_handle_t Device, uint64_t MemorySize,
-                                        void *VAddr, bool IsRecord,
-                                        bool SaveOutput,
-                                        uint64_t *ReqPtrArgOffset){
-  uint64_t ReqPtrArgOffsetOut = 0;
-  Expected<int> Rc = Device->Device->Plugin.initialize_record_replay(Device->DeviceNum, MemorySize,
-                                              VAddr, IsRecord, SaveOutput,
-                                              ReqPtrArgOffsetOut);
-  if (Rc){
-    return Rc.takeError();
-  }
-  *ReqPtrArgOffset = ReqPtrArgOffsetOut;
-  return Error::success();
 }
 
 } // namespace offload

@@ -44,8 +44,6 @@ def ol_device_info_t : Enum {
     TaggedEtor<"MAX_MEM_ALLOC_SIZE", "uint64_t", "The maximum size of memory object allocation in bytes">,
     TaggedEtor<"GLOBAL_MEM_SIZE", "uint64_t", "The size of global device memory in bytes">,
     TaggedEtor<"WORK_GROUP_LOCAL_MEM_SIZE", "uint64_t", "The maximum size of local shared memory per work group in bytes">,
-    TaggedEtor<"ID", "int32_t", "Device ID">,
-    TaggedEtor<"USE_AUTO_ZERO_COPY", "bool", "Use Auto Zero Copy">,
   ];
   list<TaggedEtor> fp_configs = !foreach(type, ["Single", "Double", "Half"], TaggedEtor<type # "_FP_CONFIG", "ol_device_fp_capability_flags_t", type # " precision floating point capability">);
   list<TaggedEtor> native_vec_widths = !foreach(type, ["char","short","int","long","float","double","half"], TaggedEtor<"NATIVE_VECTOR_WIDTH_" # type, "uint32_t", "Native vector width for " # type>);
@@ -132,79 +130,4 @@ def olGetDeviceInfoSize : Function {
     ]>,
     Return<"OL_ERRC_INVALID_DEVICE">
   ];
-}
-
-def olCreateInterop : Function {
-  let desc = "Create OpenMP interop with the given interop context.";
-  let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
-    Param<"int32_t", "InteropContext", "Interop Context", PARAM_IN>,
-    Param<"void *", "InteropSpec", "Interop Spec", PARAM_IN>,
-    Param<"void**", "Interop", "output for the interop", PARAM_OUT>
-  ];
-  let returns = [];
-}
-
-def olReleaseInterop : Function {
-  let desc = "Release OpenMP interop object.";
-  let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
-    Param<"void *", "InteropSpec", "Interop Context", PARAM_IN>
-  ];
-  let returns = [];
-}
-
-def olSelectInterop : Function {
-  let desc = "Return OpenMP interop object that the device supports";
-  let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
-    Param<"int32_t", "InteropType", "Interop Context", PARAM_IN>,
-    Param<"int32_t", "InteropPreferencesSize", "Interop Context", PARAM_IN>,
-    Param<"void*", "InteropPreferences", "Interop Context", PARAM_IN>,
-    Param<"void*", "InteropSpec", "output for the interop", PARAM_OUT>
-  ];
-  let returns = [];
-}
-
-def olFlushQueueInterop : Function {
-    let desc = "Flush the queue associated with the interop object if necessary.";
-    let details = [];
-    let params = [
-      Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
-      Param<"void *", "Interop", "Interop", PARAM_IN>
-    ];
-    let returns = [];
-}
-
-def olSyncBarrierInterop : Function {
-    let desc = "Perform a host synchronization with the queue associated with the interop object and wait for it to complete.";
-    let details = [];
-    let params = [
-      Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
-      Param<"void *", "Interop", "Interop", PARAM_IN>
-    ];
-    let returns = [];
-}
-
-def olAsyncBarrierInterop : Function {
-    let desc = "Queue an asynchronous barrier in the queue associated with the interop object and return immediately.";
-    let details = [];
-    let params = [
-      Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
-      Param<"void *", "Interop", "Interop", PARAM_IN>
-    ];
-    let returns = [];
-}
-
-def olInitializeRecordReplay : Function {
-  let desc = "Initializes the record and replay mechanism.";
-  let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
-    Param<"uint64_t", "MemorySize", " The number of bytes to be (pre-)allocated by the bump allocator", PARAM_IN>,
-    Param<"void *", "VAddr", "handle of the destination device", PARAM_IN>,
-    Param<"bool", "IsRecord", "Activates the record replay mechanism in 'record' mode or 'replay' mode", PARAM_IN>,
-    Param<"bool", "SaveOutput", "Store the device memory after kernel execution on persistent storage", PARAM_IN>,
-    Param<"uint64_t *", "ReqPtrArgOffset", "handle of the destination device", PARAM_OUT>,
-  ];
-  let returns = [];
 }
