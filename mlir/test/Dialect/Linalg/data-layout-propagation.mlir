@@ -1634,3 +1634,39 @@ func.func @push_extract_through_generic_secondextract(%arg0: tensor<128x128xf32>
 // CHECK-SAME:        ins(%[[PAD]], %[[ARG0]]
 // CHECK:           %[[EXTRACT2:.+]] =  tensor.extract_slice %[[GENERIC]]
 // CHECK:           scf.yield %[[EXTRACT2]]
+
+// -----
+
+func.func @test_dynamic_unpack_pad(%arg0: tensor<?x4x8xf32>, %dim: index) -> tensor<?x32xf32> {
+  %dest = tensor.empty(%dim) : tensor<?x32xf32>
+  %unpack = linalg.unpack %arg0 inner_dims_pos = [1] inner_tiles = [8]
+            into %dest : tensor<?x4x8xf32> -> tensor<?x32xf32>
+
+  %c0 = arith.constant 0.0 : f32
+  %pad = tensor.pad %unpack low[2, 0] high[3, 0] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %c0 : f32
+  } : tensor<?x32xf32> to tensor<?x32xf32>
+
+  return %pad : tensor<?x32xf32>
+}
+
+// CHECK-DAG:  #[[$MAP:.+]] = affine_map<()[s0] -> (s0 + 5)>
+// CHECK-LABEL: func.func @test_dynamic_unpack_pad
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DIM:[a-zA-Z0-9]+]]
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK:         %[[EMPTY0:.+]] = tensor.empty(%[[DIM]])
+// CHECK:         %[[UNPACK0:.+]] = linalg.unpack %[[ARG0]]
+// CHECK-SAME:      inner_dims_pos = [1] inner_tiles = [8]
+// CHECK-SAME:      into %[[EMPTY0]]
+// CHECK:         %[[PAD:.+]] = tensor.pad %[[ARG0]] low[2, 0, 0] high[3, 0, 0]
+// CHECK:           tensor.yield %[[CST]]
+// CHECK:         %[[DIM_VAL:.+]] = tensor.dim %[[UNPACK0]], %[[C0]]
+// CHECK:         %[[NEW_DIM:.+]] = affine.apply #[[$MAP]]()[%[[DIM_VAL]]]
+// CHECK:         %[[EMPTY1:.+]] = tensor.empty(%[[NEW_DIM]])
+// CHECK:         %[[UNPACK1:.+]] = linalg.unpack %[[PAD]]
+// CHECK-SAME:      inner_dims_pos = [1] inner_tiles = [8]
+// CHECK-SAME:      into %[[EMPTY1]]
+// CHECK:         return %[[UNPACK1]]
