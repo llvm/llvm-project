@@ -1,7 +1,4 @@
 ---
-breaks build of ROCmValidationSuite
-[C2y] Support WG14 N3457, the __COUNTER__ macro (#162662)
----
 revert breaks rocPRIM
 AMDGPU/PromoteAlloca: Refactor into analysis / commit phases
 ---
