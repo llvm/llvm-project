@@ -1931,6 +1931,125 @@ func.func @reduce_non_operation_name(%arg0: tensor<4xf32>, %arg1: tensor<f32>) -
 
 // -----
 
+//===----------------------------------------------------------------------===//
+// linalg.pooling_nhwc_*
+//===----------------------------------------------------------------------===//
+
+func.func @pooling_nhwc_max_unsigned_float_type(
+    %input: tensor<1x4x4x1xf32>,
+    %filter: tensor<2x2xf32>,
+    %init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nhwc_max_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xf32>, tensor<2x2xf32>)
+      outs (%init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32>
+  return %0 : tensor<1x2x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nhwc_max_unsigned_i1(
+    %input: tensor<1x4x4x1xi1>,
+    %filter: tensor<2x2xi1>,
+    %init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nhwc_max_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xi1>, tensor<2x2xi1>)
+      outs (%init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1>
+  return %0 : tensor<1x2x2x1xi1>
+}
+
+// -----
+
+func.func @pooling_nhwc_min_unsigned_float_type(
+    %input: tensor<1x4x4x1xf32>,
+    %filter: tensor<2x2xf32>,
+    %init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nhwc_min_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xf32>, tensor<2x2xf32>)
+      outs (%init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32>
+  return %0 : tensor<1x2x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nhwc_min_unsigned_i1(
+    %input: tensor<1x4x4x1xi1>,
+    %filter: tensor<2x2xi1>,
+    %init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nhwc_min_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xi1>, tensor<2x2xi1>)
+      outs (%init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1>
+  return %0 : tensor<1x2x2x1xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// linalg.pooling_nwc_*
+//===----------------------------------------------------------------------===//
+
+func.func @pooling_nwc_max_unsigned_float_type(
+    %input: tensor<1x4x1xf32>,
+    %filter: tensor<2xf32>,
+    %init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nwc_max_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xf32>, tensor<2xf32>)
+      outs (%init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32>
+  return %0 : tensor<1x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nwc_max_unsigned_i1(
+    %input: tensor<1x4x1xi1>,
+    %filter: tensor<2xi1>,
+    %init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nwc_max_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xi1>, tensor<2xi1>)
+      outs (%init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1>
+  return %0 : tensor<1x2x1xi1>
+}
+
+// -----
+
+func.func @pooling_nwc_min_unsigned_float_type(
+    %input: tensor<1x4x1xf32>,
+    %filter: tensor<2xf32>,
+    %init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nwc_min_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xf32>, tensor<2xf32>)
+      outs (%init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32>
+  return %0 : tensor<1x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nwc_min_unsigned_i1(
+    %input: tensor<1x4x1xi1>,
+    %filter: tensor<2xi1>,
+    %init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nwc_min_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xi1>, tensor<2xi1>)
+      outs (%init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1>
+  return %0 : tensor<1x2x1xi1>
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // Tests for generic infrastructure for named Ops. The actual Ops used are
@@ -1958,30 +2077,3 @@ func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
   func.return %0, %f : tensor<?xf16>, vector<4xf16>
 }
 
-// -----
-
-func.func @pooling_nhwc_max_unsigned_non_integer_elem_type(
-    %input: tensor<1x4x4x1xf32>,
-    %filter: tensor<2x2xf32>,
-    %init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32> {
-  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
-  %0 = linalg.pooling_nhwc_max_unsigned {dilations = dense<1> : tensor<2xi64>,
-                                        strides = dense<1> : tensor<2xi64>}
-      ins (%input, %filter: tensor<1x4x4x1xf32>, tensor<2x2xf32>)
-      outs (%init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32>
-  return %0 : tensor<1x2x2x1xf32>
-}
-
-// -----
-
-func.func @pooling_nhwc_min_unsigned_non_integer_elem_type(
-    %input: tensor<1x4x4x1xf32>,
-    %filter: tensor<2x2xf32>,
-    %init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32> {
-  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
-  %0 = linalg.pooling_nhwc_min_unsigned {dilations = dense<1> : tensor<2xi64>,
-                                        strides = dense<1> : tensor<2xi64>}
-      ins (%input, %filter: tensor<1x4x4x1xf32>, tensor<2x2xf32>)
-      outs (%init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32>
-  return %0 : tensor<1x2x2x1xf32>
-}
