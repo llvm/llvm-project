@@ -26,12 +26,12 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <optional>
@@ -482,6 +482,15 @@ hasAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
   return HasAdjSubstatementsMatcherType(vectorFromMatcherRefs(MatcherRefs));
 }
 
+/// Creates a new BoundNodesTreeBuilder that extends the given builder.
+/// This is a helper to simplify the pattern of creating a new builder,
+/// adding the current builder's matches to it, and then using it for matching.
+static BoundNodesTreeBuilder extendBuilder(BoundNodesTreeBuilder&& Builder) {
+  BoundNodesTreeBuilder Extended;
+  Extended.addMatch(std::move(Builder));
+  return Extended;
+}
+
 template <typename T, typename ArgT>
 bool HasAdjSubstatementsMatcher<T, ArgT>::matches(
     const T &Node, ASTMatchFinder *Finder,
@@ -490,29 +499,38 @@ bool HasAdjSubstatementsMatcher<T, ArgT>::matches(
   if (!CS)
     return false;
 
-  // Use llvm::search with lambda predicate that matches statements against
-  // matchers and accumulates BoundNodesTreeBuilder state
-  BoundNodesTreeBuilder CurrentBuilder;
-  const auto Found = llvm::search(
-      CS->body(), Matchers,
-      [&](const Stmt *StmtPtr, const Matcher<Stmt> &Matcher) mutable {
-        BoundNodesTreeBuilder StepBuilder;
-        StepBuilder.addMatch(CurrentBuilder);
-        if (!Matcher.matches(*StmtPtr, Finder, &StepBuilder)) {
-          // reset the state
-          CurrentBuilder = {};
-          return false;
-        }
-        // Invalidate the state
-        CurrentBuilder = StepBuilder;
-        return true;
-      });
+  // Search for a sequence of adjacent substatements that match the matchers
+  // using raw loops instead of llvm::search
+  const auto BodyBegin = CS->body_begin();
+  const auto BodyEnd = CS->body_end();
 
-  if (Found == CS->body_end())
+  if (Matchers.empty())
     return false;
 
-  Builder->addMatch(CurrentBuilder);
-  return true;
+  // Try each possible starting position
+  for (auto StartIt = BodyBegin; StartIt != BodyEnd; ++StartIt) {
+    // Check if there are enough statements remaining
+    if (std::distance(StartIt, BodyEnd) < static_cast<ptrdiff_t>(Matchers.size()))
+      break;
+
+    BoundNodesTreeBuilder CurrentBuilder;
+
+    // Use enumerate to iterate over matchers and statements simultaneously
+    auto StmtRange = llvm::make_range(StartIt, StartIt + Matchers.size());
+    for (auto [Idx, Matcher, StmtPtr] : llvm::enumerate(Matchers, StmtRange)) {
+      CurrentBuilder = extendBuilder(std::move(CurrentBuilder));
+      if (!Matcher.matches(*StmtPtr, Finder, &CurrentBuilder))
+        break;
+
+      // If this is the last iteration and we matched, we're done
+      if (Idx == Matchers.size() - 1) {
+        Builder->addMatch(CurrentBuilder);
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 template bool HasAdjSubstatementsMatcher<CompoundStmt>::matches(
@@ -1102,7 +1120,7 @@ const internal::VariadicFunction<internal::HasOpNameMatcher, StringRef,
 const internal::VariadicFunction<internal::HasAdjSubstatementsMatcherType,
                                  internal::Matcher<Stmt>,
                                  internal::hasAdjSubstatementsFunc>
-    hasAdjSubstatements = {};
+    hasAdjacentSubstatements = {};
 const internal::VariadicFunction<internal::HasOverloadOpNameMatcher, StringRef,
                                  internal::hasAnyOverloadedOperatorNameFunc>
     hasAnyOverloadedOperatorName = {};

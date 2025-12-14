@@ -49,6 +49,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -2286,7 +2287,7 @@ HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
 /// Matches nodes of type T (CompoundStmt or StmtExpr) that contain a sequence
 /// of consecutive substatements matching the provided matchers in order.
 ///
-/// See \c hasAdjSubstatements() in ASTMatchers.h for details.
+/// See \c hasAdjacentSubstatements() in ASTMatchers.h for details.
 template <typename T, typename ArgT = std::vector<Matcher<Stmt>>>
 class HasAdjSubstatementsMatcher : public MatcherInterface<T> {
   static_assert(std::is_same<T, CompoundStmt>::value ||
@@ -2308,7 +2309,7 @@ private:
 
 using HasAdjSubstatementsMatcherType =
     PolymorphicMatcher<HasAdjSubstatementsMatcher,
-                       void(TypeList<CompoundStmt, StmtExpr>),
+                       AST_POLYMORPHIC_SUPPORTED_TYPES(CompoundStmt, StmtExpr),
                        std::vector<Matcher<Stmt>>>;
 
 HasAdjSubstatementsMatcherType

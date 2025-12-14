@@ -288,7 +288,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasAnyPlacementArg);
   REGISTER_MATCHER(hasAnySelector);
   REGISTER_MATCHER(hasAnySubstatement);
-  REGISTER_MATCHER(hasAdjSubstatements);
+  REGISTER_MATCHER(hasAdjacentSubstatements);
   REGISTER_MATCHER(hasAnyTemplateArgument);
   REGISTER_MATCHER(hasAnyTemplateArgumentLoc);
   REGISTER_MATCHER(hasAnyUsingShadowDecl);
