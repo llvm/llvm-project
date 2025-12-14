@@ -1317,9 +1317,10 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
     SmallVector<OpFoldResult> outputSizes;
     AffineExpr d0, d1, d2;
     bindDims(rewriter.getContext(), d0, d1, d2);
+    AffineExpr sumExpr = d0 + d1 + d2;
     for (size_t i = 0; i < sourceSizes.size(); ++i) {
       outputSizes.push_back(affine::makeComposedFoldedAffineApply(
-          rewriter, loc, d0 + d1 + d2,
+          rewriter, loc, sumExpr,
           {sourceSizes[i], originalLowPad[i], originalHighPad[i]}));
     }
     Value outputUnPack = tensor::EmptyOp::create(
