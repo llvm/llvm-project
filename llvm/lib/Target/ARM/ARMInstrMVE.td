@@ -4067,7 +4067,7 @@ class MVE_VCVT_fp_int<string suffix, bits<2> size, bit toint, bit unsigned,
 }
 
 multiclass MVE_VCVT_fp_int_m<MVEVectorVTInfo Dest, MVEVectorVTInfo Src,
-                             SDNode unpred_op> {
+                             SDNode unpred_op, SDPatternOperator unpred_intrinsic> {
   defvar Unsigned = !or(!eq(Dest.SuffixLetter,"u"), !eq(Src.SuffixLetter,"u"));
   defvar ToInt = !eq(Src.SuffixLetter,"f");
 
@@ -4077,6 +4077,8 @@ multiclass MVE_VCVT_fp_int_m<MVEVectorVTInfo Dest, MVEVectorVTInfo Src,
 
   let Predicates = [HasMVEFloat] in {
     def : Pat<(Dest.Vec (unpred_op (Src.Vec MQPR:$src))),
+              (Dest.Vec (Inst (Src.Vec MQPR:$src)))>;
+    def : Pat<(Dest.Vec (unpred_intrinsic (Src.Vec MQPR:$src), (i32 Unsigned))),
               (Dest.Vec (Inst (Src.Vec MQPR:$src)))>;
     def : Pat<(Dest.Vec (int_arm_mve_vcvt_fp_int_predicated
                              (Src.Vec MQPR:$src), (i32 Unsigned),
@@ -4088,15 +4090,15 @@ multiclass MVE_VCVT_fp_int_m<MVEVectorVTInfo Dest, MVEVectorVTInfo Src,
 }
 // The unsuffixed VCVT for float->int implicitly rounds toward zero,
 // which I reflect here in the llvm instruction names
-defm MVE_VCVTs16f16z : MVE_VCVT_fp_int_m<MVE_v8s16, MVE_v8f16, fp_to_sint>;
-defm MVE_VCVTu16f16z : MVE_VCVT_fp_int_m<MVE_v8u16, MVE_v8f16, fp_to_uint>;
-defm MVE_VCVTs32f32z : MVE_VCVT_fp_int_m<MVE_v4s32, MVE_v4f32, fp_to_sint>;
-defm MVE_VCVTu32f32z : MVE_VCVT_fp_int_m<MVE_v4u32, MVE_v4f32, fp_to_uint>;
+defm MVE_VCVTs16f16z : MVE_VCVT_fp_int_m<MVE_v8s16, MVE_v8f16, fp_to_sint, int_arm_mve_vcvt_int_fp>;
+defm MVE_VCVTu16f16z : MVE_VCVT_fp_int_m<MVE_v8u16, MVE_v8f16, fp_to_uint, int_arm_mve_vcvt_int_fp>;
+defm MVE_VCVTs32f32z : MVE_VCVT_fp_int_m<MVE_v4s32, MVE_v4f32, fp_to_sint, int_arm_mve_vcvt_int_fp>;
+defm MVE_VCVTu32f32z : MVE_VCVT_fp_int_m<MVE_v4u32, MVE_v4f32, fp_to_uint, int_arm_mve_vcvt_int_fp>;
 // Whereas VCVT for int->float rounds to nearest
-defm MVE_VCVTf16s16n : MVE_VCVT_fp_int_m<MVE_v8f16, MVE_v8s16, sint_to_fp>;
-defm MVE_VCVTf16u16n : MVE_VCVT_fp_int_m<MVE_v8f16, MVE_v8u16, uint_to_fp>;
-defm MVE_VCVTf32s32n : MVE_VCVT_fp_int_m<MVE_v4f32, MVE_v4s32, sint_to_fp>;
-defm MVE_VCVTf32u32n : MVE_VCVT_fp_int_m<MVE_v4f32, MVE_v4u32, uint_to_fp>;
+defm MVE_VCVTf16s16n : MVE_VCVT_fp_int_m<MVE_v8f16, MVE_v8s16, sint_to_fp, int_arm_mve_vcvt_fp_int>;
+defm MVE_VCVTf16u16n : MVE_VCVT_fp_int_m<MVE_v8f16, MVE_v8u16, uint_to_fp, int_arm_mve_vcvt_fp_int>;
+defm MVE_VCVTf32s32n : MVE_VCVT_fp_int_m<MVE_v4f32, MVE_v4s32, sint_to_fp, int_arm_mve_vcvt_fp_int>;
+defm MVE_VCVTf32u32n : MVE_VCVT_fp_int_m<MVE_v4f32, MVE_v4u32, uint_to_fp, int_arm_mve_vcvt_fp_int>;
 
 let Predicates = [HasMVEFloat] in {
   def : Pat<(v4i32 (fp_to_sint_sat v4f32:$src, i32)),
