@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++11
 
 // Check that functions are marked [[nodiscard]]
 
