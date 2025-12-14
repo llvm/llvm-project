@@ -22,10 +22,11 @@
 
 namespace llvm {
 
-class TargetLowering;
-class AArch64Subtarget;
 class AArch64FunctionInfo;
 class AArch64FrameLowering;
+class AArch64InstrInfo;
+class AArch64Subtarget;
+class TargetLowering;
 
 struct SVEFrameSizes {
   struct {
@@ -93,7 +94,7 @@ protected:
   // Note: "HasWinCFI" is mutable as it can change in any "emit" function.
   mutable bool HasWinCFI = false;
 
-  const TargetInstrInfo *TII = nullptr;
+  const AArch64InstrInfo *TII = nullptr;
   AArch64FunctionInfo *AFI = nullptr;
 };
 

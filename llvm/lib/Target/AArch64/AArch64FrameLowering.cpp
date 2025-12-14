@@ -990,7 +990,7 @@ bool AArch64FrameLowering::shouldSignReturnAddressEverywhere(
 // code on Windows.
 MachineBasicBlock::iterator
 AArch64FrameLowering::insertSEH(MachineBasicBlock::iterator MBBI,
-                                const TargetInstrInfo &TII,
+                                const AArch64InstrInfo &TII,
                                 MachineInstr::MIFlag Flag) const {
   unsigned Opc = MBBI->getOpcode();
   MachineBasicBlock *MBB = MBBI->getParent();
@@ -1181,7 +1181,7 @@ bool AArch64FrameLowering::requiresSaveVG(const MachineFunction &MF) const {
 void AArch64FrameLowering::emitPacRetPlusLeafHardening(
     MachineFunction &MF) const {
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const AArch64InstrInfo *TII = Subtarget.getInstrInfo();
 
   auto EmitSignRA = [&](MachineBasicBlock &MBB) {
     DebugLoc DL; // Set debug location to unknown.
@@ -1947,8 +1947,9 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
-  auto &TLI = *MF.getSubtarget<AArch64Subtarget>().getTargetLowering();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  auto &TLI = *Subtarget.getTargetLowering();
+  const AArch64InstrInfo &TII = *Subtarget.getInstrInfo();
   bool NeedsWinCFI = needsWinCFI(MF);
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
@@ -2165,7 +2166,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const AArch64InstrInfo &TII =
+      *MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
   bool NeedsWinCFI = needsWinCFI(MF);
@@ -3033,7 +3035,8 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   RS->backward(MBBI);
   Register DstReg = RS->FindUnusedReg(&AArch64::GPR64commonRegClass);
   assert(DstReg && "There must be a free register after frame setup");
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const AArch64InstrInfo &TII =
+      *MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVi64imm), DstReg).addImm(-2);
   BuildMI(MBB, MBBI, DL, TII.get(AArch64::STURXi))
       .addReg(DstReg, getKillRegState(true))
