@@ -18,6 +18,7 @@
 #include "MisleadingBidirectionalCheck.h"
 #include "MisleadingIdentifierCheck.h"
 #include "MisplacedConstCheck.h"
+#include "MultipleInheritanceCheck.h"
 #include "NewDeleteOverloadsCheck.h"
 #include "NoRecursionCheck.h"
 #include "NonCopyableObjectsCheck.h"
@@ -57,6 +58,8 @@ public:
     CheckFactories.registerCheck<MisleadingIdentifierCheck>(
         "misc-misleading-identifier");
     CheckFactories.registerCheck<MisplacedConstCheck>("misc-misplaced-const");
+    CheckFactories.registerCheck<MultipleInheritanceCheck>(
+        "misc-multiple-inheritance");
     CheckFactories.registerCheck<NewDeleteOverloadsCheck>(
         "misc-new-delete-overloads");
     CheckFactories.registerCheck<NoRecursionCheck>("misc-no-recursion");
