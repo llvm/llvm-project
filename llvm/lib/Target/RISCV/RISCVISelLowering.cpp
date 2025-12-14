@@ -16629,35 +16629,39 @@ static SDValue reduceANDOfAtomicLoad(SDNode *N,
 // hidden by the intermediate shift. Detect that case and commute the
 // shift/and in order to enable load narrowing.
 static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  if (N0.getOpcode() != ISD::SHL || !N0.hasOneUse() ||
-      !isa<ConstantSDNode>(N1) || !isa<ConstantSDNode>(N0.getOperand(1))) {
+  // (and (shl (load ...), ShiftAmt), Mask)
+  using namespace SDPatternMatch;
+  SDValue LoadNode, ShiftNode;
+  APInt MaskVal, ShiftVal;
+  // (and (shl (load ...), ShiftAmt), Mask)
+  if (!sd_match(N,
+                m_And(m_OneUse(m_Shl(
+                          m_AllOf(m_Opc(ISD::LOAD), m_Value(LoadNode)),
+                          m_AllOf(m_ConstInt(ShiftVal), m_Value(ShiftNode)))),
+                      m_ConstInt(MaskVal)))) {
     return SDValue();
   }
 
   EVT VT = N->getValueType(0);
-  uint64_t ShiftAmt = N0.getConstantOperandVal(1);
+  uint64_t ShiftAmt = ShiftVal.getZExtValue();
 
-  if (ShiftAmt > VT.getSizeInBits())
+  if (ShiftAmt >= VT.getSizeInBits())
     return SDValue();
 
-  const APInt &MaskVal = N1->getAsAPIntVal();
   // Calculate the appropriate mask if it were applied before the shift.
   APInt InnerMask = MaskVal.lshr(ShiftAmt);
   bool IsNarrowable =
       InnerMask == 0xff || InnerMask == 0xffff || InnerMask == 0xffffffff;
 
-  if (!IsNarrowable || !isa<LoadSDNode>(N0.getOperand(0)))
+  if (!IsNarrowable)
     return SDValue();
 
   // AND the loaded value and change the shift appropriately, allowing
   // the load to be narrowed.
   SDLoc DL(N);
-  SDValue LoadNode = N0.getOperand(0);
   SDValue InnerAnd = DAG.getNode(ISD::AND, DL, VT, LoadNode,
                                  DAG.getConstant(InnerMask, DL, VT));
-  return DAG.getNode(ISD::SHL, DL, VT, InnerAnd, N0.getOperand(1));
+  return DAG.getNode(ISD::SHL, DL, VT, InnerAnd, ShiftNode);
 }
 
 // Combines two comparison operation and logic operation to one selection
