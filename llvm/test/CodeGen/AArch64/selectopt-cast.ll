@@ -901,3 +901,49 @@ loop:
 exit:
   ret void
 }
+
+define void @sext_i128() {
+; CHECK-LABEL: @sext_i128(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = icmp slt i128 0, 0
+; CHECK-NEXT:    [[I2:%.*]] = sext i1 [[I]] to i128
+; CHECK-NEXT:    [[I3:%.*]] = or i128 [[I2]], 0
+; CHECK-NEXT:    [[I4:%.*]] = icmp slt i128 [[I3]], 0
+; CHECK-NEXT:    [[I5:%.*]] = sext i1 [[I4]] to i128
+; CHECK-NEXT:    [[I4_FROZEN:%.*]] = freeze i1 [[I4]]
+; CHECK-NEXT:    br i1 [[I4_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i128 -1, 0
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[I6:%.*]] = phi i128 [ [[TMP0]], [[SELECT_TRUE_SINK]] ], [ 0, [[LOOP]] ]
+; CHECK-NEXT:    [[I7:%.*]] = icmp slt i128 [[I6]], 0
+; CHECK-NEXT:    [[I8:%.*]] = sext i1 [[I7]] to i128
+; CHECK-NEXT:    [[I7_FROZEN:%.*]] = freeze i1 [[I7]]
+; CHECK-NEXT:    br i1 [[I7_FROZEN]], label [[SELECT_TRUE_SINK2:%.*]], label [[SELECT_END1:%.*]]
+; CHECK:       select.true.sink2:
+; CHECK-NEXT:    [[TMP1:%.*]] = add i128 -1, 0
+; CHECK-NEXT:    br label [[SELECT_END1]]
+; CHECK:       select.end1:
+; CHECK-NEXT:    [[I9:%.*]] = phi i128 [ [[TMP1]], [[SELECT_TRUE_SINK2]] ], [ 0, [[SELECT_END]] ]
+; CHECK-NEXT:    [[I10:%.*]] = or i128 [[I9]], 0
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = icmp slt i128 0, 0
+  %i2 = sext i1 %i to i128
+  %i3 = or i128 %i2, 0
+  %i4 = icmp slt i128 %i3, 0
+  %i5 = sext i1 %i4 to i128
+  %i6 = add i128 %i5, 0
+  %i7 = icmp slt i128 %i6, 0
+  %i8 = sext i1 %i7 to i128
+  %i9 = add i128 %i8, 0
+  %i10 = or i128 %i9, 0
+  br label %loop
+}

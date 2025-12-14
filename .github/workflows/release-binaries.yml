@@ -199,15 +199,6 @@ jobs:
       with:
         ref: ${{ needs.prepare.outputs.ref }}
 
-    - name: Install Ninja
-      uses: llvm/actions/install-ninja@a1ea791b03c8e61f53a0e66f2f73db283aa0f01e # main
-
-    - name: Setup Windows
-      if: startsWith(runner.os, 'Windows')
-      uses: llvm/actions/setup-windows@main
-      with:
-        arch: amd64
-
     - name: Set Build Prefix
       id: setup-stage
       shell: bash

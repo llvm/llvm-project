@@ -37,9 +37,7 @@ on:
       os_list:
         required: false
         type: string
-        # Use windows-2019 due to:
-        # https://developercommunity.visualstudio.com/t/Prev-Issue---with-__assume-isnan-/1597317
-        default: '["ubuntu-24.04", "windows-2019", "macOS-13"]'
+        default: '["ubuntu-24.04"]'
 
       python_version:
         required: false
@@ -67,11 +65,6 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.os_list) }}
     steps:
-      - name: Setup Windows
-        if: startsWith(matrix.os, 'windows')
-        uses: llvm/actions/setup-windows@main
-        with:
-          arch: amd64
       # On Windows, starting with win19/20220814.1, cmake choose the 32-bit
       # python3.10.6 libraries instead of the 64-bit libraries when building
       # lldb.  Using this setup-python action to make 3.10 the default
@@ -80,9 +73,6 @@ jobs:
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ inputs.python_version }}
-      - name: Install Ninja
-        if: runner.os != 'Linux'
-        uses: llvm/actions/install-ninja@main
       # actions/checkout deletes any existing files in the new git directory,
       # so this needs to either run before ccache-action or it has to use
       # clean: false.
