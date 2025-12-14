@@ -16644,21 +16644,23 @@ static SDValue performANDCombine(SDNode *N,
 
     EVT VT = N->getValueType(0);
     uint64_t ShiftAmt = N0.getConstantOperandVal(1);
-    const APInt &MaskVal = N1->getAsAPIntVal();
-    // Calculate the mask if it were applied before the shift.
-    APInt InnerMask = MaskVal.lshr(ShiftAmt);
+    if (ShiftAmt < VT.getSizeInBits()) {
+      const APInt &MaskVal = N1->getAsAPIntVal();
+      // Calculate the mask if it were applied before the shift.
+      APInt InnerMask = MaskVal.lshr(ShiftAmt);
 
-    bool IsNarrowable =
-        InnerMask == 0xff || InnerMask == 0xffff || InnerMask == 0xffffffff;
+      bool IsNarrowable =
+          InnerMask == 0xff || InnerMask == 0xffff || InnerMask == 0xffffffff;
 
-    if (IsNarrowable && isa<LoadSDNode>(N0.getOperand(0))) {
-      // AND the loaded value and change the shift appropriately, allowing
-      // the load to be narrowed.
-      SDLoc DL(N);
-      SDValue LoadNode = N0.getOperand(0);
-      SDValue InnerAnd = DAG.getNode(ISD::AND, DL, VT, LoadNode,
-                                     DAG.getConstant(InnerMask, DL, VT));
-      return DAG.getNode(ISD::SHL, DL, VT, InnerAnd, N0.getOperand(1));
+      if (IsNarrowable && isa<LoadSDNode>(N0.getOperand(0))) {
+        // AND the loaded value and change the shift appropriately, allowing
+        // the load to be narrowed.
+        SDLoc DL(N);
+        SDValue LoadNode = N0.getOperand(0);
+        SDValue InnerAnd = DAG.getNode(ISD::AND, DL, VT, LoadNode,
+                                       DAG.getConstant(InnerMask, DL, VT));
+        return DAG.getNode(ISD::SHL, DL, VT, InnerAnd, N0.getOperand(1));
+      }
     }
   }
 
