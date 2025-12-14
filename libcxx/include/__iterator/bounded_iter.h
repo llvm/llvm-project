@@ -265,7 +265,8 @@ private:
 };
 
 template <class _It>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __bounded_iter<_It> __make_bounded_iter(_It __it, _It __begin, _It __end) {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __bounded_iter<_It>
+__make_bounded_iter(_It __it, _It __begin, _It __end) {
   return __bounded_iter<_It>(std::move(__it), std::move(__begin), std::move(__end));
 }
 
@@ -280,7 +281,7 @@ struct pointer_traits<__bounded_iter<_Iterator> > {
   using element_type    = typename pointer_traits<_Iterator>::element_type;
   using difference_type = typename pointer_traits<_Iterator>::difference_type;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __it) _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __it) _NOEXCEPT {
     return std::__to_address(__it.__current_);
   }
 };
