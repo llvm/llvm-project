@@ -298,6 +298,7 @@ class __deque_iterator {
                       __rebind_pointer_t<_MapPointer, const __rebind_pointer_t<_MapPointer, _ValueType> >,
                       _MapPointer>;
 
+// TODO(LLVM 24): Remove this check
 #  ifndef _LIBCPP_ABI_DEQUE_CONST_ITERATOR
   static_assert(
       sizeof(__map_iterator) == sizeof(_MapPointer) && _LIBCPP_ALIGNOF(__map_iterator) == _LIBCPP_ALIGNOF(_MapPointer),
@@ -309,11 +310,11 @@ class __deque_iterator {
 #  endif
 
   template <bool _IsSamePointer = is_same<_MapPointer, __map_iterator>::value, __enable_if_t<_IsSamePointer, int> = 0>
-  static [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI __map_iterator __to_stored_pointer(_MapPointer __mp) _NOEXCEPT {
+  [[__nodiscard__]] static _LIBCPP_HIDE_FROM_ABI __map_iterator __to_stored_pointer(_MapPointer __mp) _NOEXCEPT {
     return __mp;
   }
   template <bool _IsSamePointer = is_same<_MapPointer, __map_iterator>::value, __enable_if_t<!_IsSamePointer, int> = 0>
-  static [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI __map_iterator __to_stored_pointer(_MapPointer __mp) _NOEXCEPT {
+  [[__nodiscard__]] static _LIBCPP_HIDE_FROM_ABI __map_iterator __to_stored_pointer(_MapPointer __mp) _NOEXCEPT {
     return __mp ? pointer_traits<__map_iterator>::pointer_to(*__mp) : nullptr;
   }
 
