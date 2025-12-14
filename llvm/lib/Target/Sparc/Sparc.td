@@ -126,6 +126,8 @@ include "SparcCallingConv.td"
 include "SparcSchedule.td"
 include "SparcInstrInfo.td"
 
+defm : RemapAllTargetPseudoPointerOperands<sparc_ptr_rc>;
+
 def SparcInstrInfo : InstrInfo;
 
 def SparcAsmParser : AsmParser {

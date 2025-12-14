@@ -350,6 +350,8 @@ def err_address_of_label_outside_fn : Error<
   "use of address-of-label extension outside of a function body">;
 def err_asm_operand_wide_string_literal : Error<
   "cannot use %select{unicode|wide}0 string literal in 'asm'">;
+def err_defer_ts_labeled_stmt : Error<
+  "substatement of defer must not be a label">;
 
 def err_asm_expected_string : Error<
   "expected string literal %select{or parenthesized constant expression |}0in 'asm'">;
@@ -1724,6 +1726,10 @@ def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' c
   "%0 is ignored">, InGroup<OpenMPExtensions>;
 def err_omp_duplicate_modifier : Error<"duplicate modifier '%0' in '%1' clause">;
 def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
+def err_omp_unknown_need_device_ptr_kind
+    : Error<
+        "invalid argument for 'need_device_ptr' kind in 'adjust_args' clause; "
+        "expected 'fp_nullify' or 'fb_preserve'">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

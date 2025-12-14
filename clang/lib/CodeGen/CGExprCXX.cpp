@@ -503,6 +503,10 @@ RValue CodeGenFunction::EmitCXXOperatorMemberCallExpr(
 RValue CodeGenFunction::EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
                                                ReturnValueSlot ReturnValue,
                                                llvm::CallBase **CallOrInvoke) {
+  // Emit as a device kernel call if CUDA device code is to be generated.
+  if (getLangOpts().CUDAIsDevice)
+    return CGM.getCUDARuntime().EmitCUDADeviceKernelCallExpr(
+        *this, E, ReturnValue, CallOrInvoke);
   return CGM.getCUDARuntime().EmitCUDAKernelCallExpr(*this, E, ReturnValue,
                                                      CallOrInvoke);
 }
@@ -1206,16 +1210,6 @@ void CodeGenFunction::EmitNewArrayInitializer(
     EmitCXXAggrConstructorCall(Ctor, NumElements, CurPtr, CCE,
                                /*NewPointerIsChecked*/true,
                                CCE->requiresZeroInitialization());
-
-    // For MSVC vector deleting destructors support we record that for the class
-    // new[] was called. We try to optimize the code size and only emit vector
-    // deleting destructors when they are required. Vector deleting destructors
-    // are required for delete[] call but MSVC triggers emission of them
-    // whenever new[] is called for an object of the class and we do the same
-    // for compatibility.
-    if (CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
-            CGM.getContext().getLangOpts()))
-      CGM.requireVectorDestructorDefinition(Ctor->getParent());
     return;
   }
 

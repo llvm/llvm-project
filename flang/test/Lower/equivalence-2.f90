@@ -61,7 +61,7 @@ end subroutine
 subroutine eq_and_entry_foo
   SAVE x, i
   DIMENSION :: x(2)
-  EQUIVALENCE (x(2), i) 
+  EQUIVALENCE (x(2), i)
   call foo1(x, i)
   ! CHECK: %[[xi:.*]] = fir.address_of(@_QFeq_and_entry_fooEi) : !fir.ref<!fir.array<8xi8>>
 

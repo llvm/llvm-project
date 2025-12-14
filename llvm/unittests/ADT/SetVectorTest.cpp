@@ -52,7 +52,7 @@ TEST(SetVector, ContainsTest) {
 }
 
 TEST(SetVector, ConstPtrKeyTest) {
-  SetVector<int *, SmallVector<int *, 8>, SmallPtrSet<const int *, 8>> S, T;
+  SetVector<int *> S, T;
   int i, j, k, m, n;
 
   S.insert(&i);

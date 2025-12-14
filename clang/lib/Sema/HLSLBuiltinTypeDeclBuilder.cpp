@@ -202,7 +202,7 @@ public:
   BuiltinTypeMethodBuilder &declareLocalVar(LocalVar &Var);
   template <typename... Ts>
   BuiltinTypeMethodBuilder &callBuiltin(StringRef BuiltinName,
-                                        QualType ReturnType, Ts... ArgSpecs);
+                                        QualType ReturnType, Ts &&...ArgSpecs);
   template <typename TLHS, typename TRHS>
   BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS);
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
@@ -572,7 +572,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnThis() {
 template <typename... Ts>
 BuiltinTypeMethodBuilder &
 BuiltinTypeMethodBuilder::callBuiltin(StringRef BuiltinName,
-                                      QualType ReturnType, Ts... ArgSpecs) {
+                                      QualType ReturnType, Ts &&...ArgSpecs) {
   ensureCompleteDecl();
 
   std::array<Expr *, sizeof...(ArgSpecs)> Args{
@@ -1140,6 +1140,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   DeclarationName Load(&II);
   // TODO: We also need versions with status for CheckAccessFullyMapped.
   addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
+  addLoadWithStatusFunction(Load, /*IsConst=*/false);
 
   return *this;
 }
@@ -1229,6 +1230,22 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
                                   SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
                    PH::CounterHandle, getConstantIntExpr(-1))
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
+                                                  bool IsConst) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  QualType ReturnTy = getHandleElementType();
+  return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)
+      .addParam("Index", AST.UnsignedIntTy)
+      .addParam("Status", AST.UnsignedIntTy, HLSLParamModifierAttr::Keyword_out)
+      .callBuiltin("__builtin_hlsl_resource_load_with_status", ReturnTy,
+                   PH::Handle, PH::_0, PH::_1)
       .finalize();
 }
 

@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -54,6 +55,10 @@ void AMDGPUDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"
+      >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
       >();
   addAttributes<
 #define GET_ATTRDEF_LIST
@@ -140,6 +145,18 @@ LogicalResult FatRawBufferCastOp::inferReturnTypes(
     return failure();
   inferredReturnTypes = SmallVector<Type>{*resultType};
   return success();
+}
+
+FailureOr<OpFoldResult> FatRawBufferCastOp::reifyDimOfResult(OpBuilder &builder,
+                                                             int resultIndex,
+                                                             int dim) {
+  assert(resultIndex == 0 && "FatRawBufferCastOp has a single result");
+  Value source = getSource();
+  auto sourceType = cast<MemRefType>(source.getType());
+  if (sourceType.isDynamicDim(dim))
+    return OpFoldResult(
+        builder.createOrFold<memref::DimOp>(getLoc(), source, dim));
+  return OpFoldResult(builder.getIndexAttr(sourceType.getDimSize(dim)));
 }
 
 LogicalResult FatRawBufferCastOp::verify() {
@@ -339,9 +356,9 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// ScaledExtPacked816Op
+// ScaledExtPackedMatrixOp
 //===----------------------------------------------------------------------===//
-LogicalResult ScaledExtPacked816Op::verify() {
+LogicalResult ScaledExtPackedMatrixOp::verify() {
   int blockSize = getBlockSize();
   assert(llvm::is_contained({16, 32}, blockSize) && "invalid block size");
 
@@ -372,10 +389,10 @@ LogicalResult ScaledExtPacked816Op::verify() {
   } else {
     if (is_block_16) {
       bool is_valid = ((firstScaleLane == 0) && (firstScaleByte == 0)) ||
-                      ((firstScaleLane == 1) && (firstScaleByte == 2));
+                      ((firstScaleLane == 16) && (firstScaleByte == 2));
       if (!is_valid) {
         return emitOpError("blockSize of 16 can only have (firstScaleLane, "
-                           "firstScaleByte) be (0, 0) or (1, 2) for f8.");
+                           "firstScaleByte) be (0, 0) or (16, 2) for f8.");
       }
     }
   }
@@ -593,6 +610,53 @@ LogicalResult PermlaneSwapOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// MemoryCounterWaitOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Fuse adjacent memory counter wait ops, taking the minimum value of the
+/// counters.
+struct FuseMemoryCounterWaitOp final : OpRewritePattern<MemoryCounterWaitOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(MemoryCounterWaitOp op,
+                                PatternRewriter &rewriter) const override {
+    auto next = dyn_cast<MemoryCounterWaitOp>(op->getNextNode());
+    if (!next)
+      return failure();
+
+    auto setters = {&MemoryCounterWaitOp::setLoad,
+                    &MemoryCounterWaitOp::setStore, &MemoryCounterWaitOp::setDs,
+                    &MemoryCounterWaitOp::setExp,
+                    &MemoryCounterWaitOp::setTensor};
+    auto lhsVals = {op.getLoad(), op.getStore(), op.getDs(), op.getExp(),
+                    op.getTensor()};
+    auto rhsVals = {next.getLoad(), next.getStore(), next.getDs(),
+                    next.getExp(), next.getTensor()};
+    rewriter.modifyOpInPlace(op, [&] {
+      for (auto [setter, lhs, rhs] :
+           llvm::zip_equal(setters, lhsVals, rhsVals)) {
+        if (lhs && rhs) {
+          (op.*setter)(std::min(*lhs, *rhs));
+        } else if (lhs) {
+          (op.*setter)(*lhs);
+        } else if (rhs) {
+          (op.*setter)(*rhs);
+        }
+      }
+    });
+    rewriter.eraseOp(next);
+    return success();
+  }
+};
+} // namespace
+
+void MemoryCounterWaitOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<FuseMemoryCounterWaitOp>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // GatherToLDSOp
 //===----------------------------------------------------------------------===//
 
@@ -688,17 +752,145 @@ LogicalResult TransposeLoadOp::verify() {
   };
 
   auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);
-  if (validNumElems == kValidLoadSizeMap.end()) {
+  if (validNumElems == kValidLoadSizeMap.end())
     return emitOpError("Unsupported element type size for transpose load: ")
            << elementTypeSize << " bits";
-  }
-  if (numElements != validNumElems->second) {
+
+  if (numElements != validNumElems->second)
     return emitOpError(
                "Transferring type size mismatch: expected num of elements: ")
            << validNumElems->second;
-  }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MakeDmaBaseOp
+//===----------------------------------------------------------------------===//
+
+template <typename BaseOp>
+static LogicalResult verifyBase(BaseOp op) {
+  auto ldsType = cast<MemRefType>(op.getLds().getType());
+  auto globalType = cast<MemRefType>(op.getGlobal().getType());
+  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace()))
+    return op.emitOpError(
+        "lds memref must have workgroup address space attribute.");
+  if (!hasGlobalMemorySpace(globalType.getMemorySpace()))
+    return op.emitOpError(
+        "global memref must have global address space attribute.");
+
+  Type elementType = ldsType.getElementType();
+  unsigned width = elementType.getIntOrFloatBitWidth();
+
+  if (!llvm::is_contained({8u, 16u, 32u, 64u}, width))
+    return op.emitOpError(
+               "element type must be 1, 2, 4, or 8 bytes long but type was ")
+           << width << " bits long.";
+  return success();
+}
+
+LogicalResult MakeDmaBaseOp::verify() { return verifyBase(*this); }
+
+//===----------------------------------------------------------------------===//
+// MakeGatherDmaBaseOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+TDMGatherBaseType::verify(function_ref<InFlightDiagnostic()> emitError,
+                          Type elementType, Type indexType) {
+  unsigned width = elementType.getIntOrFloatBitWidth();
+  if (!llvm::is_contained({8u, 16u, 32u, 64u}, width))
+    return emitError()
+           << "element type must be 1, 2, 4, or 8 bytes wide but type "
+           << elementType << " is " << width / 8 << " bytes wide.";
+  MLIRContext *ctx = elementType.getContext();
+  Type i16 = IntegerType::get(ctx, 32);
+  Type i32 = IntegerType::get(ctx, 16);
+  if (!llvm::is_contained({i16, i32}, indexType))
+    return emitError() << "index type must be i16 or i32 but index type is "
+                       << indexType << ".";
+  return success();
+}
+
+LogicalResult MakeGatherDmaBaseOp::verify() { return verifyBase(*this); }
+
+//===----------------------------------------------------------------------===//
+// MakeDmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeDmaDescriptorOp::verify() {
+  ArrayRef<int64_t> globalStaticStrides = getGlobalStaticStrides();
+
+  if (globalStaticStrides.empty())
+    return emitOpError("strides must not be empty.");
+  if (globalStaticStrides.back() != 1)
+    return emitOpError("strides for the innermost dimension must be 1.");
+
+  ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
+  size_t rank = globalStaticSizes.size();
+  if (rank > 5)
+    return emitOpError("tensor and tile must be at most of rank 5.");
+  if (rank != globalStaticStrides.size())
+    return emitOpError("strides and sizes must have same rank.");
+
+  ArrayRef<int64_t> sharedStaticSizes = getSharedStaticSizes();
+  if (rank != sharedStaticSizes.size())
+    return emitOpError("tensor must have same rank as tile.");
+
+  unsigned elementTypeWidth = getElementTypeWidth();
+  if (!llvm::is_contained({8u, 16u, 32u, 64u}, elementTypeWidth))
+    return emitOpError(
+               "element type width must be 1, 2, 4 or 8 bytes, but was ")
+           << elementTypeWidth << " bits long";
+
+  if (Value atomicBarrierAddress = getAtomicBarrierAddress()) {
+    auto atomicBarrierAddressType =
+        cast<MemRefType>(atomicBarrierAddress.getType());
+    bool barrierInLDS =
+        hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
+    if (!barrierInLDS)
+      return emitOpError("atomic barrier address must be in LDS.");
+  }
+
+  if (getEarlyTimeout() && !getWorkgroupMask())
+    return emitOpError(
+        "early timeout does not apply when workgroup_mask is not set.");
+  return success();
+}
+
+OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
+  SmallVector<OpFoldResult> mixedGlobalSizes(getMixedGlobalSizes());
+  SmallVector<OpFoldResult> mixedGlobalStrides(getMixedGlobalStrides());
+  SmallVector<OpFoldResult> mixedSharedSizes(getMixedSharedSizes());
+
+  if (failed(foldDynamicIndexList(mixedGlobalSizes, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)) &&
+      failed(foldDynamicIndexList(mixedGlobalStrides, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)) &&
+      failed(foldDynamicIndexList(mixedSharedSizes, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)))
+    return nullptr;
+
+  SmallVector<Value> dynamicGlobalSizes, dynamicGlobalStrides,
+      dynamicSharedSizes;
+  SmallVector<int64_t> staticGlobalSizes, staticGlobalStrides,
+      staticSharedSizes;
+
+  dispatchIndexOpFoldResults(mixedGlobalSizes, dynamicGlobalSizes,
+                             staticGlobalSizes);
+  setGlobalStaticSizes(staticGlobalSizes);
+  getGlobalDynamicSizesMutable().assign(dynamicGlobalSizes);
+
+  dispatchIndexOpFoldResults(mixedGlobalStrides, dynamicGlobalStrides,
+                             staticGlobalStrides);
+  setGlobalStaticStrides(staticGlobalStrides);
+  getGlobalDynamicStridesMutable().assign(dynamicGlobalStrides);
+
+  dispatchIndexOpFoldResults(mixedSharedSizes, dynamicSharedSizes,
+                             staticSharedSizes);
+  setSharedStaticSizes(staticSharedSizes);
+  getSharedDynamicSizesMutable().assign(dynamicSharedSizes);
+  return getResult();
 }
 
 //===----------------------------------------------------------------------===//
@@ -838,6 +1030,9 @@ void ScaledMFMAOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"

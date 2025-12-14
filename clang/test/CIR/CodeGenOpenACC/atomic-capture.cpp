@@ -23,6 +23,7 @@ void use(int x, int v, float f, HasOps ops) {
   // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[X_LOAD]], %[[V_LOAD]]) : !s32i, !cir.bool
   // CHECK-NEXT: %[[IF_COND_CAST:.*]] = builtin.unrealized_conversion_cast %[[CMP:.*]] : !cir.bool to i1
   // CHECK-NEXT: acc.atomic.capture if(%[[IF_COND_CAST]]) {
+  // CHECK-NEXT: acc.atomic.read %[[V_ALLOCA]] = %[[X_ALLOCA]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: acc.atomic.update %[[X_ALLOCA]] : !cir.ptr<!s32i> {
   // CHECK-NEXT: ^bb0(%[[X_VAR:.*]]: !s32i{{.*}}):
   // CHECK-NEXT: %[[X_VAR_ALLOC:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x_var", init]
@@ -35,7 +36,6 @@ void use(int x, int v, float f, HasOps ops) {
   // CHECK-NEXT: %[[X_VAR_LOAD:.*]] = cir.load{{.*}} %[[X_VAR_ALLOC]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: acc.yield %[[X_VAR_LOAD]] : !s32i
   // CHECK-NEXT: }
-  // CHECK-NEXT: acc.atomic.read %[[V_ALLOCA]] = %[[X_ALLOCA]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: }
 #pragma acc atomic capture if (x != v)
   v = x++;
@@ -59,6 +59,7 @@ void use(int x, int v, float f, HasOps ops) {
   v = ++x;
 
   // CHECK-NEXT: acc.atomic.capture {
+  // CHECK-NEXT: acc.atomic.read %[[V_ALLOCA]] = %[[X_ALLOCA]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: acc.atomic.update %[[X_ALLOCA]] : !cir.ptr<!s32i> {
   // CHECK-NEXT: ^bb0(%[[X_VAR:.*]]: !s32i{{.*}}):
   // CHECK-NEXT: %[[X_VAR_ALLOC:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x_var", init]
@@ -71,7 +72,6 @@ void use(int x, int v, float f, HasOps ops) {
   // CHECK-NEXT: %[[X_VAR_LOAD:.*]] = cir.load{{.*}} %[[X_VAR_ALLOC]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: acc.yield %[[X_VAR_LOAD]] : !s32i
   // CHECK-NEXT: }
-  // CHECK-NEXT: acc.atomic.read %[[V_ALLOCA]] = %[[X_ALLOCA]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: }
 #pragma acc atomic capture
   v = x--;

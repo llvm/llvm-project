@@ -7,8 +7,6 @@
 ; FIXME: We're missing canonicalizations of ISD::VP_SETCC equivalent to those
 ; for ISD::SETCC, e.g., splats aren't moved to the RHS.
 
-declare <8 x i1> @llvm.vp.icmp.v8i7(<8 x i7>, <8 x i7>, metadata, <8 x i1>, i32)
-
 define <8 x i1> @icmp_eq_vv_v8i7(<8 x i7> %va, <8 x i7> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v8i7:
 ; CHECK:       # %bb.0:
@@ -57,8 +55,6 @@ define <8 x i1> @icmp_eq_vx_swap_v8i7(<8 x i7> %va, i7 %b, <8 x i1> %m, i32 zero
   ret <8 x i1> %v
 }
 
-declare <5 x i1> @llvm.vp.icmp.v5i8(<5 x i8>, <5 x i8>, metadata, <5 x i1>, i32)
-
 define <5 x i1> @icmp_eq_vv_v5i8(<5 x i8> %va, <5 x i8> %vb, <5 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v5i8:
 ; CHECK:       # %bb.0:
@@ -92,8 +88,6 @@ define <5 x i1> @icmp_eq_vx_swap_v5i8(<5 x i8> %va, i8 %b, <5 x i1> %m, i32 zero
   %v = call <5 x i1> @llvm.vp.icmp.v5i8(<5 x i8> %vb, <5 x i8> %va, metadata !"eq", <5 x i1> %m, i32 %evl)
   ret <5 x i1> %v
 }
-
-declare <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8>, <8 x i8>, metadata, <8 x i1>, i32)
 
 define <8 x i1> @icmp_eq_vv_v8i8(<8 x i8> %va, <8 x i8> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v8i8:
@@ -587,8 +581,6 @@ define <8 x i1> @icmp_sle_vi_swap_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %e
   ret <8 x i1> %v
 }
 
-declare <256 x i1> @llvm.vp.icmp.v256i8(<256 x i8>, <256 x i8>, metadata, <256 x i1>, i32)
-
 define <256 x i1> @icmp_eq_vv_v256i8(<256 x i8> %va, <256 x i8> %vb, <256 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v256i8:
 ; CHECK:       # %bb.0:
@@ -695,8 +687,6 @@ define <256 x i1> @icmp_eq_vx_swap_v256i8(<256 x i8> %va, i8 %b, <256 x i1> %m, 
   %v = call <256 x i1> @llvm.vp.icmp.v256i8(<256 x i8> %vb, <256 x i8> %va, metadata !"eq", <256 x i1> %m, i32 %evl)
   ret <256 x i1> %v
 }
-
-declare <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32>, <8 x i32>, metadata, <8 x i1>, i32)
 
 define <8 x i1> @icmp_eq_vv_v8i32(<8 x i32> %va, <8 x i32> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v8i32:
@@ -1235,8 +1225,6 @@ define <8 x i1> @icmp_sle_vi_swap_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext 
   ret <8 x i1> %v
 }
 
-declare <64 x i1> @llvm.vp.icmp.v64i32(<64 x i32>, <64 x i32>, metadata, <64 x i1>, i32)
-
 define <64 x i1> @icmp_eq_vv_v64i32(<64 x i32> %va, <64 x i32> %vb, <64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v64i32:
 ; CHECK:       # %bb.0:
@@ -1344,8 +1332,6 @@ define <64 x i1> @icmp_eq_vx_swap_v64i32(<64 x i32> %va, i32 %b, <64 x i1> %m, i
   %v = call <64 x i1> @llvm.vp.icmp.v64i32(<64 x i32> %vb, <64 x i32> %va, metadata !"eq", <64 x i1> %m, i32 %evl)
   ret <64 x i1> %v
 }
-
-declare <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64>, <8 x i64>, metadata, <8 x i1>, i32)
 
 define <8 x i1> @icmp_eq_vv_v8i64(<8 x i64> %va, <8 x i64> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v8i64:

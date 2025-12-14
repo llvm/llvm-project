@@ -2641,7 +2641,14 @@ void OpEmitter::genInlineCreateBody(
   std::string nonBuilderStateArgs = "";
   if (!nonBuilderStateArgsList.empty()) {
     llvm::raw_string_ostream nonBuilderStateArgsOS(nonBuilderStateArgs);
-    interleaveComma(nonBuilderStateArgsList, nonBuilderStateArgsOS);
+    interleave(
+        nonBuilderStateArgsList,
+        [&](StringRef name) {
+          nonBuilderStateArgsOS << "std::forward<decltype(" << name << ")>("
+                                << name << ')';
+        },
+        [&] { nonBuilderStateArgsOS << ", "; });
+
     nonBuilderStateArgs = ", " + nonBuilderStateArgs;
   }
   if (cWithLoc)

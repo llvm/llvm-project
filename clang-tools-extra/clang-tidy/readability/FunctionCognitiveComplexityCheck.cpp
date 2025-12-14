@@ -519,7 +519,6 @@ void FunctionCognitiveComplexityCheck::registerMatchers(MatchFinder *Finder) {
 
 void FunctionCognitiveComplexityCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   FunctionASTVisitor Visitor(IgnoreMacros);
   SourceLocation Loc;
 
@@ -558,7 +557,7 @@ void FunctionCognitiveComplexityCheck::check(
     // Increase, on the other hand, can be 0.
 
     diag(Detail.Loc, Msgs[MsgId], DiagnosticIDs::Note)
-        << (unsigned)Increase << (unsigned)Detail.Nesting << 1 + Detail.Nesting;
+        << Increase << Detail.Nesting << 1 + Detail.Nesting;
   }
 }
 

@@ -35,7 +35,7 @@ struct AMDGPUImageDMaskIntrinsic {
 };
 
 #define GET_AMDGPUImageDMaskIntrinsicTable_IMPL
-#include "InstCombineTables.inc"
+#include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
 
@@ -788,7 +788,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (Exp == APFloat::IEK_NaN || Exp == APFloat::IEK_Inf)
         Exp = 0;
 
-      return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Exp));
+      return IC.replaceInstUsesWith(II,
+                                    ConstantInt::getSigned(II.getType(), Exp));
     }
 
     if (isa<PoisonValue>(Src))

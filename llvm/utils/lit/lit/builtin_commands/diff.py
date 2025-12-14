@@ -8,7 +8,6 @@ import re
 import sys
 
 import util
-from util import to_string
 
 
 class DiffFlags:
@@ -67,10 +66,9 @@ def compareTwoBinaryFiles(flags, filepaths, filelines):
         filepaths[1].encode(),
         n=flags.num_context_lines,
     )
-    diffs = [diff.decode(errors="backslashreplace") for diff in diffs]
 
     for diff in diffs:
-        sys.stdout.write(to_string(diff))
+        sys.stdout.write(diff.decode(errors="backslashreplace"))
         exitCode = 1
     return exitCode
 
@@ -117,7 +115,7 @@ def compareTwoTextFiles(flags, filepaths, filelines_bin, encoding):
         filepaths[1],
         n=flags.num_context_lines,
     ):
-        sys.stdout.write(to_string(diff))
+        sys.stdout.write(diff)
         exitCode = 1
     return exitCode
 
