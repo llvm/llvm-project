@@ -7082,11 +7082,6 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
           return true;
       }
 
-      // The legacy cost model costs non-header phis with a scalar VF as a phi,
-      // but scalar unrolled VPlans will have VPBlendRecipes which emit selects.
-      if (VF.isScalar() && isa<VPBlendRecipe>(&R))
-        return true;
-
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
       /// but the original instruction wasn't uniform-after-vectorization in the
       /// legacy cost model, the legacy cost overestimates the actual cost.
@@ -9348,7 +9343,7 @@ static InstructionCost calculateEarlyExitCost(VPCostContext &CostCtx,
 ///  2. In the case of loops with uncountable early exits, we may have to do
 ///     extra work when exiting the loop early, such as calculating the final
 ///     exit values of variables used outside the loop.
-///  3. The middle block, if expected TC <= VF.Width.
+///  3. The middle block.
 static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
                                         VectorizationFactor &VF, Loop *L,
                                         PredicatedScalarEvolution &PSE,
