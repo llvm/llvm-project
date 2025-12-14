@@ -7,91 +7,37 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPError.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
-#include "llvm/Support/JSON.h"
-#include "llvm/Support/raw_ostream.h"
 
-namespace lldb_dap {
+using namespace lldb_dap;
+using namespace lldb_dap::protocol;
 
-// "RestartRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Restarts a debug session. Clients should only call this
-//     request if the corresponding capability `supportsRestartRequest` is
-//     true.\nIf the capability is missing or has the value false, a typical
-//     client emulates `restart` by terminating the debug adapter first and then
-//     launching it anew.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "restart" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/RestartArguments"
-//       }
-//     },
-//     "required": [ "command" ]
-//   }]
-// },
-// "RestartArguments": {
-//   "type": "object",
-//   "description": "Arguments for `restart` request.",
-//   "properties": {
-//     "arguments": {
-//       "oneOf": [
-//         { "$ref": "#/definitions/LaunchRequestArguments" },
-//         { "$ref": "#/definitions/AttachRequestArguments" }
-//       ],
-//       "description": "The latest version of the `launch` or `attach`
-//       configuration."
-//     }
-//   }
-// },
-// "RestartResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to `restart` request. This is just an
-//     acknowledgement, so no body field is required."
-//   }]
-// },
-void RestartRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  if (!dap.target.GetProcess().IsValid()) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message",
-                      "Restart request received but no process was launched.");
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
+/// Restarts a debug session. Clients should only call this request if the
+/// corresponding capability `supportsRestartRequest` is true.
+/// If the capability is missing or has the value false, a typical client
+/// emulates `restart` by terminating the debug adapter first and then launching
+/// it anew.
+llvm::Error
+RestartRequestHandler::Run(const std::optional<RestartArguments> &args) const {
+  if (!dap.target.GetProcess().IsValid())
+    return llvm::make_error<DAPError>(
+        "Restart request received but no process was launched.");
 
-  const llvm::json::Object *arguments = request.getObject("arguments");
-  if (arguments) {
-    // The optional `arguments` field in RestartRequest can contain an updated
-    // version of the launch arguments. If there's one, use it.
-    if (const llvm::json::Value *restart_arguments =
-            arguments->get("arguments")) {
-      protocol::LaunchRequestArguments updated_arguments;
-      llvm::json::Path::Root root;
-      if (!fromJSON(*restart_arguments, updated_arguments, root)) {
-        response["success"] = llvm::json::Value(false);
-        EmplaceSafeString(
-            response, "message",
-            llvm::formatv("Failed to parse updated launch arguments: {0}",
-                          llvm::toString(root.getError()))
-                .str());
-        dap.SendJSON(llvm::json::Value(std::move(response)));
-        return;
-      }
-      dap.last_launch_request = updated_arguments;
+  if (args) {
+    if (std::holds_alternative<AttachRequestArguments>(args->arguments))
+      return llvm::make_error<DAPError>(
+          "Restarting an AttachRequest is not supported.");
+    if (const auto *arguments =
+            std::get_if<LaunchRequestArguments>(&args->arguments);
+        arguments) {
+      dap.last_launch_request = *arguments;
       // Update DAP configuration based on the latest copy of the launch
       // arguments.
-      dap.SetConfiguration(updated_arguments.configuration, false);
+      dap.SetConfiguration(arguments->configuration, false);
       dap.ConfigureSourceMaps();
     }
   }
@@ -117,12 +63,8 @@ void RestartRequestHandler::operator()(
 
   // FIXME: Should we run 'preRunCommands'?
   // FIXME: Should we add a 'preRestartCommands'?
-  if (llvm::Error err = LaunchProcess(*dap.last_launch_request)) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
+  if (llvm::Error err = LaunchProcess(*dap.last_launch_request))
+    return llvm::make_error<DAPError>(llvm::toString(std::move(err)));
 
   SendProcessEvent(dap, Launch);
 
@@ -130,16 +72,11 @@ void RestartRequestHandler::operator()(
   // Because we're restarting, configuration has already happened so we can
   // continue the process right away.
   if (dap.stop_at_entry) {
-    if (llvm::Error err = SendThreadStoppedEvent(dap, /*on_entry=*/true)) {
-      EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-      dap.SendJSON(llvm::json::Value(std::move(response)));
-      return;
-    }
+    if (llvm::Error err = SendThreadStoppedEvent(dap, /*on_entry=*/true))
+      return llvm::make_error<DAPError>(llvm::toString(std::move(err)));
   } else {
     dap.target.GetProcess().Continue();
   }
 
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  return llvm::Error::success();
 }
-
-} // namespace lldb_dap
