@@ -320,6 +320,13 @@ ifeq "$(MAKE_GMODULES)" "YES"
 	CXXFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
 endif
 
+# Our files use x86 AT&T assembly throughout.
+# Enable it explicitly so any local Clang preference for Intel syntax gets overriden.
+ifeq ($(CC_TYPE), clang)
+	CFLAGS += -mllvm -x86-asm-syntax=att
+	CXXFLAGS += -mllvm -x86-asm-syntax=att
+endif
+
 CFLAGS += $(CFLAGS_EXTRAS)
 CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
 # Copy common options to the linker flags (dwarf, arch. & etc).
