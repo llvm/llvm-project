@@ -16643,11 +16643,8 @@ static SDValue performANDCombine(SDNode *N,
       isa<ConstantSDNode>(N0.getOperand(1))) {
 
     EVT VT = N->getValueType(0);
-    auto *MaskC = cast<ConstantSDNode>(N1);
-    auto *ShiftC = cast<ConstantSDNode>(N0.getOperand(1));
-
-    uint64_t ShiftAmt = ShiftC->getZExtValue();
-    APInt MaskVal = MaskC->getAPIntValue();
+    uint64_t ShiftAmt = N0.getConstantOperandVal(1);
+    const APInt &MaskVal = N1->getAsAPIntVal();
     // Calculate the mask if it were applied before the shift.
     APInt InnerMask = MaskVal.lshr(ShiftAmt);
 
