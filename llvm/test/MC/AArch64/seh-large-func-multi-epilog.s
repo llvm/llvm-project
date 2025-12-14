@@ -198,7 +198,7 @@ multi_epilog:
 	.seh_save_regp x25, 192
 	stp	x27, x28, [sp, #176]
 	.seh_save_regp x27, 176
-	mov	x29, fp
+	mov	x29, sp
 	.seh_set_fp
 	.seh_endprologue
         .rept 30
@@ -210,13 +210,13 @@ multi_epilog:
 	.seh_startepilogue
 	mov	sp, x29
 	.seh_set_fp
-	stp	x27, x28, [sp, #176]
+	ldp	x27, x28, [sp, #176]
 	.seh_save_regp x27, 176
-	stp	x25, x26, [sp, #192]
+	ldp	x25, x26, [sp, #192]
 	.seh_save_regp x25, 192
-	stp	x23, x24, [sp, #208]
+	ldp	x23, x24, [sp, #208]
 	.seh_save_regp x23, 208
-	stp	x21, x22, [sp, #224]
+	ldp	x21, x22, [sp, #224]
 	.seh_save_regp x21, 224
 	ldp	x19, x20, [sp, #240]
 	.seh_save_regp x19, 240
@@ -226,11 +226,11 @@ multi_epilog:
 	ret
 // epilog2 - a subsequence at the end of prolog, can use prolog's opcodes.
 	.seh_startepilogue
-	stp	x25, x26, [sp, #192]
+	ldp	x25, x26, [sp, #192]
 	.seh_save_regp x25, 192
-	stp	x23, x24, [sp, #208]
+	ldp	x23, x24, [sp, #208]
 	.seh_save_regp x23, 208
-	stp	x21, x22, [sp, #224]
+	ldp	x21, x22, [sp, #224]
 	.seh_save_regp x21, 224
 	ldp	x19, x20, [sp, #240]
 	.seh_save_regp x19, 240
@@ -242,9 +242,9 @@ multi_epilog:
 	.seh_startepilogue
 	mov	sp, x29
 	.seh_set_fp
-	stp	x23, x24, [sp, #208]
+	ldp	x23, x24, [sp, #208]
 	.seh_save_regp x23, 208
-	stp	x21, x22, [sp, #224]
+	ldp	x21, x22, [sp, #224]
 	.seh_save_regp x21, 224
 	ldp	x19, x20, [sp, #240]
 	.seh_save_regp x19, 240
@@ -261,13 +261,13 @@ multi_epilog:
 	.seh_startepilogue
 	mov	sp, x29
 	.seh_set_fp
-	stp	x27, x28, [sp, #176]
+	ldp	x27, x28, [sp, #176]
 	.seh_save_regp x27, 176
-	stp	x25, x26, [sp, #192]
+	ldp	x25, x26, [sp, #192]
 	.seh_save_regp x25, 192
-	stp	x23, x24, [sp, #208]
+	ldp	x23, x24, [sp, #208]
 	.seh_save_regp x23, 208
-	stp	x21, x22, [sp, #224]
+	ldp	x21, x22, [sp, #224]
 	.seh_save_regp x21, 224
 	ldp	x19, x20, [sp, #240]
 	.seh_save_regp x19, 240
@@ -277,11 +277,11 @@ multi_epilog:
 	ret
 // epilog5 - same as epilog2, its start index should be: 1 + epilog2's index.
 	.seh_startepilogue
-	stp	x25, x26, [sp, #192]
+	ldp	x25, x26, [sp, #192]
 	.seh_save_regp x25, 192
-	stp	x23, x24, [sp, #208]
+	ldp	x23, x24, [sp, #208]
 	.seh_save_regp x23, 208
-	stp	x21, x22, [sp, #224]
+	ldp	x21, x22, [sp, #224]
 	.seh_save_regp x21, 224
 	ldp	x19, x20, [sp, #240]
 	.seh_save_regp x19, 240
@@ -294,9 +294,9 @@ multi_epilog:
 	.seh_startepilogue
 	mov	sp, x29
 	.seh_set_fp
-	stp	x23, x24, [sp, #208]
+	ldp	x23, x24, [sp, #208]
 	.seh_save_regp x23, 208
-	stp	x21, x22, [sp, #224]
+	ldp	x21, x22, [sp, #224]
 	.seh_save_regp x21, 224
 	ldp	x19, x20, [sp, #240]
 	.seh_save_regp x19, 240

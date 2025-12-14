@@ -1765,22 +1765,21 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return lookupValue(inst);
   }
 
+  // Convert zero-initialized aggregates to ZeroOp.
+  if (auto *aggregateZero = dyn_cast<llvm::ConstantAggregateZero>(constant)) {
+    Type type = convertType(aggregateZero->getType());
+    return ZeroOp::create(builder, loc, type).getResult();
+  }
+
   // Convert aggregate constants.
-  if (isa<llvm::ConstantAggregate>(constant) ||
-      isa<llvm::ConstantAggregateZero>(constant)) {
+  if (auto *constAgg = dyn_cast<llvm::ConstantAggregate>(constant)) {
     // Lookup the aggregate elements that have been converted before.
     SmallVector<Value> elementValues;
-    if (auto *constAgg = dyn_cast<llvm::ConstantAggregate>(constant)) {
-      elementValues.reserve(constAgg->getNumOperands());
-      for (llvm::Value *operand : constAgg->operands())
-        elementValues.push_back(lookupValue(operand));
-    }
-    if (auto *constAgg = dyn_cast<llvm::ConstantAggregateZero>(constant)) {
-      unsigned numElements = constAgg->getElementCount().getFixedValue();
-      elementValues.reserve(numElements);
-      for (unsigned i = 0, e = numElements; i != e; ++i)
-        elementValues.push_back(lookupValue(constAgg->getElementValue(i)));
-    }
+
+    elementValues.reserve(constAgg->getNumOperands());
+    for (llvm::Value *operand : constAgg->operands())
+      elementValues.push_back(lookupValue(operand));
+
     assert(llvm::count(elementValues, nullptr) == 0 &&
            "expected all elements have been converted before");
 

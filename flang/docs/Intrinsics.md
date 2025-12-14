@@ -1413,3 +1413,88 @@ This is prefixed by `STRING`, a colon and a space.
 - **Standard:** GNU extension
 - **Class:** subroutine
 - **Syntax:** `CALL PERROR(STRING)`
+
+<<<<<<< HEAD
+### Non-Standard Intrinsics: SRAND
+
+#### Description
+`SRAND` reinitializes the pseudo-random number generator called by `RAND` and `IRAND`.
+The new seed used by the generator is specified by the required argument `SEED`.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine
+- **Syntax:** `CALL SRAND(SEED)`
+
+### Non-Standard Intrinsics: IRAND
+
+#### Description
+`IRAND(FLAG)` returns a pseudo-random number from a uniform distribution between 0 and a system-dependent limit.
+If `FLAG` is 0, the next number in the current sequence is returned;
+If `FLAG` is 1, the generator is restarted by `CALL SRAND(0)`;
+If `FLAG` has any other value, it is used as a new seed with `SRAND`.
+The return value is of `INTEGER` type of kind 4.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = IRAND(I)`
+
+### Non-Standard Intrinsics: RAND
+
+#### Description
+`RAND(FLAG)` returns a pseudo-random number from a uniform distribution between 0 and 1.
+If `FLAG` is 0, the next number in the current sequence is returned;
+If `FLAG` is 1, the generator is restarted by `CALL SRAND(0)`;
+If `FLAG` has any other value, it is used as a new seed with `SRAND`.
+The return value is of `REAL` type with the default kind.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = RAND(I)`
+
+### Non-Standard Intrinsics: SHOW_DESCRIPTOR
+
+#### Description
+`SHOW_DESCRIPTOR(VAR)` prints (on the C stderr stream) a contents of a descriptor for the variable VAR,
+which can be of any type and rank, including scalars.
+Requires use of flang_debug module.
+
+Here is an example of its output:
+```
+Descriptor @ 0x7ffe506fc368:
+  base_addr 0x55944caef0f0
+  elem_len  4
+  version   20240719
+  rank      1
+  type      9 "INTEGER(kind=4)"
+  attribute 2 (allocatable)
+  extra     0
+    addendum  0
+    alloc_idx 0
+  dim[0] lower_bound 1
+         extent      5
+         sm          4
+```
+
+#### Usage and Info
+- **Standard:** flang extension
+- **Class:** subroutine
+- **Syntax:** `CALL show_descriptor(VAR)`
+
+#### Example
+```Fortran
+subroutine test
+  use flang_debug
+  implicit none
+  character(len=9) :: c = 'Hey buddy'
+  integer :: a(5)
+  call show_descriptor(c)
+  call show_descriptor(c(1:3))
+  call show_descriptor(a)
+end subroutine test
+```

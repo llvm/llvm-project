@@ -1584,6 +1584,7 @@ module std [system] {
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
       textual header "__locale_dir/support/netbsd.h"
+      textual header "__locale_dir/support/newlib.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/windows.h"
@@ -1660,7 +1661,10 @@ module std [system] {
     }
     module raw_storage_iterator               { header "__memory/raw_storage_iterator.h" }
     module shared_count                       { header "__memory/shared_count.h" }
-    module shared_ptr                         { header "__memory/shared_ptr.h" }
+    module shared_ptr                         {
+      header "__memory/shared_ptr.h"
+      export std.functional.hash
+    }
     module swap_allocator                     { header "__memory/swap_allocator.h" }
     module temp_value                         { header "__memory/temp_value.h" }
     module temporary_buffer                   {
@@ -1673,6 +1677,7 @@ module std [system] {
     }
     module unique_ptr {
       header "__memory/unique_ptr.h"
+      export std.functional.hash
     }
     module unique_temporary_buffer {
       header "__memory/unique_temporary_buffer.h"
@@ -1845,6 +1850,7 @@ module std [system] {
 
   module ranges {
     module access                         { header "__ranges/access.h" }
+    module adjacent_view                  { header "__ranges/adjacent_view.h" }
     module all                            {
       header "__ranges/all.h"
       export std.ranges.ref_view
@@ -1876,6 +1882,7 @@ module std [system] {
       header "__ranges/drop_while_view.h"
       export std.functional.bind_back
     }
+    module elements_of                    { header "__ranges/elements_of.h" }
     module elements_view                  { header "__ranges/elements_view.h" }
     module empty                          { header "__ranges/empty.h" }
     module empty_view                     { header "__ranges/empty_view.h" }
@@ -2113,6 +2120,7 @@ module std [system] {
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_size               { header "__tuple/tuple_size.h" }
+    module tuple_trasnform          { header "__tuple/tuple_transform.h" }
 
     header "tuple"
     export *
@@ -2391,6 +2399,7 @@ module std [system] {
 
     header "coroutine"
     export *
+    export std.functional.hash
   }
 } // module std
 

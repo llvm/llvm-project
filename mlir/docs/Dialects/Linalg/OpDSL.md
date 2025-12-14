@@ -311,16 +311,17 @@ An example for a rank polymorphic operation is `fill`:
 
 ```python
 @linalg_structured_op
-def fill(value=ScalarDef(T1),
-         O=TensorDef(U, output=True)):
-  O[None] = TypeFn.cast_signed(U, value)
+def fill(value=ScalarDef(T),
+         O=TensorDef(T, output=True)):
+  O[None] = value
 ```
 
-The operation sets the elements of the output tensor `O` to `value`. All
-operands are either scalars or rank zero tensors that are accessed using the
-index `None`. The operation thus performs a scalar computation that trivially
-extends to a multi-dimensional pointwise computation. As a result, we may use
-`fill` with arbitrary ranked output tensors:
+The operation sets the elements of the output tensor `O` to `value`. The value
+type must match the element type of the output tensor. All operands are either
+scalars or rank zero tensors that are accessed using the index `None`. The
+operation thus performs a scalar computation that trivially extends to a
+multi-dimensional pointwise computation. As a result, we may use `fill` with
+arbitrary ranked output tensors:
 
 ```python
 tensor_2d = tensor.EmptyOp([4, 8], f32)

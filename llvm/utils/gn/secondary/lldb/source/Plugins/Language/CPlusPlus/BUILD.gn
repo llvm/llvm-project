@@ -58,6 +58,7 @@ static_library("CPlusPlus") {
     "LibCxxVariant.cpp",
     "LibCxxVector.cpp",
     "LibStdcpp.cpp",
+    "LibStdcppSpan.cpp",
     "LibStdcppTuple.cpp",
     "LibStdcppUniquePointer.cpp",
     "MSVCUndecoratedNameParser.cpp",
