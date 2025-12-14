@@ -5889,6 +5889,7 @@ AST_MATCHER_P(FunctionDecl, hasAnyBody,
           InnerMatcher.matches(*Statement, Finder, Builder));
 }
 
+
 /// Matches compound statements where at least one substatement matches
 /// a given matcher. Also matches StmtExprs that have CompoundStmt as children.
 ///
