@@ -2795,14 +2795,20 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
 static uint64_t ComputeNumRangesMultiMemRead(
     uint64_t max_packet_size,
     llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges) {
-  // Each range is specified by two numbers (~16 ASCII characters) and one
+  // Each range is specified by two numbers (up to 16 ASCII characters) and one
   // comma.
   constexpr uint64_t range_overhead = 33;
   uint64_t current_size = 0;
   for (auto [idx, range] : llvm::enumerate(ranges)) {
     uint64_t potential_size = current_size + range.size + range_overhead;
-    if (potential_size > max_packet_size)
+    if (potential_size > max_packet_size) {
+      if (idx == 0)
+        LLDB_LOG(GetLog(GDBRLog::Process),
+                 "MultiMemRead input has a range (base = {0:x}, size = {1}) "
+                 "bigger than the maximum allowed by remote",
+                 range.base, range.size);
       return idx;
+    }
   }
   return ranges.size();
 }
@@ -2820,12 +2826,8 @@ ProcessGDBRemote::ReadMemoryRanges(
   while (!ranges.empty()) {
     uint64_t num_ranges =
         ComputeNumRangesMultiMemRead(m_max_memory_size, ranges);
-    if (num_ranges == 0) {
-      LLDB_LOG(
-          GetLog(GDBRLog::Process),
-          "MultiMemRead has a range bigger than maximum allowed by remote");
+    if (num_ranges == 0)
       return Process::ReadMemoryRanges(original_ranges, buffer);
-    }
 
     auto ranges_for_request = ranges.take_front(num_ranges);
     ranges = ranges.drop_front(num_ranges);
