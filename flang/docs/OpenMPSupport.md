@@ -34,7 +34,7 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | proc_bind clause                                           | Y      | |
-| simd construct                                             | P      | linear clause is not supported |
+| simd construct                                             | Y      | |
 | declare simd construct                                     | N      | |
 | do simd construct                                          | P      | linear clause is not supported |
 | target data construct                                      | P      | device clause not supported |
