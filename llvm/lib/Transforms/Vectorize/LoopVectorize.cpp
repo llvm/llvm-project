@@ -7922,7 +7922,8 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze:
-    return new VPWidenRecipe(*I, VPI->operands(), *VPI, *VPI, VPI->getDebugLoc());
+    return new VPWidenRecipe(*I, VPI->operands(), *VPI, *VPI,
+                             VPI->getDebugLoc());
   case Instruction::ExtractValue: {
     SmallVector<VPValue *> NewOps(VPI->operands());
     auto *EVI = cast<ExtractValueInst>(I);
