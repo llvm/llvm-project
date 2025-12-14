@@ -636,10 +636,10 @@ Value *AMDGPUCodeGenPrepareImpl::emitRsqF64(IRBuilder<> &Builder, Value *X,
 
   DenormalMode DenormMode;
   FPClassTest Interested = fcNone;
-  if (MaybeZero)
-    Interested = fcZero;
   if (MaybePosInf)
-    Interested |= fcPosInf;
+    Interested = fcPosInf;
+  if (MaybeZero)
+    Interested |= fcZero;
 
   if (Interested != fcNone) {
     KnownFPClass KnownSrc = computeKnownFPClass(X, Interested, CtxI);
