@@ -959,7 +959,7 @@ enum NodeType {
 
   /// Set rounding mode.
   /// The first operand is a chain pointer. The second specifies the required
-  /// rounding mode, encoded in the same way as used in '``GET_ROUNDING``'.
+  /// rounding mode, encoded in the same way as used in GET_ROUNDING.
   SET_ROUNDING,
 
   /// X = FP_EXTEND(Y) - Extend a smaller FP type into a larger FP type.
@@ -1569,8 +1569,21 @@ enum NodeType {
   GET_ACTIVE_LANE_MASK,
 
   // The `llvm.loop.dependence.{war, raw}.mask` intrinsics
-  // Operands: Load pointer, Store pointer, Element size
+  // Operands: Load pointer, Store pointer, Element size, Lane offset
   // Output: Mask
+  //
+  // Note: The semantics of these opcodes differ slightly from the intrinsics.
+  // Wherever "lane" (meaning lane index) occurs in the intrinsic definition, it
+  // is replaced with (lane + lane_offset) for the ISD opcode.
+  //
+  //  E.g., for LOOP_DEPENDENCE_WAR_MASK:
+  //    `elementSize * lane < (ptrB - ptrA)`
+  //  Becomes:
+  //    `elementSize * (lane + lane_offset) < (ptrB - ptrA)`
+  //
+  // This is done to allow for trivial splitting of the operation. Note: The
+  // lane offset is always a constant, for scalable masks, it is implicitly
+  // multiplied by vscale.
   LOOP_DEPENDENCE_WAR_MASK,
   LOOP_DEPENDENCE_RAW_MASK,
 

@@ -1038,8 +1038,10 @@ MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address) {
 
   // For AArch64, check if this address is part of a constant island.
   if (BC.isAArch64()) {
-    if (MCSymbol *IslandSym = getOrCreateIslandAccess(Address))
+    if (MCSymbol *IslandSym = getOrCreateIslandAccess(Address)) {
+      Labels[Offset] = IslandSym;
       return IslandSym;
+    }
   }
 
   if (Offset == getSize())
@@ -1692,7 +1694,7 @@ bool BinaryFunction::scanExternalRefs() {
       // Get a reference symbol for the function when address is a valid code
       // reference.
       BranchTargetSymbol =
-          BC.handleExternalBranchTarget(TargetAddress, *TargetFunction);
+          BC.handleExternalBranchTarget(TargetAddress, *this, *TargetFunction);
       if (!BranchTargetSymbol)
         continue;
     }
@@ -1898,6 +1900,36 @@ bool BinaryFunction::scanExternalRefs() {
     BC.outs() << "BOLT-INFO: failed to scan refs for  " << *this << '\n';
 
   return Success;
+}
+
+bool BinaryFunction::validateInternalBranches() {
+  if (!isSimple() || TrapsOnEntry)
+    return true;
+
+  for (const auto &KV : Labels) {
+    MCSymbol *Label = KV.second;
+    if (getSecondaryEntryPointSymbol(Label))
+      continue;
+
+    const uint32_t Offset = KV.first;
+    // Skip empty functions and out-of-bounds offsets,
+    // as they may not be disassembled.
+    if (!Offset || (Offset > getSize()))
+      continue;
+
+    if (!getInstructionAtOffset(Offset) ||
+        isInConstantIsland(getAddress() + Offset)) {
+      BC.errs() << "BOLT-WARNING: corrupted control flow detected in function "
+                << *this << ": an internal branch/call targets an invalid "
+                << "instruction at address 0x"
+                << Twine::utohexstr(getAddress() + Offset)
+                << "; ignoring this function\n";
+      setIgnored();
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void BinaryFunction::postProcessEntryPoints() {
@@ -4795,6 +4827,11 @@ bool BinaryFunction::isAArch64Veneer() const {
   }
 
   return true;
+}
+
+bool BinaryFunction::isPossibleVeneer() const {
+  return BC.isAArch64() &&
+         (isAArch64Veneer() || getOneName().starts_with("__AArch64"));
 }
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
