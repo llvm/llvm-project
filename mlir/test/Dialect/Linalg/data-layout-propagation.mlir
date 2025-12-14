@@ -1651,22 +1651,16 @@ func.func @test_dynamic_unpack_pad(%arg0: tensor<?x4x8xf32>, %dim: index) -> ten
   return %pad : tensor<?x32xf32>
 }
 
-// CHECK-DAG:  #[[$MAP:.+]] = affine_map<()[s0] -> (s0 + 5)>
 // CHECK-LABEL: func.func @test_dynamic_unpack_pad
 // CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:    %[[DIM:[a-zA-Z0-9]+]]
 // CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
 // CHECK-DAG:     %[[CST:.+]] = arith.constant 0.000000e+00 : f32
-// CHECK:         %[[EMPTY0:.+]] = tensor.empty(%[[DIM]])
-// CHECK:         %[[UNPACK0:.+]] = linalg.unpack %[[ARG0]]
-// CHECK-SAME:      inner_dims_pos = [1] inner_tiles = [8]
-// CHECK-SAME:      into %[[EMPTY0]]
 // CHECK:         %[[PAD:.+]] = tensor.pad %[[ARG0]] low[2, 0, 0] high[3, 0, 0]
 // CHECK:           tensor.yield %[[CST]]
-// CHECK:         %[[DIM_VAL:.+]] = tensor.dim %[[UNPACK0]], %[[C0]]
-// CHECK:         %[[NEW_DIM:.+]] = affine.apply #[[$MAP]]()[%[[DIM_VAL]]]
-// CHECK:         %[[EMPTY1:.+]] = tensor.empty(%[[NEW_DIM]])
-// CHECK:         %[[UNPACK1:.+]] = linalg.unpack %[[PAD]]
+// CHECK:         %[[DIM_VAL:.+]] = tensor.dim %[[PAD]], %[[C0]]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty(%[[DIM_VAL]])
+// CHECK:         %[[UNPACK:.+]] = linalg.unpack %[[PAD]]
 // CHECK-SAME:      inner_dims_pos = [1] inner_tiles = [8]
-// CHECK-SAME:      into %[[EMPTY1]]
-// CHECK:         return %[[UNPACK1]]
+// CHECK-SAME:      into %[[EMPTY]]
+// CHECK:         return %[[UNPACK]]

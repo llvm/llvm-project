@@ -1309,22 +1309,10 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
                                           paddingVal, padOp.getNofold());
 
     // Inject the linalg.unpack right after the packed padOp.
-    SmallVector<OpFoldResult> sourceSizes =
-        tensor::getMixedSizes(rewriter, loc, unpackOp);
-    SmallVector<OpFoldResult> originalLowPad = padOp.getMixedLowPad();
-    SmallVector<OpFoldResult> originalHighPad = padOp.getMixedHighPad();
-
-    SmallVector<OpFoldResult> outputSizes;
-    AffineExpr d0, d1, d2;
-    bindDims(rewriter.getContext(), d0, d1, d2);
-    AffineExpr sumExpr = d0 + d1 + d2;
-    for (size_t i = 0; i < sourceSizes.size(); ++i) {
-      outputSizes.push_back(affine::makeComposedFoldedAffineApply(
-          rewriter, loc, sumExpr,
-          {sourceSizes[i], originalLowPad[i], originalHighPad[i]}));
-    }
-    Value outputUnPack = tensor::EmptyOp::create(
-        rewriter, loc, outputSizes, padOp.getResultType().getElementType());
+    // Compute the unpacked output size directly from the padded packed tensor.
+    Value outputUnPack = linalg::UnPackOp::createDestinationTensor(
+        rewriter, loc, newPadOp.getResult(), unpackOp.getMixedTiles(),
+        innerDimsPos, outerDimsPerm);
 
     Value replacement = linalg::UnPackOp::create(
         rewriter, loc, newPadOp.getResult(), outputUnPack, innerDimsPos,
