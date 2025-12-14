@@ -298,7 +298,7 @@ class Doc8LintHelper(LintHelper):
     def instructions(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
         return f"doc8 -q {' '.join(files_to_lint)}"
 
-    def filter_changed_files(self, changed_files: Sequence[str]) -> Sequence[str]:
+    def filter_changed_files(self, changed_files: Iterable[str]) -> Sequence[str]:
         filtered_files: List[str] = []
         for filepath in changed_files:
             _, ext = os.path.splitext(filepath)
@@ -345,8 +345,7 @@ class Doc8LintHelper(LintHelper):
 
         if parts:
             return "\n\n".join(parts)
-        else:
-            return f"doc8 exited with return code {proc.returncode} but no output."
+        return f"doc8 exited with return code {proc.returncode} but no output."
 
 
 ALL_LINTERS = (ClangTidyLintHelper(), Doc8LintHelper())
