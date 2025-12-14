@@ -3,15 +3,16 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefix=ISA
 
 define void @nested_inf_loop(i1 %0, i1 %1) {
-; OPT-LABEL: @nested_inf_loop(
-; OPT-NEXT:  BB:
-; OPT-NEXT:    br label [[BB1:%.*]]
-; OPT:       BB1:
-; OPT-NEXT:    [[BRMERGE:%.*]] = select i1 [[TMP0:%.*]], i1 true, i1 [[TMP1:%.*]]
-; OPT-NEXT:    br i1 [[BRMERGE]], label [[BB1]], label [[INFLOOP:%.*]]
-; OPT:       infloop:
-; OPT-NEXT:    br i1 true, label [[INFLOOP]], label [[DUMMYRETURNBLOCK:%.*]]
-; OPT:       DummyReturnBlock:
+; OPT-LABEL: define void @nested_inf_loop(
+; OPT-SAME: i1 [[TMP0:%.*]], i1 [[TMP1:%.*]]) {
+; OPT-NEXT:  [[BB:.*:]]
+; OPT-NEXT:    br label %[[BB1:.*]]
+; OPT:       [[BB1]]:
+; OPT-NEXT:    [[BRMERGE:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+; OPT-NEXT:    br i1 [[BRMERGE]], label %[[BB1]], label %[[INFLOOP:.*]]
+; OPT:       [[INFLOOP]]:
+; OPT-NEXT:    br i1 true, label %[[INFLOOP]], label %[[DUMMYRETURNBLOCK:.*]]
+; OPT:       [[DUMMYRETURNBLOCK]]:
 ; OPT-NEXT:    ret void
 ;
 ; ISA-LABEL: nested_inf_loop:
@@ -62,4 +63,85 @@ BB4:
 
 BB3:
   br label %BB1
+}
+
+define void @nested_inf_loop_callbr(i32 %0, i32 %1) {
+; OPT-LABEL: define void @nested_inf_loop_callbr(
+; OPT-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
+; OPT-NEXT:  [[BB:.*:]]
+; OPT-NEXT:    callbr void asm "", ""()
+; OPT-NEXT:            to label %[[BB1:.*]] []
+; OPT:       [[BB1]]:
+; OPT-NEXT:    callbr void asm "", "r,!i"(i32 [[TMP0]])
+; OPT-NEXT:            to label %[[BB3:.*]] [label %BB2]
+; OPT:       [[BB2:.*:]]
+; OPT-NEXT:    callbr void asm "", ""()
+; OPT-NEXT:            to label %[[BB4:.*]] []
+; OPT:       [[BB4]]:
+; OPT-NEXT:    br i1 true, label %[[TRANSITIONBLOCK:.*]], label %[[DUMMYRETURNBLOCK:.*]]
+; OPT:       [[TRANSITIONBLOCK]]:
+; OPT-NEXT:    callbr void asm "", "r,!i"(i32 [[TMP1]])
+; OPT-NEXT:            to label %[[BB3]] [label %BB4]
+; OPT:       [[BB3]]:
+; OPT-NEXT:    callbr void asm "", ""()
+; OPT-NEXT:            to label %[[BB1]] []
+; OPT:       [[DUMMYRETURNBLOCK]]:
+; OPT-NEXT:    ret void
+;
+; ISA-LABEL: nested_inf_loop_callbr:
+; ISA:       ; %bb.0: ; %BB
+; ISA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; ISA-NEXT:    ;;#ASMSTART
+; ISA-NEXT:    ;;#ASMEND
+; ISA-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; ISA-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; ISA-NEXT:  .LBB1_1: ; %BB1
+; ISA-NEXT:    ; =>This Inner Loop Header: Depth=1
+; ISA-NEXT:    ;;#ASMSTART
+; ISA-NEXT:    ;;#ASMEND
+; ISA-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
+; ISA-NEXT:    s_and_b64 s[8:9], s[4:5], exec
+; ISA-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
+; ISA-NEXT:  .LBB1_2: ; %BB3
+; ISA-NEXT:    ; in Loop: Header=BB1_1 Depth=1
+; ISA-NEXT:    ;;#ASMSTART
+; ISA-NEXT:    ;;#ASMEND
+; ISA-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
+; ISA-NEXT:    s_and_b64 s[8:9], s[6:7], exec
+; ISA-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; ISA-NEXT:    s_branch .LBB1_1
+; ISA-NEXT:  .LBB1_3: ; Inline asm indirect target
+; ISA-NEXT:    ; %BB2
+; ISA-NEXT:    ; in Loop: Header=BB1_1 Depth=1
+; ISA-NEXT:    ; Label of block must be emitted
+; ISA-NEXT:    ;;#ASMSTART
+; ISA-NEXT:    ;;#ASMEND
+; ISA-NEXT:    s_mov_b64 s[6:7], -1
+; ISA-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
+; ISA-NEXT:    s_cbranch_execz .LBB1_5
+; ISA-NEXT:  ; %bb.4: ; %TransitionBlock.target.BB3
+; ISA-NEXT:    ; in Loop: Header=BB1_1 Depth=1
+; ISA-NEXT:    s_xor_b64 s[6:7], exec, -1
+; ISA-NEXT:  .LBB1_5: ; %loop.exit.guard
+; ISA-NEXT:    ; in Loop: Header=BB1_1 Depth=1
+; ISA-NEXT:    s_or_b64 exec, exec, s[8:9]
+; ISA-NEXT:    s_and_b64 vcc, exec, s[6:7]
+; ISA-NEXT:    s_mov_b64 s[6:7], 0
+; ISA-NEXT:    s_cbranch_vccz .LBB1_2
+; ISA-NEXT:  ; %bb.6: ; %DummyReturnBlock
+; ISA-NEXT:    s_setpc_b64 s[30:31]
+BB:
+  callbr void asm "", ""() to label %BB1 []
+
+BB1:
+  callbr void asm "", "r,!i"(i32 %0) to label %BB3 [label %BB2]
+
+BB2:
+  callbr void asm "", ""() to label %BB4 []
+
+BB4:
+  callbr void asm "", "r,!i"(i32 %1) to label %BB3 [label %BB4]
+
+BB3:
+  callbr void asm "", ""() to label %BB1 []
 }

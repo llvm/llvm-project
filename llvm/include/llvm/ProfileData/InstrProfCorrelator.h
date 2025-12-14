@@ -13,6 +13,7 @@
 #define LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -24,7 +25,6 @@
 #include <vector>
 
 namespace llvm {
-class DWARFContext;
 class DWARFDie;
 namespace object {
 class ObjectFile;

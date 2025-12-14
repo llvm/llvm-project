@@ -192,7 +192,7 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK:       LV(REG): VF = 16
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: Generic::ScalarRC, 9 registers
-; CHECK-NEXT:  LV(REG): RegisterClass: Generic::VectorRC, 24 registers
+; CHECK-NEXT:  LV(REG): RegisterClass: Generic::VectorRC, 6 registers
 ; CHECK-NEXT:  LV(REG): Found invariant usage: 1 item
 entry:
   br label %for.body
@@ -247,4 +247,31 @@ exit:                                        ; preds = %for.body
   %result1 = add nsw i32 %add.a2, %add.a3
   %result = add nsw i32 %result0, %result1
   ret i32 %result
+}
+
+define i64 @loop_reduction_and_store_last_element(ptr %src, ptr writeonly %dst) {
+; CHECK-LABEL: LV: Checking a loop in 'loop_reduction_and_store_last_element'
+; CHECK:       LV(REG): VF = 16
+; CHECK-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-NEXT:  LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
+; CHECK-NEXT:  LV(REG): RegisterClass: Generic::VectorRC, 16 registers
+; CHECK-NEXT:  LV(REG): Found invariant usage: 1 item
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
+  %red = phi i64 [ 0, %entry ], [ %red.next, %loop ]
+  %ptr = phi ptr [ %src, %entry ], [ %ptr.next, %loop ]
+  %iv.next = add nuw i32 %iv, 1
+  %ptr.next = getelementptr i8, ptr %ptr, i64 1
+  store ptr %ptr, ptr %dst, align 8
+  %val = load i8, ptr %ptr, align 1
+  %val.ext = zext i8 %val to i64
+  %red.next = or i64 %red, %val.ext
+  %ec = icmp eq i32 %iv.next, 1000
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i64 %red.next
 }

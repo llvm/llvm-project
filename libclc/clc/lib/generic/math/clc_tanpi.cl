@@ -12,7 +12,6 @@
 #include <clc/math/clc_fabs.h>
 #include <clc/math/clc_native_recip.h>
 #include <clc/math/clc_sincos_helpers.h>
-#include <clc/math/clc_sincos_piby4.h>
 #include <clc/math/math.h>
 
 #define __CLC_BODY <clc_tanpi.inc>

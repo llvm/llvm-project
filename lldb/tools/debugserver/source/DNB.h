@@ -105,6 +105,9 @@ nub_bool_t DNBProcessMemoryDeallocate(nub_process_t pid,
                                       nub_addr_t addr) DNB_EXPORT;
 int DNBProcessMemoryRegionInfo(nub_process_t pid, nub_addr_t addr,
                                DNBRegionInfo *region_info) DNB_EXPORT;
+nub_bool_t DNBProcessGetMemoryTags(nub_process_t pid, nub_addr_t addr,
+                                   nub_size_t size,
+                                   std::vector<uint8_t> &tags) DNB_EXPORT;
 std::string
 DNBProcessGetProfileData(nub_process_t pid,
                          DNBProfileDataScanType scanType) DNB_EXPORT;

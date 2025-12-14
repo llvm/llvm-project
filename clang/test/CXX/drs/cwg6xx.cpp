@@ -1241,7 +1241,7 @@ namespace cwg686 { // cwg686: 3.0
 #endif
     struct N {
       operator struct O{}(){};
-      // expected-error@-1 {{'N::O' cannot be defined in a type specifier}}
+      // expected-error@-1 {{'cwg686::f()::N::O' cannot be defined in a type specifier}}
     };
     try {}
     catch (struct P *) {}

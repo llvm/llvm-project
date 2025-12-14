@@ -14,7 +14,7 @@
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
-namespace internal {
+namespace clang_vector {
 
 // Exploit the underlying integer representation to do a variable shift.
 LIBC_INLINE constexpr cpp::simd_mask<char> shift_mask(cpp::simd_mask<char> m,
@@ -24,8 +24,7 @@ LIBC_INLINE constexpr cpp::simd_mask<char> shift_mask(cpp::simd_mask<char> m,
   return cpp::bit_cast<cpp::simd_mask<char>>(r);
 }
 
-[[clang::no_sanitize("address")]] LIBC_INLINE size_t
-string_length(const char *src) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE size_t string_length(const char *src) {
   constexpr cpp::simd<char> null_byte = cpp::splat('\0');
 
   size_t alignment = alignof(cpp::simd<char>);
@@ -47,9 +46,8 @@ string_length(const char *src) {
              cpp::find_first_set(mask);
   }
 }
-} // namespace internal
+} // namespace clang_vector
 
-namespace string_length_impl = internal;
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_INLINE_STRLEN_H

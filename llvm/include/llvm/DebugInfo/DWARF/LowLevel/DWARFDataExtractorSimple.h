@@ -179,6 +179,7 @@ public:
 
 class DWARFDataExtractorSimple
     : public DWARFDataExtractorBase<DWARFDataExtractorSimple> {
+public:
   using DWARFDataExtractorBase::DWARFDataExtractorBase;
 
   LLVM_ABI uint64_t getRelocatedValueImpl(uint32_t Size, uint64_t *Off,

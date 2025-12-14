@@ -880,11 +880,13 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   // zext(bool) + C -> bool ? C + 1 : C
   if (match(Op0, m_ZExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
-    return createSelectInst(X, InstCombiner::AddOne(Op1C), Op1);
+    return createSelectInstWithUnknownProfile(X, InstCombiner::AddOne(Op1C),
+                                              Op1);
   // sext(bool) + C -> bool ? C - 1 : C
   if (match(Op0, m_SExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
-    return createSelectInst(X, InstCombiner::SubOne(Op1C), Op1);
+    return createSelectInstWithUnknownProfile(X, InstCombiner::SubOne(Op1C),
+                                              Op1);
 
   // ~X + C --> (C-1) - X
   if (match(Op0, m_Not(m_Value(X)))) {
@@ -2758,21 +2760,34 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // Optimize pointer differences into the same array into a size.  Consider:
   //  &A[10] - &A[0]: we should compile this to "10".
   Value *LHSOp, *RHSOp;
-  if (match(Op0, m_PtrToInt(m_Value(LHSOp))) &&
-      match(Op1, m_PtrToInt(m_Value(RHSOp))))
+  if (match(Op0, m_PtrToIntOrAddr(m_Value(LHSOp))) &&
+      match(Op1, m_PtrToIntOrAddr(m_Value(RHSOp))))
     if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType(),
                                                I.hasNoUnsignedWrap()))
       return replaceInstUsesWith(I, Res);
 
   // trunc(p)-trunc(q) -> trunc(p-q)
-  if (match(Op0, m_Trunc(m_PtrToInt(m_Value(LHSOp)))) &&
-      match(Op1, m_Trunc(m_PtrToInt(m_Value(RHSOp)))))
+  if (match(Op0, m_Trunc(m_PtrToIntOrAddr(m_Value(LHSOp)))) &&
+      match(Op1, m_Trunc(m_PtrToIntOrAddr(m_Value(RHSOp)))))
     if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType(),
                                                /* IsNUW */ false))
       return replaceInstUsesWith(I, Res);
 
-  if (match(Op0, m_ZExt(m_PtrToIntSameSize(DL, m_Value(LHSOp)))) &&
-      match(Op1, m_ZExtOrSelf(m_PtrToInt(m_Value(RHSOp))))) {
+  auto MatchSubOfZExtOfPtrToIntOrAddr = [&]() {
+    if (match(Op0, m_ZExt(m_PtrToIntSameSize(DL, m_Value(LHSOp)))) &&
+        match(Op1, m_ZExt(m_PtrToIntSameSize(DL, m_Value(RHSOp)))))
+      return true;
+    if (match(Op0, m_ZExt(m_PtrToAddr(m_Value(LHSOp)))) &&
+        match(Op1, m_ZExt(m_PtrToAddr(m_Value(RHSOp)))))
+      return true;
+    // Special case for non-canonical ptrtoint in constant expression,
+    // where the zext has been folded into the ptrtoint.
+    if (match(Op0, m_ZExt(m_PtrToIntSameSize(DL, m_Value(LHSOp)))) &&
+        match(Op1, m_PtrToInt(m_Value(RHSOp))))
+      return true;
+    return false;
+  };
+  if (MatchSubOfZExtOfPtrToIntOrAddr()) {
     if (auto *GEP = dyn_cast<GEPOperator>(LHSOp)) {
       if (GEP->getPointerOperand() == RHSOp) {
         if (GEP->hasNoUnsignedWrap() || GEP->hasNoUnsignedSignedWrap()) {

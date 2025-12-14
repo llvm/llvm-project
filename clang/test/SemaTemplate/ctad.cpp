@@ -104,3 +104,15 @@ namespace ConvertDeducedTemplateArgument {
 
   auto x = C(D<A::B>());
 }
+
+namespace pr165560 {
+template <class T, class> struct S {
+  using A = T;
+  template <class> struct I { // expected-note{{candidate function template not viable: requires 1 argument, but 0 were provided}} \
+                              // expected-note{{implicit deduction guide declared as 'template <class> I(pr165560::S<int, int>::I<type-parameter-0-0>) -> pr165560::S<int, int>::I<type-parameter-0-0>'}}
+    I(typename A::F) {} // expected-error{{type 'A' (aka 'int') cannot be used prior to '::' because it has no members}}
+  };
+};
+S<int, int>::I i; // expected-error{{no viable constructor or deduction guide for deduction of template arguments of 'S<int, int>::I'}} \
+                  // expected-note{{while building implicit deduction guide first needed here}}
+}

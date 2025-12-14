@@ -19,14 +19,10 @@
 
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-
-#define DEBUG_TYPE "ipt"
-STATISTIC(NumInstScanned, "Number of insts scanned while updating ibt");
 
 #ifndef NDEBUG
 static cl::opt<bool> ExpensiveAsserts(
@@ -50,7 +46,6 @@ const Instruction *InstructionPrecedenceTracking::getFirstSpecialInstruction(
   auto [It, Inserted] = FirstSpecialInsts.try_emplace(BB);
   if (Inserted) {
     for (const auto &I : *BB) {
-      NumInstScanned++;
       if (isSpecialInstruction(&I)) {
         It->second = &I;
         break;

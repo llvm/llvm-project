@@ -7,15 +7,11 @@
 
 @gv.fptr0 = external hidden unnamed_addr addrspace(4) constant ptr, align 4
 
-; GCN-LABEL: unreachable:
-; Function info:
-; codeLenInByte = 4
 define internal fastcc void @unreachable() {
   %fptr = load ptr, ptr addrspace(4) @gv.fptr0
   call void %fptr()
   unreachable
 }
-
 
 ; GCN-LABEL: entry:
 ; GCN-NOT: s_swappc_b64

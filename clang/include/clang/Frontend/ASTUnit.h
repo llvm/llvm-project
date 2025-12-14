@@ -22,12 +22,14 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Frontend/PrecompiledPreamble.h"
+#include "clang/Frontend/StandaloneDiagnostic.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Serialization/ASTBitCodes.h"
-#include "clang/Frontend/PrecompiledPreamble.h"
+#include "clang/Serialization/ASTWriter.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -36,6 +38,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Bitstream/BitstreamWriter.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -88,25 +91,6 @@ enum class CaptureDiagsKind { None, All, AllWithoutNonErrorsFromIncludes };
 
 /// Utility class for loading a ASTContext from an AST file.
 class ASTUnit {
-public:
-  struct StandaloneFixIt {
-    std::pair<unsigned, unsigned> RemoveRange;
-    std::pair<unsigned, unsigned> InsertFromRange;
-    std::string CodeToInsert;
-    bool BeforePreviousInsertions;
-  };
-
-  struct StandaloneDiagnostic {
-    unsigned ID;
-    DiagnosticsEngine::Level Level;
-    std::string Message;
-    std::string Filename;
-    unsigned LocOffset;
-    std::vector<std::pair<unsigned, unsigned>> Ranges;
-    std::vector<StandaloneFixIt> FixIts;
-  };
-
-private:
   std::unique_ptr<LangOptions> LangOpts;
   std::unique_ptr<CodeGenOptions> CodeGenOpts;
   // FIXME: The documentation on \c LoadFrom* member functions states that the
@@ -129,7 +113,15 @@ private:
   bool HadModuleLoaderFatalFailure = false;
   bool StorePreamblesInMemory = false;
 
-  struct ASTWriterData;
+  /// Utility struct for managing ASTWriter and its associated data streams.
+  struct ASTWriterData {
+    SmallString<128> Buffer;
+    llvm::BitstreamWriter Stream;
+    ASTWriter Writer;
+
+    ASTWriterData(ModuleCache &ModCache, const CodeGenOptions &CGOpts)
+        : Stream(Buffer), Writer(Stream, Buffer, ModCache, CGOpts, {}) {}
+  };
   std::unique_ptr<ASTWriterData> WriterData;
 
   FileSystemOptions FileSystemOpts;
@@ -270,11 +262,6 @@ private:
 
   static void ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                              ASTUnit &AST, CaptureDiagsKind CaptureDiagnostics);
-
-  void TranslateStoredDiagnostics(FileManager &FileMgr,
-                                  SourceManager &SrcMan,
-                      const SmallVectorImpl<StandaloneDiagnostic> &Diags,
-                            SmallVectorImpl<StoredDiagnostic> &Out);
 
   void clearFileLevelDecls();
 
@@ -489,6 +476,11 @@ public:
     return *LangOpts;
   }
 
+  const CodeGenOptions &getCodeGenOpts() const {
+    assert(CodeGenOpts && "ASTUnit does not have codegen options");
+    return *CodeGenOpts;
+  }
+
   const HeaderSearchOptions &getHeaderSearchOpts() const {
     assert(HSOpts && "ASTUnit does not have header search options");
     return *HSOpts;
@@ -497,6 +489,11 @@ public:
   const PreprocessorOptions &getPreprocessorOpts() const {
     assert(PPOpts && "ASTUnit does not have preprocessor options");
     return *PPOpts;
+  }
+
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVirtualFileSystemPtr() {
+    // FIXME: Don't defer VFS ownership to the FileManager.
+    return FileMgr->getVirtualFileSystemPtr();
   }
 
   const FileManager &getFileManager() const { return *FileMgr; }
@@ -829,65 +826,24 @@ public:
       bool IncludeBriefCommentsInCodeCompletion = false,
       bool UserFilesAreVolatile = false);
 
-  /// LoadFromCommandLine - Create an ASTUnit from a vector of command line
-  /// arguments, which must specify exactly one source file.
-  ///
-  /// \param ArgBegin - The beginning of the argument vector.
-  ///
-  /// \param ArgEnd - The end of the argument vector.
-  ///
-  /// \param PCHContainerOps - The PCHContainerOperations to use for loading and
-  /// creating modules.
-  ///
-  /// \param Diags - The diagnostics engine to use for reporting errors; its
-  /// lifetime is expected to extend past that of the returned ASTUnit.
-  ///
-  /// \param ResourceFilesPath - The path to the compiler resource files.
-  ///
-  /// \param StorePreamblesInMemory - Whether to store PCH in memory. If false,
-  /// PCH are stored in temporary files.
-  ///
-  /// \param PreambleStoragePath - The path to a directory, in which to create
-  /// temporary PCH files. If empty, the default system temporary directory is
-  /// used. This parameter is ignored if \p StorePreamblesInMemory is true.
-  ///
-  /// \param ModuleFormat - If provided, uses the specific module format.
-  ///
-  /// \param ErrAST - If non-null and parsing failed without any AST to return
-  /// (e.g. because the PCH could not be loaded), this accepts the ASTUnit
-  /// mainly to allow the caller to see the diagnostics.
-  ///
-  /// \param VFS - A llvm::vfs::FileSystem to be used for all file accesses.
-  /// Note that preamble is saved to a temporary directory on a RealFileSystem,
-  /// so in order for it to be loaded correctly, VFS should have access to
-  /// it(i.e., be an overlay over RealFileSystem). RealFileSystem will be used
-  /// if \p VFS is nullptr.
-  ///
-  // FIXME: Move OnlyLocalDecls, UseBumpAllocator to setters on the ASTUnit, we
-  // shouldn't need to specify them at construction time.
-  static std::unique_ptr<ASTUnit> LoadFromCommandLine(
+  friend std::unique_ptr<ASTUnit> CreateASTUnitFromCommandLine(
       const char **ArgBegin, const char **ArgEnd,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       std::shared_ptr<DiagnosticOptions> DiagOpts,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
-      bool StorePreamblesInMemory = false,
-      StringRef PreambleStoragePath = StringRef(), bool OnlyLocalDecls = false,
-      CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
-      ArrayRef<RemappedFile> RemappedFiles = {},
-      bool RemappedFilesKeepOriginalName = true,
-      unsigned PrecompilePreambleAfterNParses = 0,
-      TranslationUnitKind TUKind = TU_Complete,
-      bool CacheCodeCompletionResults = false,
-      bool IncludeBriefCommentsInCodeCompletion = false,
-      bool AllowPCHWithCompilerErrors = false,
-      SkipFunctionBodiesScope SkipFunctionBodies =
-          SkipFunctionBodiesScope::None,
-      bool SingleFileParse = false, bool UserFilesAreVolatile = false,
-      bool ForSerialization = false,
-      bool RetainExcludedConditionalBlocks = false,
-      std::optional<StringRef> ModuleFormat = std::nullopt,
-      std::unique_ptr<ASTUnit> *ErrAST = nullptr,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
+      bool StorePreamblesInMemory, StringRef PreambleStoragePath,
+      bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
+      ArrayRef<ASTUnit::RemappedFile> RemappedFiles,
+      bool RemappedFilesKeepOriginalName,
+      unsigned PrecompilePreambleAfterNParses, TranslationUnitKind TUKind,
+      bool CacheCodeCompletionResults,
+      bool IncludeBriefCommentsInCodeCompletion,
+      bool AllowPCHWithCompilerErrors,
+      SkipFunctionBodiesScope SkipFunctionBodies, bool SingleFileParse,
+      bool UserFilesAreVolatile, bool ForSerialization,
+      bool RetainExcludedConditionalBlocks,
+      std::optional<StringRef> ModuleFormat, std::unique_ptr<ASTUnit> *ErrAST,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS);
 
   /// Reparse the source files using the same command-line options that
   /// were originally used to produce this translation unit.
@@ -956,6 +912,44 @@ public:
   ///
   /// \returns True if an error occurred, false otherwise.
   bool serialize(raw_ostream &OS);
+};
+
+/// Diagnostic consumer that saves each diagnostic it is given.
+class FilterAndStoreDiagnosticConsumer : public DiagnosticConsumer {
+  SmallVectorImpl<StoredDiagnostic> *StoredDiags;
+  SmallVectorImpl<StandaloneDiagnostic> *StandaloneDiags;
+  bool CaptureNonErrorsFromIncludes = true;
+  const LangOptions *LangOpts = nullptr;
+  SourceManager *SourceMgr = nullptr;
+
+public:
+  FilterAndStoreDiagnosticConsumer(
+      SmallVectorImpl<StoredDiagnostic> *StoredDiags,
+      SmallVectorImpl<StandaloneDiagnostic> *StandaloneDiags,
+      bool CaptureNonErrorsFromIncludes);
+
+  void BeginSourceFile(const LangOptions &LangOpts,
+                       const Preprocessor *PP = nullptr) override;
+
+  void HandleDiagnostic(DiagnosticsEngine::Level Level,
+                        const Diagnostic &Info) override;
+};
+
+/// RAII object that optionally captures and filters diagnostics, if
+/// there is no diagnostic client to capture them already.
+class CaptureDroppedDiagnostics {
+  DiagnosticsEngine &Diags;
+  FilterAndStoreDiagnosticConsumer Client;
+  DiagnosticConsumer *PreviousClient = nullptr;
+  std::unique_ptr<DiagnosticConsumer> OwningPreviousClient;
+
+public:
+  CaptureDroppedDiagnostics(
+      CaptureDiagsKind CaptureDiagnostics, DiagnosticsEngine &Diags,
+      SmallVectorImpl<StoredDiagnostic> *StoredDiags,
+      SmallVectorImpl<StandaloneDiagnostic> *StandaloneDiags);
+
+  ~CaptureDroppedDiagnostics();
 };
 
 } // namespace clang

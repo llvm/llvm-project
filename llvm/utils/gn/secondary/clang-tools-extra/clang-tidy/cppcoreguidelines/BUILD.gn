@@ -33,7 +33,7 @@ static_library("cppcoreguidelines") {
     "OwningMemoryCheck.cpp",
     "PreferMemberInitializerCheck.cpp",
     "ProBoundsArrayToPointerDecayCheck.cpp",
-    "ProBoundsAvoidUncheckedContainerAccess.cpp",
+    "ProBoundsAvoidUncheckedContainerAccessCheck.cpp",
     "ProBoundsConstantArrayIndexCheck.cpp",
     "ProBoundsPointerArithmeticCheck.cpp",
     "ProTypeConstCastCheck.cpp",

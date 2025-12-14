@@ -1,7 +1,10 @@
 {
   "string": {
-    "LIBC_CONF_STRING_UNSAFE_WIDE_READ": {
-      "value": false
+    "LIBC_CONF_STRING_LENGTH_IMPL": {
+      "value": "element"
+    },
+    "LIBC_CONF_FIND_FIRST_CHARACTER_IMPL": {
+      "value": "element"
     }
   }
 }

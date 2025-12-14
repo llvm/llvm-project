@@ -332,6 +332,14 @@ class FoldingSetNodeID {
   /// Use a SmallVector to avoid a heap allocation in the common case.
   SmallVector<unsigned, 32> Bits;
 
+  template <typename T> void AddIntegerImpl(T I) {
+    static_assert(std::is_integral_v<T> && sizeof(T) <= sizeof(unsigned) * 2,
+                  "T must be an integer type no wider than 64 bits");
+    Bits.push_back(static_cast<unsigned>(I));
+    if constexpr (sizeof(unsigned) < sizeof(T))
+      Bits.push_back(static_cast<unsigned long long>(I) >> 32);
+  }
+
 public:
   FoldingSetNodeID() = default;
 
@@ -348,24 +356,12 @@ public:
                   "unexpected pointer size");
     AddInteger(reinterpret_cast<uintptr_t>(Ptr));
   }
-  void AddInteger(signed I) { Bits.push_back(I); }
-  void AddInteger(unsigned I) { Bits.push_back(I); }
-  void AddInteger(long I) { AddInteger((unsigned long)I); }
-  void AddInteger(unsigned long I) {
-    if (sizeof(long) == sizeof(int))
-      AddInteger(unsigned(I));
-    else if (sizeof(long) == sizeof(long long)) {
-      AddInteger((unsigned long long)I);
-    } else {
-      llvm_unreachable("unexpected sizeof(long)");
-    }
-  }
-  void AddInteger(long long I) { AddInteger((unsigned long long)I); }
-  void AddInteger(unsigned long long I) {
-    AddInteger(unsigned(I));
-    AddInteger(unsigned(I >> 32));
-  }
-
+  void AddInteger(signed I) { AddIntegerImpl(I); }
+  void AddInteger(unsigned I) { AddIntegerImpl(I); }
+  void AddInteger(long I) { AddIntegerImpl(I); }
+  void AddInteger(unsigned long I) { AddIntegerImpl(I); }
+  void AddInteger(long long I) { AddIntegerImpl(I); }
+  void AddInteger(unsigned long long I) { AddIntegerImpl(I); }
   void AddBoolean(bool B) { AddInteger(B ? 1U : 0U); }
   LLVM_ABI void AddString(StringRef String);
   LLVM_ABI void AddNodeID(const FoldingSetNodeID &ID);

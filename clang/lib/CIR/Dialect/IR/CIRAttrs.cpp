@@ -43,6 +43,16 @@ parseFloatLiteral(mlir::AsmParser &parser,
                   mlir::FailureOr<llvm::APFloat> &value,
                   cir::FPTypeInterface fpType);
 
+//===----------------------------------------------------------------------===//
+// AddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
+                                          cir::TargetAddressSpaceAttr &attr);
+
+void printTargetAddressSpace(mlir::AsmPrinter &p,
+                             cir::TargetAddressSpaceAttr attr);
+
 static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
                                        mlir::IntegerAttr &value);
 
@@ -57,24 +67,6 @@ using namespace cir;
 //===----------------------------------------------------------------------===//
 // General CIR parsing / printing
 //===----------------------------------------------------------------------===//
-
-Attribute CIRDialect::parseAttribute(DialectAsmParser &parser,
-                                     Type type) const {
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
-  llvm::StringRef mnemonic;
-  Attribute genAttr;
-  OptionalParseResult parseResult =
-      generatedAttributeParser(parser, &mnemonic, type, genAttr);
-  if (parseResult.has_value())
-    return genAttr;
-  parser.emitError(typeLoc, "unknown attribute in CIR dialect");
-  return Attribute();
-}
-
-void CIRDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
-  if (failed(generatedAttributePrinter(attr, os)))
-    llvm_unreachable("unexpected CIR type kind");
-}
 
 static void printRecordMembers(mlir::AsmPrinter &printer,
                                mlir::ArrayAttr members) {
@@ -278,6 +270,38 @@ ConstComplexAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// DataMemberAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       cir::DataMemberType ty,
+                       std::optional<unsigned> memberIndex) {
+  // DataMemberAttr without a given index represents a null value.
+  if (!memberIndex.has_value())
+    return success();
+
+  cir::RecordType recTy = ty.getClassTy();
+  if (recTy.isIncomplete())
+    return emitError()
+           << "incomplete 'cir.record' cannot be used to build a non-null "
+              "data member pointer";
+
+  unsigned memberIndexValue = memberIndex.value();
+  if (memberIndexValue >= recTy.getNumElements())
+    return emitError()
+           << "member index of a #cir.data_member attribute is out of range";
+
+  mlir::Type memberTy = recTy.getMembers()[memberIndexValue];
+  if (memberTy != ty.getMemberTy())
+    return emitError()
+           << "member type of a #cir.data_member attribute must match the "
+              "attribute type";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CIR ConstArrayAttr
 //===----------------------------------------------------------------------===//
 
@@ -459,6 +483,49 @@ LogicalResult cir::VTableAttr::verify(
     if (eltTypeCheck.failed())
       return eltTypeCheck;
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DynamicCastInfoAtttr definitions
+//===----------------------------------------------------------------------===//
+
+std::string DynamicCastInfoAttr::getAlias() const {
+  // The alias looks like: `dyn_cast_info_<src>_<dest>`
+
+  std::string alias = "dyn_cast_info_";
+
+  alias.append(getSrcRtti().getSymbol().getValue());
+  alias.push_back('_');
+  alias.append(getDestRtti().getSymbol().getValue());
+
+  return alias;
+}
+
+LogicalResult DynamicCastInfoAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, cir::GlobalViewAttr srcRtti,
+    cir::GlobalViewAttr destRtti, mlir::FlatSymbolRefAttr runtimeFunc,
+    mlir::FlatSymbolRefAttr badCastFunc, cir::IntAttr offsetHint) {
+  auto isRttiPtr = [](mlir::Type ty) {
+    // RTTI pointers are !cir.ptr<!u8i>.
+
+    auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
+    if (!ptrTy)
+      return false;
+
+    auto pointeeIntTy = mlir::dyn_cast<cir::IntType>(ptrTy.getPointee());
+    if (!pointeeIntTy)
+      return false;
+
+    return pointeeIntTy.isUnsigned() && pointeeIntTy.getWidth() == 8;
+  };
+
+  if (!isRttiPtr(srcRtti.getType()))
+    return emitError() << "srcRtti must be an RTTI pointer";
+
+  if (!isRttiPtr(destRtti.getType()))
+    return emitError() << "destRtti must be an RTTI pointer";
+
   return success();
 }
 

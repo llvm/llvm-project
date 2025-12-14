@@ -67,11 +67,11 @@ public:
     ClusterId(size_t Id, bool IsUnstable = false)
         : Id_(Id), IsUnstable_(IsUnstable) {}
 
-    static constexpr const size_t kMaxValid =
+    static constexpr size_t kMaxValid =
         (std::numeric_limits<size_t>::max() >> 1) - 4;
-    static constexpr const size_t kNoise = kMaxValid + 1;
-    static constexpr const size_t kError = kMaxValid + 2;
-    static constexpr const size_t kUndef = kMaxValid + 3;
+    static constexpr size_t kNoise = kMaxValid + 1;
+    static constexpr size_t kError = kMaxValid + 2;
+    static constexpr size_t kUndef = kMaxValid + 3;
 
     size_t Id_ : (std::numeric_limits<size_t>::digits - 1);
     size_t IsUnstable_ : 1;

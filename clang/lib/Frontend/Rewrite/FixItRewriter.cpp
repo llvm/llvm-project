@@ -14,12 +14,12 @@
 
 #include "clang/Rewrite/Frontend/FixItRewriter.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Edit/Commit.h"
 #include "clang/Edit/EditsReceiver.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/StringRef.h"

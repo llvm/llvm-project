@@ -17,7 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StaticDataProfileInfo.h"
@@ -198,26 +198,13 @@ private:
     /// and targets.
     using CGTypeId = uint64_t;
 
-    /// Map type identifiers to callsite labels. Labels are generated for each
-    /// indirect callsite in the function.
-    SmallVector<std::pair<CGTypeId, MCSymbol *>> CallSiteLabels;
-    SmallSet<MCSymbol *, 4> DirectCallees;
+    /// Unique target type IDs.
+    SmallSetVector<CGTypeId, 4> IndirectCalleeTypeIDs;
+    /// Unique direct callees.
+    SmallSetVector<MCSymbol *, 4> DirectCallees;
   };
 
-  /// Enumeration of function kinds, and their mapping to function kind values
-  /// stored in callgraph section entries.
-  enum class FunctionKind : uint64_t {
-    /// Function cannot be target to indirect calls.
-    NOT_INDIRECT_TARGET = 0,
-
-    /// Function may be target to indirect calls but its type id is unknown.
-    INDIRECT_TARGET_UNKNOWN_TID = 1,
-
-    /// Function may be target to indirect calls and its type id is known.
-    INDIRECT_TARGET_KNOWN_TID = 2,
-  };
-
-  enum CallGraphSectionFormatVersion : uint64_t {
+  enum CallGraphSectionFormatVersion : uint8_t {
     V_0 = 0,
   };
 
@@ -386,9 +373,9 @@ public:
   /// are available. Returns empty string otherwise.
   StringRef getConstantSectionSuffix(const Constant *C) const;
 
-  /// Iff MI is an indirect call, generate and emit a label after the callsites
-  /// which will be used to populate the .callgraph section. For direct
-  /// callsites add the callee symbol to direct callsites list of FuncCGInfo.
+  /// If MI is an indirect call, add expected type IDs to indirect type ids
+  /// list. If MI is a direct call add the callee symbol to direct callsites
+  /// list of FuncCGInfo.
   void handleCallsiteForCallgraph(
       FunctionCallGraphInfo &FuncCGInfo,
       const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,

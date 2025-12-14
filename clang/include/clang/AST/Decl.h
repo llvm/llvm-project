@@ -80,6 +80,7 @@ class TypeAliasTemplateDecl;
 class UnresolvedSetImpl;
 class VarTemplateDecl;
 enum class ImplicitParamKind;
+struct UsualDeleteParams;
 
 // Holds a constraint expression along with a pack expansion index, if
 // expanded.
@@ -2334,7 +2335,7 @@ public:
   }
 
   void setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo *Info);
-  DefaultedOrDeletedFunctionInfo *getDefalutedOrDeletedInfo() const;
+  DefaultedOrDeletedFunctionInfo *getDefaultedOrDeletedInfo() const;
 
   /// Whether this function is variadic.
   bool isVariadic() const;
@@ -2645,6 +2646,8 @@ public:
   /// Determine whether this is a type aware operator new or delete.
   bool isTypeAwareOperatorNewOrDelete() const;
   void setIsTypeAwareOperatorNewOrDelete(bool IsTypeAwareOperator = true);
+
+  UsualDeleteParams getUsualDeleteParams() const;
 
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
@@ -4037,6 +4040,11 @@ class EnumDecl : public TagDecl {
   /// and can be accessed with the provided accessors.
   unsigned ODRHash;
 
+  /// Source range covering the enum key:
+  ///  - 'enum'              (unscoped)
+  ///  - 'enum class|struct' (scoped)
+  SourceRange EnumKeyRange;
+
   EnumDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
            SourceLocation IdLoc, IdentifierInfo *Id, EnumDecl *PrevDecl,
            bool Scoped, bool ScopedUsingClassTag, bool Fixed);
@@ -4073,6 +4081,10 @@ public:
   /// True if this is an Objective-C, C++11, or
   /// Microsoft-style enumeration with a fixed underlying type.
   void setFixed(bool Fixed = true) { EnumDeclBits.IsFixed = Fixed; }
+
+  SourceRange getEnumKeyRange() const { return EnumKeyRange; }
+
+  void setEnumKeyRange(SourceRange Range) { EnumKeyRange = Range; }
 
 private:
   /// True if a valid hash is stored in ODRHash.
@@ -4519,6 +4531,11 @@ public:
   // Whether there are any fields (non-static data members) in this record.
   bool field_empty() const {
     return field_begin() == field_end();
+  }
+
+  /// Returns the number of fields (non-static data members) in this record.
+  unsigned getNumFields() const {
+    return std::distance(field_begin(), field_end());
   }
 
   /// noload_fields - Iterate over the fields stored in this record

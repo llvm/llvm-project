@@ -36,22 +36,11 @@ define i32 @test(i64 %N, i32 %x) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP3]])
-; CHECK-NEXT:    br label [[EXIT_LOOPEXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[NEXT:%.*]] = phi i32 [ [[SEL:%.*]], [[LOOP]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[EXTRA_ITER]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[SEL_COND:%.*]] = icmp sgt i32 [[NEXT]], 10
-; CHECK-NEXT:    [[SEL]] = select i1 [[SEL_COND]], i32 [[NEXT]], i32 10
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT_LOOPEXIT]], label [[LOOP]]
 ; CHECK:       exit.loopexit:
-; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i32 [ [[SEL]], [[LOOP]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ 0, [[CHECK]] ], [ [[SEL_LCSSA]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ 0, [[CHECK]] ], [ [[TMP5]], [[LOOP]] ]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
@@ -90,19 +79,9 @@ define i32 @pr66895_tail_fold_reduction_exit_inst_gets_simplified(i32 %n) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[VEC_PHI]])
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 12, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
-; CHECK-NEXT:    [[RED_NEXT]] = mul i32 [[RED]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 0
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RED_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], [[LOOP]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[RED_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
   br label %loop

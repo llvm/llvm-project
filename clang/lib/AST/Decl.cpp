@@ -1742,6 +1742,9 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
   // Collect named contexts.
   DeclarationName NameInScope = getDeclName();
   for (; Ctx; Ctx = Ctx->getParent()) {
+    if (P.Callbacks && P.Callbacks->isScopeVisible(Ctx))
+      continue;
+
     // Suppress anonymous namespace if requested.
     if (P.SuppressUnwrittenScope && isa<NamespaceDecl>(Ctx) &&
         cast<NamespaceDecl>(Ctx)->isAnonymousNamespace())
@@ -1750,9 +1753,11 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
     // Suppress inline namespace if it doesn't make the result ambiguous.
     if (Ctx->isInlineNamespace() && NameInScope) {
       if (P.SuppressInlineNamespace ==
-              PrintingPolicy::SuppressInlineNamespaceMode::All ||
+              llvm::to_underlying(
+                  PrintingPolicy::SuppressInlineNamespaceMode::All) ||
           (P.SuppressInlineNamespace ==
-               PrintingPolicy::SuppressInlineNamespaceMode::Redundant &&
+               llvm::to_underlying(
+                   PrintingPolicy::SuppressInlineNamespaceMode::Redundant) &&
            cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(
                NameInScope))) {
         continue;
@@ -1787,7 +1792,9 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       else
         OS << *ND;
     } else if (const auto *RD = dyn_cast<RecordDecl>(DC)) {
-      if (!RD->getIdentifier())
+      if (TypedefNameDecl *TD = RD->getTypedefNameForAnonDecl())
+        OS << *TD;
+      else if (!RD->getIdentifier())
         OS << "(anonymous " << RD->getKindName() << ')';
       else
         OS << *RD;
@@ -2989,10 +2996,7 @@ bool ParmVarDecl::isDestroyedInCallee() const {
   // FIXME: isParamDestroyedInCallee() should probably imply
   // isDestructedType()
   const auto *RT = getType()->getAsCanonical<RecordType>();
-  if (RT &&
-      RT->getOriginalDecl()
-          ->getDefinitionOrSelf()
-          ->isParamDestroyedInCallee() &&
+  if (RT && RT->getDecl()->getDefinitionOrSelf()->isParamDestroyedInCallee() &&
       getType().isDestructedType())
     return true;
 
@@ -3183,7 +3187,7 @@ void FunctionDecl::DefaultedOrDeletedFunctionInfo::setDeletedMessage(
 }
 
 FunctionDecl::DefaultedOrDeletedFunctionInfo *
-FunctionDecl::getDefalutedOrDeletedInfo() const {
+FunctionDecl::getDefaultedOrDeletedInfo() const {
   return FunctionDeclBits.HasDefaultedOrDeletedInfo ? DefaultedOrDeletedInfo
                                                     : nullptr;
 }
@@ -3316,6 +3320,10 @@ bool FunctionDecl::isImmediateEscalating() const {
       CD && CD->isInheritingConstructor())
     return CD->getInheritedConstructor().getConstructor();
 
+  // Destructors are not immediate escalating.
+  if (isa<CXXDestructorDecl>(this))
+    return false;
+
   // - a function that results from the instantiation of a templated entity
   // defined with the constexpr specifier.
   TemplatedKind TK = getTemplatedKind();
@@ -3379,11 +3387,11 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
     return false;
 
   return llvm::StringSwitch<bool>(getName())
-      .Cases("main",     // an ANSI console app
-             "wmain",    // a Unicode console App
-             "WinMain",  // an ANSI GUI app
-             "wWinMain", // a Unicode GUI app
-             "DllMain",  // a DLL
+      .Cases({"main",     // an ANSI console app
+              "wmain",    // a Unicode console App
+              "WinMain",  // an ANSI GUI app
+              "wWinMain", // a Unicode GUI app
+              "DllMain"}, // a DLL
              true)
       .Default(false);
 }
@@ -3503,7 +3511,7 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
     while (const auto *TD = T->getAs<TypedefType>())
       T = TD->getDecl()->getUnderlyingType();
     const IdentifierInfo *II =
-        T->castAsCanonical<EnumType>()->getOriginalDecl()->getIdentifier();
+        T->castAsCanonical<EnumType>()->getDecl()->getIdentifier();
     if (II && II->isStr("__hot_cold_t"))
       Consume();
   }
@@ -3550,6 +3558,53 @@ bool FunctionDecl::isTypeAwareOperatorNewOrDelete() const {
 
 void FunctionDecl::setIsTypeAwareOperatorNewOrDelete(bool IsTypeAware) {
   getASTContext().setIsTypeAwareOperatorNewOrDelete(this, IsTypeAware);
+}
+
+UsualDeleteParams FunctionDecl::getUsualDeleteParams() const {
+  UsualDeleteParams Params;
+
+  // This function should only be called for operator delete declarations.
+  assert(getDeclName().isAnyOperatorDelete());
+  if (!getDeclName().isAnyOperatorDelete())
+    return Params;
+
+  const FunctionProtoType *FPT = getType()->castAs<FunctionProtoType>();
+  auto AI = FPT->param_type_begin(), AE = FPT->param_type_end();
+
+  if (isTypeAwareOperatorNewOrDelete()) {
+    Params.TypeAwareDelete = TypeAwareAllocationMode::Yes;
+    assert(AI != AE);
+    ++AI;
+  }
+
+  // The first argument after the type-identity parameter (if any) is
+  // always a void* (or C* for a destroying operator delete for class
+  // type C).
+  ++AI;
+
+  // The next parameter may be a std::destroying_delete_t.
+  if (isDestroyingOperatorDelete()) {
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
+    Params.DestroyingDelete = true;
+    assert(AI != AE);
+    ++AI;
+  }
+
+  // Figure out what other parameters we should be implicitly passing.
+  if (AI != AE && (*AI)->isIntegerType()) {
+    Params.Size = true;
+    ++AI;
+  } else
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
+
+  if (AI != AE && (*AI)->isAlignValT()) {
+    Params.Alignment = AlignedAllocationMode::Yes;
+    ++AI;
+  } else
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
+
+  assert(AI == AE && "unexpected usual deallocation function parameter");
+  return Params;
 }
 
 LanguageLinkage FunctionDecl::getLanguageLinkage() const {
@@ -4658,7 +4713,7 @@ bool FieldDecl::isAnonymousStructOrUnion() const {
     return false;
 
   if (const auto *Record = getType()->getAsCanonical<RecordType>())
-    return Record->getOriginalDecl()->isAnonymousStructOrUnion();
+    return Record->getDecl()->isAnonymousStructOrUnion();
 
   return false;
 }
@@ -4718,7 +4773,7 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
   const auto *RT = getType()->getAsCanonical<RecordType>();
   if (!RT)
     return false;
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
+  const RecordDecl *RD = RT->getDecl()->getDefinition();
   if (!RD) {
     assert(isInvalidDecl() && "valid field has incomplete type");
     return false;
@@ -5143,7 +5198,7 @@ bool RecordDecl::isOrContainsUnion() const {
   if (const RecordDecl *Def = getDefinition()) {
     for (const FieldDecl *FD : Def->fields()) {
       const RecordType *RT = FD->getType()->getAsCanonical<RecordType>();
-      if (RT && RT->getOriginalDecl()->isOrContainsUnion())
+      if (RT && RT->getDecl()->isOrContainsUnion())
         return true;
     }
   }
@@ -5189,7 +5244,14 @@ void RecordDecl::completeDefinition() {
 /// This which can be turned on with an attribute, pragma, or the
 /// -mms-bitfields command-line option.
 bool RecordDecl::isMsStruct(const ASTContext &C) const {
-  return hasAttr<MSStructAttr>() || C.getLangOpts().MSBitfields == 1;
+  if (hasAttr<GCCStructAttr>())
+    return false;
+  if (hasAttr<MSStructAttr>())
+    return true;
+  auto LayoutCompatibility = C.getLangOpts().getLayoutCompatibility();
+  if (LayoutCompatibility == LangOptions::LayoutCompatibilityKind::Default)
+    return C.defaultsToMsStruct();
+  return LayoutCompatibility == LangOptions::LayoutCompatibilityKind::Microsoft;
 }
 
 void RecordDecl::reorderDecls(const SmallVectorImpl<Decl *> &Decls) {
@@ -5641,14 +5703,14 @@ void TypedefNameDecl::anchor() {}
 
 TagDecl *TypedefNameDecl::getAnonDeclWithTypedefName(bool AnyRedecl) const {
   if (auto *TT = getTypeSourceInfo()->getType()->getAs<TagType>()) {
-    auto *OwningTypedef = TT->getOriginalDecl()->getTypedefNameForAnonDecl();
+    auto *OwningTypedef = TT->getDecl()->getTypedefNameForAnonDecl();
     auto *ThisTypedef = this;
     if (AnyRedecl && OwningTypedef) {
       OwningTypedef = OwningTypedef->getCanonicalDecl();
       ThisTypedef = ThisTypedef->getCanonicalDecl();
     }
     if (OwningTypedef == ThisTypedef)
-      return TT->getOriginalDecl()->getDefinitionOrSelf();
+      return TT->getDecl()->getDefinitionOrSelf();
   }
 
   return nullptr;
@@ -5657,7 +5719,7 @@ TagDecl *TypedefNameDecl::getAnonDeclWithTypedefName(bool AnyRedecl) const {
 bool TypedefNameDecl::isTransparentTagSlow() const {
   auto determineIsTransparent = [&]() {
     if (auto *TT = getUnderlyingType()->getAs<TagType>()) {
-      if (auto *TD = TT->getOriginalDecl()) {
+      if (auto *TD = TT->getDecl()) {
         if (TD->getName() != getName())
           return false;
         SourceLocation TTLoc = getLocation();

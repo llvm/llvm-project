@@ -170,11 +170,21 @@ function(add_asan_tests arch test_runtime)
   set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
   set(CONFIG_NAME_DYNAMIC ${ARCH_UPPER_CASE}${OS_NAME}DynamicConfig)
 
+  # On some platforms, unit tests can be run against the runtime that shipped
+  # with the host compiler with COMPILER_RT_TEST_STANDALONE_BUILD_LIBS=OFF.
+  # COMPILER_RT_ASAN_UNIT_TESTS_USE_HOST_RUNTIME=ON removes the dependency
+  # on `asan`, allowing the tests to be run independently without
+  # a newly built asan runtime.
+  set(ASAN_UNIT_TEST_DEPS asan)
+  if(COMPILER_RT_ASAN_UNIT_TESTS_USE_HOST_RUNTIME)
+    set(ASAN_UNIT_TEST_DEPS)
+  endif()
+
   # Closure to keep the values.
   function(generate_asan_tests test_objects test_suite testname)
     generate_compiler_rt_tests(${test_objects} ${test_suite} ${testname} ${arch}
       COMPILE_DEPS ${ASAN_UNITTEST_HEADERS} ${ASAN_IGNORELIST_FILE}
-      DEPS asan
+      DEPS ${ASAN_UNIT_TEST_DEPS}
       KIND ${TEST_KIND}
       ${ARGN}
       )
@@ -215,7 +225,7 @@ function(add_asan_tests arch test_runtime)
       add_compiler_rt_test(AsanDynamicUnitTests "${dynamic_test_name}" "${arch}"
         SUBDIR "${CONFIG_NAME_DYNAMIC}"
         OBJECTS ${ASAN_INST_TEST_OBJECTS}
-        DEPS asan ${ASAN_INST_TEST_OBJECTS}
+        DEPS ${ASAN_UNIT_TEST_DEPS} ${ASAN_INST_TEST_OBJECTS}
         LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS} ${TARGET_LINK_FLAGS} ${DYNAMIC_LINK_FLAGS}
         )
     endif()

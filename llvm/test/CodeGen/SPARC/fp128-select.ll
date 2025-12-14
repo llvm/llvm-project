@@ -22,8 +22,7 @@ define fp128 @f128_select_soft(fp128 %a, fp128 %b) #0 {
 ; V9-NEXT:    sllx %o3, 32, %o3
 ; V9-NEXT:    or %o3, %o2, %o2
 ; V9-NEXT:    xor %o1, %o2, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    cmp %o0, 0
+; V9-NEXT:    orcc %o0, %o1, %g0
 ; V9-NEXT:    bne %xcc, .LBB0_2
 ; V9-NEXT:    nop
 ; V9-NEXT:  ! %bb.1:

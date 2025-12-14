@@ -37,7 +37,7 @@ void InitVariablesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void InitVariablesCheck::registerMatchers(MatchFinder *Finder) {
-  std::string BadDecl = "badDecl";
+  const std::string BadDecl = "badDecl";
   Finder->addMatcher(
       varDecl(unless(hasInitializer(anything())), unless(isInstantiated()),
               isLocalVarDecl(), unless(isStaticLocal()), isDefinition(),
@@ -82,7 +82,7 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
   if (MatchedDecl->getEndLoc().isMacroID())
     return;
 
-  QualType TypePtr = MatchedDecl->getType();
+  const QualType TypePtr = MatchedDecl->getType();
   std::optional<const char *> InitializationString;
   bool AddMathInclude = false;
 
@@ -108,7 +108,7 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
         << MatchedDecl;
     if (*InitializationString != nullptr)
       Diagnostic << FixItHint::CreateInsertion(
-          utils::lexer::findNextTerminator(MatchedDecl->getLocation(),
+          utils::lexer::findNextTerminator(MatchedDecl->getEndLoc(),
                                            *Result.SourceManager,
                                            Result.Context->getLangOpts()),
           *InitializationString);

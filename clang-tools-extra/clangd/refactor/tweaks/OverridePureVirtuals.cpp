@@ -79,7 +79,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -116,7 +116,8 @@ std::string removePureVirtualSyntax(const std::string &MethodDecl,
 
     DeclString += Tk.text();
     if (Tk.Kind != tok::l_paren && Next.Kind != tok::comma &&
-        Next.Kind != tok::r_paren && Next.Kind != tok::l_paren)
+        Next.Kind != tok::r_paren && Next.Kind != tok::l_paren &&
+        Tk.Kind != tok::coloncolon && Next.Kind != tok::coloncolon)
       DeclString += ' ';
   }
   // Trim the last whitespace.

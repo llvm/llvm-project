@@ -33,7 +33,8 @@ declare_objc_class(LLVMDIBuilderRef DIB, LLVMMetadataRef File) {
 
 int llvm_test_dibuilder(void) {
   const char *Filename = "debuginfo.c";
-  LLVMModuleRef M = LLVMModuleCreateWithName(Filename);
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = LLVMModuleCreateWithNameInContext(Filename, C);
 
   LLVMSetIsNewDbgInfoFormat(M, true);
   assert(LLVMIsNewDbgInfoFormat(M));
@@ -42,6 +43,9 @@ int llvm_test_dibuilder(void) {
 
   LLVMMetadataRef File = LLVMDIBuilderCreateFile(DIB, Filename,
     strlen(Filename), ".", 1);
+
+  LLVMMetadataRef FileCS = LLVMDIBuilderCreateFileWithChecksum(
+      DIB, Filename, strlen(Filename), ".", 1, CSK_MD5, "1234", 4, "source", 6);
 
   LLVMMetadataRef CompileUnit = LLVMDIBuilderCreateCompileUnit(
       DIB, LLVMDWARFSourceLanguageC, File, "llvm-c-test", 11, 0, NULL, 0, 0,
@@ -61,7 +65,7 @@ int llvm_test_dibuilder(void) {
                               "/test/include/llvm-c-test-import.h", 34,
                               "", 0);
   LLVMMetadataRef ImportedModule = LLVMDIBuilderCreateImportedModuleFromModule(
-      DIB, Module, OtherModule, File, 42, NULL, 0);
+      DIB, Module, OtherModule, FileCS, 42, NULL, 0);
   LLVMDIBuilderCreateImportedModuleFromAlias(DIB, Module, ImportedModule, File,
                                              42, NULL, 0);
 
@@ -98,15 +102,16 @@ int llvm_test_dibuilder(void) {
   LLVMAddNamedMetadataOperand(M, "FooType",
     LLVMMetadataAsValue(LLVMGetModuleContext(M), StructDbgPtrTy));
 
-
+  LLVMTypeRef I64Ty = LLVMInt64TypeInContext(C);
   LLVMTypeRef FooParamTys[] = {
-    LLVMInt64Type(),
-    LLVMInt64Type(),
-    LLVMVectorType(LLVMInt64Type(), 10),
+      I64Ty,
+      I64Ty,
+      LLVMVectorType(I64Ty, 10),
   };
-  LLVMTypeRef FooFuncTy = LLVMFunctionType(LLVMInt64Type(), FooParamTys, 3, 0);
+  LLVMTypeRef FooFuncTy = LLVMFunctionType(I64Ty, FooParamTys, 3, 0);
   LLVMValueRef FooFunction = LLVMAddFunction(M, "foo", FooFuncTy);
-  LLVMBasicBlockRef FooEntryBlock = LLVMAppendBasicBlock(FooFunction, "entry");
+  LLVMBasicBlockRef FooEntryBlock =
+      LLVMAppendBasicBlockInContext(C, FooFunction, "entry");
 
   LLVMMetadataRef Subscripts[] = {
     LLVMDIBuilderGetOrCreateSubrange(DIB, 0, 10),
@@ -127,9 +132,8 @@ int llvm_test_dibuilder(void) {
                                                 LLVMDIFlagFwdDecl,
                                                 "", 0);
 
-  LLVMMetadataRef FooParamLocation =
-    LLVMDIBuilderCreateDebugLocation(LLVMGetGlobalContext(), 42, 0,
-                                     ReplaceableFunctionMetadata, NULL);
+  LLVMMetadataRef FooParamLocation = LLVMDIBuilderCreateDebugLocation(
+      C, 42, 0, ReplaceableFunctionMetadata, NULL);
   LLVMMetadataRef FunctionMetadata = LLVMDIBuilderCreateFunction(
       DIB, File, "foo", 3, "foo", 3, File, 42, NULL, true, true, 42, 0, false);
   LLVMMetadataReplaceAllUsesWith(ReplaceableFunctionMetadata, FunctionMetadata);
@@ -142,24 +146,24 @@ int llvm_test_dibuilder(void) {
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "a", 1, 1, File,
                                          42, Int64Ty, true, 0);
 
-  LLVMDIBuilderInsertDeclareRecordAtEnd(
-      DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar1,
-      FooParamExpression, FooParamLocation, FooEntryBlock);
+  LLVMDIBuilderInsertDeclareRecordAtEnd(DIB, LLVMConstInt(I64Ty, 0, false),
+                                        FooParamVar1, FooParamExpression,
+                                        FooParamLocation, FooEntryBlock);
 
   LLVMMetadataRef FooParamVar2 =
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "b", 1, 2, File,
                                          42, Int64Ty, true, 0);
 
-  LLVMDIBuilderInsertDeclareRecordAtEnd(
-      DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar2,
-      FooParamExpression, FooParamLocation, FooEntryBlock);
+  LLVMDIBuilderInsertDeclareRecordAtEnd(DIB, LLVMConstInt(I64Ty, 0, false),
+                                        FooParamVar2, FooParamExpression,
+                                        FooParamLocation, FooEntryBlock);
 
   LLVMMetadataRef FooParamVar3 = LLVMDIBuilderCreateParameterVariable(
       DIB, FunctionMetadata, "c", 1, 3, File, 42, VectorTy, true, 0);
 
-  LLVMDIBuilderInsertDeclareRecordAtEnd(
-      DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar3,
-      FooParamExpression, FooParamLocation, FooEntryBlock);
+  LLVMDIBuilderInsertDeclareRecordAtEnd(DIB, LLVMConstInt(I64Ty, 0, false),
+                                        FooParamVar3, FooParamExpression,
+                                        FooParamLocation, FooEntryBlock);
 
   LLVMSetSubprogram(FooFunction, FunctionMetadata);
 
@@ -171,14 +175,14 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef FooLexicalBlock =
     LLVMDIBuilderCreateLexicalBlock(DIB, FunctionMetadata, File, 42, 0);
 
-  LLVMBasicBlockRef FooVarBlock = LLVMAppendBasicBlock(FooFunction, "vars");
+  LLVMBasicBlockRef FooVarBlock =
+      LLVMAppendBasicBlockInContext(C, FooFunction, "vars");
   LLVMMetadataRef FooVarsLocation =
-    LLVMDIBuilderCreateDebugLocation(LLVMGetGlobalContext(), 43, 0,
-                                     FunctionMetadata, NULL);
+      LLVMDIBuilderCreateDebugLocation(C, 43, 0, FunctionMetadata, NULL);
   LLVMMetadataRef FooVar1 =
     LLVMDIBuilderCreateAutoVariable(DIB, FooLexicalBlock, "d", 1, File,
                                     43, Int64Ty, true, 0, 0);
-  LLVMValueRef FooVal1 = LLVMConstInt(LLVMInt64Type(), 0, false);
+  LLVMValueRef FooVal1 = LLVMConstInt(I64Ty, 0, false);
   LLVMMetadataRef FooVarValueExpr1 =
       LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
 
@@ -187,7 +191,7 @@ int llvm_test_dibuilder(void) {
 
   LLVMMetadataRef FooVar2 = LLVMDIBuilderCreateAutoVariable(
       DIB, FooLexicalBlock, "e", 1, File, 44, Int64Ty, true, 0, 0);
-  LLVMValueRef FooVal2 = LLVMConstInt(LLVMInt64Type(), 1, false);
+  LLVMValueRef FooVal2 = LLVMConstInt(I64Ty, 1, false);
   LLVMMetadataRef FooVarValueExpr2 =
       LLVMDIBuilderCreateConstantValueExpression(DIB, 1);
 
@@ -235,8 +239,8 @@ int llvm_test_dibuilder(void) {
       M, "LargeEnumTest",
       LLVMMetadataAsValue(LLVMGetModuleContext(M), LargeEnumTest));
 
-  LLVMValueRef FooVal3 = LLVMConstInt(LLVMInt64Type(), 8, false);
-  LLVMValueRef FooVal4 = LLVMConstInt(LLVMInt64Type(), 4, false);
+  LLVMValueRef FooVal3 = LLVMConstInt(I64Ty, 8, false);
+  LLVMValueRef FooVal4 = LLVMConstInt(I64Ty, 4, false);
   LLVMMetadataRef lo = LLVMValueAsMetadata(FooVal1);
   LLVMMetadataRef hi = LLVMValueAsMetadata(FooVal2);
   LLVMMetadataRef strd = LLVMValueAsMetadata(FooVal3);
@@ -325,6 +329,15 @@ int llvm_test_dibuilder(void) {
   LLVMValueRef Phi2 = LLVMBuildPhi(Builder, I64, "p2");
   LLVMAddIncoming(Phi2, &Zero, &FooEntryBlock, 1);
 
+  // Test that LLVMGetFirstDbgRecord and LLVMGetLastDbgRecord return NULL for
+  // instructions without debug info.
+  LLVMDbgRecordRef Phi1FirstDbgRecord = LLVMGetFirstDbgRecord(Phi1);
+  (void)Phi1FirstDbgRecord;
+  assert(Phi1FirstDbgRecord == NULL);
+  LLVMDbgRecordRef Phi1LastDbgRecord = LLVMGetLastDbgRecord(Phi1);
+  (void)Phi1LastDbgRecord;
+  assert(Phi1LastDbgRecord == NULL);
+
   // Insert a non-phi before the `ret` but not before the debug records to
   // test that works as expected.
   LLVMPositionBuilder(Builder, FooVarBlock, Ret);
@@ -352,6 +365,43 @@ int llvm_test_dibuilder(void) {
   assert(AddDbgRecordUnderTheRange == NULL);
   (void)AddDbgRecordUnderTheRange;
 
+  // Test that we can read the first debug record.
+  LLVMMetadataRef AddDbgRecordFirstDebugLoc =
+      LLVMDbgRecordGetDebugLoc(AddDbgRecordFirst);
+  (void)AddDbgRecordFirstDebugLoc;
+  assert(LLVMDILocationGetLine(AddDbgRecordFirstDebugLoc) == 43);
+  assert(LLVMDbgRecordGetKind(AddDbgRecordFirst) == LLVMDbgRecordValue);
+  LLVMValueRef AddDbgRecordFirstValue =
+      LLVMDbgVariableRecordGetValue(AddDbgRecordFirst, 0);
+  (void)AddDbgRecordFirstValue;
+  assert(LLVMGetValueKind(AddDbgRecordFirstValue) == LLVMConstantIntValueKind);
+  assert(LLVMConstIntGetZExtValue(AddDbgRecordFirstValue) == 0);
+  LLVMMetadataRef AddDbgRecordFirstVariable =
+      LLVMDbgVariableRecordGetVariable(AddDbgRecordFirst);
+  (void)AddDbgRecordFirstVariable;
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstVariable) ==
+         LLVMDILocalVariableMetadataKind);
+  // TODO: For now, there is no way to get the name.
+  LLVMMetadataRef AddDbgRecordFirstVariableScope =
+      LLVMDIVariableGetScope(AddDbgRecordFirstVariable);
+  (void)AddDbgRecordFirstVariableScope;
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstVariableScope) ==
+         LLVMDILexicalBlockMetadataKind);
+  LLVMMetadataRef AddDbgRecordFirstVariableFile =
+      LLVMDIScopeGetFile(AddDbgRecordFirstVariableScope);
+  (void)AddDbgRecordFirstVariableFile;
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstVariableFile) ==
+         LLVMDIFileMetadataKind);
+  unsigned FileLen = 0;
+  assert(strcmp(LLVMDIFileGetFilename(AddDbgRecordFirstVariableFile, &FileLen),
+                "debuginfo.c") == 0);
+  (void)FileLen;
+  LLVMMetadataRef AddDbgRecordFirstExpr =
+      LLVMDbgVariableRecordGetExpression(AddDbgRecordFirst);
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstExpr) ==
+         LLVMDIExpressionMetadataKind);
+  (void)AddDbgRecordFirstExpr;
+
   char *MStr = LLVMPrintModuleToString(M);
   puts(MStr);
   LLVMDisposeMessage(MStr);
@@ -359,13 +409,14 @@ int llvm_test_dibuilder(void) {
   LLVMDisposeBuilder(Builder);
   LLVMDisposeDIBuilder(DIB);
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 
   return 0;
 }
 
 int llvm_get_di_tag(void) {
-  LLVMModuleRef M = LLVMModuleCreateWithName("Mod");
-  LLVMContextRef Context = LLVMGetModuleContext(M);
+  LLVMContextRef Context = LLVMContextCreate();
+  LLVMModuleRef M = LLVMModuleCreateWithNameInContext("Mod", Context);
 
   const char String[] = "foo";
   LLVMMetadataRef StringMD =
@@ -388,12 +439,14 @@ int llvm_get_di_tag(void) {
 
   LLVMDisposeDIBuilder(Builder);
   LLVMDisposeModule(M);
+  LLVMContextDispose(Context);
 
   return 0;
 }
 
 int llvm_di_type_get_name(void) {
-  LLVMModuleRef M = LLVMModuleCreateWithName("Mod");
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = LLVMModuleCreateWithNameInContext("Mod", C);
 
   LLVMDIBuilderRef Builder = LLVMCreateDIBuilder(M);
   const char Filename[] = "metadata.c";
@@ -413,13 +466,15 @@ int llvm_di_type_get_name(void) {
 
   LLVMDisposeDIBuilder(Builder);
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 
   return 0;
 }
 
 int llvm_add_globaldebuginfo(void) {
   const char *Filename = "debuginfo.c";
-  LLVMModuleRef M = LLVMModuleCreateWithName(Filename);
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = LLVMModuleCreateWithNameInContext(Filename, C);
   LLVMDIBuilderRef Builder = LLVMCreateDIBuilder(M);
   LLVMMetadataRef File =
       LLVMDIBuilderCreateFile(Builder, Filename, strlen(Filename), ".", 1);
@@ -435,13 +490,12 @@ int llvm_add_globaldebuginfo(void) {
       Builder, File, "global", 6, "", 0, File, 1, Int64TypeDef, true,
       GlobalVarValueExpr, NULL, 0);
 
-  LLVMTypeRef RecType =
-      LLVMStructCreateNamed(LLVMGetModuleContext(M), "struct");
+  LLVMTypeRef RecType = LLVMStructCreateNamed(C, "struct");
   LLVMValueRef Global = LLVMAddGlobal(M, RecType, "global");
 
   LLVMGlobalAddDebugInfo(Global, GVE);
   // use AddMetadata to add twice
-  int kindId = LLVMGetMDKindID("dbg", 3);
+  int kindId = LLVMGetMDKindIDInContext(C, "dbg", 3);
   LLVMGlobalAddMetadata(Global, kindId, GVE);
   size_t numEntries;
   LLVMValueMetadataEntry *ME = LLVMGlobalCopyAllMetadata(Global, &numEntries);
@@ -451,6 +505,7 @@ int llvm_add_globaldebuginfo(void) {
   LLVMDisposeValueMetadataEntries(ME);
   LLVMDisposeDIBuilder(Builder);
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 
   return 0;
 }

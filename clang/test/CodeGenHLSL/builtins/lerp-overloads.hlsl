@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF -DFNATTRS="hidden noundef nofpclass(nan inf)" -DTARGET=dx
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF -DFNATTRS="hidden noundef nofpclass(nan inf)" -DTARGET=dx
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF -DFNATTRS="hidden noundef nofpclass(nan inf)" -DTARGET=dx
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-compute %s -fnative-half-type -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTARGET=spv
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTARGET=spv
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-compute %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTARGET=spv
 
 // CHECK: define [[FNATTRS]] float @_Z16test_lerp_doubled(

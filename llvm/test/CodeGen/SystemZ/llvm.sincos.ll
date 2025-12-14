@@ -163,9 +163,9 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ; LINUX-NEXT:    ld %f10, 8(%r3)
 ; LINUX-NEXT:    ld %f0, 16(%r3)
 ; LINUX-NEXT:    ld %f2, 24(%r3)
-; LINUX-NEXT:    la %r3, 16(%r2)
-; LINUX-NEXT:    la %r4, 48(%r2)
 ; LINUX-NEXT:    la %r2, 176(%r15)
+; LINUX-NEXT:    la %r3, 16(%r13)
+; LINUX-NEXT:    la %r4, 48(%r13)
 ; LINUX-NEXT:    std %f0, 176(%r15)
 ; LINUX-NEXT:    std %f2, 184(%r15)
 ; LINUX-NEXT:    brasl %r14, sincosl@PLT

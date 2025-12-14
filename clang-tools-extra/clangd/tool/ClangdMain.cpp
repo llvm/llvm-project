@@ -500,6 +500,17 @@ opt<bool> EnableConfig{
     init(true),
 };
 
+opt<bool> StrongWorkspaceMode{
+    "strong-workspace-mode",
+    cat(Features),
+    desc("An alternate mode of operation for clangd, where the clangd instance "
+         "is used to edit a single workspace.\n"
+         "When enabled, fallback commands use the workspace directory as their "
+         "working directory instead of the parent folder."),
+    init(false),
+    Hidden,
+};
+
 opt<bool> UseDirtyHeaders{"use-dirty-headers", cat(Misc),
                           desc("Use files open in the editor when parsing "
                                "headers instead of reading from the disk"),
@@ -578,7 +589,7 @@ public:
     Body = Body.ltrim('/');
     llvm::SmallString<16> Path(Body);
     path::native(Path);
-    fs::make_absolute(TestScheme::TestDir, Path);
+    path::make_absolute(TestScheme::TestDir, Path);
     return std::string(Path);
   }
 
@@ -907,6 +918,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
+  Opts.StrongWorkspaceMode = StrongWorkspaceMode;
   Opts.BuildDynamicSymbolIndex = true;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {

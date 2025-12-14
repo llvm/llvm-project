@@ -18,6 +18,7 @@
 #include "llvm/Support/VirtualOutputBackends.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -254,7 +255,23 @@ static Error createDirectoriesOnDemand(StringRef OutputPath,
   });
 }
 
+static sys::fs::OpenFlags generateFlagsFromConfig(OutputConfig Config) {
+  sys::fs::OpenFlags OF = sys::fs::OF_None;
+  if (Config.getTextWithCRLF())
+    OF |= sys::fs::OF_TextWithCRLF;
+  else if (Config.getText())
+    OF |= sys::fs::OF_Text;
+  // Don't pass OF_Append if writting to temporary since OF_Append is
+  // not Atomic Append
+  if (Config.getAppend() && !Config.getAtomicWrite())
+    OF |= sys::fs::OF_Append;
+
+  return OF;
+}
+
 Error OnDiskOutputFile::tryToCreateTemporary(std::optional<int> &FD) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // Create a temporary file.
   // Insert -%%%%%%%% before the extension (if any), and because some tools
   // (noticeable, clang's own GlobalModuleIndex.cpp) glob for build
@@ -269,8 +286,9 @@ Error OnDiskOutputFile::tryToCreateTemporary(std::optional<int> &FD) {
   return createDirectoriesOnDemand(OutputPath, Config, [&]() -> Error {
     int NewFD;
     SmallString<128> UniquePath;
+    sys::fs::OpenFlags OF = generateFlagsFromConfig(Config);
     if (std::error_code EC =
-            sys::fs::createUniqueFile(ModelPath, NewFD, UniquePath))
+            sys::fs::createUniqueFile(ModelPath, NewFD, UniquePath, OF))
       return make_error<TempFileOutputError>(ModelPath, OutputPath, EC);
 
     if (Config.getDiscardOnSignal())
@@ -283,6 +301,8 @@ Error OnDiskOutputFile::tryToCreateTemporary(std::optional<int> &FD) {
 }
 
 Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   assert(OutputPath != "-" && "Unexpected request for FD of stdout");
 
   // Disable temporary file for other non-regular files, and if we get a status
@@ -312,13 +332,7 @@ Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
   // Not using a temporary file. Open the final output file.
   return createDirectoriesOnDemand(OutputPath, Config, [&]() -> Error {
     int NewFD;
-    sys::fs::OpenFlags OF = sys::fs::OF_None;
-    if (Config.getTextWithCRLF())
-      OF |= sys::fs::OF_TextWithCRLF;
-    else if (Config.getText())
-      OF |= sys::fs::OF_Text;
-    if (Config.getAppend())
-      OF |= sys::fs::OF_Append;
+    sys::fs::OpenFlags OF = generateFlagsFromConfig(Config);
     if (std::error_code EC = sys::fs::openFileForWrite(
             OutputPath, NewFD, sys::fs::CD_CreateAlways, OF))
       return convertToOutputError(OutputPath, EC);
@@ -331,6 +345,8 @@ Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
 }
 
 Error OnDiskOutputFile::initializeStream() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // Open the file stream.
   if (OutputPath == "-") {
     std::error_code EC;
@@ -435,6 +451,8 @@ areFilesDifferent(const llvm::Twine &Source, const llvm::Twine &Destination) {
 }
 
 Error OnDiskOutputFile::reset() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // Destroy the streams to flush them.
   BufferOS.reset();
   if (!FileOS)
@@ -449,6 +467,8 @@ Error OnDiskOutputFile::reset() {
 }
 
 Error OnDiskOutputFile::keep() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (auto E = reset())
     return E;
 
@@ -498,7 +518,7 @@ Error OnDiskOutputFile::keep() {
       // Someone else owns the lock on this file, wait.
       switch (Lock.waitForUnlockFor(std::chrono::seconds(256))) {
       case WaitForUnlockResult::Success:
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case WaitForUnlockResult::OwnerDied: {
         continue; // try again to get the lock.
       }
@@ -553,6 +573,8 @@ Error OnDiskOutputFile::keep() {
 }
 
 Error OnDiskOutputFile::discard() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // Destroy the streams to flush them.
   if (auto E = reset())
     return E;
@@ -575,6 +597,8 @@ Error OnDiskOutputFile::discard() {
 }
 
 Error OnDiskOutputBackend::makeAbsolute(SmallVectorImpl<char> &Path) const {
+  // FIXME: Should this really call sys::fs::make_absolute?
+  auto BypassSandbox = sys::sandbox::scopedDisable();
   return convertToOutputError(StringRef(Path.data(), Path.size()),
                               sys::fs::make_absolute(Path));
 }
@@ -582,6 +606,8 @@ Error OnDiskOutputBackend::makeAbsolute(SmallVectorImpl<char> &Path) const {
 Expected<std::unique_ptr<OutputFileImpl>>
 OnDiskOutputBackend::createFileImpl(StringRef Path,
                                     std::optional<OutputConfig> Config) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   SmallString<256> AbsPath;
   if (Path != "-") {
     AbsPath = Path;

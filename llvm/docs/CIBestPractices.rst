@@ -9,11 +9,11 @@ This document contains a list of guidelines and best practices to use when
 working on LLVM's CI systems. These are intended to keep our actions reliable,
 consistent, and secure.
 
-Github Actions Best Practices
+GitHub Actions Best Practices
 =============================
 
 This section contains information on best practices/guidelines when working on
-LLVM's github actions workflows.
+LLVM's GitHub actions workflows.
 
 Disabling Jobs In Forks
 -----------------------
@@ -35,7 +35,7 @@ jobs specified within a workflow:
       if: github.repository_owner == 'llvm'
 
 We choose to use ``github.repository_owner`` rather than ``github.repository``
-to enable these workflows to run in forks inside the LLVM organization such as
+to enable these workflows to run in forks inside the LLVM organization, such as
 the ClangIR fork.
 
 There are some exceptions to this rule where ``github.repository`` might be
@@ -46,7 +46,7 @@ release tasks, which should not run anywhere else.
 Hash Pinning Dependencies
 -------------------------
 
-Github Actions allows the use of actions from other repositories as steps in
+GitHub Actions allows the use of actions from other repositories as steps in
 jobs. We take advantage of various actions for a variety of different tasks,
 but especially tasks like checking out the repository, and
 downloading/uploading build caches. These actions are typically versioned with
@@ -59,9 +59,9 @@ just a release, which looks like the following:
       uses: actions/checkout@v4
 
 However, it is best practice to specify an exact commit SHA from which to pull
-the action from, noting the version in a comment:
+the action, noting the version in a comment:
 
-We plan on revisiting this recommendation once Github's immutable actions have
+We plan on revisiting this recommendation once GitHub's immutable actions have
 been rolled out as GA.
 
 .. code-block:: yaml
@@ -72,11 +72,11 @@ been rolled out as GA.
 
 This is beneficial for two reasons: reliability and security. Specifying an
 exact SHA rather than just a major version ensures we end up running the same
-action originally specified when the workflow as authored and/or updated,
+action originally specified when the workflow was authored and/or updated,
 and that no breaking changes sneak in from new versions of a workflow being
 released. However, this effect could also be achieved by specifying an exact
 dot release. The biggest reason to prefer hash pinned dependencies is security.
-Release assets on Github are mutable, allowing an attacker to change the code
+Release assets on GitHub are mutable, allowing an attacker to change the code
 within a specific version of an action after the fact, potentially stealing
 sensitive tokens and credentials. Hash pinning the dependencies prevents this
 as the hash would change with the code.
@@ -84,10 +84,10 @@ as the hash would change with the code.
 Using Versioned Runner Images
 -----------------------------
 
-Github actions allows the use of either specifically versioned runner images
+GitHub actions allows the use of either specifically versioned runner images
 (e.g., ``ubuntu-22.04``), or just the latest runner image
 (e.g., ``ubuntu-latest``). It is best practice to use explicitly versioned
-runner images. This prevents breakages when Github rolls the latest runner
+runner images. This prevents breakages when GitHub rolls the latest runner
 image to a new version with potentially breaking changes, instead allowing us
 to explicitly opt-in to using the new image when we have done sufficient
 testing to ensure that our existing workflows work as expected in the new
@@ -112,7 +112,7 @@ the principle of least privilege.
 Ensuring Workflows Run on the Correct Events
 --------------------------------------------
 
-Github allows workflows to run on a multitude of events and it is important to
+GitHub allows workflows to run on a multitude of events, and it is important to
 configure a workflow such that it triggers on the correct events. There are
 two main best practices around events that trigger workflows:
 
@@ -135,4 +135,21 @@ branches as follows:
   push:
     branches:
       - main
-      - releases/*
+      - release/*
+
+Container Best Practices
+========================
+
+This section contains best practices/guidelines when working with containers
+for LLVM infrastructure.
+
+Using Fully Qualified Container Names
+-------------------------------------
+
+When referencing container images from a registry, such as in GitHub Actions
+workflows, or in ``Dockerfile`` files used for building images, prefer fully
+qualified names (i.e., including the registry domain) over just the image.
+For example, prefer ``docker.io/ubuntu:24.04`` over ``ubuntu:24.04``. This
+ensures portability across systems where a different default registry might
+be specified and also prevents attackers from changing the default registry
+to pull in a malicious image instead of the intended one.

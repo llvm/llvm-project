@@ -11,8 +11,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -24,7 +24,9 @@ using namespace clang;
 using namespace llvm::opt;
 
 UEFI::UEFI(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
-    : ToolChain(D, Triple, Args) {}
+    : ToolChain(D, Triple, Args) {
+  getProgramPaths().push_back(getDriver().Dir);
+}
 
 Tool *UEFI::buildLinker() const { return new tools::uefi::Linker(*this); }
 

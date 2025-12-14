@@ -432,11 +432,7 @@ static Value getOriginalVectorValue(Value value) {
                         current = op.getSource();
                         return false;
                       })
-                      .Case<vector::SplatOp>([&current](auto op) {
-                        current = op.getInput();
-                        return false;
-                      })
-                      .Default([](Operation *) { return false; });
+                      .Default(false);
 
     if (!skipOp) {
       break;

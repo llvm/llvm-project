@@ -62,12 +62,12 @@ define i32 @foo1(i32 %N, ptr nocapture readnone %A, ptr nocapture readonly %B, i
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i32> [[TMP10]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP11]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP11]], i32 2
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[TMP11]], i32 3
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP12]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP14]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP16]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i16, ptr [[TMP13]], align 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i16, ptr [[TMP15]], align 2
@@ -80,7 +80,7 @@ define i32 @foo1(i32 %N, ptr nocapture readnone %A, ptr nocapture readonly %B, i
 ; CHECK-NEXT:    [[TMP28:%.*]] = sext <4 x i16> [[TMP27]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP29]] = add <4 x i32> [[VEC_PHI]], [[TMP28]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP30]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -167,12 +167,12 @@ define i32 @foo2(i16 zeroext %N, ptr nocapture readnone %A, ptr nocapture readon
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP8]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP8]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i16, ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i16, ptr [[TMP12]], align 2
@@ -185,7 +185,7 @@ define i32 @foo2(i16 zeroext %N, ptr nocapture readnone %A, ptr nocapture readon
 ; CHECK-NEXT:    [[TMP25:%.*]] = sext <4 x i16> [[TMP24]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP26]] = add <4 x i32> [[VEC_PHI]], [[TMP25]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP27]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

@@ -304,7 +304,7 @@ static ConstantIntRanges inferDivURange(const ConstantIntRanges &lhs,
     umin = lhsMin.udiv(rhsMax);
 
   // X u/ Y u<= X.
-  APInt umax = lhsMax;
+  const APInt &umax = lhsMax;
   return ConstantIntRanges::fromUnsigned(umin, umax);
 }
 

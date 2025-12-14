@@ -32,29 +32,41 @@ namespace llvm {
 
 namespace object {
 
+// CompressedOffloadBundle represents the format for the compressed offload
+// bundles.
+//
+// The format is as follows:
+// - Magic Number (4 bytes) - A constant "CCOB".
+// - Version (2 bytes)
+// - Compression Method (2 bytes) - Uses the values from
+// llvm::compression::Format.
+// - Total file size (4 bytes in V2, 8 bytes in V3).
+// - Uncompressed Size (4 bytes in V1/V2, 8 bytes in V3).
+// - Truncated MD5 Hash (8 bytes).
+// - Compressed Data (variable length).
 class CompressedOffloadBundle {
 private:
-  static inline const size_t MagicSize = 4;
-  static inline const size_t VersionFieldSize = sizeof(uint16_t);
-  static inline const size_t MethodFieldSize = sizeof(uint16_t);
-  static inline const size_t FileSizeFieldSize = sizeof(uint32_t);
-  static inline const size_t UncompressedSizeFieldSize = sizeof(uint32_t);
-  static inline const size_t HashFieldSize = sizeof(uint64_t);
-  static inline const size_t V1HeaderSize =
-      MagicSize + VersionFieldSize + MethodFieldSize +
-      UncompressedSizeFieldSize + HashFieldSize;
-  static inline const size_t V2HeaderSize =
-      MagicSize + VersionFieldSize + FileSizeFieldSize + MethodFieldSize +
-      UncompressedSizeFieldSize + HashFieldSize;
   static inline const llvm::StringRef MagicNumber = "CCOB";
-  static inline const uint16_t Version = 2;
 
 public:
-  LLVM_ABI static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  struct CompressedBundleHeader {
+    unsigned Version;
+    llvm::compression::Format CompressionFormat;
+    std::optional<size_t> FileSize;
+    size_t UncompressedFileSize;
+    uint64_t Hash;
+
+    static llvm::Expected<CompressedBundleHeader> tryParse(llvm::StringRef);
+  };
+
+  static inline const uint16_t DefaultVersion = 3;
+
+  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
   compress(llvm::compression::Params P, const llvm::MemoryBuffer &Input,
-           bool Verbose = false);
-  LLVM_ABI static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  decompress(llvm::MemoryBufferRef &Input, bool Verbose = false);
+           uint16_t Version, raw_ostream *VerboseStream = nullptr);
+  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  decompress(const llvm::MemoryBuffer &Input,
+             raw_ostream *VerboseStream = nullptr);
 };
 
 /// Bundle entry in binary clang-offload-bundler format.
@@ -62,12 +74,12 @@ struct OffloadBundleEntry {
   uint64_t Offset = 0u;
   uint64_t Size = 0u;
   uint64_t IDLength = 0u;
-  StringRef ID;
+  std::string ID;
   OffloadBundleEntry(uint64_t O, uint64_t S, uint64_t I, StringRef T)
-      : Offset(O), Size(S), IDLength(I), ID(T) {}
+      : Offset(O), Size(S), IDLength(I), ID(T.str()) {}
   void dumpInfo(raw_ostream &OS) {
     OS << "Offset = " << Offset << ", Size = " << Size
-       << ", ID Length = " << IDLength << ", ID = " << ID;
+       << ", ID Length = " << IDLength << ", ID = " << ID << "\n";
   }
   void dumpURI(raw_ostream &OS, StringRef FilePath) {
     OS << ID.data() << "\tfile://" << FilePath << "#offset=" << Offset
@@ -81,16 +93,21 @@ class OffloadBundleFatBin {
   uint64_t Size = 0u;
   StringRef FileName;
   uint64_t NumberOfEntries;
+  bool Decompressed;
   SmallVector<OffloadBundleEntry> Entries;
 
 public:
+  std::unique_ptr<MemoryBuffer> DecompressedBuffer;
+
   SmallVector<OffloadBundleEntry> getEntries() { return Entries; }
   uint64_t getSize() const { return Size; }
   StringRef getFileName() const { return FileName; }
   uint64_t getNumEntries() const { return NumberOfEntries; }
+  bool isDecompressed() const { return Decompressed; }
 
   LLVM_ABI static Expected<std::unique_ptr<OffloadBundleFatBin>>
-  create(MemoryBufferRef, uint64_t SectionOffset, StringRef FileName);
+  create(MemoryBufferRef, uint64_t SectionOffset, StringRef FileName,
+         bool Decompress = false);
   LLVM_ABI Error extractBundle(const ObjectFile &Source);
 
   LLVM_ABI Error dumpEntryToCodeObject();
@@ -106,9 +123,14 @@ public:
       Entry.dumpURI(outs(), FileName);
   }
 
-  OffloadBundleFatBin(MemoryBufferRef Source, StringRef File)
-      : FileName(File), NumberOfEntries(0),
-        Entries(SmallVector<OffloadBundleEntry>()) {}
+  OffloadBundleFatBin(MemoryBufferRef Source, StringRef File,
+                      bool Decompress = false)
+      : FileName(File), NumberOfEntries(0), Decompressed(Decompress),
+        Entries(SmallVector<OffloadBundleEntry>()) {
+    if (Decompress)
+      DecompressedBuffer =
+          MemoryBuffer::getMemBufferCopy(Source.getBuffer(), File);
+  }
 };
 
 enum UriTypeT { FILE_URI, MEMORY_URI };
@@ -191,6 +213,10 @@ LLVM_ABI Error extractOffloadBundleFatBinary(
 LLVM_ABI Error extractCodeObject(const ObjectFile &Source, int64_t Offset,
                                  int64_t Size, StringRef OutputFileName);
 
+/// Extract code object memory from the given \p Source object file at \p Offset
+/// and of \p Size, and copy into \p OutputFileName.
+LLVM_ABI Error extractCodeObject(MemoryBufferRef Buffer, int64_t Offset,
+                                 int64_t Size, StringRef OutputFileName);
 /// Extracts an Offload Bundle Entry given by URI
 LLVM_ABI Error extractOffloadBundleByURI(StringRef URIstr);
 

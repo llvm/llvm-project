@@ -1154,23 +1154,45 @@ TEST(CompletionTest, CommentsOnMembersFromHeader) {
       /// This is a member function.
       int delta();
     };
+
+    template <typename T>
+    struct beta {
+      /// This is a member field inside a template.
+      int omega;
+
+      /// This is a member function inside a template.
+      int epsilon();
+    };
   )cpp";
 
   auto File = testPath("foo.cpp");
   Annotations Test(R"cpp(
 #include "foo.h"
 alpha a;
-int x = a.^
+beta<int> b;
+int x = a.$p1^;
+int y = b.$p2^;
      )cpp");
   runAddDocument(Server, File, Test.code());
   auto CompletionList =
-      llvm::cantFail(runCodeComplete(Server, File, Test.point(), {}));
+      llvm::cantFail(runCodeComplete(Server, File, Test.point("p1"), {}));
 
   EXPECT_THAT(CompletionList.Completions,
               Contains(AllOf(named("gamma"), doc("This is a member field."))));
   EXPECT_THAT(
       CompletionList.Completions,
       Contains(AllOf(named("delta"), doc("This is a member function."))));
+
+  CompletionList =
+      llvm::cantFail(runCodeComplete(Server, File, Test.point("p2"), {}));
+
+  EXPECT_THAT(CompletionList.Completions,
+              Contains(AllOf(named("omega")
+                             /* FIXME: Doc retrieval does not work yet*/)));
+  EXPECT_THAT(
+      CompletionList.Completions,
+      Contains(AllOf(named("epsilon"),
+                     doc("This is a member function inside a template."))));
 }
 
 TEST(CompletionTest, CommentsOnMembersFromHeaderOverloadBundling) {
@@ -1828,6 +1850,11 @@ public:
 
   void relations(const RelationsRequest &,
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>)
+      const override {}
+
+  void
+  reverseRelations(const RelationsRequest &,
+                   llvm::function_ref<void(const SymbolID &, const Symbol &)>)
       const override {}
 
   llvm::unique_function<IndexContents(llvm::StringRef) const>
@@ -4662,6 +4689,64 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
                                    snippetSuffix("(${1:float a})")),
                              AllOf(named("foo3"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})"))));
+  }
+}
+
+TEST(CompletionTest, FuzzyMatchMacro) {
+  Annotations Code(R"cpp(
+  #define gl_foo() 42
+  #define _gl_foo() 42
+  #define glfbar() 42
+
+  int gl_frob();
+  int _gl_frob();
+
+  int main() {
+    int y = glf$c1^;
+    int y = _gl$c2^;
+  }
+  )cpp");
+
+  auto TU = TestTU::withCode(Code.code());
+
+  // Exact prefix should match macro or symbol
+  {
+    CodeCompleteOptions Opts{};
+    EXPECT_EQ(Opts.MacroFilter, Config::MacroFilterPolicy::ExactPrefix);
+
+    {
+      auto Results = completions(TU, Code.point("c1"), {}, Opts);
+      EXPECT_THAT(
+          Results.Completions,
+          ElementsAre(named("gl_frob"), named("_gl_frob"), named("glfbar")));
+    }
+
+    {
+      auto Results = completions(TU, Code.point("c2"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("_gl_frob"), named("_gl_foo")));
+    }
+  }
+
+  // but with fuzzy match
+  {
+    CodeCompleteOptions Opts{};
+    Opts.MacroFilter = Config::MacroFilterPolicy::FuzzyMatch;
+
+    // don't suggest underscore macros in general,
+    {
+      auto Results = completions(TU, Code.point("c1"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("gl_frob"), named("_gl_frob"),
+                              named("glfbar"), named("gl_foo")));
+    }
+
+    // but do suggest when macro contains exact prefix
+    {
+      auto Results = completions(TU, Code.point("c2"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("_gl_frob"), named("_gl_foo")));
+    }
   }
 }
 

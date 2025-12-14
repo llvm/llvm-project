@@ -9,6 +9,7 @@
 #ifndef ORC_RT_ERROR_H
 #define ORC_RT_ERROR_H
 
+#include "orc-rt/CallableTraitsHelper.h"
 #include "orc-rt/Compiler.h"
 #include "orc-rt/RTTI.h"
 
@@ -114,7 +115,7 @@ private:
   void setChecked(bool Checked) { ErrPtr = (ErrPtr & ~uintptr_t(1)) | Checked; }
 
   template <typename ErrT = ErrorInfoBase> std::unique_ptr<ErrT> takePayload() {
-    static_assert(std::is_base_of<ErrorInfoBase, ErrT>::value,
+    static_assert(std::is_base_of_v<ErrorInfoBase, ErrT>,
                   "ErrT is not an ErrorInfoBase subclass");
     std::unique_ptr<ErrT> Tmp(getPtr<ErrT>());
     setPtr(nullptr);
@@ -137,18 +138,15 @@ template <typename ErrT, typename... ArgTs> Error make_error(ArgTs &&...Args) {
   return make_error(std::make_unique<ErrT>(std::forward<ArgTs>(Args)...));
 }
 
-/// Traits class for selecting and applying error handlers.
-template <typename HandlerT>
-struct ErrorHandlerTraits
-    : public ErrorHandlerTraits<
-          decltype(&std::remove_reference_t<HandlerT>::operator())> {};
+namespace detail {
 
-// Specialization functions of the form 'Error (const ErrT&)'.
-template <typename ErrT> struct ErrorHandlerTraits<Error (&)(ErrT &)> {
+template <typename RetT, typename ArgT> struct ErrorHandlerTraitsImpl;
+
+// Specialization for Error(ErrT&).
+template <typename ErrT> struct ErrorHandlerTraitsImpl<Error, ErrT &> {
   static bool appliesTo(const ErrorInfoBase &E) {
     return E.template isA<ErrT>();
   }
-
   template <typename HandlerT>
   static Error apply(HandlerT &&H, std::unique_ptr<ErrorInfoBase> E) {
     assert(appliesTo(*E) && "Applying incorrect handler");
@@ -156,12 +154,11 @@ template <typename ErrT> struct ErrorHandlerTraits<Error (&)(ErrT &)> {
   }
 };
 
-// Specialization functions of the form 'void (const ErrT&)'.
-template <typename ErrT> struct ErrorHandlerTraits<void (&)(ErrT &)> {
+// Specialization for void(ErrT&).
+template <typename ErrT> struct ErrorHandlerTraitsImpl<void, ErrT &> {
   static bool appliesTo(const ErrorInfoBase &E) {
     return E.template isA<ErrT>();
   }
-
   template <typename HandlerT>
   static Error apply(HandlerT &&H, std::unique_ptr<ErrorInfoBase> E) {
     assert(appliesTo(*E) && "Applying incorrect handler");
@@ -170,13 +167,12 @@ template <typename ErrT> struct ErrorHandlerTraits<void (&)(ErrT &)> {
   }
 };
 
-/// Specialization for functions of the form 'Error (std::unique_ptr<ErrT>)'.
+// Specialization for Error(std::unique_ptr<ErrT>).
 template <typename ErrT>
-struct ErrorHandlerTraits<Error (&)(std::unique_ptr<ErrT>)> {
+struct ErrorHandlerTraitsImpl<Error, std::unique_ptr<ErrT>> {
   static bool appliesTo(const ErrorInfoBase &E) {
     return E.template isA<ErrT>();
   }
-
   template <typename HandlerT>
   static Error apply(HandlerT &&H, std::unique_ptr<ErrorInfoBase> E) {
     assert(appliesTo(*E) && "Applying incorrect handler");
@@ -185,13 +181,12 @@ struct ErrorHandlerTraits<Error (&)(std::unique_ptr<ErrT>)> {
   }
 };
 
-/// Specialization for functions of the form 'void (std::unique_ptr<ErrT>)'.
+// Specialization for void(std::unique_ptr<ErrT>).
 template <typename ErrT>
-struct ErrorHandlerTraits<void (&)(std::unique_ptr<ErrT>)> {
+struct ErrorHandlerTraitsImpl<void, std::unique_ptr<ErrT>> {
   static bool appliesTo(const ErrorInfoBase &E) {
     return E.template isA<ErrT>();
   }
-
   template <typename HandlerT>
   static Error apply(HandlerT &&H, std::unique_ptr<ErrorInfoBase> E) {
     assert(appliesTo(*E) && "Applying incorrect handler");
@@ -201,37 +196,11 @@ struct ErrorHandlerTraits<void (&)(std::unique_ptr<ErrT>)> {
   }
 };
 
-// Specialization for member functions of the form 'RetT (const ErrT&)'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(ErrT &)>
-    : public ErrorHandlerTraits<RetT (&)(ErrT &)> {};
+} // namespace detail.
 
-// Specialization for member functions of the form 'RetT (const ErrT&) const'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(ErrT &) const>
-    : public ErrorHandlerTraits<RetT (&)(ErrT &)> {};
-
-// Specialization for member functions of the form 'RetT (const ErrT&)'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(const ErrT &)>
-    : public ErrorHandlerTraits<RetT (&)(ErrT &)> {};
-
-// Specialization for member functions of the form 'RetT (const ErrT&) const'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(const ErrT &) const>
-    : public ErrorHandlerTraits<RetT (&)(ErrT &)> {};
-
-/// Specialization for member functions of the form
-/// 'RetT (std::unique_ptr<ErrT>)'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(std::unique_ptr<ErrT>)>
-    : public ErrorHandlerTraits<RetT (&)(std::unique_ptr<ErrT>)> {};
-
-/// Specialization for member functions of the form
-/// 'RetT (std::unique_ptr<ErrT>) const'.
-template <typename C, typename RetT, typename ErrT>
-class ErrorHandlerTraits<RetT (C::*)(std::unique_ptr<ErrT>) const>
-    : public ErrorHandlerTraits<RetT (&)(std::unique_ptr<ErrT>)> {};
+template <typename C>
+struct ErrorHandlerTraits
+    : public CallableTraitsHelper<detail::ErrorHandlerTraitsImpl, C> {};
 
 inline Error handleErrorsImpl(std::unique_ptr<ErrorInfoBase> Payload) {
   return make_error(std::move(Payload));
@@ -278,6 +247,8 @@ public:
       (void)!!*Err;
   }
 
+  ErrorAsOutParameter(Error &Err) : Err(&Err) { (void)!!Err; }
+
   ~ErrorAsOutParameter() {
     // Clear the checked bit.
     if (Err && !*Err)
@@ -288,11 +259,15 @@ private:
   Error *Err;
 };
 
+/// Tag to force construction of an Expected value in the success state. See
+/// Expected constructor for details.
+struct ForceExpectedSuccessValue {};
+
 template <typename T> class ORC_RT_NODISCARD Expected {
 
   template <class OtherT> friend class Expected;
 
-  static constexpr bool IsRef = std::is_reference<T>::value;
+  static constexpr bool IsRef = std::is_reference_v<T>;
   using wrap = std::reference_wrapper<std::remove_reference_t<T>>;
   using error_type = std::unique_ptr<ErrorInfoBase>;
   using storage_type = std::conditional_t<IsRef, wrap, T>;
@@ -310,10 +285,17 @@ public:
     new (getErrorStorage()) error_type(Err.takePayload());
   }
 
+  template <typename OtherT>
+  Expected(OtherT &&Val, ForceExpectedSuccessValue _,
+           std::enable_if_t<std::is_convertible_v<OtherT, T>> * = nullptr)
+      : HasError(false), Unchecked(true) {
+    new (getStorage()) storage_type(std::forward<OtherT>(Val));
+  }
+
   /// Create an Expected from a T value.
   template <typename OtherT>
   Expected(OtherT &&Val,
-           std::enable_if_t<std::is_convertible<OtherT, T>::value> * = nullptr)
+           std::enable_if_t<std::is_convertible_v<OtherT, T>> * = nullptr)
       : HasError(false), Unchecked(true) {
     new (getStorage()) storage_type(std::forward<OtherT>(Val));
   }
@@ -324,9 +306,8 @@ public:
   /// Move construct an Expected<T> value from an Expected<OtherT>, where OtherT
   /// must be convertible to T.
   template <class OtherT>
-  Expected(
-      Expected<OtherT> &&Other,
-      std::enable_if_t<std::is_convertible<OtherT, T>::value> * = nullptr) {
+  Expected(Expected<OtherT> &&Other,
+           std::enable_if_t<std::is_convertible_v<OtherT, T>> * = nullptr) {
     moveConstruct(std::move(Other));
   }
 
@@ -335,7 +316,7 @@ public:
   template <class OtherT>
   explicit Expected(
       Expected<OtherT> &&Other,
-      std::enable_if_t<!std::is_convertible<OtherT, T>::value> * = nullptr) {
+      std::enable_if_t<!std::is_convertible_v<OtherT, T>> * = nullptr) {
     moveConstruct(std::move(Other));
   }
 
