@@ -207,7 +207,8 @@ LogicalResult ModuleToObject::optimizeModule(llvm::Module &module,
 
 FailureOr<std::string>
 mlir::LLVM::translateModuleToISA(llvm::Module &llvmModule,
-                                 llvm::TargetMachine &targetMachine) {
+                                 llvm::TargetMachine &targetMachine,
+                                 function_ref<InFlightDiagnostic()> emitError) {
   std::string targetISA;
   llvm::raw_string_ostream stream(targetISA);
 
@@ -217,7 +218,7 @@ mlir::LLVM::translateModuleToISA(llvm::Module &llvmModule,
 
     if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
                                           llvm::CodeGenFileType::AssemblyFile))
-      return failure();
+      return emitError() << "Target machine cannot emit assembly";
 
     codegenPasses.run(llvmModule);
   }

@@ -302,7 +302,9 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
   if (targetOptions.getCompilationTarget() ==
       gpu::CompilationTarget::Assembly) {
     FailureOr<std::string> serializedISA =
-        mlir::LLVM::translateModuleToISA(llvmModule, **targetMachine);
+        mlir::LLVM::translateModuleToISA(llvmModule, **targetMachine, [&]() {
+          return getGPUModuleOp().emitError();
+        });
     if (failed(serializedISA)) {
       getGPUModuleOp().emitError() << "Failed translating the module to ISA."
                                    << triple << ", can't compile with LLVM\n";

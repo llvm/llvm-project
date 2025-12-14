@@ -25,8 +25,10 @@ namespace mlir {
 namespace LLVM {
 
 /// Utility function for translating to ISA.
-FailureOr<std::string> translateModuleToISA(llvm::Module &llvmModule,
-                                            llvm::TargetMachine &targetMachine);
+FailureOr<std::string>
+translateModuleToISA(llvm::Module &llvmModule,
+                     llvm::TargetMachine &targetMachine,
+                     function_ref<InFlightDiagnostic()> emitError);
 
 class ModuleTranslation;
 /// Utility base class for transforming operations into binary objects, by
