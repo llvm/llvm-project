@@ -4,7 +4,6 @@
 
 declare amdgpu_cs_chain void @callee(<3 x i32> inreg, { i32, ptr addrspace(5), i32, i32 })
 declare amdgpu_cs_chain_preserve void @callee_preserve(<3 x i32> inreg, { i32, ptr addrspace(5), i32, i32 })
-declare void @llvm.amdgcn.cs.chain(ptr, i32, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) noreturn
 
 define amdgpu_cs_chain void @dynamic_vgprs(i32 inreg %exec, <3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 inreg %num_vgpr) {
 ; GISEL-GFX12-LABEL: dynamic_vgprs:
@@ -94,4 +93,45 @@ define amdgpu_cs_chain void @constants(<3 x i32> inreg %sgpr, { i32, ptr addrspa
   unreachable
 }
 
+define amdgpu_cs_chain void @high_sgpr_pressure(<30 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr) {
+; GISEL-GFX12-LABEL: high_sgpr_pressure:
+; GISEL-GFX12:       ; %bb.0:
+; GISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_expcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
+; GISEL-GFX12-NEXT:    s_mov_b32 s30, callee_high_sgpr@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s31, callee_high_sgpr@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s34, retry_vgpr_alloc@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s35, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_alloc_vgpr 64
+; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL-GFX12-NEXT:    s_cselect_b64 s[30:31], s[30:31], s[34:35]
+; GISEL-GFX12-NEXT:    s_cselect_b32 exec_lo, 7, -1
+; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; DAGISEL-GFX12-LABEL: high_sgpr_pressure:
+; DAGISEL-GFX12:       ; %bb.0:
+; DAGISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_expcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_mov_b32 s31, retry_vgpr_alloc@abs32@hi
+; DAGISEL-GFX12-NEXT:    s_mov_b32 s30, retry_vgpr_alloc@abs32@lo
+; DAGISEL-GFX12-NEXT:    s_mov_b32 s35, callee_high_sgpr@abs32@hi
+; DAGISEL-GFX12-NEXT:    s_mov_b32 s34, callee_high_sgpr@abs32@lo
+; DAGISEL-GFX12-NEXT:    s_alloc_vgpr 64
+; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-GFX12-NEXT:    s_cselect_b64 s[34:35], s[34:35], s[30:31]
+; DAGISEL-GFX12-NEXT:    s_cselect_b32 exec_lo, 7, -1
+; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-GFX12-NEXT:    s_setpc_b64 s[34:35]
+  call void(ptr, i32, <30 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain(ptr @callee_high_sgpr, i32 7, <30 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 1, i32 inreg 64, i32 inreg -1, ptr @retry_vgpr_alloc)
+  unreachable
+}
+
+declare amdgpu_cs_chain void @callee_high_sgpr(<30 x i32> inreg, { i32, ptr addrspace(5), i32, i32 })
 declare amdgpu_cs_chain_preserve void @retry_vgpr_alloc(<3 x i32> inreg %sgpr)

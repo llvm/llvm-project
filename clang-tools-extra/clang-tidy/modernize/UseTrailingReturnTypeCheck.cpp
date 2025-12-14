@@ -55,13 +55,12 @@ public:
 
   bool visitUnqualName(StringRef UnqualName) {
     // Check for collisions with function arguments.
-    for (const ParmVarDecl *Param : F.parameters())
+    Collision = llvm::any_of(F.parameters(), [&](const ParmVarDecl *Param) {
       if (const IdentifierInfo *Ident = Param->getIdentifier())
-        if (Ident->getName() == UnqualName) {
-          Collision = true;
-          return true;
-        }
-    return false;
+        return Ident->getName() == UnqualName;
+      return false;
+    });
+    return Collision;
   }
 
   bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {

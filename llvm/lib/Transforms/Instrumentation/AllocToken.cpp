@@ -234,12 +234,31 @@ public:
   }
 };
 
-// Apply opt overrides.
-AllocTokenOptions transformOptionsFromCl(AllocTokenOptions Opts) {
-  if (!Opts.MaxTokens.has_value())
+// Apply opt overrides and module flags.
+static AllocTokenOptions resolveOptions(AllocTokenOptions Opts,
+                                        const Module &M) {
+  auto IntModuleFlagOrNull = [&](StringRef Key) {
+    return mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key));
+  };
+
+  if (auto *S = dyn_cast_or_null<MDString>(M.getModuleFlag("alloc-token-mode")))
+    if (auto Mode = getAllocTokenModeFromString(S->getString()))
+      Opts.Mode = *Mode;
+  if (auto *Val = IntModuleFlagOrNull("alloc-token-max"))
+    Opts.MaxTokens = Val->getZExtValue();
+  if (auto *Val = IntModuleFlagOrNull("alloc-token-fast-abi"))
+    Opts.FastABI |= Val->isOne();
+  if (auto *Val = IntModuleFlagOrNull("alloc-token-extended"))
+    Opts.Extended |= Val->isOne();
+
+  // Allow overriding options from command line options.
+  if (ClMaxTokens.getNumOccurrences())
     Opts.MaxTokens = ClMaxTokens;
-  Opts.FastABI |= ClFastABI;
-  Opts.Extended |= ClExtended;
+  if (ClFastABI.getNumOccurrences())
+    Opts.FastABI = ClFastABI;
+  if (ClExtended.getNumOccurrences())
+    Opts.Extended = ClExtended;
+
   return Opts;
 }
 
@@ -247,21 +266,21 @@ class AllocToken {
 public:
   explicit AllocToken(AllocTokenOptions Opts, Module &M,
                       ModuleAnalysisManager &MAM)
-      : Options(transformOptionsFromCl(std::move(Opts))), Mod(M),
+      : Options(resolveOptions(std::move(Opts), M)), Mod(M),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
-        Mode(IncrementMode(*IntPtrTy, *Options.MaxTokens)) {
+        Mode(IncrementMode(*IntPtrTy, Options.MaxTokens)) {
     switch (Options.Mode) {
     case TokenMode::Increment:
       break;
     case TokenMode::Random:
-      Mode.emplace<RandomMode>(*IntPtrTy, *Options.MaxTokens,
+      Mode.emplace<RandomMode>(*IntPtrTy, Options.MaxTokens,
                                M.createRNG(DEBUG_TYPE));
       break;
     case TokenMode::TypeHash:
-      Mode.emplace<TypeHashMode>(*IntPtrTy, *Options.MaxTokens);
+      Mode.emplace<TypeHashMode>(*IntPtrTy, Options.MaxTokens);
       break;
     case TokenMode::TypeHashPointerSplit:
-      Mode.emplace<TypeHashPointerSplitMode>(*IntPtrTy, *Options.MaxTokens);
+      Mode.emplace<TypeHashPointerSplitMode>(*IntPtrTy, Options.MaxTokens);
       break;
     }
   }
@@ -318,8 +337,6 @@ bool AllocToken::instrumentFunction(Function &F) {
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
     return false;
 
-  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
   SmallVector<std::pair<CallBase *, LibFunc>, 4> AllocCalls;
   SmallVector<IntrinsicInst *, 4> IntrinsicInsts;
 
@@ -327,6 +344,10 @@ bool AllocToken::instrumentFunction(Function &F) {
   const bool InstrumentFunction =
       F.hasFnAttribute(Attribute::SanitizeAllocToken) &&
       !F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation);
+
+  // Get TLI only when required.
+  const TargetLibraryInfo *TLI =
+      InstrumentFunction ? &FAM.getResult<TargetLibraryAnalysis>(F) : nullptr;
 
   // Collect all allocation calls to avoid iterator invalidation.
   for (Instruction &I : instructions(F)) {
@@ -343,25 +364,27 @@ bool AllocToken::instrumentFunction(Function &F) {
     auto *CB = dyn_cast<CallBase>(&I);
     if (!CB)
       continue;
-    if (std::optional<LibFunc> Func = shouldInstrumentCall(*CB, TLI))
+    if (std::optional<LibFunc> Func = shouldInstrumentCall(*CB, *TLI))
       AllocCalls.emplace_back(CB, Func.value());
   }
 
+  // Return early to avoid unnecessarily instantiating the ORE.
+  if (AllocCalls.empty() && IntrinsicInsts.empty())
+    return false;
+
+  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   bool Modified = false;
 
-  if (!AllocCalls.empty()) {
-    for (auto &[CB, Func] : AllocCalls)
-      Modified |= replaceAllocationCall(CB, Func, ORE, TLI);
-    if (Modified)
-      NumFunctionsModified++;
+  for (auto &[CB, Func] : AllocCalls)
+    Modified |= replaceAllocationCall(CB, Func, ORE, *TLI);
+
+  for (auto *II : IntrinsicInsts) {
+    replaceIntrinsicInst(II, ORE);
+    Modified = true;
   }
 
-  if (!IntrinsicInsts.empty()) {
-    for (auto *II : IntrinsicInsts)
-      replaceIntrinsicInst(II, ORE);
-    Modified = true;
+  if (Modified)
     NumFunctionsModified++;
-  }
 
   return Modified;
 }

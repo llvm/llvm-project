@@ -31,6 +31,7 @@ void ScriptInterpreterPythonInterfaces::Initialize() {
   ScriptedStopHookPythonInterface::Initialize();
   ScriptedBreakpointPythonInterface::Initialize();
   ScriptedThreadPlanPythonInterface::Initialize();
+  ScriptedFrameProviderPythonInterface::Initialize();
 }
 
 void ScriptInterpreterPythonInterfaces::Terminate() {
@@ -40,6 +41,7 @@ void ScriptInterpreterPythonInterfaces::Terminate() {
   ScriptedStopHookPythonInterface::Terminate();
   ScriptedBreakpointPythonInterface::Terminate();
   ScriptedThreadPlanPythonInterface::Terminate();
+  ScriptedFrameProviderPythonInterface::Terminate();
 }
 
 #endif
