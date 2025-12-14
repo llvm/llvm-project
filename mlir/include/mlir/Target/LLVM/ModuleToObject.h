@@ -23,6 +23,11 @@ class TargetMachine;
 
 namespace mlir {
 namespace LLVM {
+
+/// Utility function for translating to ISA.
+FailureOr<std::string> translateModuleToISA(llvm::Module &llvmModule,
+                                            llvm::TargetMachine &targetMachine);
+
 class ModuleTranslation;
 /// Utility base class for transforming operations into binary objects, by
 /// default it returns the serialized LLVM bitcode for the module. The
@@ -97,11 +102,6 @@ protected:
 
   /// Optimize the module.
   virtual LogicalResult optimizeModule(llvm::Module &module, int optL);
-
-  /// Utility function for translating to ISA, returns `std::nullopt` on
-  /// failure.
-  static std::optional<std::string>
-  translateToISA(llvm::Module &llvmModule, llvm::TargetMachine &targetMachine);
 
 protected:
   /// Module to transform to a binary object.

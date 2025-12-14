@@ -422,9 +422,9 @@ std::optional<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
   }
 
   // Translate the Module to ISA.
-  std::optional<std::string> serializedISA =
-      translateToISA(llvmModule, **targetMachine);
-  if (!serializedISA) {
+  FailureOr<std::string> serializedISA =
+      mlir::LLVM::translateModuleToISA(llvmModule, **targetMachine);
+  if (failed(serializedISA)) {
     getOperation().emitError() << "failed translating the module to ISA";
     return std::nullopt;
   }
