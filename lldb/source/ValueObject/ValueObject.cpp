@@ -2139,20 +2139,15 @@ void ValueObject::GetExpressionPath(Stream &s,
   ValueObject *parent = GetParent();
 
   if (parent) {
-    const lldb_private::CompilerType parentType = parent->GetCompilerType();
-    const bool parentTypeIsPointer = parentType.IsPointerType();
-    const bool pointeeOfParentTypeIsArray =
-        parentType.GetPointeeType().IsArrayType(nullptr, nullptr, nullptr);
-    if (parentTypeIsPointer && pointeeOfParentTypeIsArray) {
-      parent->GetExpressionPath(s, epformat);
+    parent->GetExpressionPath(s, epformat);
+    const CompilerType parentType = parent->GetCompilerType();
+    if (parentType.IsPointerType() &&
+        parentType.GetPointeeType().IsArrayType(nullptr, nullptr, nullptr)) {
       s.PutCString("[0]");
       s.PutCString(GetName().GetCString());
       return;
     }
   }
-
-  if (parent)
-    parent->GetExpressionPath(s, epformat);
 
   // if we are a deref_of_parent just because we are synthetic array members
   // made up to allow ptr[%d] syntax to work in variable printing, then add our
