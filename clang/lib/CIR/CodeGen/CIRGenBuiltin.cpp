@@ -60,9 +60,8 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::get(result);
 }
 
-static mlir::Value makeAtomicFenceValue(CIRGenFunction &cgf,
-                                        const CallExpr *expr,
-                                        cir::SyncScopeKind syncScope) {
+static void emitAtomicFenceOp(CIRGenFunction &cgf, const CallExpr *expr,
+                              cir::SyncScopeKind syncScope) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Value orderingVal = cgf.emitScalarExpr(expr->getArg(0));
 
@@ -72,7 +71,7 @@ static mlir::Value makeAtomicFenceValue(CIRGenFunction &cgf,
     // TODO(cir): Emit code to switch on `orderingVal`,
     //            and creating the fence op for valid values.
     cgf.cgm.errorNYI("Variable atomic fence ordering");
-    return {};
+    return;
   }
 
   auto constOrderingAttr = constOrdering.getValueAttr<cir::IntAttr>();
@@ -80,11 +79,9 @@ static mlir::Value makeAtomicFenceValue(CIRGenFunction &cgf,
 
   auto ordering = static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
 
-  cir::AtomicFence::create(
+  cir::AtomicFenceOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), ordering,
       cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
-
-  return {};
 }
 
 namespace {
@@ -1010,12 +1007,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__atomic_test_and_set:
   case Builtin::BI__atomic_clear:
     return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI__atomic_thread_fence:
-    return RValue::get(
-        makeAtomicFenceValue(*this, e, cir::SyncScopeKind::System));
-  case Builtin::BI__atomic_signal_fence:
-    return RValue::get(
-        makeAtomicFenceValue(*this, e, cir::SyncScopeKind::SingleThread));
+  case Builtin::BI__atomic_thread_fence: {
+    emitAtomicFenceOp(*this, e, cir::SyncScopeKind::System);
+    return RValue::get(nullptr);
+  }
+  case Builtin::BI__atomic_signal_fence: {
+    emitAtomicFenceOp(*this, e, cir::SyncScopeKind::SingleThread);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__c11_atomic_thread_fence:
   case Builtin::BI__c11_atomic_signal_fence:
   case Builtin::BI__scoped_atomic_thread_fence:
@@ -1352,7 +1351,19 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
 
   // Now see if we can emit a target-specific builtin.
-  if (mlir::Value v = emitTargetBuiltinExpr(builtinID, e, returnValue)) {
+  // FIXME: This is a temporary mechanism (double-optional semantics) that will
+  // go away once everything is implemented:
+  //   1. return `mlir::Value{}` for cases where we have issued the diagnostic.
+  //   2. return `std::nullopt` in cases where we didn't issue a diagnostic
+  //      but also didn't handle the builtin.
+  if (std::optional<mlir::Value> rst =
+          emitTargetBuiltinExpr(builtinID, e, returnValue)) {
+    mlir::Value v = rst.value();
+    // CIR dialect operations may have no results, no values will be returned
+    // even if it executes successfully.
+    if (!v)
+      return RValue::get(nullptr);
+
     switch (evalKind) {
     case cir::TEK_Scalar:
       if (mlir::isa<cir::VoidType>(v.getType()))
@@ -1373,11 +1384,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   return getUndefRValue(e->getType());
 }
 
-static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
-                                             unsigned builtinID,
-                                             const CallExpr *e,
-                                             ReturnValueSlot &returnValue,
-                                             llvm::Triple::ArchType arch) {
+static std::optional<mlir::Value>
+emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
+                          const CallExpr *e, ReturnValueSlot &returnValue,
+                          llvm::Triple::ArchType arch) {
   // When compiling in HipStdPar mode we have to be conservative in rejecting
   // target specific features in the FE, and defer the possible error to the
   // AcceleratorCodeSelection pass, wherein iff an unsupported target builtin is
@@ -1386,7 +1396,7 @@ static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
   // EmitStdParUnsupportedBuiltin.
   if (cgf->getLangOpts().HIPStdPar && cgf->getLangOpts().CUDAIsDevice &&
       arch != cgf->getTarget().getTriple().getArch())
-    return {};
+    return std::nullopt;
 
   switch (arch) {
   case llvm::Triple::arm:
@@ -1395,7 +1405,7 @@ static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
   case llvm::Triple::thumbeb:
     // These are actually NYI, but that will be reported by emitBuiltinExpr.
     // At this point, we don't even know that the builtin is target-specific.
-    return nullptr;
+    return std::nullopt;
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64_be:
@@ -1404,7 +1414,7 @@ static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
   case llvm::Triple::bpfel:
     // These are actually NYI, but that will be reported by emitBuiltinExpr.
     // At this point, we don't even know that the builtin is target-specific.
-    return nullptr;
+    return std::nullopt;
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
@@ -1426,13 +1436,13 @@ static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
   case llvm::Triple::riscv64:
     // These are actually NYI, but that will be reported by emitBuiltinExpr.
     // At this point, we don't even know that the builtin is target-specific.
-    return {};
+    return std::nullopt;
   default:
-    return {};
+    return std::nullopt;
   }
 }
 
-mlir::Value
+std::optional<mlir::Value>
 CIRGenFunction::emitTargetBuiltinExpr(unsigned builtinID, const CallExpr *e,
                                       ReturnValueSlot &returnValue) {
   if (getContext().BuiltinInfo.isAuxBuiltinID(builtinID)) {
