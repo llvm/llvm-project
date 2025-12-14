@@ -630,11 +630,9 @@ Value *AMDGPUCodeGenPrepareImpl::emitRsqF64(IRBuilder<> &Builder, Value *X,
   //
   // Fast math flags imply:
   //   sqrt ninf => !isinf(x)
-  //   sqrt nnan => not helpful
   //   fdiv ninf => x != 0, !isinf(x)
-  //   fdiv nnan => x != 0
   bool MaybePosInf = !SqrtFMF.noInfs() && !DivFMF.noInfs();
-  bool MaybeZero = !DivFMF.noInfs() && !DivFMF.noNaNs();
+  bool MaybeZero = !DivFMF.noInfs();
 
   DenormalMode DenormMode;
   FPClassTest Interested = fcNone;
