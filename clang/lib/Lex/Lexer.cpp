@@ -1930,7 +1930,12 @@ fastParseASCIIIdentifierScalar(const char *CurPtr,
   return CurPtr;
 }
 
-#if defined(__i386__) || defined(__x86_64__) && !defined(_WIN32)
+// Fast path for lexing ASCII identifiers using SSE4.2 instructions.
+// Only enabled on x86/x86_64 when building with a compiler that supports
+// the 'target' attribute, which is used for runtime dispatch. Otherwise, we
+// fall back to the scalar implementation.
+#if (defined(__i386__) || defined(__x86_64__)) && defined(__has_attribute) &&  \
+    __has_attribute(target)
 
 __attribute__((target("sse4.2"))) static const char *
 fastParseASCIIIdentifierSSE42(const char *CurPtr,
@@ -1958,27 +1963,16 @@ fastParseASCIIIdentifierSSE42(const char *CurPtr,
   return fastParseASCIIIdentifierScalar(CurPtr, BufferEnd);
 }
 
-static bool supportsSSE42() {
-  static bool SupportsSSE42 = __builtin_cpu_supports("sse4.2");
-  return SupportsSSE42;
+__attribute__((target("sse4.2"))) static const char *
+fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
+  return fastParseASCIIIdentifierSSE42(CurPtr, BufferEnd);
 }
 
+__attribute__((target("default")))
 #endif
-
 static const char *fastParseASCIIIdentifier(const char *CurPtr,
                                             const char *BufferEnd) {
-#if !defined(__i386__) && !defined(__x86_64__) || defined(_WIN32)
   return fastParseASCIIIdentifierScalar(CurPtr, BufferEnd);
-#else
-
-#ifndef __SSE4_2__
-  if (LLVM_UNLIKELY(!supportsSSE42()))
-    return fastParseASCIIIdentifierScalar(CurPtr, BufferEnd);
-#endif
-
-  return fastParseASCIIIdentifierSSE42(CurPtr, BufferEnd);
-
-#endif
 }
 
 bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
