@@ -32,8 +32,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
-#include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
@@ -4630,8 +4630,8 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     Args.push_back(Builder.getFalse());
 
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-      F->getParent(), Intrinsic::amdgcn_wmma_i32_16x16x64_iu8,
-      {CI->getArgOperand(4)->getType(), CI->getArgOperand(1)->getType()});
+        F->getParent(), Intrinsic::amdgcn_wmma_i32_16x16x64_iu8,
+        {CI->getArgOperand(4)->getType(), CI->getArgOperand(1)->getType()});
     return Builder.CreateCall(NewDecl, Args);
   }
 
