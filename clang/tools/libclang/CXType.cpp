@@ -150,13 +150,11 @@ CXType cxtype::MakeCXType(QualType T, CXTranslationUnit TU) {
       return MakeCXType(PTT->getInnerType(), TU);
     }
 
-    // Handle auto in function parameters
+    // Handle auto in function parameters (including constrained auto)
     if (auto *TTP = T->getAs<TemplateTypeParmType>()) {
       auto *D = TTP->getDecl();
       if (D && D->isImplicit()) {
-        if (auto *TC = D->getTypeConstraint(); !TC) {
-          TK = CXType_Auto;
-        }
+        TK = CXType_Auto;
       }
     }
 
