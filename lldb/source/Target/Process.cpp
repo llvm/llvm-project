@@ -117,6 +117,8 @@ static constexpr OptionEnumValueElement g_follow_fork_mode_values[] = {
     },
 };
 
+static constexpr unsigned g_string_read_width = 256;
+
 #define LLDB_PROPERTIES_process
 #include "TargetProperties.inc"
 
@@ -2137,17 +2139,14 @@ lldb::addr_t Process::FindInMemory(const uint8_t *buf, uint64_t size,
 
 llvm::SmallVector<std::optional<std::string>>
 Process::ReadCStringsFromMemory(llvm::ArrayRef<lldb::addr_t> addresses) {
-  // Make the same read width choice as ReadCStringFromMemory.
-  constexpr auto read_width = 256;
-
   llvm::SmallVector<std::optional<std::string>> output_strs(addresses.size(),
                                                             "");
   llvm::SmallVector<Range<addr_t, size_t>> ranges{
       llvm::map_range(addresses, [=](addr_t ptr) {
-        return Range<addr_t, size_t>(ptr, read_width);
+        return Range<addr_t, size_t>(ptr, g_string_read_width);
       })};
 
-  std::vector<uint8_t> buffer(read_width * addresses.size(), 0);
+  std::vector<uint8_t> buffer(g_string_read_width * addresses.size(), 0);
   uint64_t num_completed_strings = 0;
 
   while (num_completed_strings != addresses.size()) {
@@ -2194,7 +2193,7 @@ Process::ReadCStringsFromMemory(llvm::ArrayRef<lldb::addr_t> addresses) {
 
 size_t Process::ReadCStringFromMemory(addr_t addr, std::string &out_str,
                                       Status &error) {
-  char buf[256];
+  char buf[g_string_read_width];
   out_str.clear();
   addr_t curr_addr = addr;
   while (true) {
