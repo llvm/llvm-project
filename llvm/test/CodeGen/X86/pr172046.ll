@@ -48,3 +48,25 @@ entry:
   ret i32 %or
 }
 
+define i32 @shl_nsw_zext(i16 %0) {
+; X86-LABEL: shl_nsw_zext:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $256, %eax # imm = 0x100
+; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    movzwl %ax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: shl_nsw_zext:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    movl $256, %eax # imm = 0x100
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shll %cl, %eax
+; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    retq
+entry:
+  %3 = shl nsw i16 256, %0
+  %4 = sext i16 %3 to i32
+  ret i32 %4
+}
