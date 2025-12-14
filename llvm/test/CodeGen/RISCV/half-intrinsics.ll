@@ -1766,14 +1766,41 @@ define half @fma_f16(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fma_f16:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    ret
+; RV32IFZFHMIN-LABEL: fma_f16:
+; RV32IFZFHMIN:       # %bb.0:
+; RV32IFZFHMIN-NEXT:    fcvt.s.h fa5, fa2
+; RV32IFZFHMIN-NEXT:    fcvt.s.h fa4, fa1
+; RV32IFZFHMIN-NEXT:    fcvt.s.h fa3, fa0
+; RV32IFZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; RV32IFZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; RV32IFZFHMIN-NEXT:    ret
+;
+; RV64IFZFHMIN-LABEL: fma_f16:
+; RV64IFZFHMIN:       # %bb.0:
+; RV64IFZFHMIN-NEXT:    fcvt.s.h fa5, fa2
+; RV64IFZFHMIN-NEXT:    fcvt.s.h fa4, fa1
+; RV64IFZFHMIN-NEXT:    fcvt.s.h fa3, fa0
+; RV64IFZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; RV64IFZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; RV64IFZFHMIN-NEXT:    ret
+;
+; RV32IDZFHMIN-LABEL: fma_f16:
+; RV32IDZFHMIN:       # %bb.0:
+; RV32IDZFHMIN-NEXT:    fcvt.d.h fa5, fa2
+; RV32IDZFHMIN-NEXT:    fcvt.d.h fa4, fa1
+; RV32IDZFHMIN-NEXT:    fcvt.d.h fa3, fa0
+; RV32IDZFHMIN-NEXT:    fmadd.d fa5, fa3, fa4, fa5
+; RV32IDZFHMIN-NEXT:    fcvt.h.d fa0, fa5
+; RV32IDZFHMIN-NEXT:    ret
+;
+; RV64IDZFHMIN-LABEL: fma_f16:
+; RV64IDZFHMIN:       # %bb.0:
+; RV64IDZFHMIN-NEXT:    fcvt.d.h fa5, fa2
+; RV64IDZFHMIN-NEXT:    fcvt.d.h fa4, fa1
+; RV64IDZFHMIN-NEXT:    fcvt.d.h fa3, fa0
+; RV64IDZFHMIN-NEXT:    fmadd.d fa5, fa3, fa4, fa5
+; RV64IDZFHMIN-NEXT:    fcvt.h.d fa0, fa5
+; RV64IDZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: fma_f16:
 ; CHECKIZHINXMIN:       # %bb.0:

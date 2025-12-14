@@ -3518,7 +3518,8 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FMAD(SDNode *N) {
 
   SDValue Res;
   if (OVT == MVT::f16) {
-    // An f16 fma must go via f64 to prevent double rounding issues.
+    // If f16 fma is not natively supported, the value must be promoted to an
+    // f64 (and not to f32!) to prevent double rounding issues.
     SDValue A64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op0, Flags);
     SDValue B64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op1, Flags);
     SDValue C64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op2, Flags);
