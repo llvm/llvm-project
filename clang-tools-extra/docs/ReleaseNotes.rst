@@ -508,6 +508,11 @@ Changes in existing checks
   on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
   binary.
 
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` by fixing an issue where
+  the check would sometimes suggest inserting ``override`` in an invalid
+  place.
+
 - Improved :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check by fixing a crash
   on malformed code (common when using :program:`clang-tidy` through
