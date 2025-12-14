@@ -99,7 +99,7 @@ void SuperSelfCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   Diag << FixItHint::CreateReplacement(Message->getSourceRange(),
-                                       StringRef("[super init]"))
+                                       StringRef("[super init]"));
 }
 
 } // namespace clang::tidy::objc
