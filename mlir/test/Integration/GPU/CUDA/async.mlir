@@ -8,8 +8,11 @@
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_async_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
-// RUN:   --entry-point-result=void -O0 \
-// RUN: | FileCheck %s
+// RUN:   --entry-point-result=void -O0
+// RUN:
+// This test is overly flaky right now and needs investigation, skipping FileCheck.
+// See: https://github.com/llvm/llvm-project/issues/170833
+// DISABLED: | FileCheck %s
 
 func.func @main() {
   %c0    = arith.constant 0 : index

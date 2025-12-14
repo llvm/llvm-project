@@ -130,7 +130,7 @@ VoidTask silly_task() {
   co_await std::suspend_always();
 }
 
-// CIR: cir.func coroutine dso_local @_Z10silly_taskv() -> ![[VoidTask]]
+// CIR: cir.func coroutine {{.*}} @_Z10silly_taskv() -> ![[VoidTask]]
 // CIR: %[[VoidTaskAddr:.*]] = cir.alloca ![[VoidTask]], {{.*}}, ["__retval"]
 // CIR: %[[SavedFrameAddr:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["__coro_frame_addr"]
 // CIR: %[[VoidPromisseAddr:.*]] = cir.alloca ![[VoidPromisse]], {{.*}}, ["__promise"]
@@ -203,16 +203,26 @@ VoidTask silly_task() {
 // CIR:     %[[CoroHandleVoidReload:.*]] = cir.load{{.*}} %[[CoroHandleVoidAddr]] : !cir.ptr<![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
 // CIR:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SuspendAlwaysAddr]], %[[CoroHandleVoidReload]])
 // CIR:     cir.yield
+
+// Third region `resume` handles coroutine resuming logic.
+
 // CIR:   }, resume : {
+// CIR:     cir.call @_ZNSt14suspend_always12await_resumeEv(%[[SuspendAlwaysAddr]])
 // CIR:     cir.yield
 // CIR:   },)
 // CIR: }
+
+// Since we already tested cir.await guts above, the remaining checks for:
+// - The actual user written co_await
+// - The promise call
+// - The final suspend co_await
+// - Return
 
 folly::coro::Task<int> byRef(const std::string& s) {
   co_return s.size();
 }
 
-// CIR:  cir.func coroutine dso_local @_Z5byRefRKSt6string(%[[ARG:.*]]: !cir.ptr<![[StdString]]> {{.*}}) -> ![[IntTask]]
+// CIR:  cir.func coroutine {{.*}} @_Z5byRefRKSt6string(%[[ARG:.*]]: !cir.ptr<![[StdString]]> {{.*}}) -> ![[IntTask]]
 // CIR:    %[[AllocaParam:.*]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}}, ["s", init, const]
 // CIR:    %[[IntTaskAddr:.*]] = cir.alloca ![[IntTask]], {{.*}}, ["__retval"]
 // CIR:    %[[SavedFrameAddr:.*]]  = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["__coro_frame_addr"]
@@ -245,6 +255,8 @@ folly::coro::Task<int> byRef(const std::string& s) {
 // CIR:       %[[CoroHandleVoidReload:.*]] = cir.load{{.*}} %[[CoroHandleVoidAddr]] : !cir.ptr<![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
 // CIR:       cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SuspendAlwaysAddr]], %[[CoroHandleVoidReload]])
 // CIR:       cir.yield
-// CIR:      }, resume : {
-// CIR:        cir.yield
-// CIR:      },)
+// CIR:       }, resume : {
+// CIR:         cir.call @_ZNSt14suspend_always12await_resumeEv(%[[SuspendAlwaysAddr]])
+// CIR:         cir.yield
+// CIR:       },)
+// CIR:     }

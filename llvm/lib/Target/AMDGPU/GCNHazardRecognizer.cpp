@@ -190,6 +190,12 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (checkFPAtomicToDenormModeHazard(MI) > 0)
     return HazardType;
 
+  // Hazards which cannot be mitigated with S_NOPs.
+  if (!IsHazardRecognizerMode) {
+    if (checkWMMACoexecutionHazards(MI) > 0)
+      return Hazard;
+  }
+
   if (ST.hasNoDataDepHazard())
     return NoHazard;
 
@@ -437,9 +443,6 @@ void GCNHazardRecognizer::RecedeCycle() {
 
 enum HazardFnResult { HazardFound, HazardExpired, NoHazardFound };
 
-using IsExpiredFn = function_ref<bool(const MachineInstr &, int WaitStates)>;
-using GetNumWaitStatesFn = function_ref<unsigned int(const MachineInstr &)>;
-
 // Search for a hazard in a block and its predecessors.
 template <typename StateT>
 static bool
@@ -546,11 +549,14 @@ hasHazard(StateT InitialState,
 // Returns a minimum wait states since \p I walking all predecessors.
 // Only scans until \p IsExpired does not return true.
 // Can only be run in a hazard recognizer mode.
-static int getWaitStatesSince(
-    GCNHazardRecognizer::IsHazardFn IsHazard, const MachineBasicBlock *MBB,
-    MachineBasicBlock::const_reverse_instr_iterator I, int WaitStates,
-    IsExpiredFn IsExpired, DenseSet<const MachineBasicBlock *> &Visited,
-    GetNumWaitStatesFn GetNumWaitStates = SIInstrInfo::getNumWaitStates) {
+static int
+getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
+                   const MachineBasicBlock *MBB,
+                   MachineBasicBlock::const_reverse_instr_iterator I,
+                   int WaitStates, GCNHazardRecognizer::IsExpiredFn IsExpired,
+                   DenseSet<const MachineBasicBlock *> &Visited,
+                   GCNHazardRecognizer::GetNumWaitStatesFn GetNumWaitStates =
+                       SIInstrInfo::getNumWaitStates) {
   for (auto E = MBB->instr_rend(); I != E; ++I) {
     // Don't add WaitStates for parent BUNDLE instructions.
     if (I->isBundle())
@@ -582,20 +588,26 @@ static int getWaitStatesSince(
   return MinWaitStates;
 }
 
-static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
-                              const MachineInstr *MI, IsExpiredFn IsExpired) {
+static int
+getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
+                   const MachineInstr *MI,
+                   GCNHazardRecognizer::IsExpiredFn IsExpired,
+                   GCNHazardRecognizer::GetNumWaitStatesFn GetNumWaitStates =
+                       SIInstrInfo::getNumWaitStates) {
   DenseSet<const MachineBasicBlock *> Visited;
   return getWaitStatesSince(IsHazard, MI->getParent(),
                             std::next(MI->getReverseIterator()), 0, IsExpired,
-                            Visited, SIInstrInfo::getNumWaitStates);
+                            Visited, GetNumWaitStates);
 }
 
-int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard, int Limit) {
+int GCNHazardRecognizer::getWaitStatesSince(
+    IsHazardFn IsHazard, int Limit, GetNumWaitStatesFn GetNumWaitStates) {
   if (IsHazardRecognizerMode) {
     auto IsExpiredFn = [Limit](const MachineInstr &, int WaitStates) {
       return WaitStates >= Limit;
     };
-    return ::getWaitStatesSince(IsHazard, CurrCycleInstr, IsExpiredFn);
+    return ::getWaitStatesSince(IsHazard, CurrCycleInstr, IsExpiredFn,
+                                GetNumWaitStates);
   }
 
   int WaitStates = 0;
@@ -607,12 +619,16 @@ int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard, int Limit) {
       if (MI->isInlineAsm())
         continue;
     }
-    ++WaitStates;
+    WaitStates += MI ? GetNumWaitStates(*MI) : 1;
 
     if (WaitStates >= Limit)
       break;
   }
   return std::numeric_limits<int>::max();
+}
+
+int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard, int Limit) {
+  return getWaitStatesSince(IsHazard, Limit, SIInstrInfo::getNumWaitStates);
 }
 
 int GCNHazardRecognizer::getWaitStatesSinceDef(unsigned Reg,
@@ -1243,6 +1259,20 @@ int GCNHazardRecognizer::checkReadM0Hazards(MachineInstr *MI) {
          getWaitStatesSinceDef(AMDGPU::M0, IsHazardFn, ReadM0WaitStates);
 }
 
+// emit V_NOP instructions. \p WaitStatesNeeded is the number of V_NOPs we need
+// to insert, negative means not needed.
+bool GCNHazardRecognizer::emitVNops(MachineInstr *MI, int WaitStatesNeeded) {
+  if (WaitStatesNeeded <= 0)
+    return false;
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  for (int I = 0; I < WaitStatesNeeded; ++I)
+    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+            TII->get(AMDGPU::V_NOP_e32));
+
+  return true;
+}
+
 void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixVMEMtoScalarWriteHazards(MI);
   fixVcmpxPermlaneHazards(MI);
@@ -1257,7 +1287,7 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixVALUTransUseHazard(MI);
   fixVALUTransCoexecutionHazards(MI);
   fixWMMAHazards(MI); // fall-through if co-execution is enabled.
-  fixWMMACoexecutionHazards(MI);
+  emitVNops(MI, checkWMMACoexecutionHazards(MI));
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
   fixRequiredExportPriority(MI);
@@ -2045,13 +2075,13 @@ static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
   return false;
 }
 
-bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
+int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) {
   if (!AMDGPU::isGFX1250(ST))
-    return false;
+    return 0;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   if (!TII->isXDLWMMA(*MI) && !isCoexecutableVALUInst(*MI))
-    return false;
+    return 0;
 
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
@@ -2129,9 +2159,6 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   };
 
   int Limit = 0;
-  auto IsExpiredFn = [&Limit](const MachineInstr &, int WaitStates) {
-    return WaitStates >= Limit;
-  };
 
   auto GetWaitStatesFn = [](const MachineInstr &I) {
     return SIInstrInfo::isVALU(I) ? 1 : 0;
@@ -2141,38 +2168,26 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   if (TII->isXDLWMMA(*MI)) {
     for (Category = 0; WaitStatesNeeded < 0 && Category < 4; Category++) {
       Limit = WMMAWaitStates[Category]; // for IsExpiredFn.
-      DenseSet<const MachineBasicBlock *> Visited;
-      // '::getWaitStatesSince' returns the number of VALUs in between if hazard
+      // 'getWaitStatesSince' returns the number of VALUs in between if hazard
       // exists, and INT_MAX if there is no hazard. As a result, a negative
       // WaitStatesNeeded here means no hazard, and we will continue to search
       // for other categories.
       WaitStatesNeeded =
-          Limit - ::getWaitStatesSince(IsWMMAHazardFn, MI->getParent(),
-                                       std::next(MI->getReverseIterator()), 0,
-                                       IsExpiredFn, Visited, GetWaitStatesFn);
+          Limit - getWaitStatesSince(IsWMMAHazardFn, Limit, GetWaitStatesFn);
     }
   } else { // Must be a co-executable VALU.
     for (Category = 0; WaitStatesNeeded < 0 && Category < 4; Category++) {
       Limit = VALUWaitStates[Category]; // for IsExpiredFn.
-      DenseSet<const MachineBasicBlock *> Visited;
-      // '::getWaitStatesSince' returns the number of VALUs in between if hazard
+      // 'getWaitStatesSince' returns the number of VALUs in between if hazard
       // exists, and INT_MAX if there is no hazard. As a result, a negative
       // WaitStatesNeeded here means no hazard, and we will continue to search
       // for other categories.
       WaitStatesNeeded =
-          Limit - ::getWaitStatesSince(IsVALUHazardFn, MI->getParent(),
-                                       std::next(MI->getReverseIterator()), 0,
-                                       IsExpiredFn, Visited, GetWaitStatesFn);
+          Limit - getWaitStatesSince(IsVALUHazardFn, Limit, GetWaitStatesFn);
     }
   }
 
-  // WaitStatesNeeded now is the number of V_NOPs we need to insert, negative
-  // means not needed.
-  for (int i = 0; i < WaitStatesNeeded; i++)
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-            TII->get(AMDGPU::V_NOP_e32));
-
-  return true;
+  return WaitStatesNeeded;
 }
 
 bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
@@ -3644,10 +3659,10 @@ bool GCNHazardRecognizer::fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(0xFFE3);
+      .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0, ST));
   BuildMI(*MI->getParent(), std::next(MI->getIterator()), MI->getDebugLoc(),
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(0xFFE3);
+      .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0, ST));
 
   return true;
 }

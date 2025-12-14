@@ -117,43 +117,20 @@ std::optional<Label> GetFinalLabel(const OpenMPConstruct &x) {
 }
 
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause) {
-  // Clauses with OmpObjectList as its data member
-  using MemberObjectListClauses = std::tuple<OmpClause::Copyin,
-      OmpClause::Copyprivate, OmpClause::Exclusive, OmpClause::Firstprivate,
-      OmpClause::HasDeviceAddr, OmpClause::Inclusive, OmpClause::IsDevicePtr,
-      OmpClause::Link, OmpClause::Private, OmpClause::Shared,
-      OmpClause::UseDeviceAddr, OmpClause::UseDevicePtr>;
+  return common::visit([](auto &&s) { return GetOmpObjectList(s); }, clause.u);
+}
 
-  // Clauses with OmpObjectList in the tuple
-  using TupleObjectListClauses = std::tuple<OmpClause::AdjustArgs,
-      OmpClause::Affinity, OmpClause::Aligned, OmpClause::Allocate,
-      OmpClause::Enter, OmpClause::From, OmpClause::InReduction,
-      OmpClause::Lastprivate, OmpClause::Linear, OmpClause::Map,
-      OmpClause::Reduction, OmpClause::TaskReduction, OmpClause::To>;
-
-  // TODO:: Generate the tuples using TableGen.
+const OmpObjectList *GetOmpObjectList(const OmpClause::Depend &clause) {
   return common::visit(
       common::visitors{
-          [&](const OmpClause::Depend &x) -> const OmpObjectList * {
-            if (auto *taskDep{std::get_if<OmpDependClause::TaskDep>(&x.v.u)}) {
-              return &std::get<OmpObjectList>(taskDep->t);
-            } else {
-              return nullptr;
-            }
-          },
-          [&](const auto &x) -> const OmpObjectList * {
-            using Ty = std::decay_t<decltype(x)>;
-            if constexpr (common::HasMember<Ty, MemberObjectListClauses>) {
-              return &x.v;
-            } else if constexpr (common::HasMember<Ty,
-                                     TupleObjectListClauses>) {
-              return &std::get<OmpObjectList>(x.v.t);
-            } else {
-              return nullptr;
-            }
-          },
+          [](const OmpDoacross &) -> const OmpObjectList * { return nullptr; },
+          [](const OmpDependClause::TaskDep &x) { return GetOmpObjectList(x); },
       },
-      clause.u);
+      clause.v.u);
+}
+
+const OmpObjectList *GetOmpObjectList(const OmpDependClause::TaskDep &x) {
+  return &std::get<OmpObjectList>(x.t);
 }
 
 const BlockConstruct *GetFortranBlockConstruct(
@@ -227,5 +204,54 @@ OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x) {
   SplitOmpAllocateHelper(info, x);
   return info;
 }
+
+template <bool IsConst> LoopRange<IsConst>::LoopRange(QualReference x) {
+  if (auto *doLoop{Unwrap<DoConstruct>(x)}) {
+    Initialize(std::get<Block>(doLoop->t));
+  } else if (auto *omp{Unwrap<OpenMPLoopConstruct>(x)}) {
+    Initialize(std::get<Block>(omp->t));
+  }
+}
+
+template <bool IsConst> void LoopRange<IsConst>::Initialize(QualBlock &body) {
+  using QualIterator = decltype(std::declval<QualBlock>().begin());
+  auto makeRange{[](auto &container) {
+    return llvm::make_range(container.begin(), container.end());
+  }};
+
+  std::vector<llvm::iterator_range<QualIterator>> nest{makeRange(body)};
+  do {
+    auto at{nest.back().begin()};
+    auto end{nest.back().end()};
+    nest.pop_back();
+    while (at != end) {
+      if (auto *block{Unwrap<BlockConstruct>(*at)}) {
+        nest.push_back(llvm::make_range(std::next(at), end));
+        nest.push_back(makeRange(std::get<Block>(block->t)));
+        break;
+      } else if (Unwrap<DoConstruct>(*at) || Unwrap<OpenMPLoopConstruct>(*at)) {
+        items.push_back(&*at);
+      }
+      ++at;
+    }
+  } while (!nest.empty());
+}
+
+template <bool IsConst>
+auto LoopRange<IsConst>::iterator::operator++(int) -> iterator {
+  auto old = *this;
+  ++*this;
+  return old;
+}
+
+template <bool IsConst>
+auto LoopRange<IsConst>::iterator::operator--(int) -> iterator {
+  auto old = *this;
+  --*this;
+  return old;
+}
+
+template struct LoopRange<false>;
+template struct LoopRange<true>;
 
 } // namespace Fortran::parser::omp

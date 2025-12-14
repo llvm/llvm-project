@@ -863,6 +863,14 @@ static bool ProcessScopes(const Scope &scope,
       if (std::find_if(associated.begin(), associated.end(), [](SymbolRef ref) {
             return IsInitialized(*ref);
           }) != associated.end()) {
+        // If a symbol whose size has not been computed it is possible to get an
+        // assertion failure when trying to contruct the initializer. The lack
+        // of a size is assumed to be because there was an error reported that
+        // blocked computing the size. As of writing this comment, this is only
+        // called after all of semantics analysis has run without errors. If
+        // this needs to be called earlier, then we need to skip equivalence
+        // checking if there are any sizeless symbols and assert that there is
+        // an error reported.
         result &=
             CombineEquivalencedInitialization(associated, exprAnalyzer, inits);
       }
@@ -944,8 +952,8 @@ void ConstructInitializer(const Symbol &symbol,
   }
 }
 
-void ConvertToInitializers(
-    DataInitializations &inits, evaluate::ExpressionAnalyzer &exprAnalyzer) {
+void ConvertToInitializers(DataInitializations &inits,
+    evaluate::ExpressionAnalyzer &exprAnalyzer, bool forDerivedTypesOnly) {
   // Process DATA-style component /initializers/ now, so that they appear as
   // default values in time for EQUIVALENCE processing in ProcessScopes.
   for (auto &[symbolPtr, initialization] : inits) {
@@ -953,7 +961,8 @@ void ConvertToInitializers(
       ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
     }
   }
-  if (ProcessScopes(
+  if (!forDerivedTypesOnly &&
+      ProcessScopes(
           exprAnalyzer.context().globalScope(), exprAnalyzer, inits)) {
     for (auto &[symbolPtr, initialization] : inits) {
       if (!symbolPtr->owner().IsDerivedType()) {
