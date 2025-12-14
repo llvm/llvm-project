@@ -8199,6 +8199,22 @@ with compoundStmt()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundStmt.html">CompoundStmt</a>&gt;</td><td class="name" onclick="toggle('hasAdjacentSubstatements0')"><a name="hasAdjacentSubstatements0Anchor">hasAdjacentSubstatements</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;, ..., Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td></tr>
+<tr><td colspan="4" class="doc" id="hasAdjacentSubstatements0"><pre>Matches compound statements where at least one set of adjacent
+substatements matching the provided sequence of matchers. Also matches
+StmtExprs that have CompoundStmt as children.
+
+Given
+  { {}; 1+2; }
+hasAdjacentSubstatements(compoundStmt(), binaryOperator())
+  matches '{ {}; 1+2; }'
+with compoundStmt()
+  matching '{}'
+with binaryOperator()
+  matching '1+2'
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CoroutineBodyStmt.html">CoroutineBodyStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody5')"><a name="hasBody5Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasBody5"><pre>Matches a 'for', 'while', 'while' statement or a function or coroutine
 definition that has a given body. Note that in case of functions or
@@ -9976,6 +9992,20 @@ hasAnySubstatement(compoundStmt())
   matches '{ {}; 1+2; }'
 with compoundStmt()
   matching '{}'
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1StmtExpr.html">StmtExpr</a>&gt;</td><td class="name" onclick="toggle('hasAdjacentSubstatements1')"><a name="hasAdjacentSubstatements1Anchor">hasAdjacentSubstatements</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;, ..., Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td></tr>
+<tr><td colspan="4" class="doc" id="hasAdjacentSubstatements1"><pre>Matches StmtExprs with compound statements containing at least one adjacent sequence of substatements that matches the provided matchers.
+
+Given
+  int x = ({ {} 1+2; });
+hasAdjacentSubstatements(compoundStmt(), binaryOperator())
+  matches '({ {}; 1+2; })'
+with compoundStmt()
+  matching '{}'
+with binaryOperator()
+  matching '1+2'
 </pre></td></tr>
 
 
