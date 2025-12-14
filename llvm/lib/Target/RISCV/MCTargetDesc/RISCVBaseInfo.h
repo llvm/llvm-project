@@ -433,6 +433,8 @@ enum OperandType : unsigned {
   OPERAND_RTZARG,
   // Condition code used by select and short forward branch pseudos.
   OPERAND_COND_CODE,
+  // Ordering for atomic pseudos.
+  OPERAND_ATOMIC_ORDERING,
   // Vector policy operand.
   OPERAND_VEC_POLICY,
   // Vector SEW operand. Stores in log2(SEW).
@@ -443,7 +445,9 @@ enum OperandType : unsigned {
   OPERAND_VEC_RM,
   // Vtype operand for XSfmm extension.
   OPERAND_XSFMM_VTYPE,
-  OPERAND_LAST_RISCV_IMM = OPERAND_XSFMM_VTYPE,
+  // XSfmm twiden operand.
+  OPERAND_XSFMM_TWIDEN,
+  OPERAND_LAST_RISCV_IMM = OPERAND_XSFMM_TWIDEN,
 
   OPERAND_UIMM20_LUI,
   OPERAND_UIMM20_AUIPC,
@@ -457,6 +461,8 @@ enum OperandType : unsigned {
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
   OPERAND_AVL,
+
+  OPERAND_VMASK,
 };
 } // namespace RISCVOp
 
