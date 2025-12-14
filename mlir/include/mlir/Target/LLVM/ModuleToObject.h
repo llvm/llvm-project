@@ -23,7 +23,6 @@ class TargetMachine;
 
 namespace mlir {
 namespace LLVM {
-
 class ModuleTranslation;
 /// Utility base class for transforming operations into binary objects, by
 /// default it returns the serialized LLVM bitcode for the module. The
