@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 // Check that functions are marked [[nodiscard]]
 
 #include <unordered_map>
