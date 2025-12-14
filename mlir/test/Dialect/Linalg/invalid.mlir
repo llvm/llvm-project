@@ -2076,4 +2076,3 @@ func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
                                 outs(%f : vector<4xf16>) -> tensor<?xf16>
   func.return %0, %f : tensor<?xf16>, vector<4xf16>
 }
-
