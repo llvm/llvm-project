@@ -53,7 +53,6 @@
 #include <__utility/in_place.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
-#include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -70,14 +69,11 @@ namespace ranges {
 
 template <class _Fn, size_t _Np>
 struct __apply_n {
-  template <class... _Ts>
-  static auto __apply(tuple<_Ts...>&&) -> invoke_result_t<_Fn, _Ts...>;
-
   template <class _Tp, size_t... _Is>
-  static auto __make_tuple_impl(index_sequence<_Is...>) -> tuple<decltype((_Is, std::declval<_Tp (*)()>()()))...>;
+  static auto __apply(index_sequence<_Is...>) -> invoke_result_t<_Fn, decltype((void)_Is, std::declval<_Tp>())...>;
 
   template <class _Tp>
-  static constexpr auto operator()(_Tp&&) -> decltype(__apply(__make_tuple_impl<_Tp&&>(make_index_sequence<_Np>{})));
+  static auto operator()(_Tp&&) -> decltype(__apply<_Tp>(make_index_sequence<_Np>{}));
 };
 
 template <forward_range _View, move_constructible _Fn, size_t _Np>
@@ -190,9 +186,7 @@ class adjacent_transform_view<_View, _Fn, _Np>::__iterator {
   template <size_t... _Is>
   static consteval bool __noexcept_dereference(index_sequence<_Is...>) {
     return noexcept(std::invoke(
-        std::declval<__maybe_const<_Const, _Fn>&>(),
-        *std::get<_Is>(
-            __adjacent_view_iter_access::__get_current(std::declval<const __inner_iterator<_Const>&>()))...));
+        std::declval<__maybe_const<_Const, _Fn>&>(), ((void)_Is, *std::declval<iterator_t<_Base> const&>())...));
   }
 
 public:
