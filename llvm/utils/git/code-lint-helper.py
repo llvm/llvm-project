@@ -299,19 +299,14 @@ class Doc8LintHelper(LintHelper):
         return f"doc8 -q {' '.join(files_to_lint)}"
 
     def filter_changed_files(self, changed_files: Iterable[str]) -> Sequence[str]:
-        filtered_files: List[str] = []
-        for filepath in changed_files:
-            _, ext = os.path.splitext(filepath)
-            if ext != ".rst":
-                continue
-            if not self._should_lint_file(filepath):
-                continue
-            if os.path.exists(filepath):
-                filtered_files.append(filepath)
-        return filtered_files
+        return list(filter(self._should_lint_file, changed_files))
 
     def _should_lint_file(self, filepath: str) -> bool:
-        return filepath.startswith("clang-tools-extra/docs/clang-tidy/")
+        return (
+            os.path.splitext(filepath)[1] == ".rst"
+            and filepath.startswith("clang-tools-extra/docs/clang-tidy/")
+            and os.path.exists(filepath)
+        )
 
     def run_linter_tool(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
         if not files_to_lint:
@@ -334,13 +329,10 @@ class Doc8LintHelper(LintHelper):
         if proc.returncode == 0:
             return ""
 
-        output = proc.stdout.strip()
-        error_output = proc.stderr.strip()
-
         parts: List[str] = []
-        if output:
+        if output := proc.stdout.strip():
             parts.append(output)
-        if error_output:
+        if error_output := proc.stderr.strip():
             parts.append(f"stderr:\n{error_output}")
 
         if parts:
