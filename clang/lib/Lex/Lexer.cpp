@@ -1935,7 +1935,7 @@ fastParseASCIIIdentifierScalar(const char *CurPtr,
 // the 'target' attribute, which is used for runtime dispatch. Otherwise, we
 // fall back to the scalar implementation.
 #if (defined(__i386__) || defined(__x86_64__)) && defined(__has_attribute) &&  \
-    __has_attribute(target)
+    __has_attribute(target) && !defined(_MSC_VER)
 
 __attribute__((target("sse4.2"))) static const char *
 fastParseASCIIIdentifierSSE42(const char *CurPtr,
