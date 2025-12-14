@@ -476,7 +476,7 @@ def main():
   # Source location.
   paths_to_cut = args.source or []
   if not paths_to_cut:
-    paths_to_cut.append(os.getcwd() + '/')
+    paths_to_cut.append(os.getcwd().replace('\\', '/') + '/')
     if 'ANDROID_BUILD_TOP' in os.environ:
       paths_to_cut.append(os.environ['ANDROID_BUILD_TOP'] + '/')
 
