@@ -75,6 +75,7 @@ void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
                                           isFromStdNamespaceOrSystemHeader())))
                          .bind("expr"),
                      this);
+  Finder->addMatcher(initListExpr().bind("expr"), this);
 }
 
 static std::vector<std::pair<SourceLocation, StringRef>>
@@ -142,31 +143,46 @@ getCommentsBeforeLoc(ASTContext *Ctx, SourceLocation Loc) {
   return Comments;
 }
 
-static bool isLikelyTypo(llvm::ArrayRef<ParmVarDecl *> Params,
-                         StringRef ArgName, unsigned ArgIndex) {
-  const std::string ArgNameLowerStr = ArgName.lower();
-  const StringRef ArgNameLower = ArgNameLowerStr;
+template <typename NamedDeclRange>
+static bool isLikelyTypo(const NamedDeclRange &Candidates, StringRef ArgName,
+                         StringRef TargetName) {
+  llvm::SmallString<64> ArgNameLower;
+  ArgNameLower.reserve(ArgName.size());
+  for (const char C : ArgName)
+    ArgNameLower.push_back(llvm::toLower(C));
+  const StringRef ArgNameLowerRef = StringRef(ArgNameLower);
   // The threshold is arbitrary.
   const unsigned UpperBound = ((ArgName.size() + 2) / 3) + 1;
-  const unsigned ThisED = ArgNameLower.edit_distance(
-      Params[ArgIndex]->getIdentifier()->getName().lower(),
-      /*AllowReplacements=*/true, UpperBound);
+  llvm::SmallString<64> TargetNameLower;
+  TargetNameLower.reserve(TargetName.size());
+  for (const char C : TargetName)
+    TargetNameLower.push_back(llvm::toLower(C));
+  const unsigned ThisED =
+      ArgNameLowerRef.edit_distance(StringRef(TargetNameLower),
+                                    /*AllowReplacements=*/true, UpperBound);
   if (ThisED >= UpperBound)
     return false;
 
-  for (unsigned I = 0, E = Params.size(); I != E; ++I) {
-    if (I == ArgIndex)
-      continue;
-    const IdentifierInfo *II = Params[I]->getIdentifier();
+  for (const auto &Candidate : Candidates) {
+    const IdentifierInfo *II = Candidate->getIdentifier();
     if (!II)
       continue;
 
+    // Skip the target itself.
+    if (II->getName() == TargetName)
+      continue;
+
     const unsigned Threshold = 2;
-    // Other parameters must be an edit distance at least Threshold more away
-    // from this parameter. This gives us greater confidence that this is a
-    // typo of this parameter and not one with a similar name.
-    const unsigned OtherED = ArgNameLower.edit_distance(
-        II->getName().lower(),
+    // Other candidates must be an edit distance at least Threshold more away
+    // from this candidate. This gives us greater confidence that this is a
+    // typo of this candidate and not one with a similar name.
+    llvm::SmallString<64> CandidateLower;
+    const StringRef CandName = II->getName();
+    CandidateLower.reserve(CandName.size());
+    for (const char C : CandName)
+      CandidateLower.push_back(llvm::toLower(C));
+    const unsigned OtherED = ArgNameLowerRef.edit_distance(
+        StringRef(CandidateLower),
         /*AllowReplacements=*/true, ThisED + Threshold);
     if (OtherED < ThisED + Threshold)
       return false;
@@ -243,6 +259,63 @@ static const FunctionDecl *resolveMocks(const FunctionDecl *Func) {
   return Func;
 }
 
+// Create a file character range between two locations, or return an invalid
+// range if they are from different files or otherwise not representable.
+static CharSourceRange makeFileCharRange(ASTContext *Ctx, SourceLocation Begin,
+                                         SourceLocation End) {
+  return Lexer::makeFileCharRange(CharSourceRange::getCharRange(Begin, End),
+                                  Ctx->getSourceManager(), Ctx->getLangOpts());
+}
+
+// Collects consecutive comments immediately preceding an argument expression.
+static llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4>
+collectLeadingComments(ASTContext *Ctx, SourceLocation SearchBegin,
+                       const Expr *Arg) {
+  const CharSourceRange BeforeArgument =
+      makeFileCharRange(Ctx, SearchBegin, Arg->getBeginLoc());
+
+  if (BeforeArgument.isValid()) {
+    auto Vec = getCommentsInRange(Ctx, BeforeArgument);
+    llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Result;
+    Result.append(Vec.begin(), Vec.end());
+    return Result;
+  }
+
+  // Fall back to parsing back from the start of the argument.
+  const CharSourceRange ArgsRange =
+      makeFileCharRange(Ctx, Arg->getBeginLoc(), Arg->getEndLoc());
+  auto Vec = getCommentsBeforeLoc(Ctx, ArgsRange.getBegin());
+  llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Result;
+  Result.append(Vec.begin(), Vec.end());
+  return Result;
+}
+
+template <typename NamedDeclRange>
+static bool diagnoseMismatchInComment(
+    ArgumentCommentCheck &Self, ASTContext *Ctx,
+    const NamedDeclRange &Candidates, const IdentifierInfo *II, bool StrictMode,
+    llvm::Regex &IdentRE, const std::pair<SourceLocation, StringRef> &Comment,
+    SourceLocation DeclLoc) {
+  llvm::SmallVector<StringRef, 2> Matches;
+  if (!(IdentRE.match(Comment.second, &Matches) &&
+        !sameName(Matches[2], II->getName(), StrictMode)))
+    return false;
+
+  {
+    const DiagnosticBuilder Diag =
+        Self.diag(
+            Comment.first,
+            "argument name '%0' in comment does not match parameter name %1")
+        << Matches[2] << II;
+    if (isLikelyTypo(Candidates, Matches[2], II->getName())) {
+      Diag << FixItHint::CreateReplacement(
+          Comment.first, (Matches[1] + II->getName() + Matches[3]).str());
+    }
+  }
+  Self.diag(DeclLoc, "%0 declared here", DiagnosticIDs::Note) << II;
+  return true;
+}
+
 // Given the argument type and the options determine if we should
 // be adding an argument comment.
 bool ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
@@ -274,12 +347,6 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   if ((NumArgs == 0) || (IgnoreSingleArgument && NumArgs == 1))
     return;
 
-  auto MakeFileCharRange = [Ctx](SourceLocation Begin, SourceLocation End) {
-    return Lexer::makeFileCharRange(CharSourceRange::getCharRange(Begin, End),
-                                    Ctx->getSourceManager(),
-                                    Ctx->getLangOpts());
-  };
-
   for (unsigned I = 0; I < NumArgs; ++I) {
     const ParmVarDecl *PVD = Callee->getParamDecl(I);
     const IdentifierInfo *II = PVD->getIdentifier();
@@ -296,47 +363,25 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
       }
     }
 
-    const CharSourceRange BeforeArgument =
-        MakeFileCharRange(ArgBeginLoc, Args[I]->getBeginLoc());
+    const llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Comments =
+        collectLeadingComments(Ctx, ArgBeginLoc, Args[I]);
     ArgBeginLoc = Args[I]->getEndLoc();
 
-    std::vector<std::pair<SourceLocation, StringRef>> Comments;
-    if (BeforeArgument.isValid()) {
-      Comments = getCommentsInRange(Ctx, BeforeArgument);
-    } else {
-      // Fall back to parsing back from the start of the argument.
-      const CharSourceRange ArgsRange =
-          MakeFileCharRange(Args[I]->getBeginLoc(), Args[I]->getEndLoc());
-      Comments = getCommentsBeforeLoc(Ctx, ArgsRange.getBegin());
-    }
-
     for (auto Comment : Comments) {
-      llvm::SmallVector<StringRef, 2> Matches;
-      if (IdentRE.match(Comment.second, &Matches) &&
-          !sameName(Matches[2], II->getName(), StrictMode)) {
-        {
-          const DiagnosticBuilder Diag =
-              diag(Comment.first, "argument name '%0' in comment does not "
-                                  "match parameter name %1")
-              << Matches[2] << II;
-          if (isLikelyTypo(Callee->parameters(), Matches[2], I)) {
-            Diag << FixItHint::CreateReplacement(
-                Comment.first, (Matches[1] + II->getName() + Matches[3]).str());
-          }
-        }
-        diag(PVD->getLocation(), "%0 declared here", DiagnosticIDs::Note) << II;
-        if (OriginalCallee != Callee) {
-          diag(OriginalCallee->getLocation(),
-               "actual callee (%0) is declared here", DiagnosticIDs::Note)
-              << OriginalCallee;
-        }
+      const bool HadMismatch = diagnoseMismatchInComment(
+          *this, Ctx, Callee->parameters(), II, StrictMode, IdentRE, Comment,
+          PVD->getLocation());
+      if (HadMismatch && OriginalCallee != Callee) {
+        diag(OriginalCallee->getLocation(),
+             "actual callee (%0) is declared here", DiagnosticIDs::Note)
+            << OriginalCallee;
       }
     }
 
     // If the argument comments are missing for literals add them.
     if (Comments.empty() && shouldAddComment(Args[I])) {
-      const std::string ArgComment =
-          (llvm::Twine("/*") + II->getName() + "=*/").str();
+      llvm::SmallString<32> ArgComment;
+      (llvm::Twine("/*") + II->getName() + "=*/").toStringRef(ArgComment);
       const DiagnosticBuilder Diag =
           diag(Args[I]->getBeginLoc(),
                "argument comment missing for literal argument %0")
@@ -344,6 +389,142 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
           << FixItHint::CreateInsertion(Args[I]->getBeginLoc(), ArgComment);
     }
   }
+}
+
+void ArgumentCommentCheck::checkRecordInitializer(ASTContext *Ctx,
+                                                  const RecordDecl *RD,
+                                                  const InitListExpr *InitList,
+                                                  unsigned &InitIndex,
+                                                  SourceLocation &ArgBeginLoc) {
+  // If the record is not an aggregate (e.g. a base class with a user-declared
+  // constructor), we treat it as a single opaque element initialization.
+  bool IsAggregate = false;
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    IsAggregate = CXXRD->isAggregate();
+  else
+    IsAggregate = true; // C struct
+
+  if (!IsAggregate) {
+    if (InitIndex < InitList->getNumInits()) {
+      const Expr *Arg = InitList->getInit(InitIndex);
+      ArgBeginLoc = Arg->getEndLoc();
+      InitIndex++;
+    }
+    return;
+  }
+
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    for (const auto &Base : CXXRD->bases()) {
+      if (InitIndex >= InitList->getNumInits())
+        return;
+
+      const RecordDecl *BaseRD = Base.getType()->getAsRecordDecl();
+      if (!BaseRD) {
+        if (InitIndex < InitList->getNumInits()) {
+          const Expr *Arg = InitList->getInit(InitIndex);
+          ArgBeginLoc = Arg->getEndLoc();
+          InitIndex++;
+        }
+        continue;
+      }
+
+      const Expr *NextInit = InitList->getInit(InitIndex);
+      const QualType InitType = NextInit->getType();
+      const QualType BaseType = Base.getType();
+
+      // Check if this is an explicit initializer for the base.
+      const Expr *Stripped = NextInit->IgnoreParenImpCasts();
+      const auto *SubInitList = dyn_cast<InitListExpr>(Stripped);
+      const bool IsExplicitSubInit =
+          SubInitList &&
+          ASTContext::hasSameUnqualifiedType(SubInitList->getType(), BaseType);
+
+      if (IsExplicitSubInit) {
+        unsigned SubIndex = 0;
+        SourceLocation SubLoc = SubInitList->getLBraceLoc();
+        checkRecordInitializer(Ctx, BaseRD, SubInitList, SubIndex, SubLoc);
+        ArgBeginLoc = NextInit->getEndLoc();
+        InitIndex++;
+      } else if (ASTContext::hasSameUnqualifiedType(InitType, BaseType) ||
+                 (InitType->isRecordType() && BaseType->isRecordType() &&
+                  cast<CXXRecordDecl>(InitType->getAsRecordDecl())
+                      ->isDerivedFrom(cast<CXXRecordDecl>(BaseRD)))) {
+        // Copy/move construction or conversion from derived class.
+        // Treat as a single scalar initializer for the base.
+        ArgBeginLoc = NextInit->getEndLoc();
+        InitIndex++;
+      } else {
+        // Recursing into the current list.
+        checkRecordInitializer(Ctx, BaseRD, InitList, InitIndex, ArgBeginLoc);
+      }
+    }
+  }
+
+  for (const FieldDecl *FD : RD->fields()) {
+    if (InitIndex >= InitList->getNumInits())
+      break;
+
+    if (FD->isUnnamedBitField())
+      continue;
+
+    const Expr *Arg = InitList->getInit(InitIndex);
+
+    const IdentifierInfo *II = FD->getIdentifier();
+    if (!II) {
+      ArgBeginLoc = Arg->getEndLoc();
+      InitIndex++;
+      continue;
+    }
+
+    const llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Comments =
+        collectLeadingComments(Ctx, ArgBeginLoc, Arg);
+    ArgBeginLoc = Arg->getEndLoc();
+
+    for (auto Comment : Comments)
+      (void)diagnoseMismatchInComment(*this, Ctx, RD->fields(), II, StrictMode,
+                                      IdentRE, Comment, FD->getLocation());
+
+    if (Comments.empty() && shouldAddComment(Arg)) {
+      llvm::SmallString<32> ArgComment;
+      (llvm::Twine("/*") + II->getName() + "=*/").toStringRef(ArgComment);
+      const DiagnosticBuilder Diag =
+          diag(Arg->getBeginLoc(),
+               "argument comment missing for literal argument %0")
+          << II << FixItHint::CreateInsertion(Arg->getBeginLoc(), ArgComment);
+    }
+
+    InitIndex++;
+  }
+}
+
+void ArgumentCommentCheck::checkInitList(ASTContext *Ctx,
+                                         const InitListExpr *InitList) {
+  const QualType Type = InitList->getType();
+  if (!Type->isRecordType())
+    return;
+  const RecordDecl *RD = Type->getAsRecordDecl();
+  if (!RD || RD->isUnion() ||
+      (isa<CXXRecordDecl>(RD) && !cast<CXXRecordDecl>(RD)->isAggregate()))
+    return;
+
+  if (const auto *InitListSyntactic = InitList->getSyntacticForm())
+    InitList = InitListSyntactic;
+
+  if (InitList->getNumInits() == 0 ||
+      (IgnoreSingleArgument && InitList->getNumInits() == 1))
+    return;
+
+  // If any designated initializers are present, we don't try to apply
+  // positional logic for argument comments, as the structure is no longer
+  // a simple positional match.
+  for (unsigned I = 0; I < InitList->getNumInits(); ++I) {
+    if (dyn_cast_or_null<DesignatedInitExpr>(InitList->getInit(I)))
+      return;
+  }
+
+  SourceLocation ArgBeginLoc = InitList->getLBraceLoc();
+  unsigned InitIndex = 0;
+  checkRecordInitializer(Ctx, RD, InitList, InitIndex, ArgBeginLoc);
 }
 
 void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
@@ -355,8 +536,10 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
 
     checkCallArgs(Result.Context, Callee, Call->getCallee()->getEndLoc(),
                   llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
-  } else {
-    const auto *Construct = cast<CXXConstructExpr>(E);
+    return;
+  }
+
+  if (const auto *Construct = dyn_cast<CXXConstructExpr>(E)) {
     if (Construct->getNumArgs() > 0 &&
         Construct->getArg(0)->getSourceRange() == Construct->getSourceRange()) {
       // Ignore implicit construction.
@@ -366,6 +549,11 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
         Result.Context, Construct->getConstructor(),
         Construct->getParenOrBraceRange().getBegin(),
         llvm::ArrayRef(Construct->getArgs(), Construct->getNumArgs()));
+    return;
+  }
+
+  if (const auto *InitList = dyn_cast<InitListExpr>(E)) {
+    checkInitList(Result.Context, InitList);
   }
 }
 

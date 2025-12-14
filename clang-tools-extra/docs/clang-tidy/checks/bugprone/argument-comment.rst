@@ -19,6 +19,21 @@ that are placed right before the argument.
 
 The check tries to detect typos and suggest automated fixes for them.
 
+The check also supports C++ aggregate initialization, allowing comments to be
+validated against struct and class field names, including those inherited from
+base classes.
+
+.. code-block:: c++
+
+  struct Base { int b; };
+  struct Derived : Base { int d; };
+
+  void f() {
+    Derived d1 = {/*b=*/1, /*d=*/2}; // OK
+    Derived d2 = {/*x=*/1, /*d=*/2};
+    // warning: argument name 'x' in comment does not match parameter name 'b'
+  }
+
 Options
 -------
 

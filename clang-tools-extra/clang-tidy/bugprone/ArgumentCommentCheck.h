@@ -53,6 +53,11 @@ private:
                      SourceLocation ArgBeginLoc,
                      llvm::ArrayRef<const Expr *> Args);
 
+  void checkInitList(ASTContext *Ctx, const InitListExpr *InitList);
+  void checkRecordInitializer(ASTContext *Ctx, const RecordDecl *RD,
+                              const InitListExpr *InitList, unsigned &InitIndex,
+                              SourceLocation &ArgBeginLoc);
+
   bool shouldAddComment(const Expr *Arg) const;
 };
 
