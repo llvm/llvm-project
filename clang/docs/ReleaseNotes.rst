@@ -534,6 +534,7 @@ Bug Fixes in This Version
 - Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
 - Fix an assertion failure when a ``target_clones`` attribute is only on the
   forward declaration of a multiversioned function. (#GH165517) (#GH129483)
+- Clang now treats enumeration constants of fixed-underlying enums as the enumerated type. (#GH172118)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
