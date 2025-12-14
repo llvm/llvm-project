@@ -168,9 +168,13 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackInvokedWithInitialLLVMIR)) {
   auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
 
   std::string initialLLVMIR;
-  auto initialCallback = [&initialLLVMIR](llvm::Module &module) {
+  auto initialCallback =
+      [&initialLLVMIR](
+          llvm::Module &module,
+          gpu::TargetOptions::DiagnosticCallback) -> LogicalResult {
     llvm::raw_string_ostream ros(initialLLVMIR);
     module.print(ros, nullptr);
+    return success();
   };
 
   gpu::TargetOptions opts(
@@ -196,9 +200,12 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackInvokedWithLinkedLLVMIR)) {
   auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
 
   std::string linkedLLVMIR;
-  auto linkedCallback = [&linkedLLVMIR](llvm::Module &module) {
+  auto linkedCallback =
+      [&linkedLLVMIR](llvm::Module &module,
+                      gpu::TargetOptions::DiagnosticCallback) -> LogicalResult {
     llvm::raw_string_ostream ros(linkedLLVMIR);
     module.print(ros, nullptr);
+    return success();
   };
 
   gpu::TargetOptions opts(
@@ -225,9 +232,13 @@ TEST_F(MLIRTargetLLVM,
   auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
 
   std::string optimizedLLVMIR;
-  auto optimizedCallback = [&optimizedLLVMIR](llvm::Module &module) {
+  auto optimizedCallback =
+      [&optimizedLLVMIR](
+          llvm::Module &module,
+          gpu::TargetOptions::DiagnosticCallback) -> LogicalResult {
     llvm::raw_string_ostream ros(optimizedLLVMIR);
     module.print(ros, nullptr);
+    return success();
   };
 
   gpu::TargetOptions opts(
@@ -239,4 +250,82 @@ TEST_F(MLIRTargetLLVM,
   ASSERT_TRUE(serializedBinary != std::nullopt);
   ASSERT_TRUE(!serializedBinary->empty());
   ASSERT_TRUE(!optimizedLLVMIR.empty());
+}
+
+// Test callback function failure with initial LLVM IR
+TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackFailedWithInitialLLVMIR)) {
+  MLIRContext context(registry);
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+  Builder builder(&context);
+  IntegerAttr target = builder.getI32IntegerAttr(0);
+  auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
+
+  auto initialCallback =
+      [](llvm::Module & /*module*/,
+         gpu::TargetOptions::DiagnosticCallback diag) -> LogicalResult {
+    return diag() << "test";
+  };
+
+  gpu::TargetOptions opts(
+      {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
+      {}, initialCallback);
+  std::optional<SmallVector<char, 0>> serializedBinary =
+      targetAttr.serializeToObject(*module, opts);
+
+  ASSERT_TRUE(serializedBinary == std::nullopt);
+}
+
+// Test callback function failure with linked LLVM IR
+TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackFailedWithLinkedLLVMIR)) {
+  MLIRContext context(registry);
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+  Builder builder(&context);
+  IntegerAttr target = builder.getI32IntegerAttr(0);
+  auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
+
+  auto linkedCallback =
+      [](llvm::Module & /*module*/,
+         gpu::TargetOptions::DiagnosticCallback diag) -> LogicalResult {
+    return diag() << "test";
+  };
+
+  gpu::TargetOptions opts(
+      {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
+      {}, {}, linkedCallback);
+  std::optional<SmallVector<char, 0>> serializedBinary =
+      targetAttr.serializeToObject(*module, opts);
+
+  ASSERT_TRUE(serializedBinary == std::nullopt);
+}
+
+// Test callback function failure with optimized LLVM IR
+TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackFailedWithOptimizedLLVMIR)) {
+  MLIRContext context(registry);
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+  Builder builder(&context);
+  IntegerAttr target = builder.getI32IntegerAttr(0);
+  auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
+
+  auto optimizedCallback =
+      [](llvm::Module & /*module*/,
+         gpu::TargetOptions::DiagnosticCallback diag) -> LogicalResult {
+    return diag() << "test";
+  };
+
+  gpu::TargetOptions opts(
+      {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
+      {}, {}, {}, optimizedCallback);
+  std::optional<SmallVector<char, 0>> serializedBinary =
+      targetAttr.serializeToObject(*module, opts);
+
+  ASSERT_TRUE(serializedBinary == std::nullopt);
 }

@@ -46,6 +46,11 @@ class OffloadingTranslationAttrTrait
 /// ensure type safeness. Targets are free to ignore these options.
 class TargetOptions {
 public:
+  using DiagnosticCallback = function_ref<InFlightDiagnostic()>;
+  using LLVMIRCallback =
+      function_ref<LogicalResult(llvm::Module &, DiagnosticCallback)>;
+  using ISACallback =
+      function_ref<LogicalResult(StringRef, DiagnosticCallback)>;
   /// Constructor initializing the toolkit path, the list of files to link to,
   /// extra command line options, the compilation target and a callback for
   /// obtaining the parent symbol table. The default compilation target is
@@ -55,10 +60,10 @@ public:
       StringRef cmdOptions = {}, StringRef elfSection = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {},
-      function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
-      function_ref<void(llvm::Module &)> linkedLlvmIRCallback = {},
-      function_ref<void(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<void(StringRef)> isaCallback = {});
+      LLVMIRCallback initialLlvmIRCallback = {},
+      LLVMIRCallback linkedLlvmIRCallback = {},
+      LLVMIRCallback optimizedLlvmIRCallback = {},
+      ISACallback isaCallback = {});
 
   /// Returns the typeID.
   TypeID getTypeID() const;
@@ -97,19 +102,19 @@ public:
 
   /// Returns the callback invoked with the initial LLVM IR for the device
   /// module.
-  function_ref<void(llvm::Module &)> getInitialLlvmIRCallback() const;
+  LLVMIRCallback getInitialLlvmIRCallback() const;
 
   /// Returns the callback invoked with LLVM IR for the device module
   /// after linking the device libraries.
-  function_ref<void(llvm::Module &)> getLinkedLlvmIRCallback() const;
+  LLVMIRCallback getLinkedLlvmIRCallback() const;
 
   /// Returns the callback invoked with LLVM IR for the device module after
   /// LLVM optimizations but before codegen.
-  function_ref<void(llvm::Module &)> getOptimizedLlvmIRCallback() const;
+  LLVMIRCallback getOptimizedLlvmIRCallback() const;
 
   /// Returns the callback invoked with the target ISA for the device,
   /// for example PTX assembly.
-  function_ref<void(StringRef)> getISACallback() const;
+  ISACallback getISACallback() const;
 
   /// Returns the default compilation target: `CompilationTarget::Fatbin`.
   static CompilationTarget getDefaultCompilationTarget();
@@ -127,10 +132,10 @@ protected:
       StringRef elfSection = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {},
-      function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
-      function_ref<void(llvm::Module &)> linkedLlvmIRCallback = {},
-      function_ref<void(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<void(StringRef)> isaCallback = {});
+      LLVMIRCallback initialLlvmIRCallback = {},
+      LLVMIRCallback linkedLlvmIRCallback = {},
+      LLVMIRCallback optimizedLlvmIRCallback = {},
+      ISACallback isaCallback = {});
 
   /// Path to the target toolkit.
   std::string toolkitPath;
@@ -153,19 +158,19 @@ protected:
   function_ref<SymbolTable *()> getSymbolTableCallback;
 
   /// Callback invoked with the initial LLVM IR for the device module.
-  function_ref<void(llvm::Module &)> initialLlvmIRCallback;
+  LLVMIRCallback initialLlvmIRCallback;
 
   /// Callback invoked with LLVM IR for the device module after
   /// linking the device libraries.
-  function_ref<void(llvm::Module &)> linkedLlvmIRCallback;
+  LLVMIRCallback linkedLlvmIRCallback;
 
   /// Callback invoked with LLVM IR for the device module after
   /// LLVM optimizations but before codegen.
-  function_ref<void(llvm::Module &)> optimizedLlvmIRCallback;
+  LLVMIRCallback optimizedLlvmIRCallback;
 
   /// Callback invoked with the target ISA for the device,
   /// for example PTX assembly.
-  function_ref<void(StringRef)> isaCallback;
+  ISACallback isaCallback;
 
 private:
   TypeID typeID;

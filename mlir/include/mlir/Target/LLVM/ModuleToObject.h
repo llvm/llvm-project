@@ -29,13 +29,17 @@ class ModuleTranslation;
 /// operations being transformed must be translatable into LLVM IR.
 class ModuleToObject {
 public:
-  ModuleToObject(
-      Operation &module, StringRef triple, StringRef chip,
-      StringRef features = {}, int optLevel = 3,
-      function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
-      function_ref<void(llvm::Module &)> linkedLlvmIRCallback = {},
-      function_ref<void(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<void(StringRef)> isaCallback = {});
+  using DiagnosticCallback = function_ref<InFlightDiagnostic()>;
+  using LLVMIRCallback =
+      function_ref<LogicalResult(llvm::Module &, DiagnosticCallback)>;
+  using ISACallback =
+      function_ref<LogicalResult(StringRef, DiagnosticCallback)>;
+  ModuleToObject(Operation &module, StringRef triple, StringRef chip,
+                 StringRef features = {}, int optLevel = 3,
+                 LLVMIRCallback initialLlvmIRCallback = {},
+                 LLVMIRCallback linkedLlvmIRCallback = {},
+                 LLVMIRCallback optimizedLlvmIRCallback = {},
+                 ISACallback isaCallback = {});
   virtual ~ModuleToObject();
 
   /// Returns the operation being serialized.
@@ -120,19 +124,19 @@ protected:
   int optLevel;
 
   /// Callback invoked with the initial LLVM IR for the device module.
-  function_ref<void(llvm::Module &)> initialLlvmIRCallback;
+  LLVMIRCallback initialLlvmIRCallback;
 
   /// Callback invoked with LLVM IR for the device module after
   /// linking the device libraries.
-  function_ref<void(llvm::Module &)> linkedLlvmIRCallback;
+  LLVMIRCallback linkedLlvmIRCallback;
 
   /// Callback invoked with LLVM IR for the device module after
   /// LLVM optimizations but before codegen.
-  function_ref<void(llvm::Module &)> optimizedLlvmIRCallback;
+  LLVMIRCallback optimizedLlvmIRCallback;
 
   /// Callback invoked with the target ISA for the device,
   /// for example PTX assembly.
-  function_ref<void(StringRef)> isaCallback;
+  ISACallback isaCallback;
 
 private:
   /// The TargetMachine created for the given Triple, if available.

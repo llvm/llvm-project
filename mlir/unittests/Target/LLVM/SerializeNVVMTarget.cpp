@@ -176,26 +176,40 @@ TEST_F(MLIRTargetLLVMNVVM,
   ASSERT_TRUE(!!serializer);
 
   std::string initialLLVMIR;
-  auto initialCallback = [&initialLLVMIR](llvm::Module &module) {
+  auto initialCallback =
+      [&initialLLVMIR](
+          llvm::Module &module,
+          gpu::TargetOptions::DiagnosticCallback) -> LogicalResult {
     llvm::raw_string_ostream ros(initialLLVMIR);
     module.print(ros, nullptr);
+    return success();
   };
 
   std::string linkedLLVMIR;
-  auto linkedCallback = [&linkedLLVMIR](llvm::Module &module) {
+  auto linkedCallback =
+      [&linkedLLVMIR](llvm::Module &module,
+                      gpu::TargetOptions::DiagnosticCallback) -> LogicalResult {
     llvm::raw_string_ostream ros(linkedLLVMIR);
     module.print(ros, nullptr);
+    return success();
   };
 
   std::string optimizedLLVMIR;
-  auto optimizedCallback = [&optimizedLLVMIR](llvm::Module &module) {
+  auto optimizedCallback =
+      [&optimizedLLVMIR](
+          llvm::Module &module,
+          gpu::TargetOptions::DiagnosticCallback) -> LogicalResult {
     llvm::raw_string_ostream ros(optimizedLLVMIR);
     module.print(ros, nullptr);
+    return success();
   };
 
   std::string isaResult;
-  auto isaCallback = [&isaResult](llvm::StringRef isa) {
+  auto isaCallback =
+      [&isaResult](llvm::StringRef isa,
+                   gpu::TargetOptions::DiagnosticCallback) -> LogicalResult {
     isaResult = isa.str();
+    return success();
   };
 
   gpu::TargetOptions options({}, {}, {}, {}, gpu::CompilationTarget::Assembly,
@@ -217,6 +231,36 @@ TEST_F(MLIRTargetLLVMNVVM,
     linkedLLVMIR.clear();
     optimizedLLVMIR.clear();
     isaResult.clear();
+  }
+}
+
+// Test callback functions failure with ISA.
+TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(CallbackFailedWithISA)) {
+  MLIRContext context(registry);
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+
+  NVVM::NVVMTargetAttr target = NVVM::NVVMTargetAttr::get(&context);
+
+  auto serializer = dyn_cast<gpu::TargetAttrInterface>(target);
+  ASSERT_TRUE(!!serializer);
+
+  auto isaCallback =
+      [](llvm::StringRef /*isa*/,
+         gpu::TargetOptions::DiagnosticCallback diag) -> LogicalResult {
+    return diag() << "test";
+  };
+
+  gpu::TargetOptions options({}, {}, {}, {}, gpu::CompilationTarget::Assembly,
+                             {}, {}, {}, {}, isaCallback);
+
+  for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
+    std::optional<SmallVector<char, 0>> object =
+        serializer.serializeToObject(gpuModule, options);
+
+    ASSERT_TRUE(object == std::nullopt);
   }
 }
 
@@ -261,9 +305,13 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(LinkedLLVMIRResource)) {
 
   // Hook to intercept the LLVM IR after linking external libs.
   std::string linkedLLVMIR;
-  auto linkedCallback = [&linkedLLVMIR](llvm::Module &module) {
+  auto linkedCallback =
+      [&linkedLLVMIR](
+          llvm::Module &module,
+          gpu::TargetOptions::DiagnosticCallback /*diag*/) -> LogicalResult {
     llvm::raw_string_ostream ros(linkedLLVMIR);
     module.print(ros, nullptr);
+    return success();
   };
 
   // Store the bitcode as a DenseI8ArrayAttr.

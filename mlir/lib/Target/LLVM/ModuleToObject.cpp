@@ -34,12 +34,12 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
-ModuleToObject::ModuleToObject(
-    Operation &module, StringRef triple, StringRef chip, StringRef features,
-    int optLevel, function_ref<void(llvm::Module &)> initialLlvmIRCallback,
-    function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
-    function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
-    function_ref<void(StringRef)> isaCallback)
+ModuleToObject::ModuleToObject(Operation &module, StringRef triple,
+                               StringRef chip, StringRef features, int optLevel,
+                               LLVMIRCallback initialLlvmIRCallback,
+                               LLVMIRCallback linkedLlvmIRCallback,
+                               LLVMIRCallback optimizedLlvmIRCallback,
+                               ISACallback isaCallback)
     : module(module), triple(triple), chip(chip), features(features),
       optLevel(optLevel), initialLlvmIRCallback(initialLlvmIRCallback),
       linkedLlvmIRCallback(linkedLlvmIRCallback),
@@ -254,8 +254,13 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
   }
   setDataLayoutAndTriple(*llvmModule);
 
+  auto diagnosticCallback = [&]() -> InFlightDiagnostic {
+    return getOperation().emitError();
+  };
+
   if (initialLlvmIRCallback)
-    initialLlvmIRCallback(*llvmModule);
+    if (failed(initialLlvmIRCallback(*llvmModule, diagnosticCallback)))
+      return std::nullopt;
 
   // Link bitcode files.
   handleModulePreLink(*llvmModule);
@@ -270,14 +275,16 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
   }
 
   if (linkedLlvmIRCallback)
-    linkedLlvmIRCallback(*llvmModule);
+    if (failed(linkedLlvmIRCallback(*llvmModule, diagnosticCallback)))
+      return std::nullopt;
 
   // Optimize the module.
   if (failed(optimizeModule(*llvmModule, optLevel)))
     return std::nullopt;
 
   if (optimizedLlvmIRCallback)
-    optimizedLlvmIRCallback(*llvmModule);
+    if (failed(optimizedLlvmIRCallback(*llvmModule, diagnosticCallback)))
+      return std::nullopt;
 
   // Return the serialized object.
   return moduleToObject(*llvmModule);
