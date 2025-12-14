@@ -231,8 +231,8 @@ constexpr void test_val_types() {
 constexpr void test_sfinae() {
   std::optional<NonConst> opt{};
   auto l = [](auto&& x) { return x.non_const(); };
-  opt.and_then(l);
-  std::move(opt).and_then(l);
+  (void)opt.and_then(l);
+  (void)std::move(opt).and_then(l);
 }
 
 constexpr bool test() {
@@ -245,15 +245,15 @@ constexpr bool test() {
     return std::optional<int>{};
   };
 
-  opt.and_then(never_called);
-  std::move(opt).and_then(never_called);
-  copt.and_then(never_called);
-  std::move(copt).and_then(never_called);
+  (void)opt.and_then(never_called);
+  (void)std::move(opt).and_then(never_called);
+  (void)copt.and_then(never_called);
+  (void)std::move(copt).and_then(never_called);
 
   std::optional<NoCopy> nc;
   const auto& cnc = nc;
-  std::move(cnc).and_then(NoCopy{});
-  std::move(nc).and_then(NoCopy{});
+  (void)std::move(cnc).and_then(NoCopy{});
+  (void)std::move(nc).and_then(NoCopy{});
 
   return true;
 }

@@ -553,4 +553,27 @@ exit:
   ret void
 }
 
+define void @test_fp_recurrence_cmp_used_by_select() {
+; CHECK-LABEL: @test_fp_recurrence_cmp_used_by_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %fp.iv = phi double [ 0.0, %entry ], [ %fp.iv.next, %loop ]
+  %fp.iv.next = fadd double %fp.iv, 1.250000e-02
+  %cmp.fp = fcmp olt double %fp.iv.next, 2.001250e+00
+  %cond = select i1 %cmp.fp, i1 false, i1 false
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 declare void @opaque()

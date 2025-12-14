@@ -41,11 +41,11 @@ public:
 
 private:
   static constexpr size_t MIN_OUTER_SIZE =
-      align_up(sizeof(Block) + sizeof(FreeList::Node), alignof(max_align_t));
+      align_up(sizeof(Block) + sizeof(FreeList::Node), Block::MIN_ALIGN);
   static constexpr size_t MIN_LARGE_OUTER_SIZE =
-      align_up(sizeof(Block) + sizeof(FreeTrie::Node), alignof(max_align_t));
+      align_up(sizeof(Block) + sizeof(FreeTrie::Node), Block::MIN_ALIGN);
   static constexpr size_t NUM_SMALL_SIZES =
-      (MIN_LARGE_OUTER_SIZE - MIN_OUTER_SIZE) / alignof(max_align_t);
+      (MIN_LARGE_OUTER_SIZE - MIN_OUTER_SIZE) / Block::MIN_ALIGN;
 
   LIBC_INLINE static bool too_small(Block *block) {
     return block->outer_size() < MIN_OUTER_SIZE;
@@ -98,8 +98,7 @@ LIBC_INLINE Block *FreeStore::remove_best_fit(size_t size) {
 
 LIBC_INLINE FreeList &FreeStore::small_list(Block *block) {
   LIBC_ASSERT(is_small(block) && "only legal for small blocks");
-  return small_lists[(block->outer_size() - MIN_OUTER_SIZE) /
-                     alignof(max_align_t)];
+  return small_lists[(block->outer_size() - MIN_OUTER_SIZE) / Block::MIN_ALIGN];
 }
 
 LIBC_INLINE FreeList *FreeStore::find_best_small_fit(size_t size) {

@@ -68,31 +68,14 @@ consteval int ok5() {
   } s;
   new (&s) S[1]{{12, 13}};
 
+  /// FIXME: Broken in the current interpreter.
+#if BYTECODE
+  return s.a + s.b;
+#else
   return 25;
-  // return s.a + s.b; FIXME: Broken in the current interpreter.
+#endif
 }
 static_assert(ok5() == 25);
-
-/// FIXME: Broken in both interpreters.
-#if 0
-consteval int ok5() {
-    int i;
-    new (&i) int[1]{1}; // expected-note {{assignment to dereferenced one-past-the-end pointer}}
-    return i;
-}
-static_assert(ok5() == 1); // expected-error {{not an integral constant expression}} \
-                           // expected-note {{in call to}}
-#endif
-
-/// FIXME: Crashes the current interpreter.
-#if 0
-consteval int ok6() {
-    int i[2];
-    new (&i) int(100);
-    return i[0];
-}
-static_assert(ok6() == 100);
-#endif
 
 consteval int ok6() {
     int i[2];
@@ -102,6 +85,22 @@ consteval int ok6() {
 }
 static_assert(ok6() == 300);
 
+/// FIXME: Broken in the current interpreter.
+#if BYTECODE
+consteval int ok7() {
+    int i;
+    new (&i) int[1]{1};
+    return i;
+}
+static_assert(ok7() == 1);
+
+consteval int ok8() {
+    int i[2];
+    new (&i) int(100);
+    return i[0];
+}
+static_assert(ok8() == 100);
+#endif
 
 consteval auto fail1() {
   int b;

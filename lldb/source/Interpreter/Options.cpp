@@ -1410,7 +1410,9 @@ llvm::Error lldb_private::CreateOptionParsingError(
     llvm::StringRef long_option, llvm::StringRef additional_context) {
   std::string buffer;
   llvm::raw_string_ostream stream(buffer);
-  stream << "Invalid value ('" << option_arg << "') for -" << short_option;
+  stream << "invalid value ('" << option_arg << "')";
+  if (short_option)
+    stream << " for -" << short_option;
   if (!long_option.empty())
     stream << " (" << long_option << ")";
   if (!additional_context.empty())

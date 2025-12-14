@@ -329,7 +329,8 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
                    "ArrayRef<OpFoldResult>": $offsets,
                    "xegpu::CachePolicyAttr": $l1_hint,
                    "xegpu::CachePolicyAttr": $l2_hint,
-                   "xegpu::CachePolicyAttr": $l3_hint)>
+                   "xegpu::CachePolicyAttr": $l3_hint,
+                   "xegpu::DistributeLayoutAttr": $layout)>
   ];
 
   let hasVerifier = 1;
@@ -404,7 +405,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
                        OptionalAttr<DenseI64ArrayAttr>: $transpose,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint, 
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
                        OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let results = (outs XeGPU_ValueType: $value);
@@ -453,7 +454,8 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
                     "UnitAttr": $packed, "DenseI64ArrayAttr": $transpose,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>
+                    "xegpu::CachePolicyAttr": $l3_hint,
+                    "xegpu::DistributeLayoutAttr": $layout)>
   ];
 
   let hasVerifier = 1;
@@ -564,7 +566,8 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
                   "ArrayRef<OpFoldResult>": $offsets,
                   "xegpu::CachePolicyAttr": $l1_hint,
                   "xegpu::CachePolicyAttr": $l2_hint,
-                  "xegpu::CachePolicyAttr": $l3_hint)>
+                  "xegpu::CachePolicyAttr": $l3_hint,
+                  "xegpu::DistributeLayoutAttr": $layout)>
   ];
 
 

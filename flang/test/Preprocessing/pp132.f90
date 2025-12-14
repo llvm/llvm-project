@@ -18,6 +18,6 @@ subroutine foo
 
   !$acc data copyin(super_very_long_name_for_the_variable, another_super_wordy_variable_to_test)
   !$acc end data
-  
+
          !$OMP something something
 end subroutine foo

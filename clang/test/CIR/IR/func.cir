@@ -44,6 +44,14 @@ cir.func @intfunc() -> !s32i {
 cir.func @a_empty() alias(@empty)
 // CHECK: cir.func @a_empty() alias(@empty)
 
+// Should print/parse function personality.
+cir.func @personality_func() personality(@__gxx_personality_v0) {
+  cir.return
+}
+// CHECK: cir.func @personality_func() personality(@__gxx_personality_v0) {
+// CHECK:   cir.return
+// CHECK: }
+
 // int scopes() {
 //  {
 //    {
@@ -184,5 +192,13 @@ cir.func @Foo_move_assign() special_member<#cir.cxx_assign<!rec_Foo, move>> {
 }
 
 // CHECK: cir.func @Foo_move_assign() special_member<#cir.cxx_assign<!rec_Foo, move>> {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @has_attrs() attributes {foo, baz = 5, floof = "flop"} {
+  cir.return
+}
+
+// CHECK: cir.func @has_attrs() attributes {baz = 5 : i64{{.*}}, floof = "flop", foo} {
 // CHECK:   cir.return
 // CHECK: }
