@@ -1035,3 +1035,10 @@ void instantiate() {
   ignoreInstantiations<true>();
   ignoreInstantiations<false>();
 }
+void if_with_init_statement() {
+  bool x = true;
+  if (bool y = x; y == true) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: redundant boolean literal supplied to boolean operator [readability-simplify-boolean-expr]
+    // CHECK-FIXES: if (bool y = x; y) {
+  }
+}

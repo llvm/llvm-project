@@ -357,9 +357,9 @@ public:
   }
 
   bool VisitIfStmt(IfStmt *If) {
-    // Skip any if's that have a condition var or an init statement, or are
+    // Skiany if's that have a condition var or an init statement, or are
     // "if consteval" statements.
-    if (If->hasInitStorage() || If->hasVarStorage() || If->isConsteval())
+    if ( If->hasVarStorage() || If->isConsteval())
       return true;
     /*
      * if (true) ThenStmt(); -> ThenStmt();
