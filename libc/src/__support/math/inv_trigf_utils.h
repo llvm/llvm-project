@@ -40,7 +40,7 @@ static constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
 // Notice that degree-7 is good enough for atanf, but degree-8 helps reduce the
 // error bounds for atan2f's fast pass 16 times, and it does not affect the
 // performance of atanf much.
-static constexpr double ATAN_COEFFS[17][9] = {
+LIBC_INLINE_VAR constexpr double ATAN_COEFFS[17][9] = {
     {0.0, 1.0, 0x1.3f8d76d26d61bp-47, -0x1.5555555574cd8p-2,
      0x1.0dde5d06878eap-29, 0x1.99997738acc77p-3, 0x1.2c43eac9797cap-16,
      -0x1.25fb020007dbdp-3, 0x1.c1b6c31d7b0aep-7},
@@ -95,7 +95,7 @@ static constexpr double ATAN_COEFFS[17][9] = {
 };
 
 // Look-up table for atan(k/16) with k = 0..16.
-static constexpr double ATAN_K_OVER_16[17] = {
+LIBC_INLINE_VAR constexpr double ATAN_K_OVER_16[17] = {
     0.0,
     0x1.ff55bb72cfdeap-5,
     0x1.fd5ba9aac2f6ep-4,

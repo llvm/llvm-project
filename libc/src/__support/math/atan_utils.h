@@ -29,7 +29,7 @@ using Float128 = fputil::DyadicFloat<128>;
 //     b = round(atan(i/64) - a, D, RN);
 //     print("{", b, ",", a, "},");
 //   };
-static constexpr DoubleDouble ATAN_I[65] = {
+LIBC_INLINE_VAR constexpr DoubleDouble ATAN_I[65] = {
     {0.0, 0.0},
     {-0x1.220c39d4dff5p-61, 0x1.fff555bbb729bp-7},
     {-0x1.5ec431444912cp-60, 0x1.ffd55bba97625p-6},

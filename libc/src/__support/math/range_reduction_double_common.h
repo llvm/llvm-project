@@ -97,7 +97,7 @@ LIBC_INLINE static unsigned range_reduction_small(double x, DoubleDouble &u) {
 // and one of those conditions guarantees that ulp(0.25 * x_reduced) >= 2, and
 // will safely be discarded.
 
-static constexpr double ONE_TWENTY_EIGHT_OVER_PI[64][4] = {
+LIBC_INLINE_VAR constexpr double ONE_TWENTY_EIGHT_OVER_PI[64][4] = {
     {0x1.0000000000014p5, 0x1.7cc1b727220a8p-49, 0x1.4fe13abe8fa9cp-101,
      -0x1.911f924eb5336p-153},
     {0x1.0000000145f3p5, 0x1.b727220a94fep-49, 0x1.3abe8fa9a6eep-101,
@@ -306,7 +306,7 @@ LIBC_INLINE static Float128 range_reduction_small_f128(double x) {
   return fputil::quick_mul(y, PI_OVER_128_F128);
 }
 
-static constexpr Float128 SIN_K_PI_OVER_128_F128[65] = {
+LIBC_INLINE_VAR constexpr Float128 SIN_K_PI_OVER_128_F128[65] = {
     {Sign::POS, 0, 0},
     {Sign::POS, -133, 0xc90a'afbd'1b33'efc9'c539'edcb'fda0'cf2c_u128},
     {Sign::POS, -132, 0xc8fb'2f88'6ec0'9f37'6a17'954b'2b7c'5171_u128},

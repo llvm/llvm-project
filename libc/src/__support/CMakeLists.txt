@@ -213,6 +213,7 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.common
+    libc.src.__support.macros.attributes
 )
 
 add_header_library(

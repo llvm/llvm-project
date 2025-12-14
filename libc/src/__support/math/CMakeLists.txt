@@ -52,6 +52,7 @@ add_header_library(
     acosh_float_constants.h
   DEPENDS
     libc.src.__support.macros.config
+    libc.src.__support.macros.attributes
 )
 
 add_header_library(
@@ -365,6 +366,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.macros.config
     libc.src.__support.number_pair
+    libc.src.__support.macros.attributes
 )
 
 add_header_library(
@@ -527,6 +529,7 @@ add_header_library(
     exp_float_constants.h
   DEPENDS
     libc.src.__support.macros.config
+    libc.src.__support.macros.attributes
 )
 
 add_header_library(
@@ -665,6 +668,7 @@ add_header_library(
     exp_constants.h
   DEPENDS
     libc.src.__support.FPUtil.triple_double
+    libc.src.__support.macros.attributes
 )
 
 add_header_library(
