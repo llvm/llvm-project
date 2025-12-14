@@ -349,7 +349,7 @@ struct LowerGpuOpsToROCDLOpsPass final
     }
 
     LLVMTypeConverter converter(ctx, options);
-    populateCommonAMDGPUTypeAndAttributeConversions(converter);
+    amdgpu::populateCommonGPUTypeAndAttributeConversions(converter);
 
     RewritePatternSet llvmPatterns(ctx);
     LLVMConversionTarget target(getContext());

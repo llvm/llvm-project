@@ -1332,6 +1332,8 @@ def int_arm_mve_vqdmull_predicated: DefaultAttrsIntrinsic<
    LLVMMatchType<0>],
   [IntrNoMem]>;
 
+class MVESimpleUnary: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>], [IntrNoMem]>;
 class MVESimpleUnaryPredicated: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>], [IntrNoMem]>;
 
@@ -1342,6 +1344,12 @@ def int_arm_mve_qabs_predicated: MVESimpleUnaryPredicated;
 def int_arm_mve_qneg_predicated: MVESimpleUnaryPredicated;
 def int_arm_mve_clz_predicated: MVESimpleUnaryPredicated;
 def int_arm_mve_cls_predicated: MVESimpleUnaryPredicated;
+def int_arm_mve_vrintz: MVESimpleUnary;
+def int_arm_mve_vrintm: MVESimpleUnary;
+def int_arm_mve_vrintp: MVESimpleUnary;
+def int_arm_mve_vrinta: MVESimpleUnary;
+def int_arm_mve_vrintx: MVESimpleUnary;
+def int_arm_mve_vrintn: MVESimpleUnary;
 def int_arm_mve_vrintz_predicated: MVESimpleUnaryPredicated;
 def int_arm_mve_vrintm_predicated: MVESimpleUnaryPredicated;
 def int_arm_mve_vrintp_predicated: MVESimpleUnaryPredicated;
@@ -1402,6 +1410,15 @@ defm int_arm_mve_vqdmlad: MVEPredicated<[llvm_anyvector_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
    llvm_i32_ty /* exchange */, llvm_i32_ty /* round */,
    llvm_i32_ty /* subtract */]>;
+
+class MVE_cmp : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+    [llvm_anyvector_ty, LLVMMatchType<1>], [IntrNoMem]>;
+def int_arm_mve_cmp_eq: MVE_cmp;
+def int_arm_mve_cmp_ne: MVE_cmp;
+def int_arm_mve_cmp_gt: MVE_cmp;
+def int_arm_mve_cmp_ge: MVE_cmp;
+def int_arm_mve_cmp_lt: MVE_cmp;
+def int_arm_mve_cmp_le: MVE_cmp;
 
 // CDE (Custom Datapath Extension)
 
