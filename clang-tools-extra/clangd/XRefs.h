@@ -152,7 +152,8 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
               const ParsedAST &AST);
 
 std::vector<CallHierarchyOutgoingCall>
-outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index);
+outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
+              const ParsedAST &AST);
 
 /// Returns all decls that are referenced in the \p FD except local symbols.
 llvm::DenseSet<const Decl *> getNonLocalDeclRefs(ParsedAST &AST,

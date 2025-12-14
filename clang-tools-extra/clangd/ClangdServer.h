@@ -304,7 +304,7 @@ public:
                      Callback<std::vector<CallHierarchyIncomingCall>> CB);
 
   /// Resolve outgoing calls for a given call hierarchy item.
-  void outgoingCalls(const CallHierarchyItem &Item,
+  void outgoingCalls(PathRef File, const CallHierarchyItem &Item,
                      Callback<std::vector<CallHierarchyOutgoingCall>>);
 
   /// Resolve inlay hints for a given document.
