@@ -617,11 +617,11 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
   if (const auto *cat = cgf.getContext().getAsConstantArrayType(origType)) {
     // If we're in an array, we have to emit the combiner for each element of
     // the array.
-    auto itrTy = mlir::cast<cir::IntType>(cgf.PtrDiffTy);
+    auto itrTy = mlir::cast<cir::IntType>(cgf.ptrDiffTy);
     auto itrPtrTy = cir::PointerType::get(itrTy);
 
     mlir::Value zero =
-        builder.getConstInt(loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), 0);
+        builder.getConstInt(loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), 0);
     mlir::Value itr =
         cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "itr",
                               cgf.cgm.getSize(cgf.getPointerAlign()));
@@ -633,7 +633,7 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto loadItr = cir::LoadOp::create(builder, loc, {itr});
           mlir::Value arraySize = builder.getConstInt(
-              loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), cat->getZExtSize());
+              loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), cat->getZExtSize());
           auto cmp = builder.createCompare(loc, cir::CmpOpKind::lt, loadItr,
                                            arraySize);
           builder.createCondition(cmp);

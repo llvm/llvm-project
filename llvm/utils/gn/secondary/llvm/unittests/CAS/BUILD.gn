@@ -9,8 +9,10 @@ unittest("CASTests") {
   ]
   sources = [
     "ActionCacheTest.cpp",
+    "BuiltinUnifiedCASDatabasesTest.cpp",
     "CASTestConfig.cpp",
     "ObjectStoreTest.cpp",
+    "UnifiedOnDiskCacheTest.cpp",
   ]
 
   if (llvm_enable_ondisk_cas) {

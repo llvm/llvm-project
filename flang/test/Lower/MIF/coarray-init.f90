@@ -3,7 +3,7 @@
 
 program test_init
 
-end 
+end
 
 ! ALL-LABEL: func.func @main
 ! ALL: fir.call @_FortranAProgramStart

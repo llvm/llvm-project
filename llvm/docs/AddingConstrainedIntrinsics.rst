@@ -31,7 +31,7 @@ node ``FADD`` must be ``STRICT_FADD``.
 Update mappings
 ===============
 
-Add new record to the mapping of instructions to constrained intrinsic and
+Add new record to the mapping of instructions to constrained intrinsics and
 DAG nodes::
 
   include/llvm/IR/ConstrainedOps.def

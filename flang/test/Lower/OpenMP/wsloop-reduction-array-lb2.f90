@@ -19,7 +19,7 @@ contains
 
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>> {{.*}} alloc {
 ! CHECK:         } combiner {
 ! CHECK:         ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.box<!fir.array<?xi32>>>, %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.array<?xi32>>>):
 ! CHECK:           %[[ARR0:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.array<?xi32>>>

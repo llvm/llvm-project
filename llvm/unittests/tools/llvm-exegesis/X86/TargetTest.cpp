@@ -9,7 +9,6 @@
 #include "Target.h"
 
 #include <cassert>
-#include <memory>
 
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MmapUtils.h"
@@ -53,9 +52,6 @@ bool operator==(const MCInst &a, const MCInst &b) {
 
 namespace llvm {
 namespace exegesis {
-
-void InitializeX86ExegesisTarget();
-
 namespace {
 
 using testing::AllOf;
@@ -585,7 +581,7 @@ TEST_F(X86Core2TargetTest, SetRegToDf0) {
 TEST_F(X86Core2Avx512TargetTest, FillMemoryOperands_ADD64rm) {
   const Instruction &I = getInstr(X86::ADD64rm);
   InstructionTemplate IT(&I);
-  constexpr const int kOffset = 42;
+  constexpr int kOffset = 42;
   State.getExegesisTarget().fillMemoryOperands(IT, X86::RDI, kOffset);
   // Memory is operands 2-6.
   EXPECT_THAT(IT.getValueFor(I.Operands[2]), IsReg(X86::RDI));
@@ -598,7 +594,7 @@ TEST_F(X86Core2Avx512TargetTest, FillMemoryOperands_ADD64rm) {
 TEST_F(X86Core2Avx512TargetTest, FillMemoryOperands_VGATHERDPSZ128rm) {
   const Instruction &I = getInstr(X86::VGATHERDPSZ128rm);
   InstructionTemplate IT(&I);
-  constexpr const int kOffset = 42;
+  constexpr int kOffset = 42;
   State.getExegesisTarget().fillMemoryOperands(IT, X86::RDI, kOffset);
   // Memory is operands 4-8.
   EXPECT_THAT(IT.getValueFor(I.Operands[4]), IsReg(X86::RDI));
@@ -628,9 +624,9 @@ TEST_F(X86Core2TargetTest, GenerateLowerMunmapTest) {
 }
 
 #ifdef __arm__
-static constexpr const uintptr_t VAddressSpaceCeiling = 0xC0000000;
+static constexpr uintptr_t VAddressSpaceCeiling = 0xC0000000;
 #else
-static constexpr const uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
+static constexpr uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
 #endif
 
 TEST_F(X86Core2TargetTest, GenerateUpperMunmapTest) {

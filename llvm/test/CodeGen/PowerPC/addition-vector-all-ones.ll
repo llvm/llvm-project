@@ -8,15 +8,14 @@
 ; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr9 -mtriple=powerpc-ibm-aix \
 ; RUN:     -ppc-asm-full-reg-names --ppc-vsr-nums-as-vr < %s | FileCheck %s
 
-; The addition of vector `A` with vector of 1s currently uses `vspltisw` to generate vector of 1s followed by add operation.
+; Optimized version which `xxleqv` and `vsubu` to generate vector of -1s to leverage the identity A - (-1) = A + 1.
 
 ; Function for the vector type v2i64 `a + {1, 1}`
 define <2 x i64> @test_v2i64(<2 x i64> %a) {
 ; CHECK-LABEL: test_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vspltisw v3, 1
-; CHECK-NEXT:    vupklsw v3, v3
-; CHECK-NEXT:    vaddudm v2, v2, v3
+; CHECK-NEXT:    xxleqv v3, v3, v3
+; CHECK-NEXT:    vsubudm v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %add = add <2 x i64> %a, splat (i64 1)
@@ -27,8 +26,8 @@ entry:
 define <4 x i32> @test_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: test_v4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vspltisw v3, 1
-; CHECK-NEXT:    vadduwm v2, v2, v3
+; CHECK-NEXT:    xxleqv v3, v3, v3
+; CHECK-NEXT:    vsubuwm v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %add = add <4 x i32> %a, splat (i32 1)
@@ -39,8 +38,8 @@ entry:
 define <8 x i16> @test_v8i16(<8 x i16> %a) {
 ; CHECK-LABEL: test_v8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vspltish v3, 1
-; CHECK-NEXT:    vadduhm v2, v2, v3
+; CHECK-NEXT:    xxleqv v3, v3, v3
+; CHECK-NEXT:    vsubuhm v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %add = add <8 x i16> %a, splat (i16 1)
@@ -51,8 +50,8 @@ entry:
 define <16 x i8> @test_16i8(<16 x i8> %a) {
 ; CHECK-LABEL: test_16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxspltib v3, 1
-; CHECK-NEXT:    vaddubm v2, v2, v3
+; CHECK-NEXT:    xxleqv v3, v3, v3
+; CHECK-NEXT:    vsububm v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %add = add <16 x i8> %a, splat (i8 1)

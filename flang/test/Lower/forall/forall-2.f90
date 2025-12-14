@@ -16,7 +16,7 @@ subroutine implied_iters_allocatable(thing, a1)
   end type t
   type(t) :: thing(:)
   integer :: i
-  
+
   forall (i=5:13)
   ! commenting out this test for the moment (hits assert)
   !  thing(i)%arr = a1
@@ -32,7 +32,7 @@ subroutine conflicting_allocatable(thing, lo, hi)
   end type t
   type(t) :: thing(:)
   integer :: i
-  
+
   forall (i = lo:hi)
   ! commenting out this test for the moment (hits assert)
   !  thing(i)%arr = thing(hi-i)%arr

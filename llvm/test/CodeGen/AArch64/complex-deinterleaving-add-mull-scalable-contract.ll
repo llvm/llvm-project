@@ -14,13 +14,12 @@ define <vscale x 4 x double> @mull_add(<vscale x 4 x double> %a, <vscale x 4 x d
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fmul z7.d, z0.d, z1.d
 ; CHECK-NEXT:    fmul z1.d, z6.d, z1.d
-; CHECK-NEXT:    movprfx z3, z7
-; CHECK-NEXT:    fmla z3.d, p0/m, z6.d, z2.d
+; CHECK-NEXT:    fmad z6.d, p0/m, z2.d, z7.d
 ; CHECK-NEXT:    fnmsb z0.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    uzp2 z1.d, z4.d, z5.d
 ; CHECK-NEXT:    uzp1 z2.d, z4.d, z5.d
 ; CHECK-NEXT:    fadd z2.d, z2.d, z0.d
-; CHECK-NEXT:    fadd z1.d, z3.d, z1.d
+; CHECK-NEXT:    fadd z1.d, z6.d, z1.d
 ; CHECK-NEXT:    zip1 z0.d, z2.d, z1.d
 ; CHECK-NEXT:    zip2 z1.d, z2.d, z1.d
 ; CHECK-NEXT:    ret
@@ -225,17 +224,14 @@ define <vscale x 4 x double> @mul_add_rot_mull(<vscale x 4 x double> %a, <vscale
 ; CHECK-NEXT:    fmul z1.d, z25.d, z1.d
 ; CHECK-NEXT:    fmul z3.d, z4.d, z24.d
 ; CHECK-NEXT:    fmul z24.d, z5.d, z24.d
-; CHECK-NEXT:    movprfx z7, z26
-; CHECK-NEXT:    fmla z7.d, p0/m, z25.d, z2.d
+; CHECK-NEXT:    fmad z25.d, p0/m, z2.d, z26.d
 ; CHECK-NEXT:    fnmsb z0.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    movprfx z1, z3
-; CHECK-NEXT:    fmla z1.d, p0/m, z6.d, z5.d
-; CHECK-NEXT:    movprfx z2, z24
-; CHECK-NEXT:    fnmls z2.d, p0/m, z4.d, z6.d
-; CHECK-NEXT:    fadd z2.d, z0.d, z2.d
-; CHECK-NEXT:    fadd z1.d, z7.d, z1.d
-; CHECK-NEXT:    zip1 z0.d, z2.d, z1.d
-; CHECK-NEXT:    zip2 z1.d, z2.d, z1.d
+; CHECK-NEXT:    fmla z3.d, p0/m, z6.d, z5.d
+; CHECK-NEXT:    fnmsb z4.d, p0/m, z6.d, z24.d
+; CHECK-NEXT:    fadd z1.d, z0.d, z4.d
+; CHECK-NEXT:    fadd z2.d, z25.d, z3.d
+; CHECK-NEXT:    zip1 z0.d, z1.d, z2.d
+; CHECK-NEXT:    zip2 z1.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)

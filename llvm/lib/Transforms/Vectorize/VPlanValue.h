@@ -20,10 +20,8 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
@@ -150,6 +148,13 @@ public:
 
   bool hasOneUse() const { return getNumUsers() == 1; }
 
+  /// Return the single user of this value, or nullptr if there is not exactly
+  /// one user.
+  VPUser *getSingleUser() { return hasOneUse() ? *user_begin() : nullptr; }
+  const VPUser *getSingleUser() const {
+    return hasOneUse() ? *user_begin() : nullptr;
+  }
+
   void replaceAllUsesWith(VPValue *New);
 
   /// Go through the uses list for this VPValue and make each use point to \p
@@ -189,10 +194,8 @@ public:
   }
 };
 
-typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
-typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
-
-raw_ostream &operator<<(raw_ostream &OS, const VPRecipeBase &R);
+LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
+                                          const VPRecipeBase &R);
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
@@ -274,12 +277,12 @@ public:
   virtual bool usesScalars(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return onlyFirstLaneUsed(Op);
+    return usesFirstLaneOnly(Op);
   }
 
   /// Returns true if the VPUser only uses the first lane of operand \p Op.
   /// Conservatively returns false.
-  virtual bool onlyFirstLaneUsed(const VPValue *Op) const {
+  virtual bool usesFirstLaneOnly(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;
@@ -287,7 +290,7 @@ public:
 
   /// Returns true if the VPUser only uses the first part of operand \p Op.
   /// Conservatively returns false.
-  virtual bool onlyFirstPartUsed(const VPValue *Op) const {
+  virtual bool usesFirstPartOnly(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;
@@ -341,7 +344,6 @@ public:
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
-    VPPartialReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
@@ -430,7 +432,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the VPDef to stderr (for debugging).
-  void dump() const;
+  LLVM_ABI_FOR_TEST void dump() const;
 
   /// Each concrete VPDef prints itself.
   virtual void print(raw_ostream &O, const Twine &Indent,

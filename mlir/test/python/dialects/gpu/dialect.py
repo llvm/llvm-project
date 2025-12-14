@@ -133,9 +133,10 @@ def testGPUFuncOp():
             ), func.known_grid_size
 
             func = gpu.GPUFuncOp(
-                func_type,
+                ir.FunctionType.get(inputs=[T.index()], results=[]),
                 sym_name="non_kernel_func",
                 body_builder=builder,
+                arg_attrs=[{"gpu.some_attribute": ir.StringAttr.get("foo")}],
             )
             assert not func.is_kernel
             assert func.known_block_size is None
@@ -154,10 +155,11 @@ def testGPUFuncOp():
     # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
     # CHECK:   gpu.return
     # CHECK: }
-    # CHECK: gpu.func @non_kernel_func() {
-    # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
-    # CHECK:   gpu.return
-    # CHECK: }
+    # CHECK:   gpu.func @non_kernel_func(
+    # CHECK-SAME:      %[[ARG0:.*]]: index {gpu.some_attribute = "foo"}) {
+    # CHECK:           %[[GLOBAL_ID_0:.*]] = gpu.global_id  x
+    # CHECK:           gpu.return
+    # CHECK:         }
 
 
 # CHECK-LABEL: testGPULaunchFuncOp

@@ -470,4 +470,11 @@ def TestMemrefType : Test_Type<"TestMemref",
   }];
 }
 
+// Test implementation of an interface with methods specifying a
+// method body
+def TestBaseBody : Test_Type<"TestBaseBody",
+    [DeclareTypeInterfaceMethods<TestBaseTypeInterfacePrintTypeA>]> {
+  let mnemonic = "test_base_body";
+}
+
 #endif // TEST_TYPEDEFS

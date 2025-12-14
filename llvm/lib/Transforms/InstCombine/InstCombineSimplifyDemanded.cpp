@@ -105,6 +105,8 @@ static Value *simplifyShiftSelectingPackedElement(Instruction *I,
   if (~KnownShrBits.Zero != ShlAmt)
     return nullptr;
 
+  IRBuilderBase::InsertPointGuard Guard(IC.Builder);
+  IC.Builder.SetInsertPoint(I);
   Value *ShrAmtZ =
       IC.Builder.CreateICmpEQ(ShrAmt, Constant::getNullValue(ShrAmt->getType()),
                               ShrAmt->getName() + ".z");

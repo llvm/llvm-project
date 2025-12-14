@@ -1,8 +1,14 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=arm64-apple-darwin19 -filetype=obj -o %t/main.o \
 # RUN:         %S/Inputs/MachO_main_ret_foo.s
-# RUN: llvm-jitlink -noexec %t/main.o -weak_library %S/Inputs/MachO_Foo.tbd
-
+# RUN: llvm-jitlink -noexec %t/main.o -weak_library \
+# RUN:     %S/Inputs/MachO_Foo_arm64.tbd
+# RUN: llvm-jitlink -noexec %t/main.o -weak_library \
+# RUN:     %S/Inputs/MachO_Foo_arm64e.tbd
+#
 # Check that we can load main.o, which unconditionally uses symbol foo, by
 # using -weak_library on a TBD file to emulate forced weak linking against
 # a library that supplies foo, but is missing at runtime.
+#
+# Check that weak linking works for arm64 JIT'd programs even if the TBD
+# file contains only an arm64e interface.

@@ -73,7 +73,7 @@ program OmpAtomicUpdate
 !CHECK: omp.yield(%[[TEMP]] : i32)
 !CHECK: }
    !$omp atomic update
-        a = a + b 
+        a = a + b
 
 !CHECK: %[[VAL_c1:.*]] = arith.constant 1 : i32
 !CHECK: omp.atomic.update %[[VAL_Y_DECLARE]]#0 : !fir.ref<i32> {
@@ -81,7 +81,7 @@ program OmpAtomicUpdate
 !CHECK: %[[TEMP:.*]] = arith.addi %[[ARG]], %[[VAL_c1]] : i32
 !CHECK: omp.yield(%[[TEMP]] : i32)
 !CHECK: }
-   !$omp atomic 
+   !$omp atomic
         y = y + 1
 
 !CHECK: %[[VAL_X_LOADED:.*]] = fir.load %[[VAL_X_DECLARE]]#0 : !fir.ref<i32>
@@ -91,7 +91,7 @@ program OmpAtomicUpdate
 !CHECK: omp.yield(%[[TEMP]] : i32)
 !CHECK: }
     !$omp atomic update
-        z = x * z 
+        z = x * z
 
 !CHECK: %[[VAL_c1:.*]] = arith.constant 1 : i32
 !CHECK: omp.atomic.update hint(uncontended) memory_order(relaxed) %[[VAL_X_DECLARE]]#0 : !fir.ref<i32> {
@@ -110,7 +110,7 @@ program OmpAtomicUpdate
 !CHECK:  %[[TEMP:.*]] = arith.select {{.*}} : i32
 !CHECK:  omp.yield(%[[TEMP]] : i32)
 !CHECK: }
-    !$omp atomic update relaxed 
+    !$omp atomic update relaxed
         y = max(y, c, d)
 
 !CHECK: %[[VAL_X_LOADED:.*]] = fir.load %[[VAL_X_DECLARE]]#0 : !fir.ref<i32>
@@ -211,7 +211,7 @@ program OmpAtomicUpdate
 !CHECK: %[[RESULT:.*]] = fir.convert %[[EXT]] : (f32) -> i32
 !CHECK: omp.yield(%[[RESULT]] : i32)
   !$omp atomic update
-    w = w + g  
+    w = w + g
 end program OmpAtomicUpdate
 
 ! Check that the clean-ups associated with the function call

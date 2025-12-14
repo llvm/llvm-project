@@ -811,7 +811,7 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Sub24 = Builder.CreateAdd(
       FloatWidth == 128 ? Call : Cast,
       ConstantInt::getSigned(Builder.getIntNTy(BitWidthNew),
-                             -(BitWidth - FPMantissaWidth - 1)));
+                             -(int)(BitWidth - FPMantissaWidth - 1)));
   Value *ShProm25 = Builder.CreateZExt(Sub24, IntTy);
   Value *Shl26 = Builder.CreateShl(IsSigned ? Sub : IntVal,
                                    FloatWidth == 128 ? Sub24 : ShProm25);
@@ -975,11 +975,12 @@ static RTLIB::Libcall fremToLibcall(Type *Ty) {
 /* Return true if, according to \p LibInfo, the target either directly
    supports the frem instruction for the \p Ty, has a custom lowering,
    or uses a libcall. */
-static bool targetSupportsFrem(const TargetLowering &TLI, Type *Ty) {
+static bool targetSupportsFrem(const TargetLowering &TLI,
+                               const LibcallLoweringInfo &Libcalls, Type *Ty) {
   if (!TLI.isOperationExpand(ISD::FREM, EVT::getEVT(Ty)))
     return true;
 
-  return TLI.getLibcallName(fremToLibcall(Ty->getScalarType()));
+  return Libcalls.getLibcallName(fremToLibcall(Ty->getScalarType()));
 }
 
 static void addToWorklist(Instruction &I,
@@ -991,7 +992,7 @@ static void addToWorklist(Instruction &I,
 }
 
 static bool runImpl(Function &F, const TargetLowering &TLI,
-                    AssumptionCache *AC) {
+                    const LibcallLoweringInfo &Libcalls, AssumptionCache *AC) {
   SmallVector<Instruction *, 4> Worklist;
 
   unsigned MaxLegalFpConvertBitWidth =
@@ -1010,7 +1011,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
     switch (I.getOpcode()) {
     case Instruction::FRem:
-      return !targetSupportsFrem(TLI, Ty) &&
+      return !targetSupportsFrem(TLI, Libcalls, Ty) &&
              FRemExpander::canExpandType(Ty->getScalarType());
 
     case Instruction::FPToUI:
@@ -1090,20 +1091,27 @@ public:
 
   bool runOnFunction(Function &F) override {
     auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-    auto *TLI = TM->getSubtargetImpl(F)->getTargetLowering();
+    const TargetSubtargetInfo *Subtarget = TM->getSubtargetImpl(F);
+    auto *TLI = Subtarget->getTargetLowering();
     AssumptionCache *AC = nullptr;
+
+    const LibcallLoweringInfo &Libcalls =
+        getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+            *Subtarget);
 
     if (OptLevel != CodeGenOptLevel::None && !F.hasOptNone())
       AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    return runImpl(F, *TLI, AC);
+    return runImpl(F, *TLI, Libcalls, AC);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LibcallLoweringInfoWrapper>();
     AU.addRequired<TargetPassConfig>();
     if (OptLevel != CodeGenOptLevel::None)
       AU.addRequired<AssumptionCacheTracker>();
     AU.addPreserved<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addRequired<LibcallLoweringInfoWrapper>();
   }
 };
 } // namespace
@@ -1126,13 +1134,29 @@ PreservedAnalyses ExpandFpPass::run(Function &F, FunctionAnalysisManager &FAM) {
   AssumptionCache *AC = nullptr;
   if (OptLevel != CodeGenOptLevel::None)
     AC = &FAM.getResult<AssumptionAnalysis>(F);
-  return runImpl(F, TLI, AC) ? PreservedAnalyses::none()
-                             : PreservedAnalyses::all();
+
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+
+  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
+      MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
+
+  if (!LibcallLowering) {
+    F.getContext().emitError("'" + LibcallLoweringModuleAnalysis::name() +
+                             "' analysis required");
+    return PreservedAnalyses::all();
+  }
+
+  const LibcallLoweringInfo &Libcalls =
+      LibcallLowering->getLibcallLowering(*STI);
+
+  return runImpl(F, TLI, Libcalls, AC) ? PreservedAnalyses::none()
+                                       : PreservedAnalyses::all();
 }
 
 char ExpandFpLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandFpLegacyPass, "expand-fp",
                       "Expand certain fp instructions", false, false)
+INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
 INITIALIZE_PASS_END(ExpandFpLegacyPass, "expand-fp", "Expand fp", false, false)
 
 FunctionPass *llvm::createExpandFpPass(CodeGenOptLevel OptLevel) {

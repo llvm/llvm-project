@@ -107,6 +107,37 @@ TEST(ParseConfiguration, ChecksSeparatedByNewlines) {
   EXPECT_EQ("-*,misc-*\nllvm-*\n-clang-*,\ngoogle-*\n", *Options->Checks);
 }
 
+TEST(ParseConfiguration, WarningsAsErrorsSeparatedByNewlines) {
+  const auto MemoryBuffer = llvm::MemoryBufferRef("WarningsAsErrors: |\n"
+                                                  "  -*,misc-*\n"
+                                                  "  llvm-*\n"
+                                                  "  -clang-*,\n"
+                                                  "  google-*",
+                                                  "Options");
+
+  const auto Options = parseConfiguration(MemoryBuffer);
+
+  EXPECT_TRUE(!!Options);
+  EXPECT_EQ("-*,misc-*\nllvm-*\n-clang-*,\ngoogle-*\n",
+            *Options->WarningsAsErrors);
+}
+
+TEST(ParseConfiguration, WarningsAsErrorsAsList) {
+  const auto MemoryBuffer = llvm::MemoryBufferRef("WarningsAsErrors: [\n"
+                                                  "  '-*',\n"
+                                                  "  'misc-*',\n"
+                                                  "  'llvm-*',\n"
+                                                  "  '-clang-*',\n"
+                                                  "  'google-*'\n"
+                                                  "]",
+                                                  "Options");
+
+  const auto Options = parseConfiguration(MemoryBuffer);
+
+  EXPECT_TRUE(!!Options);
+  EXPECT_EQ("-*,misc-*,llvm-*,-clang-*,google-*", *Options->WarningsAsErrors);
+}
+
 TEST(ParseConfiguration, MergeConfigurations) {
   llvm::ErrorOr<ClangTidyOptions> Options1 =
       parseConfiguration(llvm::MemoryBufferRef(R"(

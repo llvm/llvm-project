@@ -40,6 +40,8 @@ VERS1.0 {
     omp_get_mapped_ptr;
     omp_get_num_devices;
     omp_get_device_num;
+    omp_get_device_from_uid;
+    omp_get_uid_from_device;
     omp_get_initial_device;
     omp_target_alloc;
     omp_target_free;

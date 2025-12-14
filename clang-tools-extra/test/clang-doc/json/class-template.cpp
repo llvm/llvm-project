@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/json/_ZTV7MyClass.json
+// RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV7MyClass.json
 
 template<typename T> struct MyClass {
   T MemberTemplate;
@@ -26,5 +26,8 @@ template<typename T> struct MyClass {
 // CHECK:           "Type": "T"
 // CHECK:         "Template": {
 // CHECK-NEXT:      "Parameters": [
-// CHECK-NEXT:        "typename T"
+// CHECK-NEXT:        {
+// CHECK-NEXT:          "End": true,
+// CHECK-NEXT:          "Param": "typename T"
+// CHECK-NEXT:        }
 // CHECK-NEXT:      ] 

@@ -6,7 +6,8 @@ cert-err58-cpp
 ==============
 
 The `cert-err58-cpp` check is an alias, please see
-`bugprone-throwing-static-initialization <../bugprone/throwing-static-initialization.html>`_
+:doc:`bugprone-throwing-static-initialization
+<../bugprone/throwing-static-initialization>`
 for more information.
 
 This check corresponds to the CERT C++ Coding Standard rule

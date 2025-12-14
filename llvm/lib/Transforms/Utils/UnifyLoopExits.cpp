@@ -12,7 +12,11 @@
 //
 // Limitation: This assumes that all terminators in the CFG are direct branches
 //             (the "br" instruction). The presence of any other control flow
-//             such as indirectbr, switch or callbr will cause an assert.
+//             such as indirectbr or switch will cause an assert.
+//             The callbr terminator is supported by creating intermediate
+//             target blocks that unconditionally branch to the original target
+//             blocks. These intermediate target blocks can then be redirected
+//             through the ControlFlowHub as usual.
 //
 //===----------------------------------------------------------------------===//
 
@@ -150,29 +154,65 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  SmallVector<BasicBlock *, 8> CallBrTargetBlocksToFix;
   // Redirect exiting edges through a control flow hub.
   ControlFlowHub CHub;
-  for (auto *BB : ExitingBlocks) {
-    auto *Branch = cast<BranchInst>(BB->getTerminator());
-    BasicBlock *Succ0 = Branch->getSuccessor(0);
-    Succ0 = L->contains(Succ0) ? nullptr : Succ0;
+  bool Changed = false;
 
-    BasicBlock *Succ1 =
-        Branch->isUnconditional() ? nullptr : Branch->getSuccessor(1);
-    Succ1 = L->contains(Succ1) ? nullptr : Succ1;
-    CHub.addBranch(BB, Succ0, Succ1);
+  for (unsigned I = 0; I < ExitingBlocks.size(); ++I) {
+    BasicBlock *BB = ExitingBlocks[I];
+    if (BranchInst *Branch = dyn_cast<BranchInst>(BB->getTerminator())) {
+      BasicBlock *Succ0 = Branch->getSuccessor(0);
+      Succ0 = L->contains(Succ0) ? nullptr : Succ0;
 
-    LLVM_DEBUG(dbgs() << "Added exiting branch: " << BB->getName() << " -> {"
-                      << (Succ0 ? Succ0->getName() : "<none>") << ", "
-                      << (Succ1 ? Succ1->getName() : "<none>") << "}\n");
+      BasicBlock *Succ1 =
+          Branch->isUnconditional() ? nullptr : Branch->getSuccessor(1);
+      Succ1 = L->contains(Succ1) ? nullptr : Succ1;
+      CHub.addBranch(BB, Succ0, Succ1);
+
+      LLVM_DEBUG(dbgs() << "Added extiting branch: " << printBasicBlock(BB)
+                        << " -> " << printBasicBlock(Succ0)
+                        << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
+                        << '\n');
+    } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(BB->getTerminator())) {
+      for (unsigned J = 0; J < CallBr->getNumSuccessors(); ++J) {
+        BasicBlock *Succ = CallBr->getSuccessor(J);
+        if (L->contains(Succ))
+          continue;
+        bool UpdatedLI = false;
+        BasicBlock *NewSucc =
+            SplitCallBrEdge(BB, Succ, J, &DTU, nullptr, &LI, &UpdatedLI);
+        // SplitCallBrEdge modifies the CFG because it creates an intermediate
+        // block. So we need to set the changed flag no matter what the
+        // ControlFlowHub is going to do later.
+        Changed = true;
+        // Even if CallBr and Succ do not have a common parent loop, we need to
+        // add the new target block to the parent loop of the current loop.
+        if (!UpdatedLI)
+          CallBrTargetBlocksToFix.push_back(NewSucc);
+        // ExitingBlocks is later used to restore SSA, so we need to make sure
+        // that the blocks used for phi nodes in the guard blocks match the
+        // predecessors of the guard blocks, which, in the case of callbr, are
+        // the new intermediate target blocks instead of the callbr blocks
+        // themselves.
+        ExitingBlocks[I] = NewSucc;
+        CHub.addBranch(NewSucc, Succ);
+        LLVM_DEBUG(dbgs() << "Added exiting branch: "
+                          << printBasicBlock(NewSucc) << " -> "
+                          << printBasicBlock(Succ) << '\n');
+      }
+    } else {
+      llvm_unreachable("unsupported block terminator");
+    }
   }
 
   SmallVector<BasicBlock *, 8> GuardBlocks;
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   BasicBlock *LoopExitBlock;
   bool ChangedCFG;
   std::tie(LoopExitBlock, ChangedCFG) = CHub.finalize(
       &DTU, GuardBlocks, "loop.exit", MaxBooleansInControlFlowHub.getValue());
+  ChangedCFG |= Changed;
   if (!ChangedCFG)
     return false;
 
@@ -187,9 +227,18 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
 
   // The guard blocks were created outside the loop, so they need to become
   // members of the parent loop.
-  if (auto ParentLoop = L->getParentLoop()) {
+  // Same goes for the callbr target blocks.  Although we try to add them to the
+  // smallest common parent loop of the callbr block and the corresponding
+  // original target block, there might not have been such a loop, in which case
+  // the newly created callbr target blocks are not part of any loop. For nested
+  // loops, this might result in them leading to a loop with multiple entry
+  // points.
+  if (auto *ParentLoop = L->getParentLoop()) {
     for (auto *G : GuardBlocks) {
       ParentLoop->addBasicBlockToLoop(G, LI);
+    }
+    for (auto *C : CallBrTargetBlocksToFix) {
+      ParentLoop->addBasicBlockToLoop(C, LI);
     }
     ParentLoop->verifyLoop();
   }
@@ -217,8 +266,6 @@ bool UnifyLoopExitsLegacyPass::runOnFunction(Function &F) {
                     << "\n");
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
-  assert(hasOnlySimpleTerminator(F) && "Unsupported block terminator.");
 
   return runImpl(LI, DT);
 }

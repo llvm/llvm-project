@@ -324,7 +324,6 @@ define i32 @reduce_sum_16xi32_prefix13(ptr %p) {
   ret i32 %add11
 }
 
-
 define i32 @reduce_sum_16xi32_prefix14(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix14:
 ; CHECK:       # %bb.0:
@@ -586,11 +585,6 @@ define i32 @reduce_or_16xi32_prefix5(ptr %p) {
   ret i32 %or3
 }
 
-declare i32 @llvm.smax.i32(i32 %a, i32 %b)
-declare i32 @llvm.smin.i32(i32 %a, i32 %b)
-declare i32 @llvm.umax.i32(i32 %a, i32 %b)
-declare i32 @llvm.umin.i32(i32 %a, i32 %b)
-
 define i32 @reduce_smax_16xi32_prefix2(ptr %p) {
 ; CHECK-LABEL: reduce_smax_16xi32_prefix2:
 ; CHECK:       # %bb.0:
@@ -848,7 +842,6 @@ define float @reduce_fadd_2xf32_ninf_only(ptr %p) {
   %fadd0 = fadd ninf float %e0, %e1
   ret float %fadd0
 }
-
 
 ; Negative test - last fadd is not associative
 define float @reduce_fadd_4xi32_non_associative(ptr %p) {

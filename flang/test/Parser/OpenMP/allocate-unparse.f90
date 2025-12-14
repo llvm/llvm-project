@@ -9,6 +9,7 @@ integer :: a, b, j, m, n, t, x, y, z
 
 ! 2.11.3 declarative allocate
 
+!$omp allocate
 !$omp allocate(x, y)
 !$omp allocate(x, y) allocator(omp_default_mem_alloc)
 
@@ -28,19 +29,24 @@ integer :: a, b, j, m, n, t, x, y, z
 !$omp allocate(j) align(16)
     allocate ( darray(z, t) )
 
+!$omp allocate
+    allocate ( darray(a, b) )
 end program allocate_unparse
 
-!CHECK:!$OMP ALLOCATE (x,y)
-!CHECK:!$OMP ALLOCATE (x,y) ALLOCATOR(omp_default_mem_alloc)
-!CHECK:!$OMP ALLOCATE (a,b)
+!CHECK:!$OMP ALLOCATE{{[ ]*$}}
+!CHECK:!$OMP ALLOCATE(x, y)
+!CHECK:!$OMP ALLOCATE(x, y) ALLOCATOR(omp_default_mem_alloc)
+!CHECK:!$OMP ALLOCATE(a, b)
 !CHECK:ALLOCATE(darray(a,b))
 !CHECK:!$OMP ALLOCATE ALLOCATOR(omp_default_mem_alloc)
 !CHECK:ALLOCATE(darray(a,b))
-!CHECK:!$OMP ALLOCATE (a,b) ALLOCATOR(omp_default_mem_alloc)
+!CHECK:!$OMP ALLOCATE(a, b) ALLOCATOR(omp_default_mem_alloc)
 !CHECK:ALLOCATE(darray(a,b))
-!CHECK:!$OMP ALLOCATE (t) ALLOCATOR(omp_const_mem_alloc)
-!CHECK:!$OMP ALLOCATE (z) ALLOCATOR(omp_default_mem_alloc)
-!CHECK:!$OMP ALLOCATE (m) ALLOCATOR(omp_default_mem_alloc)
-!CHECK:!$OMP ALLOCATE (n)
-!CHECK:!$OMP ALLOCATE (j) ALIGN(16)
+!CHECK:!$OMP ALLOCATE(t) ALLOCATOR(omp_const_mem_alloc)
+!CHECK:!$OMP ALLOCATE(z) ALLOCATOR(omp_default_mem_alloc)
+!CHECK:!$OMP ALLOCATE(m) ALLOCATOR(omp_default_mem_alloc)
+!CHECK:!$OMP ALLOCATE(n)
+!CHECK:!$OMP ALLOCATE(j) ALIGN(16)
 !CHECK:ALLOCATE(darray(z,t))
+!CHECK:!$OMP ALLOCATE{{[ ]*$}}
+!CHECK:ALLOCATE(darray(a,b))
