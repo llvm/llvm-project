@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #ifndef _LIBCPP___ATOMIC_ATOMIC_WAITABLE_TRAITS_H
 #define _LIBCPP___ATOMIC_ATOMIC_WAITABLE_TRAITS_H
 
