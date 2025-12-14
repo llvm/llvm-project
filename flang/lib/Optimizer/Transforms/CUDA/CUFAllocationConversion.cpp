@@ -62,28 +62,6 @@ static inline unsigned getMemType(cuf::DataAttribute attr) {
   llvm_unreachable("unsupported memory type");
 }
 
-template <typename OpTy>
-static bool hasDoubleDescriptors(OpTy op) {
-  if (auto declareOp =
-          mlir::dyn_cast_or_null<fir::DeclareOp>(op.getBox().getDefiningOp())) {
-    if (mlir::isa_and_nonnull<fir::AddrOfOp>(
-            declareOp.getMemref().getDefiningOp())) {
-      if (isPinned(declareOp))
-        return false;
-      return true;
-    }
-  } else if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
-                 op.getBox().getDefiningOp())) {
-    if (mlir::isa_and_nonnull<fir::AddrOfOp>(
-            declareOp.getMemref().getDefiningOp())) {
-      if (isPinned(declareOp))
-        return false;
-      return true;
-    }
-  }
-  return false;
-}
-
 static bool inDeviceContext(mlir::Operation *op) {
   if (op->getParentOfType<cuf::KernelOp>())
     return true;
@@ -344,16 +322,8 @@ struct CUFAllocateOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    bool isPointer = false;
-
-    if (auto declareOp =
-            mlir::dyn_cast_or_null<fir::DeclareOp>(op.getBox().getDefiningOp()))
-      if (declareOp.getFortranAttrs() &&
-          bitEnumContainsAny(*declareOp.getFortranAttrs(),
-                             fir::FortranVariableFlagsEnum::pointer))
-        isPointer = true;
-
-    if (hasDoubleDescriptors(op)) {
+    bool isPointer = op.getPointer();
+    if (op.getHasDoubleDescriptor()) {
       // Allocation for module variable are done with custom runtime entry point
       // so the descriptors can be synchronized.
       mlir::func::FuncOp func;
@@ -406,7 +376,7 @@ struct CUFDeallocateOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    if (hasDoubleDescriptors(op)) {
+    if (op.getHasDoubleDescriptor()) {
       // Deallocation for module variable are done with custom runtime entry
       // point so the descriptors can be synchronized.
       mlir::func::FuncOp func =

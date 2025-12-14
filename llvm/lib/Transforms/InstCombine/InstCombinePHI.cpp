@@ -698,8 +698,7 @@ static bool isSafeAndProfitableToSinkLoad(LoadInst *L) {
 Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
   LoadInst *FirstLI = cast<LoadInst>(PN.getIncomingValue(0));
 
-  // Can't forward swifterror through a phi.
-  if (FirstLI->getOperand(0)->isSwiftError())
+  if (!canReplaceOperandWithVariable(FirstLI, 0))
     return nullptr;
 
   // FIXME: This is overconservative; this transform is allowed in some cases
@@ -738,8 +737,7 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
         LI->getPointerAddressSpace() != LoadAddrSpace)
       return nullptr;
 
-    // Can't forward swifterror through a phi.
-    if (LI->getOperand(0)->isSwiftError())
+    if (!canReplaceOperandWithVariable(LI, 0))
       return nullptr;
 
     // We can't sink the load if the loaded value could be modified between
@@ -1007,7 +1005,7 @@ static bool PHIsEqualValue(PHINode *PN, Value *&NonPhiInVal,
     return true;
 
   // Don't scan crazily complex things.
-  if (ValueEqualPHIs.size() == 16)
+  if (ValueEqualPHIs.size() >= 16)
     return false;
 
   // Scan the operands to see if they are either phi nodes or are equal to

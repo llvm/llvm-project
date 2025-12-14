@@ -53,6 +53,8 @@ static const char __ldlu_r2x2[] = "__ldlu_r2x2_";
 static const char __ldlu_r4x4[] = "__ldlu_r4x4_";
 static const char __ldlu_r8x2[] = "__ldlu_r8x2_";
 
+static constexpr unsigned kTMAAlignment = 16;
+
 // CUDA specific intrinsic handlers.
 static constexpr IntrinsicHandler cudaHandlers[]{
     {"__ldca_i4x4",
@@ -1505,11 +1507,9 @@ static void genTMABulkLoad(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value size = mlir::arith::MulIOp::create(builder, loc, nelem, eleSize);
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
   barrier = builder.createConvert(loc, llvmPtrTy, barrier);
-  setAlignment(dst, 16);
-  dst = convertPtrToNVVMSpace(builder, loc, dst,
-                              mlir::NVVM::NVVMMemorySpace::Shared);
-  src = convertPtrToNVVMSpace(builder, loc, src,
-                              mlir::NVVM::NVVMMemorySpace::Shared);
+  setAlignment(dst, kTMAAlignment);
+  dst = builder.createConvert(loc, llvmPtrTy, dst);
+  src = builder.createConvert(loc, llvmPtrTy, src);
   mlir::NVVM::InlinePtxOp::create(
       builder, loc, mlir::TypeRange{}, {dst, src, size, barrier}, {},
       "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], "
@@ -1611,6 +1611,7 @@ static void genTMABulkStore(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Value src, mlir::Value dst, mlir::Value count,
                             mlir::Value eleSize) {
   mlir::Value size = mlir::arith::MulIOp::create(builder, loc, eleSize, count);
+  setAlignment(src, kTMAAlignment);
   src = convertPtrToNVVMSpace(builder, loc, src,
                               mlir::NVVM::NVVMMemorySpace::Shared);
   dst = convertPtrToNVVMSpace(builder, loc, dst,

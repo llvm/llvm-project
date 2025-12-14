@@ -98,6 +98,7 @@ public:
                                 unsigned DefaultCallPenalty) const override;
 
   APInt getFeatureMask(const Function &F) const override;
+  APInt getPriorityMask(const Function &F) const override;
 
   bool isMultiversionedFunction(const Function &F) const override;
 
@@ -188,12 +189,14 @@ public:
                                                   unsigned Opcode2) const;
 
   InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const override;
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const override;
 
-  InstructionCost
-  getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
-                         TTI::TargetCostKind CostKind) const override;
+  InstructionCost getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                        TTI::TargetCostKind CostKind) const;
+
+  InstructionCost getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                         TTI::TargetCostKind CostKind) const;
 
   bool isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst,
                           Type *Src) const;
