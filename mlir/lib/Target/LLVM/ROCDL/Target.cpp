@@ -277,12 +277,10 @@ void SerializeGPUModuleBase::addControlVariables(
   }
 }
 
-std::optional<SmallVector<char, 0>>
-SerializeGPUModuleBase::assembleIsa(StringRef isa) {
-  auto loc = getOperation().getLoc();
-
-  StringRef targetTriple = this->triple;
-
+FailureOr<SmallVector<char, 0>>
+mlir::ROCDL::assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
+                         StringRef features,
+                         function_ref<InFlightDiagnostic()> emitError) {
   SmallVector<char, 0> result;
   llvm::raw_svector_ostream os(result);
 
@@ -290,10 +288,8 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
   std::string error;
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(triple, error);
-  if (!target) {
-    emitError(loc, Twine("failed to lookup target: ") + error);
-    return std::nullopt;
-  }
+  if (!target)
+    return emitError() << "failed to lookup target: " << error;
 
   llvm::SourceMgr srcMgr;
   srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(isa), SMLoc());
@@ -330,10 +326,8 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
   std::unique_ptr<llvm::MCTargetAsmParser> tap(
       target->createMCAsmParser(*sti, *parser, *mcii, mcOptions));
 
-  if (!tap) {
-    emitError(loc, "assembler initialization error");
-    return std::nullopt;
-  }
+  if (!tap)
+    return emitError() << "assembler initialization error";
 
   parser->setTargetParser(*tap);
   parser->Run(false);
@@ -343,9 +337,11 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
 std::optional<SmallVector<char, 0>>
 SerializeGPUModuleBase::compileToBinary(const std::string &serializedISA) {
   // Assemble the ISA.
-  std::optional<SmallVector<char, 0>> isaBinary = assembleIsa(serializedISA);
+  FailureOr<SmallVector<char, 0>> isaBinary = ROCDL::assembleIsa(
+      serializedISA, this->triple, this->chip, this->features,
+      [&]() { return getOperation().emitError(); });
 
-  if (!isaBinary) {
+  if (failed(isaBinary)) {
     getOperation().emitError() << "failed during ISA assembling";
     return std::nullopt;
   }
