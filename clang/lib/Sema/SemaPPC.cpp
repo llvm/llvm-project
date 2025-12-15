@@ -105,7 +105,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
            << TheCall->getSourceRange();
 
   // Common BCD type-validation helpers
-  // Emit diagnostics and return true on failure
+  // Emit error diagnostics and return true on success
   //  - IsVectorType: enforces vector unsigned char
   //  - IsIntType: enforces any integer type
   // Lambdas centralize type checks for BCD builtin handlers
@@ -113,23 +113,21 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
                                            VectorKind::AltiVecVector);
   // Lambda 1: verify vector type
   auto IsVectorType = [&](QualType ArgTy, SourceLocation Loc,
-                              unsigned ArgIndex) -> bool {
-    if (!Context.hasSameType(ArgTy, VecType)) {
-      Diag(Loc, diag::err_ppc_invalid_vector_type)
-          << ArgIndex << VecType << ArgTy;
+                          unsigned ArgIndex) -> bool {
+    if (Context.hasSameType(ArgTy, VecType))
       return true;
-    }
+    Diag(Loc, diag::err_ppc_invalid_vector_type)
+          << ArgIndex << VecType << ArgTy;
     return false;
   };
 
   // Lambda 2: verify integer type
   auto IsIntType = [&](QualType ArgTy, SourceLocation Loc,
-                           unsigned ArgIndex) -> bool {
-    if (!ArgTy->isIntegerType()) {
-      Diag(Loc, diag::err_ppc_invalid_integer_type)
-          << ArgIndex << "integer type" << ArgTy;
+                        unsigned ArgIndex) -> bool {
+    if (ArgTy->isIntegerType())
       return true;
-    }
+    Diag(Loc, diag::err_ppc_invalid_integer_type)
+        << ArgIndex << "integer type" << ArgTy;
     return false;
   };
 
@@ -146,14 +144,14 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   case PPC::BI__builtin_ppc_bcdtruncate: {
 
     // Arg0 must be vector unsigned char
-    if (IsVectorType(TheCall->getArg(0)->getType(),
+    if (!IsVectorType(TheCall->getArg(0)->getType(),
                      TheCall->getArg(0)->getBeginLoc(), 0))
-      return true;
+      return false;
 
     // Arg1 must be integer type
-    if (IsIntType(TheCall->getArg(1)->getType(),
+    if (!IsIntType(TheCall->getArg(1)->getType(),
                   TheCall->getArg(1)->getBeginLoc(), 1))
-      return true;
+      return false;
 
     // Restrict Arg2 constant range (0–1)
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 1);
