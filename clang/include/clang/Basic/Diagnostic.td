@@ -77,10 +77,9 @@ class StableId<string Id> { string StableId = Id; }
 // Stable ID of the original diagnostic should be added to the LegacyStableIds
 // list of each of the new diagnostics created from it.
 //
-// If two or more diagnostics
-// are merged into a single diagnostic, the Stable ID of each of the original
-// diagnostics should be added to the LegacyStableIds list of the new (merged)
-// diagnostic.
+// If two or more diagnostics are merged into a single diagnostic, the Stable ID
+// of each of the original diagnostics should be added to the LegacyStableIds
+// list of the new (merged) diagnostic.
 class LegacyStableIds<list<string> Ids> { list<string> LegacyStableIds = Ids; }
 
 // This defines documentation for diagnostic groups.

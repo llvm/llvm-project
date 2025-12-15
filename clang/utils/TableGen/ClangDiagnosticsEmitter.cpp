@@ -1684,7 +1684,7 @@ namespace {
 class DiagStableIDsMap {
   StringToOffsetTable StableIDs;
   std::vector<uint32_t> LegacyStableIDs;
-  std::map<StringRef, uint32_t> LegacyStableIDsStartOffsets;
+  llvm::StringMap<uint32_t> LegacyStableIDsStartOffsets;
 
 public:
   DiagStableIDsMap(const RecordKeeper &Records) {
@@ -1719,12 +1719,9 @@ public:
   /// Gets the offset in the DiagLegacyStableIDs array of the first element of
   /// the diagnostic's list of legacy Stable IDs.
   uint32_t getLegacyStableIDsStartOffset(StringRef Name) const {
-    auto found = LegacyStableIDsStartOffsets.find(Name);
-    if (found != LegacyStableIDsStartOffsets.cend()) {
-      return found->second;
-    } else {
-      return 0;
-    }
+    // `lookup()` will return zero if not found, which is exactly what we want
+    // anyway.
+    return LegacyStableIDsStartOffsets.lookup(Name);
   }
 
   /// Emit diagnostic stable ID arrays and related data structures.
@@ -1752,11 +1749,7 @@ private:
   /// to the name of the diagnostic.
   static StringRef getStableID(const Record &R) {
     StringRef StableID = R.getValueAsString("StableId");
-    if (!StableID.empty()) {
-      return StableID;
-    } else {
-      return R.getName();
-    }
+    return StableID.empty() ? R.getName() : StableID;
   }
 
   /// Emit a list of stable IDs, used by both the "StableId" and
@@ -1926,7 +1919,7 @@ void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
     uint32_t StableIDOffset = StableIDs.getStableIDOffset(R);
     OS << ", " << StableIDOffset;
 
-    // Old Stable IDs.
+    // Previous Stable IDs.
     uint32_t LegacyStableIDsStartOffset =
         StableIDs.getLegacyStableIDsStartOffset(R.getName());
     OS << ", " << LegacyStableIDsStartOffset;

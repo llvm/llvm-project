@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple avr-unknown-unknown -fsyntax-only -fdiagnostics-format sarif %s > %t 2>&1 || true
+// RUN: %clang_cc1 -triple avr-unknown-unknown -fsyntax-only -fdiagnostics-format sarif %s > %t 2>&1
 // RUN: cat %t | %normalize_sarif | diff -U1 -b %S/Inputs/expected-sarif/sarif-legacy-stable-ids.c.sarif -
 
 struct a { int b; };

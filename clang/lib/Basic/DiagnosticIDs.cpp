@@ -191,7 +191,7 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
 // clang-format off
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
-             LEGACY_STABLE_IDS)                                                   \
+             LEGACY_STABLE_IDS)                                                \
   {                                                                            \
       diag::ENUM,                                                              \
       DEFAULT_SEVERITY,                                                        \
