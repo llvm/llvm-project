@@ -17,11 +17,12 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
-  auto result = write_internal(reinterpret_cast<char *>(&c), 1, stdout);
+  unsigned char uc = static_cast<unsigned char>(c);
+  auto result = write_internal(reinterpret_cast<char *>(&uc), 1, stdout);
   if (result.has_error())
     libc_errno = result.error;
   size_t written = result.value;
-  if (1 != written) {
+  if (written != 1) {
     // The stream should be in an error state in this case.
     return EOF;
   }

@@ -19,6 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// TODO: Deduplicate this with __support/File/file.h.
 struct FileIOResult {
   size_t value;
   int error;

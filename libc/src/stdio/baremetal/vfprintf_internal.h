@@ -1,4 +1,4 @@
-//===-- Baremetal implementation header of vfprintf -------------*- C++ -*-===//
+//===-- Implementation header of vfprintf for baremetal ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,12 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 LIBC_INLINE int write_hook(cpp::string_view str_view, void *cookie) {
-  __llvm_libc_stdio_write(cookie, str_view.data(), str_view.size());
+  auto result =
+      __llvm_libc_stdio_write(cookie, str_view.data(), str_view.size());
+  if (result <= 0)
+    return result;
+  if (static_cast<size_t>(result) != str_view.size())
+    return printf_core::FILE_WRITE_ERROR;
   return printf_core::WRITE_OK;
 }
 

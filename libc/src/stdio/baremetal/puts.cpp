@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   if (result.has_error())
     libc_errno = result.error;
   size_t written = result.value;
-  if (str_view.size() != written) {
+  if (written != str_view.size()) {
     // The stream should be in an error state in this case.
     return EOF;
   }
@@ -30,7 +30,7 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   if (result.has_error())
     libc_errno = result.error;
   written = result.value;
-  if (1 != written) {
+  if (written != 1) {
     // The stream should be in an error state in this case.
     return EOF;
   }

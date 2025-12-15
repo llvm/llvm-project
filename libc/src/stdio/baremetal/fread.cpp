@@ -10,6 +10,7 @@
 
 #include "hdr/types/FILE.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/file_internal.h"
@@ -27,6 +28,7 @@ LLVM_LIBC_FUNCTION(size_t, fread,
       read_internal(reinterpret_cast<char *>(buffer), size * nmemb, stream);
   if (result.has_error())
     libc_errno = result.error;
+  LIBC_ASSERT(result.value % size == 0 && "result not multiple of size");
   return result.value / size;
 }
 

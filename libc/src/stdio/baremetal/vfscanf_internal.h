@@ -1,4 +1,4 @@
-//===-- Baremetal implementation header of vfscanf --------------*- C++ -*-===//
+//===-- Implementation header of vfscanf ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,11 +32,11 @@ public:
   LIBC_INLINE StreamReader(::FILE *stream) : stream(stream) {}
 
   LIBC_INLINE char getc() {
-    char buf[1];
-    auto result = __llvm_libc_stdio_read(stream, buf, sizeof(buf));
-    if (result <= 0)
-      return EOF;
-    return buf[0];
+    char c;
+    auto result = __llvm_libc_stdio_read(stream, &c, 1);
+    if (result != 1)
+      return '\0';
+    return c;
   }
   LIBC_INLINE void ungetc(int) {}
 };

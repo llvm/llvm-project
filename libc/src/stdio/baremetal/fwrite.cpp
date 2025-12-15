@@ -10,6 +10,8 @@
 
 #include "hdr/types/FILE.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_assert.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/file_internal.h"
 
@@ -22,8 +24,12 @@ LLVM_LIBC_FUNCTION(size_t, fwrite,
                     ::FILE *stream)) {
   if (size == 0 || nmemb == 0)
     return 0;
-  return write_internal(reinterpret_cast<const char *>(buffer), size * nmemb,
-                        stream);
+  auto result = write_internal(reinterpret_cast<const char *>(buffer),
+                               size * nmemb, stream);
+  if (result.has_error())
+    libc_errno = result.error;
+  LIBC_ASSERT(result.value % size == 0 && "result not multiple of size");
+  return result.value / size;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

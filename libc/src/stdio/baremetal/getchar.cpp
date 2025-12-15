@@ -17,8 +17,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, getchar, ()) {
-  char c;
-  auto result = read_internal(&c, 1, stdin);
+  unsigned char c;
+  auto result = read_internal(reinterpret_cast<char *>(&c), 1, stdin);
   if (result.has_error())
     libc_errno = result.error;
 
