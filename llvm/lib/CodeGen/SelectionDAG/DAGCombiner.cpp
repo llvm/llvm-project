@@ -3171,9 +3171,9 @@ SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
                 m_Add(m_And(m_Value(A), m_Value(B)),
                       m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)), m_One()))) ||
        sd_match(N, m_ReassociatableAdd(
-                       m_Srl(m_Value(A), m_One()), m_Srl(m_Value(B), m_One()),
-                       m_ReassociatableAnd(m_Deferred(A), m_Deferred(B),
-                                           m_One()))))) {
+                       m_ReassociatableAnd(m_Value(A), m_Value(B), m_One()),
+                       m_Srl(m_Deferred(A), m_One()),
+                       m_Srl(m_Deferred(B), m_One()))))) {
     return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
   }
   if ((!LegalOperations || hasOperation(ISD::AVGFLOORS, VT)) &&
@@ -3181,9 +3181,9 @@ SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
                 m_Add(m_And(m_Value(A), m_Value(B)),
                       m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)), m_One()))) ||
        sd_match(N, m_ReassociatableAdd(
-                       m_Sra(m_Value(A), m_One()), m_Sra(m_Value(B), m_One()),
-                       m_ReassociatableAnd(m_Deferred(A), m_Deferred(B),
-                                           m_One()))))) {
+                       m_ReassociatableAnd(m_Value(A), m_Value(B), m_One()),
+                       m_Sra(m_Deferred(A), m_One()),
+                       m_Sra(m_Deferred(B), m_One()))))) {
     return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
   }
 

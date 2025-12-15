@@ -570,8 +570,13 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
     }
   }
 
-  if (registers.empty())
+  if (registers.empty()) {
     registers = GetFallbackRegisters(arch_to_use);
+    if (!registers.empty())
+      LLDB_LOG(
+          log,
+          "All other methods failed, using fallback register information.");
+  }
 
   AddRemoteRegisters(registers, arch_to_use);
 }
@@ -2785,6 +2790,29 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
   return 0;
 }
 
+/// Returns the number of ranges that is safe to request using MultiMemRead
+/// while respecting max_packet_size.
+static uint64_t ComputeNumRangesMultiMemRead(
+    uint64_t max_packet_size,
+    llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges) {
+  // Each range is specified by two numbers (up to 16 ASCII characters) and one
+  // comma.
+  constexpr uint64_t range_overhead = 33;
+  uint64_t current_size = 0;
+  for (auto [idx, range] : llvm::enumerate(ranges)) {
+    uint64_t potential_size = current_size + range.size + range_overhead;
+    if (potential_size > max_packet_size) {
+      if (idx == 0)
+        LLDB_LOG(GetLog(GDBRLog::Process),
+                 "MultiMemRead input has a range (base = {0:x}, size = {1}) "
+                 "bigger than the maximum allowed by remote",
+                 range.base, range.size);
+      return idx;
+    }
+  }
+  return ranges.size();
+}
+
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
 ProcessGDBRemote::ReadMemoryRanges(
     llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
@@ -2792,25 +2820,36 @@ ProcessGDBRemote::ReadMemoryRanges(
   if (!m_gdb_comm.GetMultiMemReadSupported())
     return Process::ReadMemoryRanges(ranges, buffer);
 
-  llvm::Expected<StringExtractorGDBRemote> response =
-      SendMultiMemReadPacket(ranges);
-  if (!response) {
-    LLDB_LOG_ERROR(GetLog(GDBRLog::Process), response.takeError(),
-                   "MultiMemRead error response: {0}");
-    return Process::ReadMemoryRanges(ranges, buffer);
-  }
+  const llvm::ArrayRef<Range<lldb::addr_t, size_t>> original_ranges = ranges;
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> memory_regions;
 
-  llvm::StringRef response_str = response->GetStringRef();
-  const unsigned expected_num_ranges = ranges.size();
-  llvm::Expected<llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>>
-      parsed_response =
-          ParseMultiMemReadPacket(response_str, buffer, expected_num_ranges);
-  if (!parsed_response) {
-    LLDB_LOG_ERROR(GetLog(GDBRLog::Process), parsed_response.takeError(),
-                   "MultiMemRead error parsing response: {0}");
-    return Process::ReadMemoryRanges(ranges, buffer);
+  while (!ranges.empty()) {
+    uint64_t num_ranges =
+        ComputeNumRangesMultiMemRead(m_max_memory_size, ranges);
+    if (num_ranges == 0)
+      return Process::ReadMemoryRanges(original_ranges, buffer);
+
+    auto ranges_for_request = ranges.take_front(num_ranges);
+    ranges = ranges.drop_front(num_ranges);
+
+    llvm::Expected<StringExtractorGDBRemote> response =
+        SendMultiMemReadPacket(ranges_for_request);
+    if (!response) {
+      LLDB_LOG_ERROR(GetLog(GDBRLog::Process), response.takeError(),
+                     "MultiMemRead error response: {0}");
+      return Process::ReadMemoryRanges(original_ranges, buffer);
+    }
+
+    llvm::StringRef response_str = response->GetStringRef();
+    const unsigned expected_num_ranges = ranges_for_request.size();
+    if (llvm::Error error = ParseMultiMemReadPacket(
+            response_str, buffer, expected_num_ranges, memory_regions)) {
+      LLDB_LOG_ERROR(GetLog(GDBRLog::Process), std::move(error),
+                     "MultiMemRead error parsing response: {0}");
+      return Process::ReadMemoryRanges(original_ranges, buffer);
+    }
   }
-  return std::move(*parsed_response);
+  return memory_regions;
 }
 
 llvm::Expected<StringExtractorGDBRemote>
@@ -2846,18 +2885,16 @@ ProcessGDBRemote::SendMultiMemReadPacket(
   return response;
 }
 
-llvm::Expected<llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>>
-ProcessGDBRemote::ParseMultiMemReadPacket(llvm::StringRef response_str,
-                                          llvm::MutableArrayRef<uint8_t> buffer,
-                                          unsigned expected_num_ranges) {
+llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
+    llvm::StringRef response_str, llvm::MutableArrayRef<uint8_t> buffer,
+    unsigned expected_num_ranges,
+    llvm::SmallVectorImpl<llvm::MutableArrayRef<uint8_t>> &memory_regions) {
   // The sizes and the data are separated by a `;`.
   auto [sizes_str, memory_data] = response_str.split(';');
   if (sizes_str.size() == response_str.size())
     return llvm::createStringError(llvm::formatv(
         "MultiMemRead response missing field separator ';' in: '{0}'",
         response_str));
-
-  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results;
 
   // Sizes are separated by a `,`.
   for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
@@ -2881,10 +2918,10 @@ ProcessGDBRemote::ParseMultiMemReadPacket(llvm::StringRef response_str,
     buffer = buffer.drop_front(read_size);
 
     memcpy(region_to_write.data(), region_to_read.data(), read_size);
-    read_results.push_back(region_to_write);
+    memory_regions.push_back(region_to_write);
   }
 
-  return read_results;
+  return llvm::Error::success();
 }
 
 bool ProcessGDBRemote::SupportsMemoryTagging() {

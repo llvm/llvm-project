@@ -229,10 +229,8 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
       if (variant.GetType() & lldb::eFunctionNameTypeFull) {
         std::vector<Module::LookupInfo> variant_lookups =
             Module::LookupInfo::MakeLookupInfos(name, variant.GetType(),
-                                                lang->GetLanguageType());
-        llvm::for_each(variant_lookups, [&](auto &variant_lookup) {
-          variant_lookup.SetLookupName(variant.GetName());
-        });
+                                                lang->GetLanguageType(),
+                                                variant.GetName());
         llvm::append_range(m_lookups, variant_lookups);
       }
     }

@@ -288,7 +288,7 @@ A detailed description of each option is presented below:
 .. option:: AbstractClassPrefix
 
     When defined, the check will ensure abstract class names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: AbstractClassIgnoredRegexp
 
@@ -425,7 +425,7 @@ and thus no warnings will be emitted.
 .. option:: ClassPrefix
 
     When defined, the check will ensure class names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ClassIgnoredRegexp
 
@@ -479,7 +479,7 @@ After:
 .. option:: ClassConstexprPrefix
 
     When defined, the check will ensure class ``constexpr`` names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ClassConstexprIgnoredRegexp
 
@@ -531,7 +531,7 @@ After:
 .. option:: ClassConstantPrefix
 
     When defined, the check will ensure class constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ClassConstantIgnoredRegexp
 
@@ -583,7 +583,7 @@ After:
 .. option:: ClassMemberPrefix
 
     When defined, the check will ensure class member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ClassMemberIgnoredRegexp
 
@@ -635,7 +635,7 @@ After:
 .. option:: ClassMethodPrefix
 
     When defined, the check will ensure class method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ClassMethodIgnoredRegexp
 
@@ -681,7 +681,7 @@ After:
 .. option:: ConceptPrefix
 
     When defined, the check will ensure concept names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConceptIgnoredRegexp
 
@@ -721,7 +721,7 @@ After:
 .. option:: ConstantPrefix
 
     When defined, the check will ensure constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstantIgnoredRegexp
 
@@ -767,7 +767,7 @@ After:
 .. option:: ConstantMemberPrefix
 
     When defined, the check will ensure constant member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstantMemberIgnoredRegexp
 
@@ -817,7 +817,7 @@ After:
 .. option:: ConstantParameterPrefix
 
     When defined, the check will ensure constant parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstantParameterIgnoredRegexp
 
@@ -863,7 +863,7 @@ After:
 .. option:: ConstantPointerParameterPrefix
 
     When defined, the check will ensure constant pointer parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstantPointerParameterIgnoredRegexp
 
@@ -909,7 +909,7 @@ After:
 .. option:: ConstexprFunctionPrefix
 
     When defined, the check will ensure constexpr function names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstexprFunctionIgnoredRegexp
 
@@ -949,7 +949,7 @@ After:
 .. option:: ConstexprMethodPrefix
 
     When defined, the check will ensure constexpr method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstexprMethodIgnoredRegexp
 
@@ -995,7 +995,7 @@ After:
 .. option:: ConstexprVariablePrefix
 
     When defined, the check will ensure constexpr variable names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstexprVariableIgnoredRegexp
 
@@ -1041,7 +1041,7 @@ After:
 .. option:: EnumPrefix
 
     When defined, the check will ensure enumeration names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: EnumIgnoredRegexp
 
@@ -1081,7 +1081,7 @@ After:
 .. option:: EnumConstantPrefix
 
     When defined, the check will ensure enumeration constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: EnumConstantIgnoredRegexp
 
@@ -1127,7 +1127,7 @@ After:
 .. option:: FunctionPrefix
 
     When defined, the check will ensure function names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: FunctionIgnoredRegexp
 
@@ -1220,7 +1220,7 @@ After:
 .. option:: GlobalConstantPrefix
 
     When defined, the check will ensure global constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: GlobalConstantIgnoredRegexp
 
@@ -1266,7 +1266,7 @@ After:
 .. option:: GlobalConstantPointerPrefix
 
     When defined, the check will ensure global constant pointer names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: GlobalConstantPointerIgnoredRegexp
 
@@ -1312,7 +1312,7 @@ After:
 .. option:: GlobalFunctionPrefix
 
     When defined, the check will ensure global function names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: GlobalFunctionIgnoredRegexp
 
@@ -1352,7 +1352,7 @@ After:
 .. option:: GlobalPointerPrefix
 
     When defined, the check will ensure global pointer names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: GlobalPointerIgnoredRegexp
 
@@ -1398,7 +1398,7 @@ After:
 .. option:: GlobalVariablePrefix
 
     When defined, the check will ensure global variable names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: GlobalVariableIgnoredRegexp
 
@@ -1450,7 +1450,7 @@ After:
 .. option:: InlineNamespacePrefix
 
     When defined, the check will ensure inline namespaces names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: InlineNamespaceIgnoredRegexp
 
@@ -1544,7 +1544,7 @@ After:
 .. option:: LocalConstantPrefix
 
     When defined, the check will ensure local constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: LocalConstantIgnoredRegexp
 
@@ -1590,7 +1590,7 @@ After:
 .. option:: LocalConstantPointerPrefix
 
     When defined, the check will ensure local constant pointer names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: LocalConstantPointerIgnoredRegexp
 
@@ -1636,7 +1636,7 @@ After:
 .. option:: LocalPointerPrefix
 
     When defined, the check will ensure local pointer names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: LocalPointerIgnoredRegexp
 
@@ -1682,7 +1682,7 @@ After:
 .. option:: LocalVariablePrefix
 
     When defined, the check will ensure local variable names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: LocalVariableIgnoredRegexp
 
@@ -1736,7 +1736,7 @@ After:
 .. option:: MacroDefinitionPrefix
 
     When defined, the check will ensure macro definitions will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: MacroDefinitionIgnoredRegexp
 
@@ -1779,7 +1779,7 @@ command line using the ``-D`` flag.
 .. option:: MemberPrefix
 
     When defined, the check will ensure member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: MemberIgnoredRegexp
 
@@ -1829,7 +1829,7 @@ After:
 .. option:: MethodPrefix
 
     When defined, the check will ensure method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: MethodIgnoredRegexp
 
@@ -1873,7 +1873,7 @@ After:
 .. option:: NamespacePrefix
 
     When defined, the check will ensure namespace names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: NamespaceIgnoredRegexp
 
@@ -1917,7 +1917,7 @@ After:
 .. option:: ParameterPrefix
 
     When defined, the check will ensure parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ParameterIgnoredRegexp
 
@@ -1963,7 +1963,7 @@ After:
 .. option:: ParameterPackPrefix
 
     When defined, the check will ensure parameter pack names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ParameterPackIgnoredRegexp
 
@@ -2007,7 +2007,7 @@ After:
 .. option:: PointerParameterPrefix
 
     When defined, the check will ensure pointer parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: PointerParameterIgnoredRegexp
 
@@ -2053,7 +2053,7 @@ After:
 .. option:: PrivateMemberPrefix
 
     When defined, the check will ensure private member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: PrivateMemberIgnoredRegexp
 
@@ -2105,7 +2105,7 @@ After:
 .. option:: PrivateMethodPrefix
 
     When defined, the check will ensure private method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: PrivateMethodIgnoredRegexp
 
@@ -2151,7 +2151,7 @@ After:
 .. option:: ProtectedMemberPrefix
 
     When defined, the check will ensure protected member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ProtectedMemberIgnoredRegexp
 
@@ -2203,7 +2203,7 @@ After:
 .. option:: ProtectedMethodPrefix
 
     When defined, the check will ensure protected method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ProtectedMethodIgnoredRegexp
 
@@ -2249,7 +2249,7 @@ After:
 .. option:: PublicMemberPrefix
 
     When defined, the check will ensure public member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: PublicMemberIgnoredRegexp
 
@@ -2301,7 +2301,7 @@ After:
 .. option:: PublicMethodPrefix
 
     When defined, the check will ensure public method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: PublicMethodIgnoredRegexp
 
@@ -2347,7 +2347,7 @@ After:
 .. option:: ScopedEnumConstantPrefix
 
     When defined, the check will ensure scoped enum constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ScopedEnumConstantIgnoredRegexp
 
@@ -2439,7 +2439,7 @@ After:
 .. option:: StaticConstantPrefix
 
     When defined, the check will ensure static constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: StaticConstantIgnoredRegexp
 
@@ -2485,7 +2485,7 @@ After:
 .. option:: StaticVariablePrefix
 
     When defined, the check will ensure static variable names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: StaticVariableIgnoredRegexp
 
@@ -2531,7 +2531,7 @@ After:
 .. option:: StructPrefix
 
     When defined, the check will ensure struct names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: StructIgnoredRegexp
 
@@ -2577,7 +2577,7 @@ After:
 .. option:: TemplateParameterPrefix
 
     When defined, the check will ensure template parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: TemplateParameterIgnoredRegexp
 
@@ -2617,7 +2617,7 @@ After:
 .. option:: TemplateTemplateParameterPrefix
 
     When defined, the check will ensure template template parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: TemplateTemplateParameterIgnoredRegexp
 
@@ -2659,7 +2659,7 @@ After:
 .. option:: TypeAliasPrefix
 
     When defined, the check will ensure type alias names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: TypeAliasIgnoredRegexp
 
@@ -2699,7 +2699,7 @@ After:
 .. option:: TypedefPrefix
 
     When defined, the check will ensure typedef names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: TypedefIgnoredRegexp
 
@@ -2739,7 +2739,7 @@ After:
 .. option:: TypeTemplateParameterPrefix
 
     When defined, the check will ensure type template parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: TypeTemplateParameterIgnoredRegexp
 
@@ -2781,7 +2781,7 @@ After:
 .. option:: UnionPrefix
 
     When defined, the check will ensure union names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: UnionIgnoredRegexp
 
@@ -2827,7 +2827,7 @@ After:
 .. option:: ValueTemplateParameterPrefix
 
     When defined, the check will ensure value template parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ValueTemplateParameterIgnoredRegexp
 
@@ -2869,7 +2869,7 @@ After:
 .. option:: VariablePrefix
 
     When defined, the check will ensure variable names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: VariableIgnoredRegexp
 
@@ -2915,7 +2915,7 @@ After:
 .. option:: VirtualMethodPrefix
 
     When defined, the check will ensure virtual method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: VirtualMethodIgnoredRegexp
 
