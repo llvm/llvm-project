@@ -50,15 +50,13 @@ def Znver5Model : SchedMachineModel {
 
   // The branch misprediction penalty is in the range from 12 to 18 cycles,
   // <...>. The common case penalty is 15 cycles.
-  let MispredictPenalty = 15;
-
   // AMD SOG, 2.8 Optimizing Branching
   // The common case penalty is 15 cycles.
   // Assuming a dispatch of 8 ops/cy and a mispredict cost of 15 from
   // the op-cache, we limit the loop buffer to 8*15 = 120 to avoid loop
   // unrolling leading to excessive filling of the op-cache from frontend.
   
-  let LoopMicroOpBufferSize = mul!(IssueWidth, MispredictPenalty);
+  let LoopMicroOpBufferSize = 120;
 
   let PostRAScheduler = 1; // Enable Post RegAlloc Scheduler pass.
 
