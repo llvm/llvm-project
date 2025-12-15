@@ -4771,28 +4771,6 @@ def OMPAssume : InheritableAttr {
   let Args = [StringArgument<"Assumption">];
 }
 
-def OMPImpexDecl : InheritableAttr {
-  // This attribute has no spellings as it is only ever created implicitly.
-  let Spellings = [];
-  let SemaHandler = 0;
-  let Args = [
-    EnumArgument<"ImpexType", "ImpexTypeTy", /*is_string=*/false,
-                 [
-                   "omp_not_impex", "omp_impex",
-                   "omp_import", "omp_import",
-                   "omp_export", "omp_export",
-                   "omp_impex", "omp_impex", ""],
-                 [
-                   "OMPNotImpex", "OMPImpex",
-                   "OMPImport", "OMPImport",
-                   "OMPExport", "OMPExport",
-                   "OMPImpex", "OMPImpex",
-                   "OMPUserDefinedImpex"]>,
-    ExprArgument<"Impexpr">
-  ];
-  let Documentation = [InternalOnly];
-}
-
 def InternalLinkage : InheritableAttr {
   let Spellings = [Clang<"internal_linkage">];
   let Subjects = SubjectList<[Var, Function, CXXRecord]>;

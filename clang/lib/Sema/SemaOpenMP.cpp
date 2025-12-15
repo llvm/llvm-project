@@ -358,7 +358,6 @@ private:
   SourceLocation AtomicLocation;
   /// Vector of declare variant construct traits.
   SmallVector<llvm::omp::TraitProperty, 8> ConstructTraits;
-  Expr *OMPPredefinedImpex[OMPImpexDeclAttr::OMPUserDefinedImpex] = {nullptr};
 
 public:
   explicit DSAStackTy(Sema &S) : SemaRef(S) {}
@@ -390,17 +389,8 @@ public:
   /// Gets omp_event_handle_t type.
   QualType getOMPEventHandleT() const { return OMPEventHandleT; }
 
-  /// Returns the current value of OMPImpexT.
-  QualType getOMPImpexT() const { return OMPImpexT; }
-
   /// Sets the OMPImpexT to the provided QualType Ty.
   void setOMPImpexT(QualType Ty) { OMPImpexT = Ty; }
-
-  // Maps the ImpexType to the provided expression (Impex) and
-  // stores the mapping in the OMPPredefinedImpex.
-  void setImpex(OMPImpexDeclAttr::ImpexTypeTy ImpexType, Expr *Impex) {
-    OMPPredefinedImpex[ImpexType] = Impex;
-  }
 
   bool isClauseParsingMode() const { return ClauseKindMode != OMPC_unknown; }
   OpenMPClauseKind getClauseParsingMode() const {

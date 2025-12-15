@@ -1513,10 +1513,12 @@ class OMPTransparentClause final : public OMPClause {
   SourceLocation LParenLoc;
 
   /// Argument of the 'transparent' clause.
-  Stmt *Transparent = nullptr;
+  Stmt *ImpexType = nullptr;
 
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+   void setImpexTypeKind(Expr *E) { ImpexType = E; }
 
 public:
   /// Build 'transparent' clause with argument \a A ('omp_not_impex',
@@ -1528,33 +1530,32 @@ public:
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPTransparentClause(Expr *Transparent, SourceLocation StartLoc,
+  OMPTransparentClause(Expr *ImpexTypeKind, SourceLocation StartLoc,
                        SourceLocation LParenLoc, SourceLocation EndLoc)
       : OMPClause(llvm::omp::OMPC_transparent, StartLoc, EndLoc),
-        LParenLoc(LParenLoc), Transparent(Transparent) {}
+        LParenLoc(LParenLoc), ImpexType(ImpexTypeKind) {}
 
   /// Build an empty clause.
   OMPTransparentClause()
       : OMPClause(llvm::omp::OMPC_transparent, SourceLocation(),
                   SourceLocation()) {}
 
-  static OMPTransparentClause *Create(const ASTContext &C,
-                                      SourceLocation StartLoc,
-                                      SourceLocation LParenLoc,
-                                      SourceLocation EndLoc, Expr *Transparent);
+  static OMPTransparentClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation EndLoc, Expr *ImpexTypeKind);
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
   /// Returns argument of the clause.
-  Expr *getTransparent() const { return cast<Expr>(Transparent); }
+  Expr *getImpexType() const { return cast<Expr>(ImpexType); }
 
   child_range children() {
-    return child_range(reinterpret_cast<Stmt **>(&Transparent),
-                       reinterpret_cast<Stmt **>(&Transparent) + 1);
+    return child_range(reinterpret_cast<Stmt **>(&ImpexType),
+                       reinterpret_cast<Stmt **>(&ImpexType) + 1);
   }
 
   const_child_range children() const {
-    return const_child_range(&Transparent, &Transparent + 1);
+    return const_child_range(&ImpexType, &ImpexType + 1);
   }
 
   child_range used_children() {

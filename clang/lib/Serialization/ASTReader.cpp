@@ -11709,7 +11709,7 @@ void OMPClauseReader::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
 
 void OMPClauseReader::VisitOMPTransparentClause(OMPTransparentClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
-  C->Transparent = Record.readSubExpr();
+  C->setImpexTypeKind(Record.readSubExpr());
 }
 
 void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {

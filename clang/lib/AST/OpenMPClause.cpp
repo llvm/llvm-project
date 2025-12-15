@@ -1925,8 +1925,9 @@ OMPTransparentClause *OMPTransparentClause::Create(const ASTContext &C,
                                                    SourceLocation StartLoc,
                                                    SourceLocation LParenLoc,
                                                    SourceLocation EndLoc,
-                                                   Expr *Transparent) {
-  return new (C) OMPTransparentClause(Transparent, StartLoc, LParenLoc, EndLoc);
+                                                   Expr *ImpexType) {
+  return new (C)
+      OMPTransparentClause(ImpexType, StartLoc, LParenLoc, EndLoc);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2062,7 +2063,7 @@ void OMPClausePrinter::VisitOMPThreadsetClause(OMPThreadsetClause *Node) {
 
 void OMPClausePrinter::VisitOMPTransparentClause(OMPTransparentClause *Node) {
   OS << "transparent(";
-  Node->getTransparent()->printPretty(OS, nullptr, Policy, 0);
+  Node->getImpexType()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
 }
 

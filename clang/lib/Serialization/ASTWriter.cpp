@@ -7932,7 +7932,7 @@ void OMPClauseWriter::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
 
 void OMPClauseWriter::VisitOMPTransparentClause(OMPTransparentClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
-  Record.AddStmt(C->getTransparent());
+  Record.AddStmt(C->getImpexType());
 }
 
 void OMPClauseWriter::VisitOMPProcBindClause(OMPProcBindClause *C) {
