@@ -137,6 +137,24 @@ branches as follows:
       - main
       - release/*
 
+Make Workflows Run on Updates to the Workflow Definition
+--------------------------------------------------------
+
+Whenever possible, workflows should also run whenever the workflow definition
+is updated. This enables easily testing the workflow whenever modifying it. For
+example, if we have a workflow with a definition in ``.github/workflows/foo.yaml``,
+we should have at least the following event within the workflow:
+
+.. code-block:: yaml
+
+  pull_request:
+    paths:
+     - .github/workflows/foo.yaml
+
+Note that it is not always possible to enable this (e.g., issues that use a
+``workflow_run`` trigger). But when possible, this makes testing the workflow
+much simpler.
+
 Container Best Practices
 ========================
 
