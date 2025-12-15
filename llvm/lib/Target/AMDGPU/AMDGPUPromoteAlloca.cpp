@@ -653,8 +653,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       // the amdgpu backend. Limit to pow2 for UDiv.
       FixedVectorType *AccessVecTy = cast<FixedVectorType>(AccessTy);
       FixedVectorType *VectorTy = AA.Vector.Ty;
-      uint64_t NumBits = SubVecTy->getScalarSizeInBits() *
-                         SubVecTy->getNumElements();
+      uint64_t NumBits =
+          SubVecTy->getScalarSizeInBits() * SubVecTy->getNumElements();
       uint64_t LoadAlign = cast<LoadInst>(Inst)->getAlign().value();
       if (!isa<ConstantInt>(Index) && SubVecTy->isIntOrIntVectorTy() &&
           llvm::isPowerOf2_32(SubVecTy->getNumElements()) &&
@@ -665,8 +665,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
         const unsigned NewNumElts = VectorTy->getNumElements() *
                                     VectorTy->getScalarSizeInBits() /
                                     NewElemType->getScalarSizeInBits();
-        const unsigned IndexDivisor = VectorTy->getNumElements() /
-                                      NewNumElts;
+        const unsigned IndexDivisor =
+            VectorTy->getNumElements() / NewNumElts;
         assert(VectorTy->getScalarSizeInBits() <
                    NewElemType->getScalarSizeInBits() &&
                "New element type should be bigger");
