@@ -152,7 +152,7 @@ stages:
               clangTargetArg: /p:ClangTarget=aarch64-apple-darwin
               archflag: --arch arm64
         pool:
-          vmImage: macos-13
+          vmImage: macos-14
         steps:
         - bash: |
             set -ex
