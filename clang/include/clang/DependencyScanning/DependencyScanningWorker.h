@@ -93,7 +93,7 @@ public:
 
   ~DependencyScanningWorker();
 
-  /// Run the dependency scanning tool for the given driver job command-line,
+  /// Run the dependency scanning worker for the given frontend command-line,
   /// and report the discovered dependencies to the provided consumer.
   ///
   /// OverlayFS should be based on the Worker's dependency scanning file-system
@@ -110,7 +110,7 @@ public:
       llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
           nullptr);
 
-  /// Run the dependency scanning tool for all given driver job command-lines,
+  /// Run the dependency scanning tool for all given frontend command-lines,
   /// and report the discovered dependencies to the provided consumer.
   ///
   /// OverlayFS should be based on the Worker's dependency scanning file-system
