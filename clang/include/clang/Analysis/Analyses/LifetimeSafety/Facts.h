@@ -238,7 +238,6 @@ public:
   const LoanManager &getLoanMgr() const { return LoanMgr; }
   OriginManager &getOriginMgr() { return OriginMgr; }
   const OriginManager &getOriginMgr() const { return OriginMgr; }
-  void setMaxCFGBlocksThreshold(size_t Threshold) { MaxCFGBlocks = Threshold; }
 
 private:
   FactID NextFactID{0};
@@ -247,7 +246,6 @@ private:
   /// Facts for each CFG block, indexed by block ID.
   llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
   llvm::BumpPtrAllocator FactAllocator;
-  size_t MaxCFGBlocks = 0;
 };
 } // namespace clang::lifetimes::internal
 
