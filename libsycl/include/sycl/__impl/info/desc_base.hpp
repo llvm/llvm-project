@@ -21,8 +21,10 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 template <typename Desc, typename DescOf> struct info_desc_tag {};
+
 template <typename Desc, typename DescOf, typename = void>
 struct is_info_desc : std::false_type {};
+
 template <typename Desc, typename DescOf>
 struct is_info_desc<
     Desc, DescOf,

@@ -14,6 +14,8 @@
 #ifndef _LIBSYCL___IMPL_DETAIL_MACRO_DEFINITIONS_HPP
 #define _LIBSYCL___IMPL_DETAIL_MACRO_DEFINITIONS_HPP
 
+static_assert(__cplusplus >= 201703L, "Libsycl requires C++17 or later.");
+
 #ifndef __SYCL2020_DEPRECATED
 #  if SYCL_LANGUAGE_VERSION == 202012L &&                                      \
       !defined(SYCL2020_DISABLE_DEPRECATION_WARNINGS)
@@ -22,8 +24,6 @@
 #    define __SYCL2020_DEPRECATED(message)
 #  endif
 #endif // __SYCL2020_DEPRECATED
-
-static_assert(__cplusplus >= 201703L, "Libsycl requires C++17 or later.");
 
 #if defined(_WIN32) && !defined(_DLL) && !defined(__SYCL_DEVICE_ONLY__)
 // When built for use with the MSVC C++ standard library, libsycl requires

@@ -13,7 +13,7 @@ target_link_libraries(sycl-ls
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag(-fno-rtti COMPILER_HAS_NORTTI_FLAG)
-if (COMPILER_HAS_NORTTI_FLAG)
+if (NOT LLVM_ENABLE_RTTI AND COMPILER_HAS_NORTTI_FLAG)
   target_compile_options(sycl-ls PRIVATE -fno-rtti)
 endif()
 
