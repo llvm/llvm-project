@@ -108,7 +108,10 @@ private:
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "Template": {
 // CHECK-NEXT:          "Parameters": [
-// CHECK-NEXT:            "typename T"
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "End": true,
+// CHECK-NEXT:              "Param": "typename T"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:        }
 // CHECK-NEXT:      },
