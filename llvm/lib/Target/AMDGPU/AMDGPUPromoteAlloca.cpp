@@ -665,8 +665,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
         const unsigned NewNumElts = VectorTy->getNumElements() *
                                     VectorTy->getScalarSizeInBits() /
                                     NewElemType->getScalarSizeInBits();
-        const unsigned IndexDivisor =
-            VectorTy->getNumElements() / NewNumElts;
+        const unsigned IndexDivisor = VectorTy->getNumElements() / NewNumElts;
         assert(VectorTy->getScalarSizeInBits() <
                    NewElemType->getScalarSizeInBits() &&
                "New element type should be bigger");
