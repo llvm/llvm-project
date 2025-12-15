@@ -180,21 +180,27 @@ else
 	# amd64, x86_64, x64 -> 64
 	ifeq "$(ARCH)" "amd64"
 		override ARCH := $(subst amd64,64,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "x86_64"
 		override ARCH := $(subst x86_64,64,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "x64"
 		override ARCH := $(subst x64,64,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "x86"
 		override ARCH := $(subst x86,32,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "i386"
 		override ARCH := $(subst i386,32,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "i686"
 		override ARCH := $(subst i686,32,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "powerpc"
 		override ARCH := $(subst powerpc,32,$(ARCH))
@@ -318,6 +324,15 @@ endif
 ifeq "$(MAKE_GMODULES)" "YES"
 	CFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
 	CXXFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
+endif
+
+# Our files use x86 AT&T assembly throughout.
+# Enable it explicitly so any local Clang preference for Intel syntax gets overriden.
+ifeq ($(CC_TYPE), clang)
+	ifeq ($(IS_X86), 1)
+		CFLAGS += -mllvm -x86-asm-syntax=att
+		CXXFLAGS += -mllvm -x86-asm-syntax=att
+	endif
 endif
 
 CFLAGS += $(CFLAGS_EXTRAS)
