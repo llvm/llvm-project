@@ -1664,8 +1664,10 @@ static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
   // FIXME: more places can use this function
   if (const auto *CE = dyn_cast<ConditionalOperator>(E)) {
     bool CondEval;
+    const auto *Cond = CE->getCond();
 
-    if (CE->getCond()->EvaluateAsBooleanCondition(CondEval, Ctx))
+    if (!Cond->isValueDependent() &&
+        Cond->EvaluateAsBooleanCondition(CondEval, Ctx))
       return CondEval ? CE->getLHS() : CE->getRHS();
   }
   return E;
