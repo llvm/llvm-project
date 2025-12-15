@@ -63,6 +63,8 @@ Control the runtime behavior using the ``MEMPROF_OPTIONS`` environment variable.
 
     MEMPROF_OPTIONS=log_path=stdout:print_text=true ./app
 
+.. _Processing Profiles:
+
 Processing Profiles
 -------------------
 
@@ -195,11 +197,7 @@ Runtime Implementation
 The runtime uses a **shadow memory** scheme similar to AddressSanitizer (ASan) but optimized for profiling.
 *   **Shadow Mapping:** Application memory is mapped to shadow memory.
 *   **Granularity:** The default granularity is 64 bytes. One byte of shadow memory tracks the access state of 64 bytes of application memory.
-*   **MemInfoBlock (MIB):** A key data structure that stores statistics for an allocation context, including:
-   *   ``AllocCount``
-   *   ``TotalAccessCount``
-   *   ``TotalLifetime``
-   *   ``Min/MaxAccessDensity``
+*   **MemInfoBlock (MIB):** A key data structure that stores statistics for an allocation context, including: ``AllocCount``, ``TotalAccessCount``, ``TotalLifetime``, and ``Min/MaxAccessDensity``.
 
 Profile Format
 --------------
