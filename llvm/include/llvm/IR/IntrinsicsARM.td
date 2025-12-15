@@ -1304,6 +1304,12 @@ defm int_arm_mve_vcvt_fix: MVEMXPredicated<
   [llvm_anyvector_ty /* input vector */, llvm_i32_ty /* scale */],
   LLVMMatchType<0>, llvm_anyvector_ty>;
 
+def int_arm_mve_vcvt_fp_int: DefaultAttrsIntrinsic<
+  [llvm_anyvector_ty], [llvm_anyvector_ty, llvm_i32_ty /* unsigned */],
+  [IntrNoMem]>;
+def int_arm_mve_vcvt_int_fp: DefaultAttrsIntrinsic<
+  [llvm_anyvector_ty], [llvm_anyvector_ty, llvm_i32_ty /* unsigned */],
+  [IntrNoMem]>;
 def int_arm_mve_vcvt_fp_int_predicated: DefaultAttrsIntrinsic<
   [llvm_anyvector_ty], [llvm_anyvector_ty, llvm_i32_ty /* unsigned */,
    llvm_anyvector_ty /* predicate */, LLVMMatchType<0> /* inactive */],
