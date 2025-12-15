@@ -1716,18 +1716,11 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Location loc = getLoc(expr->getExprLoc());
     llvm::StringRef intrinsicName;
     switch (builtinID) {
-    case X86::BI__builtin_ia32_vcvtph2ps_mask: {
+    case X86::BI__builtin_ia32_vcvtph2ps_mask:
+    case X86::BI__builtin_ia32_vcvtph2ps256_mask:
+    case X86::BI__builtin_ia32_vcvtph2ps512_mask:
       return emitX86CvtF16ToFloatExpr(builder, loc,
                                       convertType(expr->getType()), ops);
-    }
-    case X86::BI__builtin_ia32_vcvtph2ps256_mask: {
-      return emitX86CvtF16ToFloatExpr(builder, loc,
-                                      convertType(expr->getType()), ops);
-    }
-    case X86::BI__builtin_ia32_vcvtph2ps512_mask: {
-      return emitX86CvtF16ToFloatExpr(builder, loc,
-                                      convertType(expr->getType()), ops);
-    }
     case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
       intrinsicName = "x86.avx512bf16.mask.cvtneps2bf16.128";
       break;
