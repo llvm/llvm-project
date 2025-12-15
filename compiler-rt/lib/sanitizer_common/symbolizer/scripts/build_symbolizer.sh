@@ -69,11 +69,8 @@ fi
 FLAGS+=" -fPIC -flto -Oz -g0 -DNDEBUG -target $TARGET_TRIPLE -Wno-unused-command-line-argument"
 FLAGS+=" -include ${SRC_DIR}/../sanitizer_redefine_builtins.h -DSANITIZER_COMMON_REDEFINE_BUILTINS_IN_STD -Wno-language-extension-token"
 
-if [[ -n "${USE_LD}" ]]; then
-LINKFLAGS="-fuse-ld=${USE_LD} -target $TARGET_TRIPLE"
-else
 LINKFLAGS="-fuse-ld=lld -target $TARGET_TRIPLE"
-fi
+
 # Build zlib.
 if [[ ! -d ${ZLIB_BUILD} ]]; then
   if [[ -z "${ZLIB_SRC}" ]]; then
@@ -86,7 +83,13 @@ if [[ ! -d ${ZLIB_BUILD} ]]; then
 fi
 
 cd ${ZLIB_BUILD}
-AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/true ./configure --static
+if [[ -n "${USE_LD}" ]]; then
+  EXTRA="-fuse-ld=${USE_LD}"
+else
+  EXTRA=""
+fi
+
+AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype -fuse-ld=lld" RANLIB=/bin/true ./configure --static
 # TODO: remove this. this is for debugging buildbot problems
 cat configure.log
 make -j libz.a
