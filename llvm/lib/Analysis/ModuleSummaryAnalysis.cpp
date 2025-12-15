@@ -87,7 +87,11 @@ static cl::opt<bool> EnableMemProfIndirectCallSupport(
 
 // This can be used to override the number of callees created from VP metadata
 // normally taken from the -icp-max-prom option with a larger amount, if useful
-// for analysis.
+// for analysis. Use a separate option so that we can control the number of
+// indirect callees for ThinLTO summary based analysis (e.g. for MemProf which
+// needs this information for a correct and not overly-conservative callsite
+// graph analysis, especially because allocation contexts may not be very
+// frequent), without affecting normal ICP.
 cl::opt<unsigned>
     MaxSummaryIndirectEdges("module-summary-max-indirect-edges", cl::init(0),
                             cl::Hidden,

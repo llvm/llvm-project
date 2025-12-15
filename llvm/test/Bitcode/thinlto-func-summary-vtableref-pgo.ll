@@ -85,7 +85,7 @@ define i32 @_Z4testP4Base(ptr %0) !prof !15 {
 !17 = !{!"VP", i32 0, i64 150, i64 5459407273543877811, i64 100, i64 6174874150489409711, i64 50}
 
 ;; ModuleSummaryIndex stores <guid, global-value summary> map in std::map; so
-;; global value summares are printed out in the order that gv's guid increases.
+;; global value summaries are printed out in the order that gv's guid increases.
 ; DIS:	^[[VTABLEBASE2:[0-9]+]] = gv: (guid: 1960855528937986108)
 ; DIS:	^[[VFUNCBASE2:[0-9]+]] = gv: (guid: 5459407273543877811)
 ; DIS2:	^[[VFUNCDER2:[0-9]+]] = gv: (guid: 6174874150489409711)
