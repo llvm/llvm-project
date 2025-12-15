@@ -132,10 +132,12 @@ public:
     // by 8 is cheap. We guard the extension so the operation doesn't overflow.
     if (new_capacity < SIZE_MAX / 11)
       new_capacity = new_capacity * 11 / 8;
+    
     if (void *Ptr = ::realloc(buffer_ == get_empty_string() ? nullptr : buffer_,
                               new_capacity)) {
       buffer_ = static_cast<char *>(Ptr);
       capacity_ = new_capacity;
+      return;
     }
     // Out of memory: this is not handled in current implementation,
     // We trap the program and exits.
