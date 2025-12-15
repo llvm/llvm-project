@@ -598,7 +598,8 @@ public:
                             WaitcntBrackets &ScoreBrackets);
 
   // DS loop wait optimization functions
-  bool isEligibleForDSLoopOpt(const MachineLoop &ML, LoopDSWaitOptInfo &Info) const;
+  bool isEligibleForDSLoopOpt(const MachineLoop &ML,
+                              LoopDSWaitOptInfo &Info) const;
   void analyzeSingleBBLoopDSLoads(const MachineLoop &ML);
 };
 
@@ -2723,8 +2724,7 @@ bool SIInsertWaitcnts::isEligibleForDSLoopOpt(const MachineLoop &ML,
   if ((NumDSLoads + NumWMMA) * 4 < NumInsts)
     return false;
 
-  LLVM_DEBUG(dbgs() << "Loop DS Wait Opt: Loop at "
-                    << printMBBReference(*MBB)
+  LLVM_DEBUG(dbgs() << "Loop DS Wait Opt: Loop at " << printMBBReference(*MBB)
                     << " - " << NumDSLoads << " DS loads, " << NumWMMA
                     << " WMMA/MFMA, " << NumInsts
                     << " total insts, eligible\n");
