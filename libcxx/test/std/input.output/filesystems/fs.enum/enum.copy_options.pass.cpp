@@ -61,5 +61,14 @@ int main(int, char**) {
           E::create_hard_links   == ME(256),
         "Expected enumeration values do not match");
 
+  // Verify that compound assignment operators are not incorrectly marked [[nodiscard]],
+  // to avoid regression in https://llvm.org/PR171085.
+  {
+    E e = E::none;
+    e &= E::skip_existing;
+    e |= E::recursive;
+    e ^= E::create_hard_links;
+  }
+
   return 0;
 }
