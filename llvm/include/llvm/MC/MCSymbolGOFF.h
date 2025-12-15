@@ -75,6 +75,10 @@ public:
   }
 
   bool setSymbolAttribute(MCSymbolAttr Attribute);
+
+  bool isInEDSection() const {
+    return isInSection() && static_cast<MCSectionGOFF &>(getSection()).isED();
+  }
 };
 } // end namespace llvm
 

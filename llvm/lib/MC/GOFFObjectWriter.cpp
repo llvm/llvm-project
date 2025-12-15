@@ -375,7 +375,7 @@ void GOFFWriter::defineSymbols() {
     if (!Symbol.isDefined()) {
       Symbol.setIndex(++Ordinal);
       defineExtern(Symbol);
-    } else if (static_cast<MCSectionGOFF &>(Symbol.getSection()).isED()) {
+    } else if (Symbol.isInEDSection()) {
       Symbol.setIndex(++Ordinal);
       defineLabel(Symbol);
     }

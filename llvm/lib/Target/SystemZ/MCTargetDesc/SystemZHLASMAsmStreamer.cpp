@@ -225,24 +225,17 @@ static void emitXATTR(raw_ostream &OS, StringRef Name,
   OS << '\n';
 }
 
-static bool sameNameAsCSECT(MCSymbolGOFF *Sym) {
-  if (!Sym->isTemporary() && Sym->isDefined()) {
-    MCSectionGOFF &ED = static_cast<MCSectionGOFF &>(Sym->getSection());
-    return ED.isED() && Sym->getName() == ED.getParent()->getName();
-  }
-  return false;
-}
-
 void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCSymbolGOFF *Sym = static_cast<MCSymbolGOFF *>(Symbol);
 
   MCStreamer::emitLabel(Sym, Loc);
 
   // Emit ENTRY statement only if not implied by CSECT.
-  bool EmitEntry = !sameNameAsCSECT(Sym);
-
-  if (!Sym->isTemporary() && Sym->isDefined() &&
-      static_cast<MCSectionGOFF &>(Sym->getSection()).isED()) {
+  bool EmitEntry = true;
+  if (!Sym->isTemporary() && Sym->isInEDSection()) {
+    EmitEntry = Sym->getName() != static_cast<MCSectionGOFF &>(Sym->getSection())
+                                 .getParent()
+                                 ->getName();
     if (EmitEntry) {
       OS << " ENTRY " << Sym->getName();
       EmitEOL();
