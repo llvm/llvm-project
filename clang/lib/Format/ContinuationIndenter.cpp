@@ -240,45 +240,6 @@ RawStringFormatStyleManager::getEnclosingFunctionStyle(
   return It->second;
 }
 
-IndentationAndAlignment
-IndentationAndAlignment::addPadding(unsigned Spaces) const {
-  return IndentationAndAlignment(Total + Spaces, IndentedFrom);
-}
-
-IndentationAndAlignment
-IndentationAndAlignment::operator+(unsigned Spaces) const {
-  return IndentationAndAlignment(Total + Spaces, Total);
-}
-
-IndentationAndAlignment
-IndentationAndAlignment::operator-(unsigned Spaces) const {
-  return IndentationAndAlignment(Total - Spaces, Total);
-}
-
-IndentationAndAlignment &IndentationAndAlignment::operator+=(unsigned Spaces) {
-  *this = *this + Spaces;
-  return *this;
-}
-
-IndentationAndAlignment::IndentationAndAlignment(unsigned Total,
-                                                 unsigned IndentedFrom)
-    : Total(Total), IndentedFrom(IndentedFrom) {}
-
-IndentationAndAlignment::IndentationAndAlignment(unsigned Spaces)
-    : Total(Spaces), IndentedFrom(Spaces) {}
-
-bool IndentationAndAlignment::operator<(
-    const IndentationAndAlignment &Other) const {
-  if (Total != Other.Total)
-    return Total < Other.Total;
-  // The sign to use here was decided arbitrarily. This operator is mostly used
-  // when a line's indentation should be the max of 2 things. Using this sign
-  // here makes the program prefer alignment over continuation indentation. That
-  // is, it makes the alignment step that follows prefer to move the line when
-  // aligning the previous line.
-  return IndentedFrom > Other.IndentedFrom;
-}
-
 ContinuationIndenter::ContinuationIndenter(const FormatStyle &Style,
                                            const AdditionalKeywords &Keywords,
                                            const SourceManager &SourceMgr,
@@ -530,7 +491,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     return true;
   }
 
-  unsigned NewLineColumn = getNewLineColumn(State).Total;
+  unsigned NewLineColumn = getNewLineColumn(State);
   if (Current.isMemberAccess() && Style.ColumnLimit != 0 &&
       State.Column + getLengthToNextOperator(Current) > Style.ColumnLimit &&
       (State.Column > NewLineColumn ||
@@ -858,9 +819,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   }
 
   if (Current.is(TT_SelectorName) && !CurrentState.ObjCSelectorNameFound) {
-    unsigned MinIndent =
-        std::max(State.FirstIndent + Style.ContinuationIndentWidth,
-                 CurrentState.Indent.Total);
+    unsigned MinIndent = std::max(
+        State.FirstIndent + Style.ContinuationIndentWidth, CurrentState.Indent);
     unsigned FirstColonPos = State.Column + Spaces + Current.ColumnWidth;
     if (Current.LongestObjCSelectorName == 0)
       CurrentState.AlignColons = false;
@@ -950,8 +910,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return !Next || Next->isMemberAccess() ||
            Next->is(TT_FunctionDeclarationLParen) || IsFunctionCallParen(*Next);
   };
-  if (IsOpeningBracket(Previous) &&
-      State.Column > getNewLineColumn(State).Total &&
+  if (IsOpeningBracket(Previous) && State.Column > getNewLineColumn(State) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
@@ -996,7 +955,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.NoLineBreak = true;
 
   if (startsSegmentOfBuilderTypeCall(Current) &&
-      State.Column > getNewLineColumn(State).Total) {
+      State.Column > getNewLineColumn(State)) {
     CurrentState.ContainsUnwrappedBuilder = true;
   }
 
@@ -1127,8 +1086,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     Penalty += Style.PenaltyBreakFirstLessLess;
   }
 
-  const auto [TotalColumn, IndentedFromColumn] = getNewLineColumn(State);
-  State.Column = TotalColumn;
+  State.Column = getNewLineColumn(State);
 
   // Add Penalty proportional to amount of whitespace away from FirstColumn
   // This tends to penalize several lines that are far-right indented,
@@ -1174,9 +1132,9 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       } else {
         CurrentState.ColonPos =
             (shouldIndentWrappedSelectorName(Style, State.Line->Type)
-                 ? std::max(CurrentState.Indent.Total,
+                 ? std::max(CurrentState.Indent,
                             State.FirstIndent + Style.ContinuationIndentWidth)
-                 : CurrentState.Indent.Total) +
+                 : CurrentState.Indent) +
             std::max(NextNonComment->LongestObjCSelectorName,
                      NextNonComment->ColumnWidth);
       }
@@ -1197,7 +1155,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     // when we consume all of the "}"'s FakeRParens at the "{".
     if (State.Stack.size() > 1) {
       State.Stack[State.Stack.size() - 2].LastSpace =
-          std::max(CurrentState.LastSpace, CurrentState.Indent.Total) +
+          std::max(CurrentState.LastSpace, CurrentState.Indent) +
           Style.ContinuationIndentWidth;
     }
   }
@@ -1238,8 +1196,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
                                      State.Line->Type != LT_ImportStatement &&
                                      Current.isNot(TT_LineComment);
     Whitespaces.replaceWhitespace(Current, Newlines, State.Column, State.Column,
-                                  CurrentState.IsAligned, ContinuePPDirective,
-                                  IndentedFromColumn);
+                                  CurrentState.IsAligned, ContinuePPDirective);
   }
 
   if (!Current.isTrailingComment())
@@ -1383,8 +1340,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   return Penalty;
 }
 
-IndentationAndAlignment
-ContinuationIndenter::getNewLineColumn(const LineState &State) {
+unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (!State.NextToken || !State.NextToken->Previous)
     return 0;
 
@@ -1398,9 +1354,8 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
 
   const FormatToken &Previous = *Current.Previous;
   // If we are continuing an expression, we want to use the continuation indent.
-  const auto ContinuationIndent =
-      std::max(IndentationAndAlignment(CurrentState.LastSpace),
-               CurrentState.Indent) +
+  unsigned ContinuationIndent =
+      std::max(CurrentState.LastSpace, CurrentState.Indent) +
       Style.ContinuationIndentWidth;
   const FormatToken *PreviousNonComment = Current.getPreviousNonComment();
   const FormatToken *NextNonComment = Previous.getNextNonComment();
@@ -1410,7 +1365,7 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
   // Java specific bits.
   if (Style.isJava() &&
       Current.isOneOf(Keywords.kw_implements, Keywords.kw_extends)) {
-    return std::max(IndentationAndAlignment(CurrentState.LastSpace),
+    return std::max(CurrentState.LastSpace,
                     CurrentState.Indent + Style.ContinuationIndentWidth);
   }
 
@@ -1423,8 +1378,7 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
 
   if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
       State.Line->First->is(tok::kw_enum)) {
-    return IndentationAndAlignment(Style.IndentWidth *
-                                   State.Line->First->IndentLevel) +
+    return (Style.IndentWidth * State.Line->First->IndentLevel) +
            Style.IndentWidth;
   }
 
@@ -1543,7 +1497,7 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
       //    * not remove the 'lead' ContinuationIndentWidth
       //    * always un-indent by the operator when
       //    BreakBeforeTernaryOperators=true
-      unsigned Indent = CurrentState.Indent.Total;
+      unsigned Indent = CurrentState.Indent;
       if (Style.AlignOperands != FormatStyle::OAS_DontAlign)
         Indent -= Style.ContinuationIndentWidth;
       if (Style.BreakBeforeTernaryOperators && CurrentState.UnindentOperator)
@@ -1583,16 +1537,14 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
                                     TT_LeadingJavaAnnotation))) ||
       (!Style.IndentWrappedFunctionNames &&
        NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName))) {
-    return std::max(IndentationAndAlignment(CurrentState.LastSpace),
-                    CurrentState.Indent);
+    return std::max(CurrentState.LastSpace, CurrentState.Indent);
   }
   if (NextNonComment->is(TT_SelectorName)) {
     if (!CurrentState.ObjCSelectorNameFound) {
-      auto MinIndent = CurrentState.Indent;
+      unsigned MinIndent = CurrentState.Indent;
       if (shouldIndentWrappedSelectorName(Style, State.Line->Type)) {
-        MinIndent =
-            std::max(MinIndent, IndentationAndAlignment(State.FirstIndent) +
-                                    Style.ContinuationIndentWidth);
+        MinIndent = std::max(MinIndent,
+                             State.FirstIndent + Style.ContinuationIndentWidth);
       }
       // If LongestObjCSelectorName is 0, we are indenting the first
       // part of an ObjC selector (or a selector component which is
@@ -1603,10 +1555,10 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
       // component of the ObjC selector.
       //
       // In either case, we want to respect Style.IndentWrappedFunctionNames.
-      return MinIndent.addPadding(
-          std::max(NextNonComment->LongestObjCSelectorName,
-                   NextNonComment->ColumnWidth) -
-          NextNonComment->ColumnWidth);
+      return MinIndent +
+             std::max(NextNonComment->LongestObjCSelectorName,
+                      NextNonComment->ColumnWidth) -
+             NextNonComment->ColumnWidth;
     }
     if (!CurrentState.AlignColons)
       return CurrentState.Indent;
@@ -1676,7 +1628,7 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return CurrentState.Indent - NextNonComment->Tok.getLength() -
            NextNonComment->SpacesRequiredBefore;
   }
-  if (CurrentState.Indent.Total == State.FirstIndent && PreviousNonComment &&
+  if (CurrentState.Indent == State.FirstIndent && PreviousNonComment &&
       PreviousNonComment->isNoneOf(tok::r_brace, TT_CtorInitializerComma)) {
     // Ensure that we fall back to the continuation indent width instead of
     // just flushing continuations left.
@@ -1766,7 +1718,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
                                                   FormatStyle::BCIS_BeforeComma
                                               ? 0
                                               : 2);
-    CurrentState.NestedBlockIndent = CurrentState.Indent.Total;
+    CurrentState.NestedBlockIndent = CurrentState.Indent;
     if (Style.PackConstructorInitializers > FormatStyle::PCIS_BinPack) {
       CurrentState.AvoidBinPacking = true;
       CurrentState.BreakBeforeParameter =
@@ -1781,7 +1733,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
       Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon) {
     CurrentState.Indent =
         State.FirstIndent + Style.ConstructorInitializerIndentWidth;
-    CurrentState.NestedBlockIndent = CurrentState.Indent.Total;
+    CurrentState.NestedBlockIndent = CurrentState.Indent;
     if (Style.PackConstructorInitializers > FormatStyle::PCIS_BinPack)
       CurrentState.AvoidBinPacking = true;
     else
@@ -1925,9 +1877,8 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         (!Style.isTableGen() ||
          (Previous && Previous->isOneOf(TT_TableGenDAGArgListComma,
                                         TT_TableGenDAGArgListCommaToBreak)))) {
-      NewParenState.Indent =
-          std::max({IndentationAndAlignment(State.Column), NewParenState.Indent,
-                    IndentationAndAlignment(CurrentState.LastSpace)});
+      NewParenState.Indent = std::max(
+          std::max(State.Column, NewParenState.Indent), CurrentState.LastSpace);
     }
 
     // Special case for generic selection expressions, its comma-separated
@@ -2035,7 +1986,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     return Prev->is(tok::comma);
   }(Current.MatchingParen);
 
-  IndentationAndAlignment NewIndent = 0;
+  unsigned NewIndent;
   unsigned LastSpace = CurrentState.LastSpace;
   bool AvoidBinPacking;
   bool BreakBeforeParameter = false;
@@ -2048,7 +1999,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
                   std::min(State.Column, CurrentState.NestedBlockIndent);
     } else if (Current.is(tok::l_brace)) {
       const auto Width = Style.BracedInitializerIndentWidth;
-      NewIndent = IndentationAndAlignment(CurrentState.LastSpace) +
+      NewIndent = CurrentState.LastSpace +
                   (Width < 0 ? Style.ContinuationIndentWidth : Width);
     } else {
       NewIndent = CurrentState.LastSpace + Style.ContinuationIndentWidth;
@@ -2063,9 +2014,9 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     if (Current.ParameterCount > 1)
       NestedBlockIndent = std::max(NestedBlockIndent, State.Column + 1);
   } else {
-    NewIndent = IndentationAndAlignment(std::max(
-                    CurrentState.LastSpace, CurrentState.StartOfFunctionCall)) +
-                Style.ContinuationIndentWidth;
+    NewIndent =
+        Style.ContinuationIndentWidth +
+        std::max(CurrentState.LastSpace, CurrentState.StartOfFunctionCall);
 
     if (Style.isTableGen() && Current.is(TT_TableGenDAGArgOpenerToBreak) &&
         Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakElements) {
@@ -2084,7 +2035,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     // FIXME: We likely want to do this for more combinations of brackets.
     if (Current.is(tok::less) && Current.ParentBracket == tok::l_paren) {
       NewIndent = std::max(NewIndent, CurrentState.Indent);
-      LastSpace = std::max(LastSpace, CurrentState.Indent.Total);
+      LastSpace = std::max(LastSpace, CurrentState.Indent);
     }
 
     // If ObjCBinPackProtocolList is unspecified, fall back to BinPackParameters
@@ -2330,7 +2281,7 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   unsigned CurrentIndent =
       (!Newline && Current.Next && Current.Next->is(tok::r_paren))
           ? State.Stack.back().NestedBlockIndent
-          : State.Stack.back().Indent.Total;
+          : State.Stack.back().Indent;
   unsigned NextStartColumn = ContentStartsOnNewline
                                  ? CurrentIndent + Style.IndentWidth
                                  : FirstStartColumn;
