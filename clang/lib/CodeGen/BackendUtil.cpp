@@ -1018,7 +1018,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 #endif
   }
   // Register plugin callbacks with PB.
-  for (llvm::PassPlugin *Plugin : CodeGenOpts.PassPlugins)
+  for (llvm::PassPlugin *Plugin : CI.getPassPlugins())
     Plugin->registerPassBuilderCallbacks(PB);
   for (const auto &PassCallback : CodeGenOpts.PassBuilderCallbacks)
     PassCallback(PB);

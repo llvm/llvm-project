@@ -3,7 +3,7 @@
 // REQUIRES: plugins, llvm-examples
 // UNSUPPORTED: target={{.*windows.*}}
 // CHECK-INACTIVE-NOT: Bye
-// CHECK-ACTIVE: Bye
+// CHECK-ACTIVE: Bye: f
 
 int f(int x) {
   return x;

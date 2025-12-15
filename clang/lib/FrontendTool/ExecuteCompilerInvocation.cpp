@@ -238,10 +238,10 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // here and store references to these in CodeGenOpts to avoid pulling in the
   // entire PassPlugin dependency chain in CodeGenOpts.
   std::vector<std::unique_ptr<llvm::PassPlugin>> PassPlugins;
-  for (const std::string &Path : Clang->getCodeGenOpts().PassPluginNames) {
+  for (const std::string &Path : Clang->getCodeGenOpts().PassPlugins) {
     if (auto PassPlugin = llvm::PassPlugin::Load(Path)) {
       PassPlugins.emplace_back(std::make_unique<llvm::PassPlugin>(*PassPlugin));
-      Clang->getCodeGenOpts().PassPlugins.push_back(PassPlugins.back().get());
+      Clang->getPassPlugins().push_back(PassPlugins.back().get());
     } else {
       Clang->getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
           << Path << toString(PassPlugin.takeError());

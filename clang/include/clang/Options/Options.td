@@ -4072,7 +4072,7 @@ def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MetaVarName<"<dsopath>">, Flags<[NoArgumentUnused]>,
   HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">,
-  MarshallingInfoStringVector<CodeGenOpts<"PassPluginNames">>;
+  MarshallingInfoStringVector<CodeGenOpts<"PassPlugins">>;
 defm tocdata : BoolOption<"m","tocdata",
   CodeGenOpts<"AllTocData">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
