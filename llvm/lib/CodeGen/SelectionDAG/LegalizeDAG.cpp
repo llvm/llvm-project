@@ -2127,8 +2127,9 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
                                     bool IsSigned, EVT RetVT) {
   EVT CodePtrTy = TLI.getPointerTy(DAG.getDataLayout());
   SDValue Callee;
-  if (const char *LibcallName = TLI.getLibcallName(LC))
-    Callee = DAG.getExternalSymbol(LibcallName, CodePtrTy);
+  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  if (LCImpl != RTLIB::Unsupported)
+    Callee = DAG.getExternalSymbol(LCImpl, CodePtrTy);
   else {
     Callee = DAG.getPOISON(CodePtrTy);
     DAG.getContext()->emitError(Twine("no libcall available for ") +
@@ -2157,7 +2158,7 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   bool signExtend = TLI.shouldSignExtendTypeInLibCall(RetTy, IsSigned);
   CLI.setDebugLoc(SDLoc(Node))
       .setChain(InChain)
-      .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee,
+      .setLibCallee(TLI.getLibcallImplCallingConv(LCImpl), RetTy, Callee,
                     std::move(Args))
       .setTailCall(isTailCall)
       .setSExtResult(signExtend)
@@ -2392,14 +2393,13 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   }
 
   SDValue Callee =
-      DAG.getExternalSymbol(TLI.getLibcallImplName(LibcallImpl).data(),
-                            TLI.getPointerTy(DAG.getDataLayout()));
+      DAG.getExternalSymbol(LibcallImpl, TLI.getPointerTy(DAG.getDataLayout()));
 
   SDLoc dl(Node);
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee,
+      .setLibCallee(TLI.getLibcallImplCallingConv(LibcallImpl), RetTy, Callee,
                     std::move(Args))
       .setSExtResult(isSigned)
       .setZExtResult(!isSigned);
@@ -2407,8 +2407,11 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
 
   // Remainder is loaded back from the stack frame.
-  SDValue Rem =
-      DAG.getLoad(RetVT, dl, CallInfo.second, FIPtr, MachinePointerInfo());
+  int FI = cast<FrameIndexSDNode>(FIPtr)->getIndex();
+  MachinePointerInfo PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
+
+  SDValue Rem = DAG.getLoad(RetVT, dl, CallInfo.second, FIPtr, PtrInfo);
   Results.push_back(CallInfo.first);
   Results.push_back(Rem);
 }
@@ -2461,10 +2464,9 @@ SDValue SelectionDAGLegalize::ExpandSincosStretLibCall(SDNode *Node) const {
 
   Type *SincosStretRetTy = FuncTy->getReturnType();
   CallingConv::ID CallConv = CallsInfo.getLibcallImplCallingConv(SincosStret);
-  StringRef LibcallImplName = CallsInfo.getLibcallImplName(SincosStret);
 
-  SDValue Callee = DAG.getExternalSymbol(LibcallImplName.data(),
-                                         TLI.getProgramPointerTy(DL));
+  SDValue Callee =
+      DAG.getExternalSymbol(SincosStret, TLI.getProgramPointerTy(DL));
 
   TargetLowering::ArgListTy Args;
   SDValue SRet;

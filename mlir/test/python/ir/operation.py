@@ -43,6 +43,10 @@ def testTraverseOpRegionBlockIterators():
     )
     op = module.operation
     assert op.context is ctx
+    # Note, __nb_signature__ stores the fully-qualified signature - the actual type stub emitted is
+    # class RegionSequence(Sequence[Region])
+    # CHECK: class RegionSequence(collections.abc.Sequence[mlir._mlir_libs._mlir.ir.Region])
+    print(RegionSequence.__nb_signature__)
     # Get the block using iterators off of the named collections.
     regions = list(op.regions[:])
     blocks = list(regions[0].blocks)
@@ -1202,6 +1206,40 @@ def testOpWalk():
         module.operation.walk(callback)
     except RuntimeError:
         print("Exception raised")
+
+
+# CHECK-LABEL: TEST: testOpReplaceUsesWith
+@run
+def testOpReplaceUsesWith():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        m = Module.create()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(m.body):
+            value = Operation.create("custom.op1", results=[i32]).results[0]
+            value2 = Operation.create("custom.op2", results=[i32]).results[0]
+            op = Operation.create("custom.op3", operands=[value])
+            op2 = Operation.create("custom.op4", operands=[value])
+            op.replace_uses_of_with(value, value2)
+
+    assert len(list(value.uses)) == 1
+
+    # CHECK: Use owner: "custom.op4"
+    # CHECK: Use operand_number: 0
+    for use in value.uses:
+        assert use.owner in [op2]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+    assert len(list(value2.uses)) == 1
+
+    # CHECK: Use owner: "custom.op3"
+    # CHECK: Use operand_number: 0
+    for use in value2.uses:
+        assert use.owner in [op]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
 
 
 # CHECK-LABEL: TEST: testGetOwnerConcreteOpview

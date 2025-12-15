@@ -547,15 +547,36 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
         assert(reg_info.byte_size != 0);
         registers.push_back(reg_info);
       } else {
-        break; // ensure exit before reg_num is incremented
+        // Only warn if we were offered Target XML and could not use it, and
+        // the qRegisterInfo fallback failed. This is something a user could
+        // take action on by getting an lldb with libxml2.
+        //
+        // It's possible we weren't offered Target XML and qRegisterInfo failed,
+        // but there's no much a user can do about that. It may be the intended
+        // way the debug stub works, so we do not warn for that case.
+        if (response_type == StringExtractorGDBRemote::eUnsupported &&
+            m_gdb_comm.GetQXferFeaturesReadSupported() &&
+            !XMLDocument::XMLEnabled()) {
+          Debugger::ReportWarning(
+              "the debug server supports Target Description XML but LLDB does "
+              "not have XML parsing enabled. Using \"qRegisterInfo\" was also "
+              "not possible. Register information may be incorrect or missing.",
+              GetTarget().GetDebugger().GetID());
+        }
+        break;
       }
     } else {
       break;
     }
   }
 
-  if (registers.empty())
+  if (registers.empty()) {
     registers = GetFallbackRegisters(arch_to_use);
+    if (!registers.empty())
+      LLDB_LOG(
+          log,
+          "All other methods failed, using fallback register information.");
+  }
 
   AddRemoteRegisters(registers, arch_to_use);
 }
@@ -2786,15 +2807,14 @@ ProcessGDBRemote::ReadMemoryRanges(
 
   llvm::StringRef response_str = response->GetStringRef();
   const unsigned expected_num_ranges = ranges.size();
-  llvm::Expected<llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>>
-      parsed_response =
-          ParseMultiMemReadPacket(response_str, buffer, expected_num_ranges);
-  if (!parsed_response) {
-    LLDB_LOG_ERROR(GetLog(GDBRLog::Process), parsed_response.takeError(),
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> memory_regions;
+  if (llvm::Error error = ParseMultiMemReadPacket(
+          response_str, buffer, expected_num_ranges, memory_regions)) {
+    LLDB_LOG_ERROR(GetLog(GDBRLog::Process), std::move(error),
                    "MultiMemRead error parsing response: {0}");
     return Process::ReadMemoryRanges(ranges, buffer);
   }
-  return std::move(*parsed_response);
+  return memory_regions;
 }
 
 llvm::Expected<StringExtractorGDBRemote>
@@ -2830,18 +2850,16 @@ ProcessGDBRemote::SendMultiMemReadPacket(
   return response;
 }
 
-llvm::Expected<llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>>
-ProcessGDBRemote::ParseMultiMemReadPacket(llvm::StringRef response_str,
-                                          llvm::MutableArrayRef<uint8_t> buffer,
-                                          unsigned expected_num_ranges) {
+llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
+    llvm::StringRef response_str, llvm::MutableArrayRef<uint8_t> buffer,
+    unsigned expected_num_ranges,
+    llvm::SmallVectorImpl<llvm::MutableArrayRef<uint8_t>> &memory_regions) {
   // The sizes and the data are separated by a `;`.
   auto [sizes_str, memory_data] = response_str.split(';');
   if (sizes_str.size() == response_str.size())
     return llvm::createStringError(llvm::formatv(
         "MultiMemRead response missing field separator ';' in: '{0}'",
         response_str));
-
-  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results;
 
   // Sizes are separated by a `,`.
   for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
@@ -2865,10 +2883,10 @@ ProcessGDBRemote::ParseMultiMemReadPacket(llvm::StringRef response_str,
     buffer = buffer.drop_front(read_size);
 
     memcpy(region_to_write.data(), region_to_read.data(), read_size);
-    read_results.push_back(region_to_write);
+    memory_regions.push_back(region_to_write);
   }
 
-  return read_results;
+  return llvm::Error::success();
 }
 
 bool ProcessGDBRemote::SupportsMemoryTagging() {
