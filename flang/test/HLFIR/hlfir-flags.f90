@@ -7,15 +7,12 @@
 ! RUN: %flang_fc1 -emit-fir -o - %s | FileCheck --check-prefix FIR --check-prefix ALL %s
 ! RUN: %flang_fc1 -emit-fir -flang-experimental-hlfir -o - %s | FileCheck %s --check-prefix FIR --check-prefix ALL
 ! RUN: bbc -emit-fir -o - %s | FileCheck --check-prefix FIR --check-prefix ALL %s
-! RUN: bbc -emit-fir -o - %s | FileCheck --check-prefix FIR --check-prefix ALL %s
 
-! | Action      | -flang-deprecated-no-hlfir  | Result                          |
-! |             | / -hlfir=false?             |                                 |
-! | =========== | =========================== | =============================== |
-! | -emit-hlfir | N                           | Outputs HLFIR                   |
-! | -emit-hlfir | Y                           | Outputs HLFIR                   |
-! | -emit-fir   | N                           | Outputs FIR, lowering via HLFIR |
-! | -emit-fir   | Y                           | Outputs FIR, using old lowering |
+! | Action      | Result                          |
+! |             |                                 |
+! | =========== | =============================== |
+! | -emit-hlfir | Outputs HLFIR                   |
+! | -emit-fir   | Outputs FIR, lowering via HLFIR |
 
 subroutine test(a, res)
   real :: a(:), res
