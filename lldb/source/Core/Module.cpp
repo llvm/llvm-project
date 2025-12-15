@@ -641,10 +641,16 @@ void Module::FindCompileUnits(const FileSpec &path,
   }
 }
 
-Module::LookupInfo::LookupInfo(ConstString name,
+Module::LookupInfo::LookupInfo(const LookupInfo &lookup_info,
+                               ConstString lookup_name)
+    : m_name(lookup_info.GetName()), m_lookup_name(lookup_name),
+      m_language(lookup_info.GetLanguageType()),
+      m_name_type_mask(lookup_info.GetNameTypeMask()) {}
+
+Module::LookupInfo::LookupInfo(ConstString name, ConstString lookup_name,
                                FunctionNameType name_type_mask,
                                LanguageType lang_type)
-    : m_name(name), m_lookup_name(name), m_language(lang_type) {
+    : m_name(name), m_lookup_name(lookup_name), m_language(lang_type) {
   std::optional<ConstString> basename;
   Language *lang = Language::FindPlugin(lang_type);
 
@@ -696,10 +702,9 @@ Module::LookupInfo::LookupInfo(ConstString name,
   }
 }
 
-std::vector<Module::LookupInfo>
-Module::LookupInfo::MakeLookupInfos(ConstString name,
-                                    lldb::FunctionNameType name_type_mask,
-                                    lldb::LanguageType lang_type) {
+std::vector<Module::LookupInfo> Module::LookupInfo::MakeLookupInfos(
+    ConstString name, lldb::FunctionNameType name_type_mask,
+    lldb::LanguageType lang_type, ConstString lookup_name_override) {
   std::vector<LanguageType> lang_types;
   if (lang_type != eLanguageTypeUnknown) {
     lang_types.push_back(lang_type);
@@ -717,10 +722,12 @@ Module::LookupInfo::MakeLookupInfos(ConstString name,
       lang_types = {eLanguageTypeObjC, eLanguageTypeC_plus_plus};
   }
 
+  ConstString lookup_name = lookup_name_override ? lookup_name_override : name;
+
   std::vector<Module::LookupInfo> infos;
   infos.reserve(lang_types.size());
   for (LanguageType lang_type : lang_types) {
-    Module::LookupInfo info(name, name_type_mask, lang_type);
+    Module::LookupInfo info(name, lookup_name, name_type_mask, lang_type);
     infos.push_back(info);
   }
   return infos;
