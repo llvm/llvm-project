@@ -1090,8 +1090,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf1E && (EAX & 0x100))
     setFeature(FEATURE_AMX_MOVRS);
 
-  bool HasLeaf24 =
-      MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
+  bool HasLeaf24 = MaxLevel >= 0x24 &&
+                   !getX86CpuIDAndInfoEx(0x24, 0x0, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24) {
     int AVX10Ver = EBX & 0xff;
     if (AVX10Ver >= 1)
