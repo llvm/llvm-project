@@ -112,21 +112,23 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
                                            VectorKind::AltiVecVector);
   // Lambda 1: verify vector type
-  auto IsVectorType = [&](QualType ArgTy, SourceLocation Loc,
+  auto IsVectorType = [&](QualType ArgTy,
                           unsigned ArgIndex) -> bool {
     if (Context.hasSameType(ArgTy, VecType))
       return true;
-    Diag(Loc, diag::err_ppc_invalid_vector_type)
-          << ArgIndex << VecType << ArgTy;
+    Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
+         diag::err_ppc_invalid_vector_type)
+        << ArgIndex << VecType << ArgTy;
     return false;
   };
 
   // Lambda 2: verify integer type
-  auto IsIntType = [&](QualType ArgTy, SourceLocation Loc,
-                        unsigned ArgIndex) -> bool {
+  auto IsIntType = [&](QualType ArgTy,
+                       unsigned ArgIndex) -> bool {
     if (ArgTy->isIntegerType())
       return true;
-    Diag(Loc, diag::err_ppc_invalid_integer_type)
+    Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
+         diag::err_ppc_invalid_integer_type)
         << ArgIndex << "integer type" << ArgTy;
     return false;
   };
@@ -144,13 +146,11 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   case PPC::BI__builtin_ppc_bcdtruncate: {
 
     // Arg0 must be vector unsigned char
-    if (!IsVectorType(TheCall->getArg(0)->getType(),
-                     TheCall->getArg(0)->getBeginLoc(), 0))
+    if (!IsVectorType(TheCall->getArg(0)->getType(), 0))
       return false;
 
     // Arg1 must be integer type
-    if (!IsIntType(TheCall->getArg(1)->getType(),
-                  TheCall->getArg(1)->getBeginLoc(), 1))
+    if (!IsIntType(TheCall->getArg(1)->getType(),1))
       return false;
 
     // Restrict Arg2 constant range (0–1)
