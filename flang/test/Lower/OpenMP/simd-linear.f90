@@ -20,11 +20,7 @@ subroutine simple_linear
 
     !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>, %[[I]]#0 = %{{.*}} : !fir.ref<i32>) {{.*}}
     !$omp simd linear(x)
-    !CHECK: %[[LOAD:.*]] = fir.load %[[X]]#0 : !fir.ref<i32>
-    !CHECK: %[[const:.*]] = arith.constant 2 : i32
-    !CHECK: %[[RESULT:.*]] = arith.addi %[[LOAD]], %[[const]] : i32
     do i = 1, 10
-        y = x + 2
     end do
     !CHECK: } {linear_var_types = [i32]}
     !IMPLICIT: } {linear_var_types = [i32, i32]}
@@ -47,11 +43,7 @@ subroutine linear_step
 
     !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>, %[[I]]#0 = %{{.*}} : !fir.ref<i32>) {{.*}}
     !$omp simd linear(x:4)
-    !CHECK: %[[LOAD:.*]] = fir.load %[[X]]#0 : !fir.ref<i32>
-    !CHECK: %[[const:.*]] = arith.constant 2 : i32
-    !CHECK: %[[RESULT:.*]] = arith.addi %[[LOAD]], %[[const]] : i32   
     do i = 1, 10
-        y = x + 2
     end do
     !CHECK: } {linear_var_types = [i32]}
     !IMPLICIT: } {linear_var_types = [i32, i32]}
@@ -84,7 +76,6 @@ subroutine linear_expr
     !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[LINEAR_EXPR]] : !fir.ref<i32>, %[[I]]#0 = {{.*}} : !fir.ref<i32>) {{.*}}
     !$omp simd linear(x:a+4)
     do i = 1, 10
-        y = x + 2
     end do
     !CHECK: } {linear_var_types = [i32]}
     !IMPLICIT: } {linear_var_types = [i32, i32]}

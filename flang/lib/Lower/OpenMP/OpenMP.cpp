@@ -3049,8 +3049,9 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
       simdClauseOps.linearStepVars.push_back(loopStep);
     }
   }
-  simdClauseOps.linearVarTypes =
-      mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
+  if (!typeAttrs.empty())
+    simdClauseOps.linearVarTypes =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
 
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
