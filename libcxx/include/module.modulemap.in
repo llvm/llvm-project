@@ -1850,6 +1850,7 @@ module std [system] {
 
   module ranges {
     module access                         { header "__ranges/access.h" }
+    module adjacent_view                  { header "__ranges/adjacent_view.h" }
     module all                            {
       header "__ranges/all.h"
       export std.ranges.ref_view
@@ -2119,6 +2120,7 @@ module std [system] {
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_size               { header "__tuple/tuple_size.h" }
+    module tuple_trasnform          { header "__tuple/tuple_transform.h" }
 
     header "tuple"
     export *
