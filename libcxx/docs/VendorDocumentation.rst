@@ -68,6 +68,11 @@ to override it with custom paths. With Clang, this can be done with:
 The option ``-Wl,-rpath,<install>/lib`` adds a runtime library search path, which causes the system's
 dynamic linker to look for libc++ in ``<install>/lib`` whenever the program is loaded.
 
+.. note::
+  If the runtimes were built using the "per-target runtime directory" layout,
+  they will be in ``<install>/lib/<target-triple>`` instead of ``<install>/lib``.
+  In this case, use the former path for all library paths in the command above
+  (the path to include files does not change).
 
 The Bootstrapping build
 =======================
