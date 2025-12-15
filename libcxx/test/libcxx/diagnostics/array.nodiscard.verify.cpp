@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // check that <array> functions are marked [[nodiscard]]
 
 #include <array>
@@ -18,7 +16,7 @@
 template <std::size_t N>
 void test_members() {
   std::array<int, N> a;
-  const std::array<int, N> ca{};
+  const std::array<int, N> ca = {};
 
   a.begin();    // expected-warning 2 {{ignoring return value of function declared with 'nodiscard' attribute}}
   ca.begin();   // expected-warning 2 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -57,7 +55,7 @@ void test_members() {
 
 template <typename ArrT>
 void test_get() {
-  std::array<int, 94> a{};
+  std::array<int, 94> a = {};
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::get<0>(a);

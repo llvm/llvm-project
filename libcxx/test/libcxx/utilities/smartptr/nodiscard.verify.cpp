@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <memory>
@@ -42,7 +40,7 @@ void test() {
     std::make_unique_for_overwrite<int[]>(5);
 #endif
 
-    std::hash<std::unique_ptr<int>> hash;
+    std::hash<std::unique_ptr<int> > hash;
     hash(uPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
   { // [util.smartptr.weak.bad]
@@ -127,7 +125,7 @@ void test() {
     std::get_deleter<int[]>(sPtr);
 #endif
 
-    std::hash<std::shared_ptr<int[]>> hash;
+    std::hash<std::shared_ptr<int[]> > hash;
     hash(sPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
   { // [util.smartptr.weak]
