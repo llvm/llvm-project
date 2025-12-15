@@ -85,6 +85,8 @@ exports_files(glob(["include/**/*.td"]))
         tbl_outs = {
             "include/mlir/IR/" + name + ".h.inc": ["-gen-op-interface-decls"],
             "include/mlir/IR/" + name + ".cpp.inc": ["-gen-op-interface-defs"],
+            "include/mlir/IR/" + name + "AttrInterface.h.inc": ["-gen-attr-interface-decls"],
+            "include/mlir/IR/" + name + "AttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
         },
         tblgen = ":mlir-tblgen",
         td_file = "include/mlir/IR/" + name + ".td",
@@ -1728,6 +1730,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":MemRefDialect",
         ":MemRefUtils",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
@@ -5427,7 +5430,10 @@ gentbl_cc_library(
     ]},
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/Transforms/Passes.td",
-    deps = [":PassBaseTdFiles"],
+    deps = [
+        ":LLVMOpsTdFiles",
+        ":PassBaseTdFiles",
+    ],
 )
 
 cc_library(
@@ -5806,6 +5812,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AMDGPUDialect",
+        ":AMDGPUToROCDL",
         ":AMDGPUUtils",
         ":AffineDialect",
         ":ArithDialect",
@@ -5821,6 +5828,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":MemRefDialect",
         ":NVGPUDialect",
+        ":NVGPUToNVVM",
         ":NVVMDialect",
         ":ROCDLDialect",
         ":SCFDialect",
@@ -5951,6 +5959,7 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":NVGPUDialect",
+        ":NVGPUToNVVM",
         ":NVVMDialect",
         ":TransformUtils",
         ":VectorTransforms",
@@ -5970,6 +5979,7 @@ cc_library(
         ":AMDGPUDialect",
         ":AMDGPUUtils",
         ":ConversionPassIncGen",
+        ":GPUToGPURuntimeTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -10381,6 +10391,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCUtils",
         ":Pass",
+        "//llvm:Support",
     ],
 )
 
@@ -10394,6 +10405,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ArithUtils",
         ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",

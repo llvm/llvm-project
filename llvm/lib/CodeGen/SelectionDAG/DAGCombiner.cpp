@@ -3160,19 +3160,30 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 }
 
 // Attempt to form avgfloor(A, B) from (A & B) + ((A ^ B) >> 1)
+// Attempt to form avgfloor(A, B) from ((A >> 1) + (B >> 1)) + (A & B & 1)
 SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
   SDValue A, B;
 
   if ((!LegalOperations || hasOperation(ISD::AVGFLOORU, VT)) &&
-      sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
-                        m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)), m_One())))) {
+      (sd_match(N,
+                m_Add(m_And(m_Value(A), m_Value(B)),
+                      m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)), m_One()))) ||
+       sd_match(N, m_ReassociatableAdd(
+                       m_ReassociatableAnd(m_Value(A), m_Value(B), m_One()),
+                       m_Srl(m_Deferred(A), m_One()),
+                       m_Srl(m_Deferred(B), m_One()))))) {
     return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
   }
   if ((!LegalOperations || hasOperation(ISD::AVGFLOORS, VT)) &&
-      sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
-                        m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)), m_One())))) {
+      (sd_match(N,
+                m_Add(m_And(m_Value(A), m_Value(B)),
+                      m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)), m_One()))) ||
+       sd_match(N, m_ReassociatableAdd(
+                       m_ReassociatableAnd(m_Value(A), m_Value(B), m_One()),
+                       m_Sra(m_Deferred(A), m_One()),
+                       m_Sra(m_Deferred(B), m_One()))))) {
     return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
   }
 

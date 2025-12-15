@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_NONNULLSHAREDPTR_H
 #define LLDB_UTILITY_NONNULLSHAREDPTR_H
 
+#include <cassert>
 #include <memory>
 #include <utility>
 

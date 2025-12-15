@@ -93,7 +93,6 @@ struct MissingFeatures {
   static bool opFuncNoReturn() { return false; }
   static bool setFunctionAttributes() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
-  static bool setFunctionPersonality() { return false; }
 
   // CallOp handling
   static bool opCallAggregateArgs() { return false; }
@@ -180,6 +179,7 @@ struct MissingFeatures {
   static bool atomicInfoGetAtomicAddress() { return false; }
   static bool atomicScope() { return false; }
   static bool atomicSyncScopeID() { return false; }
+  static bool atomicMapTargetSyncScope() { return false; }
   static bool atomicTypes() { return false; }
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
@@ -278,6 +278,7 @@ struct MissingFeatures {
 
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
+  static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIndices() { return false; }
   static bool globalViewIntLowering() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
@@ -379,6 +380,9 @@ struct MissingFeatures {
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }
+
+  // Maybe only needed for Windows exception handling
+  static bool currentFuncletPad() { return false; }
 };
 
 } // namespace cir
