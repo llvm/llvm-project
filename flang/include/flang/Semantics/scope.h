@@ -57,15 +57,11 @@ using EquivalenceSet = std::vector<EquivalenceObject>;
 
 // Preserved USE statement information for debug info generation.
 struct PreservedUseStmt {
-  enum class Kind { UseOnly, UseRenames, UseAll };
-
   std::string moduleName;
-  Kind kind;
   std::vector<std::string> onlyNames; // For Kind::UseOnly
   std::vector<std::string> renames; // local_name (resolved via GetUltimate)
 
-  PreservedUseStmt(std::string modName, Kind k)
-      : moduleName(std::move(modName)), kind(k) {}
+  PreservedUseStmt(std::string modName) : moduleName(std::move(modName)) {}
 };
 
 class Scope {

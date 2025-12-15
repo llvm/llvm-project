@@ -3669,7 +3669,7 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
 
   if (const auto *onlyList{std::get_if<std::list<parser::Only>>(&x.u)}) {
     // USE mod, ONLY: list
-    PreservedUseStmt stmt{moduleName, PreservedUseStmt::Kind::UseOnly};
+    PreservedUseStmt stmt{moduleName};
 
     for (const auto &only : *onlyList) {
       common::visit(
@@ -3718,11 +3718,11 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
     // USE mod with optional renames (not ONLY)
     if (renameList->empty()) {
       // USE mod (import all, no renames)
-      PreservedUseStmt stmt{moduleName, PreservedUseStmt::Kind::UseAll};
+      PreservedUseStmt stmt{moduleName};
       currScope().add_preservedUseStmt(std::move(stmt));
     } else {
       // USE mod, renames (import all with some renames)
-      PreservedUseStmt stmt{moduleName, PreservedUseStmt::Kind::UseRenames};
+      PreservedUseStmt stmt{moduleName};
 
       for (const auto &rename : *renameList) {
         common::visit(common::visitors{

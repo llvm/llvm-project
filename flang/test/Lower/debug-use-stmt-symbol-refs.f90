@@ -55,5 +55,3 @@ end function
 ! CHECK-DAG: fir.use_stmt "mod1" only_symbols{{\[}}[@_QMmod1Ea]]
 ! CHECK-DAG: fir.use_stmt "mod2" renames{{\[}}[#fir.use_rename<"renamed_x", @_QMmod2Ex>, #fir.use_rename<"renamed_z", @_QMmod2Ez>]]
 ! CHECK-DAG: fir.use_stmt "mod3"{{$}}
-
-

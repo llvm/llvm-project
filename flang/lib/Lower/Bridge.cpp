@@ -258,43 +258,23 @@ emitUseStatementsFromScope(Fortran::lower::AbstractConverter &converter,
     llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
     llvm::SmallVector<mlir::Attribute> renameAttrs;
 
-    switch (preservedStmt.kind) {
-    case Fortran::semantics::PreservedUseStmt::Kind::UseOnly:
-      // USE mod, ONLY: list
-      for (const auto &name : preservedStmt.onlyNames) {
-        std::string mangledName = getMangledName(name);
-        if (!mangledName.empty())
-          onlySymbolAttrs.push_back(
-              mlir::FlatSymbolRefAttr::get(context, mangledName));
-      }
-      // Handle renames within ONLY clause
-      for (const auto &local : preservedStmt.renames) {
-        std::string mangledName = getMangledName(local);
-        if (!mangledName.empty()) {
-          auto localAttr = mlir::StringAttr::get(context, local);
-          auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
-          renameAttrs.push_back(
-              fir::UseRenameAttr::get(context, localAttr, symbolRef));
-        }
-      }
-      break;
+    // USE mod, ONLY: list
+    for (const auto &name : preservedStmt.onlyNames) {
+      std::string mangledName = getMangledName(name);
+      if (!mangledName.empty())
+        onlySymbolAttrs.push_back(
+            mlir::FlatSymbolRefAttr::get(context, mangledName));
+    }
 
-    case Fortran::semantics::PreservedUseStmt::Kind::UseRenames:
-      // USE mod, renames (import all with some renames)
-      for (const auto &local : preservedStmt.renames) {
-        std::string mangledName = getMangledName(local);
-        if (!mangledName.empty()) {
-          auto localAttr = mlir::StringAttr::get(context, local);
-          auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
-          renameAttrs.push_back(
-              fir::UseRenameAttr::get(context, localAttr, symbolRef));
-        }
+    // Handle renames
+    for (const auto &local : preservedStmt.renames) {
+      std::string mangledName = getMangledName(local);
+      if (!mangledName.empty()) {
+        auto localAttr = mlir::StringAttr::get(context, local);
+        auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
+        renameAttrs.push_back(
+            fir::UseRenameAttr::get(context, localAttr, symbolRef));
       }
-      break;
-
-    case Fortran::semantics::PreservedUseStmt::Kind::UseAll:
-      // USE mod (import all, no renames)
-      break;
     }
 
     // Create optional array attributes
