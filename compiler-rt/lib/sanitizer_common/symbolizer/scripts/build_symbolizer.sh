@@ -83,12 +83,6 @@ if [[ ! -d ${ZLIB_BUILD} ]]; then
 fi
 
 cd ${ZLIB_BUILD}
-if [[ -n "${USE_LD}" ]]; then
-  EXTRA="-fuse-ld=${USE_LD}"
-else
-  EXTRA=""
-fi
-
 AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype -fuse-ld=lld" RANLIB=/bin/true ./configure --static
 # TODO: remove this. this is for debugging buildbot problems
 cat configure.log

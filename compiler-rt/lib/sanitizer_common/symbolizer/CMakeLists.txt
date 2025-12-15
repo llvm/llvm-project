@@ -14,7 +14,6 @@ foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
                      WORKING_DIRECTORY ${RTSanitizerCommonSymbolizerInternalDir}
                      COMMAND FLAGS=${TARGET_CFLAGS}
                              CLANG=${LLVM_TOOLS_BINARY_DIR}/clang
-                             USE_LD=${LLVM_TOOLS_BINARY_DIR}/lld
                              ${CMAKE_CURRENT_SOURCE_DIR}/scripts/build_symbolizer.sh
                              ${CMAKE_CURRENT_BINARY_DIR}/RTSanitizerCommonSymbolizerInternal.${arch}.o
                      USES_TERMINAL)
