@@ -199,11 +199,13 @@ entry:
 define half @fp16_vminnm_NNNo(half %a) {
 ; CHECK-LABEL: fp16_vminnm_NNNo:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr.16 s0, .LCPI12_0
+; CHECK-NEXT:    vmov.f16 s0, r0
 ; CHECK-NEXT:    vmov.f16 s2, #1.200000e+01
-; CHECK-NEXT:    vmov.f16 s4, r0
-; CHECK-NEXT:    vminnm.f16 s2, s4, s2
-; CHECK-NEXT:    vmin.f16 d0, d1, d0
+; CHECK-NEXT:    vminnm.f16 s0, s0, s2
+; CHECK-NEXT:    vldr.16 s2, .LCPI12_0
+; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f16 s0, s2, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 1
@@ -247,11 +249,13 @@ entry:
 define half @fp16_vminnm_NNNu(half %b) {
 ; CHECK-LABEL: fp16_vminnm_NNNu:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr.16 s0, .LCPI14_0
+; CHECK-NEXT:    vmov.f16 s0, r0
 ; CHECK-NEXT:    vmov.f16 s2, #1.200000e+01
-; CHECK-NEXT:    vmov.f16 s4, r0
-; CHECK-NEXT:    vminnm.f16 s2, s4, s2
-; CHECK-NEXT:    vmin.f16 d0, d1, d0
+; CHECK-NEXT:    vminnm.f16 s0, s0, s2
+; CHECK-NEXT:    vldr.16 s2, .LCPI14_0
+; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f16 s0, s2, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 1
@@ -269,19 +273,21 @@ entry:
 define half @fp16_vminnm_NNNule(half %b) {
 ; CHECK-LABEL: fp16_vminnm_NNNule:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldr.16 s2, .LCPI15_0
+; CHECK-NEXT:    vmov.f16 s0, r0
+; CHECK-NEXT:    vminnm.f16 s0, s0, s2
 ; CHECK-NEXT:    vldr.16 s2, .LCPI15_1
-; CHECK-NEXT:    vmov.f16 s4, r0
-; CHECK-NEXT:    vldr.16 s0, .LCPI15_0
-; CHECK-NEXT:    vminnm.f16 s2, s4, s2
-; CHECK-NEXT:    vmin.f16 d0, d1, d0
+; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f16 s0, s2, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI15_0:
-; CHECK-NEXT:    .short 0x5300 @ half 56
-; CHECK-NEXT:  .LCPI15_1:
 ; CHECK-NEXT:    .short 0x5040 @ half 34
+; CHECK-NEXT:  .LCPI15_1:
+; CHECK-NEXT:    .short 0x5300 @ half 56
 
 entry:
   %cmp1 = fcmp ule half 34., %b
@@ -322,11 +328,13 @@ entry:
 define half @fp16_vmaxnm_NNNo(half %a) {
 ; CHECK-LABEL: fp16_vmaxnm_NNNo:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr.16 s0, .LCPI17_0
+; CHECK-NEXT:    vmov.f16 s0, r0
 ; CHECK-NEXT:    vmov.f16 s2, #1.200000e+01
-; CHECK-NEXT:    vmov.f16 s4, r0
-; CHECK-NEXT:    vmaxnm.f16 s2, s4, s2
-; CHECK-NEXT:    vmax.f16 d0, d1, d0
+; CHECK-NEXT:    vmaxnm.f16 s0, s0, s2
+; CHECK-NEXT:    vldr.16 s2, .LCPI17_0
+; CHECK-NEXT:    vcmp.f16 s2, s0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f16 s0, s2, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 1
@@ -344,19 +352,21 @@ entry:
 define half @fp16_vmaxnm_NNNoge(half %a) {
 ; CHECK-LABEL: fp16_vmaxnm_NNNoge:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldr.16 s2, .LCPI18_0
+; CHECK-NEXT:    vmov.f16 s0, r0
+; CHECK-NEXT:    vmaxnm.f16 s0, s0, s2
 ; CHECK-NEXT:    vldr.16 s2, .LCPI18_1
-; CHECK-NEXT:    vmov.f16 s4, r0
-; CHECK-NEXT:    vldr.16 s0, .LCPI18_0
-; CHECK-NEXT:    vmaxnm.f16 s2, s4, s2
-; CHECK-NEXT:    vmax.f16 d0, d1, d0
+; CHECK-NEXT:    vcmp.f16 s2, s0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f16 s0, s2, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI18_0:
-; CHECK-NEXT:    .short 0x5300 @ half 56
-; CHECK-NEXT:  .LCPI18_1:
 ; CHECK-NEXT:    .short 0x5040 @ half 34
+; CHECK-NEXT:  .LCPI18_1:
+; CHECK-NEXT:    .short 0x5300 @ half 56
 entry:
   %cmp1 = fcmp oge half %a, 34.
   %cond1 = select i1 %cmp1, half %a, half 34.
@@ -420,11 +430,13 @@ entry:
 define half @fp16_vmaxnm_NNNu(half %b) {
 ; CHECK-LABEL: fp16_vmaxnm_NNNu:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr.16 s0, .LCPI21_0
+; CHECK-NEXT:    vmov.f16 s0, r0
 ; CHECK-NEXT:    vmov.f16 s2, #1.200000e+01
-; CHECK-NEXT:    vmov.f16 s4, r0
-; CHECK-NEXT:    vmaxnm.f16 s2, s4, s2
-; CHECK-NEXT:    vmax.f16 d0, d1, d0
+; CHECK-NEXT:    vmaxnm.f16 s0, s0, s2
+; CHECK-NEXT:    vldr.16 s2, .LCPI21_0
+; CHECK-NEXT:    vcmp.f16 s2, s0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f16 s0, s2, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 1
@@ -442,19 +454,21 @@ entry:
 define half @fp16_vmaxnm_NNNuge(half %b) {
 ; CHECK-LABEL: fp16_vmaxnm_NNNuge:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldr.16 s2, .LCPI22_0
+; CHECK-NEXT:    vmov.f16 s0, r0
+; CHECK-NEXT:    vmaxnm.f16 s0, s0, s2
 ; CHECK-NEXT:    vldr.16 s2, .LCPI22_1
-; CHECK-NEXT:    vmov.f16 s4, r0
-; CHECK-NEXT:    vldr.16 s0, .LCPI22_0
-; CHECK-NEXT:    vmaxnm.f16 s2, s4, s2
-; CHECK-NEXT:    vmax.f16 d0, d1, d0
+; CHECK-NEXT:    vcmp.f16 s2, s0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f16 s0, s2, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI22_0:
-; CHECK-NEXT:    .short 0x5300 @ half 56
-; CHECK-NEXT:  .LCPI22_1:
 ; CHECK-NEXT:    .short 0x5040 @ half 34
+; CHECK-NEXT:  .LCPI22_1:
+; CHECK-NEXT:    .short 0x5300 @ half 56
 entry:
   %cmp1 = fcmp uge half 34., %b
   %cond1 = select i1 %cmp1, half 34., half %b
@@ -469,7 +483,9 @@ define half @fp16_vminmaxnm_neg0(half %a) {
 ; CHECK-NEXT:    vldr.16 s0, .LCPI23_0
 ; CHECK-NEXT:    vmov.f16 s2, r0
 ; CHECK-NEXT:    vminnm.f16 s2, s2, s0
-; CHECK-NEXT:    vmax.f16 d0, d1, d0
+; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f16 s0, s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 1
@@ -513,7 +529,9 @@ define half @fp16_vminmaxnm_e_neg0(half %a) {
 ; CHECK-NEXT:    vldr.16 s0, .LCPI25_0
 ; CHECK-NEXT:    vmov.f16 s2, r0
 ; CHECK-NEXT:    vminnm.f16 s2, s2, s0
-; CHECK-NEXT:    vmax.f16 d0, d1, d0
+; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f16 s0, s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 1
