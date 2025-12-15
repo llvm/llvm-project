@@ -133,7 +133,7 @@ public:
         SetEvent(m_event);
         if (m_stopped) {
           // The destructor might have called SetEvent(m_ready) before this
-          // block. It that's the case, ResetEvent(m_ready) will cause
+          // block. If that's the case, ResetEvent(m_ready) will cause
           // WaitForSingleObject to wait forever unless we break early.
           break;
         }
