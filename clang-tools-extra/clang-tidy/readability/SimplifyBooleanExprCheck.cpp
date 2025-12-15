@@ -720,7 +720,8 @@ bool SimplifyBooleanExprCheck::issueDiag(const ASTContext &Context,
 void SimplifyBooleanExprCheck::replaceWithThenStatement(
     const ASTContext &Context, const IfStmt *IfStatement,
     const Expr *BoolLiteral) {
-  std::string Replacement = getText(Context, *IfStatement->getThen());
+  // Added .str() below
+  std::string Replacement = getText(Context, *IfStatement->getThen()).str(); 
   if (const Stmt *Init = IfStatement->getInit()) {
     Replacement = (Twine("{ ") + getText(Context, *Init) + Replacement + " }").str();
   }
@@ -732,7 +733,8 @@ void SimplifyBooleanExprCheck::replaceWithElseStatement(
     const ASTContext &Context, const IfStmt *IfStatement,
     const Expr *BoolLiteral) {
   const Stmt *ElseStatement = IfStatement->getElse();
-  std::string Replacement = ElseStatement ? getText(Context, *ElseStatement) : "";
+  // Added .str() below
+  std::string Replacement = ElseStatement ? getText(Context, *ElseStatement).str() : "";
   if (const Stmt *Init = IfStatement->getInit()) {
     Replacement = (Twine("{ ") + getText(Context, *Init) + Replacement + " }").str();
   }
