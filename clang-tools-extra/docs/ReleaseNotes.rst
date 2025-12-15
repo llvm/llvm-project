@@ -531,6 +531,11 @@ Changes in existing checks
   on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
   binary.
 
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check to suggest using
+  the more idiomatic ``std::views::reverse`` where it used to suggest
+  ``std::ranges::reverse_view``.
+
 - Improved :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check by fixing a crash
   on malformed code (common when using :program:`clang-tidy` through
