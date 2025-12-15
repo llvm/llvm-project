@@ -370,6 +370,22 @@ static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
   return builder.createVecCompare(loc, pred, op0, op1);
 }
 
+static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
+                                 mlir::Value mask, mlir::Value Op0,
+                                 mlir::Value Op1) {
+  return builder.create<cir::VecTernaryOp>(loc, Op0.getType(), mask, Op0, Op1);
+}
+
+static mlir::Value emitX86ScalarSelect(CIRGenBuilderTy &builder,
+                                       mlir::Location loc, mlir::Value mask,
+                                       mlir::Value Op0, mlir::Value Op1) {
+
+  mlir::Value zero = builder.getZero(mask.getType(), loc);
+  mlir::Value cond = builder.createCompare(loc, CmpOpKind::ne, mask, zero);
+
+  return builder.createSelect(loc, Op0.getType(), cond, Op0, Op1);
+}
+
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -1186,10 +1202,14 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_selectpd_128:
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
+    return emitX86Select(builder, getLoc(expr->getExprLoc()), ops[0], ops[1],
+                         ops[2]);
   case X86::BI__builtin_ia32_selectsh_128:
   case X86::BI__builtin_ia32_selectsbf_128:
   case X86::BI__builtin_ia32_selectss_128:
   case X86::BI__builtin_ia32_selectsd_128:
+    return emitX86ScalarSelect(builder, getLoc(expr->getExprLoc()), ops[0],
+                               ops[1], ops[2]);
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpb256_mask:
   case X86::BI__builtin_ia32_cmpb512_mask:
