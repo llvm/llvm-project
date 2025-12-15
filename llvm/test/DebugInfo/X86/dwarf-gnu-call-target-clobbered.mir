@@ -1,11 +1,11 @@
 # RUN: llc %s -start-after=livedebugvalues -debugger-tune=gdb --filetype=obj -o - \
-# RUN: | llvm-dwarfdump -
+# RUN: | llvm-dwarfdump - | FileCheck %s
 
 # Generated from IR crash reproducer with `llc -stop-after=livedebugvalues -simplify-mir`.
 # Check the GNU equivalent of DW_AT_call_target_clobbered is emitted without
 # hitting assertions (DWARF version 4, -debugger-tune=gdb).
 
-# CHECK: DW_GNU_AT_call_target_clobbered
+# CHECK: DW_AT_GNU_call_site_target_clobbered
 
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
