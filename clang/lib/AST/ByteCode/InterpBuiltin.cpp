@@ -2471,9 +2471,9 @@ static bool interp__builtin_elementwise_fp_binop(
          Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements());
 
   std::optional<APSInt> RoundingMode = std::nullopt;
-  if (Call->getNumArgs() == 3) {
+  if (Call->getNumArgs() == 3)
     RoundingMode = popToAPSInt(S, Call->getArg(2));
-  }
+
   const Pointer &BPtr = S.Stk.pop<Pointer>();
   const Pointer &APtr = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
