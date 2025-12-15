@@ -3558,7 +3558,8 @@ static void mcpuHelp() {
         Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
         if (!ChildOrErr) {
           if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-            reportError(std::move(E), getFileNameForError(C, I), A->getFileName());
+            reportError(std::move(E), getFileNameForError(C, I),
+                        A->getFileName());
           continue;
         }
         if (ObjectFile *Obj = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
@@ -3570,7 +3571,8 @@ static void mcpuHelp() {
         reportError(std::move(Err), A->getFileName());
     }
     if (TheTriple.empty())
-      reportError(InputFilenames[0], "input file is not an object file or archive does not contain object file");
+      reportError(InputFilenames[0], "input file is not an object file or "
+                                     "archive does not contain object file");
   }
 
   std::string ErrMessage;
