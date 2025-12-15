@@ -87,9 +87,11 @@ DLWRAP(zeCommandListHostSynchronize, 2)
 
 DLWRAP_FINALIZE()
 
-#ifndef LEVEL_ZERO_LIBRARY
-#error "Level zero library not defined"
-#endif
+#ifdef _WIN32
+#define LEVEL_ZERO_LIBRARY "ze_loader.dll"
+#else
+#define LEVEL_ZERO_LIBRARY "libze_loader.so"
+#endif // _WIN32
 
 #ifndef TARGET_NAME
 #error "Missing TARGET_NAME macro"

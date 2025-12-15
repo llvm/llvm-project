@@ -27,7 +27,6 @@ target_include_directories(omptarget.rtl.level_zero PRIVATE
   ${LIBOMPTARGET_OMP_HEADER_DIR}
 )
 
-cmake_path(GET LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY FILENAME LEVEL_ZERO_LIBRARY_NAME)
 if (EXISTS ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY} AND NOT "level_zero" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building Level Zero NG plugin linked against level_zero library")
  if(UNIX)
@@ -36,6 +35,7 @@ if (EXISTS ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY} AND NOT "level_zero" IN_LIST L
   elseif(WIN32)
     # Full path to the Level Zero library is recognized as a linker option, so we
     # separate directory and file name
+    cmake_path(GET LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY FILENAME LEVEL_ZERO_LIBRARY_NAME)
     cmake_path(GET LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY PARENT_PATH LEVEL_ZERO_LIBRARY_PATH)
     target_link_libraries(omptarget.rtl.level_zero PRIVATE ${LEVEL_ZERO_LIBRARY_NAME}
         ${LIBOMP_LIB_FILE})
@@ -45,11 +45,6 @@ if (EXISTS ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY} AND NOT "level_zero" IN_LIST L
   endif()
 else()
   message(STATUS "Building Level Zero NG plugin for dlopened level_zero")
-  if(WIN32)
-    cmake_path(REPLACE_EXTENSION LEVEL_ZERO_LIBRARY_NAME dll)
-  endif()
-  target_compile_definitions(omptarget.rtl.level_zero PRIVATE
-      LEVEL_ZERO_LIBRARY="${LEVEL_ZERO_LIBRARY_NAME}")
   target_sources(omptarget.rtl.level_zero PRIVATE src/L0DynWrapper.cpp)
 endif()
 
