@@ -855,9 +855,9 @@ public:
     return builder.getBool(e->isSatisfied(), cgf.getLoc(e->getExprLoc()));
   }
   mlir::Value VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: array type trait");
-    return {};
+    mlir::Type type = cgf.convertType(e->getType());
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    return builder.getConstInt(loc, type, e->getValue());
   }
   mlir::Value VisitExpressionTraitExpr(const ExpressionTraitExpr *e) {
     return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
