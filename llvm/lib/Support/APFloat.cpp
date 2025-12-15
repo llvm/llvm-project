@@ -28,9 +28,6 @@
 #include <cstring>
 #include <limits.h>
 
-// Shared headers from LLVM libc
-#include "shared/math.h"
-
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
     if (usesLayout<IEEEFloat>(getSemantics()))                                 \
@@ -6156,29 +6153,6 @@ float APFloat::convertToFloat() const {
   assert(!(St & opInexact) && !LosesInfo && "Unexpected imprecision");
   (void)St;
   return Temp.getIEEE().convertToFloat();
-}
-
-static constexpr int getFEnvRoundingMode(llvm::RoundingMode rm) {
-  switch (rm) {
-  case APFloat::rmTowardPositive:
-    return FE_UPWARD;
-  case APFloat::rmTowardNegative:
-    return FE_DOWNWARD;
-  case APFloat::rmTowardZero:
-    return FE_TOWARDZERO;
-  default:
-    // TODO: fix rmNearestTiesToAway for platform without FE_TONEARESTFROMZERO.
-    return FE_TONEAREST;
-  };
-}
-
-APFloat exp(const APFloat &X, RoundingMode rounding_mode) {
-  if (&X.getSemantics() == &APFloat::IEEEsingle()) {
-    float result = LIBC_NAMESPACE::shared::expf(
-        X.convertToFloat(), getFEnvRoundingMode(rounding_mode));
-    return APFloat(result);
-  }
-  llvm_unreachable("Unsupported floating-point semantics");
 }
 
 APFloat::Storage::~Storage() {
