@@ -11900,6 +11900,34 @@ SDValue DAGCombiner::visitCTPOP(SDNode *N) {
   return SDValue();
 }
 
+static unsigned getBestMinMaxOpc(const TargetLowering &TLI, EVT VT, bool Max) {
+  unsigned IEEE2019NumOpcode = Max ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
+  unsigned IEEE2019Opcode = Max ? ISD::FMAXIMUM : ISD::FMINIMUM;
+  unsigned IEEEOpcode = Max ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+  unsigned Opcode = Max ? ISD::FMAXNUM : ISD::FMINNUM;
+
+  // Try FMINIMUM/FMAXIMUM first as it has smaller codesize on AMDGPU GFX12.
+  if (TLI.isOperationLegal(IEEE2019Opcode, VT))
+    return IEEE2019Opcode;
+  if (TLI.isOperationLegal(IEEE2019NumOpcode, VT))
+    return IEEE2019NumOpcode;
+  if (TLI.isOperationLegal(IEEEOpcode, VT))
+    return IEEEOpcode;
+  if (TLI.isOperationLegal(Opcode, VT))
+    return Opcode;
+
+  if (TLI.isOperationCustom(IEEE2019Opcode, VT))
+    return IEEE2019Opcode;
+  if (TLI.isOperationCustom(IEEE2019NumOpcode, VT))
+    return IEEE2019NumOpcode;
+  if (TLI.isOperationCustom(IEEEOpcode, VT))
+    return IEEEOpcode;
+  if (TLI.isOperationCustom(Opcode, VT))
+    return Opcode;
+
+  return ISD::DELETED_NODE;
+}
+
 static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
                                          SDValue RHS, const SDNodeFlags Flags,
                                          const TargetLowering &TLI) {
@@ -11907,16 +11935,7 @@ static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
   if (!VT.isFloatingPoint())
     return false;
 
-  bool hasMinMaxOpc = (TLI.isOperationLegalOrCustom(ISD::FMINNUM, VT) &&
-                       TLI.isOperationLegalOrCustom(ISD::FMAXNUM, VT)) ||
-                      (TLI.isOperationLegalOrCustom(ISD::FMINNUM_IEEE, VT) &&
-                       TLI.isOperationLegalOrCustom(ISD::FMAXNUM_IEEE, VT)) ||
-                      (TLI.isOperationLegalOrCustom(ISD::FMINIMUM, VT) &&
-                       TLI.isOperationLegalOrCustom(ISD::FMAXIMUM, VT)) ||
-                      (TLI.isOperationLegalOrCustom(ISD::FMINIMUMNUM, VT) &&
-                       TLI.isOperationLegalOrCustom(ISD::FMAXIMUMNUM, VT));
-
-  return (Flags.hasNoSignedZeros() || hasMinMaxOpc) &&
+  return Flags.hasNoSignedZeros() &&
          TLI.isProfitableToCombineMinNumMaxNum(VT) &&
          (Flags.hasNoNaNs() ||
           (DAG.isKnownNeverNaN(RHS) && DAG.isKnownNeverNaN(LHS)));
@@ -11928,10 +11947,8 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
                                        const TargetLowering &TLI,
                                        SelectionDAG &DAG) {
   EVT TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  unsigned IEEE2019NumOpcode = 0;
-  unsigned IEEE2019Opcode = 0;
-  unsigned IEEEOpcode = 0;
-  unsigned Opcode = 0;
+  unsigned Opcode = ISD::DELETED_NODE;
+  bool Max = true;
   switch (CC) {
   case ISD::SETOLT:
   case ISD::SETOLE:
@@ -11939,13 +11956,8 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETLE:
   case ISD::SETULT:
   case ISD::SETULE: {
-    // Since it's known never nan to get here already, either fminimumnum,
-    // fminimum, fminnum, or fminnum_ieee are OK. Try Legal first and then
-    // Custom.
-    IEEE2019NumOpcode = LHS == True ? ISD::FMINIMUMNUM : ISD::FMAXIMUMNUM;
-    IEEE2019Opcode = LHS == True ? ISD::FMINIMUM : ISD::FMAXIMUM;
-    IEEEOpcode = LHS == True ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
-    Opcode = LHS == True ? ISD::FMINNUM : ISD::FMAXNUM;
+    Max = LHS != True;
+    Opcode = Max ? ISD::FMAXNUM : ISD::FMINNUM;
   }
     [[fallthrough]];
   case ISD::SETOGT:
@@ -11958,39 +11970,17 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
       // Since it's known never nan to get here already, either fminimumnum,
       // fminimum, fminnum, or fminnum_ieee are OK. Try Legal first and then
       // Custom.
-      IEEE2019NumOpcode = (LHS == True) ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
-      IEEE2019Opcode = (LHS == True) ? ISD::FMAXIMUM : ISD::FMINIMUM;
-      IEEEOpcode = (LHS == True) ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
-      Opcode = (LHS == True) ? ISD::FMAXNUM : ISD::FMINNUM;
+      Max = LHS == True;
+      Opcode = Max ? ISD::FMAXNUM : ISD::FMINNUM;
     }
-    // Try FMINIMUM/FMAXIMUM first as it has smaller codesize on AMDGPU GFX12.
-    if (TLI.isOperationLegal(IEEE2019Opcode, VT))
-      return DAG.getNode(IEEE2019Opcode, DL, VT, LHS, RHS);
-    if (TLI.isOperationLegal(IEEE2019NumOpcode, VT))
-      return DAG.getNode(IEEE2019NumOpcode, DL, VT, LHS, RHS);
-    if (TLI.isOperationLegal(IEEEOpcode, VT))
-      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
-    if (TLI.isOperationLegal(Opcode, VT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
-
-    // X86 has combineFMinFMax
-    if (TLI.hasTargetDAGCombine((ISD::NodeType)IEEE2019Opcode) ||
-        TLI.hasTargetDAGCombine((ISD::NodeType)IEEE2019NumOpcode) ||
-        TLI.hasTargetDAGCombine((ISD::NodeType)IEEEOpcode) ||
-        TLI.hasTargetDAGCombine((ISD::NodeType)Opcode))
-      return SDValue();
-
-    if (TLI.isOperationCustom(IEEE2019Opcode, VT))
-      return DAG.getNode(IEEE2019Opcode, DL, VT, LHS, RHS);
-    if (TLI.isOperationCustom(IEEE2019NumOpcode, VT))
-      return DAG.getNode(IEEE2019NumOpcode, DL, VT, LHS, RHS);
-    if (TLI.isOperationCustom(IEEEOpcode, VT))
-      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
-    if (TLI.isOperationCustom(Opcode, VT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
-
+    unsigned MinMaxOpc = getBestMinMaxOpc(TLI, VT, Max);
+    SDNodeFlags Flags;
+    Flags.setNoNaNs(true);
+    Flags.setNoSignedZeros(true);
+    if (MinMaxOpc != ISD::DELETED_NODE)
+      return DAG.getNode(MinMaxOpc, DL, VT, LHS, RHS, Flags);
     if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+      return DAG.getNode(Opcode, DL, VT, LHS, RHS, Flags);
 
     return SDValue();
   }
