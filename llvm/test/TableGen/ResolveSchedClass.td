@@ -33,6 +33,9 @@ def SchedWriteResC : SchedWriteRes<[ResX0]> {
 def SchedWriteResD : SchedWriteRes<[ResX0]> {
   let Latency = 16;
 }
+def SchedWriteResE : SchedWriteRes<[ResX0]> {
+  let Latency = 32;
+}
 
 // Check SchedPredicate with subtarget feature.
 def FeatureFooPred : FeatureSchedPredicate<FeatureFoo>;
@@ -46,12 +49,16 @@ def CombinedAllOfPred: AllOfSchedPreds<[FeatureFooPred, MCSchedPredicate<CheckZe
 def CombinedAnyOfPred: AnyOfSchedPreds<[CombinedAllOfPred,
                                         NoneOfSchedPreds<[FeatureBarPred,
                                                           SchedPredicate<[{/*hello=*/false}]>]>]>;
+// Check if the inverse predicate correctly wraps (or not wrap) its sub-predicates.
+def CombinedNotPred : NotSchedPred<AllOfSchedPreds<[MCSchedPredicate<CheckZeroOperand<3>>,
+                                                    NotSchedPred<FeatureFooPred>]>>;
 
 def Variant : SchedWriteVariant<[
-  SchedVar<FeatureFooPred, [SchedWriteResA]>,
-  SchedVar<NoSchedPred,    [SchedWriteResB]>,
+  SchedVar<FeatureFooPred,       [SchedWriteResA]>,
+  SchedVar<NoSchedPred,          [SchedWriteResB]>,
   SchedVar<CombinedAllOfPred,    [SchedWriteResC]>,
-  SchedVar<CombinedAnyOfPred,    [SchedWriteResD]>
+  SchedVar<CombinedAnyOfPred,    [SchedWriteResD]>,
+  SchedVar<CombinedNotPred,      [SchedWriteResE]>,
 ]>;
 
 def : InstRW<[Variant], (instrs Inst_A)>;
@@ -67,6 +74,8 @@ def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;
 // CHECK-NEXT:       return {{.*}}; // SchedWriteResA
 // CHECK-NEXT:     if (STI.hasFeature(TestTarget::FeatureFoo) && MI->getOperand(1).getImm() == 0)
 // CHECK-NEXT:       return {{.*}}; // SchedWriteResC
+// CHECK-NEXT:     if (!(MI->getOperand(3).getImm() == 0 && !STI.hasFeature(TestTarget::FeatureFoo)))
+// CHECK-NEXT: 	     return {{.*}}; // SchedWriteResE
 // CHECK-NEXT:     return {{.*}}; // SchedWriteResB
 
 // CHECK: unsigned resolveVariantSchedClass(unsigned SchedClass,
@@ -86,4 +95,6 @@ def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;
 // CHECK-NEXT:         return {{.*}}; // SchedWriteResC
 // CHECK-NEXT:       if ((this->hasFeature(TestTarget::FeatureFoo) && MI->getOperand(1).getImm() == 0) || !(this->hasFeature(TestTarget::FeatureBar) || (/*hello=*/false)))
 // CHECK-NEXT:         return {{.*}}; // SchedWriteResD
+// CHECK-NEXT:       if (!(MI->getOperand(3).getImm() == 0 && !this->hasFeature(TestTarget::FeatureFoo)))
+// CHECK-NEXT: 	       return {{.*}}; // SchedWriteResE
 // CHECK-NEXT:       return {{.*}}; // SchedWriteResB

@@ -1576,25 +1576,30 @@ static void expandSchedPredicates(const Record *Rec, PredicateExpander &PE,
       PrintFatalError(Rec, "Empty SchedPredicateCombiner is not allowed");
 
     StringRef Sep;
-    if (Rec->isSubClassOf("AllOfSchedPreds"))
+    if (Rec->isSubClassOf("AllOfSchedPreds")) {
       Sep = " && ";
-    else if (Rec->isSubClassOf("AnyOfSchedPreds") ||
-             Rec->isSubClassOf("NoneOfSchedPreds"))
+    } else if (Rec->isSubClassOf("AnyOfSchedPreds")) {
       Sep = " || ";
-    else
-      PrintFatalError(Rec, "Unrecognized SchedPredicateCombiner");
-
-    if (Rec->isSubClassOf("NoneOfSchedPreds")) {
-      WrapPredicate = true;
+    } else if (Rec->isSubClassOf("NotSchedPred")) {
+      if (SubPreds.size() != 1)
+        PrintFatalError(Rec,
+                        "NotSchedPred can only have a single sub-predicate.");
       OS << "!";
+      // We don't have to eagerly wrap this term right now: telling its (only)
+      // sub-predicate to wrap itself should be sufficient.
+      WrapPredicate = false;
+    } else {
+      PrintFatalError(Rec, "Unrecognized SchedPredicateCombiner");
     }
 
     if (WrapPredicate)
       OS << "(";
 
     ListSeparator LS(Sep);
+    bool WrapSubPreds =
+        SubPreds.size() > 1 || Rec->isSubClassOf("NotSchedPred");
     for (const Record *SubP : SubPreds)
-      expandSchedPredicates(SubP, PE, /*WrapPredicate=*/true, OS << LS);
+      expandSchedPredicates(SubP, PE, WrapSubPreds, OS << LS);
 
     if (WrapPredicate)
       OS << ")";

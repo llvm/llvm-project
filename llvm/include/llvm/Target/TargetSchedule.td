@@ -409,8 +409,10 @@ class AllOfSchedPreds<list<SchedPredicateBase> predicates>
     : SchedPredicateCombiner<predicates>;
 class AnyOfSchedPreds<list<SchedPredicateBase> predicates>
     : SchedPredicateCombiner<predicates>;
+class NotSchedPred<SchedPredicateBase predicate>
+    : SchedPredicateCombiner<[predicate]>;
 class NoneOfSchedPreds<list<SchedPredicateBase> predicates>
-    : SchedPredicateCombiner<predicates>;
+    : NotSchedPred<AnyOfSchedPreds<predicates>>;
 
 // Associate a predicate with a list of SchedReadWrites. By default,
 // the selected SchedReadWrites are still associated with a single
