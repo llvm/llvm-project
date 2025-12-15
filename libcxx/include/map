@@ -1418,7 +1418,6 @@ private:
   typedef typename __base::__node_allocator __node_allocator;
   typedef typename __base::__node_pointer __node_pointer;
   typedef typename __base::__node_base_pointer __node_base_pointer;
-  typedef typename __base::__parent_pointer __parent_pointer;
 
   typedef __map_node_destructor<__node_allocator> _Dp;
   typedef unique_ptr<__node, _Dp> __node_holder;

@@ -907,8 +907,6 @@ public:
   using __end_node_t _LIBCPP_NODEBUG       = __tree_end_node<__node_base_pointer>;
   using __end_node_pointer _LIBCPP_NODEBUG = __rebind_pointer_t<__void_pointer, __end_node_t>;
 
-  using __parent_pointer _LIBCPP_NODEBUG = __end_node_pointer; // TODO: Remove this once the uses in <map> are removed
-
   using __node_allocator _LIBCPP_NODEBUG = __rebind_alloc<__alloc_traits, __node>;
   using __node_traits _LIBCPP_NODEBUG    = allocator_traits<__node_allocator>;
 
