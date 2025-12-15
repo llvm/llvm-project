@@ -29,7 +29,6 @@ enum class backend : unsigned char {
   level_zero,
   cuda,
   hip,
-  all,
 };
 
 namespace detail {

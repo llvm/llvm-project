@@ -31,8 +31,6 @@ inline std::string_view getBackendName(const backend &Backend) {
     return "cuda";
   case backend::hip:
     return "hip";
-  case backend::all:
-    return "all";
   }
 
   return "";
