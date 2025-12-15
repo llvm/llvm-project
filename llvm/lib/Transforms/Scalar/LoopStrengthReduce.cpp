@@ -4957,7 +4957,7 @@ void LSRInstance::NarrowSearchSpaceByCollapsingUnrolledCode() {
 
   // This is especially useful for unrolled loops.
 
-  for (ssize_t LUIdx = Uses.size()-1; LUIdx >= 0; --LUIdx) {
+  for (ssize_t LUIdx = Uses.size() - 1; LUIdx >= 0; --LUIdx) {
     LSRUse &LU = Uses[LUIdx];
     for (const Formula &F : LU.Formulae) {
       if (F.BaseOffset.isZero() || (F.Scale != 0 && F.Scale != 1))
