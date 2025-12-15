@@ -4263,7 +4263,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *IntTy = ConvertType(E->getType());
     Value *Zero = Constant::getNullValue(IntTy);
     Value *One = ConstantInt::get(IntTy, 1);
-    Value *NegativeOne = ConstantInt::get(IntTy, -1);
+    Value *NegativeOne = ConstantInt::getAllOnesValue(IntTy);
     Value *SignResult = Builder.CreateSelect(IsNeg, NegativeOne, One);
     Value *Result = Builder.CreateSelect(IsInf, SignResult, Zero);
     return RValue::get(Result);
@@ -4679,7 +4679,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     PHINode *Ret = Builder.CreatePHI(IntTy, 4);
     Ret->addIncoming(ConstantInt::get(IntTy, 0), Entry);
     Ret->addIncoming(ConstantInt::get(IntTy, 1), CmpGT);
-    Ret->addIncoming(ConstantInt::get(IntTy, -1), CmpLT);
+    Ret->addIncoming(ConstantInt::getAllOnesValue(IntTy), CmpLT);
     Ret->addIncoming(ConstantInt::get(IntTy, 0), Next);
     return RValue::get(Ret);
   }
