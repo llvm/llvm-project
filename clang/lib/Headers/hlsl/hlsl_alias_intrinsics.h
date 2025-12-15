@@ -294,8 +294,8 @@ bool all(double4);
 //===----------------------------------------------------------------------===//
 
 /// \fn bool and(bool x, bool y)
-/// \brief Logically ands two boolean vectors elementwise and produces a bool
-/// vector output.
+/// \brief Logically ands two boolean vectors or matrices elementwise and
+// produces a bool vector or matrix output.
 
 // TODO: Clean up clang-format marker once we've resolved
 //       https://github.com/llvm/llvm-project/issues/127851
@@ -309,6 +309,31 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
 bool3 and(bool3 x, bool3 y);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
 bool4 and(bool4 x, bool4 y);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2x1 and(bool2x1 x, bool2x1 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2x2 and(bool2x2 x, bool2x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2x3 and(bool2x3 x, bool2x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2x4 and(bool2x4 x, bool2x4 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3x1 and(bool3x1 x, bool3x1 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3x2 and(bool3x2 x, bool3x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3x3 and(bool3x3 x, bool3x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3x4 and(bool3x4 x, bool3x4 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4x1 and(bool4x1 x, bool4x1 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4x2 and(bool4x2 x, bool4x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4x3 and(bool4x3 x, bool4x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4x4 and(bool4x4 x, bool4x4 y);
 // clang-format on
 
 //===----------------------------------------------------------------------===//
@@ -1759,8 +1784,8 @@ float4 normalize(float4);
 //===----------------------------------------------------------------------===//
 
 /// \fn bool or(bool x, bool y)
-/// \brief Logically ors two boolean vectors elementwise and produces a bool
-/// vector output.
+/// \brief Logically ors two boolean vectors or matrices elementwise and
+///  produces a bool vector or matrix output.
 
 // TODO: Clean up clang-format marker once we've resolved
 //       https://github.com/llvm/llvm-project/issues/127851
@@ -1774,6 +1799,31 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
 bool3 or(bool3, bool3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
 bool4 or(bool4, bool4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool2x1 or(bool2x1 x, bool2x1 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool2x2 or(bool2x2 x, bool2x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool2x3 or(bool2x3 x, bool2x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool2x4 or(bool2x4 x, bool2x4 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool3x1 or(bool3x1 x, bool3x1 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool3x2 or(bool3x2 x, bool3x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool3x3 or(bool3x3 x, bool3x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool3x4 or(bool3x4 x, bool3x4 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool4x1 or(bool4x1 x, bool4x1 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool4x2 or(bool4x2 x, bool4x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool4x3 or(bool4x3 x, bool4x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool4x4 or(bool4x4 x, bool4x4 y);
 // clang-format on
 
 //===----------------------------------------------------------------------===//
