@@ -287,7 +287,8 @@ public:
 
   cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal);
 
-  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APInt intVal);
+  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APInt intVal,
+                              bool isUnsigned = true);
 
   cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t, uint64_t c);
 
