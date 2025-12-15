@@ -10,7 +10,6 @@
 
 // check that <regex> functions are marked [[nodiscard]]
 
-#include <locale>
 #include <regex>
 #include <string>
 
@@ -20,9 +19,6 @@ void test() {
 
     re.mark_count(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     re.flags();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    re.imbue(std::locale());
 
     re.getloc(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }

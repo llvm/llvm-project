@@ -2416,7 +2416,7 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI flag_type flags() const { return __flags_; }
 
   // locale:
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI locale_type imbue(locale_type __loc) {
+  _LIBCPP_HIDE_FROM_ABI locale_type imbue(locale_type __loc) {
     __member_init(ECMAScript);
     __start_.reset();
     return __traits_.imbue(__loc);
