@@ -538,6 +538,11 @@ Changes in existing checks
   on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
   binary.
 
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` by fixing an issue where
+  the check would sometimes suggest inserting ``override`` in an invalid
+  place.
+
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check to suggest using
   the more idiomatic ``std::views::reverse`` where it used to suggest
