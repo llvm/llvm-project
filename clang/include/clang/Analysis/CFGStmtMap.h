@@ -40,7 +40,7 @@ public:
   /// are terminators, the CFGBlock is the block they appear as a terminator,
   /// and not the block they appear as a block-level expression (e.g, '&&').
   /// CaseStmts and LabelStmts map to the CFGBlock they label.
-  const CFGBlock *getBlock(const Stmt * S) const;
+  const CFGBlock *getBlock(const Stmt *S) const;
 };
 
 } // end clang namespace
