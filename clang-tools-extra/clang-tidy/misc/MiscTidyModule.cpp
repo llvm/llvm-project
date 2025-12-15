@@ -26,6 +26,7 @@
 #include "PredictableRandCheck.h"
 #include "RedundantExpressionCheck.h"
 #include "StaticAssertCheck.h"
+#include "StaticInitializationCycleCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "UnconventionalAssignOperatorCheck.h"
 #include "UniqueptrResetReleaseCheck.h"
@@ -70,6 +71,8 @@ public:
     CheckFactories.registerCheck<RedundantExpressionCheck>(
         "misc-redundant-expression");
     CheckFactories.registerCheck<StaticAssertCheck>("misc-static-assert");
+    CheckFactories.registerCheck<StaticInitializationCycleCheck>(
+        "misc-static-initialization-cycle");
     CheckFactories.registerCheck<ThrowByValueCatchByReferenceCheck>(
         "misc-throw-by-value-catch-by-reference");
     CheckFactories.registerCheck<UnconventionalAssignOperatorCheck>(

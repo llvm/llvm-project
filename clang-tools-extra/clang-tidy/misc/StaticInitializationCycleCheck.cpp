@@ -1,0 +1,356 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "StaticInitializationCycleCheck.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Analysis/CallGraph.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SCCIterator.h"
+
+using namespace clang;
+using namespace clang::ast_matchers;
+
+namespace {
+
+// Compute (for the purpose of this check) if the value of a DeclRefExpr is used
+// (at runtime).
+// The value is not used if it appears at LHS of an assignment or it appears
+// inside a compile-time constant expression (like 'sizeof').
+bool isUnusedValue(const DeclRefExpr *DRE, ASTContext &ACtx) {
+  ParentMapContext &PMC = ACtx.getParentMapContext();
+  DynTypedNodeList Parents = PMC.getParents(*DRE);
+  const BinaryOperator *ParentBO = nullptr;
+  while (!Parents.empty()) {
+    if (const Expr *E = Parents[0].get<Expr>()) {
+      if (E->isIntegerConstantExpr(ACtx))
+        return true;
+      if (ParentBO = dyn_cast<BinaryOperator>(E))
+        break;
+    }
+    Parents = PMC.getParents(Parents[0]);
+  }
+  if (!ParentBO)
+    return false;
+  return ParentBO->isAssignmentOp() &&
+         ParentBO->getLHS()->IgnoreParenCasts() == DRE;
+}
+
+class VarUseNode;
+
+// Store the reference to a variable or the call location of a function.
+// 'Ref' is a DeclRefExpr or a CallExpr.
+// 'Node' contains information about corresponding VarDecl or FunctionDecl.
+struct VarUseRecord {
+  const Expr *Ref;
+  VarUseNode *Node;
+
+  VarUseRecord() = default;
+  VarUseRecord(const Expr *Ref, VarUseNode *N) : Ref(Ref), Node(N) {}
+  operator VarUseNode *() const { return Node; }
+};
+
+inline bool operator==(const VarUseRecord &LHS, const VarUseRecord &RHS) {
+  return LHS.Node == RHS.Node;
+}
+
+// One node in the variable usage graph.
+// If 'D' is a VarDecl:
+// 'Uses' contains all static variables and global function calls in the
+// initializer expression.
+// If 'D' is a FunctionDecl:
+// 'Uses' contains all static variable references and global function calls in
+// the function body.
+class VarUseNode {
+  const NamedDecl *D;
+  llvm::SmallVector<VarUseRecord, 2> Uses;
+
+public:
+  VarUseNode(const NamedDecl *D) : D(D) {}
+
+  const NamedDecl *getDecl() const { return D; }
+  bool isVar() const { return isa<VarDecl>(D); }
+  bool isFunction() const { return isa<FunctionDecl>(D); }
+  const VarDecl *getVar() const { return cast<VarDecl>(D); }
+  const FunctionDecl *getFunction() const { return cast<FunctionDecl>(D); }
+
+  using const_iterator = llvm::SmallVectorImpl<VarUseRecord>::const_iterator;
+
+  const_iterator begin() const { return Uses.begin(); }
+  const_iterator end() const { return Uses.end(); }
+
+  llvm::iterator_range<const_iterator> uses() const {
+    return llvm::make_range(begin(), end());
+  }
+
+  bool empty() const { return Uses.empty(); }
+  unsigned size() const { return Uses.size(); }
+
+  friend class VarUseCollector;
+  friend class VarUseGraphBuilder;
+  friend class VarUseGraph;
+};
+
+inline bool operator==(const VarUseRecord &LHS, const VarUseNode *RHS) {
+  return LHS.Node == RHS;
+}
+
+// "Variable usage graph":
+// Stores dependencies of variables from other variables or function calls,
+// and dependencies of function results from variables or functions.
+// Only static variables (static member, static local variable, or global
+// variable) and global or static functions are stored.
+// Stored are the canonical declarations of variables and definitions of
+// functions.
+class VarUseGraph {
+  using UseMapTy = llvm::DenseMap<const Decl *, std::unique_ptr<VarUseNode>>;
+
+  UseMapTy UseMap;
+  // Root contains edges to all other nodes, without a "Ref" expression.
+  VarUseNode *Root;
+
+public:
+  VarUseGraph() {
+    UseMap[nullptr] = std::make_unique<VarUseNode>(nullptr);
+    Root = UseMap[nullptr].get();
+  }
+
+  VarUseNode *addNode(const NamedDecl *D) {
+    std::unique_ptr<VarUseNode> &N = UseMap[D];
+    if (N)
+      return N.get();
+    N = std::make_unique<VarUseNode>(D);
+    Root->Uses.emplace_back(nullptr, N.get());
+    return N.get();
+  }
+
+  using const_iterator = UseMapTy::const_iterator;
+
+  const_iterator begin() const { return UseMap.begin(); }
+  const_iterator end() const { return UseMap.end(); }
+
+  unsigned size() const { return UseMap.size(); }
+
+  VarUseNode *getRoot() const { return Root; }
+
+  friend class VarUseGraphBuilder;
+};
+
+// Collect static variable references and static function calls.
+// This is used with initializer expressions and function body statements.
+// At initializer expressions only statements (and expressions) should be
+// traversed. But for functions declarations are needed too (to reach
+// initializations of variables) (only inside the given function).
+class VarUseCollector : public DynamicRecursiveASTVisitor {
+  VarUseNode *Node;
+  VarUseGraph &G;
+  const DeclContext *DC;
+
+public:
+  VarUseCollector(VarUseNode *N, VarUseGraph &G)
+      : Node(N), G(G), DC(N->isFunction() ? N->getFunction() : nullptr) {}
+
+  bool TraverseType(QualType T, bool TraverseQualifier) override {
+    return true;
+  }
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier) override {
+    return true;
+  }
+  bool TraverseAttr(Attr *At) override { return true; }
+  bool TraverseDecl(Decl *D) override {
+    if (DC && DC->containsDecl(D))
+      return DynamicRecursiveASTVisitor::TraverseDecl(D);
+    return true;
+  }
+
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
+    if (const auto *VarD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      if (!isUnusedValue(DRE, VarD->getASTContext()) &&
+          (VarD->hasGlobalStorage() || VarD->isStaticLocal()))
+        Node->Uses.emplace_back(DRE, G.addNode(VarD->getCanonicalDecl()));
+    }
+    return true;
+  }
+
+  bool VisitCallExpr(CallExpr *CE) override {
+    if (const FunctionDecl *F = CE->getDirectCallee()) {
+      if (F->isGlobal() || F->isStatic()) {
+        const FunctionDecl *Def = F->getDefinition();
+        if (Def)
+          Node->Uses.emplace_back(CE, G.addNode(Def));
+      }
+    }
+    return true;
+  }
+};
+
+// Build the complete graph by visiting all static variables and functions and
+// add all "usages" (children in the graph) to it.
+// Every variable and function is visited once (at canonical declaration or the
+// definition). When visiting an object, a node for it may already exist
+// (without added children) if a reference to it was found already.
+class VarUseGraphBuilder : public DynamicRecursiveASTVisitor {
+  VarUseGraph &G;
+
+public:
+  VarUseGraphBuilder(VarUseGraph &G) : G(G) {}
+
+  bool VisitVarDecl(VarDecl *VD) override {
+    if ((VD->hasGlobalStorage() || VD->isStaticLocal()) &&
+        VD->isCanonicalDecl()) {
+      if (VarDecl *InitD = VD->getInitializingDeclaration()) {
+        VarUseNode *N = G.addNode(VD);
+        VarUseCollector Collector(N, G);
+        Collector.TraverseStmt(InitD->getInit());
+      }
+    }
+    return true;
+  }
+
+  bool VisitFunctionDecl(FunctionDecl *FD) override {
+    if (FD->isGlobal() || FD->isStatic()) {
+      if (Stmt *Body = FD->getBody()) {
+        VarUseNode *N = G.addNode(FD);
+        VarUseCollector Collector(N, G);
+        Collector.TraverseStmt(Body);
+      }
+    }
+    return true;
+  }
+};
+
+} // namespace
+
+namespace llvm {
+
+// These structures are required by scc_iterator.
+
+template <> struct GraphTraits<const VarUseNode *> {
+  using NodeType = const VarUseNode;
+  using NodeRef = const VarUseNode *;
+  using ChildIteratorType = NodeType::const_iterator;
+
+  static NodeType *getEntryNode(const VarUseNode *N) { return N; }
+  static ChildIteratorType child_begin(NodeType *N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeType *N) { return N->end(); }
+};
+
+template <>
+struct GraphTraits<const VarUseGraph *>
+    : public GraphTraits<const VarUseNode *> {
+  static NodeType *getEntryNode(const VarUseGraph *G) { return G->getRoot(); }
+
+  static VarUseNode *GetValue(VarUseGraph::const_iterator::value_type &P) {
+    return P.second.get();
+  }
+
+  using nodes_iterator =
+      mapped_iterator<VarUseGraph::const_iterator, decltype(&GetValue)>;
+
+  static nodes_iterator nodes_begin(const VarUseGraph *G) {
+    return nodes_iterator(G->begin(), &GetValue);
+  }
+
+  static nodes_iterator nodes_end(const VarUseGraph *G) {
+    return nodes_iterator(G->end(), &GetValue);
+  }
+
+  static unsigned size(const VarUseGraph *G) { return G->size(); }
+};
+
+} // namespace llvm
+
+namespace {
+
+void reportCycles(ArrayRef<const VarUseNode *> SCC,
+                  clang::tidy::misc::StaticInitializationCycleCheck &Chk) {
+  // Check if the SCC contains any variable, otherwise it is a function
+  // recursion.
+  auto NodeIsVar = [](const VarUseNode *N) { return N->isVar(); };
+  auto VarNode = llvm::find_if(SCC, NodeIsVar);
+  if (VarNode == SCC.end())
+    return;
+
+  Chk.diag((*VarNode)->getDecl()->getLocation(),
+           "Static variable initialization cycle detected involving %0")
+      << (*VarNode)->getDecl();
+
+  // SCC may contain multiple cycles.
+  // Find one path with the front node as start.
+
+  // Lookup if a node is part of current SCC.
+  const llvm::SmallPtrSet<const VarUseNode *, 4> SCCElts(SCC.begin(),
+                                                         SCC.end());
+
+  // Visit all paths in the SCC until we reach the front again.
+  llvm::DenseMap<const VarUseNode *, VarUseNode::const_iterator> NextNode;
+  llvm::SmallVector<const VarUseNode *> FoundPath;
+  FoundPath.push_back(SCC.front());
+  while (!FoundPath.empty()) {
+    if (!NextNode.contains(FoundPath.back())) {
+      NextNode[FoundPath.back()] = FoundPath.back()->begin();
+    } else {
+      NextNode[FoundPath.back()]++;
+      if (NextNode[FoundPath.back()] == FoundPath.back()->end()) {
+        FoundPath.pop_back();
+        continue;
+      }
+    }
+    const VarUseNode *N = (*NextNode[FoundPath.back()]).Node;
+    if (N == SCC.front())
+      break;
+    if (!SCCElts.contains(N) || NextNode.contains(N))
+      continue;
+    FoundPath.push_back(N);
+  }
+
+  for (const VarUseNode *N : FoundPath) {
+    const VarUseRecord &U = *NextNode[N];
+    // 'U' is the source of the value, 'N->getDecl()' is the destination
+    const char *VarFuncUseStr = U.Node->isVar() ? "Value" : "Result";
+    if (N->isVar())
+      Chk.diag(U.Ref->getBeginLoc(),
+               "%0 of %1 may be used to initialize variable %2 here",
+               DiagnosticIDs::Note)
+          << VarFuncUseStr << U.Node->getDecl() << N->getDecl();
+    else
+      Chk.diag(U.Ref->getBeginLoc(),
+               "%0 of %1 may be used to compute result of %2",
+               DiagnosticIDs::Note)
+          << VarFuncUseStr << U.Node->getDecl() << N->getDecl();
+  }
+}
+
+} // namespace
+
+namespace clang::tidy::misc {
+
+void StaticInitializationCycleCheck::registerMatchers(MatchFinder *Finder) {
+  Finder->addMatcher(translationUnitDecl().bind("TUDecl"), this);
+}
+
+void StaticInitializationCycleCheck::check(
+    const MatchFinder::MatchResult &Result) {
+  const auto *TU = Result.Nodes.getNodeAs<TranslationUnitDecl>("TUDecl");
+
+  VarUseGraph Uses;
+  VarUseGraphBuilder Builder(Uses);
+  Builder.TraverseDecl(const_cast<TranslationUnitDecl *>(TU));
+
+  for (llvm::scc_iterator<const VarUseGraph *>
+           SCCI = llvm::scc_begin((const VarUseGraph *)&Uses),
+           SCCE = llvm::scc_end((const VarUseGraph *)&Uses);
+       SCCI != SCCE; ++SCCI) {
+    if (!SCCI.hasCycle())
+      continue;
+    reportCycles(*SCCI, *this);
+  }
+}
+
+} // namespace clang::tidy::misc
