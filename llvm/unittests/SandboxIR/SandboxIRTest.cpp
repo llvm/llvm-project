@@ -2347,7 +2347,7 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
     auto *False = sandboxir::ConstantInt::get(sandboxir::Type::getInt1Ty(Ctx),
                                               0, /*IsSigned=*/false);
     auto *FortyTwo =
-        sandboxir::ConstantInt::get(sandboxir::Type::getInt1Ty(Ctx), 42,
+        sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42,
                                     /*IsSigned=*/false);
     auto *NewSel = sandboxir::SelectInst::create(False, FortyTwo, FortyTwo,
                                                  Ret->getIterator(), Ctx);

@@ -1,7 +1,7 @@
 /* Original C (for context):
 * // Declare a real external call so the compiler must respect ABI clobbers.
 * extern int leaf(int) __attribute__((noinline));
-* 
+*
 * __attribute__((noinline))
 * int live_across_call(int x) {
 *   volatile int a = x;                // a starts in a GPR (from arg)
@@ -12,6 +12,7 @@
 * }
 */
 	.file	"live_across_call.c"
+	.att_syntax
 	.text
 	.globl	live_across_call                # -- Begin function live_across_call
 	.p2align	4
