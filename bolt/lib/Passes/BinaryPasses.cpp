@@ -554,6 +554,28 @@ Error FixupBranches::runOnFunctions(BinaryContext &BC) {
   return Error::success();
 }
 
+Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
+  BinaryFunctionListType &OutputFunctions = BC.getOutputBinaryFunctions();
+
+  assert(OutputFunctions.empty() && "Output function list already initialized");
+
+  OutputFunctions.reserve(BC.getBinaryFunctions().size() +
+                          BC.getInjectedBinaryFunctions().size());
+  llvm::transform(llvm::make_second_range(BC.getBinaryFunctions()),
+                  std::back_inserter(OutputFunctions),
+                  [](BinaryFunction &BF) { return &BF; });
+
+  llvm::erase_if(OutputFunctions,
+                 [&BC](BinaryFunction *BF) { return !BC.shouldEmit(*BF); });
+
+  llvm::stable_sort(OutputFunctions, compareBinaryFunctionByIndex);
+
+  llvm::copy(BC.getInjectedBinaryFunctions(),
+             std::back_inserter(OutputFunctions));
+
+  return Error::success();
+}
+
 Error FinalizeFunctions::runOnFunctions(BinaryContext &BC) {
   std::atomic<bool> HasFatal{false};
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
