@@ -119,18 +119,82 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
     }
   }
 
-  // extend_low
   static constexpr TypeConversionCostTblEntry ConversionTbl[] = {
+      // extend_low
       {ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i32, 1},
       {ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i32, 1},
       {ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i16, 1},
       {ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i16, 1},
       {ISD::SIGN_EXTEND, MVT::v8i16, MVT::v8i8, 1},
       {ISD::ZERO_EXTEND, MVT::v8i16, MVT::v8i8, 1},
+      // 2 x extend_low
       {ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i16, 2},
       {ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i16, 2},
       {ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i8, 2},
       {ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i8, 2},
+      // extend_low, extend_high
+      {ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i32, 2},
+      {ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i32, 2},
+      {ISD::SIGN_EXTEND, MVT::v8i32, MVT::v8i16, 2},
+      {ISD::ZERO_EXTEND, MVT::v8i32, MVT::v8i16, 2},
+      {ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8, 2},
+      {ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8, 2},
+      // 2x extend_low, extend_high
+      {ISD::SIGN_EXTEND, MVT::v8i64, MVT::v8i32, 4},
+      {ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i32, 4},
+      {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 4},
+      {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 4},
+      // shuffle
+      {ISD::TRUNCATE, MVT::v2i16, MVT::v2i32, 2},
+      {ISD::TRUNCATE, MVT::v2i8, MVT::v2i32, 4},
+      {ISD::TRUNCATE, MVT::v4i16, MVT::v4i32, 2},
+      {ISD::TRUNCATE, MVT::v4i8, MVT::v4i32, 4},
+      // narrow, and
+      {ISD::TRUNCATE, MVT::v8i16, MVT::v8i32, 2},
+      {ISD::TRUNCATE, MVT::v8i8, MVT::v8i16, 2},
+      // narrow, 2x and
+      {ISD::TRUNCATE, MVT::v16i8, MVT::v16i16, 3},
+      // 3x narrow, 4x and
+      {ISD::TRUNCATE, MVT::v8i16, MVT::v8i64, 7},
+      {ISD::TRUNCATE, MVT::v16i8, MVT::v16i32, 7},
+      // 7x narrow, 8x and
+      {ISD::TRUNCATE, MVT::v16i8, MVT::v16i64, 15},
+      // convert_i32x4
+      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i32, 1},
+      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i32, 1},
+      {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i32, 1},
+      {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 1},
+      // extend_low, convert
+      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i16, 2},
+      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i16, 2},
+      {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
+      {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
+      // extend_low x 2, convert
+      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
+      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
+      {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i8, 3},
+      {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i8, 3},
+      // several shuffles
+      {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
+      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
+      {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
+      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
+      /// trunc_sat, const, and, 3x narrow
+      {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f32, 6},
+      {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f32, 6},
+      {ISD::FP_TO_SINT, MVT::v4i8, MVT::v4f32, 6},
+      {ISD::FP_TO_UINT, MVT::v4i8, MVT::v4f32, 6},
+      /// trunc_sat, const, and, narrow
+      {ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f32, 4},
+      {ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f32, 4},
+      {ISD::FP_TO_SINT, MVT::v4i16, MVT::v4f32, 4},
+      {ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f32, 4},
+      // 2x trunc_sat, const, 2x and, 3x narrow
+      {ISD::FP_TO_SINT, MVT::v8i8, MVT::v8f32, 8},
+      {ISD::FP_TO_UINT, MVT::v8i8, MVT::v8f32, 8},
+      // 2x trunc_sat, const, 2x and, narrow
+      {ISD::FP_TO_SINT, MVT::v8i16, MVT::v8f32, 6},
+      {ISD::FP_TO_UINT, MVT::v8i16, MVT::v8f32, 6},
   };
 
   if (const auto *Entry =
@@ -166,12 +230,6 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
                                   CostKind);
   }
 
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
-  if (ISD != ISD::LOAD) {
-    return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
-                                  CostKind);
-  }
-
   EVT VT = TLI->getValueType(DL, Ty, true);
   // Type legalization can't handle structs
   if (VT == MVT::Other)
@@ -182,20 +240,119 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
 
-  // 128-bit loads are a single instruction. 32-bit and 64-bit vector loads can
-  // be lowered to load32_zero and load64_zero respectively. Assume SIMD loads
-  // are twice as expensive as scalar.
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
   unsigned width = VT.getSizeInBits();
-  switch (width) {
-  default:
-    break;
-  case 32:
-  case 64:
-  case 128:
-    return 2;
+  if (ISD == ISD::LOAD) {
+    // 128-bit loads are a single instruction. 32-bit and 64-bit vector loads
+    // can be lowered to load32_zero and load64_zero respectively. Assume SIMD
+    // loads are twice as expensive as scalar.
+    switch (width) {
+    default:
+      break;
+    case 32:
+    case 64:
+    case 128:
+      return 2;
+    }
+  } else if (ISD == ISD::STORE) {
+    // For stores, we can use store lane operations.
+    switch (width) {
+    default:
+      break;
+    case 8:
+    case 16:
+    case 32:
+    case 64:
+    case 128:
+      return 2;
+    }
   }
 
   return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace, CostKind);
+}
+
+InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
+    unsigned Opcode, Type *Ty, unsigned Factor, ArrayRef<unsigned> Indices,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+    bool UseMaskForCond, bool UseMaskForGaps) const {
+  assert(Factor >= 2 && "Invalid interleave factor");
+
+  auto *VecTy = cast<VectorType>(Ty);
+  if (!ST->hasSIMD128() || !isa<FixedVectorType>(VecTy)) {
+    return InstructionCost::getInvalid();
+  }
+
+  if (UseMaskForCond || UseMaskForGaps)
+    return BaseT::getInterleavedMemoryOpCost(Opcode, Ty, Factor, Indices,
+                                             Alignment, AddressSpace, CostKind,
+                                             UseMaskForCond, UseMaskForGaps);
+
+  constexpr unsigned MaxInterleaveFactor = 4;
+  if (Factor <= MaxInterleaveFactor) {
+    unsigned MinElts = VecTy->getElementCount().getKnownMinValue();
+    // Ensure the number of vector elements is greater than 1.
+    if (MinElts < 2 || MinElts % Factor != 0)
+      return InstructionCost::getInvalid();
+
+    unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
+    // Ensure the element type is legal.
+    if (ElSize != 8 && ElSize != 16 && ElSize != 32 && ElSize != 64)
+      return InstructionCost::getInvalid();
+
+    auto *SubVecTy =
+        VectorType::get(VecTy->getElementType(),
+                        VecTy->getElementCount().divideCoefficientBy(Factor));
+    InstructionCost MemCost =
+        getMemoryOpCost(Opcode, SubVecTy, Alignment, AddressSpace, CostKind);
+
+    unsigned VecSize = DL.getTypeSizeInBits(SubVecTy);
+    unsigned MaxVecSize = 128;
+    unsigned NumAccesses =
+        std::max<unsigned>(1, (MinElts * ElSize + MaxVecSize - 1) / VecSize);
+
+    // A stride of two is commonly supported via dedicated instructions, so it
+    // should be relatively cheap for all element sizes. A stride of four is
+    // more expensive as it will likely require more shuffles. Using two
+    // simd128 inputs is considered more expensive and we mainly account for
+    // shuffling two inputs (32 bytes), but we do model 4 x v4i32 to enable
+    // arithmetic kernels.
+    static const CostTblEntry ShuffleCostTbl[] = {
+        // One reg.
+        {2, MVT::v2i8, 1},  // interleave 2 x 2i8 into 4i8
+        {2, MVT::v4i8, 1},  // interleave 2 x 4i8 into 8i8
+        {2, MVT::v8i8, 1},  // interleave 2 x 8i8 into 16i8
+        {2, MVT::v2i16, 1}, // interleave 2 x 2i16 into 4i16
+        {2, MVT::v4i16, 1}, // interleave 2 x 4i16 into 8i16
+        {2, MVT::v2i32, 1}, // interleave 2 x 2i32 into 4i32
+
+        // Two regs.
+        {2, MVT::v16i8, 2}, // interleave 2 x 16i8 into 32i8
+        {2, MVT::v8i16, 2}, // interleave 2 x 8i16 into 16i16
+        {2, MVT::v4i32, 2}, // interleave 2 x 4i32 into 8i32
+
+        // One reg.
+        {4, MVT::v2i8, 4},  // interleave 4 x 2i8 into 8i8
+        {4, MVT::v4i8, 4},  // interleave 4 x 4i8 into 16i8
+        {4, MVT::v2i16, 4}, // interleave 4 x 2i16 into 8i16
+
+        // Two regs.
+        {4, MVT::v8i8, 16}, // interleave 4 x 8i8 into 32i8
+        {4, MVT::v4i16, 8}, // interleave 4 x 4i16 into 16i16
+        {4, MVT::v2i32, 4}, // interleave 4 x 2i32 into 8i32
+
+        // Four regs.
+        {4, MVT::v4i32, 16}, // interleave 4 x 4i32 into 16i32
+    };
+
+    EVT ETy = TLI->getValueType(DL, SubVecTy);
+    if (const auto *Entry =
+            CostTableLookup(ShuffleCostTbl, Factor, ETy.getSimpleVT()))
+      return Entry->Cost + (NumAccesses * MemCost);
+  }
+
+  return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                           Alignment, AddressSpace, CostKind,
+                                           UseMaskForCond, UseMaskForGaps);
 }
 
 InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
@@ -223,7 +380,13 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
   if (CostKind != TTI::TCK_RecipThroughput)
     return Invalid;
 
-  InstructionCost Cost(TTI::TCC_Basic);
+  if (Opcode != Instruction::Add)
+    return Invalid;
+
+  EVT AccumEVT = EVT::getEVT(AccumType);
+  // TODO: Add i64 accumulator.
+  if (AccumEVT != MVT::i32)
+    return Invalid;
 
   // Possible options:
   // - i16x8.extadd_pairwise_i8x16_sx
@@ -231,23 +394,26 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
   // - i32x4.dot_i16x8_s
   // Only try to support dot, for now.
 
-  if (Opcode != Instruction::Add)
+  EVT InputEVT = EVT::getEVT(InputTypeA);
+  if (!((InputEVT == MVT::i16 && VF.getFixedValue() == 8) ||
+        (InputEVT == MVT::i8 && VF.getFixedValue() == 16))) {
+    return Invalid;
+  }
+
+  if (OpAExtend == TTI::PR_None)
     return Invalid;
 
-  if (!BinOp || *BinOp != Instruction::Mul)
-    return Invalid;
-
-  if (InputTypeA != InputTypeB)
-    return Invalid;
+  InstructionCost Cost(TTI::TCC_Basic);
+  if (!BinOp)
+    return Cost;
 
   if (OpAExtend != OpBExtend)
     return Invalid;
 
-  EVT InputEVT = EVT::getEVT(InputTypeA);
-  EVT AccumEVT = EVT::getEVT(AccumType);
+  if (*BinOp != Instruction::Mul)
+    return Invalid;
 
-  // TODO: Add i64 accumulator.
-  if (AccumEVT != MVT::i32)
+  if (InputTypeA != InputTypeB)
     return Invalid;
 
   // Signed inputs can lower to dot

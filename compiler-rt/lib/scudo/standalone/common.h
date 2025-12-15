@@ -148,6 +148,10 @@ inline constexpr uptr getPageSizeLogCached() {
 extern uptr PageSizeCached;
 extern uptr PageSizeLogCached;
 
+// Must be defined in platform specific code.
+uptr getPageSize();
+
+// Always calls getPageSize(), but caches the results for get*Cached(), below.
 uptr getPageSizeSlow();
 
 inline uptr getPageSizeCached() {
@@ -183,6 +187,11 @@ u32 getThreadID();
 // as many bytes as requested, and avoid interruptions (on Linux).
 constexpr uptr MaxRandomLength = 256U;
 bool getRandom(void *Buffer, uptr Length, bool Blocking = false);
+
+// Get the total number of resident pages for BaseAddress to BaseAddress + Size.
+// This function can run slowly, and is only expected to be called
+// from getStats functions where performance does not matter.
+u64 getResidentPages(uptr BaseAddress, uptr Size);
 
 // Platform memory mapping functions.
 

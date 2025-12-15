@@ -224,6 +224,11 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_ReturnStmt;
     break;
 
+  // Not exposed for now because '_Defer' is currently just a TS.
+  case Stmt::DeferStmtClass:
+    K = CXCursor_UnexposedStmt;
+    break;
+
   case Stmt::GCCAsmStmtClass:
     K = CXCursor_GCCAsmStmt;
     break;
@@ -686,6 +691,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
   case Stmt::OMPInterchangeDirectiveClass:
     K = CXCursor_OMPInterchangeDirective;
+    break;
+  case Stmt::OMPFuseDirectiveClass:
+    K = CXCursor_OMPFuseDirective;
     break;
   case Stmt::OMPForDirectiveClass:
     K = CXCursor_OMPForDirective;
@@ -1335,7 +1343,7 @@ CXCursor cxcursor::getTypeRefCursor(CXCursor cursor) {
   if (const TypedefType *Typedef = Ty->getAs<TypedefType>())
     return MakeCursorTypeRef(Typedef->getDecl(), Loc, TU);
   if (const TagType *Tag = Ty->getAs<TagType>())
-    return MakeCursorTypeRef(Tag->getOriginalDecl(), Loc, TU);
+    return MakeCursorTypeRef(Tag->getDecl(), Loc, TU);
   if (const TemplateTypeParmType *TemplP = Ty->getAs<TemplateTypeParmType>())
     return MakeCursorTypeRef(TemplP->getDecl(), Loc, TU);
 

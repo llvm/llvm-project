@@ -51,6 +51,45 @@ class CIR_UnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
+// SourceLanguageAttr
+//===----------------------------------------------------------------------===//
+
+// TODO: Add cases for other languages that Clang supports.
+
+def CIR_SourceLanguage : CIR_I32EnumAttr<"SourceLanguage", "source language", [
+  I32EnumAttrCase<"C", 1, "c">,
+  I32EnumAttrCase<"CXX", 2, "cxx">
+]> {
+  // The enum attr class is defined in `CIR_SourceLanguageAttr` below,
+  // so that it can define extra class methods.
+  let genSpecializedAttr = 0;
+}
+
+def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
+
+  let summary = "Module source language";
+  let description = [{
+    Represents the source language used to generate the module.
+
+    Example:
+    ```
+    // Module compiled from C.
+    module attributes {cir.lang = cir.lang<c>} {}
+    // Module compiled from C++.
+    module attributes {cir.lang = cir.lang<cxx>} {}
+    ```
+
+    Module source language attribute name is `cir.lang` is defined by
+    `getSourceLanguageAttrName` method in CIRDialect class.
+  }];
+
+  let extraClassDeclaration = [{
+    bool isC() const { return getValue() == SourceLanguage::C; }
+    bool isCXX() const { return getValue() == SourceLanguage::CXX; }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // OptInfoAttr
 //===----------------------------------------------------------------------===//
 
@@ -342,6 +381,44 @@ def CIR_ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector", [
 }
 
 //===----------------------------------------------------------------------===//
+// ConstRecordAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_ConstRecordAttr : CIR_Attr<"ConstRecord", "const_record", [
+  TypedAttrInterface
+]> {
+  let summary = "Represents a constant record";
+  let description = [{
+    Effectively supports "struct-like" constants. It's must be built from
+    an `mlir::ArrayAttr` instance where each element is a typed attribute
+    (`mlir::TypedAttribute`).
+
+    Example:
+    ```
+    cir.global external @rgb2 = #cir.const_record<{0 : i8,
+                                                   5 : i64, #cir.null : !cir.ptr<i8>
+                                                  }> : !cir.record<"", i8, i64, !cir.ptr<i8>>
+    ```
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::ArrayAttr":$members);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::RecordType":$type,
+                                        "mlir::ArrayAttr":$members), [{
+      return $_get(type.getContext(), type, members);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<` custom<RecordMembers>($members) `>`
+  }];
+
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstPtrAttr
 //===----------------------------------------------------------------------===//
 
@@ -367,6 +444,57 @@ def CIR_ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 
   let assemblyFormat = [{
     `<` custom<ConstPtr>($value) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// DataMemberAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DataMemberAttr : CIR_Attr<"DataMember", "data_member", [
+  TypedAttrInterface
+]> {
+  let summary = "Holds a constant data member pointer value";
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "cir::DataMemberType">:$type,
+                        OptionalParameter<
+                            "std::optional<unsigned>">:$member_index);
+  let description = [{
+    A data member attribute is a literal attribute that represents a constant
+    pointer-to-data-member value.
+
+    The `member_index` parameter represents the index of the pointed-to member
+    within its containing record. It is an optional parameter; lack of this
+    parameter indicates a null pointer-to-data-member value.
+
+    Example:
+    ```
+    #ptr = #cir.data_member<1> : !cir.data_member<!s32i in !rec_22Point22>
+
+    #null = #cir.data_member<null> : !cir.data_member<!s32i in !rec_22Point22>
+    ```
+  }];
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type), [{
+      return $_get(type.getContext(), type, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
+                                        "unsigned":$member_index), [{
+      return $_get(type.getContext(), type, member_index);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<` ($member_index^):(`null`)? `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isNullPtr() const {
+      return !getMemberIndex().has_value();
+    }
   }];
 }
 
@@ -459,6 +587,156 @@ def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
+  let summary = "Represents a C++ vtable";
+  let description = [{
+    Wraps a #cir.const_record containing one or more vtable arrays.
+
+    In most cases, the anonymous record type wrapped by this attribute will
+    contain a single array corresponding to the vtable for one class. However,
+    in the case of multiple inheritence, the anonymous structure may contain
+    multiple arrays, each of which is a vtable.
+
+    Example 1 (single vtable):
+    ```mlir
+    cir.global linkonce_odr @_ZTV6Mother =
+      #cir.vtable<{
+        #cir.const_array<[
+          #cir.ptr<null> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI6Mother> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother9MotherFooEv> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 4>
+      }> : !rec_anon_struct1
+    ```
+
+    Example 2 (multiple vtables):
+    ```mlir
+    cir.global linkonce_odr @_ZTV5Child =
+      #cir.vtable<{
+        #cir.const_array<[
+          #cir.ptr<null> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN5Child9MotherFooEv> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 4>,
+        #cir.const_array<[
+          #cir.ptr<-8 : i64> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Father9FatherFooEv> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 3>
+      }> : !rec_anon_struct2
+    ```
+  }];
+
+  // `data` is a const record with one element, containing an array of
+  // vtable information.
+  let parameters = (ins
+    AttributeSelfTypeParameter<"">:$type,
+    "mlir::ArrayAttr":$data
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::ArrayAttr":$data), [{
+      return $_get(type.getContext(), type, data);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<` custom<RecordMembers>($data) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// DynamicCastInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
+  let summary = "ABI specific information about a dynamic cast";
+  let description = [{
+    Provide ABI specific information about a dynamic cast operation.
+
+    The `src_rtti` and the `dest_rtti` parameters give the RTTI of the source
+    record type and the destination record type, respectively.
+
+    The `runtime_func` parameter gives the `__dynamic_cast` function which is
+    provided by the runtime. The `bad_cast_func` parameter gives the
+    `__cxa_bad_cast` function which is also provided by the runtime.
+
+    The `offset_hint` parameter gives the hint value that should be passed to
+    the `__dynamic_cast` runtime function.
+  }];
+
+  let parameters = (ins
+    CIR_GlobalViewAttr:$src_rtti,
+    CIR_GlobalViewAttr:$dest_rtti,
+    "mlir::FlatSymbolRefAttr":$runtime_func,
+    "mlir::FlatSymbolRefAttr":$bad_cast_func,
+    CIR_IntAttr:$offset_hint
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+                                    "GlobalViewAttr":$src_rtti,
+                                    "GlobalViewAttr":$dest_rtti,
+                                    "mlir::FlatSymbolRefAttr":$runtime_func,
+                                    "mlir::FlatSymbolRefAttr":$bad_cast_func,
+                                    "IntAttr":$offset_hint), [{
+      return $_get(src_rtti.getContext(), src_rtti, dest_rtti, runtime_func,
+                   bad_cast_func, offset_hint);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<`
+      struct(qualified($src_rtti),
+             qualified($dest_rtti),
+             $runtime_func,
+             $bad_cast_func,
+             qualified($offset_hint))
+    `>`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Get attribute alias name for this attribute.
+    std::string getAlias() const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
+                                         "target_address_space"> {
+  let summary = "Represents a target-specific numeric address space";
+  let description = [{
+    The TargetAddressSpaceAttr represents a target-specific numeric address space,
+    corresponding to the LLVM IR `addressspace` qualifier and the clang
+     `address_space` attribute.
+    
+    A value of zero represents the default address space. The semantics of non-zero
+    address spaces are target-specific.
+
+    Example:
+    ```mlir
+    // Target-specific numeric address spaces
+    !cir.ptr<!s32i, addrspace(target<1>)>
+    !cir.ptr<!s32i, addrspace(target<10>)>
+    ```
+  }];
+
+  let parameters = (ins "mlir::IntegerAttr":$value);
+  let assemblyFormat = "`<` `target` `<` $value `>` `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
@@ -541,6 +819,172 @@ def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
     bool isProtected() const { return getValue() == VisibilityKind::Protected; };
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// GloblCtorAttr
+//===----------------------------------------------------------------------===//
+
+class CIR_GlobalCtorDtor<string name, string attrMnemonic>
+    : CIR_Attr<"Global" # name, "global_" # attrMnemonic> {
+  let parameters = (ins "mlir::StringAttr":$name, "int":$priority);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    AttrBuilder<(ins
+        "llvm::StringRef":$name,
+        CArg<"int", "65535">:$priority), [{
+      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), priority);
+    }]>,
+    AttrBuilderWithInferredContext<(ins
+        "mlir::StringAttr":$name,
+        CArg<"int", "65535">:$priority), [{
+      return $_get(name.getContext(), name, priority);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<` $name `,` $priority `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isDefaultPriority() const {
+      return getPriority() == getDefaultPriority();
+    };
+
+    static int getDefaultPriority() {
+      return 65535;
+    }
+  }];
+}
+
+def CIR_GlobalCtorAttr : CIR_GlobalCtorDtor<"Ctor", "ctor"> {
+  let summary = "Marks a function as a global constructor";
+  let description = [{
+    Marks the function as a global constructor in the module's constructor list.
+    It will be executed before main() is called.
+  }];
+}
+
+def CIR_GlobalDtorAttr : CIR_GlobalCtorDtor<"Dtor", "dtor"> {
+  let summary = "Marks a function as a global destructor";
+  let description = [{
+      Marks a function as a global destructor in the module dtors list.
+      The function will be executed before the module unloading.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CXX SpecialMemberAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_CtorKind : CIR_I32EnumAttr<"CtorKind", "CXX Constructor Kind", [
+  I32EnumAttrCase<"Custom", 0, "custom">,
+  I32EnumAttrCase<"Default", 1, "default">,
+  I32EnumAttrCase<"Copy", 2, "copy">,
+  I32EnumAttrCase<"Move", 3, "move">,
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_CXXCtorAttr : CIR_Attr<"CXXCtor", "cxx_ctor"> {
+  let summary = "Marks a function as a C++ constructor";
+  let description = [{
+    This attribute identifies a C++ constructor and classifies its kind:
+
+    - `custom`: a user-defined constructor
+    - `default`: a default constructor
+    - `copy`: a copy constructor
+    - `move`: a move constructor
+
+    Example:
+    ```mlir
+    #cir.cxx_ctor<!rec_a, copy>
+    #cir.cxx_ctor<!rec_b, default, trivial>
+    ```
+  }];
+
+  let parameters = (ins
+    "mlir::Type":$type,
+    EnumParameter<CIR_CtorKind>:$ctor_kind,
+    DefaultValuedParameter<"bool", "false">:$is_trivial
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+        CArg<"CtorKind", "cir::CtorKind::Custom">:$ctorKind,
+        CArg<"bool", "false">:$isTrivial), [{
+      return $_get(type.getContext(), type, ctorKind, isTrivial);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` $type `,` $ctor_kind (`,` `trivial` $is_trivial^)? `>`
+  }];
+}
+
+def CIR_CXXDtorAttr : CIR_Attr<"CXXDtor", "cxx_dtor"> {
+  let summary = "Marks a function as a CXX destructor";
+  let description = [{
+    This attribute identifies a C++ destructor.
+  }];
+
+  let parameters = (ins
+    "mlir::Type":$type,
+    DefaultValuedParameter<"bool", "false">:$is_trivial
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+        CArg<"bool", "false">:$isTrivial), [{
+      return $_get(type.getContext(), type, isTrivial);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<` $type (`,` `trivial` $is_trivial^)? `>`
+  }];
+}
+
+def CIR_AssignKind : CIR_I32EnumAttr<"AssignKind", "CXX Assignment Operator Kind", [
+  I32EnumAttrCase<"Copy", 0, "copy">,
+  I32EnumAttrCase<"Move", 1, "move">,
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_CXXAssignAttr : CIR_Attr<"CXXAssign", "cxx_assign"> {
+  let summary = "Marks a function as a CXX assignment operator";
+  let description = [{
+    This attribute identifies a C++ assignment operator and classifies its kind:
+
+    - `copy`: a copy assignment
+    - `move`: a move assignment
+  }];
+
+  let parameters = (ins
+    "mlir::Type":$type,
+    EnumParameter<CIR_AssignKind>:$assign_kind,
+    DefaultValuedParameter<"bool", "false">:$is_trivial
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+        CArg<"AssignKind">:$assignKind,
+        CArg<"bool", "false">:$isTrivial), [{
+      return $_get(type.getContext(), type, assignKind, isTrivial);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<` $type `,` $assign_kind (`,` `trivial` $is_trivial^)? `>`
+  }];
+}
+
+def CIR_CXXSpecialMemberAttr : AnyAttrOf<[
+  CIR_CXXCtorAttr,
+  CIR_CXXDtorAttr,
+  CIR_CXXAssignAttr
+]>;
 
 //===----------------------------------------------------------------------===//
 // BitfieldInfoAttr
@@ -634,6 +1078,107 @@ def CIR_AddressPointAttr : CIR_Attr<"AddressPoint", "address_point"> {
   let assemblyFormat = [{
     `<` struct($index, $offset) `>`
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// TypeInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
+  let summary = "Represents a typeinfo used for RTTI";
+  let description = [{
+    The typeinfo data for a given class is stored into an ArrayAttr. The
+    layout is determined by the C++ ABI used (clang only implements
+    itanium on CIRGen).
+
+    The verifier enforces that the output type is always a `!cir.record`,
+    and that the ArrayAttr element types match the equivalent member type
+    for the resulting record, i.e, a GlobalViewAttr for symbol reference or
+    an IntAttr for flags.
+
+    Example:
+
+    ```
+    cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE
+      : !cir.ptr<i32>
+
+    !rec_anon_struct = !cir.record<struct  {!cir.ptr<!u8i>, !cir.ptr<!u8i>,
+      !cir.ptr<!u8i>}>
+
+    cir.global constant external @type_info = #cir.typeinfo<{
+      #cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2 : i32]>
+      : !cir.ptr<!u8i>, #cir.global_view<@_ZTS1B> : !cir.ptr<!u8i>,
+      #cir.global_view<@_ZTI1A> : !cir.ptr<!u8i>}> : !rec_anon_struct
+    ```
+  }];
+
+  let parameters = (ins
+    AttributeSelfTypeParameter<"">:$type,
+    CIR_IntOrGlobalViewArrayAttr:$data
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::ArrayAttr":$data), [{
+      return $_get(type.getContext(), type, data);
+    }]>
+  ];
+
+  // Checks record element types should match the array for every equivalent
+  // element type.
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<` custom<RecordMembers>($data) `>`
+  }];
+}
+//===----------------------------------------------------------------------===//
+// InlineAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_InlineKind : CIR_I32EnumAttr<"InlineKind", "inlineKind", [
+  I32EnumAttrCase<"NoInline", 1, "no_inline">,
+  I32EnumAttrCase<"AlwaysInline", 2, "always_inline">,
+  I32EnumAttrCase<"InlineHint", 3, "inline_hint">
+]>;
+
+//===----------------------------------------------------------------------===//
+// CatchAllAttr & UnwindAttr
+//===----------------------------------------------------------------------===//
+
+// Represents the catch_all region.
+def CIR_CatchAllAttr : CIR_UnitAttr<"CatchAll", "all"> {
+  let storageType = [{ CatchAllAttr }];
+}
+
+// Represents the unwind region where unwind continues or
+// the program std::terminate's.
+def CIR_UnwindAttr : CIR_UnitAttr<"Unwind", "unwind"> {
+  let storageType = [{ CatchUnwind }];
+}
+
+//===----------------------------------------------------------------------===//
+// CIR_BlockAddrInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BlockAddrInfoAttr : CIR_Attr<"BlockAddrInfo", "block_addr_info"> {
+  let summary = "Block Addres attribute";
+  let description = [{
+    This attribute is used to represent the address of a basic block
+    within a function. It combines the symbol reference to a function
+    with the name of a label inside that function.
+  }];
+  let parameters = (ins "mlir::FlatSymbolRefAttr":$func,
+                        "mlir::StringAttr":$label);
+
+  let assemblyFormat = "`<` $func `,` $label `>`";
+  let builders = [
+    AttrBuilder<(ins "llvm::StringRef":$func_name,
+                     "llvm::StringRef":$label_name
+                     ), [{
+      return $_get($_ctxt, mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
+                   mlir::StringAttr::get($_ctxt, label_name));
+    }]>
+  ];
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

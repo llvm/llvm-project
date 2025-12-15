@@ -41,6 +41,7 @@ using llvm::SmallVector;
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;
 #endif
+using namespace llvm::omp::target::debug;
 
 int AsyncInfoTy::synchronize() {
   int Result = OFFLOAD_SUCCESS;
@@ -200,10 +201,11 @@ static int32_t getParentIndex(int64_t Type) {
 
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name) {
-  DP("Call to %s for device %d requesting %zu bytes\n", Name, DeviceNum, Size);
+  ODBG(ODT_Interface) << "Call to " << Name << " for device " << DeviceNum
+                      << " requesting " << Size << " bytes";
 
   if (Size <= 0) {
-    DP("Call to %s with non-positive length\n", Name);
+    ODBG(ODT_Interface) << "Call to " << Name << " with non-positive length";
     return NULL;
   }
 
@@ -211,7 +213,7 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
 
   if (DeviceNum == omp_get_initial_device()) {
     Rc = malloc(Size);
-    DP("%s returns host ptr " DPxMOD "\n", Name, DPxPTR(Rc));
+    ODBG(ODT_Interface) << Name << " returns host ptr " << Rc;
     return Rc;
   }
 
@@ -220,23 +222,23 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   Rc = DeviceOrErr->allocData(Size, nullptr, Kind);
-  DP("%s returns device ptr " DPxMOD "\n", Name, DPxPTR(Rc));
+  ODBG(ODT_Interface) << Name << " returns device ptr " << Rc;
   return Rc;
 }
 
 void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
                         const char *Name) {
-  DP("Call to %s for device %d and address " DPxMOD "\n", Name, DeviceNum,
-     DPxPTR(DevicePtr));
+  ODBG(ODT_Interface) << "Call to " << Name << " for device " << DeviceNum
+                      << " and address " << DevicePtr;
 
   if (!DevicePtr) {
-    DP("Call to %s with NULL ptr\n", Name);
+    ODBG(ODT_Interface) << "Call to " << Name << " with NULL ptr";
     return;
   }
 
   if (DeviceNum == omp_get_initial_device()) {
     free(DevicePtr);
-    DP("%s deallocated host ptr\n", Name);
+    ODBG(ODT_Interface) << Name << " deallocated host ptr";
     return;
   }
 
@@ -249,15 +251,16 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
                   "Failed to deallocate device ptr. Set "
                   "OFFLOAD_TRACK_ALLOCATION_TRACES=1 to track allocations.");
 
-  DP("omp_target_free deallocated device ptr\n");
+  ODBG(ODT_Interface) << "omp_target_free deallocated device ptr";
 }
 
 void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
                          const char *Name) {
-  DP("Call to %s for device %d locking %zu bytes\n", Name, DeviceNum, Size);
+  ODBG(ODT_Interface) << "Call to " << Name << " for device " << DeviceNum
+                      << " locking " << Size << " bytes";
 
   if (Size <= 0) {
-    DP("Call to %s with non-positive length\n", Name);
+    ODBG(ODT_Interface) << "Call to " << Name << " with non-positive length";
     return NULL;
   }
 
@@ -270,22 +273,23 @@ void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
   int32_t Err = 0;
   Err = DeviceOrErr->RTL->data_lock(DeviceNum, HostPtr, Size, &RC);
   if (Err) {
-    DP("Could not lock ptr %p\n", HostPtr);
+    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr;
     return nullptr;
   }
-  DP("%s returns device ptr " DPxMOD "\n", Name, DPxPTR(RC));
+  ODBG(ODT_Interface) << Name << " returns device ptr " << RC;
   return RC;
 }
 
 void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
-  DP("Call to %s for device %d unlocking\n", Name, DeviceNum);
+  ODBG(ODT_Interface) << "Call to " << Name << " for device " << DeviceNum
+                      << " unlocking";
 
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   DeviceOrErr->RTL->data_unlock(DeviceNum, HostPtr);
-  DP("%s returns\n", Name);
+  ODBG(ODT_Interface) << Name << " returns";
 }
 
 /// Call the user-defined mapper function followed by the appropriate
@@ -295,7 +299,7 @@ int targetDataMapper(ident_t *Loc, DeviceTy &Device, void *ArgBase, void *Arg,
                      void *ArgMapper, AsyncInfoTy &AsyncInfo,
                      TargetDataFuncPtrTy TargetDataFunction,
                      AttachInfoTy *AttachInfo = nullptr) {
-  DP("Calling the mapper function " DPxMOD "\n", DPxPTR(ArgMapper));
+  ODBG(ODT_Interface) << "Calling the mapper function " << ArgMapper;
 
   // The mapper function fills up Components.
   MapperComponentsTy MapperComponents;
@@ -328,6 +332,53 @@ int targetDataMapper(ident_t *Loc, DeviceTy &Device, void *ArgBase, void *Arg,
                               AsyncInfo, AttachInfo, /*FromMapper=*/true);
 
   return Rc;
+}
+
+/// Returns a buffer of the requested \p Size, to be used as the source for
+/// `submitData`.
+///
+/// For small buffers (`Size <= sizeof(void*)`), uses \p AsyncInfo's
+/// getVoidPtrLocation().
+/// For larger buffers, creates a dynamic buffer which will be eventually
+/// deleted by \p AsyncInfo's post-processing callback.
+static char *getOrCreateSourceBufferForSubmitData(AsyncInfoTy &AsyncInfo,
+                                                  int64_t Size) {
+  constexpr int64_t VoidPtrSize = sizeof(void *);
+
+  if (Size <= VoidPtrSize) {
+    void *&BufferElement = AsyncInfo.getVoidPtrLocation();
+    return reinterpret_cast<char *>(&BufferElement);
+  }
+
+  // Create a dynamic buffer for larger data and schedule its deletion.
+  char *DataBuffer = new char[Size];
+  AsyncInfo.addPostProcessingFunction([DataBuffer]() {
+    delete[] DataBuffer;
+    return OFFLOAD_SUCCESS;
+  });
+  return DataBuffer;
+}
+
+/// Calculates the target pointee base by applying the host
+/// pointee begin/base delta to the target pointee begin.
+///
+/// ```
+/// TgtPteeBase = TgtPteeBegin - (HstPteeBegin - HstPteeBase)
+/// ```
+static void *calculateTargetPointeeBase(void *HstPteeBase, void *HstPteeBegin,
+                                        void *TgtPteeBegin) {
+  uint64_t Delta = reinterpret_cast<uint64_t>(HstPteeBegin) -
+                   reinterpret_cast<uint64_t>(HstPteeBase);
+  void *TgtPteeBase = reinterpret_cast<void *>(
+      reinterpret_cast<uint64_t>(TgtPteeBegin) - Delta);
+
+  ODBG(ODT_Mapping) << "HstPteeBase: " << HstPteeBase
+                    << ", HstPteeBegin: " << HstPteeBegin
+                    << ", Delta (HstPteeBegin - HstPteeBase): " << Delta << "\n"
+                    << "TgtPteeBase (TgtPteeBegin - Delta): " << TgtPteeBase
+                    << ", TgtPteeBegin: " << TgtPteeBegin;
+
+  return TgtPteeBase;
 }
 
 /// Utility function to perform a pointer attachment operation.
@@ -396,44 +447,27 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   assert(PtrTPR.getEntry() &&
          "Need a valid pointer entry to perform pointer-attachment");
 
-  int64_t VoidPtrSize = sizeof(void *);
+  constexpr int64_t VoidPtrSize = sizeof(void *);
   assert(HstPtrSize >= VoidPtrSize && "PointerSize is too small");
 
-  uint64_t Delta = reinterpret_cast<uint64_t>(HstPteeBegin) -
-                   reinterpret_cast<uint64_t>(HstPteeBase);
-  void *TgtPteeBase = reinterpret_cast<void *>(
-      reinterpret_cast<uint64_t>(TgtPteeBegin) - Delta);
+  void *TgtPteeBase =
+      calculateTargetPointeeBase(HstPteeBase, HstPteeBegin, TgtPteeBegin);
 
   // Add shadow pointer tracking
-  // TODO: Support shadow-tracking of larger than VoidPtrSize pointers,
-  // to support restoration of Fortran descriptors. Currently, this check
-  // would return false, even if the host Fortran descriptor had been
-  // updated since its previous map, and we should have updated its
-  // device counterpart. e.g.
-  //
-  //   !$omp target enter data map(x(1:100)) !             (1)
-  //   p => x(10: 19)
-  //   !$omp target enter data map(p, p(:)) !              (2)
-  //   p => x(5: 9)
-  //   !$omp target enter data map(attach(always): p(:)) ! (3)
-  //
-  // While PtrAddr(&desc_p) and PteeBase(&p(1)) are same for (2) and (3), the
-  // pointer attachment for (3) needs to update the bounds information
-  // in the descriptor of p on device.
   if (!PtrTPR.getEntry()->addShadowPointer(
-          ShadowPtrInfoTy{HstPtrAddr, HstPteeBase, TgtPtrAddr, TgtPteeBase})) {
-    DP("Pointer " DPxMOD " is already attached to " DPxMOD "\n",
-       DPxPTR(TgtPtrAddr), DPxPTR(TgtPteeBase));
+          ShadowPtrInfoTy{HstPtrAddr, TgtPtrAddr, TgtPteeBase, HstPtrSize})) {
+    ODBG(ODT_Mapping) << "Pointer " << TgtPtrAddr << " is already attached to "
+                      << TgtPteeBase;
     return OFFLOAD_SUCCESS;
   }
 
-  DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n", DPxPTR(TgtPtrAddr),
-     DPxPTR(TgtPteeBase));
+  ODBG(ODT_Mapping) << "Update pointer (" << TgtPtrAddr << ") -> ["
+                    << TgtPteeBase << "]\n";
 
   // Lambda to handle submitData result and perform final steps.
   auto HandleSubmitResult = [&](int SubmitResult) -> int {
     if (SubmitResult != OFFLOAD_SUCCESS) {
-      REPORT("Failed to update pointer on device.\n");
+      REPORT() << "Failed to update pointer on device.";
       return OFFLOAD_FAIL;
     }
 
@@ -444,48 +478,32 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
     return OFFLOAD_SUCCESS;
   };
 
-  bool IsPtrAFortranDescriptor = HstPtrSize > VoidPtrSize;
-  if (!IsPtrAFortranDescriptor) {
-    // For "regular" pointers, we can use the VoidPtrLocation from AsyncInfo as
-    // the buffer space for the submission.
-    void *&BufferElement = AsyncInfo.getVoidPtrLocation();
-    BufferElement = TgtPteeBase;
+  // Get a buffer to be used as the source for data submission.
+  char *SrcBuffer = getOrCreateSourceBufferForSubmitData(AsyncInfo, HstPtrSize);
 
-    // Submit the updated pointer value to device
-    return HandleSubmitResult(Device.submitData(
-        TgtPtrAddr, &BufferElement, VoidPtrSize, AsyncInfo, PtrTPR.getEntry()));
+  // The pointee's address should occupy the first VoidPtrSize bytes
+  // irrespective of HstPtrSize.
+  std::memcpy(SrcBuffer, &TgtPteeBase, VoidPtrSize);
+
+  // For larger "pointers" (e.g., Fortran descriptors), copy remaining
+  // descriptor fields from the host descriptor into the buffer.
+  if (HstPtrSize > VoidPtrSize) {
+    uint64_t HstDescriptorFieldsSize = HstPtrSize - VoidPtrSize;
+    void *HstDescriptorFieldsAddr =
+        reinterpret_cast<char *>(HstPtrAddr) + VoidPtrSize;
+    std::memcpy(SrcBuffer + VoidPtrSize, HstDescriptorFieldsAddr,
+                HstDescriptorFieldsSize);
+
+    ODBG(ODT_Mapping) << "Updating " << HstPtrSize << " bytes of descriptor ("
+                      << TgtPtrAddr << ") (pointer + "
+                      << HstDescriptorFieldsSize
+                      << " additional bytes from host descriptor "
+                      << HstDescriptorFieldsAddr << ")";
   }
 
-  // For larger "pointers" (like Fortran's descriptors), we create a dynamic
-  // buffer, which will be eventually destroyed by AsyncInfo's post-processing
-  // callback.
-  char *DataBuffer = new char[HstPtrSize];
-
-  // For such descriptors, to the first VoidPtrSize bytes, we store the
-  // pointee's device address.
-  std::memcpy(DataBuffer, &TgtPteeBase, sizeof(void *));
-
-  // And to the remaining bytes, we copy the remaining contents of the host
-  // descriptor after the initial VoidPtrSize bytes.
-  uint64_t HstDescriptorFieldsSize = HstPtrSize - VoidPtrSize;
-  void *HstDescriptorFieldsAddr =
-      reinterpret_cast<char *>(HstPtrAddr) + VoidPtrSize;
-  std::memcpy(DataBuffer + VoidPtrSize, HstDescriptorFieldsAddr,
-              HstDescriptorFieldsSize);
-
-  DP("Updating %" PRId64 " bytes of descriptor (" DPxMOD ") (pointer + %" PRId64
-     " additional bytes from host descriptor " DPxMOD ")\n",
-     HstPtrSize, DPxPTR(TgtPtrAddr), HstDescriptorFieldsSize,
-     DPxPTR(HstDescriptorFieldsAddr));
-
-  // Submit the entire buffer to device
-  int SubmitResult = Device.submitData(TgtPtrAddr, DataBuffer, HstPtrSize,
+  // Submit the populated source buffer to device.
+  int SubmitResult = Device.submitData(TgtPtrAddr, SrcBuffer, HstPtrSize,
                                        AsyncInfo, PtrTPR.getEntry());
-
-  AsyncInfo.addPostProcessingFunction([DataBuffer]() -> int {
-    delete[] DataBuffer;
-    return OFFLOAD_SUCCESS;
-  });
   return HandleSubmitResult(SubmitResult);
 }
 
@@ -509,7 +527,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // Instead of executing the regular path of targetDataBegin, call the
       // targetDataMapper variant which will call targetDataBegin again
       // with new arguments.
-      DP("Calling targetDataMapper for the %dth argument\n", I);
+      ODBG(ODT_Mapping) << "Calling targetDataMapper for the " << I
+                        << "th argument";
 
       map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
       int Rc = targetDataMapper(Loc, Device, ArgsBase[I], Args[I], ArgSizes[I],
@@ -517,8 +536,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                                 targetDataBegin, AttachInfo);
 
       if (Rc != OFFLOAD_SUCCESS) {
-        REPORT("Call to targetDataBegin via targetDataMapper for custom mapper"
-               " failed.\n");
+        REPORT() << "Call to targetDataBegin via targetDataMapper for custom "
+                    "mapper failed";
         return OFFLOAD_FAIL;
       }
 
@@ -534,12 +553,20 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // ATTACH map-types are supposed to be handled after all mapping for the
     // construct is done. Defer their processing.
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_ATTACH) {
-      AttachInfo->AttachEntries.emplace_back(
-          /*PointerBase=*/HstPtrBase, /*PointeeBegin=*/HstPtrBegin,
-          /*PointerSize=*/DataSize, /*MapType=*/ArgTypes[I],
-          /*PointeeName=*/HstPtrName);
+      const bool IsCorrespondingPointerInit =
+          (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE);
+      // We don't need to keep track of PRIVATE | ATTACH entries. They
+      // represent corresponding-pointer-initialization, and are handled
+      // similar to firstprivate (PRIVATE | TO) entries by
+      // PrivateArgumentManager.
+      if (!IsCorrespondingPointerInit)
+        AttachInfo->AttachEntries.emplace_back(
+            /*PointerBase=*/HstPtrBase, /*PointeeBegin=*/HstPtrBegin,
+            /*PointerSize=*/DataSize, /*MapType=*/ArgTypes[I],
+            /*PointeeName=*/HstPtrName);
 
-      DP("Deferring ATTACH map-type processing for argument %d\n", I);
+      ODBG(ODT_Mapping) << "Deferring ATTACH map-type processing for argument "
+                        << I;
       continue;
     }
 
@@ -553,9 +580,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       int64_t Alignment = getPartialStructRequiredAlignment(HstPtrBase);
       TgtPadding = (int64_t)HstPtrBegin % Alignment;
       if (TgtPadding) {
-        DP("Using a padding of %" PRId64 " bytes for begin address " DPxMOD
-           "\n",
-           TgtPadding, DPxPTR(HstPtrBegin));
+        ODBG(ODT_Mapping) << "Using a padding of " << TgtPadding
+                          << " bytes for begin address " << HstPtrBegin;
       }
     }
 
@@ -580,7 +606,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     MappingInfoTy::HDTTMapAccessorTy HDTTMap =
         Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) {
-      DP("Has a pointer entry: \n");
+      ODBG(ODT_Mapping) << "Has a pointer entry";
       // Base is address of pointer.
       //
       // Usually, the pointer is already allocated by this time.  For example:
@@ -603,9 +629,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       PointerTgtPtrBegin = PointerTpr.TargetPointer;
       IsHostPtr = PointerTpr.Flags.IsHostPointer;
       if (!PointerTgtPtrBegin) {
-        REPORT("Call to getTargetPointer returned null pointer (%s).\n",
-               HasPresentModifier ? "'present' map type modifier"
-                                  : "device failure or illegal mapping");
+        REPORT() << "Call to getTargetPointer returned null pointer ("
+                 << (HasPresentModifier ? "'present' map type modifier"
+                                        : "device failure or illegal mapping")
+                 << ")";
         return OFFLOAD_FAIL;
       }
 
@@ -613,10 +640,11 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       if (PointerTpr.Flags.IsNewEntry && !IsHostPtr)
         AttachInfo->NewAllocations[HstPtrBase] = sizeof(void *);
 
-      DP("There are %zu bytes allocated at target address " DPxMOD " - is%s new"
-         "\n",
-         sizeof(void *), DPxPTR(PointerTgtPtrBegin),
-         (PointerTpr.Flags.IsNewEntry ? "" : " not"));
+      ODBG(ODT_Mapping) << "There are " << sizeof(void *)
+                        << " bytes allocated at target address "
+                        << PointerTgtPtrBegin << " - is"
+                        << (PointerTpr.Flags.IsNewEntry ? "" : " not")
+                        << " new";
       PointerHstPtrBegin = HstPtrBase;
       // modify current entry.
       HstPtrBase = *reinterpret_cast<void **>(HstPtrBase);
@@ -638,9 +666,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // If data_size==0, then the argument could be a zero-length pointer to
     // NULL, so getOrAlloc() returning NULL is not an error.
     if (!TgtPtrBegin && (DataSize || HasPresentModifier)) {
-      REPORT("Call to getTargetPointer returned null pointer (%s).\n",
-             HasPresentModifier ? "'present' map type modifier"
-                                : "device failure or illegal mapping");
+      REPORT() << "Call to getTargetPointer returned null pointer ("
+               << (HasPresentModifier ? "'present' map type modifier"
+                                      : "device failure or illegal mapping")
+               << ").";
       return OFFLOAD_FAIL;
     }
 
@@ -648,14 +677,15 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     if (TPR.Flags.IsNewEntry && !IsHostPtr && TgtPtrBegin)
       AttachInfo->NewAllocations[HstPtrBegin] = DataSize;
 
-    DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
-       " - is%s new\n",
-       DataSize, DPxPTR(TgtPtrBegin), (TPR.Flags.IsNewEntry ? "" : " not"));
+    ODBG(ODT_Mapping) << "There are " << DataSize
+                      << " bytes allocated at target address " << TgtPtrBegin
+                      << " - is" << (TPR.Flags.IsNewEntry ? "" : " not")
+                      << " new";
 
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_RETURN_PARAM) {
       uintptr_t Delta = (uintptr_t)HstPtrBegin - (uintptr_t)HstPtrBase;
       void *TgtPtrBase = (void *)((uintptr_t)TgtPtrBegin - Delta);
-      DP("Returning device pointer " DPxMOD "\n", DPxPTR(TgtPtrBase));
+      ODBG(ODT_Mapping) << "Returning device pointer " << TgtPtrBase;
       ArgsBase[I] = TgtPtrBase;
     }
 
@@ -733,19 +763,20 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
                          AsyncInfoTy &AsyncInfo) {
   // Report all tracked allocations from both main loop and ATTACH processing
   if (!AttachInfo.NewAllocations.empty()) {
-    DP("Tracked %u total new allocations:\n",
-       (unsigned)AttachInfo.NewAllocations.size());
-    for (const auto &Alloc : AttachInfo.NewAllocations) {
-      DP("  Host ptr: " DPxMOD ", Size: %" PRId64 " bytes\n",
-         DPxPTR(Alloc.first), Alloc.second);
-    }
+    ODBG_OS(ODT_Mapping, [&](llvm::raw_ostream &OS) {
+      OS << "Tracked " << AttachInfo.NewAllocations.size()
+         << " total new allocations:";
+      for (const auto &Alloc : AttachInfo.NewAllocations) {
+        OS << "  Host ptr: " << Alloc.first << ", Size: " << Alloc.second
+           << " bytes";
+      }
+    });
   }
 
   if (AttachInfo.AttachEntries.empty())
     return OFFLOAD_SUCCESS;
 
-  DP("Processing %zu deferred ATTACH map entries\n",
-     AttachInfo.AttachEntries.size());
+  ODBG(ODT_Mapping) << "Processing " << AttachInfo.AttachEntries.size();
 
   int Ret = OFFLOAD_SUCCESS;
   bool IsFirstPointerAttachment = true;
@@ -761,9 +792,11 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
     int64_t PtrSize = AttachEntry.PointerSize;
     int64_t MapType = AttachEntry.MapType;
 
-    DP("Processing ATTACH entry %zu: HstPtr=" DPxMOD ", HstPteeBegin=" DPxMOD
-       ", Size=%" PRId64 ", Type=0x%" PRIx64 "\n",
-       EntryIdx, DPxPTR(HstPtr), DPxPTR(HstPteeBegin), PtrSize, MapType);
+    ODBG(ODT_Mapping) << "Processing ATTACH entry " << EntryIdx
+                      << ": HstPtr=" << HstPtr
+                      << ", HstPteeBegin=" << HstPteeBegin
+                      << ", PtrSize=" << PtrSize << ", MapType=0x"
+                      << llvm::utohexstr(MapType);
 
     const bool IsAttachAlways = MapType & OMP_TGT_MAPTYPE_ALWAYS;
 
@@ -777,8 +810,9 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
                    Ptr < reinterpret_cast<void *>(
                              reinterpret_cast<char *>(AllocPtr) + AllocSize);
           });
-      DP("Attach %s " DPxMOD " was newly allocated: %s\n", PtrName, DPxPTR(Ptr),
-         IsNewlyAllocated ? "yes" : "no");
+      ODBG(ODT_Mapping) << "Attach " << PtrName << " " << Ptr
+                        << " was newly allocated: "
+                        << (IsNewlyAllocated ? "yes" : "no");
       return IsNewlyAllocated;
     };
 
@@ -786,9 +820,9 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
     // allocated, or the ALWAYS flag is set.
     if (!IsAttachAlways && !WasNewlyAllocated(HstPteeBegin, "pointee") &&
         !WasNewlyAllocated(HstPtr, "pointer")) {
-      DP("Skipping ATTACH entry %zu: neither pointer nor pointee was newly "
-         "allocated and no ALWAYS flag\n",
-         EntryIdx);
+      ODBG(ODT_Mapping) << "Skipping ATTACH entry " << EntryIdx
+                        << ": neither pointer nor pointee was newly "
+                           "allocated and no ALWAYS flag";
       continue;
     }
 
@@ -802,19 +836,19 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
           Ptr, Size, /*UpdateRefCount=*/false,
           /*UseHoldRefCount=*/false, /*MustContain=*/true);
 
-      DP("Attach %s lookup - IsPresent=%s, IsHostPtr=%s\n", PtrType,
-         TPR.isPresent() ? "yes" : "no",
-         TPR.Flags.IsHostPointer ? "yes" : "no");
+      ODBG(ODT_Mapping) << "Attach " << PtrType << " lookup - IsPresent="
+                        << (TPR.isPresent() ? "yes" : "no") << ", IsHostPtr="
+                        << (TPR.Flags.IsHostPointer ? "yes" : "no");
 
       if (!TPR.isPresent()) {
-        DP("Skipping ATTACH entry %zu: %s not present on device\n", EntryIdx,
-           PtrType);
+        ODBG(ODT_Mapping) << "Skipping ATTACH entry " << EntryIdx << ": "
+                          << PtrType << " not present on device";
         return std::nullopt;
       }
       if (TPR.Flags.IsHostPointer) {
-        DP("Skipping ATTACH entry %zu: device version of the %s is a host "
-           "pointer.\n",
-           EntryIdx, PtrType);
+        ODBG(ODT_Mapping) << "Skipping ATTACH entry " << EntryIdx
+                          << ": device version of the " << PtrType
+                          << " is a host pointer.";
         return std::nullopt;
       }
 
@@ -843,10 +877,11 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
     // Insert a data-fence before the first pointer-attachment.
     if (IsFirstPointerAttachment) {
       IsFirstPointerAttachment = false;
-      DP("Inserting a data fence before the first pointer attachment.\n");
+      ODBG(ODT_Mapping)
+          << "Inserting a data fence before the first pointer attachment.";
       Ret = Device.dataFence(AsyncInfo);
       if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Failed to insert data fence.\n");
+        REPORT() << "Failed to insert data fence.";
         return OFFLOAD_FAIL;
       }
     }
@@ -859,7 +894,8 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
     if (Ret != OFFLOAD_SUCCESS)
       return OFFLOAD_FAIL;
 
-    DP("ATTACH entry %zu processed successfully\n", EntryIdx);
+    ODBG(ODT_Mapping) << "ATTACH entry " << EntryIdx
+                      << " processed successfully";
   }
 
   return OFFLOAD_SUCCESS;
@@ -934,17 +970,29 @@ postProcessingTargetDataEnd(DeviceTy *Device,
       DelEntry = false;
     }
 
-    // If we copied back to the host a struct/array containing pointers,
-    // we need to restore the original host pointer values from their
-    // shadow copies. If the struct is going to be deallocated, remove any
-    // remaining shadow pointer entries for this struct.
+    // If we copied back to the host a struct/array containing pointers, or
+    // Fortran descriptors (which are larger than a "void *"), we need to
+    // restore the original host pointer/descriptor values from their shadow
+    // copies. If the struct is going to be deallocated, remove any remaining
+    // shadow pointer entries for this struct.
     const bool HasFrom = ArgType & OMP_TGT_MAPTYPE_FROM;
     if (HasFrom) {
       Entry->foreachShadowPointerInfo([&](const ShadowPtrInfoTy &ShadowPtr) {
-        *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
-        DP("Restoring original host pointer value " DPxMOD " for host "
-           "pointer " DPxMOD "\n",
-           DPxPTR(ShadowPtr.HstPtrVal), DPxPTR(ShadowPtr.HstPtrAddr));
+        constexpr int64_t VoidPtrSize = sizeof(void *);
+        if (ShadowPtr.PtrSize > VoidPtrSize) {
+          ODBG(ODT_Mapping)
+              << "Restoring host descriptor " << (void *)ShadowPtr.HstPtrAddr
+              << " to its original content (" << ShadowPtr.PtrSize
+              << " bytes), containing pointee address "
+              << (void *)ShadowPtr.HstPtrContent.data();
+        } else {
+          ODBG(ODT_Mapping)
+              << "Restoring host pointer " << (void *)ShadowPtr.HstPtrAddr
+              << " to its original value "
+              << (void *)ShadowPtr.HstPtrContent.data();
+        }
+        std::memcpy(ShadowPtr.HstPtrAddr, ShadowPtr.HstPtrContent.data(),
+                    ShadowPtr.PtrSize);
         return OFFLOAD_SUCCESS;
       });
     }
@@ -961,7 +1009,7 @@ postProcessingTargetDataEnd(DeviceTy *Device,
     HDTTMap.destroy();
     Ret |= Device->getMappingInfo().deallocTgtPtrAndEntry(Entry, DataSize);
     if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Deallocating data from device failed.\n");
+      REPORT() << "Deallocating data from device failed.";
       break;
     }
   }
@@ -990,7 +1038,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // directives. They may be encountered here while handling the "end" part of
     // "#pragma omp target".
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_ATTACH) {
-      DP("Ignoring ATTACH entry %d in targetDataEnd\n", I);
+      ODBG(ODT_Mapping) << "Ignoring ATTACH entry " << I << " in targetDataEnd";
       continue;
     }
 
@@ -998,7 +1046,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // Instead of executing the regular path of targetDataEnd, call the
       // targetDataMapper variant which will call targetDataEnd again
       // with new arguments.
-      DP("Calling targetDataMapper for the %dth argument\n", I);
+      ODBG(ODT_Mapping) << "Calling targetDataMapper for the " << I
+                        << "th argument";
 
       map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
       Ret = targetDataMapper(Loc, Device, ArgBases[I], Args[I], ArgSizes[I],
@@ -1006,8 +1055,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                              targetDataEnd);
 
       if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Call to targetDataEnd via targetDataMapper for custom mapper"
-               " failed.\n");
+        REPORT() << "Call to targetDataEnd via targetDataMapper for custom "
+                    "mapper failed.";
         return OFFLOAD_FAIL;
       }
 
@@ -1032,8 +1081,10 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     void *TgtPtrBegin = TPR.TargetPointer;
     if (!TPR.isPresent() && !TPR.isHostPointer() &&
         (DataSize || HasPresentModifier)) {
-      DP("Mapping does not exist (%s)\n",
-         (HasPresentModifier ? "'present' map type modifier" : "ignored"));
+      ODBG(ODT_Mapping) << "Mapping does not exist ("
+                        << (HasPresentModifier ? "'present' map type modifier"
+                                               : "ignored")
+                        << ")";
       if (HasPresentModifier) {
         // OpenMP 5.1, sec. 2.21.7.1 "map Clause", p. 350 L10-13:
         // "If a map clause appears on a target, target data, target enter data
@@ -1056,9 +1107,10 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         return OFFLOAD_FAIL;
       }
     } else {
-      DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
-         " - is%s last\n",
-         DataSize, DPxPTR(TgtPtrBegin), (TPR.Flags.IsLast ? "" : " not"));
+      ODBG(ODT_Mapping) << "There are " << DataSize
+                        << " bytes allocated at target address " << TgtPtrBegin
+                        << " - is" << (TPR.Flags.IsLast ? "" : " not")
+                        << " last";
     }
 
     // OpenMP 5.1, sec. 2.21.7.1 "map Clause", p. 351 L14-16:
@@ -1074,14 +1126,15 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     const bool HasFrom = ArgTypes[I] & OMP_TGT_MAPTYPE_FROM;
     if (HasFrom && (HasAlways || TPR.Flags.IsLast) &&
         !TPR.Flags.IsHostPointer && DataSize != 0) {
-      DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
-         DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
+      ODBG(ODT_Mapping) << "Moving " << DataSize
+                        << " bytes (tgt:" << TgtPtrBegin
+                        << ") -> (hst:" << HstPtrBegin << ")";
       TIMESCOPE_WITH_DETAILS_AND_IDENT(
           "DevToHost", "Size=" + std::to_string(DataSize) + "B", Loc);
       // Wait for any previous transfer if an event is present.
       if (void *Event = TPR.getEntry()->getEvent()) {
         if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
-          REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
+          REPORT() << "Failed to wait for event " << Event << ".";
           return OFFLOAD_FAIL;
         }
       }
@@ -1089,7 +1142,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize, AsyncInfo,
                                 TPR.getEntry());
       if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Copying data from device failed.\n");
+        REPORT() << "Copying data from device failed.";
         return OFFLOAD_FAIL;
       }
 
@@ -1129,7 +1182,8 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
       /*UseHoldRefCount=*/false, /*MustContain=*/true);
   void *TgtPtrBegin = TPR.TargetPointer;
   if (!TPR.isPresent()) {
-    DP("hst data:" DPxMOD " not found, becomes a noop\n", DPxPTR(HstPtrBegin));
+    ODBG(ODT_Mapping) << "hst data:" << HstPtrBegin
+                      << " not found, becomes a noop";
     if (ArgType & OMP_TGT_MAPTYPE_PRESENT) {
       MESSAGE("device mapping required by 'present' motion modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
@@ -1140,67 +1194,88 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
   }
 
   if (TPR.Flags.IsHostPointer) {
-    DP("hst data:" DPxMOD " unified and shared, becomes a noop\n",
-       DPxPTR(HstPtrBegin));
+    ODBG(ODT_Mapping) << "hst data:" << HstPtrBegin
+                      << " unified and shared, becomes a noop";
     return OFFLOAD_SUCCESS;
   }
 
   if (ArgType & OMP_TGT_MAPTYPE_TO) {
-    DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
-       ArgSize, DPxPTR(HstPtrBegin), DPxPTR(TgtPtrBegin));
+    ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (hst:" << HstPtrBegin
+                      << ") -> (tgt:" << TgtPtrBegin << ")";
     int Ret = Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSize, AsyncInfo,
                                 TPR.getEntry());
     if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Copying data to device failed.\n");
+      REPORT() << "Copying data to device failed.";
       return OFFLOAD_FAIL;
     }
     if (TPR.getEntry()) {
       int Ret = TPR.getEntry()->foreachShadowPointerInfo(
           [&](ShadowPtrInfoTy &ShadowPtr) {
-            DP("Restoring original target pointer value " DPxMOD " for target "
-               "pointer " DPxMOD "\n",
-               DPxPTR(ShadowPtr.TgtPtrVal), DPxPTR(ShadowPtr.TgtPtrAddr));
+            constexpr int64_t VoidPtrSize = sizeof(void *);
+            if (ShadowPtr.PtrSize > VoidPtrSize) {
+              ODBG(ODT_Mapping)
+                  << "Restoring target descriptor " << ShadowPtr.TgtPtrAddr
+                  << " to its original content (" << ShadowPtr.PtrSize
+                  << " bytes), containing pointee address "
+                  << ShadowPtr.TgtPtrContent.data();
+            } else {
+              ODBG(ODT_Mapping)
+                  << "Restoring target pointer " << ShadowPtr.TgtPtrAddr
+                  << " to its original value "
+                  << ShadowPtr.TgtPtrContent.data();
+            }
             Ret = Device.submitData(ShadowPtr.TgtPtrAddr,
-                                    (void *)&ShadowPtr.TgtPtrVal,
-                                    sizeof(void *), AsyncInfo);
+                                    ShadowPtr.TgtPtrContent.data(),
+                                    ShadowPtr.PtrSize, AsyncInfo);
             if (Ret != OFFLOAD_SUCCESS) {
-              REPORT("Copying data to device failed.\n");
+              REPORT() << "Copying data to device failed.";
               return OFFLOAD_FAIL;
             }
             return OFFLOAD_SUCCESS;
           });
       if (Ret != OFFLOAD_SUCCESS) {
-        DP("Updating shadow map failed\n");
+        ODBG(ODT_Mapping) << "Updating shadow map failed";
         return Ret;
       }
     }
   }
 
   if (ArgType & OMP_TGT_MAPTYPE_FROM) {
-    DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
-       ArgSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
+    ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (tgt:" << TgtPtrBegin
+                      << ") -> (hst:" << HstPtrBegin << ")";
     int Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, ArgSize, AsyncInfo,
                                   TPR.getEntry());
     if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Copying data from device failed.\n");
+      REPORT() << "Copying data from device failed.";
       return OFFLOAD_FAIL;
     }
 
     // Wait for device-to-host memcopies for whole struct to complete,
-    // before restoring the correct host pointer.
+    // before restoring the correct host pointer/descriptor.
     if (auto *Entry = TPR.getEntry()) {
       AsyncInfo.addPostProcessingFunction([=]() -> int {
         int Ret = Entry->foreachShadowPointerInfo(
             [&](const ShadowPtrInfoTy &ShadowPtr) {
-              *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
-              DP("Restoring original host pointer value " DPxMOD
-                 " for host pointer " DPxMOD "\n",
-                 DPxPTR(ShadowPtr.HstPtrVal), DPxPTR(ShadowPtr.HstPtrAddr));
+              constexpr int64_t VoidPtrSize = sizeof(void *);
+              if (ShadowPtr.PtrSize > VoidPtrSize) {
+                ODBG(ODT_Mapping)
+                    << "Restoring host descriptor " << ShadowPtr.HstPtrAddr
+                    << " to its original content (" << ShadowPtr.PtrSize
+                    << " bytes), containing pointee address "
+                    << ShadowPtr.HstPtrContent.data();
+              } else {
+                ODBG(ODT_Mapping)
+                    << "Restoring host pointer " << ShadowPtr.HstPtrAddr
+                    << " to its original value "
+                    << ShadowPtr.HstPtrContent.data();
+              }
+              std::memcpy(ShadowPtr.HstPtrAddr, ShadowPtr.HstPtrContent.data(),
+                          ShadowPtr.PtrSize);
               return OFFLOAD_SUCCESS;
             });
         Entry->unlock();
         if (Ret != OFFLOAD_SUCCESS) {
-          DP("Updating shadow map failed\n");
+          ODBG(ODT_Mapping) << "Updating shadow map failed";
           return Ret;
         }
         return OFFLOAD_SUCCESS;
@@ -1236,9 +1311,8 @@ static int targetDataNonContiguous(ident_t *Loc, DeviceTy &Device,
     }
   } else {
     char *Ptr = (char *)ArgsBase + Offset;
-    DP("Transfer of non-contiguous : host ptr " DPxMOD " offset %" PRIu64
-       " len %" PRIu64 "\n",
-       DPxPTR(Ptr), Offset, Size);
+    ODBG(ODT_Mapping) << "Transfer of non-contiguous : host ptr " << Ptr
+                      << " offset " << Offset << " len " << Size;
     Ret = targetDataContiguous(Loc, Device, ArgsBase, Ptr, Size, ArgType,
                                AsyncInfo);
   }
@@ -1271,16 +1345,16 @@ int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // Instead of executing the regular path of targetDataUpdate, call the
       // targetDataMapper variant which will call targetDataUpdate again
       // with new arguments.
-      DP("Calling targetDataMapper for the %dth argument\n", I);
-
+      ODBG(ODT_Mapping) << "Calling targetDataMapper for the " << I
+                        << "th argument";
       map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
       int Ret = targetDataMapper(Loc, Device, ArgsBase[I], Args[I], ArgSizes[I],
                                  ArgTypes[I], ArgName, ArgMappers[I], AsyncInfo,
                                  targetDataUpdate);
 
       if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Call to targetDataUpdate via targetDataMapper for custom mapper"
-               " failed.\n");
+        REPORT() << "Call to targetDataUpdate via targetDataMapper for custom "
+                    "mapper failed.";
         return OFFLOAD_FAIL;
       }
 
@@ -1373,13 +1447,24 @@ class PrivateArgumentManagerTy {
     uint32_t Padding;
     /// Host pointer name
     map_var_info_t HstPtrName = nullptr;
+    /// For corresponding-pointer-initialization: host pointee base address.
+    void *HstPteeBase = nullptr;
+    /// For corresponding-pointer-initialization: host pointee begin address.
+    void *HstPteeBegin = nullptr;
+    /// Whether this argument needs corresponding-pointer-initialization.
+    bool IsCorrespondingPointerInit = false;
 
     FirstPrivateArgInfoTy(int Index, void *HstPtr, uint32_t Size,
                           uint32_t Alignment, uint32_t Padding,
-                          map_var_info_t HstPtrName = nullptr)
+                          map_var_info_t HstPtrName = nullptr,
+                          void *HstPteeBase = nullptr,
+                          void *HstPteeBegin = nullptr,
+                          bool IsCorrespondingPointerInit = false)
         : HstPtrBegin(reinterpret_cast<char *>(HstPtr)),
           HstPtrEnd(HstPtrBegin + Size), Index(Index), Alignment(Alignment),
-          Size(Size), Padding(Padding), HstPtrName(HstPtrName) {}
+          Size(Size), Padding(Padding), HstPtrName(HstPtrName),
+          HstPteeBase(HstPteeBase), HstPteeBegin(HstPteeBegin),
+          IsCorrespondingPointerInit(IsCorrespondingPointerInit) {}
   };
 
   /// A vector of target pointers for all private arguments
@@ -1397,6 +1482,155 @@ class PrivateArgumentManagerTy {
   /// A pointer to a \p AsyncInfoTy object
   AsyncInfoTy &AsyncInfo;
 
+  /// \returns the value of the target pointee's base to be used for
+  /// corresponding-pointer-initialization.
+  void *getTargetPointeeBaseForCorrespondingPointerInitialization(
+      void *HstPteeBase, void *HstPteeBegin) {
+    // See if the pointee's begin address has corresponding storage on device.
+    void *TgtPteeBegin = [&]() -> void * {
+      if (!HstPteeBegin) {
+        ODBG(ODT_Mapping)
+            << "Corresponding-pointer-initialization: pointee begin address is "
+               "null";
+        return nullptr;
+      }
+
+      return Device.getMappingInfo()
+          .getTgtPtrBegin(HstPteeBegin, /*Size=*/0, /*UpdateRefCount=*/false,
+                          /*UseHoldRefCount=*/false)
+          .TargetPointer;
+    }();
+
+    // If it does, we calculate target pointee base using it, and return it.
+    // Otherwise, we retain the host pointee's base as the target pointee base
+    // of the initialized pointer. It's the user's responsibility to ensure
+    // that if a lookup fails, the host pointee is accessible on the device.
+    return TgtPteeBegin ? calculateTargetPointeeBase(HstPteeBase, HstPteeBegin,
+                                                     TgtPteeBegin)
+                        : HstPteeBase;
+  }
+
+  /// Initialize the source buffer for corresponding-pointer-initialization.
+  ///
+  /// It computes and stores the target pointee base address (or the host
+  /// pointee's base address, if lookup of target pointee fails) to the first
+  /// `sizeof(void*)` bytes of \p Buffer, and for larger pointers
+  /// (Fortran descriptors), the remaining fields of the host descriptor
+  /// \p HstPtr after those `sizeof(void*)` bytes.
+  ///
+  /// Corresponding-pointer-initialization represents the initialization of the
+  /// private version of a base-pointer/referring-pointer on a target construct.
+  ///
+  /// For example, for the following test:
+  /// ```cpp
+  ///   int x[10];
+  ///   int *px = &x[0];
+  ///   ...
+  ///   #pragma omp target data map(tofrom:px)
+  ///   {
+  ///     int **ppx = omp_get_mapped_ptr(&px, omp_get_default_device());
+  ///     #pragma omp target map(tofrom:px[1]) is_device_ptr(ppx)
+  ///     {
+  ///        foo(px, ppx);
+  ///     }
+  ///   }
+  /// ```
+  /// The following shows a possible way to implement the mapping of `px`,
+  /// which is pre-determined firstprivate and should get initialized
+  /// via corresponding-pointer-initialization:
+  ///
+  /// (A) Possible way to implement the above with PRIVATE | ATTACH:
+  /// ```llvm
+  ///  ; maps for px:
+  ///  ; &px[0], &px[1], sizeof(px[1]), TO | FROM                // (1)
+  ///  ; &px,    &px[1], sizeof(px),    ATTACH                   // (2)
+  ///  ; &px,    &px[1], sizeof(px),    PRIVATE | ATTACH | PARAM // (3)
+  ///  call... @__omp_outlined...(ptr %px, ptr %ppx)
+  ///  define ... @__omp_outlined(ptr %px, ptr %ppx) {...
+  ///    foo(%px, %ppx)
+  ///  ...}
+  /// ```
+  /// `(1)` maps the pointee `px[1].
+  /// `(2)` attaches it to the mapped version of `px`. It can be controlled by
+  /// the user based on the `attach(auto/always/never)` map-type modifier.
+  /// `(3)` privatizes and initializes the private pointer `px`, and passes it
+  /// into the kernel as the argument `%px`. Can be skipped if `px` is not
+  /// referenced in the target construct.
+  ///
+  /// While this method is not too beneficial compared to just doing the
+  /// initialization in the body of the kernel, like:
+  /// (B) Possible way to implement the above without PRIVATE | ATTACH:
+  /// ```llvm
+  ///  ; maps for px:
+  ///  ; &px[0], &px[1], sizeof(px[1]), TO | FROM | PARAM        // (4)
+  ///  ; &px,    &px[1], sizeof(px),    ATTACH                   // (5)
+  ///  call... @__omp_outlined...(ptr %px0, ptr %ppx)
+  ///  define ... __omp_outlined...(ptr %px0, ptr %ppx) {
+  ///    %px = alloca ptr;
+  ///    store ptr %px0, ptr %px
+  ///    foo(%px, %ppx)
+  ///  }
+  /// ```
+  ///
+  /// (B) is not so convenient for Fortran descriptors, because in
+  /// addition to the lookup, the remaining fields of the descriptor have
+  /// to be passed into the kernel to initialize the private copy, which
+  /// makes (A) a cleaner option for them. e.g.
+  /// ```f90
+  /// integer, pointer :: p(:)
+  /// !$omp target map(p(1))
+  /// ```
+  ///
+  /// (C) Possible mapping for the above Fortran test using PRIVATE | ATTACH:
+  /// ```llvm
+  ///  ; maps for p:
+  ///  ; &p(1),       &p(1), sizeof(p(1)),       TO | FROM
+  ///  ; &ref_ptr(p), &p(1), sizeof(ref_ptr(p)), ATTACH
+  ///  ; &ref_ptr(p), &p(1), sizeof(ref_ptr(p)), PRIVATE | ATTACH | PARAM
+  ///  call... @__omp_outlined...(ptr %ref_ptr_of_p)
+  void initBufferForCorrespondingPointerInitialization(char *Buffer,
+                                                       void *HstPtr,
+                                                       int64_t HstPtrSize,
+                                                       void *HstPteeBase,
+                                                       void *HstPteeBegin) {
+    constexpr int64_t VoidPtrSize = sizeof(void *);
+    assert(HstPtrSize >= VoidPtrSize &&
+           "corresponding-pointer-initialization: pointer size is too small");
+
+    void *TgtPteeBase =
+        getTargetPointeeBaseForCorrespondingPointerInitialization(HstPteeBase,
+                                                                  HstPteeBegin);
+
+    // Store the target pointee base address to the first VoidPtrSize bytes
+    ODBG(ODT_Mapping)
+        << "Corresponding-pointer-initialization: setting target pointee base "
+           "for "
+        << HstPtr << ", with pointee base " << TgtPteeBase;
+    std::memcpy(Buffer, &TgtPteeBase, VoidPtrSize);
+    if (HstPtrSize <= VoidPtrSize)
+      return;
+
+    // For Fortran descriptors, copy the remaining descriptor fields from host
+    uint64_t HstDescriptorFieldsSize = HstPtrSize - VoidPtrSize;
+    void *HstDescriptorFieldsAddr = static_cast<char *>(HstPtr) + VoidPtrSize;
+    ODBG(ODT_Mapping) << "Corresponding-pointer-initialization: copying "
+                      << HstDescriptorFieldsSize
+                      << " bytes of descriptor fields into buffer at offset "
+                      << VoidPtrSize << ", from " << HstDescriptorFieldsAddr;
+    std::memcpy(Buffer + VoidPtrSize, HstDescriptorFieldsAddr,
+                HstDescriptorFieldsSize);
+  }
+
+  /// Helper function to create and initialize a buffer to be used as the source
+  /// for corresponding-pointer-initialization.
+  void *createAndInitSourceBufferForCorrespondingPointerInitialization(
+      void *HstPtr, int64_t HstPtrSize, void *HstPteeBase, void *HstPteeBegin) {
+    char *Buffer = getOrCreateSourceBufferForSubmitData(AsyncInfo, HstPtrSize);
+    initBufferForCorrespondingPointerInitialization(Buffer, HstPtr, HstPtrSize,
+                                                    HstPteeBase, HstPteeBegin);
+    return Buffer;
+  }
+
   // TODO: What would be the best value here? Should we make it configurable?
   // If the size is larger than this threshold, we will allocate and transfer it
   // immediately instead of packing it.
@@ -1411,7 +1645,9 @@ public:
   int addArg(void *HstPtr, int64_t ArgSize, int64_t ArgOffset,
              bool IsFirstPrivate, void *&TgtPtr, int TgtArgsIndex,
              map_var_info_t HstPtrName = nullptr,
-             const bool AllocImmediately = false) {
+             const bool AllocImmediately = false, void *HstPteeBase = nullptr,
+             void *HstPteeBegin = nullptr,
+             bool IsCorrespondingPointerInit = false) {
     // If the argument is not first-private, or its size is greater than a
     // predefined threshold, we will allocate memory and issue the transfer
     // immediately.
@@ -1419,31 +1655,43 @@ public:
         AllocImmediately) {
       TgtPtr = Device.allocData(ArgSize, HstPtr);
       if (!TgtPtr) {
-        DP("Data allocation for %sprivate array " DPxMOD " failed.\n",
-           (IsFirstPrivate ? "first-" : ""), DPxPTR(HstPtr));
+        ODBG(ODT_Alloc) << "Data allocation for "
+                        << (IsFirstPrivate ? "first-" : "") << "private array "
+                        << HstPtr << " failed.";
         return OFFLOAD_FAIL;
       }
-#ifdef OMPTARGET_DEBUG
-      void *TgtPtrBase = (void *)((intptr_t)TgtPtr + ArgOffset);
-      DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD
-         " for %sprivate array " DPxMOD " - pushing target argument " DPxMOD
-         "\n",
-         ArgSize, DPxPTR(TgtPtr), (IsFirstPrivate ? "first-" : ""),
-         DPxPTR(HstPtr), DPxPTR(TgtPtrBase));
-#endif
+
+      ODBG(ODT_Alloc) << "Allocated " << ArgSize
+                      << " bytes of target memory at " << TgtPtr << " for "
+                      << (IsFirstPrivate ? "first-" : "") << "private array "
+                      << HstPtr << " - pushing target argument "
+                      << (void *)((intptr_t)TgtPtr + ArgOffset);
+
       // If first-private, copy data from host
       if (IsFirstPrivate) {
-        DP("Submitting firstprivate data to the device.\n");
-        int Ret = Device.submitData(TgtPtr, HstPtr, ArgSize, AsyncInfo);
+        ODBG(ODT_Mapping) << "Submitting firstprivate data to the device.";
+
+        // The source value used for corresponding-pointer-initialization
+        // is different vs regular firstprivates.
+        void *DataSource =
+            IsCorrespondingPointerInit
+                ? createAndInitSourceBufferForCorrespondingPointerInitialization(
+                      HstPtr, ArgSize, HstPteeBase, HstPteeBegin)
+                : HstPtr;
+        int Ret = Device.submitData(TgtPtr, DataSource, ArgSize, AsyncInfo);
         if (Ret != OFFLOAD_SUCCESS) {
-          DP("Copying data to device failed, failed.\n");
+          ODBG(ODT_Mapping) << "Copying "
+                            << (IsCorrespondingPointerInit
+                                    ? "corresponding-pointer-initialization"
+                                    : "firstprivate")
+                            << " data to device failed.";
           return OFFLOAD_FAIL;
         }
       }
       TgtPtrs.push_back(TgtPtr);
     } else {
-      DP("Firstprivate array " DPxMOD " of size %" PRId64 " will be packed\n",
-         DPxPTR(HstPtr), ArgSize);
+      ODBG(ODT_Mapping) << "Firstprivate array " << HstPtr << " of size "
+                        << ArgSize << " will be packed";
       // When reach this point, the argument must meet all following
       // requirements:
       // 1. Its size does not exceed the threshold (see the comment for
@@ -1482,8 +1730,10 @@ public:
         }
       }
 
-      FirstPrivateArgInfo.emplace_back(TgtArgsIndex, HstPtr, ArgSize,
-                                       StartAlignment, Padding, HstPtrName);
+      FirstPrivateArgInfo.emplace_back(
+          TgtArgsIndex, HstPtr, ArgSize, StartAlignment, Padding, HstPtrName,
+          HstPteeBase, HstPteeBegin, IsCorrespondingPointerInit);
+
       FirstPrivateArgSize += Padding + ArgSize;
     }
 
@@ -1502,24 +1752,31 @@ public:
       for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
         // First pad the pointer as we (have to) pad it on the device too.
         Itr = std::next(Itr, Info.Padding);
-        std::copy(Info.HstPtrBegin, Info.HstPtrEnd, Itr);
+
+        if (Info.IsCorrespondingPointerInit)
+          initBufferForCorrespondingPointerInitialization(
+              &*Itr, Info.HstPtrBegin, Info.Size, Info.HstPteeBase,
+              Info.HstPteeBegin);
+        else
+          std::copy(Info.HstPtrBegin, Info.HstPtrEnd, Itr);
         Itr = std::next(Itr, Info.Size);
       }
       // Allocate target memory
       void *TgtPtr =
           Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer.data());
       if (TgtPtr == nullptr) {
-        DP("Failed to allocate target memory for private arguments.\n");
+        ODBG(ODT_Alloc)
+            << "Failed to allocate target memory for private arguments.";
         return OFFLOAD_FAIL;
       }
       TgtPtrs.push_back(TgtPtr);
-      DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD "\n",
-         FirstPrivateArgSize, DPxPTR(TgtPtr));
+      ODBG(ODT_Alloc) << "Allocated " << FirstPrivateArgSize
+                      << " bytes of target memory at " << TgtPtr;
       // Transfer data to target device
       int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer.data(),
                                   FirstPrivateArgSize, AsyncInfo);
       if (Ret != OFFLOAD_SUCCESS) {
-        DP("Failed to submit data of private arguments.\n");
+        ODBG(ODT_DataTransfer) << "Failed to submit data of private arguments.";
         return OFFLOAD_FAIL;
       }
       // Fill in all placeholder pointers
@@ -1531,10 +1788,9 @@ public:
         TP += Info.Padding;
         Ptr = reinterpret_cast<void *>(TP);
         TP += Info.Size;
-        DP("Firstprivate array " DPxMOD " of size %" PRId64 " mapped to " DPxMOD
-           "\n",
-           DPxPTR(Info.HstPtrBegin), Info.HstPtrEnd - Info.HstPtrBegin,
-           DPxPTR(Ptr));
+        ODBG(ODT_Mapping) << "Firstprivate array " << Info.HstPtrBegin
+                          << " of size " << (Info.HstPtrEnd - Info.HstPtrBegin)
+                          << " mapped to " << Ptr;
       }
     }
 
@@ -1546,7 +1802,7 @@ public:
     for (void *P : TgtPtrs) {
       int Ret = Device.deleteData(P);
       if (Ret != OFFLOAD_SUCCESS) {
-        DP("Deallocation of (first-)private arrays failed.\n");
+        ODBG(ODT_Alloc) << "Deallocation of (first-)private arrays failed.";
         return OFFLOAD_FAIL;
       }
     }
@@ -1581,7 +1837,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                             ArgTypes, ArgNames, ArgMappers, AsyncInfo,
                             &AttachInfo, false /*FromMapper=*/);
   if (Ret != OFFLOAD_SUCCESS) {
-    REPORT("Call to targetDataBegin failed, abort target.\n");
+    REPORT() << "Call to targetDataBegin failed, abort target.";
     return OFFLOAD_FAIL;
   }
 
@@ -1589,7 +1845,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
   if (!AttachInfo.AttachEntries.empty()) {
     Ret = processAttachEntries(*DeviceOrErr, AttachInfo, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Failed to process ATTACH entries.\n");
+      REPORT() << "Failed to process ATTACH entries.";
       return OFFLOAD_FAIL;
     }
   }
@@ -1614,7 +1870,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
         void *HstPtrBase = Args[Idx];
         void *TgtPtrBase =
             (void *)((intptr_t)TgtArgs[TgtIdx] + TgtOffsets[TgtIdx]);
-        DP("Parent lambda base " DPxMOD "\n", DPxPTR(TgtPtrBase));
+        ODBG(ODT_Mapping) << "Parent lambda base " << TgtPtrBase;
         uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
         void *TgtPtrBegin = (void *)((uintptr_t)TgtPtrBase + Delta);
         void *&PointerTgtPtrBegin = AsyncInfo.getVoidPtrLocation();
@@ -1624,23 +1880,24 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                 /*UseHoldRefCount=*/false);
         PointerTgtPtrBegin = TPR.TargetPointer;
         if (!TPR.isPresent()) {
-          DP("No lambda captured variable mapped (" DPxMOD ") - ignored\n",
-             DPxPTR(HstPtrVal));
+          ODBG(ODT_Mapping) << "No lambda captured variable mapped "
+                            << HstPtrVal << " - ignored";
           continue;
         }
         if (TPR.Flags.IsHostPointer) {
-          DP("Unified memory is active, no need to map lambda captured"
-             "variable (" DPxMOD ")\n",
-             DPxPTR(HstPtrVal));
+          ODBG(ODT_Mapping)
+              << "Unified memory is active, no need to map lambda captured"
+                 "variable ("
+              << HstPtrVal << ")";
           continue;
         }
-        DP("Update lambda reference (" DPxMOD ") -> [" DPxMOD "]\n",
-           DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
+        ODBG(ODT_Mapping) << "Update lambda reference (" << PointerTgtPtrBegin
+                          << ") -> [" << TgtPtrBegin << "]";
         Ret =
             DeviceOrErr->submitData(TgtPtrBegin, &PointerTgtPtrBegin,
                                     sizeof(void *), AsyncInfo, TPR.getEntry());
         if (Ret != OFFLOAD_SUCCESS) {
-          REPORT("Copying data to device failed.\n");
+          REPORT() << "Copying data to device failed.";
           return OFFLOAD_FAIL;
         }
       }
@@ -1653,13 +1910,45 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
     ptrdiff_t TgtBaseOffset;
     TargetPointerResultTy TPR;
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) {
-      DP("Forwarding first-private value " DPxMOD " to the target construct\n",
-         DPxPTR(HstPtrBase));
+      ODBG(ODT_Mapping) << "Forwarding first-private value " << HstPtrBase
+                        << " to the target construct";
       TgtPtrBegin = HstPtrBase;
       TgtBaseOffset = 0;
     } else if (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE) {
+      // For cases like:
+      // ```
+      // int *p = ...;
+      // #pragma omp target map(p[0:10])
+      // ```
+      // `p` is predetermined firstprivate on the target construct, and the
+      // method to determine the initial value of the private copy on the
+      // device is called "corresponding-pointer-initialization".
+      //
+      // Such firstprivate pointers that need
+      // corresponding-pointer-initialization are represented using the
+      // `PRIVATE | ATTACH` map-types, in contrast to regular firstprivate
+      // entries, which use `PRIVATE | TO`. The structure of these
+      // `PRIVATE | ATTACH` entries is the same as the non-private
+      // `ATTACH` entries used to represent pointer-attachments, i.e.:
+      // ```
+      //  &hst_ptr_base/begin, &hst_ptee_begin, sizeof(hst_ptr)
+      // ```
+      const bool IsAttach = (ArgTypes[I] & OMP_TGT_MAPTYPE_ATTACH);
+      void *HstPteeBase = nullptr;
+      void *HstPteeBegin = nullptr;
+      if (IsAttach) {
+        // For corresponding-pointer-initialization, Args[I] is HstPteeBegin,
+        // and ArgBases[I] is both HstPtrBase/HstPtrBegin.
+        HstPteeBase = *reinterpret_cast<void **>(HstPtrBase);
+        HstPteeBegin = Args[I];
+        HstPtrBegin = ArgBases[I];
+      }
       TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
-      const bool IsFirstPrivate = (ArgTypes[I] & OMP_TGT_MAPTYPE_TO);
+      // Corresponding-pointer-initialization is a special case of firstprivate,
+      // since it also involves initializing the private pointer.
+      const bool IsFirstPrivate =
+          (ArgTypes[I] & OMP_TGT_MAPTYPE_TO) || IsAttach;
+
       // If there is a next argument and it depends on the current one, we need
       // to allocate the private memory immediately. If this is not the case,
       // then the argument can be marked for optimization and packed with the
@@ -1668,10 +1957,13 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
           (I < ArgNum - 1 && (ArgTypes[I + 1] & OMP_TGT_MAPTYPE_MEMBER_OF));
       Ret = PrivateArgumentManager.addArg(
           HstPtrBegin, ArgSizes[I], TgtBaseOffset, IsFirstPrivate, TgtPtrBegin,
-          TgtArgs.size(), HstPtrName, AllocImmediately);
+          /*TgtArgsIndex=*/TgtArgs.size(), HstPtrName, AllocImmediately,
+          HstPteeBase, HstPteeBegin, /*IsCorrespondingPointerInit=*/IsAttach);
       if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Failed to process %sprivate argument " DPxMOD "\n",
-               (IsFirstPrivate ? "first-" : ""), DPxPTR(HstPtrBegin));
+        REPORT() << "Failed to process "
+                 << (IsAttach ? "corresponding-pointer-initialization " : "")
+                 << (IsFirstPrivate ? "first-" : "") << "private argument "
+                 << HstPtrBegin << ".";
         return OFFLOAD_FAIL;
       }
     } else {
@@ -1683,11 +1975,9 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
           /*UseHoldRefCount=*/false);
       TgtPtrBegin = TPR.TargetPointer;
       TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
-#ifdef OMPTARGET_DEBUG
       void *TgtPtrBase = (void *)((intptr_t)TgtPtrBegin + TgtBaseOffset);
-      DP("Obtained target argument " DPxMOD " from host pointer " DPxMOD "\n",
-         DPxPTR(TgtPtrBase), DPxPTR(HstPtrBegin));
-#endif
+      ODBG(ODT_Mapping) << "Obtained target argument " << TgtPtrBase
+                        << " from host pointer " << HstPtrBegin;
     }
     TgtArgsPositions[I] = TgtArgs.size();
     TgtArgs.push_back(TgtPtrBegin);
@@ -1700,7 +1990,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
   // Pack and transfer first-private arguments
   Ret = PrivateArgumentManager.packAndTransfer(TgtArgs);
   if (Ret != OFFLOAD_SUCCESS) {
-    DP("Failed to pack and transfer first private arguments\n");
+    ODBG(ODT_Mapping) << "Failed to pack and transfer first private arguments";
     return OFFLOAD_FAIL;
   }
 
@@ -1724,7 +2014,7 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
   int Ret = targetDataEnd(Loc, *DeviceOrErr, ArgNum, ArgBases, Args, ArgSizes,
                           ArgTypes, ArgNames, ArgMappers, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
-    REPORT("Call to targetDataEnd failed, abort target.\n");
+    REPORT() << "Call to targetDataEnd failed, abort target.";
     return OFFLOAD_FAIL;
   }
 
@@ -1736,7 +2026,7 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
            std::move(PrivateArgumentManager)]() mutable -> int {
         int Ret = PrivateArgumentManager.free();
         if (Ret != OFFLOAD_SUCCESS) {
-          REPORT("Failed to deallocate target memory for private args\n");
+          REPORT() << "Failed to deallocate target memory for private args";
           return OFFLOAD_FAIL;
         }
         return Ret;
@@ -1758,8 +2048,8 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   TableMap *TM = getTableMap(HostPtr);
   // No map for this host pointer found!
   if (!TM) {
-    REPORT("Host ptr " DPxMOD " does not have a matching target pointer.\n",
-           DPxPTR(HostPtr));
+    REPORT() << "Host ptr " << HostPtr
+             << " does not have a matching target pointer.";
     return OFFLOAD_FAIL;
   }
 
@@ -1773,7 +2063,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   }
   assert(TargetTable && "Global data has not been mapped\n");
 
-  DP("loop trip count is %" PRIu64 ".\n", KernelArgs.Tripcount);
+  ODBG(ODT_Kernel) << "loop trip count is " << KernelArgs.Tripcount;
 
   // We need to keep bases and offsets separate. Sometimes (e.g. in OpenCL) we
   // need to manifest base pointers prior to launching a kernel. Even if we have
@@ -1799,7 +2089,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                             KernelArgs.ArgNames, KernelArgs.ArgMappers, TgtArgs,
                             TgtOffsets, PrivateArgumentManager, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Failed to process data before launching the kernel.\n");
+      REPORT() << "Failed to process data before launching the kernel.";
       return OFFLOAD_FAIL;
     }
 
@@ -1812,9 +2102,10 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
   // Launch device execution.
   void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].Address;
-  DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
-     TargetTable->EntriesBegin[TM->Index].SymbolName, DPxPTR(TgtEntryPtr),
-     TM->Index);
+  ODBG(ODT_Kernel) << "Launching target execution "
+                   << TargetTable->EntriesBegin[TM->Index].SymbolName
+                   << " with pointer " << TgtEntryPtr << " (index=" << TM->Index
+                   << ").";
 
   {
     assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
@@ -1838,7 +2129,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   }
 
   if (Ret != OFFLOAD_SUCCESS) {
-    REPORT("Executing target region abort target.\n");
+    REPORT() << "Executing target region abort target.";
     return OFFLOAD_FAIL;
   }
 
@@ -1851,7 +2142,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                            KernelArgs.ArgNames, KernelArgs.ArgMappers,
                            PrivateArgumentManager, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Failed to process data after launching the kernel.\n");
+      REPORT() << "Failed to process data after launching the kernel.";
       return OFFLOAD_FAIL;
     }
   }
@@ -1883,8 +2174,8 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   // Fail if the table map fails to find the target kernel pointer for the
   // provided host pointer.
   if (!TM) {
-    REPORT("Host ptr " DPxMOD " does not have a matching target pointer.\n",
-           DPxPTR(HostPtr));
+    REPORT() << "Host ptr " << HostPtr
+             << " does not have a matching target pointer.";
     return OFFLOAD_FAIL;
   }
 
@@ -1901,9 +2192,10 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   // Retrieve the target kernel pointer, allocate and store the recorded device
   // memory data, and launch device execution.
   void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].Address;
-  DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
-     TargetTable->EntriesBegin[TM->Index].SymbolName, DPxPTR(TgtEntryPtr),
-     TM->Index);
+  ODBG(ODT_Kernel) << "Launching target execution "
+                   << TargetTable->EntriesBegin[TM->Index].SymbolName
+                   << " with pointer " << TgtEntryPtr << " (index=" << TM->Index
+                   << ").";
 
   void *TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
                                   TARGET_ALLOC_DEFAULT);
@@ -1920,7 +2212,7 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                                 AsyncInfo);
 
   if (Ret != OFFLOAD_SUCCESS) {
-    REPORT("Executing target region abort target.\n");
+    REPORT() << "Executing target region abort target.";
     return OFFLOAD_FAIL;
   }
 

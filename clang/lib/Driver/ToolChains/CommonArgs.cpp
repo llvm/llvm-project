@@ -31,11 +31,12 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
 #include "clang/Driver/XRayArgs.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -69,8 +70,7 @@ using namespace llvm::opt;
 
 static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
                                               const llvm::Triple &Triple) {
-  if (Args.hasArg(clang::driver::options::OPT_pg) &&
-      !Args.hasArg(clang::driver::options::OPT_mfentry))
+  if (Args.hasArg(options::OPT_pg) && !Args.hasArg(options::OPT_mfentry))
     return true;
 
   if (Triple.isAndroid())
@@ -156,6 +156,9 @@ static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
       (Triple.isAndroid() && !Triple.isARM()))
     return false;
 
+  if ((Triple.isARM() || Triple.isThumb()) && Triple.isOSBinFormatMachO())
+    return false;
+
   return true;
 }
 
@@ -219,26 +222,39 @@ static bool framePointerImpliesLeafFramePointer(const llvm::opt::ArgList &Args,
 clang::CodeGenOptions::FramePointerKind
 getFramePointerKind(const llvm::opt::ArgList &Args,
                     const llvm::Triple &Triple) {
-  // There are three things to consider here:
+  // There are four things to consider here:
   // * Should a frame record be created for non-leaf functions?
   // * Should a frame record be created for leaf functions?
-  // * Is the frame pointer register reserved, i.e. must it always point to
-  //   either a new, valid frame record or be un-modified?
+  // * Is the frame pointer register reserved in non-leaf functions?
+  //   i.e. must it always point to either a new, valid frame record or be
+  //   un-modified?
+  // * Is the frame pointer register reserved in leaf functions?
   //
   //  Not all combinations of these are valid:
   //  * It's not useful to have leaf frame records without non-leaf ones.
   //  * It's not useful to have frame records without reserving the frame
   //    pointer.
   //
-  // | Non-leaf | Leaf | Reserved |
-  // | N        | N    | N        | FramePointerKind::None
-  // | N        | N    | Y        | FramePointerKind::Reserved
-  // | N        | Y    | N        | Invalid
-  // | N        | Y    | Y        | Invalid
-  // | Y        | N    | N        | Invalid
-  // | Y        | N    | Y        | FramePointerKind::NonLeaf
-  // | Y        | Y    | N        | Invalid
-  // | Y        | Y    | Y        | FramePointerKind::All
+  // | Frame Setup     | Reg Reserved    |
+  // |-----------------|-----------------|
+  // | Non-leaf | Leaf | Non-Leaf | Leaf |
+  // |----------|------|----------|------|
+  // | N        | N    | N        | N    | FramePointerKind::None
+  // | N        | N    | N        | Y    | Invalid
+  // | N        | N    | Y        | N    | Invalid
+  // | N        | N    | Y        | Y    | FramePointerKind::Reserved
+  // | N        | Y    | N        | N    | Invalid
+  // | N        | Y    | N        | Y    | Invalid
+  // | N        | Y    | Y        | N    | Invalid
+  // | N        | Y    | Y        | Y    | Invalid
+  // | Y        | N    | N        | N    | Invalid
+  // | Y        | N    | N        | Y    | Invalid
+  // | Y        | N    | Y        | N    | FramePointerKind::NonLeafNoReserve
+  // | Y        | N    | Y        | Y    | FramePointerKind::NonLeaf
+  // | Y        | Y    | N        | N    | Invalid
+  // | Y        | Y    | N        | Y    | Invalid
+  // | Y        | Y    | Y        | N    | Invalid
+  // | Y        | Y    | Y        | Y    | FramePointerKind::All
   //
   // The FramePointerKind::Reserved case is currently only reachable for Arm,
   // which has the -mframe-chain= option which can (in combination with
@@ -246,24 +262,29 @@ getFramePointerKind(const llvm::opt::ArgList &Args,
   // without requiring new frame records to be created.
 
   bool DefaultFP = useFramePointerForTargetByDefault(Args, Triple);
-  bool EnableFP =
-      mustUseNonLeafFramePointerForTarget(Triple) ||
-      Args.hasFlag(clang::driver::options::OPT_fno_omit_frame_pointer,
-                   clang::driver::options::OPT_fomit_frame_pointer, DefaultFP);
+  bool EnableFP = mustUseNonLeafFramePointerForTarget(Triple) ||
+                  Args.hasFlag(options::OPT_fno_omit_frame_pointer,
+                               options::OPT_fomit_frame_pointer, DefaultFP);
 
   bool DefaultLeafFP =
       useLeafFramePointerForTargetByDefault(Triple) ||
       (EnableFP && framePointerImpliesLeafFramePointer(Args, Triple));
-  bool EnableLeafFP = Args.hasFlag(
-      clang::driver::options::OPT_mno_omit_leaf_frame_pointer,
-      clang::driver::options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
+  bool EnableLeafFP =
+      Args.hasFlag(options::OPT_mno_omit_leaf_frame_pointer,
+                   options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
 
-  bool FPRegReserved = EnableFP || mustMaintainValidFrameChain(Args, Triple);
+  bool FPRegReserved = Args.hasFlag(options::OPT_mreserve_frame_pointer_reg,
+                                    options::OPT_mno_reserve_frame_pointer_reg,
+                                    mustMaintainValidFrameChain(Args, Triple));
 
   if (EnableFP) {
     if (EnableLeafFP)
       return clang::CodeGenOptions::FramePointerKind::All;
-    return clang::CodeGenOptions::FramePointerKind::NonLeaf;
+
+    if (FPRegReserved)
+      return clang::CodeGenOptions::FramePointerKind::NonLeaf;
+
+    return clang::CodeGenOptions::FramePointerKind::NonLeafNoReserve;
   }
   if (FPRegReserved)
     return clang::CodeGenOptions::FramePointerKind::Reserved;
@@ -660,11 +681,11 @@ static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     auto GPUName = getProcessorFromTargetID(T, A->getValue());
     return llvm::StringSwitch<std::string>(GPUName)
-        .Cases("rv630", "rv635", "r600")
-        .Cases("rv610", "rv620", "rs780", "rs880")
+        .Cases({"rv630", "rv635"}, "r600")
+        .Cases({"rv610", "rv620", "rs780"}, "rs880")
         .Case("rv740", "rv770")
         .Case("palm", "cedar")
-        .Cases("sumo", "sumo2", "sumo")
+        .Cases({"sumo", "sumo2"}, "sumo")
         .Case("hemlock", "cypress")
         .Case("aruba", "cayman")
         .Default(GPUName.str());
@@ -750,7 +771,7 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
-    if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ))
+    if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
       return std::string(
           llvm::PPC::getNormalizedPPCTargetCPU(T, A->getValue()));
     return std::string(llvm::PPC::getNormalizedPPCTargetCPU(T));
@@ -946,6 +967,24 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
   return EnableTLSDESC;
 }
 
+void tools::addDTLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
+                            llvm::opt::ArgStringList &CmdArgs) {
+  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
+    const Driver &D = ToolChain.getDriver();
+    CmdArgs.push_back(Args.MakeArgString("--thinlto-remote-compiler=" +
+                                         Twine(D.getClangProgramPath())));
+    if (auto *PA = D.getPrependArg())
+      CmdArgs.push_back(Args.MakeArgString(
+          "--thinlto-remote-compiler-prepend-arg=" + Twine(PA)));
+
+    for (const auto &A :
+         Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
+  }
+}
+
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfoList &Inputs, bool IsThinLTO) {
@@ -1057,27 +1096,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "mcpu=" + CPU));
 
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    // The optimization level matches
-    // CompilerInvocation.cpp:getOptimizationLevel().
-    StringRef OOpt;
-    if (A->getOption().matches(options::OPT_O4) ||
-        A->getOption().matches(options::OPT_Ofast))
-      OOpt = "3";
-    else if (A->getOption().matches(options::OPT_O)) {
-      OOpt = A->getValue();
-      if (OOpt == "g")
-        OOpt = "1";
-      else if (OOpt == "s" || OOpt == "z")
-        OOpt = "2";
-    } else if (A->getOption().matches(options::OPT_O0))
-      OOpt = "0";
-    if (!OOpt.empty()) {
+  if (Args.getLastArg(options::OPT_O_Group)) {
+    unsigned OptimizationLevel =
+        getOptimizationLevel(Args, InputKind(), D.getDiags());
+    CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
+                                         "O" + Twine(OptimizationLevel)));
+    if (IsAMDGCN)
       CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "O" + OOpt));
-      if (IsAMDGCN)
-        CmdArgs.push_back(Args.MakeArgString(Twine("--lto-CGO") + OOpt));
-    }
+          Args.MakeArgString(Twine("--lto-CGO") + Twine(OptimizationLevel)));
   }
 
   if (Args.hasArg(options::OPT_gsplit_dwarf)) {
@@ -1269,6 +1295,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-stack-size-section"));
 
+  if (Args.hasFlag(options::OPT_fexperimental_call_graph_section,
+                   options::OPT_fno_experimental_call_graph_section, false))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-call-graph-section"));
+
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, *Input, D);
   if (!StatsFile.empty())
@@ -1342,16 +1373,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
 
-  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
-    CmdArgs.push_back(
-        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
-    CmdArgs.push_back(
-        Args.MakeArgString("--thinlto-remote-compiler=" +
-                           Twine(ToolChain.getDriver().getClangProgramPath())));
-
-    for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
-      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
-  }
+  addDTLTOOptions(ToolChain, Args, CmdArgs);
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
@@ -1716,7 +1738,7 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.needsFuzzerInterceptors())
       addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer_interceptors", false,
                           true);
-    if (!Args.hasArg(clang::driver::options::OPT_nostdlibxx)) {
+    if (!Args.hasArg(options::OPT_nostdlibxx)) {
       bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
                                  !Args.hasArg(options::OPT_static);
       if (OnlyLibstdcxxStatic)
@@ -2228,7 +2250,7 @@ static unsigned ParseDebugDefaultVersion(const ToolChain &TC,
     return 0;
 
   unsigned Value = 0;
-  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 5 ||
+  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 6 ||
       Value < 2)
     TC.getDriver().Diag(diag::err_drv_invalid_int_value)
         << A->getAsString(Args) << A->getValue();
@@ -2241,13 +2263,14 @@ unsigned tools::DwarfVersionNum(StringRef ArgValue) {
       .Case("-gdwarf-3", 3)
       .Case("-gdwarf-4", 4)
       .Case("-gdwarf-5", 5)
+      .Case("-gdwarf-6", 6)
       .Default(0);
 }
 
 const Arg *tools::getDwarfNArg(const ArgList &Args) {
   return Args.getLastArg(options::OPT_gdwarf_2, options::OPT_gdwarf_3,
                          options::OPT_gdwarf_4, options::OPT_gdwarf_5,
-                         options::OPT_gdwarf);
+                         options::OPT_gdwarf_6, options::OPT_gdwarf);
 }
 
 unsigned tools::getDwarfVersion(const ToolChain &TC,
@@ -2265,6 +2288,37 @@ unsigned tools::getDwarfVersion(const ToolChain &TC,
     assert(DwarfVersion && "toolchain default DWARF version must be nonzero");
   }
   return DwarfVersion;
+}
+
+DwarfFissionKind tools::getDebugFissionKind(const Driver &D,
+                                            const ArgList &Args, Arg *&Arg) {
+  Arg = Args.getLastArg(options::OPT_gsplit_dwarf, options::OPT_gsplit_dwarf_EQ,
+                        options::OPT_gno_split_dwarf);
+  if (!Arg || Arg->getOption().matches(options::OPT_gno_split_dwarf))
+    return DwarfFissionKind::None;
+
+  if (Arg->getOption().matches(options::OPT_gsplit_dwarf))
+    return DwarfFissionKind::Split;
+
+  StringRef Value = Arg->getValue();
+  if (Value == "split")
+    return DwarfFissionKind::Split;
+  if (Value == "single")
+    return DwarfFissionKind::Single;
+
+  D.Diag(diag::err_drv_unsupported_option_argument)
+      << Arg->getSpelling() << Arg->getValue();
+  return DwarfFissionKind::None;
+}
+
+bool tools::checkDebugInfoOption(const Arg *A, const ArgList &Args,
+                                 const Driver &D, const ToolChain &TC) {
+  assert(A && "Expected non-nullptr argument.");
+  if (TC.supportsDebugInfoOption(A))
+    return true;
+  D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
+      << A->getAsString(Args) << TC.getTripleString();
+  return false;
 }
 
 void tools::AddAssemblerKPIC(const ToolChain &ToolChain, const ArgList &Args,
@@ -2986,7 +3040,8 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs) {
   if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
-      !Args.hasArg(options::OPT_nostdlib) &&
+      (!Args.hasArg(options::OPT_nostdlib) ||
+       TC.getTriple().isKnownWindowsMSVCEnvironment()) &&
       !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r)) {
     TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
   } else {
@@ -3125,6 +3180,8 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
       else if (CM == "medany")
         CM = "large";
       Ok = CM == "small" || CM == "medium" || CM == "large";
+    } else if (Triple.getArch() == llvm::Triple::lanai) {
+      Ok = llvm::is_contained({"small", "medium", "large"}, CM);
     }
     if (Ok) {
       CmdArgs.push_back(Args.MakeArgString("-mcmodel=" + CM));
@@ -3309,197 +3366,24 @@ bool tools::shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
 void tools::handleVectorizeLoopsArgs(const ArgList &Args,
                                      ArgStringList &CmdArgs) {
   bool EnableVec = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier vectorizeAliasOption =
-      EnableVec ? options::OPT_O_Group : options::OPT_fvectorize;
-  if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
-                   options::OPT_fno_vectorize, EnableVec))
+  if (Args.hasFlag(options::OPT_fvectorize, options::OPT_fno_vectorize,
+                   EnableVec))
     CmdArgs.push_back("-vectorize-loops");
 }
 
 void tools::handleVectorizeSLPArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) {
   bool EnableSLPVec = shouldEnableVectorizerAtOLevel(Args, true);
-  OptSpecifier SLPVectAliasOption =
-      EnableSLPVec ? options::OPT_O_Group : options::OPT_fslp_vectorize;
-  if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
-                   options::OPT_fno_slp_vectorize, EnableSLPVec))
+  if (Args.hasFlag(options::OPT_fslp_vectorize, options::OPT_fno_slp_vectorize,
+                   EnableSLPVec))
     CmdArgs.push_back("-vectorize-slp");
 }
 
 void tools::handleInterchangeLoopsArgs(const ArgList &Args,
                                        ArgStringList &CmdArgs) {
-  // FIXME: instead of relying on shouldEnableVectorizerAtOLevel, we may want to
-  // implement a separate function to infer loop interchange from opt level.
-  // For now, enable loop-interchange at the same opt levels as loop-vectorize.
-  bool EnableInterchange = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier InterchangeAliasOption =
-      EnableInterchange ? options::OPT_O_Group : options::OPT_floop_interchange;
-  if (Args.hasFlag(options::OPT_floop_interchange, InterchangeAliasOption,
-                   options::OPT_fno_loop_interchange, EnableInterchange))
+  if (Args.hasFlag(options::OPT_floop_interchange,
+                   options::OPT_fno_loop_interchange, false))
     CmdArgs.push_back("-floop-interchange");
-}
-
-// Parse -mprefer-vector-width=. Return the Value string if well-formed.
-// Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef tools::parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
-                                               const llvm::opt::ArgList &Args) {
-  Arg *A = Args.getLastArg(clang::driver::options::OPT_mprefer_vector_width_EQ);
-  if (!A)
-    return "";
-
-  StringRef Value = A->getValue();
-  unsigned Width LLVM_ATTRIBUTE_UNINITIALIZED;
-
-  // Only "none" and Integer values are accepted by
-  // -mprefer-vector-width=<value>.
-  if (Value != "none" && Value.getAsInteger(10, Width)) {
-    Diags.Report(clang::diag::err_drv_invalid_value)
-        << A->getOption().getName() << Value;
-    return "";
-  }
-
-  return Value;
-}
-
-// This is a helper function for validating the optional refinement step
-// parameter in reciprocal argument strings. Return false if there is an error
-// parsing the refinement step. Otherwise, return true and set the Position
-// of the refinement step in the input string.
-static bool getRefinementStep(StringRef In, clang::DiagnosticsEngine &Diags,
-                              const Arg &A, size_t &Position) {
-  const char RefinementStepToken = ':';
-  Position = In.find(RefinementStepToken);
-  if (Position != StringRef::npos) {
-    StringRef Option = A.getOption().getName();
-    StringRef RefStep = In.substr(Position + 1);
-    // Allow exactly one numeric character for the additional refinement
-    // step parameter. This is reasonable for all currently-supported
-    // operations and architectures because we would expect that a larger value
-    // of refinement steps would cause the estimate "optimization" to
-    // under-perform the native operation. Also, if the estimate does not
-    // converge quickly, it probably will not ever converge, so further
-    // refinement steps will not produce a better answer.
-    if (RefStep.size() != 1) {
-      Diags.Report(diag::err_drv_invalid_value) << Option << RefStep;
-      return false;
-    }
-    char RefStepChar = RefStep[0];
-    if (RefStepChar < '0' || RefStepChar > '9') {
-      Diags.Report(diag::err_drv_invalid_value) << Option << RefStep;
-      return false;
-    }
-  }
-  return true;
-}
-
-// Parse -mrecip. Return the Value string if well-formed.
-// Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef tools::parseMRecipOption(clang::DiagnosticsEngine &Diags,
-                                   const ArgList &Args) {
-  StringRef DisabledPrefixIn = "!";
-  StringRef DisabledPrefixOut = "!";
-  StringRef EnabledPrefixOut = "";
-  StringRef Out = "";
-
-  Arg *A = Args.getLastArg(options::OPT_mrecip, options::OPT_mrecip_EQ);
-  if (!A)
-    return "";
-
-  unsigned NumOptions = A->getNumValues();
-  if (NumOptions == 0) {
-    // No option is the same as "all".
-    return "all";
-  }
-
-  // Pass through "all", "none", or "default" with an optional refinement step.
-  if (NumOptions == 1) {
-    StringRef Val = A->getValue(0);
-    size_t RefStepLoc;
-    if (!getRefinementStep(Val, Diags, *A, RefStepLoc))
-      return "";
-    StringRef ValBase = Val.slice(0, RefStepLoc);
-    if (ValBase == "all" || ValBase == "none" || ValBase == "default") {
-      return Val;
-    }
-  }
-
-  // Each reciprocal type may be enabled or disabled individually.
-  // Check each input value for validity, concatenate them all back together,
-  // and pass through.
-
-  llvm::StringMap<bool> OptionStrings;
-  OptionStrings.insert(std::make_pair("divd", false));
-  OptionStrings.insert(std::make_pair("divf", false));
-  OptionStrings.insert(std::make_pair("divh", false));
-  OptionStrings.insert(std::make_pair("vec-divd", false));
-  OptionStrings.insert(std::make_pair("vec-divf", false));
-  OptionStrings.insert(std::make_pair("vec-divh", false));
-  OptionStrings.insert(std::make_pair("sqrtd", false));
-  OptionStrings.insert(std::make_pair("sqrtf", false));
-  OptionStrings.insert(std::make_pair("sqrth", false));
-  OptionStrings.insert(std::make_pair("vec-sqrtd", false));
-  OptionStrings.insert(std::make_pair("vec-sqrtf", false));
-  OptionStrings.insert(std::make_pair("vec-sqrth", false));
-
-  for (unsigned i = 0; i != NumOptions; ++i) {
-    StringRef Val = A->getValue(i);
-
-    bool IsDisabled = Val.starts_with(DisabledPrefixIn);
-    // Ignore the disablement token for string matching.
-    if (IsDisabled)
-      Val = Val.substr(1);
-
-    size_t RefStep;
-    if (!getRefinementStep(Val, Diags, *A, RefStep))
-      return "";
-
-    StringRef ValBase = Val.slice(0, RefStep);
-    llvm::StringMap<bool>::iterator OptionIter = OptionStrings.find(ValBase);
-    if (OptionIter == OptionStrings.end()) {
-      // Try again specifying float suffix.
-      OptionIter = OptionStrings.find(ValBase.str() + 'f');
-      if (OptionIter == OptionStrings.end()) {
-        // The input name did not match any known option string.
-        Diags.Report(diag::err_drv_unknown_argument) << Val;
-        return "";
-      }
-      // The option was specified without a half or float or double suffix.
-      // Make sure that the double or half entry was not already specified.
-      // The float entry will be checked below.
-      if (OptionStrings[ValBase.str() + 'd'] ||
-          OptionStrings[ValBase.str() + 'h']) {
-        Diags.Report(diag::err_drv_invalid_value)
-            << A->getOption().getName() << Val;
-        return "";
-      }
-    }
-
-    if (OptionIter->second == true) {
-      // Duplicate option specified.
-      Diags.Report(diag::err_drv_invalid_value)
-          << A->getOption().getName() << Val;
-      return "";
-    }
-
-    // Mark the matched option as found. Do not allow duplicate specifiers.
-    OptionIter->second = true;
-
-    // If the precision was not specified, also mark the double and half entry
-    // as found.
-    if (ValBase.back() != 'f' && ValBase.back() != 'd' &&
-        ValBase.back() != 'h') {
-      OptionStrings[ValBase.str() + 'd'] = true;
-      OptionStrings[ValBase.str() + 'h'] = true;
-    }
-
-    // Build the output string.
-    StringRef Prefix = IsDisabled ? DisabledPrefixOut : EnabledPrefixOut;
-    Out = Args.MakeArgString(Out + Prefix + Val);
-    if (i != NumOptions - 1)
-      Out = Args.MakeArgString(Out + ",");
-  }
-
-  return Out;
 }
 
 std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
@@ -3516,9 +3400,11 @@ std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
   case LangOptions::ComplexRangeKind::CX_Promoted:
     return "promoted";
     break;
-  default:
-    return "";
+  case LangOptions::ComplexRangeKind::CX_None:
+    return "none";
+    break;
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 std::string
@@ -3527,4 +3413,52 @@ tools::renderComplexRangeOption(LangOptionsBase::ComplexRangeKind Range) {
   if (!ComplexRangeStr.empty())
     return "-complex-range=" + ComplexRangeStr;
   return ComplexRangeStr;
+}
+
+static void emitComplexRangeDiag(const Driver &D, StringRef LastOpt,
+                                 LangOptions::ComplexRangeKind Range,
+                                 StringRef NewOpt,
+                                 LangOptions::ComplexRangeKind NewRange) {
+  //  Do not emit a warning if NewOpt overrides LastOpt in the following cases.
+  //
+  // | LastOpt               | NewOpt                |
+  // |-----------------------|-----------------------|
+  // | -fcx-limited-range    | -fno-cx-limited-range |
+  // | -fno-cx-limited-range | -fcx-limited-range    |
+  // | -fcx-fortran-rules    | -fno-cx-fortran-rules |
+  // | -fno-cx-fortran-rules | -fcx-fortran-rules    |
+  // | -ffast-math           | -fno-fast-math        |
+  // | -ffp-model=           | -ffast-math           |
+  // | -ffp-model=           | -fno-fast-math        |
+  // | -ffp-model=           | -ffp-model=           |
+  // | -fcomplex-arithmetic= | -fcomplex-arithmetic= |
+  if (LastOpt == NewOpt || NewOpt.empty() || LastOpt.empty() ||
+      (LastOpt == "-fcx-limited-range" && NewOpt == "-fno-cx-limited-range") ||
+      (LastOpt == "-fno-cx-limited-range" && NewOpt == "-fcx-limited-range") ||
+      (LastOpt == "-fcx-fortran-rules" && NewOpt == "-fno-cx-fortran-rules") ||
+      (LastOpt == "-fno-cx-fortran-rules" && NewOpt == "-fcx-fortran-rules") ||
+      (LastOpt == "-ffast-math" && NewOpt == "-fno-fast-math") ||
+      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-ffast-math") ||
+      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-fno-fast-math") ||
+      (LastOpt.starts_with("-ffp-model=") &&
+       NewOpt.starts_with("-ffp-model=")) ||
+      (LastOpt.starts_with("-fcomplex-arithmetic=") &&
+       NewOpt.starts_with("-fcomplex-arithmetic=")))
+    return;
+
+  D.Diag(clang::diag::warn_drv_overriding_complex_range)
+      << LastOpt << NewOpt << complexRangeKindToStr(Range)
+      << complexRangeKindToStr(NewRange);
+}
+
+void tools::setComplexRange(const Driver &D, StringRef NewOpt,
+                            LangOptions::ComplexRangeKind NewRange,
+                            StringRef &LastOpt,
+                            LangOptions::ComplexRangeKind &Range) {
+  // Warn if user overrides the previously set complex number
+  // multiplication/division option.
+  if (Range != LangOptions::ComplexRangeKind::CX_None && Range != NewRange)
+    emitComplexRangeDiag(D, LastOpt, Range, NewOpt, NewRange);
+  LastOpt = NewOpt;
+  Range = NewRange;
 }

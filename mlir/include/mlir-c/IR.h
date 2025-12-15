@@ -415,6 +415,12 @@ MLIR_CAPI_EXPORTED MlirOperation mlirModuleGetOperation(MlirModule module);
 /// The returned module is null when the input operation was not a ModuleOp.
 MLIR_CAPI_EXPORTED MlirModule mlirModuleFromOperation(MlirOperation op);
 
+/// Checks if two modules are equal.
+MLIR_CAPI_EXPORTED bool mlirModuleEqual(MlirModule lhs, MlirModule rhs);
+
+/// Compute a hash for the given module.
+MLIR_CAPI_EXPORTED size_t mlirModuleHashValue(MlirModule mod);
+
 //===----------------------------------------------------------------------===//
 // Operation state.
 //===----------------------------------------------------------------------===//
@@ -619,11 +625,18 @@ static inline bool mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
 MLIR_CAPI_EXPORTED bool mlirOperationEqual(MlirOperation op,
                                            MlirOperation other);
 
+/// Compute a hash for the given operation.
+MLIR_CAPI_EXPORTED size_t mlirOperationHashValue(MlirOperation op);
+
 /// Gets the context this operation is associated with
 MLIR_CAPI_EXPORTED MlirContext mlirOperationGetContext(MlirOperation op);
 
 /// Gets the location of the operation.
 MLIR_CAPI_EXPORTED MlirLocation mlirOperationGetLocation(MlirOperation op);
+
+/// Sets the location of the operation.
+MLIR_CAPI_EXPORTED void mlirOperationSetLocation(MlirOperation op,
+                                                 MlirLocation loc);
 
 /// Gets the type id of the operation.
 /// Returns null if the operation does not have a registered operation
@@ -845,6 +858,10 @@ MLIR_CAPI_EXPORTED
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
                        void *userData, MlirWalkOrder walkOrder);
 
+/// Replace uses of 'of' value with the 'with' value inside the 'op' operation.
+MLIR_CAPI_EXPORTED void
+mlirOperationReplaceUsesOfWith(MlirOperation op, MlirValue of, MlirValue with);
+
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//
@@ -1037,6 +1054,10 @@ MLIR_CAPI_EXPORTED intptr_t mlirBlockArgumentGetArgNumber(MlirValue value);
 /// Sets the type of the block argument to the given type.
 MLIR_CAPI_EXPORTED void mlirBlockArgumentSetType(MlirValue value,
                                                  MlirType type);
+
+/// Sets the location of the block argument to the given location.
+MLIR_CAPI_EXPORTED void mlirBlockArgumentSetLocation(MlirValue value,
+                                                     MlirLocation loc);
 
 /// Returns an operation that produced this value as its result. Asserts if the
 /// value is not an op result.

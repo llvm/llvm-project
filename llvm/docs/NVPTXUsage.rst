@@ -57,6 +57,19 @@ not.
 
 When compiled, the PTX kernel functions are callable by host-side code.
 
+
+Parameter Attributes
+--------------------
+
+``"nvvm.grid_constant"``
+    This attribute may be attached to a ``byval`` parameter of a kernel function
+    to indicate that the parameter should be lowered as a direct reference to
+    the grid-constant memory of the parameter, as opposed to a copy of the
+    parameter in local memory. Writing to a grid-constant parameter is
+    undefined behavior. Unlike a normal ``byval`` parameter, the address of a
+    grid-constant parameter is not unique to a given function invocation but
+    instead is shared by all kernels in the grid.
+
 .. _nvptx_fnattrs:
 
 Function Attributes
@@ -91,6 +104,12 @@ Function Attributes
     The total number of CTAs is the product of the number of CTAs in each 
     dimension. Specifying a different cluster dimension at launch will result in
     a runtime error or kernel launch failure. Only supported for Hopper+.
+
+``"nvvm.blocksareclusters"``
+    This attribute implies that the grid launch configuration for the corresponding
+    kernel function is specifying the number of clusters instead of the number of thread
+    blocks. This attribute is only allowed for kernel functions and requires
+    ``nvvm.reqntid`` and ``nvvm.cluster_dim`` attributes.
 
 .. _address_spaces:
 
@@ -303,6 +322,450 @@ aligned '``@llvm.nvvm.barrier.cta.*``' instruction should only be used if it is
 known that all threads in the CTA evaluate the condition identically, otherwise
 behavior is undefined.
 
+MBarrier family of Intrinsics
+-----------------------------
+
+Overview:
+^^^^^^^^^
+
+An ``mbarrier`` is a barrier created in shared memory that supports:
+
+* Synchronizing any subset of threads within a CTA.
+* One-way synchronization of threads across CTAs of a cluster.
+  Threads can perform only ``arrive`` operations but not ``*_wait`` on an
+  mbarrier located in shared::cluster space.
+* Waiting for completion of asynchronous memory operations initiated by a
+  thread and making them visible to other threads.
+
+Unlike ``bar{.cta}/barrier{.cta}`` instructions which can access a limited
+number of barriers per CTA, ``mbarrier`` objects are user-defined and are
+only limited by the total shared memory size available.
+
+An mbarrier object is an opaque object in shared memory with an
+alignment of 8-bytes. It keeps track of:
+
+* Current phase of the mbarrier object
+* Count of pending arrivals for the current phase of the mbarrier object
+* Count of expected arrivals for the next phase of the mbarrier object
+* Count of pending asynchronous memory operations (or transactions)
+  tracked by the current phase of the mbarrier object. This is also
+  referred to as ``tx-count``. The unit of ``tx-count`` is specified
+  by the asynchronous memory operation (for example,
+  ``llvm.nvvm.cp.async.bulk.tensor.g2s.*``).
+
+The ``phase`` of an mbarrier object is the number of times the mbarrier
+object has been used to synchronize threads/track async operations.
+In each phase, threads perform:
+
+* arrive/expect-tx/complete-tx operations to progress the current phase.
+* test_wait/try_wait operations to check for completion of the current phase.
+
+An mbarrier object completes the current phase when:
+
+* The count of the pending arrivals has reached zero AND
+* The tx-count has reached zero.
+
+When an mbarrier object completes the current phase, below
+actions are performed ``atomically``:
+
+* The mbarrier object transitions to the next phase.
+* The pending arrival count is reinitialized to the expected arrival count.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier>`_.
+
+'``llvm.nvvm.mbarrier.init``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.init(ptr %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %addr, i32 %count)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.init.*``' intrinsics are used to initialize
+an mbarrier object located at ``addr`` with the value ``count``.
+``count`` is a 32-bit unsigned integer value and must be within
+the range [1...2^20-1]. During initialization:
+
+* The tx-count and the current phase of the mbarrier object are set to 0.
+* The expected and pending arrival counts are set to ``count``.
+
+Semantics:
+""""""""""
+
+The ``.shared`` variant explicitly uses shared memory address space for
+the ``addr`` operand. If the ``addr`` does not fall within the
+shared::cta space, then the behavior of this intrinsic is undefined.
+Performing ``mbarrier.init`` on a valid mbarrier object is undefined;
+use ``mbarrier.inval`` before reusing the memory for another mbarrier
+or any other purpose.
+
+'``llvm.nvvm.mbarrier.inval``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.inval(ptr %addr)
+  declare void @llvm.nvvm.mbarrier.inval.shared(ptr addrspace(3) %addr)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.inval.*``' intrinsics invalidate the mbarrier
+object at the address specified by ``addr``.
+
+Semantics:
+""""""""""
+
+The ``.shared`` variant explicitly uses shared memory address space for
+the ``addr`` operand. If the ``addr`` does not fall within the
+shared::cta space, then the behavior of this intrinsic is undefined.
+It is expected that ``addr`` was previously initialized using
+``mbarrier.init``; otherwise, the behavior is undefined.
+
+'``llvm.nvvm.mbarrier.expect.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.expect.tx.*``' intrinsics increase the transaction
+count of the mbarrier object at ``%addr`` by ``%tx_count``. The ``%tx_count``
+is a 32-bit unsigned integer value.
+
+Semantics:
+""""""""""
+
+The ``.space.{cta/cluster}`` indicates the address space where the mbarrier
+object resides.
+
+The ``.scope.{cta/cluster}`` denotes the set of threads that can directly
+observe the synchronizing effect of the mbarrier operation. When scope is
+"cta", all threads executing in the same CTA (as the current thread) can
+directly observe the effect of the ``expect.tx`` operation. Similarly,
+when scope is "cluster", all threads executing in the same Cluster
+(as the current thread) can directly observe the effect of the operation.
+
+If the ``addr`` does not fall within shared::cta or shared::cluster space,
+then the behavior of this intrinsic is undefined. This intrinsic has
+``relaxed`` semantics and hence does not provide any memory ordering
+or visibility guarantees.
+
+'``llvm.nvvm.mbarrier.complete.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.complete.tx.*``' intrinsics decrease the transaction
+count of the mbarrier object at ``%addr`` by ``%tx_count``. The ``%tx_count``
+is a 32-bit unsigned integer value. As a result of this decrement,
+the mbarrier can potentially complete its current phase and transition
+to the next phase.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.expect.tx.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.arrive``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.*`` intrinsics signal the arrival of the
+executing thread or completion of an asynchronous instruction associated with
+an arrive operation on the mbarrier object at ``%addr``. This operation
+decrements the pending arrival count by ``%count``, a 32-bit unsigned integer,
+potentially completing the current phase and triggering a transition to the
+next phase.
+
+Semantics:
+""""""""""
+
+The ``.space.{cta/cluster}`` indicates the address space where the mbarrier
+object resides. When the mbarrier is in shared::cta space, the intrinsics
+return an opaque 64-bit value capturing the phase of the mbarrier object
+_prior_ to this arrive operation. This value can be used with a try_wait
+or test_wait operation to check for the completion of the mbarrier.
+
+The ``.scope.{cta/cluster}`` denotes the set of threads that can directly
+observe the synchronizing effect of the mbarrier operation. When scope is
+"cta", all threads executing in the same CTA (as the current thread) can
+directly observe the effect of the ``arrive`` operation. Similarly,
+when scope is "cluster", all threads executing in the same Cluster
+(as the current thread) can directly observe the effect of the operation.
+
+If the ``addr`` does not fall within shared::cta or shared::cluster space,
+then the behavior of this intrinsic is undefined.
+
+These intrinsics have ``release`` semantics by default. The release semantics
+ensure ordering of operations that occur in program order _before_ this arrive
+instruction, making their effects visible to subsequent operations in other
+threads of the CTA (or cluster, depending on scope). Threads performing
+corresponding acquire operations (such as mbarrier.test.wait) synchronize
+with this release. The ``relaxed`` variants of these intrinsics do not
+provide any memory ordering or visibility guarantees.
+
+'``llvm.nvvm.mbarrier.arrive.expect.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.expect.tx.*`` intrinsics are similar to
+the ``@llvm.nvvm.mbarrier.arrive`` intrinsics except that they also
+perform an ``expect-tx`` operation _prior_ to the ``arrive`` operation.
+The ``%tx_count`` specifies the transaction count for the ``expect-tx``
+operation and the count for the ``arrive`` operation is assumed to be 1.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.arrive.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.arrive.drop``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.drop.*`` intrinsics decrement the
+expected arrival count of the mbarrier object at ``%addr`` by
+``%count`` and then perform an ``arrive`` operation with ``%count``.
+The ``%count`` is a 32-bit integer.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.arrive.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.arrive.drop.expect.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.drop.expect.tx.*`` intrinsics perform
+the below operations on the mbarrier located at ``%addr``.
+
+* Perform an ``expect-tx`` operation i.e. increase the transaction count
+  of the mbarrier by ``%tx_count``, a 32-bit unsigned integer value.
+* Decrement the expected arrival count of the mbarrier by 1.
+* Perform an ``arrive`` operation on the mbarrier with a value of 1.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.arrive.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.test.wait``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i1 @llvm.nvvm.mbarrier.test.wait.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+
+  declare i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.test.wait.*`` intrinsics test for the completion
+of the current or the immediately preceding phase of an mbarrier object at
+``%addr``. The test for completion can be done with either the ``state`` or
+the ``phase-parity`` of the mbarrier object.
+
+* When done through the ``i64 %state`` operand, the state must be
+  returned by an ``llvm.nvvm.mbarrier.arrive.*`` on the _same_
+  mbarrier object.
+* The ``.parity`` variant of these intrinsics test for completion
+  of the phase indicated by the operand ``i32 %phase``, which is
+  the integer parity of either the current phase or the immediately
+  preceding phase of the mbarrier object. An even phase has integer
+  parity 0 and an odd phase has integer parity of 1. So the valid
+  values for phase-parity are 0 and 1.
+
+Semantics:
+""""""""""
+
+The ``.scope.{cta/cluster}`` denotes the set of threads that the
+test_wait operation can directly synchronize with.
+
+If the ``addr`` does not fall within shared::cta space, then the
+the behavior of this intrinsic is undefined.
+
+These intrinsics have ``acquire`` semantics by default. This acquire
+pattern establishes memory ordering for operations occurring in program
+order after this ``test_wait`` instruction by making operations from
+other threads in the CTA (or cluster, depending on scope) visible to
+subsequent operations in the current thread. When this wait completes,
+it synchronizes with the corresponding release pattern from the
+``mbarrier.arrive`` operation. The ``relaxed`` variants of these intrinsics
+do not provide any memory ordering or visibility guarantees.
+
+This ``test.wait`` intrinsic is non-blocking and immediately returns
+the completion status without suspending the executing thread.
+
+The boolean return value indicates:
+
+* True: The immediately preceding phase has completed
+* False: The current phase is still incomplete
+
+When this wait returns true, the following ordering guarantees hold:
+
+* All memory accesses (except async operations) requested prior to
+  ``mbarrier.arrive`` having release semantics by participating
+  threads of a CTA (or cluster, depending on scope) are visible to
+  the executing thread.
+* All ``cp.async`` operations requested prior to ``cp.async.mbarrier.arrive``
+  by participating threads of a CTA are visible to the executing thread.
+* All ``cp.async.bulk`` operations using the same mbarrier object requested
+  prior to ``mbarrier.arrive`` having release semantics by participating CTA
+  threads are visible to the executing thread.
+* Memory accesses requested after this wait are not visible to memory
+  accesses performed prior to ``mbarrier.arrive`` by other participating
+  threads.
+* No ordering guarantee exists for memory accesses by the same thread
+  between an ``mbarrier.arrive`` and this wait.
+
+'``llvm.nvvm.mbarrier.try.wait``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.try.wait{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait.tl{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
+  declare i1 @llvm.nvvm.mbarrier.try.wait.tl{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.try.wait.*`` intrinsics test for the completion of
+the current or immediately preceding phase of an mbarrier object at ``%addr``.
+Unlike the ``test.wait`` intrinsics, which perform a non-blocking test, these
+intrinsics may block the executing thread until the specified phase completes
+or a system-dependent time limit expires. Suspended threads resume execution
+when the phase completes or the time limit elapses. This time limit is
+configurable through the ``.tl`` variants of these intrinsics, where the
+``%timelimit`` operand (an unsigned integer) specifies the limit in
+nanoseconds. Other semantics are identical to those of the ``test.wait``
+intrinsics described above.
+
 Electing a thread
 -----------------
 
@@ -332,6 +795,112 @@ every time. For more information, refer PTX ISA
 
 Membar/Fences
 -------------
+
+'``llvm.nvvm.fence.acquire/release.sync_restrict.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.acquire.sync_restrict.space.cluster.scope.cluster()
+  declare void @llvm.nvvm.fence.release.sync_restrict.space.cta.scope.cluster()
+
+Overview:
+"""""""""
+
+The `nvvm.fence.{semantics}.sync_restrict.*` restrict the class of memory
+operations for which the fence instruction provides the memory ordering guarantees.
+When `.sync_restrict` is restricted to `shared_cta`, then memory semantics must
+be `release` and the effect of the fence operation only applies to operations
+performed on objects in `shared_cta` space. Likewise, when `sync_restrict` is
+restricted to `shared_cluster`, then memory semantics must be `acquire` and the
+effect of the fence operation only applies to operations performed on objects in
+`shared_cluster` memory space. The scope for both operations is `cluster`. For more details,
+please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.mbarrier_init.release.cluster``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.mbarrier_init.release.cluster()
+
+Overview:
+"""""""""
+
+`nvvm.fence.mbarrier_init.release.cluster` intrinsic restrict the class of
+memory operations for which the fence instruction provides the memory ordering
+guarantees. The `mbarrier_init` modifiers restricts the synchronizing effect to
+the prior `mbarrier_init` operation executed by the same thread on mbarrier objects
+in `shared_cta` memory space. For more details, please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.proxy.async_generic.acquire/release.sync_restrict``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.async.generic.acquire.sync_restrict.space.cluster.scope.cluster()
+  declare void @llvm.nvvm.fence.proxy.async.generic.release.sync_restrict.space.cta.scope.cluster()
+
+Overview:
+"""""""""
+
+`nvvm.fence.proxy.async_generic.{semantics}.sync_restrict` are used to establish
+ordering between a prior memory access performed via the `async proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>__`
+and a subsequent memory access performed via the generic proxy.
+``nvvm.fence.proxy.async_generic.release.sync_restrict`` can form a release
+sequence that synchronizes with an acquire sequence that contains the
+``nvvm.fence.proxy.async_generic.acquire.sync_restrict`` proxy fence. When
+`.sync_restrict` is restricted to `shared_cta`, then memory semantics must
+be `release` and the effect of the fence operation only applies to operations
+performed on objects in `shared_cta` space. Likewise, when `sync_restrict` is
+restricted to `shared_cluster`, then memory semantics must be `acquire` and the
+effect of the fence operation only applies to operations performed on objects in
+`shared_cluster` memory space. The scope for both operations is `cluster`.
+For more details, please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.proxy.<proxykind>``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.alias()
+  declare void @llvm.nvvm.fence.proxy.async()
+  declare void @llvm.nvvm.fence.proxy.async.global()
+  declare void @llvm.nvvm.fence.proxy.async.shared_cluster()
+  declare void @llvm.nvvm.fence.proxy.async.shared_cta()
+
+Overview:
+"""""""""
+
+`nvvm.fence.proxy.{proxykind}` intrinsics represent a fence with bi-directional
+proxy ordering that is established between the memory accesses done between the
+`generic proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>__`
+and the proxy specified by `proxykind`. A `bi-directional proxy` ordering between
+two proxykinds establishes two `uni-directional` proxy orderings: one from the
+first proxykind to the second proxykind and the other from the second proxykind
+to the first proxykind.
+
+`alias` proxykind refers to memory accesses performed using virtually aliased
+addresses to the same memory location
+
+`async` proxykind specifies that the memory ordering is established between the
+`async proxy` and the `generic proxy`. The memory ordering is limited only to
+operations performed on objects in the state space specified (`generic`, `global`,
+`shared_cluster`, `shared_cta`). If no state space is specified, then the memory
+ordering applies on all state spaces. For more details, please refer the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
 
 '``llvm.nvvm.fence.proxy.tensormap_generic.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -448,7 +1017,7 @@ Semantics:
 """"""""""
 
 Unlike, '``llvm.fabs.*``', these intrinsics do not perfectly preserve NaN
-values. Instead, a NaN input yeilds an unspecified NaN output.
+values. Instead, a NaN input yields an unspecified NaN output.
 
 
 '``llvm.nvvm.fabs.ftz.*``' Intrinsic
@@ -867,6 +1436,32 @@ copied and it must be a multiple of 16.
 * The [N-1]th argument (denoted by ``i1 %flag_mc``) when set, indicates
   the presence of a multicast mask (``i16 %mc``) and generates the PTX
   instruction with the ``.multicast::cluster`` modifier.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+
+'``llvm.nvvm.cp.async.bulk.global.to.shared.cta``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i64 %ch, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.global.to.shared.cta``' intrinsic
+corresponds to the ``cp.async.bulk.shared::cta.global.*`` family
+of PTX instructions. These instructions initiate an asynchronous
+copy of bulk data from global memory to shared::cta memory.
+The 32-bit operand ``%size`` specifies the amount of memory to be
+copied and it must be a multiple of 16. The last argument
+(denoted by ``i1 %flag_ch``) is a compile-time constant. When set,
+it indicates a valid cache_hint (``i64 %ch``) and generates the
+``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
@@ -1952,6 +2547,464 @@ The last argument `i1 %unpack` is a compile-time constant which when set, indica
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st>`__.
 
+tcgen05.mma Intrinsics
+----------------------
+
+Overview
+^^^^^^^^
+
+`tcgen05.mma` operation of shape `M x N x K` perform matrix multiplication and
+accumulation of the form: `D =  A * B + D` where:
+
+  - the `A` matrix has shape `M x K`, in either `Tensor Memory` or `Shared Memory`
+  - the `B` matrix has shape `K x N`, in `Shared Memory` of the current CTA and, optionally in peer CTA
+  - the `D` matrix is of the shape `M x N`, in `Tensor Memory`
+
+Optionally an input predicate can be used to disable the input (`%enable_inp_d`)
+from the accumulator matrix and the following operation can be performed as `D = A * B`
+
+The matrix multiplication and accumulation operations are categorized into various
+kinds based on input types and the throughput of the multiplication operation.
+The following table shows the different kinds of MMA operations that are supported:
+
++------------+--------------------------------------------+
+| .kind      | Supported Input Types                      |
++============+============================================+
+| f16        | F16 and BF16                               |
++------------+--------------------------------------------+
+| tf32       | TF32                                       |
++------------+--------------------------------------------+
+| f8f6f4     | All combinations of F8, F6, and F4         |
++------------+--------------------------------------------+
+| i8         | Signed and Unsigned 8-bit Integers         |
++------------+--------------------------------------------+
+| mxf8f6f4   | MX-floating point formats                  |
++------------+--------------------------------------------+
+| mxf4       | MX-floating point formats (FP4)            |
++------------+--------------------------------------------+
+| mxf4nvf4   | MXF4 + custom NVIDIA 4-bit floating point  |
+|            | (with common scaling factor)               |
++------------+--------------------------------------------+
+
+`tcgen05.mma.sp` supports sparse variant of `A` with shape `M x K` stored in packed
+form as `M X (K / 2)` in memory. The `%spmetadata` specifies the mapping of the
+`K / 2` non-zero elements to the `K` elements before performing the MMA operation.
+
+`tcgen05.mma.block_scale` perform matrix multiplication with block scaling
+`D = (A * scale_A)  * (B * scale_B) + D` where scaling of input matrices from
+memory to form the matrix `A` and matrix `B` before performing the MMA operation.
+Scale factors for `A` and `B` matrices need to be duplicated to all 32 lane partitions
+of tensor memory. The shape of `%scale_a` and `%scale_b` matrices depend on the
+`.scale_vectorsize` described in `here <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-scale-valid-comb>`__
+
+The sparsity metadata (`%spmetadata`) as well as the block-scale inputs for `A / B`
+matrices (`%scale_a` and `%scale_b`) reside in Tensor Memory.
+
+To facilitate opportunistic re-use of `A / B` matrix data across a sequence of MMA
+operations, the `A/B` matrices are loaded into a collector buffer
+(`%collector_usage_a_op_flag`, `%collector_usage_b_buffer_flag`, and `%collector_usage_b_op_flag`).
+The flag value of the collector_usage flag in the intrinsic specifies the nature of the re-use
+
+There are three kinds of matrix descriptors used by the tcgen05 family of instructions:
+
++----------------------------+-----------------------------------------------------------------------------------------------------------+-------------+
+| Descriptor                 | Description                                                                                               | Size (bits) |
++============================+===========================================================================================================+=============+
+| Shared Memory Descriptor   | Describes properties of multiplicand matrix                                                               |             |
+|                            | in shared memory, including its location                                                                  |             |
+|                            | within the CTA's shared memory.                                                                           |     64      |
+|                            | `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-shared-memory-descriptor>`__    |             |
++----------------------------+-----------------------------------------------+-------------+---------------------------------------------+-------------+
+| Instruction Descriptor     | Describes shapes, types, and details of                                                                   |             |
+|                            | all matrices and the MMA operation.                                                                       |     32      |
+|                            | `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-zero-column-mask-descriptor>`__ |             |
++----------------------------+-----------------------------------------------+-------------+---------------------------------------------+-------------+
+| Zero-Column Mask Descriptor| Generates a mask specifying which columns of                                                              |             |
+|                            | B matrix are zeroed in the MMA operation,                                                                 |             |
+|                            | regardless of values in shared memory.                                                                    |     64      |
+|                            | Total mask size = N bits                                                                                  |             |
+|                            | `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__      |             |
++----------------------------+-----------------------------------------------+-------------+---------------------------------------------+-------------+
+
+`tcgen05.mma` can be used for general matrix multiplication or for convolution operations.
+In case of convolutions, the `activations` can be stored in either matrix `A` or matrix `B`
+while the `weights` will be stored in the other matrix
+
+`tcgen05.mma` has an optional collector qualifier to specify when an `A` or `B` matrix
+is new to the sequence and should be loaded, unchanged within the sequence and,
+should be reused, or the last use in the sequence and should be discarded.
+The collector qualifier is used to give the TensorCore permission to reuse a
+previously loaded `A` or `B` matrix; however reuse is opportunistic in that the
+TensorCore may reload a matrix even when it has permission to reuse that matrix.
+Thus, the source memory of an A or B matrix must not be modified while the MMA
+instruction using those matrices has not completed - regardless of collector
+qualifier permissions.
+
+The `cta_group::1` specifies that the operation is performed on the Tensor Memory
+of the executing thread’s CTA only. The `cta_group::2` specifies that the MMA
+operation is performed on the Tensor Memory of the executing thread’s CTA and its peer CTA.
+
+The vector operand `%disable_output_lane` specifies the lane(s) in the Tensor Memory
+that should be not be updated with the resultant matrix D. Elements of the vector operand
+disable-output-lane forms a mask where each bit corresponds to a lane of the Tensor Memory,
+with least significant bit of the first element of the vector (leftmost in syntax)
+corresponding to the lane 0 of the Tensor Memory. If a bit in the mask is 1, then
+the corresponding lane in the Tensor Memory for the resultant matrix D will not be
+updated
+
+Intrinsic Design:
+^^^^^^^^^^^^^^^^^
+
+Given the broad feature set of `tcgen05.mma` instruction modeling these
+through intrinsics is highly complex, and the following table outlines the large
+number of intrinsics required to fully support the `tcgen05.mma` instruction set.
+
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| variant                            | Configuration                                                                                     | Total Variants |
++====================================+===================================================================================================+================+
+| tcgen05.mma.shared                 | 2 (space) x 2 (sp) x 4 (kind) x 2 (cta_group) x 4 (collector_usage)                               | 128            |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.tensor.ashift          | 2 (sp) x 4 (kind) x 2 (cta_group) x 2 (collector_usage)                                           | 32             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.scale_d                | 2 (space) x 2 (sp) x 2 (kind) x 2 (cta_group) x 4 (collector_usage)                               | 128            |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.scale_d.tensor.ashift  | 2 (sp) x 2 (kind) x 2 (cta_group) x 2 (collector_usage)                                           | 16             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.disable_output_lane    | 2 (space) x 2 (sp) x 4 (kind) x 2 (cta_group) x 4 (collector_usage)                               | 128            |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.disable_output_lane... | 2 (sp) x 4 (kind) x 2 (cta_group) x 2 (collector_usage)                                           | 32             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf4nvf4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage)               | 32             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage)                   | 32             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf8f6f4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage)               | 32             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.ws                     | 2 (space) x 2 (sp) x 4 (kind) x 2 (zero_col_mask) x 4 (collector_usage_op) x 4 (collector_buffer) | 256            |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| Total                              |                                                                                                   | 816            |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+
+
+To reduce the number of possible intrinsic variations, we've modeled the `tcgen05.mma`
+instructions using flag operands. We've added range checks to these flags to prevent
+invalid values. We also expanded some flags back into intrinsic modifiers to avoid
+supporting invalid combinations of features.
+
+
+'``llvm.nvvm.tcgen05.mma.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag)
+
+  ; .sp variants
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag)
+
+  ; .scale_d variants
+  declare void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group_flag, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group_flag, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+
+  ; sp.scale_d variants
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group, i32 %collector_usage_a_op_flag)
+
+Overview:
+"""""""""
+
+`nvvm.tcgen05.mma` is an asynchronous intrinsic which initiates an `M x N x K` matrix
+multiply and accumulate operation, `D = A * B + D` where the `A` matrix is `M x K`,
+the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The operation of the form
+`D = A*B` is issued when the input predicate argument `%enable_inp_d` is false.
+The optional immediate argument `%scale_d_imm` can be specified to scale the input
+matrix `D` as follows: `D = A * B + D * (2 ^ - %scale_d_imm)`. The valid range of
+values for argument `%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc
+is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+
+`nvvm.tcgen05.mma` has single thread semantics, unlike the collective instructions
+`nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing
+the `nvvm.tcgen05.mma` will result in the initiation of the whole matrix and accumulate
+operation
+
+When `.sp` is specifed, the dimension of A matrix is `M x (K/2)` and requires
+specifying an additional `%spmetadata` argument
+
+`.ashift` shifts the rows of the A matrix down by one row, except for the last row
+in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
+
+The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for
+matrix `A`. It is illegal to specify either of `USE` or `FILL` for `%collector_usage_a_op_flag`
+along with `.ashift`
+
+For more information, refer to the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
+
+The following tables describe the possible values of the flag arguments
+
+`%kind_flag` flag:
+
+============= ==========
+  `kind_flag`   value
+============= ==========
+     F16          0
+     TF32         1
+     F8F6F4       2
+     I8           3
+============= ==========
+
+`%cta_group_flag` flag:
+
+================= ==========
+ `cta_group_flag`    value
+================= ==========
+     CG1               1
+     CG2               2
+================= ==========
+
+`%collector_usage_a_op_flag` flag:
+
+============================= ==========
+ `collector_usage_a_op_flag`    value
+============================= ==========
+           DISCARD                 0
+           LASTUSE                 1
+           USE                     2
+           FILL                    3
+============================= ==========
+
+'``llvm.nvvm.tcgen05.mma.block_scale*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  ; mxf8f6f4
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf8f6f4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+
+  ; mxf4
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+
+  ; mxf4nvf4
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+
+Overview:
+"""""""""
+`nvvm.tcgen05.mma.block_scale` is an asynchronous intrinsic which initiates an `M x N x K` matrix multiply and accumulate operation, `D = (A * scale_a)  * (B * scale_b) + D` where the `A` matrix is `M x K`, the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The matrices `A` and `B` are scaled with `%scale_A` and `%scale_B` matrices respectively before performing the matrix multiply and accumulate operation. The operation of the form `D = A*B` is issued when the input predicate argument `%enable_inp_d` is false. The 32-bit register operand idesc is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+
+`nvvm.tcgen05.mma.block_scale` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma.block_scale` will result in the initiation of the whole matrix multiply and accumulate operation
+
+When `.sp` is specified, the dimension of A matrix is `M x (K / 2)` and requires specifying an additional `%spmetadata` argument
+
+The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for matrix `A`
+
+For more information, refer to the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
+
+The following tables describe the possible values of the flag arguments
+
+`%cta_group`:
+
+============= ==========
+ `cta_group`    value
+============= ==========
+     CG1          1
+     CG2          2
+============= ==========
+
+`%collector_usage_a_op_flag`:
+
+============================= ==========
+ `collector_usage_a_op_flag`    value
+============================= ==========
+     DISCARD                      0
+     LASTUSE                      1
+     USE                          2
+     FILL                         3
+============================= ==========
+
+'``llvm.nvvm.tcgen05.mma.disable_output_lane*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+
+  ; .sp variants
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+
+  ; .scale_d variants
+  declare void @llvm.nvvm.tcgen05.mma.shared.scale_d.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.shared.scale_d.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+
+  ; .sp.scale_d variants
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+
+Overview:
+"""""""""
+
+`nvvm.tcgen05.mma.disable_output_lane` is an asynchronous intrinsic which initiates an `M x N x K` matrix multiply and accumulate operation, `D = A * B + D` where the `A` matrix is `M x K`, the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The operation of the form `D = A*B` is issued when the input predicate argument `%enable_inp_d` is false. The optional immediate argument `%scale_d_imm` can be specified to scale the input matrix `D` as follows: `D = A*B+D * (2 ^ - %scale_d_imm)`. The valid range of values for argument `%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+
+The vector operand `%disable_output_lane` specifies the lane(s) in the Tensor Memory that should be not be updated with the resultant matrix `D`. Elements of the vector operand `%disable_output_lane` forms a mask where each bit corresponds to a lane of the Tensor Memory, with least significant bit of the first element of the vector corresponding to the `lane 0` of the Tensor Memory. If a bit in the mask is 1, then the corresponding lane in the Tensor Memory for the resultant matrix `D` will not be updated
+
+`nvvm.tcgen05.mma.disable_output_lane` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma.disable_output_lane` will result in the initiation of the whole matrix multiply and accumulate operation
+
+When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+
+`.ashift` shifts the rows of the A matrix down by one row, except for the last row in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
+
+The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for matrix `A`. It is illegal to specify either of `USE` or `FILL` for `%collector_usage_a_op_flag` along with `.ashift`
+
+For more information, refer to the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
+
+The following tables describes the possible values of the flag arguments
+
+`%kind_flag`:
+
+============= ==========
+ `kind_flag`    value
+============= ==========
+     F16          0
+     TF32         1
+     F8F6F4       2
+     I8           3
+============= ==========
+
+`%cta_group_flag`:
+
+================= ==========
+ `cta_group_flag`    value
+================= ==========
+        CG1           1
+        CG2           2
+================= ==========
+
+`%collector_usage_a_op_flag`:
+
+============================= ==========
+ `collector_usage_a_op_flag`    value
+============================= ==========
+     DISCARD                      0
+     LASTUSE                      1
+     USE                          2
+     FILL                         3
+============================= ==========
+
+
+'``llvm.nvvm.tcgen05.mma.ws*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  // tcgen05.mma.ws
+  declare void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.shared.zero_col_mask(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.shared.zero_col_mask(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.tensor.zero_col_mask(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+
+  ; .sp variants
+  declare void @llvm.nvvm.tcgen05.mma.ws.sp.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.sp.tensor(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.sp.shared.zero_col_mask(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.sp.tensor.zero_col_mask(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+
+Overview:
+"""""""""
+
+`nvvm.tcgen05.mma.ws` is an asynchronous intrinsic which initiates an `M x N x K` weight stationary convolution matrix multiply and accumulate operation, `D = A * B + D` where the `A` matrix is `M x K`, the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The operation of the form `D = A*B` is issued when the input predicate argument `%enable_inp_d` is false. The optional immediate argument `%scale_d_imm` can be specified to scale the input matrix `D` as follows: `D = A*B+D * (2 ^ - %scale_d_imm)`. The valid range of values for argument `%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+
+`nvvm.tcgen05.mma` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma` will result in the initiation of the whole matrix multiply and accumulate operation
+
+When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+
+The operand `%zero_col_mask` is a 64-bit register which specifies the `Zero-Column Mask Descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-zero-column-mask-descriptor>`__. The zero-column mask descriptor is used to generate a mask that specifies which columns of `B` matrix will have zero value for the matrix multiply and accumulate operation regardless of the values present in the shared memory.
+
+The `%collector_usage_b_buffer_flag` and `%collector_usage_b_op_flag` together flag specifies the usage of collector buffer for Matrix `B`
+
+For more information, refer to the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma-ws>`__
+
+The following tables describes the possible values of the flag arguments
+
+`%kind_flag`:
+
+============= ==========
+ `kind_flag`    value
+============= ==========
+     F16          0
+     TF32         1
+     F8F6F4       2
+     I8           3
+============= ==========
+
+`%collector_usage_b_buffer_flag`:
+
+================================ ==========
+ `collector_usage_b_buffer_flag`   value
+================================ ==========
+              B0                     0
+              B1                     1
+              B2                     2
+              B3                     3
+================================ ==========
+
+`%collector_usage_b_op_flag`:
+
+============================= ==========
+ `collector_usage_b_op_flag`    value
+============================= ==========
+     DISCARD                      0
+     LASTUSE                      1
+     USE                          2
+     FILL                         3
+============================= ==========
+
 Store Intrinsics
 ----------------
 
@@ -2283,9 +3336,9 @@ The Kernel
   ; Intrinsic to read X component of thread ID
   declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
-  define void @kernel(ptr addrspace(1) %A,
-                      ptr addrspace(1) %B,
-                      ptr addrspace(1) %C) {
+  define ptx_kernel void @kernel(ptr addrspace(1) %A,
+                                 ptr addrspace(1) %B,
+                                 ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
@@ -2307,9 +3360,6 @@ The Kernel
 
     ret void
   }
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 We can use the LLVM ``llc`` tool to directly run the NVPTX code generator:
@@ -2434,34 +3484,6 @@ instructions. Intrinsics are provided to convert pointers between the generic
 and non-generic address spaces.
 
 See :ref:`address_spaces` and :ref:`nvptx_intrinsics` for more information.
-
-
-Kernel Metadata
-^^^^^^^^^^^^^^^
-
-In PTX, a function can be either a `kernel` function (callable from the host
-program), or a `device` function (callable only from GPU code). You can think
-of `kernel` functions as entry-points in the GPU program. To mark an LLVM IR
-function as a `kernel` function, we make use of special LLVM metadata. The
-NVPTX back-end will look for a named metadata node called
-``nvvm.annotations``. This named metadata must contain a list of metadata that
-describe the IR. For our purposes, we need to declare a metadata node that
-assigns the "kernel" attribute to the LLVM IR function that should be emitted
-as a PTX `kernel` function. These metadata nodes take the form:
-
-.. code-block:: text
-
-  !{<function ref>, metadata !"kernel", i32 1}
-
-For the previous example, we have:
-
-.. code-block:: llvm
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
-
-Here, we have a single metadata declaration in ``nvvm.annotations``. This
-metadata annotates our ``@kernel`` function with the ``kernel`` attribute.
 
 
 Running the Kernel
@@ -2663,9 +3685,9 @@ Libdevice provides an ``__nv_powf`` function that we will use.
   ; libdevice function
   declare float @__nv_powf(float, float)
 
-  define void @kernel(ptr addrspace(1) %A,
-                      ptr addrspace(1) %B,
-                      ptr addrspace(1) %C) {
+  define ptx_kernel void @kernel(ptr addrspace(1) %A,
+                                 ptr addrspace(1) %B,
+                                 ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
@@ -2687,9 +3709,6 @@ Libdevice provides an ``__nv_powf`` function that we will use.
 
     ret void
   }
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 To compile this kernel, we perform the following steps:

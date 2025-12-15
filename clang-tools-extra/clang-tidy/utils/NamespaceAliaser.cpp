@@ -1,4 +1,4 @@
-//===---------- NamespaceAliaser.cpp - clang-tidy -------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,7 @@ NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
   if (!Function || !Function->hasBody())
     return std::nullopt;
 
-  if (AddedAliases[Function].count(Namespace.str()) != 0)
+  if (AddedAliases[Function].contains(Namespace.str()))
     return std::nullopt;
 
   // FIXME: Doesn't consider the order of declarations.
@@ -55,7 +55,7 @@ NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
   }
 
   for (const auto &Abbreviation : Abbreviations) {
-    DeclarationMatcher ConflictMatcher = namedDecl(hasName(Abbreviation));
+    const DeclarationMatcher ConflictMatcher = namedDecl(hasName(Abbreviation));
     const auto HasConflictingChildren =
         !match(findAll(ConflictMatcher), *Function, Context).empty();
     const auto HasConflictingAncestors =
@@ -65,10 +65,10 @@ NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
     if (HasConflictingAncestors || HasConflictingChildren)
       continue;
 
-    std::string Declaration =
+    const std::string Declaration =
         (llvm::Twine("\nnamespace ") + Abbreviation + " = " + Namespace + ";")
             .str();
-    SourceLocation Loc =
+    const SourceLocation Loc =
         Lexer::getLocForEndOfToken(Function->getBody()->getBeginLoc(), 0,
                                    SourceMgr, Context.getLangOpts());
     AddedAliases[Function][Namespace.str()] = Abbreviation;
@@ -84,7 +84,7 @@ std::string NamespaceAliaser::getNamespaceName(ASTContext &Context,
   const auto *Function = getSurroundingFunction(Context, Statement);
   auto FunctionAliases = AddedAliases.find(Function);
   if (FunctionAliases != AddedAliases.end()) {
-    if (FunctionAliases->second.count(Namespace) != 0) {
+    if (FunctionAliases->second.contains(Namespace)) {
       return FunctionAliases->second.find(Namespace)->getValue();
     }
   }

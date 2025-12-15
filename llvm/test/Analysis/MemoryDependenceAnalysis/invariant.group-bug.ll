@@ -17,13 +17,13 @@ target triple = "x86_64-grtev4-linux-gnu"
 %4 = type { ptr }
 %5 = type { i64, [8 x i8] }
 
-define void @fail(ptr noalias sret(i1) %arg, ptr %arg1, ptr %arg2, ptr %arg3, i1 %arg4) local_unnamed_addr #0 {
+define void @fail(ptr noalias sret(i1) %arg, ptr %arg1, ptr %arg2, ptr %arg3, i1 %arg4) local_unnamed_addr {
 ; CHECK-LABEL: @fail(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I4:%.*]] = load ptr, ptr [[ARG1:%.*]], align 8, !invariant.group [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[I5:%.*]] = getelementptr inbounds ptr, ptr [[I4]], i64 6
 ; CHECK-NEXT:    [[I6:%.*]] = load ptr, ptr [[I5]], align 8, !invariant.load [[META6]]
-; CHECK-NEXT:    [[I7:%.*]] = tail call i64 [[I6]](ptr [[ARG1]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[I7:%.*]] = tail call i64 [[I6]](ptr [[ARG1]])
 ; CHECK-NEXT:    [[I9:%.*]] = load ptr, ptr [[ARG2:%.*]], align 8
 ; CHECK-NEXT:    store i8 0, ptr [[I9]], align 1
 ; CHECK-NEXT:    br i1 [[ARG4:%.*]], label [[BB10:%.*]], label [[BB29:%.*]]
@@ -32,7 +32,7 @@ define void @fail(ptr noalias sret(i1) %arg, ptr %arg1, ptr %arg2, ptr %arg3, i1
 ; CHECK-NEXT:    [[I15_PRE:%.*]] = load ptr, ptr [[I14_PHI_TRANS_INSERT]], align 8, !invariant.load [[META6]]
 ; CHECK-NEXT:    br label [[BB12:%.*]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[I16:%.*]] = call i64 [[I15_PRE]](ptr nonnull [[ARG1]], ptr null, i64 0) #[[ATTR1]]
+; CHECK-NEXT:    [[I16:%.*]] = call i64 [[I15_PRE]](ptr nonnull [[ARG1]], ptr null, i64 0)
 ; CHECK-NEXT:    br i1 true, label [[BB28:%.*]], label [[BB17:%.*]]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    br i1 true, label [[BB18:%.*]], label [[BB21:%.*]]
@@ -55,7 +55,7 @@ bb:
   %i4 = load ptr, ptr %arg1, align 8, !invariant.group !6
   %i5 = getelementptr inbounds ptr, ptr %i4, i64 6
   %i6 = load ptr, ptr %i5, align 8, !invariant.load !6
-  %i7 = tail call i64 %i6(ptr %arg1) #1
+  %i7 = tail call i64 %i6(ptr %arg1)
   %i9 = load ptr, ptr %arg2, align 8
   store i8 0, ptr %i9, align 1
   br i1 %arg4, label %bb10, label %bb29
@@ -67,7 +67,7 @@ bb12:                                             ; preds = %bb28, %bb10
   %i13 = load ptr, ptr %arg1, align 8, !invariant.group !6
   %i14 = getelementptr inbounds ptr, ptr %i13, i64 22
   %i15 = load ptr, ptr %i14, align 8, !invariant.load !6
-  %i16 = call i64 %i15(ptr nonnull %arg1, ptr null, i64 0) #1
+  %i16 = call i64 %i15(ptr nonnull %arg1, ptr null, i64 0)
   br i1 %arg4, label %bb28, label %bb17
 
 bb17:                                             ; preds = %bb12
@@ -109,9 +109,6 @@ bb28:                                             ; preds = %bb27, %bb25, %bb20,
 bb29:                                             ; preds = %bb28, %bb
   ret void
 }
-
-attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.linker.options = !{}
 !llvm.module.flags = !{!0, !1, !3, !4, !5}

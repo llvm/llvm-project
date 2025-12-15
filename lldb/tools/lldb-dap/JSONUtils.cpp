@@ -10,6 +10,8 @@
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
@@ -122,7 +124,7 @@ DecodeMemoryReference(llvm::StringRef memoryReference) {
 
 bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
                            lldb::addr_t &out, llvm::json::Path path,
-                           bool required) {
+                           bool required, bool allow_empty) {
   const llvm::json::Object *v_obj = v.getAsObject();
   if (!v_obj) {
     path.report("expected object");
@@ -143,6 +145,11 @@ bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
   if (!mem_ref_str) {
     path.field(key).report("expected string");
     return false;
+  }
+
+  if (allow_empty && mem_ref_str->empty()) {
+    out = LLDB_INVALID_ADDRESS;
+    return true;
   }
 
   const std::optional<lldb::addr_t> addr_opt =
@@ -284,7 +291,7 @@ void FillResponse(const llvm::json::Object &request,
   // Fill in all of the needed response fields to a "request" and set "success"
   // to true by default.
   response.try_emplace("type", "response");
-  response.try_emplace("seq", (int64_t)0);
+  response.try_emplace("seq", protocol::kCalculateSeq);
   EmplaceSafeString(response, "command",
                     GetString(request, "command").value_or(""));
   const uint64_t seq = GetInteger<uint64_t>(request, "seq").value_or(0);
@@ -417,7 +424,7 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 // }
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   llvm::json::Object event;
-  event.try_emplace("seq", 0);
+  event.try_emplace("seq", protocol::kCalculateSeq);
   event.try_emplace("type", "event");
   EmplaceSafeString(event, "event", event_name);
   return event;
@@ -552,9 +559,8 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
 
   lldb::SBModule module = frame.GetModule();
   if (module.IsValid()) {
-    std::string uuid = module.GetUUIDString();
-    if (!uuid.empty())
-      object.try_emplace("moduleId", uuid);
+    if (const llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
+      object.try_emplace("moduleId", uuid.str());
   }
 
   return llvm::json::Value(std::move(object));
@@ -675,7 +681,14 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
-  case lldb::eStopReasonWatchpoint:
+  case lldb::eStopReasonWatchpoint: {
+    body.try_emplace("reason", "data breakpoint");
+    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+    body.try_emplace("hitBreakpointIds",
+                     llvm::json::Array{llvm::json::Value(bp_id)});
+    EmplaceSafeString(body, "description",
+                      llvm::formatv("data breakpoint {0}", bp_id).str());
+  } break;
   case lldb::eStopReasonInstrumentation:
     body.try_emplace("reason", "breakpoint");
     break;
@@ -710,7 +723,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
     break;
   }
   if (stop_id == 0)
-    body.try_emplace("reason", "entry");
+    body["reason"] = "entry";
   const lldb::tid_t tid = thread.GetThreadID();
   body.try_emplace("threadId", (int64_t)tid);
   // If no description has been set, then set it to the default thread stopped
@@ -816,10 +829,10 @@ VariableDescription::VariableDescription(lldb::SBValue v,
   evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
 }
 
-std::string VariableDescription::GetResult(llvm::StringRef context) {
+std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
   // In repl context, the results can be displayed as multiple lines so more
   // detailed descriptions can be returned.
-  if (context != "repl")
+  if (context != protocol::eEvaluateContextRepl)
     return display_value;
 
   if (!v.IsValid())
@@ -866,7 +879,8 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
     const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
-    llvm::StringRef comm_file, lldb::pid_t debugger_pid, bool external) {
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid,
+    const std::vector<std::optional<std::string>> &stdio, bool external) {
   llvm::json::Object run_in_terminal_args;
   if (external) {
     // This indicates the IDE to open an external terminal window.
@@ -885,6 +899,18 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   }
   req_args.push_back("--launch-target");
   req_args.push_back(program.str());
+  if (!stdio.empty()) {
+    req_args.push_back("--stdio");
+    std::stringstream ss;
+    for (const std::optional<std::string> &file : stdio) {
+      if (file)
+        ss << *file;
+      ss << ":";
+    }
+    std::string files = ss.str();
+    files.pop_back();
+    req_args.push_back(std::move(files));
+  }
   req_args.insert(req_args.end(), args.begin(), args.end());
   run_in_terminal_args.try_emplace("args", req_args);
 

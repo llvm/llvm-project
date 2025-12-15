@@ -102,6 +102,7 @@ public:
   clang::ASTContext &getASTContext() const { return astContext; }
   const clang::TargetInfo &getTarget() const { return target; }
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
+  clang::DiagnosticsEngine &getDiags() const { return diags; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
 
@@ -120,6 +121,28 @@ public:
 
   mlir::Operation *lastGlobalOp = nullptr;
 
+  /// Keep a map between lambda fields and names, this needs to be per module
+  /// since lambdas might get generated later as part of defered work, and since
+  /// the pointers are supposed to be uniqued, should be fine. Revisit this if
+  /// it ends up taking too much memory.
+  llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> lambdaFieldToName;
+  /// Map BlockAddrInfoAttr (function name, label name) to the corresponding CIR
+  /// LabelOp. This provides the main lookup table used to resolve block
+  /// addresses into their label operations.
+  llvm::DenseMap<cir::BlockAddrInfoAttr, cir::LabelOp> blockAddressInfoToLabel;
+  /// Map CIR BlockAddressOps directly to their resolved LabelOps.
+  /// Used once a block address has been successfully lowered to a label.
+  llvm::MapVector<cir::BlockAddressOp, cir::LabelOp> blockAddressToLabel;
+  /// Track CIR BlockAddressOps that cannot be resolved immediately
+  /// because their LabelOp has not yet been emitted. These entries
+  /// are solved later once the corresponding label is available.
+  llvm::DenseSet<cir::BlockAddressOp> unresolvedBlockAddressToLabel;
+  cir::LabelOp lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo);
+  void mapBlockAddress(cir::BlockAddrInfoAttr blockInfo, cir::LabelOp label);
+  void mapUnresolvedBlockAddress(cir::BlockAddressOp op);
+  void mapResolvedBlockAddress(cir::BlockAddressOp op, cir::LabelOp);
+  void updateResolvedBlockAddress(cir::BlockAddressOp op,
+                                  cir::LabelOp newLabel);
   /// Tell the consumer that this variable has been instantiated.
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
@@ -149,7 +172,65 @@ public:
 
   static cir::GlobalOp createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
                                       llvm::StringRef name, mlir::Type t,
+                                      bool isConstant = false,
                                       mlir::Operation *insertPoint = nullptr);
+
+  /// Add a global constructor or destructor to the module.
+  /// The priority is optional, if not specified, the default priority is used.
+  void addGlobalCtor(cir::FuncOp ctor,
+                     std::optional<int> priority = std::nullopt);
+  void addGlobalDtor(cir::FuncOp dtor,
+                     std::optional<int> priority = std::nullopt);
+
+  bool shouldZeroInitPadding() const {
+    // In C23 (N3096) $6.7.10:
+    // """
+    // If any object is initialized with an empty initializer, then it is
+    // subject to default initialization:
+    //  - if it is an aggregate, every member is initialized (recursively)
+    //  according to these rules, and any padding is initialized to zero bits;
+    //  - if it is a union, the first named member is initialized (recursively)
+    //  according to these rules, and any padding is initialized to zero bits.
+    //
+    // If the aggregate or union contains elements or members that are
+    // aggregates or unions, these rules apply recursively to the subaggregates
+    // or contained unions.
+    //
+    // If there are fewer initializers in a brace-enclosed list than there are
+    // elements or members of an aggregate, or fewer characters in a string
+    // literal used to initialize an array of known size than there are elements
+    // in the array, the remainder of the aggregate is subject to default
+    // initialization.
+    // """
+    //
+    // The standard seems ambiguous in the following two areas:
+    // 1. For a union type with empty initializer, if the first named member is
+    // not the largest member, then the bytes comes after the first named member
+    // but before padding are left unspecified. An example is:
+    //    union U { int a; long long b;};
+    //    union U u = {};  // The first 4 bytes are 0, but 4-8 bytes are left
+    //    unspecified.
+    //
+    // 2. It only mentions padding for empty initializer, but doesn't mention
+    // padding for a non empty initialization list. And if the aggregation or
+    // union contains elements or members that are aggregates or unions, and
+    // some are non empty initializers, while others are empty initializers,
+    // the padding initialization is unclear. An example is:
+    //    struct S1 { int a; long long b; };
+    //    struct S2 { char c; struct S1 s1; };
+    //    // The values for paddings between s2.c and s2.s1.a, between s2.s1.a
+    //    and s2.s1.b are unclear.
+    //    struct S2 s2 = { 'c' };
+    //
+    // Here we choose to zero initiailize left bytes of a union type because
+    // projects like the Linux kernel are relying on this behavior. If we don't
+    // explicitly zero initialize them, the undef values can be optimized to
+    // return garbage data. We also choose to zero initialize paddings for
+    // aggregates and unions, no matter they are initialized by empty
+    // initializers or non empty initializers. This can provide a consistent
+    // behavior. So projects like the Linux kernel can rely on it.
+    return !getLangOpts().CPlusPlus;
+  }
 
   llvm::StringMap<unsigned> cgGlobalNames;
   std::string getUniqueGlobalName(const std::string &baseName);
@@ -188,6 +269,36 @@ public:
       mlir::Location loc, llvm::StringRef name, mlir::Type ty,
       cir::GlobalLinkageKind linkage, clang::CharUnits alignment);
 
+  void emitVTable(const CXXRecordDecl *rd);
+
+  /// Return the appropriate linkage for the vtable, VTT, and type information
+  /// of the given class.
+  cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *rd);
+
+  /// Get the address of the RTTI descriptor for the given type.
+  mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType ty,
+                                          bool forEH = false);
+
+  static mlir::SymbolTable::Visibility getMLIRVisibility(Visibility v) {
+    switch (v) {
+    case DefaultVisibility:
+      return mlir::SymbolTable::Visibility::Public;
+    case HiddenVisibility:
+      return mlir::SymbolTable::Visibility::Private;
+    case ProtectedVisibility:
+      // The distinction between ProtectedVisibility and DefaultVisibility is
+      // that symbols with ProtectedVisibility, while visible to the dynamic
+      // linker like DefaultVisibility, are guaranteed to always dynamically
+      // resolve to a symbol in the current shared object. There is currently no
+      // equivalent MLIR visibility, so we fall back on the fact that the symbol
+      // is visible.
+      return mlir::SymbolTable::Visibility::Public;
+    }
+    llvm_unreachable("unknown visibility!");
+  }
+
+  llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -195,6 +306,18 @@ public:
   /// literal.
   cir::GlobalOp getGlobalForStringLiteral(const StringLiteral *s,
                                           llvm::StringRef name = ".str");
+
+  /// Return a global symbol reference to a constant array for the given string
+  /// literal.
+  cir::GlobalViewAttr
+  getAddrOfConstantStringFromLiteral(const StringLiteral *s,
+                                     llvm::StringRef name = ".str");
+
+  /// Returns the address space for temporary allocations in the language. This
+  /// ensures that the allocated variable's address space matches the
+  /// expectations of the AST, rather than using the target's allocation address
+  /// space, which may lead to type mismatches in other parts of the IR.
+  LangAS getLangTempAllocaAddressSpace() const;
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).
@@ -217,6 +340,16 @@ public:
   /// with codegen.
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
                                            LValueBaseInfo *baseInfo);
+
+  /// TODO: Add TBAAAccessInfo
+  CharUnits getDynamicOffsetAlignment(CharUnits actualBaseAlign,
+                                      const CXXRecordDecl *baseDecl,
+                                      CharUnits expectedTargetAlign);
+
+  /// Returns the assumed alignment of a virtual base of a class.
+  CharUnits getVBaseAlignment(CharUnits derivedAlign,
+                              const CXXRecordDecl *derived,
+                              const CXXRecordDecl *vbase);
 
   cir::FuncOp
   getAddrOfCXXStructor(clang::GlobalDecl gd,
@@ -282,6 +415,13 @@ public:
   getAddrOfGlobal(clang::GlobalDecl gd,
                   ForDefinition_t isForDefinition = NotForDefinition);
 
+  // Return whether RTTI information should be emitted for this target.
+  bool shouldEmitRTTI(bool forEH = false) {
+    return (forEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
+           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
+             getTriple().isNVPTX());
+  }
+
   /// Emit type info if type of an expression is a variably modified
   /// type. Also emit proper debug info for cast types.
   void emitExplicitCastExprType(const ExplicitCastExpr *e,
@@ -307,9 +447,20 @@ public:
   void setGVProperties(mlir::Operation *op, const NamedDecl *d) const;
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
 
+  /// Set TLS mode for the given operation based on the given variable
+  /// declaration.
+  void setTLSMode(mlir::Operation *op, const VarDecl &d);
+
+  /// Get TLS mode from CodeGenOptions.
+  cir::TLS_Model getDefaultCIRTLSModel() const;
+
   /// Set function attributes for a function declaration.
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
                              bool isIncompleteFunction, bool isThunk);
+
+  /// Set extra attributes (inline, etc.) for a function.
+  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+                                             cir::FuncOp f);
 
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
@@ -317,7 +468,36 @@ public:
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
+  /// Emit the function that initializes the specified global
+  void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                bool performInit);
+
+  void emitCXXGlobalVarDeclInitFunc(const VarDecl *vd, cir::GlobalOp addr,
+                                    bool performInit);
+
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
+  void emitGlobalOpenACCRoutineDecl(const clang::OpenACCRoutineDecl *cd);
+  void emitGlobalOpenACCDeclareDecl(const clang::OpenACCDeclareDecl *cd);
+  template <typename BeforeOpTy, typename DataClauseTy>
+  void emitGlobalOpenACCDeclareDataOperands(const Expr *varOperand,
+                                            DataClauseTy dataClause,
+                                            OpenACCModifierKind modifiers,
+                                            bool structured, bool implicit,
+                                            bool requiresDtor);
+  // Each of the acc.routine operations must have a unique name, so we just use
+  // an integer counter.  This is how Flang does it, so it seems reasonable.
+  unsigned routineCounter = 0;
+  void emitOpenACCRoutineDecl(const clang::FunctionDecl *funcDecl,
+                              cir::FuncOp func, SourceLocation pragmaLoc,
+                              ArrayRef<const OpenACCClause *> clauses);
+
+  void emitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *d);
+  void emitOMPGroupPrivateDecl(const OMPGroupPrivateDecl *d);
+  void emitOMPCapturedExpr(const OMPCapturedExprDecl *d);
+  void emitOMPAllocateDecl(const OMPAllocateDecl *d);
+  void emitOMPDeclareReduction(const OMPDeclareReductionDecl *d);
+  void emitOMPDeclareMapper(const OMPDeclareMapperDecl *d);
+  void emitOMPRequiresDecl(const OMPRequiresDecl *d);
 
   // C++ related functions.
   void emitDeclContext(const DeclContext *dc);
@@ -326,7 +506,24 @@ public:
   /// expression of the given type.
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
+  mlir::TypedAttr emitNullConstantAttr(QualType t);
+
+  /// Return a null constant appropriate for zero-initializing a base class with
+  /// the given type. This is usually, but not always, an LLVM null constant.
+  mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
+
+  mlir::Value emitMemberPointerConstant(const UnaryOperator *e);
+
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
+  // This function is to support the OpenACC 'bind' clause, which names an
+  // alternate name for the function to be called by. This function mangles
+  // `attachedFunction` as-if its name was actually `bindName` (that is, with
+  // the same signature).  It has some additional complications, as the 'bind'
+  // target is always going to be a global function, so member functions need an
+  // explicit instead of implicit 'this' parameter, and thus gets mangled
+  // differently.
+  std::string getOpenACCBindMangledName(const IdentifierInfo *bindName,
+                                        const FunctionDecl *attachedFunction);
 
   void emitTentativeDefinition(const VarDecl *d);
 
@@ -356,6 +553,23 @@ public:
   cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
+
+  /// Create a CIR function with builtin attribute set.
+  cir::FuncOp createCIRBuiltinFunction(mlir::Location loc, llvm::StringRef name,
+                                       cir::FuncType ty,
+                                       const clang::FunctionDecl *fd);
+
+  /// Mark the function as a special member (e.g. constructor, destructor)
+  void setCXXSpecialMemberAttr(cir::FuncOp funcOp,
+                               const clang::FunctionDecl *funcDecl);
+
+  cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
+                                    mlir::ArrayAttr = {}, bool isLocal = false,
+                                    bool assumeConvergent = false);
+
+  static constexpr const char *builtinCoroId = "__builtin_coro_id";
+  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
+  static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
@@ -453,6 +667,9 @@ private:
   void replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF);
 
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
+
+  /// Map source language used to a CIR attribute.
+  std::optional<cir::SourceLanguage> getCIRSourceLanguage() const;
 };
 } // namespace CIRGen
 

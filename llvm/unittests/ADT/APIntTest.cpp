@@ -3718,8 +3718,9 @@ TEST(APIntTest, ScaleBitMask) {
 TEST(APIntTest, DenseMap) {
   DenseMap<APInt, int> Map;
   APInt ZeroWidthInt(0, 0, false);
-  Map.insert({ZeroWidthInt, 0});
-  Map.find(ZeroWidthInt);
+  Map.insert({ZeroWidthInt, 123});
+  auto It = Map.find(ZeroWidthInt);
+  EXPECT_EQ(It->second, 123);
 }
 
 TEST(APIntTest, TryExt) {
@@ -3744,4 +3745,165 @@ TEST(APIntTest, TryExt) {
   ASSERT_EQ(42, APInt(128, -1).trySExtValue().value_or(42));
 }
 
+TEST(APIntTest, Fshl) {
+  EXPECT_EQ(
+      APIntOps::fshl(APInt(8, 0), APInt(8, 255), APInt(8, 8)).getZExtValue(),
+      0U);
+  EXPECT_EQ(
+      APIntOps::fshl(APInt(8, 255), APInt(8, 0), APInt(8, 8)).getZExtValue(),
+      255U);
+  EXPECT_EQ(
+      APIntOps::fshl(APInt(8, 255), APInt(8, 0), APInt(8, 15)).getZExtValue(),
+      128U);
+  EXPECT_EQ(
+      APIntOps::fshl(APInt(8, 15), APInt(8, 15), APInt(8, 11)).getZExtValue(),
+      120U);
+  EXPECT_EQ(
+      APIntOps::fshl(APInt(8, 2), APInt(8, 1), APInt(8, 3)).getZExtValue(),
+      16U);
+  EXPECT_EQ(
+      APIntOps::fshl(APInt(8, 2), APInt(8, 1), APInt(8, 1)).getZExtValue(),
+      APIntOps::fshl(APInt(8, 2), APInt(8, 1), APInt(8, 9)).getZExtValue());
+  EXPECT_EQ(
+      APIntOps::fshl(APInt(8, 2), APInt(8, 1), APInt(8, 7)).getZExtValue(),
+      APIntOps::fshl(APInt(8, 2), APInt(8, 1), APInt(8, 15)).getZExtValue());
+  EXPECT_EQ(APIntOps::fshl(APInt(32, 0, /*isSigned*/ true),
+                           APInt(32, 2147483647, /*isSigned*/ true),
+                           APInt(32, 32, /*isSigned*/ true))
+                .getSExtValue(),
+            0);
+  EXPECT_EQ(APIntOps::fshl(APInt(64, 1, /*isSigned*/ true),
+                           APInt(64, 2, /*isSigned*/ true),
+                           APInt(64, 3, /*isSigned*/ true))
+                .getSExtValue(),
+            8);
+  EXPECT_EQ(APIntOps::fshl(APInt(16, -2, /*isSigned*/ true),
+                           APInt(16, -1, /*isSigned*/ true),
+                           APInt(16, 3, /*isSigned*/ true))
+                .getSExtValue(),
+            -9);
+}
+
+TEST(APIntTest, Fshr) {
+  EXPECT_EQ(
+      APIntOps::fshr(APInt(8, 0), APInt(8, 255), APInt(8, 8)).getZExtValue(),
+      255U);
+  EXPECT_EQ(
+      APIntOps::fshr(APInt(8, 255), APInt(8, 0), APInt(8, 8)).getZExtValue(),
+      0U);
+  EXPECT_EQ(
+      APIntOps::fshr(APInt(8, 255), APInt(8, 0), APInt(8, 15)).getZExtValue(),
+      254U);
+  EXPECT_EQ(
+      APIntOps::fshr(APInt(8, 15), APInt(8, 15), APInt(8, 11)).getZExtValue(),
+      225U);
+  EXPECT_EQ(
+      APIntOps::fshr(APInt(8, 1), APInt(8, 2), APInt(8, 3)).getZExtValue(),
+      32U);
+  EXPECT_EQ(
+      APIntOps::fshr(APInt(8, 1), APInt(8, 2), APInt(8, 1)).getZExtValue(),
+      APIntOps::fshr(APInt(8, 1), APInt(8, 2), APInt(8, 9)).getZExtValue());
+  EXPECT_EQ(
+      APIntOps::fshr(APInt(8, 1), APInt(8, 2), APInt(8, 7)).getZExtValue(),
+      APIntOps::fshr(APInt(8, 1), APInt(8, 2), APInt(8, 15)).getZExtValue());
+  EXPECT_EQ(APIntOps::fshr(APInt(64, 0, /*isSigned*/ true),
+                           APInt(64, 9223372036854775807, /*isSigned*/ true),
+                           APInt(64, 64, /*isSigned*/ true))
+                .getSExtValue(),
+            9223372036854775807);
+  EXPECT_EQ(APIntOps::fshr(APInt(64, 1, /*isSigned*/ true),
+                           APInt(64, 2, /*isSigned*/ true),
+                           APInt(64, 3, /*isSigned*/ true))
+                .getSExtValue(),
+            2305843009213693952);
+  EXPECT_EQ(APIntOps::fshr(APInt(16, -2, /*isSigned*/ true),
+                           APInt(16, -1, /*isSigned*/ true),
+                           APInt(16, 3, /*isSigned*/ true))
+                .getSExtValue(),
+            -8193);
+}
+
+TEST(APIntTest, clmul) {
+  EXPECT_EQ(APIntOps::clmul(APInt(4, 1), APInt(4, 2)).getZExtValue(), 2U);
+  EXPECT_EQ(APIntOps::clmul(APInt(4, 5), APInt(4, 6)).getZExtValue(), 14U);
+  EXPECT_EQ(APIntOps::clmul(APInt(4, -4, /*isSigned*/ true),
+                            APInt(4, 2, /*isSigned*/ false))
+                .getSExtValue(),
+            -8);
+  EXPECT_EQ(APIntOps::clmul(APInt(4, -4, /*isSigned*/ true),
+                            APInt(4, -5, /*isSigned*/ true))
+                .getSExtValue(),
+            4);
+  EXPECT_EQ(APIntOps::clmul(APInt(8, 0), APInt(8, 255)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmul(APInt(8, 15), APInt(8, 15)).getZExtValue(), 85U);
+  EXPECT_EQ(APIntOps::clmul(APInt(8, 1), APInt(8, 2)).getZExtValue(), 2U);
+  EXPECT_EQ(APIntOps::clmul(APInt(64, 0, /*isSigned*/ true),
+                            APInt(64, 9223372036854775807, /*isSigned*/ true))
+                .getSExtValue(),
+            0);
+  EXPECT_EQ(APIntOps::clmul(APInt(64, 1, /*isSigned*/ true),
+                            APInt(64, 2, /*isSigned*/ true))
+                .getSExtValue(),
+            2);
+  EXPECT_EQ(APIntOps::clmul(APInt(16, -2, /*isSigned*/ true),
+                            APInt(16, -1, /*isSigned*/ true))
+                .getSExtValue(),
+            -21846);
+}
+
+TEST(APIntTest, clmulr) {
+  EXPECT_EQ(APIntOps::clmulr(APInt(4, 1), APInt(4, 2)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulr(APInt(4, 5), APInt(4, 6)).getZExtValue(), 3U);
+  EXPECT_EQ(APIntOps::clmulr(APInt(4, -4, /*isSigned*/ true),
+                             APInt(4, 2, /*isSigned*/ false))
+                .getSExtValue(),
+            3);
+  EXPECT_EQ(APIntOps::clmulr(APInt(4, -4, /*isSigned*/ true),
+                             APInt(4, -5, /*isSigned*/ true))
+                .getSExtValue(),
+            -2);
+  EXPECT_EQ(APIntOps::clmulr(APInt(8, 0), APInt(8, 255)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulr(APInt(8, 15), APInt(8, 15)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulr(APInt(8, 1), APInt(8, 2)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulr(APInt(64, 0, /*isSigned*/ true),
+                             APInt(64, 9223372036854775807, /*isSigned*/ true))
+                .getSExtValue(),
+            0);
+  EXPECT_EQ(APIntOps::clmulr(APInt(64, 1, /*isSigned*/ true),
+                             APInt(64, 2, /*isSigned*/ true))
+                .getSExtValue(),
+            0);
+  EXPECT_EQ(APIntOps::clmulr(APInt(16, -2, /*isSigned*/ true),
+                             APInt(16, -1, /*isSigned*/ true))
+                .getSExtValue(),
+            -21845);
+}
+
+TEST(APIntTest, clmulh) {
+  EXPECT_EQ(APIntOps::clmulh(APInt(4, 1), APInt(4, 2)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulh(APInt(4, 5), APInt(4, 6)).getZExtValue(), 1U);
+  EXPECT_EQ(APIntOps::clmulh(APInt(4, -4, /*isSigned*/ true),
+                             APInt(4, 2, /*isSigned*/ false))
+                .getSExtValue(),
+            1);
+  EXPECT_EQ(APIntOps::clmulh(APInt(4, -4, /*isSigned*/ true),
+                             APInt(4, -5, /*isSigned*/ true))
+                .getSExtValue(),
+            7);
+  EXPECT_EQ(APIntOps::clmulh(APInt(8, 0), APInt(8, 255)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulh(APInt(8, 15), APInt(8, 15)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulh(APInt(8, 1), APInt(8, 2)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::clmulh(APInt(64, 0, /*isSigned*/ true),
+                             APInt(64, 9223372036854775807, /*isSigned*/ true))
+                .getSExtValue(),
+            0);
+  EXPECT_EQ(APIntOps::clmulh(APInt(64, 1, /*isSigned*/ true),
+                             APInt(64, 2, /*isSigned*/ true))
+                .getSExtValue(),
+            0);
+  EXPECT_EQ(APIntOps::clmulh(APInt(16, -2, /*isSigned*/ true),
+                             APInt(16, -1, /*isSigned*/ true))
+                .getSExtValue(),
+            21845);
+}
 } // end anonymous namespace

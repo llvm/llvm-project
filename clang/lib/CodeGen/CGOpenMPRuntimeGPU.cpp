@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This provides a generalized class for OpenMP runtime code generation
-// specialized by GPU targets NVPTX and AMDGCN.
+// specialized by GPU targets NVPTX, AMDGCN and SPIR-V.
 //
 //===----------------------------------------------------------------------===//
 
@@ -869,6 +869,10 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
       CGM.getLangOpts().OpenMPOffloadMandatory,
       /*HasRequiresReverseOffload*/ false, /*HasRequiresUnifiedAddress*/ false,
       hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
+  Config.setDefaultTargetAS(
+      CGM.getContext().getTargetInfo().getTargetAddressSpace(LangAS::Default));
+  Config.setRuntimeCC(CGM.getRuntimeCC());
+
   OMPBuilder.setConfig(Config);
 
   if (!CGM.getLangOpts().OpenMPIsTargetDevice)
@@ -899,9 +903,34 @@ void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,
   // Nothing to do.
 }
 
-void CGOpenMPRuntimeGPU::emitNumThreadsClause(CodeGenFunction &CGF,
-                                                llvm::Value *NumThreads,
-                                                SourceLocation Loc) {
+llvm::Value *CGOpenMPRuntimeGPU::emitMessageClause(CodeGenFunction &CGF,
+                                                   const Expr *Message,
+                                                   SourceLocation Loc) {
+  CGM.getDiags().Report(Loc, diag::warn_omp_gpu_unsupported_clause)
+      << getOpenMPClauseName(OMPC_message);
+  return nullptr;
+}
+
+llvm::Value *
+CGOpenMPRuntimeGPU::emitSeverityClause(OpenMPSeverityClauseKind Severity,
+                                       SourceLocation Loc) {
+  CGM.getDiags().Report(Loc, diag::warn_omp_gpu_unsupported_clause)
+      << getOpenMPClauseName(OMPC_severity);
+  return nullptr;
+}
+
+void CGOpenMPRuntimeGPU::emitNumThreadsClause(
+    CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
+    OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
+    SourceLocation SeverityLoc, const Expr *Message,
+    SourceLocation MessageLoc) {
+  if (Modifier == OMPC_NUMTHREADS_strict) {
+    CGM.getDiags().Report(Loc,
+                          diag::warn_omp_gpu_unsupported_modifier_for_clause)
+        << "strict" << getOpenMPClauseName(OMPC_num_threads);
+    return;
+  }
+
   // Nothing to do.
 }
 
@@ -1201,12 +1230,11 @@ void CGOpenMPRuntimeGPU::emitTeamsCall(CodeGenFunction &CGF,
   emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 }
 
-void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
-                                          SourceLocation Loc,
-                                          llvm::Function *OutlinedFn,
-                                          ArrayRef<llvm::Value *> CapturedVars,
-                                          const Expr *IfCond,
-                                          llvm::Value *NumThreads) {
+void CGOpenMPRuntimeGPU::emitParallelCall(
+    CodeGenFunction &CGF, SourceLocation Loc, llvm::Function *OutlinedFn,
+    ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond,
+    llvm::Value *NumThreads, OpenMPNumThreadsClauseModifier NumThreadsModifier,
+    OpenMPSeverityClauseKind Severity, const Expr *Message) {
   if (!CGF.HaveInsertPoint())
     return;
 
@@ -1216,10 +1244,14 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
     CGBuilderTy &Bld = CGF.Builder;
     llvm::Value *NumThreadsVal = NumThreads;
     llvm::Function *WFn = WrapperFunctionsMap[OutlinedFn];
-    llvm::Value *ID = llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
+    llvm::PointerType *FnPtrTy = llvm::PointerType::get(
+        CGF.getLLVMContext(), CGM.getDataLayout().getProgramAddressSpace());
+
+    llvm::Value *ID = llvm::ConstantPointerNull::get(FnPtrTy);
     if (WFn)
-      ID = Bld.CreateBitOrPointerCast(WFn, CGM.Int8PtrTy);
-    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, CGM.Int8PtrTy);
+      ID = Bld.CreateBitOrPointerCast(WFn, FnPtrTy);
+
+    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, FnPtrTy);
 
     // Create a private scope that will globalize the arguments
     // passed from the outside of the target region.
@@ -1259,6 +1291,9 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
     else
       NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
 
+    // No strict prescriptiveness for the number of threads.
+    llvm::Value *StrictNumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, 0);
+
     assert(IfCondVal && "Expected a value");
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
     llvm::Value *Args[] = {
@@ -1271,9 +1306,11 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
         ID,
         Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
                                    CGF.VoidPtrPtrTy),
-        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
+        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size()),
+        StrictNumThreadsVal};
+
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
+                            CGM.getModule(), OMPRTL___kmpc_parallel_60),
                         Args);
   };
 
@@ -1695,7 +1732,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
                           CGF.Builder.GetInsertPoint());
   llvm::OpenMPIRBuilder::LocationDescription OmpLoc(
       CodeGenIP, CGF.SourceLocToDebugLoc(Loc));
-  llvm::SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos;
+  llvm::SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> ReductionInfos;
 
   CodeGenFunction::OMPPrivateScope Scope(CGF);
   unsigned Idx = 0;
@@ -1748,14 +1785,15 @@ void CGOpenMPRuntimeGPU::emitReduction(
     };
     ReductionInfos.emplace_back(llvm::OpenMPIRBuilder::ReductionInfo(
         ElementType, Variable, PrivateVariable, EvalKind,
-        /*ReductionGen=*/nullptr, ReductionGen, AtomicReductionGen));
+        /*ReductionGen=*/nullptr, ReductionGen, AtomicReductionGen,
+        /*DataPtrPtrGen=*/nullptr));
     Idx++;
   }
 
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createReductionsGPU(
-          OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
-          llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, /*IsByRef=*/{}, false,
+          TeamsReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
           CGF.getTarget().getGridValue(),
           C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc));
   CGF.Builder.restoreIP(AfterIP);
@@ -2271,6 +2309,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_80:
       case OffloadArch::SM_86:
       case OffloadArch::SM_87:
+      case OffloadArch::SM_88:
       case OffloadArch::SM_89:
       case OffloadArch::SM_90:
       case OffloadArch::SM_90a:
@@ -2280,6 +2319,8 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_101a:
       case OffloadArch::SM_103:
       case OffloadArch::SM_103a:
+      case OffloadArch::SM_110:
+      case OffloadArch::SM_110a:
       case OffloadArch::SM_120:
       case OffloadArch::SM_120a:
       case OffloadArch::SM_121:
@@ -2336,6 +2377,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
       case OffloadArch::GFX1250:
+      case OffloadArch::GFX1251:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
       case OffloadArch::GRANITERAPIDS:

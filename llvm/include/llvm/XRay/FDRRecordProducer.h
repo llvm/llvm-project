@@ -14,8 +14,7 @@
 #include "llvm/XRay/XRayRecord.h"
 #include <memory>
 
-namespace llvm {
-namespace xray {
+namespace llvm::xray {
 
 class RecordProducer {
 public:
@@ -45,7 +44,6 @@ public:
   Expected<std::unique_ptr<Record>> produce() override;
 };
 
-} // namespace xray
-} // namespace llvm
+} // namespace llvm::xray
 
 #endif // LLVM_XRAY_FDRRECORDPRODUCER_H

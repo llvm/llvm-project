@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/internal/clc.h>
 
 _CLC_OVERLOAD _CLC_DEF float __clc_native_rsqrt(float x) {

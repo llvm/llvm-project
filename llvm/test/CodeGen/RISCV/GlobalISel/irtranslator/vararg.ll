@@ -25,9 +25,6 @@
 ; The nounwind attribute is omitted for some of the tests, to check that CFI
 ; directives are correctly generated.
 
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_end(ptr)
-
 declare void @notdead(ptr)
 
 ; Although frontends are recommended to not generate va_arg due to the lack of
@@ -453,7 +450,6 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ret i32 %1
 }
 
-
 define i32 @va1_va_arg(ptr %fmt, ...) nounwind {
   ; RV32-LABEL: name: va1_va_arg
   ; RV32: bb.1 (%ir-block.0):
@@ -642,7 +638,7 @@ define void @va1_caller() nounwind {
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64D-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; LP64D-NEXT:   PseudoRET
-  %1 = call i32 (ptr, ...) @va1(ptr undef, double 1.0, i32 2)
+  %1 = call i32 (ptr, ...) @va1(ptr poison, double 1.0, i32 2)
   ret void
 }
 
@@ -932,7 +928,7 @@ define void @va2_caller() nounwind {
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64D-NEXT:   PseudoRET
- %1 = call i64 (ptr, ...) @va2(ptr undef, double 1.000000e+00)
+ %1 = call i64 (ptr, ...) @va2(ptr poison, double 1.000000e+00)
  ret void
 }
 
@@ -1248,8 +1244,6 @@ define void @va3_caller() nounwind {
  %1 = call i64 (i32, i64, ...) @va3(i32 2, i64 1111, double 2.000000e+00)
  ret void
 }
-
-declare void @llvm.va_copy(ptr, ptr)
 
 define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; ILP32-LABEL: name: va4_va_copy

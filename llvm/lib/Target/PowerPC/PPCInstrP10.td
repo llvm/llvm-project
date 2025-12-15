@@ -51,10 +51,6 @@
 //          Moreover, the order of operands reflects the order of operands
 //          in the encoding.
 
-//-------------------------- Predicate definitions ---------------------------//
-def IsPPC32 : Predicate<"!Subtarget->isPPC64()">;
-
-
 //===----------------------------------------------------------------------===//
 // PowerPC ISA 3.1 specific type constraints.
 //
@@ -87,15 +83,31 @@ def SDT_PPCsetbc : SDTypeProfile<1, 1, [
 // ISA 3.1 specific PPCISD nodes.
 //
 
+// XXSPLTI32DX - The PPC XXSPLTI32DX instruction.
 def PPCxxsplti32dx : SDNode<"PPCISD::XXSPLTI32DX", SDT_PPCSplat32, []>;
+
+// ACC_BUILD = Build an accumulator register from 4 VSX registers.
 def PPCAccBuild : SDNode<"PPCISD::ACC_BUILD", SDT_PPCAccBuild, []>;
+
+// PAIR_BUILD = Build a vector pair register from 2 VSX registers.
 def PPCPairBuild : SDNode<"PPCISD::PAIR_BUILD", SDT_PPCPairBuild, []>;
+
+// EXTRACT_VSX_REG = Extract one of the underlying vsx registers of
+// an accumulator or pair register. This node is needed because
+// EXTRACT_SUBVECTOR expects the input and output vectors to have the same
+// element type.
 def PPCAccExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCAccExtractVsx,
                        []>;
 def PPCPairExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCPairExtractVsx,
                         []>;
+
+// XXMFACC = This corresponds to the xxmfacc instruction.
 def PPCxxmfacc : SDNode<"PPCISD::XXMFACC", SDT_PPCxxmfacc, []>;
+
+// SETBC - The ISA 3.1 (P10) SETBC instruction.
 def PPCsetbc  : SDNode<"PPCISD::SETBC",   SDT_PPCsetbc, []>;
+
+// SETBCR - The ISA 3.1 (P10) SETBCR instruction.
 def PPCsetbcr : SDNode<"PPCISD::SETBCR",  SDT_PPCsetbc, []>;
 
 //===----------------------------------------------------------------------===//
@@ -109,7 +121,10 @@ def SDT_PPCLXVRZX : SDTypeProfile<1, 2, [
   SDTCisVT<0, v1i128>, SDTCisPtrTy<1>, SDTCisPtrTy<2>
 ]>;
 
-// PPC Specific DAG Nodes.
+// LXVRZX - Load VSX Vector Rightmost and Zero Extend
+// This node represents v1i128 BUILD_VECTOR of a zero extending load
+// instruction from <byte, halfword, word, or doubleword> to i128.
+// Allows utilization of the Load VSX Vector Rightmost Instructions.
 def PPClxvrzx : SDNode<"PPCISD::LXVRZX", SDT_PPCLXVRZX,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
@@ -117,7 +132,6 @@ def PPClxvrzx : SDNode<"PPCISD::LXVRZX", SDT_PPCLXVRZX,
 class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
          InstrItinClass itin> : Instruction {
   field bits<64> Inst;
-  field bits<64> SoftFail = 0;
   bit PCRel = 0; // Default value, set by isPCRel.
   let Size = 8;
 
@@ -126,8 +140,8 @@ class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let InOperandList = IOL;
   let AsmString = asmstr;
   let Itinerary = itin;
-  let Inst{0-5} = pref;
-  let Inst{32-37} = opcode;
+  let Inst{0...5} = pref;
+  let Inst{32...37} = opcode;
 
   bits<1> PPC970_First = 0;
   bits<1> PPC970_Single = 0;
@@ -139,7 +153,7 @@ class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let TSFlags{0}   = PPC970_First;
   let TSFlags{1}   = PPC970_Single;
   let TSFlags{2}   = PPC970_Cracked;
-  let TSFlags{5-3} = PPC970_Unit;
+  let TSFlags{5...3} = PPC970_Unit;
 
   bits<1> Prefixed = 1;  // This is a prefixed instruction.
   let TSFlags{7}  = Prefixed;
@@ -168,11 +182,11 @@ class VXForm_VTB5_RC<bits<10> xo, bits<5> R, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-10} = VT;
-  let Inst{11-15} = R;
-  let Inst{16-20} = VB;
+  let Inst{6...10} = VT;
+  let Inst{11...15} = R;
+  let Inst{16...20} = VB;
   let Inst{21} = RC;
-  let Inst{22-31} = xo;
+  let Inst{22...31} = xo;
 }
 
 // Multiclass definition to account for record and non-record form
@@ -201,16 +215,16 @@ class MLS_DForm_R_SI34_RTA5_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 2;
-  let Inst{8-10} = 0;
+  let Inst{6...7} = 2;
+  let Inst{8...10} = 0;
   let Inst{11} = PCRel;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = D{33-16}; // d0
+  let Inst{12...13} = 0;
+  let Inst{14...31} = D{33...16}; // d0
 
   // The instruction.
-  let Inst{38-42} = RST{4-0};
-  let Inst{43-47} = RA;
-  let Inst{48-63} = D{15-0}; // d1
+  let Inst{38...42} = RST{4...0};
+  let Inst{43...47} = RA;
+  let Inst{48...63} = D{15...0}; // d1
 }
 
 class MLS_DForm_R_SI34_RTA5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
@@ -223,16 +237,16 @@ class MLS_DForm_R_SI34_RTA5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 2;
-  let Inst{8-10} = 0;
+  let Inst{6...7} = 2;
+  let Inst{8...10} = 0;
   let Inst{11} = PCRel;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = SI{33-16};
+  let Inst{12...13} = 0;
+  let Inst{14...31} = SI{33...16};
 
   // The instruction.
-  let Inst{38-42} = RT;
-  let Inst{43-47} = RA;
-  let Inst{48-63} = SI{15-0};
+  let Inst{38...42} = RT;
+  let Inst{43...47} = RA;
+  let Inst{48...63} = SI{15...0};
 }
 
 class MLS_DForm_SI34_RT5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
@@ -244,16 +258,16 @@ class MLS_DForm_SI34_RT5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 2;
-  let Inst{8-10} = 0;
+  let Inst{6...7} = 2;
+  let Inst{8...10} = 0;
   let Inst{11} = 0;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = SI{33-16};
+  let Inst{12...13} = 0;
+  let Inst{14...31} = SI{33...16};
 
   // The instruction.
-  let Inst{38-42} = RT;
-  let Inst{43-47} = 0;
-  let Inst{48-63} = SI{15-0};
+  let Inst{38...42} = RT;
+  let Inst{43...47} = 0;
+  let Inst{48...63} = SI{15...0};
 }
 
 multiclass MLS_DForm_R_SI34_RTA5_p<bits<6> opcode, dag OOL, dag IOL,
@@ -275,15 +289,15 @@ class 8LS_DForm_R_SI34_RTA5_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-10} = 0;
+  let Inst{6...10} = 0;
   let Inst{11} = PCRel;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = D{33-16}; // d0
+  let Inst{12...13} = 0;
+  let Inst{14...31} = D{33...16}; // d0
 
   // The instruction.
-  let Inst{38-42} = RST{4-0};
-  let Inst{43-47} = RA;
-  let Inst{48-63} = D{15-0}; // d1
+  let Inst{38...42} = RST{4...0};
+  let Inst{43...47} = RA;
+  let Inst{48...63} = D{15...0}; // d1
 }
 
 // 8LS:D-Form: [ 1 0 0 // R // d0
@@ -299,18 +313,18 @@ class 8LS_DForm_R_SI34_XT6_RA5_MEM<bits<5> opcode, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 0;
+  let Inst{6...7} = 0;
   let Inst{8} = 0;
-  let Inst{9-10} = 0; // reserved
+  let Inst{9...10} = 0; // reserved
   let Inst{11} = PCRel;
-  let Inst{12-13} = 0; // reserved
-  let Inst{14-31} = D{33-16}; // d0
+  let Inst{12...13} = 0; // reserved
+  let Inst{14...31} = D{33...16}; // d0
 
   // The instruction.
   let Inst{37} = XST{5};
-  let Inst{38-42} = XST{4-0};
-  let Inst{43-47} = RA;
-  let Inst{48-63} = D{15-0}; // d1
+  let Inst{38...42} = XST{4...0};
+  let Inst{43...47} = RA;
+  let Inst{48...63} = D{15...0}; // d1
 }
 
 // X-Form: [PO T IMM VRB XO TX]
@@ -322,10 +336,10 @@ class XForm_XT6_IMM5_VB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   bits<5> IMM;
 
   let Pattern = pattern;
-  let Inst{6-10} = XT{4-0};
-  let Inst{11-15} = IMM;
-  let Inst{16-20} = VRB;
-  let Inst{21-30} = xo;
+  let Inst{6...10} = XT{4...0};
+  let Inst{11...15} = IMM;
+  let Inst{16...20} = VRB;
+  let Inst{21...30} = xo;
   let Inst{31} = XT{5};
 }
 
@@ -342,19 +356,19 @@ class 8RR_XX4Form_IMM8_XTAB6<bits<6> opcode, bits<2> xo,
     let Pattern = pattern;
 
     // The prefix.
-    let Inst{6-7} = 1;
+    let Inst{6...7} = 1;
     let Inst{8} = 0;
-    let Inst{9-11} = 0;
-    let Inst{12-13} = 0;
-    let Inst{14-23} = 0;
-    let Inst{24-31} = IMM;
+    let Inst{9...11} = 0;
+    let Inst{12...13} = 0;
+    let Inst{14...23} = 0;
+    let Inst{24...31} = IMM;
 
     // The instruction.
-    let Inst{38-42} = XT{4-0};
-    let Inst{43-47} = XA{4-0};
-    let Inst{48-52} = XB{4-0};
-    let Inst{53-57} = XC{4-0};
-    let Inst{58-59} = xo;
+    let Inst{38...42} = XT{4...0};
+    let Inst{43...47} = XA{4...0};
+    let Inst{48...52} = XB{4...0};
+    let Inst{53...57} = XC{4...0};
+    let Inst{58...59} = xo;
     let Inst{60} = XC{5};
     let Inst{61} = XA{5};
     let Inst{62} = XB{5};
@@ -370,11 +384,11 @@ class VXForm_RD5_N3_VB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-10}  = RD;
-  let Inst{11-12} = 0;
-  let Inst{13-15} = N;
-  let Inst{16-20} = VB;
-  let Inst{21-31} = xo;
+  let Inst{6...10}  = RD;
+  let Inst{11...12} = 0;
+  let Inst{13...15} = N;
+  let Inst{16...20} = VB;
+  let Inst{21...31} = xo;
 }
 
 
@@ -383,14 +397,14 @@ class VXForm_RD5_N3_VB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
 class VXForm_VTB5_RA5_ins<bits<11> xo, string opc, list<dag> pattern>
   : VXForm_1<xo, (outs vrrc:$VD), (ins vrrc:$VDi, gprc:$VA, vrrc:$VB),
              !strconcat(opc, " $VD, $VA, $VB"), IIC_VecGeneral, pattern>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
 
 // VX-Form: [PO VRT RA RB XO].
 // Destructive (insert) forms are suffixed with _ins.
 class VXForm_VRT5_RAB5_ins<bits<11> xo, string opc, list<dag> pattern>
   : VXForm_1<xo, (outs vrrc:$VD), (ins vrrc:$VDi, gprc:$VA, gprc:$VB),
              !strconcat(opc, " $VD, $VA, $VB"), IIC_VecGeneral, pattern>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
 
 // VX-Form: [ PO BF // VRA VRB XO ]
 class VXForm_BF3_VAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
@@ -402,11 +416,11 @@ class VXForm_BF3_VAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-8} = BF;
-  let Inst{9-10} = 0;
-  let Inst{11-15} = VA;
-  let Inst{16-20} = VB;
-  let Inst{21-31} = xo;
+  let Inst{6...8} = BF;
+  let Inst{9...10} = 0;
+  let Inst{11...15} = VA;
+  let Inst{16...20} = VB;
+  let Inst{21...31} = xo;
 }
 
 // VN-Form: [PO VRT VRA VRB PS SD XO]
@@ -421,12 +435,12 @@ class VNForm_VTAB5_SD3<bits<6> xo, bits<2> ps, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-10}  = VRT;
-  let Inst{11-15} = VRA;
-  let Inst{16-20} = VRB;
-  let Inst{21-22} = ps;
-  let Inst{23-25} = SD;
-  let Inst{26-31} = xo;
+  let Inst{6...10}  = VRT;
+  let Inst{11...15} = VRA;
+  let Inst{16...20} = VRB;
+  let Inst{21...22} = ps;
+  let Inst{23...25} = SD;
+  let Inst{26...31} = xo;
 }
 
 class VXForm_RD5_MP_VB5<bits<11> xo, bits<4> eo, dag OOL, dag IOL,
@@ -438,11 +452,11 @@ class VXForm_RD5_MP_VB5<bits<11> xo, bits<4> eo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6-10}  = RD;
-  let Inst{11-14} = eo;
+  let Inst{6...10}  = RD;
+  let Inst{11...14} = eo;
   let Inst{15} = MP;
-  let Inst{16-20} = VB;
-  let Inst{21-31} = xo;
+  let Inst{16...20} = VB;
+  let Inst{21...31} = xo;
 }
 
 // 8RR:D-Form: [ 1 1 0 // // imm0
@@ -457,17 +471,17 @@ class 8RR_DForm_IMM32_XT6<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 1;
-  let Inst{8-11} = 0;
-  let Inst{12-13} = 0; // reserved
-  let Inst{14-15} = 0; // reserved
-  let Inst{16-31} = IMM32{31-16};
+  let Inst{6...7} = 1;
+  let Inst{8...11} = 0;
+  let Inst{12...13} = 0; // reserved
+  let Inst{14...15} = 0; // reserved
+  let Inst{16...31} = IMM32{31...16};
 
   // The instruction.
-  let Inst{38-42} = XT{4-0};
-  let Inst{43-46} = xo;
+  let Inst{38...42} = XT{4...0};
+  let Inst{43...46} = xo;
   let Inst{47} = XT{5};
-  let Inst{48-63} = IMM32{15-0};
+  let Inst{48...63} = IMM32{15...0};
 }
 
 // 8RR:D-Form: [ 1 1 0 // // imm0
@@ -483,18 +497,18 @@ class 8RR_DForm_IMM32_XT6_IX<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 1;
-  let Inst{8-11} = 0;
-  let Inst{12-13} = 0; // reserved
-  let Inst{14-15} = 0; // reserved
-  let Inst{16-31} = IMM32{31-16};
+  let Inst{6...7} = 1;
+  let Inst{8...11} = 0;
+  let Inst{12...13} = 0; // reserved
+  let Inst{14...15} = 0; // reserved
+  let Inst{16...31} = IMM32{31...16};
 
   // The instruction.
-  let Inst{38-42} = XT{4-0};
-  let Inst{43-45} = xo;
+  let Inst{38...42} = XT{4...0};
+  let Inst{43...45} = xo;
   let Inst{46} = IX;
   let Inst{47} = XT{5};
-  let Inst{48-63} = IMM32{15-0};
+  let Inst{48...63} = IMM32{15...0};
 }
 
 class 8RR_XX4Form_XTABC6<bits<6> opcode, bits<2> xo, dag OOL, dag IOL,
@@ -508,17 +522,17 @@ class 8RR_XX4Form_XTABC6<bits<6> opcode, bits<2> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 1;
-  let Inst{8-11} = 0;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = 0;
+  let Inst{6...7} = 1;
+  let Inst{8...11} = 0;
+  let Inst{12...13} = 0;
+  let Inst{14...31} = 0;
 
   // The instruction.
-  let Inst{38-42} = XT{4-0};
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-57} = XC{4-0};
-  let Inst{58-59} = xo;
+  let Inst{38...42} = XT{4...0};
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...57} = XC{4...0};
+  let Inst{58...59} = xo;
   let Inst{60} = XC{5};
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
@@ -538,18 +552,18 @@ class 8RR_XX4Form_IMM3_XTABC6<bits<6> opcode, bits<2> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 1;
-  let Inst{8-11} = 0;
-  let Inst{12-13} = 0;
-  let Inst{14-28} = 0;
-  let Inst{29-31} = IMM;
+  let Inst{6...7} = 1;
+  let Inst{8...11} = 0;
+  let Inst{12...13} = 0;
+  let Inst{14...28} = 0;
+  let Inst{29...31} = IMM;
 
   // The instruction.
-  let Inst{38-42} = XT{4-0};
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-57} = XC{4-0};
-  let Inst{58-59} = xo;
+  let Inst{38...42} = XT{4...0};
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...57} = XC{4...0};
+  let Inst{58...59} = xo;
   let Inst{60} = XC{5};
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
@@ -566,11 +580,11 @@ class XX2_BF3_XO5_XB6_XO9<bits<6> opcode, bits<5> xo2, bits<9> xo, dag OOL,
 
   let Pattern = pattern;
 
-  let Inst{6-8}   = BF;
-  let Inst{9-10}  = 0;
-  let Inst{11-15} = xo2;
-  let Inst{16-20} = XB{4-0};
-  let Inst{21-29} = xo;
+  let Inst{6...8}   = BF;
+  let Inst{9...10}  = 0;
+  let Inst{11...15} = xo2;
+  let Inst{16...20} = XB{4...0};
+  let Inst{21...29} = xo;
   let Inst{30}    = XB{5};
   let Inst{31}    = 0;
 }
@@ -635,9 +649,6 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_MEM_p<bits<5> opcode, dag OOL, dag IOL,
   }
 }
 
-def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
-def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
-def PairedVectorMemops : Predicate<"Subtarget->pairedVectorMemops()">;
 def RCCp {
   dag AToVSRC = (COPY_TO_REGCLASS $XA, VSRC);
   dag BToVSRC = (COPY_TO_REGCLASS $XB, VSRC);
@@ -864,14 +875,14 @@ class DQForm_XTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6-9} = XTp{3-0};
+  let Inst{6...9} = XTp{3...0};
   let Inst{10} = XTp{4};
-  let Inst{11-15} = RA;
-  let Inst{16-27} = DQ;
-  let Inst{28-31} = xo;
+  let Inst{11...15} = RA;
+  let Inst{16...27} = DQ;
+  let Inst{28...31} = xo;
 }
 
-class XForm_XTp5_XAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+class XForm_XTp5_RAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                       string asmstr, InstrItinClass itin, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin>, XFormMemOp {
   bits<5> XTp;
@@ -879,11 +890,11 @@ class XForm_XTp5_XAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   bits<5> RB;
 
   let Pattern = pattern;
-  let Inst{6-9} = XTp{3-0};
+  let Inst{6...9} = XTp{3...0};
   let Inst{10} = XTp{4};
-  let Inst{11-15} = RA;
-  let Inst{16-20} = RB;
-  let Inst{21-30} = xo;
+  let Inst{11...15} = RA;
+  let Inst{16...20} = RB;
+  let Inst{21...30} = xo;
   let Inst{31} = 0;
 }
 
@@ -897,16 +908,16 @@ class 8LS_DForm_R_XTp5_SI34_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-10} = 0;
+  let Inst{6...10} = 0;
   let Inst{11} = PCRel;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = D{33-16}; // Imm18
+  let Inst{12...13} = 0;
+  let Inst{14...31} = D{33...16}; // Imm18
 
   // The instruction.
-  let Inst{38-41} = XTp{3-0};
+  let Inst{38...41} = XTp{3...0};
   let Inst{42}    = XTp{4};
-  let Inst{43-47} = RA;
-  let Inst{48-63} = D{15-0};
+  let Inst{43...47} = RA;
+  let Inst{48...63} = D{15...0};
 }
 
 multiclass 8LS_DForm_R_XTp5_SI34_MEM_p<bits<6> opcode, dag OOL,
@@ -936,11 +947,11 @@ class XForm_AT3<bits<6> opcode, bits<5> xo2, bits<10> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6-8}  = AT;
-  let Inst{9-10}  = 0;
-  let Inst{11-15} = xo2;
-  let Inst{16-20} = 0;
-  let Inst{21-30} = xo;
+  let Inst{6...8}  = AT;
+  let Inst{9...10}  = 0;
+  let Inst{11...15} = xo2;
+  let Inst{16...20} = 0;
+  let Inst{21...30} = xo;
   let Inst{31} = 0;
 }
 
@@ -953,10 +964,10 @@ class XForm_XT6_IMM5<bits<6> opcode, bits<5> eo, bits<10> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6-10} = XT{4-0};
-  let Inst{11-15} = eo;
-  let Inst{16-20} = UIM;
-  let Inst{21-30} = xo;
+  let Inst{6...10} = XT{4...0};
+  let Inst{11...15} = eo;
+  let Inst{16...20} = UIM;
+  let Inst{21...30} = xo;
   let Inst{31} = XT{5};
 }
 
@@ -970,11 +981,11 @@ class XX3Form_AT3_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6-8} = AT;
-  let Inst{9-10} = 0;
-  let Inst{11-15} = XA{4-0};
-  let Inst{16-20} = XB{4-0};
-  let Inst{21-28} = xo;
+  let Inst{6...8} = AT;
+  let Inst{9...10} = 0;
+  let Inst{11...15} = XA{4...0};
+  let Inst{16...20} = XB{4...0};
+  let Inst{21...28} = xo;
   let Inst{29}    = XA{5};
   let Inst{30}    = XB{5};
   let Inst{31} = 0;
@@ -994,20 +1005,20 @@ class MMIRR_XX3Form_XY4P2_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 3;
-  let Inst{8-11} = 9;
-  let Inst{12-15} = 0;
-  let Inst{16-17} = PMSK;
-  let Inst{18-23} = 0;
-  let Inst{24-27} = XMSK;
-  let Inst{28-31} = YMSK;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...15} = 0;
+  let Inst{16...17} = PMSK;
+  let Inst{18...23} = 0;
+  let Inst{24...27} = XMSK;
+  let Inst{28...31} = YMSK;
 
   // The instruction.
-  let Inst{38-40} = AT;
-  let Inst{41-42} = 0;
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-60} = xo;
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
@@ -1026,18 +1037,18 @@ class MMIRR_XX3Form_XY4_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 3;
-  let Inst{8-11} = 9;
-  let Inst{12-23} = 0;
-  let Inst{24-27} = XMSK;
-  let Inst{28-31} = YMSK;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...23} = 0;
+  let Inst{24...27} = XMSK;
+  let Inst{28...31} = YMSK;
 
   // The instruction.
-  let Inst{38-40} = AT;
-  let Inst{41-42} = 0;
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-60} = xo;
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
@@ -1056,19 +1067,19 @@ class MMIRR_XX3Form_X4Y2_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 3;
-  let Inst{8-11} = 9;
-  let Inst{12-23} = 0;
-  let Inst{24-27} = XMSK;
-  let Inst{28-29} = YMSK;
-  let Inst{30-31} = 0;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...23} = 0;
+  let Inst{24...27} = XMSK;
+  let Inst{28...29} = YMSK;
+  let Inst{30...31} = 0;
 
   // The instruction.
-  let Inst{38-40} = AT;
-  let Inst{41-42} = 0;
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-60} = xo;
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
@@ -1088,19 +1099,19 @@ class MMIRR_XX3Form_XY4P8_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 3;
-  let Inst{8-11} = 9;
-  let Inst{12-15} = 0;
-  let Inst{16-23} = PMSK;
-  let Inst{24-27} = XMSK;
-  let Inst{28-31} = YMSK;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...15} = 0;
+  let Inst{16...23} = PMSK;
+  let Inst{24...27} = XMSK;
+  let Inst{28...31} = YMSK;
 
   // The instruction.
-  let Inst{38-40} = AT;
-  let Inst{41-42} = 0;
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-60} = xo;
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
@@ -1120,20 +1131,20 @@ class MMIRR_XX3Form_XYP4_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 3;
-  let Inst{8-11} = 9;
-  let Inst{12-15} = 0;
-  let Inst{16-19} = PMSK;
-  let Inst{20-23} = 0;
-  let Inst{24-27} = XMSK;
-  let Inst{28-31} = YMSK;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...15} = 0;
+  let Inst{16...19} = PMSK;
+  let Inst{20...23} = 0;
+  let Inst{24...27} = XMSK;
+  let Inst{28...31} = YMSK;
 
   // The instruction.
-  let Inst{38-40} = AT;
-  let Inst{41-42} = 0;
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-60} = xo;
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
@@ -1160,7 +1171,7 @@ let Predicates = [PairedVectorMemops] in {
     def LXVP : DQForm_XTp5_RA17_MEM<6, 0, (outs vsrprc:$XTp),
                                     (ins (memrix16 $DQ, $RA):$addr), "lxvp $XTp, $addr",
                                     IIC_LdStLFD, []>;
-    def LXVPX : XForm_XTp5_XAB5<31, 333, (outs vsrprc:$XTp), (ins (memrr $RA, $RB):$addr),
+    def LXVPX : XForm_XTp5_RAB5<31, 333, (outs vsrprc:$XTp), (ins (memrr $RA, $RB):$addr),
                                 "lxvpx $XTp, $addr", IIC_LdStLFD,
                                 []>;
   }
@@ -1169,7 +1180,7 @@ let Predicates = [PairedVectorMemops] in {
     def STXVP : DQForm_XTp5_RA17_MEM<6, 1, (outs), (ins vsrprc:$XTp,
                                      (memrix16 $DQ, $RA):$addr), "stxvp $XTp, $addr",
                                      IIC_LdStLFD, []>;
-    def STXVPX : XForm_XTp5_XAB5<31, 461, (outs), (ins vsrprc:$XTp, (memrr $RA, $RB):$addr),
+    def STXVPX : XForm_XTp5_RAB5<31, 461, (outs), (ins vsrprc:$XTp, (memrr $RA, $RB):$addr),
                                  "stxvpx $XTp, $addr", IIC_LdStLFD,
                                  []>;
   }
@@ -1396,7 +1407,7 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, Predicates = [P
                              [(set v2i64:$XT,
                                    (PPCxxsplti32dx v2i64:$XTi, i32:$IX,
                                                    i32:$IMM32))]>,
-                             RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
+                             RegConstraint<"$XTi = $XT">;
 }
 
 let Predicates = [IsISA3_1] in {
@@ -1467,13 +1478,13 @@ let Predicates = [IsISA3_1] in {
              "vinsw $VD, $VB, $VA", IIC_VecGeneral,
              [(set v4i32:$VD,
                    (int_ppc_altivec_vinsw v4i32:$VDi, i32:$VB, timm:$VA))]>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
   def VINSD :
     VXForm_1<463, (outs vrrc:$VD), (ins vrrc:$VDi, u4imm:$VA, g8rc:$VB),
              "vinsd $VD, $VB, $VA", IIC_VecGeneral,
              [(set v2i64:$VD,
                    (int_ppc_altivec_vinsd v2i64:$VDi, i64:$VB, timm:$VA))]>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
   def VINSBVLX :
     VXForm_VTB5_RA5_ins<15, "vinsbvlx",
                         [(set v16i8:$VD,
@@ -1539,13 +1550,13 @@ let Predicates = [IsISA3_1] in {
              "vinsdlx $VD, $VA, $VB", IIC_VecGeneral,
               [(set v2i64:$VD,
                     (int_ppc_altivec_vinsdlx v2i64:$VDi, i64:$VA, i64:$VB))]>,
-              RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+              RegConstraint<"$VDi = $VD">;
   def VINSDRX :
     VXForm_1<975, (outs vrrc:$VD), (ins vrrc:$VDi, g8rc:$VA, g8rc:$VB),
              "vinsdrx $VD, $VA, $VB", IIC_VecGeneral,
               [(set v2i64:$VD,
                     (int_ppc_altivec_vinsdrx v2i64:$VDi, i64:$VA, i64:$VB))]>,
-              RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+              RegConstraint<"$VDi = $VD">;
   def VEXTRACTBM : VXForm_RD5_XO5_RS5<1602, 8, (outs gprc:$VD), (ins vrrc:$VB),
                                       "vextractbm $VD, $VB", IIC_VecGeneral,
                                       [(set i32:$VD,
@@ -1916,10 +1927,11 @@ let Predicates = [IsISA3_1] in {
                         [(set v1i128:$VD,
                           (int_ppc_altivec_vrlqmi v1i128:$VA, v1i128:$VB,
                                                   v1i128:$VDi))]>,
-                        RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+                        RegConstraint<"$VDi = $VD">;
   def VSLQ : VX1_VT5_VA5_VB5<261, "vslq", []>;
   def VSRAQ : VX1_VT5_VA5_VB5<773, "vsraq", []>;
-  def VSRQ : VX1_VT5_VA5_VB5<517, "vsrq", []>;
+  def VSRQ : VX1_VT5_VA5_VB5<517, "vsrq", 
+                            [(set v4i32:$VD, (PPCvsrq v4i32:$VA, v4i32:$VB))]>;
   def VRLQ : VX1_VT5_VA5_VB5<5, "vrlq", []>;
   def XSCVQPUQZ : X_VT5_XO5_VB5<63, 0, 836, "xscvqpuqz", []>;
   def XSCVQPSQZ : X_VT5_XO5_VB5<63, 8, 836, "xscvqpsqz", []>;
@@ -2054,6 +2066,9 @@ let Predicates = [IsISA3_1, HasFPU] in {
 
 //---------------------------- Anonymous Patterns ----------------------------//
 let Predicates = [IsISA3_1] in {
+  // Exploit vsrq instruction to optimize VSR(VSRO (input, vsro_byte_shift), vsr_bit_shift)
+  // to VSRQ(input, vsrq_bit_shift)
+  def : Pat<(VSRVSRO v4i32:$vA, v4i32:$vB), (VSRQ $vA, $vB)>;
   // Exploit the vector multiply high instructions using intrinsics.
   def : Pat<(v4i32 (int_ppc_altivec_vmulhsw v4i32:$vA, v4i32:$vB)),
             (v4i32 (VMULHSW $vA, $vB))>;
@@ -2231,6 +2246,13 @@ def VEqv
                                             (v4i32(bitconvert node:$a)),
                                             (v4i32(bitconvert node:$b)))))]>;
 
+// Vector NAND operation (not(and))
+def VNand
+    : PatFrags<(ops node:$a, node:$b), [(vnot(and node:$a, node:$b)),
+                                        (bitconvert(vnot(and
+                                            (v4i32(bitconvert node:$a)),
+                                            (v4i32(bitconvert node:$b)))))]>;
+
 // =============================================================================
 // XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectAnd
 // This class matches the equivalent Ternary Operation: A ? f(B,C) : AND(B,C)
@@ -2264,6 +2286,325 @@ multiclass XXEvalTernarySelectAnd<ValueType Vt> {
   // Pattern: A ? NOT(B) : AND(B,C) XXEVAL immediate value: 28
   def : XXEvalPattern<
             Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VAnd Vt:$vB, Vt:$vC)), 28>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectB
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : B
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op on vectors B and C (AND, NOR, EQV, NAND)
+// - B is the "false" case operand (vector B)
+//
+// Note: Patterns (A? C : B) and (A? not(C) : B) are not considered
+// for XXEVAL instruction (4 Cycle) as XXSEL (3 cycle) instruction performs 
+// better.
+// =============================================================================
+multiclass XXEvalTernarySelectB<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : B) XXEVAL immediate value: 49
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), Vt:$vB), 49>;
+  // Pattern: (A ? NOR(B,C) : B) XXEVAL immediate value: 56
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNor Vt:$vB, Vt:$vC), Vt:$vB), 56>;
+  // Pattern: (A ? EQV(B,C) : B) XXEVAL immediate value: 57
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VEqv Vt:$vB, Vt:$vC), Vt:$vB), 57>;
+  // Pattern: (A ? NAND(B,C) : B) XXEVAL immediate value: 62
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), Vt:$vB), 62>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectC
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : C
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op on vectors B and C (AND, NOR, EQV, NAND)
+// - C is the "false" case operand (vector C)
+//
+// Note: Patterns (A? B : C) and (A? not(B) : C) are not considered
+// for XXEVAL instruction (4 Cycle) as XXSEL (3 cycle) instruction performs 
+// better.
+// =============================================================================
+multiclass XXEvalTernarySelectC<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : C) XXEVAL immediate value: 81
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), Vt:$vC), 81>;
+  // Pattern: (A ? NOR(B,C) : C) XXEVAL immediate value: 88
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNor Vt:$vB, Vt:$vC), Vt:$vC), 88>;
+  // Pattern: (A ? EQV(B,C) : C) XXEVAL immediate value: 89
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VEqv Vt:$vB, Vt:$vC), Vt:$vC), 89>;
+  // Pattern: (A ? NAND(B,C) : C) XXEVAL immediate value: 94
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), Vt:$vC), 94>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectXor
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : XOR(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, AND(B,C), OR(B,C), NOR(B,C)} 
+// - XOR(B,C) is the "false" case op on vectors B and C
+// =============================================================================
+multiclass XXEvalTernarySelectXor<ValueType Vt> {
+  // Pattern: A ? AND(B,C) : XOR(B,C) XXEVAL immediate value: 97
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VXor Vt:$vB, Vt:$vC)),
+            97>;
+  
+  // Pattern: A ? B : XOR(B,C) XXEVAL immediate value: 99
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vB, (VXor Vt:$vB, Vt:$vC)),
+            99>;
+  
+  // Pattern: A ? C : XOR(B,C) XXEVAL immediate value: 101
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vC, (VXor Vt:$vB, Vt:$vC)),
+            101>;
+  
+  // Pattern: A ? OR(B,C) : XOR(B,C) XXEVAL immediate value: 103
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VXor Vt:$vB, Vt:$vC)),
+            103>;
+  
+  // Pattern: A ? NOR(B,C) : XOR(B,C) XXEVAL immediate value: 104
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNor Vt:$vB, Vt:$vC), (VXor Vt:$vB, Vt:$vC)),
+            104>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectOr
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : OR(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, AND(B,C), EQV(B,C), NOT(B), 
+//   NOT(C), NAND(B,C)} 
+// - OR(B,C) is the "false" case op on vectors B and C
+// =============================================================================
+multiclass XXEvalTernarySelectOr<ValueType Vt> {
+  // Pattern: A ? AND(B,C) : OR(B,C) XXEVAL immediate value: 113
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            113>;
+  
+  // Pattern: A ? B : OR(B,C) XXEVAL immediate value: 115
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vB, (VOr Vt:$vB, Vt:$vC)),
+            115>;
+  
+  // Pattern: A ? C : OR(B,C) XXEVAL immediate value: 117
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, Vt:$vC, (VOr Vt:$vB, Vt:$vC)),
+            117>;
+  
+  // Pattern: A ? EQV(B,C) : OR(B,C) XXEVAL immediate value: 121
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VEqv Vt:$vB, Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            121>;
+  
+  // Pattern: A ? NOT(C) : OR(B,C) XXEVAL immediate value: 122
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            122>;
+  
+  // Pattern: A ? NOT(B) : OR(B,C) XXEVAL immediate value: 124
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VOr Vt:$vB, Vt:$vC)),
+            124>;
+  
+  // Pattern: A ? NAND(B,C) : OR(B,C) XXEVAL immediate value: 126
+  def : XXEvalPattern<
+            Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VOr Vt:$vB, Vt:$vC)),
+            126>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNor
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NOR(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, AND(B,C), XOR(B,C), NOT(C),
+//   NOT(B), NAND(B,C)}
+// - C is the "false" case op NOR(B,C)
+// =============================================================================
+multiclass XXEvalTernarySelectNor<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : NOR(B,C)) XXEVAL immediate value: 129
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          129>;
+
+  // Pattern: (A ? B : NOR(B,C)) XXEVAL immediate value: 131
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, Vt:$vB, (VNor Vt:$vB, Vt:$vC)),131>;
+
+  // Pattern: (A ? C : NOR(B,C)) XXEVAL immediate value: 133
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, Vt:$vC, (VNor Vt:$vB, Vt:$vC)),
+          133>;
+
+  // Pattern: (A ? XOR(B,C) : NOR(B,C)) XXEVAL immediate value: 134
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          134>;
+
+  // Pattern: (A ? NOT(C) : NOR(B,C)) XXEVAL immediate value: 138
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          138>;
+
+  // Pattern: (A ? NOT(B) : NOR(B,C)) XXEVAL immediate value: 140
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VNor Vt:$vB, Vt:$vC)),
+          140>;
+
+  // Pattern: (A ? NAND(B,C) : NOR(B,C)) XXEVAL immediate value: 142
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          142>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectEqv
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : EQV(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {OR(B,C), NOR(B,C), NAND(B,C), NOT(B),
+//   NOT(C)}
+// - C is the "false" case op EQV(B,C)
+// =============================================================================
+multiclass XXEvalTernarySelectEqv<ValueType Vt>{
+  // Pattern: (A ? OR(B,C) : EQV(B,C)) XXEVAL immediate value: 151
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          151>;
+
+  // Pattern: (A ? NOR(B,C) : EQV(B,C)) XXEVAL immediate value: 152
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNor Vt:$vB, Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          152>;
+
+  // Pattern: (A ? NOT(C) : EQV(B,C)) XXEVAL immediate value: 154
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          154>;
+
+  // Pattern: (A ? NAND(B,C) : EQV(B,C)) XXEVAL immediate value: 158
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          158>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNotC
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NOT(C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {AND(B,C), OR(B,C), XOR(B,C), NAND(B,C),
+//   B, NOT(B)}
+// - C is the "false" case op NOT(C)
+// =============================================================================
+multiclass XXEvalTernarySelectNotC<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : NOT(C)) XXEVAL immediate value: 161
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 161>;
+
+  // Pattern: (A ? B : NOT(C)) XXEVAL immediate value: 163
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, Vt:$vB, (VNot Vt:$vC)), 163>;
+
+  // Pattern: (A ? XOR(B,C) : NOT(C)) XXEVAL immediate value: 166
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 166>;
+
+  // Pattern: (A ? OR(B,C) : NOT(C)) XXEVAL immediate value: 167
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 167>;
+  
+  // Pattern: (A ? NOT(B) : NOT(C)) XXEVAL immediate value: 172
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VNot Vt:$vC)), 172>;
+
+  // Pattern: (A ? NAND(B,C) : NOT(C)) XXEVAL immediate value: 174
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 174>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNotB
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NOT(B)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {AND(B,C), OR(B,C), XOR(B,C), NAND(B,C),
+//   C, NOT(B)}
+// - C is the "false" case op NOT(B)
+// =============================================================================
+multiclass XXEvalTernarySelectNotB<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : NOT(B)) XXEVAL immediate value: 193
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 193>;
+
+  // Pattern: (A ? C : NOT(B)) XXEVAL immediate value: 197
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, Vt:$vC, (VNot Vt:$vB)), 197>;
+
+  // Pattern: (A ? XOR(B,C) : NOT(B)) XXEVAL immediate value: 198
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 198>;
+
+  // Pattern: (A ? OR(B,C) : NOT(B)) XXEVAL immediate value: 199
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 199>;
+  
+  // Pattern: (A ? NOT(C) : NOT(B)) XXEVAL immediate value: 202
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VNot Vt:$vB)), 202>;
+
+  // Pattern: (A ? NAND(B,C) : NOT(B)) XXEVAL immediate value: 206
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 206>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNand
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NAND(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, XOR(B,C), OR(B,C), EQV(B,C)}
+// - C is the "false" case op NAND(B,C)
+// =============================================================================
+multiclass XXEvalTernarySelectNand<ValueType Vt>{
+  // Pattern: (A ? B : NAND(B,C)) XXEVAL immediate value: 227
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, Vt:$vB, (VNand Vt:$vB, Vt:$vC)), 227>;
+
+  // Pattern: (A ? C : NAND(B,C)) XXEVAL immediate value: 229
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, Vt:$vC, (VNand Vt:$vB, Vt:$vC)), 229>;
+
+  // Pattern: (A ? XOR(B,C) : NAND(B,C)) XXEVAL immediate value: 230
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNand Vt:$vB, Vt:$vC)),
+          230>;
+
+  // Pattern: (A ? OR(B,C) : NAND(B,C)) XXEVAL immediate value: 231
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VNand Vt:$vB, Vt:$vC)),
+          231>;
+
+  // Pattern: (A ? EQV(B,C) : NAND(B,C)) XXEVAL immediate value: 233
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VEqv Vt:$vB, Vt:$vC), (VNand Vt:$vB, Vt:$vC)),
+          233>;
 }
 
 let Predicates = [PrefixInstrs, HasP10Vector] in {
@@ -2377,6 +2718,15 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     // XXEval Patterns for ternary Operations.
     foreach Ty = [v4i32, v2i64, v8i16, v16i8] in {
         defm : XXEvalTernarySelectAnd<Ty>;
+        defm : XXEvalTernarySelectB<Ty>;
+        defm : XXEvalTernarySelectC<Ty>;
+        defm : XXEvalTernarySelectXor<Ty>;
+        defm : XXEvalTernarySelectOr<Ty>;
+        defm : XXEvalTernarySelectNor<Ty>;
+        defm : XXEvalTernarySelectEqv<Ty>;
+        defm : XXEvalTernarySelectNotC<Ty>;
+        defm : XXEvalTernarySelectNotB<Ty>;
+        defm : XXEvalTernarySelectNand<Ty>;
     }
 
     // Anonymous patterns to select prefixed VSX loads and stores.

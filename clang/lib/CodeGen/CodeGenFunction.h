@@ -346,6 +346,10 @@ public:
   QualType FnRetTy;
   llvm::Function *CurFn = nullptr;
 
+  /// If a cast expression is being visited, this holds the current cast's
+  /// expression.
+  const CastExpr *CurCast = nullptr;
+
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;
 
@@ -1552,9 +1556,11 @@ private:
   // BreakContinueStack - This keeps track of where break and continue
   // statements should jump to.
   struct BreakContinue {
-    BreakContinue(JumpDest Break, JumpDest Continue)
-        : BreakBlock(Break), ContinueBlock(Continue) {}
+    BreakContinue(const Stmt &LoopOrSwitch, JumpDest Break, JumpDest Continue)
+        : LoopOrSwitch(&LoopOrSwitch), BreakBlock(Break),
+          ContinueBlock(Continue) {}
 
+    const Stmt *LoopOrSwitch;
     JumpDest BreakBlock;
     JumpDest ContinueBlock;
   };
@@ -2804,6 +2810,13 @@ public:
     AllocaTracker Tracker;
   };
 
+private:
+  /// If \p Alloca is not in the same address space as \p DestLangAS, insert an
+  /// address space cast and return a new RawAddress based on this value.
+  RawAddress MaybeCastStackAddressSpace(RawAddress Alloca, LangAS DestLangAS,
+                                        llvm::Value *ArraySize = nullptr);
+
+public:
   /// CreateTempAlloca - This creates an alloca and inserts it into the entry
   /// block if \p ArraySize is nullptr, otherwise inserts it at the current
   /// insertion point of the builder. The caller is responsible for setting an
@@ -2972,10 +2985,8 @@ public:
   /// hasVolatileMember - returns true if aggregate type has a volatile
   /// member.
   bool hasVolatileMember(QualType T) {
-    if (const RecordType *RT = T->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    if (const auto *RD = T->getAsRecordDecl())
       return RD->hasVolatileMember();
-    }
     return false;
   }
 
@@ -3328,11 +3339,12 @@ public:
   /// Emit a check that \p Base points into an array object, which
   /// we can access at index \p Index. \p Accessed should be \c false if we
   /// this expression is used as an lvalue, for instance in "&Arr[Idx]".
-  void EmitBoundsCheck(const Expr *E, const Expr *Base, llvm::Value *Index,
-                       QualType IndexType, bool Accessed);
-  void EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
-                           llvm::Value *Index, QualType IndexType,
-                           QualType IndexedType, bool Accessed);
+  void EmitBoundsCheck(const Expr *ArrayExpr, const Expr *ArrayExprBase,
+                       llvm::Value *Index, QualType IndexType, bool Accessed);
+  void EmitBoundsCheckImpl(const Expr *ArrayExpr, QualType ArrayBaseType,
+                           llvm::Value *IndexVal, QualType IndexType,
+                           llvm::Value *BoundsVal, QualType BoundsType,
+                           bool Accessed);
 
   /// Returns debug info, with additional annotation if
   /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
@@ -3340,6 +3352,17 @@ public:
   llvm::DILocation *
   SanitizerAnnotateDebugInfo(ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
                              SanitizerHandler Handler);
+
+  /// Build metadata used by the AllocToken instrumentation.
+  llvm::MDNode *buildAllocToken(QualType AllocType);
+  /// Emit and set additional metadata used by the AllocToken instrumentation.
+  void EmitAllocToken(llvm::CallBase *CB, QualType AllocType);
+  /// Build additional metadata used by the AllocToken instrumentation,
+  /// inferring the type from an allocation call expression.
+  llvm::MDNode *buildAllocToken(const CallExpr *E);
+  /// Emit and set additional metadata used by the AllocToken instrumentation,
+  /// inferring the type from an allocation call expression.
+  void EmitAllocToken(llvm::CallBase *CB, const CallExpr *E);
 
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
@@ -3350,9 +3373,9 @@ public:
 
   // Emit bounds checking for flexible array and pointer members with the
   // counted_by attribute.
-  void EmitCountedByBoundsChecking(const Expr *E, llvm::Value *Idx,
-                                   Address Addr, QualType IdxTy,
-                                   QualType ArrayTy, bool Accessed,
+  void EmitCountedByBoundsChecking(const Expr *ArrayExpr, QualType ArrayType,
+                                   Address ArrayInst, QualType IndexType,
+                                   llvm::Value *IndexVal, bool Accessed,
                                    bool FlexibleArray);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -3599,7 +3622,10 @@ public:
   void EmitDefaultStmt(const DefaultStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmt(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmtRange(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
+  void EmitDeferStmt(const DeferStmt &S);
   void EmitAsmStmt(const AsmStmt &S);
+
+  const BreakContinue *GetDestForLoopControlStmt(const LoopControlStmt &S);
 
   void EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S);
   void EmitObjCAtTryStmt(const ObjCAtTryStmt &S);
@@ -3685,8 +3711,9 @@ public:
   llvm::Function *EmitCapturedStmt(const CapturedStmt &S, CapturedRegionKind K);
   llvm::Function *GenerateCapturedStmtFunction(const CapturedStmt &S);
   Address GenerateCapturedStmtArgument(const CapturedStmt &S);
-  llvm::Function *GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
-                                                     SourceLocation Loc);
+  llvm::Function *
+  GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
+                                     const OMPExecutableDirective &D);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
@@ -3851,6 +3878,7 @@ public:
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
+  void EmitOMPFuseDirective(const OMPFuseDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
   void EmitOMPScopeDirective(const OMPScopeDirective &S);
@@ -4453,10 +4481,8 @@ public:
                                 AggValueSlot slot = AggValueSlot::ignored());
   LValue EmitPseudoObjectLValue(const PseudoObjectExpr *e);
 
-  void FlattenAccessAndType(
-      Address Addr, QualType AddrTy,
-      SmallVectorImpl<std::pair<Address, llvm::Value *>> &AccessList,
-      SmallVectorImpl<QualType> &FlatTypes);
+  void FlattenAccessAndTypeLValue(LValue LVal,
+                                  SmallVectorImpl<LValue> &AccessList);
 
   llvm::Value *EmitIvarOffset(const ObjCInterfaceDecl *Interface,
                               const ObjCIvarDecl *Ivar);
@@ -5273,7 +5299,8 @@ public:
   EmitCheck(ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>>
                 Checked,
             SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,
-            ArrayRef<llvm::Value *> DynamicArgs);
+            ArrayRef<llvm::Value *> DynamicArgs,
+            const TrapReason *TR = nullptr);
 
   /// Emit a slow path cross-DSO CFI check which calls __cfi_slowpath
   /// if Cond if false.
@@ -5289,7 +5316,7 @@ public:
   /// Create a basic block that will call the trap intrinsic, and emit a
   /// conditional branch to it, for the -ftrapv checks.
   void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
-                     bool NoMerge = false);
+                     bool NoMerge = false, const TrapReason *TR = nullptr);
 
   /// Emit a call to trap or debugtrap and attach function attribute
   /// "trap-func-name" if specified.

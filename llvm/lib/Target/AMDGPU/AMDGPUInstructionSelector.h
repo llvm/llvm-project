@@ -124,7 +124,6 @@ private:
   bool selectDSGWSIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectDSAppendConsume(MachineInstr &MI, bool IsAppend) const;
   bool selectInitWholeWave(MachineInstr &MI) const;
-  bool selectSBarrier(MachineInstr &MI) const;
   bool selectDSBvhStackIntrinsic(MachineInstr &MI) const;
 
   bool selectImageIntrinsic(MachineInstr &MI,
@@ -257,9 +256,13 @@ private:
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrCPol(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrCPolM0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
   selectGlobalSAddrGLC(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffset(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoIOffsetM0(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectScratchSAddr(MachineOperand &Root) const;

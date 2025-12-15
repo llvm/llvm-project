@@ -35,10 +35,12 @@ libc_test_library(
     srcs = [
         "BazelFilePath.cpp",
         "ExecuteFunctionUnix.cpp",
+        "LibcDeathTestExecutors.cpp",
         "LibcTest.cpp",
         "LibcTestMain.cpp",
     ],
     hdrs = [
+        "ErrnoCheckingTest.h",
         "ErrnoSetterMatcher.h",
         "ExecuteFunction.h",
         "LibcTest.h",
@@ -62,6 +64,7 @@ libc_test_library(
         "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
         "//libc:__support_macros_properties_architectures",
+        "//libc:__support_macros_properties_compiler",
         "//libc:__support_macros_properties_types",
         "//libc:__support_stringutil",
         "//libc:__support_uint128",
@@ -80,19 +83,6 @@ libc_test_library(
 )
 
 libc_test_library(
-    name = "errno_test_helpers",
-    hdrs = [
-        "ErrnoCheckingTest.h",
-    ],
-    deps = [
-        ":LibcUnitTest",
-        "//libc:__support_libc_errno",
-        "//libc:__support_macros_config",
-        "//libc:errno",
-    ],
-)
-
-libc_test_library(
     name = "fp_test_helpers",
     srcs = [
         "FEnvSafeTest.cpp",
@@ -107,7 +97,6 @@ libc_test_library(
     ],
     deps = [
         ":LibcUnitTest",
-        ":errno_test_helpers",
         ":string_utils",
         ":test_logger",
         "//libc:__support_cpp_array",
@@ -122,6 +111,7 @@ libc_test_library(
         "//libc:__support_fputil_rounding_mode",
         "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
+        "//libc:__support_macros_optimization",
         "//libc:__support_macros_properties_architectures",
         "//libc:hdr_fenv_macros",
         "//libc:hdr_math_macros",

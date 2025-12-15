@@ -691,9 +691,9 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
 
     auto newResultType = RankedTensorType::get(
         newResultShape, padOp.getResultType().getElementType());
-    auto newPadOp = rewriter.create<tensor::PadOp>(
-        padOp.getLoc(), /*result=*/newResultType, collapsedSource, newLowPad,
-        newHighPad, paddingVal, padOp.getNofold());
+    auto newPadOp = tensor::PadOp::create(
+        rewriter, padOp.getLoc(), /*result=*/newResultType, collapsedSource,
+        newLowPad, newHighPad, paddingVal, padOp.getNofold());
 
     Value dest = padOp.getResult();
     if (options.rankReductionStrategy ==
@@ -747,8 +747,7 @@ struct RankReducedExtractSliceOp
     SmallVector<OpFoldResult> sizes = sliceOp.getMixedSizes();
     auto rankReducedType = cast<RankedTensorType>(
         tensor::ExtractSliceOp::inferCanonicalRankReducedResultType(
-            reassociation->size(), sliceOp.getSourceType(), offsets, sizes,
-            strides));
+            reassociation->size(), sliceOp.getSourceType(), sizes));
 
     Location loc = sliceOp.getLoc();
     Value newSlice = tensor::ExtractSliceOp::create(
@@ -1021,7 +1020,7 @@ struct RankReduceToUnBatched : RankReduceContractionOps<FromOpTy, ToOpTy> {
       LLVM_DEBUG(llvm::dbgs() << "could not infer contraction dims");
       return failure();
     }
-    ContractionDimensions contractionDims = maybeContractionDims.value();
+    const ContractionDimensions &contractionDims = maybeContractionDims.value();
 
     if (contractionDims.batch.size() != 1)
       return failure();
@@ -1066,7 +1065,7 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
       LLVM_DEBUG(llvm::dbgs() << "could not infer contraction dims");
       return failure();
     }
-    ContractionDimensions contractionDims = maybeContractionDims.value();
+    const ContractionDimensions &contractionDims = maybeContractionDims.value();
 
     if constexpr (reduceLeft) {
       auto m = contractionDims.m[0];

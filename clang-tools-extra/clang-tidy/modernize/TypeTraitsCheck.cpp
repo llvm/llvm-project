@@ -1,4 +1,4 @@
-//===--- TypeTraitsCheck.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -189,15 +189,6 @@ AST_MATCHER(TypeLoc, isType) {
 static constexpr char Bind[] = "";
 
 void TypeTraitsCheck::registerMatchers(MatchFinder *Finder) {
-  const ast_matchers::internal::VariadicDynCastAllOfMatcher<
-      Stmt,
-      DependentScopeDeclRefExpr>
-      dependentScopeDeclRefExpr; // NOLINT(readability-identifier-naming)
-  const ast_matchers::internal::VariadicDynCastAllOfMatcher<
-      TypeLoc,
-      DependentNameTypeLoc>
-      dependentNameTypeLoc; // NOLINT(readability-identifier-naming)
-
   // Only register matchers for trait<...>::value in c++17 mode.
   if (getLangOpts().CPlusPlus17) {
     Finder->addMatcher(mapAnyOf(declRefExpr, dependentScopeDeclRefExpr)
@@ -229,7 +220,7 @@ static bool checkTemplatedDecl(NestedNameSpecifier NNS,
 
 TypeTraitsCheck::TypeTraitsCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", false)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
   auto EmitValueWarning = [this, &Result](const NestedNameSpecifierLoc &QualLoc,
@@ -295,7 +286,7 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *TL = Result.Nodes.getNodeAs<TypedefTypeLoc>(Bind)) {
     const NestedNameSpecifierLoc QualLoc = TL->getQualifierLoc();
-    NestedNameSpecifier NNS = QualLoc.getNestedNameSpecifier();
+    const NestedNameSpecifier NNS = QualLoc.getNestedNameSpecifier();
     if (const auto *CTSD = dyn_cast_if_present<ClassTemplateSpecializationDecl>(
             NNS.getAsRecordDecl())) {
       if (isNamedDeclInStdTraitsSet(CTSD, TypeTraits))
@@ -313,7 +304,7 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (const auto *DNTL = Result.Nodes.getNodeAs<DependentNameTypeLoc>(Bind)) {
-    NestedNameSpecifierLoc QualLoc = DNTL->getQualifierLoc();
+    const NestedNameSpecifierLoc QualLoc = DNTL->getQualifierLoc();
     if (checkTemplatedDecl(QualLoc.getNestedNameSpecifier(), TypeTraits))
       EmitTypeWarning(QualLoc, DNTL->getEndLoc(),
                       DNTL->getElaboratedKeywordLoc());

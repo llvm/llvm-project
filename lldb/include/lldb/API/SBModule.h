@@ -296,6 +296,11 @@ public:
   /// Remove any global modules which are no longer needed.
   static void GarbageCollectAllocatedModules();
 
+  /// If this Module represents a specific object or part within a larger file,
+  /// returns the name of that object or part. Otherwise, returns
+  /// nullptr.
+  const char *GetObjectName() const;
+
 private:
   friend class SBAddress;
   friend class SBFrame;

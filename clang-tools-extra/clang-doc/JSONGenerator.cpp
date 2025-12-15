@@ -12,9 +12,10 @@ class JSONGenerator : public Generator {
 public:
   static const char *Format;
 
-  Error generateDocs(StringRef RootDir,
-                     llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                     const ClangDocContext &CDCtx) override;
+  Error generateDocumentation(StringRef RootDir,
+                              llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                              const ClangDocContext &CDCtx,
+                              std::string DirName) override;
   Error createResources(ClangDocContext &CDCtx) override;
   Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                            const ClangDocContext &CDCtx) override;
@@ -83,8 +84,23 @@ serializeLocation(const Location &Loc,
   return LocationObj;
 }
 
+/// Insert comments into a key in the Description object.
+///
+/// \param Comment Either an Object or Array, depending on the comment type
+/// \param Key     The type (Brief, Code, etc.) of comment to be inserted
 static void insertComment(Object &Description, json::Value &Comment,
                           StringRef Key) {
+  // The comment has a Children array for the actual text, with meta attributes
+  // alongside it in the Object.
+  if (auto *Obj = Comment.getAsObject()) {
+    if (auto *Children = Obj->getArray("Children"); Children->empty())
+      return;
+  }
+  // The comment is just an array of text comments.
+  else if (auto *Array = Comment.getAsArray(); Array->empty()) {
+    return;
+  }
+
   auto DescriptionIt = Description.find(Key);
 
   if (DescriptionIt == Description.end()) {
@@ -97,10 +113,28 @@ static void insertComment(Object &Description, json::Value &Comment,
   }
 }
 
+/// Takes the nested "Children" array from a comment Object.
+///
+/// \return a json::Array of comments, possible json::Value::Kind::Null
 static json::Value extractTextComments(Object *ParagraphComment) {
   if (!ParagraphComment)
-    return json::Object();
-  return *ParagraphComment->get("Children");
+    return json::Value(nullptr);
+  json::Value *Children = ParagraphComment->get("Children");
+  if (!Children)
+    return json::Value(nullptr);
+  auto ChildrenArray = *Children->getAsArray();
+  auto ChildrenIt = ChildrenArray.begin();
+  while (ChildrenIt != ChildrenArray.end()) {
+    auto *ChildObj = ChildrenIt->getAsObject();
+    assert(ChildObj && "Invalid JSON object in Comment");
+    auto TextComment = ChildObj->getString("TextComment");
+    if (!TextComment || TextComment->empty()) {
+      ChildrenIt = ChildrenArray.erase(ChildrenIt);
+      continue;
+    }
+    ++ChildrenIt;
+  }
+  return ChildrenArray;
 }
 
 static json::Value extractVerbatimComments(json::Array VerbatimLines) {
@@ -130,7 +164,8 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
 
   switch (I.Kind) {
   case CommentKind::CK_TextComment: {
-    Obj.insert({commentKindToString(I.Kind), I.Text});
+    if (!I.Text.empty())
+      Obj.insert({commentKindToString(I.Kind), I.Text});
     return Obj;
   }
 
@@ -140,6 +175,13 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
       insertComment(Description, TextCommentsArray, "BriefComments");
     else if (I.Name == "return")
       insertComment(Description, TextCommentsArray, "ReturnComments");
+    else if (I.Name == "throws" || I.Name == "throw") {
+      json::Value ThrowsVal = Object();
+      auto &ThrowsObj = *ThrowsVal.getAsObject();
+      ThrowsObj["Exception"] = I.Args.front();
+      ThrowsObj["Children"] = TextCommentsArray;
+      insertComment(Description, ThrowsVal, "ThrowsComments");
+    }
     return Obj;
   }
 
@@ -257,6 +299,9 @@ serializeCommonAttributes(const Info &I, json::Object &Obj,
       if (auto *ParagraphComment = Comment.getAsObject();
           ParagraphComment->get("ParagraphComment")) {
         auto TextCommentsArray = extractTextComments(ParagraphComment);
+        if (TextCommentsArray.kind() == json::Value::Null ||
+            TextCommentsArray.getAsArray()->empty())
+          continue;
         insertComment(Description, TextCommentsArray, "ParagraphComments");
       }
     }
@@ -333,8 +378,15 @@ static void serializeInfo(const ArrayRef<TemplateParamInfo> &Params,
   json::Value ParamsArray = Array();
   auto &ParamsArrayRef = *ParamsArray.getAsArray();
   ParamsArrayRef.reserve(Params.size());
-  for (const auto &Param : Params)
-    ParamsArrayRef.push_back(Param.Contents);
+  for (size_t Idx = 0; Idx < Params.size(); ++Idx) {
+    json::Value ParamObjVal = Object();
+    Object &ParamObj = *ParamObjVal.getAsObject();
+
+    ParamObj["Param"] = Params[Idx].Contents;
+    if (Idx == Params.size() - 1)
+      ParamObj["End"] = true;
+    ParamsArrayRef.push_back(ParamObjVal);
+  }
   Obj["Parameters"] = ParamsArray;
 }
 
@@ -468,7 +520,6 @@ static void insertArray(Object &Obj, json::Value &Array, StringRef Key) {
 static void serializeInfo(const RecordInfo &I, json::Object &Obj,
                           const std::optional<StringRef> &RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
-  Obj["FullName"] = I.FullName;
   Obj["TagType"] = getTagType(I.TagType);
   Obj["IsTypedef"] = I.IsTypeDef;
   Obj["MangledName"] = I.MangledName;
@@ -501,23 +552,30 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
     json::Array &PubMembersArrayRef = *PublicMembersArray.getAsArray();
     json::Value ProtectedMembersArray = Array();
     json::Array &ProtMembersArrayRef = *ProtectedMembersArray.getAsArray();
+    json::Value PrivateMembersArray = Array();
+    json::Array &PrivateMembersArrayRef = *PrivateMembersArray.getAsArray();
 
     for (const MemberTypeInfo &Member : I.Members) {
       json::Value MemberVal = Object();
       auto &MemberObj = *MemberVal.getAsObject();
       MemberObj["Name"] = Member.Name;
       MemberObj["Type"] = Member.Type.Name;
+      MemberObj["IsStatic"] = Member.IsStatic;
 
       if (Member.Access == AccessSpecifier::AS_public)
         PubMembersArrayRef.push_back(MemberVal);
       else if (Member.Access == AccessSpecifier::AS_protected)
         ProtMembersArrayRef.push_back(MemberVal);
+      else if (Member.Access == AccessSpecifier::AS_private)
+        PrivateMembersArrayRef.push_back(MemberVal);
     }
 
     if (!PubMembersArrayRef.empty())
       insertArray(Obj, PublicMembersArray, "PublicMembers");
     if (!ProtMembersArrayRef.empty())
       Obj["ProtectedMembers"] = ProtectedMembersArray;
+    if (!PrivateMembersArrayRef.empty())
+      insertArray(Obj, PrivateMembersArray, "PrivateMembers");
   }
 
   if (!I.Bases.empty())
@@ -527,12 +585,16 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
           serializeInfo(Base, BaseObj, RepositoryUrl);
         });
 
-  if (!I.Parents.empty())
+  if (!I.Parents.empty()) {
     serializeArray(I.Parents, Obj, "Parents", SerializeReferenceLambda);
+    Obj["HasParents"] = true;
+  }
 
-  if (!I.VirtualParents.empty())
+  if (!I.VirtualParents.empty()) {
     serializeArray(I.VirtualParents, Obj, "VirtualParents",
                    SerializeReferenceLambda);
+    Obj["HasVirtualParents"] = true;
+  }
 
   if (I.Template)
     serializeInfo(I.Template.value(), Obj);
@@ -555,6 +617,8 @@ static void serializeInfo(const VarInfo &I, json::Object &Obj,
 static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
                           const std::optional<StringRef> RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
+  if (I.USR == GlobalNamespaceID)
+    Obj["Name"] = "Global Namespace";
 
   if (!I.Children.Namespaces.empty())
     serializeArray(I.Children.Namespaces, Obj, "Namespaces",
@@ -565,8 +629,10 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     serializeInfo(Info, Object, RepositoryUrl);
   };
 
-  if (!I.Children.Functions.empty())
+  if (!I.Children.Functions.empty()) {
     serializeArray(I.Children.Functions, Obj, "Functions", SerializeInfo);
+    Obj["HasFunctions"] = true;
+  }
 
   if (!I.Children.Concepts.empty())
     serializeArray(I.Children.Concepts, Obj, "Concepts", SerializeInfo);
@@ -582,18 +648,17 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
   if (I->IT == InfoType::IT_record) {
     auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
     FileName = RecordSymbolInfo->MangledName;
-  } else if (I->IT == InfoType::IT_namespace && I->Name != "")
-    // Serialize the global namespace as index.json
+  } else if (I->IT == InfoType::IT_namespace) {
+    FileName = "index";
+  } else
     FileName = I->Name;
-  else
-    FileName = I->getFileBaseName();
   sys::path::append(Path, FileName + ".json");
   return FileName;
 }
 
-Error JSONGenerator::generateDocs(
+Error JSONGenerator::generateDocumentation(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-    const ClangDocContext &CDCtx) {
+    const ClangDocContext &CDCtx, std::string DirName) {
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
@@ -603,6 +668,7 @@ Error JSONGenerator::generateDocs(
     auto RootDirStr = RootDir.str() + "/json";
     StringRef JSONDir = StringRef(RootDirStr);
     sys::path::native(JSONDir, Path);
+    sys::path::append(Path, Info->getRelativeFilePath(""));
     if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = sys::fs::create_directories(Path);
           Err != std::error_code())

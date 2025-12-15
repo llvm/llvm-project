@@ -223,7 +223,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Structured binding declaration as a condition</td>
   <td><a href="https://wg21.link/P0963R3">P0963R3</a></td>
-  <td class="unreleased" align="center">Clang 21</td>
+  <td class="full" align="center">Clang 21</td>
  </tr>
  <!--Poland, Fall 2024-->
  <tr>
@@ -244,7 +244,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Structured Bindings can introduce a Pack</td>
   <td><a href="https://wg21.link/P1061R10">P1061R10</a></td>
-  <td class="unreleased" align="center">Clang 21</td>
+  <td class="full" align="center">Clang 21</td>
  </tr>
  <tr>
   <td>The Oxford variadic comma</td>
@@ -280,12 +280,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Trivial Relocatability</pre></td>
   <td><a href="https://wg21.link/P2786">P2786R13</a></td>
-  <td class="partial" align="center">
-    <details>
-      <summary>Clang 21 (Partial)</summary>
-      The feature test macro (<code>__cpp_trivial_relocatability</code>) has not yet been set.
-    </details>
-  </td>
+  <td class="full" align="center">Clang 21</td>
  </tr>
  <tr>
   <td><pre>#embed</pre></td>
@@ -317,7 +312,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Attaching main to the global module</td>
   <td><a href="https://wg21.link/P3618">P3618R0</a> (<a href="#dr">DR</a>)</td>
-  <td class="unreleased" align="center">Clang 21</td>
+  <td class="full" align="center">Clang 21</td>
  </tr>
  <tr>
   <td>Expansion Statements</td>
@@ -931,7 +926,14 @@ C++23, informally referred to as C++26.</p>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1857r3">P1857R3</a></td>
-        <td class="none" align="center">No</td>
+        <td class="partial" align="center">
+          <details>
+            <summary>Clang 21 (Partial)</summary>
+            The restriction that "[a] module directive may only appear
+            as the first preprocessing tokens in a file" is enforced
+            starting in Clang 21.
+          </details>
+        </td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2115r0">P2115R0</a></td>

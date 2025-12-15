@@ -9,43 +9,19 @@
 ; copied from test/CodeGen/X86/half.ll.
 
 define void @store(half %x, ptr %p) nounwind {
-; SPARC32-LABEL: store:
-; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __truncsfhf2
-; SPARC32-NEXT:    mov %i0, %o0
-; SPARC32-NEXT:    sth %o0, [%i1]
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
-;
-; SPARC64-LABEL: store:
-; SPARC64:       ! %bb.0:
-; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    sth %o0, [%i1]
-; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
+; CHECK-LABEL: store:
+; CHECK:       ! %bb.0:
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    sth %o0, [%o1]
   store half %x, ptr %p
   ret void
 }
 
 define half @return(ptr %p) nounwind {
-; SPARC32-LABEL: return:
-; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    lduh [%i0], %o0
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
-;
-; SPARC64-LABEL: return:
-; SPARC64:       ! %bb.0:
-; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    lduh [%i0], %o0
-; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
+; CHECK-LABEL: return:
+; CHECK:       ! %bb.0:
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    lduh [%o0], %o0
   %r = load half, ptr %p
   ret half %r
 }
@@ -185,46 +161,19 @@ define void @test_bitcast_to_half(ptr %addr, i16 %in) nounwind {
 }
 
 define half @from_bits(i16 %x) nounwind {
-; SPARC32-LABEL: from_bits:
-; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    mov %i0, %o0
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
-;
-; SPARC64-LABEL: from_bits:
-; SPARC64:       ! %bb.0:
-; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    srl %i0, 0, %o0
-; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
+; CHECK-LABEL: from_bits:
+; CHECK:       ! %bb.0:
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    nop
   %res = bitcast i16 %x to half
   ret half %res
 }
 
 define i16 @to_bits(half %x) nounwind {
-; SPARC32-LABEL: to_bits:
-; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __truncsfhf2
-; SPARC32-NEXT:    mov %i0, %o0
-; SPARC32-NEXT:    sethi 4194240, %i0
-; SPARC32-NEXT:    andn %o0, %i0, %i0
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
-;
-; SPARC64-LABEL: to_bits:
-; SPARC64:       ! %bb.0:
-; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    sethi 63, %i0
-; SPARC64-NEXT:    or %i0, 1023, %i0
-; SPARC64-NEXT:    and %o0, %i0, %i0
-; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
+; CHECK-LABEL: to_bits:
+; CHECK:       ! %bb.0:
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    nop
     %res = bitcast half %x to i16
     ret i16 %res
 }
@@ -694,37 +643,47 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) nounwind {
 define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; SPARC32-LABEL: test_sitofp_fadd_i32:
 ; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -104, %sp
-; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    lduh [%i1], %o0
+; SPARC32-NEXT:    save %sp, -112, %sp
+; SPARC32-NEXT:    lduh [%i1], %i1
 ; SPARC32-NEXT:    st %i0, [%fp+-4]
-; SPARC32-NEXT:    ld [%fp+-4], %f1
-; SPARC32-NEXT:    st %f0, [%fp+-12] ! 4-byte Folded Spill
-; SPARC32-NEXT:    fitos %f1, %f0
+; SPARC32-NEXT:    ld [%fp+-4], %f0
+; SPARC32-NEXT:    fitos %f0, %f0
 ; SPARC32-NEXT:    st %f0, [%fp+-8]
 ; SPARC32-NEXT:    call __truncsfhf2
 ; SPARC32-NEXT:    ld [%fp+-8], %o0
 ; SPARC32-NEXT:    call __extendhfsf2
 ; SPARC32-NEXT:    nop
-; SPARC32-NEXT:    ld [%fp+-12], %f1 ! 4-byte Folded Reload
-; SPARC32-NEXT:    fadds %f1, %f0, %f0
+; SPARC32-NEXT:    st %f0, [%fp+-16] ! 4-byte Folded Spill
+; SPARC32-NEXT:    call __extendhfsf2
+; SPARC32-NEXT:    mov %i1, %o0
+; SPARC32-NEXT:    ld [%fp+-16], %f1 ! 4-byte Folded Reload
+; SPARC32-NEXT:    fadds %f0, %f1, %f0
+; SPARC32-NEXT:    st %f0, [%fp+-12]
+; SPARC32-NEXT:    call __truncsfhf2
+; SPARC32-NEXT:    ld [%fp+-12], %o0
+; SPARC32-NEXT:    call __extendhfsf2
+; SPARC32-NEXT:    nop
 ; SPARC32-NEXT:    ret
 ; SPARC32-NEXT:    restore
 ;
 ; SPARC64-LABEL: test_sitofp_fadd_i32:
 ; SPARC64:       ! %bb.0:
 ; SPARC64-NEXT:    save %sp, -192, %sp
-; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    lduh [%i1], %o0
-; SPARC64-NEXT:    st %f0, [%fp+2039] ! 4-byte Folded Spill
+; SPARC64-NEXT:    lduh [%i1], %i1
 ; SPARC64-NEXT:    st %i0, [%fp+2043]
 ; SPARC64-NEXT:    ld [%fp+2043], %f0
 ; SPARC64-NEXT:    call __truncsfhf2
 ; SPARC64-NEXT:    fitos %f0, %f1
 ; SPARC64-NEXT:    call __extendhfsf2
 ; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    st %f0, [%fp+2039] ! 4-byte Folded Spill
+; SPARC64-NEXT:    call __extendhfsf2
+; SPARC64-NEXT:    mov %i1, %o0
 ; SPARC64-NEXT:    ld [%fp+2039], %f1 ! 4-byte Folded Reload
-; SPARC64-NEXT:    fadds %f1, %f0, %f0
+; SPARC64-NEXT:    call __truncsfhf2
+; SPARC64-NEXT:    fadds %f0, %f1, %f1
+; SPARC64-NEXT:    call __extendhfsf2
+; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
   %tmp0 = load half, ptr %b
@@ -738,10 +697,8 @@ define half @PR40273(half) nounwind {
 ; V8-LABEL: PR40273:
 ; V8:       ! %bb.0:
 ; V8-NEXT:    save %sp, -96, %sp
-; V8-NEXT:    call __truncsfhf2
-; V8-NEXT:    mov %i0, %o0
 ; V8-NEXT:    call __extendhfsf2
-; V8-NEXT:    nop
+; V8-NEXT:    mov %i0, %o0
 ; V8-NEXT:    sethi %hi(.LCPI24_0), %i0
 ; V8-NEXT:    ld [%i0+%lo(.LCPI24_0)], %f1
 ; V8-NEXT:    fcmps %f0, %f1
@@ -749,54 +706,40 @@ define half @PR40273(half) nounwind {
 ; V8-NEXT:    fbne .LBB24_2
 ; V8-NEXT:    nop
 ; V8-NEXT:  ! %bb.1:
-; V8-NEXT:    ba .LBB24_3
-; V8-NEXT:    mov %g0, %i0
+; V8-NEXT:    ret
+; V8-NEXT:    restore %g0, %g0, %o0
 ; V8-NEXT:  .LBB24_2:
-; V8-NEXT:    mov 4, %i0
-; V8-NEXT:  .LBB24_3:
-; V8-NEXT:    sethi %hi(.LCPI24_1), %i1
-; V8-NEXT:    add %i1, %lo(.LCPI24_1), %i1
-; V8-NEXT:    ld [%i1+%i0], %f0
+; V8-NEXT:    sethi 15, %i0
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore
 ;
 ; V9-LABEL: PR40273:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    save %sp, -96, %sp
-; V9-NEXT:    call __truncsfhf2
-; V9-NEXT:    mov %i0, %o0
 ; V9-NEXT:    call __extendhfsf2
-; V9-NEXT:    nop
+; V9-NEXT:    mov %i0, %o0
 ; V9-NEXT:    sethi %hi(.LCPI24_0), %i0
 ; V9-NEXT:    ld [%i0+%lo(.LCPI24_0)], %f1
 ; V9-NEXT:    mov %g0, %i0
+; V9-NEXT:    sethi 15, %i1
 ; V9-NEXT:    fcmps %fcc0, %f0, %f1
-; V9-NEXT:    movne %fcc0, 4, %i0
-; V9-NEXT:    sethi %hi(.LCPI24_1), %i1
-; V9-NEXT:    add %i1, %lo(.LCPI24_1), %i1
-; V9-NEXT:    ld [%i1+%i0], %f0
+; V9-NEXT:    movne %fcc0, %i1, %i0
 ; V9-NEXT:    ret
 ; V9-NEXT:    restore
 ;
 ; SPARC64-LABEL: PR40273:
 ; SPARC64:       ! %bb.0:
 ; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    srl %i0, 0, %o0
 ; SPARC64-NEXT:    sethi %h44(.LCPI24_0), %i0
 ; SPARC64-NEXT:    add %i0, %m44(.LCPI24_0), %i0
 ; SPARC64-NEXT:    sllx %i0, 12, %i0
 ; SPARC64-NEXT:    ld [%i0+%l44(.LCPI24_0)], %f1
 ; SPARC64-NEXT:    mov %g0, %i0
+; SPARC64-NEXT:    sethi 15, %i1
 ; SPARC64-NEXT:    fcmps %fcc0, %f0, %f1
-; SPARC64-NEXT:    movne %fcc0, 4, %i0
-; SPARC64-NEXT:    sethi %h44(.LCPI24_1), %i1
-; SPARC64-NEXT:    add %i1, %m44(.LCPI24_1), %i1
-; SPARC64-NEXT:    sllx %i1, 12, %i1
-; SPARC64-NEXT:    add %i1, %l44(.LCPI24_1), %i1
-; SPARC64-NEXT:    ld [%i1+%i0], %f0
+; SPARC64-NEXT:    movne %fcc0, %i1, %i0
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
   %2 = fcmp une half %0, 0xH0000
@@ -807,82 +750,28 @@ define half @PR40273(half) nounwind {
 define half @fabs(half %x) nounwind {
 ; SPARC32-LABEL: fabs:
 ; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __truncsfhf2
-; SPARC32-NEXT:    mov %i0, %o0
-; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    nop
-; SPARC32-NEXT:    fabss %f0, %f0
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
+; SPARC32-NEXT:    sethi 4194272, %o1
+; SPARC32-NEXT:    retl
+; SPARC32-NEXT:    andn %o0, %o1, %o0
 ;
 ; SPARC64-LABEL: fabs:
 ; SPARC64:       ! %bb.0:
-; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    fabss %f0, %f0
-; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
+; SPARC64-NEXT:    sethi 31, %o1
+; SPARC64-NEXT:    or %o1, 1023, %o1
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    and %o0, %o1, %o0
   %a = call half @llvm.fabs.f16(half %x)
   ret half %a
 }
 
 define half @fcopysign(half %x, half %y) nounwind {
-; V8-LABEL: fcopysign:
-; V8:       ! %bb.0:
-; V8-NEXT:    save %sp, -96, %sp
-; V8-NEXT:    call __truncsfhf2
-; V8-NEXT:    mov %i0, %o0
-; V8-NEXT:    call __extendhfsf2
-; V8-NEXT:    nop
-; V8-NEXT:    sethi 2097152, %i0
-; V8-NEXT:    and %i1, %i0, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    be .LBB26_2
-; V8-NEXT:    fabss %f0, %f0
-; V8-NEXT:  ! %bb.1:
-; V8-NEXT:    fnegs %f0, %f0
-; V8-NEXT:  .LBB26_2:
-; V8-NEXT:    ret
-; V8-NEXT:    restore
-;
-; V9-LABEL: fcopysign:
-; V9:       ! %bb.0:
-; V9-NEXT:    save %sp, -96, %sp
-; V9-NEXT:    call __truncsfhf2
-; V9-NEXT:    mov %i0, %o0
-; V9-NEXT:    call __extendhfsf2
-; V9-NEXT:    nop
-; V9-NEXT:    sethi 2097152, %i0
-; V9-NEXT:    and %i1, %i0, %i0
-; V9-NEXT:    fabss %f0, %f0
-; V9-NEXT:    fnegs %f0, %f1
-; V9-NEXT:    cmp %i0, 0
-; V9-NEXT:    fmovsne %icc, %f1, %f0
-; V9-NEXT:    ret
-; V9-NEXT:    restore
-;
-; SPARC64-LABEL: fcopysign:
-; SPARC64:       ! %bb.0:
-; SPARC64-NEXT:    save %sp, -192, %sp
-; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    st %f3, [%fp+2039]
-; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    ld [%fp+2039], %f1 ! 4-byte Folded Reload
-; SPARC64-NEXT:    st %f1, [%fp+2043]
-; SPARC64-NEXT:    ld [%fp+2043], %i0
-; SPARC64-NEXT:    sethi 2097152, %i1
-; SPARC64-NEXT:    and %i0, %i1, %i0
-; SPARC64-NEXT:    fabss %f0, %f0
-; SPARC64-NEXT:    fnegs %f0, %f1
-; SPARC64-NEXT:    cmp %i0, 0
-; SPARC64-NEXT:    fmovsne %icc, %f1, %f0
-; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
+; CHECK-LABEL: fcopysign:
+; CHECK:       ! %bb.0:
+; CHECK-NEXT:    sethi 4194272, %o2
+; CHECK-NEXT:    and %o1, %o2, %o1
+; CHECK-NEXT:    andn %o0, %o2, %o0
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    or %o0, %o1, %o0
   %a = call half @llvm.copysign.f16(half %x, half %y)
   ret half %a
 }

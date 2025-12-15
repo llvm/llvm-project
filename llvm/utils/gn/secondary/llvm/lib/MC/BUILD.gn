@@ -4,6 +4,7 @@ static_library("MC") {
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/DebugInfo/CodeView",
+    "//llvm/lib/DebugInfo/DWARF/LowLevel",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]

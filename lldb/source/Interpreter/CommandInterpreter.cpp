@@ -52,6 +52,7 @@
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/ErrorMessages.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -315,6 +316,11 @@ void CommandInterpreter::Initialize() {
     AddAlias("continue", cmd_obj_sp);
   }
 
+  // At this point, I'm leaving "b" command aliased to "_regexp-break".  There's
+  // a catch-all regexp in the command that takes any unrecognized input and
+  // runs it as `break set <input>` and switching the command to break add
+  // would change that behavior.  People who want to use the break add for the
+  // "b" alias can do so in their .lldbinit.
   cmd_obj_sp = GetCommandSPExact("_regexp-break");
   if (cmd_obj_sp)
     AddAlias("b", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
@@ -335,7 +341,7 @@ void CommandInterpreter::Initialize() {
     AddAlias("ni", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("thread step-in");
+  cmd_obj_sp = GetCommandSPExact("_regexp-step");
   if (cmd_obj_sp) {
     AddAlias("s", cmd_obj_sp);
     AddAlias("step", cmd_obj_sp);
@@ -667,6 +673,89 @@ void CommandInterpreter::LoadCommandDictionary() {
     }
   }
 
+  // clang-format off
+  // FIXME: It would be simpler to just use the linespec's directly here, but
+  // the `b` alias allows "foo.c   :   12   :   45" but the linespec parser
+  // is more rigorous, and doesn't strip spaces, so the two are not equivalent.
+  const char *break_add_regexes[][2] = {
+      {"^(.*[^[:space:]])[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*$",
+       "breakpoint add file --file '%1' --line %2 --column %3"},
+      {"^(.*[^[:space:]])[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*$",
+       "breakpoint add file --file '%1' --line %2"},
+      {"^/([^/]+)/$", "breakpoint add pattern -- %1"},
+      {"^([[:digit:]]+)[[:space:]]*$",
+      "breakpoint add file --line %1"},
+      {"^\\*?(0x[[:xdigit:]]+)[[:space:]]*$",
+      "breakpoint add address %1"},
+      {"^[\"']?([-+]?\\[.*\\])[\"']?[[:space:]]*$",
+       "breakpoint add name '%1'"},
+      {"^(-.*)$",
+      "breakpoint add name '%1'"},
+      {"^(.*[^[:space:]])`(.*[^[:space:]])[[:space:]]*$",
+       "breakpoint add name '%2' --shlib '%1'"},
+      {"^\\&(.*[^[:space:]])[[:space:]]*$",
+       "breakpoint add name '%1' --skip-prologue=0"},
+      {"^[\"']?(.*[^[:space:]\"'])[\"']?[[:space:]]*$",
+       "breakpoint add name '%1'"}};
+  // clang-format on
+
+  size_t num_add_regexes = std::size(break_add_regexes);
+
+  std::unique_ptr<CommandObjectRegexCommand> break_add_regex_cmd_up(
+      new CommandObjectRegexCommand(
+          *this, "_regexp-break-add",
+          "Set a breakpoint using one of several shorthand formats, or list "
+          "the existing breakpoints if no arguments are provided.",
+          "\n"
+          "_regexp-break-add <filename>:<linenum>:<colnum>\n"
+          "              main.c:12:21          // Break at line 12 and column "
+          "21 of main.c\n\n"
+          "_regexp-break-add <filename>:<linenum>\n"
+          "              main.c:12             // Break at line 12 of "
+          "main.c\n\n"
+          "_regexp-break-add <linenum>\n"
+          "              12                    // Break at line 12 of current "
+          "file\n\n"
+          "_regexp-break-add 0x<address>\n"
+          "              0x1234000             // Break at address "
+          "0x1234000\n\n"
+          "_regexp-break-add <name>\n"
+          "              main                  // Break in 'main' after the "
+          "prologue\n\n"
+          "_regexp-break-add &<name>\n"
+          "              &main                 // Break at first instruction "
+          "in 'main'\n\n"
+          "_regexp-break-add <module>`<name>\n"
+          "              libc.so`malloc        // Break in 'malloc' from "
+          "'libc.so'\n\n"
+          "_regexp-break-add /<source-regex>/\n"
+          "              /break here/          // Break on source lines in "
+          "current file\n"
+          "                                    // containing text 'break "
+          "here'.\n"
+          "_regexp-break-add\n"
+          "                                    // List the existing "
+          "breakpoints\n",
+          lldb::eSymbolCompletion | lldb::eSourceFileCompletion, false));
+
+  if (break_add_regex_cmd_up) {
+    bool success = true;
+    for (size_t i = 0; i < num_add_regexes; i++) {
+      success = break_add_regex_cmd_up->AddRegexCommand(
+          break_add_regexes[i][0], break_add_regexes[i][1]);
+      if (!success)
+        break;
+    }
+    success =
+        break_add_regex_cmd_up->AddRegexCommand("^$", "breakpoint list --full");
+
+    if (success) {
+      CommandObjectSP break_add_regex_cmd_sp(break_add_regex_cmd_up.release());
+      m_command_dict[std::string(break_add_regex_cmd_sp->GetCommandName())] =
+          break_add_regex_cmd_sp;
+    }
+  }
+
   std::unique_ptr<CommandObjectRegexCommand> tbreak_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-tbreak",
@@ -944,6 +1033,27 @@ void CommandInterpreter::LoadCommandDictionary() {
       CommandObjectSP jump_regex_cmd_sp(jump_regex_cmd_up.release());
       m_command_dict[std::string(jump_regex_cmd_sp->GetCommandName())] =
           jump_regex_cmd_sp;
+    }
+  }
+
+  std::shared_ptr<CommandObjectRegexCommand> step_regex_cmd_sp(
+      new CommandObjectRegexCommand(
+          *this, "_regexp-step",
+          "Single step, optionally to a specific function.",
+          "\n"
+          "_regexp-step                 // Single step\n"
+          "_regexp-step <function-name> // Step into the named function\n",
+          0, false));
+  if (step_regex_cmd_sp) {
+    if (step_regex_cmd_sp->AddRegexCommand("^[[:space:]]*$",
+                                           "thread step-in") &&
+        step_regex_cmd_sp->AddRegexCommand("^[[:space:]]*(-.+)$",
+                                           "thread step-in %1") &&
+        step_regex_cmd_sp->AddRegexCommand(
+            "^[[:space:]]*(.+)[[:space:]]*$",
+            "thread step-in --end-linenumber block --step-in-target %1")) {
+      m_command_dict[std::string(step_regex_cmd_sp->GetCommandName())] =
+          step_regex_cmd_sp;
     }
   }
 }
@@ -1780,13 +1890,13 @@ CommandObject *CommandInterpreter::BuildAliasResult(
 
         // Make sure we aren't going outside the bounds of the cmd string:
         if (strpos < start_fudge) {
-          result.AppendError("Unmatched quote at command beginning.");
+          result.AppendError("unmatched quote at command beginning");
           return nullptr;
         }
         llvm::StringRef arg_text = entry.ref();
         if (strpos - start_fudge + arg_text.size() + len_fudge >
             raw_input_string.size()) {
-          result.AppendError("Unmatched quote at command end.");
+          result.AppendError("unmatched quote at command end");
           return nullptr;
         }
         raw_input_string = raw_input_string.erase(
@@ -2069,7 +2179,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     command_string = command_line;
     original_command_string = command_line;
     if (m_repeat_command.empty()) {
-      result.AppendError("No auto repeat.");
+      result.AppendError("no auto repeat");
       return false;
     }
 
@@ -2481,22 +2591,18 @@ int CommandInterpreter::GetOptionArgumentPosition(const char *in_string) {
   return position;
 }
 
-static void GetHomeInitFile(llvm::SmallVectorImpl<char> &init_file,
-                            llvm::StringRef suffix = {}) {
+static void GetHomeInitFile(FileSpec &init_file, llvm::StringRef suffix = {}) {
   std::string init_file_name = ".lldbinit";
   if (!suffix.empty()) {
     init_file_name.append("-");
     init_file_name.append(suffix.str());
   }
 
-  FileSystem::Instance().GetHomeDirectory(init_file);
-  llvm::sys::path::append(init_file, init_file_name);
-
-  FileSystem::Instance().Resolve(init_file);
+  init_file =
+      HostInfo::GetUserHomeDir().CopyByAppendingPathComponent(init_file_name);
 }
 
-static void GetHomeREPLInitFile(llvm::SmallVectorImpl<char> &init_file,
-                                LanguageType language) {
+static void GetHomeREPLInitFile(FileSpec &init_file, LanguageType language) {
   if (language == eLanguageTypeUnknown) {
     LanguageSet repl_languages = Language::GetLanguagesSupportingREPLs();
     if (auto main_repl_language = repl_languages.GetSingularLanguage())
@@ -2510,9 +2616,9 @@ static void GetHomeREPLInitFile(llvm::SmallVectorImpl<char> &init_file,
        llvm::Twine(Language::GetNameForLanguageType(language)) +
        llvm::Twine("-repl"))
           .str();
-  FileSystem::Instance().GetHomeDirectory(init_file);
-  llvm::sys::path::append(init_file, init_file_name);
-  FileSystem::Instance().Resolve(init_file);
+
+  init_file =
+      HostInfo::GetUserHomeDir().CopyByAppendingPathComponent(init_file_name);
 }
 
 static void GetCwdInitFile(llvm::SmallVectorImpl<char> &init_file) {
@@ -2567,13 +2673,13 @@ void CommandInterpreter::SourceInitFileCwd(CommandReturnObject &result) {
     SourceInitFile(FileSpec(init_file.str()), result);
     break;
   case eLoadCWDlldbinitWarn: {
-    llvm::SmallString<128> home_init_file;
+    FileSpec home_init_file;
     GetHomeInitFile(home_init_file);
     if (llvm::sys::path::parent_path(init_file) ==
-        llvm::sys::path::parent_path(home_init_file)) {
+        llvm::sys::path::parent_path(home_init_file.GetPath())) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      result.AppendError(InitFileWarning);
+      result.AppendWarning(InitFileWarning);
     }
   }
   }
@@ -2590,24 +2696,24 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
     return;
   }
 
-  llvm::SmallString<128> init_file;
+  FileSpec init_file;
 
   if (is_repl)
     GetHomeREPLInitFile(init_file, GetDebugger().GetREPLLanguage());
 
-  if (init_file.empty())
+  if (init_file.GetPath().empty())
     GetHomeInitFile(init_file);
 
   if (!m_skip_app_init_files) {
     llvm::StringRef program_name =
         HostInfo::GetProgramFileSpec().GetFilename().GetStringRef();
-    llvm::SmallString<128> program_init_file;
+    FileSpec program_init_file;
     GetHomeInitFile(program_init_file, program_name);
     if (FileSystem::Instance().Exists(program_init_file))
       init_file = program_init_file;
   }
 
-  SourceInitFile(FileSpec(init_file.str()), result);
+  SourceInitFile(init_file, result);
 }
 
 void CommandInterpreter::SourceInitFileGlobal(CommandReturnObject &result) {
@@ -3684,13 +3790,11 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
           done = static_cast<bool>(cmd_obj);
         } else {
           StreamString error_msg;
-          error_msg.Printf("Ambiguous command '%s'. Possible matches:\n",
+          error_msg.Printf("ambiguous command '%s'. Possible matches:\n",
                            next_word.c_str());
-
-          for (uint32_t i = 0; i < num_matches; ++i) {
+          for (uint32_t i = 0; i < num_matches; ++i)
             error_msg.Printf("\t%s\n", matches.GetStringAtIndex(i));
-          }
-          result.AppendRawError(error_msg.GetString());
+          result.AppendError(error_msg.GetString());
         }
       } else {
         // We didn't have only one match, otherwise we wouldn't get here.

@@ -130,8 +130,6 @@ public:
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
                    bool HasMinSize = false);
 
-  virtual unsigned getHwModeSet() const override;
-
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
@@ -169,6 +167,22 @@ public:
   /// initializeProperties().
   ARMProcFamilyEnum getProcFamily() const {
     return ARMProcFamily;
+  }
+
+  /// Returns true if the processor is an Apple M-series or aligned A-series
+  /// (A14 or newer).
+  bool isAppleMLike() const {
+    switch (ARMProcFamily) {
+    case AppleA14:
+    case AppleA15:
+    case AppleA16:
+    case AppleA17:
+    case AppleM4:
+    case AppleM5:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool isXRaySupported() const override { return true; }
@@ -212,6 +226,13 @@ public:
     return hasSVE() || isStreamingSVEAvailable();
   }
 
+  /// Returns true if the target has access to either the full range of SVE
+  /// instructions, or the streaming-compatible subset of SVE instructions
+  /// available to SME2.
+  bool isNonStreamingSVEorSME2Available() const {
+    return isSVEAvailable() || (isSVEorStreamingSVEAvailable() && hasSME2());
+  }
+
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
     // we don't yet support streaming-compatible codegen support that we trust
@@ -239,8 +260,8 @@ public:
   /// Return true if the CPU supports any kind of instruction fusion.
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
-           hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCCSelect() ||
-           hasFuseAdrpAdd() || hasFuseLiterals();
+           hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCmpCSel() ||
+           hasFuseCmpCSet() || hasFuseAdrpAdd() || hasFuseLiterals();
   }
 
   unsigned getEpilogueVectorizationMinVF() const {
@@ -464,6 +485,8 @@ public:
   /// a function.
   std::optional<uint16_t>
   getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
+
+  bool enableAggressiveInterleaving() const { return AggressiveInterleaving; }
 };
 } // End llvm namespace
 

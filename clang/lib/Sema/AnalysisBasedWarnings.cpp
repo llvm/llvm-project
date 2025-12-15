@@ -29,14 +29,13 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
-#include "clang/Analysis/Analyses/LifetimeSafety.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
 #include "clang/Analysis/Analyses/UninitializedValues.h"
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -983,10 +982,9 @@ static void DiagUninitUse(Sema &S, const VarDecl *VD, const UninitUse &Use,
   case UninitUse::AfterDecl:
   case UninitUse::AfterCall:
     S.Diag(VD->getLocation(), diag::warn_sometimes_uninit_var)
-      << VD->getDeclName() << IsCapturedByBlock
-      << (Use.getKind() == UninitUse::AfterDecl ? 4 : 5)
-      << const_cast<DeclContext*>(VD->getLexicalDeclContext())
-      << VD->getSourceRange();
+        << VD->getDeclName() << IsCapturedByBlock
+        << (Use.getKind() == UninitUse::AfterDecl ? 4 : 5)
+        << VD->getLexicalDeclContext() << VD->getSourceRange();
     S.Diag(Use.getUser()->getBeginLoc(), diag::note_uninit_var_use)
         << IsCapturedByBlock << Use.getUser()->getSourceRange();
     return;
@@ -2606,6 +2604,16 @@ public:
 #endif
   }
 
+  void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
+                                        bool IsRelatedToDecl,
+                                        ASTContext &Ctx) override {
+    SourceLocation Loc;
+
+    Loc = Node.get<Stmt>()->getBeginLoc();
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_unique_ptr_array_access)
+        << Node.getSourceRange();
+  }
+
   bool isSafeBufferOptOut(const SourceLocation &Loc) const override {
     return S.PP.isSafeBufferOptOut(S.getSourceManager(), Loc);
   }
@@ -2725,6 +2733,70 @@ static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
     S.Diag(D.Loc, D.PD);
 }
 
+template <typename Iterator>
+static void emitPossiblyUnreachableDiags(Sema &S, AnalysisDeclContext &AC,
+                                         std::pair<Iterator, Iterator> PUDs) {
+
+  if (PUDs.first == PUDs.second)
+    return;
+
+  for (auto I = PUDs.first; I != PUDs.second; ++I) {
+    for (const Stmt *S : I->Stmts)
+      AC.registerForcedBlockExpression(S);
+  }
+
+  if (AC.getCFG()) {
+    CFGReverseBlockReachabilityAnalysis *Analysis =
+        AC.getCFGReachablityAnalysis();
+
+    for (auto I = PUDs.first; I != PUDs.second; ++I) {
+      const auto &D = *I;
+      if (llvm::all_of(D.Stmts, [&](const Stmt *St) {
+            const CFGBlock *Block = AC.getBlockForRegisteredExpression(St);
+            // FIXME: We should be able to assert that block is non-null, but
+            // the CFG analysis can skip potentially-evaluated expressions in
+            // edge cases; see test/Sema/vla-2.c.
+            if (Block && Analysis)
+              if (!Analysis->isReachable(&AC.getCFG()->getEntry(), Block))
+                return false;
+            return true;
+          })) {
+        S.Diag(D.Loc, D.PD);
+      }
+    }
+  } else {
+    for (auto I = PUDs.first; I != PUDs.second; ++I)
+      S.Diag(I->Loc, I->PD);
+  }
+}
+
+void sema::AnalysisBasedWarnings::registerVarDeclWarning(
+    VarDecl *VD, clang::sema::PossiblyUnreachableDiag PUD) {
+  VarDeclPossiblyUnreachableDiags.emplace(VD, PUD);
+}
+
+void sema::AnalysisBasedWarnings::issueWarningsForRegisteredVarDecl(
+    VarDecl *VD) {
+  if (!llvm::is_contained(VarDeclPossiblyUnreachableDiags, VD))
+    return;
+
+  AnalysisDeclContext AC(/*Mgr=*/nullptr, VD);
+
+  AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
+  AC.getCFGBuildOptions().AddEHEdges = false;
+  AC.getCFGBuildOptions().AddInitializers = true;
+  AC.getCFGBuildOptions().AddImplicitDtors = true;
+  AC.getCFGBuildOptions().AddTemporaryDtors = true;
+  AC.getCFGBuildOptions().AddCXXNewAllocator = false;
+  AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
+
+  auto Range = VarDeclPossiblyUnreachableDiags.equal_range(VD);
+  auto SecondRange =
+      llvm::make_second_range(llvm::make_range(Range.first, Range.second));
+  emitPossiblyUnreachableDiags(
+      S, AC, std::make_pair(SecondRange.begin(), SecondRange.end()));
+}
+
 // An AST Visitor that calls a callback function on each callable DEFINITION
 // that is NOT in a dependent context:
 class CallableVisitor : public DynamicRecursiveASTVisitor {
@@ -2779,6 +2851,56 @@ public:
     return VisitFunctionDecl(Node->getCallOperator());
   }
 };
+
+namespace clang::lifetimes {
+namespace {
+class LifetimeSafetyReporterImpl : public LifetimeSafetyReporter {
+
+public:
+  LifetimeSafetyReporterImpl(Sema &S) : S(S) {}
+
+  void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
+                          SourceLocation FreeLoc, Confidence C) override {
+    S.Diag(IssueExpr->getExprLoc(),
+           C == Confidence::Definite
+               ? diag::warn_lifetime_safety_loan_expires_permissive
+               : diag::warn_lifetime_safety_loan_expires_strict)
+        << IssueExpr->getEndLoc();
+    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
+    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
+        << UseExpr->getEndLoc();
+  }
+
+  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *EscapeExpr,
+                            SourceLocation ExpiryLoc, Confidence C) override {
+    S.Diag(IssueExpr->getExprLoc(),
+           C == Confidence::Definite
+               ? diag::warn_lifetime_safety_return_stack_addr_permissive
+               : diag::warn_lifetime_safety_return_stack_addr_strict)
+        << IssueExpr->getEndLoc();
+
+    S.Diag(EscapeExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
+        << EscapeExpr->getEndLoc();
+  }
+
+  void suggestAnnotation(const ParmVarDecl *PVD,
+                         const Expr *EscapeExpr) override {
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        PVD->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+    S.Diag(PVD->getBeginLoc(), diag::warn_lifetime_safety_suggest_lifetimebound)
+        << PVD->getSourceRange()
+        << FixItHint::CreateInsertion(InsertionPoint,
+                                      " [[clang::lifetimebound]]");
+    S.Diag(EscapeExpr->getBeginLoc(),
+           diag::note_lifetime_safety_suggestion_returned_here)
+        << EscapeExpr->getSourceRange();
+  }
+
+private:
+  Sema &S;
+};
+} // namespace
+} // namespace clang::lifetimes
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
      TranslationUnitDecl *TU) {
@@ -2880,6 +3002,11 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
+  bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
+
+  if (EnableLifetimeSafetyAnalysis)
+    AC.getCFGBuildOptions().AddLifetime = true;
+
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.
   // FIXME: This isn't the right factoring.  This is here for initial
@@ -2887,11 +3014,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // expect to always be CFGElements and then fill in the BuildOptions
   // appropriately.  This is essentially a layering violation.
   if (P.enableCheckUnreachable || P.enableThreadSafetyAnalysis ||
-      P.enableConsumedAnalysis) {
+      P.enableConsumedAnalysis || EnableLifetimeSafetyAnalysis) {
     // Unreachable code analysis and thread safety require a linearized CFG.
     AC.getCFGBuildOptions().setAllAlwaysAdd();
-  }
-  else {
+  } else {
     AC.getCFGBuildOptions()
       .setAlwaysAdd(Stmt::BinaryOperatorClass)
       .setAlwaysAdd(Stmt::CompoundAssignOperatorClass)
@@ -2902,7 +3028,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
 
-  bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
   // Install the logical handler.
   std::optional<LogicalErrorHandler> LEH;
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
@@ -2911,45 +3036,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   // Emit delayed diagnostics.
-  if (!fscope->PossiblyUnreachableDiags.empty()) {
-    bool analyzed = false;
-
-    // Register the expressions with the CFGBuilder.
-    for (const auto &D : fscope->PossiblyUnreachableDiags) {
-      for (const Stmt *S : D.Stmts)
-        AC.registerForcedBlockExpression(S);
-    }
-
-    if (AC.getCFG()) {
-      analyzed = true;
-      for (const auto &D : fscope->PossiblyUnreachableDiags) {
-        bool AllReachable = true;
-        for (const Stmt *S : D.Stmts) {
-          const CFGBlock *block = AC.getBlockForRegisteredExpression(S);
-          CFGReverseBlockReachabilityAnalysis *cra =
-              AC.getCFGReachablityAnalysis();
-          // FIXME: We should be able to assert that block is non-null, but
-          // the CFG analysis can skip potentially-evaluated expressions in
-          // edge cases; see test/Sema/vla-2.c.
-          if (block && cra) {
-            // Can this block be reached from the entrance?
-            if (!cra->isReachable(&AC.getCFG()->getEntry(), block)) {
-              AllReachable = false;
-              break;
-            }
-          }
-          // If we cannot map to a basic block, assume the statement is
-          // reachable.
-        }
-
-        if (AllReachable)
-          S.Diag(D.Loc, D.PD);
-      }
-    }
-
-    if (!analyzed)
-      flushDiagnostics(S, fscope);
-  }
+  auto &PUDs = fscope->PossiblyUnreachableDiags;
+  emitPossiblyUnreachableDiags(S, AC, std::make_pair(PUDs.begin(), PUDs.end()));
 
   // Warning: check missing 'return'
   if (P.enableCheckFallThrough) {
@@ -3029,8 +3117,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
-    if (AC.getCFG())
-      lifetimes::runLifetimeSafetyAnalysis(AC);
+    if (AC.getCFG()) {
+      lifetimes::LifetimeSafetyReporterImpl LifetimeSafetyReporter(S);
+      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter);
+    }
   }
   // Check for violations of "called once" parameter properties.
   if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&

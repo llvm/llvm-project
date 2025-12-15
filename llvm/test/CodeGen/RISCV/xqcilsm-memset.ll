@@ -34,8 +34,6 @@ entry:
   ret void
 }
 
-declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1)
-
 define void @test2(ptr nocapture %p) nounwind {
 ; RV32I-LABEL: test2:
 ; RV32I:       # %bb.0: # %entry
@@ -142,7 +140,6 @@ entry:
   ret void
 }
 
-
 define ptr @test3(ptr %p) nounwind {
 ; RV32I-LABEL: test3:
 ; RV32I:       # %bb.0: # %entry
@@ -214,10 +211,6 @@ entry:
   tail call void @llvm.memset.p0.i32(ptr align 4 %s, i8 -90, i32 64, i1 false)
   ret void
 }
-
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 define void @test4b() nounwind {
 ; RV32I-LABEL: test4b:
@@ -502,16 +495,16 @@ define void @test7() nounwind {
 ; RV32I-LABEL: test7:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, %hi(arr1)
-; RV32I-NEXT:    sw zero, %lo(arr1)(a0)
 ; RV32I-NEXT:    addi a0, a0, %lo(arr1)
+; RV32I-NEXT:    sw zero, 0(a0)
 ; RV32I-NEXT:    sw zero, 4(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILSM-LABEL: test7:
 ; RV32IXQCILSM:       # %bb.0:
 ; RV32IXQCILSM-NEXT:    lui a0, %hi(arr1)
-; RV32IXQCILSM-NEXT:    sw zero, %lo(arr1)(a0)
 ; RV32IXQCILSM-NEXT:    addi a0, a0, %lo(arr1)
+; RV32IXQCILSM-NEXT:    sw zero, 0(a0)
 ; RV32IXQCILSM-NEXT:    sw zero, 4(a0)
 ; RV32IXQCILSM-NEXT:    ret
   tail call void @llvm.memset.p0.i32(ptr align 4 @arr1, i8 0, i32 8, i1 false)
@@ -535,25 +528,25 @@ define void @test7a_unalign() nounwind {
 ; RV32I-LABEL: test7a_unalign:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(arr1)
-; RV32I-NEXT:    li a1, -1
-; RV32I-NEXT:    sw a1, %lo(arr1)(a0)
 ; RV32I-NEXT:    addi a0, a0, %lo(arr1)
+; RV32I-NEXT:    li a1, -1
+; RV32I-NEXT:    sb a1, 16(a0)
+; RV32I-NEXT:    sw a1, 0(a0)
 ; RV32I-NEXT:    sw a1, 4(a0)
 ; RV32I-NEXT:    sw a1, 8(a0)
 ; RV32I-NEXT:    sw a1, 12(a0)
-; RV32I-NEXT:    sb a1, 16(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILSM-LABEL: test7a_unalign:
 ; RV32IXQCILSM:       # %bb.0: # %entry
 ; RV32IXQCILSM-NEXT:    lui a0, %hi(arr1)
-; RV32IXQCILSM-NEXT:    li a1, -1
-; RV32IXQCILSM-NEXT:    sw a1, %lo(arr1)(a0)
 ; RV32IXQCILSM-NEXT:    addi a0, a0, %lo(arr1)
+; RV32IXQCILSM-NEXT:    li a1, -1
+; RV32IXQCILSM-NEXT:    sb a1, 16(a0)
+; RV32IXQCILSM-NEXT:    sw a1, 0(a0)
 ; RV32IXQCILSM-NEXT:    sw a1, 4(a0)
 ; RV32IXQCILSM-NEXT:    sw a1, 8(a0)
 ; RV32IXQCILSM-NEXT:    sw a1, 12(a0)
-; RV32IXQCILSM-NEXT:    sb a1, 16(a0)
 ; RV32IXQCILSM-NEXT:    ret
 entry:
   tail call void @llvm.memset.p0.i32(ptr align 4 @arr1, i8 -1, i32 17, i1 false)
@@ -656,8 +649,8 @@ define void @test8() nounwind {
 ; RV32I-LABEL: test8:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(arr1)
-; RV32I-NEXT:    sw zero, %lo(arr1)(a0)
 ; RV32I-NEXT:    addi a0, a0, %lo(arr1)
+; RV32I-NEXT:    sw zero, 0(a0)
 ; RV32I-NEXT:    sw zero, 4(a0)
 ; RV32I-NEXT:    sw zero, 8(a0)
 ; RV32I-NEXT:    sw zero, 12(a0)
@@ -666,8 +659,8 @@ define void @test8() nounwind {
 ; RV32IXQCILSM-LABEL: test8:
 ; RV32IXQCILSM:       # %bb.0: # %entry
 ; RV32IXQCILSM-NEXT:    lui a0, %hi(arr1)
-; RV32IXQCILSM-NEXT:    sw zero, %lo(arr1)(a0)
 ; RV32IXQCILSM-NEXT:    addi a0, a0, %lo(arr1)
+; RV32IXQCILSM-NEXT:    sw zero, 0(a0)
 ; RV32IXQCILSM-NEXT:    sw zero, 4(a0)
 ; RV32IXQCILSM-NEXT:    sw zero, 8(a0)
 ; RV32IXQCILSM-NEXT:    sw zero, 12(a0)
@@ -681,29 +674,29 @@ define void @test9() nounwind {
 ; RV32I-LABEL: test9:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(arr1)
-; RV32I-NEXT:    sw zero, %lo(arr1)(a0)
 ; RV32I-NEXT:    addi a0, a0, %lo(arr1)
+; RV32I-NEXT:    sw zero, 16(a0)
 ; RV32I-NEXT:    sw zero, 20(a0)
 ; RV32I-NEXT:    sw zero, 24(a0)
 ; RV32I-NEXT:    sw zero, 28(a0)
+; RV32I-NEXT:    sw zero, 0(a0)
 ; RV32I-NEXT:    sw zero, 4(a0)
 ; RV32I-NEXT:    sw zero, 8(a0)
 ; RV32I-NEXT:    sw zero, 12(a0)
-; RV32I-NEXT:    sw zero, 16(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILSM-LABEL: test9:
 ; RV32IXQCILSM:       # %bb.0: # %entry
 ; RV32IXQCILSM-NEXT:    lui a0, %hi(arr1)
-; RV32IXQCILSM-NEXT:    sw zero, %lo(arr1)(a0)
 ; RV32IXQCILSM-NEXT:    addi a0, a0, %lo(arr1)
+; RV32IXQCILSM-NEXT:    sw zero, 16(a0)
 ; RV32IXQCILSM-NEXT:    sw zero, 20(a0)
 ; RV32IXQCILSM-NEXT:    sw zero, 24(a0)
 ; RV32IXQCILSM-NEXT:    sw zero, 28(a0)
+; RV32IXQCILSM-NEXT:    sw zero, 0(a0)
 ; RV32IXQCILSM-NEXT:    sw zero, 4(a0)
 ; RV32IXQCILSM-NEXT:    sw zero, 8(a0)
 ; RV32IXQCILSM-NEXT:    sw zero, 12(a0)
-; RV32IXQCILSM-NEXT:    sw zero, 16(a0)
 ; RV32IXQCILSM-NEXT:    ret
 entry:
   tail call void @llvm.memset.p0.i32(ptr align 4 @arr1, i8 0, i32 32, i1 false)

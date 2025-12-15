@@ -27,6 +27,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/BorrowedStackFrame.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Language.h"
@@ -108,6 +109,8 @@ constexpr Definition g_frame_child_entries[] = {
     Entry::DefinitionWithChildren("reg", EntryType::FrameRegisterByName,
                                   g_string_entry),
     Definition("is-artificial", EntryType::FrameIsArtificial),
+    Definition("kind", EntryType::FrameKind),
+    Definition("borrowed-info", EntryType::FrameBorrowedInfo),
 };
 
 constexpr Definition g_function_child_entries[] = {
@@ -380,6 +383,8 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FrameRegisterFlags);
     ENUM_TO_CSTR(FrameRegisterByName);
     ENUM_TO_CSTR(FrameIsArtificial);
+    ENUM_TO_CSTR(FrameKind);
+    ENUM_TO_CSTR(FrameBorrowedInfo);
     ENUM_TO_CSTR(ScriptFrame);
     ENUM_TO_CSTR(FunctionID);
     ENUM_TO_CSTR(FunctionDidChange);
@@ -1679,10 +1684,9 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       StackFrame *frame = exe_ctx->GetFramePtr();
       if (frame) {
         const Address &pc_addr = frame->GetFrameCodeAddress();
-        if (pc_addr.IsValid()) {
+        if (pc_addr.IsValid())
           if (DumpAddressAndContent(s, sc, exe_ctx, pc_addr, false))
             return true;
-        }
       }
     }
     return false;
@@ -1747,6 +1751,34 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
   }
 
+  case Entry::Type::FrameKind: {
+    if (exe_ctx)
+      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+        if (frame->IsSynthetic())
+          s.PutCString(" [synthetic]");
+        else if (frame->IsHistorical())
+          s.PutCString(" [history]");
+        return true;
+      }
+    return false;
+  }
+
+  case Entry::Type::FrameBorrowedInfo: {
+    if (exe_ctx)
+      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+        if (BorrowedStackFrame *borrowed_frame =
+                llvm::dyn_cast<BorrowedStackFrame>(frame)) {
+          if (lldb::StackFrameSP borrowed_from_sp =
+                  borrowed_frame->GetBorrowedFrame()) {
+            s.Printf(" [borrowed from frame #%u]",
+                     borrowed_from_sp->GetFrameIndex());
+            return true;
+          }
+        }
+      }
+    return false;
+  }
+
   case Entry::Type::ScriptFrame:
     if (exe_ctx) {
       StackFrame *frame = exe_ctx->GetFramePtr();
@@ -1775,70 +1807,91 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return initial_function;
 
   case Entry::Type::FunctionName: {
-    if (!sc)
-      return false;
+    if (sc) {
+      Language *language_plugin = nullptr;
+      bool language_plugin_handled = false;
+      StreamString ss;
 
-    Language *language_plugin = nullptr;
-    bool language_plugin_handled = false;
-    StreamString ss;
+      if (sc->function)
+        language_plugin = Language::FindPlugin(sc->function->GetLanguage());
+      else if (sc->symbol)
+        language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
 
-    if (sc->function)
-      language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-    else if (sc->symbol)
-      language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+      if (language_plugin)
+        language_plugin_handled = language_plugin->GetFunctionDisplayName(
+            *sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
 
-    if (language_plugin)
-      language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          *sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
+      if (language_plugin_handled) {
+        s << ss.GetString();
+        return true;
+      }
 
-    if (language_plugin_handled) {
-      s << ss.GetString();
-      return true;
+      const char *name = sc->GetPossiblyInlinedFunctionName()
+                             .GetName(Mangled::NamePreference::ePreferDemangled)
+                             .AsCString();
+      if (name) {
+        s.PutCString(name);
+        return true;
+      }
     }
 
-    const char *name = sc->GetPossiblyInlinedFunctionName()
-                           .GetName(Mangled::NamePreference::ePreferDemangled)
-                           .AsCString();
-    if (!name)
-      return false;
-
-    s.PutCString(name);
-
-    return true;
+    // Fallback to frame methods if available.
+    if (exe_ctx) {
+      StackFrame *frame = exe_ctx->GetFramePtr();
+      if (frame) {
+        const char *name = frame->GetFunctionName();
+        if (name) {
+          s.PutCString(name);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   case Entry::Type::FunctionNameNoArgs: {
-    if (!sc)
-      return false;
+    if (sc) {
+      Language *language_plugin = nullptr;
+      bool language_plugin_handled = false;
+      StreamString ss;
+      if (sc->function)
+        language_plugin = Language::FindPlugin(sc->function->GetLanguage());
+      else if (sc->symbol)
+        language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
 
-    Language *language_plugin = nullptr;
-    bool language_plugin_handled = false;
-    StreamString ss;
-    if (sc->function)
-      language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-    else if (sc->symbol)
-      language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+      if (language_plugin)
+        language_plugin_handled = language_plugin->GetFunctionDisplayName(
+            *sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
+            ss);
 
-    if (language_plugin)
-      language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          *sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
-          ss);
+      if (language_plugin_handled) {
+        s << ss.GetString();
+        return true;
+      }
 
-    if (language_plugin_handled) {
-      s << ss.GetString();
-      return true;
+      const char *name =
+          sc->GetPossiblyInlinedFunctionName()
+              .GetName(
+                  Mangled::NamePreference::ePreferDemangledWithoutArguments)
+              .AsCString();
+      if (name) {
+        s.PutCString(name);
+        return true;
+      }
     }
 
-    const char *name =
-        sc->GetPossiblyInlinedFunctionName()
-            .GetName(Mangled::NamePreference::ePreferDemangledWithoutArguments)
-            .AsCString();
-    if (!name)
-      return false;
-
-    s.PutCString(name);
-
-    return true;
+    // Fallback to frame methods if available.
+    if (exe_ctx) {
+      StackFrame *frame = exe_ctx->GetFramePtr();
+      if (frame) {
+        const char *name = frame->GetFunctionName();
+        if (name) {
+          s.PutCString(name);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   case Entry::Type::FunctionPrefix:
@@ -1865,13 +1918,26 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   }
 
   case Entry::Type::FunctionNameWithArgs: {
-    if (!sc)
-      return false;
+    if (sc) {
+      if (FormatFunctionNameForLanguage(s, exe_ctx, sc))
+        return true;
 
-    if (FormatFunctionNameForLanguage(s, exe_ctx, sc))
-      return true;
+      if (HandleFunctionNameWithArgs(s, exe_ctx, *sc))
+        return true;
+    }
 
-    return HandleFunctionNameWithArgs(s, exe_ctx, *sc);
+    // Fallback to frame methods if available.
+    if (exe_ctx) {
+      StackFrame *frame = exe_ctx->GetFramePtr();
+      if (frame) {
+        const char *name = frame->GetDisplayFunctionName();
+        if (name) {
+          s.PutCString(name);
+          return true;
+        }
+      }
+    }
+    return false;
   }
   case Entry::Type::FunctionMangledName: {
     if (!sc)
@@ -1913,12 +1979,11 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   case Entry::Type::FunctionPCOffset:
     if (exe_ctx) {
       StackFrame *frame = exe_ctx->GetFramePtr();
-      if (frame) {
+      if (frame)
         if (DumpAddressOffsetFromFunction(s, sc, exe_ctx,
                                           frame->GetFrameCodeAddress(), false,
                                           false, false))
           return true;
-      }
     }
     return false;
 
@@ -1942,11 +2007,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::LineEntryFile:
     if (sc && sc->line_entry.IsValid()) {
-      Module *module = sc->module_sp.get();
-      if (module) {
-        if (DumpFile(s, sc->line_entry.GetFile(), (FileKind)entry.number))
-          return true;
-      }
+      if (DumpFile(s, sc->line_entry.GetFile(), (FileKind)entry.number))
+        return true;
     }
     return false;
 

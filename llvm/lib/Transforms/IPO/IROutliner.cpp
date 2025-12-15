@@ -686,9 +686,6 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
         /* Outlined code is optimized code by definition. */
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
 
-    // Don't add any new variables to the subprogram.
-    DB.finalizeSubprogram(OutlinedSP);
-
     // Attach subprogram to the function.
     F->setSubprogram(OutlinedSP);
     // We're done with the DIBuilder.
@@ -2111,8 +2108,7 @@ static void createAndInsertBasicBlocks(DenseMap<Value *, BasicBlock *> &OldMap,
 
   for (Value *RetVal : SortedKeys) {
     BasicBlock *NewBB = BasicBlock::Create(
-        ParentFunc->getContext(),
-        Twine(BaseName) + Twine("_") + Twine(static_cast<unsigned>(Idx++)),
+        ParentFunc->getContext(), Twine(BaseName) + Twine("_") + Twine(Idx++),
         ParentFunc);
     NewMap.insert(std::make_pair(RetVal, NewBB));
   }
@@ -2289,9 +2285,9 @@ void IROutliner::deduplicateExtractedSections(
     // Create a set of BasicBlocks, one for each return block, to hold the
     // needed store instructions.
     DenseMap<Value *, BasicBlock *> NewBBs;
-    createAndInsertBasicBlocks(
-        CurrentGroup.EndBBs, NewBBs, CurrentGroup.OutlinedFunction,
-        "output_block_" + Twine(static_cast<unsigned>(Idx)));
+    createAndInsertBasicBlocks(CurrentGroup.EndBBs, NewBBs,
+                               CurrentGroup.OutlinedFunction,
+                               "output_block_" + Twine(Idx));
     replaceArgumentUses(*CurrentOS, NewBBs, OutputMappings);
     alignOutputBlockWithAggFunc(CurrentGroup, *CurrentOS, NewBBs,
                                 CurrentGroup.EndBBs, OutputMappings,

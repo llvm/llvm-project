@@ -47,7 +47,7 @@ STATISTIC(NumTailCalls, "Number of tail calls");
 
 M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
                                        const M68kSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI), TM(TM) {
+    : TargetLowering(TM, STI), Subtarget(STI), TM(TM) {
 
   MVT PtrVT = MVT::i32;
 
@@ -1664,10 +1664,10 @@ static SDValue getBitTestCondition(SDValue Src, SDValue BitNo, ISD::CondCode CC,
   if (Src.getValueType() != BitNo.getValueType())
     BitNo = DAG.getNode(ISD::ANY_EXTEND, DL, Src.getValueType(), BitNo);
 
-  SDValue BTST = DAG.getNode(M68kISD::BTST, DL, MVT::i32, Src, BitNo);
+  SDValue BTST = DAG.getNode(M68kISD::BTST, DL, MVT::i8, Src, BitNo);
 
-  // NOTE BTST sets CCR.Z flag
-  M68k::CondCode Cond = CC == ISD::SETEQ ? M68k::COND_NE : M68k::COND_EQ;
+  // NOTE BTST sets CCR.Z flag if bit is 0, same as AND with bitmask
+  M68k::CondCode Cond = CC == ISD::SETEQ ? M68k::COND_EQ : M68k::COND_NE;
   return DAG.getNode(M68kISD::SETCC, DL, MVT::i8,
                      DAG.getConstant(Cond, DL, MVT::i8), BTST);
 }

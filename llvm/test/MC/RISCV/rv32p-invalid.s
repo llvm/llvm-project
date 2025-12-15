@@ -102,7 +102,16 @@ maccsu.w00 a4, s2, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the fol
 pmaccsu.w.h11 a0, a2, t3 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 maccsu.w11 t5, a4, s2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 
-ppack.w t5, a2, a4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-ppackbt.w t5, s0, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-ppacktb.w t5, t1, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-ppackt.w t3, a0, s2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+ppaire.h t5, a2, a4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+
+ppaireo.w t5, s0, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+ppairoe.w t5, t1, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+ppairo.w t3, a0, s2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+
+pli.dh a1, 1 # CHECK: :[[@LINE]]:8: error: register must be even
+pli.db s1, 1 # CHECK: :[[@LINE]]:8: error: register must be even
+plui.dh t2, 1 # CHECK: :[[@LINE]]:9: error: register must be even
+
+pli.dh a0, 0x400 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [-512, 511]
+pli.db a0, 0x200 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [-128, 255]
+plui.dh a0, 0x400 # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [-512, 1023]

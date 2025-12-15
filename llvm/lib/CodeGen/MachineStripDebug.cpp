@@ -58,7 +58,7 @@ struct StripDebugMachineModule : public ModulePass {
             //        preservation. Preserve it for now.
             if (MI.getNumOperands() > 1) {
               LLVM_DEBUG(dbgs() << "Removing debug instruction " << MI);
-              MBB.erase(&MI);
+              MBB.erase_instr(&MI);
               Changed |= true;
               continue;
             }

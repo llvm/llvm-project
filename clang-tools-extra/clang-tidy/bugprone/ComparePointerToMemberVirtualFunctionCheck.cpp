@@ -1,4 +1,4 @@
-//===--- ComparePointerToMemberVirtualFunctionCheck.cpp - clang-tidy ------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,6 @@ static constexpr llvm::StringLiteral ErrorMsg =
 
 void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
     MatchFinder *Finder) {
-
   auto DirectMemberVirtualFunctionPointer = unaryOperator(
       allOf(hasOperatorName("&"),
             hasUnaryOperand(declRefExpr(to(cxxMethodDecl(isVirtual()))))));

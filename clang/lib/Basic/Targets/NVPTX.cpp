@@ -68,15 +68,9 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   HasFastHalfType = true;
   HasFloat16 = true;
 
-  if (TargetPointerWidth == 32)
-    resetDataLayout(
-        "e-p:32:32-p6:32:32-p7:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
-  else if (Opts.NVPTXUseShortPointers)
-    resetDataLayout(
-        "e-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32-i64:64-i128:128-v16:"
-        "16-v32:32-n16:32:64");
-  else
-    resetDataLayout("e-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+  // TODO: Make shortptr a proper ABI?
+  DataLayoutString =
+      Triple.computeDataLayout(Opts.NVPTXUseShortPointers ? "shortptr" : "");
 
   // If possible, get a TargetInfo for our host triple, so we can match its
   // types.
@@ -170,7 +164,7 @@ ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {
 
 bool NVPTXTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
-      .Cases("ptx", "nvptx", true)
+      .Cases({"ptx", "nvptx"}, true)
       .Default(false);
 }
 
@@ -239,6 +233,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
       case OffloadArch::GFX1250:
+      case OffloadArch::GFX1251:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
       case OffloadArch::GRANITERAPIDS:
@@ -285,6 +280,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
         return "860";
       case OffloadArch::SM_87:
         return "870";
+      case OffloadArch::SM_88:
+        return "880";
       case OffloadArch::SM_89:
         return "890";
       case OffloadArch::SM_90:
@@ -299,6 +296,9 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_103:
       case OffloadArch::SM_103a:
         return "1030";
+      case OffloadArch::SM_110:
+      case OffloadArch::SM_110a:
+        return "1100";
       case OffloadArch::SM_120:
       case OffloadArch::SM_120a:
         return "1200";
@@ -314,6 +314,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_100a:
       case OffloadArch::SM_101a:
       case OffloadArch::SM_103a:
+      case OffloadArch::SM_110a:
       case OffloadArch::SM_120a:
       case OffloadArch::SM_121a:
         Builder.defineMacro("__CUDA_ARCH_FEAT_SM" + CUDAArchCode.drop_back() + "_ALL", "1");

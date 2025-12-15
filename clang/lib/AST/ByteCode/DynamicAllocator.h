@@ -48,11 +48,13 @@ private:
 
   struct AllocationSite {
     llvm::SmallVector<Allocation> Allocations;
+    unsigned NumAllocs = 0;
     Form AllocForm;
 
     AllocationSite(std::unique_ptr<std::byte[]> Memory, Form AllocForm)
         : AllocForm(AllocForm) {
       Allocations.push_back({std::move(Memory)});
+      ++NumAllocs;
     }
 
     size_t size() const { return Allocations.size(); }

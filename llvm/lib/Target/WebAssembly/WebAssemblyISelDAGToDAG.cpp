@@ -110,7 +110,7 @@ void WebAssemblyDAGToDAGISel::PreprocessISelDAG() {
 }
 
 static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
-  assert(Tag == WebAssembly::CPP_EXCEPTION || WebAssembly::C_LONGJMP);
+  assert(Tag == WebAssembly::CPP_EXCEPTION || Tag == WebAssembly::C_LONGJMP);
   auto &MF = DAG->getMachineFunction();
   const auto &TLI = DAG->getTargetLoweringInfo();
   MVT PtrVT = TLI.getPointerTy(DAG->getDataLayout());
