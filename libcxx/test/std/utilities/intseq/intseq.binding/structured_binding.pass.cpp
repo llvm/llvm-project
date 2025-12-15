@@ -28,6 +28,7 @@ constexpr bool test() {
   assert(elt2 == 2);
   assert(elt3 == 3);
 
+// TODO: remove this macro guard once GCC16 is available
 #if __cpp_structured_bindings >= 202411L
   []<typename...> {
     auto [... empty] = std::make_index_sequence<0>();
