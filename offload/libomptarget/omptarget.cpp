@@ -798,7 +798,15 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
                       << ", PtrSize=" << PtrSize << ", MapType=0x"
                       << llvm::utohexstr(MapType);
 
-    const bool IsAttachAlways = MapType & OMP_TGT_MAPTYPE_ALWAYS;
+    bool IsAttachAlways = MapType & OMP_TGT_MAPTYPE_ALWAYS;
+
+    // Treat ATTACH(auto) as ATTACH(always) if environment variable is set
+    if (!IsAttachAlways && MappingConfig::get().TreatAttachAutoAsAlways) {
+      IsAttachAlways = true;
+      ODBG(ODT_Mapping) << "ATTACH(auto) will be treated as ATTACH(always) "
+                        << " because LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS "
+                        << " is true";
+    }
 
     // Lambda to check if a pointer was newly allocated
     auto WasNewlyAllocated = [&](void *Ptr, const char *PtrName) {
