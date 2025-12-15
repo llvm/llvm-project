@@ -82,7 +82,8 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-DEF-LABEL: @foo(
 ; NO-VP-DEF-NEXT:  entry:
 ; NO-VP-DEF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-DEF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP0]]
+; NO-VP-DEF-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 2)
+; NO-VP-DEF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[UMAX]]
 ; NO-VP-DEF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP-DEF:       vector.ph:
 ; NO-VP-DEF-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
