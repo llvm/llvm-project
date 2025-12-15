@@ -10,6 +10,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "llvm/InitializePasses.h"
+#include <cmath>
 #include <limits>
 #include <queue>
 
@@ -38,14 +39,14 @@ bool AMDGPUNextUseAnalysis::isBackedge(MachineBasicBlock *From,
 }
 
 // Calculate the shortest distance between two blocks using Dijkstra algorithm.
-std::pair<SmallVector<MachineBasicBlock *>, uint64_t>
+std::pair<SmallVector<MachineBasicBlock *>, double>
 AMDGPUNextUseAnalysis::getShortestPath(MachineBasicBlock *FromMBB,
                                        MachineBasicBlock *ToMBB) {
   assert(FromMBB != ToMBB && "The basic blocks should be different.\n");
   DenseSet<MachineBasicBlock *> Visited;
   struct Data {
     MachineBasicBlock *BestPred = nullptr;
-    uint64_t ShortestDistance = std::numeric_limits<uint64_t>::max();
+    double ShortestDistance = std::numeric_limits<double>::max();
   };
   DenseMap<MachineBasicBlock *, Data> MBBData;
 
@@ -57,7 +58,7 @@ AMDGPUNextUseAnalysis::getShortestPath(MachineBasicBlock *FromMBB,
       Worklist(Cmp);
 
   Worklist.push(FromMBB);
-  MBBData[FromMBB] = {nullptr, 0};
+  MBBData[FromMBB] = {nullptr, 0.0};
 
   while (!Worklist.empty()) {
     MachineBasicBlock *CurMBB = Worklist.top();
@@ -84,16 +85,16 @@ AMDGPUNextUseAnalysis::getShortestPath(MachineBasicBlock *FromMBB,
     }
 
     auto Pair = MBBData.try_emplace(
-        CurMBB, Data{nullptr, std::numeric_limits<uint64_t>::max()});
-    uint64_t CurrMBBDist = Pair.first->second.ShortestDistance;
+        CurMBB, Data{nullptr, std::numeric_limits<double>::max()});
+    double CurrMBBDist = Pair.first->second.ShortestDistance;
 
     for (MachineBasicBlock *Succ : CurMBB->successors()) {
       if (isBackedge(CurMBB, Succ))
         continue;
 
-      auto GetEffectiveLoopDepth = [&](MachineBasicBlock *BB) -> unsigned {
+      auto GetEffectiveLoopDepth = [&](MachineBasicBlock *BB) -> double {
         MachineLoop *LoopBB = MLI->getLoopFor(BB);
-        unsigned LoopDepth = 0;
+        double LoopDepth = 0.0;
         for (MachineLoop *TmpLoop = LoopBB,
                          *End = LoopBB->getOutermostLoop()->getParentLoop();
              TmpLoop != End; TmpLoop = TmpLoop->getParentLoop()) {
@@ -104,35 +105,35 @@ AMDGPUNextUseAnalysis::getShortestPath(MachineBasicBlock *FromMBB,
         return LoopDepth;
       };
 
-      auto GetLoopWeight = [&](MachineBasicBlock *BB) -> uint64_t {
-
+      auto GetLoopWeight = [&](MachineBasicBlock *BB) -> double {
         MachineLoop *LoopBB = MLI->getLoopFor(BB);
         MachineLoop *LoopTo = MLI->getLoopFor(ToMBB);
-	if (!LoopBB && !LoopTo)
-	  return 0;
+        if (!LoopBB && !LoopTo)
+          return 0.0;
 
         if (LoopBB && LoopTo &&
             (LoopTo->contains(LoopBB) && (LoopTo != LoopBB)))
-          return LoopWeight *
-                 (MLI->getLoopDepth(BB) - MLI->getLoopDepth(ToMBB));
+          return std::pow(LoopWeight,
+                          static_cast<double>(MLI->getLoopDepth(BB) -
+                                              MLI->getLoopDepth(ToMBB)));
 
-	if ((LoopBB && LoopTo && LoopBB->contains(LoopTo)))
-          return 1;
+        if ((LoopBB && LoopTo && LoopBB->contains(LoopTo)))
+          return 1.0;
 
-	if ((!LoopTo && LoopBB) ||
+        if ((!LoopTo && LoopBB) ||
             (LoopBB && LoopTo && !LoopTo->contains(LoopBB)))
-          return LoopWeight * GetEffectiveLoopDepth(BB);
+          return std::pow(LoopWeight, GetEffectiveLoopDepth(BB));
 
-        return 0;
+        return 0.0;
       };
 
-      auto GetWeightedSize = [&](MachineBasicBlock *BB) -> uint64_t {
-        unsigned LoopWeight = GetLoopWeight(BB);
-        if (LoopWeight!=0)
-          return BB->size() * LoopWeight;
-        return BB->size();
+      auto GetWeightedSize = [&](MachineBasicBlock *BB) -> double {
+        double LoopWeight = GetLoopWeight(BB);
+        if (LoopWeight != 0.0)
+          return static_cast<double>(BB->size()) * LoopWeight;
+        return static_cast<double>(BB->size());
       };
-      uint64_t NewSuccDist = CurrMBBDist + GetWeightedSize(Succ);
+      double NewSuccDist = CurrMBBDist + GetWeightedSize(Succ);
 
       auto &[SuccPred, SuccDist] = MBBData[Succ];
       if (NewSuccDist < SuccDist) {
@@ -144,7 +145,7 @@ AMDGPUNextUseAnalysis::getShortestPath(MachineBasicBlock *FromMBB,
       Worklist.push(Succ);
     }
   }
-  return {{}, std::numeric_limits<uint64_t>::max()};
+  return {{}, std::numeric_limits<double>::max()};
 }
 
 void AMDGPUNextUseAnalysis::calculateShortestPaths(MachineFunction &MF) {
@@ -158,36 +159,36 @@ void AMDGPUNextUseAnalysis::calculateShortestPaths(MachineFunction &MF) {
   }
 }
 
-uint64_t AMDGPUNextUseAnalysis::calculateShortestDistance(MachineInstr *CurMI,
-                                                          MachineInstr *UseMI) {
+double AMDGPUNextUseAnalysis::calculateShortestDistance(MachineInstr *CurMI,
+                                                        MachineInstr *UseMI) {
   MachineBasicBlock *CurMBB = CurMI->getParent();
   MachineBasicBlock *UseMBB = UseMI->getParent();
 
   if (CurMBB == UseMBB)
     return getInstrId(UseMI) - getInstrId(CurMI);
 
-  uint64_t CurMIDistanceToBBEnd =
+  double CurMIDistanceToBBEnd =
       getInstrId(&*(std::prev(CurMBB->instr_end()))) - getInstrId(CurMI);
-  uint64_t UseDistanceFromBBBegin =
-      getInstrId(UseMI) - getInstrId(&*(UseMBB->instr_begin())) + 1;
-  auto Dst = getShortestDistanceFromTable(CurMBB, UseMBB);
-  assert(Dst != std::numeric_limits<uint64_t>::max());
+  double UseDistanceFromBBBegin = getInstrId(&*(UseMI->getIterator())) -
+                                  getInstrId(&*(UseMBB->instr_begin())) + 1;
+  double Dst = getShortestDistanceFromTable(CurMBB, UseMBB);
+  assert(Dst != std::numeric_limits<double>::max());
   return CurMIDistanceToBBEnd + Dst + UseDistanceFromBBBegin;
 }
 
-std::pair<uint64_t, MachineBasicBlock *>
+std::pair<double, MachineBasicBlock *>
 AMDGPUNextUseAnalysis::getShortestDistanceToExitingLatch(
     MachineBasicBlock *CurMBB, MachineLoop *CurLoop) const {
   SmallVector<MachineBasicBlock *, 2> Latches;
   CurLoop->getLoopLatches(Latches);
-  uint64_t ShortestDistanceToLatch = std::numeric_limits<uint64_t>::max();
+  double ShortestDistanceToLatch = std::numeric_limits<double>::max();
   MachineBasicBlock *ExitingLatch = nullptr;
 
   for (MachineBasicBlock *LMBB : Latches) {
     if (LMBB == CurMBB)
-      return std::make_pair(0, CurMBB);
+      return std::make_pair(0.0, CurMBB);
 
-    uint64_t Dst = getShortestDistanceFromTable(CurMBB, LMBB);
+    double Dst = getShortestDistanceFromTable(CurMBB, LMBB);
     if (ShortestDistanceToLatch > Dst) {
       ShortestDistanceToLatch = Dst;
       ExitingLatch = LMBB;
@@ -196,7 +197,7 @@ AMDGPUNextUseAnalysis::getShortestDistanceToExitingLatch(
   return std::make_pair(ShortestDistanceToLatch, ExitingLatch);
 }
 
-std::pair<uint64_t, MachineBasicBlock *>
+std::pair<double, MachineBasicBlock *>
 AMDGPUNextUseAnalysis::getLoopDistanceAndExitingLatch(
     MachineBasicBlock *CurMBB) const {
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
@@ -206,34 +207,37 @@ AMDGPUNextUseAnalysis::getLoopDistanceAndExitingLatch(
   bool IsCurLoopLatch = llvm::any_of(
       Latches, [&](MachineBasicBlock *LMBB) { return CurMBB == LMBB; });
   MachineBasicBlock *ExitingLatch = nullptr;
-  uint64_t DistanceToLatch = 0;
-  uint64_t TotalDistance = 0;
+  double DistanceToLatch = 0.0;
+  double TotalDistance = 0.0;
 
   if (CurLoop->getNumBlocks() == 1)
-    return std::make_pair(CurMBB->size(), CurMBB);
+    return std::make_pair(static_cast<double>(CurMBB->size()), CurMBB);
 
   if (CurMBB == LoopHeader) {
     std::tie(DistanceToLatch, ExitingLatch) =
         getShortestDistanceToExitingLatch(CurMBB, CurLoop);
-    TotalDistance = LoopHeader->size() + DistanceToLatch + ExitingLatch->size();
+    TotalDistance = static_cast<double>(LoopHeader->size()) + DistanceToLatch +
+                    static_cast<double>(ExitingLatch->size());
     return std::make_pair(TotalDistance, ExitingLatch);
   }
 
   if (IsCurLoopLatch) {
-    TotalDistance = LoopHeader->size() +
+    TotalDistance = static_cast<double>(LoopHeader->size()) +
                     getShortestDistanceFromTable(LoopHeader, CurMBB) +
-                    CurMBB->size();
+                    static_cast<double>(CurMBB->size());
     return std::make_pair(TotalDistance, CurMBB);
   }
 
-  auto LoopHeaderToCurMBBDistance =
+  double LoopHeaderToCurMBBDistance =
       getShortestDistanceFromTable(LoopHeader, CurMBB);
 
   std::tie(DistanceToLatch, ExitingLatch) =
       getShortestDistanceToExitingLatch(CurMBB, CurLoop);
 
-  TotalDistance = LoopHeader->size() + LoopHeaderToCurMBBDistance +
-                  CurMBB->size() + DistanceToLatch + ExitingLatch->size();
+  TotalDistance = static_cast<double>(LoopHeader->size()) +
+                  LoopHeaderToCurMBBDistance +
+                  static_cast<double>(CurMBB->size()) + DistanceToLatch +
+                  static_cast<double>(ExitingLatch->size());
   return std::make_pair(TotalDistance, ExitingLatch);
 }
 
@@ -241,16 +245,16 @@ AMDGPUNextUseAnalysis::getLoopDistanceAndExitingLatch(
 // of the current loop, but they share the same loop nest 2. the use is
 // outside of the current loop nest and 3. the use is in a parent loop of the
 // current loop nest.
-std::pair<uint64_t, MachineBasicBlock *>
+std::pair<double, MachineBasicBlock *>
 AMDGPUNextUseAnalysis::getNestedLoopDistanceAndExitingLatch(
     MachineBasicBlock *CurMBB, MachineBasicBlock *UseMBB,
     bool IsUseOutsideOfTheCurrentLoopNest, bool IsUseInParentLoop) {
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   MachineLoop *UseLoop = MLI->getLoopFor(UseMBB);
 
-  auto GetEffectiveLoopDepth = [&](MachineBasicBlock *BB) -> unsigned {
+  auto GetEffectiveLoopDepth = [&](MachineBasicBlock *BB) -> double {
     MachineLoop *LoopBB = MLI->getLoopFor(BB);
-    unsigned LoopDepth = 0;
+    double LoopDepth = 0.0;
     for (MachineLoop *TmpLoop = LoopBB,
                      *End = LoopBB->getOutermostLoop()->getParentLoop();
          TmpLoop != End; TmpLoop = TmpLoop->getParentLoop()) {
@@ -262,29 +266,34 @@ AMDGPUNextUseAnalysis::getNestedLoopDistanceAndExitingLatch(
   };
 
   auto GetLoopDistance =
-      [&](MachineLoop *ML) -> std::pair<uint64_t, MachineBasicBlock *> {
-    uint64_t ShortestDistance = 0;
-    uint64_t TmpDist = 0;
+      [&](MachineLoop *ML) -> std::pair<double, MachineBasicBlock *> {
+    double ShortestDistance = 0.0;
+    double TmpDist = 0.0;
     MachineBasicBlock *ExitingLatch = nullptr;
-    unsigned EffectiveLoopDepth = GetEffectiveLoopDepth(CurMBB);
-    unsigned UseLoopDepth =
-        !IsUseOutsideOfTheCurrentLoopNest ? MLI->getLoopDepth(UseMBB) : 0;
+    double EffectiveLoopDepth = GetEffectiveLoopDepth(CurMBB);
+    double UseLoopDepth = !IsUseOutsideOfTheCurrentLoopNest
+                              ? static_cast<double>(MLI->getLoopDepth(UseMBB))
+                              : 0.0;
     if (ML->getNumBlocks() == 1) {
-      ShortestDistance = ML->getHeader()->size() *
-                         (MLI->getLoopDepth(ML->getHeader()) - UseLoopDepth) *
-                         LoopWeight;
+      ShortestDistance =
+          static_cast<double>(ML->getHeader()->size()) *
+          std::pow(LoopWeight,
+                   (static_cast<double>(MLI->getLoopDepth(ML->getHeader())) -
+                    UseLoopDepth));
       return std::make_pair(ShortestDistance, ML->getLoopLatch());
     }
     std::tie(TmpDist, ExitingLatch) =
         getLoopDistanceAndExitingLatch(ML->getHeader());
     for (MachineBasicBlock *MBB :
          getShortestPathFromTable(ML->getHeader(), ExitingLatch)) {
-      if (UseLoopDepth == 0 && EffectiveLoopDepth != 0)
-        ShortestDistance +=
-            MBB->size() * GetEffectiveLoopDepth(MBB) * LoopWeight;
+      if (UseLoopDepth == 0.0 && EffectiveLoopDepth != 0.0)
+        ShortestDistance += static_cast<double>(MBB->size()) *
+                            std::pow(LoopWeight, GetEffectiveLoopDepth(MBB));
       else
         ShortestDistance +=
-            MBB->size() * (MLI->getLoopDepth(MBB) - UseLoopDepth) * LoopWeight;
+            static_cast<double>(MBB->size()) *
+            std::pow(LoopWeight, (static_cast<double>(MLI->getLoopDepth(MBB)) -
+                                  UseLoopDepth));
     }
     return std::make_pair(ShortestDistance, ExitingLatch);
   };
@@ -327,14 +336,14 @@ AMDGPUNextUseAnalysis::getNestedLoopDistanceAndExitingLatch(
   llvm_unreachable("Failed to calculate the loop distance!");
 }
 
-uint64_t AMDGPUNextUseAnalysis::calculateCurLoopDistance(Register DefReg,
-                                                         MachineInstr *CurMI,
-                                                         MachineInstr *UseMI) {
+double AMDGPUNextUseAnalysis::calculateCurLoopDistance(Register DefReg,
+                                                       MachineInstr *CurMI,
+                                                       MachineInstr *UseMI) {
   MachineBasicBlock *CurMBB = CurMI->getParent();
   MachineBasicBlock *UseMBB = UseMI->getParent();
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   MachineLoop *UseLoop = MLI->getLoopFor(UseMBB);
-  uint64_t LoopDistance = 0;
+  double LoopDistance = 0.0;
   MachineBasicBlock *ExitingLatch = nullptr;
   bool IsUseInParentLoop = CurLoop && UseLoop &&
                            (UseLoop->contains(CurLoop) && (UseLoop != CurLoop));
@@ -365,23 +374,23 @@ uint64_t AMDGPUNextUseAnalysis::calculateCurLoopDistance(Register DefReg,
         getNestedLoopDistanceAndExitingLatch(CurMBB, UseMBB, false, true);
   }
 
-  uint64_t UseDistanceFromBBBegin = getInstrId(&*(UseMI->getIterator())) -
-                                    getInstrId(&*(UseMBB->instr_begin())) + 1;
+  double UseDistanceFromBBBegin = getInstrId(&*(UseMI->getIterator())) -
+                                  getInstrId(&*(UseMBB->instr_begin())) + 1;
   return LoopDistance + getShortestDistanceFromTable(ExitingLatch, UseMBB) +
          UseDistanceFromBBBegin;
 }
 
-uint64_t AMDGPUNextUseAnalysis::calculateBackedgeDistance(MachineInstr *CurMI,
-                                                          MachineInstr *UseMI) {
+double AMDGPUNextUseAnalysis::calculateBackedgeDistance(MachineInstr *CurMI,
+                                                        MachineInstr *UseMI) {
   MachineBasicBlock *CurMBB = CurMI->getParent();
   MachineBasicBlock *UseMBB = UseMI->getParent();
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   MachineLoop *UseLoop = MLI->getLoopFor(UseMBB);
   assert(UseLoop && "There is no backedge.\n");
-  uint64_t CurMIDistanceToBBEnd =
+  double CurMIDistanceToBBEnd =
       getInstrId(&*(std::prev(CurMBB->instr_end()))) - getInstrId(CurMI);
-  uint64_t UseDistanceFromBBBegin = getInstrId(&*(UseMI->getIterator())) -
-                                    getInstrId(&*(UseMBB->instr_begin())) + 1;
+  double UseDistanceFromBBBegin = getInstrId(&*(UseMI->getIterator())) -
+                                  getInstrId(&*(UseMBB->instr_begin())) + 1;
 
   if (!CurLoop)
     return CurMIDistanceToBBEnd + getShortestDistanceFromTable(CurMBB, UseMBB) +
@@ -393,7 +402,7 @@ uint64_t AMDGPUNextUseAnalysis::calculateBackedgeDistance(MachineInstr *CurMI,
     if (ExitingLatch == CurMBB)
       return CurMIDistanceToBBEnd + UseDistanceFromBBBegin;
     return UseDistanceFromBBBegin + CurMIDistanceToBBEnd + DistanceToLatch +
-           ExitingLatch->size();
+           static_cast<double>(ExitingLatch->size());
   }
 
   if (!CurLoop->contains(UseLoop) && !UseLoop->contains(CurLoop)) {
@@ -407,8 +416,8 @@ uint64_t AMDGPUNextUseAnalysis::calculateBackedgeDistance(MachineInstr *CurMI,
         getNestedLoopDistanceAndExitingLatch(CurMBB, UseMBB, false, true);
     auto [DistanceToLatch, ExitingLatch] =
         getShortestDistanceToExitingLatch(InnerLoopExitingLatch, UseLoop);
-    return InnerLoopDistance + DistanceToLatch + ExitingLatch->size() +
-           UseDistanceFromBBBegin;
+    return InnerLoopDistance + DistanceToLatch +
+           static_cast<double>(ExitingLatch->size()) + UseDistanceFromBBBegin;
   }
 
   llvm_unreachable("The backedge distance has not been calculated!");
@@ -483,11 +492,11 @@ void AMDGPUNextUseAnalysis::printAllDistances(MachineFunction &MF) {
         if (Reg.isPhysical() || TRI->isAGPR(*MRI, Reg))
           continue;
 
-        std::optional<uint64_t> NextUseDistance = getNextUseDistance(Reg);
+        std::optional<double> NextUseDistance = getNextUseDistance(Reg);
         errs() << "Next-use distance of Register " << printReg(Reg, TRI)
                << " = ";
         if (NextUseDistance)
-          errs() << *NextUseDistance;
+          errs() << format("%.1f", *NextUseDistance);
         else
           errs() << "null";
         errs() << "\n";
@@ -496,13 +505,14 @@ void AMDGPUNextUseAnalysis::printAllDistances(MachineFunction &MF) {
   }
 }
 
+
 // TODO: Remove it. It is only used for testing.
-std::optional<uint64_t>
+std::optional<double>
 AMDGPUNextUseAnalysis::getNextUseDistance(Register DefReg) {
   assert(!DefReg.isPhysical() && !TRI->isAGPR(*MRI, DefReg) &&
          "Next-use distance is calculated for SGPRs and VGPRs");
-  uint64_t NextUseDistance = std::numeric_limits<uint64_t>::max();
-  uint64_t CurrentNextUseDistance = std::numeric_limits<uint64_t>::max();
+  double NextUseDistance = std::numeric_limits<double>::max();
+  double CurrentNextUseDistance = std::numeric_limits<double>::max();
   MachineInstr *CurMI = &*MRI->def_instr_begin(DefReg);
   MachineBasicBlock *CurMBB = CurMI->getParent();
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
@@ -527,18 +537,18 @@ AMDGPUNextUseAnalysis::getNextUseDistance(Register DefReg) {
     if (CurrentNextUseDistance < NextUseDistance)
       NextUseDistance = CurrentNextUseDistance;
   }
-  return NextUseDistance != std::numeric_limits<uint64_t>::max()
-             ? std::optional<uint64_t>(NextUseDistance)
+  return NextUseDistance != std::numeric_limits<double>::max()
+             ? std::optional<double>(NextUseDistance)
              : std::nullopt;
 }
 
-std::optional<uint64_t>
+std::optional<double>
 AMDGPUNextUseAnalysis::getNextUseDistance(Register DefReg, MachineInstr *CurMI,
                                           SmallVector<MachineInstr *> &Uses) {
   assert(!DefReg.isPhysical() && !TRI->isAGPR(*MRI, DefReg) &&
          "Next-use distance is calculated for SGPRs and VGPRs");
-  uint64_t NextUseDistance = std::numeric_limits<uint64_t>::max();
-  uint64_t CurrentNextUseDistance = std::numeric_limits<uint64_t>::max();
+  double NextUseDistance = std::numeric_limits<double>::max();
+  double CurrentNextUseDistance = std::numeric_limits<double>::max();
   MachineBasicBlock *CurMBB = CurMI->getParent();
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   for (auto *UseMI : Uses) {
@@ -562,8 +572,8 @@ AMDGPUNextUseAnalysis::getNextUseDistance(Register DefReg, MachineInstr *CurMI,
     if (CurrentNextUseDistance < NextUseDistance)
       NextUseDistance = CurrentNextUseDistance;
   }
-  return NextUseDistance != std::numeric_limits<uint64_t>::max()
-             ? std::optional<uint64_t>(NextUseDistance)
+  return NextUseDistance != std::numeric_limits<double>::max()
+             ? std::optional<double>(NextUseDistance)
              : std::nullopt;
 }
 
@@ -577,7 +587,7 @@ bool AMDGPUNextUseAnalysis::run(MachineFunction &MF,
   MRI = &MF.getRegInfo();
 
   for (MachineBasicBlock &BB : MF) {
-    unsigned Id = 0;
+    double Id = 0.0;
     for (MachineInstr &MI : BB) {
       InstrToId[&MI] = ++Id;
     }
