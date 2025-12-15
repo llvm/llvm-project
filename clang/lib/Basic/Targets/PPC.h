@@ -368,7 +368,7 @@ public:
   bool supportsCpuSupports() const override {
     llvm::Triple Triple = getTriple();
     // AIX 7.2 is the minimum requirement to support __builtin_cpu_supports().
-    return Triple.isOSGlibc() ||
+    return Triple.isOSGlibc() || Triple.isMusl() ||
            (Triple.isOSAIX() &&
             !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
   }
@@ -376,7 +376,7 @@ public:
   bool supportsCpuIs() const override {
     llvm::Triple Triple = getTriple();
     // AIX 7.2 is the minimum requirement to support __builtin_cpu_is().
-    return Triple.isOSGlibc() ||
+    return Triple.isOSGlibc() || Triple.isMusl() ||
            (Triple.isOSAIX() &&
             !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
   }

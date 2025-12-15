@@ -36,10 +36,13 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
     Direction direction, common::optional<bool>, IoErrorHandler &handler) {
-  if (direction != Direction::Output) {
-    handler.Crash("ExternalFileUnit only supports output IO");
+  if (direction != Direction::Output || unit != 6) {
+    handler.Crash("ExternalFileUnit only supports output to unit 6");
   }
-  return New<ExternalFileUnit>{handler}(unit).release();
+  if (!defaultOutput) { // defer construction until/unless needed
+    defaultOutput = New<ExternalFileUnit>{handler}(unit).release();
+  }
+  return defaultOutput;
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUp(const char *, std::size_t) {
@@ -124,15 +127,11 @@ std::size_t PseudoOpenFile::Read(
 
 std::size_t PseudoOpenFile::Write(FileOffset at, const char *buffer,
     std::size_t bytes, IoErrorHandler &handler) {
-  if (at) {
-    handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
-  }
-  // TODO: use persistent string buffer that can be reallocated
-  // as needed, and only freed at destruction of *this.
-  auto string{SizedNew<char>{handler}(bytes + 1)};
-  runtime::memcpy(string.get(), buffer, bytes);
-  string.get()[bytes] = '\0';
-  std::printf("%s", string.get());
+  char *mutableBuffer{const_cast<char *>(buffer)};
+  char save{buffer[bytes]};
+  mutableBuffer[bytes] = '\0';
+  std::printf("%s", buffer);
+  mutableBuffer[bytes] = save;
   return bytes;
 }
 
