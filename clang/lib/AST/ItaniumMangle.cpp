@@ -4209,6 +4209,9 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   case BuiltinType::Double:
     TypeNameOS << "float64";
     break;
+  case BuiltinType::BFloat16:
+    TypeNameOS << "bfloat16";
+    break;
   default:
     llvm_unreachable("unexpected element type for fixed-length RVV vector!");
   }
