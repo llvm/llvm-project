@@ -20358,11 +20358,12 @@ Value *BoUpSLP::vectorizeTree(
     scheduleBlock(*this, BSIter.second.get());
   // Cache last instructions for the nodes to avoid side effects, which may
   // appear during vectorization, like extra uses, etc.
-  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree.back()) {
-    if (TE->isGather())
-      continue;
-    (void)getLastInstructionInBundle(TE.get());
-  }
+  for (auto &VT : VectorizableTree)
+    for (const std::unique_ptr<TreeEntry> &TE : VT) {
+      if (TE->isGather())
+        continue;
+      (void)getLastInstructionInBundle(TE.get());
+    }
 
   if (ReductionRoot)
     Builder.SetInsertPoint(ReductionRoot->getParent(),
@@ -20372,20 +20373,21 @@ Value *BoUpSLP::vectorizeTree(
 
   // Vectorize gather operands of the nodes with the external uses only.
   SmallVector<std::pair<TreeEntry *, Instruction *>> GatherEntries;
-  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree.back()) {
-    if (TE->isGather() && !TE->VectorizedValue && TE->UserTreeIndex.UserTE &&
-        TE->UserTreeIndex.UserTE->hasState() &&
-        TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
-        (TE->UserTreeIndex.UserTE->getOpcode() != Instruction::PHI ||
-         TE->UserTreeIndex.UserTE->isAltShuffle()) &&
-        !TE->UserTreeIndex.UserTE->hasCopyableElements() &&
-        all_of(TE->UserTreeIndex.UserTE->Scalars,
-               [](Value *V) { return isUsedOutsideBlock(V); })) {
-      Instruction &LastInst =
-          getLastInstructionInBundle(TE->UserTreeIndex.UserTE);
-      GatherEntries.emplace_back(TE.get(), &LastInst);
+  for (auto &VT : VectorizableTree)
+    for (const std::unique_ptr<TreeEntry> &TE : VT) {
+      if (TE->isGather() && !TE->VectorizedValue && TE->UserTreeIndex.UserTE &&
+          TE->UserTreeIndex.UserTE->hasState() &&
+          TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
+          (TE->UserTreeIndex.UserTE->getOpcode() != Instruction::PHI ||
+           TE->UserTreeIndex.UserTE->isAltShuffle()) &&
+          !TE->UserTreeIndex.UserTE->hasCopyableElements() &&
+          all_of(TE->UserTreeIndex.UserTE->Scalars,
+                 [](Value *V) { return isUsedOutsideBlock(V); })) {
+        Instruction &LastInst =
+            getLastInstructionInBundle(TE->UserTreeIndex.UserTE);
+        GatherEntries.emplace_back(TE.get(), &LastInst);
+      }
     }
-  }
   for (auto &Entry : GatherEntries) {
     IRBuilderBase::InsertPointGuard Guard(Builder);
     Builder.SetInsertPoint(Entry.second);
@@ -20404,7 +20406,8 @@ Value *BoUpSLP::vectorizeTree(
       (void)vectorizeTree(TE.get());
     }
   }
-  (void)vectorizeTree(VectorizableTree.back()[0].get());
+  for (auto &VT : VectorizableTree)
+    (void)vectorizeTree(VT[0].get());
   // Run through the list of postponed gathers and emit them, replacing the temp
   // emitted allocas with actual vector instructions.
   ArrayRef<const TreeEntry *> PostponedNodes = PostponedGathers.getArrayRef();
@@ -20902,119 +20905,133 @@ Value *BoUpSLP::vectorizeTree(
     CSEBlocks.insert(LastInsert->getParent());
   }
 
-  SmallVector<Instruction *> RemovedInsts;
+  SmallVector<SmallVector<Instruction *>> RemovedInsts;
   // For each vectorized value:
-  for (auto &TEPtr : VectorizableTree.back()) {
-    TreeEntry *Entry = TEPtr.get();
+  for (auto &VT : VectorizableTree) {
+    RemovedInsts.emplace_back();
+    for (auto &TEPtr : VT) {
+      TreeEntry *Entry = TEPtr.get();
 
-    // No need to handle users of gathered values.
-    if (Entry->isGather() || Entry->State == TreeEntry::SplitVectorize)
-      continue;
-
-    assert(Entry->VectorizedValue && "Can't find vectorizable value");
-
-    // For each lane:
-    for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
-      Value *Scalar = Entry->Scalars[Lane];
-
-      if (Entry->getOpcode() == Instruction::GetElementPtr &&
-          !isa<GetElementPtrInst>(Scalar))
+      // No need to handle users of gathered values.
+      if (Entry->isGather() || Entry->State == TreeEntry::SplitVectorize)
         continue;
-      if (auto *EE = dyn_cast<ExtractElementInst>(Scalar);
-          EE && IgnoredExtracts.contains(EE))
-        continue;
-      if (!isa<Instruction>(Scalar) || Entry->isCopyableElement(Scalar))
-        continue;
+
+      assert(Entry->VectorizedValue && "Can't find vectorizable value");
+
+      // For each lane:
+      for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
+        Value *Scalar = Entry->Scalars[Lane];
+
+        if (Entry->getOpcode() == Instruction::GetElementPtr &&
+            !isa<GetElementPtrInst>(Scalar))
+          continue;
+        if (auto *EE = dyn_cast<ExtractElementInst>(Scalar);
+            EE && IgnoredExtracts.contains(EE))
+          continue;
+        if (!isa<Instruction>(Scalar) || Entry->isCopyableElement(Scalar))
+          continue;
 #ifndef NDEBUG
-      Type *Ty = Scalar->getType();
-      if (!Ty->isVoidTy()) {
-        for (User *U : Scalar->users()) {
-          LLVM_DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
+        Type *Ty = Scalar->getType();
+        if (!Ty->isVoidTy()) {
+          for (User *U : Scalar->users()) {
+            LLVM_DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
 
-          // It is legal to delete users in the ignorelist.
-          assert((isVectorized(U) ||
-                  (UserIgnoreList && UserIgnoreList->contains(U)) ||
-                  (isa_and_nonnull<Instruction>(U) &&
-                   isDeleted(cast<Instruction>(U)))) &&
-                 "Deleting out-of-tree value");
+            // It is legal to delete users in the ignorelist.
+            assert((isVectorized(U) ||
+                    (UserIgnoreList && UserIgnoreList->contains(U)) ||
+                    (isa_and_nonnull<Instruction>(U) &&
+                     isDeleted(cast<Instruction>(U)))) &&
+                   "Deleting out-of-tree value");
+          }
         }
-      }
 #endif
-      LLVM_DEBUG(dbgs() << "SLP: \tErasing scalar:" << *Scalar << ".\n");
-      auto *I = cast<Instruction>(Scalar);
-      RemovedInsts.push_back(I);
+        LLVM_DEBUG(dbgs() << "SLP: \tErasing scalar:" << *Scalar << ".\n");
+        auto *I = cast<Instruction>(Scalar);
+        RemovedInsts.back().push_back(I);
+      }
     }
   }
 
   // Merge the DIAssignIDs from the about-to-be-deleted instructions into the
   // new vector instruction.
-  if (auto *V =
-          dyn_cast<Instruction>(VectorizableTree.back()[0]->VectorizedValue))
-    V->mergeDIAssignID(RemovedInsts);
+  for (unsigned Idx = 0; Idx < VectorizableTree.size(); ++Idx)
+    if (auto *V =
+            dyn_cast<Instruction>(VectorizableTree[Idx][0]->VectorizedValue))
+      V->mergeDIAssignID(RemovedInsts[Idx]);
 
   // Clear up reduction references, if any.
   if (UserIgnoreList) {
-    for (Instruction *I : RemovedInsts) {
-      const TreeEntry *IE = getTreeEntries(I).front();
-      if (IE->Idx != 0 &&
-          !(VectorizableTree.back().front()->isGather() && IE->UserTreeIndex &&
-            (ValueToGatherNodes.lookup(I).contains(
-                 VectorizableTree.back().front().get()) ||
-             (IE->UserTreeIndex.UserTE ==
-                  VectorizableTree.back().front().get() &&
-              IE->UserTreeIndex.EdgeIdx == UINT_MAX))) &&
-          !(VectorizableTree.back().front()->State ==
-                TreeEntry::SplitVectorize &&
-            IE->UserTreeIndex &&
-            is_contained(VectorizableTree.back().front()->Scalars, I)) &&
-          !(GatheredLoadsEntriesFirst.has_value() &&
-            IE->Idx >= *GatheredLoadsEntriesFirst &&
-            VectorizableTree.back().front()->isGather() &&
-            is_contained(VectorizableTree.back().front()->Scalars, I)) &&
-          !(!VectorizableTree.back().front()->isGather() &&
-            VectorizableTree.back().front()->isCopyableElement(I)))
-        continue;
-      SmallVector<SelectInst *> LogicalOpSelects;
-      I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
-        // Do not replace condition of the logical op in form select <cond>.
-        bool IsPoisoningLogicalOp = isa<SelectInst>(U.getUser()) &&
-                                    (match(U.getUser(), m_LogicalAnd()) ||
-                                     match(U.getUser(), m_LogicalOr())) &&
-                                    U.getOperandNo() == 0;
-        if (IsPoisoningLogicalOp) {
-          LogicalOpSelects.push_back(cast<SelectInst>(U.getUser()));
-          return false;
-        }
-        return UserIgnoreList->contains(U.getUser());
-      });
-      // Replace conditions of the poisoning logical ops with the non-poison
-      // constant value.
-      for (SelectInst *SI : LogicalOpSelects)
-        SI->setCondition(Constant::getNullValue(SI->getCondition()->getType()));
-    }
+    for (unsigned Idx = 0; Idx < VectorizableTree.size(); ++Idx)
+      for (Instruction *I : RemovedInsts[Idx]) {
+        const TreeEntry *IE = getTreeEntries(I).front();
+        if (IE->Idx != 0 &&
+            !(VectorizableTree[Idx].front()->isGather() && IE->UserTreeIndex &&
+              (ValueToGatherNodes.lookup(I).contains(
+                   VectorizableTree[Idx].front().get()) ||
+               (IE->UserTreeIndex.UserTE ==
+                    VectorizableTree[Idx].front().get() &&
+                IE->UserTreeIndex.EdgeIdx == UINT_MAX))) &&
+            !(VectorizableTree[Idx].front()->State ==
+                  TreeEntry::SplitVectorize &&
+              IE->UserTreeIndex &&
+              is_contained(VectorizableTree[Idx].front()->Scalars, I)) &&
+            !(GatheredLoadsEntriesFirst.has_value() &&
+              IE->Idx >= *GatheredLoadsEntriesFirst &&
+              VectorizableTree[Idx].front()->isGather() &&
+              is_contained(VectorizableTree[Idx].front()->Scalars, I)) &&
+            !(!VectorizableTree[Idx].front()->isGather() &&
+              VectorizableTree[Idx].front()->isCopyableElement(I)))
+          continue;
+        SmallVector<SelectInst *> LogicalOpSelects;
+        I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
+          // Do not replace condition of the logical op in form select <cond>.
+          bool IsPoisoningLogicalOp = isa<SelectInst>(U.getUser()) &&
+                                      (match(U.getUser(), m_LogicalAnd()) ||
+                                       match(U.getUser(), m_LogicalOr())) &&
+                                      U.getOperandNo() == 0;
+          if (IsPoisoningLogicalOp) {
+            LogicalOpSelects.push_back(cast<SelectInst>(U.getUser()));
+            return false;
+          }
+          return UserIgnoreList->contains(U.getUser());
+        });
+        // Replace conditions of the poisoning logical ops with the non-poison
+        // constant value.
+        for (SelectInst *SI : LogicalOpSelects)
+          SI->setCondition(
+              Constant::getNullValue(SI->getCondition()->getType()));
+      }
   }
   // Retain to-be-deleted instructions for some debug-info bookkeeping and alias
   // cache correctness.
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
   // - instructions are not deleted until later.
-  removeInstructionsAndOperands(ArrayRef(RemovedInsts), VectorValuesAndScales);
+  SmallVector<Instruction *> AllRemovedInsts;
+  for (unsigned Idx = 0; Idx < VectorizableTree.size(); ++Idx)
+    AllRemovedInsts.insert(AllRemovedInsts.begin(), RemovedInsts[Idx].begin(),
+                           RemovedInsts[Idx].end());
+  removeInstructionsAndOperands(ArrayRef(AllRemovedInsts),
+                                VectorValuesAndScales);
 
   Builder.ClearInsertionPoint();
   InstrElementSize.clear();
 
-  const TreeEntry &RootTE = *VectorizableTree.back().front();
-  Value *Vec = RootTE.VectorizedValue;
-  if (auto It = MinBWs.find(&RootTE); ReductionBitWidth != 0 &&
-                                      It != MinBWs.end() &&
-                                      ReductionBitWidth != It->second.first) {
-    IRBuilder<>::InsertPointGuard Guard(Builder);
-    Builder.SetInsertPoint(ReductionRoot->getParent(),
-                           ReductionRoot->getIterator());
-    Vec = Builder.CreateIntCast(
-        Vec,
-        VectorType::get(Builder.getIntNTy(ReductionBitWidth),
-                        cast<VectorType>(Vec->getType())->getElementCount()),
-        It->second.second);
+  Value *Vec = nullptr;
+  for (auto &VT : VectorizableTree) {
+    const TreeEntry &RootTE = *VT.front();
+    Vec = RootTE.VectorizedValue;
+    if (auto It = MinBWs.find(&RootTE); ReductionBitWidth != 0 &&
+                                        It != MinBWs.end() &&
+                                        ReductionBitWidth != It->second.first) {
+      IRBuilder<>::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(ReductionRoot->getParent(),
+                             ReductionRoot->getIterator());
+      Vec = Builder.CreateIntCast(
+          Vec,
+          VectorType::get(Builder.getIntNTy(ReductionBitWidth),
+                          cast<VectorType>(Vec->getType())->getElementCount()),
+          It->second.second);
+    }
   }
   return Vec;
 }
