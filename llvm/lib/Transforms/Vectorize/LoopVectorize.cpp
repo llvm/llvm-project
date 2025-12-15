@@ -7083,7 +7083,8 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
 
       // The legacy cost model costs non-header phis with a scalar VF as a phi,
       // but scalar unrolled VPlans will have VPBlendRecipes which emit selects.
-      if (VF.isScalar() && isa<VPBlendRecipe>(&R))
+      if (isa<VPBlendRecipe>(&R) &&
+          vputils::onlyFirstLaneUsed(R.getVPSingleValue()))
         return true;
 
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
