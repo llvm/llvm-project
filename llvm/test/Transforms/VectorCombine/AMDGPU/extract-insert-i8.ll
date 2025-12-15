@@ -88,22 +88,8 @@ entry:
 define <8 x i8> @extract_insert_chain_shortening(<32 x i8> %in) {
 ; OPT-LABEL: define <8 x i8> @extract_insert_chain_shortening(
 ; OPT-SAME: <32 x i8> [[IN:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[I_1:%.*]] = extractelement <32 x i8> [[IN]], i64 17
-; OPT-NEXT:    [[I_2:%.*]] = extractelement <32 x i8> [[IN]], i64 18
-; OPT-NEXT:    [[I_3:%.*]] = extractelement <32 x i8> [[IN]], i64 19
-; OPT-NEXT:    [[I_5:%.*]] = extractelement <32 x i8> [[IN]], i64 21
-; OPT-NEXT:    [[I_6:%.*]] = extractelement <32 x i8> [[IN]], i64 22
-; OPT-NEXT:    [[I_7:%.*]] = extractelement <32 x i8> [[IN]], i64 23
-; OPT-NEXT:    [[O_0:%.*]] = shufflevector <32 x i8> [[IN]], <32 x i8> poison, <8 x i32> <i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; OPT-NEXT:    [[O_1:%.*]] = insertelement <8 x i8> [[O_0]], i8 [[I_1]], i32 1
-; OPT-NEXT:    [[O_2:%.*]] = insertelement <8 x i8> [[O_1]], i8 [[I_2]], i32 2
-; OPT-NEXT:    [[O_3:%.*]] = insertelement <8 x i8> [[O_2]], i8 [[I_3]], i32 3
-; OPT-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[IN]], <32 x i8> poison, <8 x i32> <i32 20, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; OPT-NEXT:    [[O_4:%.*]] = shufflevector <8 x i8> [[O_3]], <8 x i8> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 5, i32 6, i32 7>
-; OPT-NEXT:    [[O_5:%.*]] = insertelement <8 x i8> [[O_4]], i8 [[I_5]], i32 5
-; OPT-NEXT:    [[O_6:%.*]] = insertelement <8 x i8> [[O_5]], i8 [[I_6]], i32 6
-; OPT-NEXT:    [[O_7:%.*]] = insertelement <8 x i8> [[O_6]], i8 [[I_7]], i32 7
-; OPT-NEXT:    ret <8 x i8> [[O_7]]
+; OPT-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[IN]], <32 x i8> poison, <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; OPT-NEXT:    ret <8 x i8> [[TMP1]]
 ;
   %i.0 = extractelement <32 x i8> %in, i64 16
   %i.1 = extractelement <32 x i8> %in, i64 17
