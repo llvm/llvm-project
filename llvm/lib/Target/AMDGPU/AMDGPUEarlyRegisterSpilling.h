@@ -51,7 +51,7 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   DenseSet<Register> RestoredRegs;
   /// Similar to next-use distance analysis, we assume an approximate trip count
   /// of 1000 for all loops.
-  static constexpr const uint64_t LoopWeight = 1000;
+  static constexpr const double LoopWeight = 1000.0;
 
   /// Check if it is legal to spill \p CandidateReg e.g. is not a physical
   /// register.
@@ -139,7 +139,7 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
 
   bool isReachable(MachineBasicBlock *From, MachineBasicBlock *To) {
     return NUA.getShortestDistance(From, To) !=
-           std::numeric_limits<uint64_t>::max();
+           std::numeric_limits<double>::max();
   }
 
 public:

@@ -127,9 +127,9 @@ SmallVector<Register> AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
     MachineInstr *CurMI, GCNDownwardRPTracker &RPTracker) {
   MachineBasicBlock *CurMBB = CurMI->getParent();
   bool IsCurMIInLoop = MLI->getLoopFor(CurMI->getParent());
-  SmallVector<std::pair<Register, uint64_t>> RegCandidates;
+  SmallVector<std::pair<Register, double>> RegCandidates;
   MachineLoop *OutermostLoop = nullptr;
-  uint64_t LoopDistance = 0;
+  double LoopDistance = 0;
   LLVM_DEBUG(dbgs() << "===========================================\n");
   if (IsCurMIInLoop) {
     OutermostLoop = MLI->getLoopFor(CurMI->getParent())->getOutermostLoop();

@@ -36,31 +36,31 @@ class AMDGPUNextUseAnalysis {
   const MachineLoopInfo *MLI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   /// Instruction to instruction-id map.
-  DenseMap<MachineInstr *, unsigned> InstrToId;
+  DenseMap<MachineInstr *, double> InstrToId;
   /// Returns MI's instruction ID. It renumbers (part of) the BB if MI is not
   /// found in the map.
-  unsigned getInstrId(MachineInstr *MI) {
+  double getInstrId(MachineInstr *MI) {
     auto It = InstrToId.find(MI);
     if (It != InstrToId.end())
       return It->second;
     // Renumber the MBB.
     // TODO: Renumber from MI onwards.
     auto *MBB = MI->getParent();
-    unsigned Id = 0;
+    double Id = 0.0;
     for (auto &MBBMI : *MBB)
       InstrToId[&MBBMI] = Id++;
     return InstrToId.find(MI)->second;
   }
   /// [FromMBB, ToMBB] to shortest distance map.
   DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
-           std::pair<SmallVector<MachineBasicBlock *>, uint64_t>>
+           std::pair<SmallVector<MachineBasicBlock *>, double>>
       ShortestPathTable;
   /// We assume an approximate trip count of 1000 for all loops.
-  static constexpr const uint64_t LoopWeight = 1000;
-  /// Returns the shortest distance from ShortestPathTable. Will crash if
+  static constexpr const double LoopWeight = 1000.0;
+  /// Returns the shortest ditance from ShortestPathTable. Will crash if
   /// {FromMBB,ToMBB} not found.
-  uint64_t getShortestDistanceFromTable(MachineBasicBlock *FromMBB,
-                                        MachineBasicBlock *ToMBB) const {
+  double getShortestDistanceFromTable(MachineBasicBlock *FromMBB,
+                                      MachineBasicBlock *ToMBB) const {
     auto It = ShortestPathTable.find({FromMBB, ToMBB});
     assert(It != ShortestPathTable.end() && "Not found in table!");
     return It->second.second;
@@ -74,22 +74,22 @@ class AMDGPUNextUseAnalysis {
     return make_range(It->second.first.begin(), It->second.first.end());
   }
   bool isBackedge(MachineBasicBlock *From, MachineBasicBlock *To) const;
-  std::pair<SmallVector<MachineBasicBlock *>, uint64_t>
+  std::pair<SmallVector<MachineBasicBlock *>, double>
   getShortestPath(MachineBasicBlock *From, MachineBasicBlock *To);
   /// Goes over all MBB pairs in \p MF, calculates the shortest path between
   /// them and fills in \p ShortestPathTable.
   void calculateShortestPaths(MachineFunction &MF);
-  /// Returns the shortest instruction distance between \p MI and \p UseMI.
-  /// It only works if \p MI and \p UseMI are not inside a loop.
-  uint64_t calculateShortestDistance(MachineInstr *MI, MachineInstr *UseMI);
+  /// If the path from \p MI to \p UseMI does not cross any loops, then this
+  /// \returns the shortest instruction distance between them.
+  double calculateShortestDistance(MachineInstr *MI, MachineInstr *UseMI);
   /// /Returns the shortest distance between a given basic block \p CurMBB and
   /// its closest exiting latch of \p CurLoop.
-  std::pair<uint64_t, MachineBasicBlock *>
+  std::pair<double, MachineBasicBlock *>
   getShortestDistanceToExitingLatch(MachineBasicBlock *CurMBB,
                                     MachineLoop *CurLoop) const;
   /// Helper function for calculating the minimum instruction distance from the
   /// outer loop header to the outer loop latch.
-  std::pair<uint64_t, MachineBasicBlock *> getNestedLoopDistanceAndExitingLatch(
+  std::pair<double, MachineBasicBlock *> getNestedLoopDistanceAndExitingLatch(
       MachineBasicBlock *CurMBB, MachineBasicBlock *UseMBB,
       bool IsUseOutsideOfTheCurLoopNest = false,
       bool IsUseInParentLoop = false);
@@ -99,11 +99,11 @@ class AMDGPUNextUseAnalysis {
   /// exact position of the instruction in the block because we are making a
   /// rough estimate of the dynamic instruction path length, given that the loop
   /// iterates multiple times.
-  uint64_t calculateCurLoopDistance(Register DefReg, MachineInstr *CurMI,
-                                    MachineInstr *UseMI);
+  double calculateCurLoopDistance(Register DefReg, MachineInstr *CurMI,
+                                  MachineInstr *UseMI);
   /// \Returns the shortest path distance from \p CurMI to the end of the loop
   /// latch plus the distance from the top of the loop header to the PHI use.
-  uint64_t calculateBackedgeDistance(MachineInstr *CurMI, MachineInstr *UseMI);
+  double calculateBackedgeDistance(MachineInstr *CurMI, MachineInstr *UseMI);
   /// \Returns true if the use of \p DefReg (\p UseMI) is a PHI in the loop
   /// header, i.e., DefReg is flowing through the back-edge.
   bool isIncomingValFromBackedge(MachineInstr *CurMI, MachineInstr *UseMI,
@@ -126,24 +126,23 @@ public:
   bool run(MachineFunction &, const MachineLoopInfo *);
 
   /// \Returns the next-use distance for \p DefReg.
-  std::optional<uint64_t> getNextUseDistance(Register DefReg);
+  std::optional<double> getNextUseDistance(Register DefReg);
 
-  std::optional<uint64_t> getNextUseDistance(Register DefReg,
-                                             MachineInstr *CurMI,
-                                             SmallVector<MachineInstr *> &Uses);
+  std::optional<double> getNextUseDistance(Register DefReg, MachineInstr *CurMI,
+                                           SmallVector<MachineInstr *> &Uses);
 
   /// Helper function that finds the shortest instruction path in \p CurMMB's
   /// loop that includes \p CurMBB and starts from the loop header and ends at
   /// the earliest loop latch. \Returns the path cost and the earliest latch
   /// MBB.
-  std::pair<uint64_t, MachineBasicBlock *>
+  std::pair<double, MachineBasicBlock *>
   getLoopDistanceAndExitingLatch(MachineBasicBlock *CurMBB) const;
-
-  uint64_t getShortestDistance(MachineBasicBlock *FromMBB,
-                               MachineBasicBlock *ToMBB) const {
+  /// Returns the shortest ditance from ShortestPathTable.
+  double getShortestDistance(MachineBasicBlock *FromMBB,
+                             MachineBasicBlock *ToMBB) const {
     auto It = ShortestPathTable.find({FromMBB, ToMBB});
     if (It == ShortestPathTable.end())
-      return std::numeric_limits<uint64_t>::max();
+      return std::numeric_limits<double>::max();
     return It->second.second;
   }
 };
