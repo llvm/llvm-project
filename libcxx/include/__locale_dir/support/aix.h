@@ -17,7 +17,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctype.h>
-#include <stdarg.h>
 #include <string.h>
 #include <time.h>
 #if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -42,7 +41,7 @@ struct __locale_guard {
 
   locale_t __old_loc_;
 
-  __locale_guard(__locale_guard const&) = delete;
+  __locale_guard(__locale_guard const&)            = delete;
   __locale_guard& operator=(__locale_guard const&) = delete;
 };
 
@@ -177,8 +176,8 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI
+size_t __strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
   return strftime_l(__s, __max, __format, __tm, __loc);
 }
 
