@@ -615,6 +615,10 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPValue *Start,
     return new VPWidenPointerInductionRecipe(Phi, Start, Step, &Plan.getVFxUF(),
                                              IndDesc, DL);
 
+  assert((IndDesc.getKind() == InductionDescriptor::IK_IntInduction ||
+          IndDesc.getKind() == InductionDescriptor::IK_FpInduction) &&
+         "must have an integer or float induction at this point");
+
   // Update wide induction increments to use the same step as the corresponding
   // wide induction. This enables detecting induction increments directly in
   // VPlan and removes redundant splats.
@@ -669,27 +673,25 @@ void VPlanTransforms::createHeaderPhiRecipes(
                                         Plan, SE, OrigLoop,
                                         PhiR->getDebugLoc());
 
-    assert(Reductions.contains(Phi) &&
-           "can only widen reductions and fixed-order recurrences here");
+    assert(Reductions.contains(Phi) && "only reductions are expected now");
     const RecurrenceDescriptor &RdxDesc = Reductions.lookup(Phi);
     assert(RdxDesc.getRecurrenceStartValue() ==
                Phi->getIncomingValueForBlock(OrigLoop.getLoopPreheader()) &&
            "incoming value must match start value");
+    // Will be updated later to >1 if reduction is partial.
+    unsigned ScaleFactor = 1;
     bool UseOrderedReductions = !AllowReordering && RdxDesc.isOrdered();
     return new VPReductionPHIRecipe(
         Phi, RdxDesc.getRecurrenceKind(), *Start, *BackedgeValue,
         getReductionStyle(InLoopReductions.contains(Phi), UseOrderedReductions,
-                          1),
+                          ScaleFactor),
         RdxDesc.hasUsesOutsideReductionChain());
   };
 
   for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
     if (isa<VPCanonicalIVPHIRecipe>(&R))
       continue;
-    auto *PhiR = dyn_cast<VPPhi>(&R);
-    if (!PhiR)
-      break;
-
+    auto *PhiR = cast<VPPhi>(&R);
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(HeaderPhiR);
