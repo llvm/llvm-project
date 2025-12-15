@@ -720,18 +720,24 @@ bool SimplifyBooleanExprCheck::issueDiag(const ASTContext &Context,
 void SimplifyBooleanExprCheck::replaceWithThenStatement(
     const ASTContext &Context, const IfStmt *IfStatement,
     const Expr *BoolLiteral) {
+  std::string Replacement = getText(Context, *IfStatement->getThen());
+  if (const Stmt *Init = IfStatement->getInit()) {
+    Replacement = (Twine("{ ") + getText(Context, *Init) + Replacement + " }").str();
+  }
   issueDiag(Context, BoolLiteral->getBeginLoc(), SimplifyConditionDiagnostic,
-            IfStatement->getSourceRange(),
-            getText(Context, *IfStatement->getThen()));
+            IfStatement->getSourceRange(), Replacement);
 }
 
 void SimplifyBooleanExprCheck::replaceWithElseStatement(
     const ASTContext &Context, const IfStmt *IfStatement,
     const Expr *BoolLiteral) {
   const Stmt *ElseStatement = IfStatement->getElse();
+  std::string Replacement = ElseStatement ? getText(Context, *ElseStatement) : "";
+  if (const Stmt *Init = IfStatement->getInit()) {
+    Replacement = (Twine("{ ") + getText(Context, *Init) + Replacement + " }").str();
+  }
   issueDiag(Context, BoolLiteral->getBeginLoc(), SimplifyConditionDiagnostic,
-            IfStatement->getSourceRange(),
-            ElseStatement ? getText(Context, *ElseStatement) : "");
+            IfStatement->getSourceRange(), Replacement);
 }
 
 void SimplifyBooleanExprCheck::replaceWithCondition(
