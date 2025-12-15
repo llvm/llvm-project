@@ -21825,7 +21825,8 @@ static SDValue performAddDotCombine(SDNode *N, SelectionDAG &DAG) {
   // Handle commutivity
   auto isZeroDot = [](SDValue Dot) {
     return (Dot.getOpcode() == AArch64ISD::UDOT ||
-            Dot.getOpcode() == AArch64ISD::SDOT) &&
+            Dot.getOpcode() == AArch64ISD::SDOT ||
+            Dot.getOpcode() == AArch64ISD::USDOT) &&
            isZerosVector(Dot.getOperand(0).getNode());
   };
   if (!isZeroDot(Dot))
