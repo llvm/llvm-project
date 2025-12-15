@@ -1531,7 +1531,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
     return true;
 
   case AMDGPULibFunc::EI_EXP:
-    Res0 = std::exp(opr0);
+    Res0 = exp(opr0);
     return true;
 
   case AMDGPULibFunc::EI_EXP2:

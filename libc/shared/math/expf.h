@@ -11,7 +11,6 @@
 
 #include "shared/libc_common.h"
 #include "src/__support/math/expf.h"
-#include "src/__support/math/expf_static_rounding.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace shared {
