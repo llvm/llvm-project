@@ -297,7 +297,7 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
         if (auto Err = releaseEvent(Event))
           return Err;
       }
-    } else { 
+    } else {
       // Async case.
       // Wait for all events. We should wait and reset events in reverse order
       // to avoid premature event reset. If we have a kernel event in the
