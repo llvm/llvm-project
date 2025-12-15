@@ -497,7 +497,7 @@ class ReleaseWorkflow:
         if pr.state != "closed":
             return
 
-        gh = github.Github(login_or_token=self.token)
+        gh = github.Github(auth=github.Auth.Token(self.token))
         query = """
             query($node_id: ID!) {
               node(id: $node_id) {
