@@ -13,15 +13,22 @@
 
 #include "SPIRVCommandLine.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
+
+#include <functional>
+#include <iterator>
 #include <map>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
 #define DEBUG_TYPE "spirv-commandline"
 
 using namespace llvm;
 
-static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
+static const std::map<StringRef, SPIRV::Extension::Extension>
     SPIRVExtensionMap = {
         {"SPV_EXT_shader_atomic_float_add",
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_add},
@@ -176,47 +183,52 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   std::set<SPIRV::Extension::Extension> &Vals) {
   SmallVector<StringRef, 10> Tokens;
   ArgValue.split(Tokens, ",", -1, false);
-  std::sort(Tokens.begin(), Tokens.end());
 
   std::set<SPIRV::Extension::Extension> EnabledExtensions;
 
-  for (const auto &Token : Tokens) {
-    if (Token == "all") {
-      for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
-        EnabledExtensions.insert(ExtensionEnum);
+  auto M = partition(Tokens, [](auto &&T) { return T.starts_with('+'); });
 
-      continue;
-    }
+  if (std::any_of(M, Tokens.end(), [](auto &&T) { return T == "all"; }))
+    copy(make_second_range(SPIRVExtensionMap), std::inserter(Vals, Vals.end()));
 
-    if (Token.size() == 3 && Token.upper() == "KHR") {
-      for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
-        if (StringRef(ExtensionName).starts_with("SPV_KHR_"))
-          EnabledExtensions.insert(ExtensionEnum);
-      continue;
-    }
-
-    if (Token.empty() || (!Token.starts_with("+") && !Token.starts_with("-")))
-      return O.error("Invalid extension list format: " + Token.str());
-
+  for (auto &&Token : make_range(Tokens.begin(), M)) {
     StringRef ExtensionName = Token.substr(1);
     auto NameValuePair = SPIRVExtensionMap.find(ExtensionName);
 
     if (NameValuePair == SPIRVExtensionMap.end())
       return O.error("Unknown SPIR-V extension: " + Token.str());
 
-    if (Token.starts_with("+")) {
-      EnabledExtensions.insert(NameValuePair->second);
-    } else if (EnabledExtensions.count(NameValuePair->second)) {
-      if (llvm::is_contained(Tokens, "+" + ExtensionName.str()))
-        return O.error(
-            "Extension cannot be allowed and disallowed at the same time: " +
-            ExtensionName.str());
-
-      EnabledExtensions.erase(NameValuePair->second);
-    }
+    EnabledExtensions.insert(NameValuePair->second);
   }
 
-  Vals = std::move(EnabledExtensions);
+  for (auto &&Token : make_range(M, Tokens.end())) {
+    if (Token == "all")
+      continue;
+
+    if (Token.size() == 3 && Token.upper() == "KHR") {
+      for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
+        if (StringRef(ExtensionName).starts_with("SPV_KHR_"))
+          Vals.insert(ExtensionEnum);
+      continue;
+    }
+
+    if (Token.empty() || (!Token.starts_with("+") && !Token.starts_with("-")))
+      return O.error("Invalid extension list format: " + Token);
+
+    auto NameValuePair = SPIRVExtensionMap.find(Token.substr(1));
+
+    if (NameValuePair == SPIRVExtensionMap.cend())
+      return O.error("Unknown SPIR-V extension: " + Token.str());
+    if (EnabledExtensions.count(NameValuePair->second))
+      return O.error(
+          "Extension cannot be allowed and disallowed at the same time: " +
+          NameValuePair->first);
+
+    Vals.erase(NameValuePair->second);
+  }
+
+  Vals.insert(EnabledExtensions.cbegin(), EnabledExtensions.cend());
+
   return false;
 }
 

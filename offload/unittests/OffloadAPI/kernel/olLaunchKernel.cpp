@@ -55,6 +55,7 @@ struct LaunchSingleKernelTestBase : LaunchKernelTestBase {
 
 KERNEL_TEST(Foo, foo)
 KERNEL_TEST(NoArgs, noargs)
+KERNEL_TEST(MultiArgs, multiargs)
 KERNEL_TEST(Byte, byte)
 KERNEL_TEST(LocalMem, localmem)
 KERNEL_TEST(LocalMemReduction, localmem_reduction)
@@ -131,6 +132,19 @@ TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
 TEST_P(olLaunchKernelNoArgsTest, Success) {
   ASSERT_SUCCESS(
       olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs));
+
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+}
+
+TEST_P(olLaunchKernelMultiTest, Success) {
+  struct {
+    char A;
+    int *B;
+    short C;
+  } Args{0, nullptr, 0};
+
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, Args, sizeof(Args), &LaunchArgs));
 
   ASSERT_SUCCESS(olSyncQueue(Queue));
 }

@@ -96,10 +96,13 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
 
   // Last, match the compare variable operand with a binop operand.
   Value *Y;
-  if (!BO->isCommutative() && !match(BO, m_BinOp(m_Value(Y), m_Specific(X))))
-    return nullptr;
-  if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
-    return nullptr;
+  if (BO->isCommutative()) {
+    if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
+      return nullptr;
+  } else {
+    if (!match(BO, m_BinOp(m_Value(Y), m_Specific(X))))
+      return nullptr;
+  }
 
   // +0.0 compares equal to -0.0, and so it does not behave as required for this
   // transform. Bail out if we can not exclude that possibility.

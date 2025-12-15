@@ -110,7 +110,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   B->invokeCtor();
 
   // Initialize local variable inline descriptor.
-  InlineDescriptor &Desc = *reinterpret_cast<InlineDescriptor *>(B->rawData());
+  auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.Desc = D;
   Desc.Offset = sizeof(InlineDescriptor);
   Desc.IsActive = false;
@@ -304,7 +304,7 @@ bool EvalEmitter::emitSetLocal(uint32_t I, SourceInfo Info) {
 
   Block *B = getLocal(I);
   *reinterpret_cast<T *>(B->data()) = S.Stk.pop<T>();
-  InlineDescriptor &Desc = *reinterpret_cast<InlineDescriptor *>(B->rawData());
+  auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.IsInitialized = true;
 
   return true;
@@ -327,8 +327,7 @@ bool EvalEmitter::emitGetLocalEnabled(uint32_t I, SourceInfo Info) {
     return true;
 
   Block *B = getLocal(I);
-  const InlineDescriptor &Desc =
-      *reinterpret_cast<InlineDescriptor *>(B->rawData());
+  const auto &Desc = B->getBlockDesc<InlineDescriptor>();
 
   S.Stk.push<bool>(Desc.IsActive);
   return true;
@@ -344,7 +343,7 @@ bool EvalEmitter::emitEnableLocal(uint32_t I, SourceInfo Info) {
   // probably use a different struct than InlineDescriptor for the block-level
   // inline descriptor of local varaibles.
   Block *B = getLocal(I);
-  InlineDescriptor &Desc = *reinterpret_cast<InlineDescriptor *>(B->rawData());
+  auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.IsActive = true;
   return true;
 }
