@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main(int argc, char *argv[]) {
+int test(void) {
   int var = 0, a = 0;
 
 #pragma omp parallel num_threads(8) shared(var, a)
@@ -48,6 +48,18 @@ int main(int argc, char *argv[]) {
   }
 
   int error = (var != 2);
+  return error;
+}
+
+int main(int argc, char *argv[]) {
+  int i, error;
+
+  for (i = 0; i < 10; ++i) {
+    error = test();
+    if (error)
+      return error;
+  }
+
   fprintf(stderr, "DONE\n");
   return error;
 }
