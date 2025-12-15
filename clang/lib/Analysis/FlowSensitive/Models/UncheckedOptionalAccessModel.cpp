@@ -66,8 +66,7 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
   if (RD.getName() == "optional") {
     if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext()))
       return N->isStdNamespace() ||
-             isFullyQualifiedNamespaceEqualTo(*N, "absl") ||
-             isFullyQualifiedNamespaceEqualTo(*N, "bsl");
+             isFullyQualifiedNamespaceEqualTo(*N, "absl");
     return false;
   }
 
