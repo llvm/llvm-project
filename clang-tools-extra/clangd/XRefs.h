@@ -137,11 +137,12 @@ std::optional<std::vector<TypeHierarchyItem>>
 superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index);
 /// Returns direct children of a TypeHierarchyItem.
 std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,
-                                        const SymbolIndex *Index);
+                                        const SymbolIndex *Index,
+                                        const ParsedAST &AST);
 
 void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
                           TypeHierarchyDirection Direction,
-                          const SymbolIndex *Index);
+                          const SymbolIndex *Index, const ParsedAST &AST);
 
 /// Get call hierarchy information at \p Pos.
 std::vector<CallHierarchyItem>

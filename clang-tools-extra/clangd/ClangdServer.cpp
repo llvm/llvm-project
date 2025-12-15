@@ -880,21 +880,37 @@ void ClangdServer::superTypes(
                      });
 }
 
-void ClangdServer::subTypes(const TypeHierarchyItem &Item,
+void ClangdServer::subTypes(PathRef File, const TypeHierarchyItem &Item,
                             Callback<std::vector<TypeHierarchyItem>> CB) {
-  WorkScheduler->run(
-      "typeHierarchy/subTypes", /*Path=*/"",
-      [=, CB = std::move(CB)]() mutable { CB(clangd::subTypes(Item, Index)); });
+
+  auto Action = [File = File.str(), Item, CB = std::move(CB), this](
+      llvm::Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+            return CB(InpAST.takeError());
+        CB(clangd::subTypes(Item, Index, InpAST->AST));
+      };
+   WorkScheduler->runWithAST("subTypes Calls", File, std::move(Action));
+  // WorkScheduler->run(
+  //     "typeHierarchy/subTypes", /*Path=*/"",
+  //     [=, CB = std::move(CB)]() mutable { CB(clangd::subTypes(Item, Index)); });
 }
 
-void ClangdServer::resolveTypeHierarchy(
+void ClangdServer::resolveTypeHierarchy(PathRef File,
     TypeHierarchyItem Item, int Resolve, TypeHierarchyDirection Direction,
     Callback<std::optional<TypeHierarchyItem>> CB) {
-  WorkScheduler->run(
-      "Resolve Type Hierarchy", "", [=, CB = std::move(CB)]() mutable {
-        clangd::resolveTypeHierarchy(Item, Resolve, Direction, Index);
-        CB(Item);
-      });
+  auto Action = [=, CB = std::move(CB), this](
+      llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    clangd::resolveTypeHierarchy(Item, Resolve, Direction, Index, InpAST->AST);
+    CB(Item);
+  };
+  WorkScheduler->runWithAST("resolveTypeHierarchy Calls", File, std::move(Action));
+  // WorkScheduler->run(
+  //     "Resolve Type Hierarchy", "", [=, CB = std::move(CB)]() mutable {
+  //       clangd::resolveTypeHierarchy(Item, Resolve, Direction, Index);
+  //       CB(Item);
+  //     });
 }
 
 void ClangdServer::prepareCallHierarchy(

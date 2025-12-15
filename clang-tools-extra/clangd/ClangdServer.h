@@ -286,11 +286,11 @@ public:
   void superTypes(const TypeHierarchyItem &Item,
                   Callback<std::optional<std::vector<TypeHierarchyItem>>> CB);
   /// Get direct children of a type hierarchy item.
-  void subTypes(const TypeHierarchyItem &Item,
+  void subTypes(PathRef File, const TypeHierarchyItem &Item,
                 Callback<std::vector<TypeHierarchyItem>> CB);
 
   /// Resolve type hierarchy item in the given direction.
-  void resolveTypeHierarchy(TypeHierarchyItem Item, int Resolve,
+  void resolveTypeHierarchy(PathRef File, TypeHierarchyItem Item, int Resolve,
                             TypeHierarchyDirection Direction,
                             Callback<std::optional<TypeHierarchyItem>> CB);
 
