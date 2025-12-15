@@ -1731,15 +1731,14 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
       intrinsicName = "x86.avx512bf16.mask.cvtneps2bf16.128";
       break;
-    case X86::BI__builtin_ia32_cvtneps2bf16_256_mask: {
-      intrinsicName = "x86.avx512bf16.cvtneps2bf16.256";
-      auto intrinsicResult = emitIntrinsicCallOp(
-          builder, loc, intrinsicName, convertType(expr->getType()), ops);
-      return emitX86Select(builder, loc, ops[2], intrinsicResult, ops[1]);
-    }
+    case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
     case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
-      intrinsicName = "x86.avx512bf16.cvtneps2bf16.512";
-      auto intrinsicResult = emitIntrinsicCallOp(
+      StringRef intrinName;
+      if (builtinID == builtin_ia32_cvtneps2bf16_256_mask)
+        intrinsicName = "x86.avx512bf16.cvtneps2bf16.256";
+      else
+        intrinsicName = "x86.avx512bf16.cvtneps2bf16.512";
+      mlir::Value intrinsicResult = emitIntrinsicCallOp(
           builder, loc, intrinsicName, convertType(expr->getType()), ops);
       return emitX86Select(builder, loc, ops[2], intrinsicResult, ops[1]);
     }
