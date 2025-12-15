@@ -292,6 +292,7 @@ static std::optional<mlir::Value> emitX86MaskedCompareResult(CIRGenFunction &cgf
                                               mlir::Location loc) {
   if (maskIn) {
     cgf.cgm.errorNYI(loc, "emitX86MaskedCompareResult");
+    return {};
   }
   if (numElts < 8) {
     llvm::SmallVector<mlir::Attribute> indices;
@@ -323,8 +324,10 @@ static std::optional<mlir::Value> emitX86MaskedCompare(CIRGenFunction &cgf, CIRG
 
   if (cc == 3) {
     cgf.cgm.errorNYI(loc, "emitX86MaskedCompare: cc == 3");
+    return {};
   } else if (cc == 7) {
     cgf.cgm.errorNYI(loc, "emitX86MaskedCompare cc == 7");
+    return {};
   } else {
     cir::CmpOpKind pred;
     switch (cc) {
