@@ -39,4 +39,4 @@ llvm::Expected<CompileUnitsResponseBody> CompileUnitsRequestHandler::Run(
     }
   }
   return CompileUnitsResponseBody{std::move(units)};
-};
+}
