@@ -96,12 +96,11 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
 
 protected:
-  [[nodiscard]] void* do_allocate(size_t __bytes, size_t __alignment) override; // key function
+  void* do_allocate(size_t __bytes, size_t __alignment) override; // key function
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void do_deallocate(void*, size_t, size_t) override {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool
-  do_is_equal(const memory_resource& __other) const _NOEXCEPT override {
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool do_is_equal(const memory_resource& __other) const _NOEXCEPT override {
     return this == std::addressof(__other);
   }
 

@@ -70,19 +70,17 @@ operator!=(const memory_resource& __lhs, const memory_resource& __rhs) noexcept 
 
 // [mem.res.global]
 
-[[nodiscard]] [[__gnu__::__returns_nonnull__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
+[[nodiscard, __gnu__::__returns_nonnull__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
 get_default_resource() noexcept;
 
 [[__gnu__::__returns_nonnull__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
 set_default_resource(memory_resource*) noexcept;
 
-[[nodiscard]] [[using __gnu__: __returns_nonnull__, __const__]] _LIBCPP_AVAILABILITY_PMR
-    _LIBCPP_EXPORTED_FROM_ABI memory_resource*
-    new_delete_resource() noexcept;
+[[using __gnu__: __returns_nonnull__, __const__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
+new_delete_resource() noexcept;
 
-[[nodiscard]] [[using __gnu__: __returns_nonnull__, __const__]] _LIBCPP_AVAILABILITY_PMR
-    _LIBCPP_EXPORTED_FROM_ABI memory_resource*
-    null_memory_resource() noexcept;
+[[using __gnu__: __returns_nonnull__, __const__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
+null_memory_resource() noexcept;
 
 } // namespace pmr
 

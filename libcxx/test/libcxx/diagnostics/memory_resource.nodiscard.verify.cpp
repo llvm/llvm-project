@@ -25,9 +25,9 @@ void test() {
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::pmr::get_default_resource();
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // expected-warning@+1 {{ignoring return value of function declared with const attribute}}
     std::pmr::new_delete_resource();
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // expected-warning@+1 {{ignoring return value of function declared with const attribute}}
     std::pmr::null_memory_resource();
   }
 
@@ -36,17 +36,6 @@ void test() {
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     r.upstream_resource();
-
-    struct test_protected : public std::pmr::monotonic_buffer_resource {
-      void test() {
-        std::pmr::monotonic_buffer_resource other;
-
-        // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-        do_allocate(94, 82);
-        // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-        is_equal(other);
-      }
-    };
   }
 
   {
@@ -67,17 +56,6 @@ void test() {
     r.upstream_resource();
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     r.options();
-
-    struct test_protected : public std::pmr::synchronized_pool_resource {
-      void test() {
-        std::pmr::synchronized_pool_resource other;
-
-        // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-        do_allocate(94, 82);
-        // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-        is_equal(other);
-      }
-    };
   }
 
   {
@@ -85,18 +63,7 @@ void test() {
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     r.upstream_resource();
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // expected-warning@+1 {{ignoring return value of function declared with pure attribute}}
     r.options();
-
-    struct test_protected : public std::pmr::unsynchronized_pool_resource {
-      void test() {
-        std::pmr::unsynchronized_pool_resource other;
-
-        // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-        do_allocate(94, 82);
-        // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-        is_equal(other);
-      }
-    };
   }
 }

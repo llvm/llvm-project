@@ -29,20 +29,20 @@
 void test() {
   {
     std::pmr::monotonic_buffer_resource m;
-    (void)m.do_allocate(0, 0);      // expected-error{{'do_allocate' is a protected member}}
+    m.do_allocate(0, 0);            // expected-error{{'do_allocate' is a protected member}}
     m.do_deallocate(nullptr, 0, 0); // expected-error{{'do_deallocate' is a protected member}}
-    (void)m.do_is_equal(m);         // expected-error{{'do_is_equal' is a protected member}}
+    m.do_is_equal(m);               // expected-error{{'do_is_equal' is a protected member}}
   }
   {
     std::pmr::synchronized_pool_resource m;
-    (void)m.do_allocate(0, 0);      // expected-error{{'do_allocate' is a protected member}}
+    m.do_allocate(0, 0);            // expected-error{{'do_allocate' is a protected member}}
     m.do_deallocate(nullptr, 0, 0); // expected-error{{'do_deallocate' is a protected member}}
-    (void)m.do_is_equal(m);         // expected-error{{'do_is_equal' is a protected member}}
+    m.do_is_equal(m);               // expected-error{{'do_is_equal' is a protected member}}
   }
   {
     std::pmr::unsynchronized_pool_resource m;
-    (void)m.do_allocate(0, 0);      // expected-error{{'do_allocate' is a protected member}}
+    m.do_allocate(0, 0);            // expected-error{{'do_allocate' is a protected member}}
     m.do_deallocate(nullptr, 0, 0); // expected-error{{'do_deallocate' is a protected member}}
-    (void)m.do_is_equal(m);         // expected-error{{'do_is_equal' is a protected member}}
+    m.do_is_equal(m);               // expected-error{{'do_is_equal' is a protected member}}
   }
 }
