@@ -4442,7 +4442,9 @@ public:
       DeclIDs.push_back(ID);
     };
     for (NamedDecl *D : Decls) {
-      if (isa<NamespaceDecl>(D) && D->isFromASTFile()) {
+      if (ASTReader *Chain = Writer.getChain();
+          Chain && isa<NamespaceDecl>(D) && D->isFromASTFile() &&
+          D == Chain->getKeyDeclaration(D)) {
         // In ASTReader, we stored only the key declaration of a namespace decl
         // for this TU rather than storing all of the key declarations from each
         // imported module. If we have an external namespace decl, this is that
@@ -4450,11 +4452,6 @@ public:
         // key declarations from each imported module again.
         //
         // See comment 'ASTReader::FindExternalVisibleDeclsByName' for details.
-        ASTReader *Chain = Writer.getChain();
-        assert(Chain && "An external namespace decl without an ASTReader");
-        assert(D == Chain->getKeyDeclaration(D) &&
-               "An external namespace decl that is not "
-               "the key declaration of this TU");
         Chain->forEachImportedKeyDecl(D, [&AddDecl](const Decl *D) {
           AddDecl(cast<NamedDecl>(const_cast<Decl *>(D)));
         });
