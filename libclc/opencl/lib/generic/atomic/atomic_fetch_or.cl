@@ -6,17 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__opencl_c_atomic_order_seq_cst) &&                                \
-    defined(__opencl_c_atomic_scope_device)
-
 #include <clc/atomic/clc_atomic_fetch_or.h>
-#include <clc/opencl/atomic/atomic_fetch_or.h>
+#include <clc/opencl/utils.h>
 
 #define __CLC_FUNCTION atomic_fetch_or
 #define __CLC_IMPL_FUNCTION __clc_atomic_fetch_or
 
 #define __CLC_BODY <atomic_def.inc>
 #include <clc/integer/gentype.inc>
-
-#endif // defined(__opencl_c_atomic_order_seq_cst) &&
-       // defined(__opencl_c_atomic_scope_device)

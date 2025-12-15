@@ -611,6 +611,10 @@ unsigned getHashValue(const Fortran::lower::ExplicitIterSpace::ArrayBases &x) {
       [&](const auto *p) { return HashEvaluateExpr::getHashValue(*p); }, x);
 }
 
+unsigned getHashValue(const Fortran::evaluate::Component *x) {
+  return HashEvaluateExpr::getHashValue(*x);
+}
+
 bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y) {
   const auto *empty =
@@ -640,6 +644,17 @@ bool isEqual(const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
             }
           }},
       x, y);
+}
+
+bool isEqual(const Fortran::evaluate::Component *x,
+             const Fortran::evaluate::Component *y) {
+  const auto *empty =
+      llvm::DenseMapInfo<const Fortran::evaluate::Component *>::getEmptyKey();
+  const auto *tombstone = llvm::DenseMapInfo<
+      const Fortran::evaluate::Component *>::getTombstoneKey();
+  if (x == empty || y == empty || x == tombstone || y == tombstone)
+    return x == y;
+  return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
 }
 
 void copyFirstPrivateSymbol(lower::AbstractConverter &converter,

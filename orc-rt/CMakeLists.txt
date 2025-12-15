@@ -30,6 +30,8 @@ option(ORC_RT_INCLUDE_DOCS "Build the ORC-RT documentation." ON)
 option(ORC_RT_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(ORC_RT_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(ORC_RT_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
+option(ORC_RT_ENABLE_RTTI "Enable RTTI." ON)
+option(ORC_RT_ENABLE_EXCEPTIONS "Enable exceptions." ON)
 option(ORC_RT_INCLUDE_TESTS "Build ORC-RT tests." ${LLVM_INCLUDE_TESTS})
 
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
@@ -39,6 +41,27 @@ set(CMAKE_FOLDER "orc-rt")
 
 set(ORC_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(ORC_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+# Configure RTTI and exceptions compile flags
+set(ORC_RT_COMPILE_FLAGS)
+if(ORC_RT_ENABLE_RTTI)
+  list(APPEND ORC_RT_COMPILE_FLAGS -frtti)
+else()
+  list(APPEND ORC_RT_COMPILE_FLAGS -fno-rtti)
+endif()
+
+if(ORC_RT_ENABLE_EXCEPTIONS)
+  list(APPEND ORC_RT_COMPILE_FLAGS -fexceptions)
+else()
+  list(APPEND ORC_RT_COMPILE_FLAGS -fno-exceptions)
+endif()
+
+# Generate config header
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/orc-rt-c/config.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/orc-rt-c/config.h
+  @ONLY
+)
 
 #===============================================================================
 # Setup Source Code

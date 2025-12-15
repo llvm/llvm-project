@@ -1372,8 +1372,11 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
                           .addMBB(&DestBB, RISCVII::MO_CALL);
 
   RS->enterBasicBlockEnd(MBB);
+  const TargetRegisterClass *RC = &RISCV::GPRRegClass;
+  if (STI.hasStdExtZicfilp())
+    RC = &RISCV::GPRX7RegClass;
   Register TmpGPR =
-      RS->scavengeRegisterBackwards(RISCV::GPRRegClass, MI.getIterator(),
+      RS->scavengeRegisterBackwards(*RC, MI.getIterator(),
                                     /*RestoreAfter=*/false, /*SpAdj=*/0,
                                     /*AllowSpill=*/false);
   if (TmpGPR.isValid())
@@ -1383,6 +1386,9 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
     // Pick s11(or s1 for rve) because it doesn't make a difference.
     TmpGPR = STI.hasStdExtE() ? RISCV::X9 : RISCV::X27;
+    // Force t2 if Zicfilp is on
+    if (STI.hasStdExtZicfilp())
+      TmpGPR = RISCV::X7;
 
     int FrameIndex = RVFI->getBranchRelaxationScratchFrameIndex();
     if (FrameIndex == -1)
@@ -2850,15 +2856,16 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
   MCInstrDesc const &Desc = MI.getDesc();
 
   for (const auto &[Index, Operand] : enumerate(Desc.operands())) {
+    const MachineOperand &MO = MI.getOperand(Index);
     unsigned OpType = Operand.OperandType;
-    if (OpType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
-        OpType <= RISCVOp::OPERAND_LAST_RISCV_IMM) {
-      const MachineOperand &MO = MI.getOperand(Index);
-      if (MO.isReg()) {
-        ErrInfo = "Expected a non-register operand.";
-        return false;
-      }
-      if (MO.isImm()) {
+    switch (OpType) {
+    default:
+      if (OpType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
+          OpType <= RISCVOp::OPERAND_LAST_RISCV_IMM) {
+        if (!MO.isImm()) {
+          ErrInfo = "Expected an immediate operand.";
+          return false;
+        }
         int64_t Imm = MO.getImm();
         bool Ok;
         switch (OpType) {
@@ -2886,7 +2893,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM(10)
         CASE_OPERAND_UIMM(12)
         CASE_OPERAND_UIMM(16)
-        CASE_OPERAND_UIMM(20)
         CASE_OPERAND_UIMM(32)
         CASE_OPERAND_UIMM(48)
         CASE_OPERAND_UIMM(64)
@@ -2953,7 +2959,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_SIMM(6)
         CASE_OPERAND_SIMM(10)
         CASE_OPERAND_SIMM(11)
-        CASE_OPERAND_SIMM(12)
         CASE_OPERAND_SIMM(26)
         // clang-format on
         case RISCVOp::OPERAND_SIMM5_PLUS1:
@@ -2980,9 +2985,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_SIMM20_LI:
           Ok = isInt<20>(Imm);
           break;
-        case RISCVOp::OPERAND_BARE_SIMM32:
-          Ok = isInt<32>(Imm);
-          break;
         case RISCVOp::OPERAND_UIMMLOG2XLEN:
           Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
           break;
@@ -2991,8 +2993,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = Ok && Imm != 0;
           break;
         case RISCVOp::OPERAND_CLUI_IMM:
-          Ok = (isUInt<5>(Imm) && Imm != 0) ||
-               (Imm >= 0xfffe0 && Imm <= 0xfffff);
+          Ok = (isUInt<5>(Imm) && Imm != 0) || (Imm >= 0xfffe0 && Imm <= 0xfffff);
           break;
         case RISCVOp::OPERAND_RVKRNUM:
           Ok = Imm >= 0 && Imm <= 10;
@@ -3024,9 +3025,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_COND_CODE:
           Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;
           break;
+        case RISCVOp::OPERAND_ATOMIC_ORDERING:
+          Ok = isValidAtomicOrdering(Imm);
+          break;
         case RISCVOp::OPERAND_VEC_POLICY:
-          Ok = (Imm &
-                (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC)) == Imm;
+          Ok = (Imm & (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC)) ==
+               Imm;
           break;
         case RISCVOp::OPERAND_SEW:
           Ok = (isUInt<5>(Imm) && RISCVVType::isValidSEW(1 << Imm));
@@ -3044,12 +3048,66 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_XSFMM_VTYPE:
           Ok = RISCVVType::isValidXSfmmVType(Imm);
           break;
+        case RISCVOp::OPERAND_XSFMM_TWIDEN:
+          Ok = Imm == 1 || Imm == 2 || Imm == 4;
+          break;
         }
         if (!Ok) {
           ErrInfo = "Invalid immediate";
           return false;
         }
       }
+      break;
+    case RISCVOp::OPERAND_SIMM12_LO:
+      // TODO: We could be stricter about what non-register operands are
+      // allowed.
+      if (MO.isReg()) {
+        ErrInfo = "Expected a non-register operand.";
+        return false;
+      }
+      if (MO.isImm() && !isInt<12>(MO.getImm())) {
+        ErrInfo = "Invalid immediate";
+        return false;
+      }
+      break;
+    case RISCVOp::OPERAND_UIMM20_LUI:
+    case RISCVOp::OPERAND_UIMM20_AUIPC:
+      // TODO: We could be stricter about what non-register operands are
+      // allowed.
+      if (MO.isReg()) {
+        ErrInfo = "Expected a non-register operand.";
+        return false;
+      }
+      if (MO.isImm() && !isUInt<20>(MO.getImm())) {
+        ErrInfo = "Invalid immediate";
+        return false;
+      }
+      break;
+    case RISCVOp::OPERAND_BARE_SIMM32:
+      // TODO: We could be stricter about what non-register operands are
+      // allowed.
+      if (MO.isReg()) {
+        ErrInfo = "Expected a non-register operand.";
+        return false;
+      }
+      if (MO.isImm() && !isInt<32>(MO.getImm())) {
+        ErrInfo = "Invalid immediate";
+        return false;
+      }
+      break;
+    case RISCVOp::OPERAND_AVL:
+      if (MO.isImm()) {
+        int64_t Imm = MO.getImm();
+        // VLMAX is represented as -1.
+        if (!isUInt<5>(Imm) && Imm != -1) {
+          ErrInfo = "Invalid immediate";
+          return false;
+        }
+      } else if (!MO.isReg()) {
+        ErrInfo = "Expected a register or immediate operand.";
+        return false;
+      }
+      break;
     }
   }
 
@@ -3063,7 +3121,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (Op.isReg() && Op.getReg().isValid()) {
       const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
       auto *RC = MRI.getRegClass(Op.getReg());
-      if (!RISCV::GPRRegClass.hasSubClassEq(RC)) {
+      if (!RISCV::GPRNoX0RegClass.hasSubClassEq(RC)) {
         ErrInfo = "Invalid register class for VL operand";
         return false;
       }
@@ -3721,6 +3779,11 @@ std::string RISCVInstrInfo::createMIROperandComment(
   case RISCVOp::OPERAND_XSFMM_VTYPE: {
     unsigned Imm = Op.getImm();
     RISCVVType::printXSfmmVType(Imm, OS);
+    break;
+  }
+  case RISCVOp::OPERAND_XSFMM_TWIDEN: {
+    unsigned Imm = Op.getImm();
+    OS << "w" << Imm;
     break;
   }
   case RISCVOp::OPERAND_SEW:

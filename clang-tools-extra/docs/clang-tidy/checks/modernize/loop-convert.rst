@@ -147,7 +147,7 @@ Options
 .. option:: UseCxx20ReverseRanges
 
    When set to true convert loops when in C++20 or later mode using
-   ``std::ranges::reverse_view``.
+   ``std::views::reverse``.
    Default value is `true`.
 
 .. option:: MakeReverseRangeFunction
@@ -155,7 +155,7 @@ Options
    Specify the function used to reverse an iterator pair, the function should
    accept a class with ``rbegin`` and ``rend`` methods and return a
    class with ``begin`` and ``end`` methods that call the ``rbegin`` and
-   ``rend`` methods respectively. Common examples are ``ranges::reverse_view``
+   ``rend`` methods respectively. Common examples are ``std::views::reverse``
    and ``llvm::reverse``.
    Default value is an empty string.
 
