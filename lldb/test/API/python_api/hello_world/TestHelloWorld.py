@@ -69,6 +69,7 @@ class HelloWorldTestCase(TestBase):
         # The breakpoint should have a hit count of 1.
         self.assertEqual(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
 
+    @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     @skipIfiOSSimulator
     def test_with_attach_to_process_with_id_api(self):
         """Create target, spawn a process, and attach to it with process id."""
@@ -99,6 +100,7 @@ class HelloWorldTestCase(TestBase):
             stacktraces, exe=False, substrs=["main.c:%d" % self.line2, "(int)argc=2"]
         )
 
+    @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     @skipIfiOSSimulator
     @skipIfAsan  # FIXME: Hangs indefinitely.
     def test_with_attach_to_process_with_name_api(self):

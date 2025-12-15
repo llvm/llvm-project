@@ -1776,10 +1776,12 @@ Constant *DevirtModule::importConstant(VTableSlot Slot, ArrayRef<uint64_t> Args,
                     MDNode::get(M.getContext(), {MinC, MaxC}));
   };
   unsigned AbsWidth = IntTy->getBitWidth();
-  if (AbsWidth == IntPtrTy->getBitWidth())
-    SetAbsRange(~0ull, ~0ull); // Full set.
-  else
+  if (AbsWidth == IntPtrTy->getBitWidth()) {
+    uint64_t AllOnes = IntTy->getBitMask();
+    SetAbsRange(AllOnes, AllOnes); // Full set.
+  } else {
     SetAbsRange(0, 1ull << AbsWidth);
+  }
   return C;
 }
 
