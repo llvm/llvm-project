@@ -16,14 +16,14 @@
 
 #include "ClangTidyMain.h"
 #include "../ClangTidy.h"
-#include "../ClangTidyForceLinker.h"
+#include "../ClangTidyForceLinker.h" // IWYU pragma: keep
 #include "../GlobList.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/PluginLoader.h"
+#include "llvm/Support/PluginLoader.h" // IWYU pragma: keep
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
