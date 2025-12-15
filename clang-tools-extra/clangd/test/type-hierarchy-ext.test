@@ -17,11 +17,11 @@
 # CHECK-NEXT:        "name": "Child3",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
-# CHECK-NEXT:            "character": 13,
+# CHECK-NEXT:            "character": 25,
 # CHECK-NEXT:            "line": 3
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 7,
+# CHECK-NEXT:            "character": 0,
 # CHECK-NEXT:            "line": 3
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
@@ -162,11 +162,11 @@
 # CHECK-NEXT:        "name": "Child4",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
-# CHECK-NEXT:            "character": 13,
+# CHECK-NEXT:            "character": 25,
 # CHECK-NEXT:            "line": 4
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 7,
+# CHECK-NEXT:            "character": 0,
 # CHECK-NEXT:            "line": 4
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },

@@ -1356,7 +1356,7 @@ void ClangdLSPServer::onResolveTypeHierarchy(
         }
         Reply(serializeTHIForExtension(std::move(**Resp)));
       };
-  Server->resolveTypeHierarchy(Params.item, Params.resolve, Params.direction,
+  Server->resolveTypeHierarchy(Params.item.uri.file(), Params.item, Params.resolve, Params.direction,
                                std::move(Serialize));
 }
 
@@ -1376,7 +1376,7 @@ void ClangdLSPServer::onSuperTypes(
 void ClangdLSPServer::onSubTypes(
     const ResolveTypeHierarchyItemParams &Params,
     Callback<std::vector<TypeHierarchyItem>> Reply) {
-  Server->subTypes(Params.item, std::move(Reply));
+  Server->subTypes(Params.item.uri.file(), Params.item, std::move(Reply));
 }
 
 void ClangdLSPServer::onPrepareCallHierarchy(

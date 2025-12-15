@@ -1893,18 +1893,58 @@ symbolToCallHierarchyItem(const Symbol &S, PathRef TUPath) {
   return Result;
 }
 
+// Tries to find a NamedDecl in the AST that matches the given Symbol.
+// Returns nullptr if the symbol is not found in the current AST.
+const NamedDecl *getNamedDeclFromSymbol(const Symbol &Sym,
+                                        const ParsedAST &AST) {
+  // Try to convert the symbol to a location and find the decl at that location
+  auto SymLoc = symbolToLocation(Sym, AST.tuPath());
+  if (!SymLoc)
+    return nullptr;
+
+  // Check if the symbol location is in the main file
+  if (SymLoc->uri.file() != AST.tuPath())
+    return nullptr;
+
+  // Convert LSP position to source location
+  const auto &SM = AST.getSourceManager();
+  auto CurLoc = sourceLocationInMainFile(SM, SymLoc->range.start);
+  if (!CurLoc) {
+    llvm::consumeError(CurLoc.takeError());
+    return nullptr;
+  }
+
+  // Get all decls at this location
+  auto Decls = getDeclAtPosition(const_cast<ParsedAST &>(AST), *CurLoc, {});
+  if (Decls.empty())
+    return nullptr;
+
+  // Return the first decl (usually the most specific one)
+  return Decls[0];
+}
+
 static void fillSubTypes(const SymbolID &ID,
                          std::vector<TypeHierarchyItem> &SubTypes,
-                         const SymbolIndex *Index, int Levels, PathRef TUPath) {
+                         const SymbolIndex *Index, int Levels, PathRef TUPath,
+                         const ParsedAST &AST) {
   RelationsRequest Req;
   Req.Subjects.insert(ID);
   Req.Predicate = RelationKind::BaseOf;
   Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
-    if (std::optional<TypeHierarchyItem> ChildSym =
-            symbolToTypeHierarchyItem(Object, TUPath)) {
+    std::optional<TypeHierarchyItem> ChildSym;
+
+    if (auto *ND = getNamedDeclFromSymbol(Object, AST)) {
+      ChildSym = declToTypeHierarchyItem(*ND, AST.tuPath());
+      elog("fillSubTypes: declToTypeHierarchyItem, {0}", ChildSym.has_value());
+    } else {
+      ChildSym = symbolToTypeHierarchyItem(Object, TUPath);
+      elog("fillSubTypes: symbolToTypeHierarchyItem, {0}", ChildSym.has_value());
+    }
+    if (ChildSym) {
       if (Levels > 1) {
         ChildSym->children.emplace();
-        fillSubTypes(Object.ID, *ChildSym->children, Index, Levels - 1, TUPath);
+        fillSubTypes(Object.ID, *ChildSym->children, Index, Levels - 1, TUPath,
+                     AST);
       }
       SubTypes.emplace_back(std::move(*ChildSym));
     }
@@ -2287,7 +2327,7 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
 
       if (Index) {
         if (auto ID = getSymbolID(CXXRD))
-          fillSubTypes(ID, *Result->children, Index, ResolveLevels, TUPath);
+          fillSubTypes(ID, *Result->children, Index, ResolveLevels, TUPath, AST);
       }
     }
     Results.emplace_back(std::move(*Result));
@@ -2319,9 +2359,9 @@ superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index) {
 }
 
 std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,
-                                        const SymbolIndex *Index) {
+                                        const SymbolIndex *Index, const ParsedAST &AST) {
   std::vector<TypeHierarchyItem> Results;
-  fillSubTypes(Item.data.symbolID, Results, Index, 1, Item.uri.file());
+  fillSubTypes(Item.data.symbolID, Results, Index, 1, Item.uri.file(), AST);
   for (auto &ChildSym : Results)
     ChildSym.data.parents = {Item.data};
   return Results;
@@ -2329,7 +2369,8 @@ std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,
 
 void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
                           TypeHierarchyDirection Direction,
-                          const SymbolIndex *Index) {
+                          const SymbolIndex *Index,
+                          const ParsedAST &AST) {
   // We only support typeHierarchy/resolve for children, because for parents
   // we ignore ResolveLevels and return all levels of parents eagerly.
   if (!Index || Direction == TypeHierarchyDirection::Parents ||
@@ -2338,37 +2379,7 @@ void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
 
   Item.children.emplace();
   fillSubTypes(Item.data.symbolID, *Item.children, Index, ResolveLevels,
-               Item.uri.file());
-}
-
-// Tries to find a NamedDecl in the AST that matches the given Symbol.
-// Returns nullptr if the symbol is not found in the current AST.
-const NamedDecl *getNamedDeclFromSymbol(const Symbol &Sym,
-                                        const ParsedAST &AST) {
-  // Try to convert the symbol to a location and find the decl at that location
-  auto SymLoc = symbolToLocation(Sym, AST.tuPath());
-  if (!SymLoc)
-    return nullptr;
-
-  // Check if the symbol location is in the main file
-  if (SymLoc->uri.file() != AST.tuPath())
-    return nullptr;
-
-  // Convert LSP position to source location
-  const auto &SM = AST.getSourceManager();
-  auto CurLoc = sourceLocationInMainFile(SM, SymLoc->range.start);
-  if (!CurLoc) {
-    llvm::consumeError(CurLoc.takeError());
-    return nullptr;
-  }
-
-  // Get all decls at this location
-  auto Decls = getDeclAtPosition(const_cast<ParsedAST &>(AST), *CurLoc, {});
-  if (Decls.empty())
-    return nullptr;
-
-  // Return the first decl (usually the most specific one)
-  return Decls[0];
+               Item.uri.file(), AST);
 }
 
 std::vector<CallHierarchyItem>
