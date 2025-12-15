@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
 ! Test allocatable dummy argument on callee side
 
@@ -63,11 +63,13 @@ subroutine test_char_scalar_explicit_dynamic(c, n)
   ! CHECK:  %[[len:.*]] = arith.select %[[cmp]], %[[raw_len]], %[[c0_i32]] : i32
   n = n + 1
   ! CHECK: fir.store {{.*}} to %arg1 : !fir.ref<i32>
-  call foo1(c)
-  ! CHECK: %[[box:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+  call foo1(c(1))
+  ! CHECK: %[[box:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>>
   ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
+  ! [...] address computation
+  ! CHECK: fir.coordinate_of
   ! CHECK-DAG: %[[len_cast:.*]] = fir.convert %[[len]] : (i32) -> index
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %[[len_cast]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %{{.*}}, %[[len_cast]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
