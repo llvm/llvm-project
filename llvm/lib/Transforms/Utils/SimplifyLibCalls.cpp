@@ -3195,11 +3195,6 @@ Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
 
   // TODO : Handle undef values
-  // Propagate poison if any
-  if (isa<PoisonValue>(CI->getArgOperand(0)))
-    return CI->getArgOperand(0);
-  if (isa<PoisonValue>(CI->getArgOperand(1)))
-    return CI->getArgOperand(1);
 
   // Constant folding will be handled by ConstantFoldLibCall2
   return nullptr;
