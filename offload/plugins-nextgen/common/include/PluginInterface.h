@@ -1566,27 +1566,11 @@ public:
   /// object and return immediately.
   int32_t async_barrier(omp_interop_val_t *Interop);
 
-  /// Helper Range class to iterate over devices in the plugin
-  /// Used by getDeviceRange
-  class DevicesRangeTy {
-    using iterator = llvm::SmallVector<GenericDeviceTy *>::iterator;
-
-    iterator BeginIt;
-    iterator EndIt;
-
-  public:
-    DevicesRangeTy(iterator BeginIt, iterator EndIt)
-        : BeginIt(BeginIt), EndIt(EndIt) {}
-
-    auto &begin() { return BeginIt; }
-    auto &end() { return EndIt; }
-  };
-
   /// Returns a Range over all the devices in the plugin that can be
   /// used in a for loop:
   /// for (&Device : GenericPluginRef.getDevicesRange()) {
-  DevicesRangeTy getDevicesRange() {
-    return DevicesRangeTy(Devices.begin(), Devices.end());
+  auto getDevicesRange() {
+    return llvm::make_range(Devices.begin(), Devices.end());
   }
 
 private:
