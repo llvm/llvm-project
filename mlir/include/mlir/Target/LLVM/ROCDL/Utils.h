@@ -100,7 +100,7 @@ protected:
 
   /// Compiles assembly to a binary.
   virtual std::optional<SmallVector<char, 0>>
-  compileToBinary(const std::string &serializedISA);
+  compileToBinary(StringRef serializedISA);
 
   /// Default implementation of `ModuleToObject::moduleToObject`.
   std::optional<SmallVector<char, 0>>

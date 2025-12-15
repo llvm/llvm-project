@@ -212,12 +212,10 @@ public:
   gpu::GPUModuleOp getOperation();
 
   /// Compiles PTX to cubin using `ptxas`.
-  std::optional<SmallVector<char, 0>>
-  compileToBinary(const std::string &ptxCode);
+  std::optional<SmallVector<char, 0>> compileToBinary(StringRef ptxCode);
 
   /// Compiles PTX to cubin using the `nvptxcompiler` library.
-  std::optional<SmallVector<char, 0>>
-  compileToBinaryNVPTX(const std::string &ptxCode);
+  std::optional<SmallVector<char, 0>> compileToBinaryNVPTX(StringRef ptxCode);
 
   /// Serializes the LLVM module to an object format, depending on the
   /// compilation target selected in target options.
@@ -347,7 +345,7 @@ static void setOptionalCommandlineArguments(NVVMTargetAttr target,
 // TODO: clean this method & have a generic tool driver or never emit binaries
 // with this mechanism and let another stage take care of it.
 std::optional<SmallVector<char, 0>>
-NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
+NVPTXSerializer::compileToBinary(StringRef ptxCode) {
   // Determine if the serializer should create a fatbinary with the PTX embeded
   // or a simple CUBIN binary.
   const bool createFatbin =
@@ -570,7 +568,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
   } while (false)
 
 std::optional<SmallVector<char, 0>>
-NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
+NVPTXSerializer::compileToBinaryNVPTX(StringRef ptxCode) {
   Location loc = getOperation().getLoc();
   nvPTXCompilerHandle compiler = nullptr;
   nvPTXCompileResult status;
@@ -697,7 +695,7 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
     return std::nullopt;
   }
   moduleToObjectTimer.startTimer();
-  FailureOr<std::string> serializedISA =
+  FailureOr<SmallString<0>> serializedISA =
       translateModuleToISA(llvmModule, **targetMachine,
                            [&]() { return getOperation().emitError(); });
   moduleToObjectTimer.stopTimer();

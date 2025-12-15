@@ -205,11 +205,11 @@ LogicalResult ModuleToObject::optimizeModule(llvm::Module &module,
   return success();
 }
 
-FailureOr<std::string> ModuleToObject::translateModuleToISA(
+FailureOr<SmallString<0>> ModuleToObject::translateModuleToISA(
     llvm::Module &llvmModule, llvm::TargetMachine &targetMachine,
     function_ref<InFlightDiagnostic()> emitError) {
-  std::string targetISA;
-  llvm::raw_string_ostream stream(targetISA);
+  SmallString<0> targetISA;
+  llvm::raw_svector_ostream stream(targetISA);
 
   { // Drop pstream after this to prevent the ISA from being stuck buffering
     llvm::buffer_ostream pstream(stream);

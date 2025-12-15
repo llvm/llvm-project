@@ -381,7 +381,7 @@ mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
 }
 
 std::optional<SmallVector<char, 0>>
-SerializeGPUModuleBase::compileToBinary(const std::string &serializedISA) {
+SerializeGPUModuleBase::compileToBinary(StringRef serializedISA) {
   auto errCallback = [&]() { return getOperation().emitError(); };
   // Assemble the ISA.
   FailureOr<SmallVector<char, 0>> isaBinary = ROCDL::assembleIsa(
@@ -421,7 +421,7 @@ std::optional<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
   }
 
   // Translate the Module to ISA.
-  FailureOr<std::string> serializedISA =
+  FailureOr<SmallString<0>> serializedISA =
       translateModuleToISA(llvmModule, **targetMachine,
                            [&]() { return getOperation().emitError(); });
   if (failed(serializedISA)) {

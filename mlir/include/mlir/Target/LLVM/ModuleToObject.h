@@ -45,8 +45,7 @@ public:
   virtual std::optional<SmallVector<char, 0>> run();
 
   /// Translate LLVM module to textual ISA.
-  /// TODO: switch to SmallString
-  static FailureOr<std::string>
+  static FailureOr<SmallString<0>>
   translateModuleToISA(llvm::Module &llvmModule,
                        llvm::TargetMachine &targetMachine,
                        function_ref<InFlightDiagnostic()> emitError);

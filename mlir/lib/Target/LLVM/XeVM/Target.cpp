@@ -108,7 +108,7 @@ gpu::GPUModuleOp SerializeGPUModuleBase::getGPUModuleOp() {
 // - L0 runtime consumes IL and is external to MLIR codebase (rt wrappers).
 // - `ocloc` tool can be "queried" from within MLIR.
 std::optional<SmallVector<char, 0>>
-SerializeGPUModuleBase::compileToBinary(const std::string &asmStr,
+SerializeGPUModuleBase::compileToBinary(StringRef asmStr,
                                         StringRef inputFormat) {
   using TmpFile = std::pair<llvm::SmallString<128>, llvm::FileRemover>;
   // Find the `ocloc` tool.
@@ -301,7 +301,7 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
   // Return SPIRV if the compilation target is `assembly`.
   if (targetOptions.getCompilationTarget() ==
       gpu::CompilationTarget::Assembly) {
-    FailureOr<std::string> serializedISA =
+    FailureOr<SmallString<0>> serializedISA =
         translateModuleToISA(llvmModule, **targetMachine,
                              [&]() { return getGPUModuleOp().emitError(); });
     if (failed(serializedISA)) {

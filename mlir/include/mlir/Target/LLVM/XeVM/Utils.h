@@ -40,7 +40,7 @@ public:
   gpu::GPUModuleOp getGPUModuleOp();
 
   /// Compiles to native code using `ocloc`.
-  std::optional<SmallVector<char, 0>> compileToBinary(const std::string &asmStr,
+  std::optional<SmallVector<char, 0>> compileToBinary(StringRef asmStr,
                                                       StringRef inputFormat);
 
 protected:
