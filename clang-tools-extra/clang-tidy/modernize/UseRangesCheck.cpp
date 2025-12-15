@@ -197,8 +197,7 @@ std::optional<UseRangesCheck::ReverseIteratorDescriptor>
 UseRangesCheck::getReverseDescriptor() const {
   static const std::pair<StringRef, StringRef> Refs[] = {
       {"::std::rbegin", "::std::rend"}, {"::std::crbegin", "::std::crend"}};
-  return ReverseIteratorDescriptor{UseReversePipe ? "std::views::reverse"
-                                                  : "std::ranges::reverse_view",
-                                   "<ranges>", Refs, UseReversePipe};
+  return ReverseIteratorDescriptor{"std::views::reverse", "<ranges>", Refs,
+                                   UseReversePipe};
 }
 } // namespace clang::tidy::modernize

@@ -484,6 +484,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(
       std::make_unique<ReorderFunctions>(PrintReorderedFunctions));
 
+  // Produce the list of functions for the output file in a sorted order.
+  Manager.registerPass(std::make_unique<PopulateOutputFunctions>());
+
   // This is the second run of the SplitFunctions pass required by certain
   // splitting strategies (e.g. cdsplit). Running the SplitFunctions pass again
   // after ReorderFunctions allows the finalized function order to be utilized
