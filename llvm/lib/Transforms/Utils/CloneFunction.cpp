@@ -496,6 +496,24 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
           MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore")));
 
       NewInst = CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
+    } else if (auto *ICall = dyn_cast<IntrinsicInst>(&OldInst)) {
+      Intrinsic::ID IID = ICall->getIntrinsicID();
+      if (IntrinsicInst::isFloatingPointOperation(IID)) {
+        // The function call needs to be cloned, but the bundles attached to it
+        // may require update.
+        if (const BasicBlock *BB = OldInst.getParent())
+          if (const Function *F = BB->getParent())
+            // Instructions taken from default mode functions acquire "ignore"
+            // exception handling attribute.
+            if (!F->getAttributes().hasFnAttr(Attribute::StrictFP) &&
+                !ICall->getOperandBundle(LLVMContext::OB_fp_except)) {
+              SmallVector<OperandBundleDef, 1> NewBundles;
+              ICall->getOperandBundlesAsDefs(NewBundles);
+              addExceptionBundle(F->getContext(), NewBundles, fp::ebIgnore);
+              NewInst = CallInst::Create(const_cast<IntrinsicInst *>(ICall),
+                                         NewBundles);
+            }
+      }
     }
   }
   if (!NewInst)
