@@ -20,7 +20,7 @@
 #include "L0Defs.h"
 
 namespace llvm::omp::target::plugin {
-/// Command submission mode
+/// Command submission mode.
 enum class CommandModeTy { Sync = 0, Async, AsyncOrdered };
 
 /// Specialization constants used for a module compilation.
@@ -60,7 +60,7 @@ public:
   }
 };
 
-/// L0 Plugin flags
+/// L0 Plugin flags.
 struct L0OptionFlagsTy {
   uint64_t UseMemoryPool : 1;
   uint64_t Reserved : 63;
@@ -68,32 +68,32 @@ struct L0OptionFlagsTy {
 };
 
 struct L0OptionsTy {
-  /// Binary flags
+  /// Binary flags.
   L0OptionFlagsTy Flags;
 
-  /// Staging buffer size
+  /// Staging buffer size.
   size_t StagingBufferSize = L0StagingBufferSize;
-
-  /// Staging buffer count
+.
+  /// Staging buffer count.
   size_t StagingBufferCount = L0StagingBufferCount;
 
-  /// Memory pool parameters
-  /// MemPoolInfo[MemType] = {AllocMax(MB), Capacity, PoolSize(MB)}
   struct MemPoolConfigTy {
     bool Use;
     int32_t AllocMax;
     int32_t Capacity;
     int32_t PoolSize;
   };
+  /// Memory pool default parameters for each allocation kind:
+  /// {UseByDefault, AllocMax(MB), Capacity, PoolSize(MB)}
   std::array<MemPoolConfigTy, 3> MemPoolConfig{
       MemPoolConfigTy{true, 1, 4, 256},  // TARGET_ALLOC_DEVICE
       MemPoolConfigTy{true, 1, 4, 256},  // TARGET_ALLOC_HOST
       MemPoolConfigTy{true, 8, 4, 256}}; // TARGET_ALLOC_SHARED
 
-  /// Parameters for memory pools dedicated to reduction scratch space
+  /// Parameters for memory pools dedicated to reduction scratch space.
   std::array<int32_t, 3> ReductionPoolInfo{256, 8, 8192};
 
-  /// Oversubscription rate for normal kernels
+  /// Oversubscription rate for normal kernels.
   uint32_t SubscriptionRate = 4;
 
   /// Loop kernels with known ND-range may be known to have
@@ -114,7 +114,7 @@ struct L0OptionsTy {
   /// kernels (which poorly expose parallelism in the first place).
   double ThinThreadsThreshold = 0.1;
 
-  // Compilation options for IGC
+  // Compilation options for IGC.
   // OpenCL 2.0 builtins (like atomic_load_explicit and etc.) are used by
   // runtime, so we have to explicitly specify the "-cl-std=CL2.0" compilation
   // option. With it, the SPIR-V will be converted to LLVM IR with OpenCL 2.0
@@ -138,14 +138,14 @@ struct L0OptionsTy {
   /// (ZET_ENABLE_PROGRAM_DEBUGGING=1).
   bool ZeDebugEnabled = false;
 
-  bool Init = false; // have the options already been processed
+  bool Init = false; // Have the options already been processed.
 
-  // Allocator for long-lived allocations (e.g. spec constants)
+  // Allocator for long-lived allocations (e.g. spec constants).
   BumpPtrAllocator Allocator;
 
   L0OptionsTy() : CommonSpecConstants(Allocator) {}
 
-  /// Read environment variables
+  /// Read environment variables.
   void processEnvironmentVars();
 
   void init() {

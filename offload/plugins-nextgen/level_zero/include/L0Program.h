@@ -19,7 +19,7 @@ namespace llvm::omp::target::plugin {
 
 class L0DeviceTy;
 
-/// Program data to be initialized by plugin
+/// Program data to be initialized by plugin.
 struct ProgramDataTy {
   int Initialized = 0;
   int NumDevices = 0;
@@ -35,24 +35,24 @@ struct ProgramDataTy {
 
 /// Level Zero program that can contain multiple modules.
 class L0ProgramTy : public DeviceImageTy {
-  /// Handle multiple modules within a single target image
+  /// Handle multiple modules within a single target image.
   llvm::SmallVector<ze_module_handle_t> Modules;
 
   /// Map of kernel names to Modules
   std::unordered_map<std::string, ze_module_handle_t> KernelsToModuleMap;
 
-  /// List of kernels built for this image
+  /// List of kernels built for this image.
   /// We need to delete them ourselves as the main library is not doing
-  /// that right now
+  /// that right now.
   std::list<L0KernelTy *> Kernels;
 
-  /// Module that contains global data including device RTL
+  /// Module that contains global data including device RTL.
   ze_module_handle_t GlobalModule = nullptr;
 
-  /// Requires module link
+  /// Requires module link.
   bool RequiresModuleLink = false;
 
-  /// Is this module library
+  /// Is this module library.
   bool IsLibModule = false;
 
   /// Build a single module with the given image, build option, and format.
@@ -64,7 +64,7 @@ class L0ProgramTy : public DeviceImageTy {
   void replaceDriverOptsWithBackendOpts(const L0DeviceTy &Device,
                                         std::string &Options) const;
 
-  /// Check if the image should be handled as a library module
+  /// Check if the image should be handled as a library module.
   void setLibModule();
 
   L0DeviceTy &getL0Device() const;
@@ -87,13 +87,13 @@ public:
     return static_cast<L0ProgramTy &>(Device);
   }
 
-  /// Build modules from the target image description
+  /// Build modules from the target image description.
   Error buildModules(const std::string_view BuildOptions);
 
   /// Link modules stored in \p Modules.
   Error linkModules();
 
-  /// Loads the kernels names from all modules
+  /// Loads the kernels names from all modules.
   Error loadModuleKernels();
 
   /// Read data from the location in the device image which corresponds to the
@@ -110,7 +110,7 @@ public:
   /// then the lookup falls back to non-OpenMP specific lookup on the device.
   Expected<void *> getOffloadVarDeviceAddr(const char *Name) const;
 
-  /// Returns the handle of a module that contains a given Kernel name
+  /// Returns the handle of a module that contains a given Kernel name.
   ze_module_handle_t findModuleFromKernelName(const char *KernelName) const {
     auto K = KernelsToModuleMap.find(std::string(KernelName));
     if (K == KernelsToModuleMap.end())

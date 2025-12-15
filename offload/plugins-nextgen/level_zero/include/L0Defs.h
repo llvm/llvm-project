@@ -27,19 +27,19 @@ enum class AllocOptionTy : int32_t {
 
 namespace llvm::omp::target::plugin {
 
-/// Default alignmnet for allocation
+/// Default alignmnet for allocation.
 constexpr size_t L0DefaultAlignment = 0;
-/// Default staging buffer size for host to device copy (16KB)
+/// Default staging buffer size for host to device copy (16KB).
 constexpr size_t L0StagingBufferSize = (1 << 14);
-/// Default staging buffer count
+/// Default staging buffer count.
 constexpr size_t L0StagingBufferCount = 64;
-/// USM allocation threshold where preallocation does not pay off (128MB)
+/// USM allocation threshold where preallocation does not pay off (128MB).
 constexpr size_t L0UsmPreAllocThreshold = (128 << 20);
-/// Host USM allocation threshold where preallocation does not pay off (8MB)
+/// Host USM allocation threshold where preallocation does not pay off (8MB).
 constexpr size_t L0HostUsmPreAllocThreshold = (8 << 20);
-/// Maximum wait time
+/// Maximum wait time.
 constexpr uint64_t L0DefaultTimeout = std::numeric_limits<uint64_t>::max();
-/// Generic L0 handle type
+/// Generic L0 handle type.
 using ZeHandleTy = void *;
 
 using error::ErrorCode;

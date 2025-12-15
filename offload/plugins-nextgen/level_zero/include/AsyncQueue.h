@@ -19,18 +19,17 @@
 
 namespace llvm::omp::target::plugin {
 
-/// Abstract queue that supports asynchronous command submission
+/// Abstract queue that supports asynchronous command submission.
 struct AsyncQueueTy {
-  /// List of events attached to submitted commands
+  /// List of events attached to submitted commands.
   llvm::SmallVector<ze_event_handle_t> WaitEvents;
-  /// Pending staging buffer to host copies
+  /// Pending staging buffer to host copies.
   llvm::SmallVector<std::tuple<void *, void *, size_t>> H2MList;
-  /// Pending USM memory copy commands that must wait for kernel completion
+  /// Pending USM memory copy commands that must wait for kernel completion.
   llvm::SmallVector<std::tuple<const void *, void *, size_t>> USM2MList;
-  /// Kernel event not signaled
+  /// Kernel event not signaled.
   ze_event_handle_t KernelEvent = nullptr;
-  /// Is this queue being used currently
-  /// Clear data
+  /// Clear data.
   void reset() {
     WaitEvents.clear();
     H2MList.clear();

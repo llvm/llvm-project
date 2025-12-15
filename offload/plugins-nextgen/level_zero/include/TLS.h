@@ -22,9 +22,9 @@
 
 namespace llvm::omp::target::plugin {
 
-/// All thread-local data used by the Plugin
+/// All thread-local data used by the Plugin.
 class L0ThreadTLSTy {
-  /// Async info tracking
+  /// Async info tracking.
   static constexpr int32_t PerThreadQueues = 10;
   std::bitset<PerThreadQueues> InUseQueues{0};
   AsyncQueueTy AsyncQueues[PerThreadQueues];
@@ -40,7 +40,7 @@ public:
   AsyncQueueTy *getAsyncQueue() {
     AsyncQueueTy *Ret = nullptr;
     if (!InUseQueues.all()) {
-      // there's a free queue in this thread, find it
+      // there's a free queue in this thread, find it.
       for (size_t Queue = 0; Queue < PerThreadQueues; Queue++) {
         if (!InUseQueues.test(Queue)) {
           InUseQueues.set(Queue);

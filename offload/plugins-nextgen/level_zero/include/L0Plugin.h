@@ -33,20 +33,20 @@ private:
   };
   llvm::SmallVector<DeviceInfoTy> DetectedDevices;
 
-  /// Context (and Driver) specific data
+  /// Context (and Driver) specific data.
   std::list<L0ContextTy> ContextList;
 
-  // Table containing per-thread information using TLS
+  // Table containing per-thread information using TLS.
   L0ThreadTblTy ThreadTLSTable;
-  // Table containing per-thread information for each device using TLS
+  // Table containing per-thread information for each device using TLS.
   L0DeviceTLSTableTy DeviceTLSTable;
-  // Table containing per-thread information for each Context using TLS
+  // Table containing per-thread information for each Context using TLS.
   L0ContextTLSTableTy ContextTLSTable;
 
-  /// L0 plugin global options
+  /// L0 plugin global options.
   static L0OptionsTy Options;
 
-  /// Common pool of AsyncQueue
+  /// Common pool of AsyncQueue.
   AsyncQueuePoolTy AsyncQueuePool;
 
   L0ThreadTLSTy &getTLS() { return ThreadTLSTable.get(); }
@@ -90,8 +90,7 @@ public:
       AsyncQueuePool.release(Queue);
   }
 
-  // Plugin interface
-
+  // Plugin interface.
   Expected<int32_t> initImpl() override;
   Error deinitImpl() override;
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,

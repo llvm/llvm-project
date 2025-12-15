@@ -50,7 +50,7 @@ enum class PCIIdTy : int32_t {
   BMG             = 0xE200,
 };
 
-/// Device type enumeration common to compiler and runtime
+/// Device type enumeration common to compiler and runtime.
 enum class DeviceArchTy : uint64_t {
   DeviceArch_None   = 0,
   DeviceArch_Gen    = 0x0001, // Gen 9, Gen 11 or Xe
@@ -75,28 +75,28 @@ struct L0DeviceIdTy {
 };
 
 class L0DeviceTLSTy {
-  /// Command list for each device
+  /// Command list for each device.
   ze_command_list_handle_t CmdList = nullptr;
 
-  /// Main copy command list for each device
+  /// Main copy command list for each device.
   ze_command_list_handle_t CopyCmdList = nullptr;
 
-  /// Command queue for each device
+  /// Command queue for each device.
   ze_command_queue_handle_t CmdQueue = nullptr;
 
-  /// Main copy command queue for each device
+  /// Main copy command queue for each device.
   ze_command_queue_handle_t CopyCmdQueue = nullptr;
 
-  /// Immediate command list for each device
+  /// Immediate command list for each device.
   ze_command_list_handle_t ImmCmdList = nullptr;
 
-  /// Immediate copy command list for each device
+  /// Immediate copy command list for each device.
   ze_command_list_handle_t ImmCopyCmdList = nullptr;
 
 public:
   L0DeviceTLSTy() = default;
   ~L0DeviceTLSTy() {
-    // assert all fields are nullptr on destruction
+    // assert all fields are nullptr on destruction.
     assert(!CmdList && !CopyCmdList && !CmdQueue && !CopyCmdQueue &&
            !ImmCmdList && !ImmCopyCmdList &&
            "L0DeviceTLSTy destroyed without clearing resources");
@@ -113,7 +113,7 @@ public:
   }
 
   Error deinit() {
-    // destroy all lists and queues
+    // destroy all lists and queues.
     if (CmdList)
       CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
     if (CopyCmdList)
@@ -178,46 +178,46 @@ struct L0DeviceTLSTableTy
 };
 
 class L0DeviceTy final : public GenericDeviceTy {
-  // Level Zero Context for this Device
+  // Level Zero Context for this Device.
   L0ContextTy &l0Context;
 
-  // Level Zero handle  for this Device
+  // Level Zero handle  for this Device.
   ze_device_handle_t zeDevice;
-  // Device Properties
+  // Device Properties.
   ze_device_properties_t DeviceProperties{};
   ze_device_compute_properties_t ComputeProperties{};
   ze_device_memory_properties_t MemoryProperties{};
   ze_device_cache_properties_t CacheProperties{};
 
-  /// Devices' default target allocation kind for internal allocation
+  /// Devices' default target allocation kind for internal allocation.
   int32_t AllocKind = TARGET_ALLOC_DEVICE;
 
   DeviceArchTy DeviceArch = DeviceArchTy::DeviceArch_None;
 
   std::string DeviceName;
 
-  /// Common indirect access flags for this device
+  /// Common indirect access flags for this device.
   ze_kernel_indirect_access_flags_t IndirectAccessFlags = 0;
 
-  /// Device UUID for toplevel devices only
+  /// Device UUID for toplevel devices only.
   std::string DeviceUuid;
 
-  /// L0 Device ID as string
+  /// L0 Device ID as string.
   std::string zeId;
 
-  /// Command queue group ordinals for each device
+  /// Command queue group ordinals for each device.
   static constexpr uint32_t MaxOrdinal =
       std::numeric_limits<decltype(MaxOrdinal)>::max();
   std::pair<uint32_t, uint32_t> ComputeOrdinal{MaxOrdinal, 0};
-  /// Command queue group ordinals for copying
+  /// Command queue group ordinals for copying.
   std::pair<uint32_t, uint32_t> CopyOrdinal{MaxOrdinal, 0};
 
-  /// Command queue index for each device
+  /// Command queue index for each device.
   uint32_t ComputeIndex = 0;
 
   bool IsAsyncEnabled = false;
 
-  // lock for this device
+  /// Lock for this device.
   std::mutex Mutex;
 
   /// Contains all modules (possibly from multiple device images) to handle
@@ -227,15 +227,15 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// L0 programs created for this device
   std::list<L0ProgramTy> Programs;
 
-  /// MemAllocator for this device
+  /// MemAllocator for this device.
   MemAllocatorTy MemAllocator;
 
   DeviceArchTy computeArch() const;
 
-  /// Get default compute group ordinal. Returns Ordinal-NumQueues pair
+  /// Get default compute group ordinal. Returns Ordinal-NumQueues pair.
   std::pair<uint32_t, uint32_t> findComputeOrdinal();
 
-  /// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair
+  /// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair.
   std::pair<uint32_t, uint32_t> findCopyOrdinal(bool LinkCopy = false);
 
 public:
@@ -306,7 +306,7 @@ public:
     return Plugin::success();
   }
 
-  // add a new program to the device. Return a reference to the new program
+  // Add a new program to the device. Return a reference to the new program.
   L0ProgramTy &addProgram(int32_t ImageId,
                           std::unique_ptr<MemoryBuffer> &&Image) {
     Programs.emplace_back(ImageId, *this, std::move(Image));
@@ -315,7 +315,7 @@ public:
 
   const L0ProgramTy &getLastProgram() const { return Programs.back(); }
   L0ProgramTy &getLastProgram() { return Programs.back(); }
-  // Device properties getters
+  // Device properties getters.
   uint32_t getVendorId() const { return DeviceProperties.vendorId; }
   bool isGPU() const { return DeviceProperties.type == ZE_DEVICE_TYPE_GPU; }
 
@@ -421,46 +421,46 @@ public:
 
   void reportDeviceInfo() const;
 
-  // Command queues related functions
-  /// Create a command list with given ordinal and flags
+  // Command queues related functions.
+  /// Create a command list with given ordinal and flags.
   Expected<ze_command_list_handle_t>
   createCmdList(ze_context_handle_t Context, ze_device_handle_t Device,
                 uint32_t Ordinal, ze_command_list_flags_t Flags,
                 const std::string_view DeviceIdStr);
 
-  /// Create a command list with default flags
+  /// Create a command list with default flags.
   Expected<ze_command_list_handle_t>
   createCmdList(ze_context_handle_t Context, ze_device_handle_t Device,
                 uint32_t Ordinal, const std::string_view DeviceIdStr);
 
   Expected<ze_command_list_handle_t> getCmdList();
 
-  /// Create a command queue with given ordinal and flags
+  /// Create a command queue with given ordinal and flags.
   Expected<ze_command_queue_handle_t>
   createCmdQueue(ze_context_handle_t Context, ze_device_handle_t Device,
                  uint32_t Ordinal, uint32_t Index,
                  ze_command_queue_flags_t Flags,
                  const std::string_view DeviceIdStr);
 
-  /// Create a command queue with default flags
+  /// Create a command queue with default flags.
   Expected<ze_command_queue_handle_t>
   createCmdQueue(ze_context_handle_t Context, ze_device_handle_t Device,
                  uint32_t Ordinal, uint32_t Index,
                  const std::string_view DeviceIdStr, bool InOrder = false);
 
-  /// Create a new command queue for the given OpenMP device ID
+  /// Create a new command queue for the given OpenMP device ID.
   Expected<ze_command_queue_handle_t> createCommandQueue(bool InOrder = false);
 
-  /// Create an immediate command list
+  /// Create an immediate command list.
   Expected<ze_command_list_handle_t>
   createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder = false);
 
-  /// Create an immediate command list for computing
+  /// Create an immediate command list for computing.
   Expected<ze_command_list_handle_t> createImmCmdList(bool InOrder = false) {
     return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder);
   }
 
-  /// Create an immediate command list for copying
+  /// Create an immediate command list for copying.
   Expected<ze_command_list_handle_t> createImmCopyCmdList();
   Expected<ze_command_queue_handle_t> getCmdQueue();
   Expected<ze_command_list_handle_t> getCopyCmdList();
@@ -468,38 +468,38 @@ public:
   Expected<ze_command_list_handle_t> getImmCmdList();
   Expected<ze_command_list_handle_t> getImmCopyCmdList();
 
-  /// Enqueue copy command
+  /// Enqueue copy command.
   Error enqueueMemCopy(void *Dst, const void *Src, size_t Size,
                        __tgt_async_info *AsyncInfo = nullptr,
                        bool UseCopyEngine = true);
 
-  /// Enqueue asynchronous copy command
+  /// Enqueue asynchronous copy command.
   Error enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
                             __tgt_async_info *AsyncInfo, bool CopyTo = true);
 
-  /// Enqueue fill command
+  /// Enqueue fill command.
   Error enqueueMemFill(void *Ptr, const void *Pattern, size_t PatternSize,
                        size_t Size);
 
-  /// Driver related functions
+  /// Driver related functions.
 
-  /// Reurn the driver handle for this device
+  /// Reurn the driver handle for this device.
   ze_driver_handle_t getZeDriver() const { return l0Context.getZeDriver(); }
 
-  /// Return context for this device
+  /// Return context for this device.
   ze_context_handle_t getZeContext() const { return l0Context.getZeContext(); }
 
-  /// Return driver API version for this device
+  /// Return driver API version for this device.
   ze_api_version_t getDriverAPIVersion() const {
     return l0Context.getDriverAPIVersion();
   }
 
-  /// Return an event from the driver associated to this device
+  /// Return an event from the driver associated to this device.
   Expected<ze_event_handle_t> getEvent() {
     return l0Context.getEventPool().getEvent();
   }
 
-  /// Release event to the pool associated to this device
+  /// Release event to the pool associated to this device.
   Error releaseEvent(ze_event_handle_t Event) {
     return l0Context.getEventPool().releaseEvent(Event, *this);
   }
@@ -508,16 +508,16 @@ public:
 
   bool supportsLargeMem() const { return l0Context.supportsLargeMem(); }
 
-  // Allocation related routines
+  // Allocation related routines.
 
-  /// Data alloc
+  /// Data alloc.
   Expected<void *> dataAlloc(
       size_t Size, size_t Align, int32_t Kind, intptr_t Offset, bool UserAlloc,
       bool DevMalloc = false,
       uint32_t MemAdvice = std::numeric_limits<decltype(MemAdvice)>::max(),
       AllocOptionTy AllocOpt = AllocOptionTy::ALLOC_OPT_NONE);
 
-  /// Data delete
+  /// Data delete.
   Error dataDelete(void *Ptr);
 
   /// Return the memory allocation type for the specified memory location.
@@ -540,7 +540,7 @@ public:
 
   Error makeMemoryResident(void *Mem, size_t Size);
 
-  // Generic device interface implementation
+  // Generic device interface implementation.
   Expected<DeviceImageTy *>
   loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
                  int32_t ImageId) override;
@@ -591,7 +591,7 @@ public:
   // using the events from the data submission APIs so we don't need to support
   // these routines.
   // They still need to report succes to indicate the event are handled
-  // somewhere waitEvent and syncEvent should remain unimplemented
+  // somewhere waitEvent and syncEvent should remain unimplemented.
   Expected<bool> isEventCompleteImpl(void *EventPtr,
                                      AsyncInfoWrapperTy &) override {
     return true;

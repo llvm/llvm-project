@@ -23,7 +23,7 @@
       Rc = Fn(__VA_ARGS__);                                                    \
   } while (0)
 
-/// For non-thread-safe functions
+/// For non-thread-safe functions.
 #define CALL_ZE_RET_MTX(Ret, Fn, Mtx, ...)                                     \
   do {                                                                         \
     Mtx.lock();                                                                \
@@ -42,7 +42,7 @@
     Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d, %s",          \
     #Fn, rc, getZeErrorName(rc)), Fn, Mtx, __VA_ARGS__)
 
-/// For thread-safe functions
+/// For thread-safe functions.
 #define CALL_ZE_RET(Ret, Fn, ...)                                              \
   do {                                                                         \
     ze_result_t rc;                                                            \

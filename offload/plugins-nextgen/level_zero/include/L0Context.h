@@ -42,26 +42,26 @@ struct L0ContextTLSTableTy
 /// Driver and context-specific resources. We assume a single context per
 /// driver.
 class L0ContextTy {
-  /// The plugin that created this context
+  /// The plugin that created this context.
   LevelZeroPluginTy &Plugin;
 
-  /// Level Zero Driver handle
+  /// Level Zero Driver handle.
   ze_driver_handle_t zeDriver = nullptr;
 
-  /// Common Level Zero context
+  /// Common Level Zero context.
   ze_context_handle_t zeContext = nullptr;
 
-  /// API version supported by the Level Zero driver
+  /// API version supported by the Level Zero driver.
   ze_api_version_t APIVersion = ZE_API_VERSION_CURRENT;
 
   /// Imported external pointers. Track this only for user-directed
   /// imports/releases.
   llvm::DenseMap<uintptr_t, size_t> ImportedPtrs;
 
-  /// Common event pool
+  /// Common event pool.
   EventPoolTy EventPool;
 
-  /// Host Memory allocator for this driver
+  /// Host Memory allocator for this driver.
   MemAllocatorTy HostMemAllocator;
 
 public:
@@ -70,7 +70,7 @@ public:
   static constexpr int32_t ImportUnknown = 0;
   static constexpr int32_t ImportExist = 1;
 
-  /// Create context, initialize event pool and extension functions
+  /// Create context, initialize event pool and extension functions.
   L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
               int32_t DriverId)
       : Plugin(Plugin), zeDriver(zeDriver) {}
@@ -80,7 +80,7 @@ public:
   L0ContextTy &operator=(const L0ContextTy &) = delete;
   L0ContextTy &operator=(const L0ContextTy &&) = delete;
 
-  /// Release resources
+  /// Release resources.
   ~L0ContextTy() = default;
 
   Error init();
@@ -95,7 +95,7 @@ public:
     (void)ImportedPtrs.try_emplace(reinterpret_cast<uintptr_t>(Ptr), Size);
   }
 
-  /// Remove imported external pointer region
+  /// Remove imported external pointer region.
   void removeImported(void *Ptr) {
     (void)ImportedPtrs.erase(reinterpret_cast<uintptr_t>(Ptr));
   }
@@ -118,18 +118,18 @@ public:
 
   ze_driver_handle_t getZeDriver() const { return zeDriver; }
 
-  /// Return context associated with the driver
+  /// Return context associated with the driver.
   ze_context_handle_t getZeContext() const { return zeContext; }
 
-  /// Return driver API version
+  /// Return driver API version.
   ze_api_version_t getDriverAPIVersion() const { return APIVersion; }
 
-  /// Return the event pool of this driver
+  /// Return the event pool of this driver.
   EventPoolTy &getEventPool() { return EventPool; }
   const EventPoolTy &getEventPool() const { return EventPool; }
 
   bool supportsLargeMem() const {
-    // Large memory support is available since API version 1.1
+    // Large memory support is available since API version 1.1.
     return getDriverAPIVersion() >= ZE_API_VERSION_1_1;
   }
 

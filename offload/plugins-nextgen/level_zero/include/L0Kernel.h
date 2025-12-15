@@ -23,11 +23,11 @@ namespace llvm::omp::target::plugin {
 class L0DeviceTy;
 class L0ProgramTy;
 
-/// Loop descriptor
+/// Loop descriptor.
 struct TgtLoopDescTy {
-  int64_t Lb = 0;     // The lower bound of the i-th loop
-  int64_t Ub = 0;     // The upper bound of the i-th loop
-  int64_t Stride = 0; // The stride of the i-th loop
+  int64_t Lb = 0;     // The lower bound of the i-th loop.
+  int64_t Ub = 0;     // The upper bound of the i-th loop.
+  int64_t Stride = 0; // The stride of the i-th loop.
 
   bool operator==(const TgtLoopDescTy &other) const {
     return Lb == other.Lb && Ub == other.Ub && Stride == other.Stride;
@@ -35,10 +35,10 @@ struct TgtLoopDescTy {
 };
 
 struct TgtNDRangeDescTy {
-  int32_t NumLoops = 0;      // Number of loops/dimensions
+  int32_t NumLoops = 0;      // Number of loops/dimensions.
   int32_t DistributeDim = 0; // Dimensions lower than this one
-                             // must end up in one WG
-  TgtLoopDescTy Levels[3];   // Up to 3 loops
+                             // must end up in one WG.
+  TgtLoopDescTy Levels[3];   // Up to 3 loops.
 
   bool operator==(const TgtNDRangeDescTy &other) const {
     return NumLoops == other.NumLoops && DistributeDim == other.DistributeDim &&
@@ -49,7 +49,7 @@ struct TgtNDRangeDescTy {
   }
 };
 
-/// forward declaration
+/// Forward declaration.
 struct L0LaunchEnvTy;
 
 /// Kernel properties.
@@ -58,11 +58,11 @@ struct KernelPropertiesTy {
   uint32_t SIMDWidth = 0;
   uint32_t MaxThreadGroupSize = 0;
 
-  /// Cached input parameters used in the previous launch
+  /// Cached input parameters used in the previous launch.
   int32_t NumTeams = -1;
   int32_t ThreadLimit = -1;
 
-  /// Cached parameters used in the previous launch
+  /// Cached parameters used in the previous launch.
   ze_kernel_indirect_access_flags_t IndirectAccessFlags =
       std::numeric_limits<decltype(IndirectAccessFlags)>::max();
   uint32_t GroupSizes[3] = {0, 0, 0};
@@ -93,9 +93,9 @@ struct L0LaunchEnvTy {
 };
 
 class L0KernelTy : public GenericKernelTy {
-  // L0 Kernel Handle
+  // L0 Kernel Handle.
   ze_kernel_handle_t zeKernel;
-  // Kernel Properties
+  // Kernel Properties.
   mutable KernelPropertiesTy Properties;
 
   void decideKernelGroupArguments(L0DeviceTy &Device, uint32_t NumTeams,
