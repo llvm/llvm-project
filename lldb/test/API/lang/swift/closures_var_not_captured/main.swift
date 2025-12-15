@@ -212,6 +212,18 @@ enum MY_ENUM {
   }
 }
 
+func async_foo() async {}
+
+func task_inside_non_async_function() -> Task<Void, Never> {
+  var x = 10;
+  var task = Task {
+    await async_foo()
+    print("break_task_inside_non_async_function")
+  }
+
+  return task
+}
+
 func_1(arg: 42)
 func_2(arg: 42)
 await func_3(arg: 42)
@@ -227,3 +239,4 @@ my_struct.struct_computed_property = 10
 my_struct.struct_computed_property_didset = 10
 let _ = MY_ENUM(input: [1,2])
 MY_ENUM.static_func(input_static: [42])
+await task_inside_non_async_function().getResult()

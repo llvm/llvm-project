@@ -1600,16 +1600,38 @@ std::string SwiftLanguageRuntime::GetParentNameIfClosure(Function &func) {
       swift_demangle::GetFirstChildOfKind(closure_node, function_kinds);
   if (!parent_func_node)
     return "";
-  swift_demangle::ReplaceChildWith(*node, *closure_node, *parent_func_node);
 
-  ManglingErrorOr<std::string> mangled = swift::Demangle::mangleNode(node);
+  NodeFactory factory;
+  Node *new_global = factory.createNode(Kind::Global);
+  if (!new_global)
+    return "";
+  // For a given function-like node, async information is a sibling - not a
+  // child - of the node in the demangling tree. Bring that over as well.
+  // Don't bring all children, however, as the closure number of `closure_node`
+  // is also a child of `closure_node`, i.e., it is not related to
+  // `parent_func_node`.
+  //
+  // node (Global)
+  // |
+  // |- closure_node
+  //    |- parent_func_node (any function_kind)
+  //    |- async info for parent_func_node
+  //    |- closure number for closure_node
+  for (auto *child : *closure_node)
+    if (child->getKind() == Kind::AsyncAwaitResumePartialFunction ||
+        child->getKind() == Kind::AsyncSuspendResumePartialFunction)
+      new_global->addChild(child, factory);
+  new_global->addChild(parent_func_node, factory);
+
+  ManglingErrorOr<std::string> mangled =
+      swift::Demangle::mangleNode(new_global);
   if (!mangled.isSuccess())
     return "";
 
   if (parent_func_node->getKind() == Kind::Constructor)
     if (Module *module = func.CalculateSymbolContextModule().get())
-      return HandleCtorAndAllocatorVariants(mangled.result(), *module, *node,
-                                            *parent_func_node);
+      return HandleCtorAndAllocatorVariants(mangled.result(), *module,
+                                            *new_global, *parent_func_node);
   return mangled.result();
 }
 } // namespace lldb_private

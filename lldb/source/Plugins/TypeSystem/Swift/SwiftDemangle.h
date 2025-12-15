@@ -41,9 +41,10 @@ inline NodePointer GetFirstChildOfKind(NodePointer node,
 inline void ReplaceChildWith(Node &parent, Node &to_replace, Node &new_child) {
   for (unsigned idx = 0; idx < parent.getNumChildren(); idx++) {
     auto *child = parent.getChild(idx);
-    if (child == &to_replace)
+    if (child == &to_replace) {
       parent.replaceChild(idx, &new_child);
-    return;
+      return;
+    }
   }
   llvm_unreachable("invalid child passed to replaceChildWith");
 }
