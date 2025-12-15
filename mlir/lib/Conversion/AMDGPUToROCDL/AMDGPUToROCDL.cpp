@@ -3138,7 +3138,6 @@ struct ConvertAMDGPUToROCDLPass
     RewritePatternSet patterns(ctx);
     LLVMTypeConverter converter(ctx);
 
-
     populateAMDGPUToROCDLConversionPatterns(converter, patterns, *maybeChipset);
     amdgpu::populateCommonGPUTypeAndAttributeConversions(converter);
     LLVMConversionTarget target(getContext());
@@ -3194,20 +3193,19 @@ void mlir::populateAMDGPUTypeAndAttributeConversions(
     return typeConverter.convertType(VectorType::get(4, i32));
   });
   typeConverter.addConversion(
-        [&](TDMDescriptorType type,
-            SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-    Type i32 = IntegerType::get(type.getContext(), 32);
-    Type v4i32 = typeConverter.convertType(VectorType::get(4, i32));
-    Type v8i32 = typeConverter.convertType(VectorType::get(8, i32));
-    llvm::append_values(result, v4i32, v8i32, v4i32, v4i32);
-    return success();
-  });
+      [&](TDMDescriptorType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        Type i32 = IntegerType::get(type.getContext(), 32);
+        Type v4i32 = typeConverter.convertType(VectorType::get(4, i32));
+        Type v8i32 = typeConverter.convertType(VectorType::get(8, i32));
+        llvm::append_values(result, v4i32, v8i32, v4i32, v4i32);
+        return success();
+      });
 
   auto addUnrealizedCast = [](OpBuilder &builder, TypeRange types,
-                               ValueRange inputs,
-                               Location loc) -> SmallVector<Value> {
-  auto cast =
-      UnrealizedConversionCastOp::create(builder, loc, types, inputs);
+                              ValueRange inputs,
+                              Location loc) -> SmallVector<Value> {
+    auto cast = UnrealizedConversionCastOp::create(builder, loc, types, inputs);
     return cast.getResults();
   };
 
@@ -3245,6 +3243,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
       AMDGPUTensorLoadStoreOpLowering<TensorLoadToLDSOp,
                                       ROCDL::TensorLoadToLDSOp>,
       AMDGPUTensorLoadStoreOpLowering<TensorStoreFromLDSOp,
-                                      ROCDL::TensorStoreFromLDSOp>>(converter, chipset);
+                                      ROCDL::TensorStoreFromLDSOp>>(converter,
+                                                                    chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }
