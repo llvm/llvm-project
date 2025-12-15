@@ -376,7 +376,7 @@ static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
   auto halfTy = cir::VectorType::get(builder.getF16Type(), numElems());
   mlir::Value srcF16 = builder.createBitcast(loc, src, halfTy);
 
-  auto res = builder.createFloatingCast(srcF16, dstTy);
+  mlir::Value res = builder.createFloatingCast(srcF16, dstTy);
 
   return emitX86Select(builder, loc, mask, res, passthru);
 }
