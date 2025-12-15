@@ -1123,26 +1123,42 @@ struct WarpOpCreateMask : public WarpDistributionPattern {
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *yieldOperand =
-        getWarpResult(warpOp, llvm::IsaPred<vector::CreateMaskOp>);
+        getWarpResult(warpOp, (llvm::IsaPred<vector::CreateMaskOp>));
+    if (!yieldOperand)
+      yieldOperand =
+          getWarpResult(warpOp, (llvm::IsaPred<vector::ConstantMaskOp>));
     if (!yieldOperand)
       return failure();
 
-    auto mask = yieldOperand->get().getDefiningOp<vector::CreateMaskOp>();
+    Operation *mask = yieldOperand->get().getDefiningOp<vector::CreateMaskOp>();
+    if (!mask)
+      mask = yieldOperand->get().getDefiningOp<vector::ConstantMaskOp>();
 
     // Early exit if any values needed for calculating the new mask indices
     // are defined inside the warp op.
-    if (!llvm::all_of(mask->getOperands(), [&](Value value) {
+    if (mask->getOperands().size() &&
+        !llvm::all_of(mask->getOperands(), [&](Value value) {
           return warpOp.isDefinedOutsideOfRegion(value);
         }))
       return failure();
 
-    Location loc = mask.getLoc();
+    Location loc = mask->getLoc();
     unsigned operandIndex = yieldOperand->getOperandNumber();
 
     auto distType = cast<VectorType>(warpOp.getResult(operandIndex).getType());
-    VectorType seqType = mask.getVectorType();
+    VectorType seqType = cast<VectorType>(mask->getResult(0).getType());
     ArrayRef<int64_t> seqShape = seqType.getShape();
     ArrayRef<int64_t> distShape = distType.getShape();
+    SmallVector<Value> materializedOperands;
+    if (auto createMaskOp = dyn_cast<vector::CreateMaskOp>(mask)) {
+      materializedOperands.append(createMaskOp.getOperands().begin(),
+                                  createMaskOp.getOperands().end());
+    } else if (auto constantMaskOp = dyn_cast<vector::ConstantMaskOp>(mask)) {
+      auto dimSizes = constantMaskOp.getMaskDimSizesAttr().asArrayRef();
+      for (auto dimSize : dimSizes)
+        materializedOperands.push_back(
+            arith::ConstantIndexOp::create(rewriter, loc, dimSize).getResult());
+    }
 
     rewriter.setInsertionPointAfter(warpOp);
 
@@ -1170,7 +1186,7 @@ struct WarpOpCreateMask : public WarpDistributionPattern {
       // mask sizes are always in the range [0, mask_vector_size[i]).
       Value maskDimIdx = affine::makeComposedAffineApply(
           rewriter, loc, s1 - s0 * distShape[i],
-          {delinearizedIds[i], mask.getOperand(i)});
+          {delinearizedIds[i], materializedOperands[i]});
       newOperands.push_back(maskDimIdx);
     }
 
