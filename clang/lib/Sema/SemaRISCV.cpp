@@ -1100,6 +1100,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vfredusum_vs_rm:
   case RISCVVector::BI__builtin_rvv_vfwredosum_vs_rm:
   case RISCVVector::BI__builtin_rvv_vfwredusum_vs_rm:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm:
   case RISCVVector::BI__builtin_rvv_vfsqrt_v_rm_tu:
   case RISCVVector::BI__builtin_rvv_vfrec7_v_rm_tu:
   case RISCVVector::BI__builtin_rvv_vfcvt_x_f_v_rm_tu:
@@ -1205,6 +1207,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_tu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm_tu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_tu:
   case RISCVVector::BI__builtin_rvv_vfadd_vv_rm_m:
   case RISCVVector::BI__builtin_rvv_vfadd_vf_rm_m:
   case RISCVVector::BI__builtin_rvv_vfsub_vv_rm_m:
@@ -1348,6 +1352,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vfredusum_vs_rm_tum:
   case RISCVVector::BI__builtin_rvv_vfwredosum_vs_rm_tum:
   case RISCVVector::BI__builtin_rvv_vfwredusum_vs_rm_tum:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_tum:
   case RISCVVector::BI__builtin_rvv_vfadd_vv_rm_tumu:
   case RISCVVector::BI__builtin_rvv_vfadd_vf_rm_tumu:
   case RISCVVector::BI__builtin_rvv_vfsub_vv_rm_tumu:
@@ -1394,6 +1400,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_tumu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm_tumu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_tumu:
   case RISCVVector::BI__builtin_rvv_vfadd_vv_rm_mu:
   case RISCVVector::BI__builtin_rvv_vfadd_vf_rm_mu:
   case RISCVVector::BI__builtin_rvv_vfsub_vv_rm_mu:
@@ -1440,6 +1448,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_mu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm_mu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_mu:
     return SemaRef.BuiltinConstantArgRange(TheCall, 4, 0, 4);
   case RISCV::BI__builtin_riscv_ntl_load:
   case RISCV::BI__builtin_riscv_ntl_store:
