@@ -16,7 +16,7 @@ class TestCursorLanguage(unittest.TestCase):
         main_func = get_cursor(tu.cursor, "a")
         self.assertEqual(main_func.language, LanguageKind.C)
 
-    def test_c(self):
+    def test_cpp(self):
         tu = get_tu("class Cls {};", lang="cpp")
         main_func = get_cursor(tu.cursor, "Cls")
         self.assertEqual(main_func.language, LanguageKind.C_PLUS_PLUS)
