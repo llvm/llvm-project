@@ -25,6 +25,7 @@ add_clang_library(clangTidyAbseilModule STATIC
   TimeComparisonCheck.cpp
   TimeSubtractionCheck.cpp
   UpgradeDurationConversionsCheck.cpp
+  UncheckedStatusOrAccessCheck.cpp
 
   LINK_LIBS
   clangTidy
