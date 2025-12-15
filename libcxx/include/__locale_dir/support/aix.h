@@ -42,7 +42,7 @@ struct __locale_guard {
 
   locale_t __old_loc_;
 
-  __locale_guard(__locale_guard const&)            = delete;
+  __locale_guard(__locale_guard const&) = delete;
   __locale_guard& operator=(__locale_guard const&) = delete;
 };
 
@@ -82,10 +82,8 @@ inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) {
 }
 #endif // _LIBCPP_BUILDING_LIBRARY
 
-// The following are not POSIX routines.  These are quick-and-dirty hacks
-// to make things pretend to work
-namespace {
-
+// The following structure is a quick-and-dirty workaround for routines that AIX
+// does not provide in the "_l" (locale-aware) variants.
 struct __setAndRestore {
   explicit __setAndRestore(locale_t locale) {
     if (locale == (locale_t)0) {
@@ -107,73 +105,22 @@ private:
   locale_t __cloc   = (locale_t)0;
 };
 
-} // namespace
-
-inline _LIBCPP_HIDE_FROM_ABI long long strtoll_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtoll(__nptr, __endptr, __base);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtod(__nptr, __endptr);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI float strtof_l(const char* __nptr, char** __endptr, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtof(__nptr, __endptr);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI long double strtold_l(const char* __nptr, char** __endptr, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtold(__nptr, __endptr);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-strtoull_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtoull(__nptr, __endptr, __base);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char* fmt, va_list ap) {
-  const size_t buff_size = 256;
-  if ((*strp = (char*)malloc(buff_size)) == nullptr) {
-    return -1;
-  }
-
-  va_list ap_copy;
-  // va_copy may not be provided by the C library in C++03 mode.
-#if defined(_LIBCPP_CXX03_LANG) && __has_builtin(__builtin_va_copy)
-  __builtin_va_copy(ap_copy, ap);
-#else
-  va_copy(ap_copy, ap);
-#endif
-  int str_size = vsnprintf(*strp, buff_size, fmt, ap_copy);
-  va_end(ap_copy);
-
-  if ((size_t)str_size >= buff_size) {
-    if ((*strp = (char*)realloc(*strp, str_size + 1)) == nullptr) {
-      return -1;
-    }
-    str_size = vsnprintf(*strp, str_size + 1, fmt, ap);
-  }
-  return str_size;
-}
-
 //
 // Strtonum functions
 //
 inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return strtof_l(__nptr, __endptr, __loc);
+  __setAndRestore __newloc(__loc);
+  return ::strtof(__nptr, __endptr);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return strtod_l(__nptr, __endptr, __loc);
+  __setAndRestore __newloc(__loc);
+  return ::strtod(__nptr, __endptr);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return strtold_l(__nptr, __endptr, __loc);
+  __setAndRestore __newloc(__loc);
+  return ::strtold(__nptr, __endptr);
 }
 
 //
@@ -230,8 +177,8 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI
-size_t __strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI size_t
+__strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
   return strftime_l(__s, __max, __format, __tm, __loc);
 }
 
@@ -295,28 +242,55 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 #endif   // _LIBCPP_BUILDING_LIBRARY
 
-#ifndef _LIBCPP_COMPILER_GCC // GCC complains that this can't be always_inline due to C-style varargs
-_LIBCPP_HIDE_FROM_ABI
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral") // GCC doesn't support [[gnu::format]] on variadic templates
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#  define _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(...) _LIBCPP_ATTRIBUTE_FORMAT(__VA_ARGS__)
+#else
+#  define _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(...) /* nothing */
 #endif
-inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __snprintf(
-    char* __s, size_t __n, __locale_t __loc, const char* __format, ...) {
-  va_list __va;
-  va_start(__va, __format);
+
+template <class... _Args>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __snprintf(
+    char* __s, size_t __n, __locale_t __loc, const char* __format, _Args&&... __args) {
   __locale_guard __current(__loc);
-  int __res = std::vsnprintf(__s, __n, __format, __va);
-  va_end(__va);
-  return __res;
+  return std::snprintf(__s, __n, __format, std::forward<_Args>(__args)...);
 }
 
-inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
-    char** __s, __locale_t __loc, const char* __format, ...) {
-  va_list __va;
-  va_start(__va, __format);
+template <class... _Args>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
+    char** __s, __locale_t __loc, const char* __format, _Args&&... __args) {
   __locale_guard __current(__loc);
-  int __res = vasprintf(__s, __format, __va); // non-standard
-  va_end(__va);
-  return __res;
+
+  // Probe exact size.
+  int n = std::snprintf(nullptr, 0, __format, std::forward<_Args>(__args)...);
+  if (n < 0) {
+    *__s = nullptr;
+    return -1;
+  }
+
+  // Allocate and render once
+  size_t buf_size = static_cast<size_t>(n) + 1;
+  char* buf       = static_cast<char*>(std::malloc(buf_size));
+  if (!buf) {
+    *__s = nullptr;
+    return -1;
+  }
+
+  int written_size = std::snprintf(buf, buf_size, __format, std::forward<_Args>(__args)...);
+  if (written_size < 0) {
+    std::free(buf);
+    *__s = nullptr;
+    return -1;
+  }
+
+  *__s = buf;
+  return written_size;
 }
+_LIBCPP_DIAGNOSTIC_POP
+#undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
+
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
