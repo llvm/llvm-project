@@ -135,7 +135,7 @@ public:
   bool isLoanToATemporary(LoanID LID) {
     const Loan *L = Analysis.getFactManager().getLoanMgr().getLoan(LID);
     if (const auto *BL = dyn_cast<PathLoan>(L)) {
-      return BL->getAccessPath().getAsCXXBindTemporaryExpr() != nullptr;
+      return BL->getAccessPath().getAsMaterializeTemporaryExpr() != nullptr;
     }
     return false;
   }
@@ -847,7 +847,6 @@ TEST_F(LifetimeAnalysisTest, ExtraParenthesis) {
   EXPECT_THAT(Origin("p"), HasLoansTo({"a"}, "p1"));
 }
 
-// FIXME: Handle temporaries.
 TEST_F(LifetimeAnalysisTest, ViewFromTemporary) {
   SetupTest(R"(
     MyObj temporary();

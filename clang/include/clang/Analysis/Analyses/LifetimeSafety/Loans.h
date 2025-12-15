@@ -30,24 +30,24 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
 /// variable.
 /// TODO: Model access paths of other types, e.g., s.field, heap and globals.
 struct AccessPath {
-  // Currently, an access path can be:
+  // An access path can be:
   // - ValueDecl * , to represent the storage location corresponding to the
   //   variable declared in ValueDecl.
-  // - CXXBindTemporaryExpr * , to represent the storage location of the
-  //   temporary object used for the binding in CXXBindTemporaryExpr.
+  // - MaterializeTemporaryExpr * , to represent the storage location of the
+  //   temporary object materialized via this MaterializeTemporaryExpr.
   const llvm::PointerUnion<const clang::ValueDecl *,
-                           const clang::CXXBindTemporaryExpr *>
+                           const clang::MaterializeTemporaryExpr *>
       P;
 
   AccessPath(const clang::ValueDecl *D) : P(D) {}
-  AccessPath(const clang::CXXBindTemporaryExpr *BTE) : P(BTE) {}
+  AccessPath(const clang::MaterializeTemporaryExpr *MTE) : P(MTE) {}
 
   const clang::ValueDecl *getAsValueDecl() const {
     return P.dyn_cast<const clang::ValueDecl *>();
   }
 
-  const clang::CXXBindTemporaryExpr *getAsCXXBindTemporaryExpr() const {
-    return P.dyn_cast<const clang::CXXBindTemporaryExpr *>();
+  const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
+    return P.dyn_cast<const clang::MaterializeTemporaryExpr *>();
   }
 };
 

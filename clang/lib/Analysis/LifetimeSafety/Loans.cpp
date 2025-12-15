@@ -14,10 +14,10 @@ void PathLoan::dump(llvm::raw_ostream &OS) const {
   OS << getID() << " (Path: ";
   if (const clang::ValueDecl *VD = Path.getAsValueDecl()) {
     OS << VD->getNameAsString();
-  } else if (const clang::CXXBindTemporaryExpr *BTE =
-                 Path.getAsCXXBindTemporaryExpr()) {
+  } else if (const clang::MaterializeTemporaryExpr *MTE =
+                 Path.getAsMaterializeTemporaryExpr()) {
     // No nice "name" for the temporary, so deferring to LLVM default
-    OS << "CXXBindTemporaryExpr at " << BTE;
+    OS << "MaterializeTemporaryExpr at " << MTE;
   } else {
     llvm_unreachable("access path is not one of any supported types");
   }

@@ -71,10 +71,24 @@ static const PathLoan *createLoan(FactManager &FactMgr,
   return nullptr;
 }
 
+/// Creates a loan for the storage location of a temporary object.
+/// \param MTW The MaterializeTemporaryExpr that represents the temporary
+/// binding. \return The new Loan.
 static const PathLoan *createLoan(FactManager &FactMgr,
-                                  const CXXBindTemporaryExpr *BTE) {
-  AccessPath Path(BTE);
-  return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, BTE);
+                                  const MaterializeTemporaryExpr *MTE) {
+  AccessPath Path(MTE);
+  return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, MTE);
+}
+
+/// Try to find a CXXBindTemporaryExpr that descends from MTE, stripping away
+/// any implicit casts.
+/// \param MTE MaterializeTemporaryExpr whose descendants we are interested in.
+/// \return Pointer to descendant CXXBindTemporaryExpr or nullptr when not
+/// found.
+static const CXXBindTemporaryExpr *
+getChildBinding(const MaterializeTemporaryExpr *MTE) {
+  const Expr *Child = MTE->getSubExpr()->IgnoreImpCasts();
+  return dyn_cast<CXXBindTemporaryExpr>(Child);
 }
 
 void FactsGenerator::run() {
@@ -357,8 +371,9 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
     // TODO: Issue a loan to the MTE.
     flow(MTEList, SubExprList, /*Kill=*/true);
   } else {
-    assert(MTE->isXValue());
-    flow(MTEList, SubExprList, /*Kill=*/true);
+    // A temporary object's origin is the same as the origin of the
+    // expression that initializes it.
+    killAndFlowOrigin(*MTE, *MTE->getSubExpr());
   }
 }
 
@@ -392,11 +407,14 @@ void FactsGenerator::handleTemporaryDtor(
     if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
       // Check if the loan is for a temporary materialization and if that storage
       // location is the one being destructed.
-      const AccessPath AP = BL->getAccessPath();
-      const CXXBindTemporaryExpr *Path = AP.getAsCXXBindTemporaryExpr();
-      if (Path == BTE)
+      const AccessPath &AP = BL->getAccessPath();
+      const MaterializeTemporaryExpr *Path = AP.getAsMaterializeTemporaryExpr();
+      if (!Path)
+        continue;
+      if (BTE == getChildBinding(Path)) {
         CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
             BL->getID(), TemporaryDtor.getBindTemporaryExpr()->getEndLoc()));
+      }
     }
   }
 }
