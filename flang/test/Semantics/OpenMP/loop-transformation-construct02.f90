@@ -7,7 +7,7 @@ subroutine loop_transformation_construct1
   implicit none
 
   !$omp do
-  !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp fuse 
 end subroutine
 
@@ -15,7 +15,7 @@ subroutine loop_transformation_construct2
   implicit none
 
   !$omp do
-  !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp fuse 
   !$omp end fuse
 end subroutine
@@ -50,7 +50,7 @@ subroutine loop_transformation_construct4
   do x = 1, i
     v(x) = v(x) * 2
   end do
-  !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp fuse
   !$omp end fuse
 end subroutine
@@ -80,7 +80,7 @@ subroutine loop_transformation_construct6
   integer :: x
   integer :: v(i)
 
-  !ERROR: The loop sequence following the DO construct must be fully fused first.
+  !ERROR: This construct applies to a loop nest, but has a loop sequence of length 2
   !$omp do
   !$omp fuse looprange(1,1)
   !$omp unroll partial(2)
