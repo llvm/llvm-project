@@ -15,6 +15,7 @@
 #include "hdr/types/wchar_t.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -34,11 +35,11 @@ enum PropertyFlag : uint8_t {
 static_assert(4352 <= cpp::numeric_limits<unsigned short>::max());
 static_assert(39168 <= cpp::numeric_limits<unsigned short>::max());
 
-inline constexpr uint16_t LEVEL1_SIZE = 4352;
-inline constexpr uint16_t LEVEL2_SIZE = 39168;
+LIBC_INLINE_VAR constexpr uint16_t LEVEL1_SIZE = 4352;
+LIBC_INLINE_VAR constexpr uint16_t LEVEL2_SIZE = 39168;
 
 // Level 1 table: indexed by (codepoint >> 8), stores level2 block offsets
-inline constexpr uint16_t level1[LEVEL1_SIZE] = {
+LIBC_INLINE_VAR constexpr uint16_t level1[LEVEL1_SIZE] = {
     0,     256,   512,   768,   1024,  1280,  1536,  1792,  2048,  2304,  2560,
     2816,  3072,  3328,  3584,  3840,  4096,  4352,  4608,  4864,  5120,  4352,
     5376,  5632,  5888,  6144,  6400,  6656,  6912,  7168,  7424,  7680,  7936,
@@ -437,7 +438,7 @@ inline constexpr uint16_t level1[LEVEL1_SIZE] = {
     13824, 13824, 13824, 13824, 13824, 13824, 38912};
 
 // Level 2 table: blocks of 256 property flags
-inline constexpr uint8_t level2[LEVEL2_SIZE] = {
+LIBC_INLINE_VAR constexpr uint8_t level2[LEVEL2_SIZE] = {
     0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x68, 0x48, 0x48,
     0x48, 0x48, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
     0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x38, 0x90, 0x90, 0x90,
@@ -3704,7 +3705,7 @@ inline constexpr uint8_t level2[LEVEL2_SIZE] = {
     0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x00, 0x00};
 
 // Returns the Unicode property flag for a given wide character.
-inline constexpr uint8_t lookup_properties(const wchar_t wc) {
+LIBC_INLINE constexpr uint8_t lookup_properties(const wchar_t wc) {
   // Out of Unicode range
   if (static_cast<uint32_t>(wc) > 0x10FFFF) {
     return 0;

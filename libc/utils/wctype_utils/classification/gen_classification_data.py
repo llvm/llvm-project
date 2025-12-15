@@ -230,6 +230,7 @@ def generate_code(lookup_table: StagedLookupTable, llvm_project_root_path: str) 
 
 #include "hdr/stdint_proxy.h" 
 #include "hdr/types/wchar_t.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/CPP/limits.h"
@@ -251,11 +252,11 @@ enum PropertyFlag : uint8_t {{
 static_assert({len(level1)} <= cpp::numeric_limits<unsigned short>::max());
 static_assert({len(level2)} <= cpp::numeric_limits<unsigned short>::max());
 
-inline constexpr uint16_t LEVEL1_SIZE = {len(level1)};
-inline constexpr uint16_t LEVEL2_SIZE = {len(level2)};
+LIBC_INLINE_VAR constexpr uint16_t LEVEL1_SIZE = {len(level1)};
+LIBC_INLINE_VAR constexpr uint16_t LEVEL2_SIZE = {len(level2)};
 
 // Level 1 table: indexed by (codepoint >> 8), stores level2 block offsets
-inline constexpr uint16_t level1[LEVEL1_SIZE] = {{
+LIBC_INLINE_VAR constexpr uint16_t level1[LEVEL1_SIZE] = {{
 """
         )
         for i in range(0, len(level1), 11):
@@ -269,7 +270,7 @@ inline constexpr uint16_t level1[LEVEL1_SIZE] = {{
             f"""}};
 
 // Level 2 table: blocks of 256 property flags
-inline constexpr uint8_t level2[LEVEL2_SIZE] = {{
+LIBC_INLINE_VAR constexpr uint8_t level2[LEVEL2_SIZE] = {{
 """
         )
         for i in range(0, len(level2), 11):
@@ -283,7 +284,7 @@ inline constexpr uint8_t level2[LEVEL2_SIZE] = {{
             f"""}};
 
 // Returns the Unicode property flag for a given wide character.
-inline constexpr uint8_t lookup_properties(const wchar_t wc) {{
+LIBC_INLINE constexpr uint8_t lookup_properties(const wchar_t wc) {{
   // Out of Unicode range
   if (static_cast<uint32_t>(wc) > 0x10FFFF) {{
     return 0;
