@@ -38,6 +38,12 @@
 // int and takes a single argument of type const struct in6_addr *:
 // https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/netinet_in.h.html
 
+#define IN6_IS_ADDR_UNSPECIFIED(a)                                             \
+  ((__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[0]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[1]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[2]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[3]) == 0)
+
 #define IN6_IS_ADDR_LINKLOCAL(a)                                               \
   ((__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[0]) == 0xfe &&            \
    (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xc0) == 0x80)
