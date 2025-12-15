@@ -47,15 +47,16 @@ Memory:
 
 This requires at least partial support of the following functionality on the
 libsycl side:
-  * ``sycl::platform`` class
-  * ``sycl::device`` class
-  * ``sycl::context`` class
-  * ``sycl::queue`` class
-  * ``sycl::handler`` class
-  * ``sycl::id`` and ``sycl::range`` classes
-  * Unified shared memory allocation/deallocation
-  * Program manager, an internal component for retrieving and using device
-images from the multi-architectural binaries
+
+* ``sycl::platform`` class
+* ``sycl::device`` class
+* ``sycl::context`` class
+* ``sycl::queue`` class
+* ``sycl::handler`` class
+* ``sycl::id`` and ``sycl::range`` classes
+* Unified shared memory allocation/deallocation
+* Program manager, an internal component for retrieving and using device images
+  from the multi-architectural binaries
 
 Build steps
 ========
