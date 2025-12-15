@@ -1,6 +1,6 @@
-# RUN: yaml2obj %s -o %t
 # REQUIRES: x86-registered-target
 
+# RUN: yaml2obj --docnum=1 %s -o %t
 # RUN: llvm-objdump -d %t --mattr=help 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE
 # RUN: llvm-objdump -d %t --mcpu=help 2>&1 \
@@ -31,11 +31,25 @@
 # RUN: not llvm-objdump --mcpu=help %t.minidump 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.minidump
 
-# RUN: llvm-ar rcs %t.a %t
-# RUN: llvm-objdump -d --mcpu=help %t.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE,CHECK-ARCHIVE-ERROR -DFILE=%t.a
-# RUN: llvm-objdump -d --mattr=help %t.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE,CHECK-ARCHIVE-ERROR -DFILE=%t.a
+# RUN: llvm-ar rc %t.a %t
+# RUN: llvm-objdump --mcpu=help %t.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK -DFILE=%t.a
+# RUN: llvm-objdump --mattr=help %t.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK -DFILE=%t.a
+
+## We report an error when the triple cannot be inferred from any archive member.
+# RUN: llvm-ar rc %t.empty.a
+# RUN: not llvm-objdump --mcpu=help %t.empty.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.empty.a
+# RUN: not llvm-objdump --mattr=help %t.empty.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.empty.a
+
+## We report an error when the archive is malformed.
+# RUN: yaml2obj --docnum=3 %s -o %t.malformed.archive.a
+# RUN: not llvm-objdump --mcpu=help %t.malformed.archive.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-MALFORMED-ARCHIVE-ERROR --implicit-check-not=error: -DFILE=%t.malformed.archive.a
+# RUN: not llvm-objdump --mattr=help %t.malformed.archive.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-MALFORMED-ARCHIVE-ERROR --implicit-check-not=error: -DFILE=%t.malformed.archive.a
 
 # CHECK: Available CPUs for this target:
 # CHECK: Available features for this target:
@@ -48,9 +62,9 @@
 
 # CHECK-MISSING-ERROR: llvm-objdump{{.*}}: error: 'a.out': triple was not specified and could not be inferred from the input file: [[MSG]]
 
-# CHECK-UNSUPPORTED-ERROR: llvm-objdump{{.*}}: error: '[[FILE]]': input file is not an object file
+# CHECK-UNSUPPORTED-ERROR: llvm-objdump{{.*}}: error: '[[FILE]]': input file is not an object file or archive does not contain object file
 
-# CHECK-ARCHIVE-ERROR-NOT: llvm-objdump{{.*}}: error: '[[FILE]]': input file is not an object file
+# CHECK-MALFORMED-ARCHIVE-ERROR: llvm-objdump{{.*}}: error: '[[FILE]]': truncated or malformed archive
 
 --- !ELF
 FileHeader:
@@ -64,3 +78,8 @@ Streams:
   - Type:            SystemInfo
     Processor Arch:  PPC
     Platform ID:     Linux
+
+--- !Arch
+Members:
+  - Name: 'foo.c'
+    Size: '1'

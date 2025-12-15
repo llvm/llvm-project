@@ -3552,11 +3552,15 @@ static void mcpuHelp() {
       TheTriple = Obj->makeTriple();
     } else if (Archive *A = dyn_cast<Archive>(Bin)) {
       Error Err = Error::success();
+      unsigned I = -1;
       for (auto &C : A->children(Err)) {
+        ++I;
         Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
-        if (!ChildOrErr)
-          // We don't report error because we don't disassemble it here.
+        if (!ChildOrErr) {
+          if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+            reportError(std::move(E), getFileNameForError(C, I), A->getFileName());
           continue;
+        }
         if (ObjectFile *Obj = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
           TheTriple = Obj->makeTriple();
           break;
@@ -3566,7 +3570,7 @@ static void mcpuHelp() {
         reportError(std::move(Err), A->getFileName());
     }
     if (TheTriple.empty())
-      reportError(InputFilenames[0], "input file is not an object file");
+      reportError(InputFilenames[0], "input file is not an object file or archive does not contain object file");
   }
 
   std::string ErrMessage;
