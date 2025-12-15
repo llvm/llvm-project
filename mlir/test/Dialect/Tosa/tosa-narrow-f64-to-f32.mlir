@@ -31,6 +31,26 @@ func.func @test_f64_const() -> tensor<2xf64> {
 
 // -----
 
+// CHECK-LABEL: test_f64_const_precision_loss
+func.func @test_f64_const_precision_loss() -> tensor<1xf64> {
+  // expected-error @+2 {{failed to legalize operation 'tosa.const'}}
+  // 2^24 + 1 fits in f64 but rounds to 2^24 in f32.
+  %0 = "tosa.const"() <{values = dense<16777217.0> : tensor<1xf64>}> : () -> tensor<1xf64>
+  return %0 : tensor<1xf64>
+}
+
+// -----
+
+// CHECK-LABEL: test_f64_const_precision_loss_small
+func.func @test_f64_const_precision_loss_small() -> tensor<1xf64> {
+  // expected-error @+2 {{failed to legalize operation 'tosa.const'}}
+  // Too small: underflows to zero when narrowed to f32.
+  %0 = "tosa.const"() <{values = dense<1.0e-46> : tensor<1xf64>}> : () -> tensor<1xf64>
+  return %0 : tensor<1xf64>
+}
+
+// -----
+
 // CHECK-LABEL: test_f64_concat
 // DEFAULT: %[[A0:.*]]: tensor<13x21x3xf64>, %[[A1:.*]]: tensor<13x21x3xf64>
 // FUNCBOUND: %[[A0:.*]]: tensor<13x21x3xf32>, %[[A1:.*]]: tensor<13x21x3xf32>
