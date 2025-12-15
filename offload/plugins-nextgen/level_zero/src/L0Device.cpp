@@ -63,17 +63,19 @@ constexpr int DeviceArchMapSize = sizeof(DeviceArchMap) / sizeof(DeviceArchMap[0
 
 DeviceArchTy L0DeviceTy::computeArch() const {
   const auto PCIDeviceId = getPCIId();
-  if (PCIDeviceId != 0) {
-    for (int ArchIndex = 0; ArchIndex < DeviceArchMapSize; ArchIndex++) {
-      for (int i = 0;; i++) {
-        const auto Id = DeviceArchMap[ArchIndex].ids[i];
-        if (Id == PCIIdTy::None)
-          break;
+  if (PCIDeviceId == 0) {
+    DP("Warning: Cannot decide device arch for %s.\n", getNameCStr());
+    return DeviceArchTy::DeviceArch_None;
+  }
 
-        auto maskedId = static_cast<PCIIdTy>(PCIDeviceId & 0xFF00);
-        if (maskedId == Id)
-          return DeviceArchMap[ArchIndex].arch; // Exact match or prefix match
-      }
+  for (int ArchIndex = 0; ArchIndex < DeviceArchMapSize; ArchIndex++) {
+    for (int i = 0;; i++) {
+      const auto Id = DeviceArchMap[ArchIndex].ids[i];
+      if (Id == PCIIdTy::None)
+        break;
+      auto maskedId = static_cast<PCIIdTy>(PCIDeviceId & 0xFF00);
+      if (maskedId == Id)
+        return DeviceArchMap[ArchIndex].arch; // Exact match or prefix match
     }
   }
 

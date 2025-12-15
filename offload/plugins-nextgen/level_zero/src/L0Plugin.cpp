@@ -120,7 +120,8 @@ Error LevelZeroPluginTy::deinitImpl() {
   DP("Deinit Level0 plugin!\n");
   if (auto Err = ContextTLSTable.deinit())
     return Err;
-  DeviceTLSTable.clear();
+  if (auto Err = DeviceTLSTable.deinit())
+    return Err;
   for (auto &Context : ContextList)
     if (auto Err = Context.deinit())
       return Err;

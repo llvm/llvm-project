@@ -112,20 +112,20 @@ public:
     ImmCopyCmdList = std::exchange(Other.ImmCopyCmdList, nullptr);
   }
 
-  void clear() {
+  Error deinit() {
     // destroy all lists and queues
     if (CmdList)
-      CALL_ZE_EXIT_FAIL(zeCommandListDestroy, CmdList);
+      CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
     if (CopyCmdList)
-      CALL_ZE_EXIT_FAIL(zeCommandListDestroy, CopyCmdList);
+      CALL_ZE_RET_ERROR(zeCommandListDestroy, CopyCmdList);
     if (ImmCmdList)
-      CALL_ZE_EXIT_FAIL(zeCommandListDestroy, ImmCmdList);
+      CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCmdList);
     if (ImmCopyCmdList)
-      CALL_ZE_EXIT_FAIL(zeCommandListDestroy, ImmCopyCmdList);
+      CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCopyCmdList);
     if (CmdQueue)
-      CALL_ZE_EXIT_FAIL(zeCommandQueueDestroy, CmdQueue);
+      CALL_ZE_RET_ERROR(zeCommandQueueDestroy, CmdQueue);
     if (CopyCmdQueue)
-      CALL_ZE_EXIT_FAIL(zeCommandQueueDestroy, CopyCmdQueue);
+      CALL_ZE_RET_ERROR(zeCommandQueueDestroy, CopyCmdQueue);
 
     CmdList = nullptr;
     CopyCmdList = nullptr;
@@ -133,6 +133,8 @@ public:
     CopyCmdQueue = nullptr;
     ImmCmdList = nullptr;
     ImmCopyCmdList = nullptr;
+
+    return Plugin::success();
   }
 
   L0DeviceTLSTy &operator=(const L0DeviceTLSTy &) = delete;
@@ -169,8 +171,9 @@ public:
 
 struct L0DeviceTLSTableTy
     : public PerThreadContainer<std::vector<L0DeviceTLSTy>, 8> {
-  void clear() {
-    PerThreadTable::clear([](L0DeviceTLSTy &Entry) { Entry.clear(); });
+  Error deinit() {
+    return PerThreadTable::deinit(
+        [](L0DeviceTLSTy &Entry) { return Entry.deinit(); });
   }
 };
 
@@ -530,8 +533,7 @@ public:
   }
 
   MemAllocatorTy &getMemAllocator(const void *Ptr) {
-    bool IsHostMem = (ZE_MEMORY_TYPE_HOST == getMemAllocType(Ptr));
-    if (IsHostMem)
+    if (ZE_MEMORY_TYPE_HOST == getMemAllocType(Ptr))
       return l0Context.getHostMemAllocator();
     return getDeviceMemAllocator();
   }
