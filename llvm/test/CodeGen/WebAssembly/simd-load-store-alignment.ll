@@ -1430,8 +1430,7 @@ define <4 x float> @load_zero_float_a1(ptr %p) {
 ; CHECK:         .functype load_zero_float_a1 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0:p2align=0, 0
+; CHECK-NEXT:    v128.load32_zero 0:p2align=0
 ; CHECK-NEXT:    # fallthrough-return
   %x = load float, ptr %p, align 1
   %v = insertelement <4 x float> zeroinitializer, float %x, i32 0
@@ -1443,8 +1442,7 @@ define <4 x float> @load_zero_float_a2(ptr %p) {
 ; CHECK:         .functype load_zero_float_a2 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0:p2align=1, 0
+; CHECK-NEXT:    v128.load32_zero 0:p2align=1
 ; CHECK-NEXT:    # fallthrough-return
   %x = load float, ptr %p, align 2
   %v = insertelement <4 x float> zeroinitializer, float %x, i32 0
@@ -1457,8 +1455,7 @@ define <4 x float> @load_zero_float_a4(ptr %p) {
 ; CHECK:         .functype load_zero_float_a4 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %x = load float, ptr %p, align 4
   %v = insertelement <4 x float> zeroinitializer, float %x, i32 0
@@ -1471,8 +1468,7 @@ define <4 x float> @load_zero_float_a8(ptr %p) {
 ; CHECK:         .functype load_zero_float_a8 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %x = load float, ptr %p, align 8
   %v = insertelement <4 x float> zeroinitializer, float %x, i32 0
@@ -1584,8 +1580,7 @@ define <2 x double> @load_zero_double_a1(ptr %p) {
 ; CHECK:         .functype load_zero_double_a1 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0:p2align=0, 0
+; CHECK-NEXT:    v128.load64_zero 0:p2align=0
 ; CHECK-NEXT:    # fallthrough-return
   %x = load double, ptr %p, align 1
   %v = insertelement <2 x double> zeroinitializer, double %x, i32 0
@@ -1597,8 +1592,7 @@ define <2 x double> @load_zero_double_a2(ptr %p) {
 ; CHECK:         .functype load_zero_double_a2 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0:p2align=1, 0
+; CHECK-NEXT:    v128.load64_zero 0:p2align=1
 ; CHECK-NEXT:    # fallthrough-return
   %x = load double, ptr %p, align 2
   %v = insertelement <2 x double> zeroinitializer, double %x, i32 0
@@ -1610,8 +1604,7 @@ define <2 x double> @load_zero_double_a4(ptr %p) {
 ; CHECK:         .functype load_zero_double_a4 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0:p2align=2, 0
+; CHECK-NEXT:    v128.load64_zero 0:p2align=2
 ; CHECK-NEXT:    # fallthrough-return
   %x = load double, ptr %p, align 4
   %v = insertelement <2 x double> zeroinitializer, double %x, i32 0
@@ -1624,8 +1617,7 @@ define <2 x double> @load_zero_double_a8(ptr %p) {
 ; CHECK:         .functype load_zero_double_a8 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %x = load double, ptr %p, align 8
   %v = insertelement <2 x double> zeroinitializer, double %x, i32 0
@@ -1638,8 +1630,7 @@ define <2 x double> @load_zero_double_a16(ptr %p) {
 ; CHECK:         .functype load_zero_double_a16 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %x = load double, ptr %p, align 16
   %v = insertelement <2 x double> zeroinitializer, double %x, i32 0

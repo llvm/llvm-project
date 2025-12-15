@@ -127,8 +127,7 @@ define <4 x float> @load_zero_float_no_offset(ptr %p) {
 ; CHECK:         .functype load_zero_float_no_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %x = load float, ptr %p
   %v = insertelement <4 x float> zeroinitializer, float %x, i32 0
@@ -140,10 +139,7 @@ define <4 x float> @load_zero_float_with_folded_offset(ptr %p) {
 ; CHECK:         .functype load_zero_float_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_zero 24
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 24
@@ -158,10 +154,7 @@ define <4 x float> @load_zero_float_with_folded_gep_offset(ptr %p) {
 ; CHECK:         .functype load_zero_float_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_zero 24
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds float, ptr %p, i32 6
   %x = load float, ptr %s
@@ -176,8 +169,7 @@ define <4 x float> @load_zero_float_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const -24
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds float, ptr %p, i32 -6
   %x = load float, ptr %s
@@ -192,8 +184,7 @@ define <4 x float> @load_zero_float_with_unfolded_offset(ptr %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 24
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 24
@@ -210,8 +201,7 @@ define <4 x float> @load_zero_float_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 24
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr float, ptr %p, i32 6
   %x = load float, ptr %s
@@ -223,9 +213,8 @@ define <4 x float> @load_zero_float_from_numeric_address() {
 ; CHECK-LABEL: load_zero_float_from_numeric_address:
 ; CHECK:         .functype load_zero_float_from_numeric_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 42
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    v128.load32_zero 42
 ; CHECK-NEXT:    # fallthrough-return
   %s = inttoptr i32 42 to ptr
   %x = load float, ptr %s
@@ -238,9 +227,8 @@ define <4 x float> @load_zero_float_from_global_address() {
 ; CHECK-LABEL: load_zero_float_from_global_address:
 ; CHECK:         .functype load_zero_float_from_global_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const gv_float
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    v128.load32_zero gv_float
 ; CHECK-NEXT:    # fallthrough-return
   %x = load float, ptr @gv_float
   %t = insertelement <4 x float> zeroinitializer, float %x, i32 0
@@ -370,8 +358,7 @@ define <2 x double> @load_zero_double_no_offset(ptr %p) {
 ; CHECK:         .functype load_zero_double_no_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %x = load double, ptr %p
   %v = insertelement <2 x double> zeroinitializer, double %x, i32 0
@@ -383,10 +370,7 @@ define <2 x double> @load_zero_double_with_folded_offset(ptr %p) {
 ; CHECK:         .functype load_zero_double_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_zero 24
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 24
@@ -401,10 +385,7 @@ define <2 x double> @load_zero_double_with_folded_gep_offset(ptr %p) {
 ; CHECK:         .functype load_zero_double_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 48
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_zero 48
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds double, ptr %p, i32 6
   %x = load double, ptr %s
@@ -419,8 +400,7 @@ define <2 x double> @load_zero_double_with_unfolded_gep_negative_offset(ptr %p) 
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const -48
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds double, ptr %p, i32 -6
   %x = load double, ptr %s
@@ -435,8 +415,7 @@ define <2 x double> @load_zero_double_with_unfolded_offset(ptr %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 24
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 24
@@ -453,8 +432,7 @@ define <2 x double> @load_zero_double_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 48
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr double, ptr %p, i32 6
   %x = load double, ptr %s
@@ -466,9 +444,8 @@ define <2 x double> @load_zero_double_from_numeric_address() {
 ; CHECK-LABEL: load_zero_double_from_numeric_address:
 ; CHECK:         .functype load_zero_double_from_numeric_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 42
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    v128.load64_zero 42
 ; CHECK-NEXT:    # fallthrough-return
   %s = inttoptr i32 42 to ptr
   %x = load double, ptr %s
@@ -481,9 +458,8 @@ define <2 x double> @load_zero_double_from_global_address() {
 ; CHECK-LABEL: load_zero_double_from_global_address:
 ; CHECK:         .functype load_zero_double_from_global_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const gv_double
-; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    v128.load64_zero gv_double
 ; CHECK-NEXT:    # fallthrough-return
   %x = load double, ptr @gv_double
   %t = insertelement <2 x double> zeroinitializer, double %x, i32 0
