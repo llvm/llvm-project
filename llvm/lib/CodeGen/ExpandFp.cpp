@@ -853,7 +853,7 @@ static void expandIToFP(Instruction *IToFP) {
   } else {
     Value *Conv28 = Builder.CreateTrunc(Shr, Builder.getInt32Ty());
     And29 = Builder.CreateAnd(
-        Conv28, ConstantInt::getSigned(Builder.getInt32Ty(), 0x80000000));
+        Conv28, ConstantInt::get(Builder.getContext(), APInt::getSignMask(32)));
   }
   unsigned TempMod = FPMantissaWidth % 32;
   Value *And34 = nullptr;

@@ -16,13 +16,14 @@
 
 #include "ClangTidyMain.h"
 #include "../ClangTidy.h"
-#include "../ClangTidyForceLinker.h"
+#include "../ClangTidyForceLinker.h" // IWYU pragma: keep
 #include "../GlobList.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/PluginLoader.h"
+#include "llvm/Support/PluginLoader.h" // IWYU pragma: keep
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -77,6 +78,7 @@ Configuration files:
                                  (if any exists) will be taken and the current
                                  config file will be applied on top of the
                                  parent one.
+  RemovedArgs                  - Same as '--removed-arg'.
   SystemHeaders                - Same as '--system-headers'.
   UseColor                     - Same as '--use-color'.
   User                         - Specifies the name or e-mail of the user
@@ -356,6 +358,16 @@ see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
                                               cl::init(false),
                                               cl::cat(ClangTidyCategory));
 
+static cl::list<std::string> RemovedArgs("removed-arg", desc(R"(
+List of arguments to remove from the command
+line sent to the compiler. Please note that
+removing arguments might change the semantic
+of the analyzed code, possibly leading to
+compiler errors, false positives or
+false negatives. This option is applied 
+before --extra-arg and --extra-arg-before)"),
+                                         cl::cat(ClangTidyCategory));
+
 namespace clang::tidy {
 
 static void printStats(const ClangTidyStats &Stats) {
@@ -422,6 +434,8 @@ createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
     OverrideOptions.FormatStyle = FormatStyle;
   if (UseColor.getNumOccurrences() > 0)
     OverrideOptions.UseColor = UseColor;
+  if (RemovedArgs.getNumOccurrences() > 0)
+    OverrideOptions.RemovedArgs = RemovedArgs;
 
   auto LoadConfig =
       [&](StringRef Configuration,

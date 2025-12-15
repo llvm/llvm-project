@@ -6,9 +6,9 @@ declare float @llvm.amdgcn.rsq.f32(float)
 declare double @llvm.amdgcn.rsq.f64(double)
 
 define half @ret_rsq_f16(half %arg) {
-; CHECK-LABEL: define half @ret_rsq_f16(
+; CHECK-LABEL: define nofpclass(nzero nsub nnorm) half @ret_rsq_f16(
 ; CHECK-SAME: half [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.amdgcn.rsq.f16(half [[ARG]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub nnorm) half @llvm.amdgcn.rsq.f16(half [[ARG]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.amdgcn.rsq.f16(half %arg)
@@ -16,9 +16,9 @@ define half @ret_rsq_f16(half %arg) {
 }
 
 define float @ret_rsq_f32(float %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32(
+; CHECK-LABEL: define nofpclass(nzero sub nnorm) float @ret_rsq_f32(
 ; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -26,9 +26,9 @@ define float @ret_rsq_f32(float %arg) {
 }
 
 define double @ret_rsq_f64(double %arg) {
-; CHECK-LABEL: define double @ret_rsq_f64(
+; CHECK-LABEL: define nofpclass(nzero nsub nnorm) double @ret_rsq_f64(
 ; CHECK-SAME: double [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.amdgcn.rsq.f64(double [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub nnorm) double @llvm.amdgcn.rsq.f64(double [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.amdgcn.rsq.f64(double %arg)
@@ -37,9 +37,9 @@ define double @ret_rsq_f64(double %arg) {
 
 ; Result could still be -0 if negative argument is flushed.
 define float @ret_rsq_f32_dynamic_denormal_input(float %arg) #0 {
-; CHECK-LABEL: define float @ret_rsq_f32_dynamic_denormal_input(
+; CHECK-LABEL: define nofpclass(nzero sub nnorm) float @ret_rsq_f32_dynamic_denormal_input(
 ; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -47,9 +47,9 @@ define float @ret_rsq_f32_dynamic_denormal_input(float %arg) #0 {
 }
 
 define float @ret_rsq_f32_dynamic_denormal_input_known_nzero(float nofpclass(nzero) %arg) #0 {
-; CHECK-LABEL: define float @ret_rsq_f32_dynamic_denormal_input_known_nzero(
+; CHECK-LABEL: define nofpclass(nzero sub nnorm) float @ret_rsq_f32_dynamic_denormal_input_known_nzero(
 ; CHECK-SAME: float nofpclass(nzero) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(nzero) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(nzero) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -57,9 +57,9 @@ define float @ret_rsq_f32_dynamic_denormal_input_known_nzero(float nofpclass(nze
 }
 
 define float @ret_rsq_f32_dynamic_denormal_input_known_nzero_nsub(float nofpclass(nzero nsub) %arg) #0 {
-; CHECK-LABEL: define float @ret_rsq_f32_dynamic_denormal_input_known_nzero_nsub(
+; CHECK-LABEL: define nofpclass(ninf nzero sub nnorm) float @ret_rsq_f32_dynamic_denormal_input_known_nzero_nsub(
 ; CHECK-SAME: float nofpclass(nzero nsub) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(nzero nsub) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(nzero nsub) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -67,9 +67,9 @@ define float @ret_rsq_f32_dynamic_denormal_input_known_nzero_nsub(float nofpclas
 }
 
 define double @ret_rsq_f64_dynamic_denormal_input(double %arg) #1 {
-; CHECK-LABEL: define double @ret_rsq_f64_dynamic_denormal_input(
+; CHECK-LABEL: define nofpclass(nzero nsub nnorm) double @ret_rsq_f64_dynamic_denormal_input(
 ; CHECK-SAME: double [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.amdgcn.rsq.f64(double [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub nnorm) double @llvm.amdgcn.rsq.f64(double [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.amdgcn.rsq.f64(double %arg)
@@ -77,9 +77,9 @@ define double @ret_rsq_f64_dynamic_denormal_input(double %arg) #1 {
 }
 
 define double @ret_rsq_f64_dynamic_denormal_input_known_nzero(double nofpclass(nzero) %arg) #0 {
-; CHECK-LABEL: define double @ret_rsq_f64_dynamic_denormal_input_known_nzero(
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) double @ret_rsq_f64_dynamic_denormal_input_known_nzero(
 ; CHECK-SAME: double nofpclass(nzero) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.amdgcn.rsq.f64(double nofpclass(nzero) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) double @llvm.amdgcn.rsq.f64(double nofpclass(nzero) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.amdgcn.rsq.f64(double %arg)
@@ -87,9 +87,9 @@ define double @ret_rsq_f64_dynamic_denormal_input_known_nzero(double nofpclass(n
 }
 
 define double @ret_rsq_f64_dynamic_denormal_input_known_nzero_nsub(double nofpclass(nzero nsub) %arg) #0 {
-; CHECK-LABEL: define double @ret_rsq_f64_dynamic_denormal_input_known_nzero_nsub(
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) double @ret_rsq_f64_dynamic_denormal_input_known_nzero_nsub(
 ; CHECK-SAME: double nofpclass(nzero nsub) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.amdgcn.rsq.f64(double nofpclass(nzero nsub) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) double @llvm.amdgcn.rsq.f64(double nofpclass(nzero nsub) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.amdgcn.rsq.f64(double %arg)
@@ -97,9 +97,9 @@ define double @ret_rsq_f64_dynamic_denormal_input_known_nzero_nsub(double nofpcl
 }
 
 define float @ret_rsq_f32__no_snan_input(float nofpclass(snan) %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32__no_snan_input(
+; CHECK-LABEL: define nofpclass(snan nzero sub nnorm) float @ret_rsq_f32__no_snan_input(
 ; CHECK-SAME: float nofpclass(snan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(snan) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(snan) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -107,9 +107,9 @@ define float @ret_rsq_f32__no_snan_input(float nofpclass(snan) %arg) {
 }
 
 define float @ret_rsq_f32_nsz(float %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32_nsz(
+; CHECK-LABEL: define nofpclass(nzero sub nnorm) float @ret_rsq_f32_nsz(
 ; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.amdgcn.rsq.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.amdgcn.rsq.f32(float %arg)
@@ -117,9 +117,9 @@ define float @ret_rsq_f32_nsz(float %arg) {
 }
 
 define float @ret_rsq_f32_known_no_neg_zero(float nofpclass(nzero) %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32_known_no_neg_zero(
+; CHECK-LABEL: define nofpclass(ninf nzero sub nnorm) float @ret_rsq_f32_known_no_neg_zero(
 ; CHECK-SAME: float nofpclass(nzero) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(nzero) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(nzero) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -127,9 +127,9 @@ define float @ret_rsq_f32_known_no_neg_zero(float nofpclass(nzero) %arg) {
 }
 
 define float @ret_rsq_f32_known_no_pos_zero(float nofpclass(pzero) %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32_known_no_pos_zero(
+; CHECK-LABEL: define nofpclass(pinf nzero sub nnorm) float @ret_rsq_f32_known_no_pos_zero(
 ; CHECK-SAME: float nofpclass(pzero) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(pzero) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(pzero) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -137,9 +137,9 @@ define float @ret_rsq_f32_known_no_pos_zero(float nofpclass(pzero) %arg) {
 }
 
 define double @ret_rsq_f64_known_zero(double nofpclass(zero) %arg) {
-; CHECK-LABEL: define double @ret_rsq_f64_known_zero(
+; CHECK-LABEL: define nofpclass(inf nzero nsub nnorm) double @ret_rsq_f64_known_zero(
 ; CHECK-SAME: double nofpclass(zero) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.amdgcn.rsq.f64(double nofpclass(zero) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) double @llvm.amdgcn.rsq.f64(double nofpclass(zero) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.amdgcn.rsq.f64(double %arg)
@@ -147,9 +147,9 @@ define double @ret_rsq_f64_known_zero(double nofpclass(zero) %arg) {
 }
 
 define float @ret_rsq_f32_known_no_nan(float nofpclass(nan) %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32_known_no_nan(
+; CHECK-LABEL: define nofpclass(snan nzero sub nnorm) float @ret_rsq_f32_known_no_nan(
 ; CHECK-SAME: float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.amdgcn.rsq.f32(float nofpclass(nan) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(nan) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.amdgcn.rsq.f32(float %arg)
@@ -157,9 +157,9 @@ define float @ret_rsq_f32_known_no_nan(float nofpclass(nan) %arg) {
 }
 
 define float @ret_rsq_f32_known_no_inf(float nofpclass(inf) %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32_known_no_inf(
+; CHECK-LABEL: define nofpclass(zero sub nnorm) float @ret_rsq_f32_known_no_inf(
 ; CHECK-SAME: float nofpclass(inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(inf) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(inf) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -167,9 +167,9 @@ define float @ret_rsq_f32_known_no_inf(float nofpclass(inf) %arg) {
 }
 
 define float @ret_rsq_f32_known_no_nan_no_inf(float nofpclass(nan inf) %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32_known_no_nan_no_inf(
+; CHECK-LABEL: define nofpclass(snan zero sub nnorm) float @ret_rsq_f32_known_no_nan_no_inf(
 ; CHECK-SAME: float nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(nan inf) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(nan inf) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -177,9 +177,9 @@ define float @ret_rsq_f32_known_no_nan_no_inf(float nofpclass(nan inf) %arg) {
 }
 
 define float @ret_rsq_f32_poison() {
-; CHECK-LABEL: define float @ret_rsq_f32_poison(
+; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @ret_rsq_f32_poison(
 ; CHECK-SAME: ) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float poison) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub nnorm) float @llvm.amdgcn.rsq.f32(float poison) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float poison)
@@ -187,9 +187,9 @@ define float @ret_rsq_f32_poison() {
 }
 
 define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal(float nofpclass(nsub nnorm) %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal(
+; CHECK-LABEL: define nofpclass(nzero sub nnorm) float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal(
 ; CHECK-SAME: float nofpclass(nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(nsub nnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(nsub nnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -197,9 +197,9 @@ define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal(float nofpclass(n
 }
 
 define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf(float nofpclass(ninf nsub nnorm) %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf(
+; CHECK-LABEL: define nofpclass(nzero sub nnorm) float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf(
 ; CHECK-SAME: float nofpclass(ninf nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(ninf nsub nnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(ninf nsub nnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -207,9 +207,9 @@ define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf(float 
 }
 
 define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf_no_neg_zero(float nofpclass(ninf nzero nsub nnorm) %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf_no_neg_zero(
+; CHECK-LABEL: define nofpclass(ninf nzero sub nnorm) float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf_no_neg_zero(
 ; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(ninf nzero nsub nnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(ninf nzero nsub nnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -217,9 +217,9 @@ define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf_no_neg
 }
 
 define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf_no_nan(float nofpclass(nan ninf nsub nnorm) %arg) {
-; CHECK-LABEL: define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf_no_nan(
+; CHECK-LABEL: define nofpclass(nan nzero sub nnorm) float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf_no_nan(
 ; CHECK-SAME: float nofpclass(nan ninf nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(nan ninf nsub nnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(nan ninf nsub nnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -227,9 +227,9 @@ define float @ret_rsq_f32_known_no_neg_normal_no_neg_subnormal_no_neg_inf_no_nan
 }
 
 define float @ret_rsq_f32_nnan_known_no_neg_normal_no_neg_subnormal_no_neg_inf(float nofpclass(ninf nsub nnorm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_rsq_f32_nnan_known_no_neg_normal_no_neg_subnormal_no_neg_inf(
+; CHECK-LABEL: define nofpclass(nan nzero sub nnorm) float @ret_rsq_f32_nnan_known_no_neg_normal_no_neg_subnormal_no_neg_inf(
 ; CHECK-SAME: float nofpclass(ninf nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan) float @llvm.amdgcn.rsq.f32(float nofpclass(ninf nsub nnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(ninf nsub nnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nnan float @llvm.amdgcn.rsq.f32(float %arg)
@@ -237,9 +237,9 @@ define float @ret_rsq_f32_nnan_known_no_neg_normal_no_neg_subnormal_no_neg_inf(f
 }
 
 define float @ret_rsq_f32_dynamic_denormal_input_known_pzero(float nofpclass(pzero) %arg) #0 {
-; CHECK-LABEL: define float @ret_rsq_f32_dynamic_denormal_input_known_pzero(
+; CHECK-LABEL: define nofpclass(nzero sub nnorm) float @ret_rsq_f32_dynamic_denormal_input_known_pzero(
 ; CHECK-SAME: float nofpclass(pzero) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(pzero) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(pzero) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -247,9 +247,9 @@ define float @ret_rsq_f32_dynamic_denormal_input_known_pzero(float nofpclass(pze
 }
 
 define float @ret_rsq_f32_dynamic_denormal_input_known_pzero_psub(float nofpclass(pzero) %arg) #1 {
-; CHECK-LABEL: define float @ret_rsq_f32_dynamic_denormal_input_known_pzero_psub(
+; CHECK-LABEL: define nofpclass(nzero sub nnorm) float @ret_rsq_f32_dynamic_denormal_input_known_pzero_psub(
 ; CHECK-SAME: float nofpclass(pzero) [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.rsq.f32(float nofpclass(pzero) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub nnorm) float @llvm.amdgcn.rsq.f32(float nofpclass(pzero) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.amdgcn.rsq.f32(float %arg)
@@ -257,9 +257,9 @@ define float @ret_rsq_f32_dynamic_denormal_input_known_pzero_psub(float nofpclas
 }
 
 define double @ret_rsq_f64_known_not_pinf(double nofpclass(pinf) %arg) {
-; CHECK-LABEL: define double @ret_rsq_f64_known_not_pinf(
+; CHECK-LABEL: define nofpclass(zero nsub nnorm) double @ret_rsq_f64_known_not_pinf(
 ; CHECK-SAME: double nofpclass(pinf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.amdgcn.rsq.f64(double nofpclass(pinf) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero nsub nnorm) double @llvm.amdgcn.rsq.f64(double nofpclass(pinf) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.amdgcn.rsq.f64(double %arg)
@@ -267,9 +267,9 @@ define double @ret_rsq_f64_known_not_pinf(double nofpclass(pinf) %arg) {
 }
 
 define double @ret_rsq_f64_known_not_ninf(double nofpclass(ninf) %arg) {
-; CHECK-LABEL: define double @ret_rsq_f64_known_not_ninf(
+; CHECK-LABEL: define nofpclass(nzero nsub nnorm) double @ret_rsq_f64_known_not_ninf(
 ; CHECK-SAME: double nofpclass(ninf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.amdgcn.rsq.f64(double nofpclass(ninf) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub nnorm) double @llvm.amdgcn.rsq.f64(double nofpclass(ninf) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.amdgcn.rsq.f64(double %arg)
@@ -277,9 +277,9 @@ define double @ret_rsq_f64_known_not_ninf(double nofpclass(ninf) %arg) {
 }
 
 define double @ret_rsq_f64_known_not_inf(double nofpclass(inf) %arg) {
-; CHECK-LABEL: define double @ret_rsq_f64_known_not_inf(
+; CHECK-LABEL: define nofpclass(zero nsub nnorm) double @ret_rsq_f64_known_not_inf(
 ; CHECK-SAME: double nofpclass(inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.amdgcn.rsq.f64(double nofpclass(inf) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero nsub nnorm) double @llvm.amdgcn.rsq.f64(double nofpclass(inf) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.amdgcn.rsq.f64(double %arg)

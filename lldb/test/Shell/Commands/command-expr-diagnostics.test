@@ -24,7 +24,7 @@
 # RUN: "expression -- FOO(\"\")" 2>&1 | FileCheck %s --check-prefix=CHECK4
 #            (lldb) expression -- FOO("")
 # CHECK4:{{^                     (\^|˄)}}
-# CHECK4: {{^                     note: in instantiation of function template}}
+# CHECK4: {{^                     (╰─ )?note: in instantiation of function template}}
 # CHECK4: error: <user expression
 
 # RUN: echo expression --\na\n+\nb

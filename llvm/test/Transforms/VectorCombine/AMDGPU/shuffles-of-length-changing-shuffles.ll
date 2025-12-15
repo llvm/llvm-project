@@ -4,10 +4,8 @@
 define <8 x i8> @extending0(<8 x i8> %a, <4 x i8> %b) {
 ; OPT-LABEL: define <8 x i8> @extending0(
 ; OPT-SAME: <8 x i8> [[A:%.*]], <4 x i8> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; OPT-NEXT:    [[EXT0:%.*]] = shufflevector <4 x i8> [[B]], <4 x i8> [[B]], <8 x i32> <i32 poison, i32 poison, i32 3, i32 poison, i32 poison, i32 4, i32 poison, i32 poison>
-; OPT-NEXT:    [[EXT1:%.*]] = shufflevector <4 x i8> poison, <4 x i8> [[B]], <8 x i32> <i32 4, i32 poison, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; OPT-NEXT:    [[MERGE0:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[EXT0]], <8 x i32> <i32 10, i32 1, i32 2, i32 3, i32 13, i32 5, i32 6, i32 7>
-; OPT-NEXT:    [[MERGE1:%.*]] = shufflevector <8 x i8> [[EXT1]], <8 x i8> [[MERGE0]], <8 x i32> <i32 0, i32 8, i32 2, i32 9, i32 10, i32 11, i32 12, i32 13>
+; OPT-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[B]], <4 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 3, i32 poison, i32 poison, i32 0, i32 poison, i32 poison>
+; OPT-NEXT:    [[MERGE1:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[TMP1]], <8 x i32> <i32 8, i32 10, i32 10, i32 1, i32 2, i32 3, i32 13, i32 5>
 ; OPT-NEXT:    ret <8 x i8> [[MERGE1]]
 ;
   %ext0 =   shufflevector <4 x i8> %b, <4 x i8> %b,         <8 x i32> <i32 poison, i32 poison, i32 3, i32 poison, i32 poison, i32 4, i32 poison, i32 poison>
@@ -36,10 +34,8 @@ define <8 x i8> @extending_conflict(<8 x i8> %a, <4 x i8> %b) {
 define <4 x i8> @shrinking0(<4 x i8> %a, <8 x i8> %b) {
 ; OPT-LABEL: define <4 x i8> @shrinking0(
 ; OPT-SAME: <4 x i8> [[A:%.*]], <8 x i8> [[B:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[SHRINK0:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> [[B]], <4 x i32> <i32 poison, i32 7, i32 8, i32 poison>
-; OPT-NEXT:    [[SHRINK1:%.*]] = shufflevector <8 x i8> poison, <8 x i8> [[B]], <4 x i32> <i32 poison, i32 poison, i32 8, i32 9>
-; OPT-NEXT:    [[MERGE0:%.*]] = shufflevector <4 x i8> [[A]], <4 x i8> [[SHRINK0]], <4 x i32> <i32 5, i32 6, i32 0, i32 1>
-; OPT-NEXT:    [[MERGE1:%.*]] = shufflevector <4 x i8> [[MERGE0]], <4 x i8> [[SHRINK1]], <4 x i32> <i32 0, i32 2, i32 6, i32 7>
+; OPT-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> poison, <4 x i32> <i32 poison, i32 7, i32 0, i32 1>
+; OPT-NEXT:    [[MERGE1:%.*]] = shufflevector <4 x i8> [[A]], <4 x i8> [[TMP1]], <4 x i32> <i32 5, i32 0, i32 6, i32 7>
 ; OPT-NEXT:    ret <4 x i8> [[MERGE1]]
 ;
   %shrink0 = shufflevector <8 x i8> %b, <8 x i8> %b,            <4 x i32> <i32 poison, i32 7, i32 8, i32 poison>

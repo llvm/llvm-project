@@ -291,6 +291,9 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
   CONV_OP_SPECIALIZER(linalg::Conv2DNhwgcGfhwcOp);
   CONV_OP_SPECIALIZER(linalg::Conv2DNhwgcGfhwcQOp);
   CONV_OP_SPECIALIZER(linalg::Conv3DOp);
+  CONV_OP_SPECIALIZER(linalg::Conv3DNdhwcDhwcfOp);
+  CONV_OP_SPECIALIZER(linalg::Conv3DNdhwcDhwcfQOp);
+  CONV_OP_SPECIALIZER(linalg::Conv3DNcdhwFcdhwOp);
   // -----------------------------
   // Depthwise Convolution ops.
   // -----------------------------
@@ -302,6 +305,8 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
   CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNhwcHwcQOp);
   CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNhwcHwcmOp);
   CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNhwcHwcmQOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv3DNdhwcDhwcOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv3DNcdhwCdhwOp);
   CONV_OP_SPECIALIZER(linalg::DepthwiseConv3DNdhwcDhwcmOp);
   // -----------------------------
   // Pooling ops.

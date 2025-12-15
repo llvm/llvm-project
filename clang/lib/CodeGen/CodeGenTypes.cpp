@@ -104,7 +104,10 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
-    return llvm::ArrayType::get(ConvertType(MT->getElementType()),
+    llvm::Type *IRElemTy = ConvertType(MT->getElementType());
+    if (Context.getLangOpts().HLSL && T->isConstantMatrixBoolType())
+      IRElemTy = ConvertTypeForMem(Context.BoolTy);
+    return llvm::ArrayType::get(IRElemTy,
                                 MT->getNumRows() * MT->getNumColumns());
   }
 
