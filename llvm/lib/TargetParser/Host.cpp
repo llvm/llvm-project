@@ -2298,8 +2298,14 @@ StringMap<bool> sys::getHostCPUFeatures() {
 #ifndef PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE 47
 #endif
+#ifndef PF_ARM_SVE2_1_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SVE2_1_INSTRUCTIONS_AVAILABLE 48
+#endif
 #ifndef PF_ARM_SVE_PMULL128_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE_PMULL128_INSTRUCTIONS_AVAILABLE 50
+#endif
+#ifndef PF_ARM_SVE_BITPERM_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SVE_BITPERM_INSTRUCTIONS_AVAILABLE 51
 #endif
 #ifndef PF_ARM_SVE_SHA3_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE_SHA3_INSTRUCTIONS_AVAILABLE 55
@@ -2307,15 +2313,34 @@ StringMap<bool> sys::getHostCPUFeatures() {
 #ifndef PF_ARM_SVE_SM4_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE_SM4_INSTRUCTIONS_AVAILABLE 56
 #endif
-#ifndef PF_ARM_SVE_I8MM_INSTRUCTIONS_AVAILABLE
-#define PF_ARM_SVE_I8MM_INSTRUCTIONS_AVAILABLE 57
-#endif
 #ifndef PF_ARM_SVE_F32MM_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE_F32MM_INSTRUCTIONS_AVAILABLE 58
 #endif
 #ifndef PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE 59
 #endif
+#ifndef PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE 66
+#endif
+#ifndef PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE 67
+#endif
+#ifndef PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE 68
+#endif
+#ifndef PF_ARM_SME_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SME_INSTRUCTIONS_AVAILABLE 70
+#endif
+#ifndef PF_ARM_SME2_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SME2_INSTRUCTIONS_AVAILABLE 71
+#endif
+#ifndef PF_ARM_SME_F64F64_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SME_F64F64_INSTRUCTIONS_AVAILABLE 85
+#endif
+#ifndef PF_ARM_SME_I16I64_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SME_I16I64_INSTRUCTIONS_AVAILABLE 86
+#endif
+
 StringMap<bool> sys::getHostCPUFeatures() {
   StringMap<bool> Features;
 
@@ -2334,8 +2359,12 @@ StringMap<bool> sys::getHostCPUFeatures() {
       IsProcessorFeaturePresent(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE);
   Features["sve2"] =
       IsProcessorFeaturePresent(PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE);
+  Features["sve2p1"] =
+      IsProcessorFeaturePresent(PF_ARM_SVE2_1_INSTRUCTIONS_AVAILABLE);
   Features["sve-aes"] =
       IsProcessorFeaturePresent(PF_ARM_SVE_PMULL128_INSTRUCTIONS_AVAILABLE);
+  Features["sve-bitperm"] =
+      IsProcessorFeaturePresent(PF_ARM_SVE_BITPERM_INSTRUCTIONS_AVAILABLE);
   Features["sve-sha3"] =
       IsProcessorFeaturePresent(PF_ARM_SVE_SHA3_INSTRUCTIONS_AVAILABLE);
   Features["sve-sm4"] =
@@ -2345,7 +2374,19 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["f64mm"] =
       IsProcessorFeaturePresent(PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE);
   Features["i8mm"] =
-      IsProcessorFeaturePresent(PF_ARM_SVE_I8MM_INSTRUCTIONS_AVAILABLE);
+      IsProcessorFeaturePresent(PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE);
+  Features["fp16"] =
+      IsProcessorFeaturePresent(PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE);
+  Features["bf16"] =
+      IsProcessorFeaturePresent(PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE);
+  Features["sme"] =
+      IsProcessorFeaturePresent(PF_ARM_SME_INSTRUCTIONS_AVAILABLE);
+  Features["sme2"] =
+      IsProcessorFeaturePresent(PF_ARM_SME2_INSTRUCTIONS_AVAILABLE);
+  Features["sme-i16i64"] =
+      IsProcessorFeaturePresent(PF_ARM_SME_I16I64_INSTRUCTIONS_AVAILABLE);
+  Features["sme-f64f64"] =
+      IsProcessorFeaturePresent(PF_ARM_SME_F64F64_INSTRUCTIONS_AVAILABLE);
 
   // Avoid inferring "crypto" means more than the traditional AES + SHA2
   bool TradCrypto =
