@@ -3107,6 +3107,7 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
 
   SmallVector<Type *> NewArgsTy;
   InstructionCost NewCost = 0;
+  SmallDenseSet<std::pair<Value *, Value *>> SeenOperandPairs;
   for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
     if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
       NewArgsTy.push_back(II0->getArgOperand(I)->getType());
@@ -3115,6 +3116,12 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
       auto *ArgTy = FixedVectorType::get(VecTy->getElementType(),
                                          ShuffleDstTy->getNumElements());
       NewArgsTy.push_back(ArgTy);
+      std::pair<Value *, Value *> OperandPair =
+          std::make_pair(II0->getArgOperand(I), II1->getArgOperand(I));
+      if (!SeenOperandPairs.insert(OperandPair).second) {
+        // We've already computed the cost for this operand pair.
+        continue;
+      }
       NewCost += TTI.getShuffleCost(
           TargetTransformInfo::SK_PermuteTwoSrc, ArgTy, VecTy, OldMask,
           CostKind, 0, nullptr, {II0->getArgOperand(I), II1->getArgOperand(I)});
@@ -3131,12 +3138,22 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
     return false;
 
   SmallVector<Value *> NewArgs;
+  SmallDenseMap<std::pair<Value *, Value *>, Value *> ShuffleCache;
   for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
     if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
       NewArgs.push_back(II0->getArgOperand(I));
     } else {
+      std::pair<Value *, Value *> OperandPair =
+          std::make_pair(II0->getArgOperand(I), II1->getArgOperand(I));
+      auto It = ShuffleCache.find(OperandPair);
+      if (It != ShuffleCache.end()) {
+        // Reuse previously created shuffle for this operand pair.
+        NewArgs.push_back(It->second);
+        continue;
+      }
       Value *Shuf = Builder.CreateShuffleVector(II0->getArgOperand(I),
                                                 II1->getArgOperand(I), OldMask);
+      ShuffleCache[OperandPair] = Shuf;
       NewArgs.push_back(Shuf);
       Worklist.pushValue(Shuf);
     }
