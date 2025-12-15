@@ -24500,28 +24500,19 @@ Examples:
       ; 2. ptrB - ptrA = elementSize:
       ;
       ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
-      ;  store =    <0,1,2,3>       ; array[i+1] = store;
-      ;
-      ; This results in a mask with only the first lane active. This is because
-      ; we can only read one lane before we would read values that have yet to
-      ; be written.
-      ;
-      ; 3. ptrB - ptrA = elementSize * 2
-      ;
-      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
       ;  store =      <0,1,2,3>     ; array[i+2] = store;
       ;
-      ; This is the same as the previous example, but the store is two lanes
-      ; ahead of the load. So this results in a mask with the first two lanes
-      ; active.
+      ; This results in a mask with the first two lanes active. This is because
+      ; we can only read two lanes before we would read values that have yet to
+      ; be written.
       ;
-      ; 4. ptrB - ptrA = elementSize * 4
+      ; 3. ptrB - ptrA = elementSize * 4
       ;
       ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
       ;  store =          <0,1,2,3> ; array[i+4] = store;
       ;
-      ; Finally, in this example, the store is a full vector ahead of the load.
-      ; In this case, the result is an all-true mask.
+      ; This results in an all-true mask, as the store is a full vector ahead
+      ; of the load, so all values will be written before any lane is read.
 
 .. _int_loop_dependence_raw_mask:
 
@@ -24611,9 +24602,9 @@ Examples:
       ;  store =      <0,1,2,3>  ; array[i+2] = store;
       ;   load =  <0,1,2,3>      ; uint32_t load = array[i];
       ;
-      ; This also results in a mask with the first two lanes active. This could
-      ; result in a hazard if the store is scheduled after the load, so we only
-      ; consider the first two lanes to be readable.
+      ; This also results in a mask with the first two lanes active. This is
+      ; because if any more lanes were active the load would be dependent on the
+      ; completion of the store.
 
 .. _int_experimental_vp_splice:
 
