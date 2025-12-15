@@ -96,15 +96,15 @@ to be checked. The format is the following, without newlines:
 The functions are matched using POSIX extended regular expressions.
 *(Note: The regular expressions do not support negative* ``(?!)`` *matches.)*
 
-The ``reason`` is optional and is used to provide additional information about
+The `reason` is optional and is used to provide additional information about
 the reasoning behind the replacement. The default reason is
-``is marked as unsafe``.
+`is marked as unsafe`.
 
-If ``replacement`` is empty, the default text ``it should not be used`` will be
+If `replacement` is empty, the default text `it should not be used` will be
 shown instead of the suggestion for a replacement.
 
-If the ``reason`` starts with the character ``>``, the reason becomes fully
-custom. The default suffix is disabled even if a ``replacement`` is present,
+If the `reason` starts with the character ``>``, the reason becomes fully
+custom. The default suffix is disabled even if a `replacement` is present,
 and only the reason message is shown after the matched function, to allow
 better control over the suggestions. (The starting ``>`` and whitespace
 directly after it are trimmed from the message.)

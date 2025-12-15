@@ -241,7 +241,7 @@ Check development tips
 ----------------------
 
 Writing your first check can be a daunting task, particularly if you are
-unfamiliar with the LLVM and Clang code bases.  Here are some suggestions for
+unfamiliar with the LLVM and Clang code bases. Here are some suggestions for
 orienting yourself in the codebase and working on your check incrementally.
 
 Guide to useful documentation
@@ -255,9 +255,9 @@ useful LLVM APIs <https://llvm.org/docs/ProgrammersManual.html#important-and-use
 and `Picking the Right Data Structure for the Task
 <https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task>`_
 sections of the `LLVM Programmer's Manual
-<https://llvm.org/docs/ProgrammersManual.html>`_.  You don't need to memorize all the
+<https://llvm.org/docs/ProgrammersManual.html>`. You don't need to memorize all the
 details of these classes; the generated `doxygen documentation <https://llvm.org/doxygen/>`_
-has everything if you need it.  In the header `LLVM/ADT/STLExtras.h
+has everything if you need it. In the header `LLVM/ADT/STLExtras.h
 <https://llvm.org/doxygen/STLExtras_8h.html>`_ you'll find useful versions of the STL
 algorithms that operate on LLVM containers, such as `llvm::all_of
 <https://llvm.org/doxygen/STLExtras_8h.html#func-members>`_.
@@ -286,17 +286,17 @@ check developer are:
   for information about how C++ source statements are represented as an
   abstract syntax tree (AST).
 
-Most checks will interact with C++ source code via the AST.  Some checks will
+Most checks will interact with C++ source code via the AST. Some checks will
 interact with the preprocessor. The input source file is lexed and preprocessed
 and then parsed into the AST. Once the AST is fully constructed, the check is
 run by applying the check's registered AST matchers against the AST and
-invoking the check with the set of matched nodes from the AST.  Monitoring the
+invoking the check with the set of matched nodes from the AST. Monitoring the
 actions of the preprocessor is detached from the AST construction, but a check
 can collect information during preprocessing for later use by the check when
 nodes are matched by the AST.
 
 Every syntactic (and sometimes semantic) element of the C++ source code is
-represented by different classes in the AST.  You select the portions of the
+represented by different classes in the AST. You select the portions of the
 AST you're interested in by composing AST matcher functions.  You will want
 to study carefully the `AST Matcher Reference
 <https://clang.llvm.org/docs/LibASTMatchersReference.html>`_
@@ -306,10 +306,10 @@ Using the Transformer library
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Transformer library allows you to write a check that transforms source code
-by expressing the transformation as a ``RewriteRule``.  The Transformer library
+by expressing the transformation as a ``RewriteRule``. The Transformer library
 provides functions for composing edits to source code to create rewrite rules.
 Unless you need to perform low-level source location manipulation, you may want
-to consider writing your check with the Transformer library.  The `Clang
+to consider writing your check with the Transformer library. The `Clang
 Transformer Tutorial <https://clang.llvm.org/docs/ClangTransformerTutorial.html>`_
 describes the Transformer library in detail.
 
@@ -330,7 +330,7 @@ Developing your check incrementally
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The best way to develop your check is to start with simple test cases and
-increase complexity incrementally.  The test file created by the
+increase complexity incrementally. The test file created by the
 ``add_new_check.py`` script is a starting point for your test cases.
 A rough outline of the process looks like this:
 
@@ -344,7 +344,7 @@ A rough outline of the process looks like this:
 - Repeat the process until all aspects of your check are covered by tests.
 
 The quickest way to prototype your matcher is to use :program:`clang-query` to
-interactively build up your matcher.  For complicated matchers, build up a
+interactively build up your matcher. For complicated matchers, build up a
 matching expression incrementally and use :program:`clang-query`'s ``let``
 command to save named matching expressions to simplify your matcher.
 
@@ -385,7 +385,7 @@ Unit testing helper code
 Private custom matchers are a good example of auxiliary support code for your
 check that can be tested with a unit test. It will be easier to test your
 matchers or other support classes by writing a unit test than by writing a
-``FileCheck`` integration test.  The ``ASTMatchersTests`` target contains unit
+``FileCheck`` integration test. The ``ASTMatchersTests`` target contains unit
 tests for the public AST matcher classes and is a good source of testing
 idioms for matchers.
 
@@ -399,9 +399,9 @@ Making your check robust
 
 Once you've covered your check with the basic "happy path" scenarios, you'll
 want to torture your check with as many edge cases as you can cover in order to
-ensure your check is robust.  Running your check on a large code base, such as
+ensure your check is robust. Running your check on a large code base, such as
 Clang/LLVM, is a good way to catch things you forgot to account for in your
-matchers.  However, the LLVM code base may be insufficient for testing purposes
+matchers. However, the LLVM code base may be insufficient for testing purposes
 as it was developed against a particular set of coding styles and quality
 measures.  The larger the corpus of code the check is tested against, the
 higher confidence the community will have in the check's efficacy and
@@ -411,16 +411,16 @@ Some suggestions to ensure your check is robust:
 
 - Create header files that contain code matched by your check.
 - Validate that fix-its are properly applied to test header files with
-  :program:`clang-tidy`.  You will need to perform this test manually until
+  :program:`clang-tidy`. You will need to perform this test manually until
   automated support for checking messages and fix-its is added to the
   ``check_clang_tidy.py`` script.
 - Define macros that contain code matched by your check.
 - Define template classes that contain code matched by your check.
 - Define template specializations that contain code matched by your check.
 - Test your check under both Windows and Linux environments.
-- Watch out for high false-positive rates.  Ideally, a check would have no
+- Watch out for high false-positive rates. Ideally, a check would have no
   false positives, but given that matching against an AST is not control-
-  or data flow- sensitive, a number of false positives are expected.  The
+  or data flow- sensitive, a number of false positives are expected. The
   higher the false-positive rate, the less likely the check will be adopted
   in practice. Mechanisms should be put in place to help the user manage
   false positives.
@@ -430,7 +430,7 @@ Some suggestions to ensure your check is robust:
   check.
 - Consider supporting a code pattern to allow the programmer to silence the
   diagnostic whenever such a code pattern can clearly express the programmer's
-  intent.  For example, allowing an explicit cast to ``void`` to silence an
+  intent. For example, allowing an explicit cast to ``void`` to silence an
   unused variable diagnostic.
 - Consider adding check configuration options to allow the user to opt into
   more aggressive checking behavior without burdening users for the common
@@ -441,11 +441,11 @@ Documenting your check
 
 The ``add_new_check.py`` script creates entries in the
 `release notes <https://clang.llvm.org/extra/ReleaseNotes.html>`_, the list of
-checks and a new file for the check documentation itself.  It is recommended
+checks and a new file for the check documentation itself. It is recommended
 that you have a concise summary of what your check does in a single sentence
 that is repeated in the release notes, as the first sentence in the doxygen
 comments in the header file for your check class and as the first sentence of
-the check documentation.  Avoid the phrase "this check" in your check summary
+the check documentation. Avoid the phrase "this check" in your check summary
 and check documentation.
 
 If your check relates to a published coding guideline (C++ Core Guidelines,
@@ -462,7 +462,7 @@ Building the target ``docs-clang-tools-html`` will run the Sphinx documentation
 generator and create HTML documentation files in the
 tools/clang/tools/extra/docs/html directory in your build tree.
 Make sure that your check is correctly shown in the release notes and the list
-of checks.  Make sure that the formatting and structure of your check's
+of checks. Make sure that the formatting and structure of your check's
 documentation look correct.
 
 
