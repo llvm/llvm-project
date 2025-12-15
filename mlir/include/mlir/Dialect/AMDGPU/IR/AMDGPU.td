@@ -1411,8 +1411,8 @@ class AMDGPU_MakeDescriptorOp<string mnemonic> :
 
 def AMDGPU_MakeGatherDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_gather_dma_descriptor"> {
   dag args = (ins AMDGPU_TDMGatherBaseType: $base,
-                  Optional<AnyTypeOf<[VectorOfLengthAndType<[1, 2, 3, 4, 5, 6, 7, 8], [I16, I32]>,
-                                      VectorOfLengthAndType<[9, 10, 11, 12, 13, 14, 15, 16], [I16]>]>>: $indices);
+                  Optional<AnyTypeOf<[VectorOfMinMaxLengthAndType<1, 8, [I32]>,
+                                      VectorOfMinMaxLengthAndType<1, 16, [I16]>]>>: $indices);
   let arguments = !con(args, baseArgs);
   let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
 
