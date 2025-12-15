@@ -13,6 +13,7 @@
 #include "CIRGenModule.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
@@ -53,6 +54,7 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlirContext->loadDialect<mlir::DLTIDialect>();
   mlirContext->loadDialect<cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
+  mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
 
   // Register extensions to integrate CIR types with OpenACC.
   mlir::DialectRegistry registry;

@@ -426,15 +426,18 @@ let Features = "avx512f,gfni", Attributes = [NoThrow, Const, Constexpr, Required
   def vgf2p8mulb_v64qi : X86Builtin<"_Vector<64, char>(_Vector<64, char>, _Vector<64, char>)">;
 }
 
-let Features = "pclmul", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "pclmul",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def pclmulqdq128 : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>, _Constant char)">;
 }
 
-let Features = "vpclmulqdq", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "vpclmulqdq",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def pclmulqdq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Constant char)">;
 }
 
-let Features = "avx512f,vpclmulqdq", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512f,vpclmulqdq",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def pclmulqdq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<8, long long int>, _Constant char)">;
 }
 
