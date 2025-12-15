@@ -308,9 +308,7 @@ class Doc8LintHelper(LintHelper):
             and os.path.exists(filepath)
         )
 
-    def run_linter_tool(
-        self, files_to_lint: Iterable[str], args: LintArgs
-    ) -> str:
+    def run_linter_tool(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
         if not files_to_lint:
             return ""
 
