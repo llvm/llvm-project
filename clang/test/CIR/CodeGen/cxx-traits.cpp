@@ -57,3 +57,25 @@ void type_trait_expr() {
 // OGCG: store i8 0, ptr %[[B_ADDR]], align 1
 // OGCG: store i8 0, ptr %[[C_ADDR]], align 1
 // OGCG: store i8 0, ptr %[[D_ADDR]], align 1
+
+void array_type_trait_expr() {
+  unsigned long a = __array_rank(int[10][20]);
+  unsigned long b = __array_extent(int[10][20], 1);
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["a", init]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["b", init]
+// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !u64i
+// CIR: cir.store {{.*}} %[[CONST_2]], %[[A_ADDR]] : !u64i, !cir.ptr<!u64i>
+// CIR: %[[CONST_20:.*]] = cir.const #cir.int<20> : !u64i
+// CIR: cir.store {{.*}} %[[CONST_20]], %[[B_ADDR]] : !u64i, !cir.ptr<!u64i>
+
+// LLVM: %[[A_ADDR:.*]] = alloca i64, i64 1, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca i64, i64 1, align 8
+// LLVM: store i64 2, ptr %[[A_ADDR]], align 8
+// LLVM: store i64 20, ptr %[[B_ADDR]], align 8
+
+// OGCG: %[[A_ADDR:.*]] = alloca i64, align 8
+// OGCG: %[[B_ADDR:.*]] = alloca i64, align 8
+// OGCG: store i64 2, ptr %[[A_ADDR]], align 8
+// OGCG: store i64 20, ptr %[[B_ADDR]], align 8
