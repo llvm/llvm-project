@@ -55,5 +55,22 @@ entry:
   %v.i = getelementptr inbounds nuw i8, ptr %dst, i32 4
   store i32 %v_load, ptr %v.i, align 4
 
+  ;; v[idx].q
+  ;
+  ; CHECK: [[MUL0:%.*]] = mul i32 %idx, 2
+  ; TODO: It would be nice to combine adds, but this is fine for correctness.
+  ; CHECK: [[ADD0:%.*]] = add i32 [[MUL0]], 3
+  ; CHECK: [[ADD1:%.*]] = add i32 [[ADD0]], 1
+  ; CHECK: [[LOAD:%.*]] = call { i32, i32, i32, i32 } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 [[ADD1]])
+  ; CHECK: [[X:%.*]] = extractvalue { i32, i32, i32, i32 } [[LOAD]], 1
+  ; CHECK: [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr %dst, i32 4
+  ; CHECK: store i32 [[X]], ptr [[PTR]]
+  %v_dyn_ptr = call ptr addrspace(2) @llvm.dx.resource.getpointer(target("dx.CBuffer", %__cblayout_CB) %CB.cb, i32 48)
+  %v_dyn_cbuf.i = getelementptr <{ %S, target("dx.Padding", 8) }>, ptr addrspace(2) %v_dyn_ptr, i32 %idx
+  %v_dyn_q.i = getelementptr inbounds nuw i8, ptr addrspace(2) %v_dyn_cbuf.i, i32 20
+  %v_dyn_load = load i32, ptr addrspace(2) %v_dyn_q.i, align 4
+  %v_dyn.i = getelementptr inbounds nuw i8, ptr %dst, i32 4
+  store i32 %v_dyn_load, ptr %v_dyn.i, align 4
+
   ret void
 }
