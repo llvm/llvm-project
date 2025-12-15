@@ -93,10 +93,20 @@ RT_API_ATTRS void Terminator::CrashHeader() const {
       sourceFileName_, sourceLine_);
 }
 
-// TODO: These will be defined in the coarray runtime library
-RT_API_ATTRS void NotifyOtherImagesOfNormalEnd() {}
-RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement() {}
-RT_API_ATTRS void NotifyOtherImagesOfErrorTermination() {}
+RT_API_ATTRS void NotifyOtherImagesOfNormalEnd() {
+  if (normalEndCallback)
+    (*normalEndCallback)();
+}
+
+RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement() {
+  if (failImageCallback)
+    (*failImageCallback)();
+}
+
+RT_API_ATTRS void NotifyOtherImagesOfErrorTermination() {
+  if (errorCallback)
+    (*errorCallback)();
+}
 
 RT_OFFLOAD_API_GROUP_END
 

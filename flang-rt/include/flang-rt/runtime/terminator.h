@@ -12,6 +12,7 @@
 #define FLANG_RT_RUNTIME_TERMINATOR_H_
 
 #include "flang/Common/api-attrs.h"
+#include "flang/Runtime/stop.h"
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
@@ -112,6 +113,9 @@ private:
   else \
     Terminator{__FILE__, __LINE__}.CheckFailed(#pred)
 
+static void (*normalEndCallback)(void) = nullptr;
+static void (*failImageCallback)(void) = nullptr;
+static void (*errorCallback)(void) = nullptr;
 RT_API_ATTRS void NotifyOtherImagesOfNormalEnd();
 RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement();
 RT_API_ATTRS void NotifyOtherImagesOfErrorTermination();

@@ -182,6 +182,18 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
   std::exit(EXIT_SUCCESS);
 }
 
+void RTNAME(RegisterImagesNormalEndCallback)(void (*callback)(void)) {
+  Fortran::runtime::normalEndCallback = callback;
+}
+
+void RTNAME(RegisterImagesErrorCallback)(void (*callback)(void)) {
+  Fortran::runtime::errorCallback = callback;
+}
+
+void RTNAME(RegisterFailImageCallback)(void (*callback)(void)) {
+  Fortran::runtime::failImageCallback = callback;
+}
+
 [[noreturn]] void RTNAME(Exit)(int status) {
   CloseAllExternalUnits("CALL EXIT()");
   std::exit(status);
