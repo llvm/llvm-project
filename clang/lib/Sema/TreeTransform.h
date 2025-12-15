@@ -4297,6 +4297,15 @@ public:
     return getSema().OpenACC().ActOnOpenACCAsteriskSizeExpr(AsteriskLoc);
   }
 
+  ExprResult
+  RebuildSubstNonTypeTemplateParmExpr(Decl *AssociatedDecl,
+                                      const NonTypeTemplateParmDecl *NTTP,
+                                      SourceLocation Loc, TemplateArgument Arg,
+                                      UnsignedOrNone PackIndex, bool Final) {
+    return getSema().BuildSubstNonTypeTemplateParmExpr(
+        AssociatedDecl, NTTP, Loc, Arg, PackIndex, Final);
+  }
+
 private:
   QualType TransformTypeInObjectScope(TypeLocBuilder &TLB, TypeLoc TL,
                                       QualType ObjectType,
@@ -16467,7 +16476,7 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmPackExpr(
 
   TemplateArgument Pack = E->getArgumentPack();
   TemplateArgument Arg = SemaRef.getPackSubstitutedTemplateArgument(Pack);
-  return SemaRef.BuildSubstNonTypeTemplateParmExpr(
+  return getDerived().RebuildSubstNonTypeTemplateParmExpr(
       E->getAssociatedDecl(), E->getParameterPack(),
       E->getParameterPackLocation(), Arg, SemaRef.getPackIndex(Pack),
       E->getFinal());
@@ -16525,10 +16534,10 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
     Replacement = E->getReplacement();
   }
 
-  return new (SemaRef.Context) SubstNonTypeTemplateParmExpr(
-      Replacement.get()->getType(), Replacement.get()->getValueKind(),
-      E->getNameLoc(), Replacement.get(), AssociatedDecl, E->getIndex(),
-      E->getPackIndex(), E->isReferenceParameter(), E->getFinal());
+  return getDerived().RebuildSubstNonTypeTemplateParmExpr(
+      AssociatedDecl, E->getParameter(), E->getNameLoc(),
+      TemplateArgument(Replacement.get(), /*IsCanonical=*/false),
+      E->getPackIndex(), E->getFinal());
 }
 
 template<typename Derived>
