@@ -37,10 +37,11 @@ int main() {
   /// when mapping the struct happens after the mapping of the pointers.
 
   // clang-format off
-  // CHECK: omptarget --> Entry  0: Base=[[DAT_HST_PTR_BASE:0x.*]], Begin=[[DAT_HST_PTR_BASE]], Size=288, Type=0x0, Name=unknown
-  // CHECK: omptarget --> Entry  1: Base=[[DAT_HST_PTR_BASE]], Begin=[[DAT_HST_PTR_BASE]], Size=288, Type=0x1000000000001, Name=unknown
-  // CHECK: omptarget --> Entry  2: Base=[[DAT_HST_PTR_BASE]], Begin=[[DATUM_HST_PTR_BASE:0x.*]], Size=40, Type=0x1000000000011, Name=unknown
-  // CHECK: omptarget --> Entry  3: Base=[[MORE_DATUM_HST_PTR_BASE:0x.*]], Begin=[[MORE_DATUM_HST_PTR_BEGIN:0x.*]], Size=80, Type=0x1000000000011, Name=unknown
+  // CHECK: omptarget --> Entry  0: Base=[[DAT_HST_PTR_BASE:0x.*]], Begin=[[DAT_HST_PTR_BASE]], Size=288, Type=0x1, Name=unknown
+  // CHECK: omptarget --> Entry  1: Base=[[DATUM_HST_PTEE_BASE:0x.*]], Begin=[[DATUM_HST_PTEE_BASE]], Size=40, Type=0x1, Name=unknown
+  // CHECK: omptarget --> Entry  2: Base=[[DAT_HST_PTR_BASE]], Begin=[[DATUM_HST_PTEE_BASE]], Size=8, Type=0x4000, Name=unknown
+  // CHECK: omptarget --> Entry  3: Base=[[MORE_DATUM_HST_PTEE_BASE:0x.*]], Begin=[[MORE_DATUM_HST_PTEE_BASE]], Size=80, Type=0x1, Name=unknown
+  // CHECK: omptarget --> Entry  4: Base=[[MORE_DATUM_HST_PTR_BASE:0x.*]], Begin=[[MORE_DATUM_HST_PTEE_BASE]], Size=8, Type=0x4000, Name=unknown
   // clang-format on
 
   /// The struct will be mapped in the same order as the above entries.
@@ -54,20 +55,39 @@ int main() {
   // CHECK: omptarget --> Moving 288 bytes (hst:[[DAT_HST_PTR_BASE]]) -> (tgt:[[DAT_DEVICE_PTR_BASE]])
   // clang-format on
 
-  /// Second argument is dat.datum:
+  /// Second argument is dat.datum[ : 10]:
   // clang-format off
-  // CHECK: omptarget --> Looking up mapping(HstPtrBegin=[[DATUM_HST_PTR_BASE]], Size=40)...
-  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 40 with host pointer [[DATUM_HST_PTR_BASE]].
-  // CHECK: omptarget --> Creating new map entry with HstPtrBase=[[DATUM_HST_PTR_BASE]], HstPtrBegin=[[DATUM_HST_PTR_BASE]], TgtAllocBegin=[[DATUM_DEVICE_PTR_BASE:0x.*]], TgtPtrBegin=[[DATUM_DEVICE_PTR_BASE]], Size=40, DynRefCount=1, HoldRefCount=0, Name=unknown
-  // CHECK: omptarget --> Moving 40 bytes (hst:[[DATUM_HST_PTR_BASE]]) -> (tgt:[[DATUM_DEVICE_PTR_BASE]])
+  // CHECK: omptarget --> Looking up mapping(HstPtrBegin=[[DATUM_HST_PTEE_BASE]], Size=40)...
+  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 40 with host pointer [[DATUM_HST_PTEE_BASE]].
+  // CHECK: omptarget --> Creating new map entry with HstPtrBase=[[DATUM_HST_PTEE_BASE]], HstPtrBegin=[[DATUM_HST_PTEE_BASE]], TgtAllocBegin=[[DATUM_DEVICE_PTR_BASE:0x.*]], TgtPtrBegin=[[DATUM_DEVICE_PTR_BASE]], Size=40, DynRefCount=1, HoldRefCount=0, Name=unknown
+  // CHECK: omptarget --> Moving 40 bytes (hst:[[DATUM_HST_PTEE_BASE]]) -> (tgt:[[DATUM_DEVICE_PTR_BASE]])
   // clang-format on
 
-  /// Third argument is dat.more_datum:
+  /// Third argument conditionally attaches data.datum -> dat.datum[:]
+  // CHECK: omptarget --> Deferring ATTACH map-type processing for argument 2
+
+  /// Fourth argument is dat.more_datum[ : 10]:
   // clang-format off
-  // CHECK: omptarget --> Looking up mapping(HstPtrBegin=[[MORE_DATUM_HST_PTR_BEGIN]], Size=80)...
-  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 80 with host pointer [[MORE_DATUM_HST_PTR_BEGIN]].
-  // CHECK: omptarget --> Creating new map entry with HstPtrBase=[[MORE_DATUM_HST_PTR_BEGIN]], HstPtrBegin=[[MORE_DATUM_HST_PTR_BEGIN]], TgtAllocBegin=[[MORE_DATUM_DEVICE_PTR_BEGIN:0x.*]], TgtPtrBegin=[[MORE_DATUM_DEVICE_PTR_BEGIN]], Size=80, DynRefCount=1, HoldRefCount=0, Name=unknown
-  // CHECK: omptarget --> Moving 80 bytes (hst:[[MORE_DATUM_HST_PTR_BEGIN]]) -> (tgt:[[MORE_DATUM_DEVICE_PTR_BEGIN]])
+  // CHECK: omptarget --> Looking up mapping(HstPtrBegin=[[MORE_DATUM_HST_PTEE_BASE]], Size=80)...
+  // CHECK: omptarget --> Creating new map entry with HstPtrBase=[[MORE_DATUM_HST_PTEE_BASE]], HstPtrBegin=[[MORE_DATUM_HST_PTEE_BASE]], TgtAllocBegin=[[MORE_DATUM_DEVICE_PTR_BASE:0x.*]], TgtPtrBegin=[[MORE_DATUM_DEVICE_PTR_BASE]], Size=80, DynRefCount=1, HoldRefCount=0, Name=unknown
+  // CHECK: omptarget --> Moving 80 bytes (hst:[[MORE_DATUM_HST_PTEE_BASE]]) -> (tgt:[[MORE_DATUM_DEVICE_PTR_BASE]])
+  // clang-format on
+
+  /// Fifth argument conditionally attaches data.more_datum -> dat.more_datum[:]
+  // clang-format off
+  // CHECK: omptarget --> Deferring ATTACH map-type processing for argument 4
+  // CHECK: omptarget --> Processing {{[0-9]+}} deferred ATTACH map entries
+  // clang-format on
+
+  /// Attach entries are handled at the end
+  // clang-format off
+  // CHECK: omptarget --> Processing ATTACH entry 0: HstPtr=[[DAT_HST_PTR_BASE]], HstPteeBegin=[[DATUM_HST_PTEE_BASE]], Size=8, Type=0x4000
+  // CHECK: omptarget --> Attach pointee [[DATUM_HST_PTEE_BASE]] was newly allocated: yes
+  // CHECK: omptarget --> Update pointer (0x{{.*}}) -> [0x{{.*}}]
+
+  // CHECK: omptarget --> Processing ATTACH entry 1: HstPtr=[[MORE_DATUM_HST_PTR_BASE]], HstPteeBegin=[[MORE_DATUM_HST_PTEE_BASE]], Size=8, Type=0x4000
+  // CHECK: omptarget --> Attach pointee [[MORE_DATUM_HST_PTEE_BASE]] was newly allocated: yes
+  // CHECK: omptarget --> Update pointer (0x{{.*}}) -> [0x{{.*}}]
   // clang-format on
 
 #pragma omp target enter data map(to : dat.datum[ : 10])                       \
