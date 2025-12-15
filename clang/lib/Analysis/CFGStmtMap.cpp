@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/DenseMap.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
@@ -19,49 +18,28 @@
 
 using namespace clang;
 
-typedef llvm::DenseMap<const Stmt*, CFGBlock*> SMap;
-static SMap *AsMap(void *m) { return (SMap*) m; }
-
-CFGStmtMap::~CFGStmtMap() { delete AsMap(M); }
-
 const CFGBlock *CFGStmtMap::getBlock(const Stmt *S) const {
-  SMap *SM = AsMap(M);
   const Stmt *X = S;
 
   // If 'S' isn't in the map, walk the ParentMap to see if one of its ancestors
   // is in the map.
   while (X) {
-    SMap::iterator I = SM->find(X);
-    if (I != SM->end()) {
-      CFGBlock *B = I->second;
-      // Memoize this lookup.
-      if (X != S)
-        (*SM)[X] = B;
-      return B;
+    auto I = M.find(X);
+    if (I != M.end()) {
+      return I->second;
     }
-
     X = PM->getParentIgnoreParens(X);
   }
 
   return nullptr;
 }
 
-static void Accumulate(SMap &SM, CFGBlock *B) {
+void CFGStmtMap::Accumulate(SMap &SM, CFGBlock *B) {
   // First walk the block-level expressions.
-  for (CFGBlock::iterator I = B->begin(), E = B->end(); I != E; ++I) {
-    const CFGElement &CE = *I;
-    std::optional<CFGStmt> CS = CE.getAs<CFGStmt>();
-    if (!CS)
-      continue;
-
-    CFGBlock *&Entry = SM[CS->getStmt()];
-    // If 'Entry' is already initialized (e.g., a terminator was already),
-    // skip.
-    if (Entry)
-      continue;
-
-    Entry = B;
-
+  for (const CFGElement &CE : *B) {
+    if (std::optional<CFGStmt> CS = CE.getAs<CFGStmt>()) {
+      SM.try_emplace(CS->getStmt(), B);
+    }
   }
 
   // Look at the label of the block.
@@ -79,13 +57,13 @@ CFGStmtMap *CFGStmtMap::Build(CFG *C, ParentMap *PM) {
   if (!C || !PM)
     return nullptr;
 
-  SMap *SM = new SMap();
+  SMap SM;
 
   // Walk all blocks, accumulating the block-level expressions, labels,
   // and terminators.
   for (CFGBlock *BB : *C)
-    Accumulate(*SM, BB);
+    Accumulate(SM, BB);
 
-  return new CFGStmtMap(PM, SM);
+  return new CFGStmtMap(PM, std::move(SM));
 }
 
