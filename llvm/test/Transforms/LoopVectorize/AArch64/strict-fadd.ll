@@ -502,9 +502,9 @@ define float @fadd_predicated(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-UNORDERED: %[[ICMP:.*]] = icmp ule <2 x i64> %vec.ind, %[[SPLAT]]
 ; CHECK-UNORDERED: pred.load.continue2
 ; CHECK-UNORDERED: %[[FADD]] = fadd <2 x float> %[[RDX_PHI]], {{.*}}
-; CHECK-UNORDERED: %[[MASK:.*]] = select <2 x i1> %[[ICMP]], <2 x float> %[[FADD]], <2 x float> %[[RDX_PHI]]
 ; CHECK-UNORDERED-NOT: call float @llvm.vector.reduce.fadd
 ; CHECK-UNORDERED: middle.block
+; CHECK-UNORDERED: %[[MASK:.*]] = select <2 x i1> %[[ICMP]], <2 x float> %[[FADD]], <2 x float> %[[RDX_PHI]]
 ; CHECK-UNORDERED: %[[RDX:.*]] = call float @llvm.vector.reduce.fadd.v2f32(float -0.000000e+00, <2 x float> %[[MASK]])
 ; CHECK-UNORDERED: for.end
 ; CHECK-UNORDERED: ret float %[[RDX]]

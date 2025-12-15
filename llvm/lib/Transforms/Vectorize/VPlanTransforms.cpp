@@ -2467,6 +2467,33 @@ static void licm(VPlan &Plan) {
       R.moveBefore(*Preheader, Preheader->end());
     }
   }
+
+  // Sink any recipes which don't have any users in the region to the nearest
+  // common dominator of its users.
+  VPDominatorTree VPDT(Plan);
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_post_order_shallow(LoopRegion->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      if (cannotHoistOrSinkRecipe(R))
+        continue;
+      SmallSetVector<VPRecipeBase *, 4> Users;
+      if (any_of(R.definedValues(), [&Users](VPValue *V) {
+            return any_of(V->users(), [&Users](VPUser *U) {
+              auto *UR = cast<VPRecipeBase>(U);
+              Users.insert(UR);
+              return UR->getParent()->getEnclosingLoopRegion();
+            });
+          }))
+        continue;
+      if (Users.empty())
+        continue;
+      VPBasicBlock *SinkVPBB = Users.front()->getParent();
+      for (auto *User : drop_begin(Users))
+        SinkVPBB = cast<VPBasicBlock>(
+            VPDT.findNearestCommonDominator(SinkVPBB, User->getParent()));
+      R.moveBefore(*SinkVPBB, SinkVPBB->begin());
+    }
+  }
 }
 
 void VPlanTransforms::truncateToMinimalBitwidths(
