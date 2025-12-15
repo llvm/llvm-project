@@ -152,7 +152,6 @@ void MacroParenthesesPPCallbacks::replacementList(const Token &MacroNameTok,
 
 void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
                                            const MacroInfo *MI) {
-
   // Skip variable declaration.
   bool VarDecl = possibleVarDecl(MI, MI->tokens_begin());
 

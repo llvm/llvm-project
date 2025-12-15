@@ -39,6 +39,5 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK-NEXT: entry:
 // CHECK-NEXT:  %[[MOVED_ALLOCA1:.*]] = alloca { ptr }, align 8
 // CHECK-NEXT:  %[[MOVED_ALLOCA2:.*]] = alloca i32, i64 1, align 4
-// CHECK-NEXT:  %[[MAP_ARG_ALLOCA:.*]] = alloca ptr, align 8
-
 // CHECK: user_code.entry:                                  ; preds = %entry
+// CHECK-NEXT:  %[[MAP_ARG_ALLOC:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)

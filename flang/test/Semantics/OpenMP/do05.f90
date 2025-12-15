@@ -49,7 +49,7 @@ program omp_do
   end do
   !$omp end parallel do simd
 
-  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
+  !WARNING: `DISTRIBUTE` must be dynamically enclosed in a `TEAMS` region.
   !$omp distribute parallel do
   do i=1,10
     if( i == 3 ) then
@@ -64,7 +64,7 @@ program omp_do
   end do
   !$omp end distribute parallel do
 
-  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
+  !WARNING: `DISTRIBUTE` must be dynamically enclosed in a `TEAMS` region.
   !$omp distribute parallel do simd
   do i=1,10
     if( i == 3 ) then

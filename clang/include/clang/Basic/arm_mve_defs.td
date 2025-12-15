@@ -134,6 +134,13 @@ def unzip: CGHelperFn<"VectorUnzip"> {
 }
 def zip: CGHelperFn<"VectorZip">;
 
+def masked_load: IRBuilder<"CreateMaskedLoad"> {
+  let special_params = [IRBuilderIntParam<2, "Align">];
+}
+def masked_store: IRBuilder<"CreateMaskedStore"> {
+  let special_params = [IRBuilderIntParam<2, "Align">];
+}
+
 // Trivial 'codegen' function that just returns its argument. Useful
 // for wrapping up a variable name like $foo into a thing you can pass
 // around as type 'dag'.

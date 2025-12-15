@@ -983,7 +983,7 @@ public:
   }
 
   /// Check equivalence data for consistency.
-  [[nodiscard]] LLVM_ATTRIBUTE_UNUSED static bool
+  [[nodiscard]] [[maybe_unused]] static bool
   isClassDataConsistent(ProgramStateRef State);
 
   [[nodiscard]] QualType getType() const {
@@ -1041,8 +1041,7 @@ private:
 //                             Constraint functions
 //===----------------------------------------------------------------------===//
 
-[[nodiscard]] LLVM_ATTRIBUTE_UNUSED bool
-areFeasible(ConstraintRangeTy Constraints) {
+[[nodiscard]] [[maybe_unused]] bool areFeasible(ConstraintRangeTy Constraints) {
   return llvm::none_of(
       Constraints,
       [](const std::pair<EquivalenceClass, RangeSet> &ClassConstraint) {
@@ -1134,7 +1133,7 @@ template <class EndTy>
   return End;
 }
 
-[[nodiscard]] LLVM_ATTRIBUTE_UNUSED inline std::optional<RangeSet>
+[[nodiscard]] [[maybe_unused]] inline std::optional<RangeSet>
 intersect(RangeSet::Factory &F, const RangeSet *End) {
   // This is an extraneous conversion from a raw pointer into
   // std::optional<RangeSet>

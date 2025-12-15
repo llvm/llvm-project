@@ -53,7 +53,10 @@ class LLVMConfig(object):
             self.use_lit_shell = True
 
             global lit_path_displayed
-            if not self.lit_config.quiet and lit_path_displayed is False:
+            if (
+                self.lit_config.diagnostic_level_enabled("note")
+                and lit_path_displayed is False
+            ):
                 self.lit_config.note("using lit tools: {}".format(path))
                 lit_path_displayed = True
 
@@ -85,7 +88,8 @@ class LLVMConfig(object):
                 "HWASAN_SYMBOLIZER_PATH",
                 "MSAN_SYMBOLIZER_PATH",
                 "TSAN_SYMBOLIZER_PATH",
-                "UBSAN_SYMBOLIZER_PATH" "ASAN_OPTIONS",
+                "UBSAN_SYMBOLIZER_PATH",
+                "ASAN_OPTIONS",
                 "HWASAN_OPTIONS",
                 "MSAN_OPTIONS",
                 "RTSAN_OPTIONS",
@@ -289,6 +293,17 @@ class LLVMConfig(object):
         except OSError:
             self.lit_config.fatal("Could not run process %s" % command)
 
+    def check_process_success(self, command):
+        cp = subprocess.run(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=self.config.environment,
+        )
+        if cp.returncode == 0:
+            return True
+        return False
+
     def feature_config(self, features):
         # Ask llvm-config about the specified feature.
         arguments = [x for (x, _) in features]
@@ -329,6 +344,25 @@ class LLVMConfig(object):
             clang_dir = clang_dir.replace("\\", "/")
         # Ensure the result is an ascii string, across Python2.5+ - Python3.
         return clang_dir
+
+    def clang_has_bounds_safety(self, additional_flags=None):
+        """
+        Return True iff `self.config.clang` supports -fbounds-safety
+        """
+        if not self.config.clang:
+            return False
+        if not os.path.exists(self.config.clang):
+            return False
+        if additional_flags is None:
+            additional_flags = []
+        # Invoke the clang driver to see if it supports the `-fbounds-safety`
+        # flag. Only the downstream implementation has this flag so this is
+        # a simple way to check if the full implementation is available or not.
+        cmd = [self.config.clang] + additional_flags
+        cmd += ["-fbounds-safety", "-###"]
+        if self.check_process_success(cmd):
+            return True
+        return False
 
     # On macOS, LSan is only supported on clang versions 5 and higher
     def get_clang_has_lsan(self, clang, triple):
@@ -526,7 +560,7 @@ class LLVMConfig(object):
 
         if tool:
             tool = os.path.normpath(tool)
-            if not self.lit_config.quiet and not quiet:
+            if not quiet:
                 self.lit_config.note("using {}: {}".format(name, tool))
         return tool
 
@@ -636,10 +670,9 @@ class LLVMConfig(object):
                 ("%ms_abi_triple", self.make_msabi_triple(self.config.target_triple))
             )
         else:
-            if not self.lit_config.quiet:
-                self.lit_config.note(
-                    "No default target triple was found, some tests may fail as a result."
-                )
+            self.lit_config.note(
+                "No default target triple was found, some tests may fail as a result."
+            )
             self.config.substitutions.append(("%itanium_abi_triple", ""))
             self.config.substitutions.append(("%ms_abi_triple", ""))
 

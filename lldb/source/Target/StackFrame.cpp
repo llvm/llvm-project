@@ -1344,18 +1344,18 @@ const char *StackFrame::GetDisplayFunctionName() {
 SourceLanguage StackFrame::GetLanguage() {
   CompileUnit *cu = GetSymbolContext(eSymbolContextCompUnit).comp_unit;
   if (cu)
-    return cu->GetLanguage();
+    return SourceLanguage{cu->GetLanguage()};
   return {};
 }
 
 SourceLanguage StackFrame::GuessLanguage() {
   SourceLanguage lang_type = GetLanguage();
 
-  if (lang_type == eLanguageTypeUnknown) {
+  if (!lang_type) {
     SymbolContext sc =
         GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol);
     if (sc.function)
-      lang_type = LanguageType(sc.function->GetMangled().GuessLanguage());
+      lang_type = SourceLanguage(sc.function->GetMangled().GuessLanguage());
     else if (sc.symbol)
       lang_type = SourceLanguage(sc.symbol->GetMangled().GuessLanguage());
   }
@@ -2057,7 +2057,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
       if (m_sc.comp_unit && m_sc.line_entry.IsValid()) {
         have_debuginfo = true;
         if (source_lines_before > 0 || source_lines_after > 0) {
-          SupportFileSP source_file_sp = m_sc.line_entry.file_sp;
+          SupportFileNSP source_file_sp = m_sc.line_entry.file_sp;
           uint32_t start_line = m_sc.line_entry.line;
           if (!start_line && m_sc.function) {
             m_sc.function->GetStartLineSourceInfo(source_file_sp, start_line);

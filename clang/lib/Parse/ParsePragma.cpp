@@ -1419,10 +1419,11 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
 
   // Return a valid hint if pragma unroll or nounroll were specified
   // without an argument.
-  auto IsLoopHint = llvm::StringSwitch<bool>(PragmaNameInfo->getName())
-                        .Cases("unroll", "nounroll", "unroll_and_jam",
-                               "nounroll_and_jam", true)
-                        .Default(false);
+  auto IsLoopHint =
+      llvm::StringSwitch<bool>(PragmaNameInfo->getName())
+          .Cases({"unroll", "nounroll", "unroll_and_jam", "nounroll_and_jam"},
+                 true)
+          .Default(false);
 
   if (Toks.empty() && IsLoopHint) {
     ConsumeAnnotationToken();

@@ -16,44 +16,59 @@
 #include "DeviceUtils.h"
 #include "Mapping.h"
 #include "Synchronization.h"
+#include "Platform.h"
 
 using namespace ompx;
+using namespace allocator;
 
-[[gnu::used, gnu::retain, gnu::weak,
-  gnu::visibility(
-      "protected")]] DeviceMemoryPoolTy __omp_rtl_device_memory_pool;
-[[gnu::used, gnu::retain, gnu::weak,
-  gnu::visibility("protected")]] DeviceMemoryPoolTrackingTy
-    __omp_rtl_device_memory_pool_tracker;
+// Provide a default implementation of malloc / free for AMDGPU platforms built
+// without 'libc' support.
+extern "C" {
 
-/// Stateless bump allocator that uses the __omp_rtl_device_memory_pool
-/// directly.
+[[gnu::noinline]] uint64_t __asan_malloc_impl(uint64_t bufsz, uint64_t pc);
+[[gnu::noinline]] void __asan_free_impl(uint64_t ptr, uint64_t pc);
+[[gnu::noinline]] uint64_t __ockl_dm_alloc(uint64_t bufsz);
+[[gnu::noinline]] void __ockl_dm_dealloc(uint64_t ptr);
+
+#ifdef __AMDGPU__
+[[gnu::noinline]] void *__alt_libc_malloc(size_t sz);
+[[gnu::noinline]] void __alt_libc_free(void *ptr);
+
+[[gnu::noinline]] uint64_t __ockl_devmem_request(uint64_t addr, uint64_t size) {
+  if (size) { // allocation request
+    [[clang::noinline]] return (uint64_t)__alt_libc_malloc((size_t)size);
+  } else { // free request
+    [[clang::noinline]] __alt_libc_free((void *)addr);
+    return 0;
+  }
+}
+#endif
+
+#if defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
+[[gnu::weak]] void *malloc(size_t Size) { return allocator::alloc(Size); }
+[[gnu::weak]] void free(void *Ptr) { allocator::free(Ptr); }
+#else
+[[gnu::leaf]] void *malloc(size_t Size);
+[[gnu::leaf]] void free(void *Ptr);
+#endif
+}
+
+static constexpr uint64_t MEMORY_SIZE = /* 1 MiB */ 1024 * 1024;
+alignas(ALIGNMENT) static uint8_t Memory[MEMORY_SIZE] = {0};
+
+// Fallback bump pointer interface for platforms without a functioning
+// allocator.
 struct BumpAllocatorTy final {
+  uint64_t Offset = 0;
 
   void *alloc(uint64_t Size) {
     Size = utils::roundUp(Size, uint64_t(allocator::ALIGNMENT));
 
-    if (config::isDebugMode(DeviceDebugKind::AllocationTracker)) {
-      atomic::add(&__omp_rtl_device_memory_pool_tracker.NumAllocations, 1,
-                  atomic::seq_cst);
-      atomic::add(&__omp_rtl_device_memory_pool_tracker.AllocationTotal, Size,
-                  atomic::seq_cst);
-      atomic::min(&__omp_rtl_device_memory_pool_tracker.AllocationMin, Size,
-                  atomic::seq_cst);
-      atomic::max(&__omp_rtl_device_memory_pool_tracker.AllocationMax, Size,
-                  atomic::seq_cst);
-    }
-
-    uint64_t *Data =
-        reinterpret_cast<uint64_t *>(&__omp_rtl_device_memory_pool.Ptr);
-    uint64_t End =
-        reinterpret_cast<uint64_t>(Data) + __omp_rtl_device_memory_pool.Size;
-
-    uint64_t OldData = atomic::add(Data, Size, atomic::seq_cst);
-    if (OldData + Size > End)
+    uint64_t OldData = atomic::add(&Offset, Size, atomic::seq_cst);
+    if (OldData + Size >= MEMORY_SIZE)
       __builtin_trap();
 
-    return reinterpret_cast<void *>(OldData);
+    return &Memory[OldData];
   }
 
   void free(void *) {}
@@ -65,13 +80,26 @@ BumpAllocatorTy BumpAllocator;
 ///
 ///{
 
-void allocator::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment) {
-  // TODO: Check KernelEnvironment for an allocator choice as soon as we have
-  // more than one.
+void *allocator::alloc(uint64_t Size) {
+#if defined(__AMDGPU__) && defined(SANITIZER_AMDGPU)
+  return reinterpret_cast<void *>(
+      __asan_malloc_impl(Size, uint64_t(__builtin_return_address(0))));
+#elif defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
+  return reinterpret_cast<void *>(__ockl_dm_alloc(Size));
+#else
+  return ::malloc(Size);
+#endif
 }
 
-void *allocator::alloc(uint64_t Size) { return BumpAllocator.alloc(Size); }
-
-void allocator::free(void *Ptr) { BumpAllocator.free(Ptr); }
+void allocator::free(void *Ptr) {
+#if defined(__AMDGPU__) && defined(SANITIZER_AMDGPU)
+  __asan_free_impl(reinterpret_cast<uint64_t>(Ptr),
+                   uint64_t(__builtin_return_address(0)));
+#elif defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
+  __ockl_dm_dealloc(reinterpret_cast<uint64_t>(Ptr));
+#else
+  ::free(Ptr);
+#endif
+}
 
 ///}

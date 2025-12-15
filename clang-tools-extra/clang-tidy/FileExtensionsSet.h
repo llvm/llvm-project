@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FILE_EXTENSIONS_SET_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FILE_EXTENSIONS_SET_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FILEEXTENSIONSSET_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FILEEXTENSIONSSET_H
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -16,4 +16,4 @@ namespace clang::tidy {
 using FileExtensionsSet = llvm::SmallSet<llvm::StringRef, 5>;
 } // namespace clang::tidy
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FILE_EXTENSIONS_SET_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FILEEXTENSIONSSET_H

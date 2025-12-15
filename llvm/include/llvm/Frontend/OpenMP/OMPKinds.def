@@ -49,6 +49,7 @@ __OMP_TYPE(BFloat)
 
 OMP_TYPE(SizeTy, M.getDataLayout().getIntPtrType(Ctx))
 OMP_TYPE(Int63, Type::getIntNTy(Ctx, 63))
+OMP_TYPE(FuncPtrTy, PointerType::get(Ctx, M.getDataLayout().getProgramAddressSpace()))
 
 __OMP_PTR_TYPE(VoidPtr)
 __OMP_PTR_TYPE(VoidPtrPtr)
@@ -497,7 +498,7 @@ __OMP_RTL(__kmpc_target_deinit, false, Void,)
 __OMP_RTL(__kmpc_specialized_kernel_init, false, Void,)
 __OMP_RTL(__kmpc_kernel_prepare_parallel, false, Void, VoidPtr)
 __OMP_RTL(__kmpc_parallel_51, false, Void, IdentPtr, Int32, Int32, Int32, Int32,
-          VoidPtr, VoidPtr, VoidPtrPtr, SizeTy)
+          FuncPtrTy, FuncPtrTy, VoidPtrPtr, SizeTy)
 __OMP_RTL(__kmpc_parallel_spmd, false, Void, IdentPtr, Int32, VoidPtr, VoidPtrPtr, SizeTy)
 __OMP_RTL(__kmpc_parallel_60, false, Void, IdentPtr, Int32, Int32, Int32, Int32,
           VoidPtr, VoidPtr, VoidPtrPtr, SizeTy, Int32, Int32, Int8Ptr)

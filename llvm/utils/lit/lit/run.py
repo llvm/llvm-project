@@ -137,6 +137,11 @@ class Run(object):
                     "Raised process limit from %d to %d" % (soft_limit, desired_limit)
                 )
         except Exception as ex:
-            # Warn, unless this is Windows or z/OS, in which case this is expected.
-            if os.name != "nt" and platform.system() != "OS/390":
+            # Warn, unless this is Windows, z/OS, Solaris or Cygwin in which case this is expected.
+            if (
+                os.name != "nt"
+                and platform.system() != "OS/390"
+                and platform.system() != "SunOS"
+                and platform.sys.platform != "cygwin"
+            ):
                 self.lit_config.warning("Failed to raise process limit: %s" % ex)

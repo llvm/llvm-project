@@ -41,7 +41,7 @@ template <typename T> class ArrayRef;
 
 class MD5 {
 public:
-  struct MD5Result : public std::array<uint8_t, 16> {
+  struct MD5Result : std::array<uint8_t, 16> {
     LLVM_ABI SmallString<32> digest() const;
 
     uint64_t low() const {
@@ -90,7 +90,7 @@ public:
 
 private:
   // Any 32-bit or wider unsigned integer data type will do.
-  typedef uint32_t MD5_u32plus;
+  using MD5_u32plus = uint32_t;
 
   // Internal State
   struct {

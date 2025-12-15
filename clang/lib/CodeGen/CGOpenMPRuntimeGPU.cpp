@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This provides a generalized class for OpenMP runtime code generation
-// specialized by GPU targets NVPTX and AMDGCN.
+// specialized by GPU targets NVPTX, AMDGCN and SPIR-V.
 //
 //===----------------------------------------------------------------------===//
 
@@ -1068,6 +1068,10 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
       CGM.getLangOpts().OpenMPOffloadMandatory,
       /*HasRequiresReverseOffload*/ false, /*HasRequiresUnifiedAddress*/ false,
       hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
+  Config.setDefaultTargetAS(
+      CGM.getContext().getTargetInfo().getTargetAddressSpace(LangAS::Default));
+  Config.setRuntimeCC(CGM.getRuntimeCC());
+
   OMPBuilder.setConfig(Config);
 
   if (!CGM.getLangOpts().OpenMPIsTargetDevice)
@@ -1459,10 +1463,14 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
     CGBuilderTy &Bld = CGF.Builder;
     llvm::Value *NumThreadsVal = NumThreads;
     llvm::Function *WFn = WrapperFunctionsMap[OutlinedFn];
-    llvm::Value *ID = llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
+    llvm::PointerType *FnPtrTy = llvm::PointerType::get(
+        CGF.getLLVMContext(), CGM.getDataLayout().getProgramAddressSpace());
+
+    llvm::Value *ID = llvm::ConstantPointerNull::get(FnPtrTy);
     if (WFn)
-      ID = Bld.CreateBitOrPointerCast(WFn, CGM.Int8PtrTy);
-    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, CGM.Int8PtrTy);
+      ID = Bld.CreateBitOrPointerCast(WFn, FnPtrTy);
+
+    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, FnPtrTy);
 
     // Create a private scope that will globalize the arguments
     // passed from the outside of the target region.
@@ -2629,7 +2637,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUBlockID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   llvm::Function *F =
       CGF.CGM.getIntrinsic(llvm::Intrinsic::amdgcn_workgroup_id_x);
-  return Bld.CreateCall(F, std::nullopt, "gpu_block_id");
+  return Bld.CreateCall(F, {}, "gpu_block_id");
 }
 
 llvm::Value *CGOpenMPRuntimeGPU::getGPUNumBlocks(CodeGenFunction &CGF) {

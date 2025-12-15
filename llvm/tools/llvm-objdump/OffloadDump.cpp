@@ -90,7 +90,7 @@ void llvm::dumpOffloadBundleFatBinary(const ObjectFile &O, StringRef ArchName) {
                                      toString(std::move(Err)));
   for (const auto &[BundleNum, Bundle] : llvm::enumerate(FoundBundles)) {
     for (OffloadBundleEntry &Entry : Bundle.getEntries()) {
-      if (!ArchName.empty() && (Entry.ID.find(ArchName) != std::string::npos))
+      if (!ArchName.empty() && Entry.ID.find(ArchName) != std::string::npos)
         continue;
 
       // create file name for this object file:  <source-filename>.<Bundle

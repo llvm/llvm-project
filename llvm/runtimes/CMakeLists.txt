@@ -473,7 +473,6 @@ if(build_runtimes)
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
                 clang
-                clang-offload-packager
                 flang
                 count
                 lld
@@ -489,6 +488,7 @@ if(build_runtimes)
                 llvm-size
                 llvm-symbolizer
                 llvm-xray
+                llvm-offload-binary
                 not
                 obj2yaml
                 opt
@@ -576,6 +576,7 @@ if(build_runtimes)
           CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${ROCM_DEVICE_LIBS_INSTALL_PREFIX_PATH}
                      -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW=${ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC}
                      -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD=amdgcn
+                     -DCMAKE_INSTALL_LIBDIR=lib
                      ${extra_cmake_args})
       else()
         ExternalProject_Add(rocm-device-libs
@@ -606,7 +607,7 @@ if(build_runtimes)
     if (${LIBOMPTARGET_BUILD_DEVICE_FORTRT})
       set(FORTRT_DEP FortranRuntime)
     endif()
-    foreach(dep opt llvm-link llvm-extract clang clang-offload-packager clang-nvlink-wrapper rocm-device-libs offload-arch ${HSA_DEP} ${AMDGPU_ARCH_DEP} ${FORTRT_DEP})
+    foreach(dep opt llvm-link llvm-extract clang llvm-offload-binary clang-nvlink-wrapper rocm-device-libs offload-arch ${HSA_DEP} ${AMDGPU_ARCH_DEP} ${FORTRT_DEP})
       if(TARGET ${dep} AND OPENMP_ENABLE_LIBOMPTARGET)
         list(APPEND extra_deps ${dep})
       endif()
@@ -614,8 +615,8 @@ if(build_runtimes)
   endif()
   if(LLVM_LIBC_GPU_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
-    if(TARGET clang-offload-packager)
-      list(APPEND extra_deps clang-offload-packager)
+    if(TARGET llvm-offload-binary)
+      list(APPEND extra_deps llvm-offload-binary)
     endif()
     if(TARGET clang-nvlink-wrapper)
       list(APPEND extra_deps clang-nvlink-wrapper)

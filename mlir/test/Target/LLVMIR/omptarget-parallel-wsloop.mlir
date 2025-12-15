@@ -30,7 +30,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK:      call void @__kmpc_parallel_51(ptr addrspacecast
 // CHECK-SAME:  (ptr addrspace(1) @[[GLOB:[0-9]+]] to ptr),
 // CHECK-SAME:  i32 %[[THREAD_NUM:.*]], i32 1, i32 -1, i32 -1,
-// CHECK-SAME:  ptr @[[PARALLEL_FUNC:.*]], ptr null, ptr %[[PARALLEL_ARGS:.*]], i64 1)
+// CHECK-SAME:  ptr @[[PARALLEL_FUNC:.*]], ptr @[[PARALLEL_WRAPPER:.*]], ptr %[[PARALLEL_ARGS:.*]], i64 1)
 
 // CHECK:      define internal void @[[PARALLEL_FUNC]]
 // CHECK-SAME:  (ptr noalias noundef %[[TID_ADDR:.*]], ptr noalias noundef %[[ZERO_ADDR:.*]],
@@ -41,6 +41,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK-SAME:   i32 %[[THREAD_NUM:.*]], i8 0)
 
 // CHECK:      define internal void @[[LOOP_BODY_FUNC]](i32 %[[CNT:.*]], ptr %[[LOOP_BODY_ARG_PTR:.*]]) #[[ATTRS2:[0-9]+]] {
+
+// CHECK:      define internal void @[[PARALLEL_WRAPPER]](i16 {{.*}}, i32 {{.*}}) {
+// CHECK-NOT:    ret {{.*}}
+// CHECK:        call void @[[PARALLEL_FUNC]]({{.*}})
+// CHECK-NEXT:   ret void
 
 // CHECK:      attributes #[[ATTRS1]] = {
 // CHECK-SAME:  "target-cpu"="gfx90a"

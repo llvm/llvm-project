@@ -32,6 +32,13 @@ using clang::format::FormatStyle;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::RawStringFormat)
 
+enum BracketAlignmentStyle : int8_t {
+  BAS_Align,
+  BAS_DontAlign,
+  BAS_AlwaysBreak,
+  BAS_BlockIndent
+};
+
 namespace llvm {
 namespace yaml {
 template <>
@@ -204,16 +211,16 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<FormatStyle::BracketAlignmentStyle> {
-  static void enumeration(IO &IO, FormatStyle::BracketAlignmentStyle &Value) {
-    IO.enumCase(Value, "Align", FormatStyle::BAS_Align);
-    IO.enumCase(Value, "DontAlign", FormatStyle::BAS_DontAlign);
-    IO.enumCase(Value, "AlwaysBreak", FormatStyle::BAS_AlwaysBreak);
-    IO.enumCase(Value, "BlockIndent", FormatStyle::BAS_BlockIndent);
+template <> struct ScalarEnumerationTraits<BracketAlignmentStyle> {
+  static void enumeration(IO &IO, BracketAlignmentStyle &Value) {
+    IO.enumCase(Value, "Align", BAS_Align);
+    IO.enumCase(Value, "DontAlign", BAS_DontAlign);
 
     // For backward compatibility.
-    IO.enumCase(Value, "true", FormatStyle::BAS_Align);
-    IO.enumCase(Value, "false", FormatStyle::BAS_DontAlign);
+    IO.enumCase(Value, "true", BAS_Align);
+    IO.enumCase(Value, "false", BAS_DontAlign);
+    IO.enumCase(Value, "AlwaysBreak", BAS_AlwaysBreak);
+    IO.enumCase(Value, "BlockIndent", BAS_BlockIndent);
   }
 };
 
@@ -301,6 +308,18 @@ struct ScalarEnumerationTraits<FormatStyle::BreakTemplateDeclarationsStyle> {
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::BTDS_MultiLine);
     IO.enumCase(Value, "true", FormatStyle::BTDS_Yes);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::BracedListStyle> {
+  static void enumeration(IO &IO, FormatStyle::BracedListStyle &Value) {
+    IO.enumCase(Value, "Block", FormatStyle::BLS_Block);
+    IO.enumCase(Value, "FunctionCall", FormatStyle::BLS_FunctionCall);
+    IO.enumCase(Value, "AlignFirstComment", FormatStyle::BLS_AlignFirstComment);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "false", FormatStyle::BLS_Block);
+    IO.enumCase(Value, "true", FormatStyle::BLS_AlignFirstComment);
   }
 };
 
@@ -857,27 +876,28 @@ template <> struct MappingTraits<FormatStyle::TrailingCommentsAlignmentStyle> {
                         FormatStyle::TrailingCommentsAlignmentStyle &Value) {
     IO.enumCase(Value, "Leave",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Leave, 0}));
+                    {FormatStyle::TCAS_Leave, 0, true}));
 
     IO.enumCase(Value, "Always",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Always, 0}));
+                    {FormatStyle::TCAS_Always, 0, true}));
 
     IO.enumCase(Value, "Never",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Never, 0}));
+                    {FormatStyle::TCAS_Never, 0, true}));
 
     // For backwards compatibility
     IO.enumCase(Value, "true",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Always, 0}));
+                    {FormatStyle::TCAS_Always, 0, true}));
     IO.enumCase(Value, "false",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Never, 0}));
+                    {FormatStyle::TCAS_Never, 0, true}));
   }
 
   static void mapping(IO &IO,
                       FormatStyle::TrailingCommentsAlignmentStyle &Value) {
+    IO.mapOptional("AlignPPAndNotPP", Value.AlignPPAndNotPP);
     IO.mapOptional("Kind", Value.Kind);
     IO.mapOptional("OverEmptyLines", Value.OverEmptyLines);
   }
@@ -967,6 +987,54 @@ template <> struct MappingTraits<FormatStyle> {
     bool SpacesInCStyleCastParentheses = false;
     bool SpacesInParentheses = false;
 
+    if (IO.outputting()) {
+      IO.mapOptional("AlignAfterOpenBracket", Style.AlignAfterOpenBracket);
+    } else {
+      // For backward compatibility.
+      BracketAlignmentStyle LocalBAS = BAS_Align;
+      if (IsGoogleOrChromium) {
+        FormatStyle::LanguageKind Language = Style.Language;
+        if (Language == FormatStyle::LK_None)
+          Language = ((FormatStyle *)IO.getContext())->Language;
+        if (Language == FormatStyle::LK_JavaScript)
+          LocalBAS = BAS_AlwaysBreak;
+        else if (Language == FormatStyle::LK_Java)
+          LocalBAS = BAS_DontAlign;
+      } else if (BasedOnStyle.equals_insensitive("webkit")) {
+        LocalBAS = BAS_DontAlign;
+      }
+      IO.mapOptional("AlignAfterOpenBracket", LocalBAS);
+      Style.BreakAfterOpenBracketBracedList = false;
+      Style.BreakAfterOpenBracketFunction = false;
+      Style.BreakAfterOpenBracketIf = false;
+      Style.BreakAfterOpenBracketLoop = false;
+      Style.BreakAfterOpenBracketSwitch = false;
+      Style.BreakBeforeCloseBracketBracedList = false;
+      Style.BreakBeforeCloseBracketFunction = false;
+      Style.BreakBeforeCloseBracketIf = false;
+      Style.BreakBeforeCloseBracketLoop = false;
+      Style.BreakBeforeCloseBracketSwitch = false;
+
+      switch (LocalBAS) {
+      case BAS_DontAlign:
+        Style.AlignAfterOpenBracket = false;
+        break;
+      case BAS_BlockIndent:
+        Style.BreakBeforeCloseBracketBracedList = true;
+        Style.BreakBeforeCloseBracketFunction = true;
+        Style.BreakBeforeCloseBracketIf = true;
+        [[fallthrough]];
+      case BAS_AlwaysBreak:
+        Style.BreakAfterOpenBracketBracedList = true;
+        Style.BreakAfterOpenBracketFunction = true;
+        Style.BreakAfterOpenBracketIf = true;
+        [[fallthrough]];
+      case BAS_Align:
+        Style.AlignAfterOpenBracket = true;
+        break;
+      }
+    }
+
     // For backward compatibility.
     if (!IO.outputting()) {
       IO.mapOptional("AlignEscapedNewlinesLeft", Style.AlignEscapedNewlines);
@@ -1002,7 +1070,6 @@ template <> struct MappingTraits<FormatStyle> {
     }
 
     IO.mapOptional("AccessModifierOffset", Style.AccessModifierOffset);
-    IO.mapOptional("AlignAfterOpenBracket", Style.AlignAfterOpenBracket);
     IO.mapOptional("AlignArrayOfStructures", Style.AlignArrayOfStructures);
     IO.mapOptional("AlignConsecutiveAssignments",
                    Style.AlignConsecutiveAssignments);
@@ -1067,10 +1134,29 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakAfterAttributes", Style.BreakAfterAttributes);
     IO.mapOptional("BreakAfterJavaFieldAnnotations",
                    Style.BreakAfterJavaFieldAnnotations);
+    IO.mapOptional("BreakAfterOpenBracketBracedList",
+                   Style.BreakAfterOpenBracketBracedList);
+    IO.mapOptional("BreakAfterOpenBracketFunction",
+                   Style.BreakAfterOpenBracketFunction);
+    IO.mapOptional("BreakAfterOpenBracketIf", Style.BreakAfterOpenBracketIf);
+    IO.mapOptional("BreakAfterOpenBracketLoop",
+                   Style.BreakAfterOpenBracketLoop);
+    IO.mapOptional("BreakAfterOpenBracketSwitch",
+                   Style.BreakAfterOpenBracketSwitch);
     IO.mapOptional("BreakAfterReturnType", Style.BreakAfterReturnType);
     IO.mapOptional("BreakArrays", Style.BreakArrays);
     IO.mapOptional("BreakBeforeBinaryOperators",
                    Style.BreakBeforeBinaryOperators);
+    IO.mapOptional("BreakBeforeCloseBracketBracedList",
+                   Style.BreakBeforeCloseBracketBracedList);
+    IO.mapOptional("BreakBeforeCloseBracketFunction",
+                   Style.BreakBeforeCloseBracketFunction);
+    IO.mapOptional("BreakBeforeCloseBracketIf",
+                   Style.BreakBeforeCloseBracketIf);
+    IO.mapOptional("BreakBeforeCloseBracketLoop",
+                   Style.BreakBeforeCloseBracketLoop);
+    IO.mapOptional("BreakBeforeCloseBracketSwitch",
+                   Style.BreakBeforeCloseBracketSwitch);
     IO.mapOptional("BreakBeforeConceptDeclarations",
                    Style.BreakBeforeConceptDeclarations);
     IO.mapOptional("BreakBeforeBraces", Style.BreakBeforeBraces);
@@ -1549,7 +1635,7 @@ static void expandPresetsSpacesInParens(FormatStyle &Expanded) {
 FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   FormatStyle LLVMStyle;
   LLVMStyle.AccessModifierOffset = -2;
-  LLVMStyle.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  LLVMStyle.AlignAfterOpenBracket = true;
   LLVMStyle.AlignArrayOfStructures = FormatStyle::AIAS_None;
   LLVMStyle.AlignConsecutiveAssignments = {};
   LLVMStyle.AlignConsecutiveAssignments.PadOperators = true;
@@ -1566,6 +1652,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignTrailingComments = {};
   LLVMStyle.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
   LLVMStyle.AlignTrailingComments.OverEmptyLines = 0;
+  LLVMStyle.AlignTrailingComments.AlignPPAndNotPP = true;
   LLVMStyle.AllowAllArgumentsOnNextLine = true;
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
   LLVMStyle.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Never;
@@ -1609,10 +1696,20 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakAdjacentStringLiterals = true;
   LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
+  LLVMStyle.BreakAfterOpenBracketBracedList = false;
+  LLVMStyle.BreakAfterOpenBracketFunction = false;
+  LLVMStyle.BreakAfterOpenBracketIf = false;
+  LLVMStyle.BreakAfterOpenBracketLoop = false;
+  LLVMStyle.BreakAfterOpenBracketSwitch = false;
   LLVMStyle.BreakAfterReturnType = FormatStyle::RTBS_None;
   LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
+  LLVMStyle.BreakBeforeCloseBracketBracedList = false;
+  LLVMStyle.BreakBeforeCloseBracketFunction = false;
+  LLVMStyle.BreakBeforeCloseBracketIf = false;
+  LLVMStyle.BreakBeforeCloseBracketLoop = false;
+  LLVMStyle.BreakBeforeCloseBracketSwitch = false;
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTemplateCloser = false;
@@ -1628,7 +1725,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.CompactNamespaces = false;
   LLVMStyle.ConstructorInitializerIndentWidth = 4;
   LLVMStyle.ContinuationIndentWidth = 4;
-  LLVMStyle.Cpp11BracedListStyle = true;
+  LLVMStyle.Cpp11BracedListStyle = FormatStyle::BLS_AlignFirstComment;
   LLVMStyle.DerivePointerAlignment = false;
   LLVMStyle.DisableFormat = false;
   LLVMStyle.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Never;
@@ -1865,7 +1962,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.PenaltyReturnTypeOnItsOwnLine = 200;
 
   if (Language == FormatStyle::LK_Java) {
-    GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+    GoogleStyle.AlignAfterOpenBracket = false;
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;
     GoogleStyle.AlignTrailingComments = {};
     GoogleStyle.AlignTrailingComments.Kind = FormatStyle::TCAS_Never;
@@ -1877,7 +1974,9 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.SpaceAfterCStyleCast = true;
     GoogleStyle.SpacesBeforeTrailingComments = 1;
   } else if (Language == FormatStyle::LK_JavaScript) {
-    GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+    GoogleStyle.BreakAfterOpenBracketBracedList = true;
+    GoogleStyle.BreakAfterOpenBracketFunction = true;
+    GoogleStyle.BreakAfterOpenBracketIf = true;
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
     // TODO: still under discussion whether to switch to SLS_All.
@@ -1904,7 +2003,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     // beneficial there. Investigate turning this on once proper string reflow
     // has been implemented.
     GoogleStyle.BreakStringLiterals = false;
-    GoogleStyle.Cpp11BracedListStyle = false;
+    GoogleStyle.Cpp11BracedListStyle = FormatStyle::BLS_Block;
     GoogleStyle.SpacesInContainerLiterals = false;
   } else if (Language == FormatStyle::LK_ObjC) {
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
@@ -2000,7 +2099,7 @@ FormatStyle getMozillaStyle() {
   MozillaStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   MozillaStyle.ConstructorInitializerIndentWidth = 2;
   MozillaStyle.ContinuationIndentWidth = 2;
-  MozillaStyle.Cpp11BracedListStyle = false;
+  MozillaStyle.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   MozillaStyle.FixNamespaceComments = false;
   MozillaStyle.IndentCaseLabels = true;
   MozillaStyle.ObjCSpaceAfterProperty = true;
@@ -2014,7 +2113,7 @@ FormatStyle getMozillaStyle() {
 FormatStyle getWebKitStyle() {
   FormatStyle Style = getLLVMStyle();
   Style.AccessModifierOffset = -4;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   Style.AlignOperands = FormatStyle::OAS_DontAlign;
   Style.AlignTrailingComments = {};
   Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Never;
@@ -2023,7 +2122,7 @@ FormatStyle getWebKitStyle() {
   Style.BreakBeforeBraces = FormatStyle::BS_WebKit;
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
   Style.ColumnLimit = 0;
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   Style.FixNamespaceComments = false;
   Style.IndentWidth = 4;
   Style.NamespaceIndentation = FormatStyle::NI_Inner;
@@ -2043,7 +2142,7 @@ FormatStyle getGNUStyle() {
   Style.BreakBeforeBraces = FormatStyle::BS_GNU;
   Style.BreakBeforeTernaryOperators = true;
   Style.ColumnLimit = 79;
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   Style.FixNamespaceComments = false;
   Style.KeepFormFeed = true;
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
@@ -2184,8 +2283,9 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   Input >> Styles;
   if (Input.error())
     return Input.error();
+  if (Styles.empty())
+    return make_error_code(ParseError::Success);
 
-  assert(!Styles.empty());
   const auto StyleCount = Styles.size();
 
   // Start from the second style as (only) the first one may be the default.

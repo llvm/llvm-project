@@ -56,8 +56,9 @@ ModuleToObject::getOrCreateTargetMachine() {
     return targetMachine.get();
   // Load the target.
   std::string error;
+  llvm::Triple parsedTriple(triple);
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple, error);
+      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
   if (!target) {
     getOperation().emitError()
         << "Failed to lookup target for triple '" << triple << "' " << error;
@@ -65,8 +66,8 @@ ModuleToObject::getOrCreateTargetMachine() {
   }
 
   // Create the target machine using the target.
-  targetMachine.reset(target->createTargetMachine(llvm::Triple(triple), chip,
-                                                  features, {}, {}));
+  targetMachine.reset(
+      target->createTargetMachine(parsedTriple, chip, features, {}, {}));
   if (!targetMachine)
     return std::nullopt;
   return targetMachine.get();

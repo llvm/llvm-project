@@ -5411,9 +5411,14 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost
-X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
-                                  unsigned AddressSpace,
+X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                   TTI::TargetCostKind CostKind) const {
+  unsigned Opcode = MICA.getID() == Intrinsic::masked_load ? Instruction::Load
+                                                           : Instruction::Store;
+  Type *SrcTy = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  unsigned AddressSpace = MICA.getAddressSpace();
+
   bool IsLoad = (Instruction::Load == Opcode);
   bool IsStore = (Instruction::Store == Opcode);
 
@@ -6562,7 +6567,7 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
 bool X86TTIImpl::areTypesABICompatible(const Function *Caller,
                                        const Function *Callee,
-                                       const ArrayRef<Type *> &Types) const {
+                                       ArrayRef<Type *> Types) const {
   if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
     return false;
 
@@ -6647,10 +6652,12 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
                                              LegalVT.getVectorNumElements());
   InstructionCost MemOpCost;
   bool UseMaskedMemOp = UseMaskForCond || UseMaskForGaps;
-  if (UseMaskedMemOp)
-    MemOpCost = getMaskedMemoryOpCost(Opcode, SingleMemOpTy, Alignment,
-                                      AddressSpace, CostKind);
-  else
+  if (UseMaskedMemOp) {
+    unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                               : Intrinsic::masked_store;
+    MemOpCost = getMaskedMemoryOpCost(
+        {IID, SingleMemOpTy, Alignment, AddressSpace}, CostKind);
+  } else
     MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy, Alignment, AddressSpace,
                                 CostKind);
 
@@ -7222,4 +7229,20 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
   }
 
   return false;
+}
+
+bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
+  bool HasEGPR = ST->hasEGPR();
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  for (User *U : F.users()) {
+    CallBase *CB = dyn_cast<CallBase>(U);
+    if (!CB || CB->getCalledOperand() != &F)
+      continue;
+    Function *CallerFunc = CB->getFunction();
+    if (TM.getSubtarget<X86Subtarget>(*CallerFunc).hasEGPR() != HasEGPR)
+      return false;
+  }
+
+  return true;
 }

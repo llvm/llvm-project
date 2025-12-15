@@ -170,6 +170,7 @@ struct SIArgumentInfo {
   std::optional<SIArgument> DispatchID;
   std::optional<SIArgument> FlatScratchInit;
   std::optional<SIArgument> PrivateSegmentSize;
+  std::optional<SIArgument> FirstKernArgPreloadReg;
 
   std::optional<SIArgument> WorkGroupIDX;
   std::optional<SIArgument> WorkGroupIDY;
@@ -195,6 +196,7 @@ template <> struct MappingTraits<SIArgumentInfo> {
     YamlIO.mapOptional("dispatchID", AI.DispatchID);
     YamlIO.mapOptional("flatScratchInit", AI.FlatScratchInit);
     YamlIO.mapOptional("privateSegmentSize", AI.PrivateSegmentSize);
+    YamlIO.mapOptional("firstKernArgPreloadReg", AI.FirstKernArgPreloadReg);
 
     YamlIO.mapOptional("workGroupIDX", AI.WorkGroupIDX);
     YamlIO.mapOptional("workGroupIDY", AI.WorkGroupIDY);
@@ -305,13 +307,15 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
+  unsigned NumKernargPreloadSGPRs = 0;
+
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
                         const TargetRegisterInfo &TRI,
                         const llvm::MachineFunction &MF);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~SIMachineFunctionInfo() = default;
+  ~SIMachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<SIMachineFunctionInfo> {
@@ -361,6 +365,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
+    YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
   }
 };
@@ -509,7 +514,9 @@ private:
   // user arguments. This is an offset from the KernargSegmentPtr.
   bool ImplicitArgPtr : 1;
 
-  bool MayNeedAGPRs : 1;
+  /// Minimum number of AGPRs required to allocate in the function. Only
+  /// relevant for gfx90a-gfx950. For gfx908, this should be infinite.
+  unsigned MinNumAGPRs = ~0u;
 
   // The hard-wired high half of the address of the global information table
   // for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
@@ -537,6 +544,8 @@ private:
   void MRI_NoteCloneVirtualRegister(Register NewReg, Register SrcReg) override;
 
 public:
+  static bool MFMAVGPRForm;
+
   struct VGPRSpillToAGPR {
     SmallVector<MCPhysReg, 32> Lanes;
     bool FullyAllocated = false;
@@ -1020,7 +1029,9 @@ public:
   void setNumWaveDispatchVGPRs(unsigned Count) { NumWaveDispatchVGPRs = Count; }
 
   Register getPrivateSegmentWaveByteOffsetSystemSGPR() const {
-    return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
+    if (ArgInfo.PrivateSegmentWaveByteOffset)
+      return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
+    return MCRegister();
   }
 
   /// Returns the physical register reserved for use as the resource
@@ -1206,8 +1217,12 @@ public:
 
   unsigned getMaxMemoryClusterDWords() const { return MaxMemoryClusterDWords; }
 
-  bool mayNeedAGPRs() const {
-    return MayNeedAGPRs;
+  unsigned getMinNumAGPRs() const { return MinNumAGPRs; }
+
+  /// Return true if an MFMA that requires at least \p NumRegs should select to
+  /// the AGPR form, instead of the VGPR form.
+  bool selectAGPRFormMFMA(unsigned NumRegs) const {
+    return !MFMAVGPRForm && getMinNumAGPRs() >= NumRegs;
   }
 
   // \returns true if a function has a use of AGPRs via inline asm or

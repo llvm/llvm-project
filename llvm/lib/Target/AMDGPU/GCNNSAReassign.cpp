@@ -43,7 +43,7 @@ public:
   bool run(MachineFunction &MF);
 
 private:
-  using NSA_Status = enum {
+  enum NSA_Status {
     NOT_NSA,        // Not an NSA instruction
     FIXED,          // NSA which we cannot modify
     NON_CONTIGUOUS, // NSA with non-sequential address which we can try

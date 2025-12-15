@@ -34,7 +34,11 @@ def SDT_LoongArchVLDREPL : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisPtrTy<1>]>;
 def SDT_LoongArchVMSKCOND : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>;
 
 // Target nodes.
+
+// Vector Shuffle
 def loongarch_vreplve : SDNode<"LoongArchISD::VREPLVE", SDT_LoongArchVreplve>;
+
+// Vector comparisons
 def loongarch_vall_nonzero : SDNode<"LoongArchISD::VALL_NONZERO",
                                     SDT_LoongArchVecCond>;
 def loongarch_vany_nonzero : SDNode<"LoongArchISD::VANY_NONZERO",
@@ -44,11 +48,13 @@ def loongarch_vall_zero : SDNode<"LoongArchISD::VALL_ZERO",
 def loongarch_vany_zero : SDNode<"LoongArchISD::VANY_ZERO",
                                  SDT_LoongArchVecCond>;
 
+// Extended vector element extraction
 def loongarch_vpick_sext_elt : SDNode<"LoongArchISD::VPICK_SEXT_ELT",
                                       SDTypeProfile<1, 3, [SDTCisPtrTy<2>]>>;
 def loongarch_vpick_zext_elt : SDNode<"LoongArchISD::VPICK_ZEXT_ELT",
                                       SDTypeProfile<1, 3, [SDTCisPtrTy<2>]>>;
 
+// Vector Shuffle
 def loongarch_vshuf: SDNode<"LoongArchISD::VSHUF", SDT_LoongArchVShuf>;
 def loongarch_vpickev: SDNode<"LoongArchISD::VPICKEV", SDT_LoongArchV2R>;
 def loongarch_vpickod: SDNode<"LoongArchISD::VPICKOD", SDT_LoongArchV2R>;
@@ -58,25 +64,30 @@ def loongarch_vilvl: SDNode<"LoongArchISD::VILVL", SDT_LoongArchV2R>;
 def loongarch_vilvh: SDNode<"LoongArchISD::VILVH", SDT_LoongArchV2R>;
 
 def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV1RUimm>;
-def loongarch_vshuf4i_d : SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV2RUimm>;
+def loongarch_vshuf4i_d : SDNode<"LoongArchISD::VSHUF4I_D", SDT_LoongArchV2RUimm>;
 def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_LoongArchV1RUimm>;
 def loongarch_vreplgr2vr: SDNode<"LoongArchISD::VREPLGR2VR", SDT_LoongArchVreplgr2vr>;
 
 def loongarch_vfrecipe: SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchVFRECIPE>;
 def loongarch_vfrsqrte: SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchVFRSQRTE>;
 
+// Vector logicial left / right shift by immediate
 def loongarch_vslli : SDNode<"LoongArchISD::VSLLI", SDT_LoongArchV1RUimm>;
 def loongarch_vsrli : SDNode<"LoongArchISD::VSRLI", SDT_LoongArchV1RUimm>;
 
+// Vector byte logicial left / right shift
 def loongarch_vbsll : SDNode<"LoongArchISD::VBSLL", SDT_LoongArchV1RUimm>;
 def loongarch_vbsrl : SDNode<"LoongArchISD::VBSRL", SDT_LoongArchV1RUimm>;
 
+// Vector Horizontal Addition with Widening
 def loongarch_vhaddw : SDNode<"LoongArchISD::VHADDW", SDT_LoongArchV2R>;
 
+// Scalar load broadcast to vector
 def loongarch_vldrepl
     : SDNode<"LoongArchISD::VLDREPL",
              SDT_LoongArchVLDREPL, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
+// Vector mask set by condition
 def loongarch_vmskltz: SDNode<"LoongArchISD::VMSKLTZ", SDT_LoongArchVMSKCOND>;
 def loongarch_vmskgez: SDNode<"LoongArchISD::VMSKGEZ", SDT_LoongArchVMSKCOND>;
 def loongarch_vmskeqz: SDNode<"LoongArchISD::VMSKEQZ", SDT_LoongArchVMSKCOND>;
@@ -1518,6 +1529,18 @@ multiclass InsertExtractPatV2<ValueType vecty, ValueType elemty> {
   }
 }
 
+multiclass VAvgPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
+  def : Pat<(OpNode (vt (add vt:$vj, vt:$vk)), (vt (vsplat_imm_eq_1))),
+            (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
+}
+
+multiclass VAvgrPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
+  def : Pat<(OpNode (vt (add (vt (add vt:$vj, vt:$vk)),
+                             (vt (vsplat_imm_eq_1)))),
+                    (vt (vsplat_imm_eq_1))),
+            (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
+}
+
 let Predicates = [HasExtLSX] in {
 
 // VADD_{B/H/W/D}
@@ -1748,6 +1771,10 @@ defm : PatVrVrF<fmul, "VFMUL">;
 // VFDIV_{S/D}
 defm : PatVrVrF<fdiv, "VFDIV">;
 
+// VFMAX_{S/D}, VFMIN_{S/D}
+defm : PatVrVrF<fmaxnum, "VFMAX">;
+defm : PatVrVrF<fminnum, "VFMIN">;
+
 // VFMADD_{S/D}
 def : Pat<(fma v4f32:$vj, v4f32:$vk, v4f32:$va),
           (VFMADD_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
@@ -1782,6 +1809,9 @@ def : Pat<(fma_nsz (fneg v2f64:$vj), v2f64:$vk, v2f64:$va),
 
 // VFSQRT_{S/D}
 defm : PatVrF<fsqrt, "VFSQRT">;
+
+// VFLOGB_{S/D}
+defm : PatVrF<flog2, "VFLOGB">;
 
 // VFRECIP_{S/D}
 def : Pat<(fdiv vsplatf32_fpimm_eq_1, v4f32:$vj),
@@ -2154,11 +2184,29 @@ def : Pat<(f32 f32imm_vldi:$in),
 def : Pat<(f64 f64imm_vldi:$in),
           (f64 (EXTRACT_SUBREG (VLDI (to_f64imm_vldi f64imm_vldi:$in)), sub_64))>;
 
+// VAVG_{B/H/W/D/BU/HU/WU/DU}, VAVGR_{B/H/W/D/BU/HU/WU/DU}
+defm : VAvgPat<sra, "VAVG_B", v16i8>;
+defm : VAvgPat<sra, "VAVG_H", v8i16>;
+defm : VAvgPat<sra, "VAVG_W", v4i32>;
+defm : VAvgPat<sra, "VAVG_D", v2i64>;
+defm : VAvgPat<srl, "VAVG_BU", v16i8>;
+defm : VAvgPat<srl, "VAVG_HU", v8i16>;
+defm : VAvgPat<srl, "VAVG_WU", v4i32>;
+defm : VAvgPat<srl, "VAVG_DU", v2i64>;
+defm : VAvgrPat<sra, "VAVGR_B", v16i8>;
+defm : VAvgrPat<sra, "VAVGR_H", v8i16>;
+defm : VAvgrPat<sra, "VAVGR_W", v4i32>;
+defm : VAvgrPat<sra, "VAVGR_D", v2i64>;
+defm : VAvgrPat<srl, "VAVGR_BU", v16i8>;
+defm : VAvgrPat<srl, "VAVGR_HU", v8i16>;
+defm : VAvgrPat<srl, "VAVGR_WU", v4i32>;
+defm : VAvgrPat<srl, "VAVGR_DU", v2i64>;
+
 // abs
-def : Pat<(abs v16i8:$vj), (VMAX_B v16i8:$vj, (VNEG_B v16i8:$vj))>;
-def : Pat<(abs v8i16:$vj), (VMAX_H v8i16:$vj, (VNEG_H v8i16:$vj))>;
-def : Pat<(abs v4i32:$vj), (VMAX_W v4i32:$vj, (VNEG_W v4i32:$vj))>;
-def : Pat<(abs v2i64:$vj), (VMAX_D v2i64:$vj, (VNEG_D v2i64:$vj))>;
+def : Pat<(abs v16i8:$vj), (VSIGNCOV_B v16i8:$vj, v16i8:$vj)>;
+def : Pat<(abs v8i16:$vj), (VSIGNCOV_H v8i16:$vj, v8i16:$vj)>;
+def : Pat<(abs v4i32:$vj), (VSIGNCOV_W v4i32:$vj, v4i32:$vj)>;
+def : Pat<(abs v2i64:$vj), (VSIGNCOV_D v2i64:$vj, v2i64:$vj)>;
 
 // VABSD_{B/H/W/D}[U]
 defm : PatVrVr<abds, "VABSD">;
@@ -2518,6 +2566,11 @@ def : Pat<(f32 (froundeven FPR32:$fj)),
 def : Pat<(f64 (froundeven FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRNE_D (VREPLVEI_D
                (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+
+defm : PatVrF<fceil, "VFRINTRP">;
+defm : PatVrF<ffloor, "VFRINTRM">;
+defm : PatVrF<ftrunc, "VFRINTRZ">;
+defm : PatVrF<froundeven, "VFRINTRNE">;
 
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),

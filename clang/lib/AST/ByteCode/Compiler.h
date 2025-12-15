@@ -52,12 +52,14 @@ public:
     K_Decl = 3,
     K_Elem = 5,
     K_RVO = 6,
-    K_InitList = 7
+    K_InitList = 7,
+    K_DIE = 8,
   };
 
   static InitLink This() { return InitLink{K_This}; }
   static InitLink InitList() { return InitLink{K_InitList}; }
   static InitLink RVO() { return InitLink{K_RVO}; }
+  static InitLink DIE() { return InitLink{K_DIE}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
     IL.Offset = Offset;
@@ -256,7 +258,7 @@ protected:
 
 protected:
   /// Emits scope cleanup instructions.
-  void emitCleanup();
+  bool emitCleanup();
 
   /// Returns a record type from a record or pointer type.
   const RecordType *getRecordTy(QualType Ty);
@@ -522,7 +524,6 @@ public:
     this->addLocal(Local);
   }
 
-  virtual void emitDestruction() {}
   virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
   virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
   VariableScope *getParent() const { return Parent; }
@@ -551,15 +552,6 @@ public:
       return;
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
     removeStoredOpaqueValues();
-  }
-
-  /// Overriden to support explicit destruction.
-  void emitDestruction() override {
-    if (!Idx)
-      return;
-
-    this->emitDestructors();
-    this->Ctx->emitDestroy(*Idx, SourceInfo{});
   }
 
   /// Explicit destruction of local variables.
@@ -668,22 +660,29 @@ public:
 
   ~InitLinkScope() { this->Ctx->InitStack.pop_back(); }
 
-private:
+public:
   Compiler<Emitter> *Ctx;
 };
 
 template <class Emitter> class InitStackScope final {
 public:
   InitStackScope(Compiler<Emitter> *Ctx, bool Active)
-      : Ctx(Ctx), OldValue(Ctx->InitStackActive) {
+      : Ctx(Ctx), OldValue(Ctx->InitStackActive), Active(Active) {
     Ctx->InitStackActive = Active;
+    if (Active)
+      Ctx->InitStack.push_back(InitLink::DIE());
   }
 
-  ~InitStackScope() { this->Ctx->InitStackActive = OldValue; }
+  ~InitStackScope() {
+    this->Ctx->InitStackActive = OldValue;
+    if (Active)
+      Ctx->InitStack.pop_back();
+  }
 
 private:
   Compiler<Emitter> *Ctx;
   bool OldValue;
+  bool Active;
 };
 
 } // namespace interp

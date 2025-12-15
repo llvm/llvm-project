@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/CUF/CUFToLLVMIRTranslation.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/MIF/MIFDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
 #include "flang/Optimizer/OpenMP/Support/RegisterOpenMPExtensions.h"
@@ -33,6 +34,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/InitAllDialects.h"
@@ -51,7 +53,7 @@ namespace fir::support {
       mlir::vector::VectorDialect, mlir::math::MathDialect,                    \
       mlir::complex::ComplexDialect, mlir::DLTIDialect, cuf::CUFDialect,       \
       mlir::NVVM::NVVMDialect, mlir::gpu::GPUDialect,                          \
-      mlir::index::IndexDialect
+      mlir::index::IndexDialect, mif::MIFDialect
 
 #define FLANG_CODEGEN_DIALECT_LIST FIRCodeGenDialect, mlir::LLVM::LLVMDialect
 
@@ -105,6 +107,7 @@ inline void loadDialects(mlir::MLIRContext &context) {
 /// but is a smaller set since we aren't using many of the passes found there.
 inline void registerMLIRPassesForFortranTools() {
   mlir::acc::registerOpenACCPasses();
+  mlir::omp::registerOpenMPPasses();
   mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();
   mlir::affine::registerAffineLoopFusionPass();

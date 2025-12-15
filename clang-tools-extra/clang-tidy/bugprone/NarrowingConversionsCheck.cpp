@@ -29,15 +29,15 @@ AST_MATCHER_P(QualType, hasAnyType, std::vector<StringRef>, Names) {
   if (Names.empty())
     return false;
 
-  std::string Name = Node.getLocalUnqualifiedType().getAsString();
+  const std::string Name = Node.getLocalUnqualifiedType().getAsString();
   return llvm::is_contained(Names, Name);
 }
 
 AST_MATCHER(FieldDecl, hasIntBitwidth) {
   assert(Node.isBitField());
   const ASTContext &Ctx = Node.getASTContext();
-  unsigned IntBitWidth = Ctx.getIntWidth(Ctx.IntTy);
-  unsigned CurrentBitWidth = Node.getBitWidthValue();
+  const unsigned IntBitWidth = Ctx.getIntWidth(Ctx.IntTy);
+  const unsigned CurrentBitWidth = Node.getBitWidthValue();
   return IntBitWidth == CurrentBitWidth;
 }
 
@@ -79,7 +79,7 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
   const auto IsCeilFloorCallExpr = expr(callExpr(callee(functionDecl(
       hasAnyName("::ceil", "::std::ceil", "::floor", "::std::floor")))));
 
-  std::vector<StringRef> IgnoreConversionFromTypesVec =
+  const std::vector<StringRef> IgnoreConversionFromTypesVec =
       utils::options::parseStringList(IgnoreConversionFromTypes);
 
   // We may want to exclude other types from the checks, such as `size_type`
@@ -243,7 +243,7 @@ struct IntegerRange {
 static IntegerRange createFromType(const ASTContext &Context,
                                    const BuiltinType &T) {
   if (T.isFloatingPoint()) {
-    unsigned PrecisionBits = llvm::APFloatBase::semanticsPrecision(
+    const unsigned PrecisionBits = llvm::APFloatBase::semanticsPrecision(
         Context.getFloatTypeSemantics(T.desugar()));
     // Contrary to two's complement integer, floating point values are
     // symmetric and have the same number of positive and negative values.
@@ -262,8 +262,8 @@ static IntegerRange createFromType(const ASTContext &Context,
     return {LowerValue, UpperValue};
   }
   assert(T.isInteger() && "Unexpected builtin type");
-  uint64_t TypeSize = Context.getTypeSize(&T);
-  bool IsUnsignedInteger = T.isUnsignedInteger();
+  const uint64_t TypeSize = Context.getTypeSize(&T);
+  const bool IsUnsignedInteger = T.isUnsignedInteger();
   return {llvm::APSInt::getMinValue(TypeSize, IsUnsignedInteger),
           llvm::APSInt::getMaxValue(TypeSize, IsUnsignedInteger)};
 }
@@ -271,15 +271,15 @@ static IntegerRange createFromType(const ASTContext &Context,
 static bool isWideEnoughToHold(const ASTContext &Context,
                                const BuiltinType &FromType,
                                const BuiltinType &ToType) {
-  IntegerRange FromIntegerRange = createFromType(Context, FromType);
-  IntegerRange ToIntegerRange = createFromType(Context, ToType);
+  const IntegerRange FromIntegerRange = createFromType(Context, FromType);
+  const IntegerRange ToIntegerRange = createFromType(Context, ToType);
   return ToIntegerRange.contains(FromIntegerRange);
 }
 
 static bool isWideEnoughToHold(const ASTContext &Context,
                                const llvm::APSInt &IntegerConstant,
                                const BuiltinType &ToType) {
-  IntegerRange ToIntegerRange = createFromType(Context, ToType);
+  const IntegerRange ToIntegerRange = createFromType(Context, ToType);
   return ToIntegerRange.contains(IntegerConstant);
 }
 
@@ -289,13 +289,13 @@ static bool isWideEnoughToHold(const ASTContext &Context,
 static bool isFloatExactlyRepresentable(const ASTContext &Context,
                                         const llvm::APFloat &FloatConstant,
                                         const QualType &DestType) {
-  unsigned DestWidth = Context.getIntWidth(DestType);
-  bool DestSigned = DestType->isSignedIntegerOrEnumerationType();
+  const unsigned DestWidth = Context.getIntWidth(DestType);
+  const bool DestSigned = DestType->isSignedIntegerOrEnumerationType();
   llvm::APSInt Result = llvm::APSInt(DestWidth, !DestSigned);
   bool IsExact = false;
-  bool Overflows = FloatConstant.convertToInteger(
-                       Result, llvm::APFloat::rmTowardZero, &IsExact) &
-                   llvm::APFloat::opInvalidOp;
+  const bool Overflows = FloatConstant.convertToInteger(
+                             Result, llvm::APFloat::rmTowardZero, &IsExact) &
+                         llvm::APFloat::opInvalidOp;
   return !Overflows && IsExact;
 }
 
@@ -321,8 +321,8 @@ bool NarrowingConversionsCheck::isWarningInhibitedByEquivalentSize(
   // With this option, we don't warn on conversions that have equivalent width
   // in bits. eg. uint32 <-> int32.
   if (!WarnOnEquivalentBitWidth) {
-    uint64_t FromTypeSize = Context.getTypeSize(&FromType);
-    uint64_t ToTypeSize = Context.getTypeSize(&ToType);
+    const uint64_t FromTypeSize = Context.getTypeSize(&FromType);
+    const uint64_t ToTypeSize = Context.getTypeSize(&ToType);
     if (FromTypeSize == ToTypeSize) {
       return true;
     }
@@ -406,8 +406,8 @@ void NarrowingConversionsCheck::handleIntegralCast(const ASTContext &Context,
     // With this option, we don't warn on conversions that have equivalent width
     // in bits. eg. uint32 <-> int32.
     if (!WarnOnEquivalentBitWidth) {
-      uint64_t FromTypeSize = Context.getTypeSize(FromType);
-      uint64_t ToTypeSize = Context.getTypeSize(ToType);
+      const uint64_t FromTypeSize = Context.getTypeSize(FromType);
+      const uint64_t ToTypeSize = Context.getTypeSize(ToType);
       if (FromTypeSize == ToTypeSize)
         return;
     }
@@ -583,7 +583,7 @@ void NarrowingConversionsCheck::handleImplicitCast(
     return;
   if (handleConditionalOperator(Context, Lhs, Rhs))
     return;
-  SourceLocation SourceLoc = Lhs.getExprLoc();
+  const SourceLocation SourceLoc = Lhs.getExprLoc();
   switch (Cast.getCastKind()) {
   case CK_BooleanToSignedIntegral:
     handleBooleanToSignedIntegral(Context, SourceLoc, Lhs, Rhs);

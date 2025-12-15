@@ -20,7 +20,7 @@
 
 
 ; CHECK-LABEL: {{^}}call_72xi32:
-; GFX11-PAL:    NumSgprs: 37
+; GFX11-PAL:    NumSgprs: 40
 ; GFX11-PAL-GCNTRACKERS:    NumSgprs: 37
 ; GFX11-PAL:    NumVgprs: 64
 ; GFX11-PAL-GCNTRACKERS:    NumVgprs: 64
@@ -75,7 +75,7 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(ptr addrspace(1) %
 ; CHECK-LABEL: {{^}}excess_soft_clause_reg_pressure:
 ; GFX908:    NumSgprs: 64
 ; GFX908-GCNTRACKERS:    NumSgprs: 64
-; GFX908:    NumVgprs: 43
+; GFX908:    NumVgprs: 41
 ; GFX908-GCNTRACKERS:    NumVgprs: 39
 ; GFX908:    Occupancy: 5
 ; GFX908-GCNTRACKERS:    Occupancy: 6

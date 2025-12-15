@@ -7,6 +7,7 @@ from .._transform_ops_gen import *
 from .._transform_ops_gen import _Dialect
 from ..._mlir_libs._mlirDialectsTransform import *
 from ..._mlir_libs._mlirDialectsTransform import AnyOpType, OperationType
+from . import interpreter
 
 try:
     from ...ir import *
@@ -39,21 +40,56 @@ class CastOp(CastOp):
         super().__init__(result_type, _get_op_result_or_value(target), loc=loc, ip=ip)
 
 
+def cast(
+    result_type: Type, target: Union[Operation, Value], *, loc=None, ip=None
+) -> OpResult:
+    return CastOp(result_type=result_type, target=target, loc=loc, ip=ip).result
+
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class ApplyPatternsOp(ApplyPatternsOp):
     def __init__(
         self,
         target: Union[Operation, Value, OpView],
+        apply_cse: bool = False,
+        max_iterations: Optional[Union[IntegerAttr, int]] = None,
+        max_num_rewrites: Optional[Union[IntegerAttr, int]] = None,
         *,
         loc=None,
         ip=None,
     ):
-        super().__init__(target, loc=loc, ip=ip)
+        super().__init__(
+            target,
+            apply_cse=apply_cse,
+            max_iterations=max_iterations,
+            max_num_rewrites=max_num_rewrites,
+            loc=loc,
+            ip=ip,
+        )
         self.regions[0].blocks.append()
 
     @property
     def patterns(self) -> Block:
         return self.regions[0].blocks[0]
+
+
+def apply_patterns(
+    target: Union[Operation, Value, OpView],
+    apply_cse: bool = False,
+    max_iterations: Optional[Union[IntegerAttr, int]] = None,
+    max_num_rewrites: Optional[Union[IntegerAttr, int]] = None,
+    *,
+    loc=None,
+    ip=None,
+) -> ApplyPatternsOp:
+    return ApplyPatternsOp(
+        target=target,
+        apply_cse=apply_cse,
+        max_iterations=max_iterations,
+        max_num_rewrites=max_num_rewrites,
+        loc=loc,
+        ip=ip,
+    )
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -64,6 +100,7 @@ class GetParentOp(GetParentOp):
         target: Union[Operation, Value],
         *,
         isolated_from_above: bool = False,
+        allow_empty_results: bool = False,
         op_name: Optional[str] = None,
         deduplicate: bool = False,
         nth_parent: int = 1,
@@ -74,12 +111,38 @@ class GetParentOp(GetParentOp):
             result_type,
             _get_op_result_or_value(target),
             isolated_from_above=isolated_from_above,
+            allow_empty_results=allow_empty_results,
             op_name=op_name,
             deduplicate=deduplicate,
             nth_parent=nth_parent,
             loc=loc,
             ip=ip,
         )
+
+
+def get_parent_op(
+    result_type: Type,
+    target: Union[Operation, Value],
+    *,
+    isolated_from_above: bool = False,
+    allow_empty_results: bool = False,
+    op_name: Optional[str] = None,
+    deduplicate: bool = False,
+    nth_parent: int = 1,
+    loc=None,
+    ip=None,
+) -> OpResult:
+    return GetParentOp(
+        result_type=result_type,
+        target=target,
+        isolated_from_above=isolated_from_above,
+        allow_empty_results=allow_empty_results,
+        op_name=op_name,
+        deduplicate=deduplicate,
+        nth_parent=nth_parent,
+        loc=loc,
+        ip=ip,
+    ).result
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -89,15 +152,30 @@ class MergeHandlesOp(MergeHandlesOp):
         handles: Sequence[Union[Operation, Value]],
         *,
         deduplicate: bool = False,
+        results: Optional[Sequence[Type]] = None,
         loc=None,
         ip=None,
     ):
         super().__init__(
             [_get_op_result_or_value(h) for h in handles],
             deduplicate=deduplicate,
+            results=results,
             loc=loc,
             ip=ip,
         )
+
+
+def merge_handles(
+    handles: Sequence[Union[Operation, Value]],
+    *,
+    deduplicate: bool = False,
+    results: Optional[Sequence[Type]] = None,
+    loc=None,
+    ip=None,
+) -> OpResult:
+    return MergeHandlesOp(
+        handles=handles, deduplicate=deduplicate, results=results, loc=loc, ip=ip
+    ).result
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -119,16 +197,31 @@ class ReplicateOp(ReplicateOp):
         )
 
 
+def replicate(
+    pattern: Union[Operation, Value],
+    handles: Sequence[Union[Operation, Value]],
+    *,
+    loc=None,
+    ip=None,
+) -> Union[OpResult, OpResultList, ReplicateOp]:
+    op = ReplicateOp(pattern=pattern, handles=handles, loc=loc, ip=ip)
+    results = op.results
+    return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
+
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class SequenceOp(SequenceOp):
     def __init__(
         self,
-        failure_propagation_mode,
+        failure_propagation_mode: FailurePropagationMode,
         results: Sequence[Type],
         target: Union[Operation, Value, Type],
         extra_bindings: Optional[
             Union[Sequence[Value], Sequence[Type], Operation, OpView]
         ] = None,
+        *,
+        loc=None,
+        ip=None,
     ):
         root = (
             _get_op_result_or_value(target)
@@ -155,6 +248,8 @@ class SequenceOp(SequenceOp):
             failure_propagation_mode=failure_propagation_mode,
             root=root,
             extra_bindings=extra_bindings,
+            loc=loc,
+            ip=ip,
         )
         self.regions[0].blocks.append(*tuple([root_type] + extra_binding_types))
 
@@ -171,16 +266,42 @@ class SequenceOp(SequenceOp):
         return self.body.arguments[1:]
 
 
+def sequence(
+    failure_propagation_mode: FailurePropagationMode,
+    results: Sequence[Type],
+    target: Union[Operation, Value, Type],
+    extra_bindings: Optional[
+        Union[Sequence[Value], Sequence[Type], Operation, OpView]
+    ] = None,
+    *,
+    loc=None,
+    ip=None,
+) -> Union[OpResult, OpResultList, SequenceOp]:
+    op = SequenceOp(
+        results=results,
+        failure_propagation_mode=failure_propagation_mode,
+        extra_bindings=extra_bindings,
+        target=target,
+        loc=loc,
+        ip=ip,
+    )
+    results = op.results
+    return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
+
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class NamedSequenceOp(NamedSequenceOp):
     def __init__(
         self,
-        sym_name,
+        sym_name: Union[str, SymbolRefAttr],
         input_types: Sequence[Type],
         result_types: Sequence[Type],
-        sym_visibility=None,
-        arg_attrs=None,
-        res_attrs=None,
+        *,
+        sym_visibility: Optional[Union[str, StringAttr]] = None,
+        arg_attrs: Optional[Union[Sequence[dict], "DictArrayAttr"]] = None,
+        res_attrs: Optional[Union[Sequence[dict], "DictArrayAttr"]] = None,
+        loc=None,
+        ip=None,
     ):
         function_type = FunctionType.get(input_types, result_types)
         super().__init__(
@@ -204,6 +325,48 @@ class NamedSequenceOp(NamedSequenceOp):
     def bodyExtraArgs(self) -> BlockArgumentList:
         return self.body.arguments[1:]
 
+    def apply(
+        self,
+        payload: Module,
+        transform_options: Optional[interpreter.TransformOptions] = None,
+    ) -> Module:
+        assert self.parent
+        assert "transform.with_named_sequence" in self.parent.attributes
+        assert isinstance(
+            self.parent.attributes["transform.with_named_sequence"], UnitAttr
+        )
+
+        interpreter.apply_named_sequence(
+            payload_root=payload,
+            transform_root=self,
+            transform_module=self.parent,
+            transform_options=transform_options,
+        )
+        return payload  # NB: was modified in-place (if any transformation happened)
+
+
+def named_sequence(
+    sym_name: Union[str, SymbolRefAttr],
+    input_types: Sequence[Type],
+    result_types: Sequence[Type],
+    *,
+    sym_visibility: Optional[Union[str, StringAttr]] = None,
+    arg_attrs: Optional[Union[Sequence[dict], "DictArrayAttr"]] = None,
+    res_attrs: Optional[Union[Sequence[dict], "DictArrayAttr"]] = None,
+    loc=None,
+    ip=None,
+) -> NamedSequenceOp:
+    return NamedSequenceOp(
+        sym_name=sym_name,
+        input_types=input_types,
+        result_types=result_types,
+        sym_visibility=sym_visibility,
+        arg_attrs=arg_attrs,
+        res_attrs=res_attrs,
+        loc=loc,
+        ip=ip,
+    )
+
 
 @_ods_cext.register_operation(_Dialect, replace=True)
 class YieldOp(YieldOp):
@@ -217,6 +380,12 @@ class YieldOp(YieldOp):
         if operands is None:
             operands = []
         super().__init__(_get_op_results_or_values(operands), loc=loc, ip=ip)
+
+
+def yield_(
+    operands: Optional[Union[Operation, Sequence[Value]]] = None, *, loc=None, ip=None
+) -> YieldOp:
+    return YieldOp(operands=operands, loc=loc, ip=ip)
 
 
 OptionValueTypes = Union[
@@ -247,7 +416,7 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
         def option_value_to_attr(value):
             nonlocal cur_param_operand_idx
             if isinstance(value, (Value, Operation, OpView)):
-                dynamic_options.append(_get_op_result_or_value(value))
+                dynamic_options.append(value)
                 cur_param_operand_idx += 1
                 return ParamOperandAttr(cur_param_operand_idx - 1, context)
             elif isinstance(value, Attribute):

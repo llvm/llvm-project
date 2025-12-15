@@ -92,7 +92,7 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "cplusplus"; }
 
-  bool SymbolNameFitsToLanguage(Mangled mangled) const override;
+  bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
 
   bool DemangledNameContainsPath(llvm::StringRef path,
                                  ConstString demangled) const override;

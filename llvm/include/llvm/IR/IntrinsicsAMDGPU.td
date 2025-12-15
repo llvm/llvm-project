@@ -898,6 +898,31 @@ def int_amdgcn_bitop3 :
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                         [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
 
+class AMDGPUGlobalStore : Intrinsic <
+  [],
+  [global_ptr_ty,          // Base global pointer to store to
+   llvm_v4i32_ty,          // Data to store
+   llvm_metadata_ty],      // Scope
+  [ IntrWriteMem, WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+    IntrWillReturn, IntrNoCallback, IntrNoFree ],
+  "",
+  [SDNPMemOperand, SDNPMayStore]
+>;
+
+def int_amdgcn_global_store_b128 : AMDGPUGlobalStore;
+
+class AMDGPUGlobalLoad : Intrinsic <
+  [llvm_v4i32_ty],
+  [global_ptr_ty,          // Base global pointer to load from
+   llvm_metadata_ty],      // Scope
+  [ IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, IntrWillReturn,
+    IntrNoCallback, IntrNoFree ],
+  "",
+  [SDNPMemOperand, SDNPMayLoad]
+>;
+
+def int_amdgcn_global_load_b128 : AMDGPUGlobalLoad;
+
 } // TargetPrefix = "amdgcn"
 
 // New-style image intrinsics
@@ -2470,7 +2495,7 @@ def int_amdgcn_s_quadmask :
 def int_amdgcn_s_wqm :
   DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrConvergent]>;
 
-class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
+class AMDGPUWaveReduce<LLVMType data_ty = llvm_any_ty> : Intrinsic<
     [data_ty],
     [
       LLVMMatchType<0>,   // llvm value to reduce (SGPR/VGPR)
@@ -2482,7 +2507,7 @@ class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
 
 multiclass AMDGPUWaveReduceOps {
   foreach Op =
-      ["umin", "min", "umax", "max", "add", "sub", "and", "or", "xor"] in {
+      ["umin", "fmin", "min", "umax", "fmax", "max", "add", "sub", "and", "or", "xor"] in {
     def Op : AMDGPUWaveReduce;
   }
 }
@@ -2819,20 +2844,24 @@ class AMDGPULoadToLDS :
      "", [SDNPMemOperand]>;
 def int_amdgcn_load_to_lds : AMDGPULoadToLDS;
 
-class AMDGPUGlobalLoadLDS :
-  ClangBuiltin<"__builtin_amdgcn_global_load_lds">,
-  Intrinsic <
-    [],
-    [LLVMQualPointerType<1>,            // Base global pointer to load from
-     LLVMQualPointerType<3>,            // LDS base pointer to store to
-     llvm_i32_ty,                       // Data byte size: 1/2/4 (/12/16 for gfx950)
-     llvm_i32_ty,                       // imm offset (applied to both global and LDS address)
-     llvm_i32_ty],                      // auxiliary data (imm, cachepolicy (bit 0 = sc0,
-                                        //                                   bit 1 = sc1,
-                                        //                                   bit 4 = scc))
-    [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
-     ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
-     "", [SDNPMemOperand]>;
+class AMDGPUGlobalLoadLDS
+    : ClangBuiltin<"__builtin_amdgcn_global_load_lds">,
+      Intrinsic<
+          [],
+          [LLVMQualPointerType<1>, // Base global pointer to load from
+           LLVMQualPointerType<3>, // LDS base pointer to store to
+           llvm_i32_ty,            // Data byte size: 1/2/4 (/12/16 for gfx950)
+           llvm_i32_ty,  // imm offset (applied to both global and LDS address)
+           llvm_i32_ty], // auxiliary data (imm, cachepolicy (bit 0 = sc0,
+                         //                                   bit 1 = sc1,
+                         //                                   bit 4 = scc,
+                         //                                   bit 31 = volatile
+                         //                                   (compiler
+                         //                                   implemented)))
+          [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+           ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>,
+           IntrNoCallback, IntrNoFree],
+          "", [SDNPMemOperand]>;
 def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
 
 // This is IntrHasSideEffects because it reads from a volatile hardware register.
@@ -3784,6 +3813,20 @@ def int_amdgcn_perm_pk16_b6_u4 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b6_u4"
 def int_amdgcn_perm_pk16_b8_u4 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b8_u4">,
   DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i64_ty, llvm_i64_ty, llvm_v2i32_ty],
                         [IntrNoMem, IntrSpeculatable]>;
+
+class AMDGPUAddMinMax<LLVMType Ty, string Name> : ClangBuiltin<"__builtin_amdgcn_"#Name>,
+  DefaultAttrsIntrinsic<[Ty], [Ty, Ty, Ty, llvm_i1_ty /* clamp */],
+                        [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
+
+def int_amdgcn_add_max_i32 : AMDGPUAddMinMax<llvm_i32_ty, "add_max_i32">;
+def int_amdgcn_add_max_u32 : AMDGPUAddMinMax<llvm_i32_ty, "add_max_u32">;
+def int_amdgcn_add_min_i32 : AMDGPUAddMinMax<llvm_i32_ty, "add_min_i32">;
+def int_amdgcn_add_min_u32 : AMDGPUAddMinMax<llvm_i32_ty, "add_min_u32">;
+
+def int_amdgcn_pk_add_max_i16 : AMDGPUAddMinMax<llvm_v2i16_ty, "pk_add_max_i16">;
+def int_amdgcn_pk_add_max_u16 : AMDGPUAddMinMax<llvm_v2i16_ty, "pk_add_max_u16">;
+def int_amdgcn_pk_add_min_i16 : AMDGPUAddMinMax<llvm_v2i16_ty, "pk_add_min_i16">;
+def int_amdgcn_pk_add_min_u16 : AMDGPUAddMinMax<llvm_v2i16_ty, "pk_add_min_u16">;
 
 class AMDGPUCooperativeAtomicStore<LLVMType Ty> : Intrinsic <
   [],

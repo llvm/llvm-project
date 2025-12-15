@@ -653,9 +653,9 @@ struct FwdRegParamInfo {
 
 /// Register worklist for finding call site values.
 using FwdRegWorklist = MapVector<uint64_t, SmallVector<FwdRegParamInfo, 2>>;
-/// Container for the set of registers known to be clobbered on the path to a
-/// call site.
-using ClobberedRegSet = SmallSet<Register, 16>;
+/// Container for the set of register units known to be clobbered on the path
+/// to a call site.
+using ClobberedRegUnitSet = SmallSet<MCRegUnit, 16>;
 
 /// Append the expression \p Addition to \p Original and return the result.
 static const DIExpression *combineDIExpressions(const DIExpression *Original,
@@ -727,7 +727,7 @@ static void addToFwdRegWorklist(FwdRegWorklist &Worklist, unsigned Reg,
 static void interpretValues(const MachineInstr *CurMI,
                             FwdRegWorklist &ForwardedRegWorklist,
                             ParamSet &Params,
-                            ClobberedRegSet &ClobberedRegUnits) {
+                            ClobberedRegUnitSet &ClobberedRegUnits) {
 
   const MachineFunction *MF = CurMI->getMF();
   const DIExpression *EmptyExpr =
@@ -759,7 +759,7 @@ static void interpretValues(const MachineInstr *CurMI,
 
   // If the MI is an instruction defining one or more parameters' forwarding
   // registers, add those defines.
-  ClobberedRegSet NewClobberedRegUnits;
+  ClobberedRegUnitSet NewClobberedRegUnits;
   auto getForwardingRegsDefinedByMI = [&](const MachineInstr &MI,
                                           SmallSetVector<unsigned, 4> &Defs) {
     if (MI.isDebugInstr())
@@ -842,7 +842,7 @@ static void interpretValues(const MachineInstr *CurMI,
 static bool interpretNextInstr(const MachineInstr *CurMI,
                                FwdRegWorklist &ForwardedRegWorklist,
                                ParamSet &Params,
-                               ClobberedRegSet &ClobberedRegUnits) {
+                               ClobberedRegUnitSet &ClobberedRegUnits) {
   // Skip bundle headers.
   if (CurMI->isBundle())
     return true;
@@ -912,7 +912,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   bool ShouldTryEmitEntryVals = MBB->getIterator() == MF->begin();
 
   // Search for a loading value in forwarding registers inside call delay slot.
-  ClobberedRegSet ClobberedRegUnits;
+  ClobberedRegUnitSet ClobberedRegUnits;
   if (CallMI->hasDelaySlot()) {
     auto Suc = std::next(CallMI->getIterator());
     // Only one-instruction delay slot is supported.
@@ -1103,8 +1103,18 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   } else
     NewCU.addString(Die, dwarf::DW_AT_producer, Producer);
 
-  NewCU.addUInt(Die, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
-                DIUnit->getSourceLanguage());
+  if (auto Lang = DIUnit->getSourceLanguage(); Lang.hasVersionedName()) {
+    NewCU.addUInt(Die, dwarf::DW_AT_language_name, dwarf::DW_FORM_data2,
+                  Lang.getName());
+
+    if (uint32_t LangVersion = Lang.getVersion(); LangVersion != 0)
+      NewCU.addUInt(Die, dwarf::DW_AT_language_version, /*Form=*/std::nullopt,
+                    LangVersion);
+  } else {
+    NewCU.addUInt(Die, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
+                  Lang.getName());
+  }
+
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
   StringRef SysRoot = DIUnit->getSysRoot();
   if (!SysRoot.empty())
@@ -1598,18 +1608,8 @@ void DwarfDebug::ensureAbstractEntityIsCreatedIfScoped(DwarfCompileUnit &CU,
 }
 
 static const DILocalScope *getRetainedNodeScope(const MDNode *N) {
-  const DIScope *S;
-  if (const auto *LV = dyn_cast<DILocalVariable>(N))
-    S = LV->getScope();
-  else if (const auto *L = dyn_cast<DILabel>(N))
-    S = L->getScope();
-  else if (const auto *IE = dyn_cast<DIImportedEntity>(N))
-    S = IE->getScope();
-  else
-    llvm_unreachable("Unexpected retained node!");
-
   // Ensure the scope is not a DILexicalBlockFile.
-  return cast<DILocalScope>(S)->getNonLexicalBlockFileScope();
+  return DISubprogram::getRetainedNodeScope(N)->getNonLexicalBlockFileScope();
 }
 
 // Collect variable information from side table maintained by MF.
@@ -2137,11 +2137,36 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   if (NoDebug)
     return;
 
+  auto RecordLineZero = [&]() {
+    // Preserve the file and column numbers, if we can, to save space in
+    // the encoded line table.
+    // Do not update PrevInstLoc, it remembers the last non-0 line.
+    const MDNode *Scope = nullptr;
+    unsigned Column = 0;
+    if (PrevInstLoc) {
+      Scope = PrevInstLoc.getScope();
+      Column = PrevInstLoc.getCol();
+    }
+    recordSourceLine(/*Line=*/0, Column, Scope, /*Flags=*/0);
+  };
+
+  // When we emit a line-0 record, we don't update PrevInstLoc; so look at
+  // the last line number actually emitted, to see if it was line 0.
+  unsigned LastAsmLine =
+      Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
+
   // Check if source location changes, but ignore DBG_VALUE and CFI locations.
   // If the instruction is part of the function frame setup code, do not emit
   // any line record, as there is no correspondence with any user code.
-  if (MI->isMetaInstruction() || MI->getFlag(MachineInstr::FrameSetup))
+  if (MI->isMetaInstruction())
     return;
+  if (MI->getFlag(MachineInstr::FrameSetup)) {
+    // Prevent a loc from the previous block leaking into frame setup instrs.
+    if (LastAsmLine && PrevInstBB && PrevInstBB != MI->getParent())
+      RecordLineZero();
+    return;
+  }
+
   const DebugLoc &DL = MI->getDebugLoc();
   unsigned Flags = 0;
 
@@ -2163,11 +2188,6 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     recordSourceLine(DL.getLine(), DL.getCol(), DL.getScope(), Flags,
                      LocationString);
   };
-
-  // When we emit a line-0 record, we don't update PrevInstLoc; so look at
-  // the last line number actually emitted, to see if it was line 0.
-  unsigned LastAsmLine =
-      Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
   // There may be a mixture of scopes using and not using Key Instructions.
   // Not-Key-Instructions functions inlined into Key Instructions functions
@@ -2234,18 +2254,8 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     // - Instruction is at the top of a block; we don't want to inherit the
     //   location from the physically previous (maybe unrelated) block.
     if (UnknownLocations == Enable || PrevLabel ||
-        (PrevInstBB && PrevInstBB != MI->getParent())) {
-      // Preserve the file and column numbers, if we can, to save space in
-      // the encoded line table.
-      // Do not update PrevInstLoc, it remembers the last non-0 line.
-      const MDNode *Scope = nullptr;
-      unsigned Column = 0;
-      if (PrevInstLoc) {
-        Scope = PrevInstLoc.getScope();
-        Column = PrevInstLoc.getCol();
-      }
-      recordSourceLine(/*Line=*/0, Column, Scope, /*Flags=*/0);
-    }
+        (PrevInstBB && PrevInstBB != MI->getParent()))
+      RecordLineZero();
     return;
   }
 
@@ -2277,6 +2287,11 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrevInstLoc = DL;
 }
 
+// Returns the position where we should place prologue_end, potentially nullptr,
+// which means "no good place to put prologue_end". Returns true in the second
+// return value if there are no setup instructions in this function at all,
+// meaning we should not emit a start-of-function linetable entry, because it
+// would be zero-lengthed.
 static std::pair<const MachineInstr *, bool>
 findPrologueEndLoc(const MachineFunction *MF) {
   // First known non-DBG_VALUE and non-frame setup location marks
@@ -2284,6 +2299,7 @@ findPrologueEndLoc(const MachineFunction *MF) {
   const auto &TII = *MF->getSubtarget().getInstrInfo();
   const MachineInstr *NonTrivialInst = nullptr;
   const Function &F = MF->getFunction();
+  DISubprogram *SP = const_cast<DISubprogram *>(F.getSubprogram());
 
   // Some instructions may be inserted into prologue after this function. Must
   // keep prologue for these cases.
@@ -2369,6 +2385,26 @@ findPrologueEndLoc(const MachineFunction *MF) {
       auto FoundInst = ExamineInst(*CurInst);
       if (FoundInst)
         return *FoundInst;
+    }
+
+    // In very rare scenarios function calls can have line zero, and we
+    // shouldn't step over such a call while trying to reach prologue_end. In
+    // these extraordinary conditions, force the call to have the scope line
+    // and put prologue_end there. This isn't ideal, but signals that the call
+    // is where execution in the function starts, and is less catastrophic than
+    // stepping over the call.
+    if (CurInst->isCall()) {
+      if (const DILocation *Loc = CurInst->getDebugLoc().get();
+          Loc && Loc->getLine() == 0) {
+        // Create and assign the scope-line position.
+        unsigned ScopeLine = SP->getScopeLine();
+        DILocation *ScopeLineDILoc =
+            DILocation::get(SP->getContext(), ScopeLine, 0, SP);
+        const_cast<MachineInstr *>(&*CurInst)->setDebugLoc(ScopeLineDILoc);
+
+        // Consider this position to be where prologue_end is placed.
+        return std::make_pair(&*CurInst, false);
+      }
     }
 
     // Try to continue searching, but use a backup-location if substantive
@@ -3006,10 +3042,9 @@ static dwarf::PubIndexEntryDescriptor computeIndexValue(DwarfUnit *CU,
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_enumeration_type:
     return dwarf::PubIndexEntryDescriptor(
-        dwarf::GIEK_TYPE,
-        dwarf::isCPlusPlus((dwarf::SourceLanguage)CU->getLanguage())
-            ? dwarf::GIEL_EXTERNAL
-            : dwarf::GIEL_STATIC);
+        dwarf::GIEK_TYPE, dwarf::isCPlusPlus(CU->getSourceLanguage())
+                              ? dwarf::GIEL_EXTERNAL
+                              : dwarf::GIEL_STATIC);
   case dwarf::DW_TAG_typedef:
   case dwarf::DW_TAG_base_type:
   case dwarf::DW_TAG_subrange_type:
@@ -4018,7 +4053,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   TypeUnitsUnderConstruction.emplace_back(std::move(OwnedUnit), CTy);
 
   NewTU.addUInt(UnitDie, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
-                CU.getLanguage());
+                CU.getSourceLanguage());
 
   uint64_t Signature = makeTypeSignature(Identifier);
   NewTU.setTypeSignature(Signature);

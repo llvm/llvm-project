@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
+#include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -66,6 +67,9 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
   {
     std::unique_ptr<MemoryMapper> Mapper =
         cantFail(InProcessMemoryMapper::Create());
+    jitlink::LinkGraph G("G", std::make_shared<SymbolStringPool>(),
+                         Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+                         jitlink::getGenericEdgeKindName);
 
     // We will do two separate allocations
     auto PageSize = Mapper->getPageSize();
@@ -80,7 +84,7 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
 
     {
       // Provide working memory
-      char *WA1 = Mapper->prepare(Mem1->Start, HW.size() + 1);
+      char *WA1 = Mapper->prepare(G, Mem1->Start, HW.size() + 1);
       std::strcpy(WA1, HW.c_str());
     }
 
@@ -105,7 +109,7 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
     }
 
     {
-      char *WA2 = Mapper->prepare(Mem1->Start + PageSize, HW.size() + 1);
+      char *WA2 = Mapper->prepare(G, Mem1->Start + PageSize, HW.size() + 1);
       std::strcpy(WA2, HW.c_str());
     }
 
@@ -158,7 +162,7 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
       auto Mem2 = reserve(*Mapper, PageSize);
       EXPECT_THAT_ERROR(Mem2.takeError(), Succeeded());
 
-      char *WA = Mapper->prepare(Mem2->Start, HW.size() + 1);
+      char *WA = Mapper->prepare(G, Mem2->Start, HW.size() + 1);
       std::strcpy(WA, HW.c_str());
 
       MemoryMapper::AllocInfo Alloc3;

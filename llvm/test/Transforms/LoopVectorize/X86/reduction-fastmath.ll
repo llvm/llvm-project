@@ -362,4 +362,4 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-attributes #0 = { "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "unsafe-fp-math"="false" }
+attributes #0 = { "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }

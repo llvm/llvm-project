@@ -14,8 +14,11 @@
 #ifndef ORC_RT_SPSWRAPPERFUNCTION_H
 #define ORC_RT_SPSWRAPPERFUNCTION_H
 
+#include "orc-rt/Compiler.h"
 #include "orc-rt/SimplePackedSerialization.h"
 #include "orc-rt/WrapperFunction.h"
+
+#define ORC_RT_SPS_INTERFACE ORC_RT_INTERFACE
 
 namespace orc_rt {
 namespace detail {
@@ -33,51 +36,60 @@ private:
     return std::move(R);
   }
 
-  template <typename T> static const T &toSerializable(const T &Arg) noexcept {
-    return Arg;
-  }
+  template <typename T> struct Serializable {
+    typedef std::decay_t<T> serializable_type;
+    static const T &to(const T &Arg) noexcept { return Arg; }
+    static T &&from(T &&Arg) noexcept { return std::forward<T>(Arg); }
+  };
 
-  static SPSSerializableError toSerializable(Error Err) noexcept {
-    return SPSSerializableError(std::move(Err));
-  }
+  template <> struct Serializable<Error> {
+    typedef SPSSerializableError serializable_type;
+    static SPSSerializableError to(Error Err) {
+      return SPSSerializableError(std::move(Err));
+    }
+    static Error from(SPSSerializableError Err) { return Err.toError(); }
+  };
 
-  template <typename T>
-  static SPSSerializableExpected<T> toSerializable(Expected<T> Arg) noexcept {
-    return SPSSerializableExpected<T>(std::move(Arg));
-  }
+  template <typename T> struct Serializable<Expected<T>> {
+    typedef SPSSerializableExpected<T> serializable_type;
+    static SPSSerializableExpected<T> to(Expected<T> Val) {
+      return SPSSerializableExpected<T>(std::move(Val));
+    }
+    static Expected<T> from(SPSSerializableExpected<T> Val) {
+      return Val.toExpected();
+    }
+  };
 
   template <typename... Ts> struct DeserializableTuple;
 
   template <typename... Ts> struct DeserializableTuple<std::tuple<Ts...>> {
-    typedef std::tuple<
-        std::decay_t<decltype(toSerializable(std::declval<Ts>()))>...>
-        type;
+    typedef std::tuple<typename Serializable<Ts>::serializable_type...> type;
   };
 
   template <typename... Ts>
   using DeserializableTuple_t = typename DeserializableTuple<Ts...>::type;
 
-  template <typename T> static T &&fromSerializable(T &&Arg) noexcept {
-    return std::forward<T>(Arg);
-  }
-
-  static Error fromSerializable(SPSSerializableError Err) noexcept {
-    return Err.toError();
-  }
-
-  template <typename T>
-  static Expected<T> fromSerializable(SPSSerializableExpected<T> Val) noexcept {
-    return Val.toExpected();
+  template <typename ArgTuple, typename... SerializableArgs, std::size_t... Is>
+  std::optional<ArgTuple>
+  applySerializationConversions(std::tuple<SerializableArgs...> &Inputs,
+                                std::index_sequence<Is...>) {
+    static_assert(sizeof...(SerializableArgs) ==
+                      std::index_sequence<Is...>::size(),
+                  "Tuple sizes don't match");
+    return std::optional<ArgTuple>(
+        std::in_place, Serializable<std::tuple_element_t<Is, ArgTuple>>::from(
+                           std::move(std::get<Is>(Inputs)))...);
   }
 
 public:
   template <typename... ArgTs>
   std::optional<WrapperFunctionBuffer> serialize(ArgTs &&...Args) {
-    return serializeImpl(toSerializable(std::forward<ArgTs>(Args))...);
+    return serializeImpl(
+        Serializable<std::decay_t<ArgTs>>::to(std::forward<ArgTs>(Args))...);
   }
 
   template <typename ArgTuple>
-  std::optional<ArgTuple> deserialize(WrapperFunctionBuffer ArgBytes) {
+  std::optional<ArgTuple> deserialize(const WrapperFunctionBuffer &ArgBytes) {
     assert(!ArgBytes.getOutOfBandError() &&
            "Should not attempt to deserialize out-of-band error");
     SPSInputBuffer IB(ArgBytes.data(), ArgBytes.size());
@@ -85,12 +97,8 @@ public:
     if (!SPSSerializationTraits<SPSTuple<SPSArgTs...>,
                                 decltype(Args)>::deserialize(IB, Args))
       return std::nullopt;
-    return std::apply(
-        [](auto &&...A) {
-          return std::optional<ArgTuple>(std::in_place,
-                                         std::move(fromSerializable(A))...);
-        },
-        std::move(Args));
+    return applySerializationConversions<ArgTuple>(
+        Args, std::make_index_sequence<std::tuple_size_v<ArgTuple>>());
   }
 };
 
@@ -116,10 +124,10 @@ template <typename SPSSig> struct SPSWrapperFunction {
   }
 
   template <typename Handler>
-  static void handle(orc_rt_SessionRef Session, void *CallCtx,
+  static void handle(orc_rt_SessionRef S, uint64_t CallId,
                      orc_rt_WrapperFunctionReturn Return,
                      WrapperFunctionBuffer ArgBytes, Handler &&H) {
-    WrapperFunction::handle(Session, CallCtx, Return, std::move(ArgBytes),
+    WrapperFunction::handle(S, CallId, Return, std::move(ArgBytes),
                             WrapperFunctionSPSSerializer<SPSSig>(),
                             std::forward<Handler>(H));
   }

@@ -223,6 +223,10 @@ what to add to your calendar invite.
      - `ics <https://calendar.google.com/calendar/ical/c_673c6cd64474c0aff173bf8fa609559f93d654e0984d9d91d71abd32d28c0486%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/embed?src=c_673c6cd64474c0aff173bf8fa609559f93d654e0984d9d91d71abd32d28c0486%40group.calendar.google.com&ctz=America%2FLos_Angeles>`__
      -
+   * - GlobalISel
+     - Every 2nd Tuesday of the month
+     - `gcal <https://calendar.google.com/calendar/u/0?cid=YWZjNzhmMzE4MDNlNTAyNGY1NmE1MDIyODY0YTYwZmJmYzRjYTEwNTE1NmUxODA2NzBkYTliY2ZhYTVkNjk0NUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting details/agenda <https://docs.google.com/document/d/1Ry8O4-Tm5BFj9AMjr8qTQFU80z-ptiNQ62687NaIvLs/edit?usp=sharing>`__
 
 
 For event owners, our Discord bot also supports sending automated announcements
@@ -254,10 +258,6 @@ the future.
      - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/embed?src=c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com>`__
      - `Minutes/docs <https://docs.google.com/document/d/1-uEEZfmRdPThZlctOq9eXlmUaSSAAi8oKxhrPY_lpjk/edit#>`__
-   * - GlobalISel
-     - Every 2nd Tuesday of the month
-     - `gcal <https://calendar.google.com/calendar/u/0?cid=ZDcyMjc0ZjZiZjNhMzFlYmE3NTNkMWM2MGM2NjM5ZWU3ZDE2MjM4MGFlZDc2ZjViY2UyYzMwNzVhZjk4MzQ4ZEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
-     - `Meeting details/agenda <https://docs.google.com/document/d/1Ry8O4-Tm5BFj9AMjr8qTQFU80z-ptiNQ62687NaIvLs/edit?usp=sharing>`__
    * - Vector Predication
      - Every 2 weeks on Tuesdays, 3pm UTC
      -
@@ -562,7 +562,7 @@ An example invite looks as follows
 .. code-block:: none
 
   This event is a meetup for all developers of LLDB. Meeting agendas are posted
-  on discourse before the event.
+  on Discourse before the event.
 
   Attendees must adhere to the LLVM Code of Conduct
   (https://llvm.org/docs/CodeOfConduct.html). For any Code of Conduct reports,

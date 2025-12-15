@@ -208,7 +208,7 @@ namespace KernelInfo {
 // };
 
 #define KERNEL_ENVIRONMENT_IDX(MEMBER, IDX)                                    \
-  constexpr const unsigned MEMBER##Idx = IDX;
+  constexpr unsigned MEMBER##Idx = IDX;
 
 KERNEL_ENVIRONMENT_IDX(Configuration, 0)
 KERNEL_ENVIRONMENT_IDX(Ident, 1)
@@ -216,7 +216,7 @@ KERNEL_ENVIRONMENT_IDX(Ident, 1)
 #undef KERNEL_ENVIRONMENT_IDX
 
 #define KERNEL_ENVIRONMENT_CONFIGURATION_IDX(MEMBER, IDX)                      \
-  constexpr const unsigned MEMBER##Idx = IDX;
+  constexpr unsigned MEMBER##Idx = IDX;
 
 KERNEL_ENVIRONMENT_CONFIGURATION_IDX(UseGenericStateMachine, 0)
 KERNEL_ENVIRONMENT_CONFIGURATION_IDX(MayUseNestedParallelism, 1)
@@ -258,7 +258,7 @@ KERNEL_ENVIRONMENT_CONFIGURATION_GETTER(MaxTeams)
 
 GlobalVariable *
 getKernelEnvironementGVFromKernelInitCB(CallBase *KernelInitCB) {
-  constexpr const int InitKernelEnvironmentArgNo = 0;
+  constexpr int InitKernelEnvironmentArgNo = 0;
   return cast<GlobalVariable>(
       KernelInitCB->getArgOperand(InitKernelEnvironmentArgNo)
           ->stripPointerCasts());
@@ -1086,7 +1086,8 @@ private:
     SmallDenseMap<BasicBlock *, SmallPtrSet<Instruction *, 4>> BB2PRMap;
 
     BasicBlock *StartBB = nullptr, *EndBB = nullptr;
-    auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    auto BodyGenCB = [&](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                         ArrayRef<InsertPointTy> DeallocIPs) {
       BasicBlock *CGStartBB = CodeGenIP.getBlock();
       BasicBlock *CGEndBB =
           SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -1126,7 +1127,8 @@ private:
       const DebugLoc DL = ParentBB->getTerminator()->getDebugLoc();
       ParentBB->getTerminator()->eraseFromParent();
 
-      auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+      auto BodyGenCB = [&](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                           ArrayRef<InsertPointTy> DeallocIPs) {
         BasicBlock *CGStartBB = CodeGenIP.getBlock();
         BasicBlock *CGEndBB =
             SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -1256,8 +1258,9 @@ private:
       // avoid overriding binding settings, and without explicit cancellation.
       OpenMPIRBuilder::InsertPointTy AfterIP =
           cantFail(OMPInfoCache.OMPBuilder.createParallel(
-              Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
-              OMP_PROC_BIND_default, /* IsCancellable */ false));
+              Loc, AllocaIP, /* DeallocIPs */ {}, BodyGenCB, PrivCB, FiniCB,
+              nullptr, nullptr, OMP_PROC_BIND_default,
+              /* IsCancellable */ false));
       BranchInst::Create(AfterBB, AfterIP.getBlock());
 
       // Perform the actual outlining.
@@ -2693,7 +2696,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   AAExecutionDomainFunction(const IRPosition &IRP, Attributor &A)
       : AAExecutionDomain(IRP, A) {}
 
-  ~AAExecutionDomainFunction() { delete RPOT; }
+  ~AAExecutionDomainFunction() override { delete RPOT; }
 
   void initialize(Attributor &A) override {
     Function *F = getAnchorScope();
@@ -5047,6 +5050,29 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_free_shared:
         // Return without setting a fixpoint, to be resolved in updateImpl.
         return;
+      case OMPRTL___kmpc_distribute_static_loop_4:
+      case OMPRTL___kmpc_distribute_static_loop_4u:
+      case OMPRTL___kmpc_distribute_static_loop_8:
+      case OMPRTL___kmpc_distribute_static_loop_8u:
+      case OMPRTL___kmpc_distribute_for_static_loop_4:
+      case OMPRTL___kmpc_distribute_for_static_loop_4u:
+      case OMPRTL___kmpc_distribute_for_static_loop_8:
+      case OMPRTL___kmpc_distribute_for_static_loop_8u:
+      case OMPRTL___kmpc_for_static_loop_4:
+      case OMPRTL___kmpc_for_static_loop_4u:
+      case OMPRTL___kmpc_for_static_loop_8:
+      case OMPRTL___kmpc_for_static_loop_8u:
+        // Parallel regions might be reached by these calls, as they take a
+        // callback argument potentially containing arbitrary user-provided
+        // code.
+        ReachedUnknownParallelRegions.insert(&CB);
+        // TODO: The presence of these calls on their own does not prevent a
+        // kernel from being SPMD-izable. We mark it as such because we need
+        // further changes in order to also consider the contents of the
+        // callbacks passed to them.
+        SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+        SPMDCompatibilityTracker.insert(&CB);
+        break;
       default:
         // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
         // generally. However, they do not hide parallel regions.
