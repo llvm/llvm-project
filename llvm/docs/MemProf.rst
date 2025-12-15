@@ -196,10 +196,10 @@ The runtime uses a **shadow memory** scheme similar to AddressSanitizer (ASan) b
 *   **Shadow Mapping:** Application memory is mapped to shadow memory.
 *   **Granularity:** The default granularity is 64 bytes. One byte of shadow memory tracks the access state of 64 bytes of application memory.
 *   **MemInfoBlock (MIB):** A key data structure that stores statistics for an allocation context, including:
-    *   ``AllocCount``
-    *   ``TotalAccessCount``
-    *   ``TotalLifetime``
-    *   ``Min/MaxAccessDensity``
+   *   ``AllocCount``
+   *   ``TotalAccessCount``
+   *   ``TotalLifetime``
+   *   ``Min/MaxAccessDensity``
 
 Profile Format
 --------------
