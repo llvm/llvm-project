@@ -2998,7 +2998,7 @@ struct ConvertAMDGPUToROCDLPass
     LLVMTypeConverter converter(ctx);
 
     populateAMDGPUToROCDLConversionPatterns(converter, patterns, *maybeChipset);
-    populateCommonAMDGPUTypeAndAttributeConversions(converter);
+    amdgpu::populateCommonGPUTypeAndAttributeConversions(converter);
     LLVMConversionTarget target(getContext());
     target.addIllegalDialect<::mlir::amdgpu::AMDGPUDialect>();
     target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
@@ -3010,7 +3010,7 @@ struct ConvertAMDGPUToROCDLPass
 };
 } // namespace
 
-void mlir::populateCommonAMDGPUTypeAndAttributeConversions(
+void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
     TypeConverter &typeConverter) {
   populateGpuMemorySpaceAttributeConversions(
       typeConverter, [](gpu::AddressSpace space) {
