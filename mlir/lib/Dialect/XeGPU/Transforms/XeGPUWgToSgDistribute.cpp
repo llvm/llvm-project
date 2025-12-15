@@ -317,6 +317,9 @@ struct WgToSgLoadNdOpWithOffset : public OpConversionPattern<xegpu::LoadNdOp> {
     if (failed(genOffsetsList(rewriter, op, offsetsList)))
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropSgLayoutAndData();
     SmallVector<Value> newOps;
     for (auto [tdesc, offsets] :
          llvm::zip(adaptor.getTensorDesc(), offsetsList)) {
@@ -326,7 +329,7 @@ struct WgToSgLoadNdOpWithOffset : public OpConversionPattern<xegpu::LoadNdOp> {
       auto newOp = xegpu::LoadNdOp::create(
           rewriter, op.getLoc(), newResTy, tdesc, offsets,
           /*packed = */ nullptr, /*transpose = */ nullptr, op.getL1HintAttr(),
-          op.getL2HintAttr(), op.getL3HintAttr());
+          op.getL2HintAttr(), op.getL3HintAttr(), layout);
       newOps.push_back(newOp);
     }
     rewriter.replaceOpWithMultiple(op, {newOps});
@@ -347,11 +350,14 @@ struct WgToSgStoreNdOpWithOffset
     if (failed(genOffsetsList(rewriter, op, offsetsList)))
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropSgLayoutAndData();
     for (auto [v, tdesc, offsets] :
          llvm::zip(adaptor.getValue(), adaptor.getTensorDesc(), offsetsList)) {
       xegpu::StoreNdOp::create(rewriter, op.getLoc(), v, tdesc, offsets,
                                op.getL1HintAttr(), op.getL2HintAttr(),
-                               op.getL3HintAttr());
+                               op.getL3HintAttr(), layout);
     }
     rewriter.eraseOp(op);
 
@@ -371,11 +377,14 @@ struct WgToSgPrefetchNdOpWithOffset
     if (failed(genOffsetsList(rewriter, op, offsetsList)))
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropSgLayoutAndData();
     for (auto [tdesc, offsets] :
          llvm::zip(adaptor.getTensorDesc(), offsetsList)) {
       xegpu::PrefetchNdOp::create(rewriter, op.getLoc(), tdesc, offsets,
                                   op.getL1HintAttr(), op.getL2HintAttr(),
-                                  op.getL3HintAttr());
+                                  op.getL3HintAttr(), layout);
     }
     rewriter.eraseOp(op);
 
@@ -1278,15 +1287,15 @@ struct WgToSgVectorTransposeOp
   }
 };
 
-// This pattern distributes the vector.constant_mask ops to work at subgroup
-// level.
-struct WgToSgVectorConstantMaskOp
-    : public OpConversionPattern<vector::ConstantMaskOp> {
-  using OpConversionPattern<vector::ConstantMaskOp>::OpConversionPattern;
+// Distribute vector mask ops to work at subgroup level.
+template <typename MaskOpType>
+struct WgToSgVectorMaskOp : public OpConversionPattern<MaskOpType> {
+  using OpConversionPattern<MaskOpType>::OpConversionPattern;
 
-  LogicalResult
-  matchAndRewrite(vector::ConstantMaskOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(
+      MaskOpType op,
+      typename OpConversionPattern<MaskOpType>::OneToNOpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
     xegpu::DistributeLayoutAttr layout =
         xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
@@ -1296,9 +1305,16 @@ struct WgToSgVectorConstantMaskOp
     VectorType type = op.getResult().getType();
     auto wgShape = type.getShape();
 
-    ArrayRef<int64_t> wgMaskDimSizes = op.getMaskDimSizes();
+    SmallVector<Value> wgMaskDimSizes;
+    if constexpr (std::is_same_v<MaskOpType, vector::ConstantMaskOp>) {
+      for (int64_t maskSize : op.getMaskDimSizes()) {
+        wgMaskDimSizes.push_back(
+            arith::ConstantIndexOp::create(rewriter, loc, maskSize));
+      }
+    } else if constexpr (std::is_same_v<MaskOpType, vector::CreateMaskOp>) {
+      wgMaskDimSizes = llvm::to_vector(op.getOperands());
+    }
 
-    // Get subgroup ID.
     Value sgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
     auto sgOffsets =
@@ -1310,19 +1326,17 @@ struct WgToSgVectorConstantMaskOp
     VectorType resultType = VectorType::get(sgShape, type.getElementType());
 
     // In each dimension, each subgroup computes its local mask size as:
-    // min(max(wgMaskSize[d] - offset[d], 0), sgDimSize[d])
+    // min(max(wgMaskDimSize[d] - offset[d], 0), sgDimSize[d])
     SmallVector<Value> newCreateMaskOps;
     for (auto offsetSet : *sgOffsets) {
       SmallVector<Value> maskOperands;
 
-      for (auto [i, wgMaskSize] : llvm::enumerate(wgMaskDimSizes)) {
-        Value wgMaskSizeVal =
-            arith::ConstantIndexOp::create(rewriter, loc, wgMaskSize);
+      for (auto [i, wgMaskDimSize] : llvm::enumerate(wgMaskDimSizes)) {
         Value dimSizeVal =
             arith::ConstantIndexOp::create(rewriter, loc, sgShape[i]);
         Value offset = offsetSet[i];
         Value adjustedMaskSize =
-            arith::SubIOp::create(rewriter, loc, wgMaskSizeVal, offset);
+            arith::SubIOp::create(rewriter, loc, wgMaskDimSize, offset);
         Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
         Value nonNegative =
             arith::MaxSIOp::create(rewriter, loc, adjustedMaskSize, zero);
@@ -1343,6 +1357,8 @@ struct WgToSgVectorConstantMaskOp
   }
 };
 
+using WgToSgVectorConstantMaskOp = WgToSgVectorMaskOp<vector::ConstantMaskOp>;
+using WgToSgVectorCreateMaskOp = WgToSgVectorMaskOp<vector::CreateMaskOp>;
 } // namespace
 
 namespace mlir {
@@ -1358,7 +1374,8 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
            WgToSgStoreScatterOpWithOffset, WgToSgLoadMatrixOp,
            WgToSgStoreMatrixOp, WgToSgVectorStepOp, WgToSgVectorShapeCastOp,
            WgToSgMultiDimReductionOp, WgToSgVectorTransposeOp,
-           WgToSgVectorConstantMaskOp>(patterns.getContext());
+           WgToSgVectorConstantMaskOp, WgToSgVectorCreateMaskOp>(
+          patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -1485,9 +1502,10 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         return isLegal(layout);
       });
 
-  target.addDynamicallyLegalOp<
-      vector::ShapeCastOp, vector::StepOp, vector::TransposeOp,
-      vector::BroadcastOp, vector::MultiDimReductionOp, vector::ConstantMaskOp>(
+  target.addDynamicallyLegalOp<vector::ShapeCastOp, vector::StepOp,
+                               vector::TransposeOp, vector::BroadcastOp,
+                               vector::MultiDimReductionOp,
+                               vector::ConstantMaskOp, vector::CreateMaskOp>(
       [=](Operation *op) -> bool {
         // Check for either a SliceAttr or LayoutAttr on the result.
         auto layout = xegpu::getDistributeLayoutAttr(op->getResult(0));

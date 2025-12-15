@@ -916,9 +916,10 @@ void test_builtin_ctzg(unsigned char uc, unsigned short us, unsigned int ui,
 
 #endif
 
+#include <stdbool.h>
 // CHECK-LABEL: define{{.*}} void @test_builtin_bswapg
 void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
-                       unsigned long ul, unsigned long long ull,
+                       unsigned long ul, unsigned long long ull, bool b,
 #ifdef __SIZEOF_INT128__
                        unsigned __int128 ui128,
 #endif
@@ -929,9 +930,14 @@ void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
   int x = 0;
   x = x * 2;
 #endif
+  b = __builtin_bswapg(b);
+  // CHECK: %{{.*}} = load i8, ptr %b.addr
+  // CHECK: %{{.*}} = trunc i8 %{{.*}} to i1
+  // CHECK: %{{.*}} = zext i1 %{{.*}} to i8
+  // CHECK: store i8 %{{.*}}, ptr %b.addr
   uc = __builtin_bswapg(uc);
-  // CHECK: %1 = load i8, ptr %uc.addr
-  // CHECK: store i8 %1, ptr %uc.addr
+  // CHECK: %{{.*}} = load i8, ptr %uc.addr
+  // CHECK: store i8 %{{.*}}, ptr %uc.addr
   us = __builtin_bswapg(us);
   // CHECK: call i16 @llvm.bswap.i16
   ui = __builtin_bswapg(ui);
