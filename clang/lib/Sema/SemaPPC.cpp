@@ -106,13 +106,13 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
 
   // Common BCD type-validation helpers
   // Emit diagnostics and return true on failure
-  //  - VerifyVectorType: enforces vector unsigned char
-  //  - VerifyIntType: enforces any integer type
+  //  - IsVectorType: enforces vector unsigned char
+  //  - IsIntType: enforces any integer type
   // Lambdas centralize type checks for BCD builtin handlers
   QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
                                            VectorKind::AltiVecVector);
   // Lambda 1: verify vector type
-  auto VerifyVectorType = [&](QualType ArgTy, SourceLocation Loc,
+  auto IsVectorType = [&](QualType ArgTy, SourceLocation Loc,
                               unsigned ArgIndex) -> bool {
     if (!Context.hasSameType(ArgTy, VecType)) {
       Diag(Loc, diag::err_ppc_invalid_vector_type)
@@ -123,7 +123,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   };
 
   // Lambda 2: verify integer type
-  auto VerifyIntType = [&](QualType ArgTy, SourceLocation Loc,
+  auto IsIntType = [&](QualType ArgTy, SourceLocation Loc,
                            unsigned ArgIndex) -> bool {
     if (!ArgTy->isIntegerType()) {
       Diag(Loc, diag::err_ppc_invalid_integer_type)
@@ -145,20 +145,14 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   case PPC::BI__builtin_ppc_bcdshiftround:
   case PPC::BI__builtin_ppc_bcdtruncate: {
 
-    QualType Arg0Type = TheCall->getArg(0)->getType();
-    QualType Arg1Type = TheCall->getArg(1)->getType();
-    QualType Arg2Type = TheCall->getArg(2)->getType();
-
     // Arg0 must be vector unsigned char
-    if (VerifyVectorType(Arg0Type, TheCall->getArg(0)->getBeginLoc(), 0))
+    if (IsVectorType(TheCall->getArg(0)->getType(),
+                     TheCall->getArg(0)->getBeginLoc(), 0))
       return true;
 
     // Arg1 must be integer type
-    if (VerifyIntType(Arg1Type, TheCall->getArg(1)->getBeginLoc(), 1))
-      return true;
-
-    // Arg2 must be integer type
-    if (VerifyIntType(Arg2Type, TheCall->getArg(2)->getBeginLoc(), 2))
+    if (IsIntType(TheCall->getArg(1)->getType(),
+                  TheCall->getArg(1)->getBeginLoc(), 1))
       return true;
 
     // Restrict Arg2 constant range (0–1)
