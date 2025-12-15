@@ -3742,7 +3742,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         auto *BranchOnCountInst = cast<VPInstruction>(&R);
         DebugLoc DL = BranchOnCountInst->getDebugLoc();
         VPValue *Cond = Builder.createICmp(CmpInst::ICMP_EQ, IV, TC, DL);
-        Builder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, DL);
+        Builder.createNaryOp(VPInstruction::BranchOnCond, Cond, DL);
         ToRemove.push_back(BranchOnCountInst);
         continue;
       }

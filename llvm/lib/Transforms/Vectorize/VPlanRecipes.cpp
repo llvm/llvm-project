@@ -642,6 +642,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // Replace the temporary unreachable terminator with a new conditional
     // branch, hooking it up to backward destination for latch blocks now, and
     // to forward destination(s) later when they are created.
+    // Second successor may be backwards - iff it is already in VPBB2IRBB.
     VPBasicBlock *SecondVPSucc =
         cast<VPBasicBlock>(getParent()->getSuccessors()[1]);
     BasicBlock *SecondIRSucc = State.CFG.VPBB2IRBB.lookup(SecondVPSucc);
