@@ -40,7 +40,7 @@ cir.func @s0() {
 
 // Pretends that this is lowered from a C file and was tagged with allEnumCasesCovered = true
 cir.func @s1(%1 : !s32i) {
-  cir.switch (%1 : !s32i) allEnumCasesCovered {
+  cir.switch (%1 : !s32i) all_enum_cases_covered {
     cir.case (default, []) {
       cir.return
     }
@@ -54,7 +54,7 @@ cir.func @s1(%1 : !s32i) {
   } { }
   cir.return
 } 
-// CHECK: cir.switch(%[[ARG:.*]] : !s32i) allEnumCasesCovered {
+// CHECK: cir.switch(%[[ARG:.*]] : !s32i) all_enum_cases_covered {
 // CHECK-NEXT: cir.case(default, []) {
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
