@@ -1381,7 +1381,7 @@ class AMDGPU_MakeDescriptorOp<string mnemonic> :
     Optional<I32>: $lds_increment,
     Optional<Index>: $iteration_count);
 
-  let extraClassDeclaration = [{
+  code extraClassDeclarationBase = [{
     int64_t getRank() {
       return getGlobalStaticSizes().size();
     }
@@ -1402,9 +1402,6 @@ class AMDGPU_MakeDescriptorOp<string mnemonic> :
       return getMixedValues(getSharedStaticSizes(), getSharedDynamicSizes(), getContext());
     }
 
-    constexpr bool isGather() {
-      return isa<TDMGatherBaseType>(getBase().getType());
-    }
   }];
 
 }
@@ -1431,6 +1428,12 @@ def AMDGPU_MakeGatherDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_gather_dma_
 
   let hasVerifier = 1;
   let hasFolder = 1;
+
+  let extraClassDeclaration = extraClassDeclarationBase # [{
+    constexpr bool isGather() {
+      return true;
+    }
+  }];
 }
 
 def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> {
@@ -1494,6 +1497,12 @@ def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> 
 
   let hasVerifier = 1;
   let hasFolder = 1;
+
+  let extraClassDeclaration = extraClassDeclarationBase # [{
+    constexpr bool isGather() {
+      return false;
+    }
+  }];
 
 }
 
