@@ -932,7 +932,7 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     return nullptr;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (Ops[0] != 4 && Ops[0] != 5)
+  if (Ops.size() != 1 || (Ops[0] != 4 && Ops[0] != 5))
     return nullptr;
 
   bool Invert = Ops[0] == 5;
