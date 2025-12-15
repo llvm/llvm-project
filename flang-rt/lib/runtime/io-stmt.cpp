@@ -270,13 +270,11 @@ int ExternalIoStatementBase::EndIoStatement() {
     }
   }
 #else
-  // Fetch the unit pointer before *this disappears.
-  ExternalFileUnit *unitPtr{&unit_};
   // The pseudo file units are dynamically allocated
-  // and are not tracked in the unit map.
-  // They have to be destructed and deallocated here.
-  unitPtr->~ExternalFileUnit();
-  FreeMemory(unitPtr);
+  // and are not tracked in any unit map.
+  // They have to be destroyed and deallocated here.
+  unit_.~ExternalFileUnit();
+  FreeMemory(&unit_);
 #endif
   return result;
 }
