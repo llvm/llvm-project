@@ -111,7 +111,6 @@ private:
 ///
 template <typename ThisT, typename ParentT> class RTTIExtends : public ParentT {
 public:
-
   static_assert(!std::is_base_of_v<ErrorInfoBase, ParentT>,
                 "RTTIExtends should not be used to define orc_rt custom error "
                 "types, use ErrorExtends instead");
