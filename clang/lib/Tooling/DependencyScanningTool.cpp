@@ -217,42 +217,46 @@ static llvm::Error makeErrorFromDiagnosticsOS(
       DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
 }
 
+bool DependencyScanningTool::initializeWorkerCIWithContextFromCommandline(
+    DependencyScanningWorker &Worker, StringRef CWD,
+    ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
+  if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
+    // The input command line is already a -cc1 invocation; initialize the
+    // compiler instance directly from it.
+    return Worker.initializeCompilerInstanceWithContext(CWD, CommandLine, DC);
+  }
+
+  // The input command line is either a driver-style command line, or
+  // ill-formed. In this case, we will first call the Driver to build a -cc1
+  // command line for this compilation or diagnose any ill-formed input.
+  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
+      &Worker.getVFS(), CommandLine, CWD, "ScanningByName");
+  auto DiagEngineWithCmdAndOpts =
+      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
+                                                      OverlayFS, DC);
+
+  const auto MaybeFirstCC1 = getFirstCC1CommandLine(
+      ModifiedCommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS);
+  if (!MaybeFirstCC1)
+    return false;
+
+  return Worker.initializeCompilerInstanceWithContext(
+      CWD, *MaybeFirstCC1, std::move(DiagEngineWithCmdAndOpts), OverlayFS);
+}
+
 llvm::Error
 DependencyScanningTool::initializeCompilerInstanceWithContextOrError(
     StringRef CWD, ArrayRef<std::string> CommandLine) {
   DiagPrinterWithOS =
       std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
 
-  if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
-    // The input command line is already a -cc1 invocation; initialize the
-    // compiler instance directly from it.
-    if (Worker.initializeCompilerInstanceWithContext(
-            CWD, CommandLine, DiagPrinterWithOS->DiagPrinter))
-      return llvm::Error::success();
-    return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
-  }
+  bool Result = initializeWorkerCIWithContextFromCommandline(
+      Worker, CWD, CommandLine, DiagPrinterWithOS->DiagPrinter);
 
-  // The input command line is either a driver-style command line, or
-  // ill-formed. In this case, we will first call the Driver to build a -cc1
-  // command line for this compilation or diagnose any ill-formed input.
-  auto OverlayFSAndArgs = initVFSForByNameScanning(
-      &Worker.getVFS(), CommandLine, CWD, "ScanningByName");
-  auto &OverlayFS = OverlayFSAndArgs.first;
-  const auto &ModifiedCommandLine = OverlayFSAndArgs.second;
-
-  auto DiagEngineWithCmdAndOpts =
-      std::make_unique<DiagnosticsEngineWithDiagOpts>(
-          ModifiedCommandLine, OverlayFS, DiagPrinterWithOS->DiagPrinter);
-
-  const auto MaybeFirstCC1 = getFirstCC1CommandLine(
-      ModifiedCommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS);
-  if (!MaybeFirstCC1)
-    return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
-
-  if (Worker.initializeCompilerInstanceWithContext(
-          CWD, *MaybeFirstCC1, std::move(DiagEngineWithCmdAndOpts), OverlayFS))
+  if (Result)
     return llvm::Error::success();
-  return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
+  else
+    return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
 }
 
 llvm::Expected<TranslationUnitDeps>
