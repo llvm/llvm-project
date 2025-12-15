@@ -616,6 +616,11 @@ Changes in existing checks
   where the check would sometimes suggest deleting not only a redundant
   ``return`` or ``continue``, but also unrelated lines preceding it.
 
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check to avoid
+  invalid code generation when the condition contains an initialization
+  statement.
+
 - Improved :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
