@@ -1303,7 +1303,7 @@ def AMDGPU_MakeGatherDmaBaseOp : AMDGPU_DmaBaseOp<"make_gather_dma_base", AMDGPU
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    constexpr bool isGather() {
+    static constexpr bool isGather() {
       return true;
     }
   }];
@@ -1354,16 +1354,17 @@ def AMDGPU_MakeDmaBaseOp : AMDGPU_DmaBaseOp<"make_dma_base", AMDGPU_TDMBaseType>
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    constexpr bool isGather() {
+    static constexpr bool isGather() {
       return false;
     }
   }];
 }
 
-def AMDGPU_MakeDmaDescriptorOp :
-  AMDGPU_Op<"make_dma_descriptor", [Pure, AttrSizedOperandSegments]>,
-  Arguments<(ins
-    AMDGPU_TDMBaseType: $base,
+class AMDGPU_MakeDescriptorOp<string mnemonic> :
+  AMDGPU_Op<mnemonic, [Pure, AttrSizedOperandSegments]>,
+  Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
+
+  dag baseArgs = (ins
     Variadic<Index>: $global_dynamic_sizes,
     DenseI64ArrayAttr: $global_static_sizes,
     Variadic<Index>: $global_dynamic_strides,
@@ -1378,9 +1379,66 @@ def AMDGPU_MakeDmaDescriptorOp :
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
     Optional<I32>: $lds_increment,
-    Optional<Index>: $iteration_count)>,
-  Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
+    Optional<Index>: $iteration_count);
 
+  code extraClassDeclarationBase = [{
+    int64_t getRank() {
+      return getGlobalStaticSizes().size();
+    }
+
+    unsigned getElementTypeWidth() {
+      return getBase().getType().getElementType().getIntOrFloatBitWidth();
+    }
+
+    SmallVector<OpFoldResult> getMixedGlobalSizes() {
+      return getMixedValues(getGlobalStaticSizes(), getGlobalDynamicSizes(), getContext());
+    }
+
+    SmallVector<OpFoldResult> getMixedGlobalStrides() {
+      return getMixedValues(getGlobalStaticStrides(), getGlobalDynamicStrides(), getContext());
+    }
+
+    SmallVector<OpFoldResult> getMixedSharedSizes() {
+      return getMixedValues(getSharedStaticSizes(), getSharedDynamicSizes(), getContext());
+    }
+
+  }];
+
+}
+
+def AMDGPU_MakeGatherDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_gather_dma_descriptor"> {
+  dag args = (ins AMDGPU_TDMGatherBaseType: $base,
+                  AnyTypeOf<[VectorOfMinMaxLengthAndType<1, 8, [I32]>,
+                             VectorOfMinMaxLengthAndType<1, 16, [I16]>]>: $indices);
+  let arguments = !con(args, baseArgs);
+  let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
+
+  let assemblyFormat = [{
+    $base `[` $indices `]`
+    `globalSize` custom<DynamicIndexList>($global_dynamic_sizes, $global_static_sizes)
+    `globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
+    `sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
+    ( `padShared` `(` $pad_amount^ `every` $pad_interval `)` )?
+    ( `workgroupMask` $workgroup_mask^ ( `earlyTimeout` $early_timeout^)?)?
+    ( `atomicBarrier` `(` $atomic_barrier_address^ `[` $atomic_barrier_indices `]`
+                      `:` type($atomic_barrier_address) `)`)?
+    ( `iterate` $global_increment^ `,` $lds_increment `,` $iteration_count )?
+    attr-dict `:` qualified(type($base)) `,` type($indices) `->` type(results)
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+
+  let extraClassDeclaration = extraClassDeclarationBase # [{
+    static constexpr bool isGather() {
+      return true;
+    }
+  }];
+}
+
+def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> {
+  dag args = (ins AMDGPU_TDMBaseType: $base);
+  let arguments = !con(args, baseArgs);
   let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
   let description = [{
      Make all descriptor groups needed by tensor memory operations.
@@ -1437,30 +1495,15 @@ def AMDGPU_MakeDmaDescriptorOp :
     attr-dict `:` qualified(type($base)) `->` type(results)
   }];
 
-  let extraClassDeclaration = [{
-    int64_t getRank() {
-      return getGlobalStaticSizes().size();
-    }
+  let hasVerifier = 1;
+  let hasFolder = 1;
 
-    unsigned getElementTypeWidth() {
-      return getBase().getType().getElementType().getIntOrFloatBitWidth();
-    }
-
-    SmallVector<OpFoldResult> getMixedGlobalSizes() {
-      return getMixedValues(getGlobalStaticSizes(), getGlobalDynamicSizes(), getContext());
-    }
-
-    SmallVector<OpFoldResult> getMixedGlobalStrides() {
-      return getMixedValues(getGlobalStaticStrides(), getGlobalDynamicStrides(), getContext());
-    }
-
-    SmallVector<OpFoldResult> getMixedSharedSizes() {
-      return getMixedValues(getSharedStaticSizes(), getSharedDynamicSizes(), getContext());
+  let extraClassDeclaration = extraClassDeclarationBase # [{
+    static constexpr bool isGather() {
+      return false;
     }
   }];
 
-  let hasVerifier = 1;
-  let hasFolder = 1;
 }
 
 #endif // AMDGPU

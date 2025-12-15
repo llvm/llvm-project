@@ -818,50 +818,52 @@ LogicalResult MakeGatherDmaBaseOp::verify() { return verifyBase(*this); }
 // MakeDmaDescriptorOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult MakeDmaDescriptorOp::verify() {
-  ArrayRef<int64_t> globalStaticStrides = getGlobalStaticStrides();
+template <typename DescriptorOp>
+static LogicalResult verifyDescriptorOp(DescriptorOp op) {
+  ArrayRef<int64_t> globalStaticStrides = op.getGlobalStaticStrides();
 
   if (globalStaticStrides.empty())
-    return emitOpError("strides must not be empty.");
+    return op.emitOpError("strides must not be empty.");
   if (globalStaticStrides.back() != 1)
-    return emitOpError("strides for the innermost dimension must be 1.");
+    return op.emitOpError("strides for the innermost dimension must be 1.");
 
-  ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
+  ArrayRef<int64_t> globalStaticSizes = op.getGlobalStaticSizes();
   size_t rank = globalStaticSizes.size();
   if (rank > 5)
-    return emitOpError("tensor and tile must be at most of rank 5.");
+    return op.emitOpError("tensor and tile must be at most of rank 5.");
   if (rank != globalStaticStrides.size())
-    return emitOpError("strides and sizes must have same rank.");
+    return op.emitOpError("strides and sizes must have same rank.");
 
-  ArrayRef<int64_t> sharedStaticSizes = getSharedStaticSizes();
+  ArrayRef<int64_t> sharedStaticSizes = op.getSharedStaticSizes();
   if (rank != sharedStaticSizes.size())
-    return emitOpError("tensor must have same rank as tile.");
+    return op.emitOpError("tensor must have same rank as tile.");
 
-  unsigned elementTypeWidth = getElementTypeWidth();
+  unsigned elementTypeWidth = op.getElementTypeWidth();
   if (!llvm::is_contained({8u, 16u, 32u, 64u}, elementTypeWidth))
-    return emitOpError(
+    return op.emitOpError(
                "element type width must be 1, 2, 4 or 8 bytes, but was ")
            << elementTypeWidth << " bits long";
 
-  if (Value atomicBarrierAddress = getAtomicBarrierAddress()) {
+  if (Value atomicBarrierAddress = op.getAtomicBarrierAddress()) {
     auto atomicBarrierAddressType =
         cast<MemRefType>(atomicBarrierAddress.getType());
     bool barrierInLDS =
         hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
     if (!barrierInLDS)
-      return emitOpError("atomic barrier address must be in LDS.");
+      return op.emitOpError("atomic barrier address must be in LDS.");
   }
 
-  if (getEarlyTimeout() && !getWorkgroupMask())
-    return emitOpError(
+  if (op.getEarlyTimeout() && !op.getWorkgroupMask())
+    return op.emitOpError(
         "early timeout does not apply when workgroup_mask is not set.");
   return success();
 }
 
-OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
-  SmallVector<OpFoldResult> mixedGlobalSizes(getMixedGlobalSizes());
-  SmallVector<OpFoldResult> mixedGlobalStrides(getMixedGlobalStrides());
-  SmallVector<OpFoldResult> mixedSharedSizes(getMixedSharedSizes());
+template <typename DescriptorOp, typename FoldAdaptor>
+static OpFoldResult foldDescriptorOp(DescriptorOp op, FoldAdaptor adaptor) {
+  SmallVector<OpFoldResult> mixedGlobalSizes(op.getMixedGlobalSizes());
+  SmallVector<OpFoldResult> mixedGlobalStrides(op.getMixedGlobalStrides());
+  SmallVector<OpFoldResult> mixedSharedSizes(op.getMixedSharedSizes());
 
   if (failed(foldDynamicIndexList(mixedGlobalSizes, /*onlyNonNegative=*/true,
                                   /*onlyNonZero=*/true)) &&
@@ -878,19 +880,49 @@ OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
 
   dispatchIndexOpFoldResults(mixedGlobalSizes, dynamicGlobalSizes,
                              staticGlobalSizes);
-  setGlobalStaticSizes(staticGlobalSizes);
-  getGlobalDynamicSizesMutable().assign(dynamicGlobalSizes);
+  op.setGlobalStaticSizes(staticGlobalSizes);
+  op.getGlobalDynamicSizesMutable().assign(dynamicGlobalSizes);
 
   dispatchIndexOpFoldResults(mixedGlobalStrides, dynamicGlobalStrides,
                              staticGlobalStrides);
-  setGlobalStaticStrides(staticGlobalStrides);
-  getGlobalDynamicStridesMutable().assign(dynamicGlobalStrides);
+  op.setGlobalStaticStrides(staticGlobalStrides);
+  op.getGlobalDynamicStridesMutable().assign(dynamicGlobalStrides);
 
   dispatchIndexOpFoldResults(mixedSharedSizes, dynamicSharedSizes,
                              staticSharedSizes);
-  setSharedStaticSizes(staticSharedSizes);
-  getSharedDynamicSizesMutable().assign(dynamicSharedSizes);
-  return getResult();
+  op.setSharedStaticSizes(staticSharedSizes);
+  op.getSharedDynamicSizesMutable().assign(dynamicSharedSizes);
+  return op.getResult();
+}
+
+LogicalResult MakeDmaDescriptorOp::verify() {
+  return verifyDescriptorOp(*this);
+}
+
+OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
+  return foldDescriptorOp(*this, adaptor);
+}
+
+//===----------------------------------------------------------------------===//
+// MakeGatherDmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeGatherDmaDescriptorOp::verify() {
+  ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
+  size_t rank = globalStaticSizes.size();
+  if (rank > 2)
+    return emitOpError(
+        "tensor and tile must be at most of rank two in gather mode.");
+  Value indices = getIndices();
+  Type elementType = cast<VectorType>(indices.getType()).getElementType();
+  if (elementType != getBase().getType().getIndexType())
+    return emitOpError("indices' element type must match base's element type.");
+
+  return verifyDescriptorOp(*this);
+}
+
+OpFoldResult MakeGatherDmaDescriptorOp::fold(FoldAdaptor adaptor) {
+  return foldDescriptorOp(*this, adaptor);
 }
 
 //===----------------------------------------------------------------------===//
