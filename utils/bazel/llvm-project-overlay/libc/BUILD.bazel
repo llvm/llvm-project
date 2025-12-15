@@ -1652,7 +1652,7 @@ libc_support_library(
         ":__support_cpp_optional",
         ":__support_osutil_syscall",
         ":__support_threads_linux_futex_word_type",
-        ":__support_time_linux_abs_timeout",
+        ":__support_time",
         ":types_struct_timespec",
     ],
 )
@@ -1680,8 +1680,7 @@ libc_support_library(
         ":__support_cpp_optional",
         ":__support_threads_linux_futex_utils",
         ":__support_threads_sleep",
-        ":__support_time_linux_abs_timeout",
-        ":__support_time_linux_monotonicity",
+        ":__support_time",
         ":types_pid_t",
     ],
 )
@@ -1733,25 +1732,11 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_error_or",
+        ":__support_libc_assert",
         ":hdr_time_macros",
         ":types_clockid_t",
         ":types_struct_timespec",
         ":types_time_t",
-    ],
-)
-
-libc_support_library(
-    name = "__support_time_linux_abs_timeout",
-    hdrs = ["src/__support/time/linux/abs_timeout.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_cpp_expected",
-        ":__support_time",
-        ":hdr_time_macros",
-        ":types_struct_timespec",
     ],
 )
 
@@ -1781,21 +1766,6 @@ libc_support_library(
         ":__support_osutil_vdso",
         ":types_clockid_t",
         ":types_struct_timespec",
-    ],
-)
-
-libc_support_library(
-    name = "__support_time_linux_monotonicity",
-    hdrs = ["src/__support/time/linux/monotonicity.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_libc_assert",
-        ":__support_time_clock_conversion",
-        ":__support_time_linux_abs_timeout",
-        ":hdr_time_macros",
     ],
 )
 
@@ -6119,6 +6089,15 @@ libc_function(
         ":hdr_unistd_macros",
         ":types_size_t",
         ":types_uid_t",
+    ],
+)
+
+libc_function(
+    name = "getpagesize",
+    srcs = ["src/unistd/linux/getpagesize.cpp"],
+    hdrs = ["src/unistd/getpagesize.h"],
+    deps = [
+        ":__support_osutil_linux_auxv",
     ],
 )
 

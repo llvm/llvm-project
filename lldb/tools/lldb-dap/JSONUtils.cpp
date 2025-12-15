@@ -124,7 +124,7 @@ DecodeMemoryReference(llvm::StringRef memoryReference) {
 
 bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
                            lldb::addr_t &out, llvm::json::Path path,
-                           bool required) {
+                           bool required, bool allow_empty) {
   const llvm::json::Object *v_obj = v.getAsObject();
   if (!v_obj) {
     path.report("expected object");
@@ -145,6 +145,11 @@ bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
   if (!mem_ref_str) {
     path.field(key).report("expected string");
     return false;
+  }
+
+  if (allow_empty && mem_ref_str->empty()) {
+    out = LLDB_INVALID_ADDRESS;
+    return true;
   }
 
   const std::optional<lldb::addr_t> addr_opt =

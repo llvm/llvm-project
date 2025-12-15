@@ -93,6 +93,8 @@ public:
         llvm_unreachable("emitting dtor comdat as function?");
       case Dtor_Unified:
         llvm_unreachable("emitting unified dtor as function?");
+      case Dtor_VectorDeleting:
+        llvm_unreachable("unexpected dtor kind for this ABI");
       }
       llvm_unreachable("bad dtor kind");
     }
@@ -458,7 +460,8 @@ public:
        if (!IsInlined)
          continue;
 
-       StringRef Name = CGM.getMangledName(VtableComponent.getGlobalDecl());
+       StringRef Name = CGM.getMangledName(
+           VtableComponent.getGlobalDecl(/*HasVectorDeletingDtors=*/false));
        auto *Entry = CGM.GetGlobalValue(Name);
        // This checks if virtual inline function has already been emitted.
        // Note that it is possible that this inline function would be emitted
@@ -716,10 +719,14 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
 
   bool ShouldEmitVFEInfo = CGM.getCodeGenOpts().VirtualFunctionElimination &&
                            CGM.HasHiddenLTOVisibility(RD);
+  // TODO: Update this name not to be restricted to WPD only
+  // as we now emit the vtable info info for speculative devirtualization as
+  // well.
   bool ShouldEmitWPDInfo =
-      CGM.getCodeGenOpts().WholeProgramVTables &&
-      // Don't insert type tests if we are forcing public visibility.
-      !CGM.AlwaysHasLTOVisibilityPublic(RD);
+      (CGM.getCodeGenOpts().WholeProgramVTables &&
+       // Don't insert type tests if we are forcing public visibility.
+       !CGM.AlwaysHasLTOVisibilityPublic(RD)) ||
+      CGM.getCodeGenOpts().DevirtualizeSpeculatively;
   llvm::Value *VirtualFn = nullptr;
 
   {
@@ -2110,17 +2117,20 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
 
   // Always emit type metadata on non-available_externally definitions, and on
   // available_externally definitions if we are performing whole program
-  // devirtualization. For WPD we need the type metadata on all vtable
-  // definitions to ensure we associate derived classes with base classes
-  // defined in headers but with a strong definition only in a shared library.
+  // devirtualization or speculative devirtualization. We need the type metadata
+  // on all vtable definitions to ensure we associate derived classes with base
+  // classes defined in headers but with a strong definition only in a shared
+  // library.
   if (!VTable->isDeclarationForLinker() ||
-      CGM.getCodeGenOpts().WholeProgramVTables) {
+      CGM.getCodeGenOpts().WholeProgramVTables ||
+      CGM.getCodeGenOpts().DevirtualizeSpeculatively) {
     CGM.EmitVTableTypeMetadata(RD, VTable, VTLayout);
     // For available_externally definitions, add the vtable to
     // @llvm.compiler.used so that it isn't deleted before whole program
     // analysis.
     if (VTable->isDeclarationForLinker()) {
-      assert(CGM.getCodeGenOpts().WholeProgramVTables);
+      assert(CGM.getCodeGenOpts().WholeProgramVTables ||
+             CGM.getCodeGenOpts().DevirtualizeSpeculatively);
       CGM.addCompilerUsedGlobal(VTable);
     }
   }

@@ -13,6 +13,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-modifiers.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
 
 #include <list>
@@ -126,6 +127,11 @@ Object makeObject(const parser::OmpObject &object,
   }
   // OmpObject is std::variant<Designator, /*common block*/ Name>;
   return makeObject(std::get<parser::Designator>(object.u), semaCtx);
+}
+
+Object makeObject(const parser::EntityDecl &decl,
+                  semantics::SemanticsContext &semaCtx) {
+  return makeObject(std::get<parser::ObjectName>(decl.t), semaCtx);
 }
 
 ObjectList makeObjects(const parser::OmpArgumentList &objects,
@@ -275,12 +281,10 @@ makeIteratorSpecifiers(const parser::OmpIteratorSpecifier &inp,
   auto &tds = std::get<parser::TypeDeclarationStmt>(inp.t);
   auto &entities = std::get<std::list<parser::EntityDecl>>(tds.t);
   for (const parser::EntityDecl &ed : entities) {
-    auto &name = std::get<parser::ObjectName>(ed.t);
-    assert(name.symbol && "Expecting symbol for iterator variable");
-    auto *stype = name.symbol->GetType();
-    assert(stype && "Expecting symbol type");
-    IteratorSpecifier spec{{evaluate::DynamicType::From(*stype),
-                            makeObject(name, semaCtx), range}};
+    auto *symbol = std::get<parser::ObjectName>(ed.t).symbol;
+    auto *type = DEREF(symbol).GetType();
+    IteratorSpecifier spec{{evaluate::DynamicType::From(DEREF(type)),
+                            makeObject(ed, semaCtx), range}};
     specifiers.emplace_back(std::move(spec));
   }
 
@@ -982,21 +986,28 @@ Init make(const parser::OmpClause::Init &inp,
 Initializer make(const parser::OmpClause::Initializer &inp,
                  semantics::SemanticsContext &semaCtx) {
   const parser::OmpInitializerExpression &iexpr = inp.v.v;
-  const parser::OmpStylizedInstance &styleInstance = iexpr.v.front();
-  const parser::OmpStylizedInstance::Instance &instance =
-      std::get<parser::OmpStylizedInstance::Instance>(styleInstance.t);
-  if (const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u)) {
-    auto &expr = std::get<parser::Expr>(as->t);
-    return Initializer{makeExpr(expr, semaCtx)};
-  } else if (const auto *call = std::get_if<parser::CallStmt>(&instance.u)) {
-    if (call->typedCall) {
-      const auto &procRef = *call->typedCall;
-      semantics::SomeExpr evalProcRef{procRef};
-      return Initializer{evalProcRef};
-    }
+  Initializer initializer;
+
+  for (const parser::OmpStylizedInstance &sinst : iexpr.v) {
+    ObjectList variables;
+    llvm::transform(
+        std::get<std::list<parser::OmpStylizedDeclaration>>(sinst.t),
+        std::back_inserter(variables),
+        [&](const parser::OmpStylizedDeclaration &s) {
+          return makeObject(s.var, semaCtx);
+        });
+
+    SomeExpr instance = [&]() {
+      if (auto &&expr = semantics::omp::MakeEvaluateExpr(sinst))
+        return std::move(*expr);
+      llvm_unreachable("Expecting expression instance");
+    }();
+
+    initializer.v.push_back(
+        StylizedInstance{{std::move(variables), std::move(instance)}});
   }
 
-  llvm_unreachable("Unexpected initializer");
+  return initializer;
 }
 
 InReduction make(const parser::OmpClause::InReduction &inp,
@@ -1251,16 +1262,20 @@ NumTasks make(const parser::OmpClause::NumTasks &inp,
 
 NumTeams make(const parser::OmpClause::NumTeams &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
+  // inp.v -> parser::OmpNumTeamsClause
+  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!t1.empty());
   List<NumTeams::Range> v{{{/*LowerBound=*/std::nullopt,
-                            /*UpperBound=*/makeExpr(inp.v, semaCtx)}}};
+                            /*UpperBound=*/makeExpr(t1.front(), semaCtx)}}};
   return NumTeams{/*List=*/v};
 }
 
 NumThreads make(const parser::OmpClause::NumThreads &inp,
                 semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
-  return NumThreads{/*Nthreads=*/makeExpr(inp.v, semaCtx)};
+  // inp.v -> parser::OmpNumThreadsClause
+  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!t1.empty());
+  return NumThreads{/*Nthreads=*/makeExpr(t1.front(), semaCtx)};
 }
 
 // OmpxAttribute: empty
@@ -1502,8 +1517,10 @@ TaskReduction make(const parser::OmpClause::TaskReduction &inp,
 
 ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
                  semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
-  return ThreadLimit{/*Threadlim=*/makeExpr(inp.v, semaCtx)};
+  // inp.v -> parser::OmpThreadLimitClause
+  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!t1.empty());
+  return ThreadLimit{/*Threadlim=*/makeExpr(t1.front(), semaCtx)};
 }
 
 Threadset make(const parser::OmpClause::Threadset &inp,

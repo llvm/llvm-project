@@ -28,8 +28,7 @@ SmallString<128> appendPathPosix(StringRef Base, StringRef Path) {
   return Default;
 }
 
-void getMustacheHtmlFiles(StringRef AssetsPath,
-                          clang::doc::ClangDocContext &CDCtx) {
+void getHtmlFiles(StringRef AssetsPath, clang::doc::ClangDocContext &CDCtx) {
   assert(!AssetsPath.empty());
   assert(sys::fs::is_directory(AssetsPath));
 
@@ -57,6 +56,10 @@ void getMustacheHtmlFiles(StringRef AssetsPath,
       appendPathPosix(AssetsPath, "function-template.mustache");
   SmallString<128> CommentTemplate =
       appendPathPosix(AssetsPath, "comment-template.mustache");
+  SmallString<128> HeadTemplate =
+      appendPathPosix(AssetsPath, "head-template.mustache");
+  SmallString<128> NavbarTemplate =
+      appendPathPosix(AssetsPath, "navbar-template.mustache");
 
   CDCtx.MustacheTemplates.insert(
       {"namespace-template", NamespaceTemplate.c_str()});
@@ -65,4 +68,6 @@ void getMustacheHtmlFiles(StringRef AssetsPath,
   CDCtx.MustacheTemplates.insert(
       {"function-template", FunctionTemplate.c_str()});
   CDCtx.MustacheTemplates.insert({"comment-template", CommentTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"head-template", HeadTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"navbar-template", NavbarTemplate.c_str()});
 }
