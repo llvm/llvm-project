@@ -1353,8 +1353,8 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_selectpd_128:
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
-    return emitX86Select(builder, getLoc(expr->getExprLoc()), ops[0], ops[1],
-                         ops[2]);
+    return emitX86VectorSelect(builder, getLoc(expr->getExprLoc()), ops[0],
+                               ops[1], ops[2]);
   case X86::BI__builtin_ia32_selectsh_128:
   case X86::BI__builtin_ia32_selectsbf_128:
   case X86::BI__builtin_ia32_selectss_128:
