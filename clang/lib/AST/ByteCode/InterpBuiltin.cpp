@@ -5761,10 +5761,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_minps:
   case clang::X86::BI__builtin_ia32_minpd:
-  case clang::X86::BI__builtin_ia32_minps256:
-  case clang::X86::BI__builtin_ia32_minpd256:
   case clang::X86::BI__builtin_ia32_minph128:
   case clang::X86::BI__builtin_ia32_minph256:
+  case clang::X86::BI__builtin_ia32_minps256:
+  case clang::X86::BI__builtin_ia32_minpd256:
+  case clang::X86::BI__builtin_ia32_minps512:
+  case clang::X86::BI__builtin_ia32_minpd512:
+  case clang::X86::BI__builtin_ia32_minph512:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
         [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
@@ -5776,35 +5779,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_maxps:
   case clang::X86::BI__builtin_ia32_maxpd:
-  case clang::X86::BI__builtin_ia32_maxps256:
-  case clang::X86::BI__builtin_ia32_maxpd256:
   case clang::X86::BI__builtin_ia32_maxph128:
   case clang::X86::BI__builtin_ia32_maxph256:
-    return interp__builtin_elementwise_fp_binop(
-        S, OpPC, Call,
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
-          if (A.isZero() && B.isZero())
-            return B;
-          else
-            return llvm::maximum(A, B);
-        });
-
-  case clang::X86::BI__builtin_ia32_minps512:
-  case clang::X86::BI__builtin_ia32_minpd512:
-  case clang::X86::BI__builtin_ia32_minph512: {
-    return interp__builtin_elementwise_fp_binop(
-        S, OpPC, Call,
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
-          if (A.isZero() && B.isZero())
-            return B;
-          else
-            return llvm::minimum(A, B);
-        });
-  }
-
+  case clang::X86::BI__builtin_ia32_maxps256:
+  case clang::X86::BI__builtin_ia32_maxpd256:
   case clang::X86::BI__builtin_ia32_maxps512:
   case clang::X86::BI__builtin_ia32_maxpd512:
-  case clang::X86::BI__builtin_ia32_maxph512: {
+  case clang::X86::BI__builtin_ia32_maxph512:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
         [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
@@ -5813,7 +5794,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           else
             return llvm::maximum(A, B);
         });
-  }
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
