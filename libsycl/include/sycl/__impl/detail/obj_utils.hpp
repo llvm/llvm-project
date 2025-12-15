@@ -64,13 +64,8 @@ SyclObject createSyclObjFromImpl(From &&from) {
 // SYCL 2020 4.5.2. Common reference semantics (std::hash support)
 template <typename T> struct HashBase {
   size_t operator()(const T &Obj) const {
-#ifdef __SYCL_DEVICE_ONLY__
-    (void)Obj;
-    return 0;
-#else
     auto &Impl = sycl::detail::getSyclObjImpl(Obj);
     return std::hash<std::decay_t<decltype(Impl)>>{}(Impl);
-#endif
   }
 };
 
