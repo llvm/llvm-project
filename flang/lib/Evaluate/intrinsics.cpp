@@ -3600,7 +3600,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
           // Also prefer later messages when earlier ones are about
           // argument count mismatches, as a later entry that accepts
           // the right number of arguments will give more specific errors.
-          bool dominated{false};
+          bool preferLaterError{false};
           for (const auto &m : buffer.messages()) {
             std::string text{m.ToString()};
             if (text.find("'dim='") != std::string::npos) {
@@ -3614,18 +3614,18 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
                 }
               }
               if (!hadDimKeyword) {
-                dominated = true;
+                preferLaterError = true;
               }
               break;
             } else if (text.find("too many actual arguments") !=
                 std::string::npos) {
               // Prefer messages from an entry that matched the argument
               // count, as those will be more specific about what's wrong
-              dominated = true;
+              preferLaterError = true;
               break;
             }
           }
-          if (dominated) {
+          if (preferLaterError) {
             buffer = std::move(localBuffer);
           }
           localBuffer.clear();
