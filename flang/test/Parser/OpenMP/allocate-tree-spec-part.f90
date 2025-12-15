@@ -23,7 +23,7 @@ end program allocate_tree
 !CHECK-NEXT: | | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f'
 !CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr = '1_8'
 !CHECK-NEXT: | | | | | Designator -> DataRef -> Name = 'omp_default_mem_alloc'
-!CHECK-NEXT: | | | | Flags = None
+!CHECK-NEXT: | | | | Flags = {}
 !CHECK-NEXT: | | | Block
 !CHECK-NEXT: | ExecutionPart -> Block
 !CHECK-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'f=2_4'
@@ -37,7 +37,7 @@ end program allocate_tree
 !CHECK-NEXT: | | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'w'
 !CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr = '3_8'
 !CHECK-NEXT: | | | | | Designator -> DataRef -> Name = 'omp_const_mem_alloc'
-!CHECK-NEXT: | | | | Flags = None
+!CHECK-NEXT: | | | | Flags = {}
 !CHECK-NEXT: | | | Block
 !CHECK-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
 !CHECK-NEXT: | | | | | OmpBeginDirective
@@ -45,7 +45,7 @@ end program allocate_tree
 !CHECK-NEXT: | | | | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'xarray'
 !CHECK-NEXT: | | | | | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr = '2_8'
 !CHECK-NEXT: | | | | | | | Designator -> DataRef -> Name = 'omp_large_cap_mem_alloc'
-!CHECK-NEXT: | | | | | | Flags = None
+!CHECK-NEXT: | | | | | | Flags = {}
 !CHECK-NEXT: | | | | | Block
 !CHECK-NEXT: | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
 !CHECK-NEXT: | | | | | | | OmpBeginDirective
@@ -53,12 +53,12 @@ end program allocate_tree
 !CHECK-NEXT: | | | | | | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'zarray'
 !CHECK-NEXT: | | | | | | | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr = '1_8'
 !CHECK-NEXT: | | | | | | | | | Designator -> DataRef -> Name = 'omp_default_mem_alloc'
-!CHECK-NEXT: | | | | | | | | Flags = None
+!CHECK-NEXT: | | | | | | | | Flags = {}
 !CHECK-NEXT: | | | | | | | Block
 !CHECK-NEXT: | | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
 !CHECK-NEXT: | | | | | | | | | OmpBeginDirective
 !CHECK-NEXT: | | | | | | | | | | OmpDirectiveName -> llvm::omp::Directive = allocate
 !CHECK-NEXT: | | | | | | | | | | OmpClauseList ->
-!CHECK-NEXT: | | | | | | | | | | Flags = None
+!CHECK-NEXT: | | | | | | | | | | Flags = {}
 !CHECK-NEXT: | | | | | | | | | Block
 !CHECK-NEXT: | | | | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt

@@ -72,6 +72,13 @@ private:
   using OperandInfoListTy = std::vector<OperandInfoTy>;
   using OperandInfoMapTy = std::map<OperandInfoTy, unsigned>;
 
+  DenseMap<const CodeGenInstruction *, const CodeGenInstruction *>
+      TargetSpecializedPseudoInsts;
+
+  /// Compute mapping of opcodes which should have their definitions overridden
+  /// by a target version.
+  void buildTargetSpecializedPseudoInstsMap();
+
   /// Generate member functions in the target-specific GenInstrInfo class.
   ///
   /// This method is used to custom expand TIIPredicate definitions.
@@ -155,21 +162,29 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
         Res += ", ";
       } else if (OpR->isSubClassOf("RegisterClass"))
         Res += getQualifiedName(OpR) + "RegClassID, ";
-      else if (OpR->isSubClassOf("PointerLikeRegClass"))
-        Res += utostr(OpR->getValueAsInt("RegClassKind")) + ", ";
-      else
+      else if (OpR->isSubClassOf("PointerLikeRegClass")) {
+        if (Inst.isPseudo) {
+          // TODO: Verify this is a fixed pseudo
+          PrintError(Inst.TheDef,
+                     "missing target override for pseudoinstruction "
+                     "using PointerLikeRegClass");
+          PrintNote(OpR->getLoc(),
+                    "target should define equivalent instruction "
+                    "with RegisterClassLike replacement; (use "
+                    "RemapAllTargetPseudoPointerOperands?)");
+        } else {
+          PrintError(Inst.TheDef,
+                     "non-pseudoinstruction user of PointerLikeRegClass");
+        }
+      } else
         // -1 means the operand does not have a fixed register class.
         Res += "-1, ";
 
       // Fill in applicable flags.
       Res += "0";
 
-      if (OpR->isSubClassOf("RegClassByHwMode")) {
+      if (OpR->isSubClassOf("RegClassByHwMode"))
         Res += "|(1<<MCOI::LookupRegClassByHwMode)";
-      } else if (OpR->isSubClassOf("PointerLikeRegClass")) {
-        // Ptr value whose register class is resolved via callback.
-        Res += "|(1<<MCOI::LookupPtrRegClass)";
-      }
 
       // Predicate operands.  Check to see if the original unexpanded operand
       // was of type PredicateOp.
@@ -216,6 +231,10 @@ InstrInfoEmitter::CollectOperandInfo(OperandInfoListTy &OperandInfoList,
   const CodeGenTarget &Target = CDP.getTargetInfo();
   unsigned Offset = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructions()) {
+    auto OverrideEntry = TargetSpecializedPseudoInsts.find(Inst);
+    if (OverrideEntry != TargetSpecializedPseudoInsts.end())
+      Inst = OverrideEntry->second;
+
     OperandInfoTy OperandInfo = GetOperandInfo(*Inst);
     if (OperandInfoMap.try_emplace(OperandInfo, Offset).second) {
       OperandInfoList.push_back(OperandInfo);
@@ -859,6 +878,25 @@ void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS,
   }
 }
 
+void InstrInfoEmitter::buildTargetSpecializedPseudoInstsMap() {
+  ArrayRef<const Record *> SpecializedInsts = Records.getAllDerivedDefinitions(
+      "TargetSpecializedStandardPseudoInstruction");
+  const CodeGenTarget &Target = CDP.getTargetInfo();
+
+  for (const Record *SpecializedRec : SpecializedInsts) {
+    const CodeGenInstruction &SpecializedInst =
+        Target.getInstruction(SpecializedRec);
+    const Record *BaseInstRec = SpecializedRec->getValueAsDef("Instruction");
+
+    const CodeGenInstruction &BaseInst = Target.getInstruction(BaseInstRec);
+
+    if (!TargetSpecializedPseudoInsts.insert({&BaseInst, &SpecializedInst})
+             .second)
+      PrintFatalError(SpecializedRec, "multiple overrides of '" +
+                                          BaseInst.getName() + "' defined");
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Main Output.
 //===----------------------------------------------------------------------===//
@@ -881,6 +919,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   // Collect all of the operand info records.
   Timer.startTimer("Collect operand info");
+  buildTargetSpecializedPseudoInstsMap();
+
   OperandInfoListTy OperandInfoList;
   OperandInfoMapTy OperandInfoMap;
   unsigned OperandInfoSize =
@@ -911,24 +951,29 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     }
   }
 
-  OS << "#if defined(GET_INSTRINFO_MC_DESC) || "
-        "defined(GET_INSTRINFO_CTOR_DTOR)\n";
+  {
+    IfGuardEmitter IfGuard(
+        OS,
+        "defined(GET_INSTRINFO_MC_DESC) || defined(GET_INSTRINFO_CTOR_DTOR)");
+    NamespaceEmitter NS(OS, "llvm");
 
-  OS << "namespace llvm {\n\n";
-
-  OS << "struct " << TargetName << "InstrTable {\n";
-  OS << "  MCInstrDesc Insts[" << NumberedInstructions.size() << "];\n";
-  OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCOperandInfo), "
-        "\"Unwanted padding between Insts and OperandInfo\");\n";
-  OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
-  OS << "  static_assert(alignof(MCOperandInfo) >= alignof(MCPhysReg), "
-        "\"Unwanted padding between OperandInfo and ImplicitOps\");\n";
-  OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U) << "];\n";
-  OS << "};\n\n";
-
-  OS << "} // end namespace llvm\n";
-  OS << "#endif // defined(GET_INSTRINFO_MC_DESC) || "
-        "defined(GET_INSTRINFO_CTOR_DTOR)\n\n";
+    OS << "struct " << TargetName << "InstrTable {\n";
+    OS << "  MCInstrDesc Insts[" << NumberedInstructions.size() << "];\n";
+    OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCPhysReg), "
+          "\"Unwanted padding between Insts and ImplicitOps\");\n";
+    OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U)
+       << "];\n";
+    // Emit enough padding to make ImplicitOps plus Padding add up to the size
+    // of a whole number of MCOperandInfo structs. This allows us to index into
+    // the OperandInfo array starting from the end of the Insts array, by
+    // biasing the indices by the OpInfoBase value calculated below.
+    OS << "  char Padding[sizeof(MCOperandInfo) - sizeof ImplicitOps % "
+          "sizeof(MCOperandInfo)];\n";
+    OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCOperandInfo), "
+          "\"Unwanted padding between Insts and OperandInfo\");\n";
+    OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
+    OS << "};";
+  }
 
   const CodeGenRegBank &RegBank = Target.getRegBank();
   const CodeGenHwModes &CGH = Target.getHwModes();
@@ -952,9 +997,12 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
     // Emit all of the MCInstrDesc records in reverse ENUM ordering.
     Timer.startTimer("Emit InstrDesc records");
-    OS << "static_assert(sizeof(MCOperandInfo) % sizeof(MCPhysReg) == 0);\n";
-    OS << "static constexpr unsigned " << TargetName << "ImpOpBase = sizeof "
-       << TargetName << "InstrTable::OperandInfo / (sizeof(MCPhysReg));\n\n";
+    OS << "static_assert((sizeof " << TargetName
+       << "InstrTable::ImplicitOps + sizeof " << TargetName
+       << "InstrTable::Padding) % sizeof(MCOperandInfo) == 0);\n";
+    OS << "static constexpr unsigned " << TargetName << "OpInfoBase = (sizeof "
+       << TargetName << "InstrTable::ImplicitOps + sizeof " << TargetName
+       << "InstrTable::Padding) / sizeof(MCOperandInfo);\n\n";
 
     OS << "extern const " << TargetName << "InstrTable " << TargetName
        << "Descs = {\n  {\n";
@@ -963,15 +1011,14 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     for (const CodeGenInstruction *Inst : reverse(NumberedInstructions)) {
       // Keep a list of the instruction names.
       InstrNames.add(Inst->getName());
+
+      auto OverrideEntry = TargetSpecializedPseudoInsts.find(Inst);
+      if (OverrideEntry != TargetSpecializedPseudoInsts.end())
+        Inst = OverrideEntry->second;
+
       // Emit the record into the table.
       emitRecord(*Inst, --Num, InstrInfo, EmittedLists, OperandInfoMap, OS);
     }
-
-    OS << "  }, {\n";
-
-    // Emit all of the operand info records.
-    Timer.startTimer("Emit operand info");
-    EmitOperandInfo(OS, OperandInfoList);
 
     OS << "  }, {\n";
 
@@ -983,6 +1030,17 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
         OS << ' ' << getQualifiedName(Reg) << ',';
       OS << '\n';
     }
+
+    OS << "  }, {\n";
+
+    // Emit the padding.
+    OS << "    0\n";
+
+    OS << "  }, {\n";
+
+    // Emit all of the operand info records.
+    Timer.startTimer("Emit operand info");
+    EmitOperandInfo(OS, OperandInfoList);
 
     OS << "  }\n};\n\n";
 
@@ -1058,11 +1116,13 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
           if (FoundMode == ModeSelect.Items.end()) {
             // If a RegClassByHwMode doesn't have an entry corresponding to a
             // mode, pad with default register class.
-            OS << indent(4) << "-1, // Missing mode entry\n";
+            OS << indent(4) << "-1, // Missing mode entry for "
+               << Class->getName() << "\n";
           } else {
             const CodeGenRegisterClass *RegClass =
                 RegBank.getRegClass(FoundMode->second);
-            OS << indent(4) << RegClass->getQualifiedIdName() << ",\n";
+            OS << indent(4) << RegClass->getQualifiedIdName() << ", // "
+               << Class->getName() << "\n";
           }
         }
 
@@ -1247,11 +1307,11 @@ void InstrInfoEmitter::emitRecord(
 
   // Emit the operand info offset.
   OperandInfoTy OperandInfo = GetOperandInfo(Inst);
-  OS << OperandInfoMap.find(OperandInfo)->second << ",\t";
+  OS << Target.getName() << "OpInfoBase + "
+     << OperandInfoMap.find(OperandInfo)->second << ",\t";
 
   // Emit implicit operand base.
-  OS << Target.getName() << "ImpOpBase + " << EmittedLists[ImplicitOps]
-     << ",\t0";
+  OS << EmittedLists[ImplicitOps] << ",\t0";
 
   // Emit all of the target independent flags...
   if (Inst.isPreISelOpcode)

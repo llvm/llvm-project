@@ -1532,6 +1532,32 @@ static DecodeStatus DecodeSETMemOpInstruction(MCInst &Inst, uint32_t insn,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeSETMemGoOpInstruction(MCInst &Inst, uint32_t insn,
+                                                uint64_t Addr,
+                                                const MCDisassembler *Decoder) {
+  unsigned Rd = fieldFromInstruction(insn, 0, 5);
+  unsigned Rn = fieldFromInstruction(insn, 5, 5);
+
+  // None of the registers may alias: if they do, then the instruction is not
+  // merely unpredictable but actually entirely unallocated.
+  if (Rd == Rn)
+    return MCDisassembler::Fail;
+
+  // Rd and Rn register operands are written back, so they appear
+  // twice in the operand list, once as outputs and once as inputs.
+  if (!DecodeSimpleRegisterClass<AArch64::GPR64commonRegClassID, 0, 31>(
+          Inst, Rd, Addr, Decoder) ||
+      !DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(
+          Inst, Rn, Addr, Decoder) ||
+      !DecodeSimpleRegisterClass<AArch64::GPR64commonRegClassID, 0, 31>(
+          Inst, Rd, Addr, Decoder) ||
+      !DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(
+          Inst, Rn, Addr, Decoder))
+    return MCDisassembler::Fail;
+
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodePRFMRegInstruction(MCInst &Inst, uint32_t insn,
                                              uint64_t Addr,
                                              const MCDisassembler *Decoder) {

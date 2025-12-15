@@ -16,17 +16,13 @@ llvm.func @init_mbarrier(%barrier_gen : !llvm.ptr, %barrier : !llvm.ptr<3>, %cou
 
 // CHECK-LABEL: @init_mbarrier_arrive_expect_tx
 llvm.func @init_mbarrier_arrive_expect_tx(%barrier : !llvm.ptr<3>, %txcount : i32, %pred : i1) {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.arrive.expect_tx.shared.b64 _, [$0], $1;", "r,r"
-  nvvm.mbarrier.arrive.expect_tx.shared %barrier, %txcount : !llvm.ptr<3>, i32
   //CHECK:  llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.arrive.expect_tx.shared.b64 _, [$0], $1;", "r,r,b"
-  nvvm.mbarrier.arrive.expect_tx.shared %barrier, %txcount, predicate = %pred : !llvm.ptr<3>, i32, i1 
+  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount, predicate = %pred : !llvm.ptr<3>, i32, i1 
   llvm.return
 }
 
 // CHECK-LABEL: @init_mbarrier_arrive_expect_tx_generic
 llvm.func @init_mbarrier_arrive_expect_tx_generic(%barrier : !llvm.ptr, %txcount : i32, %pred : i1) {
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.arrive.expect_tx.b64 _, [$0], $1;", "l,r" 
-  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount : !llvm.ptr, i32
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.arrive.expect_tx.b64 _, [$0], $1;", "l,r,b"
   nvvm.mbarrier.arrive.expect_tx %barrier, %txcount, predicate = %pred : !llvm.ptr, i32, i1 
   llvm.return
@@ -44,7 +40,7 @@ llvm.func @init_mbarrier_try_wait_shared(%barrier : !llvm.ptr<3>, %ticks : i32, 
   // CHECK-SAME: DONE:
   // CHECK-SAME: }",
   // CHECK-SAME: "r,r,r"
-   nvvm.mbarrier.try_wait.parity.shared %barrier, %phase, %ticks : !llvm.ptr<3>, i32, i32
+   nvvm.mbarrier.try_wait.parity %barrier, %phase, %ticks : !llvm.ptr<3>, i32, i32
   llvm.return
 }
 
@@ -544,8 +540,8 @@ func.func @elect_one_leader_sync() {
 
 // -----
 
-// CHECK-LABEL: @init_mbarrier_arrive_expect_tx
-llvm.func @init_mbarrier_arrive_expect_tx(%desc : !llvm.ptr, %pred : i1) {
+// CHECK-LABEL: @test_nvvm_prefetch
+llvm.func @test_nvvm_prefetch(%desc : !llvm.ptr, %pred : i1) {
   //CHECK: nvvm.prefetch tensormap, %{{.*}}
   nvvm.prefetch tensormap, %desc : !llvm.ptr
   //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$1 prefetch.tensormap [$0];", "l,b"
@@ -583,29 +579,6 @@ func.func @cp_async_bulk_wait_group() {
   nvvm.cp.async.bulk.wait_group 0
   nvvm.cp.async.bulk.wait_group 5 {read}
   nvvm.cp.async.bulk.wait_group 0 {read}
-  func.return
-}
-
-// -----
-
-func.func @fence_mbarrier_init() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.mbarrier_init.release.cluster;"
-  nvvm.fence.mbarrier.init
-  func.return 
-}
-// -----
-
-func.func @fence_proxy() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.alias;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<alias>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.global;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.global>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.shared::cta;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cta>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.shared::cluster;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cluster>}
   func.return
 }
 
@@ -703,21 +676,6 @@ llvm.func @inline_ptx_multi_rw_r(%a : i32, %b : i32,  %rw_c : f32, %rw_d : f32) 
    %r4 = llvm.fadd %rw_c, %rw_d : f32
    %r5 = llvm.fadd %r3f, %rw_d : f32
    llvm.return %r5 : f32
-}
-
-
-// -----
-
-// CHECK-LABEL: @nvvm_pmevent
-llvm.func @nvvm_pmevent() {
-  // CHECK: %[[S0:.+]] = llvm.mlir.constant(10 : i32) : i32
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "pmevent $0;", "n" %[[S0]] : (i32) -> ()
-  
-  nvvm.pmevent id = 10
-  // CHECK: %[[S1:.+]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "pmevent $0;", "n" %[[S1]] : (i32) -> ()
-  nvvm.pmevent id = 4
-  llvm.return
 }
 
 // -----

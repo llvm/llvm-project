@@ -845,7 +845,7 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
           return false;
         }
       }
-      LLVMContext &context = CI->getParent()->getParent()->getContext();
+      LLVMContext &context = CI->getContext();
       Constant *nval;
       if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;
@@ -1531,7 +1531,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
     return true;
 
   case AMDGPULibFunc::EI_EXP:
-    Res0 = exp(opr0);
+    Res0 = std::exp(opr0);
     return true;
 
   case AMDGPULibFunc::EI_EXP2:

@@ -21,6 +21,7 @@
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -440,6 +441,14 @@ void IntegerRelation::removeEquality(unsigned pos) {
 
 void IntegerRelation::removeInequality(unsigned pos) {
   inequalities.removeRow(pos);
+}
+
+void IntegerRelation::removeConstraint(unsigned pos) {
+  if (pos >= getNumInequalities()) {
+    removeEquality(pos - getNumInequalities());
+  } else {
+    removeInequality(pos);
+  }
 }
 
 void IntegerRelation::removeEqualityRange(unsigned start, unsigned end) {
@@ -1112,15 +1121,29 @@ unsigned IntegerRelation::gaussianEliminateVars(unsigned posStart,
   return posLimit - posStart;
 }
 
+static std::optional<unsigned>
+findEqualityWithNonZeroAfterRow(IntegerRelation &rel, unsigned fromRow,
+                                unsigned colIdx) {
+  assert(fromRow < rel.getNumEqualities() && colIdx < rel.getNumCols() &&
+         "position out of bounds");
+  for (unsigned rowIdx = fromRow, e = rel.getNumEqualities(); rowIdx < e;
+       ++rowIdx) {
+    if (rel.atEq(rowIdx, colIdx) != 0)
+      return rowIdx;
+  }
+  return std::nullopt;
+}
+
 bool IntegerRelation::gaussianEliminate() {
   gcdTightenInequalities();
   unsigned firstVar = 0, vars = getNumVars();
   unsigned nowDone, eqs;
   std::optional<unsigned> pivotRow;
   for (nowDone = 0, eqs = getNumEqualities(); nowDone < eqs; ++nowDone) {
-    // Finds the first non-empty column.
+    // Finds the first non-empty column that we haven't dealt with.
     for (; firstVar < vars; ++firstVar) {
-      if ((pivotRow = findConstraintWithNonZeroAt(firstVar, /*isEq=*/true)))
+      if ((pivotRow =
+               findEqualityWithNonZeroAfterRow(*this, nowDone, firstVar)))
         break;
     }
     // The matrix has been normalized to row echelon form.
@@ -1143,6 +1166,10 @@ bool IntegerRelation::gaussianEliminate() {
       inequalities.normalizeRow(i);
     }
     gcdTightenInequalities();
+
+    // The column is finished. Tell the next iteration to start at the next
+    // column.
+    firstVar++;
   }
 
   // No redundant rows.
@@ -1724,12 +1751,64 @@ std::optional<DynamicAPInt> IntegerRelation::getConstantBoundOnDimSize(
   return minDiff;
 }
 
+void IntegerRelation::pruneOrthogonalConstraints(unsigned pos) {
+  llvm::DenseSet<unsigned> relatedCols({pos}), relatedRows;
+
+  // Early exit if constraints is empty.
+  unsigned numConstraints = getNumConstraints();
+  if (numConstraints == 0)
+    return;
+
+  llvm::SmallVector<unsigned> rowStack, colStack({pos});
+  // The following code performs a graph traversal, starting from the target
+  // variable, to identify all variables(recorded in relatedCols) and
+  // constraints (recorded in relatedRows) belonging to the same connected
+  // component.
+  while (!rowStack.empty() || !colStack.empty()) {
+    if (!rowStack.empty()) {
+      unsigned currentRow = rowStack.pop_back_val();
+      // Push all variable that accociated to this constraints to relatedCols
+      // and colStack.
+      for (unsigned colIndex = 0; colIndex < getNumVars(); ++colIndex) {
+        if (atConstraint(currentRow, colIndex) != 0 &&
+            relatedCols.insert(colIndex).second) {
+          colStack.push_back(colIndex);
+        }
+      }
+    } else {
+      unsigned currentCol = colStack.pop_back_val();
+      // Push all constraints that are associated with this variable to related
+      // rows and the row stack.
+      for (unsigned rowIndex = 0; rowIndex < numConstraints; ++rowIndex) {
+        if (atConstraint(rowIndex, currentCol) != 0 &&
+            relatedRows.insert(rowIndex).second) {
+          rowStack.push_back(rowIndex);
+        }
+      }
+    }
+  }
+
+  // Prune all constraints not related to target variable.
+  for (int constraintId = numConstraints - 1; constraintId >= 0;
+       --constraintId) {
+    if (!relatedRows.contains(constraintId))
+      removeConstraint((unsigned)constraintId);
+  }
+}
+
 template <bool isLower>
 std::optional<DynamicAPInt>
 IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
   assert(pos < getNumVars() && "invalid position");
   // Project to 'pos'.
+  // Prune orthogonal constraints to reduce unnecessary computations and
+  // accelerate the bound computation.
+  pruneOrthogonalConstraints(pos);
   projectOut(0, pos);
+
+  // After projecting out values, more orthogonal constraints may be exposed.
+  // Prune these orthogonal constraints again.
+  pruneOrthogonalConstraints(0);
   projectOut(1, getNumVars() - 1);
   // Check if there's an equality equating the '0'^th variable to a constant.
   int eqRowIdx = findEqualityToConstant(/*pos=*/0, /*symbolic=*/false);
@@ -2265,11 +2344,11 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
     newLb[d] = lbFloorDivisor;
     newUb[d] = -lbFloorDivisor;
     // Copy over the symbolic part + constant term.
-    std::copy(minLb.begin(), minLb.end(), newLb.begin() + getNumDimVars());
+    llvm::copy(minLb, newLb.begin() + getNumDimVars());
     std::transform(newLb.begin() + getNumDimVars(), newLb.end(),
                    newLb.begin() + getNumDimVars(),
                    std::negate<DynamicAPInt>());
-    std::copy(maxUb.begin(), maxUb.end(), newUb.begin() + getNumDimVars());
+    llvm::copy(maxUb, newUb.begin() + getNumDimVars());
 
     boundingLbs.emplace_back(newLb);
     boundingUbs.emplace_back(newUb);

@@ -62,7 +62,7 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   // FullyQualifiedNames.
   PrintingPolicy Policy = RD->getASTContext().getPrintingPolicy();
   Policy.SuppressInlineNamespace =
-      PrintingPolicy::SuppressInlineNamespaceMode::None;
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
 
   // Name the codegen type after the typedef name
   // if there is no tag type name available
@@ -104,7 +104,10 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
-    return llvm::ArrayType::get(ConvertType(MT->getElementType()),
+    llvm::Type *IRElemTy = ConvertType(MT->getElementType());
+    if (Context.getLangOpts().HLSL && T->isConstantMatrixBoolType())
+      IRElemTy = ConvertTypeForMem(Context.BoolTy);
+    return llvm::ArrayType::get(IRElemTy,
                                 MT->getNumRows() * MT->getNumColumns());
   }
 

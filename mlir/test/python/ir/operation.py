@@ -5,7 +5,7 @@ import io
 from tempfile import NamedTemporaryFile
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
-from mlir.dialects import arith, func, scf
+from mlir.dialects import arith, func, scf, shape
 from mlir.dialects._ods_common import _cext
 from mlir.extras import types as T
 
@@ -43,6 +43,10 @@ def testTraverseOpRegionBlockIterators():
     )
     op = module.operation
     assert op.context is ctx
+    # Note, __nb_signature__ stores the fully-qualified signature - the actual type stub emitted is
+    # class RegionSequence(Sequence[Region])
+    # CHECK: class RegionSequence(collections.abc.Sequence[mlir._mlir_libs._mlir.ir.Region])
+    print(RegionSequence.__nb_signature__)
     # Get the block using iterators off of the named collections.
     regions = list(op.regions[:])
     blocks = list(regions[0].blocks)
@@ -774,6 +778,21 @@ def testKnownOpView():
         print(repr(constant))
 
 
+# CHECK-LABEL: TEST: testFailedGenericOperationCreationReportsError
+@run
+def testFailedGenericOperationCreationReportsError():
+    with Context(), Location.unknown():
+        c0 = shape.const_shape([])
+        c1 = shape.const_shape([1, 2, 3])
+        try:
+            shape.MeetOp.build_generic(operands=[c0, c1])
+        except MLIRError as e:
+            # CHECK: unequal shape cardinality
+            print(e)
+        else:
+            assert False, "Expected exception"
+
+
 # CHECK-LABEL: TEST: testSingleResultProperty
 @run
 def testSingleResultProperty():
@@ -1189,6 +1208,40 @@ def testOpWalk():
         print("Exception raised")
 
 
+# CHECK-LABEL: TEST: testOpReplaceUsesWith
+@run
+def testOpReplaceUsesWith():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        m = Module.create()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(m.body):
+            value = Operation.create("custom.op1", results=[i32]).results[0]
+            value2 = Operation.create("custom.op2", results=[i32]).results[0]
+            op = Operation.create("custom.op3", operands=[value])
+            op2 = Operation.create("custom.op4", operands=[value])
+            op.replace_uses_of_with(value, value2)
+
+    assert len(list(value.uses)) == 1
+
+    # CHECK: Use owner: "custom.op4"
+    # CHECK: Use operand_number: 0
+    for use in value.uses:
+        assert use.owner in [op2]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+    assert len(list(value2.uses)) == 1
+
+    # CHECK: Use owner: "custom.op3"
+    # CHECK: Use operand_number: 0
+    for use in value2.uses:
+        assert use.owner in [op]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+
 # CHECK-LABEL: TEST: testGetOwnerConcreteOpview
 @run
 def testGetOwnerConcreteOpview():
@@ -1212,9 +1265,7 @@ def testIndexSwitch():
             @func.FuncOp.from_py_func(T.index())
             def index_switch(index):
                 c1 = arith.constant(i32, 1)
-                switch_op = scf.IndexSwitchOp(
-                    results_=[i32], arg=index, cases=range(3), num_caseRegions=3
-                )
+                switch_op = scf.IndexSwitchOp(results=[i32], arg=index, cases=range(3))
 
                 assert len(switch_op.regions) == 4
                 assert len(switch_op.regions[2:]) == 2

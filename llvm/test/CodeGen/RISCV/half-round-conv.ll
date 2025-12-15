@@ -4901,8 +4901,3 @@ define half @test_roundeven_half(half %x) {
   ret half %a
 }
 
-declare half @llvm.floor.f16(half)
-declare half @llvm.ceil.f16(half)
-declare half @llvm.trunc.f16(half)
-declare half @llvm.round.f16(half)
-declare half @llvm.roundeven.f16(half)

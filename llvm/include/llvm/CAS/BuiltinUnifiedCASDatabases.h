@@ -18,6 +18,7 @@ class ObjectStore;
 
 /// Create on-disk \c ObjectStore and \c ActionCache instances based on
 /// \c ondisk::UnifiedOnDiskCache, with built-in hashing.
+LLVM_ABI
 Expected<std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>>>
 createOnDiskUnifiedCASDatabases(StringRef Path);
 
@@ -50,6 +51,7 @@ enum class ValidationResult {
 /// was invalid but has been cleared, \c Skipped if validation is not needed,
 /// or an \c Error if validation cannot be performed or if the data is left
 /// in an invalid state because \p AllowRecovery is false.
+LLVM_ABI
 Expected<ValidationResult> validateOnDiskUnifiedCASDatabasesIfNeeded(
     StringRef Path, bool CheckHash, bool AllowRecovery, bool ForceValidation,
     std::optional<StringRef> LLVMCasBinaryPath);

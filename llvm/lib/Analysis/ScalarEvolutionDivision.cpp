@@ -29,8 +29,6 @@ class Type;
 
 using namespace llvm;
 
-namespace {
-
 static inline int sizeOfSCEV(const SCEV *S) {
   struct FindSCEVSize {
     int Size = 0;
@@ -51,8 +49,6 @@ static inline int sizeOfSCEV(const SCEV *S) {
   ST.visitAll(S);
   return F.Size;
 }
-
-} // namespace
 
 // Computes the Quotient and Remainder of the division of Numerator by
 // Denominator.

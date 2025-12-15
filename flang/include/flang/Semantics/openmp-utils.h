@@ -97,8 +97,8 @@ const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
-const parser::Block &GetInnermostExecPart(const parser::Block &block);
-bool IsStrictlyStructuredBlock(const parser::Block &block);
+
+MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 } // namespace omp
 } // namespace Fortran::semantics
 

@@ -26,21 +26,6 @@ using LlvmLibcExceptionStatusTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 // This test enables an exception and verifies that raising that exception
 // triggers SIGFPE.
 TEST_F(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
-#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) ||                                    \
-    defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
-  // Few Arm HW implementations do not trap exceptions. We skip this test
-  // completely on such HW.
-  //
-  // Whether HW supports trapping exceptions or not is deduced by enabling an
-  // exception and reading back to see if the exception got enabled. If the
-  // exception did not get enabled, then it means that the HW does not support
-  // trapping exceptions.
-  LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
-  LIBC_NAMESPACE::fputil::enable_except(FE_DIVBYZERO);
-  if (LIBC_NAMESPACE::fputil::get_except() == 0)
-    return;
-#endif // Architectures where exception trapping is not supported
-
   // TODO: Install a floating point exception handler and verify that the
   // the expected exception was raised. One will have to longjmp back from
   // that exception handler, so such a testing can be done after we have
@@ -61,6 +46,7 @@ TEST_F(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
       ASSERT_EQ(LIBC_NAMESPACE::fetestexcept(others), others);
     }
 
+#if defined(LIBC_TRAP_ON_RAISE_FP_EXCEPT) && defined(__SSE__)
     ASSERT_RAISES_FP_EXCEPT([=] {
       // In test frameworks like Fuchsia's zxtest, this translates to
       // a death test which runs this closure in a different thread. So,
@@ -69,6 +55,7 @@ TEST_F(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
       LIBC_NAMESPACE::fputil::enable_except(e);
       LIBC_NAMESPACE::feraiseexcept(e);
     });
+#endif // LIBC_TRAP_ON_RAISE_FP_EXCEPT
 
     // Cleanup.
     LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);

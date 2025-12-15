@@ -29,11 +29,6 @@ enum class VectorLibrary {
   AMDLIBM           // AMD Math Vector library.
 };
 
-/// Command line flag value for the vector math library to use
-///
-/// FIXME: This should come from a module flag, and not be mutually exclusive
-extern VectorLibrary ClVectorLibrary;
-
 } // namespace llvm
 
 #endif // LLVM_IR_SYSTEMLIBRARIES_H

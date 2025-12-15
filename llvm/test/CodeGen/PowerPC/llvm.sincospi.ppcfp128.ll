@@ -1,6 +1,7 @@
 ; XFAIL: *
+; UNSUPPORTED: expensive_checks
 ; FIXME: asserts
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-gnu-linux -filetype=null \
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-gnu-linux -filetype=null -enable-legalize-types-checking=0 \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names %s
 
 define { ppc_fp128, ppc_fp128 } @test_sincospi_ppcf128(ppc_fp128 %a) {

@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+v,+zvfh,+m,+zfbfmin,+zvfbfmin -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-declare <vscale x 1 x bfloat> @llvm.vp.merge.nxv1bf16(<vscale x 1 x i1>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, i32)
-
 define <vscale x 1 x bfloat> @vpmerge_vv_nxv1bf16(<vscale x 1 x bfloat> %va, <vscale x 1 x bfloat> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv1bf16:
 ; CHECK:       # %bb.0:
@@ -35,8 +33,6 @@ define <vscale x 1 x bfloat> @vpmerge_vf_nxv1bf16(bfloat %a, <vscale x 1 x bfloa
   %v = call <vscale x 1 x bfloat> @llvm.vp.merge.nxv1bf16(<vscale x 1 x i1> %m, <vscale x 1 x bfloat> %va, <vscale x 1 x bfloat> %vb, i32 %evl)
   ret <vscale x 1 x bfloat> %v
 }
-
-declare <vscale x 2 x bfloat> @llvm.vp.merge.nxv2bf16(<vscale x 2 x i1>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, i32)
 
 define <vscale x 2 x bfloat> @vpmerge_vv_nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv2bf16:
@@ -64,8 +60,6 @@ define <vscale x 2 x bfloat> @vpmerge_vf_nxv2bf16(bfloat %a, <vscale x 2 x bfloa
   ret <vscale x 2 x bfloat> %v
 }
 
-declare <vscale x 4 x bfloat> @llvm.vp.merge.nxv4bf16(<vscale x 4 x i1>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, i32)
-
 define <vscale x 4 x bfloat> @vpmerge_vv_nxv4bf16(<vscale x 4 x bfloat> %va, <vscale x 4 x bfloat> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv4bf16:
 ; CHECK:       # %bb.0:
@@ -91,8 +85,6 @@ define <vscale x 4 x bfloat> @vpmerge_vf_nxv4bf16(bfloat %a, <vscale x 4 x bfloa
   %v = call <vscale x 4 x bfloat> @llvm.vp.merge.nxv4bf16(<vscale x 4 x i1> %m, <vscale x 4 x bfloat> %va, <vscale x 4 x bfloat> %vb, i32 %evl)
   ret <vscale x 4 x bfloat> %v
 }
-
-declare <vscale x 8 x bfloat> @llvm.vp.merge.nxv8bf16(<vscale x 8 x i1>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, i32)
 
 define <vscale x 8 x bfloat> @vpmerge_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv8bf16:
@@ -120,8 +112,6 @@ define <vscale x 8 x bfloat> @vpmerge_vf_nxv8bf16(bfloat %a, <vscale x 8 x bfloa
   ret <vscale x 8 x bfloat> %v
 }
 
-declare <vscale x 16 x bfloat> @llvm.vp.merge.nxv16bf16(<vscale x 16 x i1>, <vscale x 16 x bfloat>, <vscale x 16 x bfloat>, i32)
-
 define <vscale x 16 x bfloat> @vpmerge_vv_nxv16bf16(<vscale x 16 x bfloat> %va, <vscale x 16 x bfloat> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv16bf16:
 ; CHECK:       # %bb.0:
@@ -147,8 +137,6 @@ define <vscale x 16 x bfloat> @vpmerge_vf_nxv16bf16(bfloat %a, <vscale x 16 x bf
   %v = call <vscale x 16 x bfloat> @llvm.vp.merge.nxv16bf16(<vscale x 16 x i1> %m, <vscale x 16 x bfloat> %va, <vscale x 16 x bfloat> %vb, i32 %evl)
   ret <vscale x 16 x bfloat> %v
 }
-
-declare <vscale x 32 x bfloat> @llvm.vp.merge.nxv32bf16(<vscale x 32 x i1>, <vscale x 32 x bfloat>, <vscale x 32 x bfloat>, i32)
 
 define <vscale x 32 x bfloat> @vpmerge_vv_nxv32bf16(<vscale x 32 x bfloat> %va, <vscale x 32 x bfloat> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv32bf16:

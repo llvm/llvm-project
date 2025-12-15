@@ -18,9 +18,9 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(typeLoc(unless(hasAncestor(decl(isInstantiated()))))
-                         .bind("nonDependentTypeLoc"),
-                     this);
+  Finder->addMatcher(
+      typeLoc(unless(hasAncestor(decl(isInstantiated())))).bind("typeLoc"),
+      this);
 
   if (!getLangOpts().CPlusPlus20)
     return;
@@ -44,36 +44,34 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
+  const TypeLoc TL = [&] {
+    if (const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("typeLoc"))
+      return TL->getType()->isDependentType() ? TypeLoc() : *TL;
+
+    auto TL = *Result.Nodes.getNodeAs<TypeLoc>("dependentTypeLoc");
+    while (const TypeLoc Next = TL.getNextTypeLoc())
+      TL = Next;
+    return TL;
+  }();
+
+  if (TL.isNull())
+    return;
+
   const SourceLocation ElaboratedKeywordLoc = [&] {
-    if (const auto *NonDependentTypeLoc =
-            Result.Nodes.getNodeAs<TypeLoc>("nonDependentTypeLoc")) {
-      if (const auto TL = NonDependentTypeLoc->getAs<TypedefTypeLoc>())
-        return TL.getElaboratedKeywordLoc();
+    if (const auto CastTL = TL.getAs<TypedefTypeLoc>())
+      return CastTL.getElaboratedKeywordLoc();
 
-      if (const auto TL = NonDependentTypeLoc->getAs<TagTypeLoc>())
-        return TL.getElaboratedKeywordLoc();
+    if (const auto CastTL = TL.getAs<TagTypeLoc>())
+      return CastTL.getElaboratedKeywordLoc();
 
-      if (const auto TL = NonDependentTypeLoc
-                              ->getAs<DeducedTemplateSpecializationTypeLoc>())
-        return TL.getElaboratedKeywordLoc();
+    if (const auto CastTL = TL.getAs<DeducedTemplateSpecializationTypeLoc>())
+      return CastTL.getElaboratedKeywordLoc();
 
-      if (const auto TL =
-              NonDependentTypeLoc->getAs<TemplateSpecializationTypeLoc>())
-        if (!TL.getType()->isDependentType())
-          return TL.getElaboratedKeywordLoc();
-    } else {
-      TypeLoc InnermostTypeLoc =
-          *Result.Nodes.getNodeAs<TypeLoc>("dependentTypeLoc");
-      while (const TypeLoc Next = InnermostTypeLoc.getNextTypeLoc())
-        InnermostTypeLoc = Next;
+    if (const auto CastTL = TL.getAs<TemplateSpecializationTypeLoc>())
+      return CastTL.getElaboratedKeywordLoc();
 
-      if (const auto TL = InnermostTypeLoc.getAs<DependentNameTypeLoc>())
-        return TL.getElaboratedKeywordLoc();
-
-      if (const auto TL =
-              InnermostTypeLoc.getAs<TemplateSpecializationTypeLoc>())
-        return TL.getElaboratedKeywordLoc();
-    }
+    if (const auto CastTL = TL.getAs<DependentNameTypeLoc>())
+      return CastTL.getElaboratedKeywordLoc();
 
     return SourceLocation();
   }();

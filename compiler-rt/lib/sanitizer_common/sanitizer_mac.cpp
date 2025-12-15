@@ -103,6 +103,8 @@ extern "C" {
     natural_t *nesting_depth,
     vm_region_recurse_info_t info,
     mach_msg_type_number_t *infoCnt);
+
+  extern const void* _dyld_get_shared_cache_range(size_t* length);
 }
 
 #  if !SANITIZER_GO
@@ -279,53 +281,43 @@ int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
                       (size_t)newlen);
 }
 
-static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
-                                pid_t *pid) {
-  fd_t primary_fd = kInvalidFd;
-  fd_t secondary_fd = kInvalidFd;
+bool internal_spawn(const char* argv[], const char* envp[], pid_t* pid,
+                    fd_t fd_stdin, fd_t fd_stdout) {
+  // NOTE: Caller ensures that fd_stdin and fd_stdout are not 0, 1, or 2, since
+  // this can break communication.
+  //
+  // NOTE: Caller is responsible for closing fd_stdin after the process has
+  // died.
 
+  int res;
   auto fd_closer = at_scope_exit([&] {
-    internal_close(primary_fd);
-    internal_close(secondary_fd);
+    // NOTE: We intentionally do not close fd_stdin since this can
+    // cause us to receive a fatal SIGPIPE if the process dies.
+    internal_close(fd_stdout);
   });
-
-  // We need a new pseudoterminal to avoid buffering problems. The 'atos' tool
-  // in particular detects when it's talking to a pipe and forgets to flush the
-  // output stream after sending a response.
-  primary_fd = posix_openpt(O_RDWR);
-  if (primary_fd == kInvalidFd)
-    return kInvalidFd;
-
-  int res = grantpt(primary_fd) || unlockpt(primary_fd);
-  if (res != 0) return kInvalidFd;
-
-  // Use TIOCPTYGNAME instead of ptsname() to avoid threading problems.
-  char secondary_pty_name[128];
-  res = ioctl(primary_fd, TIOCPTYGNAME, secondary_pty_name);
-  if (res == -1) return kInvalidFd;
-
-  secondary_fd = internal_open(secondary_pty_name, O_RDWR);
-  if (secondary_fd == kInvalidFd)
-    return kInvalidFd;
 
   // File descriptor actions
   posix_spawn_file_actions_t acts;
   res = posix_spawn_file_actions_init(&acts);
-  if (res != 0) return kInvalidFd;
+  if (res != 0)
+    return false;
 
   auto acts_cleanup = at_scope_exit([&] {
     posix_spawn_file_actions_destroy(&acts);
   });
 
-  res = posix_spawn_file_actions_adddup2(&acts, secondary_fd, STDIN_FILENO) ||
-        posix_spawn_file_actions_adddup2(&acts, secondary_fd, STDOUT_FILENO) ||
-        posix_spawn_file_actions_addclose(&acts, secondary_fd);
-  if (res != 0) return kInvalidFd;
+  res = posix_spawn_file_actions_adddup2(&acts, fd_stdin, STDIN_FILENO) ||
+        posix_spawn_file_actions_adddup2(&acts, fd_stdout, STDOUT_FILENO) ||
+        posix_spawn_file_actions_addclose(&acts, fd_stdin) ||
+        posix_spawn_file_actions_addclose(&acts, fd_stdout);
+  if (res != 0)
+    return false;
 
   // Spawn attributes
   posix_spawnattr_t attrs;
   res = posix_spawnattr_init(&attrs);
-  if (res != 0) return kInvalidFd;
+  if (res != 0)
+    return false;
 
   auto attrs_cleanup  = at_scope_exit([&] {
     posix_spawnattr_destroy(&attrs);
@@ -334,50 +326,17 @@ static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
   // In the spawned process, close all file descriptors that are not explicitly
   // described by the file actions object. This is Darwin-specific extension.
   res = posix_spawnattr_setflags(&attrs, POSIX_SPAWN_CLOEXEC_DEFAULT);
-  if (res != 0) return kInvalidFd;
+  if (res != 0)
+    return false;
 
   // posix_spawn
   char **argv_casted = const_cast<char **>(argv);
   char **envp_casted = const_cast<char **>(envp);
   res = posix_spawn(pid, argv[0], &acts, &attrs, argv_casted, envp_casted);
-  if (res != 0) return kInvalidFd;
+  if (res != 0)
+    return false;
 
-  // Disable echo in the new terminal, disable CR.
-  struct termios termflags;
-  tcgetattr(primary_fd, &termflags);
-  termflags.c_oflag &= ~ONLCR;
-  termflags.c_lflag &= ~ECHO;
-  tcsetattr(primary_fd, TCSANOW, &termflags);
-
-  // On success, do not close primary_fd on scope exit.
-  fd_t fd = primary_fd;
-  primary_fd = kInvalidFd;
-
-  return fd;
-}
-
-fd_t internal_spawn(const char *argv[], const char *envp[], pid_t *pid) {
-  // The client program may close its stdin and/or stdout and/or stderr thus
-  // allowing open/posix_openpt to reuse file descriptors 0, 1 or 2. In this
-  // case the communication is broken if either the parent or the child tries to
-  // close or duplicate these descriptors. We temporarily reserve these
-  // descriptors here to prevent this.
-  fd_t low_fds[3];
-  size_t count = 0;
-
-  for (; count < 3; count++) {
-    low_fds[count] = posix_openpt(O_RDWR);
-    if (low_fds[count] >= STDERR_FILENO)
-      break;
-  }
-
-  fd_t fd = internal_spawn_impl(argv, envp, pid);
-
-  for (; count > 0; count--) {
-    internal_close(low_fds[count]);
-  }
-
-  return fd;
+  return true;
 }
 
 uptr internal_rename(const char *oldpath, const char *newpath) {
@@ -1403,15 +1362,27 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
   return 0;
 }
 
-// Returns true if the address is definitely mapped, and false if it is not
-// mapped or could not be determined.
-bool IsAddressInMappedRegion(uptr addr) {
+// This function (when used during initialization when there is
+// only a single thread), can be used to verify that a range
+// of memory hasn't already been mapped, and won't be mapped
+// later in the shared cache.
+//
+// If the syscall mach_vm_region_recurse fails (due to sandbox),
+// we assume that the memory is not mapped so that execution can continue.
+//
+// NOTE: range_end is inclusive
+//
+// WARNING: This function must NOT allocate memory, since it is
+// used in InitializeShadowMemory between where we search for
+// space for shadow and where we actually allocate it.
+bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   mach_vm_size_t vmsize = 0;
   natural_t depth = 0;
   vm_region_submap_short_info_data_64_t vminfo;
   mach_msg_type_number_t count = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
-  mach_vm_address_t address = addr;
+  mach_vm_address_t address = range_start;
 
+  // First, check if the range is already mapped.
   kern_return_t kr =
       mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
                              (vm_region_info_t)&vminfo, &count);
@@ -1423,7 +1394,24 @@ bool IsAddressInMappedRegion(uptr addr) {
     Report("HINT: Is mach_vm_region_recurse allowed by sandbox?\n");
   }
 
-  return (kr == KERN_SUCCESS && addr >= address && addr < address + vmsize);
+  if (kr == KERN_SUCCESS && !IntervalsAreSeparate(address, address + vmsize - 1,
+                                                  range_start, range_end)) {
+    // Overlaps with already-mapped memory
+    return false;
+  }
+
+  size_t cacheLength;
+  uptr cacheStart = (uptr)_dyld_get_shared_cache_range(&cacheLength);
+
+  if (cacheStart &&
+      !IntervalsAreSeparate(cacheStart, cacheStart + cacheLength - 1,
+                            range_start, range_end)) {
+    // Overlaps with shared cache region
+    return false;
+  }
+
+  // We believe this address is available.
+  return true;
 }
 
 // FIXME implement on this platform.

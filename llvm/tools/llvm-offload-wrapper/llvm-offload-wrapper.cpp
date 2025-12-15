@@ -64,7 +64,7 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
 
   LLVMContext Context;
   Module M("offload.wrapper.module", Context);
-  M.setTargetTriple(Triple());
+  M.setTargetTriple(llvm::Triple(TheTriple));
 
   switch (Kind) {
   case llvm::object::OFK_OpenMP:

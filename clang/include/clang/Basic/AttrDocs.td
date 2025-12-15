@@ -4140,7 +4140,7 @@ of 2.
    .. code-block:: c
 
      typedef double * aligned_double_ptr __attribute__((align_value(64)));
-     void foo(double & x  __attribute__((align_value(128)),
+     void foo(double & x  __attribute__((align_value(128))),
               aligned_double_ptr y) { ... }
 
 If the pointer value does not have the specified alignment at runtime, the
@@ -5244,6 +5244,23 @@ deallocation function. When this form is used, it enables the compiler to
 diagnose when the incorrect deallocation function is used with this variable.
 However the associated warning, spelled `-Wmismatched-dealloc` in GCC, is not
 yet implemented in clang.
+  }];
+}
+
+def MallocSpanDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "malloc_span";
+  let Content = [{
+The ``malloc_span`` attribute can be used to mark that a function which acts
+like a system memory allocation function and returns a span-like structure,
+where the returned memory range does not alias storage from any other object
+accessible to the caller.
+
+In this context, a span-like structure is assumed to have two non-static data
+members, one of which is a pointer to the start of the allocated memory and
+the other one is either an integer type containing the size of the actually
+allocated memory or a pointer to the end of the allocated region. Note, static
+data members do not impact whether a type is span-like or not.
   }];
 }
 
@@ -8672,38 +8689,6 @@ randomized.
   }];
 }
 
-def HLSLSV_GroupThreadIDDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
-individual thread within a thread group is executing in. This attribute is
-only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupthreadid
-  }];
-}
-
-def HLSLSV_GroupIDDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
-thread group a shader is executing in. This attribute is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
-  }];
-}
-
-def HLSLSV_GroupIndexDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_GroupIndex`` semantic, when applied to an input parameter, specifies a
-data binding to map the group index to the specified parameter. This attribute
-is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupindex
-  }];
-}
-
 def HLSLResourceBindingDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8747,35 +8732,6 @@ Examples:
   }
 
 The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-packoffset
-  }];
-}
-
-def HLSLSV_DispatchThreadIDDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_DispatchThreadID`` semantic, when applied to an input parameter,
-specifies a data binding to map the global thread offset within the Dispatch
-call (per dimension of the group) to the specified parameter.
-When applied to a field of a struct, the data binding is specified to the field
-when the struct is used as a parameter type.
-The semantic on the field is ignored when not used as a parameter.
-This attribute is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-dispatchthreadid
-  }];
-}
-
-def HLSLSV_PositionDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_Position`` semantic, when applied to an input parameter in a pixel
-shader, contains the location of the pixel center (x, y) in screen space.
-This semantic can be applied to the parameter, or a field in a struct used
-as an input parameter.
-This attribute is supported as an input in pixel, hull, domain and mesh shaders.
-This attribute is supported as an output in vertex, geometry and domain shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
   }];
 }
 
@@ -9022,6 +8978,18 @@ The descriptor set is optional and defaults to 0 if not provided.
   [[vk::binding(1, 2)]] cbuffer MyCBuffer {
     float4x4 worldViewProj;
   };
+  }];
+}
+
+def HLSLVkLocationDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Attribute used for specifying the location number for the stage input/output
+variables. Allowed on function parameters, function returns, and struct
+fields. This parameter has no effect when used outside of an entrypoint
+parameter/parameter field/return value.
+
+This attribute maps to the 'Location' SPIR-V decoration.
   }];
 }
 
@@ -9672,5 +9640,66 @@ silence diagnostics with code like:
 
   char BadStr[3] = "foo"; // No space for the null terminator, diagnosed
   __attribute__((nonstring)) char NotAStr[3] = "foo"; // Not diagnosed
+  }];
+}
+
+def ModularFormatDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``modular_format`` attribute can be applied to a function that bears the
+``format`` attribute (or standard library functions) to indicate that the
+implementation is "modular", that is, that the implementation is logically
+divided into a number of named aspects. When the compiler can determine that
+not all aspects of the implementation are needed for a given call, the compiler
+may redirect the call to the identifier given as the first argument to the
+attribute (the modular implementation function).
+
+The second argument is a implementation name, and the remaining arguments are
+aspects of the format string for the compiler to report. The implementation
+name is an unevaluated identifier be in the C namespace.
+
+The compiler reports that a call requires an aspect by issuing a relocation for
+the symbol ``<impl_name>_<aspect>`` at the point of the call. This arranges for
+code and data needed to support the aspect of the implementation to be brought
+into the link to satisfy weak references in the modular implemenation function.
+If the compiler does not understand an aspect, it must summarily consider any
+call to require that aspect. 
+
+For example, say ``printf`` is annotated with
+``modular_format(__modular_printf, "__printf", "float")``. Then, a call to
+``printf(var, 42)`` would be untouched. A call to ``printf("%d", 42)`` would
+become a call to ``__modular_printf`` with the same arguments, as would
+``printf("%f", 42.0)``. The latter would be accompanied with a strong
+relocation against the symbol ``__printf_float``, which would bring floating
+point support for ``printf`` into the link.
+
+If the attribute appears more than once on a declaration, or across a chain of
+redeclarations, it is an error for the attributes to have different arguments,
+excepting that the aspects may be in any order.
+
+The following aspects are currently supported:
+
+- ``float``: The call has a floating point argument
+  }];
+}
+
+def MSStructDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``ms_struct`` and ``gcc_struct`` attributes request the compiler to enter a
+special record layout compatibility mode which mimics the layout of Microsoft or
+Itanium C++ ABI respectively. Obviously, if the current C++ ABI matches the
+requested ABI, the attribute does nothing. However, if it does not, annotated
+structure or class is laid out in a special compatibility mode, which slightly
+changes offsets for fields and bit-fields. The intention is to match the layout
+of the requested ABI for structures which only use C features.
+
+Note that the default behavior can be controlled by ``-mms-bitfields`` and
+``-mno-ms-bitfields`` switches and via ``#pragma ms_struct``.
+
+The primary difference is for bitfields, where the MS variant only packs
+adjacent fields into the same allocation unit if they have integral types
+of the same size, while the GCC/Itanium variant packs all fields in a bitfield
+tightly.
   }];
 }

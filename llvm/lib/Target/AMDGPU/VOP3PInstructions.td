@@ -1364,16 +1364,10 @@ class WMMAOpcodeMapping<Instruction TwoAddr, Instruction ThreeAddr> {
   field bit is_wmma_xdl;
 }
 
-def WMMAOpcode : GenericEnum {
-  let FilterClass = "VOP3P_Pseudo";
-}
-
 class WMMAMappingTable : GenericTable {
   let FilterClass = "WMMAOpcodeMapping";
   let CppTypeName = "WMMAOpcodeMappingInfo";
   let Fields = ["Opcode2Addr", "Opcode3Addr"];
-  string TypeOf_Opcode2Addr = "WMMAOpcode";
-  string TypeOf_Opcode3Addr = "WMMAOpcode";
 }
 
 def WMMAOpcode2AddrMappingTable : WMMAMappingTable {
@@ -1820,21 +1814,42 @@ def F32_FP8BF8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v8i32,  v16i32, v8f
 def F16_FP8BF8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f16, v8i32,  v16i32, v8f16], 1, 32, 0, 1, 1, 0, 0, 0, 1>;
 def I32_IU8X128_SWMMAC_w32       : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i32], 1, 32, 1, 0, 1, 0, 0, 0, 1>;
 
-multiclass WMMA_F8F6F4_Profiles<bit HasMatrixScale, bit Scale16, bit HasMatrixReuse> {
-  def _f8_f8_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v16i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
-  def _f8_f6_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v12i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
-  def _f8_f4_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v8i32,  v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
-  def _f6_f8_w32 : VOP3PWMMA_Profile<[v8f32, v12i32, v16i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
-  def _f6_f6_w32 : VOP3PWMMA_Profile<[v8f32, v12i32, v12i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
-  def _f6_f4_w32 : VOP3PWMMA_Profile<[v8f32, v12i32, v8i32,  v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
-  def _f4_f8_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v16i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
-  def _f4_f6_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v12i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
-  def _f4_f4_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v8i32,  v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
+// Helper class to compute the destination vector type of WMMA_F8F6F4 instructions based on element type and dimensions.
+class getWMMAF8F6F4DstVTy<ValueType DstEltTy, int M, int N> {
+  // Size in bits = (M * N / 32) * element_size_in_bits
+  defvar Size = !mul(!div(!mul(M, N), 32), DstEltTy.Size);
+  ValueType ret = !cond(!eq(Size, 256)  : v8f32,
+                        !eq(Size, 1024) : v64f16);
 }
 
-defm F32_16X16X128_F8F6F4         : WMMA_F8F6F4_Profiles<0, 0, 0>;
-defm F32_16X16X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<1, 0, 1>;
-defm F32_16X16X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<1, 1, 1>;
+// Helper class to compute the type of matrix A and B of WMMA_F8F6F4 instructions based on format and dimensions.
+class getWMMAF8F6F4ABVTy<string Fmt, int D1, int D2> {
+  defvar FmtBits = !cond(!eq(Fmt, "f8") : 8,
+                         !eq(Fmt, "f6") : 6,
+                         !eq(Fmt, "f4") : 4);
+  // TypeSize in bits = (D1 * D2 / 32) * format_bits
+  defvar TypeSize = !mul(!div(!mul(D1, D2), 32), FmtBits);
+  ValueType ret = !cond(!eq(TypeSize, 256)  : v8i32,
+                        !eq(TypeSize, 384)  : v12i32,
+                        !eq(TypeSize, 512)  : v16i32,
+                        !eq(TypeSize, 1024) : v32i32);
+}
+
+multiclass WMMA_F8F6F4_Profiles<ValueType DstEltTy, int M, int N, int K,
+                                bit HasMatrixScale, bit Scale16, bit HasMatrixReuse> {
+  defvar DstTy = getWMMAF8F6F4DstVTy<DstEltTy, M, N>.ret;
+  foreach ATy = ["f8", "f6", "f4"] in {
+    foreach BTy = ["f8", "f6", "f4"] in {
+      def _#ATy#_#BTy#_w32 : VOP3PWMMA_Profile<
+        [DstTy, getWMMAF8F6F4ABVTy<ATy, M, K>.ret, getWMMAF8F6F4ABVTy<BTy, K, N>.ret, DstTy],
+        0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
+    }
+  }
+}
+
+defm F32_16X16X128_F8F6F4         : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0>;
+defm F32_16X16X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1>;
+defm F32_16X16X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1>;
 
 class VOP_WMMA_LD_SCALE<ValueType vt, RegisterOperand RC> : VOP3P_Profile<VOPProfile<[untyped, vt, vt, untyped]>> {
   let HasMatrixScale = 1;
@@ -2218,7 +2233,7 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
   let Inst{23-16} = LdScaleOp;
   let Inst{40-32} = scale_src0;
   let Inst{49-41} = scale_src1;
-  let Inst{58-50} = 0; // scale src2
+  let Inst{58-50} = 0x100; // scale src2 = vgpr0 (dummy)
   let Inst{59}    = matrix_b_scale{0}; // scale_op_sel_hi(0)
   let Inst{60}    = 0;                 // scale_op_sel_hi(1)
   let Inst{63-61} = {0, matrix_a_scale_fmt{1-0}}; // neg (lo)
@@ -2433,6 +2448,15 @@ multiclass VOP3P_Real_with_name_gfx12<bits<8> op,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> :
   VOP3P_Real_with_name<GFX12Gen, op, backing_ps_name, asmName>;
 
+multiclass VOP3P_Real_LD_SCALE_gfx1250<bits<8> op> {
+  defvar ps = !cast<VOP3P_Pseudo>(NAME);
+  def _gfx1250 :
+    VOP3P_Real_Gen<ps, GFX1250Gen, ps.Mnemonic>,
+    VOP3Pe_gfx11_gfx12<op, ps.Pfl> {
+      let Inst{58-50} = 0x100; // scale src2 = vgpr0 (dummy)
+    }
+}
+
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
 defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 
@@ -2462,8 +2486,8 @@ defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple<GFX1250Gen, 0x3d>;
 defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3e>;
 defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3f>;
 
-defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_gfx1250<0x35>;
-defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
+defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_LD_SCALE_gfx1250<0x35>;
+defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_LD_SCALE_gfx1250<0x3a>;
 
 let AssemblerPredicate = isGFX1250Plus in
 def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;

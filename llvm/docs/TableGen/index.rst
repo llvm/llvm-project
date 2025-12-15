@@ -55,6 +55,11 @@ TableGen runs just like any other LLVM tool.  The first (optional) argument
 specifies the file to read.  If a filename is not specified, ``llvm-tblgen``
 reads from standard input.
 
+The ``-o`` option specifies the output file or ``-`` to output to
+stdout. Where TableGen produces multiple output files, the option
+specifies the name of the main output file, which also works as the
+name prefix for other output files.
+
 To be useful, one of the `backends`_ must be used.  These backends are
 selectable on the command line (type '``llvm-tblgen -help``' for a list).  For
 example, to get a list of all of the definitions that subclass a particular type

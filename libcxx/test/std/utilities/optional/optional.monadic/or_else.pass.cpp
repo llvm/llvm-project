@@ -49,7 +49,7 @@ constexpr bool test() {
     std::optional<int> opt;
     assert(opt.or_else([] { return std::optional<int>{0}; }) == 0);
     opt = 1;
-    opt.or_else([] {
+    (void)opt.or_else([] {
       assert(false);
       return std::optional<int>{};
     });
@@ -57,11 +57,37 @@ constexpr bool test() {
   {
     std::optional<MoveOnly> opt;
     opt = std::move(opt).or_else([] { return std::optional<MoveOnly>{MoveOnly{}}; });
-    std::move(opt).or_else([] {
+    (void)std::move(opt).or_else([] {
       assert(false);
       return std::optional<MoveOnly>{};
     });
   }
+#if TEST_STD_VER >= 26
+  {
+    int i = 2;
+    std::optional<int&> opt;
+    assert(opt.or_else([&] { return std::optional<int&>{i}; }) == i);
+    int j = 3;
+    opt   = j;
+    (void)opt.or_else([] {
+      assert(false);
+      return std::optional<int&>{};
+    });
+    assert(opt == j);
+  }
+  {
+    int i = 2;
+    std::optional<int&> opt;
+    assert(std::move(opt).or_else([&] { return std::optional<int&>{i}; }) == i);
+    int j = 3;
+    opt   = j;
+    (void)std::move(opt).or_else([] {
+      assert(false);
+      return std::optional<int&>{};
+    });
+    assert(opt == j);
+  }
+#endif
 
   return true;
 }

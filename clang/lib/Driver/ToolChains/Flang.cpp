@@ -11,6 +11,7 @@
 
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/CommonArgs.h"
+#include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/Path.h"
@@ -822,8 +823,14 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                          complexRangeKindToStr(Range)));
   }
 
-  if (Args.hasArg(options::OPT_fno_fast_real_mod))
-    CmdArgs.push_back("-fno-fast-real-mod");
+  if (llvm::opt::Arg *A =
+          Args.getLastArg(clang::options::OPT_ffast_real_mod,
+                          clang::options::OPT_fno_fast_real_mod)) {
+    if (A->getOption().matches(clang::options::OPT_ffast_real_mod))
+      CmdArgs.push_back("-ffast-real-mod");
+    else if (A->getOption().matches(clang::options::OPT_fno_fast_real_mod))
+      CmdArgs.push_back("-fno-fast-real-mod");
+  }
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
@@ -951,6 +958,14 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   for (options::ID Opt : {options::OPT_fbuiltin, options::OPT_fno_builtin})
     if (const Arg *A = Args.getLastArg(Opt))
       D.Diag(diag::warn_drv_invalid_argument_for_flang) << A->getSpelling();
+
+  // Warn about options that are ignored by flang. These are options that are
+  // accepted by gfortran, but have no equivalent in flang.
+  for (const Arg *A :
+       Args.filtered(options::OPT_clang_ignored_gcc_optimization_f_Group)) {
+    D.Diag(diag::warn_ignored_gcc_optimization) << A->getAsString(Args);
+    A->claim();
+  }
 
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();

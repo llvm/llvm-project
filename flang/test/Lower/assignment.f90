@@ -26,7 +26,7 @@ end
 integer function negi(a)
   integer :: a
   negi = -a
-end 
+end
 
 ! CHECK-LABEL: func @_QPnegi(
 ! CHECK-SAME:    %[[A:.*]]: !fir.ref<i32> {fir.bindc_name = "a"}) -> i32 {
@@ -41,7 +41,7 @@ end
 real function negr(a)
   real :: a
   negr = -a
-end 
+end
 
 ! CHECK-LABEL: func @_QPnegr(
 ! CHECK-SAME:    %[[A:.*]]: !fir.ref<f32> {fir.bindc_name = "a"}) -> f32 {
@@ -55,7 +55,7 @@ end
 complex function negc(a)
   complex :: a
   negc = -a
-end 
+end
 
 ! CHECK-LABEL: func @_QPnegc(
 ! CHECK-SAME:    %[[A:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "a"}) -> complex<f32> {

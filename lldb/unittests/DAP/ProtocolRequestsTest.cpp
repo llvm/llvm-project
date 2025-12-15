@@ -67,3 +67,179 @@ TEST(ProtocolRequestsTest, ExceptionInfoResponseBody) {
   ASSERT_THAT_EXPECTED(expected_opt, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected_opt), PrettyPrint(body));
 }
+
+TEST(ProtocolRequestsTest, EvaluateArguments) {
+  llvm::Expected<EvaluateArguments> expected = parse<EvaluateArguments>(R"({
+    "expression": "hello world",
+    "context": "repl"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->expression, "hello world");
+  EXPECT_EQ(expected->context, eEvaluateContextRepl);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<EvaluateArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).expression"));
+}
+
+TEST(ProtocolRequestsTest, EvaluateResponseBody) {
+  EvaluateResponseBody body;
+  body.result = "hello world";
+  body.variablesReference = 7;
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({
+    "result": "hello world",
+    "variablesReference": 7
+  })");
+
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+
+  // Check optional keys.
+  body.result = "'abc'";
+  body.type = "string";
+  body.variablesReference = 42;
+  body.namedVariables = 1;
+  body.indexedVariables = 2;
+  body.memoryReference = "0x123";
+  body.valueLocationReference = 22;
+
+  Expected<json::Value> expected_opt = parse(R"({
+    "result": "'abc'",
+    "type": "string",
+    "variablesReference": 42,
+    "namedVariables": 1,
+    "indexedVariables": 2,
+    "memoryReference": "0x123",
+    "valueLocationReference": 22
+  })");
+
+  ASSERT_THAT_EXPECTED(expected_opt, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_opt), PrettyPrint(body));
+}
+
+TEST(ProtocolRequestsTest, InitializeRequestArguments) {
+  llvm::Expected<InitializeRequestArguments> expected =
+      parse<InitializeRequestArguments>(R"({"adapterID": "myid"})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->adapterID, "myid");
+
+  // Check optional keys.
+  expected = parse<InitializeRequestArguments>(R"({
+    "adapterID": "myid",
+    "clientID": "myclientid",
+    "clientName": "lldb-dap-unit-tests",
+    "locale": "en-US",
+    "linesStartAt1": true,
+    "columnsStartAt1": true,
+    "pathFormat": "uri",
+    "supportsVariableType": true,
+    "supportsVariablePaging": true,
+    "supportsRunInTerminalRequest": true,
+    "supportsMemoryReferences": true,
+    "supportsProgressReporting": true,
+    "supportsInvalidatedEvent": true,
+    "supportsMemoryEvent": true,
+    "supportsArgsCanBeInterpretedByShell": true,
+    "supportsStartDebuggingRequest": true,
+    "supportsANSIStyling": true
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->adapterID, "myid");
+  EXPECT_EQ(expected->clientID, "myclientid");
+  EXPECT_EQ(expected->clientName, "lldb-dap-unit-tests");
+  EXPECT_EQ(expected->locale, "en-US");
+  EXPECT_EQ(expected->linesStartAt1, true);
+  EXPECT_EQ(expected->columnsStartAt1, true);
+  EXPECT_EQ(expected->pathFormat, ePathFormatURI);
+  EXPECT_EQ(expected->supportedFeatures.contains(eClientFeatureVariableType),
+            true);
+  EXPECT_EQ(
+      expected->supportedFeatures.contains(eClientFeatureRunInTerminalRequest),
+      true);
+  EXPECT_EQ(
+      expected->supportedFeatures.contains(eClientFeatureMemoryReferences),
+      true);
+  EXPECT_EQ(
+      expected->supportedFeatures.contains(eClientFeatureProgressReporting),
+      true);
+  EXPECT_EQ(
+      expected->supportedFeatures.contains(eClientFeatureInvalidatedEvent),
+      true);
+  EXPECT_EQ(expected->supportedFeatures.contains(eClientFeatureMemoryEvent),
+            true);
+  EXPECT_EQ(expected->supportedFeatures.contains(
+                eClientFeatureArgsCanBeInterpretedByShell),
+            true);
+  EXPECT_EQ(
+      expected->supportedFeatures.contains(eClientFeatureStartDebuggingRequest),
+      true);
+  EXPECT_EQ(expected->supportedFeatures.contains(eClientFeatureANSIStyling),
+            true);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<InitializeRequestArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).adapterID"));
+}
+
+TEST(ProtocolRequestsTest, PauseRequestArguments) {
+  llvm::Expected<PauseArguments> expected =
+      parse<PauseArguments>(R"({"threadId": 123})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->threadId, 123U);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<PauseArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).threadId"));
+}
+
+TEST(ProtocolRequestsTest, LocationsArguments) {
+  llvm::Expected<LocationsArguments> expected =
+      parse<LocationsArguments>(R"({"locationReference": 123})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->locationReference, 123U);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(
+      parse<LocationsArguments>(R"({})"),
+      FailedWithMessage("missing value at (root).locationReference"));
+}
+
+TEST(ProtocolRequestsTest, LocationsResponseBody) {
+  LocationsResponseBody body;
+  body.source.sourceReference = 123;
+  body.source.name = "test.cpp";
+  body.line = 42;
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({
+    "source": {
+      "sourceReference": 123,
+      "name": "test.cpp"
+    },
+    "line": 42
+  })");
+
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+
+  // Check optional keys.
+  body.column = 2;
+  body.endLine = 43;
+  body.endColumn = 4;
+
+  expected = parse(R"({
+    "source": {
+      "sourceReference": 123,
+      "name": "test.cpp"
+    },
+    "line": 42,
+    "column": 2,
+    "endLine": 43,
+    "endColumn": 4
+  })");
+
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+}
