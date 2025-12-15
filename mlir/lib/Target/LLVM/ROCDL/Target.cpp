@@ -412,9 +412,8 @@ std::optional<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
     return SerializeGPUModuleBase::moduleToObject(llvmModule);
 
-  std::optional<llvm::TargetMachine *> targetMachine =
-      getOrCreateTargetMachine();
-  if (!targetMachine) {
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine)) {
     getOperation().emitError() << "target Machine unavailable for triple "
                                << triple << ", can't compile with LLVM";
     return std::nullopt;

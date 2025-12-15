@@ -290,9 +290,8 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
   return std::nullopt;
 #endif // LLVM_HAS_SPIRV_TARGET
 
-  std::optional<llvm::TargetMachine *> targetMachine =
-      getOrCreateTargetMachine();
-  if (!targetMachine) {
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine)) {
     getGPUModuleOp().emitError() << "Target Machine unavailable for triple "
                                  << triple << ", can't optimize with LLVM\n";
     return std::nullopt;

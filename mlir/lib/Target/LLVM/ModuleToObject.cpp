@@ -50,8 +50,7 @@ ModuleToObject::~ModuleToObject() = default;
 
 Operation &ModuleToObject::getOperation() { return module; }
 
-std::optional<llvm::TargetMachine *>
-ModuleToObject::getOrCreateTargetMachine() {
+FailureOr<llvm::TargetMachine *> ModuleToObject::getOrCreateTargetMachine() {
   if (targetMachine)
     return targetMachine.get();
   // Load the target.
@@ -59,17 +58,17 @@ ModuleToObject::getOrCreateTargetMachine() {
   llvm::Triple parsedTriple(triple);
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(parsedTriple, error);
-  if (!target) {
-    getOperation().emitError()
-        << "Failed to lookup target for triple '" << triple << "' " << error;
-    return std::nullopt;
-  }
+  if (!target)
+    return getOperation().emitError()
+           << "Failed to lookup target for triple '" << triple << "' " << error;
 
   // Create the target machine using the target.
   targetMachine.reset(
       target->createTargetMachine(parsedTriple, chip, features, {}, {}));
   if (!targetMachine)
-    return std::nullopt;
+    return getOperation().emitError()
+           << "Failed to create target machine for triple '" << triple << "'";
+
   return targetMachine.get();
 }
 
@@ -183,9 +182,8 @@ LogicalResult ModuleToObject::optimizeModule(llvm::Module &module,
     return getOperation().emitError()
            << "Invalid optimization level: " << optLevel << ".";
 
-  std::optional<llvm::TargetMachine *> targetMachine =
-      getOrCreateTargetMachine();
-  if (!targetMachine)
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine))
     return getOperation().emitError()
            << "Target Machine unavailable for triple " << triple
            << ", can't optimize with LLVM\n";
@@ -226,13 +224,13 @@ FailureOr<SmallString<0>> ModuleToObject::translateModuleToISA(
 
 void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {
   // Create the target machine.
-  std::optional<llvm::TargetMachine *> targetMachine =
-      getOrCreateTargetMachine();
-  if (targetMachine) {
-    // Set the data layout and target triple of the module.
-    module.setDataLayout((*targetMachine)->createDataLayout());
-    module.setTargetTriple((*targetMachine)->getTargetTriple());
-  }
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine))
+    return;
+
+  // Set the data layout and target triple of the module.
+  module.setDataLayout((*targetMachine)->createDataLayout());
+  module.setTargetTriple((*targetMachine)->getTargetTriple());
 }
 
 std::optional<SmallVector<char, 0>>

@@ -687,9 +687,8 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
 #endif // LLVM_HAS_NVPTX_TARGET
 
   // Emit PTX code.
-  std::optional<llvm::TargetMachine *> targetMachine =
-      getOrCreateTargetMachine();
-  if (!targetMachine) {
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine)) {
     getOperation().emitError() << "Target Machine unavailable for triple "
                                << triple << ", can't optimize with LLVM\n";
     return std::nullopt;

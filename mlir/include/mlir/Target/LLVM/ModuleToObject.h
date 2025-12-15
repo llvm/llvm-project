@@ -81,7 +81,7 @@ protected:
 protected:
   /// Create the target machine based on the target triple and chip.
   /// This can fail if the target is not available.
-  std::optional<llvm::TargetMachine *> getOrCreateTargetMachine();
+  FailureOr<llvm::TargetMachine *> getOrCreateTargetMachine();
 
   /// Loads a bitcode file from path.
   std::unique_ptr<llvm::Module> loadBitcodeFile(llvm::LLVMContext &context,
