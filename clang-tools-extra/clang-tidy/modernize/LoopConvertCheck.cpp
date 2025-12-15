@@ -510,27 +510,24 @@ static bool canBeModified(ASTContext *Context, const Expr *E) {
 /// Returns true when it can be guaranteed that the elements of the
 /// container are not being modified.
 static bool usagesAreConst(ASTContext *Context, const UsageResult &Usages) {
-  for (const Usage &U : Usages) {
+  return llvm::none_of(Usages, [&Context](const Usage &U) {
     // Lambda captures are just redeclarations (VarDecl) of the same variable,
     // not expressions. If we want to know if a variable that is captured by
     // reference can be modified in an usage inside the lambda's body, we need
     // to find the expression corresponding to that particular usage, later in
     // this loop.
-    if (U.Kind != Usage::UK_CaptureByCopy && U.Kind != Usage::UK_CaptureByRef &&
-        canBeModified(Context, U.Expression))
-      return false;
-  }
-  return true;
+    return U.Kind != Usage::UK_CaptureByCopy &&
+           U.Kind != Usage::UK_CaptureByRef &&
+           canBeModified(Context, U.Expression);
+  });
 }
 
 /// Returns true if the elements of the container are never accessed
 /// by reference.
 static bool usagesReturnRValues(const UsageResult &Usages) {
-  for (const auto &U : Usages) {
-    if (U.Expression && !U.Expression->isPRValue())
-      return false;
-  }
-  return true;
+  return llvm::all_of(Usages, [](const Usage &U) {
+    return !U.Expression || U.Expression->isPRValue();
+  });
 }
 
 /// Returns true if the container is const-qualified.
@@ -1082,7 +1079,7 @@ llvm::StringRef LoopConvertCheck::getReverseFunction() const {
   if (!ReverseFunction.empty())
     return ReverseFunction;
   if (UseReverseRanges)
-    return "std::ranges::reverse_view";
+    return "std::views::reverse";
   return "";
 }
 

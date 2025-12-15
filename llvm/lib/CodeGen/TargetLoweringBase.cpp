@@ -103,6 +103,125 @@ static cl::opt<bool> DisableStrictNodeMutation("disable-strictnode-mutation",
        cl::desc("Don't mutate strict-float node to a legalize node"),
        cl::init(false), cl::Hidden);
 
+LLVM_ABI RTLIB::Libcall RTLIB::getSHL(EVT VT) {
+  if (VT == MVT::i16)
+    return RTLIB::SHL_I16;
+  if (VT == MVT::i32)
+    return RTLIB::SHL_I32;
+  if (VT == MVT::i64)
+    return RTLIB::SHL_I64;
+  if (VT == MVT::i128)
+    return RTLIB::SHL_I128;
+
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+LLVM_ABI RTLIB::Libcall RTLIB::getSRL(EVT VT) {
+  if (VT == MVT::i16)
+    return RTLIB::SRL_I16;
+  if (VT == MVT::i32)
+    return RTLIB::SRL_I32;
+  if (VT == MVT::i64)
+    return RTLIB::SRL_I64;
+  if (VT == MVT::i128)
+    return RTLIB::SRL_I128;
+
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+LLVM_ABI RTLIB::Libcall RTLIB::getSRA(EVT VT) {
+  if (VT == MVT::i16)
+    return RTLIB::SRA_I16;
+  if (VT == MVT::i32)
+    return RTLIB::SRA_I32;
+  if (VT == MVT::i64)
+    return RTLIB::SRA_I64;
+  if (VT == MVT::i128)
+    return RTLIB::SRA_I128;
+
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+LLVM_ABI RTLIB::Libcall RTLIB::getMUL(EVT VT) {
+  if (VT == MVT::i16)
+    return RTLIB::MUL_I16;
+  if (VT == MVT::i32)
+    return RTLIB::MUL_I32;
+  if (VT == MVT::i64)
+    return RTLIB::MUL_I64;
+  if (VT == MVT::i128)
+    return RTLIB::MUL_I128;
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+LLVM_ABI RTLIB::Libcall RTLIB::getMULO(EVT VT) {
+  if (VT == MVT::i32)
+    return RTLIB::MULO_I32;
+  if (VT == MVT::i64)
+    return RTLIB::MULO_I64;
+  if (VT == MVT::i128)
+    return RTLIB::MULO_I128;
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+LLVM_ABI RTLIB::Libcall RTLIB::getSDIV(EVT VT) {
+  if (VT == MVT::i16)
+    return RTLIB::SDIV_I16;
+  if (VT == MVT::i32)
+    return RTLIB::SDIV_I32;
+  if (VT == MVT::i64)
+    return RTLIB::SDIV_I64;
+  if (VT == MVT::i128)
+    return RTLIB::SDIV_I128;
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+LLVM_ABI RTLIB::Libcall RTLIB::getUDIV(EVT VT) {
+  if (VT == MVT::i16)
+    return RTLIB::UDIV_I16;
+  if (VT == MVT::i32)
+    return RTLIB::UDIV_I32;
+  if (VT == MVT::i64)
+    return RTLIB::UDIV_I64;
+  if (VT == MVT::i128)
+    return RTLIB::UDIV_I128;
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+LLVM_ABI RTLIB::Libcall RTLIB::getSREM(EVT VT) {
+  if (VT == MVT::i16)
+    return RTLIB::SREM_I16;
+  if (VT == MVT::i32)
+    return RTLIB::SREM_I32;
+  if (VT == MVT::i64)
+    return RTLIB::SREM_I64;
+  if (VT == MVT::i128)
+    return RTLIB::SREM_I128;
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+LLVM_ABI RTLIB::Libcall RTLIB::getUREM(EVT VT) {
+  if (VT == MVT::i16)
+    return RTLIB::UREM_I16;
+  if (VT == MVT::i32)
+    return RTLIB::UREM_I32;
+  if (VT == MVT::i64)
+    return RTLIB::UREM_I64;
+  if (VT == MVT::i128)
+    return RTLIB::UREM_I128;
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+LLVM_ABI RTLIB::Libcall RTLIB::getCTPOP(EVT VT) {
+  if (VT == MVT::i32)
+    return RTLIB::CTPOP_I32;
+  if (VT == MVT::i64)
+    return RTLIB::CTPOP_I64;
+  if (VT == MVT::i128)
+    return RTLIB::CTPOP_I128;
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
 /// GetFPLibCall - Helper to return the right libcall for the given floating
 /// point type, or UNKNOWN_LIBCALL if there is none.
 RTLIB::Libcall RTLIB::getFPLibCall(EVT VT,
@@ -474,6 +593,28 @@ RTLIB::Libcall RTLIB::getSINCOS_STRET(EVT RetVT) {
                       UNKNOWN_LIBCALL, UNKNOWN_LIBCALL, UNKNOWN_LIBCALL);
 }
 
+RTLIB::Libcall RTLIB::getREM(EVT VT) {
+  // TODO: Tablegen should generate this function
+  if (VT.isVector()) {
+    if (!VT.isSimple())
+      return RTLIB::UNKNOWN_LIBCALL;
+    switch (VT.getSimpleVT().SimpleTy) {
+    case MVT::v4f32:
+      return RTLIB::REM_V4F32;
+    case MVT::v2f64:
+      return RTLIB::REM_V2F64;
+    case MVT::nxv4f32:
+      return RTLIB::REM_NXV4F32;
+    case MVT::nxv2f64:
+      return RTLIB::REM_NXV2F64;
+    default:
+      return RTLIB::UNKNOWN_LIBCALL;
+    }
+  }
+
+  return getFPLibCall(VT, REM_F32, REM_F64, REM_F80, REM_F128, REM_PPCF128);
+}
+
 RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
   // TODO: Tablegen should generate this function
   if (RetVT.isVector()) {
@@ -495,6 +636,64 @@ RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
 
   return getFPLibCall(RetVT, MODF_F32, MODF_F64, MODF_F80, MODF_F128,
                       MODF_PPCF128);
+}
+
+RTLIB::Libcall RTLIB::getLROUND(EVT VT) {
+  if (VT == MVT::f32)
+    return RTLIB::LROUND_F32;
+  if (VT == MVT::f64)
+    return RTLIB::LROUND_F64;
+  if (VT == MVT::f80)
+    return RTLIB::LROUND_F80;
+  if (VT == MVT::f128)
+    return RTLIB::LROUND_F128;
+  if (VT == MVT::ppcf128)
+    return RTLIB::LROUND_PPCF128;
+
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+RTLIB::Libcall RTLIB::getLLROUND(EVT VT) {
+  if (VT == MVT::f32)
+    return RTLIB::LLROUND_F32;
+  if (VT == MVT::f64)
+    return RTLIB::LLROUND_F64;
+  if (VT == MVT::f80)
+    return RTLIB::LLROUND_F80;
+  if (VT == MVT::f128)
+    return RTLIB::LLROUND_F128;
+  if (VT == MVT::ppcf128)
+    return RTLIB::LLROUND_PPCF128;
+
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+RTLIB::Libcall RTLIB::getLRINT(EVT VT) {
+  if (VT == MVT::f32)
+    return RTLIB::LRINT_F32;
+  if (VT == MVT::f64)
+    return RTLIB::LRINT_F64;
+  if (VT == MVT::f80)
+    return RTLIB::LRINT_F80;
+  if (VT == MVT::f128)
+    return RTLIB::LRINT_F128;
+  if (VT == MVT::ppcf128)
+    return RTLIB::LRINT_PPCF128;
+  return RTLIB::UNKNOWN_LIBCALL;
+}
+
+RTLIB::Libcall RTLIB::getLLRINT(EVT VT) {
+  if (VT == MVT::f32)
+    return RTLIB::LLRINT_F32;
+  if (VT == MVT::f64)
+    return RTLIB::LLRINT_F64;
+  if (VT == MVT::f80)
+    return RTLIB::LLRINT_F80;
+  if (VT == MVT::f128)
+    return RTLIB::LLRINT_F128;
+  if (VT == MVT::ppcf128)
+    return RTLIB::LLRINT_PPCF128;
+  return RTLIB::UNKNOWN_LIBCALL;
 }
 
 RTLIB::Libcall RTLIB::getOutlineAtomicHelper(const Libcall (&LC)[5][4],

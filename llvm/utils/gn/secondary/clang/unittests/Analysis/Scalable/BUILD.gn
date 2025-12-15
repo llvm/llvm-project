@@ -1,0 +1,19 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("ClangScalableAnalysisTests") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/ASTMatchers",
+    "//clang/lib/Analysis/Scalable",
+    "//clang/lib/Basic",
+    "//clang/lib/Serialization",
+    "//clang/lib/Tooling",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "ASTEntityMappingTest.cpp",
+    "BuildNamespaceTest.cpp",
+    "EntityNameTest.cpp",
+  ]
+}

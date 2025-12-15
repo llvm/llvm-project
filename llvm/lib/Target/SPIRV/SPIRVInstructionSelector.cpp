@@ -1193,7 +1193,9 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_ATOMICRMW_FSUB:
     // Translate G_ATOMICRMW_FSUB to OpAtomicFAddEXT with negative value operand
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFAddEXT,
-                           SPIRV::OpFNegate);
+                           ResType->getOpcode() == SPIRV::OpTypeVector
+                               ? SPIRV::OpFNegateV
+                               : SPIRV::OpFNegate);
   case TargetOpcode::G_ATOMICRMW_FMIN:
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFMinEXT);
   case TargetOpcode::G_ATOMICRMW_FMAX:
@@ -1781,33 +1783,57 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
   unsigned ArgI = I.getNumOperands() - 1;
   Register SrcReg =
       I.getOperand(ArgI).isReg() ? I.getOperand(ArgI).getReg() : Register(0);
-  SPIRVType *DefType =
+  SPIRVType *SrcType =
       SrcReg.isValid() ? GR.getSPIRVTypeForVReg(SrcReg) : nullptr;
-  if (!DefType || DefType->getOpcode() != SPIRV::OpTypeVector)
+  if (!SrcType || SrcType->getOpcode() != SPIRV::OpTypeVector)
     report_fatal_error(
         "cannot select G_UNMERGE_VALUES with a non-vector argument");
 
   SPIRVType *ScalarType =
-      GR.getSPIRVTypeForVReg(DefType->getOperand(1).getReg());
+      GR.getSPIRVTypeForVReg(SrcType->getOperand(1).getReg());
   MachineBasicBlock &BB = *I.getParent();
   bool Res = false;
+  unsigned CurrentIndex = 0;
   for (unsigned i = 0; i < I.getNumDefs(); ++i) {
     Register ResVReg = I.getOperand(i).getReg();
     SPIRVType *ResType = GR.getSPIRVTypeForVReg(ResVReg);
     if (!ResType) {
-      // There was no "assign type" actions, let's fix this now
-      ResType = ScalarType;
+      LLT ResLLT = MRI->getType(ResVReg);
+      assert(ResLLT.isValid());
+      if (ResLLT.isVector()) {
+        ResType = GR.getOrCreateSPIRVVectorType(
+            ScalarType, ResLLT.getNumElements(), I, TII);
+      } else {
+        ResType = ScalarType;
+      }
       MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
-      MRI->setType(ResVReg, LLT::scalar(GR.getScalarOrVectorBitWidth(ResType)));
       GR.assignSPIRVTypeToVReg(ResType, ResVReg, *GR.CurMF);
     }
-    auto MIB =
-        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
-            .addDef(ResVReg)
-            .addUse(GR.getSPIRVTypeID(ResType))
-            .addUse(SrcReg)
-            .addImm(static_cast<int64_t>(i));
-    Res |= MIB.constrainAllUses(TII, TRI, RBI);
+
+    if (ResType->getOpcode() == SPIRV::OpTypeVector) {
+      Register UndefReg = GR.getOrCreateUndef(I, SrcType, TII);
+      auto MIB =
+          BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpVectorShuffle))
+              .addDef(ResVReg)
+              .addUse(GR.getSPIRVTypeID(ResType))
+              .addUse(SrcReg)
+              .addUse(UndefReg);
+      unsigned NumElements = GR.getScalarOrVectorComponentCount(ResType);
+      for (unsigned j = 0; j < NumElements; ++j) {
+        MIB.addImm(CurrentIndex + j);
+      }
+      CurrentIndex += NumElements;
+      Res |= MIB.constrainAllUses(TII, TRI, RBI);
+    } else {
+      auto MIB =
+          BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+              .addDef(ResVReg)
+              .addUse(GR.getSPIRVTypeID(ResType))
+              .addUse(SrcReg)
+              .addImm(CurrentIndex);
+      CurrentIndex++;
+      Res |= MIB.constrainAllUses(TII, TRI, RBI);
+    }
   }
   return Res;
 }
@@ -3329,10 +3355,11 @@ bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
                  .addUse(GR.getSPIRVTypeID(ResType))
                  // Object to get a pointer to.
                  .addUse(I.getOperand(3).getReg());
-  assert(Opcode == SPIRV::OpPtrAccessChain ||
-         Opcode == SPIRV::OpInBoundsPtrAccessChain ||
-         (getImm(I.getOperand(4), MRI) && foldImm(I.getOperand(4), MRI) == 0) &&
-             "Cannot translate GEP to OpAccessChain. First index must be 0.");
+  assert(
+      (Opcode == SPIRV::OpPtrAccessChain ||
+       Opcode == SPIRV::OpInBoundsPtrAccessChain ||
+       (getImm(I.getOperand(4), MRI) && foldImm(I.getOperand(4), MRI) == 0)) &&
+      "Cannot translate GEP to OpAccessChain. First index must be 0.");
 
   // Adding indices.
   const unsigned StartingIndex =
@@ -3828,10 +3855,18 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_unpackhalf2x16: {
     return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
   }
+  case Intrinsic::spv_ddx:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdx);
+  case Intrinsic::spv_ddy:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdy);
   case Intrinsic::spv_ddx_coarse:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdxCoarse);
   case Intrinsic::spv_ddy_coarse:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdyCoarse);
+  case Intrinsic::spv_ddx_fine:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdxFine);
+  case Intrinsic::spv_ddy_fine:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdyFine);
   case Intrinsic::spv_fwidth:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpFwidth);
   default: {

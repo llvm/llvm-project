@@ -3709,6 +3709,7 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       options::OPT_disable_llvm_passes,
       options::OPT_fnative_half_type,
       options::OPT_fnative_int16_type,
+      options::OPT_fmatrix_memory_layout_EQ,
       options::OPT_hlsl_entrypoint,
       options::OPT_fdx_rootsignature_define,
       options::OPT_fdx_rootsignature_version,
@@ -5703,6 +5704,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fenable-matrix");
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-enable-matrix");
+    // Only handle default layout if matrix is enabled
+    if (const Arg *A = Args.getLastArg(options::OPT_fmatrix_memory_layout_EQ)) {
+      StringRef Val = A->getValue();
+      if (Val == "row-major" || Val == "column-major") {
+        CmdArgs.push_back(Args.MakeArgString("-fmatrix-memory-layout=" + Val));
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back(Args.MakeArgString("-matrix-default-layout=" + Val));
+
+      } else {
+        D.Diag(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
+      }
+    }
   }
 
   CodeGenOptions::FramePointerKind FPKeepKind =
@@ -5876,9 +5889,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (KernelOrKext && RawTriple.isOSDarwin())
     CmdArgs.push_back("-fforbid-guard-variables");
 
-  if (Args.hasFlag(options::OPT_mms_bitfields, options::OPT_mno_ms_bitfields,
-                   Triple.isWindowsGNUEnvironment())) {
-    CmdArgs.push_back("-mms-bitfields");
+  if (Arg *A = Args.getLastArg(options::OPT_mms_bitfields,
+                               options::OPT_mno_ms_bitfields)) {
+    if (A->getOption().matches(options::OPT_mms_bitfields))
+      CmdArgs.push_back("-fms-layout-compatibility=microsoft");
+    else
+      CmdArgs.push_back("-fms-layout-compatibility=itanium");
   }
 
   if (Triple.isOSCygMing()) {
@@ -6994,6 +7010,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       types::isCXX(InputType))
     CmdArgs.push_back("-fcoro-aligned-allocation");
 
+  if (Args.hasFlag(options::OPT_fdefer_ts, options::OPT_fno_defer_ts,
+                   /*Default=*/false))
+    CmdArgs.push_back("-fdefer-ts");
+
   Args.AddLastArg(CmdArgs, options::OPT_fdouble_square_bracket_attributes,
                   options::OPT_fno_double_square_bracket_attributes);
 
@@ -7744,6 +7764,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   addOpenMPHostOffloadingArgs(C, JA, Args, CmdArgs);
+
+  if (Args.hasFlag(options::OPT_fdevirtualize_speculatively,
+                   options::OPT_fno_devirtualize_speculatively,
+                   /*Default value*/ false))
+    CmdArgs.push_back("-fdevirtualize-speculatively");
 
   bool VirtualFunctionElimination =
       Args.hasFlag(options::OPT_fvirtual_function_elimination,
