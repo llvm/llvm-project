@@ -1507,7 +1507,7 @@ def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> 
 }
 
 def AMDGPU_TensorLoadToLDSOp :
-  AMDGPU_Op<"tensor_load_to_lds", [MemoryEffects<[MemWrite]>, MemoryEffects<[MemRead]>]>,
+  AMDGPU_Op<"tensor_load_to_lds", [MemoryEffects<[MemWrite, MemRead]>]>,
   Arguments<(ins AMDGPU_TDMDescriptorType: $desc)> {
   let summary = "Load tensors from global memory to LDS.";
   let description = [{
@@ -1522,7 +1522,7 @@ def AMDGPU_TensorLoadToLDSOp :
 }
 
 def AMDGPU_TensorStoreFromLDSOp :
-  AMDGPU_Op<"tensor_store_from_lds", [MemoryEffects<[MemWrite]>, MemoryEffects<[MemRead]>]>,
+  AMDGPU_Op<"tensor_store_from_lds", [MemoryEffects<[MemWrite, MemRead]>]>,
   Arguments<(ins AMDGPU_TDMDescriptorType: $desc)> {
 
   let summary = "Store tensors from LDS to global memory.";
