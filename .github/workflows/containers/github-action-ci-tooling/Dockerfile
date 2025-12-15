@@ -109,14 +109,7 @@ RUN apt-get update && \
     abi-dumper \
     autoconf \
     parallel \
-    pkg-config && \
+    pkg-config \
+    universal-ctags && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-RUN git clone https://github.com/universal-ctags/ctags.git && \
-    cd ctags && \
-    ./autogen.sh && \
-    ./configure && \
-    sudo make install && \
-    rm -Rf ../ctags
-
