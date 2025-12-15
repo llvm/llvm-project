@@ -52,6 +52,7 @@ class SourceFile;
 class CASOptions;
 struct PrintOptions;
 class MemoryBufferSerializedModuleLoader;
+class ModuleInterfaceLoader;
 namespace Demangle {
 class Demangler;
 class Node;
@@ -977,6 +978,7 @@ protected:
   swift::MemoryBufferSerializedModuleLoader *m_memory_buffer_module_loader =
       nullptr;
   swift::ModuleLoader *m_explicit_swift_module_loader = nullptr;
+  swift::ModuleInterfaceLoader *m_module_interface_loader = nullptr;
   swift::ClangImporter *m_clangimporter = nullptr;
   /// Wraps the clang::ASTContext owned by ClangImporter.
   std::shared_ptr<TypeSystemClang> m_clangimporter_typesystem;

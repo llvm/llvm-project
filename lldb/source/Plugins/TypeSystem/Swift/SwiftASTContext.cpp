@@ -1856,9 +1856,11 @@ void SwiftASTContext::AddExtraClangArgs(
   swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
   auto defer = llvm::make_scope_exit([&]() {
     // Detect explicitly-built modules.
-    m_has_explicit_modules =
-        llvm::any_of(importer_options.ExtraArgs, [](const std::string &arg) {
-          return StringRef(arg).starts_with("-fmodule-file=");
+    m_has_explicit_modules |=
+        llvm::any_of(importer_options.ExtraArgs, [](const std::string &s) {
+          StringRef arg(s);
+          return arg.starts_with("-fno-implicit-module") ||
+                 arg.starts_with("-fmodule-file=");
         });
     ConfigureModuleValidation(importer_options.ExtraArgs);
   });
@@ -3888,8 +3890,11 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
             *static_cast<swift::ModuleInterfaceCheckerImpl *>(
                 m_ast_context_up->getModuleInterfaceChecker()),
             m_dependency_tracker.get(), loading_mode));
-    if (module_interface_loader_up)
+    if (module_interface_loader_up) {
+      m_module_interface_loader = static_cast<swift::ModuleInterfaceLoader *>(
+          module_interface_loader_up.get());
       m_ast_context_up->addModuleLoader(std::move(module_interface_loader_up));
+    }
   }
 
   // 4. Create and install the serialized module loader.
@@ -9403,6 +9408,42 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         *modules,
     Status &error) {
+  // If EBM is enabled, disable implicit modules during contextual imports.
+  // fixme nullptr!
+  bool turn_off_implicit = m_has_explicit_modules;
+  auto reset = llvm::make_scope_exit([&] {
+    if (turn_off_implicit) {
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Turning on implicit modules");
+      if (m_module_interface_loader) {
+        auto &opts = m_module_interface_loader->getOptions();
+        opts.disableImplicitSwiftModule = false;
+        opts.disableBuildingInterface = false;
+      }
+      if (m_clangimporter) {
+        auto &clang_instance = const_cast<clang::CompilerInstance &>(
+            m_clangimporter->getClangInstance());
+        clang_instance.getLangOpts().ImplicitModules = true;
+      }
+    }
+  });
+  if (turn_off_implicit) {
+    LOG_PRINTF(GetLog(LLDBLog::Types), "Turning off implicit modules");
+    // Swift.
+    if (m_module_interface_loader) {
+      auto &opts = m_module_interface_loader->getOptions();
+      opts.disableImplicitSwiftModule = true;
+      opts.disableBuildingInterface = true;
+    }
+    // Clang.
+    if (m_clangimporter) {
+      auto &clang_instance = const_cast<clang::CompilerInstance &>(
+          m_clangimporter->getClangInstance());
+      // AddExtraArgs is supposed to always turn implicit modules on.
+      assert(clang_instance.getLangOpts().ImplicitModules &&
+             "ClangImporter implicit module support is off");
+      clang_instance.getLangOpts().ImplicitModules = false;
+    }
+  }
 
   CompileUnit *compile_unit = sc.comp_unit;
   if (compile_unit && compile_unit->GetModule())
