@@ -19,7 +19,6 @@
 #include <level_zero/ze_api.h>
 
 #define STR(x) #x
-#define TO_STRING(x) STR(x)
 
 #define CALL_ZE(Rc, Fn, ...)                                                   \
   do {                                                                         \
@@ -44,7 +43,6 @@
   CALL_ZE_RET_MTX(                                                            \
     Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d, %s",          \
     STR(Fn), rc, getZeErrorName(rc)), Fn, Mtx, __VA_ARGS__)
-
 
 /// For thread-safe functions
 #define CALL_ZE_RET(Ret, Fn, ...)                                              \
