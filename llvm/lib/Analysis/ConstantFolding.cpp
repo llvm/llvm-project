@@ -3250,7 +3250,6 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
     APFloat MaxVal =
       maximum(Difference, APFloat::getZero(Ty->getFltSemantics()));
     return ConstantFP::get(Ty->getContext(), MaxVal);
-    break;
   }
 
   return nullptr;
