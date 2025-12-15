@@ -81,14 +81,15 @@ CMake invocation at ``<monorepo>/llvm``:
 .. code-block:: bash
 
   $ mkdir build
+  $ # Configure
   $ cmake -G Ninja -S llvm -B build                                       \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo                               \
-          -DLLVM_ENABLE_PROJECTS="clang"                                  \  # Configure
+          -DLLVM_ENABLE_PROJECTS="clang"                                  \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
           -DLLVM_RUNTIME_TARGETS="<target-triple>"
-  $ ninja -C build runtimes                                                  # Build
-  $ ninja -C build check-runtimes                                            # Test
-  $ ninja -C build install-runtimes                                          # Install
+  $ ninja -C build runtimes          # Build
+  $ ninja -C build check-runtimes    # Test
+  $ ninja -C build install-runtimes  # Install
 
 .. note::
   - This type of build is also commonly called a "Runtimes build", but we would like to move
