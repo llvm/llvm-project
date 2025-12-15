@@ -49,7 +49,7 @@ Implemented Papers
 - P2835R7: Expose ``std::atomic_ref``'s object address (`Github <https://llvm.org/PR118377>`__)
 - P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://llvm.org/PR105424>`__)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
-- P2442R1: P2442R1: Windowing range adaptors: ``views::chunk`` and ``views::slide`` (`Github <https://llvm.org/PR171234>`__) (Implemented ``views::slide`` only)
+- P2442R1: P2442R1: Windowing range adaptors: ``views::chunk`` and ``views::slide`` (`Github <https://llvm.org/PR172248>`__) (Implemented ``views::slide`` only)
 
 Improvements and New Features
 -----------------------------
