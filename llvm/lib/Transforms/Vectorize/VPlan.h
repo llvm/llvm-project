@@ -3478,20 +3478,11 @@ protected:
 /// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
 struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
-  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr, VPValue &EVL,
-                        VPValue *Mask)
-      : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
-                            {Addr, S.getStoredValue(), &EVL}, S.isConsecutive(),
-                            S.isReverse(), S, S.getDebugLoc()) {
-    setMask(Mask);
-  }
-
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr,
                         VPValue *StoredVal, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
                             {Addr, StoredVal, &EVL}, S.isConsecutive(),
                             S.isReverse(), S, S.getDebugLoc()) {
-    assert(isReverse() && "Only reverse access need to set new stored value");
     setMask(Mask);
   }
 

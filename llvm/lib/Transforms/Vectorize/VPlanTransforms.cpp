@@ -2901,11 +2901,12 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         TypeInfo.inferScalarType(LoadR), {}, {}, DL);
   }
 
-  if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(),
+  VPValue *StoredVal;
+  if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(StoredVal),
                                       m_RemoveMask(HeaderMask, Mask))) &&
       !cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
-                                     EVL, Mask);
+                                     StoredVal, EVL, Mask);
 
   if (match(&CurRecipe,
             m_MaskedStore(m_VPValue(EndPtr), m_Reverse(m_VPValue(ReversedVal)),
