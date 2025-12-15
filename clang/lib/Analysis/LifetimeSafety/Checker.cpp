@@ -163,12 +163,16 @@ public:
 
   /// Returns the declaration of a function that is visible across translation
   /// units, if such a declaration exists and is different from the definition.
-  static const FunctionDecl *getCrossTUDecl(const FunctionDecl *Definition,
+  static const FunctionDecl *getCrossTUDecl(const ParmVarDecl &PVD,
                                             SourceManager &SM) {
-    const FunctionDecl *CanonicalDecl = Definition->getCanonicalDecl();
-    if (CanonicalDecl != Definition &&
-        SM.getFileID(Definition->getLocation()) !=
-            SM.getFileID(CanonicalDecl->getLocation()))
+    const auto *FD = dyn_cast<FunctionDecl>(PVD.getDeclContext());
+    if (!FD)
+      return nullptr;
+    if (!FD->isExternallyVisible())
+      return nullptr;
+    const FunctionDecl *CanonicalDecl = FD->getCanonicalDecl();
+    if (CanonicalDecl != FD && SM.getFileID(FD->getLocation()) !=
+                                   SM.getFileID(CanonicalDecl->getLocation()))
       return CanonicalDecl;
     return nullptr;
   }
@@ -178,18 +182,12 @@ public:
       return;
     SourceManager &SM = AST.getSourceManager();
     for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap) {
-      const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
-      if (!FD)
-        continue;
-      if (FD->isExternallyVisible()) {
-        const ParmVarDecl *ParmToAnnotate = PVD;
-        if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(FD, SM))
-          if (unsigned Index = PVD->getFunctionScopeIndex();
-              Index < CrossTUDecl->getNumParams())
-            ParmToAnnotate = CrossTUDecl->getParamDecl(Index);
-        Reporter->suggestAnnotation(SuggestionScope::CrossTU, ParmToAnnotate,
-                                    EscapeExpr);
-      } else
+      if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
+        Reporter->suggestAnnotation(
+            SuggestionScope::CrossTU,
+            CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
+            EscapeExpr);
+      else
         Reporter->suggestAnnotation(SuggestionScope::IntraTU, PVD, EscapeExpr);
     }
   }
