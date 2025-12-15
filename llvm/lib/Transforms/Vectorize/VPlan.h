@@ -1966,19 +1966,23 @@ protected:
 #endif
 };
 
-/// A recipe to compute the pointers for widened memory accesses of IndexTy.
-class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
-                              public VPUnrollPartAccessor<1> {
+/// A recipe to compute the pointers for widened memory accesses of \p
+/// SourceElementTy. Unrolling adds an extra offset operand for unrolled parts >
+/// 0 and it produces `GEP Ptr, Offset`. The offset for unrolled part 0 is 0.
+class VPVectorPointerRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
 public:
   VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy,
                         GEPNoWrapFlags GEPFlags, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
-                            GEPFlags, DL),
+      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, Ptr, GEPFlags, DL),
         SourceElementTy(SourceElementTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
+
+  VPValue *getOffset() {
+    return getNumOperands() == 2 ? getOperand(1) : nullptr;
+  }
 
   void execute(VPTransformState &State) override;
 
@@ -1999,13 +2003,12 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    return new VPVectorPointerRecipe(getOperand(0), SourceElementTy,
-                                     getGEPNoWrapFlags(), getDebugLoc());
+    auto *Clone = new VPVectorPointerRecipe(getOperand(0), SourceElementTy,
+                                            getGEPNoWrapFlags(), getDebugLoc());
+    if (auto *Off = getOffset())
+      Clone->addOperand(Off);
+    return Clone;
   }
-
-  /// Return true if this VPVectorPointerRecipe corresponds to part 0. Note that
-  /// this is only accurate after the VPlan has been unrolled.
-  bool isFirstPart() const { return getUnrollPart(*this) == 0; }
 
   /// Return the cost of this VPHeaderPHIRecipe.
   InstructionCost computeCost(ElementCount VF,

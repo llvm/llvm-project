@@ -164,12 +164,12 @@ define float @test_fmax_and_fmin(ptr %src.0, ptr %src.1, i64 %n) {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP27]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP28]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX8:%.*]] = phi float [ [[TMP29]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX9:%.*]] = phi float [ [[TMP29]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAX:%.*]] = phi float [ [[BC_MERGE_RDX8]], %[[SCALAR_PH]] ], [ [[MAX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX:%.*]] = phi float [ [[BC_MERGE_RDX9]], %[[SCALAR_PH]] ], [ [[MAX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds nuw float, ptr [[SRC_0]], i64 [[IV1]]
 ; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr inbounds nuw float, ptr [[SRC_1]], i64 [[IV1]]
 ; CHECK-NEXT:    [[L_0:%.*]] = load float, ptr [[GEP_SRC_2]], align 4

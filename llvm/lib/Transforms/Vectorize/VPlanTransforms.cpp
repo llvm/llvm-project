@@ -1515,13 +1515,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     }
   }
 
-  // VPVectorPointer for part 0 can be replaced by their start pointer.
-  if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(Def)) {
-    if (VecPtr->isFirstPart()) {
-      VecPtr->replaceAllUsesWith(VecPtr->getOperand(0));
-      return;
-    }
-  }
+  // Simplify unrolled VectorPointer without offset, or with zero offset, to
+  // just the pointer operand.
+  if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(Def))
+    if (!VPR->getOffset() || match(VPR->getOffset(), m_ZeroInt()))
+      return VPR->replaceAllUsesWith(VPR->getOperand(0));
 
   // VPScalarIVSteps for part 0 can be replaced by their start value, if only
   // the first lane is demanded.
