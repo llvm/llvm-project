@@ -6219,11 +6219,11 @@ static bool hasMoreUses(const MachineInstr &MI0, const MachineInstr &MI1,
 //   - fmul → fneg → fsub: FNEG folds into FMA with negated operand
 //   - fmul → fpext → {fadd, fsub, fma}: FPEXT folds if it can be folded
 //   - fmul → fma: Assume FMA contraction will handle it (to avoid complexity)
-static bool allMulUsesCanBeContracted(const MachineInstr &MulMI,
+static bool allMulUsesCanBeContracted(const MachineInstr &MI,
                                       const MachineRegisterInfo &MRI,
                                       const unsigned PreferredFusedOpcode) {
-  const auto &TLI = *MulMI.getMF()->getSubtarget().getTargetLowering();
-  Register MulReg = MulMI.getOperand(0).getReg();
+  const auto &TLI = *MI.getMF()->getSubtarget().getTargetLowering();
+  Register MulReg = MI.getOperand(0).getReg();
 
   // Check all uses of the multiply result
   for (const MachineInstr &UseMI : MRI.use_nodbg_instructions(MulReg)) {
@@ -6244,9 +6244,8 @@ static bool allMulUsesCanBeContracted(const MachineInstr &MulMI,
            MRI.use_nodbg_instructions(FNegReg)) {
         unsigned FNegUseOpcode = FNegUseMI.getOpcode();
 
-        if (FNegUseOpcode == TargetOpcode::G_FSUB) {
+        if (FNegUseOpcode == TargetOpcode::G_FSUB)
           continue;
-        }
         if (FNegUseOpcode == TargetOpcode::G_FPEXT) {
           // FNEG → FPEXT → FSUB
           Register FNegFPExtReg = FNegUseMI.getOperand(0).getReg();
