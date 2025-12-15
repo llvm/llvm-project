@@ -50,7 +50,118 @@ define amdgpu_kernel void @test_bitcast_gen_64i8_v32i8(ptr addrspace(1) %out, i3
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[IDX]], 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i256> [[TMP0]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i256 [[TMP2]] to <32 x i8>
-; CHECK-NEXT:    store <32 x i8> [[TMP3]], ptr addrspace(1) [[OUT]], align 16
+; CHECK-NEXT:    store <32 x i8> [[TMP3]], ptr addrspace(1) [[OUT]], align 32
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alloca = alloca [2 x [32 x i8]], align 16, addrspace(5)
+  %gep = getelementptr <32 x i8>, ptr addrspace(5) %alloca, i32 0, i32 %idx
+  %load = load <32 x i8>, ptr addrspace(5) %gep, align 32
+  store <32 x i8> %load, ptr addrspace(1) %out, align 32
+  ret void
+}
+
+define amdgpu_kernel void @test_bitcast_gen_64i8_v32i8_align16(ptr addrspace(1) %out, i32 %idx) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @test_bitcast_gen_64i8_v32i8_align16(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[IDX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <64 x i8> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <32 x i8> poison, i8 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[IDX]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <32 x i8> [[TMP1]], i8 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[IDX]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <32 x i8> [[TMP4]], i8 [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[IDX]], 3
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <32 x i8> [[TMP7]], i8 [[TMP9]], i64 3
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[IDX]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <32 x i8> [[TMP10]], i8 [[TMP12]], i64 4
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[IDX]], 5
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <32 x i8> [[TMP13]], i8 [[TMP15]], i64 5
+; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[IDX]], 6
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <32 x i8> [[TMP16]], i8 [[TMP18]], i64 6
+; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[IDX]], 7
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP20]]
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <32 x i8> [[TMP19]], i8 [[TMP21]], i64 7
+; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[IDX]], 8
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP23]]
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <32 x i8> [[TMP22]], i8 [[TMP24]], i64 8
+; CHECK-NEXT:    [[TMP26:%.*]] = add i32 [[IDX]], 9
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP26]]
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <32 x i8> [[TMP25]], i8 [[TMP27]], i64 9
+; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[IDX]], 10
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP29]]
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <32 x i8> [[TMP28]], i8 [[TMP30]], i64 10
+; CHECK-NEXT:    [[TMP32:%.*]] = add i32 [[IDX]], 11
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP32]]
+; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <32 x i8> [[TMP31]], i8 [[TMP33]], i64 11
+; CHECK-NEXT:    [[TMP35:%.*]] = add i32 [[IDX]], 12
+; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP35]]
+; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <32 x i8> [[TMP34]], i8 [[TMP36]], i64 12
+; CHECK-NEXT:    [[TMP38:%.*]] = add i32 [[IDX]], 13
+; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP38]]
+; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <32 x i8> [[TMP37]], i8 [[TMP39]], i64 13
+; CHECK-NEXT:    [[TMP41:%.*]] = add i32 [[IDX]], 14
+; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP41]]
+; CHECK-NEXT:    [[TMP43:%.*]] = insertelement <32 x i8> [[TMP40]], i8 [[TMP42]], i64 14
+; CHECK-NEXT:    [[TMP44:%.*]] = add i32 [[IDX]], 15
+; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP44]]
+; CHECK-NEXT:    [[TMP46:%.*]] = insertelement <32 x i8> [[TMP43]], i8 [[TMP45]], i64 15
+; CHECK-NEXT:    [[TMP47:%.*]] = add i32 [[IDX]], 16
+; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP47]]
+; CHECK-NEXT:    [[TMP49:%.*]] = insertelement <32 x i8> [[TMP46]], i8 [[TMP48]], i64 16
+; CHECK-NEXT:    [[TMP50:%.*]] = add i32 [[IDX]], 17
+; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP50]]
+; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <32 x i8> [[TMP49]], i8 [[TMP51]], i64 17
+; CHECK-NEXT:    [[TMP53:%.*]] = add i32 [[IDX]], 18
+; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP53]]
+; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <32 x i8> [[TMP52]], i8 [[TMP54]], i64 18
+; CHECK-NEXT:    [[TMP56:%.*]] = add i32 [[IDX]], 19
+; CHECK-NEXT:    [[TMP57:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP56]]
+; CHECK-NEXT:    [[TMP58:%.*]] = insertelement <32 x i8> [[TMP55]], i8 [[TMP57]], i64 19
+; CHECK-NEXT:    [[TMP59:%.*]] = add i32 [[IDX]], 20
+; CHECK-NEXT:    [[TMP60:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP59]]
+; CHECK-NEXT:    [[TMP61:%.*]] = insertelement <32 x i8> [[TMP58]], i8 [[TMP60]], i64 20
+; CHECK-NEXT:    [[TMP62:%.*]] = add i32 [[IDX]], 21
+; CHECK-NEXT:    [[TMP63:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP62]]
+; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <32 x i8> [[TMP61]], i8 [[TMP63]], i64 21
+; CHECK-NEXT:    [[TMP65:%.*]] = add i32 [[IDX]], 22
+; CHECK-NEXT:    [[TMP66:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP65]]
+; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <32 x i8> [[TMP64]], i8 [[TMP66]], i64 22
+; CHECK-NEXT:    [[TMP68:%.*]] = add i32 [[IDX]], 23
+; CHECK-NEXT:    [[TMP69:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP68]]
+; CHECK-NEXT:    [[TMP70:%.*]] = insertelement <32 x i8> [[TMP67]], i8 [[TMP69]], i64 23
+; CHECK-NEXT:    [[TMP71:%.*]] = add i32 [[IDX]], 24
+; CHECK-NEXT:    [[TMP72:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP71]]
+; CHECK-NEXT:    [[TMP73:%.*]] = insertelement <32 x i8> [[TMP70]], i8 [[TMP72]], i64 24
+; CHECK-NEXT:    [[TMP74:%.*]] = add i32 [[IDX]], 25
+; CHECK-NEXT:    [[TMP75:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP74]]
+; CHECK-NEXT:    [[TMP76:%.*]] = insertelement <32 x i8> [[TMP73]], i8 [[TMP75]], i64 25
+; CHECK-NEXT:    [[TMP77:%.*]] = add i32 [[IDX]], 26
+; CHECK-NEXT:    [[TMP78:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP77]]
+; CHECK-NEXT:    [[TMP79:%.*]] = insertelement <32 x i8> [[TMP76]], i8 [[TMP78]], i64 26
+; CHECK-NEXT:    [[TMP80:%.*]] = add i32 [[IDX]], 27
+; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP80]]
+; CHECK-NEXT:    [[TMP82:%.*]] = insertelement <32 x i8> [[TMP79]], i8 [[TMP81]], i64 27
+; CHECK-NEXT:    [[TMP83:%.*]] = add i32 [[IDX]], 28
+; CHECK-NEXT:    [[TMP84:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP83]]
+; CHECK-NEXT:    [[TMP85:%.*]] = insertelement <32 x i8> [[TMP82]], i8 [[TMP84]], i64 28
+; CHECK-NEXT:    [[TMP86:%.*]] = add i32 [[IDX]], 29
+; CHECK-NEXT:    [[TMP87:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP86]]
+; CHECK-NEXT:    [[TMP88:%.*]] = insertelement <32 x i8> [[TMP85]], i8 [[TMP87]], i64 29
+; CHECK-NEXT:    [[TMP89:%.*]] = add i32 [[IDX]], 30
+; CHECK-NEXT:    [[TMP90:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP89]]
+; CHECK-NEXT:    [[TMP91:%.*]] = insertelement <32 x i8> [[TMP88]], i8 [[TMP90]], i64 30
+; CHECK-NEXT:    [[TMP92:%.*]] = add i32 [[IDX]], 31
+; CHECK-NEXT:    [[TMP93:%.*]] = extractelement <64 x i8> [[ALLOCA]], i32 [[TMP92]]
+; CHECK-NEXT:    [[TMP94:%.*]] = insertelement <32 x i8> [[TMP91]], i8 [[TMP93]], i64 31
+; CHECK-NEXT:    store <32 x i8> [[TMP94]], ptr addrspace(1) [[OUT]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -652,40 +652,34 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       // Extracting subvector with dynamic index has very large expansion in
       // the amdgpu backend. Limit to pow2 for UDiv.
       FixedVectorType *AccessVecTy = cast<FixedVectorType>(AccessTy);
-      auto *GEP = dyn_cast<GetElementPtrInst>(
-          cast<LoadInst>(Inst)->getPointerOperand());
+      FixedVectorType *VectorTy = AA.Vector.Ty;
+      uint64_t NumBits = SubVecTy->getScalarSizeInBits() *
+                         SubVecTy->getNumElements();
+      uint64_t LoadAlign = cast<LoadInst>(Inst)->getAlign().value();
       if (!isa<ConstantInt>(Index) && SubVecTy->isIntOrIntVectorTy() &&
           llvm::isPowerOf2_32(SubVecTy->getNumElements()) &&
           VectorTy->getNumElements() % SubVecTy->getNumElements() == 0 &&
-          llvm::isPowerOf2_32(AccessVecTy->getNumElements())) {
-        uint64_t NumBits = SubVecTy->getScalarSizeInBits() *
-                           SubVecTy->getNumElements();
-        // Check that NumBits and GEP's type's NumBits match for alignment
-        if (auto *GEPTy =
-                dyn_cast<FixedVectorType>(GEP->getSourceElementType())) {
-          if (NumBits == GEPTy->getScalarSizeInBits() *
-                         GEPTy->getNumElements()) {
-            IntegerType *NewElemType = Builder.getIntNTy(NumBits);
-            const unsigned NewNumElts = VectorTy->getNumElements() *
-                                        VectorTy->getScalarSizeInBits() /
-                                        NewElemType->getScalarSizeInBits();
-            const unsigned IndexDivisor = VectorTy->getNumElements() /
-                                          NewNumElts;
-            assert(VectorTy->getScalarSizeInBits() <
-                       NewElemType->getScalarSizeInBits() &&
-                   "New element type should be bigger");
-            assert(IndexDivisor > 0u && "Zero index divisor");
-            FixedVectorType *BitCastType =
-                FixedVectorType::get(NewElemType, NewNumElts);
-            Value *BCVal = Builder.CreateBitCast(CurVal, BitCastType);
-            Value *NewIdx = Builder.CreateUDiv(
-                Index, ConstantInt::get(Index->getType(), IndexDivisor));
-            Value *ExtVal = Builder.CreateExtractElement(BCVal, NewIdx);
-            Value *BCOut = Builder.CreateBitCast(ExtVal, AccessTy);
-            Inst->replaceAllUsesWith(BCOut);
-            return nullptr;
-          }
-        }
+          llvm::isPowerOf2_32(AccessVecTy->getNumElements()) &&
+          NumBits <= (LoadAlign * 8u)) {
+        IntegerType *NewElemType = Builder.getIntNTy(NumBits);
+        const unsigned NewNumElts = VectorTy->getNumElements() *
+                                    VectorTy->getScalarSizeInBits() /
+                                    NewElemType->getScalarSizeInBits();
+        const unsigned IndexDivisor = VectorTy->getNumElements() /
+                                      NewNumElts;
+        assert(VectorTy->getScalarSizeInBits() <
+                   NewElemType->getScalarSizeInBits() &&
+               "New element type should be bigger");
+        assert(IndexDivisor > 0u && "Zero index divisor");
+        FixedVectorType *BitCastType =
+            FixedVectorType::get(NewElemType, NewNumElts);
+        Value *BCVal = Builder.CreateBitCast(CurVal, BitCastType);
+        Value *NewIdx = Builder.CreateUDiv(
+            Index, ConstantInt::get(Index->getType(), IndexDivisor));
+        Value *ExtVal = Builder.CreateExtractElement(BCVal, NewIdx);
+        Value *BCOut = Builder.CreateBitCast(ExtVal, AccessTy);
+        Inst->replaceAllUsesWith(BCOut);
+        return nullptr;
       }
 
       Value *SubVec = PoisonValue::get(SubVecTy);
