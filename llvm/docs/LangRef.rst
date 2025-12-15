@@ -24497,7 +24497,7 @@ Examples:
       ; This results in an all-true mask, as the load always occurs before the
       ; store, so it does not depend on any values to be stored.
       ;
-      ; 2. ptrB - ptrA = elementSize:
+      ; 2. ptrB - ptrA = 2 * elementSize:
       ;
       ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
       ;  store =      <0,1,2,3>     ; array[i+2] = store;
@@ -24506,7 +24506,7 @@ Examples:
       ; we can only read two lanes before we would read values that have yet to
       ; be written.
       ;
-      ; 3. ptrB - ptrA = elementSize * 4
+      ; 3. ptrB - ptrA = 4 * elementSize
       ;
       ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
       ;  store =          <0,1,2,3> ; array[i+4] = store;
