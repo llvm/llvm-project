@@ -3906,13 +3906,12 @@ private:
              "Expected only split vectorize node.");
       SmallVector<int> Mask(getVectorFactor(), PoisonMaskElem);
       unsigned CommonVF = std::max<unsigned>(
-          CombinedEntriesWithIndices.back().second,
-          Scalars.size() - CombinedEntriesWithIndices.back().second);
+          CombinedEntriesWithIndices.back().Cnt,
+          Scalars.size() - CombinedEntriesWithIndices.back().Cnt);
       for (auto [Idx, I] : enumerate(ReorderIndices))
-        Mask[I] =
-            Idx + (Idx >= CombinedEntriesWithIndices.back().second
-                       ? CommonVF - CombinedEntriesWithIndices.back().second
-                       : 0);
+        Mask[I] = Idx + (Idx >= CombinedEntriesWithIndices.back().Cnt
+                             ? CommonVF - CombinedEntriesWithIndices.back().Cnt
+                             : 0);
       return Mask;
     }
 
@@ -4037,9 +4036,15 @@ private:
     /// The index of this treeEntry in VectorizableTree.
     unsigned Idx = 0;
 
+    struct CombineIndex {
+      unsigned Idx;
+      unsigned Cnt;
+      CombineIndex(unsigned Idx, unsigned Cnt) : Idx(Idx), Cnt(Cnt) {}
+    };
+
     /// For gather/buildvector/alt opcode nodes, which are combined from
     /// other nodes as a series of insertvector instructions.
-    SmallVector<std::pair<unsigned, unsigned>, 2> CombinedEntriesWithIndices;
+    SmallVector<CombineIndex, 2> CombinedEntriesWithIndices;
 
   private:
     /// The operands of each instruction in each lane Operands[op_index][lane].
@@ -4301,7 +4306,7 @@ private:
       if (!CombinedEntriesWithIndices.empty()) {
         dbgs() << "Combined entries: ";
         interleaveComma(CombinedEntriesWithIndices, dbgs(), [&](const auto &P) {
-          dbgs() << "Entry index " << P.first << " with offset " << P.second;
+          dbgs() << "Entry index " << P.Idx << " with offset " << P.Cnt;
         });
         dbgs() << "\n";
       }
@@ -8171,7 +8176,7 @@ void BoUpSLP::TreeEntry::reorderSplitNode(unsigned Idx, ArrayRef<int> Mask,
     copy(MaskOrder, NewMaskOrder.begin());
   } else {
     assert(Idx == 1 && "Expected either 0 or 1 index.");
-    unsigned Offset = CombinedEntriesWithIndices.back().second;
+    unsigned Offset = CombinedEntriesWithIndices.back().Cnt;
     for (unsigned I : seq<unsigned>(Mask.size())) {
       NewMask[I + Offset] = Mask[I] + Offset;
       NewMaskOrder[I + Offset] = MaskOrder[I] + Offset;
@@ -8604,7 +8609,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         assert(Data.first->CombinedEntriesWithIndices.size() == 2 &&
                "Expected exactly 2 entries.");
         for (const auto &P : Data.first->CombinedEntriesWithIndices) {
-          TreeEntry &OpTE = *VectorizableTree.back()[P.first];
+          TreeEntry &OpTE = *VectorizableTree.back()[P.Idx];
           OrdersType Order = OpTE.ReorderIndices;
           if (Order.empty() || !OpTE.ReuseShuffleIndices.empty()) {
             if (!OpTE.isGather() && OpTE.ReuseShuffleIndices.empty())
@@ -8623,7 +8628,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           transform(Order, MaskOrder.begin(), [E](unsigned I) {
             return I < E ? static_cast<int>(I) : PoisonMaskElem;
           });
-          Data.first->reorderSplitNode(P.second ? 1 : 0, Mask, MaskOrder);
+          Data.first->reorderSplitNode(P.Cnt ? 1 : 0, Mask, MaskOrder);
           // Clear ordering of the operand.
           if (!OpTE.ReorderIndices.empty()) {
             OpTE.ReorderIndices.clear();
@@ -14525,16 +14530,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     if (E->ReorderIndices.empty()) {
       VectorCost = ::getShuffleCost(
           *TTI, TTI::SK_InsertSubvector, FinalVecTy, {}, CostKind,
-          E->CombinedEntriesWithIndices.back().second,
-          getWidenedType(ScalarTy,
-                         VectorizableTree
-                             .back()[E->CombinedEntriesWithIndices.back().first]
-                             ->getVectorFactor()));
+          E->CombinedEntriesWithIndices.back().Cnt,
+          getWidenedType(
+              ScalarTy,
+              VectorizableTree.back()[E->CombinedEntriesWithIndices.back().Idx]
+                  ->getVectorFactor()));
     } else {
       unsigned CommonVF = std::max(
-          VectorizableTree.back()[E->CombinedEntriesWithIndices.front().first]
+          VectorizableTree.back()[E->CombinedEntriesWithIndices.front().Idx]
               ->getVectorFactor(),
-          VectorizableTree.back()[E->CombinedEntriesWithIndices.back().first]
+          VectorizableTree.back()[E->CombinedEntriesWithIndices.back().Idx]
               ->getVectorFactor());
       VectorCost = ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc,
                                     getWidenedType(ScalarTy, CommonVF),
@@ -17141,7 +17146,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       if (It != VTEs.end()) {
         const TreeEntry *VTE = *It;
         if (none_of(TE->CombinedEntriesWithIndices,
-                    [&](const auto &P) { return P.first == VTE->Idx; })) {
+                    [&](const auto &P) { return P.Idx == VTE->Idx; })) {
           Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
           if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
             continue;
@@ -17166,7 +17171,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         VTE = *MIt;
       }
       if (none_of(TE->CombinedEntriesWithIndices,
-                  [&](const auto &P) { return P.first == VTE->Idx; })) {
+                  [&](const auto &P) { return P.Idx == VTE->Idx; })) {
         Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
         if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst) ||
             CheckNonSchedulableOrdering(VTE, &LastBundleInst))
@@ -18710,7 +18715,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       E->CombinedEntriesWithIndices.size());
   transform(
       E->CombinedEntriesWithIndices, SubVectors.begin(), [&](const auto &P) {
-        return std::make_pair(VectorizableTree.back()[P.first].get(), P.second);
+        return std::make_pair(VectorizableTree.back()[P.Idx].get(), P.Cnt);
       });
   // Build a mask out of the reorder indices and reorder scalars per this
   // mask.
@@ -19295,13 +19300,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            "Expected exactly 2 combined entries.");
     setInsertPointAfterBundle(E);
     TreeEntry &OpTE1 =
-        *VectorizableTree.back()[E->CombinedEntriesWithIndices.front().first];
+        *VectorizableTree.back()[E->CombinedEntriesWithIndices.front().Idx];
     assert(OpTE1.isSame(
                ArrayRef(E->Scalars).take_front(OpTE1.getVectorFactor())) &&
            "Expected same first part of scalars.");
     Value *Op1 = vectorizeTree(&OpTE1);
     TreeEntry &OpTE2 =
-        *VectorizableTree.back()[E->CombinedEntriesWithIndices.back().first];
+        *VectorizableTree.back()[E->CombinedEntriesWithIndices.back().Idx];
     assert(
         OpTE2.isSame(ArrayRef(E->Scalars).take_back(OpTE2.getVectorFactor())) &&
         "Expected same second part of scalars.");
@@ -19343,8 +19348,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       SmallVector<int> Mask(E->getVectorFactor(), PoisonMaskElem);
       std::iota(
           Mask.begin(),
-          std::next(Mask.begin(), E->CombinedEntriesWithIndices.back().second),
-          0);
+          std::next(Mask.begin(), E->CombinedEntriesWithIndices.back().Cnt), 0);
       unsigned ScalarTyNumElements = getNumElements(ScalarTy);
       if (ScalarTyNumElements != 1) {
         assert(SLPReVec && "Only supported by REVEC.");
@@ -19352,7 +19356,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
       Value *Vec = Builder.CreateShuffleVector(Op1, Mask);
       Vec = createInsertVector(Builder, Vec, Op2,
-                               E->CombinedEntriesWithIndices.back().second *
+                               E->CombinedEntriesWithIndices.back().Cnt *
                                    ScalarTyNumElements);
       E->VectorizedValue = Vec;
       return Vec;
@@ -19394,11 +19398,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
         E->CombinedEntriesWithIndices.size());
-    transform(E->CombinedEntriesWithIndices, SubVectors.begin(),
-              [&](const auto &P) {
-                return std::make_pair(VectorizableTree.back()[P.first].get(),
-                                      P.second);
-              });
+    transform(
+        E->CombinedEntriesWithIndices, SubVectors.begin(), [&](const auto &P) {
+          return std::make_pair(VectorizableTree.back()[P.Idx].get(), P.Cnt);
+        });
     assert(
         (E->CombinedEntriesWithIndices.empty() || E->ReorderIndices.empty()) &&
         "Expected either combined subnodes or reordering");
@@ -22457,9 +22460,9 @@ bool BoUpSLP::collectValuesToDemote(
   if (E.State == TreeEntry::SplitVectorize)
     return TryProcessInstruction(
         BitWidth,
-        {VectorizableTree.back()[E.CombinedEntriesWithIndices.front().first]
+        {VectorizableTree.back()[E.CombinedEntriesWithIndices.front().Idx]
              .get(),
-         VectorizableTree.back()[E.CombinedEntriesWithIndices.back().first]
+         VectorizableTree.back()[E.CombinedEntriesWithIndices.back().Idx]
              .get()});
 
   if (E.isAltShuffle()) {
