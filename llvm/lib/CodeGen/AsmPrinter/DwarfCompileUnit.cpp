@@ -1293,6 +1293,8 @@ DwarfCompileUnit::getDwarf5OrGNUAttr(dwarf::Attribute Attr) const {
     return dwarf::DW_AT_GNU_all_call_sites;
   case dwarf::DW_AT_call_target:
     return dwarf::DW_AT_GNU_call_site_target;
+  case dwarf::DW_AT_call_target_clobbered:
+    return dwarf::DW_AT_GNU_call_site_target_clobbered;
   case dwarf::DW_AT_call_origin:
     return dwarf::DW_AT_abstract_origin;
   case dwarf::DW_AT_call_return_pc:
