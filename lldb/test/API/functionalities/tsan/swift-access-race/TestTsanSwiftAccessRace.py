@@ -28,7 +28,7 @@ class TsanSwiftAccessRaceTestCase(lldbtest.TestBase):
     @swiftTest
     @skipIfLinux
     @skipUnlessSwiftThreadSanitizer
-    @skipIfAsan  # This test does not behave reliable with an ASANified LLDB.
+    @skipIfAsan # This test does not behave reliable with an ASANified LLDB.
     def test_tsan_swift(self):
         self.build()
         self.do_test()
@@ -50,14 +50,8 @@ class TsanSwiftAccessRaceTestCase(lldbtest.TestBase):
         for m in target.module_iter():
             libspec = m.GetFileSpec()
             if "clang_rt" in libspec.GetFilename():
-                runtimes.append(
-                    os.path.join(libspec.GetDirectory(), libspec.GetFilename())
-                )
+                runtimes.append(os.path.join(libspec.GetDirectory(), libspec.GetFilename()))
         self.registerSharedLibrariesWithTarget(target, runtimes)
-
-        # Enable verbose logging to help diagnose rdar://153220781
-        self.runCmd("log enable lldb break platform process target thread")
-        self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
 
         # Unfortunately the runtime itself isn't 100% reliable in reporting TSAN errors.
         failure_reasons = []
@@ -68,47 +62,36 @@ class TsanSwiftAccessRaceTestCase(lldbtest.TestBase):
             info.SetWorkingDirectory(self.get_process_working_directory())
             process = target.Launch(info, error)
             if not error.success:
-                failure_reasons.append(
-                    f"Failed to bring up process, error: {error.value}"
-                )
+                failure_reasons.append(f"Failed to bring up process, error: {error.value}")
                 continue
 
             stop_reason = process.GetSelectedThread().GetStopReason()
             if stop_reason == lldb.eStopReasonInstrumentation:
                 break
-
-            thread = process.GetSelectedThread()
-            stop_reason_data = [
-                thread.GetStopReasonDataAtIndex(index)
-                for index in range(thread.GetStopReasonDataCount())
-            ]
-            failure_reasons.append(
-                f"Invalid stop_reason: {stop_reason}, stop_reason_data: {stop_reason_data}"
-            )
+            failure_reasons.append(f"Invalid stop_reason: {stop_reason}")
 
         self.assertEqual(
-            stop_reason,
+            stop_reason, 
             lldb.eStopReasonInstrumentation,
-            f"Failed with {len(failure_reasons)} attempts with reasons: {failure_reasons}",
-        )
-
+            f"Failed with {len(failure_reasons)} attempts with reasons: {failure_reasons}")
+            
         # the stop reason of the thread should be a TSan report.
-        self.expect(
-            "thread list",
-            "A Swift access race should be detected",
-            substrs=["stopped", "stop reason = Swift access race detected"],
-        )
+        self.expect("thread list", "A Swift access race should be detected",
+                    substrs=['stopped', 'stop reason = Swift access race detected'])
 
         self.expect(
             "thread info -s",
             "The extended stop info should contain the TSan provided fields",
-            substrs=["instrumentation_class", "description", "mops"],
-        )
+            substrs=[
+                "instrumentation_class",
+                "description",
+                "mops"])
 
-        output_lines = self.res.GetOutput().split("\n")
-        json_line = "\n".join(output_lines[2:])
+        output_lines = self.res.GetOutput().split('\n')
+        json_line = '\n'.join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "ThreadSanitizer")
         self.assertEqual(data["issue_type"], "external-race")
         self.assertEqual(len(data["mops"]), 2)
         self.assertTrue(data["location_filename"].endswith("/main.swift"))
+
