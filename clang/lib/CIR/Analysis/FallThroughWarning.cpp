@@ -131,8 +131,10 @@ CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForLambda() {
 /// \param returnOp The return operation to check
 /// \return true if this is a phony return, false otherwise
 bool isPhonyReturn(cir::ReturnOp returnOp) {
-  if (!returnOp)
-    return false;
+  assert(returnOp && "ReturnOp should be non-null");
+
+  if (returnOp.getIsImplicit())
+    return true;
 
   // Get the returned value - return operations use $input as the operand
   if (!returnOp.hasOperand())
