@@ -598,8 +598,8 @@ public:
                             WaitcntBrackets &ScoreBrackets);
 
   // DS loop wait optimization functions
-  bool isEligibleForDSLoopOpt(MachineLoop *ML, LoopDSWaitOptInfo &Info) const;
-  void analyzeSingleBBLoopDSLoads(MachineLoop *ML);
+  bool isEligibleForDSLoopOpt(const MachineLoop &ML, LoopDSWaitOptInfo &Info) const;
+  void analyzeSingleBBLoopDSLoads(const MachineLoop &ML);
 };
 
 // This objects maintains the current score brackets of each wait counter, and
@@ -2681,26 +2681,22 @@ bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
 //
 // Opportunity arises when the load ordering in the preheader block and
 // the load ordering at the end of the loop body, feeding the loaded data
-// to the next iteration, are not matched well (since their orderings are
-// not co-optimized)
+// to the next iteration, are not matched well (since machine scheduler doesn't
+// co-schedule loads in preheader and loads in loop body).
 //===----------------------------------------------------------------------===//
 
-bool SIInsertWaitcnts::isEligibleForDSLoopOpt(MachineLoop *ML,
+bool SIInsertWaitcnts::isEligibleForDSLoopOpt(const MachineLoop &ML,
                                               LoopDSWaitOptInfo &Info) const {
-  if (!OptimizeDSLoopWaitcnt)
-    return false;
-
   // Only for GFX12+ where we have a separate counter for LDS.
-  if (!ST->hasExtendedWaitCounts())
-    return false;
+  assert(OptimizeDSLoopWaitcnt && ST->hasExtendedWaitCounts());
 
   // Must be a single-block loop. Makes the analysis easier.
-  if (ML->getNumBlocks() != 1)
+  if (ML.getNumBlocks() != 1)
     return false;
 
-  MachineBasicBlock *MBB = ML->getHeader();
+  const MachineBasicBlock *MBB = ML.getHeader();
 
-  // Count DS loads, WMMA/MFMA instructions, and total non-meta instructions
+  // Count DS loads/WMMA instructions, and total non-meta instructions
   unsigned NumDSLoads = 0;
   unsigned NumWMMA = 0;
   unsigned NumInsts = 0;
@@ -2712,12 +2708,12 @@ bool SIInsertWaitcnts::isEligibleForDSLoopOpt(MachineLoop *ML,
     if (SIInstrInfo::isDS(MI)) {
       if (MI.mayLoad() && !MI.mayStore())
         ++NumDSLoads;
-    } else if (SIInstrInfo::isWMMA(MI) || SIInstrInfo::isMFMA(MI)) {
+    } else if (SIInstrInfo::isWMMA(MI)) {
       ++NumWMMA;
     }
   }
 
-  // Heuristics: need significant number of DS loads and WMMA/MFMA
+  // Heuristics: Need significant number of DS loads and WMMA/MFMA
   // to make this optimization worthwhile
   if (NumDSLoads < 16 || NumWMMA < 8)
     return false;
@@ -2727,21 +2723,23 @@ bool SIInsertWaitcnts::isEligibleForDSLoopOpt(MachineLoop *ML,
   if ((NumDSLoads + NumWMMA) * 4 < NumInsts)
     return false;
 
-  LLVM_DEBUG(dbgs() << "Loop DS Wait Opt: Loop at "; MBB->printName(dbgs());
-             dbgs() << " - " << NumDSLoads << " DS loads, " << NumWMMA
+  LLVM_DEBUG(dbgs() << "Loop DS Wait Opt: Loop at "
+                    << printMBBReference(*MBB)
+                    << " - " << NumDSLoads << " DS loads, " << NumWMMA
                     << " WMMA/MFMA, " << NumInsts
                     << " total insts, eligible\n");
 
+  Info.Valid = true;
   return true;
 }
 
-void SIInsertWaitcnts::analyzeSingleBBLoopDSLoads(MachineLoop *ML) {
-  MachineBasicBlock *MBB = ML->getHeader();
+void SIInsertWaitcnts::analyzeSingleBBLoopDSLoads(const MachineLoop &ML) {
+  MachineBasicBlock *MBB = ML.getHeader();
   LoopDSWaitOptInfo &Info = LoopDSWaitOptCache[MBB];
 
+  Info.Valid = false;
   // Quick structural checks
   if (!isEligibleForDSLoopOpt(ML, Info)) {
-    Info.Valid = false;
     return;
   }
 
@@ -2902,7 +2900,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
       auto BeginIt = ML->getSubLoops().begin();
       auto EndIt = ML->getSubLoops().end();
       if (BeginIt == EndIt) // innermost loop only
-        analyzeSingleBBLoopDSLoads(ML);
+        analyzeSingleBBLoopDSLoads(*ML);
       else
         Worklist.append(BeginIt, EndIt);
     }

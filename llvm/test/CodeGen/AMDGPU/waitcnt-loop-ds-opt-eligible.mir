@@ -1,16 +1,13 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-insert-waitcnts -amdgpu-waitcnt-loop-ds-opt -debug-only=si-insert-waitcnts -filetype-null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-insert-waitcnts -amdgpu-waitcnt-loop-ds-opt -debug-only=si-insert-waitcnts --filetype=null %s 2>&1 | FileCheck %s
 
 # Test for DS loop wait optimization eligibility check.
 # Verifies that the pass correctly identifies single-block loops with
 # sufficient DS loads (>=16) and WMMA instructions (>=8) as eligible
 # for optimization.
 #
-# CHECK: Loop DS Wait Opt: Loop at bb.1 - 16 DS loads, 8 WMMA/MFMA, {{[0-9]+}} total insts, eligible
+# CHECK: Loop DS Wait Opt: Loop at %bb.1 - 16 DS loads, 8 WMMA/MFMA, {{[0-9]+}} total insts, eligible
 
---- |
-  define amdgpu_kernel void @ds_loop_eligible() { ret void }
-...
 
 ---
 name: ds_loop_eligible
