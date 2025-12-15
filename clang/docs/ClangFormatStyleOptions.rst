@@ -6942,6 +6942,11 @@ the configuration (without a prefix: ``Auto``).
 **SpacesInComments** (``SpacesInCommentsStyle``) :versionbadge:`clang-format 21` :ref:`¶ <SpacesInComments>`
   Controls whitespace around block comment delimiters.
 
+  .. note::
+
+   This option is not applied to comments starting with ``/*!`` or ``/**``,
+   or to comments ending with ``=`` before the closing ``*/``.
+
   Possible values:
 
   * ``SICS_Never`` (in configuration: ``Never``)

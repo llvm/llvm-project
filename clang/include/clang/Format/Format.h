@@ -5204,6 +5204,10 @@ struct FormatStyle {
     SICS_Leave
   };
   /// Controls whitespace around block comment delimiters.
+  /// \note
+  ///  This option is not applied to comments starting with ``/*!`` or ``/**``,
+  ///  or to comments ending with ``=`` before the closing ``*/``.
+  /// \endnote
   /// \version 21
   SpacesInCommentsStyle SpacesInComments;
 
