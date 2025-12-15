@@ -47,7 +47,7 @@ template int MyFunction<int>(int);
 
 }
 
-// These are all already formatted as desired
+// These are all already formatted as desired.
 #define my_macro_2
 
 namespace my_namespace_2 {

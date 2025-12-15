@@ -25,7 +25,7 @@ template int MyFunction<int>(int);
 
 }
 
-// ...or lower_case for the same set of symbol types
+// ...or lower_case for the same set of symbol types.
 #define my_macro_2
 
 namespace my_namespace_2 {

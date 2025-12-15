@@ -263,7 +263,7 @@ A detailed description of each option is presented below:
 .. option:: DefaultPrefix
 
     When defined, the check will ensure all names by default will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: DefaultIgnoredRegexp
 
