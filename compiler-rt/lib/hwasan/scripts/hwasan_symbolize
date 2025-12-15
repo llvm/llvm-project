@@ -21,7 +21,7 @@ import html
 import json
 import mmap
 import os
-from pathlib import Path
+import pathlib
 import re
 import struct
 import subprocess
@@ -471,7 +471,7 @@ def main():
   # Source location.
   paths_to_cut = args.source or []
   if not paths_to_cut:
-    paths_to_cut.append(Path.cwd().as_posix() + '/')
+    paths_to_cut.append(pathlib.Path.cwd().as_posix() + '/')
     if 'ANDROID_BUILD_TOP' in os.environ:
       paths_to_cut.append(os.environ['ANDROID_BUILD_TOP'] + '/')
 
