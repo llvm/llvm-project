@@ -30,6 +30,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
 namespace mlir {
@@ -435,50 +436,18 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
   }
 };
 
-// TODO: AMDGPU backend already have all this bitpacking logic, we should move
-// it to some common place.
-///  Vmcnt, Expcnt and Lgkmcnt are decoded as follows:
-///     Vmcnt = Waitcnt[3:0]        (pre-gfx9)
-///     Vmcnt = Waitcnt[15:14,3:0]  (gfx9,10)
-///     Vmcnt = Waitcnt[15:10]      (gfx11)
-///     Expcnt = Waitcnt[6:4]       (pre-gfx11)
-///     Expcnt = Waitcnt[2:0]       (gfx11)
-///     Lgkmcnt = Waitcnt[11:8]     (pre-gfx10)
-///     Lgkmcnt = Waitcnt[13:8]     (gfx10)
-///     Lgkmcnt = Waitcnt[9:4]      (gfx11)
 static FailureOr<unsigned> encodeWaitcnt(Chipset chipset, unsigned vmcnt,
                                          unsigned expcnt, unsigned lgkmcnt) {
-  if (chipset.majorVersion < 9) {
-    vmcnt = std::min(15u, vmcnt);
-    expcnt = std::min(7u, expcnt);
-    lgkmcnt = std::min(15u, lgkmcnt);
-    return vmcnt | (expcnt << 4) | (lgkmcnt << 8);
-  }
-  if (chipset.majorVersion == 9) {
-    vmcnt = std::min(63u, vmcnt);
-    expcnt = std::min(7u, expcnt);
-    lgkmcnt = std::min(15u, lgkmcnt);
-    unsigned lowBits = vmcnt & 0xF;
-    unsigned highBits = (vmcnt >> 4) << 14;
-    unsigned otherCnts = (expcnt << 4) | (lgkmcnt << 8);
-    return lowBits | highBits | otherCnts;
-  }
-  if (chipset.majorVersion == 10) {
-    vmcnt = std::min(63u, vmcnt);
-    expcnt = std::min(7u, expcnt);
-    lgkmcnt = std::min(63u, lgkmcnt);
-    unsigned lowBits = vmcnt & 0xF;
-    unsigned highBits = (vmcnt >> 4) << 14;
-    unsigned otherCnts = (expcnt << 4) | (lgkmcnt << 8);
-    return lowBits | highBits | otherCnts;
-  }
-  if (chipset.majorVersion == 11) {
-    vmcnt = std::min(63u, vmcnt);
-    expcnt = std::min(7u, expcnt);
-    lgkmcnt = std::min(63u, lgkmcnt);
-    return (vmcnt << 10) | expcnt | (lgkmcnt << 4);
-  }
-  return failure();
+  if (chipset.majorVersion >= 12)
+    return failure();
+
+  llvm::AMDGPU::IsaVersion isaVersion{
+      chipset.majorVersion, chipset.minorVersion, chipset.steppingVersion};
+  vmcnt = std::min(vmcnt, llvm::AMDGPU::getVmcntBitMask(isaVersion));
+  expcnt = std::min(expcnt, llvm::AMDGPU::getExpcntBitMask(isaVersion));
+  lgkmcnt = std::min(lgkmcnt, llvm::AMDGPU::getLgkmcntBitMask(isaVersion));
+
+  return llvm::AMDGPU::encodeWaitcnt(isaVersion, vmcnt, expcnt, lgkmcnt);
 }
 
 struct MemoryCounterWaitOpLowering
