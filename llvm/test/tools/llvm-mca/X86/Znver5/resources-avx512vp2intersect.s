@@ -18,36 +18,47 @@ vp2intersectq    (%rax){1to8}, %zmm19, %k0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     1.00                        vp2intersectd	%zmm16, %zmm19, %k0
-# CHECK-NEXT:  2      8     1.00    *                   vp2intersectd	(%rax), %zmm19, %k0
-# CHECK-NEXT:  2      8     1.00    *                   vp2intersectd	(%rax){1to16}, %zmm19, %k0
-# CHECK-NEXT:  1      1     1.00                        vp2intersectq	%zmm16, %zmm19, %k0
-# CHECK-NEXT:  2      8     1.00    *                   vp2intersectq	(%rax), %zmm19, %k0
-# CHECK-NEXT:  2      8     1.00    *                   vp2intersectq	(%rax){1to8}, %zmm19, %k0
+# CHECK-NEXT:  1      1     0.50                        vp2intersectd	%zmm16, %zmm19, %k0
+# CHECK-NEXT:  1      8     0.50    *                   vp2intersectd	(%rax), %zmm19, %k0
+# CHECK-NEXT:  1      8     0.50    *                   vp2intersectd	(%rax){1to16}, %zmm19, %k0
+# CHECK-NEXT:  1      1     0.50                        vp2intersectq	%zmm16, %zmm19, %k0
+# CHECK-NEXT:  1      8     0.50    *                   vp2intersectq	(%rax), %zmm19, %k0
+# CHECK-NEXT:  1      8     0.50    *                   vp2intersectq	(%rax){1to8}, %zmm19, %k0
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - ICXDivider
-# CHECK-NEXT: [1]   - ICXFPDivider
-# CHECK-NEXT: [2]   - ICXPort0
-# CHECK-NEXT: [3]   - ICXPort1
-# CHECK-NEXT: [4]   - ICXPort2
-# CHECK-NEXT: [5]   - ICXPort3
-# CHECK-NEXT: [6]   - ICXPort4
-# CHECK-NEXT: [7]   - ICXPort5
-# CHECK-NEXT: [8]   - ICXPort6
-# CHECK-NEXT: [9]   - ICXPort7
-# CHECK-NEXT: [10]  - ICXPort8
-# CHECK-NEXT: [11]  - ICXPort9
+# CHECK-NEXT: [0]   - Zn4AGU0
+# CHECK-NEXT: [1]   - Zn4AGU1
+# CHECK-NEXT: [2]   - Zn4AGU2
+# CHECK-NEXT: [3]   - Zn4ALU0
+# CHECK-NEXT: [4]   - Zn4ALU1
+# CHECK-NEXT: [5]   - Zn4ALU2
+# CHECK-NEXT: [6]   - Zn4ALU3
+# CHECK-NEXT: [7]   - Zn4BRU1
+# CHECK-NEXT: [8]   - Zn4FP0
+# CHECK-NEXT: [9]   - Zn4FP1
+# CHECK-NEXT: [10]  - Zn4FP2
+# CHECK-NEXT: [11]  - Zn4FP3
+# CHECK-NEXT: [12.0] - Zn4FP45
+# CHECK-NEXT: [12.1] - Zn4FP45
+# CHECK-NEXT: [13]  - Zn4FPSt
+# CHECK-NEXT: [14.0] - Zn4LSU
+# CHECK-NEXT: [14.1] - Zn4LSU
+# CHECK-NEXT: [14.2] - Zn4LSU
+# CHECK-NEXT: [15.0] - Zn4Load
+# CHECK-NEXT: [15.1] - Zn4Load
+# CHECK-NEXT: [15.2] - Zn4Load
+# CHECK-NEXT: [16.0] - Zn4Store
+# CHECK-NEXT: [16.1] - Zn4Store
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     6.00    -     2.00   2.00    -      -      -      -      -      -
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00   3.00   3.00   2.00   2.00    -     1.33   1.33   1.33   1.33   1.33   1.33    -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vp2intersectd	%zmm16, %zmm19, %k0
-# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vp2intersectd	(%rax), %zmm19, %k0
-# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vp2intersectd	(%rax){1to16}, %zmm19, %k0
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vp2intersectq	%zmm16, %zmm19, %k0
-# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vp2intersectq	(%rax), %zmm19, %k0
-# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vp2intersectq	(%rax){1to8}, %zmm19, %k0
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vp2intersectd	%zmm16, %zmm19, %k0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vp2intersectd	(%rax), %zmm19, %k0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vp2intersectd	(%rax){1to16}, %zmm19, %k0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vp2intersectq	%zmm16, %zmm19, %k0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vp2intersectq	(%rax), %zmm19, %k0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vp2intersectq	(%rax){1to8}, %zmm19, %k0
