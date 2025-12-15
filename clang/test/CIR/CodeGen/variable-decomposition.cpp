@@ -16,7 +16,7 @@ float function() {
   return a + b;
 }
 
-// CIR-LABEL: cir.func dso_local @_Z8functionv() -> !cir.float
+// CIR-LABEL: cir.func {{.*}} @_Z8functionv() -> !cir.float
 // CIR:  %[[RETVAL:.+]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["__retval"]
 // CIR:  %[[STRUCT:.+]] = cir.alloca !rec_some_struct, !cir.ptr<!rec_some_struct>, ["", init]
 // CIR:  %[[CONST:.+]] = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.float}> : !rec_some_struct

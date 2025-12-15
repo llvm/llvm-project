@@ -169,6 +169,22 @@ public:
     return ARMProcFamily;
   }
 
+  /// Returns true if the processor is an Apple M-series or aligned A-series
+  /// (A14 or newer).
+  bool isAppleMLike() const {
+    switch (ARMProcFamily) {
+    case AppleA14:
+    case AppleA15:
+    case AppleA16:
+    case AppleA17:
+    case AppleM4:
+    case AppleM5:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool isXRaySupported() const override { return true; }
 
   /// Returns true if the function has a streaming body.
@@ -469,6 +485,8 @@ public:
   /// a function.
   std::optional<uint16_t>
   getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
+
+  bool enableAggressiveInterleaving() const { return AggressiveInterleaving; }
 };
 } // End llvm namespace
 

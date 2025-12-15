@@ -222,7 +222,6 @@ Clang-Tidy Checks
    :doc:`darwin-dispatch-once-nonstatic <darwin/dispatch-once-nonstatic>`, "Yes"
    :doc:`fuchsia-default-arguments-calls <fuchsia/default-arguments-calls>`,
    :doc:`fuchsia-default-arguments-declarations <fuchsia/default-arguments-declarations>`, "Yes"
-   :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`,
    :doc:`fuchsia-overloaded-operator <fuchsia/overloaded-operator>`,
    :doc:`fuchsia-statically-constructed-objects <fuchsia/statically-constructed-objects>`,
    :doc:`fuchsia-temporary-objects <fuchsia/temporary-objects>`,
@@ -239,7 +238,6 @@ Clang-Tidy Checks
    :doc:`google-objc-function-naming <google/objc-function-naming>`,
    :doc:`google-objc-global-variable-declaration <google/objc-global-variable-declaration>`,
    :doc:`google-readability-avoid-underscore-in-googletest-name <google/readability-avoid-underscore-in-googletest-name>`,
-   :doc:`google-readability-casting <google/readability-casting>`,
    :doc:`google-readability-todo <google/readability-todo>`,
    :doc:`google-runtime-float <google/runtime-float>`,
    :doc:`google-runtime-int <google/runtime-int>`,
@@ -273,6 +271,7 @@ Clang-Tidy Checks
    :doc:`misc-misleading-bidirectional <misc/misleading-bidirectional>`,
    :doc:`misc-misleading-identifier <misc/misleading-identifier>`,
    :doc:`misc-misplaced-const <misc/misplaced-const>`,
+   :doc:`misc-multiple-inheritance <misc/multiple-inheritance>`,
    :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`misc-no-recursion <misc/no-recursion>`,
    :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
@@ -291,6 +290,7 @@ Clang-Tidy Checks
    :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
    :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
    :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
+   :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`,
    :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
    :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"
@@ -462,9 +462,9 @@ Check aliases
    :doc:`cert-mem57-cpp <cert/mem57-cpp>`, :doc:`bugprone-default-operator-new-on-overaligned-type <bugprone/default-operator-new-on-overaligned-type>`,
    :doc:`cert-msc24-c <cert/msc24-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`misc-predictable-rand <misc/predictable-rand>`,
-   :doc:`cert-msc50-cpp <cert/msc50-cpp>`, :doc:`misc-predictable-rand <misc/predictable-rand>`,
    :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`,
    :doc:`cert-msc33-c <cert/msc33-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
+   :doc:`cert-msc50-cpp <cert/msc50-cpp>`, :doc:`misc-predictable-rand <misc/predictable-rand>`,
    :doc:`cert-msc51-cpp <cert/msc51-cpp>`, :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`,
    :doc:`cert-msc54-cpp <cert/msc54-cpp>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`cert-oop11-cpp <cert/oop11-cpp>`, :doc:`performance-move-constructor-init <performance/move-constructor-init>`,
@@ -584,7 +584,9 @@ Check aliases
    :doc:`cppcoreguidelines-non-private-member-variables-in-classes <cppcoreguidelines/non-private-member-variables-in-classes>`, :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
    :doc:`cppcoreguidelines-use-default-member-init <cppcoreguidelines/use-default-member-init>`, :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
    :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`google-build-namespaces <google/build-namespaces>`,
+   :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`, :doc:`misc-multiple-inheritance <misc/multiple-inheritance>`,
    :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
+   :doc:`google-readability-casting <google/readability-casting>`, :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`,
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`hicpp-avoid-c-arrays <hicpp/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,

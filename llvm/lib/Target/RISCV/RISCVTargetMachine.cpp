@@ -123,7 +123,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVLateBranchOptPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
-  initializeRISCVCodeGenPreparePass(*PR);
+  initializeRISCVCodeGenPrepareLegacyPassPass(*PR);
   initializeRISCVPostRAExpandPseudoPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVOptWInstrsPass(*PR);
@@ -141,6 +141,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPushPopOptPass(*PR);
   initializeRISCVIndirectBranchTrackingPass(*PR);
   initializeRISCVLoadStoreOptPass(*PR);
+  initializeRISCVPreAllocZilsdOptPass(*PR);
   initializeRISCVExpandAtomicPseudoPass(*PR);
   initializeRISCVRedundantCopyEliminationPass(*PR);
   initializeRISCVAsmPrinterPass(*PR);
@@ -461,7 +462,7 @@ void RISCVPassConfig::addIRPasses() {
 
     addPass(createRISCVGatherScatterLoweringPass());
     addPass(createInterleavedAccessPass());
-    addPass(createRISCVCodeGenPreparePass());
+    addPass(createRISCVCodeGenPrepareLegacyPass());
   }
 
   TargetPassConfig::addIRPasses();
@@ -604,6 +605,8 @@ void RISCVPassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
     addPass(createRISCVVLOptimizerPass());
+    // Add Zilsd pre-allocation load/store optimization
+    addPass(createRISCVPreAllocZilsdOptPass());
   }
 
   addPass(createRISCVInsertReadWriteCSRPass());
@@ -636,6 +639,9 @@ bool RISCVPassConfig::addILPOpts() {
 }
 
 void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "RISCVPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+
   PB.registerLateLoopOptimizationsEPCallback([=](LoopPassManager &LPM,
                                                  OptimizationLevel Level) {
     if (Level != OptimizationLevel::O0)

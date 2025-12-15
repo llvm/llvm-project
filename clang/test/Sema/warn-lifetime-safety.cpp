@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
 
 struct MyObj {
   int id;
@@ -10,6 +10,10 @@ struct [[gsl::Pointer()]] View {
   View(const MyObj&); // Borrows from MyObj
   View();
   void use() const;
+};
+
+class TriviallyDestructedClass {
+  View a, b;
 };
 
 //===----------------------------------------------------------------------===//
@@ -396,6 +400,186 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
   }             // expected-note {{destroyed here}}
 }
 
+void trivial_int_uaf() {
+  int * a;
+  {
+      int b = 1;
+      a = &b;  // expected-warning {{object whose reference is captured does not live long enough}}
+  }            // expected-note {{destroyed here}}
+  (void)*a;    // expected-note {{later used here}}
+}
+
+void trivial_class_uaf() {
+  TriviallyDestructedClass* ptr;
+  {
+      TriviallyDestructedClass s;
+      ptr = &s; // expected-warning {{object whose reference is captured does not live long enough}}
+  }             // expected-note {{destroyed here}}
+  (void)ptr;    // expected-note {{later used here}}
+}
+
+//===----------------------------------------------------------------------===//
+// Basic Definite Use-After-Return (Return-Stack-Address) (-W...permissive)
+// These are cases where the pointer is guaranteed to be dangling at the use site.
+//===----------------------------------------------------------------------===//
+
+MyObj* simple_return_stack_address() {
+  MyObj s;      
+  MyObj* p = &s; // expected-warning {{address of stack memory is returned later}}
+  return p;      // expected-note {{returned here}}
+}
+
+MyObj* direct_return() {
+  MyObj s;      
+  return &s;     // expected-warning {{address of stack memory is returned later}}
+                 // expected-note@-1 {{returned here}}
+}
+
+const MyObj* conditional_assign_unconditional_return(const MyObj& safe, bool c) {
+  MyObj s; 
+  const MyObj* p = &safe;
+  if (c) {
+    p = &s;       // expected-warning {{address of stack memory is returned later}}
+  }     
+  return p;      // expected-note {{returned here}}
+}
+
+View conditional_assign_both_branches(const MyObj& safe, bool c) {
+  MyObj s;
+  View p;
+  if (c) {
+    p = s;      // expected-warning {{address of stack memory is returned later}}
+  } 
+  else {
+    p = safe;
+  }
+  return p;     // expected-note {{returned here}}
+
+}
+
+View reassign_safe_to_local(const MyObj& safe) {
+  MyObj local;
+  View p = safe;
+  p = local;    // expected-warning {{address of stack memory is returned later}}
+  return p;     // expected-note {{returned here}}
+}
+
+View pointer_chain_to_local() {
+  MyObj local;
+  View p1 = local;     // expected-warning {{address of stack memory is returned later}}
+  View p2 = p1; 
+  return p2;          // expected-note {{returned here}}
+}
+
+View multiple_assign_multiple_return(const MyObj& safe, bool c1, bool c2) {
+  MyObj local1;
+  MyObj local2;
+  View p;
+  if (c1) {
+    p = local1;       // expected-warning {{address of stack memory is returned later}}
+    return p;         // expected-note {{returned here}}
+  }
+  else if (c2) {
+    p = local2;       // expected-warning {{address of stack memory is returned later}}
+    return p;         // expected-note {{returned here}}
+  }
+  p = safe;
+  return p;
+}
+
+View multiple_assign_single_return(const MyObj& safe, bool c1, bool c2) {
+  MyObj local1;
+  MyObj local2;
+  View p;
+  if (c1) {
+    p = local1;      // expected-warning {{address of stack memory is returned later}}
+  }
+  else if (c2) {
+    p = local2;      // expected-warning {{address of stack memory is returned later}}
+  }
+  else {
+    p = safe;
+  }
+  return p;         // expected-note 2 {{returned here}}
+}
+
+View direct_return_of_local() {
+  MyObj stack;      
+  return stack;     // expected-warning {{address of stack memory is returned later}}
+                    // expected-note@-1 {{returned here}}
+}
+
+MyObj& reference_return_of_local() {
+  MyObj stack;      
+  return stack;     // expected-warning {{address of stack memory is returned later}}
+                    // expected-note@-1 {{returned here}}
+}
+
+int* trivial_int_uar() {
+  int *a;
+  int b = 1;
+  a = &b;          // expected-warning {{address of stack memory is returned later}}
+  return a;        // expected-note {{returned here}}
+}
+
+TriviallyDestructedClass* trivial_class_uar () {
+  TriviallyDestructedClass *ptr;
+  TriviallyDestructedClass s;
+  ptr = &s;       // expected-warning {{address of stack memory is returned later}}
+  return ptr;     // expected-note {{returned here}}
+}
+
+const int& return_parameter(int a) { 
+  return a; // expected-warning {{address of stack memory is returned later}}
+            // expected-note@-1 {{returned here}}
+}
+
+int* return_pointer_to_parameter(int a) {
+    return &a;  // expected-warning {{address of stack memory is returned later}}
+                // expected-note@-1 {{returned here}}
+}
+
+const int& return_reference_to_parameter(int a)
+{
+    const int &b = a; 
+    return b;         // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
+}
+
+const int& get_ref_to_local() {
+    int a = 42;
+    return a;         // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
+}
+
+//===----------------------------------------------------------------------===//
+// Use-After-Scope & Use-After-Return (Return-Stack-Address) Combined
+// These are cases where the diagnostic kind is determined by location
+//===----------------------------------------------------------------------===//
+
+MyObj* uaf_before_uar() {
+  MyObj* p;
+  {
+    MyObj local_obj; 
+    p = &local_obj;  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  return p;          // expected-note {{later used here}}
+}
+
+View uar_before_uaf(const MyObj& safe, bool c) {
+  View p;
+  {
+    MyObj local_obj; 
+    p = local_obj;  // expected-warning {{address of stack memory is returned later}}
+    if (c) {
+      return p;      // expected-note {{returned here}}
+    }
+  }
+  p.use();
+  p = safe;
+  return p;
+}
+
 //===----------------------------------------------------------------------===//
 // No-Error Cases
 //===----------------------------------------------------------------------===//
@@ -434,12 +618,19 @@ void no_error_loan_from_current_iteration(bool cond) {
   }
 }
 
+View safe_return(const MyObj& safe) {
+  MyObj local;
+  View p = local;
+  p = safe;     // p has been reassigned
+  return p;     // This is safe
+}
 
 //===----------------------------------------------------------------------===//
 // Lifetimebound Attribute Tests
 //===----------------------------------------------------------------------===//
 
 View Identity(View v [[clang::lifetimebound]]);
+const MyObj& IdentityRef(const MyObj& obj [[clang::lifetimebound]]);
 MyObj* Identity(MyObj* v [[clang::lifetimebound]]);
 View Choose(bool cond, View a [[clang::lifetimebound]], View b [[clang::lifetimebound]]);
 MyObj* GetPointer(const MyObj& obj [[clang::lifetimebound]]);
@@ -556,7 +747,8 @@ void lifetimebound_partial_safety(bool cond) {
   v.use();                // expected-note {{later used here}}
 }
 
-// FIXME: Creating reference from lifetimebound call doesn't propagate loans.
+// FIXME: Warning should be on the 'GetObject' call, not the assignment to 'ptr'. 
+// The loan from the lifetimebound argument is not propagated to the call expression itself.
 const MyObj& GetObject(View v [[clang::lifetimebound]]);
 void lifetimebound_return_reference() {
   View v;
@@ -565,9 +757,9 @@ void lifetimebound_return_reference() {
     MyObj obj;
     View temp_v = obj;
     const MyObj& ref = GetObject(temp_v);
-    ptr = &ref;
-  }
-  (void)*ptr;
+    ptr = &ref;           // expected-warning {{object whose reference is captured does not live long enough}}
+  }                       // expected-note {{destroyed here}}
+  (void)*ptr;             // expected-note {{later used here}}
 }
 
 // FIXME: No warning for non gsl::Pointer types. Origin tracking is only supported for pointer types.
@@ -582,6 +774,71 @@ void lifetimebound_ctor() {
     v = obj;
   }
   (void)v;
+}
+
+View lifetimebound_return_of_local() {
+  MyObj stack;
+  return Identity(stack); // expected-warning {{address of stack memory is returned later}}
+                          // expected-note@-1 {{returned here}}
+}
+
+const MyObj& lifetimebound_return_ref_to_local() {
+  MyObj stack;
+  return IdentityRef(stack); // expected-warning {{address of stack memory is returned later}}
+                             // expected-note@-1 {{returned here}}
+}
+
+View lifetimebound_return_by_value_param(MyObj stack_param) {
+  return Identity(stack_param); // expected-warning {{address of stack memory is returned later}}
+                                // expected-note@-1 {{returned here}}
+}
+
+View lifetimebound_return_by_value_multiple_param(int cond, MyObj a, MyObj b, MyObj c) {
+  if (cond == 1) 
+    return Identity(a); // expected-warning {{address of stack memory is returned later}}
+                        // expected-note@-1 {{returned here}}
+  if (cond == 2) 
+    return Identity(b); // expected-warning {{address of stack memory is returned later}}
+                        // expected-note@-1 {{returned here}}
+  return Identity(c); // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
+}
+
+template<class T>
+View lifetimebound_return_by_value_param_template(T t) {
+  return Identity(t); // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
+}
+void use_lifetimebound_return_by_value_param_template() { 
+  lifetimebound_return_by_value_param_template(MyObj{}); // expected-note {{in instantiation of}}
+}
+
+void lambda_uar_param() {
+  auto lambda = [](MyObj stack_param) {
+    return Identity(stack_param); // expected-warning {{address of stack memory is returned later}}
+                                  // expected-note@-1 {{returned here}}
+  };
+  lambda(MyObj{});
+}
+
+// FIXME: This should be detected. We see correct destructors but origin flow breaks somewhere.
+namespace VariadicTemplatedParamsUAR{
+
+template<typename... Args>
+View Max(Args... args [[clang::lifetimebound]]);
+
+template<typename... Args>
+View lifetimebound_return_of_variadic_param(Args... args) {
+  return Max(args...);
+}
+void test_variadic() {
+  lifetimebound_return_of_variadic_param(MyObj{1}, MyObj{2}, MyObj{3});
+}
+}
+
+// FIXME: Fails to diagnose UAF when a reference to a by-value param escapes via an out-param.
+void uaf_from_by_value_param_failing(MyObj param, View* out_p) {
+  *out_p = Identity(param);
 }
 
 // Conditional operator.

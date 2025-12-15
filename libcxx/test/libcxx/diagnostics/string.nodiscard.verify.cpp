@@ -130,3 +130,80 @@ void test() {
   str.subview(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 }
+
+void test_nonmembers() {
+  // Numeric conversions
+
+  std::string str;
+
+  std::stoi(str);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stol(str);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stoll(str);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stoull(str); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  std::stof(str);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stod(str);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stold(str); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  std::to_string(94);    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_string(82U);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_string(94L);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_string(82UL);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_string(94LL);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_string(82ULL); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_string(94.0F); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_string(82.0);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_string(94.0L); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+#if !defined(TEST_HAS_NO_WIDE_CHARACTERS)
+
+  std::wstring wstr;
+
+  std::stoi(wstr);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stol(wstr);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stoll(wstr);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stoull(wstr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  std::stof(wstr);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stod(wstr);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stold(wstr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  std::to_wstring(94);    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_wstring(82U);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_wstring(94L);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_wstring(82UL);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_wstring(94LL);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_wstring(82ULL); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_wstring(94.0F); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_wstring(82.0);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_wstring(94.0L); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+#endif
+
+  // std::hash<>
+
+  std::hash<std::string> hash;
+
+  hash(str); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+#if TEST_STD_VER >= 14
+  // string literals
+
+  using namespace std::string_literals;
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  ""s; // const char*
+#  if !defined(TEST_HAS_NO_WIDE_CHARACTERS)
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  L""s; // const wchar_t*
+#  endif
+#  if !defined(TEST_HAS_NO_CHAR8_T)
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  u8""s; // const char8_t*
+#  endif
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  u""s; // const char16_t*
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  U""s; // const char32_t*
+#endif
+}

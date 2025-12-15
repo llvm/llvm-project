@@ -959,7 +959,7 @@ enum NodeType {
 
   /// Set rounding mode.
   /// The first operand is a chain pointer. The second specifies the required
-  /// rounding mode, encoded in the same way as used in '``GET_ROUNDING``'.
+  /// rounding mode, encoded in the same way as used in GET_ROUNDING.
   SET_ROUNDING,
 
   /// X = FP_EXTEND(Y) - Extend a smaller FP type into a larger FP type.
@@ -1498,86 +1498,103 @@ enum NodeType {
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
 
-  // PARTIAL_REDUCE_[U|S]MLA(Accumulator, Input1, Input2)
-  // The partial reduction nodes sign or zero extend Input1 and Input2
-  // (with the extension kind noted below) to the element type of
-  // Accumulator before multiplying their results.
-  // This result is concatenated to the Accumulator, and this is then reduced,
-  // using addition, to the result type.
-  // The output is only expected to either be given to another partial reduction
-  // operation or an equivalent vector reduce operation, so the order in which
-  // the elements are reduced is deliberately not specified.
-  // Input1 and Input2 must be the same type. Accumulator and the output must be
-  // the same type.
-  // The number of elements in Input1 and Input2 must be a positive integer
-  // multiple of the number of elements in the Accumulator / output type.
-  // Input1 and Input2 must have an element type which is the same as or smaller
-  // than the element type of the Accumulator and output.
+  /// PARTIAL_REDUCE_[U|S]MLA(Accumulator, Input1, Input2)
+  /// The partial reduction nodes sign or zero extend Input1 and Input2
+  /// (with the extension kind noted below) to the element type of
+  /// Accumulator before multiplying their results.
+  /// This result is concatenated to the Accumulator, and this is then reduced,
+  /// using addition, to the result type.
+  /// The output is only expected to either be given to another partial
+  /// reduction operation or an equivalent vector reduce operation, so the order
+  /// in which the elements are reduced is deliberately not specified.
+  /// Input1 and Input2 must be the same type. Accumulator and the output must
+  /// be the same type.
+  /// The number of elements in Input1 and Input2 must be a positive integer
+  /// multiple of the number of elements in the Accumulator / output type.
+  /// Input1 and Input2 must have an element type which is the same as or
+  /// smaller than the element type of the Accumulator and output.
   PARTIAL_REDUCE_SMLA,  // sext, sext
   PARTIAL_REDUCE_UMLA,  // zext, zext
   PARTIAL_REDUCE_SUMLA, // sext, zext
   PARTIAL_REDUCE_FMLA,  // fpext, fpext
 
-  // The `llvm.experimental.stackmap` intrinsic.
-  // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
-  // Outputs: output chain, glue
+  /// The `llvm.experimental.stackmap` intrinsic.
+  /// Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
+  /// Outputs: output chain, glue
   STACKMAP,
 
-  // The `llvm.experimental.patchpoint.*` intrinsic.
-  // Operands: input chain, [glue], reg-mask, <id>, <numShadowBytes>, callee,
-  //   <numArgs>, cc, ...
-  // Outputs: [rv], output chain, glue
+  /// The `llvm.experimental.patchpoint.*` intrinsic.
+  /// Operands: input chain, [glue], reg-mask, <id>, <numShadowBytes>, callee,
+  ///   <numArgs>, cc, ...
+  /// Outputs: [rv], output chain, glue
   PATCHPOINT,
 
-  // PTRADD represents pointer arithmetic semantics, for targets that opt in
-  // using shouldPreservePtrArith().
-  // ptr = PTRADD ptr, offset
+  /// PTRADD represents pointer arithmetic semantics, for targets that opt in
+  /// using shouldPreservePtrArith().
+  /// ptr = PTRADD ptr, offset
   PTRADD,
 
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
 #include "llvm/IR/VPIntrinsics.def"
 
-  // Issue a no-op relocation against a given symbol at the current location.
+  /// Issue a no-op relocation against a given symbol at the current location.
   RELOC_NONE,
 
-  // The `llvm.experimental.convergence.*` intrinsics.
+  /// The `llvm.experimental.convergence.*` intrinsics.
   CONVERGENCECTRL_ANCHOR,
   CONVERGENCECTRL_ENTRY,
   CONVERGENCECTRL_LOOP,
-  // This does not correspond to any convergence control intrinsic. It is used
-  // to glue a convergence control token to a convergent operation in the DAG,
-  // which is later translated to an implicit use in the MIR.
+  /// This does not correspond to any convergence control intrinsic. It is used
+  /// to glue a convergence control token to a convergent operation in the DAG,
+  /// which is later translated to an implicit use in the MIR.
   CONVERGENCECTRL_GLUE,
 
-  // Experimental vector histogram intrinsic
-  // Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
-  // Output: Output Chain
+  /// Experimental vector histogram intrinsic
+  /// Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
+  /// Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
-  // Finds the index of the last active mask element
-  // Operands: Mask
+  /// Finds the index of the last active mask element
+  /// Operands: Mask
   VECTOR_FIND_LAST_ACTIVE,
 
-  // GET_ACTIVE_LANE_MASK - this corrosponds to the llvm.get.active.lane.mask
-  // intrinsic. It creates a mask representing active and inactive vector
-  // lanes, active while Base + index < Trip Count. As with the intrinsic,
-  // the operands Base and Trip Count have the same scalar integer type and
-  // the internal addition of Base + index cannot overflow. However, the ISD
-  // node supports result types which are wider than i1, where the high
-  // bits conform to getBooleanContents similar to the SETCC operator.
+  /// GET_ACTIVE_LANE_MASK - this corrosponds to the llvm.get.active.lane.mask
+  /// intrinsic. It creates a mask representing active and inactive vector
+  /// lanes, active while Base + index < Trip Count. As with the intrinsic,
+  /// the operands Base and Trip Count have the same scalar integer type and
+  /// the internal addition of Base + index cannot overflow. However, the ISD
+  /// node supports result types which are wider than i1, where the high
+  /// bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
 
-  // The `llvm.loop.dependence.{war, raw}.mask` intrinsics
-  // Operands: Load pointer, Store pointer, Element size
-  // Output: Mask
+  /// The `llvm.loop.dependence.{war, raw}.mask` intrinsics
+  /// Operands: Load pointer, Store pointer, Element size, Lane offset
+  /// Output: Mask
+  ///
+  /// Note: The semantics of these opcodes differ slightly from the intrinsics.
+  /// Wherever "lane" (meaning lane index) occurs in the intrinsic definition,
+  /// it is replaced with (lane + lane_offset) for the ISD opcode.
+  ///
+  ///  E.g., for LOOP_DEPENDENCE_WAR_MASK:
+  ///    `elementSize * lane < (ptrB - ptrA)`
+  ///  Becomes:
+  ///    `elementSize * (lane + lane_offset) < (ptrB - ptrA)`
+  ///
+  /// This is done to allow for trivial splitting of the operation. Note: The
+  /// lane offset is always a constant, for scalable masks, it is implicitly
+  /// multiplied by vscale.
   LOOP_DEPENDENCE_WAR_MASK,
   LOOP_DEPENDENCE_RAW_MASK,
 
-  // llvm.clear_cache intrinsic
-  // Operands: Input Chain, Start Addres, End Address
-  // Outputs: Output Chain
+  /// llvm.clear_cache intrinsic
+  /// Operands: Input Chain, Start Addres, End Address
+  /// Outputs: Output Chain
   CLEAR_CACHE,
+
+  /// Untyped node storing deactivation symbol reference
+  /// (DeactivationSymbolSDNode).
+  DEACTIVATION_SYMBOL,
 
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.

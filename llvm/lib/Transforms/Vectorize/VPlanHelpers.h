@@ -394,6 +394,12 @@ class VPSlotTracker {
   /// require slot tracking.
   std::unique_ptr<ModuleSlotTracker> MST;
 
+  /// Cached metadata kind names from the Module's LLVMContext.
+  SmallVector<StringRef> MDNames;
+
+  /// Cached Module pointer for printing metadata.
+  const Module *M = nullptr;
+
   void assignName(const VPValue *V);
   LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
@@ -401,14 +407,27 @@ class VPSlotTracker {
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
-    if (Plan)
+    if (Plan) {
       assignNames(*Plan);
+      if (auto *ScalarHeader = Plan->getScalarHeader())
+        M = ScalarHeader->getIRBasicBlock()->getModule();
+    }
   }
 
   /// Returns the name assigned to \p V, if there is one, otherwise try to
   /// construct one from the underlying value, if there's one; else return
   /// <badref>.
   std::string getOrCreateName(const VPValue *V) const;
+
+  /// Returns the cached metadata kind names.
+  ArrayRef<StringRef> getMDNames() {
+    if (MDNames.empty() && M)
+      M->getContext().getMDKindNames(MDNames);
+    return MDNames;
+  }
+
+  /// Returns the cached Module pointer.
+  const Module *getModule() const { return M; }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

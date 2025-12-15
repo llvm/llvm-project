@@ -1455,8 +1455,7 @@ bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Block *B = S.P.getGlobal(I);
-  const auto &Desc =
-      *reinterpret_cast<const GlobalInlineDescriptor *>(B->rawData());
+  const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
   if (Desc.InitState != GlobalInitState::Initialized)
     return DiagnoseUninitialized(S, OpPC, B->isExtern(), B->getDescriptor(),
                                  AK_Read);
@@ -2474,6 +2473,18 @@ inline bool InitScope(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+inline bool EnableLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
+  assert(!S.Current->isLocalEnabled(I));
+  S.Current->enableLocal(I);
+  return true;
+}
+
+inline bool GetLocalEnabled(InterpState &S, CodePtr OpPC, uint32_t I) {
+  assert(S.Current);
+  S.Stk.push<bool>(S.Current->isLocalEnabled(I));
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Cast, CastFP
 //===----------------------------------------------------------------------===//
@@ -2633,10 +2644,6 @@ bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
-      << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
-      << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
   if (!CheckPointerToIntegralCast(S, OpPC, Ptr, T::bitWidth()))
     return Invalid(S, OpPC);

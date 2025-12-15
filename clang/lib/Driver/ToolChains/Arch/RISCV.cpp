@@ -130,17 +130,10 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 #undef RESERVE_REG
 
   // -mrelax is default, unless -mno-relax is specified.
-  if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true)) {
+  if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
     Features.push_back("+relax");
-    // -gsplit-dwarf -mrelax requires DW_AT_high_pc/DW_AT_ranges/... indexing
-    // into .debug_addr, which is currently not implemented.
-    Arg *A;
-    if (getDebugFissionKind(D, Args, A) != DwarfFissionKind::None)
-      D.Diag(clang::diag::err_drv_riscv_unsupported_with_linker_relaxation)
-          << A->getAsString(Args);
-  } else {
+  else
     Features.push_back("-relax");
-  }
 
   // If -mstrict-align, -mno-strict-align, -mscalar-strict-align, or
   // -mno-scalar-strict-align is passed, use it. Otherwise, the

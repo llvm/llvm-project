@@ -22,11 +22,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -93,6 +95,14 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   RootSignatureValMD->addOperand(MDVals);
 }
 
+// Find array variable declaration from DeclRef expression
+static const ValueDecl *getArrayDecl(const Expr *E) {
+  if (const DeclRefExpr *DRE =
+          dyn_cast_or_null<DeclRefExpr>(E->IgnoreImpCasts()))
+    return DRE->getDecl();
+  return nullptr;
+}
+
 // Find array variable declaration from nested array subscript AST nodes
 static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
   const Expr *E = nullptr;
@@ -102,9 +112,7 @@ static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
       return nullptr;
     ASE = dyn_cast<ArraySubscriptExpr>(E);
   }
-  if (const DeclRefExpr *DRE = dyn_cast_or_null<DeclRefExpr>(E))
-    return DRE->getDecl();
-  return nullptr;
+  return getArrayDecl(E);
 }
 
 // Get the total size of the array, or -1 if the array is unbounded.
@@ -581,22 +589,58 @@ static llvm::Value *createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M,
   return B.CreateLoad(Ty, GV);
 }
 
-llvm::Value *
-CGHLSLRuntime::emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                         HLSLAppliedSemanticAttr *Semantic,
-                                         std::optional<unsigned> Index) {
+llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
+    llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
 
   unsigned Location = SPIRVLastAssignedInputSemanticLocation;
+  if (auto *L = Decl->getAttr<HLSLVkLocationAttr>())
+    Location = L->getLocation();
 
   // DXC completely ignores the semantic/index pair. Location are assigned from
   // the first semantic to the last.
   llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Type);
   unsigned ElementCount = AT ? AT->getNumElements() : 1;
   SPIRVLastAssignedInputSemanticLocation += ElementCount;
+
   return createSPIRVLocationLoad(B, CGM.getModule(), Type, Location,
                                  VariableName.str());
+}
+
+static void createSPIRVLocationStore(IRBuilder<> &B, llvm::Module &M,
+                                     llvm::Value *Source, unsigned Location,
+                                     StringRef Name) {
+  auto *GV = new llvm::GlobalVariable(
+      M, Source->getType(), /* isConstant= */ false,
+      llvm::GlobalValue::ExternalLinkage,
+      /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
+      llvm::GlobalVariable::GeneralDynamicTLSModel,
+      /* AddressSpace */ 8, /* isExternallyInitialized= */ false);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  addLocationDecoration(GV, Location);
+  B.CreateStore(Source, GV);
+}
+
+void CGHLSLRuntime::emitSPIRVUserSemanticStore(
+    llvm::IRBuilder<> &B, llvm::Value *Source,
+    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
+    std::optional<unsigned> Index) {
+  Twine BaseName = Twine(Semantic->getAttrName()->getName());
+  Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
+
+  unsigned Location = SPIRVLastAssignedOutputSemanticLocation;
+  if (auto *L = Decl->getAttr<HLSLVkLocationAttr>())
+    Location = L->getLocation();
+
+  // DXC completely ignores the semantic/index pair. Location are assigned from
+  // the first semantic to the last.
+  llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Source->getType());
+  unsigned ElementCount = AT ? AT->getNumElements() : 1;
+  SPIRVLastAssignedOutputSemanticLocation += ElementCount;
+  createSPIRVLocationStore(B, CGM.getModule(), Source, Location,
+                           VariableName.str());
 }
 
 llvm::Value *
@@ -619,11 +663,28 @@ CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
   return Value;
 }
 
+void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
+                                              llvm::Value *Source,
+                                              HLSLAppliedSemanticAttr *Semantic,
+                                              std::optional<unsigned> Index) {
+  // DXIL packing rules etc shall be handled here.
+  // FIXME: generate proper sigpoint, index, col, row values.
+  SmallVector<Value *> Args{B.getInt32(4),
+                            B.getInt32(0),
+                            B.getInt32(0),
+                            B.getInt8(0),
+                            llvm::PoisonValue::get(B.getInt32Ty()),
+                            Source};
+
+  llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_store_output;
+  B.CreateIntrinsic(/*ReturnType=*/CGM.VoidTy, IntrinsicID, Args, nullptr);
+}
+
 llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
     IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
   if (CGM.getTarget().getTriple().isSPIRV())
-    return emitSPIRVUserSemanticLoad(B, Type, Semantic, Index);
+    return emitSPIRVUserSemanticLoad(B, Type, Decl, Semantic, Index);
 
   if (CGM.getTarget().getTriple().isDXIL())
     return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
@@ -631,9 +692,23 @@ llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
   llvm_unreachable("Unsupported target for user-semantic load.");
 }
 
+void CGHLSLRuntime::emitUserSemanticStore(IRBuilder<> &B, llvm::Value *Source,
+                                          const clang::DeclaratorDecl *Decl,
+                                          HLSLAppliedSemanticAttr *Semantic,
+                                          std::optional<unsigned> Index) {
+  if (CGM.getTarget().getTriple().isSPIRV())
+    return emitSPIRVUserSemanticStore(B, Source, Decl, Semantic, Index);
+
+  if (CGM.getTarget().getTriple().isDXIL())
+    return emitDXILUserSemanticStore(B, Source, Semantic, Index);
+
+  llvm_unreachable("Unsupported target for user-semantic load.");
+}
+
 llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
-    IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
-    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
+    std::optional<unsigned> Index) {
 
   std::string SemanticName = Semantic->getAttrName()->getName().upper();
   if (SemanticName == "SV_GROUPINDEX") {
@@ -669,14 +744,70 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     return buildVectorInput(B, GroupIDIntrinsic, Type);
   }
 
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+  llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
+
   if (SemanticName == "SV_POSITION") {
-    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Pixel)
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::FragCoord */ 15);
+    if (ST == Triple::EnvironmentType::Pixel) {
+      if (CGM.getTarget().getTriple().isSPIRV())
+        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                      Semantic->getAttrName()->getName(),
+                                      /* BuiltIn::FragCoord */ 15);
+      if (CGM.getTarget().getTriple().isDXIL())
+        return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+    }
+
+    if (ST == Triple::EnvironmentType::Vertex) {
+      return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
+    }
   }
 
-  llvm_unreachable("non-handled system semantic. FIXME.");
+  llvm_unreachable(
+      "Load hasn't been implemented yet for this system semantic. FIXME");
+}
+
+static void createSPIRVBuiltinStore(IRBuilder<> &B, llvm::Module &M,
+                                    llvm::Value *Source, const Twine &Name,
+                                    unsigned BuiltInID) {
+  auto *GV = new llvm::GlobalVariable(
+      M, Source->getType(), /* isConstant= */ false,
+      llvm::GlobalValue::ExternalLinkage,
+      /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
+      llvm::GlobalVariable::GeneralDynamicTLSModel,
+      /* AddressSpace */ 8, /* isExternallyInitialized= */ false);
+  addSPIRVBuiltinDecoration(GV, BuiltInID);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  B.CreateStore(Source, GV);
+}
+
+void CGHLSLRuntime::emitSystemSemanticStore(IRBuilder<> &B, llvm::Value *Source,
+                                            const clang::DeclaratorDecl *Decl,
+                                            HLSLAppliedSemanticAttr *Semantic,
+                                            std::optional<unsigned> Index) {
+
+  std::string SemanticName = Semantic->getAttrName()->getName().upper();
+  if (SemanticName == "SV_POSITION") {
+    if (CGM.getTarget().getTriple().isDXIL()) {
+      emitDXILUserSemanticStore(B, Source, Semantic, Index);
+      return;
+    }
+
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      createSPIRVBuiltinStore(B, CGM.getModule(), Source,
+                              Semantic->getAttrName()->getName(),
+                              /* BuiltIn::Position */ 0);
+      return;
+    }
+  }
+
+  if (SemanticName == "SV_TARGET") {
+    emitUserSemanticStore(B, Source, Decl, Semantic, Index);
+    return;
+  }
+
+  llvm_unreachable(
+      "Store hasn't been implemented yet for this system semantic. FIXME");
 }
 
 llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
@@ -685,8 +816,18 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
 
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
-    return emitSystemSemanticLoad(B, Type, Decl, Semantic, Index);
+    return emitSystemSemanticLoad(B, FD, Type, Decl, Semantic, Index);
   return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
+}
+
+void CGHLSLRuntime::handleScalarSemanticStore(
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
+    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic) {
+  std::optional<unsigned> Index = Semantic->getSemanticIndex();
+  if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
+    emitSystemSemanticStore(B, Source, Decl, Semantic, Index);
+  else
+    emitUserSemanticStore(B, Source, Decl, Semantic, Index);
 }
 
 std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
@@ -698,8 +839,7 @@ CGHLSLRuntime::handleStructSemanticLoad(
   const llvm::StructType *ST = cast<StructType>(Type);
   const clang::RecordDecl *RD = Decl->getType()->getAsRecordDecl();
 
-  assert(std::distance(RD->field_begin(), RD->field_end()) ==
-         ST->getNumElements());
+  assert(RD->getNumFields() == ST->getNumElements());
 
   llvm::Value *Aggregate = llvm::PoisonValue::get(Type);
   auto FieldDecl = RD->field_begin();
@@ -713,6 +853,34 @@ CGHLSLRuntime::handleStructSemanticLoad(
   }
 
   return std::make_pair(Aggregate, AttrBegin);
+}
+
+specific_attr_iterator<HLSLAppliedSemanticAttr>
+CGHLSLRuntime::handleStructSemanticStore(
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
+    const clang::DeclaratorDecl *Decl,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd) {
+
+  const llvm::StructType *ST = cast<StructType>(Source->getType());
+
+  const clang::RecordDecl *RD = nullptr;
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(Decl))
+    RD = FD->getDeclaredReturnType()->getAsRecordDecl();
+  else
+    RD = Decl->getType()->getAsRecordDecl();
+  assert(RD);
+
+  assert(RD->getNumFields() == ST->getNumElements());
+
+  auto FieldDecl = RD->field_begin();
+  for (unsigned I = 0; I < ST->getNumElements(); ++I) {
+    llvm::Value *Extract = B.CreateExtractValue(Source, I);
+    AttrBegin =
+        handleSemanticStore(B, FD, Extract, *FieldDecl, AttrBegin, AttrEnd);
+  }
+
+  return AttrBegin;
 }
 
 std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
@@ -729,6 +897,22 @@ CGHLSLRuntime::handleSemanticLoad(
   ++AttrBegin;
   return std::make_pair(handleScalarSemanticLoad(B, FD, Type, Decl, Attr),
                         AttrBegin);
+}
+
+specific_attr_iterator<HLSLAppliedSemanticAttr>
+CGHLSLRuntime::handleSemanticStore(
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
+    const clang::DeclaratorDecl *Decl,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd) {
+  assert(AttrBegin != AttrEnd);
+  if (Source->getType()->isStructTy())
+    return handleStructSemanticStore(B, FD, Source, Decl, AttrBegin, AttrEnd);
+
+  HLSLAppliedSemanticAttr *Attr = *AttrBegin;
+  ++AttrBegin;
+  handleScalarSemanticStore(B, FD, Source, Decl, Attr);
+  return AttrBegin;
 }
 
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
@@ -762,20 +946,22 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  // FIXME: support struct parameters where semantics are on members.
-  // See: https://github.com/llvm/llvm-project/issues/57874
+  llvm::DenseMap<const DeclaratorDecl *, llvm::Value *> OutputSemantic;
+
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
     if (Param.hasStructRetAttr()) {
-      // FIXME: support output.
-      // See: https://github.com/llvm/llvm-project/issues/57874
       SRetOffset = 1;
-      Args.emplace_back(PoisonValue::get(Param.getType()));
+      llvm::Type *VarType = Param.getParamStructRetType();
+      llvm::Value *Var = B.CreateAlloca(VarType);
+      OutputSemantic.try_emplace(FD, Var);
+      Args.push_back(Var);
       continue;
     }
 
     const ParmVarDecl *PD = FD->getParamDecl(Param.getArgNo() - SRetOffset);
     llvm::Value *SemanticValue = nullptr;
+    // FIXME: support inout/out parameters for semantics.
     if ([[maybe_unused]] HLSLParamModifierAttr *MA =
             PD->getAttr<HLSLParamModifierAttr>()) {
       llvm_unreachable("Not handled yet");
@@ -802,8 +988,20 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
   CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args, OB);
   CI->setCallingConv(Fn->getCallingConv());
-  // FIXME: Handle codegen for return type semantics.
-  // See: https://github.com/llvm/llvm-project/issues/57875
+
+  if (Fn->getReturnType() != CGM.VoidTy)
+    OutputSemantic.try_emplace(FD, CI);
+
+  for (auto &[Decl, Source] : OutputSemantic) {
+    AllocaInst *AI = dyn_cast<AllocaInst>(Source);
+    llvm::Value *SourceValue =
+        AI ? B.CreateLoad(AI->getAllocatedType(), Source) : Source;
+
+    auto AttrBegin = Decl->specific_attr_begin<HLSLAppliedSemanticAttr>();
+    auto AttrEnd = Decl->specific_attr_end<HLSLAppliedSemanticAttr>();
+    handleSemanticStore(B, FD, SourceValue, Decl, AttrBegin, AttrEnd);
+  }
+
   B.CreateRetVoid();
 
   // Add and identify root signature to function, if applicable
@@ -1023,12 +1221,13 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
           ArraySubsExpr->getType()->isHLSLResourceRecordArray()) &&
          "expected resource array subscript expression");
 
-  // Let clang codegen handle local resource array subscripts,
+  // Let clang codegen handle local and static resource array subscripts,
   // or when the subscript references on opaque expression (as part of
   // ArrayInitLoopExpr AST node).
   const VarDecl *ArrayDecl =
       dyn_cast_or_null<VarDecl>(getArrayDecl(ArraySubsExpr));
-  if (!ArrayDecl || !ArrayDecl->hasGlobalStorage())
+  if (!ArrayDecl || !ArrayDecl->hasGlobalStorage() ||
+      ArrayDecl->getStorageClass() == SC_Static)
     return std::nullopt;
 
   // get the resource array type
@@ -1058,7 +1257,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // Find binding info for the resource array. For implicit binding
   // an HLSLResourceBindingAttr should have been added by SemaHLSL.
   ResourceBindingAttrs Binding(ArrayDecl);
-  assert((Binding.hasBinding()) &&
+  assert(Binding.hasBinding() &&
          "resource array must have a binding attribute");
 
   // Find the individual resource type.
@@ -1112,6 +1311,49 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
       return std::nullopt;
   }
   return CGF.MakeAddrLValue(TmpVar, ResultTy, AlignmentSource::Decl);
+}
+
+// If RHSExpr is a global resource array, initialize all of its resources and
+// set them into LHS. Returns false if no copy has been performed and the
+// array copy should be handled by Clang codegen.
+bool CGHLSLRuntime::emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr,
+                                          CodeGenFunction &CGF) {
+  QualType ResultTy = RHSExpr->getType();
+  assert(ResultTy->isHLSLResourceRecordArray() && "expected resource array");
+
+  // Let Clang codegen handle local and static resource array copies.
+  const VarDecl *ArrayDecl = dyn_cast_or_null<VarDecl>(getArrayDecl(RHSExpr));
+  if (!ArrayDecl || !ArrayDecl->hasGlobalStorage() ||
+      ArrayDecl->getStorageClass() == SC_Static)
+    return false;
+
+  // Find binding info for the resource array. For implicit binding
+  // the HLSLResourceBindingAttr should have been added by SemaHLSL.
+  ResourceBindingAttrs Binding(ArrayDecl);
+  assert(Binding.hasBinding() &&
+         "resource array must have a binding attribute");
+
+  // Find the individual resource type.
+  ASTContext &AST = ArrayDecl->getASTContext();
+  QualType ResTy = AST.getBaseElementType(ResultTy);
+  const auto *ResArrayTy = cast<ConstantArrayType>(ResultTy.getTypePtr());
+
+  // Use the provided LHS for the result.
+  AggValueSlot ValueSlot = AggValueSlot::forAddr(
+      LHS.getAddress(), Qualifiers(), AggValueSlot::IsDestructed_t(true),
+      AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsAliased_t(false),
+      AggValueSlot::DoesNotOverlap);
+
+  // Create Value for index and total array size (= range size).
+  int Size = getTotalArraySize(AST, ResArrayTy);
+  llvm::Value *Zero = llvm::ConstantInt::get(CGM.IntTy, 0);
+  llvm::Value *Range = llvm::ConstantInt::get(CGM.IntTy, Size);
+
+  // Initialize individual resources in the array into LHS.
+  std::optional<llvm::Value *> EndIndex = initializeLocalResourceArray(
+      CGF, ResTy->getAsCXXRecordDecl(), ResArrayTy, ValueSlot, Range, Zero,
+      ArrayDecl->getName(), Binding, {Zero}, RHSExpr->getExprLoc());
+  return EndIndex.has_value();
 }
 
 std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(

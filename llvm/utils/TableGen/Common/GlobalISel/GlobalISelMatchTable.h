@@ -267,7 +267,7 @@ extern std::set<LLTCodeGen> KnownTypes;
 
 /// Convert an MVT to an equivalent LLT if possible, or the invalid LLT() for
 /// MVTs that don't map cleanly to an LLT (e.g., iPTR, *any, ...).
-std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT);
+std::optional<LLTCodeGen> MVTToLLT(MVT VT);
 
 using TempTypeIdx = int64_t;
 class LLTCodeGenOrTempType {

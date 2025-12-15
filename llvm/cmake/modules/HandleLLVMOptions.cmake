@@ -1339,6 +1339,9 @@ if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
   if(APPLE)
     append("-Wl,-cache_path_lto,${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+    append("-bplugin_opt:-legacy-thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
+           CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   elseif((UNIX OR MINGW) AND LLVM_USE_LINKER STREQUAL "lld")
     append("-Wl,--thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)

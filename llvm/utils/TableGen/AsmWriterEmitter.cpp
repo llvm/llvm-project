@@ -943,17 +943,21 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
             }
           }
 
-          if (Rec->isSubClassOf("RegisterOperand"))
-            Rec = Rec->getValueAsDef("RegClass");
-          if (Rec->isSubClassOf("RegisterClassLike")) {
+          if (Target.getAsRegClassLike(Rec)) {
             if (!IAP.isOpMapped(ROName)) {
               IAP.addOperand(ROName, MIOpNum, PrintMethodIdx);
-              const Record *R = CGA.ResultOperands[i].getRecord();
-              if (R->isSubClassOf("RegisterOperand"))
-                R = R->getValueAsDef("RegClass");
-              IAP.addCond(std::string(
-                  formatv("AliasPatternCond::K_RegClass, {}::{}RegClassID",
-                          Namespace, R->getName())));
+              const Record *R =
+                  Target.getAsRegClassLike(CGA.ResultOperands[i].getRecord());
+              assert(R && "Not a valid register class?");
+              if (R->isSubClassOf("RegClassByHwMode")) {
+                IAP.addCond(std::string(
+                    formatv("AliasPatternCond::K_RegClassByHwMode, {}::{}",
+                            Namespace, R->getName())));
+              } else {
+                IAP.addCond(std::string(
+                    formatv("AliasPatternCond::K_RegClass, {}::{}RegClassID",
+                            Namespace, R->getName())));
+              }
             } else {
               IAP.addCond(std::string(formatv("AliasPatternCond::K_TiedReg, {}",
                                               IAP.getOpIndex(ROName))));

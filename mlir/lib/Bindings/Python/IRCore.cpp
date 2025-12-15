@@ -1411,9 +1411,10 @@ nb::object PyOperation::create(std::string_view name,
   }
 
   // Construct the operation.
+  PyMlirContext::ErrorCapture errors(location.getContext());
   MlirOperation operation = mlirOperationCreate(&state);
   if (!operation.ptr)
-    throw nb::value_error("Operation creation failed");
+    throw MLIRError("Operation creation failed", errors.take());
   PyOperationRef created =
       PyOperation::createDetached(location.getContext(), operation);
   maybeInsertOperation(created, maybeIp);
@@ -1518,12 +1519,12 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_prop_ro(
         "owner",
-        [](PyOpResult &self) -> nb::typed<nb::object, PyOperation> {
+        [](PyOpResult &self) -> nb::typed<nb::object, PyOpView> {
           assert(mlirOperationEqual(self.getParentOperation()->get(),
                                     mlirOpResultGetOwner(self.get())) &&
                  "expected the owner of the value in Python to match that in "
                  "the IR");
-          return self.getParentOperation().getObject();
+          return self.getParentOperation()->createOpView();
         },
         "Returns the operation that produces this result.");
     c.def_prop_ro(
@@ -2347,6 +2348,12 @@ public:
           return mlirBlockArgumentSetType(self.get(), type);
         },
         nb::arg("type"), "Sets the type of this block argument.");
+    c.def(
+        "set_location",
+        [](PyBlockArgument &self, PyLocation loc) {
+          return mlirBlockArgumentSetLocation(self.get(), loc);
+        },
+        nb::arg("loc"), "Sets the location of this block argument.");
   }
 };
 
@@ -3932,6 +3939,14 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return PyOpSuccessors(self.getOperation().getRef());
           },
           "Returns the list of Operation successors.")
+      .def(
+          "replace_uses_of_with",
+          [](PyOperation &self, PyValue &of, PyValue &with) {
+            mlirOperationReplaceUsesOfWith(self.get(), of.get(), with.get());
+          },
+          "of"_a, "with_"_a,
+          "Replaces uses of the 'of' value with the 'with' value inside the "
+          "operation.")
       .def("_set_invalid", &PyOperation::setInvalid,
            "Invalidate the operation.");
 
@@ -4631,7 +4646,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           kDumpDocstring)
       .def_prop_ro(
           "owner",
-          [](PyValue &self) -> nb::object {
+          [](PyValue &self) -> nb::typed<nb::object, PyOpView> {
             MlirValue v = self.get();
             if (mlirValueIsAOpResult(v)) {
               assert(mlirOperationEqual(self.getParentOperation()->get(),
@@ -4639,7 +4654,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                      "expected the owner of the value in Python to match "
                      "that in "
                      "the IR");
-              return self.getParentOperation().getObject();
+              return self.getParentOperation()->createOpView();
             }
 
             if (mlirValueIsABlockArgument(v)) {

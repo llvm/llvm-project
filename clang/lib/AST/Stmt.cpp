@@ -1499,3 +1499,19 @@ const Stmt *LoopControlStmt::getNamedLoopOrSwitch() const {
     return nullptr;
   return getLabelDecl()->getStmt()->getInnermostLabeledStmt();
 }
+
+DeferStmt::DeferStmt(EmptyShell Empty) : Stmt(DeferStmtClass, Empty) {}
+DeferStmt::DeferStmt(SourceLocation DeferLoc, Stmt *Body)
+    : Stmt(DeferStmtClass) {
+  setDeferLoc(DeferLoc);
+  setBody(Body);
+}
+
+DeferStmt *DeferStmt::CreateEmpty(ASTContext &Context, EmptyShell Empty) {
+  return new (Context) DeferStmt(Empty);
+}
+
+DeferStmt *DeferStmt::Create(ASTContext &Context, SourceLocation DeferLoc,
+                             Stmt *Body) {
+  return new (Context) DeferStmt(DeferLoc, Body);
+}
