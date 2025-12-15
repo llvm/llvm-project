@@ -31,7 +31,7 @@ Before running the script, ensure you have the following set up:
 To run the script, navigate to your local `llvm-project` repository, check out the branch containing your stack of commits, and run:
 
 ```bash
-python3 llvm_push_pr.py
+python3 git-llvm-push
 ```
 
 Assuming your remotes are configured with `upstream` pointing to `https://github.com/llvm/llvm-project.git` and `origin` pointing to your personal fork:
@@ -61,7 +61,7 @@ Regardless of success or failure, the script performs the following cleanup step
 To see what actions the script *would* perform without actually creating branches, pushing code, or opening pull requests, use the `--dry-run` flag. 
 
 ```bash
-python3 llvm_push_pr.py --dry-run
+python3 git-llvm-push --dry-run
 ```
 
 ### Creating Draft Pull Requests
@@ -69,7 +69,7 @@ python3 llvm_push_pr.py --dry-run
 If you want to create pull requests but not have them ready for review immediately, use the `--draft` flag.
 
 ```bash
-python3 llvm_push_pr.py --draft
+python3 git-llvm-push --draft
 ```
 
 ### Enabling Auto-Merge
@@ -78,7 +78,7 @@ You can use the `--auto-merge` flag to create a pull request and enable the "aut
 This is only supported for a single commit, as the script would need to block until your first PR landed to move onto the next, or otherwise be too complex for a simple script.
 
 ```bash
-python3 llvm_push_pr.py --auto-merge
+python3 git-llvm-push --auto-merge
 ```
 
 ### Creating PRs Without Merging
@@ -87,7 +87,7 @@ If you only want to create the pull requests and then merge them manually later,
 Currently, this is only supported for single-commit branches.
 
 ```bash
-python3 llvm_push_pr.py --no-merge
+python3 git-llvm-push --no-merge
 ```
 
 ### Working with alternate remotes
@@ -95,8 +95,17 @@ python3 llvm_push_pr.py --no-merge
 If you have cloned the main `llvm/llvm-project.git` repository directly, your `origin` remote will point to upstream. If your personal fork is tracked under a different remote name (e.g., `my-fork`), you will need to specify both the `--upstream-remote` and `--remote` flags:
 
 ```bash
-python3 llvm_push_pr.py --upstream-remote origin --remote my-fork
+python3 git-llvm-push --upstream-remote origin --remote my-fork
 ```
+
+## Alternate usage via `git llvm-push`
+
+If the script is available on your PATH, you can use it as a git subcommand, similar to `git clang-format`. 
+
+```bash
+git llvm-push [FLAGS] ...
+```
+
 
 ## Auto-Detection Features
 
