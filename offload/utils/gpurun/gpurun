@@ -244,6 +244,7 @@ def helpExit(exCode):
     print("  -nm       : use numactl OMPI_COMM_WORLD_LOCAL_RANK")
     print("  -topo     : display the topology and exit")
     print("  -rocmsmi  : force use of rocm-smi rather than amd-smi")
+    print("  -amdsmi   : force use of amd-smi rather than rocm-smi")
     print("  --version : Print version of gpurun and exit")
     print("")
     sys.exit(exCode)
@@ -264,6 +265,7 @@ def processArgs():
     use_nm=False
     use_md=False
     use_rocmsmi=False
+    use_amdsmi=False
     md_count=1
 
     dump_topo=False
@@ -284,7 +286,8 @@ def processArgs():
       elif sys.argv[sysPos] == "-topo":  dump_topo=True; break
       elif sys.argv[sysPos] == "-nr":  use_nr=True
       elif sys.argv[sysPos] == "-nm":  use_nm=True
-      elif sys.argv[sysPos] == "-rocmsmi":  use_rocmsmi=True
+      elif sys.argv[sysPos] == "-rocmsmi":  use_rocmsmi=True; use_amdsmi=False
+      elif sys.argv[sysPos] == "-amdsmi":  use_amdsmi=True; use_rocmsmi=False
       elif sys.argv[sysPos] == "-md":
           use_md=True
           if sys.argv[sysPos+1].isdigit():
@@ -295,7 +298,7 @@ def processArgs():
       else: break
       sysPos += 1
 
-    return sysPos, debug_numa, use_taskset, use_numactl, use_nobind, dry_run, use_md, md_count, use_nr, use_nm, dump_topo, use_rocmsmi
+    return sysPos, debug_numa, use_taskset, use_numactl, use_nobind, dry_run, use_md, md_count, use_nr, use_nm, dump_topo, use_rocmsmi, use_amdsmi
 
 def dumpTopology(affinity_data, node_data, hip_uuid, numa_cpus):
     numaStat="<unknown>"
@@ -303,20 +306,22 @@ def dumpTopology(affinity_data, node_data, hip_uuid, numa_cpus):
     with open('/proc/sys/kernel/numa_balancing', 'r') as f: numaStat = f.read()
     with open('/sys/kernel/mm/transparent_hugepage/enabled', 'r') as f: pageSize = f.read()
     Tb="\t"
-    print("Topology     Numa: "+numaStat.strip()+"   PageSize: "+pageSize.strip()+"\n\nGPU     Node  Affinity       UUID               Cores")
+    print("Topology     numa_balancing: "+numaStat.strip()+"   PageSize: "+pageSize.strip()+"\n\nGPU     Node  Affinity       UUID               Cores")
     for i in range(len(node_data)):
       print(i, Tb, node_data[i], Tb, affinity_data[i], Tb, hip_uuid[i], Tb, numa_cpus[affinity_data[i]])
     sys.exit(0)
 
 if __name__ == "__main__":
-    sysPos, debug_numa, use_taskset, use_numactl, use_nobind, dry_run, use_md, md_count, use_nr, use_nm, dump_topo, use_rocmsmi = processArgs()
+    sysPos, debug_numa, use_taskset, use_numactl, use_nobind, dry_run, use_md, md_count, use_nr, use_nm, dump_topo, use_rocmsmi, use_amdsmi = processArgs()
     #check for numactl and taskset
     has_numactl = check_numactl_exists()
     has_taskset = check_taskset_exists()
 
     #get topo info
     if use_taskset or dump_topo: numa_cpus = parse_lscpu_numa()
-    if noAmdSmi or use_rocmsmi:
+    if use_amdsmi:
+       affinity_data, node_data, hip_uuid = get_amd_smi_static_numa()
+    elif noAmdSmi or use_rocmsmi:
        affinity_data, node_data, hip_uuid = parse_rocm_smi_toponuma()
     else:
        affinity_data, node_data, hip_uuid = get_amd_smi_static_numa()
