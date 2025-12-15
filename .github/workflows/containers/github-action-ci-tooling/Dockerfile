@@ -94,6 +94,10 @@ COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/cla
 COPY clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py ${LLVM_SYSROOT}/bin/clang-tidy-diff.py
 
 # Install dependencies for 'pr-code-lint.yml' job
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y python3-doc8 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 COPY llvm/utils/git/requirements_linting.txt requirements_linting.txt
 RUN pip install -r requirements_linting.txt --break-system-packages && \
     rm requirements_linting.txt
