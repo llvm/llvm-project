@@ -316,6 +316,18 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
   CONV_OP_SPECIALIZER(linalg::PoolingNhwcSumOp);
   CONV_OP_SPECIALIZER(linalg::PoolingNhwcMaxUnsignedOp);
   CONV_OP_SPECIALIZER(linalg::PoolingNhwcMinUnsignedOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNchwSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNchwMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNcwSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMaxUnsignedOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNcwMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMinOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMinUnsignedOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNdhwcSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNdhwcMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNdhwcMinOp);
 #undef CONV_OP_SPECIALIZER
   return failure();
 }
