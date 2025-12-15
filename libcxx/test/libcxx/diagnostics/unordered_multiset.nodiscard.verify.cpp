@@ -28,8 +28,8 @@ struct TransparentKeyHash {
 };
 
 void test() {
-  std::unordered_set<int> us;
-  const std::unordered_set<int> cus;
+  std::unordered_multiset<int> us;
+  const std::unordered_multiset<int> cus;
 
   us.get_allocator(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
@@ -57,8 +57,9 @@ void test() {
   us.find(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cus.find(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 20
-  std::unordered_set<StoredKey, TransparentKeyHash, std::equal_to<>> tus;
-  const std::unordered_set<StoredKey, TransparentKeyHash, std::equal_to<>> ctus;
+  std::unordered_multiset<StoredKey, TransparentKeyHash, std::equal_to<>> tus;
+  const std::unordered_multiset<StoredKey, TransparentKeyHash, std::equal_to<>> ctus;
+
   TransparentKey tkey;
 
   tus.find(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}

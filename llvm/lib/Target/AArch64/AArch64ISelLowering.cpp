@@ -19598,6 +19598,19 @@ static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue performBICiCombine(SDNode *N, SelectionDAG &DAG,
+                                  TargetLowering::DAGCombinerInfo &DCI) {
+  APInt DemandedBits =
+      APInt::getAllOnes(N->getValueType(0).getScalarSizeInBits());
+  APInt DemandedElts =
+      APInt::getAllOnes(N->getValueType(0).getVectorNumElements());
+
+  if (DAG.getTargetLoweringInfo().SimplifyDemandedBits(
+          SDValue(N, 0), DemandedBits, DemandedElts, DCI))
+    return SDValue(N, 0);
+  return SDValue();
+}
+
 static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
@@ -28399,18 +28412,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performFlagSettingCombine(N, DCI, ISD::ADD);
   case AArch64ISD::SUBS:
     return performFlagSettingCombine(N, DCI, ISD::SUB);
-  case AArch64ISD::BICi: {
-    APInt DemandedBits =
-        APInt::getAllOnes(N->getValueType(0).getScalarSizeInBits());
-    APInt DemandedElts =
-        APInt::getAllOnes(N->getValueType(0).getVectorNumElements());
-
-    if (DAG.getTargetLoweringInfo().SimplifyDemandedBits(
-            SDValue(N, 0), DemandedBits, DemandedElts, DCI))
-      return SDValue();
-
-    break;
-  }
+  case AArch64ISD::BICi:
+    return performBICiCombine(N, DAG, DCI);
   case ISD::XOR:
     return performXorCombine(N, DAG, DCI, Subtarget);
   case ISD::MUL:
