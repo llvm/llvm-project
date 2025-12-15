@@ -132,9 +132,11 @@ std::vector<TypeHierarchyItem> getTypeHierarchy(
     const SymbolIndex *Index = nullptr, PathRef TUPath = PathRef{});
 
 /// Returns direct parents of a TypeHierarchyItem using SymbolIDs stored inside
-/// the item.
+/// the item or using the AST.
 std::optional<std::vector<TypeHierarchyItem>>
-superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index);
+superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index,
+           const ParsedAST &AST);
+
 /// Returns direct children of a TypeHierarchyItem.
 std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,
                                         const SymbolIndex *Index,

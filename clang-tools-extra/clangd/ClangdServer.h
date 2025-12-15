@@ -283,7 +283,7 @@ public:
                      TypeHierarchyDirection Direction,
                      Callback<std::vector<TypeHierarchyItem>> CB);
   /// Get direct parents of a type hierarchy item.
-  void superTypes(const TypeHierarchyItem &Item,
+  void superTypes(PathRef File, const TypeHierarchyItem &Item,
                   Callback<std::optional<std::vector<TypeHierarchyItem>>> CB);
   /// Get direct children of a type hierarchy item.
   void subTypes(PathRef File, const TypeHierarchyItem &Item,
@@ -299,8 +299,7 @@ public:
                             Callback<std::vector<CallHierarchyItem>> CB);
 
   /// Resolve incoming calls for a given call hierarchy item.
-  void incomingCalls(PathRef File,
-                     const CallHierarchyItem &Item,
+  void incomingCalls(PathRef File, const CallHierarchyItem &Item,
                      Callback<std::vector<CallHierarchyIncomingCall>> CB);
 
   /// Resolve outgoing calls for a given call hierarchy item.

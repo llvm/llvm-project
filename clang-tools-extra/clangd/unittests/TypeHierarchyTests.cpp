@@ -809,7 +809,7 @@ struct Chil^d : Parent {};
                                  TypeHierarchyDirection::Children, Index.get(),
                                  testPath(TU.Filename));
   ASSERT_THAT(Result, SizeIs(1));
-  auto Parents = superTypes(Result.front(), Index.get());
+  auto Parents = superTypes(Result.front(), Index.get(), AST);
 
   EXPECT_THAT(Parents, Optional(UnorderedElementsAre(
                            AllOf(withName("Parent"),
