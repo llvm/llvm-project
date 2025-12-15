@@ -88,6 +88,10 @@ NoZeroDivCheck("mno-check-zero-division", cl::Hidden,
 
 extern cl::opt<bool> EmitJalrReloc;
 
+static cl::opt<bool> UseMipsTailCalls("mips-tail-calls", cl::Hidden,
+                                      cl::desc("MIPS: permit tail calls."),
+                                      cl::init(false));
+
 static const MCPhysReg Mips64DPRegs[8] = {
   Mips::D12_64, Mips::D13_64, Mips::D14_64, Mips::D15_64,
   Mips::D16_64, Mips::D17_64, Mips::D18_64, Mips::D19_64
@@ -3422,13 +3426,18 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   if (IsTailCall) {
-    bool Eligible = isEligibleForTailCallOptimization(
-        CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>(), IsMustTail);
-    if (!Eligible || !CalleeIsLocal) {
+    if (!UseMipsTailCalls) {
       IsTailCall = false;
-      if (IsMustTail)
-        report_fatal_error("failed to perform tail call elimination on a call "
-                           "site marked musttail");
+    } else {
+      bool Eligible = isEligibleForTailCallOptimization(
+          CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>());
+      if (!Eligible || !CalleeIsLocal) {
+        IsTailCall = false;
+        if (IsMustTail)
+          report_fatal_error(
+              "failed to perform tail call elimination on a call "
+              "site marked musttail");
+      }
     }
   }
 

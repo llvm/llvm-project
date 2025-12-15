@@ -63,10 +63,9 @@ class TargetRegisterClass;
     const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 
   private:
-    bool isEligibleForTailCallOptimization(const CCState &CCInfo,
-                                           unsigned NextStackOffset,
-                                           const MipsFunctionInfo &FI,
-                                           bool IsMustTail) const override;
+    bool isEligibleForTailCallOptimization(
+      const CCState &CCInfo, unsigned NextStackOffset,
+      const MipsFunctionInfo &FI) const override;
 
     void
     getOpndList(SmallVectorImpl<SDValue> &Ops,

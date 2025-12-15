@@ -51,10 +51,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips-isel"
 
-static cl::opt<bool>
-UseMipsTailCalls("mips-tail-calls", cl::Hidden,
-                    cl::desc("MIPS: permit tail calls."), cl::init(false));
-
 static cl::opt<bool> NoDPLoadStore("mno-ldc1-sdc1", cl::init(false),
                                    cl::desc("Expand double precision loads and "
                                             "stores to their single precision "
@@ -1179,11 +1175,8 @@ MipsSETargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 }
 
 bool MipsSETargetLowering::isEligibleForTailCallOptimization(
-    const CCState &CCInfo, unsigned NextStackOffset, const MipsFunctionInfo &FI,
-    bool IsMustTail) const {
-  if (!UseMipsTailCalls && !IsMustTail)
-    return false;
-
+    const CCState &CCInfo, unsigned NextStackOffset,
+    const MipsFunctionInfo &FI) const {
   // Exception has to be cleared with eret.
   if (FI.isISR())
     return false;
@@ -1192,8 +1185,7 @@ bool MipsSETargetLowering::isEligibleForTailCallOptimization(
   if (CCInfo.getInRegsParamsCount() > 0 || FI.hasByvalArg())
     return false;
 
-  // Return true if the callee's argument area is no larger than the
-  // caller's.
+  // Return true if the callee's argument area is no larger than the caller's.
   return NextStackOffset <= FI.getIncomingArgSize();
 }
 

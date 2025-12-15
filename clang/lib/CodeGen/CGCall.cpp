@@ -5997,18 +5997,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       if (IsMIPS) {
         if (HasMips16)
           CGM.getDiags().Report(Loc, diag::err_mips_impossible_musttail) << 0;
-        else if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-          if (!FD->isDefined()) {
-            CGM.addUndefinedGlobalForTailCall({FD, Loc});
-          } else {
-            llvm::GlobalValue::LinkageTypes Linkage =
-                CGM.getFunctionLinkage(GlobalDecl(FD));
-            if (!llvm::GlobalValue::isLocalLinkage(Linkage) &&
-                FD->isExternallyVisible())
-              CGM.getDiags().Report(Loc, diag::err_mips_impossible_musttail)
-                  << 1;
-          }
-        }
+        else if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
+          CGM.addUndefinedGlobalForTailCall({FD, Loc});
       }
       Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
     }

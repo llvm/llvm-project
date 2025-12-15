@@ -1577,15 +1577,27 @@ void CodeGenModule::Release() {
     } else if (getTriple().isMIPS()) {
       for (auto &I : MustTailCallUndefinedGlobals) {
         const FunctionDecl *FD = I.first;
-        const FunctionDecl *Definition = FD->getDefinition();
-        if (!Definition) {
-          getDiags().Report(I.second, diag::err_mips_impossible_musttail) << 1;
+        StringRef MangledName = getMangledName(GlobalDecl(FD));
+        llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+
+        if (!Entry) {
+          Visibility Vis = FD->getVisibility();
+          if (Vis == DefaultVisibility)
+            getDiags().Report(I.second, diag::err_mips_impossible_musttail) << 1;
           continue;
         }
-        llvm::GlobalValue::LinkageTypes Linkage =
-            getFunctionLinkage(GlobalDecl(Definition));
-        if (!llvm::GlobalValue::isLocalLinkage(Linkage) &&
-            Definition->isExternallyVisible())
+
+        bool CalleeIsLocal;
+        if (Entry->isDeclarationForLinker()) {
+          bool HasLocalLinkage = Entry->hasLocalLinkage();
+          bool HasHiddenVisibility =
+              Entry->hasHiddenVisibility() || Entry->hasProtectedVisibility();
+          CalleeIsLocal = HasLocalLinkage || HasHiddenVisibility;
+        } else {
+          CalleeIsLocal = Entry->isDSOLocal();
+        }
+
+        if (!CalleeIsLocal)
           getDiags().Report(I.second, diag::err_mips_impossible_musttail) << 1;
       }
     }

@@ -595,10 +595,10 @@ class TargetRegisterClass;
 
     /// isEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization.
-    virtual bool isEligibleForTailCallOptimization(const CCState &CCInfo,
-                                                   unsigned NextStackOffset,
-                                                   const MipsFunctionInfo &FI,
-                                                   bool IsMustTail) const = 0;
+    virtual bool
+    isEligibleForTailCallOptimization(const CCState &CCInfo,
+                                      unsigned NextStackOffset,
+                                      const MipsFunctionInfo &FI) const = 0;
 
     /// copyByValArg - Copy argument registers which were used to pass a byval
     /// argument to the stack. Create a stack frame object for the byval
