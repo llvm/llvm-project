@@ -1,6 +1,5 @@
 foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
   get_target_flags_for_arch(${arch} TARGET_CFLAGS)
-  set(FLAGS \"${TARGET_CFLAGS} -fuse-fd=${LLVM_TOOLS_BINARY_DIR}/lld\")
 
   set(RTSanitizerCommonSymbolizerInternalDir
       "${CMAKE_CURRENT_BINARY_DIR}/RTSanitizerCommonSymbolizerInternal.${arch}")
@@ -13,8 +12,9 @@ foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
                              sanitizer_symbolize.cpp
                              scripts/build_symbolizer.sh
                      WORKING_DIRECTORY ${RTSanitizerCommonSymbolizerInternalDir}
-                     COMMAND FLAGS=${FLAGS}
+                     COMMAND FLAGS=${TARGET_CFLAGS}
                              CLANG=${LLVM_TOOLS_BINARY_DIR}/clang
+                             USE_LD=${LLVM_TOOLS_BINARY_DIR}/lld
                              ${CMAKE_CURRENT_SOURCE_DIR}/scripts/build_symbolizer.sh
                              ${CMAKE_CURRENT_BINARY_DIR}/RTSanitizerCommonSymbolizerInternal.${arch}.o
                      USES_TERMINAL)
