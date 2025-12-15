@@ -21,28 +21,23 @@ namespace orc_rt {
 std::string ExceptionError::toString() const noexcept {
   std::string Result;
   try {
+    std::rethrow_exception(E);
+  } catch (std::exception &SE) {
+    Result = SE.what();
+    E = std::current_exception();
+  } catch (std::error_code &EC) {
     try {
-      std::rethrow_exception(E);
-    } catch (std::exception &E) {
-      Result = E.what();
-      throw;
-    } catch (std::error_code &EC) {
-      try {
-        // Technically 'message' itself can throw.
-        Result = EC.message();
-      } catch (...) {
-        Result = "std::error_code (.message() call failed)";
-        throw EC;
-      }
-      throw;
-    } catch (std::string &ErrMsg) {
-      Result = ErrMsg;
-      throw;
+      // Technically 'message' itself can throw.
+      Result = EC.message();
     } catch (...) {
-      Result = "c++ exception of unknown type";
-      throw;
+      Result = "std::error_code (.message() call failed)";
     }
+    E = std::current_exception();
+  } catch (std::string &ErrMsg) {
+    Result = ErrMsg;
+    E = std::current_exception();
   } catch (...) {
+    Result = "C++ exception of unknown type";
     E = std::current_exception();
   }
   return Result;

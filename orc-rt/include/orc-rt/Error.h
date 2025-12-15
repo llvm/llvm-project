@@ -16,10 +16,13 @@
 
 #include <cassert>
 #include <cstdlib>
-#include <exception>
 #include <memory>
 #include <string>
 #include <type_traits>
+
+#if ORC_RT_ENABLE_EXCEPTIONS
+#include <exception>
+#endif // ORC_RT_ENABLE_EXCEPTIONS
 
 namespace orc_rt {
 

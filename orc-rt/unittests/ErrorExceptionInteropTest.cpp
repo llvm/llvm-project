@@ -14,6 +14,8 @@
 #include "orc-rt/Error.h"
 #include "gtest/gtest.h"
 
+#include <system_error>
+
 using namespace orc_rt;
 
 namespace {
@@ -166,6 +168,46 @@ TEST(ErrorExceptionInteropTest, ThrowErrorAndCatchAsException) {
       ADD_FAILURE() << "Failed to downcase error to dynamic type";
     } catch (...) {
       ADD_FAILURE() << "Caught unexpected error type";
+    }
+  });
+}
+
+TEST(ErrorExceptionInteropTest, ErrorExceptionToString) {
+  /// Check that exceptions can be converted to Strings as exepcted.
+  EXCEPTION_TEST({
+
+    {
+      // std::exception should be converted by calling `.what()`;
+      class MyException : public std::exception {
+      public:
+        ~MyException() override {}
+        const char *what() const noexcept override { return "what"; }
+      };
+
+      EXPECT_EQ(toString(runCapturingExceptions([]() { throw MyException(); })),
+                "what");
+    }
+
+    {
+      // std::error_code should be converted by calling `.message()`.
+      auto EC = std::make_error_code(std::errc::cross_device_link);
+      std::string ECErrMsg = EC.message();
+      EXPECT_EQ(toString(runCapturingExceptions([&]() { throw EC; })),
+                ECErrMsg);
+    }
+
+    {
+      // std::string should be converted by copying its value.
+      std::string ErrMsg = "foo";
+      EXPECT_EQ(toString(runCapturingExceptions([&]() { throw ErrMsg; })),
+                ErrMsg);
+    }
+
+    {
+      // Check that exceptions of other types produce the expected
+      // "unrecognized type" error message:
+      EXPECT_EQ(toString(runCapturingExceptions([]() { throw 42; })),
+                "C++ exception of unknown type");
     }
   });
 }
