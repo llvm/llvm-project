@@ -665,9 +665,20 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
       Offset -= STL->getElementOffset(Element);
       CurType = ST->getElementType(Element);
       OnLiteralIndexing(CurType, Element);
+    } else if (auto *VT = dyn_cast<FixedVectorType>(CurType)) {
+      Type *EltTy = VT->getElementType();
+      TypeSize EltSizeBits = DL.getTypeSizeInBits(EltTy);
+      assert(EltSizeBits % 8 == 0 &&
+             "Element type size in bits must be a multiple of 8.");
+      uint32_t EltTypeSize = EltSizeBits / 8;
+      assert(Offset < VT->getNumElements() * EltTypeSize);
+      uint64_t Index = Offset / EltTypeSize;
+      Offset -= Index * EltTypeSize;
+      CurType = EltTy;
+      OnLiteralIndexing(CurType, Index);
+
     } else {
-      // Vector type indexing should not use GEP.
-      // So if we have an index left, something is wrong. Giving up.
+      // Unknown composite kind; give up.
       return true;
     }
   } while (Offset > 0);
