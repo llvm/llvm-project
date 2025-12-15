@@ -27,7 +27,7 @@ body:             |
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[SUB]], [[C1]]
     ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C2]]
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND3]], [[AND2]](s64)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL]], [[LSHR]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[SHL]], [[LSHR]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %2:_(s64) = COPY $x10
@@ -61,7 +61,7 @@ body:             |
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[SUB]], [[C1]]
     ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C2]]
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND3]], [[AND2]](s64)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL]], [[LSHR]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[SHL]], [[LSHR]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %2:_(s64) = COPY $x10
@@ -93,7 +93,7 @@ body:             |
     ; RV64I-NEXT: [[SLLW:%[0-9]+]]:_(s64) = G_SLLW [[COPY]], [[AND]]
     ; RV64I-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[SEXT_INREG]], [[C1]]
     ; RV64I-NEXT: [[SRLW:%[0-9]+]]:_(s64) = G_SRLW [[COPY]], [[AND1]]
-    ; RV64I-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[SLLW]], [[SRLW]]
+    ; RV64I-NEXT: [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[SLLW]], [[SRLW]]
     ; RV64I-NEXT: $x10 = COPY [[OR]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
@@ -133,7 +133,7 @@ body:             |
     ; RV64I-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[AND]](s64)
     ; RV64I-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[SUB]], [[C1]]
     ; RV64I-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[AND1]](s64)
-    ; RV64I-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL]], [[LSHR]]
+    ; RV64I-NEXT: [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[SHL]], [[LSHR]]
     ; RV64I-NEXT: $x10 = COPY [[OR]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
@@ -173,7 +173,7 @@ body:             |
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND2]], [[AND1]](s64)
     ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[SUB]], [[C1]]
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[AND3]](s64)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR]], [[SHL]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[LSHR]], [[SHL]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %2:_(s64) = COPY $x10
@@ -207,7 +207,7 @@ body:             |
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND2]], [[AND1]](s64)
     ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[SUB]], [[C1]]
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[AND3]](s64)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR]], [[SHL]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[LSHR]], [[SHL]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %2:_(s64) = COPY $x10
@@ -239,7 +239,7 @@ body:             |
     ; RV64I-NEXT: [[SRLW:%[0-9]+]]:_(s64) = G_SRLW [[COPY]], [[AND]]
     ; RV64I-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[SEXT_INREG]], [[C1]]
     ; RV64I-NEXT: [[SLLW:%[0-9]+]]:_(s64) = G_SLLW [[COPY]], [[AND1]]
-    ; RV64I-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[SRLW]], [[SLLW]]
+    ; RV64I-NEXT: [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[SRLW]], [[SLLW]]
     ; RV64I-NEXT: $x10 = COPY [[OR]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
@@ -279,7 +279,7 @@ body:             |
     ; RV64I-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[AND]](s64)
     ; RV64I-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[SUB]], [[C1]]
     ; RV64I-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[AND1]](s64)
-    ; RV64I-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR]], [[SHL]]
+    ; RV64I-NEXT: [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[LSHR]], [[SHL]]
     ; RV64I-NEXT: $x10 = COPY [[OR]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
