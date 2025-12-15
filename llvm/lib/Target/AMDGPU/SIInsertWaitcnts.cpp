@@ -2899,7 +2899,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
       MachineLoop *ML = Worklist.pop_back_val();
       auto BeginIt = ML->getSubLoops().begin();
       auto EndIt = ML->getSubLoops().end();
-      if (BeginIt == EndIt) // innermost loop only
+      if (BeginIt == EndIt) // Innermost loop only.
         analyzeSingleBBLoopDSLoads(*ML);
       else
         Worklist.append(BeginIt, EndIt);
