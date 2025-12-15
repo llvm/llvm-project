@@ -356,18 +356,14 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
 
 void SystemZHLASMAsmStreamer::finishImpl() {
   for (auto &Symbol : getAssembler().symbols()) {
-    if (Symbol.isTemporary())
+    if (Symbol.isTemporary() || !Symbol.isRegistered() || Symbol.isDefined())
       continue;
-    if (Symbol.isRegistered()) {
-      if (Symbol.isDefined())
-        continue;
-      auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
-      OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
-      EmitEOL();
-      emitXATTR(OS, Sym.getName(), Sym.getLinkage(), Sym.getCodeData(),
-                Sym.getBindingScope());
-      EmitEOL();
-    }
+    auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
+    OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
+    EmitEOL();
+    emitXATTR(OS, Sym.getName(), Sym.getLinkage(), Sym.getCodeData(),
+              Sym.getBindingScope());
+    EmitEOL();
   }
 
   // Finish the assembly output.
