@@ -8,7 +8,7 @@
 
 void a() {}
 
-// CIR: cir.func dso_local @_Z1av()
+// CIR: cir.func no_inline dso_local @_Z1av()
 // LLVM: define dso_local void @_Z1av()
 // OGCG: define dso_local void @_Z1av()
 
@@ -18,12 +18,12 @@ extern void b();
 // OGCG: declare void @_Z1bv()
 
 static void c() {}
-// CIR: cir.func internal private dso_local @_ZL1cv()
+// CIR: cir.func no_inline internal private dso_local @_ZL1cv()
 // LLVM: define internal void @_ZL1cv()
 // OGCG: define internal void @_ZL1cv()
 
 inline void d() {}
-// CIR: cir.func comdat linkonce_odr @_Z1dv()
+// CIR: cir.func {{.*}} comdat linkonce_odr @_Z1dv()
 // LLVM: define linkonce_odr void @_Z1dv()
 // OGCG: define linkonce_odr void @_Z1dv(){{.*}} comdat
 
@@ -31,7 +31,7 @@ namespace {
   void e() {}
 }
 
-// CIR: cir.func internal private dso_local @_ZN12_GLOBAL__N_11eEv()
+// CIR: cir.func {{.*}} internal private dso_local @_ZN12_GLOBAL__N_11eEv()
 // LLVM: define internal void @_ZN12_GLOBAL__N_11eEv()
 // OGCG: define internal void @_ZN12_GLOBAL__N_11eEv()
 

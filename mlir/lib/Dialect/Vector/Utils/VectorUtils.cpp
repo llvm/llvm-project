@@ -91,7 +91,7 @@ mlir::vector::isTranspose2DSlice(vector::TransposeOp op) {
 
   // Check whether the two source vector dimensions that are greater than one
   // must be transposed with each other so that we can apply one of the 2-D
-  // transpose pattens. Otherwise, these patterns are not applicable.
+  // transpose patterns. Otherwise, these patterns are not applicable.
   if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1],
                                   op.getPermutation()))
     return failure();
@@ -322,46 +322,61 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      std::optional<Value> padValue,
                                      bool useInBoundsInsteadOfMasking,
                                      ArrayRef<bool> inputScalableVecDims) {
-  assert(!llvm::is_contained(inputVectorSizes, ShapedType::kDynamic) &&
+  VectorType vecToReadTy = VectorType::get(
+      inputVectorSizes, cast<ShapedType>(source.getType()).getElementType(),
+      inputScalableVecDims);
+
+  return createReadOrMaskedRead(builder, loc, source, vecToReadTy, padValue,
+                                useInBoundsInsteadOfMasking);
+}
+
+Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
+                                     Value source,
+                                     const VectorType &vecToReadTy,
+                                     std::optional<Value> padValue,
+                                     bool useInBoundsInsteadOfMasking) {
+  assert(!llvm::is_contained(vecToReadTy.getScalableDims(),
+                             ShapedType::kDynamic) &&
          "invalid input vector sizes");
   auto sourceShapedType = cast<ShapedType>(source.getType());
   auto sourceShape = sourceShapedType.getShape();
-  assert(sourceShape.size() == inputVectorSizes.size() &&
+
+  int64_t vecToReadRank = vecToReadTy.getRank();
+  auto vecToReadShape = vecToReadTy.getShape();
+
+  assert(sourceShape.size() == static_cast<size_t>(vecToReadRank) &&
          "expected same ranks.");
-  auto vectorType =
-      VectorType::get(inputVectorSizes, sourceShapedType.getElementType(),
-                      inputScalableVecDims);
   assert((!padValue.has_value() ||
           padValue.value().getType() == sourceShapedType.getElementType()) &&
          "expected same pad element type to match source element type");
-  int64_t readRank = inputVectorSizes.size();
+
   auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
-  SmallVector<bool> inBoundsVal(readRank, true);
+  SmallVector<bool> inBoundsVal(vecToReadRank, true);
 
   if (useInBoundsInsteadOfMasking) {
     // Update the inBounds attribute.
     // FIXME: This computation is too weak - it ignores the read indices.
-    for (unsigned i = 0; i < readRank; i++)
-      inBoundsVal[i] = (sourceShape[i] == inputVectorSizes[i]) &&
+    for (unsigned i = 0; i < vecToReadRank; i++)
+      inBoundsVal[i] = (sourceShape[i] == vecToReadShape[i]) &&
                        ShapedType::isStatic(sourceShape[i]);
   }
   auto transferReadOp = vector::TransferReadOp::create(
       builder, loc,
-      /*vectorType=*/vectorType,
+      /*vectorType=*/vecToReadTy,
       /*source=*/source,
-      /*indices=*/SmallVector<Value>(readRank, zero),
+      /*indices=*/SmallVector<Value>(vecToReadRank, zero),
       /*padding=*/padValue,
       /*inBounds=*/inBoundsVal);
 
-  if (llvm::equal(inputVectorSizes, sourceShape) || useInBoundsInsteadOfMasking)
+  if (llvm::equal(vecToReadTy.getShape(), sourceShape) ||
+      useInBoundsInsteadOfMasking)
     return transferReadOp;
   SmallVector<OpFoldResult> mixedSourceDims =
       isa<MemRefType>(source.getType())
           ? memref::getMixedSizes(builder, loc, source)
           : tensor::getMixedSizes(builder, loc, source);
 
-  auto maskType = VectorType::get(inputVectorSizes, builder.getI1Type(),
-                                  inputScalableVecDims);
+  auto maskType = vecToReadTy.cloneWith(/*shape=*/{}, builder.getI1Type());
   Value mask =
       vector::CreateMaskOp::create(builder, loc, maskType, mixedSourceDims);
   return mlir::vector::maskOperation(builder, transferReadOp, mask)

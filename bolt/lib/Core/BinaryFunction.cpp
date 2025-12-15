@@ -61,6 +61,8 @@ extern cl::OptionCategory BoltOptCategory;
 
 extern cl::opt<bool> EnableBAT;
 extern cl::opt<bool> Instrument;
+extern cl::list<std::string> PrintOnly;
+extern cl::opt<std::string> PrintOnlyFile;
 extern cl::opt<bool> StrictMode;
 extern cl::opt<bool> UpdateDebugSections;
 extern cl::opt<unsigned> Verbosity;
@@ -130,14 +132,6 @@ static cl::opt<bool>
 PrintDynoStatsOnly("print-dyno-stats-only",
   cl::desc("while printing functions output dyno-stats and skip instructions"),
   cl::init(false),
-  cl::Hidden,
-  cl::cat(BoltCategory));
-
-static cl::list<std::string>
-PrintOnly("print-only",
-  cl::CommaSeparated,
-  cl::desc("list of functions to print"),
-  cl::value_desc("func1,func2,func3,..."),
   cl::Hidden,
   cl::cat(BoltCategory));
 
@@ -1035,12 +1029,8 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   return BranchType;
 }
 
-MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address,
-                                                bool CreatePastEnd) {
+MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address) {
   const uint64_t Offset = Address - getAddress();
-
-  if ((Offset == getSize()) && CreatePastEnd)
-    return getFunctionEndLabel();
 
   auto LI = Labels.find(Offset);
   if (LI != Labels.end())
@@ -1048,9 +1038,14 @@ MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address,
 
   // For AArch64, check if this address is part of a constant island.
   if (BC.isAArch64()) {
-    if (MCSymbol *IslandSym = getOrCreateIslandAccess(Address))
+    if (MCSymbol *IslandSym = getOrCreateIslandAccess(Address)) {
+      Labels[Offset] = IslandSym;
       return IslandSym;
+    }
   }
+
+  if (Offset == getSize())
+    return getFunctionEndLabel();
 
   MCSymbol *Label = BC.Ctx->createNamedTempSymbol();
   Labels[Offset] = Label;
@@ -1415,9 +1410,7 @@ Error BinaryFunction::disassemble() {
           // A recursive call. Calls to internal blocks are handled by
           // ValidateInternalCalls pass.
           TargetSymbol = getSymbol();
-        }
-
-        if (!TargetSymbol) {
+        } else {
           // Create either local label or external symbol.
           if (containsAddress(TargetAddress)) {
             TargetSymbol = getOrCreateLocalLabel(TargetAddress);
@@ -1427,10 +1420,9 @@ Error BinaryFunction::disassemble() {
                 !(BC.isAArch64() &&
                   BC.handleAArch64Veneer(TargetAddress, /*MatchOnly*/ true))) {
               // Result of __builtin_unreachable().
-              LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump past end detected at 0x"
-                                << Twine::utohexstr(AbsoluteInstrAddr)
-                                << " in function " << *this
-                                << " : replacing with nop.\n");
+              errs() << "BOLT-WARNING: jump past end detected at 0x"
+                     << Twine::utohexstr(AbsoluteInstrAddr) << " in function "
+                     << *this << " : replacing with nop.\n";
               BC.MIB->createNoop(Instruction);
               if (IsCondBranch) {
                 // Register branch offset for profile validation.
@@ -1699,11 +1691,12 @@ bool BinaryFunction::scanExternalRefs() {
       if (!TargetFunction || ignoreFunctionRef(*TargetFunction))
         continue;
 
-      const uint64_t FunctionOffset =
-          TargetAddress - TargetFunction->getAddress();
+      // Get a reference symbol for the function when address is a valid code
+      // reference.
       BranchTargetSymbol =
-          FunctionOffset ? TargetFunction->addEntryPointAtOffset(FunctionOffset)
-                         : TargetFunction->getSymbol();
+          BC.handleExternalBranchTarget(TargetAddress, *this, *TargetFunction);
+      if (!BranchTargetSymbol)
+        continue;
     }
 
     // Can't find more references. Not creating relocations since we are not
@@ -1897,16 +1890,6 @@ bool BinaryFunction::scanExternalRefs() {
     }
   }
 
-  // Inform BinaryContext that this function symbols will not be defined and
-  // relocations should not be created against them.
-  if (BC.HasRelocations) {
-    for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
-      BC.UndefinedSymbols.insert(LI.second);
-    for (MCSymbol *const EndLabel : FunctionEndLabels)
-      if (EndLabel)
-        BC.UndefinedSymbols.insert(EndLabel);
-  }
-
   clearList(Relocations);
   clearList(ExternallyReferencedOffsets);
 
@@ -1917,6 +1900,36 @@ bool BinaryFunction::scanExternalRefs() {
     BC.outs() << "BOLT-INFO: failed to scan refs for  " << *this << '\n';
 
   return Success;
+}
+
+bool BinaryFunction::validateInternalBranches() {
+  if (!isSimple() || TrapsOnEntry)
+    return true;
+
+  for (const auto &KV : Labels) {
+    MCSymbol *Label = KV.second;
+    if (getSecondaryEntryPointSymbol(Label))
+      continue;
+
+    const uint32_t Offset = KV.first;
+    // Skip empty functions and out-of-bounds offsets,
+    // as they may not be disassembled.
+    if (!Offset || (Offset > getSize()))
+      continue;
+
+    if (!getInstructionAtOffset(Offset) ||
+        isInConstantIsland(getAddress() + Offset)) {
+      BC.errs() << "BOLT-WARNING: corrupted control flow detected in function "
+                << *this << ": an internal branch/call targets an invalid "
+                << "instruction at address 0x"
+                << Twine::utohexstr(getAddress() + Offset)
+                << "; ignoring this function\n";
+      setIgnored();
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void BinaryFunction::postProcessEntryPoints() {
@@ -1995,7 +2008,7 @@ void BinaryFunction::postProcessJumpTables() {
       if (IsBuiltinUnreachable) {
         BinaryFunction *TargetBF = BC.getBinaryFunctionAtAddress(EntryAddress);
         MCSymbol *Label = TargetBF ? TargetBF->getSymbol()
-                                   : getOrCreateLocalLabel(EntryAddress, true);
+                                   : getOrCreateLocalLabel(EntryAddress);
         JT.Entries.push_back(Label);
         continue;
       }
@@ -2006,7 +2019,7 @@ void BinaryFunction::postProcessJumpTables() {
           BC.getBinaryFunctionContainingAddress(EntryAddress);
       MCSymbol *Label;
       if (HasOneParent && TargetBF == this) {
-        Label = getOrCreateLocalLabel(EntryAddress, true);
+        Label = getOrCreateLocalLabel(EntryAddress);
       } else {
         const uint64_t Offset = EntryAddress - TargetBF->getAddress();
         Label = Offset ? TargetBF->addEntryPointAtOffset(Offset)
@@ -2060,41 +2073,47 @@ void BinaryFunction::postProcessJumpTables() {
   }
 }
 
-bool BinaryFunction::validateExternallyReferencedOffsets() {
-  SmallPtrSet<MCSymbol *, 4> JTTargets;
-  for (const JumpTable *JT : llvm::make_second_range(JumpTables))
-    JTTargets.insert_range(JT->Entries);
+bool BinaryFunction::validateInternalRefDataRelocations() {
+  if (InternalRefDataRelocations.empty())
+    return true;
 
-  bool HasUnclaimedReference = false;
-  for (uint64_t Destination : ExternallyReferencedOffsets) {
-    // Ignore __builtin_unreachable().
-    if (Destination == getSize())
-      continue;
-    // Ignore constant islands
-    if (isInConstantIsland(Destination + getAddress()))
-      continue;
+  // Rely on the user hint that all data refs are valid and only used as
+  // destinations by indirect branch in the same function.
+  if (opts::StrictMode)
+    return true;
 
-    if (BinaryBasicBlock *BB = getBasicBlockAtOffset(Destination)) {
-      // Check if the externally referenced offset is a recognized jump table
-      // target.
-      if (JTTargets.contains(BB->getLabel()))
-        continue;
-
-      if (opts::Verbosity >= 1) {
-        BC.errs() << "BOLT-WARNING: unclaimed data to code reference (possibly "
-                  << "an unrecognized jump table entry) to " << BB->getName()
-                  << " in " << *this << "\n";
-      }
-      auto L = BC.scopeLock();
-      addEntryPoint(*BB);
-    } else {
-      BC.errs() << "BOLT-WARNING: unknown data to code reference to offset "
-                << Twine::utohexstr(Destination) << " in " << *this << "\n";
-      setIgnored();
+  DenseSet<uint64_t> UnclaimedRelocations(InternalRefDataRelocations);
+  for (const JumpTable *JT : llvm::make_second_range(JumpTables)) {
+    uint64_t EntryAddress = JT->getAddress();
+    while (EntryAddress < JT->getAddress() + JT->getSize()) {
+      UnclaimedRelocations.erase(EntryAddress);
+      EntryAddress += JT->EntrySize;
     }
-    HasUnclaimedReference = true;
   }
-  return !HasUnclaimedReference;
+
+  if (UnclaimedRelocations.empty())
+    return true;
+
+  BC.errs() << "BOLT-WARNING: " << UnclaimedRelocations.size()
+            << " unclaimed data relocation"
+            << (UnclaimedRelocations.size() > 1 ? "s" : "")
+            << " remain against function " << *this;
+  if (opts::Verbosity) {
+    BC.errs() << ":\n";
+    for (uint64_t RelocationAddress : UnclaimedRelocations) {
+      const Relocation *Relocation = BC.getRelocationAt(RelocationAddress);
+      BC.errs() << "  ";
+      if (Relocation)
+        BC.errs() << *Relocation;
+      else
+        BC.errs() << "<missing relocation>";
+      BC.errs() << '\n';
+    }
+  } else {
+    BC.errs() << ". Re-run with -v=1 to see the list\n";
+  }
+
+  return false;
 }
 
 bool BinaryFunction::postProcessIndirectBranches(
@@ -2178,13 +2197,10 @@ bool BinaryFunction::postProcessIndirectBranches(
         continue;
       }
 
-      // If this block contains an epilogue code and has an indirect branch,
-      // then most likely it's a tail call. Otherwise, we cannot tell for sure
-      // what it is and conservatively reject the function's CFG.
-      bool IsEpilogue = llvm::any_of(BB, [&](const MCInst &Instr) {
-        return BC.MIB->isLeave(Instr) || BC.MIB->isPop(Instr);
-      });
-      if (IsEpilogue) {
+      // If this block contains epilogue code and has an indirect branch,
+      // then most likely it's a tail call. Otherwise, we cannot tell for
+      // sure what it is and conservatively reject the function's CFG.
+      if (BC.MIB->isEpilogue(BB)) {
         BC.MIB->convertJmpToTailCall(Instr);
         BB.removeAllSuccessors();
         continue;
@@ -2220,14 +2236,6 @@ bool BinaryFunction::postProcessIndirectBranches(
     HasUnknownControlFlow = false;
 
     LastIndirectJumpBB->updateJumpTableSuccessors();
-  }
-
-  // Validate that all data references to function offsets are claimed by
-  // recognized jump tables. Register externally referenced blocks as entry
-  // points.
-  if (!opts::StrictMode && hasInternalReference()) {
-    if (!validateExternallyReferencedOffsets())
-      return false;
   }
 
   if (HasUnknownControlFlow && !BC.HasRelocations)
@@ -2518,12 +2526,18 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   CurrentState = State::CFG;
 
   // Make any necessary adjustments for indirect branches.
-  if (!postProcessIndirectBranches(AllocatorId)) {
-    if (opts::Verbosity) {
-      BC.errs() << "BOLT-WARNING: failed to post-process indirect branches for "
-                << *this << '\n';
-    }
+  bool ValidCFG = postProcessIndirectBranches(AllocatorId);
+  if (!ValidCFG && opts::Verbosity) {
+    BC.errs() << "BOLT-WARNING: failed to post-process indirect branches for "
+              << *this << '\n';
+  }
 
+  // Validate that all data references to function offsets are claimed by
+  // recognized jump tables.
+  if (ValidCFG)
+    ValidCFG = validateInternalRefDataRelocations();
+
+  if (!ValidCFG) {
     if (BC.isAArch64())
       PreserveNops = BC.HasRelocations;
 
@@ -3235,14 +3249,6 @@ void BinaryFunction::clearDisasmState() {
   clearList(Instructions);
   clearList(IgnoredBranches);
   clearList(TakenBranches);
-
-  if (BC.HasRelocations) {
-    for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
-      BC.UndefinedSymbols.insert(LI.second);
-    for (MCSymbol *const EndLabel : FunctionEndLabels)
-      if (EndLabel)
-        BC.UndefinedSymbols.insert(EndLabel);
-  }
 }
 
 void BinaryFunction::setTrapOnEntry() {
@@ -4821,6 +4827,11 @@ bool BinaryFunction::isAArch64Veneer() const {
   }
 
   return true;
+}
+
+bool BinaryFunction::isPossibleVeneer() const {
+  return BC.isAArch64() &&
+         (isAArch64Veneer() || getOneName().starts_with("__AArch64"));
 }
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,

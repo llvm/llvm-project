@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Tests for LLVM libc socket.h functions.
+# Tests for LLVM libc mman.h functions.
 
 load("//libc/test:libc_test_rules.bzl", "libc_test")
 
@@ -30,6 +30,7 @@ libc_test(
         "//libc:mmap",
         "//libc:munlock",
         "//libc:munmap",
+        "//libc:sysconf",
     ],
 )
 
@@ -48,6 +49,7 @@ libc_test(
         "//libc:munlock",
         "//libc:munlockall",
         "//libc:munmap",
+        "//libc:sysconf",
     ],
 )
 
@@ -89,6 +91,25 @@ libc_test(
         "//libc:msync",
         "//libc:munlock",
         "//libc:munmap",
+        "//libc:sysconf",
+    ],
+)
+
+libc_test(
+    name = "pkey_test",
+    srcs = ["linux/pkey_test.cpp"],
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_signal_macros",
+        "//libc:mmap",
+        "//libc:munmap",
+        "//libc:pkey_alloc",
+        "//libc:pkey_free",
+        "//libc:pkey_get",
+        "//libc:pkey_mprotect",
+        "//libc:pkey_set",
+        "//libc:types_size_t",
+        "//libc/test/UnitTest:test_logger",
     ],
 )
 
@@ -111,6 +132,7 @@ libc_test(
         "//libc:munmap",
         "//libc:open",
         "//libc:remap_file_pages",
+        "//libc:sysconf",
     ],
 )
 

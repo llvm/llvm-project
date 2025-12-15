@@ -12,7 +12,6 @@ void stdLib() {
   std::vector<int> I;
   std::find(I.rbegin(), I.rend(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES-NOPIPE: std::ranges::find(std::ranges::reverse_view(I), 0);
+  // CHECK-FIXES-NOPIPE: std::ranges::find(std::views::reverse(I), 0);
   // CHECK-FIXES-PIPE: std::ranges::find(I | std::views::reverse, 0);
-
 }

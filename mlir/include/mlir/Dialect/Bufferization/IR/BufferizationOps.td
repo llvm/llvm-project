@@ -28,7 +28,8 @@ class Bufferization_Op<string mnemonic, list<Trait> traits = []>
 
 def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     [AttrSizedOperandSegments, BufferizableOpInterface,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+       "reifyResultShapes"]>]> {
   let summary = "allocate buffer for a tensor";
 
   let description = [{
@@ -219,7 +220,8 @@ def Bufferization_MaterializeInDestinationOp
     : Bufferization_Op<"materialize_in_destination",
         [AllElementTypesMatch<["source", "dest"]>,
          BufferizableOpInterface, DestinationStyleOpInterface,
-         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+           "reifyResultShapes"]>,
          DeclareOpInterfaceMethods<SubsetOpInterface,
             ["operatesOnEquivalentSubset", "operatesOnDisjointSubset"]>,
          DeclareOpInterfaceMethods<SubsetInsertionOpInterface,

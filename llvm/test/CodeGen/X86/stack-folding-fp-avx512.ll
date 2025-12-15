@@ -609,7 +609,7 @@ define <4 x float> @stack_fold_insertps(<4 x float> %a0, <4 x float> %a1) {
 }
 declare <4 x float> @llvm.x86.sse41.insertps(<4 x float>, <4 x float>, i8) nounwind readnone
 
-define <8 x double> @stack_fold_maxpd_zmm(<8 x double> %a0, <8 x double> %a1) #0 {
+define <8 x double> @stack_fold_maxpd_zmm(<8 x double> %a0, <8 x double> %a1) {
 ; CHECK-LABEL: stack_fold_maxpd_zmm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -695,7 +695,7 @@ define <8 x double> @stack_fold_maxpd_zmm_commutable_kz(<8 x double> %a0, <8 x d
   ret <8 x double> %4
 }
 
-define <16 x float> @stack_fold_maxps_zmm(<16 x float> %a0, <16 x float> %a1) #0 {
+define <16 x float> @stack_fold_maxps_zmm(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK-LABEL: stack_fold_maxps_zmm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -781,7 +781,7 @@ define <16 x float> @stack_fold_maxps_zmm_commutable_kz(<16 x float> %a0, <16 x 
   ret <16 x float> %4
 }
 
-define <8 x double> @stack_fold_minpd_zmm(<8 x double> %a0, <8 x double> %a1) #0 {
+define <8 x double> @stack_fold_minpd_zmm(<8 x double> %a0, <8 x double> %a1) {
 ; CHECK-LABEL: stack_fold_minpd_zmm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -867,7 +867,7 @@ define <8 x double> @stack_fold_minpd_zmm_commutable_kz(<8 x double> %a0, <8 x d
   ret <8 x double> %4
 }
 
-define <16 x float> @stack_fold_minps_zmm(<16 x float> %a0, <16 x float> %a1) #0 {
+define <16 x float> @stack_fold_minps_zmm(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK-LABEL: stack_fold_minps_zmm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1157,7 +1157,7 @@ define <4 x float> @stack_fold_mulss_int(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %5
 }
 
-define <8 x double> @stack_fold_orpd_zmm(<8 x double> %a0, <8 x double> %a1) #0 {
+define <8 x double> @stack_fold_orpd_zmm(<8 x double> %a0, <8 x double> %a1) {
 ; CHECK-LABEL: stack_fold_orpd_zmm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1178,7 +1178,7 @@ define <8 x double> @stack_fold_orpd_zmm(<8 x double> %a0, <8 x double> %a1) #0 
   ret <8 x double> %6
 }
 
-define <16 x float> @stack_fold_orps_zmm(<16 x float> %a0, <16 x float> %a1) #0 {
+define <16 x float> @stack_fold_orps_zmm(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK-LABEL: stack_fold_orps_zmm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1414,7 +1414,7 @@ define <4 x float> @stack_fold_subss_int(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %5
 }
 
-define <8 x double> @stack_fold_xorpd_zmm(<8 x double> %a0, <8 x double> %a1) #0 {
+define <8 x double> @stack_fold_xorpd_zmm(<8 x double> %a0, <8 x double> %a1) {
 ; CHECK-LABEL: stack_fold_xorpd_zmm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1435,7 +1435,7 @@ define <8 x double> @stack_fold_xorpd_zmm(<8 x double> %a0, <8 x double> %a1) #0
   ret <8 x double> %6
 }
 
-define <16 x float> @stack_fold_xorps_zmm(<16 x float> %a0, <16 x float> %a1) #0 {
+define <16 x float> @stack_fold_xorps_zmm(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK-LABEL: stack_fold_xorps_zmm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2058,5 +2058,4 @@ define <16 x float> @stack_fold_permilpsvar_zmm_maskz(<16 x float> %a0, <16 x i3
   ret <16 x float> %4
 }
 
-attributes #0 = { "unsafe-fp-math"="false" }
-attributes #1 = { "unsafe-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
+attributes #1 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }

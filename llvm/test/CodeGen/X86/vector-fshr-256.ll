@@ -1403,7 +1403,7 @@ define <8 x i32> @constant_funnnel_v8i32(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm4[4,5,6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3 # [16777216,8388608,4194304,2097152]
 ; AVX1-NEXT:    vpor %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpsrld $7, %xmm1, %xmm3
 ; AVX1-NEXT:    vpsrld $5, %xmm1, %xmm4
@@ -1412,7 +1412,7 @@ define <8 x i32> @constant_funnnel_v8i32(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; AVX1-NEXT:    vpsrld $4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm4[4,5,6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [268435456,134217728,67108864,33554432]
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
@@ -1631,9 +1631,9 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; AVX1-NEXT:    vpsllw $8, %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; AVX1-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm3 = [128,32,8,2,128,2,8,32]
-; AVX1-NEXT:    vpmaddubsw %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpmaddubsw %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [128,64,32,16,8,4,2,1,128,1,2,4,8,16,32,64]
+; AVX1-NEXT:    vpmullw %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpmullw %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
@@ -1653,7 +1653,7 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2 # [0,64,0,16,0,4,0,1,0,1,0,4,0,16,0,64,0,64,0,16,0,4,0,1,0,1,0,4,0,16,0,64]
 ; AVX2-NEXT:    vpsllw $8, %ymm2, %ymm2
 ; AVX2-NEXT:    vpor %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [128,0,32,0,8,0,2,0,128,0,2,0,8,0,32,0,128,0,32,0,8,0,2,0,128,0,2,0,8,0,32,0]
+; AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [128,64,32,16,8,4,2,1,128,1,2,4,8,16,32,64,128,64,32,16,8,4,2,1,128,1,2,4,8,16,32,64]
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -1672,7 +1672,7 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; AVX512F-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2 # [0,64,0,16,0,4,0,1,0,1,0,4,0,16,0,64,0,64,0,16,0,4,0,1,0,1,0,4,0,16,0,64]
 ; AVX512F-NEXT:    vpsllw $8, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpor %ymm1, %ymm2, %ymm1
-; AVX512F-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [128,0,32,0,8,0,2,0,128,0,2,0,8,0,32,0,128,0,32,0,8,0,2,0,128,0,2,0,8,0,32,0]
+; AVX512F-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [128,64,32,16,8,4,2,1,128,1,2,4,8,16,32,64,128,64,32,16,8,4,2,1,128,1,2,4,8,16,32,64]
 ; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -1690,7 +1690,7 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; AVX512VL-NEXT:    vpaddb %ymm0, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2 # [0,64,0,16,0,4,0,1,0,1,0,4,0,16,0,64,0,64,0,16,0,4,0,1,0,1,0,4,0,16,0,64]
 ; AVX512VL-NEXT:    vpsllw $8, %ymm2, %ymm2
-; AVX512VL-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [128,0,32,0,8,0,2,0,128,0,2,0,8,0,32,0,128,0,32,0,8,0,2,0,128,0,2,0,8,0,32,0]
+; AVX512VL-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [128,64,32,16,8,4,2,1,128,1,2,4,8,16,32,64,128,64,32,16,8,4,2,1,128,1,2,4,8,16,32,64]
 ; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | ymm1 | ymm2
 ; AVX512VL-NEXT:    retq

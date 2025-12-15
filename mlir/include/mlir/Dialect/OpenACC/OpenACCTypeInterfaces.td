@@ -73,12 +73,18 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
     InterfaceMethod<
       /*description=*/[{
         Generates allocation operations for the pointer-like type. It will create
-        an allocate that produces memory space for an instance of the current type.
+        an allocate operation that produces memory space for an instance of the
+        current type.
 
         The `varName` parameter is optional and can be used to provide a name
-        for the allocated variable. If the current type is represented
-        in a way that it does not capture the pointee type, `varType` must be
-        passed in to provide the necessary type information.
+        for the allocated variable. When provided, it must be used by the
+        implementation; and if the implementing dialect does not have its own
+        way to save it, the discardable `acc.var_name` attribute from the acc
+        dialect will be used.
+
+        If the current type is represented in a way that it does not capture
+        the pointee type, `varType` must be passed in to provide the necessary
+        type information.
 
         The `originalVar` parameter is optional but enables support for dynamic
         types (e.g., dynamic memrefs). When provided, implementations can extract
@@ -170,6 +176,50 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
         return false;
       }]
     >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates a load operation from the pointer-like type. This dereferences
+        the pointer and returns the loaded value.
+
+        The `srcPtr` parameter is the pointer to load from. If the current type is
+        represented in a way that it does not capture the pointee type, `valueType`
+        must be passed in to provide the necessary type information.
+
+        Returns the loaded value, or an empty Value if load generation failed.
+      }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"genLoad",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$srcPtr,
+                    "::mlir::Type":$valueType),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates a store operation to the pointer-like type. This stores a value
+        to the memory location pointed to by the pointer.
+
+        The `destPtr` parameter is the pointer to store to. The `valueToStore`
+        parameter is the value to be stored. The type information is derived from
+        the valueToStore parameter itself.
+
+        Returns true if store was successfully generated, false otherwise.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"genStore",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::Value":$valueToStore,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$destPtr),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
   ];
 }
 
@@ -252,6 +302,18 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
 
         return {};
       }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the dimensions of this type are not known. This occurs
+        when the MLIR type does not encode dimensional information and there is
+        no associated descriptor or metadata in the current entity that would
+        make this information extractable. For example, an opaque pointer type
+        pointing to an array without dimension information would have unknown
+        dimensions.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasUnknownDimensions"
     >,
     InterfaceMethod<
       /*description=*/[{

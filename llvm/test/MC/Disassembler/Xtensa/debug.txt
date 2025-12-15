@@ -9,7 +9,7 @@
 # CHECK-DEBUG: break 1, 1
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
 
-[0x2c,0xf1]
+[0x2d,0xf1]
 # CHECK-DEBUG: break.n 1
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
 

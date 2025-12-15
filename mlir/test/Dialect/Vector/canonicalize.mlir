@@ -1914,6 +1914,25 @@ func.func @store_to_load_tensor_perm_broadcast(%arg0 : tensor<4x4x4xf32>,
 
 // -----
 
+// CHECK-LABEL: func @store_to_load_tensor_forwarding_unit_dim_broadcast
+//  CHECK-SAME: (%[[V0:.*]]: vector<4x8xf32>, %[[MEM:.*]]: tensor<1x1x4x8xf32>)
+// CHECK-NOT: vector.transfer_write
+// CHECK-NOT: vector.transfer_read
+// CHECK: %[[RET:.+]] = vector.broadcast %[[V0]] : vector<4x8xf32> to vector<1x1x4x8xf32>
+// CHECK: return %[[RET]]
+func.func @store_to_load_tensor_forwarding_unit_dim_broadcast(
+    %vec: vector<4x8xf32>,
+    %mem : tensor<1x1x4x8xf32>
+  ) -> vector<1x1x4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %cst_0 = arith.constant 0.0 : f32
+  %write = vector.transfer_write %vec, %mem[%c0, %c0, %c0, %c0] : vector<4x8xf32>, tensor<1x1x4x8xf32>
+  %read = vector.transfer_read %write[%c0, %c0, %c0, %c0], %cst_0 : tensor<1x1x4x8xf32>, vector<1x1x4x8xf32>
+  return %read : vector<1x1x4x8xf32>
+}
+
+// -----
+
 
 // CHECK-LABEL: func @dead_store_tensor
 //   CHECK-DAG:      %[[C0:.*]] = arith.constant 0 : index
@@ -3530,6 +3549,62 @@ func.func @from_elements_index_to_i64_conversion() -> vector<3xi64> {
 
 // -----
 
+// +---------------------------------------------------------------------------
+// Tests for FoldTransposeFromElements
+// +---------------------------------------------------------------------------
+
+// CHECK-LABEL: transpose_from_elements_1d
+// CHECK-SAME:  %[[EL_0:.*]]: i32, %[[EL_1:.*]]: i32 
+func.func @transpose_from_elements_1d(%el_0: i32, %el_1: i32) -> vector<2xi32> {
+  %v = vector.from_elements %el_0, %el_1 : vector<2xi32>
+  %t = vector.transpose %v, [0] : vector<2xi32> to vector<2xi32>
+  return %t : vector<2xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0]], %[[EL_1]] : vector<2xi32>
+  // CHECK-NOT: vector.transpose
+  // CHECK: return %[[R]]
+}
+
+// CHECK-LABEL: transpose_from_elements_2d
+// CHECK-SAME:  %[[EL_0_0:.*]]: i32, %[[EL_0_1:.*]]: i32, %[[EL_0_2:.*]]: i32, %[[EL_1_0:.*]]: i32, %[[EL_1_1:.*]]: i32, %[[EL_1_2:.*]]: i32 
+func.func @transpose_from_elements_2d(
+  %el_0_0: i32, %el_0_1: i32, %el_0_2: i32,
+  %el_1_0: i32, %el_1_1: i32, %el_1_2: i32
+) -> vector<3x2xi32> {
+  %v = vector.from_elements %el_0_0, %el_0_1, %el_0_2, %el_1_0, %el_1_1, %el_1_2 : vector<2x3xi32>
+  %t = vector.transpose %v, [1, 0] : vector<2x3xi32> to vector<3x2xi32>
+  return %t : vector<3x2xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0_0:.*]], %[[EL_1_0:.*]], %[[EL_0_1:.*]], %[[EL_1_1:.*]], %[[EL_0_2:.*]], %[[EL_1_2:.*]] : vector<3x2xi32>
+  // CHECK-NOT: vector.transpose
+  // CHECK: return %[[R]]
+}
+
+// CHECK-LABEL: transpose_from_elements_3d
+// CHECK-SAME:  %[[EL_0_0_0:.*]]: i32, %[[EL_0_0_1:.*]]: i32, %[[EL_0_1_0:.*]]: i32, %[[EL_0_1_1:.*]]: i32, %[[EL_0_2_0:.*]]: i32, %[[EL_0_2_1:.*]]: i32, %[[EL_1_0_0:.*]]: i32, %[[EL_1_0_1:.*]]: i32, %[[EL_1_1_0:.*]]: i32, %[[EL_1_1_1:.*]]: i32, %[[EL_1_2_0:.*]]: i32, %[[EL_1_2_1:.*]]: i32 
+func.func @transpose_from_elements_3d(
+  %el_0_0_0: i32, %el_0_0_1: i32, %el_0_1_0: i32, %el_0_1_1: i32, %el_0_2_0: i32, %el_0_2_1: i32,
+  %el_1_0_0: i32, %el_1_0_1: i32, %el_1_1_0: i32, %el_1_1_1: i32, %el_1_2_0: i32, %el_1_2_1: i32
+) -> vector<2x2x3xi32> {
+  %v = vector.from_elements
+    %el_0_0_0, %el_0_0_1,
+    %el_0_1_0, %el_0_1_1,
+    %el_0_2_0, %el_0_2_1,
+    %el_1_0_0, %el_1_0_1,
+    %el_1_1_0, %el_1_1_1,
+    %el_1_2_0, %el_1_2_1
+    : vector<2x3x2xi32>
+  %t = vector.transpose %v, [0, 2, 1] : vector<2x3x2xi32> to vector<2x2x3xi32>
+  return %t : vector<2x2x3xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0_0_0:.*]], %[[EL_0_1_0:.*]], %[[EL_0_2_0:.*]], %[[EL_0_0_1:.*]], %[[EL_0_1_1:.*]], %[[EL_0_2_1:.*]], %[[EL_1_0_0:.*]], %[[EL_1_1_0:.*]], %[[EL_1_2_0:.*]], %[[EL_1_0_1:.*]], %[[EL_1_1_1:.*]], %[[EL_1_2_1:.*]] : vector<2x2x3xi32>
+  // CHECK-NOT: vector.transpose
+  // CHECK: return %[[R]]
+}
+
+// +---------------------------------------------------------------------------
+// End of  Tests for FoldTransposeFromElements
+// +---------------------------------------------------------------------------
+
+// -----
+
 // Not a DenseElementsAttr, don't fold.
 
 // CHECK-LABEL: func @negative_insert_llvm_undef(
@@ -3849,6 +3924,53 @@ func.func @contiguous_scatter_step(%base: memref<?xf32>,
   vector.scatter %base[%c0][%indices], %mask, %value :
     memref<?xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32>
   return
+}
+
+// -----
+
+// No canoniclization should happen here as the base is a tensor.
+// CHECK-LABEL: @no_fold_contiguous_scatter_tensor
+// CHECK-NOT: vector.maskedstore
+//     CHECK:   %[[RES:.*]] = vector.scatter
+//     CHECK:   return %[[RES]]
+func.func @no_fold_contiguous_scatter_tensor(%base: tensor<16xf32>,
+                                          %mask: vector<16xi1>,
+                                          %value: vector<16xf32>) -> tensor<16xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xi32>
+  %0 = vector.scatter %base[%c0] [%indices], %mask, %value
+      : tensor<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> -> tensor<16xf32>
+  return %0 : tensor<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @scatter_memref_all_false
+//  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[INDEX:.*]]: vector<16xindex>, %[[VALUE:.*]]: vector<16xf32>)
+//  CHECK-NEXT:   return
+func.func @scatter_memref_all_false(%base: memref<?xf32>,
+                                    %index: vector<16xindex>,
+                                    %value: vector<16xf32>) {
+  %c0 = arith.constant 0 : index
+  %mask = arith.constant dense<false> : vector<16xi1>
+  vector.scatter %base[%c0][%index], %mask, %value
+      : memref<?xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @scatter_tensor_all_false
+//  CHECK-SAME:   (%[[BASE:.*]]: tensor<16xf32>, %[[INDEX:.*]]: vector<16xindex>, %[[VALUE:.*]]: vector<16xf32>) -> tensor<16xf32> {
+//       CHECK:   return %[[BASE]] : tensor<16xf32>
+func.func @scatter_tensor_all_false(%base: tensor<16xf32>,
+                                    %index: vector<16xindex>,
+                                    %value: vector<16xf32>) -> tensor<16xf32> {
+  %c0 = arith.constant 0 : index
+  %mask = arith.constant dense<false> : vector<16xi1>
+  %0 = vector.scatter %base[%c0][%index], %mask, %value
+      : tensor<16xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32> -> tensor<16xf32>
+  return %0 : tensor<16xf32>
 }
 
 // -----

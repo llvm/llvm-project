@@ -509,6 +509,294 @@ define <vscale x 2 x bfloat> @splat_nxv2bf16_imm() {
   ret <vscale x 2 x bfloat> splat(bfloat 1.0)
 }
 
+define <vscale x 2 x half> @splat_nzero_nxv2f16() {
+; CHECK-LABEL: splat_nzero_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x8000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x half> splat (half -0.0)
+}
+
+define <vscale x 4 x half> @splat_nzero_nxv4f16() {
+; CHECK-LABEL: splat_nzero_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x8000
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x half> splat (half -0.0)
+}
+
+define <vscale x 8 x half> @splat_nzero_nxv8f16() {
+; CHECK-LABEL: splat_nzero_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x8000
+; CHECK-NEXT:    ret
+  ret <vscale x 8 x half> splat (half -0.0)
+}
+
+define <vscale x 2 x float> @splat_nzero_nxv2f32() {
+; CHECK-LABEL: splat_nzero_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #0x80000000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x float> splat (float -0.0)
+}
+
+define <vscale x 4 x float> @splat_nzero_nxv4f32() {
+; CHECK-LABEL: splat_nzero_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #0x80000000
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x float> splat (float -0.0)
+}
+
+define <vscale x 2 x double> @splat_nzero_nxv2f64() {
+; CHECK-LABEL: splat_nzero_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, #0x8000000000000000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x double> splat (double -0.0)
+}
+
+define <vscale x 2 x bfloat> @splat_nzero_nxv2bf16() {
+; CHECK-LABEL: splat_nzero_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x8000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x bfloat> splat (bfloat -0.0)
+}
+
+define <vscale x 4 x bfloat> @splat_nzero_nxv4bf16() {
+; CHECK-LABEL: splat_nzero_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x8000
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x bfloat> splat (bfloat -0.0)
+}
+
+define <vscale x 8 x bfloat> @splat_nzero_nxv8bf16() {
+; CHECK-LABEL: splat_nzero_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x8000
+; CHECK-NEXT:    ret
+  ret <vscale x 8 x bfloat> splat (bfloat -0.0)
+}
+
+define <vscale x 2 x half> @splat_pinf_nxv2f16() {
+; CHECK-LABEL: splat_pinf_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x7c00
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x half> splat (half 0x7FF0000000000000)
+}
+
+define <vscale x 4 x half> @splat_pinf_nxv4f16() {
+; CHECK-LABEL: splat_pinf_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x7c00
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x half> splat (half 0x7FF0000000000000)
+}
+
+define <vscale x 8 x half> @splat_pinf_nxv8f16() {
+; CHECK-LABEL: splat_pinf_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x7c00
+; CHECK-NEXT:    ret
+  ret <vscale x 8 x half> splat (half 0x7FF0000000000000)
+}
+
+define <vscale x 2 x float> @splat_pinf_nxv2f32() {
+; CHECK-LABEL: splat_pinf_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #0x7f800000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x float> splat (float 0x7FF0000000000000)
+}
+
+define <vscale x 4 x float> @splat_pinf_nxv4f32() {
+; CHECK-LABEL: splat_pinf_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #0x7f800000
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x float> splat (float 0x7FF0000000000000)
+}
+
+define <vscale x 2 x double> @splat_pinf_nxv2f64() {
+; CHECK-LABEL: splat_pinf_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, #0x7ff0000000000000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x double> splat (double 0x7FF0000000000000)
+}
+
+define <vscale x 2 x bfloat> @splat_pinf_nxv2bf16() {
+; CHECK-LABEL: splat_pinf_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, #32640 // =0x7f80
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x bfloat> splat (bfloat 0x7FF0000000000000)
+}
+
+define <vscale x 4 x bfloat> @splat_pinf_nxv4bf16() {
+; CHECK-LABEL: splat_pinf_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, #32640 // =0x7f80
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x bfloat> splat (bfloat 0x7FF0000000000000)
+}
+
+define <vscale x 8 x bfloat> @splat_pinf_nxv8bf16() {
+; CHECK-LABEL: splat_pinf_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, #32640 // =0x7f80
+; CHECK-NEXT:    ret
+  ret <vscale x 8 x bfloat> splat (bfloat 0x7FF0000000000000)
+}
+
+define <vscale x 2 x half> @splat_ninf_nxv2f16() {
+; CHECK-LABEL: splat_ninf_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0xfc00
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x half> splat (half 0xFFF0000000000000)
+}
+
+define <vscale x 4 x half> @splat_ninf_nxv4f16() {
+; CHECK-LABEL: splat_ninf_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0xfc00
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x half> splat (half 0xFFF0000000000000)
+}
+
+define <vscale x 8 x half> @splat_ninf_nxv8f16() {
+; CHECK-LABEL: splat_ninf_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0xfc00
+; CHECK-NEXT:    ret
+  ret <vscale x 8 x half> splat (half 0xFFF0000000000000)
+}
+
+define <vscale x 2 x float> @splat_ninf_nxv2f32() {
+; CHECK-LABEL: splat_ninf_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #0xff800000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x float> splat (float 0xFFF0000000000000)
+}
+
+define <vscale x 4 x float> @splat_ninf_nxv4f32() {
+; CHECK-LABEL: splat_ninf_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #0xff800000
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x float> splat (float 0xFFF0000000000000)
+}
+
+define <vscale x 2 x double> @splat_ninf_nxv2f64() {
+; CHECK-LABEL: splat_ninf_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, #0xfff0000000000000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x double> splat (double 0xFFF0000000000000)
+}
+
+define <vscale x 2 x bfloat> @splat_ninf_nxv2bf16() {
+; CHECK-LABEL: splat_ninf_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0xff80
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x bfloat> splat (bfloat 0xFFF0000000000000)
+}
+
+define <vscale x 4 x bfloat> @splat_ninf_nxv4bf16() {
+; CHECK-LABEL: splat_ninf_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0xff80
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x bfloat> splat (bfloat 0xFFF0000000000000)
+}
+
+define <vscale x 8 x bfloat> @splat_ninf_nxv8bf16() {
+; CHECK-LABEL: splat_ninf_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0xff80
+; CHECK-NEXT:    ret
+  ret <vscale x 8 x bfloat> splat (bfloat 0xFFF0000000000000)
+}
+
+define <vscale x 2 x half> @splat_nan_nxv2f16() {
+; CHECK-LABEL: splat_nan_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x7e00
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x half> splat (half 0x7FF8000000000000)
+}
+
+define <vscale x 4 x half> @splat_nan_nxv4f16() {
+; CHECK-LABEL: splat_nan_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x7e00
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x half> splat (half 0x7FF8000000000000)
+}
+
+define <vscale x 8 x half> @splat_nan_nxv8f16() {
+; CHECK-LABEL: splat_nan_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dupm z0.h, #0x7e00
+; CHECK-NEXT:    ret
+  ret <vscale x 8 x half> splat (half 0x7FF8000000000000)
+}
+
+define <vscale x 2 x float> @splat_nan_nxv2f32() {
+; CHECK-LABEL: splat_nan_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #0x7fc00000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x float> splat (float 0x7FF8000000000000)
+}
+
+define <vscale x 4 x float> @splat_nan_nxv4f32() {
+; CHECK-LABEL: splat_nan_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #0x7fc00000
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x float> splat (float 0x7FF8000000000000)
+}
+
+define <vscale x 2 x double> @splat_nan_nxv2f64() {
+; CHECK-LABEL: splat_nan_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, #0x7ff8000000000000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x double> splat (double 0x7FF8000000000000)
+}
+
+define <vscale x 2 x bfloat> @splat_nan_nxv2bf16() {
+; CHECK-LABEL: splat_nan_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, #32704 // =0x7fc0
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x bfloat> splat (bfloat 0x7FF8000000000000)
+}
+
+define <vscale x 4 x bfloat> @splat_nan_nxv4bf16() {
+; CHECK-LABEL: splat_nan_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, #32704 // =0x7fc0
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x bfloat> splat (bfloat 0x7FF8000000000000)
+}
+
+define <vscale x 8 x bfloat> @splat_nan_nxv8bf16() {
+; CHECK-LABEL: splat_nan_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, #32704 // =0x7fc0
+; CHECK-NEXT:    ret
+  ret <vscale x 8 x bfloat> splat (bfloat 0x7FF8000000000000)
+}
+
 define <vscale x 4 x i32> @splat_nxv4i32_fold(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: splat_nxv4i32_fold:
 ; CHECK:       // %bb.0:
@@ -581,8 +869,8 @@ define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv2f64_imm_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    adrp x8, .LCPI60_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI60_0
+; CHECK-NEXT:    adrp x8, .LCPI96_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI96_0
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   ret <vscale x 2 x double> splat(double 3.33)

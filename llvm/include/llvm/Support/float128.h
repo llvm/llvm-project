@@ -14,7 +14,7 @@ namespace llvm {
 #if defined(__clang__) && defined(__FLOAT128__) &&                             \
     defined(__SIZEOF_INT128__) && !defined(__LONG_DOUBLE_IBM128__)
 #define HAS_IEE754_FLOAT128
-typedef __float128 float128;
+using float128 = __float128;
 #elif defined(__FLOAT128__) && defined(__SIZEOF_INT128__) &&                   \
     !defined(__LONG_DOUBLE_IBM128__) &&                                        \
     (defined(__GNUC__) || defined(__GNUG__))

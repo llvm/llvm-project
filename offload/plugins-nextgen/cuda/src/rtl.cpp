@@ -25,6 +25,7 @@
 #include "PluginInterface.h"
 #include "Utils/ELF.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -148,7 +149,8 @@ struct CUDAKernelTy : public GenericKernelTy {
     // The maximum number of threads cannot exceed the maximum of the kernel.
     MaxNumThreads = std::min(MaxNumThreads, (uint32_t)MaxThreads);
 
-    return Plugin::success();
+    // Retrieve the size of the arguments.
+    return initArgsSize();
   }
 
   /// Launch the CUDA kernel function.
@@ -172,11 +174,32 @@ struct CUDAKernelTy : public GenericKernelTy {
   }
 
 private:
+  /// Initialize the size of the arguments.
+  Error initArgsSize() {
+    CUresult Res;
+    size_t ArgOffset, ArgSize;
+    size_t Arg = 0;
+
+    ArgsSize = 0;
+
+    // Find the last argument to know the total size of the arguments.
+    while ((Res = cuFuncGetParamInfo(Func, Arg++, &ArgOffset, &ArgSize)) ==
+           CUDA_SUCCESS)
+      ArgsSize = ArgOffset + ArgSize;
+
+    if (Res != CUDA_ERROR_INVALID_VALUE)
+      return Plugin::check(Res, "error in cuFuncGetParamInfo: %s");
+    return Plugin::success();
+  }
+
   /// The CUDA kernel function to execute.
   CUfunction Func;
   /// The maximum amount of dynamic shared memory per thread group. By default,
   /// this is set to 48 KB.
   mutable uint32_t MaxDynCGroupMemLimit = 49152;
+
+  /// The size of the kernel arguments.
+  size_t ArgsSize;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
@@ -293,6 +316,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = Plugin::check(Res, "error in cuDeviceGet: %s"))
       return Err;
 
+    CUuuid UUID = {0};
+    Res = cuDeviceGetUuid(&UUID, Device);
+    if (auto Err = Plugin::check(Res, "error in cuDeviceGetUuid: %s"))
+      return Err;
+    setDeviceUidFromVendorUid(toHex(UUID.bytes, true));
+
     // Query the current flags of the primary context and set its flags if
     // it is inactive.
     unsigned int FormerPrimaryCtxFlags = 0;
@@ -371,6 +400,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = getDeviceAttr(CU_DEVICE_ATTRIBUTE_WARP_SIZE, WarpSize))
       return Err;
     HardwareParallelism = NumMuliprocessors * (MaxThreadsPerSM / WarpSize);
+
+    uint32_t MaxSharedMem;
+    if (auto Err = getDeviceAttr(
+            CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, MaxSharedMem))
+      return Err;
+    MaxBlockSharedMemSize = MaxSharedMem;
 
     return Plugin::success();
   }
@@ -1082,10 +1117,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_SUCCESS)
       Info.add("Total Constant Memory", TmpInt, "bytes");
 
-    Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK,
-                           TmpInt);
-    if (Res == CUDA_SUCCESS)
-      Info.add("Max Shared Memory per Block", TmpInt, "bytes");
+    Info.add("Max Shared Memory per Block", MaxBlockSharedMemSize, "bytes",
+             DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_REGISTERS_PER_BLOCK, TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -1228,11 +1261,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Info;
   }
 
-  virtual bool shouldSetupDeviceMemoryPool() const override {
-    /// We use the CUDA malloc for now.
-    return false;
-  }
-
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_STACK_SIZE, Value);
@@ -1240,6 +1268,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   Error setDeviceStackSize(uint64_t Value) override {
     return setCtxLimit(CU_LIMIT_STACK_SIZE, Value);
   }
+  bool hasDeviceHeapSize() override { return true; }
   Error getDeviceHeapSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_MALLOC_HEAP_SIZE, Value);
   }
@@ -1423,6 +1452,12 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
+  // The args size passed in LaunchParams may have tail padding, which is not
+  // accepted by the CUDA driver.
+  if (ArgsSize > LaunchParams.Size)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "mismatch in kernel arguments");
+
   CUstream Stream;
   if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
@@ -1430,9 +1465,10 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   uint32_t MaxDynCGroupMem =
       std::max(KernelArgs.DynCGroupMem, GenericDevice.getDynamicMemorySize());
 
+  size_t ConfigArgsSize = ArgsSize;
   void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
                     CU_LAUNCH_PARAM_BUFFER_SIZE,
-                    reinterpret_cast<void *>(&LaunchParams.Size),
+                    reinterpret_cast<void *>(&ConfigArgsSize),
                     CU_LAUNCH_PARAM_END};
 
   // If we are running an RPC server we want to wake up the server thread

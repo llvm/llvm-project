@@ -66,10 +66,15 @@ enum class IRMemLocation {
   ErrnoMem = 2,
   /// Any other memory.
   Other = 3,
+  /// Represents target specific state.
+  TargetMem0 = 4,
+  TargetMem1 = 5,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
-  Last = Other,
+  FirstTarget = TargetMem0,
+  // TargetMem IDs must be at the end of the list.
+  Last = TargetMem1,
 };
 
 template <typename LocationEnum> class MemoryEffectsBase {

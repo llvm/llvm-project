@@ -5,6 +5,6 @@
 program main
   integer :: x
 
-  ! CHECK: not yet implemented: OpenMPDeclarativeAllocate
+  ! CHECK: not yet implemented: OmpAllocateDirective
   !$omp allocate(x) align(32)
 end

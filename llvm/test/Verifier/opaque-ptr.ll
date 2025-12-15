@@ -52,9 +52,9 @@ define void @opaque_mangle() {
 
 define void @intrinsic_calls(ptr %a) {
 ; CHECK-LABEL: @intrinsic_calls(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr [[A:%.*]], i32 4, <2 x i1> zeroinitializer, <2 x i32> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> zeroinitializer, ptr [[A]], i32 4, <2 x i1> zeroinitializer)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> zeroinitializer, i32 4, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 4 [[A:%.*]], <2 x i1> zeroinitializer, <2 x i32> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> zeroinitializer, ptr align 4 [[A]], <2 x i1> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 4 zeroinitializer, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype(i32) null, i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;

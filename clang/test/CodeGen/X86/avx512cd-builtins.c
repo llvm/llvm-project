@@ -14,37 +14,53 @@
 __m512i test_mm512_conflict_epi64(__m512i __A) {
   // CHECK-LABEL: test_mm512_conflict_epi64
   // CHECK: call {{.*}}<8 x i64> @llvm.x86.avx512.conflict.q.512(<8 x i64> %{{.*}})
-  return _mm512_conflict_epi64(__A); 
+  return _mm512_conflict_epi64(__A);
 }
+
+TEST_CONSTEXPR(match_v8di(_mm512_conflict_epi64((__m512i)(__v8di){1, 2, 1, 3, 2, 4, 1, 5}), 0, 0, 1, 0, 2, 0, 5, 0));
+TEST_CONSTEXPR(match_v8di(_mm512_conflict_epi64((__m512i)(__v8di){5, 5, 5, 5, 5, 5, 5, 5}), 0, 1, 3, 7, 15, 31, 63, 127));
+TEST_CONSTEXPR(match_v8di(_mm512_conflict_epi64((__m512i)(__v8di){1, 2, 3, 4, 5, 6, 7, 8}), 0, 0, 0, 0, 0, 0, 0, 0));
 __m512i test_mm512_mask_conflict_epi64(__m512i __W, __mmask8 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_mask_conflict_epi64
   // CHECK: call {{.*}}<8 x i64> @llvm.x86.avx512.conflict.q.512(<8 x i64> %{{.*}})
   // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
-  return _mm512_mask_conflict_epi64(__W,__U,__A); 
+  return _mm512_mask_conflict_epi64(__W,__U,__A);
 }
+
+TEST_CONSTEXPR(match_v8di(_mm512_mask_conflict_epi64((__m512i)(__v8di){0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 0x55, (__m512i)(__v8di){1, 2, 1, 3, 2, 4, 1, 5}), 0, 0xFF, 1, 0xFF, 2, 0xFF, 5, 0xFF));
 __m512i test_mm512_maskz_conflict_epi64(__mmask8 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_maskz_conflict_epi64
   // CHECK: call {{.*}}<8 x i64> @llvm.x86.avx512.conflict.q.512(<8 x i64> %{{.*}})
   // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
-  return _mm512_maskz_conflict_epi64(__U,__A); 
+  return _mm512_maskz_conflict_epi64(__U,__A);
 }
+
+TEST_CONSTEXPR(match_v8di(_mm512_maskz_conflict_epi64(0x55, (__m512i)(__v8di){1, 2, 1, 3, 2, 4, 1, 5}), 0, 0, 1, 0, 2, 0, 5, 0));
 __m512i test_mm512_conflict_epi32(__m512i __A) {
   // CHECK-LABEL: test_mm512_conflict_epi32
   // CHECK: call <16 x i32> @llvm.x86.avx512.conflict.d.512(<16 x i32> %{{.*}})
-  return _mm512_conflict_epi32(__A); 
+  return _mm512_conflict_epi32(__A);
 }
+
+TEST_CONSTEXPR(match_v16si(_mm512_conflict_epi32((__m512i)(__v16si){1, 2, 1, 3, 2, 4, 1, 5, 6, 7, 6, 8, 7, 9, 6, 10}), 0, 0, 1, 0, 2, 0, 5, 0, 0, 0, 256, 0, 512, 0, 1280, 0));
+TEST_CONSTEXPR(match_v16si(_mm512_conflict_epi32((__m512i)(__v16si){9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}), 0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4095, 8191, 16383, 32767));
+TEST_CONSTEXPR(match_v16si(_mm512_conflict_epi32((__m512i)(__v16si){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
 __m512i test_mm512_mask_conflict_epi32(__m512i __W, __mmask16 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_mask_conflict_epi32
   // CHECK: call <16 x i32> @llvm.x86.avx512.conflict.d.512(<16 x i32> %{{.*}})
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
-  return _mm512_mask_conflict_epi32(__W,__U,__A); 
+  return _mm512_mask_conflict_epi32(__W,__U,__A);
 }
+
+TEST_CONSTEXPR(match_v16si(_mm512_mask_conflict_epi32((__m512i)(__v16si){0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 0x5555, (__m512i)(__v16si){1, 2, 1, 3, 2, 4, 1, 5, 6, 7, 6, 8, 7, 9, 6, 10}), 0, 0xFF, 1, 0xFF, 2, 0xFF, 5, 0xFF, 0, 0xFF, 256, 0xFF, 512, 0xFF, 1280, 0xFF));
 __m512i test_mm512_maskz_conflict_epi32(__mmask16 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_maskz_conflict_epi32
   // CHECK: call <16 x i32> @llvm.x86.avx512.conflict.d.512(<16 x i32> %{{.*}})
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
-  return _mm512_maskz_conflict_epi32(__U,__A); 
+  return _mm512_maskz_conflict_epi32(__U,__A);
 }
+
+TEST_CONSTEXPR(match_v16si(_mm512_maskz_conflict_epi32(0x5555, (__m512i)(__v16si){1, 2, 1, 3, 2, 4, 1, 5, 6, 7, 6, 8, 7, 9, 6, 10}), 0, 0, 1, 0, 2, 0, 5, 0, 0, 0, 256, 0, 512, 0, 1280, 0));
 __m512i test_mm512_lzcnt_epi32(__m512i __A) {
   // CHECK-LABEL: test_mm512_lzcnt_epi32
   // CHECK: call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %{{.*}}, i1 true)

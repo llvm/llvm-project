@@ -14,10 +14,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-namespace {
-
 // Determine if the given QualType is a nullary function or pointer to same.
-bool protoTypeHasNoParms(QualType QT) {
+static bool protoTypeHasNoParms(QualType QT) {
   if (const auto *PT = QT->getAs<PointerType>())
     QT = PT->getPointeeType();
   if (auto *MPT = QT->getAs<MemberPointerType>())
@@ -27,16 +25,14 @@ bool protoTypeHasNoParms(QualType QT) {
   return false;
 }
 
-const char FunctionId[] = "function";
-const char TypedefId[] = "typedef";
-const char FieldId[] = "field";
-const char VarId[] = "var";
-const char NamedCastId[] = "named-cast";
-const char CStyleCastId[] = "c-style-cast";
-const char ExplicitCastId[] = "explicit-cast";
-const char LambdaId[] = "lambda";
-
-} // namespace
+static const char FunctionId[] = "function";
+static const char TypedefId[] = "typedef";
+static const char FieldId[] = "field";
+static const char VarId[] = "var";
+static const char NamedCastId[] = "named-cast";
+static const char CStyleCastId[] = "c-style-cast";
+static const char ExplicitCastId[] = "explicit-cast";
+static const char LambdaId[] = "lambda";
 
 void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(functionDecl(parameterCountIs(0), unless(isImplicit()),
@@ -93,9 +89,9 @@ void RedundantVoidArgCheck::check(const MatchFinder::MatchResult &Result) {
 void RedundantVoidArgCheck::processFunctionDecl(
     const MatchFinder::MatchResult &Result, const FunctionDecl *Function) {
   const auto *Method = dyn_cast<CXXMethodDecl>(Function);
-  SourceLocation Start = Method && Method->getParent()->isLambda()
-                             ? Method->getBeginLoc()
-                             : Function->getLocation();
+  const SourceLocation Start = Method && Method->getParent()->isLambda()
+                                   ? Method->getBeginLoc()
+                                   : Function->getLocation();
   SourceLocation End = Function->getEndLoc();
   if (Function->isThisDeclarationADefinition()) {
     if (const Stmt *Body = Function->getBody()) {
@@ -117,7 +113,8 @@ static bool isMacroIdentifier(const IdentifierTable &Idents,
   if (!ProtoToken.is(tok::TokenKind::raw_identifier))
     return false;
 
-  IdentifierTable::iterator It = Idents.find(ProtoToken.getRawIdentifier());
+  const IdentifierTable::iterator It =
+      Idents.find(ProtoToken.getRawIdentifier());
   if (It == Idents.end())
     return false;
 
@@ -127,7 +124,7 @@ static bool isMacroIdentifier(const IdentifierTable &Idents,
 void RedundantVoidArgCheck::removeVoidArgumentTokens(
     const ast_matchers::MatchFinder::MatchResult &Result, SourceRange Range,
     StringRef GrammarLocation) {
-  CharSourceRange CharRange =
+  const CharSourceRange CharRange =
       Lexer::makeFileCharRange(CharSourceRange::getTokenRange(Range),
                                *Result.SourceManager, getLangOpts());
 
@@ -149,7 +146,7 @@ void RedundantVoidArgCheck::removeVoidArgumentTokens(
   Token ProtoToken;
   const IdentifierTable &Idents = Result.Context->Idents;
   int MacroLevel = 0;
-  std::string Diagnostic =
+  const std::string Diagnostic =
       ("redundant void argument list in " + GrammarLocation).str();
 
   while (!PrototypeLexer.LexFromRawLexer(ProtoToken)) {
@@ -220,7 +217,7 @@ void RedundantVoidArgCheck::removeVoidArgumentTokens(
 
 void RedundantVoidArgCheck::removeVoidToken(Token VoidToken,
                                             StringRef Diagnostic) {
-  SourceLocation VoidLoc = VoidToken.getLocation();
+  const SourceLocation VoidLoc = VoidToken.getLocation();
   diag(VoidLoc, Diagnostic) << FixItHint::CreateRemoval(VoidLoc);
 }
 
@@ -243,9 +240,9 @@ void RedundantVoidArgCheck::processFieldDecl(
 void RedundantVoidArgCheck::processVarDecl(
     const MatchFinder::MatchResult &Result, const VarDecl *Var) {
   if (protoTypeHasNoParms(Var->getType())) {
-    SourceLocation Begin = Var->getBeginLoc();
+    const SourceLocation Begin = Var->getBeginLoc();
     if (Var->hasInit()) {
-      SourceLocation InitStart =
+      const SourceLocation InitStart =
           Result.SourceManager->getExpansionLoc(Var->getInit()->getBeginLoc())
               .getLocWithOffset(-1);
       removeVoidArgumentTokens(Result, SourceRange(Begin, InitStart),
@@ -277,8 +274,9 @@ void RedundantVoidArgCheck::processLambdaExpr(
     const MatchFinder::MatchResult &Result, const LambdaExpr *Lambda) {
   if (Lambda->getLambdaClass()->getLambdaCallOperator()->getNumParams() == 0 &&
       Lambda->hasExplicitParameters()) {
-    SourceManager *SM = Result.SourceManager;
-    TypeLoc TL = Lambda->getLambdaClass()->getLambdaTypeInfo()->getTypeLoc();
+    const SourceManager *SM = Result.SourceManager;
+    const TypeLoc TL =
+        Lambda->getLambdaClass()->getLambdaTypeInfo()->getTypeLoc();
     removeVoidArgumentTokens(Result,
                              {SM->getSpellingLoc(TL.getBeginLoc()),
                               SM->getSpellingLoc(TL.getEndLoc())},

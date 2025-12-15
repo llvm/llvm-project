@@ -1,0 +1,64 @@
+name: Test Unprivileged Download Artifact Action
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/test-unprivileged-download-artifact.yml
+      - '.github/workflows/unprivileged-download-artifact/**'
+  pull_request:
+    paths:
+      - .github/workflows/test-unprivileged-download-artifact.yml
+      - '.github/workflows/unprivileged-download-artifact/**'
+
+jobs:
+  upload-test-artifact:
+    name: Upload Test Artifact
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create Test Files
+        run: |
+          echo "foo" > comment1
+          echo "bar" > comment2
+      - name: Upload Test File 1
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: artifact-name-1
+          path: |
+            comment1
+      - name: Upload Test File 2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: artifact-name-2
+          path: |
+            comment2
+        
+
+  test-download:
+    name: Test Unprivileged Download Artifact
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    needs: [ upload-test-artifact ]
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          sparse-checkout: |
+            .github/workflows/unprivileged-download-artifact/action.yml
+      - name: Download Artifact
+        uses: ./.github/workflows/unprivileged-download-artifact
+        id: download-artifact
+        with:
+          run-id: ${{ github.run_id }}
+          artifact-name: artifact-name-
+      - name: Assert That Contents are the Same
+        run: |
+          cat comment1
+          [[ "$(cat comment1)" == "foo" ]]
+          cat comment2
+          [[ "$(cat comment2)" == "bar" ]]

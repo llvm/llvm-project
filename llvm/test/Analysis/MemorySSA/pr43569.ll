@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: @c()
 ; Function Attrs: nounwind uwtable
-define dso_local void @c() #0 {
+define dso_local void @c() {
 entry:
   call void @llvm.instrprof.increment(ptr @__profn_c, i64 68269137, i32 3, i32 0)
   br label %for.cond
@@ -42,8 +42,4 @@ for.end:                                          ; preds = %for.cond1
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.instrprof.increment(ptr, i64, i32, i32) #1
-
-attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind }
-
+declare void @llvm.instrprof.increment(ptr, i64, i32, i32)

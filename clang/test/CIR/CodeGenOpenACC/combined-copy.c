@@ -2,7 +2,7 @@
 
 int global;
 void acc_compute(int parmVar) {
-  // CHECK: cir.func{{.*}} @acc_compute(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_compute(%[[ARG:.*]]: !s32i{{.*}})
   // CHECK-NEXT: %[[PARM:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["parmVar", init]
   int localVar1;
   short localVar2;
@@ -73,8 +73,6 @@ void acc_compute(int parmVar) {
   // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_copy>, name = "parmVar"} loc
   // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_copy>, name = "localVar1"} loc
 
-  // TODO: OpenACC: Represent alwaysin/alwaysout/always correctly. For now,
-  // these do nothing to the IR.
 #pragma acc parallel loop copy(alwaysin: localVar1) copy(alwaysout: localVar2) copy(always: localVar3)
   for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copy>, modifiers = #acc<data_clause_modifier alwaysin>, name = "localVar1"} loc
@@ -1082,7 +1080,7 @@ typedef struct OuterTy {
 } Outer;
 
 void copy_member_of_array_element_member() {
-  // CHECK: cir.func{{.*}} @copy_member_of_array_element_member() {
+  // CHECK: cir.func{{.*}} @copy_member_of_array_element_member()
   Outer outer;
   // CHECK-NEXT: %[[OUTER:.*]] = cir.alloca !rec_OuterTy, !cir.ptr<!rec_OuterTy>, ["outer"]
 
@@ -1104,7 +1102,7 @@ void copy_member_of_array_element_member() {
 }
 
 void modifier_list() {
-  // CHECK: cir.func{{.*}} @modifier_list() {
+  // CHECK: cir.func{{.*}} @modifier_list()
   int localVar;
   // CHECK-NEXT: %[[LOCALVAR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["localVar"]
 

@@ -64,7 +64,6 @@ void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void IncDecInConditionsCheck::check(const MatchFinder::MatchResult &Result) {
-
   SourceLocation ExprLoc;
   bool IsIncrementOp = false;
 

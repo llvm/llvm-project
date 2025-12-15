@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_CONTROL_FLOW_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_CONTROL_FLOW_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTCONTROLFLOWCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTCONTROLFLOWCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -30,21 +30,8 @@ public:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
-
-private:
-  void
-  checkRedundantReturn(const ast_matchers::MatchFinder::MatchResult &Result,
-                       const CompoundStmt *Block);
-
-  void
-  checkRedundantContinue(const ast_matchers::MatchFinder::MatchResult &Result,
-                         const CompoundStmt *Block);
-
-  void issueDiagnostic(const ast_matchers::MatchFinder::MatchResult &Result,
-                       const CompoundStmt *Block, const SourceRange &StmtRange,
-                       const char *Diag);
 };
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_CONTROL_FLOW_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTCONTROLFLOWCHECK_H

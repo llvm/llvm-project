@@ -1,0 +1,53 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+      - Index:           1
+        ParamTypes:      []
+        ReturnTypes:
+          - I64
+      - Index:           2
+        ParamTypes:      []
+        ReturnTypes:
+          - F32
+      - Index:           3
+        ParamTypes:      []
+        ReturnTypes:
+          - F64
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 1, 2, 3 ]
+  - Type:            EXPORT
+    Exports:
+      - Name:            i32.reinterpret_f32
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            i64.reinterpret_f64
+        Kind:            FUNCTION
+        Index:           1
+      - Name:            f32.reinterpret_i32
+        Kind:            FUNCTION
+        Index:           2
+      - Name:            f64.reinterpret_i64
+        Kind:            FUNCTION
+        Index:           3
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            43000080BFBC0B
+      - Index:           1
+        Locals:          []
+        Body:            44000000000000F0BFBD0B
+      - Index:           2
+        Locals:          []
+        Body:            417FBE0B
+      - Index:           3
+        Locals:          []
+        Body:            427FBF0B
+...

@@ -32,11 +32,11 @@ LLVM_LIBC_FUNCTION(int, openat, (int dfd, const char *path, int flags, ...)) {
 
   int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, dfd, path, flags,
                                              mode_flags);
-  if (fd > 0)
-    return fd;
-
-  libc_errno = -fd;
-  return -1;
+  if (fd < 0) {
+    libc_errno = -fd;
+    return -1;
+  }
+  return fd;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

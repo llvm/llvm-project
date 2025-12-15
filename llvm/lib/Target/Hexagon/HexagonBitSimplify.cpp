@@ -137,8 +137,7 @@ namespace {
       return !Bits.any();
     }
     bool includes(const RegisterSet &Rs) const {
-      // A.test(B)  <=>  A-B != {}
-      return !Rs.Bits.test(Bits);
+      return Rs.Bits.subsetOf(Bits);
     }
     bool intersects(const RegisterSet &Rs) const {
       return Bits.anyCommon(Rs.Bits);
@@ -1796,7 +1795,7 @@ namespace {
 
     const MachineDominatorTree &MDT;
     const HexagonInstrInfo &HII;
-    const HexagonRegisterInfo &HRI;
+    [[maybe_unused]] const HexagonRegisterInfo &HRI;
     MachineRegisterInfo &MRI;
     BitTracker &BT;
   };
@@ -1886,7 +1885,7 @@ bool BitSimplification::matchHalf(unsigned SelfR,
 
 bool BitSimplification::validateReg(BitTracker::RegisterRef R, unsigned Opc,
       unsigned OpNum) {
-  auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum, &HRI);
+  auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum);
   auto *RRC = HBS::getFinalVRegClass(R, MRI);
   return OpRC->hasSubClassEq(RRC);
 }

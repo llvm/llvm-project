@@ -21,7 +21,8 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP8]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP11]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP9]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = sdiv i64 [[M]], [[CONV6]]
@@ -36,9 +37,7 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[TMP28]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = sext i32 [[TMP30]] to i64
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP32]]
-; CHECK-NEXT:    [[TMP37:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP38:%.*]] = shl nuw i64 [[TMP37]], 1
-; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr double, ptr [[TMP34]], i64 [[TMP38]]
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr double, ptr [[TMP34]], i64 [[TMP11]]
 ; CHECK-NEXT:    store <vscale x 2 x double> zeroinitializer, ptr [[TMP34]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x double> zeroinitializer, ptr [[TMP39]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]
@@ -139,7 +138,7 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    [[TMP32:%.*]] = add i32 [[TMP31]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = sext i32 [[TMP32]] to i64
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP33]]
-; CHECK-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> zeroinitializer, ptr [[TMP34]], i32 8, <vscale x 2 x i1> [[TMP23]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> zeroinitializer, ptr align 8 [[TMP34]], <vscale x 2 x i1> [[TMP23]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP14]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
@@ -241,12 +240,12 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP23:%.*]] = udiv <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 2 x i64> [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = urem i64 [[INDEX]], [[MUL_2_I]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = udiv i64 [[TMP24]], [[MUL_1_I]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = urem i64 [[TMP24]], [[MUL_1_I]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = udiv i64 [[TMP26]], [[X]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = urem i64 [[TMP26]], [[X]]
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 2 x i64> [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP30:%.*]] = mul i64 [[X]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[TMP30]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = mul i64 [[TMP31]], [[X]]
@@ -256,7 +255,7 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP36:%.*]] = shl i64 [[TMP35]], 32
 ; CHECK-NEXT:    [[TMP37:%.*]] = ashr i64 [[TMP36]], 32
 ; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP37]]
-; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP23]], ptr [[TMP38]], i32 4, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP23]], ptr align 4 [[TMP38]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP14]])
 ; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0

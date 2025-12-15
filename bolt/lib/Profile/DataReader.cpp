@@ -570,7 +570,7 @@ void DataReader::readBasicSampleData(BinaryFunction &BF) {
   if (!SampleDataOrErr)
     return;
 
-  // Basic samples mode territory (without LBR info)
+  // Basic samples mode territory (without brstack info)
   // First step is to assign BB execution count based on samples from perf
   BF.ProfileMatchRatio = 1.0f;
   BF.removeTagsFromProfile();
@@ -578,8 +578,8 @@ void DataReader::readBasicSampleData(BinaryFunction &BF) {
   bool NormalizeByCalls = usesEvent("branches");
   static bool NagUser = true;
   if (NagUser) {
-    outs()
-        << "BOLT-INFO: operating with basic samples profiling data (no LBR).\n";
+    outs() << "BOLT-INFO: operating with basic samples profiling data (no "
+              "brstack).\n";
     if (NormalizeByInsnCount)
       outs() << "BOLT-INFO: normalizing samples by instruction count.\n";
     else if (NormalizeByCalls)

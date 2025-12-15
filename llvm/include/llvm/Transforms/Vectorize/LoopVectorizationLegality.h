@@ -196,6 +196,15 @@ private:
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter &ORE;
+
+  /// Reports a condition where loop vectorization is disallowed: prints
+  /// \p DebugMsg for debugging purposes along with the corresponding
+  /// optimization remark \p RemarkName, with \p RemarkMsg as the user-facing
+  /// message. The loop \p L is used for the location of the remark.
+  void reportDisallowedVectorization(const StringRef DebugMsg,
+                                     const StringRef RemarkName,
+                                     const StringRef RemarkMsg,
+                                     const Loop *L) const;
 };
 
 /// This holds vectorization requirements that must be verified late in
@@ -251,18 +260,15 @@ struct HistogramInfo {
 /// induction variable and the different reduction variables.
 class LoopVectorizationLegality {
 public:
-  LoopVectorizationLegality(Loop *L, PredicatedScalarEvolution &PSE,
-                            DominatorTree *DT, TargetTransformInfo *TTI,
-                            TargetLibraryInfo *TLI, Function *F,
-                            LoopAccessInfoManager &LAIs, LoopInfo *LI,
-                            OptimizationRemarkEmitter *ORE,
-                            LoopVectorizationRequirements *R,
-                            LoopVectorizeHints *H, DemandedBits *DB,
-                            AssumptionCache *AC, BlockFrequencyInfo *BFI,
-                            ProfileSummaryInfo *PSI, AAResults *AA)
+  LoopVectorizationLegality(
+      Loop *L, PredicatedScalarEvolution &PSE, DominatorTree *DT,
+      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, Function *F,
+      LoopAccessInfoManager &LAIs, LoopInfo *LI, OptimizationRemarkEmitter *ORE,
+      LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,
+      AssumptionCache *AC, bool AllowRuntimeSCEVChecks, AAResults *AA)
       : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT), LAIs(LAIs),
-        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC), BFI(BFI), PSI(PSI),
-        AA(AA) {}
+        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
+        AllowRuntimeSCEVChecks(AllowRuntimeSCEVChecks), AA(AA) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -358,7 +364,7 @@ public:
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
-  bool blockNeedsPredication(BasicBlock *BB) const;
+  bool blockNeedsPredication(const BasicBlock *BB) const;
 
   /// Check if this pointer is consecutive when vectorizing. This happens
   /// when the last index of the GEP is the induction variable, or that the
@@ -720,9 +726,8 @@ private:
   /// Hold potentially faulting loads.
   SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
 
-  /// BFI and PSI are used to check for profile guided size optimizations.
-  BlockFrequencyInfo *BFI;
-  ProfileSummaryInfo *PSI;
+  /// Whether or not creating SCEV predicates is allowed.
+  bool AllowRuntimeSCEVChecks;
 
   // Alias Analysis results used to check for possible aliasing with loads
   // used in uncountable exit conditions.

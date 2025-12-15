@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// REQUIRES: std-at-least-c++23
 
 // These compilers don't support __builtin_is_implicit_lifetime yet.
-// UNSUPPORTED: clang-19, gcc-14, gcc-15, apple-clang-16, apple-clang-17
+// UNSUPPORTED: clang-19, gcc-15, apple-clang-17
 
 // <type_traits>
 
@@ -139,13 +139,6 @@ constexpr void test_is_implicit_lifetime() {
   test_is_implicit_lifetime<T[94], true>();
 }
 
-struct ArithmeticTypesTest {
-  template <class T>
-  constexpr void operator()() {
-    test_is_implicit_lifetime<T>();
-  }
-};
-
 constexpr bool test() {
   // Standard fundamental C++ types
 
@@ -155,7 +148,7 @@ constexpr bool test() {
   test_is_implicit_lifetime<const void, false>();
   test_is_implicit_lifetime<volatile void, false>();
 
-  types::for_each(types::arithmetic_types(), ArithmeticTypesTest{});
+  types::for_each(types::arithmetic_types(), []<typename T> { test_is_implicit_lifetime<T>(); });
 
   test_is_implicit_lifetime<Enum>();
   test_is_implicit_lifetime<SignedEnum>();

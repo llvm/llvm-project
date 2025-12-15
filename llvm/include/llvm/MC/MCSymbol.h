@@ -383,6 +383,8 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MCSymbol &Sym) {
   return OS;
 }
 
+bool isRangeRelaxable(const MCSymbol *Begin, const MCSymbol *End);
+
 } // end namespace llvm
 
 #endif // LLVM_MC_MCSYMBOL_H

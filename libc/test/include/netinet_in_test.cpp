@@ -9,11 +9,20 @@
 #include "include/llvm-libc-macros/netinet-in-macros.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcNetinetInTest, IPPROTOMacro) {
-  EXPECT_EQ(IPPROTO_IP, 0);
-  EXPECT_EQ(IPPROTO_ICMP, 1);
-  EXPECT_EQ(IPPROTO_TCP, 6);
-  EXPECT_EQ(IPPROTO_UDP, 17);
-  EXPECT_EQ(IPPROTO_IPV6, 41);
-  EXPECT_EQ(IPPROTO_RAW, 255);
+TEST(LlvmLibcNetinetInTest, IN6Macro) {
+  char buff[16] = {};
+
+  buff[0] = 0xfe;
+  buff[1] = 0x80;
+  EXPECT_TRUE(IN6_IS_ADDR_LINKLOCAL(buff));
+  buff[0] = 0xff;
+  buff[1] = 0x80;
+  EXPECT_FALSE(IN6_IS_ADDR_LINKLOCAL(buff));
+
+  buff[0] = 0xfe;
+  buff[1] = 0xc0;
+  EXPECT_TRUE(IN6_IS_ADDR_SITELOCAL(buff));
+  buff[0] = 0xff;
+  buff[1] = 0x80;
+  EXPECT_FALSE(IN6_IS_ADDR_SITELOCAL(buff));
 }

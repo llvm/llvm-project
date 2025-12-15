@@ -18,8 +18,11 @@ namespace {
 
 AST_MATCHER(Expr, isInMacro) { return Node.getBeginLoc().isMacroID(); }
 
+} // namespace
+
 /// Find the next statement after `S`.
-const Stmt *nextStmt(const MatchFinder::MatchResult &Result, const Stmt *S) {
+static const Stmt *nextStmt(const MatchFinder::MatchResult &Result,
+                            const Stmt *S) {
   auto Parents = Result.Context->getParents(*S);
   if (Parents.empty())
     return nullptr;
@@ -40,8 +43,8 @@ using ExpansionRanges = std::vector<SourceRange>;
 /// \brief Get all the macro expansion ranges related to `Loc`.
 ///
 /// The result is ordered from most inner to most outer.
-ExpansionRanges getExpansionRanges(SourceLocation Loc,
-                                   const MatchFinder::MatchResult &Result) {
+static ExpansionRanges
+getExpansionRanges(SourceLocation Loc, const MatchFinder::MatchResult &Result) {
   ExpansionRanges Locs;
   while (Loc.isMacroID()) {
     Locs.push_back(
@@ -50,8 +53,6 @@ ExpansionRanges getExpansionRanges(SourceLocation Loc,
   }
   return Locs;
 }
-
-} // namespace
 
 void MultipleStatementMacroCheck::registerMatchers(MatchFinder *Finder) {
   const auto Inner = expr(isInMacro(), unless(compoundStmt())).bind("inner");

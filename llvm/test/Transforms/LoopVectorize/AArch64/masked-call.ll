@@ -56,10 +56,10 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFCOMMON-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
 ; TFCOMMON-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFCOMMON-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP6]], ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP6]], ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFCOMMON-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
@@ -72,7 +72,8 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TFA_INTERLEAVE-NEXT:  [[ENTRY:.*]]:
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
+; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP9]], 2
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 1025)
@@ -82,19 +83,15 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY1]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT4:%.*]], %[[VECTOR_BODY]] ]
 ; TFA_INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; TFA_INTERLEAVE-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP7]], i64 [[TMP9]]
-; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP10]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x i64> poison)
+; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP10]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x i64> poison)
 ; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD3]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFA_INTERLEAVE-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP15:%.*]] = shl nuw i64 [[TMP14]], 1
-; TFA_INTERLEAVE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i64 [[TMP15]]
-; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP11]], ptr [[TMP13]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP12]], ptr [[TMP16]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
+; TFA_INTERLEAVE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i64 [[TMP9]]
+; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP11]], ptr align 8 [[TMP13]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP12]], ptr align 8 [[TMP16]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP17]], 1
@@ -182,13 +179,13 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFCOMMON-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
 ; TFCOMMON-NEXT:    [[TMP6:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], splat (i64 50)
 ; TFCOMMON-NEXT:    [[TMP7:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> zeroinitializer
 ; TFCOMMON-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[TMP7]])
 ; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> zeroinitializer
 ; TFCOMMON-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr [[TMP9]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr align 8 [[TMP9]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFCOMMON-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
@@ -201,7 +198,8 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
 ; TFA_INTERLEAVE-NEXT:  [[ENTRY:.*]]:
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
+; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP9]], 2
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 1025)
@@ -211,11 +209,9 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY1]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT5:%.*]], %[[VECTOR_BODY]] ]
 ; TFA_INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFA_INTERLEAVE-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i64 [[TMP9]]
-; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP10]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x i64> poison)
+; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP10]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x i64> poison)
 ; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], splat (i64 50)
 ; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_MASKED_LOAD3]], splat (i64 50)
 ; TFA_INTERLEAVE-NEXT:    [[TMP13:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i1> zeroinitializer
@@ -225,11 +221,9 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP15]], <vscale x 2 x i64> zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[PREDPHI4:%.*]] = select <vscale x 2 x i1> [[TMP12]], <vscale x 2 x i64> [[TMP16]], <vscale x 2 x i64> zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
-; TFA_INTERLEAVE-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP19:%.*]] = shl nuw i64 [[TMP18]], 1
-; TFA_INTERLEAVE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr [[TMP17]], i64 [[TMP19]]
-; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr [[TMP17]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI4]], ptr [[TMP20]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
+; TFA_INTERLEAVE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr [[TMP17]], i64 [[TMP9]]
+; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr align 8 [[TMP17]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI4]], ptr align 8 [[TMP20]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP22:%.*]] = shl nuw i64 [[TMP21]], 1
@@ -333,7 +327,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFCOMMON-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
 ; TFCOMMON-NEXT:    [[TMP6:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], splat (i64 50)
 ; TFCOMMON-NEXT:    [[TMP7:%.*]] = xor <vscale x 2 x i1> [[TMP6]], splat (i1 true)
 ; TFCOMMON-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i1> zeroinitializer
@@ -342,7 +336,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[TMP10]])
 ; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[TMP9]]
 ; TFCOMMON-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr [[TMP12]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr align 8 [[TMP12]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFCOMMON-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
@@ -355,7 +349,8 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
 ; TFA_INTERLEAVE-NEXT:  [[ENTRY:.*]]:
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
+; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP9]], 2
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 1025)
@@ -365,11 +360,9 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY1]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT5:%.*]], %[[VECTOR_BODY]] ]
 ; TFA_INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFA_INTERLEAVE-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i64 [[TMP9]]
-; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP10]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x i64> poison)
+; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP10]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x i64> poison)
 ; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], splat (i64 50)
 ; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_MASKED_LOAD3]], splat (i64 50)
 ; TFA_INTERLEAVE-NEXT:    [[TMP13:%.*]] = xor <vscale x 2 x i1> [[TMP11]], splat (i1 true)
@@ -385,11 +378,9 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP21]], <vscale x 2 x i64> [[TMP17]]
 ; TFA_INTERLEAVE-NEXT:    [[PREDPHI4:%.*]] = select <vscale x 2 x i1> [[TMP12]], <vscale x 2 x i64> [[TMP22]], <vscale x 2 x i64> [[TMP18]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
-; TFA_INTERLEAVE-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP25:%.*]] = shl nuw i64 [[TMP24]], 1
-; TFA_INTERLEAVE-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i64, ptr [[TMP23]], i64 [[TMP25]]
-; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr [[TMP23]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI4]], ptr [[TMP26]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
+; TFA_INTERLEAVE-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i64, ptr [[TMP23]], i64 [[TMP9]]
+; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr align 8 [[TMP23]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI4]], ptr align 8 [[TMP26]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP28:%.*]] = shl nuw i64 [[TMP27]], 1
@@ -607,10 +598,10 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFALWAYS-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFALWAYS-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; TFALWAYS-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFALWAYS-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
 ; TFALWAYS-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFALWAYS-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFALWAYS-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP6]], ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFALWAYS-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP6]], ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFALWAYS-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFALWAYS-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
@@ -629,10 +620,10 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFFALLBACK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFFALLBACK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
 ; TFFALLBACK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFFALLBACK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP6]], ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFFALLBACK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP6]], ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFFALLBACK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
@@ -645,7 +636,8 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
 ; TFA_INTERLEAVE-NEXT:  [[ENTRY:.*]]:
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
+; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP9]], 2
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 1025)
@@ -655,19 +647,15 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY1]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT4:%.*]], %[[VECTOR_BODY]] ]
 ; TFA_INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; TFA_INTERLEAVE-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP7]], i64 [[TMP9]]
-; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP10]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x i64> poison)
+; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP10]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x i64> poison)
 ; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD3]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFA_INTERLEAVE-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP15:%.*]] = shl nuw i64 [[TMP14]], 1
-; TFA_INTERLEAVE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i64 [[TMP15]]
-; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP11]], ptr [[TMP13]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP12]], ptr [[TMP16]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
+; TFA_INTERLEAVE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i64 [[TMP9]]
+; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP11]], ptr align 8 [[TMP13]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP12]], ptr align 8 [[TMP16]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP17]], 1
@@ -762,12 +750,12 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFALWAYS-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; TFALWAYS-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[B]], i64 [[INDEX]]
-; TFALWAYS-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
+; TFALWAYS-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
 ; TFALWAYS-NEXT:    [[TMP6:%.*]] = fmul <vscale x 2 x double> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
 ; TFALWAYS-NEXT:    [[TMP7:%.*]] = fptoui <vscale x 2 x double> [[WIDE_MASKED_LOAD]] to <vscale x 2 x i64>
 ; TFALWAYS-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFALWAYS-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFALWAYS-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP8]], ptr [[TMP9]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFALWAYS-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP8]], ptr align 8 [[TMP9]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFALWAYS-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> [[TMP6]], <vscale x 2 x double> splat (double -0.000000e+00)
 ; TFALWAYS-NEXT:    [[TMP11]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI]], <vscale x 2 x double> [[TMP10]])
 ; TFALWAYS-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
@@ -791,12 +779,12 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFFALLBACK-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; TFFALLBACK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[B]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
+; TFFALLBACK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
 ; TFFALLBACK-NEXT:    [[TMP6:%.*]] = fmul <vscale x 2 x double> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
 ; TFFALLBACK-NEXT:    [[TMP7:%.*]] = fptoui <vscale x 2 x double> [[WIDE_MASKED_LOAD]] to <vscale x 2 x i64>
 ; TFFALLBACK-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFFALLBACK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP8]], ptr [[TMP9]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFFALLBACK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP8]], ptr align 8 [[TMP9]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFFALLBACK-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> [[TMP6]], <vscale x 2 x double> splat (double -0.000000e+00)
 ; TFFALLBACK-NEXT:    [[TMP11]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI]], <vscale x 2 x double> [[TMP10]])
 ; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
@@ -811,7 +799,8 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFA_INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], double [[M:%.*]]) #[[ATTR0]] {
 ; TFA_INTERLEAVE-NEXT:  [[ENTRY:.*]]:
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
+; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP9]], 2
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 1025)
@@ -824,11 +813,9 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY1]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT4:%.*]], %[[VECTOR_BODY]] ]
 ; TFA_INTERLEAVE-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP24:%.*]], %[[VECTOR_BODY]] ]
 ; TFA_INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[B]], i64 [[INDEX]]
-; TFA_INTERLEAVE-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr double, ptr [[TMP7]], i64 [[TMP9]]
-; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
-; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr [[TMP10]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x double> poison)
+; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
+; TFA_INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP10]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x double> poison)
 ; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = fmul <vscale x 2 x double> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = fmul <vscale x 2 x double> [[WIDE_MASKED_LOAD3]], [[BROADCAST_SPLAT]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP13:%.*]] = fptoui <vscale x 2 x double> [[WIDE_MASKED_LOAD]] to <vscale x 2 x i64>
@@ -836,11 +823,9 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFA_INTERLEAVE-NEXT:    [[TMP15:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[TMP13]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP16:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[TMP14]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; TFA_INTERLEAVE-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP19:%.*]] = shl nuw i64 [[TMP18]], 1
-; TFA_INTERLEAVE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr [[TMP17]], i64 [[TMP19]]
-; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP15]], ptr [[TMP17]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP16]], ptr [[TMP20]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
+; TFA_INTERLEAVE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr [[TMP17]], i64 [[TMP9]]
+; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP15]], ptr align 8 [[TMP17]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP16]], ptr align 8 [[TMP20]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP21:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> [[TMP11]], <vscale x 2 x double> splat (double -0.000000e+00)
 ; TFA_INTERLEAVE-NEXT:    [[TMP22:%.*]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI]], <vscale x 2 x double> [[TMP21]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP23:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x double> [[TMP12]], <vscale x 2 x double> splat (double -0.000000e+00)

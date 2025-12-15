@@ -789,6 +789,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     // Search for the kext on the local filesystem via the UUID
     if (!m_module_sp && m_uuid.IsValid()) {
       ModuleSpec module_spec;
+      module_spec.SetTarget(target.shared_from_this());
       module_spec.GetUUID() = m_uuid;
       if (!m_uuid.IsValid())
         module_spec.GetArchitecture() = target.GetArchitecture();
@@ -801,9 +802,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // system.
       PlatformSP platform_sp(target.GetPlatform());
       if (platform_sp) {
-        FileSpecList search_paths = target.GetExecutableSearchPaths();
-        platform_sp->GetSharedModule(module_spec, process, m_module_sp,
-                                     &search_paths, nullptr, nullptr);
+        platform_sp->GetSharedModule(module_spec, process, m_module_sp, nullptr,
+                                     nullptr);
       }
 
       // Ask the Target to find this file on the local system, if possible.

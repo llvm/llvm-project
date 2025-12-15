@@ -37,6 +37,10 @@ class NVPTXTTIImpl final : public BasicTTIImplBase<NVPTXTTIImpl> {
   const NVPTXSubtarget *getST() const { return ST; };
   const NVPTXTargetLowering *getTLI() const { return TLI; };
 
+  /// \returns true if the result of the value could potentially be
+  /// different across threads in a warp.
+  bool isSourceOfDivergence(const Value *V) const;
+
 public:
   explicit NVPTXTTIImpl(const NVPTXTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
@@ -45,8 +49,6 @@ public:
   bool hasBranchDivergence(const Function *F = nullptr) const override {
     return true;
   }
-
-  bool isSourceOfDivergence(const Value *V) const override;
 
   unsigned getFlatAddressSpace() const override {
     return AddressSpace::ADDRESS_SPACE_GENERIC;
@@ -181,6 +183,12 @@ public:
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override;
 
+  bool isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddrSpace,
+                          TTI::MaskKind MaskKind) const override;
+
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddrSpace,
+                         TTI::MaskKind MaskKind) const override;
+
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override;
 
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
@@ -195,6 +203,8 @@ public:
     // Self-referential globals are not supported.
     return false;
   }
+
+  InstructionUniformity getInstructionUniformity(const Value *V) const override;
 };
 
 } // end namespace llvm

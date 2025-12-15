@@ -65,12 +65,13 @@ bool FormatToken::isTypeOrIdentifier(const LangOptions &LangOpts) const {
 
 bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
   assert(is(tok::r_brace));
-  if (!Style.Cpp11BracedListStyle ||
-      Style.AlignAfterOpenBracket != FormatStyle::BAS_BlockIndent) {
+  assert(MatchingParen);
+  assert(MatchingParen->is(tok::l_brace));
+  if (Style.Cpp11BracedListStyle == FormatStyle::BLS_Block ||
+      !Style.BreakBeforeCloseBracketBracedList) {
     return false;
   }
   const auto *LBrace = MatchingParen;
-  assert(LBrace && LBrace->is(tok::l_brace));
   if (LBrace->is(BK_BracedInit))
     return true;
   if (LBrace->Previous && LBrace->Previous->is(tok::equal))
@@ -87,7 +88,8 @@ bool FormatToken::opensBlockOrBlockTypeList(const FormatStyle &Style) const {
   return is(TT_ArrayInitializerLSquare) || is(TT_ProtoExtensionLSquare) ||
          (is(tok::l_brace) &&
           (getBlockKind() == BK_Block || is(TT_DictLiteral) ||
-           (!Style.Cpp11BracedListStyle && NestingLevel == 0))) ||
+           (Style.Cpp11BracedListStyle == FormatStyle::BLS_Block &&
+            NestingLevel == 0))) ||
          (is(tok::less) && Style.isProto());
 }
 
@@ -183,7 +185,8 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // In C++11 braced list style, we should not format in columns unless they
   // have many items (20 or more) or we allow bin-packing of function call
   // arguments.
-  if (Style.Cpp11BracedListStyle && !Style.BinPackArguments &&
+  if (Style.Cpp11BracedListStyle != FormatStyle::BLS_Block &&
+      !Style.BinPackArguments &&
       (Commas.size() < 19 || !Style.BinPackLongBracedList)) {
     return;
   }
@@ -195,7 +198,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
     return;
 
   // Column format doesn't really make sense if we don't align after brackets.
-  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_DontAlign)
+  if (!Style.AlignAfterOpenBracket)
     return;
 
   FormatToken *ItemBegin = Token->Next;
@@ -227,7 +230,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
       ItemEnd = Token->MatchingParen;
       const FormatToken *NonCommentEnd = ItemEnd->getPreviousNonComment();
       ItemLengths.push_back(CodePointsBetween(ItemBegin, NonCommentEnd));
-      if (Style.Cpp11BracedListStyle &&
+      if (Style.Cpp11BracedListStyle != FormatStyle::BLS_Block &&
           !ItemEnd->Previous->isTrailingComment()) {
         // In Cpp11 braced list style, the } and possibly other subsequent
         // tokens will need to stay on a line with the last element.

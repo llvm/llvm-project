@@ -1397,11 +1397,12 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleIdentSCCSDirective(Result);
     case tok::pp_sccs:
       return HandleIdentSCCSDirective(Result);
-    case tok::pp_embed:
-      return HandleEmbedDirective(SavedHash.getLocation(), Result,
-                                  getCurrentFileLexer()
-                                      ? *getCurrentFileLexer()->getFileEntry()
-                                      : static_cast<FileEntry *>(nullptr));
+    case tok::pp_embed: {
+      if (PreprocessorLexer *CurrentFileLexer = getCurrentFileLexer())
+        if (OptionalFileEntryRef FERef = CurrentFileLexer->getFileEntry())
+          return HandleEmbedDirective(SavedHash.getLocation(), Result, *FERef);
+      return HandleEmbedDirective(SavedHash.getLocation(), Result, nullptr);
+    }
     case tok::pp_assert:
       //isExtension = true;  // FIXME: implement #assert
       break;
@@ -3665,14 +3666,14 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
           std::pair<tok::TokenKind, SourceLocation> Matches) {
         Diag(CurTok, diag::err_expected) << Expected;
         Diag(Matches.second, diag::note_matching) << Matches.first;
-        if (CurTok.isNot(tok::eod))
+        if (CurTok.isNot(EndTokenKind))
           DiscardUntilEndOfDirective(CurTok);
       };
 
   auto ExpectOrDiagAndSkipToEOD = [&](tok::TokenKind Kind) {
     if (CurTok.isNot(Kind)) {
       Diag(CurTok, diag::err_expected) << Kind;
-      if (CurTok.isNot(tok::eod))
+      if (CurTok.isNot(EndTokenKind))
         DiscardUntilEndOfDirective(CurTok);
       return false;
     }
@@ -3763,7 +3764,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (Result.isNegative()) {
         Diag(CurTok, diag::err_requires_positive_value)
             << toString(Result, 10) << /*positive*/ 0;
-        if (CurTok.isNot(tok::eod))
+        if (CurTok.isNot(EndTokenKind))
           DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
@@ -3906,7 +3907,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       }
       if (!ForHasEmbed) {
         Diag(ParamStartLoc, diag::err_pp_unknown_parameter) << 1 << Parameter;
-        if (CurTok.isNot(tok::eod))
+        if (CurTok.isNot(EndTokenKind))
           DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
@@ -4018,7 +4019,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
       this->LookupEmbedFile(Filename, isAngled, true, LookupFromFile);
   if (!MaybeFileRef) {
     // could not find file
-    if (Callbacks && Callbacks->EmbedFileNotFound(OriginalFilename)) {
+    if (Callbacks && Callbacks->EmbedFileNotFound(Filename)) {
       return;
     }
     Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;

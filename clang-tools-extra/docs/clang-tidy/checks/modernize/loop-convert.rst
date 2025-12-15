@@ -107,7 +107,8 @@ Original:
   for (int i = 0; i < size(v); ++i)
     cout << v[i];
 
-After applying the check with minimum confidence level set to `reasonable` (default):
+After applying the check with minimum confidence level set to
+`reasonable` (default):
 
 .. code-block:: c++
 
@@ -146,7 +147,7 @@ Options
 .. option:: UseCxx20ReverseRanges
 
    When set to true convert loops when in C++20 or later mode using
-   ``std::ranges::reverse_view``.
+   ``std::views::reverse``.
    Default value is `true`.
 
 .. option:: MakeReverseRangeFunction
@@ -154,7 +155,7 @@ Options
    Specify the function used to reverse an iterator pair, the function should
    accept a class with ``rbegin`` and ``rend`` methods and return a
    class with ``begin`` and ``end`` methods that call the ``rbegin`` and
-   ``rend`` methods respectively. Common examples are ``ranges::reverse_view``
+   ``rend`` methods respectively. Common examples are ``std::views::reverse``
    and ``llvm::reverse``.
    Default value is an empty string.
 
@@ -320,6 +321,6 @@ not be used on code with a compatibility requirement of OpenMP prior to
 version 5. It is **intentional** that this check does not make any attempts to
 exclude incorrect diagnostics on OpenMP for loops prior to OpenMP 5.
 
-To prevent this check to be applied (and to break) OpenMP for loops but still be
-applied to non-OpenMP for loops the usage of ``NOLINT`` (see
-:ref:`clang-tidy-nolint`) on the specific for loops is recommended.
+To prevent this check to be applied (and to break) OpenMP for loops
+but still be applied to non-OpenMP for loops the usage of ``NOLINT``
+(see :ref:`clang-tidy-nolint`) on the specific for loops is recommended.

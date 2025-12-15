@@ -90,7 +90,7 @@ void PlatformAppleSimulator::GetStatus(Stream &strm) {
   if (!sdk.empty())
     strm << "  SDK Path: \"" << sdk << "\"\n";
   else
-    strm << "  SDK Path: error: unable to locate SDK\n";
+    strm << "  SDK Path: <unable to locate SDK>\n";
 
 #if defined(__APPLE__)
   // This will get called by subclasses, so just output status on the current
@@ -420,7 +420,6 @@ Status PlatformAppleSimulator::GetSymbolFile(const FileSpec &platform_file,
 
 Status PlatformAppleSimulator::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
   // For iOS/tvOS/watchOS, the SDK files are all cached locally on the
   // host system. So first we ask for the file in the cached SDK, then
@@ -432,12 +431,10 @@ Status PlatformAppleSimulator::GetSharedModule(
   error = GetSymbolFile(platform_file, module_spec.GetUUIDPtr(),
                         platform_module_spec.GetFileSpec());
   if (error.Success()) {
-    error = ResolveExecutable(platform_module_spec, module_sp,
-                              module_search_paths_ptr);
+    error = ResolveExecutable(platform_module_spec, module_sp);
   } else {
     const bool always_create = false;
-    error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                        module_search_paths_ptr, old_modules,
+    error = ModuleList::GetSharedModule(module_spec, module_sp, old_modules,
                                         did_create_ptr, always_create);
   }
   if (module_sp)
@@ -660,4 +657,3 @@ void PlatformAppleSimulator::Terminate() {
       PlatformDarwin::Terminate();
     }
 }
-

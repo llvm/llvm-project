@@ -10,7 +10,6 @@
 ; RUN: llc -mtriple riscv64 -mattr=+m,+v,+zvl256b -riscv-v-vector-bits-max=256 < %s \
 ; RUN:    | FileCheck %s -check-prefixes=RV64-VLEN256EXACT
 
-
 define i64 @vscale_zero() nounwind {
 ; RV64-LABEL: vscale_zero:
 ; RV64:       # %bb.0: # %entry
@@ -200,5 +199,3 @@ entry:
   ret i64 %1
 }
 
-
-declare i64 @llvm.vscale.i64()

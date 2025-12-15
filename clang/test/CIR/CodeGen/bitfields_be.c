@@ -21,13 +21,13 @@ int init(S* s) {
   return s->c;
 }
 
-//CIR: cir.func dso_local @init
+//CIR: cir.func {{.*}} @init
 //CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init] {alignment = 8 : i64}
 //CIR:   [[TMP1:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 //CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>
 //CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP2]] : !cir.ptr<!u32i>) -> !s32i
 
-//LLVM: define dso_local i32 @init(ptr %0) {
+//LLVM: define dso_local i32 @init(ptr %0){{.*}} {
 //LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 //LLVM:   [[TMP1:%.*]] = alloca i32, i64 1, align 4
 //LLVM:   [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
@@ -51,7 +51,7 @@ void load(S* s) {
 }
 
 // field 'a'
-// CIR: cir.func dso_local @load
+// CIR: cir.func {{.*}} @load
 // CIR:    %[[PTR0:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init] {alignment = 8 : i64} loc(#loc35)
 // CIR:    %[[CONST1:.*]] = cir.const #cir.int<4> : !s32i
 // CIR:    %[[MIN1:.*]] = cir.unary(minus, %[[CONST1]]) nsw : !s32i, !s32i
@@ -59,7 +59,7 @@ void load(S* s) {
 // CIR:    %[[GET0:.*]] = cir.get_member %[[VAL0]][0] {name = "a"} : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>
 // CIR:    %[[SET0:.*]] = cir.set_bitfield align(4) (#bfi_a, %[[GET0]] : !cir.ptr<!u32i>, %[[MIN1]] : !s32i) -> !s32i
 
-// LLVM: define dso_local void @load
+// LLVM: define dso_local void @load{{.*}}{{.*}}
 // LLVM:   %[[PTR0:.*]] = load ptr
 // LLVM:   %[[GET0:.*]] = getelementptr %struct.S, ptr %[[PTR0]], i32 0, i32 0
 // LLVM:   %[[VAL0:.*]] = load i32, ptr %[[GET0]], align 4
