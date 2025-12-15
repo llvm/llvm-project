@@ -20,7 +20,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint-doc8'
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint'
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
