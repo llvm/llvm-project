@@ -32,6 +32,11 @@ class Tosa_ShapeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_Op<mnemonic, !listconcat(traits, [TosaShapeOperator, Pure])> {
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[]>,
+  ];
 }
 
 // op trait: shape operator has same ranks for operands and results
@@ -43,6 +48,10 @@ def TosaShapeOperatorWithSameRanks
 class Tosa_ElementwiseShapeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_ShapeOp<mnemonic,
                    !listconcat(traits, [TosaShapeOperatorWithSameRanks])> {
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_SHAPE]>,
+  ];
 }
 
 
@@ -62,11 +71,6 @@ def Tosa_AddShapeOp : Tosa_ElementwiseShapeOp<"add_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
-
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_SHAPE]>,
-  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -90,11 +94,6 @@ def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
 
   let results = (outs Tosa_Shape:$output);
 
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
-  ];
-
   let hasVerifier = 1;
   let hasFolder = 1;
 }
@@ -115,11 +114,6 @@ def Tosa_DivCeilShapeOp : Tosa_ElementwiseShapeOp<"div_ceil_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
-
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_SHAPE]>
-  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -138,11 +132,6 @@ def Tosa_DivFloorShapeOp : Tosa_ElementwiseShapeOp<"div_floor_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
-
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_SHAPE]>
-  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -161,11 +150,6 @@ def Tosa_MulShapeOp : Tosa_ElementwiseShapeOp<"mul_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
-
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_SHAPE]>
-  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -184,11 +168,6 @@ def Tosa_SubShapeOp : Tosa_ElementwiseShapeOp<"sub_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
-
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_SHAPE]>,
-  ];
 }
 
 #endif // TOSA_SHAPE_OPS
