@@ -3850,7 +3850,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
     // Turn icmp (ptrtoint/ptrtoaddr x), (ptrtoint/ptrtoaddr/constant) into a
     // compare of the input if the integer type is the same size as the
     // pointer address type (icmp only compares the address of the pointer).
-    if (MaxRecurse && (isa<PtrToIntInst>(LI) || isa<PtrToAddrInst>(LI)) &&
+    if (MaxRecurse && (isa<PtrToIntInst, PtrToAddrInst>(LI)) &&
         Q.DL.getAddressType(SrcTy) == DstTy) {
       if (Constant *RHSC = dyn_cast<Constant>(RHS)) {
         // Transfer the cast to the constant.
@@ -3858,7 +3858,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
                                         ConstantExpr::getIntToPtr(RHSC, SrcTy),
                                         Q, MaxRecurse - 1))
           return V;
-      } else if (isa<PtrToIntInst>(RHS) || isa<PtrToAddrInst>(RHS)) {
+      } else if (isa<PtrToIntInst, PtrToAddrInst>(RHS)) {
         auto *RI = cast<CastInst>(RHS);
         if (RI->getOperand(0)->getType() == SrcTy)
           // Compare without the cast.
