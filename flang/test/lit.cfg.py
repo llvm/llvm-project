@@ -90,8 +90,9 @@ if config.flang_test_triple:
 # directories.
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
 
-# If the flang examples are built, add examples to the config
-if config.flang_examples:
+# Some tests depend on examples, mark them as available in the config. This
+# setting includes examples from both, flang and llvm.
+if config.build_examples:
     config.available_features.add("examples")
 
 # Plugins (loadable modules)
