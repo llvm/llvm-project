@@ -216,15 +216,11 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
 
 bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
     StringRef CWD, ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
-  auto OverlayFSAndArgs =
+  auto [OverlayFS, ModifiedCommandLine] =
       initVFSForByNameScanning(DepFS, CommandLine, CWD, "ScanningByName", CAS);
-  auto &OverlayFS = OverlayFSAndArgs.first;
-  const auto &ModifiedCommandLine = OverlayFSAndArgs.second;
-
   auto DiagEngineWithCmdAndOpts =
       std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
                                                       OverlayFS, DC);
-
   return initializeCompilerInstanceWithContext(
       CWD, ModifiedCommandLine, std::move(DiagEngineWithCmdAndOpts), OverlayFS);
 }
