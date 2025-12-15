@@ -2067,6 +2067,17 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty, llvm::APInt &Min,
   return true;
 }
 
+static bool IsOptimizedBuild(const CodeGenOptions &CGOpt) {
+  return CGOpt.OptimizationLevel > 0;
+}
+
+static bool ConvertBoolByCmpZero(const CodeGenOptions &CGOpt) {
+  if (CGOpt.getLoadBoolFromMem() == CodeGenOptions::BoolFromMem::NonZero)
+    return true;
+
+  return false;
+}
+
 llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
   llvm::APInt Min, End;
   bool IsBool = Ty->hasBooleanRepresentation() && !Ty->isVectorType();
@@ -2086,7 +2097,7 @@ void CodeGenFunction::maybeAttachRangeForLoad(llvm::LoadInst *Load, QualType Ty,
   if (EmitScalarRangeCheck(Load, Ty, Loc)) {
     // In order to prevent the optimizer from throwing away the check, don't
     // attach range metadata to the load.
-  } else if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
+  } else if (IsOptimizedBuild(CGM.getCodeGenOpts())) {
     if (llvm::MDNode *RangeInfo = getRangeForLoadFromType(Ty)) {
       Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
       Load->setMetadata(llvm::LLVMContext::MD_noundef,
@@ -2271,13 +2282,12 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   }
 
   llvm::Type *ResTy = ConvertType(Ty);
-  bool HasBoolRep = Ty->hasBooleanRepresentation();
-  if (HasBoolRep && CGM.getCodeGenOpts().getLoadBoolFromMem() ==
-                        CodeGenOptions::BoolFromMem::NonZero) {
+  bool HasBoolRep = Ty->hasBooleanRepresentation() || Ty->isExtVectorBoolType();
+  if (HasBoolRep && ConvertBoolByCmpZero(CGM.getCodeGenOpts())) {
     return Builder.CreateICmpNE(
         Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
   }
-  if (HasBoolRep || Ty->isBitIntType() || Ty->isExtVectorBoolType())
+  if (HasBoolRep || Ty->isBitIntType())
     return Builder.CreateTrunc(Value, ResTy, "loadedv");
 
   return Value;
@@ -2472,7 +2482,7 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
 
   if (LV.isMatrixElt()) {
     llvm::Value *Idx = LV.getMatrixIdx();
-    if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
+    if (IsOptimizedBuild(CGM.getCodeGenOpts())) {
       const auto *const MatTy = LV.getType()->castAs<ConstantMatrixType>();
       llvm::MatrixBuilder MB(Builder);
       MB.CreateIndexAssumption(Idx, MatTy->getNumElementsFlattened());
@@ -2690,7 +2700,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 
     if (Dst.isMatrixElt()) {
       llvm::Value *Idx = Dst.getMatrixIdx();
-      if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
+      if (IsOptimizedBuild(CGM.getCodeGenOpts())) {
         const auto *const MatTy = Dst.getType()->castAs<ConstantMatrixType>();
         llvm::MatrixBuilder MB(Builder);
         MB.CreateIndexAssumption(Idx, MatTy->getNumElementsFlattened());
@@ -3920,7 +3930,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                llvm::AttributeList::FunctionIndex, B),
       /*Local=*/true);
   llvm::CallInst *HandlerCall = CGF.EmitNounwindRuntimeCall(Fn, FnArgs);
-  NoMerge = NoMerge || !CGF.CGM.getCodeGenOpts().OptimizationLevel ||
+  NoMerge = NoMerge || !IsOptimizedBuild(CGF.CGM.getCodeGenOpts()) ||
             (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
   if (NoMerge)
     HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
@@ -4312,7 +4322,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
         TrapLocation, TrapCategory, TrapMessage);
   }
 
-  NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
+  NoMerge = NoMerge || !IsOptimizedBuild(CGM.getCodeGenOpts()) ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
   llvm::MDBuilder MDHelper(getLLVMContext());
