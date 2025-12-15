@@ -20,7 +20,6 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
@@ -367,13 +366,17 @@ static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
                                             mlir::Location loc,
                                             mlir::Type dstTy,
                                             SmallVectorImpl<mlir::Value> &ops) {
+
   mlir::Value src = ops[0];
   mlir::Value passthru = ops[1];
   mlir::Value mask = ops[2];
 
-  auto vecTy = mlir::cast<cir::VectorType>(op0Ty);
+  auto vecTy = mlir::cast<cir::VectorType>(src.getType());
   uint64_t numElems = vecTy.getSize();
-  auto halfTy = cir::VectorType::get(builder.getF16Type(), numElems());
+
+  mask = getMaskVecValue(builder, loc, mask, numElems);
+
+  auto halfTy = cir::VectorType::get(builder.getF16Type(), numElems);
   mlir::Value srcF16 = builder.createBitcast(loc, src, halfTy);
 
   mlir::Value res = builder.createFloatingCast(srcF16, dstTy);
@@ -1737,7 +1740,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Value intrinsicResult = emitIntrinsicCallOp(
         builder, loc, intrinsicName, convertType(expr->getType()), ops);
 
-    return emitX86VectorSelect(builder, loc, ops[2], intrinsicResult, ops[1]);
+    return emitX86Select(builder, loc, ops[2], intrinsicResult, ops[1]);
   }
   case X86::BI__cpuid:
   case X86::BI__cpuidex:
