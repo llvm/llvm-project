@@ -29,14 +29,12 @@ namespace clang::tidy::bugprone {
 
 using matchers::hasUnevaluatedContext;
 
-namespace {
-
 static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
   return anyOf(hasAnyName("::std::move", "::std::forward"),
                matchers::matchesAnyListedName(InvalidationFunctions));
 }
 
-StatementMatcher
+static StatementMatcher
 makeReinitMatcher(const ValueDecl *MovedVariable,
                   llvm::ArrayRef<StringRef> InvalidationFunctions) {
   const auto DeclRefMatcher =
@@ -148,8 +146,6 @@ private:
   std::unique_ptr<StmtToBlockMap> BlockMap;
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
 };
-
-} // namespace
 
 // Matches nodes that are
 // - Part of a decltype argument or class template argument (we check this by
