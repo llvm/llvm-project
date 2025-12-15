@@ -87,6 +87,8 @@ fi
 
 cd ${ZLIB_BUILD}
 AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/true ./configure --static
+# TODO: remove this. this is for debugging buildbot problems
+cat configure.log
 make -j libz.a
 
 # Build and install libcxxabi and libcxx.

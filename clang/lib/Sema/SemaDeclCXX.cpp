@@ -7288,20 +7288,27 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
       CheckCompletedMemberFunction(MD);
   }
 
-  // ms_struct is a request to use the same ABI rules as MSVC.  Check
-  // whether this class uses any C++ features that are implemented
-  // completely differently in MSVC, and if so, emit a diagnostic.
-  // That diagnostic defaults to an error, but we allow projects to
-  // map it down to a warning (or ignore it).  It's a fairly common
-  // practice among users of the ms_struct pragma to mass-annotate
-  // headers, sweeping up a bunch of types that the project doesn't
-  // really rely on MSVC-compatible layout for.  We must therefore
-  // support "ms_struct except for C++ stuff" as a secondary ABI.
+  // {ms,gcc}_struct is a request to change ABI rules to either follow
+  // Microsoft or Itanium C++ ABI. However, even if these attributes are
+  // present, we do not layout classes following foreign ABI rules, but
+  // instead enter a special "compatibility mode", which only changes
+  // alignments of fundamental types and layout of bit fields.
+  // Check whether this class uses any C++ features that are implemented
+  // completely differently in the requested ABI, and if so, emit a
+  // diagnostic. That diagnostic defaults to an error, but we allow
+  // projects to map it down to a warning (or ignore it). It's a fairly
+  // common practice among users of the ms_struct pragma to
+  // mass-annotate headers, sweeping up a bunch of types that the
+  // project doesn't really rely on MSVC-compatible layout for. We must
+  // therefore support "ms_struct except for C++ stuff" as a secondary
+  // ABI.
   // Don't emit this diagnostic if the feature was enabled as a
   // language option (as opposed to via a pragma or attribute), as
   // the option -mms-bitfields otherwise essentially makes it impossible
   // to build C++ code, unless this diagnostic is turned off.
-  if (Record->isMsStruct(Context) && !Context.getLangOpts().MSBitfields &&
+  if (Context.getLangOpts().getLayoutCompatibility() ==
+          LangOptions::LayoutCompatibilityKind::Default &&
+      Record->isMsStruct(Context) != Context.defaultsToMsStruct() &&
       (Record->isPolymorphic() || Record->getNumBases())) {
     Diag(Record->getLocation(), diag::warn_cxx_ms_struct);
   }
@@ -9903,13 +9910,6 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
     return true;
   }
 
-  // For an anonymous struct or union, the copy and assignment special members
-  // will never be used, so skip the check. For an anonymous union declared at
-  // namespace scope, the constructor and destructor are used.
-  if (CSM != CXXSpecialMemberKind::DefaultConstructor &&
-      CSM != CXXSpecialMemberKind::Destructor && RD->isAnonymousStructOrUnion())
-    return false;
-
   // C++11 [class.copy]p7, p18:
   //   If the class definition declares a move constructor or move assignment
   //   operator, an implicitly declared copy constructor or copy assignment
@@ -11143,9 +11143,11 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
     else
       Loc = RD->getLocation();
 
+    DeclarationName Name =
+        Context.DeclarationNames.getCXXOperatorName(OO_Delete);
     // If we have a virtual destructor, look up the deallocation function
     if (FunctionDecl *OperatorDelete = FindDeallocationFunctionForDestructor(
-            Loc, RD, /*Diagnose=*/true, /*LookForGlobal=*/false)) {
+            Loc, RD, /*Diagnose=*/true, /*LookForGlobal=*/false, Name)) {
       Expr *ThisArg = nullptr;
 
       // If the notional 'delete this' expression requires a non-trivial
@@ -11193,8 +11195,38 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
         // delete calls that require it.
         FunctionDecl *GlobalOperatorDelete =
             FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
-                                                  /*LookForGlobal*/ true);
-        Destructor->setOperatorGlobalDelete(GlobalOperatorDelete);
+                                                  /*LookForGlobal*/ true, Name);
+        if (GlobalOperatorDelete) {
+          MarkFunctionReferenced(Loc, GlobalOperatorDelete);
+          Destructor->setOperatorGlobalDelete(GlobalOperatorDelete);
+        }
+      }
+
+      if (Context.getTargetInfo().emitVectorDeletingDtors(
+              Context.getLangOpts())) {
+        // Lookup delete[] too in case we have to emit a vector deleting dtor.
+        DeclarationName VDeleteName =
+            Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
+        FunctionDecl *ArrOperatorDelete = FindDeallocationFunctionForDestructor(
+            Loc, RD, /*Diagnose*/ false,
+            /*LookForGlobal*/ false, VDeleteName);
+        if (ArrOperatorDelete && isa<CXXMethodDecl>(ArrOperatorDelete)) {
+          FunctionDecl *GlobalArrOperatorDelete =
+              FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
+                                                    /*LookForGlobal*/ true,
+                                                    VDeleteName);
+          Destructor->setGlobalOperatorArrayDelete(GlobalArrOperatorDelete);
+          if (GlobalArrOperatorDelete &&
+              Context.classNeedsVectorDeletingDestructor(RD))
+            MarkFunctionReferenced(Loc, GlobalArrOperatorDelete);
+        } else if (!ArrOperatorDelete) {
+          ArrOperatorDelete = FindDeallocationFunctionForDestructor(
+              Loc, RD, /*Diagnose*/ false,
+              /*LookForGlobal*/ true, VDeleteName);
+        }
+        Destructor->setOperatorArrayDelete(ArrOperatorDelete);
+        if (ArrOperatorDelete && Context.classNeedsVectorDeletingDestructor(RD))
+          MarkFunctionReferenced(Loc, ArrOperatorDelete);
       }
     }
   }

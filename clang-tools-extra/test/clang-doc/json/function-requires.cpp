@@ -43,7 +43,10 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Parameters": [
-// CHECK-NEXT:          "typename T"
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
+// CHECK-NEXT:            "Param": "typename T"
+// CHECK-NEXT:          }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "USR": "{{[0-9A-F]*}}" 
@@ -79,7 +82,10 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Parameters": [
-// CHECK-NEXT:          "Incrementable T"
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
+// CHECK-NEXT:            "Param": "Incrementable T"
+// CHECK-NEXT:          }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "USR": "{{[0-9A-F]*}}"

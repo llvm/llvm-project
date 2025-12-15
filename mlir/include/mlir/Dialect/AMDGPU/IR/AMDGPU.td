@@ -94,6 +94,9 @@ def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
   let description = [{
     This type is opaque and it is used to represent a struct of two addresses.
     One address is in LDS while the other is in global memory.
+
+    The value defined by this operation is only intended to be used by
+    amdgpu.tdm_make_descriptor.
   }];
   let parameters = (ins "Type":$elementType);
   let builders = [
@@ -102,6 +105,28 @@ def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
     }]>
   ];
   let assemblyFormat = "`<` $elementType `>`";
+}
+
+def AMDGPU_TDMGatherBaseType : AMDGPU_Type<"TDMGatherBase", "tdm_gather_base"> {
+  let summary = "Pair of base addresses that move data between LDS and global storage.";
+  let description = [{
+    This type is opaque and it is used to represent a struct of two addresses.
+    One address is in LDS while the other is in global memory.
+
+    This operation is similar to amdgpu.tdm_make_base but intended to be
+    used in gather mode.
+
+    The value defined by this operation is only intended to be used by
+    amdgpu.tdm_make_gather_descriptor.
+  }];
+  let parameters = (ins "Type":$elementType, "Type":$indexType);
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "Type":$elementType, "Type": $indexType), [{
+      return $_get(elementType.getContext(), elementType, indexType);
+    }]>
+  ];
+  let assemblyFormat = "`<` $elementType `,` $indexType`>`";
+  let genVerifyDecl = 1;
 }
 
 def AMDGPU_TDMDescriptorType : AMDGPU_Type<"TDMDescriptor", "tdm_descriptor"> {
@@ -377,6 +402,8 @@ def AMDGPU_FatRawBufferCastOp :
     AMDGPU_Op<"fat_raw_buffer_cast",
       [Pure,
        DeclareOpInterfaceMethods<InferTypeOpInterface>,
+       DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+                                 ["reifyDimOfResult"]>,
        ViewLikeOpInterface, AttrSizedOperandSegments]>,
     Arguments<(ins AnyMemRef:$source,
       Optional<I64>:$validBytes,
@@ -1234,16 +1261,56 @@ def AMDGPU_ScaledMFMAOp :
   let hasCanonicalizer = 1;
 }
 
-def AMDGPU_MakeDmaBaseOp :
-    AMDGPU_Op<"make_dma_base", [Pure, AttrSizedOperandSegments, AllElementTypesMatch<["global", "lds"]>]>,
+
+class AMDGPU_DmaBaseOp<string mnemonic, Type outType> :
+    AMDGPU_Op<mnemonic, [Pure, AttrSizedOperandSegments, AllElementTypesMatch<["global", "lds"]>]>,
     Arguments<(ins Arg<AnyMemRef>:$global,
                    Variadic<Index>:$global_indices,
                    Arg<AnyMemRef>:$lds,
                    Variadic<Index>:$lds_indices)>,
-    Results<(outs AMDGPU_TDMBaseType: $base)> {
+    Results<(outs outType: $base)> {
 
   // TODO:
   // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
+
+  let assemblyFormat = [{
+    $global `[` $global_indices `]` `,` $lds `[` $lds_indices `]` attr-dict `:` type($global) `,` type($lds) `->` type(results)
+  }];
+}
+
+def AMDGPU_MakeGatherDmaBaseOp : AMDGPU_DmaBaseOp<"make_gather_dma_base", AMDGPU_TDMGatherBaseType> {
+  let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
+
+  let description = [{
+    This operation creates a pair of addresses that will be used by `tensor_load_to_lds`
+    and `tensor_store_from_lds`.
+
+    This operation creates a value corresponding to the tensor descriptor (D#) group 0
+    found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
+
+    Unlike `make_dma_base`, this operation returns `!amdgpu.tdm_gather_base<$element_type, $index_type>`
+    which is only compatible with `make_gather_dma_descriptor`. Using the descriptor returned
+    by `make_gather_dma_descriptor` will set the `tensor_load_to_lds` and `tensor_store_from_lds` to gather mode.
+
+    ```mlir
+      %base = amdgpu.make_gather_dma_base %global[%idx0, %idx1], %lds[%idx2, %idx3] : memref<64x64xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_gather_base<i32, i16>
+      // %indices : i16
+      %descriptor = amdgpu.make_gather_dma_descriptor %base[%indices] globalSize [2, 2] globalStride [2, 1] sharedSize [2, 2] : !amdgpu.tdm_gather_base<i32, i16>, i16 -> !amdgpu.tdm_descriptor
+      amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
+    ```
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static constexpr bool isGather() {
+      return true;
+    }
+  }];
+}
+
+
+def AMDGPU_MakeDmaBaseOp : AMDGPU_DmaBaseOp<"make_dma_base", AMDGPU_TDMBaseType> {
 
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
   let description = [{
@@ -1284,17 +1351,20 @@ def AMDGPU_MakeDmaBaseOp :
     These tensor DMA operations were introduced in gfx1250.
   }];
 
-  let assemblyFormat = [{
-    $global `[` $global_indices `]` `,` $lds `[` $lds_indices `]` attr-dict `:` type($global) `,` type($lds) `->` type(results)
-  }];
-
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static constexpr bool isGather() {
+      return false;
+    }
+  }];
 }
 
-def AMDGPU_MakeDmaDescriptorOp :
-  AMDGPU_Op<"make_dma_descriptor", [Pure, AttrSizedOperandSegments]>,
-  Arguments<(ins
-    AMDGPU_TDMBaseType: $base,
+class AMDGPU_MakeDescriptorOp<string mnemonic> :
+  AMDGPU_Op<mnemonic, [Pure, AttrSizedOperandSegments]>,
+  Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
+
+  dag baseArgs = (ins
     Variadic<Index>: $global_dynamic_sizes,
     DenseI64ArrayAttr: $global_static_sizes,
     Variadic<Index>: $global_dynamic_strides,
@@ -1309,9 +1379,66 @@ def AMDGPU_MakeDmaDescriptorOp :
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
     Optional<I32>: $lds_increment,
-    Optional<Index>: $iteration_count)>,
-  Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
+    Optional<Index>: $iteration_count);
 
+  code extraClassDeclarationBase = [{
+    int64_t getRank() {
+      return getGlobalStaticSizes().size();
+    }
+
+    unsigned getElementTypeWidth() {
+      return getBase().getType().getElementType().getIntOrFloatBitWidth();
+    }
+
+    SmallVector<OpFoldResult> getMixedGlobalSizes() {
+      return getMixedValues(getGlobalStaticSizes(), getGlobalDynamicSizes(), getContext());
+    }
+
+    SmallVector<OpFoldResult> getMixedGlobalStrides() {
+      return getMixedValues(getGlobalStaticStrides(), getGlobalDynamicStrides(), getContext());
+    }
+
+    SmallVector<OpFoldResult> getMixedSharedSizes() {
+      return getMixedValues(getSharedStaticSizes(), getSharedDynamicSizes(), getContext());
+    }
+
+  }];
+
+}
+
+def AMDGPU_MakeGatherDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_gather_dma_descriptor"> {
+  dag args = (ins AMDGPU_TDMGatherBaseType: $base,
+                  AnyTypeOf<[VectorOfMinMaxLengthAndType<1, 8, [I32]>,
+                             VectorOfMinMaxLengthAndType<1, 16, [I16]>]>: $indices);
+  let arguments = !con(args, baseArgs);
+  let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
+
+  let assemblyFormat = [{
+    $base `[` $indices `]`
+    `globalSize` custom<DynamicIndexList>($global_dynamic_sizes, $global_static_sizes)
+    `globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
+    `sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
+    ( `padShared` `(` $pad_amount^ `every` $pad_interval `)` )?
+    ( `workgroupMask` $workgroup_mask^ ( `earlyTimeout` $early_timeout^)?)?
+    ( `atomicBarrier` `(` $atomic_barrier_address^ `[` $atomic_barrier_indices `]`
+                      `:` type($atomic_barrier_address) `)`)?
+    ( `iterate` $global_increment^ `,` $lds_increment `,` $iteration_count )?
+    attr-dict `:` qualified(type($base)) `,` type($indices) `->` type(results)
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+
+  let extraClassDeclaration = extraClassDeclarationBase # [{
+    static constexpr bool isGather() {
+      return true;
+    }
+  }];
+}
+
+def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> {
+  dag args = (ins AMDGPU_TDMBaseType: $base);
+  let arguments = !con(args, baseArgs);
   let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
   let description = [{
      Make all descriptor groups needed by tensor memory operations.
@@ -1368,30 +1495,15 @@ def AMDGPU_MakeDmaDescriptorOp :
     attr-dict `:` qualified(type($base)) `->` type(results)
   }];
 
-  let extraClassDeclaration = [{
-    int64_t getRank() {
-      return getGlobalStaticSizes().size();
-    }
+  let hasVerifier = 1;
+  let hasFolder = 1;
 
-    unsigned getElementTypeWidth() {
-      return getBase().getType().getElementType().getIntOrFloatBitWidth();
-    }
-
-    SmallVector<OpFoldResult> getMixedGlobalSizes() {
-      return getMixedValues(getGlobalStaticSizes(), getGlobalDynamicSizes(), getContext());
-    }
-
-    SmallVector<OpFoldResult> getMixedGlobalStrides() {
-      return getMixedValues(getGlobalStaticStrides(), getGlobalDynamicStrides(), getContext());
-    }
-
-    SmallVector<OpFoldResult> getMixedSharedSizes() {
-      return getMixedValues(getSharedStaticSizes(), getSharedDynamicSizes(), getContext());
+  let extraClassDeclaration = extraClassDeclarationBase # [{
+    static constexpr bool isGather() {
+      return false;
     }
   }];
 
-  let hasVerifier = 1;
-  let hasFolder = 1;
 }
 
 #endif // AMDGPU
