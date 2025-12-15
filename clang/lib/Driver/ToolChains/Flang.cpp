@@ -204,7 +204,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (Args.hasFlag(options::OPT_funsafe_cray_pointers,
                    options::OPT_fno_unsafe_cray_pointers, false))
     // TODO: currently passed as MLIR option
-    CmdArgs.push_back("-mmlir -funsafe-cray-pointers"); 
+    CmdArgs.push_back("-mmlir -funsafe-cray-pointers");
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
