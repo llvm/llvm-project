@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Level Zero RTL Options support
+// Level Zero RTL Options support.
 //
 //===----------------------------------------------------------------------===//
 
@@ -73,7 +73,7 @@ struct L0OptionsTy {
 
   /// Staging buffer size.
   size_t StagingBufferSize = L0StagingBufferSize;
-.
+
   /// Staging buffer count.
   size_t StagingBufferCount = L0StagingBufferCount;
 

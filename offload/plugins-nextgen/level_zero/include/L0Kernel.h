@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// GenericKernel implementation for SPIR-V/Xe machine
+// GenericKernel implementation for SPIR-V/Xe machine.
 //
 //===----------------------------------------------------------------------===//
 

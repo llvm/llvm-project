@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Level Zero RTL Options support
+// Level Zero RTL Options support.
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,25 +18,25 @@
 
 namespace llvm::omp::target::plugin {
 
-/// Read environment variables
+/// Read environment variables.
 void L0OptionsTy::processEnvironmentVars() {
-  // Compilation options for IGC
+  // Compilation options for IGC.
   UserCompilationOptions +=
       std::string(" ") +
       StringEnvar("LIBOMPTARGET_LEVEL_ZERO_COMPILATION_OPTIONS", "").get();
 
-  // Memory pool
+  // Memory pool syntax:
   // LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL=<Option>
   //  <Option>       := 0 | <PoolInfoList>
   //  <PoolInfoList> := <PoolInfo>[,<PoolInfoList>]
   //  <PoolInfo>     := <MemType>[,<AllocMax>[,<Capacity>[,<PoolSize>]]]
   //  <MemType>      := all | device | host | shared
   //  <AllocMax>     := non-negative integer or empty, max allocation size in
-  //                    MB (default: 1)
+  //                    MB (default: 1).
   //  <Capacity>     := positive integer or empty, number of allocations from
-  //                    a single block (default: 4)
+  //                    a single block (default: 4).
   //  <PoolSize>     := positive integer or empty, max pool size in MB
-  //                    (default: 256)
+  //                    (default: 256).
   const StringEnvar MemoryPoolVar("LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL", "");
   if (MemoryPoolVar.isPresent()) {
     if (MemoryPoolVar.get() == "0") {
@@ -87,7 +87,7 @@ void L0OptionsTy::processEnvironmentVars() {
       }
       if (Valid > 0) {
         if (Valid == 2) {
-          // "all" is specified -- ignore other inputs
+          // "all" is specified -- ignore other inputs.
           if (AllInfo[0] > 0) {
             MemPoolConfig[TARGET_ALLOC_DEVICE] = {true, AllInfo[0], AllInfo[1],
                                                   AllInfo[2]};
@@ -102,14 +102,14 @@ void L0OptionsTy::processEnvironmentVars() {
           for (size_t Pool = 0; Pool < PoolInfo.size(); ++Pool) {
             switch (PoolInfo[Pool][0]) {
             case -1:
-              // No value was specified, keep the default
+              // No value was specified, keep the default.
               break;
             case 0:
-              // Pool disabled
+              // Pool was disabled.
               MemPoolConfig[Pool] = {false, 0, 0, 0};
               break;
             default:
-              // Use the user specified values
+              // Use the user specified values.
               MemPoolConfig[Pool] = {true, PoolInfo[Pool][0], PoolInfo[Pool][1],
                                      PoolInfo[Pool][2]};
               break;
@@ -143,7 +143,7 @@ void L0OptionsTy::processEnvironmentVars() {
     CommonSpecConstants.addConstant<char>(0xFF747469, 1);
   }
 
-  // LIBOMPTARGET_LEVEL_ZERO_STAGING_BUFFER_SIZE=<SizeInKB>
+  // LIBOMPTARGET_LEVEL_ZERO_STAGING_BUFFER_SIZE=<SizeInKB>.
   const Envar<size_t> StagingBufferSizeVar(
       "LIBOMPTARGET_LEVEL_ZERO_STAGING_BUFFER_SIZE");
   if (StagingBufferSizeVar.isPresent()) {
@@ -155,11 +155,11 @@ void L0OptionsTy::processEnvironmentVars() {
     StagingBufferSize = SizeInKB << 10;
   }
 
-  // LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE=<Fmt>
+  // LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE=<Fmt>.
   // <Fmt> := sync | async | async_ordered
-  // sync: perform synchronization after each command
-  // async: perform synchronization when it is required
-  // async_ordered: same as "async", but command is ordered
+  // sync: perform synchronization after each command.
+  // async: perform synchronization when it is required.
+  // async_ordered: same as "async", but command is ordered.
   // This option is ignored unless IMM is fully enabled on compute and copy.
   // On Intel PVC GPU, when used with immediate command lists over Level Zero
   // backend, a target region may involve multiple command submissions to the
@@ -172,7 +172,7 @@ void L0OptionsTy::processEnvironmentVars() {
   // the kernel event. d) Finally wait on the host for all the events
   // associated with the data transfer from device.
   // The env-var also affects any "target update" constructs as well.
-  // The env-var only affects the L0 copy/compute commands issued from a
+  // The env-var only affects the L0 copy/  compute commands issued from a
   // single target construct execution, not across multiple invocations.
   const StringEnvar CommandModeVar("LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE");
   if (CommandModeVar.isPresent()) {

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Level Zero Program abstraction
+// Level Zero Program abstraction.
 //
 //===----------------------------------------------------------------------===//
 
@@ -61,7 +61,7 @@ void L0ProgramTy::setLibModule() {
 #if _WIN32
   return;
 #else
-  // Check if the image belongs to a dynamic library
+  // Check if the image belongs to a dynamic library.
   Dl_info DLI{nullptr, nullptr, nullptr, nullptr};
   if (dladdr(getStart(), &DLI) && DLI.dli_fname) {
     std::vector<uint8_t> FileBin;
@@ -104,7 +104,7 @@ Error L0ProgramTy::addModule(size_t Size, const uint8_t *Image,
   ze_module_handle_t Module = nullptr;
   ze_module_build_log_handle_t BuildLog = nullptr;
 
-  // Build a single module from a single image
+  // Build a single module from a single image.
   ModuleDesc.inputSize = Size;
   ModuleDesc.pInputModule = Image;
   ModuleDesc.pBuildFlags = BuildOptions.c_str();
@@ -113,7 +113,7 @@ Error L0ProgramTy::addModule(size_t Size, const uint8_t *Image,
                     l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
 
   // Check if module link is required. We do not need this check for
-  // library module
+  // library module.
   if (!RequiresModuleLink && !IsLibModule) {
     ze_module_properties_t Properties = {ZE_STRUCTURE_TYPE_MODULE_PROPERTIES,
                                          nullptr, 0};
@@ -164,7 +164,7 @@ size_t L0ProgramTy::readFile(const char *FileName,
 
 void L0ProgramTy::replaceDriverOptsWithBackendOpts(const L0DeviceTy &Device,
                                                    std::string &Options) const {
-  // Options that need to be replaced with backend-specific options
+  // Options that need to be replaced with backend-specific options.
   static const struct {
     std::string Option;
     std::string BackendOption;
@@ -275,11 +275,11 @@ Error L0ProgramTy::buildModules(const std::string_view BuildOptions) {
   // Iterate over the images and pick the first one that fits.
   uint64_t ImageCount = 0;
   struct V1ImageInfo {
-    // 0 - native, 1 - SPIR-V
+    // 0 - native, 1 - SPIR-V.
     uint64_t Format = std::numeric_limits<uint64_t>::max();
     std::string CompileOpts;
     std::string LinkOpts;
-    // We may have multiple sections created from split-kernel mode
+    // We may have multiple sections created from split-kernel mode.
     std::vector<const uint8_t *> PartBegin;
     std::vector<uint64_t> PartSize;
 
@@ -365,8 +365,7 @@ Error L0ProgramTy::buildModules(const std::string_view BuildOptions) {
           AuxInfo.emplace(
               std::piecewise_construct, std::forward_as_tuple(Idx),
               std::forward_as_tuple(Part1Id, Parts[2].str(), Parts[3].str()));
-          // Image pointer and size
-          // will be initialized later.
+          // Image pointer and size will be initialized later.
         }
       }
     }
@@ -383,7 +382,7 @@ Error L0ProgramTy::buildModules(const std::string_view BuildOptions) {
       if (!SectionNameRef.consume_front(Prefix))
         continue;
 
-      // Expected section name in split-kernel mode:
+      // Expected section name in split-kernel mode with the following pattern:
       // __openmp_offload_spirv_<image_id>_<part_id>
       auto Parts = SectionNameRef.split('_');
       // It seems that we do not need part ID as long as they are ordered
@@ -438,13 +437,13 @@ Error L0ProgramTy::buildModules(const std::string_view BuildOptions) {
     }
 
     const auto NumParts = It->second.PartBegin.size();
-    // Split-kernel is not supported in SPIRV format
+    // Split-kernel is not supported in SPIRV format.
     if (NumParts > 1 && It->second.Format != 0) {
       DP("Warning: split-kernel images are not supported in SPIRV format\n");
       continue;
     }
 
-    // Skip unknown image format
+    // Skip unknown image format.
     if (It->second.Format != 0 && It->second.Format != 1) {
       DP("Warning: image %" PRIu64 "is ignored due to unknown format.\n", Idx);
       continue;

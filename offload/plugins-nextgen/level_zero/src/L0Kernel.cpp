@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// GenericKernel implementation for SPIR-V/Xe machine
+// GenericKernel implementation for SPIR-V/Xe machine.
 //
 //===----------------------------------------------------------------------===//
 
@@ -129,7 +129,7 @@ void L0KernelTy::decideKernelGroupArguments(L0DeviceTy &Device,
   }
 
   if (MaxGroupCountForced) {
-    // If number of teams is specified by the user, then use KernelWidth
+    // If number of teams is specified by the user, then use KernelWidth.
     // WIs per WG by default, so that it matches
     // decideLoopKernelGroupArguments() behavior.
     if (!MaxGroupSizeForced) {
@@ -143,7 +143,7 @@ void L0KernelTy::decideKernelGroupArguments(L0DeviceTy &Device,
 
     MaxGroupCount = NumSubslices * NumThreadsPerSubslice;
     if (MaxGroupSizeForced) {
-      // Set group size for the HW capacity
+      // Set group size for the HW capacity.
       uint32_t NumThreadsPerGroup = (MaxGroupSize + SIMDWidth - 1) / SIMDWidth;
       uint32_t NumGroupsPerSubslice =
           (NumThreadsPerSubslice + NumThreadsPerGroup - 1) / NumThreadsPerGroup;
@@ -152,7 +152,7 @@ void L0KernelTy::decideKernelGroupArguments(L0DeviceTy &Device,
       assert(!MaxGroupSizeForced && !MaxGroupCountForced);
       assert((MaxGroupSize <= KernelWidth || MaxGroupSize % KernelWidth == 0) &&
              "Invalid maxGroupSize");
-      // Maximize group size
+      // Maximize group size.
       while (MaxGroupSize >= KernelWidth) {
         uint32_t NumThreadsPerGroup =
             (MaxGroupSize + SIMDWidth - 1) / SIMDWidth;
@@ -202,17 +202,17 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
   assert(SIMDWidth <= KernelWidth && "Invalid SIMD width.");
 
   if (ThreadLimit > 0) {
-    // use thread_limit clause value default
+    // use thread_limit clause value default.
     DP("Max team size is set to %" PRId32 " (thread_limit clause)\n",
        ThreadLimit);
   } else if (ThreadLimitICV > 0) {
-    // else use thread-limit-var ICV
+    // else use thread-limit-var ICV.
     ThreadLimit = ThreadLimitICV;
     DP("Max team size is set to %" PRId32 " (thread-limit-icv)\n", ThreadLimit);
   }
 
   size_t MaxThreadLimit = Device.getMaxGroupSize();
-  // Set correct max group size if the kernel was compiled with explicit SIMD
+  // Set correct max group size if the kernel was compiled with explicit SIMD.
   if (SIMDWidth == 1)
     MaxThreadLimit = Device.getNumThreadsPerSubslice();
 
@@ -227,7 +227,7 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
     DP("Max team size execceds current maximum %zu. Adjusted\n",
        MaxThreadLimit);
   }
-  // scope code to ease integration with downstream custom code
+  // scope code to ease integration with downstream custom code.
   {
     if (NumTeams > 0) {
       DP("Number of teams is set to %" PRId32
@@ -260,7 +260,7 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   if (!CmdListOrErr)
     return CmdListOrErr.takeError();
   const ze_command_list_handle_t CmdList = *CmdListOrErr;
-  // Command queue is not used with immediate command list
+  // Command queue is not used with immediate command list.
 
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Using immediate command list for kernel submission.\n");
@@ -348,7 +348,7 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
                                   uint32_t NumBlocks[3]) const {
 
   if (KernelEnvironment.Configuration.ExecMode != OMP_TGT_EXEC_MODE_BARE) {
-    // For non-bare mode, the groups are already set in the launch
+    // For non-bare mode, the groups are already set in the launch.
     KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
     CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), NumThreads[0],
                       NumThreads[1], NumThreads[2]);
@@ -365,7 +365,7 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
   uint32_t GroupSizes[3];
   auto DeviceId = l0Device.getDeviceId();
   auto &KernelPR = KEnv.KernelPR;
-  // Check if we can reuse previous group parameters
+  // Check if we can reuse previous group parameters.
   bool GroupParamsReused =
       KernelPR.reuseGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
 
@@ -394,13 +394,13 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
 
 Error L0KernelTy::setIndirectFlags(L0DeviceTy &l0Device,
                                    L0LaunchEnvTy &KEnv) const {
-  // Set Kernel Indirect flags
+  // Set Kernel Indirect flags.
   ze_kernel_indirect_access_flags_t Flags = 0;
   Flags |= l0Device.getMemAllocator(TARGET_ALLOC_HOST).getIndirectFlags();
   Flags |= l0Device.getMemAllocator(TARGET_ALLOC_DEVICE).getIndirectFlags();
 
   if (KEnv.KernelPR.IndirectAccessFlags != Flags) {
-    // Combine with common access flags
+    // Combine with common access flags.
     const auto FinalFlags = l0Device.getIndirectFlags() | Flags;
     CALL_ZE_RET_ERROR(zeKernelSetIndirectAccess, zeKernel, FinalFlags);
     DP("Setting indirect access flags " DPxMOD "\n", DPxPTR(FinalFlags));
@@ -431,7 +431,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (IsAsync && !AsyncInfo->Queue) {
     AsyncInfo->Queue = reinterpret_cast<void *>(Plugin.getAsyncQueue());
     if (!AsyncInfo->Queue)
-      IsAsync = false; // Couldn't get a queue, revert to sync
+      IsAsync = false; // Couldn't get a queue, revert to sync.
   }
   auto *AsyncQueue =
       IsAsync ? static_cast<AsyncQueueTy *>(AsyncInfo->Queue) : nullptr;
@@ -445,9 +445,9 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = setKernelGroups(l0Device, KEnv, NumThreads, NumBlocks))
     return Err;
 
-  // Set kernel arguments
+  // Set kernel arguments.
   for (int32_t I = 0; I < NumArgs; I++) {
-    // scope code to ease integration with downstream custom code
+    // Scope code to ease integration with downstream custom code.
     {
       void *Arg = (static_cast<void **>(LaunchParams.Data))[I];
       CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, sizeof(Arg),
@@ -462,7 +462,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = setIndirectFlags(l0Device, KEnv))
     return Err;
 
-  // The next calls should unlock the KernelLock internally
+  // The next calls should unlock the KernelLock internally.
   const bool UseImmCmdList = l0Device.useImmForCompute();
   if (UseImmCmdList)
     return launchKernelWithImmCmdList(l0Device, zeKernel, KEnv,

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Memory related support for SPIR-V/Xe machine
+// Memory related support for SPIR-V/Xe machine.
 //
 //===----------------------------------------------------------------------===//
 
@@ -54,7 +54,7 @@ void *MemAllocatorTy::MemPoolTy::BlockTy::alloc() {
   return nullptr;
 }
 
-/// Deallocate the given memory
+/// Deallocate the given memory.
 void MemAllocatorTy::MemPoolTy::BlockTy::dealloc(void *Mem) {
   if (!contains(Mem))
     assert(0 && "Inconsistent memory pool state");
@@ -69,20 +69,20 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
   AllocKind = Kind;
   Allocator = AllocatorIn;
 
-  // Read user-defined options
+  // Read user-defined options.
   const auto &UserOptions = Option.MemPoolConfig[AllocKind];
   const size_t UserAllocMax = UserOptions.AllocMax;
   const size_t UserCapacity = UserOptions.Capacity;
   const size_t UserPoolSize = UserOptions.PoolSize;
 
   BlockCapacity = UserCapacity;
-  PoolSizeMax = UserPoolSize << 20; // MB to B
+  PoolSizeMax = UserPoolSize << 20; // Covert MB to B.
   PoolSize = 0;
 
   auto Context = Allocator->L0Context->getZeContext();
   const auto Device = Allocator->Device;
 
-  // Check page size used for this allocation kind to decide minimum
+  // Check page size used for this allocation kind to decide minimum.
   // allocation size when allocating from L0.
   auto MemOrErr = Allocator->allocFromL0(8, 0, AllocKind);
   if (!MemOrErr)
@@ -107,7 +107,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
     IsDiscrete = Device->isDiscreteDevice();
 
     if (AllocKind == TARGET_ALLOC_SHARED && IsDiscrete) {
-      // Use page size as minimum chunk size for USM shared on discrete
+      // Use page size as minimum chunk size for USM shared on discrete.
       // device.
       // FIXME: pageSize is not returned correctly (=0) on some new devices,
       //        so use fallback value for now.
@@ -116,7 +116,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
     }
   }
 
-  // Convert MB to B and round up to power of 2
+  // Convert MB to B and round up to power of 2.
   AllocMax = AllocMin << getBucketId(UserAllocMax * (1 << 20));
   if (AllocMin >= AllocMax) {
     AllocMax = 2 * AllocMin;
@@ -140,9 +140,9 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
     // larger block does not pay off at all. It is better to keep a single
     // chunk in a single block in such cases.
     if (BlockSize <= AllocUnit) {
-      BlockSize = AllocUnit; // Allocation unit is already large enough
+      BlockSize = AllocUnit; // Allocation unit is already large enough.
     } else if (IsDiscrete) {
-      // Do not preallocate if it does not pay off
+      // Do not preallocate if it does not pay off.
       if (ChunkSize >= L0UsmPreAllocThreshold ||
           (AllocKind == TARGET_ALLOC_HOST &&
            ChunkSize >= L0HostUsmPreAllocThreshold))
@@ -159,12 +159,12 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
   return Plugin::success();
 }
 
-// Used for reduction pool
+// Used for reduction pool.
 Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn,
                                       const L0OptionsTy &Option) {
   AllocKind = TARGET_ALLOC_DEVICE;
   Allocator = AllocatorIn;
-  AllocMin = AllocUnit = 1024 << 6; // 64KB
+  AllocMin = AllocUnit = 1024 << 6; // 64KB.
   AllocMax = Option.ReductionPoolInfo[0] << 20;
   BlockCapacity = Option.ReductionPoolInfo[1];
   PoolSize = 0;
@@ -185,14 +185,14 @@ Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn,
   return Plugin::success();
 }
 
-// Used for small memory pool with fixed parameters
+// Used for small memory pool with fixed parameters.
 Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn) {
   AllocKind = TARGET_ALLOC_DEVICE;
   Allocator = AllocatorIn;
   AllocMax = AllocMin;
   BlockCapacity = AllocUnit / AllocMax;
   PoolSize = 0;
-  PoolSizeMax = (1 << 20); // this should be sufficiently large
+  PoolSizeMax = (1 << 20); // This should be sufficiently large.
   Buckets.resize(1);
   BucketStats.resize(1, {0, 0});
   BucketParams.emplace_back(AllocMax, AllocUnit);
@@ -286,7 +286,7 @@ Expected<void *> MemAllocatorTy::MemPoolTy::alloc(size_t Size,
     const bool IsFull = (PoolSize > PoolSizeMax);
     if (IsFull && !IsSmallAllocatable)
       return nullptr;
-    // Bucket is empty or all blocks in the bucket are full
+    // Bucket is empty or all blocks in the bucket are full.
     const auto ChunkSize = BucketParams[BucketId].first;
     const auto BlockSize = BucketParams[BucketId].second;
     auto BaseOrErr = Allocator->allocFromL0AndLog(BlockSize, 0, AllocKind);
@@ -357,7 +357,7 @@ void MemAllocatorTy::MemAllocInfoMapTy::add(void *Ptr, void *Base,
     NumImplicitArgs[Kind]++;
 }
 
-/// Remove allocation information for the given memory location
+/// Remove allocation information for the given memory location.
 bool MemAllocatorTy::MemAllocInfoMapTy::remove(void *Ptr,
                                                MemAllocInfoTy *Removed) {
   const auto AllocInfo = Map.find(Ptr);
@@ -411,11 +411,11 @@ Error MemAllocatorTy::initHostPool(L0ContextTy &Driver,
 }
 
 void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
-  // Update the maximum allocation size for this Allocator
+  // Update the maximum allocation size for this Allocator.
   auto maxMemAllocSize = L0Device.getMaxMemAllocSize();
 
   if (IsHostMem) {
-    // MaxAllocSize should be the minimum of all devices from the driver
+    // MaxAllocSize should be the minimum of all devices from the driver.
     if (MaxAllocSize > maxMemAllocSize) {
       MaxAllocSize = maxMemAllocSize;
       DP("Updated MaxAllocSize for driver " DPxMOD " to %zu\n",
@@ -429,7 +429,7 @@ void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
      MaxAllocSize);
 }
 
-/// Release resources and report statistics if requested
+/// Release resources and report statistics if requested.
 Error MemAllocatorTy::deinit() {
   if (!L0Context)
     return Plugin::success();
@@ -437,7 +437,7 @@ Error MemAllocatorTy::deinit() {
   std::lock_guard<std::mutex> Lock(Mtx);
   if (!L0Context)
     return Plugin::success();
-  // Release RTL-owned memory
+  // Release RTL-owned memory.
   for (auto *M : MemOwned) {
     auto Err = deallocLocked(M);
     if (Err)
@@ -460,7 +460,7 @@ Error MemAllocatorTy::deinit() {
       return Err;
     CounterPool.reset(nullptr);
   }
-  // Report memory usage if requested
+  // Report memory usage if requested.
   if (getDebugLevel() > 0) {
     for (size_t Kind = 0; Kind < MaxMemKind; Kind++) {
       auto &Stat = Stats[Kind];
@@ -480,12 +480,12 @@ Error MemAllocatorTy::deinit() {
     }
   }
 
-  // mark as deinitialized
+  // Mark as deinitialized.
   L0Context = nullptr;
   return Plugin::success();
 }
 
-/// Allocate memory with the specified information
+/// Allocate memory with the specified information.
 Expected<void *> MemAllocatorTy::allocFromPool(size_t Size, size_t Align,
                                                int32_t Kind, intptr_t Offset,
                                                bool UserAlloc, bool DevMalloc,
@@ -567,7 +567,7 @@ Expected<void *> MemAllocatorTy::allocFromPool(size_t Size, size_t Align,
   return Mem;
 }
 
-/// Deallocate memory
+/// Deallocate memory.
 Error MemAllocatorTy::deallocLocked(void *Ptr) {
   MemAllocInfoTy Info;
   if (!AllocInfo.remove(Ptr, &Info)) {
@@ -581,9 +581,9 @@ Error MemAllocatorTy::deallocLocked(void *Ptr) {
     if (Pools[Info.Kind])
       DeallocSize = Pools[Info.Kind]->dealloc(Info.Base);
     if (DeallocSize == 0) {
-      // Try reduction scratch pool
+      // Try reduction scratch pool.
       DeallocSize = ReductionPool->dealloc(Info.Base);
-      // Try reduction counter pool
+      // Try reduction counter pool.
       if (DeallocSize == 0)
         DeallocSize = CounterPool->dealloc(Info.Base);
       if (DeallocSize == 0) {
@@ -627,7 +627,7 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
   ze_host_mem_alloc_desc_t HostDesc{ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC,
                                     nullptr, 0};
 
-  // Use relaxed allocation limit if driver supports
+  // Use relaxed allocation limit if driver supports.
   ze_relaxed_allocation_limits_exp_desc_t RelaxedDesc{
       ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC, nullptr,
       ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE};
@@ -683,7 +683,7 @@ Expected<ze_event_handle_t> EventPoolTy::getEvent() {
   std::lock_guard<std::mutex> Lock(*Mtx);
 
   if (Events.empty()) {
-    // Need to create a new L0 pool
+    // Need to create a new L0 pool.
     ze_event_pool_desc_t Desc{ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr, 0, 0};
     Desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE | Flags;
     Desc.count = PoolSize;
@@ -691,7 +691,7 @@ Expected<ze_event_handle_t> EventPoolTy::getEvent() {
     CALL_ZE_RET_ERROR(zeEventPoolCreate, Context, &Desc, 0, nullptr, &Pool);
     Pools.push_back(Pool);
 
-    // Create events
+    // Create events.
     ze_event_desc_t EventDesc{ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, 0, 0};
     EventDesc.wait = 0;
     EventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
@@ -709,7 +709,7 @@ Expected<ze_event_handle_t> EventPoolTy::getEvent() {
   return Ret;
 }
 
-/// Return an event to the pool
+/// Return an event to the pool.
 Error EventPoolTy::releaseEvent(ze_event_handle_t Event, L0DeviceTy &Device) {
   std::lock_guard<std::mutex> Lock(*Mtx);
   CALL_ZE_RET_ERROR(zeEventHostReset, Event);

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// RTL for SPIR-V/Xe machine
+// RTL for SPIR-V/Xe machine.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,7 +24,7 @@ using namespace llvm::omp::target;
 using namespace error;
 
 #pragma clang diagnostic ignored "-Wglobal-constructors"
-// Common data across all possible plugin instantiations
+// Common data across all possible plugin instantiations.
 L0OptionsTy LevelZeroPluginTy::Options;
 
 Expected<int32_t> LevelZeroPluginTy::findDevices() {
@@ -59,7 +59,7 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
       DP("Cannot find any devices from driver " DPxMOD ".\n", DPxPTR(Driver));
       continue;
     }
-    // We have a driver that supports at least one device
+    // We have a driver that supports at least one device.
     ContextList.emplace_back(*this, Driver, DriverId);
     auto &DrvInfo = ContextList.back();
     if (auto Err = DrvInfo.init())
@@ -72,12 +72,12 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
           {OrderId++, zeDevice, &DrvInfo, L0DeviceTy::isDiscrete(zeDevice)});
   }
 
-  // move discrete devices to the front
+  // Move discrete devices to the front.
   std::sort(RootDevices.begin(), RootDevices.end(),
             [](const RootInfoTy &A, const RootInfoTy &B) {
-              // if both are discrete, order by OrderId
-              // if both are not discrete, order by OrderId
-              // Otherwise, discrete goes first
+              // If both are discrete, order by OrderId.
+              // If both are not discrete, order by OrderId.
+              // Otherwise, discrete goes first.
 
               if (A.IsDiscrete && B.IsDiscrete)
                 return A.OrderId < B.OrderId;
@@ -97,7 +97,7 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
   DP("Found %" PRIu32 " devices.\n", NumDevices);
   DP("List of devices (DeviceID[.SubID[.CCSID]])\n");
   for (auto &DeviceInfo : DetectedDevices) {
-    (void)DeviceInfo; // to avoid unused variable warning in non-debug builds
+    (void)DeviceInfo; // Avoid unused variable warning in non-debug builds.
     DP("-- Device %" PRIu32 "%s%s\n", DeviceInfo.Id.RootId,
        (DeviceInfo.Id.SubId < 0
             ? ""
@@ -111,7 +111,7 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
 
 Expected<int32_t> LevelZeroPluginTy::initImpl() {
   DP("Level0 NG plugin initialization\n");
-  // process options before anything else
+  // Process options before anything else.
   Options.init();
   return findDevices();
 }
@@ -172,12 +172,11 @@ Error LevelZeroPluginTy::syncBarrierImpl(omp_interop_val_t *Interop) {
   if (!Interop->async_info || !Interop->async_info->Queue)
     return Plugin::success();
 
-  // L0 object
   const auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
   const auto device_id = Interop->device_id;
   auto &l0Device = getDeviceFromId(device_id);
 
-  // We can synchronize both L0 & SYCL objects with the same ze command
+  // We can synchronize both L0 & SYCL objects with the same ze command.
   if (l0Device.useImmForInterop()) {
     DP("LevelZeroPluginTy::sync_barrier: Synchronizing " DPxMOD
        " with ImmCmdList barrier\n",
@@ -221,7 +220,7 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
                       nullptr);
   } else {
 #if 0
-    // TODO: re-enable once we have a way to delay the CmdList reset 
+    // TODO: re-enable once we have a way to delay the CmdList reset .
     DP("LevelZeroPluginTy::async_barrier: Appending CmdList barrier to " DPxMOD
        "\n",
        DPxPTR(Interop));

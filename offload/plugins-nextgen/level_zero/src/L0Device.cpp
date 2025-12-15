@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// GenericDevice instatiation for SPIR-V/Xe machine
+// GenericDevice instatiation for SPIR-V/Xe machine.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,7 +24,7 @@ L0DeviceTLSTy &L0DeviceTy::getTLS() {
 }
 
 // clang-format off
-/// Mapping from device arch to GPU runtime's device identifiers
+/// Mapping from device arch to GPU runtime's device identifiers.
 static struct {
   DeviceArchTy arch;
   PCIIdTy ids[10];
@@ -75,7 +75,7 @@ DeviceArchTy L0DeviceTy::computeArch() const {
         break;
       auto maskedId = static_cast<PCIIdTy>(PCIDeviceId & 0xFF00);
       if (maskedId == Id)
-        return DeviceArchMap[ArchIndex].arch; // Exact match or prefix match
+        return DeviceArchMap[ArchIndex].arch; // Exact match or prefix match.
     }
   }
 
@@ -94,7 +94,7 @@ bool L0DeviceTy::isDeviceIPorNewer(uint32_t Version) const {
   return IPVersion.ipVersion >= Version;
 }
 
-/// Get default compute group ordinal. Returns Ordinal-NumQueues pair
+/// Get default compute group ordinal. Returns Ordinal-NumQueues pair.
 std::pair<uint32_t, uint32_t> L0DeviceTy::findComputeOrdinal() {
   std::pair<uint32_t, uint32_t> Ordinal{MaxOrdinal, 0};
   uint32_t Count = 0;
@@ -108,7 +108,7 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findComputeOrdinal() {
               Properties.data());
   for (uint32_t I = 0; I < Count; I++) {
     // TODO: add a separate set of ordinals for compute queue groups which
-    // support cooperative kernels
+    // support cooperative kernels.
     if (Properties[I].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
       Ordinal.first = I;
       Ordinal.second = Properties[I].numQueues;
@@ -121,7 +121,7 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findComputeOrdinal() {
   return Ordinal;
 }
 
-/// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair
+/// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair.
 std::pair<uint32_t, uint32_t> L0DeviceTy::findCopyOrdinal(bool LinkCopy) {
   std::pair<uint32_t, uint32_t> Ordinal{MaxOrdinal, 0};
   uint32_t Count = 0;
@@ -194,7 +194,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   DP("Found a GPU device, Name = %s\n", DeviceProperties.name);
 
   DeviceArch = computeArch();
-  // Default allocation kind for this device
+  // Default allocation kind for this device.
   AllocKind = isDiscreteDevice() ? TARGET_ALLOC_DEVICE : TARGET_ALLOC_SHARED;
 
   ze_kernel_indirect_access_flags_t Flags =
@@ -203,7 +203,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
           : ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
   IndirectAccessFlags = Flags;
 
-  // Get the UUID
+  // Get the UUID.
   std::string uid;
   for (int n = 0; n < ZE_MAX_DEVICE_UUID_SIZE; n++)
     uid += std::to_string(DeviceProperties.uuid.id[n]);
@@ -235,7 +235,7 @@ L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
                            int32_t ImageId) {
   auto *PGM = getProgramFromImage(TgtImage->getMemBufferRef());
   if (PGM) {
-    // Program already exists
+    // Program already exists.
     return PGM;
   }
 
@@ -267,8 +267,8 @@ L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
 }
 
 Error L0DeviceTy::unloadBinaryImpl(DeviceImageTy *Image) {
-  // Ignoring for now
-  // TODO: call properly L0Program unload
+  // Ignoring for now.
+  // TODO: call properly L0Program unload.
   return Plugin::success();
 }
 
@@ -285,10 +285,10 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
   if (!AsyncQueue->WaitEvents.empty()) {
     const auto &WaitEvents = AsyncQueue->WaitEvents;
     if (Plugin.getOptions().CommandMode == CommandModeTy::AsyncOrdered) {
-      // Only need to wait for the last event
+      // Only need to wait for the last event.
       CALL_ZE_RET_ERROR(zeEventHostSynchronize, WaitEvents.back(),
                         L0DefaultTimeout);
-      // Synchronize on kernel event to support printf()
+      // Synchronize on kernel event to support printf().
       auto KE = AsyncQueue->KernelEvent;
       if (KE && KE != WaitEvents.back()) {
         CALL_ZE_RET_ERROR(zeEventHostSynchronize, KE, L0DefaultTimeout);
@@ -297,7 +297,8 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
         if (auto Err = releaseEvent(Event))
           return Err;
       }
-    } else { // Async
+    } else { 
+      // Async case.
       // Wait for all events. We should wait and reset events in reverse order
       // to avoid premature event reset. If we have a kernel event in the
       // queue, it is the last event to wait for since all wait events of the
@@ -316,12 +317,12 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
     }
   }
 
-  // Commit delayed USM2M copies
+  // Commit delayed USM2M copies.
   for (auto &USM2M : AsyncQueue->USM2MList) {
     std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
                 std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
   }
-  // Commit delayed H2M copies
+  // Commit delayed H2M copies.
   for (auto &H2M : AsyncQueue->H2MList) {
     std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
                 static_cast<char *>(std::get<1>(H2M)));
@@ -361,12 +362,12 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo) {
   if (!AsyncQueue->WaitEvents.empty())
     return Plugin::success();
 
-  // Commit delayed USM2M copies
+  // Commit delayed USM2M copies.
   for (auto &USM2M : AsyncQueue->USM2MList) {
     std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
                 std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
   }
-  // Commit delayed H2M copies
+  // Commit delayed H2M copies.
   for (auto &H2M : AsyncQueue->H2MList) {
     std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
                 static_cast<char *>(std::get<1>(H2M)));
@@ -402,7 +403,7 @@ Error L0DeviceTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
   if (IsAsync && !AsyncInfo->Queue) {
     AsyncInfo->Queue = reinterpret_cast<void *>(Plugin.getAsyncQueue());
     if (!AsyncInfo->Queue)
-      IsAsync = false; // Couldn't get a queue, revert to sync
+      IsAsync = false; // Couldn't get a queue, revert to sync.
   }
   const auto TgtPtrType = getMemAllocType(TgtPtr);
   if (TgtPtrType == ZE_MEMORY_TYPE_SHARED ||
@@ -450,7 +451,7 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
   if (IsAsync && !AsyncInfo->Queue) {
     AsyncInfo->Queue = Plugin.getAsyncQueue();
     if (!AsyncInfo->Queue)
-      IsAsync = false; // Couldn't get a queue, revert to sync
+      IsAsync = false; // Couldn't get a queue, revert to sync.
   }
   auto AsyncQueue =
       IsAsync ? static_cast<AsyncQueueTy *>(AsyncInfo->Queue) : nullptr;
@@ -465,7 +466,7 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
       CopyNow = false;
     }
     if (CopyNow) {
-      // scope code to ease integration with downstream custom code
+      // scope code to ease integration with downstream custom code.
       std::copy_n(static_cast<const char *>(TgtPtr), Size,
                   static_cast<char *>(HstPtr));
     }
@@ -490,7 +491,7 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
     }
     if (DstPtr != HstPtr) {
       if (IsAsync) {
-        // Store delayed H2M data copies
+        // Store delayed H2M data copies.
         auto &H2MList = AsyncQueue->H2MList;
         H2MList.emplace_back(DstPtr, HstPtr, static_cast<size_t>(Size));
       } else {
@@ -609,10 +610,10 @@ Expected<GenericKernelTy &> L0DeviceTy::constructKernel(const char *Name) {
 uint32_t L0DeviceTy::getMemAllocType(const void *Ptr) const {
   ze_memory_allocation_properties_t properties = {
       ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES,
-      nullptr,                // extension
-      ZE_MEMORY_TYPE_UNKNOWN, // type
-      0,                      // id
-      0,                      // page size
+      nullptr,                // Extension.
+      ZE_MEMORY_TYPE_UNKNOWN, // Type.
+      0,                      // Id.
+      0,                      // Page size.
   };
 
   ze_result_t rc;
@@ -629,7 +630,7 @@ interop_spec_t L0DeviceTy::selectInteropPreference(int32_t InteropType,
                                                    int32_t NumPrefers,
                                                    interop_spec_t *Prefers) {
   // no supported preference found, set default to level_zero,
-  // non-ordered unless is targetsync
+  // non-ordered unless is targetsync.
   return interop_spec_t{
       tgt_fr_level_zero,
       {InteropType == kmp_interop_type_targetsync /*inorder*/, 0},
@@ -786,7 +787,7 @@ Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
   return Plugin::success();
 }
 
-/// Enqueue memory fill
+/// Enqueue memory fill.
 Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
                                  size_t PatternSize, size_t Size) {
   if (useImmForCopy()) {
@@ -824,7 +825,7 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
 Error L0DeviceTy::dataFillImpl(void *TgtPtr, const void *PatternPtr,
                                int64_t PatternSize, int64_t Size,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  // TODO: support async version
+  // TODO: support async version.
   return enqueueMemFill(TgtPtr, PatternPtr, PatternSize, Size);
 }
 
@@ -862,13 +863,13 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
   return Plugin::success();
 }
 
-// Command queues related functions
-/// Create a command list with given ordinal and flags
+// Command queues related functions.
+/// Create a command list with given ordinal and flags.
 Expected<ze_command_list_handle_t> L0DeviceTy::createCmdList(
     ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
     ze_command_list_flags_t Flags, const std::string_view DeviceIdStr) {
   ze_command_list_desc_t cmdListDesc = {ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC,
-                                        nullptr, // extension
+                                        nullptr, // Extension.
                                         Ordinal, Flags};
   ze_command_list_handle_t cmdList;
   CALL_ZE_RET_ERROR(zeCommandListCreate, Context, Device, &cmdListDesc,
@@ -879,7 +880,7 @@ Expected<ze_command_list_handle_t> L0DeviceTy::createCmdList(
   return cmdList;
 }
 
-/// Create a command list with default flags
+/// Create a command list with default flags.
 Expected<ze_command_list_handle_t>
 L0DeviceTy::createCmdList(ze_context_handle_t Context,
                           ze_device_handle_t Device, uint32_t Ordinal,
@@ -903,17 +904,17 @@ Expected<ze_command_list_handle_t> L0DeviceTy::getCmdList() {
   return CmdList;
 }
 
-/// Create a command queue with given ordinal and flags
+/// Create a command queue with given ordinal and flags.
 Expected<ze_command_queue_handle_t>
 L0DeviceTy::createCmdQueue(ze_context_handle_t Context,
                            ze_device_handle_t Device, uint32_t Ordinal,
                            uint32_t Index, ze_command_queue_flags_t Flags,
                            const std::string_view DeviceIdStr) {
   ze_command_queue_desc_t cmdQueueDesc = {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC,
-                                          nullptr, // extension
+                                          nullptr, // Extension.
                                           Ordinal,
                                           Index,
-                                          Flags, // flags
+                                          Flags,
                                           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
                                           ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
   ze_command_queue_handle_t cmdQueue;
@@ -925,7 +926,7 @@ L0DeviceTy::createCmdQueue(ze_context_handle_t Context,
   return cmdQueue;
 }
 
-/// Create a command queue with default flags
+/// Create a command queue with default flags.
 Expected<ze_command_queue_handle_t> L0DeviceTy::createCmdQueue(
     ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
     uint32_t Index, const std::string_view DeviceIdStr, bool InOrder) {
@@ -935,7 +936,7 @@ Expected<ze_command_queue_handle_t> L0DeviceTy::createCmdQueue(
                                                   Index, Flags, DeviceIdStr);
 }
 
-/// Create a new command queue for the given OpenMP device ID
+/// Create a new command queue for the given OpenMP device ID.
 Expected<ze_command_queue_handle_t>
 L0DeviceTy::createCommandQueue(bool InOrder) {
   auto cmdQueue =
@@ -944,7 +945,7 @@ L0DeviceTy::createCommandQueue(bool InOrder) {
   return cmdQueue;
 }
 
-/// Create an immediate command list
+/// Create an immediate command list.
 Expected<ze_command_list_handle_t>
 L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
@@ -964,7 +965,7 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   return CmdList;
 }
 
-/// Create an immediate command list for copying
+/// Create an immediate command list for copying.
 Expected<ze_command_list_handle_t> L0DeviceTy::createImmCopyCmdList() {
   uint32_t Ordinal = getMainCopyEngine();
   if (Ordinal == MaxOrdinal)
@@ -986,7 +987,7 @@ Expected<ze_command_queue_handle_t> L0DeviceTy::getCmdQueue() {
 }
 
 Expected<ze_command_list_handle_t> L0DeviceTy::getCopyCmdList() {
-  // Use main copy engine if available
+  // Use main copy engine if available.
   if (hasMainCopyEngine()) {
     auto &TLS = getTLS();
     auto CmdList = TLS.getCopyCmdList();
@@ -1000,12 +1001,12 @@ Expected<ze_command_list_handle_t> L0DeviceTy::getCopyCmdList() {
     }
     return CmdList;
   }
-  // Use compute engine otherwise
+  // Use compute engine otherwise.
   return getCmdList();
 }
 
 Expected<ze_command_queue_handle_t> L0DeviceTy::getCopyCmdQueue() {
-  // Use main copy engine if available
+  // Use main copy engine if available.
   if (hasMainCopyEngine()) {
     auto &TLS = getTLS();
     auto CmdQueue = TLS.getCopyCmdQueue();
@@ -1019,7 +1020,7 @@ Expected<ze_command_queue_handle_t> L0DeviceTy::getCopyCmdQueue() {
     }
     return CmdQueue;
   }
-  // Use compute engine otherwise
+  // Use compute engine otherwise.
   return getCmdQueue();
 }
 
@@ -1053,7 +1054,7 @@ Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
   const bool Ordered =
       (getPlugin().getOptions().CommandMode == CommandModeTy::AsyncOrdered);
 
-  // Nothing to do if everything is ordered
+  // Nothing to do if everything is ordered.
   if (Ordered)
     return Plugin::success();
 

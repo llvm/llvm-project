@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// GenericDevice instatiation for SPIR-V/Xe machine
+// GenericDevice instatiation for SPIR-V/Xe machine.
 //
 //===----------------------------------------------------------------------===//
 
