@@ -32,8 +32,8 @@ class HiddenFrameMarkerTest(TestBase):
             "bt",
             substrs=[
                 "     frame #0:",
-                "  ﹍ frame #1:",
-                "   * frame #7:",
+                "   * frame #1:",
+                "  ﹉ frame #7:",
                 "     frame #8:",
                 "     frame #9:",
             ],
@@ -44,8 +44,8 @@ class HiddenFrameMarkerTest(TestBase):
             "bt",
             substrs=[
                 "     frame #0:",
-                "   * frame #1:",
-                "  ﹉ frame #7:",
+                "  ﹍ frame #1:",
+                "   * frame #7:",
                 "     frame #8:",
                 "     frame #9:",
             ],
