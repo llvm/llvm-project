@@ -112,8 +112,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
                                            VectorKind::AltiVecVector);
   // Lambda 1: verify vector type
-  auto IsVectorType = [&](QualType ArgTy,
-                          unsigned ArgIndex) -> bool {
+  auto IsVectorType = [&](QualType ArgTy, unsigned ArgIndex) -> bool {
     if (Context.hasSameType(ArgTy, VecType))
       return true;
     Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
@@ -123,8 +122,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   };
 
   // Lambda 2: verify integer type
-  auto IsIntType = [&](QualType ArgTy,
-                       unsigned ArgIndex) -> bool {
+  auto IsIntType = [&](QualType ArgTy, unsigned ArgIndex) -> bool {
     if (ArgTy->isIntegerType())
       return true;
     Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
@@ -150,7 +148,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
       return false;
 
     // Arg1 must be integer type
-    if (!IsIntType(TheCall->getArg(1)->getType(),1))
+    if (!IsIntType(TheCall->getArg(1)->getType(), 1))
       return false;
 
     // Restrict Arg2 constant range (0–1)
