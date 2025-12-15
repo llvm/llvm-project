@@ -260,9 +260,7 @@ define <vscale x 8 x i64> @masked_sload_x2_8i8_8i64(ptr %a, ptr %b, <vscale x 8 
 define <vscale x 2 x i64> @masked_load_frozen_before_sext(ptr %a, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_load_frozen_before_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
   %load.frozen = freeze <vscale x 2 x i8> %load

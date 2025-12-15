@@ -256,7 +256,6 @@ define <vscale x 2 x i64> @masked_load_frozen_before_zext(ptr %src, <vscale x 2 
 ; CHECK-LABEL: masked_load_frozen_before_zext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    and z0.d, z0.d, #0xff
 ; CHECK-NEXT:    ret
   %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %src, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
   %load.frozen = freeze <vscale x 2 x i8> %load
@@ -269,9 +268,7 @@ define <vscale x 2 x i64> @masked_load_frozen_before_zext_multiuse(ptr %src, <vs
 ; CHECK-LABEL: masked_load_frozen_before_zext_multiuse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    and z0.d, z0.d, #0xff
-; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z0
 ; CHECK-NEXT:    ret
   %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %src, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
   %load.frozen = freeze <vscale x 2 x i8> %load
