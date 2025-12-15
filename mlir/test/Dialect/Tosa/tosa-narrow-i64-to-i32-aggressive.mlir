@@ -79,3 +79,12 @@ func.func @test_const() -> tensor<2xi64> {
   // FUNCBOUND: return %[[CONST]] : tensor<2xi32>
   return %0 : tensor<2xi64>
 }
+
+// -----
+
+// CHECK-LABEL: test_clamp_trunc
+func.func @test_clamp_trunc(%arg0: tensor<100xi64>) -> tensor<100xi64> {
+  // COMMON: tosa.clamp %{{.*}} {max_val = 2147483647 : i32, min_val = -2147483648 : i32} : (tensor<100xi32>) -> tensor<100xi32>
+  %1 = tosa.clamp %arg0 {max_val = 3000000000 : i64, min_val = -2147483648 : i64} : (tensor<100xi64>) -> tensor<100xi64>
+  return %1 : tensor<100xi64>
+}

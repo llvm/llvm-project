@@ -526,7 +526,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
     setOperationAction({ISD::ABDS, ISD::ABDU}, VTs, Legal);
     setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
-    setOperationAction(ISD::SHL, VTs, Custom);
+    setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, VTs, Custom);
     setOperationAction(ISD::BITCAST, VTs, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VTs, Custom);
   }
@@ -2196,6 +2196,60 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 5,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
+  case Intrinsic::riscv_sf_vlte8:
+  case Intrinsic::riscv_sf_vlte16:
+  case Intrinsic::riscv_sf_vlte32:
+  case Intrinsic::riscv_sf_vlte64:
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.ptrVal = I.getArgOperand(1);
+    switch (Intrinsic) {
+    case Intrinsic::riscv_sf_vlte8:
+      Info.memVT = MVT::i8;
+      Info.align = Align(1);
+      break;
+    case Intrinsic::riscv_sf_vlte16:
+      Info.memVT = MVT::i16;
+      Info.align = Align(2);
+      break;
+    case Intrinsic::riscv_sf_vlte32:
+      Info.memVT = MVT::i32;
+      Info.align = Align(4);
+      break;
+    case Intrinsic::riscv_sf_vlte64:
+      Info.memVT = MVT::i64;
+      Info.align = Align(8);
+      break;
+    }
+    Info.size = MemoryLocation::UnknownSize;
+    Info.flags |= MachineMemOperand::MOLoad;
+    return true;
+  case Intrinsic::riscv_sf_vste8:
+  case Intrinsic::riscv_sf_vste16:
+  case Intrinsic::riscv_sf_vste32:
+  case Intrinsic::riscv_sf_vste64:
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.ptrVal = I.getArgOperand(1);
+    switch (Intrinsic) {
+    case Intrinsic::riscv_sf_vste8:
+      Info.memVT = MVT::i8;
+      Info.align = Align(1);
+      break;
+    case Intrinsic::riscv_sf_vste16:
+      Info.memVT = MVT::i16;
+      Info.align = Align(2);
+      break;
+    case Intrinsic::riscv_sf_vste32:
+      Info.memVT = MVT::i32;
+      Info.align = Align(4);
+      break;
+    case Intrinsic::riscv_sf_vste64:
+      Info.memVT = MVT::i64;
+      Info.align = Align(8);
+      break;
+    }
+    Info.size = MemoryLocation::UnknownSize;
+    Info.flags |= MachineMemOperand::MOStore;
+    return true;
   }
 }
 
@@ -8608,22 +8662,21 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VSELECT:
     return lowerToScalableOp(Op, DAG);
   case ISD::SHL:
-    if (Subtarget.enablePExtCodeGen() &&
-        Op.getSimpleValueType().isFixedLengthVector()) {
-      // We have patterns for scalar/immediate shift amount, so no lowering
-      // needed.
-      if (Op.getOperand(1)->getOpcode() == ISD::SPLAT_VECTOR)
-        return Op;
-
-      // There's no vector-vector version of shift instruction in P extension so
-      // we need to unroll to scalar computation and pack them back.
-      return DAG.UnrollVectorOp(Op.getNode());
-    }
-    [[fallthrough]];
-  case ISD::SRA:
   case ISD::SRL:
-    if (Op.getSimpleValueType().isFixedLengthVector())
+  case ISD::SRA:
+    if (Op.getSimpleValueType().isFixedLengthVector()) {
+      if (Subtarget.enablePExtCodeGen()) {
+        // We have patterns for scalar/immediate shift amount, so no lowering
+        // needed.
+        if (Op.getOperand(1)->getOpcode() == ISD::SPLAT_VECTOR)
+          return Op;
+
+        // There's no vector-vector version of shift instruction in P extension
+        // so we need to unroll to scalar computation and pack them back.
+        return DAG.UnrollVectorOp(Op.getNode());
+      }
       return lowerToScalableOp(Op, DAG);
+    }
     // This can be called for an i32 shift amount that needs to be promoted.
     assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
