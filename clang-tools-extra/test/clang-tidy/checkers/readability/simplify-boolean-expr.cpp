@@ -1035,10 +1035,19 @@ void instantiate() {
   ignoreInstantiations<true>();
   ignoreInstantiations<false>();
 }
+
 void if_with_init_statement() {
   bool x = true;
   if (bool y = x; y == true) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: redundant boolean literal supplied to boolean operator [readability-simplify-boolean-expr]
+    // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: redundant boolean literal supplied to boolean operator [readability-simplify-boolean-expr]
     // CHECK-FIXES: if (bool y = x; y) {
   }
+}
+
+void test_init_stmt_true() {
+  void foo(int i);
+  if (int i = 0; true)
+    foo(i);
+  // CHECK-MESSAGES: :[[@LINE-2]]:18: warning: redundant boolean literal in if statement condition [readability-simplify-boolean-expr]
+  // CHECK-FIXES:   { int i = 0;foo(i) };
 }
