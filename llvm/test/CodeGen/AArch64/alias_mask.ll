@@ -563,3 +563,40 @@ entry:
   %0 = call <1 x i1> @llvm.loop.dependence.raw.mask.v1i1(ptr %a, ptr %b, i64 8)
   ret <1 x i1> %0
 }
+
+define <8 x i1> @whilewr_extract_v8i1(ptr %a, ptr %b) {
+; CHECK-LABEL: whilewr_extract_v8i1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    whilewr p0.b, x0, x1
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <8 x i1> @llvm.loop.dependence.war.mask.v8i1(ptr %a, ptr %b, i64 1)
+  ret <8 x i1> %0
+}
+
+define <4 x i1> @whilewr_extract_v4i1(ptr %a, ptr %b) {
+; CHECK-LABEL: whilewr_extract_v4i1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    whilewr p0.b, x0, x1
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %a, ptr %b, i64 1)
+  ret <4 x i1> %0
+}
+
+define <2 x i1> @whilewr_extract_v2i1(ptr %a, ptr %b) {
+; CHECK-LABEL: whilewr_extract_v2i1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    whilewr p0.s, x0, x1
+; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <2 x i1> @llvm.loop.dependence.war.mask.v2i1(ptr %a, ptr %b, i64 4)
+  ret <2 x i1> %0
+}
