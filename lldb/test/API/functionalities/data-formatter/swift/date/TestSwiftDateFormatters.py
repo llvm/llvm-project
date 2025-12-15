@@ -22,7 +22,7 @@ class TestCase(TestBase):
         )
 
         self.expect(
-            "v date",
+            "frame var date",
             startstr="(Foundation.Date) date = 2001-01-15 13:12:00 UTC",
         )
 
@@ -30,6 +30,6 @@ class TestCase(TestBase):
             return
 
         self.expect(
-            "v nsdate",
+            "frame var nsdate",
             startstr="(Foundation.NSDate) date = 2001-01-15 13:12:00 UTC",
         )
