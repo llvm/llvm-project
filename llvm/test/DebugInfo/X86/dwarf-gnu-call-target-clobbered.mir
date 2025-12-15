@@ -3,7 +3,7 @@
 
 # Generated from IR crash reproducer with `llc -stop-after=livedebugvalues -simplify-mir`.
 # Check the GNU equivalent of DW_AT_call_target_clobbered is emitted without
-# hitting assertions (DWARF version 4, -debuger-tune=gdb).
+# hitting assertions (DWARF version 4, -debugger-tune=gdb).
 
 # CHECK: DW_GNU_AT_call_target_clobbered
 
