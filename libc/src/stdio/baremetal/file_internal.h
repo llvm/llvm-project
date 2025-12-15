@@ -35,7 +35,7 @@ struct FileIOResult {
 LIBC_INLINE FileIOResult read_internal(char *buf, size_t size, ::FILE *stream) {
   ssize_t ret = __llvm_libc_stdio_read(stream, buf, size);
   if (ret < 0)
-    return {0, -ret};
+    return {0, static_cast<int>(-ret)};
   return ret;
 }
 
@@ -43,7 +43,7 @@ LIBC_INLINE FileIOResult write_internal(const char *buf, size_t size,
                                         ::FILE *stream) {
   ssize_t ret = __llvm_libc_stdio_write(stream, buf, size);
   if (ret < 0)
-    return {0, -ret};
+    return {0, static_cast<int>(-ret)};
   return ret;
 }
 
