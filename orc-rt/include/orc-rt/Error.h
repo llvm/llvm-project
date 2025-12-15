@@ -198,7 +198,7 @@ inline Error make_error(std::unique_ptr<ErrorInfoBase> Payload) noexcept {
 template <typename ThisT, typename ParentT>
 Error ErrorExtends<ThisT, ParentT>::restoreError() noexcept {
   return make_error(
-      std::unique_ptr<ThisT>(new ThisT(*static_cast<ThisT *>(this))));
+      std::make_unique<ThisT>(std::move(*static_cast<ThisT *>(this))));
 }
 
 inline Error restore_error(ErrorInfoBase &&EIB) { return EIB.restoreError(); }
