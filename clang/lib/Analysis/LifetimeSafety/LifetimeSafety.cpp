@@ -33,25 +33,22 @@ namespace internal {
 
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter,
-                                               size_t MaxCFGBlocks)
-    : MaxCFGBlocks(MaxCFGBlocks), AC(AC), Reporter(Reporter) {
-  FactMgr.setMaxCFGBlocksThreshold(MaxCFGBlocks);
-}
+                                               const LifetimeSafetyOpts &LSOpts)
+    : LSOpts(LSOpts), AC(AC), Reporter(Reporter) {}
 
 void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
 
   const CFG &Cfg = *AC.getCFG();
-  if (MaxCFGBlocks > 0 && Cfg.getNumBlockIDs() > MaxCFGBlocks) {
-    std::string FuncName = "<unknown>";
-    if (const Decl *D = AC.getDecl())
-      if (const auto *ND = dyn_cast<NamedDecl>(D))
-        FuncName = ND->getQualifiedNameAsString();
-    DEBUG_WITH_TYPE("LifetimeSafety",
-                    llvm::dbgs()
-                        << "LifetimeSafety: Skipping function " << FuncName
-                        << "due to large CFG: <count> blocks (threshold: "
-                        << MaxCFGBlocks << ")\n");
+  if (LSOpts.MaxCFGBlocks > 0 && Cfg.getNumBlockIDs() > LSOpts.MaxCFGBlocks) {
+    DEBUG_WITH_TYPE(
+        "LifetimeSafety", std::string FuncName = "<unknown>";
+        if (const Decl *D = AC.getDecl()) if (const auto *ND =
+                                                  dyn_cast<NamedDecl>(D))
+            FuncName = ND->getQualifiedNameAsString();
+        llvm::dbgs() << "LifetimeSafety: Skipping function " << FuncName
+                     << "due to large CFG: <count> blocks (threshold: "
+                     << LSOpts.MaxCFGBlocks << ")\n");
     return;
   }
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
@@ -87,9 +84,10 @@ void LifetimeSafetyAnalysis::run() {
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetyReporter *Reporter) {
-  internal::LifetimeSafetyAnalysis Analysis(
-      AC, Reporter,
-      AC.getASTContext().getLangOpts().LifetimeSafetyMaxCFGBlocks);
+  LifetimeSafetyOpts LSOpts;
+  LSOpts.MaxCFGBlocks =
+      AC.getASTContext().getLangOpts().LifetimeSafetyMaxCFGBlocks;
+  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter, LSOpts);
   Analysis.run();
 }
 } // namespace clang::lifetimes

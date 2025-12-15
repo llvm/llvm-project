@@ -62,8 +62,10 @@ public:
     BuildOptions.AddLifetime = true;
 
     // Run the main analysis.
+    LifetimeSafetyOpts LSOpts;
+    LSOpts.MaxCFGBlocks = 0;
     Analysis =
-        std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr, 0);
+        std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr, LSOpts);
     Analysis->run();
 
     AnnotationToPointMap = Analysis->getFactManager().getTestPoints();

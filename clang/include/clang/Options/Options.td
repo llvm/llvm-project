@@ -5171,10 +5171,9 @@ def mmlir : Separate<["-"], "mmlir">,
   HelpText<"Additional arguments to forward to MLIR's option processing">,
   MarshallingInfoStringVector<FrontendOpts<"MLIRArgs">>;
 def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
-                            Group<m_Group>,
-                            Visibility<[ClangOption, CC1Option]>,
-                            HelpText<"Set Fuchsia API level">,
-                            MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
+  Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Set Fuchsia API level">,
+  MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
 def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
   Visibility<[ClangOption, CC1Option, FlangOption]>,
   Group<m_Group>, HelpText<"Set macOS deployment target">;

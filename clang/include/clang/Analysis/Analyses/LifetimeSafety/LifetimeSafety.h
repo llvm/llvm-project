@@ -35,6 +35,12 @@ enum class Confidence : uint8_t {
   Definite // Reported as a definite error (-Wlifetime-safety-permissive)
 };
 
+struct LifetimeSafetyOpts {
+  /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
+  /// be skipped.
+  size_t MaxCFGBlocks;
+};
+
 class LifetimeSafetyReporter {
 public:
   LifetimeSafetyReporter() = default;
@@ -68,7 +74,8 @@ struct LifetimeFactory {
 class LifetimeSafetyAnalysis {
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                         LifetimeSafetyReporter *Reporter, size_t MaxCFGBlocks);
+                         LifetimeSafetyReporter *Reporter,
+                         const LifetimeSafetyOpts &LSOpts);
 
   void run();
 
@@ -80,7 +87,7 @@ public:
   FactManager &getFactManager() { return FactMgr; }
 
 private:
-  size_t MaxCFGBlocks;
+  const LifetimeSafetyOpts &LSOpts;
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
   LifetimeFactory Factory;
