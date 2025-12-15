@@ -31,7 +31,7 @@ cleanup.ret:                                      ; preds = %13
           to label %11 unwind label %13
 
 11:                                               ; preds = %9
-  %12 = call i1 @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %10) ]
+  call void @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %10) ]
   cleanupret from %10 unwind label %13
 
 13:                                               ; preds = %9
