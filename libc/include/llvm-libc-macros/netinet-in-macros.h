@@ -44,6 +44,15 @@
    (__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[2]) == 0 &&              \
    (__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[3]) == 0)
 
+#define IN6_IS_ADDR_LOOPBACK(a)                                                \
+  ((__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[0]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[1]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[2]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[12]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[13]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[14]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[15]) == 1)
+
 #define IN6_IS_ADDR_LINKLOCAL(a)                                               \
   ((__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[0]) == 0xfe &&            \
    (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xc0) == 0x80)
