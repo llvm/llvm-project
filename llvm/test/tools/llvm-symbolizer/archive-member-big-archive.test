@@ -15,15 +15,9 @@
 
 ## Create big archive with duplicate member names (64-bit first, 32-bit second).
 # RUN: cp 64.o test.o
-# RUN: llvm-ar --format=bigarchive %if system-aix %{-X64%} crv archive1.a test.o
+# RUN: llvm-ar --format=bigarchive %if system-aix %{-X64%} crv archive.a test.o
 # RUN: cp 32.o test.o
-# RUN: llvm-ar --format=bigarchive %if system-aix %{-X32 rv%} %else %{qv%} archive1.a test.o
-
-## Create big archive with duplicate member names (32-bit first, 64-bit second).
-# RUN: cp 32.o test.o
-# RUN: llvm-ar --format=bigarchive %if system-aix %{-X32%} crv archive2.a test.o
-# RUN: cp 64.o test.o
-# RUN: llvm-ar --format=bigarchive %if system-aix %{-X64 rv%} %else %{qv%} archive2.a test.o
+# RUN: llvm-ar --format=bigarchive %if system-aix %{-X32 rv%} %else %{qv%} archive.a test.o
 
 ## Test symbolization with unique member names.
 # RUN: llvm-symbolizer --default-arch=ppc64 --obj="archive.a(1.o)" 0x0 | FileCheck %s --check-prefix=CHECK-1
@@ -34,45 +28,37 @@
 # CHECK-1: foo1
 # CHECK-2: foo2
 
-## Test symbolization when 64-bit member is first.
-# RUN: llvm-symbolizer --default-arch=ppc64 --obj="archive1.a(test.o)" 0x0 | FileCheck %s --check-prefix=CHECK-64
-# RUN: llvm-symbolizer --obj="archive1.a(test.o):ppc64" 0x0 | FileCheck %s --check-prefix=CHECK-64
-
-## Test symbolization when 64-bit member is second.
-# RUN: llvm-symbolizer --default-arch=ppc64 --obj="archive2.a(test.o)" 0x0 | FileCheck %s --check-prefix=CHECK-64
-# RUN: llvm-symbolizer --obj="archive2.a(test.o):ppc64" 0x0 | FileCheck %s --check-prefix=CHECK-64
+## Test 64-bit member (first in archive).
+# RUN: llvm-symbolizer --default-arch=ppc64 --obj="archive.a(test.o)" 0x0 | FileCheck %s --check-prefix=CHECK-64
+# RUN: llvm-symbolizer --obj="archive.a(test.o):ppc64" 0x0 | FileCheck %s --check-prefix=CHECK-64
 
 # CHECK-64: foo64
 
-## Test symbolization when 32-bit member is first.
-# RUN: llvm-symbolizer --default-arch=ppc --obj="archive2.a(test.o)" 0x0 | FileCheck %s --check-prefix=CHECK-32
-# RUN: llvm-symbolizer --obj="archive2.a(test.o):ppc" 0x0 | FileCheck %s --check-prefix=CHECK-32
-
-## Test symbolization when 32-bit member is second.
-# RUN: llvm-symbolizer --default-arch=ppc --obj="archive1.a(test.o)" 0x0 | FileCheck %s --check-prefix=CHECK-32
-# RUN: llvm-symbolizer --obj="archive1.a(test.o):ppc" 0x0 | FileCheck %s --check-prefix=CHECK-32
+## Test 32-bit member (second in archive).
+# RUN: llvm-symbolizer --default-arch=ppc --obj="archive.a(test.o)" 0x0 | FileCheck %s --check-prefix=CHECK-32
+# RUN: llvm-symbolizer --obj="archive.a(test.o):ppc" 0x0 | FileCheck %s --check-prefix=CHECK-32
 
 # CHECK-32: foo32
 
 ## Test error: no matching architecture.
-# RUN: not llvm-symbolizer --default-arch=x86_64 --obj="archive1.a(test.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOARCH
-# CHECK-NOARCH: error: 'archive1.a(test.o)': no matching member 'test.o' with arch 'x86_64' in 'archive1.a'
+# RUN: not llvm-symbolizer --default-arch=x86_64 --obj="archive.a(test.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOARCH
+# CHECK-NOARCH: error: 'archive.a(test.o)': no matching member 'test.o' with arch 'x86_64' in 'archive.a'
 
 ## Test error: no architecture specified.
-# RUN: not llvm-symbolizer --obj="archive1.a(test.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOARCHSPEC
-# CHECK-NOARCHSPEC: error: 'archive1.a(test.o)': no matching member 'test.o' with arch '' in 'archive1.a'
+# RUN: not llvm-symbolizer --obj="archive.a(test.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOARCHSPEC
+# CHECK-NOARCHSPEC: error: 'archive.a(test.o)': no matching member 'test.o' with arch '' in 'archive.a'
 
 ## Test error: nonexistent member.
-# RUN: not llvm-symbolizer --default-arch=ppc --obj="archive1.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-# CHECK-ERROR: error: 'archive1.a(nonexistent.o)': no matching member 'nonexistent.o' with arch 'ppc' in 'archive1.a'
+# RUN: not llvm-symbolizer --default-arch=ppc --obj="archive.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+# CHECK-ERROR: error: 'archive.a(nonexistent.o)': no matching member 'nonexistent.o' with arch 'ppc' in 'archive.a'
 
 ## Test error: not an archive.
 # RUN: not llvm-symbolizer --obj="test.o(test.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
 # CHECK-NOTARCHIVE: error: 'test.o(test.o)': 'test.o' is not a valid archive
 
 ## Test error: empty member name.
-# RUN: not llvm-symbolizer --obj="archive1.a():ppc64" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NONAME
-# CHECK-NONAME: error: 'archive1.a():ppc64': no matching member '' with arch 'ppc64' in 'archive1.a'
+# RUN: not llvm-symbolizer --obj="archive.a():ppc64" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NONAME
+# CHECK-NONAME: error: 'archive.a():ppc64': no matching member '' with arch 'ppc64' in 'archive.a'
 
 ## 32-bit XCOFF object.
 --- !XCOFF
