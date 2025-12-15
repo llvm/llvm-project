@@ -8391,36 +8391,6 @@ bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
   return true;
 }
 
-SDValue LoongArchTargetLowering::addTokenForArgument(SDValue Chain,
-                                                     SelectionDAG &DAG,
-                                                     MachineFrameInfo &MFI,
-                                                     int ClobberedFI) const {
-  SmallVector<SDValue, 8> ArgChains;
-  int64_t FirstByte = MFI.getObjectOffset(ClobberedFI);
-  int64_t LastByte = FirstByte + MFI.getObjectSize(ClobberedFI) - 1;
-
-  // Include the original chain at the beginning of the list. When this is
-  // used by target LowerCall hooks, this helps legalize find the
-  // CALLSEQ_BEGIN node.
-  ArgChains.push_back(Chain);
-
-  // Add a chain value for each stack argument corresponding
-  for (SDNode *U : DAG.getEntryNode().getNode()->users())
-    if (LoadSDNode *L = dyn_cast<LoadSDNode>(U))
-      if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(L->getBasePtr()))
-        if (FI->getIndex() < 0) {
-          int64_t InFirstByte = MFI.getObjectOffset(FI->getIndex());
-          int64_t InLastByte = InFirstByte;
-          InLastByte += MFI.getObjectSize(FI->getIndex()) - 1;
-
-          if ((InFirstByte <= FirstByte && FirstByte <= InLastByte) ||
-              (FirstByte <= InFirstByte && InFirstByte <= LastByte))
-            ArgChains.push_back(SDValue(L, 1));
-        }
-
-  // Build a tokenfactor for all the chains.
-  return DAG.getNode(ISD::TokenFactor, SDLoc(Chain), MVT::Other, ArgChains);
-}
 static Align getPrefTypeAlign(EVT VT, SelectionDAG &DAG) {
   return DAG.getDataLayout().getPrefTypeAlign(
       VT.getTypeForEVT(*DAG.getContext()));
@@ -8504,6 +8474,13 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (!IsTailCall)
     Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
+
+  // During a tail call, stores to the argument area must happen after all of
+  // the function's incoming arguments have been loaded because they may alias.
+  // This is done by folding in a TokenFactor from LowerFormalArguments, but
+  // there's no point in doing so repeatedly so this tracks whether that's
+  // happened yet.
+  bool AfterFormalArgLoads = false;
 
   // Copy argument values to their designated locations.
   SmallVector<std::pair<Register, SDValue>> RegsToPass;
@@ -8624,10 +8601,10 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
         int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
         DstAddr = DAG.getFrameIndex(FI, PtrVT);
         DstInfo = MachinePointerInfo::getFixedStack(MF, FI);
-        // Make sure any stack arguments overlapping with where we're storing
-        // are loaded before this eventual operation. Otherwise they'll be
-        // clobbered.
-        Chain = addTokenForArgument(Chain, DAG, MF.getFrameInfo(), FI);
+        if (!AfterFormalArgLoads) {
+          Chain = DAG.getStackArgumentTokenFactor(Chain);
+          AfterFormalArgLoads = true;
+        }
       } else {
         SDValue PtrOff = DAG.getIntPtrConstant(Offset, DL);
         DstAddr = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);

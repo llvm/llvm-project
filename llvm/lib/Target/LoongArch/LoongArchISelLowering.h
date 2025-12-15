@@ -263,12 +263,6 @@ private:
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
       const SmallVectorImpl<CCValAssign> &ArgLocs) const;
 
-  /// Finds the incoming stack arguments which overlap the given fixed stack
-  /// object and incorporates their load into the current chain. This prevents
-  /// an upcoming store from clobbering the stack argument before it's used.
-  SDValue addTokenForArgument(SDValue Chain, SelectionDAG &DAG,
-                              MachineFrameInfo &MFI, int ClobberedFI) const;
-
   bool softPromoteHalfType() const override { return true; }
 
   bool

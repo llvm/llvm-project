@@ -7,9 +7,9 @@ declare i32 @many_args_callee(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i3
 define i32 @many_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9) {
 ; LA32-LABEL: many_args_tail:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a0, $zero, 9
-; LA32-NEXT:    st.w $a0, $sp, 4
 ; LA32-NEXT:    ori $a0, $zero, 8
+; LA32-NEXT:    st.w $a0, $sp, 0
+; LA32-NEXT:    ori $a0, $zero, 9
 ; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    ori $a2, $zero, 2
 ; LA32-NEXT:    ori $a3, $zero, 3
@@ -17,15 +17,15 @@ define i32 @many_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %
 ; LA32-NEXT:    ori $a5, $zero, 5
 ; LA32-NEXT:    ori $a6, $zero, 6
 ; LA32-NEXT:    ori $a7, $zero, 7
-; LA32-NEXT:    st.w $a0, $sp, 0
+; LA32-NEXT:    st.w $a0, $sp, 4
 ; LA32-NEXT:    move $a0, $zero
 ; LA32-NEXT:    b many_args_callee
 ;
 ; LA64-LABEL: many_args_tail:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 9
-; LA64-NEXT:    st.d $a0, $sp, 8
 ; LA64-NEXT:    ori $a0, $zero, 8
+; LA64-NEXT:    st.d $a0, $sp, 0
+; LA64-NEXT:    ori $a0, $zero, 9
 ; LA64-NEXT:    ori $a1, $zero, 1
 ; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    ori $a3, $zero, 3
@@ -33,7 +33,7 @@ define i32 @many_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %
 ; LA64-NEXT:    ori $a5, $zero, 5
 ; LA64-NEXT:    ori $a6, $zero, 6
 ; LA64-NEXT:    ori $a7, $zero, 7
-; LA64-NEXT:    st.d $a0, $sp, 0
+; LA64-NEXT:    st.d $a0, $sp, 8
 ; LA64-NEXT:    move $a0, $zero
 ; LA64-NEXT:    pcaddu18i $t8, %call36(many_args_callee)
 ; LA64-NEXT:    jr $t8
@@ -44,9 +44,9 @@ define i32 @many_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %
 define i32 @many_args_musttail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9) {
 ; LA32-LABEL: many_args_musttail:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a0, $zero, 9
-; LA32-NEXT:    st.w $a0, $sp, 4
 ; LA32-NEXT:    ori $a0, $zero, 8
+; LA32-NEXT:    st.w $a0, $sp, 0
+; LA32-NEXT:    ori $a0, $zero, 9
 ; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    ori $a2, $zero, 2
 ; LA32-NEXT:    ori $a3, $zero, 3
@@ -54,15 +54,15 @@ define i32 @many_args_musttail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i
 ; LA32-NEXT:    ori $a5, $zero, 5
 ; LA32-NEXT:    ori $a6, $zero, 6
 ; LA32-NEXT:    ori $a7, $zero, 7
-; LA32-NEXT:    st.w $a0, $sp, 0
+; LA32-NEXT:    st.w $a0, $sp, 4
 ; LA32-NEXT:    move $a0, $zero
 ; LA32-NEXT:    b many_args_callee
 ;
 ; LA64-LABEL: many_args_musttail:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 9
-; LA64-NEXT:    st.d $a0, $sp, 8
 ; LA64-NEXT:    ori $a0, $zero, 8
+; LA64-NEXT:    st.d $a0, $sp, 0
+; LA64-NEXT:    ori $a0, $zero, 9
 ; LA64-NEXT:    ori $a1, $zero, 1
 ; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    ori $a3, $zero, 3
@@ -70,7 +70,7 @@ define i32 @many_args_musttail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i
 ; LA64-NEXT:    ori $a5, $zero, 5
 ; LA64-NEXT:    ori $a6, $zero, 6
 ; LA64-NEXT:    ori $a7, $zero, 7
-; LA64-NEXT:    st.d $a0, $sp, 0
+; LA64-NEXT:    st.d $a0, $sp, 8
 ; LA64-NEXT:    move $a0, $zero
 ; LA64-NEXT:    pcaddu18i $t8, %call36(many_args_callee)
 ; LA64-NEXT:    jr $t8
@@ -85,9 +85,9 @@ define i32 @many_args_musttail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i
 define i32 @more_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9) {
 ; LA32-LABEL: more_args_tail:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a0, $zero, 9
-; LA32-NEXT:    st.w $a0, $sp, 4
 ; LA32-NEXT:    ori $a0, $zero, 8
+; LA32-NEXT:    st.w $a0, $sp, 0
+; LA32-NEXT:    ori $a0, $zero, 9
 ; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    ori $a2, $zero, 2
 ; LA32-NEXT:    ori $a3, $zero, 3
@@ -95,15 +95,15 @@ define i32 @more_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %
 ; LA32-NEXT:    ori $a5, $zero, 5
 ; LA32-NEXT:    ori $a6, $zero, 6
 ; LA32-NEXT:    ori $a7, $zero, 7
-; LA32-NEXT:    st.w $a0, $sp, 0
+; LA32-NEXT:    st.w $a0, $sp, 4
 ; LA32-NEXT:    move $a0, $zero
 ; LA32-NEXT:    b many_args_callee
 ;
 ; LA64-LABEL: more_args_tail:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 9
-; LA64-NEXT:    st.d $a0, $sp, 8
 ; LA64-NEXT:    ori $a0, $zero, 8
+; LA64-NEXT:    st.d $a0, $sp, 0
+; LA64-NEXT:    ori $a0, $zero, 9
 ; LA64-NEXT:    ori $a1, $zero, 1
 ; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    ori $a3, $zero, 3
@@ -111,7 +111,7 @@ define i32 @more_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %
 ; LA64-NEXT:    ori $a5, $zero, 5
 ; LA64-NEXT:    ori $a6, $zero, 6
 ; LA64-NEXT:    ori $a7, $zero, 7
-; LA64-NEXT:    st.d $a0, $sp, 0
+; LA64-NEXT:    st.d $a0, $sp, 8
 ; LA64-NEXT:    move $a0, $zero
 ; LA64-NEXT:    pcaddu18i $t8, %call36(many_args_callee)
 ; LA64-NEXT:    jr $t8
@@ -124,9 +124,9 @@ define i32 @more_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %
 define i32 @different_args_tail_32bit(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4) nounwind {
 ; LA32-LABEL: different_args_tail_32bit:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a0, $zero, 9
-; LA32-NEXT:    st.w $a0, $sp, 4
 ; LA32-NEXT:    ori $a0, $zero, 8
+; LA32-NEXT:    st.w $a0, $sp, 0
+; LA32-NEXT:    ori $a0, $zero, 9
 ; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    ori $a2, $zero, 2
 ; LA32-NEXT:    ori $a3, $zero, 3
@@ -134,7 +134,7 @@ define i32 @different_args_tail_32bit(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4) no
 ; LA32-NEXT:    ori $a5, $zero, 5
 ; LA32-NEXT:    ori $a6, $zero, 6
 ; LA32-NEXT:    ori $a7, $zero, 7
-; LA32-NEXT:    st.w $a0, $sp, 0
+; LA32-NEXT:    st.w $a0, $sp, 4
 ; LA32-NEXT:    move $a0, $zero
 ; LA32-NEXT:    b many_args_callee
 ;
@@ -187,9 +187,9 @@ define i32 @different_args_tail_64bit(i128 %0, i128 %1, i128 %2, i128 %3, i128 %
 ;
 ; LA64-LABEL: different_args_tail_64bit:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 9
-; LA64-NEXT:    st.d $a0, $sp, 8
 ; LA64-NEXT:    ori $a0, $zero, 8
+; LA64-NEXT:    st.d $a0, $sp, 0
+; LA64-NEXT:    ori $a0, $zero, 9
 ; LA64-NEXT:    ori $a1, $zero, 1
 ; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    ori $a3, $zero, 3
@@ -197,7 +197,7 @@ define i32 @different_args_tail_64bit(i128 %0, i128 %1, i128 %2, i128 %3, i128 %
 ; LA64-NEXT:    ori $a5, $zero, 5
 ; LA64-NEXT:    ori $a6, $zero, 6
 ; LA64-NEXT:    ori $a7, $zero, 7
-; LA64-NEXT:    st.d $a0, $sp, 0
+; LA64-NEXT:    st.d $a0, $sp, 8
 ; LA64-NEXT:    move $a0, $zero
 ; LA64-NEXT:    pcaddu18i $t8, %call36(many_args_callee)
 ; LA64-NEXT:    jr $t8
