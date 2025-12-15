@@ -48,7 +48,7 @@ RUN regsvr32 /S "C:\BuildTools\DIA SDK\bin\amd64\msdia140.dll" & \
 RUN choco install -y ninja --version 1.13.1 && \
     choco install -y git --version 2.50.1 && \
     choco install -y sccache --version 0.10.0 && \
-    choco install -y python3 --version 3.9.7
+    choco install -y python3 --version 3.12.3
 
 # Testing requires psutil
 RUN pip install psutil
