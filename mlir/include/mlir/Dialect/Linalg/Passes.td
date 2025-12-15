@@ -167,7 +167,7 @@ def LinalgInlineScalarOperandsPass : Pass<"linalg-inline-scalar-operands"> {
 }
 
 def LinalgFoldIntoElementwisePass : Pass<"linalg-fold-into-elementwise"> {
-  let summary = "Fold transform, broadcast and other ops into elementwise";
+  let summary = "Fold transform ops into elementwise";
   let dependentDialects = ["linalg::LinalgDialect"];
 }
 
