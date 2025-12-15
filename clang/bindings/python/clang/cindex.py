@@ -3602,6 +3602,9 @@ class TranslationUnit(ClangObject):
             self, len(unsaved_files), unsaved_files_array, options
         )
 
+        if not ptr:
+            raise TranslationUnitLoadError("Error reparsing translation unit.")
+
     def save(self, filename):
         """Saves the TranslationUnit to a file.
 
