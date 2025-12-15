@@ -1411,6 +1411,15 @@ defm int_arm_mve_vqdmlad: MVEPredicated<[llvm_anyvector_ty],
    llvm_i32_ty /* exchange */, llvm_i32_ty /* round */,
    llvm_i32_ty /* subtract */]>;
 
+class MVE_cmp : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+    [llvm_anyvector_ty, LLVMMatchType<1>], [IntrNoMem]>;
+def int_arm_mve_cmp_eq: MVE_cmp;
+def int_arm_mve_cmp_ne: MVE_cmp;
+def int_arm_mve_cmp_gt: MVE_cmp;
+def int_arm_mve_cmp_ge: MVE_cmp;
+def int_arm_mve_cmp_lt: MVE_cmp;
+def int_arm_mve_cmp_le: MVE_cmp;
+
 // CDE (Custom Datapath Extension)
 
 multiclass CDEGPRIntrinsics<list<LLVMType> args> {
