@@ -181,7 +181,8 @@ private:
     size_t Arg = 0;
 
     // Find the last argument to know the total size of the arguments.
-    while ((Res = cuFuncGetParamInfo(Func, Arg++, &ArgOffset, &ArgSize)) == CUDA_SUCCESS)
+    while ((Res = cuFuncGetParamInfo(Func, Arg++, &ArgOffset, &ArgSize)) ==
+           CUDA_SUCCESS)
       ArgsSize = ArgOffset + ArgSize;
 
     if (Res != CUDA_ERROR_INVALID_VALUE)
@@ -1452,7 +1453,8 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // The args size passed in LaunchParams may have tail padding, which is not
   // accepted by the CUDA driver.
   if (ArgsSize > LaunchParams.Size)
-    return Plugin::error(ErrorCode::INVALID_BINARY, "mismatch in kernel arguments");
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "mismatch in kernel arguments");
 
   CUstream Stream;
   if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
