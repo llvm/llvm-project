@@ -2544,10 +2544,10 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     // conditions that need to be checked at runtime. This could also be fixed
     // by saying that mixedGlobalSizes is a DynamicI32List.
     Value tensorDimX;
-    if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult))
+    if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult)) {
       tensorDimX =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    else {
+    } else {
       IntegerType i32 = rewriter.getI32Type();
       tensorDimX = cast<Value>(tensorDimXOpFoldResult);
       tensorDimX = LLVM::TruncOp::create(rewriter, loc, i32, tensorDimX);
@@ -2597,10 +2597,10 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     // checked at runtime. This could also be fixed by saying that
     // mixedSharedSizes is a DynamicI16List.
     Value tileDimX;
-    if (auto attr = dyn_cast<Attribute>(tileDimXOpFoldResult))
+    if (auto attr = dyn_cast<Attribute>(tileDimXOpFoldResult)) {
       tileDimX =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    else {
+    } else {
       IntegerType i32 = rewriter.getI32Type();
       tileDimX = cast<Value>(tileDimXOpFoldResult);
       tileDimX = LLVM::TruncOp::create(rewriter, loc, i32, tileDimX);
@@ -2780,10 +2780,10 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
 
     OpFoldResult tensorDimXOpFoldResult = *(mixedGlobalSizes.rbegin() + dimX);
     Value tensorDimX;
-    if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult))
+    if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult)) {
       tensorDimX =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    else {
+    } else {
       IntegerType i32 = rewriter.getI32Type();
       tensorDimX = cast<Value>(tensorDimXOpFoldResult);
       tensorDimX = LLVM::TruncOp::create(rewriter, loc, i32, tensorDimX);
@@ -2971,9 +2971,9 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     }
 
     SmallVector<Value> indicesI32Vector;
-    if (elementType == i32)
+    if (elementType == i32) {
       indicesI32Vector = indicesVector;
-    else {
+    } else {
       for (unsigned i = 0; i < targetSize; i++) {
         Value index = indicesVector[i];
         indicesI32Vector.push_back(
@@ -2985,9 +2985,9 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     }
 
     SmallVector<Value> indicesToInsert;
-    if (elementType == i32)
+    if (elementType == i32) {
       indicesToInsert = indicesI32Vector;
-    else {
+    } else {
       unsigned size = indicesI32Vector.size() / 2;
       for (unsigned i = 0; i < size; i++) {
         Value first = indicesI32Vector[2 * i];
