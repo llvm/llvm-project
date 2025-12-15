@@ -7,10 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanningTool.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/Utils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
 
 using namespace clang;
@@ -74,13 +79,131 @@ protected:
 };
 } // anonymous namespace
 
+static std::pair<std::unique_ptr<driver::Driver>,
+                 std::unique_ptr<driver::Compilation>>
+buildCompilation(ArrayRef<std::string> CommandLine, DiagnosticsEngine &Diags,
+                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                 llvm::BumpPtrAllocator &Alloc) {
+  auto Argv = llvm::map_to_vector<256>(
+      CommandLine, [](const auto &Arg) { return Arg.c_str(); });
+
+  std::unique_ptr<driver::Driver> Driver = std::make_unique<driver::Driver>(
+      Argv[0], llvm::sys::getDefaultTargetTriple(), Diags,
+      "clang LLVM compiler", FS);
+  Driver->setTitle("clang_based_tool");
+
+  bool CLMode = driver::IsClangCL(
+      driver::getDriverMode(Argv[0], ArrayRef(Argv).slice(1)));
+
+  if (llvm::Error E =
+          driver::expandResponseFiles(Argv, CLMode, Alloc, FS.get())) {
+    Diags.Report(diag::err_drv_expand_response_file)
+        << llvm::toString(std::move(E));
+    return std::make_pair(nullptr, nullptr);
+  }
+
+  std::unique_ptr<driver::Compilation> Compilation(
+      Driver->BuildCompilation(Argv));
+  if (!Compilation)
+    return std::make_pair(nullptr, nullptr);
+
+  if (Compilation->containsError())
+    return std::make_pair(nullptr, nullptr);
+
+  if (Compilation->getJobs().empty()) {
+    Diags.Report(diag::err_fe_expected_compiler_job)
+        << llvm::join(CommandLine, " ");
+    return std::make_pair(nullptr, nullptr);
+  }
+
+  return std::make_pair(std::move(Driver), std::move(Compilation));
+}
+
+/// Constructs the full -cc1 command line, including executable, for the given
+/// driver \c Cmd.
+static std::vector<std::string>
+buildCC1CommandLine(const driver::Command &Cmd) {
+  const auto &Args = Cmd.getArguments();
+  std::vector<std::string> Out;
+  Out.reserve(Args.size() + 1);
+  Out.emplace_back(Cmd.getExecutable());
+  llvm::append_range(Out, Args);
+  return Out;
+}
+
+static bool computeDependenciesForDriverCommandLine(
+    DependencyScanningWorker &Worker, StringRef WorkingDirectory,
+    ArrayRef<std::string> CommandLine, DependencyConsumer &Consumer,
+    DependencyActionController &Controller, DiagnosticsEngine &Diags,
+    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
+  Worker.getVFS().setCurrentWorkingDirectory(WorkingDirectory);
+
+  // Compilation holds a non-owning a reference to the Driver, hence we need to
+  // keep the Driver alive when we use Compilation. Arguments to commands may be
+  // owned by Alloc when expanded from response files.
+  llvm::BumpPtrAllocator Alloc;
+  const auto [Driver, Compilation] =
+      buildCompilation(CommandLine, Diags, &Worker.getVFS(), Alloc);
+  if (!Compilation)
+    return false;
+
+  const auto CC1CommandLines =
+      llvm::map_to_vector(Compilation->getJobs(), buildCC1CommandLine);
+  const auto CC1CommandLinesView = llvm::map_to_vector(
+      CC1CommandLines, [](const auto &CC1Cmds) { return ArrayRef(CC1Cmds); });
+
+  return Worker.computeDependencies(WorkingDirectory, CC1CommandLinesView,
+                                    Consumer, Controller, Diags, OverlayFS);
+}
+
+static llvm::Error makeErrorFromDiagnosticsOS(
+    TextDiagnosticsPrinterWithOutput &DiagPrinterWithOS) {
+  return llvm::make_error<llvm::StringError>(
+      DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
+}
+
+static llvm::Error computeDependenciesOrError(
+    DependencyScanningWorker &Worker, StringRef WorkingDirectory,
+    ArrayRef<std::string> CommandLine, DependencyConsumer &Consumer,
+    DependencyActionController &Controller,
+    std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt) {
+  // If we are scanning from a TUBuffer, create an overlay filesystem with the
+  // input as an in-memory file and add it to the command line.
+  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr;
+  std::vector<std::string> CommandLineWithTUBufferInput;
+  if (TUBuffer) {
+    std::tie(OverlayFS, CommandLineWithTUBufferInput) =
+        initVFSForTUBufferScanning(&Worker.getVFS(), CommandLine,
+                                   WorkingDirectory, *TUBuffer);
+    CommandLine = CommandLineWithTUBufferInput;
+  }
+
+  TextDiagnosticsPrinterWithOutput DiagPrinterWithOS(CommandLine);
+  DiagnosticsEngineWithDiagOpts DiagEngineWithDiagOpts(
+      CommandLine, &Worker.getVFS(), DiagPrinterWithOS.DiagPrinter);
+  auto &Diags = *DiagEngineWithDiagOpts.DiagEngine;
+
+  const auto IsCC1Input = (CommandLine.size() >= 2 && CommandLine[1] == "-cc1");
+  const auto Success =
+      IsCC1Input
+          ? Worker.computeDependencies(WorkingDirectory, CommandLine, Consumer,
+                                       Controller, Diags, OverlayFS)
+          : computeDependenciesForDriverCommandLine(
+                Worker, WorkingDirectory, CommandLine, Consumer, Controller,
+                Diags, OverlayFS);
+
+  if (!Success)
+    return makeErrorFromDiagnosticsOS(DiagPrinterWithOS);
+  return llvm::Error::success();
+}
+
 llvm::Expected<std::string>
 DependencyScanningTool::getDependencyFile(ArrayRef<std::string> CommandLine,
                                           StringRef CWD) {
   MakeDependencyPrinterConsumer Consumer;
   CallbackActionController Controller(nullptr);
-  auto Result =
-      Worker.computeDependencies(CWD, CommandLine, Consumer, Controller);
+  auto Result = computeDependenciesOrError(Worker, CWD, CommandLine, Consumer,
+                                           Controller);
   if (Result)
     return std::move(Result);
   std::string Output;
@@ -132,8 +255,8 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   P1689Rule Rule;
   P1689ModuleDependencyPrinterConsumer Consumer(Rule, Command);
   P1689ActionController Controller;
-  auto Result = Worker.computeDependencies(CWD, Command.CommandLine, Consumer,
-                                           Controller);
+  auto Result = computeDependenciesOrError(Worker, CWD, Command.CommandLine,
+                                           Consumer, Controller);
   if (Result)
     return std::move(Result);
 
@@ -151,8 +274,8 @@ DependencyScanningTool::getTranslationUnitDependencies(
     std::optional<llvm::MemoryBufferRef> TUBuffer) {
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
-  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer,
-                                                  Controller, TUBuffer);
+  llvm::Error Result = computeDependenciesOrError(
+      Worker, CWD, CommandLine, Consumer, Controller, TUBuffer);
 
   if (Result)
     return std::move(Result);
@@ -177,18 +300,6 @@ DependencyScanningTool::getModuleDependencies(
   return Result;
 }
 
-/// Constructs the full -cc1 command line, including executable, for the given
-/// driver \c Cmd.
-static std::vector<std::string>
-buildCC1CommandLine(const driver::Command &Cmd) {
-  const auto &Args = Cmd.getArguments();
-  std::vector<std::string> Out;
-  Out.reserve(Args.size() + 1);
-  Out.emplace_back(Cmd.getExecutable());
-  llvm::append_range(Out, Args);
-  return Out;
-}
-
 static std::optional<std::vector<std::string>> getFirstCC1CommandLine(
     ArrayRef<std::string> CommandLine, DiagnosticsEngine &Diags,
     llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> ScanFS) {
@@ -209,12 +320,6 @@ static std::optional<std::vector<std::string>> getFirstCC1CommandLine(
   if (const auto It = llvm::find_if(Jobs, IsClangCmd); It != Jobs.end())
     return buildCC1CommandLine(*It);
   return std::nullopt;
-}
-
-static llvm::Error makeErrorFromDiagnosticsOS(
-    TextDiagnosticsPrinterWithOutput &DiagPrinterWithOS) {
-  return llvm::make_error<llvm::StringError>(
-      DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
 }
 
 llvm::Error
