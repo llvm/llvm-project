@@ -749,13 +749,13 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
 
       // Loop over all of the incoming value in PN, moving them to NewPN if they
       // are from the extracted region.
-      for (unsigned i = 0; i != PN->getNumIncomingValues(); ++i) {
+      PN->removeIncomingValueIf([&](unsigned i) {
         if (Blocks.count(PN->getIncomingBlock(i))) {
           NewPN->addIncoming(PN->getIncomingValue(i), PN->getIncomingBlock(i));
-          PN->removeIncomingValue(i);
-          --i;
+          return true;
         }
-      }
+        return false;
+      });
     }
   }
 }
