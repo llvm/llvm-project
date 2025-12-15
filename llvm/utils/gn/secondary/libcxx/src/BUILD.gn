@@ -47,6 +47,7 @@ config("cxx_config") {
     "-Wextra-semi",
     "-Wno-user-defined-literals",
     "-Wno-covered-switch-default",
+    "-Wno-nullability-completeness",
   ]
   cflags_cc = [
     "-std=c++23",
@@ -316,7 +317,10 @@ if (libcxx_enable_experimental) {
   static_library("cxx_experimental") {
     output_dir = runtimes_dir
     output_name = "c++experimental"
-    sources = [ "experimental/keep.cpp" ]
+    sources = [
+      "experimental/keep.cpp",
+      "experimental/log_hardening_failure.cpp",
+    ]
     if (libcxx_enable_filesystem && libcxx_enable_time_zone_database) {
       sources += [
         # TODO TZDB The exception could be moved in chrono once the TZDB library

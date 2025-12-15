@@ -93,11 +93,12 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     // is contributing to a hash collision but there's enough information
     // (Opcodes,other registers etc) that this will likely not be a problem.
 
-    // TODO: Handle the following Index/ID/Predicate cases. They can
+    // TODO: Handle the following Index/ID/Predicate/LaneMask cases. They can
     // be hashed on in a stable manner.
     case MachineOperand::MO_CFIIndex:
     case MachineOperand::MO_IntrinsicID:
     case MachineOperand::MO_Predicate:
+    case MachineOperand::MO_LaneMask:
 
     // In the cases below we havn't found a way to produce an artifact that will
     // result in a stable hash, in most cases because they are pointers. We want
@@ -131,7 +132,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     MIOperands.push_back((unsigned)Op->getFailureOrdering());
   }
 
-  auto HashMI = hash_combine_range(MIOperands.begin(), MIOperands.end());
+  auto HashMI = hash_combine_range(MIOperands);
   OS << format_hex_no_prefix(HashMI, 16, true);
   return OS.str();
 }

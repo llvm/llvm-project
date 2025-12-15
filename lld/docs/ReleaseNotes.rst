@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================
 lld |release| Release Notes
 ===========================
@@ -25,10 +28,9 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
-* For AArch64, added support for ``-zgcs-report-dynamic``, enabling checks for
-  GNU GCS Attribute Flags in Dynamic Objects when GCS is enabled. Inherits value
-  from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,
-  ensuring compatibility with GNU ld linker.
+
+* ``--print-gc-sections=<file>`` prints garbage collection section listing to a file.
+  (`#159706 <https://github.com/llvm/llvm-project/pull/159706>`_)
 
 Breaking changes
 ----------------
@@ -42,8 +44,16 @@ MinGW Improvements
 MachO Improvements
 ------------------
 
+* ``--separate-cstring-literal-sections`` emits cstring literal sections into sections defined by their section name.
+  (`#158720 <https://github.com/llvm/llvm-project/pull/158720>`_)
+* ``--tail-merge-strings`` enables tail merging of cstring literals.
+  (`#161262 <https://github.com/llvm/llvm-project/pull/161262>`_)
+
 WebAssembly Improvements
 ------------------------
+
+* The ``--stack-first`` flag is now enabled by default. The old
+  behavior can be enabled using ``--no-stack-first``.
 
 Fixes
 #####

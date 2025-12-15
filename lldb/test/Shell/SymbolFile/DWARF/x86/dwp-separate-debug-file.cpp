@@ -1,7 +1,7 @@
 // REQUIRES: lld, python
 
 // Now test with DWARF5
-// RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -c %s -o %t.dwarf5.o
+// RUN: %clangxx -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -c %s -o %t.dwarf5.o
 // RUN: ld.lld %t.dwarf5.o -o %t.dwarf5
 // RUN: llvm-dwp %t.dwarf5.dwo -o %t.dwarf5.dwp
 // RUN: rm %t.dwarf5.dwo
@@ -64,7 +64,7 @@
 // RUN:   -b %t.dwarf5.debug 2>&1 | FileCheck %s -check-prefix=NODWP
 
 // Now test with DWARF4
-// RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-4 -c %s -o %t.dwarf4.o
+// RUN: %clangxx -target x86_64-pc-linux -gsplit-dwarf -gdwarf-4 -c %s -o %t.dwarf4.o
 // RUN: ld.lld %t.dwarf4.o -o %t.dwarf4
 // RUN: llvm-dwp %t.dwarf4.dwo -o %t.dwarf4.dwp
 // RUN: rm %t.dwarf4.dwo
@@ -128,7 +128,7 @@
 
 // Test if we have a GNU build ID in our main executable and in our debug file,
 // and we have a .dwp file that doesn't, that we can still load our .dwp file.
-// RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -c %s -o %t.o
+// RUN: %clangxx -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -c %s -o %t.o
 // RUN: ld.lld %t.o --build-id=md5 -o %t
 // RUN: llvm-dwp %t.dwo -o %t.dwp
 // RUN: rm %t.dwo

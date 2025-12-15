@@ -426,7 +426,6 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
   bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
@@ -454,7 +453,7 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
+  } else if (compiler_type.IsFloatingPointType(is_complex)) {
     if (is_complex)
       error = Status::FromErrorString(
           "We don't support returning complex values at present");
@@ -695,7 +694,6 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
         uint64_t field_bit_offset = 0;
         bool is_signed;
         bool is_complex;
-        uint32_t count;
 
         CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
             idx, name, &field_bit_offset, nullptr, nullptr);
@@ -741,7 +739,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
             // return a nullptr return value object.
             return return_valobj_sp;
           }
-        } else if (field_compiler_type.IsFloatingPointType(count, is_complex)) {
+        } else if (field_compiler_type.IsFloatingPointType(is_complex)) {
           // Structs with long doubles are always passed in memory.
           if (*field_bit_width == 128) {
             is_memory = true;
@@ -864,16 +862,16 @@ UnwindPlanSP ABISysV_ppc::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = dwarf_r1;
   uint32_t pc_reg_num = dwarf_pc;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
   // The previous PC is in the LR, all other registers are the same.
-  row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
+  row.SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("ppc at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;
@@ -884,17 +882,17 @@ UnwindPlanSP ABISysV_ppc::CreateDefaultUnwindPlan() {
   uint32_t sp_reg_num = dwarf_r1;
   uint32_t pc_reg_num = dwarf_lr;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   const int32_t ptr_size = 4;
-  row->SetUnspecifiedRegistersAreUndefined(true);
-  row->GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
+  row.SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 1, true);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 1, true);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("ppc default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);

@@ -393,7 +393,6 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
   bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
@@ -423,7 +422,7 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
+  } else if (compiler_type.IsFloatingPointType(is_complex)) {
     if (is_complex)
       error = Status::FromErrorString(
           "We don't support returning complex values at present");
@@ -619,17 +618,17 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectImpl(
 }
 
 UnwindPlanSP ABISysV_s390x::CreateFunctionEntryUnwindPlan() {
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value + 160
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r15_s390x, 160);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r15_s390x, 160);
 
   // The previous PC is in r14
-  row->SetRegisterLocationToRegister(dwarf_pswa_s390x, dwarf_r14_s390x, true);
+  row.SetRegisterLocationToRegister(dwarf_pswa_s390x, dwarf_r14_s390x, true);
 
   // All other registers are the same.
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("s390x at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;

@@ -98,7 +98,7 @@ define float @sub_sub_nsz(float %x, float %y, float %z) {
 
 define float @sub_add_neg_x(float %x, float %y) {
 ; CHECK-LABEL: @sub_add_neg_x(
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], -5.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fmul nsz float [[X:%.*]], -5.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %mul = fmul float %x, 5.000000e+00

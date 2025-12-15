@@ -923,7 +923,6 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
       bool sucess = false;
       std::string name;
       bool is_complex;
-      uint32_t count;
       const uint32_t num_children = return_compiler_type.GetNumFields();
 
       // A structure consisting of one or two FP values (and nothing else) will
@@ -937,7 +936,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
               return_compiler_type.GetFieldAtIndex(idx, name, &field_bit_offset,
                                                    nullptr, nullptr);
 
-          if (field_compiler_type.IsFloatingPointType(count, is_complex))
+          if (field_compiler_type.IsFloatingPointType(is_complex))
             use_fp_regs = true;
           else
             found_non_fp_field = true;
@@ -1044,7 +1043,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
         if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
             field_compiler_type.IsPointerType() ||
-            field_compiler_type.IsFloatingPointType(count, is_complex)) {
+            field_compiler_type.IsFloatingPointType(is_complex)) {
           padding = field_byte_offset - integer_bytes;
 
           if (integer_bytes < 8) {
@@ -1129,16 +1128,16 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 }
 
 UnwindPlanSP ABISysV_mips64::CreateFunctionEntryUnwindPlan() {
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
   // The previous PC is in the RA, all other registers are the same.
-  row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
+  row.SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("mips64 at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetReturnAddressRegister(dwarf_r31);
@@ -1146,15 +1145,15 @@ UnwindPlanSP ABISysV_mips64::CreateFunctionEntryUnwindPlan() {
 }
 
 UnwindPlanSP ABISysV_mips64::CreateDefaultUnwindPlan() {
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
-  row->SetUnspecifiedRegistersAreUndefined(true);
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
+  row.SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
-  row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
+  row.SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("mips64 default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);

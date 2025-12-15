@@ -9,28 +9,27 @@
 #ifndef LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 #define LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_tm.h"
 #include "hdr/types/time_t.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include "time_constants.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
 // calculates the seconds from the epoch for tm_in. Does not update the struct,
 // you must call update_from_seconds for that.
-int64_t mktime_internal(const tm *tm_out);
+cpp::optional<time_t> mktime_internal(const tm *tm_out);
 
 // Update the "tm" structure's year, month, etc. members from seconds.
 // "total_seconds" is the number of seconds since January 1st, 1970.
-int64_t update_from_seconds(int64_t total_seconds, tm *tm);
+int64_t update_from_seconds(time_t total_seconds, tm *tm);
 
 // TODO(michaelrj): move these functions to use ErrorOr instead of setting
 // errno. They always accompany a specific return value so we only need the one
@@ -84,7 +83,7 @@ LIBC_INLINE char *asctime(const tm *timeptr, char *buffer,
 }
 
 LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
-  int64_t seconds = *timer;
+  time_t seconds = *timer;
   // Update the tm structure's year, month, day, etc. from seconds.
   if (update_from_seconds(seconds, result) < 0) {
     out_of_range();
@@ -94,11 +93,22 @@ LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
   return result;
 }
 
-// TODO: localtime is not yet implemented and a temporary solution is to
-//       use gmtime, https://github.com/llvm/llvm-project/issues/107597
+LIBC_INLINE tm *localtime_internal(const time_t *timer, tm *result) {
+  time_t seconds = *timer;
+  // Update the tm structure's year, month, day, etc. from seconds.
+  if (update_from_seconds(seconds, result) < 0) {
+    out_of_range();
+    return nullptr;
+  }
+
+  // TODO(zimirza): implement timezone database
+
+  return result;
+}
+
 LIBC_INLINE tm *localtime(const time_t *t_ptr) {
   static tm result;
-  return time_utils::gmtime_internal(t_ptr, &result);
+  return time_utils::localtime_internal(t_ptr, &result);
 }
 
 // Returns number of years from (1, year).
@@ -329,7 +339,8 @@ public:
   }
 
   LIBC_INLINE time_t get_epoch() const {
-    return static_cast<time_t>(mktime_internal(timeptr));
+    auto seconds = mktime_internal(timeptr);
+    return seconds ? *seconds : time_utils::out_of_range();
   }
 
   // returns the timezone offset in microwave time:

@@ -7,7 +7,7 @@ subroutine teams()
   ! BOTH: omp.target
 
   ! HOST-SAME: host_eval(%{{.*}} -> %[[NUM_TEAMS:.*]], %{{.*}} -> %[[THREAD_LIMIT:.*]] : i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
   !$omp target
@@ -32,9 +32,9 @@ end subroutine teams
 ! BOTH-LABEL: func.func @_QPdistribute_parallel_do
 subroutine distribute_parallel_do()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]], %{{.*}} -> %[[NUM_THREADS:.*]] : i32, i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -94,9 +94,9 @@ end subroutine distribute_parallel_do
 ! BOTH-LABEL: func.func @_QPdistribute_parallel_do_simd
 subroutine distribute_parallel_do_simd()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]], %{{.*}} -> %[[NUM_THREADS:.*]] : i32, i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -159,9 +159,9 @@ end subroutine distribute_parallel_do_simd
 ! BOTH-LABEL: func.func @_QPdistribute
 subroutine distribute()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -209,9 +209,9 @@ end subroutine distribute
 ! BOTH-LABEL: func.func @_QPdistribute_simd
 subroutine distribute_simd()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -258,3 +258,28 @@ subroutine distribute_simd()
   !$omp end distribute simd
   !$omp end teams
 end subroutine distribute_simd
+
+! BOTH-LABEL: func.func @_QPloop
+subroutine loop()
+  ! BOTH: omp.target
+
+  ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
+
+  ! DEVICE-NOT: host_eval({{.*}})
+  ! DEVICE-SAME: {
+
+  ! BOTH: omp.teams
+  !$omp target teams
+
+  ! BOTH: omp.parallel
+
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.wsloop
+  ! BOTH-NEXT: omp.loop_nest
+
+  ! HOST-SAME: (%{{.*}}) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]])
+  !$omp loop
+  do i=1,10
+  end do
+  !$omp end target teams
+end subroutine loop

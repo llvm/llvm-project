@@ -42,7 +42,7 @@ void TemplUses(NotInt NI, ConvertsToInt CTI, Int IsI) {
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+3{{'num' argument to 'worker' clause not allowed on a 'loop' construct associated with a 'kernels' construct that has a 'num_workers' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_workers' clause is here}}
 #pragma acc kernels num_workers(IsI)
 #pragma acc loop worker(num:CTI)
   for(int i = 0; i < 5; ++i);
@@ -124,7 +124,7 @@ void uses() {
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+3{{'num' argument to 'worker' clause not allowed on a 'loop' construct associated with a 'kernels' construct that has a 'num_workers' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_workers' clause is here}}
 #pragma acc kernels num_workers(i)
 #pragma acc loop worker(num:i)
   for(int i = 0; i < 5; ++i);
@@ -133,7 +133,7 @@ void uses() {
   for(int i= 0; i< 5; ++i) {
     // expected-error@+3{{loop with a 'worker' clause may not exist in the region of a 'worker' clause}}
     // expected-error@+2{{loop with a 'gang' clause may not exist in the region of a 'worker' clause}}
-    // expected-note@-4 2{{previous clause is here}}
+    // expected-note@-4 2{{previous 'worker' clause is here}}
 #pragma acc loop worker, gang
   for(int k = 0; k < 5; ++k);
   }
@@ -157,7 +157,7 @@ void uses() {
   for(int i= 0; i< 5; ++i) {
     // expected-error@+3{{loop with a 'worker' clause may not exist in the region of a 'worker' clause}}
     // expected-error@+2{{loop with a 'gang' clause may not exist in the region of a 'worker' clause}}
-    // expected-note@-4 2{{previous clause is here}}
+    // expected-note@-4 2{{previous 'worker' clause is here}}
 #pragma acc loop worker, gang
   for(int k = 0; k < 5; ++k);
   }
@@ -175,7 +175,7 @@ void uses() {
   for(int i= 0; i< 5; ++i) {
     // expected-error@+3{{loop with a 'worker' clause may not exist in the region of a 'worker' clause}}
     // expected-error@+2{{loop with a 'gang' clause may not exist in the region of a 'worker' clause}}
-    // expected-note@-4 2{{previous clause is here}}
+    // expected-note@-4 2{{previous 'worker' clause is here}}
 #pragma acc loop worker, gang
   for(int k = 0; k < 5; ++k);
   }
@@ -193,7 +193,7 @@ void uses() {
   for(int i= 0; i< 5; ++i) {
     // expected-error@+3{{loop with a 'worker' clause may not exist in the region of a 'worker' clause}}
     // expected-error@+2{{loop with a 'gang' clause may not exist in the region of a 'worker' clause}}
-    // expected-note@-4 2{{previous clause is here}}
+    // expected-note@-4 2{{previous 'worker' clause is here}}
 #pragma acc loop worker, gang
   for(int k = 0; k < 5; ++k);
   }

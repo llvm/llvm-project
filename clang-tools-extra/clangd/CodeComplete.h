@@ -71,10 +71,8 @@ struct CodeCompleteOptions {
   /// Whether to present doc comments as plain-text or markdown.
   MarkupKind DocumentationFormat = MarkupKind::PlainText;
 
-  enum IncludeInsertion {
-    IWYU,
-    NeverInsert,
-  } InsertIncludes = IncludeInsertion::IWYU;
+  Config::HeaderInsertionPolicy InsertIncludes =
+      Config::HeaderInsertionPolicy::IWYU;
 
   /// Whether include insertions for Objective-C code should use #import instead
   /// of #include.
@@ -112,6 +110,14 @@ struct CodeCompleteOptions {
   /// The way argument list on calls '()' and generics '<>' are handled.
   Config::ArgumentListsPolicy ArgumentLists =
       Config::ArgumentListsPolicy::FullPlaceholders;
+
+  /// Whether to suggest code patterns & snippets or not in completion
+  Config::CodePatternsPolicy CodePatterns = Config::CodePatternsPolicy::All;
+
+  /// Filter macros using an exact prefix, or with a fuzzy match. In both cases,
+  /// macros with leading or trailing underscores are strictly filtered
+  Config::MacroFilterPolicy MacroFilter =
+      Config::MacroFilterPolicy::ExactPrefix;
 
   /// Whether to use the clang parser, or fallback to text-based completion
   /// (using identifiers in the current file and symbol indexes).

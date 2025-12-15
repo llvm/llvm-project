@@ -201,7 +201,7 @@ public:
     bool setPlacementIfUnset(DieOutputPlacement Placement) {
       auto InputData = Flags.load();
       if ((InputData & 0x7) == NotSet)
-        if (Flags.compare_exchange_weak(InputData, (InputData | Placement)))
+        if (Flags.compare_exchange_strong(InputData, (InputData | Placement)))
           return true;
 
       return false;

@@ -129,7 +129,7 @@ func.func private @test_verifier_fails() -> () attributes {
 // -----
 
 func.func private @test_attr_with_type_failed_to_parse_type() -> () attributes {
-  // expected-error@+2 {{invalid kind of type specified}}
+  // expected-error@+2 {{invalid kind of type specified: expected builtin.integer, but found 'vector<4xi32>'}}
   // expected-error@+1 {{failed to parse TestAttrWithTypeParam parameter 'int_type'}}
   attr = #test.attr_with_type<vector<4xi32>, vector<4xi32>>
 }

@@ -32,6 +32,20 @@ def print_self():
 
 
 @test_in_context
+def print_self_via_apply_method():
+    m = ir.Module.parse(
+        print_root_module.replace("from interpreter", "print_self_via_apply_method")
+    )
+    m.body.operations[0].apply(m)
+
+
+# CHECK-LABEL: print_self_via_apply_method
+# CHECK: transform.named_sequence @__transform_main
+# CHECK: transform.print
+# CHECK: transform.yield
+
+
+@test_in_context
 def print_other():
     transform = ir.Module.parse(
         print_root_module.replace("from interpreter", "print_other")

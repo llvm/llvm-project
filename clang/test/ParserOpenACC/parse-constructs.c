@@ -54,15 +54,15 @@ void func() {
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc kernels clause list
   for(;;){}
-    // expected-error@+2{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
+    // expected-error@+2{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc data clause list
   for(;;){}
-  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
+  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'attach', 'copyin', or 'create' clause}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc enter data clause list
   for(;;){}
-  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc exit data clause list
   for(;;){}
@@ -141,20 +141,19 @@ void func() {
 #pragma acc shutdown clause list
   for(;;){}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
+  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', or 'device_type' clause}}
 #pragma acc set clause list
   for(;;){}
-  // expected-error@+2{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
+  // expected-error@+2{{OpenACC 'update' construct must have at least one 'device', 'host', or 'self' clause}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc update clause list
   for(;;){}
 }
 
-// expected-warning@+1{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
 #pragma acc routine seq
 void routine_func();
 // expected-error@+2{{invalid OpenACC clause 'clause'}}
-// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'worker', 'vector' or 'seq' clause}}
+// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'seq', 'vector', or 'worker' clause}}
 #pragma acc routine clause list
 void routine_func();
 
@@ -162,12 +161,12 @@ void routine_func();
 #pragma acc routine (func_name) seq
 // expected-error@+3{{use of undeclared identifier 'func_name'}}
 // expected-error@+2{{invalid OpenACC clause 'clause'}}
-// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'worker', 'vector' or 'seq' clause}}
+// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'seq', 'vector', or 'worker' clause}}
 #pragma acc routine (func_name) clause list
 
 #pragma acc routine (routine_func) seq
 // expected-error@+2{{invalid OpenACC clause 'clause'}}
-// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'worker', 'vector' or 'seq' clause}}
+// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'seq', 'vector', or 'worker' clause}}
 #pragma acc routine (routine_func) clause list
 
 // expected-error@+2{{expected ')'}}

@@ -198,6 +198,8 @@ public:
 
   explicit GlobalMerge() : FunctionPass(ID) {
     Opt.MaxOffset = GlobalMergeMaxOffset;
+    Opt.MergeConstantGlobals = EnableGlobalMergeOnConst;
+    Opt.MergeConstAggressive = GlobalMergeAllConst;
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
@@ -711,7 +713,8 @@ bool GlobalMergeImpl::run(Module &M) {
       continue;
 
     // Ignore all 'special' globals.
-    if (GV.getName().starts_with("llvm.") || GV.getName().starts_with(".llvm."))
+    if (GV.getName().starts_with("llvm.") ||
+        GV.getName().starts_with(".llvm.") || Section == "llvm.metadata")
       continue;
 
     // Ignore all "required" globals:
@@ -769,6 +772,9 @@ Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
   bool MergeConstAggressive = GlobalMergeAllConst.getNumOccurrences() > 0
                                   ? GlobalMergeAllConst
                                   : MergeConstAggressiveByDefault;
-  return new GlobalMerge(TM, Offset, OnlyOptimizeForSize, MergeExternal,
+  unsigned PreferOffset = GlobalMergeMaxOffset.getNumOccurrences() > 0
+                              ? GlobalMergeMaxOffset
+                              : Offset;
+  return new GlobalMerge(TM, PreferOffset, OnlyOptimizeForSize, MergeExternal,
                          MergeConstant, MergeConstAggressive);
 }

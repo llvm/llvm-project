@@ -6,4 +6,4 @@
  *
  *===----------------------------------------------------------------------===*/
 
-#include ${FLANG_RT_INCLUDE_QUADMATH_H}
+#include ${FLANG_INCLUDE_QUADMATH_H}

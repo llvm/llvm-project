@@ -67,31 +67,46 @@ template <typename SpecificTy> const OmpModifierDescriptor &OmpGetDescriptor();
 #define DECLARE_DESCRIPTOR(name) \
   template <> const OmpModifierDescriptor &OmpGetDescriptor<name>()
 
+DECLARE_DESCRIPTOR(parser::OmpAccessGroup);
 DECLARE_DESCRIPTOR(parser::OmpAlignment);
 DECLARE_DESCRIPTOR(parser::OmpAlignModifier);
 DECLARE_DESCRIPTOR(parser::OmpAllocatorComplexModifier);
 DECLARE_DESCRIPTOR(parser::OmpAllocatorSimpleModifier);
+DECLARE_DESCRIPTOR(parser::OmpAlwaysModifier);
+DECLARE_DESCRIPTOR(parser::OmpAttachModifier);
+DECLARE_DESCRIPTOR(parser::OmpAutomapModifier);
 DECLARE_DESCRIPTOR(parser::OmpChunkModifier);
+DECLARE_DESCRIPTOR(parser::OmpCloseModifier);
 DECLARE_DESCRIPTOR(parser::OmpContextSelector);
+DECLARE_DESCRIPTOR(parser::OmpDeleteModifier);
 DECLARE_DESCRIPTOR(parser::OmpDependenceType);
 DECLARE_DESCRIPTOR(parser::OmpDeviceModifier);
+DECLARE_DESCRIPTOR(parser::OmpDimsModifier);
 DECLARE_DESCRIPTOR(parser::OmpDirectiveNameModifier);
 DECLARE_DESCRIPTOR(parser::OmpExpectation);
+DECLARE_DESCRIPTOR(parser::OmpFallbackModifier);
+DECLARE_DESCRIPTOR(parser::OmpInteropType);
 DECLARE_DESCRIPTOR(parser::OmpIterator);
 DECLARE_DESCRIPTOR(parser::OmpLastprivateModifier);
 DECLARE_DESCRIPTOR(parser::OmpLinearModifier);
+DECLARE_DESCRIPTOR(parser::OmpLowerBound);
 DECLARE_DESCRIPTOR(parser::OmpMapper);
 DECLARE_DESCRIPTOR(parser::OmpMapType);
 DECLARE_DESCRIPTOR(parser::OmpMapTypeModifier);
 DECLARE_DESCRIPTOR(parser::OmpOrderModifier);
 DECLARE_DESCRIPTOR(parser::OmpOrderingModifier);
+DECLARE_DESCRIPTOR(parser::OmpPreferType);
 DECLARE_DESCRIPTOR(parser::OmpPrescriptiveness);
+DECLARE_DESCRIPTOR(parser::OmpPresentModifier);
 DECLARE_DESCRIPTOR(parser::OmpReductionIdentifier);
 DECLARE_DESCRIPTOR(parser::OmpReductionModifier);
+DECLARE_DESCRIPTOR(parser::OmpRefModifier);
+DECLARE_DESCRIPTOR(parser::OmpSelfModifier);
 DECLARE_DESCRIPTOR(parser::OmpStepComplexModifier);
 DECLARE_DESCRIPTOR(parser::OmpStepSimpleModifier);
 DECLARE_DESCRIPTOR(parser::OmpTaskDependenceType);
 DECLARE_DESCRIPTOR(parser::OmpVariableCategory);
+DECLARE_DESCRIPTOR(parser::OmpxHoldModifier);
 
 #undef DECLARE_DESCRIPTOR
 

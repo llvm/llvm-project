@@ -307,7 +307,6 @@ Status ABISysV_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
   bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
@@ -337,7 +336,7 @@ Status ABISysV_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
+  } else if (compiler_type.IsFloatingPointType(is_complex)) {
     if (is_complex)
       error = Status::FromErrorString(
           "We don't support returning complex values at present");
@@ -587,7 +586,6 @@ static bool FlattenAggregateType(
   for (uint32_t idx = 0; idx < num_children; ++idx) {
     std::string name;
     bool is_signed;
-    uint32_t count;
     bool is_complex;
 
     uint64_t field_bit_offset = 0;
@@ -606,7 +604,7 @@ static bool FlattenAggregateType(
     const uint32_t field_type_flags = field_compiler_type.GetTypeInfo();
     if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
         field_compiler_type.IsPointerType() ||
-        field_compiler_type.IsFloatingPointType(count, is_complex)) {
+        field_compiler_type.IsFloatingPointType(is_complex)) {
       aggregate_field_offsets.push_back(field_byte_offset);
       aggregate_compiler_types.push_back(field_compiler_type);
     } else if (field_type_flags & eTypeHasChildren) {
@@ -696,7 +694,6 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
       is_memory = false;
       for (uint32_t idx = 0; idx < num_children; idx++) {
         bool is_signed;
-        uint32_t count;
         bool is_complex;
 
         CompilerType field_compiler_type = aggregate_compiler_types[idx];
@@ -736,7 +733,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
             // return a nullptr return value object.
             return return_valobj_sp;
           }
-        } else if (field_compiler_type.IsFloatingPointType(count, is_complex)) {
+        } else if (field_compiler_type.IsFloatingPointType(is_complex)) {
           // Structs with long doubles are always passed in memory.
           if (field_bit_width == 128) {
             is_memory = true;
@@ -867,13 +864,13 @@ UnwindPlanSP ABISysV_x86_64::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = dwarf_rsp;
   uint32_t pc_reg_num = dwarf_rip;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 8);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -8, false);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  UnwindPlan::Row row;
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 8);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -8, false);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("x86_64 at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;
@@ -889,19 +886,19 @@ UnwindPlanSP ABISysV_x86_64::CreateDefaultUnwindPlan() {
   uint32_t sp_reg_num = dwarf_rsp;
   uint32_t pc_reg_num = dwarf_rip;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   const int32_t ptr_size = 8;
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_rbp, 2 * ptr_size);
-  row->SetOffset(0);
-  row->SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_rbp, 2 * ptr_size);
+  row.SetOffset(0);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("x86_64 default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
@@ -929,8 +926,8 @@ bool ABISysV_x86_64::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
   std::string Name = std::string(reg_info->name);
   bool IsCalleeSaved =
       llvm::StringSwitch<bool>(Name)
-          .Cases("r12", "r13", "r14", "r15", "rbp", "ebp", "rbx", "ebx", true)
-          .Cases("rip", "eip", "rsp", "esp", "sp", "fp", "pc", true)
+          .Cases({"r12", "r13", "r14", "r15", "rbp", "ebp", "rbx", "ebx"}, true)
+          .Cases({"rip", "eip", "rsp", "esp", "sp", "fp", "pc"}, true)
           .Default(false);
   return IsCalleeSaved;
 }

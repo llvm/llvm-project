@@ -4,17 +4,20 @@ standards:
   - stdc
 merge_yaml_files:
   - stdlib-malloc.yaml
-macros: []
+macros:
+  - macro_name: "NULL"
+    macro_header: null-macro.h
 types:
   - type_name: __atexithandler_t
-  - type_name: __qsortrcompare_t
   - type_name: __qsortcompare_t
-  - type_name: __bsearchcompare_t
+  - type_name: __qsortrcompare_t
+  - type_name: __search_compare_t
   - type_name: div_t
   - type_name: ldiv_t
   - type_name: lldiv_t
   - type_name: locale_t
   - type_name: size_t
+  - type_name: wchar_t  
 enums: []
 objects: []
 functions:
@@ -87,7 +90,7 @@ functions:
       - type: const void *
       - type: size_t
       - type: size_t
-      - type: __bsearchcompare_t
+      - type: __search_compare_t
   - name: div
     standards:
       - stdc
@@ -133,6 +136,28 @@ functions:
     arguments:
       - type: long long
       - type: long long
+  - name: mbstowcs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
+      - type: size_t
+  - name: mbtowc
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
+      - type: size_t
+  - name: memalignment
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const void *
   - name: posix_memalign
     standards:
       - posix
@@ -152,7 +177,7 @@ functions:
       - type: __qsortcompare_t
   - name: qsort_r
     standards:
-      - GNUExtensions
+      - POSIX
     return_type: void
     arguments:
       - type: void *
@@ -324,3 +349,18 @@ functions:
     return_type: int
     arguments:
       - type: const char *
+  - name: wctomb
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: char *
+      - type: wchar_t
+  - name: wcstombs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: const wchar_t *__restrict
+      - type: size_t

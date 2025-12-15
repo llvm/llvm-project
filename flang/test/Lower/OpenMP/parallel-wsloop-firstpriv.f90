@@ -3,9 +3,9 @@
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
-! CHECK: func @_QPomp_do_firstprivate(%[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "a"}) 
+! CHECK: func @_QPomp_do_firstprivate(%[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "a"})
 subroutine omp_do_firstprivate(a)
-  ! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFomp_do_firstprivateEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFomp_do_firstprivateEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer::a
   integer::n
   n = a+1
@@ -18,8 +18,8 @@ subroutine omp_do_firstprivate(a)
   ! CHECK-NEXT: omp.loop_nest (%[[ARG1:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   ! CHECK: %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFomp_do_firstprivateEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_firstprivateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK-NEXT: hlfir.assign %[[ARG1]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
-  ! CHECK-NEXT: fir.call @_QPfoo(%[[I_PVT_DECL]]#1, %[[A_PVT_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
+  ! CHECK-NEXT: hlfir.assign %[[ARG1]] to %[[I_PVT_DECL]]#0 : i32, !fir.ref<i32>
+  ! CHECK-NEXT: fir.call @_QPfoo(%[[I_PVT_DECL]]#0, %[[A_PVT_DECL]]#0) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK-NEXT: omp.yield
   ! CHECK-NEXT: }
   ! CHECK-NEXT: }
@@ -27,14 +27,14 @@ subroutine omp_do_firstprivate(a)
       call foo(i, a)
     end do
   !$omp end parallel do
-  !CHECK: fir.call @_QPbar(%[[ARG0_DECL]]#1) {{.*}}: (!fir.ref<i32>) -> ()
+  !CHECK: fir.call @_QPbar(%[[ARG0_DECL]]#0) {{.*}}: (!fir.ref<i32>) -> ()
   call bar(a)
 end subroutine omp_do_firstprivate
 
-! CHECK: func @_QPomp_do_firstprivate2(%[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) 
+! CHECK: func @_QPomp_do_firstprivate2(%[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "n"})
 subroutine omp_do_firstprivate2(a, n)
-  ! CHECK:  %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFomp_do_firstprivate2Ea"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK:  %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFomp_do_firstprivate2En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK:  %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFomp_do_firstprivate2Ea"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK:  %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFomp_do_firstprivate2En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer::a
   integer::n
   n = a+1
@@ -48,13 +48,13 @@ subroutine omp_do_firstprivate2(a, n)
   ! CHECK: %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[N_PVT_DECL:.*]]:2 = hlfir.declare %[[N_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2En"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK: hlfir.assign %[[ARG2]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
-  ! CHECK: fir.call @_QPfoo(%[[I_PVT_DECL]]#1, %[[A_PVT_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
+  ! CHECK: hlfir.assign %[[ARG2]] to %[[I_PVT_DECL]]#0 : i32, !fir.ref<i32>
+  ! CHECK: fir.call @_QPfoo(%[[I_PVT_DECL]]#0, %[[A_PVT_DECL]]#0) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK: omp.yield
     do i= a, n
       call foo(i, a)
     end do
   !$omp end parallel do
-  !CHECK: fir.call @_QPbar(%[[ARG1_DECL]]#1) {{.*}}: (!fir.ref<i32>) -> ()
+  !CHECK: fir.call @_QPbar(%[[ARG1_DECL]]#0) {{.*}}: (!fir.ref<i32>) -> ()
   call bar(n)
 end subroutine omp_do_firstprivate2

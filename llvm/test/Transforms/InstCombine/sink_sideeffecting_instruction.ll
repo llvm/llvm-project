@@ -49,12 +49,12 @@ define i32 @test() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[VAR1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VAR]])
 ; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @foo(ptr nonnull writeonly [[VAR]])
 ; CHECK-NEXT:    [[VAR4:%.*]] = icmp eq i32 [[VAR3]], 0
 ; CHECK-NEXT:    br i1 [[VAR4]], label [[BB5:%.*]], label [[BB14:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[VAR1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VAR1]])
 ; CHECK-NEXT:    [[VAR8:%.*]] = load i32, ptr [[VAR]], align 4
 ; CHECK-NEXT:    [[VAR9:%.*]] = icmp eq i32 [[VAR8]], 0
 ; CHECK-NEXT:    [[VAR7:%.*]] = call i32 @foo(ptr nonnull writeonly [[VAR1]])
@@ -66,23 +66,23 @@ define i32 @test() {
 ; CHECK-NEXT:    br label [[BB12]]
 ; CHECK:       bb12:
 ; CHECK-NEXT:    [[VAR13:%.*]] = phi i32 [ [[VAR11]], [[BB10]] ], [ [[VAR7]], [[BB_CRIT_EDGE]] ]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[VAR1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VAR1]])
 ; CHECK-NEXT:    br label [[BB14]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    [[VAR15:%.*]] = phi i32 [ [[VAR13]], [[BB12]] ], [ 0, [[BB:%.*]] ]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VAR]])
 ; CHECK-NEXT:    ret i32 [[VAR15]]
 ;
 bb:
   %var = alloca i32, align 4
   %var1 = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %var) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %var) #4
   %var3 = call i32 @foo(ptr nonnull writeonly %var)
   %var4 = icmp eq i32 %var3, 0
   br i1 %var4, label %bb5, label %bb14
 
 bb5:                                              ; preds = %bb
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %var1) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %var1) #4
   %var8 = load i32, ptr %var, align 4
   %var9 = icmp eq i32 %var8, 0
   %var7 = call i32 @foo(ptr nonnull writeonly %var1)
@@ -97,12 +97,12 @@ bb_crit_edge:
 
 bb12:                                             ; preds = %bb10, %bb5
   %var13 = phi i32 [ %var11, %bb10 ], [ %var7, %bb_crit_edge ]
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %var1) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %var1) #4
   br label %bb14
 
 bb14:                                             ; preds = %bb12, %bb
   %var15 = phi i32 [ %var13, %bb12 ], [ 0, %bb ]
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %var)
+  call void @llvm.lifetime.end.p0(ptr nonnull %var)
   ret i32 %var15
 }
 
@@ -325,18 +325,18 @@ define i32 @sink_lifetime1(i1 %c) {
 ; CHECK-LABEL: @sink_lifetime1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VAR]])
 ; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(ptr nonnull [[VAR]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       use_block:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VAR]])
 ; CHECK-NEXT:    ret i32 [[VAR3]]
 ;
 entry:
   %var = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %var)
+  call void @llvm.lifetime.start.p0(ptr %var)
   %var3 = call i32 @unknown(ptr %var) argmemonly nounwind willreturn
   br i1 %c, label %early_return, label %use_block
 
@@ -344,7 +344,7 @@ early_return:
   ret i32 0
 
 use_block:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %var)
+  call void @llvm.lifetime.end.p0(ptr %var)
   ret i32 %var3
 }
 
@@ -352,25 +352,25 @@ define i32 @sink_lifetime2(i1 %c) {
 ; CHECK-LABEL: @sink_lifetime2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VAR]])
 ; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(ptr nonnull [[VAR]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[MERGE:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VAR3]], [[USE_BLOCK]] ]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VAR]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ; CHECK:       use_block:
 ; CHECK-NEXT:    br label [[MERGE]]
 ;
 entry:
   %var = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %var)
+  call void @llvm.lifetime.start.p0(ptr %var)
   %var3 = call i32 @unknown(ptr %var) argmemonly nounwind willreturn
   br i1 %c, label %merge, label %use_block
 
 merge:
   %ret = phi i32 [0, %entry], [%var3, %use_block]
-  call void @llvm.lifetime.end.p0(i64 4, ptr %var)
+  call void @llvm.lifetime.end.p0(ptr %var)
   ret i32 %ret
 
 use_block:
@@ -390,8 +390,8 @@ define i32 @sink_lifetime3(i1 %c) {
 ;
 entry:
   %var = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %var)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %var)
+  call void @llvm.lifetime.start.p0(ptr %var)
+  call void @llvm.lifetime.end.p0(ptr %var)
   ; If unknown accesses %var, that's UB
   %var3 = call i32 @unknown(ptr %var) argmemonly nounwind willreturn
   br i1 %c, label %early_return, label %use_block
@@ -407,9 +407,9 @@ define i32 @sink_lifetime4a(i1 %c) {
 ; CHECK-LABEL: @sink_lifetime4a(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VAR]])
 ; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(ptr nonnull [[VAR]]) #[[ATTR1]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VAR]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
@@ -418,9 +418,9 @@ define i32 @sink_lifetime4a(i1 %c) {
 ;
 entry:
   %var = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %var)
+  call void @llvm.lifetime.start.p0(ptr %var)
   %var3 = call i32 @unknown(ptr %var) argmemonly nounwind willreturn
-  call void @llvm.lifetime.end.p0(i64 4, ptr %var)
+  call void @llvm.lifetime.end.p0(ptr %var)
   br i1 %c, label %early_return, label %use_block
 
 early_return:
@@ -436,9 +436,9 @@ define i32 @sink_lifetime4b(i1 %c) {
 ; CHECK-LABEL: @sink_lifetime4b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VAR]])
 ; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(ptr nonnull writeonly [[VAR]]) #[[ATTR1]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VAR]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
@@ -447,9 +447,9 @@ define i32 @sink_lifetime4b(i1 %c) {
 ;
 entry:
   %var = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %var)
+  call void @llvm.lifetime.start.p0(ptr %var)
   %var3 = call i32 @unknown(ptr writeonly %var) argmemonly nounwind willreturn
-  call void @llvm.lifetime.end.p0(i64 4, ptr %var)
+  call void @llvm.lifetime.end.p0(ptr %var)
   br i1 %c, label %early_return, label %use_block
 
 early_return:
@@ -486,6 +486,6 @@ use_block:
 
 
 declare i32 @bar()
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 

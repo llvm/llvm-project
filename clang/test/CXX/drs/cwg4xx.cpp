@@ -36,6 +36,15 @@ namespace cwg400 { // cwg400: 2.7
   // expected-error@-1 {{member 'a' found in multiple base classes of different types}}
   //   expected-note@#cwg400-A {{member type 'cwg400::A::a' found by ambiguous name lookup}}
   //   expected-note@#cwg400-B {{member type 'cwg400::B::a' found by ambiguous name lookup}}
+  struct F : A {};
+  struct G : A {
+    using G::A;
+    // expected-error@-1 {{using declaration refers to its own class}}
+    using G::a;
+    // expected-error@-1 {{using declaration refers to its own class}}
+    using F::a;
+    // expected-error@-1 {{using declaration refers into 'F', which is not a base class of 'G'}}
+  };
 } // namespace cwg400
 
 namespace cwg401 { // cwg401: 2.8
@@ -257,7 +266,7 @@ namespace cwg409 { // cwg409: 2.7
     A::B b2;
     A<T>::B b3;
     A<T*>::B b4;
-    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::B'; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::B' is a C++20 extension}}
   };
 } // namespace cwg409
 
@@ -1062,7 +1071,7 @@ namespace cwg471 { // cwg471: 2.8
   //   expected-note@#cwg471-G-using {{declared private here}}
 } // namespace cwg471
 
-namespace cwg472 { // cwg472: no drafting 2011-04
+namespace cwg472 { // cwg472: no open 2011-04
 struct B {
   int i; // #cwg472-i
 };

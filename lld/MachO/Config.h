@@ -183,8 +183,10 @@ struct Configuration {
   bool deadStripDylibs = false;
   bool demangle = false;
   bool deadStrip = false;
+  bool interposable = false;
   bool errorForArchMismatch = false;
   bool ignoreAutoLink = false;
+  int readWorkers = 0;
   // ld64 allows invalid auto link options as long as the link succeeds. LLD
   // does not, but there are cases in the wild where the invalid linker options
   // exist. This allows users to ignore the specific invalid options in the case
@@ -219,6 +221,10 @@ struct Configuration {
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
   bool warnThinArchiveMissingMembers;
+  bool disableVerify;
+  bool separateCstringLiteralSections;
+  bool tailMergeStrings;
+  unsigned slopScale = 256;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;

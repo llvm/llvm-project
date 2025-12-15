@@ -29,7 +29,7 @@ loop:
 
 ; check that we branch to the exit block
 ; CHECK: middle.block:
-; CHECK: br i1 true, label %exit, label %scalar.ph
+; CHECK: br label %exit
 
 exit:
   ret void

@@ -15,9 +15,18 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_SERVER_H
 #define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_SERVER_H
 
+#include "src/__support/macros/properties/compiler.h"
+
 // Workaround for missing __has_builtin in < GCC 10.
 #ifndef __has_builtin
 #define __has_builtin(x) 0
+#endif
+
+// Workaround for missing __builtin_is_constant_evaluated in < GCC 10.
+// Also this builtin is defined for GCC 9.
+#if !(__has_builtin(__builtin_is_constant_evaluated) ||                        \
+      (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)))
+#define __builtin_is_constant_evaluated(x) 0
 #endif
 
 // Configs for using the LLVM libc writer interface.
@@ -28,7 +37,7 @@
 #define LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 #define LIBC_COPT_PRINTF_DISABLE_STRERROR
 
-// The 'long double' type is 8 byte
+// The 'long double' type is 8 bytes.
 #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 
 #include "shared/rpc.h"
@@ -160,9 +169,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
     if (!format[lane])
       continue;
 
-    printf_core::WriteBuffer<
-        printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
-        wb(nullptr, 0);
+    printf_core::DropOverflowBuffer wb(nullptr, 0);
     printf_core::Writer writer(wb);
 
     internal::DummyArgList<packed> printf_args;
@@ -189,9 +196,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
     if (!format[lane])
       continue;
 
-    printf_core::WriteBuffer<
-        printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
-        wb(nullptr, 0);
+    printf_core::DropOverflowBuffer wb(nullptr, 0);
     printf_core::Writer writer(wb);
 
     internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);
@@ -253,9 +258,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
       continue;
 
     char *buffer = temp_storage.alloc(buffer_size[lane]);
-    printf_core::WriteBuffer<
-        printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
-        wb(buffer, buffer_size[lane]);
+    printf_core::DropOverflowBuffer wb(buffer, buffer_size[lane]);
     printf_core::Writer writer(wb);
 
     internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);
@@ -289,7 +292,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
 
     results[lane] = static_cast<int>(
         fwrite(buffer, 1, writer.get_chars_written(), files[lane]));
-    if (results[lane] != writer.get_chars_written() || ret == -1)
+    if (size_t(results[lane]) != writer.get_chars_written() || ret == -1)
       results[lane] = -1;
   }
 
@@ -386,7 +389,9 @@ LIBC_INLINE static rpc::Status handle_port_impl(rpc::Server::Port &port) {
     port.recv([](rpc::Buffer *buffer, uint32_t) {
       int status = 0;
       __builtin_memcpy(&status, buffer->data, sizeof(int));
-      exit(status);
+      // We want a quick exit to avoid conflicts with offloading library
+      // teardowns when called from the GPU.
+      quick_exit(status);
     });
     break;
   }
@@ -506,6 +511,55 @@ LIBC_INLINE static rpc::Status handle_port_impl(rpc::Server::Port &port) {
       buffer->data[0] = static_cast<uint64_t>(
           system(reinterpret_cast<const char *>(args[id])));
     });
+    break;
+  }
+  case LIBC_TEST_INCREMENT: {
+    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
+      reinterpret_cast<uint64_t *>(buffer->data)[0] += 1;
+    });
+    break;
+  }
+  case LIBC_TEST_INTERFACE: {
+    bool end_with_recv;
+    uint64_t cnt;
+    port.recv([&](rpc::Buffer *buffer, uint32_t) {
+      end_with_recv = buffer->data[0];
+    });
+    port.recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
+    port.send([&](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = cnt = cnt + 1;
+    });
+    port.recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
+    port.send([&](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = cnt = cnt + 1;
+    });
+    port.recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
+    port.recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
+    port.send([&](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = cnt = cnt + 1;
+    });
+    port.send([&](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = cnt = cnt + 1;
+    });
+    if (end_with_recv)
+      port.recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
+    else
+      port.send([&](rpc::Buffer *buffer, uint32_t) {
+        buffer->data[0] = cnt = cnt + 1;
+      });
+
+    break;
+  }
+  case LIBC_TEST_STREAM: {
+    uint64_t sizes[num_lanes] = {0};
+    void *dst[num_lanes] = {nullptr};
+    port.recv_n(dst, sizes,
+                [](uint64_t size) -> void * { return new char[size]; });
+    port.send_n(dst, sizes);
+    for (uint64_t i = 0; i < num_lanes; ++i) {
+      if (dst[i])
+        delete[] reinterpret_cast<uint8_t *>(dst[i]);
+    }
     break;
   }
   case LIBC_NOOP: {

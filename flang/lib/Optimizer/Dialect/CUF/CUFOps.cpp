@@ -76,6 +76,16 @@ llvm::LogicalResult cuf::FreeOp::verify() { return checkCudaAttr(*this); }
 // AllocateOp
 //===----------------------------------------------------------------------===//
 
+template <typename OpTy>
+static llvm::LogicalResult checkStreamType(OpTy op) {
+  if (!op.getStream())
+    return mlir::success();
+  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(op.getStream().getType()))
+    if (!refTy.getEleTy().isInteger(64))
+      return op.emitOpError("stream is expected to be an i64 reference");
+  return mlir::success();
+}
+
 llvm::LogicalResult cuf::AllocateOp::verify() {
   if (getPinned() && getStream())
     return emitOpError("pinned and stream cannot appears at the same time");
@@ -92,7 +102,7 @@ llvm::LogicalResult cuf::AllocateOp::verify() {
         "expect errmsg to be a reference to/or a box type value");
   if (getErrmsg() && !getHasStat())
     return emitOpError("expect stat attribute when errmsg is provided");
-  return mlir::success();
+  return checkStreamType(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -137,6 +147,14 @@ llvm::LogicalResult cuf::DeallocateOp::verify() {
   if (getErrmsg() && !getHasStat())
     return emitOpError("expect stat attribute when errmsg is provided");
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// KernelLaunchOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult cuf::KernelLaunchOp::verify() {
+  return checkStreamType(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -253,7 +271,7 @@ llvm::LogicalResult cuf::KernelOp::verify() {
         return emitOpError("expect reduce attributes to be ReduceAttr");
     }
   }
-  return mlir::success();
+  return checkStreamType(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -315,8 +333,17 @@ void cuf::SharedMemoryOp::build(
       bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
   build(builder, result, wrapAllocaResultType(inType),
         mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
-        /*offset=*/mlir::Value{});
+        /*offset=*/mlir::Value{}, /*alignment=*/mlir::IntegerAttr{},
+        /*isStatic=*/nullptr);
   result.addAttributes(attributes);
+}
+
+//===----------------------------------------------------------------------===//
+// StreamCastOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult cuf::StreamCastOp::verify() {
+  return checkStreamType(*this);
 }
 
 // Tablegen operators

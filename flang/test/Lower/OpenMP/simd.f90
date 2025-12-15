@@ -16,7 +16,7 @@ subroutine simd
   ! CHECK-NEXT: omp.simd private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i=1, 9
-    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#0 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -26,7 +26,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_if_clause
 subroutine simd_with_if_clause(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_if_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_if_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   !$OMP SIMD IF( n .GE. threshold )
   ! CHECK: %[[COND:.*]] = arith.cmpi sge
@@ -36,7 +36,7 @@ subroutine simd_with_if_clause(n, threshold)
   ! CHECK: omp.simd if(%[[COND:.*]]) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#0 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -46,7 +46,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_simdlen_clause
 subroutine simd_with_simdlen_clause(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   !$OMP SIMD SIMDLEN(2)
   ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
@@ -55,7 +55,7 @@ subroutine simd_with_simdlen_clause(n, threshold)
   ! CHECK: omp.simd simdlen(2) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#0 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -65,7 +65,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_simdlen_clause_from_param
 subroutine simd_with_simdlen_clause_from_param(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clause_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clause_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   integer, parameter :: simdlen = 2;
   !$OMP SIMD SIMDLEN(simdlen)
@@ -75,7 +75,7 @@ subroutine simd_with_simdlen_clause_from_param(n, threshold)
   ! CHECK: omp.simd simdlen(2) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#0 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -85,7 +85,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_simdlen_clause_from_expr_from_param
 subroutine simd_with_simdlen_clause_from_expr_from_param(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clause_from_expr_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clause_from_expr_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   integer, parameter :: simdlen = 2;
   !$OMP SIMD SIMDLEN(simdlen*2 + 2)
@@ -95,7 +95,7 @@ subroutine simd_with_simdlen_clause_from_expr_from_param(n, threshold)
   ! CHECK: omp.simd simdlen(6) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#0 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -105,7 +105,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_safelen_clause
 subroutine simd_with_safelen_clause(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_safelen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_safelen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   !$OMP SIMD SAFELEN(2)
   ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
@@ -114,7 +114,7 @@ subroutine simd_with_safelen_clause(n, threshold)
   ! CHECK: omp.simd safelen(2) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#0 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -124,7 +124,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_safelen_clause_from_expr_from_param
 subroutine simd_with_safelen_clause_from_expr_from_param(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_safelen_clause_from_expr_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_safelen_clause_from_expr_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   integer, parameter :: safelen = 2;
   !$OMP SIMD SAFELEN(safelen*2 + 2)
@@ -134,7 +134,7 @@ subroutine simd_with_safelen_clause_from_expr_from_param(n, threshold)
   ! CHECK: omp.simd safelen(6) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#0 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -144,7 +144,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_simdlen_safelen_clause
 subroutine simd_with_simdlen_safelen_clause(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_safelen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_safelen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   !$OMP SIMD SIMDLEN(1) SAFELEN(2)
   ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
@@ -153,7 +153,7 @@ subroutine simd_with_simdlen_safelen_clause(n, threshold)
   ! CHECK: omp.simd safelen(2) simdlen(1) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#0 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -175,7 +175,7 @@ subroutine simd_with_collapse_clause(n)
   ! CHECK-NEXT: omp.loop_nest (%[[ARG_0:.*]], %[[ARG_1:.*]]) : i32 = (
   ! CHECK-SAME:                %[[LOWER_I]], %[[LOWER_J]]) to (
   ! CHECK-SAME:                %[[UPPER_I]], %[[UPPER_J]]) inclusive step (
-  ! CHECK-SAME:                %[[STEP_I]], %[[STEP_J]]) {
+  ! CHECK-SAME:                %[[STEP_I]], %[[STEP_J]]) collapse(2) {
   !$OMP SIMD COLLAPSE(2)
   do i = 1, n
     do j = 1, n
@@ -198,7 +198,7 @@ subroutine simdloop_aligned_cptr( A)
   use iso_c_binding
   integer :: i
   type (c_ptr) :: A
-!CHECK: omp.simd aligned(%[[A_DECL]]#1 : !fir.ref
+!CHECK: omp.simd aligned(%[[A_DECL]]#0 : !fir.ref
 !CHECK-SAME: <!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
 !CHECK-SAME: -> 256 : i64)
   !$OMP SIMD ALIGNED(A:256)
@@ -219,8 +219,25 @@ subroutine simdloop_aligned_allocatable()
 !CHECK-SAME: uniq_name = "_QFsimdloop_aligned_allocatableEa"} :
 !CHECK-SAME: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) ->
 !CHECK-SAME: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-!CHECK: omp.simd aligned(%[[A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> -> 256 : i64)
+!CHECK: omp.simd aligned(%[[A_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> -> 256 : i64)
   !$OMP SIMD ALIGNED(A:256)
+  do i = 1, 10
+    A(i) = i
+  end do
+end subroutine
+
+subroutine aligned_non_power_of_two()
+  integer :: i
+  integer, allocatable :: A(:)
+  allocate(A(10))
+!CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a",
+!CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"}
+!CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A_PTR]] {fortran_attrs = #fir.var_attrs<allocatable>,
+!CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"} :
+!CHECK-SAME: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) ->
+!CHECK-SAME: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+!CHECK: omp.simd private
+  !$OMP SIMD ALIGNED(A:257)
   do i = 1, 10
     A(i) = i
   end do
@@ -235,7 +252,7 @@ subroutine simd_with_nontemporal_clause(n)
   !CHECK: %[[LB:.*]] = arith.constant 1 : i32
   !CHECK: %[[UB:.*]] = fir.load %{{.*}}#0 : !fir.ref<i32>
   !CHECK: %[[STEP:.*]] = arith.constant 1 : i32
-  !CHECK: omp.simd nontemporal(%[[A_DECL]]#1, %[[C_DECL]]#1 : !fir.ref<i32>, !fir.ref<i32>) private({{.*}}) {
+  !CHECK: omp.simd nontemporal(%[[A_DECL]]#0, %[[C_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>) private({{.*}}) {
   !CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   !$OMP SIMD NONTEMPORAL(A, C)
   do i = 1, n
@@ -253,7 +270,7 @@ subroutine lastprivate_with_simd
   integer :: i
   real :: sum
 
-  
+
 !CHECK: omp.simd private(@_QFlastprivate_with_simdEsum_private_f32 %[[VAR_SUM_DECLARE]]#0 -> %[[VAR_SUM_PINNED:.*]], @{{.*}}) {
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = ({{.*}} to ({{.*}}) inclusive step ({{.*}}) {
 !CHECK: %[[VAR_SUM_PINNED_DECLARE:.*]]:2 = hlfir.declare %[[VAR_SUM_PINNED]] {{.*}}
@@ -286,7 +303,7 @@ subroutine simd_with_reduction_clause
   !$omp simd reduction(+:x)
   do i=1, 9
     ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_RED]] {uniq_name = "_QFsimd_with_reduction_clauseEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#0 : i32, !fir.ref<i32>
     ! CHECK: %[[X_LD:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
     ! CHECK: %[[I_LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: %[[SUM:.*]] = arith.addi %[[X_LD]], %[[I_LD]] : i32

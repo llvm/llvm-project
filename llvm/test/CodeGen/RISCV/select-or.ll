@@ -3,7 +3,7 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
-; RUN: llc -mtriple=riscv64 -mattr=+xmipscmove -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+xmipscmov -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-CCMOV %s
 
 ;; There are a few different ways to lower (select (or A, B), X, Y). This test

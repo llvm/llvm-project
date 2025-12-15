@@ -232,3 +232,23 @@ define <4 x float> @ins3_ins3_fdiv(float %x, float %y) {
   %r = fdiv <4 x float> %i0, %i1
   ret <4 x float> %r
 }
+
+; Ensure we don't crash when erasing dead instructions.
+
+define i32 @pr155110(i32 %x) {
+; CHECK-LABEL: @pr155110(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_PH]]
+;
+entry:
+  br label %vector.ph
+
+vector.ph:                                        ; preds = %vector.ph, %entry
+  %phi = phi i32 [ 0, %entry ], [ %reduce, %vector.ph ]
+  %inselt = insertelement <4 x i32> poison, i32 %phi, i64 0
+  %and = and <4 x i32> %inselt, zeroinitializer
+  %reduce = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> zeroinitializer)
+  br label %vector.ph
+}

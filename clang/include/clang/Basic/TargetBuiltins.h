@@ -141,12 +141,33 @@ namespace clang {
   };
   }
 
+  /// DirectX builtins
+  namespace DirectX {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsDirectX.inc"
+#undef GET_BUILTIN_ENUMERATORS
+    LastTSBuiltin
+  };
+  } // namespace DirectX
+
   /// SPIRV builtins
   namespace SPIRV {
   enum {
     LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
 #define GET_BUILTIN_ENUMERATORS
-#include "clang/Basic/BuiltinsSPIRV.inc"
+#include "clang/Basic/BuiltinsSPIRVCommon.inc"
+#undef GET_BUILTIN_ENUMERATORS
+    FirstVKBuiltin,
+    LastCoreBuiltin = FirstVKBuiltin - 1,
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsSPIRVVK.inc"
+#undef GET_BUILTIN_ENUMERATORS
+    FirstCLBuiltin,
+    LastVKBuiltin = FirstCLBuiltin - 1,
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsSPIRVCL.inc"
 #undef GET_BUILTIN_ENUMERATORS
     LastTSBuiltin
   };
@@ -186,6 +207,9 @@ namespace clang {
     FirstSiFiveBuiltin,
     LastRVVBuiltin = FirstSiFiveBuiltin - 1,
 #include "clang/Basic/riscv_sifive_vector_builtins.inc"
+    FirstAndesBuiltin,
+    LastSiFiveBuiltin = FirstAndesBuiltin - 1,
+#include "clang/Basic/riscv_andes_vector_builtins.inc"
 #undef GET_RISCVV_BUILTIN_ENUMERATORS
     FirstTSBuiltin,
   };
@@ -262,6 +286,10 @@ namespace clang {
     bool isPoly() const {
       EltType ET = getEltType();
       return ET == Poly8 || ET == Poly16 || ET == Poly64;
+    }
+    bool isFloatingPoint() const {
+      EltType ET = getEltType();
+      return ET == Float16 || ET == Float32 || ET == Float64 || ET == BFloat16;
     }
     bool isUnsigned() const { return (Flags & UnsignedFlag) != 0; }
     bool isQuad() const { return (Flags & QuadFlag) != 0; }
@@ -369,7 +397,9 @@ namespace clang {
     }
     bool isOverloadDefault() const { return !(Flags & OverloadKindMask); }
     bool isOverloadWhileRW() const { return Flags & IsOverloadWhileRW; }
-    bool isOverloadCvt() const { return Flags & IsOverloadCvt; }
+    bool isOverloadFirstandLast() const {
+      return Flags & IsOverloadFirstandLast;
+    }
     bool isPrefetch() const { return Flags & IsPrefetch; }
     bool isReverseCompare() const { return Flags & ReverseCompare; }
     bool isAppendSVALL() const { return Flags & IsAppendSVALL; }

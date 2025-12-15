@@ -14,7 +14,6 @@
 #ifdef __MVS__
 
 #include "llvm/Support/AutoConvert.h"
-#include "llvm/Support/Error.h"
 #include <cassert>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -83,27 +82,6 @@ int enablezOSAutoConversion(int FD) {
   return fcntl(FD, F_CONTROL_CVT, &Query);
 }
 
-std::error_code llvm::disablezOSAutoConversion(int FD) {
-  if (::disablezOSAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
-}
-
-std::error_code llvm::enablezOSAutoConversion(int FD) {
-  if (::enablezOSAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
-}
-
-std::error_code llvm::restorezOSStdHandleAutoConversion(int FD) {
-  if (::restorezOSStdHandleAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
-}
-
 std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {
   assert((!Text || (CCSID != FT_UNTAGGED && CCSID != FT_BINARY)) &&
          "FT_UNTAGGED and FT_BINARY are not allowed for text files");
@@ -118,7 +96,7 @@ std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {
   return std::error_code();
 }
 
-ErrorOr<__ccsid_t> llvm::getzOSFileTag(const char *FileName, const int FD) {
+ErrorOr<__ccsid_t> llvm::getzOSFileTag(const Twine &FileName, const int FD) {
   // If we have a file descriptor, use it to find out file tagging. Otherwise we
   // need to use stat() with the file path.
   if (FD != -1) {
@@ -132,12 +110,12 @@ ErrorOr<__ccsid_t> llvm::getzOSFileTag(const char *FileName, const int FD) {
     return Query.fccsid;
   }
   struct stat Attr;
-  if (stat(FileName, &Attr) == -1)
+  if (stat(FileName.str().c_str(), &Attr) == -1)
     return std::error_code(errno, std::generic_category());
   return Attr.st_tag.ft_ccsid;
 }
 
-ErrorOr<bool> llvm::needzOSConversion(const char *FileName, const int FD) {
+ErrorOr<bool> llvm::needzOSConversion(const Twine &FileName, const int FD) {
   ErrorOr<__ccsid_t> Ccsid = getzOSFileTag(FileName, FD);
   if (std::error_code EC = Ccsid.getError())
     return EC;

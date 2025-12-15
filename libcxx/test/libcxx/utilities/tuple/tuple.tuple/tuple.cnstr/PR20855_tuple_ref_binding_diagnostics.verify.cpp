@@ -38,9 +38,7 @@ template <class T> struct CannotDeduce {
 template <class ...Args>
 void F(typename CannotDeduce<std::tuple<Args...>>::type const&) {}
 
-
 void f() {
-#if TEST_HAS_BUILTIN_IDENTIFIER(__reference_binds_to_temporary)
   // Test that we emit our diagnostic from the library.
   // expected-error@tuple:* 8 {{Attempted construction of reference element binds to a temporary whose lifetime has ended}}
 
@@ -73,8 +71,4 @@ void f() {
     std::tuple<std::string &&> t2("hello"); // expected-note {{requested here}}
     std::tuple<std::string &&> t3(std::allocator_arg, alloc, "hello"); // expected-note {{requested here}}
   }
-#else
-#error force failure
-// expected-error@-1 {{force failure}}
-#endif
 }

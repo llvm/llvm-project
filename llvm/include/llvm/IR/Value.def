@@ -69,24 +69,11 @@
 #define HANDLE_CONSTANT_EXCLUDE_LLVM_C_API(ValueName)
 #endif
 
-// Having constant first makes the range check for isa<Constant> faster
-// and smaller by one operation.
+// Having constant first makes the range check for isa<Constant> faster and
+// smaller by one operation. Further, keep ConstantData as the first subset so
+// it's also as fast.
 
 // Constant
-HANDLE_GLOBAL_VALUE(Function)
-HANDLE_GLOBAL_VALUE(GlobalAlias)
-HANDLE_GLOBAL_VALUE(GlobalIFunc)
-HANDLE_GLOBAL_VALUE(GlobalVariable)
-HANDLE_CONSTANT(BlockAddress)
-HANDLE_CONSTANT(ConstantExpr)
-HANDLE_CONSTANT_EXCLUDE_LLVM_C_API(DSOLocalEquivalent)
-HANDLE_CONSTANT_EXCLUDE_LLVM_C_API(NoCFIValue)
-HANDLE_CONSTANT(ConstantPtrAuth)
-
-// ConstantAggregate.
-HANDLE_CONSTANT(ConstantArray)
-HANDLE_CONSTANT(ConstantStruct)
-HANDLE_CONSTANT(ConstantVector)
 
 // ConstantData.
 HANDLE_CONSTANT(UndefValue)
@@ -100,8 +87,23 @@ HANDLE_CONSTANT(ConstantTargetNone)
 HANDLE_CONSTANT(ConstantPointerNull)
 HANDLE_CONSTANT(ConstantTokenNone)
 
-HANDLE_CONSTANT_MARKER(ConstantFirstVal, Function)
-HANDLE_CONSTANT_MARKER(ConstantLastVal, ConstantTokenNone)
+// ConstantAggregate.
+HANDLE_CONSTANT(ConstantArray)
+HANDLE_CONSTANT(ConstantStruct)
+HANDLE_CONSTANT(ConstantVector)
+
+HANDLE_GLOBAL_VALUE(Function)
+HANDLE_GLOBAL_VALUE(GlobalAlias)
+HANDLE_GLOBAL_VALUE(GlobalIFunc)
+HANDLE_GLOBAL_VALUE(GlobalVariable)
+HANDLE_CONSTANT(BlockAddress)
+HANDLE_CONSTANT(ConstantExpr)
+HANDLE_CONSTANT_EXCLUDE_LLVM_C_API(DSOLocalEquivalent)
+HANDLE_CONSTANT_EXCLUDE_LLVM_C_API(NoCFIValue)
+HANDLE_CONSTANT(ConstantPtrAuth)
+
+HANDLE_CONSTANT_MARKER(ConstantFirstVal, UndefValue)
+HANDLE_CONSTANT_MARKER(ConstantLastVal, ConstantPtrAuth)
 HANDLE_CONSTANT_MARKER(ConstantDataFirstVal, UndefValue)
 HANDLE_CONSTANT_MARKER(ConstantDataLastVal, ConstantTokenNone)
 HANDLE_CONSTANT_MARKER(ConstantAggregateFirstVal, ConstantArray)

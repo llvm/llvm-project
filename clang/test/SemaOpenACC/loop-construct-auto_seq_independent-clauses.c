@@ -8,41 +8,41 @@ void uses() {
 #pragma acc loop independent
   for(unsigned i = 0; i < 5; ++i);
 
-  // expected-error@+2{{OpenACC clause 'seq' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'auto' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'auto' clause is here}}
 #pragma acc loop auto seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'independent' may not appear on the same construct as a 'auto' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'auto' clause is here}}
 #pragma acc loop auto independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'independent' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'independent' clause is here}}
 #pragma acc loop independent auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'seq' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'independent' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'independent' clause is here}}
 #pragma acc loop independent seq
   for(unsigned i = 0; i < 5; ++i);
 
-  // expected-error@+2{{OpenACC clause 'seq' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'independent' may not appear on the same construct as a 'independent' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'independent' clause is here}}
 #pragma acc loop independent independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'auto' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'auto' clause is here}}
 #pragma acc loop auto auto
   for(unsigned i = 0; i < 5; ++i);
 
@@ -589,15 +589,19 @@ void uses() {
 
   // 'seq' cannot be combined with 'gang', 'worker' or 'vector'
   // expected-error@+2{{OpenACC clause 'gang' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq gang
   for(unsigned i = 0; i < 5; ++i);
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'gang' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'gang' clause is here}}
+#pragma acc loop gang seq
+  for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'worker' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq worker
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq vector
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'loop' directive}}
@@ -729,15 +733,15 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 
   // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'gang' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'gang' clause is here}}
 #pragma acc loop gang seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'worker' clause is here}}
 #pragma acc loop worker seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'vector' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'vector' clause is here}}
 #pragma acc loop vector seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'loop' directive}}

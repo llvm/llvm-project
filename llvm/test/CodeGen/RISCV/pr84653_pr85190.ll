@@ -39,7 +39,7 @@ define i1 @pr85190(i64 %a) {
 ; CHECK-NOZBB-LABEL: pr85190:
 ; CHECK-NOZBB:       # %bb.0:
 ; CHECK-NOZBB-NEXT:    ori a1, a0, 7
-; CHECK-NOZBB-NEXT:    slti a2, a0, 0
+; CHECK-NOZBB-NEXT:    srli a2, a0, 63
 ; CHECK-NOZBB-NEXT:    li a3, -1
 ; CHECK-NOZBB-NEXT:    slli a3, a3, 63
 ; CHECK-NOZBB-NEXT:    sub a3, a3, a1

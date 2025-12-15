@@ -15,11 +15,26 @@
 #include "DNBError.h"
 #include "DNBLog.h"
 #include "MachProcess.h"
-#include "PThreadMutex.h"
 #include "SysSignal.h"
 #include <cerrno>
+#include <inttypes.h>
 #include <sys/ptrace.h>
 #include <sys/types.h>
+
+static void AppendExceptionData(std::vector<mach_exception_data_type_t> &out,
+                                mach_exception_data_t data,
+                                mach_msg_type_number_t count) {
+  mach_exception_data_type_t buf;
+  for (mach_msg_type_number_t i = 0; i < count; ++i) {
+    // The input Data we receive need not be aligned correctly.
+    // Perform an unaligned copy by pretending we're dealing with
+    // a char* buffer. This is required to work around UBSAN/ASAN
+    // "misaligned address" errors.
+    auto *src = reinterpret_cast<char *>(data + i);
+    memcpy(&buf, src, sizeof(mach_exception_data_type_t));
+    out.push_back(buf);
+  }
+}
 
 // Routine mach_exception_raise
 extern "C" kern_return_t
@@ -95,20 +110,16 @@ catch_mach_exception_raise(mach_port_t exc_port, mach_port_t thread_port,
                            mach_exception_data_t exc_data,
                            mach_msg_type_number_t exc_data_count) {
   if (DNBLogCheckLogBit(LOG_EXCEPTIONS)) {
-    std::vector<uint64_t> exc_datas;
-    uint64_t tmp;
-    for (unsigned i = 0; i < exc_data_count; ++i) {
-      // Perform an unaligned copy.
-      memcpy(&tmp, &exc_data[i], sizeof(uint64_t));
-      exc_datas.push_back(tmp);
-    }
+    std::vector<mach_exception_data_type_t> exc_datas;
+    AppendExceptionData(exc_datas, exc_data, exc_data_count);
     DNBLogThreaded("::%s ( exc_port = 0x%4.4x, thd_port = 0x%4.4x, tsk_port = "
-                   "0x%4.4x, exc_type = %d ( %s ), exc_data[%d] = { 0x%llx, "
-                   "0x%llx })",
+                   "0x%4.4x, exc_type = %d ( %s ), exc_data[%d] = { 0x%" PRIx64
+                   ", "
+                   "0x%" PRIx64 " })",
                    __FUNCTION__, exc_port, thread_port, task_port, exc_type,
                    MachException::Name(exc_type), exc_data_count,
-                   (uint64_t)(exc_data_count > 0 ? exc_datas[0] : 0xBADDBADD),
-                   (uint64_t)(exc_data_count > 1 ? exc_datas[1] : 0xBADDBADD));
+                   (exc_data_count > 0 ? exc_datas[0] : 0xBADDBADD),
+                   (exc_data_count > 1 ? exc_datas[1] : 0xBADDBADD));
   }
   g_message->exc_type = 0;
   g_message->exc_data.clear();
@@ -117,7 +128,7 @@ catch_mach_exception_raise(mach_port_t exc_port, mach_port_t thread_port,
     g_message->task_port = task_port;
     g_message->thread_port = thread_port;
     g_message->exc_type = exc_type;
-    g_message->AppendExceptionData(exc_data, exc_data_count);
+    AppendExceptionData(g_message->exc_data, exc_data, exc_data_count);
     return KERN_SUCCESS;
   } else if (!MachTask::IsValid(g_message->task_port)) {
     // Our original exception port isn't valid anymore check for a SIGTRAP
@@ -129,7 +140,7 @@ catch_mach_exception_raise(mach_port_t exc_port, mach_port_t thread_port,
       g_message->task_port = task_port;
       g_message->thread_port = thread_port;
       g_message->exc_type = exc_type;
-      g_message->AppendExceptionData(exc_data, exc_data_count);
+      AppendExceptionData(g_message->exc_data, exc_data, exc_data_count);
       return KERN_SUCCESS;
     }
   }

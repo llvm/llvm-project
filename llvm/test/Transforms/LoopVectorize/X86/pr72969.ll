@@ -56,7 +56,6 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VEC-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 1>, [[VECTOR_PH]] ], [ [[TMP28:%.*]], [[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 1, i16 2, i16 3, i16 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 0
 ; VEC-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 1
@@ -75,7 +74,7 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    store i64 0, ptr [[TMP25]], align 8
 ; VEC-NEXT:    store i64 0, ptr [[TMP26]], align 8
 ; VEC-NEXT:    [[TMP27:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 1)
-; VEC-NEXT:    [[TMP28]] = zext <4 x i16> [[TMP27]] to <4 x i64>
+; VEC-NEXT:    [[TMP28:%.*]] = zext <4 x i16> [[TMP27]] to <4 x i64>
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VEC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; VEC-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

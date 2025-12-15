@@ -44,8 +44,6 @@ define <vscale x 1 x bfloat> @vfmin_nxv1bf16_vf(<vscale x 1 x bfloat> %a, bfloat
   ret <vscale x 1 x bfloat> %v
 }
 
-declare <vscale x 2 x bfloat> @llvm.minnum.nxv2bf16(<vscale x 2 x bfloat>, <vscale x 2 x bfloat>)
-
 define <vscale x 2 x bfloat> @vfmin_nxv2bf16_vv(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
 ; CHECK-LABEL: vfmin_nxv2bf16_vv:
 ; CHECK:       # %bb.0:
@@ -77,8 +75,6 @@ define <vscale x 2 x bfloat> @vfmin_nxv2bf16_vf(<vscale x 2 x bfloat> %a, bfloat
   %v = call <vscale x 2 x bfloat> @llvm.minnum.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %splat)
   ret <vscale x 2 x bfloat> %v
 }
-
-declare <vscale x 4 x bfloat> @llvm.minnum.nxv4bf16(<vscale x 4 x bfloat>, <vscale x 4 x bfloat>)
 
 define <vscale x 4 x bfloat> @vfmin_nxv4bf16_vv(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
 ; CHECK-LABEL: vfmin_nxv4bf16_vv:
@@ -112,8 +108,6 @@ define <vscale x 4 x bfloat> @vfmin_nxv4bf16_vf(<vscale x 4 x bfloat> %a, bfloat
   ret <vscale x 4 x bfloat> %v
 }
 
-declare <vscale x 8 x bfloat> @llvm.minnum.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
-
 define <vscale x 8 x bfloat> @vfmin_nxv8bf16_vv(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: vfmin_nxv8bf16_vv:
 ; CHECK:       # %bb.0:
@@ -145,8 +139,6 @@ define <vscale x 8 x bfloat> @vfmin_nxv8bf16_vf(<vscale x 8 x bfloat> %a, bfloat
   %v = call <vscale x 8 x bfloat> @llvm.minnum.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %splat)
   ret <vscale x 8 x bfloat> %v
 }
-
-declare <vscale x 16 x bfloat> @llvm.minnum.nxv16bf16(<vscale x 16 x bfloat>, <vscale x 16 x bfloat>)
 
 define <vscale x 16 x bfloat> @vfmin_nxv16bf16_vv(<vscale x 16 x bfloat> %a, <vscale x 16 x bfloat> %b) {
 ; CHECK-LABEL: vfmin_nxv16bf16_vv:
@@ -180,8 +172,6 @@ define <vscale x 16 x bfloat> @vfmin_nxv16bf16_vf(<vscale x 16 x bfloat> %a, bfl
   ret <vscale x 16 x bfloat> %v
 }
 
-declare <vscale x 32 x bfloat> @llvm.minnum.nxv32bf16(<vscale x 32 x bfloat>, <vscale x 32 x bfloat>)
-
 define <vscale x 32 x bfloat> @vfmin_nxv32bf16_vv(<vscale x 32 x bfloat> %a, <vscale x 32 x bfloat> %b) {
 ; CHECK-LABEL: vfmin_nxv32bf16_vv:
 ; CHECK:       # %bb.0:
@@ -194,11 +184,11 @@ define <vscale x 32 x bfloat> @vfmin_nxv32bf16_vv(<vscale x 32 x bfloat> %a, <vs
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v16
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v0, v8
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v20
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v12
-; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v0, v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -231,7 +221,7 @@ define <vscale x 32 x bfloat> @vfmin_nxv32bf16_vf(<vscale x 32 x bfloat> %a, bfl
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v12
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
@@ -239,7 +229,7 @@ define <vscale x 32 x bfloat> @vfmin_nxv32bf16_vf(<vscale x 32 x bfloat> %a, bfl
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v0, v8
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v12
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v0, v8, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -260,8 +250,6 @@ define <vscale x 32 x bfloat> @vfmin_nxv32bf16_vf(<vscale x 32 x bfloat> %a, bfl
   %v = call <vscale x 32 x bfloat> @llvm.minnum.nxv32bf16(<vscale x 32 x bfloat> %a, <vscale x 32 x bfloat> %splat)
   ret <vscale x 32 x bfloat> %v
 }
-
-declare <vscale x 1 x half> @llvm.minnum.nxv1f16(<vscale x 1 x half>, <vscale x 1 x half>)
 
 define <vscale x 1 x half> @vfmin_nxv1f16_vv(<vscale x 1 x half> %a, <vscale x 1 x half> %b) {
 ; ZVFH-LABEL: vfmin_nxv1f16_vv:
@@ -307,8 +295,6 @@ define <vscale x 1 x half> @vfmin_nxv1f16_vf(<vscale x 1 x half> %a, half %b) {
   ret <vscale x 1 x half> %v
 }
 
-declare <vscale x 2 x half> @llvm.minnum.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half>)
-
 define <vscale x 2 x half> @vfmin_nxv2f16_vv(<vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; ZVFH-LABEL: vfmin_nxv2f16_vv:
 ; ZVFH:       # %bb.0:
@@ -352,8 +338,6 @@ define <vscale x 2 x half> @vfmin_nxv2f16_vf(<vscale x 2 x half> %a, half %b) {
   %v = call <vscale x 2 x half> @llvm.minnum.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %splat)
   ret <vscale x 2 x half> %v
 }
-
-declare <vscale x 4 x half> @llvm.minnum.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half>)
 
 define <vscale x 4 x half> @vfmin_nxv4f16_vv(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; ZVFH-LABEL: vfmin_nxv4f16_vv:
@@ -399,8 +383,6 @@ define <vscale x 4 x half> @vfmin_nxv4f16_vf(<vscale x 4 x half> %a, half %b) {
   ret <vscale x 4 x half> %v
 }
 
-declare <vscale x 8 x half> @llvm.minnum.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
-
 define <vscale x 8 x half> @vfmin_nxv8f16_vv(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; ZVFH-LABEL: vfmin_nxv8f16_vv:
 ; ZVFH:       # %bb.0:
@@ -444,8 +426,6 @@ define <vscale x 8 x half> @vfmin_nxv8f16_vf(<vscale x 8 x half> %a, half %b) {
   %v = call <vscale x 8 x half> @llvm.minnum.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %splat)
   ret <vscale x 8 x half> %v
 }
-
-declare <vscale x 16 x half> @llvm.minnum.nxv16f16(<vscale x 16 x half>, <vscale x 16 x half>)
 
 define <vscale x 16 x half> @vfmin_nxv16f16_vv(<vscale x 16 x half> %a, <vscale x 16 x half> %b) {
 ; ZVFH-LABEL: vfmin_nxv16f16_vv:
@@ -491,8 +471,6 @@ define <vscale x 16 x half> @vfmin_nxv16f16_vf(<vscale x 16 x half> %a, half %b)
   ret <vscale x 16 x half> %v
 }
 
-declare <vscale x 32 x half> @llvm.minnum.nxv32f16(<vscale x 32 x half>, <vscale x 32 x half>)
-
 define <vscale x 32 x half> @vfmin_nxv32f16_vv(<vscale x 32 x half> %a, <vscale x 32 x half> %b) {
 ; ZVFH-LABEL: vfmin_nxv32f16_vv:
 ; ZVFH:       # %bb.0:
@@ -511,11 +489,11 @@ define <vscale x 32 x half> @vfmin_nxv32f16_vv(<vscale x 32 x half> %a, <vscale 
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v16
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v20
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmin.vv v0, v0, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -554,7 +532,7 @@ define <vscale x 32 x half> @vfmin_nxv32f16_vf(<vscale x 32 x half> %a, half %b)
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFHMIN-NEXT:    addi a1, sp, 16
-; ZVFHMIN-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmv.v.x v8, a0
@@ -562,7 +540,7 @@ define <vscale x 32 x half> @vfmin_nxv32f16_vf(<vscale x 32 x half> %a, half %b)
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmin.vv v0, v8, v0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -583,8 +561,6 @@ define <vscale x 32 x half> @vfmin_nxv32f16_vf(<vscale x 32 x half> %a, half %b)
   %v = call <vscale x 32 x half> @llvm.minnum.nxv32f16(<vscale x 32 x half> %a, <vscale x 32 x half> %splat)
   ret <vscale x 32 x half> %v
 }
-
-declare <vscale x 1 x float> @llvm.minnum.nxv1f32(<vscale x 1 x float>, <vscale x 1 x float>)
 
 define <vscale x 1 x float> @vfmin_nxv1f32_vv(<vscale x 1 x float> %a, <vscale x 1 x float> %b) {
 ; CHECK-LABEL: vfmin_nxv1f32_vv:
@@ -608,8 +584,6 @@ define <vscale x 1 x float> @vfmin_nxv1f32_vf(<vscale x 1 x float> %a, float %b)
   ret <vscale x 1 x float> %v
 }
 
-declare <vscale x 2 x float> @llvm.minnum.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>)
-
 define <vscale x 2 x float> @vfmin_nxv2f32_vv(<vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: vfmin_nxv2f32_vv:
 ; CHECK:       # %bb.0:
@@ -631,8 +605,6 @@ define <vscale x 2 x float> @vfmin_nxv2f32_vf(<vscale x 2 x float> %a, float %b)
   %v = call <vscale x 2 x float> @llvm.minnum.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %splat)
   ret <vscale x 2 x float> %v
 }
-
-declare <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
 
 define <vscale x 4 x float> @vfmin_nxv4f32_vv(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: vfmin_nxv4f32_vv:
@@ -656,8 +628,6 @@ define <vscale x 4 x float> @vfmin_nxv4f32_vf(<vscale x 4 x float> %a, float %b)
   ret <vscale x 4 x float> %v
 }
 
-declare <vscale x 8 x float> @llvm.minnum.nxv8f32(<vscale x 8 x float>, <vscale x 8 x float>)
-
 define <vscale x 8 x float> @vfmin_nxv8f32_vv(<vscale x 8 x float> %a, <vscale x 8 x float> %b) {
 ; CHECK-LABEL: vfmin_nxv8f32_vv:
 ; CHECK:       # %bb.0:
@@ -679,8 +649,6 @@ define <vscale x 8 x float> @vfmin_nxv8f32_vf(<vscale x 8 x float> %a, float %b)
   %v = call <vscale x 8 x float> @llvm.minnum.nxv8f32(<vscale x 8 x float> %a, <vscale x 8 x float> %splat)
   ret <vscale x 8 x float> %v
 }
-
-declare <vscale x 16 x float> @llvm.minnum.nxv16f32(<vscale x 16 x float>, <vscale x 16 x float>)
 
 define <vscale x 16 x float> @vfmin_nxv16f32_vv(<vscale x 16 x float> %a, <vscale x 16 x float> %b) {
 ; CHECK-LABEL: vfmin_nxv16f32_vv:
@@ -704,8 +672,6 @@ define <vscale x 16 x float> @vfmin_nxv16f32_vf(<vscale x 16 x float> %a, float 
   ret <vscale x 16 x float> %v
 }
 
-declare <vscale x 1 x double> @llvm.minnum.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>)
-
 define <vscale x 1 x double> @vfmin_nxv1f64_vv(<vscale x 1 x double> %a, <vscale x 1 x double> %b) {
 ; CHECK-LABEL: vfmin_nxv1f64_vv:
 ; CHECK:       # %bb.0:
@@ -727,8 +693,6 @@ define <vscale x 1 x double> @vfmin_nxv1f64_vf(<vscale x 1 x double> %a, double 
   %v = call <vscale x 1 x double> @llvm.minnum.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> %splat)
   ret <vscale x 1 x double> %v
 }
-
-declare <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
 
 define <vscale x 2 x double> @vfmin_nxv2f64_vv(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: vfmin_nxv2f64_vv:
@@ -752,8 +716,6 @@ define <vscale x 2 x double> @vfmin_nxv2f64_vf(<vscale x 2 x double> %a, double 
   ret <vscale x 2 x double> %v
 }
 
-declare <vscale x 4 x double> @llvm.minnum.nxv4f64(<vscale x 4 x double>, <vscale x 4 x double>)
-
 define <vscale x 4 x double> @vfmin_nxv4f64_vv(<vscale x 4 x double> %a, <vscale x 4 x double> %b) {
 ; CHECK-LABEL: vfmin_nxv4f64_vv:
 ; CHECK:       # %bb.0:
@@ -775,8 +737,6 @@ define <vscale x 4 x double> @vfmin_nxv4f64_vf(<vscale x 4 x double> %a, double 
   %v = call <vscale x 4 x double> @llvm.minnum.nxv4f64(<vscale x 4 x double> %a, <vscale x 4 x double> %splat)
   ret <vscale x 4 x double> %v
 }
-
-declare <vscale x 8 x double> @llvm.minnum.nxv8f64(<vscale x 8 x double>, <vscale x 8 x double>)
 
 define <vscale x 8 x double> @vfmin_nxv8f64_vv(<vscale x 8 x double> %a, <vscale x 8 x double> %b) {
 ; CHECK-LABEL: vfmin_nxv8f64_vv:

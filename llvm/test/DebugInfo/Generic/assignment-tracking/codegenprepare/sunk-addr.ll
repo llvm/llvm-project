@@ -1,7 +1,7 @@
 ; REQUIRES: x86-registered-target
 ; RUN: llc -start-before=codegenprepare -stop-after=codegenprepare \
 ; RUN:   -mtriple=x86_64-unknown-unknown %s -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg."
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ;; Check that when CodeGenPrepare moves an address computation to a block it's
 ;; used in its dbg.assign uses are updated.

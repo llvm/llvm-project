@@ -8,10 +8,10 @@
 
 #include "MCInstrDescView.h"
 
-#include <iterator>
 #include <tuple>
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/InterleavedRange.h"
 
 namespace llvm {
 namespace exegesis {
@@ -119,7 +119,7 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     Operand.IsDef = (OpIndex < Description->getNumDefs());
     Operand.IsEarlyClobber =
         (Description->getOperandConstraint(OpIndex, MCOI::EARLY_CLOBBER) != -1);
-    // TODO(gchatelet): Handle isLookupPtrRegClass.
+    // TODO(gchatelet): Handle LookupRegClassByHwMode.
     if (OpInfo.RegClass >= 0)
       Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);
     int TiedToIndex = Description->getOperandConstraint(OpIndex, MCOI::TIED_TO);
@@ -293,15 +293,8 @@ void Instruction::dump(const MCRegisterInfo &RegInfo,
   }
   for (const auto &Var : Variables) {
     Stream << "- Var" << Var.getIndex();
-    Stream << " [";
-    bool IsFirst = true;
-    for (auto OperandIndex : Var.TiedOperands) {
-      if (!IsFirst)
-        Stream << ",";
-      Stream << "Op" << OperandIndex;
-      IsFirst = false;
-    }
-    Stream << "]";
+    Stream << " ";
+    Stream << llvm::interleaved_array(Var.TiedOperands, ",");
     Stream << "\n";
   }
   if (hasMemoryOperands())

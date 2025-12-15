@@ -14,6 +14,7 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -49,6 +50,8 @@ class MCSymbol;
 class raw_ostream;
 
 namespace bolt {
+class BinaryBasicBlock;
+class BinaryContext;
 class BinaryFunction;
 
 /// Different types of indirect branches encountered during disassembly.
@@ -66,6 +69,20 @@ enum class IndirectBranchType : char {
 class MCPlusBuilder {
 public:
   using AllocatorIdTy = uint16_t;
+
+  std::optional<int64_t> getAnnotationAtOpIndex(const MCInst &Inst,
+                                                unsigned OpIndex) const {
+    std::optional<unsigned> FirstAnnotationOp = getFirstAnnotationOpIndex(Inst);
+    if (!FirstAnnotationOp)
+      return std::nullopt;
+
+    if (*FirstAnnotationOp > OpIndex || Inst.getNumOperands() < OpIndex)
+      return std::nullopt;
+
+    const auto *Op = Inst.begin() + OpIndex;
+    const int64_t ImmValue = Op->getImm();
+    return extractAnnotationIndex(ImmValue);
+  }
 
 private:
   /// A struct that represents a single annotation allocator
@@ -404,7 +421,7 @@ public:
 
   bool equals(const MCExpr &A, const MCExpr &B, CompFuncTy Comp) const;
 
-  virtual bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+  virtual bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
                       CompFuncTy Comp) const;
 
   virtual bool isBranch(const MCInst &Inst) const {
@@ -415,7 +432,7 @@ public:
     return Analysis->isConditionalBranch(Inst);
   }
 
-  /// Returns true if Inst is a condtional move instruction
+  /// Returns true if Inst is a conditional move instruction
   virtual bool isConditionalMove(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
@@ -427,6 +444,17 @@ public:
 
   virtual bool isIndirectBranch(const MCInst &Inst) const {
     return Analysis->isIndirectBranch(Inst);
+  }
+
+  /// Returns true if the instruction unconditionally transfers the control to
+  /// another program point, interrupting sequential code execution, e.g. by a
+  /// call, return, or unconditional jump. This explicitly leaves out
+  /// conditional branches as they may not be taken, but does allow transferring
+  /// the control to the next instruction (zero-displacement jump/call).
+  bool isUnconditionalControlTransfer(const MCInst &Inst) const {
+    const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
+    // barrier captures returns and unconditional branches
+    return Desc.isBarrier() || Desc.isCall();
   }
 
   /// Returns true if the instruction is memory indirect call or jump
@@ -517,10 +545,15 @@ public:
     return 0;
   }
 
+  /// Create a helper function to increment counter for Instrumentation
+  virtual void createInstrCounterIncrFunc(BinaryContext &BC) {
+    llvm_unreachable("not implemented");
+  }
+
   /// Create increment contents of target by 1 for Instrumentation
-  virtual InstructionListType
-  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
-                       unsigned CodePointerSize) const {
+  virtual InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                                   MCContext *Ctx, bool IsLeaf,
+                                                   unsigned CodePointerSize) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }
@@ -551,25 +584,192 @@ public:
     return Analysis->isReturn(Inst);
   }
 
-  virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
+  /// Returns the registers that are trusted at function entry.
+  ///
+  /// Each register should be treated as if a successfully authenticated
+  /// pointer was written to it before entering the function (i.e. the
+  /// pointer is safe to jump to as well as to be signed).
+  virtual SmallVector<MCPhysReg> getTrustedLiveInRegs() const {
     llvm_unreachable("not implemented");
-    return getNoRegister();
+    return {};
   }
 
-  virtual bool isAuthenticationOfReg(const MCInst &Inst,
-                                     MCPhysReg AuthenticatedReg) const {
+  /// Returns the register where an authenticated pointer is written to by Inst,
+  /// or std::nullopt if not authenticating any register.
+  ///
+  /// Sets IsChecked if the instruction always checks authenticated pointer,
+  /// i.e. it either writes a successfully authenticated pointer or terminates
+  /// the program abnormally (such as "ldra x0, [x1]!" on AArch64, which crashes
+  /// on authentication failure even if FEAT_FPAC is not implemented).
+  virtual std::optional<MCPhysReg>
+  getWrittenAuthenticatedReg(const MCInst &Inst, bool &IsChecked) const {
+    llvm_unreachable("not implemented");
+    return std::nullopt;
+  }
+
+  /// Returns the register signed by Inst, or std::nullopt if not signing any
+  /// register.
+  ///
+  /// The returned register is assumed to be both input and output operand,
+  /// as it is done on AArch64.
+  virtual std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return std::nullopt;
+  }
+
+  virtual bool isPSignOnLR(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
 
-  virtual ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const {
+  virtual bool isPAuthOnLR(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
-    return getNoRegister();
+    return false;
+  }
+
+  virtual bool isPAuthAndRet(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Generate the matching pointer authentication instruction from a fused
+  /// pauth-and-return instruction.
+  virtual void createMatchingAuth(const MCInst &AuthAndRet, MCInst &Auth) {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Returns the register used as a return address. Returns std::nullopt if
+  /// not applicable, such as reading the return address from a system register
+  /// or from the stack.
+  ///
+  /// Sets IsAuthenticatedInternally if the instruction accepts a signed
+  /// pointer as its operand and authenticates it internally.
+  ///
+  /// Should only be called when isReturn(Inst) is true.
+  virtual std::optional<MCPhysReg>
+  getRegUsedAsRetDest(const MCInst &Inst,
+                      bool &IsAuthenticatedInternally) const {
+    llvm_unreachable("not implemented");
+    return std::nullopt;
+  }
+
+  /// Returns the register used as the destination of an indirect branch or call
+  /// instruction. Sets IsAuthenticatedInternally if the instruction accepts
+  /// a signed pointer as its operand and authenticates it internally.
+  ///
+  /// Should only be called if isIndirectCall(Inst) or isIndirectBranch(Inst)
+  /// returns true.
+  virtual MCPhysReg
+  getRegUsedAsIndirectBranchDest(const MCInst &Inst,
+                                 bool &IsAuthenticatedInternally) const {
+    llvm_unreachable("not implemented");
+    return 0; // Unreachable. A valid register should be returned by the
+              // target implementation.
+  }
+
+  /// Returns the register containing an address safely materialized by `Inst`
+  /// under the Pointer Authentication threat model.
+  ///
+  /// Returns the register `Inst` writes to if:
+  /// 1. the register is a materialized address, and
+  /// 2. the register has been materialized safely, i.e. cannot be attacker-
+  ///    controlled, under the Pointer Authentication threat model.
+  ///
+  /// If the instruction does not write to any register satisfying the above
+  /// two conditions, std::nullopt is returned.
+  ///
+  /// The Pointer Authentication threat model assumes an attacker is able to
+  /// modify any writable memory, but not executable code (due to W^X).
+  virtual std::optional<MCPhysReg>
+  getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return std::nullopt;
+  }
+
+  /// Analyzes if this instruction can safely perform address arithmetics
+  /// under Pointer Authentication threat model.
+  ///
+  /// If an (OutReg, InReg) pair is returned, then after Inst is executed,
+  /// OutReg is as trusted as InReg is.
+  ///
+  /// The arithmetic instruction is considered safe if OutReg is not attacker-
+  /// controlled, provided InReg and executable code are not. Please note that
+  /// registers other than InReg as well as the contents of memory which is
+  /// writable by the process should be considered attacker-controlled.
+  ///
+  /// The instruction should not write any values derived from InReg anywhere,
+  /// except for OutReg.
+  virtual std::optional<std::pair<MCPhysReg, MCPhysReg>>
+  analyzeAddressArithmeticsForPtrAuth(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return std::nullopt;
+  }
+
+  /// Analyzes if a pointer is checked to be authenticated successfully
+  /// by the end of the basic block.
+  ///
+  /// It is possible for pointer authentication instructions not to terminate
+  /// the program abnormally on authentication failure and return some invalid
+  /// pointer instead (like it is done on AArch64 when FEAT_FPAC is not
+  /// implemented). This might be enough to crash on invalid memory access when
+  /// the pointer is later used as the destination of a load, store, or branch
+  /// instruction. On the other hand, when the pointer is not used right away,
+  /// it may be important for the compiler to check the address explicitly not
+  /// to introduce a signing or authentication oracle.
+  ///
+  /// This function is intended to detect a complex, multi-instruction pointer-
+  /// checking sequence spanning a contiguous range of instructions at the end
+  /// of the basic block (as these sequences are expected to end with a
+  /// conditional branch - this is how they are implemented on AArch64 by LLVM).
+  /// If a (Reg, FirstInst) pair is returned and before execution of FirstInst
+  /// Reg was last written to by an authentication instruction, then it is known
+  /// that in any successor of BB either
+  /// * the authentication instruction that last wrote to Reg succeeded, or
+  /// * the program is terminated abnormally without introducing any signing
+  ///   or authentication oracles
+  ///
+  /// Note that this function is not expected to repeat the results returned
+  /// by getAuthCheckedReg(Inst, MayOverwrite) function below.
+  virtual std::optional<std::pair<MCPhysReg, MCInst *>>
+  getAuthCheckedReg(BinaryBasicBlock &BB) const {
+    llvm_unreachable("not implemented");
+    return std::nullopt;
+  }
+
+  /// Returns the register that is checked to be authenticated successfully.
+  ///
+  /// If the returned register was last written to by an authentication
+  /// instruction and that authentication failed, then the program is known
+  /// to be terminated abnormally as a result of execution of Inst.
+  ///
+  /// Additionally, if MayOverwrite is false, it is known that the authenticated
+  /// pointer is not clobbered by Inst itself.
+  ///
+  /// Use this function for simple, single-instruction patterns instead of
+  /// its getAuthCheckedReg(BB) counterpart.
+  virtual std::optional<MCPhysReg> getAuthCheckedReg(const MCInst &Inst,
+                                                     bool MayOverwrite) const {
+    llvm_unreachable("not implemented");
+    return std::nullopt;
   }
 
   virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Returns true if Inst is a trap instruction.
+  ///
+  /// Tests if Inst is an instruction that immediately causes an abnormal
+  /// program termination, for example when a security violation is detected
+  /// by a compiler-inserted check.
+  ///
+  /// @note An implementation of this method should likely return false for
+  /// calls to library functions like abort(), as it is possible that the
+  /// execution state is partially attacker-controlled at this point.
+  virtual bool isTrap(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -590,11 +790,20 @@ public:
 
   virtual bool isPop(const MCInst &Inst) const { return false; }
 
+  /// Determine if a basic block looks like an epilogue. For now it is only
+  /// called at the final stage of building CFG to check basic block ending
+  /// with an indirect call that has unknown control flow attribute.
+  virtual bool isEpilogue(const BinaryBasicBlock &BB) const { return false; }
+
   /// Return true if the instruction is used to terminate an indirect branch.
   virtual bool isTerminateBranch(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
+
+  /// Return true if the hlt instruction under the x86, otherwise, default to
+  /// false.
+  virtual bool isX86HLT(const MCInst &Inst) const { return false; }
 
   /// Return the width, in bytes, of the memory access performed by \p Inst, if
   /// this is a pop instruction. Return zero otherwise.
@@ -638,6 +847,16 @@ public:
   }
 
   virtual bool isAddXri(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isLDRWl(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isLDRXl(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1145,6 +1364,32 @@ public:
   /// Return true if the instruction is a tail call.
   bool isTailCall(const MCInst &Inst) const;
 
+  /// Stores NegateRAState annotation on \p Inst.
+  void setNegateRAState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has NegateRAState annotation.
+  bool hasNegateRAState(const MCInst &Inst) const;
+
+  /// Sets RememberState annotation on \p Inst.
+  void setRememberState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has RememberState annotation.
+  bool hasRememberState(const MCInst &Inst) const;
+
+  /// Stores RestoreState annotation on \p Inst.
+  void setRestoreState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has RestoreState annotation.
+  bool hasRestoreState(const MCInst &Inst) const;
+
+  /// Sets kRASigned or kRAUnsigned annotation on \p Inst.
+  /// Fails if \p Inst has either annotation already set.
+  void setRAState(MCInst &Inst, bool State) const;
+
+  /// Return true if \p Inst has kRASigned annotation, false if it has
+  /// kRAUnsigned annotation, and std::nullopt if neither annotation is set.
+  std::optional<bool> getRAState(const MCInst &Inst) const;
+
   /// Return true if the instruction is a call with an exception handling info.
   virtual bool isInvoke(const MCInst &Inst) const {
     return isCall(Inst) && getEHInfo(Inst);
@@ -1254,9 +1499,16 @@ public:
     return nullptr;
   }
 
-  /// Return MCSymbol extracted from a target expression
+  /// Return MCSymbol extracted from the expression.
   virtual const MCSymbol *getTargetSymbol(const MCExpr *Expr) const {
-    return &cast<const MCSymbolRefExpr>(Expr)->getSymbol();
+    if (auto *BinaryExpr = dyn_cast<const MCBinaryExpr>(Expr))
+      return getTargetSymbol(BinaryExpr->getLHS());
+
+    auto *SymbolRefExpr = dyn_cast<const MCSymbolRefExpr>(Expr);
+    if (SymbolRefExpr && SymbolRefExpr->getSpecifier() == 0)
+      return &SymbolRefExpr->getSymbol();
+
+    return nullptr;
   }
 
   /// Return addend that represents an offset from MCSymbol target
@@ -1326,7 +1578,7 @@ public:
   }
 
   /// Get the default def_in and live_out registers for the function
-  /// Currently only used for the Stoke optimzation
+  /// Currently only used for the Stoke optimization
   virtual void getDefaultDefIn(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
@@ -1551,6 +1803,19 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Take \p LDRInst and return ADRP+LDR instruction sequence - for
+  ///
+  ///     ldr  x0, [label]
+  ///
+  /// the following sequence will be generated:
+  ///
+  ///     adrp x0, PageBase(label)
+  ///     ldr  x0, [x0, PageOffset(label)]
+  virtual InstructionListType createAdrpLdr(const MCInst &LDRInst,
+                                            MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Return not 0 if the instruction CurInst, in combination with the recent
   /// history of disassembled instructions supplied by [Begin, End), is a linker
   /// generated veneer/stub that needs patching. This happens in AArch64 when
@@ -1601,6 +1866,44 @@ public:
 
   /// Create a return instruction.
   virtual void createReturn(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Check if an Instruction is a BTI landing pad with the required properties.
+  /// Takes both explicit and implicit BTIs into account.
+  virtual bool isBTILandingPad(MCInst &Inst, bool CallTarget,
+                               bool JumpTarget) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Check if an Instruction is an implicit BTI c landing pad.
+  virtual bool isImplicitBTIC(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Create a BTI landing pad instruction.
+  virtual void createBTI(MCInst &Inst, bool CallTarget, bool JumpTarget) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Update operand of BTI instruction.
+  virtual void updateBTIVariant(MCInst &Inst, bool CallTarget,
+                                bool JumpTarget) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Checks if the indirect call / jump is accepted by the landing pad at the
+  /// start of the target BasicBlock.
+  virtual bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Inserts a BTI landing pad to the start of the BB, that matches the
+  /// indirect call inst used to call the BB.
+  virtual void insertBTI(BinaryBasicBlock &BB, MCInst &Call) const {
     llvm_unreachable("not implemented");
   }
 
@@ -1724,11 +2027,45 @@ public:
     return {};
   }
 
+  /// Create a sequence of instructions to compare contents of a register
+  /// \p RegNo to immediate \Imm and jump to \p Target if they are different.
+  virtual InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
+                                           const MCSymbol *Target,
+                                           MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
+  /// Find memcpy size in bytes by using preceding instructions.
+  /// Returns std::nullopt if size cannot be determined (no-op for most
+  /// targets).
+  virtual std::optional<uint64_t>
+  findMemcpySizeInBytes(const BinaryBasicBlock &BB,
+                        BinaryBasicBlock::iterator CallInst) const {
+    return std::nullopt;
+  }
+
   /// Creates inline memcpy instruction. If \p ReturnEnd is true, then return
   /// (dest + n) instead of dest.
   virtual InstructionListType createInlineMemcpy(bool ReturnEnd) const {
     llvm_unreachable("not implemented");
     return {};
+  }
+
+  /// Creates size-aware inline memcpy instruction. If \p KnownSize is provided,
+  /// generates optimized code for that specific size. Falls back to regular
+  /// createInlineMemcpy if size is unknown or not needed (e.g. with X86).
+  virtual InstructionListType
+  createInlineMemcpy(bool ReturnEnd, std::optional<uint64_t> KnownSize) const {
+    return createInlineMemcpy(ReturnEnd);
+  }
+
+  /// Extract immediate value from move instruction that sets the given
+  /// register. Returns the immediate value if the instruction is a
+  /// move-immediate to TargetReg.
+  virtual std::optional<uint64_t>
+  extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const {
+    return std::nullopt;
   }
 
   /// Create a target-specific relocation out of the \p Fixup.
@@ -2012,7 +2349,8 @@ public:
   }
 
   /// Print each annotation attached to \p Inst.
-  void printAnnotations(const MCInst &Inst, raw_ostream &OS) const;
+  void printAnnotations(const MCInst &Inst, raw_ostream &OS,
+                        bool PrintMemData = false) const;
 
   /// Remove annotation with a given \p Index.
   ///

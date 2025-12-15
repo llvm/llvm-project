@@ -1,4 +1,4 @@
-//===--- SpecialMemberFunctionsCheck.h - clang-tidy--------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIAL_MEMBER_FUNCTIONS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIAL_MEMBER_FUNCTIONS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIALMEMBERFUNCTIONSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIALMEMBERFUNCTIONSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -19,7 +19,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// are defined.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/special-member-functions.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/special-member-functions.html
 class SpecialMemberFunctionsCheck : public ClangTidyCheck {
 public:
   SpecialMemberFunctionsCheck(StringRef Name, ClangTidyContext *Context);
@@ -69,6 +69,7 @@ private:
   const bool AllowMissingMoveFunctionsWhenCopyIsDeleted;
   const bool AllowImplicitlyDeletedCopyOrMove;
   ClassDefiningSpecialMembersMap ClassWithSpecialMembers;
+  const bool IgnoreMacros;
 };
 
 } // namespace clang::tidy::cppcoreguidelines
@@ -83,21 +84,20 @@ struct DenseMapInfo<
   using ClassDefId =
       clang::tidy::cppcoreguidelines::SpecialMemberFunctionsCheck::ClassDefId;
 
-  static inline ClassDefId getEmptyKey() {
-    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
-                      "EMPTY"};
+  static ClassDefId getEmptyKey() {
+    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(), "EMPTY"};
   }
 
-  static inline ClassDefId getTombstoneKey() {
+  static ClassDefId getTombstoneKey() {
     return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-                      "TOMBSTONE"};
+            "TOMBSTONE"};
   }
 
-  static unsigned getHashValue(ClassDefId Val) {
+  static unsigned getHashValue(const ClassDefId &Val) {
     assert(Val != getEmptyKey() && "Cannot hash the empty key!");
     assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
 
-    std::hash<ClassDefId::second_type> SecondHash;
+    const std::hash<ClassDefId::second_type> SecondHash;
     return Val.first.getHashValue() + SecondHash(Val.second);
   }
 
@@ -112,4 +112,4 @@ struct DenseMapInfo<
 
 } // namespace llvm
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIAL_MEMBER_FUNCTIONS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIALMEMBERFUNCTIONSCHECK_H

@@ -9,7 +9,7 @@
 #include "src/unistd/getentropy.h"
 #include "hdr/errno_macros.h"
 #include "src/__support/common.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>

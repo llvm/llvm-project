@@ -18,7 +18,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -42,10 +44,13 @@
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
+#include "llvm/CodeGen/InitUndef.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -61,11 +66,14 @@
 #include "llvm/CodeGen/MachineSink.h"
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
+#include "llvm/CodeGen/PEI.h"
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
+#include "llvm/CodeGen/PostRAMachineSink.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/ProcessImplicitDefs.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
@@ -73,22 +81,28 @@
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
+#include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/StackColoring.h"
+#include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
+#include "llvm/CodeGen/XRayInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
@@ -101,17 +115,19 @@
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/CFGuard.h"
+#include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
+#include "llvm/Transforms/Scalar/LoopTermFold.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/Transforms/Scalar/MergeICmps.h"
 #include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
 #include "llvm/Transforms/Scalar/ScalarizeMaskedMemIntrin.h"
+#include "llvm/Transforms/Utils/CanonicalizeFreezeInLoops.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
 #include <cassert>
-#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -159,8 +175,12 @@ public:
 
     // Target should override TM.Options.EnableIPRA in their target-specific
     // LLVMTM ctor. See TargetMachine::setGlobalISel for example.
-    if (Opt.EnableIPRA)
+    if (Opt.EnableIPRA) {
       TM.Options.EnableIPRA = *Opt.EnableIPRA;
+    } else {
+      // If not explicitly specified, use target default.
+      TM.Options.EnableIPRA |= TM.useIPRA();
+    }
 
     if (Opt.EnableGlobalISelAbort)
       TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
@@ -178,9 +198,6 @@ public:
   }
 
 protected:
-  template <typename PassT>
-  using has_required_t = decltype(std::declval<PassT &>().isRequired());
-
   template <typename PassT>
   using is_module_pass_t = decltype(std::declval<PassT &>().run(
       std::declval<Module &>(), std::declval<ModuleAnalysisManager &>()));
@@ -201,20 +218,15 @@ protected:
   class AddIRPass {
   public:
     AddIRPass(ModulePassManager &MPM, const DerivedT &PB) : MPM(MPM), PB(PB) {}
-    ~AddIRPass() {
-      if (!FPM.isEmpty())
-        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-    }
+    ~AddIRPass() { flushFPMToMPM(); }
 
     template <typename PassT>
-    void operator()(PassT &&Pass, StringRef Name = PassT::name()) {
+    void operator()(PassT &&Pass, bool Force = false,
+                    StringRef Name = PassT::name()) {
       static_assert((is_detected<is_function_pass_t, PassT>::value ||
                      is_detected<is_module_pass_t, PassT>::value) &&
                     "Only module pass and function pass are supported.");
-      bool Required = false;
-      if constexpr (is_detected<has_required_t, PassT>::value)
-        Required = PassT::isRequired();
-      if (!PB.runBeforeAdding(Name) && !Required)
+      if (!Force && !PB.runBeforeAdding(Name))
         return;
 
       // Add Function Pass
@@ -222,16 +234,40 @@ protected:
         FPM.addPass(std::forward<PassT>(Pass));
       } else {
         // Add Module Pass
-        if (!FPM.isEmpty()) {
-          MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-          FPM = FunctionPassManager();
-        }
-
+        flushFPMToMPM();
         MPM.addPass(std::forward<PassT>(Pass));
       }
     }
 
+    /// Setting this will add passes to the CGSCC pass manager.
+    void requireCGSCCOrder() {
+      if (PB.AddInCGSCCOrder)
+        return;
+      flushFPMToMPM();
+      PB.AddInCGSCCOrder = true;
+    }
+
+    /// Stop adding passes to the CGSCC pass manager.
+    /// Existing passes won't be removed.
+    void stopAddingInCGSCCOrder() {
+      if (!PB.AddInCGSCCOrder)
+        return;
+      flushFPMToMPM();
+      PB.AddInCGSCCOrder = false;
+    }
+
   private:
+    void flushFPMToMPM() {
+      if (FPM.isEmpty())
+        return;
+      if (PB.AddInCGSCCOrder) {
+        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+            createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+      } else {
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      }
+      FPM = FunctionPassManager();
+    }
     ModulePassManager &MPM;
     FunctionPassManager FPM;
     const DerivedT &PB;
@@ -243,13 +279,17 @@ protected:
     AddMachinePass(ModulePassManager &MPM, const DerivedT &PB)
         : MPM(MPM), PB(PB) {}
     ~AddMachinePass() {
-      if (!MFPM.isEmpty()) {
-        FunctionPassManager FPM;
-        FPM.addPass(
-            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-        FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+      if (MFPM.isEmpty())
+        return;
+
+      FunctionPassManager FPM;
+      FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+      FPM.addPass(FreeMachineFunctionPass());
+      if (this->PB.AddInCGSCCOrder) {
+        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+            createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+      } else
         MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-      }
     }
 
     template <typename PassT>
@@ -267,12 +307,7 @@ protected:
         MFPM.addPass(std::forward<PassT>(Pass));
       } else {
         // Add Module Pass
-        if (!MFPM.isEmpty()) {
-          MPM.addPass(createModuleToFunctionPassAdaptor(
-              createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
-          MFPM = MachineFunctionPassManager();
-        }
-
+        flushMFPMToMPM();
         MPM.addPass(std::forward<PassT>(Pass));
       }
 
@@ -280,7 +315,39 @@ protected:
         C(Name, MFPM);
     }
 
+    /// Setting this will add passes to the CGSCC pass manager.
+    void requireCGSCCOrder() {
+      if (PB.AddInCGSCCOrder)
+        return;
+      flushMFPMToMPM();
+      PB.AddInCGSCCOrder = true;
+    }
+
+    /// Stop adding passes to the CGSCC pass manager.
+    /// Existing passes won't be removed.
+    void stopAddingInCGSCCOrder() {
+      if (!PB.AddInCGSCCOrder)
+        return;
+      flushMFPMToMPM();
+      PB.AddInCGSCCOrder = false;
+    }
+
   private:
+    void flushMFPMToMPM() {
+      if (MFPM.isEmpty())
+        return;
+
+      if (PB.AddInCGSCCOrder) {
+        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+            createCGSCCToFunctionPassAdaptor(
+                createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)))));
+      } else {
+        MPM.addPass(createModuleToFunctionPassAdaptor(
+            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
+      }
+      MFPM = MachineFunctionPassManager();
+    }
+
     ModulePassManager &MPM;
     MachineFunctionPassManager MFPM;
     const DerivedT &PB;
@@ -512,11 +579,13 @@ protected:
   /// Insert InsertedPass pass after TargetPass pass.
   /// Only machine function passes are supported.
   template <typename TargetPassT, typename InsertedPassT>
-  void insertPass(InsertedPassT &&Pass) {
+  void insertPass(InsertedPassT &&Pass) const {
     AfterCallbacks.emplace_back(
         [&](StringRef Name, MachineFunctionPassManager &MFPM) mutable {
-          if (Name == TargetPassT::name())
+          if (Name == TargetPassT::name() &&
+              runBeforeAdding(InsertedPassT::name())) {
             MFPM.addPass(std::forward<InsertedPassT>(Pass));
+          }
         });
   }
 
@@ -546,6 +615,7 @@ private:
   /// Helper variable for `-start-before/-start-after/-stop-before/-stop-after`
   mutable bool Started = true;
   mutable bool Stopped = true;
+  mutable bool AddInCGSCCOrder = false;
 };
 
 template <typename Derived, typename TargetMachineT>
@@ -562,9 +632,14 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
 
   {
     AddIRPass addIRPass(MPM, derived());
-    addIRPass(RequireAnalysisPass<MachineModuleAnalysis, Module>());
-    addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
-    addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
+    addIRPass(RequireAnalysisPass<MachineModuleAnalysis, Module>(),
+              /*Force=*/true);
+    addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>(),
+              /*Force=*/true);
+    addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>(),
+              /*Force=*/true);
+    addIRPass(RequireAnalysisPass<RuntimeLibraryAnalysis, Module>(),
+              /*Force=*/true);
     addISelPasses(addIRPass);
   }
 
@@ -663,8 +738,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
     addPass(LowerEmuTLSPass());
 
   addPass(PreISelIntrinsicLoweringPass(&TM));
-  addPass(ExpandLargeDivRemPass(&TM));
-  addPass(ExpandFpPass(&TM));
+  addPass(ExpandLargeDivRemPass(TM));
+  addPass(ExpandFpPass(TM, getOptLevel()));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);
@@ -680,11 +755,16 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   // Before running any passes, run the verifier to determine if the input
   // coming from the front-end and/or optimizer is valid.
   if (!Opt.DisableVerify)
-    addPass(VerifierPass());
+    addPass(VerifierPass(), /*Force=*/true);
 
   // Run loop strength reduction before anything else.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
-    addPass(createFunctionToLoopPassAdaptor(LoopStrengthReducePass(),
+    LoopPassManager LPM;
+    LPM.addPass(CanonicalizeFreezeInLoopsPass());
+    LPM.addPass(LoopStrengthReducePass());
+    if (Opt.EnableLoopTermFold)
+      LPM.addPass(LoopTermFoldPass());
+    addPass(createFunctionToLoopPassAdaptor(std::move(LPM),
                                             /*UseMemorySSA=*/true));
   }
 
@@ -695,7 +775,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     // target lowering hook.
     if (!Opt.DisableMergeICmps)
       addPass(MergeICmpsPass());
-    addPass(ExpandMemCmpPass(&TM));
+    addPass(ExpandMemCmpPass(TM));
   }
 
   // Run GC lowering passes for builtin collectors
@@ -729,11 +809,12 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   addPass(ScalarizeMaskedMemIntrinPass());
 
   // Expand reduction intrinsics into shuffle sequences if the target wants to.
-  addPass(ExpandReductionsPass());
+  if (!Opt.DisableExpandReductions)
+    addPass(ExpandReductionsPass());
 
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableSelectOptimize)
-    addPass(SelectOptimizePass(&TM));
+    addPass(SelectOptimizePass(TM));
 
   if (Opt.EnableGlobalMergeFunc)
     addPass(GlobalMergeFuncPass());
@@ -760,14 +841,14 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addPassesToHandleExceptions(
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
   case ExceptionHandling::ZOS:
-    addPass(DwarfEHPreparePass(&TM));
+    addPass(DwarfEHPreparePass(TM));
     break;
   case ExceptionHandling::WinEH:
     // We support using both GCC-style and MSVC-style exceptions on Windows, so
     // add both preparation passes. Each pass will only actually run if it
     // recognizes the personality function.
     addPass(WinEHPreparePass());
-    addPass(DwarfEHPreparePass(&TM));
+    addPass(DwarfEHPreparePass(TM));
     break;
   case ExceptionHandling::Wasm:
     // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
@@ -792,7 +873,7 @@ template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addCodeGenPrepare(
     AddIRPass &addPass) const {
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableCGP)
-    addPass(CodeGenPreparePass(&TM));
+    addPass(CodeGenPreparePass(TM));
   // TODO: Default ctor'd RewriteSymbolPass is no-op.
   // addPass(RewriteSymbolPass());
 }
@@ -804,11 +885,17 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPrepare(
     AddIRPass &addPass) const {
   derived().addPreISel(addPass);
 
+  if (Opt.RequiresCodeGenSCCOrder)
+    addPass.requireCGSCCOrder();
+
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(ObjCARCContractPass());
+
   addPass(CallBrPreparePass());
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
-  addPass(SafeStackPass(&TM));
-  addPass(StackProtectorPass(&TM));
+  addPass(SafeStackPass(TM));
+  addPass(StackProtectorPass(TM));
 
   if (Opt.PrintISelInput)
     addPass(PrintFunctionPass(dbgs(),
@@ -817,7 +904,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPrepare(
   // All passes which modify the LLVM IR are now complete; run the verifier
   // to ensure that the IR is valid.
   if (!Opt.DisableVerify)
-    addPass(VerifierPass());
+    addPass(VerifierPass(), /*Force=*/true);
 }
 
 template <typename Derived, typename TargetMachineT>
@@ -994,26 +1081,30 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
 
   derived().addPreEmitPass(addPass);
 
-  if (TM.Options.EnableIPRA)
+  if (TM.Options.EnableIPRA) {
     // Collect register usage information and produce a register mask of
     // clobbered registers, to be used to optimize call sites.
+    addPass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>());
     addPass(RegUsageInfoCollectorPass());
+  }
 
   addPass(FuncletLayoutPass());
 
+  addPass(RemoveLoadsIntoFakeUsesPass());
   addPass(StackMapLivenessPass());
-  addPass(LiveDebugValuesPass());
-  addPass(MachineSanitizerBinaryMetadata());
+  addPass(LiveDebugValuesPass(
+      getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues()));
+  addPass(MachineSanitizerBinaryMetadataPass());
 
   if (TM.Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       Opt.EnableMachineOutliner != RunOutliner::NeverOutline) {
-    bool RunOnAllFunctions =
-        (Opt.EnableMachineOutliner == RunOutliner::AlwaysOutline);
-    bool AddOutliner = RunOnAllFunctions || TM.Options.SupportsDefaultOutlining;
-    if (AddOutliner)
-      addPass(MachineOutlinerPass(RunOnAllFunctions));
+    if (Opt.EnableMachineOutliner != RunOutliner::TargetDefault ||
+        TM.Options.SupportsDefaultOutlining)
+      addPass(MachineOutlinerPass(Opt.EnableMachineOutliner));
   }
+
+  addPass(StackFrameLayoutAnalysisPass());
 
   // Add passes that directly emit MI after all other MI passes.
   derived().addPreEmitPass2(addPass);
@@ -1104,7 +1195,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
       addPass(RAGreedyPass());
       break;
     default:
-      report_fatal_error("register allocator not supported yet", false);
+      reportFatalUsageError("register allocator not supported yet");
     }
     return;
   }
@@ -1163,7 +1254,21 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
 
   addPass(ProcessImplicitDefsPass());
 
+  // LiveVariables currently requires pure SSA form.
+  //
+  // FIXME: Once TwoAddressInstruction pass no longer uses kill flags,
+  // LiveVariables can be removed completely, and LiveIntervals can be directly
+  // computed. (We still either need to regenerate kill flags after regalloc, or
+  // preferably fix the scavenger to not depend on them).
+  // FIXME: UnreachableMachineBlockElim is a dependant pass of LiveVariables.
+  // When LiveVariables is removed this has to be removed/moved either.
+  // Explicit addition of UnreachableMachineBlockElim allows stopping before or
+  // after it with -stop-before/-stop-after.
+  addPass(UnreachableMachineBlockElimPass());
+  addPass(RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>());
+
   // Edge splitting is smarter with machine loop info.
+  addPass(RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>());
   addPass(PHIEliminationPass());
 
   // Eventually, we want to run LiveIntervals before PHI elimination.

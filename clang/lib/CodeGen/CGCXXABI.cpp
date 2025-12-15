@@ -50,10 +50,9 @@ CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
     llvm::Value *MemPtr, const MemberPointerType *MPT) {
   ErrorUnsupportedABI(CGF, "calls through member pointers");
 
-  const auto *RD =
-      cast<CXXRecordDecl>(MPT->getClass()->castAs<RecordType>()->getDecl());
+  const auto *RD = MPT->getMostRecentCXXRecordDecl();
   ThisPtrForCall =
-      CGF.getAsNaturalPointerTo(This, CGF.getContext().getRecordType(RD));
+      CGF.getAsNaturalPointerTo(This, CGF.getContext().getCanonicalTagType(RD));
   const FunctionProtoType *FPT =
       MPT->getPointeeType()->getAs<FunctionProtoType>();
   llvm::Constant *FnPtr = llvm::Constant::getNullValue(
@@ -61,10 +60,9 @@ CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
   return CGCallee::forDirect(FnPtr, FPT);
 }
 
-llvm::Value *
-CGCXXABI::EmitMemberDataPointerAddress(CodeGenFunction &CGF, const Expr *E,
-                                       Address Base, llvm::Value *MemPtr,
-                                       const MemberPointerType *MPT) {
+llvm::Value *CGCXXABI::EmitMemberDataPointerAddress(
+    CodeGenFunction &CGF, const Expr *E, Address Base, llvm::Value *MemPtr,
+    const MemberPointerType *MPT, bool IsInBounds) {
   ErrorUnsupportedABI(CGF, "loads of member pointers");
   llvm::Type *Ty =
       llvm::PointerType::get(CGF.getLLVMContext(), Base.getAddressSpace());
@@ -108,7 +106,7 @@ CGCXXABI::EmitNullMemberPointer(const MemberPointerType *MPT) {
 
 llvm::Constant *CGCXXABI::EmitMemberFunctionPointer(const CXXMethodDecl *MD) {
   return GetBogusMemberPointer(CGM.getContext().getMemberPointerType(
-      MD->getType(), MD->getParent()->getTypeForDecl()));
+      MD->getType(), /*Qualifier=*/std::nullopt, MD->getParent()));
 }
 
 llvm::Constant *CGCXXABI::EmitMemberDataPointer(const MemberPointerType *MPT,
@@ -167,10 +165,7 @@ bool CGCXXABI::mayNeedDestruction(const VarDecl *VD) const {
   // If the variable has an incomplete class type (or array thereof), it
   // might need destruction.
   const Type *T = VD->getType()->getBaseElementTypeUnsafe();
-  if (T->getAs<RecordType>() && T->isIncompleteType())
-    return true;
-
-  return false;
+  return T->isRecordType() && T->isIncompleteType();
 }
 
 bool CGCXXABI::isEmittedWithConstantInitializer(
@@ -273,6 +268,20 @@ void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
   numElements = readArrayCookieImpl(CGF, allocAddr, cookieSize);
 }
 
+void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
+                               QualType eltTy, llvm::Value *&numElements,
+                               llvm::Value *&allocPtr, CharUnits &cookieSize) {
+  assert(eltTy.isDestructedType());
+
+  // Derive a char* in the same address space as the pointer.
+  ptr = ptr.withElementType(CGF.Int8Ty);
+
+  cookieSize = getArrayCookieSizeImpl(eltTy);
+  Address allocAddr = CGF.Builder.CreateConstInBoundsByteGEP(ptr, -cookieSize);
+  allocPtr = allocAddr.emitRawPointer(CGF);
+  numElements = readArrayCookieImpl(CGF, allocAddr, cookieSize);
+}
+
 llvm::Value *CGCXXABI::readArrayCookieImpl(CodeGenFunction &CGF,
                                            Address ptr,
                                            CharUnits cookieSize) {
@@ -294,7 +303,7 @@ llvm::Constant *CGCXXABI::getMemberPointerAdjustment(const CastExpr *E) {
     derivedType = E->getType();
 
   const CXXRecordDecl *derivedClass =
-    derivedType->castAs<MemberPointerType>()->getClass()->getAsCXXRecordDecl();
+      derivedType->castAs<MemberPointerType>()->getMostRecentCXXRecordDecl();
 
   return CGM.GetNonVirtualBaseClassOffset(derivedClass,
                                           E->path_begin(),

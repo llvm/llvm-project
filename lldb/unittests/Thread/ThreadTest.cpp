@@ -28,7 +28,6 @@
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
-using namespace lldb_private::repro;
 using namespace lldb;
 
 namespace {
@@ -49,7 +48,7 @@ public:
     HMODULE hModule = ::LoadLibraryW(L"Kernel32.dll");
     if (hModule) {
       SetThreadName = reinterpret_cast<SetThreadDescriptionFunctionPtr>(
-          ::GetProcAddress(hModule, "SetThreadDescription"));
+          (void *)::GetProcAddress(hModule, "SetThreadDescription"));
     }
     PlatformWindows::Initialize();
 #endif

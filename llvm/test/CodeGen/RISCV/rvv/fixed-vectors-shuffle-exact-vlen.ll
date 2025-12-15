@@ -70,17 +70,17 @@ define <8 x i32> @m2_pair_swap_vl8(<8 x i32> %v1) vscale_range(2,2) {
 ; RV32-LABEL: m2_pair_swap_vl8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v10, 0
+; RV32-NEXT:    vmv.v.i v12, 0
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vwsubu.vx v12, v10, a0
+; RV32-NEXT:    vwsubu.vx v10, v12, a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV32-NEXT:    vmv.v.x v10, a0
-; RV32-NEXT:    vand.vx v12, v12, a1
+; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vand.vx v10, v10, a1
-; RV32-NEXT:    vsrl.vv v12, v8, v12
-; RV32-NEXT:    vsll.vv v8, v8, v10
-; RV32-NEXT:    vor.vv v8, v8, v12
+; RV32-NEXT:    vand.vx v12, v12, a1
+; RV32-NEXT:    vsrl.vv v10, v8, v10
+; RV32-NEXT:    vsll.vv v8, v8, v12
+; RV32-NEXT:    vor.vv v8, v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: m2_pair_swap_vl8:
@@ -182,24 +182,24 @@ define void @shuffle1(ptr %explicit_0, ptr %explicit_1) vscale_range(2,2) {
 ; CHECK-LABEL: shuffle1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a0, a0, 252
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 12, e8, m1, ta, ma
+; CHECK-NEXT:    vle8.v v10, (a0)
 ; CHECK-NEXT:    vmv.v.i v0, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vslidedown.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vslidedown.vi v10, v10, 1, v0.t
 ; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmerge.vvm v11, v11, v8, v0
+; CHECK-NEXT:    vmerge.vvm v9, v9, v10, v0
 ; CHECK-NEXT:    addi a0, a1, 672
-; CHECK-NEXT:    vs2r.v v10, (a0)
+; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    ret
   %1 = getelementptr i32, ptr %explicit_0, i64 63
   %2 = load <3 x i32>, ptr %1, align 1
-  %3 = shufflevector <3 x i32> %2, <3 x i32> undef, <2 x i32> <i32 1, i32 2>
-  %4 = shufflevector <2 x i32> %3, <2 x i32> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %5 = shufflevector <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 undef, i32 0, i32 undef, i32 0>, <8 x i32> %4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 5, i32 9, i32 7>
+  %3 = shufflevector <3 x i32> %2, <3 x i32> poison, <2 x i32> <i32 1, i32 2>
+  %4 = shufflevector <2 x i32> %3, <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %5 = shufflevector <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 poison, i32 0>, <8 x i32> %4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 5, i32 9, i32 7>
   %6 = getelementptr inbounds <8 x i32>, ptr %explicit_1, i64 21
   store <8 x i32> %5, ptr %6, align 32
   ret void
@@ -218,7 +218,7 @@ define <16 x float> @shuffle2(<4 x float> %a) vscale_range(2,2) {
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v12, v0
 ; CHECK-NEXT:    ret
   %b = extractelement <4 x float> %a, i32 2
-  %c = insertelement <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %b, i32 5
+  %c = insertelement <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %b, i32 5
   %b1 = extractelement <4 x float> %a, i32 0
   %c1 = insertelement <16 x float> %c, float %b1, i32 6
   ret <16 x float>%c1
@@ -296,8 +296,8 @@ define <4 x double> @shuffles_add(<4 x double> %0, <4 x double> %1) vscale_range
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v12, v10
 ; CHECK-NEXT:    ret
-  %3 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 undef, i32 2, i32 4, i32 6>
-  %4 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 undef, i32 3, i32 5, i32 7>
+  %3 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 poison, i32 2, i32 4, i32 6>
+  %4 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 poison, i32 3, i32 5, i32 7>
   %5 = fadd <4 x double> %3, %4
   ret <4 x double> %5
 }
@@ -338,20 +338,20 @@ define i64 @multi_chunks_shuffle(<32 x i32> %0) vscale_range(8,8) {
 ; RV32-LABEL: multi_chunks_shuffle:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v10, 0
+; RV32-NEXT:    vmv.v.i v12, 0
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vwsubu.vx v12, v10, a0
+; RV32-NEXT:    vwsubu.vx v10, v12, a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV32-NEXT:    vmv.v.x v10, a0
+; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    lui a0, 61681
 ; RV32-NEXT:    addi a0, a0, -241
-; RV32-NEXT:    vand.vx v12, v12, a1
 ; RV32-NEXT:    vand.vx v10, v10, a1
-; RV32-NEXT:    vsrl.vv v12, v8, v12
-; RV32-NEXT:    vsll.vv v8, v8, v10
+; RV32-NEXT:    vand.vx v12, v12, a1
+; RV32-NEXT:    vsrl.vv v10, v8, v10
+; RV32-NEXT:    vsll.vv v8, v8, v12
 ; RV32-NEXT:    vmv.s.x v0, a0
-; RV32-NEXT:    vor.vv v8, v8, v12
+; RV32-NEXT:    vor.vv v8, v8, v10
 ; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.i v10, 0
 ; RV32-NEXT:    vmerge.vvm v8, v10, v8, v0

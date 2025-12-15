@@ -33,6 +33,7 @@
 #define LLVM_CODEGEN_GCMETADATA_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -40,6 +41,7 @@
 #include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -99,12 +101,12 @@ private:
   // are live per safe point (1.5% on 64-bit hosts).
 
 public:
-  GCFunctionInfo(const Function &F, GCStrategy &S);
-  ~GCFunctionInfo();
+  LLVM_ABI GCFunctionInfo(const Function &F, GCStrategy &S);
+  LLVM_ABI ~GCFunctionInfo();
 
   /// Handle invalidation explicitly.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &Inv);
 
   /// getFunction - Return the function to which this metadata applies.
   const Function &getFunction() const { return F; }
@@ -151,15 +153,47 @@ public:
   size_t live_size(const iterator &p) const { return roots_size(); }
 };
 
-struct GCStrategyMap {
-  StringMap<std::unique_ptr<GCStrategy>> StrategyMap;
+class GCStrategyMap {
+  using MapT =
+      MapVector<StringRef, std::unique_ptr<GCStrategy>, StringMap<unsigned>>;
+  MapT Strategies;
 
+public:
   GCStrategyMap() = default;
   GCStrategyMap(GCStrategyMap &&) = default;
 
   /// Handle invalidation explicitly.
-  bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv);
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &Inv);
+
+  using iterator = MapT::iterator;
+  using const_iterator = MapT::const_iterator;
+  using reverse_iterator = MapT::reverse_iterator;
+  using const_reverse_iterator = MapT::const_reverse_iterator;
+
+  iterator begin() { return Strategies.begin(); }
+  const_iterator begin() const { return Strategies.begin(); }
+  iterator end() { return Strategies.end(); }
+  const_iterator end() const { return Strategies.end(); }
+
+  reverse_iterator rbegin() { return Strategies.rbegin(); }
+  const_reverse_iterator rbegin() const { return Strategies.rbegin(); }
+  reverse_iterator rend() { return Strategies.rend(); }
+  const_reverse_iterator rend() const { return Strategies.rend(); }
+
+  bool empty() const { return Strategies.empty(); }
+
+  const GCStrategy &operator[](StringRef GCName) const {
+    auto I = Strategies.find(GCName);
+    assert(I != Strategies.end() && "Required strategy doesn't exist!");
+    return *I->second;
+  }
+
+  std::pair<iterator, bool> try_emplace(StringRef GCName) {
+    return Strategies.try_emplace(GCName);
+  }
+
+  bool contains(StringRef GCName) const { return Strategies.contains(GCName); }
 };
 
 /// An analysis pass which caches information about the entire Module.
@@ -167,11 +201,11 @@ struct GCStrategyMap {
 class CollectorMetadataAnalysis
     : public AnalysisInfoMixin<CollectorMetadataAnalysis> {
   friend struct AnalysisInfoMixin<CollectorMetadataAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = GCStrategyMap;
-  Result run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI Result run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 /// An analysis pass which caches information about the Function.
@@ -179,11 +213,11 @@ public:
 /// This pass depends on `CollectorMetadataAnalysis`.
 class GCFunctionAnalysis : public AnalysisInfoMixin<GCFunctionAnalysis> {
   friend struct AnalysisInfoMixin<GCFunctionAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = GCFunctionInfo;
-  Result run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// LowerIntrinsics - This pass rewrites calls to the llvm.gcread or
@@ -194,7 +228,7 @@ public:
 /// This pass requires `CollectorMetadataAnalysis`.
 class GCLoweringPass : public PassInfoMixin<GCLoweringPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// An analysis pass which caches information about the entire Module.
@@ -210,7 +244,7 @@ public:
   /// Lookup the GCStrategy object associated with the given gc name.
   /// Objects are owned internally; No caller should attempt to delete the
   /// returned objects.
-  GCStrategy *getGCStrategy(const StringRef Name);
+  LLVM_ABI GCStrategy *getGCStrategy(const StringRef Name);
 
   /// List of per function info objects.  In theory, Each of these
   /// may be associated with a different GC.
@@ -231,14 +265,14 @@ private:
 public:
   using iterator = SmallVector<std::unique_ptr<GCStrategy>, 1>::const_iterator;
 
-  static char ID;
+  LLVM_ABI static char ID;
 
-  GCModuleInfo();
+  LLVM_ABI GCModuleInfo();
 
   /// clear - Resets the pass. Any pass, which uses GCModuleInfo, should
   /// call it in doFinalization().
   ///
-  void clear();
+  LLVM_ABI void clear();
 
   /// begin/end - Iterators for used strategies.
   ///
@@ -248,7 +282,7 @@ public:
   /// get - Look up function metadata.  This is currently assumed
   /// have the side effect of initializing the associated GCStrategy.  That
   /// will soon change.
-  GCFunctionInfo &getFunctionInfo(const Function &F);
+  LLVM_ABI GCFunctionInfo &getFunctionInfo(const Function &F);
 };
 
 } // end namespace llvm

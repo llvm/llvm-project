@@ -37,7 +37,7 @@ struct __disabled_formatter {
 /// - is_copy_assignable_v<F>, and
 /// - is_move_assignable_v<F>.
 template <class _Tp, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter : __disabled_formatter {};
+struct formatter : __disabled_formatter {};
 
 #  if _LIBCPP_STD_VER >= 23
 

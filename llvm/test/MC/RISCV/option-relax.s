@@ -21,15 +21,11 @@
 
 # CHECK-INST: call foo
 # CHECK-RELOC: R_RISCV_CALL_PLT foo 0x0
-# CHECK-RELOC-NOT: R_RISCV_RELAX - 0x0
+# CHECK-RELOC-NOT: R_RISCV
 call foo
 
-# CHECK-RELOC-NEXT: R_RISCV_ADD64
-# CHECK-RELOC-NEXT: R_RISCV_SUB64
 .dword .L2-.L1
-# CHECK-RELOC-NEXT: R_RISCV_JAL
 jal zero, .L1
-# CHECK-RELOC-NEXT: R_RISCV_BRANCH
 beq s1, s1, .L1
 
 .L2:
@@ -41,8 +37,6 @@ beq s1, s1, .L1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX - 0x0
 call bar
 
-# CHECK-RELOC-NEXT: R_RISCV_ADD64
-# CHECK-RELOC-NEXT: R_RISCV_SUB64
 .dword .L2-.L1
 # CHECK-RELOC-NEXT: R_RISCV_JAL
 jal zero, .L1
@@ -57,8 +51,6 @@ beq s1, s1, .L1
 # CHECK-RELOC-NOT: R_RISCV_RELAX - 0x0
 call baz
 
-# CHECK-RELOC-NEXT: R_RISCV_ADD64
-# CHECK-RELOC-NEXT: R_RISCV_SUB64
 .dword .L2-.L1
 # CHECK-RELOC-NEXT: R_RISCV_JAL
 jal zero, .L1
@@ -70,3 +62,8 @@ beq s1, s1, .L1
 auipc t1, %pcrel_hi(.L1)
 # CHECK-RELOC-NEXT: R_RISCV_PCREL_LO12_I .Ltmp0
 addi t1, t1, %pcrel_lo(1b)
+
+# CHECK-RELOC-NOT: .rela.text1
+.section .text1,"ax"
+nop
+call .text1

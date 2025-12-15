@@ -81,6 +81,7 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   case Instruction::Opcode::FPToUI:
   case Instruction::Opcode::FPToSI:
   case Instruction::Opcode::FPExt:
+  case Instruction::Opcode::PtrToAddr:
   case Instruction::Opcode::PtrToInt:
   case Instruction::Opcode::IntToPtr:
   case Instruction::Opcode::SIToFP:
@@ -219,7 +220,7 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
              [BB](auto *V) { return cast<Instruction>(V)->getParent() != BB; }))
     return createLegalityResult<Pack>(ResultReason::DiffBBs);
   // Pack if instructions repeat, i.e., require some sort of broadcast.
-  SmallPtrSet<Value *, 8> Unique(Bndl.begin(), Bndl.end());
+  SmallPtrSet<Value *, 8> Unique(llvm::from_range, Bndl);
   if (Unique.size() != Bndl.size())
     return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
 

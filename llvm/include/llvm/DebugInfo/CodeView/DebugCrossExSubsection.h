@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <map>
@@ -34,8 +35,8 @@ public:
     return S->kind() == DebugSubsectionKind::CrossScopeExports;
   }
 
-  Error initialize(BinaryStreamReader Reader);
-  Error initialize(BinaryStreamRef Stream);
+  LLVM_ABI Error initialize(BinaryStreamReader Reader);
+  LLVM_ABI Error initialize(BinaryStreamRef Stream);
 
   Iterator begin() const { return References.begin(); }
   Iterator end() const { return References.end(); }
@@ -44,7 +45,8 @@ private:
   FixedStreamArray<CrossModuleExport> References;
 };
 
-class DebugCrossModuleExportsSubsection final : public DebugSubsection {
+class LLVM_ABI DebugCrossModuleExportsSubsection final
+    : public DebugSubsection {
 public:
   DebugCrossModuleExportsSubsection()
       : DebugSubsection(DebugSubsectionKind::CrossScopeExports) {}

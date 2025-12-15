@@ -16,8 +16,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+zfbfmin,+zvfbfmin,+v,+m -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs -early-live-intervals < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN
 
-declare <vscale x 1 x bfloat> @llvm.maximum.nxv1bf16(<vscale x 1 x bfloat>, <vscale x 1 x bfloat>)
-
 define <vscale x 1 x bfloat> @vfmax_nxv1bf16_vv(<vscale x 1 x bfloat> %a, <vscale x 1 x bfloat> %b) {
 ; CHECK-LABEL: vfmax_nxv1bf16_vv:
 ; CHECK:       # %bb.0:
@@ -38,8 +36,6 @@ define <vscale x 1 x bfloat> @vfmax_nxv1bf16_vv(<vscale x 1 x bfloat> %a, <vscal
   %v = call <vscale x 1 x bfloat> @llvm.maximum.nxv1bf16(<vscale x 1 x bfloat> %a, <vscale x 1 x bfloat> %b)
   ret <vscale x 1 x bfloat> %v
 }
-
-declare <vscale x 2 x bfloat> @llvm.maximum.nxv2bf16(<vscale x 2 x bfloat>, <vscale x 2 x bfloat>)
 
 define <vscale x 2 x bfloat> @vfmax_nxv2bf16_vv(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
 ; CHECK-LABEL: vfmax_nxv2bf16_vv:
@@ -62,8 +58,6 @@ define <vscale x 2 x bfloat> @vfmax_nxv2bf16_vv(<vscale x 2 x bfloat> %a, <vscal
   ret <vscale x 2 x bfloat> %v
 }
 
-declare <vscale x 4 x bfloat> @llvm.maximum.nxv4bf16(<vscale x 4 x bfloat>, <vscale x 4 x bfloat>)
-
 define <vscale x 4 x bfloat> @vfmax_nxv4bf16_vv(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
 ; CHECK-LABEL: vfmax_nxv4bf16_vv:
 ; CHECK:       # %bb.0:
@@ -84,8 +78,6 @@ define <vscale x 4 x bfloat> @vfmax_nxv4bf16_vv(<vscale x 4 x bfloat> %a, <vscal
   %v = call <vscale x 4 x bfloat> @llvm.maximum.nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b)
   ret <vscale x 4 x bfloat> %v
 }
-
-declare <vscale x 8 x bfloat> @llvm.maximum.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
 
 define <vscale x 8 x bfloat> @vfmax_nxv8bf16_vv(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: vfmax_nxv8bf16_vv:
@@ -108,8 +100,6 @@ define <vscale x 8 x bfloat> @vfmax_nxv8bf16_vv(<vscale x 8 x bfloat> %a, <vscal
   ret <vscale x 8 x bfloat> %v
 }
 
-declare <vscale x 16 x bfloat> @llvm.maximum.nxv16bf16(<vscale x 16 x bfloat>, <vscale x 16 x bfloat>)
-
 define <vscale x 16 x bfloat> @vfmax_nxv16bf16_vv(<vscale x 16 x bfloat> %a, <vscale x 16 x bfloat> %b) {
 ; CHECK-LABEL: vfmax_nxv16bf16_vv:
 ; CHECK:       # %bb.0:
@@ -130,163 +120,72 @@ define <vscale x 16 x bfloat> @vfmax_nxv16bf16_vv(<vscale x 16 x bfloat> %a, <vs
   ret <vscale x 16 x bfloat> %v
 }
 
-declare <vscale x 32 x bfloat> @llvm.maximum.nxv32bf16(<vscale x 32 x bfloat>, <vscale x 32 x bfloat>)
-
 define <vscale x 32 x bfloat> @vfmax_nxv32bf16_vv(<vscale x 32 x bfloat> %a, <vscale x 32 x bfloat> %b) nounwind {
-; ZVFH-LABEL: vfmax_nxv32bf16_vv:
-; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    addi sp, sp, -16
-; ZVFH-NEXT:    csrr a0, vlenb
-; ZVFH-NEXT:    slli a0, a0, 3
-; ZVFH-NEXT:    mv a1, a0
-; ZVFH-NEXT:    slli a0, a0, 1
-; ZVFH-NEXT:    add a0, a0, a1
-; ZVFH-NEXT:    sub sp, sp, a0
-; ZVFH-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; ZVFH-NEXT:    vmv8r.v v24, v16
-; ZVFH-NEXT:    csrr a0, vlenb
-; ZVFH-NEXT:    slli a0, a0, 3
-; ZVFH-NEXT:    add a0, sp, a0
-; ZVFH-NEXT:    addi a0, a0, 16
-; ZVFH-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
-; ZVFH-NEXT:    vmv8r.v v0, v8
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v24
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v0
-; ZVFH-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFH-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFH-NEXT:    vmfeq.vv v3, v16, v16
-; ZVFH-NEXT:    vmerge.vvm v24, v8, v16, v0
-; ZVFH-NEXT:    csrr a0, vlenb
-; ZVFH-NEXT:    slli a0, a0, 4
-; ZVFH-NEXT:    add a0, sp, a0
-; ZVFH-NEXT:    addi a0, a0, 16
-; ZVFH-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
-; ZVFH-NEXT:    vmv1r.v v0, v3
-; ZVFH-NEXT:    vmerge.vvm v8, v16, v8, v0
-; ZVFH-NEXT:    addi a0, sp, 16
-; ZVFH-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; ZVFH-NEXT:    csrr a0, vlenb
-; ZVFH-NEXT:    slli a0, a0, 3
-; ZVFH-NEXT:    add a0, sp, a0
-; ZVFH-NEXT:    addi a0, a0, 16
-; ZVFH-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
-; ZVFH-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v24, v12
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v4
-; ZVFH-NEXT:    csrr a0, vlenb
-; ZVFH-NEXT:    slli a0, a0, 4
-; ZVFH-NEXT:    add a0, sp, a0
-; ZVFH-NEXT:    addi a0, a0, 16
-; ZVFH-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; ZVFH-NEXT:    addi a0, sp, 16
-; ZVFH-NEXT:    vl8r.v v0, (a0) # Unknown-size Folded Reload
-; ZVFH-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFH-NEXT:    vfmax.vv v16, v0, v16
-; ZVFH-NEXT:    csrr a0, vlenb
-; ZVFH-NEXT:    slli a0, a0, 4
-; ZVFH-NEXT:    add a0, sp, a0
-; ZVFH-NEXT:    addi a0, a0, 16
-; ZVFH-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
-; ZVFH-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFH-NEXT:    vmfeq.vv v7, v24, v24
-; ZVFH-NEXT:    vmerge.vvm v16, v8, v24, v0
-; ZVFH-NEXT:    vmv1r.v v0, v7
-; ZVFH-NEXT:    vmerge.vvm v8, v24, v8, v0
-; ZVFH-NEXT:    vfmax.vv v16, v8, v16
-; ZVFH-NEXT:    csrr a0, vlenb
-; ZVFH-NEXT:    slli a0, a0, 4
-; ZVFH-NEXT:    add a0, sp, a0
-; ZVFH-NEXT:    addi a0, a0, 16
-; ZVFH-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; ZVFH-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v24
-; ZVFH-NEXT:    vfncvtbf16.f.f.w v12, v16
-; ZVFH-NEXT:    csrr a0, vlenb
-; ZVFH-NEXT:    slli a0, a0, 3
-; ZVFH-NEXT:    mv a1, a0
-; ZVFH-NEXT:    slli a0, a0, 1
-; ZVFH-NEXT:    add a0, a0, a1
-; ZVFH-NEXT:    add sp, sp, a0
-; ZVFH-NEXT:    addi sp, sp, 16
-; ZVFH-NEXT:    ret
-;
-; ZVFHMIN-LABEL: vfmax_nxv32bf16_vv:
-; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    addi sp, sp, -16
-; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    li a1, 24
-; ZVFHMIN-NEXT:    mul a0, a0, a1
-; ZVFHMIN-NEXT:    sub sp, sp, a0
-; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vmv8r.v v24, v16
-; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    slli a0, a0, 3
-; ZVFHMIN-NEXT:    add a0, sp, a0
-; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
-; ZVFHMIN-NEXT:    vmv8r.v v0, v8
-; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v16, v24
-; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v8, v0
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFHMIN-NEXT:    vmfeq.vv v3, v16, v16
-; ZVFHMIN-NEXT:    vmerge.vvm v24, v8, v16, v0
-; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    slli a0, a0, 4
-; ZVFHMIN-NEXT:    add a0, sp, a0
-; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
-; ZVFHMIN-NEXT:    vmv1r.v v0, v3
-; ZVFHMIN-NEXT:    vmerge.vvm v8, v16, v8, v0
-; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    slli a0, a0, 3
-; ZVFHMIN-NEXT:    add a0, sp, a0
-; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v24, v12
-; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v8, v4
-; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    slli a0, a0, 4
-; ZVFHMIN-NEXT:    add a0, sp, a0
-; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vl8r.v v0, (a0) # Unknown-size Folded Reload
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfmax.vv v16, v0, v16
-; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    slli a0, a0, 4
-; ZVFHMIN-NEXT:    add a0, sp, a0
-; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
-; ZVFHMIN-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFHMIN-NEXT:    vmfeq.vv v7, v24, v24
-; ZVFHMIN-NEXT:    vmerge.vvm v16, v8, v24, v0
-; ZVFHMIN-NEXT:    vmv1r.v v0, v7
-; ZVFHMIN-NEXT:    vmerge.vvm v8, v24, v8, v0
-; ZVFHMIN-NEXT:    vfmax.vv v16, v8, v16
-; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    slli a0, a0, 4
-; ZVFHMIN-NEXT:    add a0, sp, a0
-; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfncvtbf16.f.f.w v8, v24
-; ZVFHMIN-NEXT:    vfncvtbf16.f.f.w v12, v16
-; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    li a1, 24
-; ZVFHMIN-NEXT:    mul a0, a0, a1
-; ZVFHMIN-NEXT:    add sp, sp, a0
-; ZVFHMIN-NEXT:    addi sp, sp, 16
-; ZVFHMIN-NEXT:    ret
+; CHECK-LABEL: vfmax_nxv32bf16_vv:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vmv8r.v v0, v16
+; CHECK-NEXT:    vmv8r.v v24, v8
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v0
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v24
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmfeq.vv v0, v8, v8
+; CHECK-NEXT:    vmfeq.vv v3, v16, v16
+; CHECK-NEXT:    vmerge.vvm v24, v8, v16, v0
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vmv1r.v v0, v3
+; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v4
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vfmax.vv v8, v8, v16
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v20
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmfeq.vv v0, v8, v8
+; CHECK-NEXT:    vmfeq.vv v7, v24, v24
+; CHECK-NEXT:    vmerge.vvm v16, v8, v24, v0
+; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
+; CHECK-NEXT:    vfmax.vv v16, v8, v16
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v24
+; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v16
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
   %v = call <vscale x 32 x bfloat> @llvm.maximum.nxv32bf16(<vscale x 32 x bfloat> %a, <vscale x 32 x bfloat> %b)
   ret <vscale x 32 x bfloat> %v
 }
-
-declare <vscale x 1 x half> @llvm.maximum.nxv1f16(<vscale x 1 x half>, <vscale x 1 x half>)
 
 define <vscale x 1 x half> @vfmax_nxv1f16_vv(<vscale x 1 x half> %a, <vscale x 1 x half> %b) {
 ; ZVFH-LABEL: vfmax_nxv1f16_vv:
@@ -319,8 +218,6 @@ define <vscale x 1 x half> @vfmax_nxv1f16_vv(<vscale x 1 x half> %a, <vscale x 1
   ret <vscale x 1 x half> %v
 }
 
-declare <vscale x 2 x half> @llvm.maximum.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half>)
-
 define <vscale x 2 x half> @vfmax_nxv2f16_vv(<vscale x 2 x half> %a, <vscale x 2 x half> %b) {
 ; ZVFH-LABEL: vfmax_nxv2f16_vv:
 ; ZVFH:       # %bb.0:
@@ -351,8 +248,6 @@ define <vscale x 2 x half> @vfmax_nxv2f16_vv(<vscale x 2 x half> %a, <vscale x 2
   %v = call <vscale x 2 x half> @llvm.maximum.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b)
   ret <vscale x 2 x half> %v
 }
-
-declare <vscale x 4 x half> @llvm.maximum.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half>)
 
 define <vscale x 4 x half> @vfmax_nxv4f16_vv(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; ZVFH-LABEL: vfmax_nxv4f16_vv:
@@ -385,8 +280,6 @@ define <vscale x 4 x half> @vfmax_nxv4f16_vv(<vscale x 4 x half> %a, <vscale x 4
   ret <vscale x 4 x half> %v
 }
 
-declare <vscale x 8 x half> @llvm.maximum.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
-
 define <vscale x 8 x half> @vfmax_nxv8f16_vv(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; ZVFH-LABEL: vfmax_nxv8f16_vv:
 ; ZVFH:       # %bb.0:
@@ -418,8 +311,6 @@ define <vscale x 8 x half> @vfmax_nxv8f16_vv(<vscale x 8 x half> %a, <vscale x 8
   ret <vscale x 8 x half> %v
 }
 
-declare <vscale x 16 x half> @llvm.maximum.nxv16f16(<vscale x 16 x half>, <vscale x 16 x half>)
-
 define <vscale x 16 x half> @vfmax_nxv16f16_vv(<vscale x 16 x half> %a, <vscale x 16 x half> %b) {
 ; ZVFH-LABEL: vfmax_nxv16f16_vv:
 ; ZVFH:       # %bb.0:
@@ -450,8 +341,6 @@ define <vscale x 16 x half> @vfmax_nxv16f16_vv(<vscale x 16 x half> %a, <vscale 
   ret <vscale x 16 x half> %v
 }
 
-declare <vscale x 32 x half> @llvm.maximum.nxv32f16(<vscale x 32 x half>, <vscale x 32 x half>)
-
 define <vscale x 32 x half> @vfmax_nxv32f16_vv(<vscale x 32 x half> %a, <vscale x 32 x half> %b) nounwind {
 ; ZVFH-LABEL: vfmax_nxv32f16_vv:
 ; ZVFH:       # %bb.0:
@@ -468,54 +357,45 @@ define <vscale x 32 x half> @vfmax_nxv32f16_vv(<vscale x 32 x half> %a, <vscale 
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    addi sp, sp, -16
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    li a1, 24
-; ZVFHMIN-NEXT:    mul a0, a0, a1
+; ZVFHMIN-NEXT:    slli a0, a0, 4
 ; ZVFHMIN-NEXT:    sub sp, sp, a0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vmv8r.v v24, v16
-; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    slli a0, a0, 3
-; ZVFHMIN-NEXT:    add a0, sp, a0
-; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
-; ZVFHMIN-NEXT:    vmv8r.v v0, v8
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v24
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v0
+; ZVFHMIN-NEXT:    vmv8r.v v0, v16
+; ZVFHMIN-NEXT:    vmv8r.v v24, v8
+; ZVFHMIN-NEXT:    addi a0, sp, 16
+; ZVFHMIN-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v0
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v24
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vv v0, v8, v8
 ; ZVFHMIN-NEXT:    vmfeq.vv v3, v16, v16
 ; ZVFHMIN-NEXT:    vmerge.vvm v24, v8, v16, v0
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    slli a0, a0, 4
+; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v3
 ; ZVFHMIN-NEXT:    vmerge.vvm v8, v16, v8, v0
-; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v4
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v4
-; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    slli a0, a0, 4
-; ZVFHMIN-NEXT:    add a0, sp, a0
-; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vl8r.v v0, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfmax.vv v16, v0, v16
+; ZVFHMIN-NEXT:    vfmax.vv v8, v8, v16
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    slli a0, a0, 4
+; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; ZVFHMIN-NEXT:    addi a0, sp, 16
+; ZVFHMIN-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v20
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vv v0, v8, v8
 ; ZVFHMIN-NEXT:    vmfeq.vv v7, v24, v24
 ; ZVFHMIN-NEXT:    vmerge.vvm v16, v8, v24, v0
@@ -523,24 +403,21 @@ define <vscale x 32 x half> @vfmax_nxv32f16_vv(<vscale x 32 x half> %a, <vscale 
 ; ZVFHMIN-NEXT:    vmerge.vvm v8, v24, v8, v0
 ; ZVFHMIN-NEXT:    vfmax.vv v16, v8, v16
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    slli a0, a0, 4
+; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v24
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    li a1, 24
-; ZVFHMIN-NEXT:    mul a0, a0, a1
+; ZVFHMIN-NEXT:    slli a0, a0, 4
 ; ZVFHMIN-NEXT:    add sp, sp, a0
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 32 x half> @llvm.maximum.nxv32f16(<vscale x 32 x half> %a, <vscale x 32 x half> %b)
   ret <vscale x 32 x half> %v
 }
-
-declare <vscale x 1 x float> @llvm.maximum.nxv1f32(<vscale x 1 x float>, <vscale x 1 x float>)
 
 define <vscale x 1 x float> @vfmax_nxv1f32_vv(<vscale x 1 x float> %a, <vscale x 1 x float> %b) {
 ; CHECK-LABEL: vfmax_nxv1f32_vv:
@@ -556,8 +433,6 @@ define <vscale x 1 x float> @vfmax_nxv1f32_vv(<vscale x 1 x float> %a, <vscale x
   ret <vscale x 1 x float> %v
 }
 
-declare <vscale x 2 x float> @llvm.maximum.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>)
-
 define <vscale x 2 x float> @vfmax_nxv2f32_vv(<vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: vfmax_nxv2f32_vv:
 ; CHECK:       # %bb.0:
@@ -571,8 +446,6 @@ define <vscale x 2 x float> @vfmax_nxv2f32_vv(<vscale x 2 x float> %a, <vscale x
   %v = call <vscale x 2 x float> @llvm.maximum.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b)
   ret <vscale x 2 x float> %v
 }
-
-declare <vscale x 4 x float> @llvm.maximum.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
 
 define <vscale x 4 x float> @vfmax_nxv4f32_vv(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: vfmax_nxv4f32_vv:
@@ -588,8 +461,6 @@ define <vscale x 4 x float> @vfmax_nxv4f32_vv(<vscale x 4 x float> %a, <vscale x
   ret <vscale x 4 x float> %v
 }
 
-declare <vscale x 8 x float> @llvm.maximum.nxv8f32(<vscale x 8 x float>, <vscale x 8 x float>)
-
 define <vscale x 8 x float> @vfmax_nxv8f32_vv(<vscale x 8 x float> %a, <vscale x 8 x float> %b) {
 ; CHECK-LABEL: vfmax_nxv8f32_vv:
 ; CHECK:       # %bb.0:
@@ -603,8 +474,6 @@ define <vscale x 8 x float> @vfmax_nxv8f32_vv(<vscale x 8 x float> %a, <vscale x
   %v = call <vscale x 8 x float> @llvm.maximum.nxv8f32(<vscale x 8 x float> %a, <vscale x 8 x float> %b)
   ret <vscale x 8 x float> %v
 }
-
-declare <vscale x 16 x float> @llvm.maximum.nxv16f32(<vscale x 16 x float>, <vscale x 16 x float>)
 
 define <vscale x 16 x float> @vfmax_nxv16f32_vv(<vscale x 16 x float> %a, <vscale x 16 x float> %b) nounwind {
 ; CHECK-LABEL: vfmax_nxv16f32_vv:
@@ -621,8 +490,6 @@ define <vscale x 16 x float> @vfmax_nxv16f32_vv(<vscale x 16 x float> %a, <vscal
   ret <vscale x 16 x float> %v
 }
 
-declare <vscale x 1 x double> @llvm.maximum.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>)
-
 define <vscale x 1 x double> @vfmax_nxv1f64_vv(<vscale x 1 x double> %a, <vscale x 1 x double> %b) {
 ; CHECK-LABEL: vfmax_nxv1f64_vv:
 ; CHECK:       # %bb.0:
@@ -636,8 +503,6 @@ define <vscale x 1 x double> @vfmax_nxv1f64_vv(<vscale x 1 x double> %a, <vscale
   %v = call <vscale x 1 x double> @llvm.maximum.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> %b)
   ret <vscale x 1 x double> %v
 }
-
-declare <vscale x 2 x double> @llvm.maximum.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
 
 define <vscale x 2 x double> @vfmax_nxv2f64_vv(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: vfmax_nxv2f64_vv:
@@ -653,8 +518,6 @@ define <vscale x 2 x double> @vfmax_nxv2f64_vv(<vscale x 2 x double> %a, <vscale
   ret <vscale x 2 x double> %v
 }
 
-declare <vscale x 4 x double> @llvm.maximum.nxv4f64(<vscale x 4 x double>, <vscale x 4 x double>)
-
 define <vscale x 4 x double> @vfmax_nxv4f64_vv(<vscale x 4 x double> %a, <vscale x 4 x double> %b) {
 ; CHECK-LABEL: vfmax_nxv4f64_vv:
 ; CHECK:       # %bb.0:
@@ -668,8 +531,6 @@ define <vscale x 4 x double> @vfmax_nxv4f64_vv(<vscale x 4 x double> %a, <vscale
   %v = call <vscale x 4 x double> @llvm.maximum.nxv4f64(<vscale x 4 x double> %a, <vscale x 4 x double> %b)
   ret <vscale x 4 x double> %v
 }
-
-declare <vscale x 8 x double> @llvm.maximum.nxv8f64(<vscale x 8 x double>, <vscale x 8 x double>)
 
 define <vscale x 8 x double> @vfmax_nxv8f64_vv(<vscale x 8 x double> %a, <vscale x 8 x double> %b) nounwind {
 ; CHECK-LABEL: vfmax_nxv8f64_vv:

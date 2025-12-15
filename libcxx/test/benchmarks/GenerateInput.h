@@ -13,6 +13,7 @@
 #include <climits>
 #include <concepts>
 #include <cstddef>
+#include <initializer_list>
 #include <random>
 #include <string>
 #include <vector>
@@ -24,7 +25,7 @@ static const char Letters[] = {
 static const std::size_t LettersSize = sizeof(Letters);
 
 inline std::default_random_engine& getRandomEngine() {
-  static std::default_random_engine RandEngine(std::random_device{}());
+  static std::default_random_engine RandEngine(123456);
   return RandEngine;
 }
 

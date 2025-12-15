@@ -22,14 +22,16 @@ contains
 end program test
 
 ! CHECK-LABEL: define internal void @_QFPsub(
-! CHECK-SAME:    ptr %[[arg:.*]])
+! CHECK-SAME:    ptr {{[^%]*}}%[[arg:.*]])
 ! CHECK: %[[extent:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 7, i64 0, i32 1
 ! CHECK: %[[extval:.*]] = load i64, ptr %[[extent]]
 ! CHECK: %[[elesize:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 1
 ! CHECK: %[[esval:.*]] = load i64, ptr %[[elesize]]
 ! CHECK: %[[mul:.*]] = mul i64 1, %[[esval]]
 ! CHECK: %[[mul2:.*]] = mul i64 %[[mul]], %[[extval]]
-! CHECK: %[[buff:.*]] = call ptr @malloc(i64 %[[mul2]])
+! CHECK: %[[cmp:.*]] = icmp sgt i64 %[[mul2]], 0
+! CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[mul2]], i64 1
+! CHECK: %[[buff:.*]] = call ptr @malloc(i64 %[[size]])
 ! CHECK: %[[to:.*]] = getelementptr i8, ptr %[[buff]], i64 %
 ! CHECK: call void @llvm.memmove.p0.p0.i64(ptr %[[to]], ptr %{{.*}}, i64 %{{.*}}, i1 false)
 ! CHECK: call void @free(ptr %[[buff]])

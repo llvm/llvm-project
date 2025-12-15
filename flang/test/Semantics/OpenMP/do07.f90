@@ -1,5 +1,4 @@
 ! RUN: not %flang -fsyntax-only -fopenmp %s 2>&1 | FileCheck %s
-! REQUIRES: shell
 ! OpenMP Version 4.5
 ! 2.7.1 Loop Construct
 ! No statement in the associated loops other than the DO statements

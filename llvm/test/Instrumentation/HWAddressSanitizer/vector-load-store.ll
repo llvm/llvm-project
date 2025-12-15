@@ -125,7 +125,7 @@ define void @load.nxv1i32(ptr %p) sanitize_hwaddress {
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 8
 ; CHECK-NEXT:    call void @__hwasan_loadN(i64 [[TMP1]], i64 [[TMP4]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <vscale x 1 x i32>, ptr [[P]], align 4
@@ -140,7 +140,7 @@ define void @load.nxv2i32(ptr %p) sanitize_hwaddress {
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 64
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 64
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 8
 ; CHECK-NEXT:    call void @__hwasan_loadN(i64 [[TMP1]], i64 [[TMP4]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <vscale x 2 x i32>, ptr [[P]], align 8
@@ -155,7 +155,7 @@ define void @load.nxv4i32(ptr %p) sanitize_hwaddress {
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 128
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 8
 ; CHECK-NEXT:    call void @__hwasan_loadN(i64 [[TMP1]], i64 [[TMP4]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <vscale x 4 x i32>, ptr [[P]], align 16
@@ -170,7 +170,7 @@ define void @load.nxv8i32(ptr %p) sanitize_hwaddress {
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 256
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 256
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 8
 ; CHECK-NEXT:    call void @__hwasan_loadN(i64 [[TMP1]], i64 [[TMP4]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <vscale x 8 x i32>, ptr [[P]], align 32
@@ -185,7 +185,7 @@ define void @load.nxv16i32(ptr %p) sanitize_hwaddress {
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 512
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 512
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 8
 ; CHECK-NEXT:    call void @__hwasan_loadN(i64 [[TMP1]], i64 [[TMP4]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <vscale x 16 x i32>, ptr [[P]], align 64
@@ -201,7 +201,7 @@ define void @store.nxv1i32(ptr %p) sanitize_hwaddress {
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 8
 ; CHECK-NEXT:    call void @__hwasan_storeN(i64 [[TMP1]], i64 [[TMP4]])
 ; CHECK-NEXT:    store <vscale x 1 x i32> zeroinitializer, ptr [[P]], align 4
@@ -216,7 +216,7 @@ define void @store.nxv2i32(ptr %p) sanitize_hwaddress {
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 64
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 64
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 8
 ; CHECK-NEXT:    call void @__hwasan_storeN(i64 [[TMP1]], i64 [[TMP4]])
 ; CHECK-NEXT:    store <vscale x 2 x i32> zeroinitializer, ptr [[P]], align 8
@@ -231,7 +231,7 @@ define void @store.nxv4i32(ptr %p) sanitize_hwaddress {
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 128
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 8
 ; CHECK-NEXT:    call void @__hwasan_storeN(i64 [[TMP1]], i64 [[TMP4]])
 ; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[P]], align 16
@@ -246,7 +246,7 @@ define void @store.nxv8i32(ptr %p) sanitize_hwaddress {
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 256
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 256
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 8
 ; CHECK-NEXT:    call void @__hwasan_storeN(i64 [[TMP1]], i64 [[TMP4]])
 ; CHECK-NEXT:    store <vscale x 8 x i32> zeroinitializer, ptr [[P]], align 32
@@ -261,7 +261,7 @@ define void @store.nxv16i32(ptr %p) sanitize_hwaddress {
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 512
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 512
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 8
 ; CHECK-NEXT:    call void @__hwasan_storeN(i64 [[TMP1]], i64 [[TMP4]])
 ; CHECK-NEXT:    store <vscale x 16 x i32> zeroinitializer, ptr [[P]], align 64

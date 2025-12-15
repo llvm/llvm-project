@@ -34,6 +34,13 @@ function(get_compiler_rt_path path)
       return()
     endif()
   endforeach()
+
+  # If LLVM_BUILTIN_TARGETS is specified, we still need
+  # to locate the compiler-rt runtime to be able to build builtins.
+  # This supports bootstrapping builtins without compiler-rt.
+  if (LLVM_BUILTIN_TARGETS)
+    set(${path} "${CMAKE_CURRENT_SOURCE_DIR}/../../compiler-rt" PARENT_SCOPE)
+  endif()
 endfunction()
 
 include(LLVMExternalProjectUtils)
@@ -73,12 +80,7 @@ endfunction()
 macro(set_enable_per_target_runtime_dir)
   # May have been set by llvm/CMakeLists.txt.
   if (NOT DEFINED LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-    # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
-    if (LLVM_TARGET_TRIPLE MATCHES "aix")
-      set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF)
-    else()
-      set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON)
-    endif()
+    set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON)
   endif()
 endmacro()
 
@@ -96,6 +98,7 @@ function(builtin_default_target compiler_rt_path)
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
+                                      -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
                                       ${BUILTINS_CMAKE_ARGS}
@@ -136,6 +139,7 @@ function(builtin_register_target compiler_rt_path name)
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                       -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
+                                      -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                       ${COMMON_CMAKE_ARGS}
@@ -198,7 +202,7 @@ endif()
 
 function(_get_runtime_name name out_var)
   string(FIND ${name} "lib" idx)
-  if(idx EQUAL 0 AND NOT ${name} STREQUAL "libc")
+  if(idx EQUAL 0 AND NOT (${name} STREQUAL "libc" OR ${name} STREQUAL "libclc"))
     string(SUBSTRING ${name} 3 -1 name)
   endif()
   set(${out_var} ${name} PARENT_SCOPE)
@@ -476,7 +480,6 @@ if(build_runtimes)
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
                 clang
-                clang-offload-packager
                 flang
                 count
                 lld
@@ -485,11 +488,14 @@ if(build_runtimes)
                 llvm-lto
                 llvm-jitlink
                 llvm-nm
+                llvm-strip
                 llvm-objdump
                 llvm-profdata
+                llvm-readobj
                 llvm-size
                 llvm-symbolizer
                 llvm-xray
+                llvm-offload-binary
                 not
                 obj2yaml
                 opt
@@ -502,6 +508,9 @@ if(build_runtimes)
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
+    if(WIN32)
+      list(APPEND extra_deps KillTheDoctor)
+    endif()
   endif()
 
   # Forward user-provived system configuration to runtimes for requirement introspection.
@@ -514,7 +523,27 @@ if(build_runtimes)
     list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${CMAKE_PROGRAM_PATH}")
   endif()
 
-  if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+  # TODO: We need to consider passing it as '-DRUNTIMES_x86_64_LLVM_ENABLE_RUNTIMES'.
+  if("libclc" IN_LIST LLVM_ENABLE_RUNTIMES)
+    foreach(dep clang llvm-as llvm-link opt)
+      if(TARGET ${dep})
+        list(APPEND extra_deps ${dep})
+      endif()
+    endforeach()
+  endif()
+  # Tools needed by build_symbolizer.sh.
+  if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+    foreach(dep clang llvm-tblgen opt llvm-ar llvm-link)
+      if(TARGET ${dep})
+        list(APPEND extra_deps ${dep})
+      endif()
+    endforeach()
+  endif()
+  # Allow openmp to see the Fortran compiler
+  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
+    list(APPEND extra_args ENABLE_FORTRAN)
+  endif()
+  if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
     if (${LLVM_TOOL_FLANG_BUILD})
       message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang")
       set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang")
@@ -526,7 +555,7 @@ if(build_runtimes)
       # that all .mod files are also properly build.
       list(APPEND extra_deps "flang" "module_files")
     endif()
-    foreach(dep opt llvm-link llvm-extract clang clang-offload-packager)
+    foreach(dep opt llvm-link llvm-extract clang llvm-offload-binary clang-nvlink-wrapper)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
@@ -534,22 +563,8 @@ if(build_runtimes)
   endif()
   if(LLVM_LIBC_GPU_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
-    if("libc" IN_LIST RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES)
-      if(TARGET amdhsa-loader)
-        list(APPEND extra_cmake_args
-             "-DRUNTIMES_amdgcn-amd-amdhsa_LIBC_GPU_LOADER_EXECUTABLE=$<TARGET_FILE:amdhsa-loader>")
-        list(APPEND extra_deps amdhsa-loader)
-      endif()
-    endif()
-    if("libc" IN_LIST RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES)
-      if(TARGET nvptx-loader)
-        list(APPEND extra_cmake_args
-             "-DRUNTIMES_nvptx64-nvidia-cuda_LIBC_GPU_LOADER_EXECUTABLE=$<TARGET_FILE:nvptx-loader>")
-        list(APPEND extra_deps nvptx-loader)
-      endif()
-    endif()
-    if(TARGET clang-offload-packager)
-      list(APPEND extra_deps clang-offload-packager)
+    if(TARGET llvm-offload-binary)
+      list(APPEND extra_deps llvm-offload-binary)
     endif()
     if(TARGET clang-nvlink-wrapper)
       list(APPEND extra_deps clang-nvlink-wrapper)

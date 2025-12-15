@@ -74,4 +74,4 @@
 # WITHENCODINGS-NEXT:  1      1     0.50                         6     c4 c1 30 c6 c1 ff             vshufps	$255, %xmm9, %xmm9, %xmm0
 # WITHENCODINGS-NEXT:  1      1     1.00           *             6     c4 01 78 11 0c 8b             vmovups	%xmm9, (%r11,%r9,4)
 # WITHENCODINGS-NEXT:  1      1     0.50                         3     44 39 c6                      cmpl	%r8d, %esi
-# WITHENCODINGS-NEXT:  1      1     0.50                         6     0f 8c 00 00 00 00             jl	-90
+# WITHENCODINGS-NEXT:  1      1     0.50                         2     7c 00                         jl	-90

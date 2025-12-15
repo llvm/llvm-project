@@ -66,7 +66,7 @@ PipeWindows::PipeWindows(pipe_t read, pipe_t write)
 
 PipeWindows::~PipeWindows() { Close(); }
 
-Status PipeWindows::CreateNew(bool child_process_inherit) {
+Status PipeWindows::CreateNew() {
   // Even for anonymous pipes, we open a named pipe.  This is because you
   // cannot get overlapped i/o on Windows without using a named pipe.  So we
   // synthesize a unique name.
@@ -74,11 +74,10 @@ Status PipeWindows::CreateNew(bool child_process_inherit) {
   std::string pipe_name = llvm::formatv(
       "lldb.pipe.{0}.{1}.{2}", GetCurrentProcessId(), &g_pipe_serial, serial);
 
-  return CreateNew(pipe_name.c_str(), child_process_inherit);
+  return CreateNew(pipe_name.c_str());
 }
 
-Status PipeWindows::CreateNew(llvm::StringRef name,
-                              bool child_process_inherit) {
+Status PipeWindows::CreateNew(llvm::StringRef name) {
   if (name.empty())
     return Status(ERROR_INVALID_PARAMETER, eErrorTypeWin32);
 
@@ -88,8 +87,9 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
   std::string pipe_path = g_pipe_name_prefix.str();
   pipe_path.append(name.str());
 
-  SECURITY_ATTRIBUTES sa{sizeof(SECURITY_ATTRIBUTES), 0,
-                         child_process_inherit ? TRUE : FALSE};
+  // We always create inheritable handles, but we won't pass them to a child
+  // process unless explicitly requested (cf. ProcessLauncherWindows.cpp).
+  SECURITY_ATTRIBUTES sa{sizeof(SECURITY_ATTRIBUTES), 0, TRUE};
 
   // Always open for overlapped i/o.  We implement blocking manually in Read
   // and Write.
@@ -108,7 +108,7 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
 
   // Open the write end of the pipe. Note that closing either the read or 
   // write end of the pipe could directly close the pipe itself.
-  Status result = OpenNamedPipe(name, child_process_inherit, false);
+  Status result = OpenNamedPipe(name, false);
   if (!result.Success()) {
     CloseReadFileDescriptor();
     return result;
@@ -118,7 +118,6 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
 }
 
 Status PipeWindows::CreateWithUniqueName(llvm::StringRef prefix,
-                                         bool child_process_inherit,
                                          llvm::SmallVectorImpl<char> &name) {
   llvm::SmallString<128> pipe_name;
   Status error;
@@ -132,7 +131,7 @@ Status PipeWindows::CreateWithUniqueName(llvm::StringRef prefix,
     pipe_name += "-";
     pipe_name += reinterpret_cast<char *>(unique_string);
     ::RpcStringFreeA(&unique_string);
-    error = CreateNew(pipe_name, child_process_inherit);
+    error = CreateNew(pipe_name);
   } else {
     error = Status(status, eErrorTypeWin32);
   }
@@ -141,32 +140,30 @@ Status PipeWindows::CreateWithUniqueName(llvm::StringRef prefix,
   return error;
 }
 
-Status PipeWindows::OpenAsReader(llvm::StringRef name,
-                                 bool child_process_inherit) {
+Status PipeWindows::OpenAsReader(llvm::StringRef name) {
   if (CanRead())
     return Status(); // Note the name is ignored.
 
-  return OpenNamedPipe(name, child_process_inherit, true);
+  return OpenNamedPipe(name, true);
 }
 
 llvm::Error PipeWindows::OpenAsWriter(llvm::StringRef name,
-                                      bool child_process_inherit,
                                       const Timeout<std::micro> &timeout) {
   if (CanWrite())
     return llvm::Error::success(); // Note the name is ignored.
 
-  return OpenNamedPipe(name, child_process_inherit, false).takeError();
+  return OpenNamedPipe(name, false).takeError();
 }
 
-Status PipeWindows::OpenNamedPipe(llvm::StringRef name,
-                                  bool child_process_inherit, bool is_read) {
+Status PipeWindows::OpenNamedPipe(llvm::StringRef name, bool is_read) {
   if (name.empty())
     return Status(ERROR_INVALID_PARAMETER, eErrorTypeWin32);
 
   assert(is_read ? !CanRead() : !CanWrite());
 
-  SECURITY_ATTRIBUTES attributes{sizeof(SECURITY_ATTRIBUTES), 0,
-                                 child_process_inherit ? TRUE : FALSE};
+  // We always create inheritable handles, but we won't pass them to a child
+  // process unless explicitly requested (cf. ProcessLauncherWindows.cpp).
+  SECURITY_ATTRIBUTES attributes{sizeof(SECURITY_ATTRIBUTES), 0, TRUE};
 
   std::string pipe_path = g_pipe_name_prefix.str();
   pipe_path.append(name.str());
@@ -282,7 +279,8 @@ llvm::Expected<size_t> PipeWindows::Read(void *buf, size_t size,
     return Status(failure_error, eErrorTypeWin32).takeError();
 
   DWORD timeout_msec =
-      timeout ? ceil<std::chrono::milliseconds>(*timeout).count() : INFINITE;
+      timeout ? std::chrono::ceil<std::chrono::milliseconds>(*timeout).count()
+              : INFINITE;
   DWORD wait_result =
       ::WaitForSingleObject(m_read_overlapped.hEvent, timeout_msec);
   if (wait_result != WAIT_OBJECT_0) {
@@ -327,7 +325,8 @@ llvm::Expected<size_t> PipeWindows::Write(const void *buf, size_t size,
     return Status(failure_error, eErrorTypeWin32).takeError();
 
   DWORD timeout_msec =
-      timeout ? ceil<std::chrono::milliseconds>(*timeout).count() : INFINITE;
+      timeout ? std::chrono::ceil<std::chrono::milliseconds>(*timeout).count()
+              : INFINITE;
   DWORD wait_result =
       ::WaitForSingleObject(m_write_overlapped.hEvent, timeout_msec);
   if (wait_result != WAIT_OBJECT_0) {

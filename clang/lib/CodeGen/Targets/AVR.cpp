@@ -59,7 +59,7 @@ public:
     unsigned TySize = getContext().getTypeSize(Ty);
 
     // An int8 type argument always costs two registers like an int16.
-    if (TySize == 8 && NumRegs >= 2) {
+    if (TySize == 8 && NumRegs >= 2 && Ty->isIntegralOrEnumerationType()) {
       NumRegs -= 2;
       return ABIArgInfo::getExtend(Ty);
     }

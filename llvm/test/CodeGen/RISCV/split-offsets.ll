@@ -25,17 +25,16 @@ define void @test1(ptr %sp, ptr %t, i32 %n) {
 ;
 ; RV64I-LABEL: test1:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    lui a2, 20
 ; RV64I-NEXT:    ld a0, 0(a0)
+; RV64I-NEXT:    lui a2, 20
 ; RV64I-NEXT:    li a3, 2
-; RV64I-NEXT:    addiw a2, a2, -1920
 ; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    li a2, 1
-; RV64I-NEXT:    sw a3, 0(a0)
-; RV64I-NEXT:    sw a2, 4(a0)
-; RV64I-NEXT:    sw a2, 0(a1)
-; RV64I-NEXT:    sw a3, 4(a1)
+; RV64I-NEXT:    sw a3, -1920(a0)
+; RV64I-NEXT:    sw a2, -1916(a0)
+; RV64I-NEXT:    sw a2, -1920(a1)
+; RV64I-NEXT:    sw a3, -1916(a1)
 ; RV64I-NEXT:    ret
 entry:
   %s = load ptr, ptr %sp
@@ -77,7 +76,6 @@ define void @test2(ptr %sp, ptr %t, i32 %n) {
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    ld a0, 0(a0)
 ; RV64I-NEXT:    lui a4, 20
-; RV64I-NEXT:    addiw a4, a4, -1920
 ; RV64I-NEXT:    add a1, a1, a4
 ; RV64I-NEXT:    add a0, a0, a4
 ; RV64I-NEXT:    sext.w a2, a2
@@ -85,10 +83,10 @@ define void @test2(ptr %sp, ptr %t, i32 %n) {
 ; RV64I-NEXT:  .LBB1_1: # %while_body
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    addiw a4, a3, 1
-; RV64I-NEXT:    sw a4, 0(a0)
-; RV64I-NEXT:    sw a3, 4(a0)
-; RV64I-NEXT:    sw a4, 0(a1)
-; RV64I-NEXT:    sw a3, 4(a1)
+; RV64I-NEXT:    sw a4, -1920(a0)
+; RV64I-NEXT:    sw a3, -1916(a0)
+; RV64I-NEXT:    sw a4, -1920(a1)
+; RV64I-NEXT:    sw a3, -1916(a1)
 ; RV64I-NEXT:    mv a3, a4
 ; RV64I-NEXT:    blt a4, a2, .LBB1_1
 ; RV64I-NEXT:  .LBB1_2: # %while_end
@@ -134,11 +132,10 @@ define void @test3(ptr %t) {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a1, 20
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    addiw a1, a1, -1920
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    li a1, 3
-; RV64I-NEXT:    sw a2, 4(a0)
-; RV64I-NEXT:    sw a1, 8(a0)
+; RV64I-NEXT:    sw a2, -1916(a0)
+; RV64I-NEXT:    sw a1, -1912(a0)
 ; RV64I-NEXT:    ret
 entry:
   %splitgep = getelementptr i8, ptr %t, i64 80000

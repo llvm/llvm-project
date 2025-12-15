@@ -8,7 +8,7 @@
 ! RUN: | FileCheck %s
 
 
-!CHECK: func @_QQmain() attributes {fir.bindc_name = "default_clause_lowering"} {
+!CHECK: func @_QQmain() attributes {fir.bindc_name = "DEFAULT_CLAUSE_LOWERING"} {
 !CHECK: %[[W:.*]] = fir.alloca i32 {bindc_name = "w", uniq_name = "_QFEw"}
 !CHECK: %[[W_DECL:.*]]:2 = hlfir.declare %[[W]] {uniq_name = "_QFEw"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
@@ -291,7 +291,7 @@ end subroutine
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = (%[[CONST_LB]]) to (%[[CONST_UB]]) inclusive step (%[[CONST_STEP]]) {
 !CHECK: %[[X_DECLARE:.*]]:2 = hlfir.declare %[[X_ALLOCA]] {{.*}}
 !CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR_ALLOCA]] {{.*}}
-!CHECK: hlfir.assign %[[ARG]] to %[[LOOP_VAR_DECLARE]]#1 : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[ARG]] to %[[LOOP_VAR_DECLARE]]#0 : i32, !fir.ref<i32>
 !CHECK: %[[LOADED_X:.*]] = fir.load %[[X_DECLARE]]#0 : !fir.ref<i32>
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
 !CHECK: %[[RESULT:.*]] = arith.addi %[[LOADED_X]], %[[CONST]] : i32
@@ -324,7 +324,7 @@ end subroutine
 ! CHECK: omp.wsloop private(@{{.*}} %{{.*}} -> %[[LOOP_VAR:.*]] : !fir.ref<i32>) {
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = (%[[CONST_LB]]) to (%[[CONST_UB]]) inclusive step (%[[CONST_STEP]]) {
 !CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR]] {{.*}}
-!CHECK: hlfir.assign %[[ARG]] to %[[LOOP_VAR_DECLARE]]#1 : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[ARG]] to %[[LOOP_VAR_DECLARE]]#0 : i32, !fir.ref<i32>
 !CHECK: %[[LOADED_X:.*]] = fir.load %[[X_VAR_DECLARE]]#0 : !fir.ref<i32>
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
 !CHECK: %[[ADD:.*]] = arith.addi %[[LOADED_X]], %[[CONST]] : i32
@@ -420,21 +420,19 @@ end subroutine
 !CHECK: %[[VAR_I_DECLARE:.*]] = hlfir.declare %[[VAR_I]] {uniq_name = "_QFthreadprivate_with_defaultEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[BLK_ADDR:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<4xi8>>
 !CHECK: %[[BLK_THREADPRIVATE_OUTER:.*]] = omp.threadprivate %[[BLK_ADDR]] : !fir.ref<!fir.array<4xi8>> -> !fir.ref<!fir.array<4xi8>>
-!CHECK: %[[CONVERT:.*]] = fir.convert %[[BLK_THREADPRIVATE_OUTER]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK: %[[VAR_C:.*]] = arith.constant 0 : index
-!CHECK: %[[BLK_REF:.*]] = fir.coordinate_of %[[CONVERT]], %[[VAR_C]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK: %[[BLK_REF:.*]] = fir.coordinate_of %[[BLK_THREADPRIVATE_OUTER]], %[[VAR_C]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 !CHECK: %[[CONVERT:.*]] = fir.convert %[[BLK_REF]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK: %[[VAR_X_DECLARE:.*]] = hlfir.declare %[[CONVERT]] {uniq_name = "_QFthreadprivate_with_defaultEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[VAR_X_DECLARE:.*]] = hlfir.declare %[[CONVERT]] storage(%[[BLK_THREADPRIVATE_OUTER]][0]) {uniq_name = "_QFthreadprivate_with_defaultEx"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel {
 !CHECK:   %[[BLK_THREADPRIVATE_INNER:.*]] = omp.threadprivate %[[BLK_ADDR]] : !fir.ref<!fir.array<4xi8>> -> !fir.ref<!fir.array<4xi8>>
-!CHECK:   %[[CONVERT_INNER:.*]] = fir.convert %[[BLK_THREADPRIVATE_INNER]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK:   %[[VAR_C_INNER:.*]] = arith.constant 0 : index
-!CHECK:   %[[BLK_REF_INNER:.*]] = fir.coordinate_of %[[CONVERT_INNER]], %[[VAR_C_INNER]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK:   %[[BLK_REF_INNER:.*]] = fir.coordinate_of %[[BLK_THREADPRIVATE_INNER]], %[[VAR_C_INNER]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 !CHECK:   %[[CONVERT_INNER:.*]] = fir.convert %[[BLK_REF_INNER]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK:   %[[VAR_X_DECLARE_INNER:.*]] = hlfir.declare %[[CONVERT_INNER]] {uniq_name = "_QFthreadprivate_with_defaultEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[VAR_X_DECLARE_INNER:.*]] = hlfir.declare %[[CONVERT_INNER]] storage(%[[BLK_THREADPRIVATE_INNER]][0]) {uniq_name = "_QFthreadprivate_with_defaultEx"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine threadprivate_with_default
         integer :: x
-        common /blk/ x 
+        common /blk/ x
         !$omp threadprivate (/blk/)
 
         !$omp parallel do default(private)

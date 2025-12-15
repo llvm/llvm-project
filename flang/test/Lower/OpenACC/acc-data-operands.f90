@@ -116,7 +116,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_array_section_allocatable() {
 ! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QMacc_data_operandFacc_operand_array_section_allocatableEa"}
 ! CHECK: %[[DECLA:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<allocatable>
-! CHECK: %[[LOAD_BOX_A_1:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[LOAD_BOX_A_1:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_0:.*]]:3 = fir.box_dims %[[LOAD_BOX_A_1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK: %[[LOAD_BOX_A_0:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -126,12 +126,12 @@ end subroutine
 ! CHECK: %[[LB:.*]] = arith.subi %[[C1]], %[[DIMS0_0]]#0 : index
 ! CHECK: %[[C50:.*]] = arith.constant 50 : index
 ! CHECK: %[[UB:.*]] = arith.subi %[[C50]], %[[DIMS0_0]]#0 : index
-! CHECK: %[[LOAD_BOX_A_2:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[LOAD_BOX_A_2:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_2:.*]]:3 = fir.box_dims %[[LOAD_BOX_A_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK: %[[BOUND_1_50:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS0_2]]#1 : index) stride(%[[DIMS0_1]]#2 : index) startIdx(%[[DIMS0_0]]#0 : index) {strideInBytes = true}
 ! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) bounds(%[[BOUND_1_50]]) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "a(1:50)"}
-! CHECK: %[[LOAD_BOX_A_1:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[LOAD_BOX_A_1:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_0:.*]]:3 = fir.box_dims %[[LOAD_BOX_A_1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK: %[[LOAD_BOX_A_0:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -141,7 +141,7 @@ end subroutine
 ! CHECK: %[[LB:.*]] = arith.subi %[[C51]], %[[DIMS0_0]]#0 : index
 ! CHECK: %[[C100:.*]] = arith.constant 100 : index
 ! CHECK: %[[UB:.*]] = arith.subi %[[C100]], %[[DIMS0_0]]#0 : index
-! CHECK: %[[LOAD_BOX_A_2:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[LOAD_BOX_A_2:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_2:.*]]:3 = fir.box_dims %[[LOAD_BOX_A_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK: %[[BOUND_51_100:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS0_2]]#1 : index) stride(%[[DIMS0_1]]#2 : index) startIdx(%[[DIMS0_0]]#0 : index) {strideInBytes = true}
@@ -167,7 +167,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_array_section_pointer() {
 ! CHECK: %[[P:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {bindc_name = "p", uniq_name = "_QMacc_data_operandFacc_operand_array_section_pointerEp"}
 ! CHECK: %[[DECLP:.*]]:2 = hlfir.declare %[[P]] {fortran_attrs = #fir.var_attrs<pointer>
-! CHECK: %[[LOAD_BOX_P_1:.*]] = fir.load %[[DECLP]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK: %[[LOAD_BOX_P_1:.*]] = fir.load %[[DECLP]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_0:.*]]:3 = fir.box_dims %[[LOAD_BOX_P_1]], %[[C0:.*]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK: %[[LOAD_BOX_P_0:.*]] = fir.load %[[DECLP]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
@@ -177,7 +177,7 @@ end subroutine
 ! CHECK: %[[LB:.*]] = arith.subi %[[C1]], %[[DIMS0_0]]#0 : index
 ! CHECK: %[[C50:.*]] = arith.constant 50 : index
 ! CHECK: %[[UB:.*]] = arith.subi %[[C50]], %[[DIMS0_0]]#0 : index
-! CHECK: %[[LOAD_BOX_P_2:.*]] = fir.load %[[DECLP]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK: %[[LOAD_BOX_P_2:.*]] = fir.load %[[DECLP]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_2:.*]]:3 = fir.box_dims %[[LOAD_BOX_P_2]], %[[C0]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS0_2]]#1 : index) stride(%[[DIMS0_1]]#2 : index) startIdx(%[[DIMS0_0]]#0 : index) {strideInBytes = true}

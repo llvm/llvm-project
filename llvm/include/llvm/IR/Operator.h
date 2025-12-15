@@ -22,6 +22,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <optional>
 
@@ -63,12 +64,12 @@ public:
 
   /// Return true if this operator has flags which may cause this operator
   /// to evaluate to poison despite having non-poison inputs.
-  bool hasPoisonGeneratingFlags() const;
+  LLVM_ABI bool hasPoisonGeneratingFlags() const;
 
   /// Return true if this operator has poison-generating flags,
   /// return attributes or metadata. The latter two is only possible for
   /// instructions.
-  bool hasPoisonGeneratingAnnotations() const;
+  LLVM_ABI bool hasPoisonGeneratingAnnotations() const;
 };
 
 /// Utility class for integer operators which may exhibit overflow - Add, Sub,
@@ -134,9 +135,7 @@ public:
   }
   static bool classof(const ConstantExpr *CE) {
     return CE->getOpcode() == Instruction::Add ||
-           CE->getOpcode() == Instruction::Sub ||
-           CE->getOpcode() == Instruction::Mul ||
-           CE->getOpcode() == Instruction::Shl;
+           CE->getOpcode() == Instruction::Sub;
   }
   static bool classof(const Value *V) {
     return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
@@ -150,7 +149,7 @@ struct OperandTraits<OverflowingBinaryOperator>
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(OverflowingBinaryOperator, Value)
 
-/// A udiv or sdiv instruction, which can be marked as "exact",
+/// A udiv, sdiv, lshr, or ashr instruction, which can be marked as "exact",
 /// indicating that no bits are destroyed.
 class PossiblyExactOperator : public Operator {
 public:
@@ -182,15 +181,11 @@ public:
            OpC == Instruction::LShr;
   }
 
-  static bool classof(const ConstantExpr *CE) {
-    return isPossiblyExactOpcode(CE->getOpcode());
-  }
   static bool classof(const Instruction *I) {
     return isPossiblyExactOpcode(I->getOpcode());
   }
   static bool classof(const Value *V) {
-    return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
-           (isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V)));
+    return (isa<Instruction>(V) && classof(cast<Instruction>(V)));
   }
 };
 
@@ -342,7 +337,7 @@ public:
   /// Get the maximum error permitted by this operation in ULPs. An accuracy of
   /// 0.0 means that the operation should be performed with the default
   /// precision.
-  float getFPAccuracy() const;
+  LLVM_ABI float getFPAccuracy() const;
 
   /// Returns true if `Ty` is a supported floating-point type for phi, select,
   /// or call FPMathOperators.
@@ -444,7 +439,7 @@ public:
 
   /// Returns the offset of the index with an inrange attachment, or
   /// std::nullopt if none.
-  std::optional<ConstantRange> getInRange() const;
+  LLVM_ABI std::optional<ConstantRange> getInRange() const;
 
   inline op_iterator       idx_begin()       { return op_begin()+1; }
   inline const_op_iterator idx_begin() const { return op_begin()+1; }
@@ -474,8 +469,8 @@ public:
     return getPointerOperand()->getType();
   }
 
-  Type *getSourceElementType() const;
-  Type *getResultElementType() const;
+  LLVM_ABI Type *getSourceElementType() const;
+  LLVM_ABI Type *getResultElementType() const;
 
   /// Method to return the address space of the pointer operand.
   unsigned getPointerAddressSpace() const {
@@ -521,7 +516,7 @@ public:
   }
 
   /// Compute the maximum alignment that this GEP is garranteed to preserve.
-  Align getMaxPreservedAlignment(const DataLayout &DL) const;
+  LLVM_ABI Align getMaxPreservedAlignment(const DataLayout &DL) const;
 
   /// Accumulate the constant address offset of this GEP if possible.
   ///
@@ -540,20 +535,21 @@ public:
   ///
   /// The APInt passed into this routine must be at exactly as wide as the
   /// IntPtr type for the address space of the base GEP pointer.
-  bool accumulateConstantOffset(
+  LLVM_ABI bool accumulateConstantOffset(
       const DataLayout &DL, APInt &Offset,
       function_ref<bool(Value &, APInt &)> ExternalAnalysis = nullptr) const;
 
-  static bool accumulateConstantOffset(
+  LLVM_ABI static bool accumulateConstantOffset(
       Type *SourceType, ArrayRef<const Value *> Index, const DataLayout &DL,
       APInt &Offset,
       function_ref<bool(Value &, APInt &)> ExternalAnalysis = nullptr);
 
   /// Collect the offset of this GEP as a map of Values to their associated
   /// APInt multipliers, as well as a total Constant Offset.
-  bool collectOffset(const DataLayout &DL, unsigned BitWidth,
-                     SmallMapVector<Value *, APInt, 4> &VariableOffsets,
-                     APInt &ConstantOffset) const;
+  LLVM_ABI bool
+  collectOffset(const DataLayout &DL, unsigned BitWidth,
+                SmallMapVector<Value *, APInt, 4> &VariableOffsets,
+                APInt &ConstantOffset) const;
 };
 
 template <>
@@ -598,6 +594,37 @@ struct OperandTraits<PtrToIntOperator>
     : public FixedNumOperandTraits<PtrToIntOperator, 1> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PtrToIntOperator, Value)
+
+class PtrToAddrOperator
+    : public ConcreteOperator<Operator, Instruction::PtrToAddr> {
+  friend class PtrToAddr;
+  friend class ConstantExpr;
+
+public:
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
+  Value *getPointerOperand() { return getOperand(0); }
+  const Value *getPointerOperand() const { return getOperand(0); }
+
+  static unsigned getPointerOperandIndex() {
+    return 0U; // get index for modifying correct operand
+  }
+
+  /// Method to return the pointer operand as a PointerType.
+  Type *getPointerOperandType() const { return getPointerOperand()->getType(); }
+
+  /// Method to return the address space of the pointer operand.
+  unsigned getPointerAddressSpace() const {
+    return cast<PointerType>(getPointerOperandType())->getAddressSpace();
+  }
+};
+
+template <>
+struct OperandTraits<PtrToAddrOperator>
+    : public FixedNumOperandTraits<PtrToAddrOperator, 1> {};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PtrToAddrOperator, Value)
 
 class BitCastOperator
     : public ConcreteOperator<Operator, Instruction::BitCast> {

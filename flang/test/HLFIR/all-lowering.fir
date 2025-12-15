@@ -90,7 +90,7 @@ func.func @_QPall3(%arg0: !fir.ref<!fir.array<2x!fir.logical<4>>> {fir.bindc_nam
 
 // CHECK-DAG:     %[[MASK_ADDR:.*]] = fir.address_of
 // CHECK-DAG:     %[[MASK_VAR:.*]]:2 = hlfir.declare %[[MASK_ADDR]](%[[MASK_SHAPE:.*]])
-// CHECK-DAG:     %[[MASK_BOX:.*]] = fir.embox %[[MASK_VAR]]#1(%[[MASK_SHAPE:.*]])
+// CHECK-DAG:     %[[MASK_BOX:.*]] = fir.embox %[[MASK_VAR]]#0(%[[MASK_SHAPE:.*]])
 
 // CHECK-DAG:     %[[DIM:.*]] = arith.constant 1 : i32
 

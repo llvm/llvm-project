@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic,pedantic-expected,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic,pedantic-ref,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=expected,all                   -std=c11 -Wcast-qual           %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-linux -verify=pedantic,pedantic-expected,all -std=c11 -Wcast-qual -pedantic %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all                        -std=c11 -Wcast-qual           %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=pedantic,pedantic-ref,all      -std=c11 -Wcast-qual -pedantic %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
@@ -173,6 +173,10 @@ _Static_assert(CTB3, ""); // pedantic-ref-warning {{GNU extension}} \
                           // pedantic-expected-warning {{GNU extension}}
 
 
+void nonComplexToComplexCast(void) {
+  _Complex double z = *(_Complex double *)&(struct { double r, i; }){0.0, 1.0};
+}
+
 int t1 = sizeof(int);
 void test4(void) {
   t1 = sizeof(int);
@@ -203,6 +207,16 @@ const struct StrA sc = *sb;
 _Static_assert(sc.a == 12, ""); // pedantic-ref-warning {{GNU extension}} \
                                 // pedantic-expected-warning {{GNU extension}}
 
+struct ComplexS {
+  int a;
+  float b;
+  struct StrA sa[2];
+};
+const struct ComplexS CS = {12, 23.0f, {{1}, {2}}};
+const struct ComplexS CS2 = CS;
+_Static_assert(CS2.sa[0].a == 1, ""); // pedantic-ref-warning {{GNU extension}} \
+                                      // pedantic-expected-warning {{GNU extension}}
+
 _Static_assert(((void*)0 + 1) != (void*)0, ""); // pedantic-expected-warning {{arithmetic on a pointer to void is a GNU extension}} \
                                                 // pedantic-expected-warning {{not an integer constant expression}} \
                                                 // pedantic-expected-note {{cannot perform pointer arithmetic on null pointer}} \
@@ -221,7 +235,8 @@ int castViaInt[*(int*)(unsigned long)"test"]; // ref-error {{variable length arr
                                               // expected-error {{variable length array}} \
                                               // pedantic-expected-error {{variable length array}}
 
-const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}}
+const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}} \
+                                              // pedantic-expected-note {{this conversion is not allowed in a constant expression}}
 _Static_assert(funcp == (void*)0, ""); // all-error {{failed due to requirement 'funcp == (void *)0'}} \
                                        // pedantic-warning {{expression is not an integer constant expression}}
 _Static_assert(funcp == (void*)123, ""); // pedantic-warning {{equality comparison between function pointer and void pointer}} \
@@ -318,3 +333,75 @@ void foo3 (void)
  void* x = 0;
  void* y = &*x;
 }
+
+static void *FooTable[1] = {
+    [0] = (void *[1]) { // 1
+        [0] = (void *[1]) { // 2
+            [0] = (void *[1]) {} // pedantic-warning {{use of an empty initializer}}
+        },
+    }
+};
+
+int strcmp(const char *, const char *); // all-note {{passing argument to parameter here}}
+#define S "\x01\x02\x03\x04\x05\x06\x07\x08"
+const char _str[] = {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]};
+const unsigned char _str2[] = {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]};
+const int compared = strcmp(_str, (const char *)_str2); // all-error {{initializer element is not a compile-time constant}}
+
+
+const int compared2 = strcmp(strcmp, _str); // all-error {{incompatible pointer types}} \
+                                            // all-error {{initializer element is not a compile-time constant}}
+
+int foo(x) // all-warning {{a function definition without a prototype is deprecated in all versions of C}}
+int x;
+{
+  return x;
+}
+
+void bar() { // pedantic-warning {{a function declaration without a prototype}}
+  int x;
+  x = foo(); // all-warning {{too few arguments}}
+}
+
+int *_b = &a;
+void discardedCmp(void)
+{
+    (*_b) = ((&a == &a) , a); // all-warning {{left operand of comma operator has no effect}}
+}
+
+/// ArraySubscriptExpr that's not an lvalue
+typedef unsigned char U __attribute__((vector_size(1)));
+void nonLValueASE(U f) { f[0] = f[((U)(U){0})[0]]; }
+
+static char foo_(a) // all-warning {{definition without a prototype}}
+  char a;
+{
+  return 'a';
+}
+static void bar_(void) {
+  foo_(foo_(1));
+}
+
+void foo2(void*);
+void bar2(void) {
+  int a[2][3][4][5]; // all-note {{array 'a' declared here}}
+  foo2(&a[0][4]); // all-warning {{array index 4 is past the end of the array}}
+}
+
+void plainComplex(void) {
+  _Complex cd; // all-warning {{_Complex double}}
+  cd = *(_Complex *)&(struct { double r, i; }){0.0, 0.0}; // all-warning {{_Complex double}}
+}
+
+/// This test results in an ImplicitValueInitExpr with DiscardResult set.
+struct M{
+  char c;
+};
+typedef struct S64 {
+  struct M m;
+  char a[64];
+} I64;
+
+_Static_assert((((I64){}, 1)), ""); // all-warning {{left operand of comma operator has no effect}} \
+                                    // pedantic-warning {{use of an empty initializer is a C23 extension}} \
+                                    // pedantic-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}

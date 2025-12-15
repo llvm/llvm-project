@@ -17,6 +17,7 @@
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/ProfileData/CtxInstrContextNode.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 enum PGOCtxProfileRecords {
@@ -36,7 +37,8 @@ enum PGOCtxProfileBlockIDs {
   ContextNodeBlockID = ContextRootBlockID + 1,
   FlatProfilesSectionBlockID = ContextNodeBlockID + 1,
   FlatProfileBlockID = FlatProfilesSectionBlockID + 1,
-  LAST_VALID = FlatProfileBlockID
+  UnhandledBlockID = FlatProfileBlockID + 1,
+  LAST_VALID = UnhandledBlockID
 };
 
 /// Write one or more ContextNodes to the provided raw_fd_stream.
@@ -73,7 +75,7 @@ enum PGOCtxProfileBlockIDs {
 /// like value profiling - which would appear as additional records. For
 /// example, value profiling would produce a new record with a new record ID,
 /// containing the profiled values (much like the counters)
-class PGOCtxProfileWriter final : public ctx_profile::ProfileWriter {
+class LLVM_ABI PGOCtxProfileWriter final : public ctx_profile::ProfileWriter {
   enum class EmptyContextCriteria { None, EntryIsZero, AllAreZero };
 
   BitstreamWriter Writer;
@@ -90,10 +92,11 @@ public:
   PGOCtxProfileWriter(raw_ostream &Out,
                       std::optional<unsigned> VersionOverride = std::nullopt,
                       bool IncludeEmpty = false);
-  ~PGOCtxProfileWriter() { Writer.ExitBlock(); }
+  ~PGOCtxProfileWriter() override { Writer.ExitBlock(); }
 
   void startContextSection() override;
   void writeContextual(const ctx_profile::ContextNode &RootNode,
+                       const ctx_profile::ContextNode *Unhandled,
                        uint64_t TotalRootEntryCount) override;
   void endContextSection() override;
 
@@ -104,11 +107,11 @@ public:
 
   // constants used in writing which a reader may find useful.
   static constexpr unsigned CodeLen = 2;
-  static constexpr uint32_t CurrentVersion = 3;
+  static constexpr uint32_t CurrentVersion = 4;
   static constexpr unsigned VBREncodingBits = 6;
   static constexpr StringRef ContainerMagic = "CTXP";
 };
 
-Error createCtxProfFromYAML(StringRef Profile, raw_ostream &Out);
+LLVM_ABI Error createCtxProfFromYAML(StringRef Profile, raw_ostream &Out);
 } // namespace llvm
 #endif

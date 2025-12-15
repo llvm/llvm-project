@@ -166,10 +166,10 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
 class RawPtrRefLocalVarsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug;
-  mutable BugReporter *BR;
   EnsureFunctionAnalysis EFA;
 
 protected:
+  mutable BugReporter *BR;
   mutable std::optional<RetainTypeChecker> RTC;
 
 public:
@@ -179,6 +179,8 @@ public:
   virtual std::optional<bool> isUnsafePtr(const QualType T) const = 0;
   virtual bool isSafePtr(const CXXRecordDecl *) const = 0;
   virtual bool isSafePtrType(const QualType) const = 0;
+  virtual bool isSafeExpr(const Expr *) const { return false; }
+  virtual bool isSafeDecl(const Decl *) const { return false; }
   virtual const char *ptrKind() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -232,6 +234,14 @@ public:
       }
 
       bool TraverseIfStmt(IfStmt *IS) override {
+        if (IS->getConditionVariable()) {
+          // This code currently does not explicitly check the "else" statement
+          // since getConditionVariable returns nullptr when there is a
+          // condition defined after ";" as in "if (auto foo = ~; !foo)". If
+          // this semantics change, we should add an explicit check for "else".
+          if (auto *Then = IS->getThen(); !Then || TFA.isTrivial(Then))
+            return true;
+        }
         if (!TFA.isTrivial(IS))
           return DynamicRecursiveASTVisitor::TraverseIfStmt(IS);
         return true;
@@ -260,6 +270,12 @@ public:
           return DynamicRecursiveASTVisitor::TraverseCompoundStmt(CS);
         return true;
       }
+
+      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) override {
+        if (isSmartPtrClass(safeGetName(Decl)))
+          return true;
+        return DynamicRecursiveASTVisitor::TraverseClassTemplateDecl(Decl);
+      }
     };
 
     LocalVisitor visitor(this);
@@ -281,6 +297,7 @@ public:
                 return isSafePtr(Record);
               },
               [&](const clang::QualType Type) { return isSafePtrType(Type); },
+              [&](const clang::Decl *D) { return isSafeDecl(D); },
               [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
                 if (!InitArgOrigin || IsSafe)
                   return true;
@@ -288,7 +305,7 @@ public:
                 if (isa<CXXThisExpr>(InitArgOrigin))
                   return true;
 
-                if (isa<CXXNullPtrLiteralExpr>(InitArgOrigin))
+                if (isNullPtr(InitArgOrigin))
                   return true;
 
                 if (isa<IntegerLiteral>(InitArgOrigin))
@@ -298,6 +315,9 @@ public:
                   return true;
 
                 if (EFA.isACallToEnsureFn(InitArgOrigin))
+                  return true;
+
+                if (isSafeExpr(InitArgOrigin))
                   return true;
 
                 if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
@@ -346,7 +366,7 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    if (dyn_cast<ParmVarDecl>(V)) {
+    if (isa<ParmVarDecl>(V)) {
       Os << "Assignment to an " << ptrKind() << " parameter ";
       printQuotedQualifiedName(Os, V);
       Os << " is unsafe.";
@@ -407,6 +427,9 @@ public:
   bool isSafePtrType(const QualType type) const final {
     return isRefOrCheckedPtrType(type);
   }
+  bool isSafeExpr(const Expr *E) const final {
+    return isExprToGetCheckedPtrCapableMember(E);
+  }
   const char *ptrKind() const final { return "unchecked"; }
 };
 
@@ -418,13 +441,23 @@ public:
     RTC = RetainTypeChecker();
   }
   std::optional<bool> isUnsafePtr(const QualType T) const final {
+    if (T.hasStrongOrWeakObjCLifetime())
+      return false;
     return RTC->isUnretained(T);
   }
   bool isSafePtr(const CXXRecordDecl *Record) const final {
-    return isRetainPtr(Record);
+    return isRetainPtrOrOSPtr(Record);
   }
   bool isSafePtrType(const QualType type) const final {
-    return isRetainPtrType(type);
+    return isRetainPtrOrOSPtrType(type);
+  }
+  bool isSafeExpr(const Expr *E) const final {
+    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
+           isa<ObjCMessageExpr>(E);
+  }
+  bool isSafeDecl(const Decl *D) const final {
+    // Treat NS/CF globals in system header as immortal.
+    return BR->getSourceManager().isInSystemHeader(D->getLocation());
   }
   const char *ptrKind() const final { return "unretained"; }
 };

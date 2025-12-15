@@ -309,7 +309,6 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
   bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
@@ -339,7 +338,7 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
+  } else if (compiler_type.IsFloatingPointType(is_complex)) {
     if (is_complex)
       error = Status::FromErrorString(
           "We don't support returning complex values at present");
@@ -973,16 +972,16 @@ UnwindPlanSP ABISysV_ppc64::CreateFunctionEntryUnwindPlan() {
     pc_reg_num = ppc64_dwarf::dwarf_pc_ppc64;
   }
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
   // The previous PC is in the LR. All other registers are the same.
-  row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
+  row.SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("ppc64 at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;
@@ -1003,17 +1002,17 @@ UnwindPlanSP ABISysV_ppc64::CreateDefaultUnwindPlan() {
     cr_reg_num = ppc64_dwarf::dwarf_cr_ppc64;
   }
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
   const int32_t ptr_size = 8;
-  row->SetUnspecifiedRegistersAreUndefined(true);
-  row->GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
+  row.SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 2, true);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(cr_reg_num, ptr_size, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 2, true);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(cr_reg_num, ptr_size, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("ppc64 default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);

@@ -15,6 +15,15 @@
 
 using namespace mlir;
 
+/// Conditions the deletion of the operation to the removal of all its uses.
+static bool forwardToUsers(Operation *op,
+                           SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  for (Value result : op->getResults())
+    for (OpOperand &use : result.getUses())
+      newBlockingUses.push_back(&use);
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Interfaces for AllocaOp
 //===----------------------------------------------------------------------===//
@@ -25,8 +34,8 @@ llvm::SmallVector<MemorySlot> cir::AllocaOp::getPromotableSlots() {
 
 Value cir::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                      OpBuilder &builder) {
-  return builder.create<cir::ConstantOp>(
-      getLoc(), slot.elemType, builder.getAttr<cir::UndefAttr>(slot.elemType));
+  return cir::ConstantOp::create(builder, getLoc(),
+                                 cir::UndefAttr::get(slot.elemType));
 }
 
 void cir::AllocaOp::handleBlockArgument(const MemorySlot &slot,
@@ -65,7 +74,7 @@ bool cir::LoadOp::canUsesBeRemoved(
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
-         getResult().getType() == slot.elemType;
+         getType() == slot.elemType;
 }
 
 DeletionKind cir::LoadOp::removeBlockingUses(
@@ -106,5 +115,63 @@ DeletionKind cir::StoreOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
     OpBuilder &builder, Value reachingDefinition,
     const DataLayout &dataLayout) {
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for CopyOp
+//===----------------------------------------------------------------------===//
+
+bool cir::CopyOp::loadsFrom(const MemorySlot &slot) {
+  return getSrc() == slot.ptr;
+}
+
+bool cir::CopyOp::storesTo(const MemorySlot &slot) {
+  return getDst() == slot.ptr;
+}
+
+Value cir::CopyOp::getStored(const MemorySlot &slot, OpBuilder &builder,
+                             Value reachingDef, const DataLayout &dataLayout) {
+  return cir::LoadOp::create(builder, getLoc(), slot.elemType, getSrc());
+}
+
+DeletionKind cir::CopyOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, mlir::Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  if (loadsFrom(slot))
+    cir::StoreOp::create(builder, getLoc(), reachingDefinition, getDst(),
+                         /*isVolatile=*/false,
+                         /*alignment=*/mlir::IntegerAttr{},
+                         /*sync_scope=*/cir::SyncScopeKindAttr(),
+                         /*mem-order=*/cir::MemOrderAttr());
+  return DeletionKind::Delete;
+}
+
+bool cir::CopyOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (getDst() == getSrc())
+    return false;
+
+  return getLength(dataLayout) == dataLayout.getTypeSize(slot.elemType);
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for CastOp
+//===----------------------------------------------------------------------===//
+
+bool cir::CastOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (getKind() == cir::CastKind::bitcast)
+    return forwardToUsers(*this, newBlockingUses);
+  return false;
+}
+
+DeletionKind cir::CastOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }

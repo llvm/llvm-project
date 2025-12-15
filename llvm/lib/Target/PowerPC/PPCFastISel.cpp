@@ -17,6 +17,7 @@
 #include "PPCCallingConv.h"
 #include "PPCISelLowering.h"
 #include "PPCMachineFunctionInfo.h"
+#include "PPCSelectionDAGInfo.h"
 #include "PPCSubtarget.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FastISel.h"
@@ -1374,7 +1375,10 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value *> &Args,
   unsigned LinkageSize = Subtarget->getFrameLowering()->getLinkageSize();
   CCInfo.AllocateStack(LinkageSize, Align(8));
 
-  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, CC_PPC64_ELF_FIS);
+  SmallVector<Type *, 16> ArgTys;
+  for (Value *Arg : Args)
+    ArgTys.push_back(Arg->getType());
+  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, ArgTys, CC_PPC64_ELF_FIS);
 
   // Bail out if we can't handle any of the arguments.
   for (const CCValAssign &VA : ArgLocs) {
@@ -1487,7 +1491,7 @@ bool PPCFastISel::finishCall(MVT RetVT, CallLoweringInfo &CLI, unsigned &NumByte
   if (RetVT != MVT::isVoid) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, RetCC_PPC64_ELF_FIS);
+    CCInfo.AnalyzeCallResult(RetVT, CLI.RetTy, RetCC_PPC64_ELF_FIS);
     CCValAssign &VA = RVLocs[0];
     assert(RVLocs.size() == 1 && "No support for multi-reg return values!");
     assert(VA.isRegLoc() && "Can only return in registers!");
@@ -1573,7 +1577,7 @@ bool PPCFastISel::fastLowerCall(CallLoweringInfo &CLI) {
       RetVT != MVT::f64) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, IsVarArg, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, RetCC_PPC64_ELF_FIS);
+    CCInfo.AnalyzeCallResult(RetVT, RetTy, RetCC_PPC64_ELF_FIS);
     if (RVLocs.size() > 1)
       return false;
   }
@@ -1704,7 +1708,8 @@ bool PPCFastISel::SelectRet(const Instruction *I) {
 
     // Special case for returning a constant integer of any size - materialize
     // the constant as an i64 and copy it to the return register.
-    if (const ConstantInt *CI = dyn_cast<ConstantInt>(RV)) {
+    if (isa<ConstantInt>(RV) && RV->getType()->isIntegerTy()) {
+      const ConstantInt *CI = cast<ConstantInt>(RV);
       CCValAssign &VA = ValLocs[0];
 
       Register RetReg = VA.getLocReg();
@@ -2263,16 +2268,16 @@ Register PPCFastISel::fastMaterializeConstant(const Constant *C) {
 // Materialize the address created by an alloca into a register, and
 // return the register number (or zero if we failed to handle it).
 Register PPCFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+  DenseMap<const AllocaInst *, int>::iterator SI =
+      FuncInfo.StaticAllocaMap.find(AI);
+
   // Don't handle dynamic allocas.
-  if (!FuncInfo.StaticAllocaMap.count(AI))
+  if (SI == FuncInfo.StaticAllocaMap.end())
     return Register();
 
   MVT VT;
   if (!isLoadTypeLegal(AI->getType(), VT))
     return Register();
-
-  DenseMap<const AllocaInst*, int>::iterator SI =
-    FuncInfo.StaticAllocaMap.find(AI);
 
   if (SI != FuncInfo.StaticAllocaMap.end()) {
     Register ResultReg = createResultReg(&PPC::G8RC_and_G8RC_NOX0RegClass);

@@ -27,7 +27,7 @@ void bad_memcpy_known_dest(const char *src) {
   char dest01[13];
   memcpy(dest01, src, strlen(src));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: the result from calling 'memcpy' is not null-terminated [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: dest01[14];
+  // CHECK-FIXES: char dest01[14];
   // CHECK-FIXES-NEXT: strcpy_s(dest01, src);
 }
 
@@ -44,7 +44,7 @@ void bad_memcpy_full_source_length(std::string src) {
   char *dest20 = reinterpret_cast<char *>(malloc(src.size()));
   memcpy(dest20, src.data(), src.size());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: the result from calling 'memcpy' is not null-terminated [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: dest20 = reinterpret_cast<char *>(malloc(src.size() + 1));
+  // CHECK-FIXES: char *dest20 = reinterpret_cast<char *>(malloc(src.size() + 1));
   // CHECK-FIXES-NEXT: strcpy(dest20, src.data());
 }
 

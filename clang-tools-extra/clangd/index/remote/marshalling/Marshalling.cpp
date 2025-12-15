@@ -203,6 +203,9 @@ llvm::Expected<clangd::Ref> Marshaller::fromProtobuf(const Ref &Message) {
     return Location.takeError();
   Result.Location = *Location;
   Result.Kind = static_cast<RefKind>(Message.kind());
+  auto ContainerID = SymbolID::fromStr(Message.container());
+  if (ContainerID)
+    Result.Container = *ContainerID;
   return Result;
 }
 
@@ -340,6 +343,7 @@ llvm::Expected<Ref> Marshaller::toProtobuf(const clangd::Ref &From) {
   if (!Location)
     return Location.takeError();
   *Result.mutable_location() = *Location;
+  Result.set_container(From.Container.str());
   return Result;
 }
 

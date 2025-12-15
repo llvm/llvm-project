@@ -23,6 +23,7 @@
 #include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/MCA/Instruction.h"
 #include "llvm/MCA/Support.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -32,7 +33,7 @@ class RecycledInstErr : public ErrorInfo<RecycledInstErr> {
   Instruction *RecycledInst;
 
 public:
-  static char ID;
+  LLVM_ABI static char ID;
 
   explicit RecycledInstErr(Instruction *Inst) : RecycledInst(Inst) {}
   // Always need to carry an Instruction
@@ -77,6 +78,10 @@ class InstrBuilder {
   DenseMap<std::pair<hash_code, unsigned>, std::unique_ptr<const InstrDesc>>
       VariantDescriptors;
 
+  // These descriptors are customized for particular instructions and cannot
+  // be reused
+  SmallVector<std::unique_ptr<const InstrDesc>> CustomDescriptors;
+
   bool FirstCallInst;
   bool FirstReturnInst;
   unsigned CallLatency;
@@ -99,9 +104,9 @@ class InstrBuilder {
   Error verifyInstrDesc(const InstrDesc &ID, const MCInst &MCI) const;
 
 public:
-  InstrBuilder(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
-               const MCRegisterInfo &RI, const MCInstrAnalysis *IA,
-               const InstrumentManager &IM, unsigned CallLatency);
+  LLVM_ABI InstrBuilder(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+                        const MCRegisterInfo &RI, const MCInstrAnalysis *IA,
+                        const InstrumentManager &IM, unsigned CallLatency);
 
   void clear() {
     Descriptors.clear();
@@ -114,7 +119,7 @@ public:
   /// or null if there isn't any.
   void setInstRecycleCallback(InstRecycleCallback CB) { InstRecycleCB = CB; }
 
-  Expected<std::unique_ptr<Instruction>>
+  LLVM_ABI Expected<std::unique_ptr<Instruction>>
   createInstruction(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
 };
 } // namespace mca

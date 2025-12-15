@@ -13,18 +13,18 @@ end
 ! CHECK-LABEL: func.func @_QMm2Ptest() {
 ! CHECK:         %[[VAL_0:.*]] = fir.address_of(@_QMmEx) : !fir.ref<i32>
 ! CHECK:         %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<i32> -> !fir.ref<i32>
+! CHECK:         %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<i32> -> !fir.ref<i32>
 ! CHECK:         %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         fir.call @_QPbar(%[[VAL_3]]#1) {{.*}}: (!fir.ref<i32>) -> ()
+! CHECK:         fir.call @_QPbar(%[[VAL_3]]#0) {{.*}}: (!fir.ref<i32>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 
 ! CHECK-LABEL: func.func private @_QMm2FtestPinternal_test() {{.*}} {
 ! CHECK:         %[[VAL_0:.*]] = fir.address_of(@_QMmEx) : !fir.ref<i32>
 ! CHECK:         %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<i32> -> !fir.ref<i32>
+! CHECK:         %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<i32> -> !fir.ref<i32>
 ! CHECK:         %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         fir.call @_QPbar(%[[VAL_3]]#1) {{.*}}: (!fir.ref<i32>) -> ()
+! CHECK:         fir.call @_QPbar(%[[VAL_3]]#0) {{.*}}: (!fir.ref<i32>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 

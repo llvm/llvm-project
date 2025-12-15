@@ -815,13 +815,13 @@ void StackColoring::calculateLocalLiveness() {
       LocalLiveOut |= BlockInfo.Begin;
 
       // Update block LiveIn set, noting whether it has changed.
-      if (LocalLiveIn.test(BlockInfo.LiveIn)) {
+      if (!LocalLiveIn.subsetOf(BlockInfo.LiveIn)) {
         changed = true;
         BlockInfo.LiveIn |= LocalLiveIn;
       }
 
       // Update block LiveOut set, noting whether it has changed.
-      if (LocalLiveOut.test(BlockInfo.LiveOut)) {
+      if (!LocalLiveOut.subsetOf(BlockInfo.LiveOut)) {
         changed = true;
         BlockInfo.LiveOut |= LocalLiveOut;
       }
@@ -1178,8 +1178,11 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
     if (auto It = SlotRemap.find(i); It != SlotRemap.end()) {
       int Target = It->second;
       // As long as our target is mapped to something else, follow it.
-      while (SlotRemap.count(Target)) {
-        Target = SlotRemap[Target];
+      while (true) {
+        auto It = SlotRemap.find(Target);
+        if (It == SlotRemap.end())
+          break;
+        Target = It->second;
         SlotRemap[i] = Target;
       }
     }
@@ -1198,7 +1201,7 @@ PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
   StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
   if (SC.run(MF))
-    return PreservedAnalyses::none();
+    return getMachineFunctionPassPreservedAnalyses();
   return PreservedAnalyses::all();
 }
 

@@ -18,9 +18,28 @@
 ## with safe_thunks ICF.
 # RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -map %t/thunk.map -o %t/thunk %t/input.o --icf=safe_thunks
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/thunk | FileCheck %s
+# RUN: llvm-objdump --macho --section-headers %t/thunk > %t/headers.txt
+# RUN: llvm-otool -vs __DATA __objc_selrefs %t/thunk >> %t/headers.txt
+# RUN: llvm-otool -vs __TEXT __objc_stubs %t/thunk >> %t/headers.txt
+# RUN: FileCheck %s --check-prefix=OBJC < %t/headers.txt
 
 # RUN: FileCheck %s --input-file %t/thunk.map --check-prefix=MAP
- 
+
+# OBJC: Sections:
+# OBJC: __text
+# OBJC-NEXT: __lcxx_override
+# OBJC-NEXT: __stubs
+# OBJC-NEXT: __stub_helper
+# OBJC-NEXT: __objc_stubs
+
+# OBJC: Contents of (__DATA,__objc_selrefs) section
+# OBJC-NEXT: {{[0-9a-f]*}}  __TEXT:__objc_methname:foo
+# OBJC-NEXT: {{[0-9a-f]*}}  __TEXT:__objc_methname:bar
+
+# OBJC: Contents of (__TEXT,__objc_stubs) section
+# OBJC: _objc_msgSend$bar:
+# OBJC: _objc_msgSend$foo:
+
 # MAP:      0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _a
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _b
@@ -45,7 +64,6 @@
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.1
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f.thunk.1
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr.thunk.0
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} ltmp0.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _z
 
 
@@ -206,6 +224,22 @@
 
 # CHECK: [[#%x, NAN_PAGE + NAN_OFFSET]] <__stubs>:
 
+.section  __TEXT,__objc_methname,cstring_literals
+lselref1:
+  .asciz  "foo"
+lselref2:
+  .asciz  "bar"
+
+.section  __DATA,__objc_selrefs,literal_pointers,no_dead_strip
+.p2align  3
+.quad lselref1
+.quad lselref2
+
+.text
+.globl _objc_msgSend
+_objc_msgSend:
+  ret
+
 .subsections_via_symbols
 
 .addrsig
@@ -352,6 +386,8 @@ _main:
   bl _fold_func_low_addr
   bl _fold_func_high_addr
   bl ___nan
+  bl _objc_msgSend$foo
+  bl _objc_msgSend$bar
   ret
 
 .globl _fold_func_high_addr

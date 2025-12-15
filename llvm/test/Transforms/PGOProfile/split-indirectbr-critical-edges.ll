@@ -42,6 +42,7 @@ if.end:                                           ; preds = %if.end.preheader, %
 ;; The edge will not be profiled.
 ; CHECK-LABEL: @cannot_split(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %targets = alloca <2 x ptr>, align 16
 ; CHECK-NEXT:    call void @llvm.instrprof.increment
 ; CHECK: indirect:
 ; CHECK-NOT:     call void @llvm.instrprof.increment

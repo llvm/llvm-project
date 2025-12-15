@@ -11,7 +11,7 @@
 #include "hdr/types/FILE.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/arg_list.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/common.h"
 #include "src/stdio/gpu/vfprintf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -12,7 +12,9 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
+#include <mutex>
 
 using namespace lldb_private;
 
@@ -125,32 +127,47 @@ ExecutionContext::ExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr,
   }
 }
 
-ExecutionContext::ExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr,
-                                   std::unique_lock<std::recursive_mutex> &lock)
-    : m_target_sp(), m_process_sp(), m_thread_sp(), m_frame_sp() {
-  if (exe_ctx_ref_ptr) {
-    m_target_sp = exe_ctx_ref_ptr->GetTargetSP();
-    if (m_target_sp) {
-      lock = std::unique_lock<std::recursive_mutex>(m_target_sp->GetAPIMutex());
-
-      m_process_sp = exe_ctx_ref_ptr->GetProcessSP();
-      m_thread_sp = exe_ctx_ref_ptr->GetThreadSP();
-      m_frame_sp = exe_ctx_ref_ptr->GetFrameSP();
-    }
-  }
+llvm::Expected<StoppedExecutionContext>
+lldb_private::GetStoppedExecutionContext(
+    const lldb::ExecutionContextRefSP &exe_ctx_ref_ptr) {
+  return GetStoppedExecutionContext(exe_ctx_ref_ptr.get());
 }
 
-ExecutionContext::ExecutionContext(const ExecutionContextRef &exe_ctx_ref,
-                                   std::unique_lock<std::recursive_mutex> &lock)
-    : m_target_sp(exe_ctx_ref.GetTargetSP()), m_process_sp(), m_thread_sp(),
-      m_frame_sp() {
-  if (m_target_sp) {
-    lock = std::unique_lock<std::recursive_mutex>(m_target_sp->GetAPIMutex());
+llvm::Expected<StoppedExecutionContext>
+lldb_private::GetStoppedExecutionContext(
+    const ExecutionContextRef *exe_ctx_ref_ptr) {
+  if (!exe_ctx_ref_ptr)
+    return llvm::createStringError(
+        "StoppedExecutionContext created with an empty ExecutionContextRef");
 
-    m_process_sp = exe_ctx_ref.GetProcessSP();
-    m_thread_sp = exe_ctx_ref.GetThreadSP();
-    m_frame_sp = exe_ctx_ref.GetFrameSP();
-  }
+  lldb::TargetSP target_sp = exe_ctx_ref_ptr->GetTargetSP();
+  if (!target_sp)
+    return llvm::createStringError(
+        "StoppedExecutionContext created with a null target");
+
+  auto api_lock =
+      std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+
+  auto process_sp = exe_ctx_ref_ptr->GetProcessSP();
+  if (!process_sp)
+    return llvm::createStringError(
+        "StoppedExecutionContext created with a null process");
+
+  ProcessRunLock::ProcessRunLocker stop_locker;
+  if (!stop_locker.TryLock(&process_sp->GetRunLock()))
+    return llvm::createStringError(
+        "attempted to create a StoppedExecutionContext with a running process");
+
+  auto thread_sp = exe_ctx_ref_ptr->GetThreadSP();
+  auto frame_sp = exe_ctx_ref_ptr->GetFrameSP();
+  return StoppedExecutionContext(target_sp, process_sp, thread_sp, frame_sp,
+                                 std::move(api_lock), std::move(stop_locker));
+}
+
+std::unique_lock<std::recursive_mutex> StoppedExecutionContext::AllowResume() {
+  Clear();
+  m_stop_locker = ProcessRunLock::ProcessRunLocker();
+  return std::move(m_api_lock);
 }
 
 ExecutionContext::ExecutionContext(ExecutionContextScope *exe_scope_ptr)
@@ -412,6 +429,16 @@ ExecutionContextRef::ExecutionContextRef(Target *target, bool adopt_selected)
   SetTargetPtr(target, adopt_selected);
 }
 
+ExecutionContextRef::ExecutionContextRef(Process *process, bool adopt_selected)
+    : m_target_wp(), m_process_wp(), m_thread_wp(), m_stack_id() {
+  SetProcessPtr(process, adopt_selected);
+}
+
+ExecutionContextRef::ExecutionContextRef(Thread *thread, bool adopt_selected)
+    : m_target_wp(), m_process_wp(), m_thread_wp(), m_stack_id() {
+  SetThreadPtr(thread, adopt_selected);
+}
+
 ExecutionContextRef::ExecutionContextRef(const ExecutionContextRef &rhs)
 
     = default;
@@ -439,10 +466,13 @@ operator=(const ExecutionContext &exe_ctx) {
   else
     m_tid = LLDB_INVALID_THREAD_ID;
   lldb::StackFrameSP frame_sp(exe_ctx.GetFrameSP());
-  if (frame_sp)
+  if (frame_sp) {
     m_stack_id = frame_sp->GetStackID();
-  else
+    m_frame_list_wp = frame_sp->GetContainingStackFrameList();
+  } else {
     m_stack_id.Clear();
+    m_frame_list_wp.reset();
+  }
   return *this;
 }
 
@@ -484,6 +514,7 @@ void ExecutionContextRef::SetThreadSP(const lldb::ThreadSP &thread_sp) {
 void ExecutionContextRef::SetFrameSP(const lldb::StackFrameSP &frame_sp) {
   if (frame_sp) {
     m_stack_id = frame_sp->GetStackID();
+    m_frame_list_wp = frame_sp->GetContainingStackFrameList();
     SetThreadSP(frame_sp->GetThread());
   } else {
     ClearFrame();
@@ -496,55 +527,66 @@ void ExecutionContextRef::SetFrameSP(const lldb::StackFrameSP &frame_sp) {
 void ExecutionContextRef::SetTargetPtr(Target *target, bool adopt_selected) {
   Clear();
   if (target) {
-    lldb::TargetSP target_sp(target->shared_from_this());
-    if (target_sp) {
-      m_target_wp = target_sp;
-      if (adopt_selected) {
-        lldb::ProcessSP process_sp(target_sp->GetProcessSP());
-        if (process_sp) {
-          m_process_wp = process_sp;
-          if (process_sp) {
-            // Only fill in the thread and frame if our process is stopped
-            // Don't just check the state, since we might be in the middle of
-            // resuming.
-            Process::StopLocker stop_locker;
-
-            if (stop_locker.TryLock(&process_sp->GetRunLock()) &&
-                StateIsStoppedState(process_sp->GetState(), true)) {
-              lldb::ThreadSP thread_sp(
-                  process_sp->GetThreadList().GetSelectedThread());
-              if (!thread_sp)
-                thread_sp = process_sp->GetThreadList().GetThreadAtIndex(0);
-
-              if (thread_sp) {
-                SetThreadSP(thread_sp);
-                lldb::StackFrameSP frame_sp(
-                    thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame));
-                if (!frame_sp)
-                  frame_sp = thread_sp->GetStackFrameAtIndex(0);
-                if (frame_sp)
-                  SetFrameSP(frame_sp);
-              }
-            }
-          }
-        }
-      }
+    lldb::TargetSP target_sp = target->shared_from_this();
+    SetTargetSP(target_sp);
+    if (adopt_selected) {
+      if (lldb::ProcessSP process_sp = target_sp->GetProcessSP())
+        SetProcessPtr(process_sp.get(), adopt_selected);
     }
   }
 }
 
-void ExecutionContextRef::SetProcessPtr(Process *process) {
+void ExecutionContextRef::SetProcessPtr(Process *process, bool adopt_selected) {
   if (process) {
-    SetProcessSP(process->shared_from_this());
+    lldb::ProcessSP process_sp = process->shared_from_this();
+    SetProcessSP(process_sp);
+    if (adopt_selected) {
+      // Only fill in the thread if our process is stopped.
+      // Don't just check the state, since we might be in the middle of
+      // resuming.
+      Process::StopLocker stop_locker;
+      if (stop_locker.TryLock(&process_sp->GetRunLock()) &&
+          StateIsStoppedState(process_sp->GetState(), true)) {
+        lldb::ThreadSP thread_sp(
+            process_sp->GetThreadList().GetSelectedThread());
+        if (!thread_sp)
+          thread_sp = process_sp->GetThreadList().GetThreadAtIndex(0);
+        if (thread_sp) {
+          SetThreadSP(thread_sp);
+          lldb::StackFrameSP frame_sp =
+              thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
+          if (!frame_sp)
+            frame_sp = thread_sp->GetStackFrameAtIndex(0);
+          if (frame_sp)
+            SetFrameSP(frame_sp);
+        }
+      }
+    }
   } else {
     m_process_wp.reset();
     m_target_wp.reset();
   }
 }
 
-void ExecutionContextRef::SetThreadPtr(Thread *thread) {
+void ExecutionContextRef::SetThreadPtr(Thread *thread, bool adopt_selected) {
   if (thread) {
-    SetThreadSP(thread->shared_from_this());
+    lldb::ThreadSP thread_sp = thread->shared_from_this();
+    SetThreadSP(thread_sp);
+    if (adopt_selected) {
+      // Only fill in the frame if our process is stopped.
+      // Don't just check the state, since we might be in the middle of
+      // resuming.
+      Process::StopLocker stop_locker;
+      if (stop_locker.TryLock(&thread->GetProcess()->GetRunLock()) &&
+          StateIsStoppedState(thread->GetProcess()->GetState(), true)) {
+        lldb::StackFrameSP frame_sp =
+            thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
+        if (!frame_sp)
+          frame_sp = thread_sp->GetStackFrameAtIndex(0);
+        if (frame_sp)
+          SetFrameSP(frame_sp);
+      }
+    }
   } else {
     ClearThread();
     m_process_wp.reset();
@@ -600,6 +642,15 @@ lldb::ThreadSP ExecutionContextRef::GetThreadSP() const {
 
 lldb::StackFrameSP ExecutionContextRef::GetFrameSP() const {
   if (m_stack_id.IsValid()) {
+    // Try the remembered frame list first to avoid circular dependencies
+    // during frame provider initialization.
+    if (auto frame_list_sp = m_frame_list_wp.lock()) {
+      if (auto frame_sp = frame_list_sp->GetFrameWithStackID(m_stack_id))
+        return frame_sp;
+    }
+
+    // Fallback: ask the thread, which might re-trigger the frame provider
+    // initialization.
     lldb::ThreadSP thread_sp(GetThreadSP());
     if (thread_sp)
       return thread_sp->GetFrameWithStackID(m_stack_id);

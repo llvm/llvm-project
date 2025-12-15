@@ -156,8 +156,8 @@ define <3 x float> @copysign_v3f32(<3 x float> %a, <3 x float> %b) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #-2147483648 // =0x80000000
 ; CHECK-GI-NEXT:    mov w9, #2147483647 // =0x7fffffff
-; CHECK-GI-NEXT:    mov v2.s[0], w9
-; CHECK-GI-NEXT:    mov v3.s[0], w8
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    fmov s3, w8
 ; CHECK-GI-NEXT:    mov v2.s[1], w9
 ; CHECK-GI-NEXT:    mov v3.s[1], w8
 ; CHECK-GI-NEXT:    mov v2.s[2], w9

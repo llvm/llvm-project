@@ -480,11 +480,10 @@ ABISysV_arc::GetReturnValueObjectSimple(Thread &thread,
   }
   // Floating point return type.
   else if (type_flags & eTypeIsFloat) {
-    uint32_t float_count = 0;
     bool is_complex = false;
 
-    if (compiler_type.IsFloatingPointType(float_count, is_complex) &&
-        1 == float_count && !is_complex) {
+    if (compiler_type.IsFloatingPointType(is_complex) &&
+        !compiler_type.IsVectorType() && !is_complex) {
       const size_t byte_size =
           llvm::expectedToOptional(compiler_type.GetByteSize(&thread))
               .value_or(0);
@@ -560,16 +559,16 @@ ValueObjectSP ABISysV_arc::GetReturnValueObjectImpl(Thread &thread,
 }
 
 UnwindPlanSP ABISysV_arc::CreateFunctionEntryUnwindPlan() {
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value.
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf::sp, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf::sp, 0);
 
   // The previous PC is in the BLINK, all other registers are the same.
-  row->SetRegisterLocationToRegister(dwarf::pc, dwarf::blink, true);
+  row.SetRegisterLocationToRegister(dwarf::pc, dwarf::blink, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("arc at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;

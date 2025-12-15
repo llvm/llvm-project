@@ -30,8 +30,6 @@ define <vscale x 2 x i1> @vfptoui_nxv2i1_nxv2bf16_unmasked(<vscale x 2 x bfloat>
   ret <vscale x 2 x i1> %v
 }
 
-declare <vscale x 2 x i1> @llvm.vp.fptoui.nxv2i1.nxv2f16(<vscale x 2 x half>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i1> @vfptoui_nxv2i1_nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfptoui_nxv2i1_nxv2f16:
 ; ZVFH:       # %bb.0:
@@ -72,8 +70,6 @@ define <vscale x 2 x i1> @vfptoui_nxv2i1_nxv2f16_unmasked(<vscale x 2 x half> %v
   ret <vscale x 2 x i1> %v
 }
 
-declare <vscale x 2 x i1> @llvm.vp.fptoui.nxv2i1.nxv2f32(<vscale x 2 x float>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i1> @vfptoui_nxv2i1_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptoui_nxv2i1_nxv2f32:
 ; CHECK:       # %bb.0:
@@ -95,8 +91,6 @@ define <vscale x 2 x i1> @vfptoui_nxv2i1_nxv2f32_unmasked(<vscale x 2 x float> %
   %v = call <vscale x 2 x i1> @llvm.vp.fptoui.nxv2i1.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i1> %v
 }
-
-declare <vscale x 2 x i1> @llvm.vp.fptoui.nxv2i1.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i1> @vfptoui_nxv2i1_nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptoui_nxv2i1_nxv2f64:

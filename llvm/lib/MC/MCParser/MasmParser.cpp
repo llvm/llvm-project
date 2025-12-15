@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
@@ -33,16 +32,14 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/AsmCond.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -375,11 +372,6 @@ FieldInitializer &FieldInitializer::operator=(FieldInitializer &&Initializer) {
 // It's a peer of AsmParser, not of COFFAsmParser, WasmAsmParser, etc.
 class MasmParser : public MCAsmParser {
 private:
-  AsmLexer Lexer;
-  MCContext &Ctx;
-  MCStreamer &Out;
-  const MCAsmInfo &MAI;
-  SourceMgr &SrcMgr;
   SourceMgr::DiagHandlerTy SavedDiagHandler;
   void *SavedDiagContext;
   std::unique_ptr<MCAsmParserExtension> PlatformParser;
@@ -450,9 +442,6 @@ private:
   /// Defaults to 1U, meaning Intel.
   unsigned AssemblerDialect = 1U;
 
-  /// is Darwin compatibility enabled?
-  bool IsDarwin = false;
-
   /// Are we parsing ms-style inline assembly?
   bool ParsingMSInlineAsm = false;
 
@@ -484,11 +473,6 @@ public:
   /// @name MCAsmParser Interface
   /// {
 
-  SourceMgr &getSourceManager() override { return SrcMgr; }
-  MCAsmLexer &getLexer() override { return Lexer; }
-  MCContext &getContext() override { return Ctx; }
-  MCStreamer &getStreamer() override { return Out; }
-
   unsigned getAssemblerDialect() override {
     if (AssemblerDialect == ~0U)
       return MAI.getAssemblerDialect();
@@ -499,11 +483,9 @@ public:
     AssemblerDialect = i;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) override;
-  bool Warning(SMLoc L, const Twine &Msg,
-               SMRange Range = std::nullopt) override;
-  bool printError(SMLoc L, const Twine &Msg,
-                  SMRange Range = std::nullopt) override;
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool printError(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
 
   enum ExpandKind { ExpandMacros, DoNotExpandMacros };
   const AsmToken &Lex(ExpandKind ExpandNextToken);
@@ -608,7 +590,7 @@ private:
   bool expandStatement(SMLoc Loc);
 
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
-                    SMRange Range = std::nullopt) const {
+                    SMRange Range = {}) const {
     ArrayRef<SMRange> Ranges(Range);
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
@@ -777,6 +759,19 @@ private:
 
   std::optional<std::string> evaluateBuiltinTextMacro(BuiltinSymbol Symbol,
                                                       SMLoc StartLoc);
+
+  // Generic (target and platform independent) directive parsing.
+  enum BuiltinFunction {
+    BI_NO_FUNCTION, // Placeholder
+    BI_CATSTR,
+  };
+
+  /// Maps builtin name --> BuiltinFunction enum, for builtins handled by this
+  /// class.
+  StringMap<BuiltinFunction> BuiltinFunctionMap;
+
+  bool evaluateBuiltinMacroFunction(BuiltinFunction Function, StringRef Name,
+                                    std::string &Res);
 
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
@@ -959,7 +954,7 @@ private:
   bool parseDirectiveEcho(SMLoc DirectiveLoc);
 
   void initializeDirectiveKindMap();
-  void initializeBuiltinSymbolMap();
+  void initializeBuiltinSymbolMaps();
 };
 
 } // end anonymous namespace
@@ -968,16 +963,14 @@ namespace llvm {
 
 extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
 
-extern MCAsmParserExtension *createCOFFMasmParser();
-
 } // end namespace llvm
 
 enum { DEFAULT_ADDRSPACE = 0 };
 
 MasmParser::MasmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                        const MCAsmInfo &MAI, struct tm TM, unsigned CB)
-    : Lexer(MAI), Ctx(Ctx), Out(Out), MAI(MAI), SrcMgr(SM),
-      CurBuffer(CB ? CB : SM.getMainFileID()), TM(TM) {
+    : MCAsmParser(Ctx, Out, SM, MAI), CurBuffer(CB ? CB : SM.getMainFileID()),
+      TM(TM) {
   HadError = false;
   // Save the old handler.
   SavedDiagHandler = SrcMgr.getDiagHandler();
@@ -999,7 +992,7 @@ MasmParser::MasmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
 
   initializeDirectiveKindMap();
   PlatformParser->Initialize(*this);
-  initializeBuiltinSymbolMap();
+  initializeBuiltinSymbolMaps();
 
   NumOfMacroInstantiations = 0;
 }
@@ -1084,15 +1077,25 @@ bool MasmParser::expandMacros() {
   }
 
   std::optional<std::string> ExpandedValue;
-  auto BuiltinIt = BuiltinSymbolMap.find(IDLower);
-  if (BuiltinIt != BuiltinSymbolMap.end()) {
+
+  if (auto BuiltinIt = BuiltinSymbolMap.find(IDLower);
+      BuiltinIt != BuiltinSymbolMap.end()) {
     ExpandedValue =
         evaluateBuiltinTextMacro(BuiltinIt->getValue(), Tok.getLoc());
-  } else {
-    auto VarIt = Variables.find(IDLower);
-    if (VarIt != Variables.end() && VarIt->getValue().IsText) {
-      ExpandedValue = VarIt->getValue().TextValue;
+  } else if (auto BuiltinFuncIt = BuiltinFunctionMap.find(IDLower);
+             BuiltinFuncIt != BuiltinFunctionMap.end()) {
+    StringRef Name;
+    if (parseIdentifier(Name)) {
+      return true;
     }
+    std::string Res;
+    if (evaluateBuiltinMacroFunction(BuiltinFuncIt->getValue(), Name, Res)) {
+      return true;
+    }
+    ExpandedValue = Res;
+  } else if (auto VarIt = Variables.find(IDLower);
+             VarIt != Variables.end() && VarIt->getValue().IsText) {
+    ExpandedValue = VarIt->getValue().TextValue;
   }
 
   if (!ExpandedValue)
@@ -1113,6 +1116,7 @@ bool MasmParser::expandMacros() {
 const AsmToken &MasmParser::Lex(ExpandKind ExpandNextToken) {
   if (Lexer.getTok().is(AsmToken::Error))
     Error(Lexer.getErrLoc(), Lexer.getErr());
+  bool StartOfStatement = false;
 
   // if it's a end of statement with a comment in it
   if (getTok().is(AsmToken::EndOfStatement)) {
@@ -1120,10 +1124,10 @@ const AsmToken &MasmParser::Lex(ExpandKind ExpandNextToken) {
     if (!getTok().getString().empty() && getTok().getString().front() != '\n' &&
         getTok().getString().front() != '\r' && MAI.preserveAsmComments())
       Out.addExplicitComment(Twine(getTok().getString()));
+    StartOfStatement = true;
   }
 
   const AsmToken *tok = &Lexer.Lex();
-  bool StartOfStatement = Lexer.isAtStartOfStatement();
 
   while (ExpandNextToken == ExpandMacros && tok->is(AsmToken::Identifier)) {
     if (StartOfStatement) {
@@ -1216,20 +1220,19 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
       Lex();
 
     ParseStatementInfo Info(&AsmStrRewrites);
-    bool Parsed = parseStatement(Info, nullptr);
+    bool HasError = parseStatement(Info, nullptr);
 
     // If we have a Lexer Error we are on an Error Token. Load in Lexer Error
     // for printing ErrMsg via Lex() only if no (presumably better) parser error
     // exists.
-    if (Parsed && !hasPendingError() && Lexer.getTok().is(AsmToken::Error)) {
+    if (HasError && !hasPendingError() && Lexer.getTok().is(AsmToken::Error))
       Lex();
-    }
 
     // parseStatement returned true so may need to emit an error.
     printPendingErrors();
 
     // Skipping to the next line if needed.
-    if (Parsed && !getLexer().isAtStartOfStatement())
+    if (HasError && !getLexer().justConsumedEOL())
       eatToEndOfStatement();
   }
 
@@ -1473,18 +1476,18 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       auto VarIt = Variables.find(SymbolName.lower());
       if (VarIt != Variables.end())
         SymbolName = VarIt->second.Name;
-      Sym = getContext().getOrCreateSymbol(SymbolName);
+      Sym = getContext().parseSymbol(SymbolName);
     }
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
     if (Sym->isVariable()) {
-      auto V = Sym->getVariableValue(/*SetUsed=*/false);
+      auto V = Sym->getVariableValue();
       bool DoInline = isa<MCConstantExpr>(V);
       if (auto TV = dyn_cast<MCTargetExpr>(V))
         DoInline = TV->inlineAssignedExpr();
       if (DoInline) {
-        Res = Sym->getVariableValue(/*SetUsed=*/false);
+        Res = Sym->getVariableValue();
         return false;
       }
     }
@@ -1958,7 +1961,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     if (IDVal == "@@") {
       Sym = Ctx.createDirectionalLocalSymbol(0);
     } else {
-      Sym = getContext().getOrCreateSymbol(IDVal);
+      Sym = getContext().parseSymbol(IDVal);
     }
 
     // End of Labels should be treated as end of line for lexing
@@ -2310,7 +2313,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     for (unsigned i = 0; i != Info.ParsedOperands.size(); ++i) {
       if (i != 0)
         OS << ", ";
-      Info.ParsedOperands[i]->print(OS);
+      Info.ParsedOperands[i]->print(OS, MAI);
     }
     OS << "]";
 
@@ -2559,54 +2562,6 @@ bool MasmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
   return false;
 }
 
-static bool isOperator(AsmToken::TokenKind kind) {
-  switch (kind) {
-  default:
-    return false;
-  case AsmToken::Plus:
-  case AsmToken::Minus:
-  case AsmToken::Tilde:
-  case AsmToken::Slash:
-  case AsmToken::Star:
-  case AsmToken::Dot:
-  case AsmToken::Equal:
-  case AsmToken::EqualEqual:
-  case AsmToken::Pipe:
-  case AsmToken::PipePipe:
-  case AsmToken::Caret:
-  case AsmToken::Amp:
-  case AsmToken::AmpAmp:
-  case AsmToken::Exclaim:
-  case AsmToken::ExclaimEqual:
-  case AsmToken::Less:
-  case AsmToken::LessEqual:
-  case AsmToken::LessLess:
-  case AsmToken::LessGreater:
-  case AsmToken::Greater:
-  case AsmToken::GreaterEqual:
-  case AsmToken::GreaterGreater:
-    return true;
-  }
-}
-
-namespace {
-
-class AsmLexerSkipSpaceRAII {
-public:
-  AsmLexerSkipSpaceRAII(AsmLexer &Lexer, bool SkipSpace) : Lexer(Lexer) {
-    Lexer.setSkipSpace(SkipSpace);
-  }
-
-  ~AsmLexerSkipSpaceRAII() {
-    Lexer.setSkipSpace(true);
-  }
-
-private:
-  AsmLexer &Lexer;
-};
-
-} // end anonymous namespace
-
 bool MasmParser::parseMacroArgument(const MCAsmMacroParameter *MP,
                                     MCAsmMacroArgument &MA,
                                     AsmToken::TokenKind EndTok) {
@@ -2633,43 +2588,12 @@ bool MasmParser::parseMacroArgument(const MCAsmMacroParameter *MP,
 
   unsigned ParenLevel = 0;
 
-  // Darwin doesn't use spaces to delmit arguments.
-  AsmLexerSkipSpaceRAII ScopedSkipSpace(Lexer, IsDarwin);
-
-  bool SpaceEaten;
-
   while (true) {
-    SpaceEaten = false;
     if (Lexer.is(AsmToken::Eof) || Lexer.is(AsmToken::Equal))
       return TokError("unexpected token");
 
-    if (ParenLevel == 0) {
-      if (Lexer.is(AsmToken::Comma))
-        break;
-
-      if (Lexer.is(AsmToken::Space)) {
-        SpaceEaten = true;
-        Lex(); // Eat spaces.
-      }
-
-      // Spaces can delimit parameters, but could also be part an expression.
-      // If the token after a space is an operator, add the token and the next
-      // one into this argument
-      if (!IsDarwin) {
-        if (isOperator(Lexer.getKind()) && Lexer.isNot(EndTok)) {
-          MA.push_back(getTok());
-          Lex();
-
-          // Whitespace after an operator can be ignored.
-          if (Lexer.is(AsmToken::Space))
-            Lex();
-
-          continue;
-        }
-      }
-      if (SpaceEaten)
-        break;
-    }
+    if (ParenLevel == 0 && Lexer.is(AsmToken::Comma))
+      break;
 
     // handleMacroEntry relies on not advancing the lexer here
     // to be able to fill in the remaining default parameter values
@@ -2894,9 +2818,9 @@ bool MasmParser::handleMacroInvocation(const MCAsmMacro *M, SMLoc NameLoc) {
   SmallVector<AsmRewrite, 4> AsmStrRewrites;
   while (Lexer.isNot(AsmToken::Eof)) {
     ParseStatementInfo Info(&AsmStrRewrites);
-    bool Parsed = parseStatement(Info, nullptr);
+    bool HasError = parseStatement(Info, nullptr);
 
-    if (!Parsed && Info.ExitValue) {
+    if (!HasError && Info.ExitValue) {
       ExitValue = std::move(*Info.ExitValue);
       break;
     }
@@ -2904,15 +2828,14 @@ bool MasmParser::handleMacroInvocation(const MCAsmMacro *M, SMLoc NameLoc) {
     // If we have a Lexer Error we are on an Error Token. Load in Lexer Error
     // for printing ErrMsg via Lex() only if no (presumably better) parser error
     // exists.
-    if (Parsed && !hasPendingError() && Lexer.getTok().is(AsmToken::Error)) {
+    if (HasError && !hasPendingError() && Lexer.getTok().is(AsmToken::Error))
       Lex();
-    }
 
     // parseStatement returned true so may need to emit an error.
     printPendingErrors();
 
     // Skipping to the next line if needed.
-    if (Parsed && !getLexer().isAtStartOfStatement())
+    if (HasError && !getLexer().justConsumedEOL())
       eatToEndOfStatement();
   }
 
@@ -2976,7 +2899,7 @@ bool MasmParser::parseIdentifier(StringRef &Res,
   if (Position == StartOfStatement &&
       StringSwitch<bool>(Res)
           .CaseLower("echo", true)
-          .CasesLower("ifdef", "ifndef", "elseifdef", "elseifndef", true)
+          .CasesLower({"ifdef", "ifndef", "elseifdef", "elseifndef"}, true)
           .Default(false)) {
     ExpandNextToken = DoNotExpandMacros;
   }
@@ -3082,12 +3005,11 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
     return false;
   }
 
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
-
+  auto *Sym = static_cast<MCSymbolCOFF *>(getContext().parseSymbol(Var.Name));
   const MCConstantExpr *PrevValue =
-      Sym->isVariable() ? dyn_cast_or_null<MCConstantExpr>(
-                              Sym->getVariableValue(/*SetUsed=*/false))
-                        : nullptr;
+      Sym->isVariable()
+          ? dyn_cast_or_null<MCConstantExpr>(Sym->getVariableValue())
+          : nullptr;
   if (Var.IsText || !PrevValue || PrevValue->getValue() != Value) {
     switch (Var.Redefinable) {
     case Variable::NOT_REDEFINABLE:
@@ -3192,6 +3114,18 @@ bool MasmParser::parseTextItem(std::string &Data) {
           break;
         }
         Data = std::move(*BuiltinText);
+        ID = StringRef(Data);
+        Expanded = true;
+        continue;
+      }
+
+      // Try to resolve as a built-in macro function
+      auto BuiltinFuncIt = BuiltinFunctionMap.find(ID.lower());
+      if (BuiltinFuncIt != BuiltinFunctionMap.end()) {
+        Data.clear();
+        if (evaluateBuiltinMacroFunction(BuiltinFuncIt->getValue(), ID, Data)) {
+          return true;
+        }
         ID = StringRef(Data);
         Expanded = true;
         continue;
@@ -3379,7 +3313,7 @@ bool MasmParser::parseDirectiveNamedValue(StringRef TypeName, unsigned Size,
                                           StringRef Name, SMLoc NameLoc) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
     getStreamer().emitLabel(Sym);
     unsigned Count;
     if (emitIntegralValues(Size, &Count))
@@ -3570,7 +3504,7 @@ bool MasmParser::parseDirectiveNamedRealValue(StringRef TypeName,
                                               SMLoc NameLoc) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
     getStreamer().emitLabel(Sym);
     unsigned Count;
     if (emitRealValues(Semantics, &Count))
@@ -3740,9 +3674,8 @@ bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
                           std::to_string(Initializers.size()));
   }
   // Default-initialize all remaining values.
-  Initializers.insert(Initializers.end(),
-                      Contents.Initializers.begin() + Initializers.size(),
-                      Contents.Initializers.end());
+  llvm::append_range(Initializers, llvm::drop_begin(Contents.Initializers,
+                                                    Initializers.size()));
 
   Initializer = FieldInitializer(std::move(Initializers), Contents.Structure);
   return false;
@@ -4065,7 +3998,7 @@ bool MasmParser::parseDirectiveNamedStructValue(const StructInfo &Structure,
                                                 SMLoc DirLoc, StringRef Name) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
     getStreamer().emitLabel(Sym);
     unsigned Count;
     if (emitStructValues(Structure, &Count))
@@ -4290,8 +4223,7 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     // Check whether we should use optimal code alignment for this align
     // directive.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
-    assert(Section && "must have section to emit alignment");
-    if (Section->useCodeAlign()) {
+    if (MAI.useCodeAlign(*Section)) {
       getStreamer().emitCodeAlignment(Align(Alignment),
                                       &getTargetParser().getSTI(),
                                       /*MaxBytesToEmit=*/0);
@@ -4566,9 +4498,9 @@ bool MasmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
 bool MasmParser::parseDirectiveExtern() {
   // .extern is the default - but we still need to take any provided type info.
   auto parseOp = [&]() -> bool {
-    StringRef Name;
+    MCSymbol *Sym;
     SMLoc NameLoc = getTok().getLoc();
-    if (parseIdentifier(Name))
+    if (parseSymbol(Sym))
       return Error(NameLoc, "expected name");
     if (parseToken(AsmToken::Colon))
       return true;
@@ -4581,11 +4513,10 @@ bool MasmParser::parseDirectiveExtern() {
       AsmTypeInfo Type;
       if (lookUpType(TypeName, Type))
         return Error(TypeLoc, "unrecognized type");
-      KnownType[Name.lower()] = Type;
+      KnownType[Sym->getName().lower()] = Type;
     }
 
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-    Sym->setExternal(true);
+    static_cast<MCSymbolCOFF *>(Sym)->setExternal(true);
     getStreamer().emitSymbolAttribute(Sym, MCSA_Extern);
 
     return false;
@@ -4600,11 +4531,10 @@ bool MasmParser::parseDirectiveExtern() {
 ///  ::= { ".globl", ".weak", ... } [ identifier ( , identifier )* ]
 bool MasmParser::parseDirectiveSymbolAttribute(MCSymbolAttr Attr) {
   auto parseOp = [&]() -> bool {
-    StringRef Name;
     SMLoc Loc = getTok().getLoc();
-    if (parseIdentifier(Name))
+    MCSymbol *Sym;
+    if (parseSymbol(Sym))
       return Error(Loc, "expected identifier");
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
     // Assembler local symbols don't make any sense here. Complain loudly.
     if (Sym->isTemporary())
@@ -4627,12 +4557,9 @@ bool MasmParser::parseDirectiveComm(bool IsLocal) {
     return true;
 
   SMLoc IDLoc = getLexer().getLoc();
-  StringRef Name;
-  if (parseIdentifier(Name))
+  MCSymbol *Sym;
+  if (parseSymbol(Sym))
     return TokError("expected identifier in directive");
-
-  // Handle the identifier as the key symbol.
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   if (getLexer().isNot(AsmToken::Comma))
     return TokError("unexpected token in directive");
@@ -4854,7 +4781,7 @@ bool MasmParser::parseDirectiveIfdef(SMLoc DirectiveLoc, bool expect_defined) {
         is_defined = true;
       } else {
         MCSymbol *Sym = getContext().lookupSymbol(Name.lower());
-        is_defined = (Sym && !Sym->isUndefined(false));
+        is_defined = (Sym && !Sym->isUndefined());
       }
     }
 
@@ -4975,7 +4902,7 @@ bool MasmParser::parseDirectiveElseIfdef(SMLoc DirectiveLoc,
         is_defined = true;
       } else {
         MCSymbol *Sym = getContext().lookupSymbol(Name);
-        is_defined = (Sym && !Sym->isUndefined(false));
+        is_defined = (Sym && !Sym->isUndefined());
       }
     }
 
@@ -5145,7 +5072,7 @@ bool MasmParser::parseDirectiveErrorIfdef(SMLoc DirectiveLoc,
       IsDefined = true;
     } else {
       MCSymbol *Sym = getContext().lookupSymbol(Name);
-      IsDefined = (Sym && !Sym->isUndefined(false));
+      IsDefined = (Sym && !Sym->isUndefined());
     }
   }
 
@@ -5394,10 +5321,10 @@ void MasmParser::initializeDirectiveKindMap() {
 bool MasmParser::isMacroLikeDirective() {
   if (getLexer().is(AsmToken::Identifier)) {
     bool IsMacroLike = StringSwitch<bool>(getTok().getIdentifier())
-                           .CasesLower("repeat", "rept", true)
+                           .CasesLower({"repeat", "rept"}, true)
                            .CaseLower("while", true)
-                           .CasesLower("for", "irp", true)
-                           .CasesLower("forc", "irpc", true)
+                           .CasesLower({"for", "irp"}, true)
+                           .CasesLower({"forc", "irpc"}, true)
                            .Default(false);
     if (IsMacroLike)
       return true;
@@ -5913,11 +5840,11 @@ bool MasmParser::lookUpField(const StructInfo &Structure, StringRef Member,
 
 bool MasmParser::lookUpType(StringRef Name, AsmTypeInfo &Info) const {
   unsigned Size = StringSwitch<unsigned>(Name)
-                      .CasesLower("byte", "db", "sbyte", 1)
-                      .CasesLower("word", "dw", "sword", 2)
-                      .CasesLower("dword", "dd", "sdword", 4)
-                      .CasesLower("fword", "df", 6)
-                      .CasesLower("qword", "dq", "sqword", 8)
+                      .CasesLower({"byte", "db", "sbyte"}, 1)
+                      .CasesLower({"word", "dw", "sword"}, 2)
+                      .CasesLower({"dword", "dd", "sdword"}, 4)
+                      .CasesLower({"fword", "df"}, 6)
+                      .CasesLower({"qword", "dq", "sqword"}, 8)
                       .CaseLower("real4", 4)
                       .CaseLower("real8", 8)
                       .CaseLower("real10", 10)
@@ -6204,7 +6131,7 @@ bool MasmParser::parseMSInlineAsm(
   return false;
 }
 
-void MasmParser::initializeBuiltinSymbolMap() {
+void MasmParser::initializeBuiltinSymbolMaps() {
   // Numeric built-ins (supported in all versions)
   BuiltinSymbolMap["@version"] = BI_VERSION;
   BuiltinSymbolMap["@line"] = BI_LINE;
@@ -6215,6 +6142,9 @@ void MasmParser::initializeBuiltinSymbolMap() {
   BuiltinSymbolMap["@filecur"] = BI_FILECUR;
   BuiltinSymbolMap["@filename"] = BI_FILENAME;
   BuiltinSymbolMap["@curseg"] = BI_CURSEG;
+
+  // Function built-ins (supported in all versions)
+  BuiltinFunctionMap["@catstr"] = BI_CATSTR;
 
   // Some built-ins exist only for MASM32 (32-bit x86)
   if (getContext().getSubtargetInfo()->getTargetTriple().getArch() ==
@@ -6287,6 +6217,48 @@ MasmParser::evaluateBuiltinTextMacro(BuiltinSymbol Symbol, SMLoc StartLoc) {
     return getStreamer().getCurrentSectionOnly()->getName().str();
   }
   llvm_unreachable("unhandled built-in symbol");
+}
+
+bool MasmParser::evaluateBuiltinMacroFunction(BuiltinFunction Function,
+                                              StringRef Name,
+                                              std::string &Res) {
+  if (parseToken(AsmToken::LParen, "invoking macro function '" + Name +
+                                       "' requires arguments in parentheses")) {
+    return true;
+  }
+
+  MCAsmMacroParameters P;
+  switch (Function) {
+  default:
+    return true;
+  case BI_CATSTR:
+    break;
+  }
+  MCAsmMacro M(Name, "", P, {}, true);
+
+  MCAsmMacroArguments A;
+  if (parseMacroArguments(&M, A, AsmToken::RParen) || parseRParen()) {
+    return true;
+  }
+
+  switch (Function) {
+  default:
+    llvm_unreachable("unhandled built-in function");
+  case BI_CATSTR: {
+    for (const MCAsmMacroArgument &Arg : A) {
+      for (const AsmToken &Tok : Arg) {
+        if (Tok.is(AsmToken::String)) {
+          Res.append(Tok.getStringContents());
+        } else {
+          Res.append(Tok.getString());
+        }
+      }
+    }
+    return false;
+  }
+  }
+  llvm_unreachable("unhandled built-in function");
+  return true;
 }
 
 /// Create an MCAsmParser instance.

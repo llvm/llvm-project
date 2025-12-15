@@ -26,7 +26,7 @@ template <class _IntT,
           class _FloatT,
           bool _FloatBigger = (numeric_limits<_FloatT>::digits > numeric_limits<_IntT>::digits),
           int _Bits         = (numeric_limits<_IntT>::digits - numeric_limits<_FloatT>::digits)>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _IntT __max_representable_int_for_float() _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _IntT __max_representable_int_for_float() _NOEXCEPT {
   static_assert(is_floating_point<_FloatT>::value, "must be a floating point type");
   static_assert(is_integral<_IntT>::value, "must be an integral type");
   static_assert(numeric_limits<_FloatT>::radix == 2, "FloatT has incorrect radix");

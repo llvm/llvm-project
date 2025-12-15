@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
 
 #include <unordered_set>
@@ -139,12 +140,14 @@ public:
   virtual void printSectionDetails() {}
   virtual void printArchSpecificInfo() {}
   virtual void printMemtag() {}
+  virtual void printSectionsAsSFrame(ArrayRef<std::string> Sections) {}
 
   // Only implemented for PE/COFF.
   virtual void printCOFFImports() { }
   virtual void printCOFFExports() { }
   virtual void printCOFFDirectives() { }
   virtual void printCOFFBaseReloc() { }
+  virtual void printCOFFPseudoReloc() {}
   virtual void printCOFFDebugDirectory() { }
   virtual void printCOFFTLSDirectory() {}
   virtual void printCOFFResources() {}
@@ -157,8 +160,10 @@ public:
                      llvm::codeview::GlobalTypeTableBuilder &GlobalCVTypes,
                      bool GHash) {}
 
-  // Only implemented for XCOFF.
+  // Only implemented for XCOFF/COFF.
   virtual void printStringTable() {}
+
+  // Only implemented for XCOFF.
   virtual void printAuxiliaryHeader() {}
   virtual void printExceptionSection() {}
   virtual void printLoaderSection(bool PrintHeader, bool PrintSymbols,
@@ -184,9 +189,14 @@ public:
   std::function<Error(const Twine &Msg)> WarningHandler;
   void reportUniqueWarning(Error Err) const;
   void reportUniqueWarning(const Twine &Msg) const;
+  void printOffloading(const object::ObjectFile &Obj);
 
 protected:
   ScopedPrinter &W;
+
+  static std::vector<object::SectionRef>
+  getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
+                              ArrayRef<std::string> Sections);
 
 private:
   virtual void printSymbols(bool ExtraSymInfo) {}

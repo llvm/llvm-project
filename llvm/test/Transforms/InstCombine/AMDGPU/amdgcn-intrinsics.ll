@@ -1776,18 +1776,18 @@ declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, f
 define void @exp_disabled_inputs_to_undef(float %x, float %y, float %z, float %w) {
   ; enable src0..src3 constants
 ; CHECK-LABEL: @exp_disabled_inputs_to_undef(
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 1.000000e+00, float undef, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float undef, float 2.000000e+00, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float undef, float undef, float 5.000000e-01, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float undef, float undef, float undef, float 4.000000e+00, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float [[X:%.*]], float undef, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float undef, float [[Y:%.*]], float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float undef, float undef, float [[Z:%.*]], float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float undef, float undef, float undef, float [[W:%.*]], i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float undef, float undef, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 3, float 1.000000e+00, float 2.000000e+00, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 5, float 1.000000e+00, float undef, float 5.000000e-01, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 9, float 1.000000e+00, float undef, float undef, float 4.000000e+00, i1 false, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 1.000000e+00, float poison, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float poison, float 2.000000e+00, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float poison, float poison, float 5.000000e-01, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float poison, float poison, float poison, float 4.000000e+00, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float [[X:%.*]], float poison, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float poison, float [[Y:%.*]], float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float poison, float poison, float [[Z:%.*]], float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float poison, float poison, float poison, float [[W:%.*]], i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float poison, float poison, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 3, float 1.000000e+00, float 2.000000e+00, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 5, float 1.000000e+00, float poison, float 5.000000e-01, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 9, float 1.000000e+00, float poison, float poison, float 4.000000e+00, i1 false, i1 false)
 ; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float 1.000000e+00, float 2.000000e+00, float 5.000000e-01, float 4.000000e+00, i1 false, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -1824,15 +1824,15 @@ declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2
 
 define void @exp_compr_disabled_inputs_to_undef(<2 x half> %xy, <2 x half> %zw) {
 ; CHECK-LABEL: @exp_compr_disabled_inputs_to_undef(
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> undef, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> undef, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> [[XY:%.*]], <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> [[XY]], <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> [[XY]], <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 12, <2 x half> undef, <2 x half> [[ZW:%.*]], i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> poison, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> poison, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> [[XY:%.*]], <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> [[XY]], <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> [[XY]], <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 12, <2 x half> poison, <2 x half> [[ZW:%.*]], i1 true, i1 false)
 ; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> [[XY]], <2 x half> [[ZW]], i1 true, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -1849,300 +1849,6 @@ define void @exp_compr_disabled_inputs_to_undef(<2 x half> %xy, <2 x half> %zw) 
   call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 12, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
   call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
   ret void
-}
-
-; --------------------------------------------------------------------
-; llvm.amdgcn.fmed3
-; --------------------------------------------------------------------
-
-declare float @llvm.amdgcn.fmed3.f32(float, float, float) nounwind readnone
-
-define float @fmed3_f32(float %x, float %y, float %z) {
-; CHECK-LABEL: @fmed3_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float %z)
-  ret float %med3
-}
-
-define float @fmed3_canonicalize_x_c0_c1_f32(float %x) {
-; CHECK-LABEL: @fmed3_canonicalize_x_c0_c1_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X:%.*]], float 0.000000e+00, float 1.000000e+00)
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 0.0, float 1.0)
-  ret float %med3
-}
-
-define float @fmed3_canonicalize_c0_x_c1_f32(float %x) {
-; CHECK-LABEL: @fmed3_canonicalize_c0_x_c1_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X:%.*]], float 0.000000e+00, float 1.000000e+00)
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0.0, float %x, float 1.0)
-  ret float %med3
-}
-
-define float @fmed3_canonicalize_c0_c1_x_f32(float %x) {
-; CHECK-LABEL: @fmed3_canonicalize_c0_c1_x_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X:%.*]], float 0.000000e+00, float 1.000000e+00)
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float %x)
-  ret float %med3
-}
-
-define float @fmed3_canonicalize_x_y_c_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_canonicalize_x_y_c_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X:%.*]], float [[Y:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 1.0)
-  ret float %med3
-}
-
-define float @fmed3_canonicalize_x_c_y_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_canonicalize_x_c_y_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X:%.*]], float [[Y:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 1.0, float %y)
-  ret float %med3
-}
-
-define float @fmed3_canonicalize_c_x_y_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_canonicalize_c_x_y_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X:%.*]], float [[Y:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 1.0, float %x, float %y)
-  ret float %med3
-}
-
-define float @fmed3_undef_x_y_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_undef_x_y_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float undef, float %x, float %y)
-  ret float %med3
-}
-
-define float @fmed3_fmf_undef_x_y_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_fmf_undef_x_y_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call nnan float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call nnan float @llvm.amdgcn.fmed3.f32(float undef, float %x, float %y)
-  ret float %med3
-}
-
-define float @fmed3_x_undef_y_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_x_undef_y_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float undef, float %y)
-  ret float %med3
-}
-
-define float @fmed3_x_y_undef_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_x_y_undef_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float undef)
-  ret float %med3
-}
-
-define float @fmed3_qnan0_x_y_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_qnan0_x_y_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8000000000000, float %x, float %y)
-  ret float %med3
-}
-
-define float @fmed3_x_qnan0_y_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_x_qnan0_y_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 0x7FF8000000000000, float %y)
-  ret float %med3
-}
-
-define float @fmed3_x_y_qnan0_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_x_y_qnan0_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF8000000000000)
-  ret float %med3
-}
-
-define float @fmed3_qnan1_x_y_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_qnan1_x_y_f32(
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MED3]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8000100000000, float %x, float %y)
-  ret float %med3
-}
-
-; This can return any of the qnans.
-define float @fmed3_qnan0_qnan1_qnan2_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_qnan0_qnan1_qnan2_f32(
-; CHECK-NEXT:    ret float 0x7FF8030000000000
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8000100000000, float 0x7FF8002000000000, float 0x7FF8030000000000)
-  ret float %med3
-}
-
-define float @fmed3_constant_src0_0_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_constant_src0_0_f32(
-; CHECK-NEXT:    ret float 5.000000e-01
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0.5, float -1.0, float 4.0)
-  ret float %med3
-}
-
-define float @fmed3_constant_src0_1_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_constant_src0_1_f32(
-; CHECK-NEXT:    ret float 5.000000e-01
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0.5, float 4.0, float -1.0)
-  ret float %med3
-}
-
-define float @fmed3_constant_src1_0_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_constant_src1_0_f32(
-; CHECK-NEXT:    ret float 5.000000e-01
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float -1.0, float 0.5, float 4.0)
-  ret float %med3
-}
-
-define float @fmed3_constant_src1_1_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_constant_src1_1_f32(
-; CHECK-NEXT:    ret float 5.000000e-01
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 4.0, float 0.5, float -1.0)
-  ret float %med3
-}
-
-define float @fmed3_constant_src2_0_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_constant_src2_0_f32(
-; CHECK-NEXT:    ret float 5.000000e-01
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float -1.0, float 4.0, float 0.5)
-  ret float %med3
-}
-
-define float @fmed3_constant_src2_1_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_constant_src2_1_f32(
-; CHECK-NEXT:    ret float 5.000000e-01
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 4.0, float -1.0, float 0.5)
-  ret float %med3
-}
-
-define float @fmed3_x_qnan0_qnan1_f32(float %x) {
-; CHECK-LABEL: @fmed3_x_qnan0_qnan1_f32(
-; CHECK-NEXT:    ret float [[X:%.*]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 0x7FF8001000000000, float 0x7FF8002000000000)
-  ret float %med3
-}
-
-define float @fmed3_qnan0_x_qnan1_f32(float %x) {
-; CHECK-LABEL: @fmed3_qnan0_x_qnan1_f32(
-; CHECK-NEXT:    ret float [[X:%.*]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8001000000000, float %x, float 0x7FF8002000000000)
-  ret float %med3
-}
-
-define float @fmed3_qnan0_qnan1_x_f32(float %x) {
-; CHECK-LABEL: @fmed3_qnan0_qnan1_x_f32(
-; CHECK-NEXT:    ret float [[X:%.*]]
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8001000000000, float 0x7FF8002000000000, float %x)
-  ret float %med3
-}
-
-define float @fmed3_nan_0_1_f32() {
-; CHECK-LABEL: @fmed3_nan_0_1_f32(
-; CHECK-NEXT:    ret float 0.000000e+00
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8001000000000, float 0.0, float 1.0)
-  ret float %med3
-}
-
-define float @fmed3_0_nan_1_f32() {
-; CHECK-LABEL: @fmed3_0_nan_1_f32(
-; CHECK-NEXT:    ret float 0.000000e+00
-;
-  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 0x7FF8001000000000, float 1.0)
-  ret float %med
-}
-
-define float @fmed3_0_1_nan_f32() {
-; CHECK-LABEL: @fmed3_0_1_nan_f32(
-; CHECK-NEXT:    ret float 1.000000e+00
-;
-  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float 0x7FF8001000000000)
-  ret float %med
-}
-
-define float @fmed3_undef_0_1_f32() {
-; CHECK-LABEL: @fmed3_undef_0_1_f32(
-; CHECK-NEXT:    ret float 0.000000e+00
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float undef, float 0.0, float 1.0)
-  ret float %med3
-}
-
-define float @fmed3_0_undef_1_f32() {
-; CHECK-LABEL: @fmed3_0_undef_1_f32(
-; CHECK-NEXT:    ret float 0.000000e+00
-;
-  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float undef, float 1.0)
-  ret float %med
-}
-
-define float @fmed3_0_1_undef_f32() {
-; CHECK-LABEL: @fmed3_0_1_undef_f32(
-; CHECK-NEXT:    ret float 1.000000e+00
-;
-  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float undef)
-  ret float %med
-}
-
-define float @fmed3_poison_x_y_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_poison_x_y_f32(
-; CHECK-NEXT:    ret float poison
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float poison, float %x, float %y)
-  ret float %med3
-}
-
-define float @fmed3_x_poison_y_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_x_poison_y_f32(
-; CHECK-NEXT:    ret float poison
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float poison, float %y)
-  ret float %med3
-}
-
-define float @fmed3_x_y_poison_f32(float %x, float %y) {
-; CHECK-LABEL: @fmed3_x_y_poison_f32(
-; CHECK-NEXT:    ret float poison
-;
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float poison)
-  ret float %med3
 }
 
 ; --------------------------------------------------------------------
@@ -3037,7 +2743,7 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 @gv = constant i32 0
 
-define amdgpu_kernel void @readfirstlane_constant(i32 %arg, ptr %ptr) {
+define amdgpu_cs void @readfirstlane_constant(i32 %arg, ptr %ptr) {
 ; CHECK-LABEL: @readfirstlane_constant(
 ; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    store volatile i32 [[VAR]], ptr [[PTR:%.*]], align 4
@@ -3123,7 +2829,7 @@ bb1:
 
 declare i32 @llvm.amdgcn.readlane(i32, i32)
 
-define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane, ptr %ptr) {
+define amdgpu_cs void @readlane_constant(i32 %arg, i32 %lane, ptr %ptr) {
 ; CHECK-LABEL: @readlane_constant(
 ; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 7)
 ; CHECK-NEXT:    store volatile i32 [[VAR]], ptr [[PTR:%.*]], align 4
@@ -3232,7 +2938,7 @@ define amdgpu_kernel void @update_dpp_no_combine(ptr addrspace(1) %out, i32 %in1
 
 define amdgpu_kernel void @update_dpp_drop_old(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
 ; CHECK-LABEL: @update_dpp_drop_old(
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 undef, i32 [[IN2:%.*]], i32 3, i32 15, i32 15, i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[IN2:%.*]], i32 3, i32 15, i32 15, i1 true)
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3243,7 +2949,7 @@ define amdgpu_kernel void @update_dpp_drop_old(ptr addrspace(1) %out, i32 %in1, 
 
 define amdgpu_kernel void @update_dpp_undef_old(ptr addrspace(1) %out, i32 %in1) {
 ; CHECK-LABEL: @update_dpp_undef_old(
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 undef, i32 [[IN1:%.*]], i32 4, i32 15, i32 15, i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[IN1:%.*]], i32 4, i32 15, i32 15, i1 true)
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3272,7 +2978,7 @@ define amdgpu_kernel void @permlane16(ptr addrspace(1) %out, i32 %src0, i32 %src
 
 define amdgpu_kernel void @permlane16_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlane16_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 poison, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3283,7 +2989,7 @@ define amdgpu_kernel void @permlane16_bound_ctrl(ptr addrspace(1) %out, i32 %src
 
 define amdgpu_kernel void @permlane16_fetch_invalid_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlane16_fetch_invalid_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 poison, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3311,7 +3017,7 @@ define amdgpu_kernel void @permlanex16(ptr addrspace(1) %out, i32 %src0, i32 %sr
 
 define amdgpu_kernel void @permlanex16_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlanex16_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 poison, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3322,7 +3028,7 @@ define amdgpu_kernel void @permlanex16_bound_ctrl(ptr addrspace(1) %out, i32 %sr
 
 define amdgpu_kernel void @permlanex16_fetch_invalid_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlanex16_fetch_invalid_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 poison, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3335,14 +3041,12 @@ define amdgpu_kernel void @permlanex16_fetch_invalid_bound_ctrl(ptr addrspace(1)
 ; llvm.amdgcn.permlane64
 ; --------------------------------------------------------------------
 
-define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src0) {
+define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src) {
 ; CHECK-LABEL: @permlane64_uniform(
-; CHECK-NEXT:    [[SRC1:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[SRC0:%.*]])
-; CHECK-NEXT:    store i32 [[SRC1]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %src1 = call i32 @llvm.amdgcn.readfirstlane(i32 %src0)
-  %res = call i32 @llvm.amdgcn.permlane64(i32 %src1)
+  %res = call i32 @llvm.amdgcn.permlane64(i32 %src)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
@@ -6774,4 +6478,64 @@ define i32 @prng_poison_i32() {
 ;
   %prng = call i32 @llvm.amdgcn.prng.b32(i32 poison)
   ret i32 %prng
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.ds.bpermute
+; --------------------------------------------------------------------
+
+define void @ds_bpermute_uniform_src(ptr addrspace(1) %out, i32 %lane) {
+; CHECK-LABEL: @ds_bpermute_uniform_src(
+; CHECK-NEXT:    store i32 7, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.ds.bpermute(i32 %lane, i32 7)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @ds_bpermute_constant_lane(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @ds_bpermute_constant_lane(
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[SRC:%.*]], i32 7)
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.ds.bpermute(i32 28, i32 %src)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @ds_bpermute_uniform_lane(ptr addrspace(1) %out, i32 %lanearg, i32 %src) {
+; CHECK-LABEL: @ds_bpermute_uniform_lane(
+; CHECK-NEXT:    [[LANE:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[LANEARG:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[LANE]], 2
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[SRC:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %lane = call i32 @llvm.amdgcn.readfirstlane(i32 %lanearg)
+  %v = call i32 @llvm.amdgcn.ds.bpermute(i32 %lane, i32 %src)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.make.buffer.rsrc.p8
+; --------------------------------------------------------------------
+
+define ptr addrspace(8) @make_buffer_rsrc_poison() {
+; CHECK-LABEL: @make_buffer_rsrc_poison(
+; CHECK-NEXT:    ret ptr addrspace(8) poison
+;
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) poison, i16 0, i64 1234, i32 5678)
+  ret ptr addrspace(8) %rsrc
+}
+
+define ptr addrspace(8) @make_buffer_rsrc_undef() {
+; CHECK-LABEL: @make_buffer_rsrc_undef(
+; CHECK-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) undef, i16 0, i64 1234, i32 5678)
+; CHECK-NEXT:    ret ptr addrspace(8) [[RSRC]]
+;
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) undef, i16 0, i64 1234, i32 5678)
+  ret ptr addrspace(8) %rsrc
 }

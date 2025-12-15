@@ -5,9 +5,9 @@ bugprone-suspicious-semicolon
 
 Finds most instances of stray semicolons that unexpectedly alter the meaning of
 the code. More specifically, it looks for ``if``, ``while``, ``for`` and
-``for-range`` statements whose body is a single semicolon, and then analyzes the
-context of the code (e.g. indentation) in an attempt to determine whether that
-is intentional.
+``for-range`` statements whose body is a single semicolon, and then analyzes
+the context of the code (e.g. indentation) in an attempt to determine whether
+that is intentional.
 
 .. code-block:: c++
 
@@ -26,8 +26,8 @@ of the first line, and `x` will be incremented regardless of the condition.
       processLine(line);
 
 As a result of this code, `processLine()` will only be called once, when the
-``while`` loop with the empty body exits with `line == NULL`. The indentation of
-the code indicates the intention of the programmer.
+``while`` loop with the empty body exits with ``line == NULL``. The indentation
+of the code indicates the intention of the programmer.
 
 
 .. code-block:: c++

@@ -143,9 +143,9 @@ contains
 
 ! CHECK: %[[C4_LOAD:.*]] = fir.load %[[C4_DESC]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[C4_REBOX:.*]] = fir.rebox %[[C4_LOAD]](%{{.*}}) : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.shift<1>) -> !fir.class<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
-! CHECK: %[[PA_CONV:.*]] = fir.convert %[[PA_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>> 
-! CHECK: %[[C4_REBOX_CONV:.*]] = fir.convert %[[C4_REBOX]] : (!fir.class<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.box<none> 
-! CHECK: fir.call @_FortranAPointerAssociate(%[[PA_CONV]], %[[C4_REBOX_CONV]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> () 
+! CHECK: %[[PA_CONV:.*]] = fir.convert %[[PA_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[C4_REBOX_CONV:.*]] = fir.convert %[[C4_REBOX]] : (!fir.class<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.box<none>
+! CHECK: fir.call @_FortranAPointerAssociate(%[[PA_CONV]], %[[C4_REBOX_CONV]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> ()
 ! CHECK-LABEL: fir.do_loop
 ! CHECK: %[[PA_LOAD:.*]] = fir.load %[[PA_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[PA_COORD:.*]] = fir.coordinate_of %[[PA_LOAD]], %{{.*}} : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, i64) -> !fir.ref<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
@@ -165,8 +165,8 @@ contains
 ! CHECK: %[[SLICE:.*]] = fir.slice %[[C2_INDEX]], %[[C4_INDEX]], %[[C1_INDEX]] : (index, index, index) -> !fir.slice<1>
 ! CHECK: %[[SLICE_REBOX:.*]] = fir.rebox %[[C4_LOAD]](%[[SHIFT]]) [%[[SLICE]]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.shift<1>, !fir.slice<1>) -> !fir.class<!fir.array<3x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
 ! CHECK: %[[PA_CONV:.*]] = fir.convert %[[PA_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[SLICE_REBOX_CONV:.*]] = fir.convert %[[SLICE_REBOX]] : (!fir.class<!fir.array<3x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.box<none> 
-! CHECK: fir.call @_FortranAPointerAssociate(%[[PA_CONV]], %[[SLICE_REBOX_CONV]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> () 
+! CHECK: %[[SLICE_REBOX_CONV:.*]] = fir.convert %[[SLICE_REBOX]] : (!fir.class<!fir.array<3x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.box<none>
+! CHECK: fir.call @_FortranAPointerAssociate(%[[PA_CONV]], %[[SLICE_REBOX_CONV]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> ()
 ! CHECK-LABEL: fir.do_loop
 ! CHECK: %[[PA_LOAD:.*]] = fir.load %[[PA_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[PA_COORD:.*]] = fir.coordinate_of %[[PA_LOAD]], %{{.*}} : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, i64) -> !fir.ref<!fir.type<_QMpolyTp1{a:i32,b:i32}>>

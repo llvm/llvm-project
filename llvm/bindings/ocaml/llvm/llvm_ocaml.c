@@ -15,16 +15,16 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include "llvm_ocaml.h"
+#include "caml/callback.h"
+#include "caml/fail.h"
+#include "caml/memory.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/Support.h"
 #include "llvm/Config/llvm-config.h"
-#include "caml/memory.h"
-#include "caml/fail.h"
-#include "caml/callback.h"
-#include "llvm_ocaml.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if OCAML_VERSION < 41200
 value caml_alloc_some(value v) {
@@ -239,7 +239,9 @@ value llvm_dispose_context(value C) {
 }
 
 /* unit -> llcontext */
-value llvm_global_context(value Unit) { return to_val(LLVMGetGlobalContext()); }
+value llvm_global_context(value Unit) {
+  return to_val(LLVMGetGlobalContext());
+}
 
 /* llcontext -> string -> int */
 value llvm_mdkind_id(value C, value Name) {
@@ -1543,6 +1545,14 @@ value llvm_is_global_constant(value GlobalVar) {
 /* bool -> llvalue -> unit */
 value llvm_set_global_constant(value Flag, value GlobalVar) {
   LLVMSetGlobalConstant(Value_val(GlobalVar), Bool_val(Flag));
+  return Val_unit;
+}
+
+/* llvalue -> llmdkind -> llmetadata -> unit */
+value llvm_global_set_metadata(value Value, value MetadataKind,
+                               value Metadata) {
+  LLVMGlobalSetMetadata(Value_val(Value), (unsigned int)Int_val(MetadataKind),
+                        Metadata_val(Metadata));
   return Val_unit;
 }
 

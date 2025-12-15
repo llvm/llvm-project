@@ -12,7 +12,6 @@ find_package(Backtrace)
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
-
 # List of files that are buildable for all devices.
 set(supported_sources
   ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
@@ -34,6 +33,7 @@ set(supported_sources
   edit-input.cpp
   edit-output.cpp
   environment.cpp
+  exceptions.cpp
   external-unit.cpp
   extrema.cpp
   file.cpp
@@ -57,7 +57,9 @@ set(supported_sources
   product.cpp
   pseudo-unit.cpp
   ragged.cpp
+  reduction.cpp
   stat.cpp
+  stop.cpp
   sum.cpp
   support.cpp
   terminator.cpp
@@ -67,6 +69,7 @@ set(supported_sources
   type-info.cpp
   unit.cpp
   utf.cpp
+  work-queue.cpp
 )
 
 # List of source not used for GPU offloading.
@@ -86,6 +89,55 @@ set(host_sources
   temporary-stack.cpp
   time-intrinsic.cpp
   unit-map.cpp
+)
+
+# Sources that can be compiled directly for the GPU.
+set(gpu_sources
+  ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
+  ${FLANG_SOURCE_DIR}/lib/Decimal/decimal-to-binary.cpp
+  ISO_Fortran_binding.cpp
+  allocator-registry.cpp
+  allocatable.cpp
+  array-constructor.cpp
+  assign.cpp
+  buffer.cpp
+  character.cpp
+  connection.cpp
+  copy.cpp
+  derived-api.cpp
+  derived.cpp
+  dot-product.cpp
+  edit-output.cpp
+  extrema.cpp
+  findloc.cpp
+  format.cpp
+  inquiry.cpp
+  internal-unit.cpp
+  io-error.cpp
+  iostat.cpp
+  matmul-transpose.cpp
+  matmul.cpp
+  memory.cpp
+  misc-intrinsic.cpp
+  non-tbp-dio.cpp
+  numeric.cpp
+  pointer.cpp
+  product.cpp
+  ragged.cpp
+  stat.cpp
+  sum.cpp
+  support.cpp
+  terminator.cpp
+  tools.cpp
+  transformational.cpp
+  type-code.cpp
+  type-info.cpp
+  utf.cpp
+  work-queue.cpp
+  complex-powi.cpp
+  reduce.cpp
+  reduction.cpp
+  temporary-stack.cpp
 )
 
 file(GLOB_RECURSE public_headers
@@ -124,7 +176,13 @@ else ()
   set(f128_sources "")
 endif ()
 
-set(sources ${supported_sources} ${host_sources} ${f128_sources})
+if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
+  set(sources ${gpu_sources})
+elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
+  set(sources ${supported_sources})
+else ()
+  set(sources ${supported_sources} ${host_sources} ${f128_sources})
+endif ()
 
 
 if (NOT WIN32)
@@ -196,19 +254,33 @@ else()
   add_win_flangrt_runtime(STATIC dynamic     MultiThreadedDLL      INSTALL_WITH_TOOLCHAIN)
   add_win_flangrt_runtime(STATIC dynamic_dbg MultiThreadedDebugDLL INSTALL_WITH_TOOLCHAIN)
 
-  # Unittests link against LLVMSupport which is using CMake's default runtime
-  # library selection, which is either MultiThreadedDLL or MultiThreadedDebugDLL
-  # depending on the configuration. They have to match or linking will fail.
+  # Unittests link against LLVMSupport. If CMAKE_MSVC_RUNTIME_LIBRARY is set,
+  # that will have been used for LLVMSupport so it must also be used here.
+  # Otherwise this will use CMake's default runtime library selection, which
+  # is either MultiThreadedDLL or MultiThreadedDebugDLL depending on the configuration.
+  # They have to match or linking will fail.
   if (GENERATOR_IS_MULTI_CONFIG)
     # We cannot select an ALIAS library because it may be different
     # per configuration. Fallback to CMake's default.
     add_win_flangrt_runtime(STATIC unittest "" EXCLUDE_FROM_ALL)
   else ()
-    string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
-    if (build_type STREQUAL "debug")
-      add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic_dbg)
-    else ()
-      add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic)
-    endif ()
+    # Check if CMAKE_MSVC_RUNTIME_LIBRARY was set.
+    if (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreaded")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.static)
+    elseif (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDLL")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic)
+    elseif (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebug")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.static_dbg)
+    elseif (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebugDLL")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic_dbg)
+    else()
+      # Default based on the build type.
+      string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
+      if (build_type STREQUAL "debug")
+          add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic_dbg)
+      else ()
+          add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic)
+      endif ()
+    endif()
   endif ()
 endif()

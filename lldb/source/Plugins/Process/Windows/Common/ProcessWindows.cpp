@@ -22,7 +22,6 @@
 #include "lldb/Host/HostNativeProcessBase.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
-#include "lldb/Host/windows/windows.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -80,8 +79,10 @@ namespace lldb_private {
 
 ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
                                          lldb::ListenerSP listener_sp,
-                                         const FileSpec *,
+                                         const FileSpec *crash_file_path,
                                          bool can_connect) {
+  if (crash_file_path)
+    return nullptr; // Cannot create a Windows process from a crash_file.
   return ProcessSP(new ProcessWindows(target_sp, listener_sp));
 }
 
@@ -239,14 +240,13 @@ ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
 Status ProcessWindows::DoResume(RunDirection direction) {
   Log *log = GetLog(WindowsLog::Process);
   llvm::sys::ScopedLock lock(m_mutex);
-  Status error;
 
   if (direction == RunDirection::eRunReverse) {
-    error.FromErrorStringWithFormatv(
-        "error: {0} does not support reverse execution of processes",
-        GetPluginName());
-    return error;
+    return Status::FromErrorStringWithFormatv(
+        "{0} does not support reverse execution of processes", GetPluginName());
   }
+
+  Status error;
 
   StateType private_state = GetPrivateState();
   if (private_state == eStateStopped || private_state == eStateCrashed) {
@@ -668,7 +668,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
     target->ModulesDidUnload(unloaded_modules, true);
   }
 
-  SetProcessExitStatus(GetID(), true, 0, exit_code);
+  SetExitStatus(exit_code, /*exit_string=*/"");
   SetPrivateState(eStateExited);
 
   ProcessDebugger::OnExitProcess(exit_code);

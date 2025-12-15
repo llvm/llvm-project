@@ -21,6 +21,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -353,10 +354,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
            diag::err_expected)
           << tok::r_brace;
     else if (!HadError) {
-      Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-           Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
-                                : diag::ext_delimited_escape_sequence)
-          << /*delimited*/ 0 << (Features.CPlusPlus ? 1 : 0);
+      Lexer::DiagnoseDelimitedOrNamedEscapeSequence(Loc, false, Features,
+                                                    *Diags);
     }
   }
 
@@ -709,11 +708,8 @@ static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
          diag::warn_ucn_not_valid_in_c89_literal);
 
   if ((IsDelimitedEscapeSequence || IsNamedEscapeSequence) && Diags)
-    Diag(Diags, Features, Loc, ThisTokBegin, UcnBegin, ThisTokBuf,
-         Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
-                              : diag::ext_delimited_escape_sequence)
-        << (IsNamedEscapeSequence ? 1 : 0) << (Features.CPlusPlus ? 1 : 0);
-
+    Lexer::DiagnoseDelimitedOrNamedEscapeSequence(Loc, IsNamedEscapeSequence,
+                                                  Features, *Diags);
   return true;
 }
 
@@ -1287,10 +1283,10 @@ bool NumericLiteralParser::isValidUDSuffix(const LangOptions &LangOpts,
   // Per tweaked N3660, "il", "i", and "if" are also used in the library.
   // In C++2a "d" and "y" are used in the library.
   return llvm::StringSwitch<bool>(Suffix)
-      .Cases("h", "min", "s", true)
-      .Cases("ms", "us", "ns", true)
-      .Cases("il", "i", "if", true)
-      .Cases("d", "y", LangOpts.CPlusPlus20)
+      .Cases({"h", "min", "s"}, true)
+      .Cases({"ms", "us", "ns"}, true)
+      .Cases({"il", "i", "if"}, true)
+      .Cases({"d", "y"}, LangOpts.CPlusPlus20)
       .Default(false);
 }
 
@@ -1423,6 +1419,42 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
     return;
   }
 
+  // Parse a potential octal literal prefix.
+  bool IsSingleZero = false;
+  if ((c1 == 'O' || c1 == 'o') && (s[1] >= '0' && s[1] <= '7')) {
+    unsigned DiagId;
+    if (LangOpts.C2y)
+      DiagId = diag::warn_c2y_compat_octal_literal;
+    else if (LangOpts.CPlusPlus)
+      DiagId = diag::ext_cpp_octal_literal;
+    else
+      DiagId = diag::ext_octal_literal;
+    Diags.Report(TokLoc, DiagId);
+    ++s;
+    DigitsBegin = s;
+    radix = 8;
+    s = SkipOctalDigits(s);
+    if (s == ThisTokEnd) {
+      // Done
+    } else if ((isHexDigit(*s) && *s != 'e' && *s != 'E' && *s != '.') &&
+               !isValidUDSuffix(LangOpts, StringRef(s, ThisTokEnd - s))) {
+      auto InvalidDigitLoc = Lexer::AdvanceToTokenCharacter(
+          TokLoc, s - ThisTokBegin, SM, LangOpts);
+      Diags.Report(InvalidDigitLoc, diag::err_invalid_digit)
+          << StringRef(s, 1) << 1;
+      hadError = true;
+    }
+    // Other suffixes will be diagnosed by the caller.
+    return;
+  }
+
+  auto _ = llvm::make_scope_exit([&] {
+    // If we still have an octal value but we did not see an octal prefix,
+    // diagnose as being an obsolescent feature starting in C2y.
+    if (radix == 8 && LangOpts.C2y && !hadError && !IsSingleZero)
+      Diags.Report(TokLoc, diag::warn_unprefixed_octal_deprecated);
+  });
+
   // For now, the radix is set to 8. If we discover that we have a
   // floating point constant, the radix will change to 10. Octal floating
   // point constants are not permitted (only decimal and hexadecimal).
@@ -1434,6 +1466,8 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
   // anything, we leave the digit start where it was.
   if (s != PossibleNewDigitStart)
     DigitsBegin = PossibleNewDigitStart;
+  else
+    IsSingleZero = (s == ThisTokBegin + 1);
 
   if (s == ThisTokEnd)
     return; // Done, simple octal number like 01234

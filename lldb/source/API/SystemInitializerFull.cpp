@@ -8,6 +8,7 @@
 
 #include "SystemInitializerFull.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
@@ -86,10 +87,53 @@ llvm::Error SystemInitializerFull::Initialize() {
 
   LLDB_LOG(GetLog(SystemLog::System), "{0}", GetVersion());
 
+  auto LoadPlugin = [](const lldb::DebuggerSP &debugger_sp,
+                       const FileSpec &spec,
+                       Status &error) -> llvm::sys::DynamicLibrary {
+    llvm::sys::DynamicLibrary dynlib =
+        llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
+    if (dynlib.isValid()) {
+      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger debugger);
+
+      lldb::SBDebugger debugger_sb(debugger_sp);
+      // This calls the bool lldb::PluginInitialize(lldb::SBDebugger debugger)
+      // function.
+      // TODO: mangle this differently for your system - on OSX, the first
+      // underscore needs to be removed and the second one stays
+      LLDBCommandPluginInit init_func =
+          (LLDBCommandPluginInit)(uintptr_t)dynlib.getAddressOfSymbol(
+              "_ZN4lldb16PluginInitializeENS_10SBDebuggerE");
+      if (init_func) {
+        if (init_func(debugger_sb))
+          return dynlib;
+        else
+          error = Status::FromErrorString(
+              "plug-in refused to load "
+              "(lldb::PluginInitialize(lldb::SBDebugger) "
+              "returned false)");
+      } else {
+        error = Status::FromErrorString(
+            "plug-in is missing the required initialization: "
+            "lldb::PluginInitialize(lldb::SBDebugger)");
+      }
+    } else {
+      if (FileSystem::Instance().Exists(spec))
+        error = Status::FromErrorString(
+            "this file does not represent a loadable dylib");
+      else
+        error = Status::FromErrorString("no such file");
+    }
+    return llvm::sys::DynamicLibrary();
+  };
+
+  Debugger::Initialize(LoadPlugin);
+
   return llvm::Error::success();
 }
 
 void SystemInitializerFull::Terminate() {
+  Debugger::Terminate();
+
   Debugger::SettingsTerminate();
 
   // Terminate plug-ins in core LLDB.

@@ -86,7 +86,8 @@ struct ModuleFunctionSearchOptions {
 ///
 /// The module will parse more detailed information as more queries are made.
 class Module : public std::enable_shared_from_this<Module>,
-               public SymbolContextScope {
+               public SymbolContextScope,
+               public UserID {
 public:
   class LookupInfo;
   // Static functions that can track the lifetime of module objects. This is
@@ -297,23 +298,15 @@ public:
   ///     matches.
   void FindCompileUnits(const FileSpec &path, SymbolContextList &sc_list);
 
-  /// Find functions by lookup info.
+  /// Find functions by a vector of lookup infos.
   ///
   /// If the function is an inlined function, it will have a block,
   /// representing the inlined function, and the function will be the
   /// containing function.  If it is not inlined, then the block will be NULL.
-  ///
-  /// \param[in] lookup_info
-  ///     The lookup info of the function we are looking for.
-  ///
-  /// \param[out] sc_list
-  ///     A symbol context list that gets filled in with all of the
-  ///     matches.
-  void FindFunctions(const LookupInfo &lookup_info,
+  void FindFunctions(llvm::ArrayRef<LookupInfo> lookup_infos,
                      const CompilerDeclContext &parent_decl_ctx,
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list);
-
   /// Find functions by name.
   ///
   /// If the function is an inlined function, it will have a block,
@@ -885,6 +878,10 @@ public:
   /// ElapsedTime RAII object.
   StatsDuration &GetSymtabIndexTime() { return m_symtab_index_time; }
 
+  StatisticsMap &GetSymbolLocatorStatistics() {
+    return m_symbol_locator_duration_map;
+  }
+
   void ResetStatistics();
 
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
@@ -912,22 +909,44 @@ public:
   public:
     LookupInfo() = default;
 
-    LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
-               lldb::LanguageType language);
+    /// Copies an existing LookupInfo with a different lookup name.
+    LookupInfo(const LookupInfo &lookup_info, ConstString lookup_name);
+
+    /// Creates a vector of lookup infos for function name resolution.
+    ///
+    /// \param[in] name
+    ///     The function name to search for. This can be a simple name like
+    ///     "foo" or a qualified name like "Class::method".
+    ///
+    /// \param[in] name_type_mask
+    ///     A bitmask specifying what types of names to search for
+    ///     (e.g., eFunctionNameTypeFull, eFunctionNameTypeBase,
+    ///     eFunctionNameTypeMethod, eFunctionNameTypeAuto). Multiple types
+    ///     can be combined with bitwise OR.
+    ///
+    /// \param[in] lang_type
+    ///     The language to create lookups for. If eLanguageTypeUnknown is
+    ///     passed, creates one LookupInfo for each language plugin currently
+    ///     available in LLDB. If a specific language is provided, creates only
+    ///     a single LookupInfo for that language.
+    ///
+    /// \param[in] lookup_name_override
+    ///     Manually override the name used for lookup. This parameter is
+    ///     optional. If not provided, it will be set to the value of the name
+    ///     parameter.
+    ///
+    /// \return
+    ///     A vector of LookupInfo objects, one per relevant language.
+    static std::vector<LookupInfo>
+    MakeLookupInfos(ConstString name, lldb::FunctionNameType name_type_mask,
+                    lldb::LanguageType lang_type,
+                    ConstString lookup_name_override = {});
 
     ConstString GetName() const { return m_name; }
 
-    void SetName(ConstString name) { m_name = name; }
-
     ConstString GetLookupName() const { return m_lookup_name; }
 
-    void SetLookupName(ConstString name) { m_lookup_name = name; }
-
     lldb::FunctionNameType GetNameTypeMask() const { return m_name_type_mask; }
-
-    void SetNameTypeMask(lldb::FunctionNameType mask) {
-      m_name_type_mask = mask;
-    }
 
     lldb::LanguageType GetLanguageType() const { return m_language; }
 
@@ -951,9 +970,14 @@ public:
     /// names we are looking for
     lldb::FunctionNameType m_name_type_mask = lldb::eFunctionNameTypeNone;
 
-    ///< If \b true, then demangled names that match will need to contain
-    ///< "m_name" in order to be considered a match
+    /// If \b true, then demangled names that match will need to contain
+    /// "m_name" in order to be considered a match
     bool m_match_name_after_lookup = false;
+
+  private:
+    LookupInfo(ConstString name, ConstString lookup_name,
+               lldb::FunctionNameType name_type_mask,
+               lldb::LanguageType lang_type);
   };
 
   /// Get a unique hash for this module.
@@ -1063,6 +1087,8 @@ protected:
   /// an object file and a symbol file which both have symbol tables. The parse
   /// time for the symbol tables can be aggregated here.
   StatsDuration m_symtab_index_time;
+
+  StatisticsMap m_symbol_locator_duration_map;
 
   /// A set of hashes of all warnings and errors, to avoid reporting them
   /// multiple times to the same Debugger.
