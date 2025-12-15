@@ -377,10 +377,20 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
     // Invalid escapes are written as '?' and then translated.
     char ByteChar = Invalid ? '?' : ResultChar;
     SmallString<8> ResultCharConv;
-    Converter->convert(StringRef(&ByteChar, 1), ResultCharConv);
-    assert(ResultCharConv.size() == 1 &&
-           "Char size increased after translation");
-    ResultChar = ResultCharConv[0];
+    std::error_code EC =
+        Converter->convert(StringRef(&ByteChar, 1), ResultCharConv);
+    if (EC) {
+      Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
+           diag::err_exec_charset_conversion_failed)
+          << EC.message();
+      HadError = true;
+    } else {
+      if (ResultCharConv.size() > 1)
+        Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
+             diag::err_char_size_increased_after_conversion)
+            << ByteChar;
+      ResultChar = ResultCharConv[0];
+    }
   }
   return ResultChar;
 }
@@ -1879,10 +1889,18 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
                    "Wide character translation not supported");
             char ByteChar = *tmp_out_start;
             SmallString<1> ConvertedChar;
-            Converter->convert(StringRef(&ByteChar, 1), ConvertedChar);
-            assert(ConvertedChar.size() == 1 &&
-                   "Char size increased after translation");
-            *tmp_out_start = ConvertedChar[0];
+            std::error_code EC =
+                Converter->convert(StringRef(&ByteChar, 1), ConvertedChar);
+            if (EC) {
+              PP.Diag(Loc, diag::err_exec_charset_conversion_failed)
+                  << EC.message();
+              HadError = true;
+            } else {
+              if (ConvertedChar.size() > 1)
+                PP.Diag(Loc, diag::err_char_size_increased_after_conversion)
+                    << ByteChar;
+              *tmp_out_start = ConvertedChar[0];
+            }
           }
         }
       }
