@@ -3,7 +3,7 @@
 
 # Instructions for debugging can be found in LLJITWithRemoteDebugging.cpp
 
-# REQUIRES: default_triple
+# REQUIRES: default_triple, thread_support
 # UNSUPPORTED: target=powerpc64{{.*}}, target=s390{{.*}}
 
 # RUN: LLJITWithRemoteDebugging %p/Inputs/argc_sub1.ll 2>&1 | FileCheck --check-prefix=CHECK0 %s
