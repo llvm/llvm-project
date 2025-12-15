@@ -1518,7 +1518,7 @@ class OMPTransparentClause final : public OMPClause {
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
 
-   void setImpexTypeKind(Expr *E) { ImpexType = E; }
+  void setImpexTypeKind(Expr *E) { ImpexType = E; }
 
 public:
   /// Build 'transparent' clause with argument \a A ('omp_not_impex',
