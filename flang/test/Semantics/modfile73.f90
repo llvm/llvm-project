@@ -24,29 +24,29 @@
 ! RUN: cat %t/modfile73.mod | FileCheck %s
 
   use modfile73ba
-end  
+end
 module modfile73
   use modfile73bb
-  use modfile73c 
+  use modfile73c
   CONTAINS
    subroutine init_
-  end  
+  end
   subroutine delete_
-  end  
+  end
   subroutine assign_
-  end  
-  function initialized_ 
-  end  
-  function same_ 
-  end  
-  function refcount_ 
-  end  
-  function id_ 
-  end  
-  function name_ 
-  end  
+  end
+  function initialized_
+  end
+  function same_
+  end
+  function refcount_
+  end
+  function id_
+  end
+  function name_
+  end
   subroutine tag_new_object
-   end  
+   end
 end
 
 !      CHECK: !need$ {{.*}} n modfile73bb

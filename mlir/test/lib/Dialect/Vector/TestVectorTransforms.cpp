@@ -179,11 +179,13 @@ struct TestVectorUnrollingPatterns
                                        return success(isa<vector::StepOp>(op));
                                      }));
     populateVectorUnrollPatterns(
-        patterns, UnrollVectorOptions()
-                      .setNativeShape(ArrayRef<int64_t>{8, 8})
-                      .setFilterConstraint([](Operation *op) {
-                        return success(isa<vector::CreateMaskOp>(op));
-                      }));
+        patterns,
+        UnrollVectorOptions()
+            .setNativeShape(ArrayRef<int64_t>{8, 8})
+            .setFilterConstraint([](Operation *op) {
+              return success(
+                  isa<vector::CreateMaskOp, vector::ConstantMaskOp>(op));
+            }));
     populateVectorUnrollPatterns(
         patterns,
         UnrollVectorOptions()

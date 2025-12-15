@@ -7944,6 +7944,10 @@ public:
   /// implicit casts if necessary.
   ExprResult prepareVectorSplat(QualType VectorTy, Expr *SplattedExpr);
 
+  /// Prepare `SplattedExpr` for a matrix splat operation, adding
+  /// implicit casts if necessary.
+  ExprResult prepareMatrixSplat(QualType MatrixTy, Expr *SplattedExpr);
+
   // CheckExtVectorCast - check type constraints for extended vectors.
   // Since vectors are an extension, there are no C standard reference for this.
   // We allow casting between vectors and integer datatypes of the same size,
@@ -8586,7 +8590,8 @@ public:
   FunctionDecl *FindDeallocationFunctionForDestructor(SourceLocation StartLoc,
                                                       CXXRecordDecl *RD,
                                                       bool Diagnose,
-                                                      bool LookForGlobal);
+                                                      bool LookForGlobal,
+                                                      DeclarationName Name);
 
   /// ActOnCXXDelete - Parsed a C++ 'delete' expression (C++ 5.3.5), as in:
   /// @code ::delete ptr; @endcode

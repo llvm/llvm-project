@@ -24,6 +24,7 @@ def CVrr : Operand<i32>,
    let ParserMatchClass = CVrrAsmOperand;
    let PrintMethod = "printRegReg";
    let MIOperandInfo = (ops GPR:$base, GPR:$offset);
+   let OperandType = "OPERAND_MEMORY";
 }
 
 def cv_tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;

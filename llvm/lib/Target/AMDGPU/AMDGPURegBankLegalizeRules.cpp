@@ -889,6 +889,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(B128, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Uni(B128, {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
 
+  addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD_USHORT, G_AMDGPU_BUFFER_LOAD_UBYTE,
+                    G_AMDGPU_BUFFER_LOAD_SSHORT, G_AMDGPU_BUFFER_LOAD_SBYTE},
+                   StandardB)
+      .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
+
   addRulesForGOpcs({G_AMDGPU_BUFFER_STORE})
       .Any({{S32}, {{}, {Vgpr32, SgprV4S32, Vgpr32, Vgpr32, Sgpr32}}});
 
@@ -947,6 +953,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, ScalarizeToS16},
            hasSALUFloat)
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
+
+  addRulesForGOpcs({G_FSUB}, Standard)
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUFloat)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUFloat)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUFloat);
 
   // FNEG and FABS are either folded as source modifiers or can be selected as
   // bitwise XOR and AND with Mask. XOR and AND are available on SALU but for

@@ -171,6 +171,7 @@ clang_tidy_library(
     deps = [
         ":google",
         ":lib",
+        ":misc",
         ":utils",
     ],
 )

@@ -25,11 +25,7 @@ TEST_CONSTEXPR_CXX23 void test_index_const() {
       assert(v[N / 2] == v.test(N / 2));
     }
   }
-#if !defined(_LIBCPP_VERSION) || defined(_LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL)
   ASSERT_SAME_TYPE(decltype(cases[0][0]), bool);
-#else
-  ASSERT_SAME_TYPE(decltype(cases[0][0]), typename std::bitset<N>::__const_reference);
-#endif
 }
 
 TEST_CONSTEXPR_CXX23 bool test() {
@@ -47,11 +43,7 @@ TEST_CONSTEXPR_CXX23 bool test() {
   const auto& set = set_;
   auto b          = set[0];
   set_[0]         = true;
-#if !defined(_LIBCPP_VERSION) || defined(_LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL)
   assert(!b);
-#else
-  assert(b);
-#endif
 
   return true;
 }

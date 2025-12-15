@@ -11,6 +11,7 @@
 
 #include "PdbAstBuilder.h"
 #include "PdbSymUid.h"
+#include "PdbUtil.h"
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
@@ -41,13 +42,7 @@ class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
   using IndexedBase =
       std::pair<uint64_t, std::unique_ptr<clang::CXXBaseSpecifier>>;
 
-  union UdtTagRecord {
-    UdtTagRecord() {}
-    llvm::codeview::UnionRecord ur;
-    llvm::codeview::ClassRecord cr;
-    llvm::codeview::EnumRecord er;
-  } m_cvr;
-
+  CVTagRecord m_cv_tag_record;
   PdbTypeSymId m_id;
   CompilerType &m_derived_ct;
   clang::TagDecl &m_tag_decl;

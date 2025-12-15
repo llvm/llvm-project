@@ -1,8 +1,8 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
-! C755 The same proc-component-attr-spec shall not appear more than once in a 
+! C755 The same proc-component-attr-spec shall not appear more than once in a
 ! given proc-component-def-stmt.
-! C759 PASS and NOPASS shall not both appear in the same 
+! C759 PASS and NOPASS shall not both appear in the same
 ! proc-component-attr-spec-list.
 !
 ! R741 proc-component-def-stmt ->

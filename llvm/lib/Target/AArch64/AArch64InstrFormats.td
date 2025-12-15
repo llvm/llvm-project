@@ -10,6 +10,20 @@
 //  Describe AArch64 instructions format here
 //
 
+// Helper class to convert vector element types to integers.
+class ChangeElementTypeToInteger<ValueType InVT> {
+  ValueType VT = !cond(
+    !eq(InVT, v2f32): v2i32,
+    !eq(InVT, v4f32): v4i32,
+    // TODO: Other types.
+    true : untyped);
+}
+
+class VTPair<ValueType A, ValueType B> {
+  ValueType VT0 = A;
+  ValueType VT1 = B;
+}
+
 // Format specifies the encoding used by the instruction.  This is part of the
 // ad-hoc solution used to emit machine instruction encodings by our machine
 // code emitter.
@@ -8952,36 +8966,6 @@ multiclass SIMDThreeSameVectorBFDot<bit U, string asm> {
                                            v4f32, v8bf16>;
 }
 
-class BaseSIMDThreeSameVectorBF16DotI<bit Q, bit U, string asm,
-                                      string dst_kind, string lhs_kind,
-                                      string rhs_kind,
-                                      RegisterOperand RegType,
-                                      ValueType AccumType,
-                                      ValueType InputType>
-  : BaseSIMDIndexedTied<Q, U, 0b0, 0b01, 0b1111,
-                        RegType, RegType, V128, VectorIndexS,
-                        asm, "", dst_kind, lhs_kind, rhs_kind,
-        [(set (AccumType RegType:$dst),
-              (AccumType (int_aarch64_neon_bfdot
-                                 (AccumType RegType:$Rd),
-                                 (InputType RegType:$Rn),
-                                 (InputType (bitconvert (AccumType
-                                    (AArch64duplane32 (v4f32 V128:$Rm),
-                                        VectorIndexS:$idx)))))))]> {
-
-  bits<2> idx;
-  let Inst{21}    = idx{0};  // L
-  let Inst{11}    = idx{1};  // H
-}
-
-multiclass SIMDThreeSameVectorBF16DotI<bit U, string asm> {
-
-  def v4bf16  : BaseSIMDThreeSameVectorBF16DotI<0, U, asm, ".2s", ".4h",
-                                               ".2h", V64, v2f32, v4bf16>;
-  def v8bf16 : BaseSIMDThreeSameVectorBF16DotI<1, U, asm, ".4s", ".8h",
-                                              ".2h", V128, v4f32, v8bf16>;
-}
-
 let mayRaiseFPException = 1, Uses = [FPCR] in
 class SIMDBF16MLAL<bit Q, string asm, SDPatternOperator OpNode>
   : BaseSIMDThreeSameVectorTied<Q, 0b1, 0b110, 0b11111, V128, asm, ".4s",
@@ -9053,6 +9037,40 @@ class BF16ToSinglePrecision<string asm>
   let Inst{4-0}   = Rd;
 }
 } // End of let mayStore = 0, mayLoad = 0, hasSideEffects = 0
+
+multiclass BaseSIMDThreeSameVectorBF16DotI<bit Q, bit U, string asm,
+                                           string dst_kind, string lhs_kind,
+                                           string rhs_kind,
+                                           RegisterOperand RegType,
+                                           ValueType AccumType,
+                                           ValueType InputType> {
+  let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
+    def NAME : BaseSIMDIndexedTied<Q, U, 0b0, 0b01, 0b1111, RegType, RegType, V128, VectorIndexS,
+                                   asm, "", dst_kind, lhs_kind, rhs_kind, []>
+    {
+      bits<2> idx;
+      let Inst{21} = idx{0};  // L
+      let Inst{11} = idx{1};  // H
+    }
+  }
+
+  foreach DupTypes = [VTPair<AccumType, v4f32>,
+                      VTPair<ChangeElementTypeToInteger<AccumType>.VT, v4i32>] in {
+    def : Pat<(AccumType (int_aarch64_neon_bfdot
+                (AccumType RegType:$Rd), (InputType RegType:$Rn),
+                (InputType (bitconvert
+                  (DupTypes.VT0 (AArch64duplane32 (DupTypes.VT1
+                    (bitconvert (v8bf16 V128:$Rm))), VectorIndexS:$Idx)))))),
+              (!cast<Instruction>(NAME) $Rd, $Rn, $Rm, VectorIndexS:$Idx)>;
+  }
+}
+
+multiclass SIMDThreeSameVectorBF16DotI<bit U, string asm> {
+  defm v4bf16 : BaseSIMDThreeSameVectorBF16DotI<0, U, asm, ".2s", ".4h",
+                                               ".2h", V64, v2f32, v4bf16>;
+  defm v8bf16 : BaseSIMDThreeSameVectorBF16DotI<1, U, asm, ".4s", ".8h",
+                                              ".2h", V128, v4f32, v8bf16>;
+}
 
 //----------------------------------------------------------------------------
 class BaseSIMDThreeSameVectorIndexB<bit Q, bit U, bits<2> sz, bits<4> opc,

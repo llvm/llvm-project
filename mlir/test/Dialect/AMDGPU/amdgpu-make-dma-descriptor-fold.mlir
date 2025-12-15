@@ -1,8 +1,8 @@
 // RUN: mlir-opt --canonicalize %s | FileCheck %s
 
 // CHECK-LABEL: @make_dma_descriptor_fold
-// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[IDX:.+]]: index)
-func.func @make_dma_descriptor_fold(%base: !amdgpu.tdm_base<i32>, %idx: index) -> !amdgpu.tdm_descriptor {
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[IDX:.+]]: index, %[[I32:.+]]: i32)
+func.func @make_dma_descriptor_fold(%base: !amdgpu.tdm_base<i32>, %idx: index, %i32: i32) -> !amdgpu.tdm_descriptor {
   %c64 = arith.constant 64 : index
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
@@ -13,7 +13,7 @@ func.func @make_dma_descriptor_fold(%base: !amdgpu.tdm_base<i32>, %idx: index) -
         globalStride [%c64, 1]
         // CHECK-SAME: sharedSize [64, 64]
         sharedSize [%c64, %c64]
-        iterate %idx, %idx, %idx
+        iterate %idx, %i32, %idx
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
   func.return %0 : !amdgpu.tdm_descriptor
 }

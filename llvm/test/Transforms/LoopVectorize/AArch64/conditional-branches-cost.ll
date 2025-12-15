@@ -528,7 +528,8 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 16
+; DEFAULT-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP4]], 4
+; DEFAULT-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP11]], 4
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 257, [[TMP5]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 257, [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[N_VEC]], 8
@@ -544,14 +545,10 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[TMP8]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = uitofp <vscale x 4 x i16> [[BROADCAST_SPLAT]] to <vscale x 4 x double>
-; DEFAULT-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 2
+; DEFAULT-NEXT:    [[TMP14:%.*]] = mul nuw nsw i64 [[TMP11]], 2
+; DEFAULT-NEXT:    [[TMP17:%.*]] = mul nuw nsw i64 [[TMP11]], 3
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr double, ptr [[NEXT_GEP1]], i64 [[TMP11]]
-; DEFAULT-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP13]], 3
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[NEXT_GEP1]], i64 [[TMP14]]
-; DEFAULT-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 12
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr double, ptr [[NEXT_GEP1]], i64 [[TMP17]]
 ; DEFAULT-NEXT:    store <vscale x 4 x double> [[TMP9]], ptr [[NEXT_GEP1]], align 8
 ; DEFAULT-NEXT:    store <vscale x 4 x double> [[TMP9]], ptr [[TMP12]], align 8

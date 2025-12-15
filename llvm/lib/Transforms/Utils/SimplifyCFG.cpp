@@ -1904,27 +1904,24 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     // so does not add any new instructions.
 
     // Check if sizes and terminators of all successors match.
+    unsigned Size0 = UniqueSuccessors[0]->size();
+    Instruction *Term0 = UniqueSuccessors[0]->getTerminator();
     bool AllSame =
-        none_of(UniqueSuccessors, [&UniqueSuccessors](BasicBlock *Succ) {
-          Instruction *Term0 = UniqueSuccessors[0]->getTerminator();
-          Instruction *Term = Succ->getTerminator();
-          return !Term->isSameOperationAs(Term0) ||
-                 !equal(Term->operands(), Term0->operands()) ||
-                 UniqueSuccessors[0]->size() != Succ->size();
+        all_of(drop_begin(UniqueSuccessors), [Term0, Size0](BasicBlock *Succ) {
+          return Succ->getTerminator()->isIdenticalTo(Term0) &&
+                 Succ->size() == Size0;
         });
     if (!AllSame)
       return false;
-    if (AllSame) {
-      LockstepReverseIterator<true> LRI(UniqueSuccessors.getArrayRef());
-      while (LRI.isValid()) {
-        Instruction *I0 = (*LRI)[0];
-        if (any_of(*LRI, [I0](Instruction *I) {
-              return !areIdenticalUpToCommutativity(I0, I);
-            })) {
-          return false;
-        }
-        --LRI;
+    LockstepReverseIterator<true> LRI(UniqueSuccessors.getArrayRef());
+    while (LRI.isValid()) {
+      Instruction *I0 = (*LRI)[0];
+      if (any_of(*LRI, [I0](Instruction *I) {
+            return !areIdenticalUpToCommutativity(I0, I);
+          })) {
+        return false;
       }
+      --LRI;
     }
     // Now we know that all instructions in all successors can be hoisted. Let
     // the loop below handle the hoisting.
@@ -7664,7 +7661,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
   Value *Sub =
-      Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
+      Builder.CreateSub(SI->getCondition(), ConstantInt::getSigned(Ty, Base));
   Value *Rot = Builder.CreateIntrinsic(
       Ty, Intrinsic::fshl,
       {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Shift)});

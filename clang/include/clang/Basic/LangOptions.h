@@ -421,6 +421,16 @@ public:
     None,
   };
 
+  enum class LayoutCompatibilityKind {
+    /// Use default layout rules of the target.
+    Default = 0,
+    /// Use Itanium rules for bit-field layout and fundamental types alignment.
+    Itanium = 1,
+    /// Use Microsoft C++ ABI rules for bit-field layout and fundamental types
+    /// alignment.
+    Microsoft = 2,
+  };
+
   // Define simple language options (with no accessors).
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
   unsigned Name : Bits;

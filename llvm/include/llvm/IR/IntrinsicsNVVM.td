@@ -1501,16 +1501,18 @@ let TargetPrefix = "nvvm" in {
     } // ftz
   } // variant
 
-  foreach rnd = ["rn", "rz", "rm", "rp"] in {
-    foreach ftz = ["", "_ftz"] in
-      def int_nvvm_fma_ # rnd # ftz # _f : NVVMBuiltin,
-        PureIntrinsic<[llvm_float_ty],
-          [llvm_float_ty, llvm_float_ty, llvm_float_ty]>;
-
-    def int_nvvm_fma_ # rnd # _d : NVVMBuiltin,
+  foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+    foreach ftz = ["", "_ftz"] in {
+      foreach sat = ["", "_sat"] in {
+        def int_nvvm_fma # rnd # ftz # sat # _f : NVVMBuiltin,
+          PureIntrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty]>;
+      } // sat
+    } // ftz
+    def int_nvvm_fma # rnd # _d : NVVMBuiltin,
       PureIntrinsic<[llvm_double_ty],
         [llvm_double_ty, llvm_double_ty, llvm_double_ty]>;
-  }
+  } // rnd
 
   //
   // Rcp
@@ -1568,14 +1570,16 @@ let TargetPrefix = "nvvm" in {
   // Add
   //
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative] in {
-    foreach rnd = ["rn", "rz", "rm", "rp"] in {
-      foreach ftz = ["", "_ftz"] in
-        def int_nvvm_add_ # rnd # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
-
-      def int_nvvm_add_ # rnd # _d : NVVMBuiltin,
+    foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+      foreach ftz = ["", "_ftz"] in {
+        foreach sat = ["", "_sat"] in {
+          def int_nvvm_add # rnd # ftz # sat # _f : NVVMBuiltin,
+            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
+        } // sat
+      } // ftz
+      def int_nvvm_add # rnd # _d : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    }
+    } // rnd
   }
 
   //

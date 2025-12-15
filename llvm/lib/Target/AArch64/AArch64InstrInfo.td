@@ -1735,23 +1735,6 @@ def BFCVTN2      : SIMD_BFCVTN2;
 
 def : Pat<(concat_vectors (v4bf16 V64:$Rd), (any_fpround (v4f32 V128:$Rn))),
           (BFCVTN2 (v8bf16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub)), V128:$Rn)>;
-
-// Vector-scalar BFDOT:
-// The second source operand of the 64-bit variant of BF16DOTlane is a 128-bit
-// register (the instruction uses a single 32-bit lane from it), so the pattern
-// is a bit tricky.
-def : Pat<(v2f32 (int_aarch64_neon_bfdot
-                    (v2f32 V64:$Rd), (v4bf16 V64:$Rn),
-                    (v4bf16 (bitconvert
-                      (v2i32 (AArch64duplane32
-                        (v4i32 (bitconvert
-                          (v8bf16 (insert_subvector undef,
-                            (v4bf16 V64:$Rm),
-                            (i64 0))))),
-                        VectorIndexS:$idx)))))),
-          (BF16DOTlanev4bf16 (v2f32 V64:$Rd), (v4bf16 V64:$Rn),
-                             (SUBREG_TO_REG (i32 0), V64:$Rm, dsub),
-                             VectorIndexS:$idx)>;
 }
 
 let Predicates = [HasNEONandIsStreamingSafe, HasBF16] in {

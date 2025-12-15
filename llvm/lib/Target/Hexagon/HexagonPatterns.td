@@ -380,6 +380,7 @@ multiclass NopCast_pat<ValueType Ty1, ValueType Ty2, RegisterClass RC> {
 def Add: pf2<add>;    def And: pf2<and>;    def Sra: pf2<sra>;
 def Sub: pf2<sub>;    def Or:  pf2<or>;     def Srl: pf2<srl>;
 def Mul: pf2<mul>;    def Xor: pf2<xor>;    def Shl: pf2<shl>;
+def Sext: pf1<sext>;  def Zext: pf1<zext>;
 
 def Smin: pf2<smin>;  def Smax: pf2<smax>;
 def Umin: pf2<umin>;  def Umax: pf2<umax>;

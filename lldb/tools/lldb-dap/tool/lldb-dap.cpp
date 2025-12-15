@@ -443,7 +443,6 @@ static llvm::Error serveConnection(
     TrackConnectionTimeout(g_loop, g_connection_timeout_mutex,
                            g_connection_timeout_time_point,
                            connection_timeout_seconds.value());
-  std::condition_variable dap_sessions_condition;
   unsigned int clientCount = 0;
   auto handle = listener->Accept(g_loop, [=, &log, &clientCount](
                                              std::unique_ptr<Socket> sock) {

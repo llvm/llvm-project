@@ -862,7 +862,7 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
   }
 
-  SCEVExpander Rewriter(*SE, DL, "loopflatten");
+  SCEVExpander Rewriter(*SE, "loopflatten");
   SmallVector<WeakTrackingVH, 4> DeadInsts;
   unsigned ElimExt = 0;
   unsigned Widened = 0;

@@ -1547,6 +1547,7 @@ public:
   void EmitGlobal(GlobalDecl D);
 
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
+  void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
 
   llvm::GlobalValue *GetGlobalValue(StringRef Ref);
 

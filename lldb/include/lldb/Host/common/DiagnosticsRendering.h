@@ -59,10 +59,27 @@ struct DiagnosticDetail {
 
 StructuredData::ObjectSP Serialize(llvm::ArrayRef<DiagnosticDetail> details);
 
+/// Renders an array of DiagnosticDetail instances.
+///
+/// \param[in] stream
+///     The stream to render the diagnostics to.
+/// \param offset_in_command
+///     An optional offset to the column position of the diagnostic in the
+///     source.
+/// \param show_inline
+///     Whether to show the diagnostics inline.
+/// \param details
+///     The array of DiagnosticsDetail to render.
+/// \param force_ascii
+///     Whether to force ascii rendering. If false, Unicode characters will be
+///     used if the output file supports them.
+///
+/// \see lldb_private::Terminal::SupportsUnicode
 void RenderDiagnosticDetails(Stream &stream,
                              std::optional<uint16_t> offset_in_command,
                              bool show_inline,
-                             llvm::ArrayRef<DiagnosticDetail> details);
+                             llvm::ArrayRef<DiagnosticDetail> details,
+                             bool force_ascii = false);
 
 class DiagnosticError
     : public llvm::ErrorInfo<DiagnosticError, CloneableECError> {

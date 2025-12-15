@@ -442,7 +442,7 @@ FunctionLoweringInfo::GetLiveOutRegInfo(Register Reg, unsigned BitWidth) {
 /// register based on the LiveOutInfo of its operands.
 void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   Type *Ty = PN->getType();
-  if (!Ty->isIntegerTy() || Ty->isVectorTy())
+  if (!Ty->isIntegerTy())
     return;
 
   SmallVector<EVT, 1> ValueVTs;
@@ -451,7 +451,9 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
          "PHIs with non-vector integer types should have a single VT.");
   EVT IntVT = ValueVTs[0];
 
-  if (TLI->getNumRegisters(PN->getContext(), IntVT) != 1)
+  unsigned NumRegisters = TLI->getNumRegisters(PN->getContext(), IntVT);
+  // FIXME: Support multiple registers for big endian targets.
+  if (NumRegisters != 1 && MF->getDataLayout().isBigEndian())
     return;
   IntVT = TLI->getRegisterType(PN->getContext(), IntVT);
   unsigned BitWidth = IntVT.getSizeInBits();
@@ -460,82 +462,95 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   if (It == ValueMap.end())
     return;
 
-  Register DestReg = It->second;
-  if (DestReg == 0)
+  Register BaseReg = It->second;
+  if (!BaseReg)
     return;
-  assert(DestReg.isVirtual() && "Expected a virtual reg");
-  LiveOutRegInfo.grow(DestReg);
-  LiveOutInfo &DestLOI = LiveOutRegInfo[DestReg];
+  assert(BaseReg.isVirtual() && "Expected a virtual reg");
 
-  Value *V = PN->getIncomingValue(0);
-  if (isa<UndefValue>(V) || isa<ConstantExpr>(V)) {
-    DestLOI.NumSignBits = 1;
-    DestLOI.Known = KnownBits(BitWidth);
-    return;
-  }
+  for (unsigned RegIdx = 0; RegIdx < NumRegisters; ++RegIdx) {
+    // Split registers are assigned sequentially.
+    Register DestReg = BaseReg.id() + RegIdx;
+    LiveOutRegInfo.grow(DestReg);
+    LiveOutInfo &DestLOI = LiveOutRegInfo[DestReg];
 
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-    APInt Val;
-    if (TLI->signExtendConstant(CI))
-      Val = CI->getValue().sext(BitWidth);
-    else
-      Val = CI->getValue().zext(BitWidth);
-    DestLOI.NumSignBits = Val.getNumSignBits();
-    DestLOI.Known = KnownBits::makeConstant(Val);
-  } else {
-    assert(ValueMap.count(V) && "V should have been placed in ValueMap when its"
-                                "CopyToReg node was created.");
-    Register SrcReg = ValueMap[V];
-    if (!SrcReg.isVirtual()) {
-      DestLOI.IsValid = false;
-      return;
-    }
-    const LiveOutInfo *SrcLOI = GetLiveOutRegInfo(SrcReg, BitWidth);
-    if (!SrcLOI) {
-      DestLOI.IsValid = false;
-      return;
-    }
-    DestLOI = *SrcLOI;
-  }
-
-  assert(DestLOI.Known.Zero.getBitWidth() == BitWidth &&
-         DestLOI.Known.One.getBitWidth() == BitWidth &&
-         "Masks should have the same bit width as the type.");
-
-  for (unsigned i = 1, e = PN->getNumIncomingValues(); i != e; ++i) {
-    Value *V = PN->getIncomingValue(i);
+    Value *V = PN->getIncomingValue(0);
     if (isa<UndefValue>(V) || isa<ConstantExpr>(V)) {
       DestLOI.NumSignBits = 1;
       DestLOI.Known = KnownBits(BitWidth);
-      return;
+      continue;
     }
 
     if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
       APInt Val;
       if (TLI->signExtendConstant(CI))
-        Val = CI->getValue().sext(BitWidth);
+        Val = CI->getValue().sext(BitWidth * NumRegisters);
       else
-        Val = CI->getValue().zext(BitWidth);
-      DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, Val.getNumSignBits());
-      DestLOI.Known.Zero &= ~Val;
-      DestLOI.Known.One &= Val;
-      continue;
+        Val = CI->getValue().zext(BitWidth * NumRegisters);
+      APInt Extracted = Val.extractBits(BitWidth, BitWidth * RegIdx);
+      DestLOI.NumSignBits = Extracted.getNumSignBits();
+      DestLOI.Known = KnownBits::makeConstant(Extracted);
+    } else {
+      assert(ValueMap.count(V) &&
+             "V should have been placed in ValueMap when its"
+             "CopyToReg node was created.");
+      Register SrcReg = ValueMap[V];
+      if (!SrcReg.isVirtual()) {
+        DestLOI.IsValid = false;
+        continue;
+      }
+      // Split registers are assigned sequentially.
+      SrcReg = SrcReg.id() + RegIdx;
+      const LiveOutInfo *SrcLOI = GetLiveOutRegInfo(SrcReg, BitWidth);
+      if (!SrcLOI) {
+        DestLOI.IsValid = false;
+        continue;
+      }
+      DestLOI = *SrcLOI;
     }
 
-    assert(ValueMap.count(V) && "V should have been placed in ValueMap when "
-                                "its CopyToReg node was created.");
-    Register SrcReg = ValueMap[V];
-    if (!SrcReg.isVirtual()) {
-      DestLOI.IsValid = false;
-      return;
+    assert(DestLOI.Known.Zero.getBitWidth() == BitWidth &&
+           DestLOI.Known.One.getBitWidth() == BitWidth &&
+           "Masks should have the same bit width as the type.");
+
+    for (unsigned i = 1, e = PN->getNumIncomingValues(); i != e; ++i) {
+      Value *V = PN->getIncomingValue(i);
+      if (isa<UndefValue>(V) || isa<ConstantExpr>(V)) {
+        DestLOI.NumSignBits = 1;
+        DestLOI.Known = KnownBits(BitWidth);
+        break;
+      }
+
+      if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
+        APInt Val;
+        if (TLI->signExtendConstant(CI))
+          Val = CI->getValue().sext(BitWidth * NumRegisters);
+        else
+          Val = CI->getValue().zext(BitWidth * NumRegisters);
+        APInt Extracted = Val.extractBits(BitWidth, BitWidth * RegIdx);
+        DestLOI.NumSignBits =
+            std::min(DestLOI.NumSignBits, Extracted.getNumSignBits());
+        DestLOI.Known =
+            DestLOI.Known.intersectWith(KnownBits::makeConstant(Extracted));
+        continue;
+      }
+
+      assert(ValueMap.count(V) && "V should have been placed in ValueMap when "
+                                  "its CopyToReg node was created.");
+      Register SrcReg = ValueMap[V];
+      if (!SrcReg.isVirtual()) {
+        DestLOI.IsValid = false;
+        break;
+      }
+      // Split registers are assigned sequentially.
+      SrcReg = SrcReg.id() + RegIdx;
+      const LiveOutInfo *SrcLOI = GetLiveOutRegInfo(SrcReg, BitWidth);
+      if (!SrcLOI) {
+        DestLOI.IsValid = false;
+        break;
+      }
+      DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, SrcLOI->NumSignBits);
+      DestLOI.Known = DestLOI.Known.intersectWith(SrcLOI->Known);
     }
-    const LiveOutInfo *SrcLOI = GetLiveOutRegInfo(SrcReg, BitWidth);
-    if (!SrcLOI) {
-      DestLOI.IsValid = false;
-      return;
-    }
-    DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, SrcLOI->NumSignBits);
-    DestLOI.Known = DestLOI.Known.intersectWith(SrcLOI->Known);
   }
 }
 

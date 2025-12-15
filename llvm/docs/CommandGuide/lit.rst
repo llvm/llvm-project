@@ -314,6 +314,11 @@ The timing data is stored in the `test_exec_root` in a file named
   place of this option, which is especially useful in environments where the
   call to ``lit`` is issued indirectly.
 
+.. option:: --filter-failed
+
+  Run only those tests that previously failed. Tests that have been newly added
+  but not yet run are not included.
+
 .. option:: --xfail LIST
 
   Treat those tests whose name is in the semicolon separated list ``LIST`` as

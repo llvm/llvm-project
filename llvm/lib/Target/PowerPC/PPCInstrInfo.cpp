@@ -416,7 +416,7 @@ bool PPCInstrInfo::getFMAPatterns(MachineInstr &Root,
 
     // If this is not Leaf FMA Instr, its 'add' operand should only have one use
     // as this fma will be changed later.
-    return IsLeaf ? true : MRI->hasOneNonDBGUse(OpAdd.getReg());
+    return MRI->hasOneNonDBGUse(OpAdd.getReg());
   };
 
   int16_t AddOpIdx = -1;
@@ -5807,9 +5807,6 @@ bool PPCInstrInfo::getMemOperandWithOffsetWidth(
     return false;
 
   // Handle only loads/stores with base register followed by immediate offset.
-  if (!LdSt.getOperand(1).isImm() ||
-      (!LdSt.getOperand(2).isReg() && !LdSt.getOperand(2).isFI()))
-    return false;
   if (!LdSt.getOperand(1).isImm() ||
       (!LdSt.getOperand(2).isReg() && !LdSt.getOperand(2).isFI()))
     return false;

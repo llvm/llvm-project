@@ -23,7 +23,8 @@ def TuneA320 : SubtargetFeature<"a320", "ARMProcFamily", "CortexA320",
                                    FeatureFuseAdrpAdd,
                                    FeaturePostRAScheduler,
                                    FeatureUseWzrToVecMove,
-                                   FeatureUseFixedOverScalableIfEqualCost]>;
+                                   FeatureUseFixedOverScalableIfEqualCost,
+                                   FeatureAggressiveInterleaving]>;
 
 def TuneA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    "Cortex-A53 ARM processors", [

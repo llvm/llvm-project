@@ -2152,7 +2152,17 @@ void append_range(Container &C, Range &&R) {
 /// Appends all `Values` to container `C`.
 template <typename Container, typename... Args>
 void append_values(Container &C, Args &&...Values) {
-  C.reserve(range_size(C) + sizeof...(Args));
+  if (size_t InitialSize = range_size(C); InitialSize == 0) {
+    // Only reserve if the container is empty. Reserving on a non-empty
+    // container may interfere with the exponential growth strategy, if the
+    // container does not round up the capacity. Consider `append_values` called
+    // repeatedly in a loop: each call would reserve exactly `size + N`, causing
+    // the capacity to grow linearly (e.g., 100 -> 105 -> 110 -> ...) instead of
+    // exponentially (e.g., 100 -> 200 -> ...). Linear growth turns the
+    // amortized O(1) append into O(n) because every few insertions trigger a
+    // reallocation and copy of all elements.
+    C.reserve(InitialSize + sizeof...(Args));
+  }
   // Append all values one by one.
   ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }

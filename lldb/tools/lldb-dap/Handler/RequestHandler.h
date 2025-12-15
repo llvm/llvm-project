@@ -564,11 +564,14 @@ public:
   Run(const protocol::VariablesArguments &) const override;
 };
 
-class LocationsRequestHandler : public LegacyRequestHandler {
+class LocationsRequestHandler
+    : public RequestHandler<protocol::LocationsArguments,
+                            llvm::Expected<protocol::LocationsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "locations"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::LocationsResponseBody>
+  Run(const protocol::LocationsArguments &) const override;
 };
 
 class DisassembleRequestHandler final

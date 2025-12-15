@@ -297,6 +297,22 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
+    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
+      VPBuilder Builder(VPR);
+      const DataLayout &DL =
+          Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
+      Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
+      Type *VFTy = TypeInfo.inferScalarType(&Plan.getVF());
+      VPValue *VF = Builder.createScalarZExtOrTrunc(
+          &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
+      // VFxUF does not wrap, so VF * Part also cannot wrap.
+      VPValue *VFxPart = Builder.createOverflowingOp(
+          Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
+          {true, true});
+      Copy->setOperand(0, VPR->getOperand(0));
+      Copy->addOperand(VFxPart);
+      continue;
+    }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
       auto *Phi = dyn_cast<VPReductionPHIRecipe>(R.getOperand(0));
       if (Phi && Phi->isOrdered()) {
@@ -314,12 +330,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
-            VPVectorPointerRecipe, VPVectorEndPointerRecipe>(Copy) ||
+            VPVectorEndPointerRecipe>(Copy) ||
         match(Copy,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
       Copy->addOperand(getConstantInt(Part));
 
-    if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
+    if (isa<VPVectorEndPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
   }
 }
@@ -383,6 +399,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         continue;
       }
     }
+    // For vector VF, the penultimate element is always extracted from the last part.
     if (match(&R, m_ExtractLastLaneOfLastPart(m_VPValue(Op0))) ||
         match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));

@@ -205,4 +205,53 @@ OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x) {
   return info;
 }
 
+template <bool IsConst> LoopRange<IsConst>::LoopRange(QualReference x) {
+  if (auto *doLoop{Unwrap<DoConstruct>(x)}) {
+    Initialize(std::get<Block>(doLoop->t));
+  } else if (auto *omp{Unwrap<OpenMPLoopConstruct>(x)}) {
+    Initialize(std::get<Block>(omp->t));
+  }
+}
+
+template <bool IsConst> void LoopRange<IsConst>::Initialize(QualBlock &body) {
+  using QualIterator = decltype(std::declval<QualBlock>().begin());
+  auto makeRange{[](auto &container) {
+    return llvm::make_range(container.begin(), container.end());
+  }};
+
+  std::vector<llvm::iterator_range<QualIterator>> nest{makeRange(body)};
+  do {
+    auto at{nest.back().begin()};
+    auto end{nest.back().end()};
+    nest.pop_back();
+    while (at != end) {
+      if (auto *block{Unwrap<BlockConstruct>(*at)}) {
+        nest.push_back(llvm::make_range(std::next(at), end));
+        nest.push_back(makeRange(std::get<Block>(block->t)));
+        break;
+      } else if (Unwrap<DoConstruct>(*at) || Unwrap<OpenMPLoopConstruct>(*at)) {
+        items.push_back(&*at);
+      }
+      ++at;
+    }
+  } while (!nest.empty());
+}
+
+template <bool IsConst>
+auto LoopRange<IsConst>::iterator::operator++(int) -> iterator {
+  auto old = *this;
+  ++*this;
+  return old;
+}
+
+template <bool IsConst>
+auto LoopRange<IsConst>::iterator::operator--(int) -> iterator {
+  auto old = *this;
+  --*this;
+  return old;
+}
+
+template struct LoopRange<false>;
+template struct LoopRange<true>;
+
 } // namespace Fortran::parser::omp

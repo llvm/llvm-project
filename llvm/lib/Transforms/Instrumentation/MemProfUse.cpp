@@ -62,6 +62,12 @@ static cl::opt<bool>
                                      "context in this module's profiles"),
                             cl::Hidden, cl::init(false));
 
+static cl::opt<bool> PrintMatchedAllocStack(
+    "memprof-print-matched-alloc-stack",
+    cl::desc("Print full stack context for matched "
+             "allocations with -memprof-print-match-info."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool>
     PrintFunctionGuids("memprof-print-function-guids",
                        cl::desc("Print function GUIDs computed for matching"),
@@ -227,9 +233,26 @@ static void HandleUnsupportedAnnotationKinds(GlobalVariable &GVar,
                     << Reason << ".\n");
 }
 
+// Structure for tracking info about matched allocation contexts for use with
+// -memprof-print-match-info and -memprof-print-matched-alloc-stack.
 struct AllocMatchInfo {
+  // Total size in bytes of matched context.
   uint64_t TotalSize = 0;
+  // Matched allocation's type.
   AllocationType AllocType = AllocationType::None;
+  // Number of frames matched to the allocation itself (values will be >1 in
+  // cases where allocation was already inlined). Use a set because there can
+  // be multiple inlined instances and each may have a different inline depth.
+  // Use std::set to iterate in sorted order when printing.
+  std::set<unsigned> MatchedFramesSet;
+  // The full call stack of the allocation, for cases where requested via
+  // -memprof-print-matched-alloc-stack.
+  std::vector<Frame> CallStack;
+
+  // Caller responsible for inserting the matched frames and the call stack when
+  // appropriate.
+  AllocMatchInfo(uint64_t TotalSize, AllocationType AllocType)
+      : TotalSize(TotalSize), AllocType(AllocType) {}
 };
 
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
@@ -407,13 +430,11 @@ static void addVPMetadata(Module &M, Instruction &I,
   }
 }
 
-static void
-handleAllocSite(Instruction &I, CallBase *CI,
-                ArrayRef<uint64_t> InlinedCallStack, LLVMContext &Ctx,
-                OptimizationRemarkEmitter &ORE, uint64_t MaxColdSize,
-                const std::set<const AllocationInfo *> &AllocInfoSet,
-                std::map<std::pair<uint64_t, unsigned>, AllocMatchInfo>
-                    &FullStackIdToAllocMatchInfo) {
+static void handleAllocSite(
+    Instruction &I, CallBase *CI, ArrayRef<uint64_t> InlinedCallStack,
+    LLVMContext &Ctx, OptimizationRemarkEmitter &ORE, uint64_t MaxColdSize,
+    const std::set<const AllocationInfo *> &AllocInfoSet,
+    std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo) {
   // TODO: Remove this once the profile creation logic deduplicates contexts
   // that are the same other than the IsInlineFrame bool. Until then, keep the
   // largest.
@@ -455,9 +476,15 @@ handleAllocSite(Instruction &I, CallBase *CI,
       // was requested.
       if (ClPrintMemProfMatchInfo) {
         assert(FullStackId != 0);
-        FullStackIdToAllocMatchInfo[std::make_pair(FullStackId,
-                                                   InlinedCallStack.size())] = {
-            AllocInfo->Info.getTotalSize(), AllocType};
+        auto [Iter, Inserted] = FullStackIdToAllocMatchInfo.try_emplace(
+            FullStackId,
+            AllocMatchInfo(AllocInfo->Info.getTotalSize(), AllocType));
+        // Always insert the new matched frame count, since it may differ.
+        Iter->second.MatchedFramesSet.insert(InlinedCallStack.size());
+        if (Inserted && PrintMatchedAllocStack)
+          Iter->second.CallStack.insert(Iter->second.CallStack.begin(),
+                                        AllocInfo->CallStack.begin(),
+                                        AllocInfo->CallStack.end());
       }
       ORE.emit(
           OptimizationRemark(DEBUG_TYPE, "MemProfUse", CI)
@@ -564,14 +591,13 @@ static void handleCallSite(Instruction &I, const Function *CalledFunction,
   addVPMetadata(M, I, CalleeGuids.getArrayRef());
 }
 
-static void readMemprof(Module &M, Function &F,
-                        IndexedInstrProfReader *MemProfReader,
-                        const TargetLibraryInfo &TLI,
-                        std::map<std::pair<uint64_t, unsigned>, AllocMatchInfo>
-                            &FullStackIdToAllocMatchInfo,
-                        std::set<std::vector<uint64_t>> &MatchedCallSites,
-                        DenseMap<uint64_t, LocToLocMap> &UndriftMaps,
-                        OptimizationRemarkEmitter &ORE, uint64_t MaxColdSize) {
+static void
+readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
+            const TargetLibraryInfo &TLI,
+            std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo,
+            std::set<std::vector<uint64_t>> &MatchedCallSites,
+            DenseMap<uint64_t, LocToLocMap> &UndriftMaps,
+            OptimizationRemarkEmitter &ORE, uint64_t MaxColdSize) {
   auto &Ctx = M.getContext();
   // Previously we used getIRPGOFuncName() here. If F is local linkage,
   // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
@@ -799,11 +825,11 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   if (SalvageStaleProfile)
     UndriftMaps = computeUndriftMap(M, MemProfReader.get(), TLI);
 
-  // Map from the stack hash and matched frame count of each allocation context
-  // in the function profiles to the total profiled size (bytes) and allocation
-  // type.
-  std::map<std::pair<uint64_t, unsigned>, AllocMatchInfo>
-      FullStackIdToAllocMatchInfo;
+  // Map from the stack hash of each matched allocation context in the function
+  // profiles to match info such as the total profiled size (bytes), allocation
+  // type, number of frames matched to the allocation itself, and the full array
+  // of call stack ids.
+  std::map<uint64_t, AllocMatchInfo> FullStackIdToAllocMatchInfo;
 
   // Set of the matched call sites, each expressed as a sequence of an inline
   // call stack.
@@ -824,11 +850,21 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   }
 
   if (ClPrintMemProfMatchInfo) {
-    for (const auto &[IdLengthPair, Info] : FullStackIdToAllocMatchInfo) {
-      auto [Id, Length] = IdLengthPair;
-      errs() << "MemProf " << getAllocTypeAttributeString(Info.AllocType)
-             << " context with id " << Id << " has total profiled size "
-             << Info.TotalSize << " is matched with " << Length << " frames\n";
+    for (const auto &[Id, Info] : FullStackIdToAllocMatchInfo) {
+      for (auto Frames : Info.MatchedFramesSet) {
+        // TODO: To reduce verbosity, should we change the existing message
+        // so that we emit a list of matched frame counts in a single message
+        // about the context (instead of one message per frame count?
+        errs() << "MemProf " << getAllocTypeAttributeString(Info.AllocType)
+               << " context with id " << Id << " has total profiled size "
+               << Info.TotalSize << " is matched with " << Frames << " frames";
+        if (PrintMatchedAllocStack) {
+          errs() << " and call stack";
+          for (auto &F : Info.CallStack)
+            errs() << " " << computeStackId(F);
+        }
+        errs() << "\n";
+      }
     }
 
     for (const auto &CallStack : MatchedCallSites) {

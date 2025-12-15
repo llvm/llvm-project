@@ -1226,3 +1226,41 @@ let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                                                              GPR32Opnd>,
                                     ISA_MIPS32R6;
 }
+
+// Combining branch and set instructions into one compact branch instruction
+let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
+  def : MipsPat<(brcond (i32 (setlt i32:$rs, 0)), bb:$offset),
+                (BLTZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setlt i32:$rs, 1)), bb:$offset),
+                (BLEZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setge i32:$rs, 0)), bb:$offset),
+                (BGEZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setge i32:$rs, 1)), bb:$offset),
+                (BGTZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setgt i32:$rs, 0)), bb:$offset),
+                (BGTZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setgt i32:$rs, -1)), bb:$offset),
+                (BGEZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setle i32:$rs, 0)), bb:$offset),
+                (BLEZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setle i32:$rs, -1)), bb:$offset),
+                (BLTZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+
+  def : MipsPat<(brcond (i32 (setlt GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BLTC GPR32:$rs, GPR32:$rt, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setge GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BGEC GPR32:$rs, GPR32:$rt, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setgt GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BLTC GPR32:$rt, GPR32:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setle GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BGEC GPR32:$rt, GPR32:$rs, bb:$offset)>, ISA_MIPS32R6;
+
+  def : MipsPat<(brcond (i32 (setult GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BLTUC GPR32:$rs, GPR32:$rt, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setuge GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BGEUC GPR32:$rs, GPR32:$rt, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setugt GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BLTUC GPR32:$rt, GPR32:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setule GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BGEUC GPR32:$rt, GPR32:$rs, bb:$offset)>, ISA_MIPS32R6;
+}

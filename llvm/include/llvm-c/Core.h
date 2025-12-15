@@ -4297,6 +4297,30 @@ LLVM_C_ABI void LLVMSetCondition(LLVMValueRef Branch, LLVMValueRef Cond);
 LLVM_C_ABI LLVMBasicBlockRef LLVMGetSwitchDefaultDest(LLVMValueRef SwitchInstr);
 
 /**
+ * Obtain the case value for a successor of a switch instruction. i corresponds
+ * to the successor index. The first successor is the default destination, so i
+ * must be greater than zero.
+ *
+ * This only works on llvm::SwitchInst instructions.
+ *
+ * @see llvm::SwitchInst::CaseHandle::getCaseValue()
+ */
+LLVM_C_ABI LLVMValueRef LLVMGetSwitchCaseValue(LLVMValueRef SwitchInstr,
+                                               unsigned i);
+
+/**
+ * Set the case value for a successor of a switch instruction. i corresponds to
+ * the successor index. The first successor is the default destination, so i
+ * must be greater than zero.
+ *
+ * This only works on llvm::SwitchInst instructions.
+ *
+ * @see llvm::SwitchInst::CaseHandle::setValue()
+ */
+LLVM_C_ABI void LLVMSetSwitchCaseValue(LLVMValueRef SwitchInstr, unsigned i,
+                                       LLVMValueRef CaseValue);
+
+/**
  * @}
  */
 

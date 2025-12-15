@@ -13736,8 +13736,8 @@ half __ovld atomic_fetch_min_explicit(volatile atomic_half *,
                                       half, memory_order, memory_scope);
 half __ovld atomic_fetch_max_explicit(volatile atomic_half *,
                                       half, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp16_global_atomic_min_max) &&                \
-    defined(__opencl_c_ext_fp16_local_atomic_min_max)
+#endif // defined(__opencl_c_ext_fp16_global_atomic_min_max) &&
+       // defined(__opencl_c_ext_fp16_local_atomic_min_max)
 
 #if defined(__opencl_c_ext_fp32_global_atomic_min_max)
 float __ovld atomic_fetch_min(volatile __global atomic_float *, float);
@@ -13777,8 +13777,8 @@ float __ovld atomic_fetch_min_explicit(volatile atomic_float *,
                                        float, memory_order, memory_scope);
 float __ovld atomic_fetch_max_explicit(volatile atomic_float *,
                                        float, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp32_global_atomic_min_max) &&                \
-    defined(__opencl_c_ext_fp32_local_atomic_min_max)
+#endif // defined(__opencl_c_ext_fp32_global_atomic_min_max) &&
+       // defined(__opencl_c_ext_fp32_local_atomic_min_max)
 
 #if defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
 #if defined(__opencl_c_ext_fp64_global_atomic_min_max)
@@ -13819,10 +13819,10 @@ double __ovld atomic_fetch_min_explicit(volatile atomic_double *,
                                         double, memory_order, memory_scope);
 double __ovld atomic_fetch_max_explicit(volatile atomic_double *,
                                         double, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp64_global_atomic_min_max) &&                \
-    defined(__opencl_c_ext_fp64_local_atomic_min_max)
-#endif // defined(cl_khr_int64_base_atomics) &&                                \
-    defined(cl_khr_int64_extended_atomics)
+#endif // defined(__opencl_c_ext_fp64_global_atomic_min_max) &&
+       // defined(__opencl_c_ext_fp64_local_atomic_min_max)
+#endif // defined(cl_khr_int64_base_atomics) &&
+       // defined(cl_khr_int64_extended_atomics)
 
 #if defined(__opencl_c_ext_fp16_global_atomic_add)
 half __ovld atomic_fetch_add(volatile __global atomic_half *, half);
@@ -13862,8 +13862,8 @@ half __ovld atomic_fetch_add_explicit(volatile atomic_half *,
                                       half, memory_order, memory_scope);
 half __ovld atomic_fetch_sub_explicit(volatile atomic_half *,
                                       half, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp16_global_atomic_add) &&                    \
-    defined(__opencl_c_ext_fp16_local_atomic_add)
+#endif // defined(__opencl_c_ext_fp16_global_atomic_add) &&
+       // defined(__opencl_c_ext_fp16_local_atomic_add)
 
 #if defined(__opencl_c_ext_fp32_global_atomic_add)
 float __ovld atomic_fetch_add(volatile __global atomic_float *, float);
@@ -13903,8 +13903,8 @@ float __ovld atomic_fetch_add_explicit(volatile atomic_float *,
                                        float, memory_order, memory_scope);
 float __ovld atomic_fetch_sub_explicit(volatile atomic_float *,
                                        float, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp32_global_atomic_add) &&                    \
-    defined(__opencl_c_ext_fp32_local_atomic_add)
+#endif // defined(__opencl_c_ext_fp32_global_atomic_add) &&
+       // defined(__opencl_c_ext_fp32_local_atomic_add)
 
 #if defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
 #if defined(__opencl_c_ext_fp64_global_atomic_add)
@@ -13945,10 +13945,10 @@ double __ovld atomic_fetch_add_explicit(volatile atomic_double *,
                                         double, memory_order, memory_scope);
 double __ovld atomic_fetch_sub_explicit(volatile atomic_double *,
                                         double, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp64_global_atomic_add) &&                    \
-    defined(__opencl_c_ext_fp64_local_atomic_add)
-#endif // defined(cl_khr_int64_base_atomics) &&                                \
-    defined(cl_khr_int64_extended_atomics)
+#endif // defined(__opencl_c_ext_fp64_global_atomic_add) &&
+       // defined(__opencl_c_ext_fp64_local_atomic_add)
+#endif // defined(cl_khr_int64_base_atomics) &&
+       // defined(cl_khr_int64_extended_atomics)
 
 #endif // cl_ext_float_atomics
 
