@@ -4,15 +4,27 @@
 define i32 @main(i32 %arg, ptr nocapture readnone %arg1) #0 {
 ; CHECK-LABEL: define i32 @main(
 ; CHECK-SAME: i32 [[ARG:%.*]], ptr readnone captures(none) [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STOREMERGE_I_I:%.*]] = extractelement <8 x i8> [[VEC_IND]], i32 7
+; CHECK-NEXT:    store i8 [[STOREMERGE_I_I]], ptr [[TMP0]], align 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i8> [[VEC_IND]], splat (i8 8)
+; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[STOREMERGE_I_I:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[TMP12_I_I:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i8 [[STOREMERGE_I_I]], ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP8_I_I:%.*]] = icmp ult i8 [[STOREMERGE_I_I]], 8
-; CHECK-NEXT:    [[TMP12_I_I]] = add nuw nsw i8 [[STOREMERGE_I_I]], 1
-; CHECK-NEXT:    br i1 [[TMP8_I_I]], label %[[LOOP]], label %[[RET:.*]]
+; CHECK-NEXT:    [[STOREMERGE_I_I1:%.*]] = phi i8 [ 8, %[[SCALAR_PH]] ], [ [[TMP12_I_I:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    store i8 [[STOREMERGE_I_I1]], ptr [[TMP0]], align 2
+; CHECK-NEXT:    [[TMP8_I_I:%.*]] = icmp ult i8 [[STOREMERGE_I_I1]], 8
+; CHECK-NEXT:    [[TMP12_I_I]] = add nuw nsw i8 [[STOREMERGE_I_I1]], 1
+; CHECK-NEXT:    br i1 [[TMP8_I_I]], label %[[LOOP]], label %[[RET:.*]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[RET]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -33,3 +45,9 @@ ret:
 
 attributes #0 = { "target-cpu"="z13" }
 
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+;.

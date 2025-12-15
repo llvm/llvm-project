@@ -15,7 +15,7 @@ define void @test_iv_trunc_crash(ptr %a, ptr %b, i32 %n) {
 ; CHECK-NEXT:    [[SMAX1:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP1]], i64 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[SMAX1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i32 [[TMP2]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP3]], 8
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP3]], 20
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[N]] to i64
@@ -27,34 +27,46 @@ define void @test_iv_trunc_crash(ptr %a, ptr %b, i32 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP3]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP3]], 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 8, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 16, i32 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[TMP11]]
-; CHECK-NEXT:    [[DOTCAST:%.*]] = sitofp i32 [[N_VEC]] to double
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul reassoc double [[X]], [[DOTCAST]]
-; CHECK-NEXT:    [[TMP13:%.*]] = fadd reassoc double [[SUM_0]], [[TMP12]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[X]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTCAST2:%.*]] = sitofp i32 [[N_VEC]] to double
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul reassoc double [[X]], [[DOTCAST2]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = fadd reassoc double [[SUM_0]], [[TMP14]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul reassoc <2 x double> splat (double 2.000000e+00), [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x double> poison, double [[SUM_0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT2]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul reassoc <2 x double> <double 0.000000e+00, double 1.000000e+00>, [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = fadd reassoc <2 x double> [[BROADCAST_SPLAT3]], [[TMP15]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[DOTCAST2:%.*]] = sitofp i32 [[INDEX]] to double
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul reassoc double [[X]], [[DOTCAST2]]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = fadd reassoc double [[SUM_0]], [[TMP14]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul reassoc double 7.000000e+00, [[X]]
-; CHECK-NEXT:    [[TMP16:%.*]] = fadd reassoc double [[OFFSET_IDX]], [[TMP15]]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x double> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fadd reassoc <2 x double> [[VEC_IND]], [[TMP18]]
+; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = fadd reassoc <2 x double> [[STEP_ADD]], [[TMP18]]
+; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = fadd reassoc <2 x double> [[STEP_ADD_2]], [[TMP18]]
+; CHECK-NEXT:    [[STEP_ADD_4:%.*]] = fadd reassoc <2 x double> [[STEP_ADD_3]], [[TMP18]]
+; CHECK-NEXT:    [[STEP_ADD_5:%.*]] = fadd reassoc <2 x double> [[STEP_ADD_4]], [[TMP18]]
+; CHECK-NEXT:    [[STEP_ADD_6:%.*]] = fadd reassoc <2 x double> [[STEP_ADD_5]], [[TMP18]]
+; CHECK-NEXT:    [[STEP_ADD_7:%.*]] = fadd reassoc <2 x double> [[STEP_ADD_6]], [[TMP18]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[STEP_ADD_7]], i32 1
 ; CHECK-NEXT:    store double [[TMP16]], ptr [[B]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = fadd reassoc <2 x double> [[STEP_ADD_7]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi double [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[SUM_0]], %[[ENTRY]] ], [ [[SUM_0]], %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi double [ [[OFFSET_IDX]], %[[MIDDLE_BLOCK]] ], [ [[SUM_0]], %[[ENTRY]] ], [ [[SUM_0]], %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[SUM_1:%.*]] = phi double [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP_BODY:.*]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP_BODY]]
 ; CHECK:       [[LOOP_BODY]]:

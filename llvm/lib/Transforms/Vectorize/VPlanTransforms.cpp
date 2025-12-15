@@ -821,31 +821,6 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     if (!PhiR)
       continue;
 
-    // Try to narrow wide and replicating recipes to uniform recipes, based on
-    // VPlan analysis.
-    // TODO: Apply to all recipes in the future, to replace legacy uniformity
-    // analysis.
-    auto Users = collectUsersRecursively(PhiR);
-    for (VPUser *U : reverse(Users)) {
-      auto *Def = dyn_cast<VPRecipeWithIRFlags>(U);
-      auto *RepR = dyn_cast<VPReplicateRecipe>(U);
-      // Skip recipes that shouldn't be narrowed.
-      if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
-          Def->getNumUsers() == 0 || !Def->getUnderlyingValue() ||
-          (RepR && (RepR->isSingleScalar() || RepR->isPredicated())))
-        continue;
-
-      // Skip recipes that may have other lanes than their first used.
-      if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
-        continue;
-
-      auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
-                                          Def->operands(), /*IsUniform*/ true,
-                                          /*Mask*/ nullptr, /*Flags*/ *Def);
-      Clone->insertAfter(Def);
-      Def->replaceAllUsesWith(Clone);
-    }
-
     // Replace wide pointer inductions which have only their scalars used by
     // PtrAdd(IndStart, ScalarIVSteps (0, Step)).
     if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(&Phi)) {
@@ -1607,8 +1582,11 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Skip recipes that aren't single scalars.
-      if (!vputils::isSingleScalar(RepOrWidenR))
+      // Skip recipes that aren't single scalars and don't just have their first
+      // lane used.
+      if (!vputils::isSingleScalar(RepOrWidenR) &&
+          (!vputils::onlyFirstLaneUsed(RepOrWidenR) ||
+           RepOrWidenR->getNumUsers() == 0))
         continue;
 
       // Skip recipes for which conversion to single-scalar does introduce
@@ -2601,6 +2579,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(simplifyRecipes, Plan);
   runPass(removeDeadRecipes, Plan);
   runPass(simplifyBlends, Plan);
+  runPass(narrowToSingleScalarRecipes, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(narrowToSingleScalarRecipes, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);

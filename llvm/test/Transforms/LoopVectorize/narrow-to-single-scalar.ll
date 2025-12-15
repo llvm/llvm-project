@@ -120,17 +120,19 @@ define void @narrow_to_single_scalar_store_address_not_uniform_across_all_parts(
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC2-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], 0
-; VF2IC2-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX]], 1
+; VF2IC2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2IC2-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 2
-; VF2IC2-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 3
-; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP7]], 1
+; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i32 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP0]], 1
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP2]]
 ; VF2IC2-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP3]]
+; VF2IC2-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[VEC_IND]], i32 1
+; VF2IC2-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[STEP_ADD]], i32 1
 ; VF2IC2-NEXT:    store i32 [[TMP8]], ptr [[TMP4]], align 4
 ; VF2IC2-NEXT:    store i32 [[TMP1]], ptr [[TMP5]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; VF2IC2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD]], splat (i32 2)
 ; VF2IC2-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
 ; VF2IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
