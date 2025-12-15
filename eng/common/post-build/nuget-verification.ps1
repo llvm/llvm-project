@@ -65,7 +65,7 @@ if ($NuGetExePath) {
         Write-Host "Downloading nuget.exe from $nugetExeUrl..."
         $ProgressPreference = 'SilentlyContinue'
         try {
-            Invoke-WebRequest $nugetExeUrl -OutFile $downloadedNuGetExe
+            Invoke-WebRequest $nugetExeUrl -UseBasicParsing -OutFile $downloadedNuGetExe
             $ProgressPreference = 'Continue'
         } catch {
             $ProgressPreference = 'Continue'

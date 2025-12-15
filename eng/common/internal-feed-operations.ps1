@@ -26,7 +26,7 @@ function SetupCredProvider {
   $url = 'https://raw.githubusercontent.com/microsoft/artifacts-credprovider/master/helpers/installcredprovider.ps1'
   
   Write-Host "Writing the contents of 'installcredprovider.ps1' locally..."
-  Invoke-WebRequest $url -OutFile installcredprovider.ps1
+  Invoke-WebRequest $url -UseBasicParsing -OutFile installcredprovider.ps1
   
   Write-Host 'Installing plugin...'
   .\installcredprovider.ps1 -Force
