@@ -136,9 +136,10 @@ public:
                               new_capacity)) {
       buffer_ = static_cast<char *>(Ptr);
       capacity_ = new_capacity;
-    } else {
-      __builtin_unreachable(); // out of memory
     }
+    // Out of memory: this is not handled in current implementation,
+    // We trap the program and exits.
+    __builtin_trap();
   }
 
   LIBC_INLINE void resize(size_t size) {
