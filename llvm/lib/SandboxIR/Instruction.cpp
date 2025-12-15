@@ -916,14 +916,14 @@ void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate) {
   // the expense of some performance. Copy PHI::removeIncomingValueIf more
   // directly if performance becomes an issue.
 
-  // Removing the element at index X, moves the element previously at X + 1
-  // to X. Working from the end avoids complications from that.
-  unsigned Idx = getNumIncomingValues();
-  while (Idx > 0) {
-    if (Predicate(Idx - 1))
-      removeIncomingValue(Idx - 1);
-    --Idx;
-  }
+  auto &Tracker = Ctx.getTracker();
+  cast<llvm::PHINode>(Val)->removeIncomingValueIf([&](unsigned Idx) {
+    if (Predicate(Idx)) {
+      Tracker.emplaceIfTracking<PHIRemoveIncoming>(this, Idx);
+      return true;
+    }
+    return false;
+  });
 }
 
 Value *CmpInst::create(Predicate P, Value *S1, Value *S2, InsertPosition Pos,
