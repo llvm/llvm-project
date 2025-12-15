@@ -20,13 +20,15 @@ local:
 
 This occurs because Flang's implementation of pointers to internal procedures requires an executable stack.
 
+An internal procedure has a "host scope", which is the scope surrounding it.
+It can access variables in the host scope.
 When an internal procedure is referenced from outside its host scope (for example, via a procedure pointer), the implementation must ensure that it can still access variables from that host scope.
 To achieve this, the current implementation of Flang generates a small piece of code, called a "trampoline", on the stack.
 When the procedure is called, this trampoline is executed.
 The trampoline is on the stack, so the stack itself must be executable.
 For a more detailed explanation of trampolines, please refer to the [design document](InternalProcedureTrampolines.md).
 
-An executable stack increases the risk and impact of certain classes of security vulnerability, such as [stack buffer overflows](https://llsoftsec.github.io/llsoftsecbook/#stack-buffer-overflows).
+An executable stack increases the risk and impact of certain classes of security vulnerabilities, such as [stack buffer overflows](https://llsoftsec.github.io/llsoftsecbook/#stack-buffer-overflows).
 Therefore, modern linkers often issue a warning or an error if an executable stack is not explicitly requested by the developer.
 For instance, the GNU Linker (`ld`) issues a warning while the LLVM Linker (`lld`) emits an error.
 
