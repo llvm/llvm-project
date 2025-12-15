@@ -393,6 +393,7 @@ for.body:
 ; CHECK-UNROLL-NEXT: [[PROLOGUE:.LBB[0-9_]+]]:
 ; CHECK-UNROLL:         le lr, [[PROLOGUE]]
 ; CHECK-UNROLL-NEXT: [[PROLOGUE_EXIT:.LBB[0-9_]+]]:
+; CHECK-UNROLL:      [[PREHEADER:.LBB[0-9_]+]]:
 ; CHECK-UNROLL:      [[BODY:.LBB[0-9_]+]]:
 ; CHECK-UNROLL:         le lr, [[BODY]]
 ; CHECK-UNROLL-NOT:     b
