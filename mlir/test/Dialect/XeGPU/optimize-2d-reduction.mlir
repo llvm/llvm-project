@@ -6,16 +6,11 @@
 // CHECK:      %[[ACC:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>, dims = [0, 1]>} 1.000000e+00 : f32
 // CHECK:      %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<4x16xf32> -> !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>>
 // CHECK:      %[[LOADED:.*]] = xegpu.load_nd %[[TDESC]][0, 0]  : !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>> -> vector<4x16xf32>
-// CHECK:      %[[ACC_VEC:.*]] = vector.from_elements %[[ACC]] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>, dims = [0, 1]>} : vector<1xf32>
-// CHECK:      %[[ACC_VEC_FOR_INTRA:.*]] = vector.broadcast %[[ACC_VEC]]
-// CHECK-SAME: {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>, dims = [0]>} : vector<1xf32> to vector<16xf32>
-// CHECK:      %[[LOADED_REDUCED:.*]] = vector.multi_reduction <add>, %[[LOADED]], %[[ACC_VEC_FOR_INTRA]]
+// CHECK:      %[[ACC_VEC:.*]] = vector.broadcast %cst {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>, dims = [0]>} : f32 to vector<16xf32>
+// CHECK:      %[[LOADED_REDUCED:.*]] = vector.multi_reduction <add>, %[[LOADED]], %[[ACC_VEC]]
 // CHECK-SAME: {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>, dims = [0]>} [0] : vector<4x16xf32> to vector<16xf32>
-// CHECK:      %[[LOADED_REDUCED_FOR_CROSS:.*]] = vector.shape_cast %[[LOADED_REDUCED]]
-// CHECK-SAME: {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16xf32> to vector<1x16xf32>
-// CHECK:      %[[LOADED_REDUCED_2D:.*]] = vector.multi_reduction <add>, %[[LOADED_REDUCED_FOR_CROSS]], %[[ACC_VEC]]
-// CHECK-SAME: {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>} [1] : vector<1x16xf32> to vector<1xf32>
-// CHECK:      %[[SCALAR_RES:.*]] = vector.extract %[[LOADED_REDUCED_2D]][0] : f32 from vector<1xf32>
+// CHECK:      %[[LOADED_REDUCED_FOR_CROSS:.*]] = vector.reduction <add>, %[[LOADED_REDUCED]]
+// CHECK-SAME: {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>, dims = [0, 1]>} : vector<16xf32> into f32
 gpu.module @xevm_test {
   gpu.func @vector_reduce_2d(%src: memref<4x16xf32>, %dst: memref<256xf32>) {
     %cst = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>, dims = [0, 1]>} 1.0 : f32

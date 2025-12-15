@@ -447,14 +447,6 @@ class MultiRed2dOp : public OpConversionPattern<vector::MultiDimReductionOp> {
     // TODO: remove scalar acc assumption (need more complex layout adjustments
     // for sliced inputs).
     assert(scalarAcc && "Expected scalar acc");
-    if (scalarAcc) {
-      acc = vector::FromElementsOp::create(
-          rewriter, loc, VectorType::get({1}, sourceVecType.getElementType()),
-          acc);
-      xegpu::setDistributeLayoutAttr(
-          llvm::dyn_cast<OpResult>(acc),
-          cast<xegpu::DistributeLayoutAttr>(resLayout));
-    }
 
     // The first reduction's dist attribute does not have the cross lane dim.
     auto resSliceLayoutAttr = cast<xegpu::SliceAttr>(resLayout);
@@ -467,7 +459,7 @@ class MultiRed2dOp : public OpConversionPattern<vector::MultiDimReductionOp> {
         reductionOp.getContext(), resSliceLayoutAttr.getParent(),
         DenseI64ArrayAttr::get(getContext(), sliceDims));
 
-    // We reduce only one dim first, adjsut accumulator.
+    // We reduce intra-lane, acc is source without intra lane.
     SmallVector<int64_t> accShape(sourceVecType.getShape());
     accShape.erase(accShape.begin() + intraLaneDim);
     // Add a dim to the lower-dim user-supplied acc
@@ -487,45 +479,11 @@ class MultiRed2dOp : public OpConversionPattern<vector::MultiDimReductionOp> {
         llvm::dyn_cast<OpResult>(intraLaneReduced),
         cast<xegpu::DistributeLayoutAttr>(intraLaneRedResLayout));
 
-    xegpu::DistributeLayoutAttr nextMultiRedLayout = intraLaneRedResLayout;
-    // Example: vector<2x4> got reduced to vector<2>, next reduction returns a
-    // scalar, distribution passes do not support this result type. Expand to
-    // vector<2x1>, so that the second reduction result is vector<1>. Restore
-    // this dim in layout, but lane data is 1.
-    if (scalarAcc) {
-      SmallVector<int> srcLaneData(srcLayout.getRank(), 1);
-      auto laneLayoutSrc = srcLayout.getEffectiveLaneLayoutAsInt();
-      SmallVector<int> srcLaneLayout(laneLayoutSrc.begin(),
-                                     laneLayoutSrc.end());
-      nextMultiRedLayout = xegpu::LayoutAttr::get(
-          reductionOp.getContext(),
-          DenseI32ArrayAttr::get(reductionOp.getContext(), srcLaneLayout),
-          DenseI32ArrayAttr::get(reductionOp.getContext(), srcLaneData));
-
-      SmallVector<int64_t> vecTypeWithUnitDim{sourceVecType.getShape()};
-      vecTypeWithUnitDim[intraLaneDim] = 1;
-      intraLaneReduced = vector::ShapeCastOp::create(
-          rewriter, loc,
-          VectorType::get(vecTypeWithUnitDim, sourceVecType.getElementType()),
-          intraLaneReduced);
-      xegpu::setDistributeLayoutAttr(llvm::dyn_cast<OpResult>(intraLaneReduced),
-                                     nextMultiRedLayout);
-    } else
-      crossLaneDim -= static_cast<int64_t>(intraLaneDim < crossLaneDim);
-    // Do cross-lane reduction
-    // TODO: why use accumulator again?
-    Value crossLaneReduced = vector::MultiDimReductionOp::create(
-        rewriter, loc, reductionOp.getKind(), intraLaneReduced, acc,
-        ArrayRef<int64_t>(crossLaneDim));
-    auto crossLaneLayout = xegpu::SliceAttr::get(
-        reductionOp.getContext(), nextMultiRedLayout,
-        DenseI64ArrayAttr::get(getContext(), crossLaneDim));
-    xegpu::setDistributeLayoutAttr(llvm::dyn_cast<OpResult>(crossLaneReduced),
-                                   crossLaneLayout);
-
-    if (scalarAcc)
-      crossLaneReduced =
-          vector::ExtractOp::create(rewriter, loc, crossLaneReduced, 0);
+    Value crossLaneReduced = vector::ReductionOp::create(
+        rewriter, loc, reductionOp.getKind(), intraLaneReduced, nullptr);
+    xegpu::setDistributeLayoutAttr(
+        llvm::dyn_cast<OpResult>(crossLaneReduced),
+        cast<xegpu::DistributeLayoutAttr>(resLayout));
     assert(crossLaneReduced.getType() == reductionOp.getResult().getType() &&
            "Type mismatch");
     rewriter.replaceOp(reductionOp, crossLaneReduced);
