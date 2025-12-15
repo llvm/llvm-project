@@ -190,7 +190,8 @@ static mlir::ParseResult parseChangeTeamOpBody(mlir::OpAsmParser &parser,
 
   mlir::Operation *terminator = body.back().getTerminator();
   if (!terminator || !mlir::isa<mif::EndTeamOp>(terminator))
-    return mlir::failure();
+    return parser.emitError(parser.getNameLoc(),
+                            "missing mif.end_team terminator");
 
   return mlir::success();
 }

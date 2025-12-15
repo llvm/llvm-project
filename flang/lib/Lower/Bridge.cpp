@@ -4090,6 +4090,7 @@ private:
         eval.getFirstNestedEvaluation();
     auto *changeTeamStmt =
         changeTeamStmtEval.getIf<Fortran::parser::ChangeTeamStmt>();
+    assert(changeTeamStmt && "ChangeTeamStmt not found");
     mif::ChangeTeamOp changeOp =
         genChangeTeamStmt(*this, changeTeamStmtEval, *changeTeamStmt);
     mlir::Block *entryBlock = changeOp.getBody();
@@ -4102,12 +4103,13 @@ private:
 
     // CHANGE TEAM body code.
     auto iter = eval.getNestedEvaluations().begin()++;
-    for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter) {
+    for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
       genFIR(*iter, unstructuredContext);
-    }
+
     // END TEAM statement
     Fortran::lower::pft::Evaluation &endTeamEval = *iter;
     auto *endTeamStmt = endTeamEval.getIf<Fortran::parser::EndChangeTeamStmt>();
+    assert(endTeamStmt && "EndChangeTeamStmt not found");
     if (unstructuredContext)
       maybeStartBlock(endTeamEval.block);
 
