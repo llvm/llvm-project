@@ -381,26 +381,16 @@ static void emitCatchDispatchBlock(CIRGenFunction &cgf,
     return;
   }
 
-  // calls to eh_typeid_for) and the selector value is loaded. After that,
-  // blocks get connected for later codegen. In CIR, these are all
-  // implicit behaviors of cir.catch - not a lot of work to do.
-  //
-  // Test against each of the exception types we claim to catch.
-  for (const EHCatchScope::Handler &handler : catchScope) {
-    if (handler.isCatchAll())
-      return;
+  assert(std::find_if(catchScope.begin(), catchScope.end(),
+                      [](const auto &handler) {
+                        return !handler.type.rtti && handler.type.flags != 0;
+                      }) == catchScope.end() &&
+         "catch handler without type value or with not supported flags");
 
-    mlir::TypedAttr typeValue = handler.type.rtti;
-    assert(handler.type.flags == 0 && "catch handler flags not supported");
-    assert(typeValue && "fell into catch-all case!");
-
-    // Check for address space mismatch
-    assert(!cir::MissingFeatures::addressSpace());
-  }
-
-  // There was no catch all handler, populate th EH regions for the enclosing
-  // scope.
-  cgf.populateEHCatchRegions(catchScope.getEnclosingEHScope(), tryOp);
+  // There was no catch all handler, populate th EH regions for the
+  // enclosing scope.
+  if (!std::prev(catchScope.end())->isCatchAll())
+    cgf.populateEHCatchRegions(catchScope.getEnclosingEHScope(), tryOp);
 }
 
 void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
@@ -684,7 +674,6 @@ void CIRGenFunction::populateEHCatchRegions(EHScopeStack::stable_iterator scope,
         break;
       }
 
-      assert(callWithExceptionCtx && "expected call information");
       // TODO(cir): In the incubator we create a new basic block with YieldOp
       // inside the attached cleanup region, but this part will be redesigned
       break;

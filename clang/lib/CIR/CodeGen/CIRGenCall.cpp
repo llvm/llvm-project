@@ -503,9 +503,7 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
     callOpWithExceptions =
         builder.createCallOp(callLoc, directFuncOp, cirCallArgs);
 
-    cgf.callWithExceptionCtx = callOpWithExceptions;
     cgf.populateCatchHandlersIfRequired(tryOp);
-    cgf.callWithExceptionCtx = nullptr;
     return callOpWithExceptions;
   }
 
