@@ -371,10 +371,9 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
 
-    if (match(&R, m_ExtractLastLaneOfLastPart(m_VPValue(Op0))) ||
-        match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
-      addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
-      if (Plan.hasScalarVFOnly()) {
+    if (Plan.hasScalarVFOnly()) {
+      if (match(&R, m_ExtractLastPart(m_VPValue(Op0))) ||
+          match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
         auto *I = cast<VPInstruction>(&R);
         bool IsPenultimatePart =
             I->getOpcode() == VPInstruction::ExtractPenultimateElement;
@@ -383,7 +382,11 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         I->replaceAllUsesWith(getValueForPart(Op0, PartIdx));
         continue;
       }
-      // For vector VF, always extract from the last part.
+    }
+    // For vector VF, the penultimate element is always extracted from the last part.
+    if (match(&R, m_ExtractLastLaneOfLastPart(m_VPValue(Op0))) ||
+        match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
+      addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
       R.setOperand(0, getValueForPart(Op0, UF - 1));
       continue;
     }

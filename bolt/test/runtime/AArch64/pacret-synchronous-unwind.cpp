@@ -11,12 +11,15 @@
 // RUN: -fno-asynchronous-unwind-tables \
 // RUN: %s -o %t.exe -Wl,-q
 // RUN: llvm-bolt %t.exe -o %t.bolt | FileCheck %s --check-prefix=CHECK
-//
-// CHECK: PointerAuthCFIAnalyzer ran on 3 functions. Ignored
-// CHECK-NOT: 0 functions (0.00%) because of CFI inconsistencies
-// CHECK-SAME: 1 functions (33.33%) because of CFI inconsistencies
-// CHECK-NEXT: BOLT-WARNING: PointerAuthCFIAnalyzer only supports asynchronous
-// CHECK-SAME: unwind tables. For C compilers, see -fasynchronous-unwind-tables.
+
+// Number of functions with .cfi-negate-ra-state in the binary is
+// platform-dependent.
+// CHECK: BOLT-INFO: PointerAuthCFIAnalyzer ran on {{[0-9]+}} functions.
+// CHECK-SAME: Ignored {{[0-9]}} functions ({{[0-9.]+}}%) because of CFI
+// CHECK-SAME: inconsistencies
+// CHECK-NEXT: BOLT-WARNING: PointerAuthCFIAnalyzer only supports
+// CHECK-SAME: asynchronous unwind tables. For C compilers, see
+// CHECK-SAME: -fasynchronous-unwind-tables.
 
 #include <cstdio>
 #include <stdexcept>

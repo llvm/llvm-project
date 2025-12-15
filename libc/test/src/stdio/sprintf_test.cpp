@@ -2484,6 +2484,18 @@ TEST(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
 
   written = LIBC_NAMESPACE::sprintf(buff, "%Le", 1.2345678e4900L);
   ASSERT_STREQ_LEN(written, buff, "1.234568e+4900");
+
+#ifndef LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION
+  // Minimum normal + epsilon
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%.20Le", 3.36210314311209350663E-4932L);
+  ASSERT_STREQ_LEN(written, buff, "3.36210314311209350663e-4932");
+
+  // Minimum subnormal
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%.20Le", 3.64519953188247460253E-4951L);
+  ASSERT_STREQ_LEN(written, buff, "3.64519953188247460253e-4951");
+#endif // LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION
 #endif
 }
 
