@@ -180,6 +180,8 @@ private:
     size_t ArgOffset, ArgSize;
     size_t Arg = 0;
 
+    ArgsSize = 0;
+
     // Find the last argument to know the total size of the arguments.
     while ((Res = cuFuncGetParamInfo(Func, Arg++, &ArgOffset, &ArgSize)) ==
            CUDA_SUCCESS)
@@ -197,7 +199,7 @@ private:
   mutable uint32_t MaxDynCGroupMemLimit = 49152;
 
   /// The size of the kernel arguments.
-  size_t ArgsSize = 0;
+  size_t ArgsSize;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
@@ -1453,7 +1455,7 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // The args size passed in LaunchParams may have tail padding, which is not
   // accepted by the CUDA driver.
   if (ArgsSize > LaunchParams.Size)
-    return Plugin::error(ErrorCode::INVALID_BINARY,
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "mismatch in kernel arguments");
 
   CUstream Stream;
