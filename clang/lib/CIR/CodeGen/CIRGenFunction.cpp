@@ -352,7 +352,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
   insertCleanupAndLeave(curBlock);
 }
 
-cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
+cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc, bool isImplicit) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   // If we are on a coroutine, add the coro_end builtin call.
@@ -365,9 +365,9 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
     auto value = cir::LoadOp::create(
         builder, loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
     return cir::ReturnOp::create(builder, loc,
-                                 llvm::ArrayRef(value.getResult()));
+                                 llvm::ArrayRef(value.getResult()), isImplicit);
   }
-  return cir::ReturnOp::create(builder, loc);
+  return cir::ReturnOp::create(builder, loc, {}, isImplicit);
 }
 
 // This is copied from CodeGenModule::MayDropFunctionReturn.  This is a
@@ -410,7 +410,7 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
     }
   }
 
-  (void)emitReturn(localScope->endLoc);
+  (void)emitReturn(localScope->endLoc, /*isImplicit=*/true);
 }
 
 cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
