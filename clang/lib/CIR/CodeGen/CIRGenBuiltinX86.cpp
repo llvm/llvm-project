@@ -417,20 +417,22 @@ static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
   return builder.createVecCompare(loc, pred, op0, op1);
 }
 
-static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
-                                 mlir::Value mask, mlir::Value Op0,
-                                 mlir::Value Op1) {
-  return builder.create<cir::VecTernaryOp>(loc, Op0.getType(), mask, Op0, Op1);
+static mlir::Value emitX86VectorSelect(CIRGenBuilderTy &builder,
+                                       mlir::Location loc, mlir::Value mask,
+                                       mlir::Value Op0, mlir::Value Op1) {
+  return cir::VecTernaryOp::create(builder, loc, Op0.getType(), mask, Op0, Op1);
 }
 
 static mlir::Value emitX86ScalarSelect(CIRGenBuilderTy &builder,
                                        mlir::Location loc, mlir::Value mask,
                                        mlir::Value Op0, mlir::Value Op1) {
 
-  mlir::Value zero = builder.getZero(mask.getType(), loc);
-  mlir::Value cond = builder.createCompare(loc, CmpOpKind::ne, mask, zero);
+  auto zeroAttr = builder.getZeroAttr(mask.getType());
+  mlir::Value zero =
+      cir::ConstantOp::create(builder, loc, mask.getType(), zeroAttr);
+  mlir::Value cond = builder.createCompare(loc, cir::CmpOpKind::ne, mask, zero);
 
-  return builder.createSelect(loc, Op0.getType(), cond, Op0, Op1);
+  return builder.createSelect(loc, cond, Op0, Op1);
 }
 
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
