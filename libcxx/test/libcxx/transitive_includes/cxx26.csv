@@ -787,6 +787,7 @@ random string
 random string_view
 random tuple
 random version
+ranges array
 ranges cctype
 ranges compare
 ranges concepts

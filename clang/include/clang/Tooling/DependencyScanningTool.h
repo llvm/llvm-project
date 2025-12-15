@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNINGTOOL_H
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNINGTOOL_H
 
+#include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/DependencyScanningUtils.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
@@ -119,9 +120,8 @@ public:
   /// @param CWD The current working directory used during the scan.
   /// @param CommandLine The commandline used for the scan.
   /// @return Error if the initializaiton fails.
-  llvm::Error
-  initializeCompilerInstanceWithContext(StringRef CWD,
-                                        ArrayRef<std::string> CommandLine);
+  llvm::Error initializeCompilerInstanceWithContextOrError(
+      StringRef CWD, ArrayRef<std::string> CommandLine);
 
   /// @brief Computes the dependeny for the module named ModuleName.
   /// @param ModuleName The name of the module for which this method computes
@@ -138,7 +138,7 @@ public:
   /// @return An instance of \c TranslationUnitDeps if the scan is successful.
   ///         Otherwise it returns an error.
   llvm::Expected<dependencies::TranslationUnitDeps>
-  computeDependenciesByNameWithContext(
+  computeDependenciesByNameWithContextOrError(
       StringRef ModuleName,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput);
@@ -147,7 +147,7 @@ public:
   ///        diagnostics and deletes the compiler instance. Call this method
   ///        once all names for a same commandline are scanned.
   /// @return Error if an error occured during finalization.
-  llvm::Error finalizeCompilerInstanceWithContext();
+  llvm::Error finalizeCompilerInstanceWithContextOrError();
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
