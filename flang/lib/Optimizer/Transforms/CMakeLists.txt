@@ -9,6 +9,7 @@ add_flang_library(FIRTransforms
   CompilerGeneratedNames.cpp
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
+  CUDA/CUFAllocationConversion.cpp
   CUFAddConstructor.cpp
   CUFDeviceGlobal.cpp
   CUFOpConversion.cpp

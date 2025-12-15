@@ -19,15 +19,12 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <tuple>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 
@@ -198,8 +195,8 @@ public:
   const_iterator end() const { return Sections.end(); }
 
   SmallVectorImpl<const MCSymbol *> &getSymbols() { return Symbols; }
-  iterator_range<pointee_iterator<
-      typename SmallVector<const MCSymbol *, 0>::const_iterator>>
+  iterator_range<
+      pointee_iterator<SmallVector<const MCSymbol *, 0>::const_iterator>>
   symbols() const {
     return make_pointee_range(Symbols);
   }

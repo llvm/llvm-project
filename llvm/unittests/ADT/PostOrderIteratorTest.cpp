@@ -23,7 +23,7 @@ namespace {
 
 // Whether we're able to compile
 TEST(PostOrderIteratorTest, Compiles) {
-  typedef SmallPtrSet<void *, 4> ExtSetTy;
+  using ExtSetTy = SmallPtrSet<void *, 4>;
 
   // Tests that template specializations are kept up to date
   void *Null = nullptr;
@@ -44,7 +44,7 @@ TEST(PostOrderIteratorTest, Compiles) {
 
 static_assert(
     std::is_convertible_v<decltype(*std::declval<po_iterator<Graph<3>>>()),
-                          typename po_iterator<Graph<3>>::reference>);
+                          po_iterator<Graph<3>>::reference>);
 
 // Test post-order and reverse post-order traversals for simple graph type.
 TEST(PostOrderIteratorTest, PostOrderAndReversePostOrderTraverrsal) {

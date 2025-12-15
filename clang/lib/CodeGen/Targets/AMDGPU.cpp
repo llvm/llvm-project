@@ -439,11 +439,8 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     return;
 
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-  if (FD) {
+  if (FD)
     setFunctionDeclAttributes(FD, F, M);
-    if (FD->hasAttr<DeviceKernelAttr>() && !M.getLangOpts().OpenCL)
-      F->setCallingConv(getDeviceKernelCallingConv());
-  }
   if (!getABIInfo().getCodeGenOpts().EmitIEEENaNCompliantInsts)
     F->addFnAttr("amdgpu-ieee", "false");
 }

@@ -186,9 +186,9 @@ static unsigned conjugateICmpMask(unsigned Mask) {
   return NewMask;
 }
 
-// Adapts the external decomposeBitTestICmp for local use.
-static bool decomposeBitTestICmp(Value *Cond, CmpInst::Predicate &Pred,
-                                 Value *&X, Value *&Y, Value *&Z) {
+// Adapts the external decomposeBitTest for local use.
+static bool decomposeBitTest(Value *Cond, CmpInst::Predicate &Pred, Value *&X,
+                             Value *&Y, Value *&Z) {
   auto Res = llvm::decomposeBitTest(Cond, /*LookThroughTrunc=*/true,
                                     /*AllowNonZeroC=*/true);
   if (!Res)
@@ -220,7 +220,7 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C, Value *&D, Value *&E,
 
   // Check whether the icmp can be decomposed into a bit test.
   Value *L1, *L11, *L12, *L2, *L21, *L22;
-  if (decomposeBitTestICmp(LHS, PredL, L11, L12, L2)) {
+  if (decomposeBitTest(LHS, PredL, L11, L12, L2)) {
     L21 = L22 = L1 = nullptr;
   } else {
     auto *LHSCMP = dyn_cast<ICmpInst>(LHS);
@@ -253,7 +253,7 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C, Value *&D, Value *&E,
     return std::nullopt;
 
   Value *R11, *R12, *R2;
-  if (decomposeBitTestICmp(RHS, PredR, R11, R12, R2)) {
+  if (decomposeBitTest(RHS, PredR, R11, R12, R2)) {
     if (R11 == L11 || R11 == L12 || R11 == L21 || R11 == L22) {
       A = R11;
       D = R12;
@@ -3890,7 +3890,7 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
   // Decompose ((A & N) ? 0 : N * C) into BitMaskMul
   if (match(Op, m_Select(m_Value(Cond), m_APInt(EqZero), m_APInt(NeZero)))) {
     auto ICmpDecompose =
-        decomposeBitTest(Cond, /*LookThruTrunc=*/true,
+        decomposeBitTest(Cond, /*LookThroughTrunc=*/true,
                          /*AllowNonZeroC=*/false, /*DecomposeBitMask=*/true);
     if (!ICmpDecompose.has_value())
       return std::nullopt;
@@ -3993,6 +3993,27 @@ static Value *foldOrUnsignedUMulOverflowICmp(BinaryOperator &I,
       !C1->isZero()) {
     Constant *NewC = ConstantInt::get(X->getType(), C2->udiv(*C1));
     return Builder.CreateICmp(ICmpInst::ICMP_UGT, X, NewC);
+  }
+  return nullptr;
+}
+
+/// Fold select(X >s 0, 0, -X) | smax(X, 0) --> abs(X)
+///      select(X <s 0, -X, 0) | smax(X, 0) --> abs(X)
+static Value *FoldOrOfSelectSmaxToAbs(BinaryOperator &I,
+                                      InstCombiner::BuilderTy &Builder) {
+  Value *X;
+  Value *Sel;
+  if (match(&I,
+            m_c_Or(m_Value(Sel), m_OneUse(m_SMax(m_Value(X), m_ZeroInt()))))) {
+    auto NegX = m_Neg(m_Specific(X));
+    if (match(Sel, m_Select(m_SpecificICmp(ICmpInst::ICMP_SGT, m_Specific(X),
+                                           m_ZeroInt()),
+                            m_ZeroInt(), NegX)) ||
+        match(Sel, m_Select(m_SpecificICmp(ICmpInst::ICMP_SLT, m_Specific(X),
+                                           m_ZeroInt()),
+                            NegX, m_ZeroInt())))
+      return Builder.CreateBinaryIntrinsic(Intrinsic::abs, X,
+                                           Builder.getFalse());
   }
   return nullptr;
 }
@@ -4545,6 +4566,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     if (Value *V = SimplifyAddWithRemainder(I))
       return replaceInstUsesWith(I, V);
 
+  if (Value *Res = FoldOrOfSelectSmaxToAbs(I, Builder))
+    return replaceInstUsesWith(I, Res);
+
   return nullptr;
 }
 
@@ -5072,9 +5096,17 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     return &I;
   }
 
+  // not (bitcast (cmp A, B) --> bitcast (!cmp A, B)
+  if (match(NotOp, m_OneUse(m_BitCast(m_Value(X)))) &&
+      match(X, m_OneUse(m_Cmp(Pred, m_Value(), m_Value())))) {
+    cast<CmpInst>(X)->setPredicate(CmpInst::getInversePredicate(Pred));
+    return new BitCastInst(X, Ty);
+  }
+
   // Move a 'not' ahead of casts of a bool to enable logic reduction:
   // not (bitcast (sext i1 X)) --> bitcast (sext (not i1 X))
-  if (match(NotOp, m_OneUse(m_BitCast(m_OneUse(m_SExt(m_Value(X)))))) && X->getType()->isIntOrIntVectorTy(1)) {
+  if (match(NotOp, m_OneUse(m_BitCast(m_OneUse(m_SExt(m_Value(X)))))) &&
+      X->getType()->isIntOrIntVectorTy(1)) {
     Type *SextTy = cast<BitCastOperator>(NotOp)->getSrcTy();
     Value *NotX = Builder.CreateNot(X);
     Value *Sext = Builder.CreateSExt(NotX, SextTy);

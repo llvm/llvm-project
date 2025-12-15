@@ -243,7 +243,7 @@ private:
 lldb::StopDisassemblyType GetStopDisassemblyDisplay(lldb::SBDebugger &debugger);
 
 /// Take ownership of the stored error.
-llvm::Error ToError(const lldb::SBError &error);
+llvm::Error ToError(const lldb::SBError &error, bool show_user = true);
 
 /// Provides the string value if this data structure is a string type.
 std::string GetStringValue(const lldb::SBStructuredData &data);

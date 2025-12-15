@@ -151,7 +151,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool IsCpRestoreSet;
   bool CurForbiddenSlotAttr;
   int CpRestoreOffset;
-  unsigned GPReg;
+  MCRegister GPReg;
   unsigned CpSaveLocation;
   /// If true, then CpSaveLocation is a register, otherwise it's an offset.
   bool     CpSaveLocationIsRegister;
@@ -823,7 +823,7 @@ private:
   };
 
   struct RegListOp {
-    SmallVector<unsigned, 10> *List;
+    SmallVector<MCRegister, 10> *List;
   };
 
   union {
@@ -1377,15 +1377,15 @@ public:
     if (Size < 2 || Size > 5)
       return false;
 
-    unsigned R0 = RegList.List->front();
-    unsigned R1 = RegList.List->back();
+    MCRegister R0 = RegList.List->front();
+    MCRegister R1 = RegList.List->back();
     if (!((R0 == Mips::S0 && R1 == Mips::RA) ||
           (R0 == Mips::S0_64 && R1 == Mips::RA_64)))
       return false;
 
-    int PrevReg = *RegList.List->begin();
+    MCRegister PrevReg = RegList.List->front();
     for (int i = 1; i < Size - 1; i++) {
-      int Reg = (*(RegList.List))[i];
+      MCRegister Reg = (*(RegList.List))[i];
       if ( Reg != PrevReg + 1)
         return false;
       PrevReg = Reg;
@@ -1447,7 +1447,7 @@ public:
     return static_cast<const MCConstantExpr *>(getMemOff())->getValue();
   }
 
-  const SmallVectorImpl<unsigned> &getRegList() const {
+  const SmallVectorImpl<MCRegister> &getRegList() const {
     assert((Kind == k_RegList) && "Invalid access!");
     return *(RegList.List);
   }
@@ -1548,12 +1548,13 @@ public:
   }
 
   static std::unique_ptr<MipsOperand>
-  CreateRegList(SmallVectorImpl<unsigned> &Regs, SMLoc StartLoc, SMLoc EndLoc,
+  CreateRegList(SmallVectorImpl<MCRegister> &Regs, SMLoc StartLoc, SMLoc EndLoc,
                 MipsAsmParser &Parser) {
-    assert(Regs.size() > 0 && "Empty list not allowed");
+    assert(!Regs.empty() && "Empty list not allowed");
 
     auto Op = std::make_unique<MipsOperand>(k_RegList, Parser);
-    Op->RegList.List = new SmallVector<unsigned, 10>(Regs.begin(), Regs.end());
+    Op->RegList.List =
+        new SmallVector<MCRegister, 10>(Regs.begin(), Regs.end());
     Op->StartLoc = StartLoc;
     Op->EndLoc = EndLoc;
     return Op;
@@ -1684,7 +1685,7 @@ public:
     case k_RegList:
       OS << "RegList< ";
       for (auto Reg : (*RegList.List))
-        OS << Reg << " ";
+        OS << Reg.id() << " ";
       OS <<  ">";
       break;
     }
@@ -6176,7 +6177,7 @@ int MipsAsmParser::matchCPURegisterName(StringRef Name) {
 
   CC = StringSwitch<unsigned>(Name)
            .Case("zero", 0)
-           .Cases("at", "AT", 1)
+           .Cases({"at", "AT"}, 1)
            .Case("a0", 4)
            .Case("a1", 5)
            .Case("a2", 6)
@@ -6848,9 +6849,9 @@ ParseStatus MipsAsmParser::parseInvNum(OperandVector &Operands) {
 
 ParseStatus MipsAsmParser::parseRegisterList(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  SmallVector<unsigned, 10> Regs;
-  unsigned RegNo;
-  unsigned PrevReg = Mips::NoRegister;
+  SmallVector<MCRegister, 10> Regs;
+  MCRegister Reg;
+  MCRegister PrevReg;
   bool RegRange = false;
   SmallVector<std::unique_ptr<MCParsedAsmOperand>, 8> TmpOperands;
 
@@ -6860,46 +6861,47 @@ ParseStatus MipsAsmParser::parseRegisterList(OperandVector &Operands) {
   SMLoc S = Parser.getTok().getLoc();
   while (parseAnyRegister(TmpOperands).isSuccess()) {
     SMLoc E = getLexer().getLoc();
-    MipsOperand &Reg = static_cast<MipsOperand &>(*TmpOperands.back());
-    RegNo = isGP64bit() ? Reg.getGPR64Reg() : Reg.getGPR32Reg();
+    MipsOperand &RegOpnd = static_cast<MipsOperand &>(*TmpOperands.back());
+    Reg = isGP64bit() ? RegOpnd.getGPR64Reg() : RegOpnd.getGPR32Reg();
     if (RegRange) {
       // Remove last register operand because registers from register range
       // should be inserted first.
-      if ((isGP64bit() && RegNo == Mips::RA_64) ||
-          (!isGP64bit() && RegNo == Mips::RA)) {
-        Regs.push_back(RegNo);
+      if ((isGP64bit() && Reg == Mips::RA_64) ||
+          (!isGP64bit() && Reg == Mips::RA)) {
+        Regs.push_back(Reg);
       } else {
-        unsigned TmpReg = PrevReg + 1;
-        while (TmpReg <= RegNo) {
+        MCRegister TmpReg = PrevReg + 1;
+        while (TmpReg <= Reg) {
           if ((((TmpReg < Mips::S0) || (TmpReg > Mips::S7)) && !isGP64bit()) ||
               (((TmpReg < Mips::S0_64) || (TmpReg > Mips::S7_64)) &&
                isGP64bit()))
             return Error(E, "invalid register operand");
 
           PrevReg = TmpReg;
-          Regs.push_back(TmpReg++);
+          Regs.push_back(TmpReg);
+          TmpReg = TmpReg.id() + 1;
         }
       }
 
       RegRange = false;
     } else {
-      if ((PrevReg == Mips::NoRegister) &&
-          ((isGP64bit() && (RegNo != Mips::S0_64) && (RegNo != Mips::RA_64)) ||
-           (!isGP64bit() && (RegNo != Mips::S0) && (RegNo != Mips::RA))))
+      if (!PrevReg.isValid() &&
+          ((isGP64bit() && (Reg != Mips::S0_64) && (Reg != Mips::RA_64)) ||
+           (!isGP64bit() && (Reg != Mips::S0) && (Reg != Mips::RA))))
         return Error(E, "$16 or $31 expected");
-      if (!(((RegNo == Mips::FP || RegNo == Mips::RA ||
-              (RegNo >= Mips::S0 && RegNo <= Mips::S7)) &&
+      if (!(((Reg == Mips::FP || Reg == Mips::RA ||
+              (Reg >= Mips::S0 && Reg <= Mips::S7)) &&
              !isGP64bit()) ||
-            ((RegNo == Mips::FP_64 || RegNo == Mips::RA_64 ||
-              (RegNo >= Mips::S0_64 && RegNo <= Mips::S7_64)) &&
+            ((Reg == Mips::FP_64 || Reg == Mips::RA_64 ||
+              (Reg >= Mips::S0_64 && Reg <= Mips::S7_64)) &&
              isGP64bit())))
         return Error(E, "invalid register operand");
-      if ((PrevReg != Mips::NoRegister) && (RegNo != PrevReg + 1) &&
-          ((RegNo != Mips::FP && RegNo != Mips::RA && !isGP64bit()) ||
-           (RegNo != Mips::FP_64 && RegNo != Mips::RA_64 && isGP64bit())))
+      if (PrevReg.isValid() && (Reg != PrevReg + 1) &&
+          ((Reg != Mips::FP && Reg != Mips::RA && !isGP64bit()) ||
+           (Reg != Mips::FP_64 && Reg != Mips::RA_64 && isGP64bit())))
         return Error(E, "consecutive register numbers expected");
 
-      Regs.push_back(RegNo);
+      Regs.push_back(Reg);
     }
 
     if (Parser.getTok().is(AsmToken::Minus))
@@ -6913,7 +6915,7 @@ ParseStatus MipsAsmParser::parseRegisterList(OperandVector &Operands) {
     if (Parser.getTok().isNot(AsmToken::Dollar))
       break;
 
-    PrevReg = RegNo;
+    PrevReg = Reg;
   }
 
   SMLoc E = Parser.getTok().getLoc();
@@ -7780,7 +7782,7 @@ bool MipsAsmParser::parseDirectiveCpLocal(SMLoc Loc) {
   }
   getParser().Lex(); // Consume the EndOfStatement.
 
-  unsigned NewReg = RegOpnd.getGPR32Reg();
+  MCRegister NewReg = RegOpnd.getGPR32Reg();
   if (IsPicEnabled)
     GPReg = NewReg;
 
@@ -7835,7 +7837,6 @@ bool MipsAsmParser::parseDirectiveCpRestore(SMLoc Loc) {
 
 bool MipsAsmParser::parseDirectiveCPSetup() {
   MCAsmParser &Parser = getParser();
-  unsigned FuncReg;
   unsigned Save;
   bool SaveIsReg = true;
 
@@ -7852,7 +7853,7 @@ bool MipsAsmParser::parseDirectiveCPSetup() {
     return false;
   }
 
-  FuncReg = FuncRegOpnd.getGPR32Reg();
+  MCRegister FuncReg = FuncRegOpnd.getGPR32Reg();
   TmpReg.clear();
 
   if (!eatComma("unexpected token, expected comma"))
@@ -7878,7 +7879,7 @@ bool MipsAsmParser::parseDirectiveCPSetup() {
       reportParseError(SaveOpnd.getStartLoc(), "invalid register");
       return false;
     }
-    Save = SaveOpnd.getGPR32Reg();
+    Save = SaveOpnd.getGPR32Reg().id();
   }
 
   if (!eatComma("unexpected token, expected comma"))
@@ -8696,7 +8697,7 @@ bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
                        "expected general purpose register");
       return false;
     }
-    unsigned StackReg = StackRegOpnd.getGPR32Reg();
+    MCRegister StackReg = StackRegOpnd.getGPR32Reg();
 
     if (Parser.getTok().is(AsmToken::Comma))
       Parser.Lex();

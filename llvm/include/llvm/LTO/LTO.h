@@ -462,6 +462,19 @@ private:
     ModuleMapType ModuleMap;
     // The bitcode modules to compile, if specified by the LTO Config.
     std::optional<ModuleMapType> ModulesToCompile;
+
+    void setPrevailingModuleForGUID(GlobalValue::GUID GUID, StringRef Module) {
+      PrevailingModuleForGUID[GUID] = Module;
+    }
+    bool isPrevailingModuleForGUID(GlobalValue::GUID GUID,
+                                   StringRef Module) const {
+      auto It = PrevailingModuleForGUID.find(GUID);
+      return It != PrevailingModuleForGUID.end() && It->second == Module;
+    }
+
+  private:
+    // Make this private so all accesses must go through above accessor methods
+    // to avoid inadvertently creating new entries on lookups.
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 

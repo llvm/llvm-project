@@ -1,5 +1,5 @@
 ! REQUIRES: x86-registered-target
-! checks fatlto objects: that valid bitcode is included in the object file generated. 
+! checks fatlto objects: that valid bitcode is included in the object file generated.
 
 ! RUN: %flang -fc1 -triple x86_64-unknown-linux-gnu -flto -ffat-lto-objects -emit-obj %s -o %t.o
 ! RUN: llvm-readelf -S %t.o | FileCheck %s --check-prefixes=ELF

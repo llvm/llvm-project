@@ -11,9 +11,9 @@
 
 #include "Gnu.h"
 #include "clang/Basic/TargetID.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -101,7 +101,7 @@ public:
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
-  /// Should skip sanitize options.
+  /// Should skip sanitize option.
   bool shouldSkipSanitizeOption(const ToolChain &TC,
                                 const llvm::opt::ArgList &DriverArgs,
                                 StringRef TargetID,
@@ -155,18 +155,79 @@ public:
     return SanitizerKind::Address;
   }
 
-  void diagnoseUnsupportedSanitizers(const llvm::opt::ArgList &Args) const {
-    if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
-                      true))
-      return;
+  bool diagnoseUnsupportedOption(const llvm::opt::Arg *A,
+                                 const llvm::opt::DerivedArgList &DAL,
+                                 const llvm::opt::ArgList &DriverArgs,
+                                 const char *Value = nullptr) const {
     auto &Diags = getDriver().getDiags();
-    for (auto *A : Args.filtered(options::OPT_fsanitize_EQ)) {
-      SanitizerMask K =
-          parseSanitizerValue(A->getValue(), /*Allow Groups*/ false);
-      if (K != SanitizerKind::Address)
-        Diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
-            << A->getAsString(Args) << getTriple().str();
+    bool IsExplicitDevice =
+        A->getBaseArg().getOption().matches(options::OPT_Xarch_device);
+
+    if (Value) {
+      unsigned DiagID =
+          IsExplicitDevice
+              ? clang::diag::err_drv_unsupported_option_part_for_target
+              : clang::diag::warn_drv_unsupported_option_part_for_target;
+      Diags.Report(DiagID) << Value << A->getAsString(DriverArgs)
+                           << getTriple().str();
+    } else {
+      unsigned DiagID =
+          IsExplicitDevice
+              ? clang::diag::err_drv_unsupported_option_for_target
+              : clang::diag::warn_drv_unsupported_option_for_target;
+      Diags.Report(DiagID) << A->getAsString(DAL) << getTriple().str();
     }
+    return true;
+  }
+
+  bool handleSanitizeOption(const ToolChain &TC, llvm::opt::DerivedArgList &DAL,
+                            const llvm::opt::ArgList &DriverArgs,
+                            StringRef TargetID, const llvm::opt::Arg *A) const {
+    if (TargetID.empty())
+      return false;
+    // If we shouldn't do sanitizing, skip it.
+    if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                            options::OPT_fno_gpu_sanitize, true))
+      return true;
+    const llvm::opt::Option &Opt = A->getOption();
+    // Sanitizer coverage is currently not supported for AMDGPU, so warn/error
+    // on every related option.
+    if (Opt.matches(options::OPT_fsan_cov_Group)) {
+      diagnoseUnsupportedOption(A, DAL, DriverArgs);
+    }
+    // If this isn't a sanitizer option, don't handle it.
+    if (!Opt.matches(options::OPT_fsanitize_EQ))
+      return false;
+
+    SmallVector<const char *, 4> SupportedSanitizers;
+    SmallVector<const char *, 4> UnSupportedSanitizers;
+
+    for (const char *Value : A->getValues()) {
+      SanitizerMask K = parseSanitizerValue(Value, /*Allow Groups*/ false);
+      if (K & ROCMToolChain::getSupportedSanitizers())
+        SupportedSanitizers.push_back(Value);
+      else
+        UnSupportedSanitizers.push_back(Value);
+    }
+
+    // If there are no supported sanitizers, drop the whole argument.
+    if (SupportedSanitizers.empty()) {
+      diagnoseUnsupportedOption(A, DAL, DriverArgs);
+      return true;
+    }
+    // If only some sanitizers are unsupported, report each one individually.
+    if (!UnSupportedSanitizers.empty()) {
+      for (const char *Value : UnSupportedSanitizers) {
+        diagnoseUnsupportedOption(A, DAL, DriverArgs, Value);
+      }
+    }
+    // If we know the target arch, check if the sanitizer is supported for it.
+    if (shouldSkipSanitizeOption(TC, DriverArgs, TargetID, A))
+      return true;
+
+    // Add a new argument with only the supported sanitizers.
+    DAL.AddJoinedArg(A, A->getOption(), llvm::join(SupportedSanitizers, ","));
+    return true;
   }
 };
 

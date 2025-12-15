@@ -46,7 +46,6 @@
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include <cassert>
 #include <memory>
-#include <utility>
 
 using namespace llvm;
 

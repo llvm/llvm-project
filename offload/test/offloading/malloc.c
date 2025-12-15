@@ -10,7 +10,7 @@ int main() {
   int Threads = 64;
   int Teams = 10;
 
-  // Allocate ~55MB on the device.
+  // Allocate ~160 KiB on the device.
 #pragma omp target map(from : DP)
   DP = (long unsigned *)malloc(sizeof(long unsigned) * N * Threads * Teams);
 

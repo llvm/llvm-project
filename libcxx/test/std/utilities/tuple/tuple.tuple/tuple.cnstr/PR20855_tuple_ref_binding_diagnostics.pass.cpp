@@ -16,17 +16,6 @@
 #include <tuple>
 #include <string>
 #include <cassert>
-#include "test_macros.h"
-
-#if TEST_HAS_BUILTIN(__reference_constructs_from_temporary)
-#  define ASSERT_REFERENCE_BINDS_TEMPORARY(...) static_assert(__reference_constructs_from_temporary(__VA_ARGS__), "")
-#  define ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(...)                                                                    \
-    static_assert(!__reference_constructs_from_temporary(__VA_ARGS__), "")
-#else
-// TODO(LLVM 22): Remove this as all support compilers should have __reference_constructs_from_temporary implemented.
-#  define ASSERT_REFERENCE_BINDS_TEMPORARY(...) static_assert(__reference_binds_to_temporary(__VA_ARGS__), "")
-#  define ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(...) static_assert(!__reference_binds_to_temporary(__VA_ARGS__), "")
-#endif
 
 template <class Tp>
 struct ConvertsTo {
@@ -41,17 +30,6 @@ struct ConvertsTo {
 
 struct Base {};
 struct Derived : Base {};
-
-
-static_assert(std::is_same<decltype("abc"), decltype(("abc"))>::value, "");
-ASSERT_REFERENCE_BINDS_TEMPORARY(std::string const&, decltype("abc"));
-ASSERT_REFERENCE_BINDS_TEMPORARY(std::string const&, decltype(("abc")));
-ASSERT_REFERENCE_BINDS_TEMPORARY(std::string const&, const char*&&);
-
-ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(int&, const ConvertsTo<int&>&);
-ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(const int&, ConvertsTo<int&>&);
-ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(Base&, Derived&);
-
 
 static_assert(std::is_constructible<int&, std::reference_wrapper<int>>::value, "");
 static_assert(std::is_constructible<int const&, std::reference_wrapper<int>>::value, "");

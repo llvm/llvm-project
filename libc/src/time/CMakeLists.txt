@@ -245,3 +245,11 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.clock_getres
 )
+
+add_entrypoint_object(
+  clock_settime
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clock_settime
+)
+

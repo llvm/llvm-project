@@ -13,8 +13,9 @@ include "mlir/Dialect/XeGPU/IR/XeGPUAttrs.td"
 include "mlir/Dialect/XeGPU/IR/XeGPUDialect.td"
 include "mlir/IR/BuiltinTypes.td"
 
-def XeGPU_IntType: AnyTypeOf<[I1, I8, I16, I32, I64, SI1, SI8, SI16, SI32, SI64, UI1, UI8, UI16, UI32, UI64]>;
-def XeGPU_FloatType: AnyTypeOf<[F16, F32, F64, BF16, TF32]>;
+def XeGPU_IntType : AnyTypeOf<[I1, I<4>, I8, I16, I32, I64, SI1, SI8, SI16,
+                               SI32, SI64, UI1, UI8, UI16, UI32, UI64]>;
+def XeGPU_FloatType : AnyTypeOf<[F16, F32, F64, BF16, TF32]>;
 def XeGPU_ScalarType: AnyTypeOf<[XeGPU_IntType, XeGPU_FloatType]>;
 def XeGPU_PointerType : AnyTypeOf<[UI64, UI32, I64, I32]>;
 def XeGPU_BaseAddrType
@@ -34,6 +35,17 @@ class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],
     : TypeDef<XeGPU_Dialect, name, traits, baseCppClass> {
   let mnemonic = typeMnemonic;
 }
+
+def isSharedPred : CPred<"isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
+class StaticShared1DMemRefOf<list<Type> allowedTypes> :
+  ConfinedType<MemRefRankOf<allowedTypes, [1]>, [HasStaticShapePred, isSharedPred],
+     "reside in share memory and statically 1d shaped " # MemRefOf<allowedTypes>.summary # " ",
+     "mlir::MemRefType">;
+
+class StaticShared2DMemRefOf<list<Type> allowedTypes>:
+  ConfinedType<MemRefRankOf<allowedTypes, [2]>, [HasStaticShapePred, isSharedPred],
+     "reside in share memory and statically 2d shaped " # MemRefOf<allowedTypes>.summary # " ",
+     "mlir::MemRefType">;
 
 def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
         [ShapedTypeInterface], "::mlir::TensorType"> {

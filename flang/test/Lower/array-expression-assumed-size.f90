@@ -16,8 +16,8 @@ end subroutine assumed_size_forall_test
 
 ! CHECK-LABEL: func @_QPassumed_size_test(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<10x?xi32>>{{.*}}) {
-! CHECK:         %[[VAL_1A:.*]] = fir.convert %c10{{.*}} : (i64) -> index 
-! CHECK:         %[[VAL_1B:.*]] = arith.cmpi sgt, %[[VAL_1A]], %c0{{.*}} : index 
+! CHECK:         %[[VAL_1A:.*]] = fir.convert %c10{{.*}} : (i64) -> index
+! CHECK:         %[[VAL_1B:.*]] = arith.cmpi sgt, %[[VAL_1A]], %c0{{.*}} : index
 ! CHECK:         %[[VAL_1:.*]] = arith.select %[[VAL_1B]], %[[VAL_1A]], %c0{{.*}} : index
 ! CHECK:         %[[VAL_2:.*]] = fir.assumed_size_extent : index
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 1 : index
@@ -79,8 +79,8 @@ end subroutine assumed_size_forall_test
 ! CHECK-LABEL: func @_QPassumed_size_forall_test(
 ! CHECK-SAME:       %[[VAL_0:.*]]: !fir.ref<!fir.array<10x?xi32>>{{.*}}) {
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca i32 {adapt.valuebyref, bindc_name = "i"}
-! CHECK:         %[[VAL_2A:.*]] = fir.convert %c10{{.*}} : (i64) -> index 
-! CHECK:         %[[VAL_2B:.*]] = arith.cmpi sgt, %[[VAL_2A]], %c0{{.*}} : index 
+! CHECK:         %[[VAL_2A:.*]] = fir.convert %c10{{.*}} : (i64) -> index
+! CHECK:         %[[VAL_2B:.*]] = arith.cmpi sgt, %[[VAL_2A]], %c0{{.*}} : index
 ! CHECK:         %[[VAL_2:.*]] = arith.select %[[VAL_2B]], %[[VAL_2A]], %c0{{.*}} : index
 ! CHECK:         %[[VAL_3:.*]] = fir.assumed_size_extent : index
 ! CHECK:         %[[VAL_4:.*]] = arith.constant 2 : i32

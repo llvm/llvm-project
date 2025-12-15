@@ -27,7 +27,7 @@ namespace internal {
 // as well as a way to support non-ASCII character encodings.
 
 // Similarly, do not change these functions to use case ranges. e.g.
-//  bool islower(int ch) {
+//  bool islower(char ch) {
 //    switch(ch) {
 //    case 'a'...'z':
 //      return true;
@@ -37,7 +37,7 @@ namespace internal {
 // EBCDIC. Technically we could use some smaller ranges, but that's even harder
 // to read.
 
-LIBC_INLINE static constexpr bool islower(int ch) {
+LIBC_INLINE static constexpr bool islower(char ch) {
   switch (ch) {
   case 'a':
   case 'b':
@@ -71,7 +71,7 @@ LIBC_INLINE static constexpr bool islower(int ch) {
   }
 }
 
-LIBC_INLINE static constexpr bool isupper(int ch) {
+LIBC_INLINE static constexpr bool isupper(char ch) {
   switch (ch) {
   case 'A':
   case 'B':
@@ -105,7 +105,7 @@ LIBC_INLINE static constexpr bool isupper(int ch) {
   }
 }
 
-LIBC_INLINE static constexpr bool isdigit(int ch) {
+LIBC_INLINE static constexpr bool isdigit(char ch) {
   switch (ch) {
   case '0':
   case '1':
@@ -123,7 +123,7 @@ LIBC_INLINE static constexpr bool isdigit(int ch) {
   }
 }
 
-LIBC_INLINE static constexpr int tolower(int ch) {
+LIBC_INLINE static constexpr char tolower(char ch) {
   switch (ch) {
   case 'A':
     return 'a';
@@ -182,7 +182,7 @@ LIBC_INLINE static constexpr int tolower(int ch) {
   }
 }
 
-LIBC_INLINE static constexpr int toupper(int ch) {
+LIBC_INLINE static constexpr char toupper(char ch) {
   switch (ch) {
   case 'a':
     return 'A';
@@ -241,7 +241,7 @@ LIBC_INLINE static constexpr int toupper(int ch) {
   }
 }
 
-LIBC_INLINE static constexpr bool isalpha(int ch) {
+LIBC_INLINE static constexpr bool isalpha(char ch) {
   switch (ch) {
   case 'a':
   case 'b':
@@ -301,7 +301,7 @@ LIBC_INLINE static constexpr bool isalpha(int ch) {
   }
 }
 
-LIBC_INLINE static constexpr bool isalnum(int ch) {
+LIBC_INLINE static constexpr bool isalnum(char ch) {
   switch (ch) {
   case 'a':
   case 'b':
@@ -371,7 +371,7 @@ LIBC_INLINE static constexpr bool isalnum(int ch) {
   }
 }
 
-LIBC_INLINE static constexpr int b36_char_to_int(int ch) {
+LIBC_INLINE static constexpr int b36_char_to_int(char ch) {
   switch (ch) {
   case '0':
     return 0;
@@ -476,7 +476,7 @@ LIBC_INLINE static constexpr int b36_char_to_int(int ch) {
   }
 }
 
-LIBC_INLINE static constexpr int int_to_b36_char(int num) {
+LIBC_INLINE static constexpr char int_to_b36_char(int num) {
   // Can't actually use LIBC_ASSERT here because it depends on integer_to_string
   // which depends on this.
 
@@ -559,7 +559,7 @@ LIBC_INLINE static constexpr int int_to_b36_char(int num) {
   }
 }
 
-LIBC_INLINE static constexpr bool isspace(int ch) {
+LIBC_INLINE static constexpr bool isspace(char ch) {
   switch (ch) {
   case ' ':
   case '\t':
@@ -574,8 +574,15 @@ LIBC_INLINE static constexpr bool isspace(int ch) {
 }
 
 // not yet encoding independent.
-LIBC_INLINE static constexpr bool isgraph(int ch) {
+LIBC_INLINE static constexpr bool isgraph(char ch) {
   return 0x20 < ch && ch < 0x7f;
+}
+
+// An overload which provides a way to compare input with specific character
+// values, when input can be of a regular or a wide character type.
+LIBC_INLINE static constexpr bool is_char_or_wchar(char ch, char c_value,
+                                                   [[maybe_unused]] wchar_t) {
+  return (ch == c_value);
 }
 
 } // namespace internal

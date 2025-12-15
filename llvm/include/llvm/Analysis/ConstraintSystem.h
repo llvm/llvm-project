@@ -64,7 +64,7 @@ class ConstraintSystem {
   SmallVector<std::string> getVarNamesList() const;
 
 public:
-  ConstraintSystem() {}
+  ConstraintSystem() = default;
   ConstraintSystem(ArrayRef<Value *> FunctionArgs) {
     NumVariables += FunctionArgs.size();
     for (auto *Arg : FunctionArgs) {

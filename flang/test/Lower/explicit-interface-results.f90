@@ -313,7 +313,7 @@ contains
   function result_depends_on_equiv_sym()
     character(l) :: result_depends_on_equiv_sym
     call set_result_with_some_value(result_depends_on_equiv_sym)
-  end function  
+  end function
 end module
 
 ! CHECK-LABEL: func @_QPtest_result_depends_on_equiv_sym
@@ -387,7 +387,7 @@ function test_recursion(n) result(res)
   if (n.eq.1) then
     res = char(some_local(1))
   ! CHECK: else
-  else 
+  else
     ! CHECK-NOT: fir.alloca !fir.array<?xi32>
 
     ! verify that the actual argument for symbol n ("n-1") is used to allocate

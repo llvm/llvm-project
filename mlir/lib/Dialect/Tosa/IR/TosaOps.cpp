@@ -370,7 +370,7 @@ ParseResult parseWithEnumHandling(OpAsmParser &parser, OperationState &result) {
                                     result.operands)))
     return failure();
 
-  result.addTypes(fnTy.getResult(0));
+  result.addTypes(fnTy.getResults());
   result.addAttributes(attrs);
 
   return success();
@@ -532,6 +532,24 @@ void MatmulTBlockScaledOp::print(OpAsmPrinter &parser) {
   printWithEnumHandling(parser, *this);
 }
 
+ParseResult CastFromBlockScaledOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
+  return parseWithEnumHandling<tosa::BlockSize>(parser, result);
+}
+
+void CastFromBlockScaledOp::print(OpAsmPrinter &parser) {
+  printWithEnumHandling(parser, *this);
+}
+
+ParseResult CastToBlockScaledOp::parse(OpAsmParser &parser,
+                                       OperationState &result) {
+  return parseWithEnumHandling<tosa::BlockSize>(parser, result);
+}
+
+void CastToBlockScaledOp::print(OpAsmPrinter &parser) {
+  printWithEnumHandling(parser, *this);
+}
+
 //===----------------------------------------------------------------------===//
 // Tosa utilities.
 //===----------------------------------------------------------------------===//
@@ -545,7 +563,7 @@ static std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
 static Type getStorageElementTypeOrSelf(Type type) {
   auto srcType = getElementTypeOrSelf(type);
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(srcType))
-    srcType = quantType.getStorageType();
+    srcType = getStorageElementTypeFromQuantized(quantType);
   return srcType;
 }
 
@@ -588,6 +606,12 @@ Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
   return tosa::ConstOp::create(builder, loc, padConstType, padConstAttr);
 }
 
+unsigned mlir::tosa::getBitWidth(Type type) {
+  if (dyn_cast<tosa::mxint8Type>(type))
+    return 8;
+  return type.getIntOrFloatBitWidth();
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
@@ -607,16 +631,16 @@ static LogicalResult verifyConvOp(T op) {
   bool resultIsFloat = llvm::isa<FloatType>(resultEType);
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
-    inputEType = quantType.getStorageType();
+    inputEType = getStorageElementTypeFromQuantized(quantType);
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(weightEType))
-    weightEType = quantType.getStorageType();
+    weightEType = getStorageElementTypeFromQuantized(quantType);
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(biasEType))
-    biasEType = quantType.getStorageType();
+    biasEType = getStorageElementTypeFromQuantized(quantType);
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(resultEType))
-    resultEType = quantType.getStorageType();
+    resultEType = getStorageElementTypeFromQuantized(quantType);
 
   if (biasIsFloat && resultIsFloat && (biasEType != resultEType)) {
     // for now, only enforce bias element type == result element type for
@@ -685,7 +709,7 @@ LogicalResult tosa::ConstOp::verify() {
 
   if (auto result = llvm::dyn_cast<mlir::quant::QuantizedType>(
           outputType.getElementType())) {
-    if (result.getStorageType() == attrType.getElementType())
+    if (getStorageElementTypeFromQuantized(result) == attrType.getElementType())
       return success();
   }
 
@@ -703,7 +727,7 @@ static LogicalResult verifyConvOpModes(T op) {
       llvm::cast<ShapedType>(op.getInput().getType()).getElementType();
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
-    inputEType = quantType.getStorageType();
+    inputEType = getStorageElementTypeFromQuantized(quantType);
 
   auto accType = op.getAccType();
   if (inputEType.isInteger(8) && !accType.isInteger(32))
@@ -728,7 +752,7 @@ static LogicalResult verifyConvOpModes(T op) {
       llvm::cast<ShapedType>(op.getResult().getType()).getElementType();
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(resultEType))
-    resultEType = quantType.getStorageType();
+    resultEType = getStorageElementTypeFromQuantized(quantType);
 
   return success();
 }
@@ -1155,13 +1179,13 @@ LogicalResult tosa::ClampOp::verify() {
       llvm::cast<ShapedType>(getInput().getType()).getElementType();
   if (auto quantType =
           llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputETy)) {
-    inputETy = quantType.getStorageType();
+    inputETy = getStorageElementTypeFromQuantized(quantType);
   }
   mlir::Type outputETy =
       llvm::cast<ShapedType>(getOutput().getType()).getElementType();
   if (auto quantType =
           llvm::dyn_cast<mlir::quant::UniformQuantizedType>(outputETy)) {
-    outputETy = quantType.getStorageType();
+    outputETy = getStorageElementTypeFromQuantized(quantType);
   }
   if (inputETy != outputETy)
     return emitOpError("input/output element types are incompatible.");
@@ -1737,6 +1761,11 @@ LogicalResult tosa::ConcatOp::verify() {
       }
     }
 
+    const ShapeAdaptor outputShape(outType);
+    if (outputShape.hasRank() && outputShape.getRank() != firstInputRank)
+      return emitOpError("expect output rank to match inputs rank, got ")
+             << outputShape.getRank() << " vs " << firstInputRank;
+
     // ERROR_IF(axis_sum != shape[axis]);
     int64_t axisSum = 0;
     for (const auto &input : inputList) {
@@ -1748,7 +1777,7 @@ LogicalResult tosa::ConcatOp::verify() {
       }
       axisSum += inputShape.getDimSize(axis);
     }
-    const ShapeAdaptor outputShape(outType);
+
     if (axisSum >= 0 && outputShape.hasRank() &&
         !outputShape.isDynamicDim(axis) &&
         axisSum != outputShape.getDimSize(axis))
@@ -2272,9 +2301,9 @@ LogicalResult tosa::MulOp::verify() {
     }
 
     // verify shift has value 0 for non-integer types
-    ElementsAttr shift_elem;
-    if (matchPattern(getShift(), m_Constant(&shift_elem))) {
-      int32_t shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+    ElementsAttr shiftElem;
+    if (matchPattern(getShift(), m_Constant(&shiftElem))) {
+      int32_t shift = shiftElem.getValues<IntegerAttr>()[0].getInt();
       if (shift != 0) {
         return emitOpError() << "require shift to be 0 for float type";
       }
@@ -2604,7 +2633,7 @@ static LogicalResult verifyZeroPoint(T op, Value val, const int64_t &zp,
   if (!zpElemType.isInteger(8) && zp != 0) {
     // convert operand to lower case for error message
     std::string lower = operand;
-    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    llvm::transform(lower, lower.begin(), ::tolower);
     return op.emitOpError()
            << lower << " zero point must be zero for non-int8 integer types";
   }
@@ -2853,39 +2882,39 @@ LogicalResult tosa::GatherOp::verify() {
   const ShapeAdaptor indicesShape(getIndices().getType());
   const ShapeAdaptor outputShape(getOutput().getType());
 
-  int64_t N = ShapedType::kDynamic;
-  int64_t W = ShapedType::kDynamic;
-  int64_t C = ShapedType::kDynamic;
+  int64_t n = ShapedType::kDynamic;
+  int64_t w = ShapedType::kDynamic;
+  int64_t c = ShapedType::kDynamic;
 
   if (valuesShape.hasRank()) {
-    N = valuesShape.getDimSize(0);
-    C = valuesShape.getDimSize(2);
+    n = valuesShape.getDimSize(0);
+    c = valuesShape.getDimSize(2);
   }
   if (indicesShape.hasRank()) {
     const int64_t indicesN = indicesShape.getDimSize(0);
-    W = indicesShape.getDimSize(1);
-    if (N == ShapedType::kDynamic)
-      N = indicesN;
-    else if (indicesN != ShapedType::kDynamic && N != indicesN)
-      return emitOpError() << "requires indices dimension 0 to have size " << N
+    w = indicesShape.getDimSize(1);
+    if (n == ShapedType::kDynamic)
+      n = indicesN;
+    else if (indicesN != ShapedType::kDynamic && n != indicesN)
+      return emitOpError() << "requires indices dimension 0 to have size " << n
                            << ", got " << indicesN;
   }
   if (outputShape.hasRank()) {
     const int64_t outputN = outputShape.getDimSize(0);
     const int64_t outputW = outputShape.getDimSize(1);
     const int64_t outputC = outputShape.getDimSize(2);
-    if (N != ShapedType::kDynamic && outputN != ShapedType::kDynamic &&
-        N != outputN)
-      return emitOpError() << "requires output dimension 0 to have size " << N
+    if (n != ShapedType::kDynamic && outputN != ShapedType::kDynamic &&
+        n != outputN)
+      return emitOpError() << "requires output dimension 0 to have size " << n
                            << ", got " << outputN;
 
-    if (W != ShapedType::kDynamic && outputW != ShapedType::kDynamic &&
-        W != outputW)
-      return emitOpError() << "requires output dimension 1 to have size " << W
+    if (w != ShapedType::kDynamic && outputW != ShapedType::kDynamic &&
+        w != outputW)
+      return emitOpError() << "requires output dimension 1 to have size " << w
                            << ", got " << outputW;
-    if (C != ShapedType::kDynamic && outputC != ShapedType::kDynamic &&
-        C != outputC)
-      return emitOpError() << "requires output dimension 2 to have size " << C
+    if (c != ShapedType::kDynamic && outputC != ShapedType::kDynamic &&
+        c != outputC)
+      return emitOpError() << "requires output dimension 2 to have size " << c
                            << ", got " << outputC;
   }
   return success();
@@ -3078,66 +3107,66 @@ LogicalResult tosa::ScatterOp::verify() {
   const ShapeAdaptor inputShape(getInput().getType());
   const ShapeAdaptor outputShape(getValuesOut().getType());
 
-  int64_t N = ShapedType::kDynamic;
-  int64_t K = ShapedType::kDynamic;
-  int64_t W = ShapedType::kDynamic;
-  int64_t C = ShapedType::kDynamic;
+  int64_t n = ShapedType::kDynamic;
+  int64_t k = ShapedType::kDynamic;
+  int64_t w = ShapedType::kDynamic;
+  int64_t c = ShapedType::kDynamic;
   if (valuesInShape.hasRank()) {
-    N = valuesInShape.getDimSize(0);
-    K = valuesInShape.getDimSize(1);
-    C = valuesInShape.getDimSize(2);
+    n = valuesInShape.getDimSize(0);
+    k = valuesInShape.getDimSize(1);
+    c = valuesInShape.getDimSize(2);
   }
   if (indicesShape.hasRank()) {
     const int64_t indicesN = indicesShape.getDimSize(0);
-    W = indicesShape.getDimSize(1);
-    if (N == ShapedType::kDynamic)
-      N = indicesN;
-    else if (indicesN != ShapedType::kDynamic && N != indicesN)
-      return emitOpError() << "requires indices dimension 0 to have size " << N
+    w = indicesShape.getDimSize(1);
+    if (n == ShapedType::kDynamic)
+      n = indicesN;
+    else if (indicesN != ShapedType::kDynamic && n != indicesN)
+      return emitOpError() << "requires indices dimension 0 to have size " << n
                            << ", got " << indicesN;
   }
   if (inputShape.hasRank()) {
     const int64_t inputN = inputShape.getDimSize(0);
     const int64_t inputW = inputShape.getDimSize(1);
     const int64_t inputC = inputShape.getDimSize(2);
-    if (N == ShapedType::kDynamic)
-      N = inputN;
-    else if (inputN != ShapedType::kDynamic && N != inputN)
-      return emitOpError() << "requires input dimension 0 to have size " << N
+    if (n == ShapedType::kDynamic)
+      n = inputN;
+    else if (inputN != ShapedType::kDynamic && n != inputN)
+      return emitOpError() << "requires input dimension 0 to have size " << n
                            << ", got " << inputN;
-    if (W == ShapedType::kDynamic)
-      W = inputW;
-    else if (inputW != ShapedType::kDynamic && W != inputW)
-      return emitOpError() << "requires input dimension 1 to have size " << W
+    if (w == ShapedType::kDynamic)
+      w = inputW;
+    else if (inputW != ShapedType::kDynamic && w != inputW)
+      return emitOpError() << "requires input dimension 1 to have size " << w
                            << ", got " << inputW;
 
-    if (C == ShapedType::kDynamic)
-      C = inputC;
-    else if (inputC != ShapedType::kDynamic && C != inputC)
-      return emitOpError() << "requires input dimension 2 to have size " << C
+    if (c == ShapedType::kDynamic)
+      c = inputC;
+    else if (inputC != ShapedType::kDynamic && c != inputC)
+      return emitOpError() << "requires input dimension 2 to have size " << c
                            << ", got " << inputC;
   }
   if (outputShape.hasRank()) {
     const int64_t outputN = outputShape.getDimSize(0);
     const int64_t outputK = outputShape.getDimSize(1);
     const int64_t outputC = outputShape.getDimSize(2);
-    if (N != ShapedType::kDynamic && outputN != ShapedType::kDynamic &&
-        N != outputN)
+    if (n != ShapedType::kDynamic && outputN != ShapedType::kDynamic &&
+        n != outputN)
       return emitOpError() << "requires values_out dimension 0 to have size "
-                           << N << ", got " << outputN;
-    if (K == ShapedType::kDynamic)
-      K = outputK;
-    else if (outputK != ShapedType::kDynamic && K != outputK)
+                           << n << ", got " << outputN;
+    if (k == ShapedType::kDynamic)
+      k = outputK;
+    else if (outputK != ShapedType::kDynamic && k != outputK)
       return emitOpError() << "requires values_out dimension 1 to have size "
-                           << K << ", got " << outputK;
-    if (C != ShapedType::kDynamic && outputC != ShapedType::kDynamic &&
-        C != outputC)
+                           << k << ", got " << outputK;
+    if (c != ShapedType::kDynamic && outputC != ShapedType::kDynamic &&
+        c != outputC)
       return emitOpError() << "requires values_out dimension 2 to have size "
-                           << C << ", got " << outputC;
+                           << c << ", got " << outputC;
   }
-  if (K != ShapedType::kDynamic && W != ShapedType::kDynamic && !(K >= W))
-    return emitOpError() << "requires dimensions K >= W, got K=" << K
-                         << " and W=" << W;
+  if (k != ShapedType::kDynamic && w != ShapedType::kDynamic && !(k >= w))
+    return emitOpError() << "requires dimensions K >= W, got K=" << k
+                         << " and W=" << w;
 
   return success();
 }
@@ -3712,14 +3741,13 @@ LogicalResult TransposeConv2DOp::verify() {
            << strides << "]";
 
   const auto checkPadAgainstKernelDim =
-      [this](int64_t pad_value, int64_t kernel_dim_size,
-             llvm::StringRef pad_name,
-             llvm::StringRef kernel_dim_name) -> LogicalResult {
-    if (pad_value <= -kernel_dim_size)
+      [this](int64_t padValue, int64_t kernelDimSize, llvm::StringRef padName,
+             llvm::StringRef kernelDimName) -> LogicalResult {
+    if (padValue <= -kernelDimSize)
       return emitOpError("expected ")
-             << pad_name << " > -" << kernel_dim_name
-             << ", but got: " << pad_name << "=" << pad_value << " and "
-             << kernel_dim_name << "=" << kernel_dim_size;
+             << padName << " > -" << kernelDimName << ", but got: " << padName
+             << "=" << padValue << " and " << kernelDimName << "="
+             << kernelDimSize;
     return success();
   };
 
@@ -3941,6 +3969,145 @@ LogicalResult RescaleOp::inferReturnTypeComponents(
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape(adaptor.getInput().getType());
   inferredReturnShapes.push_back(ShapedTypeComponents(inputShape));
+  return success();
+}
+
+LogicalResult CastFromBlockScaledOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    CastFromBlockScaledOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  const ShapeAdaptor inputShape(adaptor.getInputData().getType());
+  inferredReturnShapes.push_back(ShapedTypeComponents(inputShape));
+  return success();
+}
+
+LogicalResult CastFromBlockScaledOp::verify() {
+  const Type inputDataType = getInputData().getType();
+  const Type outputDataType = getResult().getType();
+  if (failed(verifyCompatibleShape(inputDataType, outputDataType)))
+    return emitOpError() << "require compatible shapes for input_data ("
+                         << inputDataType << ") and "
+                         << "output_data (" << outputDataType << ")";
+
+  const ShapeAdaptor inputDataShape = ShapeAdaptor(inputDataType);
+
+  if (inputDataShape.hasRank()) {
+    const unsigned int blockSize =
+        BlockSizeAttr::getBlockSizeValue(getBlockSize());
+    const int64_t inputDataLastDim =
+        inputDataShape.getDimSize(inputDataShape.getRank() - 1);
+    if (inputDataLastDim % blockSize != 0)
+      return emitOpError() << "expect last dimension of input_data ("
+                           << inputDataLastDim
+                           << ") to be divisible by block_size (" << blockSize
+                           << ")";
+
+    const Type inputScaleType = getInputScale().getType();
+    const ShapeAdaptor inputScaleShape = ShapeAdaptor(inputScaleType);
+
+    if (inputScaleShape.hasRank()) {
+      SmallVector<int64_t> inputDataDims, inputScaleDims;
+      inputDataShape.getDims(inputDataDims);
+      inputScaleShape.getDims(inputScaleDims);
+
+      if (inputDataDims.size() != inputScaleDims.size() ||
+          failed(verifyCompatibleShape(
+              ArrayRef<int64_t>(inputDataDims).drop_back(1),
+              ArrayRef<int64_t>(inputScaleDims).drop_back(1))))
+        return emitOpError() << "require compatible shapes for input_data ("
+                             << inputDataType << ") and "
+                             << "input_scale (" << inputScaleType
+                             << ") except for the last dimension";
+
+      const SmallVector<int64_t, 2> dimsToCheck{inputDataLastDim / blockSize,
+                                                inputScaleDims.back()};
+      if (ShapedType::isStatic(inputDataLastDim) &&
+          failed(verifyCompatibleDims(dimsToCheck)))
+        return emitOpError()
+               << "expect last dimension of input_scale ("
+               << inputScaleDims.back()
+               << ") to be equal to last dimension of input_data / block_size ("
+               << inputDataDims.back() / blockSize << ")";
+    }
+  }
+
+  return success();
+}
+
+LogicalResult CastToBlockScaledOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    CastToBlockScaledOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  const ShapeAdaptor inputShape(adaptor.getInputData().getType());
+  inferredReturnShapes.push_back(ShapedTypeComponents(inputShape));
+  if (!inputShape.hasRank())
+    return success();
+
+  // Calculate output_scale shape if ranked input provided
+  SmallVector<int64_t> outputScaleShape;
+  inputShape.getDims(outputScaleShape);
+  const int64_t lastDimLoc = inputShape.getRank() - 1;
+  const int64_t lastDimSize = inputShape.getDimSize(lastDimLoc);
+  if (ShapedType::isStatic(lastDimSize)) {
+    const unsigned int blockSize =
+        BlockSizeAttr::getBlockSizeValue(adaptor.getBlockSize());
+    outputScaleShape[lastDimLoc] = lastDimSize / blockSize;
+  }
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputScaleShape));
+  return success();
+}
+
+LogicalResult CastToBlockScaledOp::verify() {
+  const Type inputDataType = getInputData().getType();
+  const Type outputDataType = getResult(0).getType();
+  if (failed(verifyCompatibleShape(inputDataType, outputDataType)))
+    return emitOpError() << "require compatible shapes for input_data ("
+                         << inputDataType << ") and "
+                         << "output_data (" << outputDataType << ")";
+
+  const unsigned int blockSize =
+      BlockSizeAttr::getBlockSizeValue(getBlockSize());
+  const ShapeAdaptor inputDataShape = ShapeAdaptor(inputDataType);
+  if (inputDataShape.hasRank()) {
+    const int64_t inputDataLastDim =
+        inputDataShape.getDimSize(inputDataShape.getRank() - 1);
+    if (ShapedType::isStatic(inputDataLastDim) &&
+        inputDataLastDim % blockSize != 0)
+      return emitOpError() << "expect last dimension of input_data ("
+                           << inputDataLastDim
+                           << ") to be divisible by block_size (" << blockSize
+                           << ")";
+  }
+
+  const ShapeAdaptor outputDataShape = ShapeAdaptor(outputDataType);
+  const Type outputScaleType = getResult(1).getType();
+  const ShapeAdaptor outputScaleShape = ShapeAdaptor(outputScaleType);
+  if (outputDataShape.hasRank() && outputScaleShape.hasRank()) {
+    SmallVector<int64_t> outputDataDims, outputScaleDims;
+    outputDataShape.getDims(outputDataDims);
+    outputScaleShape.getDims(outputScaleDims);
+
+    if (outputDataDims.size() != outputScaleDims.size() ||
+        failed(verifyCompatibleShape(
+            ArrayRef<int64_t>(outputDataDims).drop_back(1),
+            ArrayRef<int64_t>(outputScaleDims).drop_back(1))))
+      return emitOpError() << "require compatible shapes for output_data ("
+                           << outputDataType << ") and "
+                           << "output_scale (" << outputScaleType
+                           << ") except for the last dimension";
+
+    const int64_t outputDataLastDim = outputDataDims.back();
+    const SmallVector<int64_t, 2> dimsToCheck{outputDataLastDim / blockSize,
+                                              outputScaleDims.back()};
+    if (ShapedType::isStatic(outputDataLastDim) &&
+        failed(verifyCompatibleDims(dimsToCheck)))
+      return emitOpError()
+             << "expect last dimension of output_scale ("
+             << outputScaleDims.back()
+             << ") to be equal to last dimension of output_data / block_size ("
+             << outputDataDims.back() / blockSize << ")";
+  }
+
   return success();
 }
 

@@ -32,6 +32,34 @@
 #endif
 #endif
 
+static void RaiseLimits() {
+#ifdef _AIX
+  // AIX has restrictive memory soft-limits out-of-box, so raise them if needed.
+  auto RaiseLimit = [](int resource) {
+    struct rlimit r;
+    getrlimit(resource, &r);
+
+    // Increase the soft limit to the hard limit, if necessary and
+    // possible.
+    if (r.rlim_cur != RLIM_INFINITY && r.rlim_cur != r.rlim_max) {
+      r.rlim_cur = r.rlim_max;
+      setrlimit(resource, &r);
+    }
+  };
+
+  // Address space size.
+  RaiseLimit(RLIMIT_AS);
+  // Heap size.
+  RaiseLimit(RLIMIT_DATA);
+  // Stack size.
+  RaiseLimit(RLIMIT_STACK);
+#ifdef RLIMIT_RSS
+  // Resident set size.
+  RaiseLimit(RLIMIT_RSS);
+#endif
+#endif
+}
+
 void CleanupStdHandles(void *Cookie) {
   llvm::raw_ostream *Outs = &llvm::outs(), *Errs = &llvm::errs();
   Outs->flush();
@@ -67,6 +95,7 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
   StackPrinter.emplace(Argc, Argv);
   sys::PrintStackTraceOnErrorSignal(Argv[0]);
   install_out_of_memory_new_handler();
+  RaiseLimits();
 
 #ifdef __MVS__
 

@@ -143,7 +143,7 @@ than bad code generation.
 If the errors are in LLVM itself, please report every single regression found
 as blocker, and all the other bugs as important, but not necessarily blocking
 the release to proceed. They can be set as "known failures" and to be
-fix on a future date.
+fixed on a future date.
 
 .. _pre-release-process:
 
@@ -198,7 +198,7 @@ You should:
 * Compare the results, report all errors on Bugzilla and publish the binary blob
   where the release manager can grab it.
 
-Once the release manages announces that the latest candidate is the good one,
+Once the release manager announces that the latest candidate is the good one,
 you have to pack the ``Release`` (no Asserts) install directory on ``Phase3``
 and that will be the official binary.
 

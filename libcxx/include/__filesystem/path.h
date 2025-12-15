@@ -324,6 +324,7 @@ struct _PathCVT<char> {
   }
 };
 
+#    if _LIBCPP_HAS_LOCALIZATION
 template <class _ECharT>
 struct _PathExport {
   typedef __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Narrower;
@@ -364,7 +365,7 @@ struct _PathExport<char16_t> {
   }
 };
 
-#    if _LIBCPP_HAS_CHAR8_T
+#      if _LIBCPP_HAS_CHAR8_T
 template <>
 struct _PathExport<char8_t> {
   typedef __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Narrower;
@@ -374,8 +375,9 @@ struct _PathExport<char8_t> {
     _Narrower()(back_inserter(__dest), __src.data(), __src.data() + __src.size());
   }
 };
-#    endif // _LIBCPP_HAS_CHAR8_T
-#  endif   /* _LIBCPP_WIN32API */
+#      endif // _LIBCPP_HAS_CHAR8_T
+#    endif   // _LIBCPP_HAS_LOCALIZATION
+#  endif     // _LIBCPP_WIN32API
 
 class _LIBCPP_EXPORTED_FROM_ABI path {
   template <class _SourceOrIter, class _Tp = path&>
@@ -665,16 +667,16 @@ public:
   _LIBCPP_HIDE_FROM_ABI void __reserve(size_t __s) { __pn_.reserve(__s); }
 
   // native format observers
-  _LIBCPP_HIDE_FROM_ABI const string_type& native() const noexcept { return __pn_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const string_type& native() const noexcept { return __pn_; }
 
-  _LIBCPP_HIDE_FROM_ABI const value_type* c_str() const noexcept { return __pn_.c_str(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const value_type* c_str() const noexcept { return __pn_.c_str(); }
 
   _LIBCPP_HIDE_FROM_ABI operator string_type() const { return __pn_; }
 
 #  if defined(_LIBCPP_WIN32API)
-  _LIBCPP_HIDE_FROM_ABI std::wstring wstring() const { return __pn_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::wstring wstring() const { return __pn_; }
 
-  _LIBCPP_HIDE_FROM_ABI std::wstring generic_wstring() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::wstring generic_wstring() const {
     std::wstring __s;
     __s.resize(__pn_.size());
     std::replace_copy(__pn_.begin(), __pn_.end(), __s.begin(), '\\', '/');
@@ -683,6 +685,7 @@ public:
 
 #    if _LIBCPP_HAS_LOCALIZATION
   template <class _ECharT, class _Traits = char_traits<_ECharT>, class _Allocator = allocator<_ECharT> >
+  [[nodiscard]]
   _LIBCPP_HIDE_FROM_ABI basic_string<_ECharT, _Traits, _Allocator> string(const _Allocator& __a = _Allocator()) const {
     using _Str = basic_string<_ECharT, _Traits, _Allocator>;
     _Str __s(__a);
@@ -691,8 +694,8 @@ public:
     return __s;
   }
 
-  _LIBCPP_HIDE_FROM_ABI std::string string() const { return string<char>(); }
-  _LIBCPP_HIDE_FROM_ABI __u8_string u8string() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::string string() const { return string<char>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __u8_string u8string() const {
     using _CVT = __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__>;
     __u8_string __s;
     __s.reserve(__pn_.size());
@@ -700,12 +703,12 @@ public:
     return __s;
   }
 
-  _LIBCPP_HIDE_FROM_ABI std::u16string u16string() const { return string<char16_t>(); }
-  _LIBCPP_HIDE_FROM_ABI std::u32string u32string() const { return string<char32_t>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u16string u16string() const { return string<char16_t>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u32string u32string() const { return string<char32_t>(); }
 
   // generic format observers
   template <class _ECharT, class _Traits = char_traits<_ECharT>, class _Allocator = allocator<_ECharT> >
-  _LIBCPP_HIDE_FROM_ABI basic_string<_ECharT, _Traits, _Allocator>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI basic_string<_ECharT, _Traits, _Allocator>
   generic_string(const _Allocator& __a = _Allocator()) const {
     using _Str = basic_string<_ECharT, _Traits, _Allocator>;
     _Str __s   = string<_ECharT, _Traits, _Allocator>(__a);
@@ -716,10 +719,10 @@ public:
     return __s;
   }
 
-  _LIBCPP_HIDE_FROM_ABI std::string generic_string() const { return generic_string<char>(); }
-  _LIBCPP_HIDE_FROM_ABI std::u16string generic_u16string() const { return generic_string<char16_t>(); }
-  _LIBCPP_HIDE_FROM_ABI std::u32string generic_u32string() const { return generic_string<char32_t>(); }
-  _LIBCPP_HIDE_FROM_ABI __u8_string generic_u8string() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::string generic_string() const { return generic_string<char>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u16string generic_u16string() const { return generic_string<char16_t>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u32string generic_u32string() const { return generic_string<char32_t>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __u8_string generic_u8string() const {
     __u8_string __s = u8string();
     std::replace(__s.begin(), __s.end(), '\\', '/');
     return __s;
@@ -727,15 +730,18 @@ public:
 #    endif // _LIBCPP_HAS_LOCALIZATION
 #  else    /* _LIBCPP_WIN32API */
 
-  _LIBCPP_HIDE_FROM_ABI std::string string() const { return __pn_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::string string() const { return __pn_; }
 #    if _LIBCPP_HAS_CHAR8_T
-  _LIBCPP_HIDE_FROM_ABI std::u8string u8string() const { return std::u8string(__pn_.begin(), __pn_.end()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u8string u8string() const {
+    return std::u8string(__pn_.begin(), __pn_.end());
+  }
 #    else
-  _LIBCPP_HIDE_FROM_ABI std::string u8string() const { return __pn_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::string u8string() const { return __pn_; }
 #    endif
 
 #    if _LIBCPP_HAS_LOCALIZATION
   template <class _ECharT, class _Traits = char_traits<_ECharT>, class _Allocator = allocator<_ECharT> >
+  [[nodiscard]]
   _LIBCPP_HIDE_FROM_ABI basic_string<_ECharT, _Traits, _Allocator> string(const _Allocator& __a = _Allocator()) const {
     using _CVT = __widen_from_utf8<sizeof(_ECharT) * __CHAR_BIT__>;
     using _Str = basic_string<_ECharT, _Traits, _Allocator>;
@@ -746,32 +752,34 @@ public:
   }
 
 #      if _LIBCPP_HAS_WIDE_CHARACTERS
-  _LIBCPP_HIDE_FROM_ABI std::wstring wstring() const { return string<wchar_t>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::wstring wstring() const { return string<wchar_t>(); }
 #      endif
-  _LIBCPP_HIDE_FROM_ABI std::u16string u16string() const { return string<char16_t>(); }
-  _LIBCPP_HIDE_FROM_ABI std::u32string u32string() const { return string<char32_t>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u16string u16string() const { return string<char16_t>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u32string u32string() const { return string<char32_t>(); }
 #    endif // _LIBCPP_HAS_LOCALIZATION
 
   // generic format observers
-  _LIBCPP_HIDE_FROM_ABI std::string generic_string() const { return __pn_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::string generic_string() const { return __pn_; }
 #    if _LIBCPP_HAS_CHAR8_T
-  _LIBCPP_HIDE_FROM_ABI std::u8string generic_u8string() const { return std::u8string(__pn_.begin(), __pn_.end()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u8string generic_u8string() const {
+    return std::u8string(__pn_.begin(), __pn_.end());
+  }
 #    else
-  _LIBCPP_HIDE_FROM_ABI std::string generic_u8string() const { return __pn_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::string generic_u8string() const { return __pn_; }
 #    endif
 
 #    if _LIBCPP_HAS_LOCALIZATION
   template <class _ECharT, class _Traits = char_traits<_ECharT>, class _Allocator = allocator<_ECharT> >
-  _LIBCPP_HIDE_FROM_ABI basic_string<_ECharT, _Traits, _Allocator>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI basic_string<_ECharT, _Traits, _Allocator>
   generic_string(const _Allocator& __a = _Allocator()) const {
     return string<_ECharT, _Traits, _Allocator>(__a);
   }
 
 #      if _LIBCPP_HAS_WIDE_CHARACTERS
-  _LIBCPP_HIDE_FROM_ABI std::wstring generic_wstring() const { return string<wchar_t>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::wstring generic_wstring() const { return string<wchar_t>(); }
 #      endif
-  _LIBCPP_HIDE_FROM_ABI std::u16string generic_u16string() const { return string<char16_t>(); }
-  _LIBCPP_HIDE_FROM_ABI std::u32string generic_u32string() const { return string<char32_t>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u16string generic_u16string() const { return string<char16_t>(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u32string generic_u32string() const { return string<char32_t>(); }
 #    endif // _LIBCPP_HAS_LOCALIZATION
 #  endif   /* !_LIBCPP_WIN32API */
 
@@ -788,40 +796,40 @@ private:
 
 public:
   // compare
-  _LIBCPP_HIDE_FROM_ABI int compare(const path& __p) const noexcept { return __compare(__p.__pn_); }
-  _LIBCPP_HIDE_FROM_ABI int compare(const string_type& __s) const { return __compare(__s); }
-  _LIBCPP_HIDE_FROM_ABI int compare(__string_view __s) const { return __compare(__s); }
-  _LIBCPP_HIDE_FROM_ABI int compare(const value_type* __s) const { return __compare(__s); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int compare(const path& __p) const noexcept { return __compare(__p.__pn_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int compare(const string_type& __s) const { return __compare(__s); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int compare(__string_view __s) const { return __compare(__s); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int compare(const value_type* __s) const { return __compare(__s); }
 
   // decomposition
-  _LIBCPP_HIDE_FROM_ABI path root_name() const { return string_type(__root_name()); }
-  _LIBCPP_HIDE_FROM_ABI path root_directory() const { return string_type(__root_directory()); }
-  _LIBCPP_HIDE_FROM_ABI path root_path() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path root_name() const { return string_type(__root_name()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path root_directory() const { return string_type(__root_directory()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path root_path() const {
 #  if defined(_LIBCPP_WIN32API)
     return string_type(__root_path_raw());
 #  else
     return root_name().append(string_type(__root_directory()));
 #  endif
   }
-  _LIBCPP_HIDE_FROM_ABI path relative_path() const { return string_type(__relative_path()); }
-  _LIBCPP_HIDE_FROM_ABI path parent_path() const { return string_type(__parent_path()); }
-  _LIBCPP_HIDE_FROM_ABI path filename() const { return string_type(__filename()); }
-  _LIBCPP_HIDE_FROM_ABI path stem() const { return string_type(__stem()); }
-  _LIBCPP_HIDE_FROM_ABI path extension() const { return string_type(__extension()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path relative_path() const { return string_type(__relative_path()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path parent_path() const { return string_type(__parent_path()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path filename() const { return string_type(__filename()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path stem() const { return string_type(__stem()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path extension() const { return string_type(__extension()); }
 
   // query
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const noexcept { return __pn_.empty(); }
 
-  _LIBCPP_HIDE_FROM_ABI bool has_root_name() const { return !__root_name().empty(); }
-  _LIBCPP_HIDE_FROM_ABI bool has_root_directory() const { return !__root_directory().empty(); }
-  _LIBCPP_HIDE_FROM_ABI bool has_root_path() const { return !__root_path_raw().empty(); }
-  _LIBCPP_HIDE_FROM_ABI bool has_relative_path() const { return !__relative_path().empty(); }
-  _LIBCPP_HIDE_FROM_ABI bool has_parent_path() const { return !__parent_path().empty(); }
-  _LIBCPP_HIDE_FROM_ABI bool has_filename() const { return !__filename().empty(); }
-  _LIBCPP_HIDE_FROM_ABI bool has_stem() const { return !__stem().empty(); }
-  _LIBCPP_HIDE_FROM_ABI bool has_extension() const { return !__extension().empty(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool has_root_name() const { return !__root_name().empty(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool has_root_directory() const { return !__root_directory().empty(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool has_root_path() const { return !__root_path_raw().empty(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool has_relative_path() const { return !__relative_path().empty(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool has_parent_path() const { return !__parent_path().empty(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool has_filename() const { return !__filename().empty(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool has_stem() const { return !__stem().empty(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool has_extension() const { return !__extension().empty(); }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_absolute() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_absolute() const {
 #  if defined(_LIBCPP_WIN32API)
     __string_view __root_name_str = __root_name();
     __string_view __root_dir      = __root_directory();
@@ -845,13 +853,13 @@ public:
     return has_root_directory();
 #  endif
   }
-  _LIBCPP_HIDE_FROM_ABI bool is_relative() const { return !is_absolute(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_relative() const { return !is_absolute(); }
 
   // relative paths
-  path lexically_normal() const;
-  path lexically_relative(const path& __base) const;
+  [[nodiscard]] path lexically_normal() const;
+  [[nodiscard]] path lexically_relative(const path& __base) const;
 
-  _LIBCPP_HIDE_FROM_ABI path lexically_proximate(const path& __base) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path lexically_proximate(const path& __base) const {
     path __result = this->lexically_relative(__base);
     if (__result.native().empty())
       return *this;
@@ -862,8 +870,8 @@ public:
   class iterator;
   typedef iterator const_iterator;
 
-  iterator begin() const;
-  iterator end() const;
+  [[nodiscard]] iterator begin() const;
+  [[nodiscard]] iterator end() const;
 
 #  if _LIBCPP_HAS_LOCALIZATION
   template <
@@ -906,7 +914,7 @@ private:
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(path& __lhs, path& __rhs) noexcept { __lhs.swap(__rhs); }
 
-_LIBCPP_EXPORTED_FROM_ABI size_t hash_value(const path& __p) noexcept;
+[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI size_t hash_value(const path& __p) noexcept;
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
@@ -914,7 +922,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <>
 struct hash<filesystem::path> : __unary_function<filesystem::path, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(filesystem::path const& __p) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(filesystem::path const& __p) const noexcept {
     return filesystem::hash_value(__p);
   }
 };

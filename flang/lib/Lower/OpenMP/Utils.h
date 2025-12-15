@@ -20,6 +20,7 @@ extern llvm::cl::opt<bool> treatIndexAsSection;
 
 namespace fir {
 class FirOpBuilder;
+class RecordType;
 } // namespace fir
 namespace Fortran {
 
@@ -136,6 +137,13 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
     mlir::omp::ClauseMapFlags mapTypeBits);
 
+mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    fir::RecordType recordType, llvm::StringRef mapperNameStr);
+
+bool requiresImplicitDefaultDeclareMapper(
+    const semantics::DerivedTypeSpec &typeSpec);
+
 omp::ObjectList gatherObjectsOf(omp::Object derivedTypeMember,
                                 semantics::SemanticsContext &semaCtx);
 
@@ -158,6 +166,8 @@ void genObjectList(const ObjectList &objects,
 
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
                                      mlir::Location loc);
+
+pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval);
 
 int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,

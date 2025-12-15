@@ -57,6 +57,7 @@
 # FULL-NEXT:  hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 
@@ -167,6 +168,7 @@ body:             |
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 
@@ -248,6 +250,7 @@ body:             |
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 
@@ -330,6 +333,7 @@ body:             |
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 

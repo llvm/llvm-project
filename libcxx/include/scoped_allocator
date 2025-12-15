@@ -434,10 +434,10 @@ public:
         piecewise_construct,
         __transform_tuple(typename __uses_alloc_ctor< _T1, inner_allocator_type&, _Args1... >::type(),
                           std::move(__x),
-                          __make_index_sequence<sizeof...(_Args1)>()),
+                          __index_sequence_for<_Args1...>()),
         __transform_tuple(typename __uses_alloc_ctor< _T2, inner_allocator_type&, _Args2... >::type(),
                           std::move(__y),
-                          __make_index_sequence<sizeof...(_Args2)>()));
+                          __index_sequence_for<_Args2...>()));
   }
 
   template <class _T1, class _T2>

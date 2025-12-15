@@ -10,8 +10,8 @@ end subroutine scalar_substring_embox
 ! CHECK-SAME:                                         %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "i"},
 ! CHECK-SAME:                                         %[[VAL_1:.*]]: !fir.ref<i64> {fir.bindc_name = "j"}) {
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] {uniq_name = "_QFscalar_substring_emboxEi"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] {uniq_name = "_QFscalar_substring_emboxEj"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFscalar_substring_emboxEi"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFscalar_substring_emboxEj"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = fir.address_of(@_QQclX61626348656C6C6F20576F726C6421646667) : !fir.ref<!fir.char<1,18>>
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 18 : index
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_6]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = ".stringlit"} : (!fir.ref<!fir.char<1,18>>, index) -> (!fir.ref<!fir.char<1,18>>, !fir.ref<!fir.char<1,18>>)
@@ -53,7 +53,7 @@ end subroutine array_substring_embox
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 7 : index
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_6]]) typeparams %[[VAL_4]] dummy_scope %[[VAL_1]] {uniq_name = "_QFarray_substring_emboxEarr"} : (!fir.ref<!fir.array<4x!fir.char<1,7>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.ref<!fir.array<4x!fir.char<1,7>>>, !fir.ref<!fir.array<4x!fir.char<1,7>>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_6]]) typeparams %[[VAL_4]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFarray_substring_emboxEarr"} : (!fir.ref<!fir.array<4x!fir.char<1,7>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.ref<!fir.array<4x!fir.char<1,7>>>, !fir.ref<!fir.array<4x!fir.char<1,7>>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 4 : index
@@ -79,11 +79,11 @@ end subroutine substring_assignment
 ! CHECK:           %[[VAL_3:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,4>>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 4 : index
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]] typeparams %[[VAL_5]] dummy_scope %[[VAL_2]] {uniq_name = "_QFsubstring_assignmentEa"} : (!fir.ref<!fir.char<1,4>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]] typeparams %[[VAL_5]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFsubstring_assignmentEa"} : (!fir.ref<!fir.char<1,4>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
 ! CHECK:           %[[VAL_7:.*]]:2 = fir.unboxchar %[[VAL_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,4>>
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 4 : index
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]] typeparams %[[VAL_9]] dummy_scope %[[VAL_2]] {uniq_name = "_QFsubstring_assignmentEb"} : (!fir.ref<!fir.char<1,4>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]] typeparams %[[VAL_9]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFsubstring_assignmentEb"} : (!fir.ref<!fir.char<1,4>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 2 : index
@@ -109,7 +109,7 @@ end subroutine array_substring_assignment
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 5 : index
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 6 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_6]]) typeparams %[[VAL_4]] dummy_scope %[[VAL_1]] {uniq_name = "_QFarray_substring_assignmentEa"} : (!fir.ref<!fir.array<6x!fir.char<1,5>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.ref<!fir.array<6x!fir.char<1,5>>>, !fir.ref<!fir.array<6x!fir.char<1,5>>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_6]]) typeparams %[[VAL_4]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFarray_substring_assignmentEa"} : (!fir.ref<!fir.array<6x!fir.char<1,5>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.ref<!fir.array<6x!fir.char<1,5>>>, !fir.ref<!fir.array<6x!fir.char<1,5>>>)
 ! CHECK:           %[[VAL_8:.*]] = fir.address_of(@_QQclX424144) : !fir.ref<!fir.char<1,3>>
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]] typeparams %[[VAL_9]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX424144"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
@@ -138,7 +138,7 @@ end subroutine array_substring_assignment2
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 8 : index
 ! CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_9]]) dummy_scope %[[VAL_1]] {uniq_name = "_QFarray_substring_assignment2Ea"} : (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment2Tt{ch:!fir.char<1,7>}>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment2Tt{ch:!fir.char<1,7>}>>>, !fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment2Tt{ch:!fir.char<1,7>}>>>)
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_9]]) dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFarray_substring_assignment2Ea"} : (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment2Tt{ch:!fir.char<1,7>}>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment2Tt{ch:!fir.char<1,7>}>>>, !fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment2Tt{ch:!fir.char<1,7>}>>>)
 ! CHECK:           %[[VAL_18:.*]] = fir.address_of(@_QQclX6E696365) : !fir.ref<!fir.char<1,4>>
 ! CHECK:           %[[VAL_19:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_18]] typeparams %[[VAL_19]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX6E696365"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
@@ -164,10 +164,10 @@ end subroutine array_substring_assignment3
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 8 : index
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_9]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_10]]) dummy_scope %[[VAL_2]] {uniq_name = "_QFarray_substring_assignment3Ea"} : (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>, !fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>)
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_10]]) dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFarray_substring_assignment3Ea"} : (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>, !fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>)
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 8 : index
 ! CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_13]]) dummy_scope %[[VAL_2]] {uniq_name = "_QFarray_substring_assignment3Eb"} : (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>, !fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>)
+! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_13]]) dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFarray_substring_assignment3Eb"} : (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>, !fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>)
 ! CHECK:           %[[VAL_22:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_23:.*]] = arith.constant 5 : index
 ! CHECK:           %[[VAL_24:.*]] = arith.constant 4 : index

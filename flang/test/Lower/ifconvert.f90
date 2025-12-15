@@ -1,4 +1,4 @@
-! RUN: bbc -fdebug-dump-pre-fir %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-dump-pft %s 2>&1 | FileCheck %s
 
 ! Note: PFT dump output is fairly stable, including node indexes and
 !       annotations, so all output is CHECKed.

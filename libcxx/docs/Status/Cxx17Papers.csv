@@ -84,7 +84,7 @@
 "`P0508R0 <https://wg21.link/P0508R0>`__","Wording for GB 58 - structured bindings for node_handles","2016-11 (Issaquah)","|Complete|","7","`#99944 <https://github.com/llvm/llvm-project/issues/99944>`__",""
 "`P0509R1 <https://wg21.link/P0509R1>`__","Updating ""Restrictions on exception handling""","2016-11 (Issaquah)","|Nothing To Do|","n/a","`#103676 <https://github.com/llvm/llvm-project/issues/103676>`__",""
 "`P0510R0 <https://wg21.link/P0510R0>`__","Disallowing references, incomplete types, arrays, and empty variants","2016-11 (Issaquah)","|Complete|","4","`#103677 <https://github.com/llvm/llvm-project/issues/103677>`__",""
-"`P0513R0 <https://wg21.link/P0513R0>`__","Poisoning the Hash","2016-11 (Issaquah)","|Complete|","5","`#103678 <https://github.com/llvm/llvm-project/issues/103678>`__",""
+"`P0513R0 <https://wg21.link/P0513R0>`__","Poisoning the Hash","2016-11 (Issaquah)","|Complete|","5","`#103678 <https://github.com/llvm/llvm-project/issues/103678>`__","Implemented as a DR against C++11 since LLVM 22. MSVC STL does the same."
 "`P0516R0 <https://wg21.link/P0516R0>`__","Clarify That shared_future's Copy Operations have Wide Contracts","2016-11 (Issaquah)","|Complete|","4","`#103679 <https://github.com/llvm/llvm-project/issues/103679>`__",""
 "`P0517R0 <https://wg21.link/P0517R0>`__","Make future_error Constructible","2016-11 (Issaquah)","|Complete|","4","`#103680 <https://github.com/llvm/llvm-project/issues/103680>`__",""
 "`P0521R0 <https://wg21.link/P0521R0>`__","Proposed Resolution for CA 14 (shared_ptr use_count/unique)","2016-11 (Issaquah)","|Complete|","18","`#103681 <https://github.com/llvm/llvm-project/issues/103681>`__",""

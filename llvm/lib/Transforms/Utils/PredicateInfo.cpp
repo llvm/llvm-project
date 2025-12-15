@@ -809,7 +809,6 @@ public:
   void emitInstructionAnnot(const Instruction *I,
                             formatted_raw_ostream &OS) override {
     if (const auto *PI = PredInfo->getPredicateInfoFor(I)) {
-      OS << "; Has predicate info\n";
       if (const auto *PB = dyn_cast<PredicateBranch>(PI)) {
         OS << "; branch predicate info { TrueEdge: " << PB->TrueEdge
            << " Comparison:" << *PB->Condition << " Edge: [";
@@ -819,7 +818,7 @@ public:
         OS << "]";
       } else if (const auto *PS = dyn_cast<PredicateSwitch>(PI)) {
         OS << "; switch predicate info { CaseValue: " << *PS->CaseValue
-           << " Switch:" << *PS->Switch << " Edge: [";
+           << " Edge: [";
         PS->From->printAsOperand(OS);
         OS << ",";
         PS->To->printAsOperand(OS);

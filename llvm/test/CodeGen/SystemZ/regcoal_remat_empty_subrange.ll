@@ -22,10 +22,10 @@ define void @main(i16 %in) {
 ; CHECK-NEXT:    locghile %r3, 1
 ; CHECK-NEXT:    o %r0, 0(%r1)
 ; CHECK-NEXT:    larl %r1, g_222
-; CHECK-NEXT:    lghi %r5, 0
 ; CHECK-NEXT:    dsgfr %r2, %r0
+; CHECK-NEXT:    lghi %r3, 0
 ; CHECK-NEXT:    stgrl %r2, g_39
-; CHECK-NEXT:    stc %r5, 19(%r1)
+; CHECK-NEXT:    stc %r3, 19(%r1)
 ; CHECK-NEXT:    br %r14
   %tmp = load i32, ptr @g_151, align 4
   %tmp3 = or i32 %tmp, 1

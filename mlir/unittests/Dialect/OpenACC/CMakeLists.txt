@@ -1,6 +1,8 @@
 add_mlir_unittest(MLIROpenACCTests
   OpenACCOpsTest.cpp
+  OpenACCOpsInterfacesTest.cpp
   OpenACCUtilsTest.cpp
+  OpenACCUtilsTilingTest.cpp
 )
 mlir_target_link_libraries(MLIROpenACCTests
   PRIVATE

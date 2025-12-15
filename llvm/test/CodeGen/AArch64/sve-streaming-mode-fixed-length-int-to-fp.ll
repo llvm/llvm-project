@@ -2444,11 +2444,11 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-LABEL: scvtf_v16i32_v16f64:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #272
-; NONEON-NOSVE-NEXT:    str x29, [sp, #256] // 8-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str x29, [sp, #256] // 8-byte Spill
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 272
 ; NONEON-NOSVE-NEXT:    .cfi_offset w29, -16
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [x0]
-; NONEON-NOSVE-NEXT:    ldr x29, [sp, #256] // 8-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    ldp q3, q2, [x0, #32]
 ; NONEON-NOSVE-NEXT:    str q1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    stp q0, q2, [sp]
