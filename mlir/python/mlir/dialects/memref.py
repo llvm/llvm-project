@@ -14,8 +14,7 @@ from ..ir import Value, MemRefType, StridedLayoutAttr, ShapedType, Operation
 def _is_constant_int_like(i):
     return (
         isinstance(i, Value)
-        and isinstance(i.owner, Operation)
-        and isinstance(i.owner.opview, ConstantOp)
+        and isinstance(i.owner, ConstantOp)
         and _is_integer_like_type(i.type)
     )
 
