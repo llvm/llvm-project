@@ -1812,6 +1812,7 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   HI.name = printName(Ctx, ND);
   HI.detail = printQualifiedName(ND);
   HI.kind = SK;
+  HI.tags = getSymbolTags(ND);
   HI.range = Range{sourceLocToPosition(SM, DeclRange->getBegin()),
                    sourceLocToPosition(SM, DeclRange->getEnd())};
   HI.selectionRange = Range{NameBegin, NameEnd};
@@ -1930,15 +1931,14 @@ static void fillSubTypes(const SymbolID &ID,
   RelationsRequest Req;
   Req.Subjects.insert(ID);
   Req.Predicate = RelationKind::BaseOf;
-  Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
+  Index->relations(Req, [&Levels, &Index, &SubTypes, &TUPath,
+                         &AST](const SymbolID &Subject, const Symbol &Object) {
     std::optional<TypeHierarchyItem> ChildSym;
 
     if (auto *ND = getNamedDeclFromSymbol(Object, AST)) {
       ChildSym = declToTypeHierarchyItem(*ND, AST.tuPath());
-      elog("fillSubTypes: declToTypeHierarchyItem, {0}", ChildSym.has_value());
     } else {
       ChildSym = symbolToTypeHierarchyItem(Object, TUPath);
-      elog("fillSubTypes: symbolToTypeHierarchyItem, {0}", ChildSym.has_value());
     }
     if (ChildSym) {
       if (Levels > 1) {
@@ -2167,15 +2167,15 @@ static QualType typeForNode(const ASTContext &Ctx, const HeuristicResolver *H,
   return QualType();
 }
 
-// Given a type targeted by the cursor, return one or more types that are more interesting
-// to target.
-static void unwrapFindType(
-    QualType T, const HeuristicResolver* H, llvm::SmallVector<QualType>& Out) {
+// Given a type targeted by the cursor, return one or more types that are more
+// interesting to target.
+static void unwrapFindType(QualType T, const HeuristicResolver *H,
+                           llvm::SmallVector<QualType> &Out) {
   if (T.isNull())
     return;
 
   // If there's a specific type alias, point at that rather than unwrapping.
-  if (const auto* TDT = T->getAs<TypedefType>())
+  if (const auto *TDT = T->getAs<TypedefType>())
     return Out.push_back(QualType(TDT, 0));
 
   // Pointers etc => pointee type.
@@ -2209,8 +2209,8 @@ static void unwrapFindType(
 }
 
 // Convenience overload, to allow calling this without the out-parameter
-static llvm::SmallVector<QualType> unwrapFindType(
-    QualType T, const HeuristicResolver* H) {
+static llvm::SmallVector<QualType> unwrapFindType(QualType T,
+                                                  const HeuristicResolver *H) {
   llvm::SmallVector<QualType> Result;
   unwrapFindType(T, H, Result);
   return Result;
@@ -2232,9 +2232,9 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
     std::vector<LocatedSymbol> LocatedSymbols;
 
     // NOTE: unwrapFindType might return duplicates for something like
-    // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you some
-    // information about the type you may have not known before
-    // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
+    // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you
+    // some information about the type you may have not known before (since
+    // unique_ptr<unique_ptr<T>> != unique_ptr<T>).
     for (const QualType &Type : unwrapFindType(
              typeForNode(AST.getASTContext(), AST.getHeuristicResolver(), N),
              AST.getHeuristicResolver()))
@@ -2327,7 +2327,8 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
 
       if (Index) {
         if (auto ID = getSymbolID(CXXRD))
-          fillSubTypes(ID, *Result->children, Index, ResolveLevels, TUPath, AST);
+          fillSubTypes(ID, *Result->children, Index, ResolveLevels, TUPath,
+                       AST);
       }
     }
     Results.emplace_back(std::move(*Result));
@@ -2337,7 +2338,8 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
 }
 
 std::optional<std::vector<TypeHierarchyItem>>
-superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index) {
+superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index,
+           const ParsedAST &AST) {
   std::vector<TypeHierarchyItem> Results;
   if (!Item.data.parents)
     return std::nullopt;
@@ -2349,8 +2351,14 @@ superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index) {
     Req.IDs.insert(Parent.symbolID);
     IDToData[Parent.symbolID] = &Parent;
   }
-  Index->lookup(Req, [&Item, &Results, &IDToData](const Symbol &S) {
-    if (auto THI = symbolToTypeHierarchyItem(S, Item.uri.file())) {
+  Index->lookup(Req, [&Item, &Results, &IDToData, &AST](const Symbol &S) {
+    std::optional<TypeHierarchyItem> THI;
+    if (auto *ND = getNamedDeclFromSymbol(S, AST)) {
+      THI = declToTypeHierarchyItem(*ND, AST.tuPath());
+    } else {
+      THI = symbolToTypeHierarchyItem(S, Item.uri.file());
+    }
+    if (THI) {
       THI->data = *IDToData.lookup(S.ID);
       Results.emplace_back(std::move(*THI));
     }
@@ -2359,7 +2367,8 @@ superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index) {
 }
 
 std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,
-                                        const SymbolIndex *Index, const ParsedAST &AST) {
+                                        const SymbolIndex *Index,
+                                        const ParsedAST &AST) {
   std::vector<TypeHierarchyItem> Results;
   fillSubTypes(Item.data.symbolID, Results, Index, 1, Item.uri.file(), AST);
   for (auto &ChildSym : Results)
@@ -2369,8 +2378,7 @@ std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,
 
 void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
                           TypeHierarchyDirection Direction,
-                          const SymbolIndex *Index,
-                          const ParsedAST &AST) {
+                          const SymbolIndex *Index, const ParsedAST &AST) {
   // We only support typeHierarchy/resolve for children, because for parents
   // we ignore ResolveLevels and return all levels of parents eagerly.
   if (!Index || Direction == TypeHierarchyDirection::Parents ||

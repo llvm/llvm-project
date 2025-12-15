@@ -1548,6 +1548,9 @@ struct TypeHierarchyItem {
   /// The kind of this item.
   SymbolKind kind;
 
+  /// The symbol tags for this item.
+  std::vector<SymbolTag> tags;
+
   /// More detail for this item, e.g. the signature of a function.
   std::optional<std::string> detail;
 

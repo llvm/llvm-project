@@ -46,6 +46,7 @@
 # CHECK-NEXT:         }
 # CHECK-NEXT:       },
 # CHECK-NEXT:       "tags": [
+# CHECK-NEXT:         18,
 # CHECK-NEXT:         19
 # CHECK-NEXT:       ],
 # CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
@@ -71,11 +72,11 @@
 # CHECK-NEXT:       "name": "Child1",
 # CHECK-NEXT:       "range": {
 # CHECK-NEXT:         "end": {
-# CHECK-NEXT:           "character": 13,
+# CHECK-NEXT:           "character": 25,
 # CHECK-NEXT:           "line": 1
 # CHECK-NEXT:         },
 # CHECK-NEXT:         "start": {
-# CHECK-NEXT:           "character": 7,
+# CHECK-NEXT:           "character": 0,
 # CHECK-NEXT:           "line": 1
 # CHECK-NEXT:         }
 # CHECK-NEXT:       },
@@ -90,6 +91,7 @@
 # CHECK-NEXT:         }
 # CHECK-NEXT:       },
 # CHECK-NEXT:       "tags": [
+# CHECK-NEXT:         18,
 # CHECK-NEXT:         19
 # CHECK-NEXT:       ],
 # CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
@@ -144,6 +146,7 @@
 # CHECK-NEXT:         }
 # CHECK-NEXT:       },
 # CHECK-NEXT:       "tags": [
+# CHECK-NEXT:         18,
 # CHECK-NEXT:         19
 # CHECK-NEXT:       ],
 # CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
