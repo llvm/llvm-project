@@ -16,31 +16,51 @@
 # RUN: --riscv-save-csrs-early=true \
 # RUN: --riscv-user-defined-uncond-prolog-csrs="x19" \
 # RUN: -o - | FileCheck %s -check-prefixes=EARLYCSR_UNCONDX19
+--- |
+  define void @use_callee_saved() {
+  entry:
+    ret void
+  }
+
+  define void @make_a_call() {
+  entry:
+    tail call void @bar()
+    ret void
+  }
+
+  define void @make_a_call_and_use_callee_saved() {
+  entry:
+    tail call void @bar()
+    ret void
+  }
+
+  declare void @bar(...)
+...
 ---
-name:            test0
+name: use_callee_saved
 tracksRegLiveness: true
 stack:
-  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+  - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
   bb.0.entry:
     liveins: $x10
-    ; NOEARLYCSR-LABEL: name: test0
+    ; NOEARLYCSR-LABEL: name: use_callee_saved
     ; NOEARLYCSR: liveins: $x10, $x18
     ; NOEARLYCSR-NEXT: {{  $}}
     ; NOEARLYCSR-NEXT: $x2 = frame-setup ADDI $x2, -16
     ; NOEARLYCSR-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
     ; NOEARLYCSR-NEXT: frame-setup SD killed $x18, $x2, 8 :: (store (s64) into %stack.1)
     ; NOEARLYCSR-NEXT: frame-setup CFI_INSTRUCTION offset $x18, -8
-    ; NOEARLYCSR-NEXT: $x18 = LD $x2, 4 :: (load (s64))
+    ; NOEARLYCSR-NEXT: $x18 = LD $x2, 0 :: (load (s64))
     ; NOEARLYCSR-NEXT: $x18 = frame-destroy LD $x2, 8 :: (load (s64) from %stack.1)
     ; NOEARLYCSR-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
     ; NOEARLYCSR-NEXT: $x2 = frame-destroy ADDI $x2, 16
     ; NOEARLYCSR-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; NOEARLYCSR-NEXT: PseudoRET
     ;
-    ; NOEARLYCSR_UNCONDX19-LABEL: name: test0
+    ; NOEARLYCSR_UNCONDX19-LABEL: name: use_callee_saved
     ; NOEARLYCSR_UNCONDX19: liveins: $x10, $x18, $x19
     ; NOEARLYCSR_UNCONDX19-NEXT: {{  $}}
     ; NOEARLYCSR_UNCONDX19-NEXT: $x2 = frame-setup ADDI $x2, -32
@@ -49,7 +69,7 @@ body:             |
     ; NOEARLYCSR_UNCONDX19-NEXT: frame-setup SD killed $x19, $x2, 16 :: (store (s64) into %stack.2)
     ; NOEARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION offset $x18, -8
     ; NOEARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -16
-    ; NOEARLYCSR_UNCONDX19-NEXT: $x18 = LD $x2, 12 :: (load (s64))
+    ; NOEARLYCSR_UNCONDX19-NEXT: $x18 = LD $x2, 8 :: (load (s64))
     ; NOEARLYCSR_UNCONDX19-NEXT: $x18 = frame-destroy LD $x2, 24 :: (load (s64) from %stack.1)
     ; NOEARLYCSR_UNCONDX19-NEXT: $x19 = frame-destroy LD $x2, 16 :: (load (s64) from %stack.2)
     ; NOEARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
@@ -58,24 +78,24 @@ body:             |
     ; NOEARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; NOEARLYCSR_UNCONDX19-NEXT: PseudoRET
     ;
-    ; EARLYCSR-LABEL: name: test0
+    ; EARLYCSR-LABEL: name: use_callee_saved
     ; EARLYCSR: liveins: $x10
     ; EARLYCSR-NEXT: {{  $}}
     ; EARLYCSR-NEXT: $x2 = frame-setup ADDI $x2, -16
     ; EARLYCSR-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
-    ; EARLYCSR-NEXT: $x18 = LD $x2, 12 :: (load (s64))
+    ; EARLYCSR-NEXT: $x18 = LD $x2, 8 :: (load (s64))
     ; EARLYCSR-NEXT: $x2 = frame-destroy ADDI $x2, 16
     ; EARLYCSR-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; EARLYCSR-NEXT: PseudoRET
     ;
-    ; EARLYCSR_UNCONDX19-LABEL: name: test0
+    ; EARLYCSR_UNCONDX19-LABEL: name: use_callee_saved
     ; EARLYCSR_UNCONDX19: liveins: $x10, $x19
     ; EARLYCSR_UNCONDX19-NEXT: {{  $}}
     ; EARLYCSR_UNCONDX19-NEXT: $x2 = frame-setup ADDI $x2, -16
     ; EARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
     ; EARLYCSR_UNCONDX19-NEXT: frame-setup SD killed $x19, $x2, 8 :: (store (s64) into %stack.1)
     ; EARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -8
-    ; EARLYCSR_UNCONDX19-NEXT: $x18 = LD $x2, 4 :: (load (s64))
+    ; EARLYCSR_UNCONDX19-NEXT: $x18 = LD $x2, 0 :: (load (s64))
     ; EARLYCSR_UNCONDX19-NEXT: $x19 = frame-destroy LD $x2, 8 :: (load (s64) from %stack.1)
     ; EARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
     ; EARLYCSR_UNCONDX19-NEXT: $x2 = frame-destroy ADDI $x2, 16
@@ -84,4 +104,108 @@ body:             |
     $x18 = LD %stack.0, 0 :: (load (s64))
     PseudoRET
 
+...
+---
+name: make_a_call
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    ; NOEARLYCSR-LABEL: name: make_a_call
+    ; NOEARLYCSR: PseudoTAIL target-flags(riscv-call) @bar, csr_ilp32d_lp64d, implicit $x2
+    ;
+    ; NOEARLYCSR_UNCONDX19-LABEL: name: make_a_call
+    ; NOEARLYCSR_UNCONDX19: liveins: $x19
+    ; NOEARLYCSR_UNCONDX19-NEXT: {{  $}}
+    ; NOEARLYCSR_UNCONDX19-NEXT: $x2 = frame-setup ADDI $x2, -16
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-setup SD killed $x19, $x2, 8 :: (store (s64) into %stack.0)
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -8
+    ; NOEARLYCSR_UNCONDX19-NEXT: $x19 = frame-destroy LD $x2, 8 :: (load (s64) from %stack.0)
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; NOEARLYCSR_UNCONDX19-NEXT: $x2 = frame-destroy ADDI $x2, 16
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; NOEARLYCSR_UNCONDX19-NEXT: PseudoTAIL target-flags(riscv-call) @bar, csr_ilp32d_lp64d, implicit $x2
+    ;
+    ; EARLYCSR-LABEL: name: make_a_call
+    ; EARLYCSR: PseudoTAIL target-flags(riscv-call) @bar, csr_ilp32d_lp64d, implicit $x2
+    ;
+    ; EARLYCSR_UNCONDX19-LABEL: name: make_a_call
+    ; EARLYCSR_UNCONDX19: liveins: $x19
+    ; EARLYCSR_UNCONDX19-NEXT: {{  $}}
+    ; EARLYCSR_UNCONDX19-NEXT: $x2 = frame-setup ADDI $x2, -16
+    ; EARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    ; EARLYCSR_UNCONDX19-NEXT: frame-setup SD killed $x19, $x2, 8 :: (store (s64) into %stack.0)
+    ; EARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -8
+    ; EARLYCSR_UNCONDX19-NEXT: $x19 = frame-destroy LD $x2, 8 :: (load (s64) from %stack.0)
+    ; EARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; EARLYCSR_UNCONDX19-NEXT: $x2 = frame-destroy ADDI $x2, 16
+    ; EARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; EARLYCSR_UNCONDX19-NEXT: PseudoTAIL target-flags(riscv-call) @bar, csr_ilp32d_lp64d, implicit $x2
+    PseudoTAIL target-flags(riscv-call) @bar, csr_ilp32d_lp64d, implicit $x2
+
+...
+---
+name: make_a_call_and_use_callee_saved
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0.entry:
+    ; NOEARLYCSR-LABEL: name: make_a_call_and_use_callee_saved
+    ; NOEARLYCSR: liveins: $x18
+    ; NOEARLYCSR-NEXT: {{  $}}
+    ; NOEARLYCSR-NEXT: $x2 = frame-setup ADDI $x2, -16
+    ; NOEARLYCSR-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    ; NOEARLYCSR-NEXT: frame-setup SD killed $x18, $x2, 8 :: (store (s64) into %stack.1)
+    ; NOEARLYCSR-NEXT: frame-setup CFI_INSTRUCTION offset $x18, -8
+    ; NOEARLYCSR-NEXT: $x18 = LD $x2, 0 :: (load (s64))
+    ; NOEARLYCSR-NEXT: $x18 = frame-destroy LD $x2, 8 :: (load (s64) from %stack.1)
+    ; NOEARLYCSR-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
+    ; NOEARLYCSR-NEXT: $x2 = frame-destroy ADDI $x2, 16
+    ; NOEARLYCSR-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; NOEARLYCSR-NEXT: PseudoTAIL target-flags(riscv-call) @bar, csr_ilp32d_lp64d, implicit $x2
+    ;
+    ; NOEARLYCSR_UNCONDX19-LABEL: name: make_a_call_and_use_callee_saved
+    ; NOEARLYCSR_UNCONDX19: liveins: $x18, $x19
+    ; NOEARLYCSR_UNCONDX19-NEXT: {{  $}}
+    ; NOEARLYCSR_UNCONDX19-NEXT: $x2 = frame-setup ADDI $x2, -32
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 32
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-setup SD killed $x18, $x2, 24 :: (store (s64) into %stack.1)
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-setup SD killed $x19, $x2, 16 :: (store (s64) into %stack.2)
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION offset $x18, -8
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -16
+    ; NOEARLYCSR_UNCONDX19-NEXT: $x18 = LD $x2, 8 :: (load (s64))
+    ; NOEARLYCSR_UNCONDX19-NEXT: $x18 = frame-destroy LD $x2, 24 :: (load (s64) from %stack.1)
+    ; NOEARLYCSR_UNCONDX19-NEXT: $x19 = frame-destroy LD $x2, 16 :: (load (s64) from %stack.2)
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; NOEARLYCSR_UNCONDX19-NEXT: $x2 = frame-destroy ADDI $x2, 32
+    ; NOEARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; NOEARLYCSR_UNCONDX19-NEXT: PseudoTAIL target-flags(riscv-call) @bar, csr_ilp32d_lp64d, implicit $x2
+    ;
+    ; EARLYCSR-LABEL: name: make_a_call_and_use_callee_saved
+    ; EARLYCSR: $x2 = frame-setup ADDI $x2, -16
+    ; EARLYCSR-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    ; EARLYCSR-NEXT: $x18 = LD $x2, 8 :: (load (s64))
+    ; EARLYCSR-NEXT: $x2 = frame-destroy ADDI $x2, 16
+    ; EARLYCSR-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; EARLYCSR-NEXT: PseudoTAIL target-flags(riscv-call) @bar, csr_ilp32d_lp64d, implicit $x2
+    ;
+    ; EARLYCSR_UNCONDX19-LABEL: name: make_a_call_and_use_callee_saved
+    ; EARLYCSR_UNCONDX19: liveins: $x19
+    ; EARLYCSR_UNCONDX19-NEXT: {{  $}}
+    ; EARLYCSR_UNCONDX19-NEXT: $x2 = frame-setup ADDI $x2, -16
+    ; EARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    ; EARLYCSR_UNCONDX19-NEXT: frame-setup SD killed $x19, $x2, 8 :: (store (s64) into %stack.1)
+    ; EARLYCSR_UNCONDX19-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -8
+    ; EARLYCSR_UNCONDX19-NEXT: $x18 = LD $x2, 0 :: (load (s64))
+    ; EARLYCSR_UNCONDX19-NEXT: $x19 = frame-destroy LD $x2, 8 :: (load (s64) from %stack.1)
+    ; EARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; EARLYCSR_UNCONDX19-NEXT: $x2 = frame-destroy ADDI $x2, 16
+    ; EARLYCSR_UNCONDX19-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; EARLYCSR_UNCONDX19-NEXT: PseudoTAIL target-flags(riscv-call) @bar, csr_ilp32d_lp64d, implicit $x2
+    $x18 = LD %stack.0, 0 :: (load (s64))
+    PseudoTAIL target-flags(riscv-call) @bar, csr_ilp32d_lp64d, implicit $x2
 ...
