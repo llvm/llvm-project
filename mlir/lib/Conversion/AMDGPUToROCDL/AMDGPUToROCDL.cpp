@@ -2322,7 +2322,7 @@ struct AMDGPUMakeDmaBaseLowering : public ConvertOpToLLVMPattern<BaseOp> {
 
     sgprs[0] = consts[1];
 
-    if constexpr (op.isGather()) {
+    if constexpr (BaseOp::isGather()) {
       sgprs[0] = setValueAtOffset(rewriter, loc, sgprs[0], consts[1], 30);
 
       auto type = cast<TDMGatherBaseType>(op.getResult().getType());
@@ -2637,7 +2637,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                                   ConversionPatternRewriter &rewriter,
                                   Location loc, Value sgpr4,
                                   ArrayRef<Value> consts) const {
-    if constexpr (op.isGather())
+    if constexpr (DescriptorOp::isGather())
       return setValidIndices(op, adaptor, rewriter, loc, sgpr4, consts);
     return setTileDim1(op, adaptor, rewriter, loc, sgpr4, consts);
   }
@@ -2646,7 +2646,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr4, ArrayRef<Value> consts) const {
     // Value is ignored when in gather mode.
-    if constexpr (op.isGather())
+    if constexpr (DescriptorOp::isGather())
       return sgpr4;
     return setTileDimX(op, adaptor, rewriter, loc, sgpr4, consts, 2, 144);
   }
@@ -2710,7 +2710,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr5, Value sgpr6, ArrayRef<Value> consts) const {
     // Value is ignored when in gather mode.
-    if constexpr (op.isGather())
+    if constexpr (DescriptorOp::isGather())
       return {sgpr5, sgpr6};
     return setTensorDimXStride(op, adaptor, rewriter, loc, sgpr5, sgpr6, consts,
                                1, 208);
@@ -2891,7 +2891,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   Value getDGroup2(DescriptorOp op, OpAdaptor adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
-    if constexpr (op.isGather())
+    if constexpr (DescriptorOp::isGather())
       return getDGroup2Gather(op, adaptor, rewriter, loc, consts);
     return getDGroup2NonGather(op, adaptor, rewriter, loc, consts);
   }
@@ -3029,7 +3029,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   Value getDGroup3(DescriptorOp op, OpAdaptor adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
-    if constexpr (op.isGather())
+    if constexpr (DescriptorOp::isGather())
       return getDGroup3Gather(op, adaptor, rewriter, loc, consts);
     return getDGroup3NonGather(op, adaptor, rewriter, loc, consts);
   }
