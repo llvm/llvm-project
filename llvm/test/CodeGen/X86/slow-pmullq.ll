@@ -9,19 +9,21 @@
 define <8 x i64> @test_mul_52bit_fits(<8 x i64> %a, <8 x i64> %b) {
 ; CNL-LABEL: test_mul_52bit_fits:
 ; CNL:       # %bb.0:
-; CNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CNL-NEXT:    vpmadd52luq %zmm1, %zmm0, %zmm2
-; CNL-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CNL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm2
+; CNL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
+; CNL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CNL-NEXT:    vpmadd52luq %zmm1, %zmm2, %zmm0
 ; CNL-NEXT:    retq
 ;
 ; NOVLX-LABEL: test_mul_52bit_fits:
 ; NOVLX:       # %bb.0:
-; NOVLX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; NOVLX-NEXT:    vpmadd52luq %zmm1, %zmm0, %zmm2
-; NOVLX-NEXT:    vmovdqa64 %zmm2, %zmm0
+; NOVLX-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm2
+; NOVLX-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
+; NOVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NOVLX-NEXT:    vpmadd52luq %zmm1, %zmm2, %zmm0
 ; NOVLX-NEXT:    retq
-  %a_masked = and <8 x i64> %a,  splat (i64 4503599627370495)
-  %b_masked = and <8 x i64> %b,  splat (i64 4503599627370495)
+  %a_masked = and <8 x i64> %a,  splat (i64 8589934591)
+  %b_masked = and <8 x i64> %b,  splat (i64 524287)
 
   %res = mul <8 x i64> %a_masked, %b_masked
   ret <8 x i64> %res
@@ -34,21 +36,21 @@ define <8 x i64> @test_mul_52bit_fits(<8 x i64> %a, <8 x i64> %b) {
 define <8 x i64> @test_mul_shift_high_bits(<8 x i64> %a, <8 x i64> %b) {
 ; CNL-LABEL: test_mul_shift_high_bits:
 ; CNL:       # %bb.0:
-; CNL-NEXT:    vpsrlq $12, %zmm0, %zmm2
-; CNL-NEXT:    vpsrlq $12, %zmm1, %zmm1
+; CNL-NEXT:    vpsrlq $31, %zmm0, %zmm2
+; CNL-NEXT:    vpsrlq $45, %zmm1, %zmm1
 ; CNL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CNL-NEXT:    vpmadd52luq %zmm1, %zmm2, %zmm0
 ; CNL-NEXT:    retq
 ;
 ; NOVLX-LABEL: test_mul_shift_high_bits:
 ; NOVLX:       # %bb.0:
-; NOVLX-NEXT:    vpsrlq $12, %zmm0, %zmm2
-; NOVLX-NEXT:    vpsrlq $12, %zmm1, %zmm1
+; NOVLX-NEXT:    vpsrlq $31, %zmm0, %zmm2
+; NOVLX-NEXT:    vpsrlq $45, %zmm1, %zmm1
 ; NOVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; NOVLX-NEXT:    vpmadd52luq %zmm1, %zmm2, %zmm0
 ; NOVLX-NEXT:    retq
-  %a_shifted = lshr <8 x i64> %a, <i64 12, i64 12, i64 12, i64 12, i64 12, i64 12, i64 12, i64 12>
-  %b_shifted = lshr <8 x i64> %b, <i64 12, i64 12, i64 12, i64 12, i64 12, i64 12, i64 12, i64 12>
+ %a_shifted = lshr <8 x i64> %a, <i64 31, i64 31, i64 31, i64 31, i64 31, i64 31, i64 31, i64 31>
+ %b_shifted = lshr <8 x i64> %b, <i64 45, i64 45, i64 45, i64 45, i64 45, i64 45, i64 45, i64 45>
 
   %res = mul <8 x i64> %a_shifted, %b_shifted
   ret <8 x i64> %res
@@ -101,22 +103,24 @@ define <8 x i64> @test_mul_full_64bit(<8 x i64> %a, <8 x i64> %b) {
 define <4 x i64> @test_mul_52bit_ymm(<4 x i64> %a, <4 x i64> %b) {
 ; CNL-LABEL: test_mul_52bit_ymm:
 ; CNL:       # %bb.0:
-; CNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CNL-NEXT:    vpmadd52luq %ymm1, %ymm0, %ymm2
-; CNL-NEXT:    vmovdqa %ymm2, %ymm0
+; CNL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm2
+; CNL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm1
+; CNL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CNL-NEXT:    vpmadd52luq %ymm1, %ymm2, %ymm0
 ; CNL-NEXT:    retq
 ;
 ; NOVLX-LABEL: test_mul_52bit_ymm:
 ; NOVLX:       # %bb.0:
-; NOVLX-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4503599627370495,4503599627370495,4503599627370495,4503599627370495]
+; NOVLX-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [8589934591,8589934591,8589934591,8589934591]
 ; NOVLX-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; NOVLX-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [524287,524287,524287,524287]
 ; NOVLX-NEXT:    vpand %ymm2, %ymm1, %ymm1
 ; NOVLX-NEXT:    vpmullq %zmm1, %zmm0, %zmm0
 ; NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; NOVLX-NEXT:    retq
 
-  %a_masked = and <4 x i64> %a,  splat (i64 4503599627370495)
-  %b_masked = and <4 x i64> %b,  splat (i64 4503599627370495)
+  %a_masked = and <4 x i64> %a,  splat (i64 8589934591)
+  %b_masked = and <4 x i64> %b,  splat (i64 524287)
 
   %res = mul <4 x i64> %a_masked, %b_masked
   ret <4 x i64> %res

@@ -49883,23 +49883,26 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
     unsigned Count1 = Known1.countMinLeadingZeros();
 
     // Optimization 1: Use VPMULUDQ (32-bit multiply).
-    if (Count0 >= 32 && Count1 >= 32) {
+    if (Count0 >= 32 && Count1 >= 32)
       return DAG.getNode(X86ISD::PMULUDQ, DL, VT, Op0, Op1);
-    }
 
     // Optimization 1.5: Use PMULDQ (32-bit signed multiply).
     unsigned Sign0 = DAG.ComputeNumSignBits(Op0);
     unsigned Sign1 = DAG.ComputeNumSignBits(Op1);
-    if (Sign0 > 32 && Sign1 > 32) {
+    if (Sign0 > 32 && Sign1 > 32)
       return DAG.getNode(X86ISD::PMULDQ, DL, VT, Op0, Op1);
-    }
 
     // Optimization 2: Use VPMADD52L (52-bit multiply-add).
-    if (Subtarget.hasAVX512() && Subtarget.hasIFMA() &&
-        (VT.getSizeInBits() == 512 || Subtarget.hasVLX())) {
-      if (Count0 >= 12 && Count1 >= 12) {
-        SDValue Zero = getZeroVector(VT.getSimpleVT(), Subtarget, DAG, DL);
-        return DAG.getNode(X86ISD::VPMADD52L, DL, VT, Op0, Op1, Zero);
+    if (Subtarget.hasIFMA() || Subtarget.hasAVXIFMA()) {
+      if (VT.getSizeInBits() == 512 || Subtarget.hasVLX() ||
+          Subtarget.hasAVXIFMA()) {
+        //(64−Count0)+(64−Count1)<=52
+        //128-(Count0+Count1)<=52
+        //76<=Count0+Count1
+        if (Count0 + Count1 >= 76) {
+          SDValue Zero = getZeroVector(VT.getSimpleVT(), Subtarget, DAG, DL);
+          return DAG.getNode(X86ISD::VPMADD52L, DL, VT, Op0, Op1, Zero);
+        }
       }
     }
   }
