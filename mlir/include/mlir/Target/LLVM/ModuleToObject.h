@@ -75,7 +75,7 @@ protected:
 
   /// Serializes the LLVM IR bitcode to an object file, by default it serializes
   /// to LLVM bitcode.
-  virtual std::optional<SmallVector<char, 0>>
+  virtual FailureOr<SmallVector<char, 0>>
   moduleToObject(llvm::Module &llvmModule);
 
 protected:

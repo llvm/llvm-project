@@ -233,7 +233,7 @@ void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {
   module.setTargetTriple((*targetMachine)->getTargetTriple());
 }
 
-std::optional<SmallVector<char, 0>>
+FailureOr<SmallVector<char, 0>>
 ModuleToObject::moduleToObject(llvm::Module &llvmModule) {
   SmallVector<char, 0> binaryData;
   // Write the LLVM module bitcode to a buffer.
