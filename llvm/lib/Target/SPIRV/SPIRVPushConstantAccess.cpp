@@ -32,9 +32,12 @@ using namespace llvm;
 static bool replacePushConstantAccesses(Module &M, SPIRVGlobalRegistry *GR) {
   SmallVector<GlobalVariable *> PushConstants;
   for (GlobalVariable &GV : M.globals()) {
-    if (GV.getAddressSpace() ==
+    if (GV.getAddressSpace() !=
         storageClassToAddressSpace(SPIRV::StorageClass::PushConstant))
-      PushConstants.push_back(&GV);
+      continue;
+
+    GV.removeDeadConstantUsers();
+    PushConstants.push_back(&GV);
   }
 
   for (GlobalVariable *GV : PushConstants) {
@@ -48,10 +51,7 @@ static bool replacePushConstantAccesses(Module &M, SPIRVGlobalRegistry *GR) {
 
     SmallVector<User *, 4> Users(GV->user_begin(), GV->user_end());
     for (User *U : Users) {
-      Instruction *I = dyn_cast<Instruction>(U);
-      if (!I)
-        continue;
-
+      Instruction *I = cast<Instruction>(U);
       IRBuilder<> Builder(I);
       Value *GetPointerCall = Builder.CreateIntrinsic(
           NewGV->getType(), Intrinsic::spv_pushconstant_getpointer, {NewGV});
