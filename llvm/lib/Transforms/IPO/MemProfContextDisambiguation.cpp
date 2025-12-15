@@ -235,6 +235,8 @@ cl::opt<bool> MemProfFixupImportant(
     "memprof-fixup-important", cl::init(true), cl::Hidden,
     cl::desc("Enables edge fixup for important contexts"));
 
+extern cl::opt<unsigned> MaxSummaryIndirectEdges;
+
 } // namespace llvm
 
 namespace {
@@ -6067,8 +6069,8 @@ unsigned MemProfContextDisambiguation::recordICPInfo(
   uint32_t NumCandidates;
   uint64_t TotalCount;
   auto CandidateProfileData =
-      ICallAnalysis->getPromotionCandidatesForInstruction(CB, TotalCount,
-                                                          NumCandidates);
+      ICallAnalysis->getPromotionCandidatesForInstruction(
+          CB, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
   if (CandidateProfileData.empty())
     return 0;
 

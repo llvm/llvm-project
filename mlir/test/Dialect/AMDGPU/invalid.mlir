@@ -442,3 +442,13 @@ func.func @make_dma_descriptor_invalid_shared_and_global_rank(%base: !amdgpu.tdm
   func.return
 }
 
+
+// -----
+
+// CHECK-LABEL: func @make_gather_dma_descriptor_invalid_index_types
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_gather_base<i32, i32>, %[[VEC:.+]]: vector<8xi32>)
+func.func @make_gather_dma_descriptor_invalid_index_types(%base: !amdgpu.tdm_gather_base<i32, i16>, %indices: vector<8xi32>) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_descriptor' op indices' element type must match base's element type.}}
+  amdgpu.make_gather_dma_descriptor %base[%indices] globalSize [4, 4] globalStride [1, 1] sharedSize [1, 2] : !amdgpu.tdm_gather_base<i32, i16>, vector<8xi32> -> !amdgpu.tdm_descriptor
+  func.return
+}
