@@ -18,6 +18,7 @@ add_flang_library(FIRTransforms
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
   FIRToSCF.cpp
+  FIRToCoreMLIR.cpp
   MemoryUtils.cpp
   MemoryAllocation.cpp
   StackArrays.cpp

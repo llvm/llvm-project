@@ -107,8 +107,44 @@ void addDebugInfoPass(mlir::PassManager &pm,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }
 
+void addFIRToCoreMLIRToLLVMPass(mlir::PassManager &pm,
+                                const MLIRToLLVMPassPipelineConfig &config) {
+  if (disableFirToLlvmIr)
+    return;
+
+  fir::FIRToLLVMPassOptions options;
+  options.ignoreMissingTypeDescriptors = ignoreMissingTypeDescriptors;
+  options.skipExternalRttiDefinition = skipExternalRttiDefinition;
+  options.applyTBAA = config.AliasAnalysis;
+  options.forceUnifiedTBAATree = useOldAliasTags;
+  options.typeDescriptorsRenamedForAssembly =
+      !disableCompilerGeneratedNamesConversion;
+  options.ComplexRange = config.ComplexRange;
+
+  pm.addPass(createFIRToCoreMLIRPass());
+  pm.addPass(mlir::memref::createFoldMemRefAliasOpsPass());
+
+  if (config.OptLevel.isOptimizingForSpeed()) {
+    pm.addPass(mlir::createMem2Reg());
+    pm.addPass(mlir::createCSEPass());
+    pm.addPass(mlir::createCanonicalizerPass());
+  }
+
+  pm.addPass(mlir::memref::createExpandOpsPass());
+  pm.addPass(mlir::memref::createExpandStridedMetadataPass());
+  pm.addPass(mlir::createLowerAffinePass());
+  pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
+  pm.addPass(fir::createFIRToLLVMPass(options));
+  pm.addPass(mlir::createReconcileUnrealizedCastsPass());
+}
+
 void addFIRToLLVMPass(mlir::PassManager &pm,
                       const MLIRToLLVMPassPipelineConfig &config) {
+  if (config.LowerThroughCoreMLIR) {
+    addFIRToCoreMLIRToLLVMPass(pm, config);
+    return;
+  }
+
   fir::FIRToLLVMPassOptions options;
   options.ignoreMissingTypeDescriptors = ignoreMissingTypeDescriptors;
   options.skipExternalRttiDefinition = skipExternalRttiDefinition;
