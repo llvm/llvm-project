@@ -18,8 +18,6 @@
 #include <string>
 #include <level_zero/ze_api.h>
 
-#define STR(x) #x
-
 #define CALL_ZE(Rc, Fn, ...)                                                   \
   do {                                                                         \
       Rc = Fn(__VA_ARGS__);                                                    \
@@ -42,7 +40,7 @@
 #define CALL_ZE_RET_ERROR_MTX(Fn, Mtx, ...)                                   \
   CALL_ZE_RET_MTX(                                                            \
     Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d, %s",          \
-    STR(Fn), rc, getZeErrorName(rc)), Fn, Mtx, __VA_ARGS__)
+    #Fn, rc, getZeErrorName(rc)), Fn, Mtx, __VA_ARGS__)
 
 /// For thread-safe functions
 #define CALL_ZE_RET(Ret, Fn, ...)                                              \
@@ -59,7 +57,7 @@
 #define CALL_ZE_RET_ERROR(Fn, ...)                                             \
   CALL_ZE_RET(                                                                 \
     Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d, %s",           \
-    STR(Fn), rc, getZeErrorName(rc)), Fn, __VA_ARGS__)
+    #Fn, rc, getZeErrorName(rc)), Fn, __VA_ARGS__)
 
 #define CALL_ZE_EXT_SILENT_RET(Device, Ret, Name, ...)                         \
   do {                                                                         \
@@ -72,7 +70,7 @@
 #define CALL_ZE_EXT_RET_ERROR(Device, Name, ...)                               \
   CALL_ZE_EXT_SILENT_RET(Device,                                               \
       Plugin::error(ErrorCode::UNKNOWN, "%s failed with code %d, %s",          \
-			 STR(Name), rc, getZeErrorName(rc)), Name, __VA_ARGS__)                    
+			 #Name, rc, getZeErrorName(rc)), Name, __VA_ARGS__)
 
 #define FOREACH_ZE_ERROR_CODE(Fn)                                              \
   Fn(ZE_RESULT_SUCCESS)                                                        \
