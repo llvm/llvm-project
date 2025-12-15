@@ -2259,10 +2259,12 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     /// Adjust start value of fixed-order recurrence phi to [poison, ... ,
     /// poison, start value].
     VPValue *StartV = FOR->getStartValue();
-    VPValue *NewStart = PHBuilder.createNaryOp(
-        VPInstruction::InsertLastLane, {Plan.getOrAddLiveIn(PoisonValue::get(
-                                            TypeInfo.inferScalarType(StartV))),
-                                        StartV});
+    VPValue *NewStart =
+        PHBuilder.createNaryOp(VPInstruction::InsertLastLane,
+                               {Plan.getOrAddLiveIn(PoisonValue::get(
+                                    TypeInfo.inferScalarType(StartV))),
+                                StartV},
+                               FOR->getDebugLoc(), "vector.recur.init");
     FOR->setOperand(0, NewStart);
 
     SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;

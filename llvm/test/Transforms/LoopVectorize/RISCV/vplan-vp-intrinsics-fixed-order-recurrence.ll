@@ -18,7 +18,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT: Successor(s): scalar.ph, vector.ph
 ; IF-EVL-EMPTY:
 ; IF-EVL: vector.ph:
-; IF-EVL-NEXT:  EMIT vp<[[RECUR_INIT:%[0-9]+]]> = insert-last-lane ir<poison>, ir<33>
+; IF-EVL-NEXT:  EMIT vp<[[RECUR_INIT:%.+]]> = insert-last-lane ir<poison>, ir<33>
 ; IF-EVL-NEXT:  EMIT-SCALAR vp<[[VF32:%[0-9]+]]> = trunc vp<[[VF]]> to i32
 ; IF-EVL-NEXT: Successor(s): vector loop
 ; IF-EVL-EMPTY:

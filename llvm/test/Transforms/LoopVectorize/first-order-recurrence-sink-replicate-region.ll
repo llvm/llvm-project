@@ -310,14 +310,14 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK:        pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%10> = ir<%lv.2>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%9> = ir<%lv.2>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT:   Successor(s): loop.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  loop.1:
 ; CHECK-NEXT:    WIDEN ir<%add.1> = add ir<%conv>, ir<%rem>
-; CHECK-NEXT:    WIDEN-CAST ir<%conv.lv.2> = sext vp<%10> to i32
+; CHECK-NEXT:    WIDEN-CAST ir<%conv.lv.2> = sext vp<%9> to i32
 ; CHECK-NEXT:    WIDEN ir<%add> = add ir<%add.1>, ir<%conv.lv.2>
 ; CHECK-NEXT:  Successor(s): pred.store
 ; CHECK-EMPTY:

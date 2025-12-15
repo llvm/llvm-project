@@ -710,7 +710,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Elt = State.get(getOperand(1), /*IsScalar=*/true);
     Value *RuntimeVF = getRuntimeVF(Builder, Builder.getInt32Ty(), State.VF);
     Value *LastIdx = Builder.CreateSub(RuntimeVF, Builder.getInt32(1));
-    return Builder.CreateInsertElement(Vec, Elt, LastIdx);
+    return Builder.CreateInsertElement(Vec, Elt, LastIdx, Name);
   }
   case VPInstruction::ReductionStartVector: {
     if (State.VF.isScalar())
