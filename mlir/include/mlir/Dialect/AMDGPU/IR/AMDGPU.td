@@ -1408,13 +1408,13 @@ class AMDGPU_MakeDescriptorOp<string mnemonic> :
 
 def AMDGPU_MakeGatherDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_gather_dma_descriptor"> {
   dag args = (ins AMDGPU_TDMGatherBaseType: $base,
-                  Optional<AnyTypeOf<[VectorOfMinMaxLengthAndType<1, 8, [I32]>,
-                                      VectorOfMinMaxLengthAndType<1, 16, [I16]>]>>: $indices);
+                  AnyTypeOf<[VectorOfMinMaxLengthAndType<1, 8, [I32]>,
+                             VectorOfMinMaxLengthAndType<1, 16, [I16]>]>: $indices);
   let arguments = !con(args, baseArgs);
   let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
 
   let assemblyFormat = [{
-    $base ( `[` $indices^ `]` )?
+    $base `[` $indices `]`
     `globalSize` custom<DynamicIndexList>($global_dynamic_sizes, $global_static_sizes)
     `globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
     `sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
@@ -1423,7 +1423,7 @@ def AMDGPU_MakeGatherDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_gather_dma_
     ( `atomicBarrier` `(` $atomic_barrier_address^ `[` $atomic_barrier_indices `]`
                       `:` type($atomic_barrier_address) `)`)?
     ( `iterate` $global_increment^ `,` $lds_increment `,` $iteration_count )?
-    attr-dict `:` qualified(type($base)) ( `,` type($indices)^ )? `->` type(results)
+    attr-dict `:` qualified(type($base)) `,` type($indices) `->` type(results)
   }];
 
   let hasVerifier = 1;

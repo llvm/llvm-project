@@ -881,36 +881,3 @@ func.func @make_gather_dma_descriptor(%base: !amdgpu.tdm_gather_base<i32, i16>, 
   func.return %descriptor : !amdgpu.tdm_descriptor
 }
 
-// -----
-
-// CHECK-LABEL: func @make_gather_dma_descriptor_no_indices
-// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_gather_base<i32, i16>)
-func.func @make_gather_dma_descriptor_no_indices(%base: !amdgpu.tdm_gather_base<i32, i16>) -> !amdgpu.tdm_descriptor {
-  // CHECK-DAG: %[[DGROUP0:.+]] = builtin.unrealized_conversion_cast %[[BASE]]
-
-  // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32)
-  // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32)
-  // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32)
-  // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32)
-  // CHECK-DAG: %[[C4:.+]] = llvm.mlir.constant(4 : i32)
-  // CHECK-DAG: %[[C5:.+]] = llvm.mlir.constant(5 : i32)
-  // CHECK-DAG: %[[C6:.+]] = llvm.mlir.constant(6 : i32)
-  // CHECK-DAG: %[[C7:.+]] = llvm.mlir.constant(7 : i32)
-
-  // CHECK: %[[V8I32:.+]] = llvm.mlir.poison : vector<8xi32>
-  // CHECK: %[[DGROUP1_0:.+]] = llvm.insertelement {{.*}}, %[[V8I32]][%[[C0]] : i32]
-  // CHECK: %[[DGROUP1_1:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_0]][%[[C1]] : i32]
-  // CHECK: %[[DGROUP1_2:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_1]][%[[C2]] : i32]
-  // CHECK: %[[DGROUP1_3:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_2]][%[[C3]] : i32]
-  // CHECK: %[[DGROUP1_4:.+]] = llvm.insertelement %[[C0]], %[[DGROUP1_3]][%[[C4]] : i32]
-  // CHECK: %[[DGROUP1_5:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_4]][%[[C5]] : i32]
-  // CHECK: %[[DGROUP1_6:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_5]][%[[C6]] : i32]
-  // CHECK: %[[DGROUP1:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_6]][%[[C7]] : i32]
-
-  // CHECK-DAG: %[[DGROUP2:.+]] = llvm.mlir.poison : vector<4xi32>
-  // CHECK-DAG: %[[DGROUP3:.+]] = llvm.mlir.poison : vector<4xi32>
-
-  // CHECK: %[[DGROUPS:.+]] = builtin.unrealized_conversion_cast %[[DGROUP0]], %[[DGROUP1]], %[[DGROUP2]], %[[DGROUP3]]
-  %descriptor = amdgpu.make_gather_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] : !amdgpu.tdm_gather_base<i32, i16> -> !amdgpu.tdm_descriptor
-  func.return %descriptor : !amdgpu.tdm_descriptor
-}

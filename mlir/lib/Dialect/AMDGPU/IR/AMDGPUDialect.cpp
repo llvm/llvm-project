@@ -914,12 +914,10 @@ LogicalResult MakeGatherDmaDescriptorOp::verify() {
     return emitOpError(
         "tensor and tile must be at most of rank two in gather mode.");
   Value indices = getIndices();
-  if (indices) {
-    Type elementType = cast<VectorType>(indices.getType()).getElementType();
-    if (elementType != getBase().getType().getIndexType())
-      return emitOpError(
-          "indices' element type must match base's element type.");
-  }
+  Type elementType = cast<VectorType>(indices.getType()).getElementType();
+  if (elementType != getBase().getType().getIndexType())
+    return emitOpError("indices' element type must match base's element type.");
+
   return verifyDescriptorOp(*this);
 }
 
