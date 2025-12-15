@@ -19,7 +19,8 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 64
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP2]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 510, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 510, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add i64 3, [[N_VEC]]
@@ -28,29 +29,19 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 4
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP27:%.*]] = shl nuw i64 [[TMP11]], 5
+; CHECK-NEXT:    [[TMP27:%.*]] = mul nuw nsw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP15:%.*]] = mul nuw nsw i64 [[TMP4]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP27]]
-; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP15:%.*]] = mul nuw i64 [[TMP14]], 48
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 16 x i8>, ptr [[TMP10]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 16 x i8>, ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 16 x i8>, ptr [[TMP28]], align 1
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP19:%.*]] = shl nuw i64 [[TMP18]], 4
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP29]], i64 [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP22:%.*]] = shl nuw i64 [[TMP21]], 5
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[TMP29]], i64 [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP25:%.*]] = mul nuw i64 [[TMP24]], 48
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[TMP29]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP29]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[TMP29]], i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[TMP29]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 16 x i8>, ptr [[TMP29]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 16 x i8>, ptr [[TMP20]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <vscale x 16 x i8>, ptr [[TMP23]], align 1

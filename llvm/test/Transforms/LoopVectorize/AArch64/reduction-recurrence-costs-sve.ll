@@ -294,7 +294,8 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 8
+; DEFAULT-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP3]], 4
+; DEFAULT-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP5]], 2
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[X]], i64 0
@@ -305,9 +306,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP17:%.*]] = shl nuw i64 [[TMP16]], 2
-; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr i16, ptr [[TMP13]], i64 [[TMP17]]
+; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr i16, ptr [[TMP13]], i64 [[TMP5]]
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP13]], align 2
 ; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i16>, ptr [[TMP18]], align 2
 ; DEFAULT-NEXT:    [[TMP19:%.*]] = udiv <vscale x 4 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
@@ -355,7 +354,8 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; VSCALEFORTUNING2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VSCALEFORTUNING2:       [[VECTOR_PH]]:
 ; VSCALEFORTUNING2-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; VSCALEFORTUNING2-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 8
+; VSCALEFORTUNING2-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP3]], 4
+; VSCALEFORTUNING2-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP7]], 2
 ; VSCALEFORTUNING2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
 ; VSCALEFORTUNING2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[X]], i64 0
@@ -366,9 +366,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; VSCALEFORTUNING2-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
 ; VSCALEFORTUNING2-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
 ; VSCALEFORTUNING2-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
-; VSCALEFORTUNING2-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; VSCALEFORTUNING2-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 2
-; VSCALEFORTUNING2-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[TMP8]], i64 [[TMP11]]
+; VSCALEFORTUNING2-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[TMP8]], i64 [[TMP7]]
 ; VSCALEFORTUNING2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP8]], align 2
 ; VSCALEFORTUNING2-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i16>, ptr [[TMP12]], align 2
 ; VSCALEFORTUNING2-NEXT:    [[TMP13:%.*]] = udiv <vscale x 4 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
