@@ -436,11 +436,18 @@ define <4 x i16> @nonconst_indexes(i1 %cond, i32 %otheridx, <4 x i16> %store) #0
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX_1]], 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i16> [[STORE]], i64 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i16> [[TMP7]], i16 [[TMP9]], i32 [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <16 x i16> [[TMP10]] to <4 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = udiv i32 [[INDEX_2]], 4
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP11]], i32 [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP13]] to <4 x i16>
-; CHECK-NEXT:    ret <4 x i16> [[TMP14]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i16> [[TMP10]], i32 [[INDEX_2]]
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i16> poison, i16 [[TMP11]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[INDEX_2]], 1
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <16 x i16> [[TMP10]], i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i16> [[TMP12]], i16 [[TMP14]], i64 1
+; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[INDEX_2]], 2
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <16 x i16> [[TMP10]], i32 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i16> [[TMP15]], i16 [[TMP17]], i64 2
+; CHECK-NEXT:    [[TMP19:%.*]] = add i32 [[INDEX_2]], 3
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <16 x i16> [[TMP10]], i32 [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i16> [[TMP18]], i16 [[TMP20]], i64 3
+; CHECK-NEXT:    ret <4 x i16> [[TMP21]]
 ;
 entry:
   %data = alloca [16 x i16], addrspace(5)
