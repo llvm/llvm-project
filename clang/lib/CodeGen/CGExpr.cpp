@@ -2677,8 +2677,13 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         MB.CreateIndexAssumption(Idx, MatTy->getNumElementsFlattened());
       }
       llvm::Instruction *Load = Builder.CreateLoad(Dst.getMatrixAddress());
+      llvm::Value *InsertVal = Src.getScalarVal();
+      if (getLangOpts().HLSL && InsertVal->getType()->isIntegerTy(1)) {
+        llvm::Type *StorageElmTy = Load->getType()->getScalarType();
+        InsertVal = Builder.CreateZExt(InsertVal, StorageElmTy);
+      }
       llvm::Value *Vec =
-          Builder.CreateInsertElement(Load, Src.getScalarVal(), Idx, "matins");
+          Builder.CreateInsertElement(Load, InsertVal, Idx, "matins");
       auto *I = Builder.CreateStore(Vec, Dst.getMatrixAddress(),
                                     Dst.isVolatileQualified());
       addInstToCurrentSourceAtom(I, Vec);
