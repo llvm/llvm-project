@@ -822,9 +822,8 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
     // avoids interfering with descriptor-based flows such as fir.box /
     // fir.box_addr and keeps this pattern focused on value conversions.
     if (mlir::isa<mlir::MemRefType>(fromFirTy) ||
-        mlir::isa<mlir::MemRefType>(toFirTy)) {
+        mlir::isa<mlir::MemRefType>(toFirTy))
       return mlir::failure();
-    }
 
     auto fromTy = convertType(fromFirTy);
     auto toTy = convertType(toFirTy);
