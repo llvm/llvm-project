@@ -206,8 +206,7 @@ Error BTFParser::parseTypesInfo(ParseContext &Ctx, uint64_t TypesInfoStart,
                                 StringRef RawData) {
   using support::endian::byte_swap;
 
-  auto RawDataAsBytes = arrayRefFromStringRef(RawData);
-  TypesBuffer.assign(RawDataAsBytes.begin(), RawDataAsBytes.end());
+  TypesBuffer.assign(arrayRefFromStringRef(RawData));
   // Switch endianness if necessary.
   endianness Endianness = Ctx.Obj.isLittleEndian() ? llvm::endianness::little
                                                    : llvm::endianness::big;
