@@ -257,6 +257,7 @@ public:
     return error_unlocked();
   }
 
+  // TODO: https://github.com/llvm/llvm-project/issues/172302
   // MacOS defines clearerr_unlocked as a macro. While pre-processing, the
   // identifier below is substituted for the definition in the SDK, which leads
   // to compile time errors due to ill-formed statements. This is a workaround
