@@ -23,6 +23,7 @@ add_clang_library(clangCIR
   CIRGenDecl.cpp
   CIRGenDeclCXX.cpp
   CIRGenDeclOpenACC.cpp
+  CIRGenDeclOpenMP.cpp
   CIRGenException.cpp
   CIRGenExpr.cpp
   CIRGenExprAggregate.cpp
@@ -41,6 +42,7 @@ add_clang_library(clangCIR
   CIRGenStmt.cpp
   CIRGenStmtOpenACC.cpp
   CIRGenStmtOpenACCLoop.cpp
+  CIRGenStmtOpenMP.cpp
   CIRGenTypes.cpp
   CIRGenVTables.cpp
   TargetInfo.cpp
