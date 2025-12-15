@@ -233,9 +233,9 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // Emit ENTRY statement only if not implied by CSECT.
   bool EmitEntry = true;
   if (!Sym->isTemporary() && Sym->isInEDSection()) {
-    EmitEntry = Sym->getName() != static_cast<MCSectionGOFF &>(Sym->getSection())
-                                 .getParent()
-                                 ->getName();
+    EmitEntry =
+        Sym->getName() !=
+        static_cast<MCSectionGOFF &>(Sym->getSection()).getParent()->getName();
     if (EmitEntry) {
       OS << " ENTRY " << Sym->getName();
       EmitEOL();
