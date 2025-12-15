@@ -1,3 +1,4 @@
+#include "Annotations.h"
 #include "CompileCommands.h"
 #include "Config.h"
 #include "Headers.h"
@@ -231,6 +232,55 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
                        fileURI("unittest:///root/B.cc"),
                        fileURI("unittest:///root/B.cc"),
                        fileURI("unittest:///root/B.cc")}));
+}
+
+TEST_F(BackgroundIndexTest, ConstructorForwarding) {
+  Annotations Header(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+    struct Test {
+      [[Test]](){}
+    };
+  )cpp");
+  Annotations Main(R"cpp(
+    #include "header.hpp"
+    int main() {
+      auto a = std::[[make_unique]]<Test>();
+    }
+  )cpp");
+
+  MockFS FS;
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  OverlayCDB CDB(/*Base=*/nullptr);
+  BackgroundIndex::Options Opts;
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+
+  FS.Files[testPath("root/header.hpp")] = Header.code();
+  FS.Files[testPath("root/test.cpp")] = Main.code();
+
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = testPath("root/test.cpp");
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", testPath("root/test.cpp")};
+  CDB.setCompileCommand(testPath("root/test.cpp"), Cmd);
+
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+
+  auto Syms = runFuzzyFind(Idx, "Test");
+  auto Constructor =
+      std::find_if(Syms.begin(), Syms.end(), [](const Symbol &S) {
+        return S.SymInfo.Kind == index::SymbolKind::Constructor;
+      });
+  ASSERT_TRUE(Constructor != Syms.end());
+  EXPECT_THAT(getRefs(Idx, Constructor->ID),
+              refsAre({fileURI("unittest:///root/header.hpp"),
+                       fileURI("unittest:///root/test.cpp")}));
 }
 
 TEST_F(BackgroundIndexTest, MainFileRefs) {
