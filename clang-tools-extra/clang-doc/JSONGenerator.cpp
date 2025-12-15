@@ -378,8 +378,15 @@ static void serializeInfo(const ArrayRef<TemplateParamInfo> &Params,
   json::Value ParamsArray = Array();
   auto &ParamsArrayRef = *ParamsArray.getAsArray();
   ParamsArrayRef.reserve(Params.size());
-  for (const auto &Param : Params)
-    ParamsArrayRef.push_back(Param.Contents);
+  for (size_t Idx = 0; Idx < Params.size(); ++Idx) {
+    json::Value ParamObjVal = Object();
+    Object &ParamObj = *ParamObjVal.getAsObject();
+
+    ParamObj["Param"] = Params[Idx].Contents;
+    if (Idx == Params.size() - 1)
+      ParamObj["End"] = true;
+    ParamsArrayRef.push_back(ParamObjVal);
+  }
   Obj["Parameters"] = ParamsArray;
 }
 
@@ -622,8 +629,10 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     serializeInfo(Info, Object, RepositoryUrl);
   };
 
-  if (!I.Children.Functions.empty())
+  if (!I.Children.Functions.empty()) {
     serializeArray(I.Children.Functions, Obj, "Functions", SerializeInfo);
+    Obj["HasFunctions"] = true;
+  }
 
   if (!I.Children.Concepts.empty())
     serializeArray(I.Children.Concepts, Obj, "Concepts", SerializeInfo);
