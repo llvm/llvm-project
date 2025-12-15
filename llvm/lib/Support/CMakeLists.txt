@@ -397,7 +397,7 @@ target_include_directories(LLVMSupport
 )
 
 # Integrating LLVM libc's math functions
-target_include_directories(LLVMSupport PRIVATE "${LLVM_INCLUDE_DIR}/../../libc")
+target_include_directories(LLVMSupport PRIVATE "${LLVM_SOURCE_DIR}/../libc")
 if(NOT MSVC)
   target_compile_options(LLVMSupport PRIVATE "-Wno-c99-extensions") # _Complex warnings.
 endif()
