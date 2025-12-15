@@ -430,7 +430,8 @@ dependencies::createCompilerInvocation(ArrayRef<std::string> CommandLine,
   return Invocation;
 }
 
-std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
 dependencies::initVFSForTUBufferScanning(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
     ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
@@ -438,7 +439,6 @@ dependencies::initVFSForTUBufferScanning(
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> ModifiedFS;
   auto OverlayFS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
@@ -449,11 +449,10 @@ dependencies::initVFSForTUBufferScanning(
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
 
   OverlayFS->pushOverlay(InMemoryOverlay);
-  ModifiedFS = OverlayFS;
   std::vector<std::string> ModifiedCommandLine(CommandLine);
   ModifiedCommandLine.emplace_back(InputPath);
 
-  return std::make_pair(ModifiedFS, ModifiedCommandLine);
+  return std::make_pair(OverlayFS, ModifiedCommandLine);
 }
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,

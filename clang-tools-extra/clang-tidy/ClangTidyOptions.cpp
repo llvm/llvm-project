@@ -232,6 +232,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("CheckOptions", Options.CheckOptions);
     IO.mapOptional("ExtraArgs", Options.ExtraArgs);
     IO.mapOptional("ExtraArgsBefore", Options.ExtraArgsBefore);
+    IO.mapOptional("RemovedArgs", Options.RemovedArgs);
     IO.mapOptional("InheritParentConfig", Options.InheritParentConfig);
     IO.mapOptional("UseColor", Options.UseColor);
     IO.mapOptional("SystemHeaders", Options.SystemHeaders);
@@ -254,6 +255,7 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
   Options.User = std::nullopt;
+  Options.RemovedArgs = std::nullopt;
   for (const ClangTidyModuleRegistry::entry &Module :
        ClangTidyModuleRegistry::entries())
     Options.mergeWith(Module.instantiate()->getModuleOptions(), 0);
@@ -297,6 +299,7 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(UseColor, Other.UseColor);
   mergeVectors(ExtraArgs, Other.ExtraArgs);
   mergeVectors(ExtraArgsBefore, Other.ExtraArgsBefore);
+  mergeVectors(RemovedArgs, Other.RemovedArgs);
   // FIXME: how to handle duplicate names check?
   mergeVectors(CustomChecks, Other.CustomChecks);
   for (const auto &KeyValue : Other.CheckOptions) {

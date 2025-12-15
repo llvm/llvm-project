@@ -229,6 +229,13 @@ def main():
         help="Additional argument to prepend to the compiler " "command line.",
     )
     parser.add_argument(
+        "-removed-arg",
+        dest="removed_arg",
+        action="append",
+        default=[],
+        help="Arguments to remove from the compiler command line.",
+    )
+    parser.add_argument(
         "-quiet",
         action="store_true",
         default=False,
@@ -378,6 +385,8 @@ def main():
         common_clang_tidy_args.append("-extra-arg=%s" % arg)
     for arg in args.extra_arg_before:
         common_clang_tidy_args.append("-extra-arg-before=%s" % arg)
+    for arg in args.removed_arg:
+        common_clang_tidy_args.append("-removed-arg=%s" % arg)
     for plugin in args.plugins:
         common_clang_tidy_args.append("-load=%s" % plugin)
     if args.warnings_as_errors:

@@ -31,7 +31,7 @@ static llvm::StringRef extractNextGlob(StringRef &GlobList) {
 }
 
 static llvm::Regex createRegexFromGlob(StringRef &Glob) {
-  SmallString<128> RegexText("^");
+  llvm::SmallString<128> RegexText("^");
   const StringRef MetaChars("()^$|*+?.[]\\{}");
   for (const char C : Glob) {
     if (C == '*')
