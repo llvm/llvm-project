@@ -5,9 +5,8 @@ define float @select_oeq_fmul_fabs_or_fabs_src(float %x) {
 ; CHECK-LABEL: define float @select_oeq_fmul_fabs_or_fabs_src(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[MUL_FABS_X:%.*]] = fmul float [[FABS_X]], 0x4170000000000000
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_ZERO]], float [[MUL_FABS_X]], float [[FABS_X]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_ZERO]], float 0.000000e+00, float [[FABS_X]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
@@ -21,9 +20,8 @@ define float @select_oeq_fmul_fabs_or_fabs_src_cmp_neg0(float %x) {
 ; CHECK-LABEL: define float @select_oeq_fmul_fabs_or_fabs_src_cmp_neg0(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[MUL_FABS_X:%.*]] = fmul float [[FABS_X]], 0x4170000000000000
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_ZERO]], float [[MUL_FABS_X]], float [[FABS_X]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_ZERO]], float 0.000000e+00, float [[FABS_X]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
@@ -37,9 +35,8 @@ define float @select_oeq_fdiv_fabs_or_fabs_src(float %x) {
 ; CHECK-LABEL: define float @select_oeq_fdiv_fabs_or_fabs_src(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[MUL_FABS_X:%.*]] = fmul float [[FABS_X]], 0x3E70000000000000
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_ZERO]], float [[MUL_FABS_X]], float [[FABS_X]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_ZERO]], float 0.000000e+00, float [[FABS_X]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
@@ -169,10 +166,8 @@ define float @select_olt_fmul_fabs_or_fabs_src(float %x) {
 define float @select_fmul_fabs_or_src(float %x) {
 ; CHECK-LABEL: define float @select_fmul_fabs_or_src(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[MUL_FABS_X:%.*]] = fmul float [[FABS_X]], 0x4170000000000000
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_ZERO]], float [[MUL_FABS_X]], float [[X]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_ZERO]], float 0.000000e+00, float [[X]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
@@ -285,9 +280,8 @@ define float @select_une_fmul_fabs_or_fabs_src(float %x) {
 ; CHECK-LABEL: define float @select_une_fmul_fabs_or_fabs_src(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[MUL_FABS_X:%.*]] = fmul float [[FABS_X]], 0x4170000000000000
 ; CHECK-NEXT:    [[X_IS_NOT_ZERO:%.*]] = fcmp une float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_NOT_ZERO]], float [[FABS_X]], float [[MUL_FABS_X]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_NOT_ZERO]], float [[FABS_X]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
@@ -440,9 +434,8 @@ define <2 x float> @select_oeq_fmul_fabs_or_fabs_src_vector(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @select_oeq_fmul_fabs_or_fabs_src_vector(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    [[MUL_FABS_X:%.*]] = fmul <2 x float> [[FABS_X]], <float 2.000000e+01, float 4.000000e+01>
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq <2 x float> [[X]], zeroinitializer
-; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[X_IS_ZERO]], <2 x float> [[MUL_FABS_X]], <2 x float> [[FABS_X]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[X_IS_ZERO]], <2 x float> zeroinitializer, <2 x float> [[FABS_X]]
 ; CHECK-NEXT:    ret <2 x float> [[SELECT]]
 ;
   %fabs.x = call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
@@ -456,9 +449,8 @@ define <3 x float> @select_oeq_fmul_fabs_or_fabs_src_vector_mixed_sign_zero(<3 x
 ; CHECK-LABEL: define <3 x float> @select_oeq_fmul_fabs_or_fabs_src_vector_mixed_sign_zero(
 ; CHECK-SAME: <3 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call <3 x float> @llvm.fabs.v3f32(<3 x float> [[X]])
-; CHECK-NEXT:    [[MUL_FABS_X:%.*]] = fmul <3 x float> [[FABS_X]], splat (float 0x4170000000000000)
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq <3 x float> [[X]], zeroinitializer
-; CHECK-NEXT:    [[SELECT:%.*]] = select <3 x i1> [[X_IS_ZERO]], <3 x float> [[MUL_FABS_X]], <3 x float> [[FABS_X]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select <3 x i1> [[X_IS_ZERO]], <3 x float> zeroinitializer, <3 x float> [[FABS_X]]
 ; CHECK-NEXT:    ret <3 x float> [[SELECT]]
 ;
   %fabs.x = call <3 x float> @llvm.fabs.v3f32(<3 x float> %x)
