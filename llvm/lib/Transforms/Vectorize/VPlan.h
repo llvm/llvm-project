@@ -1967,10 +1967,8 @@ protected:
 };
 
 /// A recipe to compute the pointers for widened memory accesses of \p
-/// SourceElementTy. The recipe has one operand prior to unrolling, \p Ptr.
-/// After unrolling, it has an extra operand which can be queried using \p
-/// getOffset, and it produces `GEP Ptr, Offset` with flags \p GEPFlags, when
-/// executed. The recipe is a no-op when no unrolling is in effect (IC = 1).
+/// SourceElementTy. Unrolling adds an extra offset operand for unrolled parts >
+/// 0 and it produces `GEP Ptr, Offset`. The offset for unrolled part 0 is 0.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 

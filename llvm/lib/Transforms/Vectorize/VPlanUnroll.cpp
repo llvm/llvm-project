@@ -305,6 +305,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Type *VFTy = TypeInfo.inferScalarType(&Plan.getVF());
       VPValue *VF = Builder.createScalarZExtOrTrunc(
           &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
+      // VFxUF does not wrap, so VF * Part also cannot wrap.
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
           {true, true});
