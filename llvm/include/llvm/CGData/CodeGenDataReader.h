@@ -16,6 +16,7 @@
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/CGData/StableFunctionMapRecord.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -98,6 +99,8 @@ protected:
   /// Clear the current error and return a successful one.
   Error success() { return error(cgdata_error::success); }
 };
+
+LLVM_ABI extern cl::opt<bool> IndexedCodeGenDataLazyLoading;
 
 class LLVM_ABI IndexedCodeGenDataReader : public CodeGenDataReader {
   /// The codegen data file contents.
