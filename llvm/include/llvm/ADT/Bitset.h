@@ -110,10 +110,10 @@ public:
   constexpr size_t size() const { return NumBits; }
 
   constexpr bool any() const {
-    for (unsigned I = 0; I < NumWords - 1; ++I)
-      if (Bits[I] != 0)
+    for (BitWord Word : Bits)
+      if (Word != 0)
         return true;
-    return (Bits[NumWords - 1] & RemainderMask) != 0;
+    return false;
   }
 
   constexpr bool none() const { return !any(); }
@@ -123,14 +123,13 @@ public:
     for (unsigned I = 0; I < NumWords - 1; ++I)
       if (Bits[I] != AllOnes)
         return false;
-    return (Bits[NumWords - 1] & RemainderMask) == RemainderMask;
+    return Bits[NumWords - 1] == RemainderMask;
   }
 
   constexpr size_t count() const {
     size_t Count = 0;
-    for (unsigned I = 0; I < NumWords - 1; ++I)
-      Count += popcount(Bits[I]);
-    Count += popcount(Bits[NumWords - 1] & RemainderMask);
+    for (BitWord Word : Bits)
+      Count += popcount(Word);
     return Count;
   }
 
@@ -171,18 +170,17 @@ public:
 
   constexpr Bitset operator~() const {
     Bitset Result = *this;
-    for (auto &B : Result.Bits)
+    for (BitWord &B : Result.Bits)
       B = ~B;
     Result.maskLastWord();
     return Result;
   }
 
   constexpr bool operator==(const Bitset &RHS) const {
-    for (unsigned I = 0; I < NumWords - 1; ++I)
+    for (unsigned I = 0; I < NumWords; ++I)
       if (Bits[I] != RHS.Bits[I])
         return false;
-    return (Bits[NumWords - 1] & RemainderMask) ==
-           (RHS.Bits[NumWords - 1] & RemainderMask);
+    return true;
   }
 
   constexpr bool operator!=(const Bitset &RHS) const { return !(*this == RHS); }
@@ -248,7 +246,6 @@ public:
     }
     for (unsigned I = NumWords - WordShift; I < NumWords; ++I)
       Bits[I] = 0;
-    maskLastWord();
     return *this;
   }
 
