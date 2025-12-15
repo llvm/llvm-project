@@ -2311,12 +2311,12 @@ struct AMDGPUMakeDmaBaseLowering : public ConvertOpToLLVMPattern<BaseOp> {
 
     constexpr int32_t constlen = 4;
     Value consts[constlen];
-    for (int64_t i = 0; i < constlen; i++)
+    for (int64_t i = 0; i < constlen; ++i)
       consts[i] = createI32Constant(rewriter, loc, i);
 
     constexpr int32_t sgprslen = constlen;
     Value sgprs[sgprslen];
-    for (int64_t i = 0; i < sgprslen; i++) {
+    for (int64_t i = 0; i < sgprslen; ++i) {
       sgprs[i] = consts[0];
     }
 
@@ -2720,7 +2720,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
     Value sgprs[8];
-    for (int64_t i = 0; i < 8; i++) {
+    for (int64_t i = 0; i < 8; ++i) {
       sgprs[i] = consts[0];
     }
 
@@ -2909,7 +2909,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
 
     constexpr int64_t sgprlen = 4;
     Value sgprs[sgprlen];
-    for (int i = 0; i < sgprlen; i++)
+    for (int i = 0; i < sgprlen; ++i)
       sgprs[i] = consts[0];
 
     sgprs[0] = setTensorDim2(op, adaptor, rewriter, loc, sgprs[0], consts);
@@ -2947,7 +2947,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     unsigned targetSize = std::min(maxLength, discountedLength);
 
     SmallVector<Value> indicesVector;
-    for (unsigned i = offset; i < targetSize + offset; i++) {
+    for (unsigned i = offset; i < targetSize + offset; ++i) {
       Value idx;
       if (i < consts.size())
         idx = consts[i];
@@ -2961,7 +2961,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     if (elementType == i32) {
       indicesI32Vector = indicesVector;
     } else {
-      for (unsigned i = 0; i < targetSize; i++) {
+      for (unsigned i = 0; i < targetSize; ++i) {
         Value index = indicesVector[i];
         indicesI32Vector.push_back(
             LLVM::ZExtOp::create(rewriter, loc, i32, index));
@@ -2976,7 +2976,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
       indicesToInsert = indicesI32Vector;
     } else {
       unsigned size = indicesI32Vector.size() / 2;
-      for (unsigned i = 0; i < size; i++) {
+      for (unsigned i = 0; i < size; ++i) {
         Value first = indicesI32Vector[2 * i];
         Value second = indicesI32Vector[2 * i + 1];
         Value joined = setValueAtOffset(rewriter, loc, first, second, 16);
@@ -3046,7 +3046,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
 
     constexpr int32_t sgprlen = 4;
     Value sgprs[sgprlen];
-    for (int i = 0; i < sgprlen; i++)
+    for (int i = 0; i < sgprlen; ++i)
       sgprs[i] = consts[0];
 
     std::tie(sgprs[0], sgprs[1]) = setTensorDim3Stride(
@@ -3084,7 +3084,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     assert(v4i32 && "expected type conversion to succeed");
 
     SmallVector<Value> consts;
-    for (int64_t i = 0; i < 8; i++)
+    for (int64_t i = 0; i < 8; ++i)
       consts.push_back(createI32Constant(rewriter, loc, i));
 
     Value dgroup0 = this->getDGroup0(adaptor);
