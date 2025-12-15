@@ -2,8 +2,7 @@
 
 # JITLink is the Orc-specific JIT linker implementation.
 #
-# RUN: %clangxx -g -S -emit-llvm -fPIC \
-# RUN:          -o %t.ll %p/Inputs/jitbp.cpp
+# RUN: %clangxx_host -g -S -emit-llvm -o %t.ll %p/Inputs/jitbp.cpp
 # RUN: %lldb -b -o 'settings set plugin.jit-loader.gdb.enable on' -o 'b jitbp' \
 # RUN:          -o 'run --jit-linker=jitlink %t.ll' lli | FileCheck %s
 
