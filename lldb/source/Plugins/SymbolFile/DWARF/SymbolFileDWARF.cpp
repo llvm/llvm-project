@@ -2007,18 +2007,21 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
     dwo_module_spec.GetArchitecture() =
         m_objfile_sp->GetModule()->GetArchitecture();
 
-    // Try load from CAS, if loaded, continue to next one.
-    auto loaded = ModuleList::GetSharedModuleFromCAS(
-        const_name, dwo_path, GetObjectFile()->GetFileSpec(), dwo_module_spec,
-        module_sp);
-    if (!loaded)
-      GetObjectFile()->GetModule()->ReportWarning(
-          "Failed to load module '{0}' from CAS: {1}", const_name,
-          toString(loaded.takeError()));
-
-    // succeed, loaded next module.
-    if (*loaded)
-      continue;
+    // BEGIN CAS
+    if (!FileSystem::Instance().Exists(dwo_path)) {
+      LLDB_LOG(GetLog(LLDBLog::Symbols | LLDBLog::Modules),
+               "Loading module '{0}' from CAS at {1}...", const_name, dwo_path);
+      auto loaded = ModuleList::GetSharedModuleFromCAS(
+          dwo_path, GetObjectFile()->GetModule(), dwo_module_spec, module_sp);
+      if (!loaded)
+        GetObjectFile()->GetModule()->ReportWarning(
+            "Failed to load module '{0}' from CAS: {1}", const_name,
+            toString(loaded.takeError()));
+      else if (*loaded)
+        // Succeed, load next module.
+        continue;
+    }
+    // END CAS
 
     dwo_module_spec.GetFileSpec().SetFile(dwo_path, FileSpec::Style::native);
     if (dwo_module_spec.GetFileSpec().IsRelative()) {

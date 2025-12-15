@@ -1,4 +1,5 @@
 add_lldb_library(lldbPluginTypeSystemSwift PLUGIN
+  LLDBExplicitModuleLoader.cpp
   SwiftDWARFImporterForClangTypes.cpp
   TypeSystemSwift.cpp
   TypeSystemSwiftTypeRef.cpp

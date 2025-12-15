@@ -22,7 +22,6 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/CAS/CASConfiguration.h"
 #include "llvm/Support/RWMutex.h"
 
 #include <functional>
@@ -32,6 +31,14 @@
 
 #include <cstddef>
 #include <cstdint>
+
+namespace llvm {
+namespace cas {
+class CASConfiguration;
+class ObjectStore;
+class ActionCache;
+} // namespace cas
+} // namespace llvm
 
 namespace lldb_private {
 class ConstString;
@@ -106,6 +113,7 @@ public:
   // START CAS
   /// Get CASPath set via properties.
   FileSpec GetCASOnDiskPath() const;
+  bool SetCASOnDiskPath(const FileSpec &);
 
   /// Get CASPluginPath set via properties.
   FileSpec GetCASPluginPath() const;
@@ -538,10 +546,14 @@ public:
 
   // START CAS
 
-  /// Get CAS configuration using global module properties or from candidate
-  /// search path.
-  static std::optional<llvm::cas::CASConfiguration>
-  GetCASConfiguration(FileSpec CandidateConfigSearchPath);
+  struct CAS {
+    std::shared_ptr<llvm::cas::CASConfiguration> configuration;
+    std::shared_ptr<llvm::cas::ObjectStore> object_store;
+    std::shared_ptr<llvm::cas::ActionCache> action_cache;
+  };
+  /// Search for a CAS configuration file near this module. This
+  /// operation does a lot of file system stat calls.
+  static llvm::Expected<CAS> GetOrCreateCAS(const lldb::ModuleSP &module_sp);
 
   /// Gets the shared module from CAS. It works the same as `GetSharedModule`
   /// but the lookup is done inside the CAS.
@@ -550,11 +562,9 @@ public:
   ///    true if module is successfully loaded, false if module is not found
   ///    in the CAS, error if there are any errors happened during the loading
   ///    process.
-  static llvm::Expected<bool> GetSharedModuleFromCAS(ConstString module_name,
-                                                     llvm::StringRef cas_id,
-                                                     FileSpec cu_path,
-                                                     ModuleSpec &module_spec,
-                                                     lldb::ModuleSP &module_sp);
+  static llvm::Expected<bool>
+  GetSharedModuleFromCAS(llvm::StringRef cas_id, const lldb::ModuleSP &nearby,
+                         ModuleSpec &module_spec, lldb::ModuleSP &module_sp);
   // END CAS
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
