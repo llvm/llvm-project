@@ -1496,7 +1496,7 @@ add x0, x27, 1
 # CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .   ..   ld1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
+# CHECK:      [0,0]     DeeeeeeER .    ..   ld1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
 # CHECK-NEXT: [0,1]     .DeE----R .    ..   add	x0, x27, #1
 # CHECK-NEXT: [0,2]     . DeeeeeeER    ..   ld1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
 # CHECK-NEXT: [0,3]     .  DeE----R    ..   add	x0, x27, #1
@@ -1542,7 +1542,7 @@ add x0, x27, 1
 # CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .   ..   ld1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeER .    ..   ld1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE----R .    ..   add	x0, x27, #1
 # CHECK-NEXT: [0,2]     . DeeeeeeER    ..   ld1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
 # CHECK-NEXT: [0,3]     .  DeE----R    ..   add	x0, x27, #1
@@ -1864,7 +1864,7 @@ add x0, x27, 1
 # CHECK-NEXT:                     01234567
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.  .   .   ld1	{ v1.d }[0], [x27], x28
+# CHECK:      [0,0]     DeeeeeeeER.    . .   ld1	{ v1.d }[0], [x27], x28
 # CHECK-NEXT: [0,1]     .DeE-----R.    . .   add	x0, x27, #1
 # CHECK-NEXT: [0,2]     . DeeeeeeeER   . .   ld1r	{ v1.1d }, [x27], #8
 # CHECK-NEXT: [0,3]     .  DeE-----R   . .   add	x0, x27, #1
@@ -1910,7 +1910,7 @@ add x0, x27, 1
 # CHECK-NEXT:                     01234567
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.  .   .   ld1r	{ v1.4s }, [x27], #4
+# CHECK:      [0,0]     DeeeeeeeER.    . .   ld1r	{ v1.4s }, [x27], #4
 # CHECK-NEXT: [0,1]     .DeE-----R.    . .   add	x0, x27, #1
 # CHECK-NEXT: [0,2]     . DeeeeeeeER   . .   ld1r	{ v1.8b }, [x27], #1
 # CHECK-NEXT: [0,3]     .  DeE-----R   . .   add	x0, x27, #1
@@ -1956,7 +1956,7 @@ add x0, x27, 1
 # CHECK-NEXT:                     01234567
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.  .   .   ld1r	{ v1.2d }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeER.    . .   ld1r	{ v1.2d }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE-----R.    . .   add	x0, x27, #1
 # CHECK-NEXT: [0,2]     . DeeeeeeeER   . .   ld1r	{ v1.2s }, [x27], x28
 # CHECK-NEXT: [0,3]     .  DeE-----R   . .   add	x0, x27, #1

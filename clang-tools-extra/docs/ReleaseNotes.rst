@@ -135,6 +135,8 @@ Objective-C
 Miscellaneous
 ^^^^^^^^^^^^^
 
+- Add wildcard ``.gitignore`` file to the clangd index directory.
+
 Improvements to clang-doc
 -------------------------
 
