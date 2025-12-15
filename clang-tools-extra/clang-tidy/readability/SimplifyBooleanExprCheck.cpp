@@ -745,8 +745,6 @@ void SimplifyBooleanExprCheck::replaceWithElseStatement(
             IfStatement->getSourceRange(), Replacement);
 }
 
-
-
 void SimplifyBooleanExprCheck::replaceWithCondition(
     const ASTContext &Context, const ConditionalOperator *Ternary,
     bool Negated) {
