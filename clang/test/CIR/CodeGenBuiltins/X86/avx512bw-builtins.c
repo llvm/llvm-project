@@ -768,3 +768,42 @@ unsigned char test_ktestz_mask64_u8(__mmask64 A, __mmask64 B) {
   return _ktestz_mask64_u8(A, B);
 }
 
+
+
+__m512i test_mm512_movm_epi16(__mmask32 __A) {
+  // CIR-LABEL: _mm512_movm_epi16
+  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u32i -> !cir.vector<!cir.int<s, 1> x 32>
+  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<!cir.int<s, 1> x 32> -> !cir.vector<!s16i x 32>
+  // LLVM-LABEL: @test_mm512_movm_epi16
+  // LLVM:  %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVM:  %{{.*}} = sext <32 x i1> %{{.*}} to <32 x i16>
+  return _mm512_movm_epi16(__A); 
+}
+
+__mmask64 test_mm512_movepi8_mask(__m512i __A) {
+  // CIR-LABEL: @_mm512_movepi8_mask
+  // CIR: %{{.*}} = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<{{!s8i|!u8i}} x 64>, !cir.vector<!cir.int<u, 1> x 64>
+
+  // LLVM-LABEL: @test_mm512_movepi8_mask
+  // LLVM: [[CMP:%.*]] = icmp slt <64 x i8> %{{.*}}, zeroinitializer
+
+  // In the unsigned case below, the canonicalizer proves the comparison is
+  // always false (no i8 unsigned value can be < 0) and folds it away.
+  // LLVM-UNSIGNED-CHAR: store i64 0, ptr %{{.*}}, align 8
+  
+  // OGCG-LABEL: @test_mm512_movepi8_mask
+  // OGCG: [[CMP:%.*]] = icmp slt <64 x i8> %{{.*}}, zeroinitializer
+  return _mm512_movepi8_mask(__A); 
+}
+
+__mmask32 test_mm512_movepi16_mask(__m512i __A) {
+  // CIR-LABEL: @_mm512_movepi16_mask
+  // CIR: %{{.*}} = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<!s16i x 32>, !cir.vector<!cir.int<u, 1> x 32>
+
+  // LLVM-LABEL: @test_mm512_movepi16_mask
+  // LLVM: [[CMP:%.*]] = icmp slt <32 x i16> %{{.*}}, zeroinitializer
+
+  // OGCG-LABEL: @test_mm512_movepi16_mask
+  // OGCG: [[CMP:%.*]] = icmp slt <32 x i16> %{{.*}}, zeroinitializer
+  return _mm512_movepi16_mask(__A); 
+}
