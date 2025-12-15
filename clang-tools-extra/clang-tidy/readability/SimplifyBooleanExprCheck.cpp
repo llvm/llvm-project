@@ -721,9 +721,10 @@ void SimplifyBooleanExprCheck::replaceWithThenStatement(
     const ASTContext &Context, const IfStmt *IfStatement,
     const Expr *BoolLiteral) {
   // Added .str() below
-  std::string Replacement = getText(Context, *IfStatement->getThen()).str(); 
+  std::string Replacement = getText(Context, *IfStatement->getThen()).str();
   if (const Stmt *Init = IfStatement->getInit()) {
-    Replacement = (Twine("{ ") + getText(Context, *Init) + Replacement + " }").str();
+    Replacement =
+        (Twine("{ ") + getText(Context, *Init) + Replacement + " }").str();
   }
   issueDiag(Context, BoolLiteral->getBeginLoc(), SimplifyConditionDiagnostic,
             IfStatement->getSourceRange(), Replacement);
@@ -734,13 +735,17 @@ void SimplifyBooleanExprCheck::replaceWithElseStatement(
     const Expr *BoolLiteral) {
   const Stmt *ElseStatement = IfStatement->getElse();
   // Added .str() below
-  std::string Replacement = ElseStatement ? getText(Context, *ElseStatement).str() : "";
+  std::string Replacement =
+      ElseStatement ? getText(Context, *ElseStatement).str() : "";
   if (const Stmt *Init = IfStatement->getInit()) {
-    Replacement = (Twine("{ ") + getText(Context, *Init) + Replacement + " }").str();
+    Replacement =
+        (Twine("{ ") + getText(Context, *Init) + Replacement + " }").str();
   }
   issueDiag(Context, BoolLiteral->getBeginLoc(), SimplifyConditionDiagnostic,
             IfStatement->getSourceRange(), Replacement);
 }
+
+
 
 void SimplifyBooleanExprCheck::replaceWithCondition(
     const ASTContext &Context, const ConditionalOperator *Ternary,
