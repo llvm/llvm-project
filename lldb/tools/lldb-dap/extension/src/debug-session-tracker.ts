@@ -1,5 +1,6 @@
 import { DebugProtocol } from "@vscode/debugprotocol";
 import * as vscode from "vscode";
+import { AndroidComponentTracker } from "./android/android-component-tracker";
 
 export interface LLDBDapCapabilities extends DebugProtocol.Capabilities {
   /** The debug adapter supports the `moduleSymbols` request. */
@@ -86,6 +87,7 @@ export class DebugSessionTracker
     let stopping = false;
     return {
       onError: (error) => !stopping && this.logger.error(error), // Can throw benign read errors when shutting down.
+      onWillReceiveMessage: (message) => this.onWillReceiveMessage(session, message),
       onDidSendMessage: (message) => this.onDidSendMessage(session, message),
       onWillStopSession: () => (stopping = true),
       onExit: () => this.onExit(session),
@@ -103,6 +105,11 @@ export class DebugSessionTracker
 
   /** Clear information from the active session. */
   private onExit(session: vscode.DebugSession) {
+    const androidComponentTracker = AndroidComponentTracker.getFromSession(session);
+    if (androidComponentTracker) {
+      this.logger.info(`Stopping android APK "${androidComponentTracker.componentName}"`);
+      androidComponentTracker.stopDebugSession().catch();
+    }
     this.modules.delete(session);
     this.modulesChanged.fire(undefined);
   }
@@ -124,6 +131,19 @@ export class DebugSessionTracker
     if (session == vscode.debug.activeDebugSession) {
       const sessionHasModules = this.modules.get(session) != undefined;
       this.showModulesTreeView(sessionHasModules);
+    }
+  }
+
+  private onWillReceiveMessage(session: vscode.DebugSession, message: DebugProtocol.Request) {
+    this.logger.info(`Received message: ${JSON.stringify(message)}`);
+    if (message.command === "configurationDone") {
+      const androidComponentTracker = AndroidComponentTracker.getFromSession(session);
+      if (androidComponentTracker) {
+        this.logger.info(
+          `Dismissing Waiting-For-Debugger dialog on Android APK "${androidComponentTracker.componentName}"`
+        );
+        androidComponentTracker.dismissWaitingForDebuggerDialog().catch();
+      }
     }
   }
 

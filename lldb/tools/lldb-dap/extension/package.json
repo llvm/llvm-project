@@ -281,6 +281,12 @@
             },
             "description": "Commands executed when the debugging session ends.",
             "default": []
+          },
+          "lldb-dap.androidComponent": {
+            "order": 8,
+            "type": "string",
+            "description": "If non-empty, defines which Android activity to be launched and debugged. The name must have the format `package/name`. For example, `com.example.app/.MainActivity`.",
+            "default": ""
           }
         }
       }
@@ -678,6 +684,11 @@
               "customThreadFormat": {
                 "type": "string",
                 "description": "If non-empty, threads will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for threads. If the format string contains errors, an error message will be displayed on the Debug Console and the default thread names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
+                "default": ""
+              },
+              "androidComponent": {
+                "type": "string",
+                "description": "If non-empty, defines which Android activity to be launched and debugged. The name must have the format `package/name`. For example, `com.example.app/.MainActivity`.",
                 "default": ""
               }
             }

@@ -7,6 +7,7 @@ import { LogFilePathProvider, LogType } from "./logging";
 import { ErrorWithNotification } from "./ui/error-with-notification";
 import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
 import { expandUser } from "./utils";
+import { AndroidComponentTracker } from "./android/android-component-tracker";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -326,6 +327,15 @@ export class LLDBDapDescriptorFactory
       );
       this.logger.error(error);
       throw error;
+    }
+
+    if (session.configuration.androidComponent && session.configuration.request === "launch") {
+      this.logger.info(
+        `Session "${session.name}" is an Android debug session for component ${session.configuration.androidComponent}.`,
+      );
+      const tracker = new AndroidComponentTracker(session, session.configuration.androidComponent);
+      // TODO: handled exceptions
+      await tracker.startDebugSession();
     }
 
     // Use a server connection if the debugAdapterPort is provided
