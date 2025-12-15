@@ -459,6 +459,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
     return 2;
+  case Instruction::InsertElement:
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ComputeAnyOfResult:
@@ -571,6 +572,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
     Value *B = State.get(getOperand(1), OnlyFirstLaneUsed);
     return Builder.CreateCmp(getPredicate(), A, B, Name);
+  }
+  case Instruction::InsertElement: {
+    assert(State.VF.isVector() && "Only insert element into vector");
+    Value *Vec = State.get(getOperand(0));
+    Value *Elt = State.get(getOperand(1), /*IsScalar=*/true);
+    Value *Idx = State.get(getOperand(2), /*IsScalar=*/true);
+    return Builder.CreateInsertElement(Vec, Elt, Idx, Name);
   }
   case Instruction::PHI: {
     llvm_unreachable("should be handled by VPPhi::execute");
@@ -1179,6 +1187,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::Freeze:
   case Instruction::FCmp:
   case Instruction::ICmp:
+  case Instruction::InsertElement:
   case Instruction::Select:
   case Instruction::PHI:
   case VPInstruction::AnyOf:
@@ -1223,6 +1232,8 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return false;
   case Instruction::ExtractElement:
     return Op == getOperand(1);
+  case Instruction::InsertElement:
+    return Op == getOperand(1) || Op == getOperand(2);
   case Instruction::PHI:
     return true;
   case Instruction::FCmp:
@@ -4302,35 +4313,6 @@ void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 #endif
-
-void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
-  auto &Builder = State.Builder;
-  // Create a vector from the initial value.
-  auto *VectorInit = getStartValue()->getLiveInIRValue();
-
-  Type *VecTy = State.VF.isScalar()
-                    ? VectorInit->getType()
-                    : VectorType::get(VectorInit->getType(), State.VF);
-
-  BasicBlock *VectorPH =
-      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-  if (State.VF.isVector()) {
-    auto *IdxTy = Builder.getInt32Ty();
-    auto *One = ConstantInt::get(IdxTy, 1);
-    IRBuilder<>::InsertPointGuard Guard(Builder);
-    Builder.SetInsertPoint(VectorPH->getTerminator());
-    auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, State.VF);
-    auto *LastIdx = Builder.CreateSub(RuntimeVF, One);
-    VectorInit = Builder.CreateInsertElement(
-        PoisonValue::get(VecTy), VectorInit, LastIdx, "vector.recur.init");
-  }
-
-  // Create a phi node for the new recurrence.
-  PHINode *Phi = PHINode::Create(VecTy, 2, "vector.recur");
-  Phi->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
-  Phi->addIncoming(VectorInit, VectorPH);
-  State.set(this, Phi);
-}
 
 InstructionCost
 VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
