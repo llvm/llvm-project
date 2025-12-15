@@ -21,21 +21,6 @@
 #define STR(x) #x
 #define TO_STRING(x) STR(x)
 
-#define DPCALL(...)                                                            \
-  do {                                                                         \
-    if (getDebugLevel() > 1)                                                   \
-      DP(__VA_ARGS__);                                                         \
-  } while (0)
-
-#define WARNING(...)                                                           \
-  do {                                                                         \
-    fprintf(stderr, "%s --> ", DEBUG_PREFIX);                                  \
-    fprintf(stderr, "Warning: " __VA_ARGS__);                                  \
-  } while (0)
-
-#define INVALID_OPTION(Name, Value)                                            \
-  WARNING("Ignoring invalid option " #Name "=%s\n", Value)
-
 #define CALL_ZE(Rc, Fn, ...)                                                   \
   do {                                                                         \
       Rc = Fn(__VA_ARGS__);                                                    \

@@ -183,8 +183,9 @@ void L0OptionsTy::processEnvironmentVars() {
     else if (match(CommandModeVar, "async_ordered"))
       CommandMode = CommandModeTy::AsyncOrdered;
     else
-      INVALID_OPTION(LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE,
-                     CommandModeVar.get().c_str());
+      MESSAGE("Warning: Ignoring invalid value for "
+              "LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE=%s\n",
+              CommandModeVar.get().c_str());
   }
 
   // Detect if we need to enable compatibility with Level Zero debug mode.
