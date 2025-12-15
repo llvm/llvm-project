@@ -170,3 +170,4 @@ end function test_alloc_return_poly_array
 ! CHECK:           %[[REBOX:.*]] = fir.rebox %[[LOAD]](%[[SHIFT]]) : (!fir.class<!fir.heap<!fir.array<?xnone>>>, !fir.shift<1>) -> !fir.class<!fir.heap<!fir.array<?xnone>>>
 ! CHECK:           return %[[REBOX]] : !fir.class<!fir.heap<!fir.array<?xnone>>>
 ! CHECK:         }
+
