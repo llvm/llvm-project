@@ -224,8 +224,7 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
         llvm::VectorType::get(ResType, ElementCount::getFixed(NumElements));
   }
   if (!Op0Ty->hasFloatingRepresentation())
-    llvm_unreachable(
-        "f32tof16 operand must have a float representation");
+    llvm_unreachable("f32tof16 operand must have a float representation");
 
   if (CGF.CGM.getTriple().isDXIL())
     return CGF.Builder.CreateIntrinsic(ResType, Intrinsic::dx_legacyf32tof16,
@@ -254,7 +253,7 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
         Value *InVal = CGF.Builder.CreateExtractElement(Op0, i);
         Float2 = CGF.Builder.CreateInsertElement(Float2, InVal, (uint64_t)0);
         Value *Res = CGF.Builder.CreateIntrinsic(
-          CGF.IntTy, Intrinsic::spv_packhalf2x16, ArrayRef<Value *>{Float2});
+            CGF.IntTy, Intrinsic::spv_packhalf2x16, ArrayRef<Value *>{Float2});
         Result = CGF.Builder.CreateInsertElement(Result, Res, i);
       }
       return Result;
