@@ -919,6 +919,10 @@ def FeatureDisableUnpredicatedLdStLower : SubtargetFeature<
     "disable-unpredicated-ld-st-lower", "DisableUnpredicatedLdStLower",
     "true", "Disable lowering unpredicated loads/stores as LDR/STR">;
 
+def FeatureAggressiveInterleaving : SubtargetFeature<"aggressive-interleaving",
+                                                     "AggressiveInterleaving", "true",
+                                                     "Make use of aggressive interleaving during vectorization">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

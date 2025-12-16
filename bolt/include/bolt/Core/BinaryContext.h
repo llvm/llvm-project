@@ -231,6 +231,9 @@ class BinaryContext {
   /// Store all functions in the binary, sorted by original address.
   std::map<uint64_t, BinaryFunction> BinaryFunctions;
 
+  /// Functions to be considered for the output in a sorted order.
+  BinaryFunctionListType OutputFunctions;
+
   /// A mutex that is used to control parallel accesses to BinaryFunctions.
   mutable llvm::sys::RWMutex BinaryFunctionsMutex;
 
@@ -553,6 +556,9 @@ public:
   const std::map<uint64_t, BinaryFunction> &getBinaryFunctions() const {
     return BinaryFunctions;
   }
+
+  /// Return functions meant for the output in a sorted order.
+  BinaryFunctionListType &getOutputBinaryFunctions() { return OutputFunctions; }
 
   /// Create BOLT-injected function
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
@@ -1386,9 +1392,6 @@ public:
   /// Add a filename entry from SrcCUID to DestCUID.
   unsigned addDebugFilenameToUnit(const uint32_t DestCUID,
                                   const uint32_t SrcCUID, unsigned FileIndex);
-
-  /// Return functions in output layout order
-  BinaryFunctionListType getSortedFunctions();
 
   /// Do the best effort to calculate the size of the function by emitting
   /// its code, and relaxing branch instructions. By default, branch
