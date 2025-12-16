@@ -372,6 +372,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
         (ScopeStack.size() == 1u && CurrentChange.NewlinesBefore > 0 &&
          InsideNestedScope)) {
       LineShifted = true;
+      CurrentChange.IndentedFromColumn += Shift;
       CurrentChange.Spaces += Shift;
     }
 
