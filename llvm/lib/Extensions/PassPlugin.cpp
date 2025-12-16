@@ -1,4 +1,4 @@
-//===- lib/Passes/PassPluginLoader.cpp - Load Plugins for New PM Passes ---===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Extensions/PassPlugin.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
@@ -44,11 +44,6 @@ Expected<PassPlugin> PassPlugin::Load(const std::string &Filename) {
             Twine(P.Info.APIVersion) + ", supported version is " +
             Twine(LLVM_PLUGIN_API_VERSION) + ".",
         inconvertibleErrorCode());
-
-  if (!P.Info.RegisterPassBuilderCallbacks)
-    return make_error<StringError>(Twine("Empty entry callback in plugin '") +
-                                       Filename + "'.'",
-                                   inconvertibleErrorCode());
 
   return P;
 }

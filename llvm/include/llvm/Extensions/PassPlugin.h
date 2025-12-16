@@ -1,4 +1,4 @@
-//===- llvm/Passes/PassPlugin.h - Public Plugin API -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_PASSES_PASSPLUGIN_H
-#define LLVM_PASSES_PASSPLUGIN_H
+#ifndef LLVM_EXTENSIONS_PASSPLUGIN_H
+#define LLVM_EXTENSIONS_PASSPLUGIN_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
@@ -21,7 +22,9 @@
 #include <string>
 
 namespace llvm {
+class Module;
 class PassBuilder;
+class TargetMachine;
 
 /// \macro LLVM_PLUGIN_API_VERSION
 /// Identifies the API version understood by this plugin.
@@ -30,14 +33,15 @@ class PassBuilder;
 /// against that of the plugin. A mismatch is an error. The supported version
 /// will be incremented for ABI-breaking changes to the \c PassPluginLibraryInfo
 /// struct, i.e. when callbacks are added, removed, or reordered.
-#define LLVM_PLUGIN_API_VERSION 1
+#define LLVM_PLUGIN_API_VERSION 2
 
 extern "C" {
 /// Information about the plugin required to load its passes
 ///
 /// This struct defines the core interface for pass plugins and is supposed to
-/// be filled out by plugin implementors. LLVM-side users of a plugin are
-/// expected to use the \c PassPlugin class below to interface with it.
+/// be filled out by plugin implementors. Unused function pointers can be set to
+/// nullptr. LLVM-side users of a plugin are expected to use the \c PassPlugin
+/// class below to interface with it.
 struct PassPluginLibraryInfo {
   /// The API version understood by this plugin, usually \c
   /// LLVM_PLUGIN_API_VERSION
@@ -49,7 +53,14 @@ struct PassPluginLibraryInfo {
 
   /// The callback for registering plugin passes with a \c PassBuilder
   /// instance
-  void (*RegisterPassBuilderCallbacks)(PassBuilder &);
+  void (*RegisterPassBuilderCallbacks)(PassBuilder &) = nullptr;
+
+  /// Callback called before running the back-end passes on the module. The
+  /// callback can generate code itself by writing the expected output to OS and
+  /// returning true to prevent the default pipeline and further plugin
+  /// callbacks from running.
+  bool (*PreCodeGenCallback)(Module &, TargetMachine &, CodeGenFileType,
+                             raw_pwrite_stream &OS) = nullptr;
 };
 }
 
@@ -80,7 +91,17 @@ public:
 
   /// Invoke the PassBuilder callback registration
   void registerPassBuilderCallbacks(PassBuilder &PB) const {
-    Info.RegisterPassBuilderCallbacks(PB);
+    if (Info.RegisterPassBuilderCallbacks)
+      Info.RegisterPassBuilderCallbacks(PB);
+  }
+
+  /// Invoke the pre-codegen callback.
+  bool invokePreCodeGenCallback(Module &M, TargetMachine &TM,
+                                CodeGenFileType CGFT,
+                                raw_pwrite_stream &OS) const {
+    if (Info.PreCodeGenCallback)
+      return Info.PreCodeGenCallback(M, TM, CGFT, OS);
+    return false;
   }
 
 private:
@@ -91,8 +112,13 @@ private:
   sys::DynamicLibrary Library;
   PassPluginLibraryInfo Info;
 };
-}
+} // namespace llvm
 
+// The function returns a struct with default initializers.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
+#endif
 /// The public entry point for a pass plugin.
 ///
 /// When a plugin is loaded by the driver, it will call this entry point to
@@ -109,5 +135,8 @@ private:
 /// ```
 extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
 llvmGetPassPluginInfo();
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #endif /* LLVM_PASSES_PASSPLUGIN_H */
