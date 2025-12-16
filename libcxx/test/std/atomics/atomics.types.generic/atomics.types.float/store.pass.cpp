@@ -39,6 +39,7 @@ void test_impl() {
   // store
   {
     MaybeVolatile<std::atomic<T>> a(T(3.1));
+    DoNotOptimize(a);
     a.store(T(1.2), std::memory_order::relaxed);
     assert(a.load() == T(1.2));
   }

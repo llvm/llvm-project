@@ -38,6 +38,7 @@ void test_impl() {
   // wait with different value
   {
     MaybeVolatile<std::atomic<T>> a(T(3.1));
+    DoNotOptimize(a);
     a.wait(T(1.1), std::memory_order::relaxed);
   }
 

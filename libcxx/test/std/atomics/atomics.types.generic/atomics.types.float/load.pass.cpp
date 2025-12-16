@@ -40,6 +40,7 @@ void test_impl() {
   // load
   {
     MaybeVolatile<std::atomic<T>> a(T(3.1));
+    DoNotOptimize(a);
     a.store(T(1.2));
     std::same_as<T> decltype(auto) r = a.load(std::memory_order::relaxed);
     assert(r == T(1.2));
