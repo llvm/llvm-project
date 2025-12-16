@@ -17343,8 +17343,8 @@ Semantics:
 
 If both operands are qNaNs, returns a :ref:`NaN <floatnan>`. If one operand is
 qNaN and another operand is a number, returns the number. If both operands are
-numbers, returns the lesser of the two arguments. -0.0 is considered to be less
-than +0.0 for this intrinsic.
+numbers, returns the lesser of the two arguments. If both operands compare equal
+(for example +0.0 and -0.0), non-deterministially returns either operand.
 
 If an operand is a signaling NaN, then the intrinsic will non-deterministically
 either:
@@ -17352,14 +17352,8 @@ either:
  * Return a :ref:`NaN <floatnan>`.
  * Or treat the signaling NaN as a quiet NaN.
 
-If the ``nsz`` flag is specified, ``llvm.minnum`` with one +0.0 and one
--0.0 operand may non-deterministically return either operand. Contrary to normal
-``nsz`` semantics, if both operands have the same sign, the result must also
-have the same sign.
-
-When used with the ``nsz`` flag, this intrinsics follows the semantics of
-``fmin`` in C and ``maxNum`` in IEEE 754-2008 with the usual
-:ref:`signaling NaN <floatnan>` exception.
+This intrinsics follows the semantics of ``fmin`` in C and ``maxNum`` in
+IEEE 754-2008 with the usual :ref:`signaling NaN <floatnan>` exception.
 
 The ``llvm.minnum`` intrinsic can be refined into ``llvm.minimumnum``, as the
 latter exhibits a subset of behaviors of the former.
@@ -17402,8 +17396,8 @@ Semantics:
 
 If both operands are qNaNs, returns a :ref:`NaN <floatnan>`. If one operand is
 qNaN and another operand is a number, returns the number. If both operands are
-numbers, returns the greater of the two arguments. -0.0 is considered to be
-less than +0.0 for this intrinsic.
+numbers, returns the greater of the two arguments. If both operands compare
+equal (for example +0.0 and -0.0), non-deterministically returns either operand.
 
 If an operand is a signaling NaN, then the intrinsic will non-deterministically
 either:
@@ -17411,14 +17405,8 @@ either:
  * Return a :ref:`NaN <floatnan>`.
  * Or treat the signaling NaN as a quiet NaN.
 
-If the ``nsz`` flag is specified, ``llvm.maxnum`` with one +0.0 and one
--0.0 operand may non-deterministically return either operand. Contrary to normal
-``nsz`` semantics, if both operands have the same sign, the result must also
-have the same sign.
-
-When used with the ``nsz`` flag, this intrinsics follows the semantics of
-``fmax`` in C and ``maxNum`` in IEEE 754-2008 with the usual
-:ref:`signaling NaN <floatnan>` exception.
+This intrinsics follows the semantics of ``fmax`` in C and ``maxNum`` in
+IEEE 754-2008 with the usual :ref:`signaling NaN <floatnan>` exception.
 
 The ``llvm.maxnum`` intrinsic can be refined into ``llvm.maximumnum``, as the
 latter exhibits a subset of behaviors of the former.
@@ -20371,8 +20359,8 @@ The '``llvm.vector.reduce.fmax.*``' intrinsics do a floating-point
 ``MAX`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-This instruction has the same comparison and ``nsz`` semantics as the
-'``llvm.maxnum.*``' intrinsic.
+This instruction has the same comparison semantics as the '``llvm.maxnum.*``'
+intrinsic.
 
 If any of the vector elements is a signaling NaN, the intrinsic will
 non-deterministically either:
@@ -20405,8 +20393,8 @@ The '``llvm.vector.reduce.fmin.*``' intrinsics do a floating-point
 ``MIN`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-This instruction has the same comparison and ``nsz`` semantics as the
-'``llvm.minnum.*``' intrinsic.
+This instruction has the same comparison semantics as the '``llvm.minnum.*``'
+intrinsic.
 
 If any of the vector elements is a signaling NaN, the intrinsic will
 non-deterministically either:
