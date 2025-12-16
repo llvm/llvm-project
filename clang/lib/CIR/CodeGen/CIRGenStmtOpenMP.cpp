@@ -47,8 +47,9 @@ CIRGenFunction::emitOMPTaskyieldDirective(const OMPTaskyieldDirective &s) {
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPBarrierDirective(const OMPBarrierDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPBarrierDirective");
-  return mlir::failure();
+  mlir::omp::BarrierOp::create(builder, getLoc(s.getBeginLoc()));
+  assert(s.clauses().empty() && "omp barrier doesn't support clauses");
+  return mlir::success();
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPMetaDirective(const OMPMetaDirective &s) {
