@@ -214,31 +214,47 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
     std::swap(Off1, Off2);
   }
 
-  Register StartReg = FirstOp0.getReg();
-  Register NextReg = SecondOp0.getReg();
-
-  if (StartReg == RISCV::X0 || NextReg == RISCV::X0)
-    return false;
-
-  // If the base reg gets overwritten by one of the loads then bail out.
-  if (Opc == RISCV::LW && (StartReg == Base1 || NextReg == Base1))
-    return false;
-
   if (!isShiftedUInt<5, 2>(Off1) || (Off2 - Off1 != 4))
     return false;
 
-  if (NextReg != StartReg + 1)
-    return false;
+  Register StartReg = FirstOp0.getReg();
+  Register NextReg = SecondOp0.getReg();
 
-  unsigned XqciOpc = (Opc == RISCV::LW) ? RISCV::QC_LWMI : RISCV::QC_SWMI;
+  unsigned XqciOpc;
+  unsigned StartRegState;
+  unsigned NextRegState = 0;
+  bool AddNextReg = true;
 
-  unsigned StartRegState = (Opc == RISCV::LW)
-                               ? static_cast<unsigned>(RegState::Define)
-                               : getKillRegState(FirstOp0.isKill());
-  unsigned NextRegState =
-      (Opc == RISCV::LW)
-          ? static_cast<unsigned>(RegState::ImplicitDefine)
-          : (RegState::Implicit | getKillRegState(SecondOp0.isKill()));
+  if (Opc == RISCV::LW) {
+
+    if (StartReg == RISCV::X0)
+      return false;
+
+    // If the base reg gets overwritten by one of the loads bail out.
+    if (StartReg == Base1 || NextReg == Base1)
+      return false;
+
+    // The registers need to be consecutive.
+    if (NextReg != StartReg + 1)
+      return false;
+
+    XqciOpc = RISCV::QC_LWMI;
+    StartRegState = static_cast<unsigned>(RegState::Define);
+    NextRegState = static_cast<unsigned>(RegState::ImplicitDefine);
+  } else {
+    assert(Opc == RISCV::SW && "Expected a SW instruction");
+    if (StartReg == NextReg) {
+      XqciOpc = RISCV::QC_SETWMI;
+      StartRegState = getKillRegState(FirstOp0.isKill() || SecondOp0.isKill());
+      AddNextReg = false;
+    } else if (NextReg == StartReg + 1) {
+      XqciOpc = RISCV::QC_SWMI;
+      StartRegState = getKillRegState(FirstOp0.isKill());
+      NextRegState = RegState::Implicit | getKillRegState(SecondOp0.isKill());
+    } else {
+      return false;
+    }
+  }
 
   DebugLoc DL =
       First->getDebugLoc() ? First->getDebugLoc() : Second->getDebugLoc();
@@ -247,8 +263,10 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
       .addReg(Base1, getKillRegState(FirstOp1.isKill() || SecondOp1.isKill()))
       .addImm(2)
       .addImm(Off1)
-      .cloneMergedMemRefs({&*First, &*Second})
-      .addReg(NextReg, NextRegState);
+      .cloneMergedMemRefs({&*First, &*Second});
+
+  if (AddNextReg)
+    MIB.addReg(NextReg, NextRegState);
 
   First->getParent()->insert(First, MIB);
   First->removeFromParent();

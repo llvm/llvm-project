@@ -45,10 +45,11 @@ public:
   /// file format that is specified in the options (-MD is the default) and
   /// return it.
   ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, dependency file contents otherwise.
-  llvm::Expected<std::string>
-  getDependencyFile(ArrayRef<std::string> CommandLine, StringRef CWD);
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// dependency file contents otherwise.
+  std::optional<std::string>
+  getDependencyFile(ArrayRef<std::string> CommandLine, StringRef CWD,
+                    DiagnosticConsumer &DiagConsumer);
 
   /// Collect the module dependency in P1689 format for C++20 named modules.
   ///
@@ -59,19 +60,21 @@ public:
   /// \param MakeformatOutputPath The output parameter for the path to
   /// \param MakeformatOutput.
   ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, P1689 dependency format rules otherwise.
-  llvm::Expected<P1689Rule>
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// P1689 dependency format rules otherwise.
+  std::optional<P1689Rule>
   getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD,
                                std::string &MakeformatOutput,
-                               std::string &MakeformatOutputPath);
-  llvm::Expected<P1689Rule>
-  getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD) {
+                               std::string &MakeformatOutputPath,
+                               DiagnosticConsumer &DiagConsumer);
+  std::optional<P1689Rule>
+  getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD,
+                               DiagnosticConsumer &DiagConsumer) {
     std::string MakeformatOutput;
     std::string MakeformatOutputPath;
 
     return getP1689ModuleDependencyFile(Command, CWD, MakeformatOutput,
-                                        MakeformatOutputPath);
+                                        MakeformatOutputPath, DiagConsumer);
   }
 
   /// Given a Clang driver command-line for a translation unit, gather the
@@ -89,11 +92,12 @@ public:
   ///                 TUBuffer is nullopt, the input should be included in the
   ///                 Commandline already.
   ///
-  /// \returns a \c StringError with the diagnostic output if clang errors
-  /// occurred, \c TranslationUnitDeps otherwise.
-  llvm::Expected<dependencies::TranslationUnitDeps>
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// translation unit dependencies otherwise.
+  std::optional<dependencies::TranslationUnitDeps>
   getTranslationUnitDependencies(
       ArrayRef<std::string> CommandLine, StringRef CWD,
+      DiagnosticConsumer &DiagConsumer,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);

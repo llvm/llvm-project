@@ -357,8 +357,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FEXP,              MVT::f32,   Expand);
   setOperationAction(ISD::FMA,               MVT::f32,   Expand);
   setOperationAction(ISD::FMA,               MVT::f64,   Expand);
-  setOperationAction(ISD::FREM,              MVT::f32,   Expand);
-  setOperationAction(ISD::FREM,              MVT::f64,   Expand);
+  setOperationAction(ISD::FREM, MVT::f32, LibCall);
+  setOperationAction(ISD::FREM, MVT::f64, LibCall);
 
   // Lower f16 conversion operations into library calls
   setOperationAction(ISD::FP16_TO_FP,        MVT::f32,   Expand);

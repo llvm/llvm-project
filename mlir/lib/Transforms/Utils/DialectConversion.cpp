@@ -2257,37 +2257,6 @@ ConversionPatternRewriter::getRemappedValues(ValueRange keys,
   return success();
 }
 
-LogicalResult ConversionPatternRewriter::legalize(Region *r) {
-  // Fast path: If the region is empty, there is nothing to legalize.
-  if (r->empty())
-    return success();
-
-  // Gather a list of all operations to legalize. This is done before
-  // converting the entry block signature because unrealized_conversion_cast
-  // ops should not be included.
-  SmallVector<Operation *> ops;
-  for (Block &b : *r)
-    for (Operation &op : b)
-      ops.push_back(&op);
-
-  // If the current pattern runs with a type converter, convert the entry block
-  // signature.
-  if (const TypeConverter *converter = impl->currentTypeConverter) {
-    std::optional<TypeConverter::SignatureConversion> conversion =
-        converter->convertBlockSignature(&r->front());
-    if (!conversion)
-      return failure();
-    applySignatureConversion(&r->front(), *conversion, converter);
-  }
-
-  // Legalize all operations in the region.
-  for (Operation *op : ops)
-    if (failed(legalize(op)))
-      return failure();
-
-  return success();
-}
-
 void ConversionPatternRewriter::inlineBlockBefore(Block *source, Block *dest,
                                                   Block::iterator before,
                                                   ValueRange argValues) {
@@ -3287,8 +3256,20 @@ struct OperationConverter {
       : rewriter(ctx, config, *this), opLegalizer(rewriter, target, patterns),
         mode(mode) {}
 
-  /// Converts the given operations to the conversion target.
-  LogicalResult convertOperations(ArrayRef<Operation *> ops);
+  /// Applies the conversion to the given operations (and their nested
+  /// operations).
+  LogicalResult applyConversion(ArrayRef<Operation *> ops);
+
+  /// Legalizes the given operations (and their nested operations) to the
+  /// conversion target.
+  template <typename Fn>
+  LogicalResult legalizeOperations(ArrayRef<Operation *> ops, Fn onFailure,
+                                   bool isRecursiveLegalization = false);
+  LogicalResult legalizeOperations(ArrayRef<Operation *> ops,
+                                   bool isRecursiveLegalization = false) {
+    return legalizeOperations(
+        ops, /*onFailure=*/[&]() {}, isRecursiveLegalization);
+  }
 
   /// Converts a single operation. If `isRecursiveLegalization` is "true", the
   /// conversion is a recursive legalization request, triggered from within a
@@ -3296,6 +3277,8 @@ struct OperationConverter {
   /// attempt at legalizing the operation later (via the regular pre-order
   /// legalization mechanism).
   LogicalResult convert(Operation *op, bool isRecursiveLegalization = false);
+
+  const ConversionTarget &getTarget() { return opLegalizer.getTarget(); }
 
 private:
   /// The rewriter to use when converting operations.
@@ -3308,10 +3291,6 @@ private:
   OpConversionMode mode;
 };
 } // namespace mlir
-
-LogicalResult ConversionPatternRewriter::legalize(Operation *op) {
-  return impl->opConverter.convert(op, /*isRecursiveLegalization=*/true);
-}
 
 LogicalResult OperationConverter::convert(Operation *op,
                                           bool isRecursiveLegalization) {
@@ -3398,12 +3377,15 @@ legalizeUnresolvedMaterialization(RewriterBase &rewriter,
   return failure();
 }
 
-LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
+template <typename Fn>
+LogicalResult
+OperationConverter::legalizeOperations(ArrayRef<Operation *> ops, Fn onFailure,
+                                       bool isRecursiveLegalization) {
   const ConversionTarget &target = opLegalizer.getTarget();
 
   // Compute the set of operations and blocks to convert.
   SmallVector<Operation *> toConvert;
-  for (auto *op : ops) {
+  for (Operation *op : ops) {
     op->walk<WalkOrder::PreOrder, ForwardDominanceIterator<>>(
         [&](Operation *op) {
           toConvert.push_back(op);
@@ -3415,24 +3397,66 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
           return WalkResult::advance();
         });
   }
-
-  // Convert each operation and discard rewrites on failure.
-  ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
-
-  for (auto *op : toConvert) {
-    if (failed(convert(op))) {
-      // Dialect conversion failed.
-      if (rewriterImpl.config.allowPatternRollback) {
-        // Rollback is allowed: restore the original IR.
-        rewriterImpl.undoRewrites();
-      } else {
-        // Rollback is not allowed: apply all modifications that have been
-        // performed so far.
-        rewriterImpl.applyRewrites();
-      }
+  for (Operation *op : toConvert) {
+    if (failed(convert(op, isRecursiveLegalization))) {
+      // Failed to convert an operation.
+      onFailure();
       return failure();
     }
   }
+  return success();
+}
+
+LogicalResult ConversionPatternRewriter::legalize(Operation *op) {
+  return impl->opConverter.legalizeOperations(op,
+                                              /*isRecursiveLegalization=*/true);
+}
+
+LogicalResult ConversionPatternRewriter::legalize(Region *r) {
+  // Fast path: If the region is empty, there is nothing to legalize.
+  if (r->empty())
+    return success();
+
+  // Gather a list of all operations to legalize. This is done before
+  // converting the entry block signature because unrealized_conversion_cast
+  // ops should not be included.
+  SmallVector<Operation *> ops;
+  for (Block &b : *r)
+    for (Operation &op : b)
+      ops.push_back(&op);
+
+  // If the current pattern runs with a type converter, convert the entry block
+  // signature.
+  if (const TypeConverter *converter = impl->currentTypeConverter) {
+    std::optional<TypeConverter::SignatureConversion> conversion =
+        converter->convertBlockSignature(&r->front());
+    if (!conversion)
+      return failure();
+    applySignatureConversion(&r->front(), *conversion, converter);
+  }
+
+  // Legalize all operations in the region. This includes all nested
+  // operations.
+  return impl->opConverter.legalizeOperations(ops,
+                                              /*isRecursiveLegalization=*/true);
+}
+
+LogicalResult OperationConverter::applyConversion(ArrayRef<Operation *> ops) {
+  // Convert each operation and discard rewrites on failure.
+  ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
+  LogicalResult status = legalizeOperations(ops, /*onFailure=*/[&]() {
+    // Dialect conversion failed.
+    if (rewriterImpl.config.allowPatternRollback) {
+      // Rollback is allowed: restore the original IR.
+      rewriterImpl.undoRewrites();
+    } else {
+      // Rollback is not allowed: apply all modifications that have been
+      // performed so far.
+      rewriterImpl.applyRewrites();
+    }
+  });
+  if (failed(status))
+    return failure();
 
   // After a successful conversion, apply rewrites.
   rewriterImpl.applyRewrites();
@@ -4143,7 +4167,7 @@ static LogicalResult applyConversion(ArrayRef<Operation *> ops,
       [&] {
         OperationConverter opConverter(ops.front()->getContext(), target,
                                        patterns, config, mode);
-        status = opConverter.convertOperations(ops);
+        status = opConverter.applyConversion(ops);
       },
       irUnits);
   return status;

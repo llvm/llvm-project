@@ -107,16 +107,6 @@ public:
       DiagnosticConsumer &DiagConsumer,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
-  /// Run the dependency scanning tool for a given clang driver command-line
-  /// for a specific translation unit via file system or memory buffer.
-  ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, success otherwise.
-  llvm::Error computeDependencies(
-      StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
-      DependencyConsumer &Consumer, DependencyActionController &Controller,
-      std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
-
   /// The three method below implements a new interface for by name
   /// dependency scanning. They together enable the dependency scanning worker
   /// to more effectively perform scanning for a sequence of modules

@@ -845,7 +845,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FMUL,       MVT::f64, Expand);
     setOperationAction(ISD::FMA,        MVT::f64, Expand);
     setOperationAction(ISD::FDIV,       MVT::f64, Expand);
-    setOperationAction(ISD::FREM,       MVT::f64, Expand);
+    setOperationAction(ISD::FREM, MVT::f64, LibCall);
     setOperationAction(ISD::FCOPYSIGN,  MVT::f64, Expand);
     setOperationAction(ISD::FGETSIGN,   MVT::f64, Expand);
     setOperationAction(ISD::FNEG,       MVT::f64, Expand);
@@ -1216,8 +1216,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::FCOS,      MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS,   MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS,   MVT::f32, Expand);
-  setOperationAction(ISD::FREM,      MVT::f64, Expand);
-  setOperationAction(ISD::FREM,      MVT::f32, Expand);
+  setOperationAction(ISD::FREM, MVT::f64, LibCall);
+  setOperationAction(ISD::FREM, MVT::f32, LibCall);
   if (!Subtarget->useSoftFloat() && Subtarget->hasVFP2Base() &&
       !Subtarget->isThumb1Only()) {
     setOperationAction(ISD::FCOPYSIGN, MVT::f64, Custom);

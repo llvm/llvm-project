@@ -14,6 +14,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/Tooling/Tooling.h"
@@ -235,12 +236,11 @@ TEST(DependencyScanner, ScanDepsWithFS) {
                                     ScanningOutputFormat::Make);
   DependencyScanningTool ScanTool(Service, VFS);
 
-  std::string DepFile;
-  ASSERT_THAT_ERROR(
-      ScanTool.getDependencyFile(CommandLine, CWD).moveInto(DepFile),
-      llvm::Succeeded());
-  using llvm::sys::path::convert_to_slash;
-  EXPECT_EQ(convert_to_slash(DepFile),
+  TextDiagnosticBuffer DiagConsumer;
+  std::optional<std::string> DepFile =
+      ScanTool.getDependencyFile(CommandLine, CWD, DiagConsumer);
+  ASSERT_TRUE(DepFile.has_value());
+  EXPECT_EQ(llvm::sys::path::convert_to_slash(*DepFile),
             "test.cpp.o: /root/test.cpp /root/header.h\n");
 }
 
@@ -296,10 +296,10 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
   // This will fail with "fatal error: module 'Foo' not found" but it doesn't
   // matter, the point of the test is to check that files are not read
   // unnecessarily.
-  std::string DepFile;
-  ASSERT_THAT_ERROR(
-      ScanTool.getDependencyFile(CommandLine, CWD).moveInto(DepFile),
-      llvm::Failed());
+  TextDiagnosticBuffer DiagConsumer;
+  std::optional<std::string> DepFile =
+      ScanTool.getDependencyFile(CommandLine, CWD, DiagConsumer);
+  ASSERT_FALSE(DepFile.has_value());
 
   EXPECT_TRUE(!llvm::is_contained(InterceptFS->StatPaths, OtherPath));
   EXPECT_EQ(InterceptFS->ReadFiles, std::vector<std::string>{"test.m"});

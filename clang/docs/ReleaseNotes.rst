@@ -611,6 +611,7 @@ Bug Fixes to C++ Support
 - Fixed an issue where templates prevented nested anonymous records from checking the deletion of special members. (#GH167217)
 - Fixed spurious diagnoses of certain nested lambda expressions. (#GH149121) (#GH156579)
 - Fix the result of ``__is_pointer_interconvertible_base_of`` when arguments are qualified and passed via template parameters. (#GH135273)
+- Fixed a crash when evaluating nested requirements in requires-expressions that reference invented parameters. (#GH166325)
 - Fixed a crash when standard comparison categories (e.g. ``std::partial_ordering``) are defined with incorrect static member types. (#GH170015) (#GH56571)
 
 Bug Fixes to AST Handling
@@ -659,6 +660,11 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+- Support has been added for the following processors (command-line identifiers in parentheses):
+  - Arm C1-Nano (``c1-nano``)
+  - Arm C1-Pro (``c1-pro``)
+  - Arm C1-Premium (``c1-premium``)
+  - Arm C1-Ultra (``c1-ultra``)
 - More intrinsics for the following AArch64 instructions:
   FCVTZ[US], FCVTN[US], FCVTM[US], FCVTP[US], FCVTA[US]
 

@@ -773,6 +773,24 @@ func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_
   func.return %descriptor : !amdgpu.tdm_descriptor
 }
 
+// CHECK-LABEL: func @tensor_load_to_lds
+// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor)
+func.func @tensor_load_to_lds(%desc: !amdgpu.tdm_descriptor) {
+  // CHECK: %[[DGROUPS:.+]]:4 = builtin.unrealized_conversion_cast %[[DESC]]
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc : !amdgpu.tdm_descriptor
+  func.return
+}
+
+// CHECK-LABEL: func @tensor_store_from_lds
+// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor)
+func.func @tensor_store_from_lds(%desc: !amdgpu.tdm_descriptor) {
+  // CHECK: %[[DGROUPS:.+]]:4 = builtin.unrealized_conversion_cast %[[DESC]]
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc : !amdgpu.tdm_descriptor
+  func.return
+}
+
 // -----
 
 // CHECK-LABEL: func @make_gather_dma_descriptor
