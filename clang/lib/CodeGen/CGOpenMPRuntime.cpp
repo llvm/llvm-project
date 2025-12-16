@@ -9118,10 +9118,11 @@ private:
           //    from user-defined mappers (e.g. test with s.data[0:8:2]).
           GroupUnionCurInfo.NonContigInfo.Dims.insert(
               GroupUnionCurInfo.NonContigInfo.Dims.begin(), 1);
-          emitCombinedEntry(CurInfo, GroupUnionCurInfo.Types, PartialStruct,
-                            AttachInfo, /*IsMapThis=*/!VD, OMPBuilder, VD,
-                            /*OffsetForMemberOfFlag=*/0,
-                            /*NotTargetParams=*/true);
+          emitCombinedEntry(
+              CurInfo, GroupUnionCurInfo.Types, PartialStruct, AttachInfo,
+              /*IsMapThis=*/!VD, OMPBuilder, VD,
+              /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size(),
+              /*NotTargetParams=*/true);
         }
 
         // Append this group's results to the overall CurInfo in the correct
