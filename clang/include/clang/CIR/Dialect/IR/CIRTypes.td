@@ -445,7 +445,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   }];
 
   let parameters = (ins
-    CIR_VectorElementType:$elementType,
+    CIR_VectorElementType:$element_type,
     "uint64_t":$size,
     OptionalParameter<"bool">:$is_scalable
   );
