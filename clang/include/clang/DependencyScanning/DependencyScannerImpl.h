@@ -17,6 +17,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 class DiagnosticConsumer;
@@ -63,15 +64,15 @@ private:
 std::unique_ptr<DiagnosticOptions>
 createDiagOptions(ArrayRef<std::string> CommandLine);
 
-struct DignosticsEngineWithDiagOpts {
+struct DiagnosticsEngineWithDiagOpts {
   // We need to bound the lifetime of the DiagOpts used to create the
   // DiganosticsEngine with the DiagnosticsEngine itself.
   std::unique_ptr<DiagnosticOptions> DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine;
 
-  DignosticsEngineWithDiagOpts(ArrayRef<std::string> CommandLine,
-                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                               DiagnosticConsumer &DC);
+  DiagnosticsEngineWithDiagOpts(ArrayRef<std::string> CommandLine,
+                                IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                                DiagnosticConsumer &DC);
 };
 
 struct TextDiagnosticsPrinterWithOutput {
@@ -97,7 +98,8 @@ std::unique_ptr<CompilerInvocation>
 createCompilerInvocation(ArrayRef<std::string> CommandLine,
                          DiagnosticsEngine &Diags);
 
-std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
 initVFSForTUBufferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                            ArrayRef<std::string> CommandLine,
                            StringRef WorkingDirectory,
@@ -143,22 +145,11 @@ class CompilerInstanceWithContext {
   llvm::StringRef CWD;
   std::vector<std::string> CommandLine;
 
-  // Context - file systems
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS;
-
   // Context - Diagnostics engine.
-  std::unique_ptr<TextDiagnosticsPrinterWithOutput> DiagPrinterWithOS;
-  // DiagConsumer may points to DiagPrinterWithOS->DiagPrinter, or a custom
-  // DiagnosticConsumer passed in from initialize.
   DiagnosticConsumer *DiagConsumer = nullptr;
-  std::unique_ptr<DignosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
+  std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
 
   // Context - compiler invocation
-  // Compilation's command's arguments may be owned by Alloc when expanded from
-  // response files, so we need to keep Alloc alive in the context.
-  llvm::BumpPtrAllocator Alloc;
-  std::unique_ptr<clang::driver::Driver> Driver;
-  std::unique_ptr<clang::driver::Compilation> Compilation;
   std::unique_ptr<CompilerInvocation> OriginalInvocation;
 
   // Context - output options
@@ -180,15 +171,13 @@ public:
       : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
 
   // The three methods below returns false when they fail, with the detail
-  // accumulated in DiagConsumer.
-  bool initialize(DiagnosticConsumer *DC);
+  // accumulated in \c DiagEngineWithDiagOpts's diagnostic consumer.
+  bool initialize(
+      std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
+      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
   bool computeDependencies(StringRef ModuleName, DependencyConsumer &Consumer,
                            DependencyActionController &Controller);
   bool finalize();
-
-  // The method below turns the return status from the above methods
-  // into an llvm::Error using a default DiagnosticConsumer.
-  llvm::Error handleReturnStatus(bool Success);
 };
 } // namespace dependencies
 } // namespace clang

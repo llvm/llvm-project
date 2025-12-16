@@ -1174,6 +1174,17 @@ public:
     return getTypeConversion(Context, VT).second;
   }
 
+  /// Perform getTypeToTransformTo repeatedly until a legal type is obtained.
+  /// Useful for vector operations that might take multiple steps to legalize.
+  EVT getLegalTypeToTransformTo(LLVMContext &Context, EVT VT) const {
+    EVT LegalVT = getTypeToTransformTo(Context, VT);
+    while (LegalVT != VT) {
+      VT = LegalVT;
+      LegalVT = getTypeToTransformTo(Context, VT);
+    }
+    return LegalVT;
+  }
+
   /// For types supported by the target, this is an identity function.  For
   /// types that must be expanded (i.e. integer types that are larger than the
   /// largest integer register or illegal floating point types), this returns
@@ -1481,6 +1492,10 @@ public:
   bool isOperationLegal(unsigned Op, EVT VT) const {
     return (VT == MVT::Other || isTypeLegal(VT)) &&
            getOperationAction(Op, VT) == Legal;
+  }
+
+  bool isOperationExpandOrLibCall(unsigned Op, EVT VT) const {
+    return isOperationExpand(Op, VT) || getOperationAction(Op, VT) == LibCall;
   }
 
   /// Return how this load with extension should be treated: either it is legal,
@@ -2235,19 +2250,20 @@ public:
     return false;
   }
 
+  /// Whether AtomicExpandPass should automatically insert a seq_cst trailing
+  /// fence without reducing the ordering for this atomic store. Defaults to
+  /// false.
+  virtual bool
+  shouldInsertTrailingSeqCstFenceForAtomicStore(const Instruction *I) const {
+    return false;
+  }
+
   // The memory ordering that AtomicExpandPass should assign to a atomic
   // instruction that it has lowered by adding fences. This can be used
   // to "fold" one of the fences into the atomic instruction.
   virtual AtomicOrdering
   atomicOperationOrderAfterFenceSplit(const Instruction *I) const {
     return AtomicOrdering::Monotonic;
-  }
-
-  /// Whether AtomicExpandPass should automatically insert a trailing fence
-  /// without reducing the ordering for this atomic. Defaults to false.
-  virtual bool
-  shouldInsertTrailingFenceForAtomicStore(const Instruction *I) const {
-    return false;
   }
 
   /// Perform a load-linked operation on Addr, returning a "Value *" with the

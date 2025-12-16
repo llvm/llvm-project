@@ -44,6 +44,7 @@
 #include <string>
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/circular_raw_ostream.h"
 
 /// 32-Bit field data attributes controlling information presented to the user.
@@ -430,6 +431,86 @@ static inline raw_ostream &operator<<(raw_ostream &Os,
 #define ODBG_RESET_LEVEL()                                                     \
   static_cast<llvm::offload::debug::odbg_ostream::IfLevel>(0)
 
+// helper templates to support lambdas with different number of arguments
+template <typename LambdaTy> struct LambdaHelper {
+  template <typename FuncTy, typename RetTy, typename... Args>
+  static constexpr size_t CountArgs(RetTy (FuncTy::*)(Args...)) {
+    return sizeof...(Args);
+  }
+  template <typename FuncTy, typename RetTy, typename... Args>
+  static constexpr size_t CountArgs(RetTy (FuncTy::*)(Args...) const) {
+    return sizeof...(Args);
+  }
+
+  static constexpr size_t NArgs = CountArgs(&LambdaTy::operator());
+}
+
+template <typename LambdaTy>
+struct LambdaOs : public LambdaHelper<LambdaTy> {
+  static void dispatch(LambdaTy func, llvm::raw_ostream &Os, uint32_t Level) {
+    if constexpr (NArgs == 2)
+      func(Os, Level);
+    else
+      func(Os);
+  }
+};
+
+#define ODBG_OS_BASE(Stream, Component, Prefix, Type, Level, Callback)         \
+  if (::llvm::offload::debug::isDebugEnabled()) {                              \
+    uint32_t RealLevel = (Level);                                              \
+    if (::llvm::offload::debug::shouldPrintDebug((Component), (Type),          \
+                                                 RealLevel)) {                 \
+      ::llvm::offload::debug::odbg_ostream OS{                                 \
+          ::llvm::offload::debug::computePrefix((Prefix), (Type)), (Stream),   \
+          RealLevel, /*ShouldPrefixNextString=*/true,                          \
+          /*ShouldEmitNewLineOnDestruction=*/true};                            \
+      auto F = Callback;                                                       \
+      ::llvm::offload::debug::LambdaOs<decltype(F)>::dispatch(F, OS,           \
+                                                              RealLevel);      \
+    }                                                                          \
+  }
+
+#define ODBG_OS_STREAM(Stream, Type, Level, Callback)                          \
+  ODBG_OS_BASE(Stream, GETNAME(TARGET_NAME), DEBUG_PREFIX, Type, Level,        \
+               Callback)
+#define ODBG_OS_3(Type, Level, Callback)                                       \
+  ODBG_OS_STREAM(llvm::offload::debug::dbgs(), Type, Level, Callback)
+#define ODBG_OS_2(Type, Callback) ODBG_OS_3(Type, 1, Callback)
+#define ODBG_OS_1(Callback) ODBG_OS_2("default", Callback)
+#define ODBG_OS_SELECT(Type, Level, Callback, NArgs, ...) ODBG_OS_##NArgs
+// Print a debug message of a certain type and verbosity level using a callback
+// to emit the message. If no type or level is provided, "default" and "1 are
+// assumed respectively.
+#define ODBG_OS(...)                                                           \
+  ODBG_OS_SELECT(__VA_ARGS__ __VA_OPT__(, ) 3, 2, 1)(__VA_ARGS__)
+
+// helper templates to support lambdas with different number of arguments
+template <typename LambdaTy> struct LambdaIf : public LambdaHelper<LambdaTy> {
+  static void dispatch(LambdaTy func, uint32_t Level) {
+    if constexpr (NArgs == 1)
+      func(Level);
+    else
+      func();
+  }
+};
+
+#define ODBG_IF_BASE(Type, Level, Callback)                                    \
+  if (::llvm::offload::debug::isDebugEnabled()) {                              \
+    uint32_t RealLevel = (Level);                                              \
+    if (::llvm::offload::debug::shouldPrintDebug(GETNAME(TARGET_NAME), (Type), \
+                                                 RealLevel)) {                 \
+      auto F = Callback;                                                       \
+      ::llvm::offload::debug::LambdaIf<decltype(F)>::dispatch(F, RealLevel);   \
+    }                                                                          \
+  }
+
+#define ODBG_IF_3(Type, Level, Callback) ODBG_IF_BASE(Type, Level, Callback)
+#define ODBG_IF_2(Type, Callback) ODBG_IF_3(Type, 1, Callback)
+#define ODBG_IF_1(Callback) ODBG_IF_2("default", Callback)
+#define ODBG_IF_SELECT(Type, Level, Callback, NArgs, ...) ODBG_IF_##NArgs
+#define ODBG_IF(...)                                                           \
+  ODBG_IF_SELECT(__VA_ARGS__ __VA_OPT__(, ) 3, 2, 1)(__VA_ARGS__)
+
 #else
 
 inline bool isDebugEnabled() { return false; }
@@ -445,6 +526,13 @@ inline bool isDebugEnabled() { return false; }
 #define ODBG_ONLY_LEVEL(Level) 0
 #define ODBG_RESET_LEVEL() 0
 #define ODBG(...) ODBG_NULL
+
+#define ODBG_OS_BASE(Stream, Component, Prefix, Type, Level, Callback)
+#define ODBG_OS_STREAM(Stream, Type, Level, Callback)
+#define ODBG_OS(...)
+
+#define ODBG_IF_BASE(Type, Level, Callback)
+#define ODBG_IF(...)
 
 #endif
 
@@ -476,6 +564,9 @@ constexpr const char *ODT_DumpTable = "DumpTable";
 constexpr const char *ODT_MappingChanged = "MappingChanged";
 constexpr const char *ODT_PluginKernel = "PluginKernel";
 constexpr const char *ODT_EmptyMapping = "EmptyMapping";
+constexpr const char *ODT_Device = "Device";
+constexpr const char *ODT_Interface = "Interface";
+constexpr const char *ODT_Alloc = "Alloc";
 
 static inline odbg_ostream reportErrorStream() {
 #ifdef OMPTARGET_DEBUG
@@ -524,6 +615,12 @@ static inline odbg_ostream reportErrorStream() {
       FAILURE_MESSAGE(__VA_ARGS__);                                            \
     }                                                                          \
   } while (false)
+
+// Define default format for pointers
+static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
+  Os << ::llvm::format(DPxMOD, DPxPTR(Ptr));
+  return Os;
+}
 
 #else
 #define DP(...)                                                                \

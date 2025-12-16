@@ -984,6 +984,11 @@ let SMETargetGuard = "sme2p2" in {
 def SVCOMPACT : SInst<"svcompact[_{d}]", "dPd",  "ilUiUlfd", MergeNone, "aarch64_sve_compact", [VerifyRuntimeMode]>;
 }
 
+let SVETargetGuard = "sve2p2|sme2p2",  SMETargetGuard = "sme2p2" in {
+def SVCOMPACT_BH : SInst<"svcompact[_{d}]", "dPd",  "cUcsUsmbh", MergeNone, "aarch64_sve_compact", [VerifyRuntimeMode]>;
+def SVEXPAND  : SInst<"svexpand[_{d}]",  "dPd",  "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_expand",  [VerifyRuntimeMode]>;
+}
+
 // Note: svdup_lane is implemented using the intrinsic for TBL to represent a
 // splat of any possible lane. It is upto LLVM to pick a more efficient
 // instruction such as DUP (indexed) if the lane index fits the range of the
@@ -1110,6 +1115,11 @@ def SVCNTD : SInst<"svcntd", "nv", "", MergeNone, "aarch64_sve_cntd", [IsAppendS
 
 def SVCNTP : SInst<"svcntp_{d}",  "nPP", "PcPsPiPl",         MergeNone, "aarch64_sve_cntp", [VerifyRuntimeMode]>;
 def SVLEN  : SInst<"svlen[_{d}]", "nd",  "csilUcUsUiUlhfdb", MergeNone, "", [VerifyRuntimeMode]>;
+
+let SVETargetGuard = "sve2p2|sme2p2",  SMETargetGuard = "sve2p2|sme2p2" in {
+  def SVFIRSTP  : SInst<"svfirstp_{d}", "lPP", "PcPsPiPl", MergeNone, "aarch64_sve_firstp", [VerifyRuntimeMode], []>;
+  def SVLASTP  : SInst<"svlastp_{d}", "lPP", "PcPsPiPl", MergeNone, "aarch64_sve_lastp", [VerifyRuntimeMode], []>;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Saturating scalar arithmetic
@@ -1292,10 +1302,10 @@ defm SVQSUB_S  : SInstZPZZ<"svqsub",  "csli",     "aarch64_sve_sqsub",  "aarch64
 defm SVQSUB_U  : SInstZPZZ<"svqsub",  "UcUsUiUl", "aarch64_sve_uqsub",  "aarch64_sve_uqsub_u">;
 defm SVQSUBR_S : SInstZPZZ<"svqsubr", "csli",     "aarch64_sve_sqsubr", "aarch64_sve_sqsub_u", [ReverseMergeAnyBinOp]>;
 defm SVQSUBR_U : SInstZPZZ<"svqsubr", "UcUsUiUl", "aarch64_sve_uqsubr", "aarch64_sve_uqsub_u", [ReverseMergeAnyBinOp]>;
-defm SVHSUB_S  : SInstZPZZ<"svhsub",  "csli",     "aarch64_sve_shsub",  "aarch64_sve_shsub">;
-defm SVHSUB_U  : SInstZPZZ<"svhsub",  "UcUsUiUl", "aarch64_sve_uhsub",  "aarch64_sve_uhsub">;
-defm SVHSUBR_S : SInstZPZZ<"svhsubr", "csli",     "aarch64_sve_shsubr", "aarch64_sve_shsubr">;
-defm SVHSUBR_U : SInstZPZZ<"svhsubr", "UcUsUiUl", "aarch64_sve_uhsubr", "aarch64_sve_uhsubr">;
+defm SVHSUB_S  : SInstZPZZ<"svhsub",  "csli",     "aarch64_sve_shsub",  "aarch64_sve_shsub_u">;
+defm SVHSUB_U  : SInstZPZZ<"svhsub",  "UcUsUiUl", "aarch64_sve_uhsub",  "aarch64_sve_uhsub_u">;
+defm SVHSUBR_S : SInstZPZZ<"svhsubr", "csli",     "aarch64_sve_shsubr", "aarch64_sve_shsub_u", [ReverseMergeAnyBinOp]>;
+defm SVHSUBR_U : SInstZPZZ<"svhsubr", "UcUsUiUl", "aarch64_sve_uhsubr", "aarch64_sve_uhsub_u", [ReverseMergeAnyBinOp]>;
 
 defm SVQABS   : SInstZPZ<"svqabs",   "csil", "aarch64_sve_sqabs">;
 defm SVQNEG   : SInstZPZ<"svqneg",   "csil", "aarch64_sve_sqneg">;
@@ -2411,4 +2421,12 @@ let SVETargetGuard = "sve2,fp8fma", SMETargetGuard = "ssve-fp8fma" in {
   def SVFMLALLBT_LANE : SInst<"svmlallbt_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
   def SVFMLALLTB_LANE : SInst<"svmlalltb_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
   def SVFMLALLTT_LANE : SInst<"svmlalltt_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
+}
+
+let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2p2" in {
+  def FMUL_SINGLE_X2 : SInst<"svmul[_single_{d}_x2]", "22d", "hfd", MergeNone, "aarch64_sve_fmul_single_x2", [IsStreaming], []>;
+  def FMUL_SINGLE_X4 : SInst<"svmul[_single_{d}_x4]", "44d", "hfd", MergeNone, "aarch64_sve_fmul_single_x4", [IsStreaming], []>;
+
+  def FMUL_X2 : SInst<"svmul[_{d}_x2]", "222", "hfd", MergeNone, "aarch64_sve_fmul_x2", [IsStreaming], []>;
+  def FMUL_X4 : SInst<"svmul[_{d}_x4]", "444", "hfd", MergeNone, "aarch64_sve_fmul_x4", [IsStreaming], []>;
 }
