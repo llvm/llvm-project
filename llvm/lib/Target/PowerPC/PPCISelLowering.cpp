@@ -16883,7 +16883,7 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
   // the second vector, canonicalize to the commuted form. This will make it
   // more likely to match one of the single instruction patterns.
   if (Mask[0] >= NumElts && LHS.getOpcode() != ISD::VECTOR_SHUFFLE &&
-      RHS.getOpcode() != ISD::VECTOR_SHUFFLE) {
+      RHS.getOpcode() != ISD::VECTOR_SHUFFLE && LHS != RHS) {
     std::swap(LHS, RHS);
     Res = DAG.getCommutedVectorShuffle(*SVN);
     Mask = cast<ShuffleVectorSDNode>(Res)->getMask();
