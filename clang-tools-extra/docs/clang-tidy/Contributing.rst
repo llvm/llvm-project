@@ -451,6 +451,19 @@ your build tree.  Make sure that your check is correctly shown in the release no
 list of checks.  Make sure that the formatting and structure of your check's documentation
 look correct.
 
+Clang-tidy uses `doc8 <https://pypi.org/project/doc8/>`_ to check ``.rst``
+files for formatting consistency. You can install ``doc8`` with ``pip``:
+
+.. code-block:: console
+
+  $ pip install doc8
+
+To run ``doc8`` on the modified documentations:
+
+.. code-block:: console
+
+  $ git diff --name-only HEAD -- clang-tools-extra/docs/clang-tidy/ | grep "\.rst$" | xargs -r doc8
+
 
 Registering your Check
 ----------------------
