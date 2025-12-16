@@ -179,6 +179,10 @@ using MemmoveFct = void *(*)(void *, const void *, std::size_t);
     void *dest, const void *src, std::size_t count) {
   return Fortran::runtime::memmove(dest, src, count);
 }
+[[maybe_unused]] static RT_API_ATTRS void MemcpyWrapper(
+    void *dest, const void *src, std::size_t count) {
+  Fortran::runtime::memcpy(dest, src, count);
+}
 #endif
 
 #if STD_STRLEN_USE_BUILTIN
