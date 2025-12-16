@@ -332,6 +332,11 @@ class Doc8LintHelper(LintHelper):
         parts: List[str] = []
         if output := proc.stdout.strip():
             parts.append(output)
+            if "D001" in output or "Line too long" in output:
+                parts.append(
+                    "Note: documentation lines should be no more than 79 characters wide."
+                )
+
         if error_output := proc.stderr.strip():
             parts.append(f"stderr:\n{error_output}")
 
