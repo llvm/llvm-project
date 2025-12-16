@@ -2835,6 +2835,58 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
 }
 
 //===----------------------------------------------------------------------===//
+// GetMemberValueOp
+//===----------------------------------------------------------------------===//
+
+def CIR_GetMemberValueOp : CIR_Op<"get_member_value"> {
+  let summary = "Get the value of a member of a record";
+  let description = [{
+    The `cir.get_member_value` operation gets the value of a particular named
+    member from the input record.
+
+    It expects the record object as well as the name of the member and its field
+    index.
+
+    Example:
+    ```mlir
+    // Suppose we have a record with multiple members.
+    !s32i = !cir.int<s, 32>
+    !s8i = !cir.int<s, 8>
+    !ty_B = !cir.record<"struct.B" {!s32i, !s8i}>
+
+    // Get the value of the member at index 1.
+    %1 = cir.get_member_value %0[1] : (!ty_B) -> !s8i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_RecordType:$rec,
+    IndexAttr:$index_attr);
+
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $rec `[` $index_attr `]` attr-dict
+    `:` qualified(type($rec)) `->` qualified(type($result))
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result,
+                   "mlir::Value":$rec,
+                   "unsigned":$index),
+    [{
+      mlir::APInt fieldIdx(64, index);
+      build($_builder, $_state, result, rec, fieldIdx);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return the index of the record member being accessed.
+    uint64_t getIndex() { return getIndexAttr().getZExtValue(); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
