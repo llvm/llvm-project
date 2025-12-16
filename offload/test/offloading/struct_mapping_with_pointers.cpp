@@ -37,10 +37,10 @@ int main() {
   /// when mapping the struct happens after the mapping of the pointers.
 
   // clang-format off
-  // CHECK: omptarget --> Entry  0: Base=[[DAT_HST_PTR_BASE:0x.*]], Begin=[[DAT_HST_PTR_BASE]], Size=288, Type=0x0, Name=unknown
-  // CHECK: omptarget --> Entry  1: Base=[[DAT_HST_PTR_BASE]], Begin=[[DAT_HST_PTR_BASE]], Size=288, Type=0x1000000000001, Name=unknown
-  // CHECK: omptarget --> Entry  2: Base=[[DAT_HST_PTR_BASE]], Begin=[[DATUM_HST_PTR_BASE:0x.*]], Size=40, Type=0x1000000000011, Name=unknown
-  // CHECK: omptarget --> Entry  3: Base=[[MORE_DATUM_HST_PTR_BASE:0x.*]], Begin=[[MORE_DATUM_HST_PTR_BEGIN:0x.*]], Size=80, Type=0x1000000000011, Name=unknown
+  // CHECK: omptarget --> Entry  0: Base=0x{{0*}}[[DAT_HST_PTR_BASE:.*]], Begin=0x{{0*}}[[DAT_HST_PTR_BASE]], Size=288, Type=0x{{0*}}, Name=unknown
+  // CHECK: omptarget --> Entry  1: Base=0x{{0*}}[[DAT_HST_PTR_BASE]], Begin=0x{{0*}}[[DAT_HST_PTR_BASE]], Size=288, Type=0x1000000000001, Name=unknown
+  // CHECK: omptarget --> Entry  2: Base=0x{{0*}}[[DAT_HST_PTR_BASE]], Begin=0x{{0*}}[[DATUM_HST_PTR_BASE:.*]], Size=40, Type=0x1000000000011, Name=unknown
+  // CHECK: omptarget --> Entry  3: Base=0x{{0*}}[[MORE_DATUM_HST_PTR_BASE:.*]], Begin=0x{{0*}}[[MORE_DATUM_HST_PTR_BEGIN:.*]], Size=80, Type=0x1000000000011, Name=unknown
   // clang-format on
 
   /// The struct will be mapped in the same order as the above entries.
@@ -48,26 +48,26 @@ int main() {
   /// First argument is the struct itself and it will be mapped once.
 
   // clang-format off
-  // CHECK: omptarget --> Looking up mapping(HstPtrBegin=[[DAT_HST_PTR_BASE]], Size=288)...
-  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 288 with host pointer [[DAT_HST_PTR_BASE]].
-  // CHECK: omptarget --> Creating new map entry with HstPtrBase=[[DAT_HST_PTR_BASE]], HstPtrBegin=[[DAT_HST_PTR_BASE]], TgtAllocBegin=[[DAT_DEVICE_PTR_BASE:0x.*]], TgtPtrBegin=[[DAT_DEVICE_PTR_BASE]], Size=288, DynRefCount=1, HoldRefCount=0, Name=unknown
-  // CHECK: omptarget --> Moving 288 bytes (hst:[[DAT_HST_PTR_BASE]]) -> (tgt:[[DAT_DEVICE_PTR_BASE]])
+  // CHECK: omptarget --> Looking up mapping(HstPtrBegin=0x{{0*}}[[DAT_HST_PTR_BASE]], Size=288)...
+  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 288 with host pointer 0x{{0*}}[[DAT_HST_PTR_BASE]].
+  // CHECK: omptarget --> Creating new map entry with HstPtrBase=0x{{0*}}[[DAT_HST_PTR_BASE]], HstPtrBegin=0x{{0*}}[[DAT_HST_PTR_BASE]], TgtAllocBegin=0x{{0*}}[[DAT_DEVICE_PTR_BASE:.*]], TgtPtrBegin=0x{{0*}}[[DAT_DEVICE_PTR_BASE]], Size=288, DynRefCount=1, HoldRefCount=0, Name=unknown
+  // CHECK: omptarget --> Moving 288 bytes (hst:0x{{0*}}[[DAT_HST_PTR_BASE]]) -> (tgt:0x{{0*}}[[DAT_DEVICE_PTR_BASE]])
   // clang-format on
 
   /// Second argument is dat.datum:
   // clang-format off
-  // CHECK: omptarget --> Looking up mapping(HstPtrBegin=[[DATUM_HST_PTR_BASE]], Size=40)...
-  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 40 with host pointer [[DATUM_HST_PTR_BASE]].
-  // CHECK: omptarget --> Creating new map entry with HstPtrBase=[[DATUM_HST_PTR_BASE]], HstPtrBegin=[[DATUM_HST_PTR_BASE]], TgtAllocBegin=[[DATUM_DEVICE_PTR_BASE:0x.*]], TgtPtrBegin=[[DATUM_DEVICE_PTR_BASE]], Size=40, DynRefCount=1, HoldRefCount=0, Name=unknown
-  // CHECK: omptarget --> Moving 40 bytes (hst:[[DATUM_HST_PTR_BASE]]) -> (tgt:[[DATUM_DEVICE_PTR_BASE]])
+  // CHECK: omptarget --> Looking up mapping(HstPtrBegin=0x{{0*}}[[DATUM_HST_PTR_BASE]], Size=40)...
+  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 40 with host pointer 0x{{0*}}[[DATUM_HST_PTR_BASE]].
+  // CHECK: omptarget --> Creating new map entry with HstPtrBase=0x{{0*}}[[DATUM_HST_PTR_BASE]], HstPtrBegin=0x{{0*}}[[DATUM_HST_PTR_BASE]], TgtAllocBegin=0x{{0*}}[[DATUM_DEVICE_PTR_BASE:.*]], TgtPtrBegin=0x{{0*}}[[DATUM_DEVICE_PTR_BASE]], Size=40, DynRefCount=1, HoldRefCount=0, Name=unknown
+  // CHECK: omptarget --> Moving 40 bytes (hst:0x{{0*}}[[DATUM_HST_PTR_BASE]]) -> (tgt:0x{{0*}}[[DATUM_DEVICE_PTR_BASE]])
   // clang-format on
 
   /// Third argument is dat.more_datum:
   // clang-format off
-  // CHECK: omptarget --> Looking up mapping(HstPtrBegin=[[MORE_DATUM_HST_PTR_BEGIN]], Size=80)...
-  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 80 with host pointer [[MORE_DATUM_HST_PTR_BEGIN]].
-  // CHECK: omptarget --> Creating new map entry with HstPtrBase=[[MORE_DATUM_HST_PTR_BEGIN]], HstPtrBegin=[[MORE_DATUM_HST_PTR_BEGIN]], TgtAllocBegin=[[MORE_DATUM_DEVICE_PTR_BEGIN:0x.*]], TgtPtrBegin=[[MORE_DATUM_DEVICE_PTR_BEGIN]], Size=80, DynRefCount=1, HoldRefCount=0, Name=unknown
-  // CHECK: omptarget --> Moving 80 bytes (hst:[[MORE_DATUM_HST_PTR_BEGIN]]) -> (tgt:[[MORE_DATUM_DEVICE_PTR_BEGIN]])
+  // CHECK: omptarget --> Looking up mapping(HstPtrBegin=0x{{0*}}[[MORE_DATUM_HST_PTR_BEGIN]], Size=80)...
+  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 80 with host pointer 0x{{0*}}[[MORE_DATUM_HST_PTR_BEGIN]].
+  // CHECK: omptarget --> Creating new map entry with HstPtrBase=0x{{0*}}[[MORE_DATUM_HST_PTR_BEGIN]], HstPtrBegin=0x{{0*}}[[MORE_DATUM_HST_PTR_BEGIN]], TgtAllocBegin=0x{{0*}}[[MORE_DATUM_DEVICE_PTR_BEGIN:.*]], TgtPtrBegin=0x{{0*}}[[MORE_DATUM_DEVICE_PTR_BEGIN]], Size=80, DynRefCount=1, HoldRefCount=0, Name=unknown
+  // CHECK: omptarget --> Moving 80 bytes (hst:0x{{0*}}[[MORE_DATUM_HST_PTR_BEGIN]]) -> (tgt:0x{{0*}}[[MORE_DATUM_DEVICE_PTR_BEGIN]])
   // clang-format on
 
 #pragma omp target enter data map(to : dat.datum[ : 10])                       \
@@ -75,9 +75,9 @@ int main() {
 
   /// Checks induced by having a target region:
   // clang-format off
-  // CHECK: omptarget --> Entry  0: Base=[[DAT_HST_PTR_BASE]], Begin=[[DAT_HST_PTR_BASE]], Size=288, Type=0x223, Name=unknown
-  // CHECK: omptarget --> Mapping exists (implicit) with HstPtrBegin=[[DAT_HST_PTR_BASE]], TgtPtrBegin=[[DAT_DEVICE_PTR_BASE]], Size=288, DynRefCount=2 (incremented), HoldRefCount=0, Name=unknown
-  // CHECK: omptarget --> Obtained target argument [[DAT_DEVICE_PTR_BASE]] from host pointer [[DAT_HST_PTR_BASE]]
+  // CHECK: omptarget --> Entry  0: Base=0x{{0*}}[[DAT_HST_PTR_BASE]], Begin=0x{{0*}}[[DAT_HST_PTR_BASE]], Size=288, Type=0x{{0*}}223, Name=unknown
+  // CHECK: omptarget --> Mapping exists (implicit) with HstPtrBegin=0x{{0*}}[[DAT_HST_PTR_BASE]], TgtPtrBegin=0x{{0*}}[[DAT_DEVICE_PTR_BASE]], Size=288, DynRefCount=2 (incremented), HoldRefCount=0, Name=unknown
+  // CHECK: omptarget --> Obtained target argument 0x{{0*}}[[DAT_DEVICE_PTR_BASE]] from host pointer 0x{{0*}}[[DAT_HST_PTR_BASE]]
   // clang-format on
 
 #pragma omp target
@@ -93,15 +93,15 @@ int main() {
 
   /// Post-target region checks:
   // clang-format off
-  // CHECK: omptarget --> Mapping exists with HstPtrBegin=[[DAT_HST_PTR_BASE]], TgtPtrBegin=[[DAT_DEVICE_PTR_BASE]], Size=288, DynRefCount=1 (decremented), HoldRefCount=0
+  // CHECK: omptarget --> Mapping exists with HstPtrBegin=0x{{0*}}[[DAT_HST_PTR_BASE]], TgtPtrBegin=0x{{0*}}[[DAT_DEVICE_PTR_BASE]], Size=288, DynRefCount=1 (decremented), HoldRefCount=0
   // clang-format on
 
 #pragma omp target exit data map(from : dat)
 
   /// Target data end checks:
   // clang-format off
-  // CHECK: omptarget --> Mapping exists with HstPtrBegin=[[DAT_HST_PTR_BASE]], TgtPtrBegin=[[DAT_DEVICE_PTR_BASE]], Size=288, DynRefCount=0 (decremented, delayed deletion), HoldRefCount=0
-  // CHECK: omptarget --> Moving 288 bytes (tgt:[[DAT_DEVICE_PTR_BASE]]) -> (hst:[[DAT_HST_PTR_BASE]])
+  // CHECK: omptarget --> Mapping exists with HstPtrBegin=0x{{0*}}[[DAT_HST_PTR_BASE]], TgtPtrBegin=0x{{0*}}[[DAT_DEVICE_PTR_BASE]], Size=288, DynRefCount=0 (decremented, delayed deletion), HoldRefCount=0
+  // CHECK: omptarget --> Moving 288 bytes (tgt:0x{{0*}}[[DAT_DEVICE_PTR_BASE]]) -> (hst:0x{{0*}}[[DAT_HST_PTR_BASE]])
   // clang-format on
 
   // CHECK: dat.xi = 4
