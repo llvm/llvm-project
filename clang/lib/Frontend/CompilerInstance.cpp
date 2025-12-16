@@ -548,7 +548,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   if (TextEncodingConfig::setConvertersFromOptions(PP->getTextEncodingConfig(),
                                                    getLangOpts(), getTarget()))
-    PP->getDiagnostics().Report(clang::diag::err_fe_literal_conv_config);
+    PP->getDiagnostics().Report(clang::diag::err_fe_text_encoding_config);
 }
 
 std::string

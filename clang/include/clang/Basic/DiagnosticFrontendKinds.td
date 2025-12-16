@@ -338,8 +338,8 @@ def err_non_default_visibility_dllimport : Error<
   "non-default visibility cannot be applied to 'dllimport' declaration">;
 def err_ifunc_resolver_return : Error<
   "ifunc resolver function must return a pointer">;
-def err_fe_literal_conv_config : Error<
-  "failed to configure the literal converter">;
+def err_fe_text_encoding_config
+    : Error<"failed to configure the text encoding config">;
 def warn_atomic_op_misaligned : Warning<
   "misaligned atomic operation may incur "
   "significant performance penalty"
