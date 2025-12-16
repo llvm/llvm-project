@@ -5,14 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file contains the definition of the SYCL 2020 exception_list class
-/// interface (4.13.2.)
-///
-//===----------------------------------------------------------------------===//
 
-// 4.13.2. Exception class interface
+// SYCL 2020 4.13.2. Exception class interface.
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/exception.hpp>
 

@@ -21,7 +21,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-// Minimal span-like view
+// Minimal span-like view.
 template <class T> struct range_view {
   T *ptr{};
   size_t len{};
@@ -34,20 +34,31 @@ template <class T> struct range_view {
 using PlatformWithDevStorageType =
     std::unordered_map<ol_platform_handle_t, std::vector<ol_device_handle_t>>;
 
-// Contiguous global storage of platform handlers and device handles (grouped by
-// platform) for a backend.
+/// Contiguous global storage of platform handlers and device handles (grouped
+/// by platform) for a backend.
 struct OffloadTopology {
   OffloadTopology() : MBackend(OL_PLATFORM_BACKEND_UNKNOWN) {}
   OffloadTopology(ol_platform_backend_t OlBackend) : MBackend(OlBackend) {}
 
+  /// Updates backend for this topology.
+  ///
+  /// \param B new backend value.
   void set_backend(ol_platform_backend_t B) { MBackend = B; }
 
-  // Platforms for this backend
+  /// Returns all platforms associated with this topology.
+  ///
+  /// \returns minimal span-like view to platforms associated with this
+  /// topology.
   range_view<const ol_platform_handle_t> platforms() const {
     return {MPlatforms.data(), MPlatforms.size()};
   }
 
-  // Devices for a specific platform (platform_id is index into Platforms)
+  /// Returns all devices associated with specific platform.
+  ///
+  /// \param PlatformId platform_id is index into Platforms.
+  ///
+  /// \returns minimal span-like view to devices associated with specified
+  /// platform.
   range_view<const ol_device_handle_t>
   devicesForPlatform(size_t PlatformId) const {
     if (PlatformId >= MDevRangePerPlatformId.size())
@@ -55,7 +66,10 @@ struct OffloadTopology {
     return MDevRangePerPlatformId[PlatformId];
   }
 
-  // Register new platform and devices into this topology under that platform.
+  /// Register new platform and devices into this topology.
+  ///
+  /// \param PlatformsAndDev associative container with platforms & devices.
+  /// \param TotalDevCount total device count for the platform.
   void
   registerNewPlatformsAndDevices(PlatformWithDevStorageType &PlatformsAndDev,
                                  size_t TotalDevCount) {
@@ -77,6 +91,9 @@ struct OffloadTopology {
     assert(TotalDevCount == MDevices.size());
   }
 
+  /// Queries backend of this topology.
+  ///
+  /// \returns backend of this topology.
   ol_platform_backend_t backend() const { return MBackend; }
 
 private:

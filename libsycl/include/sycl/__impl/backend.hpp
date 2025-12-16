@@ -23,7 +23,7 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-// SYCL 2020 4.1. Backends
+// SYCL 2020 4.1. Backends.
 enum class backend : unsigned char {
   opencl = 0,
   level_zero,
@@ -35,7 +35,7 @@ namespace detail {
 template <typename T> struct is_backend_info_desc : std::false_type {};
 } // namespace detail
 
-// SYCL 2020  4.5.1.1. Type traits backend_traits
+// SYCL 2020  4.5.1.1. Type traits backend_traits.
 template <backend Backend> class backend_traits;
 
 template <backend Backend, typename SyclType>

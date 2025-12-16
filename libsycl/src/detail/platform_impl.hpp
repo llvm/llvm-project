@@ -46,10 +46,14 @@ public:
   ~platform_impl() = default;
 
   /// Returns the backend associated with this platform.
+  ///
+  /// \returns sycl::backend associated with this platform.
   backend getBackend() const noexcept { return MBackend; }
 
   /// Returns all SYCL platforms from all backends that are
   /// available in the system.
+  ///
+  /// \returns std::vector of all platforms that are available in the system.
   static const std::vector<PlatformImplUPtr> &getPlatforms();
 
   /// Returns raw underlying offload platform handle.
@@ -57,40 +61,23 @@ public:
   /// It does not retain handle. It is caller responsibility to make sure that
   /// platform stays alive while raw handle is in use.
   ///
-  /// \return a raw plug-in platform handle.
+  /// \return a raw offload platform handle.
   const ol_platform_handle_t &getHandleRef() const { return MOffloadPlatform; }
 
-  /// Returns platform index in a backend (needed for a proper indexing in
-  /// device selector).
-  size_t getPlatformIndex() const { return MOffloadPlatformIndex; }
-
-  /// Queries the cache to see if the specified offloading RT platform has been
-  /// seen before.  If so, return the cached platform_impl, otherwise create a
-  /// new one and cache it.
+  /// Queries the cache to get the implementation for specified offloading RT
+  /// platform. All platform implementation objects are created at first
+  /// get_platforms call.
   ///
   /// \param Platform is the offloading RT Platform handle representing the
-  /// platform
-  /// \param PlatformIndex is a platform index in a backend (needed for a proper
-  /// indexing in device selector).
-  /// \return the platform_impl representing the offloading RT platform
+  /// platform.
+  /// \return the platform_impl representing the offloading RT platform.
   static platform_impl &getPlatformImpl(ol_platform_handle_t Platform);
 
-  template <typename InfoDesc>
-  static constexpr ol_platform_info_t getOffloadInfo() {
-    if constexpr (std::is_same_v<InfoDesc, sycl::info::platform::version>)
-      return OL_PLATFORM_INFO_VERSION;
-    else if constexpr (std::is_same_v<InfoDesc, sycl::info::platform::name>)
-      return OL_PLATFORM_INFO_NAME;
-    else if constexpr (std::is_same_v<InfoDesc, sycl::info::platform::vendor>)
-      return OL_PLATFORM_INFO_VENDOR_NAME;
-    else
-      static_assert(false && "Convertion list for platform info is not full.");
-  }
-  /// Queries this SYCL platform for info.
+  /// Queries this platform for info.
   ///
   /// The return type depends on information being queried.
   template <typename Param> typename Param::return_type get_info() const {
-    // for now we have only std::string properties
+    // For now we have only std::string properties
     static_assert(std::is_same_v<typename Param::return_type, std::string>);
 
     using namespace info::platform;

@@ -44,16 +44,29 @@ enum class errc : int {
   backend_mismatch = 14,
 };
 
-/// Constructs an error code using E and sycl_category()
+/// Constructs an error code using sycl::errc and sycl_category().
+///
+/// \param E SYCL 2020 error code.
+///
+/// \returns constructed error code.
 _LIBSYCL_EXPORT std::error_code make_error_code(sycl::errc E) noexcept;
 
 /// Obtains a reference to the static error category object for SYCL errors.
+///
+/// This object overrides the virtual function error_category::name() to return
+/// a pointer to the string "sycl". When the implementation throws an
+/// sycl::exception object Ex with this category, the error code value contained
+/// by the exception (Ex.code().value()) is one of the enumerated values in
+/// sycl::errc.
+///
+/// \returns the error category object for SYCL errors.
 _LIBSYCL_EXPORT const std::error_category &sycl_category() noexcept;
 
-// Derive from std::exception so uncaught exceptions are printed in c++ default
-// exception handler.
-// Virtual inheritance is mandated by SYCL 2020.
-// SYCL 2020 4.13.2. Exception class interface
+/// \brief SYCL 2020 exception class (4.13.2.) for sync and async error handling
+/// in a SYCL application (host code).
+///
+/// Derived from std::exception so uncaught exceptions are printed in c++
+/// default exception handler. Virtual inheritance is mandated by SYCL 2020.
 class _LIBSYCL_EXPORT exception : public virtual std::exception {
 public:
   exception(std::error_code, const char *);
@@ -70,11 +83,26 @@ public:
 
   virtual ~exception();
 
+  /// Returns the error code stored inside the exception.
+  ///
+  /// \returns the error code stored inside the exception.
   const std::error_code &code() const noexcept;
+
+  /// Returns the error category of the error code stored inside the exception.
+  ///
+  /// \returns the error category of the error code stored inside the exception.
   const std::error_category &category() const noexcept;
 
+  /// Returns string that describes the error that triggered the exception.
+  ///
+  /// \returns an implementation-defined non-null constant C-style string that
+  /// describes the error that triggered the exception.
   const char *what() const noexcept final;
 
+  /// Checks if the exception has an associated SYCL context.
+  ///
+  /// \returns true if this SYCL exception has an associated SYCL context and
+  /// false if it does not.
   bool has_context() const noexcept;
 
 private:
@@ -84,8 +112,7 @@ private:
   std::error_code MErrC = make_error_code(sycl::errc::invalid);
 };
 
-/// Used as a container for a list of asynchronous exceptions
-///
+/// \brief Used as a container for a list of asynchronous exceptions.
 class _LIBSYCL_EXPORT exception_list {
 public:
   using value_type = std::exception_ptr;
@@ -95,10 +122,21 @@ public:
   using iterator = std::vector<std::exception_ptr>::const_iterator;
   using const_iterator = std::vector<std::exception_ptr>::const_iterator;
 
+  /// Returns the size of the list.
+  ///
+  /// \returns the size of the list.
   size_type size() const;
-  // first asynchronous exception
+
+  /// Returns an iterator to the beginning of the list of asynchronous
+  /// exceptions.
+  ///
+  /// \returns an iterator to the beginning of the list of asynchronous
+  /// exceptions.
   iterator begin() const;
-  // refer to past-the-end last asynchronous exception
+
+  /// Returns an iterator to the end of the list of asynchronous exceptions.
+  ///
+  /// \returns an iterator to the end of the list of asynchronous exceptions.
   iterator end() const;
 
 private:

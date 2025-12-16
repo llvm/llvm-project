@@ -21,9 +21,19 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 class platform_impl;
 
-// Offload topologies (one per backend) discovered from liboffload.
+/// Returns offload topologies (one per backend) discovered from liboffload.
+///
+/// This vector is populated only once at the first call of get_platforms().
+///
+/// \returns std::vector of all offload topologies.
 std::vector<detail::OffloadTopology> &getOffloadTopologies();
 
+/// Returns implementation class objects for all platforms discovered from
+/// liboffload.
+///
+/// This vector is populated only once at the first call of get_platforms().
+///
+/// \returns std::vector of implementation objects for all platforms.
 std::vector<std::unique_ptr<platform_impl>> &getPlatformCache();
 
 } // namespace detail

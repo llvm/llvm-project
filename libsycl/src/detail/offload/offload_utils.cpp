@@ -11,8 +11,8 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
-const char *stringifyErrorCode(ol_errc_t error) {
-  switch (error) {
+const char *stringifyErrorCode(ol_errc_t Error) {
+  switch (Error) {
 #define _OFFLOAD_ERRC(NAME)                                                    \
   case NAME:                                                                   \
     return #NAME;

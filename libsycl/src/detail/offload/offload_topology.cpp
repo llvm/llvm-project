@@ -34,14 +34,14 @@ void discoverOffloadDevices() {
         ol_platform_handle_t Plat = nullptr;
         ol_result_t Res = call_nocheck(
             olGetDeviceInfo, Dev, OL_DEVICE_INFO_PLATFORM, sizeof(Plat), &Plat);
-        // If error occures, ignore platform and continue iteration
+        // If error occurs, ignore platform and continue iteration
         if (Res != OL_SUCCESS)
           return true;
 
         ol_platform_backend_t OlBackend = OL_PLATFORM_BACKEND_UNKNOWN;
         Res = call_nocheck(olGetPlatformInfo, Plat, OL_PLATFORM_INFO_BACKEND,
                            sizeof(OlBackend), &OlBackend);
-        // If error occures, ignore platform and continue iteration
+        // If error occurs, ignore platform and continue iteration
         if (Res != OL_SUCCESS)
           return true;
 

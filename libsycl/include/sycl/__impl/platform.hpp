@@ -29,7 +29,8 @@ namespace detail {
 class platform_impl;
 } // namespace detail
 
-// SYCL 2020 4.6.2. Platform class
+/// \brief SYCL 2020 platform class (4.6.2.) encapsulating a single SYCL
+/// platform on which kernel functions may be executed.
 class _LIBSYCL_EXPORT platform {
 public:
   platform(const platform &rhs) = default;
@@ -46,7 +47,7 @@ public:
 
   /// Returns the backend associated with this platform.
   ///
-  /// \return the backend associated with this platform
+  /// \return the backend associated with this platform.
   backend get_backend() const noexcept;
 
   /// Queries this SYCL platform for info.

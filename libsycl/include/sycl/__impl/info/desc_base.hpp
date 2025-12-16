@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains helpers for info descriptors
+/// This file contains helpers for info descriptors.
 ///
 //===----------------------------------------------------------------------===//
 
