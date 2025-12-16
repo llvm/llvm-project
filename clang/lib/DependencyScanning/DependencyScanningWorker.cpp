@@ -60,20 +60,15 @@ bool DependencyScanningWorker::computeDependencies(
     DependencyConsumer &DepConsumer, DependencyActionController &Controller,
     DiagnosticConsumer &DiagConsumer,
     llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  auto DiagEngineWithDiagOpts =
-      OverlayFS
-          ? DiagnosticsEngineWithDiagOpts(CommandLine, OverlayFS, DiagConsumer)
-          : DiagnosticsEngineWithDiagOpts(CommandLine, DepFS, DiagConsumer);
-  auto &Diags = *DiagEngineWithDiagOpts.DiagEngine;
   return computeDependencies(WorkingDirectory,
                              ArrayRef<ArrayRef<std::string>>(CommandLine),
-                             DepConsumer, Controller, Diags, OverlayFS);
+                             DepConsumer, Controller, DiagConsumer, OverlayFS);
 }
 
 bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
     DependencyConsumer &DepConsumer, DependencyActionController &Controller,
-    DiagnosticsEngine &Diags,
+    DiagnosticConsumer &DiagConsumer,
     llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr;
   if (OverlayFS) {
@@ -99,6 +94,11 @@ bool DependencyScanningWorker::computeDependencies(
           {Cmd.front(), {Cmd.begin() + 1, Cmd.end()}});
       return true;
     }
+
+    auto DiagEngineWithDiagOpts =
+        DiagnosticsEngineWithDiagOpts(Cmd, OverlayFS, DiagConsumer);
+    auto &Diags = *DiagEngineWithDiagOpts.DiagEngine;
+
     // Create an invocation that uses the underlying file system to ensure that
     // any file system requests that are made by the driver do not go through
     // the dependency scanning filesystem.
@@ -107,7 +107,7 @@ bool DependencyScanningWorker::computeDependencies(
 
   // Ensure finish() is called even if we never reached ExecuteAction().
   if (!Action.hasDiagConsumerFinished())
-    Diags.getClient()->finish();
+    DiagConsumer.finish();
 
   return Success && Action.hasScanned();
 }

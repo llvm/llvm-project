@@ -119,11 +119,11 @@ public:
   /// dependency scanning file-system is used instead.
   ///
   /// \returns false if clang errors occurred (with diagnostics reported to
-  /// \c Diags), true otherwise.
+  /// \c DiagConsumer), true otherwise.
   bool computeDependencies(
       StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
       DependencyConsumer &DepConsumer, DependencyActionController &Controller,
-      DiagnosticsEngine &Diags,
+      DiagnosticConsumer &DiagConsumer,
       llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
           nullptr);
 

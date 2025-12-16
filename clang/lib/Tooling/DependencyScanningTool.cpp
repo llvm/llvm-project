@@ -136,16 +136,24 @@ buildFrontendCommandLine(const driver::Command &Cmd) {
 static bool computeDependenciesForDriverCommandLine(
     DependencyScanningWorker &Worker, StringRef WorkingDirectory,
     ArrayRef<std::string> CommandLine, DependencyConsumer &Consumer,
-    DependencyActionController &Controller, DiagnosticsEngine &Diags,
+    DependencyActionController &Controller, DiagnosticConsumer &DiagConsumer,
     IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  Worker.getVFS().setCurrentWorkingDirectory(WorkingDirectory);
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr;
+  if (OverlayFS) {
+    FS = OverlayFS;
+  } else {
+    FS = &Worker.getVFS();
+    FS->setCurrentWorkingDirectory(WorkingDirectory);
+  }
 
   // Compilation holds a non-owning a reference to the Driver, hence we need to
   // keep the Driver alive when we use Compilation. Arguments to commands may be
   // owned by Alloc when expanded from response files.
   llvm::BumpPtrAllocator Alloc;
-  const auto [Driver, Compilation] =
-      buildCompilation(CommandLine, Diags, &Worker.getVFS(), Alloc);
+  auto DiagEngineWithDiagOpts =
+      DiagnosticsEngineWithDiagOpts(CommandLine, FS, DiagConsumer);
+  const auto [Driver, Compilation] = buildCompilation(
+      CommandLine, *DiagEngineWithDiagOpts.DiagEngine, FS, Alloc);
   if (!Compilation)
     return false;
 
@@ -156,7 +164,8 @@ static bool computeDependenciesForDriverCommandLine(
       FrontendCommandLines.begin(), FrontendCommandLines.end());
 
   return Worker.computeDependencies(WorkingDirectory, FrontendCommandLinesView,
-                                    Consumer, Controller, Diags, OverlayFS);
+                                    Consumer, Controller, DiagConsumer,
+                                    OverlayFS);
 }
 
 static llvm::Error makeErrorFromDiagnosticsOS(
@@ -181,18 +190,13 @@ static bool computeDependencies(
     CommandLine = CommandLineWithTUBufferInput;
   }
 
-  DiagnosticsEngineWithDiagOpts DiagEngineWithDiagOpts(
-      CommandLine, &Worker.getVFS(), DiagConsumer);
-  auto &Diags = *DiagEngineWithDiagOpts.DiagEngine;
-
   const auto IsCC1Input = (CommandLine.size() >= 2 && CommandLine[1] == "-cc1");
-  return
-      IsCC1Input
-          ? Worker.computeDependencies(WorkingDirectory, CommandLine, Consumer,
-                                       Controller, Diags, OverlayFS)
-          : computeDependenciesForDriverCommandLine(
-                Worker, WorkingDirectory, CommandLine, Consumer, Controller,
-                Diags, OverlayFS);
+  return IsCC1Input ? Worker.computeDependencies(WorkingDirectory, CommandLine,
+                                                 Consumer, Controller,
+                                                 DiagConsumer, OverlayFS)
+                    : computeDependenciesForDriverCommandLine(
+                          Worker, WorkingDirectory, CommandLine, Consumer,
+                          Controller, DiagConsumer, OverlayFS);
 }
 
 std::optional<std::string>
