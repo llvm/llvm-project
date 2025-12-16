@@ -46,7 +46,7 @@ int MyFunction(int MyArgument) {
 
 template int MyFunction<int>(int);
 
-}
+}  // namespace MyNamespace
 
 #define my_macro_2
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for macro definition 'my_macro_2' [readability-identifier-naming]
@@ -72,5 +72,4 @@ int my_function(int my_argument) {
 
 template int my_function<int>(int);
 
-}
-
+}  // namespace my_namespace_2

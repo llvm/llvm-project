@@ -23,7 +23,7 @@ int MyFunction(int MyArgument) {
 
 template int MyFunction<int>(int);
 
-}
+}  // namespace MyNamespace
 
 // ...or lower_case for the same set of symbol types.
 #define my_macro_2
@@ -46,5 +46,4 @@ int my_function(int my_argument) {
 
 template int my_function<int>(int);
 
-}
-
+}  // namespace my_namespace_2
