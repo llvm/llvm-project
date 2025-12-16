@@ -67,22 +67,6 @@ public:
 
     State getBehaviour() const { return Behaviour; }
 
-    /// Unknown cause tracking.
-    void markUnknownFromMissingDefinition() {
-      UnknownFromMissingDefinition = true;
-      ContainsUnknown = true;
-    }
-    void markUnknownFromKnownUnannotated() {
-      UnknownFromKnownUnannotated = true;
-      ContainsUnknown = true;
-    }
-    bool hasUnknownFromMissingDefinition() const {
-      return UnknownFromMissingDefinition;
-    }
-    bool hasUnknownFromKnownUnannotated() const {
-      return UnknownFromKnownUnannotated;
-    }
-
     /// Register a single exception type as recognized potential exception to be
     /// thrown.
     void registerException(const Type *ExceptionType,
@@ -127,6 +111,12 @@ public:
     /// occur. If there is an 'Unknown' element this can not be guaranteed.
     bool containsUnknownElements() const { return ContainsUnknown; }
 
+    void registerUnknownException() {
+      Behaviour = State::Throwing;
+      ThrowsUnknown = true;
+      ContainsUnknown = true;
+    }
+
   private:
     /// Recalculate the 'Behaviour' for example after filtering.
     void reevaluateBehaviour();
@@ -140,8 +130,9 @@ public:
     /// after filtering.
     bool ContainsUnknown;
 
-    bool UnknownFromMissingDefinition = false;
-    bool UnknownFromKnownUnannotated = false;
+    /// True if the entity is determined to be Throwing due to an unknown cause,
+    /// based on analyzer configuration.
+    bool ThrowsUnknown = false;
 
     /// 'ThrownException' is empty if the 'Behaviour' is either 'NotThrowing' or
     /// 'Unknown'.
@@ -149,10 +140,16 @@ public:
   };
 
   ExceptionAnalyzer() = default;
-  /// When enabled, treat any function that is not explicitly non-throwing
-  /// as potentially throwing, even if its body analysis finds no throw.
-  void assumeUnannotatedFunctionsThrow(bool Enable) {
-    AssumeUnannotatedThrowing = Enable;
+
+  enum class UnknownHandlingBehavior { Ignore, TreatAsThrowing };
+
+  void setUnannotatedFunctionsBehavior(UnknownHandlingBehavior Behavior) {
+    AssumeUnannotatedThrowing =
+        Behavior == UnknownHandlingBehavior::TreatAsThrowing;
+  }
+  void setMissingDefinitionsBehavior(UnknownHandlingBehavior Behavior) {
+    MissingDefinitionsAreThrowing =
+        Behavior == UnknownHandlingBehavior::TreatAsThrowing;
   }
 
   void ignoreBadAlloc(bool ShallIgnore) { IgnoreBadAlloc = ShallIgnore; }
@@ -179,6 +176,7 @@ private:
   llvm::StringSet<> IgnoredExceptions;
   llvm::DenseMap<const FunctionDecl *, ExceptionInfo> FunctionCache{32U};
   bool AssumeUnannotatedThrowing = false;
+  bool MissingDefinitionsAreThrowing = false;
 };
 
 } // namespace clang::tidy::utils

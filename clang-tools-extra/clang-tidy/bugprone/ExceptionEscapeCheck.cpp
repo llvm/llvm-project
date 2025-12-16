@@ -80,9 +80,20 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
   IgnoredExceptions.insert_range(IgnoredExceptionsVec);
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
-  Tracer.assumeUnannotatedFunctionsThrow(
+
+  const auto MissingDefinitionsBehavior =
+      TreatFunctionsWithoutSpecificationAsThrowing !=
+              FunctionsThatShouldNotThrowPolicy::None
+          ? utils::ExceptionAnalyzer::UnknownHandlingBehavior::TreatAsThrowing
+          : utils::ExceptionAnalyzer::UnknownHandlingBehavior::Ignore;
+  Tracer.setMissingDefinitionsBehavior(MissingDefinitionsBehavior);
+
+  const auto UnannotatedFunctionsBehavior =
       TreatFunctionsWithoutSpecificationAsThrowing ==
-      FunctionsThatShouldNotThrowPolicy::All);
+              FunctionsThatShouldNotThrowPolicy::All
+          ? utils::ExceptionAnalyzer::UnknownHandlingBehavior::TreatAsThrowing
+          : utils::ExceptionAnalyzer::UnknownHandlingBehavior::Ignore;
+  Tracer.setUnannotatedFunctionsBehavior(UnannotatedFunctionsBehavior);
 }
 
 void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -131,20 +142,7 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   const utils::ExceptionAnalyzer::ExceptionInfo Info =
       Tracer.analyze(MatchedDecl);
 
-  const auto Behaviour = Info.getBehaviour();
-  const bool IsThrowing =
-      Behaviour == utils::ExceptionAnalyzer::State::Throwing;
-  const bool IsUnknown = Behaviour == utils::ExceptionAnalyzer::State::Unknown;
-
-  const bool ReportUnknown =
-      IsUnknown && ((TreatFunctionsWithoutSpecificationAsThrowing ==
-                         FunctionsThatShouldNotThrowPolicy::All &&
-                     Info.hasUnknownFromKnownUnannotated()) ||
-                    (TreatFunctionsWithoutSpecificationAsThrowing !=
-                         FunctionsThatShouldNotThrowPolicy::None &&
-                     Info.hasUnknownFromMissingDefinition()));
-
-  if (!(IsThrowing || ReportUnknown))
+  if (Info.getBehaviour() != utils::ExceptionAnalyzer::State::Throwing)
     return;
 
   diag(MatchedDecl->getLocation(), "an exception may be thrown in function "

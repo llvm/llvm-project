@@ -39,10 +39,7 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
     Behaviour = State::Unknown;
 
   ContainsUnknown = ContainsUnknown || Other.ContainsUnknown;
-  UnknownFromMissingDefinition =
-      UnknownFromMissingDefinition || Other.UnknownFromMissingDefinition;
-  UnknownFromKnownUnannotated =
-      UnknownFromKnownUnannotated || Other.UnknownFromKnownUnannotated;
+  ThrowsUnknown = ThrowsUnknown || Other.ThrowsUnknown;
   ThrownExceptions.insert_range(Other.ThrownExceptions);
   return *this;
 }
@@ -455,13 +452,12 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
 void ExceptionAnalyzer::ExceptionInfo::clear() {
   Behaviour = State::NotThrowing;
   ContainsUnknown = false;
-  UnknownFromMissingDefinition = false;
-  UnknownFromKnownUnannotated = false;
+  ThrowsUnknown = false;
   ThrownExceptions.clear();
 }
 
 void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
-  if (ThrownExceptions.empty())
+  if (ThrownExceptions.empty() && !ThrowsUnknown)
     if (ContainsUnknown)
       Behaviour = State::Unknown;
     else
@@ -494,15 +490,16 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     // are not explicitly non-throwing and no throw was discovered.
     if (AssumeUnannotatedThrowing &&
         Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
-      auto Unknown = ExceptionInfo::createUnknown();
-      Unknown.markUnknownFromKnownUnannotated();
-      return Unknown;
+      Result.registerUnknownException();
+      return Result;
     }
     return Result;
   }
 
   auto Result = ExceptionInfo::createUnknown();
-  Result.markUnknownFromMissingDefinition();
+  if (MissingDefinitionsAreThrowing)
+    Result.registerUnknownException();
+
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
     for (const QualType &Ex : FPT->exceptions()) {
       CallStack.insert({Func, CallLoc});
