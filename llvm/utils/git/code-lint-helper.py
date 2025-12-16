@@ -307,7 +307,7 @@ class Doc8LintHelper(LintHelper):
             if len(parts) == 2:
                 return (
                     parts[0]
-                    + "\nNote: documentation lines should be no more than 79 characters wide.\n</details>"
+                    + "\nNote: documentation lines should be less than 80 characters wide.\n</details>"
                     + parts[1]
                 )
         return comment
