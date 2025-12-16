@@ -6234,8 +6234,6 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
   return Result;
 }
 
-/// PerformSELECTShiftCombine - Optimize guarded shift patterns.
-///
 /// Transform patterns like:
 ///   (select (ugt shift, BitWidth-1), 0, (srl/shl x, shift))
 ///   (select (ult shift, BitWidth), (srl/shl x, shift), 0)
