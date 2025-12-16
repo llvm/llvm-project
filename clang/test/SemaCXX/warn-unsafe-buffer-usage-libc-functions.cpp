@@ -181,6 +181,8 @@ void test_sarg_precision(std::string Str, std::string_view Sv, std::wstring_view
   printf("%.10s", a);
   printf("%.11s", a); // expected-warning {{function 'printf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   printf("%.10s", b); // expected-warning {{function 'printf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  __builtin_snprintf(0, 0, "%"); // ill-formed specifier, no-crash
+  printf("%%"); // ill-formed specifier, no-crash  
 }
 
 

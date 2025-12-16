@@ -919,20 +919,24 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
   const Expr *Fmt = Call->getArg(FmtArgIdx);
 
   if (auto *SL = dyn_cast<clang::StringLiteral>(Fmt->IgnoreParenImpCasts())) {
-    if (SL->getCharByteWidth() == 1) {
-      StringRef FmtStr = SL->getString();
-      StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
+    StringRef FmtStr{};
 
-      return analyze_format_string::ParsePrintfString(
-          Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
-          Ctx.getTargetInfo(), isKprintf);
-    }
+    if (SL->getCharByteWidth() == 1)
+      FmtStr = SL->getString();
+    else if (auto FmtStrTmp = SL->tryEvaluateString(Ctx))
+      FmtStr = *FmtStrTmp;
+    if (!FmtStr.empty()) {
+      const Expr *UnsafeArgTmp = nullptr;
+      StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArgTmp, Ctx);
 
-    if (auto FmtStr = SL->tryEvaluateString(Ctx)) {
-      StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
-      return analyze_format_string::ParsePrintfString(
-          Handler, FmtStr->data(), FmtStr->data() + FmtStr->size(),
-          Ctx.getLangOpts(), Ctx.getTargetInfo(), isKprintf);
+      analyze_format_string::ParsePrintfString(Handler, FmtStr.begin(),
+                                               FmtStr.end(), Ctx.getLangOpts(),
+                                               Ctx.getTargetInfo(), isKprintf);
+      if (UnsafeArgTmp != nullptr) {
+        UnsafeArg = UnsafeArgTmp;
+        return true;
+      }
+      return false;
     }
   }
   // If format is not a string literal, we cannot analyze the format string.
