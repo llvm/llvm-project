@@ -17,7 +17,9 @@ void test_za_merge_paths(int a) __arm_inout("za") {
     // expected-remark@+2 {{call from 'test_za_merge_paths' to 'unknown callee' sets up a lazy save for ZA}}
     // expected-new-remark@+1 {{call to 'private_za_callee_b' requires ZA save}}
     private_za_callee_b();
-  // expected-remark@+1 {{call from 'test_za_merge_paths' to 'unknown callee' sets up a lazy save for ZA}}
+  // expected-remark@+3 {{call from 'test_za_merge_paths' to 'unknown callee' sets up a lazy save for ZA}}
+  /// The new lowering won't report this call as the save is already needed due
+  /// to the call to `private_za_callee_a/b()` calls on both paths to this call.
   private_za_callee_c();
 }
 
@@ -31,7 +33,9 @@ void test_lazy_save_multiple_paths(int a) __arm_inout("za") {
     // expected-remark@+2 {{call from 'test_lazy_save_multiple_paths' to 'unknown callee' sets up a lazy save for ZA}}
     // expected-new-remark@+1 {{call to 'private_za_callee_b' requires ZA save}}
     private_za_callee_b();
-    // expected-remark@+1 {{call from 'test_lazy_save_multiple_paths' to 'unknown callee' sets up a lazy save for ZA}}
+    // expected-remark@+3 {{call from 'test_lazy_save_multiple_paths' to 'unknown callee' sets up a lazy save for ZA}}
+    /// The new lowering won't report this call as the save is already needed
+    /// due to the call to `private_za_callee_b()`.
     private_za_callee_c();
   }
 }
