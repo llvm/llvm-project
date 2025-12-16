@@ -66,9 +66,9 @@ void test() {
   TransparentKey<int> tkey;
 
   std::flat_map<int, int> nfm;
-  nfm[key];            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  fm[std::move(key)];  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  fm[std::move(tkey)]; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  nfm[key];            // no-warning
+  fm[std::move(key)];  // no-warning
+  fm[std::move(tkey)]; // no-warning
 
   fm.at(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cfm.at(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
