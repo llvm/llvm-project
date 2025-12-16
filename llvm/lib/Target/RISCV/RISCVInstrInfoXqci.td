@@ -472,13 +472,15 @@ class QCIRVInstI<bits<4> funct4, string opcodestr>
 
 class QCIRVInstR<bits<4> funct4, string opcodestr>
     : RVInstR<{0b000, funct4}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
-              (ins GPRNoX0:$rs1), opcodestr, "$rd, $rs1"> {
+              (ins GPRNoX0:$rs1), opcodestr, "$rd, $rs1">,
+      Sched<[WriteIALU, ReadIALU]> {
   let rs2 = 0;
 }
 
 class QCIRVInstRR<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
     : RVInstR<{0b00, funct5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
-              (ins InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr, "$rd, $rs1, $rs2">;
+              (ins InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr, "$rd, $rs1, $rs2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
 class QCIRVInstRRTied<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
     : RVInstR<{0b00, funct5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
@@ -881,7 +883,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_WRAP : QCIRVInstRR<0b10010, GPR, "qc.wrap">;
   def QC_WRAPI : RVInstI<0b000, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
                          (ins GPRNoX0:$rs1, uimm11:$imm11), "qc.wrapi",
-                         "$rd, $rs1, $imm11"> {
+                         "$rd, $rs1, $imm11">,
+                 Sched<[WriteIALU, ReadIALU]> {
     bits<11> imm11;
 
     let imm12 = {0b0, imm11};
