@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <algorithm>
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // Check that the special implementation of ranges::for_each for the associative container iterators works as expected
 
@@ -158,11 +159,80 @@ void test_node_container(Converter conv) {
   }
 }
 
+template <template <class> class Container>
+void test_invoke_set_like() {
+  { // check that std::invoke is used
+    struct T {
+      mutable int i = 3;
+
+      void zero() const { i = 0; }
+    };
+
+    class S {
+      int val_;
+
+    public:
+      S(int val) : val_(val) {}
+
+      T j;
+
+      bool operator<(const S& rhs) const { return val_ < rhs.val_; }
+    };
+
+    { // Iterator overload
+      Container<S> a = {S{2}, S{4}, S{6}};
+      std::ranges::for_each(a.begin(), a.end(), &T::zero, &S::j);
+      assert(a.find(2)->j.i == 0);
+      assert(a.find(4)->j.i == 0);
+      assert(a.find(6)->j.i == 0);
+    }
+    { // Range overload
+      Container<S> a = {S{2}, S{4}, S{6}};
+      std::ranges::for_each(a, &T::zero, &S::j);
+      assert(a.find(2)->j.i == 0);
+      assert(a.find(4)->j.i == 0);
+      assert(a.find(6)->j.i == 0);
+    }
+  }
+}
+
+template <template <class, class> class Container>
+void test_invoke_map_like() {
+  { // check that std::invoke is used
+    struct S {
+      int i;
+
+      void zero() { i = 0; }
+    };
+
+    { // Iterator overload
+      Container<int, S> a = {{1, S{2}}, {3, S{4}}, {5, S{6}}};
+      std::ranges::for_each(a.begin(), a.end(), &S::zero, &std::pair<const int, S>::second);
+      assert(a.find(1)->second.i == 0);
+      assert(a.find(3)->second.i == 0);
+      assert(a.find(5)->second.i == 0);
+    }
+    { // Range overload
+      Container<int, S> a = {{1, S{2}}, {3, S{4}}, {5, S{6}}};
+      std::ranges::for_each(a, &S::zero, &std::pair<const int, S>::second);
+      assert(a.find(1)->second.i == 0);
+      assert(a.find(3)->second.i == 0);
+      assert(a.find(5)->second.i == 0);
+    }
+  }
+}
+
 int main(int, char**) {
   test_node_container<std::set<int> >([](int i) { return i; });
   test_node_container<std::multiset<int> >([](int i) { return i; });
   test_node_container<std::map<int, int> >([](int i) { return std::make_pair(i, i); });
   test_node_container<std::multimap<int, int> >([](int i) { return std::make_pair(i, i); });
+
+  test_invoke_set_like<std::set>();
+  test_invoke_set_like<std::multiset>();
+
+  test_invoke_map_like<std::map>();
+  test_invoke_map_like<std::multimap>();
 
   return 0;
 }
