@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
@@ -23,6 +25,63 @@
 using namespace mlir;
 using namespace mlir::vector;
 using namespace mlir::x86vector;
+
+static bool validateVectorProdOp(Value prodOp) {
+  Operation *defOp = prodOp.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // If the LHS/RHS op is transfer_read return false if:
+  // (1) - It has false in-bounds
+  // (2) - The permutation map is not identical
+  if (auto readOp = prodOp.getDefiningOp<mlir::vector::TransferReadOp>()) {
+    ArrayAttr inBoundsAttr = readOp.getInBoundsAttr();
+    if (inBoundsAttr) {
+
+      for (Attribute attr : inBoundsAttr) {
+        auto boolAttr = llvm::dyn_cast<BoolAttr>(attr);
+        if (!boolAttr || !boolAttr.getValue()) {
+          return false;
+        }
+      }
+    }
+
+    if (!readOp.getPermutationMap().isIdentity())
+      return false;
+  }
+
+  Value srcBuff;
+  SmallVector<OpFoldResult> indexVals;
+  llvm::TypeSwitch<Operation *>(defOp).Case<TransferReadOp, LoadOp>(
+      [&](auto readOp) {
+        srcBuff = readOp.getOperand(0);
+        indexVals = SmallVector<OpFoldResult>(readOp.getIndices().begin(),
+                                              readOp.getIndices().end());
+      });
+
+  if (!srcBuff)
+    return false;
+
+  // Return false, if the source is not a memref type
+  Type srcType = srcBuff.getType();
+  if (!llvm::isa<MemRefType>(srcType))
+    return false;
+
+  // Return false, if the innermost stride of the memref is not 1.
+  auto [strides, offset] =
+      llvm::cast<mlir::MemRefType>(srcType).getStridesAndOffset();
+  if (!strides.empty()) {
+    int64_t s = strides.back();
+    if (s != mlir::ShapedType::kDynamic && s != 1)
+      return false;
+  }
+
+  // Return false if the vnni offset of load or transfer_read is not zero.
+  if (getConstantIntValue(indexVals.back()) != 0)
+    return false;
+
+  return true;
+}
 
 // This function retrieves the source operation of the load or transfer
 // reads and creates subviews for the BF16 packed-operations to
@@ -46,13 +105,11 @@ using namespace mlir::x86vector;
 // ```
 //   memref.subview %arg1[%c0,%c0,%c0]:memref<1x32x2xbf16> to memref<1x8x2xbf16>
 // ```
-static FailureOr<SmallVector<memref::SubViewOp>>
+static SmallVector<memref::SubViewOp>
 getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
                           ArrayRef<int64_t> nonUnitDimShape, bool isUnitDim) {
 
   Operation *defOp = prodOp.getDefiningOp();
-  if (!defOp)
-    return failure();
 
   Value srcBuff;
   SmallVector<OpFoldResult> indexVals;
@@ -62,13 +119,6 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
         indexVals = SmallVector<OpFoldResult>(readOp.getIndices().begin(),
                                               readOp.getIndices().end());
       });
-
-  if (!srcBuff)
-    return failure();
-
-  Type srcType = srcBuff.getType();
-  if (!llvm::isa<MemRefType>(srcType))
-    return failure();
 
   int64_t mnDimSize = 1;
   unsigned mnDimIdx = 0;
@@ -215,6 +265,20 @@ struct VectorContractBF16ToFMA
           contractOp, "BF16 packed load operation expects non-unit (LHR or "
                       "RHS) dim and acc dim of size 4/8.");
 
+    if (!validateVectorProdOp(contractOp.getLhs()))
+      return rewriter.notifyMatchFailure(
+          contractOp,
+          "The LHS is in invalid format. Either it has false inbound or "
+          "non-identical permuation map or the vnni offset is not zero or src "
+          "is not MemRef type or has non-unit vnni stride");
+
+    if (!validateVectorProdOp(contractOp.getRhs()))
+      return rewriter.notifyMatchFailure(
+          contractOp,
+          "The LHS is in invalid format. Either it has false inbound or "
+          "non-identical permuation map or the vnni offset is not zero or src "
+          "is not MemRef type or has non-unit vnni stride");
+
     // Lower vector.contract to FMAs with help of BF16 packed ops.
     auto loc = contractOp.getLoc();
 
@@ -235,19 +299,11 @@ struct VectorContractBF16ToFMA
         rhsHasMultipleNonUnitDims ? rhsShape : lhsShape;
 
     // Build subviews.
-    auto unitSubview = getSubviewFromVectorInput(loc, rewriter, unitSrc,
-                                                 nonUnitDimShape, true);
+    auto unitDimSubview = getSubviewFromVectorInput(loc, rewriter, unitSrc,
+                                                    nonUnitDimShape, true);
 
-    auto nonUnitSubview = getSubviewFromVectorInput(loc, rewriter, nonUnitSrc,
-                                                    nonUnitDimShape, false);
-
-    // Check failures once.
-    if (failed(unitSubview) || failed(nonUnitSubview))
-      return rewriter.notifyMatchFailure(
-          contractOp, "The input source is not MemRef Type.");
-
-    SmallVector<memref::SubViewOp> unitDimSubview = *unitSubview;
-    SmallVector<memref::SubViewOp> nonUnitDimSubview = *nonUnitSubview;
+    auto nonUnitDimSubview = getSubviewFromVectorInput(
+        loc, rewriter, nonUnitSrc, nonUnitDimShape, false);
 
     auto castAcc = vector::ShapeCastOp::create(
         rewriter, loc,
@@ -264,10 +320,6 @@ struct VectorContractBF16ToFMA
     auto oddIdxFMA =
         vector::FMAOp::create(rewriter, loc, loadBcstOddIdxElementToF32,
                               loadOddIdxElementF32, castAcc);
-
-    OpResult vcResult = contractOp->getResult(0);
-    if (vcResult.hasOneUse())
-      rewriter.setInsertionPoint(*vcResult.getUsers().begin());
 
     // Load, broadcast, and do FMA for even indexed BF16 elements.
     auto loadBcstEvenIdxElementToF32 = x86vector::BcstToPackedF32Op::create(
