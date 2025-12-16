@@ -1100,12 +1100,14 @@ struct WarpOpShapeCast : public WarpDistributionPattern {
   }
 };
 
-/// Sink out vector.create_mask op feeding into a warp op yield.
+/// Sink out vector.create_mask / vector.constant_mask op feeding into a warp op
+/// yield.
 /// ```
 /// %0 = ...
 /// %1 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
 ///   ...
 ///   %mask = vector.create_mask %0 : vector<32xi1>
+///   // or %mask = vector.constant_mask[2] : vector<32xi1>
 ///   gpu.yield %mask : vector<32xi1>
 /// }
 /// ```
