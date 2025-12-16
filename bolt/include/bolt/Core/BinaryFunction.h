@@ -735,11 +735,12 @@ private:
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
   }
 
-  /// This constructor is used to create an injected function
+  /// This constructor is used to create an injected function, i.e. a function
+  /// that didn't originate in the input file.
   BinaryFunction(const std::string &Name, BinaryContext &BC, bool IsSimple)
       : Address(0), Size(0), BC(BC), IsSimple(IsSimple),
-        CodeSectionName(buildCodeSectionName(Name, BC)),
-        ColdCodeSectionName(buildColdCodeSectionName(Name, BC)),
+        CodeSectionName(BC.getInjectedCodeSectionName()),
+        ColdCodeSectionName(BC.getInjectedColdCodeSectionName()),
         FunctionNumber(++Count) {
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
     IsInjected = true;
