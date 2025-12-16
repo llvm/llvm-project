@@ -184,12 +184,12 @@ define i64 @test_negative_use_shl(i64 %x, i32 %y) {
 ;;   i.e., shift > 31 ? 0 : x >> shift
 ;;   -->  (srl x, shift)
 ;;
-;; Transformation 2 (ult form, equivalent after InstCombine):
+;; Transformation 2 (ult form):
 ;;   (select (icmp ult shift, BitWidth), (srl x, shift), 0)
 ;;   i.e., shift < 32 ? x >> shift : 0
 ;;   -->  (srl x, shift)
 ;;
-;; Same applies to shl (left shift).
+;; Same transformation applies to left shifts.
 ;; ============================================================================
 
 ;; --- i16 shr tests ---

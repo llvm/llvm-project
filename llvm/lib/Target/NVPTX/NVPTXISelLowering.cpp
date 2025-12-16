@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -6235,10 +6236,10 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
 }
 
 /// Transform patterns like:
-///   (select (ugt shift, BitWidth-1), 0, (srl/shl x, shift))
-///   (select (ult shift, BitWidth), (srl/shl x, shift), 0)
+///   (select (ugt shift_amt, BitWidth-1), 0, (srl/shl x, shift_amt))
+///   (select (ult shift_amt, BitWidth), (srl/shl x, shift_amt), 0)
 /// Into:
-///   (NVPTXISD::SRL_CLAMP x, shift) or (NVPTXISD::SHL_CLAMP x, shift)
+///   (NVPTXISD::SRL_CLAMP x, shift_amt) or (NVPTXISD::SHL_CLAMP x, shift_amt)
 ///
 /// These patterns arise from C/C++ code like `shift >= 32 ? 0 : x >> shift`
 /// which guards against undefined behavior. PTX shr/shl instructions clamp
@@ -6246,91 +6247,55 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
 /// guard redundant.
 ///
 /// Note: We only handle SRL and SHL, not SRA, because arithmetic right
-/// shifts produce sign-extended results (0 or -1) when shift >= BitWidth,
-/// which differs from the C pattern that always returns 0.
+/// shifts could produce 0 or -1 when shift >= BitWidth.
+/// Note: We don't handle uge or ule. These don't appear because of canonicalization.
 static SDValue PerformSELECTShiftCombine(SDNode *N,
                                          TargetLowering::DAGCombinerInfo &DCI) {
-  SDValue Cond = N->getOperand(0);
-  SDValue TrueVal = N->getOperand(1);
-  SDValue FalseVal = N->getOperand(2);
+  using namespace SDPatternMatch;
+  SDValue ShiftAmt, ShiftOp, Threshold;
 
-  // We're looking for:
-  //   (select (setcc shift, BitWidth-1, ugt), 0, (shift x, shift))
-  // or:
-  //   (select (setcc shift, BitWidth, ult), (shift x, shift), 0)
+  // shift_amt > threshold ? 0 : shift_op
+  bool MatchedUGT = sd_match(
+      N, m_Select(m_SetCC(m_Value(ShiftAmt), m_Value(Threshold),
+                          m_SpecificCondCode(ISD::SETUGT)),
+                  m_Zero(), m_Value(ShiftOp)));
+  // shift_amt < threshold ? shift_op : 0
+  bool MatchedULT = !MatchedUGT &&
+                    sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
+                                                 m_Value(Threshold),
+                                                 m_SpecificCondCode(ISD::SETULT)),
+                                         m_Value(ShiftOp), m_Zero()));
 
-  SDValue ZeroVal, ShiftOp;
-  bool Inverted = false;
-
-  if (isConstZero(TrueVal)) {
-    ZeroVal = TrueVal;
-    ShiftOp = FalseVal;
-  } else if (isConstZero(FalseVal)) {
-    ZeroVal = FalseVal;
-    ShiftOp = TrueVal;
-    Inverted = true;
-  } else {
+  if (!MatchedUGT && !MatchedULT)
     return SDValue();
-  }
 
-  // Only handle logical shifts (SRL, SHL), not arithmetic (SRA)
+  // Only handle logical shifts
   unsigned ShiftOpc = ShiftOp.getOpcode();
   if (ShiftOpc != ISD::SRL && ShiftOpc != ISD::SHL)
     return SDValue();
 
-  // Condition must be a SETCC
-  if (Cond.getOpcode() != ISD::SETCC)
+  // Verify the shift amount in the guard is the same as the shift amount in the shift operation.
+  if (!sd_match(ShiftOp.getOperand(1), m_TruncOrSelf(m_Specific(ShiftAmt))))
     return SDValue();
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
-  SDValue CondLHS = Cond.getOperand(0);
-  SDValue CondRHS = Cond.getOperand(1);
-  SDValue ShiftAmt = ShiftOp.getOperand(1);
-
-  // Look through truncation - NVPTX truncates 64-bit shift amounts to 32-bit
-  if (ShiftAmt.getOpcode() == ISD::TRUNCATE)
-    ShiftAmt = ShiftAmt.getOperand(0);
-
-  // The value being compared must be the same as the shift amount.
-  // e.g., in "shift > 31 ? 0 : x >> shift", both must use the same 'shift'.
-  if (CondLHS != ShiftAmt)
-    return SDValue();
-
-  auto *Threshold = dyn_cast<ConstantSDNode>(CondRHS);
-  if (!Threshold)
+  // Threshold must be BitWidth-1 for ugt or BitWidth for ult
+  auto *ThresholdC = dyn_cast<ConstantSDNode>(Threshold);
+  if (!ThresholdC)
     return SDValue();
 
   unsigned BitWidth = ShiftOp.getValueType().getSizeInBits();
-  uint64_t ThreshVal = Threshold->getZExtValue();
+  uint64_t ThreshVal = ThresholdC->getZExtValue();
 
-  // Check for valid patterns based on select orientation:
-  //
-  // When TrueVal is 0 (not inverted):
-  //   (select (ugt shift, BitWidth-1), 0, shift_result)
-  //   i.e., shift > 31 ? 0 : x >> shift
-  //
-  // When FalseVal is 0 (inverted):
-  //   (select (ult shift, BitWidth), shift_result, 0)
-  //   i.e., shift < 32 ? x >> shift : 0
-  //
-  // Both patterns return 0 when shift >= BitWidth, which PTX handles natively.
-  bool ValidPattern = false;
-  if (!Inverted && CC == ISD::SETUGT && ThreshVal == BitWidth - 1)
-    ValidPattern = true;
-  else if (Inverted && CC == ISD::SETULT && ThreshVal == BitWidth)
-    ValidPattern = true;
-
-  if (!ValidPattern)
+  if (MatchedUGT && ThreshVal != BitWidth - 1)
+    return SDValue();
+  if (MatchedULT && ThreshVal != BitWidth)
     return SDValue();
 
-  // Pattern matched! Return a custom clamp node that has defined semantics
-  // for out-of-range shift amounts, matching PTX's clamping behavior.
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(N);
+  // Return a clamp shift operation, which has the same semantics as PTX shift. 
   unsigned ClampOpc =
-      (ShiftOpc == ISD::SRL) ? NVPTXISD::SRL_CLAMP : NVPTXISD::SHL_CLAMP;
-  return DAG.getNode(ClampOpc, DL, ShiftOp.getValueType(),
-                     ShiftOp.getOperand(0), ShiftOp.getOperand(1));
+      ShiftOpc == ISD::SRL ? NVPTXISD::SRL_CLAMP : NVPTXISD::SHL_CLAMP;
+  return DCI.DAG.getNode(ClampOpc, SDLoc(N), ShiftOp.getValueType(),
+                         ShiftOp.getOperand(0), ShiftOp.getOperand(1));
 }
 
 static SDValue PerformVSELECTCombine(SDNode *N,
