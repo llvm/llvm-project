@@ -64,7 +64,7 @@ RestartRequestHandler::Run(const std::optional<RestartArguments> &args) const {
   // FIXME: Should we run 'preRunCommands'?
   // FIXME: Should we add a 'preRestartCommands'?
   if (llvm::Error err = LaunchProcess(*dap.last_launch_request))
-    return llvm::make_error<DAPError>(llvm::toString(std::move(err)));
+    return err;
 
   SendProcessEvent(dap, Launch);
 
@@ -73,7 +73,7 @@ RestartRequestHandler::Run(const std::optional<RestartArguments> &args) const {
   // continue the process right away.
   if (dap.stop_at_entry) {
     if (llvm::Error err = SendThreadStoppedEvent(dap, /*on_entry=*/true))
-      return llvm::make_error<DAPError>(llvm::toString(std::move(err)));
+      return err;
   } else {
     dap.target.GetProcess().Continue();
   }

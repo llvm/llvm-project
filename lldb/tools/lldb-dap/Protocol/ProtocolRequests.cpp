@@ -310,8 +310,15 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
       O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
   if (!success)
     return false;
+  // Validate that we have a well formed launch request.
+  if (!LRA.launchCommands.empty() &&
+      LRA.console != protocol::eConsoleInternal) {
+    P.report(
+        "'launchCommands' and non-internal 'console' are mutually exclusive");
+    return false;
+  }
   if (LRA.configuration.program.empty() && LRA.launchCommands.empty()) {
-    P.report("`program` or `launchCommands` should be provided");
+    P.report("'program' or 'launchCommands' should be provided");
     return false;
   }
   return true;
@@ -331,15 +338,25 @@ bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
                  O.mapOptional("debuggerId", ARA.debuggerId);
   if (!success)
     return false;
-  if (ARA.debuggerId.has_value())
-    return true;
-  if (ARA.targetId.has_value())
-    return true;
-  if ((ARA.pid == LLDB_INVALID_PROCESS_ID) &&
-      ARA.configuration.program.empty() && ARA.attachCommands.empty() &&
-      ARA.coreFile.empty() && (ARA.gdbRemotePort == LLDB_DAP_INVALID_PORT)) {
-    P.report("`pid` or `program` or `attachCommands` or `coreFile` or "
-             "`gdbRemotePort` should be provided");
+  // Validate that we have a well formed attach request.
+  if (ARA.attachCommands.empty() && ARA.coreFile.empty() &&
+      ARA.configuration.program.empty() && ARA.pid == LLDB_INVALID_PROCESS_ID &&
+      ARA.gdbRemotePort == LLDB_DAP_INVALID_PORT && !ARA.targetId.has_value()) {
+    P.report("expected one of 'pid', 'program', 'attachCommands', "
+             "'coreFile', 'gdb-remote-port', or 'targetId' to be specified");
+    return false;
+  }
+  // Check if we have mutually exclusive arguments.
+  if ((ARA.pid != LLDB_INVALID_PROCESS_ID) &&
+      (ARA.gdbRemotePort != LLDB_DAP_INVALID_PORT)) {
+    P.report("'pid' and 'gdb-remote-port' are mutually exclusive");
+    return false;
+  }
+  // Validate that both debugger_id and target_id are provided together.
+  if (ARA.debuggerId.has_value() != ARA.targetId.has_value()) {
+    P.report(
+        "Both 'debuggerId' and 'targetId' must be specified together for "
+        "debugger reuse, or both must be omitted to create a new debugger");
     return false;
   }
   return true;
