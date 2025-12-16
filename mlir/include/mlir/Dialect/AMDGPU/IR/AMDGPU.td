@@ -402,6 +402,8 @@ def AMDGPU_FatRawBufferCastOp :
     AMDGPU_Op<"fat_raw_buffer_cast",
       [Pure,
        DeclareOpInterfaceMethods<InferTypeOpInterface>,
+       DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+                                 ["reifyDimOfResult"]>,
        ViewLikeOpInterface, AttrSizedOperandSegments]>,
     Arguments<(ins AnyMemRef:$source,
       Optional<I64>:$validBytes,
@@ -992,6 +994,15 @@ def MFMAOutTypes : AnyTypeOf<[F64,
 def ScaledMFMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[32], [F8E5M2, F8E4M3FN]>,
                                    VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
 def ScaledMFMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 16], [F32]>]>;
+
+// scaled_wmma
+def ScaledWMMAInTypes
+    : AnyTypeOf<[VectorOfLengthAndType<[64], [F8E5M2, F8E4M3FN]>,
+                 VectorOfLengthAndType<[64], [F6E2M3FN, F6E3M2FN]>,
+                 VectorOfLengthAndType<[64, 128], [F4E2M1FN]>]>;
+
+def ScaledWMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[8, 16], [F32]>]>;
+
 // wmma
 def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[2], [F32]>,
                              VectorOfLengthAndType<[4, 8, 16], [F16, BF16]>,
@@ -1259,6 +1270,78 @@ def AMDGPU_ScaledMFMAOp :
   let hasCanonicalizer = 1;
 }
 
+def AMDGPU_ScaledWMMAOp
+    : AMDGPU_Op<"scaled_wmma", [AllTypesMatch<["destC", "destD"]>, Pure]>,
+      Arguments<(ins ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$m,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$n,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[128]>]>:$k,
+          ScaledWMMAInTypes:$sourceA, ScaledWMMAInTypes:$sourceB,
+          ScaledWMMAOutTypes:$destC,
+          VectorOfLengthAndType<[4, 8], [F8E8M0FNU, F8E4M3FN]>:$scaleA,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[0, 16]>]>:$a_first_scale_lane,
+          VectorOfLengthAndType<[4, 8], [F8E8M0FNU, F8E4M3FN]>:$scaleB,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[0, 16]>]>:$b_first_scale_lane)>,
+      Results<(outs ScaledWMMAOutTypes:$destD)> {
+  // TODO: E5M3FNU scales are supported, but there is not yet MLIR support for
+  // this datatype. Once we have support for that, update the scaleA and scaleB
+  // types here.
+  let summary = "MLIR wrapper for scaled wmma instructions";
+  let description = [{
+    The `amdgpu.scaled_wmma` op is an MLIR wrapper around intrinsics for scaled
+    `wmma` instructions. These instructions perform matrix multiplication with
+    per-block scaling of inputs, supporting fp4, fp6, and fp8 data formats.
+
+    The scale instructions support a block size of 16 or 32 and two tile sizes:
+    - 16x16x128 with mixed f8/f6/f4 formats (output: vector<8xf32>)
+    - 32x16x128 with f4 format only (output: vector<16xf32>)
+
+    Scale parameters (`scaleA`, `scaleB`) are small vectors of f8 scale values
+    (either f8E8M0FNU, or f8E4M3FN) that are packed into i32/i64 values during
+    lowering. Each lane can operate on 4 bytes (4 scale values), and the
+    number of scales required for each matrix is determined by:
+      num_scales_A = (M × K) / block_size
+      num_scales_B = (N × K) / block_size
+      
+    The index attributes (`a_first_scale_lane`, `b_first_scale_lane`) select
+    which lane to start reading scale values from (0 or 16):
+    - For block size 32, 32 lanes across a single wave are used for the scale
+    values. If the number of scales (num_scales_A or num_scales_B) can fit
+    into half of the available lanes
+    (i.e., num_scales / scales_per_lane == 16 (num_lanes)),
+    then then first_scale_lane can be either 0 or 16. If all lanes are required
+    for storing the scale values (num_scales / scales_per_lane == 32 (num_lanes)),
+    then the first_scale_lane must be 0.
+    - For block size 16, the same rules apply as above except that there are 64
+    lanes across two waves that are used for the scale values. When
+    num_scales / scales_per_lane == 32 (num lanes), then 16 lanes from each wave are used.
+    first_scale_lane of 0 or 16 will decide which lanes are used for this. When
+    num_scales / scales_per_lane == 64 (num_lanes), then first_scale_lane must
+    be set to 0.
+
+    Example:
+    ```mlir
+      // 16x16x128: fp8 inputs
+      %0 = amdgpu.scaled_wmma 16x16x128 (%scaleVecA * %matA) * (%scaleVecB * %matB) + %matC
+        {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32}
+        : vector<4xf8E8M0FNU>, vector<64xf8E4M3FN>,
+        vector<4xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<8xf32>
+
+      // 32x16x128: fp4 inputs with different scale lanes
+      %1 = amdgpu.scaled_wmma 32x16x128 (%scaleVecD * %matD) * (%scaleVecE * %matE) + %matF
+        {a_first_scale_lane = 0 : i32, b_first_scale_lane = 16 : i32}
+        : vector<8xf8E4M3FN>, vector<128xf4E2M1FN>,
+        vector<8xf8E4M3FN>, vector<64xf4E2M1FN>, vector<16xf32>
+    ```
+  }];
+  let assemblyFormat = [{
+    custom<MNKDimensionList>($m, $n, $k) ` `
+    `(` $scaleA `*` $sourceA `)` `*`
+    `(` $scaleB `*` $sourceB `)` `+` $destC
+    attr-dict
+    `:` type($scaleA) `,` type($sourceA) `,` type($scaleB) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
 
 class AMDGPU_DmaBaseOp<string mnemonic, Type outType> :
     AMDGPU_Op<mnemonic, [Pure, AttrSizedOperandSegments, AllElementTypesMatch<["global", "lds"]>]>,
@@ -1301,7 +1384,7 @@ def AMDGPU_MakeGatherDmaBaseOp : AMDGPU_DmaBaseOp<"make_gather_dma_base", AMDGPU
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    constexpr bool isGather() {
+    static constexpr bool isGather() {
       return true;
     }
   }];
@@ -1352,16 +1435,17 @@ def AMDGPU_MakeDmaBaseOp : AMDGPU_DmaBaseOp<"make_dma_base", AMDGPU_TDMBaseType>
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    constexpr bool isGather() {
+    static constexpr bool isGather() {
       return false;
     }
   }];
 }
 
-def AMDGPU_MakeDmaDescriptorOp :
-  AMDGPU_Op<"make_dma_descriptor", [Pure, AttrSizedOperandSegments]>,
-  Arguments<(ins
-    AMDGPU_TDMBaseType: $base,
+class AMDGPU_MakeDescriptorOp<string mnemonic> :
+  AMDGPU_Op<mnemonic, [Pure, AttrSizedOperandSegments]>,
+  Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
+
+  dag baseArgs = (ins
     Variadic<Index>: $global_dynamic_sizes,
     DenseI64ArrayAttr: $global_static_sizes,
     Variadic<Index>: $global_dynamic_strides,
@@ -1376,9 +1460,66 @@ def AMDGPU_MakeDmaDescriptorOp :
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
     Optional<I32>: $lds_increment,
-    Optional<Index>: $iteration_count)>,
-  Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
+    Optional<Index>: $iteration_count);
 
+  code extraClassDeclarationBase = [{
+    int64_t getRank() {
+      return getGlobalStaticSizes().size();
+    }
+
+    unsigned getElementTypeWidth() {
+      return getBase().getType().getElementType().getIntOrFloatBitWidth();
+    }
+
+    SmallVector<OpFoldResult> getMixedGlobalSizes() {
+      return getMixedValues(getGlobalStaticSizes(), getGlobalDynamicSizes(), getContext());
+    }
+
+    SmallVector<OpFoldResult> getMixedGlobalStrides() {
+      return getMixedValues(getGlobalStaticStrides(), getGlobalDynamicStrides(), getContext());
+    }
+
+    SmallVector<OpFoldResult> getMixedSharedSizes() {
+      return getMixedValues(getSharedStaticSizes(), getSharedDynamicSizes(), getContext());
+    }
+
+  }];
+
+}
+
+def AMDGPU_MakeGatherDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_gather_dma_descriptor"> {
+  dag args = (ins AMDGPU_TDMGatherBaseType: $base,
+                  AnyTypeOf<[VectorOfMinMaxLengthAndType<1, 8, [I32]>,
+                             VectorOfMinMaxLengthAndType<1, 16, [I16]>]>: $indices);
+  let arguments = !con(args, baseArgs);
+  let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
+
+  let assemblyFormat = [{
+    $base `[` $indices `]`
+    `globalSize` custom<DynamicIndexList>($global_dynamic_sizes, $global_static_sizes)
+    `globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
+    `sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
+    ( `padShared` `(` $pad_amount^ `every` $pad_interval `)` )?
+    ( `workgroupMask` $workgroup_mask^ ( `earlyTimeout` $early_timeout^)?)?
+    ( `atomicBarrier` `(` $atomic_barrier_address^ `[` $atomic_barrier_indices `]`
+                      `:` type($atomic_barrier_address) `)`)?
+    ( `iterate` $global_increment^ `,` $lds_increment `,` $iteration_count )?
+    attr-dict `:` qualified(type($base)) `,` type($indices) `->` type(results)
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+
+  let extraClassDeclaration = extraClassDeclarationBase # [{
+    static constexpr bool isGather() {
+      return true;
+    }
+  }];
+}
+
+def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> {
+  dag args = (ins AMDGPU_TDMBaseType: $base);
+  let arguments = !con(args, baseArgs);
   let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
   let description = [{
      Make all descriptor groups needed by tensor memory operations.
@@ -1435,30 +1576,46 @@ def AMDGPU_MakeDmaDescriptorOp :
     attr-dict `:` qualified(type($base)) `->` type(results)
   }];
 
-  let extraClassDeclaration = [{
-    int64_t getRank() {
-      return getGlobalStaticSizes().size();
-    }
+  let hasVerifier = 1;
+  let hasFolder = 1;
 
-    unsigned getElementTypeWidth() {
-      return getBase().getType().getElementType().getIntOrFloatBitWidth();
-    }
-
-    SmallVector<OpFoldResult> getMixedGlobalSizes() {
-      return getMixedValues(getGlobalStaticSizes(), getGlobalDynamicSizes(), getContext());
-    }
-
-    SmallVector<OpFoldResult> getMixedGlobalStrides() {
-      return getMixedValues(getGlobalStaticStrides(), getGlobalDynamicStrides(), getContext());
-    }
-
-    SmallVector<OpFoldResult> getMixedSharedSizes() {
-      return getMixedValues(getSharedStaticSizes(), getSharedDynamicSizes(), getContext());
+  let extraClassDeclaration = extraClassDeclarationBase # [{
+    static constexpr bool isGather() {
+      return false;
     }
   }];
 
-  let hasVerifier = 1;
-  let hasFolder = 1;
+}
+
+def AMDGPU_TensorLoadToLDSOp :
+  AMDGPU_Op<"tensor_load_to_lds", [MemoryEffects<[MemWrite, MemRead]>]>,
+  Arguments<(ins AMDGPU_TDMDescriptorType: $desc)> {
+  let summary = "Load tensors from global memory to LDS.";
+  let description = [{
+    Load tensors of up to five dimensions from global memory to LDS.
+
+    This operation was introduced in gfx1250.
+  }];
+
+  let assemblyFormat = [{
+    $desc attr-dict `:` qualified(type($desc))
+  }];
+}
+
+def AMDGPU_TensorStoreFromLDSOp :
+  AMDGPU_Op<"tensor_store_from_lds", [MemoryEffects<[MemWrite, MemRead]>]>,
+  Arguments<(ins AMDGPU_TDMDescriptorType: $desc)> {
+
+  let summary = "Store tensors from LDS to global memory.";
+  let description = [{
+    Store tensors of up to five dimensions from LDS to global memory.
+
+    This operation was introduced in gfx1250.
+  }];
+
+  let assemblyFormat = [{
+    $desc attr-dict `:` qualified(type($desc))
+  }];
 }
 
 #endif // AMDGPU

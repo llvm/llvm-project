@@ -772,3 +772,130 @@ func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_
   %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] workgroupMask %wg_mask earlyTimeout %timeout : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
   func.return %descriptor : !amdgpu.tdm_descriptor
 }
+
+// CHECK-LABEL: func @tensor_load_to_lds
+// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor)
+func.func @tensor_load_to_lds(%desc: !amdgpu.tdm_descriptor) {
+  // CHECK: %[[DGROUPS:.+]]:4 = builtin.unrealized_conversion_cast %[[DESC]]
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc : !amdgpu.tdm_descriptor
+  func.return
+}
+
+// CHECK-LABEL: func @tensor_store_from_lds
+// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor)
+func.func @tensor_store_from_lds(%desc: !amdgpu.tdm_descriptor) {
+  // CHECK: %[[DGROUPS:.+]]:4 = builtin.unrealized_conversion_cast %[[DESC]]
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc : !amdgpu.tdm_descriptor
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @make_gather_dma_descriptor
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_gather_base<i32, i16>, %[[INDICES:.+]]: vector<13xi16>)
+func.func @make_gather_dma_descriptor(%base: !amdgpu.tdm_gather_base<i32, i16>, %indices: vector<13xi16>) -> !amdgpu.tdm_descriptor {
+
+  // CHECK-DAG: %[[DGROUP0:.+]] = builtin.unrealized_conversion_cast %[[BASE]]
+
+  // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32)
+  // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32)
+  // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32)
+  // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32)
+  // CHECK-DAG: %[[C4:.+]] = llvm.mlir.constant(4 : i32)
+  // CHECK-DAG: %[[C5:.+]] = llvm.mlir.constant(5 : i32)
+  // CHECK-DAG: %[[C6:.+]] = llvm.mlir.constant(6 : i32)
+  // CHECK-DAG: %[[C7:.+]] = llvm.mlir.constant(7 : i32)
+
+  // CHECK: %[[SGPR4:.+]] = llvm.mlir.constant([[VALID_INDICES:13]] : i32) : i32
+
+  // CHECK: %[[V8I32:.+]] = llvm.mlir.poison : vector<8xi32>
+  // CHECK: %[[DGROUP1_0:.+]] = llvm.insertelement {{.*}}, %[[V8I32]][%[[C0]] : i32]
+  // CHECK: %[[DGROUP1_1:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_0]][%[[C1]] : i32]
+  // CHECK: %[[DGROUP1_2:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_1]][%[[C2]] : i32]
+  // CHECK: %[[DGROUP1_3:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_2]][%[[C3]] : i32]
+  // CHECK: %[[DGROUP1_4:.+]] = llvm.insertelement %[[SGPR4]], %[[DGROUP1_3]][%[[C4]] : i32]
+  // CHECK: %[[DGROUP1_5:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_4]][%[[C5]] : i32]
+  // CHECK: %[[DGROUP1_6:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_5]][%[[C6]] : i32]
+  // CHECK: %[[DGROUP1:.+]] = llvm.insertelement {{.*}}, %[[DGROUP1_6]][%[[C7]] : i32]
+
+  // CHECK-DAG: %[[IDX0:.+]] = llvm.extractelement %[[INDICES]][%[[C0]] : i32] : vector<13xi16>
+  // CHECK-DAG: %[[IDX1:.+]] = llvm.extractelement %[[INDICES]][%[[C1]] : i32] : vector<13xi16>
+  // CHECK-DAG: %[[IDX2:.+]] = llvm.extractelement %[[INDICES]][%[[C2]] : i32] : vector<13xi16>
+  // CHECK-DAG: %[[IDX3:.+]] = llvm.extractelement %[[INDICES]][%[[C3]] : i32] : vector<13xi16>
+  // CHECK-DAG: %[[IDX4:.+]] = llvm.extractelement %[[INDICES]][%[[C4]] : i32] : vector<13xi16>
+  // CHECK-DAG: %[[IDX5:.+]] = llvm.extractelement %[[INDICES]][%[[C5]] : i32] : vector<13xi16>
+  // CHECK-DAG: %[[IDX6:.+]] = llvm.extractelement %[[INDICES]][%[[C6]] : i32] : vector<13xi16>
+  // CHECK-DAG: %[[IDX7:.+]] = llvm.extractelement %[[INDICES]][%[[C7]] : i32] : vector<13xi16>
+
+  // CHECK: %[[IDX0_32:.+]] = llvm.zext %[[IDX0]] : i16 to i32
+  // CHECK: %[[IDX1_32:.+]] = llvm.zext %[[IDX1]] : i16 to i32
+  // CHECK: %[[IDX2_32:.+]] = llvm.zext %[[IDX2]] : i16 to i32
+  // CHECK: %[[IDX3_32:.+]] = llvm.zext %[[IDX3]] : i16 to i32
+  // CHECK: %[[IDX4_32:.+]] = llvm.zext %[[IDX4]] : i16 to i32
+  // CHECK: %[[IDX5_32:.+]] = llvm.zext %[[IDX5]] : i16 to i32
+  // CHECK: %[[IDX6_32:.+]] = llvm.zext %[[IDX6]] : i16 to i32
+  // CHECK: %[[IDX7_32:.+]] = llvm.zext %[[IDX7]] : i16 to i32
+
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: %[[IDX1:.+]] = llvm.shl %[[IDX1_32]], %[[SHIFT]]
+  // CHECK: %[[SGPR0:.+]] = llvm.or disjoint %[[IDX0_32]], %[[IDX1]]
+
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: %[[IDX3:.+]] = llvm.shl %[[IDX3_32]], %[[SHIFT]]
+  // CHECK: %[[SGPR1:.+]] = llvm.or disjoint %[[IDX2_32]], %[[IDX3]]
+
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: %[[IDX5:.+]] = llvm.shl %[[IDX5_32]], %[[SHIFT]]
+  // CHECK: %[[SGPR2:.+]] = llvm.or disjoint %[[IDX4_32]], %[[IDX5]]
+
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: %[[IDX7:.+]] = llvm.shl %[[IDX7_32]], %[[SHIFT]]
+  // CHECK: %[[SGPR3:.+]] = llvm.or disjoint %[[IDX6_32]], %[[IDX7]]
+
+  // CHECK: %[[DGROUP2_0:.+]] = llvm.mlir.poison : vector<4xi32>
+  // CHECK: %[[DGROUP2_1:.+]] = llvm.insertelement %[[SGPR0]], %[[DGROUP2_0]][%[[C0]] : i32]
+  // CHECK: %[[DGROUP2_2:.+]] = llvm.insertelement %[[SGPR1]], %[[DGROUP2_1]][%[[C1]] : i32]
+  // CHECK: %[[DGROUP2_3:.+]] = llvm.insertelement %[[SGPR2]], %[[DGROUP2_2]][%[[C2]] : i32]
+  // CHECK: %[[DGROUP2:.+]] = llvm.insertelement %[[SGPR3]], %[[DGROUP2_3]][%[[C3]] : i32]
+
+  // CHECK: %[[C8:.+]] = llvm.mlir.constant(8 : i32)
+  // CHECK: %[[IDX8:.+]] = llvm.extractelement %[[INDICES]][%[[C8]] : i32] : vector<13xi16>
+  // CHECK: %[[C9:.+]] = llvm.mlir.constant(9 : i32)
+  // CHECK: %[[IDX9:.+]] = llvm.extractelement %[[INDICES]][%[[C9]] : i32] : vector<13xi16>
+  // CHECK: %[[C10:.+]] = llvm.mlir.constant(10 : i32)
+  // CHECK: %[[IDX10:.+]] = llvm.extractelement %[[INDICES]][%[[C10]] : i32] : vector<13xi16>
+  // CHECK: %[[C11:.+]] = llvm.mlir.constant(11 : i32)
+  // CHECK: %[[IDX11:.+]] = llvm.extractelement %[[INDICES]][%[[C11]] : i32] : vector<13xi16>
+  // CHECK: %[[C12:.+]] = llvm.mlir.constant(12 : i32)
+  // CHECK: %[[IDX12:.+]] = llvm.extractelement %[[INDICES]][%[[C12]] : i32] : vector<13xi16>
+
+  // CHECK: %[[IDX8_32:.+]] = llvm.zext %[[IDX8]] : i16 to i32
+  // CHECK: %[[IDX9_32:.+]] = llvm.zext %[[IDX9]] : i16 to i32
+  // CHECK: %[[IDX10_32:.+]] = llvm.zext %[[IDX10]] : i16 to i32
+  // CHECK: %[[IDX11_32:.+]] = llvm.zext %[[IDX11]] : i16 to i32
+  // CHECK: %[[IDX12_32:.+]] = llvm.zext %[[IDX12]] : i16 to i32
+
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: %[[IDX9:.+]] = llvm.shl %[[IDX9_32]], %[[SHIFT]]
+  // CHECK: %[[SGPR0:.+]] = llvm.or disjoint %[[IDX8_32]], %[[IDX9]]
+
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: %[[IDX11:.+]] = llvm.shl %[[IDX11_32]], %[[SHIFT]]
+  // CHECK: %[[SGPR1:.+]] = llvm.or disjoint %[[IDX10_32]], %[[IDX11]]
+
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: %[[IDX13:.+]] = llvm.shl %[[C0]], %[[SHIFT]]
+  // CHECK: %[[SGPR2:.+]] = llvm.or disjoint %[[IDX12_32]], %[[IDX13]]
+
+  // CHECK-DAG: %[[DGROUP3_0:.+]] = llvm.mlir.poison : vector<4xi32>
+  // CHECK: %[[DGROUP3_1:.+]] = llvm.insertelement %[[SGPR0]], %[[DGROUP3_0]][%[[C0]] : i32]
+  // CHECK: %[[DGROUP3_2:.+]] = llvm.insertelement %[[SGPR1]], %[[DGROUP3_1]][%[[C1]] : i32]
+  // CHECK: %[[DGROUP3:.+]] = llvm.insertelement %[[SGPR2]], %[[DGROUP3_2]][%[[C2]] : i32]
+
+  // CHECK: %[[DGROUPS:.+]] = builtin.unrealized_conversion_cast %[[DGROUP0]], %[[DGROUP1]], %[[DGROUP2]], %[[DGROUP3]]
+  %descriptor = amdgpu.make_gather_dma_descriptor %base[%indices] globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] : !amdgpu.tdm_gather_base<i32, i16>, vector<13xi16> -> !amdgpu.tdm_descriptor
+  func.return %descriptor : !amdgpu.tdm_descriptor
+}
+
