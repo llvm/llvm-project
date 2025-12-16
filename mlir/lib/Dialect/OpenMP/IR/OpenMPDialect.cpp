@@ -2223,7 +2223,7 @@ static LogicalResult verifyDimsModifier(Operation *op,
     }
     return success();
   } else {
-    if (!dimsValues.empty()) {
+    if (dimsValues.size() > 1) {
       return op->emitError(
           "dims values can only be specified with dims modifier");
     }
