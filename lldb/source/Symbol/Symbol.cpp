@@ -267,7 +267,8 @@ void Symbol::Dump(Stream *s, Target *target, uint32_t index,
 
     intptr_t shlib = m_addr_range.GetByteSize();
     if (shlib)
-      s->Printf(" -> %s`%s\n", (const char *)shlib, m_reexport_name.GetCString());
+      s->Printf(" -> %s`%s\n", (const char *)shlib,
+                m_reexport_name.GetCString());
     else
       s->Printf(" -> %s\n", m_reexport_name.GetCString());
   } else {
