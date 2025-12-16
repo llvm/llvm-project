@@ -3476,6 +3476,12 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
   if (const std::string * bindName{symbol.GetBindName()};
       bindName) { // has a binding name
     if (!bindName->empty()) {
+      bool toolchain_error{bindName->front() == '.'};
+      if (toolchain_error) {
+        messages_.Say(symbol.name(),
+            "Symbol has a BIND(C) name with leading dot that may have special meaning to the toolchain"_err_en_US);
+        context_.SetError(symbol);
+      }
       bool visible_ascii{true};
       for (char ch : *bindName) {
         visible_ascii &= parser::IsPrintable(ch);
