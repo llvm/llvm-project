@@ -1,4 +1,4 @@
-//===--- LiteralConverter.cpp - Translator for String Literals -----------===//
+//===--- TextEncodingConfig.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Lex/LiteralConverter.h"
+#include "clang/Lex/TextEncodingConfig.h"
 #include "clang/Basic/DiagnosticDriver.h"
 
 using namespace llvm;
 
 llvm::TextEncodingConverter *
-LiteralConverter::getConverter(ConversionAction Action) {
+TextEncodingConfig::getConverter(ConversionAction Action) {
   if (Action == CA_ToSystemEncoding)
     return ToSystemEncodingConverter;
   else if (Action == CA_ToExecEncoding)
@@ -22,23 +22,22 @@ LiteralConverter::getConverter(ConversionAction Action) {
 }
 
 std::error_code
-LiteralConverter::setConvertersFromOptions(LiteralConverter &LiteralConv,
-                                           const clang::LangOptions &Opts,
-                                           const clang::TargetInfo &TInfo) {
+TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
+                                             const clang::LangOptions &Opts,
+                                             const clang::TargetInfo &TInfo) {
   using namespace llvm;
-  LiteralConv.InternalEncoding = "UTF-8";
-  LiteralConv.SystemEncoding = TInfo.getTriple().getDefaultNarrowTextEncoding();
-  LiteralConv.ExecEncoding = Opts.ExecEncoding.empty()
-                                 ? LiteralConv.InternalEncoding
-                                 : Opts.ExecEncoding;
+  TEC.InternalEncoding = "UTF-8";
+  TEC.SystemEncoding = TInfo.getTriple().getDefaultNarrowTextEncoding();
+  TEC.ExecEncoding =
+      Opts.ExecEncoding.empty() ? TEC.InternalEncoding : Opts.ExecEncoding;
 
   // Create converter between internal and system encoding
-  if (LiteralConv.InternalEncoding != LiteralConv.SystemEncoding) {
+  if (TEC.InternalEncoding != TEC.SystemEncoding) {
     ErrorOr<TextEncodingConverter> ErrorOrConverter =
-        llvm::TextEncodingConverter::create(LiteralConv.InternalEncoding,
-                                            LiteralConv.SystemEncoding);
+        llvm::TextEncodingConverter::create(TEC.InternalEncoding,
+                                            TEC.SystemEncoding);
     if (ErrorOrConverter) {
-      LiteralConv.ToSystemEncodingConverter =
+      TEC.ToSystemEncodingConverter =
           new TextEncodingConverter(std::move(*ErrorOrConverter));
     } else
       return ErrorOrConverter.getError();
@@ -46,13 +45,13 @@ LiteralConverter::setConvertersFromOptions(LiteralConverter &LiteralConv,
 
   // Create converter between internal and exec encoding specified
   // in fexec-charset option.
-  if (LiteralConv.InternalEncoding == LiteralConv.ExecEncoding)
+  if (TEC.InternalEncoding == TEC.ExecEncoding)
     return std::error_code();
   ErrorOr<TextEncodingConverter> ErrorOrConverter =
-      llvm::TextEncodingConverter::create(LiteralConv.InternalEncoding,
-                                          LiteralConv.ExecEncoding);
+      llvm::TextEncodingConverter::create(TEC.InternalEncoding,
+                                          TEC.ExecEncoding);
   if (ErrorOrConverter) {
-    LiteralConv.ToExecEncodingConverter =
+    TEC.ToExecEncodingConverter =
         new TextEncodingConverter(std::move(*ErrorOrConverter));
   } else
     return ErrorOrConverter.getError();
