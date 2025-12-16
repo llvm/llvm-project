@@ -5392,6 +5392,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (IID == Intrinsic::amdgcn_exp2 && EltTy->isFloatTy())
         Known.knownNot(fcSubnormal);
 
+      if (Known.isKnownNeverNegInfinity())
+        Known.knownNot(fcPosZero);
+
       break;
     }
     case Intrinsic::fptrunc_round: {
