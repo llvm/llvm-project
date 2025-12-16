@@ -439,4 +439,15 @@ def AffineExpandIndexOpsAsAffine : Pass<"affine-expand-index-ops-as-affine"> {
   let constructor = "mlir::affine::createAffineExpandIndexOpsAsAffinePass()";
 }
 
+def AffineFoldMemRefAliasOps : Pass<"affine-fold-memref-alias-ops"> {
+  let summary = "Fold memref alias ops into affine memory ops";
+  let description = [{
+    The pass folds memref.subview, memref.expand_shape, and memref.collapse_shape
+    operations into affine memory operations (currently only `affine.load` and
+    `affine.store`) . This is similar to the `fold-memref-alias-ops` pass in the
+    `memref` dialect but adds handling specific to affine operations.
+  }];
+  let dependentDialects = ["memref::MemRefDialect"];
+}
+
 #endif // MLIR_DIALECT_AFFINE_PASSES
