@@ -613,6 +613,8 @@ void CIRGenFunction::populateCatchHandlers(cir::TryOp tryOp) {
     if (hasCatchAll)
       handlerAttrs.push_back(cir::CatchAllAttr::get(&getMLIRContext()));
 
+    assert(!cir::MissingFeatures::ehScopeFilter());
+
     // If there's no catch_all, attach the unwind region. This needs to be the
     // last region in the TryOp catch list.
     if (!hasCatchAll)
