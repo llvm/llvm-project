@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 
 using namespace llvm;
@@ -61,56 +62,14 @@ void nvvm::printTcgen05CollectorUsageOp(raw_ostream &OS,
 }
 
 void nvvm::printTensormapElemType(raw_ostream &OS, const Constant *ImmArgVal) {
+  static constexpr StringRef TensormapElemTypes[] = {
+      "u8",       "u16",   "u32",       "s32",      "u64",  "s64",
+      "f16",      "f32",   "f32.ftz",   "f64",      "bf16", "tf32",
+      "tf32.ftz", "b4x16", "b4x16_p64", "b6x16_p32"};
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
-    switch (Val) {
-    case 0:
-      OS << "u8";
-      return;
-    case 1:
-      OS << "u16";
-      return;
-    case 2:
-      OS << "u32";
-      return;
-    case 3:
-      OS << "s32";
-      return;
-    case 4:
-      OS << "u64";
-      return;
-    case 5:
-      OS << "s64";
-      return;
-    case 6:
-      OS << "f16";
-      return;
-    case 7:
-      OS << "f32";
-      return;
-    case 8:
-      OS << "f32.ftz";
-      return;
-    case 9:
-      OS << "f64";
-      return;
-    case 10:
-      OS << "bf16";
-      return;
-    case 11:
-      OS << "tf32";
-      return;
-    case 12:
-      OS << "tf32.ftz";
-      return;
-    case 13:
-      OS << "b4x16";
-      return;
-    case 14:
-      OS << "b4x16_p64";
-      return;
-    case 15:
-      OS << "b6x16_p32";
+    if (Val <= static_cast<uint64_t>(nvvm::TensormapElemType::B6x16_p32)) {
+      OS << TensormapElemTypes[Val];
       return;
     }
   }
@@ -122,14 +81,14 @@ void nvvm::printTensormapInterleaveLayout(raw_ostream &OS,
                                           const Constant *ImmArgVal) {
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
-    switch (Val) {
-    case 0:
+    switch (static_cast<TensormapInterleaveLayout>(Val)) {
+    case TensormapInterleaveLayout::NO_INTERLEAVE:
       OS << "No interleave";
       return;
-    case 1:
+    case TensormapInterleaveLayout::INTERLEAVE_16B:
       OS << "16B interleave";
       return;
-    case 2:
+    case TensormapInterleaveLayout::INTERLEAVE_32B:
       OS << "32B interleave";
       return;
     }
@@ -143,20 +102,20 @@ void nvvm::printTensormapSwizzleMode(raw_ostream &OS,
                                      const Constant *ImmArgVal) {
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
-    switch (Val) {
-    case 0:
+    switch (static_cast<TensormapSwizzleMode>(Val)) {
+    case TensormapSwizzleMode::NO_SWIZZLE:
       OS << "No swizzling";
       return;
-    case 1:
+    case TensormapSwizzleMode::SWIZZLE_32B:
       OS << "32B swizzling";
       return;
-    case 2:
+    case TensormapSwizzleMode::SWIZZLE_64B:
       OS << "64B swizzling";
       return;
-    case 3:
+    case TensormapSwizzleMode::SWIZZLE_128B:
       OS << "128B swizzling";
       return;
-    case 4:
+    case TensormapSwizzleMode::SWIZZLE_96B:
       OS << "96B swizzling";
       return;
     }
@@ -169,17 +128,17 @@ void nvvm::printTensormapSwizzleAtomicity(raw_ostream &OS,
                                           const Constant *ImmArgVal) {
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
-    switch (Val) {
-    case 0:
+    switch (static_cast<TensormapSwizzleAtomicity>(Val)) {
+    case TensormapSwizzleAtomicity::SWIZZLE_ATOMICITY_16B:
       OS << "16B";
       return;
-    case 1:
+    case TensormapSwizzleAtomicity::SWIZZLE_ATOMICITY_32B:
       OS << "32B";
       return;
-    case 2:
+    case TensormapSwizzleAtomicity::SWIZZLE_ATOMICITY_32B_FLIP_8B:
       OS << "32B + 8B flip";
       return;
-    case 3:
+    case TensormapSwizzleAtomicity::SWIZZLE_ATOMICITY_64B:
       OS << "64B";
       return;
     }
@@ -192,11 +151,10 @@ void nvvm::printTensormapSwizzleAtomicity(raw_ostream &OS,
 void nvvm::printTensormapFillMode(raw_ostream &OS, const Constant *ImmArgVal) {
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
-    switch (Val) {
-    case 0:
+    if (Val == static_cast<uint64_t>(TensormapFillMode::ZERO_FILL)) {
       OS << "Zero fill";
       return;
-    case 1:
+    } else if (Val == static_cast<uint64_t>(TensormapFillMode::OOB_NAN_FILL)) {
       OS << "OOB-NaN fill";
       return;
     }

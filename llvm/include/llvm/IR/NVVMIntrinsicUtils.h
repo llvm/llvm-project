@@ -59,6 +59,51 @@ enum class Tcgen05CollectorUsageOp : uint8_t {
   USE = 3,
 };
 
+enum class TensormapElemType : uint8_t {
+  U8 = 0,
+  U16 = 1,
+  U32 = 2,
+  S32 = 3,
+  U64 = 4,
+  S64 = 5,
+  F16 = 6,
+  F32 = 7,
+  F32_FTZ = 8,
+  F64 = 9,
+  BF16 = 10,
+  TF32 = 11,
+  TF32_FTZ = 12,
+  B4x16 = 13,
+  B4x16_p64 = 14,
+  B6x16_p32 = 15,
+};
+
+enum class TensormapInterleaveLayout : uint8_t {
+  NO_INTERLEAVE = 0,
+  INTERLEAVE_16B = 1,
+  INTERLEAVE_32B = 2,
+};
+
+enum class TensormapSwizzleMode : uint8_t {
+  NO_SWIZZLE = 0,
+  SWIZZLE_32B = 1,
+  SWIZZLE_64B = 2,
+  SWIZZLE_128B = 3,
+  SWIZZLE_96B = 4,
+};
+
+enum class TensormapSwizzleAtomicity : uint8_t {
+  SWIZZLE_ATOMICITY_16B = 0,
+  SWIZZLE_ATOMICITY_32B = 1,
+  SWIZZLE_ATOMICITY_32B_FLIP_8B = 2,
+  SWIZZLE_ATOMICITY_64B = 3,
+};
+
+enum class TensormapFillMode : uint8_t {
+  ZERO_FILL = 0,
+  OOB_NAN_FILL = 1,
+};
+
 void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
 
 void printTcgen05CollectorUsageOp(raw_ostream &OS, const Constant *ImmArgVal);

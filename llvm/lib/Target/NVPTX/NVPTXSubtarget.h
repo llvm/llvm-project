@@ -20,6 +20,7 @@
 #include "NVPTXRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include <string>
 
@@ -209,7 +210,7 @@ public:
   }
 
   bool hasTensormapReplaceElemtypeSupport(unsigned value) const {
-    if (value >= 13)
+    if (value >= static_cast<unsigned>(nvvm::TensormapElemType::B4x16))
       return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
              hasPTXWithFamilySMs(88, {100, 101, 120}) ||
              hasPTXWithAccelSMs(87, {100, 101, 120});
@@ -224,7 +225,7 @@ public:
   }
 
   bool hasTensormapReplaceSwizzleModeSupport(unsigned value) const {
-    if (value == 4)
+    if (value == static_cast<unsigned>(nvvm::TensormapSwizzleMode::SWIZZLE_96B))
       return hasPTXWithAccelSMs(88, {103});
 
     return hasTensormapReplaceSupport();
