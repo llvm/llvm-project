@@ -658,6 +658,11 @@ let hasSideEffects = false in {
                 (ins B32:$src), (ins CvtMode:$mode),
                 "cvt${mode:base}.satfinite${mode:relu}." # F8Name # "x2.f16x2">,
       Requires<[hasPTX<81>, hasSM<89>]>;
+    def _bf16x2
+        : NVPTXInst<(outs B16:$dst), (ins B32:$src, CvtMode:$mode),
+                    !strconcat("cvt${mode:base}.satfinite${mode:relu}.", F8Name,
+                               "x2.bf16x2 \t$dst, $src;"),
+                    []>;
   }
 
   defm CVT_e4m3x2 : CVT_TO_F8X2<"e4m3">;
@@ -702,12 +707,40 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rn_relu_satf  : CVT_TO_TF32<"rn.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
+  
+  def CVT_s2f6x2_f32_sf : NVPTXInst<(outs B16:$dst),
+      (ins B32:$src1, B32:$src2, CvtMode:$mode),
+      "cvt${mode:base}.satfinite${mode:relu}.s2f6x2.f32 \t$dst, $src1, $src2;", []>;
+  def CVT_s2f6x2_f32_sf_scale : NVPTXInst<(outs B16:$dst),
+      (ins B32:$src1, B32:$src2, B16:$scale, CvtMode:$mode),
+      "cvt${mode:base}.satfinite${mode:relu}.scaled::n2::ue8m0.s2f6x2.f32 \t"
+      "$dst, $src1, $src2, $scale;", []>;
+
+  def CVT_s2f6x2_bf16x2_sf : NVPTXInst<(outs B16:$dst),
+      (ins B32:$src, CvtMode:$mode),
+      "cvt${mode:base}.satfinite${mode:relu}.s2f6x2.bf16x2 \t$dst, $src;", []>;
+  def CVT_s2f6x2_bf16x2_sf_scale : NVPTXInst<(outs B16:$dst),
+      (ins B32:$src, B16:$scale, CvtMode:$mode),
+      "cvt${mode:base}.satfinite${mode:relu}.scaled::n2::ue8m0.s2f6x2.bf16x2 \t"
+      "$dst, $src, $scale;", []>;
+
+  def CVT_bf16x2_s2f6x2 : NVPTXInst<(outs B32:$dst),
+      (ins B16:$src, CvtMode:$mode),
+      "cvt${mode:base}${mode:relu}.bf16x2.s2f6x2 \t$dst, $src;", []>;
+  def CVT_bf16x2_s2f6x2_scale : NVPTXInst<(outs B32:$dst),
+      (ins B16:$src, B16:$scale, CvtMode:$mode),
+      "cvt${mode:base}${mode:relu}.scaled::n2::ue8m0.bf16x2.s2f6x2 \t"
+      "$dst, $src, $scale;", []>;
+  def CVT_bf16x2_s2f6x2_sf : NVPTXInst<(outs B32:$dst),
+      (ins B16:$src, CvtMode:$mode),
+      "cvt${mode:base}.satfinite${mode:relu}.bf16x2.s2f6x2 \t$dst, $src;", []>;
+  def CVT_bf16x2_s2f6x2_sf_scale : NVPTXInst<(outs B32:$dst),
+      (ins B16:$src, B16:$scale, CvtMode:$mode),
+      "cvt${mode:base}.satfinite${mode:relu}.scaled::n2::ue8m0.bf16x2.s2f6x2 \t"
+      "$dst, $src, $scale;", []>;
 
   // FP6 conversions.
   foreach type = ["e2m3x2", "e3m2x2"] in {
-    def CVT_ # type # _f32_sf : BasicFlagsNVPTXInst<(outs B16:$dst),
-                                          (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
-                                          "cvt${mode:base}.satfinite${mode:relu}." # type # ".f32">;
     def CVT_f16x2_ # type : BasicFlagsNVPTXInst<(outs B32:$dst),
                                       (ins B16:$src), (ins CvtMode:$mode),
                                       "cvt${mode:base}${mode:relu}.f16x2." # type>;
@@ -721,6 +754,30 @@ let hasSideEffects = false in {
 
   def CVT_e2m3x4_f32x4_rs_sf : CVT_TO_FP6X4<"e2m3">;
   def CVT_e3m2x4_f32x4_rs_sf : CVT_TO_FP6X4<"e3m2">;
+  
+  multiclass CVT_TO_FP6X2<string FP6Name> {
+    def _f32_sf :
+      NVPTXInst<(outs B16:$dst),
+                (ins B32:$src1, B32:$src2, CvtMode:$mode),
+                "cvt${mode:base}.satfinite${mode:relu}." # FP6Name
+                # "x2.f32"
+                "\t$dst, $src1, $src2;", []>;
+    def _f16x2_sf
+        : NVPTXInst<
+              (outs B16:$dst), (ins B32:$src, CvtMode:$mode),
+              "cvt${mode:base}.satfinite${mode:relu}."#FP6Name#"x2.f16x2 "
+                                                               "\t$dst, $src;",
+              []>;
+    def _bf16x2_sf
+        : NVPTXInst<
+              (outs B16:$dst), (ins B32:$src, CvtMode:$mode),
+              "cvt${mode:base}.satfinite${mode:relu}."#FP6Name#"x2.bf16x2 "
+                                                               "\t$dst, $src;",
+              []>;
+  }
+
+  defm CVT_e2m3x2 : CVT_TO_FP6X2<"e2m3">;
+  defm CVT_e3m2x2 : CVT_TO_FP6X2<"e3m2">;
   
   // FP4 conversions.
   def CVT_e2m1x2_f32_sf : NVPTXInst<(outs B16:$dst),
@@ -744,6 +801,20 @@ let hasSideEffects = false in {
               (ins B32:$src1, B32:$src2, B32:$src3, B32:$src4, B32:$src5, CvtMode:$mode),
               "cvt${mode:base}${mode:relu}.satfinite.e2m1x4.f32 \t" # 
                 "$dst, {{$src1, $src2, $src3, $src4}}, $src5;">;
+
+  def CVT_e2m1x2_f16x2_sf : NVPTXInst<(outs B16:$dst), 
+      (ins B32:$src, CvtMode:$mode),
+      !strconcat("{{ \n\t", ".reg .b8 \t%e2m1x2_out; \n\t",
+                "cvt${mode:base}.satfinite${mode:relu}.e2m1x2."
+                "f16x2 \t%e2m1x2_out, $src; \n\t",
+                "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t", "}}"), []>;
+
+  def CVT_e2m1x2_bf16x2_sf : NVPTXInst<(outs B16:$dst), 
+      (ins B32:$src, CvtMode:$mode),
+      !strconcat("{{ \n\t", ".reg .b8 \t%e2m1x2_out; \n\t",
+                "cvt${mode:base}.satfinite${mode:relu}.e2m1x2."
+                "bf16x2 \t%e2m1x2_out, $src; \n\t",
+                "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t", "}}"), []>;
 
   // UE8M0x2 conversions.
   class CVT_f32_to_ue8m0x2<string sat = ""> :
