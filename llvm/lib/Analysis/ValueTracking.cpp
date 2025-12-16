@@ -5562,6 +5562,39 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       // TODO: Copy inf handling from instructions
       break;
+    case Intrinsic::amdgcn_rcp: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+
+      Known.propagateNaN(KnownSrc);
+
+      Type *EltTy = II->getType()->getScalarType();
+
+      // f32 denormal always flushed.
+      if (EltTy->isFloatTy())
+        Known.knownNot(fcSubnormal);
+
+      if (KnownSrc.isKnownNever(fcNegative))
+        Known.knownNot(fcNegative);
+      if (KnownSrc.isKnownNever(fcPositive))
+        Known.knownNot(fcPositive);
+
+      if (KnownSrc.isKnownNeverNegInfinity())
+        Known.knownNot(fcNegZero);
+      if (KnownSrc.isKnownNeverPosInfinity())
+        Known.knownNot(fcPosZero);
+
+      if (const Function *F = II->getFunction()) {
+        DenormalMode Mode = F->getDenormalMode(EltTy->getFltSemantics());
+        if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+          Known.knownNot(fcPosInf);
+        if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+          Known.knownNot(fcNegInf);
+      }
+
+      break;
+    }
     case Intrinsic::amdgcn_rsq: {
       KnownFPClass KnownSrc;
       // The only negative value that can be returned is -inf for -0 inputs.
