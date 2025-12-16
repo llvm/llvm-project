@@ -211,7 +211,7 @@ def HasSME2p2        : Predicate<"Subtarget->isStreaming() && Subtarget->hasSME2
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p2), "sme2p2">;
 def HasSVEAES2       : Predicate<"Subtarget->hasSVEAES2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVEAES2), "sve-aes2">;
-def HasSVEBFSCALE    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSVE_BFSCALE()">,
+def HasSVEBFSCALE    : Predicate<"Subtarget->isNonStreamingSVEorSME2Available() && Subtarget->hasSVE_BFSCALE()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVEBFSCALE), "sve-bfscale">;
 def HasSVE_F16F32MM  : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_F16F32MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_F16F32MM), "sve-f16f32mm">;
