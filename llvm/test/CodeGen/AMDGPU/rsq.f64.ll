@@ -4377,53 +4377,53 @@ define double @v_rsq_f64__afn_ninf(double %x) {
 ; SI-SDAG-IR-LABEL: v_rsq_f64__afn_ninf:
 ; SI-SDAG-IR:       ; %bb.0:
 ; SI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x3fd80000
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], s[4:5], 0.5
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], s[4:5], 0.5
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-GISEL-IR-LABEL: v_rsq_f64__afn_ninf:
 ; SI-GISEL-IR:       ; %bb.0:
 ; SI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[0:1], v[2:3]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 0.5
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[0:1], v[2:3]
 ; SI-GISEL-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-IR-LABEL: v_rsq_f64__afn_ninf:
 ; VI-SDAG-IR:       ; %bb.0:
 ; VI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x3fd80000
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], s[4:5], 0.5
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], s[4:5], 0.5
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[0:1], v[2:3]
 ; VI-SDAG-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-GISEL-IR-LABEL: v_rsq_f64__afn_ninf:
 ; VI-GISEL-IR:       ; %bb.0:
 ; VI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[0:1], v[2:3]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 0.5
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[0:1], v[2:3]
 ; VI-GISEL-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-SDAG-CG-LABEL: v_rsq_f64__afn_ninf:
@@ -4787,53 +4787,53 @@ define double @v_rsq_f64__afn_nnan_ninf(double %x) {
 ; SI-SDAG-IR-LABEL: v_rsq_f64__afn_nnan_ninf:
 ; SI-SDAG-IR:       ; %bb.0:
 ; SI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x3fd80000
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], s[4:5], 0.5
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], s[4:5], 0.5
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-GISEL-IR-LABEL: v_rsq_f64__afn_nnan_ninf:
 ; SI-GISEL-IR:       ; %bb.0:
 ; SI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[0:1], v[2:3]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 0.5
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[0:1], v[2:3]
 ; SI-GISEL-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-IR-LABEL: v_rsq_f64__afn_nnan_ninf:
 ; VI-SDAG-IR:       ; %bb.0:
 ; VI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x3fd80000
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], s[4:5], 0.5
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], s[4:5], 0.5
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[0:1], v[2:3]
 ; VI-SDAG-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-GISEL-IR-LABEL: v_rsq_f64__afn_nnan_ninf:
 ; VI-GISEL-IR:       ; %bb.0:
 ; VI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[0:1], v[2:3]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 0.5
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[0:1], v[2:3]
 ; VI-GISEL-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-SDAG-CG-LABEL: v_rsq_f64__afn_nnan_ninf:
@@ -4984,53 +4984,53 @@ define double @v_neg_rsq_f64__afn_nnan_ninf(double %x) {
 ; SI-SDAG-IR-LABEL: v_neg_rsq_f64__afn_nnan_ninf:
 ; SI-SDAG-IR:       ; %bb.0:
 ; SI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x3fd80000
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], s[4:5], 0.5
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], -v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], s[4:5], 0.5
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], -v[0:1], v[2:3]
 ; SI-SDAG-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-GISEL-IR-LABEL: v_neg_rsq_f64__afn_nnan_ninf:
 ; SI-GISEL-IR:       ; %bb.0:
 ; SI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[0:1], v[2:3]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], -v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 0.5
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], -v[0:1], v[2:3]
 ; SI-GISEL-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-IR-LABEL: v_neg_rsq_f64__afn_nnan_ninf:
 ; VI-SDAG-IR:       ; %bb.0:
 ; VI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x3fd80000
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], s[4:5], 0.5
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], -v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], s[4:5], 0.5
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], -v[0:1], v[2:3]
 ; VI-SDAG-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-GISEL-IR-LABEL: v_neg_rsq_f64__afn_nnan_ninf:
 ; VI-GISEL-IR:       ; %bb.0:
 ; VI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[0:1], v[2:3]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], -v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 0.5
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], -v[0:1], v[2:3]
 ; VI-GISEL-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-SDAG-CG-LABEL: v_neg_rsq_f64__afn_nnan_ninf:
@@ -5183,53 +5183,53 @@ define double @v_rsq_f64__nnan_ninf(double %x) {
 ; SI-SDAG-IR-LABEL: v_rsq_f64__nnan_ninf:
 ; SI-SDAG-IR:       ; %bb.0:
 ; SI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x3fd80000
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], s[4:5], 0.5
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[2:3], v[0:1]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], s[4:5], 0.5
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-GISEL-IR-LABEL: v_rsq_f64__nnan_ninf:
 ; SI-GISEL-IR:       ; %bb.0:
 ; SI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[0:1], v[2:3]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 0.5
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[0:1], v[2:3]
 ; SI-GISEL-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-IR-LABEL: v_rsq_f64__nnan_ninf:
 ; VI-SDAG-IR:       ; %bb.0:
 ; VI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x3fd80000
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], s[4:5], 0.5
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], v[2:3], v[0:1]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], s[4:5], 0.5
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[4:5], v[0:1], v[2:3]
 ; VI-SDAG-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-GISEL-IR-LABEL: v_rsq_f64__nnan_ninf:
 ; VI-GISEL-IR:       ; %bb.0:
 ; VI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
+; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[0:1]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[0:1], v[2:3]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], -v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 0.5
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[0:1], v[2:3]
 ; VI-GISEL-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-SDAG-CG-LABEL: v_rsq_f64__nnan_ninf:
@@ -5404,77 +5404,77 @@ define <2 x double> @v_rsq_v2f64__afn_nnan_ninf(<2 x double> %x) {
 ; SI-SDAG-IR-LABEL: v_rsq_v2f64__afn_nnan_ninf:
 ; SI-SDAG-IR:       ; %bb.0:
 ; SI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
-; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[2:3]
+; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[4:5], v[0:1]
+; SI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[6:7], v[2:3]
 ; SI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x3fd80000
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], -v[0:1], v[0:1]
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[6:7], -v[2:3], v[2:3]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[4:5], v[4:5], v[0:1], 1.0
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[6:7], v[6:7], v[2:3], 1.0
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[8:9], v[0:1], v[4:5]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[4:5], v[4:5], s[4:5], 0.5
-; SI-SDAG-IR-NEXT:    v_mul_f64 v[10:11], v[2:3], v[6:7]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[6:7], v[6:7], s[4:5], 0.5
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[8:9], v[4:5], v[0:1]
-; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[10:11], v[6:7], v[2:3]
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[0:1], -v[4:5], v[0:1]
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[2:3], -v[6:7], v[2:3]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 1.0
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], 1.0
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[8:9], v[4:5], v[0:1]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], s[4:5], 0.5
+; SI-SDAG-IR-NEXT:    v_mul_f64 v[10:11], v[6:7], v[2:3]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], s[4:5], 0.5
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[8:9], v[0:1], v[4:5]
+; SI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[10:11], v[2:3], v[6:7]
 ; SI-SDAG-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-GISEL-IR-LABEL: v_rsq_v2f64__afn_nnan_ninf:
 ; SI-GISEL-IR:       ; %bb.0:
 ; SI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
-; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[2:3]
+; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[4:5], v[0:1]
+; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[6:7], v[2:3]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v10, 0
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v11, 0x3fd80000
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[4:5], -v[0:1], v[0:1]
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], -v[2:3], v[2:3]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[4:5], v[4:5], v[0:1], 1.0
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[6:7], v[6:7], v[2:3], 1.0
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[8:9], v[0:1], v[4:5]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[4:5], v[4:5], v[10:11], 0.5
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[12:13], v[2:3], v[6:7]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[6:7], v[6:7], v[10:11], 0.5
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[8:9], v[4:5], v[0:1]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[12:13], v[6:7], v[2:3]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], -v[4:5], v[0:1]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], -v[6:7], v[2:3]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 1.0
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], 1.0
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[8:9], v[4:5], v[0:1]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[10:11], 0.5
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[12:13], v[6:7], v[2:3]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[10:11], 0.5
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[8:9], v[0:1], v[4:5]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[12:13], v[2:3], v[6:7]
 ; SI-GISEL-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-IR-LABEL: v_rsq_v2f64__afn_nnan_ninf:
 ; VI-SDAG-IR:       ; %bb.0:
 ; VI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
-; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[2:3]
+; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[4:5], v[0:1]
+; VI-SDAG-IR-NEXT:    v_rsq_f64_e32 v[6:7], v[2:3]
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s5, 0x3fd80000
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[4:5], -v[0:1], v[0:1]
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[6:7], -v[2:3], v[2:3]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[4:5], v[4:5], v[0:1], 1.0
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[6:7], v[6:7], v[2:3], 1.0
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[8:9], v[0:1], v[4:5]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[4:5], v[4:5], s[4:5], 0.5
-; VI-SDAG-IR-NEXT:    v_mul_f64 v[10:11], v[2:3], v[6:7]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[6:7], v[6:7], s[4:5], 0.5
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[8:9], v[4:5], v[0:1]
-; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[10:11], v[6:7], v[2:3]
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[0:1], -v[4:5], v[0:1]
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[2:3], -v[6:7], v[2:3]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 1.0
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], 1.0
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[8:9], v[4:5], v[0:1]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], s[4:5], 0.5
+; VI-SDAG-IR-NEXT:    v_mul_f64 v[10:11], v[6:7], v[2:3]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], s[4:5], 0.5
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[0:1], v[8:9], v[0:1], v[4:5]
+; VI-SDAG-IR-NEXT:    v_fma_f64 v[2:3], v[10:11], v[2:3], v[6:7]
 ; VI-SDAG-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-GISEL-IR-LABEL: v_rsq_v2f64__afn_nnan_ninf:
 ; VI-GISEL-IR:       ; %bb.0:
 ; VI-GISEL-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
-; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[2:3], v[2:3]
+; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[4:5], v[0:1]
+; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[6:7], v[2:3]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v8, 0
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v9, 0x3fd80000
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[4:5], -v[0:1], v[0:1]
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], -v[2:3], v[2:3]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[4:5], v[4:5], v[0:1], 1.0
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[6:7], v[6:7], v[2:3], 1.0
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[10:11], v[0:1], v[4:5]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], 0.5
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[12:13], v[2:3], v[6:7]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[6:7], v[6:7], v[8:9], 0.5
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[10:11], v[4:5], v[0:1]
-; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[12:13], v[6:7], v[2:3]
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], -v[4:5], v[0:1]
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], -v[6:7], v[2:3]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 1.0
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], 1.0
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[10:11], v[4:5], v[0:1]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[8:9], 0.5
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[12:13], v[6:7], v[2:3]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[8:9], 0.5
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[10:11], v[0:1], v[4:5]
+; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[12:13], v[2:3], v[6:7]
 ; VI-GISEL-IR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-SDAG-CG-LABEL: v_rsq_v2f64__afn_nnan_ninf:

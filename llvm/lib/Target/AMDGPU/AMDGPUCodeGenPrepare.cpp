@@ -651,7 +651,7 @@ Value *AMDGPUCodeGenPrepareImpl::emitRsqF64(IRBuilder<> &Builder, Value *X,
       MaybeZero = false;
   }
 
-  Value *SpecialOrRsq = Y0;
+  Value *SpecialOrRsq = X;
   if (MaybeZero || MaybePosInf) {
     Value *Cond;
     if (MaybePosInf && MaybeZero) {
