@@ -371,6 +371,7 @@ public:
   bool addInstSelector() override;
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   bool addILPOpts() override;
@@ -469,6 +470,12 @@ bool X86PassConfig::addIRTranslator() {
   return false;
 }
 
+void X86PassConfig::addPreRegBankSelect() {
+  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
+  if (!IsOptNone) {
+    addPass(createX86PostLegalizerCombiner());
+  }
+}
 bool X86PassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
   return false;
