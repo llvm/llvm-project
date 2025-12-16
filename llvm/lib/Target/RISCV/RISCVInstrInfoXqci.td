@@ -1030,19 +1030,31 @@ let Predicates = [HasVendorXqcilsm, IsRV32] in {
 } // Predicates = [HasVendorXqcilsm, IsRV32]
 
 let Predicates = [HasVendorXqcicli, IsRV32] in {
-  def QC_LIEQ    : QCILICC<0b000, 0b01, GPRNoX0, "qc.lieq">;
-  def QC_LINE    : QCILICC<0b001, 0b01, GPRNoX0, "qc.line">;
-  def QC_LILT    : QCILICC<0b100, 0b01, GPRNoX0, "qc.lilt">;
-  def QC_LIGE    : QCILICC<0b101, 0b01, GPRNoX0, "qc.lige">;
-  def QC_LILTU   : QCILICC<0b110, 0b01, GPRNoX0, "qc.liltu">;
-  def QC_LIGEU   : QCILICC<0b111, 0b01, GPRNoX0, "qc.ligeu">;
+  def QC_LIEQ    : QCILICC<0b000, 0b01, GPRNoX0, "qc.lieq">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_LINE    : QCILICC<0b001, 0b01, GPRNoX0, "qc.line">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_LILT    : QCILICC<0b100, 0b01, GPRNoX0, "qc.lilt">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_LIGE    : QCILICC<0b101, 0b01, GPRNoX0, "qc.lige">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_LILTU   : QCILICC<0b110, 0b01, GPRNoX0, "qc.liltu">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_LIGEU   : QCILICC<0b111, 0b01, GPRNoX0, "qc.ligeu">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
 
-  def QC_LIEQI   : QCILICC<0b000, 0b11, simm5, "qc.lieqi">;
-  def QC_LINEI   : QCILICC<0b001, 0b11, simm5, "qc.linei">;
-  def QC_LILTI   : QCILICC<0b100, 0b11, simm5, "qc.lilti">;
-  def QC_LIGEI   : QCILICC<0b101, 0b11, simm5, "qc.ligei">;
-  def QC_LILTUI  : QCILICC<0b110, 0b11, uimm5, "qc.liltui">;
-  def QC_LIGEUI  : QCILICC<0b111, 0b11, uimm5, "qc.ligeui">;
+  def QC_LIEQI   : QCILICC<0b000, 0b11, simm5, "qc.lieqi">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_LINEI   : QCILICC<0b001, 0b11, simm5, "qc.linei">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_LILTI   : QCILICC<0b100, 0b11, simm5, "qc.lilti">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_LIGEI   : QCILICC<0b101, 0b11, simm5, "qc.ligei">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_LILTUI  : QCILICC<0b110, 0b11, uimm5, "qc.liltui">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_LIGEUI  : QCILICC<0b111, 0b11, uimm5, "qc.ligeui">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 } // Predicates = [HasVendorXqcicli, IsRV32]
 
 let Predicates = [HasVendorXqcicm, IsRV32] in {
