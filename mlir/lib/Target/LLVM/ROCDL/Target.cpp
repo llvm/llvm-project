@@ -292,7 +292,8 @@ mlir::ROCDL::assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
     return emitError() << "failed to lookup target: " << error;
 
   llvm::SourceMgr srcMgr;
-  srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(isa), SMLoc());
+  // Copy buffer to ensure it's null terminated.
+  srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBufferCopy(isa), SMLoc());
 
   const llvm::MCTargetOptions mcOptions;
   std::unique_ptr<llvm::MCRegisterInfo> mri(target->createMCRegInfo(triple));
