@@ -425,20 +425,29 @@ static mlir::Value emitX86VectorSelect(CIRGenBuilderTy &builder,
 
 static mlir::Value emitX86ScalarSelect(CIRGenBuilderTy &builder,
                                        mlir::Location loc, mlir::Value mask,
-                                       mlir::Value Op0, mlir::Value Op1) {
+                                       mlir::Value vecA, mlir::Value vecB) {
+  mlir::Value index =
+      cir::ConstantOp::create(builder, loc, builder.getI64Type(),
+                              mlir::IntegerAttr::get(builder.getI64Type(), 0));
+
+  mlir::Value a = cir::ExtractElementOp::create(builder, loc, vecA, index);
+  mlir::Value b = cir::ExtractElementOp::create(builder, loc, vecB, index);
 
   mlir::Value one = cir::ConstantOp::create(
-      builder, loc, mask.getType(), builder.getIntAttr(mask.getType(), 1));
+      builder, loc, mask.getType(), mlir::IntegerAttr::get(mask.getType(), 1));
 
-  mlir::Value masked = builder.createAnd(loc, mask, one);
+  mlir::Value masked =
+      builder.createBinaryOp(loc, cir::BinaryOpKind::And, mask, one);
 
   mlir::Value zero = cir::ConstantOp::create(
-      builder, loc, mask.getType(), builder.getZeroAttr(mask.getType()));
+      builder, loc, mask.getType(), mlir::IntegerAttr::get(mask.getType(), 0));
 
   mlir::Value cond =
       builder.createCompare(loc, cir::CmpOpKind::ne, masked, zero);
 
-  return builder.createSelect(loc, cond, Op0, Op1);
+  mlir::Value selected = builder.createSelect(loc, cond, a, b);
+
+  return cir::InsertElementOp::create(builder, loc, vecA, selected, index);
 }
 
 std::optional<mlir::Value>
@@ -1359,8 +1368,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_selectpd_128:
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
-    return emitX86VectorSelect(builder, getLoc(expr->getExprLoc()), ops[0],
-                               ops[1], ops[2]);
+    ops[0] = getMaskVecValue(builder, loc, ops[0], numElts);
+    mlir::Type resultTy = ops[1].getType();
+    return emitX86VectorSelect(builder, loc, ops[0], ops[1], ops[2], resultTy);
   case X86::BI__builtin_ia32_selectsh_128:
   case X86::BI__builtin_ia32_selectsbf_128:
   case X86::BI__builtin_ia32_selectss_128:
@@ -1368,15 +1378,16 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Location loc = getLoc(expr->getExprLoc());
 
     mlir::Value idx0 = cir::ConstantOp::create(
-        builder, loc, builder.getIndexType(), builder.getIndexAttr(0));
+        builder, loc, builder.getIndexType(),
+        mlir::IntegerAttr::get(builder.getIndexType(), 0));
 
-    mlir::Value a = builder.createExtractElement(loc, ops[1], idx0);
-    mlir::Value b = builder.createExtractElement(loc, ops[2], idx0);
+    mlir::Value a = cir::ExtractElementOp::create(builder, loc, ops[1], idx0);
+    mlir::Value b = cir::ExtractElementOp::create(builder, loc, ops[2], idx0);
 
     mlir::Value selected = emitX86ScalarSelect(builder, loc, ops[0], a, b);
 
     mlir::Value result =
-        builder.createInsertElement(loc, ops[1], selected, idx0);
+        cir::InsertElementOp::create(builder, loc, ops[1], selected, idx0);
 
     return result;
 
