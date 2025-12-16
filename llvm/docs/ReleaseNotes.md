@@ -112,6 +112,8 @@ Changes to the AArch64 Backend
 * `FEAT_TME` support has been removed, as it has been withdrawn from
    all future versions of the A-profile architecture.
 
+* Added support for C1-Nano, C1-Pro, C1-Premium, and C1-Ultra CPUs.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
