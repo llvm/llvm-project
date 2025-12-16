@@ -24,6 +24,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 
@@ -34,7 +35,6 @@ class TargetMachine;
 
 class PhysicalRegisterUsageInfo {
 public:
-  ~PhysicalRegisterUsageInfo();
   /// Set TargetMachine which is used to print analysis.
   void setTargetMachine(const TargetMachine &TM);
 
@@ -109,6 +109,9 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
+
+/// Returns true if the -print-regusage flag is enabled.
+LLVM_ABI bool shouldPrintRegUsage();
 
 } // end namespace llvm
 

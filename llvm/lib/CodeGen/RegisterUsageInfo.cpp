@@ -56,14 +56,7 @@ bool PhysicalRegisterUsageInfo::doFinalization(Module &M) {
   return false;
 }
 
-PhysicalRegisterUsageInfo::~PhysicalRegisterUsageInfo() {
-  // As doFinalization() is not called for analysis results in the new PM,
-  // we print the register usage information here.
-  if (DumpRegUsage && TM)
-    print(errs());
-
-  RegMasks.shrink_and_clear();
-}
+bool llvm::shouldPrintRegUsage() { return DumpRegUsage; }
 
 void PhysicalRegisterUsageInfo::storeUpdateRegUsageInfo(
     const Function &FP, ArrayRef<uint32_t> RegMask) {
