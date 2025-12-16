@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c23 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux -std=c23 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
 #define INT64_MIN (-9223372036854775807LL - 1)
