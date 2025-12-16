@@ -76,10 +76,8 @@ AppleObjCTypeEncodingParser::ReadQuotedString(llvm::StringRef &type) {
 
 uint32_t AppleObjCTypeEncodingParser::ReadNumber(llvm::StringRef &type) {
   uint32_t total = 0;
-  while (!type.empty() && isdigit(type.front())) {
-    total = 10 * total + (type.front() - '0');
-    type = type.drop_front();
-  }
+  while (!type.empty() && isdigit(type.front()))
+    total = 10 * total + (popChar(type) - '0');
   return total;
 }
 
