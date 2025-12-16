@@ -3,11 +3,17 @@
 ; RUN: opt < %s -passes=vector-combine -S -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=CHECK,AVX
 
 define <4 x float> @shuffle_fma_const_chain(<4 x float> %a0) {
-; CHECK-LABEL: define <4 x float> @shuffle_fma_const_chain(
-; CHECK-SAME: <4 x float> [[A0:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[F:%.*]] = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> [[A0]], <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[F]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    ret <4 x float> [[RES]]
+; SSE-LABEL: define <4 x float> @shuffle_fma_const_chain(
+; SSE-SAME: <4 x float> [[A0:%.*]]) #[[ATTR0:[0-9]+]] {
+; SSE-NEXT:    [[F:%.*]] = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> [[A0]], <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[F]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; SSE-NEXT:    ret <4 x float> [[RES]]
+;
+; AVX-LABEL: define <4 x float> @shuffle_fma_const_chain(
+; AVX-SAME: <4 x float> [[A0:%.*]]) #[[ATTR0:[0-9]+]] {
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; AVX-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[TMP1]], <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
+; AVX-NEXT:    ret <4 x float> [[RES]]
 ;
   %f = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> %a0, <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
   %res = shufflevector <4 x float> %f, <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -15,18 +21,11 @@ define <4 x float> @shuffle_fma_const_chain(<4 x float> %a0) {
 }
 
 define <8 x float> @concat_fma_const_chain(<4 x float> %a0, <4 x float> %a1) {
-; SSE-LABEL: define <8 x float> @concat_fma_const_chain(
-; SSE-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]]) #[[ATTR0]] {
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP1]], <8 x float> splat (float 0x3F8DE8D040000000), <8 x float> splat (float 0xBFB3715EE0000000))
-; SSE-NEXT:    ret <8 x float> [[RES]]
-;
-; AVX-LABEL: define <8 x float> @concat_fma_const_chain(
-; AVX-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]]) #[[ATTR0]] {
-; AVX-NEXT:    [[L:%.*]] = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> [[A0]], <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
-; AVX-NEXT:    [[H:%.*]] = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> [[A1]], <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
-; AVX-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[L]], <4 x float> [[H]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX-NEXT:    ret <8 x float> [[RES]]
+; CHECK-LABEL: define <8 x float> @concat_fma_const_chain(
+; CHECK-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP1]], <8 x float> splat (float 0x3F8DE8D040000000), <8 x float> splat (float 0xBFB3715EE0000000))
+; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
   %l = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> %a0, <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
   %h = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> %a1, <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
@@ -35,12 +34,18 @@ define <8 x float> @concat_fma_const_chain(<4 x float> %a0, <4 x float> %a1) {
 }
 
 define <8 x float> @interleave_fma_const_chain(<4 x float> %a0, <4 x float> %a1) {
-; CHECK-LABEL: define <8 x float> @interleave_fma_const_chain(
-; CHECK-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[L:%.*]] = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> [[A0]], <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
-; CHECK-NEXT:    [[H:%.*]] = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> [[A1]], <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[L]], <4 x float> [[H]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; CHECK-NEXT:    ret <8 x float> [[RES]]
+; SSE-LABEL: define <8 x float> @interleave_fma_const_chain(
+; SSE-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[L:%.*]] = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> [[A0]], <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
+; SSE-NEXT:    [[H:%.*]] = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> [[A1]], <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[L]], <4 x float> [[H]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; SSE-NEXT:    ret <8 x float> [[RES]]
+;
+; AVX-LABEL: define <8 x float> @interleave_fma_const_chain(
+; AVX-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> [[A1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; AVX-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP1]], <8 x float> splat (float 0x3F8DE8D040000000), <8 x float> splat (float 0xBFB3715EE0000000))
+; AVX-NEXT:    ret <8 x float> [[RES]]
 ;
   %l = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> %a0, <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
   %h = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> %a1, <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))

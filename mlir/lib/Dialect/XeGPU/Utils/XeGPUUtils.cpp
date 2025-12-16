@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -527,7 +526,7 @@ SmallVector<OpFoldResult> xegpu::addElementwise(OpBuilder &builder,
   for (auto [l, r] : llvm::zip_equal(lhs, rhs)) {
     auto lval = getValueOrCreateConstantIndexOp(builder, loc, l);
     auto rval = getValueOrCreateConstantIndexOp(builder, loc, r);
-    results.push_back(builder.createOrFold<index::AddOp>(loc, lval, rval));
+    results.push_back(builder.createOrFold<arith::AddIOp>(loc, lval, rval));
   }
   return results;
 }

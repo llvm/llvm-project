@@ -109,14 +109,9 @@ public:
   LLVM_ABI static bool shouldExecuteImpl(CounterInfo &Counter);
 
   inline static bool shouldExecute(CounterInfo &Counter) {
-    // Compile to nothing when debugging is off
-#ifdef NDEBUG
-    return true;
-#else
     if (!Counter.Active)
       return true;
     return shouldExecuteImpl(Counter);
-#endif
   }
 
   // Return true if a given counter had values set (either programatically or on

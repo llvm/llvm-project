@@ -107,6 +107,11 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+- Added a new ``MacroFilter`` configuration option to ``Completion`` to 
+  allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting 
+  macros. ``ExactPrefix`` is the default, which retains previous 
+  behavior of suggesting macros which match the prefix exactly.  
+
 Code actions
 ^^^^^^^^^^^^
 
@@ -129,6 +134,8 @@ Objective-C
 
 Miscellaneous
 ^^^^^^^^^^^^^
+
+- Add wildcard ``.gitignore`` file to the clangd index directory.
 
 Improvements to clang-doc
 -------------------------
@@ -192,12 +199,25 @@ Improvements to clang-tidy
   From now on, users should specify explicitly that they want CSA checks to run
   in :program:`clang-tidy`.
 
+- Improved :program:`clang-tidy` by adding the `--removed-arg` option to remove
+  arguments sent to the compiler when invoking Clang-Tidy. This option was also
+  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and 
+  can be configured in the config file through the `RemovedArgs` option.
+
 - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
   moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
   in the 24th release.
 
+- Improved :program:`clang-tidy` configuration parsing by allowing the same list
+  syntax in `WarningsAsErrors` as in `Checks`.
+
 New checks
 ^^^^^^^^^^
+
+- New :doc:`abseil-unchecked-statusor-access
+  <clang-tidy/checks/abseil/unchecked-statusor-access>` check.
+
+  Finds uses of ``absl::StatusOr`` without checking if a value is present.
 
 - New :doc:`bugprone-derived-method-shadowing-base-method
   <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
@@ -328,8 +348,23 @@ New check aliases
   <clang-tidy/checks/bugprone/copy-constructor-mutates-argument>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`fuchsia-multiple-inheritance <clang-tidy/checks/fuchsia/multiple-inheritance>` to
+  :doc:`misc-multiple-inheritance
+  <clang-tidy/checks/misc/multiple-inheritance>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`google-readability-casting <clang-tidy/checks/google/readability-casting>` to
+  :doc:`modernize-avoid-c-style-cast
+  <clang-tidy/checks/modernize/avoid-c-style-cast>`
+  keeping initial check as an alias to the new one.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-chained-comparison
+  <clang-tidy/checks/bugprone/chained-comparison>` check by adding a
+  new option `IgnoreMacros` to suppress warnings within macro
+  expansions.
 
 - Improved :doc:`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
@@ -408,6 +443,10 @@ Changes in existing checks
   suffix when the reason starts with the character `>` in the `CustomFunctions`
   option.
 
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check by adding
+  `InvalidationFunctions` option to support custom invalidation functions.
+
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
   by adding a new option `AllowThreadLocal` that suppresses warnings on
@@ -436,6 +475,12 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to
   correctly ignore ``std::array`` and other array-like containers when
   `IgnoreArrays` option is set to `true`.
+
+- Improved :doc:`fuchsia-multiple-inheritance
+  <clang-tidy/checks/fuchsia/multiple-inheritance>`
+  by fixing an issue where the check would only analyze the first class with
+  a given name in the program, missing any subsequent classes with that same
+  name (declared in a different scope).
 
 - Improved :doc:`google-readability-casting
   <clang-tidy/checks/google/readability-casting>` check by adding fix-it
@@ -498,6 +543,16 @@ Changes in existing checks
   on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
   binary.
 
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` by fixing an issue where
+  the check would sometimes suggest inserting ``override`` in an invalid
+  place.
+
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check to suggest using
+  the more idiomatic ``std::views::reverse`` where it used to suggest
+  ``std::ranges::reverse_view``.
+
 - Improved :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check by fixing a crash
   on malformed code (common when using :program:`clang-tidy` through
@@ -558,9 +613,23 @@ Changes in existing checks
   adding parentheses when the inner expression are implicitly converted
   multiple times.
 
+- Improved :doc:`readability-inconsistent-declaration-parameter-name
+  <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>` check
+  by not enforcing parameter name consistency between a variadic parameter pack
+  in the primary template and specific parameters in its specializations.
+
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
+
+- Improved :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check by fixing false
+  negatives when explicitly cast from function pointer.
+
+- Improved :doc:`readability-redundant-control-flow
+  <clang-tidy/checks/readability/redundant-control-flow>` by fixing an issue
+  where the check would sometimes suggest deleting not only a redundant
+  ``return`` or ``continue``, but also unrelated lines preceding it.
 
 - Improved :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
@@ -569,6 +638,11 @@ Changes in existing checks
 - Improved :doc:`readability-use-concise-preprocessor-directives
   <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check to
   generate correct fix-its for forms without a space after the directive.
+
+- Improved :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check by ensuring that
+  comments between the ``if`` condition and the ``then`` block are preserved
+  when applying the fix.
 
 Removed checks
 ^^^^^^^^^^^^^^

@@ -769,7 +769,7 @@ public:
   bool isOSGlibc() const {
     return (getOS() == Triple::Linux || getOS() == Triple::KFreeBSD ||
             getOS() == Triple::Hurd) &&
-           !isAndroid();
+           !isAndroid() && !isMusl();
   }
 
   /// Tests whether the OS is AIX.

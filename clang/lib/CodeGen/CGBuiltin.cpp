@@ -566,6 +566,7 @@ static Value *EmitISOVolatileLoad(CodeGenFunction &CGF, const CallExpr *E) {
   llvm::Type *ITy =
       llvm::IntegerType::get(CGF.getLLVMContext(), LoadSize.getQuantity() * 8);
   llvm::LoadInst *Load = CGF.Builder.CreateAlignedLoad(ITy, Ptr, LoadSize);
+  Load->setAtomic(llvm::AtomicOrdering::Monotonic);
   Load->setVolatile(true);
   return Load;
 }
@@ -578,6 +579,7 @@ static Value *EmitISOVolatileStore(CodeGenFunction &CGF, const CallExpr *E) {
   CharUnits StoreSize = CGF.getContext().getTypeSizeInChars(ElTy);
   llvm::StoreInst *Store =
       CGF.Builder.CreateAlignedStore(Value, Ptr, StoreSize);
+  Store->setAtomic(llvm::AtomicOrdering::Monotonic);
   Store->setVolatile(true);
   return Store;
 }
@@ -3583,12 +3585,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::IntegerType *IntTy = cast<llvm::IntegerType>(ArgValue->getType());
     assert(IntTy && "LLVM's __builtin_bswapg only supports integer variants");
-    assert(((IntTy->getBitWidth() % 16 == 0 && IntTy->getBitWidth() != 0) ||
-            IntTy->getBitWidth() == 8) &&
+    if (IntTy->getBitWidth() == 1 || IntTy->getBitWidth() == 8)
+      return RValue::get(ArgValue);
+    assert(((IntTy->getBitWidth() % 16 == 0 && IntTy->getBitWidth() != 0)) &&
            "LLVM's __builtin_bswapg only supports integer variants that has a "
            "multiple of 16 bits as well as a single byte");
-    if (IntTy->getBitWidth() == 8)
-      return RValue::get(ArgValue);
     return RValue::get(
         emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
   }
@@ -3693,9 +3694,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       if (auto *CATy =
               ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
           CATy && CATy->getKind() == CountAttributedType::CountedBy) {
-        const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FAMDecl->findCountedByField())
-          Result = GetCountedByFieldExprGEP(Arg, FAMDecl, CountFD);
+        const auto *MemberDecl = cast<FieldDecl>(ME->getMemberDecl());
+        if (const FieldDecl *CountFD = MemberDecl->findCountedByField())
+          Result = GetCountedByFieldExprGEP(Arg, MemberDecl, CountFD);
         else
           llvm::report_fatal_error("Cannot find the counted_by 'count' field");
       }

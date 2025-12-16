@@ -37,7 +37,7 @@ def RetCC_Sparc32 : CallingConv<[
   CCIfType<[f32], CCAssignToReg<[F0, F1, F2, F3]>>,
   CCIfType<[f64], CCAssignToReg<[D0, D1]>>,
   // FIXME GCC in soft-float mode passes f128 as if 2xi64 values.
-  CCIfType<[f128], CCIfInReg<CCIfConsecutiveRegs<CCAssignToReg<[Q0, Q1]>>>>,
+  CCIfType<[f128], CCIfInReg<CCAssignToReg<[Q0, Q1]>>>,
   CCIfType<[v2i32], CCCustom<"CC_Sparc_Assign_Ret_Split_64">>
 ]>;
 

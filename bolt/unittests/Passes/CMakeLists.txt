@@ -6,7 +6,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_bolt_unittest(PassTests
-  InsertNegateRAState.cpp
+  PointerAuthCFIFixup.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )
