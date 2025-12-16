@@ -1668,6 +1668,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     if (BuiltinID == AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8) {
       if (Args.size() == 7)
         Args.push_back(Builder.getFalse());
+      if (Args.size() == 8)
+        Args[7] = Builder.CreateZExtOrTrunc(Args[7], Builder.getInt1Ty());
     }
 
     SmallVector<llvm::Type *, 6> ArgTypes;
