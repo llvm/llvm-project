@@ -188,8 +188,7 @@ public:
   //
 
   clang::NamespaceDecl *
-  AddNamespace(NameSearchContext &context,
-               ClangASTImporter::NamespaceMapSP &namespace_decls);
+  AddNamespace(NameSearchContext &context);
 
   /// The worker function for FindExternalVisibleDeclsByName.
   ///
