@@ -40,9 +40,9 @@
 namespace Fortran::semantics {
 static bool IsLoopTransforming(llvm::omp::Directive dir);
 static bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
-static std::optional<size_t> CountGeneratedLoops(
+static std::optional<size_t> CountGeneratedNests(
     const parser::ExecutionPartConstruct &epc);
-static std::optional<size_t> CountGeneratedLoops(const parser::Block &block);
+static std::optional<size_t> CountGeneratedNests(const parser::Block &block);
 } // namespace Fortran::semantics
 
 namespace {
@@ -302,7 +302,7 @@ static bool IsFullUnroll(const parser::OpenMPLoopConstruct &x) {
   return false;
 }
 
-static std::optional<size_t> CountGeneratedLoops(
+static std::optional<size_t> CountGeneratedNests(
     const parser::ExecutionPartConstruct &epc) {
   if (parser::Unwrap<parser::DoConstruct>(epc)) {
     return 1;
@@ -330,7 +330,7 @@ static std::optional<size_t> CountGeneratedLoops(
     if (!count || *count <= 0) {
       return std::nullopt;
     }
-    if (auto nestedCount{CountGeneratedLoops(std::get<parser::Block>(omp.t))}) {
+    if (auto nestedCount{CountGeneratedNests(std::get<parser::Block>(omp.t))}) {
       if (static_cast<size_t>(*count) <= *nestedCount)
         return 1 + *nestedCount - static_cast<size_t>(*count);
     }
@@ -341,7 +341,7 @@ static std::optional<size_t> CountGeneratedLoops(
   return 1;
 }
 
-static std::optional<size_t> CountGeneratedLoops(const parser::Block &block) {
+static std::optional<size_t> CountGeneratedNests(const parser::Block &block) {
   // Count the number of loops in the associated block. If there are any
   // malformed construct in there, getting the number may be meaningless.
   // These issues will be diagnosed elsewhere, and we should not emit any
@@ -350,7 +350,7 @@ static std::optional<size_t> CountGeneratedLoops(const parser::Block &block) {
   // keep it that way.
   std::optional<size_t> numLoops{0};
   for (auto &epc : parser::omp::LoopRange(block)) {
-    if (auto genCount{CountGeneratedLoops(epc)}) {
+    if (auto genCount{CountGeneratedNests(epc)}) {
       *numLoops += *genCount;
     } else {
       numLoops = std::nullopt;
@@ -388,7 +388,7 @@ void OmpStructureChecker::CheckNestedConstruct(
 
   // Check if a loop-nest-associated construct has only one top-level loop
   // in it.
-  if (std::optional<size_t> numLoops{CountGeneratedLoops(body)}) {
+  if (std::optional<size_t> numLoops{CountGeneratedNests(body)}) {
     if (*numLoops == 0) {
       context_.Say(beginSpec.DirName().source,
           "This construct should contain a DO-loop or a loop-nest-generating OpenMP construct"_err_en_US);
@@ -631,7 +631,7 @@ void OmpStructureChecker::CheckLooprangeBounds(
         return;
       }
       auto requiredCount{static_cast<size_t>(*first + *count - 1)};
-      if (auto loopCount{CountGeneratedLoops(std::get<parser::Block>(x.t))}) {
+      if (auto loopCount{CountGeneratedNests(std::get<parser::Block>(x.t))}) {
         if (*loopCount < requiredCount) {
           context_.Say(clause.source,
               "The specified loop range requires %zu loops, but the loop sequence has a length of %zu"_err_en_US,
