@@ -444,8 +444,7 @@ template <typename LambdaTy> struct LambdaHelper {
   static constexpr size_t NArgs = CountArgs(&LambdaTy::operator());
 };
 
-template <typename LambdaTy>
-struct LambdaOs : public LambdaHelper<LambdaTy> {
+template <typename LambdaTy> struct LambdaOs : public LambdaHelper<LambdaTy> {
   static void dispatch(LambdaTy func, llvm::raw_ostream &Os, uint32_t Level) {
     if constexpr (LambdaHelper<LambdaTy>::NArgs == 2)
       func(Os, Level);
