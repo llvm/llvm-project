@@ -515,14 +515,18 @@ private:
     const RematReg *Remat;
 
     /// Execution frequency information required by scoring heuristics.
+    /// Frequencies are scaled down if they are high to avoid overflow/underflow
+    /// when combining them.
     struct FreqInfo {
-      /// Per-region execution frequencies, normalized to minimum observed
-      /// frequency. 0 when unknown.
+      /// Per-region execution frequencies. 0 when unknown.
       SmallVector<uint64_t> Regions;
-      /// Maximum observed frequency, normalized to minimum observed frequency.
-      uint64_t MaxFreq = 0;
+      /// Minimum and maximum observed frequencies.
+      uint64_t MinFreq, MaxFreq;
 
       FreqInfo(MachineFunction &MF, const GCNScheduleDAGMILive &DAG);
+
+    private:
+      static const uint64_t ScaleFactor = 1024;
     };
 
     /// This only initializes state-independent characteristics of \p Remat, not
@@ -537,14 +541,13 @@ private:
 
     /// Returns whether the current score is null, indicating the
     /// rematerialization is useless.
-    bool hasNullScore() const { return !MaxFreq && !RegionImpact; }
+    bool hasNullScore() const { return !RegionImpact; }
 
-    /// For each pair of candidates the most important scoring component with
-    /// non-equal values determine the result of the comparison (higher is
-    /// better).
+    /// Compare score components of non-null scores pair-wise. A null score is
+    /// always strictly lesser than another non-null score.
     bool operator<(const ScoredRemat &O) const {
       if (hasNullScore())
-        return true;
+        return !O.hasNullScore();
       if (O.hasNullScore())
         return false;
       if (MaxFreq != O.MaxFreq)
@@ -553,7 +556,11 @@ private:
         return FreqDiff < O.FreqDiff;
       if (RegionImpact != O.RegionImpact)
         return RegionImpact < O.RegionImpact;
-      // Break ties using pointer to rematerializable register.
+      // Break ties using pointer to rematerializable register. Rematerializable
+      // registers are collected in instruction order so, within the same
+      // region, this will prefer registers defined earlier that have longer
+      // live ranges in their defining region (since the registers we consider
+      // are always live-out in their defining region).
       return Remat > O.Remat;
     }
 
@@ -592,6 +599,8 @@ private:
     const RematReg *Remat;
     /// The rematerialized MI replacing the original defining MI.
     MachineInstr *RematMI;
+    /// Slot of the deleted instruction.
+    SlotIndex OriginalSlot;
 
     RollbackInfo(const RematReg *Remat) : Remat(Remat) {}
   };
@@ -611,7 +620,7 @@ private:
   unsigned AchievedOcc;
 
   /// List of rematerializable registers.
-  SmallVector<RematReg, 16> RematRegs;
+  SmallVector<RematReg> RematRegs;
   /// List of rematerializations to rollback if rematerialization does not end
   /// up being beneficial.
   SmallVector<RollbackInfo> Rollbacks;

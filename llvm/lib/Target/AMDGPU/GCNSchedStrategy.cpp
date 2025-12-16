@@ -1299,10 +1299,6 @@ bool PreRARematStage::initGCNSchedStage() {
 
   if (!GCNSchedStage::initGCNSchedStage() || DAG.Regions.size() <= 1)
     return false;
-  if (DAG.MinOccupancy >= MFI.getMaxWavesPerEU() &&
-      !MF.getFunction().hasFnAttribute("amdgpu-num-sgpr") &&
-      !MF.getFunction().hasFnAttribute("amdgpu-num-vgpr"))
-    return false;
 
   // Maps all MIs (except lone terminators, which are not part of any region) to
   // their parent region. Non-lone terminators are considered part of the region
@@ -1336,18 +1332,22 @@ bool PreRARematStage::initGCNSchedStage() {
     return Printable([&, Remat](raw_ostream &OS) {
       // Concatenate all region numbers in which the register is unused and
       // live-through.
-      std::string UnusedLTRegions;
+      bool HasLiveThroughRegion = true;
+      OS << '[' << Remat.DefRegion << " -";
       for (unsigned I = 0; I < NumRegions; ++I) {
         if (Remat.isUnusedLiveThrough(I)) {
-          if (!UnusedLTRegions.empty())
-            UnusedLTRegions += ",";
-          UnusedLTRegions += std::to_string(I);
+          if (HasLiveThroughRegion) {
+            OS << ',';
+          } else {
+            OS << "- ";
+            HasLiveThroughRegion = true;
+          }
+          OS << I;
         }
       }
-      if (!UnusedLTRegions.empty())
-        UnusedLTRegions = "- " + UnusedLTRegions + " -";
-      OS << "[" << Remat.DefRegion << " -" << UnusedLTRegions << "> "
-         << Remat.UseRegion << "] ";
+      if (HasLiveThroughRegion)
+        OS << " -";
+      OS << "> " << Remat.UseRegion << "] ";
       Remat.DefMI->print(OS, /*IsStandalone=*/true, /*SkipOpers=*/false,
                          /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
     });
@@ -1414,7 +1414,7 @@ bool PreRARematStage::initGCNSchedStage() {
     sort(ScoredRemats);
 
     REMAT_DEBUG({
-      dbgs() << "==== ROUND " << RoundNum << " ====\n"
+      dbgs() << "==== ROUND " << RoundNum++ << " ====\n"
              << REMAT_PREFIX
              << "Candidates with non-null score, in rematerialization order:\n";
       for (const ScoredRemat &RematDecision : reverse(ScoredRemats)) {
@@ -1465,9 +1465,6 @@ bool PreRARematStage::initGCNSchedStage() {
       unsetSatisifedRPTargets(Remat.Live);
     }
 
-#ifndef NDEBUG
-    ++RoundNum;
-#endif
     REMAT_DEBUG({
       if (!TargetRegions.any()) {
         dbgs() << "** Interrupt round on all targets achieved\n";
@@ -2085,9 +2082,9 @@ bool PreRARematStage::collectRematRegs(
 
   // Set of registers already marked for potential remterialization; used to
   // avoid rematerialization chains.
-  SmallSet<Register, 4> RematRegSet;
-  auto IsMarkedForRemat = [&RematRegSet](const MachineOperand &MO) -> bool {
-    return MO.isReg() && RematRegSet.contains(MO.getReg());
+  SmallSet<Register, 4> MarkedRegs;
+  auto IsMarkedForRemat = [&MarkedRegs](const MachineOperand &MO) -> bool {
+    return MO.isReg() && MarkedRegs.contains(MO.getReg());
   };
 
   // Identify rematerializable instructions in the function.
@@ -2137,7 +2134,7 @@ bool PreRARematStage::collectRematRegs(
         continue;
 
       // Add the instruction to the rematerializable list.
-      RematRegSet.insert(Reg);
+      MarkedRegs.insert(Reg);
       RematRegs.emplace_back(&DefMI, UseMI, DAG, MIRegion);
     }
   }
@@ -2156,20 +2153,15 @@ PreRARematStage::RematReg::RematReg(
   Register Reg = getReg();
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
     auto LiveInIt = DAG.LiveIns[I].find(Reg);
-    if (LiveInIt != DAG.LiveIns[I].end() && LiveInIt->second.any())
+    if (LiveInIt != DAG.LiveIns[I].end())
       LiveIn.set(I);
-    auto LiveOutIt = DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).find(Reg);
-    auto LiveOutEnd = DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).end();
-    if (LiveOutIt != LiveOutEnd && LiveOutIt->second.any())
+    const auto &LiveOuts = DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I);
+    if (auto LiveOutIt = LiveOuts.find(Reg); LiveOutIt != LiveOuts.end())
       LiveOut.set(I);
   }
   Live |= LiveIn;
   Live |= LiveOut;
-
-  // Store the register's lane bitmask.
-  unsigned SubIdx = DefMI->getOperand(0).getSubReg();
-  Mask = SubIdx ? DAG.TRI->getSubRegIndexLaneMask(SubIdx)
-                : DAG.MRI.getMaxLaneMaskForVReg(Reg);
+  Mask = DAG.RegionLiveOuts.getLiveRegsForRegionIdx(DefRegion).at(Reg);
 }
 
 bool PreRARematStage::RematReg::maybeBeneficial(
@@ -2199,7 +2191,8 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   MachineBlockFrequencyInfo MBFI(MF, MBPI, *DAG.MLI);
 
   const unsigned NumRegions = DAG.Regions.size();
-  uint64_t MinFreq = MBFI.getEntryFreq().getFrequency();
+  MinFreq = MBFI.getEntryFreq().getFrequency();
+  MaxFreq = 0;
   Regions.reserve(NumRegions);
   for (unsigned I = 0; I < NumRegions; ++I) {
     MachineBasicBlock *MBB = DAG.Regions[I].first->getParent();
@@ -2213,11 +2206,13 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   if (!MinFreq)
     return;
 
-  // Normalize to minimum observed frequency to avoid underflows/overflows when
-  // combining frequencies.
-  for (uint64_t &Freq : Regions)
-    Freq /= MinFreq;
-  MaxFreq /= MinFreq;
+  // Scale everything down if frequencies are high.
+  if (MinFreq >= ScaleFactor * ScaleFactor) {
+    for (uint64_t &Freq : Regions)
+      Freq /= ScaleFactor;
+    MinFreq /= ScaleFactor;
+    MaxFreq /= ScaleFactor;
+  }
 }
 
 PreRARematStage::ScoredRemat::ScoredRemat(const RematReg *Remat,
@@ -2248,11 +2243,11 @@ int64_t PreRARematStage::ScoredRemat::getFreqDiff(const FreqInfo &Freq) const {
   // to values that will yield the worst possible score given known frequencies
   // in order to penalize rematerializations from or into regions whose
   // frequency is unknown.
-  uint64_t DefOrOne = std::max(Freq.Regions[Remat->DefRegion], (uint64_t)1);
-  uint64_t UseOrMax = Freq.Regions[Remat->UseRegion];
+  int64_t DefOrMin = std::max(Freq.Regions[Remat->DefRegion], Freq.MinFreq);
+  int64_t UseOrMax = Freq.Regions[Remat->UseRegion];
   if (!UseOrMax)
     UseOrMax = Freq.MaxFreq;
-  return DefOrOne - UseOrMax;
+  return DefOrMin - UseOrMax;
 }
 
 void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
@@ -2279,6 +2274,7 @@ void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
       MaxFreq = std::max(MaxFreq, Freq);
     }
   }
+  RegionImpact *= NumRegs;
 }
 
 void PreRARematStage::rematerialize(const RematReg &Remat,
@@ -2295,8 +2291,10 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
   MachineInstr *RematMI = &*std::prev(InsertPos);
   Remat.UseMI->substituteRegister(Reg, NewReg, 0, *DAG.TRI);
   Remat.insertMI(Remat.UseRegion, RematMI, DAG);
-  if (Rollback)
+  if (Rollback) {
     Rollback->RematMI = RematMI;
+    Rollback->OriginalSlot = DAG.LIS->getInstructionIndex(DefMI);
+  }
 
   // Remove the register from all regions where it is a live-in or live-out
   // and adjust RP targets.
@@ -2349,15 +2347,30 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
 void PreRARematStage::rollback(const RollbackInfo &Rollback,
                                BitVector &RecomputeRP) const {
   const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
-  auto &[Remat, RematMI] = Rollback;
+  auto &[Remat, RematMI, OriginalSlot] = Rollback;
   MachineBasicBlock *MBB = RegionBB[Remat->DefRegion];
   Register Reg = RematMI->getOperand(0).getReg();
   Register NewReg = DAG.MRI.cloneVirtualRegister(Reg);
 
-  // Re-rematerialize MI in its original region. Note that it may not be
-  // rematerialized exactly in the same position as originally within the
-  // region, but it should not matter much.
-  MachineBasicBlock::iterator InsertPos(DAG.Regions[Remat->DefRegion].second);
+  // Re-rematerialize MI in its original region. Try to re-create the original
+  // instruction at its initial position.
+  SlotIndex NextSlot =
+      DAG.LIS->getSlotIndexes()->getNextNonNullIndex(OriginalSlot);
+  MachineInstr *NextMI = DAG.LIS->getInstructionFromIndex(NextSlot);
+  MachineBasicBlock::iterator InsertPos;
+  // I think it is possible that NextMI ends up being from a different block
+  // than the rolled back MI's defining region's parent MBB if all MIs if (1)
+  // the region ends at a MBB end iterator and (2) all MIs between the original
+  // MI position and the end of the block region have been rematerialized. In
+  // that case we should simply rematerialize at the end of the region/MBB. If
+  // (1) is not true then the region ends on a region terminator which we never
+  // move. If (2) is not true then NextMI point to a valid MI inside the
+  // original region. In both latter cases rematerializing before NextMI is
+  // correct.
+  if (!NextMI || RegionBB[Remat->DefRegion] != NextMI->getParent())
+    InsertPos = DAG.Regions[Remat->DefRegion].second;
+  else
+    InsertPos = NextMI;
   TII->reMaterialize(*MBB, InsertPos, NewReg, 0, *RematMI);
   MachineInstr *ReRematMI = &*std::prev(InsertPos);
   REMAT_DEBUG(dbgs() << '[' << Remat->DefRegion << "] Re-rematerialized as "
