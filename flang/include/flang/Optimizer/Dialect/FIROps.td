@@ -351,7 +351,7 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
   }];
 }
 
-def fir_PrefetchOp : fir_Op<"prefetch", []> {
+def fir_PrefetchOp : fir_Op<"prefetch", [MemoryEffects<[MemAlloc<DefaultResource>]>]> {
   let summary = "prefetch a memory reference";
 
   let description = [{
@@ -377,9 +377,7 @@ def fir_PrefetchOp : fir_Op<"prefetch", []> {
   ///                  0 and 1, respectively
   /// NOTE: The numerical values used here is in reference to the LLVM LangRef
   let arguments =
-      (ins Arg<AnyReferenceLike,
-               "prefetch memory address", [MemWrite]> : $memref,
-       UnitAttr : $rw,
+      (ins AnyReferenceLike : $memref, UnitAttr : $rw,
        ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]> : $localityHint,
        UnitAttr : $cacheType);
 
