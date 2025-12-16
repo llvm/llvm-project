@@ -461,6 +461,7 @@ files for formatting consistency. You can install ``doc8`` with ``pip``:
 To run ``doc8`` on the modified documentations:
 
 .. code-block:: console
+
   $ git diff --name-only HEAD -- clang-tools-extra/docs/clang-tidy/ | grep "\.rst$" | xargs -r doc8
 
 
