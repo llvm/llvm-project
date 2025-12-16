@@ -31,6 +31,16 @@ void TestTaskTransparentWithErrors() {
       for (int i = 0; i < 5; ++i) {}
     }
   }
+  // expected-error@+1{{use of undeclared identifier 'omp_not_impex'}}
+#pragma omp task transparent(omp_not_impex)
+  // expected-error@+1{{use of undeclared identifier 'omp_import'}}
+#pragma omp task transparent(omp_import)
+  // expected-error@+1{{use of undeclared identifier 'omp_export'}}
+#pragma omp task transparent(omp_export)
+  // expected-error@+1{{use of undeclared identifier 'omp_impex'}}
+#pragma omp task transparent(omp_impex)
+  for (int i = 0; i < 5; ++i) {}
+
 }
 
 typedef void **omp_impex_t;
@@ -80,8 +90,8 @@ void TestTaskTransparent() {
 
 int invalid_arg;
 void TestTaskTransparentInvalidArgs() {
-  #pragma omp task transparent(invalid_arg) // expected-error {{incompatible integer to pointer conversion initializing 'const omp_impex_t' (aka 'void **const') with an expression of type 'int'}}
-  #pragma omp task transparent(123) // expected-error {{incompatible integer to pointer conversion initializing 'const omp_impex_t' (aka 'void **const') with an expression of type 'int'}}
+  #pragma omp task transparent(invalid_arg) // expected-error {{incompatible integer to pointer conversion initializing 'omp_impex_t' (aka 'void **') with an expression of type 'int'}}
+  #pragma omp task transparent(123) // expected-error {{incompatible integer to pointer conversion initializing 'omp_impex_t' (aka 'void **') with an expression of type 'int'}}
 #pragma omp task transparent(omp_import, omp_not_import) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp task transparent() // expected-error {{expected expression}}
   {}
@@ -100,9 +110,9 @@ void TestTaskloopTransparent() {
 
 
 void TestTaskLoopTransparentInvalidArgs() {
-  #pragma omp taskloop transparent(invalid_arg) // expected-error {{incompatible integer to pointer conversion initializing 'const omp_impex_t' (aka 'void **const') with an expression of type 'int'}}
+  #pragma omp taskloop transparent(invalid_arg) // expected-error {{incompatible integer to pointer conversion initializing 'omp_impex_t' (aka 'void **') with an expression of type 'int'}}
   for (int i = 0; i < 10; ++i) {}
-  #pragma omp taskloop transparent(123) // expected-error {{incompatible integer to pointer conversion initializing 'const omp_impex_t' (aka 'void **const') with an expression of type 'int'}}
+  #pragma omp taskloop transparent(123) // expected-error {{incompatible integer to pointer conversion initializing 'omp_impex_t' (aka 'void **') with an expression of type 'int'}}
   for (int i = 0; i < 10; ++i) {}
 #pragma omp taskloop transparent(omp_not_import, omp_import) // expected-error{{expected ')'}} // expected-note{{to match this '('}}  // expected-error{{use of undeclared identifier 'omp_not_import'; did you mean 'omp_not_impex'?}}
   for (int i = 0; i < 10; ++i) {}

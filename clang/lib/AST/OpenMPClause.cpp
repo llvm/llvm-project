@@ -1921,14 +1921,6 @@ OMPThreadLimitClause *OMPThreadLimitClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPThreadLimitClause(N);
 }
 
-OMPTransparentClause *OMPTransparentClause::Create(const ASTContext &C,
-                                                   SourceLocation StartLoc,
-                                                   SourceLocation LParenLoc,
-                                                   SourceLocation EndLoc,
-                                                   Expr *ImpexType) {
-  return new (C) OMPTransparentClause(ImpexType, StartLoc, LParenLoc, EndLoc);
-}
-
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//

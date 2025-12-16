@@ -278,13 +278,6 @@ enum OpenMPThreadsetKind {
   OMPC_THREADSET_unknown
 };
 
-/// OpenMP modifiers for 'transparent' clause.
-enum OpenMPTransparentKind {
-#define OPENMP_TRANSPARENT_KIND(Name) OMPC_TRANSPARENT_##Name,
-#include "clang/Basic/OpenMPKinds.def"
-  OMPC_TRANSPARENT_unknown
-};
-
 /// Number of allowed allocate-modifiers.
 static constexpr unsigned NumberOfOMPAllocateClauseModifiers =
     OMPC_ALLOCATE_unknown;

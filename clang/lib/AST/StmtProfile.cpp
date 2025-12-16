@@ -551,7 +551,10 @@ void OMPClauseProfiler::VisitOMPDefaultClause(const OMPDefaultClause *C) { }
 void OMPClauseProfiler::VisitOMPThreadsetClause(const OMPThreadsetClause *C) {}
 
 void OMPClauseProfiler::VisitOMPTransparentClause(
-    const OMPTransparentClause *C) {}
+    const OMPTransparentClause *C) {
+  if (C->getImpexType())
+    Profiler->VisitStmt(C->getImpexType());
+}
 
 void OMPClauseProfiler::VisitOMPProcBindClause(const OMPProcBindClause *C) { }
 
