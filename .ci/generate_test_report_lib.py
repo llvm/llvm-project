@@ -323,6 +323,7 @@ def generate_report(
             title,
             return_code,
             junit_objects,
+            ninja_logs,
             size_limit,
             list_failures=False,
         )

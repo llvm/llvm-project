@@ -974,6 +974,7 @@ public:
     return false;
   }
 
+  void populateUnwindResumeBlock(bool isCleanup, cir::TryOp tryOp);
   void populateEHCatchRegions(EHScopeStack::stable_iterator scope,
                               cir::TryOp tryOp);
 
@@ -2154,6 +2155,10 @@ public:
   void emitOMPDeclareReduction(const OMPDeclareReductionDecl &d);
   void emitOMPDeclareMapper(const OMPDeclareMapperDecl &d);
   void emitOMPRequiresDecl(const OMPRequiresDecl &d);
+
+private:
+  template <typename Op>
+  void emitOpenMPClauses(Op &op, ArrayRef<const OMPClause *> clauses);
 
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission

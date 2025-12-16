@@ -423,36 +423,6 @@ class TestReports(unittest.TestCase):
         )
 
     def test_no_failures_multiple_build_failed_ninja_log(self):
-        test = generate_test_report_lib.generate_report(
-            "Foo",
-            1,
-            [
-                junit_from_xml(
-                    dedent(
-                        """\
-          <?xml version="1.0" encoding="UTF-8"?>
-          <testsuites time="0.00">
-          <testsuite name="Passed" tests="1" failures="0" skipped="0" time="0.00">
-          <testcase classname="Bar/test_1" name="test_1" time="0.00"/>
-          </testsuite>
-          </testsuites>"""
-                    )
-                )
-            ],
-            [
-                [
-                    "[1/5] test/1.stamp",
-                    "[2/5] test/2.stamp",
-                    "FAILED: touch test/2.stamp",
-                    "Wow! Be Kind!",
-                    "[3/5] test/3.stamp",
-                    "[4/5] test/4.stamp",
-                    "FAILED: touch test/4.stamp",
-                    "Wow! I Dare You!",
-                    "[5/5] test/5.stamp",
-                ]
-            ],
-        )
         self.assertEqual(
             generate_test_report_lib.generate_report(
                 "Foo",
