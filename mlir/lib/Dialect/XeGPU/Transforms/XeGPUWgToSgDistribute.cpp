@@ -1137,6 +1137,8 @@ struct WgToSgVectorShapeCastOp
       return srcIdx == src.size();
     };
 
+    xegpu::DistributeLayoutAttr layoutToDistribute = layout;
+
     if (checkOnlyExpandUnitDims(srcShape, wgShape)) {
       xegpu::DistributeLayoutAttr sourceLayout =
           xegpu::getDistributeLayoutAttr(op.getSource());
@@ -1147,20 +1149,22 @@ struct WgToSgVectorShapeCastOp
         });
       };
 
-      if (!usedByBroadcastOp(op)) {
+      if (!usedByBroadcastOp(op))
         return rewriter.notifyMatchFailure(
             op, "ShapeCast ops that expand unit dimensions and are used by "
                 "non-broadcast operations are not supported.");
-      }
+
       if (!sourceLayout.isSliceOf(layout))
         return rewriter.notifyMatchFailure(
             op, "The ShapeCast op only expands dimensions, the result layout "
                 "must be a slice of the input layout, or vice versa.");
-      layout = layout.setUnitDimData(expandedUnitDims);
-      layout = layout.setUnitDimLayout(expandedUnitDims);
+      layoutToDistribute = layoutToDistribute.setUnitDimData(expandedUnitDims);
+      layoutToDistribute =
+          layoutToDistribute.setUnitDimLayout(expandedUnitDims);
     }
 
-    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
+    SmallVector<int64_t> sgShape =
+        getSgShapeAndCount(wgShape, layoutToDistribute).first;
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
