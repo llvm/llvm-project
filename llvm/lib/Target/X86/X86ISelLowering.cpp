@@ -54078,6 +54078,28 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                                    St->getMemOperand());
   }
 
+  // All code below attempts to move stores to FPU, early out if we can't.
+  const Function &F = DAG.getMachineFunction().getFunction();
+  bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
+  if (Subtarget.useSoftFloat() || NoImplicitFloatOps)
+    return SDValue();
+
+  // If we are storing a larger than legal scalar integer, see if we can cheaply
+  // handle this as a vector store, either because it already bitcasts to a
+  // vector type or the operation is likely to expand to a vector type
+  // (legalization can scalarize back if it the op failed).
+  if (VT == MVT::i256 || VT == MVT::i512) {
+    MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+    if (TLI.isTypeLegal(VecVT) && ISD::isNormalStore(St) &&
+        (mayFoldIntoVector(StoredVal, Subtarget) ||
+         (DCI.isBeforeLegalize() &&
+          TLI.getOperationAction(StoredVal.getOpcode(), VT) ==
+              TargetLowering::LegalizeAction::Custom)))
+      return DAG.getStore(St->getChain(), dl, DAG.getBitcast(VecVT, StoredVal),
+                          St->getBasePtr(), St->getPointerInfo(),
+                          St->getBaseAlign(), St->getMemOperand()->getFlags());
+  }
+
   // Turn load->store of MMX types into GPR load/stores.  This avoids clobbering
   // the FP state in cases where an emms may be missing.
   // A preferable solution to the general problem is to figure out the right
@@ -54087,12 +54109,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   if (VT.getSizeInBits() != 64)
     return SDValue();
 
-  const Function &F = DAG.getMachineFunction().getFunction();
-  bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
-  bool F64IsLegal =
-      !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2();
-
-  if (!F64IsLegal || Subtarget.is64Bit())
+  if (!Subtarget.hasSSE2() || Subtarget.is64Bit())
     return SDValue();
 
   if (VT == MVT::i64 && isa<LoadSDNode>(St->getValue()) &&
