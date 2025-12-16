@@ -40,8 +40,8 @@ public:
   gpu::GPUModuleOp getGPUModuleOp();
 
   /// Compiles to native code using `ocloc`.
-  FailureOr<SmallVector<char, 0>> compileToBinary(StringRef asmStr,
-                                                  StringRef inputFormat);
+  std::optional<SmallVector<char, 0>> compileToBinary(const std::string &asmStr,
+                                                      StringRef inputFormat);
 
 protected:
   /// XeVM Target attribute.
