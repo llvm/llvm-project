@@ -4097,6 +4097,8 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
   }
 
   // Forward -fobjc-direct-precondition-thunk to cc1
+  // Defaults to false and needs explict turn on for now
+  // TODO: switch to default true and needs explict turn off in the future.
   if (Args.hasFlag(options::OPT_fobjc_direct_precondition_thunk,
                    options::OPT_fno_objc_direct_precondition_thunk, false))
     CmdArgs.push_back("-fobjc-direct-precondition-thunk");
