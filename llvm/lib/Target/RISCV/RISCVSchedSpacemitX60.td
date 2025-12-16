@@ -1038,8 +1038,9 @@ def : WriteRes<WriteRdVLENB, [SMX60_IEUA]>;
 
 // Assign scheduling info to COPY instructions.
 // Note: We try NOT to assign ProcResource but only latency to vector COPY because
-// those resources might push off the time those COPYs be seen by the scheduler. More
-// specifically, for a given COPY of live-in (physical) register, ideally we want it
+// those resources might prevent those COPYs from showing up to the scheulder
+// until it's too late.
+// Specifically, for a given COPY of live-in (physical) register, ideally we want it
 // to be visible to the top available queue as early as possible so that it can be scheduled
 // at the beginning of the function. Assigning resource to vector COPYs might risk
 // creating structural hazard that prevents those COPYs from even entering the available
