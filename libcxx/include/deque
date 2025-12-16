@@ -463,11 +463,6 @@ private:
       : __m_iter_(__m),
         __ptr_(__p) {}
 
-  template <bool _IsSamePointer = is_same<_MapPointer, __map_iterator>::value, __enable_if_t<!_IsSamePointer, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI explicit __deque_iterator(_MapPointer __m, pointer __p) _NOEXCEPT
-      : __m_iter_(__m ? pointer_traits<__map_iterator>::pointer_to(*__m) : nullptr),
-        __ptr_(__p) {}
-
   template <class _Tp, class _Ap>
   friend class deque;
   template <class _Vp, class _Pp, class _Rp, class _MP, class _Dp, _Dp>
