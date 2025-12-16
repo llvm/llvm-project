@@ -715,36 +715,6 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
   return InstDesc(I, RecurKind::AnyOf);
 }
 
-bool RecurrenceDescriptor::isValidIVRangeForFindIV(const SCEVAddRecExpr *AR,
-                                                   bool IsSigned,
-                                                   bool IsFindFirstIV,
-                                                   ScalarEvolution &SE) {
-  const ConstantRange IVRange =
-      IsSigned ? SE.getSignedRange(AR) : SE.getUnsignedRange(AR);
-  unsigned NumBits = AR->getType()->getIntegerBitWidth();
-  ConstantRange ValidRange = ConstantRange::getEmpty(NumBits);
-
-  if (IsFindFirstIV) {
-    if (IsSigned)
-      ValidRange =
-          ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits),
-                                     APInt::getSignedMaxValue(NumBits) - 1);
-    else
-      ValidRange = ConstantRange::getNonEmpty(APInt::getMinValue(NumBits),
-                                              APInt::getMaxValue(NumBits) - 1);
-  } else {
-    APInt Sentinel = IsSigned ? APInt::getSignedMinValue(NumBits)
-                              : APInt::getMinValue(NumBits);
-    ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
-  }
-
-  LLVM_DEBUG(dbgs() << "LV: " << (IsFindFirstIV ? "FindFirstIV" : "FindLastIV")
-                    << " valid range is " << ValidRange << ", and the range of "
-                    << *AR << " is " << IVRange << "\n");
-
-  return ValidRange.contains(IVRange);
-}
-
 // We are looking for loops that do something like this:
 //   int r = 0;
 //   for (int i = 0; i < n; i++) {
@@ -822,24 +792,49 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
     // [Signed|Unsigned]Max(<recurrence type>) for FindFirstIV.
     // TODO: This range restriction can be lifted by adding an additional
     // virtual OR reduction.
-    bool IsFindFirstIV = isFindFirstIVRecurrenceKind(Kind);
+    auto CheckRange = [&](bool IsSigned) {
+      const ConstantRange IVRange =
+          IsSigned ? SE.getSignedRange(AR) : SE.getUnsignedRange(AR);
+      unsigned NumBits = Ty->getIntegerBitWidth();
+      ConstantRange ValidRange = ConstantRange::getEmpty(NumBits);
+      if (isFindLastIVRecurrenceKind(Kind)) {
+        APInt Sentinel = IsSigned ? APInt::getSignedMinValue(NumBits)
+                                  : APInt::getMinValue(NumBits);
+        ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
+      } else {
+        if (IsSigned)
+          ValidRange =
+              ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits),
+                                         APInt::getSignedMaxValue(NumBits) - 1);
+        else
+          ValidRange = ConstantRange::getNonEmpty(
+              APInt::getMinValue(NumBits), APInt::getMaxValue(NumBits) - 1);
+      }
+
+      LLVM_DEBUG(dbgs() << "LV: "
+                        << (isFindLastIVRecurrenceKind(Kind) ? "FindLastIV"
+                                                             : "FindFirstIV")
+                        << " valid range is " << ValidRange
+                        << ", and the range of " << *AR << " is " << IVRange
+                        << "\n");
+
+      // Ensure the induction variable does not wrap around by verifying that
+      // its range is fully contained within the valid range.
+      return ValidRange.contains(IVRange);
+    };
     if (isFindLastIVRecurrenceKind(Kind)) {
-      if (RecurrenceDescriptor::isValidIVRangeForFindIV(
-              cast<SCEVAddRecExpr>(AR), /*IsSigned=*/true, IsFindFirstIV, SE))
+      if (CheckRange(true))
         return RecurKind::FindLastIVSMax;
-      if (RecurrenceDescriptor::isValidIVRangeForFindIV(
-              cast<SCEVAddRecExpr>(AR), /*IsSigned=*/false, IsFindFirstIV, SE))
+      if (CheckRange(false))
         return RecurKind::FindLastIVUMax;
       return std::nullopt;
     }
     assert(isFindFirstIVRecurrenceKind(Kind) &&
            "Kind must either be a FindLastIV or FindFirstIV");
 
-    if (RecurrenceDescriptor::isValidIVRangeForFindIV(
-            cast<SCEVAddRecExpr>(AR), /*IsSigned=*/true, IsFindFirstIV, SE))
+    if (CheckRange(true))
       return RecurKind::FindFirstIVSMin;
-    if (RecurrenceDescriptor::isValidIVRangeForFindIV(
-            cast<SCEVAddRecExpr>(AR), /*IsSigned=*/false, IsFindFirstIV, SE))
+    if (CheckRange(false))
       return RecurKind::FindFirstIVUMin;
     return std::nullopt;
   };
