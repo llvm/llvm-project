@@ -10,21 +10,8 @@ endif()
 # This library uses the same compiled objects as libomp, but with all symbols
 # exported to allow testing internal functions.
 
-libomp_get_ldflags(LIBOMP_TEST_LDFLAGS)
+libomp_get_ldflags(LIBOMP_TEST_LDFLAGS FOR_UNITTESTS)
 libomp_get_libflags(LIBOMP_TEST_LIBFLAGS)
-# Replace the libomp exports with the test exports exporting all symbols.
-if(LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  string(REPLACE "${LIBOMP_SRC_DIR}/exports_so.txt"
-                  "${LIBOMP_SRC_DIR}/exports_test_so.txt"
-                  LIBOMP_TEST_LDFLAGS "${LIBOMP_TEST_LDFLAGS}")
-endif()
-# Duplicate setting of LIBOMP_LINKER_LANGUAGE to match libomp.
-if(NOT ${LIBOMP_USE_STDCPPLIB})
-  set(LIBOMP_LINKER_LANGUAGE C)
-  set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
-else()
-  set(LIBOMP_LINKER_LANGUAGE CXX)
-endif()
 
 # Create the testing library from the same objects as libomp.
 add_library(omp_testing SHARED $<TARGET_OBJECTS:obj.omp>)

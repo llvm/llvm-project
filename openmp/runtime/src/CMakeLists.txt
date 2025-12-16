@@ -153,19 +153,6 @@ libomp_get_asmflags(LIBOMP_CONFIGURED_ASMFLAGS)
 set_source_files_properties(${LIBOMP_CXXFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
 set_source_files_properties(${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
 
-# Remove any cmake-automatic linking of the standard C++ library.
-# We neither need (nor want) the standard C++ library dependency even though we compile c++ files.
-if(NOT ${LIBOMP_USE_STDCPPLIB})
-  set(LIBOMP_LINKER_LANGUAGE C)
-  set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
-else()
-  set(LIBOMP_LINKER_LANGUAGE CXX)
-endif()
-
-if(UNIX)
-  set(LIBOMP_DL_LIBS ${CMAKE_DL_LIBS})
-endif()
-
 # Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
 # avoid an unwanted dependency on libstdc++.so.
 add_compile_definitions(_GLIBCXX_NO_ASSERTIONS)
