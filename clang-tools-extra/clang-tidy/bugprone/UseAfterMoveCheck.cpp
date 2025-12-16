@@ -40,16 +40,15 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
   const auto DeclRefMatcher =
       declRefExpr(hasDeclaration(equalsNode(MovedVariable))).bind("declref");
 
-  static const auto StandardContainerTypeMatcher =
-      hasType(hasUnqualifiedDesugaredType(
-          recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
-              "::std::basic_string", "::std::vector", "::std::deque",
-              "::std::forward_list", "::std::list", "::std::set", "::std::map",
-              "::std::multiset", "::std::multimap", "::std::unordered_set",
-              "::std::unordered_map", "::std::unordered_multiset",
-              "::std::unordered_multimap"))))));
+  const auto StandardContainerTypeMatcher = hasType(hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
+          "::std::basic_string", "::std::vector", "::std::deque",
+          "::std::forward_list", "::std::list", "::std::set", "::std::map",
+          "::std::multiset", "::std::multimap", "::std::unordered_set",
+          "::std::unordered_map", "::std::unordered_multiset",
+          "::std::unordered_multimap"))))));
 
-  static const auto StandardResettableOwnerTypeMatcher = hasType(
+  const auto StandardResettableOwnerTypeMatcher = hasType(
       hasUnqualifiedDesugaredType(recordType(hasDeclaration(cxxRecordDecl(
           hasAnyName("::std::unique_ptr", "::std::shared_ptr",
                      "::std::weak_ptr", "::std::optional", "::std::any"))))));
