@@ -27,42 +27,25 @@
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
-  Type:            ET_REL
+  Type:            ET_DYN
   Machine:         EM_X86_64
-  SectionHeaderStringTable: .strtab
 Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x4
-    Content:         E800000000
+    Size:            5
   - Name:            .llvm.callgraph
     Type:            SHT_LLVM_CALL_GRAPH
-    Flags:           [ SHF_LINK_ORDER ]
-    Link:            .text
-    AddressAlign:    0x1
-    Content:         '00040000000000000000000000000000000001'
-  - Name:            .rela.text
-    Type:            SHT_RELA
-    Flags:           [ SHF_INFO_LINK ]
-    Link:            .symtab
-    AddressAlign:    0x8
-    Info:            .text
-    Relocations:
-      - Offset:          0x1
-        Symbol:          _Z3foov
-        Type:            R_X86_64_PLT32
-        Addend:          -4
-  - Type:            SectionHeaderTable
-    Sections:
-      - Name:            .strtab
-      - Name:            .text
-      - Name:            .rela.text
-      - Name:            .llvm.callgraph
-      - Name:            .symtab
+    ContentArray: [
+      # --- Entry 1: _Z3foov (foo) ---
+      0x00, # Format Version
+      0x04, # Flags
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Function entry address
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # TypeID unknown
+
+      # Indirect Callees List
+      0x01, # NumIndirectTargetTypeIDs (1)
+        #< Missing indirect call entries here.
+    ]
 Symbols:
   - Name:            _Z3foov
-    Type:            STT_FUNC
-    Section:         .text
-    Binding:         STB_GLOBAL
 ...

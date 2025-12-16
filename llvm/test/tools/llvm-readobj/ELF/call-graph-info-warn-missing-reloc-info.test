@@ -1,0 +1,126 @@
+## Tests --call-graph-info prints information from call graph section.
+
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readelf --call-graph-info %t 2>&1 | count 0
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
+
+# WARN: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type id for 2 indirect targets.
+# WARN: warning: '[[FILE]]': unknown relocation at offset 2
+# WARN: warning: '[[FILE]]': unknown relocation at offset 19
+# WARN: warning: '[[FILE]]': unknown relocation at offset 29
+# WARN: warning: '[[FILE]]': unknown relocation at offset 56
+
+## YAML content was generated from this assembly using obj2yaml.
+##    .text
+##    
+##    .globl foo
+##    .type foo,@function
+##    foo:                  #< foo is at 0.
+##    .Lfoo_begin:
+##     callq foo            #< direct call is at 5. target is foo (0).
+##     retq
+##    
+##    .globl bar
+##    .type bar,@function
+##    bar:                  #< bar is at 6.
+##     callq	*-40(%rbp)    #< indirect call is at 9.
+##     retq
+##    
+##    .globl baz
+##    .type baz,@function
+##    baz:                  #< baz is at 10 (a).
+##     retq
+##    
+##    .globl qux
+##    .type qux,@function
+##    qux:                  #< qux is at 11 (b).
+##     retq
+##    
+##    .section	.llvm.callgraph,"o",@llvm_call_graph,.text
+##    .byte	0       #< Format version number.
+##    .byte	3       #< Flag IsIndirectTarget true
+##    .quad	0       #< foo()'s address.
+##    .quad	0       #< TypeID: unknown.
+##    .byte   1       #< Count of direct callees.
+##    .quad   5       #< Direct callee foo's address>
+##    
+##    .byte	0       #< Format version number.
+##    .byte   5       #< Flag IsIndirectTarget true
+##    .quad	6       #< bar()'s address.
+##    .quad	0       #< TypeID: unknown.
+##    .byte	1       #< Count of indirect target type IDs
+##    .quad   16      #< Indirect call type id.
+##    
+##    
+##    .byte	0       #< Format version number.
+##    .byte   1       #< Flag IsIndirectTarget true
+##    .quad	10      #< baz()'s address.
+##    .quad   32      #< Indirect target type id.
+##    
+##    # No call graph section entry for qux. 
+##    
+##    .text
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Size: 12 # or whatever size is needed for all the data
+  - Name: .llvm.callgraph
+    Type: SHT_LLVM_CALL_GRAPH
+    # Possible other fields, as needed for the code - I haven't inspected.
+    ContentArray: [
+        '0', # Format version number
+        '3', # Flag IsIndirectTarget true, HasDirectCallees true
+        '0', '0', '0', '0', '0', '0', '0', '0', # foo()'s address
+        '0', '0', '0', '0', '0', '0', '0', '0', # foo()'s TypeID Unknown
+        '1', # NumDirectCallees
+        '0', '0', '0', '0', '0', '0', '0', '0', # Direct callee foo()'s address
+        '0', # Format version number
+        '5', # Flag IsIndirectTarget true, HasIndirectTargetTypeIDs true
+        '6', '0', '0', '0', '0', '0', '0', '0', # bar()'s address
+        '0', '0', '0', '0', '0', '0', '0', '0', # bar()'s TypeID Unknown
+        '1', # NumIndirectTargetTypeIDs
+        '16', '0', '0', '0', '0', '0', '0', '0', # Indirect callee type ID
+        '0', # Format version number
+        '1', # Flag IsIndirectTarget true
+        '10', '0', '0', '0', '0', '0', '0', '0', # baz()'s address
+        '32', '0', '0', '0', '0', '0', '0', '0', # baz()'s TypeID Unknown
+      ]
+  - Name:            .rela.llvm.callgraph
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    Relocations:
+      # 1. Pointer to foo() definition
+      - Offset: 0x2
+        Symbol: foo
+        Type:   R_X86_64_64
+
+      # 2. Pointer to the call site "callq foo" (offset 5 inside foo)
+      #    We relocate against 'foo' and add 5 to get the address of the instruction.
+      - Offset: 0x13
+        Symbol: foo
+        Type:   R_X86_64_64
+        Addend: 5
+
+      # 3. Pointer to bar() definition
+      - Offset: 0x1D
+        Symbol: bar
+        Type:   R_X86_64_64
+
+      # 4. Pointer to baz() definition
+      - Offset: 0x38
+        Symbol: baz
+        Type:   R_X86_64_64
+Symbols:
+  - Name:            foo
+  - Name:            bar
+  - Name:            baz
+...

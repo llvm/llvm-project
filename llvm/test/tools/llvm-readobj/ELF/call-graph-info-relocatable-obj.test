@@ -166,69 +166,64 @@ FileHeader:
   Data:            ELFDATA2LSB
   Type:            ET_REL
   Machine:         EM_X86_64
-  SectionHeaderStringTable: .strtab
 Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x10
-    Content:         554889E55DC3662E0F1F840000000000554889E55DC3662E0F1F840000000000554889E54088F88845FF31C05DC36690554889E54883EC20488D0500000000488945F8FF55F8488D0500000000488945F0FF55F0488D0500000000488945E0488B45E00FBE7DEFFFD0E800000000E8000000000FBE7DEFE80000000031C04883C4205DC3
+    Size:            0x84
   - Name:            .llvm.callgraph
     Type:            SHT_LLVM_CALL_GRAPH
     Flags:           [ SHF_LINK_ORDER ]
     Link:            .text
-    AddressAlign:    0x1
-    Content:         00010000000000000000A220EFB89B695CF800010000000000000000A220EFB89B695CF8000100000000000000005486BC59814B8E3000070000000000000000DC011AF8DE94940A0300000000000000000000000000000000000000000000000002A220EFB89B695CF85486BC59814B8E30
-  - Name:            .comment
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_MERGE, SHF_STRINGS ]
-    AddressAlign:    0x1
-    EntSize:         0x1
-    Content:         004675636873696120636C616E672076657273696F6E2032322E302E306769742028676974406769746875622E636F6D3A5072616268756B2F6C6C766D2D70726F6A6563742E67697420366532323235343933303736346536613734323839613261633731616637633834333038356633622900
-  - Name:            .note.GNU-stack
-    Type:            SHT_PROGBITS
-    AddressAlign:    0x1
-  - Name:            .eh_frame
-    Type:            SHT_X86_64_UNWIND
-    Flags:           [ SHF_ALLOC ]
-    AddressAlign:    0x8
-    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C000000000000000600000000410E108602430D06410C07080000001C0000003C000000000000000600000000410E108602430D06410C07080000001C0000005C000000000000000E00000000410E108602430D06490C07080000001C0000007C000000000000005400000000410E108602430D06024F0C07080000
-  - Name:            .rela.text
-    Type:            SHT_RELA
-    Flags:           [ SHF_INFO_LINK ]
-    Link:            .symtab
-    AddressAlign:    0x8
-    Info:            .text
-    Relocations:
-      - Offset:          0x3B
-        Symbol:          _Z3foov
-        Type:            R_X86_64_PC32
-        Addend:          -4
-      - Offset:          0x49
-        Symbol:          _Z3barv
-        Type:            R_X86_64_PC32
-        Addend:          -4
-      - Offset:          0x57
-        Symbol:          _Z3bazc
-        Type:            R_X86_64_PC32
-        Addend:          -4
-      - Offset:          0x6A
-        Symbol:          _Z3foov
-        Type:            R_X86_64_PLT32
-        Addend:          -4
-      - Offset:          0x6F
-        Symbol:          _Z3barv
-        Type:            R_X86_64_PLT32
-        Addend:          -4
-      - Offset:          0x78
-        Symbol:          _Z3bazc
-        Type:            R_X86_64_PLT32
-        Addend:          -4
+    ContentArray: [
+      # --- Entry 1: _Z3foov (foo) ---
+      # Offset 0x0
+      0x00, # Format Version
+      0x01, # Flags
+      # Offset 0x2 (Matches Reloc: _Z3foov)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Address of foo
+      0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, # TypeID of foo
+
+      # --- Entry 2: _Z3barv (bar) ---
+      # Offset 0x12
+      0x00, # Format Version
+      0x01, # Flags
+      # Offset 0x14 (Matches Reloc: _Z3barv)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Address of bar
+      0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, # TypeID of bar
+
+      # --- Entry 3: _Z3bazc (baz) ---
+      # Offset 0x24
+      0x00, # Format Version
+      0x01, # Flags
+      # Offset 0x26 (Matches Reloc: _Z3bazc)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Address of baz
+      0x54, 0x86, 0xBC, 0x59, 0x81, 0x4B, 0x8E, 0x30, # TypeID of baz
+
+      # --- Entry 4: _Z6callerv (caller) ---
+      # Offset 0x36
+      0x00, # Format Version
+      0x07, # Flags (HasDirectCallees | IsIndirectTarget | ...)
+      # Offset 0x38 (Matches Reloc: _Z6callerv)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Address of caller
+      0xDC, 0x01, 0x1A, 0xF8, 0xDE, 0x94, 0x94, 0x0A, # TypeID of caller
+
+      # Direct Callees List
+      0x03, # NumDirectCallees (3)
+      # Offset 0x49 (Matches Reloc: _Z3foov)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Callee 1: foo
+      # Offset 0x51 (Matches Reloc: _Z3barv)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Callee 2: bar
+      # Offset 0x59 (Matches Reloc: _Z3bazc)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Callee 3: baz
+
+      # Indirect Callees List
+      0x02, # NumIndirectTargetTypeIDs (2)
+      0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, # Indirect TypeID 1 (matches foo/bar)
+      0x54, 0x86, 0xBC, 0x59, 0x81, 0x4B, 0x8E, 0x30  # Indirect TypeID 2 (matches baz)
+    ]
   - Name:            .rela.llvm.callgraph
     Type:            SHT_RELA
     Flags:           [ SHF_INFO_LINK ]
-    Link:            .symtab
-    AddressAlign:    0x8
     Info:            .llvm.callgraph
     Relocations:
       - Offset:          0x2
@@ -252,75 +247,9 @@ Sections:
       - Offset:          0x59
         Symbol:          _Z3bazc
         Type:            R_X86_64_64
-  - Name:            .rela.eh_frame
-    Type:            SHT_RELA
-    Flags:           [ SHF_INFO_LINK ]
-    Link:            .symtab
-    AddressAlign:    0x8
-    Info:            .eh_frame
-    Relocations:
-      - Offset:          0x20
-        Symbol:          .text
-        Type:            R_X86_64_PC32
-      - Offset:          0x40
-        Symbol:          .text
-        Type:            R_X86_64_PC32
-        Addend:          16
-      - Offset:          0x60
-        Symbol:          .text
-        Type:            R_X86_64_PC32
-        Addend:          32
-      - Offset:          0x80
-        Symbol:          .text
-        Type:            R_X86_64_PC32
-        Addend:          48
-  - Name:            .llvm_addrsig
-    Type:            SHT_LLVM_ADDRSIG
-    Flags:           [ SHF_EXCLUDE ]
-    Link:            .symtab
-    AddressAlign:    0x1
-    Symbols:         [ _Z3foov, _Z3barv, _Z3bazc ]
-  - Type:            SectionHeaderTable
-    Sections:
-      - Name:            .strtab
-      - Name:            .text
-      - Name:            .rela.text
-      - Name:            .llvm.callgraph
-      - Name:            .rela.llvm.callgraph
-      - Name:            .comment
-      - Name:            .note.GNU-stack
-      - Name:            .eh_frame
-      - Name:            .rela.eh_frame
-      - Name:            .llvm_addrsig
-      - Name:            .symtab
 Symbols:
-  - Name:            cg.cpp
-    Type:            STT_FILE
-    Index:           SHN_ABS
-  - Name:            .text
-    Type:            STT_SECTION
-    Section:         .text
   - Name:            _Z3foov
-    Type:            STT_FUNC
-    Section:         .text
-    Binding:         STB_GLOBAL
-    Size:            0x6
   - Name:            _Z3barv
-    Type:            STT_FUNC
-    Section:         .text
-    Binding:         STB_GLOBAL
-    Value:           0x10
-    Size:            0x6
   - Name:            _Z3bazc
-    Type:            STT_FUNC
-    Section:         .text
-    Binding:         STB_GLOBAL
-    Value:           0x20
-    Size:            0xE
   - Name:            _Z6callerv
-    Type:            STT_FUNC
-    Section:         .text
-    Binding:         STB_GLOBAL
-    Value:           0x30
-    Size:            0x54
 ...
