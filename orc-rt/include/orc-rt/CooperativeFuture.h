@@ -61,7 +61,7 @@ public:
   // run, or an Error if no further tasks can be run (since in this case the
   // future that requested the work will be left without a value, and we want
   // to report why).
-  virtual Error runNextItem() = 0;
+  virtual Error runNextTask() = 0;
 };
 
 template <typename T> class CooperativeFuture;
@@ -102,7 +102,7 @@ protected:
   void setHasNoValue() { S.fetch_and(~State::HasValue); }
   Error workUntilHasValue() {
     while (!hasValue())
-      if (auto Err = WQ.runNextItem())
+      if (auto Err = WQ.runNextTask())
         return Err;
     return Error::success();
   }

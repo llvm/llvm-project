@@ -24,19 +24,19 @@ class QueueingTaskDispatchRunner : public CooperativeFutureTaskRunner {
 public:
   QueueingTaskDispatchRunner(QueueingTaskDispatcher &QTD) : QTD(QTD) {}
 
-  Error runNextItem() override {
-    ++RunNextItemCalls;
+  Error runNextTask() override {
+    ++RunNextTaskCalls;
     if (auto T = QTD.pop_back()) {
       T->run();
       return Error::success();
     }
     return make_error<StringError>("No tasks left");
   }
-  size_t getRunNextItemCalls() const { return RunNextItemCalls; }
+  size_t getRunNextTaskCalls() const { return RunNextTaskCalls; }
 
 private:
   QueueingTaskDispatcher &QTD;
-  size_t RunNextItemCalls = 0;
+  size_t RunNextTaskCalls = 0;
 };
 
 } // anonymous namespace
@@ -252,6 +252,6 @@ TEST(CooperativeFutureTest, WorkQueueFailure) {
 
   EXPECT_FALSE(!!Result);
   consumeError(Result.takeError());
-  EXPECT_GT(QTDRunner.getRunNextItemCalls(), 0u);
+  EXPECT_GT(QTDRunner.getRunNextTaskCalls(), 0u);
 #endif // ORC_RT_ENABLE_EXCEPTIONS
 }
