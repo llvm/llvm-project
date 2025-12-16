@@ -42,6 +42,7 @@ add_clang_library(clangAnalysis
   clangBasic
   clangFormat
   clangLex
+  clangToolingCore
 
   DEPENDS
   omp_gen
