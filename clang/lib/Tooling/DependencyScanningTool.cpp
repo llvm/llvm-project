@@ -121,12 +121,12 @@ buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
   return std::make_pair(std::move(Driver), std::move(Compilation));
 }
 
-/// Constructs the full -cc1 command line, including executable, for the given
-/// driver \c Cmd.
-static std::vector<std::string>
-buildCC1CommandLine(const driver::Command &Cmd) {
+/// Constructs the full frontend command line, including executable, for the
+/// given driver \c Cmd.
+static SmallVector<std::string, 0>
+buildFrontendCommandLine(const driver::Command &Cmd) {
   const auto &Args = Cmd.getArguments();
-  std::vector<std::string> Out;
+  SmallVector<std::string, 0> Out;
   Out.reserve(Args.size() + 1);
   Out.emplace_back(Cmd.getExecutable());
   llvm::append_range(Out, Args);
@@ -149,12 +149,13 @@ static bool computeDependenciesForDriverCommandLine(
   if (!Compilation)
     return false;
 
-  const auto CC1CommandLines =
-      llvm::map_to_vector(Compilation->getJobs(), buildCC1CommandLine);
-  const auto CC1CommandLinesView = llvm::map_to_vector(
-      CC1CommandLines, [](const auto &CC1Cmds) { return ArrayRef(CC1Cmds); });
+  SmallVector<SmallVector<std::string, 0>> FrontendCommandLines;
+  for (const auto &Cmd : Compilation->getJobs())
+    FrontendCommandLines.push_back(buildFrontendCommandLine(Cmd));
+  SmallVector<ArrayRef<std::string>> FrontendCommandLinesView(
+      FrontendCommandLines.begin(), FrontendCommandLines.end());
 
-  return Worker.computeDependencies(WorkingDirectory, CC1CommandLinesView,
+  return Worker.computeDependencies(WorkingDirectory, FrontendCommandLinesView,
                                     Consumer, Controller, Diags, OverlayFS);
 }
 
@@ -296,7 +297,7 @@ DependencyScanningTool::getModuleDependencies(
   return Result;
 }
 
-static std::optional<std::vector<std::string>> getFirstCC1CommandLine(
+static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
     ArrayRef<std::string> CommandLine, DiagnosticsEngine &Diags,
     llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> ScanFS) {
   // Compilation holds a non-owning a reference to the Driver, hence we need to
@@ -314,7 +315,7 @@ static std::optional<std::vector<std::string>> getFirstCC1CommandLine(
 
   const auto &Jobs = Compilation->getJobs();
   if (const auto It = llvm::find_if(Jobs, IsClangCmd); It != Jobs.end())
-    return buildCC1CommandLine(*It);
+    return buildFrontendCommandLine(*It);
   return std::nullopt;
 }
 
