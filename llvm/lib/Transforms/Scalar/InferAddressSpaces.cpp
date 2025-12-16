@@ -191,7 +191,7 @@ class InferAddressSpacesImpl {
   const DominatorTree *DT = nullptr;
   const TargetTransformInfo *TTI = nullptr;
   MemorySSA *MSSA = nullptr;
-  mutable BatchAAResults BatchAA;
+  AliasAnalysis *AA = nullptr;
   const DataLayout *DL = nullptr;
   /// Target specific address space which uses of should be replaced if
   /// possible.
@@ -253,7 +253,7 @@ class InferAddressSpacesImpl {
   unsigned
   getLoadPtrAddrSpaceImpl(const LoadInst *LI, unsigned NewAS, MemoryAccess *MA,
                           ValueToAddrSpaceMapTy &InferredAddrSpace,
-                          SmallPtrSet<MemoryAccess *, 8> Visited) const;
+                          SmallPtrSet<MemoryAccess *, 8> &Visited) const;
   unsigned getLoadPtrAddrSpace(const LoadInst *LI,
                                ValueToAddrSpaceMapTy &InferredAddrSpace) const;
 
@@ -261,7 +261,7 @@ public:
   InferAddressSpacesImpl(AssumptionCache &AC, const DominatorTree *DT,
                          const TargetTransformInfo *TTI, MemorySSA *MSSA,
                          AliasAnalysis *AA, unsigned FlatAddrSpace)
-      : AC(AC), DT(DT), TTI(TTI), MSSA(MSSA), BatchAA(*AA),
+      : AC(AC), DT(DT), TTI(TTI), MSSA(MSSA), AA(AA),
         FlatAddrSpace(FlatAddrSpace) {}
   bool run(Function &F);
 };
@@ -1092,8 +1092,9 @@ static bool isReallyAClobber(const Value *Ptr, MemoryDef *Def,
 unsigned InferAddressSpacesImpl::getLoadPtrAddrSpaceImpl(
     const LoadInst *LI, unsigned AS, MemoryAccess *MA,
     ValueToAddrSpaceMapTy &InferredAddrSpace,
-    SmallPtrSet<MemoryAccess *, 8> Visited) const {
+    SmallPtrSet<MemoryAccess *, 8> &Visited) const {
   MemorySSAWalker *Walker = MSSA->getWalker();
+  BatchAAResults BatchAA(*AA);
   MemoryLocation Loc(MemoryLocation::get(LI));
 
   if (MSSA->isLiveOnEntryDef(MA))
@@ -1103,17 +1104,13 @@ unsigned InferAddressSpacesImpl::getLoadPtrAddrSpaceImpl(
     return AS;
 
   if (MemoryDef *Def = dyn_cast<MemoryDef>(MA)) {
-    LLVM_DEBUG(dbgs() << "  Def: " << *Def->getMemoryInst() << '\n');
-
     if (!isReallyAClobber(LI->getPointerOperand(), Def, &BatchAA, TTI))
       return getLoadPtrAddrSpaceImpl(
           LI, AS,
           Walker->getClobberingMemoryAccess(Def->getDefiningAccess(), Loc),
           InferredAddrSpace, Visited);
 
-    LLVM_DEBUG(dbgs() << "      -> load is clobbered\n");
     Instruction *DI = Def->getMemoryInst();
-
     StoreInst *SI = dyn_cast<StoreInst>(DI);
 
     // TODO: handle other memory writing instructions
@@ -1134,7 +1131,6 @@ unsigned InferAddressSpacesImpl::getLoadPtrAddrSpaceImpl(
       return FlatAddrSpace;
 
     if (BatchAA.isMustAlias(Loc, MemoryLocation::get(SI))) {
-      LLVM_DEBUG(dbgs() << "      -> must alias with store: " << *SI << "\n");
       return AS;
     }
 
@@ -1161,7 +1157,6 @@ unsigned InferAddressSpacesImpl::getLoadPtrAddrSpace(
     return UninitializedAddressSpace;
 
   SmallPtrSet<MemoryAccess *, 8> Visited;
-  LLVM_DEBUG(dbgs() << "Checking clobbering of: " << *LI << '\n');
   return getLoadPtrAddrSpaceImpl(
       LI, UninitializedAddressSpace,
       MSSA->getWalker()->getClobberingMemoryAccess(LI), InferredAddrSpace,
