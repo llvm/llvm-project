@@ -69,8 +69,7 @@ void CopyPropagation::recordCopy(NodeAddr<StmtNode*> SA, EqualityMap &EM) {
     if (FS == DefM.end() || FS->second.empty())
       continue; // Undefined source
     RDefMap[I.second][SA.Id] = FS->second.top()->Id;
-    // Insert DstR into the map.
-    RDefMap[I.first];
+    RDefMap.try_emplace(I.first);
   }
 }
 
