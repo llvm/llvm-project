@@ -3896,8 +3896,6 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
     return 2;
   }
 
-  // If the target triple is derived from the files, we display help message
-  // when disassembling them.
   if (PrintCpuHelp) {
     mcpuHelp();
     if (!ShouldDump)
