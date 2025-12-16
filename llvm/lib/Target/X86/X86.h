@@ -295,6 +295,7 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
 
 FunctionPass *createX86PostLegalizerCombiner();
 FunctionPass *createX86PreLegalizerCombiner();
+FunctionPass *createX86PostLegalizerCombiner();
 FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
 FunctionPass *createX86LoadValueInjectionRetHardeningPass();
 FunctionPass *createX86SpeculativeLoadHardeningPass();
@@ -340,6 +341,7 @@ void initializeX86SuppressAPXForRelocationPassPass(PassRegistry &);
 void initializeX86WinEHUnwindV2Pass(PassRegistry &);
 void initializeX86PostLegalizerCombinerPass(PassRegistry &);
 void initializeX86PreLegalizerCombinerPass(PassRegistry &);
+void initializeX86PostLegalizerCombinerPass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

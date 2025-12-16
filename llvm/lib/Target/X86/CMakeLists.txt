@@ -23,7 +23,8 @@ tablegen(LLVM X86GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="X86PostLegalizerCombiner")
 tablegen(LLVM X86GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="X86PreLegalizerCombiner")
-
+tablegen(LLVM X86GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="X86PostLegalizerCombiner")
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
