@@ -10878,7 +10878,7 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   assert(VT.isInteger() && "Expected operands to be integers");
 
   // usub.sat(a, 1) -> sub(a, zext(a != 0))
-  if (Opcode == ISD::USUBSAT && !VT.isVector() && isOneConstant(RHS)) {
+  if (Opcode == ISD::USUBSAT && isOneOrOneSplat(RHS)) {
     LHS = DAG.getFreeze(LHS);
     SDValue Zero = DAG.getConstant(0, dl, VT);
     EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
