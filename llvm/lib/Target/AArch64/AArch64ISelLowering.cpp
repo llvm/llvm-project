@@ -1914,18 +1914,22 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
     }
 
-    setOperationPromotedToType(
-        {ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT}, MVT::nxv2i1,
-        MVT::nxv2i64);
-    setOperationPromotedToType(
-        {ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT}, MVT::nxv4i1,
-        MVT::nxv4i32);
-    setOperationPromotedToType(
-        {ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT}, MVT::nxv8i1,
-        MVT::nxv8i16);
-    setOperationPromotedToType(
-        {ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT}, MVT::nxv16i1,
-        MVT::nxv16i8);
+    setOperationPromotedToType(ISD::VECTOR_SPLICE_LEFT, MVT::nxv2i1,
+                               MVT::nxv2i64);
+    setOperationPromotedToType(ISD::VECTOR_SPLICE_RIGHT, MVT::nxv2i1,
+                               MVT::nxv2i64);
+    setOperationPromotedToType(ISD::VECTOR_SPLICE_LEFT, MVT::nxv4i1,
+                               MVT::nxv4i32);
+    setOperationPromotedToType(ISD::VECTOR_SPLICE_RIGHT, MVT::nxv4i1,
+                               MVT::nxv4i32);
+    setOperationPromotedToType(ISD::VECTOR_SPLICE_LEFT, MVT::nxv8i1,
+                               MVT::nxv8i16);
+    setOperationPromotedToType(ISD::VECTOR_SPLICE_RIGHT, MVT::nxv8i1,
+                               MVT::nxv8i16);
+    setOperationPromotedToType(ISD::VECTOR_SPLICE_LEFT, MVT::nxv16i1,
+                               MVT::nxv16i8);
+    setOperationPromotedToType(ISD::VECTOR_SPLICE_RIGHT, MVT::nxv16i1,
+                               MVT::nxv16i8);
 
     setOperationAction(ISD::VSCALE, MVT::i32, Custom);
 

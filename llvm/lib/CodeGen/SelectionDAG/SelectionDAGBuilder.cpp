@@ -12908,7 +12908,7 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
 
   unsigned NumElts = VT.getVectorNumElements();
 
-  uint64_t Idx = (NumElts + (IsLeft ? Imm : -Imm)) % NumElts;
+  uint64_t Idx = IsLeft ? Imm : NumElts - Imm;
 
   // Use VECTOR_SHUFFLE to maintain original behaviour for fixed-length vectors.
   SmallVector<int, 8> Mask;
