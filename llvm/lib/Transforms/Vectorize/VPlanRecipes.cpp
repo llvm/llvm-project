@@ -1908,7 +1908,7 @@ void VPWidenSelectRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                       VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-SELECT ";
   printAsOperand(O, SlotTracker);
-  O << " = select ";
+  O << " = select";
   printFlags(O);
   getOperand(0)->printAsOperand(O, SlotTracker);
   O << ", ";
@@ -2314,7 +2314,6 @@ void VPWidenIntOrFpInductionRecipe::printRecipe(
   printAsOperand(O, SlotTracker);
   O << " = WIDEN-INDUCTION";
   printFlags(O);
-  O << " ";
   printOperands(O, SlotTracker);
 
   if (auto *TI = getTruncInst())
@@ -2503,7 +2502,8 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   // LastLane = Stride * (RunTimeVF - 1)
   Value *LastLane = Builder.CreateSub(RunTimeVF, ConstantInt::get(IndexTy, 1));
   if (Stride != 1)
-    LastLane = Builder.CreateMul(ConstantInt::get(IndexTy, Stride), LastLane);
+    LastLane =
+        Builder.CreateMul(ConstantInt::getSigned(IndexTy, Stride), LastLane);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   Value *ResultPtr =
       Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
@@ -2526,15 +2526,12 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
-  unsigned CurrentPart = getUnrollPart(*this);
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  Type *IndexTy = DL.getIndexType(State.TypeAnalysis.inferScalarType(this));
+  assert(getOffset() &&
+         "Expected prior simplification of recipe without offset");
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-
-  Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
-  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Increment,
-                                       "", getGEPNoWrapFlags());
-
+  Value *Offset = State.get(getOffset(), true);
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Offset, "",
+                                       getGEPNoWrapFlags());
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
 
@@ -2551,10 +2548,10 @@ void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
-  // Handle cases where only the first lane is used the same way as the legacy
-  // cost model.
+  // A blend will be expanded to a select VPInstruction, which will generate a
+  // scalar select if only the first lane is used.
   if (vputils::onlyFirstLaneUsed(this))
-    return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+    VF = ElementCount::getFixed(1);
 
   Type *ResultTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
   Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);

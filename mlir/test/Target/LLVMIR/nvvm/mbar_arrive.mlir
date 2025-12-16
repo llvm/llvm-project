@@ -101,3 +101,16 @@ llvm.func @mbarrier_arrive_nocomplete_shared(%barrier: !llvm.ptr<3>) {
   %0 = nvvm.mbarrier.arrive.nocomplete %barrier, %count : !llvm.ptr<3>, i32  -> i64
   llvm.return
 }
+
+llvm.func @mbarrier_arrive_ignore_retval(%count : i32, %barrier: !llvm.ptr<3>) {
+  // CHECK-LABEL: define void @mbarrier_arrive_ignore_retval(i32 %0, ptr addrspace(3) %1) {
+  // CHECK-NEXT: %3 = call i64 @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %1, i32 %0)
+  // CHECK-NEXT: %4 = call i64 @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %1, i32 %0)
+  // CHECK-NEXT: ret void
+  // CHECK-NEXT: }
+  nvvm.mbarrier.arrive %barrier, %count : !llvm.ptr<3>
+  nvvm.mbarrier.arrive %barrier, %count : !llvm.ptr<3>
+
+  llvm.return
+}
+

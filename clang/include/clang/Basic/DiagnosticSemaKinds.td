@@ -1770,7 +1770,6 @@ def err_user_defined_msg_constexpr : Error<
 def note_unsatisfied_trait
     : Note<"%0 is not %enum_select<TraitName>{"
            "%TriviallyRelocatable{trivially relocatable}|"
-           "%Replaceable{replaceable}|"
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
            "%StandardLayout{standard-layout}|"
@@ -1792,8 +1791,6 @@ def note_unsatisfied_trait_reason
            "class type}|"
            "%NTRBase{has a non-trivially-relocatable base %1}|"
            "%NTRField{has a non-trivially-relocatable member %1 of type %2}|"
-           "%NonReplaceableBase{has a non-replaceable base %1}|"
-           "%NonReplaceableField{has a non-replaceable member %1 of type %2}|"
            "%NTCBase{has a non-trivially-copyable base %1}|"
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%NonEmptyMember{has a non-static data member %1 of type %2}|"
@@ -3904,9 +3901,19 @@ def warn_attribute_dllimport_static_field_definition : Warning<
 def warn_attribute_dllexport_explicit_instantiation_decl : Warning<
   "explicit instantiation declaration should not be 'dllexport'">,
   InGroup<DllexportExplicitInstantiationDecl>;
-def warn_attribute_dllexport_explicit_instantiation_def : Warning<
+def warn_attr_dllexport_explicit_inst_def : Warning<
+  "'dllexport' attribute ignored on explicit instantiation definition">,
+  InGroup<DllexportExplicitInstantiation>;
+def warn_attr_dllexport_explicit_inst_def_mismatch : Warning<
   "'dllexport' attribute ignored on explicit instantiation definition">,
   InGroup<IgnoredAttributes>;
+def note_prev_decl_missing_dllexport : Note<
+  "'dllexport' attribute is missing on previous declaration">;
+def warn_dllexport_on_decl_ignored : Warning<
+  "explicit instantiation definition is not exported without 'dllexport'">,
+  InGroup<IgnoredAttributes>;
+def note_dllexport_on_decl : Note<
+  "'dllexport' attribute on the declaration is ignored">;
 def warn_attribute_exclude_from_explicit_instantiation_local_class : Warning<
   "%0 attribute ignored on local class%select{| member}1">,
   InGroup<IgnoredAttributes>;
@@ -6848,6 +6855,7 @@ def note_protected_by_objc_weak_init : Note<
   "jump bypasses initialization of __weak variable">;
 def note_protected_by_non_trivial_c_struct_init : Note<
   "jump bypasses initialization of variable of non-trivial C struct type">;
+def note_protected_by_defer_stmt : Note<"jump bypasses defer statement">;
 def note_enters_block_captures_cxx_obj : Note<
   "jump enters lifetime of block which captures a destructible C++ object">;
 def note_enters_block_captures_strong : Note<
@@ -6861,6 +6869,7 @@ def note_enters_compound_literal_scope : Note<
   "jump enters lifetime of a compound literal that is non-trivial to destruct">;
 def note_enters_statement_expression : Note<
   "jump enters a statement expression">;
+def note_enters_defer_stmt : Note<"jump enters a defer statement">;
 
 def note_exits_cleanup : Note<
   "jump exits scope of variable with __attribute__((cleanup))">;
@@ -6906,6 +6915,16 @@ def note_exits_block_captures_non_trivial_c_struct : Note<
   "to destroy">;
 def note_exits_compound_literal_scope : Note<
   "jump exits lifetime of a compound literal that is non-trivial to destruct">;
+def note_exits_defer_stmt : Note<"jump exits a defer statement">;
+def err_jump_out_of_defer_stmt : Error<
+  "cannot %enum_select<DeferJumpKind>{"
+  "%Break{break out of a}|"
+  "%Continue{continue loop outside of enclosing}|"
+  "%Return{return from a}|"
+  "%SEHLeave{__leave a}"
+  "}0 defer statement">;
+def err_defer_invalid_sjlj : Error<
+  "cannot use %0 inside a defer statement">;
 
 def err_func_returning_qualified_void : ExtWarn<
   "function cannot return qualified void type %0">,
@@ -11020,6 +11039,8 @@ def err_switch_explicit_conversion : Error<
 def err_switch_incomplete_class_type : Error<
   "switch condition has incomplete class type %0">;
 
+// TODO: It ought to be possible to refactor these to be a single warning that
+// uses %enum_select.
 def warn_empty_if_body : Warning<
   "if statement has empty body">, InGroup<EmptyBody>;
 def warn_empty_for_body : Warning<
@@ -11030,6 +11051,8 @@ def warn_empty_while_body : Warning<
   "while loop has empty body">, InGroup<EmptyBody>;
 def warn_empty_switch_body : Warning<
   "switch statement has empty body">, InGroup<EmptyBody>;
+def warn_empty_defer_body : Warning<
+  "defer statement has empty body">, InGroup<EmptyBody>;
 def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
 
@@ -11779,6 +11802,9 @@ def err_omp_expected_addressable_lvalue_or_array_item : Error<
   "expected addressable lvalue expression, array element%select{ or array section|, array section or array shaping expression}0%select{| of non 'omp_depend_t' type}1">;
 def err_omp_expected_named_var_member_or_array_expression: Error<
   "expected expression containing only member accesses and/or array sections based on named variables">;
+def err_omp_expected_base_pointer_var_name_member_expr
+    : Error<"base-pointer is not a variable name%select{| or data member of "
+            "current class}0">;
 def err_omp_bit_fields_forbidden_in_clause : Error<
   "bit fields cannot be used to specify storage in a '%0' clause">;
 def err_array_section_does_not_specify_contiguous_storage : Error<
