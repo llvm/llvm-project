@@ -34,8 +34,8 @@ private:
     ~StructElement() = default;
   };
 
-  clang::QualType BuildType(TypeSystemClang &clang_ast_ctx, llvm::StringRef &type,
-                            bool for_expression,
+  clang::QualType BuildType(TypeSystemClang &clang_ast_ctx,
+                            llvm::StringRef &type, bool for_expression,
                             uint32_t *bitfield_bit_size = nullptr);
 
   clang::QualType BuildStruct(TypeSystemClang &ast_ctx, llvm::StringRef &type,
@@ -53,8 +53,8 @@ private:
 
   std::string ReadStructName(llvm::StringRef &type);
 
-  StructElement ReadStructElement(TypeSystemClang &ast_ctx, llvm::StringRef &type,
-                                  bool for_expression);
+  StructElement ReadStructElement(TypeSystemClang &ast_ctx,
+                                  llvm::StringRef &type, bool for_expression);
 
   clang::QualType BuildObjCObjectPointerType(TypeSystemClang &clang_ast_ctx,
                                              llvm::StringRef &type,

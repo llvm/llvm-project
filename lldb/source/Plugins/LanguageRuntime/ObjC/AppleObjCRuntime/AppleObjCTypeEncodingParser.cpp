@@ -200,7 +200,8 @@ clang::QualType AppleObjCTypeEncodingParser::BuildArray(
 // consume but ignore the type info and always return an 'id'; if anything,
 // dynamic typing will resolve things for us anyway
 clang::QualType AppleObjCTypeEncodingParser::BuildObjCObjectPointerType(
-    TypeSystemClang &clang_ast_ctx, llvm::StringRef &type, bool for_expression) {
+    TypeSystemClang &clang_ast_ctx, llvm::StringRef &type,
+    bool for_expression) {
   if (!consumeChar(type, _C_ID))
     return clang::QualType();
 
@@ -287,10 +288,9 @@ clang::QualType AppleObjCTypeEncodingParser::BuildObjCObjectPointerType(
   }
 }
 
-clang::QualType
-AppleObjCTypeEncodingParser::BuildType(TypeSystemClang &clang_ast_ctx,
-                                       llvm::StringRef &type, bool for_expression,
-                                       uint32_t *bitfield_bit_size) {
+clang::QualType AppleObjCTypeEncodingParser::BuildType(
+    TypeSystemClang &clang_ast_ctx, llvm::StringRef &type, bool for_expression,
+    uint32_t *bitfield_bit_size) {
   if (type.empty())
     return clang::QualType();
 
