@@ -299,10 +299,9 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
   SmallVector<Value> sourceIndices;
   // memref.load guarantees that indexes start inbounds while the vector
   // operations don't. This impacts if our linearization is `disjoint`
-  if (failed(resolveSourceIndicesExpandShape(
-          loadOp.getLoc(), rewriter, expandShapeOp, loadOp.getIndices(),
-          sourceIndices, isa<memref::LoadOp>(loadOp.getOperation()))))
-    return failure();
+  resolveSourceIndicesExpandShape(loadOp.getLoc(), rewriter, expandShapeOp,
+                                  loadOp.getIndices(), sourceIndices,
+                                  isa<memref::LoadOp>(loadOp.getOperation()));
 
   return llvm::TypeSwitch<Operation *, LogicalResult>(loadOp)
       .Case([&](memref::LoadOp op) {
@@ -359,10 +358,8 @@ LogicalResult LoadOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
     return failure();
 
   SmallVector<Value> sourceIndices;
-  if (failed(resolveSourceIndicesCollapseShape(
-          loadOp.getLoc(), rewriter, collapseShapeOp, loadOp.getIndices(),
-          sourceIndices)))
-    return failure();
+  resolveSourceIndicesCollapseShape(loadOp.getLoc(), rewriter, collapseShapeOp,
+                                    loadOp.getIndices(), sourceIndices);
   llvm::TypeSwitch<Operation *, void>(loadOp)
       .Case([&](memref::LoadOp op) {
         rewriter.replaceOpWithNewOp<memref::LoadOp>(
@@ -447,10 +444,9 @@ LogicalResult StoreOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
   SmallVector<Value> sourceIndices;
   // memref.store guarantees that indexes start inbounds while the vector
   // operations don't. This impacts if our linearization is `disjoint`
-  if (failed(resolveSourceIndicesExpandShape(
-          storeOp.getLoc(), rewriter, expandShapeOp, storeOp.getIndices(),
-          sourceIndices, isa<memref::StoreOp>(storeOp.getOperation()))))
-    return failure();
+  resolveSourceIndicesExpandShape(storeOp.getLoc(), rewriter, expandShapeOp,
+                                  storeOp.getIndices(), sourceIndices,
+                                  isa<memref::StoreOp>(storeOp.getOperation()));
   llvm::TypeSwitch<Operation *, void>(storeOp)
       .Case([&](memref::StoreOp op) {
         rewriter.replaceOpWithNewOp<memref::StoreOp>(
@@ -481,10 +477,8 @@ LogicalResult StoreOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
     return failure();
 
   SmallVector<Value> sourceIndices;
-  if (failed(resolveSourceIndicesCollapseShape(
-          storeOp.getLoc(), rewriter, collapseShapeOp, storeOp.getIndices(),
-          sourceIndices)))
-    return failure();
+  resolveSourceIndicesCollapseShape(storeOp.getLoc(), rewriter, collapseShapeOp,
+                                    storeOp.getIndices(), sourceIndices);
   llvm::TypeSwitch<Operation *, void>(storeOp)
       .Case([&](memref::StoreOp op) {
         rewriter.replaceOpWithNewOp<memref::StoreOp>(

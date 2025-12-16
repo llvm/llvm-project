@@ -42,7 +42,7 @@ static void expandToUnderlyingIndices(AffineMap affineMap, ValueRange indices,
                                       SmallVectorImpl<Value> &result) {
   SmallVector<OpFoldResult> indicesOfr(
       llvm::map_to_vector(indices, [](Value v) -> OpFoldResult { return v; }));
-  for (unsigned i = 0, e = affineMap.getNumResults(); i < e; ++i) {
+  for (unsigned i : llvm::seq(0u, affineMap.getNumResults())) {
     OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
         rewriter, loc, affineMap.getSubMap({i}), indicesOfr);
     result.push_back(getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
@@ -55,10 +55,8 @@ static void expandToUnderlyingIndices(AffineMap affineMap, ValueRange indices,
 
 namespace {
 
-class AffineLoadOpOfSubViewOpFolder final
-    : public OpRewritePattern<AffineLoadOp> {
-public:
-  using OpRewritePattern<AffineLoadOp>::OpRewritePattern;
+struct AffineLoadOpOfSubViewOpFolder final : OpRewritePattern<AffineLoadOp> {
+  using Base::Base;
 
   LogicalResult matchAndRewrite(AffineLoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
@@ -83,10 +81,9 @@ public:
   }
 };
 
-class AffineLoadOpOfExpandShapeOpFolder final
-    : public OpRewritePattern<AffineLoadOp> {
-public:
-  using OpRewritePattern<AffineLoadOp>::OpRewritePattern;
+struct AffineLoadOpOfExpandShapeOpFolder final
+    : OpRewritePattern<AffineLoadOp> {
+  using Base::Base;
 
   LogicalResult matchAndRewrite(AffineLoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
@@ -103,10 +100,9 @@ public:
     SmallVector<Value> sourceIndices;
     // affine.load guarantees that indexes start inbounds, which impacts if our
     // linearization is `disjoint`.
-    if (failed(memref::resolveSourceIndicesExpandShape(
-            loadOp.getLoc(), rewriter, expandShapeOp, indices, sourceIndices,
-            /*startsInbounds=*/true)))
-      return failure();
+    memref::resolveSourceIndicesExpandShape(
+        loadOp.getLoc(), rewriter, expandShapeOp, indices, sourceIndices,
+        /*startsInbounds=*/true);
 
     rewriter.replaceOpWithNewOp<AffineLoadOp>(
         loadOp, expandShapeOp.getViewSource(), sourceIndices);
@@ -114,10 +110,9 @@ public:
   }
 };
 
-class AffineLoadOpOfCollapseShapeOpFolder final
-    : public OpRewritePattern<AffineLoadOp> {
-public:
-  using OpRewritePattern<AffineLoadOp>::OpRewritePattern;
+struct AffineLoadOpOfCollapseShapeOpFolder final
+    : OpRewritePattern<AffineLoadOp> {
+  using Base::Base;
 
   LogicalResult matchAndRewrite(AffineLoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
@@ -132,10 +127,8 @@ public:
                               loadOp.getLoc(), rewriter, indices);
 
     SmallVector<Value> sourceIndices;
-    if (failed(memref::resolveSourceIndicesCollapseShape(
-            loadOp.getLoc(), rewriter, collapseShapeOp, indices,
-            sourceIndices)))
-      return failure();
+    memref::resolveSourceIndicesCollapseShape(
+        loadOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices);
 
     rewriter.replaceOpWithNewOp<AffineLoadOp>(
         loadOp, collapseShapeOp.getViewSource(), sourceIndices);
@@ -143,10 +136,8 @@ public:
   }
 };
 
-class AffineStoreOpOfSubViewOpFolder final
-    : public OpRewritePattern<AffineStoreOp> {
-public:
-  using OpRewritePattern<AffineStoreOp>::OpRewritePattern;
+struct AffineStoreOpOfSubViewOpFolder final : OpRewritePattern<AffineStoreOp> {
+  using Base::Base;
 
   LogicalResult matchAndRewrite(AffineStoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
@@ -172,10 +163,9 @@ public:
   }
 };
 
-class AffineStoreOpOfExpandShapeOpFolder final
-    : public OpRewritePattern<AffineStoreOp> {
-public:
-  using OpRewritePattern<AffineStoreOp>::OpRewritePattern;
+struct AffineStoreOpOfExpandShapeOpFolder final
+    : OpRewritePattern<AffineStoreOp> {
+  using Base::Base;
 
   LogicalResult matchAndRewrite(AffineStoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
@@ -192,10 +182,9 @@ public:
     SmallVector<Value> sourceIndices;
     // affine.store guarantees that indexes start inbounds, which impacts if our
     // linearization is `disjoint`.
-    if (failed(memref::resolveSourceIndicesExpandShape(
-            storeOp.getLoc(), rewriter, expandShapeOp, indices, sourceIndices,
-            /*startsInbounds=*/true)))
-      return failure();
+    memref::resolveSourceIndicesExpandShape(
+        storeOp.getLoc(), rewriter, expandShapeOp, indices, sourceIndices,
+        /*startsInbounds=*/true);
 
     rewriter.replaceOpWithNewOp<AffineStoreOp>(
         storeOp, storeOp.getValueToStore(), expandShapeOp.getViewSource(),
@@ -204,10 +193,9 @@ public:
   }
 };
 
-class AffineStoreOpOfCollapseShapeOpFolder final
-    : public OpRewritePattern<AffineStoreOp> {
-public:
-  using OpRewritePattern<AffineStoreOp>::OpRewritePattern;
+struct AffineStoreOpOfCollapseShapeOpFolder final
+    : OpRewritePattern<AffineStoreOp> {
+  using Base::Base;
 
   LogicalResult matchAndRewrite(AffineStoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
@@ -223,10 +211,8 @@ public:
                               storeOp.getLoc(), rewriter, indices);
 
     SmallVector<Value> sourceIndices;
-    if (failed(memref::resolveSourceIndicesCollapseShape(
-            storeOp.getLoc(), rewriter, collapseShapeOp, indices,
-            sourceIndices)))
-      return failure();
+    memref::resolveSourceIndicesCollapseShape(
+        storeOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices);
 
     rewriter.replaceOpWithNewOp<AffineStoreOp>(
         storeOp, storeOp.getValueToStore(), collapseShapeOp.getViewSource(),
