@@ -5520,6 +5520,30 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Exception related: EhTypeIdOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhTypeIdOp : CIR_Op<"eh.typeid",
+  [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Compute exception type id from it's global type symbol";
+  let description = [{
+    Returns the exception type id for a given global symbol representing
+    a type.
+
+    Example:
+    ```mlir
+    %type_id = cir.eh.typeid @_ZTIi
+    ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$type_sym);
+  let results = (outs CIR_UInt32:$type_id);
+  let assemblyFormat = [{
+    $type_sym attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
