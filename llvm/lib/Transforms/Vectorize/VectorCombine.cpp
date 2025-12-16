@@ -33,6 +33,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
@@ -148,6 +149,7 @@ private:
   bool foldShuffleChainsToReduce(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
   bool foldSignBitReductionCmp(Instruction &I);
+  bool foldICmpEqZeroVectorReduce(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool shrinkType(Instruction &I);
@@ -4367,7 +4369,186 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
   Value *NewReduce = Builder.CreateIntrinsic(ScalarTy, NewIID, {X});
   Value *NewCmp = IsNegativeCheck(Check) ? Builder.CreateIsNeg(NewReduce)
                                          : Builder.CreateIsNotNeg(NewReduce);
+  replaceValue(I, *NewCmp);
+  return true;
+}
 
+/// vector.reduce.OP f(X_i) == 0 -> vector.reduce.OP X_i == 0
+///
+/// We can prove it for cases when:
+///
+///   1.  OP X_i == 0 <=> \forall i \in [1, N] X_i == 0
+///   1'. OP X_i == 0 <=> \exists j \in [1, N] X_j == 0
+///   2.  f(x) == 0 <=> x == 0
+///
+/// From 1 and 2 (or 1' and 2), we can infer that
+///
+///   OP f(X_i) == 0 <=> OP X_i == 0.
+///
+///                  (1)
+///   OP f(X_i) == 0 <=> \forall i \in [1, N] f(X_i) == 0
+///                  (2)
+///                  <=> \forall i \in [1, N] X_i == 0
+///                  (1)
+///                  <=> OP(X_i) == 0
+///
+/// For some of the OP's and f's, we need to have domain constraints on X
+/// to ensure properties 1 (or 1') and 2.
+bool VectorCombine::foldICmpEqZeroVectorReduce(Instruction &I) {
+  CmpPredicate Pred;
+  Value *Op;
+  if (!match(&I, m_ICmp(Pred, m_Value(Op), m_Zero())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  auto *II = dyn_cast<IntrinsicInst>(Op);
+  if (!II)
+    return false;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax:
+    break;
+  default:
+    return false;
+  }
+
+  Value *InnerOp = II->getArgOperand(0);
+
+  // TODO: fixed vector type might be too restrictive
+  if (!II->hasOneUse() || !isa<FixedVectorType>(InnerOp->getType()))
+    return false;
+
+  Value *X = nullptr;
+
+  // Check for zero-preserving operations where f(x) = 0 <=> x = 0
+  //
+  //   1. f(x) = shl nuw x, y for arbitrary y
+  //   2. f(x) = mul nuw x, c for defined c != 0
+  //   3. f(x) = zext x
+  //   4. f(x) = sext x
+  //   5. f(x) = neg x
+  //
+  if (!(match(InnerOp, m_NUWShl(m_Value(X), m_Value())) ||      // Case 1
+        match(InnerOp, m_NUWMul(m_Value(X), m_NonZeroInt())) || // Case 2
+        match(InnerOp, m_ZExt(m_Value(X))) ||                   // Case 3
+        match(InnerOp, m_SExt(m_Value(X))) ||                   // Case 4
+        match(InnerOp, m_Neg(m_Value(X)))                       // Case 5
+        ))
+    return false;
+
+  SimplifyQuery S = SQ.getWithInstruction(&I);
+  auto *XTy = cast<FixedVectorType>(X->getType());
+
+  // Check for domain constraints for all supported reductions.
+  //
+  //  a. OR X_i   - has property 1  for every X
+  //  b. UMAX X_i - has property 1  for every X
+  //  c. UMIN X_i - has property 1' for every X
+  //  d. SMAX X_i - has property 1  for X >= 0
+  //  e. SMIN X_i - has property 1' for X >= 0
+  //  f. ADD X_i  - has property 1  for X >= 0 && ADD X_i doesn't sign wrap
+  //
+  // In order for the proof to work, we need 1 (or 1') to be true for both
+  // OP f(X_i) and OP X_i and that's why below we check constraints twice.
+  //
+  // NOTE: ADD X_i holds property 1 for a mirror case as well, i.e. when
+  //       X <= 0 && ADD X_i doesn't sign wrap. However, due to the nature
+  //       of known bits, we can't reasonably hold knowledge of "either 0
+  //       or negative".
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::vector_reduce_add: {
+    // We need to check that both X_i and f(X_i) have enough leading
+    // zeros to not overflow.
+    KnownBits KnownX = computeKnownBits(X, S);
+    KnownBits KnownFX = computeKnownBits(InnerOp, S);
+    unsigned NumElems = XTy->getNumElements();
+    // Adding N elements loses at most ceil(log2(N)) leading bits.
+    unsigned LostBits = Log2_32_Ceil(NumElems);
+    unsigned LeadingZerosX = KnownX.countMinLeadingZeros();
+    unsigned LeadingZerosFX = KnownFX.countMinLeadingZeros();
+    // Need at least one leading zero left after summation to ensure no overflow
+    if (LeadingZerosX <= LostBits || LeadingZerosFX <= LostBits)
+      return false;
+
+    // We are not checking whether X or f(X) are positive explicitly because
+    // we implicitly checked for it when we checked if both cases have enough
+    // leading zeros to not wrap addition.
+    break;
+  }
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax:
+    // Check whether X >= 0 and f(X) >= 0
+    if (!isKnownNonNegative(InnerOp, S) || !isKnownNonNegative(X, S))
+      return false;
+
+    break;
+  default:
+    break;
+  };
+
+  LLVM_DEBUG(dbgs() << "Found a reduction to 0 comparison with removable op: "
+                    << *II << "\n");
+
+  // For zext/sext, check if the transform is profitable using cost model.
+  // For other operations (shl, mul, neg), we're removing an instruction
+  // while keeping the same reduction type, so it's always profitable.
+  if (isa<ZExtInst>(InnerOp) || isa<SExtInst>(InnerOp)) {
+    auto *FXTy = cast<FixedVectorType>(InnerOp->getType());
+    Intrinsic::ID IID = II->getIntrinsicID();
+
+    InstructionCost ExtCost = TTI.getCastInstrCost(
+        cast<CastInst>(InnerOp)->getOpcode(), FXTy, XTy,
+        TTI::CastContextHint::None, CostKind, cast<CastInst>(InnerOp));
+
+    InstructionCost OldReduceCost, NewReduceCost;
+    switch (IID) {
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_or:
+      OldReduceCost = TTI.getArithmeticReductionCost(
+          getArithmeticReductionInstruction(IID), FXTy, std::nullopt, CostKind);
+      NewReduceCost = TTI.getArithmeticReductionCost(
+          getArithmeticReductionInstruction(IID), XTy, std::nullopt, CostKind);
+      break;
+    case Intrinsic::vector_reduce_umin:
+    case Intrinsic::vector_reduce_umax:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_smax:
+      OldReduceCost =
+          TTI.getMinMaxReductionCost(IID, FXTy, FastMathFlags(), CostKind);
+      NewReduceCost =
+          TTI.getMinMaxReductionCost(IID, XTy, FastMathFlags(), CostKind);
+      break;
+    default:
+      llvm_unreachable("Unexpected reduction");
+    }
+
+    InstructionCost OldCost = OldReduceCost + ExtCost;
+    InstructionCost NewCost =
+        NewReduceCost + (InnerOp->hasOneUse() ? 0 : ExtCost);
+
+    LLVM_DEBUG(dbgs() << "Found a removable extension before reduction: "
+                      << *InnerOp << "\n  OldCost: " << OldCost
+                      << " vs NewCost: " << NewCost << "\n");
+
+    // We consider transformation to still be potentially beneficial even
+    // when the costs are the same because we might remove a use from f(X)
+    // and unlock other optimizations. Equal costs would just mean that we
+    // didn't make it worse in the worst case.
+    if (NewCost > OldCost)
+      return false;
+  }
+
+  // Since we support zext and sext as f, we might change the scalar type
+  // of the intrinsic.
+  Type *Ty = XTy->getScalarType();
+  Value *NewReduce = Builder.CreateIntrinsic(Ty, II->getIntrinsicID(), {X});
+  Value *NewCmp =
+      Builder.CreateICmp(Pred, NewReduce, ConstantInt::getNullValue(Ty));
   replaceValue(I, *NewCmp);
   return true;
 }
@@ -5405,6 +5586,8 @@ bool VectorCombine::run() {
         break;
       case Instruction::ICmp:
         if (foldSignBitReductionCmp(I))
+          return true;
+        if (foldICmpEqZeroVectorReduce(I))
           return true;
         [[fallthrough]];
       case Instruction::FCmp:
