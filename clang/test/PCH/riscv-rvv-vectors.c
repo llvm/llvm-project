@@ -8,9 +8,9 @@
 // RUN:   -fsyntax-only -verify %t/test_pch_src.c
 //
 // Test precompiled module(only available after C++20)
-// RUN: %clang -target riscv64-linux-gnu -std=c++20 -march=rv64gcv -fmodule-header -o %t/test_module1.pcm %t/test_module1.h
-// RUN: %clang -target riscv64-linux-gnu -std=c++20 -march=rv64gcv -fmodule-header -o %t/test_module2.pcm %t/test_module2.h
-// RUN: %clang -target riscv64-linux-gnu -std=c++20 -march=rv64gcv -fmodule-file=%t/test_module1.pcm -fmodule-file=%t/test_module2.pcm \
+// RUN: %clang_cc1 -triple riscv64-linux-gnu -target-feature +v -std=c++20 -xc++-user-header -emit-header-unit -o %t/test_module1.pcm %t/test_module1.h
+// RUN: %clang_cc1 -triple riscv64-linux-gnu -target-feature +v -std=c++20 -xc++-user-header -emit-header-unit -o %t/test_module2.pcm %t/test_module2.h
+// RUN: %clang_cc1 -triple riscv64-linux-gnu -target-feature +v -std=c++20 -fmodule-file=%t/test_module1.pcm -fmodule-file=%t/test_module2.pcm \
 // RUN:   -fsyntax-only %t/test_module_src.cpp
 
 //--- test_pch.h
