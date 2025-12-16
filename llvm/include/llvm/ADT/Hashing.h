@@ -136,7 +136,7 @@ namespace detail {
 
 inline uint64_t fetch64(const char *p) {
   uint64_t result;
-  memcpy(&result, p, sizeof(result));
+  std::memcpy(&result, p, sizeof(result));
   if (sys::IsBigEndianHost)
     sys::swapByteOrder(result);
   return result;
@@ -144,7 +144,7 @@ inline uint64_t fetch64(const char *p) {
 
 inline uint32_t fetch32(const char *p) {
   uint32_t result;
-  memcpy(&result, p, sizeof(result));
+  std::memcpy(&result, p, sizeof(result));
   if (sys::IsBigEndianHost)
     sys::swapByteOrder(result);
   return result;
@@ -333,36 +333,33 @@ inline uint64_t get_execution_seed() {
 // for equality. For all the platforms we care about, this holds for integers
 // and pointers, but there are platforms where it doesn't and we would like to
 // support user-defined types which happen to satisfy this property.
-template <typename T> struct is_hashable_data
-  : std::integral_constant<bool, ((is_integral_or_enum<T>::value ||
-                                   std::is_pointer<T>::value) &&
-                                  64 % sizeof(T) == 0)> {};
+template <typename T>
+struct is_hashable_data : std::bool_constant<((is_integral_or_enum<T>::value ||
+                                               std::is_pointer<T>::value) &&
+                                              64 % sizeof(T) == 0)> {};
 
 // Special case std::pair to detect when both types are viable and when there
 // is no alignment-derived padding in the pair. This is a bit of a lie because
 // std::pair isn't truly POD, but it's close enough in all reasonable
 // implementations for our use case of hashing the underlying data.
-template <typename T, typename U> struct is_hashable_data<std::pair<T, U> >
-  : std::integral_constant<bool, (is_hashable_data<T>::value &&
-                                  is_hashable_data<U>::value &&
-                                  (sizeof(T) + sizeof(U)) ==
-                                   sizeof(std::pair<T, U>))> {};
+template <typename T, typename U>
+struct is_hashable_data<std::pair<T, U>>
+    : std::bool_constant<(is_hashable_data<T>::value &&
+                          is_hashable_data<U>::value &&
+                          (sizeof(T) + sizeof(U)) == sizeof(std::pair<T, U>))> {
+};
 
 /// Helper to get the hashable data representation for a type.
-/// This variant is enabled when the type itself can be used.
-template <typename T>
-std::enable_if_t<is_hashable_data<T>::value, T>
-get_hashable_data(const T &value) {
-  return value;
-}
-/// Helper to get the hashable data representation for a type.
-/// This variant is enabled when we must first call hash_value and use the
-/// result as our data.
-template <typename T>
-std::enable_if_t<!is_hashable_data<T>::value, size_t>
-get_hashable_data(const T &value) {
-  using ::llvm::hash_value;
-  return hash_value(value);
+template <typename T> auto get_hashable_data(const T &value) {
+  if constexpr (is_hashable_data<T>::value) {
+    // This variant is enabled when the type itself can be used.
+    return value;
+  } else {
+    // This variant is enabled when we must first call hash_value and use the
+    // result as our data.
+    using ::llvm::hash_value;
+    return static_cast<size_t>(hash_value(value));
+  }
 }
 
 /// Helper to store data from a value into a buffer and advance the
@@ -379,7 +376,7 @@ bool store_and_advance(char *&buffer_ptr, char *buffer_end, const T& value,
   if (buffer_ptr + store_size > buffer_end)
     return false;
   const char *value_data = reinterpret_cast<const char *>(&value);
-  memcpy(buffer_ptr, value_data + offset, store_size);
+  std::memcpy(buffer_ptr, value_data + offset, store_size);
   buffer_ptr += store_size;
   return true;
 }
@@ -513,7 +510,7 @@ public:
       // with the variadic combine because that formation can have varying
       // argument types.
       size_t partial_store_size = buffer_end - buffer_ptr;
-      memcpy(buffer_ptr, &data, partial_store_size);
+      std::memcpy(buffer_ptr, &data, partial_store_size);
 
       // If the store fails, our buffer is full and ready to hash. We have to
       // either initialize the hash state (on the first full buffer) or mix

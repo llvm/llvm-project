@@ -10,15 +10,11 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
-#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -211,13 +207,13 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     if (isZeroInteger(newLength)) {
       hasZeroLen = true;
     } else if (!hasZeroLen) {
-      Value check = b.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::eq,
+      Value check = arith::CmpIOp::create(
+          b, loc, arith::CmpIPredicate::eq,
           getValueOrCreateConstantIndexOp(b, loc, newLength),
           getValueOrCreateConstantIndexOp(b, loc, zero));
       dynHasZeroLenCond =
           dynHasZeroLenCond
-              ? b.create<arith::OrIOp>(loc, check, dynHasZeroLenCond)
+              ? arith::OrIOp::create(b, loc, check, dynHasZeroLenCond)
               : check;
     }
 
@@ -241,7 +237,7 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   auto castResult = [&](Value val) -> Value {
     if (resultType == val.getType())
       return val;
-    return b.create<tensor::CastOp>(loc, resultType, val);
+    return tensor::CastOp::create(b, loc, resultType, val);
   };
 
   // In cases where the original data source is unused: Emit a GenerateOp and
@@ -249,10 +245,10 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   // have a dimension of size 0, the semantics of which is unclear.)
   auto createGenerateOp = [&]() {
     // Create GenerateOp.
-    auto generateOp = b.create<tensor::GenerateOp>(
-        loc, resultType, dynDims,
+    auto generateOp = tensor::GenerateOp::create(
+        b, loc, resultType, dynDims,
         [&](OpBuilder &builder, Location gLoc, ValueRange indices) {
-          builder.create<tensor::YieldOp>(gLoc, padValue);
+          tensor::YieldOp::create(builder, gLoc, padValue);
         });
     return generateOp;
   };
@@ -261,10 +257,10 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   // the result shape of the new SliceOp has a zero dimension.
   auto createPadOfExtractSlice = [&]() {
     // Create pad(extract_slice(x)).
-    auto newSliceOp = b.create<tensor::ExtractSliceOp>(
-        loc, padOp.getSource(), newOffsets, newLengths, newStrides);
-    auto newPadOp = b.create<PadOp>(
-        loc, Type(), newSliceOp, newLows, newHighs,
+    auto newSliceOp = tensor::ExtractSliceOp::create(
+        b, loc, padOp.getSource(), newOffsets, newLengths, newStrides);
+    auto newPadOp = PadOp::create(
+        b, loc, Type(), newSliceOp, newLows, newHighs,
         /*nofold=*/padOp.getNofold(),
         getPrunedAttributeList(padOp, PadOp::getAttributeNames()));
 
@@ -291,17 +287,17 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     Operation *thenOp;
     Operation *elseOp;
     Operation *sliceOp;
-    auto result = b.create<scf::IfOp>(
-        loc, dynHasZeroLenCond,
+    auto result = scf::IfOp::create(
+        b, loc, dynHasZeroLenCond,
         /*thenBuilder=*/
         [&](OpBuilder &b, Location loc) {
           thenOp = createGenerateOp();
-          b.create<scf::YieldOp>(loc, castResult(thenOp->getResult(0)));
+          scf::YieldOp::create(b, loc, castResult(thenOp->getResult(0)));
         },
         /*elseBuilder=*/
         [&](OpBuilder &b, Location loc) {
           std::tie(elseOp, sliceOp) = createPadOfExtractSlice();
-          b.create<scf::YieldOp>(loc, castResult(elseOp->getResult(0)));
+          scf::YieldOp::create(b, loc, castResult(elseOp->getResult(0)));
         });
     return TilingResult{
         {elseOp}, SmallVector<Value>(result->getResults()), {sliceOp}};

@@ -116,6 +116,9 @@ def err_enumerator_unnamed_no_def : Error<
 def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
+def ext_ms_c_empty_enum_type : Extension<
+  "empty enumeration types are a Microsoft extension">,
+  InGroup<MicrosoftEmptyEnum>;
 def ext_c23_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a C23 extension">,
   InGroup<C23>;
@@ -215,6 +218,8 @@ def warn_c23_compat_case_range : Warning<
   DefaultIgnore, InGroup<CPre2yCompat>;
 def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
+def err_c2y_labeled_break_continue : Error<
+  "named %select{'break'|'continue'}0 is only supported in C2y">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -276,6 +281,9 @@ def err_expected_while : Error<"expected 'while' in do/while loop">;
 
 def err_expected_semi_after_stmt : Error<"expected ';' after %0 statement">;
 def err_expected_semi_after_expr : Error<"expected ';' after expression">;
+def warn_attr_in_secondary_block : ExtWarn<
+  "ISO C does not allow an attribute list to appear here">,
+  InGroup<DiagGroup<"c-attribute-extension">>;
 def err_extraneous_token_before_semi : Error<"extraneous '%0' before ';'">;
 
 def err_expected_semi_after_method_proto : Error<
@@ -342,6 +350,8 @@ def err_address_of_label_outside_fn : Error<
   "use of address-of-label extension outside of a function body">;
 def err_asm_operand_wide_string_literal : Error<
   "cannot use %select{unicode|wide}0 string literal in 'asm'">;
+def err_defer_ts_labeled_stmt : Error<
+  "substatement of defer must not be a label">;
 
 def err_asm_expected_string : Error<
   "expected string literal %select{or parenthesized constant expression |}0in 'asm'">;
@@ -474,9 +484,6 @@ def err_bool_redeclaration : Error<
 def warn_cxx98_compat_static_assert : Warning<
   "'static_assert' declarations are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def ext_ms_static_assert : ExtWarn<
-  "use of 'static_assert' without inclusion of <assert.h> is a Microsoft "
-  "extension">, InGroup<MicrosoftStaticAssert>;
 def ext_cxx_static_assert_no_message : ExtWarn<
   "'static_assert' with no message is a C++17 extension">, InGroup<CXX17>;
 def ext_c_static_assert_no_message : ExtWarn<
@@ -503,7 +510,7 @@ def err_expected_coloncolon_after_super : Error<
   "expected '::' after '__super'">;
 
 def ext_decomp_decl_empty : ExtWarn<
-  "ISO C++17 does not allow a decomposition group to be empty">,
+  "ISO C++17 does not allow a structured binding group to be empty">,
   InGroup<DiagGroup<"empty-decomposition">>;
 
 def err_function_parameter_limit_exceeded : Error<
@@ -830,6 +837,9 @@ def err_ms_property_expected_comma_or_rparen : Error<
   "expected ',' or ')' at end of property accessor list">;
 def err_ms_property_initializer : Error<
   "property declaration cannot have a default member initializer">;
+def ext_invalid_attribute_argument
+    : Extension<"'%0' is not allowed in an attribute argument list">,
+    InGroup<DiagGroup<"attribute-preprocessor-tokens">>;
 
 def err_assume_attr_expects_cond_expr : Error<
   "use of this expression in an %0 attribute requires parentheses">;
@@ -930,6 +940,10 @@ def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
 def warn_missing_dependent_template_keyword : ExtWarn<
   "use 'template' keyword to treat '%0' as a dependent template name">;
+
+def err_cxx26_template_template_params
+    : Error<"%select{variable template|concept}0 template parameter is a C++2c "
+            "extension">;
 
 def ext_extern_template : Extension<
   "extern templates are a C++11 extension">, InGroup<CXX11>;
@@ -1065,14 +1079,15 @@ def ext_ms_abstract_keyword : ExtWarn<
   "'abstract' keyword is a Microsoft extension">,
   InGroup<MicrosoftAbstract>;
 
-def ext_relocatable_keyword : ExtWarn<
-  "'%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0' "
-  "keyword is a C++2c extension">,
-  InGroup<CXX26>;
-def warn_relocatable_keyword  : Warning<
-  "'%select{trivially_relocatable|replaceable}0_if_eligible' "
-  "keyword is incompatible with standards before C++2c">,
-  DefaultIgnore, InGroup<CXXPre26Compat>;
+def ext_relocatable_keyword
+    : ExtWarn<
+          "'trivially_relocatable_if_eligible' keyword is a C++2c extension">,
+      InGroup<CXX26>;
+def warn_relocatable_keyword
+    : Warning<"'trivially_relocatable_if_eligible' keyword is incompatible "
+              "with standards before C++2c">,
+      DefaultIgnore,
+      InGroup<CXXPre26Compat>;
 
 def err_access_specifier_interface : Error<
   "interface types cannot specify '%select{private|protected}0' access">;
@@ -1080,8 +1095,8 @@ def err_access_specifier_interface : Error<
 def err_duplicate_class_virt_specifier : Error<
   "class already marked '%0'">;
 
-def err_duplicate_class_relocation_specifier : Error<
-  "class already marked '%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0'">;
+def err_duplicate_class_relocation_specifier
+    : Error<"class already marked 'trivially_relocatable_if_eligible'">;
 
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
@@ -1132,7 +1147,7 @@ def warn_cxx23_compat_binding_pack : Warning<
 def err_capture_default_first : Error<
   "capture default must be first">;
 def ext_decl_attrs_on_lambda : ExtWarn<
-  "%select{an attribute specifier sequence|%0}1 in this position "
+  "%select{an attribute specifier sequence|%1}0 in this position "
   "is a C++23 extension">, InGroup<CXX23AttrsOnLambda>;
 def ext_lambda_missing_parens : ExtWarn<
   "lambda without a parameter clause is a C++23 extension">,
@@ -1488,6 +1503,11 @@ def err_omp_multiple_step_or_linear_modifier : Error<
   "multiple %select{'step size'|'linear modifier'}0 found in linear clause">;
 def err_omp_deprecate_old_syntax: Error<
   "old syntax '%0' on '%1' clause was deprecated, use new syntax '%2'">;
+def err_omp_allocator_comma_separator :
+  Error<"',' not allowed as separator in 'uses_allocators' clause, use ';' instead">;
+def warn_omp_future_directive_spelling: Warning<
+  "directive spelling '%0' is introduced in a later OpenMP version">,
+  InGroup<OpenMPFuture>;
 def warn_pragma_expected_colon_r_paren : Warning<
   "missing ':' or ')' after %0 - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unknown_directive : Error<
@@ -1496,8 +1516,8 @@ def err_omp_unexpected_directive : Error<
   "unexpected OpenMP directive %select{|'#pragma omp %1'}0">;
 def err_omp_expected_punc : Error<
   "expected ',' or ')' in '%0' %select{clause|directive}1">;
-def warn_clause_expected_string : Warning<
-  "expected string literal in 'clause %0' - ignoring">, InGroup<IgnoredPragmas>;
+def warn_clause_expected_string: Warning<
+  "expected string %select{|literal }1in 'clause %0' - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unexpected_clause : Error<
   "unexpected OpenMP clause '%0' in directive '#pragma omp %1'">;
 def err_omp_unexpected_clause_extension_only : Error<
@@ -1571,6 +1591,9 @@ def err_omp_declare_target_multiple : Error<
   "%0 appears multiple times in clauses on the same declare target directive">;
 def err_omp_declare_target_indirect_device_type: Error<
   "only 'device_type(any)' clause is allowed with indirect clause">;
+def warn_omp_deprecated_declare_target_delimited_form :
+  Warning<"the delimited form of '#pragma omp declare target' without clauses is deprecated; use '#pragma omp begin declare target' instead">,
+  InGroup<Deprecated>;
 def err_omp_expected_clause: Error<
   "expected at least one clause on '#pragma omp %0' directive">;
 def err_omp_mapper_illegal_identifier : Error<
@@ -1588,6 +1611,9 @@ def err_omp_unknown_adjust_args_op
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;
+def err_omp_non_by_ref_need_device_addr_modifier_argument
+    : Error<"expected reference type argument on 'adjust_args' clause with "
+            "'need_device_addr' modifier">;
 def err_omp_declare_variant_duplicate_nested_trait : Error<
   "nested OpenMP context selector contains duplicated trait '%0'"
   " in selector '%1' and set '%2' with different score">;
@@ -1701,6 +1727,10 @@ def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' c
   "%0 is ignored">, InGroup<OpenMPExtensions>;
 def err_omp_duplicate_modifier : Error<"duplicate modifier '%0' in '%1' clause">;
 def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
+def err_omp_unknown_need_device_ptr_kind
+    : Error<
+        "invalid argument for 'need_device_ptr' kind in 'adjust_args' clause; "
+        "expected 'fp_nullify' or 'fb_preserve'">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
@@ -1842,9 +1872,8 @@ def note_max_tokens_total_override : Note<"total token limit set here">;
 
 def err_expected_semantic_identifier : Error<
   "expected HLSL Semantic identifier">;
-def err_invalid_declaration_in_hlsl_buffer : Error<
-  "invalid declaration inside %select{tbuffer|cbuffer}0">;
-def err_unknown_hlsl_semantic : Error<"unknown HLSL semantic %0">;
+def err_invalid_declaration_in_hlsl_buffer
+    : Error<"invalid declaration inside %select{tbuffer|cbuffer}0">;
 def err_hlsl_separate_attr_arg_and_number : Error<"wrong argument format for hlsl attribute, use %0 instead">;
 def ext_hlsl_access_specifiers : ExtWarn<
   "access specifiers are a clang HLSL extension">,
@@ -1857,8 +1886,7 @@ def err_hlsl_virtual_inheritance
     : Error<"virtual inheritance is unsupported in HLSL">;
 
 // HLSL Root Signature Parser Diagnostics
-def err_hlsl_unexpected_end_of_params
-    : Error<"expected %0 to denote end of parameters, or, another valid parameter of %1">;
+def err_hlsl_invalid_token : Error<"invalid %select{parameter|value}0 of %1">;
 def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
 def err_hlsl_rootsig_missing_param : Error<"did not specify mandatory parameter '%0'">;
 def err_hlsl_number_literal_overflow : Error<

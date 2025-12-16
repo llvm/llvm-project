@@ -1,4 +1,4 @@
-; RUN: llc  -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GCN
+; RUN: llc  -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s -check-prefix=GCN
 
 ; GCN-LABEL: ; %bb.0:
 ; GCN: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO:[0-9]+]]{{\:}}[[ADDR_HI:[0-9]+]]], 0x0

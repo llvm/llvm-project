@@ -51,7 +51,7 @@ username for an individual isn't available, the brackets will be empty.
 * Nikhil Gupta (Nvidia) []
 * Oliver Hunt (Apple) [@ojhunt]
 * Peter Smith (ARM) [@smithp35]
-* Pietro Albini (Ferrous Systems; Rust) [@pietroalbini]
+* Pietro Albini (Oxide Computer Company; Rust) [@pietroalbini]
 * Serge Guelton (Mozilla) [@serge-sans-paille]
 * Sergey Zverev (Intel) [@offsake]
 * Shayne Hiet-Block (Microsoft) [@GreatKeeper]
@@ -95,7 +95,7 @@ Nomination process
 
 Anyone who feels they meet these criteria can nominate themselves, or may be nominated by a third party such as an existing LLVM Security Response Group member. The nomination should state whether the nominee is nominated as an individual, researcher, or as a vendor contact. It should clearly describe the grounds for nomination.
 
-For the moment, nominations are generally proposed, discussed, and voted on using a github pull request. An `example nomination is available here`_. The use of pull requests helps keep membership discussions open, transparent, and easily accessible to LLVM developers in many ways. If, for any reason, a fully-world-readable nomination seems inappropriate, you may reach out to the LLVM Security Response Group via the `report a vulnerability`_ route, and a discussion can be had about the best way to approach nomination, given the constraints that individuals are under.
+For the moment, nominations are generally proposed, discussed, and voted on using a GitHub pull request. An `example nomination is available here`_. The use of pull requests helps keep membership discussions open, transparent, and easily accessible to LLVM developers in many ways. If, for any reason, a fully-world-readable nomination seems inappropriate, you may reach out to the LLVM Security Response Group via the `report a vulnerability`_ route, and a discussion can be had about the best way to approach nomination, given the constraints that individuals are under.
 
 Choosing new members
 --------------------
@@ -157,6 +157,7 @@ Members of the LLVM Security Response Group are expected to:
 * Help write and review patches to address security issues.
 * Participate in the member nomination and removal processes.
 
+.. _security-group-discussion-medium:
 
 Discussion Medium
 =================
@@ -204,6 +205,10 @@ The LLVM Security Policy may be changed by majority vote of the LLVM Security Re
 What is considered a security issue?
 ====================================
 
+We define "security-sensitive" to mean that a discovered bug or vulnerability
+may require coordinated disclosure, and therefore should be reported to the LLVM
+Security Response group rather than publishing in the public bug tracker.
+
 The LLVM Project has a significant amount of code, and not all of it is
 considered security-sensitive. This is particularly true because LLVM is used in
 a wide variety of circumstances: there are different threat models, untrusted
@@ -217,31 +222,52 @@ security-sensitive). This requires a rationale, and buy-in from the LLVM
 community as for any RFC. In some cases, parts of the codebase could be handled
 as security-sensitive but need significant work to get to the stage where that's
 manageable. The LLVM community will need to decide whether it wants to invest in
-making these parts of the code securable, and maintain these security
-properties over time. In all cases the LLVM Security Response Group should be consulted,
-since they'll be responding to security issues filed against these parts of the
-codebase.
+making these parts of the code securable, and maintain these security properties
+over time. In all cases the LLVM Security Response Group
+`should be consulted <security-group-discussion-medium_>`__, since they'll be
+responding to security issues filed against these parts of the codebase.
 
-If you're not sure whether an issue is in-scope for this security process or
-not, err towards assuming that it is. The Security Response Group might agree or disagree
-and will explain its rationale in the report, as well as update this document
-through the above process.
+The security-sensitive parts of the LLVM Project currently are the following:
 
-The security-sensitive parts of the LLVM Project currently are the following.
-Note that this list can change over time.
+* Code generation: most miscompilations are not security sensitive. However, a
+  miscompilation where there are clear indications that it can result in the
+  produced binary becoming significantly easier to exploit could be considered
+  security sensitive, and should be reported to the security response group.
+* Run-time libraries: only parts of the run-time libraries are considered
+  security-sensitive. The parts that are not considered security-sensitive are
+  documented below.
 
-* None are currently defined. Please don't let this stop you from reporting
-  issues to the LLVM Security Response Group that you believe are security-sensitive.
+The following parts of the LLVM Project are currently treated as non-security
+sensitive:
 
-The parts of the LLVM Project which are currently treated as non-security
-sensitive are the following. Note that this list can change over time.
+* LLVM's language frontends, analyzers, optimizers, and code generators for
+  which a malicious input can cause undesirable behavior. For example, a
+  maliciously crafted C, Rust or bitcode input file can cause arbitrary code to
+  execute in LLVM. These parts of LLVM haven't been hardened, and handling
+  untrusted code usually also includes running utilities such as make which can
+  more readily perform malicious things. For example, vulnerabilities in clang,
+  clangd, or the LLVM optimizer in a JIT caused by untrusted inputs are not
+  security-sensitive.
+* The following parts of the run-time libraries are explicitly not considered
+  security-sensitive:
 
-* Language front-ends, such as clang, for which a malicious input file can cause
-  undesirable behavior. For example, a maliciously crafted C or Rust source file
-  can cause arbitrary code to execute in LLVM. These parts of LLVM haven't been
-  hardened, and compiling untrusted code usually also includes running utilities
-  such as `make` which can more readily perform malicious things.
+  * parts of the run-time libraries that are not meant to be included in
+    production binaries. For example, most sanitizers are not considered
+    security-sensitive as they are meant to be used during development only, not
+    in production.
+  * for libc and libc++: if a user calls library functionality in an undefined
+    or otherwise incorrect way, this will most likely not be considered a
+    security issue, unless the libc/libc++ documentation explicitly promises to
+    harden or catch that specific undefined behaviour or incorrect usage.
+  * unwinding and exception handling: the implementations are not hardened
+    against malformed or malicious unwind or exception handling data. This is
+    not considered security sensitive.
 
+Note that both the explicit security-sensitive and explicit non-security
+sensitive lists can change over time. If you're not sure whether an issue is
+in-scope for this security process or not, err towards assuming that it is. The
+Security Response Group might agree or disagree and will explain its rationale
+in the report, as well as update this document through the above process.
 
 .. _CVE process: https://cve.mitre.org
 .. _report a vulnerability: https://github.com/llvm/llvm-security-repo/security/advisories/new

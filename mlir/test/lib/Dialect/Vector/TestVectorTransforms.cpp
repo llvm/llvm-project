@@ -172,6 +172,42 @@ struct TestVectorUnrollingPatterns
                       .setFilterConstraint([](Operation *op) {
                         return success(isa<vector::ReductionOp>(op));
                       }));
+    populateVectorUnrollPatterns(patterns,
+                                 UnrollVectorOptions()
+                                     .setNativeShape(ArrayRef<int64_t>{8})
+                                     .setFilterConstraint([](Operation *op) {
+                                       return success(isa<vector::StepOp>(op));
+                                     }));
+    populateVectorUnrollPatterns(
+        patterns,
+        UnrollVectorOptions()
+            .setNativeShape(ArrayRef<int64_t>{8, 8})
+            .setFilterConstraint([](Operation *op) {
+              return success(
+                  isa<vector::CreateMaskOp, vector::ConstantMaskOp>(op));
+            }));
+    populateVectorUnrollPatterns(
+        patterns,
+        UnrollVectorOptions()
+            .setNativeShapeFn(
+                [](Operation *op) -> std::optional<SmallVector<int64_t>> {
+                  auto shapeCast = dyn_cast<vector::ShapeCastOp>(op);
+                  if (!shapeCast)
+                    return std::nullopt;
+
+                  auto resultShape = shapeCast.getResultVectorType().getShape();
+                  // Special case with leading unit dims and different inner dim
+                  // for result and target shape.
+                  if (resultShape.size() == 2 && resultShape[0] == 1 &&
+                      resultShape[1] == 32) {
+                    return SmallVector<int64_t>{1, 16};
+                  }
+                  // Default case: [2,4] for all tests.
+                  return SmallVector<int64_t>{2, 4};
+                })
+            .setFilterConstraint([](Operation *op) {
+              return success(isa<vector::ShapeCastOp>(op));
+            }));
     populateVectorUnrollPatterns(
         patterns, UnrollVectorOptions()
                       .setNativeShape(ArrayRef<int64_t>{1, 3, 4, 2})
@@ -341,36 +377,6 @@ struct TestVectorTransferOpt
   void runOnOperation() override {
     IRRewriter rewriter(&getContext());
     transferOpflowOpt(rewriter, getOperation());
-  }
-};
-
-struct TestVectorTransferCollapseInnerMostContiguousDims
-    : public PassWrapper<TestVectorTransferCollapseInnerMostContiguousDims,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
-      TestVectorTransferCollapseInnerMostContiguousDims)
-
-  TestVectorTransferCollapseInnerMostContiguousDims() = default;
-  TestVectorTransferCollapseInnerMostContiguousDims(
-      const TestVectorTransferCollapseInnerMostContiguousDims &pass) = default;
-
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<memref::MemRefDialect, affine::AffineDialect>();
-  }
-
-  StringRef getArgument() const final {
-    return "test-vector-transfer-collapse-inner-most-dims";
-  }
-
-  StringRef getDescription() const final {
-    return "Test lowering patterns that reduces the rank of the vector "
-           "transfer memory and vector operands.";
-  }
-
-  void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    populateVectorTransferCollapseInnerMostContiguousDimsPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -546,8 +552,8 @@ static Value allocateGlobalSharedMemory(Location loc, OpBuilder &builder,
 
   auto ip = builder.saveInsertionPoint();
   builder.setInsertionPoint(moduleOp);
-  auto global = builder.create<memref::GlobalOp>(
-      loc,
+  auto global = memref::GlobalOp::create(
+      builder, loc,
       /*sym_name=*/symbolName,
       /*sym_visibility=*/builder.getStringAttr("private"),
       /*type=*/memrefType,
@@ -560,19 +566,18 @@ static Value allocateGlobalSharedMemory(Location loc, OpBuilder &builder,
   global->moveBefore(&moduleOp.front());
 
   builder.restoreInsertionPoint(ip);
-  return builder.create<memref::GetGlobalOp>(loc, memrefType, symbolName);
+  return memref::GetGlobalOp::create(builder, loc, memrefType, symbolName);
 }
 
 static Value warpReduction(Location loc, OpBuilder &builder, Value input,
                            CombiningKind kind, uint32_t size) {
   // First reduce on a single thread to get per lane reduction value.
-  Value laneVal = builder.create<vector::ReductionOp>(loc, kind, input);
+  Value laneVal = vector::ReductionOp::create(builder, loc, kind, input);
   // Parallel reduction using butterfly shuffles.
   for (uint64_t i = 1; i < size; i <<= 1) {
-    Value shuffled = builder
-                         .create<gpu::ShuffleOp>(loc, laneVal, i,
-                                                 /*width=*/size,
-                                                 /*mode=*/gpu::ShuffleMode::XOR)
+    Value shuffled = gpu::ShuffleOp::create(builder, loc, laneVal, i,
+                                            /*width=*/size,
+                                            /*mode=*/gpu::ShuffleMode::XOR)
                          .getShuffleResult();
     laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
   }
@@ -647,12 +652,11 @@ struct TestVectorDistribution
              "unsupported shuffle type");
       Type i32Type = builder.getIntegerType(32);
       Value srcIdxI32 =
-          builder.create<arith::IndexCastOp>(loc, i32Type, srcIdx);
-      Value warpSzI32 = builder.create<arith::ConstantOp>(
-          loc, builder.getIntegerAttr(i32Type, warpSz));
-      Value result = builder
-                         .create<gpu::ShuffleOp>(loc, val, srcIdxI32, warpSzI32,
-                                                 gpu::ShuffleMode::IDX)
+          arith::IndexCastOp::create(builder, loc, i32Type, srcIdx);
+      Value warpSzI32 = arith::ConstantOp::create(
+          builder, loc, builder.getIntegerAttr(i32Type, warpSz));
+      Value result = gpu::ShuffleOp::create(builder, loc, val, srcIdxI32,
+                                            warpSzI32, gpu::ShuffleMode::IDX)
                          .getResult(0);
       return result;
     };
@@ -680,7 +684,7 @@ struct TestVectorDistribution
     options.warpAllocationFn = allocateGlobalSharedMemory;
     options.warpSyncronizationFn = [](Location loc, OpBuilder &builder,
                                       gpu::WarpExecuteOnLane0Op warpOp) {
-      builder.create<gpu::BarrierOp>(loc);
+      gpu::BarrierOp::create(builder, loc);
     };
     // Test on one pattern in isolation.
     if (warpOpToSCF) {
@@ -1020,6 +1024,22 @@ struct TestEliminateVectorMasks
                          VscaleRange{vscaleMin, vscaleMax});
   }
 };
+
+struct TestVectorShuffleLowering
+    : public PassWrapper<TestVectorShuffleLowering,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorShuffleLowering)
+
+  StringRef getArgument() const final { return "test-vector-shuffle-lowering"; }
+  StringRef getDescription() const final {
+    return "Test lowering patterns for vector.shuffle with mixed-size inputs";
+  }
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorShuffleLoweringPatterns(patterns);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -1037,8 +1057,6 @@ void registerTestVectorLowerings() {
 
   PassRegistration<TestVectorTransferOpt>();
 
-  PassRegistration<TestVectorTransferCollapseInnerMostContiguousDims>();
-
   PassRegistration<TestVectorSinkPatterns>();
 
   PassRegistration<TestVectorReduceToContractPatternsPatterns>();
@@ -1050,6 +1068,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestFlattenVectorTransferPatterns>();
 
   PassRegistration<TestVectorScanLowering>();
+
+  PassRegistration<TestVectorShuffleLowering>();
 
   PassRegistration<TestVectorDistribution>();
 

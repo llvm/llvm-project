@@ -11,6 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// RISC-V specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def SDT_NDS_FMV_BF16_X
+    : SDTypeProfile<1, 1, [SDTCisVT<0, bf16>, SDTCisVT<1, XLenVT>]>;
+def SDT_NDS_FMV_X_ANYEXTBF16
+    : SDTypeProfile<1, 1, [SDTCisVT<0, XLenVT>, SDTCisVT<1, bf16>]>;
+
+def riscv_nds_fmv_bf16_x
+    : SDNode<"RISCVISD::NDS_FMV_BF16_X", SDT_NDS_FMV_BF16_X>;
+def riscv_nds_fmv_x_anyextbf16
+    : SDNode<"RISCVISD::NDS_FMV_X_ANYEXTBF16", SDT_NDS_FMV_X_ANYEXTBF16>;
+
+//===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
@@ -53,12 +67,44 @@ def simm20_lsb000 : Operand<XLenVT> {
   let DecoderMethod = "decodeSImmOperandAndLslN<20, 3>";
 }
 
+// Predicate: True if immediate is a power of 2.
+def PowerOf2 : PatLeaf<(imm), [{
+  return isPowerOf2_64(N->getZExtValue());
+}]>;
+
+// Transformation function: Get log2 of immediate.
+def Log2 : SDNodeXForm<imm, [{
+  uint64_t Imm = Log2_64(N->getZExtValue());
+  return CurDAG->getTargetConstant(Imm, SDLoc(N), N->getValueType(0));
+}]>;
+
+//===----------------------------------------------------------------------===//
+// Pseudo table
+//===----------------------------------------------------------------------===//
+
+class RISCVNDSVLN<bit M, bit U, bits<3> S, bits<3> L> {
+  bits<1> Masked = M;
+  bits<1> Unsigned = U;
+  bits<3> Log2SEW = S;
+  bits<3> LMUL = L;
+  Pseudo Pseudo = !cast<Pseudo>(NAME);
+}
+
+def RISCVNDSVLNTable : GenericTable {
+  let FilterClass = "RISCVNDSVLN";
+  let CppTypeName = "NDSVLNPseudo";
+  let Fields = ["Masked", "Unsigned", "Log2SEW", "LMUL", "Pseudo"];
+  let PrimaryKey = ["Masked", "Unsigned", "Log2SEW", "LMUL"];
+  let PrimaryKeyName = "getNDSVLNPseudo";
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
 class NDSRVInstBB<bit cs, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs1, uimmlog2xlen:$cimm, bare_simm11_lsb0:$imm10),
+    : RVInst<(outs),
+             (ins GPR:$rs1, uimmlog2xlen:$cimm, bare_simm11_lsb0:$imm10),
              opcodestr, "$rs1, $cimm, $imm10", [], InstFormatNDS_BRANCH_10>,
       Sched<[WriteJmp, ReadIALU]> {
   bits<10> imm10;
@@ -106,7 +152,8 @@ class NDSRVInstBC<bits<3> funct3, string opcodestr>
 }
 
 class NDSRVInstBFO<bits<3> funct3, string opcodestr>
-    : RVInst<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$msb, uimmlog2xlen:$lsb),
+    : RVInst<(outs GPR:$rd),
+             (ins GPR:$rs1, uimmlog2xlen:$msb, uimmlog2xlen:$lsb),
              opcodestr, "$rd, $rs1, $msb, $lsb", [], InstFormatOther>,
       Sched<[WriteIALU, ReadIALU]> {
   bits<5> rd;
@@ -315,6 +362,58 @@ class NDSRVInstSDGP<bits<3> funct3, string opcodestr>
   let mayStore = 1;
 }
 
+class NDSRVInstVSINTLN<bits<5> funct5, string opcodestr>
+    : RVInst<(outs VR:$vd), (ins GPRMemZeroOffset:$rs1),
+             opcodestr, "$vd, ${rs1}", [], InstFormatR>,
+      VLESchedMC {
+  bits<5> rs1;
+  bits<5> vd;
+
+  let Inst{31-26} = 0b000001;
+  let Inst{25} = 1;
+  let Inst{24-20} = funct5;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+  let Uses = [VTYPE, VL];
+}
+
+class NDSRVInstVSINTCvt<bits<5> fucnt5, string opcodestr>
+    : RVInst<(outs VR:$vd), (ins VR:$vs, VMaskOp:$vm),
+             opcodestr, "$vd, $vs$vm", [], InstFormatR> {
+  bits<5> vs;
+  bits<5> vd;
+  bit vm;
+
+  let Inst{31-26} = 0b000000;
+  let Inst{25} = vm;
+  let Inst{24-20} = vs;
+  let Inst{19-15} = fucnt5;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Uses = [FRM, VL, VTYPE];
+  let RVVConstraint = VMConstraint;
+}
+
+class NDSRVInstBFHCvt<bits<7> funct7, bits<5> rs1val, DAGOperand rdty,
+                      DAGOperand rs2ty, string opcodestr>
+    : RVInstR<funct7, 0b100, OPC_CUSTOM_2, (outs rdty:$rd),
+              (ins rs2ty:$rs2), opcodestr, "$rd, $rs2"> {
+  let rs1 = rs1val;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let mayRaiseFPException = 1;
+}
+
 class NDSRVInstVFPMAD<bits<6> funct6, string opcodestr>
     : RVInst<(outs VR:$vd), (ins VR:$vs2, FPR32:$rs1, VMaskOp:$vm),
              opcodestr # "." # "vf", "$vd, $rs1, $vs2$vm", [], InstFormatR>,
@@ -361,13 +460,13 @@ class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
   let RVVConstraint = VMConstraint;
 }
 
-class NDSRVInstVBFHCvt<bits<7> funct7, bits<5> vs1, string opcodestr>
-    : RVInst<(outs VR:$vd), (ins VR:$vs2, VMaskOp:$vm),
+class NDSRVInstVBFHCvt<bits<5> vs1, string opcodestr>
+    : RVInst<(outs VR:$vd), (ins VR:$vs2),
              opcodestr, "$vd, $vs2", [], InstFormatR> {
   bits<5> vs2;
   bits<5> vd;
 
-  let Inst{31-25} = funct7;
+  let Inst{31-25} = 0b0000000;
   let Inst{24-20} = vs2;
   let Inst{19-15} = vs1;
   let Inst{14-12} = 0b100;
@@ -380,9 +479,125 @@ class NDSRVInstVBFHCvt<bits<7> funct7, bits<5> vs1, string opcodestr>
   let Uses = [VL, VTYPE];
 }
 
+class NDSRVInstVLN<bits<5> funct5, string opcodestr>
+    : RVInst<(outs VR:$vd), (ins GPRMemZeroOffset:$rs1, VMaskOp:$vm),
+             opcodestr, "$vd, ${rs1}$vm", [], InstFormatR>,
+      VLESchedMC {
+  bits<5> rs1;
+  bits<5> vd;
+  bit vm;
+
+  let Inst{31-26} = 0b000001;
+  let Inst{25} = vm;
+  let Inst{24-20} = funct5;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+
+  let Uses = [VTYPE, VL];
+  let RVVConstraint = VMConstraint;
+}
+
+class VPseudoVLN8NoMask<VReg RetClass, bit U> :
+      RISCVVPseudo<(outs RetClass:$rd),
+                   (ins RetClass:$dest,
+                        GPRMemZeroOffset:$rs1,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []>,
+      RISCVNDSVLN</*Masked*/0, /*Unsigned*/U, !logtwo(8), VLMul> {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasVecPolicyOp = 1;
+  let Constraints = "$rd = $dest";
+}
+
+class VPseudoVLN8Mask<VReg RetClass, bit U> :
+      RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1,
+                        VMV0:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                   []>,
+      RISCVNDSVLN</*Masked*/1, /*Unsigned*/U, !logtwo(8), VLMul> {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
+  let Constraints = "$rd = $passthru";
+}
+
 //===----------------------------------------------------------------------===//
 // Multiclass
 //===----------------------------------------------------------------------===//
+
+multiclass VPseudoVWCVT_S_BF16 {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxListFW in {
+    let VLMul = m.value, SEW=16 in
+    def "_" # m.MX : VPseudoUnaryNoMask<m.wvrclass, m.vrclass, constraint>,
+                     SchedUnary<"WriteVFWCvtIToFV", "ReadVFWCvtIToFV", m.MX, 16,
+                                forcePassthruRead=true>;
+  }
+}
+
+multiclass VPseudoVNCVT_BF16_S {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxListFW in {
+    let VLMul = m.value, SEW=16 in
+    def "_" # m.MX : VPseudoUnaryNoMaskRoundingMode<m.vrclass, m.wvrclass,
+                                                    constraint>,
+                     SchedUnary<"WriteVFNCvtFToFV", "ReadVFNCvtFToFV", m.MX, 16,
+                                forcePassthruRead=true>;
+  }
+}
+
+multiclass VPatConversionS_BF16<string intrinsic, string instruction> {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    let Predicates = [HasVendorXAndesVBFHCvt] in
+    def : VPatUnaryNoMask<intrinsic, instruction, "BF16",
+                          fwti.Vector, fvti.Vector,
+                          fvti.Log2SEW, fvti.LMul,
+                          fwti.RegClass, fvti.RegClass>;
+  }
+}
+
+multiclass VPatConversionBF16_S<string intrinsic, string instruction> {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    let Predicates = [HasVendorXAndesVBFHCvt] in
+    def : VPatUnaryNoMaskRoundingMode<intrinsic, instruction, "S",
+                                      fvti.Vector, fwti.Vector,
+                                      fvti.Log2SEW, fvti.LMul,
+                                      fvti.RegClass, fwti.RegClass>;
+  }
+}
+
+multiclass VPseudoVLN8<bit U> {
+  foreach lmul = MxSet<8>.m in {
+    defvar LInfo = lmul.MX;
+    defvar vreg = lmul.vrclass;
+    let VLMul = lmul.value in {
+      def "_V_" # LInfo :
+        VPseudoVLN8NoMask<vreg, U>,
+        VLESched<LInfo>;
+      def "_V_" # LInfo # "_MASK" :
+        VPseudoVLN8Mask<vreg, U>,
+        RISCVMaskedPseudo<MaskIdx=2>,
+        VLESched<LInfo>;
+    }
+  }
+}
 
 let fprclass = !cast<RegisterClass>("FPR32") in
 def SCALAR_F16_FPR32 : FPR_Info<16>;
@@ -400,7 +615,8 @@ multiclass VPatVFPMADBinaryV_VX_RM<string intrinsic, string instruction,
                                    list<VTypeInfo> vtilist> {
   foreach vti = vtilist in {
     defvar kind = "V"#vti.ScalarSuffix;
-    defm : VPatBinaryRoundingMode<intrinsic, instruction#"_"#kind#"_"#vti.LMul.MX,
+    defm : VPatBinaryRoundingMode<intrinsic,
+                                  instruction#"_"#kind#"_"#vti.LMul.MX,
                                   vti.Vector, vti.Vector, f32, vti.Mask,
                                   vti.Log2SEW, vti.RegClass,
                                   vti.RegClass, FPR32>;
@@ -480,15 +696,49 @@ def NDS_SDGP  : NDSRVInstSDGP<0b111, "nds.sdgp">;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
 
 //===----------------------------------------------------------------------===//
+// XAndesBFHCvt
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesBFHCvt] in {
+def NDS_FCVT_S_BF16 : NDSRVInstBFHCvt<0b0000000, 0b00010,
+                                      FPR32, FPR16, "nds.fcvt.s.bf16">,
+                      Sched<[WriteFCvtF16ToF32, ReadFCvtF16ToF32]>;
+def NDS_FCVT_BF16_S : NDSRVInstBFHCvt<0b0000000, 0b00011,
+                                      FPR16, FPR32, "nds.fcvt.bf16.s">,
+                      Sched<[WriteFCvtF32ToF16, ReadFCvtF32ToF16]>;
+}
+
+//===----------------------------------------------------------------------===//
 // XAndesVBFHCvt
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
     mayRaiseFPException = true in {
 let RVVConstraint = VS2Constraint, DestEEW = EEWSEWx2 in
-def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b0000000, 0b00000, "nds.vfwcvt.s.bf16">;
+def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b00000, "nds.vfwcvt.s.bf16">;
 let Uses = [FRM, VL, VTYPE] in
-def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b0000000, 0b00001, "nds.vfncvt.bf16.s">;
+def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b00001, "nds.vfncvt.bf16.s">;
+}
+
+//===----------------------------------------------------------------------===//
+// XAndesVSIntH
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesVSIntH] in {
+  def NDS_VFWCVT_F_N  : NDSRVInstVSINTCvt<0b00100, "nds.vfwcvt.f.n.v">;
+  def NDS_VFWCVT_F_NU : NDSRVInstVSINTCvt<0b00101, "nds.vfwcvt.f.nu.v">;
+  def NDS_VFWCVT_F_B  : NDSRVInstVSINTCvt<0b00110, "nds.vfwcvt.f.b.v">;
+  def NDS_VFWCVT_F_BU : NDSRVInstVSINTCvt<0b00111, "nds.vfwcvt.f.bu.v">;
+  def NDS_VLE4_V : NDSRVInstVSINTLN<0b00000, "nds.vle4.v">;
+}
+
+//===----------------------------------------------------------------------===//
+// XAndesVSIntLoad
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesVSIntLoad] in {
+def NDS_VLN8_V  : NDSRVInstVLN<0b00010, "nds.vln8.v">;
+def NDS_VLNU8_V : NDSRVInstVLN<0b00011, "nds.vlnu8.v">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -516,7 +766,43 @@ def NDS_VD4DOTSU_VV : NDSRVInstVD4DOT<0b000101, "nds.vd4dotsu">;
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
+class NDS_BBPat<CondCode Cond, NDSRVInstBB Inst>
+    : Pat<(riscv_brcc (and(XLenVT GPR:$rs1), PowerOf2:$mask), 0, Cond,
+              bb:$imm10),
+          (Inst GPR:$rs1, (Log2 PowerOf2:$mask), bare_simm11_lsb0:$imm10)>;
+
+class NDS_BCPat<CondCode Cond, NDSRVInstBC Inst>
+    : Pat<(riscv_brcc (XLenVT GPR:$rs1), uimm7:$cimm, Cond, bb:$imm10),
+          (Inst GPR:$rs1, uimm7:$cimm, bare_simm11_lsb0:$imm10)>;
+
+defm CC_UImmLog2XLen_NDS : SelectCC_GPR_riirr<GPR, uimmlog2xlen>;
+defm CC_UImm7_NDS        : SelectCC_GPR_riirr<GPR, uimm7>;
+
+class SelectNDS_BB<CondCode Cond>
+    : Pat<(riscv_selectcc_frag:$cc (and(XLenVT GPR:$lhs), PowerOf2:$mask), 0,
+              Cond, (XLenVT GPR:$truev), GPR:$falsev),
+          (Select_GPR_Using_CC_UImmLog2XLen_NDS GPR:$lhs, (Log2 PowerOf2:$mask),
+              (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+
+class SelectNDS_BC<CondCode Cond>
+    : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), uimm7:$cimm, Cond,
+              (XLenVT GPR:$truev), GPR:$falsev),
+          (Select_GPR_Using_CC_UImm7_NDS GPR:$lhs, uimm7:$cimm,
+              (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+
 let Predicates = [HasVendorXAndesPerf] in {
+
+def : NDS_BBPat<SETEQ, NDS_BBC>;
+def : NDS_BBPat<SETNE, NDS_BBS>;
+
+def : SelectNDS_BB<SETEQ>;
+def : SelectNDS_BB<SETNE>;
+
+def : NDS_BCPat<SETEQ, NDS_BEQC>;
+def : NDS_BCPat<SETNE, NDS_BNEC>;
+
+def : SelectNDS_BC<SETEQ>;
+def : SelectNDS_BC<SETNE>;
 
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (NDS_BFOS GPR:$rs1, 15, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (NDS_BFOS GPR:$rs1, 7, 0)>;
@@ -547,14 +833,55 @@ def : Sh2AddPat<NDS_LEA_W_ZE>;
 def : Sh3AddPat<NDS_LEA_D_ZE>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
 
+let Predicates = [HasVendorXAndesBFHCvt] in {
+def : Pat<(fpextend (bf16 FPR16:$rs)),
+          (NDS_FCVT_S_BF16 (bf16 FPR16:$rs))>;
+def : Pat<(bf16 (fpround FPR32:$rs)),
+          (NDS_FCVT_BF16_S FPR32:$rs)>;
+
+let isCodeGenOnly = 1 in {
+def NDS_FMV_BF16_X : FPUnaryOp_r<0b1111000, 0b00000, 0b000, FPR16, GPR, "fmv.w.x">,
+                     Sched<[WriteFMovI32ToF32, ReadFMovI32ToF32]>;
+def NDS_FMV_X_BF16 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR16, "fmv.x.w">,
+                     Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
+}
+
+def : Pat<(riscv_nds_fmv_bf16_x GPR:$src), (NDS_FMV_BF16_X GPR:$src)>;
+def : Pat<(riscv_nds_fmv_x_anyextbf16 (bf16 FPR16:$src)),
+          (NDS_FMV_X_BF16 (bf16 FPR16:$src))>;
+} // Predicates = [HasVendorXAndesBFHCvt]
+
+// Use flh/fsh to load/store bf16 if zfh is enabled.
+let Predicates = [HasStdExtZfh, HasVendorXAndesBFHCvt] in {
+def : LdPat<load, FLH, bf16>;
+def : StPat<store, FSH, FPR16, bf16>;
+} // Predicates = [HasStdExtZfh, HasVendorXAndesBFHCvt]
+
+let Predicates = [HasVendorXAndesVBFHCvt] in {
+defm PseudoNDS_VFWCVT_S_BF16 : VPseudoVWCVT_S_BF16;
+defm PseudoNDS_VFNCVT_BF16_S : VPseudoVNCVT_BF16_S;
+} // Predicates = [HasVendorXAndesVBFHCvt]
+
+defm : VPatConversionS_BF16<"int_riscv_nds_vfwcvt_s_bf16",
+                            "PseudoNDS_VFWCVT_S">;
+defm : VPatConversionBF16_S<"int_riscv_nds_vfncvt_bf16_s",
+                            "PseudoNDS_VFNCVT_BF16">;
+
+let Predicates = [HasVendorXAndesVSIntLoad] in {
+defm PseudoNDS_VLN8  : VPseudoVLN8<0>;
+defm PseudoNDS_VLNU8 : VPseudoVLN8<1>;
+} // Predicates = [HasVendorXAndesVSIntLoad]
+
 let Predicates = [HasVendorXAndesVPackFPH],
     mayRaiseFPException = true in {
 defm PseudoNDS_VFPMADT : VPseudoVFPMAD_VF_RM;
 defm PseudoNDS_VFPMADB : VPseudoVFPMAD_VF_RM;
 } // Predicates = [HasVendorXAndesVPackFPH]
 
-defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadt", "PseudoNDS_VFPMADT", AllFP16Vectors>;
-defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadb", "PseudoNDS_VFPMADB", AllFP16Vectors>;
+defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadt", "PseudoNDS_VFPMADT",
+                               AllFP16Vectors>;
+defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadb", "PseudoNDS_VFPMADB",
+                               AllFP16Vectors>;
 
 let Predicates = [HasVendorXAndesVDot] in {
 defm PseudoNDS_VD4DOTS  : VPseudoVD4DOT_VV;
@@ -574,6 +901,29 @@ defset list<VTypeInfoToWide> AllQuadWidenableVD4DOTVectors = {
   def : VTypeInfoToWide<VI16M8,  VI64M8>;
 }
 
-defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dots", "PseudoNDS_VD4DOTS", AllQuadWidenableVD4DOTVectors>;
-defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotu", "PseudoNDS_VD4DOTU", AllQuadWidenableVD4DOTVectors>;
-defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU", AllQuadWidenableVD4DOTVectors>;
+defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dots", "PseudoNDS_VD4DOTS",
+                            AllQuadWidenableVD4DOTVectors>;
+defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotu", "PseudoNDS_VD4DOTU",
+                            AllQuadWidenableVD4DOTVectors>;
+defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
+                            AllQuadWidenableVD4DOTVectors>;
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions for SFB (Short Forward Branch)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasShortForwardBranchIALU], hasSideEffects = 0,
+    mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
+def PseudoCCNDS_BFOS : Pseudo<(outs GPR:$dst),
+                              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
+                               GPR:$falsev, GPR:$rs1,
+                               uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
+                       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
+                              ReadSFBALU]>;
+def PseudoCCNDS_BFOZ : Pseudo<(outs GPR:$dst),
+                              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
+                               GPR:$falsev, GPR:$rs1,
+                               uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
+                       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
+                              ReadSFBALU]>;
+}

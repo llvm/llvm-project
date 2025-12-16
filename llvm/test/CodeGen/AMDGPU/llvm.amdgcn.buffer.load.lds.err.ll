@@ -1,13 +1,13 @@
 ; RUN: split-file %s %t
 ;
 ; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 %t/struct.ll 2>&1 | FileCheck --ignore-case %s
-; RUN: not --crash llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 %t/struct.ll 2>&1 | FileCheck --ignore-case %s
+; RUN: not llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 %t/struct.ll 2>&1 | FileCheck --ignore-case %s
 ; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 %t/struct.ptr.ll 2>&1 | FileCheck --ignore-case --check-prefix=LEGALIZER-FAIL %s
-; RUN: not --crash llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 %t/struct.ptr.ll 2>&1 | FileCheck --ignore-case %s
+; RUN: not llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 %t/struct.ptr.ll 2>&1 | FileCheck --ignore-case %s
 ; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 %t/raw.ll 2>&1 | FileCheck --ignore-case %s
-; RUN: not --crash llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 %t/raw.ll 2>&1 | FileCheck --ignore-case %s
+; RUN: not llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 %t/raw.ll 2>&1 | FileCheck --ignore-case %s
 ; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 %t/raw.ptr.ll 2>&1 | FileCheck --ignore-case --check-prefix=LEGALIZER-FAIL %s
-; RUN: not --crash llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 %t/raw.ptr.ll 2>&1 | FileCheck --ignore-case %s
+; RUN: not llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 %t/raw.ptr.ll 2>&1 | FileCheck --ignore-case %s
 ;
 ; CHECK: LLVM ERROR: Cannot select
 ; LEGALIZER-FAIL: Do not know how to expand this operator's operand!

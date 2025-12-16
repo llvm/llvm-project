@@ -16,10 +16,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SERIALIZE_H
 
 #include "Representation.h"
-#include "clang/AST/AST.h"
-#include "clang/AST/CommentVisitor.h"
 #include <string>
-#include <vector>
 
 using namespace clang::comments;
 
@@ -72,6 +69,10 @@ std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const ConceptDecl *D, const FullComment *FC, const Location &Loc,
          bool PublicOnly);
 
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const VarDecl *D, const FullComment *FC, const Location &Loc,
+         bool PublicOnly);
+
 // Function to hash a given USR value for storage.
 // As USRs (Unified Symbol Resolution) could be large, especially for functions
 // with long type arguments, we use 160-bits SHA1(USR) values to
@@ -79,7 +80,7 @@ emitInfo(const ConceptDecl *D, const FullComment *FC, const Location &Loc,
 // memory (vs storing USRs directly).
 SymbolID hashUSR(llvm::StringRef USR);
 
-std::string serialize(std::unique_ptr<Info> &I);
+std::string serialize(std::unique_ptr<Info> &I, DiagnosticsEngine &Diags);
 
 } // namespace serialize
 } // namespace doc

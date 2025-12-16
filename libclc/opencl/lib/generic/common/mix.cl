@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_mad.h>
-#include <clc/opencl/clc.h>
 
 #define __CLC_BODY <mix.inc>
 #include <clc/math/gentype.inc>

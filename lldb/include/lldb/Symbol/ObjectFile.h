@@ -18,6 +18,8 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
+#include "lldb/Utility/NonNullSharedPtr.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Threading.h"
@@ -103,10 +105,10 @@ public:
   /// more than one architecture or object.
   ObjectFile(const lldb::ModuleSP &module_sp, const FileSpec *file_spec_ptr,
              lldb::offset_t file_offset, lldb::offset_t length,
-             lldb::DataBufferSP data_sp, lldb::offset_t data_offset);
+             lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset);
 
   ObjectFile(const lldb::ModuleSP &module_sp, const lldb::ProcessSP &process_sp,
-             lldb::addr_t header_addr, lldb::DataBufferSP data_sp);
+             lldb::addr_t header_addr, lldb::DataExtractorSP extractor_sp);
 
   /// Destructor.
   ///
@@ -150,7 +152,7 @@ public:
   static lldb::ObjectFileSP
   FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file_spec,
              lldb::offset_t file_offset, lldb::offset_t file_size,
-             lldb::DataBufferSP &data_sp, lldb::offset_t &data_offset);
+             lldb::DataExtractorSP extractor_sp, lldb::offset_t &data_offset);
 
   /// Find a ObjectFile plug-in that can parse a file in memory.
   ///
@@ -417,7 +419,7 @@ public:
   /// Attempts to parse the object header.
   ///
   /// This function is used as a test to see if a given plug-in instance can
-  /// parse the header data already contained in ObjectFile::m_data. If an
+  /// parse the header data already contained in ObjectFile::m_data_nsp. If an
   /// object file parser does not recognize that magic bytes in a header,
   /// false should be returned and the next plug-in can attempt to parse an
   /// object file.
@@ -544,9 +546,9 @@ public:
     return false;
   }
 
-  /// Get metadata about threads from the corefile.
+  /// Get metadata about thread ids from the corefile.
   ///
-  /// The corefile may have metadata (e.g. a Mach-O "thread extrainfo"
+  /// The corefile may have metadata (e.g. a Mach-O "process metadata"
   /// LC_NOTE) which for the threads in the process; this method tries
   /// to retrieve them.
   ///
@@ -567,6 +569,18 @@ public:
   virtual bool GetCorefileThreadExtraInfos(std::vector<lldb::tid_t> &tids) {
     return false;
   }
+
+  /// Get process metadata from the corefile in a StructuredData dictionary.
+  ///
+  /// The corefile may have notes (e.g. a Mach-O "process metadata" LC_NOTE)
+  /// which provide metadata about the process and threads in a JSON or
+  /// similar format.
+  ///
+  /// \return
+  ///     A StructuredData object with the metadata in the note, if there is
+  ///     one.  An empty shared pointer is returned if not metadata is found,
+  ///     or a problem parsing it.
+  virtual StructuredData::ObjectSP GetCorefileProcessMetadata() { return {}; }
 
   virtual lldb::RegisterContextSP
   GetThreadContextAtIndex(uint32_t idx, lldb_private::Thread &thread) {
@@ -745,6 +759,12 @@ public:
     return false;
   }
 
+  /// Returns true if the section is a global offset table section.
+  virtual bool IsGOTSection(const lldb_private::Section &section) const {
+    assert(section.GetObjectFile() == this && "Wrong object file!");
+    return false;
+  }
+
   /// Get a hash that can be used for caching object file releated information.
   ///
   /// Data for object files can be cached between runs of debug sessions and
@@ -758,6 +778,8 @@ public:
   std::string GetObjectName() const;
 
 protected:
+  typedef NonNullSharedPtr<lldb_private::DataExtractor> DataExtractorNSP;
+
   // Member variables.
   FileSpec m_file;
   Type m_type;
@@ -767,8 +789,10 @@ protected:
   lldb::addr_t m_length; ///< The length of this object file if it is known (can
                          ///be zero if length is unknown or can't be
                          ///determined).
-  DataExtractor
-      m_data; ///< The data for this object file so things can be parsed lazily.
+  DataExtractorNSP m_data_nsp; ///< The data for this object file so things
+                               ///< can be parsed lazily.  This shared pointer
+                               ///< will always have a DataExtractor object,
+                               ///< although it may only be default-constructed.
   lldb::ProcessWP m_process_wp;
   /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;

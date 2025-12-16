@@ -287,7 +287,7 @@ public:
   LLVM_ABI void finalizeWithMemoryManagerLocking();
 
 private:
-  LLVM_ABI_FRIEND friend void jitLinkForORC(
+  LLVM_ABI friend void jitLinkForORC(
       object::OwningBinary<object::ObjectFile> O,
       RuntimeDyld::MemoryManager &MemMgr, JITSymbolResolver &Resolver,
       bool ProcessAllSections,

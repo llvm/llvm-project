@@ -21,161 +21,6 @@
 
 namespace llvm {
 class LoongArchSubtarget;
-namespace LoongArchISD {
-enum NodeType : unsigned {
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-
-  // TODO: add more LoongArchISDs
-  CALL,
-  CALL_MEDIUM,
-  CALL_LARGE,
-  RET,
-  TAIL,
-  TAIL_MEDIUM,
-  TAIL_LARGE,
-
-  // Select
-  SELECT_CC,
-
-  // 32-bit shifts, directly matching the semantics of the named LoongArch
-  // instructions.
-  SLL_W,
-  SRA_W,
-  SRL_W,
-
-  ROTL_W,
-  ROTR_W,
-
-  // unsigned 32-bit integer division
-  DIV_W,
-  MOD_W,
-  DIV_WU,
-  MOD_WU,
-
-  // FPR<->GPR transfer operations
-  MOVGR2FR_W_LA64,
-  MOVFR2GR_S_LA64,
-  MOVFCSR2GR,
-  MOVGR2FCSR,
-
-  FTINT,
-
-  // Bit counting operations
-  CLZ_W,
-  CTZ_W,
-
-  BSTRINS,
-  BSTRPICK,
-
-  // Byte-swapping and bit-reversal
-  REVB_2H,
-  REVB_2W,
-  BITREV_4B,
-  BITREV_8B,
-  BITREV_W,
-
-  // Intrinsic operations start ============================================
-  BREAK,
-  CACOP_D,
-  CACOP_W,
-  DBAR,
-  IBAR,
-  SYSCALL,
-
-  // CRC check operations
-  CRC_W_B_W,
-  CRC_W_H_W,
-  CRC_W_W_W,
-  CRC_W_D_W,
-  CRCC_W_B_W,
-  CRCC_W_H_W,
-  CRCC_W_W_W,
-  CRCC_W_D_W,
-
-  CSRRD,
-
-  // Write new value to CSR and return old value.
-  // Operand 0: A chain pointer.
-  // Operand 1: The new value to write.
-  // Operand 2: The address of the required CSR.
-  // Result 0: The old value of the CSR.
-  // Result 1: The new chain pointer.
-  CSRWR,
-
-  // Similar to CSRWR but with a write mask.
-  // Operand 0: A chain pointer.
-  // Operand 1: The new value to write.
-  // Operand 2: The write mask.
-  // Operand 3: The address of the required CSR.
-  // Result 0: The old value of the CSR.
-  // Result 1: The new chain pointer.
-  CSRXCHG,
-
-  // IOCSR access operations
-  IOCSRRD_B,
-  IOCSRRD_W,
-  IOCSRRD_H,
-  IOCSRRD_D,
-  IOCSRWR_B,
-  IOCSRWR_H,
-  IOCSRWR_W,
-  IOCSRWR_D,
-
-  // Read CPU configuration information operation
-  CPUCFG,
-
-  // Vector Shuffle
-  VREPLVE,
-  VSHUF,
-  VPICKEV,
-  VPICKOD,
-  VPACKEV,
-  VPACKOD,
-  VILVL,
-  VILVH,
-  VSHUF4I,
-  VREPLVEI,
-  VREPLGR2VR,
-  XVPERMI,
-
-  // Extended vector element extraction
-  VPICK_SEXT_ELT,
-  VPICK_ZEXT_ELT,
-
-  // Vector comparisons
-  VALL_ZERO,
-  VANY_ZERO,
-  VALL_NONZERO,
-  VANY_NONZERO,
-
-  // Floating point approximate reciprocal operation
-  FRECIPE,
-  FRSQRTE,
-
-  // Vector logicial left / right shift by immediate
-  VSLLI,
-  VSRLI,
-
-  // Vector byte logicial left / right shift
-  VBSLL,
-  VBSRL,
-
-  // Scalar load broadcast to vector
-  VLDREPL,
-
-  // Vector mask set by condition
-  VMSKLTZ,
-  VMSKGEZ,
-  VMSKEQZ,
-  VMSKNEZ,
-  XVMSKLTZ,
-  XVMSKGEZ,
-  XVMSKEQZ,
-  XVMSKNEZ,
-
-  // Intrinsic operations end =============================================
-};
-} // end namespace LoongArchISD
 
 class LoongArchTargetLowering : public TargetLowering {
   const LoongArchSubtarget &Subtarget;
@@ -194,9 +39,6 @@ public:
                           SelectionDAG &DAG) const override;
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
-
-  // This method returns the name of a target specific DAG node.
-  const char *getTargetNodeName(unsigned Opcode) const override;
 
   // Lower incoming arguments, copy physregs into vregs.
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
@@ -236,7 +78,7 @@ public:
                                           Value *NewVal, Value *Mask,
                                           AtomicOrdering Ord) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
@@ -320,13 +162,24 @@ public:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
+  bool shouldScalarizeBinop(SDValue VecOp) const override;
+  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                               unsigned Index) const override;
+  bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
+
+  /// Check if a constant splat can be generated using [x]vldi, where imm[12]
+  /// is 1.
+  std::pair<bool, uint64_t>
+  isImmVLDILegalForMode1(const APInt &SplatValue,
+                         const unsigned SplatBitSize) const;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
                                    unsigned ValNo, MVT ValVT,
                                    CCValAssign::LocInfo LocInfo,
                                    ISD::ArgFlagsTy ArgFlags, CCState &State,
-                                   bool IsFixed, bool IsRet, Type *OrigTy);
+                                   bool IsRet, Type *OrigTy);
 
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -372,15 +225,22 @@ private:
   SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITREVERSE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRotate(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorSRL(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

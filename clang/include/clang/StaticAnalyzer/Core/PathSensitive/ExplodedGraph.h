@@ -448,14 +448,15 @@ class ExplodedNodeSet {
 
 public:
   ExplodedNodeSet(ExplodedNode *N) {
-    assert(N && !static_cast<ExplodedNode*>(N)->isSink());
+    assert(N && !N->isSink());
     Impl.insert(N);
   }
 
   ExplodedNodeSet() = default;
 
   void Add(ExplodedNode *N) {
-    if (N && !static_cast<ExplodedNode*>(N)->isSink()) Impl.insert(N);
+    if (N && !N->isSink())
+      Impl.insert(N);
   }
 
   using iterator = ImplTy::iterator;

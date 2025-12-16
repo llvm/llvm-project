@@ -36,12 +36,11 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
@@ -105,7 +104,7 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
   // it is a function (avoiding a grammar ambiguity).
   bool wrapped = op->getNumResults() != 1;
   if (!wrapped && op->getResult(0).getType() &&
-      llvm::isa<FunctionType>(op->getResult(0).getType()))
+      isa<FunctionType>(op->getResult(0).getType()))
     wrapped = true;
 
   if (wrapped)
@@ -442,6 +441,7 @@ public:
   /// Print the given attribute without considering an alias.
   void printAttributeImpl(Attribute attr,
                           AttrTypeElision typeElision = AttrTypeElision::Never);
+  void printNamedAttribute(NamedAttribute attr);
 
   /// Print the alias for the given attribute, return failure if no alias could
   /// be printed.
@@ -481,7 +481,6 @@ protected:
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
                              ArrayRef<StringRef> elidedAttrs = {},
                              bool withKeyword = false);
-  void printNamedAttribute(NamedAttribute attr);
   void printTrailingLocation(Location loc, bool allowAlias = true);
   void printLocationInternal(LocationAttr loc, bool pretty = false,
                              bool isTopLevel = false);
@@ -801,6 +800,10 @@ private:
   void printAttributeWithoutType(Attribute attr) override {
     printAttribute(attr);
   }
+  void printNamedAttribute(NamedAttribute attr) override {
+    printAttribute(attr.getValue());
+  }
+
   LogicalResult printAlias(Attribute attr) override {
     initializer.visit(attr);
     return success();
@@ -975,6 +978,10 @@ private:
     recordAliasResult(
         initializer.visit(attr, canBeDeferred, /*elideType=*/true));
   }
+  void printNamedAttribute(NamedAttribute attr) override {
+    printAttribute(attr.getValue());
+  }
+
   LogicalResult printAlias(Attribute attr) override {
     printAttribute(attr);
     return success();
@@ -2025,7 +2032,7 @@ private:
 };
 
 template <typename Range>
-void printDimensionList(raw_ostream &stream, Range &&shape) {
+static void printDimensionList(raw_ostream &stream, Range &&shape) {
   llvm::interleave(
       shape, stream,
       [&stream](const auto &dimSize) {
@@ -2063,9 +2070,8 @@ static OpPrintingFlags verifyOpAndAdjustFlags(Operation *op,
     return failure();
   });
   if (failed(verify(op))) {
-    LLVM_DEBUG(llvm::dbgs()
-               << DEBUG_TYPE << ": '" << op->getName()
-               << "' failed to verify and will be printed in generic form\n");
+    LDBG() << op->getName()
+           << "' failed to verify and will be printed in generic form";
     printerFlags.printGenericOpForm();
   }
 
@@ -2194,10 +2200,9 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
           os << '>';
         }
         os << '[';
-        interleave(
-            loc.getLocations(),
-            [&](Location loc) { printLocationInternal(loc, pretty); },
-            [&]() { os << ", "; });
+        interleaveComma(loc.getLocations(), [&](Location loc) {
+          printLocationInternal(loc, pretty);
+        });
         os << ']';
       })
       .Default([&](LocationAttr loc) {
@@ -2381,7 +2386,6 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     return;
   return printAttributeImpl(attr, typeElision);
 }
-
 void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
                                           AttrTypeElision typeElision) {
   if (!isa<BuiltinDialect>(attr.getDialect())) {
@@ -2831,6 +2835,19 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         os << '>';
       })
       .Case<NoneType>([&](Type) { os << "none"; })
+      .Case<GraphType>([&](GraphType graphTy) {
+        os << '(';
+        interleaveComma(graphTy.getInputs(), [&](Type ty) { printType(ty); });
+        os << ") -> ";
+        ArrayRef<Type> results = graphTy.getResults();
+        if (results.size() == 1 && !isa<FunctionType, GraphType>(results[0])) {
+          printType(results[0]);
+        } else {
+          os << '(';
+          interleaveComma(results, [&](Type ty) { printType(ty); });
+          os << ')';
+        }
+      })
       .Default([&](Type type) { return printDialectType(type); });
 }
 
@@ -2971,6 +2988,11 @@ void AsmPrinter::printAttributeWithoutType(Attribute attr) {
   assert(impl &&
          "expected AsmPrinter::printAttributeWithoutType to be overriden");
   impl->printAttribute(attr, Impl::AttrTypeElision::Must);
+}
+
+void AsmPrinter::printNamedAttribute(NamedAttribute attr) {
+  assert(impl && "expected AsmPrinter::printNamedAttribute to be overriden");
+  impl->printNamedAttribute(attr);
 }
 
 void AsmPrinter::printKeywordOrString(StringRef keyword) {

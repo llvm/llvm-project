@@ -12,12 +12,12 @@
 
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/SelectorLocationsKind.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 
@@ -330,8 +330,7 @@ Stmt::child_range ObjCMessageExpr::children() {
 }
 
 Stmt::const_child_range ObjCMessageExpr::children() const {
-  auto Children = const_cast<ObjCMessageExpr *>(this)->children();
-  return const_child_range(Children.begin(), Children.end());
+  return const_cast<ObjCMessageExpr *>(this)->children();
 }
 
 StringRef ObjCBridgedCastExpr::getBridgeKindName() const {

@@ -85,8 +85,8 @@ func.func @transfer_read_dims_mismatch_contiguous(
 
 // CHECK-LABEL: func.func @transfer_read_dims_mismatch_contiguous(
 // CHECK-SAME:    %[[MEM:.+]]: memref<5x4x3x2xi8, {{.+}}>) -> vector<2x3x2xi8> {
-// CHECK:         %[[C0_I8:.+]] = arith.constant 0 : i8
-// CHECK:         %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C0_I8:.+]] = arith.constant 0 : i8
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
 // CHECK:         %[[COLLAPSED_MEM:.+]] = memref.collapse_shape %[[MEM]]
 // CHECK-SAME{LITERAL}: [[0], [1, 2, 3]]
 // CHECK-SAME:          : memref<5x4x3x2xi8, {{.+}}> into memref<5x24xi8, {{.+}}>
@@ -116,8 +116,8 @@ func.func @transfer_read_dims_mismatch_contiguous_unit_dims(
 // CHECK-LABEL: func.func @transfer_read_dims_mismatch_contiguous_unit_dims(
 // CHECK-SAME:    %[[MEM:.+]]: memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>)
 // CHECK-SAME:    -> vector<1x1x4x3x2xi8>
-// CHECK:       %[[C0_I8:.+]] = arith.constant 0 : i8
-// CHECK:       %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C0_I8:.+]] = arith.constant 0 : i8
+// CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 // CHECK:       %[[COLLAPSED:.+]] = memref.collapse_shape %[[MEM]]
 // CHECK-SAME{LITERAL}: [[0], [1], [2, 3, 4]]
 // CHECK-SAME:    : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>
@@ -149,8 +149,8 @@ func.func @transfer_read_non_contiguous_unit_dims(
 
 // CHECK-LABEL:   func.func @transfer_read_non_contiguous_unit_dims(
 // CHECK-SAME:      %[[MEM:.*]]: memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>) -> vector<1x1x3x2xi8> {
-// CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i8
-// CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : i8
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = memref.collapse_shape %[[MEM]]
 // CHECK-SAME{LITERAL}: [[0], [1], [2, 3]]
 // CHECK-SAME:        : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>> into memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>
@@ -182,8 +182,8 @@ func.func @transfer_read_dims_mismatch_non_zero_indices(
 // CHECK-LABEL:   func.func @transfer_read_dims_mismatch_non_zero_indices(
 // CHECK-SAME:      %[[IDX_1:.+]]: index, %[[IDX_2:.+]]: index,
 // CHECK-SAME:      %[[MEM:.+]]: memref<1x43x4x6xi32>
-// CHECK:           %[[C0_I32:.+]] = arith.constant 0 : i32
-// CHECK:           %[[C_0:.+]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C0_I32:.+]] = arith.constant 0 : i32
+// CHECK-DAG:       %[[C_0:.+]] = arith.constant 0 : index
 // CHECK:           %[[COLLAPSED_IN:.+]] = memref.collapse_shape %[[MEM]]
 // CHECK-SAME{LITERAL}: [[0], [1], [2, 3]]
 // CHECK-SAME:         : memref<1x43x4x6xi32> into memref<1x43x24xi32>
@@ -241,8 +241,8 @@ func.func @transfer_read_leading_dynamic_dims(
 
 // CHECK-LABEL: func @transfer_read_leading_dynamic_dims
 // CHECK-SAME:    %[[MEM:.+]]: memref<?x?x8x4xi8, {{.+}}>, %[[IDX_1:.+]]: index, %[[IDX_2:.+]]: index
-// CHECK:         %[[C0_I8:.+]] = arith.constant 0 : i8
-// CHECK:         %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C0_I8:.+]] = arith.constant 0 : i8
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
 // CHECK:         %[[COLLAPSED:.+]] = memref.collapse_shape %[[MEM]]
 // CHECK-SAME{LITERAL}: [[0], [1], [2, 3]]
 // CHECK-SAME:      : memref<?x?x8x4xi8, {{.+}}> into memref<?x?x32xi8, {{.+}}>
@@ -304,8 +304,8 @@ func.func @transfer_read_dynamic_dim_to_flatten(
 // CHECK-SAME:    %[[IDX_1:arg0]]
 // CHECK-SAME:    %[[IDX_2:arg1]]
 // CHECK-SAME:    %[[MEM:arg2]]
-// CHECK:              %[[C0_I32:.+]] = arith.constant 0 : i32
-// CHECK:              %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:          %[[C0_I32:.+]] = arith.constant 0 : i32
+// CHECK-DAG:          %[[C0:.+]] = arith.constant 0 : index
 // CHECK:              %[[COLLAPSED:.+]] = memref.collapse_shape %[[MEM]]
 // CHECK-SAME{LITERAL}:  [[0], [1], [2, 3]]
 // CHECK-SAME:           memref<1x?x4x6xi32> into memref<1x?x24xi32>

@@ -56,8 +56,7 @@ body:             |
     ; CHECK-LABEL: name: float_positive_zero
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
-    ; CHECK-NEXT: [[FMV_W_X:%[0-9]+]]:fpr32 = FMV_W_X [[COPY]]
+    ; CHECK-NEXT: [[FMV_W_X:%[0-9]+]]:fpr32 = FMV_W_X $x0
     ; CHECK-NEXT: $f10_f = COPY [[FMV_W_X]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
     %1:fprb(s32) = G_FCONSTANT float 0.000000e+00
@@ -164,17 +163,14 @@ body:             |
     ; RV32-LABEL: name: double_positive_zero
     ; RV32: liveins: $x10
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
-    ; RV32-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x0
-    ; RV32-NEXT: [[BuildPairF64Pseudo:%[0-9]+]]:fpr64 = BuildPairF64Pseudo [[COPY1]], [[COPY]]
-    ; RV32-NEXT: $f10_d = COPY [[BuildPairF64Pseudo]]
+    ; RV32-NEXT: [[FCVT_D_W:%[0-9]+]]:fpr64 = FCVT_D_W $x0, 0
+    ; RV32-NEXT: $f10_d = COPY [[FCVT_D_W]]
     ; RV32-NEXT: PseudoRET implicit $f10_d
     ;
     ; RV64-LABEL: name: double_positive_zero
     ; RV64: liveins: $x10
     ; RV64-NEXT: {{  $}}
-    ; RV64-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
-    ; RV64-NEXT: [[FMV_D_X:%[0-9]+]]:fpr64 = FMV_D_X [[COPY]]
+    ; RV64-NEXT: [[FMV_D_X:%[0-9]+]]:fpr64 = FMV_D_X $x0
     ; RV64-NEXT: $f10_d = COPY [[FMV_D_X]]
     ; RV64-NEXT: PseudoRET implicit $f10_d
     %1:fprb(s64) = G_FCONSTANT double 0.000000e+00

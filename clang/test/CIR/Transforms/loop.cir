@@ -16,7 +16,7 @@ module {
   }
 }
 
-// CHECK:  cir.func @testFor(%arg0: !cir.bool) {
+// CHECK:  cir.func{{.*}} @testFor(%arg0: !cir.bool) {
 // CHECK:    cir.br ^bb[[#COND:]]
 // CHECK:  ^bb[[#COND]]:
 // CHECK:    cir.brcond %arg0 ^bb[[#BODY:]], ^bb[[#EXIT:]]
@@ -38,7 +38,7 @@ module {
     cir.return
   }
 
-// CHECK:  cir.func @testWhile(%arg0: !cir.bool) {
+// CHECK:  cir.func{{.*}} @testWhile(%arg0: !cir.bool) {
 // CHECK:    cir.br ^bb[[#COND:]]
 // CHECK:  ^bb[[#COND]]:
 // CHECK:    cir.brcond %arg0 ^bb[[#BODY:]], ^bb[[#EXIT:]]
@@ -59,7 +59,7 @@ module {
     cir.return
   }
 
-// CHECK:  cir.func @testDoWhile(%arg0: !cir.bool) {
+// CHECK:  cir.func{{.*}} @testDoWhile(%arg0: !cir.bool) {
 // CHECK:    cir.br ^bb[[#BODY:]]
 // CHECK:  ^bb[[#COND]]:
 // CHECK:    cir.brcond %arg0 ^bb[[#BODY:]], ^bb[[#EXIT:]]

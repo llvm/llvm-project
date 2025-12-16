@@ -49,9 +49,15 @@ public:
   /// \p StartOfTokenColumn is the column at which the token will start after
   /// this replacement. It is needed for determining how \p Spaces is turned
   /// into tabs and spaces for some format styles.
+  ///
+  /// \p IndentedFromColumn is only used when the replacement starts a new
+  /// line. It should be the column that the position of the line is derived
+  /// from. It is used for determining what lines the alignment process should
+  /// move.
   void replaceWhitespace(FormatToken &Tok, unsigned Newlines, unsigned Spaces,
                          unsigned StartOfTokenColumn, bool IsAligned = false,
-                         bool InPPDirective = false);
+                         bool InPPDirective = false,
+                         unsigned IndentedFromColumn = 0);
 
   /// Adds information about an unchangeable token's whitespace.
   ///
@@ -104,13 +110,15 @@ public:
     /// \p PreviousLinePostfix, \p NewlinesBefore line breaks, \p Spaces spaces
     /// and \p CurrentLinePrefix.
     ///
-    /// \p StartOfTokenColumn and \p InPPDirective will be used to lay out
-    /// trailing comments and escaped newlines.
+    /// \p StartOfTokenColumn and \p ContinuesPPDirective will be used to lay
+    /// out trailing comments and escaped newlines. \p IndentedFromColumn will
+    /// be used to continue aligned lines.
     Change(const FormatToken &Tok, bool CreateReplacement,
            SourceRange OriginalWhitespaceRange, int Spaces,
-           unsigned StartOfTokenColumn, unsigned NewlinesBefore,
-           StringRef PreviousLinePostfix, StringRef CurrentLinePrefix,
-           bool IsAligned, bool ContinuesPPDirective, bool IsInsideToken);
+           unsigned StartOfTokenColumn, unsigned IndentedFromColumn,
+           unsigned NewlinesBefore, StringRef PreviousLinePostfix,
+           StringRef CurrentLinePrefix, bool IsAligned,
+           bool ContinuesPPDirective, bool IsInsideToken);
 
     // The kind of the token whose whitespace this change replaces, or in which
     // this change inserts whitespace.
@@ -123,6 +131,11 @@ public:
     // FormatToken around to query its information.
     SourceRange OriginalWhitespaceRange;
     unsigned StartOfTokenColumn;
+    // Only used when the token is at the start of a line. The column that the
+    // position of the line is derived from. The alignment procedure moves the
+    // line when it moves a token in the same unwrapped line that is to the left
+    // of said column.
+    unsigned IndentedFromColumn;
     unsigned NewlinesBefore;
     std::string PreviousLinePostfix;
     std::string CurrentLinePrefix;
@@ -212,7 +225,7 @@ private:
   /// \c EscapedNewlineColumn for the first tokens or token parts in a line.
   void calculateLineBreakInformation();
 
-  /// \brief Align consecutive C/C++ preprocessor macros over all \c Changes.
+  /// Align consecutive C/C++ preprocessor macros over all \c Changes.
   void alignConsecutiveMacros();
 
   /// Align consecutive assignments over all \c Changes.

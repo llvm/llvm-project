@@ -15,7 +15,7 @@ program bug47659
   end do label1
 end program
 
-!CHECK-LABEL: PROGRAM bug47659
+!CHECK-LABEL: PROGRAM BUG47659
 !CHECK: !$ACC PARALLEL LOOP
 
 

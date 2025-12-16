@@ -416,7 +416,6 @@ def BBSI : RRI8_Inst<0x07, (outs),
 }
 
 def : Pat<(brcond AR:$s, bb:$target), (BNEZ AR:$s, bb:$target)>;
-
 //===----------------------------------------------------------------------===//
 // Call and jump instructions
 //===----------------------------------------------------------------------===//
@@ -497,6 +496,8 @@ def EXTW : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
   let hasSideEffects = 1;
 }
 
+def : Pat<(atomic_fence timm, timm), (MEMW)>;
+
 //===----------------------------------------------------------------------===//
 // Illegal instructions
 //===----------------------------------------------------------------------===//
@@ -576,7 +577,7 @@ def WUR : RRR_Inst<0x00, 0x03, 0x0F, (outs UR:$ur), (ins AR:$t),
 }
 
 def RUR : RRR_Inst<0x00, 0x03, 0x0E, (outs AR:$r), (ins UR:$ur),
-                  "rur\t$r, $ur", []> {
+                  "rur\t$r, $ur", [(set AR:$r, (Xtensa_rur UR:$ur))]> {
   bits<8> ur;
 
   let s = ur{7-4};
@@ -1311,6 +1312,34 @@ def : Pat<(f32 (load (Xtensa_pcrel_wrapper tconstpool:$in))),
           (WFR (L32R tconstpool:$in))>;
 
 //===----------------------------------------------------------------------===//
+// SelectCC and BranchCC instructions with FP operands
+//===----------------------------------------------------------------------===//
+
+let usesCustomInserter = 1, Predicates = [HasSingleFloat] in {
+  def SELECT_CC_INT_FP : Pseudo<(outs FPR:$dst), (ins AR:$lhs, AR:$rhs, FPR:$t, FPR:$f, i32imm:$cond),
+                                "!select_cc_int_fp $dst, $lhs, $rhs, $t, $f, $cond",
+                                [(set FPR:$dst, (Xtensa_select_cc AR:$lhs, AR:$rhs, FPR:$t, FPR:$f, imm:$cond))]>;
+  def SELECT_CC_FP_INT : Pseudo<(outs AR:$dst), (ins FPR:$lhs, FPR:$rhs, AR:$t, AR:$f, i32imm:$cond, i32imm:$brkind),
+                                "!select_cc_fp_int $dst, $lhs, $rhs, $t, $f, $cond, $brkind",
+                                [(set AR:$dst, (Xtensa_select_cc_fp FPR:$lhs, FPR:$rhs, AR:$t, AR:$f, imm:$cond, imm:$brkind))]>;
+  def SELECT_CC_FP_FP : Pseudo<(outs FPR:$dst), (ins FPR:$lhs, FPR:$rhs, FPR:$t, FPR:$f, i32imm:$cond, i32imm:$brkind),
+                               "!select_cc_fp_fp $dst, $lhs, $rhs, $t, $f, $cond, $brkind",
+                               [(set FPR:$dst, (Xtensa_select_cc_fp FPR:$lhs, FPR:$rhs, FPR:$t, FPR:$f, imm:$cond, imm:$brkind))]>;
+}
+
+let usesCustomInserter = 1, isBranch = 1, isTerminator = 1, isBarrier = 1, Predicates = [HasSingleFloat] in {
+  def BRCC_FP : Pseudo<(outs), (ins i32imm:$cond, FPR:$lhs, FPR:$rhs, brtarget:$target),
+                       "!brcc_fp $cond, $lhs, $rhs, $target", []>;
+}
+
+def cond_as_i32imm : SDNodeXForm<cond, [{
+  return CurDAG->getTargetConstant(N->get(), SDLoc(N), MVT::i32);
+}]>;
+
+def : Pat<(brcc cond:$cond, FPR:$s, FPR:$t,  bb:$target),
+          (BRCC_FP (cond_as_i32imm $cond), FPR:$s, FPR:$t, bb:$target)>;
+
+//===----------------------------------------------------------------------===//
 // Region Protection feature instructions
 //===----------------------------------------------------------------------===//
 
@@ -1378,7 +1407,7 @@ let isBarrier = 1, isTerminator = 1 in {
     let r = 0x04;
   }
 
-  def BREAK_N : RRRN_Inst<0x0C, (outs), (ins uimm4:$imm),
+  def BREAK_N : RRRN_Inst<0x0D, (outs), (ins uimm4:$imm),
                          "break.n\t$imm", []>, Requires<[HasDensity, HasDebug]> {
     bits<4> imm;
 
@@ -1469,6 +1498,46 @@ def RFI : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins uimm4:$imm),
   let r = 0x3;
   let s = imm{3-0};
   let t = 0x1;
+}
+
+//===----------------------------------------------------------------------===//
+// S32C1I
+//===----------------------------------------------------------------------===//
+
+let mayStore = 1, mayLoad = 1, Predicates = [HasS32C1I] in {
+  def S32C1I : RRI8_Inst<0x02, (outs AR:$a), (ins AR:$t, mem32:$addr),
+                        "s32c1i\t$t, $addr", []> {
+    bits<12> addr;
+
+    let r = 0x0e;
+    let Uses = [SCOMPARE1];
+    let Constraints = "$a = $t";
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Atomic patterns
+//===----------------------------------------------------------------------===//
+
+// Atomic load/store are available under both +s32c1i and +force-atomics.
+// Fences will be inserted for atomic load/stores according to the logic in
+// XtensaTargetLowering.
+let Predicates = [HasAtomicLdSt] in {
+  def : Pat<(i32 (atomic_load_8  addr_ish1:$addr)), (L8UI addr_ish1:$addr)>;
+  def : Pat<(i32 (atomic_load_16 addr_ish2:$addr)), (L16UI addr_ish2:$addr)>;
+  def : Pat<(i32 (atomic_load_32 addr_ish4:$addr)), (L32I addr_ish4:$addr)>;
+
+  def : Pat<(atomic_store_8  AR:$t, addr_ish1:$addr), (S8I AR:$t, addr_ish1:$addr)>;
+  def : Pat<(atomic_store_16 AR:$t, addr_ish2:$addr), (S16I AR:$t, addr_ish2:$addr)>;
+  def : Pat<(atomic_store_32 AR:$t, addr_ish4:$addr), (S32I AR:$t, addr_ish4:$addr)>;
+}
+
+let usesCustomInserter = 1, Predicates = [HasS32C1I] in {
+  def ATOMIC_CMP_SWAP_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$cmp, AR:$swap),
+                                   "!atomic_cmp_swap_32_p, $dst, $ptr, $cmp, $swap",
+                                   [(set AR:$dst, (atomic_cmp_swap_i32 AR:$ptr, AR:$cmp, AR:$swap))]>;
 }
 
 //===----------------------------------------------------------------------===//

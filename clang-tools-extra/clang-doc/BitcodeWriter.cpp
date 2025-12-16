@@ -130,7 +130,9 @@ static const llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor>
           {BI_TEMPLATE_SPECIALIZATION_BLOCK_ID, "TemplateSpecializationBlock"},
           {BI_TEMPLATE_PARAM_BLOCK_ID, "TemplateParamBlock"},
           {BI_CONSTRAINT_BLOCK_ID, "ConstraintBlock"},
-          {BI_CONCEPT_BLOCK_ID, "ConceptBlock"}};
+          {BI_CONCEPT_BLOCK_ID, "ConceptBlock"},
+          {BI_VAR_BLOCK_ID, "VarBlock"},
+          {BI_FRIEND_BLOCK_ID, "FriendBlock"}};
       assert(Inits.size() == BlockIdCount);
       for (const auto &Init : Inits)
         BlockIdNameMap[Init.first] = Init.second;
@@ -160,9 +162,15 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {COMMENT_ARG, {"Arg", &genStringAbbrev}},
           {FIELD_TYPE_NAME, {"Name", &genStringAbbrev}},
           {FIELD_DEFAULT_VALUE, {"DefaultValue", &genStringAbbrev}},
+          {FIELD_TYPE_IS_BUILTIN, {"IsBuiltin", &genBoolAbbrev}},
+          {FIELD_TYPE_IS_TEMPLATE, {"IsTemplate", &genBoolAbbrev}},
           {MEMBER_TYPE_NAME, {"Name", &genStringAbbrev}},
           {MEMBER_TYPE_ACCESS, {"Access", &genIntAbbrev}},
           {MEMBER_TYPE_IS_STATIC, {"IsStatic", &genBoolAbbrev}},
+          {MEMBER_TYPE_IS_BUILTIN, {"IsBuiltin", &genBoolAbbrev}},
+          {MEMBER_TYPE_IS_TEMPLATE, {"IsTemplate", &genBoolAbbrev}},
+          {TYPE_IS_BUILTIN, {"IsBuiltin", &genBoolAbbrev}},
+          {TYPE_IS_TEMPLATE, {"IsTemplate", &genBoolAbbrev}},
           {NAMESPACE_USR, {"USR", &genSymbolIdAbbrev}},
           {NAMESPACE_NAME, {"Name", &genStringAbbrev}},
           {NAMESPACE_PATH, {"Path", &genStringAbbrev}},
@@ -181,6 +189,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {RECORD_LOCATION, {"Location", &genLocationAbbrev}},
           {RECORD_TAG_TYPE, {"TagType", &genIntAbbrev}},
           {RECORD_IS_TYPE_DEF, {"IsTypeDef", &genBoolAbbrev}},
+          {RECORD_MANGLED_NAME, {"MangledName", &genStringAbbrev}},
           {BASE_RECORD_USR, {"USR", &genSymbolIdAbbrev}},
           {BASE_RECORD_NAME, {"Name", &genStringAbbrev}},
           {BASE_RECORD_PATH, {"Path", &genStringAbbrev}},
@@ -201,6 +210,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {REFERENCE_TYPE, {"RefType", &genIntAbbrev}},
           {REFERENCE_PATH, {"Path", &genStringAbbrev}},
           {REFERENCE_FIELD, {"Field", &genIntAbbrev}},
+          {REFERENCE_FILE, {"File", &genStringAbbrev}},
           {TEMPLATE_PARAM_CONTENTS, {"Contents", &genStringAbbrev}},
           {TEMPLATE_SPECIALIZATION_OF,
            {"SpecializationOf", &genSymbolIdAbbrev}},
@@ -213,7 +223,13 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {CONCEPT_IS_TYPE, {"IsType", &genBoolAbbrev}},
           {CONCEPT_CONSTRAINT_EXPRESSION,
            {"ConstraintExpression", &genStringAbbrev}},
-          {CONSTRAINT_EXPRESSION, {"Expression", &genStringAbbrev}}};
+          {CONSTRAINT_EXPRESSION, {"Expression", &genStringAbbrev}},
+          {VAR_USR, {"USR", &genSymbolIdAbbrev}},
+          {VAR_NAME, {"Name", &genStringAbbrev}},
+          {VAR_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
+          {VAR_IS_STATIC, {"IsStatic", &genBoolAbbrev}},
+          {FRIEND_IS_CLASS, {"IsClass", &genBoolAbbrev}}};
+
       assert(Inits.size() == RecordIdCount);
       for (const auto &Init : Inits) {
         RecordIdNameMap[Init.first] = Init.second;
@@ -233,12 +249,15 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
           COMMENT_PARAMNAME, COMMENT_CLOSENAME, COMMENT_SELFCLOSING,
           COMMENT_EXPLICIT, COMMENT_ATTRKEY, COMMENT_ATTRVAL, COMMENT_ARG}},
         // Type Block
-        {BI_TYPE_BLOCK_ID, {}},
+        {BI_TYPE_BLOCK_ID, {TYPE_IS_BUILTIN, TYPE_IS_TEMPLATE}},
         // FieldType Block
-        {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_NAME, FIELD_DEFAULT_VALUE}},
+        {BI_FIELD_TYPE_BLOCK_ID,
+         {FIELD_TYPE_NAME, FIELD_DEFAULT_VALUE, FIELD_TYPE_IS_BUILTIN,
+          FIELD_TYPE_IS_TEMPLATE}},
         // MemberType Block
         {BI_MEMBER_TYPE_BLOCK_ID,
-         {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS, MEMBER_TYPE_IS_STATIC}},
+         {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS, MEMBER_TYPE_IS_STATIC,
+          MEMBER_TYPE_IS_BUILTIN, MEMBER_TYPE_IS_TEMPLATE}},
         // Enum Block
         {BI_ENUM_BLOCK_ID,
          {ENUM_USR, ENUM_NAME, ENUM_DEFLOCATION, ENUM_LOCATION, ENUM_SCOPED}},
@@ -254,7 +273,8 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Record Block
         {BI_RECORD_BLOCK_ID,
          {RECORD_USR, RECORD_NAME, RECORD_PATH, RECORD_DEFLOCATION,
-          RECORD_LOCATION, RECORD_TAG_TYPE, RECORD_IS_TYPE_DEF}},
+          RECORD_LOCATION, RECORD_TAG_TYPE, RECORD_IS_TYPE_DEF,
+          RECORD_MANGLED_NAME}},
         // BaseRecord Block
         {BI_BASE_RECORD_BLOCK_ID,
          {BASE_RECORD_USR, BASE_RECORD_NAME, BASE_RECORD_PATH,
@@ -267,7 +287,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Reference Block
         {BI_REFERENCE_BLOCK_ID,
          {REFERENCE_USR, REFERENCE_NAME, REFERENCE_QUAL_NAME, REFERENCE_TYPE,
-          REFERENCE_PATH, REFERENCE_FIELD}},
+          REFERENCE_PATH, REFERENCE_FIELD, REFERENCE_FILE}},
         // Template Blocks.
         {BI_TEMPLATE_BLOCK_ID, {}},
         {BI_TEMPLATE_PARAM_BLOCK_ID, {TEMPLATE_PARAM_CONTENTS}},
@@ -277,11 +297,11 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
          {CONCEPT_USR, CONCEPT_NAME, CONCEPT_IS_TYPE,
           CONCEPT_CONSTRAINT_EXPRESSION}},
         // Constraint Block
-        {BI_CONSTRAINT_BLOCK_ID, {CONSTRAINT_EXPRESSION}}};
+        {BI_CONSTRAINT_BLOCK_ID, {CONSTRAINT_EXPRESSION}},
+        {BI_VAR_BLOCK_ID, {VAR_NAME, VAR_USR, VAR_DEFLOCATION, VAR_IS_STATIC}},
+        {BI_FRIEND_BLOCK_ID, {FRIEND_IS_CLASS}}};
 
 // AbbreviationMap
-
-constexpr unsigned char BitCodeConstants::Signature[];
 
 void ClangDocBitcodeWriter::AbbreviationMap::add(RecordId RID,
                                                  unsigned AbbrevID) {
@@ -458,11 +478,27 @@ void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
   emitRecord((unsigned)R.RefType, REFERENCE_TYPE);
   emitRecord(R.Path, REFERENCE_PATH);
   emitRecord((unsigned)Field, REFERENCE_FIELD);
+  emitRecord(R.DocumentationFileName, REFERENCE_FILE);
+}
+
+void ClangDocBitcodeWriter::emitBlock(const FriendInfo &R) {
+  StreamSubBlockGuard Block(Stream, BI_FRIEND_BLOCK_ID);
+  emitBlock(R.Ref, FieldId::F_friend);
+  emitRecord(R.IsClass, FRIEND_IS_CLASS);
+  if (R.Template)
+    emitBlock(*R.Template);
+  if (R.Params)
+    for (const auto &P : *R.Params)
+      emitBlock(P);
+  if (R.ReturnType)
+    emitBlock(*R.ReturnType);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const TypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_TYPE_BLOCK_ID);
   emitBlock(T.Type, FieldId::F_type);
+  emitRecord(T.IsBuiltIn, TYPE_IS_BUILTIN);
+  emitRecord(T.IsTemplate, TYPE_IS_TEMPLATE);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
@@ -484,6 +520,8 @@ void ClangDocBitcodeWriter::emitBlock(const FieldTypeInfo &T) {
   emitBlock(T.Type, FieldId::F_type);
   emitRecord(T.Name, FIELD_TYPE_NAME);
   emitRecord(T.DefaultValue, FIELD_DEFAULT_VALUE);
+  emitRecord(T.IsBuiltIn, FIELD_TYPE_IS_BUILTIN);
+  emitRecord(T.IsTemplate, FIELD_TYPE_IS_TEMPLATE);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
@@ -492,6 +530,9 @@ void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
   emitRecord(T.Name, MEMBER_TYPE_NAME);
   emitRecord(T.Access, MEMBER_TYPE_ACCESS);
   emitRecord(T.IsStatic, MEMBER_TYPE_IS_STATIC);
+  emitRecord(T.IsBuiltIn, MEMBER_TYPE_IS_BUILTIN);
+  emitRecord(T.IsTemplate, MEMBER_TYPE_IS_TEMPLATE);
+  emitRecord(T.IsTemplate, MEMBER_TYPE_IS_TEMPLATE);
   for (const auto &CI : T.Description)
     emitBlock(CI);
 }
@@ -540,6 +581,8 @@ void ClangDocBitcodeWriter::emitBlock(const NamespaceInfo &I) {
     emitBlock(C);
   for (const auto &C : I.Children.Concepts)
     emitBlock(C);
+  for (const auto &C : I.Children.Variables)
+    emitBlock(C);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const EnumInfo &I) {
@@ -575,6 +618,7 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
   emitRecord(I.USR, RECORD_USR);
   emitRecord(I.Name, RECORD_NAME);
   emitRecord(I.Path, RECORD_PATH);
+  emitRecord(I.MangledName, RECORD_MANGLED_NAME);
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
@@ -603,6 +647,8 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
     emitBlock(C);
   if (I.Template)
     emitBlock(*I.Template);
+  for (const auto &C : I.Friends)
+    emitBlock(C);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const BaseRecordInfo &I) {
@@ -682,6 +728,20 @@ void ClangDocBitcodeWriter::emitBlock(const ConstraintInfo &C) {
   emitBlock(C.ConceptRef, FieldId::F_concept);
 }
 
+void ClangDocBitcodeWriter::emitBlock(const VarInfo &I) {
+  StreamSubBlockGuard Block(Stream, BI_VAR_BLOCK_ID);
+  emitRecord(I.USR, VAR_USR);
+  emitRecord(I.Name, VAR_NAME);
+  for (const auto &N : I.Namespace)
+    emitBlock(N, FieldId::F_namespace);
+  for (const auto &CI : I.Description)
+    emitBlock(CI);
+  if (I.DefLoc)
+    emitRecord(*I.DefLoc, VAR_DEFLOCATION);
+  emitRecord(I.IsStatic, VAR_IS_STATIC);
+  emitBlock(I.Type);
+}
+
 bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
   switch (I->IT) {
   case InfoType::IT_namespace:
@@ -702,8 +762,16 @@ bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
   case InfoType::IT_concept:
     emitBlock(*static_cast<clang::doc::ConceptInfo *>(I));
     break;
+  case InfoType::IT_variable:
+    emitBlock(*static_cast<VarInfo *>(I));
+    break;
+  case InfoType::IT_friend:
+    emitBlock(*static_cast<FriendInfo *>(I));
+    break;
   case InfoType::IT_default:
-    llvm::errs() << "Unexpected info, unable to write.\n";
+    unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                        "Unexpected info, unable to write.");
+    Diags.Report(ID);
     return true;
   }
   return false;

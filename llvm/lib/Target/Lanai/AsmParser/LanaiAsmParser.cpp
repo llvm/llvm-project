@@ -344,7 +344,7 @@ public:
       return SymbolRefExpr->getSpecifier() == Lanai::S_None;
     if (const MCSymbolRefExpr *SymbolRefExpr =
             dyn_cast<MCSymbolRefExpr>(Imm.Value)) {
-      return SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None;
+      return SymbolRefExpr->getSpecifier() == 0;
     }
 
     // Binary expression
@@ -354,7 +354,7 @@ public:
         return SymbolRefExpr->getSpecifier() == Lanai::S_None;
       if (const MCSymbolRefExpr *SymbolRefExpr =
               dyn_cast<MCSymbolRefExpr>(BinaryExpr->getLHS()))
-        return SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None;
+        return SymbolRefExpr->getSpecifier() == 0;
     }
 
     return false;
@@ -535,8 +535,7 @@ public:
 #ifndef NDEBUG
       const MCSymbolRefExpr *SymbolRefExpr =
           dyn_cast<MCSymbolRefExpr>(getImm());
-      assert(SymbolRefExpr &&
-             SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None);
+      assert(SymbolRefExpr && SymbolRefExpr->getSpecifier() == 0);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
     } else if (isa<MCBinaryExpr>(getImm())) {
@@ -551,7 +550,7 @@ public:
       assert(false && "Operand type not supported.");
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case IMMEDIATE:
       OS << "Imm: " << getImm() << "\n";
@@ -560,18 +559,22 @@ public:
       OS << "Token: " << getToken() << "\n";
       break;
     case REGISTER:
-      OS << "Reg: %r" << getReg() << "\n";
+      OS << "Reg: %r" << getReg().id() << "\n";
       break;
     case MEMORY_IMM:
-      OS << "MemImm: " << *getMemOffset() << "\n";
+      OS << "MemImm: ";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << '\n';
       break;
     case MEMORY_REG_IMM:
-      OS << "MemRegImm: " << getMemBaseReg() << "+" << *getMemOffset() << "\n";
+      OS << "MemRegImm: " << getMemBaseReg().id() << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << '\n';
       break;
     case MEMORY_REG_REG:
       assert(getMemOffset() == nullptr);
-      OS << "MemRegReg: " << getMemBaseReg() << "+"
-         << "%r" << getMemOffsetReg() << "\n";
+      OS << "MemRegReg: " << getMemBaseReg().id() << "+"
+         << "%r" << getMemOffsetReg().id() << "\n";
       break;
     }
   }

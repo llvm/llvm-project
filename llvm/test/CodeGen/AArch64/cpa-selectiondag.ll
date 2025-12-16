@@ -119,23 +119,17 @@ define void @msubpt1(i32 %index, i32 %elem) {
 ; CHECK-CPA-O0:       // %bb.0: // %entry
 ; CHECK-CPA-O0-NEXT:    // implicit-def: $x8
 ; CHECK-CPA-O0-NEXT:    mov w8, w0
-; CHECK-CPA-O0-NEXT:    sxtw x9, w8
-; CHECK-CPA-O0-NEXT:    mov x8, xzr
-; CHECK-CPA-O0-NEXT:    subs x8, x8, x9
-; CHECK-CPA-O0-NEXT:    lsl x8, x8, #1
-; CHECK-CPA-O0-NEXT:    subs x10, x8, x9
+; CHECK-CPA-O0-NEXT:    sxtw x8, w8
+; CHECK-CPA-O0-NEXT:    mov w9, #48 // =0x30
+; CHECK-CPA-O0-NEXT:    // kill: def $x9 killed $w9
+; CHECK-CPA-O0-NEXT:    mneg x8, x8, x9
+; CHECK-CPA-O0-NEXT:    add x8, x8, #288
 ; CHECK-CPA-O0-NEXT:    adrp x9, array2
 ; CHECK-CPA-O0-NEXT:    add x9, x9, :lo12:array2
-; CHECK-CPA-O0-NEXT:    mov w8, #288 // =0x120
-; CHECK-CPA-O0-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-CPA-O0-NEXT:    addpt x8, x9, x8
-; CHECK-CPA-O0-NEXT:    addpt x8, x8, x10, lsl #4
-; CHECK-CPA-O0-NEXT:    mov w10, #96 // =0x60
-; CHECK-CPA-O0-NEXT:    // kill: def $x10 killed $w10
-; CHECK-CPA-O0-NEXT:    addpt x10, x9, x10
-; CHECK-CPA-O0-NEXT:    ldr q1, [x10, #16]
-; CHECK-CPA-O0-NEXT:    ldr q2, [x10, #32]
 ; CHECK-CPA-O0-NEXT:    ldr q0, [x9, #96]
+; CHECK-CPA-O0-NEXT:    ldr q1, [x9, #112]
+; CHECK-CPA-O0-NEXT:    ldr q2, [x9, #128]
 ; CHECK-CPA-O0-NEXT:    str q2, [x8, #32]
 ; CHECK-CPA-O0-NEXT:    str q1, [x8, #16]
 ; CHECK-CPA-O0-NEXT:    str q0, [x8]
@@ -144,21 +138,17 @@ define void @msubpt1(i32 %index, i32 %elem) {
 ; CHECK-CPA-O3-LABEL: msubpt1:
 ; CHECK-CPA-O3:       // %bb.0: // %entry
 ; CHECK-CPA-O3-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-CPA-O3-NEXT:    sxtw x9, w0
-; CHECK-CPA-O3-NEXT:    adrp x8, array2
-; CHECK-CPA-O3-NEXT:    add x8, x8, :lo12:array2
-; CHECK-CPA-O3-NEXT:    mov w11, #96 // =0x60
-; CHECK-CPA-O3-NEXT:    mov w12, #288 // =0x120
-; CHECK-CPA-O3-NEXT:    ldr q2, [x8, #96]
-; CHECK-CPA-O3-NEXT:    neg x10, x9
-; CHECK-CPA-O3-NEXT:    addpt x11, x8, x11
-; CHECK-CPA-O3-NEXT:    lsl x10, x10, #1
-; CHECK-CPA-O3-NEXT:    ldp q1, q0, [x11, #16]
-; CHECK-CPA-O3-NEXT:    sub x9, x10, x9
-; CHECK-CPA-O3-NEXT:    addpt x10, x8, x12
-; CHECK-CPA-O3-NEXT:    addpt x9, x10, x9, lsl #4
-; CHECK-CPA-O3-NEXT:    stp q1, q0, [x9, #16]
-; CHECK-CPA-O3-NEXT:    str q2, [x9]
+; CHECK-CPA-O3-NEXT:    sxtw x8, w0
+; CHECK-CPA-O3-NEXT:    mov w9, #48 // =0x30
+; CHECK-CPA-O3-NEXT:    mneg x8, x8, x9
+; CHECK-CPA-O3-NEXT:    adrp x9, array2
+; CHECK-CPA-O3-NEXT:    add x9, x9, :lo12:array2
+; CHECK-CPA-O3-NEXT:    ldp q1, q0, [x9, #112]
+; CHECK-CPA-O3-NEXT:    ldr q2, [x9, #96]
+; CHECK-CPA-O3-NEXT:    add x8, x8, #288
+; CHECK-CPA-O3-NEXT:    addpt x8, x9, x8
+; CHECK-CPA-O3-NEXT:    stp q1, q0, [x8, #16]
+; CHECK-CPA-O3-NEXT:    str q2, [x8]
 ; CHECK-CPA-O3-NEXT:    ret
 ;
 ; CHECK-NOCPA-O0-LABEL: msubpt1:
@@ -205,15 +195,15 @@ entry:
 define void @subpt1(i32 %index, i32 %elem) {
 ; CHECK-CPA-O0-LABEL: subpt1:
 ; CHECK-CPA-O0:       // %bb.0: // %entry
-; CHECK-CPA-O0-NEXT:    adrp x9, array
-; CHECK-CPA-O0-NEXT:    add x9, x9, :lo12:array
+; CHECK-CPA-O0-NEXT:    // implicit-def: $x8
+; CHECK-CPA-O0-NEXT:    mov w8, w0
+; CHECK-CPA-O0-NEXT:    sxtw x9, w8
 ; CHECK-CPA-O0-NEXT:    mov w8, #96 // =0x60
 ; CHECK-CPA-O0-NEXT:    // kill: def $x8 killed $w8
+; CHECK-CPA-O0-NEXT:    subs x8, x8, x9, lsl #8
+; CHECK-CPA-O0-NEXT:    adrp x9, array
+; CHECK-CPA-O0-NEXT:    add x9, x9, :lo12:array
 ; CHECK-CPA-O0-NEXT:    addpt x8, x9, x8
-; CHECK-CPA-O0-NEXT:    // implicit-def: $x10
-; CHECK-CPA-O0-NEXT:    mov w10, w0
-; CHECK-CPA-O0-NEXT:    sbfiz x10, x10, #8, #32
-; CHECK-CPA-O0-NEXT:    subpt x8, x8, x10
 ; CHECK-CPA-O0-NEXT:    ldr q0, [x9, #32]
 ; CHECK-CPA-O0-NEXT:    str q0, [x8]
 ; CHECK-CPA-O0-NEXT:    ret
@@ -221,13 +211,13 @@ define void @subpt1(i32 %index, i32 %elem) {
 ; CHECK-CPA-O3-LABEL: subpt1:
 ; CHECK-CPA-O3:       // %bb.0: // %entry
 ; CHECK-CPA-O3-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-CPA-O3-NEXT:    adrp x8, array
-; CHECK-CPA-O3-NEXT:    add x8, x8, :lo12:array
+; CHECK-CPA-O3-NEXT:    sxtw x8, w0
 ; CHECK-CPA-O3-NEXT:    mov w9, #96 // =0x60
-; CHECK-CPA-O3-NEXT:    sbfiz x10, x0, #8, #32
-; CHECK-CPA-O3-NEXT:    addpt x9, x8, x9
-; CHECK-CPA-O3-NEXT:    ldr q0, [x8, #32]
-; CHECK-CPA-O3-NEXT:    subpt x8, x9, x10
+; CHECK-CPA-O3-NEXT:    sub x8, x9, x8, lsl #8
+; CHECK-CPA-O3-NEXT:    adrp x9, array
+; CHECK-CPA-O3-NEXT:    add x9, x9, :lo12:array
+; CHECK-CPA-O3-NEXT:    ldr q0, [x9, #32]
+; CHECK-CPA-O3-NEXT:    addpt x8, x9, x8
 ; CHECK-CPA-O3-NEXT:    str q0, [x8]
 ; CHECK-CPA-O3-NEXT:    ret
 ;
@@ -264,28 +254,24 @@ entry:
 define void @subpt2(i32 %index, i32 %elem) {
 ; CHECK-CPA-O0-LABEL: subpt2:
 ; CHECK-CPA-O0:       // %bb.0: // %entry
-; CHECK-CPA-O0-NEXT:    mov x8, xzr
-; CHECK-CPA-O0-NEXT:    subs x10, x8, w0, sxtw
-; CHECK-CPA-O0-NEXT:    adrp x9, array
-; CHECK-CPA-O0-NEXT:    add x9, x9, :lo12:array
 ; CHECK-CPA-O0-NEXT:    mov w8, #96 // =0x60
 ; CHECK-CPA-O0-NEXT:    // kill: def $x8 killed $w8
+; CHECK-CPA-O0-NEXT:    subs x8, x8, w0, sxtw #4
+; CHECK-CPA-O0-NEXT:    adrp x9, array
+; CHECK-CPA-O0-NEXT:    add x9, x9, :lo12:array
 ; CHECK-CPA-O0-NEXT:    addpt x8, x9, x8
-; CHECK-CPA-O0-NEXT:    addpt x8, x8, x10, lsl #4
 ; CHECK-CPA-O0-NEXT:    ldr q0, [x9, #32]
 ; CHECK-CPA-O0-NEXT:    str q0, [x8]
 ; CHECK-CPA-O0-NEXT:    ret
 ;
 ; CHECK-CPA-O3-LABEL: subpt2:
 ; CHECK-CPA-O3:       // %bb.0: // %entry
-; CHECK-CPA-O3-NEXT:    mov x8, xzr
-; CHECK-CPA-O3-NEXT:    mov w9, #96 // =0x60
-; CHECK-CPA-O3-NEXT:    adrp x10, array
-; CHECK-CPA-O3-NEXT:    add x10, x10, :lo12:array
-; CHECK-CPA-O3-NEXT:    sub x8, x8, w0, sxtw
-; CHECK-CPA-O3-NEXT:    addpt x9, x10, x9
-; CHECK-CPA-O3-NEXT:    ldr q0, [x10, #32]
-; CHECK-CPA-O3-NEXT:    addpt x8, x9, x8, lsl #4
+; CHECK-CPA-O3-NEXT:    mov w8, #96 // =0x60
+; CHECK-CPA-O3-NEXT:    adrp x9, array
+; CHECK-CPA-O3-NEXT:    add x9, x9, :lo12:array
+; CHECK-CPA-O3-NEXT:    sub x8, x8, w0, sxtw #4
+; CHECK-CPA-O3-NEXT:    ldr q0, [x9, #32]
+; CHECK-CPA-O3-NEXT:    addpt x8, x9, x8
 ; CHECK-CPA-O3-NEXT:    str q0, [x8]
 ; CHECK-CPA-O3-NEXT:    ret
 ;
@@ -670,14 +656,13 @@ define hidden void @multidim() {
 ; CHECK-CPA-O0-NEXT:    .cfi_offset w30, -16
 ; CHECK-CPA-O0-NEXT:    adrp x8, b
 ; CHECK-CPA-O0-NEXT:    ldrh w9, [x8, :lo12:b]
+; CHECK-CPA-O0-NEXT:    // implicit-def: $x8
 ; CHECK-CPA-O0-NEXT:    mov w8, w9
-; CHECK-CPA-O0-NEXT:    mov w10, w8
+; CHECK-CPA-O0-NEXT:    ubfiz x8, x8, #1, #32
+; CHECK-CPA-O0-NEXT:    add x10, x8, #2
 ; CHECK-CPA-O0-NEXT:    adrp x8, a
 ; CHECK-CPA-O0-NEXT:    add x8, x8, :lo12:a
-; CHECK-CPA-O0-NEXT:    mov w11, #2 // =0x2
-; CHECK-CPA-O0-NEXT:    // kill: def $x11 killed $w11
-; CHECK-CPA-O0-NEXT:    addpt x8, x8, x11
-; CHECK-CPA-O0-NEXT:    addpt x8, x8, x10, lsl #1
+; CHECK-CPA-O0-NEXT:    addpt x8, x8, x10
 ; CHECK-CPA-O0-NEXT:    add w9, w9, #1
 ; CHECK-CPA-O0-NEXT:    mov w9, w9
 ; CHECK-CPA-O0-NEXT:    // kill: def $x9 killed $w9
@@ -697,13 +682,13 @@ define hidden void @multidim() {
 ; CHECK-CPA-O3-LABEL: multidim:
 ; CHECK-CPA-O3:       // %bb.0: // %entry
 ; CHECK-CPA-O3-NEXT:    adrp x8, b
-; CHECK-CPA-O3-NEXT:    mov w9, #2 // =0x2
 ; CHECK-CPA-O3-NEXT:    adrp x10, a
 ; CHECK-CPA-O3-NEXT:    add x10, x10, :lo12:a
 ; CHECK-CPA-O3-NEXT:    ldrh w8, [x8, :lo12:b]
-; CHECK-CPA-O3-NEXT:    addpt x9, x10, x9
-; CHECK-CPA-O3-NEXT:    addpt x9, x9, x8, lsl #1
+; CHECK-CPA-O3-NEXT:    lsl x9, x8, #1
 ; CHECK-CPA-O3-NEXT:    add x8, x8, #1
+; CHECK-CPA-O3-NEXT:    add x9, x9, #2
+; CHECK-CPA-O3-NEXT:    addpt x9, x10, x9
 ; CHECK-CPA-O3-NEXT:    addpt x8, x9, x8
 ; CHECK-CPA-O3-NEXT:    ldrb w8, [x8]
 ; CHECK-CPA-O3-NEXT:    cbz w8, .LBB14_2

@@ -66,6 +66,13 @@ def Write4PassDGEMM : SchedWrite;
 def Write8PassDGEMM : SchedWrite;
 def Write16PassDGEMM : SchedWrite;
 
+// WMMA/SWMMA instructions
+def WriteXDL2PassWMMA : SchedWrite;
+def WriteXDL4PassWMMA : SchedWrite;
+def Write4PassWMMA : SchedWrite;
+def Write8PassWMMA : SchedWrite;
+def Write16PassWMMA : SchedWrite;
+
 // Scalar float instructions
 def WriteSFPU : SchedWrite;
 
@@ -457,7 +464,30 @@ def : InstRW<[WriteCopy], (instrs COPY)>;
 
 }  // End SchedModel = GFX12SpeedModel
 
+// Check if any matrix inputs are interpreted as f8 in an f8f6f4
+// wmma instruction.
+def PredIsF8_WMMA_SCALE : SchedPredicate<[{
+  TII->getNamedOperand(*MI, AMDGPU::OpName::matrix_a_fmt)->getImm() <= AMDGPU::WMMA::MATRIX_FMT_BF8 ||
+  TII->getNamedOperand(*MI, AMDGPU::OpName::matrix_b_fmt)->getImm() <= AMDGPU::WMMA::MATRIX_FMT_BF8
+}]>;
+
+// If either matrix format is f8, the instruction takes 2x as many
+// cycles. TODO: This isn't reflected in MCA.
+def WriteWMMAScale_16X16X128_F8F6F4 : SchedWriteVariant<[
+    SchedVar<PredIsF8_WMMA_SCALE, [WriteXDL4PassWMMA]>,
+    SchedVar<NoSchedPred, [WriteXDL2PassWMMA]>
+]>;
+
 multiclass GFX125xCommonWriteRes {
+
+let ReleaseAtCycles = [8] in
+def : HWWriteRes<WriteXDL2PassWMMA, [HWXDL], 8>;
+let ReleaseAtCycles = [16] in
+def : HWWriteRes<WriteXDL4PassWMMA, [HWXDL], 16>;
+
+def : HWWriteRes<Write4PassWMMA,  [HWVALU], 16>;
+def : HWWriteRes<Write8PassWMMA,  [HWVALU], 32>;
+def : HWWriteRes<Write16PassWMMA, [HWVALU], 64>;
 
 def : HWWriteRes<Write32Bit,             [HWVALU, HWRC],   5>;
 def : HWWriteRes<WriteFloatCvt,          [HWVALU, HWRC],   5>;
@@ -476,6 +506,12 @@ def : HWWriteRes<WriteVMEM,              [HWVMEM,   HWRC], 320>;
 def : HWWriteRes<WriteBarrier,           [HWBranch],       2000>;
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
+
+def : InstRW<[WriteXDL2PassWMMA], (instregex "^V_[S]*WMMA[C]*_.*_(FP8|BF8|BF16|F16)_w32")>;
+def : InstRW<[WriteXDL4PassWMMA], (instregex "^V_[S]*WMMA[C]*_.*_(IU8|IU4)_w32")>;
+def : InstRW<[WriteWMMAScale_16X16X128_F8F6F4], (instregex "^V_WMMA_.*_16X16X128_F8F6F4.*_w32")>;
+def : InstRW<[Write4PassWMMA],    (instregex "^V_WMMA_F32_16X16X4_F32_w32")>;
+def : InstRW<[WriteXDL2PassWMMA], (instregex "^V_WMMA.*_F32_32X16X128_F4")>;
 } // End GFX125xCommonWriteRes
 
 let SchedModel = GFX1250SpeedModel in {

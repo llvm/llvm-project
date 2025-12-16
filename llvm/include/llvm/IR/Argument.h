@@ -78,6 +78,9 @@ public:
   /// Return true if this argument has the byval attribute.
   LLVM_ABI bool hasByValAttr() const;
 
+  /// Return true if this argument has the dead_on_return attribute.
+  LLVM_ABI bool hasDeadOnReturnAttr() const;
+
   /// Return true if this argument has the byref attribute.
   LLVM_ABI bool hasByRefAttr() const;
 
@@ -104,12 +107,6 @@ public:
   /// If hasPointeeInMemoryValueAttr returns true, the in-memory ABI type is
   /// returned. Otherwise, nullptr.
   LLVM_ABI Type *getPointeeInMemoryValueType() const;
-
-  /// If this is a byval or inalloca argument, return its alignment.
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getParamAlign() instead.
-  LLVM_ABI LLVM_DEPRECATED("Use getParamAlign() instead",
-                           "getParamAlign") uint64_t getParamAlignment() const;
 
   /// If this is a byval or inalloca argument, return its alignment.
   LLVM_ABI MaybeAlign getParamAlign() const;

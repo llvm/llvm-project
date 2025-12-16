@@ -6,6 +6,7 @@ add_lldb_unittest(SymbolFileDWARFTests
   DWARFUnitTest.cpp
   SymbolFileDWARFTests.cpp
   XcodeSDKModuleTests.cpp
+  DWARF64UnitTest.cpp
 
   LINK_COMPONENTS
     Support
@@ -26,6 +27,7 @@ add_lldb_unittest(SymbolFileDWARFTests
 
 set(test_inputs
    test-dwarf.exe
-   DW_AT_default_value-test.yaml)
+   DW_AT_default_value-test.yaml
+   DW_AT_spec_decl_exists-test.yaml)
 
 add_unittest_inputs(SymbolFileDWARFTests "${test_inputs}")

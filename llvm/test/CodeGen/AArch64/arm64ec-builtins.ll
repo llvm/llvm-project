@@ -46,27 +46,24 @@ define float @f6(float %val, i32 %a) {
 @dst = global [512 x i8] zeroinitializer, align 1
 @src = global [512 x i8] zeroinitializer, align 1
 
-; FIXME: Wrong and probably needs a # prefix
 define void @call__arm_sc_memcpy(i64 noundef %n) #0 {
 ; CHECK-LABEL: "#call__arm_sc_memcpy":
-; CHECK: bl __arm_sc_memcpy
+; CHECK: bl "#__arm_sc_memcpy"
 
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 @dst, ptr nonnull align 1 @src, i64 %n, i1 false)
   ret void
 }
 
-; FIXME: Wrong and probably needs a # prefix
 define void @call__arm_sc_memmove(i64 noundef %n) #0 {
 ; CHECK-LABEL: "#call__arm_sc_memmove":
-; CHECK: bl __arm_sc_memmove
+; CHECK: bl "#__arm_sc_memmove"
   tail call void @llvm.memmove.p0.p0.i64(ptr align 1 @dst, ptr nonnull align 1 @src, i64 %n, i1 false)
   ret void
 }
 
-; FIXME: Wrong and probably needs a # prefix
 define void @call__arm_sc_memset(i64 noundef %n) #0 {
 ; CHECK-LABEL: "#call__arm_sc_memset":
-; CHECK: bl __arm_sc_memset
+; CHECK: bl "#__arm_sc_memset"
   tail call void @llvm.memset.p0.i64(ptr align 1 @dst, i8 2, i64 %n, i1 false)
   ret void
 }

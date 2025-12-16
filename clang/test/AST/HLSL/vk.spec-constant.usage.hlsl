@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-compute -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -fnative-int16-type -triple spirv-unknown-vulkan-compute -x hlsl -ast-dump -o - %s | FileCheck %s
 
 // CHECK: VarDecl {{.*}} bool_const 'const hlsl_private bool' static cinit
 // CHECK-NEXT: CallExpr {{.*}} 'bool'
@@ -63,6 +63,17 @@ const unsigned short ushort_const = 10;
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 12
 [[vk::constant_id(6)]]
 const unsigned int uint_const = 12;
+
+// CHECK: VarDecl {{.*}} uint_const_2 'const hlsl_private uint':'const hlsl_private unsigned int' static cinit
+// CHECK-NEXT: CallExpr {{.*}} 'unsigned int'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'unsigned int (*)(unsigned int, unsigned int) noexcept' <FunctionToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int (unsigned int, unsigned int) noexcept' lvalue Function {{.*}} '__builtin_get_spirv_spec_constant_uint' 'unsigned int (unsigned int, unsigned int) noexcept'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'unsigned int' <IntegralCast>
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 6
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'unsigned int' <IntegralCast>
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 12
+[[vk::constant_id(6)]]
+const uint uint_const_2 = 12;
 
 
 // CHECK: VarDecl {{.*}} ulong_const 'const hlsl_private unsigned long long' static cinit

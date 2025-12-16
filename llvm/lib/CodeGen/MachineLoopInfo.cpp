@@ -22,13 +22,16 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericLoopInfoImpl.h"
 
 using namespace llvm;
 
 // Explicitly instantiate methods in LoopInfoImpl.h for MI-level Loops.
-template class llvm::LoopBase<MachineBasicBlock, MachineLoop>;
-template class llvm::LoopInfoBase<MachineBasicBlock, MachineLoop>;
+template class LLVM_EXPORT_TEMPLATE
+    llvm::LoopBase<MachineBasicBlock, MachineLoop>;
+template class LLVM_EXPORT_TEMPLATE
+    llvm::LoopInfoBase<MachineBasicBlock, MachineLoop>;
 
 AnalysisKey MachineLoopAnalysis::Key;
 

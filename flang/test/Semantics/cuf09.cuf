@@ -15,7 +15,7 @@ module m
     print*,'from device'
     print '(f10.5)', (x(ivar), ivar = 1, 10)
     write(*,*), "Hello world from device!"
-    !WARNING: I/O statement might not be supported on device
+    !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
     write(12,'(10F4.1)'), x
   end
   attributes(global) subroutine devsub3(n)
@@ -35,6 +35,12 @@ module m
     !ERROR: Host array 'm' cannot be present in device context
     if (i .le. N) a(i) = m(i)
   end subroutine
+
+  attributes(device) function devfct(r1, r2) result(res)
+    real(4), intent(in) :: r1(3), r2(3)
+    real(4) :: res(3)
+    res = r1 - r2 ! Do not error on function result
+  end function
 
   attributes(global) subroutine hostparameter(a)
     integer :: a(*)

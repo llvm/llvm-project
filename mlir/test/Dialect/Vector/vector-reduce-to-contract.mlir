@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-vector-reduction-to-contract-patterns -split-input-file | FileCheck %s
 
-// TODO: Seperate tests for vector.multi_reduction -> vector.contract and
+// TODO: Separate tests for vector.multi_reduction -> vector.contract and
 //  * pre-op + vector.contract -> vector.contract,
 //  * vector.contract + post-op -> vector.contract.
 

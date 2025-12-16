@@ -1,3 +1,3 @@
-CXX_SOURCES := main.cpp
+CXX_SOURCES := main.cpp extern.cpp
 
 include Makefile.rules

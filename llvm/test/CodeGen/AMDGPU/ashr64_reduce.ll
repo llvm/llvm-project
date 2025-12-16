@@ -17,9 +17,11 @@ define i64 @ashr_metadata(i64 %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v2, v[2:3]
+; CHECK-NEXT:    flat_load_dword v0, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v2, v[0:1]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load i64, ptr %arg1.ptr, !range !0, !noundef !{}
   %ashr = ashr i64 %arg0, %shift.amt
@@ -29,9 +31,11 @@ define i64 @ashr_metadata(i64 %arg0, ptr %arg1.ptr) {
 define amdgpu_ps i64 @ashr_metadata_sgpr_return(i64 inreg %arg0, ptr addrspace(1) inreg %arg1.ptr) {
 ; CHECK-LABEL: ashr_metadata_sgpr_return:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s2, s[2:3], 0x0
+; CHECK-NEXT:    s_load_dword s0, s[2:3], 0x0
+; CHECK-NEXT:    s_ashr_i32 s2, s1, 31
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_ashr_i64 s[0:1], s[0:1], s2
+; CHECK-NEXT:    s_ashr_i32 s0, s1, s0
+; CHECK-NEXT:    s_mov_b32 s1, s2
 ; CHECK-NEXT:    ; return to shader part epilog
   %shift.amt = load i64, ptr addrspace(1) %arg1.ptr, !range !0, !noundef !{}
   %ashr = ashr i64 %arg0, %shift.amt
@@ -43,9 +47,11 @@ define i64 @ashr_exact_metadata(i64 %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_exact_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v2, v[2:3]
+; CHECK-NEXT:    flat_load_dword v0, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v2, v[0:1]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load i64, ptr %arg1.ptr, !range !0, !noundef !{}
   %ashr = ashr exact i64 %arg0, %shift.amt
@@ -56,9 +62,11 @@ define i64 @ashr_metadata_two_ranges(i64 %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_metadata_two_ranges:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v2, v[2:3]
+; CHECK-NEXT:    flat_load_dword v0, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v2, v[0:1]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load i64, ptr %arg1.ptr, !range !1, !noundef !{}
   %ashr = ashr i64 %arg0, %shift.amt
@@ -100,12 +108,30 @@ define <2 x i64> @ashr_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_v2_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; CHECK-NEXT:    flat_load_dwordx4 v[6:9], v[4:5]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v5, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v4, v[0:1]
-; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v6, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v6, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v8, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, v5
+; CHECK-NEXT:    v_mov_b32_e32 v3, v4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load <2 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
+  %ashr = ashr <2 x i64> %arg0, %shift.amt
+  ret <2 x i64> %ashr
+}
+
+define <2 x i64> @ashr_v2_metadata_63(<2 x i64> %arg0, ptr %arg1.ptr) {
+; CHECK-LABEL: ashr_v2_metadata_63:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, 31, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
+; CHECK-NEXT:    v_mov_b32_e32 v3, v2
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %shift.amt = load <2 x i64>, ptr %arg1.ptr, !range !4, !noundef !{}
   %ashr = ashr <2 x i64> %arg0, %shift.amt
   ret <2 x i64> %ashr
 }
@@ -115,10 +141,14 @@ define <2 x i64> @ashr_exact_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_exact_v2_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; CHECK-NEXT:    flat_load_dwordx4 v[6:9], v[4:5]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v5, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v4, v[0:1]
-; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v6, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v6, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v8, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, v5
+; CHECK-NEXT:    v_mov_b32_e32 v3, v4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load <2 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
   %ashr = ashr exact <2 x i64> %arg0, %shift.amt
@@ -129,12 +159,18 @@ define <3 x i64> @ashr_v3_metadata(<3 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_v3_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v12, v[6:7] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[6:7]
+; CHECK-NEXT:    flat_load_dword v0, v[6:7] offset:16
+; CHECK-NEXT:    flat_load_dwordx4 v[9:12], v[6:7]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v7, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v8, 31, v3
+; CHECK-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i64 v[4:5], v12, v[4:5]
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v8, v[0:1]
-; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v10, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v4, v0, v5
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v9, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v11, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, v7
+; CHECK-NEXT:    v_mov_b32_e32 v3, v8
+; CHECK-NEXT:    v_mov_b32_e32 v5, v6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load <3 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
   %ashr = ashr <3 x i64> %arg0, %shift.amt
@@ -145,15 +181,23 @@ define <4 x i64> @ashr_v4_metadata(<4 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_v4_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[10:13], v[8:9]
+; CHECK-NEXT:    flat_load_dwordx4 v[12:15], v[8:9]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[13:16], v[8:9] offset:16
+; CHECK-NEXT:    flat_load_dwordx4 v[15:18], v[8:9] offset:16
 ; CHECK-NEXT:    ; kill: killed $vgpr8 killed $vgpr9
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v10, v[0:1]
-; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v12, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v11, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v9, 31, v3
+; CHECK-NEXT:    v_ashrrev_i32_e32 v10, 31, v5
+; CHECK-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v12, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v14, v3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i64 v[4:5], v13, v[4:5]
-; CHECK-NEXT:    v_ashrrev_i64 v[6:7], v15, v[6:7]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v4, v15, v5
+; CHECK-NEXT:    v_ashrrev_i32_e32 v6, v17, v7
+; CHECK-NEXT:    v_mov_b32_e32 v1, v11
+; CHECK-NEXT:    v_mov_b32_e32 v3, v9
+; CHECK-NEXT:    v_mov_b32_e32 v5, v10
+; CHECK-NEXT:    v_mov_b32_e32 v7, v8
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load <4 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
   %ashr = ashr <4 x i64> %arg0, %shift.amt
@@ -164,6 +208,7 @@ define <4 x i64> @ashr_v4_metadata(<4 x i64> %arg0, ptr %arg1.ptr) {
 !1 = !{i64 32, i64 38, i64 42, i64 48}
 !2 = !{i64 31, i64 38, i64 42, i64 48}
 !3 = !{i64 32, i64 38, i64 2147483680, i64 2147483681}
+!4 = !{i64 63, i64 64}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Test range with an "or X, 16"
@@ -333,8 +378,8 @@ define i64 @ashr_or32(i64 %arg0, i64 %shift_amt) {
 ; CHECK-LABEL: ashr_or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_or_b32_e32 v2, 32, v2
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v2, v[0:1]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v2, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v1, 31, v1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %or = or i64 %shift_amt, 32
   %ashr = ashr i64 %arg0, %or
@@ -345,10 +390,10 @@ define <2 x i64> @ashr_v2_or32(<2 x i64> %arg0, <2 x i64> %shift_amt) {
 ; CHECK-LABEL: ashr_v2_or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_or_b32_e32 v5, 32, v6
-; CHECK-NEXT:    v_or_b32_e32 v4, 32, v4
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v4, v[0:1]
-; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v5, v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v4, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v1, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v6, v3
+; CHECK-NEXT:    v_ashrrev_i32_e32 v3, 31, v3
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %or = or <2 x i64> %shift_amt, splat (i64 32)
   %ashr = ashr <2 x i64> %arg0, %or
@@ -359,12 +404,12 @@ define <3 x i64> @ashr_v3_or32(<3 x i64> %arg0, <3 x i64> %shift_amt) {
 ; CHECK-LABEL: ashr_v3_or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_or_b32_e32 v7, 32, v10
-; CHECK-NEXT:    v_or_b32_e32 v8, 32, v8
-; CHECK-NEXT:    v_or_b32_e32 v6, 32, v6
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v6, v[0:1]
-; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v8, v[2:3]
-; CHECK-NEXT:    v_ashrrev_i64 v[4:5], v7, v[4:5]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v6, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v1, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v8, v3
+; CHECK-NEXT:    v_ashrrev_i32_e32 v3, 31, v3
+; CHECK-NEXT:    v_ashrrev_i32_e32 v4, v10, v5
+; CHECK-NEXT:    v_ashrrev_i32_e32 v5, 31, v5
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %or = or <3 x i64> %shift_amt, splat (i64 32)
   %ashr = ashr <3 x i64> %arg0, %or
@@ -375,14 +420,14 @@ define <4 x i64> @ashr_v4_or32(<4 x i64> %arg0, <4 x i64> %shift_amt) {
 ; CHECK-LABEL: ashr_v4_or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_or_b32_e32 v9, 32, v14
-; CHECK-NEXT:    v_or_b32_e32 v11, 32, v12
-; CHECK-NEXT:    v_or_b32_e32 v10, 32, v10
-; CHECK-NEXT:    v_or_b32_e32 v8, 32, v8
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v8, v[0:1]
-; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v10, v[2:3]
-; CHECK-NEXT:    v_ashrrev_i64 v[4:5], v11, v[4:5]
-; CHECK-NEXT:    v_ashrrev_i64 v[6:7], v9, v[6:7]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v8, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v1, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v10, v3
+; CHECK-NEXT:    v_ashrrev_i32_e32 v3, 31, v3
+; CHECK-NEXT:    v_ashrrev_i32_e32 v4, v12, v5
+; CHECK-NEXT:    v_ashrrev_i32_e32 v5, 31, v5
+; CHECK-NEXT:    v_ashrrev_i32_e32 v6, v14, v7
+; CHECK-NEXT:    v_ashrrev_i32_e32 v7, 31, v7
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %or = or <4 x i64> %shift_amt, splat (i64 32)
   %ashr = ashr <4 x i64> %arg0, %or
@@ -395,8 +440,8 @@ define i64 @ashr_or32_sgpr(i64 inreg %arg0, i64 inreg %shift_amt) {
 ; CHECK-LABEL: ashr_or32_sgpr:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_or_b32 s4, s18, 32
-; CHECK-NEXT:    s_ashr_i64 s[4:5], s[16:17], s4
+; CHECK-NEXT:    s_ashr_i32 s4, s17, s18
+; CHECK-NEXT:    s_ashr_i32 s5, s17, 31
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -408,8 +453,8 @@ define i64 @ashr_or32_sgpr(i64 inreg %arg0, i64 inreg %shift_amt) {
 define amdgpu_ps i64 @ashr_or32_sgpr_return(i64 inreg %arg0, i64 inreg %shift_amt) {
 ; CHECK-LABEL: ashr_or32_sgpr_return:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_or_b32 s2, s2, 32
-; CHECK-NEXT:    s_ashr_i64 s[0:1], s[0:1], s2
+; CHECK-NEXT:    s_ashr_i32 s0, s1, s2
+; CHECK-NEXT:    s_ashr_i32 s1, s1, 31
 ; CHECK-NEXT:    ; return to shader part epilog
   %or = or i64 %shift_amt, 32
   %ashr = ashr i64 %arg0, %or
@@ -420,10 +465,10 @@ define <2 x i64> @ashr_v2_or32_sgpr(<2 x i64> inreg %arg0, <2 x i64> inreg %shif
 ; CHECK-LABEL: ashr_v2_or32_sgpr:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_or_b32 s6, s22, 32
-; CHECK-NEXT:    s_or_b32 s4, s20, 32
-; CHECK-NEXT:    s_ashr_i64 s[4:5], s[16:17], s4
-; CHECK-NEXT:    s_ashr_i64 s[6:7], s[18:19], s6
+; CHECK-NEXT:    s_ashr_i32 s4, s17, s20
+; CHECK-NEXT:    s_ashr_i32 s5, s17, 31
+; CHECK-NEXT:    s_ashr_i32 s6, s19, s22
+; CHECK-NEXT:    s_ashr_i32 s7, s19, 31
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s6
@@ -438,12 +483,12 @@ define <3 x i64> @ashr_v3_or32_sgpr(<3 x i64> inreg %arg0, <3 x i64> inreg %shif
 ; CHECK-LABEL: ashr_v3_or32_sgpr:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_or_b32 s8, s26, 32
-; CHECK-NEXT:    s_or_b32 s6, s24, 32
-; CHECK-NEXT:    s_or_b32 s4, s22, 32
-; CHECK-NEXT:    s_ashr_i64 s[4:5], s[16:17], s4
-; CHECK-NEXT:    s_ashr_i64 s[6:7], s[18:19], s6
-; CHECK-NEXT:    s_ashr_i64 s[8:9], s[20:21], s8
+; CHECK-NEXT:    s_ashr_i32 s4, s17, s22
+; CHECK-NEXT:    s_ashr_i32 s5, s17, 31
+; CHECK-NEXT:    s_ashr_i32 s6, s19, s24
+; CHECK-NEXT:    s_ashr_i32 s7, s19, 31
+; CHECK-NEXT:    s_ashr_i32 s8, s21, s26
+; CHECK-NEXT:    s_ashr_i32 s9, s21, 31
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s6
@@ -460,20 +505,21 @@ define <4 x i64> @ashr_v4_or32_sgpr(<4 x i64> inreg %arg0, <4 x i64> inreg %shif
 ; CHECK-LABEL: ashr_v4_or32_sgpr:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_or_b32_e32 v0, 32, v0
-; CHECK-NEXT:    s_or_b32 s8, s28, 32
-; CHECK-NEXT:    s_or_b32 s6, s26, 32
-; CHECK-NEXT:    s_or_b32 s4, s24, 32
-; CHECK-NEXT:    s_ashr_i64 s[4:5], s[16:17], s4
-; CHECK-NEXT:    s_ashr_i64 s[6:7], s[18:19], s6
-; CHECK-NEXT:    s_ashr_i64 s[8:9], s[20:21], s8
-; CHECK-NEXT:    v_ashrrev_i64 v[6:7], v0, s[22:23]
+; CHECK-NEXT:    s_ashr_i32 s4, s17, s24
+; CHECK-NEXT:    s_ashr_i32 s5, s17, 31
+; CHECK-NEXT:    s_ashr_i32 s6, s19, s26
+; CHECK-NEXT:    s_ashr_i32 s7, s19, 31
+; CHECK-NEXT:    s_ashr_i32 s8, s21, s28
+; CHECK-NEXT:    s_ashr_i32 s9, s21, 31
+; CHECK-NEXT:    s_ashr_i32 s10, s23, 31
+; CHECK-NEXT:    v_ashrrev_i32_e64 v6, v0, s23
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s7
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s8
 ; CHECK-NEXT:    v_mov_b32_e32 v5, s9
+; CHECK-NEXT:    v_mov_b32_e32 v7, s10
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %or = or <4 x i64> %shift_amt, splat (i64 32)
   %ashr = ashr <4 x i64> %arg0, %or

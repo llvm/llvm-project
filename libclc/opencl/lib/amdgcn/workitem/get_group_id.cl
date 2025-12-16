@@ -6,17 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/workitem/clc_get_group_id.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t get_group_id(uint dim) {
-  switch (dim) {
-  case 0:
-    return __builtin_amdgcn_workgroup_id_x();
-  case 1:
-    return __builtin_amdgcn_workgroup_id_y();
-  case 2:
-    return __builtin_amdgcn_workgroup_id_z();
-  default:
-    return 1;
-  }
+  return __clc_get_group_id(dim);
 }

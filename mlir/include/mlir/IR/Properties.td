@@ -401,6 +401,21 @@ class ConfinedProperty<Property p, Pred pred, string newSummary = "">
   : ConfinedProp<p, pred, newSummary>,
     Deprecated<"moved to shorter name ConfinedProp">;
 
+/// Defines a constant value of type `prop` to be used in pattern matching.
+/// When used as a constraint, forms a matcher that tests that the property is
+/// equal to the given value (and matches any other constraints on the property).
+/// The constant value is given as a string and should be of the _interface_ type
+/// of the attribute.
+///
+/// This requires that the given property's inference type be comparable to the
+/// given value with `==`, and does require specify a concrete property type.
+class ConstantProp<Property prop, string val>
+    : ConfinedProp<prop,
+        CPred<"$_self == " # val>,
+        "constant '" # prop.summary # "': " # val> {
+  string value = val;
+}
+
 //===----------------------------------------------------------------------===//
 // Primitive property combinators
 //===----------------------------------------------------------------------===//
@@ -453,7 +468,7 @@ class ArrayProp<Property elem = Property<>, string newSummary = ""> :
       return $_diag() << "expected array attribute";
     for (::mlir::Attribute elemAttr : arrayAttr) {
       }] # _makePropStorage<elem, "elemVal">.ret # [{
-      auto elemRes = [&](Attribute propAttr, }] # elem.storageType # [{& propStorage) -> ::mlir::LogicalResult {
+      auto elemRes = [&](::mlir::Attribute propAttr, }] # elem.storageType # [{& propStorage) -> ::mlir::LogicalResult {
         }] # !subst("$_attr", "propAttr",
           !subst("$_storage", "propStorage", elem.convertFromAttribute)) # [{
       }(elemAttr, elemVal);
@@ -465,7 +480,7 @@ class ArrayProp<Property elem = Property<>, string newSummary = ""> :
   }];
 
   let convertToAttribute = [{
-    SmallVector<Attribute> elems;
+    SmallVector<::mlir::Attribute> elems;
     for (const auto& elemVal : $_storage) {
       auto elemAttr = [&](const }] # elem.storageType #[{& propStorage) -> ::mlir::Attribute {
         }] # !subst("$_storage", "propStorage", elem.convertToAttribute) # [{
@@ -632,7 +647,7 @@ class OptionalProp<Property p, bit canDelegateParsing = 1>
     }
     ::mlir::Attribute presentAttr = arrayAttr[0];
     }] # _makePropStorage<p, "presentVal">.ret # [{
-    auto presentRes = [&](Attribute propAttr, }] # p.storageType # [{& propStorage) -> ::mlir::LogicalResult {
+    auto presentRes = [&](::mlir::Attribute propAttr, }] # p.storageType # [{& propStorage) -> ::mlir::LogicalResult {
       }] # !subst("$_storage", "propStorage",
           !subst("$_attr", "propAttr", p.convertFromAttribute)) # [{
     }(presentAttr, presentVal);
@@ -758,9 +773,10 @@ class OptionalProp<Property p, bit canDelegateParsing = 1>
   }];
   let writeToMlirBytecode = [{
     $_writer.writeOwnedBool($_storage.has_value());
-    if (!$_storage.has_value())
-      return;
-  }] # !subst("$_storage", "(*($_storage))", p.writeToMlirBytecode);
+    if ($_storage.has_value()) {
+      }] # !subst("$_storage", "(*($_storage))", p.writeToMlirBytecode) # [{
+    }
+  }];
 
   let hashProperty = !if(!empty(p.hashProperty), p.hashProperty,
     [{ hash_value($_storage.has_value() ? std::optional<::llvm::hash_code>{}] #

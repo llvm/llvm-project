@@ -94,7 +94,8 @@ def Linalg_IndexOp : Linalg_Op<"index", [Pure]>,
 def Linalg_SoftmaxOp : Linalg_Op<"softmax",
     [DestinationStyleOpInterface,
      PredOpTrait<"input and output have same element type", TCopVTEtIsSameAs<0, 1>>,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+      ["reifyResultShapes"]>,
      DeclareOpInterfaceMethods<AggregatedOpInterface, ["decomposeOperation"]>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TilingInterface,
@@ -183,15 +184,13 @@ def Linalg_WinogradFilterTransformOp : Linalg_Op<"winograd_filter_transform",
 
   let arguments = (ins TensorRankOf<[AnyType], [4]>:$filter,
                        TensorRankOf<[AnyType], [4]>:$output,
-                       I64Attr:$m,
-                       I64Attr:$r
+                       WinogradConv2DFmr:$fmr
   );
 
   let results = (outs TensorRankOf<[AnyType], [4]>:$result);
   let assemblyFormat = [{
     attr-dict
-    `m` `(` $m `)`
-    `r` `(` $r `)`
+    `fmr` `(` $fmr `)`
     `ins` `(` $filter `:` type($filter) `)`
     `outs` `(` $output `:` type($output) `)`
     `->` type($result)
@@ -254,15 +253,13 @@ def Linalg_WinogradInputTransformOp : Linalg_Op<"winograd_input_transform",
 
   let arguments = (ins TensorRankOf<[AnyType], [4]>:$input,
                        TensorRankOf<[AnyType], [6]>:$output,
-                       I64Attr:$m,
-                       I64Attr:$r
+                       WinogradConv2DFmr:$fmr
   );
 
   let results = (outs TensorRankOf<[AnyType], [6]>:$result);
   let assemblyFormat = [{
     attr-dict
-    `m` `(` $m `)`
-    `r` `(` $r `)`
+    `fmr` `(` $fmr `)`
     `ins` `(` $input `:` type($input) `)`
     `outs` `(` $output `:` type($output) `)`
     `->` type($result)
@@ -343,15 +340,13 @@ def Linalg_WinogradOutputTransformOp : Linalg_Op<"winograd_output_transform",
 
   let arguments = (ins TensorRankOf<[AnyType], [6]>:$value,
                        TensorRankOf<[AnyType], [4]>:$output,
-                       I64Attr:$m,
-                       I64Attr:$r
+                       WinogradConv2DFmr:$fmr
   );
 
   let results = (outs TensorRankOf<[AnyType], [4]>:$result);
   let assemblyFormat = [{
     attr-dict
-    `m` `(` $m `)`
-    `r` `(` $r `)`
+    `fmr` `(` $fmr `)`
     `ins` `(` $value `:` type($value) `)`
     `outs` `(` $output `:` type($output) `)`
     `->` type($result)

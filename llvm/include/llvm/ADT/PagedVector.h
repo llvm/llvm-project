@@ -189,8 +189,7 @@ public:
         while (ElementIdx < PV->Size &&
                !PV->PageToDataPtrs[ElementIdx / PageSize])
           ElementIdx += PageSize;
-        if (ElementIdx > PV->Size)
-          ElementIdx = PV->Size;
+        ElementIdx = std::min(ElementIdx, PV->Size);
       }
 
       return *this;

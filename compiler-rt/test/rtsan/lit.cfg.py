@@ -6,7 +6,7 @@ config.name = "RTSAN" + config.name_suffix
 
 default_rtsan_opts = "atexit_sleep_ms=0"
 
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     # On Darwin, we default to `abort_on_error=1`, which would make tests run
     # much slower. Let's override this and run lit tests with 'abort_on_error=0'.
     default_rtsan_opts += ":abort_on_error=0"
@@ -36,7 +36,7 @@ def build_invocation(compile_flags):
 llvm_rtsan = os.path.join(config.llvm_tools_dir, "llvm-rtsan")
 
 # Setup substitutions.
-if config.host_os == "Linux":
+if config.target_os == "Linux":
     libdl_flag = "-ldl"
 else:
     libdl_flag = ""
@@ -52,7 +52,7 @@ config.substitutions.append(("%llvm_rtsan", llvm_rtsan))
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
 
-if config.host_os not in ["Darwin", "FreeBSD", "Linux", "NetBSD", "OpenBSD"]:
+if config.target_os not in ["Darwin", "FreeBSD", "Linux", "NetBSD", "OpenBSD"]:
     config.unsupported = True
 elif "64" not in config.host_arch:
     if "arm" in config.host_arch:
@@ -61,5 +61,5 @@ elif "64" not in config.host_arch:
     else:
         config.unsupported = True
 
-if config.host_os == "NetBSD":
+if config.target_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_nomprotect_prefix))

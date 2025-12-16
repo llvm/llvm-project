@@ -171,8 +171,8 @@ public:
     (void)Result;
     assert(Result && "unimplemented branch");
 
-    Inst.getOperand(SymOpIndex) = MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
+    Inst.getOperand(SymOpIndex) =
+        MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
   }
 
   IndirectBranchType analyzeIndirectBranch(
@@ -233,8 +233,7 @@ public:
     Inst.setOpcode(RISCV::JAL);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(RISCV::X0));
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx)));
   }
 
   StringRef getTrapFillValue() const override {
@@ -246,8 +245,7 @@ public:
     Inst.setOpcode(Opcode);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(MCSpecifierExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        ELF::R_RISCV_CALL_PLT, *Ctx)));
+        MCSymbolRefExpr::create(Target, *Ctx), ELF::R_RISCV_CALL_PLT, *Ctx)));
   }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
@@ -563,8 +561,7 @@ public:
     Insts.emplace_back(MCInstBuilder(RISCV::BEQ)
                            .addReg(RegNo)
                            .addReg(RegTmp)
-                           .addExpr(MCSymbolRefExpr::create(
-                               Target, MCSymbolRefExpr::VK_None, *Ctx)));
+                           .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Insts;
   }
 
@@ -629,9 +626,9 @@ public:
     return Insts;
   }
 
-  InstructionListType
-  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
-                       unsigned CodePointerSize) const override {
+  InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                           MCContext *Ctx, bool IsLeaf,
+                                           unsigned CodePointerSize) override {
     // We need 2 scratch registers: one for the target address (x10), and one
     // for the increment value (x11).
     // addi sp, sp, -16
@@ -663,14 +660,12 @@ public:
     if (IsTailCall) {
       Inst.addOperand(MCOperand::createReg(RISCV::X0));
       Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-          Inst, MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-          *Ctx, 0)));
+          Inst, MCSymbolRefExpr::create(Target, *Ctx), *Ctx, 0)));
       convertJmpToTailCall(Inst);
     } else {
       Inst.addOperand(MCOperand::createReg(RISCV::X1));
       Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-          Inst, MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-          *Ctx, 0)));
+          Inst, MCSymbolRefExpr::create(Target, *Ctx), *Ctx, 0)));
     }
   }
 

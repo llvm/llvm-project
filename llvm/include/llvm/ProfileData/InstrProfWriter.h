@@ -226,8 +226,6 @@ private:
   void addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,
                  uint64_t Weight, function_ref<void(Error)> Warn);
   bool shouldEncodeData(const ProfilingData &PD);
-  /// Add \p Trace using reservoir sampling.
-  void addTemporalProfileTrace(TemporalProfTraceTy Trace);
 
   /// Add a memprof record for a function identified by its \p Id.
   void addMemProfRecord(const GlobalValue::GUID Id,

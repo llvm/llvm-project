@@ -48,3 +48,11 @@ unsigned long long test_ull(unsigned long long x) {
 unsigned _BitInt(16) test_unsigned_bit_int(unsigned _BitInt(16) x) {
   return -x;
 }
+
+unsigned test_shift_minus(int i) {
+  return -(1 << i);
+}
+
+unsigned test_shift_not(int i) {
+  return ~(1 << i);
+}

@@ -11,6 +11,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "TargetImpl.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
@@ -81,7 +82,8 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
-  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
+  void applyBranchToBranchOpt() const override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -112,6 +114,7 @@ AArch64::AArch64(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_AARCH64_COPY;
   relativeRel = R_AARCH64_RELATIVE;
   iRelativeRel = R_AARCH64_IRELATIVE;
+  iRelSymbolicRel = R_AARCH64_FUNCINIT64;
   gotRel = R_AARCH64_GLOB_DAT;
   pltRel = R_AARCH64_JUMP_SLOT;
   symbolicRel = R_AARCH64_ABS64;
@@ -135,6 +138,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_ABS16:
   case R_AARCH64_ABS32:
   case R_AARCH64_ABS64:
+  case R_AARCH64_FUNCINIT64:
   case R_AARCH64_ADD_ABS_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
   case R_AARCH64_LDST16_ABS_LO12_NC:
@@ -151,6 +155,12 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_MOVW_UABS_G2:
   case R_AARCH64_MOVW_UABS_G2_NC:
   case R_AARCH64_MOVW_UABS_G3:
+    return R_ABS;
+  case R_AARCH64_PATCHINST:
+    if (!isAbsolute(s))
+      Err(ctx) << getErrorLoc(ctx, loc)
+               << "R_AARCH64_PATCHINST relocation against non-absolute symbol "
+               << &s;
     return R_ABS;
   case R_AARCH64_AUTH_ABS64:
     return RE_AARCH64_AUTH;
@@ -259,7 +269,8 @@ bool AArch64::usesOnlyLowPageBits(RelType type) const {
 }
 
 RelType AArch64::getDynRel(RelType type) const {
-  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64)
+  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64 ||
+      type == R_AARCH64_FUNCINIT64)
     return type;
   return R_AARCH64_NONE;
 }
@@ -503,6 +514,12 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_PREL32:
     checkIntUInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
+    break;
+  case R_AARCH64_PATCHINST:
+    if (!rel.sym->isUndefined()) {
+      checkUInt(ctx, loc, val, 32, rel);
+      write32le(loc, val);
+    }
     break;
   case R_AARCH64_PLT32:
   case R_AARCH64_GOTPCREL32:
@@ -748,7 +765,7 @@ void AArch64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     relocateNoSym(loc, R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC, val);
     break;
   default:
-    llvm_unreachable("unsupported relocation for TLS GD to LE relaxation");
+    llvm_unreachable("unsupported relocation for TLS GD to IE relaxation");
   }
 }
 
@@ -925,12 +942,8 @@ static bool needsGotForMemtag(const Relocation &rel) {
   return rel.sym->isTagged() && needsGot(rel.expr);
 }
 
-void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
+void AArch64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   AArch64Relaxer relaxer(ctx, sec.relocs());
   for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
     const Relocation &rel = sec.relocs()[i];
@@ -972,6 +985,62 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     }
     relocate(loc, rel, val);
   }
+}
+
+static std::optional<uint64_t> getControlTransferAddend(InputSection &is,
+                                                        Relocation &r) {
+  // Identify a control transfer relocation for the branch-to-branch
+  // optimization. A "control transfer relocation" means a B or BL
+  // target but it also includes relative vtable relocations for example.
+  //
+  // We require the relocation type to be JUMP26, CALL26 or PLT32. With a
+  // relocation type of PLT32 the value may be assumed to be used for branching
+  // directly to the symbol and the addend is only used to produce the relocated
+  // value (hence the effective addend is always 0). This is because if a PLT is
+  // needed the addend will be added to the address of the PLT, and it doesn't
+  // make sense to branch into the middle of a PLT. For example, relative vtable
+  // relocations use PLT32 and 0 or a positive value as the addend but still are
+  // used to branch to the symbol.
+  //
+  // With JUMP26 or CALL26 the only reasonable interpretation of a non-zero
+  // addend is that we are branching to symbol+addend so that becomes the
+  // effective addend.
+  if (r.type == R_AARCH64_PLT32)
+    return 0;
+  if (r.type == R_AARCH64_JUMP26 || r.type == R_AARCH64_CALL26)
+    return r.addend;
+  return std::nullopt;
+}
+
+static std::pair<Relocation *, uint64_t>
+getBranchInfoAtTarget(InputSection &is, uint64_t offset) {
+  auto *i = llvm::partition_point(
+      is.relocations, [&](Relocation &r) { return r.offset < offset; });
+  if (i != is.relocations.end() && i->offset == offset &&
+      i->type == R_AARCH64_JUMP26) {
+    return {i, i->addend};
+  }
+  return {nullptr, 0};
+}
+
+static void redirectControlTransferRelocations(Relocation &r1,
+                                               const Relocation &r2) {
+  r1.expr = r2.expr;
+  r1.sym = r2.sym;
+  // With PLT32 we must respect the original addend as that affects the value's
+  // interpretation. With the other relocation types the original addend is
+  // irrelevant because it referred to an offset within the original target
+  // section so we overwrite it.
+  if (r1.type == R_AARCH64_PLT32)
+    r1.addend += r2.addend;
+  else
+    r1.addend = r2.addend;
+}
+
+void AArch64::applyBranchToBranchOpt() const {
+  applyBranchToBranchOptImpl(ctx, getControlTransferAddend,
+                             getBranchInfoAtTarget,
+                             redirectControlTransferRelocations);
 }
 
 // AArch64 may use security features in variant PLT sequences. These are:

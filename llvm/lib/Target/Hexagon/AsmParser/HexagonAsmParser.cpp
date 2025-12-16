@@ -423,7 +423,7 @@ public:
     return StringRef(Tok.Data, Tok.Length);
   }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   static std::unique_ptr<HexagonOperand> CreateToken(MCContext &Context,
                                                      StringRef Str, SMLoc S) {
@@ -456,14 +456,14 @@ public:
 
 } // end anonymous namespace
 
-void HexagonOperand::print(raw_ostream &OS) const {
+void HexagonOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case Immediate:
     HexagonMCAsmInfo(Triple()).printExpr(OS, *getImm());
     break;
   case Register:
     OS << "<register R";
-    OS << getReg() << ">";
+    OS << getReg().id() << ">";
     break;
   case Token:
     OS << "'" << getToken() << "'";

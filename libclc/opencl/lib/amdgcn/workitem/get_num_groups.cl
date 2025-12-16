@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/opencl-base.h>
 
 uint __clc_amdgcn_get_num_groups_x(void) __asm("llvm.r600.read.ngroups.x");
 uint __clc_amdgcn_get_num_groups_y(void) __asm("llvm.r600.read.ngroups.y");

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
+#include "hdr/errno_macros.h"
 #include "src/math/exp2m1f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -16,8 +16,6 @@ using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
 using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
 TEST_F(LlvmLibcExp2m1fTest, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::exp2m1f(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
@@ -34,8 +32,6 @@ TEST_F(LlvmLibcExp2m1fTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExp2m1fTest, Overflow) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::exp2m1f(0x1.fffffep+127),
                               FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -50,8 +46,6 @@ TEST_F(LlvmLibcExp2m1fTest, Overflow) {
 }
 
 TEST_F(LlvmLibcExp2m1fTest, Underflow) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(-1.0f, LIBC_NAMESPACE::exp2m1f(-0x1.fffffep+127),
                               FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);

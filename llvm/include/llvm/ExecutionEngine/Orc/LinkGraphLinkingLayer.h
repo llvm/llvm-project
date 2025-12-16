@@ -63,7 +63,6 @@ public:
                                      jitlink::JITLinkContext &Ctx,
                                      MemoryBufferRef InputObject) {}
 
-    virtual void notifyLoaded(MaterializationResponsibility &MR) {}
     virtual Error notifyEmitted(MaterializationResponsibility &MR) {
       return Error::success();
     }
@@ -89,7 +88,7 @@ public:
                         std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
   /// Destroy the LinkGraphLinkingLayer.
-  ~LinkGraphLinkingLayer();
+  ~LinkGraphLinkingLayer() override;
 
   /// Add a plugin.
   LinkGraphLinkingLayer &addPlugin(std::shared_ptr<Plugin> P) {

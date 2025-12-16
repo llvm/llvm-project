@@ -15,7 +15,7 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(<4 x s32>) = COPY $q4
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s32>) = G_CONCAT_VECTORS [[COPY1]](<4 x s32>), [[COPY2]](<4 x s32>), [[COPY3]](<4 x s32>), [[COPY4]](<4 x s32>)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.experimental.vector.partial.reduce.add), [[COPY]](<4 x s32>), [[CONCAT_VECTORS]](<16 x s32>)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.vector.partial.reduce.add), [[COPY]](<4 x s32>), [[CONCAT_VECTORS]](<16 x s32>)
     ; CHECK-NEXT: [[VECREDUCE_ADD:%[0-9]+]]:_(s32) = G_VECREDUCE_ADD [[INT]](<4 x s32>)
     ; CHECK-NEXT: $w0 = COPY [[VECREDUCE_ADD]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -25,7 +25,7 @@ body:             |
     %4:_(<4 x s32>) = COPY $q3
     %5:_(<4 x s32>) = COPY $q4
     %1:_(<16 x s32>) = G_CONCAT_VECTORS %2:_(<4 x s32>), %3:_(<4 x s32>), %4:_(<4 x s32>), %5:_(<4 x s32>)
-    %6:_(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.experimental.vector.partial.reduce.add), %0:_(<4 x s32>), %1:_(<16 x s32>)
+    %6:_(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.vector.partial.reduce.add), %0:_(<4 x s32>), %1:_(<16 x s32>)
     %7:_(s32) = G_VECREDUCE_ADD %6:_(<4 x s32>)
     $w0 = COPY %7:_(s32)
     RET_ReallyLR implicit $w0

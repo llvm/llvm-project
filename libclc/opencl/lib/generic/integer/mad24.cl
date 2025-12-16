@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/integer/clc_mad24.h>
-#include <clc/opencl/clc.h>
 
-#define FUNCTION mad24
+#define __CLC_FUNCTION mad24
 #define __CLC_BODY <clc/shared/ternary_def.inc>
 
 #include <clc/integer/gentype24.inc>

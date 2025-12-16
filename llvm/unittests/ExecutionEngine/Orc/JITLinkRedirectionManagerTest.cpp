@@ -18,7 +18,7 @@ static int finalTarget() { return 53; }
 
 class JITLinkRedirectionManagerTest : public testing::Test {
 public:
-  ~JITLinkRedirectionManagerTest() {
+  ~JITLinkRedirectionManagerTest() override {
     if (ES)
       if (auto Err = ES->endSession())
         ES->reportError(std::move(Err));

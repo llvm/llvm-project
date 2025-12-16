@@ -247,7 +247,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __stable_sort(
   constexpr auto __default_comp = __desugars_to_v<__less_tag, _Compare, value_type, value_type >;
   constexpr auto __radix_sortable =
       __is_ordered_integer_representable_v<value_type> &&
-      is_same_v< value_type&, __iter_reference<_RandomAccessIterator>>;
+      is_same_v< value_type&, __iterator_reference<_RandomAccessIterator>>;
   if constexpr (__default_comp && __radix_sortable) {
     if (__len <= __buff_size && __len >= static_cast<difference_type>(std::__radix_sort_min_bound<value_type>()) &&
         __len <= static_cast<difference_type>(std::__radix_sort_max_bound<value_type>())) {

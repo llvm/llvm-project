@@ -292,7 +292,7 @@ template <int... Is> void variadic_nttp() {
   void bar [[noreturn...]] ();                        // expected-error {{attribute 'noreturn' cannot be used as an attribute pack}}
   void baz [[clang::no_sanitize(Is...)]] ();          // expected-error {{expected string literal as argument of 'no_sanitize' attribute}}
   void bor [[clang::annotate("A", "V" ...)]] ();      // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
-  void bir [[clang::annotate("B", {1, 2, 3, 4})]] (); // expected-error {{'annotate' attribute requires parameter 1 to be a constant expression}} expected-note {{subexpression not valid in a constant expression}}
+  void bir [[clang::annotate("B", {1, 2, 3, 4})]] (); // expected-error {{'clang::annotate' attribute requires parameter 1 to be a constant expression}} expected-note {{subexpression not valid in a constant expression}}
   void boo [[unknown::foo(Is...)]] ();                // expected-warning {{unknown attribute 'unknown::foo' ignored}}
   void faz [[clang::annotate("C", (Is + ...))]] ();   // expected-warning {{pack fold expression is a C++17 extension}}
   void far [[clang::annotate("D", Is...)]] ();
@@ -306,8 +306,8 @@ void bar () {
   // FIXME: GCC accepts [[gnu::noreturn]] on a lambda, even though it appertains
   // to the operator()'s type, and GCC does not otherwise accept attributes
   // applied to types. Use that to test this.
-  [] () [[gnu::noreturn]] { return; } (); // expected-warning {{attribute 'noreturn' ignored}} FIXME-error {{should not return}}
-  [] () [[gnu::noreturn]] { throw; } (); // expected-warning {{attribute 'noreturn' ignored}}
+  [] () [[gnu::noreturn]] { return; } (); // expected-warning {{attribute 'gnu::noreturn' ignored}} FIXME-error {{should not return}}
+  [] () [[gnu::noreturn]] { throw; } (); // expected-warning {{attribute 'gnu::noreturn' ignored}}
   new int[42][[]][5][[]]{};
 }
 
@@ -350,16 +350,16 @@ namespace arguments {
 }
 
 // Forbid attributes on decl specifiers.
-unsigned [[gnu::used]] static int [[gnu::unused]] v1; // expected-error {{'unused' attribute cannot be applied to types}} \
+unsigned [[gnu::used]] static int [[gnu::unused]] v1; // expected-error {{'gnu::unused' attribute cannot be applied to types}} \
            expected-error {{an attribute list cannot appear here}}
-typedef [[gnu::used]] unsigned long [[gnu::unused]] v2; // expected-error {{'unused' attribute cannot be applied to types}} \
+typedef [[gnu::used]] unsigned long [[gnu::unused]] v2; // expected-error {{'gnu::unused' attribute cannot be applied to types}} \
           expected-error {{an attribute list cannot appear here}}
 int [[carries_dependency]] foo(int [[carries_dependency]] x); // expected-error 2{{'carries_dependency' attribute cannot be applied to types}}
 
 // Forbid [[gnu::...]] attributes on declarator chunks.
-int *[[gnu::unused]] v3; // expected-warning {{attribute 'unused' ignored}}
-int v4[2][[gnu::unused]]; // expected-warning {{attribute 'unused' ignored}}
-int v5()[[gnu::unused]]; // expected-warning {{attribute 'unused' ignored}}
+int *[[gnu::unused]] v3; // expected-warning {{attribute 'gnu::unused' ignored}}
+int v4[2][[gnu::unused]]; // expected-warning {{attribute 'gnu::unused' ignored}}
+int v5()[[gnu::unused]]; // expected-warning {{attribute 'gnu::unused' ignored}}
 
 [[attribute_declaration]]; // expected-warning {{unknown attribute 'attribute_declaration' ignored}}
 [[noreturn]]; // expected-error {{'noreturn' attribute only applies to functions}}

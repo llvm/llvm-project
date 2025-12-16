@@ -183,9 +183,9 @@ static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
     AttributeCommonInfo::AttrArgsInfo AttrArgsInfo =
         AttributeCommonInfo::getCXX11AttrArgsInfo(II);
     if (AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Required)
-      return PP.isNextPPTokenLParen();
+      return PP.isNextPPTokenOneOf(tok::l_paren);
 
-    return !PP.isNextPPTokenLParen() ||
+    return !PP.isNextPPTokenOneOf(tok::l_paren) ||
            AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Optional;
   }
   return false;
@@ -248,50 +248,67 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
 
   // The standard C/C++ and Posix headers
   return llvm::StringSwitch<bool>(LowerInclude)
-    // C library headers
-    .Cases("assert.h", "complex.h", "ctype.h", "errno.h", "fenv.h", true)
-    .Cases("float.h", "inttypes.h", "iso646.h", "limits.h", "locale.h", true)
-    .Cases("math.h", "setjmp.h", "signal.h", "stdalign.h", "stdarg.h", true)
-    .Cases("stdatomic.h", "stdbool.h", "stdckdint.h", "stdcountof.h", true)
-    .Cases("stddef.h", "stdint.h", "stdio.h", "stdlib.h", "stdnoreturn.h", true)
-    .Cases("string.h", "tgmath.h", "threads.h", "time.h", "uchar.h", true)
-    .Cases("wchar.h", "wctype.h", true)
+      // C library headers
+      .Cases({"assert.h", "complex.h", "ctype.h", "errno.h", "fenv.h"}, true)
+      .Cases({"float.h", "inttypes.h", "iso646.h", "limits.h", "locale.h"},
+             true)
+      .Cases({"math.h", "setjmp.h", "signal.h", "stdalign.h", "stdarg.h"}, true)
+      .Cases({"stdatomic.h", "stdbool.h", "stdckdint.h", "stdcountof.h"}, true)
+      .Cases({"stddef.h", "stdint.h", "stdio.h", "stdlib.h", "stdnoreturn.h"},
+             true)
+      .Cases({"string.h", "tgmath.h", "threads.h", "time.h", "uchar.h"}, true)
+      .Cases({"wchar.h", "wctype.h"}, true)
 
-    // C++ headers for C library facilities
-    .Cases("cassert", "ccomplex", "cctype", "cerrno", "cfenv", true)
-    .Cases("cfloat", "cinttypes", "ciso646", "climits", "clocale", true)
-    .Cases("cmath", "csetjmp", "csignal", "cstdalign", "cstdarg", true)
-    .Cases("cstdbool", "cstddef", "cstdint", "cstdio", "cstdlib", true)
-    .Cases("cstring", "ctgmath", "ctime", "cuchar", "cwchar", true)
-    .Case("cwctype", true)
+      // C++ headers for C library facilities
+      .Cases({"cassert", "ccomplex", "cctype", "cerrno", "cfenv"}, true)
+      .Cases({"cfloat", "cinttypes", "ciso646", "climits", "clocale"}, true)
+      .Cases({"cmath", "csetjmp", "csignal", "cstdalign", "cstdarg"}, true)
+      .Cases({"cstdbool", "cstddef", "cstdint", "cstdio", "cstdlib"}, true)
+      .Cases({"cstring", "ctgmath", "ctime", "cuchar", "cwchar"}, true)
+      .Case("cwctype", true)
 
-    // C++ library headers
-    .Cases("algorithm", "fstream", "list", "regex", "thread", true)
-    .Cases("array", "functional", "locale", "scoped_allocator", "tuple", true)
-    .Cases("atomic", "future", "map", "set", "type_traits", true)
-    .Cases("bitset", "initializer_list", "memory", "shared_mutex", "typeindex", true)
-    .Cases("chrono", "iomanip", "mutex", "sstream", "typeinfo", true)
-    .Cases("codecvt", "ios", "new", "stack", "unordered_map", true)
-    .Cases("complex", "iosfwd", "numeric", "stdexcept", "unordered_set", true)
-    .Cases("condition_variable", "iostream", "ostream", "streambuf", "utility", true)
-    .Cases("deque", "istream", "queue", "string", "valarray", true)
-    .Cases("exception", "iterator", "random", "strstream", "vector", true)
-    .Cases("forward_list", "limits", "ratio", "system_error", true)
+      // C++ library headers
+      .Cases({"algorithm", "fstream", "list", "regex", "thread"}, true)
+      .Cases({"array", "functional", "locale", "scoped_allocator", "tuple"},
+             true)
+      .Cases({"atomic", "future", "map", "set", "type_traits"}, true)
+      .Cases(
+          {"bitset", "initializer_list", "memory", "shared_mutex", "typeindex"},
+          true)
+      .Cases({"chrono", "iomanip", "mutex", "sstream", "typeinfo"}, true)
+      .Cases({"codecvt", "ios", "new", "stack", "unordered_map"}, true)
+      .Cases({"complex", "iosfwd", "numeric", "stdexcept", "unordered_set"},
+             true)
+      .Cases(
+          {"condition_variable", "iostream", "ostream", "streambuf", "utility"},
+          true)
+      .Cases({"deque", "istream", "queue", "string", "valarray"}, true)
+      .Cases({"exception", "iterator", "random", "strstream", "vector"}, true)
+      .Cases({"forward_list", "limits", "ratio", "system_error"}, true)
 
-    // POSIX headers (which aren't also C headers)
-    .Cases("aio.h", "arpa/inet.h", "cpio.h", "dirent.h", "dlfcn.h", true)
-    .Cases("fcntl.h", "fmtmsg.h", "fnmatch.h", "ftw.h", "glob.h", true)
-    .Cases("grp.h", "iconv.h", "langinfo.h", "libgen.h", "monetary.h", true)
-    .Cases("mqueue.h", "ndbm.h", "net/if.h", "netdb.h", "netinet/in.h", true)
-    .Cases("netinet/tcp.h", "nl_types.h", "poll.h", "pthread.h", "pwd.h", true)
-    .Cases("regex.h", "sched.h", "search.h", "semaphore.h", "spawn.h", true)
-    .Cases("strings.h", "stropts.h", "sys/ipc.h", "sys/mman.h", "sys/msg.h", true)
-    .Cases("sys/resource.h", "sys/select.h",  "sys/sem.h", "sys/shm.h", "sys/socket.h", true)
-    .Cases("sys/stat.h", "sys/statvfs.h", "sys/time.h", "sys/times.h", "sys/types.h", true)
-    .Cases("sys/uio.h", "sys/un.h", "sys/utsname.h", "sys/wait.h", "syslog.h", true)
-    .Cases("tar.h", "termios.h", "trace.h", "ulimit.h", true)
-    .Cases("unistd.h", "utime.h", "utmpx.h", "wordexp.h", true)
-    .Default(false);
+      // POSIX headers (which aren't also C headers)
+      .Cases({"aio.h", "arpa/inet.h", "cpio.h", "dirent.h", "dlfcn.h"}, true)
+      .Cases({"fcntl.h", "fmtmsg.h", "fnmatch.h", "ftw.h", "glob.h"}, true)
+      .Cases({"grp.h", "iconv.h", "langinfo.h", "libgen.h", "monetary.h"}, true)
+      .Cases({"mqueue.h", "ndbm.h", "net/if.h", "netdb.h", "netinet/in.h"},
+             true)
+      .Cases({"netinet/tcp.h", "nl_types.h", "poll.h", "pthread.h", "pwd.h"},
+             true)
+      .Cases({"regex.h", "sched.h", "search.h", "semaphore.h", "spawn.h"}, true)
+      .Cases({"strings.h", "stropts.h", "sys/ipc.h", "sys/mman.h", "sys/msg.h"},
+             true)
+      .Cases({"sys/resource.h", "sys/select.h", "sys/sem.h", "sys/shm.h",
+              "sys/socket.h"},
+             true)
+      .Cases({"sys/stat.h", "sys/statvfs.h", "sys/time.h", "sys/times.h",
+              "sys/types.h"},
+             true)
+      .Cases(
+          {"sys/uio.h", "sys/un.h", "sys/utsname.h", "sys/wait.h", "syslog.h"},
+          true)
+      .Cases({"tar.h", "termios.h", "trace.h", "ulimit.h"}, true)
+      .Cases({"unistd.h", "utime.h", "utmpx.h", "wordexp.h"}, true)
+      .Default(false);
 }
 
 /// Find a similar string in `Candidates`.
@@ -1242,9 +1259,6 @@ void Preprocessor::HandleDirective(Token &Result) {
   // pp-directive.
   bool ReadAnyTokensBeforeDirective =CurPPLexer->MIOpt.getHasReadAnyTokensVal();
 
-  if (!hasSeenMainFileFirstPPToken())
-    HandleMainFileFirstPPToken(Result);
-
   // Save the '#' token in case we need to return it later.
   Token SavedHash = Result;
 
@@ -1383,11 +1397,12 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleIdentSCCSDirective(Result);
     case tok::pp_sccs:
       return HandleIdentSCCSDirective(Result);
-    case tok::pp_embed:
-      return HandleEmbedDirective(SavedHash.getLocation(), Result,
-                                  getCurrentFileLexer()
-                                      ? *getCurrentFileLexer()->getFileEntry()
-                                      : static_cast<FileEntry *>(nullptr));
+    case tok::pp_embed: {
+      if (PreprocessorLexer *CurrentFileLexer = getCurrentFileLexer())
+        if (OptionalFileEntryRef FERef = CurrentFileLexer->getFileEntry())
+          return HandleEmbedDirective(SavedHash.getLocation(), Result, *FERef);
+      return HandleEmbedDirective(SavedHash.getLocation(), Result, nullptr);
+    }
     case tok::pp_assert:
       //isExtension = true;  // FIXME: implement #assert
       break;
@@ -2079,10 +2094,11 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     return;
 
   if (FilenameTok.isNot(tok::header_name)) {
-    if (FilenameTok.is(tok::identifier) && PPOpts.SingleFileParseMode) {
+    if (FilenameTok.is(tok::identifier) &&
+        (PPOpts.SingleFileParseMode || PPOpts.SingleModuleParseMode)) {
       // If we saw #include IDENTIFIER and lexing didn't turn in into a header
-      // name, it was undefined. In 'single-file-parse' mode, just skip the
-      // directive without emitting diagnostics - the identifier might be
+      // name, it was undefined. In 'single-{file,module}-parse' mode, just skip
+      // the directive without emitting diagnostics - the identifier might be
       // normally defined in previously-skipped include directive.
       DiscardUntilEndOfDirective();
       return;
@@ -2390,10 +2406,15 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       (getLangOpts().CPlusPlusModules || getLangOpts().Modules) &&
       ModuleToImport && !ModuleToImport->isHeaderUnit();
 
+  if (MaybeTranslateInclude && (UsableHeaderUnit || UsableClangHeaderModule) &&
+      PPOpts.SingleModuleParseMode) {
+    Action = IncludeLimitReached;
+  }
   // Determine whether we should try to import the module for this #include, if
   // there is one. Don't do so if precompiled module support is disabled or we
   // are processing this module textually (because we're building the module).
-  if (MaybeTranslateInclude && (UsableHeaderUnit || UsableClangHeaderModule)) {
+  else if (MaybeTranslateInclude &&
+           (UsableHeaderUnit || UsableClangHeaderModule)) {
     // If this include corresponds to a module but that module is
     // unavailable, diagnose the situation and bail out.
     // FIXME: Remove this; loadModule does the same check (but produces
@@ -3307,23 +3328,6 @@ void Preprocessor::HandleDefineDirective(
   // If the callbacks want to know, tell them about the macro definition.
   if (Callbacks)
     Callbacks->MacroDefined(MacroNameTok, MD);
-
-  // If we're in MS compatibility mode and the macro being defined is the
-  // assert macro, implicitly add a macro definition for static_assert to work
-  // around their broken assert.h header file in C. Only do so if there isn't
-  // already a static_assert macro defined.
-  if (!getLangOpts().CPlusPlus && getLangOpts().MSVCCompat &&
-      MacroNameTok.getIdentifierInfo()->isStr("assert") &&
-      !isMacroDefined("static_assert")) {
-    MacroInfo *MI = AllocateMacroInfo(SourceLocation());
-
-    Token Tok;
-    Tok.startToken();
-    Tok.setKind(tok::kw__Static_assert);
-    Tok.setIdentifierInfo(getIdentifierInfo("_Static_assert"));
-    MI->setTokens({Tok}, BP);
-    (void)appendDefMacroDirective(getIdentifierInfo("static_assert"), MI);
-  }
 }
 
 /// HandleUndefDirective - Implements \#undef.
@@ -3445,6 +3449,13 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
     CurPPLexer->pushConditionalLevel(DirectiveTok.getLocation(),
                                      /*wasskip*/false, /*foundnonskip*/false,
                                      /*foundelse*/false);
+  } else if (PPOpts.SingleModuleParseMode && !MI) {
+    // In 'single-module-parse mode' undefined identifiers trigger skipping of
+    // all the directive blocks. We lie here and set FoundNonSkipPortion so that
+    // even any \#else blocks get skipped.
+    SkipExcludedConditionalBlock(
+        HashToken.getLocation(), DirectiveTok.getLocation(),
+        /*FoundNonSkipPortion=*/true, /*FoundElse=*/false);
   } else if (!MI == isIfndef || RetainExcludedCB) {
     // Yes, remember that we are inside a conditional, then lex the next token.
     CurPPLexer->pushConditionalLevel(DirectiveTok.getLocation(),
@@ -3499,6 +3510,13 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(IfToken.getLocation(), /*wasskip*/false,
                                      /*foundnonskip*/false, /*foundelse*/false);
+  } else if (PPOpts.SingleModuleParseMode && DER.IncludedUndefinedIds) {
+    // In 'single-module-parse mode' undefined identifiers trigger skipping of
+    // all the directive blocks. We lie here and set FoundNonSkipPortion so that
+    // even any \#else blocks get skipped.
+    SkipExcludedConditionalBlock(HashToken.getLocation(), IfToken.getLocation(),
+                                 /*FoundNonSkipPortion=*/true,
+                                 /*FoundElse=*/false);
   } else if (ConditionalTrue || RetainExcludedCB) {
     // Yes, remember that we are inside a conditional, then lex the next token.
     CurPPLexer->pushConditionalLevel(IfToken.getLocation(), /*wasskip*/false,
@@ -3668,14 +3686,14 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
           std::pair<tok::TokenKind, SourceLocation> Matches) {
         Diag(CurTok, diag::err_expected) << Expected;
         Diag(Matches.second, diag::note_matching) << Matches.first;
-        if (CurTok.isNot(tok::eod))
+        if (CurTok.isNot(EndTokenKind))
           DiscardUntilEndOfDirective(CurTok);
       };
 
   auto ExpectOrDiagAndSkipToEOD = [&](tok::TokenKind Kind) {
     if (CurTok.isNot(Kind)) {
       Diag(CurTok, diag::err_expected) << Kind;
-      if (CurTok.isNot(tok::eod))
+      if (CurTok.isNot(EndTokenKind))
         DiscardUntilEndOfDirective(CurTok);
       return false;
     }
@@ -3766,6 +3784,8 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (Result.isNegative()) {
         Diag(CurTok, diag::err_requires_positive_value)
             << toString(Result, 10) << /*positive*/ 0;
+        if (CurTok.isNot(EndTokenKind))
+          DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
       return Result.getLimitedValue();
@@ -3813,9 +3833,13 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
             [[fallthrough]];
           case tok::r_brace:
           case tok::r_square: {
+            if (BracketStack.empty()) {
+              ExpectOrDiagAndSkipToEOD(tok::r_paren);
+              return false;
+            }
             tok::TokenKind Matching =
                 GetMatchingCloseBracket(BracketStack.back().first);
-            if (BracketStack.empty() || CurTok.getKind() != Matching) {
+            if (CurTok.getKind() != Matching) {
               DiagMismatchedBracesAndSkipToEOD(Matching, BracketStack.back());
               return false;
             }
@@ -3903,7 +3927,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       }
       if (!ForHasEmbed) {
         Diag(ParamStartLoc, diag::err_pp_unknown_parameter) << 1 << Parameter;
-        if (CurTok.isNot(tok::eod))
+        if (CurTok.isNot(EndTokenKind))
           DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
@@ -4005,14 +4029,17 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   StringRef OriginalFilename = Filename;
   bool isAngled =
       GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
+
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
-  assert(!Filename.empty());
+  if (Filename.empty())
+    return;
+
   OptionalFileEntryRef MaybeFileRef =
       this->LookupEmbedFile(Filename, isAngled, true, LookupFromFile);
   if (!MaybeFileRef) {
     // could not find file
-    if (Callbacks && Callbacks->EmbedFileNotFound(OriginalFilename)) {
+    if (Callbacks && Callbacks->EmbedFileNotFound(Filename)) {
       return;
     }
     Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;

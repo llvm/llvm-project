@@ -203,7 +203,7 @@ static MCInstPrinter *createSystemZMCInstPrinter(const Triple &T,
 static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,
                                                  MCInstPrinter *InstPrint) {
-  if (S.getContext().getTargetTriple().isOSzOS())
+  if (S.getContext().getTargetTriple().isOSzOS() && !GNUAsOnzOSCL)
     return new SystemZTargetHLASMStreamer(S, OS);
   else
     return new SystemZTargetGNUStreamer(S, OS);

@@ -8,7 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/XtensaMCExpr.h"
+#include "MCTargetDesc/XtensaMCAsmInfo.h"
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "MCTargetDesc/XtensaTargetStreamer.h"
 #include "TargetInfo/XtensaTargetInfo.h"
@@ -302,10 +302,10 @@ public:
     return Tok;
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Immediate:
-      OS << *getImm();
+      MAI.printExpr(OS, *getImm());
       break;
     case Register:
       OS << "<register x";

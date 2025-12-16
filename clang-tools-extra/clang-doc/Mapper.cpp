@@ -95,10 +95,10 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
     // this decl for some reason (e.g. we're only reporting public decls).
     if (Child)
       CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(Child->USR)),
-                               serialize::serialize(Child));
+                               serialize::serialize(Child, CDCtx.Diags));
     if (Parent)
       CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(Parent->USR)),
-                               serialize::serialize(Parent));
+                               serialize::serialize(Parent, CDCtx.Diags));
   }
   return true;
 }
@@ -136,6 +136,12 @@ bool MapASTVisitor::VisitTypeAliasDecl(const TypeAliasDecl *D) {
 
 bool MapASTVisitor::VisitConceptDecl(const ConceptDecl *D) {
   return mapDecl(D, true);
+}
+
+bool MapASTVisitor::VisitVarDecl(const VarDecl *D) {
+  if (D->isCXXClassMember())
+    return true;
+  return mapDecl(D, D->isThisDeclarationADefinition());
 }
 
 comments::FullComment *

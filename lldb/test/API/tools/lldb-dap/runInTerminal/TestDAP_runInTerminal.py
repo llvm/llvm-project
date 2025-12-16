@@ -2,7 +2,7 @@
 Test lldb-dap runInTerminal reverse request
 """
 
-from lldbsuite.test.decorators import skipIfBuildType, skipIfWindows, skipIf, no_match
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 import lldbdap_testcase
 import os
@@ -26,8 +26,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         with open(fifo_file, "r") as file:
             return file.readline()
 
+    @skipIfAsan
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminal(self):
         """
             Tests the "runInTerminal" reverse request. It makes sure that the IDE can
@@ -36,7 +36,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         source = "main.c"
         self.build_and_launch(
-            program, runInTerminal=True, args=["foobar"], env=["FOO=bar"]
+            program, console="integratedTerminal", args=["foobar"], env=["FOO=bar"]
         )
 
         self.assertEqual(
@@ -73,14 +73,15 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
         self.continue_to_exit()
 
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
+    @skipIfAsan
+    @skipIfWindows
     def test_runInTerminalWithObjectEnv(self):
         """
             Tests the "runInTerminal" reverse request. It makes sure that the IDE can
             launch the inferior with the correct environment variables using an object.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, runInTerminal=True, env={"FOO": "BAR"})
+        self.build_and_launch(program, console="integratedTerminal", env={"FOO": "BAR"})
 
         self.assertEqual(
             len(self.dap_server.reverse_requests),
@@ -97,12 +98,11 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
 
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminalInvalidTarget(self):
         self.build_and_create_debug_adapter()
         response = self.launch(
             "INVALIDPROGRAM",
-            runInTerminal=True,
+            console="integratedTerminal",
             args=["foobar"],
             env=["FOO=bar"],
             expectFailure=True,
@@ -114,7 +114,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_missingArgInRunInTerminalLauncher(self):
         proc = subprocess.run(
             [self.lldbDAPExec, "--launch-target", "INVALIDPROGRAM"],
@@ -127,7 +126,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherWithInvalidProgram(self):
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)
@@ -152,7 +150,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("No such file or directory", stderr)
 
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherWithValidProgram(self):
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)
@@ -177,7 +174,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("foo", stdout)
 
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherAndCheckEnvironment(self):
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)
@@ -196,7 +192,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("FOO=BAR", stdout)
 
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_NonAttachedRunInTerminalLauncher(self):
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)

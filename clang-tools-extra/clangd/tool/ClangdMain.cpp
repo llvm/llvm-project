@@ -13,6 +13,7 @@
 #include "Config.h"
 #include "ConfigProvider.h"
 #include "Feature.h"
+#include "FeatureModule.h"
 #include "IncludeCleaner.h"
 #include "PathMapping.h"
 #include "Protocol.h"
@@ -499,6 +500,17 @@ opt<bool> EnableConfig{
     init(true),
 };
 
+opt<bool> StrongWorkspaceMode{
+    "strong-workspace-mode",
+    cat(Features),
+    desc("An alternate mode of operation for clangd, where the clangd instance "
+         "is used to edit a single workspace.\n"
+         "When enabled, fallback commands use the workspace directory as their "
+         "working directory instead of the parent folder."),
+    init(false),
+    Hidden,
+};
+
 opt<bool> UseDirtyHeaders{"use-dirty-headers", cat(Misc),
                           desc("Use files open in the editor when parsing "
                                "headers instead of reading from the disk"),
@@ -577,7 +589,7 @@ public:
     Body = Body.ltrim('/');
     llvm::SmallString<16> Path(Body);
     path::native(Path);
-    fs::make_absolute(TestScheme::TestDir, Path);
+    path::make_absolute(TestScheme::TestDir, Path);
     return std::string(Path);
   }
 
@@ -668,7 +680,6 @@ public:
     std::optional<Config::ExternalIndexSpec> IndexSpec;
     std::optional<Config::BackgroundPolicy> BGPolicy;
     std::optional<Config::ArgumentListsPolicy> ArgumentLists;
-    std::optional<Config::HeaderInsertionPolicy> HeaderInsertionPolicy;
 
     // If --compile-commands-dir arg was invoked, check value and override
     // default path.
@@ -713,11 +724,6 @@ public:
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
 
-    // If CLI has set never, use that regardless of what the config files have
-    if (HeaderInsertion == Config::HeaderInsertionPolicy::NeverInsert) {
-      HeaderInsertionPolicy = Config::HeaderInsertionPolicy::NeverInsert;
-    }
-
     if (std::optional<bool> Enable = shouldEnableFunctionArgSnippets()) {
       ArgumentLists = *Enable ? Config::ArgumentListsPolicy::FullPlaceholders
                               : Config::ArgumentListsPolicy::Delimiters;
@@ -732,8 +738,8 @@ public:
         C.Index.Background = *BGPolicy;
       if (ArgumentLists)
         C.Completion.ArgumentLists = *ArgumentLists;
-      if (HeaderInsertionPolicy)
-        C.Completion.HeaderInsertion = *HeaderInsertionPolicy;
+      if (HeaderInsertion.getNumOccurrences())
+        C.Completion.HeaderInsertion = HeaderInsertion;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
 
@@ -781,8 +787,8 @@ It should be used via an editor plugin rather than invoked directly. For more in
 clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment variable.
 )";
   llvm::cl::HideUnrelatedOptions(ClangdCategories);
-  llvm::cl::ParseCommandLineOptions(argc, argv, Overview,
-                                    /*Errs=*/nullptr, FlagsEnvVar);
+  llvm::cl::ParseCommandLineOptions(argc, argv, Overview, /*Errs=*/nullptr,
+                                    /*VFS=*/nullptr, FlagsEnvVar);
   if (Test) {
     if (!Sync.getNumOccurrences())
       Sync = true;
@@ -912,6 +918,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
+  Opts.StrongWorkspaceMode = StrongWorkspaceMode;
   Opts.BuildDynamicSymbolIndex = true;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
@@ -1022,6 +1029,10 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
                ? 0
                : static_cast<int>(ErrorResultCode::CheckFailed);
   }
+
+  FeatureModuleSet ModuleSet = FeatureModuleSet::fromRegistry();
+  if (ModuleSet.begin() != ModuleSet.end())
+    Opts.FeatureModules = &ModuleSet;
 
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.

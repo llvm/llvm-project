@@ -60,6 +60,7 @@ public:
     SuitableAlign = 128;
     WCharType = SignedInt;
     WIntType = UnsignedInt;
+    BitIntMaxAlign = 128;
   }
 
   bool setCPU(const std::string &Name) override {
@@ -132,9 +133,9 @@ public:
     IntPtrType = SignedInt;
     PtrDiffType = SignedInt;
     SizeType = UnsignedInt;
-    resetDataLayout("e-m:e-p:32:32-i64:64-n32-S128");
     // TODO: select appropriate ABI.
     setABI("ilp32d");
+    resetDataLayout();
   }
 
   bool setABI(const std::string &Name) override {
@@ -157,9 +158,9 @@ public:
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
     IntMaxType = Int64Type = SignedLong;
     HasUnalignedAccess = true;
-    resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
     // TODO: select appropriate ABI.
     setABI("lp64d");
+    resetDataLayout();
   }
 
   bool setABI(const std::string &Name) override {

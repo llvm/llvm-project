@@ -61,7 +61,8 @@ enum class sampleprof_error {
   ostream_seek_unsupported,
   uncompress_failed,
   zlib_unavailable,
-  hash_mismatch
+  hash_mismatch,
+  illegal_line_offset,
 };
 
 inline std::error_code make_error_code(sampleprof_error E) {
@@ -89,6 +90,8 @@ struct is_error_code_enum<llvm::sampleprof_error> : std::true_type {};
 
 namespace llvm {
 namespace sampleprof {
+
+constexpr char kVTableProfPrefix[] = "vtables ";
 
 enum SampleProfileFormat {
   SPF_None = 0,
@@ -203,6 +206,9 @@ enum class SecProfSummaryFlags : uint32_t {
   /// SecFlagIsPreInlined means this profile contains ShouldBeInlined
   /// contexts thus this is CS preinliner computed.
   SecFlagIsPreInlined = (1 << 4),
+
+  /// SecFlagHasVTableTypeProf means this profile contains vtable type profiles.
+  SecFlagHasVTableTypeProf = (1 << 5),
 };
 
 enum class SecFuncMetadataFlags : uint32_t {
@@ -286,11 +292,11 @@ struct LineLocation {
   LLVM_ABI void dump() const;
 
   // Serialize the line location to the output stream using ULEB128 encoding.
-  LLVM_ABI void serialize(raw_ostream &OS);
+  LLVM_ABI void serialize(raw_ostream &OS) const;
 
   bool operator<(const LineLocation &O) const {
-    return LineOffset < O.LineOffset ||
-           (LineOffset == O.LineOffset && Discriminator < O.Discriminator);
+    return std::tie(LineOffset, Discriminator) <
+           std::tie(O.LineOffset, O.Discriminator);
   }
 
   bool operator==(const LineLocation &O) const {
@@ -302,7 +308,7 @@ struct LineLocation {
   }
 
   uint64_t getHashCode() const {
-    return ((uint64_t) Discriminator << 32) | LineOffset;
+    return ((uint64_t)Discriminator << 32) | LineOffset;
   }
 
   uint32_t LineOffset;
@@ -317,16 +323,30 @@ struct LineLocationHash {
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
+/// Key represents type of a C++ polymorphic class type by its vtable and value
+/// represents its counter.
+/// TODO: The class name FunctionId should be renamed to SymbolId in a refactor
+/// change.
+using TypeCountMap = std::map<FunctionId, uint64_t>;
+
+/// Write \p Map to the output stream. Keys are linearized using \p NameTable
+/// and written as ULEB128. Values are written as ULEB128 as well.
+std::error_code
+serializeTypeMap(const TypeCountMap &Map,
+                 const MapVector<FunctionId, uint32_t> &NameTable,
+                 raw_ostream &OS);
+
 /// Representation of a single sample record.
 ///
 /// A sample record is represented by a positive integer value, which
 /// indicates how frequently was the associated line location executed.
 ///
 /// Additionally, if the associated location contains a function call,
-/// the record will hold a list of all the possible called targets. For
-/// direct calls, this will be the exact function being invoked. For
-/// indirect calls (function pointers, virtual table dispatch), this
-/// will be a list of one or more functions.
+/// the record will hold a list of all the possible called targets and the types
+/// for virtual table dispatches. For direct calls, this will be the exact
+/// function being invoked. For indirect calls (function pointers, virtual table
+/// dispatch), this will be a list of one or more functions. For virtual table
+/// dispatches, this record will also hold the type of the object.
 class SampleRecord {
 public:
   using CallTarget = std::pair<FunctionId, uint64_t>;
@@ -745,6 +765,7 @@ using BodySampleMap = std::map<LineLocation, SampleRecord>;
 // memory, which is *very* significant for large profiles.
 using FunctionSamplesMap = std::map<FunctionId, FunctionSamples>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
+using CallsiteTypeMap = std::map<LineLocation, TypeCountMap>;
 using LocToLocMap =
     std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
 
@@ -867,6 +888,17 @@ public:
     }
   }
 
+  // Propagate the given attribute to this profile context and all callee
+  // contexts.
+  void setContextAttribute(ContextAttributeMask Attr) {
+    Context.setAttribute(Attr);
+    for (auto &I : CallsiteSamples) {
+      for (auto &CS : I.second) {
+        CS.second.setContextAttribute(Attr);
+      }
+    }
+  }
+
   // Query the stale profile matching results and remap the location.
   const LineLocation &mapIRLocToProfileLoc(const LineLocation &IRLoc) const {
     // There is no remapping if the profile is not stale or the matching gives
@@ -923,6 +955,14 @@ public:
   findFunctionSamplesMapAt(const LineLocation &Loc) const {
     auto Iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
     if (Iter == CallsiteSamples.end())
+      return nullptr;
+    return &Iter->second;
+  }
+
+  /// Returns the TypeCountMap for inlined callsites at the given \p Loc.
+  const TypeCountMap *findCallsiteTypeSamplesAt(const LineLocation &Loc) const {
+    auto Iter = VirtualCallsiteTypeCounts.find(mapIRLocToProfileLoc(Loc));
+    if (Iter == VirtualCallsiteTypeCounts.end())
       return nullptr;
     return &Iter->second;
   }
@@ -988,6 +1028,61 @@ public:
     return CallsiteSamples;
   }
 
+  /// Returns vtable access samples for the C++ types collected in this
+  /// function.
+  const CallsiteTypeMap &getCallsiteTypeCounts() const {
+    return VirtualCallsiteTypeCounts;
+  }
+
+  /// Returns the vtable access samples for the C++ types for \p Loc.
+  /// Under the hood, the caller-specified \p Loc will be un-drifted before the
+  /// type sample lookup if possible.
+  TypeCountMap &getTypeSamplesAt(const LineLocation &Loc) {
+    return VirtualCallsiteTypeCounts[mapIRLocToProfileLoc(Loc)];
+  }
+
+  /// At location \p Loc, add a type sample for the given \p Type with
+  /// \p Count. This function uses saturating add which clamp the result to
+  /// maximum uint64_t (the counter type), and inserts the saturating add result
+  /// to map.  Returns counter_overflow to caller if the actual result is larger
+  /// than maximum uint64_t.
+  sampleprof_error addTypeSamplesAt(const LineLocation &Loc, FunctionId Type,
+                                    uint64_t Count) {
+    auto &TypeCounts = getTypeSamplesAt(Loc);
+    bool Overflowed = false;
+    TypeCounts[Type] = SaturatingMultiplyAdd(Count, /* Weight= */ (uint64_t)1,
+                                             TypeCounts[Type], &Overflowed);
+    return Overflowed ? sampleprof_error::counter_overflow
+                      : sampleprof_error::success;
+  }
+
+  /// Scale \p Other sample counts by \p Weight and add the scaled result to the
+  /// type samples for \p Loc. Under the hoold, the caller-provided \p Loc will
+  /// be un-drifted before the type sample lookup if possible.
+  /// typename T is either a std::map or a DenseMap.
+  template <typename T>
+  sampleprof_error addCallsiteVTableTypeProfAt(const LineLocation &Loc,
+                                               const T &Other,
+                                               uint64_t Weight = 1) {
+    static_assert((std::is_same_v<typename T::key_type, StringRef> ||
+                   std::is_same_v<typename T::key_type, FunctionId>) &&
+                      std::is_same_v<typename T::mapped_type, uint64_t>,
+                  "T must be a map with StringRef or FunctionId as key and "
+                  "uint64_t as value");
+    TypeCountMap &TypeCounts = getTypeSamplesAt(Loc);
+    bool Overflowed = false;
+
+    for (const auto &[Type, Count] : Other) {
+      FunctionId TypeId(Type);
+      bool RowOverflow = false;
+      TypeCounts[TypeId] = SaturatingMultiplyAdd(
+          Count, Weight, TypeCounts[TypeId], &RowOverflow);
+      Overflowed |= RowOverflow;
+    }
+    return Overflowed ? sampleprof_error::counter_overflow
+                      : sampleprof_error::success;
+  }
+
   /// Return the maximum of sample counts in a function body. When SkipCallSite
   /// is false, which is the default, the return count includes samples in the
   /// inlined functions. When SkipCallSite is true, the return count only
@@ -1042,6 +1137,10 @@ public:
         mergeSampleProfErrors(Result,
                               FSMap[Rec.first].merge(Rec.second, Weight));
     }
+    for (const auto &[Loc, OtherTypeMap] : Other.getCallsiteTypeCounts())
+      mergeSampleProfErrors(
+          Result, addCallsiteVTableTypeProfAt(Loc, OtherTypeMap, Weight));
+
     return Result;
   }
 
@@ -1115,13 +1214,19 @@ public:
     // Note the sequence of the suffixes in the knownSuffixes array matters.
     // If suffix "A" is appended after the suffix "B", "A" should be in front
     // of "B" in knownSuffixes.
-    const char *KnownSuffixes[] = {LLVMSuffix, PartSuffix, UniqSuffix};
+    const SmallVector<StringRef> KnownSuffixes{LLVMSuffix, PartSuffix,
+                                               UniqSuffix};
+    return getCanonicalFnName(FnName, KnownSuffixes, Attr);
+  }
+
+  static StringRef getCanonicalFnName(StringRef FnName,
+                                      ArrayRef<StringRef> Suffixes,
+                                      StringRef Attr = "selected") {
     if (Attr == "" || Attr == "all")
       return FnName.split('.').first;
     if (Attr == "selected") {
       StringRef Cand(FnName);
-      for (const auto &Suf : KnownSuffixes) {
-        StringRef Suffix(Suf);
+      for (const auto Suffix : Suffixes) {
         // If the profile contains ".__uniq." suffix, don't strip the
         // suffix for names in the IR.
         if (Suffix == UniqSuffix && FunctionSamples::HasUniqSuffix)
@@ -1130,7 +1235,7 @@ public:
         if (It == StringRef::npos)
           continue;
         auto Dit = Cand.rfind('.');
-        if (Dit == It + Suffix.size() - 1)
+        if (Dit == It || Dit == It + Suffix.size() - 1)
           Cand = Cand.substr(0, It);
       }
       return Cand;
@@ -1284,6 +1389,23 @@ private:
   /// in the call to bar() at line offset 1, the other for all the samples
   /// collected in the call to baz() at line offset 8.
   CallsiteSampleMap CallsiteSamples;
+
+  /// Map a virtual callsite to the list of accessed vtables and vtable counts.
+  /// The callsite is referenced by its source location.
+  ///
+  /// For example, given:
+  ///
+  ///     void foo() {
+  ///       ...
+  ///  5    inlined_vcall_bar();
+  ///       ...
+  ///  5    inlined_vcall_baz();
+  ///       ...
+  ///  200  inlined_vcall_qux();
+  ///     }
+  /// This map will contain two entries. One with two types for line offset 5
+  /// and one with one type for line offset 200.
+  CallsiteTypeMap VirtualCallsiteTypeCounts;
 
   /// IR to profile location map generated by stale profile matching.
   ///
@@ -1542,6 +1664,7 @@ public:
   }
 
   unsigned size() { return Syms.size(); }
+  void reserve(size_t Size) { Syms.reserve(Size); }
 
   void setToCompress(bool TC) { ToCompress = TC; }
   bool toCompress() { return ToCompress; }

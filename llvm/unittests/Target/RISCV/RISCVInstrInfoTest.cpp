@@ -374,9 +374,9 @@ TEST_P(RISCVInstrInfoTest, GetDestEEW) {
   EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VMSEQ_VV), 4), 0u);
   EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VMAND_MM), 0), 0u);
   EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VIOTA_M), 3), 3u);
-  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VQMACCU_2x8x2), 3), 5u);
-  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::VFWMACC_4x4x4), 4), 5u);
-  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::THVdotVMAQA_VV), 5), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::SF_VQMACCU_2x8x2), 3), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::SF_VFWMACC_4x4x4), 4), 5u);
+  EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::TH_VMAQA_VV), 5), 5u);
 }
 
 } // namespace

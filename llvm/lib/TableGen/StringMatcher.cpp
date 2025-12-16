@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TableGen/StringMatcher.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -23,14 +23,15 @@
 using namespace llvm;
 
 /// FindFirstNonCommonLetter - Find the first character in the keys of the
-/// string pairs that is not shared across the whole set of strings.  All
+/// string pairs that is not shared across the whole set of strings. All
 /// strings are assumed to have the same length.
 static unsigned
 FindFirstNonCommonLetter(ArrayRef<const StringMatcher::StringPair *> Matches) {
   assert(!Matches.empty());
   for (auto [Idx, Letter] : enumerate(Matches[0]->first)) {
-    // Check to see if `Letter` is the same across the set.
-    for (const StringMatcher::StringPair *Match : Matches)
+    // Check to see if `Letter` is the same across the set. Since the letter is
+    // from `Matches[0]`, we can skip `Matches[0]` in the loop below.
+    for (const StringMatcher::StringPair *Match : Matches.drop_front())
       if (Match->first[Idx] != Letter)
         return Idx;
   }

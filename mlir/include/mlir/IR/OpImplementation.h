@@ -207,6 +207,9 @@ public:
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr);
 
+  /// Print the given named attribute.
+  virtual void printNamedAttribute(NamedAttribute attr);
+
   /// Print the alias for the given attribute, return failure if no alias could
   /// be printed.
   virtual LogicalResult printAlias(Attribute attr);

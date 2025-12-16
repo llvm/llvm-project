@@ -29,7 +29,9 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR``: Enable -fstack-protector-strong to defend against stack smashing attack.
     - ``LIBC_CONF_KEEP_FRAME_POINTER``: Keep frame pointer in functions for better debugging experience.
 * **"errno" options**
-    - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, LIBC_ERRNO_MODE_SYSTEM, and LIBC_ERRNO_MODE_SYSTEM_INLINE.
+    - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM_INLINE.
+* **"fenv" options**
+    - ``LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT``: Trap with SIGFPE when feraiseexcept is called with unmasked floating point exceptions, similar to glibc's behavior.  This is currently working only on x86 with SSE.
 * **"general" options**
     - ``LIBC_ADD_NULL_CHECKS``: Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior.
 * **"math" options**
@@ -58,7 +60,12 @@ to learn about the defaults for your platform and target.
 * **"setjmp" options**
     - ``LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER``: Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved.
 * **"string" options**
+    - ``LIBC_CONF_FIND_FIRST_CHARACTER_IMPL``: Selects the implementation for find-first-character-related functions: 'element', 'word', 'clang_vector', or 'arch_vector'.
     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.
-    - ``LIBC_CONF_STRING_UNSAFE_WIDE_READ``: Read more than a byte at a time to perform byte-string operations like strlen.
+    - ``LIBC_CONF_STRING_LENGTH_IMPL``: Selects the implementation for string-length: 'element', 'word', 'clang_vector', or 'arch_vector'.
+* **"threads" options**
+    - ``LIBC_CONF_THREAD_MODE``: The implementation used for Mutex, acceptable values are LIBC_THREAD_MODE_PLATFORM, LIBC_THREAD_MODE_SINGLE, and LIBC_THREAD_MODE_EXTERNAL.
 * **"time" options**
     - ``LIBC_CONF_TIME_64BIT``: Force the size of time_t to 64 bits, even on platforms where compatibility considerations would otherwise make it 32-bit.
+* **"wctype" options**
+    - ``LIBC_CONF_WCTYPE_MODE``: The implementation used for wctype, acceptable values are LIBC_WCTYPE_MODE_ASCII and LIBC_WCTYPE_MODE_UTF8.

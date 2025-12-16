@@ -28,6 +28,69 @@
 #include <vector>
 
 namespace llvm {
+namespace SPIRV {
+// This code restores function args/retvalue types for composite cases
+// because the final types should still be aggregate whereas they're i32
+// during the translation to cope with aggregate flattening etc.
+// TODO: should these just return nullptr when there's no metadata?
+static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
+                                                     FunctionType *FTy,
+                                                     StringRef Name) {
+  if (!NMD)
+    return FTy;
+
+  constexpr auto getConstInt = [](MDNode *MD, unsigned OpId) -> ConstantInt * {
+    if (MD->getNumOperands() <= OpId)
+      return nullptr;
+    if (auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(OpId)))
+      return dyn_cast<ConstantInt>(CMeta->getValue());
+    return nullptr;
+  };
+
+  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
+    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
+      return MDS->getString() == Name;
+    return false;
+  });
+
+  if (It == NMD->op_end())
+    return FTy;
+
+  Type *RetTy = FTy->getReturnType();
+  SmallVector<Type *, 4> PTys(FTy->params());
+
+  for (unsigned I = 1; I != (*It)->getNumOperands(); ++I) {
+    MDNode *MD = dyn_cast<MDNode>((*It)->getOperand(I));
+    assert(MD && "MDNode operand is expected");
+
+    if (auto *Const = getConstInt(MD, 0)) {
+      auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
+      assert(CMeta && "ConstantAsMetadata operand is expected");
+      assert(Const->getSExtValue() >= -1);
+      // Currently -1 indicates return value, greater values mean
+      // argument numbers.
+      if (Const->getSExtValue() == -1)
+        RetTy = CMeta->getType();
+      else
+        PTys[Const->getSExtValue()] = CMeta->getType();
+    }
+  }
+
+  return FunctionType::get(RetTy, PTys, FTy->isVarArg());
+}
+
+FunctionType *getOriginalFunctionType(const Function &F) {
+  return extractFunctionTypeFromMetadata(
+      F.getParent()->getNamedMetadata("spv.cloned_funcs"), F.getFunctionType(),
+      F.getName());
+}
+
+FunctionType *getOriginalFunctionType(const CallBase &CB) {
+  return extractFunctionTypeFromMetadata(
+      CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
+      CB.getFunctionType(), CB.getName());
+}
+} // Namespace SPIRV
 
 // The following functions are used to add these string literals as a series of
 // 32-bit integer operands with the correct format, and unpack them if necessary
@@ -105,6 +168,15 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     uint32_t LowBits = FullImm & 0xffffffff;
     uint32_t HighBits = (FullImm >> 32) & 0xffffffff;
     MIB.addImm(LowBits).addImm(HighBits);
+    // Asm Printer needs this info to print 64-bit operands correctly
+    MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH64);
+    return;
+  } else if (Bitwidth <= 128) {
+    uint32_t LowBits = Imm.getRawData()[0] & 0xffffffff;
+    uint32_t MidBits0 = (Imm.getRawData()[0] >> 32) & 0xffffffff;
+    uint32_t MidBits1 = Imm.getRawData()[1] & 0xffffffff;
+    uint32_t HighBits = (Imm.getRawData()[1] >> 32) & 0xffffffff;
+    MIB.addImm(LowBits).addImm(MidBits0).addImm(MidBits1).addImm(HighBits);
     return;
   }
   report_fatal_error("Unsupported constant bitwidth");
@@ -181,7 +253,7 @@ void buildOpMemberDecorate(Register Reg, MachineInstr &I,
 }
 
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
-                             const MDNode *GVarMD) {
+                             const MDNode *GVarMD, const SPIRVSubtarget &ST) {
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
     auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
     if (!OpMD)
@@ -193,6 +265,20 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
     if (!DecorationId)
       report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
                          "element of the decoration");
+
+    // The goal of `spirv.Decorations` metadata is to provide a way to
+    // represent SPIR-V entities that do not map to LLVM in an obvious way.
+    // FP flags do have obvious matches between LLVM IR and SPIR-V.
+    // Additionally, we have no guarantee at this point that the flags passed
+    // through the decoration are not violated already in the optimizer passes.
+    // Therefore, we simply ignore FP flags, including NoContraction, and
+    // FPFastMathMode.
+    if (DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::NoContraction) ||
+        DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
+      continue; // Ignored.
+    }
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                    .addUse(Reg)
                    .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
@@ -371,6 +457,12 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
 }
 
+int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI) {
+  const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
+  assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
+  return MI->getOperand(1).getCImm()->getSExtValue();
+}
+
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
   if (const auto *GI = dyn_cast<GIntrinsic>(&MI))
     return GI->is(IntrinsicID);
@@ -463,8 +555,10 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     DemangledNameLenStart = NameSpaceStart + 11;
   }
   Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
-  Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
-      .getAsInteger(10, Len);
+  [[maybe_unused]] bool Error =
+      Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+          .getAsInteger(10, Len);
+  assert(!Error && "Failed to parse demangled name length");
   return Name.substr(Start, Len).str();
 }
 
@@ -756,7 +850,7 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
   for (unsigned I = 0; I < MaxIters; ++I) {
     std::string OrdName = Name + Twine(I).str();
     if (!M.getFunction(OrdName)) {
-      Name = OrdName;
+      Name = std::move(OrdName);
       return true;
     }
   }
@@ -993,6 +1087,113 @@ int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType) {
   return foldImm(ResType->getOperand(2), MRI);
+}
+
+MachineBasicBlock::iterator
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
+  // Find the position to insert the OpVariable instruction.
+  // We will insert it after the last OpFunctionParameter, if any, or
+  // after OpFunction otherwise.
+  MachineBasicBlock::iterator VarPos = BB.begin();
+  while (VarPos != BB.end() && VarPos->getOpcode() != SPIRV::OpFunction) {
+    ++VarPos;
+  }
+  // Advance VarPos to the next instruction after OpFunction, it will either
+  // be an OpFunctionParameter, so that we can start the next loop, or the
+  // position to insert the OpVariable instruction.
+  ++VarPos;
+  while (VarPos != BB.end() &&
+         VarPos->getOpcode() == SPIRV::OpFunctionParameter) {
+    ++VarPos;
+  }
+  // VarPos is now pointing at after the last OpFunctionParameter, if any,
+  // or after OpFunction, if no parameters.
+  return VarPos != BB.end() && VarPos->getOpcode() == SPIRV::OpLabel ? ++VarPos
+                                                                     : VarPos;
+}
+
+bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
+                             uint64_t &TotalSize) {
+  // An array of N padded structs is represented as {[N-1 x <{T, pad}>], T}.
+  if (Ty->getStructNumElements() != 2)
+    return false;
+
+  Type *FirstElement = Ty->getStructElementType(0);
+  Type *SecondElement = Ty->getStructElementType(1);
+
+  if (!FirstElement->isArrayTy())
+    return false;
+
+  Type *ArrayElementType = FirstElement->getArrayElementType();
+  if (!ArrayElementType->isStructTy() ||
+      ArrayElementType->getStructNumElements() != 2)
+    return false;
+
+  Type *T_in_struct = ArrayElementType->getStructElementType(0);
+  if (T_in_struct != SecondElement)
+    return false;
+
+  auto *Padding_in_struct =
+      dyn_cast<TargetExtType>(ArrayElementType->getStructElementType(1));
+  if (!Padding_in_struct || Padding_in_struct->getName() != "spirv.Padding")
+    return false;
+
+  const uint64_t ArraySize = FirstElement->getArrayNumElements();
+  TotalSize = ArraySize + 1;
+  OriginalElementType = ArrayElementType;
+  return true;
+}
+
+Type *reconstitutePeeledArrayType(Type *Ty) {
+  if (!Ty->isStructTy())
+    return Ty;
+
+  auto *STy = cast<StructType>(Ty);
+  Type *OriginalElementType = nullptr;
+  uint64_t TotalSize = 0;
+  if (matchPeeledArrayPattern(STy, OriginalElementType, TotalSize)) {
+    Type *ResultTy = ArrayType::get(
+        reconstitutePeeledArrayType(OriginalElementType), TotalSize);
+    return ResultTy;
+  }
+
+  SmallVector<Type *, 4> NewElementTypes;
+  bool Changed = false;
+  for (Type *ElementTy : STy->elements()) {
+    Type *NewElementTy = reconstitutePeeledArrayType(ElementTy);
+    if (NewElementTy != ElementTy)
+      Changed = true;
+    NewElementTypes.push_back(NewElementTy);
+  }
+
+  if (!Changed)
+    return Ty;
+
+  Type *ResultTy;
+  if (STy->isLiteral())
+    ResultTy =
+        StructType::get(STy->getContext(), NewElementTypes, STy->isPacked());
+  else {
+    auto *NewTy = StructType::create(STy->getContext(), STy->getName());
+    NewTy->setBody(NewElementTypes, STy->isPacked());
+    ResultTy = NewTy;
+  }
+  return ResultTy;
+}
+
+std::optional<SPIRV::LinkageType::LinkageType>
+getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
+  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
+    return std::nullopt;
+
+  if (GV.isDeclarationForLinker())
+    return SPIRV::LinkageType::Import;
+
+  if (GV.hasLinkOnceODRLinkage() &&
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
+    return SPIRV::LinkageType::LinkOnceODR;
+
+  return SPIRV::LinkageType::Export;
 }
 
 } // namespace llvm

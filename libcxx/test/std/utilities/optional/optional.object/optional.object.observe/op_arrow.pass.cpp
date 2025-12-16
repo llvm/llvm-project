@@ -19,9 +19,9 @@
 
 using std::optional;
 
-struct X
-{
-    int test() noexcept {return 3;}
+struct X {
+  int test() noexcept { return 3; }
+  int test() const noexcept { return 3; }
 };
 
 struct Y
@@ -47,6 +47,30 @@ int main(int, char**)
         optional<X> opt(X{});
         assert(opt->test() == 3);
     }
+#if TEST_STD_VER >= 26
+    {
+      X x{};
+      std::optional<X&> opt(x);
+      ASSERT_SAME_TYPE(decltype(opt.operator->()), X*);
+      ASSERT_NOEXCEPT(opt.operator->());
+    }
+    {
+      X x{};
+      std::optional<const X&> opt(x);
+      ASSERT_SAME_TYPE(decltype(opt.operator->()), const X*);
+      ASSERT_NOEXCEPT(opt.operator->());
+    }
+    {
+      X x{};
+      optional<X&> opt{x};
+      assert(opt->test() == 3);
+    }
+    {
+      X x{};
+      optional<const X&> opt{x};
+      assert(opt->test() == 3);
+    }
+#endif
     {
         static_assert(test() == 3, "");
     }

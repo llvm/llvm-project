@@ -17,13 +17,13 @@ char g_exact[4] = "123";
 
 // CIR: cir.global external @g_exact = #cir.const_array<"123\00" : !cir.array<!s8i x 4>> : !cir.array<!s8i x 4>
 
-// CIR: cir.global "private" cir_private dsolocal @[[STR1_GLOBAL:.*]] = #cir.const_array<"1\00" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
-// CIR: cir.global "private" cir_private dsolocal @[[STR2_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 1>
-// CIR: cir.global "private" cir_private dsolocal @[[STR3_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 2>
+// CIR: cir.global "private" constant cir_private dso_local @[[STR1_GLOBAL:.*]] = #cir.const_array<"1\00" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
+// CIR: cir.global "private" constant cir_private dso_local @[[STR2_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 1>
+// CIR: cir.global "private" constant cir_private dso_local @[[STR3_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 2>
 
-// LLVM: @[[STR1_GLOBAL:.*]] = private global [2 x i8] c"1\00"
-// LLVM: @[[STR2_GLOBAL:.*]] = private global [1 x i8] zeroinitializer
-// LLVM: @[[STR3_GLOBAL:.*]] = private global [2 x i8] zeroinitializer
+// LLVM: @[[STR1_GLOBAL:.*]] = private constant [2 x i8] c"1\00"
+// LLVM: @[[STR2_GLOBAL:.*]] = private constant [1 x i8] zeroinitializer
+// LLVM: @[[STR3_GLOBAL:.*]] = private constant [2 x i8] zeroinitializer
 
 // OGCG: @[[STR1_GLOBAL:.*]] = private unnamed_addr constant [2 x i8] c"1\00"
 // OGCG: @[[STR2_GLOBAL:.*]] = private unnamed_addr constant [1 x i8] zeroinitializer
@@ -33,10 +33,10 @@ char *f1() {
   return "1";
 }
 
-// CIR: cir.func @f1()
+// CIR: cir.func{{.*}} @f1()
 // CIR:   %[[STR:.*]] = cir.get_global @[[STR1_GLOBAL]] : !cir.ptr<!cir.array<!s8i x 2>>
 
-// LLVM: define ptr @f1()
+// LLVM: define{{.*}} ptr @f1()
 // LLVM:   store ptr @[[STR1_GLOBAL]], ptr {{.*}}
 
 // OGCG: define {{.*}}ptr @f1()
@@ -46,24 +46,24 @@ char *f2() {
   return "";
 }
 
-// CIR: cir.func @f2()
+// CIR: cir.func{{.*}} @f2()
 // CIR:   %[[STR2:.*]] = cir.get_global @[[STR2_GLOBAL]] : !cir.ptr<!cir.array<!s8i x 1>>
 
-// LLVM: define ptr @f2()
+// LLVM: define{{.*}} ptr @f2()
 // LLVM:   store ptr @[[STR2_GLOBAL]], ptr {{.*}}
 
-// OGCG: define {{.*}}ptr @f2()
+// OGCG: define{{.*}} ptr @f2()
 // OGCG:   ret ptr @[[STR2_GLOBAL]]
 
 char *f3() {
   return "\00";
 }
 
-// CIR: cir.func @f3()
+// CIR: cir.func{{.*}} @f3()
 // CIR:   %[[STR3:.*]] = cir.get_global @[[STR3_GLOBAL]] : !cir.ptr<!cir.array<!s8i x 2>>
 
-// LLVM: define ptr @f3()
+// LLVM: define{{.*}} ptr @f3()
 // LLVM:   store ptr @[[STR3_GLOBAL]], ptr {{.*}}
 
-// OGCG: define {{.*}}ptr @f3()
+// OGCG: define{{.*}} ptr @f3()
 // OGCG:   ret ptr @[[STR3_GLOBAL]]

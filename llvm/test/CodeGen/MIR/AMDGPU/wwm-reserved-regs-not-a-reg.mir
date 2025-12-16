@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
 
 ---
 name: invalid_reg

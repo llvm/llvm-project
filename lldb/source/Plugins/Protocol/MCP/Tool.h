@@ -9,48 +9,34 @@
 #ifndef LLDB_PLUGINS_PROTOCOL_MCP_TOOL_H
 #define LLDB_PLUGINS_PROTOCOL_MCP_TOOL_H
 
-#include "Protocol.h"
-#include "lldb/Core/Debugger.h"
+#include "lldb/Protocol/MCP/Protocol.h"
+#include "lldb/Protocol/MCP/Tool.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
-#include <string>
+#include <optional>
 
 namespace lldb_private::mcp {
 
-class Tool {
+class CommandTool : public lldb_protocol::mcp::Tool {
 public:
-  Tool(std::string name, std::string description);
-  virtual ~Tool() = default;
+  using lldb_protocol::mcp::Tool::Tool;
+  ~CommandTool() = default;
 
-  virtual llvm::Expected<protocol::TextResult>
-  Call(const llvm::json::Value &args) = 0;
+  llvm::Expected<lldb_protocol::mcp::CallToolResult>
+  Call(const lldb_protocol::mcp::ToolArguments &args) override;
 
-  virtual std::optional<llvm::json::Value> GetSchema() const {
-    return std::nullopt;
-  }
-
-  protocol::ToolDefinition GetDefinition() const;
-
-  const std::string &GetName() { return m_name; }
-
-private:
-  std::string m_name;
-  std::string m_description;
+  std::optional<llvm::json::Value> GetSchema() const override;
 };
 
-class LLDBCommandTool : public mcp::Tool {
+class DebuggerListTool : public lldb_protocol::mcp::Tool {
 public:
-  LLDBCommandTool(std::string name, std::string description,
-                  Debugger &debugger);
-  ~LLDBCommandTool() = default;
+  using lldb_protocol::mcp::Tool::Tool;
+  ~DebuggerListTool() = default;
 
-  virtual llvm::Expected<protocol::TextResult>
-  Call(const llvm::json::Value &args) override;
-
-  virtual std::optional<llvm::json::Value> GetSchema() const override;
-
-private:
-  Debugger &m_debugger;
+  llvm::Expected<lldb_protocol::mcp::CallToolResult>
+  Call(const lldb_protocol::mcp::ToolArguments &args) override;
 };
+
 } // namespace lldb_private::mcp
 
 #endif

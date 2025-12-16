@@ -102,7 +102,7 @@ void NormalUses(float *PointerParam) {
 #pragma acc parallel copy(GlobalArray) pcopy(always: PointerParam[Global]) present_or_copy(alwaysin, alwaysout: Global)
   while(true);
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
-  // CHECK-NEXT: copy clause 
+  // CHECK-NEXT: copy clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'short[5]' lvalue Var{{.*}}'GlobalArray' 'short[5]'
   // CHECK-NEXT: pcopy clause modifiers: always
   // CHECK-NEXT: ArraySubscriptExpr{{.*}}'float' lvalue
@@ -133,7 +133,7 @@ void NormalUses(float *PointerParam) {
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
 
-#pragma acc parallel copyout(GlobalArray) pcopyout(zero:PointerParam[Global]) present_or_copyout(always, alwaysin: Global)
+#pragma acc parallel copyout(GlobalArray) pcopyout(zero:PointerParam[Global]) present_or_copyout(always, alwaysout: Global)
   while(true);
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
   // CHECK-NEXT: copyout clause
@@ -144,7 +144,7 @@ void NormalUses(float *PointerParam) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'float *' lvalue ParmVar{{.*}}'PointerParam' 'float *'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
-  // CHECK-NEXT: present_or_copyout clause modifiers: always, alwaysin
+  // CHECK-NEXT: present_or_copyout clause modifiers: always, alwaysout
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
@@ -363,7 +363,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
 
-#pragma acc parallel copyout(t) pcopyout(zero:NTTP, u) present_or_copyout(always, alwaysin: u[0:t])
+#pragma acc parallel copyout(t) pcopyout(zero:NTTP, u) present_or_copyout(always, alwaysout: u[0:t])
   while(true);
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
   // CHECK-NEXT: copyout clause
@@ -371,7 +371,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: pcopyout clause modifiers: zero
   // CHECK-NEXT: DeclRefExpr{{.*}}'auto' lvalue NonTypeTemplateParm{{.*}} 'NTTP' 'auto &'
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
-  // CHECK-NEXT: present_or_copyout clause modifiers: always, alwaysin
+  // CHECK-NEXT: present_or_copyout clause modifiers: always, alwaysout
   // CHECK-NEXT: ArraySectionExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
@@ -569,7 +569,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
 
-// #pragma acc parallel copyout(t) pcopyout(zero:NTTP, u) present_or_copyout(always, alwaysin: u[0:t])
+// #pragma acc parallel copyout(t) pcopyout(zero:NTTP, u) present_or_copyout(always, alwaysout: u[0:t])
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
   // CHECK-NEXT: copyout clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
@@ -578,7 +578,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
-  // CHECK-NEXT: present_or_copyout clause modifiers: always, alwaysin
+  // CHECK-NEXT: present_or_copyout clause modifiers: always, alwaysout
   // CHECK-NEXT: ArraySectionExpr
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
@@ -649,7 +649,7 @@ void TemplUses(T t, U u, T*PointerParam) {
 
 struct S {
   // CHECK-NEXT: CXXRecordDecl{{.*}} struct S definition
-  // CHECK: CXXRecordDecl{{.*}} implicit struct S
+  // CHECK: CXXRecordDecl{{.*}} implicit {{.*}}struct S{{$}}
   int ThisMember;
   // CHECK-NEXT: FieldDecl{{.*}} ThisMember 'int'
   int *ThisMemberPtr;

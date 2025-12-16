@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/opencl-base.h>
 
 #if __clang_major__ >= 8
 #define CONST_AS __constant

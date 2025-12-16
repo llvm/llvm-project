@@ -65,6 +65,10 @@
 // See siginfo.h in the Linux Kernel, these codes can be sent for any signal.
 #define ADD_LINUX_SIGNAL(signo, name, ...)                                     \
   AddSignal(signo, name, __VA_ARGS__);                                         \
+  ADD_SIGCODE(signo, signo, SI_USER, 0, "sent by kill, sigsend or raise",      \
+              SignalCodePrintOption::Sender);                                  \
+  ADD_SIGCODE(signo, signo, SI_KERNEL, 0x80, "sent by kernel (SI_KERNEL)",     \
+              SignalCodePrintOption::Sender);                                  \
   ADD_SIGCODE(signo, signo, SI_QUEUE, -1, "sent by sigqueue",                  \
               SignalCodePrintOption::Sender);                                  \
   ADD_SIGCODE(signo, signo, SI_TIMER, -2, "sent by timer expiration",          \
@@ -156,7 +160,7 @@ void LinuxSignals::Reset() {
   ADD_LINUX_SIGNAL(25,     "SIGXFSZ",      false,    true,   true,   "file size limit exceeded");
   ADD_LINUX_SIGNAL(26,     "SIGVTALRM",    false,    true,   true,   "virtual time alarm");
   ADD_LINUX_SIGNAL(27,     "SIGPROF",      false,    false,  false,  "profiling time alarm");
-  ADD_LINUX_SIGNAL(28,     "SIGWINCH",     false,    true,   true,   "window size changes");
+  ADD_LINUX_SIGNAL(28,     "SIGWINCH",     false,    false,   false,   "window size changes");
   ADD_LINUX_SIGNAL(29,     "SIGIO",        false,    true,   true,   "input/output ready/Pollable event", "SIGPOLL");
   ADD_LINUX_SIGNAL(30,     "SIGPWR",       false,    true,   true,   "power failure");
   ADD_LINUX_SIGNAL(31,     "SIGSYS",       false,    true,   true,   "invalid system call");

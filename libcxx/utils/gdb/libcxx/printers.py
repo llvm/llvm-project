@@ -65,16 +65,6 @@ def _remove_generics(typename):
     return match.group(1)
 
 
-def _cc_field(node):
-    """Previous versions of libcxx had inconsistent field naming naming. Handle
-    both types.
-    """
-    try:
-        return node["__value_"]["__cc_"]
-    except:
-        return node["__value_"]["__cc"]
-
-
 def _data_field(node):
     """Previous versions of libcxx had inconsistent field naming naming. Handle
     both types.
@@ -829,7 +819,7 @@ class StdUnorderedMapPrinter(AbstractUnorderedCollectionPrinter):
     """Print a std::unordered_(multi)map."""
 
     def _get_key_value(self, node):
-        key_value = _cc_field(node)
+        key_value = node["__value_"]
         return [key_value["first"], key_value["second"]]
 
     def display_hint(self):
@@ -885,7 +875,7 @@ class StdUnorderedMapIteratorPrinter(AbstractHashMapIteratorPrinter):
         self._initialize(val, val["__i_"]["__node_"])
 
     def _get_key_value(self):
-        key_value = _cc_field(self.node)
+        key_value = self.node["__value_"]
         return [key_value["first"], key_value["second"]]
 
     def display_hint(self):

@@ -2555,7 +2555,7 @@ entry:
 define <4 x i64> @splatshuf_zext_v4i64(<4 x i32> %x) {
 ; SSE2-LABEL: splatshuf_zext_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -2563,7 +2563,7 @@ define <4 x i64> @splatshuf_zext_v4i64(<4 x i32> %x) {
 ;
 ; SSSE3-LABEL: splatshuf_zext_v4i64:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSSE3-NEXT:    pxor %xmm1, %xmm1
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm1
@@ -2571,7 +2571,7 @@ define <4 x i64> @splatshuf_zext_v4i64(<4 x i32> %x) {
 ;
 ; SSE41-LABEL: splatshuf_zext_v4i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    retq

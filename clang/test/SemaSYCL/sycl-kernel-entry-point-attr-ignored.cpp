@@ -6,11 +6,11 @@
 // A unique kernel name type is required for each declared kernel entry point.
 template<int> struct KN;
 
-// expected-warning@+1 {{'sycl_kernel_entry_point' attribute ignored}}
+// expected-warning@+1 {{'clang::sycl_kernel_entry_point' attribute ignored}}
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void ok1();
 
-// expected-warning@+2 {{'sycl_kernel_entry_point' attribute ignored}}
+// expected-warning@+2 {{'clang::sycl_kernel_entry_point' attribute ignored}}
 template<typename KNT>
 [[clang::sycl_kernel_entry_point(KNT)]]
 void ok2() {}

@@ -7,16 +7,15 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-LABEL: @reduction_add_trunc(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP31:%.*]] = mul nuw i32 [[TMP30]], 16
+; CHECK-NEXT:    [[TMP31:%.*]] = shl nuw i32 [[TMP30]], 4
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 256, [[TMP31]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP2]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP2]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 256, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 256, [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i32 [[TMP4]], 16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -25,11 +24,9 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = and <vscale x 8 x i32> [[VEC_PHI]], splat (i32 255)
 ; CHECK-NEXT:    [[TMP15:%.*]] = and <vscale x 8 x i32> [[VEC_PHI1]], splat (i32 255)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP10]], 8
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 [[TMP11]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 [[TMP9]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 8 x i8>, ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[TMP27:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD2]] to <vscale x 8 x i32>
@@ -39,13 +36,11 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP35:%.*]] = trunc <vscale x 8 x i32> [[TMP29]] to <vscale x 8 x i8>
 ; CHECK-NEXT:    [[TMP34]] = zext <vscale x 8 x i8> [[TMP33]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[TMP36]] = zext <vscale x 8 x i8> [[TMP35]] to <vscale x 8 x i32>
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP37:%.*]] = trunc <vscale x 8 x i32> [[TMP34]] to <vscale x 8 x i8>
-; CHECK-NEXT:    [[TMP38:%.*]] = trunc <vscale x 8 x i32> [[TMP36]] to <vscale x 8 x i8>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 8 x i8> [[TMP38]], [[TMP37]]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 8 x i8> [[TMP35]], [[TMP33]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = call i8 @llvm.vector.reduce.add.nxv8i8(<vscale x 8 x i8> [[BIN_RDX]])
 ; CHECK-NEXT:    [[TMP40:%.*]] = zext i8 [[TMP39]] to i32
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 256, [[N_VEC]]

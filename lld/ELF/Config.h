@@ -275,6 +275,11 @@ struct Config {
   llvm::SmallVector<llvm::StringRef, 0> searchPaths;
   llvm::SmallVector<llvm::StringRef, 0> symbolOrderingFile;
   llvm::SmallVector<llvm::StringRef, 0> thinLTOModulesToCompile;
+  llvm::StringRef dtltoDistributor;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoDistributorArgs;
+  llvm::StringRef dtltoCompiler;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerPrependArgs;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
   llvm::SmallVector<llvm::StringRef, 0> undefined;
   llvm::SmallVector<SymbolVersion, 0> dynamicList;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
@@ -302,6 +307,7 @@ struct Config {
   bool bpFunctionOrderForCompression = false;
   bool bpDataOrderForCompression = false;
   bool bpVerboseSectionOrderer = false;
+  bool branchToBranch = false;
   bool checkSections;
   bool checkDynamicRelocs;
   std::optional<llvm::DebugCompressionType> compressDebugSections;
@@ -353,7 +359,7 @@ struct Config {
   bool optRemarksWithHotness;
   bool picThunk;
   bool pie;
-  bool printGcSections;
+  llvm::StringRef printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
   std::optional<uint64_t> randomizeSectionPadding;
@@ -399,6 +405,7 @@ struct Config {
   bool zIfuncNoplt;
   bool zInitfirst;
   bool zInterpose;
+  bool zKeepDataSectionPrefix;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
   bool zNoBtCfi;
@@ -563,6 +570,7 @@ struct UndefinedDiag {
 // a partition.
 struct InStruct {
   std::unique_ptr<InputSection> attributes;
+  std::unique_ptr<SyntheticSection> hexagonAttributes;
   std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<BssSection> bss;
   std::unique_ptr<BssSection> bssRelRo;
@@ -695,6 +703,8 @@ struct Ctx : CommonLinkerContext {
   std::unique_ptr<llvm::TarWriter> tar;
   // InputFile for linker created symbols with no source location.
   InputFile *internalFile = nullptr;
+  // Dummy Undefined for relocations without a symbol.
+  Undefined *dummySym = nullptr;
   // True if symbols can be exported (isExported) or preemptible.
   bool hasDynsym = false;
   // True if SHT_LLVM_SYMPART is used.

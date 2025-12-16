@@ -29,6 +29,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include <variant>
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsTypes.h.inc"
@@ -45,10 +46,10 @@
   mlir::acc::CopyinOp, mlir::acc::CreateOp, mlir::acc::PresentOp,              \
       mlir::acc::NoCreateOp, mlir::acc::AttachOp, mlir::acc::DevicePtrOp,      \
       mlir::acc::GetDevicePtrOp, mlir::acc::PrivateOp,                         \
-      mlir::acc::FirstprivateOp, mlir::acc::UpdateDeviceOp,                    \
-      mlir::acc::UseDeviceOp, mlir::acc::ReductionOp,                          \
-      mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeclareLinkOp,            \
-      mlir::acc::CacheOp
+      mlir::acc::FirstprivateOp, mlir::acc::FirstprivateMapInitialOp,          \
+      mlir::acc::UpdateDeviceOp, mlir::acc::UseDeviceOp,                       \
+      mlir::acc::ReductionOp, mlir::acc::DeclareDeviceResidentOp,              \
+      mlir::acc::DeclareLinkOp, mlir::acc::CacheOp
 #define ACC_DATA_EXIT_OPS                                                      \
   mlir::acc::CopyoutOp, mlir::acc::DeleteOp, mlir::acc::DetachOp,              \
       mlir::acc::UpdateHostOp
@@ -151,11 +152,8 @@ mlir::ValueRange getDataOperands(mlir::Operation *accOp);
 /// Used to get a mutable range iterating over the data operands.
 mlir::MutableOperandRange getMutableDataOperands(mlir::Operation *accOp);
 
-/// Used to obtain the enclosing compute construct operation that contains
-/// the provided `region`. Returns nullptr if no compute construct operation
-/// is found. The returns operation is one of types defined by
-///`ACC_COMPUTE_CONSTRUCT_OPS`.
-mlir::Operation *getEnclosingComputeOp(mlir::Region &region);
+/// Used to get the recipe attribute from a data clause operation.
+mlir::SymbolRefAttr getRecipe(mlir::Operation *accOp);
 
 /// Used to check whether the provided `type` implements the `PointerLikeType`
 /// interface.
@@ -179,7 +177,31 @@ static constexpr StringLiteral getDeclareActionAttrName() {
 }
 
 static constexpr StringLiteral getRoutineInfoAttrName() {
-  return StringLiteral("acc.routine_info");
+  return RoutineInfoAttr::name;
+}
+
+static constexpr StringLiteral getSpecializedRoutineAttrName() {
+  return SpecializedRoutineAttr::name;
+}
+
+/// Used to check whether the current operation is marked with
+/// `acc routine`. The operation passed in should be a function.
+inline bool isAccRoutine(mlir::Operation *op) {
+  return op->hasAttr(mlir::acc::getRoutineInfoAttrName());
+}
+
+/// Used to check whether this is a specialized accelerator version of
+/// `acc routine` function.
+inline bool isSpecializedAccRoutine(mlir::Operation *op) {
+  return op->hasAttr(mlir::acc::getSpecializedRoutineAttrName());
+}
+
+static constexpr StringLiteral getFromDefaultClauseAttrName() {
+  return StringLiteral("acc.from_default");
+}
+
+static constexpr StringLiteral getVarNameAttrName() {
+  return VarNameAttr::name;
 }
 
 static constexpr StringLiteral getCombinedConstructsAttrName() {

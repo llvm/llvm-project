@@ -1338,15 +1338,13 @@ private:
           getConverter().getFoldingContext(), toEvExpr(*expr)));
     return std::nullopt;
   }
-  void addFirOperand(
-      mlir::Type type, int entityPosition, Property p,
-      llvm::ArrayRef<mlir::NamedAttribute> attributes = std::nullopt) {
+  void addFirOperand(mlir::Type type, int entityPosition, Property p,
+                     llvm::ArrayRef<mlir::NamedAttribute> attributes = {}) {
     interface.inputs.emplace_back(
         FirPlaceHolder{type, entityPosition, p, attributes});
   }
-  void
-  addFirResult(mlir::Type type, int entityPosition, Property p,
-               llvm::ArrayRef<mlir::NamedAttribute> attributes = std::nullopt) {
+  void addFirResult(mlir::Type type, int entityPosition, Property p,
+                    llvm::ArrayRef<mlir::NamedAttribute> attributes = {}) {
     interface.outputs.emplace_back(
         FirPlaceHolder{type, entityPosition, p, attributes});
   }
@@ -1766,6 +1764,17 @@ mlir::Type Fortran::lower::getDummyProcedureType(
   if (::mustPassLengthWithDummyProcedure(iface))
     return fir::factory::getCharacterProcedureTupleType(procType);
   return procType;
+}
+
+mlir::Type Fortran::lower::getDummyProcedurePointerType(
+    const Fortran::semantics::Symbol &dummyProcPtr,
+    Fortran::lower::AbstractConverter &converter) {
+  std::optional<Fortran::evaluate::characteristics::Procedure> iface =
+      Fortran::evaluate::characteristics::Procedure::Characterize(
+          dummyProcPtr, converter.getFoldingContext());
+  mlir::Type procPtrType = getProcedureDesignatorType(
+      iface.has_value() ? &*iface : nullptr, converter);
+  return fir::ReferenceType::get(procPtrType);
 }
 
 bool Fortran::lower::isCPtrArgByValueType(mlir::Type ty) {

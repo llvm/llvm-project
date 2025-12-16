@@ -41,6 +41,7 @@ class LoopInfo;
 class MDNode;
 class StringRef;
 class TargetLibraryInfo;
+class IntrinsicInst;
 template <typename T> class ArrayRef;
 
 constexpr unsigned MaxAnalysisRecursionDepth = 6;
@@ -311,11 +312,11 @@ LLVM_ABI std::optional<bool> computeKnownFPSignBit(const Value *V,
 
 /// Return true if the sign bit of the FP value can be ignored by the user when
 /// the value is zero.
-bool canIgnoreSignBitOfZero(const Use &U);
+LLVM_ABI bool canIgnoreSignBitOfZero(const Use &U);
 
 /// Return true if the sign bit of the FP value can be ignored by the user when
 /// the value is NaN.
-bool canIgnoreSignBitOfNaN(const Use &U);
+LLVM_ABI bool canIgnoreSignBitOfNaN(const Use &U);
 
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8
@@ -357,11 +358,6 @@ GetPointerBaseWithConstantOffset(const Value *Ptr, int64_t &Offset,
   return GetPointerBaseWithConstantOffset(const_cast<Value *>(Ptr), Offset, DL,
                                           AllowNonInbounds);
 }
-
-/// Returns true if the GEP is based on a pointer to a string (array of
-// \p CharSize integers) and is indexing into this string.
-LLVM_ABI bool isGEPBasedOnPointerToString(const GEPOperator *GEP,
-                                          unsigned CharSize = 8);
 
 /// Represents offset+length into a ConstantDataArray.
 struct ConstantDataArraySlice {
@@ -617,6 +613,12 @@ LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
                                       const DominatorTree *DT = nullptr,
                                       bool AllowEphemerals = false);
 
+/// Returns true, if no instruction between \p Assume and \p CtxI may free
+/// memory and the function is marked as NoSync. The latter ensures the current
+/// function cannot arrange for another thread to free on its behalf.
+LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
+                                 const Instruction *CtxI);
+
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.
   AlwaysOverflowsLow,
@@ -725,6 +727,9 @@ LLVM_ABI bool isGuaranteedToExecuteForEveryIteration(const Instruction *I,
 /// To filter out operands that raise UB on poison, you can use
 /// getGuaranteedNonPoisonOp.
 LLVM_ABI bool propagatesPoison(const Use &PoisonOp);
+
+/// Return whether this intrinsic propagates poison for all operands.
+LLVM_ABI bool intrinsicPropagatesPoison(Intrinsic::ID IID);
 
 /// Return true if the given instruction must trigger undefined behavior
 /// when I is executed with any operands which appear in KnownPoison holding
@@ -965,6 +970,21 @@ LLVM_ABI bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
 LLVM_ABI bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
                                     Value *&Start, Value *&Step);
 
+/// Attempt to match a simple value-accumulating recurrence of the form:
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%OtherOp, %llvm.intrinsic.acc)
+/// OR
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%llvm.intrinsic.acc, %OtherOp)
+///
+/// The recurrence relation is of kind:
+///   X_0 = %a (initial value),
+///   X_i = call @llvm.binary.intrinsic(X_i-1, %b)
+/// Where %b is not required to be loop-invariant.
+LLVM_ABI bool matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                   PHINode *&P, Value *&Init,
+                                                   Value *&OtherOp);
+
 /// Return true if RHS is known to be implied true by LHS.  Return false if
 /// RHS is known to be implied false by LHS.  Otherwise, return std::nullopt if
 /// no implication can be made. A & B must be i1 (boolean) values or a vector of
@@ -1003,6 +1023,16 @@ findValuesAffectedByCondition(Value *Cond, bool IsAssume,
 /// where f(X) == 0 if and only if X == 0, otherwise returns nullptr.
 LLVM_ABI Value *stripNullTest(Value *V);
 LLVM_ABI const Value *stripNullTest(const Value *V);
+
+/// Enumerates all possible immediate values of V and inserts them into the set
+/// \p Constants. If \p AllowUndefOrPoison is false, it fails when V may contain
+/// undef/poison elements. Returns true if the result is complete. Otherwise,
+/// the result is incomplete (more than MaxCount values).
+/// NOTE: The constant values are not distinct.
+LLVM_ABI bool
+collectPossibleValues(const Value *V,
+                      SmallPtrSetImpl<const Constant *> &Constants,
+                      unsigned MaxCount, bool AllowUndefOrPoison = true);
 
 } // end namespace llvm
 

@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_powr.h>
-#include <clc/opencl/clc.h>
 
-#define FUNCTION powr
+#define __CLC_FUNCTION powr
 #define __CLC_BODY <clc/shared/binary_def.inc>
 #include <clc/math/gentype.inc>
