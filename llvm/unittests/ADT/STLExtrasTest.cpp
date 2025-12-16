@@ -1260,6 +1260,104 @@ TEST(STLExtras, MoveRange) {
   EXPECT_TRUE(llvm::all_of(V4, HasVal));
 }
 
+TEST(STLExtrasTest, AllOfAnyOfNoneOfConstexpr) {
+  // Test all_of with std::array.
+  constexpr std::array<int, 4> Arr1 = {2, 4, 6, 8};
+  static_assert(all_of(Arr1, [](int X) { return X % 2 == 0; }),
+                "all_of should return true for all even numbers");
+  static_assert(!all_of(Arr1, [](int X) { return X > 5; }),
+                "all_of should return false when not all elements satisfy");
+
+  // Test all_of with C-style array.
+  constexpr int CArr[] = {1, 3, 5, 7};
+  static_assert(all_of(CArr, [](int X) { return X % 2 == 1; }),
+                "all_of works with C-style array");
+  static_assert(!all_of(CArr, [](int X) { return X < 5; }),
+                "all_of should return false when some elements don't satisfy");
+
+  // Test with empty range.
+  constexpr std::array<int, 0> Empty = {};
+  static_assert(all_of(Empty, [](int) { return false; }),
+                "all_of should return true for empty range");
+
+  // Test any_of with std::string_view (testing with char type).
+  constexpr std::string_view Str1 = "hello";
+  static_assert(any_of(Str1, [](char C) { return C == 'e'; }),
+                "any_of finds character in string_view");
+  static_assert(any_of(Str1, [](char C) { return C > 'k'; }),
+                "any_of finds matching characters");
+  static_assert(!any_of(Str1, [](char C) { return C == 'x'; }),
+                "any_of returns false when no match");
+
+  // Test any_of with C-style array of different type.
+  constexpr bool BoolArr[] = {false, false, true, false};
+  static_assert(any_of(BoolArr, [](bool B) { return B; }),
+                "any_of finds true value");
+  static_assert(!any_of(BoolArr, [](bool B) { return !B; }) == false,
+                "any_of with negated predicate");
+
+  // Test any_of with empty range.
+  static_assert(!any_of(Empty, [](int) { return true; }),
+                "any_of should return false for empty range");
+
+  // Test none_of with std::array.
+  constexpr std::array<int, 5> Arr5 = {1, 3, 5, 7, 9};
+  static_assert(none_of(Arr5, [](int X) { return X % 2 == 0; }),
+                "none_of should return true when no elements are even");
+  static_assert(none_of(Arr5, [](int X) { return X > 10; }),
+                "none_of should return true when all elements don't satisfy");
+  static_assert(
+      !none_of(Arr5, [](int X) { return X == 5; }),
+      "none_of should return false when at least one element matches");
+
+  // Test none_of with std::string_view.
+  constexpr std::string_view Str2 = "WORLD";
+  static_assert(none_of(Str2, [](char C) { return C >= 'a' && C <= 'z'; }),
+                "none_of verifies no lowercase letters");
+  static_assert(!none_of(Str2, [](char C) { return C == 'R'; }),
+                "none_of returns false when element exists");
+
+  // Test none_of with empty range.
+  static_assert(none_of(Empty, [](int) { return true; }),
+                "none_of should return true for empty range");
+
+  // Test with single element C-style array.
+  constexpr int Single[] = {42};
+  static_assert(all_of(Single, [](int X) { return X == 42; }),
+                "all_of works with single element C-array");
+  static_assert(any_of(Single, [](int X) { return X == 42; }),
+                "any_of works with single element");
+  static_assert(none_of(Single, [](int X) { return X != 42; }),
+                "none_of works with single element");
+
+  // Test with const arrays.
+  constexpr const std::array<int, 3> ConstArr = {100, 200, 300};
+  static_assert(all_of(ConstArr, [](int X) { return X >= 100; }),
+                "all_of works with const std::array");
+  static_assert(any_of(ConstArr, [](int X) { return X == 200; }),
+                "any_of works with const std::array");
+  static_assert(none_of(ConstArr, [](int X) { return X < 100; }),
+                "none_of works with const std::array");
+
+  // Test logical relationships between all_of, any_of, and none_of.
+  constexpr std::array<int, 3> Arr8 = {5, 10, 15};
+  static_assert(all_of(Arr8, [](int X) { return X > 0; }) ==
+                    !any_of(Arr8, [](int X) { return X <= 0; }),
+                "all_of(P) should equal !any_of(!P)");
+  static_assert(none_of(Arr8, [](int X) { return X < 0; }) ==
+                    !any_of(Arr8, [](int X) { return X < 0; }),
+                "none_of(P) should equal !any_of(P)");
+
+  // Test with different element types in std::array.
+  constexpr std::array<char, 4> CharArr = {'a', 'b', 'c', 'd'};
+  static_assert(all_of(CharArr, [](char C) { return C >= 'a' && C <= 'z'; }),
+                "all_of works with char array");
+  static_assert(any_of(CharArr, [](char C) { return C == 'c'; }),
+                "any_of works with char array");
+  static_assert(none_of(CharArr, [](char C) { return C >= 'A' && C <= 'Z'; }),
+                "none_of works with char array");
+}
+
 TEST(STLExtras, Unique) {
   std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
 
