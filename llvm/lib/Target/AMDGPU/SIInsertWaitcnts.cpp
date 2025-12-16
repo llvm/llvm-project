@@ -738,16 +738,6 @@ public:
     PendingEvents |= Context->WaitEventMaskForInst[STORE_CNT];
   }
 
-  // Returns true if there are pending VGPR-writing loads for counter type T.
-  // This is used to optimize waitcnt insertion at function boundaries when the
-  // only pending LOAD_CNT events are from instructions that don't write to
-  // VGPRs (e.g., GLOBAL_INV). We check for VMEM_READ_ACCESS or VMEM_ACCESS
-  // events, which correspond to actual VGPR-writing loads.
-  bool hasPendingVGPRWait(InstCounterType T) const {
-    assert(T == LOAD_CNT && "Only LOAD_CNT is supported");
-    return hasPendingEvent(VMEM_READ_ACCESS) || hasPendingEvent(VMEM_ACCESS);
-  }
-
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
     return LDSDMAStores;
   }
@@ -1390,9 +1380,9 @@ bool WaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
       (T == X_CNT && hasPendingEvent(SMEM_GROUP)))
     return true;
 
-  // GLOBAL_INV completes in-order with other LOAD_CNT events (VMEM_READ_ACCESS,
-  // VMEM_ACCESS), so having GLOBAL_INV_ACCESS mixed with other LOAD_CNT events
-  // doesn't cause out-of-order completion.
+  // GLOBAL_INV completes in-order with other LOAD_CNT events (VMEM_ACCESS),
+  // so having GLOBAL_INV_ACCESS mixed with other LOAD_CNT events doesn't cause
+  // out-of-order completion.
   if (T == LOAD_CNT) {
     unsigned Events = hasPendingEvent(T);
     // Remove GLOBAL_INV_ACCESS from the event mask before checking for mixed
@@ -1979,7 +1969,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     // GLOBAL_INV increments loadcnt but doesn't write to VGPRs, so there's
     // no need to wait for it at function boundaries.
     if (ST->hasExtendedWaitCounts() &&
-        !ScoreBrackets.hasPendingVGPRWait(LOAD_CNT))
+        !ScoreBrackets.hasPendingEvent(VMEM_ACCESS))
       AllZeroWait.LoadCnt = ~0u;
     Wait = Wait.combined(AllZeroWait);
   }
