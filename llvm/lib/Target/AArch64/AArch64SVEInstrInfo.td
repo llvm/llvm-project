@@ -4633,8 +4633,8 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm UXTW_ZPzZ  : sve_int_un_pred_arit_d_z<0b101, "uxtw", AArch64uxt_mt>;
 
   // SVE predicate count
-  defm FIRSTP_XPP : sve_int_pcount_pred_tmp<0b001, "firstp">;
-  defm LASTP_XPP  : sve_int_pcount_pred_tmp<0b010, "lastp">;
+  defm FIRSTP_XPP : sve_int_pcount_pred<0b001, "firstp", int_aarch64_sve_firstp>;
+  defm LASTP_XPP  : sve_int_pcount_pred<0b010, "lastp", int_aarch64_sve_lastp>;
 
   // SVE reverse within elements, zeroing predicate
   defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit", AArch64rbit_mt>;
@@ -4718,7 +4718,7 @@ let Predicates = [HasSVE2p2, HasF16MM] in {
 //===----------------------------------------------------------------------===//
 let Predicates = [HasNonStreamingSVE2p2_or_SME2p2] in {
   // SVE2 EXPAND
-  defm EXPAND_ZPZ : sve2_int_perm_expand<"expand">;
+  defm EXPAND_ZPZ : sve2_int_perm_expand<"expand", int_aarch64_sve_expand>;
   // SVE COMPACT - byte and halfword
   defm COMPACT_ZPZ : sve_int_perm_compact_bh<"compact", int_aarch64_sve_compact>;
 }

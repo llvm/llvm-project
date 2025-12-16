@@ -6525,7 +6525,7 @@ llvm::Value *CGOpenMPRuntime::emitNumTeamsForTargetDirective(
   }
 
   assert(MinNT == MaxNT && "Num threads ranges require handling here.");
-  return llvm::ConstantInt::get(CGF.Int32Ty, MinNT);
+  return llvm::ConstantInt::getSigned(CGF.Int32Ty, MinNT);
 }
 
 /// Check for a num threads constant value (stored in \p DefaultVal), or
