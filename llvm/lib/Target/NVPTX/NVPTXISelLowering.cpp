@@ -6253,17 +6253,26 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
 static SDValue PerformSELECTShiftCombine(SDNode *N,
                                          TargetLowering::DAGCombinerInfo &DCI) {
   using namespace SDPatternMatch;
-  SDValue ShiftAmt, ShiftOp, Threshold;
+  unsigned BitWidth = N->getValueType(0).getSizeInBits();
 
-  // shift_amt > threshold ? 0 : shift_op
-  bool MatchedUGT =
-      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt), m_Value(Threshold),
-                                   m_SpecificCondCode(ISD::SETUGT)),
-                           m_Zero(), m_Value(ShiftOp)));
-  // shift_amt < threshold ? shift_op : 0
+  // Don't optimize i8 shifts. i8 values are stored in 16-bit registers in PTX,
+  // and shift instructions clamp at register width (16), not logical type width
+  // (8). The guard must remain to ensure correct behavior.
+  if (BitWidth < 16)
+    return SDValue();
+
+  SDValue ShiftAmt, ShiftOp;
+  // shift_amt > BitWidth-1 ? 0 : shift_op
+  bool MatchedUGT = sd_match(
+      N, m_Select(m_SetCC(m_Value(ShiftAmt),
+                          m_SpecificInt(APInt(BitWidth, BitWidth - 1)),
+                          m_SpecificCondCode(ISD::SETUGT)),
+                  m_Zero(), m_Value(ShiftOp)));
+  // shift_amt < BitWidth ? shift_op : 0
   bool MatchedULT =
       !MatchedUGT &&
-      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt), m_Value(Threshold),
+      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
+                                   m_SpecificInt(APInt(BitWidth, BitWidth)),
                                    m_SpecificCondCode(ISD::SETULT)),
                            m_Value(ShiftOp), m_Zero()));
 
@@ -6278,26 +6287,6 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
   // Verify the shift amount in the guard is the same as the shift amount in the
   // shift operation.
   if (!sd_match(ShiftOp.getOperand(1), m_TruncOrSelf(m_Specific(ShiftAmt))))
-    return SDValue();
-
-  // Threshold must be BitWidth-1 for ugt or BitWidth for ult
-  auto *ThresholdC = dyn_cast<ConstantSDNode>(Threshold);
-  if (!ThresholdC)
-    return SDValue();
-
-  unsigned BitWidth = ShiftOp.getValueType().getSizeInBits();
-
-  // Don't optimize i8 shifts. i8 values are stored in 16-bit registers in PTX,
-  // and shift instructions clamp at register width (16), not logical type width
-  // (8). The guard must remain to ensure correct behavior.
-  if (BitWidth < 16)
-    return SDValue();
-
-  uint64_t ThreshVal = ThresholdC->getZExtValue();
-
-  if (MatchedUGT && ThreshVal != BitWidth - 1)
-    return SDValue();
-  if (MatchedULT && ThreshVal != BitWidth)
     return SDValue();
 
   // Return a clamp shift operation, which has the same semantics as PTX shift.
