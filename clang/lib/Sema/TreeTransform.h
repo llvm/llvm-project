@@ -10674,8 +10674,15 @@ TreeTransform<Derived>::TransformOMPThreadsetClause(OMPThreadsetClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPTransparentClause(OMPTransparentClause *C) {
+  Expr *Impex = C->getImpexType();
+  ExprResult TransformedImpex = getDerived().TransformExpr(Impex);
+
+  if (TransformedImpex.isInvalid())
+    return nullptr;
+
   return getDerived().RebuildOMPTransparentClause(
-      C->getImpexType(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      TransformedImpex.get(), C->getBeginLoc(), C->getLParenLoc(),
+      C->getEndLoc());
 }
 
 template <typename Derived>

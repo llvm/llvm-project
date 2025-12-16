@@ -169,6 +169,14 @@ extern const omp_impex_t omp_not_impex;
 extern const omp_impex_t omp_import;
 extern const omp_impex_t omp_export;
 extern const omp_impex_t omp_impex;
+
+template <typename T>
+void TestTaskLoopImpex() {
+#pragma omp taskloop transparent(omp_impex)
+  for (int i = 0; i < 10; ++i) {}
+#pragma omp task transparent(omp_not_impex)
+  for (int i = 0; i < 10; ++i) {}
+}
 #endif
 
 int main(int argc, char **argv) {
@@ -234,6 +242,7 @@ int main(int argc, char **argv) {
 #pragma omp task transparent((v))
   foo();
 
+  TestTaskLoopImpex<omp_impex_t>();
 #endif
   // CHECK60: #pragma omp task threadset(omp_pool)
   // CHECK60: #pragma omp task threadset(omp_team)
