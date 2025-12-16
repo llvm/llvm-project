@@ -451,15 +451,15 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   );
 
   let assemblyFormat = [{
-    `<` $size `x` $elementType `>`
+    `<` $size `x` $element_type `>`
   }];
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$elementType, "uint64_t":$size, CArg<"bool",
+      "mlir::Type":$element_type, "uint64_t":$size, CArg<"bool",
       "false">:$isScalable
     ), [{
-        return $_get(elementType.getContext(), elementType, size, isScalable);
+        return $_get(element_type.getContext(), element_type, size, isScalable);
     }]>,
   ];
 

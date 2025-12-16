@@ -339,10 +339,14 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType =
           cir::VectorType::get(builder.getUInt16Ty(), 8, /*isScalable=*/true);
       break;
-    // TODO: Waiting for FP type helpers
-    // case BuiltinType::SveFloat16:
-    //   resultType = cir::VectorType::get(builder.getF16Type(), 8,
-    //   /*isScalable=*/true); break;
+    case BuiltinType::SveFloat16:
+      resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
+                                        /*isScalable=*/true);
+      break;
+    case BuiltinType::SveBFloat16:
+      resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
+                                        /*isScalable=*/true);
+      break;
     case BuiltinType::SveInt32:
       resultType =
           cir::VectorType::get(builder.getSInt32Ty(), 4, /*isScalable=*/true);
@@ -351,10 +355,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType =
           cir::VectorType::get(builder.getUInt32Ty(), 4, /*isScalable=*/true);
       break;
-    // TODO: Waiting for FP type helpers
-    // case BuiltinType::SveFloat32:
-    //   resultType = cir::VectorType::get(builder.getF32Type(), 4,
-    //   /*isScalable=*/true); break;
+    case BuiltinType::SveFloat32:
+      resultType = cir::VectorType::get(builder.getSingleTy(), 4,
+                                        /*isScalable=*/true);
+      break;
     case BuiltinType::SveInt64:
       resultType =
           cir::VectorType::get(builder.getSInt64Ty(), 2, /*isScalable=*/true);
@@ -363,10 +367,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType =
           cir::VectorType::get(builder.getUInt64Ty(), 2, /*isScalable=*/true);
       break;
-    // TODO: Waiting for FP type helpers
-    // case BuiltinType::SveFloat64:
-    //   resultType = cir::VectorType::get(builder.getF64Type(), 2,
-    //   /*isScalable=*/true); break;
+    case BuiltinType::SveFloat64:
+      resultType = cir::VectorType::get(builder.getDoubleTy(), 2,
+                                        /*isScalable=*/true);
+      break;
 
     // Unsigned integral types.
     case BuiltinType::Char8:

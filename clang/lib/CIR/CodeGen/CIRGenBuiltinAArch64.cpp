@@ -59,8 +59,8 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
     StringRef intrinsicName = "vscale.i64";
     auto vscale = emitIntrinsicCallOp(builder, loc, intrinsicName,
                                       convertType(expr->getType()));
-    return builder.createMul(loc, vscale,
-                             builder.getUInt64(scalingFactor, loc));
+    return builder.createNUWAMul(loc, vscale,
+                                 builder.getUInt64(scalingFactor, loc));
   };
 
   assert(!cir::MissingFeatures::aarch64SVEIntrinsics());

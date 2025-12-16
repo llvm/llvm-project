@@ -3,9 +3,12 @@
 
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=ALL,CIR
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=ALL,CIR
-//
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM
+
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR
+
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR
 
 #include <arm_sve.h>
 
@@ -27,10 +30,10 @@ uint64_t test_svlen_u8(svuint8_t op) MODE_ATTR
 {
 // CIR:     %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
 // CIR:     %[[C16:.*]] = cir.const #cir.int<16> : !u64i
-// CIR:     %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C16]]) : !u64i
+// CIR:     %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C16]]) nuw : !u64i
 
-// LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-// LLVM:    [[RES:%.*]] = mul i64 [[VSCALE]], 16
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 16
   return SVE_ACLE_FUNC(svlen,_u8,,)(op);
 }
 
@@ -39,10 +42,10 @@ uint64_t test_svlen_s8(svint8_t op) MODE_ATTR
 {
 // CIR:     %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
 // CIR:     %[[C16:.*]] = cir.const #cir.int<16> : !u64i
-// CIR:     %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C16]]) : !u64i
+// CIR:     %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C16]]) nuw : !u64i
 
-// LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-// LLVM:    [[RES:%.*]] = mul i64 [[VSCALE]], 16
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 16
   return SVE_ACLE_FUNC(svlen,_s8,,)(op);
 }
 
@@ -51,10 +54,10 @@ uint64_t test_svlen_u16(svuint16_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
 // CIR:           %[[C8:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C8]]) : !u64i
+// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C8]]) nuw : !u64i
 
-// LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-// LLVM:    [[RES:%.*]] = mul i64 [[VSCALE]], 8
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
   return SVE_ACLE_FUNC(svlen,_u16,,)(op);
 }
 
@@ -63,34 +66,46 @@ uint64_t test_svlen_s16(svint16_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
 // CIR:           %[[C8:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C8]]) : !u64i
+// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C8]]) nuw : !u64i
 
-// LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-// LLVM:    [[RES:%.*]] = mul i64 [[VSCALE]], 8
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
   return SVE_ACLE_FUNC(svlen,_s16,,)(op);
 }
 
-// TODO: Waiting for FP type helpers
-// uint64_t test_svlen_f16(svfloat16_t op) MODE_ATTR
-// {
-//   return SVE_ACLE_FUNC(svlen,_f16,,)(op);
-// }
+// ALL-LABEL: @test_svlen_f16(
+uint64_t test_svlen_f16(svfloat16_t op) MODE_ATTR
+{
+// CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
+// CIR:           %[[C8:.*]] = cir.const #cir.int<8> : !u64i
+// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C8]]) nuw : !u64i
 
-// TODO: Waiting for FP type helpers
-// uint64_t test_svlen_bf16(svbfloat16_t op) MODE_ATTR
-// {
-//   return SVE_ACLE_FUNC(svlen,_bf16,,)(op);
-// }
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
+  return SVE_ACLE_FUNC(svlen,_f16,,)(op);
+}
+
+// ALL-LABEL: @test_svlen_bf16(
+uint64_t test_svlen_bf16(svbfloat16_t op) MODE_ATTR
+{
+// CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
+// CIR:           %[[C8:.*]] = cir.const #cir.int<8> : !u64i
+// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C8]]) nuw : !u64i
+
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
+  return SVE_ACLE_FUNC(svlen,_bf16,,)(op);
+}
 
 // ALL-LABEL: @test_svlen_u32(
 uint64_t test_svlen_u32(svuint32_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
 // CIR:           %[[C4:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C4]]) : !u64i
+// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C4]]) nuw : !u64i
 
-// LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-// LLVM:    [[RES:%.*]] = mul i64  [[VSCALE]], 4
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64  [[VSCALE]], 4
   return SVE_ACLE_FUNC(svlen,_u32,,)(op);
 }
 
@@ -99,28 +114,34 @@ uint64_t test_svlen_s32(svint32_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
 // CIR:           %[[C4:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C4]]) : !u64i
+// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C4]]) nuw : !u64i
 
-// LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-// LLVM:    [[RES:%.*]] = mul i64 [[VSCALE]], 4
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 4
   return SVE_ACLE_FUNC(svlen,_s32,,)(op);
 }
 
-// TODO: Waiting for FP type helpers
-// uint64_t test_svlen_f32(svfloat32_t op) MODE_ATTR
-// {
-//   return SVE_ACLE_FUNC(svlen,_f32,,)(op);
-// }
+// ALL-LABEL: @test_svlen_f32(
+uint64_t test_svlen_f32(svfloat32_t op) MODE_ATTR
+{
+// CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
+// CIR:           %[[C4:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C4]]) nuw : !u64i
+
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 4
+  return SVE_ACLE_FUNC(svlen,_f32,,)(op);
+}
 
 // ALL-LABEL: @test_svlen_u64(
 uint64_t test_svlen_u64(svuint64_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
 // CIR:           %[[C2:.*]] = cir.const #cir.int<2> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C2]]) : !u64i
+// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C2]]) nuw : !u64i
 
-// LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-// LLVM:    [[RES:%.*]] = mul i64  [[VSCALE]], 2
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64  [[VSCALE]], 2
   return SVE_ACLE_FUNC(svlen,_u64,,)(op);
 }
 
@@ -129,15 +150,21 @@ uint64_t test_svlen_s64(svint64_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
 // CIR:           %[[C2:.*]] = cir.const #cir.int<2> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C2]]) : !u64i
+// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C2]]) nuw : !u64i
 
-// LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-// LLVM:    [[RES:%.*]] = mul i64 [[VSCALE]], 2
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 2
   return SVE_ACLE_FUNC(svlen,_s64,,)(op);
 }
 
-// TODO: Waiting for FP type helpers
-// uint64_t test_svlen_f64(svfloat64_t op) MODE_ATTR
-// {
-//   return SVE_ACLE_FUNC(svlen,_f64,,)(op);
-// }
+// ALL-LABEL: @test_svlen_f64
+uint64_t test_svlen_f64(svfloat64_t op) MODE_ATTR
+{
+// CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale.i64"  : () -> !u64i
+// CIR:           %[[C2:.*]] = cir.const #cir.int<2> : !u64i
+// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C2]]) nuw : !u64i
+
+// LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+// LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 2
+  return SVE_ACLE_FUNC(svlen,_f64,,)(op);
+}
