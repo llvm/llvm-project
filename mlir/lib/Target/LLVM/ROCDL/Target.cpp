@@ -380,26 +380,26 @@ mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
   return SmallVector<char, 0>(buffer.begin(), buffer.end());
 }
 
-FailureOr<SmallVector<char, 0>>
-SerializeGPUModuleBase::compileToBinary(StringRef serializedISA) {
+std::optional<SmallVector<char, 0>>
+SerializeGPUModuleBase::compileToBinary(const std::string &serializedISA) {
   auto errCallback = [&]() { return getOperation().emitError(); };
   // Assemble the ISA.
   FailureOr<SmallVector<char, 0>> isaBinary = ROCDL::assembleIsa(
       serializedISA, this->triple, this->chip, this->features, errCallback);
 
   if (failed(isaBinary))
-    return failure();
+    return std::nullopt;
 
   // Link the object code.
   FailureOr<SmallVector<char, 0>> linkedCode =
       ROCDL::linkObjectCode(*isaBinary, toolkitPath, errCallback);
   if (failed(linkedCode))
-    return failure();
+    return std::nullopt;
 
   return linkedCode;
 }
 
-FailureOr<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
+std::optional<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
     const gpu::TargetOptions &targetOptions, llvm::Module &llvmModule) {
   // Return LLVM IR if the compilation target is offload.
 #define DEBUG_TYPE "serialize-to-llvm"
@@ -412,19 +412,22 @@ FailureOr<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
     return SerializeGPUModuleBase::moduleToObject(llvmModule);
 
-  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
-  if (failed(targetMachine))
-    return getOperation().emitError()
-           << "target Machine unavailable for triple " << triple
-           << ", can't compile with LLVM";
+  std::optional<llvm::TargetMachine *> targetMachine =
+      getOrCreateTargetMachine();
+  if (!targetMachine) {
+    getOperation().emitError() << "target Machine unavailable for triple "
+                               << triple << ", can't compile with LLVM";
+    return std::nullopt;
+  }
 
   // Translate the Module to ISA.
-  FailureOr<SmallString<0>> serializedISA =
+  FailureOr<std::string> serializedISA =
       translateModuleToISA(llvmModule, **targetMachine,
                            [&]() { return getOperation().emitError(); });
-  if (failed(serializedISA))
-    return getOperation().emitError() << "failed translating the module to ISA";
-
+  if (failed(serializedISA)) {
+    getOperation().emitError() << "failed translating the module to ISA";
+    return std::nullopt;
+  }
 #define DEBUG_TYPE "serialize-to-isa"
   LLVM_DEBUG({
     llvm::dbgs() << "ISA for module: "
@@ -437,9 +440,10 @@ FailureOr<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
     return SmallVector<char, 0>(serializedISA->begin(), serializedISA->end());
 
   // Compiling to binary requires a valid ROCm path, fail if it's not found.
-  if (getToolkitPath().empty())
-    return getOperation().emitError()
-           << "invalid ROCm path, please set a valid path";
+  if (getToolkitPath().empty()) {
+    getOperation().emitError() << "invalid ROCm path, please set a valid path";
+    return std::nullopt;
+  }
 
   // Compile to binary.
   return compileToBinary(*serializedISA);
@@ -452,7 +456,7 @@ public:
   AMDGPUSerializer(Operation &module, ROCDLTargetAttr target,
                    const gpu::TargetOptions &targetOptions);
 
-  FailureOr<SmallVector<char, 0>>
+  std::optional<SmallVector<char, 0>>
   moduleToObject(llvm::Module &llvmModule) override;
 
 private:
@@ -466,7 +470,7 @@ AMDGPUSerializer::AMDGPUSerializer(Operation &module, ROCDLTargetAttr target,
     : SerializeGPUModuleBase(module, target, targetOptions),
       targetOptions(targetOptions) {}
 
-FailureOr<SmallVector<char, 0>>
+std::optional<SmallVector<char, 0>>
 AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule) {
   return moduleToObjectImpl(targetOptions, llvmModule);
 }
