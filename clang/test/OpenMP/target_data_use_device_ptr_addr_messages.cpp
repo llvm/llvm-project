@@ -15,9 +15,7 @@ struct SA {
   int &j = i;
   int *k = &j;
   int *&z = k;
-  int **pp = &k;
   int aa[10];
-  int aa2d[10][10];
   void func(int arg) {
 #pragma omp target data map(i) use_device_ptr // expected-error {{expected '(' after 'use_device_ptr'}}
     {}
@@ -78,14 +76,6 @@ struct SA {
 #pragma omp target data map(i) use_device_addr(d) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
     {}
 #pragma omp target data map(i) use_device_addr(da) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
-    {}
-#pragma omp target data map(i) use_device_addr(pp[1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
-    {}
-#pragma omp target data map(i) use_device_addr(pp[1][1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}} omp51-error {{base-pointer is not a variable name or data member of current class}}
-    {}
-#pragma omp target data map(i) use_device_addr(aa[1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
-    {}
-#pragma omp target data map(i) use_device_addr(aa2d[1][1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
     {}
   return;
  }
@@ -172,9 +162,7 @@ T tmain(T argc) {
   T &j = i;
   T *k = &j;
   T *&z = k;
-  T **pp = &k;
   T aa[10];
-  T aa2d[10][10];
 #pragma omp target data map(i) use_device_ptr // expected-error {{expected '(' after 'use_device_ptr'}}
   {}
 #pragma omp target data map(i) use_device_ptr( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}}
@@ -235,14 +223,6 @@ T tmain(T argc) {
   {}
 #pragma omp target data map(i) use_device_addr(da) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
   {}
-#pragma omp target data map(i) use_device_addr(pp[1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
-    {}
-#pragma omp target data map(i) use_device_addr(pp[1][1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}} omp51-error {{base-pointer is not a variable name}}
-    {}
-#pragma omp target data map(i) use_device_addr(aa[1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
-    {}
-#pragma omp target data map(i) use_device_addr(aa2d[1][1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
-    {}
   return 0;
 }
 
@@ -255,9 +235,7 @@ int main(int argc, char **argv) {
   int &j = i;
   int *k = &j;
   int *&z = k;
-  int **pp = &k;
   int aa[10];
-  int aa2d[10][10];
 #pragma omp target data map(i) use_device_ptr // expected-error {{expected '(' after 'use_device_ptr'}}
   {}
 #pragma omp target data map(i) use_device_ptr( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}}
@@ -318,13 +296,5 @@ int main(int argc, char **argv) {
   {}
 #pragma omp target data map(i) use_device_addr(da) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
   {}
-#pragma omp target data map(i) use_device_addr(pp[1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
-  {}
-#pragma omp target data map(i) use_device_addr(pp[1][1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}} omp51-error {{base-pointer is not a variable name}}
-  {}
-#pragma omp target data map(i) use_device_addr(aa[1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
-    {}
-#pragma omp target data map(i) use_device_addr(aa2d[1][1]) // omp45-error {{unexpected OpenMP clause 'use_device_addr' in directive '#pragma omp target data'}}
-    {}
   return tmain<int, 3>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}}
 }

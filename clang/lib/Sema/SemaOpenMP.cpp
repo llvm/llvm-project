@@ -2206,7 +2206,6 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
     // | ptr  |      n.a.     |  -  |   x   |       -       |     -    | bycopy|
     // | ptr  |      n.a.     |  x  |   -   |       -       |     -    | null  |
     // | ptr  |      n.a.     |  -  |   -   |       -       |     x    | byref |
-    // | ptr  |      n.a.     |  -  |   -   |       -       |   x, x[] | bycopy|
     // | ptr  |      n.a.     |  -  |   -   |       -       |    x[]   | bycopy|
     // | ptr  |      n.a.     |  -  |   -   |       x       |          | bycopy|
     // | ptr  |      n.a.     |  -  |   -   |       x       |     x    | bycopy|
@@ -2232,22 +2231,18 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
     //  - For pointers mapped by value that have either an implicit map or an
     //    array section, the runtime library may pass the NULL value to the
     //    device instead of the value passed to it by the compiler.
-    //  - If both a pointer and a dereference of it are mapped, then the pointer
-    //    should be passed by reference.
 
     if (Ty->isReferenceType())
       Ty = Ty->castAs<ReferenceType>()->getPointeeType();
 
-    // Locate map clauses and see if the variable being captured is mapped by
-    // itself, or referred to, in any of those clauses. Here we only care about
-    // variables, not fields, because fields are part of aggregates.
+    // Locate map clauses and see if the variable being captured is referred to
+    // in any of those clauses. Here we only care about variables, not fields,
+    // because fields are part of aggregates.
     bool IsVariableAssociatedWithSection = false;
-    bool IsVariableItselfMapped = false;
 
     DSAStack->checkMappableExprComponentListsForDeclAtLevel(
         D, Level,
         [&IsVariableUsedInMapClause, &IsVariableAssociatedWithSection,
-         &IsVariableItselfMapped,
          D](OMPClauseMappableExprCommon::MappableExprComponentListRef
                 MapExprComponents,
             OpenMPClauseKind WhereFoundClauseKind) {
@@ -2263,19 +2258,8 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
 
           assert(EI != EE && "Invalid map expression!");
 
-          if (isa<DeclRefExpr>(EI->getAssociatedExpression()) &&
-              EI->getAssociatedDeclaration() == D) {
-            IsVariableUsedInMapClause = true;
-
-            // If the component list has only one element, it's for mapping the
-            // variable itself, like map(p). This takes precedence in
-            // determining how it's captured, so we don't need to look further
-            // for any other maps that use the variable (like map(p[0]) etc.)
-            if (MapExprComponents.size() == 1) {
-              IsVariableItselfMapped = true;
-              return true;
-            }
-          }
+          if (isa<DeclRefExpr>(EI->getAssociatedExpression()))
+            IsVariableUsedInMapClause |= EI->getAssociatedDeclaration() == D;
 
           ++EI;
           if (EI == EE)
@@ -2289,10 +2273,8 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
               isa<MemberExpr>(EI->getAssociatedExpression()) ||
               isa<OMPArrayShapingExpr>(Last->getAssociatedExpression())) {
             IsVariableAssociatedWithSection = true;
-            // We've found a case like map(p[0]) or map(p->a) or map(*p),
-            // so we are done with this particular map, but we need to keep
-            // looking in case we find a map(p).
-            return false;
+            // There is nothing more we need to know about this variable.
+            return true;
           }
 
           // Keep looking for more map info.
@@ -2301,23 +2283,8 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
 
     if (IsVariableUsedInMapClause) {
       // If variable is identified in a map clause it is always captured by
-      // reference except if it is a pointer that is dereferenced somehow, but
-      // not itself mapped.
-      //
-      // OpenMP 6.0, 7.1.1: Data sharing attribute rules, variables referenced
-      // in a construct::
-      // If a list item in a has_device_addr clause or in a map clause on the
-      // target construct has a base pointer, and the base pointer is a scalar
-      // variable *that is not a list item in a map clause on the construct*,
-      // the base pointer is firstprivate.
-      //
-      // OpenMP 4.5, 2.15.1.1: Data-sharing Attribute Rules for Variables
-      // Referenced in a Construct:
-      // If an array section is a list item in a map clause on the target
-      // construct and the array section is derived from a variable for which
-      // the type is pointer then that variable is firstprivate.
-      IsByRef = IsVariableItselfMapped ||
-                !(Ty->isPointerType() && IsVariableAssociatedWithSection);
+      // reference except if it is a pointer that is dereferenced somehow.
+      IsByRef = !(Ty->isPointerType() && IsVariableAssociatedWithSection);
     } else {
       // By default, all the data that has a scalar type is mapped by copy
       // (except for reduction variables).
@@ -23422,10 +23389,8 @@ static void checkMappableExpressionList(
     OpenMPMapClauseKind MapType = OMPC_MAP_unknown,
     ArrayRef<OpenMPMapModifierKind> Modifiers = {},
     bool IsMapTypeImplicit = false, bool NoDiagnose = false) {
-  // We only expect mappable expressions in 'to', 'from', 'map', and
-  // 'use_device_addr' clauses.
-  assert((CKind == OMPC_map || CKind == OMPC_to || CKind == OMPC_from ||
-          CKind == OMPC_use_device_addr) &&
+  // We only expect mappable expressions in 'to', 'from', and 'map' clauses.
+  assert((CKind == OMPC_map || CKind == OMPC_to || CKind == OMPC_from) &&
          "Unexpected clause kind with mappable expressions!");
   unsigned OMPVersion = SemaRef.getLangOpts().OpenMP;
 
@@ -25139,67 +25104,17 @@ SemaOpenMP::ActOnOpenMPUseDeviceAddrClause(ArrayRef<Expr *> VarList,
     // similar properties of a first private variable.
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_firstprivate, Ref);
 
-    // Use the map-like approach to fully populate VarComponents
-    OMPClauseMappableExprCommon::MappableExprComponentList CurComponents;
-
-    const Expr *BE = checkMapClauseExpressionBase(
-        SemaRef, RefExpr, CurComponents, OMPC_use_device_addr,
-        DSAStack->getCurrentDirective(),
-        /*NoDiagnose=*/false);
-
-    if (!BE)
-      continue;
-
-    assert(!CurComponents.empty() &&
-           "use_device_addr clause expression with no components!");
-
-    // OpenMP use_device_addr: If a list item is an array section, the array
-    // base must be a base language identifier. We caught the cases where
-    // the array-section has a base-variable in getPrivateItem. e.g.
-    //   struct S {
-    //     int a[10];
-    //   }; S s1;
-    //   ... use_device_addr(s1.a[0])    // not ok, caught already
-    //
-    // But we still neeed to verify that the base-pointer is also a
-    // base-language identifier, and catch cases like:
-    //   int *pa[10]; *p;
-    //   ... use_device_addr(pa[1][2])   // not ok, base-pointer is pa[1]
-    //   ... use_device_addr(p[1])       // ok
-    //   ... use_device_addr(this->p[1]) // ok
-    auto AttachPtrResult = OMPClauseMappableExprCommon::findAttachPtrExpr(
-        CurComponents, DSAStack->getCurrentDirective());
-    const Expr *AttachPtrExpr = AttachPtrResult.first;
-
-    if (AttachPtrExpr) {
-      const Expr *BaseExpr = AttachPtrExpr->IgnoreParenImpCasts();
-      bool IsValidBase = false;
-
-      if (isa<DeclRefExpr>(BaseExpr))
-        IsValidBase = true;
-      else if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr);
-               ME && isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
-        IsValidBase = true;
-
-      if (!IsValidBase) {
-        SemaRef.Diag(ELoc,
-                     diag::err_omp_expected_base_pointer_var_name_member_expr)
-            << (SemaRef.getCurrentThisType().isNull() ? 0 : 1)
-            << AttachPtrExpr->getSourceRange();
-        continue;
-      }
-    }
-
-    // Get the declaration from the components
-    ValueDecl *CurDeclaration = CurComponents.back().getAssociatedDeclaration();
-    assert(isa<CXXThisExpr>(BE) ||
-           CurDeclaration &&
-               "Unexpected null decl for use_device_addr clause.");
-
-    MVLI.VarBaseDeclarations.push_back(CurDeclaration);
-    MVLI.VarComponents.resize(MVLI.VarComponents.size() + 1);
-    MVLI.VarComponents.back().append(CurComponents.begin(),
-                                     CurComponents.end());
+    // Create a mappable component for the list item. List items in this clause
+    // only need a component.
+    MVLI.VarBaseDeclarations.push_back(D);
+    MVLI.VarComponents.emplace_back();
+    Expr *Component = SimpleRefExpr;
+    if (VD && (isa<ArraySectionExpr>(RefExpr->IgnoreParenImpCasts()) ||
+               isa<ArraySubscriptExpr>(RefExpr->IgnoreParenImpCasts())))
+      Component =
+          SemaRef.DefaultFunctionArrayLvalueConversion(SimpleRefExpr).get();
+    MVLI.VarComponents.back().emplace_back(Component, D,
+                                           /*IsNonContiguous=*/false);
   }
 
   if (MVLI.ProcessedVarList.empty())

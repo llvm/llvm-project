@@ -11104,12 +11104,6 @@ void OpenMPIRBuilder::setCorrectMemberOfFlag(
           omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF))
     return;
 
-  // Entries with ATTACH are not members-of anything. They are handled
-  // separately by the runtime after other maps have been handled.
-  if (static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
-          Flags & omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH))
-    return;
-
   // Reset the placeholder value to prepare the flag for the assignment of the
   // proper MEMBER_OF value.
   Flags &= ~omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
