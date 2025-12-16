@@ -284,8 +284,8 @@ static mlir::Value emitX86MaskTest(CIRGenBuilderTy &builder, mlir::Location loc,
   return emitIntrinsicCallOp(builder, loc, intrinsicName, resTy,
                              mlir::ValueRange{lhsVec, rhsVec});
 }
-// TODO: The cgf parameter should be removed when all the NYI cases are
-// implemented.
+
+// TODO: The cgf parameter should be removed when all the NYI cases are implemented.
 static std::optional<mlir::Value> emitX86MaskedCompareResult(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
                                               mlir::Value cmp, unsigned numElts,
                                               mlir::Value maskIn,
@@ -311,8 +311,7 @@ static std::optional<mlir::Value> emitX86MaskedCompareResult(CIRGenFunction &cgf
       cmp, builder.getUIntNTy(std::max(numElts, 8U)));
 }
 
-// TODO: The cgf parameter should be removed when all the NYI cases are
-// implemented.
+// TODO: The cgf parameter should be removed when all the NYI cases are implemented.
 static std::optional<mlir::Value> emitX86MaskedCompare(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
                                         unsigned cc, bool isSigned,
                                         ArrayRef<mlir::Value> ops,
@@ -365,46 +364,19 @@ static std::optional<mlir::Value> emitX86MaskedCompare(CIRGenFunction &cgf, CIRG
   return emitX86MaskedCompareResult(cgf, builder, cmp, numElts, maskIn, loc);
 }
 
-// TODO: The cgf parameter should be removed when all the NYI cases are
-// implemented.
+// TODO: The cgf parameter should be removed when all the NYI cases are implemented.
 static std::optional<mlir::Value> emitX86ConvertToMask(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
                                         mlir::Value in, mlir::Location loc) {
   cir::ConstantOp zero = builder.getNullValue(in.getType(), loc);
   return emitX86MaskedCompare(cgf, builder, 1, true, {in, zero}, loc);
 }
 
-// Convert the mask from an integer type to a vector of i1.
-static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, CIRGenFunction &cgf,
-                                   mlir::Value mask,
-                                   unsigned numElts, mlir::Location loc) {
-  cir::VectorType maskTy =
-      cir::VectorType::get(builder.getSIntNTy(1),
-                           cast<cir::IntType>(mask.getType()).getWidth());
 
-  mlir::Value maskVec = builder.createBitcast(mask, maskTy);
-
-  // If we have less than 8 elements, then the starting mask was an i8 and
-  // we need to extract down to the right number of elements.
-  if (numElts < 8) {
-    llvm::SmallVector<mlir::Attribute> indices;
-    mlir::Type i64Ty = builder.getSInt64Ty();
-
-    for (auto i : llvm::seq<unsigned>(0, numElts))
-      indices.push_back(cir::IntAttr::get(i64Ty, i));
-
-    maskVec = builder.createVecShuffle(loc, maskVec, maskVec, indices);
-  }
-
-  return maskVec;
-}
-
-// TODO: The cgf parameter should be removed when all the NYI cases are
-// implemented.
-static std::optional<mlir::Value> emitX86SExtMask(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
+static std::optional<mlir::Value> emitX86SExtMask(CIRGenBuilderTy &builder,
                                   mlir::Value op,
                                   mlir::Type dstTy, mlir::Location loc) {
   unsigned numberOfElements = cast<cir::VectorType>(dstTy).getSize();
-  mlir::Value mask = getMaskVecValue(builder, cgf, op, numberOfElements, loc);
+  mlir::Value mask = getMaskVecValue(builder, loc, op, numberOfElements);
 
   return builder.createCast(loc, cir::CastKind::integral, mask, dstTy);
 }
@@ -820,7 +792,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_cvtmask2q128:
   case X86::BI__builtin_ia32_cvtmask2q256:
   case X86::BI__builtin_ia32_cvtmask2q512:
-    return emitX86SExtMask(*this, this->getBuilder(), 
+    return emitX86SExtMask(this->getBuilder(), 
                           ops[0], convertType(expr->getType()),
                           getLoc(expr->getExprLoc()));
   case X86::BI__builtin_ia32_cvtb2mask128:
