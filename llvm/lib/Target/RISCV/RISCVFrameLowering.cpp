@@ -1604,7 +1604,7 @@ void RISCVFrameLowering::determineUncondPrologCalleeSaves(
       std::string msg;
       raw_string_ostream Msg(msg);
       Msg << "Couldn't parse register: " << Name << "\n";
-      report_fatal_error(Twine(msg));
+      reportFatalUsageError(Twine(msg));
     }
     UncondPrologCSRs.set(Reg.id());
   }

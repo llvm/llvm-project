@@ -394,7 +394,7 @@ public:
 
   /// This method determines which of the registers reported by
   /// getMustPreserveRegisters() must be saved in prolog and reloaded in epilog
-  /// regardless of wheather or not they were modified by the function.
+  /// regardless of whether or not they were modified by the function.
   virtual void
   determineUncondPrologCalleeSaves(MachineFunction &MF, const MCPhysReg *CSRegs,
                                    BitVector &UncondPrologCSRs) const;
