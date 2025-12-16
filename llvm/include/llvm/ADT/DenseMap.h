@@ -355,7 +355,6 @@ public:
     return lookupOrInsertIntoBucket(Key).first->second;
   }
 
-  
   ValueT &operator[](KeyT &&Key) {
     return lookupOrInsertIntoBucket(std::move(Key)).first->second;
   }
