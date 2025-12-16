@@ -20121,11 +20121,8 @@ public:
         return true;
 
       LValue Pointer;
-      if (!EvaluatePointer(E->getArg(0), Pointer, Info)) {
-        if (EvaluateBuiltinConstantP(Info, E->getArg(0)))
-          return true;
+      if (!EvaluatePointer(E->getArg(0), Pointer, Info))
         return false;
-      }
       if (Pointer.Designator.Invalid)
         return false;
       if (Pointer.isNullPointer()) {
