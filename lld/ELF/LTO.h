@@ -21,7 +21,6 @@
 #define LLD_ELF_LTO_H
 
 #include "lld/Common/LLVM.h"
-#include "lld/config.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/DynamicLibrary.h"
