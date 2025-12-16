@@ -133,6 +133,9 @@ class TokenView {
 public:
   class iterator { // NOLINT(readability-identifier-naming)
   public:
+    using value_type = Token;
+    using pointer = const Token *;
+    using reference = const Token &;
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
     using iterator_category = std::input_iterator_tag;
