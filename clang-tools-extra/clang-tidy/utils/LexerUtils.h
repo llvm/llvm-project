@@ -10,9 +10,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXERUTILS_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/basic/SourceManager.h"
 #include <iterator>
 #include <optional>
 #include <utility>
