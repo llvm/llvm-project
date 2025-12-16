@@ -1875,8 +1875,8 @@ bool X86DAGToDAGISel::matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM,
   // For more information see http://people.redhat.com/drepper/tls.pdf
   if (isNullConstant(Address) && AM.Segment.getNode() == nullptr &&
       !IndirectTlsSegRefs &&
-      (Subtarget->isTargetGlibc() || Subtarget->isTargetAndroid() ||
-       Subtarget->isTargetFuchsia())) {
+      (Subtarget->isTargetGlibc() || Subtarget->isTargetMusl() ||
+       Subtarget->isTargetAndroid() || Subtarget->isTargetFuchsia())) {
     if (Subtarget->isTarget64BitILP32() && !AllowSegmentRegForX32)
       return true;
     switch (N->getPointerInfo().getAddrSpace()) {

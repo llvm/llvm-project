@@ -12,7 +12,6 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
-#include "clang/Tooling/Transformer/SourceCode.h"
 #include "clang/Tooling/Transformer/Stencil.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
