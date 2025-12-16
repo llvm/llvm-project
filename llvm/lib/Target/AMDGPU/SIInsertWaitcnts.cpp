@@ -2829,7 +2829,6 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   bool Modified = false;
 
   MachineBasicBlock &EntryBB = MF.front();
-  MachineBasicBlock::iterator I = EntryBB.begin();
 
   if (!MFI->isEntryFunction()) {
     // Wait for any outstanding memory operations that the input registers may
@@ -2838,9 +2837,9 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
 
     // TODO: Could insert earlier and schedule more liberally with operations
     // that only use caller preserved registers.
-    for (MachineBasicBlock::iterator E = EntryBB.end();
-         I != E && (I->isPHI() || I->isMetaInstruction()); ++I)
-      ;
+    MachineBasicBlock::iterator I = EntryBB.begin();
+    while (I != EntryBB.end() && I->isMetaInstruction())
+      ++I;
 
     if (ST->hasExtendedWaitCounts()) {
       BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAIT_LOADCNT_DSCNT))

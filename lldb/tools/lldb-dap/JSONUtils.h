@@ -368,8 +368,6 @@ int64_t PackLocation(int64_t var_ref, bool is_value_location);
 /// Reverse of `PackLocation`
 std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
 
-llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
-
 /// Create a runInTerminal reverse request object
 ///
 /// \param[in] program
