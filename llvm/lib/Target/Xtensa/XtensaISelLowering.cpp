@@ -217,7 +217,7 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSQRT, VT, Expand);
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FCOS, VT, Expand);
-      setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::FREM, VT, LibCall);
       setOperationAction(ISD::FDIV, VT, Expand);
       setOperationAction(ISD::FPOW, VT, Expand);
       setOperationAction(ISD::FSQRT, VT, Expand);

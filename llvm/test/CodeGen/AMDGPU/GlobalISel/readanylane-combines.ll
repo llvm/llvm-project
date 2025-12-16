@@ -143,3 +143,44 @@ define amdgpu_ps float @unmerge_readanylane_merge_extract_bitcast_to_physical_vg
   %bitcast = bitcast <2 x i16> %extracted to float
   ret float %bitcast
 }
+
+define amdgpu_ps void @op_readanylanes_merge_to_virtual_vgpr(ptr addrspace(1) inreg %ptr0, ptr addrspace(1) inreg %ptr1) {
+; CHECK-LABEL: op_readanylanes_merge_to_virtual_vgpr:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1] glc dlc
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; CHECK-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s1
+; CHECK-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
+; CHECK-NEXT:    s_endpgm
+  %load = load volatile <2 x float>, ptr addrspace(1) %ptr0
+  %fneg = fneg <2 x float> %load
+  store <2 x float> %fneg, ptr addrspace(1) %ptr1
+  ret void
+}
+
+define amdgpu_ps void @op_readanylanes_merge_bitcast_to_virtual_vgpr(ptr addrspace(1) inreg %ptr0, ptr addrspace(1) inreg %ptr1) {
+; CHECK-LABEL: op_readanylanes_merge_bitcast_to_virtual_vgpr:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1] glc dlc
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; CHECK-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s1
+; CHECK-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
+; CHECK-NEXT:    s_endpgm
+  %load = load volatile <2 x float>, ptr addrspace(1) %ptr0
+  %fneg = fneg <2 x float> %load
+  %bitcast = bitcast <2 x float> %fneg to double
+  store double %bitcast, ptr addrspace(1) %ptr1
+  ret void
+}

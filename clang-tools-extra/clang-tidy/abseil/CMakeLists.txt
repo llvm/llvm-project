@@ -38,6 +38,8 @@ add_clang_library(clangTidyAbseilModule STATIC
 
 clang_target_link_libraries(clangTidyAbseilModule
   PRIVATE
+  clangAnalysisFlowSensitive
+  clangAnalysisFlowSensitiveModels
   clangAST
   clangASTMatchers
   clangBasic

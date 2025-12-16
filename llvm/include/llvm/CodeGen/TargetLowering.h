@@ -1494,6 +1494,10 @@ public:
            getOperationAction(Op, VT) == Legal;
   }
 
+  bool isOperationExpandOrLibCall(unsigned Op, EVT VT) const {
+    return isOperationExpand(Op, VT) || getOperationAction(Op, VT) == LibCall;
+  }
+
   /// Return how this load with extension should be treated: either it is legal,
   /// needs to be promoted to a larger size, needs to be expanded to some other
   /// code sequence, or the target has a custom expander for it.
