@@ -137,7 +137,7 @@ private:
   std::unique_ptr<Preprocessor> PP;
   bool EnteredMainFile = false;
   bool StartedLexing = false;
-  Token CurrentToken;
+  Token CurrentToken = Token();
 };
 
 } // namespace tooling

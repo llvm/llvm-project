@@ -137,8 +137,7 @@ namespace {
       return !Bits.any();
     }
     bool includes(const RegisterSet &Rs) const {
-      // A.test(B)  <=>  A-B != {}
-      return !Rs.Bits.test(Bits);
+      return Rs.Bits.subsetOf(Bits);
     }
     bool intersects(const RegisterSet &Rs) const {
       return Bits.anyCommon(Rs.Bits);

@@ -159,12 +159,15 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
      << "  if(I.size()) return I;\n"
      << "  I.reserve(" << FMVExts.size() << ");\n";
   for (const Record *Rec : FMVExts) {
-    OS << "  I.emplace_back(";
-    OS << "\"" << Rec->getValueAsString("Name") << "\"";
-    OS << ", " << Rec->getValueAsString("FeatureBit");
-    OS << ", " << Rec->getValueAsString("PriorityBit");
     auto FeatName = Rec->getValueAsString("BackendFeature");
     const Record *FeatRec = ExtensionMap[FeatName];
+    OS << "  I.emplace_back(";
+    OS << "\"" << Rec->getValueAsString("Name") << "\"";
+    if (FeatRec)
+      OS << ", " << Rec->getValueAsString("FeatureBit");
+    else
+      OS << ", std::nullopt";
+    OS << ", " << Rec->getValueAsString("PriorityBit");
     if (FeatRec)
       OS << ", " << FeatRec->getValueAsString("ArchExtKindSpelling").upper();
     else

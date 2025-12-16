@@ -338,7 +338,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::MUL, ISD::SDIV, ISD::SREM, ISD::UDIV, ISD::UREM},
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
-      setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
+      setOperationAction({ISD::SHL, ISD::SRA}, VT, Legal);
       setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
       setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
       setCondCodeAction(
@@ -352,6 +352,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SSUBSAT, VT, Legal);
       setOperationAction(ISD::UADDSAT, VT, Legal);
       setOperationAction(ISD::USUBSAT, VT, Legal);
+      setOperationAction(ISD::ROTL, VT, Custom);
+      setOperationAction(ISD::ROTR, VT, Custom);
+      setOperationAction(ISD::SRL, VT, Custom);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -425,7 +428,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::MUL, ISD::SDIV, ISD::SREM, ISD::UDIV, ISD::UREM},
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
-      setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
+      setOperationAction({ISD::SHL, ISD::SRA}, VT, Legal);
       setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
       setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
       setCondCodeAction(
@@ -440,6 +443,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UADDSAT, VT, Legal);
       setOperationAction(ISD::USUBSAT, VT, Legal);
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
+      setOperationAction(ISD::ROTL, VT, Custom);
+      setOperationAction(ISD::ROTR, VT, Custom);
+      setOperationAction(ISD::SRL, VT, Custom);
     }
     for (MVT VT : {MVT::v32i8, MVT::v16i16, MVT::v8i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -601,6 +607,9 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerBF16_TO_FP(Op, DAG);
   case ISD::VECREDUCE_ADD:
     return lowerVECREDUCE_ADD(Op, DAG);
+  case ISD::ROTL:
+  case ISD::ROTR:
+    return lowerRotate(Op, DAG);
   case ISD::VECREDUCE_AND:
   case ISD::VECREDUCE_OR:
   case ISD::VECREDUCE_XOR:
@@ -611,8 +620,49 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE(Op, DAG);
   case ISD::ConstantFP:
     return lowerConstantFP(Op, DAG);
+  case ISD::SRL:
+    return lowerVectorSRL(Op, DAG);
   }
   return SDValue();
+}
+
+/// getVShiftAmt - Check if this is a valid build_vector for the immediate
+/// operand of a vector shift operation, where all the elements of the
+/// build_vector must have the same constant integer value.
+static bool getVShiftAmt(SDValue Op, unsigned ElementBits, int64_t &Amt) {
+  // Ignore bit_converts.
+  while (Op.getOpcode() == ISD::BITCAST)
+    Op = Op.getOperand(0);
+  BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(Op.getNode());
+  APInt SplatBits, SplatUndef;
+  unsigned SplatBitSize;
+  bool HasAnyUndefs;
+  if (!BVN ||
+      !BVN->isConstantSplat(SplatBits, SplatUndef, SplatBitSize, HasAnyUndefs,
+                            ElementBits) ||
+      SplatBitSize > ElementBits)
+    return false;
+  Amt = SplatBits.getSExtValue();
+  return true;
+}
+
+SDValue LoongArchTargetLowering::lowerVectorSRL(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+  int64_t Amt;
+
+  if (!Op.getOperand(1).getValueType().isVector())
+    return Op;
+  unsigned EltSize = VT.getScalarSizeInBits();
+  MVT GRLenVT = Subtarget.getGRLenVT();
+
+  assert(Op.getOpcode() == ISD::SRL && "unexpected shift opcode");
+  if (getVShiftAmt(Op.getOperand(1), EltSize, Amt) && Amt >= 0 && Amt < EltSize)
+    return DAG.getNode(LoongArchISD::VSRLI, DL, VT, Op.getOperand(0),
+                       DAG.getConstant(Amt, DL, GRLenVT));
+  return DAG.getNode(LoongArchISD::VSRL, DL, VT, Op.getOperand(0),
+                     Op.getOperand(1));
 }
 
 // Helper to attempt to return a cheaper, bit-inverted version of \p V.
@@ -823,6 +873,58 @@ SDValue LoongArchTargetLowering::lowerPREFETCH(SDValue Op,
   // Just preserve the chain.
   if (!IsData)
     return Op.getOperand(0);
+
+  return Op;
+}
+
+SDValue LoongArchTargetLowering::lowerRotate(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+  assert(VT.isVector() && "Unexpected type");
+
+  SDLoc DL(Op);
+  SDValue R = Op.getOperand(0);
+  SDValue Amt = Op.getOperand(1);
+  unsigned Opcode = Op.getOpcode();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+
+  auto checkCstSplat = [](SDValue V, APInt &CstSplatValue) {
+    if (V.getOpcode() != ISD::BUILD_VECTOR)
+      return false;
+    if (SDValue SplatValue =
+            cast<BuildVectorSDNode>(V.getNode())->getSplatValue()) {
+      if (auto *C = dyn_cast<ConstantSDNode>(SplatValue)) {
+        CstSplatValue = C->getAPIntValue();
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Check for constant splat rotation amount.
+  APInt CstSplatValue;
+  bool IsCstSplat = checkCstSplat(Amt, CstSplatValue);
+  bool isROTL = Opcode == ISD::ROTL;
+
+  // Check for splat rotate by zero.
+  if (IsCstSplat && CstSplatValue.urem(EltSizeInBits) == 0)
+    return R;
+
+  // LoongArch targets always prefer ISD::ROTR.
+  if (isROTL) {
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    return DAG.getNode(ISD::ROTR, DL, VT, R,
+                       DAG.getNode(ISD::SUB, DL, VT, Zero, Amt));
+  }
+
+  // Rotate by a immediate.
+  if (IsCstSplat) {
+    // ISD::ROTR: Attemp to rotate by a positive immediate.
+    SDValue Bits = DAG.getConstant(EltSizeInBits, DL, VT);
+    if (SDValue Urem =
+            DAG.FoldConstantArithmetic(ISD::UREM, DL, VT, {Amt, Bits}))
+      return DAG.getNode(Opcode, DL, VT, R, Urem);
+  }
 
   return Op;
 }
@@ -8853,7 +8955,7 @@ bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
 }
 
 bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                                 const CallInst &I,
+                                                 const CallBase &I,
                                                  MachineFunction &MF,
                                                  unsigned Intrinsic) const {
   switch (Intrinsic) {

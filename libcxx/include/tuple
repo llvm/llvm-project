@@ -576,7 +576,7 @@ __memberwise_forward_assign(_Dest& __dest, _Source&& __source, __type_list<_Up..
 
 template <class... _Tp>
 class _LIBCPP_NO_SPECIALIZATIONS tuple {
-  typedef __tuple_impl<__make_index_sequence<sizeof...(_Tp)>, _Tp...> _BaseT;
+  typedef __tuple_impl<__index_sequence_for<_Tp...>, _Tp...> _BaseT;
 
   _BaseT __base_;
 
@@ -858,7 +858,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(_If<_And<is_copy_assignable<_Tp>...>::value, tuple, __nat> const& __tuple) noexcept(
       _And<is_nothrow_copy_assignable<_Tp>...>::value) {
-    std::__memberwise_copy_assign(*this, __tuple, __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_copy_assign(*this, __tuple, __index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -866,15 +866,14 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(tuple const& __tuple) const
     requires(_And<is_copy_assignable<const _Tp>...>::value)
   {
-    std::__memberwise_copy_assign(*this, __tuple, __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_copy_assign(*this, __tuple, __index_sequence_for<_Tp...>());
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(tuple&& __tuple) const
     requires(_And<is_assignable<const _Tp&, _Tp>...>::value)
   {
-    std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __type_list<_Tp...>(), __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_forward_assign(*this, std::move(__tuple), __type_list<_Tp...>(), __index_sequence_for<_Tp...>());
     return *this;
   }
 #    endif // _LIBCPP_STD_VER >= 23
@@ -882,8 +881,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(_If<_And<is_move_assignable<_Tp>...>::value, tuple, __nat>&& __tuple) noexcept(
       _And<is_nothrow_move_assignable<_Tp>...>::value) {
-    std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __type_list<_Tp...>(), __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_forward_assign(*this, std::move(__tuple), __type_list<_Tp...>(), __index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -893,7 +891,7 @@ public:
                      int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(tuple<_Up...> const& __tuple) noexcept(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
-    std::__memberwise_copy_assign(*this, __tuple, __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_copy_assign(*this, __tuple, __index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -902,8 +900,7 @@ public:
                            int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(tuple<_Up...>&& __tuple) noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
-    std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __type_list<_Up...>(), __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_forward_assign(*this, std::move(__tuple), __type_list<_Up...>(), __index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -912,7 +909,7 @@ public:
             enable_if_t< _And<_BoolConstant<sizeof...(_Tp) == sizeof...(_UTypes)>,
                               is_assignable<const _Tp&, const _UTypes&>...>::value>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(const tuple<_UTypes...>& __u) const {
-    std::__memberwise_copy_assign(*this, __u, __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_copy_assign(*this, __u, index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -920,7 +917,7 @@ public:
             enable_if_t< _And<_BoolConstant<sizeof...(_Tp) == sizeof...(_UTypes)>,
                               is_assignable<const _Tp&, _UTypes>...>::value>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(tuple<_UTypes...>&& __u) const {
-    std::__memberwise_forward_assign(*this, __u, __type_list<_UTypes...>(), __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_forward_assign(*this, __u, __type_list<_UTypes...>(), index_sequence_for<_Tp...>());
     return *this;
   }
 #    endif // _LIBCPP_STD_VER >= 23
@@ -986,7 +983,7 @@ public:
       __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up const&>... >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(array<_Up, _Np> const& __array) noexcept(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
-    std::__memberwise_copy_assign(*this, __array, __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_copy_assign(*this, __array, __index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -998,7 +995,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(array<_Up, _Np>&& __array) noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
     std::__memberwise_forward_assign(
-        *this, std::move(__array), __type_list<_If<true, _Up, _Tp>...>(), __make_index_sequence<sizeof...(_Tp)>());
+        *this, std::move(__array), __type_list<_If<true, _Up, _Tp>...>(), __index_sequence_for<_Tp...>());
     return *this;
   }
 

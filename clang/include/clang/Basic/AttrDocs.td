@@ -4140,7 +4140,7 @@ of 2.
    .. code-block:: c
 
      typedef double * aligned_double_ptr __attribute__((align_value(64)));
-     void foo(double & x  __attribute__((align_value(128)),
+     void foo(double & x  __attribute__((align_value(128))),
               aligned_double_ptr y) { ... }
 
 If the pointer value does not have the specified alignment at runtime, the
@@ -8981,6 +8981,18 @@ The descriptor set is optional and defaults to 0 if not provided.
   }];
 }
 
+def HLSLVkLocationDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Attribute used for specifying the location number for the stage input/output
+variables. Allowed on function parameters, function returns, and struct
+fields. This parameter has no effect when used outside of an entrypoint
+parameter/parameter field/return value.
+
+This attribute maps to the 'Location' SPIR-V decoration.
+  }];
+}
+
 def WebAssemblyFuncrefDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
@@ -9628,5 +9640,66 @@ silence diagnostics with code like:
 
   char BadStr[3] = "foo"; // No space for the null terminator, diagnosed
   __attribute__((nonstring)) char NotAStr[3] = "foo"; // Not diagnosed
+  }];
+}
+
+def ModularFormatDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``modular_format`` attribute can be applied to a function that bears the
+``format`` attribute (or standard library functions) to indicate that the
+implementation is "modular", that is, that the implementation is logically
+divided into a number of named aspects. When the compiler can determine that
+not all aspects of the implementation are needed for a given call, the compiler
+may redirect the call to the identifier given as the first argument to the
+attribute (the modular implementation function).
+
+The second argument is a implementation name, and the remaining arguments are
+aspects of the format string for the compiler to report. The implementation
+name is an unevaluated identifier be in the C namespace.
+
+The compiler reports that a call requires an aspect by issuing a relocation for
+the symbol ``<impl_name>_<aspect>`` at the point of the call. This arranges for
+code and data needed to support the aspect of the implementation to be brought
+into the link to satisfy weak references in the modular implemenation function.
+If the compiler does not understand an aspect, it must summarily consider any
+call to require that aspect. 
+
+For example, say ``printf`` is annotated with
+``modular_format(__modular_printf, "__printf", "float")``. Then, a call to
+``printf(var, 42)`` would be untouched. A call to ``printf("%d", 42)`` would
+become a call to ``__modular_printf`` with the same arguments, as would
+``printf("%f", 42.0)``. The latter would be accompanied with a strong
+relocation against the symbol ``__printf_float``, which would bring floating
+point support for ``printf`` into the link.
+
+If the attribute appears more than once on a declaration, or across a chain of
+redeclarations, it is an error for the attributes to have different arguments,
+excepting that the aspects may be in any order.
+
+The following aspects are currently supported:
+
+- ``float``: The call has a floating point argument
+  }];
+}
+
+def MSStructDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``ms_struct`` and ``gcc_struct`` attributes request the compiler to enter a
+special record layout compatibility mode which mimics the layout of Microsoft or
+Itanium C++ ABI respectively. Obviously, if the current C++ ABI matches the
+requested ABI, the attribute does nothing. However, if it does not, annotated
+structure or class is laid out in a special compatibility mode, which slightly
+changes offsets for fields and bit-fields. The intention is to match the layout
+of the requested ABI for structures which only use C features.
+
+Note that the default behavior can be controlled by ``-mms-bitfields`` and
+``-mno-ms-bitfields`` switches and via ``#pragma ms_struct``.
+
+The primary difference is for bitfields, where the MS variant only packs
+adjacent fields into the same allocation unit if they have integral types
+of the same size, while the GCC/Itanium variant packs all fields in a bitfield
+tightly.
   }];
 }

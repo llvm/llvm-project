@@ -124,7 +124,7 @@ DecodeMemoryReference(llvm::StringRef memoryReference) {
 
 bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
                            lldb::addr_t &out, llvm::json::Path path,
-                           bool required) {
+                           bool required, bool allow_empty) {
   const llvm::json::Object *v_obj = v.getAsObject();
   if (!v_obj) {
     path.report("expected object");
@@ -145,6 +145,11 @@ bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
   if (!mem_ref_str) {
     path.field(key).report("expected string");
     return false;
+  }
+
+  if (allow_empty && mem_ref_str->empty()) {
+    out = LLDB_INVALID_ADDRESS;
+    return true;
   }
 
   const std::optional<lldb::addr_t> addr_opt =
@@ -554,9 +559,8 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
 
   lldb::SBModule module = frame.GetModule();
   if (module.IsValid()) {
-    std::string uuid = module.GetUUIDString();
-    if (!uuid.empty())
-      object.try_emplace("moduleId", uuid);
+    if (const llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
+      object.try_emplace("moduleId", uuid.str());
   }
 
   return llvm::json::Value(std::move(object));
@@ -677,7 +681,14 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
-  case lldb::eStopReasonWatchpoint:
+  case lldb::eStopReasonWatchpoint: {
+    body.try_emplace("reason", "data breakpoint");
+    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+    body.try_emplace("hitBreakpointIds",
+                     llvm::json::Array{llvm::json::Value(bp_id)});
+    EmplaceSafeString(body, "description",
+                      llvm::formatv("data breakpoint {0}", bp_id).str());
+  } break;
   case lldb::eStopReasonInstrumentation:
     body.try_emplace("reason", "breakpoint");
     break;

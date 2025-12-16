@@ -151,22 +151,22 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeBool(MachineIRBuilder &MIRBuilder) {
 }
 
 unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
-  if (Width > 64)
-    report_fatal_error("Unsupported integer width!");
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(CurMF->getSubtarget());
   if (ST.canUseExtension(
-          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers) ||
-      ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4))
+          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
+      (Width == 4 && ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4)))
     return Width;
   if (Width <= 8)
-    Width = 8;
+    return 8;
   else if (Width <= 16)
-    Width = 16;
+    return 16;
   else if (Width <= 32)
-    Width = 32;
-  else
-    Width = 64;
-  return Width;
+    return 32;
+  else if (Width <= 64)
+    return 64;
+  else if (Width <= 128)
+    return 128;
+  reportFatalUsageError("Unsupported Integer width!");
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
@@ -183,11 +183,11 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
           .addImm(SPIRV::Capability::Int4TypeINTEL);
     } else if ((!isPowerOf2_32(Width) || Width < 8) &&
                ST.canUseExtension(
-                   SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers)) {
+                   SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers)) {
       MIRBuilder.buildInstr(SPIRV::OpExtension)
-          .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);
+          .addImm(SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers);
       MIRBuilder.buildInstr(SPIRV::OpCapability)
-          .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersINTEL);
+          .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersALTERA);
     }
     return MIRBuilder.buildInstr(SPIRV::OpTypeInt)
         .addDef(createTypeVReg(MIRBuilder))
@@ -413,7 +413,7 @@ Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-          addNumImm(APInt(BitWidth, CI->getZExtValue()), MIB);
+          addNumImm(CI->getValue(), MIB);
         } else {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
                     .addDef(Res)
@@ -883,10 +883,12 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
           .addUse(NumElementsVReg);
     });
   } else {
-    assert(ST.isShader() && "Runtime arrays are not allowed in non-shader "
-                            "SPIR-V modules.");
-    if (!ST.isShader())
+    if (!ST.isShader()) {
+      llvm::reportFatalUsageError(
+          "Runtime arrays are not allowed in non-shader "
+          "SPIR-V modules");
       return nullptr;
+    }
     ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
       return MIRBuilder.buildInstr(SPIRV::OpTypeRuntimeArray)
           .addDef(createTypeVReg(MIRBuilder))

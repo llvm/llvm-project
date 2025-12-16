@@ -11,9 +11,11 @@
 ; REQUIRES:asserts
 
 ; SPIRV-O0:Target Library Information
+; SPIRV-O0-NEXT:Runtime Library Function Analysis
 ; SPIRV-O0-NEXT:Target Pass Configuration
 ; SPIRV-O0-NEXT:Machine Module Information
 ; SPIRV-O0-NEXT:Target Transform Information
+; SPIRV-O0-NEXT:Library Function Lowering Analysis
 ; SPIRV-O0-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-O0-NEXT:Assumption Cache Tracker
 ; SPIRV-O0-NEXT:Profile summary info
@@ -83,9 +85,11 @@
 ; SPIRV-O0-NEXT:      Free MachineFunction
 
 ; SPIRV-Opt:Target Library Information
+; SPIRV-Opt-NEXT:Runtime Library Function Analysis
 ; SPIRV-Opt-NEXT:Target Pass Configuration
 ; SPIRV-Opt-NEXT:Machine Module Information
 ; SPIRV-Opt-NEXT:Target Transform Information
+; SPIRV-Opt-NEXT:Library Function Lowering Analysis
 ; SPIRV-Opt-NEXT:Assumption Cache Tracker
 ; SPIRV-Opt-NEXT:Type-Based Alias Analysis
 ; SPIRV-Opt-NEXT:Scoped NoAlias Alias Analysis

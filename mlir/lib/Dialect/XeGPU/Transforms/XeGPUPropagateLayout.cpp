@@ -517,8 +517,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
     auto [bWidth, bHeight, bCount] = blockWHC.value();
     SmallVector<int> instData;
     int instWidth = xegpu::getLargestDivisor(
-        static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 1)), bWidth,
-        bCount);
+        static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 1)), bWidth);
     if (instWidth == -1)
       prefetch.emitWarning(
           "No suitable instruction multiple found for the given shape.");
@@ -581,23 +580,39 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   // Only consider vector to vector broadcasts for now.
   VectorType resultTy = broadcast.getResultVectorType();
   VectorType sourceTy = dyn_cast<VectorType>(broadcast.getSourceType());
-  if (!sourceTy) {
-    broadcast.emitWarning("Expecting source type to be a vector type.");
+  // skip layout propagation for non-vector source operand.
+  if (!sourceTy)
+    return;
+
+  // Hanlding broadcast from low-rank to high-rank (e.g., 1D to 2D) case.
+  if (sourceTy.getRank() != resultTy.getRank()) {
+    auto sourceDims = sourceTy.getShape();
+    auto resultDims = resultTy.getShape();
+    SmallVector<int64_t> bcastDims;
+    auto dimDiff = resultTy.getRank() - sourceTy.getRank();
+    // adding the missing leading dims
+    for (int i = 0; i < dimDiff; i++)
+      bcastDims.push_back(i);
+
+    // for the rest dims in the resultTy, if sourceTy dim is 1, then it's
+    // broadcasted dim
+    for (size_t i = 0; i < sourceDims.size(); i++)
+      if ((sourceDims[i] == 1) && (resultDims[i + dimDiff] != 1))
+        bcastDims.push_back(i + dimDiff);
+
+    // create a slice layout for the source
+    xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
+        broadcast->getContext(),
+        cast<xegpu::DistributeLayoutAttr>(resultLayout.get()),
+        DenseI64ArrayAttr::get(broadcast->getContext(), bcastDims));
+
+    propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
     return;
   }
 
-  // Only consider nD -> nD broadcast.
-  if (sourceTy.getRank() != resultTy.getRank()) {
-    broadcast.emitWarning("Expecting source and result to have same rank.");
-    return;
-  }
   SetVector<int64_t> broadcastUnitDims = broadcast.computeBroadcastedUnitDims();
-  if (broadcastUnitDims.size() != 1) {
-    broadcast.emitWarning("Expecting source type to be nD vector only with "
-                          "one broadcasted dimension.");
-    return;
-  }
-  // Propagate the result layout to the source operand.
+  resultLayout = cast<xegpu::DistributeLayoutAttr>(resultLayout.get())
+                     .setUnitDimData(broadcastUnitDims);
   propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
 }
 
@@ -759,8 +774,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
     auto [bWidth, bHeight, bCount] = blockWHC.value();
     SmallVector<int> instData;
     int instWidth = xegpu::getLargestDivisor(
-        static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 1)), bWidth,
-        bCount);
+        static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 1)), bWidth);
     if (instWidth == -1)
       store.emitWarning(
           "No suitable instruction multiple found for the given shape.");
@@ -919,7 +933,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   } else {
 
     // The layout is strictly determined by the payload type.
-    auto payloadTy = dyn_cast<VectorType>(load.getValueType());
+    VectorType payloadTy = load.getValueType();
     if (!payloadTy) {
       load.emitWarning("Not propagating, non-vector payload supplied.");
       return;
@@ -989,7 +1003,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     // Currently, for 2D StoreScatterOp we expect that the height dimension of
     // the tensor descriptor is equal to the subgroup size. This is ensured by
     // the op verifier.
-    auto payloadTy = dyn_cast<VectorType>(storeScatter.getValueType());
+    VectorType payloadTy = storeScatter.getValueType();
     if (!payloadTy) {
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;

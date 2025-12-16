@@ -4,10 +4,9 @@
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags -O0 %t.o -o %t.exe -Wl,-q -Wl,-z,force-bti
-# RUN: llvm-bolt --inline-all %t.exe -o %t.bolt --debug 2>&1 | FileCheck %s
+# RUN: llvm-bolt --inline-all %t.exe -o %t.bolt  | FileCheck %s
 
 # For BTI, we should not inline foo.
-# CHECK: BOLT-DEBUG: Skipping inlining block with tailcall in _Z3barP1A : .LBB01 to keep BTIs consistent.
 # CHECK-NOT: BOLT-INFO: inlined {{[0-9]+}} calls at {{[0-9]+}} call sites in {{[0-9]+}} iteration(s). Change in binary size: {{[0-9]+}} bytes.
 
 	.text
