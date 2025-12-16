@@ -650,31 +650,25 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       //     <64 x i8> ->             <16 x i8> <8 x i16>
       //     <64 x i8> -> <4 x i128> -> i128 -> <8 x i16>
       // Extracting subvector with dynamic index has very large expansion in
-      // the amdgpu backend. Limit to pow2 for UDiv.
-      FixedVectorType *AccessVecTy = cast<FixedVectorType>(AccessTy);
+      // the amdgpu backend. Limit to pow2.
       FixedVectorType *VectorTy = AA.Vector.Ty;
-      uint64_t NumBits =
-          SubVecTy->getScalarSizeInBits() * SubVecTy->getNumElements();
+      uint64_t NumBits = DL.getTypeStoreSize(SubVecTy) * 8u;
       uint64_t LoadAlign = cast<LoadInst>(Inst)->getAlign().value();
-      if (!isa<ConstantInt>(Index) && SubVecTy->isIntOrIntVectorTy() &&
+      bool IsAlignedLoad = NumBits <= (LoadAlign * 8u);
+      unsigned TotalNumElts = VectorTy->getNumElements();
+      bool IsProperlyDivisible = TotalNumElts % NumLoadedElts == 0;
+      if (!isa<ConstantInt>(Index) &&
           llvm::isPowerOf2_32(SubVecTy->getNumElements()) &&
-          VectorTy->getNumElements() % SubVecTy->getNumElements() == 0 &&
-          llvm::isPowerOf2_32(AccessVecTy->getNumElements()) &&
-          NumBits <= (LoadAlign * 8u)) {
-        IntegerType *NewElemType = Builder.getIntNTy(NumBits);
-        const unsigned NewNumElts = VectorTy->getNumElements() *
-                                    VectorTy->getScalarSizeInBits() /
-                                    NewElemType->getScalarSizeInBits();
-        const unsigned IndexDivisor = VectorTy->getNumElements() / NewNumElts;
-        assert(VectorTy->getScalarSizeInBits() <
-                   NewElemType->getScalarSizeInBits() &&
-               "New element type should be bigger");
-        assert(IndexDivisor > 0u && "Zero index divisor");
-        FixedVectorType *BitCastType =
-            FixedVectorType::get(NewElemType, NewNumElts);
-        Value *BCVal = Builder.CreateBitCast(CurVal, BitCastType);
-        Value *NewIdx = Builder.CreateUDiv(
-            Index, ConstantInt::get(Index->getType(), IndexDivisor));
+          IsProperlyDivisible && IsAlignedLoad) {
+        IntegerType *NewElemTy = Builder.getIntNTy(NumBits);
+        const unsigned NewNumElts = 
+            DL.getTypeStoreSize(VectorTy) * 8u / NumBits;
+        const unsigned LShrAmt = llvm::Log2_32(TotalNumElts / NewNumElts);
+        FixedVectorType *BitCastTy =
+            FixedVectorType::get(NewElemTy, NewNumElts);
+        Value *BCVal = Builder.CreateBitCast(CurVal, BitCastTy);
+        Value *NewIdx = Builder.CreateLShr(
+            Index, ConstantInt::get(Index->getType(), LShrAmt));
         Value *ExtVal = Builder.CreateExtractElement(BCVal, NewIdx);
         Value *BCOut = Builder.CreateBitCast(ExtVal, AccessTy);
         Inst->replaceAllUsesWith(BCOut);

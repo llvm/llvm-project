@@ -7,7 +7,7 @@ define amdgpu_kernel void @test_bitcast_gen_64i8_v16i8(ptr addrspace(1) %out, i3
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <64 x i8> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <64 x i8> [[ALLOCA]] to <4 x i128>
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[IDX]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[IDX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i128> [[TMP0]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i128 [[TMP2]] to <16 x i8>
 ; CHECK-NEXT:    store <16 x i8> [[TMP3]], ptr addrspace(1) [[OUT]], align 16
@@ -27,7 +27,7 @@ define amdgpu_kernel void @test_bitcast_gen_32i16_v8i16(ptr addrspace(1) %out, i
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <32 x i16> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <32 x i16> [[ALLOCA]] to <4 x i128>
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[IDX]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[IDX]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i128> [[TMP0]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i128 [[TMP2]] to <8 x i16>
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr addrspace(1) [[OUT]], align 16
@@ -47,7 +47,7 @@ define amdgpu_kernel void @test_bitcast_gen_64i8_v32i8(ptr addrspace(1) %out, i3
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <64 x i8> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <64 x i8> [[ALLOCA]] to <2 x i256>
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[IDX]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[IDX]], 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i256> [[TMP0]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i256 [[TMP2]] to <32 x i8>
 ; CHECK-NEXT:    store <32 x i8> [[TMP3]], ptr addrspace(1) [[OUT]], align 32
@@ -178,7 +178,7 @@ define amdgpu_kernel void @test_bitcast_gen_16i32_v4i32(ptr addrspace(1) %out, i
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <16 x i32> [[ALLOCA]] to <4 x i128>
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[IDX]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i128> [[TMP0]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i128 [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr addrspace(1) [[OUT]], align 16
