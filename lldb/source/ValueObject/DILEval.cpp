@@ -71,7 +71,7 @@ ArrayToPointerConversion(ValueObject &valobj, ExecutionContextScope &ctx,
   ExecutionContext exe_ctx;
   ctx.CalculateExecutionContext(exe_ctx);
   return ValueObject::CreateValueObjectFromAddress(
-      "result", addr, exe_ctx,
+      name, addr, exe_ctx,
       valobj.GetCompilerType().GetArrayElementType(&ctx).GetPointerType(),
       /* do_deref */ false);
 }
@@ -122,9 +122,8 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
     }
   }
 
-  llvm::StringRef name = "result";
   if (in_type.IsArrayType())
-    valobj = ArrayToPointerConversion(*valobj, *m_exe_ctx_scope, name);
+    valobj = ArrayToPointerConversion(*valobj, *m_exe_ctx_scope, "result");
 
   if (valobj->GetCompilerType().IsInteger() ||
       valobj->GetCompilerType().IsUnscopedEnumerationType()) {
@@ -765,74 +764,101 @@ Interpreter::Visit(const BooleanLiteralNode *node) {
 }
 
 llvm::Expected<CastKind>
-Interpreter::VerifyCastType(lldb::ValueObjectSP operand, CompilerType op_type,
-                            CompilerType target_type, int location) {
-
-  if (target_type.IsScalarType()) {
-    if (op_type.IsPointerType() || op_type.IsNullPtrType()) {
-      // Cast from pointer to float/double is not allowed.
-      if (target_type.IsFloat()) {
-        std::string errMsg = llvm::formatv(
-            "Cast from {0} to {1} is not allowed", op_type.TypeDescription(),
-            target_type.TypeDescription());
-        return llvm::make_error<DILDiagnosticError>(
-            m_expr, std::move(errMsg), location,
-            op_type.TypeDescription().length());
-      }
-      // Casting pointer to bool is valid. Otherwise check if the result type
-      // is at least as big as the pointer size.
-      uint64_t type_byte_size = 0;
-      uint64_t rhs_type_byte_size = 0;
-      if (auto temp = target_type.GetByteSize(m_exe_ctx_scope.get()))
-        type_byte_size = *temp;
-      if (auto temp = op_type.GetByteSize(m_exe_ctx_scope.get()))
-        rhs_type_byte_size = *temp;
-      if (!target_type.IsBoolean() && type_byte_size < rhs_type_byte_size) {
-        std::string errMsg = llvm::formatv(
-            "cast from pointer to smaller type {0} loses information",
-            target_type.TypeDescription());
-        return llvm::make_error<DILDiagnosticError>(
-            m_expr, std::move(errMsg), location,
-            op_type.TypeDescription().length());
-      }
-    } else if (!op_type.IsScalarType() && !op_type.IsEnumerationType()) {
-      // Otherwise accept only arithmetic types and enums.
-      std::string errMsg = llvm::formatv(
-          "cannot convert {0} to {1} without a conversion operator",
-          op_type.TypeDescription(), target_type.TypeDescription());
-
+Interpreter::VerifyArithmeticCast(CompilerType source_type,
+                                  CompilerType target_type, int location) {
+  if (source_type.IsPointerType() || source_type.IsNullPtrType()) {
+    // Cast from pointer to float/double is not allowed.
+    if (target_type.IsFloat()) {
+      std::string errMsg = llvm::formatv("Cast from {0} to {1} is not allowed",
+                                         source_type.TypeDescription(),
+                                         target_type.TypeDescription());
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
-          op_type.TypeDescription().length());
+          source_type.TypeDescription().length());
     }
-    return CastKind::eArithmetic;
+
+    // Casting from pointer to bool is always valid.
+    if (target_type.IsBoolean())
+      return CastKind::eArithmetic;
+
+    // Otherwise check if the result type is at least as big as the pointer
+    // size.
+    uint64_t type_byte_size = 0;
+    uint64_t rhs_type_byte_size = 0;
+    if (auto temp = target_type.GetByteSize(m_exe_ctx_scope.get())) {
+      type_byte_size = *temp;
+    } else {
+      std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
+                                         target_type.TypeDescription());
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, std::move(errMsg), location,
+          target_type.TypeDescription().length());
+    }
+
+    if (auto temp = source_type.GetByteSize(m_exe_ctx_scope.get())) {
+      rhs_type_byte_size = *temp;
+    } else {
+      std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
+                                         source_type.TypeDescription());
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, std::move(errMsg), location,
+          source_type.TypeDescription().length());
+    }
+
+    if (type_byte_size < rhs_type_byte_size) {
+      std::string errMsg = llvm::formatv(
+          "cast from pointer to smaller type {0} loses information",
+          target_type.TypeDescription());
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, std::move(errMsg), location,
+          source_type.TypeDescription().length());
+    }
+  } else if (!source_type.IsScalarType() && !source_type.IsEnumerationType()) {
+    // Otherwise accept only arithmetic types and enums.
+    std::string errMsg = llvm::formatv("cannot convert {0} to {1}",
+                                       source_type.TypeDescription(),
+                                       target_type.TypeDescription());
+
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, std::move(errMsg), location,
+        source_type.TypeDescription().length());
   }
+  return CastKind::eArithmetic;
+}
+
+llvm::Expected<CastKind>
+Interpreter::VerifyCastType(lldb::ValueObjectSP operand,
+                            CompilerType source_type, CompilerType target_type,
+                            int location) {
+
+  if (target_type.IsScalarType())
+    return VerifyArithmeticCast(source_type, target_type, location);
 
   if (target_type.IsEnumerationType()) {
     // Cast to enum type.
-    if (!op_type.IsScalarType() && !op_type.IsEnumerationType()) {
+    if (!source_type.IsScalarType() && !source_type.IsEnumerationType()) {
       std::string errMsg = llvm::formatv("Cast from {0} to {1} is not allowed",
-                                         op_type.TypeDescription(),
+                                         source_type.TypeDescription(),
                                          target_type.TypeDescription());
 
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
-          op_type.TypeDescription().length());
+          source_type.TypeDescription().length());
     }
     return CastKind::eEnumeration;
   }
 
   if (target_type.IsPointerType()) {
-    if (!op_type.IsInteger() && !op_type.IsEnumerationType() &&
-        !op_type.IsArrayType() && !op_type.IsPointerType() &&
-        !op_type.IsNullPtrType()) {
+    if (!source_type.IsInteger() && !source_type.IsEnumerationType() &&
+        !source_type.IsArrayType() && !source_type.IsPointerType() &&
+        !source_type.IsNullPtrType()) {
       std::string errMsg = llvm::formatv(
           "cannot cast from type {0} to pointer type {1}",
-          op_type.TypeDescription(), target_type.TypeDescription());
+          source_type.TypeDescription(), target_type.TypeDescription());
 
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
-          op_type.TypeDescription().length());
+          source_type.TypeDescription().length());
     }
     return CastKind::ePointer;
   }
@@ -840,17 +866,17 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP operand, CompilerType op_type,
   if (target_type.IsNullPtrType()) {
     // Cast to nullptr type.
     bool is_signed;
-    if (!target_type.IsNullPtrType() &&
+    if (!source_type.IsNullPtrType() &&
         (!operand->IsIntegerType(is_signed) ||
          (is_signed && operand->GetValueAsSigned(0) != 0) ||
          (!is_signed && operand->GetValueAsUnsigned(0) != 0))) {
       std::string errMsg = llvm::formatv("Cast from {0} to {1} is not allowed",
-                                         op_type.TypeDescription(),
+                                         source_type.TypeDescription(),
                                          target_type.TypeDescription());
 
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
-          op_type.TypeDescription().length());
+          source_type.TypeDescription().length());
     }
     return CastKind::eNullptr;
   }
@@ -859,11 +885,12 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP operand, CompilerType op_type,
     return CastKind::eReference;
 
   // Unsupported cast.
-  std::string errMsg =
-      llvm::formatv("casting of {0} to {1} is not implemented yet",
-                    op_type.TypeDescription(), target_type.TypeDescription());
+  std::string errMsg = llvm::formatv(
+      "casting of {0} to {1} is not implemented yet",
+      source_type.TypeDescription(), target_type.TypeDescription());
   return llvm::make_error<DILDiagnosticError>(
-      m_expr, std::move(errMsg), location, op_type.TypeDescription().length());
+      m_expr, std::move(errMsg), location,
+      source_type.TypeDescription().length());
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {

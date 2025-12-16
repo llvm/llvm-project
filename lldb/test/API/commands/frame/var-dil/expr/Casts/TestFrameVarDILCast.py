@@ -104,7 +104,7 @@ class TestFrameVarDILCast(TestBase):
         self.expect(
             "frame variable '(int)ns_foo_'",
             error=True,
-            substrs=["cannot convert 'ns::Foo' to 'int' without a conversion operator"],
+            substrs=["cannot convert 'ns::Foo' to 'int'"],
         )
 
         self.expect_var_path("(int)myint_", type="int", value="1")

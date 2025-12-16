@@ -1,12 +1,6 @@
 // Type Casting, main.cpp
 
-#include <cstdarg>
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
 #include <limits>
-#include <memory>
-#include <string>
 
 namespace ns {
 

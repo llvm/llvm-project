@@ -71,13 +71,21 @@ private:
                   std::shared_ptr<ExecutionContextScope> ctx,
                   const IntegerLiteralNode *literal);
 
+  /// A helper function for VerifyCastType (below). This performs
+  /// arithmetic-specific checks. It should only be called if the target_type
+  /// is a scalar type.
+  llvm::Expected<CastKind> VerifyArithmeticCast(CompilerType source_type,
+                                                CompilerType target_type,
+                                                int location);
+
   /// As a preparation for type casting, compare the requested 'target' type
   /// of the cast with the type of the operand to be cast. If the cast is
   /// allowed, return the appropriate CastKind for the cast; otherwise return
   /// an error.
-  llvm::Expected<CastKind>
-  VerifyCastType(lldb::ValueObjectSP operand, CompilerType op_type,
-                 CompilerType target_type, int location);
+  llvm::Expected<CastKind> VerifyCastType(lldb::ValueObjectSP operand,
+                                          CompilerType source_type,
+                                          CompilerType target_type,
+                                          int location);
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;

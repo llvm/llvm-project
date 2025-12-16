@@ -48,13 +48,6 @@ enum class CastKind {
   eNone,        ///< Invalid promotion type (results in error).
 };
 
-/// Promotions allowed for type casts in DIL.
-//enum CastPromotionKind {
-//  eArithmetic, ///< Casting to a scalar.
-//  ePointer,    ///< Casting to a pointer type.
-//  eNone,       ///< Invalid promotion type (results in error).
-//};
-
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
 /// end of this file.
 class Visitor;
