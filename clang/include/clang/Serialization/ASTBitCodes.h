@@ -2061,6 +2061,7 @@ enum StmtCode {
   // HLSL Constructs
   EXPR_HLSL_OUT_ARG,
 
+  STMT_DEFER,
 };
 
 /// The kinds of designators that can occur in a

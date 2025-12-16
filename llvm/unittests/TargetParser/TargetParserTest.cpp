@@ -1144,6 +1144,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("apple-a17", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m4", "armv8.7-a"),
                       AArch64CPUTestParams("apple-a18", "armv8.7-a"),
+                      AArch64CPUTestParams("apple-m5", "armv8.7-a"),
                       AArch64CPUTestParams("exynos-m3", "armv8-a"),
                       AArch64CPUTestParams("exynos-m4", "armv8.2-a"),
                       AArch64CPUTestParams("exynos-m5", "armv8.2-a"),
@@ -1260,11 +1261,12 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
                       AArch64CPUAliasTestParams({"apple-a16", "apple-m3",
                                                  "apple-s9", "apple-s10"}),
-                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"})),
+                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"}),
+                      AArch64CPUAliasTestParams({"apple-m5", "apple-a19"})),
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 91;
+static constexpr unsigned NumAArch64CPUArchs = 93;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

@@ -240,7 +240,7 @@ value llvm_dispose_context(value C) {
 
 /* unit -> llcontext */
 value llvm_global_context(value Unit) {
-  return to_val(getGlobalContextForCAPI());
+  return to_val(LLVMGetGlobalContext());
 }
 
 /* llcontext -> string -> int */
