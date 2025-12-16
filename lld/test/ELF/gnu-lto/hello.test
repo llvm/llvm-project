@@ -2,26 +2,33 @@
 // Test if we can link a simple LTO'ed program.
 // Ensure that LLD was used by checking for the output from LLD_VERSION.
 
+// RUN: gcc -DFUNCTIONF=1 -c -flto -x c %s -o %tf.dynamic.o
 // RUN: gcc -c -flto -x c %s -o %t.dynamic.o
-// RUN: gcc -B%llvm_obj_root -fuse-ld=lld -flto %t.dynamic.o -o %t.dynamic
+// RUN: gcc -B%llvm_obj_root -fuse-ld=lld -flto %t.dynamic.o %tf.dynamic.o \
+// RUN:     -o %t.dynamic
 // RUN: llvm-objdump -t -j .comment -s %t.dynamic | \
 // RUN:   FileCheck --check-prefix=OBJDUMP %s
 // RUN: llvm-readelf -s %t.dynamic | \
 // RUN:   FileCheck --check-prefix=READELF %s
 
+// RUN: gcc -DFUNCTIONF=1 -c -flto -x c -fPIE %s -o %tf.pie.o
 // RUN: gcc -c -flto -x c -fPIE %s -o %t.pie.o
-// RUN: gcc -B%llvm_obj_root -fuse-ld=lld -flto -pie %t.pie.o -o %t.pie
+// RUN: gcc -B%llvm_obj_root -fuse-ld=lld -flto -pie %t.pie.o %tf.pie.o \
+// RUN:     -o %t.pie
 // RUN: llvm-objdump -t -j .comment -s %t.pie \
 // RUN:   | FileCheck --check-prefix=OBJDUMP %s
 // RUN: llvm-readelf -s %t.pie | \
 // RUN:   FileCheck --check-prefix=READELF %s
 
-#include <stdio.h>
+#ifdef FUNCTIONF
+int f(void) { return 0; }
+#else
+int f(void);
 
 int main() {
-  printf("It works!\n");
-  return 0;
+  return f();
 }
+#endif
 
 // OBJDUMP: __gnu_lto
 // OBJDUMP: .LLD 1.0
