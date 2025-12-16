@@ -252,11 +252,11 @@ CFG *AnalysisDeclContext::getUnoptimizedCFG() {
 
 const CFGStmtMap *AnalysisDeclContext::getCFGStmtMap() {
   if (cfgStmtMap)
-    return cfgStmtMap.get();
+    return &*cfgStmtMap;
 
   if (const CFG *c = getCFG()) {
-    cfgStmtMap.reset(CFGStmtMap::Build(c, &getParentMap()));
-    return cfgStmtMap.get();
+    cfgStmtMap.emplace(*c, getParentMap());
+    return &*cfgStmtMap;
   }
 
   return nullptr;
