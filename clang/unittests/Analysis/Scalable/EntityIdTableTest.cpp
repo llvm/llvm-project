@@ -22,7 +22,7 @@ TEST(EntityIdTableTest, CreateNewEntity) {
   EntityName Entity("c:@F@foo", "", {});
   Table.getId(Entity);
 
-  EXPECT_TRUE(Table.exists(Entity));
+  EXPECT_TRUE(Table.contains(Entity));
 }
 
 TEST(EntityIdTableTest, Idempotency) {
@@ -48,8 +48,8 @@ TEST(EntityIdTableTest, ExistsTrue) {
   Table.getId(Entity1);
   Table.getId(Entity2);
 
-  EXPECT_TRUE(Table.exists(Entity1));
-  EXPECT_TRUE(Table.exists(Entity2));
+  EXPECT_TRUE(Table.contains(Entity1));
+  EXPECT_TRUE(Table.contains(Entity2));
 }
 
 TEST(EntityIdTableTest, ExistsFalse) {
@@ -60,8 +60,8 @@ TEST(EntityIdTableTest, ExistsFalse) {
 
   Table.getId(Entity1);
 
-  EXPECT_TRUE(Table.exists(Entity1));
-  EXPECT_FALSE(Table.exists(Entity2));
+  EXPECT_TRUE(Table.contains(Entity1));
+  EXPECT_FALSE(Table.contains(Entity2));
 }
 
 TEST(EntityIdTableTest, MultipleEntities) {

@@ -17,7 +17,7 @@ EntityId EntityIdTable::getId(const EntityName &Name) {
   return Res.first->second;
 }
 
-bool EntityIdTable::exists(const EntityName &Name) const {
+bool EntityIdTable::contains(const EntityName &Name) const {
   return Entities.find(Name) != Entities.end();
 }
 

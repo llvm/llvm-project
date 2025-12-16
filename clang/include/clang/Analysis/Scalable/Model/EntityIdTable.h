@@ -33,7 +33,7 @@ public:
   EntityId getId(const EntityName &Name);
 
   /// Returns true if an entity with the given name exists in the table.
-  bool exists(const EntityName &Name) const;
+  bool contains(const EntityName &Name) const;
 
   /// Invokes the callback for each entity in the table.
   ///
