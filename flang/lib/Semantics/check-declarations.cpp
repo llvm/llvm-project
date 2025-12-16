@@ -3476,13 +3476,13 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
   if (const std::string * bindName{symbol.GetBindName()};
       bindName) { // has a binding name
     if (!bindName->empty()) {
-      bool ok{bindName->front() == '_' || parser::IsLetter(bindName->front())};
+      bool visible_ascii{true};
       for (char ch : *bindName) {
-        ok &= ch == '_' || parser::IsLetter(ch) || parser::IsDecimalDigit(ch);
+        visible_ascii &= parser::IsPrintable(ch);
       }
-      if (!ok) {
+      if (!visible_ascii) {
         messages_.Say(symbol.name(),
-            "Symbol has a BIND(C) name that is not a valid C language identifier"_err_en_US);
+            "Symbol has a BIND(C) name containing non-visible ASCII character(s)"_err_en_US);
         context_.SetError(symbol);
       }
     }
