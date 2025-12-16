@@ -10542,6 +10542,21 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       return DAG.getNode(ISD::SHL, DL, VT, N0, NewOp1);
   }
 
+  // fold (shl x, (and y, 63)) -> (shl x, y)
+  // if VT is i64 then mask must be 63
+  // if VT is i32 then mask must be 31 
+  if (N1.getOpcode() == ISD::AND) {
+    SDValue AndLHS = N1.getOperand(0);
+    SDValue AndRHS = N1.getOperand(1);
+    ConstantSDNode *AndRHSC = isConstOrConstSplat(AndRHS);
+    if (AndRHSC) {
+      APInt Mask = AndRHSC->getAPIntValue();
+      if ((VT == MVT::i64 && Mask == 63) || (VT == MVT::i32 && Mask == 31)) {
+        return DAG.getNode(ISD::SHL, DL, VT, N0, AndLHS);
+      }
+    }
+  }
+
   // fold (shl (shl x, c1), c2) -> 0 or (shl x, (add c1, c2))
   if (N0.getOpcode() == ISD::SHL) {
     auto MatchOutOfRange = [OpSizeInBits](ConstantSDNode *LHS,
