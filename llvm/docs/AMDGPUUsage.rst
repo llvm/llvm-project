@@ -2066,9 +2066,6 @@ The AMDGPU backend supports the following calling conventions:
                                      stack pointer. Calls to ``amdgpu_gfx`` functions are allowed and behave like they
                                      do in ``amdgpu_cs`` functions.
 
-                                     All counters (``lgkmcnt``, ``vmcnt``, ``storecnt``, etc.) are presumed in an
-                                     unknown state at function entry.
-
                                      A function may have multiple exits (e.g. one chain exit and one plain ``ret void``
                                      for when the wave ends), but all ``llvm.amdgcn.cs.chain`` exits must be in
                                      uniform control flow.
@@ -2127,6 +2124,14 @@ The AMDGPU backend supports the following calling conventions:
                                      Describe.
 
      =============================== ==========================================================
+
+The following ABI conventions apply to all calling conventions that are used for
+callable functions (i.e. those that do not correspond to hardware entry points):
+
+* On entry to a function the dependency counters (``VMcnt``, ``LOADcnt`` etc.)
+  are in an indeterminate state.
+* On return from a function, all dependency counters must be zero except for
+  ``VScnt``/``STOREcnt``.
 
 AMDGPU MCExpr
 -------------

@@ -1893,19 +1893,6 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   return Modified;
 }
 
-/// \returns true if the callee inserts an s_waitcnt 0 on function entry.
-static bool callWaitsOnFunctionEntry(const MachineInstr &MI) {
-  // Currently all conventions wait, but this may not always be the case.
-  //
-  // TODO: If IPRA is enabled, and the callee is isSafeForNoCSROpt, it may make
-  // senses to omit the wait and do it in the caller.
-  return true;
-}
-
-/// \returns true if the callee is expected to wait for any outstanding waits
-/// before returning.
-static bool callWaitsOnFunctionReturn(const MachineInstr &MI) { return true; }
-
 ///  Generate s_waitcnt instruction to be placed before cur_Inst.
 ///  Instructions of a given type are returned in order,
 ///  but instructions of different types can complete out of order.
@@ -1944,8 +1931,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   //   with knowledge of the called routines.
   if (Opc == AMDGPU::SI_RETURN_TO_EPILOG || Opc == AMDGPU::SI_RETURN ||
       Opc == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
-      Opc == AMDGPU::S_SETPC_B64_return ||
-      (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
+      Opc == AMDGPU::S_SETPC_B64_return) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
   }
   // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
@@ -1993,7 +1979,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     if (TII->isAlwaysGDS(Opc) && ScoreBrackets.hasPendingGDS())
       addWait(Wait, DS_CNT, ScoreBrackets.getPendingGDSWait());
 
-    if (MI.isCall() && callWaitsOnFunctionEntry(MI)) {
+    if (MI.isCall()) {
       // The function is going to insert a wait on everything in its prolog.
       // This still needs to be careful if the call target is a load (e.g. a GOT
       // load). We also need to check WAW dependency with saved PC.
@@ -2354,15 +2340,9 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     IsSMEMAccess = true;
     ScoreBrackets->updateByEvent(SMEM_ACCESS, Inst);
   } else if (Inst.isCall()) {
-    if (callWaitsOnFunctionReturn(Inst)) {
-      // Act as a wait on everything
-      ScoreBrackets->applyWaitcnt(
-          WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
-      ScoreBrackets->setStateOnFunctionEntryOrReturn();
-    } else {
-      // May need to way wait for anything.
-      ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
-    }
+    // Act as a wait on everything
+    ScoreBrackets->applyWaitcnt(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
+    ScoreBrackets->setStateOnFunctionEntryOrReturn();
   } else if (SIInstrInfo::isLDSDIR(Inst)) {
     ScoreBrackets->updateByEvent(EXP_LDS_ACCESS, Inst);
   } else if (TII->isVINTERP(Inst)) {
