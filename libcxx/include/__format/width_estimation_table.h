@@ -119,7 +119,7 @@ namespace __width_estimation_table {
 /// - bits [0, 13] The size of the range, allowing 16384 elements.
 /// - bits [14, 31] The lower bound code point of the range. The upper bound of
 ///   the range is lower bound + size.
-_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[110] = {
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[111] = {
     0x0440005f /* 00001100 - 0000115f [   96] */, //
     0x08c68001 /* 0000231a - 0000231b [    2] */, //
     0x08ca4001 /* 00002329 - 0000232a [    2] */, //
@@ -181,10 +181,10 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[110] = {
     0x3fc0405f /* 0000ff01 - 0000ff60 [   96] */, //
     0x3ff80006 /* 0000ffe0 - 0000ffe6 [    7] */, //
     0x5bf80004 /* 00016fe0 - 00016fe4 [    5] */, //
-    0x5bfc0001 /* 00016ff0 - 00016ff1 [    2] */, //
-    0x5c0017f7 /* 00017000 - 000187f7 [ 6136] */, //
-    0x620004d5 /* 00018800 - 00018cd5 [ 1238] */, //
-    0x633fc009 /* 00018cff - 00018d08 [   10] */, //
+    0x5bfc0006 /* 00016ff0 - 00016ff6 [    7] */, //
+    0x5c001cd5 /* 00017000 - 00018cd5 [ 7382] */, //
+    0x633fc01f /* 00018cff - 00018d1e [   32] */, //
+    0x63600072 /* 00018d80 - 00018df2 [  115] */, //
     0x6bfc0003 /* 0001aff0 - 0001aff3 [    4] */, //
     0x6bfd4006 /* 0001aff5 - 0001affb [    7] */, //
     0x6bff4001 /* 0001affd - 0001affe [    2] */, //
@@ -209,7 +209,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[110] = {
     0x7da00045 /* 0001f680 - 0001f6c5 [   70] */, //
     0x7db30000 /* 0001f6cc - 0001f6cc [    1] */, //
     0x7db40002 /* 0001f6d0 - 0001f6d2 [    3] */, //
-    0x7db54002 /* 0001f6d5 - 0001f6d7 [    3] */, //
+    0x7db54003 /* 0001f6d5 - 0001f6d8 [    4] */, //
     0x7db70003 /* 0001f6dc - 0001f6df [    4] */, //
     0x7dbac001 /* 0001f6eb - 0001f6ec [    2] */, //
     0x7dbd0008 /* 0001f6f4 - 0001f6fc [    9] */, //
@@ -217,11 +217,12 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[110] = {
     0x7dfc0000 /* 0001f7f0 - 0001f7f0 [    1] */, //
     0x7e4000ff /* 0001f900 - 0001f9ff [  256] */, //
     0x7e9c000c /* 0001fa70 - 0001fa7c [   13] */, //
-    0x7ea00009 /* 0001fa80 - 0001fa89 [   10] */, //
-    0x7ea3c037 /* 0001fa8f - 0001fac6 [   56] */, //
-    0x7eb3800e /* 0001face - 0001fadc [   15] */, //
-    0x7eb7c00a /* 0001fadf - 0001fae9 [   11] */, //
-    0x7ebc0008 /* 0001faf0 - 0001faf8 [    9] */, //
+    0x7ea0000a /* 0001fa80 - 0001fa8a [   11] */, //
+    0x7ea38038 /* 0001fa8e - 0001fac6 [   57] */, //
+    0x7eb20000 /* 0001fac8 - 0001fac8 [    1] */, //
+    0x7eb3400f /* 0001facd - 0001fadc [   16] */, //
+    0x7eb7c00b /* 0001fadf - 0001faea [   12] */, //
+    0x7ebbc009 /* 0001faef - 0001faf8 [   10] */, //
     0x80003fff /* 00020000 - 00023fff [16384] */, //
     0x90003fff /* 00024000 - 00027fff [16384] */, //
     0xa0003fff /* 00028000 - 0002bfff [16384] */, //
