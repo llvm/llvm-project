@@ -1168,13 +1168,13 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_AddImplicitDef: {
       uint64_t InsnID = readULEB();
       uint16_t RegNum = readU16();
-      RegState RegFlags = static_cast<RegState>(readU16());
+      RegState Flags = static_cast<RegState>(readU16());
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
-      RegFlags |= RegState::Implicit;
-      OutMIs[InsnID].addDef(RegNum, RegFlags);
+      Flags |= RegState::Implicit;
+      OutMIs[InsnID].addDef(RegNum, Flags);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_AddImplicitDef(OutMIs["
-                             << InsnID << "], " << RegNum << ", " << static_cast<uint16_t>(RegFlags) << ")\n");
+                             << InsnID << "], " << RegNum << ", " << static_cast<uint16_t>(Flags) << ")\n");
       break;
     }
 

@@ -1794,7 +1794,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     return (Flags & Flag) != RegState::NoFlags;
   };
 
-  if (HasFlag(RegState::Define)) {
+  if (!HasFlag(RegState::Define)) {
     if (consumeIfPresent(MIToken::lparen)) {
       unsigned Idx;
       if (!parseRegisterTiedDefIndex(Idx))
