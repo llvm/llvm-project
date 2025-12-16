@@ -31,7 +31,7 @@ MATH_MANGLE(cbrt)(float x)
     }
 
     // Is normal or subnormal.
-    z = ((x != 0.0f) & BUILTIN_ISFINITE_F32(x)) ? z : x;
+    z = x == 0.0f || BUILTIN_ISINF_F32(x) ? x : z;
     return BUILTIN_COPYSIGN_F32(z, x);
 }
 
