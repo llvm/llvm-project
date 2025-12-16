@@ -62,7 +62,7 @@ TEST(ConstantsTest, UseCounts) {
 TEST(ConstantsTest, Integer_i1) {
   LLVMContext Context;
   IntegerType *Int1 = IntegerType::get(Context, 1);
-  Constant *One = ConstantInt::get(Int1, 1, true);
+  Constant *One = ConstantInt::get(Int1, 1);
   Constant *Zero = ConstantInt::get(Int1, 0);
   Constant *NegOne = ConstantInt::get(Int1, static_cast<uint64_t>(-1), true);
   EXPECT_EQ(NegOne, ConstantInt::getSigned(Int1, -1));
@@ -142,7 +142,9 @@ TEST(ConstantsTest, IntSigns) {
   EXPECT_EQ(206U, ConstantInt::getSigned(Int8Ty, -50)->getZExtValue());
 
   // Overflow is handled by truncation.
-  EXPECT_EQ(0x3b, ConstantInt::get(Int8Ty, 0x13b)->getSExtValue());
+  EXPECT_EQ(0x3b, ConstantInt::get(Int8Ty, 0x13b, /*IsSigned=*/false,
+                                   /*ImplicitTrunc=*/true)
+                      ->getSExtValue());
 }
 
 TEST(ConstantsTest, PointerCast) {
@@ -842,7 +844,7 @@ TEST(ConstantsTest, Float128Test) {
   LLVMTypeRef TyFloat = LLVMFloatTypeInContext(C);
   LLVMTypeRef TyDouble = LLVMDoubleTypeInContext(C);
   LLVMTypeRef TyHalf = LLVMHalfTypeInContext(C);
-  LLVMBuilderRef Builder = LLVMCreateBuilder();
+  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(C);
   uint64_t n[2] = {0x4000000000000000, 0x0}; //+2
   uint64_t m[2] = {0xC000000000000000, 0x0}; //-2
   LLVMValueRef val1 = LLVMConstFPFromBits(Ty128, n);
@@ -862,6 +864,7 @@ TEST(ConstantsTest, Float128Test) {
   uint64_t r[1] = {0x0000000000003c00}; //+1
   LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
   EXPECT_TRUE(val7 != nullptr);
+  LLVMDisposeBuilder(Builder);
   LLVMContextDispose(C);
 }
 

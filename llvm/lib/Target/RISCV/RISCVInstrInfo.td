@@ -349,6 +349,7 @@ def simm12_lo : RISCVSImmLeafOp<12> {
       return isInt<12>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+  let OperandType = "OPERAND_SIMM12_LO";
 }
 
 // A 12-bit signed immediate which cannot fit in 6-bit signed immediate,
@@ -394,9 +395,11 @@ class UImm20OperandMaybeSym : RISCVUImmOp<20> {
 
 def uimm20_lui : UImm20OperandMaybeSym {
   let ParserMatchClass = UImmAsmOperand<20, "LUI">;
+  let OperandType = "OPERAND_UIMM20_LUI";
 }
 def uimm20_auipc : UImm20OperandMaybeSym {
   let ParserMatchClass = UImmAsmOperand<20, "AUIPC">;
+  let OperandType = "OPERAND_UIMM20_AUIPC";
 }
 
 def uimm20 : RISCVUImmOp<20>;
@@ -485,9 +488,6 @@ def csr_sysreg : RISCVOp, TImmLeaf<XLenVT, "return isUInt<12>(Imm);"> {
   let DecoderMethod = "decodeUImmOperand<12>";
   let OperandType = "OPERAND_UIMM12";
 }
-
-// A parameterized register class alternative to i32imm/i64imm from Target.td.
-def ixlenimm : Operand<XLenVT>;
 
 // Condition code used by select and short forward branch pseudos.
 def cond_code : RISCVOp {
