@@ -494,11 +494,15 @@ uint32_t Module::ResolveSymbolContextForAddress(
         !(resolved_flags & eSymbolContextSymbol)) {
       Symtab *symtab = symfile->GetSymtab();
       if (symtab && so_addr.IsSectionOffset()) {
-        addr_t file_address = so_addr.GetFileAddress();
-        Symbol *matching_symbol = symtab->FindSymbolAtFileAddress(file_address);
+        Symbol *matching_symbol = nullptr;
 
-        if (!matching_symbol ||
-            matching_symbol->GetType() == eSymbolTypeInvalid) {
+        addr_t file_address = so_addr.GetFileAddress();
+        Symbol *symbol_at_address =
+            symtab->FindSymbolAtFileAddress(file_address);
+        if (symbol_at_address &&
+            symbol_at_address->GetType() != lldb::eSymbolTypeInvalid) {
+          matching_symbol = symbol_at_address;
+        } else {
           symtab->ForEachSymbolContainingFileAddress(
               file_address, [&matching_symbol](Symbol *symbol) -> bool {
                 if (symbol->GetType() != eSymbolTypeInvalid) {
@@ -508,6 +512,7 @@ uint32_t Module::ResolveSymbolContextForAddress(
                 return true; // Keep iterating
               });
         }
+
         sc.symbol = matching_symbol;
         if (!sc.symbol && resolve_scope & eSymbolContextFunction &&
             !(resolved_flags & eSymbolContextFunction)) {
