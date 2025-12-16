@@ -121,6 +121,13 @@ public:
 
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                           QualType ty) override;
+  CatchTypeInfo
+  getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
+                               QualType catchHandlerType) override {
+    auto rtti = dyn_cast<cir::GlobalViewAttr>(getAddrOfRTTIDescriptor(loc, ty));
+    assert(rtti && "expected GlobalViewAttr");
+    return CatchTypeInfo{rtti, 0};
+  }
 
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *vtableClass) override {
     return true;
@@ -2310,7 +2317,6 @@ struct CallEndCatch final : EHScopeStack::Cleanup {
 
 static mlir::Value callBeginCatch(CIRGenFunction &cgf, mlir::Type paramTy,
                                   bool endMightThrow) {
-
   auto catchParam = cir::CatchParamOp::create(
       cgf.getBuilder(), cgf.getBuilder().getUnknownLoc(), paramTy);
 
@@ -2319,6 +2325,56 @@ static mlir::Value callBeginCatch(CIRGenFunction &cgf, mlir::Type paramTy,
       endMightThrow && !cgf.cgm.getLangOpts().AssumeNothrowExceptionDtor);
 
   return catchParam.getParam();
+}
+
+/// A "special initializer" callback for initializing a catch
+/// parameter during catch initialization.
+static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
+                           Address paramAddr, SourceLocation loc) {
+  CanQualType catchType =
+      cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
+  // If we're catching by reference, we can just cast the object
+  // pointer to the appropriate pointer.
+  if (isa<ReferenceType>(catchType)) {
+    cgf.cgm.errorNYI(loc, "initCatchParam: ReferenceType");
+    return;
+  }
+
+  // Scalars and complexes.
+  cir::TypeEvaluationKind tek = cgf.getEvaluationKind(catchType);
+  if (tek != cir::TEK_Aggregate) {
+    // Notes for LLVM lowering:
+    // If the catch type is a pointer type, __cxa_begin_catch returns
+    // the pointer by value.
+    if (catchType->hasPointerRepresentation()) {
+      cgf.cgm.errorNYI(loc, "initCatchParam: hasPointerRepresentation");
+      return;
+    }
+
+    mlir::Type cirCatchTy = cgf.convertTypeForMem(catchType);
+    mlir::Value catchParam =
+        callBeginCatch(cgf, cgf.getBuilder().getPointerTo(cirCatchTy), false);
+    LValue srcLV = cgf.makeNaturalAlignAddrLValue(catchParam, catchType);
+    LValue destLV = cgf.makeAddrLValue(paramAddr, catchType);
+    switch (tek) {
+    case cir::TEK_Complex: {
+      cgf.cgm.errorNYI(loc, "initCatchParam: cir::TEK_Complex");
+      return;
+    }
+    case cir::TEK_Scalar: {
+      auto exnLoad = cgf.emitLoadOfScalar(srcLV, loc);
+      cgf.emitStoreOfScalar(exnLoad, destLV, /*isInit=*/true);
+      return;
+    }
+    case cir::TEK_Aggregate:
+      llvm_unreachable("evaluation kind filtered out!");
+    }
+
+    // Otherwise, it returns a pointer into the exception object.
+    llvm_unreachable("bad evaluation kind");
+  }
+
+  cgf.cgm.errorNYI(loc, "initCatchParam: cir::TEK_Aggregate");
 }
 
 /// Begins a catch statement by initializing the catch variable and
@@ -2355,5 +2411,29 @@ void CIRGenItaniumCXXABI::emitBeginCatch(CIRGenFunction &cgf,
     return;
   }
 
-  cgf.cgm.errorNYI("emitBeginCatch: catch with exception decl");
+  auto getCatchParamAllocaIP = [&]() {
+    cir::CIRBaseBuilderTy::InsertPoint currIns =
+        cgf.getBuilder().saveInsertionPoint();
+    mlir::Operation *currParent = currIns.getBlock()->getParentOp();
+
+    mlir::Block *insertBlock = nullptr;
+    if (auto scopeOp = currParent->getParentOfType<cir::ScopeOp>()) {
+      insertBlock = &scopeOp.getScopeRegion().getBlocks().back();
+    } else if (auto fnOp = currParent->getParentOfType<cir::FuncOp>()) {
+      insertBlock = &fnOp.getRegion().getBlocks().back();
+    } else {
+      llvm_unreachable("unknown outermost scope-like parent");
+    }
+    return cgf.getBuilder().getBestAllocaInsertPoint(insertBlock);
+  };
+
+  // Emit the local. Make sure the alloca's superseed the current scope, since
+  // these are going to be consumed by `cir.catch`, which is not within the
+  // current scope.
+
+  CIRGenFunction::AutoVarEmission var =
+      cgf.emitAutoVarAlloca(*catchParam, getCatchParamAllocaIP());
+  initCatchParam(cgf, *catchParam, var.getObjectAddress(cgf),
+                 catchStmt->getBeginLoc());
+  cgf.emitAutoVarCleanups(var);
 }

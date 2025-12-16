@@ -263,6 +263,7 @@ struct MissingFeatures {
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
   static bool ehCleanupBranchFixups() { return false; }
+  static bool ehScopeFilter() { return false; }
   static bool ehstackBranches() { return false; }
   static bool emitBranchThroughCleanup() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
@@ -376,7 +377,6 @@ struct MissingFeatures {
   static bool tryOp() { return false; }
   static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
-  static bool catchParamOp() { return false; }
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }

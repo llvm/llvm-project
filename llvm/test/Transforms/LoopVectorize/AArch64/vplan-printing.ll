@@ -91,7 +91,8 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) "target-features"="+neon,+do
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%ext.b>, ir<%ext.a>
 ; CHECK-NEXT:   PARTIAL-REDUCE ir<[[RDX_NEXT]]> = ir<[[RDX]]> + reduce.add (ir<%mul>)
 ; CHECK-NEXT:   EMIT vp<[[EP_IV_NEXT:%.+]]> = add nuw vp<[[EP_IV]]>, ir<16>
-; CHECK-NEXT:   EMIT branch-on-count vp<[[EP_IV_NEXT]]>, ir<1024>
+; CHECK-NEXT:   EMIT vp<{{%.+}}> = icmp eq vp<%index.next>, ir<1024>
+; CHECK-NEXT:   EMIT branch-on-cond vp<{{%.+}}>
 ; CHECK-NEXT: Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:

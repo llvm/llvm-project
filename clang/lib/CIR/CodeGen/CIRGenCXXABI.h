@@ -161,6 +161,9 @@ public:
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
 
+  virtual CatchTypeInfo
+  getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
+                               QualType catchHandlerType) = 0;
   virtual CatchTypeInfo getCatchAllTypeInfo();
 
   /// Get the implicit (second) parameter that comes after the "this" pointer,
