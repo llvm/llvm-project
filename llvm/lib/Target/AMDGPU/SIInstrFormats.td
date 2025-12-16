@@ -323,6 +323,18 @@ def CPolBit {
 
 class VOPDstOperand<RegisterClassLike rc> : RegisterOperand<rc, "printVOPDst">;
 
+def Vgpr32Lo128 : AsmOperandClass {
+  let Name = "Vgpr32Lo128";
+  let PredicateMethod = "isVGPR32_Lo128";
+  let RenderMethod = "addRegOperands";
+}
+
+def Vgpr16Lo128 : AsmOperandClass {
+  let Name = "Vgpr16Lo128";
+  let PredicateMethod = "isVGPR16_Lo128";
+  let RenderMethod = "addRegOperands";
+}
+
 def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
   let EncoderMethod = "getMachineOpValueT16";
   let DecoderMethod = "DecodeVGPR_16RegisterClass";
@@ -331,12 +343,30 @@ def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
 def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
   let EncoderMethod = "getMachineOpValueT16Lo128";
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
+  let ParserMatchClass = Vgpr16Lo128;
+}
+
+def VOPDstOperand_Vgpr32Lo128 : VOPDstOperand <VGPR_32_Lo128> {
+  let ParserMatchClass = Vgpr32Lo128;
 }
 
 // Source-encoded destination operand for instructions like v_swap_b16.
 def VOPSrcEncodedDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
   let EncoderMethod = VSrcT_b16_Lo128.EncoderMethod;
   let DecoderMethod = VSrcT_b16_Lo128.DecoderMethod;
+  let ParserMatchClass = Vgpr16Lo128;
+}
+
+
+def VGPROp_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
+  let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
+  let EncoderMethod = "getMachineOpValueT16Lo128";
+  let ParserMatchClass = Vgpr16Lo128;
+}
+
+def VGPROp_32_Lo128 : RegisterOperand<VGPR_32_Lo128> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+  let ParserMatchClass = Vgpr32Lo128;
 }
 
 class VINTRPe <bits<2> op> : Enc32 {

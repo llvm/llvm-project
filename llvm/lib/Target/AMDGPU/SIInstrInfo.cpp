@@ -996,8 +996,14 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         SrcReg = NewSrcReg;
       }
       // Use the smaller instruction encoding if possible.
-      if (AMDGPU::VGPR_16_Lo128RegClass.contains(DestReg) &&
-          (IsSGPRSrc || AMDGPU::VGPR_16_Lo128RegClass.contains(SrcReg))) {
+      const MachineFunction *MF = MBB.getParent();
+      if (llvm::is_contained(
+              AMDGPU::VGPR_16_Lo128RegClass.getRawAllocationOrder(*MF),
+              DestReg) &&
+          (IsSGPRSrc ||
+           llvm::is_contained(
+               AMDGPU::VGPR_16_Lo128RegClass.getRawAllocationOrder(*MF),
+               SrcReg))) {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B16_t16_e32), DestReg)
             .addReg(SrcReg);
       } else {

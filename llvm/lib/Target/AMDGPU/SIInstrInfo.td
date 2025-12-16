@@ -1825,7 +1825,7 @@ class getVALUDstForVT_fake16<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
                           !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128_AlignTarget>,
                             !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64_AlignTarget>,
-                              !if(!eq(VT.Size, 16), VOPDstOperand<VGPR_32_Lo128>,
+                              !if(!eq(VT.Size, 16), VOPDstOperand_Vgpr32Lo128,
                               VOPDstS64orS32)))); // else VT == i1
 }
 

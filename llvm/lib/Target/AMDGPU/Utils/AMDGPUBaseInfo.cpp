@@ -3662,6 +3662,33 @@ bool isPackedFP32Inst(unsigned Opc) {
   }
 }
 
+bool isLo128VGPR32(MCPhysReg R) {
+  return R >= AMDGPU::VGPR0 && R <= AMDGPU::VGPR127;
+}
+
+bool isHi128VGPR32(MCPhysReg R) {
+  return ((R >= AMDGPU::VGPR128 && R <= AMDGPU::VGPR255) ||
+          (R >= AMDGPU::VGPR384 && R <= AMDGPU::VGPR511) ||
+          (R >= AMDGPU::VGPR640 && R <= AMDGPU::VGPR767) ||
+          (R >= AMDGPU::VGPR896 && R <= AMDGPU::VGPR1023));
+}
+
+bool isLo128VGPR16(MCPhysReg R) {
+  return (R >= AMDGPU::VGPR0_LO16 && R <= AMDGPU::VGPR127_LO16) ||
+         (R >= AMDGPU::VGPR0_HI16 && R <= AMDGPU::VGPR127_HI16);
+}
+
+bool isHi128VGPR16(MCPhysReg R) {
+  return ((R >= AMDGPU::VGPR128_LO16 && R <= AMDGPU::VGPR255_LO16) ||
+          (R >= AMDGPU::VGPR384_LO16 && R <= AMDGPU::VGPR511_LO16) ||
+          (R >= AMDGPU::VGPR640_LO16 && R <= AMDGPU::VGPR767_LO16) ||
+          (R >= AMDGPU::VGPR896_LO16 && R <= AMDGPU::VGPR1023_LO16) ||
+          (R >= AMDGPU::VGPR128_HI16 && R <= AMDGPU::VGPR255_HI16) ||
+          (R >= AMDGPU::VGPR384_HI16 && R <= AMDGPU::VGPR511_HI16) ||
+          (R >= AMDGPU::VGPR640_HI16 && R <= AMDGPU::VGPR767_HI16) ||
+          (R >= AMDGPU::VGPR896_HI16 && R <= AMDGPU::VGPR1023_HI16));
+}
+
 const std::array<unsigned, 3> &ClusterDimsAttr::getDims() const {
   assert(isFixedDims() && "expect kind to be FixedDims");
   return Dims;

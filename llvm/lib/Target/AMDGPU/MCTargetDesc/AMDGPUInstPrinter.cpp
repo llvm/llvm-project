@@ -813,7 +813,14 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
           OpInfo, STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
       const MCRegisterClass &RC = MRI.getRegClass(RCID);
       auto Reg = mc2PseudoReg(Op.getReg());
-      if (!RC.contains(Reg) && !isInlineValue(Reg)) {
+      bool Err = !RC.contains(Reg) && !isInlineValue(Reg);
+      if (!Err && (RCID == AMDGPU::VGPR_32_Lo128RegClassID ||
+                   RCID == AMDGPU::VS_32_Lo128RegClassID))
+        Err = AMDGPU::isHi128VGPR32(Reg);
+      if (!Err && (RCID == AMDGPU::VGPR_16_Lo128RegClassID ||
+                   RCID == AMDGPU::VS_16_Lo128RegClassID))
+        Err = AMDGPU::isHi128VGPR16(Reg);
+      if (Err) {
         bool IsWaveSizeOp = OpInfo.isLookupRegClassByHwMode() &&
                             (OpInfo.RegClass == AMDGPU::SReg_1 ||
                              OpInfo.RegClass == AMDGPU::SReg_1_XEXEC);

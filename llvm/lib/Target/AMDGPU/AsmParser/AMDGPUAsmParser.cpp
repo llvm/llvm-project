@@ -426,6 +426,10 @@ public:
     return isRegOrInline(RCID, type) && !hasModifiers();
   }
 
+  bool isVGPR32_Lo128() const;
+
+  bool isVGPR16_Lo128() const;
+
   bool isSCSrcB16() const {
     return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::i16);
   }
@@ -2243,7 +2247,28 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
 }
 
 bool AMDGPUOperand::isRegClass(unsigned RCID) const {
-  return isRegKind() && AsmParser->getMRI()->getRegClass(RCID).contains(getReg());
+  if (!isRegKind() ||
+      !AsmParser->getMRI()->getRegClass(RCID).contains(getReg()))
+    return false;
+  if (RCID == AMDGPU::VGPR_32_Lo128RegClassID ||
+      RCID == AMDGPU::VS_32_Lo128RegClassID)
+    return !AMDGPU::isHi128VGPR32(getReg());
+  if (RCID == AMDGPU::VGPR_16_Lo128RegClassID ||
+      RCID == AMDGPU::VS_16_Lo128RegClassID)
+    return !AMDGPU::isHi128VGPR16(getReg());
+  return true;
+}
+
+bool AMDGPUOperand::isVGPR32_Lo128() const {
+  if (!isRegKind())
+    return false;
+  return AMDGPU::isLo128VGPR32(getReg());
+}
+
+bool AMDGPUOperand::isVGPR16_Lo128() const {
+  if (!isRegKind())
+    return false;
+  return AMDGPU::isLo128VGPR16(getReg());
 }
 
 bool AMDGPUOperand::isVRegWithInputMods() const {
