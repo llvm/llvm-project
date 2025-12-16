@@ -2,3 +2,6 @@
 revert breaks rocPRIM
 AMDGPU/PromoteAlloca: Refactor into analysis / commit phases
 ---
+fails 39 clang lit tests, and hpc2021 534
+"[OpenMP][Clang] Use `ATTACH` map-type for list-items with base-pointers. (#153683)"
+---
