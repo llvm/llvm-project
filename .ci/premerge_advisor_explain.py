@@ -7,7 +7,6 @@ import argparse
 import platform
 import sys
 import json
-import os
 
 # TODO(boomanaiden154): Remove the optional call once we can require Python
 # 3.10.
