@@ -11,7 +11,3 @@ define <vscale x 8 x bfloat> @bfscale_h(<vscale x 8 x i1> %pg, <vscale x 8 x bfl
                                                                       <vscale x 8 x i16> %b)
   ret <vscale x 8 x bfloat> %out
 }
-
-;
-; FSQRT
-;
