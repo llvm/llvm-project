@@ -521,7 +521,7 @@ class VPseudoVLN8Mask<VReg RetClass, bit U> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         GPRMemZeroOffset:$rs1,
-                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                        VMV0:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
                    []>,
       RISCVNDSVLN</*Masked*/1, /*Unsigned*/U, !logtwo(8), VLMul> {
   let mayLoad = 1;

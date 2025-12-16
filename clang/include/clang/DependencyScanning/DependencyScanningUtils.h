@@ -21,7 +21,7 @@ namespace clang {
 namespace dependencies {
 
 /// Graph of modular dependencies.
-using ModuleDepsGraph = std::vector<clang::dependencies::ModuleDeps>;
+using ModuleDepsGraph = std::vector<ModuleDeps>;
 
 /// The full dependencies and module graph for a specific input.
 struct TranslationUnitDeps {
@@ -31,7 +31,7 @@ struct TranslationUnitDeps {
   /// The identifier of the C++20 module this translation unit exports.
   ///
   /// If the translation unit is not a module then \c ID.ModuleName is empty.
-  clang::dependencies::ModuleID ID;
+  ModuleID ID;
 
   /// A collection of absolute paths to files that this translation unit
   /// directly depends on, not including transitive dependencies.
@@ -39,14 +39,14 @@ struct TranslationUnitDeps {
 
   /// A collection of prebuilt modules this translation unit directly depends
   /// on, not including transitive dependencies.
-  std::vector<clang::dependencies::PrebuiltModuleDep> PrebuiltModuleDeps;
+  std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
 
   /// A list of modules this translation unit directly depends on, not including
   /// transitive dependencies.
   ///
   /// This may include modules with a different context hash when it can be
   /// determined that the differences are benign for this compilation.
-  std::vector<clang::dependencies::ModuleID> ClangModuleDeps;
+  std::vector<ModuleID> ClangModuleDeps;
 
   /// A list of module names that are visible to this translation unit. This
   /// includes both direct and transitive module dependencies.
@@ -61,19 +61,18 @@ struct TranslationUnitDeps {
   /// FIXME: If we add support for multi-arch builds in clang-scan-deps, we
   /// should make the dependencies between commands explicit to enable parallel
   /// builds of each architecture.
-  std::vector<clang::dependencies::Command> Commands;
+  std::vector<Command> Commands;
 
   /// Deprecated driver command-line. This will be removed in a future version.
   std::vector<std::string> DriverCommandLine;
 };
 
-class FullDependencyConsumer : public clang::dependencies::DependencyConsumer {
+class FullDependencyConsumer : public DependencyConsumer {
 public:
-  FullDependencyConsumer(
-      const llvm::DenseSet<clang::dependencies::ModuleID> &AlreadySeen)
+  FullDependencyConsumer(const llvm::DenseSet<ModuleID> &AlreadySeen)
       : AlreadySeen(AlreadySeen) {}
 
-  void handleBuildCommand(clang::dependencies::Command Cmd) override {
+  void handleBuildCommand(Command Cmd) override {
     Commands.push_back(std::move(Cmd));
   }
 
@@ -83,16 +82,15 @@ public:
     Dependencies.push_back(std::string(File));
   }
 
-  void handlePrebuiltModuleDependency(
-      clang::dependencies::PrebuiltModuleDep PMD) override {
+  void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
     PrebuiltModuleDeps.emplace_back(std::move(PMD));
   }
 
-  void handleModuleDependency(clang::dependencies::ModuleDeps MD) override {
+  void handleModuleDependency(ModuleDeps MD) override {
     ClangModuleDeps[MD.ID] = std::move(MD);
   }
 
-  void handleDirectModuleDependency(clang::dependencies::ModuleID ID) override {
+  void handleDirectModuleDependency(ModuleID ID) override {
     DirectModuleDeps.push_back(ID);
   }
 
@@ -105,8 +103,8 @@ public:
   }
 
   void handleProvidedAndRequiredStdCXXModules(
-      std::optional<clang::dependencies::P1689ModuleInfo> Provided,
-      std::vector<clang::dependencies::P1689ModuleInfo> Requires) override {
+      std::optional<P1689ModuleInfo> Provided,
+      std::vector<P1689ModuleInfo> Requires) override {
     ModuleName = Provided ? Provided->ModuleName : "";
     llvm::transform(Requires, std::back_inserter(NamedModuleDeps),
                     [](const auto &Module) { return Module.ModuleName; });
@@ -116,34 +114,29 @@ public:
 
 private:
   std::vector<std::string> Dependencies;
-  std::vector<clang::dependencies::PrebuiltModuleDep> PrebuiltModuleDeps;
-  llvm::MapVector<clang::dependencies::ModuleID,
-                  clang::dependencies::ModuleDeps>
-      ClangModuleDeps;
+  std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
+  llvm::MapVector<ModuleID, ModuleDeps> ClangModuleDeps;
   std::string ModuleName;
   std::vector<std::string> NamedModuleDeps;
-  std::vector<clang::dependencies::ModuleID> DirectModuleDeps;
+  std::vector<ModuleID> DirectModuleDeps;
   std::vector<std::string> VisibleModules;
-  std::vector<clang::dependencies::Command> Commands;
+  std::vector<Command> Commands;
   std::string ContextHash;
-  const llvm::DenseSet<clang::dependencies::ModuleID> &AlreadySeen;
+  const llvm::DenseSet<ModuleID> &AlreadySeen;
 };
 
 /// A callback to lookup module outputs for "-fmodule-file=", "-o" etc.
 using LookupModuleOutputCallback =
-    llvm::function_ref<std::string(const clang::dependencies::ModuleDeps &,
-                                   clang::dependencies::ModuleOutputKind)>;
+    llvm::function_ref<std::string(const ModuleDeps &, ModuleOutputKind)>;
 
 /// A simple dependency action controller that uses a callback. If no callback
 /// is provided, it is assumed that looking up module outputs is unreachable.
-class CallbackActionController
-    : public clang::dependencies::DependencyActionController {
+class CallbackActionController : public DependencyActionController {
 public:
   virtual ~CallbackActionController();
 
-  static std::string
-  lookupUnreachableModuleOutput(const clang::dependencies::ModuleDeps &MD,
-                                clang::dependencies::ModuleOutputKind Kind) {
+  static std::string lookupUnreachableModuleOutput(const ModuleDeps &MD,
+                                                   ModuleOutputKind Kind) {
     llvm::report_fatal_error("unexpected call to lookupModuleOutput");
   };
 
@@ -154,9 +147,8 @@ public:
     }
   }
 
-  std::string
-  lookupModuleOutput(const clang::dependencies::ModuleDeps &MD,
-                     clang::dependencies::ModuleOutputKind Kind) override {
+  std::string lookupModuleOutput(const ModuleDeps &MD,
+                                 ModuleOutputKind Kind) override {
     return LookupModuleOutput(MD, Kind);
   }
 
