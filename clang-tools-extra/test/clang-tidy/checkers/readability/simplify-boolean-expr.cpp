@@ -1041,7 +1041,7 @@ void test_init_stmt_true() {
   if (int i = 0; true)
     foo(i);
   // CHECK-MESSAGES: :[[@LINE-2]]:18: warning: redundant boolean literal in if statement condition [readability-simplify-boolean-expr]
-  // CHECK-FIXES:   { int i = 0;foo(i) };
+  // CHECK-FIXES:   { int i = 0; foo(i); };
 }
 
 void if_with_init_statement() {
