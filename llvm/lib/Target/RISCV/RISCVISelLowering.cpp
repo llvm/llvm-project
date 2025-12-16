@@ -358,7 +358,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(
           {ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT}, MVT::i32,
           Custom);
-    setOperationAction(ISD::SADDO, MVT::i32, Custom);
+    setOperationAction({ISD::SADDO, ISD::SSUBO}, MVT::i32, Custom);
   }
   if (!Subtarget.hasStdExtZmmul()) {
     setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU}, XLenVT, Expand);
@@ -526,7 +526,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
     setOperationAction({ISD::ABDS, ISD::ABDU}, VTs, Legal);
     setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
-    setOperationAction(ISD::SHL, VTs, Custom);
+    setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, VTs, Custom);
     setOperationAction(ISD::BITCAST, VTs, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VTs, Custom);
   }
@@ -8662,22 +8662,21 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VSELECT:
     return lowerToScalableOp(Op, DAG);
   case ISD::SHL:
-    if (Subtarget.enablePExtCodeGen() &&
-        Op.getSimpleValueType().isFixedLengthVector()) {
-      // We have patterns for scalar/immediate shift amount, so no lowering
-      // needed.
-      if (Op.getOperand(1)->getOpcode() == ISD::SPLAT_VECTOR)
-        return Op;
-
-      // There's no vector-vector version of shift instruction in P extension so
-      // we need to unroll to scalar computation and pack them back.
-      return DAG.UnrollVectorOp(Op.getNode());
-    }
-    [[fallthrough]];
-  case ISD::SRA:
   case ISD::SRL:
-    if (Op.getSimpleValueType().isFixedLengthVector())
+  case ISD::SRA:
+    if (Op.getSimpleValueType().isFixedLengthVector()) {
+      if (Subtarget.enablePExtCodeGen()) {
+        // We have patterns for scalar/immediate shift amount, so no lowering
+        // needed.
+        if (Op.getOperand(1)->getOpcode() == ISD::SPLAT_VECTOR)
+          return Op;
+
+        // There's no vector-vector version of shift instruction in P extension
+        // so we need to unroll to scalar computation and pack them back.
+        return DAG.UnrollVectorOp(Op.getNode());
+      }
       return lowerToScalableOp(Op, DAG);
+    }
     // This can be called for an i32 shift amount that needs to be promoted.
     assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
@@ -15061,35 +15060,42 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(customLegalizeToWOp(N, DAG, ExtOpc));
     break;
   }
-  case ISD::SADDO: {
+  case ISD::SADDO:
+  case ISD::SSUBO: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
 
-    // If the RHS is a constant, we can simplify ConditionRHS below. Otherwise
-    // use the default legalization.
-    if (!isa<ConstantSDNode>(N->getOperand(1)))
-      return;
-
+    // This is similar to the default legalization, but we return the
+    // sext_inreg instead of the add/sub.
+    bool IsAdd = N->getOpcode() == ISD::SADDO;
     SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(0));
     SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(1));
-    SDValue Res = DAG.getNode(ISD::ADD, DL, MVT::i64, LHS, RHS);
-    Res = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Res,
-                      DAG.getValueType(MVT::i32));
+    SDValue Op =
+        DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, DL, MVT::i64, LHS, RHS);
+    SDValue Res = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Op,
+                              DAG.getValueType(MVT::i32));
 
-    SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+    SDValue Overflow;
 
-    // For an addition, the result should be less than one of the operands (LHS)
-    // if and only if the other operand (RHS) is negative, otherwise there will
-    // be overflow.
-    // For a subtraction, the result should be less than one of the operands
-    // (LHS) if and only if the other operand (RHS) is (non-zero) positive,
-    // otherwise there will be overflow.
-    EVT OType = N->getValueType(1);
-    SDValue ResultLowerThanLHS = DAG.getSetCC(DL, OType, Res, LHS, ISD::SETLT);
-    SDValue ConditionRHS = DAG.getSetCC(DL, OType, RHS, Zero, ISD::SETLT);
+    // If the RHS is a constant, we can simplify ConditionRHS below. Otherwise
+    // use the default legalization.
+    if (IsAdd && isa<ConstantSDNode>(N->getOperand(1))) {
+      SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
 
-    SDValue Overflow =
-        DAG.getNode(ISD::XOR, DL, OType, ConditionRHS, ResultLowerThanLHS);
+      // For an addition, the result should be less than one of the operands
+      // (LHS) if and only if the other operand (RHS) is negative, otherwise
+      // there will be overflow.
+      EVT OType = N->getValueType(1);
+      SDValue ResultLowerThanLHS =
+          DAG.getSetCC(DL, OType, Res, LHS, ISD::SETLT);
+      SDValue ConditionRHS = DAG.getSetCC(DL, OType, RHS, Zero, ISD::SETLT);
+
+      Overflow =
+          DAG.getNode(ISD::XOR, DL, OType, ConditionRHS, ResultLowerThanLHS);
+    } else {
+      Overflow = DAG.getSetCC(DL, N->getValueType(1), Res, Op, ISD::SETNE);
+    }
+
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
     Results.push_back(Overflow);
     return;
@@ -15259,18 +15265,22 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     break;
   }
   case RISCVISD::PASUB:
-  case RISCVISD::PASUBU: {
+  case RISCVISD::PASUBU:
+  case RISCVISD::PMULHSU: {
     MVT VT = N->getSimpleValueType(0);
     SDValue Op0 = N->getOperand(0);
     SDValue Op1 = N->getOperand(1);
-    assert(VT == MVT::v2i16 || VT == MVT::v4i8);
+    unsigned Opcode = N->getOpcode();
+    // PMULHSU doesn't support i8 variants
+    assert(VT == MVT::v2i16 ||
+           (Opcode != RISCVISD::PMULHSU && VT == MVT::v4i8));
     MVT NewVT = MVT::v4i16;
     if (VT == MVT::v4i8)
       NewVT = MVT::v8i8;
     SDValue Undef = DAG.getUNDEF(VT);
     Op0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, {Op0, Undef});
     Op1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, {Op1, Undef});
-    Results.push_back(DAG.getNode(N->getOpcode(), DL, NewVT, {Op0, Op1}));
+    Results.push_back(DAG.getNode(Opcode, DL, NewVT, {Op0, Op1}));
     return;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -16380,9 +16390,9 @@ static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::TRUNCATE, DL, VT, Min);
 }
 
-// Handle P extension averaging subtraction pattern:
-// (vXiY (trunc (srl (sub ([s|z]ext vXiY:$a), ([s|z]ext vXiY:$b)), 1)))
-// -> PASUB/PASUBU
+// Handle P extension truncate patterns:
+// PASUB/PASUBU: (trunc (srl (sub ([s|z]ext a), ([s|z]ext b)), 1))
+// PMULHSU: (trunc (srl (mul (sext a), (zext b)), EltBits))
 static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
@@ -16395,7 +16405,7 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
       VecVT != MVT::v4i8 && VecVT != MVT::v2i32)
     return SDValue();
 
-  // Check if shift amount is 1
+  // Check if shift amount is a splat constant
   SDValue ShAmt = N0.getOperand(1);
   if (ShAmt.getOpcode() != ISD::BUILD_VECTOR)
     return SDValue();
@@ -16409,44 +16419,57 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat);
   if (!C)
     return SDValue();
-  if (C->getZExtValue() != 1)
-    return SDValue();
 
-  // Check for SUB operation
-  SDValue Sub = N0.getOperand(0);
-  if (Sub.getOpcode() != ISD::SUB)
-    return SDValue();
+  SDValue Op = N0.getOperand(0);
+  unsigned ShAmtVal = C->getZExtValue();
 
-  SDValue LHS = Sub.getOperand(0);
-  SDValue RHS = Sub.getOperand(1);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
 
-  // Check if both operands are sign/zero extends from the target
-  // type
-  bool IsSignExt = LHS.getOpcode() == ISD::SIGN_EXTEND &&
-                   RHS.getOpcode() == ISD::SIGN_EXTEND;
-  bool IsZeroExt = LHS.getOpcode() == ISD::ZERO_EXTEND &&
-                   RHS.getOpcode() == ISD::ZERO_EXTEND;
+  bool LHSIsSExt = LHS.getOpcode() == ISD::SIGN_EXTEND;
+  bool LHSIsZExt = LHS.getOpcode() == ISD::ZERO_EXTEND;
+  bool RHSIsSExt = RHS.getOpcode() == ISD::SIGN_EXTEND;
+  bool RHSIsZExt = RHS.getOpcode() == ISD::ZERO_EXTEND;
 
-  if (!IsSignExt && !IsZeroExt)
+  if (!(LHSIsSExt || LHSIsZExt) || !(RHSIsSExt || RHSIsZExt))
     return SDValue();
 
   SDValue A = LHS.getOperand(0);
   SDValue B = RHS.getOperand(0);
 
-  // Check if the extends are from our target vector type
   if (A.getValueType() != VT || B.getValueType() != VT)
     return SDValue();
 
-  // Determine the instruction based on type and signedness
   unsigned Opc;
-  if (IsSignExt)
-    Opc = RISCVISD::PASUB;
-  else if (IsZeroExt)
-    Opc = RISCVISD::PASUBU;
-  else
+  switch (Op.getOpcode()) {
+  default:
     return SDValue();
+  case ISD::SUB:
+    // PASUB/PASUBU: shift amount must be 1
+    if (ShAmtVal != 1)
+      return SDValue();
+    if (LHSIsSExt && RHSIsSExt)
+      Opc = RISCVISD::PASUB;
+    else if (LHSIsZExt && RHSIsZExt)
+      Opc = RISCVISD::PASUBU;
+    else
+      return SDValue();
+    break;
+  case ISD::MUL:
+    // PMULHSU: shift amount must be element size, only for i16/i32
+    unsigned EltBits = VecVT.getScalarSizeInBits();
+    if (ShAmtVal != EltBits || (EltBits != 16 && EltBits != 32))
+      return SDValue();
+    if ((LHSIsSExt && RHSIsZExt) || (LHSIsZExt && RHSIsSExt)) {
+      Opc = RISCVISD::PMULHSU;
+      // commuted case
+      if (LHSIsZExt && RHSIsSExt)
+        std::swap(A, B);
+    } else
+      return SDValue();
+    break;
+  }
 
-  // Create the machine node directly
   return DAG.getNode(Opc, SDLoc(N), VT, {A, B});
 }
 

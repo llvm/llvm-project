@@ -74,6 +74,7 @@ Changes to the LLVM IR
   format string function implementations from statically-linked libc's based on
   the requirements of each call. Currently only `float` is supported; this can
   keep floating point support out of printf if it can be proven unused.
+* Case values are no longer operands of `SwitchInst`.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -217,6 +218,7 @@ Changes to the C API
   * `LLVMParseBitcode2` -> `LLVMParseBitcodeInContext2`
   * `LLVMGetBitcodeModule` -> `LLVMGetBitcodeModuleInContext2`
   * `LLVMGetBitcodeModule2` -> `LLVMGetBitcodeModuleInContext2`
+* Add `LLVMGetSwitchCaseValue` and `LLVMSetSwitchCaseValue` to get and set switch case values; switch case values are no longer operands of the instruction.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -247,13 +249,16 @@ Changes to LLDB
 
 * LLDB can now set breakpoints, show backtraces, and display variables when
   debugging Wasm with supported runtimes (WAMR and V8).
-* LLDB no longer stops processes by default when receiving SIGWINCH signals 
+* LLDB now has a Wasm platform, which can be configured to run WebAssembly
+  binaries directly under a Wasm runtime. Configurable through the
+  platform.plugin.wasm settings.
+* LLDB no longer stops processes by default when receiving SIGWINCH signals
   (window resize events) on Linux. This is the default on other Unix platforms.
   You can re-enable it using `process handle --notify=true --stop=true SIGWINCH`.
 * The `show-progress` setting, which became a NOOP with the introduction of the
   statusline, now defaults to off and controls using OSC escape codes to show a
   native progress bar in supporting terminals like Ghostty and ConEmu.
-* The default PDB reader on Windows was changed from DIA to native, which uses 
+* The default PDB reader on Windows was changed from DIA to native, which uses
   LLVM's PDB and CodeView support. You can switch back to the DIA reader with
   `settings set plugin.symbol-file.pdb.reader dia`. Note that support for the
   DIA reader will be removed in a future version of LLDB.

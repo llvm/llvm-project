@@ -1964,6 +1964,14 @@ defm lifetime_safety : BoolFOption<
   BothFlags<[], [CC1Option],
           " experimental lifetime safety for C++">>;
 
+defm lifetime_safety_inference
+    : BoolFOption<"experimental-lifetime-safety-inference",
+                  LangOpts<"EnableLifetimeSafetyInference">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " experimental lifetime safety inference for C++">>;
+
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Emit">,
@@ -3474,6 +3482,10 @@ def fno_modules_prune_non_affecting_module_map_files :
     Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
     MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesPruneNonAffectingModuleMaps">>,
     HelpText<"Do not prune non-affecting module map files when writing module files">;
+def fmodules_single_module_parse_mode :
+  Flag<["-"], "fmodules-single-module-parse-mode">,
+  Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
+  MarshallingInfoFlag<PreprocessorOpts<"SingleModuleParseMode">>;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -5211,9 +5223,7 @@ def : Joined<["-"], "mmacosx-version-min=">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   Group<m_Group>, Alias<mmacos_version_min_EQ>;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">,
-  MarshallingInfoFlag<LangOpts<"MSBitfields">>;
+  HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">;
 def moutline : Flag<["-"], "moutline">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Enable function outlining (AArch64 only)">;
@@ -5222,6 +5232,12 @@ def mno_outline : Flag<["-"], "mno-outline">, Group<f_clang_Group>,
     HelpText<"Disable function outlining (AArch64 only)">;
 def mno_ms_bitfields : Flag<["-"], "mno-ms-bitfields">, Group<m_Group>,
   HelpText<"Do not set the default structure layout to be compatible with the Microsoft compiler standard">;
+def fms_layout_compatibility_EQ : Joined<["-"], "fms-layout-compatibility=">,
+  Visibility<[CC1Option]>,
+  HelpText<"Structure layout compatibility with Microsoft C++ ABI">,
+  Values<"default,itanium,microsoft">,
+  NormalizedValues<["Default", "Itanium", "Microsoft"]>, NormalizedValuesScope<"LangOptions::LayoutCompatibilityKind">,
+  MarshallingInfoEnum<LangOpts<"LayoutCompatibility">, "Default">;
 def mskip_rax_setup : Flag<["-"], "mskip-rax-setup">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Skip setting up RAX register when passing variable arguments (x86 only)">,
@@ -9595,6 +9611,8 @@ class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<dxc_Group>,
   Visibility<[DXCOption]>;
 
+def dxc_col_major : DXCFlag<"Zpc">, HelpText<"Pack matrices in column-major order">;
+def dxc_row_major : DXCFlag<"Zpr">, HelpText<"Pack matrices in row-major order">;
 def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def dxc_Fo : DXCJoinedOrSeparate<"Fo">,

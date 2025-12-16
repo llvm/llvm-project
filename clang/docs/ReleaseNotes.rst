@@ -86,6 +86,12 @@ Potentially Breaking Changes
   options-related code has been moved out of the Driver into a separate library.
 - The ``clangFrontend`` library no longer depends on ``clangDriver``, which may
   break downstream projects that relied on this transitive dependency.
+- Clang now supports MSVC vector deleting destructors when targeting Windows.
+  This means that vtables of classes with virtual destructors will contain a
+  pointer to vector deleting destructor (instead of scalar deleting destructor)
+  which in fact is a different symbol with different name and linkage. This
+  may cause runtime failures if two binaries using the same class defining a
+  virtual destructor are compiled with different versions of clang.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -373,6 +379,12 @@ Attribute Changes in Clang
   multilibs for printf features. Requires cooperation with the libc
   implementation.
 
+- On targets with Itanium C++ ABI, Clang now supports ``[[gnu:gcc_struct]]``
+  with the behavior similar to one existing in GCC. In particular, whenever
+  ``-mms-bitfields`` command line option is provided (or if Microsoft-compatible
+  structure layout is default on the target), ``[[gnu::gcc_struct]]`` requests
+  the compiler to follow Itanium rules for the layout of an annotated structure.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,
@@ -593,6 +605,7 @@ Bug Fixes to C++ Support
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 - Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
+- Fixed an issue where templates prevented nested anonymous records from checking the deletion of special members. (#GH167217)
 - Fixed spurious diagnoses of certain nested lambda expressions. (#GH149121) (#GH156579)
 - Fix the result of ``__is_pointer_interconvertible_base_of`` when arguments are qualified and passed via template parameters. (#GH135273)
 
@@ -652,6 +665,8 @@ Windows Support
 ^^^^^^^^^^^^^^^
 - clang-cl now supports /arch:AVX10.1 and /arch:AVX10.2.
 - clang-cl now supports /vlen, /vlen=256 and /vlen=512.
+
+- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -783,6 +798,8 @@ Crash and bug fixes
 - Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
 - Fixed a crash when parsing invalid nested name specifier sequences
   containing a single colon. (#GH167905)
+- Fixed a crash when parsing malformed #pragma clang loop vectorize_width(4,8,16)
+  by diagnosing invalid comma-separated argument lists. (#GH166325)
 
 Improvements
 ^^^^^^^^^^^^
@@ -826,6 +843,18 @@ OpenMP Support
 
 Improvements
 ^^^^^^^^^^^^
+- Mapping of expressions that have base-pointers now conforms to the OpenMP's
+  conditional pointer-attachment based on both pointee and poitner being
+  present, and one being new. This also lays the foundation of supporting
+  OpenMP 6.1's attach map-type modifier.
+- Several improvements were made to the handling of maps on list items involving
+  multiple levels of pointer dereferences, including not mapping intermediate
+  expressions, and grouping the items that share the same base-pointer, as
+  belonging to the same containing structure.
+- Support of array-sections on ``use_device_addr`` was made more robust,
+  including diagnosing when the array-section's base is not a named-variable.
+- Handling of ``use_device_addr`` and ``use_device_ptr`` in the presence of
+  other maps with the same base-pointer/variable, was improved.
 
 Additional Information
 ======================

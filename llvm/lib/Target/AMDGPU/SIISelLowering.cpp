@@ -6304,7 +6304,11 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case AMDGPU::SI_INDIRECT_SRC_V1:
   case AMDGPU::SI_INDIRECT_SRC_V2:
+  case AMDGPU::SI_INDIRECT_SRC_V3:
   case AMDGPU::SI_INDIRECT_SRC_V4:
+  case AMDGPU::SI_INDIRECT_SRC_V5:
+  case AMDGPU::SI_INDIRECT_SRC_V6:
+  case AMDGPU::SI_INDIRECT_SRC_V7:
   case AMDGPU::SI_INDIRECT_SRC_V8:
   case AMDGPU::SI_INDIRECT_SRC_V9:
   case AMDGPU::SI_INDIRECT_SRC_V10:
@@ -6315,7 +6319,11 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitIndirectSrc(MI, *BB, *getSubtarget());
   case AMDGPU::SI_INDIRECT_DST_V1:
   case AMDGPU::SI_INDIRECT_DST_V2:
+  case AMDGPU::SI_INDIRECT_DST_V3:
   case AMDGPU::SI_INDIRECT_DST_V4:
+  case AMDGPU::SI_INDIRECT_DST_V5:
+  case AMDGPU::SI_INDIRECT_DST_V6:
+  case AMDGPU::SI_INDIRECT_DST_V7:
   case AMDGPU::SI_INDIRECT_DST_V8:
   case AMDGPU::SI_INDIRECT_DST_V9:
   case AMDGPU::SI_INDIRECT_DST_V10:
@@ -16508,7 +16516,9 @@ SDValue SITargetLowering::performFDivCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   EVT VT = N->getValueType(0);
-  if ((VT != MVT::f16 && VT != MVT::bf16) || !Subtarget->has16BitInsts())
+
+  // fsqrt legality correlates to rsq availability.
+  if ((VT != MVT::f16 && VT != MVT::bf16) || !isOperationLegal(ISD::FSQRT, VT))
     return SDValue();
 
   SDValue LHS = N->getOperand(0);

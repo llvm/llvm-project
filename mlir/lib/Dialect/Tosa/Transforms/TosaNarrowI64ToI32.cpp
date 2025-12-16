@@ -176,6 +176,42 @@ class ConvertCastOpWithBoundsChecking
   }
 };
 
+class ConvertClampOpWithBoundsChecking
+    : public OpConversionPattern<tosa::ClampOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(tosa::ClampOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    const auto minAttr = dyn_cast<IntegerAttr>(op.getMinValAttr());
+    const auto maxAttr = dyn_cast<IntegerAttr>(op.getMaxValAttr());
+    if (!minAttr || !maxAttr)
+      return failure();
+
+    const int64_t min = minAttr.getInt();
+    const int64_t max = maxAttr.getInt();
+
+    if (min < std::numeric_limits<int32_t>::min() ||
+        max > std::numeric_limits<int32_t>::max())
+      return rewriter.notifyMatchFailure(
+          op, "Clamp bounds exceed int32 range. Narrowing cast may lead to "
+              "data loss.");
+
+    const Type resultType = op.getOutput().getType();
+    const Type newResultType = typeConverter->convertType(resultType);
+
+    const IntegerType int32Type = IntegerType::get(rewriter.getContext(), 32);
+    const IntegerAttr newMinAttr =
+        rewriter.getIntegerAttr(int32Type, static_cast<int32_t>(min));
+    const IntegerAttr newMaxAttr =
+        rewriter.getIntegerAttr(int32Type, static_cast<int32_t>(max));
+    rewriter.replaceOpWithNewOp<tosa::ClampOp>(op, newResultType,
+                                               adaptor.getInput(), newMinAttr,
+                                               newMaxAttr, op.getNanModeAttr());
+    return success();
+  }
+};
+
 template <typename OpTy>
 class ConvertTypedOp : public OpConversionPattern<OpTy> {
   using OpConversionPattern<OpTy>::OpConversionPattern;
@@ -285,6 +321,8 @@ public:
     } else {
       // Tensor
       patterns.add<ConvertArgMaxOpWithBoundsChecking>(typeConverter, context);
+      // Activation functions
+      patterns.add<ConvertClampOpWithBoundsChecking>(typeConverter, context);
       // Data layout
       patterns.add<ConvertTypedOp<tosa::ConcatOp>>(typeConverter, context);
       patterns.add<ConvertTypedOp<tosa::PadOp>>(typeConverter, context);

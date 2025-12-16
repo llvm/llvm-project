@@ -3335,7 +3335,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   // Vector increment/decrement.
   } else if (type->isVectorType()) {
     if (type->hasIntegerRepresentation()) {
-      llvm::Value *amt = llvm::ConstantInt::get(value->getType(), amount);
+      llvm::Value *amt = llvm::ConstantInt::getSigned(value->getType(), amount);
 
       value = Builder.CreateAdd(value, amt, isInc ? "inc" : "dec");
     } else {

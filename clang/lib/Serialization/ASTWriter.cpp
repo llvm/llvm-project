@@ -4396,20 +4396,20 @@ public:
 
   template <typename Coll> data_type getData(const Coll &Decls) {
     unsigned Start = DeclIDs.size();
-    for (NamedDecl *D : Decls) {
+    auto AddDecl = [this](NamedDecl *D) {
       NamedDecl *DeclForLocalLookup =
           getDeclForLocalLookup(Writer.getLangOpts(), D);
 
       if (Writer.getDoneWritingDeclsAndTypes() &&
           !Writer.wasDeclEmitted(DeclForLocalLookup))
-        continue;
+        return;
 
       // Try to avoid writing internal decls to reduced BMI.
       // See comments in ASTWriter::WriteDeclContextLexicalBlock for details.
       if (Writer.isGeneratingReducedBMI() &&
           !DeclForLocalLookup->isFromExplicitGlobalModule() &&
           IsInternalDeclFromFileContext(DeclForLocalLookup))
-        continue;
+        return;
 
       auto ID = Writer.GetDeclRef(DeclForLocalLookup);
 
@@ -4423,7 +4423,7 @@ public:
             ModuleLocalDeclsMap.insert({Key, DeclIDsTy{ID}});
           else
             Iter->second.push_back(ID);
-          continue;
+          return;
         }
         break;
       case LookupVisibility::TULocal: {
@@ -4432,7 +4432,7 @@ public:
           TULocalDeclsMap.insert({D->getDeclName(), DeclIDsTy{ID}});
         else
           Iter->second.push_back(ID);
-        continue;
+        return;
       }
       case LookupVisibility::GenerallyVisibile:
         // Generally visible decls go into the general lookup table.
@@ -4440,6 +4440,24 @@ public:
       }
 
       DeclIDs.push_back(ID);
+    };
+    for (NamedDecl *D : Decls) {
+      if (ASTReader *Chain = Writer.getChain();
+          Chain && isa<NamespaceDecl>(D) && D->isFromASTFile() &&
+          D == Chain->getKeyDeclaration(D)) {
+        // In ASTReader, we stored only the key declaration of a namespace decl
+        // for this TU rather than storing all of the key declarations from each
+        // imported module. If we have an external namespace decl, this is that
+        // key declaration and we need to re-expand it to write out all of the
+        // key declarations from each imported module again.
+        //
+        // See comment 'ASTReader::FindExternalVisibleDeclsByName' for details.
+        Chain->forEachImportedKeyDecl(D, [&AddDecl](const Decl *D) {
+          AddDecl(cast<NamedDecl>(const_cast<Decl *>(D)));
+        });
+      } else {
+        AddDecl(D);
+      }
     }
     return std::make_pair(Start, DeclIDs.size());
   }
@@ -6540,6 +6558,14 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
         Record.AddDeclRef(Update.getDecl());
         break;
 
+      case DeclUpdateKind::CXXResolvedDtorArrayDelete:
+        Record.AddDeclRef(Update.getDecl());
+        break;
+
+      case DeclUpdateKind::CXXResolvedDtorGlobArrayDelete:
+        Record.AddDeclRef(Update.getDecl());
+        break;
+
       case DeclUpdateKind::CXXResolvedExceptionSpec: {
         auto prototype =
           cast<FunctionDecl>(D)->getType()->castAs<FunctionProtoType>();
@@ -7610,6 +7636,34 @@ void ASTWriter::ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
   Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
     DeclUpdates[D].push_back(
         DeclUpdate(DeclUpdateKind::CXXResolvedDtorGlobDelete, GlobDelete));
+  });
+}
+
+void ASTWriter::ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                            const FunctionDecl *ArrayDelete) {
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
+  assert(!WritingAST && "Already writing the AST!");
+  assert(ArrayDelete && "Not given an operator delete");
+  if (!Chain)
+    return;
+  Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
+    DeclUpdates[D].push_back(
+        DeclUpdate(DeclUpdateKind::CXXResolvedDtorArrayDelete, ArrayDelete));
+  });
+}
+
+void ASTWriter::ResolvedOperatorGlobArrayDelete(
+    const CXXDestructorDecl *DD, const FunctionDecl *GlobArrayDelete) {
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
+  assert(!WritingAST && "Already writing the AST!");
+  assert(GlobArrayDelete && "Not given an operator delete");
+  if (!Chain)
+    return;
+  Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
+    DeclUpdates[D].push_back(DeclUpdate(
+        DeclUpdateKind::CXXResolvedDtorGlobArrayDelete, GlobArrayDelete));
   });
 }
 
