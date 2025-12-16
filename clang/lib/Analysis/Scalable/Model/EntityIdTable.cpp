@@ -28,6 +28,4 @@ void EntityIdTable::forEach(
   }
 }
 
-size_t EntityIdTable::count() const { return Entities.size(); }
-
 } // namespace clang::ssaf

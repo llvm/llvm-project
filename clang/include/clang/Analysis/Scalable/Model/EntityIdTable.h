@@ -42,7 +42,7 @@ public:
   forEach(llvm::function_ref<void(const EntityName &, EntityId)> Callback) const;
 
   /// Returns the number of unique entities in the table.
-  size_t count() const;
+  size_t count() const { return Entities.size(); }
 };
 
 } // namespace clang::ssaf
