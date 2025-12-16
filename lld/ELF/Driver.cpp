@@ -1835,16 +1835,16 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 #endif
   }
 
+#if LLD_ENABLE_GNU_LTO
   // Parse GCC collect2 options.
   if (!ctx.arg.plugin.empty()) {
-#if LLD_ENABLE_GNU_LTO
     StringRef v = args.getLastArgValue(OPT_plugin_opt_fresolution);
     if (!v.empty()) {
       ctx.arg.resolutionFile = v;
       ctx.arg.pluginOpt.push_back(std::string("-fresolution=" + v.str()));
     }
-#endif
   }
+#endif
 
   ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
 
