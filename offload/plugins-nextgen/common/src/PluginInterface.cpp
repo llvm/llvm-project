@@ -413,8 +413,8 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
       return Err;
   } else {
     KernelEnvironment = KernelEnvironmentTy{};
-    ODBG(ODT_Alloc) << "Failed to read kernel environment for '" << getName()
-                    << "' Using default Bare (0) execution mode";
+    ODBG(ODT_Kernel) << "Failed to read kernel environment for '" << getName()
+                     << "' Using default Bare (0) execution mode";
   }
 
   // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
@@ -2070,8 +2070,8 @@ int32_t GenericPluginTy::is_accessible_ptr(int32_t DeviceId, const void *Ptr,
                                            size_t Size) {
   auto HandleError = [&](Error Err) -> bool {
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    ODBG(ODT_Alloc) << "Failure while checking accessibility of pointer " << Ptr
-                    << " for device " << DeviceId << ": " << ErrStr;
+    ODBG(ODT_Mapping) << "Failure while checking accessibility of pointer "
+                      << Ptr << " for device " << DeviceId << ": " << ErrStr;
     return false;
   };
 
