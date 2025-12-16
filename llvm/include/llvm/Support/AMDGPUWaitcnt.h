@@ -16,8 +16,7 @@
 
 #include "llvm/TargetParser/TargetParser.h" // IsaVersion
 
-namespace llvm {
-namespace AMDGPU {
+namespace llvm::AMDGPU {
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
 /// Large values (including the maximum possible integer) can be used to
@@ -203,7 +202,6 @@ LLVM_ABI unsigned encodeLoadcntDscnt(const IsaVersion &Version,
 /// \p Version.
 LLVM_ABI unsigned encodeStorecntDscnt(const IsaVersion &Version,
                                       const Waitcnt &Decoded);
-} // end namespace AMDGPU
-} // end namespace llvm
+} // end namespace llvm::AMDGPU
 
 #endif // LLVM_SUPPORT_AMDGPUWAITCNT_H
