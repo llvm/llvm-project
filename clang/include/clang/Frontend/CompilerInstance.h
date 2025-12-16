@@ -133,7 +133,7 @@ class CompilerInstance : public ModuleLoader {
   std::unique_ptr<Sema> TheSema;
 
   /// Back-end pass plugins.
-  std::vector<llvm::PassPlugin *> PassPlugins;
+  std::vector<std::unique_ptr<llvm::PassPlugin>> PassPlugins;
 
   /// The frontend timer group.
   std::unique_ptr<llvm::TimerGroup> timerGroup;
@@ -652,7 +652,9 @@ public:
   /// @name Back-end Pass Plugins
   /// @{
 
-  std::vector<llvm::PassPlugin *> &getPassPlugins() { return PassPlugins; }
+  llvm::ArrayRef<std::unique_ptr<llvm::PassPlugin>> getPassPlugins() const {
+    return PassPlugins;
+  }
 
   /// @}
   /// @name Frontend timer

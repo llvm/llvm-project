@@ -27,6 +27,7 @@
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Extensions/PassPlugin.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -41,7 +42,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/BuryPointer.h"
@@ -1018,7 +1018,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 #endif
   }
   // Register plugin callbacks with PB.
-  for (llvm::PassPlugin *Plugin : CI.getPassPlugins())
+  for (const std::unique_ptr<PassPlugin> &Plugin : CI.getPassPlugins())
     Plugin->registerPassBuilderCallbacks(PB);
   for (const auto &PassCallback : CodeGenOpts.PassBuilderCallbacks)
     PassCallback(PB);
