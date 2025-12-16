@@ -120,14 +120,7 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
 mlir::Type CIRGenTypes::convertTypeForLoadStore(QualType qualType,
                                                 mlir::Type mlirType) {
   if (!mlirType) {
-    convertType(qualType);
-
-    if (mlir::isa<mlir::IntegerType>(mlirType) &&
-        mlir::cast<mlir::IntegerType>(mlirType).getWidth() == 1)
-      return mlir::IntegerType::get(&getMLIRContext(),
-                                    astContext.getTypeSize(qualType));
-
-    return mlirType;
+    mlirType = convertType(qualType);
   }
 
   if (qualType->isBitIntType())
@@ -135,6 +128,11 @@ mlir::Type CIRGenTypes::convertTypeForLoadStore(QualType qualType,
         &getMLIRContext(),
         astContext.getTypeSizeInChars(qualType).getQuantity() *
             astContext.getCharWidth());
+
+  if (mlir::isa<mlir::IntegerType>(mlirType) &&
+      mlir::cast<mlir::IntegerType>(mlirType).getWidth() == 1)
+    return mlir::IntegerType::get(&getMLIRContext(),
+                                  astContext.getTypeSize(qualType));
 
   if (qualType->isExtVectorBoolType())
     return convertTypeForMem(qualType);
