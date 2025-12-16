@@ -29,7 +29,7 @@ void nonFunctionLikeMacroTest() {
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>SET_PTR_VAR_TO_NULL</string>
-// CHECK-NEXT:   <key>expansion</key><string>ptr =0</string>
+// CHECK-NEXT:   <key>expansion</key><string>ptr
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT: </array>
 
@@ -53,7 +53,7 @@ void nonFunctionLikeNestedMacroTest() {
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:  <key>name</key><string>SET_PTR_VAR_TO_NULL_WITH_NESTED_MACRO</string>
-// CHECK-NEXT:  <key>expansion</key><string>ptr =0</string>
+// CHECK-NEXT:  <key>expansion</key><string>ptr
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT: </array>
 
@@ -84,7 +84,7 @@ void functionLikeMacroTest() {
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:  <key>name</key><string>TO_NULL(&amp;ptr)</string>
-// CHECK-NEXT:  <key>expansion</key><string>setToNull (&amp;ptr )</string>
+// CHECK-NEXT:  <key>expansion</key><string>setToNull
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT: </array>
 
@@ -115,7 +115,7 @@ void functionLikeNestedMacroTest() {
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>TO_NULL(&amp;a)</string>
-// CHECK-NEXT:   <key>expansion</key><string>setToNull (&amp;a )</string>
+// CHECK-NEXT:   <key>expansion</key><string>setToNull
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
@@ -125,9 +125,7 @@ void functionLikeNestedMacroTest() {
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>DEREF(a)</string>
-// CHECK-NEXT:   <key>expansion</key><string>{int b ;b =5;}print (a );*a </string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>{
 
 //===----------------------------------------------------------------------===//
 // Tests for undefining and/or redifining macros.
@@ -149,14 +147,12 @@ void undefinedMacroByTheEndOfParsingTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>141</integer>
+// CHECK-NEXT:    <key>line</key><integer>139</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>WILL_UNDEF_SET_NULL_TO_PTR(ptr)</string>
-// CHECK-NEXT:   <key>expansion</key><string>ptr =nullptr ;</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>ptr
 
 #define WILL_REDIFINE_MULTIPLE_TIMES_SET_TO_NULL(ptr) \
   /* Nothing */
@@ -180,14 +176,12 @@ void macroRedefinedMultipleTimesTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>169</integer>
+// CHECK-NEXT:    <key>line</key><integer>165</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>WILL_REDIFINE_MULTIPLE_TIMES_SET_TO_NULL(ptr)</string>
-// CHECK-NEXT:   <key>expansion</key><string>ptr =nullptr ;</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>ptr
 
 #define WILL_UNDEF_SET_NULL_TO_PTR_2(ptr) \
   ptr = nullptr;
@@ -206,14 +200,12 @@ void undefinedMacroInsideAnotherMacroTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>200</integer>
+// CHECK-NEXT:    <key>line</key><integer>194</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>PASS_PTR_TO_MACRO_THAT_WILL_BE_UNDEFD(ptr)</string>
-// CHECK-NEXT:   <key>expansion</key><string>ptr =nullptr ;</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>ptr
 
 #undef WILL_UNDEF_SET_NULL_TO_PTR_2
 
@@ -243,14 +235,12 @@ void macroArgContainsCommaInStringTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>237</integer>
+// CHECK-NEXT:    <key>line</key><integer>229</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>TO_NULL_AND_PRINT(a, &quot;Will this , cause a crash?&quot;)</string>
-// CHECK-NEXT:   <key>expansion</key><string>a =0;print (&quot;Will this , cause a crash?&quot;)</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>a
 
 void macroArgContainsLParenInStringTest() {
   int *a;
@@ -263,14 +253,12 @@ void macroArgContainsLParenInStringTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>257</integer>
+// CHECK-NEXT:    <key>line</key><integer>247</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>TO_NULL_AND_PRINT(a, &quot;Will this ( cause a crash?&quot;)</string>
-// CHECK-NEXT:   <key>expansion</key><string>a =0;print (&quot;Will this ( cause a crash?&quot;)</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>a
 
 void macroArgContainsRParenInStringTest() {
   int *a;
@@ -283,14 +271,12 @@ void macroArgContainsRParenInStringTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>277</integer>
+// CHECK-NEXT:    <key>line</key><integer>265</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>TO_NULL_AND_PRINT(a, &quot;Will this ) cause a crash?&quot;)</string>
-// CHECK-NEXT:   <key>expansion</key><string>a =0;print (&quot;Will this ) cause a crash?&quot;)</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>a
 
 #define CALL_FUNCTION(funcCall)   \
   funcCall
@@ -308,14 +294,12 @@ void macroArgContainsLParenRParenTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>302</integer>
+// CHECK-NEXT:    <key>line</key><integer>288</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>CALL_FUNCTION(setToNull(&amp;a))</string>
-// CHECK-NEXT:   <key>expansion</key><string>setToNull (&amp;a )</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>setToNull
 
 void setToNullAndPrint(int **vptr, const char *str) {
   setToNull(vptr);
@@ -333,14 +317,12 @@ void macroArgContainsCommaLParenRParenTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>327</integer>
+// CHECK-NEXT:    <key>line</key><integer>311</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>CALL_FUNCTION(setToNullAndPrint(&amp;a, &quot;Hello!&quot;))</string>
-// CHECK-NEXT:   <key>expansion</key><string>setToNullAndPrint (&amp;a ,&quot;Hello!&quot;)</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>setToNullAndPrint
 
 #define CALL_FUNCTION_WITH_TWO_PARAMS(funcCall, param1, param2) \
   funcCall(param1, param2)
@@ -356,14 +338,12 @@ void macroArgContainsCommaLParenRParenTest2() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>350</integer>
+// CHECK-NEXT:    <key>line</key><integer>332</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>CALL_FUNCTION_WITH_TWO_PARAMS(setToNullAndPrint, &amp;a, &quot;Hello!&quot;)</string>
-// CHECK-NEXT:   <key>expansion</key><string>setToNullAndPrint (&amp;a ,&quot;Hello!&quot;)</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>setToNullAndPrint
 
 #define CALL_LAMBDA(l) \
   l()
@@ -382,24 +362,22 @@ void commaInBracketsTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>376</integer>
+// CHECK-NEXT:    <key>line</key><integer>356</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>CALL_LAMBDA(([&amp;ptr, str] () mutable { TO_NULL(&amp;ptr); }))</string>
-// CHECK-NEXT:   <key>expansion</key><string>([&amp;ptr ,str ]()mutable {setToNull (&amp;ptr );})()</string>
-// CHECK-NEXT:  </dict>
+// CHECK-NEXT:   <key>expansion</key><string>(
+// CHECK:  </dict>
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>376</integer>
+// CHECK-NEXT:    <key>line</key><integer>356</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>CALL_LAMBDA(([&amp;ptr, str] () mutable { TO_NULL(&amp;ptr); }))</string>
-// CHECK-NEXT:   <key>expansion</key><string>([&amp;ptr ,str ]()mutable {setToNull (&amp;ptr );})()</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>(
 
 #define PASTE_CODE(code) \
   code
@@ -421,7 +399,7 @@ void commaInBracesTest() {
 // CHECK-NEXT:    <dict>
 // CHECK-NEXT:     <key>location</key>
 // CHECK-NEXT:     <dict>
-// CHECK-NEXT:      <key>line</key><integer>408</integer>
+// CHECK-NEXT:      <key>line</key><integer>386</integer>
 // CHECK-NEXT:      <key>col</key><integer>3</integer>
 // CHECK-NEXT:      <key>file</key><integer>0</integer>
 // CHECK-NEXT:     </dict>
@@ -434,9 +412,7 @@ void commaInBracesTest() {
 // CHECK-NEXT:    int *ptr = nullptr;
 // CHECK-NEXT:    *ptr = 5;
 // CHECK-NEXT:  })</string>
-// CHECK-NEXT:     <key>expansion</key><string>{int *ptr =nullptr ;*ptr =5;}</string>
-// CHECK-NEXT:    </dict>
-// CHECK-NEXT:   </array>
+// CHECK-NEXT:     <key>expansion</key><string>{
 
 // Example taken from
 // https://gcc.gnu.org/onlinedocs/cpp/Macro-Arguments.html#Macro-Arguments.
@@ -457,14 +433,12 @@ void emptyParamTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>451</integer>
+// CHECK-NEXT:    <key>line</key><integer>427</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>POTENTIALLY_EMPTY_PARAM(,ptr)</string>
-// CHECK-NEXT:   <key>expansion</key><string>;ptr =nullptr </string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>;
 
 #define NESTED_EMPTY_PARAM(a, b) \
   POTENTIALLY_EMPTY_PARAM(a, b);
@@ -482,14 +456,12 @@ void nestedEmptyParamTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>476</integer>
+// CHECK-NEXT:    <key>line</key><integer>450</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>NESTED_EMPTY_PARAM(, ptr)</string>
-// CHECK-NEXT:   <key>expansion</key><string>;ptr =nullptr ;</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>;
 
 #define CALL_FUNCTION_WITH_ONE_PARAM_THROUGH_MACRO(func, param) \
   CALL_FUNCTION(func(param))
@@ -505,14 +477,12 @@ void lParenRParenInNestedMacro() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>499</integer>
+// CHECK-NEXT:    <key>line</key><integer>471</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>CALL_FUNCTION_WITH_ONE_PARAM_THROUGH_MACRO(setToNull, &amp;ptr)</string>
-// CHECK-NEXT:   <key>expansion</key><string>setToNull (&amp;ptr )</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>setToNull
 
 //===----------------------------------------------------------------------===//
 // Tests for variadic macro arguments.
@@ -536,14 +506,12 @@ void variadicMacroArgumentTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>530</integer>
+// CHECK-NEXT:    <key>line</key><integer>500</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>VARIADIC_SET_TO_NULL(ptr, 1, 5, &quot;haha!&quot;)</string>
-// CHECK-NEXT:   <key>expansion</key><string>ptr =nullptr ;variadicFunc (1,5,&quot;haha!&quot;)</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>ptr
 
 void variadicMacroArgumentWithoutAnyArgumentTest() {
   int *ptr;
@@ -558,14 +526,12 @@ void variadicMacroArgumentWithoutAnyArgumentTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>552</integer>
+// CHECK-NEXT:    <key>line</key><integer>520</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>VARIADIC_SET_TO_NULL(ptr)</string>
-// CHECK-NEXT:   <key>expansion</key><string>ptr =nullptr ;variadicFunc ()</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>ptr
 
 //===----------------------------------------------------------------------===//
 // Tests for # and ##.
@@ -586,14 +552,12 @@ void hashHashOperatorTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>580</integer>
+// CHECK-NEXT:    <key>line</key><integer>546</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>DECLARE_FUNC_AND_SET_TO_NULL(whatever, ptr)</string>
-// CHECK-NEXT:   <key>expansion</key><string>void generated_whatever ();ptr =nullptr ;</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>void generated_whatever
 
 void macroArgContainsHashHashInStringTest() {
   int *a;
@@ -606,14 +570,12 @@ void macroArgContainsHashHashInStringTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>600</integer>
+// CHECK-NEXT:    <key>line</key><integer>564</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>TO_NULL_AND_PRINT(a, &quot;Will this ## cause a crash?&quot;)</string>
-// CHECK-NEXT:   <key>expansion</key><string>a =0;print (&quot;Will this ## cause a crash?&quot;)</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>a
 
 #define PRINT_STR(str, ptr) \
   print(#str);              \
@@ -630,14 +592,12 @@ void hashOperatorTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>624</integer>
+// CHECK-NEXT:    <key>line</key><integer>586</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>PRINT_STR(Hello, ptr)</string>
-// CHECK-NEXT:   <key>expansion</key><string>print (&quot;Hello&quot;);ptr =nullptr </string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>print
 
 void macroArgContainsHashInStringTest() {
   int *a;
@@ -650,14 +610,12 @@ void macroArgContainsHashInStringTest() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>644</integer>
+// CHECK-NEXT:    <key>line</key><integer>604</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>TO_NULL_AND_PRINT(a, &quot;Will this # cause a crash?&quot;)</string>
-// CHECK-NEXT:   <key>expansion</key><string>a =0;print (&quot;Will this # cause a crash?&quot;)</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>a
 
 //===----------------------------------------------------------------------===//
 // Tests for more complex macro expansions.
@@ -708,14 +666,12 @@ void testVeryComplexAlgorithm() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>698</integer>
+// CHECK-NEXT:    <key>line</key><integer>656</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>EUCLIDEAN_ALGORITHM(A, B)</string>
-// CHECK-NEXT:   <key>expansion</key><string>if (A &lt;0){A =-A ;}if (B &lt;0){B =-B ;}return B /(B -B );</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>if
 
 #define YET_ANOTHER_SET_TO_NULL(x, y, z)   \
   print((void *) x);                       \
@@ -736,14 +692,12 @@ void test() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>730</integer>
+// CHECK-NEXT:    <key>line</key><integer>686</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>YET_ANOTHER_SET_TO_NULL(5, DO_NOTHING2(&quot;Remember the Vasa&quot;), ptr)</string>
-// CHECK-NEXT:   <key>expansion</key><string>print ((void *)5);print ((void *)&quot;Remember the Vasa&quot;);ptr =nullptr ;</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>print
 
 int garbage_value;
 
@@ -761,14 +715,12 @@ void recursiveMacroUser() {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>754</integer>
+// CHECK-NEXT:    <key>line</key><integer>708</integer>
 // CHECK-NEXT:    <key>col</key><integer>7</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>value</string>
-// CHECK-NEXT:   <key>expansion</key><string>garbage_value </string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>garbage_value
 
 #define FOO(x) int foo() { return x; }
 #define APPLY_ZERO1(function) function(0)
@@ -781,14 +733,12 @@ void useZeroApplier1() { (void)(1 / foo()); } // expected-warning{{Division by z
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>776</integer>
+// CHECK-NEXT:    <key>line</key><integer>728</integer>
 // CHECK-NEXT:    <key>col</key><integer>1</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>APPLY_ZERO1(FOO)</string>
-// CHECK-NEXT:   <key>expansion</key><string>int foo (){return 0;}</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>int foo
 
 #define BAR(x) int bar() { return x; }
 #define APPLY_ZERO2 BAR(0)
@@ -801,14 +751,12 @@ void useZeroApplier2() { (void)(1 / bar()); } // expected-warning{{Division by z
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>796</integer>
+// CHECK-NEXT:    <key>line</key><integer>746</integer>
 // CHECK-NEXT:    <key>col</key><integer>1</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>APPLY_ZERO2</string>
-// CHECK-NEXT:   <key>expansion</key><string>int bar (){return 0;}</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>int
 
 void foo(int &x, const char *str);
 
@@ -827,14 +775,12 @@ void mulitpleParamsResolveToVA_ARGS(void) {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>821</integer>
+// CHECK-NEXT:    <key>line</key><integer>769</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>DISPATCH(x, &quot;LF1M healer&quot;)</string>
-// CHECK-NEXT:   <key>expansion</key><string>foo (x ,&quot;LF1M healer&quot;);x =0;;</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>foo
 
 void variadicCFunction(int &x, const char *str, ...);
 
@@ -852,14 +798,12 @@ void concatVA_ARGS(void) {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>846</integer>
+// CHECK-NEXT:    <key>line</key><integer>792</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>CONCAT_VA_ARGS(x, &quot;You need to construct additional pylons.&quot;, &apos;c&apos;, 9)</string>
-// CHECK-NEXT:   <key>expansion</key><string>variadicCFunction (x ,&quot;You need to construct additional pylons.&quot;,&apos;c&apos;,9);x =0;</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>variadicCFunction
 
 void concatVA_ARGSEmpty(void) {
   int x = 1;
@@ -872,14 +816,12 @@ void concatVA_ARGSEmpty(void) {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>866</integer>
+// CHECK-NEXT:    <key>line</key><integer>810</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>CONCAT_VA_ARGS(x, &quot;You need to construct&quot;)</string>
-// CHECK-NEXT:   <key>expansion</key><string>variadicCFunction (x ,&quot;You need to construct&quot;);x =0;</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>variadicCFunction
 
 #define STRINGIFIED_VA_ARGS(i, fmt, ...) variadicCFunction(i, fmt, #__VA_ARGS__); \
   i = 0;
@@ -895,14 +837,12 @@ void stringifyVA_ARGS(void) {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>889</integer>
+// CHECK-NEXT:    <key>line</key><integer>831</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>STRINGIFIED_VA_ARGS(x, &quot;Additional supply depots required.&quot;, &apos;a&apos;, 10)</string>
-// CHECK-NEXT:   <key>expansion</key><string>variadicCFunction (x ,&quot;Additional supply depots required.&quot;,&quot;&apos;a&apos;, 10&quot;);x =0;</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>variadicCFunction
 
 void stringifyVA_ARGSEmpty(void) {
   int x = 1;
@@ -915,14 +855,12 @@ void stringifyVA_ARGSEmpty(void) {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>909</integer>
+// CHECK-NEXT:    <key>line</key><integer>849</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>STRINGIFIED_VA_ARGS(x, &quot;Additional supply depots required.&quot;)</string>
-// CHECK-NEXT:   <key>expansion</key><string>variadicCFunction (x ,&quot;Additional supply depots required.&quot;,&quot;&quot;);x =0;</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>variadicCFunction
 
 // bz44493: Support GNU-style named variadic arguments in plister
 #define BZ44493_GNUVA(i, args...)  --(i);
@@ -940,11 +878,9 @@ int bz44493(void) {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>933</integer>
+// CHECK-NEXT:    <key>line</key><integer>871</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>BZ44493_GNUVA(a, &quot;arg2&quot;)</string>
-// CHECK-NEXT:   <key>expansion</key><string>--(a );</string>
-// CHECK-NEXT:  </dict>
-// CHECK-NEXT: </array>
+// CHECK-NEXT:   <key>expansion</key><string>--(a
