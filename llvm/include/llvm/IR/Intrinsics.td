@@ -758,7 +758,7 @@ class MSBuiltin<string name> {
 /// 1. Don't touch memory or any hidden state
 /// 2. Can be freely speculated, and
 /// 3. Will not create undef or poison on defined inputs.
-class PureTotalIntrinsic<list<LLVMType> ret_types,
+class PureIntrinsic<list<LLVMType> ret_types,
                 list<LLVMType> param_types = [],
                 list<IntrinsicProperty> intr_properties = [],
                 string name = "",
@@ -1953,7 +1953,7 @@ def int_fake_use : DefaultAttrsIntrinsic<[], [llvm_vararg_ty],
 // Intrinsic to mask out bits of a pointer.
 // First argument must be pointer or vector of pointer. This is checked by the
 // verifier.
-def int_ptrmask: PureTotalIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_anyint_ty]>;
+def int_ptrmask: PureIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_anyint_ty]>;
 
 // Intrinsic to wrap a thread local variable.
 def int_threadlocal_address : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>],
