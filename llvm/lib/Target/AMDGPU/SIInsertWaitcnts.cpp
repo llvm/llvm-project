@@ -65,8 +65,7 @@ static cl::opt<bool> ForceEmitZeroLoadFlag(
 
 static cl::opt<bool> ExpertSchedulingModeFlag(
     "amdgpu-expert-scheduling-mode",
-    cl::desc("Enable expert scheduling mode 2 for all kernel functions (GFX12+ "
-             "only)"),
+    cl::desc("Enable expert scheduling mode 2 for all functions (GFX12+ only)"),
     cl::init(false), cl::Hidden);
 
 namespace {
@@ -486,6 +485,10 @@ private:
 
   WaitcntGenerator *WCG = nullptr;
 
+  // Remember call and return instructions in the function.
+  DenseSet<MachineInstr *> CallInsts;
+  DenseSet<MachineInstr *> ReturnInsts;
+
   // S_ENDPGM instructions before which we should insert a DEALLOC_VGPRS
   // message.
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
@@ -625,7 +628,7 @@ public:
                              WaitcntBrackets &ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
                             WaitcntBrackets &ScoreBrackets);
-  void setSchedulingMode(MachineBasicBlock &MBB, MachineInstr &MI,
+  void setSchedulingMode(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                          bool ExpertMode) const;
 };
 
@@ -2107,6 +2110,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       Opc == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
       Opc == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
+    ReturnInsts.insert(&MI);
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
   }
   // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
@@ -2158,6 +2162,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       // The function is going to insert a wait on everything in its prolog.
       // This still needs to be careful if the call target is a load (e.g. a GOT
       // load). We also need to check WAW dependency with saved PC.
+      CallInsts.insert(&MI);
       Wait = AMDGPU::Waitcnt();
 
       const auto &CallAddrOp = *TII->getNamedOperand(MI, AMDGPU::OpName::src0);
@@ -2729,11 +2734,11 @@ static bool isWaitInstr(MachineInstr &Inst) {
 }
 
 void SIInsertWaitcnts::setSchedulingMode(MachineBasicBlock &MBB,
-                                         MachineInstr &MI,
+                                         MachineBasicBlock::iterator I,
                                          bool ExpertMode) const {
   const unsigned EncodedReg = AMDGPU::Hwreg::HwregEncoding::encode(
       AMDGPU::Hwreg::ID_SCHED_MODE, AMDGPU::Hwreg::HwregOffset::Default, 2);
-  BuildMI(MBB, MI, DebugLoc(), TII->get(AMDGPU::S_SETREG_IMM32_B32))
+  BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_SETREG_IMM32_B32))
       .addImm(ExpertMode ? 2 : 0)
       .addImm(EncodedReg);
 }
@@ -3112,12 +3117,6 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
     Modified = true;
-  } else if (IsExpertMode) {
-    for (MachineBasicBlock::iterator E = EntryBB.end();
-         I != E && (I->isPHI() || I->isMetaInstruction()); ++I)
-      ;
-    setSchedulingMode(EntryBB, *I, true);
-    Modified = true;
   }
 
   // Keep iterating over the blocks in reverse post order, inserting and
@@ -3233,6 +3232,28 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     }
   }
 
+  if (IsExpertMode) {
+    // Enable expert scheduling on function entry. To satisfy ABI requirements
+    // and to allow calls between function with different expert scheduling
+    // settings, disable it around calls and before returns.
+
+    MachineBasicBlock::iterator I = EntryBB.begin();
+    while (I != EntryBB.end() && I->isMetaInstruction())
+      ++I;
+    setSchedulingMode(EntryBB, I, true);
+
+    for (MachineInstr *MI : CallInsts) {
+      MachineBasicBlock &MBB = *MI->getParent();
+      setSchedulingMode(MBB, MI, false);
+      setSchedulingMode(MBB, std::next(MI->getIterator()), true);
+    }
+
+    for (MachineInstr *MI : ReturnInsts)
+      setSchedulingMode(*MI->getParent(), MI, false);
+
+    Modified = true;
+  }
+
   // Deallocate the VGPRs before previously identified S_ENDPGM instructions.
   // This is done in different ways depending on how the VGPRs were allocated
   // (i.e. whether we're in dynamic VGPR mode or not).
@@ -3265,6 +3286,9 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
       }
     }
   }
+
+  CallInsts.clear();
+  ReturnInsts.clear();
   ReleaseVGPRInsts.clear();
   PreheadersToFlush.clear();
   SLoadAddresses.clear();

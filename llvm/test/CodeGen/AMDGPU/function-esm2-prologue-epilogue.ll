@@ -6,6 +6,7 @@ declare i16 @llvm.bswap.i16(i16) nounwind readnone
 define float @missing_truncate_promote_bswap(i32 %arg) {
 ; GFX12-LABEL: missing_truncate_promote_bswap:
 ; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
@@ -16,6 +17,7 @@ define float @missing_truncate_promote_bswap(i32 %arg) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX12-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp = trunc i32 %arg to i16
@@ -23,4 +25,52 @@ bb:
   %tmp2 = bitcast i16 %tmp1 to half
   %tmp3 = fpext half %tmp2 to float
   ret float %tmp3
+}
+
+define float @main(i32 %arg) {
+; GFX12-LABEL: main:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
+; GFX12-NEXT:    s_mov_b32 s2, s33
+; GFX12-NEXT:    s_mov_b32 s33, s32
+; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX12-NEXT:    scratch_store_b32 off, v1, s33 ; 4-byte Folded Spill
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_mov_b32 exec_lo, s0
+; GFX12-NEXT:    s_add_co_i32 s32, s32, 16
+; GFX12-NEXT:    s_getpc_b64 s[0:1]
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
+; GFX12-NEXT:    s_add_co_u32 s0, s0, missing_truncate_promote_bswap@gotpcrel32@lo+12
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, missing_truncate_promote_bswap@gotpcrel32@hi+24
+; GFX12-NEXT:    s_wait_alu depctr_vm_vsrc(0)
+; GFX12-NEXT:    v_writelane_b32 v1, s30, 0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-NEXT:    v_writelane_b32 v1, s31, 1
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 0
+; GFX12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
+; GFX12-NEXT:    v_readlane_b32 s31, v1, 1
+; GFX12-NEXT:    v_readlane_b32 s30, v1, 0
+; GFX12-NEXT:    s_mov_b32 s32, s33
+; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX12-NEXT:    scratch_load_b32 v1, off, s33 ; 4-byte Folded Reload
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_mov_b32 exec_lo, s0
+; GFX12-NEXT:    s_mov_b32 s33, s2
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %tmp = call float @missing_truncate_promote_bswap(i32 %arg)
+  ret float %tmp
 }
