@@ -1,7 +1,5 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
-// XFAIL: *
-
 #include <omp.h>
 #include <stdio.h>
 

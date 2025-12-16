@@ -135,6 +135,8 @@ Objective-C
 Miscellaneous
 ^^^^^^^^^^^^^
 
+- Add wildcard ``.gitignore`` file to the clangd index directory.
+
 Improvements to clang-doc
 -------------------------
 
@@ -197,6 +199,11 @@ Improvements to clang-tidy
   From now on, users should specify explicitly that they want CSA checks to run
   in :program:`clang-tidy`.
 
+- Improved :program:`clang-tidy` by adding the `--removed-arg` option to remove
+  arguments sent to the compiler when invoking Clang-Tidy. This option was also
+  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and 
+  can be configured in the config file through the `RemovedArgs` option.
+
 - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
   moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
   in the 24th release.
@@ -206,6 +213,11 @@ Improvements to clang-tidy
 
 New checks
 ^^^^^^^^^^
+
+- New :doc:`abseil-unchecked-statusor-access
+  <clang-tidy/checks/abseil/unchecked-statusor-access>` check.
+
+  Finds uses of ``absl::StatusOr`` without checking if a value is present.
 
 - New :doc:`bugprone-derived-method-shadowing-base-method
   <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
@@ -530,6 +542,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
   on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
   binary.
+
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` by fixing an issue where
+  the check would sometimes suggest inserting ``override`` in an invalid
+  place.
 
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check to suggest using
