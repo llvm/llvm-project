@@ -183,14 +183,16 @@ public:
     // here.
     if (E->changesVolatileQualification())
       return EmitLoadOfLValue(E);
-    return EmitCast(E->getCastKind(), E->getSubExpr(), E->getType());
+    return EmitCast(E->getCastKind(), E->getSubExpr(),
+                    E->getType().getAtomicUnqualifiedType());
   }
   ComplexPairTy VisitCastExpr(CastExpr *E) {
     if (const auto *ECE = dyn_cast<ExplicitCastExpr>(E))
       CGF.CGM.EmitExplicitCastExprType(ECE, &CGF);
     if (E->changesVolatileQualification())
        return EmitLoadOfLValue(E);
-    return EmitCast(E->getCastKind(), E->getSubExpr(), E->getType());
+    return EmitCast(E->getCastKind(), E->getSubExpr(),
+                    E->getType().getAtomicUnqualifiedType());
   }
   ComplexPairTy VisitCallExpr(const CallExpr *E);
   ComplexPairTy VisitStmtExpr(const StmtExpr *E);
@@ -533,8 +535,6 @@ ComplexPairTy ComplexExprEmitter::EmitScalarToComplexCast(llvm::Value *Val,
                                                           QualType DestType,
                                                           SourceLocation Loc) {
   // Convert the input element to the element type of the complex.
-  if (DestType->isAtomicType())
-    DestType = DestType->castAs<AtomicType>()->getValueType();
   DestType = DestType->castAs<ComplexType>()->getElementType();
   Val = CGF.EmitScalarConversion(Val, SrcType, DestType, Loc);
 
@@ -632,7 +632,8 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_FloatingRealToComplex:
   case CK_IntegralRealToComplex: {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op);
-    return EmitScalarToComplexCast(CGF.EmitScalarExpr(Op), Op->getType(),
+    return EmitScalarToComplexCast(CGF.EmitScalarExpr(Op),
+                                   Op->getType().getAtomicUnqualifiedType(),
                                    DestTy, Op->getExprLoc());
   }
 
@@ -1222,9 +1223,7 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
                          RValue &Val) {
   TestAndClearIgnoreReal();
   TestAndClearIgnoreImag();
-  QualType LHSTy = E->getLHS()->getType();
-  if (const AtomicType *AT = LHSTy->getAs<AtomicType>())
-    LHSTy = AT->getValueType();
+  QualType LHSTy = E->getLHS()->getType().getAtomicUnqualifiedType();
 
   BinOpInfo OpInfo;
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
@@ -1242,7 +1241,7 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
                        E->getComputationResultType(), IsComplexDivisor);
   if (PromotionTypeCR.isNull())
     PromotionTypeCR = E->getComputationResultType();
-  OpInfo.Ty = PromotionTypeCR;
+  OpInfo.Ty = PromotionTypeCR.getAtomicUnqualifiedType();
   QualType ComplexElementTy =
       OpInfo.Ty->castAs<ComplexType>()->getElementType();
   QualType PromotionTypeRHS =
