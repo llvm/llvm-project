@@ -22,6 +22,7 @@
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/SerializedDiagnosticPrinter.h"
+#include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Options/Options.h"
 #include "clang/Tooling/DependencyScanningTool.h"
 #include "llvm/ADT/STLExtras.h"
@@ -828,13 +829,16 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
     }
   };
 
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  DiagnosticOptions DiagOpts;
+  TextDiagnosticPrinter DiagConsumer(OS, DiagOpts);
   llvm::DenseSet<ModuleID> AlreadySeen;
   auto TUDepsOrErr = DepsTool.getTranslationUnitDependencies(
-      Opts.BuildArgs, *Opts.WorkingDirectory, AlreadySeen,
+      Opts.BuildArgs, *Opts.WorkingDirectory, DiagConsumer, AlreadySeen,
       std::move(LookupOutput));
   if (!TUDepsOrErr)
-    return ReportFailure() << "failed to generate a reproducer\n"
-                           << toString(TUDepsOrErr.takeError());
+    return ReportFailure() << "failed to generate a reproducer\n" << S;
 
   TranslationUnitDeps TU = *TUDepsOrErr;
   llvm::raw_fd_ostream ScriptOS(ScriptFD, /*shouldClose=*/true);
