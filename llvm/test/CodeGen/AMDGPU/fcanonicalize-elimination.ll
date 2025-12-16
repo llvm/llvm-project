@@ -857,11 +857,10 @@ define float @v_test_canonicalize_amdgcn_exp2(float %a) {
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_minimum:
 ; GCN: s_waitcnt
-; GCN-NEXT: v_cmp_u_f32_e32 vcc, v1, v1
-; GCN-NEXT: v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-NEXT: v_cmp_u_f32_e32 vcc, v0, v0
-; GCN-NEXT: v_cndmask_b32_e32 v1, v1, v0, vcc
 ; GCN-NEXT: v_min_f32_e32 [[MIN:v[0-9]+]], v0, v1
+; GCN-NEXT: v_mov_b32_e32 [[K:v[0-9]+]], 0x7fc00000
+; GCN-NEXT: v_cmp_o_f32_e32 vcc, v0, v1
+; GCN-NEXT: v_cndmask_b32_e32 v0, [[K]], [[MIN]], vcc
 ; VI-FLUSH-NEXT: v_mul_f32_e32 v0, 1.0, v0
 ; GCN-NEXT: s_setpc_b64
 define float @v_test_canonicalize_minimum(float %a, float %b) {
@@ -872,11 +871,10 @@ define float @v_test_canonicalize_minimum(float %a, float %b) {
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_maximum:
 ; GCN: s_waitcnt
-; GCN-NEXT: v_cmp_u_f32_e32 vcc, v1, v1
-; GCN-NEXT: v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-NEXT: v_cmp_u_f32_e32 vcc, v0, v0
-; GCN-NEXT: v_cndmask_b32_e32 v1, v1, v0, vcc
-; GCN-NEXT: v_max_f32_e32 [[MAX:v[0-9]+]], v0, v1
+; GCN-NEXT: v_max_f32_e32 [[MIN:v[0-9]+]], v0, v1
+; GCN-NEXT: v_mov_b32_e32 [[K:v[0-9]+]], 0x7fc00000
+; GCN-NEXT: v_cmp_o_f32_e32 vcc, v0, v1
+; GCN-NEXT: v_cndmask_b32_e32 v0, [[K]], [[MIN]], vcc
 ; VI-FLUSH-NEXT: v_mul_f32_e32 v0, 1.0, v0
 ; GCN-NEXT: s_setpc_b64
 define float @v_test_canonicalize_maximum(float %a, float %b) {

@@ -4453,13 +4453,6 @@ define float @v_fmul_0_fsub_0_safe_infloop_regression(float %arg) {
 ; SI-NSZ-NEXT:    s_brev_b32 s4, 1
 ; SI-NSZ-NEXT:    v_fma_f32 v0, v0, s4, 0
 ; SI-NSZ-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_fmul_0_fsub_0_safe_infloop_regression:
-; VI:       ; %bb.0: ; %bb
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mul_f32_e32 v0, 0, v0
-; VI-NEXT:    v_sub_f32_e32 v0, 0, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
 ; FIXME: utils/update_llc_test_checks.py will generate redundant VI
 ; labels, remove them, they will cause test failure.
 bb:
