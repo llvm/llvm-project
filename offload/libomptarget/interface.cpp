@@ -359,7 +359,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   ODBG_OS(ODT_Kernel, [&](llvm::raw_ostream &Os) {
     for (uint32_t I = 0; I < KernelArgs->NumArgs; ++I) {
       Os << "Entry " << llvm::format_decimal(I, 2)
-         << " Base=" << KernelArgs->ArgBasePtrs[I]
+         << ": Base=" << KernelArgs->ArgBasePtrs[I]
          << ", Begin=" << KernelArgs->ArgPtrs[I]
          << ", Size=" << KernelArgs->ArgSizes[I]
          << ", Type=" << llvm::format_hex(KernelArgs->ArgTypes[I], 8)
