@@ -192,6 +192,54 @@ define i64 @test_negative_use_shl(i64 %x, i32 %y) {
 ;; Same transformation applies to left shifts.
 ;; ============================================================================
 
+;; --- i8 shr tests (negative - guard must remain) ---
+
+; Do NOT optimize - PTX uses 16-bit registers, clamping happens at 16 not 8
+define i8 @test_guarded_i8_ugt(i8 %x, i8 %shift) {
+; CHECK-LABEL: test_guarded_i8_ugt(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [test_guarded_i8_ugt_param_0];
+; CHECK-NEXT:    ld.param.b8 %r1, [test_guarded_i8_ugt_param_1];
+; CHECK-NEXT:    setp.gt.u32 %p1, %r1, 7;
+; CHECK-NEXT:    shr.u16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    selp.b16 %rs3, 0, %rs2, %p1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ugt i8 %shift, 7
+  %shr = lshr i8 %x, %shift
+  %sel = select i1 %cmp, i8 0, i8 %shr
+  ret i8 %sel
+}
+
+; Do NOT optimize - PTX uses 16-bit registers, clamping happens at 16 not 8
+define i8 @test_guarded_i8_ult(i8 %x, i8 %shift) {
+; CHECK-LABEL: test_guarded_i8_ult(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [test_guarded_i8_ult_param_0];
+; CHECK-NEXT:    ld.param.b8 %r1, [test_guarded_i8_ult_param_1];
+; CHECK-NEXT:    setp.lt.u32 %p1, %r1, 8;
+; CHECK-NEXT:    shr.u16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    selp.b16 %rs3, %rs2, 0, %p1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i8 %shift, 8
+  %shr = lshr i8 %x, %shift
+  %sel = select i1 %cmp, i8 %shr, i8 0
+  ret i8 %sel
+}
+
 ;; --- i16 shr tests ---
 
 ; (select (ugt shift, 15), 0, (srl x, shift)) --> (srl x, shift)
@@ -310,6 +358,54 @@ define i64 @test_guarded_i64_ult(i64 %x, i64 %shift) {
   %shr = lshr i64 %x, %shift
   %sel = select i1 %cmp, i64 %shr, i64 0
   ret i64 %sel
+}
+
+;; --- i8 shl tests (negative - guard must remain) ---
+
+; Do NOT optimize - PTX uses 16-bit registers, clamping happens at 16 not 8
+define i8 @test_guarded_i8_ugt_shl(i8 %x, i8 %shift) {
+; CHECK-LABEL: test_guarded_i8_ugt_shl(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [test_guarded_i8_ugt_shl_param_0];
+; CHECK-NEXT:    ld.param.b8 %r1, [test_guarded_i8_ugt_shl_param_1];
+; CHECK-NEXT:    setp.gt.u32 %p1, %r1, 7;
+; CHECK-NEXT:    shl.b16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    selp.b16 %rs3, 0, %rs2, %p1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ugt i8 %shift, 7
+  %shl = shl i8 %x, %shift
+  %sel = select i1 %cmp, i8 0, i8 %shl
+  ret i8 %sel
+}
+
+; Do NOT optimize - PTX uses 16-bit registers, clamping happens at 16 not 8
+define i8 @test_guarded_i8_ult_shl(i8 %x, i8 %shift) {
+; CHECK-LABEL: test_guarded_i8_ult_shl(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [test_guarded_i8_ult_shl_param_0];
+; CHECK-NEXT:    ld.param.b8 %r1, [test_guarded_i8_ult_shl_param_1];
+; CHECK-NEXT:    setp.lt.u32 %p1, %r1, 8;
+; CHECK-NEXT:    shl.b16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    selp.b16 %rs3, %rs2, 0, %p1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i8 %shift, 8
+  %shl = shl i8 %x, %shift
+  %sel = select i1 %cmp, i8 %shl, i8 0
+  ret i8 %sel
 }
 
 ;; --- i16 shl tests ---

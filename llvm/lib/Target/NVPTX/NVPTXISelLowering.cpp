@@ -6286,6 +6286,13 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
     return SDValue();
 
   unsigned BitWidth = ShiftOp.getValueType().getSizeInBits();
+
+  // Don't optimize i8 shifts. i8 values are stored in 16-bit registers in PTX,
+  // and shift instructions clamp at register width (16), not logical type width
+  // (8). The guard must remain to ensure correct behavior.
+  if (BitWidth < 16)
+    return SDValue();
+
   uint64_t ThreshVal = ThresholdC->getZExtValue();
 
   if (MatchedUGT && ThreshVal != BitWidth - 1)
