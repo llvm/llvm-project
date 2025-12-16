@@ -789,7 +789,8 @@ class QCIRVInstESStore<bits<3> funct3, bits<2> funct2, string opcodestr>
 
 class QCIRVInstEAI<bits<3> funct3, bits<1> funct1, string opcodestr>
     : RVInst48<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, bare_simm32:$imm),
-               opcodestr, "$rd, $imm", [], InstFormatOther> {
+               opcodestr, "$rd, $imm", [], InstFormatOther>,
+      Sched<[WriteIALU, ReadIALU]> {
   bits<5> rd;
   bits<32> imm;
 
@@ -804,7 +805,8 @@ class QCIRVInstEAI<bits<3> funct3, bits<1> funct1, string opcodestr>
 class QCIRVInstEI<bits<3> funct3, bits<2> funct2, string opcodestr>
     : QCIRVInstEIBase<funct3, funct2, (outs GPRNoX0:$rd),
                       (ins GPRNoX0:$rs1, simm26:$imm), opcodestr,
-                      "$rd, $rs1, $imm">;
+                      "$rd, $rs1, $imm">,
+      Sched<[WriteIALU, ReadIALU]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIRVInst48EJ<bits<2> func2, string opcodestr>
