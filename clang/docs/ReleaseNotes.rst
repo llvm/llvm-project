@@ -382,6 +382,7 @@ clang-format
 
 libclang
 --------
+- Visit constraints of `auto` type to properly visit concept usages (#GH166580)
 
 Code Completion
 ---------------
