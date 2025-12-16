@@ -130,15 +130,21 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
         // otool expects the fully encoded ADD/LDR instruction to be passed in
         // as the value here, so reconstruct it:
         unsigned EncodedInst;
-        if (MI.getOpcode() == AArch64::ADDXri)
+        switch (MI.getOpcode()) {
+        case AArch64::ADDXri:
           EncodedInst = 0x91000000;
-        else if (MI.getOpcode() == AArch64::ADDWri)
+          break;
+        case AArch64::ADDWri:
           EncodedInst = 0x11000000;
-        else if (MI.getOpcode() == AArch64::LDRXui)
+          break;
+        case AArch64::LDRXui:
           EncodedInst = 0xF9400000;
-        else // LDRWui
+          break;
+        default: // LDRWui
           EncodedInst = 0xB9400000;
-        EncodedInst |= Value << 10; // imm12 [+ shift:2 for ADD]
+          break;
+        }
+        EncodedInst |= Value << 10; // imm12 (ADD: imm+shift, LDR: offset)
         EncodedInst |=
           MCRI.getEncodingValue(MI.getOperand(1).getReg()) << 5; // Rn
         EncodedInst |= MCRI.getEncodingValue(MI.getOperand(0).getReg()); // Rd
