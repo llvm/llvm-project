@@ -165,7 +165,7 @@ namespace clang {
     /// Objective-C method calls.
     OK_ObjCSubscript,
 
-    /// A matrix component is a single element of a matrix.
+    /// A matrix component is a single element or range of elements on a matrix.
     OK_MatrixComponent
   };
 

@@ -2807,8 +2807,7 @@ public:
                             SourceLocation RBracketLoc)
       : Expr(MatrixSingleSubscriptExprClass, T,
              Base->getValueKind(), // lvalue/rvalue follows the matrix base
-             OK_MatrixComponent) { // or OK_Ordinary/OK_VectorComponent if you
-                                   // prefer
+             OK_MatrixComponent) {
     SubExprs[BASE] = Base;
     SubExprs[ROW_IDX] = RowIdx;
     ArrayOrMatrixSubscriptExprBits.RBracketLoc = RBracketLoc;

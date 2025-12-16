@@ -5160,8 +5160,6 @@ ExprResult Sema::CreateBuiltinMatrixSubscriptExpr(Expr *Base, Expr *RowIdx,
   RowIdx = RowR.get();
 
   if (!ColumnIdx) {
-    if (getLangOpts().HLSL)
-      return CreateBuiltinMatrixSingleSubscriptExpr(Base, RowIdx, RBLoc);
     return new (Context) MatrixSubscriptExpr(
         Base, RowIdx, ColumnIdx, Context.IncompleteMatrixIdxTy, RBLoc);
   }
@@ -21641,12 +21639,17 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     return ExprError();
   }
 
-  case BuiltinType::IncompleteMatrixIdx:
-    Diag(cast<MatrixSubscriptExpr>(E->IgnoreParens())
-             ->getRowIdx()
-             ->getBeginLoc(),
-         diag::err_matrix_incomplete_index);
+  case BuiltinType::IncompleteMatrixIdx: {
+    auto *MS = cast<MatrixSubscriptExpr>(E->IgnoreParens());
+    // At this point, we know there was no second [] to complete the operator.
+    // In HLSL, treat "m[row]" as selecting a row lane of column sized vector.
+    if (getLangOpts().HLSL) {
+      return CreateBuiltinMatrixSingleSubscriptExpr(
+          MS->getBase(), MS->getRowIdx(), E->getExprLoc());
+    }
+    Diag(MS->getRowIdx()->getBeginLoc(), diag::err_matrix_incomplete_index);
     return ExprError();
+  }
 
   // Expressions of unknown type.
   case BuiltinType::ArraySection:

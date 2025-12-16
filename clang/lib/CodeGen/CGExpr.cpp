@@ -2473,22 +2473,18 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
     unsigned NumCols = MT->getNumColumns();
 
     llvm::Value *MatrixVec = EmitLoadOfScalar(LV, Loc);
-
     llvm::Value *Row = LV.getMatrixRowIdx();
-    llvm::Value *Result =
-        llvm::PoisonValue::get(ConvertType(LV.getType())); // <NumCols x T>
+    llvm::Type *ElemTy = ConvertType(MT->getElementType());
+    llvm::Type *RowTy = llvm::FixedVectorType::get(ElemTy, MT->getNumColumns());
+    llvm::Value *Result = llvm::PoisonValue::get(RowTy); // <NumCols x T>
 
     llvm::MatrixBuilder MB(Builder);
 
     for (unsigned Col = 0; Col < NumCols; ++Col) {
       llvm::Value *ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
-
       llvm::Value *EltIndex = MB.CreateIndex(Row, ColIdx, NumRows);
-
       llvm::Value *Elt = Builder.CreateExtractElement(MatrixVec, EltIndex);
-
       llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
-
       Result = Builder.CreateInsertElement(Result, Elt, Lane);
     }
 
@@ -4981,9 +4977,9 @@ LValue CodeGenFunction::EmitMatrixSingleSubscriptExpr(
 
     unsigned Row = RowConst->getZExtValue();
     unsigned Start = Row * NumCols;
-    for (unsigned C = 0; C < NumCols; ++C) {
+    for (unsigned C = 0; C < NumCols; ++C)
       Indices.push_back(llvm::ConstantInt::get(Int32Ty, Start + C));
-    }
+
     llvm::Constant *Elts = llvm::ConstantVector::get(Indices);
     return LValue::MakeExtVectorElt(
         MaybeConvertMatrixAddress(Base.getAddress(), *this), Elts,

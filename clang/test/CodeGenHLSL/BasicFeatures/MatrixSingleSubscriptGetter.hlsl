@@ -151,7 +151,7 @@ int4 getIntMatrixDynamic(int4x4 M, int index) {
 // CHECK-NEXT:    ret <4 x float> [[ADD32]]
 //
 float4 AddFloatMatrixConstant(float4x4 M) {
-    return M[0] + M[1] + M[2] +M[3];
+    return M[0] + M[1] + M[2] + M[3];
 }
 
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z20AddIntMatrixConstantu11matrix_typeILm4ELm4EiE(
@@ -201,5 +201,5 @@ float4 AddFloatMatrixConstant(float4x4 M) {
 // CHECK-NEXT:    ret <4 x i32> [[ADD32]]
 //
 int4 AddIntMatrixConstant(int4x4 M) {
-   return M[0] + M[1] + M[2] +M[3];
+   return M[0] + M[1] + M[2] + M[3];
 }

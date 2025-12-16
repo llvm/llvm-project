@@ -48,7 +48,7 @@ export float4 AddFloatMatrixConstant(float4x4 M) {
 // CHECK-NEXT: MatrixSingleSubscriptExpr {{.*}} 'vector<float, 4>' lvalue matrixcomponent
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float4x4':'matrix<float, 4, 4>' lvalue ParmVar {{.*}} 'M' 'float4x4':'matrix<float, 4, 4>'
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 3
-    return M[0] + M[1] + M[2] +M[3];
+    return M[0] + M[1] + M[2] + M[3];
 }
 
 export int4 AddIntMatrixConstant(int4x4 M) {
@@ -73,5 +73,5 @@ export int4 AddIntMatrixConstant(int4x4 M) {
 // CHECK-NEXT: MatrixSingleSubscriptExpr {{.*}} 'vector<int, 4>' lvalue matrixcomponent
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int4x4':'matrix<int, 4, 4>' lvalue ParmVar {{.*}} 'M' 'int4x4':'matrix<int, 4, 4>'
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 3
-   return M[0] + M[1] + M[2] +M[3];
+   return M[0] + M[1] + M[2] + M[3];
 }

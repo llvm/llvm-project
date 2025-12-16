@@ -200,6 +200,9 @@ class LValue {
     // Index into a vector subscript: V[i]
     llvm::Value *VectorIdx;
 
+    // Index into a matrix row subscript: M[i]
+    llvm::Value *MatrixRowIdx;
+
     // ExtVector element subset: V.xyx
     llvm::Constant *VectorElts;
 
@@ -402,7 +405,7 @@ public:
 
   llvm::Value *getMatrixRowIdx() const {
     assert(isMatrixRow());
-    return VectorIdx;
+    return MatrixRowIdx;
   }
 
   // extended vector elements.
@@ -498,7 +501,7 @@ public:
                               TBAAAccessInfo TBAAInfo) {
     LValue LV;
     LV.LVType = MatrixRow;
-    LV.VectorIdx = RowIdx; // store the row index here
+    LV.MatrixRowIdx = RowIdx; // store the row index here
     LV.Initialize(MatrixTy, MatrixTy.getQualifiers(), Addr, BaseInfo, TBAAInfo);
     return LV;
   }
