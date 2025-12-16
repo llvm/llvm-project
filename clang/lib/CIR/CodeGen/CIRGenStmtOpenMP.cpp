@@ -30,8 +30,35 @@ CIRGenFunction::emitOMPErrorDirective(const OMPErrorDirective &s) {
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPParallelDirective");
-  return mlir::failure();
+  mlir::LogicalResult res = mlir::success();
+  llvm::SmallVector<mlir::Type> retTy;
+  llvm::SmallVector<mlir::Value> operands;
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  auto parallelOp =
+      mlir::omp::ParallelOp::create(builder, begin, retTy, operands);
+  emitOpenMPClauses(parallelOp, s.clauses());
+
+  {
+    mlir::Block &block = parallelOp.getRegion().emplaceBlock();
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPointToEnd(&block);
+
+    LexicalScope ls{*this, begin, builder.getInsertionBlock()};
+
+    if (s.hasCancel())
+      getCIRGenModule().errorNYI(s.getBeginLoc(),
+                                 "OpenMP Parallel with Cancel");
+    if (s.getTaskReductionRefExpr())
+      getCIRGenModule().errorNYI(s.getBeginLoc(),
+                                 "OpenMP Parallel with Task Reduction");
+
+    res = emitStmt(s.getAssociatedStmt(), /*useCurrentScope=*/true);
+
+    mlir::omp::TerminatorOp::create(builder, end);
+  }
+  return res;
 }
 
 mlir::LogicalResult
