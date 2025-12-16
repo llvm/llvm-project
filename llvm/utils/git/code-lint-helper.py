@@ -298,6 +298,20 @@ class Doc8LintHelper(LintHelper):
     def instructions(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
         return f"doc8 -q {' '.join(files_to_lint)}"
 
+    def create_comment_text(
+        self, linter_output: str, files_to_lint: Sequence[str], args: LintArgs
+    ) -> str:
+        comment = super().create_comment_text(linter_output, files_to_lint, args)
+        if "D001" in linter_output or "Line too long" in linter_output:
+            parts = comment.rsplit("</details>", 1)
+            if len(parts) == 2:
+                return (
+                    parts[0]
+                    + "\nNote: documentation lines should be no more than 79 characters wide.\n</details>"
+                    + parts[1]
+                )
+        return comment
+
     def filter_changed_files(self, changed_files: Iterable[str]) -> Sequence[str]:
         return list(filter(self._should_lint_file, changed_files))
 
@@ -332,10 +346,6 @@ class Doc8LintHelper(LintHelper):
         parts: List[str] = []
         if output := proc.stdout.strip():
             parts.append(output)
-            if "D001" in output or "Line too long" in output:
-                parts.append(
-                    "Note: documentation lines should be no more than 79 characters wide."
-                )
 
         if error_output := proc.stderr.strip():
             parts.append(f"stderr:\n{error_output}")
