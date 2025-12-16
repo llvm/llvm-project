@@ -1036,6 +1036,14 @@ void instantiate() {
   ignoreInstantiations<false>();
 }
 
+void test_init_stmt_true() {
+  void foo(int i);
+  if (int i = 0; true)
+    foo(i);
+  // CHECK-MESSAGES: :[[@LINE-2]]:18: warning: redundant boolean literal in if statement condition [readability-simplify-boolean-expr]
+  // CHECK-FIXES:   { int i = 0;foo(i) };
+}
+
 void if_with_init_statement() {
   bool x = true;
   if (bool y = x; y == true) {
@@ -1044,10 +1052,19 @@ void if_with_init_statement() {
   }
 }
 
-void test_init_stmt_true() {
-  void foo(int i);
-  if (int i = 0; true)
-    foo(i);
-  // CHECK-MESSAGES: :[[@LINE-2]]:18: warning: redundant boolean literal in if statement condition [readability-simplify-boolean-expr]
-  // CHECK-FIXES:   { int i = 0;foo(i) };
+// This matches the "RAII" and "Cond" logic from the deleted C++17 file
+// to ensure we don't regress or crash on these complex cases.
+void test_cxx17_raii_and_complex() {
+  struct RAII {};
+  bool Cond = true;
+  // Case 1: Init statement with non-boolean type
+  if (RAII Object; Cond) {
+    // No warning expected here for now, just verifying no crash.
+  }
+  // Case 2: Init statement declaring the condition variable
+  if (bool X = Cond; X) {
+    // No warning expected, verifying no crash.
+  }
 }
+
+
