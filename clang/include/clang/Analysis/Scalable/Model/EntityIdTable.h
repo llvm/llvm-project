@@ -18,7 +18,7 @@ namespace clang::ssaf {
 
 /// Manages entity name interning and provides efficient EntityId handles.
 ///
-/// The table maps each unique EntityName maps to exactly one EntityId.
+/// The table maps each unique EntityName to exactly one EntityId.
 /// Entities are never removed.
 class EntityIdTable {
   std::map<EntityName, EntityId> Entities;
