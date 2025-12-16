@@ -40,7 +40,6 @@ add_clang_library(clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic
-  clangFormat
   clangLex
 
   DEPENDS
