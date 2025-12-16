@@ -3,7 +3,8 @@
 bugprone-unsafe-functions
 =========================
 
-Checks for functions that have safer, more secure replacements available, or are considered deprecated due to design flaws.
+Checks for functions that have safer, more secure replacements available, or
+are considered deprecated due to design flaws.
 The check heavily relies on the functions from the
 **Annex K.** "Bounds-checking interfaces" of C11.
 
