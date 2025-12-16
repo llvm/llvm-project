@@ -4441,9 +4441,9 @@ public:
 
       DeclIDs.push_back(ID);
     };
+    ASTReader *Chain = Writer.getChain();
     for (NamedDecl *D : Decls) {
-      if (ASTReader *Chain = Writer.getChain();
-          Chain && isa<NamespaceDecl>(D) && D->isFromASTFile() &&
+      if (Chain && isa<NamespaceDecl>(D) && D->isFromASTFile() &&
           D == Chain->getKeyDeclaration(D)) {
         // In ASTReader, we stored only the key declaration of a namespace decl
         // for this TU rather than storing all of the key declarations from each
@@ -4641,7 +4641,7 @@ uint64_t ASTWriter::WriteSpecializationInfoLookupTable(
   return Offset;
 }
 
-/// Returns ture if all of the lookup result are either external, not emitted or
+/// Returns true if all of the lookup result are either external, not emitted or
 /// predefined. In such cases, the lookup result is not interesting and we don't
 /// need to record the result in the current being written module. Return false
 /// otherwise.

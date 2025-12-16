@@ -8,11 +8,11 @@
 
 #include "src/__support/threads/CndVar.h"
 #include "src/__support/CPP/mutex.h"
-#include "src/__support/OSUtil/syscall.h"           // syscall_impl
+#include "src/__support/OSUtil/syscall.h" // syscall_impl
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_word.h" // FutexWordType
-#include "src/__support/threads/linux/raw_mutex.h"  // RawMutex
 #include "src/__support/threads/mutex.h"            // Mutex
+#include "src/__support/threads/raw_mutex.h"        // RawMutex
 
 #include <sys/syscall.h> // For syscall numbers.
 
