@@ -12,6 +12,7 @@
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBError.h"
 
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
@@ -54,7 +55,8 @@ RestartRequestHandler::Run(const std::optional<RestartArguments> &args) const {
     ScopeSyncMode scope_sync_mode(dap.debugger);
     lldb::StateType state = process.GetState();
     if (state != lldb::eStateConnected) {
-      process.Kill();
+      if (lldb::SBError error = process.Kill(); error.Fail())
+        return ToError(error);
     }
     // Clear the list of thread ids to avoid sending "thread exited" events
     // for threads of the process we are terminating.
@@ -63,8 +65,8 @@ RestartRequestHandler::Run(const std::optional<RestartArguments> &args) const {
 
   // FIXME: Should we run 'preRunCommands'?
   // FIXME: Should we add a 'preRestartCommands'?
-  if (llvm::Error err = LaunchProcess(*dap.last_launch_request))
-    return err;
+  if (llvm::Error error = LaunchProcess(*dap.last_launch_request))
+    return error;
 
   SendProcessEvent(dap, Launch);
 
@@ -72,10 +74,11 @@ RestartRequestHandler::Run(const std::optional<RestartArguments> &args) const {
   // Because we're restarting, configuration has already happened so we can
   // continue the process right away.
   if (dap.stop_at_entry) {
-    if (llvm::Error err = SendThreadStoppedEvent(dap, /*on_entry=*/true))
-      return err;
+    if (llvm::Error error = SendThreadStoppedEvent(dap, /*on_entry=*/true))
+      return error;
   } else {
-    dap.target.GetProcess().Continue();
+    if (lldb::SBError error = dap.target.GetProcess().Continue(); error.Fail())
+      return ToError(error);
   }
 
   return llvm::Error::success();
