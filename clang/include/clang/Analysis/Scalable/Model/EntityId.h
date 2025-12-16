@@ -17,8 +17,7 @@
 
 #include <cstddef>
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 
 class EntityIdTable;
 
@@ -43,7 +42,6 @@ public:
   bool operator!=(const EntityId &Other) const { return !(*this == Other); }
 };
 
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf
 
 #endif // LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITY_ID_H

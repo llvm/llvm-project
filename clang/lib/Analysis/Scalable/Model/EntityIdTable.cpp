@@ -9,8 +9,7 @@
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"
 #include <cassert>
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 
 EntityId EntityIdTable::getId(const EntityName &Name) {
   const auto It = Entities.find(Name);
@@ -36,5 +35,4 @@ void EntityIdTable::forEach(
 
 size_t EntityIdTable::count() const { return Entities.size(); }
 
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf

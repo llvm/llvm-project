@@ -14,8 +14,7 @@
 #include <functional>
 #include <map>
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 
 /// Manages entity name interning and provides efficient EntityId handles.
 ///
@@ -46,7 +45,6 @@ public:
   size_t count() const;
 };
 
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf
 
 #endif // LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITY_ID_TABLE_H
