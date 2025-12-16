@@ -340,7 +340,6 @@ Error processModule(Module &M, raw_ostream &OS) {
       // Process single function
       const Function *F = [&]() -> const Function * {
         if (auto *ExactMatch = M.getFunction(FunctionName)) return ExactMatch;
-
         const auto Demangled = llvm::demangle(FunctionName);
         auto It = llvm::find_if(M, [&](const Function &Func) {
           return llvm::demangle(Func.getName().str()) == Demangled;
