@@ -912,6 +912,10 @@ void PHINode::replaceIncomingBlockWith(const BasicBlock *Old, BasicBlock *New) {
       setIncomingBlock(Idx, New);
 }
 void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate) {
+  // Avoid duplicate tracking by going through this->removeIncomingValue here at
+  // the expense of some performance. Copy PHI::removeIncomingValueIf more
+  // directly if performance becomes an issue.
+
   auto &Tracker = Ctx.getTracker();
   cast<llvm::PHINode>(Val)->removeIncomingValueIf([&](unsigned Idx) {
     if (Predicate(Idx)) {
