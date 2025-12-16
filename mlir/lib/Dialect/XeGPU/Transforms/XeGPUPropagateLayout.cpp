@@ -608,10 +608,6 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
     propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
     return;
   }
-
-  SetVector<int64_t> broadcastUnitDims = broadcast.computeBroadcastedUnitDims();
-  resultLayout = cast<xegpu::DistributeLayoutAttr>(resultLayout.get())
-                     .setUnitDimData(broadcastUnitDims);
   propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
 }
 
