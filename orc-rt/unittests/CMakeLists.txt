@@ -23,6 +23,7 @@ add_orc_rt_unittest(CoreTests
   IntervalSetTest.cpp
   MathTest.cpp
   MemoryFlagsTest.cpp
+  QueueingTaskDispatcherTest.cpp
   RTTITest.cpp
   ScopeExitTest.cpp
   SessionTest.cpp
