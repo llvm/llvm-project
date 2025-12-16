@@ -75,8 +75,8 @@ protected:
 } // anonymous namespace
 
 std::optional<std::string>
-DependencyScanningTool::getDependencyFile(StringRef CWD,
-                                          ArrayRef<std::string> CommandLine,
+DependencyScanningTool::getDependencyFile(ArrayRef<std::string> CommandLine,
+                                          StringRef CWD,
                                           DiagnosticConsumer &DiagConsumer) {
   MakeDependencyPrinterConsumer DepConsumer;
   CallbackActionController Controller(nullptr);

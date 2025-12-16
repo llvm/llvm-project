@@ -237,7 +237,7 @@ TEST(DependencyScanner, ScanDepsWithFS) {
 
   IgnoringDiagConsumer DiagConsumer;
   std::optional<std::string> DepFile =
-      ScanTool.getDependencyFile(CWD, CommandLine, DiagConsumer);
+      ScanTool.getDependencyFile(CommandLine, CWD, DiagConsumer);
   ASSERT_TRUE(DepFile.has_value());
   EXPECT_EQ(llvm::sys::path::convert_to_slash(*DepFile),
             "test.cpp.o: /root/test.cpp /root/header.h\n");
@@ -297,7 +297,7 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
   // unnecessarily.
   IgnoringDiagConsumer DiagConsumer;
   std::optional<std::string> DepFile =
-      ScanTool.getDependencyFile(CWD, CommandLine, DiagConsumer);
+      ScanTool.getDependencyFile(CommandLine, CWD, DiagConsumer);
   ASSERT_FALSE(DepFile.has_value());
 
   EXPECT_TRUE(!llvm::is_contained(InterceptFS->StatPaths, OtherPath));

@@ -48,7 +48,7 @@ public:
   /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
   /// dependency file contents otherwise.
   std::optional<std::string>
-  getDependencyFile(StringRef CWD, ArrayRef<std::string> CommandLine,
+  getDependencyFile(ArrayRef<std::string> CommandLine, StringRef CWD,
                     DiagnosticConsumer &DiagConsumer);
 
   /// Collect the module dependency in P1689 format for C++20 named modules.
