@@ -22,7 +22,7 @@ bool EntityIdTable::exists(const EntityName &Name) const {
 }
 
 void EntityIdTable::forEach(
-    std::function<void(const EntityName &, EntityId)> Callback) const {
+    llvm::function_ref<void(const EntityName &, EntityId)> Callback) const {
   for (const auto& [Name, Id] : Entities) {
     Callback(Name, Id);
   }
