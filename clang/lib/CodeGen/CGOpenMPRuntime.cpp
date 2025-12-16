@@ -9116,10 +9116,12 @@ private:
           //  * It preserves the correct rank so targetDataUpdate() computes
           //    DimSize == 2 for cases like strided array sections originating
           //    from user-defined mappers (e.g. test with s.data[0:8:2]).
-          UnionCurInfo.NonContigInfo.Dims.insert(
-              UnionCurInfo.NonContigInfo.Dims.begin(), 1);
-          emitCombinedEntry(CombinedInfo, UnionCurInfo.Types, PartialStruct,
-                            /*IsMapThis*/ !VD, OMPBuilder, VD);
+          GroupUnionCurInfo.NonContigInfo.Dims.insert(
+              GroupUnionCurInfo.NonContigInfo.Dims.begin(), 1);
+          emitCombinedEntry(CurInfo, GroupUnionCurInfo.Types, PartialStruct,
+                            AttachInfo, /*IsMapThis=*/!VD, OMPBuilder, VD,
+                            /*OffsetForMemberOfFlag=*/0,
+                            /*NotTargetParams=*/true);
         }
 
         // Append this group's results to the overall CurInfo in the correct
@@ -9127,6 +9129,7 @@ private:
         CurInfo.append(GroupUnionCurInfo);
         if (AttachInfo.isValid())
           emitAttachEntry(CGF, CurInfo, AttachInfo);
+      }
 
       // We need to append the results of this capture to what we already have.
       CombinedInfo.append(CurInfo);
