@@ -465,8 +465,8 @@ struct XeGPUOptimizeBlockLoadsPass final
     // converted.
     target.addDynamicallyLegalOp<vector::ExtractOp>(
         [&](vector::ExtractOp extractOp) {
-          auto layout =
-              xegpu::getTempLayout(dyn_cast<OpResult>(extractOp.getResult()));
+          auto layout = xegpu::getTemporaryLayout(
+              dyn_cast<OpResult>(extractOp.getResult()));
           if (!layout)
             return true;
           auto laneLayout = layout.getEffectiveLaneLayoutAsInt();

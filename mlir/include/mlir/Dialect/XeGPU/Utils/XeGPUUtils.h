@@ -119,10 +119,10 @@ int getLargestDivisor(T dim, ArrayRef<T> candidates,
                       ArrayRef<T> candidateMultiples = {});
 
 /// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
-std::string getTemporaryLayout(const OpOperand &operand);
+std::string getTemporaryLayoutName(const OpOperand &operand);
 
 /// Return the attribute name for the OpResult to attach DistributeLayoutAttr
-std::string getTemporaryLayout(const OpResult result);
+std::string getTemporaryLayoutName(const OpResult result);
 
 /// Retrieves the DistributeLayoutAttr associated with a given Value. For
 /// TensorDescType values, the DistributeLayoutAttr is extracted from the
@@ -162,7 +162,7 @@ void setDistributeLayoutAttr(const OpOperand &opr,
 template <typename T,
           typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
                                       std::is_same_v<T, OpResult>>>
-DistributeLayoutAttr getTempLayout(const T &operandOrResult);
+DistributeLayoutAttr getTemporaryLayout(const T &operandOrResult);
 
 template <typename T,
           typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||

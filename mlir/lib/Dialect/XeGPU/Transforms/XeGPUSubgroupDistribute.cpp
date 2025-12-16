@@ -869,11 +869,11 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
           storeScatterOp, "Expected at most 2D result at SG level");
 
     std::string layoutPayloadName =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(0));
+        xegpu::getTemporaryLayoutName(storeScatterOp->getOpOperand(0));
     std::string layoutOffsetsName =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(2));
+        xegpu::getTemporaryLayoutName(storeScatterOp->getOpOperand(2));
     std::string layoutMaskName =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(3));
+        xegpu::getTemporaryLayoutName(storeScatterOp->getOpOperand(3));
 
     xegpu::LayoutAttr layoutPayload =
         storeScatterOp->getAttrOfType<xegpu::LayoutAttr>(layoutPayloadName);
@@ -1152,9 +1152,9 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
                                          "Expected 1D offsets and mask vector");
     // Assume offset and mask producers will be distributed as well.
     std::string layoutOffsetsName =
-        xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(1));
+        xegpu::getTemporaryLayoutName(loadGatherOp->getOpOperand(1));
     std::string layoutMaskName =
-        xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(2));
+        xegpu::getTemporaryLayoutName(loadGatherOp->getOpOperand(2));
 
     xegpu::LayoutAttr layoutOffsets =
         loadGatherOp->getAttrOfType<xegpu::LayoutAttr>(layoutOffsetsName);
@@ -1225,7 +1225,7 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
       DenseElementsAttr::get(acc.getType(), zeroAttr));
   // Reduction result should have the same layout as the accumulator.
   xegpu::setTemporaryLayout(cast<OpResult>(reductionResult),
-                            xegpu::getTempLayout(dyn_cast<OpResult>(acc)));
+                            xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc)));
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
   for (int i = 0; i < nSlices; ++i) {
@@ -1253,8 +1253,8 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
     // accumulator. Shape cast source has the same layout as the original
     // reduction source.
     // TODO: other ops generated here may also need layout attributes.
-    auto srcLayout = xegpu::getTempLayout(dyn_cast<OpResult>(src));
-    auto accLayout = xegpu::getTempLayout(dyn_cast<OpResult>(acc));
+    auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
+    auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
 
     xegpu::setTemporaryLayout(slice->getOpOperand(0), srcLayout);
     xegpu::setTemporaryLayout(slice->getOpResult(0), accLayout);
@@ -1350,7 +1350,7 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
     VectorType resultType = cast<VectorType>(reductionOp.getType());
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getTempLayout(reductionOp->getOpOperand(0));
+        xegpu::getTemporaryLayout(reductionOp->getOpOperand(0));
 
     FailureOr<VectorType> sourceDistTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(sourceLayout, sourceType);
@@ -1512,9 +1512,9 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
         dyn_cast<VectorType>(broadcastOp.getResult().getType());
 
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getTempLayout(broadcastOp->getOpOperand(0));
+        xegpu::getTemporaryLayout(broadcastOp->getOpOperand(0));
     xegpu::DistributeLayoutAttr resultLayout =
-        xegpu::getTempLayout(dyn_cast<OpResult>(broadcastOp.getResult()));
+        xegpu::getTemporaryLayout(dyn_cast<OpResult>(broadcastOp.getResult()));
 
     FailureOr<VectorType> sourceDistType;
     Type sourceElemOrDistType;
@@ -1603,9 +1603,9 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
     auto resultDistTy =
         cast<VectorType>(warpOp.getResult(operandNumber).getType());
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getTempLayout(shapeCastOp->getOpOperand(0));
+        xegpu::getTemporaryLayout(shapeCastOp->getOpOperand(0));
     xegpu::DistributeLayoutAttr resultLayout =
-        xegpu::getTempLayout(dyn_cast<OpResult>(shapeCastOp.getResult()));
+        xegpu::getTemporaryLayout(dyn_cast<OpResult>(shapeCastOp.getResult()));
     if (!sourceLayout || !resultLayout)
       return rewriter.notifyMatchFailure(
           warpOp,
@@ -1687,7 +1687,7 @@ struct VectorExtractStridedSliceDistribution
       int64_t distributedDim = distributedDims[0];
       int sourceDistrDimSize =
           extractOp.getSourceVectorType().getShape()[distributedDim];
-      auto sourceLayout = xegpu::getTempLayout(extractOp->getOpOperand(0));
+      auto sourceLayout = xegpu::getTemporaryLayout(extractOp->getOpOperand(0));
       if (!sourceLayout || sourceLayout.getEffectiveLaneLayoutAsInt().empty())
         return rewriter.notifyMatchFailure(
             warpOp, "the source of extract_strided_slice op lacks distribution "
@@ -1797,8 +1797,8 @@ struct VectorInsertStridedSliceDistribution
             "rank) dims of dest vector");
       int64_t srcDistrDimSize = srcType.getDimSize(sourceDistributedDim);
       // Obtain the source and dest layouts.
-      auto destLayout = xegpu::getTempLayout(insertOp->getOpOperand(1));
-      auto sourceLayout = xegpu::getTempLayout(insertOp->getOpOperand(0));
+      auto destLayout = xegpu::getTemporaryLayout(insertOp->getOpOperand(1));
+      auto sourceLayout = xegpu::getTemporaryLayout(insertOp->getOpOperand(0));
       if (!destLayout || !sourceLayout ||
           destLayout.getEffectiveLaneLayoutAsInt().empty() ||
           sourceLayout.getEffectiveLaneLayoutAsInt().empty())
@@ -1913,7 +1913,7 @@ struct VectorBitcastDistribution final : public gpu::WarpDistributionPattern {
     unsigned operandIdx = operand->getOperandNumber();
     VectorType distributedSourceType =
         getDistVecTypeBasedOnLaneLayout(
-            xegpu::getTempLayout(bitcastOp->getOpOperand(0)),
+            xegpu::getTemporaryLayout(bitcastOp->getOpOperand(0)),
             bitcastOp.getSourceVectorType())
             .value_or(VectorType());
     if (!distributedSourceType)
@@ -1956,9 +1956,9 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
     auto transposeOp = operand->get().getDefiningOp<vector::TransposeOp>();
     unsigned operandIdx = operand->getOperandNumber();
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getTempLayout(transposeOp->getOpOperand(0));
+        xegpu::getTemporaryLayout(transposeOp->getOpOperand(0));
     xegpu::DistributeLayoutAttr resultLayout =
-        xegpu::getTempLayout(transposeOp->getOpResult(0));
+        xegpu::getTemporaryLayout(transposeOp->getOpResult(0));
     if (!sourceLayout || !resultLayout)
       return rewriter.notifyMatchFailure(
           transposeOp,

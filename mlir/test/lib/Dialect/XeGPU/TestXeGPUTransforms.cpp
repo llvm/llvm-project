@@ -184,7 +184,7 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
   matchAndRewrite(vector::StepOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    auto layoutName = xegpu::getTemporaryLayout(op->getResult(0));
+    auto layoutName = xegpu::getTemporaryLayoutName(op->getResult(0));
     auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
     if (!sliceAttr || sliceAttr.getRank() != 1)
       return failure();
@@ -324,7 +324,7 @@ struct TestXeGPULayoutInterface
 
     target.addDynamicallyLegalOp<vector::StepOp>(
         [&](vector::StepOp op) -> bool {
-          auto layoutName = xegpu::getTemporaryLayout(op->getResult(0));
+          auto layoutName = xegpu::getTemporaryLayoutName(op->getResult(0));
           auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
           return isLegal(sliceAttr);
         });
