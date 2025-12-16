@@ -58,7 +58,7 @@ struct __locale_guard {
 #define _LIBCPP_LC_ALL LC_ALL
 
 // Get MB_CUE_MAX before __locale_t is defined because it uses a defferent definition in <sys/localedef.h>.
-static inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __mb_cur_max() { return MB_CUR_MAX; }
+inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __mb_cur_max() { return MB_CUR_MAX; }
 
 using __locale_t _LIBCPP_NODEBUG = ::locale_t;
 
