@@ -765,7 +765,8 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
   if (AttachInfo.AttachEntries.empty())
     return OFFLOAD_SUCCESS;
 
-  ODBG(ODT_Mapping) << "Processing " << AttachInfo.AttachEntries.size();
+  ODBG(ODT_Mapping) << "Processing " << AttachInfo.AttachEntries.size()
+                    << " deferred ATTACH map entries";
 
   int Ret = OFFLOAD_SUCCESS;
   bool IsFirstPointerAttachment = true;
