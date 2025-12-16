@@ -16,7 +16,8 @@ namespace clang::ssaf {
 
 /// Uniquely identifies an analysis summary.
 ///
-/// This is the key to refer to an analysis or to name a builder to build an analysis.
+/// This is the key to refer to an analysis or to name a builder to build an
+/// analysis.
 class SummaryName {
 public:
   explicit SummaryName(std::string Name) : Name(std::move(Name)) {}
