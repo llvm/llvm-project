@@ -87,10 +87,8 @@ ComparisonCategoryInfo::ValueInfo *ComparisonCategoryInfo::lookupValueInfo(
   // itself (e.g., std::partial_ordering::less must be of type
   // partial_ordering).
   VarDecl *VD = cast<VarDecl>(Lookup.front());
-  const CXXRecordDecl *VDRecord =
-      VD->getType()->getAsCXXRecordDecl();
-  if (!VDRecord ||
-      VDRecord->getCanonicalDecl() != Record->getCanonicalDecl())
+  const CXXRecordDecl *VDRecord = VD->getType()->getAsCXXRecordDecl();
+  if (!VDRecord || VDRecord->getCanonicalDecl() != Record->getCanonicalDecl())
     return nullptr;
 
   Objects.emplace_back(ValueKind, VD);
