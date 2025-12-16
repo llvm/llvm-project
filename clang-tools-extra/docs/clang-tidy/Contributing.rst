@@ -449,7 +449,7 @@ Building the target ``docs-clang-tools-html`` will run the Sphinx documentation 
 and create HTML documentation files in the tools/clang/tools/extra/docs/html directory in
 your build tree.  Make sure that your check is correctly shown in the release notes and the
 list of checks.  Make sure that the formatting and structure of your check's documentation
-look correct.
+look correct: there is no trailing whitespaces and lines are no longer than 80 characters. To validate your files, please use ``doc8`` as described below.
 
 Clang-Tidy uses `doc8 <https://pypi.org/project/doc8/>`_ to check ``.rst``
 files for formatting consistency. You can install ``doc8`` with ``pip``:
