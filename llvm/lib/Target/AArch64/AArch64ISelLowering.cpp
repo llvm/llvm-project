@@ -4573,9 +4573,10 @@ static SDValue lowerIntNeonIntrinsic(SDValue Op, unsigned Opcode,
   };
 
   // Skip first operand as it is intrinsic ID.
-  for (unsigned I = 1, E = Op.getNumOperands(); I < E; ++I){
+  for (unsigned I = 1, E = Op.getNumOperands(); I < E; ++I) {
     SDValue Val = Op.getOperand(I);
-    NewOps.push_back(isa<ConstantSDNode>(Val.getNode()) ? Val : bitcastToFloat(Val));
+    NewOps.push_back(isa<ConstantSDNode>(Val.getNode()) ? Val
+                                                        : bitcastToFloat(Val));
   }
   EVT OrigVT = Op.getValueType();
   SDValue OpNode = DAG.getNode(Opcode, DL, getFloatVT(OrigVT), NewOps);
