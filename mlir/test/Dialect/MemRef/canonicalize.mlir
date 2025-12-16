@@ -522,7 +522,7 @@ func.func @fold_collapse_of_expand(%arg0 : memref<12x4xf32>) -> memref<12x4xf32>
   return %1 : memref<12x4xf32>
 }
 // CHECK-LABEL: func @fold_collapse_of_expand
-//   CHECK-NOT:   linalg.{{.*}}_shape
+//   CHECK-NOT:   memref.{{.*}}_shape
 
 // -----
 
@@ -535,7 +535,7 @@ func.func @fold_collapse_collapse_of_expand(%arg0 : memref<?x?xf32>, %sz0: index
   return %1 : memref<?x?xf32>
 }
 // CHECK-LABEL: @fold_collapse_collapse_of_expand
-//   CHECK-NOT:   linalg.{{.*}}_shape
+//   CHECK-NOT:   memref.{{.*}}_shape
 
 // -----
 

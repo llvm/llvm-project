@@ -456,6 +456,103 @@ LogicalResult WMMAOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ScaledWMMAOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ScaledWMMAOp::verify() {
+  // Helper functions for type classification.
+  auto isF8 = llvm::IsaPred<Float8E4M3FNType, Float8E5M2Type>;
+  auto isF6 = llvm::IsaPred<Float6E2M3FNType, Float6E3M2FNType>;
+  auto isF4 = llvm::IsaPred<Float4E2M1FNType>;
+  auto isScaleF8 = llvm::IsaPred<Float8E8M0FNUType, Float8E4M3FNType>;
+  auto isE8M0 = llvm::IsaPred<Float8E8M0FNUType>;
+  auto isE4M3 = llvm::IsaPred<Float8E4M3FNType>;
+
+  auto sourceAType = cast<VectorType>(getSourceA().getType());
+  auto sourceBType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
+
+  // Validate source element types are small floats (fp4/fp6/fp8).
+  Type aElemType = sourceAType.getElementType();
+  Type bElemType = sourceBType.getElementType();
+
+  // Validate vector lengths based on dimensions.
+  int64_t m = getM();
+  int64_t aLen = sourceAType.getNumElements();
+  int64_t bLen = sourceBType.getNumElements();
+  int64_t expectedOutLen = (m == 16) ? 8 : 16;
+
+  if (destType.getNumElements() != expectedOutLen)
+    return emitOpError("expected output vector of length ")
+           << expectedOutLen << " but got " << destType.getNumElements();
+
+  if (m == 16) {
+    // For 16×16×128: both A and B must be 64 elements.
+    if (aLen != 64)
+      return emitOpError(
+                 "for 16x16x128, sourceA must have 64 elements but got ")
+             << aLen;
+    if (bLen != 64)
+      return emitOpError(
+                 "for 16x16x128, sourceB must have 64 elements but got ")
+             << bLen;
+  } else { // m == 32
+    // For 32×16×128: only fp4 is supported, A is 128, B is 64.
+    if (!isF4(aElemType) && !isF4(bElemType))
+      return emitOpError("32x16x128 only supports fp4 element types");
+
+    if (aLen != 128)
+      return emitOpError(
+                 "for 32x16x128, sourceA must have 128 elements but got ")
+             << aLen;
+    if (bLen != 64)
+      return emitOpError(
+                 "for 32x16x128, sourceB must have 64 elements but got ")
+             << bLen;
+
+    // For 32x16x128, matrix A uses all 32 lanes so a_first_scale_lane must be
+    // 0.
+    if (getAFirstScaleLane() != 0)
+      return emitOpError("for 32x16x128, a_first_scale_lane must be 0");
+  }
+
+  // Validate scale types and their compatibility with matrix element types.
+  auto scaleAType = cast<VectorType>(getScaleA().getType());
+  auto scaleBType = cast<VectorType>(getScaleB().getType());
+  Type scaleAElemType = scaleAType.getElementType();
+  Type scaleBElemType = scaleBType.getElementType();
+
+  // Validate scale element types are valid scale f8 types (E8M0FNU or E4M3FN).
+  if (!isScaleF8(scaleAElemType) || !isScaleF8(scaleBElemType))
+    return emitOpError(
+        "scale operands must have f8 element types (E8M0FNU or E4M3FN)");
+
+  // Any matrices A/B (fp8|fp6|fp4) with E8M0 scales for matrix A/B are valid.
+  if (isE8M0(scaleAElemType) && isE8M0(scaleBElemType))
+    return success();
+
+  // Matrix A (F8|F6) x Matrix B (F4) with Scale A (E8M0), Scale B (E5M3|E4M3).
+  if ((isF8(aElemType) || isF6(aElemType)) && isE8M0(scaleAElemType) &&
+      isF4(bElemType) && isE4M3(scaleBElemType))
+    return success();
+
+  // Matrix A (F4) x Matrix B (F8|F6) with Scale A (E5M3|E4M3), Scale B (E8M0).
+  if (isF4(aElemType) && isE4M3(scaleAElemType) &&
+      (isF8(bElemType) || isF6(bElemType)) && isE8M0(scaleBElemType))
+    return success();
+
+  // Matrix A (F4) x Matrix B (F4) with Scale A (E4M3), Scale B (E4M3).
+  if (isF4(aElemType) && isF4(bElemType) && isE4M3(scaleAElemType) &&
+      isE4M3(scaleBElemType))
+    return success();
+
+  // No valid combination matched.
+  return emitOpError("invalid combination of matrix and scale types: ")
+         << "sourceA=" << aElemType << ", scaleA=" << scaleAElemType
+         << ", sourceB=" << bElemType << ", scaleB=" << scaleBElemType;
+}
+
+//===----------------------------------------------------------------------===//
 // MFMAOp
 //===----------------------------------------------------------------------===//
 LogicalResult MFMAOp::verify() {

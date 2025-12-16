@@ -22,12 +22,12 @@ contains
 !CHECK OtherConstruct scope
 !CHECK: omp_orig size=4 offset=0: ObjectEntity type: TYPE(logicalwrapper)
 !CHECK: omp_priv size=4 offset=4: ObjectEntity type: TYPE(logicalwrapper)
-  
+
     !$omp simd reduction(.AND.:res)
     do i=1,n
        res%b=res%b .and. x(i)%b
     enddo
-    
+
     func=res%b
   end function func
 end module mm

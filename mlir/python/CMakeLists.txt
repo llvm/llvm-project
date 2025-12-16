@@ -804,6 +804,21 @@ declare_mlir_python_extension(MLIRPythonExtension.TransformInterpreter
     MLIRCAPITransformDialectTransforms
 )
 
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.AMDGPU.Pybind
+  MODULE_NAME _mlirDialectsAMDGPU
+  ADD_TO_PARENT MLIRPythonSources.Dialects.amdgpu
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
+  SOURCES
+    DialectAMDGPU.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPIAMDGPU
+)
+
+
 # TODO: Figure out how to put this in the test tree.
 # This should not be included in the main Python extension. However,
 # putting it into MLIRPythonTestSources along with the dialect declaration

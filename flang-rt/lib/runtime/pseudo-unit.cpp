@@ -39,10 +39,9 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
   if (direction != Direction::Output || unit != 6) {
     handler.Crash("ExternalFileUnit only supports output to unit 6");
   }
-  if (!defaultOutput) { // defer construction until/unless needed
-    defaultOutput = New<ExternalFileUnit>{handler}(unit).release();
-  }
-  return defaultOutput;
+  // The pseudo-unit allocated here will be released in
+  // ExternalIoStatementBase::EndIoStatement().
+  return New<ExternalFileUnit>{handler}(unit).release();
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUp(const char *, std::size_t) {
