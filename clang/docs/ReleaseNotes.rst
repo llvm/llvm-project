@@ -1107,6 +1107,18 @@ OpenMP Support
 
 Improvements
 ^^^^^^^^^^^^
+- Mapping of expressions that have base-pointers now conforms to the OpenMP's
+  conditional pointer-attachment based on both pointee and poitner being
+  present, and one being new. This also lays the foundation of supporting
+  OpenMP 6.1's attach map-type modifier.
+- Several improvements were made to the handling of maps on list items involving
+  multiple levels of pointer dereferences, including not mapping intermediate
+  expressions, and grouping the items that share the same base-pointer, as
+  belonging to the same containing structure.
+- Support of array-sections on ``use_device_addr`` was made more robust,
+  including diagnosing when the array-section's base is not a named-variable.
+- Handling of ``use_device_addr`` and ``use_device_ptr`` in the presence of
+  other maps with the same base-pointer/variable, was improved.
 
 Additional Information
 ======================
