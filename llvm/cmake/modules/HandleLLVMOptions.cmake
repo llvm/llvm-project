@@ -1469,13 +1469,6 @@ if(LLVM_ENABLE_FATLTO AND ((UNIX AND NOT APPLE) OR FUCHSIA))
   endif()
 endif()
 
-# Set an AIX default for LLVM_EXPORT_SYMBOLS_FOR_PLUGINS based on whether we are
-# doing dynamic linking (see below).
-set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_AIX_default OFF)
-if (NOT (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB))
-  set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_AIX_default ON)
-endif()
-
 # This option makes utils/extract_symbols.py be used to determine the list of
 # symbols to export from LLVM tools. This is necessary when on AIX or when using
 # MSVC if you want to allow plugins. On AIX we don't show this option, and we
@@ -1483,19 +1476,33 @@ endif()
 # linking (due to incompatibility). With MSVC, note that the plugin has to
 # explicitly link against (exactly one) tool so we can't unilaterally turn on
 # LLVM_ENABLE_PLUGINS when it's enabled.
+set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_default OFF)
+set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION ON)
 if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  # Set an AIX default for LLVM_EXPORT_SYMBOLS_FOR_PLUGINS based on whether we are
+  # doing dynamic linking (see above).
+  if(NOT (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB))
+    set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_default ON)
+  endif()
   set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION OFF)
-else()
-  set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION ON)
+elseif(WIN32 OR CYGWIN)
+  # Set a WIN32 default for LLVM_EXPORT_SYMBOLS_FOR_PLUGINS if we are
+  # doing dynamic linking.
+  if(BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB)
+    set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_default ON)
+  endif()
 endif()
 CMAKE_DEPENDENT_OPTION(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS
        "Export symbols from LLVM tools so that plugins can import them" OFF
-       "LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION" ${LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_AIX_default})
-if(BUILD_SHARED_LIBS AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
-  message(FATAL_ERROR "BUILD_SHARED_LIBS not compatible with LLVM_EXPORT_SYMBOLS_FOR_PLUGINS")
-endif()
-if(LLVM_LINK_LLVM_DYLIB AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
-  message(FATAL_ERROR "LLVM_LINK_LLVM_DYLIB not compatible with LLVM_EXPORT_SYMBOLS_FOR_PLUGINS")
+       "LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION" ${LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_default})
+
+if (CYGWIN)
+  # CMake sets CMAKE_EXE_EXPORTS_${lang}_FLAG to `-Wl,--export-all-symbols`
+  # for Cygwin. This is incompatible with LLVM_EXPORT_SYMBOLS_FOR_PLUGINS
+  # tweaks, so unset them.
+  set(CMAKE_EXE_EXPORTS_ASM_FLAG "")
+  set(CMAKE_EXE_EXPORTS_C_FLAG "")
+  set(CMAKE_EXE_EXPORTS_CXX_FLAG "")
 endif()
 
 # By default we should enable LLVM_ENABLE_IDE only for multi-configuration
