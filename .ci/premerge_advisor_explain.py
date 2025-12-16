@@ -7,6 +7,7 @@ import argparse
 import platform
 import sys
 import json
+import os
 
 # TODO(boomanaiden154): Remove the optional call once we can require Python
 # 3.10.
@@ -158,3 +159,5 @@ if __name__ == "__main__":
         args.pr_number,
         args.return_code,
     )
+
+    sys.exit(args.return_code)
