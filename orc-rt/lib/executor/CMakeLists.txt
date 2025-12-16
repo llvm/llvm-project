@@ -1,5 +1,6 @@
 set(files
   AllocAction.cpp
+  CooperativeFuture.cpp
   Error.cpp
   QueueingTaskDispatcher.cpp
   ResourceManager.cpp

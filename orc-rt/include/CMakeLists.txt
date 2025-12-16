@@ -6,6 +6,7 @@ set(ORC_RT_HEADERS
     orc-rt/AllocAction.h
     orc-rt/BitmaskEnum.h
     orc-rt/Compiler.h
+    orc-rt/CooperativeFuture.h
     orc-rt/Error.h
     orc-rt/ExecutorAddress.h
     orc-rt/IntervalMap.h
