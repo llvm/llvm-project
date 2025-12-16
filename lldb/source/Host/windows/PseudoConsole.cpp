@@ -100,7 +100,7 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
     return llvm::errorCodeToError(
         std::error_code(GetLastError(), std::system_category()));
 
-  COORD consoleSize{256, 25};
+  COORD consoleSize{80, 25};
   HPCON hPC = INVALID_HANDLE_VALUE;
   hr = ConPTY::Create()(consoleSize, hInputRead, hOutputWrite, 0, &hPC);
   CloseHandle(hInputRead);
