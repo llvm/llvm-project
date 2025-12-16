@@ -1735,7 +1735,7 @@ UnaryFunction for_each(R &&Range, UnaryFunction F) {
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
 constexpr bool all_of(R &&Range, UnaryPredicate P) {
-  // TODO: switch back to std::all_of() after we bump to c++20.
+  // TODO: switch back to std::all_of() after it becomes constexpr in c++20.
   for (auto I = adl_begin(Range), E = adl_end(Range); I != E; ++I)
     if (!P(*I))
       return false;
@@ -1746,7 +1746,7 @@ constexpr bool all_of(R &&Range, UnaryPredicate P) {
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
 constexpr bool any_of(R &&Range, UnaryPredicate P) {
-  // TODO: switch back to std::any_of() after we bump to c++20.
+  // TODO: switch back to std::any_of() after it becomes constexpr in c++20.
   for (auto I = adl_begin(Range), E = adl_end(Range); I != E; ++I)
     if (P(*I))
       return true;
@@ -1757,11 +1757,8 @@ constexpr bool any_of(R &&Range, UnaryPredicate P) {
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
 constexpr bool none_of(R &&Range, UnaryPredicate P) {
-  // TODO: switch back to std::none_of() after we bump to c++20.
-  for (auto I = adl_begin(Range), E = adl_end(Range); I != E; ++I)
-    if (P(*I))
-      return false;
-  return true;
+  // TODO: switch back to std::none_of() after it becomes constexpr in c++20.
+  return !any_of(Range, P);
 }
 
 /// Provide wrappers to std::fill which take ranges instead of having to pass
