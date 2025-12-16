@@ -970,7 +970,8 @@ let Predicates = [HasVendorXqciac, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_C_MULIADD : RVInst16CL<0b001, 0b10, (outs GPRC:$rd_wb),
                                (ins GPRC:$rd, GPRC:$rs1, uimm5:$uimm),
-                               "qc.c.muliadd", "$rd, $rs1, $uimm"> {
+                               "qc.c.muliadd", "$rd, $rs1, $uimm">,
+                     Sched<[WriteIALU, ReadIALU, ReadIALU]> {
     let Constraints = "$rd = $rd_wb";
     bits<5> uimm;
 
@@ -981,13 +982,15 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
   def QC_MULIADD : RVInstI<0b110, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
                            (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12),
-                           "qc.muliadd", "$rd, $rs1, $imm12"> {
+                           "qc.muliadd", "$rd, $rs1, $imm12">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]> {
     let Constraints = "$rd = $rd_wb";
   }
 
   def QC_SHLADD : RVInstRBase<0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
                               (ins GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$shamt),
-                              "qc.shladd", "$rd, $rs1, $rs2, $shamt"> {
+                              "qc.shladd", "$rd, $rs1, $rs2, $shamt">,
+                  Sched<[WriteIALU, ReadIALU, ReadIALU]> {
     bits<5> shamt;
 
     let Inst{31-30} = 0b01;
