@@ -133,6 +133,7 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
 
   auto element_type = deque_type.GetTypeTemplateArgument(0);
   if (!element_type) {
+    // PDB doesn't have the template type, so use the type of _Map (T**).
     element_type = map_sp->GetCompilerType().GetPointeeType().GetPointeeType();
     if (!element_type)
       return lldb::eRefetch;
