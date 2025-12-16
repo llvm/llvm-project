@@ -53,8 +53,9 @@ cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
 }
 
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
-                                             llvm::APInt intVal) {
-  return getConstInt(loc, llvm::APSInt(intVal));
+                                             llvm::APInt intVal,
+                                             bool isUnsigned) {
+  return getConstInt(loc, llvm::APSInt(intVal, isUnsigned));
 }
 
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc, mlir::Type t,
