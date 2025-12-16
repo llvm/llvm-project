@@ -1856,9 +1856,11 @@ void SwiftASTContext::AddExtraClangArgs(
   swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
   auto defer = llvm::make_scope_exit([&]() {
     // Detect explicitly-built modules.
-    m_has_explicit_modules =
-        llvm::any_of(importer_options.ExtraArgs, [](const std::string &arg) {
-          return StringRef(arg).starts_with("-fmodule-file=");
+    m_has_explicit_modules |=
+        llvm::any_of(importer_options.ExtraArgs, [](const std::string &s) {
+          StringRef arg(s);
+          return arg.starts_with("-fno-implicit-module") ||
+                 arg.starts_with("-fmodule-file=");
         });
     ConfigureModuleValidation(importer_options.ExtraArgs);
   });
@@ -1897,6 +1899,22 @@ void SwiftASTContext::AddExtraClangArgs(
   if (HasNonexistentExplicitModule(importer_options.ExtraArgs))
     RemoveExplicitModules(importer_options.ExtraArgs);
 }
+
+bool SwiftASTContext::IsModuleAvailableInCAS(const std::string &key) {
+  auto id = m_cas->parseID(key);
+  if (!id) {
+    HEALTH_LOG_PRINTF("failed to parse CASID when loading module: %s",
+                      toString(id.takeError()).c_str());
+    return false;
+  }
+  auto lookup = m_action_cache->get(*id);
+  if (!lookup) {
+    HEALTH_LOG_PRINTF("module lookup failure through action cache: %s",
+                      toString(lookup.takeError()).c_str());
+    return false;
+  }
+  return (bool)*lookup;
+};
 
 void SwiftASTContext::AddExtraClangCC1Args(
     const std::vector<std::string> &source,
@@ -1969,26 +1987,9 @@ void SwiftASTContext::AddExtraClangCC1Args(
     invocation.getCASOpts().PluginOptions =
         GetCASOptions().Config.PluginOptions;
 
-    // Check the module availability in CAS, if not, fallback to regular load.
-    auto CheckModuleInCAS = [&](const std::string &key) {
-      auto id = m_cas->parseID(key);
-      if (!id) {
-        HEALTH_LOG_PRINTF("failed to parse CASID when loading module: %s",
-                          toString(id.takeError()).c_str());
-        return false;
-      }
-      auto lookup = m_action_cache->get(*id);
-      if (!lookup) {
-        HEALTH_LOG_PRINTF("module lookup failure through action cache: %s",
-                          toString(lookup.takeError()).c_str());
-        return false;
-      }
-      return (bool)*lookup;
-    };
-
     use_cas_module = llvm::all_of(
         invocation.getFrontendOpts().ModuleCacheKeys, [&](const auto &entry) {
-          auto exist = CheckModuleInCAS(entry.second);
+          bool exist = IsModuleAvailableInCAS(entry.second);
           if (!exist)
             HEALTH_LOG_PRINTF("module '%s' cannot be load "
                               "from CAS using key: %s, fallback to "
@@ -3747,7 +3748,6 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
   std::string moduleCachePath =
       GetCompilerInvocation().getClangModuleCachePath().str();
   std::unique_ptr<swift::ClangImporter> clang_importer_up;
-  auto &clang_importer_options = GetClangImporterOptions();
   if (!m_ast_context_up->SearchPathOpts.getSDKPath().empty() ||
       TargetHasNoSDK()) {
     // Create the DWARFImporterDelegate.
@@ -3847,15 +3847,34 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
     m_ast_context_up->addModuleLoader(std::move(memory_buffer_loader_up));
   }
 
+  // 2. Create the explicit swift module loader.
+  if (props.GetUseSwiftExplicitModuleLoader()) {
+    auto &search_path_opts = GetCompilerInvocation().getSearchPathOptions();
+    std::unique_ptr<swift::ModuleLoader> esml_up =
+        swift::ExplicitSwiftModuleLoader::create(
+            *m_ast_context_up, m_dependency_tracker.get(), loading_mode,
+            search_path_opts.ExplicitSwiftModuleMapPath,
+            search_path_opts.ExplicitSwiftModuleInputs,
+            /*IgnoreSwiftSourceInfo*/ false);
+    if (esml_up) {
+      m_explicit_swift_module_loader =
+          static_cast<swift::ExplicitSwiftModuleLoader *>(esml_up.get());
+      m_ast_context_up->addModuleLoader(std::move(esml_up), /*isClang=*/false,
+                                        /*isDwarf=*/false,
+                                        /*isInterface=*/false,
+                                        /*isExplicit=*/true);
+    }
+  }
+
   // Add a module interface checker.
   m_ast_context_up->addModuleInterfaceChecker(
-    std::make_unique<swift::ModuleInterfaceCheckerImpl>(*m_ast_context_up,
-      moduleCachePath, prebuiltModuleCachePath,
-      swift::ModuleInterfaceLoaderOptions()));
+      std::make_unique<swift::ModuleInterfaceCheckerImpl>(
+          *m_ast_context_up, moduleCachePath, prebuiltModuleCachePath,
+          swift::ModuleInterfaceLoaderOptions()));
 
-  // 2. Create and install the module interface loader.
+  // 3. Create and install the module interface loader.
   //
-  // The ordering of 2-4 is the same as the Swift compiler's 1-3,
+  // The ordering of 2-4 is the same as the Swift compiler's 2-4,
   // where unintuitively the serialized module loader comes before the
   // module interface loader. The reason for this is that the module
   // interface loader is actually 2-in-1 and secretly attempts to load
@@ -3867,21 +3886,25 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
   if (loading_mode != swift::ModuleLoadingMode::OnlySerialized) {
     std::unique_ptr<swift::ModuleLoader> module_interface_loader_up(
         swift::ModuleInterfaceLoader::create(
-          *m_ast_context_up, *static_cast<swift::ModuleInterfaceCheckerImpl*>(
-            m_ast_context_up->getModuleInterfaceChecker()), m_dependency_tracker.get(),
-          loading_mode));
-    if (module_interface_loader_up)
+            *m_ast_context_up,
+            *static_cast<swift::ModuleInterfaceCheckerImpl *>(
+                m_ast_context_up->getModuleInterfaceChecker()),
+            m_dependency_tracker.get(), loading_mode));
+    if (module_interface_loader_up) {
+      m_module_interface_loader = static_cast<swift::ModuleInterfaceLoader *>(
+          module_interface_loader_up.get());
       m_ast_context_up->addModuleLoader(std::move(module_interface_loader_up));
+    }
   }
 
-  // 3. Create and install the serialized module loader.
+  // 4. Create and install the serialized module loader.
   std::unique_ptr<swift::ModuleLoader> serialized_module_loader_up(
       swift::ImplicitSerializedModuleLoader::create(
           *m_ast_context_up, m_dependency_tracker.get(), loading_mode));
   if (serialized_module_loader_up)
     m_ast_context_up->addModuleLoader(std::move(serialized_module_loader_up));
 
-  // 4. Install the clang importer.
+  // 5. Install the clang importer.
   if (clang_importer_up) {
     m_clangimporter = (swift::ClangImporter *)clang_importer_up.get();
     m_ast_context_up->addModuleLoader(std::move(clang_importer_up),
@@ -4079,6 +4102,23 @@ SwiftASTContext::GetModule(const SourceModule &module, bool *cached) {
   // Create a diagnostic consumer for the diagnostics produced by the import.
   auto import_diags = getScopedDiagnosticConsumer();
 
+  // Is this an explicitly specified explicit Swift module?
+  StringRef module_path = module.search_path.GetStringRef();
+  bool is_esml_module = (module_path.ends_with(".swiftmodule") &&
+                         llvm::sys::fs::exists(module_path)) ||
+                        (m_cas && IsModuleAvailableInCAS(module_path.str()));
+  if (is_esml_module) {
+    std::string path = module_path.str();
+    bool unloaded = false;
+    if (m_explicit_swift_module_loader) {
+      ast->addExplicitModulePath(module_name, path);
+      if (auto *memory_loader = GetMemoryBufferModuleLoader())
+        unloaded = memory_loader->unregisterMemoryBuffer(module_name);
+    }
+    HEALTH_LOG_PRINTF("found explicit module \"%s\"%s", path.c_str(),
+                      unloaded ? "; replacing AST section module" : "");
+  }
+
   swift::ModuleDecl *module_decl = ast->getModuleByName(module_name);
 
   // Error handling.
@@ -4100,6 +4140,16 @@ SwiftASTContext::GetModule(const SourceModule &module, bool *cached) {
   }
   LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- found %s",
              module_name.c_str(), module_decl->getName().str().str().c_str());
+
+  if (is_esml_module) {
+    // Simulate the effect of the BypassResilience flag in the
+    // MemoryBufferSerializedModuleLoader.  Explicitly specified
+    // modules are not typically produced from textual interfaces. By
+    // disabling resilience, the debugger can directly access private
+    // members.
+    //if (!module_decl->isBuiltFromInterface())
+    //  module_decl->setBypassResilience();
+  }
 
   m_swift_module_cache.insert({module_name, *module_decl});
   return *module_decl;
@@ -9358,6 +9408,42 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         *modules,
     Status &error) {
+  // If EBM is enabled, disable implicit modules during contextual imports.
+  // fixme nullptr!
+  bool turn_off_implicit = m_has_explicit_modules;
+  auto reset = llvm::make_scope_exit([&] {
+    if (turn_off_implicit) {
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Turning on implicit modules");
+      if (m_module_interface_loader) {
+        auto &opts = m_module_interface_loader->getOptions();
+        opts.disableImplicitSwiftModule = false;
+        opts.disableBuildingInterface = false;
+      }
+      if (m_clangimporter) {
+        auto &clang_instance = const_cast<clang::CompilerInstance &>(
+            m_clangimporter->getClangInstance());
+        clang_instance.getLangOpts().ImplicitModules = true;
+      }
+    }
+  });
+  if (turn_off_implicit) {
+    LOG_PRINTF(GetLog(LLDBLog::Types), "Turning off implicit modules");
+    // Swift.
+    if (m_module_interface_loader) {
+      auto &opts = m_module_interface_loader->getOptions();
+      opts.disableImplicitSwiftModule = true;
+      opts.disableBuildingInterface = true;
+    }
+    // Clang.
+    if (m_clangimporter) {
+      auto &clang_instance = const_cast<clang::CompilerInstance &>(
+          m_clangimporter->getClangInstance());
+      // AddExtraArgs is supposed to always turn implicit modules on.
+      assert(clang_instance.getLangOpts().ImplicitModules &&
+             "ClangImporter implicit module support is off");
+      clang_instance.getLangOpts().ImplicitModules = false;
+    }
+  }
 
   CompileUnit *compile_unit = sc.comp_unit;
   if (compile_unit && compile_unit->GetModule())
