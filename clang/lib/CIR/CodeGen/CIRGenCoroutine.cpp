@@ -133,9 +133,9 @@ emitBodyAndFallthrough(CIRGenFunction &cgf, const CoroutineBodyStmt &s,
                        const CIRGenFunction::LexicalScope *currLexScope) {
   if (cgf.emitStmt(body, /*useCurrentScope=*/true).failed())
     return mlir::failure();
-  // Note that LLVM checks CanFallthrough by looking into the availability
-  // of the insert block which is kinda brittle and unintuitive, seems to be
-  // related with how landing pads are handled.
+  // Note that classic codegen checks CanFallthrough by looking into the
+  // availability of the insert block which is kinda brittle and unintuitive,
+  // seems to be related with how landing pads are handled.
   //
   // CIRGen handles this by checking pre-existing co_returns in the current
   // scope instead.
@@ -308,7 +308,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
 
     // FIXME(cir): wrap emitBodyAndFallthrough with try/catch bits.
     if (s.getExceptionHandler())
-      assert(!cir::MissingFeatures::unhandledException());
+      assert(!cir::MissingFeatures::coroutineExceptions());
     if (emitBodyAndFallthrough(*this, s, s.getBody(), curLexScope).failed())
       return mlir::failure();
 
@@ -494,6 +494,7 @@ mlir::LogicalResult CIRGenFunction::emitCoreturnStmt(CoreturnStmt const &s) {
   if (rv && rv->getType()->isVoidType() && !isa<InitListExpr>(rv)) {
     // Make sure to evaluate the non initlist expression of a co_return
     // with a void expression for side effects.
+    RunCleanupsScope cleanupScope(*this);
     assert(!cir::MissingFeatures::ehCleanupScope());
     emitIgnoredExpr(rv);
   }
