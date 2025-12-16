@@ -271,13 +271,21 @@ WHOLE_DECLARATION_IN_MACRO;
 template <typename T> struct Wrapper {};
 template <typename T>
 struct ClassWrapper {
-    using R = T;
-    Wrapper<R> f();
+  using R = T;
+  Wrapper<R> f();
+  R g();
 };
 
 template <typename T>
 Wrapper<typename ClassWrapper<T>::R> ClassWrapper<T>::f() {
-    return {};
+  return {};
+}
+
+template <typename T>
+typename ClassWrapper<T>::R ClassWrapper<T>::g() {
+// CHECK-MESSAGES-20: :[[@LINE-1]]:1: warning: redundant 'typename' [readability-redundant-typename]
+// CHECK-FIXES-20: ClassWrapper<T>::R ClassWrapper<T>::g() {
+  return {};
 }
 
 template <typename T> struct StructWrapper {};
@@ -285,9 +293,17 @@ template <typename T>
 class ClassWithNestedStruct {
   struct Nested {};
   StructWrapper<Nested> f();
+  Nested g();
 };
 
 template <typename T>
 StructWrapper<typename ClassWithNestedStruct<T>::Nested> ClassWithNestedStruct<T>::f() {
+  return {};
+}
+
+template <typename T>
+typename ClassWithNestedStruct<T>::Nested ClassWithNestedStruct<T>::g() {
+// CHECK-MESSAGES-20: :[[@LINE-1]]:1: warning: redundant 'typename' [readability-redundant-typename]
+// CHECK-FIXES-20: ClassWithNestedStruct<T>::Nested ClassWithNestedStruct<T>::g() {
   return {};
 }
