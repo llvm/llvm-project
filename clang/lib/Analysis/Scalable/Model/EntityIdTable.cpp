@@ -12,14 +12,9 @@
 namespace clang::ssaf {
 
 EntityId EntityIdTable::getId(const EntityName &Name) {
-  const auto It = Entities.find(Name);
-  if (It == Entities.end()) {
-    EntityId Id(Entities.size());
-    Entities.emplace(Name, Id);
-    return Id;
-  }
-
-  return It->second;
+  EntityId Id(Entities.size());
+  const auto Res = Entities.try_emplace(Name, Id);
+  return Res.first->second;
 }
 
 bool EntityIdTable::exists(const EntityName &Name) const {
