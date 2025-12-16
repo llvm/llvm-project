@@ -276,7 +276,7 @@ define void @foo(i32 %v0) {
       sandboxir::ConstantInt::isValueValidForType(Int32Ty, (int64_t)42));
   // Check isNegative().
   EXPECT_FALSE(FortyTwo->isNegative());
-  EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, -42));
+  EXPECT_TRUE(sandboxir::ConstantInt::getSigned(Int32Ty, -42));
   // Check isZero().
   EXPECT_FALSE(FortyTwo->isZero());
   EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, 0)->isZero());
@@ -285,7 +285,7 @@ define void @foo(i32 %v0) {
   EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, 1)->isOne());
   // Check isMinusOne().
   EXPECT_FALSE(FortyTwo->isMinusOne());
-  EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, -1)->isMinusOne());
+  EXPECT_TRUE(sandboxir::ConstantInt::getSigned(Int32Ty, -1)->isMinusOne());
   // Check isMaxValue().
   EXPECT_FALSE(FortyTwo->isMaxValue(/*Signed=*/true));
   EXPECT_TRUE(
@@ -293,9 +293,9 @@ define void @foo(i32 %v0) {
           ->isMaxValue(/*Signed=*/true));
   // Check isMinValue().
   EXPECT_FALSE(FortyTwo->isMinValue(/*Signed=*/true));
-  EXPECT_TRUE(
-      sandboxir::ConstantInt::get(Int32Ty, std::numeric_limits<int32_t>::min())
-          ->isMinValue(/*Signed=*/true));
+  EXPECT_TRUE(sandboxir::ConstantInt::getSigned(
+                  Int32Ty, std::numeric_limits<int32_t>::min())
+                  ->isMinValue(/*Signed=*/true));
   // Check uge().
   EXPECT_TRUE(FortyTwo->uge(41));
   EXPECT_FALSE(FortyTwo->uge(43));

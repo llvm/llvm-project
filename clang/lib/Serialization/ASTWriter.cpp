@@ -4396,20 +4396,20 @@ public:
 
   template <typename Coll> data_type getData(const Coll &Decls) {
     unsigned Start = DeclIDs.size();
-    for (NamedDecl *D : Decls) {
+    auto AddDecl = [this](NamedDecl *D) {
       NamedDecl *DeclForLocalLookup =
           getDeclForLocalLookup(Writer.getLangOpts(), D);
 
       if (Writer.getDoneWritingDeclsAndTypes() &&
           !Writer.wasDeclEmitted(DeclForLocalLookup))
-        continue;
+        return;
 
       // Try to avoid writing internal decls to reduced BMI.
       // See comments in ASTWriter::WriteDeclContextLexicalBlock for details.
       if (Writer.isGeneratingReducedBMI() &&
           !DeclForLocalLookup->isFromExplicitGlobalModule() &&
           IsInternalDeclFromFileContext(DeclForLocalLookup))
-        continue;
+        return;
 
       auto ID = Writer.GetDeclRef(DeclForLocalLookup);
 
@@ -4423,7 +4423,7 @@ public:
             ModuleLocalDeclsMap.insert({Key, DeclIDsTy{ID}});
           else
             Iter->second.push_back(ID);
-          continue;
+          return;
         }
         break;
       case LookupVisibility::TULocal: {
@@ -4432,7 +4432,7 @@ public:
           TULocalDeclsMap.insert({D->getDeclName(), DeclIDsTy{ID}});
         else
           Iter->second.push_back(ID);
-        continue;
+        return;
       }
       case LookupVisibility::GenerallyVisibile:
         // Generally visible decls go into the general lookup table.
@@ -4440,6 +4440,24 @@ public:
       }
 
       DeclIDs.push_back(ID);
+    };
+    ASTReader *Chain = Writer.getChain();
+    for (NamedDecl *D : Decls) {
+      if (Chain && isa<NamespaceDecl>(D) && D->isFromASTFile() &&
+          D == Chain->getKeyDeclaration(D)) {
+        // In ASTReader, we stored only the key declaration of a namespace decl
+        // for this TU rather than storing all of the key declarations from each
+        // imported module. If we have an external namespace decl, this is that
+        // key declaration and we need to re-expand it to write out all of the
+        // key declarations from each imported module again.
+        //
+        // See comment 'ASTReader::FindExternalVisibleDeclsByName' for details.
+        Chain->forEachImportedKeyDecl(D, [&AddDecl](const Decl *D) {
+          AddDecl(cast<NamedDecl>(const_cast<Decl *>(D)));
+        });
+      } else {
+        AddDecl(D);
+      }
     }
     return std::make_pair(Start, DeclIDs.size());
   }
@@ -4623,7 +4641,7 @@ uint64_t ASTWriter::WriteSpecializationInfoLookupTable(
   return Offset;
 }
 
-/// Returns ture if all of the lookup result are either external, not emitted or
+/// Returns true if all of the lookup result are either external, not emitted or
 /// predefined. In such cases, the lookup result is not interesting and we don't
 /// need to record the result in the current being written module. Return false
 /// otherwise.
