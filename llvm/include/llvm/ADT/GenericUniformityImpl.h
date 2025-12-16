@@ -1,4 +1,4 @@
-﻿//===- GenericUniformityImpl.h -----------------------*- C++ -*------------===//
+//===- GenericUniformityImpl.h -----------------------*- C++ -*------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -412,8 +412,8 @@ public:
   /// based on its operands. This queries the target-specific callback.
   bool isCustomUniform(const InstructionT &I) const;
 
-  /// \brief keep track of instructions that require custom uniformity analysis.
-  void addUniformInstruction(const InstructionT *I, InstructionUniformity IU);
+  /// \brief Add an instruction that requires custom uniformity analysis.
+  void addCustomUniformCandidate(const InstructionT *I);
 
 protected:
   const ContextT &Context;
@@ -428,9 +428,9 @@ protected:
   // Internal worklist for divergence propagation.
   std::vector<const InstructionT *> Worklist;
 
-  // Map containing tracked instruction that can be proven uniform based on its
-  // operand Uniformity.
-  DenseMap<const InstructionT *, InstructionUniformity> UniformInstruction;
+  // Set of instructions that require custom uniformity analysis based on
+  // operand uniformity.
+  SmallPtrSet<const InstructionT *, 8> CustomUniformCandidates;
 
   /// \brief Mark \p Term as divergent and push all Instructions that become
   /// divergent as a result on the worklist.
@@ -798,9 +798,8 @@ void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
   if (isAlwaysUniform(I))
     return;
   // Check if instruction requires custom uniformity analysis
-  auto It = UniformInstruction.find(&I);
-  if (It != UniformInstruction.end()) {
-    if (It->second == InstructionUniformity::Custom && isCustomUniform(I)) {
+  if (CustomUniformCandidates.count(&I)) {
+    if (isCustomUniform(I)) {
       addUniformOverride(I);
       return;
     }
@@ -837,9 +836,9 @@ void GenericUniformityAnalysisImpl<ContextT>::addUniformOverride(
 }
 
 template <typename ContextT>
-void GenericUniformityAnalysisImpl<ContextT>::addUniformInstruction(
-    const InstructionT *I, InstructionUniformity IU) {
-  UniformInstruction[I] = IU;
+void GenericUniformityAnalysisImpl<ContextT>::addCustomUniformCandidate(
+    const InstructionT *I) {
+  CustomUniformCandidates.insert(I);
 }
 
 // Mark as divergent all external uses of values defined in \p DefCycle.

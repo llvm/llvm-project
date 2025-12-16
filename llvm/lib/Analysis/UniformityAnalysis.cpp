@@ -43,7 +43,7 @@ template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
       break;
     case InstructionUniformity::Custom:
       // Instructions requiring custom uniformity analysis based on operands
-      addUniformInstruction(&I, IU);
+      addCustomUniformCandidate(&I);
       break;
     case InstructionUniformity::Default:
       break;
@@ -119,10 +119,9 @@ bool GenericUniformityAnalysisImpl<SSAContext>::isCustomUniform(
     const Instruction &I) const {
   // Build bitvector of uniform operands
   SmallBitVector UniformArgs(I.getNumOperands());
-  for (unsigned OpIdx = 0, E =UniformArgs.size(); OpIdx != E; ++OpIdx) {
+  for (unsigned OpIdx = 0, E = UniformArgs.size(); OpIdx != E; ++OpIdx) {
     UniformArgs[OpIdx] = !isDivergentUse(I.getOperandUse(OpIdx));
   }
-
   // Query target-specific uniformity callback
   return TTI->isUniform(&I, UniformArgs);
 }

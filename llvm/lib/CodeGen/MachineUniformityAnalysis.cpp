@@ -64,7 +64,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
         break;
       case InstructionUniformity::Custom:
         // Instructions requiring custom uniformity analysis based on operands
-        addUniformInstruction(&instr, uniformity);
+        addCustomUniformCandidate(&instr);
         break;
       case InstructionUniformity::Default:
         break;
@@ -161,17 +161,13 @@ bool GenericUniformityAnalysisImpl<MachineSSAContext>::isCustomUniform(
     const MachineInstr &MI) const {
   const auto &InstrInfo = *F.getSubtarget().getInstrInfo();
 
-  // Build bitvector of uniform register use operands
-  SmallVector<const MachineOperand *, 4> RegUseOps;
-  for (const MachineOperand &MO : MI.uses()) {
-    if (MO.isReg() && MO.getReg().isVirtual()) {
-      RegUseOps.push_back(&MO);
-    }
-  }
-
-  SmallBitVector UniformArgs(RegUseOps.size());
-  for (unsigned i = 0; i < RegUseOps.size(); ++i) {
-    UniformArgs[i] = !isDivergentUse(*RegUseOps[i]);
+  // Build bitvector of uniform operands
+  SmallBitVector UniformArgs(MI.getNumOperands());
+  for (unsigned OpIdx = 0, E = MI.getNumOperands(); OpIdx != E; ++OpIdx) {
+    const MachineOperand &MO = MI.getOperand(OpIdx);
+    // Register operands: check if divergent
+    // Non-register operands (immediates, etc.): always uniform
+    UniformArgs[OpIdx] = !MO.isReg() || !isDivergentUse(MO);
   }
 
   // Query target-specific uniformity callback
