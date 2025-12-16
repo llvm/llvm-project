@@ -170,23 +170,17 @@ static void addConstFixits(DiagnosticBuilder &Diag, const VarDecl *Variable,
                            Qualifiers::TQ Qualifier,
                            utils::fixit::QualifierTarget Target,
                            utils::fixit::QualifierPolicy Policy) {
-  Diag << addQualifierToVarDecl(*Variable, Context, Qualifier, Target, Policy);
-
   // If this is a parameter, also add fixits for corresponding parameters in
   // function declarations
   if (const auto *ParamDecl = dyn_cast<ParmVarDecl>(Variable)) {
     const unsigned ParamIdx = ParamDecl->getFunctionScopeIndex();
-
     for (const FunctionDecl *Redecl : Function->redecls()) {
-      if (Redecl == Function)
-        continue;
-
-      if (ParamIdx < Redecl->getNumParams()) {
-        const ParmVarDecl *RedeclParam = Redecl->getParamDecl(ParamIdx);
-        Diag << addQualifierToVarDecl(*RedeclParam, Context, Qualifier, Target,
-                                      Policy);
-      }
+      Diag << addQualifierToVarDecl(*Redecl->getParamDecl(ParamIdx), Context,
+                                    Qualifier, Target, Policy);
     }
+  } else {
+    Diag << addQualifierToVarDecl(*Variable, Context, Qualifier, Target,
+                                  Policy);
   }
 }
 

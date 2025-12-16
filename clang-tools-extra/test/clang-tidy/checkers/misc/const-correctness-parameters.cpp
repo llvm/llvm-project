@@ -6,14 +6,9 @@
 // RUN:   }}" -- -I %S/Inputs/const-correctness -fno-delayed-template-parsing
 
 struct Bar {
-  void buz() const;
-  void mutate();
-  int value;
-};
-
-struct Foo {
-  void method() const;
+  void const_method() const;
   void mutating_method();
+  int value;
 };
 
 void ref_param_const(Bar& b);
@@ -22,14 +17,14 @@ void ref_param_const(Bar& b);
 void ref_param_const(Bar& b) {
   // CHECK-MESSAGES: [[@LINE-1]]:22: warning: variable 'b' of type 'Bar &' can be declared 'const'
   // CHECK-FIXES: void ref_param_const(Bar const& b) {
-  b.buz();
+  b.const_method();
 }
 
-void ref_param_already_const(const Foo& f) {
-  f.method();
+void ref_param_already_const(const Bar& f) {
+  f.const_method();
 }
 
-void ref_param_mutated(Foo& f) {
+void ref_param_mutated(Bar& f) {
   f.mutating_method();
 }
 
@@ -41,11 +36,11 @@ void pointer_param_read_only(Bar* b) {
   // CHECK-MESSAGES: [[@LINE-1]]:30: warning: pointee of variable 'b' of type 'Bar *' can be declared 'const'
   // CHECK-MESSAGES: [[@LINE-2]]:30: warning: variable 'b' of type 'Bar *' can be declared 'const'
   // CHECK-FIXES: void pointer_param_read_only(Bar const* const b) {
-  b->buz();
+  b->const_method();
 }
 
 void pointer_param_mutated_pointee(Bar* b) {
-  b->mutate();
+  b->mutating_method();
 }
 
 void pointer_param_mutated_pointer(Bar* b) {
@@ -61,21 +56,21 @@ void value_param_int(int x) {
 }
 
 void value_param_struct(Bar b) {
-  b.buz();
+  b.const_method();
 }
 
-void multiple_params_mixed(int x, Bar& b, Foo& f) {
+void multiple_params_mixed(int x, Bar& b, Bar& f) {
   // CHECK-MESSAGES: [[@LINE-1]]:35: warning: variable 'b' of type 'Bar &' can be declared 'const'
-  // CHECK-FIXES: void multiple_params_mixed(int x, Bar const& b, Foo& f) {
+  // CHECK-FIXES: void multiple_params_mixed(int x, Bar const& b, Bar& f) {
   int y = x;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'y' of type 'int' can be declared 'const'
   // CHECK-FIXES: int const y = x;
-  b.buz();
+  b.const_method();
   f.mutating_method();
 }
 
 void rvalue_ref_param(Bar&& b) {
-  b.buz();
+  b.const_method();
 }
 
 void pass_to_const_ref(const Bar& b);
@@ -93,7 +88,7 @@ void param_passed_to_nonconst_ref(Bar& b) {
 
 template<typename T>
 void template_param(T& t) {
-  t.buz();
+  t.const_method();
 }
 
 void instantiate_template() {
@@ -113,12 +108,12 @@ void specialized_func(T& t) {
 
 template<>
 void specialized_func<Bar>(Bar& b) {
-  b.buz();
+  b.const_method();
 }
 
 template<int N>
 void non_type_template_param(Bar& b) {
-  b.buz();
+  b.const_method();
 }
 
 template<typename... Args>
@@ -166,7 +161,7 @@ void sfinae_func(T& t, typename enable_if<bool_constant<is_bar<T>::value>>::type
 template<typename T>
 struct TemplateClass {
   void non_template_method(Bar& b) {
-    b.buz();
+    b.const_method();
   }
 
   template<typename U>
@@ -175,7 +170,7 @@ struct TemplateClass {
   }
 
   static void static_method(Bar& b) {
-    b.buz();
+    b.const_method();
   }
 };
 
@@ -226,14 +221,14 @@ void use_requires_buz() {
 
 void lambda_params() {
   auto lambda = [](Bar& b) {
-    b.buz();
+    b.const_method();
   };
 }
 
 struct Container {
   Container(int* x) {}
   void member_func(Bar& b) {
-    b.buz();
+    b.const_method();
   }
 };
 
@@ -257,31 +252,31 @@ void decl_multiple(Bar& b);
 void decl_multiple(Bar& b) {
   // CHECK-MESSAGES: [[@LINE-1]]:20: warning: variable 'b' of type 'Bar &' can be declared 'const'
   // CHECK-FIXES: void decl_multiple(Bar const& b) {
-  b.buz();
+  b.const_method();
 }
 
-void decl_multi_params(int& x, Bar& b, Foo& f);
-// CHECK-FIXES: void decl_multi_params(int const& x, Bar const& b, Foo& f);
+void decl_multi_params(int& x, Bar& b, Bar& f);
+// CHECK-FIXES: void decl_multi_params(int const& x, Bar const& b, Bar& f);
 
-void decl_multi_params(int& x, Bar& b, Foo& f) {
+void decl_multi_params(int& x, Bar& b, Bar& f) {
   // CHECK-MESSAGES: [[@LINE-1]]:24: warning: variable 'x' of type 'int &' can be declared 'const'
   // CHECK-MESSAGES: [[@LINE-2]]:32: warning: variable 'b' of type 'Bar &' can be declared 'const'
-  // CHECK-FIXES: void decl_multi_params(int const& x, Bar const& b, Foo& f) {
+  // CHECK-FIXES: void decl_multi_params(int const& x, Bar const& b, Bar& f) {
   int y = x;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'y' of type 'int' can be declared 'const'
   // CHECK-FIXES: int const y = x;
-  b.buz();
+  b.const_method();
   f.mutating_method();  // f is mutated
 }
 
 namespace ns {
-  void namespaced_func(Foo& f);
-  // CHECK-FIXES: void namespaced_func(Foo const& f);
+  void namespaced_func(Bar& f);
+  // CHECK-FIXES: void namespaced_func(Bar const& f);
 
-  void namespaced_func(Foo& f) {
-    // CHECK-MESSAGES: [[@LINE-1]]:24: warning: variable 'f' of type 'Foo &' can be declared 'const'
-    // CHECK-FIXES: void namespaced_func(Foo const& f) {
-    f.method();
+  void namespaced_func(Bar& f) {
+    // CHECK-MESSAGES: [[@LINE-1]]:24: warning: variable 'f' of type 'Bar &' can be declared 'const'
+    // CHECK-FIXES: void namespaced_func(Bar const& f) {
+    f.const_method();
   }
 }
 
@@ -485,11 +480,11 @@ void struct_ptr_param(Bar** bp) {
   // CHECK-MESSAGES: [[@LINE-1]]:23: warning: pointee of variable 'bp' of type 'Bar **' can be declared 'const'
   // CHECK-MESSAGES: [[@LINE-2]]:23: warning: variable 'bp' of type 'Bar **' can be declared 'const'
   // CHECK-FIXES: void struct_ptr_param(Bar* const* const bp) {
-  (*bp)->buz();
+  (*bp)->const_method();
 }
 
 void struct_ptr_param_modified(Bar** bp) {
   // CHECK-MESSAGES: [[@LINE-1]]:32: warning: variable 'bp' of type 'Bar **' can be declared 'const'
   // CHECK-FIXES: void struct_ptr_param_modified(Bar** const bp) {
-  (*bp)->mutate();
+  (*bp)->mutating_method();
 }
