@@ -2311,18 +2311,18 @@ struct AMDGPUMakeDmaBaseLowering : public ConvertOpToLLVMPattern<BaseOp> {
 
     constexpr int32_t constlen = 4;
     Value consts[constlen];
-    for (int64_t i = 0; i < constlen; i++)
+    for (int64_t i = 0; i < constlen; ++i)
       consts[i] = createI32Constant(rewriter, loc, i);
 
     constexpr int32_t sgprslen = constlen;
     Value sgprs[sgprslen];
-    for (int64_t i = 0; i < sgprslen; i++) {
+    for (int64_t i = 0; i < sgprslen; ++i) {
       sgprs[i] = consts[0];
     }
 
     sgprs[0] = consts[1];
 
-    if (op.isGather()) {
+    if constexpr (BaseOp::isGather()) {
       sgprs[0] = setValueAtOffset(rewriter, loc, sgprs[0], consts[1], 30);
 
       auto type = cast<TDMGatherBaseType>(op.getResult().getType());
@@ -2382,19 +2382,18 @@ struct AMDGPUMakeDmaBaseLowering : public ConvertOpToLLVMPattern<BaseOp> {
   }
 };
 
-struct AMDGPUMakeDmaDescriptorLowering
-    : public ConvertOpToLLVMPattern<MakeDmaDescriptorOp> {
-  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+template <typename DescriptorOp>
+struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
+  using ConvertOpToLLVMPattern<DescriptorOp>::ConvertOpToLLVMPattern;
+  using OpAdaptor = typename ConvertOpToLLVMPattern<DescriptorOp>::OpAdaptor;
 
-  AMDGPUMakeDmaDescriptorLowering(const LLVMTypeConverter &converter,
-                                  Chipset chipset)
-      : ConvertOpToLLVMPattern<MakeDmaDescriptorOp>(converter),
-        chipset(chipset) {}
+  AMDGPULowerDescriptor(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<DescriptorOp>(converter), chipset(chipset) {}
   Chipset chipset;
 
   Value getDGroup0(OpAdaptor adaptor) const { return adaptor.getBase(); }
 
-  Value setWorkgroupMask(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setWorkgroupMask(DescriptorOp op, OpAdaptor adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr0) const {
     Value mask = op.getWorkgroupMask();
@@ -2408,7 +2407,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr0, extendedMask, 0);
   }
 
-  Value setDataSize(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setDataSize(DescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr0, ArrayRef<Value> consts) const {
     unsigned elementTypeWidthInBits = op.getElementTypeWidth();
@@ -2419,7 +2418,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr0, size, 16);
   }
 
-  Value setAtomicBarrier(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setAtomicBarrier(DescriptorOp op, OpAdaptor adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr0, ArrayRef<Value> consts) const {
     if (!adaptor.getAtomicBarrierAddress())
@@ -2428,16 +2427,18 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 18);
   }
 
-  Value setIterateEnable(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setIterateEnable(DescriptorOp op, OpAdaptor adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr0, ArrayRef<Value> consts) const {
     if (!adaptor.getGlobalIncrement())
       return sgpr0;
 
+    // Value is ignored when in gather mode.
+    // TODO: emit error earlier?
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 19);
   }
 
-  Value setPadEnable(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setPadEnable(DescriptorOp op, OpAdaptor adaptor,
                      ConversionPatternRewriter &rewriter, Location loc,
                      Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getPadAmount())
@@ -2446,7 +2447,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 20);
   }
 
-  Value setEarlyTimeout(MakeDmaDescriptorOp op, OpAdaptor adaptorm,
+  Value setEarlyTimeout(DescriptorOp op, OpAdaptor adaptor,
                         ConversionPatternRewriter &rewriter, Location loc,
                         Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getWorkgroupMask())
@@ -2455,7 +2456,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 21);
   }
 
-  Value setPadInterval(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setPadInterval(DescriptorOp op, OpAdaptor adaptor,
                        ConversionPatternRewriter &rewriter, Location loc,
                        Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getPadAmount())
@@ -2476,7 +2477,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr0, padInterval, 22);
   }
 
-  Value setPadAmount(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setPadAmount(DescriptorOp op, OpAdaptor adaptor,
                      ConversionPatternRewriter &rewriter, Location loc,
                      Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getPadAmount())
@@ -2494,7 +2495,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr0, padAmount, 25);
   }
 
-  Value setAtomicBarrierAddress(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setAtomicBarrierAddress(DescriptorOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &rewriter,
                                 Location loc, Value sgpr1,
                                 ArrayRef<Value> consts) const {
@@ -2505,9 +2506,9 @@ struct AMDGPUMakeDmaDescriptorLowering
     auto barrierAddressTy =
         cast<MemRefType>(op.getAtomicBarrierAddress().getType());
     ValueRange atomicBarrierIndices = adaptor.getAtomicBarrierIndices();
-    atomicBarrierAddress =
-        getStridedElementPtr(rewriter, loc, barrierAddressTy,
-                             atomicBarrierAddress, atomicBarrierIndices);
+    atomicBarrierAddress = ConvertToLLVMPattern::getStridedElementPtr(
+        rewriter, loc, barrierAddressTy, atomicBarrierAddress,
+        atomicBarrierIndices);
     IntegerType i32 = rewriter.getI32Type();
     // pre-condition: atomicBarrierAddress is aligned to 8 bytes which implies
     // that the 3 LSBs are zero.
@@ -2524,8 +2525,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr1, atomicBarrierAddress, 32);
   }
 
-  std::pair<Value, Value> setTensorDimX(MakeDmaDescriptorOp op,
-                                        OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDimX(DescriptorOp op, OpAdaptor adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1, Value sgpr2,
                                         ArrayRef<Value> consts, uint64_t dimX,
@@ -2544,10 +2544,10 @@ struct AMDGPUMakeDmaDescriptorLowering
     // conditions that need to be checked at runtime. This could also be fixed
     // by saying that mixedGlobalSizes is a DynamicI32List.
     Value tensorDimX;
-    if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult))
+    if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult)) {
       tensorDimX =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    else {
+    } else {
       IntegerType i32 = rewriter.getI32Type();
       tensorDimX = cast<Value>(tensorDimXOpFoldResult);
       tensorDimX = LLVM::TruncOp::create(rewriter, loc, i32, tensorDimX);
@@ -2561,8 +2561,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return {sgpr1, sgpr2};
   }
 
-  std::pair<Value, Value> setTensorDim0(MakeDmaDescriptorOp op,
-                                        OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDim0(DescriptorOp op, OpAdaptor adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1, Value sgpr2,
                                         ArrayRef<Value> consts) const {
@@ -2570,8 +2569,7 @@ struct AMDGPUMakeDmaDescriptorLowering
                          48);
   }
 
-  std::pair<Value, Value> setTensorDim1(MakeDmaDescriptorOp op,
-                                        OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDim1(DescriptorOp op, OpAdaptor adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr2, Value sgpr3,
                                         ArrayRef<Value> consts) const {
@@ -2579,7 +2577,7 @@ struct AMDGPUMakeDmaDescriptorLowering
                          80);
   }
 
-  Value setTileDimX(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setTileDimX(DescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr, ArrayRef<Value> consts, size_t dimX,
                     int64_t offset) const {
@@ -2599,10 +2597,10 @@ struct AMDGPUMakeDmaDescriptorLowering
     // checked at runtime. This could also be fixed by saying that
     // mixedSharedSizes is a DynamicI16List.
     Value tileDimX;
-    if (auto attr = dyn_cast<Attribute>(tileDimXOpFoldResult))
+    if (auto attr = dyn_cast<Attribute>(tileDimXOpFoldResult)) {
       tileDimX =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    else {
+    } else {
       IntegerType i32 = rewriter.getI32Type();
       tileDimX = cast<Value>(tileDimXOpFoldResult);
       tileDimX = LLVM::TruncOp::create(rewriter, loc, i32, tileDimX);
@@ -2611,26 +2609,50 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr, tileDimX, offset);
   }
 
-  Value setTileDim0(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim0(DescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr3, ArrayRef<Value> consts) const {
     return setTileDimX(op, adaptor, rewriter, loc, sgpr3, consts, 0, 112);
   }
 
-  Value setTileDim1(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim1(DescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr4, ArrayRef<Value> consts) const {
     return setTileDimX(op, adaptor, rewriter, loc, sgpr4, consts, 1, 128);
   }
 
-  Value setTileDim2(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setValidIndices(DescriptorOp op, OpAdaptor adaptor,
+                        ConversionPatternRewriter &rewriter, Location loc,
+                        Value sgpr4, ArrayRef<Value> consts) const {
+    auto type = cast<VectorType>(op.getIndices().getType());
+    ArrayRef<int64_t> shape = type.getShape();
+    assert(shape.size() == 1 && "expected shape to be of rank 1.");
+    unsigned length = shape.back();
+    assert(0 < length && length <= 16 && "expected length to be at most 16.");
+    Value value = createI32Constant(rewriter, loc, length);
+    return setValueAtOffset(rewriter, loc, sgpr4, value, 128);
+  }
+
+  Value setTileDim1OrValidIndices(DescriptorOp op, OpAdaptor adaptor,
+                                  ConversionPatternRewriter &rewriter,
+                                  Location loc, Value sgpr4,
+                                  ArrayRef<Value> consts) const {
+    if constexpr (DescriptorOp::isGather())
+      return setValidIndices(op, adaptor, rewriter, loc, sgpr4, consts);
+    return setTileDim1(op, adaptor, rewriter, loc, sgpr4, consts);
+  }
+
+  Value setTileDim2(DescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr4, ArrayRef<Value> consts) const {
+    // Value is ignored when in gather mode.
+    if constexpr (DescriptorOp::isGather())
+      return sgpr4;
     return setTileDimX(op, adaptor, rewriter, loc, sgpr4, consts, 2, 144);
   }
 
   std::pair<Value, Value>
-  setTensorDimXStride(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  setTensorDimXStride(DescriptorOp op, OpAdaptor adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgprY, Value sgprZ, ArrayRef<Value> consts,
                       size_t dimX, int64_t offset) const {
@@ -2676,7 +2698,7 @@ struct AMDGPUMakeDmaDescriptorLowering
   }
 
   std::pair<Value, Value>
-  setTensorDim0Stride(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  setTensorDim0Stride(DescriptorOp op, OpAdaptor adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr5, Value sgpr6, ArrayRef<Value> consts) const {
     return setTensorDimXStride(op, adaptor, rewriter, loc, sgpr5, sgpr6, consts,
@@ -2684,18 +2706,21 @@ struct AMDGPUMakeDmaDescriptorLowering
   }
 
   std::pair<Value, Value>
-  setTensorDim1Stride(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  setTensorDim1Stride(DescriptorOp op, OpAdaptor adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr5, Value sgpr6, ArrayRef<Value> consts) const {
+    // Value is ignored when in gather mode.
+    if constexpr (DescriptorOp::isGather())
+      return {sgpr5, sgpr6};
     return setTensorDimXStride(op, adaptor, rewriter, loc, sgpr5, sgpr6, consts,
                                1, 208);
   }
 
-  Value getDGroup1(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup1(DescriptorOp op, OpAdaptor adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
     Value sgprs[8];
-    for (int64_t i = 0; i < 8; i++) {
+    for (int64_t i = 0; i < 8; ++i) {
       sgprs[i] = consts[0];
     }
 
@@ -2716,7 +2741,8 @@ struct AMDGPUMakeDmaDescriptorLowering
         setTensorDim1(op, adaptor, rewriter, loc, sgprs[2], sgprs[3], consts);
 
     sgprs[3] = setTileDim0(op, adaptor, rewriter, loc, sgprs[3], consts);
-    sgprs[4] = setTileDim1(op, adaptor, rewriter, loc, sgprs[4], consts);
+    sgprs[4] =
+        setTileDim1OrValidIndices(op, adaptor, rewriter, loc, sgprs[4], consts);
     sgprs[4] = setTileDim2(op, adaptor, rewriter, loc, sgprs[4], consts);
     std::tie(sgprs[5], sgprs[6]) = setTensorDim0Stride(
         op, adaptor, rewriter, loc, sgprs[5], sgprs[6], consts);
@@ -2736,7 +2762,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return dgroup1;
   }
 
-  Value setTensorDimX(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setTensorDimX(DescriptorOp op, OpAdaptor adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr0, ArrayRef<Value> consts, int64_t dimX,
                       int64_t offset) const {
@@ -2749,10 +2775,10 @@ struct AMDGPUMakeDmaDescriptorLowering
 
     OpFoldResult tensorDimXOpFoldResult = *(mixedGlobalSizes.rbegin() + dimX);
     Value tensorDimX;
-    if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult))
+    if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult)) {
       tensorDimX =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    else {
+    } else {
       IntegerType i32 = rewriter.getI32Type();
       tensorDimX = cast<Value>(tensorDimXOpFoldResult);
       tensorDimX = LLVM::TruncOp::create(rewriter, loc, i32, tensorDimX);
@@ -2761,7 +2787,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr0, tensorDimX, offset);
   }
 
-  Value setTensorDim2(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setTensorDim2(DescriptorOp op, OpAdaptor adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr0, ArrayRef<Value> consts) const {
     return setTensorDimX(op, adaptor, rewriter, loc, sgpr0, consts, 2, 0);
@@ -2776,7 +2802,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, accumulator, value, shift);
   }
 
-  Value setLDSAddrIncrement(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setLDSAddrIncrement(DescriptorOp op, OpAdaptor adaptor,
                             ConversionPatternRewriter &rewriter, Location loc,
                             Value sgpr1, ArrayRef<Value> consts,
                             int64_t offset) const {
@@ -2785,7 +2811,7 @@ struct AMDGPUMakeDmaDescriptorLowering
   }
 
   std::pair<Value, Value>
-  setGlobalAddrIncrement(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  setGlobalAddrIncrement(DescriptorOp op, OpAdaptor adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr2, Value sgpr3, ArrayRef<Value> consts,
                          int64_t offset) const {
@@ -2803,8 +2829,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return {sgpr2, sgpr3};
   }
 
-  Value setTensorDim3OrLDSAddrIncrement(MakeDmaDescriptorOp op,
-                                        OpAdaptor adaptor,
+  Value setTensorDim3OrLDSAddrIncrement(DescriptorOp op, OpAdaptor adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1,
                                         ArrayRef<Value> consts) const {
@@ -2819,9 +2844,8 @@ struct AMDGPUMakeDmaDescriptorLowering
   }
 
   std::pair<Value, Value> setTensorDim2StrideOrGlobalAddrIncrement(
-      MakeDmaDescriptorOp op, OpAdaptor adaptor,
-      ConversionPatternRewriter &rewriter, Location loc, Value sgpr2,
-      Value sgpr3, ArrayRef<Value> consts) const {
+      DescriptorOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter,
+      Location loc, Value sgpr2, Value sgpr3, ArrayRef<Value> consts) const {
     Value globalIncrement = op.getGlobalIncrement();
     constexpr int32_t dim = 2;
     constexpr int32_t offset = 64;
@@ -2832,7 +2856,7 @@ struct AMDGPUMakeDmaDescriptorLowering
                                   consts, offset);
   }
 
-  Value setIterateCount(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setIterateCount(DescriptorOp op, OpAdaptor adaptor,
                         ConversionPatternRewriter &rewriter, Location loc,
                         Value sgpr3, ArrayRef<Value> consts,
                         int32_t offset) const {
@@ -2850,7 +2874,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr3, iterationCount, offset);
   }
 
-  Value setTileDim3OrIterateCount(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim3OrIterateCount(DescriptorOp op, OpAdaptor adaptor,
                                   ConversionPatternRewriter &rewriter,
                                   Location loc, Value sgpr3,
                                   ArrayRef<Value> consts) const {
@@ -2864,9 +2888,17 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setIterateCount(op, adaptor, rewriter, loc, sgpr3, consts, offset);
   }
 
-  Value getDGroup2(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup2(DescriptorOp op, OpAdaptor adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
+    if constexpr (DescriptorOp::isGather())
+      return getDGroup2Gather(op, adaptor, rewriter, loc, consts);
+    return getDGroup2NonGather(op, adaptor, rewriter, loc, consts);
+  }
+
+  Value getDGroup2NonGather(DescriptorOp op, OpAdaptor adaptor,
+                            ConversionPatternRewriter &rewriter, Location loc,
+                            ArrayRef<Value> consts) const {
     IntegerType i32 = rewriter.getI32Type();
     Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
     assert(v4i32 && "expected type conversion to succeed.");
@@ -2877,7 +2909,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
     constexpr int64_t sgprlen = 4;
     Value sgprs[sgprlen];
-    for (int i = 0; i < sgprlen; i++)
+    for (int i = 0; i < sgprlen; ++i)
       sgprs[i] = consts[0];
 
     sgprs[0] = setTensorDim2(op, adaptor, rewriter, loc, sgprs[0], consts);
@@ -2896,8 +2928,78 @@ struct AMDGPUMakeDmaDescriptorLowering
     return dgroup2;
   }
 
+  Value getGatherIndices(DescriptorOp op, OpAdaptor adaptor,
+                         ConversionPatternRewriter &rewriter, Location loc,
+                         ArrayRef<Value> consts, bool firstHalf) const {
+    IntegerType i32 = rewriter.getI32Type();
+    Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
+    assert(v4i32 && "expected type conversion to succeed.");
+
+    Value indices = adaptor.getIndices();
+    auto vectorType = cast<VectorType>(indices.getType());
+    unsigned length = vectorType.getShape().back();
+    Type elementType = vectorType.getElementType();
+    unsigned maxLength = elementType == i32 ? 4 : 8;
+    int32_t offset = firstHalf ? 0 : maxLength;
+    unsigned discountedLength =
+        std::max(static_cast<int32_t>(length - offset), 0);
+
+    unsigned targetSize = std::min(maxLength, discountedLength);
+
+    SmallVector<Value> indicesVector;
+    for (unsigned i = offset; i < targetSize + offset; ++i) {
+      Value idx;
+      if (i < consts.size())
+        idx = consts[i];
+      else
+        idx = createI32Constant(rewriter, loc, i);
+      Value elem = LLVM::ExtractElementOp::create(rewriter, loc, indices, idx);
+      indicesVector.push_back(elem);
+    }
+
+    SmallVector<Value> indicesI32Vector;
+    if (elementType == i32) {
+      indicesI32Vector = indicesVector;
+    } else {
+      for (unsigned i = 0; i < targetSize; ++i) {
+        Value index = indicesVector[i];
+        indicesI32Vector.push_back(
+            LLVM::ZExtOp::create(rewriter, loc, i32, index));
+      }
+      if ((targetSize % 2) != 0)
+        // Add padding when not divisible by two.
+        indicesI32Vector.push_back(consts[0]);
+    }
+
+    SmallVector<Value> indicesToInsert;
+    if (elementType == i32) {
+      indicesToInsert = indicesI32Vector;
+    } else {
+      unsigned size = indicesI32Vector.size() / 2;
+      for (unsigned i = 0; i < size; ++i) {
+        Value first = indicesI32Vector[2 * i];
+        Value second = indicesI32Vector[2 * i + 1];
+        Value joined = setValueAtOffset(rewriter, loc, first, second, 16);
+        indicesToInsert.push_back(joined);
+      }
+    }
+
+    Value dgroup = LLVM::PoisonOp::create(rewriter, loc, v4i32);
+    for (auto [sgpr, constant] : llvm::zip_first(indicesToInsert, consts))
+      dgroup =
+          LLVM::InsertElementOp::create(rewriter, loc, dgroup, sgpr, constant);
+
+    return dgroup;
+  }
+
+  Value getDGroup2Gather(DescriptorOp op, OpAdaptor adaptor,
+                         ConversionPatternRewriter &rewriter, Location loc,
+                         ArrayRef<Value> consts) const {
+    return getGatherIndices(op, adaptor, rewriter, loc, consts, true);
+  }
+
   std::pair<Value, Value>
-  setTensorDim3Stride(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  setTensorDim3Stride(DescriptorOp op, OpAdaptor adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr0, Value sgpr1, ArrayRef<Value> consts) const {
     constexpr int32_t dim = 3;
@@ -2906,8 +3008,7 @@ struct AMDGPUMakeDmaDescriptorLowering
                                dim, offset);
   }
 
-  std::pair<Value, Value> setTensorDim4(MakeDmaDescriptorOp op,
-                                        OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDim4(DescriptorOp op, OpAdaptor adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1, Value sgpr2,
                                         ArrayRef<Value> consts) const {
@@ -2917,7 +3018,7 @@ struct AMDGPUMakeDmaDescriptorLowering
                          offset);
   }
 
-  Value setTileDim4(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim4(DescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr2, ArrayRef<Value> consts) const {
     constexpr int32_t dim = 4;
@@ -2925,9 +3026,17 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setTileDimX(op, adaptor, rewriter, loc, sgpr2, consts, dim, offset);
   }
 
-  Value getDGroup3(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup3(DescriptorOp op, OpAdaptor adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
+    if constexpr (DescriptorOp::isGather())
+      return getDGroup3Gather(op, adaptor, rewriter, loc, consts);
+    return getDGroup3NonGather(op, adaptor, rewriter, loc, consts);
+  }
+
+  Value getDGroup3NonGather(DescriptorOp op, OpAdaptor adaptor,
+                            ConversionPatternRewriter &rewriter, Location loc,
+                            ArrayRef<Value> consts) const {
     IntegerType i32 = rewriter.getI32Type();
     Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
     assert(v4i32 && "expected type conversion to succeed.");
@@ -2937,7 +3046,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
     constexpr int32_t sgprlen = 4;
     Value sgprs[sgprlen];
-    for (int i = 0; i < sgprlen; i++)
+    for (int i = 0; i < sgprlen; ++i)
       sgprs[i] = consts[0];
 
     std::tie(sgprs[0], sgprs[1]) = setTensorDim3Stride(
@@ -2954,8 +3063,14 @@ struct AMDGPUMakeDmaDescriptorLowering
     return dgroup3;
   }
 
+  Value getDGroup3Gather(DescriptorOp op, OpAdaptor adaptor,
+                         ConversionPatternRewriter &rewriter, Location loc,
+                         ArrayRef<Value> consts) const {
+    return getGatherIndices(op, adaptor, rewriter, loc, consts, false);
+  }
+
   LogicalResult
-  matchAndRewrite(MakeDmaDescriptorOp op, OpAdaptor adaptor,
+  matchAndRewrite(DescriptorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (chipset < kGfx1250)
       return op->emitOpError(
@@ -2969,7 +3084,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     assert(v4i32 && "expected type conversion to succeed");
 
     SmallVector<Value> consts;
-    for (int64_t i = 0; i < 8; i++)
+    for (int64_t i = 0; i < 8; ++i)
       consts.push_back(createI32Constant(rewriter, loc, i));
 
     Value dgroup0 = this->getDGroup0(adaptor);
@@ -3047,6 +3162,10 @@ void mlir::populateAMDGPUTypeAndAttributeConversions(
     Type i32 = IntegerType::get(type.getContext(), 32);
     return typeConverter.convertType(VectorType::get(4, i32));
   });
+  typeConverter.addConversion([&](TDMGatherBaseType type) -> Type {
+    Type i32 = IntegerType::get(type.getContext(), 32);
+    return typeConverter.convertType(VectorType::get(4, i32));
+  });
 }
 
 void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
@@ -3075,6 +3194,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
       GatherToLDSOpLowering, TransposeLoadOpLowering, AMDGPUPermlaneLowering,
       AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
       AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
-      AMDGPUMakeDmaDescriptorLowering>(converter, chipset);
+      AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
+      AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>>(converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }
