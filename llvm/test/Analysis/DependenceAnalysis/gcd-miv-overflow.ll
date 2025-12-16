@@ -190,8 +190,7 @@ exit:
 ;     if (offset1 == -5) A[offset1] = 0;
 ;   }
 ;
-; FIXME: DependenceAnalysis fails to detect dependency between two stores. Also
-; GCD MIV misses '='-dependency.
+; FIXME: DependenceAnalysis fails to detect dependency between two stores.
 ;
 ; memory accesses                     | (i,j) == (1844674407370955160,1)
 ; ------------------------------------|----------------------------------
@@ -211,7 +210,7 @@ define void @gcdmiv_delta_ovfl2(ptr %A) {
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - output [* *]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - output [* <>]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [* *|<]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.1, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - output [* *]!
 ;

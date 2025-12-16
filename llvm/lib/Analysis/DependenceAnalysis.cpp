@@ -2653,7 +2653,9 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
         !accumulateCoefficientsGCD(Dst, CurLoop, DstCoeff, RunningGCD))
       return false;
 
-    Delta = SE->getMinusSCEV(SrcCoeff, DstCoeff);
+    Delta = minusSCEVNoSignedOverflow(DstCoeff, SrcCoeff, *SE);
+    if (!Delta)
+      continue;
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
     std::optional<APInt> ConstCoeff = getConstantCoefficient(Delta);
