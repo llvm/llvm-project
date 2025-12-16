@@ -63,65 +63,6 @@ FailureOr<VectorType> getDistributedVectorType(xegpu::TensorDescType tdescTy);
 FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
                                                LayoutAttr layout);
 
-/// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
-std::string getTempLayoutName(const OpOperand &operand);
-
-/// Return the attribute name for the OpResult to attach DistributeLayoutAttr
-std::string getTempLayoutName(const OpResult result);
-
-/// Retrieves the DistributeLayoutAttr associated with a given Value. For
-/// TensorDescType values, the DistributeLayoutAttr is extracted from the
-/// TensorDescType itself. For other values, it is obtained from the attributes
-/// of the defining operation. Returns nullptr if no DistributeLayoutAttr is
-/// found.
-DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
-
-/// Retrieves the DistributeLayoutAttr associated with a given OpOperand. It
-/// will first check the operand_layout_{id} of the owner operation. If not
-/// found, it will check the operand itself and its defining op.
-DistributeLayoutAttr getDistributeLayoutAttr(const OpOperand &opr);
-
-/// Removes the LayoutAttr for a given OpOperand or OpResult if it exists.
-template <typename T,
-          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
-                                      std::is_same_v<T, OpResult>>>
-void removeLayoutAttr(const T &operandOrResult);
-
-/// Removes the DistributeLayoutAttr for each OpOperand and OpResult of the
-/// given operation if they exist. If the operation contains regions, it is also
-/// applied recursively to the contained operations
-void removeLayoutAttrs(Operation *op);
-
-/// Sets the DistributeLayoutAttr for a given OpResult
-void setDistributeLayoutAttr(const OpResult &Result,
-                             const DistributeLayoutAttr layout);
-
-/// Sets the DistributeLayoutAttr for a given OpOperand
-void setDistributeLayoutAttr(const OpOperand &opr,
-                             const DistributeLayoutAttr layout);
-
-/// get and set distribute layout attribute for non-anchor operations
-/// (and offsets/masks of load/store ops before we get rid of their temp attrs)
-template <typename T,
-          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
-                                      std::is_same_v<T, OpResult>>>
-DistributeLayoutAttr getTempLayout(const T &operandOrResult);
-
-template <typename T,
-          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
-                                      std::is_same_v<T, OpResult>>>
-void setTempLayout(const T &operandOrResult, const DistributeLayoutAttr layout);
-
-/// Set the DistributeLayoutAttr for each OpOperand and OpResult of the given
-/// operation. If the operation contains regions, it is also applied recursively
-/// to the contained operations
-void retrieveDistributeLayoutAttrsRecursive(Operation *op);
-
-/// Attach layout attributes to all vector-type operands of operations within
-/// the given operation's region. Reports an error if any vector operand lacks
-/// a layout attribute.
-bool localPropagateLayoutsFromAnchor(Operation *rootOp);
-
 /// Extract a set of small vectors from a value with a given shape using
 /// vector.extract_stride_slice
 SmallVector<Value> extractVectorsWithShapeFromValue(OpBuilder &builder,
@@ -176,6 +117,69 @@ SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
 template <typename T>
 int getLargestDivisor(T dim, ArrayRef<T> candidates,
                       ArrayRef<T> candidateMultiples = {});
+
+/// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
+std::string getLocalLayout(const OpOperand &operand);
+
+/// Return the attribute name for the OpResult to attach DistributeLayoutAttr
+std::string getLocalLayout(const OpResult result);
+
+/// Retrieves the DistributeLayoutAttr associated with a given Value. For
+/// TensorDescType values, the DistributeLayoutAttr is extracted from the
+/// TensorDescType itself. For other values, it is obtained from the attributes
+/// of the defining operation. Returns nullptr if no DistributeLayoutAttr is
+/// found.
+DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
+
+/// Retrieves the DistributeLayoutAttr associated with a given OpOperand. It
+/// will first check the operand_layout_{id} of the owner operation. If not
+/// found, it will check the operand itself and its defining op.
+DistributeLayoutAttr getDistributeLayoutAttr(const OpOperand &opr);
+
+/// Removes the LayoutAttr for a given OpOperand or OpResult if it exists.
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                      std::is_same_v<T, OpResult>>>
+void removeLayoutAttr(const T &operandOrResult);
+
+/// Removes the DistributeLayoutAttr for each OpOperand and OpResult of the
+/// given operation if they exist. If the operation contains regions, it is also
+/// applied recursively to the contained operations
+void removeLayoutAttrs(Operation *op);
+
+/// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpResult
+/// user should use setAnchorLayout instead
+void setDistributeLayoutAttr(const OpResult &Result,
+                             const DistributeLayoutAttr layout);
+
+/// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpOperand
+/// user should use setAnchorLayout instead
+void setDistributeLayoutAttr(const OpOperand &opr,
+                             const DistributeLayoutAttr layout);
+
+/// get and set distribute layout attribute for non-anchor operations
+/// (and offsets/masks of load/store ops before we get rid of their temp attrs)
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                      std::is_same_v<T, OpResult>>>
+DistributeLayoutAttr getTempLayout(const T &operandOrResult);
+
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                      std::is_same_v<T, OpResult>>>
+void setLocalLayout(const T &operandOrResult,
+                    const DistributeLayoutAttr layout);
+
+/// [to-be-deprecated] Set the DistributeLayoutAttr for each OpOperand and
+/// OpResult of of the given operation. If the operation contains regions, it is
+/// also applied recursively to the contained operations operation.
+/// TODO: To be replaced by recoverLocalLayouts()
+void recoverLocalLayoutsDeprecated(Operation *op);
+
+/// Attach layout attributes to all vector-type operands of operations within
+/// the given operation's region. Reports an error if any vector operand lacks
+/// a layout attribute.
+bool recoverLocalLayouts(Operation *rootOp);
 
 } // namespace xegpu
 

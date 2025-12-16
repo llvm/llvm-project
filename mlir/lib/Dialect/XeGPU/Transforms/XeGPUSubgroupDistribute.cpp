@@ -869,11 +869,11 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
           storeScatterOp, "Expected at most 2D result at SG level");
 
     std::string layoutPayloadName =
-        xegpu::getTempLayoutName(storeScatterOp->getOpOperand(0));
+        xegpu::getLocalLayout(storeScatterOp->getOpOperand(0));
     std::string layoutOffsetsName =
-        xegpu::getTempLayoutName(storeScatterOp->getOpOperand(2));
+        xegpu::getLocalLayout(storeScatterOp->getOpOperand(2));
     std::string layoutMaskName =
-        xegpu::getTempLayoutName(storeScatterOp->getOpOperand(3));
+        xegpu::getLocalLayout(storeScatterOp->getOpOperand(3));
 
     xegpu::LayoutAttr layoutPayload =
         storeScatterOp->getAttrOfType<xegpu::LayoutAttr>(layoutPayloadName);
@@ -1152,9 +1152,9 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
                                          "Expected 1D offsets and mask vector");
     // Assume offset and mask producers will be distributed as well.
     std::string layoutOffsetsName =
-        xegpu::getTempLayoutName(loadGatherOp->getOpOperand(1));
+        xegpu::getLocalLayout(loadGatherOp->getOpOperand(1));
     std::string layoutMaskName =
-        xegpu::getTempLayoutName(loadGatherOp->getOpOperand(2));
+        xegpu::getLocalLayout(loadGatherOp->getOpOperand(2));
 
     xegpu::LayoutAttr layoutOffsets =
         loadGatherOp->getAttrOfType<xegpu::LayoutAttr>(layoutOffsetsName);
@@ -1224,8 +1224,8 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
   // Reduction result should have the same layout as the accumulator.
-  xegpu::setTempLayout(cast<OpResult>(reductionResult),
-                       xegpu::getTempLayout(dyn_cast<OpResult>(acc)));
+  xegpu::setLocalLayout(cast<OpResult>(reductionResult),
+                        xegpu::getTempLayout(dyn_cast<OpResult>(acc)));
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
   for (int i = 0; i < nSlices; ++i) {
@@ -1256,8 +1256,8 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
     auto srcLayout = xegpu::getTempLayout(dyn_cast<OpResult>(src));
     auto accLayout = xegpu::getTempLayout(dyn_cast<OpResult>(acc));
 
-    xegpu::setTempLayout(slice->getOpOperand(0), srcLayout);
-    xegpu::setTempLayout(slice->getOpResult(0), accLayout);
+    xegpu::setLocalLayout(slice->getOpOperand(0), srcLayout);
+    xegpu::setLocalLayout(slice->getOpResult(0), accLayout);
     // Extract and reduction results in scalars, so no result layout is needed.
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
     Value reduction = vector::ReductionOp::create(
@@ -2041,7 +2041,7 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   // 1) It is assumed that there are no layout conflicts.
   // 2) Any existing layout attributes attached to the operands are ignored.
   Operation *op = getOperation();
-  if (!xegpu::localPropagateLayoutsFromAnchor(op)) {
+  if (!xegpu::recoverLocalLayouts(op)) {
     signalPassFailure();
     return;
   }

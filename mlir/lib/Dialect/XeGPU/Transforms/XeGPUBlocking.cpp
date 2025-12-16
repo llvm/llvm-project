@@ -281,12 +281,12 @@ void XeGPUBlockingPass::runOnOperation() {
   Operation *op = getOperation();
 
   // TODO-LayoutRefactor: unify the local propagation for layout preprocessing
-  // replace the function with localPropagateLayoutsFromAnchor
-  // if (!xegpu::localPropagateLayoutsFromAnchor(op)) {
+  // replace the function with recoverLocalLayouts
+  // if (!xegpu::recoverLocalLayouts(op)) {
   //   signalPassFailure();
   //   return;
   // }
-  xegpu::retrieveDistributeLayoutAttrsRecursive(op);
+  xegpu::recoverLocalLayoutsDeprecated(op);
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,
                                  xegpu::LayoutAttr layout) {
@@ -414,14 +414,14 @@ void XeGPUBlockingPass::runOnOperation() {
   op->walk([](Operation *op) {
     // Remove the layout attributes cached per operands.
     for (OpOperand &opr : op->getOpOperands()) {
-      std::string name = xegpu::getTempLayoutName(opr);
+      std::string name = xegpu::getLocalLayout(opr);
       if (op->hasAttrOfType<xegpu::LayoutAttr>(name))
         op->removeAttr(name);
     }
 
     // Update the layout attributes per result.
     for (OpResult result : op->getOpResults()) {
-      std::string name = xegpu::getTempLayoutName(result);
+      std::string name = xegpu::getLocalLayout(result);
       if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
         op->removeAttr(name);
         if (!isa<LoopLikeOpInterface>(op))

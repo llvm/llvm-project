@@ -776,7 +776,7 @@ def AnchorLayoutInterface : OpInterface<"AnchorLayoutInterface"> {
   let description = [{
     An attribute interface for accessing anchor layout information.
     This interface provides a method to set and retrieve the anchor layout
-    from attributes that implement it.
+    from operations that implement it.
   }];
 
   let methods = [

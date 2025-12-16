@@ -101,13 +101,13 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
 
-std::string xegpu::getTempLayoutName(const OpOperand &operand) {
+std::string xegpu::getLocalLayout(const OpOperand &operand) {
   const StringRef prefix("layout_operand_");
   unsigned idx = const_cast<OpOperand &>(operand).getOperandNumber();
   return llvm::formatv("{0}{1}", prefix, idx).str();
 }
 
-std::string xegpu::getTempLayoutName(const OpResult result) {
+std::string xegpu::getLocalLayout(const OpResult result) {
   const StringRef prefix = "layout_result_";
   return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
 }
@@ -129,7 +129,7 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
       return layout;
     }
 
-    std::string layoutName = getTempLayoutName(result);
+    std::string layoutName = getLocalLayout(result);
     if (defOp->hasAttr(layoutName)) {
       auto layout =
           defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
@@ -141,10 +141,8 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     auto *parentOp = arg.getOwner()->getParentOp();
     if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
-      if (tiedInit) {
-        auto layout = getDistributeLayoutAttr(tiedInit->get());
-        return layout;
-      }
+      if (tiedInit)
+        return getDistributeLayoutAttr(tiedInit->get());
     }
   }
 
@@ -169,22 +167,20 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
       return convertOp.getInputLayoutAttr();
     }
     auto layout = anchorOp.getAnchorLayout();
+
+    if (idx == 0)
+      return layout;
+
     // For store operations (StoreScatterOp, StoreNdOp, StoreMatrixOp),
     // the layout is valid for the first two operands: value and memref/tdesc.
     // For other operations, the layout applies to the first operand only.
     if (isa<xegpu::StoreScatterOp, xegpu::StoreNdOp, xegpu::StoreMatrixOp>(
-            op)) {
-      if (idx < 2) {
-        return layout;
-      }
-    } else {
-      if (idx == 0) {
-        return layout;
-      }
-    }
+            op) &&
+        (idx < 2))
+      return layout;
   }
 
-  std::string layoutName = xegpu::getTempLayoutName(opr);
+  std::string layoutName = xegpu::getLocalLayout(opr);
   if (op->hasAttr(layoutName)) {
     auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
@@ -230,7 +226,7 @@ maybePickPermanentLayout(xegpu::DistributeLayoutAttr layout,
 }
 
 // TODO-LayoutRefactor: Remove this function after replacing use
-//  with setTempLayout or setAnchorLayout
+//  with setLocalLayout or setAnchorLayout
 void xegpu::setDistributeLayoutAttr(
     const mlir::OpResult &result,
     const mlir::xegpu::DistributeLayoutAttr layout) {
@@ -243,7 +239,7 @@ void xegpu::setDistributeLayoutAttr(
     return;
   }
 
-  std::string name = xegpu::getTempLayoutName(result);
+  std::string name = xegpu::getLocalLayout(result);
   if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
@@ -253,7 +249,7 @@ void xegpu::setDistributeLayoutAttr(
 }
 
 // TODO-LayoutRefactor: Remove this function after replacing use
-//  with setTempLayout or setAnchorLayout
+//  with setLocalLayout or setAnchorLayout
 void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
                                     const DistributeLayoutAttr layout) {
   Operation *owner = operand.getOwner();
@@ -291,7 +287,7 @@ void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
     }
   }
 
-  std::string name = xegpu::getTempLayoutName(operand);
+  std::string name = xegpu::getLocalLayout(operand);
   if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
@@ -304,7 +300,7 @@ template <typename T, typename>
 xegpu::DistributeLayoutAttr xegpu::getTempLayout(const T &operandOrResult) {
   Operation *op = operandOrResult.getOwner();
 
-  std::string layoutName = xegpu::getTempLayoutName(operandOrResult);
+  std::string layoutName = xegpu::getLocalLayout(operandOrResult);
   if (op->hasAttr(layoutName)) {
     auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
@@ -319,10 +315,10 @@ template xegpu::DistributeLayoutAttr
 xegpu::getTempLayout<mlir::OpOperand>(const OpOperand &operand);
 
 template <typename T, typename>
-void xegpu::setTempLayout(const T &operandOrResult,
-                          const xegpu::DistributeLayoutAttr layout) {
+void xegpu::setLocalLayout(const T &operandOrResult,
+                           const xegpu::DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
-  std::string name = xegpu::getTempLayoutName(operandOrResult);
+  std::string name = xegpu::getLocalLayout(operandOrResult);
   if (owner->hasAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
     return;
   }
@@ -331,15 +327,15 @@ void xegpu::setTempLayout(const T &operandOrResult,
   }
 }
 
-template void xegpu::setTempLayout<mlir::OpResult>(
+template void xegpu::setLocalLayout<mlir::OpResult>(
     const mlir::OpResult &result,
     const mlir::xegpu::DistributeLayoutAttr layout);
 
-template void xegpu::setTempLayout<mlir::OpOperand>(
+template void xegpu::setLocalLayout<mlir::OpOperand>(
     const mlir::OpOperand &operand,
     const mlir::xegpu::DistributeLayoutAttr layout);
 
-void xegpu::retrieveDistributeLayoutAttrsRecursive(Operation *op) {
+void xegpu::recoverLocalLayoutsDeprecated(Operation *op) {
   op->walk([&](Operation *nestOp) {
     for (OpOperand &opr : nestOp->getOpOperands()) {
       auto layout = getDistributeLayoutAttr(opr.get());
@@ -356,7 +352,7 @@ void xegpu::retrieveDistributeLayoutAttrsRecursive(Operation *op) {
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's region. Reports an error if any vector operand lacks
 /// a layout attribute.
-bool xegpu::localPropagateLayoutsFromAnchor(Operation *rootOp) {
+bool xegpu::recoverLocalLayouts(Operation *rootOp) {
   auto result = rootOp->walk([&](Operation *op) {
     for (OpOperand &operand : op->getOpOperands()) {
       // Layouts are needed for vector type only.
@@ -378,7 +374,7 @@ bool xegpu::localPropagateLayoutsFromAnchor(Operation *rootOp) {
 template <typename T, typename>
 void xegpu::removeLayoutAttr(const T &operandOrResult) {
   Operation *owner = operandOrResult.getOwner();
-  std::string name = xegpu::getTempLayoutName(operandOrResult);
+  std::string name = xegpu::getLocalLayout(operandOrResult);
   if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
     owner->removeAttr(name);
 }
