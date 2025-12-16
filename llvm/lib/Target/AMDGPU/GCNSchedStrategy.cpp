@@ -2045,7 +2045,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     unsigned SpillCostAfter = PressureAfter.getVGPRSpills(MF);
 
     uint64_t BlockFreq =
-        MBFI.getBlockFreq(DAG.Regions[Region].first->getParent())
+        MBFI->getBlockFreq(DAG.Regions[Region].first->getParent())
             .getFrequency();
 
     bool RelativeFreqIsDenom = EntryFreq > BlockFreq;
@@ -2086,7 +2086,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     auto DefReg = DefMI->getOperand(0).getReg();
     uint64_t DefFreq =
         EntryFreq
-            ? MBFI.getBlockFreq(DefMI->getParent()).getFrequency() / EntryFreq
+            ? MBFI->getBlockFreq(DefMI->getParent()).getFrequency() / EntryFreq
             : 1;
 
     const TargetRegisterClass *RC = DAG.MRI.getRegClass(DefReg);
@@ -2096,7 +2096,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   // Account for CopyForUse copies in each block that the register is used.
   for (auto &[UseBlock, UseRegs] : CopyForUse) {
     uint64_t UseFreq =
-        EntryFreq ? MBFI.getBlockFreq(UseBlock).getFrequency() / EntryFreq : 1;
+        EntryFreq ? MBFI->getBlockFreq(UseBlock).getFrequency() / EntryFreq : 1;
 
     for (Register UseReg : UseRegs) {
       const TargetRegisterClass *RC = DAG.MRI.getRegClass(UseReg);
