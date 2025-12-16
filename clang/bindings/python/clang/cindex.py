@@ -3598,11 +3598,12 @@ class TranslationUnit(ClangObject):
             unsaved_files = []
 
         unsaved_files_array = self.process_unsaved_files(unsaved_files)
-        ptr = conf.lib.clang_reparseTranslationUnit(
-            self, len(unsaved_files), unsaved_files_array, options
+        result = int(
+            conf.lib.clang_reparseTranslationUnit(
+                self, len(unsaved_files), unsaved_files_array, options
+            )
         )
-
-        if not ptr:
+        if result != 0:
             raise TranslationUnitLoadError("Error reparsing translation unit.")
 
     def save(self, filename):
