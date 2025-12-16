@@ -113,6 +113,8 @@ Object makeObject(const parser::Designator &dsg,
                   semantics::SemanticsContext &semaCtx);
 Object makeObject(const parser::StructureComponent &comp,
                   semantics::SemanticsContext &semaCtx);
+Object makeObject(const parser::EntityDecl &decl,
+                  semantics::SemanticsContext &semaCtx);
 
 inline auto makeObjectFn(semantics::SemanticsContext &semaCtx) {
   return [&](auto &&s) { return makeObject(s, semaCtx); };
@@ -172,6 +174,7 @@ std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx);
 
 namespace clause {
+using StylizedInstance = tomp::type::StylizedInstanceT<IdTy, ExprTy>;
 using Range = tomp::type::RangeT<ExprTy>;
 using Mapper = tomp::type::MapperT<IdTy, ExprTy>;
 using Iterator = tomp::type::IteratorT<TypeTy, IdTy, ExprTy>;

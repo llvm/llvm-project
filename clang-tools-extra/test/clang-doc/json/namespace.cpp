@@ -73,6 +73,7 @@ typedef int MyTypedef;
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "HasEnums": true,
+// CHECK-NEXT:   "HasFunctions": true,
 // CHECK-NEXT:   "HasRecords": true,
 // CHECK-NEXT:   "InfoType": "namespace",
 // CHECK-NEXT:   "Name": "Global Namespace",
