@@ -95,10 +95,17 @@ int RTDECL(AllocatableCheckLengthParameter)(Descriptor &,
 // Successfully allocated memory is initialized if the allocatable has a
 // derived type, and is always initialized by AllocatableAllocateSource().
 // Performs all necessary coarray synchronization and validation actions.
+#ifdef RT_DEVICE_COMPILATION
 int RTDECL(AllocatableAllocate)(Descriptor &,
     std::int64_t *asyncObject = nullptr, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0, MemmoveFct memmoveFct = nullptr);
+    int sourceLine = 0, MemmoveFct memmoveFct = &MemcpyWrapper);
+#else
+int RTDECL(AllocatableAllocate)(Descriptor &,
+    std::int64_t *asyncObject = nullptr, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0, MemmoveFct memmoveFct = &Fortran::runtime::memcpy);
+#endif
 int RTDECL(AllocatableAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
     const char *sourceFile = nullptr, int sourceLine = 0);

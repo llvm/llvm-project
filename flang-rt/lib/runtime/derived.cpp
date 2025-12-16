@@ -73,11 +73,7 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
       // Explicit initialization of data pointers and
       // non-allocatable non-automatic components
       std::size_t bytes{component_->SizeInBytes(instance_)};
-      if (!memmoveFct_) {
-        runtime::memcpy(rawComponent, init, bytes);
-      } else {
-        memmoveFct_(rawComponent, init, bytes);
-      }
+      memmoveFct_(rawComponent, init, bytes);
     } else if (component_->genre() == typeInfo::Component::Genre::Pointer ||
         component_->genre() == typeInfo::Component::Genre::PointerDevice) {
       // Data pointers without explicit initialization are established
@@ -115,32 +111,20 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
             chunk = done;
           }
           char *uninitialized{rawInstance + done * *stride};
-          if (!memmoveFct_) {
-            runtime::memcpy(uninitialized, rawInstance, chunk * *stride);
-          } else {
-            memmoveFct_(uninitialized, rawInstance, chunk * *stride);
-          }
+          memmoveFct_(uninitialized, rawInstance, chunk * *stride);
           done += chunk;
         }
       } else {
         for (std::size_t done{1}; done < elements_; ++done) {
           char *uninitialized{rawInstance + done * *stride};
-          if (!memmoveFct_) {
-            runtime::memcpy(uninitialized, rawInstance, elementBytes);
-          } else {
-            memmoveFct_(uninitialized, rawInstance, elementBytes);
-          }
+          memmoveFct_(uninitialized, rawInstance, elementBytes);
         }
       }
     } else { // one at a time with subscription
       for (Elementwise::Advance(); !Elementwise::IsComplete();
           Elementwise::Advance()) {
         char *element{instance_.Element<char>(subscripts_)};
-        if (!memmoveFct_) {
-          runtime::memcpy(element, rawInstance, elementBytes);
-        } else {
-          memmoveFct_(element, rawInstance, elementBytes);
-        }
+        memmoveFct_(element, rawInstance, elementBytes);
       }
     }
   }

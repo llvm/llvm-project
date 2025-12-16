@@ -89,9 +89,15 @@ int RTDECL(PointerCheckLengthParameter)(Descriptor &,
 // Successfully allocated memory is initialized if the pointer has a
 // derived type, and is always initialized by PointerAllocateSource().
 // Performs all necessary coarray synchronization and validation actions.
+#ifdef RT_DEVICE_COMPILATION
 int RTDECL(PointerAllocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0, MemmoveFct memmoveFct = nullptr);
+    int sourceLine = 0, MemmoveFct memmoveFct = &MemcpyWrapper);
+#else
+int RTDECL(PointerAllocate)(Descriptor &, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0, MemmoveFct memmoveFct = &Fortran::runtime::memmove);
+#endif
 int RTDECL(PointerAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
     const char *sourceFile = nullptr, int sourceLine = 0);
