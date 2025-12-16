@@ -44,7 +44,7 @@
 #include <string>
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/circular_raw_ostream.h"
+#include "llvm/Support/raw_ostream.h"
 
 /// 32-Bit field data attributes controlling information presented to the user.
 enum OpenMPInfoType : uint32_t {
@@ -176,6 +176,41 @@ private:
   /// If the stream is muted, writes to it are ignored
   bool Muted = false;
 
+  /// Small buffer to reduce interferance between different threads
+  /// writing at the same time to the underlying stream.
+  static constexpr size_t BufferSize = 256;
+  std::array<char, BufferSize> Buffer;
+  size_t BufferPos = 0;
+
+  void flush() {
+    if (BufferPos > 0) {
+      Os.write(Buffer.data(), BufferPos);
+      BufferPos = 0;
+    }
+    Os.flush();
+  }
+
+  void writeToBuffer(const char *Ptr, size_t Size) {
+    size_t RemainingBufferSize = BufferSize - BufferPos;
+    if (Size <= RemainingBufferSize) {
+      std::memcpy(&Buffer[BufferPos], Ptr, Size);
+      BufferPos += Size;
+      return;
+    }
+    while (Size > RemainingBufferSize) {
+      std::memcpy(&Buffer[BufferPos], Ptr, RemainingBufferSize);
+      BufferPos = BufferSize;
+      Ptr += RemainingBufferSize;
+      Size -= RemainingBufferSize;
+      flush();
+      RemainingBufferSize = BufferSize;
+    }
+    if (Size > 0) {
+      std::memcpy(&Buffer[BufferPos], Ptr, Size);
+      BufferPos += Size;
+    }
+  }
+
   /// Split the line on newlines and insert the prefix before each
   /// newline. Forward everything to the underlying stream.
   void write_impl(const char *Ptr, size_t Size) final {
@@ -202,13 +237,13 @@ private:
       NeedEndNewLine = true;
     }
   }
-  void emitPrefix() { Os.write(Prefix.c_str(), Prefix.size()); }
+  void emitPrefix() { writeToBuffer(Prefix.c_str(), Prefix.size()); }
   void writeWithPrefix(StringRef Str) {
     if (ShouldPrefixNextString) {
       emitPrefix();
       ShouldPrefixNextString = false;
     }
-    Os.write(Str.data(), Str.size());
+    writeToBuffer(Str.data(), Str.size());
   }
 
 public:
@@ -222,7 +257,8 @@ public:
   }
   ~odbg_ostream() final {
     if (ShouldEmitNewLineOnDestruction && NeedEndNewLine)
-      Os << '\n';
+      writeToBuffer("\n", 1);
+    flush();
   }
   odbg_ostream(const odbg_ostream &) = delete;
   odbg_ostream &operator=(const odbg_ostream &) = delete;
@@ -246,17 +282,8 @@ public:
   void shouldMute(const OnlyLevel Filter) { Muted = BaseLevel != Filter; }
 };
 
-/// dbgs - Return a circular-buffered debug stream.
-[[maybe_unused]] static llvm::raw_ostream &dbgs() {
-  // Do one-time initialization in a thread-safe way.
-  static struct dbgstream {
-    llvm::circular_raw_ostream strm;
-
-    dbgstream() : strm(llvm::errs(), "*** Debug Log Output ***\n", 0) {}
-  } thestrm;
-
-  return thestrm.strm;
-}
+/// dbgs - Return the debug stream for offload debugging (just llvm::errs()).
+[[maybe_unused]] static llvm::raw_ostream &dbgs() { return llvm::errs(); }
 
 #ifdef OMPTARGET_DEBUG
 
