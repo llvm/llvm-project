@@ -152,13 +152,14 @@ bool VRegRenamer::renameInstsInMBB(MachineBasicBlock *MBB) {
       continue;
     if (!Candidate.getNumOperands())
       continue;
-    // Look for instructions that define VRegs in operand 0.
-    MachineOperand &MO = Candidate.getOperand(0);
-    // Avoid non regs, instructions defining physical regs.
-    if (!MO.isReg() || !MO.getReg().isVirtual())
-      continue;
-    VRegs.push_back(
-        NamedVReg(MO.getReg(), Prefix + getInstructionOpcodeHash(Candidate)));
+    // Look for instructions that define VRegs.
+    for (MachineOperand &MO : Candidate.defs()) {
+      // Avoid non regs, instructions defining physical regs.
+      if (!MO.isReg() || !MO.getReg().isVirtual())
+        continue;
+      VRegs.push_back(
+          NamedVReg(MO.getReg(), Prefix + getInstructionOpcodeHash(Candidate)));
+    }
   }
 
   return !VRegs.empty() ? doVRegRenaming(getVRegRenameMap(VRegs)) : false;
