@@ -42,7 +42,12 @@ void p3example() {
   static auto y = 0.0;
   // In C++98: 'auto' storage class specifier is redundant and incompatible with C++0x
   // In C++0x: 'auto' storage class specifier is not permitted in C++0x, and will not be supported in future releases
-  auto int r; // expected-warning {{'auto' storage class specifier}}
+  auto int r;
+#if __cplusplus >= 201103L
+  // expected-error@-2 {{'auto' cannot be combined with a type specifier}}
+#else
+  // expected-warning@-4 {{'auto' storage class specifier}}
+#endif
 
   same<__typeof(x), int> xHasTypeInt;
   same<__typeof(v), const int*> vHasTypeConstIntPtr;

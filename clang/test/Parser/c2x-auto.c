@@ -144,7 +144,7 @@ constexpr int auto a2 = 0; // c23-error {{cannot combine with previous 'int' dec
 auto int b1 = 0; // c23-error {{illegal storage class on file-scoped variable}} \
                     c17-error {{illegal storage class on file-scoped variable}}
 
-int auto b2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}} \
+int auto b2 = 0; // c23-error {{illegal storage class on file-scoped variable}} \
                     c17-error {{illegal storage class on file-scoped variable}}
 
 void f() {
@@ -155,5 +155,5 @@ void f() {
                                 c17-error {{use of undeclared identifier 'constexpr'}}
 
   auto int d1 = 0;
-  int auto d2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}}
+  int auto d2 = 0;
 }

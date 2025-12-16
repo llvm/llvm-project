@@ -3753,7 +3753,9 @@ void Parser::ParseDeclarationSpecifiers(
       // This identifier can only be a typedef name if we haven't already seen
       // a type-specifier.  Without this check we misparse:
       //  typedef int X; struct Y { short X; };  as 'short int'.
-      if (DS.hasTypeSpecifier())
+      // However, if 'auto' is set, we need to check if this identifier is a
+      // type name to detect conflicts (e.g., "auto MyInt").
+      if (DS.hasTypeSpecifier() && DS.getTypeSpecType() != DeclSpec::TST_auto)
         goto DoneWithDeclSpec;
 
       // If the token is an identifier named "__declspec" and Microsoft
@@ -3838,6 +3840,14 @@ void Parser::ParseDeclarationSpecifiers(
                                   DS.isFriendSpecified()))
         goto DoneWithDeclSpec;
 
+      // If 'auto' is set and we're in a template parameter context, the
+      // identifier is always the parameter name, not a type specifier, so skip
+      // type name lookup to avoid false ambiguity errors.
+      if (DS.getTypeSpecType() == DeclSpec::TST_auto &&
+          DSContext == DeclSpecContext::DSC_template_param) {
+        goto DoneWithDeclSpec;
+      }
+
       ParsedType TypeRep = Actions.getTypeName(
           *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
           false, false, nullptr, false, false,
@@ -3845,11 +3855,16 @@ void Parser::ParseDeclarationSpecifiers(
 
       // If this is not a typedef name, don't parse it as part of the declspec,
       // it must be an implicit int or an error.
+      // However, if 'auto' is already set, we can't have an implicit int.
       if (!TypeRep) {
         if (TryAnnotateTypeConstraint())
           goto DoneWithDeclSpec;
         if (Tok.isNot(tok::identifier))
           continue;
+        // If 'auto' is set, the identifier must be a type name or it's an
+        // error. Don't try to parse it as implicit int.
+        if (DS.getTypeSpecType() == DeclSpec::TST_auto)
+          goto DoneWithDeclSpec;
         ParsedAttributes Attrs(AttrFactory);
         if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext, Attrs)) {
           if (!Attrs.empty()) {
@@ -3859,6 +3874,47 @@ void Parser::ParseDeclarationSpecifiers(
           continue;
         }
         goto DoneWithDeclSpec;
+      }
+
+      // If 'auto' is set and this identifier is a type name, check if it's
+      // followed by declarator tokens (like '=', '(', '[', etc.). If so, this
+      // identifier is likely the variable name, not a type specifier, so we
+      // should stop parsing declaration specifiers.
+      // Also check for concept constraint syntax (C<T> auto param) where
+      // the identifier before 'auto' might be a concept, not a type conflict.
+      // Also check for template parameters (template<auto V>) and lambda
+      // parameters
+      // ([](auto c)) where the identifier is a parameter name, not a type
+      // conflict.
+      if (DS.getTypeSpecType() == DeclSpec::TST_auto && TypeRep) {
+        // Check if the next token indicates this is a declarator
+        tok::TokenKind NextKind = NextToken().getKind();
+        if (NextKind == tok::equal || NextKind == tok::l_paren ||
+            NextKind == tok::l_square || NextKind == tok::amp ||
+            NextKind == tok::ampamp || NextKind == tok::star ||
+            NextKind == tok::coloncolon || NextKind == tok::comma ||
+            NextKind == tok::semi || NextKind == tok::colon ||
+            NextKind == tok::greater || NextKind == tok::r_paren ||
+            NextKind == tok::arrow) {
+          // This identifier is likely the variable/parameter name, stop parsing
+          // decl specifiers. Note: ':' is for range-based for loops:
+          // for (auto Arg: x).
+          // Note: '>' is for template parameters: template<auto V>
+          // Note: ')' is for function/lambda parameters: [](auto c)
+          // Note: '->' is for lambda return types: [](auto c) -> int
+          goto DoneWithDeclSpec;
+        }
+        // Check for concept constraint syntax: C<T> auto param)
+        // If the identifier is followed by 'auto' and then an identifier that's
+        // followed by ')', this might be concept syntax, not a type conflict.
+        if (NextKind == tok::identifier) {
+          // Look ahead to see if this is followed by ')' (function parameter)
+          Token AfterNext = GetLookAheadToken(2);
+          if (AfterNext.is(tok::r_paren)) {
+            // This might be concept constraint syntax, skip conflict detection
+            goto DoneWithDeclSpec;
+          }
+        }
       }
 
       // Likewise, if this is a context where the identifier could be a template
@@ -4094,15 +4150,33 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
-        if (isKnownToBeTypeSpecifier(GetLookAheadToken(1))) {
-          isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
-                                             PrevSpec, DiagID, Policy);
-          if (!isInvalid && !getLangOpts().C23)
-            Diag(Tok, diag::ext_auto_storage_class)
-              << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
-        } else
-          isInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto, Loc, PrevSpec,
-                                         DiagID, Policy);
+        // Check for concept constraint syntax: C<T> auto param
+        // If there's already a type specifier, check if the previous token was
+        // '>' by looking at the source text before 'auto'.
+        if (DS.getTypeSpecType() != DeclSpec::TST_unspecified &&
+            Loc.isValid()) {
+          const SourceManager &SM = PP.getSourceManager();
+          const char *CharData = SM.getCharacterData(Loc);
+          if (CharData) {
+            // Look backwards for '>' token, skipping whitespace
+            const char *Cur = CharData - 1;
+            const char *BufferStart =
+                SM.getBufferData(SM.getFileID(Loc)).data();
+            while (Cur >= BufferStart && (*Cur == ' ' || *Cur == '\t' ||
+                                          *Cur == '\n' || *Cur == '\r')) {
+              --Cur;
+            }
+            if (Cur >= BufferStart && *Cur == '>') {
+              // This is concept constraint syntax (C<T> auto), don't treat as
+              // conflict. The concept constraint will be handled elsewhere
+              goto DoneWithDeclSpec;
+            }
+          }
+        }
+        // Always set 'auto' as a type specifier in C++11+ and C23.
+        // Conflicts will be detected in DeclSpec::Finish().
+        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto, Loc, PrevSpec,
+                                       DiagID, Policy);
       } else
         isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                            PrevSpec, DiagID, Policy);
@@ -4632,7 +4706,8 @@ void Parser::ParseDeclarationSpecifiers(
     DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : Tok.getLocation());
 
     // If the specifier wasn't legal, issue a diagnostic.
-    if (isInvalid) {
+    // Skip diagnostic if 'auto' conflict will be handled in Finish()
+    if (isInvalid && !DS.hasConflictingTypeSpecifier()) {
       assert(PrevSpec && "Method did not return previous specifier!");
       assert(DiagID);
 
