@@ -150,7 +150,7 @@ public:
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Module *module, Target *target);
 
-  static LanguageSet GetSupportedLanguagesForTypes();
+  static const LanguageSet &GetSupportedLanguagesForTypes();
   static LanguageSet GetSupportedLanguagesForExpressions();
 
   static void Initialize();
