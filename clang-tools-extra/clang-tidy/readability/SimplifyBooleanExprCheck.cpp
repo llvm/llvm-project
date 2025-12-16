@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SimplifyBooleanExprCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/DiagnosticIDs.h"
@@ -237,22 +238,12 @@ static std::string replacementExpression(const ASTContext &Context,
 
 static bool containsDiscardedTokens(const ASTContext &Context,
                                     CharSourceRange CharRange) {
-  std::string ReplacementText =
-      Lexer::getSourceText(CharRange, Context.getSourceManager(),
-                           Context.getLangOpts())
-          .str();
-  Lexer Lex(CharRange.getBegin(), Context.getLangOpts(), ReplacementText.data(),
-            ReplacementText.data(),
-            ReplacementText.data() + ReplacementText.size());
-  Lex.SetCommentRetentionState(true);
-
-  Token Tok;
-  while (!Lex.LexFromRawLexer(Tok)) {
-    if (Tok.is(tok::TokenKind::comment) || Tok.is(tok::TokenKind::hash))
-      return true;
-  }
-
-  return false;
+  return llvm::any_of(
+      utils::lexer::tokensIncludingComments(
+          CharRange, Context.getSourceManager(), Context.getLangOpts()),
+      [](Token Tok) {
+        return Tok.isOneOf(tok::TokenKind::comment, tok::TokenKind::hash);
+      });
 }
 
 class SimplifyBooleanExprCheck::Visitor : public RecursiveASTVisitor<Visitor> {

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseTrailingReturnTypeCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -14,7 +15,6 @@
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
 
-#include <cctype>
 #include <optional>
 
 namespace clang::tidy {
@@ -173,13 +173,11 @@ static SourceLocation findTrailingReturnTypeSourceLocation(
       Lexer::getLocForEndOfToken(ClosingParen, 0, SM, LangOpts);
 
   // Skip subsequent CV and ref qualifiers.
-  const std::pair<FileID, unsigned> Loc = SM.getDecomposedLoc(Result);
-  const StringRef File = SM.getBufferData(Loc.first);
-  const char *TokenBegin = File.data() + Loc.second;
-  Lexer Lexer(SM.getLocForStartOfFile(Loc.first), LangOpts, File.begin(),
-              TokenBegin, File.end());
-  Token T;
-  while (!Lexer.LexFromRawLexer(T)) {
+  for (Token T : utils::lexer::tokens(
+           Lexer::makeFileCharRange(
+               CharSourceRange::getTokenRange(Result, F.getEndLoc()), SM,
+               LangOpts),
+           SM, LangOpts)) {
     if (T.is(tok::raw_identifier)) {
       IdentifierInfo &Info = Ctx.Idents.get(
           StringRef(SM.getCharacterData(T.getLocation()), T.getLength()));
@@ -255,15 +253,11 @@ classifyTokensBeforeFunctionName(const FunctionDecl &F, const ASTContext &Ctx,
   const SourceLocation BeginNameF = expandIfMacroId(F.getLocation(), SM);
 
   // Create tokens for everything before the name of the function.
-  const std::pair<FileID, unsigned> Loc = SM.getDecomposedLoc(BeginF);
-  const StringRef File = SM.getBufferData(Loc.first);
-  const char *TokenBegin = File.data() + Loc.second;
-  Lexer Lexer(SM.getLocForStartOfFile(Loc.first), LangOpts, File.begin(),
-              TokenBegin, File.end());
-  Token T;
   SmallVector<ClassifiedToken, 8> ClassifiedTokens;
-  while (!Lexer.LexFromRawLexer(T) &&
-         SM.isBeforeInTranslationUnit(T.getLocation(), BeginNameF)) {
+  for (Token T : utils::lexer::tokens(
+           Lexer::makeFileCharRange(
+               CharSourceRange::getCharRange(BeginF, BeginNameF), SM, LangOpts),
+           SM, LangOpts)) {
     if (T.is(tok::raw_identifier)) {
       IdentifierInfo &Info = Ctx.Idents.get(
           StringRef(SM.getCharacterData(T.getLocation()), T.getLength()));
@@ -367,25 +361,20 @@ static SourceLocation findLambdaTrailingReturnInsertLoc(
     else
       ParamEndLoc = Method->getParametersSourceRange().getEnd();
 
-    const std::pair<FileID, unsigned> ParamEndLocInfo =
-        SM.getDecomposedLoc(ParamEndLoc);
-    const StringRef Buffer = SM.getBufferData(ParamEndLocInfo.first);
-
-    Lexer Lexer(SM.getLocForStartOfFile(ParamEndLocInfo.first), LangOpts,
-                Buffer.begin(), Buffer.data() + ParamEndLocInfo.second,
-                Buffer.end());
-
-    Token Token;
-    while (!Lexer.LexFromRawLexer(Token)) {
-      if (Token.is(tok::raw_identifier)) {
-        IdentifierInfo &Info = Ctx.Idents.get(StringRef(
-            SM.getCharacterData(Token.getLocation()), Token.getLength()));
-        Token.setIdentifierInfo(&Info);
-        Token.setKind(Info.getTokenID());
+    for (Token T : utils::lexer::tokens(
+             Lexer::makeFileCharRange(CharSourceRange::getTokenRange(
+                                          ParamEndLoc, Method->getEndLoc()),
+                                      SM, LangOpts),
+             SM, LangOpts)) {
+      if (T.is(tok::raw_identifier)) {
+        IdentifierInfo &Info = Ctx.Idents.get(
+            StringRef(SM.getCharacterData(T.getLocation()), T.getLength()));
+        T.setIdentifierInfo(&Info);
+        T.setKind(Info.getTokenID());
       }
 
-      if (Token.is(tok::kw_requires))
-        return Token.getLocation().getLocWithOffset(-1);
+      if (T.is(tok::kw_requires))
+        return T.getLocation().getLocWithOffset(-1);
     }
 
     return {};

@@ -54,20 +54,11 @@ void UseOverrideCheck::registerMatchers(MatchFinder *Finder) {
 static SmallVector<Token, 16>
 parseTokens(CharSourceRange Range, const MatchFinder::MatchResult &Result) {
   const SourceManager &Sources = *Result.SourceManager;
-  const std::pair<FileID, unsigned> LocInfo =
-      Sources.getDecomposedLoc(Range.getBegin());
-  const StringRef File = Sources.getBufferData(LocInfo.first);
-  const char *TokenBegin = File.data() + LocInfo.second;
-  Lexer RawLexer(Sources.getLocForStartOfFile(LocInfo.first),
-                 Result.Context->getLangOpts(), File.begin(), TokenBegin,
-                 File.end());
   SmallVector<Token, 16> Tokens;
-  Token Tok;
   int NestedParens = 0;
-  while (!RawLexer.LexFromRawLexer(Tok)) {
+  for (Token Tok :
+       utils::lexer::tokens(Range, Sources, Result.Context->getLangOpts())) {
     if ((Tok.is(tok::semi) || Tok.is(tok::l_brace)) && NestedParens == 0)
-      break;
-    if (Sources.isBeforeInTranslationUnit(Range.getEnd(), Tok.getLocation()))
       break;
     if (Tok.is(tok::l_paren))
       ++NestedParens;

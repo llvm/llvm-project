@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantVoidArgCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 
@@ -127,12 +128,6 @@ void RedundantVoidArgCheck::removeVoidArgumentTokens(
   const CharSourceRange CharRange =
       Lexer::makeFileCharRange(CharSourceRange::getTokenRange(Range),
                                *Result.SourceManager, getLangOpts());
-
-  std::string DeclText =
-      Lexer::getSourceText(CharRange, *Result.SourceManager, getLangOpts())
-          .str();
-  Lexer PrototypeLexer(CharRange.getBegin(), getLangOpts(), DeclText.data(),
-                       DeclText.data(), DeclText.data() + DeclText.size());
   enum class TokenState {
     Start,
     MacroId,
@@ -149,7 +144,9 @@ void RedundantVoidArgCheck::removeVoidArgumentTokens(
   const std::string Diagnostic =
       ("redundant void argument list in " + GrammarLocation).str();
 
-  while (!PrototypeLexer.LexFromRawLexer(ProtoToken)) {
+  for (const Token Tok :
+       utils::lexer::tokens(CharRange, *Result.SourceManager, getLangOpts())) {
+    ProtoToken = Tok;
     switch (State) {
     case TokenState::Start:
       if (ProtoToken.is(tok::TokenKind::l_paren))

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MacroToEnumCheck.h"
+#include "../utils/LexerUtils.h"
 #include "IntegralLiteralExpressionMatcher.h"
-
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
@@ -19,17 +19,14 @@
 
 namespace clang::tidy::modernize {
 
-static bool hasOnlyComments(SourceLocation Loc, const LangOptions &Options,
-                            StringRef Text) {
+static bool hasOnlyComments(SourceLocation Loc, const SourceManager &SM,
+                            const LangOptions &Options,
+                            CharSourceRange CharRange) {
   // Use a lexer to look for tokens; if we find something other than a single
   // hash, then there were intervening tokens between macro definitions.
-  const std::string Buffer{Text};
-  Lexer Lex(Loc, Options, Buffer.c_str(), Buffer.c_str(),
-            Buffer.c_str() + Buffer.size());
-  Token Tok;
   bool SeenHash = false;
-  while (!Lex.LexFromRawLexer(Tok)) {
-    if (Tok.getKind() == tok::hash && !SeenHash) {
+  for (const Token Tok : utils::lexer::tokens(CharRange, SM, Options)) {
+    if (Tok.is(tok::hash) && !SeenHash) {
       SeenHash = true;
       continue;
     }
@@ -46,6 +43,7 @@ static bool hasOnlyComments(SourceLocation Loc, const LangOptions &Options,
     CRLFCR,
   };
 
+  const StringRef Text = Lexer::getSourceText(CharRange, SM, Options);
   WhiteSpace State = WhiteSpace::Nothing;
   for (const char C : Text) {
     switch (C) {
@@ -237,8 +235,7 @@ bool MacroToEnumCallbacks::isConsecutiveMacro(const MacroDirective *MD) const {
       SourceRange{CurrentFile->LastMacroLocation, Define}, true};
   const CharSourceRange CharRange =
       Lexer::makeFileCharRange(BetweenMacros, SM, LangOpts);
-  const StringRef BetweenText = Lexer::getSourceText(CharRange, SM, LangOpts);
-  return hasOnlyComments(Define, LangOpts, BetweenText);
+  return hasOnlyComments(Define, SM, LangOpts, CharRange);
 }
 
 void MacroToEnumCallbacks::clearCurrentEnum(SourceLocation Loc) {
@@ -258,17 +255,11 @@ void MacroToEnumCallbacks::conditionStart(const SourceLocation &Loc) {
 }
 
 void MacroToEnumCallbacks::checkCondition(SourceRange Range) {
-  const CharSourceRange CharRange = Lexer::makeFileCharRange(
-      CharSourceRange::getTokenRange(Range), SM, LangOpts);
-  std::string Text = Lexer::getSourceText(CharRange, SM, LangOpts).str();
-  Lexer Lex(CharRange.getBegin(), LangOpts, Text.data(), Text.data(),
-            Text.data() + Text.size());
-  Token Tok;
-  bool End = false;
-  while (!End) {
-    End = Lex.LexFromRawLexer(Tok);
-    if (Tok.is(tok::raw_identifier) &&
-        Tok.getRawIdentifier().str() != "defined")
+  for (const Token Tok : utils::lexer::tokens(
+           Lexer::makeFileCharRange(CharSourceRange::getTokenRange(Range), SM,
+                                    LangOpts),
+           SM, LangOpts)) {
+    if (Tok.is(tok::raw_identifier) && Tok.getRawIdentifier() != "defined")
       checkName(Tok);
   }
 }
