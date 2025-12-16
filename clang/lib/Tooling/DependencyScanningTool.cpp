@@ -206,7 +206,7 @@ DependencyScanningTool::getDependencyFile(ArrayRef<std::string> CommandLine,
   MakeDependencyPrinterConsumer DepConsumer;
   CallbackActionController Controller(nullptr);
   if (!computeDependencies(Worker, CWD, CommandLine, DepConsumer, Controller,
-                                  DiagConsumer))
+                           DiagConsumer))
     return std::nullopt;
   std::string Output;
   DepConsumer.printDependencies(Output);
@@ -278,7 +278,7 @@ DependencyScanningTool::getTranslationUnitDependencies(
   CallbackActionController Controller(LookupModuleOutput);
 
   if (!computeDependencies(Worker, CWD, CommandLine, Consumer, Controller,
-                                  DiagConsumer, TUBuffer))
+                           DiagConsumer, TUBuffer))
     return std::nullopt;
   return Consumer.takeTranslationUnitDeps();
 }
