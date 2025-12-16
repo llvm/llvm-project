@@ -3226,18 +3226,6 @@ __m256i test_mm256_movm_epi8(__mmask32 __A) {
   return _mm256_movm_epi8(__A); 
 }
 
-__m512i test_mm512_movm_epi8(__mmask64 __A) {
-  // CIR-LABEL: _mm512_movm_epi8
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u64i -> !cir.vector<!cir.int<s, 1> x 64>
-  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<!cir.int<s, 1> x 64> -> !cir.vector<{{!s8i|!u8i}} x 64>
-
-  // LLVM-LABEL: @test_mm512_movm_epi8
-  // LLVM:  %{{.*}} = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM:  %{{.*}} = sext <64 x i1> %{{.*}} to <64 x i8>
-  return _mm512_movm_epi8(__A); 
-}
-
-
 __m128i test_mm_movm_epi16(__mmask8 __A) {
   // CHECK-LABEL: test_mm_movm_epi16
   // CHECK: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
