@@ -176,7 +176,7 @@ private:
   /// If the stream is muted, writes to it are ignored
   bool Muted = false;
 
-  /// Small buffer to reduce interferance between different threads
+  /// Small buffer to reduce interference between different threads
   /// writing at the same time to the underlying stream.
   static constexpr size_t BufferSize = 256;
   std::array<char, BufferSize> Buffer;
