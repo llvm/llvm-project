@@ -473,6 +473,7 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
         assert(Idx != -1);
         if (SingleExecUser->getParent() == I->getParent() &&
             !SingleExecUser->getOperand(Idx).isImplicit() &&
+            SingleExecUser->getDesc().getNumOperands() > (unsigned)Idx &&
             TII->isOperandLegal(*SingleExecUser, Idx, &I->getOperand(1))) {
           LLVM_DEBUG(dbgs() << "Redundant EXEC COPY: " << *I << '\n');
           LIS->RemoveMachineInstrFromMaps(*I);
