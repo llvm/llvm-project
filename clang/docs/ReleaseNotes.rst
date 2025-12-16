@@ -357,7 +357,7 @@ Attribute Changes in Clang
 - New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
   as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
 
-- Annotations from C++26 are supported (still experimental), and gated under the `-freflection` flag.
+- Annotations for C++26, originally proposed in P3394, are supported and gated under the `-freflection` flag (still experimental).
 
 - New function attribute `malloc_span` is added. It has semantics similar to that of the `malloc`
   attribute, but `malloc_span` applies not to functions returning pointers, but to functions returning

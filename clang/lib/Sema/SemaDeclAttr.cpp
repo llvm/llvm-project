@@ -6482,8 +6482,8 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // Let E be the expression std​::​meta​::​reflect_constant(CE). E
   // shall be a constant expression; the result of E is the underlying constant
-  // of the annotation. Among other requirements it means for we need to check
-  // they obey is_copy_construbtible.
+  // of the annotation. Among other requirements it means we need to check that
+  // the type obeys is_copy_construbtible.
   if (const CXXRecordDecl *RD = CE->getType()->getAsCXXRecordDecl(); RD) {
     for (auto *Ctor : RD->ctors()) {
       if (Ctor->isCopyOrMoveConstructor() &&
