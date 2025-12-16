@@ -349,8 +349,8 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
 
     // If the argument comments are missing for literals add them.
     if (Comments.empty() && shouldAddComment(Args[I])) {
-      const std::string ArgComment =
-          (llvm::Twine("/*") + II->getName() + "=*/").str();
+      llvm::SmallString<32> ArgComment;
+      (llvm::Twine("/*") + II->getName() + "=*/").toStringRef(ArgComment);
       const DiagnosticBuilder Diag =
           diag(Args[I]->getBeginLoc(),
                "argument comment missing for literal argument %0")
