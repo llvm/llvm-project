@@ -158,19 +158,18 @@ static bool isLikelyTypo(const NamedDeclRange &Candidates, StringRef ArgName,
   // The threshold is arbitrary.
   const unsigned UpperBound = ((ArgName.size() + 2) / 3) + 1;
   const llvm::SmallString<64> TargetNameLower = getLowercasedString(TargetName);
-  const unsigned ThisED = ArgNameLowerRef.edit_distance(
-      StringRef(TargetNameLower),
-      /*AllowReplacements=*/true, UpperBound);
+  const unsigned ThisED =
+      ArgNameLowerRef.edit_distance(StringRef(TargetNameLower),
+                                    /*AllowReplacements=*/true, UpperBound);
   if (ThisED >= UpperBound)
     return false;
 
   for (const auto &Candidate : Candidates) {
     const IdentifierInfo *II = Candidate->getIdentifier();
-    if (!II)
+    if (II->getName() == TargetName)
       continue;
 
-    // Skip the target itself.
-    if (II->getName() == TargetName)
+    if (!II)
       continue;
 
     const unsigned Threshold = 2;
