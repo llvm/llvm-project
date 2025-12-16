@@ -287,7 +287,8 @@ public:
 
   cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal);
 
-  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APInt intVal);
+  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APInt intVal,
+                              bool isUnsigned = true);
 
   cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t, uint64_t c);
 
@@ -492,11 +493,12 @@ public:
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
                            bool isVolatile = false,
                            mlir::IntegerAttr align = {},
+                           cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
     if (!align)
       align = getAlignmentAttr(dst.getAlignment());
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), isVolatile,
-                                         align, order);
+                                         align, scope, order);
   }
 
   /// Create a cir.complex.real_ptr operation that derives a pointer to the real
@@ -526,6 +528,19 @@ public:
   Address createComplexImagPtr(mlir::Location loc, Address addr) {
     return Address{createComplexImagPtr(loc, addr.getPointer()),
                    addr.getAlignment()};
+  }
+
+  cir::GetRuntimeMemberOp createGetIndirectMember(mlir::Location loc,
+                                                  mlir::Value objectPtr,
+                                                  mlir::Value memberPtr) {
+    auto memberPtrTy = mlir::cast<cir::DataMemberType>(memberPtr.getType());
+
+    // TODO(cir): consider address space.
+    assert(!cir::MissingFeatures::addressSpace());
+    cir::PointerType resultTy = getPointerTo(memberPtrTy.getMemberTy());
+
+    return cir::GetRuntimeMemberOp::create(*this, loc, resultTy, objectPtr,
+                                           memberPtr);
   }
 
   /// Create a cir.ptr_stride operation to get access to an array element.

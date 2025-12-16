@@ -378,8 +378,15 @@ static void serializeInfo(const ArrayRef<TemplateParamInfo> &Params,
   json::Value ParamsArray = Array();
   auto &ParamsArrayRef = *ParamsArray.getAsArray();
   ParamsArrayRef.reserve(Params.size());
-  for (const auto &Param : Params)
-    ParamsArrayRef.push_back(Param.Contents);
+  for (size_t Idx = 0; Idx < Params.size(); ++Idx) {
+    json::Value ParamObjVal = Object();
+    Object &ParamObj = *ParamObjVal.getAsObject();
+
+    ParamObj["Param"] = Params[Idx].Contents;
+    if (Idx == Params.size() - 1)
+      ParamObj["End"] = true;
+    ParamsArrayRef.push_back(ParamObjVal);
+  }
   Obj["Parameters"] = ParamsArray;
 }
 
@@ -545,23 +552,30 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
     json::Array &PubMembersArrayRef = *PublicMembersArray.getAsArray();
     json::Value ProtectedMembersArray = Array();
     json::Array &ProtMembersArrayRef = *ProtectedMembersArray.getAsArray();
+    json::Value PrivateMembersArray = Array();
+    json::Array &PrivateMembersArrayRef = *PrivateMembersArray.getAsArray();
 
     for (const MemberTypeInfo &Member : I.Members) {
       json::Value MemberVal = Object();
       auto &MemberObj = *MemberVal.getAsObject();
       MemberObj["Name"] = Member.Name;
       MemberObj["Type"] = Member.Type.Name;
+      MemberObj["IsStatic"] = Member.IsStatic;
 
       if (Member.Access == AccessSpecifier::AS_public)
         PubMembersArrayRef.push_back(MemberVal);
       else if (Member.Access == AccessSpecifier::AS_protected)
         ProtMembersArrayRef.push_back(MemberVal);
+      else if (Member.Access == AccessSpecifier::AS_private)
+        PrivateMembersArrayRef.push_back(MemberVal);
     }
 
     if (!PubMembersArrayRef.empty())
       insertArray(Obj, PublicMembersArray, "PublicMembers");
     if (!ProtMembersArrayRef.empty())
       Obj["ProtectedMembers"] = ProtectedMembersArray;
+    if (!PrivateMembersArrayRef.empty())
+      insertArray(Obj, PrivateMembersArray, "PrivateMembers");
   }
 
   if (!I.Bases.empty())
@@ -571,12 +585,16 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
           serializeInfo(Base, BaseObj, RepositoryUrl);
         });
 
-  if (!I.Parents.empty())
+  if (!I.Parents.empty()) {
     serializeArray(I.Parents, Obj, "Parents", SerializeReferenceLambda);
+    Obj["HasParents"] = true;
+  }
 
-  if (!I.VirtualParents.empty())
+  if (!I.VirtualParents.empty()) {
     serializeArray(I.VirtualParents, Obj, "VirtualParents",
                    SerializeReferenceLambda);
+    Obj["HasVirtualParents"] = true;
+  }
 
   if (I.Template)
     serializeInfo(I.Template.value(), Obj);
@@ -599,6 +617,8 @@ static void serializeInfo(const VarInfo &I, json::Object &Obj,
 static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
                           const std::optional<StringRef> RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
+  if (I.USR == GlobalNamespaceID)
+    Obj["Name"] = "Global Namespace";
 
   if (!I.Children.Namespaces.empty())
     serializeArray(I.Children.Namespaces, Obj, "Namespaces",
@@ -609,8 +629,10 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     serializeInfo(Info, Object, RepositoryUrl);
   };
 
-  if (!I.Children.Functions.empty())
+  if (!I.Children.Functions.empty()) {
     serializeArray(I.Children.Functions, Obj, "Functions", SerializeInfo);
+    Obj["HasFunctions"] = true;
+  }
 
   if (!I.Children.Concepts.empty())
     serializeArray(I.Children.Concepts, Obj, "Concepts", SerializeInfo);
