@@ -232,12 +232,12 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
 
   unsigned XqciOpc = (Opc == RISCV::LW) ? RISCV::QC_LWMI : RISCV::QC_SWMI;
 
-  unsigned StartRegState = (Opc == RISCV::LW)
-                               ? static_cast<unsigned>(RegState::Define)
+  RegState StartRegState = (Opc == RISCV::LW)
+                               ? RegState::Define
                                : getKillRegState(FirstOp0.isKill());
-  unsigned NextRegState =
+  RegState NextRegState =
       (Opc == RISCV::LW)
-          ? static_cast<unsigned>(RegState::ImplicitDefine)
+          ? RegState::ImplicitDefine
           : (RegState::Implicit | getKillRegState(SecondOp0.isKill()));
 
   DebugLoc DL =
