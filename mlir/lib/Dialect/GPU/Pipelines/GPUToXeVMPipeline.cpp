@@ -77,6 +77,7 @@ void buildGPUPassPipeline(OpPassManager &pm,
     layoutOptions.layoutKind = "lane";
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(layoutOptions));
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUOptimizeBlockLoads());
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSubgroupDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
