@@ -74,23 +74,23 @@ protected:
 };
 } // anonymous namespace
 
-llvm::Expected<std::string>
-DependencyScanningTool::getDependencyFile(ArrayRef<std::string> CommandLine,
-                                          StringRef CWD) {
-  MakeDependencyPrinterConsumer Consumer;
+std::optional<std::string>
+DependencyScanningTool::getDependencyFile(StringRef CWD,
+                                          ArrayRef<std::string> CommandLine,
+                                          DiagnosticConsumer &DiagConsumer) {
+  MakeDependencyPrinterConsumer DepConsumer;
   CallbackActionController Controller(nullptr);
-  auto Result =
-      Worker.computeDependencies(CWD, CommandLine, Consumer, Controller);
-  if (Result)
-    return std::move(Result);
+  if (!Worker.computeDependencies(CWD, CommandLine, DepConsumer, Controller,
+                                  DiagConsumer))
+    return std::nullopt;
   std::string Output;
-  Consumer.printDependencies(Output);
+  DepConsumer.printDependencies(Output);
   return Output;
 }
 
-llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
+std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
     const CompileCommand &Command, StringRef CWD, std::string &MakeformatOutput,
-    std::string &MakeformatOutputPath) {
+    std::string &MakeformatOutputPath, DiagnosticConsumer &DiagConsumer) {
   class P1689ModuleDependencyPrinterConsumer
       : public MakeDependencyPrinterConsumer {
   public:
@@ -132,10 +132,9 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   P1689Rule Rule;
   P1689ModuleDependencyPrinterConsumer Consumer(Rule, Command);
   P1689ActionController Controller;
-  auto Result = Worker.computeDependencies(CWD, Command.CommandLine, Consumer,
-                                           Controller);
-  if (Result)
-    return std::move(Result);
+  if (!Worker.computeDependencies(CWD, Command.CommandLine, Consumer,
+                                  Controller, DiagConsumer))
+    return std::nullopt;
 
   MakeformatOutputPath = Consumer.getMakeFormatDependencyOutputPath();
   if (!MakeformatOutputPath.empty())
@@ -143,19 +142,19 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   return Rule;
 }
 
-llvm::Expected<TranslationUnitDeps>
+std::optional<TranslationUnitDeps>
 DependencyScanningTool::getTranslationUnitDependencies(
     ArrayRef<std::string> CommandLine, StringRef CWD,
+    DiagnosticConsumer &DiagConsumer,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput,
     std::optional<llvm::MemoryBufferRef> TUBuffer) {
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
-  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer,
-                                                  Controller, TUBuffer);
 
-  if (Result)
-    return std::move(Result);
+  if (!Worker.computeDependencies(CWD, CommandLine, Consumer, Controller,
+                                  DiagConsumer, TUBuffer))
+    return std::nullopt;
   return Consumer.takeTranslationUnitDeps();
 }
 

@@ -325,26 +325,16 @@ private:
 
 } // end anonymous namespace
 
-/// Takes the result of a dependency scan and prints error / dependency files
-/// based on the result.
-///
-/// \returns True on error.
-static bool
-handleMakeDependencyToolResult(const std::string &Input,
-                               llvm::Expected<std::string> &MaybeFile,
-                               SharedStream &OS, SharedStream &Errs) {
-  if (!MaybeFile) {
-    llvm::handleAllErrors(
-        MaybeFile.takeError(), [&Input, &Errs](llvm::StringError &Err) {
-          Errs.applyLocked([&](raw_ostream &OS) {
-            OS << "Error while scanning dependencies for " << Input << ":\n";
-            OS << Err.getMessage();
-          });
-        });
-    return true;
-  }
-  OS.applyLocked([&](raw_ostream &OS) { OS << *MaybeFile; });
-  return false;
+/// Prints any diagnostics produced during a dependency scan.
+static void handleDiagnostics(StringRef Input, StringRef Diagnostics,
+                              SharedStream &Errs) {
+  if (Diagnostics.empty())
+    return;
+
+  Errs.applyLocked([&](raw_ostream &OS) {
+    OS << "Diagnostics while scanning dependencies for '" << Input << "':\n";
+    OS << Diagnostics;
+  });
 }
 
 template <typename Container>
@@ -627,23 +617,6 @@ private:
   std::vector<InputDeps> Inputs;
 };
 
-static bool handleTranslationUnitResult(
-    StringRef Input, llvm::Expected<TranslationUnitDeps> &MaybeTUDeps,
-    FullDeps &FD, size_t InputIndex, SharedStream &OS, SharedStream &Errs) {
-  if (!MaybeTUDeps) {
-    llvm::handleAllErrors(
-        MaybeTUDeps.takeError(), [&Input, &Errs](llvm::StringError &Err) {
-          Errs.applyLocked([&](raw_ostream &OS) {
-            OS << "Error while scanning dependencies for " << Input << ":\n";
-            OS << Err.getMessage();
-          });
-        });
-    return true;
-  }
-  FD.mergeDeps(Input, std::move(*MaybeTUDeps), InputIndex);
-  return false;
-}
-
 static bool handleModuleResult(StringRef ModuleName,
                                llvm::Expected<TranslationUnitDeps> &MaybeTUDeps,
                                FullDeps &FD, size_t InputIndex,
@@ -740,24 +713,6 @@ private:
   std::mutex Lock;
   std::vector<P1689Rule> Rules;
 };
-
-static bool
-handleP1689DependencyToolResult(const std::string &Input,
-                                llvm::Expected<P1689Rule> &MaybeRule,
-                                P1689Deps &PD, SharedStream &Errs) {
-  if (!MaybeRule) {
-    llvm::handleAllErrors(
-        MaybeRule.takeError(), [&Input, &Errs](llvm::StringError &Err) {
-          Errs.applyLocked([&](raw_ostream &OS) {
-            OS << "Error while scanning dependencies for " << Input << ":\n";
-            OS << Err.getMessage();
-          });
-        });
-    return true;
-  }
-  PD.addRules(*MaybeRule);
-  return false;
-}
 
 /// Construct a path for the explicitly built PCM.
 static std::string constructPCMPath(ModuleID MID, StringRef OutputDir) {
@@ -1036,6 +991,12 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       std::string Filename = std::move(Input->Filename);
       std::string CWD = std::move(Input->Directory);
 
+      std::string S;
+      llvm::raw_string_ostream OS(S);
+      DiagnosticOptions DiagOpts;
+      DiagOpts.ShowCarets = false;
+      TextDiagnosticPrinter DiagConsumer(OS, DiagOpts);
+
       std::string OutputDir(ModuleFilesDir);
       if (OutputDir.empty())
         OutputDir = getModuleCachePath(Input->CommandLine);
@@ -1045,9 +1006,12 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
       // Run the tool on it.
       if (Format == ScanningOutputFormat::Make) {
-        auto MaybeFile = WorkerTool.getDependencyFile(Input->CommandLine, CWD);
-        if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
-                                           Errs))
+        auto MaybeFile =
+            WorkerTool.getDependencyFile(CWD, Input->CommandLine, DiagConsumer);
+        handleDiagnostics(Filename, S, Errs);
+        if (MaybeFile)
+          DependencyOS.applyLocked([&](raw_ostream &OS) { OS << *MaybeFile; });
+        else
           HadErrors = true;
       } else if (Format == ScanningOutputFormat::P1689) {
         // It is useful to generate the make-format dependency output during
@@ -1058,9 +1022,11 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         std::string MakeformatOutput;
 
         auto MaybeRule = WorkerTool.getP1689ModuleDependencyFile(
-            *Input, CWD, MakeformatOutput, MakeformatOutputPath);
-
-        if (handleP1689DependencyToolResult(Filename, MaybeRule, PD, Errs))
+            *Input, CWD, MakeformatOutput, MakeformatOutputPath, DiagConsumer);
+        handleDiagnostics(Filename, S, Errs);
+        if (MaybeRule)
+          PD.addRules(*MaybeRule);
+        else
           HadErrors = true;
 
         if (!MakeformatOutputPath.empty() && !MakeformatOutput.empty() &&
@@ -1086,10 +1052,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           }
 
           SharedStream MakeformatOS(OSIter->second);
-          llvm::Expected<std::string> MaybeOutput(MakeformatOutput);
-          if (handleMakeDependencyToolResult(Filename, MaybeOutput,
-                                             MakeformatOS, Errs))
-            HadErrors = true;
+          MakeformatOS.applyLocked(
+              [&](raw_ostream &OS) { OS << MakeformatOutput; });
         }
       } else if (ModuleNames) {
         StringRef ModuleNameRef(*ModuleNames);
@@ -1150,10 +1114,12 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           Filename = TU->getBufferIdentifier();
         }
         auto MaybeTUDeps = WorkerTool.getTranslationUnitDependencies(
-            Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
-            TUBuffer);
-        if (handleTranslationUnitResult(Filename, MaybeTUDeps, *FD, LocalIndex,
-                                        DependencyOS, Errs))
+            Input->CommandLine, CWD, DiagConsumer, AlreadySeenModules,
+            LookupOutput, TUBuffer);
+        handleDiagnostics(Filename, S, Errs);
+        if (MaybeTUDeps)
+          FD->mergeDeps(Filename, *MaybeTUDeps, LocalIndex);
+        else
           HadErrors = true;
       }
     }
