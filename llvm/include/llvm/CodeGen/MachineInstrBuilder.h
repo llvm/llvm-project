@@ -40,7 +40,12 @@ namespace llvm {
 class MCInstrDesc;
 class MDNode;
 
-// Keep this in sync with the table in MIRLangRef.rst.
+/// Flags to represent properties of register accesses.
+///
+/// These values never use the `0x1` bit so we can tell if someone is passing
+/// boolean `true` instead of one of these values.
+///
+/// Keep this in sync with the table in MIRLangReg.rst
 enum class RegState : unsigned {
   /// No Flags, used in initializers
   NoFlags = 0x0,
@@ -147,7 +152,7 @@ public:
            "Passing in 'true' to addReg is forbidden! Use enums instead.");
 
     auto HasFlag = [Flags](RegState Flag) -> bool {
-      return (Flags & Flag) != RegState::NoFlags;
+      return (Flags & Flag) == Flag;
     };
 
     MI->addOperand(*MF, MachineOperand::CreateReg(RegNo,
@@ -191,7 +196,7 @@ public:
   /// `RegState::Define` when calling this function.
   const MachineInstrBuilder &addUse(Register RegNo, RegState Flags = RegState::NoFlags,
                                     unsigned SubReg = 0) const {
-    assert((Flags & RegState::Define) == RegState::NoFlags &&
+    assert((Flags & RegState::Define) != RegState::Define &&
            "Misleading addUse defines register, use addReg instead.");
     return addReg(RegNo, Flags, SubReg);
   }

@@ -1791,7 +1791,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   auto HasFlag = [Flags](RegState Flag) -> bool {
-    return (Flags & Flag) != RegState::NoFlags;
+    return (Flags & Flag) == Flag;
   };
 
   if (!HasFlag(RegState::Define)) {
