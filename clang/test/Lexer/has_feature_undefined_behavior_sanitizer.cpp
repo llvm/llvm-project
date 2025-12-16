@@ -26,7 +26,7 @@
 // Specifying a specific sanitizer under UBSan and immediately suppressing
 // `__has_feature(undefined_behavior_sanitizer)` for the same should result in
 // "no-UBSan."
-// BUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=undefined -fsanitize-ignore-for-ubsan-feature=undefined %s -o - | FileCheck --check-prefix=CHECK-NO-UBSAN %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=undefined -fsanitize-ignore-for-ubsan-feature=undefined %s -o - | FileCheck --check-prefix=CHECK-NO-UBSAN %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=alignment -fsanitize-ignore-for-ubsan-feature=alignment %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=bool -fsanitize-ignore-for-ubsan-feature=bool %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=builtin -fsanitize-ignore-for-ubsan-feature=builtin %s -o - | FileCheck --check-prefixes=CHECK-NO-UBSAN %s
