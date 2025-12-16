@@ -2589,11 +2589,11 @@ def : InstRW<[OlympusWrite_2c_1V], (instregex "^UHADD_ZPmZ_[BHSD]")>;
 // URHADD
 def : InstRW<[OlympusWrite_2c_1V], (instregex "^URHADD_ZPmZ_[BHSD]")>;
 // SHSUB
-def : InstRW<[OlympusWrite_2c_1V], (instregex "^SHSUB_ZPmZ_[BHSD]")>;
+def : InstRW<[OlympusWrite_2c_1V], (instregex "^SHSUB_ZP[mZ]Z_[BHSD]")>;
 // SHSUBR
 def : InstRW<[OlympusWrite_2c_1V], (instregex "^SHSUBR_ZPmZ_[BHSD]")>;
 // UHSUB
-def : InstRW<[OlympusWrite_2c_1V], (instregex "^UHSUB_ZPmZ_[BHSD]")>;
+def : InstRW<[OlympusWrite_2c_1V], (instregex "^UHSUB_ZP[mZ]Z_[BHSD]")>;
 // UHSUBR
 def : InstRW<[OlympusWrite_2c_1V], (instregex "^UHSUBR_ZPmZ_[BHSD]")>;
 // SMAX (vectors)
