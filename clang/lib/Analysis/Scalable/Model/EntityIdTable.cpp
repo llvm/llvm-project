@@ -23,8 +23,8 @@ bool EntityIdTable::contains(const EntityName &Name) const {
 
 void EntityIdTable::forEach(
     llvm::function_ref<void(const EntityName &, EntityId)> Callback) const {
-  for (const auto& [Name, Id] : Entities) {
-    Callback(Name, Id);
+  for (const auto& NameIdPair : Entities) {
+    Callback(NameIdPair.first, NameIdPair.second);
   }
 }
 
