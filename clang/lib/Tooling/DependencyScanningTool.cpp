@@ -178,18 +178,8 @@ static bool computeDependencies(
     DependencyScanningWorker &Worker, StringRef WorkingDirectory,
     ArrayRef<std::string> CommandLine, DependencyConsumer &Consumer,
     DependencyActionController &Controller, DiagnosticConsumer &DiagConsumer,
-    std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt) {
-  // If we are scanning from a TUBuffer, create an overlay filesystem with the
-  // input as an in-memory file and add it to the command line.
-  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr;
-  std::vector<std::string> CommandLineWithTUBufferInput;
-  if (TUBuffer) {
-    std::tie(OverlayFS, CommandLineWithTUBufferInput) =
-        initVFSForTUBufferScanning(&Worker.getVFS(), CommandLine,
-                                   WorkingDirectory, *TUBuffer);
-    CommandLine = CommandLineWithTUBufferInput;
-  }
-
+    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
+        nullptr) {
   const auto IsCC1Input = (CommandLine.size() >= 2 && CommandLine[1] == "-cc1");
   return IsCC1Input ? Worker.computeDependencies(WorkingDirectory, CommandLine,
                                                  Consumer, Controller,
@@ -277,8 +267,19 @@ DependencyScanningTool::getTranslationUnitDependencies(
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
 
+  // If we are scanning from a TUBuffer, create an overlay filesystem with the
+  // input as an in-memory file and add it to the command line.
+  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr;
+  std::vector<std::string> CommandLineWithTUBufferInput;
+  if (TUBuffer) {
+    std::tie(OverlayFS, CommandLineWithTUBufferInput) =
+        initVFSForTUBufferScanning(&Worker.getVFS(), CommandLine, CWD,
+                                   *TUBuffer);
+    CommandLine = CommandLineWithTUBufferInput;
+  }
+
   if (!computeDependencies(Worker, CWD, CommandLine, Consumer, Controller,
-                           DiagConsumer, TUBuffer))
+                           DiagConsumer, OverlayFS))
     return std::nullopt;
   return Consumer.takeTranslationUnitDeps();
 }
