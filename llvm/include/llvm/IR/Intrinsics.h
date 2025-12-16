@@ -181,6 +181,7 @@ namespace Intrinsic {
       AMX,
       PPCQuad,
       AArch64Svcount,
+      ArgumentTypeConstraint,  // For AnyTypeOf - marks constrained argument types.
     } Kind;
 
     union {
@@ -189,6 +190,7 @@ namespace Intrinsic {
       unsigned Pointer_AddressSpace;
       unsigned Struct_NumElements;
       unsigned Argument_Info;
+      unsigned Argument_NumConstraints;
       ElementCount Vector_Width;
     };
 
@@ -229,6 +231,12 @@ namespace Intrinsic {
     unsigned getRefArgNumber() const {
       assert(Kind == VecOfAnyPtrsToElt || Kind == OneNthEltsVecArgument);
       return Argument_Info & 0xFFFF;
+    }
+
+    // For ArgumentTypeConstraint: get number of allowed types.
+    unsigned getArgumentNumConstraints() const {
+      assert(Kind == ArgumentTypeConstraint);
+      return Argument_NumConstraints;
     }
 
     static IITDescriptor get(IITDescriptorKind K, unsigned Field) {
@@ -277,6 +285,10 @@ namespace Intrinsic {
   /// This method returns true on error.
   LLVM_ABI bool matchIntrinsicVarArg(bool isVarArg,
                                      ArrayRef<IITDescriptor> &Infos);
+
+  /// Verify type constraints for AnyTypeOf constrained intrinsics.
+  LLVM_ABI bool verifyIntrinsicTypeConstraints(ID id, FunctionType *FTy,
+                                               std::string &ErrMsg);
 
   /// Gets the type arguments of an intrinsic call by matching type contraints
   /// specified by the .td file. The overloaded types are pushed into the
