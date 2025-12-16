@@ -240,11 +240,15 @@ static Value *convertStrToInt(CallInst *CI, StringRef &Str, Value *EndPtr,
     B.CreateStore(StrEnd, EndPtr);
   }
 
-  if (Negate)
+  if (Negate) {
     // Unsigned negation doesn't overflow.
     Result = -Result;
+    // For unsigned numbers, discard sign bits.
+    if (!AsSigned)
+      Result &= maxUIntN(NBits);
+  }
 
-  return ConstantInt::get(RetTy, Result);
+  return ConstantInt::get(RetTy, Result, AsSigned);
 }
 
 static bool isOnlyUsedInComparisonWithZero(Value *V) {

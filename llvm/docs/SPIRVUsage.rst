@@ -249,6 +249,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
    * - ``SPV_ALTERA_arbitrary_precision_fixed_point``
      - Add instructions for fixed point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
+   * - ``SPV_EXT_image_raw10_raw12``
+     - Adds Image Channel Data Type definitions for RAW10 and RAW12 image formats.
 
 
 SPIR-V representation in LLVM IR
