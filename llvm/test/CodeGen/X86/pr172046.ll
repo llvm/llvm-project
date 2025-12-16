@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefixes=X64
 
-define i32 @_Z1ft(i16 zeroext %0) {
+define i32 @_Z1ft(i16 zeroext %x) {
 ; X86-LABEL: _Z1ft:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -16,9 +16,9 @@ define i32 @_Z1ft(i16 zeroext %0) {
 ; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    retq
 entry:
-  %3 = shl nuw i16 %0, 3
-  %4 = zext i16 %3 to i32
-  ret i32 %4
+  %shl = shl nuw i16 %x, 3
+  %zext = zext i16 %shl to i32
+  ret i32 %zext
 }
 
 define i32 @_Z1gt(i16 zeroext %x) {
@@ -48,7 +48,7 @@ entry:
   ret i32 %or
 }
 
-define i32 @shl_nsw_zext(i16 %0) {
+define i32 @shl_nsw_zext(i16 %x) {
 ; X86-LABEL: shl_nsw_zext:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
@@ -66,7 +66,7 @@ define i32 @shl_nsw_zext(i16 %0) {
 ; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 entry:
-  %3 = shl nsw i16 256, %0
-  %4 = sext i16 %3 to i32
-  ret i32 %4
+  %shl = shl nsw i16 256, %x
+  %sext = sext i16 %shl to i32
+  ret i32 %sext
 }
