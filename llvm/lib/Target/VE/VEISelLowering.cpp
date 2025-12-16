@@ -886,7 +886,7 @@ bool VETargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
 
 VETargetLowering::VETargetLowering(const TargetMachine &TM,
                                    const VESubtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+    : TargetLowering(TM, STI), Subtarget(&STI) {
   // Instructions which use registers as conditionals examine all the
   // bits (as does the pseudo SELECT_CC expansion). I don't think it
   // matters much whether it's ZeroOrOneBooleanContent, or

@@ -71,18 +71,13 @@ enum {
   MO_GOT = (1 << 0),
 
   // @INDNTPOFF
-  MO_INDNTPOFF = (2 << 0)
-};
+  MO_INDNTPOFF = (2 << 0),
 
-// z/OS XPLink specific: classifies the types of
-// accesses to the ADA (Associated Data Area).
-// These enums contains values that overlap with the above MO_ enums,
-// but that's fine since the above enums are used with ELF,
-// while these values are used with z/OS.
-enum {
-  MO_ADA_DATA_SYMBOL_ADDR = 1,
-  MO_ADA_INDIRECT_FUNC_DESC,
-  MO_ADA_DIRECT_FUNC_DESC,
+  // z/OS XPLink specific: classifies the types of
+  // accesses to the ADA (Associated Data Area).
+  MO_ADA_DATA_SYMBOL_ADDR = (1 << 2),
+  MO_ADA_INDIRECT_FUNC_DESC = (2 << 2),
+  MO_ADA_DIRECT_FUNC_DESC = (3 << 2),
 };
 
 // Classifies a branch.
@@ -391,6 +386,12 @@ public:
 
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
+
+  std::pair<unsigned, unsigned>
+  decomposeMachineOperandsTargetFlags(unsigned TF) const override;
+
+  ArrayRef<std::pair<unsigned, const char *>>
+  getSerializableDirectMachineOperandTargetFlags() const override;
 };
 
 } // end namespace llvm

@@ -94,6 +94,8 @@ public:
 
 private:
   void resetVRegsType(MachineFunction &MF);
+  void removeDeadInstruction(MachineInstr &MI) const;
+  void removeOpNamesForDeadMI(MachineInstr &MI) const;
 
   // tblgen-erated 'select' implementation, used as the initial selector for
   // the patterns that don't require complex C++.
@@ -149,6 +151,9 @@ private:
   bool selectStackRestore(MachineInstr &I) const;
 
   bool selectMemOperation(Register ResVReg, MachineInstr &I) const;
+  Register getOrCreateMemSetGlobal(MachineInstr &I) const;
+  bool selectCopyMemory(MachineInstr &I, Register SrcReg) const;
+  bool selectCopyMemorySized(MachineInstr &I, Register SrcReg) const;
 
   bool selectAtomicRMW(Register ResVReg, const SPIRVType *ResType,
                        MachineInstr &I, unsigned NewOpcode,
@@ -328,8 +333,8 @@ private:
                            MachineInstr &I) const;
   bool selectFrexp(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
-  bool selectDpdCoarse(Register ResVReg, const SPIRVType *ResType,
-                       MachineInstr &I, const unsigned DPdOpCode) const;
+  bool selectDerivativeInst(Register ResVReg, const SPIRVType *ResType,
+                            MachineInstr &I, const unsigned DPdOpCode) const;
   // Utilities
   std::pair<Register, bool>
   buildI32Constant(uint32_t Val, MachineInstr &I,
@@ -467,6 +472,7 @@ static bool isConstReg(MachineRegisterInfo *MRI, MachineInstr *OpDef,
   switch (Opcode) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_IMPLICIT_DEF:
     return true;
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
@@ -509,22 +515,202 @@ static bool isConstReg(MachineRegisterInfo *MRI, Register OpReg) {
   return false;
 }
 
+// TODO(168736): We should make this either a flag in tabelgen
+// or reduce our dependence on the global registry, so we can remove this
+// function. It can easily be missed when new intrinsics are added.
+
+// Most SPIR-V instrinsics are considered to have side-effects in their tablegen
+// definition because they are referenced in the global registry. This is a list
+// of intrinsics that have no side effects other than their references in the
+// global registry.
+static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
+  switch (ID) {
+  // This is not an exhaustive list and may need to be updated.
+  case Intrinsic::spv_all:
+  case Intrinsic::spv_alloca:
+  case Intrinsic::spv_any:
+  case Intrinsic::spv_bitcast:
+  case Intrinsic::spv_const_composite:
+  case Intrinsic::spv_cross:
+  case Intrinsic::spv_degrees:
+  case Intrinsic::spv_distance:
+  case Intrinsic::spv_extractelt:
+  case Intrinsic::spv_extractv:
+  case Intrinsic::spv_faceforward:
+  case Intrinsic::spv_fdot:
+  case Intrinsic::spv_firstbitlow:
+  case Intrinsic::spv_firstbitshigh:
+  case Intrinsic::spv_firstbituhigh:
+  case Intrinsic::spv_frac:
+  case Intrinsic::spv_gep:
+  case Intrinsic::spv_global_offset:
+  case Intrinsic::spv_global_size:
+  case Intrinsic::spv_group_id:
+  case Intrinsic::spv_insertelt:
+  case Intrinsic::spv_insertv:
+  case Intrinsic::spv_isinf:
+  case Intrinsic::spv_isnan:
+  case Intrinsic::spv_lerp:
+  case Intrinsic::spv_length:
+  case Intrinsic::spv_normalize:
+  case Intrinsic::spv_num_subgroups:
+  case Intrinsic::spv_num_workgroups:
+  case Intrinsic::spv_ptrcast:
+  case Intrinsic::spv_radians:
+  case Intrinsic::spv_reflect:
+  case Intrinsic::spv_refract:
+  case Intrinsic::spv_resource_getpointer:
+  case Intrinsic::spv_resource_handlefrombinding:
+  case Intrinsic::spv_resource_handlefromimplicitbinding:
+  case Intrinsic::spv_resource_nonuniformindex:
+  case Intrinsic::spv_rsqrt:
+  case Intrinsic::spv_saturate:
+  case Intrinsic::spv_sdot:
+  case Intrinsic::spv_sign:
+  case Intrinsic::spv_smoothstep:
+  case Intrinsic::spv_step:
+  case Intrinsic::spv_subgroup_id:
+  case Intrinsic::spv_subgroup_local_invocation_id:
+  case Intrinsic::spv_subgroup_max_size:
+  case Intrinsic::spv_subgroup_size:
+  case Intrinsic::spv_thread_id:
+  case Intrinsic::spv_thread_id_in_group:
+  case Intrinsic::spv_udot:
+  case Intrinsic::spv_undef:
+  case Intrinsic::spv_value_md:
+  case Intrinsic::spv_workgroup_size:
+    return false;
+  default:
+    return true;
+  }
+}
+
+// TODO(168736): We should make this either a flag in tabelgen
+// or reduce our dependence on the global registry, so we can remove this
+// function. It can easily be missed when new intrinsics are added.
+static bool isOpcodeWithNoSideEffects(unsigned Opcode) {
+  switch (Opcode) {
+  case SPIRV::OpTypeVoid:
+  case SPIRV::OpTypeBool:
+  case SPIRV::OpTypeInt:
+  case SPIRV::OpTypeFloat:
+  case SPIRV::OpTypeVector:
+  case SPIRV::OpTypeMatrix:
+  case SPIRV::OpTypeImage:
+  case SPIRV::OpTypeSampler:
+  case SPIRV::OpTypeSampledImage:
+  case SPIRV::OpTypeArray:
+  case SPIRV::OpTypeRuntimeArray:
+  case SPIRV::OpTypeStruct:
+  case SPIRV::OpTypeOpaque:
+  case SPIRV::OpTypePointer:
+  case SPIRV::OpTypeFunction:
+  case SPIRV::OpTypeEvent:
+  case SPIRV::OpTypeDeviceEvent:
+  case SPIRV::OpTypeReserveId:
+  case SPIRV::OpTypeQueue:
+  case SPIRV::OpTypePipe:
+  case SPIRV::OpTypeForwardPointer:
+  case SPIRV::OpTypePipeStorage:
+  case SPIRV::OpTypeNamedBarrier:
+  case SPIRV::OpTypeAccelerationStructureNV:
+  case SPIRV::OpTypeCooperativeMatrixNV:
+  case SPIRV::OpTypeCooperativeMatrixKHR:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool isDead(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
+  // If there are no definitions, then assume there is some other
+  // side-effect that makes this instruction live.
+  if (MI.getNumDefs() == 0)
+    return false;
+
   for (const auto &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
-    if (Reg.isPhysical() || !MRI.use_nodbg_empty(Reg))
+    if (Reg.isPhysical()) {
+      LLVM_DEBUG(dbgs() << "Not dead: def of physical register " << Reg);
       return false;
+    }
+    for (const auto &UseMI : MRI.use_nodbg_instructions(Reg)) {
+      if (UseMI.getOpcode() != SPIRV::OpName) {
+        LLVM_DEBUG(dbgs() << "Not dead: def " << MO << " has use in " << UseMI);
+        return false;
+      }
+    }
   }
+
   if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE || MI.isFakeUse() ||
-      MI.isLifetimeMarker())
+      MI.isLifetimeMarker()) {
+    LLVM_DEBUG(
+        dbgs()
+        << "Not dead: Opcode is LOCAL_ESCAPE, fake use, or lifetime marker.\n");
     return false;
-  if (MI.isPHI())
+  }
+  if (MI.isPHI()) {
+    LLVM_DEBUG(dbgs() << "Dead: Phi instruction with no uses.\n");
     return true;
+  }
+
+  // It is possible that the only side effect is that the instruction is
+  // referenced in the global registry. If that is the only side effect, the
+  // intrinsic is dead.
+  if (MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS ||
+      MI.getOpcode() == TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS) {
+    const auto &Intr = cast<GIntrinsic>(MI);
+    if (!intrinsicHasSideEffects(Intr.getIntrinsicID())) {
+      LLVM_DEBUG(dbgs() << "Dead: Intrinsic with no real side effects.\n");
+      return true;
+    }
+  }
+
   if (MI.mayStore() || MI.isCall() ||
       (MI.mayLoad() && MI.hasOrderedMemoryRef()) || MI.isPosition() ||
-      MI.isDebugInstr() || MI.isTerminator() || MI.isJumpTableDebugInfo())
+      MI.isDebugInstr() || MI.isTerminator() || MI.isJumpTableDebugInfo()) {
+    LLVM_DEBUG(dbgs() << "Not dead: instruction has side effects.\n");
     return false;
-  return true;
+  }
+
+  if (isPreISelGenericOpcode(MI.getOpcode())) {
+    // TODO: Is there a generic way to check if the opcode has side effects?
+    LLVM_DEBUG(dbgs() << "Dead: Generic opcode with no uses.\n");
+    return true;
+  }
+
+  if (isOpcodeWithNoSideEffects(MI.getOpcode())) {
+    LLVM_DEBUG(dbgs() << "Dead: known opcode with no side effects\n");
+    return true;
+  }
+
+  return false;
+}
+
+void SPIRVInstructionSelector::removeOpNamesForDeadMI(MachineInstr &MI) const {
+  // Delete the OpName that uses the result if there is one.
+  for (const auto &MO : MI.all_defs()) {
+    Register Reg = MO.getReg();
+    if (Reg.isPhysical())
+      continue;
+    SmallVector<MachineInstr *, 4> UselessOpNames;
+    for (MachineInstr &UseMI : MRI->use_nodbg_instructions(Reg)) {
+      assert(UseMI.getOpcode() == SPIRV::OpName &&
+             "There is still a use of the dead function.");
+      UselessOpNames.push_back(&UseMI);
+    }
+    for (MachineInstr *OpNameMI : UselessOpNames) {
+      GR.invalidateMachineInstr(OpNameMI);
+      OpNameMI->eraseFromParent();
+    }
+  }
+}
+
+void SPIRVInstructionSelector::removeDeadInstruction(MachineInstr &MI) const {
+  salvageDebugInfo(*MRI, MI);
+  GR.invalidateMachineInstr(&MI);
+  removeOpNamesForDeadMI(MI);
+  MI.eraseFromParent();
 }
 
 bool SPIRVInstructionSelector::select(MachineInstr &I) {
@@ -532,6 +718,13 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
 
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
+
+  LLVM_DEBUG(dbgs() << "Checking if instruction is dead: " << I;);
+  if (isDead(I, *MRI)) {
+    LLVM_DEBUG(dbgs() << "Instruction is dead.\n");
+    removeDeadInstruction(I);
+    return true;
+  }
 
   Register Opcode = I.getOpcode();
   // If it's not a GMIR instruction, we've selected it already.
@@ -584,9 +777,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     // if the instruction has been already made dead by folding it away
     // erase it
     LLVM_DEBUG(dbgs() << "Instruction is folded and dead.\n");
-    salvageDebugInfo(*MRI, I);
-    GR.invalidateMachineInstr(&I);
-    I.eraseFromParent();
+    removeDeadInstruction(I);
     return true;
   }
 
@@ -1002,7 +1193,9 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_ATOMICRMW_FSUB:
     // Translate G_ATOMICRMW_FSUB to OpAtomicFAddEXT with negative value operand
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFAddEXT,
-                           SPIRV::OpFNegate);
+                           ResType->getOpcode() == SPIRV::OpTypeVector
+                               ? SPIRV::OpFNegateV
+                               : SPIRV::OpFNegate);
   case TargetOpcode::G_ATOMICRMW_FMIN:
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFMinEXT);
   case TargetOpcode::G_ATOMICRMW_FMAX:
@@ -1435,50 +1628,79 @@ bool SPIRVInstructionSelector::selectStackRestore(MachineInstr &I) const {
       .constrainAllUses(TII, TRI, RBI);
 }
 
-bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
-                                                  MachineInstr &I) const {
+Register
+SPIRVInstructionSelector::getOrCreateMemSetGlobal(MachineInstr &I) const {
+  MachineIRBuilder MIRBuilder(I);
+  assert(I.getOperand(1).isReg() && I.getOperand(2).isReg());
+
+  // TODO: check if we have such GV, add init, use buildGlobalVariable.
+  unsigned Num = getIConstVal(I.getOperand(2).getReg(), MRI);
+  Function &CurFunction = GR.CurMF->getFunction();
+  Type *LLVMArrTy =
+      ArrayType::get(IntegerType::get(CurFunction.getContext(), 8), Num);
+  GlobalVariable *GV = new GlobalVariable(*CurFunction.getParent(), LLVMArrTy,
+                                          true, GlobalValue::InternalLinkage,
+                                          Constant::getNullValue(LLVMArrTy));
+
+  Type *ValTy = Type::getInt8Ty(I.getMF()->getFunction().getContext());
+  Type *ArrTy = ArrayType::get(ValTy, Num);
+  SPIRVType *VarTy = GR.getOrCreateSPIRVPointerType(
+      ArrTy, MIRBuilder, SPIRV::StorageClass::UniformConstant);
+
+  SPIRVType *SpvArrTy = GR.getOrCreateSPIRVType(
+      ArrTy, MIRBuilder, SPIRV::AccessQualifier::None, false);
+
+  unsigned Val = getIConstVal(I.getOperand(1).getReg(), MRI);
+  Register Const = GR.getOrCreateConstIntArray(Val, Num, I, SpvArrTy, TII);
+
+  Register VarReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  auto MIBVar =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
+          .addDef(VarReg)
+          .addUse(GR.getSPIRVTypeID(VarTy))
+          .addImm(SPIRV::StorageClass::UniformConstant)
+          .addUse(Const);
+  if (!MIBVar.constrainAllUses(TII, TRI, RBI))
+    return Register();
+
+  GR.add(GV, MIBVar);
+  GR.addGlobalObject(GV, GR.CurMF, VarReg);
+
+  buildOpDecorate(VarReg, I, TII, SPIRV::Decoration::Constant, {});
+  return VarReg;
+}
+
+bool SPIRVInstructionSelector::selectCopyMemory(MachineInstr &I,
+                                                Register SrcReg) const {
   MachineBasicBlock &BB = *I.getParent();
-  Register SrcReg = I.getOperand(1).getReg();
-  bool Result = true;
-  if (I.getOpcode() == TargetOpcode::G_MEMSET) {
+  Register DstReg = I.getOperand(0).getReg();
+  SPIRVType *DstTy = GR.getSPIRVTypeForVReg(DstReg);
+  SPIRVType *SrcTy = GR.getSPIRVTypeForVReg(SrcReg);
+  if (GR.getPointeeType(DstTy) != GR.getPointeeType(SrcTy))
+    report_fatal_error("OpCopyMemory requires operands to have the same type");
+  uint64_t CopySize = getIConstVal(I.getOperand(2).getReg(), MRI);
+  SPIRVType *PointeeTy = GR.getPointeeType(DstTy);
+  const Type *LLVMPointeeTy = GR.getTypeForSPIRVType(PointeeTy);
+  if (!LLVMPointeeTy)
+    report_fatal_error(
+        "Unable to determine pointee type size for OpCopyMemory");
+  const DataLayout &DL = I.getMF()->getFunction().getDataLayout();
+  if (CopySize != DL.getTypeStoreSize(const_cast<Type *>(LLVMPointeeTy)))
+    report_fatal_error(
+        "OpCopyMemory requires the size to match the pointee type size");
+  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCopyMemory))
+                 .addUse(DstReg)
+                 .addUse(SrcReg);
+  if (I.getNumMemOperands()) {
     MachineIRBuilder MIRBuilder(I);
-    assert(I.getOperand(1).isReg() && I.getOperand(2).isReg());
-    unsigned Val = getIConstVal(I.getOperand(1).getReg(), MRI);
-    unsigned Num = getIConstVal(I.getOperand(2).getReg(), MRI);
-    Type *ValTy = Type::getInt8Ty(I.getMF()->getFunction().getContext());
-    Type *ArrTy = ArrayType::get(ValTy, Num);
-    SPIRVType *VarTy = GR.getOrCreateSPIRVPointerType(
-        ArrTy, MIRBuilder, SPIRV::StorageClass::UniformConstant);
-
-    SPIRVType *SpvArrTy = GR.getOrCreateSPIRVType(
-        ArrTy, MIRBuilder, SPIRV::AccessQualifier::None, false);
-    Register Const = GR.getOrCreateConstIntArray(Val, Num, I, SpvArrTy, TII);
-    // TODO: check if we have such GV, add init, use buildGlobalVariable.
-    Function &CurFunction = GR.CurMF->getFunction();
-    Type *LLVMArrTy =
-        ArrayType::get(IntegerType::get(CurFunction.getContext(), 8), Num);
-    // Module takes ownership of the global var.
-    GlobalVariable *GV = new GlobalVariable(*CurFunction.getParent(), LLVMArrTy,
-                                            true, GlobalValue::InternalLinkage,
-                                            Constant::getNullValue(LLVMArrTy));
-    Register VarReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
-    auto MIBVar =
-        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
-            .addDef(VarReg)
-            .addUse(GR.getSPIRVTypeID(VarTy))
-            .addImm(SPIRV::StorageClass::UniformConstant)
-            .addUse(Const);
-    Result &= MIBVar.constrainAllUses(TII, TRI, RBI);
-
-    GR.add(GV, MIBVar);
-    GR.addGlobalObject(GV, GR.CurMF, VarReg);
-
-    buildOpDecorate(VarReg, I, TII, SPIRV::Decoration::Constant, {});
-    SPIRVType *SourceTy = GR.getOrCreateSPIRVPointerType(
-        ValTy, I, SPIRV::StorageClass::UniformConstant);
-    SrcReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
-    selectOpWithSrcs(SrcReg, SourceTy, I, {VarReg}, SPIRV::OpBitcast);
+    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
+  return MIB.constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectCopyMemorySized(MachineInstr &I,
+                                                     Register SrcReg) const {
+  MachineBasicBlock &BB = *I.getParent();
   auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCopyMemorySized))
                  .addUse(I.getOperand(0).getReg())
                  .addUse(SrcReg)
@@ -1487,9 +1709,30 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
     MachineIRBuilder MIRBuilder(I);
     addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
-  Result &= MIB.constrainAllUses(TII, TRI, RBI);
-  if (ResVReg.isValid() && ResVReg != MIB->getOperand(0).getReg())
-    Result &= BuildCOPY(ResVReg, MIB->getOperand(0).getReg(), I);
+  return MIB.constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
+                                                  MachineInstr &I) const {
+  Register SrcReg = I.getOperand(1).getReg();
+  bool Result = true;
+  if (I.getOpcode() == TargetOpcode::G_MEMSET) {
+    Register VarReg = getOrCreateMemSetGlobal(I);
+    if (!VarReg.isValid())
+      return false;
+    Type *ValTy = Type::getInt8Ty(I.getMF()->getFunction().getContext());
+    SPIRVType *SourceTy = GR.getOrCreateSPIRVPointerType(
+        ValTy, I, SPIRV::StorageClass::UniformConstant);
+    SrcReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+    Result &= selectOpWithSrcs(SrcReg, SourceTy, I, {VarReg}, SPIRV::OpBitcast);
+  }
+  if (STI.isLogicalSPIRV()) {
+    Result &= selectCopyMemory(I, SrcReg);
+  } else {
+    Result &= selectCopyMemorySized(I, SrcReg);
+  }
+  if (ResVReg.isValid() && ResVReg != I.getOperand(0).getReg())
+    Result &= BuildCOPY(ResVReg, I.getOperand(0).getReg(), I);
   return Result;
 }
 
@@ -1540,33 +1783,57 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
   unsigned ArgI = I.getNumOperands() - 1;
   Register SrcReg =
       I.getOperand(ArgI).isReg() ? I.getOperand(ArgI).getReg() : Register(0);
-  SPIRVType *DefType =
+  SPIRVType *SrcType =
       SrcReg.isValid() ? GR.getSPIRVTypeForVReg(SrcReg) : nullptr;
-  if (!DefType || DefType->getOpcode() != SPIRV::OpTypeVector)
+  if (!SrcType || SrcType->getOpcode() != SPIRV::OpTypeVector)
     report_fatal_error(
         "cannot select G_UNMERGE_VALUES with a non-vector argument");
 
   SPIRVType *ScalarType =
-      GR.getSPIRVTypeForVReg(DefType->getOperand(1).getReg());
+      GR.getSPIRVTypeForVReg(SrcType->getOperand(1).getReg());
   MachineBasicBlock &BB = *I.getParent();
   bool Res = false;
+  unsigned CurrentIndex = 0;
   for (unsigned i = 0; i < I.getNumDefs(); ++i) {
     Register ResVReg = I.getOperand(i).getReg();
     SPIRVType *ResType = GR.getSPIRVTypeForVReg(ResVReg);
     if (!ResType) {
-      // There was no "assign type" actions, let's fix this now
-      ResType = ScalarType;
+      LLT ResLLT = MRI->getType(ResVReg);
+      assert(ResLLT.isValid());
+      if (ResLLT.isVector()) {
+        ResType = GR.getOrCreateSPIRVVectorType(
+            ScalarType, ResLLT.getNumElements(), I, TII);
+      } else {
+        ResType = ScalarType;
+      }
       MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
-      MRI->setType(ResVReg, LLT::scalar(GR.getScalarOrVectorBitWidth(ResType)));
       GR.assignSPIRVTypeToVReg(ResType, ResVReg, *GR.CurMF);
     }
-    auto MIB =
-        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
-            .addDef(ResVReg)
-            .addUse(GR.getSPIRVTypeID(ResType))
-            .addUse(SrcReg)
-            .addImm(static_cast<int64_t>(i));
-    Res |= MIB.constrainAllUses(TII, TRI, RBI);
+
+    if (ResType->getOpcode() == SPIRV::OpTypeVector) {
+      Register UndefReg = GR.getOrCreateUndef(I, SrcType, TII);
+      auto MIB =
+          BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpVectorShuffle))
+              .addDef(ResVReg)
+              .addUse(GR.getSPIRVTypeID(ResType))
+              .addUse(SrcReg)
+              .addUse(UndefReg);
+      unsigned NumElements = GR.getScalarOrVectorComponentCount(ResType);
+      for (unsigned j = 0; j < NumElements; ++j) {
+        MIB.addImm(CurrentIndex + j);
+      }
+      CurrentIndex += NumElements;
+      Res |= MIB.constrainAllUses(TII, TRI, RBI);
+    } else {
+      auto MIB =
+          BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+              .addDef(ResVReg)
+              .addUse(GR.getSPIRVTypeID(ResType))
+              .addUse(SrcReg)
+              .addImm(CurrentIndex);
+      CurrentIndex++;
+      Res |= MIB.constrainAllUses(TII, TRI, RBI);
+    }
   }
   return Res;
 }
@@ -3088,6 +3355,12 @@ bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
                  .addUse(GR.getSPIRVTypeID(ResType))
                  // Object to get a pointer to.
                  .addUse(I.getOperand(3).getReg());
+  assert(
+      (Opcode == SPIRV::OpPtrAccessChain ||
+       Opcode == SPIRV::OpInBoundsPtrAccessChain ||
+       (getImm(I.getOperand(4), MRI) && foldImm(I.getOperand(4), MRI) == 0)) &&
+      "Cannot translate GEP to OpAccessChain. First index must be 0.");
+
   // Adding indices.
   const unsigned StartingIndex =
       (Opcode == SPIRV::OpAccessChain || Opcode == SPIRV::OpInBoundsAccessChain)
@@ -3143,10 +3416,9 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
   return Result;
 }
 
-bool SPIRVInstructionSelector::selectDpdCoarse(Register ResVReg,
-                                               const SPIRVType *ResType,
-                                               MachineInstr &I,
-                                               const unsigned DPdOpCode) const {
+bool SPIRVInstructionSelector::selectDerivativeInst(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
+    const unsigned DPdOpCode) const {
   // TODO: This should check specifically for Fragment Execution Model, but STI
   // doesn't provide that information yet. See #167562
   errorIfInstrOutsideShader(I);
@@ -3583,12 +3855,20 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_unpackhalf2x16: {
     return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
   }
-  case Intrinsic::spv_ddx_coarse: {
-    return selectDpdCoarse(ResVReg, ResType, I, SPIRV::OpDPdxCoarse);
-  }
-  case Intrinsic::spv_ddy_coarse: {
-    return selectDpdCoarse(ResVReg, ResType, I, SPIRV::OpDPdyCoarse);
-  }
+  case Intrinsic::spv_ddx:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdx);
+  case Intrinsic::spv_ddy:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdy);
+  case Intrinsic::spv_ddx_coarse:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdxCoarse);
+  case Intrinsic::spv_ddy_coarse:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdyCoarse);
+  case Intrinsic::spv_ddx_fine:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdxFine);
+  case Intrinsic::spv_ddy_fine:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdyFine);
+  case Intrinsic::spv_fwidth:
+    return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpFwidth);
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);

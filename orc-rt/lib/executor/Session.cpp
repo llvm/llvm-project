@@ -14,69 +14,93 @@
 
 namespace orc_rt {
 
+Session::ControllerAccess::~ControllerAccess() = default;
+
 Session::~Session() { waitForShutdown(); }
 
 void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
-  std::vector<std::unique_ptr<ResourceManager>> ToShutdown;
+  // Safe to call concurrently / redundantly.
+  detachFromController();
 
   {
     std::scoped_lock<std::mutex> Lock(M);
-    ShutdownCallbacks.push_back(std::move(OnShutdownComplete));
-
-    // If somebody else has already called shutdown then there's nothing further
-    // for us to do here.
-    if (State >= SessionState::ShuttingDown)
+    if (SI) {
+      SI->OnCompletes.push_back(std::move(OnShutdownComplete));
       return;
+    }
 
-    State = SessionState::ShuttingDown;
-    std::swap(ResourceMgrs, ToShutdown);
+    SI = std::make_unique<ShutdownInfo>();
+    SI->OnCompletes.push_back(std::move(OnShutdownComplete));
+    std::swap(SI->ResourceMgrs, ResourceMgrs);
   }
 
-  shutdownNext(Error::success(), std::move(ToShutdown));
+  shutdownNext(Error::success());
 }
 
 void Session::waitForShutdown() {
   shutdown([]() {});
   std::unique_lock<std::mutex> Lock(M);
-  StateCV.wait(Lock, [&]() { return State == SessionState::Shutdown; });
+  SI->CompleteCV.wait(Lock, [&]() { return SI->Complete; });
 }
 
-void Session::shutdownNext(
-    Error Err, std::vector<std::unique_ptr<ResourceManager>> RemainingRMs) {
+void Session::addResourceManager(std::unique_ptr<ResourceManager> RM) {
+  std::scoped_lock<std::mutex> Lock(M);
+  assert(!SI && "addResourceManager called after shutdown");
+  ResourceMgrs.push_back(std::move(RM));
+}
+
+void Session::setController(std::shared_ptr<ControllerAccess> CA) {
+  assert(CA && "Cannot attach null controller");
+  std::scoped_lock<std::mutex> Lock(M);
+  assert(!this->CA && "Cannot re-attach controller");
+  assert(!SI && "Cannot attach controller after shutdown");
+  this->CA = std::move(CA);
+}
+
+void Session::detachFromController() {
+  if (auto TmpCA = CA) {
+    TmpCA->doDisconnect();
+    CA = nullptr;
+  }
+}
+
+void Session::shutdownNext(Error Err) {
   if (Err)
     reportError(std::move(Err));
 
-  if (RemainingRMs.empty())
+  if (SI->ResourceMgrs.empty())
     return shutdownComplete();
 
-  auto NextRM = std::move(RemainingRMs.back());
-  RemainingRMs.pop_back();
-  NextRM->shutdown(
-      [this, RemainingRMs = std::move(RemainingRMs)](Error Err) mutable {
-        shutdownNext(std::move(Err), std::move(RemainingRMs));
-      });
+  // Get the next ResourceManager to shut down.
+  auto NextRM = std::move(SI->ResourceMgrs.back());
+  SI->ResourceMgrs.pop_back();
+  NextRM->shutdown([this](Error Err) { shutdownNext(std::move(Err)); });
 }
 
 void Session::shutdownComplete() {
 
   std::unique_ptr<TaskDispatcher> TmpDispatcher;
-  std::vector<OnShutdownCompleteFn> TmpShutdownCallbacks;
   {
     std::lock_guard<std::mutex> Lock(M);
     TmpDispatcher = std::move(Dispatcher);
-    TmpShutdownCallbacks = std::move(ShutdownCallbacks);
   }
 
   TmpDispatcher->shutdown();
 
-  for (auto &OnShutdownComplete : TmpShutdownCallbacks)
+  for (auto &OnShutdownComplete : SI->OnCompletes)
     OnShutdownComplete();
 
   {
     std::lock_guard<std::mutex> Lock(M);
-    State = SessionState::Shutdown;
+    SI->Complete = true;
   }
-  StateCV.notify_all();
+
+  SI->CompleteCV.notify_all();
+}
+
+void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
+                            orc_rt_WrapperFunctionBuffer ResultBytes) {
+  unwrap(S)->sendWrapperResult(CallId, ResultBytes);
 }
 
 } // namespace orc_rt

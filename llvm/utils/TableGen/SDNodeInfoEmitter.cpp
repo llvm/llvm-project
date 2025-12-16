@@ -201,7 +201,7 @@ static void emitTypeConstraint(
   unsigned OtherOpNo = 0;
   unsigned NumHwModes = 0;
   unsigned VTByHwModeOffset = 0;
-  MVT::SimpleValueType VT = MVT::INVALID_SIMPLE_VALUE_TYPE;
+  MVT VT = MVT::INVALID_SIMPLE_VALUE_TYPE;
 
   switch (C.ConstraintType) {
   case SDTypeConstraint::SDTCisVT:
@@ -212,7 +212,7 @@ static void emitTypeConstraint(
     [[fallthrough]];
   case SDTypeConstraint::SDTCVecEltisVT:
     if (C.VVT.isSimple()) {
-      VT = C.VVT.getSimple().SimpleTy;
+      VT = C.VVT.getSimple();
     } else {
       NumHwModes = C.VVT.size();
       assert(NumHwModes && "Empty type set?");

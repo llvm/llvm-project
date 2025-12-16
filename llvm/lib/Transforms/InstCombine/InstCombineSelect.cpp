@@ -96,10 +96,13 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
 
   // Last, match the compare variable operand with a binop operand.
   Value *Y;
-  if (!BO->isCommutative() && !match(BO, m_BinOp(m_Value(Y), m_Specific(X))))
-    return nullptr;
-  if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
-    return nullptr;
+  if (BO->isCommutative()) {
+    if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
+      return nullptr;
+  } else {
+    if (!match(BO, m_BinOp(m_Value(Y), m_Specific(X))))
+      return nullptr;
+  }
 
   // +0.0 compares equal to -0.0, and so it does not behave as required for this
   // transform. Bail out if we can not exclude that possibility.
@@ -1163,6 +1166,7 @@ static Value *canonicalizeSaturatedAddSigned(ICmpInst *Cmp, Value *TVal,
   // (X >= Y) ? INT_MAX : (X + C) --> sadd.sat(X, C)
   // where Y is INT_MAX - C or INT_MAX - C - 1, and C > 0
   if ((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE) &&
+      isa<Constant>(Cmp1) &&
       match(FVal, m_Add(m_Specific(Cmp0), m_StrictlyPositive(C)))) {
     APInt IntMax =
         APInt::getSignedMaxValue(Cmp1->getType()->getScalarSizeInBits());
@@ -3066,14 +3070,10 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
          "Op must be either i1 or vector of i1.");
   if (SI.getCondition()->getType() != Op->getType())
     return nullptr;
-  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL)) {
-    Instruction *MDFrom = nullptr;
-    if (!ProfcheckDisableMetadataFixes)
-      MDFrom = &SI;
-    return SelectInst::Create(
+  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL))
+    return createSelectInstWithUnknownProfile(
         Op, IsAnd ? V : ConstantInt::getTrue(Op->getType()),
-        IsAnd ? ConstantInt::getFalse(Op->getType()) : V, "", nullptr, MDFrom);
-  }
+        IsAnd ? ConstantInt::getFalse(Op->getType()) : V);
   return nullptr;
 }
 

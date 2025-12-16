@@ -29,34 +29,29 @@ jobs:
     runs-on: ${{ inputs.SKU }}
     steps:
       - name: Checkout DXC
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: Microsoft/DirectXShaderCompiler
           ref: main
           path: DXC
           submodules: true
       - name: Checkout LLVM
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ inputs.LLVM-branch }}
           path: llvm-project
       - name: Checkout OffloadTest
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: llvm/offload-test-suite
           ref: main
           path: OffloadTest
       - name: Checkout Golden Images
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: llvm/offload-golden-images
           ref: main
           path: golden-images
-      - name: Setup Windows
-        if: runner.os == 'Windows'
-        uses: llvm/actions/setup-windows@5dd955034a6742a2e21d82bf165fcb1050ae7b49 # main
-        with:
-          arch: amd64
       - name: Build DXC
         run: |
             cd DXC

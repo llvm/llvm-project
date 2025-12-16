@@ -53,7 +53,6 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
   const char *Curr = Name.data();
   const char *End = Curr + Name.size();
   while (Curr < End) {
-
     const char *Prev = Curr;
     UTF32 CodePoint = 0;
     const ConversionResult Result = convertUTF8Sequence(
@@ -82,7 +81,8 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
         errs() << "Unicode conversion issue\n";
         break;
       }
-      Skeleton.append((char *)BufferStart, (char *)IBuffer);
+      Skeleton.append(reinterpret_cast<char *>(BufferStart),
+                      reinterpret_cast<char *>(IBuffer));
     }
   }
   return Skeleton;

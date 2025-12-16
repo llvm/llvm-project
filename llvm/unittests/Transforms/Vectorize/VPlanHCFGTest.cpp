@@ -113,12 +113,13 @@ compound=true
   N0 -> N2 [ label="F"]
   N1 [label =
     "scalar.ph:\l" +
+    "  EMIT-SCALAR vp\<%6\> = phi [ ir\<%indvars.iv\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
     "Successor(s): ir-bb\<for.body\>\l"
   ]
   N1 -> N3 [ label=""]
   N3 [label =
     "ir-bb\<for.body\>:\l" +
-    "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]\l" +
+    "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp\<%6\> from scalar.ph)\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\l" +
     "  IR   %l1 = load i32, ptr %arr.idx, align 4\l" +
     "  IR   %res = add i32 %l1, 10\l" +
@@ -282,12 +283,13 @@ compound=true
   N0 -> N2 [ label="F"]
   N1 [label =
     "scalar.ph:\l" +
+    "  EMIT-SCALAR vp\<%6\> = phi [ ir\<%iv\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
     "Successor(s): ir-bb\<loop.header\>\l"
   ]
   N1 -> N3 [ label=""]
   N3 [label =
     "ir-bb\<loop.header\>:\l" +
-    "  IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]\l" +
+    "  IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp\<%6\> from scalar.ph)\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %iv\l" +
     "  IR   %l1 = load i32, ptr %arr.idx, align 4\l" +
     "  IR   %c = icmp eq i32 %l1, 0\l" +

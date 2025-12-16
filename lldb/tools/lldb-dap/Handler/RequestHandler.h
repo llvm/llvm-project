@@ -435,6 +435,9 @@ class DataBreakpointInfoRequestHandler
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "dataBreakpointInfo"; }
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureDataBreakpointBytes};
+  }
   llvm::Expected<protocol::DataBreakpointInfoResponseBody>
   Run(const protocol::DataBreakpointInfoArguments &args) const override;
 };
@@ -489,11 +492,12 @@ public:
   Run(const std::optional<protocol::ModulesArguments> &args) const override;
 };
 
-class PauseRequestHandler : public LegacyRequestHandler {
+class PauseRequestHandler
+    : public RequestHandler<protocol::PauseArguments, protocol::PauseResponse> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "pause"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Error Run(const protocol::PauseArguments &args) const override;
 };
 
 class ScopesRequestHandler final
@@ -560,11 +564,14 @@ public:
   Run(const protocol::VariablesArguments &) const override;
 };
 
-class LocationsRequestHandler : public LegacyRequestHandler {
+class LocationsRequestHandler
+    : public RequestHandler<protocol::LocationsArguments,
+                            llvm::Expected<protocol::LocationsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "locations"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::LocationsResponseBody>
+  Run(const protocol::LocationsArguments &) const override;
 };
 
 class DisassembleRequestHandler final

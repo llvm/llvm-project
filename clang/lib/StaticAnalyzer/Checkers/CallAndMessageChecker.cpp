@@ -322,13 +322,12 @@ bool CallAndMessageChecker::PreVisitProcessArg(
         else {
           os << " (e.g., via the field chain: '";
           bool first = true;
-          for (SmallVectorImpl<const FieldDecl *>::iterator
-               DI = F.FieldChain.begin(), DE = F.FieldChain.end(); DI!=DE;++DI){
+          for (const FieldDecl *FD : F.FieldChain) {
             if (first)
               first = false;
             else
               os << '.';
-            os << **DI;
+            os << *FD;
           }
           os << "')";
         }

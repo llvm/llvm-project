@@ -493,10 +493,12 @@ void DwarfCompileUnit::attachLowHighPC(DIE &D, const MCSymbol *Begin,
   assert(End->isDefined() && "Invalid end label");
 
   addLabelAddress(D, dwarf::DW_AT_low_pc, Begin);
-  if (DD->getDwarfVersion() < 4)
-    addLabelAddress(D, dwarf::DW_AT_high_pc, End);
-  else
+  if (DD->getDwarfVersion() >= 4 &&
+      (!isDwoUnit() || !llvm::isRangeRelaxable(Begin, End))) {
     addLabelDelta(D, dwarf::DW_AT_high_pc, End, Begin);
+    return;
+  }
+  addLabelAddress(D, dwarf::DW_AT_high_pc, End);
 }
 
 // Add info for Wasm-global-based relocation.
@@ -1319,15 +1321,29 @@ DwarfCompileUnit::getDwarf5OrGNULocationAtom(dwarf::LocationAtom Loc) const {
 DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
     DIE &ScopeDIE, const DISubprogram *CalleeSP, const Function *CalleeF,
     bool IsTail, const MCSymbol *PCAddr, const MCSymbol *CallAddr,
-    unsigned CallReg, DIType *AllocSiteTy) {
+    MachineLocation CallTarget, int64_t Offset, DIType *AllocSiteTy) {
   // Insert a call site entry DIE within ScopeDIE.
   DIE &CallSiteDIE = createAndAddDIE(getDwarf5OrGNUTag(dwarf::DW_TAG_call_site),
                                      ScopeDIE, nullptr);
 
-  if (CallReg) {
-    // Indirect call.
-    addAddress(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_target),
-               MachineLocation(CallReg));
+  // A valid register in CallTarget indicates an indirect call.
+  if (CallTarget.getReg()) {
+    // Add a DW_AT_call_target location expression describing the location of
+    // the address of the target function. If any register in the expression
+    // (i.e., the single register we currently handle) is volatile we must use
+    // DW_AT_call_target_clobbered instead.
+    const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
+    dwarf::Attribute Attribute = getDwarf5OrGNUAttr(
+        TRI.isCalleeSavedPhysReg(CallTarget.getReg(), *Asm->MF)
+            ? dwarf::DW_AT_call_target
+            : dwarf::DW_AT_call_target_clobbered);
+
+    // CallTarget is the location of the address of an indirect call. The
+    // location may be indirect, modified by Offset.
+    if (CallTarget.isIndirect())
+      addMemoryLocation(CallSiteDIE, Attribute, CallTarget, Offset);
+    else
+      addAddress(CallSiteDIE, Attribute, CallTarget);
   } else if (CalleeSP) {
     DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP, CalleeF);
     assert(CalleeDIE && "Could not create DIE for call site entry origin");
@@ -1640,15 +1656,15 @@ void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
     addAddress(Die, dwarf::DW_AT_location, Location);
 }
 
-/// Add an address attribute to a die based on the location provided.
-void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
-                                  const MachineLocation &Location) {
+void DwarfCompileUnit::addLocationWithExpr(DIE &Die, dwarf::Attribute Attribute,
+                                           const MachineLocation &Location,
+                                           ArrayRef<uint64_t> Expr) {
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   if (Location.isIndirect())
     DwarfExpr.setMemoryLocationKind();
 
-  DIExpressionCursor Cursor({});
+  DIExpressionCursor Cursor(Expr);
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
   if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
     return;
@@ -1660,6 +1676,23 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
   if (DwarfExpr.TagOffset)
     addUInt(Die, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
             *DwarfExpr.TagOffset);
+}
+
+/// Add an address attribute to a die based on the location provided.
+void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
+                                  const MachineLocation &Location) {
+  addLocationWithExpr(Die, Attribute, Location, {});
+}
+
+/// Add a memory location exprloc to \p DIE with attribute \p Attribute
+/// at \p Location + \p Offset.
+void DwarfCompileUnit::addMemoryLocation(DIE &Die, dwarf::Attribute Attribute,
+                                         const MachineLocation &Location,
+                                         int64_t Offset) {
+  assert(Location.isIndirect() && "Memory loc should be indirect");
+  SmallVector<uint64_t, 3> Ops;
+  DIExpression::appendOffset(Ops, Offset);
+  addLocationWithExpr(Die, Attribute, Location, Ops);
 }
 
 /// Start with the address based on the location provided, and generate the

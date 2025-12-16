@@ -82,7 +82,7 @@ int c =
 ```
 In the current implementation an `is_stmt` won't be generated for the `a + b` instruction, meaning debuggers will likely step over the `add` and stop at the `store` of the result into `c` (which does get `is_stmt`). A user might have wished to edit `a` or `b` on the previous line in order to alter the result stored to `c`, which they now won't have the chance to do (they'd need to edit the variables on a previous line instead). If the expression was all on one line then they would be able to edit the values before the `add`. For these reasons we're choosing to recommend that the feature should not be enabled at O0.
 
-It should be possible to fix this case if we make a few changes: add all the instructions in the statement (i.e., including the loads) to the atom, and tweak the DwarfEmission code to understand this situation (same atom, different line). So there is room to persue this in the future. Though that gets tricky in some cases due to the [other limitation mentioned above](#lack-of-multiple-atom-membership), e.g.:
+It should be possible to fix this case if we make a few changes: add all the instructions in the statement (i.e., including the loads) to the atom, and tweak the DwarfEmission code to understand this situation (same atom, different line). So there is room to pursue this in the future. Though that gets tricky in some cases due to the [other limitation mentioned above](#lack-of-multiple-atom-membership), e.g.:
 ```c
 int e =        // atom 1
     (a + b)    // atom 1
