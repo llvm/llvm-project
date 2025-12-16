@@ -263,8 +263,11 @@ public:
     return {};
   }
   mlir::Value VisitEmbedExpr(EmbedExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: embed");
-    return {};
+    assert(e->getDataElementCount() == 1);
+    auto it = e->begin();
+    llvm::APInt value = (*it)->getValue();
+    return builder.getConstInt(cgf.getLoc(e->getExprLoc()), value,
+                               e->getType()->isUnsignedIntegerType());
   }
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     if (e->isGLValue())
@@ -849,18 +852,15 @@ public:
   }
   mlir::Value
   VisitConceptSpecializationExpr(const ConceptSpecializationExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: concept specialization");
-    return {};
+    return builder.getBool(e->isSatisfied(), cgf.getLoc(e->getExprLoc()));
   }
   mlir::Value VisitRequiresExpr(const RequiresExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: requires");
-    return {};
+    return builder.getBool(e->isSatisfied(), cgf.getLoc(e->getExprLoc()));
   }
   mlir::Value VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: array type trait");
-    return {};
+    mlir::Type type = cgf.convertType(e->getType());
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    return builder.getConstInt(loc, type, e->getValue());
   }
   mlir::Value VisitExpressionTraitExpr(const ExpressionTraitExpr *e) {
     return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));

@@ -472,11 +472,16 @@ public:
   Run(const protocol::SetInstructionBreakpointsArguments &args) const override;
 };
 
-class CompileUnitsRequestHandler : public LegacyRequestHandler {
+class CompileUnitsRequestHandler
+    : public RequestHandler<
+          std::optional<protocol::CompileUnitsArguments>,
+          llvm::Expected<protocol::CompileUnitsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "compileUnits"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::CompileUnitsResponseBody>
+  Run(const std::optional<protocol::CompileUnitsArguments> &args)
+      const override;
 };
 
 class ModulesRequestHandler final
@@ -564,11 +569,14 @@ public:
   Run(const protocol::VariablesArguments &) const override;
 };
 
-class LocationsRequestHandler : public LegacyRequestHandler {
+class LocationsRequestHandler
+    : public RequestHandler<protocol::LocationsArguments,
+                            llvm::Expected<protocol::LocationsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "locations"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::LocationsResponseBody>
+  Run(const protocol::LocationsArguments &) const override;
 };
 
 class DisassembleRequestHandler final
@@ -622,17 +630,17 @@ public:
   Run(const protocol::ModuleSymbolsArguments &args) const override;
 };
 
-/// A request used in testing to get the details on all breakpoints that are
-/// currently set in the target. This helps us to test "setBreakpoints" and
-/// "setFunctionBreakpoints" requests to verify we have the correct set of
-/// breakpoints currently set in LLDB.
-class TestGetTargetBreakpointsRequestHandler : public LegacyRequestHandler {
+class TestGetTargetBreakpointsRequestHandler
+    : public RequestHandler<
+          protocol::TestGetTargetBreakpointsArguments,
+          llvm::Expected<protocol::TestGetTargetBreakpointsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() {
     return "_testGetTargetBreakpoints";
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::TestGetTargetBreakpointsResponseBody>
+  Run(const protocol::TestGetTargetBreakpointsArguments &args) const override;
 };
 
 class WriteMemoryRequestHandler final

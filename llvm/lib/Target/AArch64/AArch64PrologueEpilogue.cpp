@@ -162,8 +162,7 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
   }
   TypeSize Scale = TypeSize::getFixed(1), Width = TypeSize::getFixed(0);
   int64_t MinOffset, MaxOffset;
-  bool Success = static_cast<const AArch64InstrInfo *>(TII)->getMemOpInfo(
-      NewOpc, Scale, Width, MinOffset, MaxOffset);
+  bool Success = TII->getMemOpInfo(NewOpc, Scale, Width, MinOffset, MaxOffset);
   (void)Success;
   assert(Success && "unknown load/store opcode");
 

@@ -1216,7 +1216,7 @@ def CIR_SwitchOp : CIR_Op<"switch", [
 
   let arguments = (ins 
     CIR_IntType:$condition,
-    UnitAttr:$allEnumCasesCovered
+    UnitAttr:$all_enum_cases_covered
   );
 
   let regions = (region AnyRegion:$body);
@@ -1229,7 +1229,7 @@ def CIR_SwitchOp : CIR_Op<"switch", [
 
   let assemblyFormat = [{
     `(` $condition `:` qualified(type($condition)) `)` 
-     (`allEnumCasesCovered` $allEnumCasesCovered^)?
+     (`all_enum_cases_covered` $all_enum_cases_covered^)?
     $body
     attr-dict
   }];
@@ -3031,6 +3031,8 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 
   let results = (outs Optional<CIR_AnyType>:$result);
   let arguments = commonArgs;
+
+  let skipDefaultBuilders = 1;
 
   let builders = [
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
