@@ -1358,7 +1358,7 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     layoutKind = LayoutKind::Lane;
   } else if (this->layoutKind == "inst") {
     layoutKind = LayoutKind::InstData;
-  } else if (this->layoutKind == "sg") {
+  } else if (this->layoutKind == "subgroup") {
     layoutKind = LayoutKind::Subgroup;
   } else {
     getOperation()->emitError("Unsupported layout kind option: " +

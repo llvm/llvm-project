@@ -51,7 +51,7 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
       Propagate the `lane_layout` and `lane_data` fields of the layout attribute.
       Default values are selected to align with hardware.
 
-    - `sg`
+    - `subgroup`
       Propagate the `sg_layout` and `sg_data` fields of the layout attribute.
       Default values are selected to align with hardware.
   }];
@@ -64,7 +64,7 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
     Option<
     "layoutKind", "layout-kind", "std::string",
     /*default=*/"\"lane\"",
-    "Propagate `sg` / `inst` / `lane` level of xegpu layouts.">
+    "Propagate `subgroup` / `inst` / `lane` level of xegpu layouts.">
   ];
 }
 

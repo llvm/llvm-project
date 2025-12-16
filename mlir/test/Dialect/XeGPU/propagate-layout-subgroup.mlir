@@ -1,4 +1,4 @@
-// RUN: mlir-opt -xevm-attach-target='chip=pvc' -xegpu-propagate-layout="layout-kind=sg" -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -xevm-attach-target='chip=pvc' -xegpu-propagate-layout="layout-kind=subgroup" -split-input-file %s | FileCheck %s
 
 gpu.module @test {
   // CHECK-LABEL: store_nd
@@ -14,7 +14,7 @@ gpu.module @test {
     // CHECK-SAME: : vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>>
     %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32> -> !xegpu.tensor_desc<256x128xf32>
     %load = xegpu.load_nd %tdesc : !xegpu.tensor_desc<256x128xf32> -> vector<256x128xf32>
-    xegpu.store_nd %load, %tdesc {layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>}
+    xegpu.store_nd %load, %tdesc <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>}>
       : vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32>
     return
   }
@@ -46,7 +46,7 @@ gpu.module @test {
     %tdesc1 = xegpu.create_nd_tdesc %src1 : memref<128x256xf32> -> !xegpu.tensor_desc<128x256xf32>
     %load = xegpu.load_nd %tdesc[0, 0] : !xegpu.tensor_desc<256x128xf32> -> vector<256x128xf32>
     %trans = vector.transpose %load, [1, 0] : vector<256x128xf32> to vector<128x256xf32>
-    xegpu.store_nd %trans, %tdesc1[0, 0] {layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], order = [1, 0]>}
+    xegpu.store_nd %trans, %tdesc1[0, 0] <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], order = [1, 0]>}>
         : vector<128x256xf32>, !xegpu.tensor_desc<128x256xf32>
     return
   }
