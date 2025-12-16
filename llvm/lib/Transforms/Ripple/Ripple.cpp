@@ -5934,8 +5934,20 @@ Ripple::ConstructedSeries Ripple::getLinearSeriesFor(Instruction *I) {
     // series.
     const TensorShape &NewBaseShape = LhsBaseShape;
 
+    // The slopes are necessarily compatible, otherwise the shape propagation
+    // wouldn't have succeeded
     TensorShape NewSlopeShape = ToShape;
     NewSlopeShape.reduceDimensions(NewBaseShape.nonEmptyDims());
+
+    // Broadcasts are allowed to propagate through any binop
+    if (LhsBaseShape == RhsBaseShape && LhsSeries.LS->hasZeroSlopes() &&
+        RhsSeries.LS->hasZeroSlopes()) {
+      for (unsigned i = 0; i < ToShape.rank(); ++i)
+        NewSlopes.push_back(ConstantSlopeOf(0));
+      auto *LS =
+          new LinearSeries(BinOp, RhsBaseShape, NewSlopes, NewSlopeShape);
+      return {LS, NewState};
+    }
 
     // We have to expand when:
     // 1) the bases have different shapes
@@ -6055,6 +6067,15 @@ Ripple::ConstructedSeries Ripple::getLinearSeriesFor(Instruction *I) {
     if (CastOpSeries.isNotASeries())
       return {};
 
+    // Broadcasts can propagate through casts
+    if (CastOpSeries.LS->hasZeroSlopes()) {
+      for (unsigned i = 0; i < ToShape.rank(); ++i)
+        NewSlopes.push_back(ConstantSlopeOf(0));
+      auto *LS = new LinearSeries(CastI, CastOpSeries.LS->getBaseShape(),
+                                  NewSlopes, CastOpSeries.LS->getSlopeShape());
+      return {LS, CastOpSeries.getState()};
+    }
+
     auto Sext = dyn_cast<SExtInst>(CastI);
     auto Zext = dyn_cast<ZExtInst>(CastI);
     bool CanDistributeExtension =
@@ -6087,13 +6108,16 @@ Ripple::ConstructedSeries Ripple::getLinearSeriesFor(Instruction *I) {
     if (InSeries.isNotASeries())
       return {};
 
-    // Scalar bypass, no current unary operator can pass through LS
-    if (InSeries.LS->isScalar()) {
+    // Scalar and broadcast are allowed to continue
+    if (InSeries.LS->isScalar() || InSeries.LS->hasZeroSlopes()) {
       auto *LS =
           new LinearSeries(UnOp, InSeries.LS->getBaseShape(),
                            InSeries.LS->slopes(), InSeries.LS->getSlopeShape());
       return {LS, InSeries.getState()};
     }
+
+    // The only known unary operator as of this implementation is fneg, hence
+    // nothing to support
 
     return {};
   };
