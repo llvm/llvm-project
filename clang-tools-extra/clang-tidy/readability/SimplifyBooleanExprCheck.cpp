@@ -722,13 +722,12 @@ void SimplifyBooleanExprCheck::replaceWithThenStatement(
     const Expr *BoolLiteral) {
   std::string Replacement = getText(Context, *IfStatement->getThen()).str();
 
-  // Fix: Ensure the body statement ends with a semicolon if it's not a block.
-  if (!Replacement.empty() && Replacement.back() != ';' &&
-      Replacement.back() != '}')
+  // Fix: Check if the statement ends with ; or } (ignoring trailing whitespace)
+  StringRef Trimmed = StringRef(Replacement).trim();
+  if (!Trimmed.empty() && Trimmed.back() != ';' && Trimmed.back() != '}')
     Replacement += ";";
 
   if (const Stmt *Init = IfStatement->getInit()) {
-    // Fix: Add a space between the init statement and the body.
     Replacement =
         (Twine("{ ") + getText(Context, *Init) + " " + Replacement + " }")
             .str();
@@ -744,14 +743,11 @@ void SimplifyBooleanExprCheck::replaceWithElseStatement(
   std::string Replacement =
       ElseStatement ? getText(Context, *ElseStatement).str() : "";
 
-  // Fix: Ensure the else statement ends with a semicolon if it exists and isn't
-  // a block.
-  if (!Replacement.empty() && Replacement.back() != ';' &&
-      Replacement.back() != '}')
+  StringRef Trimmed = StringRef(Replacement).trim();
+  if (!Trimmed.empty() && Trimmed.back() != ';' && Trimmed.back() != '}')
     Replacement += ";";
 
   if (const Stmt *Init = IfStatement->getInit()) {
-    // Fix: Add a space between the init statement and the body.
     Replacement =
         (Twine("{ ") + getText(Context, *Init) + " " + Replacement + " }")
             .str();
