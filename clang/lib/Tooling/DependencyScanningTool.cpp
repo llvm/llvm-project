@@ -293,7 +293,7 @@ static llvm::Error makeErrorFromDiagnosticsOS(
       DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
 }
 
-bool DependencyScanningTool::initializeWorkCIWithContextFromCommandline(
+bool DependencyScanningTool::initializeWorkerCIWithContextFromCommandline(
     DependencyScanningWorker &Worker, StringRef CWD,
     ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
   if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
@@ -326,7 +326,7 @@ DependencyScanningTool::initializeCompilerInstanceWithContextOrError(
   DiagPrinterWithOS =
       std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
 
-  bool Result = initializeWorkCIWithContextFromCommandline(
+  bool Result = initializeWorkerCIWithContextFromCommandline(
       Worker, CWD, CommandLine, DiagPrinterWithOS->DiagPrinter);
 
   if (Result)
