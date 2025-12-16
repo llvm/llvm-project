@@ -47,8 +47,6 @@
 // EP-OPT: VectorizerEnd
 // EP-OPT: OptimizerLast
 
-// FIXME: Thin-LTO does not invoke vectorizer callbacks
-//
 // RUN: %clang -fpass-plugin=%llvmshlibdir/Bye%pluginext -O2 -flto=thin \
 // RUN:        -Xclang -load -Xclang %llvmshlibdir/Bye%pluginext \
 // RUN:        -mllvm -print-ep-callbacks -o /dev/null -S -emit-llvm %s | FileCheck --check-prefix=EP-LTO-THIN %s
