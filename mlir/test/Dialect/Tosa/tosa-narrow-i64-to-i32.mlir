@@ -15,6 +15,18 @@ func.func @test_i64_argmax(%arg0: tensor<1x513x513x19xi8>) -> tensor<1x513x513xi
 
 // -----
 
+// CHECK-LABEL: test_i64_const
+func.func @test_i64_const() -> tensor<2xi64> {
+  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense<[1, 2]> : tensor<2xi32>}> : () -> tensor<2xi32>
+  %0 = "tosa.const"() <{values = dense<[1, 2]> : tensor<2xi64>}> : () -> tensor<2xi64>
+  // DEFAULT: %[[OUT:.*]] = tosa.cast %[[CONST]] : (tensor<2xi32>) -> tensor<2xi64>
+  // DEFAULT: return %[[OUT]] : tensor<2xi64>
+  // FUNCBOUND: return %[[CONST]] : tensor<2xi32>
+  return %0 : tensor<2xi64>
+}
+
+// -----
+
 // CHECK-LABEL: test_i64_argmax_cast
 func.func @test_i64_argmax_cast(%arg0: tensor<1x513x513x19xi8>) -> tensor<1x513x513xf32> {
   // COMMON: %[[ARGMAX:.*]] = tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x513x513x19xi8>) -> tensor<1x513x513xi32>
