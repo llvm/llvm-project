@@ -2,8 +2,8 @@
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_minmax
-body:             |
+name: test_minmax
+body: |
   bb.0:
     ; Pointer operands
     %0:_(p0) = G_CONSTANT i64 0
