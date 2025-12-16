@@ -606,6 +606,8 @@ def warn_odr_objc_synthesize_ivar_inconsistent : Warning<
   InGroup<ODR>;
 def note_odr_objc_synthesize_ivar_here : Note<
   "property is synthesized to ivar %0 here">;
+def err_unsupported_objc_primitive_encoding
+    : Error<"cannot yet @encode type %0">;
 
 // Importing C++ ASTs
 def note_odr_friend : Note<"friend declared here">;
@@ -1042,6 +1044,38 @@ def warn_npot_ms_struct : Warning<
 
 def err_itanium_layout_unimplemented : Error<
   "Itanium-compatible layout for the Microsoft C++ ABI is not yet supported">;
+
+// Unsupported features in name mangling
+def err_itanium_mangle_fixed_point_literal
+    : Error<"cannot mangle fixed point literals yet">;
+def err_itanium_mangle_dependent_neon_vector
+    : Error<"cannot mangle this dependent neon vector type yet">;
+def err_itanium_mangle_dependent_fixed_length_sve_vector
+    : Error<"cannot mangle this dependent fixed-length SVE vector type yet">;
+def err_itanium_mangle_dependent_fixed_length_rvv_vector
+    : Error<"cannot mangle this dependent fixed-length RVV vector type yet">;
+def err_itanium_mangle_requires_expr_with_substitution_failure
+    : Error<"cannot mangle this requires-expression containing a substitution "
+            "failure">;
+def err_itanium_mangle_unsupported_expr_type
+    : Error<"cannot yet mangle expression type %0">;
+def err_itanium_mangle_ternary_omitted_operand
+    : Error<"?: operator with omitted middle operand cannot be mangled">;
+def err_itanium_mangle_unsupported_expr
+    : Error<"cannot yet mangle %0 expression">;
+def err_itanium_mangle_openacc_asterisk_size_expr
+    : Error<"cannot yet mangle OpenACC Asterisk Size expression">;
+def err_itanium_mangle_unnamed_union_nttp
+    : Error<"cannot mangle this unnamed union NTTP yet">;
+
+def err_ms_mangle_number_overflow
+    : Error<"mangling number exceeds limit (65535)">;
+def err_ms_mangle_unsupported_with_detail
+    : Error<"cannot mangle this %0 %1 yet">;
+def err_ms_mangle_unsupported : Error<"cannot mangle this %0 yet">;
+
+def err_unexpected_vftable_component
+    : Error<"unexpected vftable component type %0 for component number %1">;
 
 // -Wpadded-bitfield
 def warn_padded_struct_bitfield : Warning<

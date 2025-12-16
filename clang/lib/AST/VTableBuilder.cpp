@@ -3315,10 +3315,8 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
 
     default:
       DiagnosticsEngine &Diags = Context.getDiagnostics();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "Unexpected vftable component type %0 for component number %1");
-      Diags.Report(MostDerivedClass->getLocation(), DiagID)
+      Diags.Report(MostDerivedClass->getLocation(),
+                   diag::err_unexpected_vftable_component)
           << I << Component.getKind();
     }
 
