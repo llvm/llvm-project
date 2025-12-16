@@ -41,6 +41,7 @@ function at-exit {
       $(git rev-parse HEAD~1) $retcode "${GITHUB_TOKEN}" \
       $GITHUB_PR_NUMBER "${BUILD_DIR}"/test-results.*.xml \
       "${MONOREPO_ROOT}"/ninja*.log)
+    advisor_retcode=$?
   fi
 
   if [[ "$retcode" != "0" ]]; then

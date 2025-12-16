@@ -161,10 +161,11 @@ def get_failures(junit_objects) -> dict[str, list[tuple[str, str]]]:
 def are_all_failures_explained(
     failures: list[tuple[str, str]], failure_explanations: dict[str, FailureExplanation]
 ) -> bool:
-    for failure in failures:
-        failed_action, _ = failure
+    for failed_action, _ in failures:
         if failed_action not in failure_explanations:
             return False
+        else:
+            assert failure_explanations[failed_action]["explained"]
     return True
 
 
@@ -283,9 +284,6 @@ def generate_report(
         # No tests failed but the build was in a failed state. Bring this to the user's
         # attention.
         ninja_failures = find_failure_in_ninja_logs(ninja_logs)
-        all_failures_explained &= are_all_failures_explained(
-            ninja_failures, failure_explanations
-        )
         if not ninja_failures:
             all_failures_explained = False
             report.extend(
@@ -299,6 +297,9 @@ def generate_report(
                 ]
             )
         else:
+            all_failures_explained &= are_all_failures_explained(
+                ninja_failures, failure_explanations
+            )
             report.extend(
                 [
                     "",
