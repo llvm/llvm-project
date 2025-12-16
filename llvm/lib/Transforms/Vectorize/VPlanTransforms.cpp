@@ -1589,8 +1589,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
-      // Convert scatters with a uniform address that is unmasked into an
-      // extract-last-element + scalar store.
+      // Convert an unmasked scatter with an uniform address into
+      // extract-last-lane + scalar store.
       // TODO: Add a profitability check comparing the cost of a scatter vs.
       // extract + scalar store.
       auto *WidenStoreR = dyn_cast<VPWidenStoreRecipe>(&R);
