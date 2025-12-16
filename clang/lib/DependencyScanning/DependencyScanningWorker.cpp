@@ -55,47 +55,6 @@ static bool createAndRunToolInvocation(
                               Diags.getClient());
 }
 
-bool DependencyScanningWorker::scanDependencies(
-    StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CC1CommandLines,
-    DependencyConsumer &Consumer, DependencyActionController &Controller,
-    DiagnosticsEngine &Diags,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr;
-  if (OverlayFS) {
-#ifndef NDEBUG
-    bool SawDepFS = false;
-    OverlayFS->visit(
-        [&](llvm::vfs::FileSystem &VFS) { SawDepFS |= &VFS == DepFS.get(); });
-    assert(SawDepFS && "OverlayFS not based on DepFS");
-#endif
-    FS = std::move(OverlayFS);
-  } else {
-    FS = DepFS;
-    FS->setCurrentWorkingDirectory(WorkingDirectory);
-  }
-
-  DependencyScanningAction Action(Service, WorkingDirectory, Consumer,
-                                  Controller, DepFS);
-
-  const bool Success = llvm::all_of(CC1CommandLines, [&](const auto &Cmd) {
-    if (StringRef(Cmd[1]) != "-cc1") {
-      // Non-clang command. Just pass through to the dependency consumer.
-      Consumer.handleBuildCommand({Cmd.front(), {Cmd.begin() + 1, Cmd.end()}});
-      return true;
-    }
-    // Create an invocation that uses the underlying file system to ensure that
-    // any file system requests that are made by the driver do not go through
-    // the dependency scanning filesystem.
-    return createAndRunToolInvocation(Cmd, Action, FS, PCHContainerOps, Diags);
-  });
-
-  // Ensure finish() is called even if we never reached ExecuteAction().
-  if (!Action.hasDiagConsumerFinished())
-    Diags.getClient()->finish();
-
-  return Success && Action.hasScanned();
-}
-
 bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
     DependencyConsumer &DepConsumer, DependencyActionController &Controller,
@@ -116,8 +75,41 @@ bool DependencyScanningWorker::computeDependencies(
     DependencyConsumer &DepConsumer, DependencyActionController &Controller,
     DiagnosticsEngine &Diags,
     llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  return scanDependencies(WorkingDirectory, CommandLines, DepConsumer,
-                          Controller, Diags, OverlayFS);
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr;
+  if (OverlayFS) {
+#ifndef NDEBUG
+    bool SawDepFS = false;
+    OverlayFS->visit(
+        [&](llvm::vfs::FileSystem &VFS) { SawDepFS |= &VFS == DepFS.get(); });
+    assert(SawDepFS && "OverlayFS not based on DepFS");
+#endif
+    FS = std::move(OverlayFS);
+  } else {
+    FS = DepFS;
+    FS->setCurrentWorkingDirectory(WorkingDirectory);
+  }
+
+  DependencyScanningAction Action(Service, WorkingDirectory, DepConsumer,
+                                  Controller, DepFS);
+
+  const bool Success = llvm::all_of(CommandLines, [&](const auto &Cmd) {
+    if (StringRef(Cmd[1]) != "-cc1") {
+      // Non-clang command. Just pass through to the dependency consumer.
+      DepConsumer.handleBuildCommand(
+          {Cmd.front(), {Cmd.begin() + 1, Cmd.end()}});
+      return true;
+    }
+    // Create an invocation that uses the underlying file system to ensure that
+    // any file system requests that are made by the driver do not go through
+    // the dependency scanning filesystem.
+    return createAndRunToolInvocation(Cmd, Action, FS, PCHContainerOps, Diags);
+  });
+
+  // Ensure finish() is called even if we never reached ExecuteAction().
+  if (!Action.hasDiagConsumerFinished())
+    Diags.getClient()->finish();
+
+  return Success && Action.hasScanned();
 }
 
 bool DependencyScanningWorker::initializeCompilerInstanceWithContext(

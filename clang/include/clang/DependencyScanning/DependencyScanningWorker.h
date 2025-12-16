@@ -182,15 +182,6 @@ private:
 
   friend CompilerInstanceWithContext;
   std::unique_ptr<CompilerInstanceWithContext> CIWithContext;
-
-  /// Actually carries out the scan. If \c OverlayFS is provided, it must be
-  /// based on top of DepFS.
-  bool scanDependencies(
-      StringRef WorkingDirectory,
-      ArrayRef<ArrayRef<std::string>> CC1CommandLines,
-      DependencyConsumer &Consumer, DependencyActionController &Controller,
-      DiagnosticsEngine &Diags,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 };
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
