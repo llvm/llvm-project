@@ -16,7 +16,7 @@
 #ifndef LLVM_ADT_BITSET_H
 #define LLVM_ADT_BITSET_H
 
-#include "llvm/ADT/bit.h"
+#include "llvm/ADT/STLExtras.h"
 #include <array>
 #include <climits>
 #include <cstdint>
@@ -45,10 +45,7 @@ class Bitset {
   using StorageType = std::array<BitWord, NumWords>;
   StorageType Bits{};
 
-  constexpr void maskLastWord() {
-    if constexpr (RemainderNumBits != 0)
-      Bits[NumWords - 1] &= RemainderMask;
-  }
+  constexpr void maskLastWord() { Bits[NumWords - 1] &= RemainderMask; }
 
 protected:
   constexpr Bitset(const std::array<uint64_t, (NumBits + 63) / 64> &B) {
@@ -110,10 +107,7 @@ public:
   constexpr size_t size() const { return NumBits; }
 
   constexpr bool any() const {
-    for (BitWord Word : Bits)
-      if (Word != 0)
-        return true;
-    return false;
+    return llvm::any_of(Bits, [](BitWord I) { return I != 0; });
   }
 
   constexpr bool none() const { return !any(); }
