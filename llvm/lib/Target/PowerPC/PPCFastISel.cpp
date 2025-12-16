@@ -145,7 +145,7 @@ class PPCFastISel final : public FastISel {
       return RC->getID() == PPC::VSSRCRegClassID;
     }
     Register copyRegToRegClass(const TargetRegisterClass *ToRC, Register SrcReg,
-                               unsigned Flag = 0, unsigned SubReg = 0) {
+                               RegState Flag = {}, unsigned SubReg = 0) {
       Register TmpReg = createResultReg(ToRC);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
               TII.get(TargetOpcode::COPY), TmpReg).addReg(SrcReg, Flag, SubReg);
@@ -1884,7 +1884,7 @@ bool PPCFastISel::SelectTrunc(const Instruction *I) {
 
   // The only interesting case is when we need to switch register classes.
   if (SrcVT == MVT::i64)
-    SrcReg = copyRegToRegClass(&PPC::GPRCRegClass, SrcReg, 0, PPC::sub_32);
+    SrcReg = copyRegToRegClass(&PPC::GPRCRegClass, SrcReg, {}, PPC::sub_32);
 
   updateValueMap(I, SrcReg);
   return true;

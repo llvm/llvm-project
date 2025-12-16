@@ -526,10 +526,13 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(
     MachineBasicBlock::iterator InsertBefore, unsigned SubIdx,
     LiveInterval &DestLI, bool Late, SlotIndex Def, const MCInstrDesc &Desc) {
   bool FirstCopy = !Def.isValid();
-  MachineInstr *CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
-      .addReg(ToReg, RegState::Define | getUndefRegState(FirstCopy)
-              | getInternalReadRegState(!FirstCopy), SubIdx)
-      .addReg(FromReg, 0, SubIdx);
+  MachineInstr *CopyMI =
+      BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
+          .addReg(ToReg,
+                  RegState::Define | getUndefRegState(FirstCopy) |
+                      getInternalReadRegState(!FirstCopy),
+                  SubIdx)
+          .addReg(FromReg, {}, SubIdx);
 
   CopyMI->setFlag(MachineInstr::LRSplit);
   SlotIndexes &Indexes = *LIS.getSlotIndexes();

@@ -1157,7 +1157,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint16_t SubRegIdx = readU16();
       assert(OutMIs[NewInsnID] && "Attempted to add to undefined instruction");
       OutMIs[NewInsnID].addReg(State.MIs[OldInsnID]->getOperand(OpIdx).getReg(),
-                               0, SubRegIdx);
+                               {}, SubRegIdx);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_CopySubReg(OutMIs["
                              << NewInsnID << "], MIs[" << OldInsnID << "], "
@@ -1168,13 +1168,14 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_AddImplicitDef: {
       uint64_t InsnID = readULEB();
       uint16_t RegNum = readU16();
-      uint16_t Flags = readU16();
+      RegState Flags = static_cast<RegState>(readU16());
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
       Flags |= RegState::Implicit;
       OutMIs[InsnID].addDef(RegNum, Flags);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_AddImplicitDef(OutMIs["
-                             << InsnID << "], " << RegNum << ")\n");
+                             << InsnID << "], " << RegNum << ", "
+                             << static_cast<uint16_t>(Flags) << ")\n");
       break;
     }
 
@@ -1192,13 +1193,13 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_AddRegister: {
       uint64_t InsnID = readULEB();
       uint16_t RegNum = readU16();
-      uint16_t RegFlags = readU16();
+      RegState RegFlags = static_cast<RegState>(readU16());
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
       OutMIs[InsnID].addReg(RegNum, RegFlags);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs()
-                          << CurrentIdx << ": GIR_AddRegister(OutMIs[" << InsnID
-                          << "], " << RegNum << ", " << RegFlags << ")\n");
+                      dbgs() << CurrentIdx << ": GIR_AddRegister(OutMIs["
+                             << InsnID << "], " << RegNum << ", "
+                             << static_cast<uint16_t>(RegFlags) << ")\n");
       break;
     }
     case GIR_AddIntrinsicID: {
@@ -1260,9 +1261,9 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_AddTempSubRegister: {
       uint64_t InsnID = readULEB();
       uint64_t TempRegID = readULEB();
-      uint16_t TempRegFlags = 0;
+      RegState TempRegFlags = {};
       if (MatcherOpcode != GIR_AddSimpleTempRegister)
-        TempRegFlags = readU16();
+        TempRegFlags = static_cast<RegState>(readU16());
       uint16_t SubReg = 0;
       if (MatcherOpcode == GIR_AddTempSubRegister)
         SubReg = readU16();
@@ -1276,7 +1277,7 @@ bool GIMatchTableExecutor::executeMatchTable(
           dbgs() << CurrentIdx << ": GIR_AddTempRegister(OutMIs[" << InsnID
                  << "], TempRegisters[" << TempRegID << "]";
           if (SubReg) dbgs() << '.' << TRI.getSubRegIndexName(SubReg);
-          dbgs() << ", " << TempRegFlags << ")\n");
+          dbgs() << ", " << static_cast<uint16_t>(TempRegFlags) << ")\n");
       break;
     }
 

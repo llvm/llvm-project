@@ -1535,7 +1535,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
   return StackOffset::getFixed(Offset) + SVEAreaOffset;
 }
 
-static unsigned getPrologueDeath(MachineFunction &MF, unsigned Reg) {
+static RegState getPrologueDeath(MachineFunction &MF, unsigned Reg) {
   // Do not set a kill flag on values that are also marked as live-in. This
   // happens with the @llvm-returnaddress intrinsic and with arguments passed in
   // callee saved registers.
