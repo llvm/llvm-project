@@ -23481,7 +23481,8 @@ bool SLPVectorizerPass::vectorizeStores(
       }
 
       SmallVector<unsigned> CandidateVFs;
-      for (unsigned VF = std::max(MaxVF, NonPowerOf2VF); VF >= MinVF;
+      unsigned PowerOf2Elts = bit_floor(Operands.size());
+      for (unsigned VF = std::max(PowerOf2Elts, NonPowerOf2VF); VF >= MinVF;
            VF = divideCeil(VF, 2))
         CandidateVFs.push_back(VF);
 
@@ -23556,9 +23557,43 @@ bool SLPVectorizerPass::vectorizeStores(
                   continue;
                 }
               }
-              unsigned TreeSize;
-              std::optional<bool> Res = vectorizeStoreChain(
-                  Slice, R, SliceStartIdx, MinVF, TreeSize, true);
+              unsigned TreeSize = UINT_MAX;
+              std::optional<bool> Res;
+              if (Slice.size() > std::max(MaxVF, NonPowerOf2VF)) {
+                unsigned EltCnt = Slice.size();
+                auto StartIt = Slice.begin();
+                Res = true;
+                bool DeleteTree = true;
+                while (EltCnt) {
+                  unsigned SubLen = std::min(MaxVF, EltCnt);
+                  EltCnt -= SubLen;
+                  SmallVector<Value *> SubSlice(StartIt, StartIt + SubLen);
+                  unsigned SubTreeSize;
+                  std::optional<bool> SubRes =
+                      vectorizeStoreChain(SubSlice, R, SliceStartIdx, MinVF,
+                                          SubTreeSize, DeleteTree);
+                  DeleteTree = false;
+                  if (TreeSize == UINT_MAX)
+                    TreeSize = SubTreeSize;
+                  else if (TreeSize != SubTreeSize) {
+                    Res = std::nullopt;
+                    break;
+                  }
+                  TreeSize = std::min(TreeSize, SubTreeSize);
+                  StartIt += SubLen;
+                  if (!SubRes) {
+                    Res = std::nullopt;
+                    break;
+                  }
+                  if (!*SubRes) {
+                    Res = false;
+                    break;
+                  }
+                }
+              } else {
+                Res = vectorizeStoreChain(Slice, R, SliceStartIdx, MinVF,
+                                          TreeSize, true);
+              }
               if (Res && *Res) {
                 if (TreeSize) {
                   InstructionCost Cost = R.getTreeCost();
