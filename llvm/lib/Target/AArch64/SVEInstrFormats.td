@@ -1176,13 +1176,6 @@ multiclass sve_int_pcount_pred<bits<3> opc, string asm,
   def : SVE_2_Op_Pat<i64, int_op, nxv4i1,  nxv4i1,  !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<i64, int_op, nxv2i1,  nxv2i1,  !cast<Instruction>(NAME # _D)>;
 }
-
-multiclass sve_int_pcount_pred_tmp<bits<3> opc, string asm> {
-  def _B : sve_int_pcount_pred<0b00, opc, asm, PPR8>;
-  def _H : sve_int_pcount_pred<0b01, opc, asm, PPR16>;
-  def _S : sve_int_pcount_pred<0b10, opc, asm, PPR32>;
-  def _D : sve_int_pcount_pred<0b11, opc, asm, PPR64>;
-}
 //===----------------------------------------------------------------------===//
 // SVE Element Count Group
 //===----------------------------------------------------------------------===//
@@ -7716,11 +7709,20 @@ class sve2_int_perm_expand<bits<2> sz, string asm,
   let hasSideEffects = 0;
 }
 
-multiclass sve2_int_perm_expand<string asm> {
+multiclass sve2_int_perm_expand<string asm, SDPatternOperator op> {
   def _B : sve2_int_perm_expand<0b00, asm, ZPR8>;
   def _H : sve2_int_perm_expand<0b01, asm, ZPR16>;
   def _S : sve2_int_perm_expand<0b10, asm, ZPR32>;
   def _D : sve2_int_perm_expand<0b11, asm, ZPR64>;
+
+  def : SVE_2_Op_Pat<nxv16i8,  op, nxv16i1, nxv16i8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i16,  op, nxv8i1,  nxv8i16,  !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv8f16,  op, nxv8i1,  nxv8f16,  !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv8bf16, op, nxv8i1,  nxv8bf16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4i32,  op, nxv4i1,  nxv4i32,  !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv4f32,  op, nxv4i1,  nxv4f32,  !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2i64,  op, nxv2i1,  nxv2i64,  !cast<Instruction>(NAME # _D)>;
+  def : SVE_2_Op_Pat<nxv2f64,  op, nxv2i1,  nxv2f64,  !cast<Instruction>(NAME # _D)>;
 }
 
 class sve_int_perm_rev<bits<2> sz8_64, bits<2> opc, string asm,

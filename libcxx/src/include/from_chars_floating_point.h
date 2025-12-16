@@ -197,7 +197,7 @@ struct __exponent_result {
 // __offset, 0, false. This allows using the results unconditionally, the
 // __present is important for the scientific notation, where the value is
 // mandatory.
-__exponent_result __parse_exponent(const char* __input, size_t __n, size_t __offset, char __marker) {
+static __exponent_result __parse_exponent(const char* __input, size_t __n, size_t __offset, char __marker) {
   if (__offset + 1 < __n &&                          // an exponent always needs at least one digit.
       std::tolower(__input[__offset]) == __marker && //
       !std::isspace(__input[__offset + 1])           // leading whitespace is not allowed.
@@ -217,7 +217,7 @@ __exponent_result __parse_exponent(const char* __input, size_t __n, size_t __off
 }
 
 // Here we do this operation as int64 to avoid overflow.
-int32_t __merge_exponents(int64_t __fractional, int64_t __exponent, int __max_biased_exponent) {
+static int32_t __merge_exponents(int64_t __fractional, int64_t __exponent, int __max_biased_exponent) {
   int64_t __sum = __fractional + __exponent;
 
   if (__sum > __max_biased_exponent)

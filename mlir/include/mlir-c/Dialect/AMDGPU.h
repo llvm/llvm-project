@@ -18,6 +18,39 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(AMDGPU, amdgpu);
 
+//===---------------------------------------------------------------------===//
+// TDMBaseType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAAMDGPUTDMBaseType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirAMDGPUTDMBaseTypeGetTypeID();
+
+MLIR_CAPI_EXPORTED MlirType mlirAMDGPUTDMBaseTypeGet(MlirContext ctx,
+                                                     MlirType elementType);
+
+//===---------------------------------------------------------------------===//
+// TDMDescriptorType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAAMDGPUTDMDescriptorType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirAMDGPUTDMDescriptorTypeGetTypeID();
+
+MLIR_CAPI_EXPORTED MlirType mlirAMDGPUTDMDescriptorTypeGet(MlirContext ctx);
+
+//===---------------------------------------------------------------------===//
+// TDMGatherBaseType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAAMDGPUTDMGatherBaseType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirAMDGPUTDMGatherBaseTypeGetTypeID();
+
+MLIR_CAPI_EXPORTED MlirType mlirAMDGPUTDMGatherBaseTypeGet(MlirContext ctx,
+                                                           MlirType elementType,
+                                                           MlirType indexType);
+
 #ifdef __cplusplus
 }
 #endif
