@@ -1120,6 +1120,10 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("cortex-x3", "armv9-a"),
                       AArch64CPUTestParams("cortex-x4", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-x925", "armv9.2-a"),
+                      AArch64CPUTestParams("c1-nano", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-premium", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-pro", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-ultra", "armv9.3-a"),
                       AArch64CPUTestParams("cyclone", "armv8-a"),
                       AArch64CPUTestParams("apple-a7", "armv8-a"),
                       AArch64CPUTestParams("apple-a8", "armv8-a"),
@@ -1266,7 +1270,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 93;
+static constexpr unsigned NumAArch64CPUArchs = 97;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

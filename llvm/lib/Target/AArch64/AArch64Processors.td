@@ -66,6 +66,14 @@ def TuneA520AE  : SubtargetFeature<"a520ae", "ARMProcFamily", "CortexA520",
                                    FeaturePostRAScheduler,
                                    FeatureUseWzrToVecMove]>;
 
+def TuneC1Nano : SubtargetFeature<"c1-nano", "ARMProcFamily",
+                                  "C1Nano", "C1-Nano ARM Processors",[
+                                  FeatureFuseAES,
+                                  FeatureFuseAdrpAdd,
+                                  FeaturePostRAScheduler,
+                                  FeatureUseWzrToVecMove,
+                                  FeatureUseFixedOverScalableIfEqualCost]>;
+
 def TuneA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
                                    "Cortex-A57 ARM processors", [
                                    FeatureFuseAES,
@@ -232,6 +240,18 @@ def TuneA725 : SubtargetFeature<"cortex-a725", "ARMProcFamily",
                                 FeatureEnableSelectOptimize,
                                 FeaturePredictableSelectIsExpensive]>;
 
+def TuneC1Pro : SubtargetFeature<"c1-pro", "ARMProcFamily",
+                                  "C1Pro", "C1-Pro ARM Processors",[
+                                  FeatureFuseAES,
+                                  FeaturePostRAScheduler,
+                                  FeatureCmpBccFusion,
+                                  FeatureALULSLFast,
+                                  FeatureFuseAdrpAdd,
+                                  FeatureFuseCmpCSel,
+                                  FeatureFuseCmpCSet,
+                                  FeatureEnableSelectOptimize,
+                                  FeaturePredictableSelectIsExpensive]>;
+
 def TuneR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
                                "CortexR82",
                                "Cortex-R82 ARM processors", [
@@ -300,6 +320,32 @@ def TuneX925 : SubtargetFeature<"cortex-x925", "ARMProcFamily",
                                 FeatureUseFixedOverScalableIfEqualCost,
                                 FeatureAvoidLDAPUR,
                                 FeaturePredictableSelectIsExpensive]>;
+
+def TuneC1Premium : SubtargetFeature<"c1-premium", "ARMProcFamily",
+                                  "C1Premium", "C1-Premium ARM Processors",[
+                                  FeatureALULSLFast,
+                                  FeatureFuseAdrpAdd,
+                                  FeatureFuseCmpCSel,
+                                  FeatureFuseCmpCSet,
+                                  FeatureFuseAES,
+                                  FeaturePostRAScheduler,
+                                  FeatureEnableSelectOptimize,
+                                  FeatureUseFixedOverScalableIfEqualCost,
+                                  FeatureAvoidLDAPUR,
+                                  FeaturePredictableSelectIsExpensive]>;
+
+def TuneC1Ultra : SubtargetFeature<"c1-ultra", "ARMProcFamily",
+                                  "C1Ultra", "C1-Ultra ARM Processors",[
+                                  FeatureALULSLFast,
+                                  FeatureFuseAdrpAdd,
+                                  FeatureFuseCmpCSel,
+                                  FeatureFuseCmpCSet,
+                                  FeatureFuseAES,
+                                  FeaturePostRAScheduler,
+                                  FeatureEnableSelectOptimize,
+                                  FeatureUseFixedOverScalableIfEqualCost,
+                                  FeatureAvoidLDAPUR,
+                                  FeaturePredictableSelectIsExpensive]>;
 
 def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  "Fujitsu A64FX processors", [
@@ -867,6 +913,19 @@ def ProcessorFeatures {
                                  FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8, FeatureJS,
                                  FeatureNEON, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM,
                                  FeatureDotProd, FeatureFPAC];
+  list<SubtargetFeature> C1Nano = [HasV9_3aOps, FeatureNEON, FeatureCLRBHB,
+                                   FeatureCHK, FeatureFPARMv8, FeaturePerfMon,
+                                   FeatureSPECRES2, FeatureSSBS, FeatureRDM,
+                                   FeatureVH, FeatureBF16, FeatureDotProd,
+                                   FeatureFP16FML, FeatureFullFP16, FeatureMPAM,
+                                   FeatureSVE, FeatureCCIDX, FeatureComplxNum,
+                                   FeatureFPAC, FeatureJS, FeatureAM,
+                                   FeatureRAS, FeatureSEL2, FeatureTRACEV8_4,
+                                   FeatureAltFPCmp, FeatureFRInt3264,
+                                   FeatureMTE, FeatureFineGrainedTraps,
+                                   FeatureHCX, FeatureRCPC3, FeatureETE,
+                                   FeatureSVEBitPerm, FeatureSVE2, FeatureTRBE,
+                                   FeatureSME, FeatureSME2];
   list<SubtargetFeature> A65  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                  FeatureRCPC, FeatureSSBS, FeatureRAS,
@@ -936,6 +995,20 @@ def ProcessorFeatures {
                                  FeatureDotProd, FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8,
                                  FeatureJS, FeatureLSE, FeatureNEON, FeaturePAuth, FeatureRAS,
                                  FeatureRCPC, FeatureRDM, FeatureFPAC];
+  list<SubtargetFeature> C1Pro = [HasV9_3aOps, FeatureNEON, FeatureCLRBHB,
+                                  FeatureCHK, FeatureFPARMv8, FeaturePerfMon,
+                                  FeatureSPECRES2, FeatureSSBS, FeatureRDM,
+                                  FeatureVH, FeatureBF16, FeatureDotProd,
+                                  FeatureFP16FML, FeatureFullFP16, FeatureMPAM,
+                                  FeatureSPE, FeatureSVE, FeatureCCIDX,
+                                  FeatureComplxNum, FeatureFPAC, FeatureJS,
+                                  FeatureAM, FeatureRAS, FeatureSEL2,
+                                  FeatureTRACEV8_4, FeatureAltFPCmp,
+                                  FeatureFRInt3264, FeatureMTE,
+                                  FeatureFineGrainedTraps, FeatureHCX,
+                                  FeatureSPE_EEF, FeatureRCPC3, FeatureETE,
+                                  FeatureSVEBitPerm, FeatureSVE2, FeatureTRBE,
+                                  FeatureSME, FeatureSME2];
   list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                  FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                  FeatureSB, FeatureRDM, FeatureDotProd,
@@ -995,6 +1068,36 @@ def ProcessorFeatures {
                                  FeatureDotProd, FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8,
                                  FeatureJS, FeatureLSE, FeatureNEON, FeaturePAuth, FeatureRAS,
                                  FeatureRCPC, FeatureRDM, FeatureFPAC];
+  list<SubtargetFeature> C1Premium = [HasV9_3aOps, FeatureNEON, FeatureCLRBHB,
+                                      FeatureCHK, FeatureFPARMv8,
+                                      FeaturePerfMon, FeatureSPECRES2,
+                                      FeatureSSBS, FeatureRDM, FeatureVH,
+                                      FeatureBF16, FeatureDotProd,
+                                      FeatureFP16FML, FeatureFullFP16,
+                                      FeatureMPAM, FeatureSPE, FeatureSVE,
+                                      FeatureCCIDX, FeatureComplxNum,
+                                      FeatureFPAC, FeatureJS, FeatureAM,
+                                      FeatureRAS, FeatureSEL2, FeatureTRACEV8_4,
+                                      FeatureAltFPCmp, FeatureFRInt3264,
+                                      FeatureMTE, FeatureFineGrainedTraps,
+                                      FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
+                                      FeatureETE, FeatureSVEBitPerm,
+                                      FeatureSVE2, FeatureTRBE, FeatureSME,
+                                      FeatureSME2];
+  list<SubtargetFeature> C1Ultra = [HasV9_3aOps, FeatureNEON, FeatureCLRBHB,
+                                    FeatureCHK, FeatureFPARMv8, FeaturePerfMon,
+                                    FeatureSPECRES2, FeatureSSBS, FeatureRDM,
+                                    FeatureVH, FeatureBF16, FeatureDotProd,
+                                    FeatureFP16FML, FeatureFullFP16,
+                                    FeatureMPAM, FeatureSPE, FeatureSVE,
+                                    FeatureCCIDX, FeatureComplxNum, FeatureFPAC,
+                                    FeatureJS, FeatureAM, FeatureRAS,
+                                    FeatureSEL2, FeatureTRACEV8_4,
+                                    FeatureAltFPCmp, FeatureFRInt3264,
+                                    FeatureMTE, FeatureFineGrainedTraps,
+                                    FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
+                                    FeatureETE, FeatureSVEBitPerm, FeatureSVE2,
+                                    FeatureTRBE, FeatureSME, FeatureSME2];
   list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
                                      FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
                                      FeatureSVE, FeatureComplxNum,
@@ -1266,6 +1369,8 @@ def : ProcessorModel<"cortex-a520", CortexA510Model, ProcessorFeatures.A520,
                      [TuneA520]>;
 def : ProcessorModel<"cortex-a520ae", CortexA510Model, ProcessorFeatures.A520AE,
                      [TuneA520AE]>;
+def : ProcessorModel<"c1-nano", CortexA510Model,
+                     ProcessorFeatures.C1Nano, [TuneC1Nano]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, ProcessorFeatures.A53,
                      [TuneA57]>;
 def : ProcessorModel<"cortex-a65", CortexA53Model, ProcessorFeatures.A65,
@@ -1300,6 +1405,8 @@ def : ProcessorModel<"cortex-a720ae", NeoverseN2Model, ProcessorFeatures.A720AE,
                      [TuneA720AE]>;
 def : ProcessorModel<"cortex-a725", NeoverseN3Model, ProcessorFeatures.A725,
                      [TuneA725]>;
+def : ProcessorModel<"c1-pro", NeoverseN3Model,
+                     ProcessorFeatures.C1Pro, [TuneC1Pro]>;
 def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
                      [TuneR82]>;
 def : ProcessorModel<"cortex-r82ae", CortexA55Model, ProcessorFeatures.R82AE,
@@ -1316,6 +1423,10 @@ def : ProcessorModel<"cortex-x4", NeoverseV3Model, ProcessorFeatures.X4,
                      [TuneX4]>;
 def : ProcessorModel<"cortex-x925", NeoverseV3Model, ProcessorFeatures.X925,
                      [TuneX925]>;
+def : ProcessorModel<"c1-premium", NeoverseV3Model,
+                     ProcessorFeatures.C1Premium, [TuneC1Premium]>;
+def : ProcessorModel<"c1-ultra", NeoverseV3Model,
+                     ProcessorFeatures.C1Ultra, [TuneC1Ultra]>;
 def : ProcessorModel<"gb10", NeoverseV3Model, ProcessorFeatures.GB10,
                      [TuneX925]>;
 def : ProcessorModel<"grace", NeoverseV2Model, ProcessorFeatures.Grace,

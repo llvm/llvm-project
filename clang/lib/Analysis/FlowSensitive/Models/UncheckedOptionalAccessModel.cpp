@@ -66,8 +66,7 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
   if (RD.getName() == "optional") {
     if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext()))
       return N->isStdNamespace() ||
-             isFullyQualifiedNamespaceEqualTo(*N, "absl") ||
-             isFullyQualifiedNamespaceEqualTo(*N, "bsl");
+             isFullyQualifiedNamespaceEqualTo(*N, "absl");
     return false;
   }
 
@@ -76,6 +75,12 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr && (isFullyQualifiedNamespaceEqualTo(*N, "base") ||
                             isFullyQualifiedNamespaceEqualTo(*N, "folly"));
+  }
+
+  if (RD.getName() == "Optional_Base") {
+    const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
+    return N != nullptr &&
+           isFullyQualifiedNamespaceEqualTo(*N, "bslstl", "BloombergLP");
   }
 
   if (RD.getName() == "NullableValue") {
