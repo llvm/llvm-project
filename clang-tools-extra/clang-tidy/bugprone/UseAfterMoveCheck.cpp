@@ -78,7 +78,13 @@ private:
   std::unique_ptr<StmtToBlockMap> BlockMap;
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
 };
+
 } // namespace
+
+static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
+  return anyOf(hasAnyName("::std::move", "::std::forward"),
+               matchers::matchesAnyListedName(InvalidationFunctions));
+}
 
 static StatementMatcher
 makeReinitMatcher(const ValueDecl *MovedVariable,
@@ -142,11 +148,6 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                           unless(callee(functionDecl(
                               getNameMatcher(InvalidationFunctions)))))))
       .bind("reinit");
-}
-
-static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
-  return anyOf(hasAnyName("::std::move", "::std::forward"),
-               matchers::matchesAnyListedName(InvalidationFunctions));
 }
 
 // Matches nodes that are
