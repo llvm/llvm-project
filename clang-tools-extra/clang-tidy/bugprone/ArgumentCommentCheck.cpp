@@ -145,7 +145,7 @@ getCommentsBeforeLoc(ASTContext *Ctx, SourceLocation Loc) {
 static llvm::SmallString<64> getLowercasedString(StringRef Name) {
   llvm::SmallString<64> Result;
   Result.reserve(Name.size());
-  for (char C : Name)
+  for (const char C : Name)
     Result.push_back(llvm::toLower(C));
   return Result;
 }
@@ -164,28 +164,27 @@ static bool isLikelyTypo(const NamedDeclRange &Candidates, StringRef ArgName,
   if (ThisED >= UpperBound)
     return false;
 
-  for (const auto &Candidate : Candidates) {
-    const IdentifierInfo *II = Candidate->getIdentifier();
-    if (II->getName() == TargetName)
-      continue;
+  return std::all_of(Candidates.begin(), Candidates.end(),
+                     [&](const auto &Candidate) {
+                       const IdentifierInfo *II = Candidate->getIdentifier();
+                       if (II->getName() == TargetName)
+                         return true;
 
-    if (!II)
-      continue;
+                       if (!II)
+                         return true;
 
-    const unsigned Threshold = 2;
-    // Other candidates must be an edit distance at least Threshold more away
-    // from this candidate. This gives us greater confidence that this is a
-    // typo of this candidate and not one with a similar name.
-    const llvm::SmallString<64> CandidateLower =
-        getLowercasedString(II->getName());
-    const unsigned OtherED = ArgNameLowerRef.edit_distance(
-        StringRef(CandidateLower),
-        /*AllowReplacements=*/true, ThisED + Threshold);
-    if (OtherED < ThisED + Threshold)
-      return false;
-  }
-
-  return true;
+                       const unsigned Threshold = 2;
+                       // Other candidates must be an edit distance at least
+                       // Threshold more away from this candidate. This gives us
+                       // greater confidence that this is a typo of this
+                       // candidate and not one with a similar name.
+                       const llvm::SmallString<64> CandidateLower =
+                           getLowercasedString(II->getName());
+                       const unsigned OtherED = ArgNameLowerRef.edit_distance(
+                           StringRef(CandidateLower),
+                           /*AllowReplacements=*/true, ThisED + Threshold);
+                       return OtherED >= ThisED + Threshold;
+                     });
 }
 
 static bool sameName(StringRef InComment, StringRef InDecl, bool StrictMode) {
