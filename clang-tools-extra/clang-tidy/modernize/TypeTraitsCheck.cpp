@@ -83,7 +83,6 @@ static const llvm::StringSet<> ValueTraits = {
     "is_pointer_interconvertible_base_of",
     "is_polymorphic",
     "is_reference",
-    "is_replaceable",
     "is_rvalue_reference",
     "is_same",
     "is_scalar",
