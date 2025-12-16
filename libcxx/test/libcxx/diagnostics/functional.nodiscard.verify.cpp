@@ -10,6 +10,7 @@
 
 // check that <functional> functions are marked [[nodiscard]]
 
+#include <cstddef>
 #include <functional>
 
 #include "test_macros.h"
@@ -59,4 +60,9 @@ void test() {
 
   std::ref(i);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::cref(i); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  // Hash specializations
+
+  std::hash<std::nullptr_t> hash;
+  hash(nullptr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

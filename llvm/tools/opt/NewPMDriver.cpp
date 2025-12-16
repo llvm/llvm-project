@@ -23,6 +23,7 @@
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Extensions/PassPlugin.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -30,7 +31,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Timer.h"
@@ -520,7 +520,7 @@ bool llvm::runPassPipeline(
         false, "", nullptr, DebugifyMode::OriginalDebugInfo,
         &DebugInfoBeforePass, VerifyDIPreserveExport));
   if (EnableProfcheck)
-    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileVerifierPass()));
+    MPM.addPass(ProfileVerifierPass());
 
   // Add any relevant output pass at the end of the pipeline.
   switch (OK) {

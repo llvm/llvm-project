@@ -368,8 +368,8 @@ typedef std::unordered_map<BinaryFunction *, std::set<BinaryFunction *>,
                            KeyHash, KeyCongruent>
     CongruentBucketsMap;
 
-typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
-                           KeyHash, KeyEqual>
+typedef std::unordered_map<BinaryFunction *, BinaryFunctionListType, KeyHash,
+                           KeyEqual>
     IdenticalBucketsMap;
 
 namespace llvm {
@@ -380,7 +380,8 @@ void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
     if (!Data->getName().starts_with("_ZTV") && // vtable
         !Data->getName().starts_with("_ZTCN"))  // construction vtable
       continue;
-    for (uint64_t I = Address, End = I + Data->getSize(); I < End; I += 8)
+    for (uint64_t I = Address, End = I + Data->getSize(); I < End;
+         I += VTableAddressGranularity)
       setAddressUsedInVTable(I);
   }
 }
@@ -521,7 +522,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
       for (auto &IBI : IdenticalBuckets) {
         // Functions identified as identical.
-        std::vector<BinaryFunction *> &Twins = IBI.second;
+        BinaryFunctionListType &Twins = IBI.second;
         if (Twins.size() < 2)
           continue;
 

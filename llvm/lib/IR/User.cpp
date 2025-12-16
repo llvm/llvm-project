@@ -50,16 +50,16 @@ bool User::replaceUsesOfWith(Value *From, Value *To) {
 //                         User allocHungoffUses Implementation
 //===----------------------------------------------------------------------===//
 
-void User::allocHungoffUses(unsigned N, bool IsPhi) {
+void User::allocHungoffUses(unsigned N, bool WithExtraValues) {
   assert(HasHungOffUses && "alloc must have hung off uses");
 
-  static_assert(alignof(Use) >= alignof(BasicBlock *),
+  static_assert(alignof(Use) >= alignof(Value *),
                 "Alignment is insufficient for 'hung-off-uses' pieces");
 
   // Allocate the array of Uses
   size_t size = N * sizeof(Use);
-  if (IsPhi)
-    size += N * sizeof(BasicBlock *);
+  if (WithExtraValues)
+    size += N * sizeof(Value *);
   Use *Begin = static_cast<Use*>(::operator new(size));
   Use *End = Begin + N;
   setOperandList(Begin);
@@ -67,7 +67,7 @@ void User::allocHungoffUses(unsigned N, bool IsPhi) {
     new (Begin) Use(this);
 }
 
-void User::growHungoffUses(unsigned NewNumUses, bool IsPhi) {
+void User::growHungoffUses(unsigned NewNumUses, bool WithExtraValues) {
   assert(HasHungOffUses && "realloc must have hung off uses");
 
   unsigned OldNumUses = getNumOperands();
@@ -77,21 +77,21 @@ void User::growHungoffUses(unsigned NewNumUses, bool IsPhi) {
   assert(NewNumUses > OldNumUses && "realloc must grow num uses");
 
   Use *OldOps = getOperandList();
-  allocHungoffUses(NewNumUses, IsPhi);
+  allocHungoffUses(NewNumUses, WithExtraValues);
   Use *NewOps = getOperandList();
 
   // Now copy from the old operands list to the new one.
   std::copy(OldOps, OldOps + OldNumUses, NewOps);
 
-  // If this is a Phi, then we need to copy the BB pointers too.
-  if (IsPhi) {
+  // If the User has extra values (phi basic blocks, switch case values), then
+  // we need to copy these, too.
+  if (WithExtraValues) {
     auto *OldPtr = reinterpret_cast<char *>(OldOps + OldNumUses);
     auto *NewPtr = reinterpret_cast<char *>(NewOps + NewNumUses);
-    std::copy(OldPtr, OldPtr + (OldNumUses * sizeof(BasicBlock *)), NewPtr);
+    std::copy(OldPtr, OldPtr + (OldNumUses * sizeof(Value *)), NewPtr);
   }
   Use::zap(OldOps, OldOps + OldNumUses, true);
 }
-
 
 // This is a private struct used by `User` to track the co-allocated descriptor
 // section.

@@ -26,7 +26,6 @@
 #include "clang/StaticAnalyzer/Frontend/AnalyzerHelpFlags.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Option/OptTable.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -233,20 +232,6 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   }
 
   Clang->LoadRequestedPlugins();
-
-  // Load and store pass plugins for the back-end. Store the loaded pass plugins
-  // here and store references to these in CodeGenOpts to avoid pulling in the
-  // entire PassPlugin dependency chain in CodeGenOpts.
-  std::vector<std::unique_ptr<llvm::PassPlugin>> PassPlugins;
-  for (const std::string &Path : Clang->getCodeGenOpts().PassPluginNames) {
-    if (auto PassPlugin = llvm::PassPlugin::Load(Path)) {
-      PassPlugins.emplace_back(std::make_unique<llvm::PassPlugin>(*PassPlugin));
-      Clang->getCodeGenOpts().PassPlugins.push_back(PassPlugins.back().get());
-    } else {
-      Clang->getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
-          << Path << toString(PassPlugin.takeError());
-    }
-  }
 
   // Honor -mllvm.
   //
