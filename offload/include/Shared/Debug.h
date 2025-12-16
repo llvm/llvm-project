@@ -461,22 +461,15 @@ static inline raw_ostream &operator<<(raw_ostream &Os,
 
 // helper templates to support lambdas with different number of arguments
 template <typename LambdaTy> struct LambdaHelper {
-  template <typename FuncTy, typename RetTy, typename... Args>
-  static constexpr size_t CountArgs(RetTy (FuncTy::*)(Args...)) {
-    return sizeof...(Args);
-  }
-  template <typename FuncTy, typename RetTy, typename... Args>
-  static constexpr size_t CountArgs(RetTy (FuncTy::*)(Args...) const) {
-    return sizeof...(Args);
-  }
+  template <typename T, typename = std::void_t<>>
+  struct has_two_args : std::false_type {};
+  template <typename T>
+  struct has_two_args<T,
+                      std::void_t<decltype(std::declval<T>().operator()(1, 2))>>
+      : std::true_type {};
 
-  static constexpr size_t NArgs = CountArgs(&LambdaTy::operator());
-}
-
-template <typename LambdaTy>
-struct LambdaOs : public LambdaHelper<LambdaTy> {
   static void dispatch(LambdaTy func, llvm::raw_ostream &Os, uint32_t Level) {
-    if constexpr (NArgs == 2)
+    if constexpr (has_two_args<LambdaTy>::value)
       func(Os, Level);
     else
       func(Os);
@@ -493,8 +486,8 @@ struct LambdaOs : public LambdaHelper<LambdaTy> {
           RealLevel, /*ShouldPrefixNextString=*/true,                          \
           /*ShouldEmitNewLineOnDestruction=*/true};                            \
       auto F = Callback;                                                       \
-      ::llvm::offload::debug::LambdaOs<decltype(F)>::dispatch(F, OS,           \
-                                                              RealLevel);      \
+      ::llvm::offload::debug::LambdaHelper<decltype(F)>::dispatch(F, OS,       \
+                                                                  RealLevel);  \
     }                                                                          \
   }
 
@@ -511,33 +504,6 @@ struct LambdaOs : public LambdaHelper<LambdaTy> {
 // assumed respectively.
 #define ODBG_OS(...)                                                           \
   ODBG_OS_SELECT(__VA_ARGS__ __VA_OPT__(, ) 3, 2, 1)(__VA_ARGS__)
-
-// helper templates to support lambdas with different number of arguments
-template <typename LambdaTy> struct LambdaIf : public LambdaHelper<LambdaTy> {
-  static void dispatch(LambdaTy func, uint32_t Level) {
-    if constexpr (NArgs == 1)
-      func(Level);
-    else
-      func();
-  }
-};
-
-#define ODBG_IF_BASE(Type, Level, Callback)                                    \
-  if (::llvm::offload::debug::isDebugEnabled()) {                              \
-    uint32_t RealLevel = (Level);                                              \
-    if (::llvm::offload::debug::shouldPrintDebug(GETNAME(TARGET_NAME), (Type), \
-                                                 RealLevel)) {                 \
-      auto F = Callback;                                                       \
-      ::llvm::offload::debug::LambdaIf<decltype(F)>::dispatch(F, RealLevel);   \
-    }                                                                          \
-  }
-
-#define ODBG_IF_3(Type, Level, Callback) ODBG_IF_BASE(Type, Level, Callback)
-#define ODBG_IF_2(Type, Callback) ODBG_IF_3(Type, 1, Callback)
-#define ODBG_IF_1(Callback) ODBG_IF_2("default", Callback)
-#define ODBG_IF_SELECT(Type, Level, Callback, NArgs, ...) ODBG_IF_##NArgs
-#define ODBG_IF(...)                                                           \
-  ODBG_IF_SELECT(__VA_ARGS__ __VA_OPT__(, ) 3, 2, 1)(__VA_ARGS__)
 
 #else
 
@@ -558,9 +524,6 @@ inline bool isDebugEnabled() { return false; }
 #define ODBG_OS_BASE(Stream, Component, Prefix, Type, Level, Callback)
 #define ODBG_OS_STREAM(Stream, Type, Level, Callback)
 #define ODBG_OS(...)
-
-#define ODBG_IF_BASE(Type, Level, Callback)
-#define ODBG_IF(...)
 
 #endif
 
