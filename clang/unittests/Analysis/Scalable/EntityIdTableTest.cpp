@@ -29,10 +29,11 @@ TEST(EntityIdTableTest, Idempotency) {
   EntityIdTable Table;
 
   EntityName Entity("c:@F@foo", "", {});
+  EntityName EntityCopy = Entity;
 
   EntityId Id1 = Table.getId(Entity);
   EntityId Id2 = Table.getId(Entity);
-  EntityId Id3 = Table.getId(Entity);
+  EntityId Id3 = Table.getId(EntityCopy);
 
   EXPECT_EQ(Id1, Id2);
   EXPECT_EQ(Id2, Id3);
