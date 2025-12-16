@@ -148,14 +148,14 @@ void ST::test_present_members() {
 // CHECK-USE-I386: @.offload_maptypes.4 = private unnamed_addr constant [3 x i64] [i64 [[#0x2020]], i64 [[#0x1000000002003]], i64 [[#0x1000000002003]]]
 //.
 // CHECK-NOUSE-PPC64LE: @.offload_sizes = private unnamed_addr constant [7 x i64] [i64 0, i64 4, i64 4, i64 4, i64 0, i64 4, i64 4]
-// CHECK-NOUSE-PPC64LE: @.offload_maptypes = private unnamed_addr constant [7 x i64] [i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002003]], i64 [[#0x2003]], i64 [[#0x2000]], i64 [[#0x5000000002003]], i64 [[#0x5000000002003]]]
+// CHECK-NOUSE-PPC64LE: @.offload_maptypes = private unnamed_addr constant [7 x i64] [i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002003]], i64 [[#0x2003]], i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002003]]]
 // CHECK-NOUSE-PPC64LE: @.offload_sizes.1 = private unnamed_addr constant [1 x i64] [i64 4]
 // CHECK-NOUSE-PPC64LE: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 [[#0x2407]]]
 // CHECK-NOUSE-PPC64LE: @.offload_sizes.3 = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 4]
 // CHECK-NOUSE-PPC64LE: @.offload_maptypes.4 = private unnamed_addr constant [3 x i64] [i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002003]]]
 //.
 // CHECK-NOUSE-I386: @.offload_sizes = private unnamed_addr constant [7 x i64] [i64 0, i64 4, i64 4, i64 4, i64 0, i64 4, i64 4]
-// CHECK-NOUSE-I386: @.offload_maptypes = private unnamed_addr constant [7 x i64] [i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002003]], i64 [[#0x2003]], i64 [[#0x2000]], i64 [[#0x5000000002003]], i64 [[#0x5000000002003]]]
+// CHECK-NOUSE-I386: @.offload_maptypes = private unnamed_addr constant [7 x i64] [i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002003]], i64 [[#0x2003]], i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002003]]]
 // CHECK-NOUSE-I386: @.offload_sizes.1 = private unnamed_addr constant [1 x i64] [i64 4]
 // CHECK-NOUSE-I386: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 [[#0x2407]]]
 // CHECK-NOUSE-I386: @.offload_sizes.3 = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 4]
