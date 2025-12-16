@@ -17358,7 +17358,8 @@ If the ``nsz`` flag is specified, ``llvm.minnum`` with one +0.0 and one
 have the same sign.
 
 When used with the ``nsz`` flag, this intrinsics follows the semantics of
-``fmin`` in C.
+``fmin`` in C and ``maxNum`` in IEEE 754-2008 with the usual
+:ref:`signaling NaN <floatnan>` exception.
 
 The ``llvm.minnum`` intrinsic can be refined into ``llvm.minimumnum``, as the
 latter exhibits a subset of behaviors of the former.
@@ -17416,7 +17417,8 @@ If the ``nsz`` flag is specified, ``llvm.maxnum`` with one +0.0 and one
 have the same sign.
 
 When used with the ``nsz`` flag, this intrinsics follows the semantics of
-``fmax`` in C.
+``fmax`` in C and ``maxNum`` in IEEE 754-2008 with the usual
+:ref:`signaling NaN <floatnan>` exception.
 
 The ``llvm.maxnum`` intrinsic can be refined into ``llvm.maximumnum``, as the
 latter exhibits a subset of behaviors of the former.
