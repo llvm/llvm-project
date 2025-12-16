@@ -6,8 +6,7 @@ define void @convert_v3f32() {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    str wzr, [sp, #12]
-; CHECK-NEXT:    ldr s0, [sp, #12]
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    strb wzr, [x8]
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    str h0, [x8]
