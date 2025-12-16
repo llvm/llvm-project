@@ -81,8 +81,8 @@ void test() {
   ctm.equal_range(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
-  m[key];            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  m[std::move(key)]; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  m[key];            // no-warning
+  m[std::move(key)]; // no-warning
 
   m.at(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cm.at(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
