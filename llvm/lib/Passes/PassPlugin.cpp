@@ -45,10 +45,5 @@ Expected<PassPlugin> PassPlugin::Load(const std::string &Filename) {
             Twine(LLVM_PLUGIN_API_VERSION) + ".",
         inconvertibleErrorCode());
 
-  if (!P.Info.RegisterPassBuilderCallbacks)
-    return make_error<StringError>(Twine("Empty entry callback in plugin '") +
-                                       Filename + "'.'",
-                                   inconvertibleErrorCode());
-
   return P;
 }
