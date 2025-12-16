@@ -1,5 +1,7 @@
 set(files
   AllocAction.cpp
+  Error.cpp
+  QueueingTaskDispatcher.cpp
   ResourceManager.cpp
   RTTI.cpp
   Session.cpp
