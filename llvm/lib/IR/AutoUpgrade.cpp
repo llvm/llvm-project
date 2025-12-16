@@ -2751,10 +2751,14 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *C = CI->getArgOperand(0);
     C = Builder.CreateICmpNE(C, Builder.getInt32(0));
 
-    Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Name)
-      .Case("barrier0.popc", Intrinsic::nvvm_barrier_cta_red_popc_aligned_all)
-      .Case("barrier0.and", Intrinsic::nvvm_barrier_cta_red_and_aligned_all)
-      .Case("barrier0.or", Intrinsic::nvvm_barrier_cta_red_or_aligned_all);
+    Intrinsic::ID IID =
+        StringSwitch<Intrinsic::ID>(Name)
+            .Case("barrier0.popc",
+                  Intrinsic::nvvm_barrier_cta_red_popc_aligned_all)
+            .Case("barrier0.and",
+                  Intrinsic::nvvm_barrier_cta_red_and_aligned_all)
+            .Case("barrier0.or",
+                  Intrinsic::nvvm_barrier_cta_red_or_aligned_all);
     Value *Bar = Builder.CreateIntrinsic(IID, {}, {Builder.getInt32(0), C});
     Rep = Builder.CreateZExt(Bar, CI->getType());
   } else {
