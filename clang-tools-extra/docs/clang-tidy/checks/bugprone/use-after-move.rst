@@ -3,7 +3,8 @@
 bugprone-use-after-move
 =======================
 
-Warns if an object is used after it has been moved, for example:
+Warns if an object is used after it has been moved, forwarded, or otherwise
+potentially invalidated, for example:
 
 .. code-block:: c++
 
@@ -254,6 +255,33 @@ forget to add the reinitialization for this additional member. Instead, it is
 safer to assign to the entire struct in one go, and this will also avoid the
 use-after-move warning.
 
+Coroutines
+----------
+
+This check also searches for occurrences of "use-after-suspend" in C++
+coroutines. This can be used, for example, to detect when a coroutine accesses
+thread-local data after a suspension point (i.e. ``co_yield`` or ``co_await``),
+where the reference or pointer used to access the data was acquired prior to
+the suspension point. Such situations can be dangerous as the referenced memory
+may belong to a different thread after suspension, or have been deallocated
+entirely by the time the coroutine resumes.
+
+Note that, for any use-after-suspend to be flagged,
+:option:`NonlocalAccessors` must be non-empty actually match some functions.
+For example, if we have:
+
+.. code-block:: c++
+
+    CustomAwaitable AwaitResponse();
+
+    int* thread_data = GetThreadLocalData();
+    co_await AwaitResponse(); // suspension
+    return *thread_data; // use after suspension
+
+then :option:`NonlocalAccessors` must match ``GetThreadLocalData``, and
+:option:`Awaitables` must match either ``CustomAwaitable`` or
+``AwaitResponse``.
+
 Options
 -------
 
@@ -271,3 +299,17 @@ Options
   argument (``*this``) is considered to be reinitialized. For non-member or
   static member functions, the first argument is considered to be
   reinitialized. Default value is an empty string.
+
+.. option:: Awaitables
+
+  A semicolon-separated list of regular expressions matching names of types or
+  functions (the operands to ``co_await``) that may potentially suspend the
+  current execution, causing the calling coroutine to resume before the callee
+  has finished. Default value is `::std::suspend_always`.
+
+.. option:: NonlocalAccessors
+
+  A semicolon-separated list of regular expressions matching names of functions
+  that return a pointer or reference to data that may become invalidated after
+  a coroutine suspension, such as a function that returns a pointer to
+  thread-local data. Default value is an empty string.

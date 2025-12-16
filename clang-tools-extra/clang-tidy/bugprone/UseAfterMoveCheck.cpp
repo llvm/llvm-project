@@ -81,7 +81,29 @@ private:
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
 };
 
+// Matches the expression awaited by the `co_await`.
+// TODO: Merge with the `awaitable` matcher in CoroutineHostileRAIICheck.
+AST_MATCHER_P(CoroutineSuspendExpr, suspendExpr,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  if (const Expr *E = Node.getOperand())
+    return InnerMatcher.matches(*E, Finder, Builder);
+  return false;
+}
+
 } // namespace
+
+// TODO: Merge with the corresponding function in CoroutineHostileRAIICheck.
+static auto typeWithNameIn(llvm::ArrayRef<StringRef> Names) {
+  return hasType(hasCanonicalType(
+      hasDeclaration(namedDecl(matchers::matchesAnyListedRegexName(Names)))));
+}
+
+// TODO: Merge with the corresponding function in CoroutineHostileRAIICheck.
+static auto functionWithNameIn(llvm::ArrayRef<StringRef> Names) {
+  auto Call = callExpr(
+      callee(functionDecl(matchers::matchesAnyListedRegexName(Names))));
+  return anyOf(expr(cxxBindTemporaryExpr(has(Call))), expr(Call));
+}
 
 static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
   return anyOf(hasAnyName("::std::move", "::std::forward"),
@@ -419,6 +441,7 @@ enum MoveType {
   Forward = 0,      // std::forward
   Move = 1,         // std::move
   Invalidation = 2, // other
+  Suspend = 3,      // co_yield, co_await
 };
 
 } // namespace
@@ -441,22 +464,24 @@ static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
   const SourceLocation MoveLoc = MovingCall->getExprLoc();
 
   Check->diag(UseLoc,
-              "'%0' used after it was %select{forwarded|moved|invalidated}1")
+              "'%0' used after %select{it was forwarded|it was moved|it was "
+              "invalidated|a suspension point}1")
       << MoveArg->getDecl()->getName() << Type;
-  Check->diag(MoveLoc, "%select{forward|move|invalidation}0 occurred here",
+  Check->diag(MoveLoc,
+              "%select{forward|move|invalidation|suspension}0 occurred here",
               DiagnosticIDs::Note)
       << Type;
   if (Use.EvaluationOrderUndefined) {
-    Check->diag(
-        UseLoc,
-        "the use and %select{forward|move|invalidation}0 are unsequenced, i.e. "
-        "there is no guarantee about the order in which they are evaluated",
-        DiagnosticIDs::Note)
+    Check->diag(UseLoc,
+                "the use and %select{forward|move|invalidation|suspension}0 "
+                "are unsequenced, i.e. there is no guarantee about the order "
+                "in which they are evaluated",
+                DiagnosticIDs::Note)
         << Type;
   } else if (Use.UseHappensInLaterLoopIteration) {
     Check->diag(UseLoc,
                 "the use happens in a later loop iteration than the "
-                "%select{forward|move|invalidation}0",
+                "%select{forward|move|invalidation|suspension}0",
                 DiagnosticIDs::Note)
         << Type;
   }
@@ -467,13 +492,21 @@ UseAfterMoveCheck::UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
       InvalidationFunctions(utils::options::parseStringList(
           Options.get("InvalidationFunctions", ""))),
       ReinitializationFunctions(utils::options::parseStringList(
-          Options.get("ReinitializationFunctions", ""))) {}
+          Options.get("ReinitializationFunctions", ""))),
+      Awaitables(utils::options::parseStringList(
+          Options.get("Awaitables", "::std::suspend_always"))),
+      NonlocalAccessors(utils::options::parseStringList(
+          Options.get("NonlocalAccessors", ""))) {}
 
 void UseAfterMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "InvalidationFunctions",
                 utils::options::serializeStringList(InvalidationFunctions));
   Options.store(Opts, "ReinitializationFunctions",
                 utils::options::serializeStringList(ReinitializationFunctions));
+  Options.store(Opts, "Awaitables",
+                utils::options::serializeStringList(Awaitables));
+  Options.store(Opts, "NonlocalAccessors",
+                utils::options::serializeStringList(NonlocalAccessors));
 }
 
 void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
@@ -485,25 +518,29 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
       cxxMemberCallExpr(callee(cxxMethodDecl(hasName("try_emplace"))));
   auto Arg = declRefExpr().bind("arg");
   auto IsMemberCallee = callee(functionDecl(unless(isStaticStorageClass())));
-  auto CallMoveMatcher =
-      callExpr(callee(functionDecl(getNameMatcher(InvalidationFunctions))
-                          .bind("move-decl")),
-               anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),
-                     callExpr(unless(cxxMemberCallExpr(IsMemberCallee)),
-                              hasArgument(0, Arg))),
-               unless(inDecltypeOrTemplateArg()),
-               unless(hasParent(TryEmplaceMatcher)), expr().bind("call-move"),
-               anyOf(hasAncestor(compoundStmt(
-                         hasParent(lambdaExpr().bind("containing-lambda")))),
-                     hasAncestor(functionDecl(anyOf(
-                         cxxConstructorDecl(
-                             hasAnyConstructorInitializer(withInitializer(
-                                 expr(anyOf(equalsBoundNode("call-move"),
-                                            hasDescendant(expr(
-                                                equalsBoundNode("call-move")))))
-                                     .bind("containing-ctor-init"))))
-                             .bind("containing-ctor"),
-                         functionDecl().bind("containing-func"))))));
+  auto Awaitee = suspendExpr(
+      anyOf(typeWithNameIn(Awaitables), functionWithNameIn(Awaitables)));
+  auto CallMoveMatcher = expr(
+      anyOf(callExpr(callee(functionDecl(getNameMatcher(InvalidationFunctions))
+                                .bind("move-decl")),
+                     anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),
+                           callExpr(unless(cxxMemberCallExpr(IsMemberCallee)),
+                                    hasArgument(0, Arg)))),
+            coyieldExpr(Awaitee),
+            coawaitExpr(allOf(unless(coawaitExpr(isImplicit())), Awaitee))),
+      unless(inDecltypeOrTemplateArg()), unless(hasParent(TryEmplaceMatcher)),
+      expr().bind("call-move"),
+      anyOf(hasAncestor(compoundStmt(
+                hasParent(lambdaExpr().bind("containing-lambda")))),
+            hasAncestor(functionDecl(
+                anyOf(cxxConstructorDecl(
+                          hasAnyConstructorInitializer(withInitializer(
+                              expr(anyOf(equalsBoundNode("call-move"),
+                                         hasDescendant(expr(
+                                             equalsBoundNode("call-move")))))
+                                  .bind("containing-ctor-init"))))
+                          .bind("containing-ctor"),
+                      functionDecl().bind("containing-func"))))));
 
   Finder->addMatcher(
       traverse(
@@ -534,7 +571,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<LambdaExpr>("containing-lambda");
   const auto *ContainingFunc =
       Result.Nodes.getNodeAs<FunctionDecl>("containing-func");
-  const auto *CallMove = Result.Nodes.getNodeAs<CallExpr>("call-move");
+  const auto *CallMove = Result.Nodes.getNodeAs<Expr>("call-move");
   const auto *MovingCall = Result.Nodes.getNodeAs<Expr>("moving-call");
   const auto *Arg = Result.Nodes.getNodeAs<DeclRefExpr>("arg");
   const auto *MoveDecl = Result.Nodes.getNodeAs<FunctionDecl>("move-decl");
@@ -544,13 +581,14 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Ignore the std::move if the variable that was passed to it isn't a local
   // variable.
-  if (!Arg->getDecl()->getDeclContext()->isFunctionOrMethod())
+  if (Arg && !Arg->getDecl()->getDeclContext()->isFunctionOrMethod())
     return;
 
-  // Collect all code blocks that could use the arg after move.
-  llvm::SmallVector<Stmt *> CodeBlocks{};
+  // Collect all code blocks that could use the arg after move, along with the
+  // declaration of the function containing each block of code.
+  llvm::SmallVector<std::pair<const Decl *, Stmt *>> CodeBlocks{};
   if (ContainingCtor) {
-    CodeBlocks.push_back(ContainingCtor->getBody());
+    CodeBlocks.push_back({ContainingCtor, ContainingCtor->getBody()});
     if (ContainingCtorInit) {
       // Collect the constructor initializer expressions.
       bool BeforeMove{true};
@@ -559,21 +597,56 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
                               ContainingCtorInit->IgnoreImplicit())
           BeforeMove = false;
         if (!BeforeMove)
-          CodeBlocks.push_back(Init->getInit());
+          CodeBlocks.push_back({ContainingCtor, Init->getInit()});
       }
     }
   } else if (ContainingLambda) {
-    CodeBlocks.push_back(ContainingLambda->getBody());
+    CodeBlocks.push_back(
+        {ContainingLambda->getCallOperator(), ContainingLambda->getBody()});
   } else if (ContainingFunc) {
-    CodeBlocks.push_back(ContainingFunc->getBody());
+    CodeBlocks.push_back({ContainingFunc, ContainingFunc->getBody()});
   }
 
-  for (Stmt *CodeBlock : CodeBlocks) {
+  for (auto [ContainingDecl, CodeBlock] : CodeBlocks) {
     UseAfterMoveFinder Finder(Result.Context, InvalidationFunctions,
                               ReinitializationFunctions);
-    if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
-      emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
-                     determineMoveType(MoveDecl));
+    if (Arg) {
+      // Non-coroutine cases
+      if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
+        emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
+                       determineMoveType(MoveDecl));
+    } else {
+      // Coroutine cases (use-after-suspend, to catch pointers to thread-locals)
+      llvm::SmallVector<const DeclRefExpr *> DeclRefs;
+      // Find all local variables declared inside this code block
+      auto InterestingCallMatcher =
+          callExpr(callee(functionDecl(
+                       matchers::matchesAnyListedRegexName(NonlocalAccessors))),
+                   unless(hasParent(memberExpr(hasDeclaration(
+                       functionDecl(unless(returns(hasCanonicalType(
+                           anyOf(referenceType(), pointerType()))))))))));
+      auto DeclsMatcher =
+          declRefExpr(to(varDecl(unless(isImplicit()),
+                                 hasDeclContext(equalsNode(ContainingDecl)),
+                                 hasType(hasUnqualifiedDesugaredType(
+                                     anyOf(pointerType(), referenceType()))),
+                                 hasInitializer(anyOf(
+                                     InterestingCallMatcher,
+                                     hasDescendant(InterestingCallMatcher))))))
+              .bind("declref");
+      for (const auto &Bound :
+           match(findAll(DeclsMatcher), *CodeBlock, *Result.Context)) {
+        DeclRefs.push_back(Bound.getNodeAs<DeclRefExpr>("declref"));
+      }
+      for (const DeclRefExpr *DeclRef : DeclRefs) {
+        if (auto Use = Finder.find(CodeBlock, MovingCall, DeclRef)) {
+          emitDiagnostic(MovingCall, DeclRef, *Use, this, Result.Context,
+                         isa<CoroutineSuspendExpr>(MovingCall)
+                             ? MoveType::Suspend
+                             : determineMoveType(MoveDecl));
+        }
+      }
+    }
   }
 }
 
