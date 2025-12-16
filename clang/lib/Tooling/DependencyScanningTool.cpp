@@ -81,11 +81,13 @@ protected:
 
 static std::pair<std::unique_ptr<driver::Driver>,
                  std::unique_ptr<driver::Compilation>>
-buildCompilation(ArrayRef<std::string> CommandLine, DiagnosticsEngine &Diags,
+buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                  llvm::BumpPtrAllocator &Alloc) {
-  auto Argv = llvm::map_to_vector<256>(
-      CommandLine, [](const auto &Arg) { return Arg.c_str(); });
+  SmallVector<const char *, 256> Argv;
+  Argv.reserve(ArgStrs.size());
+  for (const std::string &Arg : ArgStrs)
+    Argv.push_back(Arg.c_str());
 
   std::unique_ptr<driver::Driver> Driver = std::make_unique<driver::Driver>(
       Argv[0], llvm::sys::getDefaultTargetTriple(), Diags,
@@ -112,7 +114,7 @@ buildCompilation(ArrayRef<std::string> CommandLine, DiagnosticsEngine &Diags,
 
   if (Compilation->getJobs().empty()) {
     Diags.Report(diag::err_fe_expected_compiler_job)
-        << llvm::join(CommandLine, " ");
+        << llvm::join(ArgStrs, " ");
     return std::make_pair(nullptr, nullptr);
   }
 
