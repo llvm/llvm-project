@@ -178,12 +178,8 @@ protected:
   virtual void PostRun() const {};
 };
 
-/// Base class for handling DAP async requests. Handlers should declare their
-/// arguments and response body types like:
-///
-/// class MyRequestHandler : public AsyncRequestHandler<Arguments, Response> {
-///   ....
-/// };
+/// A specialized base class for attach and launch requests that delays sending
+/// the response until 'configurationDone' is received.
 template <typename Args, typename Resp>
 class DelayedResponseRequestHandler : public BaseRequestHandler {
   using BaseRequestHandler::BaseRequestHandler;

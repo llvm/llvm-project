@@ -271,10 +271,17 @@ bool BaseRequestHandler::HasInstructionGranularity(
 
 void BaseRequestHandler::BuildErrorResponse(
     llvm::Error err, protocol::Response &response) const {
+  // Handle the ErrorSuccess case.
+  if (!err) {
+    response.success = true;
+    return;
+  }
+
+  response.success = false;
+
   llvm::handleAllErrors(
       std::move(err),
       [&](const NotStoppedError &err) {
-        response.success = false;
         response.message = lldb_dap::protocol::eResponseMessageNotStopped;
       },
       [&](const DAPError &err) {
@@ -288,7 +295,6 @@ void BaseRequestHandler::BuildErrorResponse(
         protocol::ErrorResponseBody body;
         body.error = error_message;
 
-        response.success = false;
         response.body = body;
       },
       [&](const llvm::ErrorInfoBase &err) {
@@ -300,7 +306,6 @@ void BaseRequestHandler::BuildErrorResponse(
         protocol::ErrorResponseBody body;
         body.error = error_message;
 
-        response.success = false;
         response.body = body;
       });
 }
