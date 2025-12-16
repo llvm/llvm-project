@@ -164,27 +164,26 @@ static bool isLikelyTypo(const NamedDeclRange &Candidates, StringRef ArgName,
   if (ThisED >= UpperBound)
     return false;
 
-  return std::all_of(Candidates.begin(), Candidates.end(),
-                     [&](const auto &Candidate) {
-                       const IdentifierInfo *II = Candidate->getIdentifier();
-                       if (II->getName() == TargetName)
-                         return true;
+  return llvm::all_of(Candidates, [&](const auto &Candidate) {
+    const IdentifierInfo *II = Candidate->getIdentifier();
+    if (II->getName() == TargetName)
+      return true;
 
-                       if (!II)
-                         return true;
+    if (!II)
+      return true;
 
-                       const unsigned Threshold = 2;
-                       // Other candidates must be an edit distance at least
-                       // Threshold more away from this candidate. This gives us
-                       // greater confidence that this is a typo of this
-                       // candidate and not one with a similar name.
-                       const llvm::SmallString<64> CandidateLower =
-                           getLowercasedString(II->getName());
-                       const unsigned OtherED = ArgNameLowerRef.edit_distance(
-                           StringRef(CandidateLower),
-                           /*AllowReplacements=*/true, ThisED + Threshold);
-                       return OtherED >= ThisED + Threshold;
-                     });
+    const unsigned Threshold = 2;
+    // Other candidates must be an edit distance at least
+    // Threshold more away from this candidate. This gives us
+    // greater confidence that this is a typo of this
+    // candidate and not one with a similar name.
+    const llvm::SmallString<64> CandidateLower =
+        getLowercasedString(II->getName());
+    const unsigned OtherED = ArgNameLowerRef.edit_distance(
+        StringRef(CandidateLower),
+        /*AllowReplacements=*/true, ThisED + Threshold);
+    return OtherED >= ThisED + Threshold;
+  });
 }
 
 static bool sameName(StringRef InComment, StringRef InDecl, bool StrictMode) {
