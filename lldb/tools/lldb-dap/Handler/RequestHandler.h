@@ -76,13 +76,16 @@ protected:
 
   /// @}
 
+  /// Builds an error response from the given error.
+  void BuildErrorResponse(llvm::Error, protocol::Response &) const;
+
   /// Sends an error response from the current handler.
-  void SendError(llvm::Error err, protocol::Response &response) const;
+  void SendError(llvm::Error, protocol::Response &) const;
 
   /// Sends a successful response, with an optional body from the current
   /// handler.
   void SendSuccess(protocol::Response &,
-                   std::optional<llvm::json::Value> body = std::nullopt) const;
+                   std::optional<llvm::json::Value> = std::nullopt) const;
 
   /// Send a response to the client.
   void Send(protocol::Response &response) const;
@@ -182,10 +185,13 @@ protected:
 ///   ....
 /// };
 template <typename Args, typename Resp>
-class AsyncRequestHandler : public BaseRequestHandler {
+class DelayedResponseRequestHandler : public BaseRequestHandler {
   using BaseRequestHandler::BaseRequestHandler;
 
   void operator()(const protocol::Request &request) const override {
+    // Only support void responses for now.
+    static_assert(std::is_same_v<Resp, llvm::Error>);
+
     protocol::Response response;
     response.request_seq = request.seq;
     response.command = request.command;
@@ -194,69 +200,30 @@ class AsyncRequestHandler : public BaseRequestHandler {
     if (llvm::Error err = arguments.takeError())
       return SendError(std::move(err), response);
 
-    if constexpr (std::is_same_v<Resp, llvm::Error>) {
-      Run(*arguments, [this, response](llvm::Error err) mutable {
-        lldb::SBMutex lock = dap.GetAPIMutex();
-        std::lock_guard<lldb::SBMutex> guard(lock);
+    BuildErrorResponse(Run(*arguments), response);
 
-        if (err)
-          SendError(std::move(err), response);
-        else
-          SendSuccess(response);
-      });
-    } else {
-      Run(*arguments, [this, response](Resp body) mutable {
-        lldb::SBMutex lock = dap.GetAPIMutex();
-        std::lock_guard<lldb::SBMutex> guard(lock);
-
-        if (llvm::Error err = body.takeError())
-          SendError(std::move(err), response);
-        else
-          SendSuccess(response, *body);
-      });
-    }
-  };
-
-protected:
-  /// A Callback<T> is a void function that accepts either a `llvm::Error` or
-  /// `llvm::Expected<RespBody>`.
-  template <typename T> using Callback = llvm::unique_function<void(T)>;
-
-  /// Invoke the handler.
-  ///
-  /// NOTE: Implementations must to invoke the callback exactly one time.
-  ///
-  /// The response is sent as soon as the callback is invoked.
-  virtual void Run(const Args &, Callback<Resp>) const = 0;
-
-  /// Delay sending a response until the `on_configuration_done` handler is
-  /// invoked.
-  void DelayResponseUntilConfigurationDone(Callback<llvm::Error> cb,
-                                           llvm::Error err) const {
-    // Wrap the error in case the DAP is shutdown before `configurationDone` is
-    // called so we don't have an unresolved `llvm::Error` reference, otherwise
-    // `DAP::~DAP()` may assert when this lambda is destroyed.
-    LLVMErrorRef err_ref = llvm::wrap(std::move(err));
-    dap.on_configuration_done = [cb = std::move(cb), err_ref]() mutable {
-      cb(llvm::unwrap(err_ref));
-    };
+    dap.on_configuration_done = [this, response]() mutable { Send(response); };
 
     // The 'configurationDone' request is not sent until after 'initialized'
     // triggers the breakpoints being sent and 'configurationDone' is the last
     // message in the chain.
     protocol::Event initialized{"initialized"};
     dap.Send(initialized);
-  }
+  };
+
+protected:
+  /// Run the request handler.
+  virtual Resp Run(const Args &) const = 0;
 };
 
 class AttachRequestHandler
-    : public AsyncRequestHandler<protocol::AttachRequestArguments,
-                                 protocol::AttachResponse> {
+    : public DelayedResponseRequestHandler<protocol::AttachRequestArguments,
+                                           protocol::AttachResponse> {
 public:
-  using AsyncRequestHandler::AsyncRequestHandler;
+  using DelayedResponseRequestHandler::DelayedResponseRequestHandler;
   static llvm::StringLiteral GetCommand() { return "attach"; }
-  void Run(const protocol::AttachRequestArguments &args,
-           Callback<protocol::AttachResponse>) const override;
+  protocol::AttachResponse
+  Run(const protocol::AttachRequestArguments &args) const override;
 };
 
 class BreakpointLocationsRequestHandler
@@ -369,13 +336,13 @@ public:
 };
 
 class LaunchRequestHandler
-    : public AsyncRequestHandler<protocol::LaunchRequestArguments,
-                                 protocol::LaunchResponse> {
+    : public DelayedResponseRequestHandler<protocol::LaunchRequestArguments,
+                                           protocol::LaunchResponse> {
 public:
-  using AsyncRequestHandler::AsyncRequestHandler;
+  using DelayedResponseRequestHandler::DelayedResponseRequestHandler;
   static llvm::StringLiteral GetCommand() { return "launch"; }
-  void Run(const protocol::LaunchRequestArguments &arguments,
-           llvm::unique_function<void(llvm::Error)>) const override;
+  protocol::LaunchResponse
+  Run(const protocol::LaunchRequestArguments &arguments) const override;
 };
 
 class RestartRequestHandler : public LegacyRequestHandler {

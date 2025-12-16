@@ -269,12 +269,12 @@ bool BaseRequestHandler::HasInstructionGranularity(
   return false;
 }
 
-void BaseRequestHandler::SendError(llvm::Error err,
-                                   protocol::Response &response) const {
-  response.success = false;
+void BaseRequestHandler::BuildErrorResponse(
+    llvm::Error err, protocol::Response &response) const {
   llvm::handleAllErrors(
       std::move(err),
       [&](const NotStoppedError &err) {
+        response.success = false;
         response.message = lldb_dap::protocol::eResponseMessageNotStopped;
       },
       [&](const DAPError &err) {
@@ -287,6 +287,8 @@ void BaseRequestHandler::SendError(llvm::Error err,
         error_message.urlLabel = err.getURLLabel();
         protocol::ErrorResponseBody body;
         body.error = error_message;
+
+        response.success = false;
         response.body = body;
       },
       [&](const llvm::ErrorInfoBase &err) {
@@ -297,9 +299,15 @@ void BaseRequestHandler::SendError(llvm::Error err,
         error_message.id = err.convertToErrorCode().value();
         protocol::ErrorResponseBody body;
         body.error = error_message;
+
+        response.success = false;
         response.body = body;
       });
+}
 
+void BaseRequestHandler::SendError(llvm::Error err,
+                                   protocol::Response &response) const {
+  BuildErrorResponse(std::move(err), response);
   Send(response);
 }
 
