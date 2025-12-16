@@ -5963,9 +5963,7 @@ bb5:
            PHI->getIncomingBlock(Idx) == RemoveBB1;
   });
   EXPECT_EQ(PHI->getNumIncomingValues(), 3u);
-  EXPECT_EQ(PHI->getIncomingBlock(0), RemainBB0);
-  EXPECT_EQ(PHI->getIncomingBlock(1), RemainBB1);
-  EXPECT_EQ(PHI->getIncomingBlock(2), RemainBB2);
+  EXPECT_THAT(PHI->blocks(), ::testing::UnorderedElementsAre(RemainBB0, RemainBB1, RemainBB2));
   // Check replaceIncomingBlockWith
   OrigBB = RemainBB0;
   auto *NewBB = RemainBB1;
