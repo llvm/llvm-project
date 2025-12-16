@@ -125,8 +125,6 @@
 #include <cassert>
 #include <utility>
 
-#error testing
-
 namespace llvm {
 
 // FIXME: Dummy target independent passes definitions that have not yet been

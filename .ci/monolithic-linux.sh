@@ -66,7 +66,7 @@ start-group "ninja"
 
 if [[ -n "${targets}" ]]; then
   # Targets are not escaped as they are passed as separate arguments.
-  ninja -C "${BUILD_DIR}" ${targets} |& tee ninja.log
+  ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
   cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
 fi
 
