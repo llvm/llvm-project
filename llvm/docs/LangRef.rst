@@ -17560,9 +17560,8 @@ have the same sign.
 Note that these are the semantics of minimumNumber specified in
 IEEE-754-2019 with the usual :ref:`signaling NaN <floatnan>` exception.
 
-This intrinsic differs from ``llvm.minnum`` in that it is guaranteed to treat
-sNaN the same way as qNaN. ``llvm.minnum`` will instead non-deterministically
-either act like ``llvm.minimumnum`` or return a :ref:`NaN <floatnan>`.
+This intrinsic behaves the same as ``llvm.minnum`` other than its treatment of
+sNaN inputs.
 
 .. _i_maximumnum:
 
@@ -17614,9 +17613,8 @@ have the same sign.
 Note that these are the semantics of maximumNumber specified in
 IEEE-754-2019  with the usual :ref:`signaling NaN <floatnan>` exception.
 
-This intrinsic differs from ``llvm.maxnum`` in that it is guaranteed to treat
-sNaN the same way as qNaN. ``llvm.maxnum`` will instead non-deterministically
-either act like ``llvm.maximumnum`` or return a :ref:`NaN <floatnan>`.
+This intrinsic behaves the same as ``llvm.maxnum`` other than its treatment of
+sNaN inputs.
 
 .. _int_copysign:
 
