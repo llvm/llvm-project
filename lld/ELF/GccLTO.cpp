@@ -18,6 +18,8 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+// The following global variable allows to recover the C++ context when
+// receiving a callback from the plugin.
 GccIRCompiler *gcc = nullptr;
 
 GccIRCompiler::GccIRCompiler(Ctx &ctx) : IRCompiler(ctx) {
