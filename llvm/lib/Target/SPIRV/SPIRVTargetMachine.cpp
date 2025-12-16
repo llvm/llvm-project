@@ -209,14 +209,14 @@ void SPIRVPassConfig::addISelPrepare() {
     // back to virtual registers.
     addPass(createPromoteMemoryToRegisterPass());
   }
-
+  SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
   addPass(createSPIRVLegalizeImplicitBindingPass());
-  addPass(createSPIRVLegalizeZeroSizeArraysPass());
+  addPass(createSPIRVLegalizeZeroSizeArraysPass(&TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
-  addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
+  addPass(createSPIRVEmitIntrinsicsPass(&TM));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
-    addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
+    addPass(createSPIRVLegalizePointerCastPass(&TM));
   TargetPassConfig::addISelPrepare();
 }
 

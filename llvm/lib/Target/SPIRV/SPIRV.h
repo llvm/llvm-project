@@ -25,7 +25,7 @@ ModulePass *createSPIRVCBufferAccessLegacyPass();
 FunctionPass *createSPIRVMergeRegionExitTargetsPass();
 FunctionPass *createSPIRVStripConvergenceIntrinsicsPass();
 ModulePass *createSPIRVLegalizeImplicitBindingPass();
-ModulePass *createSPIRVLegalizeZeroSizeArraysPass();
+ModulePass *createSPIRVLegalizeZeroSizeArraysPass(const SPIRVTargetMachine *TM);
 FunctionPass *createSPIRVLegalizePointerCastPass(SPIRVTargetMachine *TM);
 FunctionPass *createSPIRVRegularizerPass();
 FunctionPass *createSPIRVPreLegalizerCombiner();

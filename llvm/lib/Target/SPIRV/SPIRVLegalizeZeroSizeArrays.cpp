@@ -13,6 +13,8 @@
 
 #include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRV.h"
+#include "SPIRVTargetMachine.h"
+#include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IRBuilder.h"
@@ -20,7 +22,6 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/TargetParser/Triple.h"
 
 #define DEBUG_TYPE "spirv-legalize-zero-size-arrays"
 
@@ -45,14 +46,24 @@ bool hasZeroSizeArray(const Type *Ty) {
   return false;
 }
 
+bool shouldLegalizeInstType(const Type *Ty) {
+  if (const ArrayType *ArrTy = dyn_cast_if_present<ArrayType>(Ty)) {
+    return ArrTy->getNumElements() == 0 ||
+           shouldLegalizeInstType(ArrTy->getElementType());
+  }
+  return false;
+}
+
 class SPIRVLegalizeZeroSizeArraysImpl
     : public InstVisitor<SPIRVLegalizeZeroSizeArraysImpl> {
   friend class InstVisitor<SPIRVLegalizeZeroSizeArraysImpl>;
 
 public:
+  SPIRVLegalizeZeroSizeArraysImpl(const SPIRVTargetMachine *TM)
+      : InstVisitor(), TM(TM) {}
   bool runOnModule(Module &M);
 
-  // TODO: Handle GEP, PHI
+  // TODO: Handle GEP, PHI.
   void visitAllocaInst(AllocaInst &AI);
   void visitLoadInst(LoadInst &LI);
   void visitStoreInst(StoreInst &SI);
@@ -64,6 +75,7 @@ private:
   Type *legalizeType(Type *Ty);
   Constant *legalizeConstant(Constant *C);
 
+  const SPIRVTargetMachine *TM;
   DenseMap<Type *, Type *> TypeMap;
   DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
   SmallVector<Instruction *, 16> ToErase;
@@ -73,14 +85,18 @@ private:
 class SPIRVLegalizeZeroSizeArraysLegacy : public ModulePass {
 public:
   static char ID;
-  SPIRVLegalizeZeroSizeArraysLegacy() : ModulePass(ID) {}
+  SPIRVLegalizeZeroSizeArraysLegacy(const SPIRVTargetMachine *TM)
+      : ModulePass(ID), TM(TM) {}
   StringRef getPassName() const override {
     return "SPIRV Legalize Zero-Size Arrays";
   }
   bool runOnModule(Module &M) override {
-    SPIRVLegalizeZeroSizeArraysImpl Impl;
+    SPIRVLegalizeZeroSizeArraysImpl Impl(TM);
     return Impl.runOnModule(M);
   }
+
+private:
+  const SPIRVTargetMachine *TM;
 };
 
 Type *SPIRVLegalizeZeroSizeArraysImpl::legalizeType(Type *Ty) {
@@ -92,7 +108,9 @@ Type *SPIRVLegalizeZeroSizeArraysImpl::legalizeType(Type *Ty) {
 
   if (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty)) {
     if (ArrTy->getNumElements() == 0) {
-      LegalizedTy = PointerType::getUnqual(Ty->getContext());
+      LegalizedTy = PointerType::get(
+          Ty->getContext(),
+          storageClassToAddressSpace(SPIRV::StorageClass::Generic));
     } else if (Type *ElemTy = legalizeType(ArrTy->getElementType());
                ElemTy != ArrTy->getElementType()) {
       LegalizedTy = ArrayType::get(ElemTy, ArrTy->getNumElements());
@@ -124,11 +142,14 @@ Constant *SPIRVLegalizeZeroSizeArraysImpl::legalizeConstant(Constant *C) {
   if (!C || !hasZeroSizeArray(C->getType()))
     return C;
 
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(C))
-    return GlobalMap.lookup(GV) ? GlobalMap[GV] : C;
+  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(C)) {
+    if (GlobalVariable *NewGV = GlobalMap.lookup(GV))
+      return NewGV;
+    return C;
+  }
 
   Type *NewTy = legalizeType(C->getType());
-  if (isa<UndefValue>(C) || isa<PoisonValue>(C))
+  if (isa<UndefValue>(C))
     return PoisonValue::get(NewTy);
   if (isa<ConstantAggregateZero>(C))
     return Constant::getNullValue(NewTy);
@@ -170,12 +191,15 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitAllocaInst(AllocaInst &AI) {
   if (!hasZeroSizeArray(AI.getAllocatedType()))
     return;
 
-  // TODO: Handle nested arrays and structs containing zero-size arrays
+  // TODO: Handle structs containing zero-size arrays.
   ArrayType *ArrTy = dyn_cast<ArrayType>(AI.getAllocatedType());
-  if (ArrTy && ArrTy->getNumElements() == 0) {
+  if (shouldLegalizeInstType(ArrTy)) {
     IRBuilder<> Builder(&AI);
-    AllocaInst *NewAI = Builder.CreateAlloca(ArrTy->getElementType(),
-                                             AI.getArraySize(), AI.getName());
+    AllocaInst *NewAI = Builder.CreateAlloca(
+        PointerType::get(
+            ArrTy->getContext(),
+            storageClassToAddressSpace(SPIRV::StorageClass::Generic)),
+        /*ArraySize=*/nullptr, AI.getName());
     NewAI->setAlignment(AI.getAlign());
     NewAI->setDebugLoc(AI.getDebugLoc());
     AI.replaceAllUsesWith(NewAI);
@@ -188,9 +212,9 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitLoadInst(LoadInst &LI) {
   if (!hasZeroSizeArray(LI.getType()))
     return;
 
-  // TODO: Handle nested arrays and structs containing zero-size arrays
+  // TODO: Handle structs containing zero-size arrays.
   ArrayType *ArrTy = dyn_cast<ArrayType>(LI.getType());
-  if (ArrTy && ArrTy->getNumElements() == 0) {
+  if (shouldLegalizeInstType(ArrTy)) {
     LI.replaceAllUsesWith(PoisonValue::get(LI.getType()));
     ToErase.push_back(&LI);
     Modified = true;
@@ -200,9 +224,9 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitLoadInst(LoadInst &LI) {
 void SPIRVLegalizeZeroSizeArraysImpl::visitStoreInst(StoreInst &SI) {
   Type *StoreTy = SI.getValueOperand()->getType();
 
-  // TODO: Handle nested arrays and structs containing zero-size arrays
+  // TODO: Handle structs containing zero-size arrays.
   ArrayType *ArrTy = dyn_cast<ArrayType>(StoreTy);
-  if (ArrTy && ArrTy->getNumElements() == 0) {
+  if (shouldLegalizeInstType(ArrTy)) {
     ToErase.push_back(&SI);
     Modified = true;
   }
@@ -212,9 +236,9 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitSelectInst(SelectInst &Sel) {
   if (!hasZeroSizeArray(Sel.getType()))
     return;
 
-  // TODO: Handle nested arrays and structs containing zero-size arrays
+  // TODO: Handle structs containing zero-size arrays.
   ArrayType *ArrTy = dyn_cast<ArrayType>(Sel.getType());
-  if (ArrTy && ArrTy->getNumElements() == 0) {
+  if (shouldLegalizeInstType(ArrTy)) {
     Sel.replaceAllUsesWith(PoisonValue::get(Sel.getType()));
     ToErase.push_back(&Sel);
     Modified = true;
@@ -226,9 +250,9 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitExtractValueInst(
   if (!hasZeroSizeArray(EVI.getAggregateOperand()->getType()))
     return;
 
-  // TODO: Handle nested arrays and structs containing zero-size arrays
+  // TODO: Handle structs containing zero-size arrays.
   ArrayType *ArrTy = dyn_cast<ArrayType>(EVI.getType());
-  if (ArrTy && ArrTy->getNumElements() == 0) {
+  if (shouldLegalizeInstType(ArrTy)) {
     EVI.replaceAllUsesWith(PoisonValue::get(EVI.getType()));
     ToErase.push_back(&EVI);
     Modified = true;
@@ -240,10 +264,10 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitInsertValueInst(
   if (!hasZeroSizeArray(IVI.getAggregateOperand()->getType()))
     return;
 
-  // TODO: Handle nested arrays and structs containing zero-size arrays
+  // TODO: Handle structs containing zero-size arrays.
   ArrayType *ArrTy =
       dyn_cast<ArrayType>(IVI.getInsertedValueOperand()->getType());
-  if (ArrTy && ArrTy->getNumElements() == 0) {
+  if (shouldLegalizeInstType(ArrTy)) {
     IVI.replaceAllUsesWith(IVI.getAggregateOperand());
     ToErase.push_back(&IVI);
     Modified = true;
@@ -257,8 +281,7 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
   Modified = false;
 
   // Runtime arrays are allowed for shaders, so we don't need to do anything.
-  Triple Triple(M.getTargetTriple());
-  if (Triple.getOS() == Triple::Vulkan)
+  if (TM && TM->getSubtargetImpl()->isShader())
     return false;
 
   // First pass: create new globals and track mapping (don't erase old ones
@@ -268,7 +291,7 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
     if (!hasZeroSizeArray(GV.getValueType()))
       continue;
 
-    // llvm.embedded.module is handled by SPIRVPrepareGlobals
+    // llvm.embedded.module is handled by SPIRVPrepareGlobals.
     if (GV.getName() == "llvm.embedded.module")
       continue;
 
@@ -317,7 +340,7 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
 
 PreservedAnalyses SPIRVLegalizeZeroSizeArrays::run(Module &M,
                                                    ModuleAnalysisManager &AM) {
-  SPIRVLegalizeZeroSizeArraysImpl Impl;
+  SPIRVLegalizeZeroSizeArraysImpl Impl(TM);
   if (Impl.runOnModule(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -329,6 +352,7 @@ INITIALIZE_PASS(SPIRVLegalizeZeroSizeArraysLegacy,
                 "spirv-legalize-zero-size-arrays",
                 "Legalize SPIR-V zero-size arrays", false, false)
 
-ModulePass *llvm::createSPIRVLegalizeZeroSizeArraysPass() {
-  return new SPIRVLegalizeZeroSizeArraysLegacy();
+ModulePass *
+llvm::createSPIRVLegalizeZeroSizeArraysPass(const SPIRVTargetMachine *TM) {
+  return new SPIRVLegalizeZeroSizeArraysLegacy(TM);
 }

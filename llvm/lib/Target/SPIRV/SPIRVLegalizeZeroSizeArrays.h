@@ -13,9 +13,14 @@
 
 namespace llvm {
 
+class SPIRVTargetMachine;
+
 class SPIRVLegalizeZeroSizeArrays
     : public PassInfoMixin<SPIRVLegalizeZeroSizeArrays> {
+  const SPIRVTargetMachine *TM;
+
 public:
+  SPIRVLegalizeZeroSizeArrays(const SPIRVTargetMachine *TM) : TM(TM) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
