@@ -49894,12 +49894,13 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 
     // Optimization 2: Use VPMADD52L (52-bit multiply-add).
     if (Subtarget.hasIFMA() || Subtarget.hasAVXIFMA()) {
-      if (VT.getSizeInBits() == 512 || Subtarget.hasVLX() ||
-          Subtarget.hasAVXIFMA()) {
-        //(64−Count0)+(64−Count1)<=52
-        //128-(Count0+Count1)<=52
-        //76<=Count0+Count1
-        if (Count0 + Count1 >= 76) {
+      if ((VT.getSizeInBits() == 512 && Subtarget.hasIFMA()) ||
+          (VT.getSizeInBits() < 512 &&
+           (Subtarget.hasVLX() || Subtarget.hasAVXIFMA()))) {
+        KnownBits KnownMul = KnownBits::mul(Known0, Known1, Op0 == Op1);
+        if (Known0.countMaxActiveBits() <= 52 &&
+            Known1.countMaxActiveBits() <= 52 &&
+            KnownMul.countMaxActiveBits() <= 52) {
           SDValue Zero = getZeroVector(VT.getSimpleVT(), Subtarget, DAG, DL);
           return DAG.getNode(X86ISD::VPMADD52L, DL, VT, Op0, Op1, Zero);
         }
