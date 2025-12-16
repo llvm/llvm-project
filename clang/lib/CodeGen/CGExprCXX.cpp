@@ -504,7 +504,8 @@ RValue CodeGenFunction::EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
                                                ReturnValueSlot ReturnValue,
                                                llvm::CallBase **CallOrInvoke) {
   // Emit as a device kernel call if CUDA device code is to be generated.
-  if (getLangOpts().CUDAIsDevice)
+  // TODO: implement for HIP
+  if (!getLangOpts().HIP && getLangOpts().CUDAIsDevice)
     return CGM.getCUDARuntime().EmitCUDADeviceKernelCallExpr(
         *this, E, ReturnValue, CallOrInvoke);
   return CGM.getCUDARuntime().EmitCUDAKernelCallExpr(*this, E, ReturnValue,

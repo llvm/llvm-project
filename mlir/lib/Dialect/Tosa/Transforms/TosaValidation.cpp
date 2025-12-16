@@ -688,9 +688,22 @@ LogicalResult TosaValidation::levelCheckSize(Operation *op,
       return op->emitOpError() << "failed level check: unranked tensor";
     auto shape = type.getShape();
     for (auto dim : shape) {
-      if (mlir::ShapedType::isDynamic(dim))
+      const bool dimIsDynamic = mlir::ShapedType::isDynamic(dim);
+      const TosaSpecificationVersion targetVersion = targetEnv.getSpecVersion();
+      const TosaSpecificationVersion minRequiredVersion(1, 1);
+      if (targetVersion.isBackwardsCompatibleWith(minRequiredVersion) &&
+          dimIsDynamic)
+        // TOSA 1.1 and above supports dynamic dimensions, however, they must be
+        // resolved at backend compile time. Runtime dynamism is not currently
+        // supported. Checking this requirement is met is delegated to backends.
+        return success();
+
+      // When targeting TOSA 1.0 or below, dynamic dims are not supported
+      if (dimIsDynamic)
         return op->emitOpError() << "failed level check: " << operandOrResult
-                                 << " shape dimension cannot be dynamic";
+                                 << " shape dimension cannot be dynamic when"
+                                 << " targeting TOSA specification version 1.0"
+                                 << " or below";
     }
 
     int64_t element_bits = tosa::getBitWidth(getElementTypeOrSelf(type));

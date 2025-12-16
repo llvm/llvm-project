@@ -8247,8 +8247,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       // If the PHI is used by a partial reduction, set the scale factor.
       bool UseInLoopReduction = CM.isInLoopReduction(Phi);
       bool UseOrderedReductions = CM.useOrderedReductions(RdxDesc);
-      unsigned ScaleFactor =
-          getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
+      // Will be updated later to >1 if reduction is partial.
+      unsigned ScaleFactor = 1;
 
       return new VPReductionPHIRecipe(
           Phi, RdxDesc.getRecurrenceKind(), *StartV, *BackedgeValue,
@@ -8326,6 +8326,9 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
       (isa<VPReductionRecipe>(BinOpRecipe) &&
        cast<VPReductionRecipe>(BinOpRecipe)->isPartialReduction()))
     std::swap(BinOp, Accumulator);
+
+  if (auto *RedPhiR = dyn_cast<VPReductionPHIRecipe>(Accumulator))
+    RedPhiR->setVFScaleFactor(ScaleFactor);
 
   assert(ScaleFactor ==
              vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()) &&

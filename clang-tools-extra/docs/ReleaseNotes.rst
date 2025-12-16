@@ -214,6 +214,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`abseil-unchecked-statusor-access
+  <clang-tidy/checks/abseil/unchecked-statusor-access>` check.
+
+  Finds uses of ``absl::StatusOr`` without checking if a value is present.
+
 - New :doc:`bugprone-derived-method-shadowing-base-method
   <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
 
