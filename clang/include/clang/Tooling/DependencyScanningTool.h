@@ -151,6 +151,20 @@ public:
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
+  /// @brief Initialize the worker's compiler instance from the commandline.
+  ///        The compiler instance only takes a `-cc1` job, so this method
+  ///        builds the `-cc1` job from the CommandLine input.
+  /// @param Worker The dependency scanning worker whose compiler instance
+  ///        with context is initialized.
+  /// @param CWD The current working directory.
+  /// @param CommandLine This command line may be a driver command or a cc1
+  ///        command.
+  /// @param DC A diagnostics consumer to report error if the initialization
+  ///        fails.
+  static bool initializeWorkerCIWithContextFromCommandline(
+      clang::dependencies::DependencyScanningWorker &Worker, StringRef CWD,
+      ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC);
+
 private:
   dependencies::DependencyScanningWorker Worker;
   std::unique_ptr<dependencies::TextDiagnosticsPrinterWithOutput>

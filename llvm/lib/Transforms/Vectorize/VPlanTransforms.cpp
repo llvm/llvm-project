@@ -1515,13 +1515,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     }
   }
 
-  // VPVectorPointer for part 0 can be replaced by their start pointer.
-  if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(Def)) {
-    if (VecPtr->isFirstPart()) {
-      VecPtr->replaceAllUsesWith(VecPtr->getOperand(0));
-      return;
-    }
-  }
+  // Simplify unrolled VectorPointer without offset, or with zero offset, to
+  // just the pointer operand.
+  if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(Def))
+    if (!VPR->getOffset() || match(VPR->getOffset(), m_ZeroInt()))
+      return VPR->replaceAllUsesWith(VPR->getOperand(0));
 
   // VPScalarIVSteps for part 0 can be replaced by their start value, if only
   // the first lane is demanded.
@@ -1583,13 +1581,44 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPWidenGEPRecipe,
-               VPReplicateRecipe>(&R))
+               VPReplicateRecipe, VPWidenStoreRecipe>(&R))
         continue;
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
-      auto *RepOrWidenR = cast<VPRecipeWithIRFlags>(&R);
+      // Convert an unmasked scatter with an uniform address into
+      // extract-last-lane + scalar store.
+      // TODO: Add a profitability check comparing the cost of a scatter vs.
+      // extract + scalar store.
+      auto *WidenStoreR = dyn_cast<VPWidenStoreRecipe>(&R);
+      if (WidenStoreR && vputils::isSingleScalar(WidenStoreR->getAddr()) &&
+          !WidenStoreR->isConsecutive()) {
+        assert(!WidenStoreR->isReverse() &&
+               "Not consecutive memory recipes shouldn't be reversed");
+        VPValue *Mask = WidenStoreR->getMask();
+
+        // Only convert the scatter to a scalar store if it is unmasked.
+        // TODO: Support converting scatter masked by the header mask to scalar
+        // store.
+        if (Mask)
+          continue;
+
+        auto *Extract = new VPInstruction(VPInstruction::ExtractLastLane,
+                                          {WidenStoreR->getOperand(1)});
+        Extract->insertBefore(WidenStoreR);
+
+        // TODO: Sink the scalar store recipe to middle block if possible.
+        auto *ScalarStore = new VPReplicateRecipe(
+            &WidenStoreR->getIngredient(), {Extract, WidenStoreR->getAddr()},
+            true /*IsSingleScalar*/, nullptr /*Mask*/, {},
+            *WidenStoreR /*Metadata*/);
+        ScalarStore->insertBefore(WidenStoreR);
+        WidenStoreR->eraseFromParent();
+        continue;
+      }
+
+      auto *RepOrWidenR = dyn_cast<VPRecipeWithIRFlags>(&R);
       if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
           vputils::isSingleScalar(RepR->getOperand(1))) {
         auto *Clone = new VPReplicateRecipe(
@@ -1610,7 +1639,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       }
 
       // Skip recipes that aren't single scalars.
-      if (!vputils::isSingleScalar(RepOrWidenR))
+      if (!RepOrWidenR || !vputils::isSingleScalar(RepOrWidenR))
         continue;
 
       // Skip recipes for which conversion to single-scalar does introduce
