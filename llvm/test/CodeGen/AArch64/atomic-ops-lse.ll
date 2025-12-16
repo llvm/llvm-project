@@ -1890,14 +1890,14 @@ define dso_local i1 @test_atomic_cmpxchg_i8_1(i8 %wanted, i8 %new) nounwind {
 ;
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i8_1:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
-; MSVC-OUTLINE-ATOMICS-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    stp x19, x30, [sp, #-16]! // 16-byte Folded Spill
 ; MSVC-OUTLINE-ATOMICS-NEXT:    mov w19, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x2, var8
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x2, x2, :lo12:var8
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_cas1_acq
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w0, w19, uxtb
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cset w0, eq
-; MSVC-OUTLINE-ATOMICS-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; MSVC-OUTLINE-ATOMICS-NEXT:    ldp x19, x30, [sp], #16 // 16-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
    %pair = cmpxchg ptr @var8, i8 %wanted, i8 %new acquire acquire
    %success = extractvalue { i8, i1 } %pair, 1
@@ -1963,14 +1963,14 @@ define dso_local i1 @test_atomic_cmpxchg_i16_1(i16 %wanted, i16 %new) nounwind {
 ;
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i16_1:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
-; MSVC-OUTLINE-ATOMICS-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    stp x19, x30, [sp, #-16]! // 16-byte Folded Spill
 ; MSVC-OUTLINE-ATOMICS-NEXT:    mov w19, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x2, var16
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x2, x2, :lo12:var16
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_cas2_acq
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w0, w19, uxth
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cset w0, eq
-; MSVC-OUTLINE-ATOMICS-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; MSVC-OUTLINE-ATOMICS-NEXT:    ldp x19, x30, [sp], #16 // 16-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
    %pair = cmpxchg ptr @var16, i16 %wanted, i16 %new acquire acquire
    %success = extractvalue { i16, i1 } %pair, 1
