@@ -3571,8 +3571,8 @@ static void mcpuHelp() {
         reportError(std::move(Err), A->getFileName());
     }
     if (TheTriple.empty())
-      reportError(InputFilenames[0], "input file is not an object file or "
-                                     "archive does not contain object file");
+      reportError(InputFilenames[0],
+                  "target triple could not be derived from input file");
   }
 
   std::string ErrMessage;

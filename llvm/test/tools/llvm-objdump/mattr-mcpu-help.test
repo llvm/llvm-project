@@ -6,11 +6,18 @@
 # RUN: llvm-objdump -d %t --mcpu=help 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE
 
+# CHECK: Available CPUs for this target:
+# CHECK: Available features for this target:
+## To check we still disassemble the file:
+# CHECK-DISASSEMBLE: file format elf64-x86-64
+
 ## The help message can be printed without -d.
 # RUN: llvm-objdump --mattr=help %t 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DISASSEMBLE
 # RUN: llvm-objdump --mcpu=help %t 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DISASSEMBLE
+
+# CHECK-NO-DISASSEMBLE-NOT: file format elf64-x86-64
 
 ## We still handle other options.
 # RUN: llvm-objdump --mattr=help --section-headers %t 2>&1 \
@@ -18,11 +25,23 @@
 # RUN: llvm-objdump --mcpu=help --section-headers %t 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-SECTION-HEADERS
 
+# CHECK-SECTION-HEADERS: Sections:
+# CHECK-SECTION-HEADERS: Idx Name               Size     VMA              Type
+
 ## We report an error when we can't infer the triple because we don't have --triple or an input object (including a.out).
 # RUN: not llvm-objdump --mattr=help 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-MISSING-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
 # RUN: not llvm-objdump --mcpu=help 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-MISSING-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
+
+# CHECK-MISSING-ERROR: llvm-objdump{{.*}}: error: 'a.out': triple was not specified and could not be inferred from the input file: [[MSG]]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
 
 # RUN: yaml2obj --docnum=2 %s -o %t.minidump
 ## We report an error when the binary file isn't an object file format.
@@ -30,6 +49,14 @@
 # RUN:   | FileCheck %s --check-prefix=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.minidump
 # RUN: not llvm-objdump --mcpu=help %t.minidump 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.minidump
+
+# CHECK-UNSUPPORTED-ERROR: llvm-objdump{{.*}}: error: '[[FILE]]': target triple could not be derived from input file
+
+--- !minidump
+Streams:
+  - Type:            SystemInfo
+    Processor Arch:  PPC
+    Platform ID:     Linux
 
 # RUN: llvm-ar rc %t.a %t
 # RUN: llvm-objdump --mcpu=help %t.a 2>&1 \
@@ -51,35 +78,24 @@
 # RUN: not llvm-objdump --mattr=help %t.malformed.archive.a 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-MALFORMED-ARCHIVE-ERROR --implicit-check-not=error: -DFILE=%t.malformed.archive.a
 
-# CHECK: Available CPUs for this target:
-# CHECK: Available features for this target:
-## To check we still disassemble the file:
-# CHECK-DISASSEMBLE: file format elf64-x86-64
-# CHECK-NO-DISASSEMBLE-NOT: file format elf64-x86-64
-
-# CHECK-SECTION-HEADERS: Sections:
-# CHECK-SECTION-HEADERS: Idx Name               Size     VMA              Type
-
-# CHECK-MISSING-ERROR: llvm-objdump{{.*}}: error: 'a.out': triple was not specified and could not be inferred from the input file: [[MSG]]
-
-# CHECK-UNSUPPORTED-ERROR: llvm-objdump{{.*}}: error: '[[FILE]]': input file is not an object file or archive does not contain object file
-
 # CHECK-MALFORMED-ARCHIVE-ERROR: llvm-objdump{{.*}}: error: '[[FILE]]': truncated or malformed archive
-
---- !ELF
-FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_EXEC
-  Machine:         EM_X86_64
-
---- !minidump
-Streams:
-  - Type:            SystemInfo
-    Processor Arch:  PPC
-    Platform ID:     Linux
 
 --- !Arch
 Members:
   - Name: 'foo.c'
     Size: '1'
+
+## We report an error when the archive is malformed.
+# RUN: yaml2obj --docnum=4 %s -o %t.invalid.error.code.archive.a
+# RUN: not llvm-objdump --mcpu=help %t.invalid.error.code.archive.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-INVALID-ERROR-ARCHIVE-ERROR --implicit-check-not=error: -DFILE=%t.invalid.error.code.archive.a
+# RUN: not llvm-objdump --mattr=help %t.invalid.error.code.archive.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-INVALID-ERROR-ARCHIVE-ERROR --implicit-check-not=error: -DFILE=%t.invalid.error.code.archive.a
+
+# CHECK-INVALID-ERROR-ARCHIVE-ERROR: llvm-objdump{{.*}}: error: [[FILE]](<file index: 1>): truncated or malformed archive (long name offset characters after the '/' are not all decimal numbers: '&a25*' for archive member header at offset 68)
+
+--- !Arch
+Members:
+## We need the first member to be a valid member to trigger the right error to be reported.
+  - Name: 'hello.c/'
+  - Name: "/&a25*"
