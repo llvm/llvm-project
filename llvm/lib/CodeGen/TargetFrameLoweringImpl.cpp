@@ -137,7 +137,7 @@ void TargetFrameLowering::determineUncondPrologCalleeSaves(
   // Functions which call __builtin_unwind_init get all their registers saved.
   if (MF.callsUnwindInit()) {
     for (unsigned i = 0; CSRegs[i]; ++i) {
-      unsigned Reg = CSRegs[i];
+      MCRegister Reg = CSRegs[i];
       UncondPrologCSRs.set(Reg);
     }
   }
@@ -162,7 +162,7 @@ void TargetFrameLowering::determineEarlyCalleeSaves(
 
   EarlyCSRs.resize(TRI.getNumRegs());
   for (unsigned i = 0; CSRegs[i]; ++i) {
-    unsigned Reg = CSRegs[i];
+    MCRegister Reg = CSRegs[i];
     if (!UncondPrologCSRs[Reg])
       EarlyCSRs.set(Reg);
   }
