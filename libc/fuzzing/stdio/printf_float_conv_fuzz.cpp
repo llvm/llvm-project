@@ -113,8 +113,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   ld_num = LIBC_NAMESPACE::fputil::FPBits<long double>(ld_raw_num).get_val();
 
   // checking the same value in double and long double could help find
-  // mismatches. Mostly this is here to match previous behavior where this was
-  // the only long double value checked.
+  // mismatches. It also ensures long doubles are being tested even before the
+  // input data is long enough. Mostly this is here to match previous behavior
+  // where this was the only long double value checked.
   long double num_as_ld = static_cast<long double>(num);
 
   if (width > MAX_SIZE) {
