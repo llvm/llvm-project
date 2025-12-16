@@ -2155,6 +2155,10 @@ public:
   void emitOMPDeclareMapper(const OMPDeclareMapperDecl &d);
   void emitOMPRequiresDecl(const OMPRequiresDecl &d);
 
+private:
+  template <typename Op>
+  void emitOpenMPClauses(Op &op, ArrayRef<const OMPClause *> clauses);
+
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission
   //===--------------------------------------------------------------------===//

@@ -162,10 +162,10 @@ static llvm::Error makeErrorFromDiagnosticsOS(
       DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
 }
 
-static llvm::Error computeDependenciesOrError(
+static bool computeDependencies(
     DependencyScanningWorker &Worker, StringRef WorkingDirectory,
     ArrayRef<std::string> CommandLine, DependencyConsumer &Consumer,
-    DependencyActionController &Controller,
+    DependencyActionController &Controller, DiagnosticConsumer &DiagConsumer,
     std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt) {
   // If we are scanning from a TUBuffer, create an overlay filesystem with the
   // input as an in-memory file and add it to the command line.
@@ -178,42 +178,37 @@ static llvm::Error computeDependenciesOrError(
     CommandLine = CommandLineWithTUBufferInput;
   }
 
-  TextDiagnosticsPrinterWithOutput DiagPrinterWithOS(CommandLine);
   DiagnosticsEngineWithDiagOpts DiagEngineWithDiagOpts(
-      CommandLine, &Worker.getVFS(), DiagPrinterWithOS.DiagPrinter);
+      CommandLine, &Worker.getVFS(), DiagConsumer);
   auto &Diags = *DiagEngineWithDiagOpts.DiagEngine;
 
   const auto IsCC1Input = (CommandLine.size() >= 2 && CommandLine[1] == "-cc1");
-  const auto Success =
+  return
       IsCC1Input
           ? Worker.computeDependencies(WorkingDirectory, CommandLine, Consumer,
                                        Controller, Diags, OverlayFS)
           : computeDependenciesForDriverCommandLine(
                 Worker, WorkingDirectory, CommandLine, Consumer, Controller,
                 Diags, OverlayFS);
-
-  if (!Success)
-    return makeErrorFromDiagnosticsOS(DiagPrinterWithOS);
-  return llvm::Error::success();
 }
 
-llvm::Expected<std::string>
+std::optional<std::string>
 DependencyScanningTool::getDependencyFile(ArrayRef<std::string> CommandLine,
-                                          StringRef CWD) {
-  MakeDependencyPrinterConsumer Consumer;
+                                          StringRef CWD,
+                                          DiagnosticConsumer &DiagConsumer) {
+  MakeDependencyPrinterConsumer DepConsumer;
   CallbackActionController Controller(nullptr);
-  auto Result = computeDependenciesOrError(Worker, CWD, CommandLine, Consumer,
-                                           Controller);
-  if (Result)
-    return std::move(Result);
+  if (!computeDependencies(Worker, CWD, CommandLine, DepConsumer, Controller,
+                                  DiagConsumer))
+    return std::nullopt;
   std::string Output;
-  Consumer.printDependencies(Output);
+  DepConsumer.printDependencies(Output);
   return Output;
 }
 
-llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
+std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
     const CompileCommand &Command, StringRef CWD, std::string &MakeformatOutput,
-    std::string &MakeformatOutputPath) {
+    std::string &MakeformatOutputPath, DiagnosticConsumer &DiagConsumer) {
   class P1689ModuleDependencyPrinterConsumer
       : public MakeDependencyPrinterConsumer {
   public:
@@ -255,10 +250,9 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   P1689Rule Rule;
   P1689ModuleDependencyPrinterConsumer Consumer(Rule, Command);
   P1689ActionController Controller;
-  auto Result = computeDependenciesOrError(Worker, CWD, Command.CommandLine,
-                                           Consumer, Controller);
-  if (Result)
-    return std::move(Result);
+  if (!computeDependencies(Worker, CWD, Command.CommandLine, Consumer,
+                           Controller, DiagConsumer))
+    return std::nullopt;
 
   MakeformatOutputPath = Consumer.getMakeFormatDependencyOutputPath();
   if (!MakeformatOutputPath.empty())
@@ -266,19 +260,19 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   return Rule;
 }
 
-llvm::Expected<TranslationUnitDeps>
+std::optional<TranslationUnitDeps>
 DependencyScanningTool::getTranslationUnitDependencies(
     ArrayRef<std::string> CommandLine, StringRef CWD,
+    DiagnosticConsumer &DiagConsumer,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput,
     std::optional<llvm::MemoryBufferRef> TUBuffer) {
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
-  llvm::Error Result = computeDependenciesOrError(
-      Worker, CWD, CommandLine, Consumer, Controller, TUBuffer);
 
-  if (Result)
-    return std::move(Result);
+  if (!computeDependencies(Worker, CWD, CommandLine, Consumer, Controller,
+                                  DiagConsumer, TUBuffer))
+    return std::nullopt;
   return Consumer.takeTranslationUnitDeps();
 }
 
