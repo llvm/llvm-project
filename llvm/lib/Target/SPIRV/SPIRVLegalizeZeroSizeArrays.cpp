@@ -194,6 +194,7 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitAllocaInst(AllocaInst &AI) {
   // TODO: Handle structs containing zero-size arrays.
   ArrayType *ArrTy = dyn_cast<ArrayType>(AI.getAllocatedType());
   if (shouldLegalizeInstType(ArrTy)) {
+    // Allocate a generic pointer instead of an empty array.
     IRBuilder<> Builder(&AI);
     AllocaInst *NewAI = Builder.CreateAlloca(
         PointerType::get(
