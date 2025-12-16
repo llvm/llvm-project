@@ -2474,6 +2474,13 @@ public:
     return Partial ? Partial->VFScaleFactor : 1;
   }
 
+  /// Set the VFScaleFactor for this reduction phi. Can only be set to a factor
+  /// > 1.
+  void setVFScaleFactor(unsigned ScaleFactor) {
+    assert(ScaleFactor > 1 && "must set to scale factor > 1");
+    Style = RdxUnordered{ScaleFactor};
+  }
+
   /// Returns the number of incoming values, also number of incoming blocks.
   /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
   /// incoming value, its start value.
