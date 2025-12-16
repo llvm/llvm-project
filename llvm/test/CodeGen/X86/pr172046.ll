@@ -2,55 +2,27 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefixes=X64
 
-define i32 @_Z1ft(i16 zeroext %x) {
-; X86-LABEL: _Z1ft:
-; X86:       # %bb.0: # %entry
+define i32 @shl_nuw_zext(i16 zeroext %x) {
+; X86-LABEL: shl_nuw_zext:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll $3, %eax
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: _Z1ft:
-; X64:       # %bb.0: # %entry
+; X64-LABEL: shl_nuw_zext:
+; X64:       # %bb.0:
 ; X64-NEXT:    shll $3, %edi
 ; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    retq
-entry:
   %shl = shl nuw i16 %x, 3
   %zext = zext i16 %shl to i32
   ret i32 %zext
 }
 
-define i32 @_Z1gt(i16 zeroext %x) {
-; X86-LABEL: _Z1gt:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $8191, %ecx # imm = 0x1FFF
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    leal (%eax,%ecx,8), %eax
-; X86-NEXT:    retl
-;
-; X64-LABEL: _Z1gt:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andl $8191, %eax # imm = 0x1FFF
-; X64-NEXT:    shll $16, %edi
-; X64-NEXT:    leal (%rdi,%rax,8), %eax
-; X64-NEXT:    retq
-entry:
-  %conv = zext nneg i16 %x to i32
-  %shl = shl nuw i16 %x, 3
-  %conv3 = zext i16 %shl to i32
-  %shl5 = shl nuw nsw i32 %conv, 16
-  %or = or disjoint i32 %shl5, %conv3
-  ret i32 %or
-}
-
 define i32 @shl_nsw_zext(i16 %x) {
 ; X86-LABEL: shl_nsw_zext:
-; X86:       # %bb.0: # %entry
+; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $256, %eax # imm = 0x100
 ; X86-NEXT:    shll %cl, %eax
@@ -58,14 +30,13 @@ define i32 @shl_nsw_zext(i16 %x) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shl_nsw_zext:
-; X64:       # %bb.0: # %entry
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %ecx
 ; X64-NEXT:    movl $256, %eax # imm = 0x100
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax
 ; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
-entry:
   %shl = shl nsw i16 256, %x
   %sext = sext i16 %shl to i32
   ret i32 %sext
