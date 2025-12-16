@@ -8905,15 +8905,15 @@ def : Pat<(i32 (int_aarch64_neon_facgt (f16 FPR16:$Rn), (f16 FPR16:$Rm))),
 defm SHL      : SIMDScalarLShiftD<   0, 0b01010, "shl", AArch64vshl>;
 defm SLI      : SIMDScalarLShiftDTied<1, 0b01010, "sli", AArch64vsli>;
 defm SQRSHRN  : SIMDScalarRShiftBHS< 0, 0b10011, "sqrshrn",
-                                     AArch64sqrshrn>;
+                                     AArch64sqrshrn, int_aarch64_neon_sqrshrn>;
 defm SQRSHRUN : SIMDScalarRShiftBHS< 1, 0b10001, "sqrshrun",
-                                     AArch64sqrshrun>;
+                                     AArch64sqrshrun, int_aarch64_neon_sqrshrun>;
 defm SQSHLU   : SIMDScalarLShiftBHSD<1, 0b01100, "sqshlu", AArch64sqshlui>;
 defm SQSHL    : SIMDScalarLShiftBHSD<0, 0b01110, "sqshl", AArch64sqshli>;
 defm SQSHRN   : SIMDScalarRShiftBHS< 0, 0b10010, "sqshrn",
-                                     AArch64sqshrn>;
+                                     AArch64sqshrn, int_aarch64_neon_sqshrn>;
 defm SQSHRUN  : SIMDScalarRShiftBHS< 1, 0b10000, "sqshrun",
-                                     AArch64sqshrun>;
+                                     AArch64sqshrun, int_aarch64_neon_sqshrun>;
 defm SRI      : SIMDScalarRShiftDTied<   1, 0b01000, "sri", AArch64vsri>;
 defm SRSHR    : SIMDScalarRShiftD<   0, 0b00100, "srshr", AArch64srshri>;
 defm SRSRA    : SIMDScalarRShiftDTied<   0, 0b00110, "srsra",
@@ -8924,10 +8924,10 @@ defm SSRA     : SIMDScalarRShiftDTied<   0, 0b00010, "ssra",
     TriOpFrag<(add_and_or_is_add node:$LHS,
                    (AArch64vashr node:$MHS, node:$RHS))>>;
 defm UQRSHRN  : SIMDScalarRShiftBHS< 1, 0b10011, "uqrshrn",
-                                     AArch64uqrshrn>;
+                                     AArch64uqrshrn, int_aarch64_neon_uqrshrn>;
 defm UQSHL    : SIMDScalarLShiftBHSD<1, 0b01110, "uqshl", AArch64uqshli>;
 defm UQSHRN   : SIMDScalarRShiftBHS< 1, 0b10010, "uqshrn",
-                                     AArch64uqshrn>;
+                                     AArch64uqshrn, int_aarch64_neon_uqshrn>;
 defm URSHR    : SIMDScalarRShiftD<   1, 0b00100, "urshr", AArch64urshri>;
 defm URSRA    : SIMDScalarRShiftDTied<   1, 0b00110, "ursra",
     TriOpFrag<(add node:$LHS,
