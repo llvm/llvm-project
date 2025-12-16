@@ -661,7 +661,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
           llvm::isPowerOf2_32(SubVecTy->getNumElements()) &&
           IsProperlyDivisible && IsAlignedLoad) {
         IntegerType *NewElemTy = Builder.getIntNTy(NumBits);
-        const unsigned NewNumElts = 
+        const unsigned NewNumElts =
             DL.getTypeStoreSize(VectorTy) * 8u / NumBits;
         const unsigned LShrAmt = llvm::Log2_32(TotalNumElts / NewNumElts);
         FixedVectorType *BitCastTy =
