@@ -6248,23 +6248,24 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
 ///
 /// Note: We only handle SRL and SHL, not SRA, because arithmetic right
 /// shifts could produce 0 or -1 when shift >= BitWidth.
-/// Note: We don't handle uge or ule. These don't appear because of canonicalization.
+/// Note: We don't handle uge or ule. These don't appear because of
+/// canonicalization.
 static SDValue PerformSELECTShiftCombine(SDNode *N,
                                          TargetLowering::DAGCombinerInfo &DCI) {
   using namespace SDPatternMatch;
   SDValue ShiftAmt, ShiftOp, Threshold;
 
   // shift_amt > threshold ? 0 : shift_op
-  bool MatchedUGT = sd_match(
-      N, m_Select(m_SetCC(m_Value(ShiftAmt), m_Value(Threshold),
-                          m_SpecificCondCode(ISD::SETUGT)),
-                  m_Zero(), m_Value(ShiftOp)));
+  bool MatchedUGT =
+      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt), m_Value(Threshold),
+                                   m_SpecificCondCode(ISD::SETUGT)),
+                           m_Zero(), m_Value(ShiftOp)));
   // shift_amt < threshold ? shift_op : 0
-  bool MatchedULT = !MatchedUGT &&
-                    sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
-                                                 m_Value(Threshold),
-                                                 m_SpecificCondCode(ISD::SETULT)),
-                                         m_Value(ShiftOp), m_Zero()));
+  bool MatchedULT =
+      !MatchedUGT &&
+      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt), m_Value(Threshold),
+                                   m_SpecificCondCode(ISD::SETULT)),
+                           m_Value(ShiftOp), m_Zero()));
 
   if (!MatchedUGT && !MatchedULT)
     return SDValue();
@@ -6274,7 +6275,8 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
   if (ShiftOpc != ISD::SRL && ShiftOpc != ISD::SHL)
     return SDValue();
 
-  // Verify the shift amount in the guard is the same as the shift amount in the shift operation.
+  // Verify the shift amount in the guard is the same as the shift amount in the
+  // shift operation.
   if (!sd_match(ShiftOp.getOperand(1), m_TruncOrSelf(m_Specific(ShiftAmt))))
     return SDValue();
 
@@ -6291,7 +6293,7 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
   if (MatchedULT && ThreshVal != BitWidth)
     return SDValue();
 
-  // Return a clamp shift operation, which has the same semantics as PTX shift. 
+  // Return a clamp shift operation, which has the same semantics as PTX shift.
   unsigned ClampOpc =
       ShiftOpc == ISD::SRL ? NVPTXISD::SRL_CLAMP : NVPTXISD::SHL_CLAMP;
   return DCI.DAG.getNode(ClampOpc, SDLoc(N), ShiftOp.getValueType(),
