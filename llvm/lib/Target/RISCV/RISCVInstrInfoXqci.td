@@ -468,7 +468,8 @@ class QCIStore_ScaleIdx<bits<4> funct4, string opcodestr>
 class QCIRVInstI<bits<4> funct4, string opcodestr>
     : RVInstIUnary<{0b000, funct4, 0b00000}, 0b011, OPC_CUSTOM_0,
                    (outs GPRNoX0:$rd), (ins GPRNoX0:$rs1), opcodestr,
-                   "$rd, $rs1">;
+                   "$rd, $rs1">,
+      Sched<[WriteIALU, ReadIALU]>;
 
 class QCIRVInstR<bits<4> funct4, string opcodestr>
     : RVInstR<{0b000, funct4}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
@@ -485,7 +486,8 @@ class QCIRVInstRR<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
 class QCIRVInstRRTied<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
     : RVInstR<{0b00, funct5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
               (ins GPRNoX0:$rd, InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr,
-              "$rd, $rs1, $rs2"> {
+              "$rd, $rs1, $rs2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
 }
 
@@ -493,7 +495,8 @@ class QCIBitManipRII<bits<3> funct3, bits<2> funct2,
                      DAGOperand InTyRs1, string opcodestr>
     : RVInstIBase<funct3, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
                   (ins InTyRs1:$rs1, uimm5_plus1:$width, uimm5:$shamt),
-                  opcodestr, "$rd, $rs1, $width, $shamt"> {
+                  opcodestr, "$rd, $rs1, $width, $shamt">,
+      Sched<[WriteIALU, ReadIALU]> {
   bits<5> shamt;
   bits<5> width;
 
@@ -506,7 +509,8 @@ class QCIBitManipRIITied<bits<3> funct3, bits<2> funct2,
                          DAGOperand InTyRs1, string opcodestr>
     : RVInstIBase<funct3, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd,
                   InTyRs1:$rs1, uimm5_plus1:$width, uimm5:$shamt),
-                  opcodestr, "$rd, $rs1, $width, $shamt"> {
+                  opcodestr, "$rd, $rs1, $width, $shamt">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<5> shamt;
   bits<5> width;
@@ -520,7 +524,8 @@ class QCIRVInstRI<bits<1> funct1, DAGOperand InTyImm11,
                              string opcodestr>
     : RVInstIBase<0b000, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
                   (ins GPRNoX0:$rd, GPRNoX0:$rs1, InTyImm11:$imm11), opcodestr,
-                  "$rd, $rs1, $imm11"> {
+                  "$rd, $rs1, $imm11">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<11> imm11;
 
@@ -918,7 +923,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_INSBI : RVInstIBase<0b001, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
                              (ins GPRNoX0:$rd, simm5:$imm5, uimm5_plus1:$width,
                              uimm5:$shamt), "qc.insbi",
-                             "$rd, $imm5, $width, $shamt"> {
+                             "$rd, $imm5, $width, $shamt">,
+                 Sched<[WriteIALU, ReadIALU]> {
     let Constraints = "$rd = $rd_wb";
     bits<5> imm5;
     bits<5> shamt;
@@ -951,11 +957,13 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_CLO : QCIRVInstI<0b0100, "qc.clo">;
   def QC_CTO : QCIRVInstI<0b0101, "qc.cto">;
   def QC_BREV32 : QCIRVInstI<0b0110, "qc.brev32">;
-  def QC_C_BEXTI  : QCI_RVInst16CB_BM<0b00, "qc.c.bexti">;
-  def QC_C_BSETI  : QCI_RVInst16CB_BM<0b01, "qc.c.bseti">;
+  def QC_C_BEXTI  : QCI_RVInst16CB_BM<0b00, "qc.c.bexti">,
+                    Sched<[WriteIALU, ReadIALU]>;
+  def QC_C_BSETI  : QCI_RVInst16CB_BM<0b01, "qc.c.bseti">, Sched<[WriteIALU]>;
   def QC_C_EXTU : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
                              (ins GPRNoX0:$rd, uimm5ge6_plus1:$width),
-                             "qc.c.extu", "$rd, $width"> {
+                             "qc.c.extu", "$rd, $width">,
+                  Sched<[WriteIALU, ReadIALU]> {
     bits<5> rd;
     bits<5> width;
     let Constraints = "$rd = $rd_wb";
