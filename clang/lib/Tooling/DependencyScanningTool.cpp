@@ -124,7 +124,7 @@ buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
 /// Constructs the full frontend command line, including executable, for the
 /// given driver \c Cmd.
 static SmallVector<std::string, 0>
-buildFrontendCommandLine(const driver::Command &Cmd) {
+buildCC1CommandLine(const driver::Command &Cmd) {
   const auto &Args = Cmd.getArguments();
   SmallVector<std::string, 0> Out;
   Out.reserve(Args.size() + 1);
@@ -159,7 +159,7 @@ static bool computeDependenciesForDriverCommandLine(
 
   SmallVector<SmallVector<std::string, 0>> FrontendCommandLines;
   for (const auto &Cmd : Compilation->getJobs())
-    FrontendCommandLines.push_back(buildFrontendCommandLine(Cmd));
+    FrontendCommandLines.push_back(buildCC1CommandLine(Cmd));
   SmallVector<ArrayRef<std::string>> FrontendCommandLinesView(
       FrontendCommandLines.begin(), FrontendCommandLines.end());
 
@@ -320,7 +320,7 @@ static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
 
   const auto &Jobs = Compilation->getJobs();
   if (const auto It = llvm::find_if(Jobs, IsClangCmd); It != Jobs.end())
-    return buildFrontendCommandLine(*It);
+    return buildCC1CommandLine(*It);
   return std::nullopt;
 }
 
