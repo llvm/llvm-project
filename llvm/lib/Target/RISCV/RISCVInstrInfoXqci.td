@@ -1009,14 +1009,22 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 } // Predicates = [HasVendorXqciac, IsRV32]
 
 let Predicates = [HasVendorXqcics, IsRV32] in {
-  def QC_SELECTIIEQ : QCISELECTIICC <0b010, "qc.selectiieq">;
-  def QC_SELECTIINE : QCISELECTIICC <0b011, "qc.selectiine">;
-  def QC_SELECTIEQ  : QCISELECTICC  <0b010, "qc.selectieq">;
-  def QC_SELECTINE  : QCISELECTICC  <0b011, "qc.selectine">;
-  def QC_SELECTEQI  : QCISELECTCCI  <0b010, "qc.selecteqi">;
-  def QC_SELECTNEI  : QCISELECTCCI  <0b011, "qc.selectnei">;
-  def QC_SELECTIEQI : QCISELECTICCI <0b010, "qc.selectieqi">;
-  def QC_SELECTINEI : QCISELECTICCI <0b011, "qc.selectinei">;
+  def QC_SELECTIIEQ : QCISELECTIICC <0b010, "qc.selectiieq">,
+                      Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_SELECTIINE : QCISELECTIICC <0b011, "qc.selectiine">,
+                      Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_SELECTIEQ  : QCISELECTICC  <0b010, "qc.selectieq">,
+                      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_SELECTINE  : QCISELECTICC  <0b011, "qc.selectine">,
+                      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_SELECTEQI  : QCISELECTCCI  <0b010, "qc.selecteqi">,
+                      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_SELECTNEI  : QCISELECTCCI  <0b011, "qc.selectnei">,
+                      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_SELECTIEQI : QCISELECTICCI <0b010, "qc.selectieqi">,
+                      Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_SELECTINEI : QCISELECTICCI <0b011, "qc.selectinei">,
+                      Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 } // Predicates = [HasVendorXqcics, IsRV32]
 
 let Predicates = [HasVendorXqcilsm, IsRV32] in {
