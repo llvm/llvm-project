@@ -91,19 +91,14 @@ void template_param(T& t) {
   t.const_method();
 }
 
-void instantiate_template() {
-  Bar b;
-  template_param(b);
-}
-
 template<typename T>
 void forwarding_ref(T&& t) {
-  t.method();
+  t.mutating_method();
 }
 
 template<typename T>
 void specialized_func(T& t) {
-  t.buz();
+  t.const_method();
 }
 
 template<>
@@ -118,12 +113,12 @@ void non_type_template_param(Bar& b) {
 
 template<typename... Args>
 void variadic_template(Args&... args) {
-  (args.buz(), ...);
+  (args.const_method(), ...);
 }
 
 template<typename First, typename... Rest>
 void variadic_first_param(First& first, Rest&... rest) {
-  first.buz();
+  first.const_method();
 }
 
 template<typename T>
@@ -155,8 +150,22 @@ struct bool_constant<true> : true_type {};
 
 template<typename T>
 void sfinae_func(T& t, typename enable_if<bool_constant<is_bar<T>::value>>::type* = nullptr) {
-  t.buz();
+  t.const_method();
 }
+
+void instantiate() {
+  int a = 42;
+  Bar b;
+  template_param(b);
+  forwarding_ref(b);
+  specialized_func(b);
+  non_type_template_param<2>(b);
+  variadic_template(b, b);
+  variadic_first_param(b, a);
+  sfinae_func(b);
+}
+
+// Leave this for futher reference if const-correctness is implemented on template functions/methods 
 
 template<typename T>
 struct TemplateClass {
@@ -166,7 +175,7 @@ struct TemplateClass {
 
   template<typename U>
   void template_method(U& u) {
-    u.buz();
+    u.const_method();
   }
 
   static void static_method(Bar& b) {
@@ -176,29 +185,12 @@ struct TemplateClass {
 
 template struct TemplateClass<int>;
 
-struct NonTemplateClass {
-  template<typename T>
-  void template_method(T& t) {
-    t.buz();
-  }
-
-  template<typename T>
-  static void static_template_method(T& t) {
-    t.buz();
-  }
-};
-
-template<typename T = Bar>
-void default_template_arg(T& t) {
-  t.buz();
-}
-
 template<typename Outer>
 struct OuterTemplate {
   template<typename Inner>
   static void nested_template_func(Outer& o, Inner& i) {
-    o.buz();
-    i.buz();
+    o.const_method();
+    i.const_method();
   }
 };
 
@@ -207,16 +199,16 @@ using RefAlias = T&;
 
 template<typename T>
 void alias_template_param(RefAlias<T> t) {
-  t.buz();
+  t.const_method();
 }
 
 template<typename T>
-void requires_buz(T& t) {
+void requires_const_method(T& t) {
 }
 
-void use_requires_buz() {
+void use_requires_const_method() {
   Bar b;
-  requires_buz(b);
+  requires_const_method(b);
 }
 
 void lambda_params() {
