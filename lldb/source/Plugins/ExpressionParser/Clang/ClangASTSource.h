@@ -187,8 +187,7 @@ public:
   // Helper APIs
   //
 
-  clang::NamespaceDecl *
-  AddNamespace(NameSearchContext &context);
+  clang::NamespaceDecl *AddNamespace(NameSearchContext &context);
 
   /// The worker function for FindExternalVisibleDeclsByName.
   ///

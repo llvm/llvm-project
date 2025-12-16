@@ -1431,12 +1431,12 @@ void ClangASTSource::CompleteNamespaceMap(
   }
 }
 
-NamespaceDecl *ClangASTSource::AddNamespace(
-    NameSearchContext &context) {
+NamespaceDecl *ClangASTSource::AddNamespace(NameSearchContext &context) {
   if (!context.m_namespace_map)
     return nullptr;
 
-  const CompilerDeclContext &namespace_decl = context.m_namespace_map->begin()->second;
+  const CompilerDeclContext &namespace_decl =
+      context.m_namespace_map->begin()->second;
 
   clang::ASTContext *src_ast =
       TypeSystemClang::DeclContextGetTypeSystemClang(namespace_decl);
