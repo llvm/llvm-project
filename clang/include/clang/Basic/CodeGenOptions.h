@@ -32,7 +32,6 @@
 
 namespace llvm {
 class PassBuilder;
-class PassPlugin;
 }
 namespace clang {
 
@@ -475,11 +474,8 @@ public:
 
   std::vector<std::string> DefaultFunctionAttrs;
 
-  /// List of dynamic shared object file names to be loaded as pass plugins.
-  std::vector<std::string> PassPluginNames;
-
-  /// List of loaded pass plugins.
-  std::vector<llvm::PassPlugin *> PassPlugins;
+  /// List of dynamic shared object files to be loaded as pass plugins.
+  std::vector<std::string> PassPlugins;
 
   /// List of pass builder callbacks.
   std::vector<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks;

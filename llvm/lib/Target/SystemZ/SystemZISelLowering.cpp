@@ -1970,6 +1970,28 @@ SDValue SystemZTargetLowering::joinRegisterPartsIntoValue(
   return SDValue();
 }
 
+// The first part of a split stack argument is at index I in Args (and
+// ArgLocs). Return the type of a part and the number of them by reference.
+template <class ArgTy>
+static bool analyzeArgSplit(const SmallVectorImpl<ArgTy> &Args,
+                            SmallVector<CCValAssign, 16> &ArgLocs, unsigned I,
+                            MVT &PartVT, unsigned &NumParts) {
+  if (!Args[I].Flags.isSplit())
+    return false;
+  assert(I < ArgLocs.size() && ArgLocs.size() == Args.size() &&
+         "ArgLocs havoc.");
+  PartVT = ArgLocs[I].getValVT();
+  NumParts = 1;
+  for (unsigned PartIdx = I + 1;; ++PartIdx) {
+    assert(PartIdx != ArgLocs.size() && "SplitEnd not found.");
+    assert(ArgLocs[PartIdx].getValVT() == PartVT && "Unsupported split.");
+    ++NumParts;
+    if (Args[PartIdx].Flags.isSplitEnd())
+      break;
+  }
+  return true;
+}
+
 SDValue SystemZTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
@@ -2074,16 +2096,26 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
                                    MachinePointerInfo()));
       // If the original argument was split (e.g. i128), we need
       // to load all parts of it here (using the same address).
-      unsigned ArgIndex = Ins[I].OrigArgIndex;
-      assert (Ins[I].PartOffset == 0);
-      while (I + 1 != E && Ins[I + 1].OrigArgIndex == ArgIndex) {
-        CCValAssign &PartVA = ArgLocs[I + 1];
-        unsigned PartOffset = Ins[I + 1].PartOffset;
-        SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, ArgValue,
-                                      DAG.getIntPtrConstant(PartOffset, DL));
-        InVals.push_back(DAG.getLoad(PartVA.getValVT(), DL, Chain, Address,
-                                     MachinePointerInfo()));
-        ++I;
+      MVT PartVT;
+      unsigned NumParts;
+      if (analyzeArgSplit(Ins, ArgLocs, I, PartVT, NumParts)) {
+        // TODO: It is strange that while LowerCallTo() sets the PartOffset
+        // relative to the first split part LowerArguments() sets the offset
+        // from the beginning of the struct. So with {i32, i256}, the
+        // PartOffset for the i256 parts are differently handled. Try to
+        // remove that difference and use PartOffset directly here (instead
+        // of SplitBaseOffs).
+        unsigned SplitBaseOffs = Ins[I].PartOffset;
+        for (unsigned PartIdx = 1; PartIdx < NumParts; ++PartIdx) {
+          ++I;
+          CCValAssign &PartVA = ArgLocs[I];
+          unsigned PartOffset = Ins[I].PartOffset - SplitBaseOffs;
+          SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, ArgValue,
+                                        DAG.getIntPtrConstant(PartOffset, DL));
+          InVals.push_back(DAG.getLoad(PartVA.getValVT(), DL, Chain, Address,
+                                       MachinePointerInfo()));
+          assert(PartOffset && "Offset should be non-zero.");
+        }
       }
     } else
       InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
@@ -2319,18 +2351,13 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
       // Store the argument in a stack slot and pass its address.
-      unsigned ArgIndex = Outs[I].OrigArgIndex;
       EVT SlotVT;
-      if (I + 1 != E && Outs[I + 1].OrigArgIndex == ArgIndex) {
-        // Allocate the full stack space for a promoted (and split) argument.
-        Type *OrigArgType = CLI.Args[Outs[I].OrigArgIndex].Ty;
-        EVT OrigArgVT = getValueType(MF.getDataLayout(), OrigArgType);
-        MVT PartVT = getRegisterTypeForCallingConv(Ctx, CLI.CallConv, OrigArgVT);
-        unsigned N = getNumRegistersForCallingConv(Ctx, CLI.CallConv, OrigArgVT);
-        SlotVT = EVT::getIntegerVT(Ctx, PartVT.getSizeInBits() * N);
-      } else {
+      MVT PartVT;
+      unsigned NumParts = 1;
+      if (analyzeArgSplit(Outs, ArgLocs, I, PartVT, NumParts))
+        SlotVT = EVT::getIntegerVT(Ctx, PartVT.getSizeInBits() * NumParts);
+      else
         SlotVT = Outs[I].VT;
-      }
       SDValue SpillSlot = DAG.CreateStackTemporary(SlotVT);
       int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
       MemOpChains.push_back(
@@ -2338,18 +2365,19 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
                        MachinePointerInfo::getFixedStack(MF, FI)));
       // If the original argument was split (e.g. i128), we need
       // to store all parts of it here (and pass just one address).
-      assert (Outs[I].PartOffset == 0);
-      while (I + 1 != E && Outs[I + 1].OrigArgIndex == ArgIndex) {
-        SDValue PartValue = OutVals[I + 1];
-        unsigned PartOffset = Outs[I + 1].PartOffset;
+      assert(Outs[I].PartOffset == 0);
+      for (unsigned PartIdx = 1; PartIdx < NumParts; ++PartIdx) {
+        ++I;
+        SDValue PartValue = OutVals[I];
+        unsigned PartOffset = Outs[I].PartOffset;
         SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, SpillSlot,
                                       DAG.getIntPtrConstant(PartOffset, DL));
         MemOpChains.push_back(
             DAG.getStore(Chain, DL, PartValue, Address,
                          MachinePointerInfo::getFixedStack(MF, FI)));
+        assert(PartOffset && "Offset should be non-zero.");
         assert((PartOffset + PartValue.getValueType().getStoreSize() <=
                 SlotVT.getStoreSize()) && "Not enough space for argument part!");
-        ++I;
       }
       ArgValue = SpillSlot;
     } else
@@ -2534,7 +2562,7 @@ bool SystemZTargetLowering::CanLowerReturn(
   // Special case that we cannot easily detect in RetCC_SystemZ since
   // i128 may not be a legal type.
   for (auto &Out : Outs)
-    if (Out.ArgVT == MVT::i128)
+    if (Out.ArgVT.isScalarInteger() && Out.ArgVT.getSizeInBits() > 64)
       return false;
 
   SmallVector<CCValAssign, 16> RetLocs;
@@ -8859,7 +8887,12 @@ SDValue SystemZTargetLowering::combineBR_CCMASK(SDNode *N,
   int CCMaskVal = CCMask->getZExtValue();
   SDValue Chain = N->getOperand(0);
   SDValue CCReg = N->getOperand(4);
-  if (combineCCMask(CCReg, CCValidVal, CCMaskVal, DAG))
+  // If combineCMask was able to merge or simplify ccvalid or ccmask, re-emit
+  // the modified BR_CCMASK with the new values.
+  // In order to avoid conditional branches with full or empty cc masks, do not
+  // do this if ccmask is 0 or equal to ccvalid.
+  if (combineCCMask(CCReg, CCValidVal, CCMaskVal, DAG) && CCMaskVal != 0 &&
+      CCMaskVal != CCValidVal)
     return DAG.getNode(SystemZISD::BR_CCMASK, SDLoc(N), N->getValueType(0),
                        Chain,
                        DAG.getTargetConstant(CCValidVal, SDLoc(N), MVT::i32),
@@ -8946,6 +8979,13 @@ SDValue SystemZTargetLowering::combineSELECT_CCMASK(
       IsCombinedCCReg = true;
     }
   }
+  // If the condition is trivially false or trivially true after
+  // combineCCMask, just collapse this SELECT_CCMASK to the indicated value
+  // (possibly modified by constructCCSDValsFromSELECT).
+  if (CCMaskVal == 0)
+    return FalseVal;
+  if (CCMaskVal == CCValidVal)
+    return TrueVal;
 
   if (IsCombinedCCReg)
     return DAG.getNode(
