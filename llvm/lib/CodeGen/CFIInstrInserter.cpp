@@ -319,7 +319,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpValOffset:
         break;
       }
-      assert((bool)CSRReg + (bool)CSROffset <= 1 &&
+      assert((!CSRReg.has_value() || !CSROffset.has_value()) &&
              "A register can only be at an offset from CFA or in another "
              "register, but not both!");
       CSRSavedLocation CSRLoc;
@@ -328,13 +328,10 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       else if (CSROffset)
         CSRLoc = CSRSavedLocation::createCFAOffset(*CSROffset);
       if (CSRLoc.isValid()) {
-        auto It = CSRLocMap.find(CFI.getRegister());
-        if (It == CSRLocMap.end()) {
-          CSRLocMap.insert({CFI.getRegister(), CSRLoc});
-        } else if (It->second != CSRLoc) {
+        auto [It, Inserted] = CSRLocMap.insert({CFI.getRegister(), CSRLoc});
+        if (!Inserted && It->second != CSRLoc)
           reportFatalInternalError(
               "Different saved locations for the same CSR");
-        }
         CSRSaved.set(CFI.getRegister());
       }
     }
