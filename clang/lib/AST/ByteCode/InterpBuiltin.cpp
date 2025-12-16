@@ -877,7 +877,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
   // Write Result to ResultPtr and put Overflow on the stack.
   assignInteger(S, ResultPtr, ResultT, Result);
   if (ResultPtr.canBeInitialized())
-    ResultPtr.initialize(S);
+    ResultPtr.initialize();
 
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
@@ -934,7 +934,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
   assignInteger(S, CarryOutPtr, CarryOutT, CarryOut);
-  CarryOutPtr.initialize(S);
+  CarryOutPtr.initialize();
 
   assert(Call->getType() == Call->getArg(0)->getType());
   pushInteger(S, Result, Call->getType());
@@ -1743,7 +1743,7 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
       } else {
         Dst.atIndex(I).deref<T>() = T::from(EltVal.countLeadingZeros());
       }
-      Dst.atIndex(I).initialize(S);
+      Dst.atIndex(I).initialize();
     });
   }
 
@@ -1960,7 +1960,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   // Now, read both pointers to a buffer and compare those.
   BitcastBuffer BufferA(
       Bits(ASTCtx.getTypeSize(ElemTypeA) * PtrA.getNumElems()));
-  readPointerToBuffer(S, S.getContext(), PtrA, BufferA, false);
+  readPointerToBuffer(S.getContext(), PtrA, BufferA, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
   if (ASTCtx.getTargetInfo().isBigEndian())
@@ -1968,7 +1968,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   BitcastBuffer BufferB(
       Bits(ASTCtx.getTypeSize(ElemTypeB) * PtrB.getNumElems()));
-  readPointerToBuffer(S, S.getContext(), PtrB, BufferB, false);
+  readPointerToBuffer(S.getContext(), PtrB, BufferB, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
   if (ASTCtx.getTargetInfo().isBigEndian())
@@ -2753,6 +2753,65 @@ static bool interp__builtin_ia32_addsub(InterpState &S, CodePtr OpPC,
     }
     Dst.elem<T>(I) = static_cast<T>(LElem);
   }
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_ia32_pclmulqdq(InterpState &S, CodePtr OpPC,
+                                           const CallExpr *Call) {
+  // PCLMULQDQ: carry-less multiplication of selected 64-bit halves
+  // imm8 bit 0: selects lower (0) or upper (1) 64 bits of first operand
+  // imm8 bit 4: selects lower (0) or upper (1) 64 bits of second operand
+  assert(Call->getArg(0)->getType()->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
+
+  // Extract imm8 argument
+  APSInt Imm8 = popToAPSInt(S, Call->getArg(2));
+  bool SelectUpperA = (Imm8 & 0x01) != 0;
+  bool SelectUpperB = (Imm8 & 0x10) != 0;
+
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned NumElems = VT->getNumElements();
+  const auto *DestVT = Call->getType()->castAs<VectorType>();
+  PrimType DestElemT = *S.getContext().classify(DestVT->getElementType());
+  bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
+
+  // Process each 128-bit lane (2 elements at a time)
+  for (unsigned Lane = 0; Lane < NumElems; Lane += 2) {
+    APSInt A0, A1, B0, B1;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      A0 = LHS.elem<T>(Lane + 0).toAPSInt();
+      A1 = LHS.elem<T>(Lane + 1).toAPSInt();
+      B0 = RHS.elem<T>(Lane + 0).toAPSInt();
+      B1 = RHS.elem<T>(Lane + 1).toAPSInt();
+    });
+
+    // Select the appropriate 64-bit values based on imm8
+    APInt A = SelectUpperA ? A1 : A0;
+    APInt B = SelectUpperB ? B1 : B0;
+
+    // Extend both operands to 128 bits for carry-less multiplication
+    APInt A128 = A.zext(128);
+    APInt B128 = B.zext(128);
+
+    // Use APIntOps::clmul for carry-less multiplication
+    APInt Result = llvm::APIntOps::clmul(A128, B128);
+
+    // Split the 128-bit result into two 64-bit halves
+    APSInt ResultLow(Result.extractBits(64, 0), DestUnsigned);
+    APSInt ResultHigh(Result.extractBits(64, 64), DestUnsigned);
+
+    INT_TYPE_SWITCH_NO_BOOL(DestElemT, {
+      Dst.elem<T>(Lane + 0) = static_cast<T>(ResultLow);
+      Dst.elem<T>(Lane + 1) = static_cast<T>(ResultHigh);
+    });
+  }
+
   Dst.initializeAllElements();
   return true;
 }
@@ -4787,6 +4846,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return llvm::APIntOps::muluExtended(LoLHS, LoRHS);
         });
 
+  case clang::X86::BI__builtin_ia32_pclmulqdq128:
+  case clang::X86::BI__builtin_ia32_pclmulqdq256:
+  case clang::X86::BI__builtin_ia32_pclmulqdq512:
+    return interp__builtin_ia32_pclmulqdq(S, OpPC, Call);
+
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_triop_fp(
         S, OpPC, Call,
@@ -5667,7 +5731,7 @@ bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
 
   INT_TYPE_SWITCH(FieldT,
                   FieldPtr.deref<T>() = T::from(IntValue.getSExtValue()));
-  FieldPtr.initialize(S);
+  FieldPtr.initialize();
   return true;
 }
 
@@ -5723,7 +5787,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
       TYPE_SWITCH(*FT, {
         DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
         if (Src.atField(F.Offset).isInitialized())
-          DestField.initialize(S);
+          DestField.initialize();
         if (Activate)
           DestField.activate();
       });
@@ -5761,7 +5825,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
       return false;
   }
 
-  Dest.initialize(S);
+  Dest.initialize();
   return true;
 }
 
@@ -5782,7 +5846,7 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
       Pointer DestElem = Dest.atIndex(I);
       TYPE_SWITCH(ET, {
         DestElem.deref<T>() = Src.elem<T>(I);
-        DestElem.initialize(S);
+        DestElem.initialize();
       });
     }
     return true;

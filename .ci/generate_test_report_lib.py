@@ -267,7 +267,7 @@ def generate_report(
             report.extend(
                 [
                     "",
-                    "All tests passed but another part of the build **failed**. "
+                    "All executed tests passed, but another part of the build **failed**. "
                     "Information about the build failure could not be automatically "
                     "obtained.",
                     "",
@@ -278,7 +278,7 @@ def generate_report(
             report.extend(
                 [
                     "",
-                    "All tests passed but another part of the build **failed**. Click on "
+                    "All executed tests passed, but another part of the build **failed**. Click on "
                     "a failure below to see the details.",
                     "",
                 ]
@@ -298,6 +298,7 @@ def generate_report(
             title,
             return_code,
             junit_objects,
+            ninja_logs,
             size_limit,
             list_failures=False,
         )

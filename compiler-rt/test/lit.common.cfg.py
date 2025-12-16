@@ -180,6 +180,14 @@ if config.enable_per_target_runtime_dir:
         config.compiler_rt_libdir = re.sub(
             r"/sparc(?=-[^/]+$)", "/sparcv9", config.compiler_rt_libdir
         )
+    if config.target_arch == "powerpc":
+        config.compiler_rt_libdir = re.sub(
+            r"/powerpc64(?=-[^/]+$)", "/powerpc", config.compiler_rt_libdir
+        )
+    elif config.target_arch == "powerpc64":
+        config.compiler_rt_libdir = re.sub(
+            r"/powerpc(?=-[^/]+$)", "/powerpc64", config.compiler_rt_libdir
+        )
 
 # Check if the test compiler resource dir matches the local build directory
 # (which happens with -DLLVM_ENABLE_PROJECTS=clang;compiler-rt) or if we are
@@ -968,8 +976,17 @@ def target_page_size():
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
+        # UNIX (except WASI) and Windows can use mmap.PAGESIZE,
+        # attempt to use os.sysconf for other targets.
         out, err = proc.communicate(
-            b'import os; print(os.sysconf("SC_PAGESIZE") if hasattr(os, "sysconf") else "")'
+            b"""
+try:
+    from mmap import PAGESIZE
+    print(PAGESIZE)
+except ImportError:
+    from os import sysconf
+    print(sysconf("SC_PAGESIZE"))
+"""
         )
         return int(out)
     except:
