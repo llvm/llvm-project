@@ -1219,8 +1219,11 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   }
   shapeForEmptyOp.append(packOp.getMixedTiles());
 
-  // getMixedTiles() may contain Values pointing to constant ops, not the
-  // constant attributes. Replace them with a true OpFoldResult.
+  // getMixedTiles() may contain Values pointing to constant ops (as opposed to
+  // constant attributes with the corresponding value). Replace those with
+  // attributes. This is to match the behaviour in
+  // `getPackOpSourceOrPaddedSource`, which replaces constant SSA values with
+  // attributes.
   llvm::transform(shapeForEmptyOp, shapeForEmptyOp.begin(),
                   [&](OpFoldResult ofr) {
                     if (auto val = llvm::dyn_cast<Value>(ofr))
