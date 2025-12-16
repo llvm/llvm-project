@@ -16252,9 +16252,10 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.back().size() << ".\n");
 
+  for (auto &VT : VectorizableTree) {
   SmallPtrSet<Value *, 4> CheckedExtracts;
-  for (unsigned I = 0, E = VectorizableTree.back().size(); I < E; ++I) {
-    TreeEntry &TE = *VectorizableTree.back()[I];
+  for (unsigned I = 0, E = VT.size(); I < E; ++I) {
+    TreeEntry &TE = *VT[I];
     // No need to count the cost for combined entries, they are combined and
     // just skip their cost.
     if (TE.State == TreeEntry::CombinedVectorize) {
@@ -16288,7 +16289,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C << " for bundle "
                       << shortBundleName(TE.Scalars, TE.Idx) << ".\n"
                       << "SLP: Current total cost = " << Cost << "\n");
-  }
+  }}
 
   if (Cost >= -SLPCostThreshold &&
       none_of(ExternalUses, [](const ExternalUser &EU) {
@@ -16510,10 +16511,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
         // block as the root phis, currently vectorized. It allows to keep
         // better ordering info of PHIs, being vectorized currently.
         bool IsProfitablePHIUser =
-            (KeepScalar ||
-             (ScalarCost - ExtraCost <= TTI::TCC_Basic &&
-              VectorizableTree.back().front()->Scalars.size() > 2)) &&
-            VectorizableTree.back().front()->hasState() &&
+            (KeepScalar || (ScalarCost - ExtraCost <= TTI::TCC_Basic &&
+                            Entry->Container.front()->Scalars.size() > 2)) &&
+          Entry->Container.front()->hasState() &&
             VectorizableTree.back().front()->getOpcode() == Instruction::PHI &&
             !Inst->hasNUsesOrMore(UsesLimit) &&
             none_of(
@@ -16727,6 +16727,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   // Add the cost for reduced value resize (if required).
   if (ReductionBitWidth != 0) {
     assert(UserIgnoreList && "Expected reduction tree.");
+    assert(VectorizableTree.size() == 1 && "Don't support wide reduction tree");
     const TreeEntry &E = *VectorizableTree.back().front();
     auto It = MinBWs.find(&E);
     if (It != MinBWs.end() && It->second.first != ReductionBitWidth) {
