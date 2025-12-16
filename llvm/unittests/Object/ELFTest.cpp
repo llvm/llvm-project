@@ -275,7 +275,7 @@ TEST(ELFTest, getRISCVVendorRelocationTypeName) {
   EXPECT_EQ("R_RISCV_CHERIOT_COMPARTMENT_LO_S",
             getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM222, "XCHERIOT1"));
   EXPECT_EQ("R_RISCV_CHERIOT_COMPARTMENT_SIZE",
-            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM222, "XCHERIOT1"));
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM223, "XCHERIOT1"));
 }
 
 TEST(ELFTest, getELFRelativeRelocationType) {
