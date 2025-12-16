@@ -278,3 +278,32 @@ gpu.func @array_length(%arg0: vector<8x16xf16>, %arg1: memref<256x256xf16>, %arg
   gpu.return
 }
 }
+
+// -----
+// CHECK-LABEL: gpu.func @dynamic_memref(
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf16>, %{{.*}}: vector<8x16xf16>) -> vector<8x16xf32> {
+// CHECK-DAG:     %[[C16:.*]] = arith.constant 16 : index
+// CHECK-DAG:     %[[C32:.*]] = arith.constant 32 : index
+// CHECK-NEXT:    %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<?x?xf16> -> index
+// CHECK-NEXT:    %[[T0:.*]] = arith.index_cast %[[PTR]] : index to i64
+// CHECK-NEXT:    %[[T1:.*]] = xegpu.create_nd_tdesc %[[T0]], shape : [64, %[[C32]]], strides : [%[[C32]], 1] : i64
+// CHECK-SAME:      -> !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
+// CHECK-NEXT:    %[[T2:.*]] = xegpu.load_nd %[[T1]][%{{.*}}, %[[C16]]]  {layout_result_0 =
+// CHECK-SAME:      #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>} : !xegpu.tensor_desc<16x8xi32,
+// CHECK-SAME:      #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>> -> vector<16x8xi32>
+// CHECK-NEXT:    %{{.*}} = vector.bitcast %[[T2]] {layout_result_0 =
+// CHECK-SAME:      #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>} : vector<16x8xi32> to vector<16x16xf16>
+#a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+#b = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
+#bt = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>
+gpu.module @xevm_module {
+gpu.func @dynamic_memref(%arg0: memref<?x?xf16>, %arg1: vector<8x16xf16>) -> vector<8x16xf32> {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %0 = xegpu.create_nd_tdesc %arg0, shape : [64, 64], strides : [64, 1] : memref<?x?xf16> -> !xegpu.tensor_desc<16x16xf16, #b>
+  %1 = xegpu.load_nd %0[%c0, %c32] { result_layout = #b } : !xegpu.tensor_desc<16x16xf16, #b> -> vector<16x16xf16>
+  %2 = vector.transpose %1, [1, 0] { layout_result_0 = #bt } : vector<16x16xf16> to vector<16x16xf16>
+  %6 = xegpu.dpas %arg1, %2 { layout_result_0 = #a } : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+  gpu.return %6 : vector<8x16xf32>
+}
+}
