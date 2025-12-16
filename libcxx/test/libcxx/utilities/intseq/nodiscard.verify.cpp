@@ -18,4 +18,7 @@ void test() {
   std::integer_sequence<int, 49, 82, 94> seq;
 
   seq.size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#if TEST_STD_VER >= 26
+  get<0>(seq); // expected-warning {{ignoring return value of function}}
+#endif
 }
