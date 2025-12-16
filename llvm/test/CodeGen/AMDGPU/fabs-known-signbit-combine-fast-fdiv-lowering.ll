@@ -73,7 +73,7 @@ define float @fdiv_fast_daz_rhs_signbit_known_zero_maxnum_fabs(float %x, float %
 ; CHECK-NEXT:    v_max_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    s_mov_b32 s4, 0x6f800000
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x2f800000
-; CHECK-NEXT:    v_cmp_gt_f32_e64 vcc, |v1|, s4
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
 ; CHECK-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_rcp_f32_e32 v1, v1
@@ -97,7 +97,7 @@ define float @fdiv_fast_daz_rhs_signbit_known_zero_minnum_fabs(float %x, float %
 ; CHECK-NEXT:    v_min_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    s_mov_b32 s4, 0x6f800000
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x2f800000
-; CHECK-NEXT:    v_cmp_gt_f32_e64 vcc, |v1|, s4
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
 ; CHECK-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_rcp_f32_e32 v1, v1
@@ -122,7 +122,7 @@ define float @fdiv_fast_daz_rhs_signbit_known_zero_maximum_fabs(float %x, float 
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
 ; CHECK-NEXT:    s_mov_b32 s4, 0x6f800000
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x2f800000
-; CHECK-NEXT:    v_cmp_gt_f32_e64 vcc, |v1|, s4
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
 ; CHECK-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_rcp_f32_e32 v1, v1
@@ -147,7 +147,7 @@ define float @fdiv_fast_daz_rhs_signbit_known_zero_minimum_fabs(float %x, float 
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
 ; CHECK-NEXT:    s_mov_b32 s4, 0x6f800000
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x2f800000
-; CHECK-NEXT:    v_cmp_gt_f32_e64 vcc, |v1|, s4
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
 ; CHECK-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_rcp_f32_e32 v1, v1
@@ -171,7 +171,7 @@ define float @fdiv_fast_daz_rhs_signbit_known_zero_maximumnum_fabs(float %x, flo
 ; CHECK-NEXT:    v_max_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    s_mov_b32 s4, 0x6f800000
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x2f800000
-; CHECK-NEXT:    v_cmp_gt_f32_e64 vcc, |v1|, s4
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
 ; CHECK-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_rcp_f32_e32 v1, v1
@@ -195,7 +195,7 @@ define float @fdiv_fast_daz_rhs_signbit_known_zero_minimumnum_fabs(float %x, flo
 ; CHECK-NEXT:    v_min_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    s_mov_b32 s4, 0x6f800000
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x2f800000
-; CHECK-NEXT:    v_cmp_gt_f32_e64 vcc, |v1|, s4
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
 ; CHECK-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_rcp_f32_e32 v1, v1
