@@ -455,7 +455,8 @@ bool HexagonHardwareLoops::findInductionRegister(MachineLoop *L,
     return false;
 
   Register PredR;
-  unsigned PredPos, PredRegFlags;
+  unsigned PredPos;
+  RegState PredRegFlags;
   if (!TII->getPredReg(Cond, PredR, PredPos, PredRegFlags))
     return false;
 
@@ -642,7 +643,8 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
   // to the header.
   bool Negated = TII->predOpcodeHasNot(Cond) ^ (TB != Header);
   Register PredReg;
-  unsigned PredPos, PredRegFlags;
+  unsigned PredPos;
+  RegState PredRegFlags;
   if (!TII->getPredReg(Cond, PredReg, PredPos, PredRegFlags))
     return nullptr;
   MachineInstr *CondI = MRI->getVRegDef(PredReg);
@@ -921,11 +923,11 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
         BuildMI(*PH, InsertPos, DL, SubD, SubR);
 
       if (RegToReg)
-        SubIB.addReg(End->getReg(), 0, End->getSubReg())
-          .addReg(Start->getReg(), 0, Start->getSubReg());
+        SubIB.addSubReg(End->getReg(), End->getSubReg())
+          .addSubReg(Start->getReg(), Start->getSubReg());
       else
         SubIB.addImm(EndV)
-          .addReg(Start->getReg(), 0, Start->getSubReg());
+          .addSubReg(Start->getReg(), Start->getSubReg());
       DistR = SubR;
     } else {
       // If the loop has been unrolled, we should use the original loop count
@@ -940,7 +942,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
         Register SubR = MRI->createVirtualRegister(IntRC);
         MachineInstrBuilder SubIB =
           BuildMI(*PH, InsertPos, DL, SubD, SubR);
-        SubIB.addReg(End->getReg(), 0, End->getSubReg())
+        SubIB.addSubReg(End->getReg(), End->getSubReg())
              .addImm(-StartV);
         DistR = SubR;
       }
@@ -960,7 +962,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
     Register AddR = MRI->createVirtualRegister(IntRC);
     MCInstrDesc const &AddD = TII->get(Hexagon::A2_addi);
     BuildMI(*PH, InsertPos, DL, AddD, AddR)
-      .addReg(DistR, 0, DistSR)
+      .addSubReg(DistR, DistSR)
       .addImm(AdjV);
 
     AdjR = AddR;
@@ -982,7 +984,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
     Register LsrR = MRI->createVirtualRegister(IntRC);
     const MCInstrDesc &LsrD = TII->get(Hexagon::S2_lsr_i_r);
     BuildMI(*PH, InsertPos, DL, LsrD, LsrR)
-      .addReg(AdjR, 0, AdjSR)
+      .addSubReg(AdjR, AdjSR)
       .addImm(Shift);
 
     CountR = LsrR;
@@ -1004,7 +1006,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
     Register DistCheckR = MRI->createVirtualRegister(PredRC);
     const MCInstrDesc &DistCheckD = TII->get(Hexagon::C2_cmpgti);
     BuildMI(*PH, InsertPos, DL, DistCheckD, DistCheckR)
-        .addReg(DistR, 0, DistSR)
+        .addSubReg(DistR, DistSR)
         .addImm((CmpLess) ? 0 : -1);
 
     // Generate:
@@ -1015,14 +1017,14 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
       const MCInstrDesc &MuxD = TII->get(Hexagon::C2_muxir);
       BuildMI(*PH, InsertPos, DL, MuxD, MuxR)
           .addReg(DistCheckR)
-          .addReg(CountR, 0, CountSR)
+          .addSubReg(CountR, CountSR)
           .addImm(1);
     } else {
       const MCInstrDesc &MuxD = TII->get(Hexagon::C2_muxri);
       BuildMI(*PH, InsertPos, DL, MuxD, MuxR)
           .addReg(DistCheckR)
           .addImm(1)
-          .addReg(CountR, 0, CountSR);
+          .addSubReg(CountR, CountSR);
     }
     MuxSR = 0;
   }
@@ -1285,7 +1287,7 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
     // Create a copy of the loop count register.
     Register CountReg = MRI->createVirtualRegister(&Hexagon::IntRegsRegClass);
     BuildMI(*Preheader, InsertPos, DL, TII->get(TargetOpcode::COPY), CountReg)
-      .addReg(TripCount->getReg(), 0, TripCount->getSubReg());
+      .addSubReg(TripCount->getReg(), TripCount->getSubReg());
     // Add the Loop instruction to the beginning of the loop.
     BuildMI(*Preheader, InsertPos, DL, TII->get(LOOP_r)).addMBB(LoopStart)
       .addReg(CountReg);

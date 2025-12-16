@@ -2433,7 +2433,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
     } else { // This is a copy
       MachineInstr *SubDef = MRI->getVRegDef(Def->getReg());
       SubDef->getOperand(1).setIsKill(false);
-      RS.addReg(SubDef->getOperand(1).getReg(), 0, Def->getSubReg());
+      RS.addSubReg(SubDef->getOperand(1).getReg(), Def->getSubReg());
     }
     RS.addImm(SubIdx);
   }
@@ -2757,7 +2757,7 @@ bool SIFoldOperandsImpl::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
     MachineInstr *VGPRCopy =
         BuildMI(*DefMBB, ++Def->getIterator(), Def->getDebugLoc(),
                 TII->get(AMDGPU::V_ACCVGPR_READ_B32_e64), TempVGPR)
-            .addReg(Reg, /* flags */ 0, SubReg);
+            .addSubReg(Reg, SubReg);
 
     // Copy back to an AGPR and use that instead of the AGPR subreg in all MOs.
     Register TempAGPR = MRI->createVirtualRegister(ARC);

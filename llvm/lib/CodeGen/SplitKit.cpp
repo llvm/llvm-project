@@ -529,7 +529,7 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(
   MachineInstr *CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
       .addReg(ToReg, RegState::Define | getUndefRegState(FirstCopy)
               | getInternalReadRegState(!FirstCopy), SubIdx)
-      .addReg(FromReg, 0, SubIdx);
+      .addSubReg(FromReg, SubIdx);
 
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
   if (FirstCopy) {

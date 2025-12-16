@@ -3257,14 +3257,14 @@ MipsSETargetLowering::emitCOPY_FW(MachineInstr &MI,
       BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Wt).addReg(Ws);
     }
 
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_lo);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addSubReg(Wt, Mips::sub_lo);
   } else {
     Register Wt = RegInfo.createVirtualRegister(
         Subtarget.useOddSPReg() ? &Mips::MSA128WRegClass
                                 : &Mips::MSA128WEvensRegClass);
 
     BuildMI(*BB, MI, DL, TII->get(Mips::SPLATI_W), Wt).addReg(Ws).addImm(Lane);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_lo);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addSubReg(Wt, Mips::sub_lo);
   }
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3294,12 +3294,12 @@ MipsSETargetLowering::emitCOPY_FD(MachineInstr &MI,
   DebugLoc DL = MI.getDebugLoc();
 
   if (Lane == 0)
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Ws, 0, Mips::sub_64);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addSubReg(Ws, Mips::sub_64);
   else {
     Register Wt = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
 
     BuildMI(*BB, MI, DL, TII->get(Mips::SPLATI_D), Wt).addReg(Ws).addImm(1);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_64);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addSubReg(Wt, Mips::sub_64);
   }
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3466,7 +3466,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), WdTmp1)
       .addReg(SrcVecReg)
       .addReg(SrcVecReg)
-      .addReg(LaneReg, 0, SubRegIdx);
+      .addSubReg(LaneReg, SubRegIdx);
 
   Register WdTmp2 = RegInfo.createVirtualRegister(VecRC);
   if (IsFP) {
@@ -3495,7 +3495,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), Wd)
       .addReg(WdTmp2)
       .addReg(WdTmp2)
-      .addReg(LaneTmp2, 0, SubRegIdx);
+      .addSubReg(LaneTmp2, SubRegIdx);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
@@ -3658,7 +3658,7 @@ MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
 
   if(!UsingMips32) {
     Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR32RegClass);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Tmp).addReg(Rt, 0, Mips::sub_32);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Tmp).addSubReg(Rt, Mips::sub_32);
     Rt = Tmp;
   }
 

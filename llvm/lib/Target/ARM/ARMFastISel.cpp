@@ -2798,7 +2798,7 @@ Register ARMFastISel::ARMEmitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
     if (setsCPSR)
       MIB.addReg(ARM::CPSR, RegState::Define);
     SrcReg = constrainOperandRegClass(TII.get(Opcode), SrcReg, 1 + setsCPSR);
-    MIB.addReg(SrcReg, isKill * RegState::Kill)
+    MIB.addReg(SrcReg, getKillRegState(isKill))
         .addImm(ImmEnc)
         .add(predOps(ARMCC::AL));
     if (hasS)

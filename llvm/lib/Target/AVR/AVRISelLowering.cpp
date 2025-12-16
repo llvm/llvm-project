@@ -2000,8 +2000,8 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
       ShrExtendReg = MRI.createVirtualRegister(&AVR::GPR8RegClass);
       Register Tmp = MRI.createVirtualRegister(&AVR::GPR8RegClass);
       BuildMI(*BB, MI, dl, TII.get(AVR::ADDRdRr), Tmp)
-          .addReg(Regs[0].first, 0, Regs[0].second)
-          .addReg(Regs[0].first, 0, Regs[0].second);
+          .addSubReg(Regs[0].first, Regs[0].second)
+          .addSubReg(Regs[0].first, Regs[0].second);
       BuildMI(*BB, MI, dl, TII.get(AVR::SBCRdRr), ShrExtendReg)
           .addReg(Tmp)
           .addReg(Tmp);
@@ -2049,7 +2049,7 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
       size_t Idx = ShiftLeft ? I : Regs.size() - I - 1;
       Register SwapReg = MRI.createVirtualRegister(&AVR::LD8RegClass);
       BuildMI(*BB, MI, dl, TII.get(AVR::SWAPRd), SwapReg)
-          .addReg(Regs[Idx].first, 0, Regs[Idx].second);
+          .addSubReg(Regs[Idx].first, Regs[Idx].second);
       if (I != 0) {
         Register R = MRI.createVirtualRegister(&AVR::GPR8RegClass);
         BuildMI(*BB, MI, dl, TII.get(AVR::EORRdRr), R)
@@ -2085,12 +2085,12 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
       Register InSubreg = Regs[I].second;
       if (I == (ssize_t)Regs.size() - 1) { // first iteration
         BuildMI(*BB, MI, dl, TII.get(AVR::ADDRdRr), Out)
-            .addReg(In, 0, InSubreg)
-            .addReg(In, 0, InSubreg);
+            .addSubReg(In, InSubreg)
+            .addSubReg(In, InSubreg);
       } else {
         BuildMI(*BB, MI, dl, TII.get(AVR::ADCRdRr), Out)
-            .addReg(In, 0, InSubreg)
-            .addReg(In, 0, InSubreg);
+            .addSubReg(In, InSubreg)
+            .addSubReg(In, InSubreg);
       }
       Regs[I] = std::pair(Out, 0);
     }
@@ -2104,9 +2104,9 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
       Register InSubreg = Regs[I].second;
       if (I == 0) {
         unsigned Opc = ArithmeticShift ? AVR::ASRRd : AVR::LSRRd;
-        BuildMI(*BB, MI, dl, TII.get(Opc), Out).addReg(In, 0, InSubreg);
+        BuildMI(*BB, MI, dl, TII.get(Opc), Out).addSubReg(In, InSubreg);
       } else {
-        BuildMI(*BB, MI, dl, TII.get(AVR::RORRd), Out).addReg(In, 0, InSubreg);
+        BuildMI(*BB, MI, dl, TII.get(AVR::RORRd), Out).addSubReg(In, InSubreg);
       }
       Regs[I] = std::pair(Out, 0);
     }
@@ -2167,26 +2167,26 @@ AVRTargetLowering::insertWideShift(MachineInstr &MI,
       (Opc != ISD::SRA || (ShiftAmt < 16 || ShiftAmt >= 22))) {
     // Use the resulting registers starting with the least significant byte.
     BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(0).getReg())
-        .addReg(Registers[3].first, 0, Registers[3].second)
+        .addSubReg(Registers[3].first, Registers[3].second)
         .addImm(AVR::sub_lo)
-        .addReg(Registers[2].first, 0, Registers[2].second)
+        .addSubReg(Registers[2].first, Registers[2].second)
         .addImm(AVR::sub_hi);
     BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(1).getReg())
-        .addReg(Registers[1].first, 0, Registers[1].second)
+        .addSubReg(Registers[1].first, Registers[1].second)
         .addImm(AVR::sub_lo)
-        .addReg(Registers[0].first, 0, Registers[0].second)
+        .addSubReg(Registers[0].first, Registers[0].second)
         .addImm(AVR::sub_hi);
   } else {
     // Use the resulting registers starting with the most significant byte.
     BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(1).getReg())
-        .addReg(Registers[0].first, 0, Registers[0].second)
+        .addSubReg(Registers[0].first, Registers[0].second)
         .addImm(AVR::sub_hi)
-        .addReg(Registers[1].first, 0, Registers[1].second)
+        .addSubReg(Registers[1].first, Registers[1].second)
         .addImm(AVR::sub_lo);
     BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(0).getReg())
-        .addReg(Registers[2].first, 0, Registers[2].second)
+        .addSubReg(Registers[2].first, Registers[2].second)
         .addImm(AVR::sub_hi)
-        .addReg(Registers[3].first, 0, Registers[3].second)
+        .addSubReg(Registers[3].first, Registers[3].second)
         .addImm(AVR::sub_lo);
   }
 

@@ -509,7 +509,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
-  unsigned KillFlag = getKillRegState(KillSrc);
+  RegState KillFlag = getKillRegState(KillSrc);
 
   if (RISCV::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
@@ -922,9 +922,9 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
 
   for (const RISCVMatInt::Inst &Inst : Seq) {
     bool LastItem = ++Num == Seq.size();
-    unsigned DstRegState = getDeadRegState(DstIsDead && LastItem) |
+    RegState DstRegState = getDeadRegState(DstIsDead && LastItem) |
                            getRenamableRegState(DstRenamable);
-    unsigned SrcRegState = getKillRegState(SrcReg != RISCV::X0) |
+    RegState SrcRegState = getKillRegState(SrcReg != RISCV::X0) |
                            getRenamableRegState(SrcRenamable);
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
@@ -3251,7 +3251,7 @@ MachineInstr *RISCVInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
 
   return BuildMI(MBB, MemI, DL, get(MemI.getOpcode()))
       .addReg(MemI.getOperand(0).getReg(),
-              MemI.mayLoad() ? RegState::Define : 0)
+              getDefRegState(MemI.mayLoad()))
       .addReg(AM.BaseReg)
       .addImm(AM.Displacement)
       .setMemRefs(MemI.memoperands())

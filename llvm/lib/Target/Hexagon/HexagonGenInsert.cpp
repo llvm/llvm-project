@@ -1409,7 +1409,7 @@ bool HexagonGenInsert::generateInserts() {
 
     BuildMI(B, At, DL, D, NewR)
       .addReg(IF.SrcR)
-      .addReg(IF.InsR, 0, InsS)
+      .addSubReg(IF.InsR, InsS)
       .addImm(Wdh)
       .addImm(Off);
 

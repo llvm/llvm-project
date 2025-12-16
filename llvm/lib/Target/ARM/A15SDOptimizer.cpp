@@ -436,7 +436,7 @@ unsigned A15SDOptimizer::createExtractSubreg(
           InsertBefore,
           DL,
           TII->get(TargetOpcode::COPY), Out)
-    .addReg(DReg, 0, Lane);
+    .addSubReg(DReg, Lane);
 
   return Out;
 }

@@ -300,7 +300,7 @@ void PPCCTRLoops::expandNormalLoops(MachineLoop *ML, MachineInstr *Start,
 
   BuildMI(*Exiting, Dec, Dec->getDebugLoc(), TII->get(TargetOpcode::COPY),
           Dec->getOperand(0).getReg())
-      .addReg(CMPMIB->getOperand(0).getReg(), 0, PPC::sub_gt);
+      .addSubReg(CMPMIB->getOperand(0).getReg(), PPC::sub_gt);
 
   // Remove the pseudo instructions.
   Start->eraseFromParent();

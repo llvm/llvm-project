@@ -1974,7 +1974,7 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
       if (VT == MVT::i16) {
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                 TII.get(Copy), TypeEntry.HighInReg)
-          .addReg(Zero32, 0, X86::sub_16bit);
+          .addSubReg(Zero32, X86::sub_16bit);
       } else if (VT == MVT::i32) {
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                 TII.get(Copy), TypeEntry.HighInReg)

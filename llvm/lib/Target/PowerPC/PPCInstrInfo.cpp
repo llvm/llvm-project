@@ -1644,7 +1644,7 @@ void PPCInstrInfo::insertSelect(MachineBasicBlock &MBB,
 
   BuildMI(MBB, MI, dl, get(OpCode), DestReg)
     .addReg(FirstReg).addReg(SecondReg)
-    .addReg(Cond[1].getReg(), 0, SubIdx);
+    .addSubReg(Cond[1].getReg(), SubIdx);
 }
 
 static unsigned getCRBitValue(unsigned CRBit) {
@@ -2722,7 +2722,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   MachineBasicBlock::iterator MII = MI;
   BuildMI(*MI->getParent(), std::next(MII), MI->getDebugLoc(),
           get(TargetOpcode::COPY), CRReg)
-    .addReg(PPC::CR0, MIOpC != NewOpC ? RegState::Kill : 0);
+    .addReg(PPC::CR0, getKillRegState(MIOpC != NewOpC));
 
   // Even if CR0 register were dead before, it is alive now since the
   // instruction we just built uses it.

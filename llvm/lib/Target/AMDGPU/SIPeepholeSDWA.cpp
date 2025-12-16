@@ -1356,7 +1356,7 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
     if (Op.isImm())
       Copy.addImm(Op.getImm());
     else if (Op.isReg())
-      Copy.addReg(Op.getReg(), Op.isKill() ? RegState::Kill : 0,
+      Copy.addReg(Op.getReg(), getKillRegState(Op.isKill()),
                   Op.getSubReg());
     Op.ChangeToRegister(VGPR, false);
   }

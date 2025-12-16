@@ -222,7 +222,7 @@ static bool splitMBB(BlockSplitInfo &BSI) {
   // Add the branches to ThisMBB.
   BuildMI(*ThisMBB, ThisMBB->end(), BSI.SplitBefore->getDebugLoc(),
           TII->get(NewBROpcode))
-      .addReg(BSI.SplitCond->getOperand(0).getReg(), 0, BSI.SplitCondSubreg)
+      .addSubReg(BSI.SplitCond->getOperand(0).getReg(), BSI.SplitCondSubreg)
       .addMBB(NewBRTarget);
   BuildMI(*ThisMBB, ThisMBB->end(), BSI.SplitBefore->getDebugLoc(),
           TII->get(PPC::B))

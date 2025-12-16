@@ -370,7 +370,7 @@ bool InlineAsmLowering::lowerInlineAsm(
         for (Register Reg : OpInfo.Regs) {
           Inst.addReg(Reg,
                       RegState::Define | getImplRegState(Reg.isPhysical()) |
-                          (OpInfo.isEarlyClobber ? RegState::EarlyClobber : 0));
+                          getEarlyClobberRegState(OpInfo.isEarlyClobber));
         }
 
         // Remember this output operand for later processing

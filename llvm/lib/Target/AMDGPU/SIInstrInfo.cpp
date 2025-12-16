@@ -2289,7 +2289,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(RI.getSubReg(VecReg, SubReg), RegState::Undef)
         .add(MI.getOperand(2))
         .addReg(VecReg, RegState::ImplicitDefine)
-        .addReg(VecReg, RegState::Implicit | (IsUndef ? RegState::Undef : 0));
+        .addReg(VecReg, RegState::Implicit | getUndefRegState(IsUndef));
 
     const int ImpDefIdx =
         OpDesc.getNumOperands() + OpDesc.implicit_uses().size();
@@ -2328,7 +2328,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
             .add(MI.getOperand(2))
             .addReg(VecReg, RegState::ImplicitDefine)
             .addReg(VecReg,
-                    RegState::Implicit | (IsUndef ? RegState::Undef : 0));
+                    RegState::Implicit | getUndefRegState(IsUndef));
 
     const int ImpDefIdx =
         OpDesc.getNumOperands() + OpDesc.implicit_uses().size();
@@ -2369,7 +2369,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_indirect_read))
         .addDef(Dst)
         .addReg(RI.getSubReg(VecReg, SubReg), RegState::Undef)
-        .addReg(VecReg, RegState::Implicit | (IsUndef ? RegState::Undef : 0));
+        .addReg(VecReg, RegState::Implicit | getUndefRegState(IsUndef));
 
     MachineInstr *SetOff = BuildMI(MBB, MI, DL, get(AMDGPU::S_SET_GPR_IDX_OFF));
 
@@ -2647,7 +2647,7 @@ SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
         if (Src.isPhysical())
           MovDPP.addReg(RI.getSubReg(Src, Sub));
         else
-          MovDPP.addReg(Src, SrcOp.isUndef() ? RegState::Undef : 0, Sub);
+          MovDPP.addReg(Src, getUndefRegState(SrcOp.isUndef()), Sub);
       }
     }
 
@@ -2956,11 +2956,11 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       MCCtx.createTempSymbol("offset_hi", /*AlwaysAddSuffix=*/true);
   BuildMI(MBB, I, DL, get(AMDGPU::S_ADD_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub0)
-      .addReg(PCReg, 0, AMDGPU::sub0)
+      .addSubReg(PCReg, AMDGPU::sub0)
       .addSym(OffsetLo, MO_FAR_BRANCH_OFFSET);
   BuildMI(MBB, I, DL, get(AMDGPU::S_ADDC_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub1)
-      .addReg(PCReg, 0, AMDGPU::sub1)
+      .addSubReg(PCReg, AMDGPU::sub1)
       .addSym(OffsetHi, MO_FAR_BRANCH_OFFSET);
   ApplyHazardWorkarounds();
 
@@ -3382,13 +3382,13 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
     if (SelOp == AMDGPU::V_CNDMASK_B32_e32) {
       Select =
         BuildMI(MBB, I, DL, get(SelOp), DstElt)
-        .addReg(FalseReg, 0, SubIdx)
-        .addReg(TrueReg, 0, SubIdx);
+        .addSubReg(FalseReg, SubIdx)
+        .addSubReg(TrueReg, SubIdx);
     } else {
       Select =
         BuildMI(MBB, I, DL, get(SelOp), DstElt)
-        .addReg(TrueReg, 0, SubIdx)
-        .addReg(FalseReg, 0, SubIdx);
+        .addSubReg(TrueReg, SubIdx)
+        .addSubReg(FalseReg, SubIdx);
     }
 
     preserveCondRegFlags(Select->getOperand(3), Cond[1]);
@@ -6158,7 +6158,7 @@ unsigned SIInstrInfo::buildExtractSubReg(
 
   unsigned NewSubIdx = RI.composeSubRegIndices(SuperReg.getSubReg(), SubIdx);
   BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), SubReg)
-      .addReg(SuperReg.getReg(), 0, NewSubIdx);
+      .addSubReg(SuperReg.getReg(), NewSubIdx);
   return SubReg;
 }
 
@@ -6754,7 +6754,7 @@ Register SIInstrInfo::readlaneVGPRToSGPR(
     Register SGPR = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
     BuildMI(*UseMI.getParent(), UseMI, UseMI.getDebugLoc(),
             get(AMDGPU::V_READFIRSTLANE_B32), SGPR)
-        .addReg(SrcReg, 0, RI.getSubRegFromChannel(i));
+        .addSubReg(SrcReg, RI.getSubRegFromChannel(i));
     SRegs.push_back(SGPR);
   }
 
@@ -6982,7 +6982,7 @@ emitLoadScalarOpsFromVGPRLoop(const SIInstrInfo &TII,
       ScalarOp->setIsKill();
     } else {
       SmallVector<Register, 8> ReadlanePieces;
-      unsigned VScalarOpUndef = getUndefRegState(ScalarOp->isUndef());
+      RegState VScalarOpUndef = getUndefRegState(ScalarOp->isUndef());
       assert(NumSubRegs % 2 == 0 && NumSubRegs <= 32 &&
              "Unhandled register size");
 
@@ -7511,15 +7511,15 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       const DebugLoc &DL = MI.getDebugLoc();
       BuildMI(MBB, MI, DL, get(AMDGPU::V_ADD_CO_U32_e64), NewVAddrLo)
         .addDef(CondReg0)
-        .addReg(RsrcPtr, 0, AMDGPU::sub0)
-        .addReg(VAddr->getReg(), 0, AMDGPU::sub0)
+        .addSubReg(RsrcPtr, AMDGPU::sub0)
+        .addSubReg(VAddr->getReg(), AMDGPU::sub0)
         .addImm(0);
 
       // NewVaddrHi = RsrcPtr:sub1 + VAddr:sub1
       BuildMI(MBB, MI, DL, get(AMDGPU::V_ADDC_U32_e64), NewVAddrHi)
         .addDef(CondReg1, RegState::Dead)
-        .addReg(RsrcPtr, 0, AMDGPU::sub1)
-        .addReg(VAddr->getReg(), 0, AMDGPU::sub1)
+        .addSubReg(RsrcPtr, AMDGPU::sub1)
+        .addSubReg(VAddr->getReg(), AMDGPU::sub1)
         .addReg(CondReg0, RegState::Kill)
         .addImm(0);
 
@@ -7594,9 +7594,9 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       // NewVaddr = {NewVaddrHi, NewVaddrLo}
       BuildMI(MBB, Addr64, Addr64->getDebugLoc(), get(AMDGPU::REG_SEQUENCE),
               NewVAddr)
-          .addReg(RsrcPtr, 0, AMDGPU::sub0)
+          .addSubReg(RsrcPtr, AMDGPU::sub0)
           .addImm(AMDGPU::sub0)
-          .addReg(RsrcPtr, 0, AMDGPU::sub1)
+          .addSubReg(RsrcPtr, AMDGPU::sub1)
           .addImm(AMDGPU::sub1);
     } else {
       // Legalize a VGPR Rsrc and soffset together.
@@ -8111,7 +8111,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
           .add(Inst.getOperand(1));
       BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
           .addImm(0) // src0_modifiers
-          .addReg(TmpReg, 0, AMDGPU::hi16)
+          .addSubReg(TmpReg, AMDGPU::hi16)
           .addImm(0)  // clamp
           .addImm(0)  // omod
           .addImm(0); // op_sel0
@@ -9087,7 +9087,7 @@ void SIInstrInfo::splitScalar64BitBFE(SIInstrWorklist &Worklist,
     Register ResultReg = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
 
     BuildMI(MBB, MII, DL, get(AMDGPU::V_BFE_I32_e64), MidRegLo)
-        .addReg(Inst.getOperand(1).getReg(), 0, AMDGPU::sub0)
+        .addSubReg(Inst.getOperand(1).getReg(), AMDGPU::sub0)
         .addImm(0)
         .addImm(BitWidth);
 
@@ -9112,10 +9112,10 @@ void SIInstrInfo::splitScalar64BitBFE(SIInstrWorklist &Worklist,
 
   BuildMI(MBB, MII, DL, get(AMDGPU::V_ASHRREV_I32_e64), TmpReg)
     .addImm(31)
-    .addReg(Src.getReg(), 0, AMDGPU::sub0);
+    .addSubReg(Src.getReg(), AMDGPU::sub0);
 
   BuildMI(MBB, MII, DL, get(TargetOpcode::REG_SEQUENCE), ResultReg)
-    .addReg(Src.getReg(), 0, AMDGPU::sub0)
+    .addSubReg(Src.getReg(), AMDGPU::sub0)
     .addImm(AMDGPU::sub0)
     .addReg(TmpReg)
     .addImm(AMDGPU::sub1);
@@ -9245,32 +9245,32 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
     switch (Inst.getOpcode()) {
     case AMDGPU::S_PACK_LL_B32_B16:
       NewMI
-          .addReg(SrcReg0, 0,
+          .addSubReg(SrcReg0,
                   isSrc0Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
           .addImm(AMDGPU::lo16)
-          .addReg(SrcReg1, 0,
+          .addSubReg(SrcReg1,
                   isSrc1Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
           .addImm(AMDGPU::hi16);
       break;
     case AMDGPU::S_PACK_LH_B32_B16:
       NewMI
-          .addReg(SrcReg0, 0,
+          .addSubReg(SrcReg0,
                   isSrc0Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
           .addImm(AMDGPU::lo16)
-          .addReg(SrcReg1, 0, AMDGPU::hi16)
+          .addSubReg(SrcReg1, AMDGPU::hi16)
           .addImm(AMDGPU::hi16);
       break;
     case AMDGPU::S_PACK_HL_B32_B16:
-      NewMI.addReg(SrcReg0, 0, AMDGPU::hi16)
+      NewMI.addSubReg(SrcReg0, AMDGPU::hi16)
           .addImm(AMDGPU::lo16)
-          .addReg(SrcReg1, 0,
+          .addSubReg(SrcReg1,
                   isSrc1Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
           .addImm(AMDGPU::hi16);
       break;
     case AMDGPU::S_PACK_HH_B32_B16:
-      NewMI.addReg(SrcReg0, 0, AMDGPU::hi16)
+      NewMI.addSubReg(SrcReg0, AMDGPU::hi16)
           .addImm(AMDGPU::lo16)
-          .addReg(SrcReg1, 0, AMDGPU::hi16)
+          .addSubReg(SrcReg1, AMDGPU::hi16)
           .addImm(AMDGPU::hi16);
       break;
     default:
@@ -10457,7 +10457,7 @@ MachineInstr *SIInstrInfo::createPHISourceCopy(
     InsPt++;
     return BuildMI(MBB, InsPt, DL,
                    get(AMDGPU::LaneMaskConstants::get(ST).MovTermOpc), Dst)
-        .addReg(Src, 0, SrcSubReg)
+        .addSubReg(Src, SrcSubReg)
         .addReg(AMDGPU::EXEC, RegState::Implicit);
   }
   return TargetInstrInfo::createPHISourceCopy(MBB, InsPt, DL, Src, SrcSubReg,
@@ -11025,7 +11025,7 @@ void SIInstrInfo::enforceOperandRCAlignment(MachineInstr &MI,
       MRI.createVirtualRegister(IsAGPR ? &AMDGPU::AReg_64_Align2RegClass
                                        : &AMDGPU::VReg_64_Align2RegClass);
   BuildMI(*BB, MI, DL, get(AMDGPU::REG_SEQUENCE), NewVR)
-      .addReg(DataReg, 0, Op.getSubReg())
+      .addSubReg(DataReg, Op.getSubReg())
       .addImm(AMDGPU::sub0)
       .addReg(Undef)
       .addImm(AMDGPU::sub1);

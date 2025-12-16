@@ -452,7 +452,7 @@ public:
   bool parseVirtualRegister(VRegInfo *&Info);
   bool parseNamedVirtualRegister(VRegInfo *&Info);
   bool parseRegister(Register &Reg, VRegInfo *&VRegInfo);
-  bool parseRegisterFlag(unsigned &Flags);
+  bool parseRegisterFlag(RegState &Flags);
   bool parseRegisterClassOrBank(VRegInfo &RegInfo);
   bool parseSubRegisterIndex(unsigned &SubReg);
   bool parseRegisterTiedDefIndex(unsigned &TiedDefIdx);
@@ -1652,8 +1652,8 @@ bool MIParser::parseRegisterClassOrBank(VRegInfo &RegInfo) {
   llvm_unreachable("Unexpected register kind");
 }
 
-bool MIParser::parseRegisterFlag(unsigned &Flags) {
-  const unsigned OldFlags = Flags;
+bool MIParser::parseRegisterFlag(RegState &Flags) {
+  const RegState OldFlags = Flags;
   switch (Token.kind()) {
   case MIToken::kw_implicit:
     Flags |= RegState::Implicit;
@@ -1762,7 +1762,7 @@ bool MIParser::assignRegisterTies(MachineInstr &MI,
 bool MIParser::parseRegisterOperand(MachineOperand &Dest,
                                     std::optional<unsigned> &TiedDefIdx,
                                     bool IsDef) {
-  unsigned Flags = IsDef ? RegState::Define : 0;
+  RegState Flags = getDefRegState(IsDef);
   while (Token.isRegisterFlag()) {
     if (parseRegisterFlag(Flags))
       return true;
@@ -1789,7 +1789,12 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
         return true;
   }
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if ((Flags & RegState::Define) == 0) {
+
+  auto HasFlag = [Flags](RegState Flag) -> bool {
+    return (Flags & Flag) != RegState::NoFlags;
+  };
+
+  if (HasFlag(RegState::Define)) {
     if (consumeIfPresent(MIToken::lparen)) {
       unsigned Idx;
       if (!parseRegisterTiedDefIndex(Idx))
@@ -1837,19 +1842,25 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       return error("generic virtual registers must have a type");
   }
 
-  if (Flags & RegState::Define) {
-    if (Flags & RegState::Kill)
+  if (HasFlag(RegState::Define)) {
+    if (HasFlag(RegState::Kill))
       return error("cannot have a killed def operand");
   } else {
-    if (Flags & RegState::Dead)
+    if (HasFlag(RegState::Dead))
       return error("cannot have a dead use operand");
   }
 
-  Dest = MachineOperand::CreateReg(
-      Reg, Flags & RegState::Define, Flags & RegState::Implicit,
-      Flags & RegState::Kill, Flags & RegState::Dead, Flags & RegState::Undef,
-      Flags & RegState::EarlyClobber, SubReg, Flags & RegState::Debug,
-      Flags & RegState::InternalRead, Flags & RegState::Renamable);
+  Dest = MachineOperand::CreateReg(Reg, 
+                                   HasFlag(RegState::Define),
+                                   HasFlag(RegState::Implicit),
+                                   HasFlag(RegState::Kill),
+                                   HasFlag(RegState::Dead),
+                                   HasFlag(RegState::Undef),
+                                   HasFlag(RegState::EarlyClobber),
+                                   SubReg,
+                                   HasFlag(RegState::Debug),
+                                   HasFlag(RegState::InternalRead),
+                                   HasFlag(RegState::Renamable));
 
   return false;
 }

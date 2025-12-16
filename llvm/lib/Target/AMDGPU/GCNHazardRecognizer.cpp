@@ -16,6 +16,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -1336,7 +1337,7 @@ bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {
   bool IsUndef = Src0->isUndef();
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII->get(AMDGPU::V_MOV_B32_e32))
-    .addReg(Reg, RegState::Define | (IsUndef ? RegState::Dead : 0))
+    .addReg(Reg, RegState::Define | getDeadRegState(IsUndef))
     .addReg(Reg, IsUndef ? RegState::Undef : RegState::Kill);
 
   return true;
