@@ -447,7 +447,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let parameters = (ins
     CIR_VectorElementType:$elementType,
     "uint64_t":$size,
-    OptionalParameter<"bool">:$isScalable
+    OptionalParameter<"bool">:$is_scalable
   );
 
   let assemblyFormat = [{
