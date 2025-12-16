@@ -150,7 +150,7 @@ public:
       rhsMask = packInputs(op1.getRhsMask(), op2.getRhsMask());
     }
 
-    auto extOp = op.getLhs().getDefiningOp();
+    auto *extOp = op.getLhs().getDefiningOp();
 
     arm_sme::CombiningKind kind = op.getKind();
     if (kind == arm_sme::CombiningKind::Add) {
@@ -311,8 +311,8 @@ public:
       rhsMask = packInputs(rhs0Mask, rhs1Mask);
     }
 
-    auto lhsExtOp = op.getLhs().getDefiningOp();
-    auto rhsExtOp = op.getRhs().getDefiningOp();
+    auto *lhsExtOp = op.getLhs().getDefiningOp();
+    auto *rhsExtOp = op.getRhs().getDefiningOp();
 
     arm_sme::CombiningKind kind = op.getKind();
     if (kind == arm_sme::CombiningKind::Add) {

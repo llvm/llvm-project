@@ -104,7 +104,7 @@ ModuleDependencyScanner::scan(PathRef FilePath,
   if (Mangler)
     Mangler(Cmd, FilePath);
 
-  using namespace clang::tooling::dependencies;
+  using namespace clang::tooling;
 
   llvm::SmallString<128> FilePathDir(FilePath);
   llvm::sys::path::remove_filename(FilePathDir);

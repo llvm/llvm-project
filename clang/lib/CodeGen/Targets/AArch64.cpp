@@ -1359,9 +1359,10 @@ void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
 
   llvm::SmallDenseSet<StringRef, 8> UniqueFeats;
   for (auto &Feat : Features)
-    if (auto Ext = llvm::AArch64::parseFMVExtension(Feat))
-      if (UniqueFeats.insert(Ext->Name).second)
-        Out << 'M' << Ext->Name;
+    if (getTarget().doesFeatureAffectCodeGen(Feat))
+      if (auto Ext = llvm::AArch64::parseFMVExtension(Feat))
+        if (UniqueFeats.insert(Ext->Name).second)
+          Out << 'M' << Ext->Name;
 }
 
 std::unique_ptr<TargetCodeGenInfo>

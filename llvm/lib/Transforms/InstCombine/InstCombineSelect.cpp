@@ -96,15 +96,18 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
 
   // Last, match the compare variable operand with a binop operand.
   Value *Y;
-  if (!BO->isCommutative() && !match(BO, m_BinOp(m_Value(Y), m_Specific(X))))
-    return nullptr;
-  if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
-    return nullptr;
+  if (BO->isCommutative()) {
+    if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
+      return nullptr;
+  } else {
+    if (!match(BO, m_BinOp(m_Value(Y), m_Specific(X))))
+      return nullptr;
+  }
 
   // +0.0 compares equal to -0.0, and so it does not behave as required for this
   // transform. Bail out if we can not exclude that possibility.
-  if (isa<FPMathOperator>(BO))
-    if (!BO->hasNoSignedZeros() &&
+  if (const auto *FPO = dyn_cast<FPMathOperator>(BO))
+    if (!FPO->hasNoSignedZeros() &&
         !cannotBeNegativeZero(Y,
                               IC.getSimplifyQuery().getWithInstruction(&Sel)))
       return nullptr;
@@ -519,8 +522,8 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
       return nullptr;
 
     FastMathFlags FMF;
-    if (isa<FPMathOperator>(&SI))
-      FMF = SI.getFastMathFlags();
+    if (const auto *FPO = dyn_cast<FPMathOperator>(&SI))
+      FMF = FPO->getFastMathFlags();
     Constant *C = ConstantExpr::getBinOpIdentity(
         TVI->getOpcode(), TVI->getType(), true, FMF.noSignedZeros());
     Value *OOp = TVI->getOperand(2 - OpToFold);
@@ -3067,14 +3070,10 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
          "Op must be either i1 or vector of i1.");
   if (SI.getCondition()->getType() != Op->getType())
     return nullptr;
-  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL)) {
-    Instruction *MDFrom = nullptr;
-    if (!ProfcheckDisableMetadataFixes)
-      MDFrom = &SI;
-    return SelectInst::Create(
+  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL))
+    return createSelectInstWithUnknownProfile(
         Op, IsAnd ? V : ConstantInt::getTrue(Op->getType()),
-        IsAnd ? ConstantInt::getFalse(Op->getType()) : V, "", nullptr, MDFrom);
-  }
+        IsAnd ? ConstantInt::getFalse(Op->getType()) : V);
   return nullptr;
 }
 

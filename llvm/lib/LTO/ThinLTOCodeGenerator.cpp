@@ -249,7 +249,7 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
   PassBuilder PB(&TM, PTO, PGOOpt, &PIC);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      new TargetLibraryInfoImpl(TM.getTargetTriple()));
+      new TargetLibraryInfoImpl(TM.getTargetTriple(), TM.Options.VecLib));
   if (Freestanding)
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
