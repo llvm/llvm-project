@@ -1,4 +1,4 @@
-#RUN: not --crash llc -mtriple=arm64 -global-isel -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=arm64 -global-isel -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
@@ -27,4 +27,3 @@ body: |
     ; CHECK: Bad machine code: Generic smin/smax/umin/umax does not support pointer operands
     %6:_(<4 x p0>) = G_SMIN %5, %5
 ...
-
