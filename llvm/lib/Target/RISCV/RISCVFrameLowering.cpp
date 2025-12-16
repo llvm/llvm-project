@@ -34,9 +34,9 @@ using namespace llvm;
 
 static cl::opt<std::string> UserDefinedUncondPrologCSRs(
     "riscv-user-defined-uncond-prolog-csrs",
-    cl::desc("Comma-separated list of registerst that have to be saved / "
+    cl::desc("Comma-separated list of registers that have to be saved / "
              "restored in prolog / epilog. Used for testing only"),
-    cl::init(""), cl::Hidden);
+    cl::init(""), cl::ReallyHidden);
 
 static Align getABIStackAlignment(RISCVABI::ABI ABI) {
   if (ABI == RISCVABI::ABI_ILP32E)
