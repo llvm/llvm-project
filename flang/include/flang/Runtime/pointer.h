@@ -96,7 +96,7 @@ int RTDECL(PointerAllocate)(Descriptor &, bool hasStat = false,
 #else
 int RTDECL(PointerAllocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0, MemmoveFct memmoveFct = &Fortran::runtime::memmove);
+    int sourceLine = 0, MemmoveFct memmoveFct = &Fortran::runtime::memcpy);
 #endif
 int RTDECL(PointerAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
