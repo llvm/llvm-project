@@ -4321,7 +4321,7 @@ public:
                                                            LParenLoc, EndLoc);
   }
 
- private:
+private:
   QualType TransformTypeInObjectScope(TypeLocBuilder &TLB, TypeLoc TL,
                                       QualType ObjectType,
                                       NamedDecl *FirstQualifierInScope);
