@@ -63,25 +63,89 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
 static void emitAtomicFenceOp(CIRGenFunction &cgf, const CallExpr *expr,
                               cir::SyncScopeKind syncScope) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Value orderingVal = cgf.emitScalarExpr(expr->getArg(0));
+  mlir::Location loc = cgf.getLoc(expr->getSourceRange());
 
-  auto constOrdering = orderingVal.getDefiningOp<cir::ConstantOp>();
+  // Convert the memory order specified by user to effective one:
+  //   Relaxed                -> std::nullopt
+  //   Consume/Acquire        -> Acquire
+  //   Release                -> Release
+  //   AcquireRelease         -> AcquireRelease
+  //   SequentiallyConsistent -> SequentiallyConsistent
+  auto getEffectiveMemOrder =
+      [](cir::MemOrder oriOrder) -> std::optional<cir::MemOrder> {
+    if (oriOrder == cir::MemOrder::Relaxed)
+      return std::nullopt;
+    else if (oriOrder == cir::MemOrder::Consume ||
+             oriOrder == cir::MemOrder::Acquire)
+      return cir::MemOrder::Acquire;
+    else
+      return oriOrder;
+  };
 
-  if (!constOrdering) {
-    // TODO(cir): Emit code to switch on `orderingVal`,
-    //            and creating the fence op for valid values.
-    cgf.cgm.errorNYI("Variable atomic fence ordering");
+  // Handle constant memory ordering.
+  Expr::EvalResult eval;
+  if (expr->getArg(0)->EvaluateAsInt(eval, cgf.getContext())) {
+    uint64_t constOrder = eval.Val.getInt().getZExtValue();
+    // Not emit anything if it's an invalid constant.
+    if (!cir::isValidCIRAtomicOrderingCABI(constOrder))
+      return;
+    cir::MemOrder caseOrder = static_cast<cir::MemOrder>(constOrder);
+    if (std::optional<cir::MemOrder> order = getEffectiveMemOrder(caseOrder))
+      cir::AtomicFenceOp::create(
+          builder, loc, order.value(),
+          cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
     return;
   }
 
-  auto constOrderingAttr = constOrdering.getValueAttr<cir::IntAttr>();
-  assert(constOrderingAttr && "Expected integer constant for ordering");
+  // Otherwise, handle variable memory ordering. Emit `SwitchOp` to convert
+  // dynamic value to static value.
+  mlir::Value varOrder = cgf.emitScalarExpr(expr->getArg(0));
+  cir::SwitchOp::create(
+      builder, loc, varOrder,
+      [&](mlir::OpBuilder &, mlir::Location loc, mlir::OperationState &) {
+        mlir::Block *switchBlock = builder.getBlock();
 
-  auto ordering = static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
+        auto emitMemOrderCase = [&](llvm::ArrayRef<cir::MemOrder> caseOrders) {
+          if (caseOrders.empty()) {
+            // Creating default case operation
+            mlir::OpBuilder::InsertPoint insertPoint;
+            cir::CaseOp::create(builder, loc, builder.getArrayAttr({}),
+                                cir::CaseOpKind::Default, insertPoint);
+            builder.restoreInsertionPoint(insertPoint);
+          } else if (auto actualOrder = getEffectiveMemOrder(caseOrders[0])) {
+            // Creating case operation for effective memory order. If there are
+            // multiple cases in `caseOrders`, the actual order of each case
+            // must be same, this needs to be guaranteed by the caller.
+            mlir::OpBuilder::InsertPoint insertPoint;
+            llvm::SmallVector<mlir::Attribute, 2> orderAttrs;
+            for (cir::MemOrder caseOrder : caseOrders)
+              orderAttrs.push_back(cir::IntAttr::get(
+                  varOrder.getType(), static_cast<int>(caseOrder)));
+            cir::CaseOp::create(builder, loc, builder.getArrayAttr(orderAttrs),
+                                cir::CaseOpKind::Anyof, insertPoint);
+            // Creating atomic fence operation
+            builder.restoreInsertionPoint(insertPoint);
+            cir::AtomicFenceOp::create(
+                builder, loc, actualOrder.value(),
+                cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
+          } else {
+            // Do nothing if unneccssary (!caseOrders.empty() && !actualOrder)
+            return;
+          }
+          builder.createBreak(loc);
+          builder.setInsertionPointToEnd(switchBlock);
+          return;
+        };
 
-  cir::AtomicFenceOp::create(
-      builder, cgf.getLoc(expr->getSourceRange()), ordering,
-      cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
+        emitMemOrderCase(/*default:*/ {});
+        emitMemOrderCase({cir::MemOrder::Relaxed}); // Not effective
+        emitMemOrderCase({cir::MemOrder::Consume, cir::MemOrder::Acquire});
+        emitMemOrderCase({cir::MemOrder::Release});
+        emitMemOrderCase({cir::MemOrder::AcquireRelease});
+        emitMemOrderCase({cir::MemOrder::SequentiallyConsistent});
+
+        builder.createYield(loc);
+      });
 }
 
 namespace {
@@ -1007,16 +1071,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__atomic_test_and_set:
   case Builtin::BI__atomic_clear:
     return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI__atomic_thread_fence: {
+  case Builtin::BI__atomic_thread_fence:
+  case Builtin::BI__c11_atomic_thread_fence: {
     emitAtomicFenceOp(*this, e, cir::SyncScopeKind::System);
     return RValue::get(nullptr);
   }
-  case Builtin::BI__atomic_signal_fence: {
+  case Builtin::BI__atomic_signal_fence:
+  case Builtin::BI__c11_atomic_signal_fence: {
     emitAtomicFenceOp(*this, e, cir::SyncScopeKind::SingleThread);
     return RValue::get(nullptr);
   }
-  case Builtin::BI__c11_atomic_thread_fence:
-  case Builtin::BI__c11_atomic_signal_fence:
   case Builtin::BI__scoped_atomic_thread_fence:
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:

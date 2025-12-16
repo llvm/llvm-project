@@ -179,3 +179,427 @@ void loadWithSignalFence(DataPtr d) {
   // OGCG:    %[[DATA_TEMP_LOAD]] = load ptr, ptr %[[DATA_TEMP]], align 8
   // OGCG:    ret void
 }
+
+void const_atomic_thread_fence() {
+  __atomic_thread_fence(__ATOMIC_RELAXED);
+  __atomic_thread_fence(__ATOMIC_CONSUME);
+  __atomic_thread_fence(__ATOMIC_ACQUIRE);
+  __atomic_thread_fence(__ATOMIC_RELEASE);
+  __atomic_thread_fence(__ATOMIC_ACQ_REL);
+  __atomic_thread_fence(__ATOMIC_SEQ_CST);
+  // CIR-LABEL: const_atomic_thread_fence
+  // CIR: cir.atomic.fence syncscope(system) acquire
+  // CIR: cir.atomic.fence syncscope(system) acquire
+  // CIR: cir.atomic.fence syncscope(system) release
+  // CIR: cir.atomic.fence syncscope(system) acq_rel
+  // CIR: cir.atomic.fence syncscope(system) seq_cst
+
+  // LLVM-LABEL: const_atomic_thread_fence
+  // LLVM: fence acquire
+  // LLVM: fence acquire
+  // LLVM: fence release
+  // LLVM: fence acq_rel
+  // LLVM: fence seq_cst
+
+  // OGCG-LABEL: const_atomic_thread_fence
+  // OGCG: fence acquire
+  // OGCG: fence acquire
+  // OGCG: fence release
+  // OGCG: fence acq_rel
+  // OGCG: fence seq_cst
+}
+
+void const_c11_atomic_thread_fence() {
+  __c11_atomic_thread_fence(__ATOMIC_RELAXED);
+  __c11_atomic_thread_fence(__ATOMIC_CONSUME);
+  __c11_atomic_thread_fence(__ATOMIC_ACQUIRE);
+  __c11_atomic_thread_fence(__ATOMIC_RELEASE);
+  __c11_atomic_thread_fence(__ATOMIC_ACQ_REL);
+  __c11_atomic_thread_fence(__ATOMIC_SEQ_CST);
+  // CIR-LABEL: const_c11_atomic_thread_fence
+  // CIR: cir.atomic.fence syncscope(system) acquire
+  // CIR: cir.atomic.fence syncscope(system) acquire
+  // CIR: cir.atomic.fence syncscope(system) release
+  // CIR: cir.atomic.fence syncscope(system) acq_rel
+  // CIR: cir.atomic.fence syncscope(system) seq_cst
+
+  // LLVM-LABEL: const_c11_atomic_thread_fence
+  // LLVM: fence acquire
+  // LLVM: fence acquire
+  // LLVM: fence release
+  // LLVM: fence acq_rel
+  // LLVM: fence seq_cst
+
+  // OGCG-LABEL: const_c11_atomic_thread_fence
+  // OGCG: fence acquire
+  // OGCG: fence acquire
+  // OGCG: fence release
+  // OGCG: fence acq_rel
+  // OGCG: fence seq_cst
+}
+
+void const_atomic_signal_fence() {
+  __atomic_signal_fence(__ATOMIC_RELAXED);
+  __atomic_signal_fence(__ATOMIC_CONSUME);
+  __atomic_signal_fence(__ATOMIC_ACQUIRE);
+  __atomic_signal_fence(__ATOMIC_RELEASE);
+  __atomic_signal_fence(__ATOMIC_ACQ_REL);
+  __atomic_signal_fence(__ATOMIC_SEQ_CST);
+  // CIR-LABEL: const_atomic_signal_fence
+  // CIR: cir.atomic.fence syncscope(single_thread) acquire
+  // CIR: cir.atomic.fence syncscope(single_thread) acquire
+  // CIR: cir.atomic.fence syncscope(single_thread) release
+  // CIR: cir.atomic.fence syncscope(single_thread) acq_rel
+  // CIR: cir.atomic.fence syncscope(single_thread) seq_cst
+
+  // LLVM-LABEL: const_atomic_signal_fence
+  // LLVM: fence syncscope("singlethread") acquire
+  // LLVM: fence syncscope("singlethread") acquire
+  // LLVM: fence syncscope("singlethread") release
+  // LLVM: fence syncscope("singlethread") acq_rel
+  // LLVM: fence syncscope("singlethread") seq_cst
+
+  // OGCG--LABEL: const_atomic_signal_fence
+  // OGCG: fence syncscope("singlethread") acquire
+  // OGCG: fence syncscope("singlethread") acquire
+  // OGCG: fence syncscope("singlethread") release
+  // OGCG: fence syncscope("singlethread") acq_rel
+  // OGCG: fence syncscope("singlethread") seq_cst
+}
+
+void const_c11_atomic_signal_fence() {
+  __c11_atomic_signal_fence(__ATOMIC_RELAXED);
+  __c11_atomic_signal_fence(__ATOMIC_CONSUME);
+  __c11_atomic_signal_fence(__ATOMIC_ACQUIRE);
+  __c11_atomic_signal_fence(__ATOMIC_RELEASE);
+  __c11_atomic_signal_fence(__ATOMIC_ACQ_REL);
+  __c11_atomic_signal_fence(__ATOMIC_SEQ_CST);
+  // CIR-LABEL: const_c11_atomic_signal_fence
+  // CIR: cir.atomic.fence syncscope(single_thread) acquire
+  // CIR: cir.atomic.fence syncscope(single_thread) acquire
+  // CIR: cir.atomic.fence syncscope(single_thread) release
+  // CIR: cir.atomic.fence syncscope(single_thread) acq_rel
+  // CIR: cir.atomic.fence syncscope(single_thread) seq_cst
+
+  // LLVM-LABEL: const_c11_atomic_signal_fence
+  // LLVM: fence syncscope("singlethread") acquire
+  // LLVM: fence syncscope("singlethread") acquire
+  // LLVM: fence syncscope("singlethread") release
+  // LLVM: fence syncscope("singlethread") acq_rel
+  // LLVM: fence syncscope("singlethread") seq_cst
+
+  // OGCG-LABEL: const_c11_atomic_signal_fence
+  // OGCG: fence syncscope("singlethread") acquire
+  // OGCG: fence syncscope("singlethread") acquire
+  // OGCG: fence syncscope("singlethread") release
+  // OGCG: fence syncscope("singlethread") acq_rel
+  // OGCG: fence syncscope("singlethread") seq_cst
+}
+
+void variable_atomic_thread_fences(int memorder) {
+  __atomic_thread_fence(memorder);
+  // CIR-LABEL: variable_atomic_thread_fences
+  // CIR:  cir.switch
+  // CIR:    cir.case(default, []) {
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(system) acquire
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<3> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(system) release
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<4> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(system) acq_rel
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<5> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(system)
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.yield
+  // CIR:  }
+
+  // LLVM-LABEL: variable_atomic_thread_fences
+  // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
+  // LLVM:   br label %[[SWITCH_BLK:.+]]
+  // LLVM: [[SWITCH_BLK]]:
+  // LLVM:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // LLVM:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // LLVM:     i32 2, label %[[ACQUIRE_BLK]]
+  // LLVM:     i32 3, label %[[RELEASE_BLK:.+]]
+  // LLVM:     i32 4, label %[[ACQ_REL_BLK:.+]]
+  // LLVM:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // LLVM:   ]
+  // LLVM: [[DEFAULT_BLK]]:
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[ACQUIRE_BLK]]:
+  // LLVM:   fence acquire
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[RELEASE_BLK]]:
+  // LLVM:   fence release
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[ACQ_REL_BLK]]:
+  // LLVM:   fence acq_rel
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[SEQ_CST_BLK]]:
+  // LLVM:   fence seq_cst
+  // LLVM:   br label %{{.+}}
+
+  // OGCG-LABEL: variable_atomic_thread_fences
+  // OGCG:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
+  // OGCG:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // OGCG:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // OGCG:     i32 2, label %[[ACQUIRE_BLK]]
+  // OGCG:     i32 3, label %[[RELEASE_BLK:.+]]
+  // OGCG:     i32 4, label %[[ACQ_REL_BLK:.+]]
+  // OGCG:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // OGCG:   ]
+  // OGCG: [[ACQUIRE_BLK]]:
+  // OGCG:   fence acquire
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[RELEASE_BLK]]:
+  // OGCG:   fence release
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[ACQ_REL_BLK]]:
+  // OGCG:   fence acq_rel
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[SEQ_CST_BLK]]:
+  // OGCG:   fence seq_cst
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[DEFAULT_BLK]]:
+  // OGCG:   ret void
+}
+
+void variable_c11_atomic_thread_fences(int memorder) {
+  __c11_atomic_thread_fence(memorder);
+  // CIR-LABEL: variable_c11_atomic_thread_fences
+  // CIR:  cir.switch
+  // CIR:    cir.case(default, []) {
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(system) acquire
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<3> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(system) release
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<4> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(system) acq_rel
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<5> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(system)
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.yield
+  // CIR:  }
+
+  // LLVM-LABEL: variable_c11_atomic_thread_fences
+  // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
+  // LLVM:   br label %[[SWITCH_BLK:.+]]
+  // LLVM: [[SWITCH_BLK]]:
+  // LLVM:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // LLVM:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // LLVM:     i32 2, label %[[ACQUIRE_BLK]]
+  // LLVM:     i32 3, label %[[RELEASE_BLK:.+]]
+  // LLVM:     i32 4, label %[[ACQ_REL_BLK:.+]]
+  // LLVM:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // LLVM:   ]
+  // LLVM: [[DEFAULT_BLK]]:
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[ACQUIRE_BLK]]:
+  // LLVM:   fence acquire
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[RELEASE_BLK]]:
+  // LLVM:   fence release
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[ACQ_REL_BLK]]:
+  // LLVM:   fence acq_rel
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[SEQ_CST_BLK]]:
+  // LLVM:   fence seq_cst
+  // LLVM:   br label %{{.+}}
+
+  // OGCG-LABEL: variable_c11_atomic_thread_fences
+  // OGCG:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
+  // OGCG:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // OGCG:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // OGCG:     i32 2, label %[[ACQUIRE_BLK]]
+  // OGCG:     i32 3, label %[[RELEASE_BLK:.+]]
+  // OGCG:     i32 4, label %[[ACQ_REL_BLK:.+]]
+  // OGCG:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // OGCG:   ]
+  // OGCG: [[ACQUIRE_BLK]]:
+  // OGCG:   fence acquire
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[RELEASE_BLK]]:
+  // OGCG:   fence release
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[ACQ_REL_BLK]]:
+  // OGCG:   fence acq_rel
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[SEQ_CST_BLK]]:
+  // OGCG:   fence seq_cst
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[DEFAULT_BLK]]:
+  // OGCG:   ret void
+}
+
+void variable_atomic_signal_fences(int memorder) {
+  __atomic_signal_fence(memorder);
+  // CIR-LABEL: variable_atomic_signal_fences
+  // CIR:  cir.switch
+  // CIR:    cir.case(default, []) {
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(single_thread) acquire
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<3> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(single_thread) release
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<4> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(single_thread) acq_rel
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<5> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(single_thread)
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.yield
+  // CIR:  }
+
+  // LLVM-LABEL: variable_atomic_signal_fences
+  // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
+  // LLVM:   br label %[[SWITCH_BLK:.+]]
+  // LLVM: [[SWITCH_BLK]]:
+  // LLVM:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // LLVM:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // LLVM:     i32 2, label %[[ACQUIRE_BLK]]
+  // LLVM:     i32 3, label %[[RELEASE_BLK:.+]]
+  // LLVM:     i32 4, label %[[ACQ_REL_BLK:.+]]
+  // LLVM:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // LLVM:   ]
+  // LLVM: [[DEFAULT_BLK]]:
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[ACQUIRE_BLK]]:
+  // LLVM:   fence syncscope("singlethread") acquire
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[RELEASE_BLK]]:
+  // LLVM:   fence syncscope("singlethread") release
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[ACQ_REL_BLK]]:
+  // LLVM:   fence syncscope("singlethread") acq_rel
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[SEQ_CST_BLK]]:
+  // LLVM:   fence syncscope("singlethread") seq_cst
+  // LLVM:   br label %{{.+}}
+
+  // OGCG-LABEL: variable_atomic_signal_fences
+  // OGCG:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
+  // OGCG:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // OGCG:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // OGCG:     i32 2, label %[[ACQUIRE_BLK]]
+  // OGCG:     i32 3, label %[[RELEASE_BLK:.+]]
+  // OGCG:     i32 4, label %[[ACQ_REL_BLK:.+]]
+  // OGCG:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // OGCG:   ]
+  // OGCG: [[ACQUIRE_BLK]]:
+  // OGCG:   fence syncscope("singlethread") acquire
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[RELEASE_BLK]]:
+  // OGCG:   fence syncscope("singlethread") release
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[ACQ_REL_BLK]]:
+  // OGCG:   fence syncscope("singlethread") acq_rel
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[SEQ_CST_BLK]]:
+  // OGCG:   fence syncscope("singlethread") seq_cst
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[DEFAULT_BLK]]:
+  // OGCG:   ret void
+}
+
+void variable_c11_atomic_signal_fences(int memorder) {
+  __c11_atomic_signal_fence(memorder);
+  // CIR-LABEL: variable_c11_atomic_signal_fences
+  // CIR:  cir.switch
+  // CIR:    cir.case(default, []) {
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(single_thread) acquire
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<3> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(single_thread) release
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<4> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(single_thread) acq_rel
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.case(anyof, [#cir.int<5> : !s32i]) {
+  // CIR:      cir.atomic.fence syncscope(single_thread)
+  // CIR:      cir.break
+  // CIR:    }
+  // CIR:    cir.yield
+  // CIR:  }
+
+  // LLVM-LABEL: variable_c11_atomic_signal_fences
+  // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
+  // LLVM:   br label %[[SWITCH_BLK:.+]]
+  // LLVM: [[SWITCH_BLK]]:
+  // LLVM:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // LLVM:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // LLVM:     i32 2, label %[[ACQUIRE_BLK]]
+  // LLVM:     i32 3, label %[[RELEASE_BLK:.+]]
+  // LLVM:     i32 4, label %[[ACQ_REL_BLK:.+]]
+  // LLVM:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // LLVM:   ]
+  // LLVM: [[DEFAULT_BLK]]:
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[ACQUIRE_BLK]]:
+  // LLVM:   fence syncscope("singlethread") acquire
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[RELEASE_BLK]]:
+  // LLVM:   fence syncscope("singlethread") release
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[ACQ_REL_BLK]]:
+  // LLVM:   fence syncscope("singlethread") acq_rel
+  // LLVM:   br label %{{.+}}
+  // LLVM: [[SEQ_CST_BLK]]:
+  // LLVM:   fence syncscope("singlethread") seq_cst
+  // LLVM:   br label %{{.+}}
+
+  // OGCG-LABEL: variable_c11_atomic_signal_fences
+  // OGCG:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
+  // OGCG:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // OGCG:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // OGCG:     i32 2, label %[[ACQUIRE_BLK]]
+  // OGCG:     i32 3, label %[[RELEASE_BLK:.+]]
+  // OGCG:     i32 4, label %[[ACQ_REL_BLK:.+]]
+  // OGCG:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // OGCG:   ]
+  // OGCG: [[ACQUIRE_BLK]]:
+  // OGCG:   fence syncscope("singlethread") acquire
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[RELEASE_BLK]]:
+  // OGCG:   fence syncscope("singlethread") release
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[ACQ_REL_BLK]]:
+  // OGCG:   fence syncscope("singlethread") acq_rel
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[SEQ_CST_BLK]]:
+  // OGCG:   fence syncscope("singlethread") seq_cst
+  // OGCG:   br label %[[DEFAULT_BLK]]
+  // OGCG: [[DEFAULT_BLK]]:
+  // OGCG:   ret void
+}
