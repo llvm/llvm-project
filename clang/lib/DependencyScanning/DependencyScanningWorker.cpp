@@ -60,7 +60,7 @@ bool DependencyScanningWorker::computeDependencies(
     DependencyConsumer &DepConsumer, DependencyActionController &Controller,
     DiagnosticConsumer &DiagConsumer,
     llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  DiagnosticsEngineWithDiagOpts DiagEngineWithDiagOpts =
+  auto DiagEngineWithDiagOpts =
       OverlayFS
           ? DiagnosticsEngineWithDiagOpts(CommandLine, OverlayFS, DiagConsumer)
           : DiagnosticsEngineWithDiagOpts(CommandLine, DepFS, DiagConsumer);
