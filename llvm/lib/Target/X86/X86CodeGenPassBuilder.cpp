@@ -29,28 +29,23 @@ public:
                                  const CGPassBuilderOption &Opts,
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
-  void addPreISel(ModulePassManagerWrapper &MPM,
-                  FunctionPassManagerWrapper &FPM) const;
-  void addAsmPrinter(ModulePassManagerWrapper &MPM, CreateMCStreamer) const;
-  Error addInstSelector(ModulePassManagerWrapper &MPM,
-                        MachineFunctionPassManagerWrapper &FPm) const;
+  void addPreISel(PassManagerWrapper &PMW) const;
+  void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const;
+  Error addInstSelector(PassManagerWrapper &PMW) const;
 };
 
-void X86CodeGenPassBuilder::addPreISel(ModulePassManagerWrapper &MPM,
-                                       FunctionPassManagerWrapper &FPM) const {
+void X86CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
   // TODO: Add passes pre instruction selection.
 }
 
-void X86CodeGenPassBuilder::addAsmPrinter(ModulePassManagerWrapper &MPM,
+void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW,
                                           CreateMCStreamer) const {
   // TODO: Add AsmPrinter.
 }
 
-Error X86CodeGenPassBuilder::addInstSelector(
-    ModulePassManagerWrapper &MPM,
-    MachineFunctionPassManagerWrapper &MFPM) const {
+Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
   // TODO: Add instruction selector related passes.
-  addMachineFunctionPass(X86ISelDAGToDAGPass(TM), MFPM);
+  addMachineFunctionPass(X86ISelDAGToDAGPass(TM), PMW);
   return Error::success();
 }
 
