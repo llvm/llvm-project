@@ -45,8 +45,8 @@ public:
   /// file format that is specified in the options (-MD is the default) and
   /// return it.
   ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, dependency file contents otherwise.
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// dependency file contents otherwise.
   std::optional<std::string>
   getDependencyFile(StringRef CWD, ArrayRef<std::string> CommandLine,
                     DiagnosticConsumer &DiagConsumer);
@@ -60,8 +60,8 @@ public:
   /// \param MakeformatOutputPath The output parameter for the path to
   /// \param MakeformatOutput.
   ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, P1689 dependency format rules otherwise.
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// P1689 dependency format rules otherwise.
   std::optional<P1689Rule>
   getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD,
                                std::string &MakeformatOutput,
@@ -92,8 +92,8 @@ public:
   ///                 TUBuffer is nullopt, the input should be included in the
   ///                 Commandline already.
   ///
-  /// \returns a \c StringError with the diagnostic output if clang errors
-  /// occurred, \c TranslationUnitDeps otherwise.
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// translation unit dependencies otherwise.
   std::optional<dependencies::TranslationUnitDeps>
   getTranslationUnitDependencies(
       ArrayRef<std::string> CommandLine, StringRef CWD,
