@@ -302,7 +302,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
     }
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      getProperties().layout = anchorLayout;
+      setLayoutAttr(anchorLayout);
     }
 
    SmallVector<OpFoldResult> getMixedOffsets() {
@@ -433,7 +433,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     }
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      getProperties().layout = anchorLayout;
+      setLayoutAttr(anchorLayout);
     }
 
     SmallVector<OpFoldResult> getMixedOffsets() {
@@ -554,7 +554,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
     }
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      getProperties().layout = anchorLayout;
+      setLayoutAttr(anchorLayout);
     }
 
     SmallVector<OpFoldResult> getMixedOffsets() {
@@ -843,7 +843,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
     }
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      getProperties().layout = anchorLayout;
+      setLayoutAttr(anchorLayout);
     }
 
     TypedValue<xegpu::TensorDescType> getTensorDesc() {
@@ -987,7 +987,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
     }
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      getProperties().layout = anchorLayout;
+      setLayoutAttr(anchorLayout);
     }
 
     TypedValue<xegpu::TensorDescType> getTensorDesc() {
@@ -1153,7 +1153,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
     }
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      getProperties().layout = anchorLayout;
+      setLayoutAttr(anchorLayout);
     }
 
     TypedValue<xegpu::TensorDescType> getTensorDesc() {
@@ -1333,7 +1333,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
     }
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      getProperties().layout_cd = anchorLayout;
+      setLayoutCdAttr(anchorLayout);
     }
 
     VectorType getLhsType() {
@@ -1416,7 +1416,7 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
     }
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      getProperties().layout = anchorLayout;
+      setLayoutAttr(anchorLayout);
     }
 
   }];
@@ -1534,7 +1534,7 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
       }
 
       void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-        getProperties().target_layout = anchorLayout;
+        setTargetLayoutAttr(anchorLayout);
       }
 
     }];
@@ -1644,7 +1644,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     }
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      getProperties().layout = anchorLayout;
+      setLayoutAttr(anchorLayout);
     }
 
   }];
@@ -1711,7 +1711,7 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     }
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      getProperties().layout = anchorLayout;
+      setLayoutAttr(anchorLayout);
     }
 
   }];

@@ -119,10 +119,10 @@ int getLargestDivisor(T dim, ArrayRef<T> candidates,
                       ArrayRef<T> candidateMultiples = {});
 
 /// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
-std::string getLocalLayout(const OpOperand &operand);
+std::string getTemporaryLayout(const OpOperand &operand);
 
 /// Return the attribute name for the OpResult to attach DistributeLayoutAttr
-std::string getLocalLayout(const OpResult result);
+std::string getTemporaryLayout(const OpResult result);
 
 /// Retrieves the DistributeLayoutAttr associated with a given Value. For
 /// TensorDescType values, the DistributeLayoutAttr is extracted from the
@@ -167,19 +167,19 @@ DistributeLayoutAttr getTempLayout(const T &operandOrResult);
 template <typename T,
           typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
                                       std::is_same_v<T, OpResult>>>
-void setLocalLayout(const T &operandOrResult,
-                    const DistributeLayoutAttr layout);
+void setTemporaryLayout(const T &operandOrResult,
+                        const DistributeLayoutAttr layout);
 
 /// [to-be-deprecated] Set the DistributeLayoutAttr for each OpOperand and
 /// OpResult of of the given operation. If the operation contains regions, it is
 /// also applied recursively to the contained operations operation.
-/// TODO: To be replaced by recoverLocalLayouts()
-void recoverLocalLayoutsDeprecated(Operation *op);
+/// TODO: To be replaced by recoverTemporaryLayouts()
+void recoverTemporaryLayoutsDeprecated(Operation *op);
 
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's region. Reports an error if any vector operand lacks
 /// a layout attribute.
-bool recoverLocalLayouts(Operation *rootOp);
+bool recoverTemporaryLayouts(Operation *rootOp);
 
 } // namespace xegpu
 

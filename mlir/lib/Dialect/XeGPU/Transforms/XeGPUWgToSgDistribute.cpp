@@ -508,8 +508,8 @@ struct WgToSgVectorBroadcastOp
     for (auto operand : adaptor.getOperands().front()) {
       auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
                                                       newResultType, operand);
-      xegpu::setLocalLayout(newBroadcast->getResult(0),
-                            layout.dropSgLayoutAndData());
+      xegpu::setTemporaryLayout(newBroadcast->getResult(0),
+                                layout.dropSgLayoutAndData());
 
       newBroadcastOps.push_back(newBroadcast.getResult());
     }
@@ -756,8 +756,8 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     auto eltType = vecType.getElementType();
 
     auto setLayout = [&](Value val) {
-      xegpu::setLocalLayout(llvm::dyn_cast<OpResult>(val),
-                            layout.dropSgLayoutAndData());
+      xegpu::setTemporaryLayout(llvm::dyn_cast<OpResult>(val),
+                                layout.dropSgLayoutAndData());
     };
 
     if (vecAttr.isSplat()) {
@@ -987,7 +987,7 @@ struct WgToSgStoreScatterOpWithOffset
         // Skip for operand one (memref)
         if (operand.getOperandNumber() == 1)
           continue;
-        xegpu::setLocalLayout(operand, layout.dropSgLayoutAndData());
+        xegpu::setTemporaryLayout(operand, layout.dropSgLayoutAndData());
       }
     }
     rewriter.eraseOp(op);
@@ -1080,11 +1080,12 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
           vector::BroadcastOp::create(rewriter, loc, newTy, offsets[0]);
       auto finalSteps =
           arith::AddIOp::create(rewriter, loc, steps, bcastOffset);
-      xegpu::setLocalLayout(steps->getResult(0), layout.dropSgLayoutAndData());
-      xegpu::setLocalLayout(bcastOffset->getResult(0),
-                            layout.dropSgLayoutAndData());
-      xegpu::setLocalLayout(finalSteps->getResult(0),
-                            layout.dropSgLayoutAndData());
+      xegpu::setTemporaryLayout(steps->getResult(0),
+                                layout.dropSgLayoutAndData());
+      xegpu::setTemporaryLayout(bcastOffset->getResult(0),
+                                layout.dropSgLayoutAndData());
+      xegpu::setTemporaryLayout(finalSteps->getResult(0),
+                                layout.dropSgLayoutAndData());
       newOps.push_back(finalSteps);
     }
 
@@ -1153,8 +1154,8 @@ struct WgToSgVectorShapeCastOp
     for (auto src : adaptor.getSource()) {
       auto newShapeCast = vector::ShapeCastOp::create(rewriter, op.getLoc(),
                                                       newResultType, src);
-      xegpu::setLocalLayout(newShapeCast->getResult(0),
-                            layout.dropSgLayoutAndData());
+      xegpu::setTemporaryLayout(newShapeCast->getResult(0),
+                                layout.dropSgLayoutAndData());
       newShapeCastOps.push_back(newShapeCast.getResult());
     }
 
@@ -1215,7 +1216,8 @@ struct WgToSgMultiDimReductionOp
       auto newOp = vector::MultiDimReductionOp::create(
           rewriter, op.getLoc(), newDstType, op.getKind(), sgSrc,
           adaptor.getAcc()[0], op.getReductionDims());
-      xegpu::setLocalLayout(newOp->getResult(0), layout.dropSgLayoutAndData());
+      xegpu::setTemporaryLayout(newOp->getResult(0),
+                                layout.dropSgLayoutAndData());
       newReductions.push_back(newOp.getResult());
     }
 
@@ -1278,8 +1280,8 @@ struct WgToSgVectorTransposeOp
     for (auto src : adaptor.getVector()) {
       auto newTranspose = vector::TransposeOp::create(
           rewriter, op.getLoc(), newResultType, src, permutation);
-      xegpu::setLocalLayout(newTranspose->getResult(0),
-                            layout.dropSgLayoutAndData());
+      xegpu::setTemporaryLayout(newTranspose->getResult(0),
+                                layout.dropSgLayoutAndData());
       newTransposeOps.push_back(newTranspose.getResult());
     }
 
@@ -1348,8 +1350,8 @@ struct WgToSgVectorMaskOp : public OpConversionPattern<MaskOpType> {
 
       auto newCreateMaskOp =
           vector::CreateMaskOp::create(rewriter, loc, resultType, maskOperands);
-      xegpu::setLocalLayout(newCreateMaskOp->getResult(0),
-                            layout.dropSgLayoutAndData());
+      xegpu::setTemporaryLayout(newCreateMaskOp->getResult(0),
+                                layout.dropSgLayoutAndData());
       newCreateMaskOps.push_back(newCreateMaskOp.getResult());
     }
 
@@ -1392,7 +1394,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   // TODO-LayoutRefactor: unify the local propagation for layout preprocessing
   // Operation *op = getOperation();
-  // if (!xegpu::recoverLocalLayouts(op)) {
+  // if (!xegpu::recoverTemporaryLayouts(op)) {
   //   signalPassFailure();
   //   return;
   // }
@@ -1585,7 +1587,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   // Layout propagation pass will activated.
   getOperation()->walk([](Operation *op) {
     for (OpResult result : op->getOpResults()) {
-      std::string name = xegpu::getLocalLayout(result);
+      std::string name = xegpu::getTemporaryLayout(result);
       if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
         op->removeAttr(name);
         if (!isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::ConditionOp>(op)) {
