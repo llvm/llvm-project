@@ -26,9 +26,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
-#if LLD_ENABLE_GNU_LTO
-#include "GnuLTO.h"
-#endif
 #include <memory>
 #include <vector>
 
@@ -80,39 +77,6 @@ private:
   SmallVector<std::string, 0> filenames;
   std::unique_ptr<llvm::raw_fd_ostream> indexFile;
 };
-
-#if LLD_ENABLE_GNU_LTO
-class GccIRCompiler : public IRCompiler {
-protected:
-  void addObject(IRFile &f,
-                 std::vector<llvm::lto::SymbolResolution> &r) override;
-
-public:
-  GccIRCompiler(Ctx &ctx);
-  ~GccIRCompiler();
-
-  void add(ELFFileBase &f);
-  SmallVector<std::unique_ptr<InputFile>, 0> compile() override;
-  static PluginStatus message(int level, const char *format, ...);
-  static PluginStatus registerClaimFile(pluginClaimFileHandler handler);
-  static PluginStatus registerClaimFileV2(pluginClaimFileHandlerV2 handler);
-  PluginStatus registerAllSymbolsRead(pluginAllSymbolsReadHandler handler);
-  void loadPlugin();
-  bool addCompiledFile(StringRef path);
-
-private:
-  std::vector<std::unique_ptr<MemoryBuffer>> files;
-  SmallVector<PluginTV> tv;
-  pluginClaimFileHandler *claimFileHandler;
-  pluginClaimFileHandlerV2 *claimFileHandlerV2;
-  pluginAllSymbolsReadHandler *allSymbolsReadHandler;
-  // Handle for the shared library created via dlopen().
-  llvm::sys::DynamicLibrary plugin;
-
-  void initializeTv();
-};
-#endif
-
 } // namespace lld::elf
 
 #endif

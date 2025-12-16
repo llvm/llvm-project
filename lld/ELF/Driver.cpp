@@ -28,6 +28,10 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "LTO.h"
+#include "lld/config.h"
+#if LLD_ENABLE_GNU_LTO
+#include "GccLTO.h"
+#endif
 #include "LinkerScript.h"
 #include "MarkLive.h"
 #include "OutputSections.h"
