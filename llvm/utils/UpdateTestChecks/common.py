@@ -24,7 +24,7 @@ Version changelog:
 2: --function-signature is now enabled by default and also checks return
    type/attributes.
 3: Opening parenthesis of function args is kept on the first LABEL line
-   in case arguments are split to a separate SAME line.
+   in case arguments are split to separate SAME lines.
 4: --check-globals now has a third option ('smart'). The others are now called
    'none' and 'all'. 'smart' is the default.
 5: Basic block labels are matched by FileCheck expressions
@@ -2177,7 +2177,8 @@ def add_checks(
                     no_meta_details=ginfo.no_meta_details(),
                 )[0]
             func_name_separator = func_dict[checkprefix][func_name].func_name_separator
-            if "[[" in args_and_sig:
+            BRACKET_PREFIX = "[["
+            if BRACKET_PREFIX in args_and_sig:
                 # Captures in label lines are not supported, thus split into a -LABEL
                 # and a separate -SAME line that contains the arguments with captures.
                 args_and_sig_prefix = ""
@@ -2202,9 +2203,39 @@ def add_checks(
                         func_name_separator,
                     )
                 )
-                output_lines.append(
-                    "%s %s-SAME: %s" % (comment_marker, checkprefix, args_and_sig)
-                )
+                # Split into multiple args_and_sig lines to avoid having more than 9 backreferences which
+                # are currently not supported.
+
+                # Find the start positions of the [[ markers.
+                BRACKET_SUFFIX = "]]"
+                split_marker_positions = [idx for idx in range(len(args_and_sig)) if args_and_sig.startswith(BRACKET_PREFIX, idx)]
+                # Divide the marker array into chunks of size 10 so we can cut off the current substring and put the remainder
+                # into a new line.
+                CHUNK_SIZE = 9
+                split_marker_chunks = [split_marker_positions[idx:idx + CHUNK_SIZE] for idx in range(0, len(split_marker_positions), CHUNK_SIZE)]
+
+                next_start = 0
+                for chunk_idx, chunk in enumerate(split_marker_chunks):
+                    # Find the first closing bracket pair at the end position of this chunk.
+                    if chunk_idx == len(split_marker_chunks) - 1:
+                        # If this is the last chunk, then just use the remainder of the string.
+                        current_substr = args_and_sig[next_start:]
+                    else:
+                        # Take the last element of the current chunk. This is the last occurrence of [[.
+                        last_chunk_idx = chunk[len(chunk) - 1]
+                        # Starting from this index in the substring, take the matching ]].
+                        end_pos = args_and_sig.find(BRACKET_SUFFIX, last_chunk_idx)
+                        end_pos += len(BRACKET_SUFFIX)
+                        # Take the position after since this is usually a closing parenthesis or a white space.
+                        end_pos += 1
+                        # Slice from the start point to the last ]] and put it in the current SAME line. 
+                        current_substr = args_and_sig[next_start:end_pos]
+                        # Start again from the end position.
+                        next_start = end_pos
+
+                    output_lines.append(
+                        "%s %s-SAME: %s" % (comment_marker, checkprefix, current_substr)
+                    )
             else:
                 output_lines.append(
                     check_label_format
