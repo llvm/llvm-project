@@ -77,19 +77,26 @@ static void DescribeAddressBriefly(Stream &strm, const Address &addr,
   strm.Printf(".\n");
 }
 
+std::optional<addr_t> StopInfoMachException::GetTagFaultAddress() const {
+  bool bad_access = (m_value == 1);              // EXC_BAD_ACCESS
+  bool tag_fault = (m_exc_code == 0x106);        // EXC_ARM_MTE_TAG_FAULT
+  bool has_fault_addr = (m_exc_data_count >= 2); // m_exc_subcode -> fault addr
+
+  if (bad_access && tag_fault && has_fault_addr)
+    return m_exc_subcode; // Fault address
+
+  return std::nullopt;
+}
+
 static constexpr uint8_t g_mte_tag_shift = 64 - 8;
 static constexpr addr_t g_mte_tag_mask = (addr_t)0x0f << g_mte_tag_shift;
 
-bool StopInfoMachException::DetermineTagMismatch(ExecutionContext &exe_ctx) {
-  const bool IsBadAccess = m_value == 1;            // EXC_BAD_ACCESS
-  const bool IsMTETagFault = (m_exc_code == 0x106); // EXC_ARM_MTE_TAG_FAULT
-  if (!IsBadAccess || !IsMTETagFault)
+bool StopInfoMachException::DetermineTagMismatch() {
+  auto fault_address = GetTagFaultAddress();
+  if (!fault_address)
     return false;
 
-  if (m_exc_data_count < 2)
-    return false;
-
-  const uint64_t bad_address = m_exc_subcode;
+  const uint64_t bad_address = *fault_address;
 
   StreamString strm;
   strm.Printf("EXC_ARM_MTE_TAG_FAULT (code=%" PRIu64 ", address=0x%" PRIx64
@@ -295,7 +302,7 @@ const char *StopInfoMachException::GetDescription() {
     case llvm::Triple::aarch64:
       if (DeterminePtrauthFailure(exe_ctx))
         return m_description.c_str();
-      if (DetermineTagMismatch(exe_ctx))
+      if (DetermineTagMismatch())
         return m_description.c_str();
       break;
 
