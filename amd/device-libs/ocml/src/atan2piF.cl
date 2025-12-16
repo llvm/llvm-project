@@ -19,13 +19,7 @@ MATH_MANGLE(atan2pi)(float y, float x)
     float v = BUILTIN_MIN_F32(ax, ay);
     float u = BUILTIN_MAX_F32(ax, ay);
 
-    float vbyu;
-    if (DAZ_OPT()) {
-        float s = u > 0x1.0p+96f ? 0x1.0p-32f : 1.0f;
-        vbyu = s * MATH_FAST_DIV(v, s*u);
-    } else {
-        vbyu = MATH_DIV(v, u);
-    }
+    float vbyu = MATH_DIV(v, u);
 
     float a = MATH_PRIVATE(atanpired)(vbyu);
 
