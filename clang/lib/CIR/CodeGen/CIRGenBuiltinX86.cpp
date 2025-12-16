@@ -427,16 +427,22 @@ static mlir::Value emitX86ScalarSelect(CIRGenBuilderTy &builder,
                                        mlir::Location loc, mlir::Value mask,
                                        mlir::Value Op0, mlir::Value Op1) {
 
-  auto zeroAttr = builder.getZeroAttr(mask.getType());
-  mlir::Value zero =
-      cir::ConstantOp::create(builder, loc, mask.getType(), zeroAttr);
-  mlir::Value cond = builder.createCompare(loc, cir::CmpOpKind::ne, mask, zero);
+  mlir::Value one = cir::ConstantOp::create(
+      builder, loc, mask.getType(), builder.getIntAttr(mask.getType(), 1));
+
+  mlir::Value masked = builder.createAnd(loc, mask, one);
+
+  mlir::Value zero = cir::ConstantOp::create(
+      builder, loc, mask.getType(), builder.getZeroAttr(mask.getType()));
+
+  mlir::Value cond =
+      builder.createCompare(loc, cir::CmpOpKind::ne, masked, zero);
 
   return builder.createSelect(loc, cond, Op0, Op1);
 }
 
-mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
-                                               const CallExpr *expr) {
+std::optional<mlir::Value>
+CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
     cgm.errorNYI(expr->getSourceRange(), "__builtin_cpu_is");
     return mlir::Value{};
@@ -1359,8 +1365,21 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_selectsbf_128:
   case X86::BI__builtin_ia32_selectss_128:
   case X86::BI__builtin_ia32_selectsd_128:
-    return emitX86ScalarSelect(builder, getLoc(expr->getExprLoc()), ops[0],
-                               ops[1], ops[2]);
+    mlir::Location loc = getLoc(expr->getExprLoc());
+
+    mlir::Value idx0 = cir::ConstantOp::create(
+        builder, loc, builder.getIndexType(), builder.getIndexAttr(0));
+
+    mlir::Value a = builder.createExtractElement(loc, ops[1], idx0);
+    mlir::Value b = builder.createExtractElement(loc, ops[2], idx0);
+
+    mlir::Value selected = emitX86ScalarSelect(builder, loc, ops[0], a, b);
+
+    mlir::Value result =
+        builder.createInsertElement(loc, ops[1], selected, idx0);
+
+    return result;
+
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpb256_mask:
   case X86::BI__builtin_ia32_cmpb512_mask:
