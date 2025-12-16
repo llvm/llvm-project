@@ -92,68 +92,68 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT4-LABEL: test_barrier:
 ; VARIANT4:       ; %bb.0: ; %entry
 ; VARIANT4-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
-; VARIANT4-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; VARIANT4-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; VARIANT4-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; VARIANT4-NEXT:    v_lshlrev_b32_e32 v3, 2, v2
+; VARIANT4-NEXT:    v_lshlrev_b32_e32 v2, 2, v1
 ; VARIANT4-NEXT:    s_wait_kmcnt 0x0
-; VARIANT4-NEXT:    v_xad_u32 v0, v2, -1, s2
-; VARIANT4-NEXT:    global_store_b32 v3, v2, s[0:1]
+; VARIANT4-NEXT:    v_xad_u32 v0, v1, -1, s2
+; VARIANT4-NEXT:    global_store_b32 v2, v1, s[0:1]
 ; VARIANT4-NEXT:    s_barrier_signal -1
-; VARIANT4-NEXT:    s_barrier_wait -1
 ; VARIANT4-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; VARIANT4-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; VARIANT4-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; VARIANT4-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
 ; VARIANT4-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; VARIANT4-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
+; VARIANT4-NEXT:    s_barrier_wait -1
 ; VARIANT4-NEXT:    global_load_b32 v0, v[0:1], off
 ; VARIANT4-NEXT:    s_wait_loadcnt 0x0
-; VARIANT4-NEXT:    global_store_b32 v3, v0, s[0:1]
+; VARIANT4-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; VARIANT4-NEXT:    s_endpgm
 ;
 ; VARIANT5-LABEL: test_barrier:
 ; VARIANT5:       ; %bb.0: ; %entry
 ; VARIANT5-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
-; VARIANT5-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; VARIANT5-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; VARIANT5-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; VARIANT5-NEXT:    v_lshlrev_b32_e32 v3, 2, v2
+; VARIANT5-NEXT:    v_lshlrev_b32_e32 v2, 2, v1
 ; VARIANT5-NEXT:    s_wait_kmcnt 0x0
-; VARIANT5-NEXT:    v_xad_u32 v0, v2, -1, s2
-; VARIANT5-NEXT:    global_store_b32 v3, v2, s[0:1]
+; VARIANT5-NEXT:    v_xad_u32 v0, v1, -1, s2
+; VARIANT5-NEXT:    global_store_b32 v2, v1, s[0:1]
 ; VARIANT5-NEXT:    s_barrier_signal -1
-; VARIANT5-NEXT:    s_barrier_wait -1
 ; VARIANT5-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; VARIANT5-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; VARIANT5-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; VARIANT5-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
 ; VARIANT5-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; VARIANT5-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
+; VARIANT5-NEXT:    s_barrier_wait -1
 ; VARIANT5-NEXT:    global_load_b32 v0, v[0:1], off
 ; VARIANT5-NEXT:    s_wait_loadcnt 0x0
-; VARIANT5-NEXT:    global_store_b32 v3, v0, s[0:1]
+; VARIANT5-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; VARIANT5-NEXT:    s_endpgm
 ;
 ; VARIANT6-LABEL: test_barrier:
 ; VARIANT6:       ; %bb.0: ; %entry
 ; VARIANT6-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; VARIANT6-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; VARIANT6-NEXT:    s_wait_kmcnt 0x0
-; VARIANT6-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_and_b32 v4, 0x3ff, v0
 ; VARIANT6-NEXT:    s_add_co_i32 s2, s2, -1
-; VARIANT6-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; VARIANT6-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_lshlrev_b32 v5, 2, v4
-; VARIANT6-NEXT:    v_sub_nc_u32_e32 v0, s2, v4
-; VARIANT6-NEXT:    global_store_b32 v5, v4, s[0:1]
+; VARIANT6-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; VARIANT6-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; VARIANT6-NEXT:    v_lshlrev_b32_e32 v4, 2, v1
+; VARIANT6-NEXT:    v_sub_nc_u32_e32 v0, s2, v1
+; VARIANT6-NEXT:    global_store_b32 v4, v1, s[0:1]
 ; VARIANT6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; VARIANT6-NEXT:    s_barrier_signal -1
-; VARIANT6-NEXT:    s_barrier_wait -1
-; VARIANT6-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; VARIANT6-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
+; VARIANT6-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; VARIANT6-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; VARIANT6-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; VARIANT6-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
+; VARIANT6-NEXT:    s_barrier_wait -1
 ; VARIANT6-NEXT:    global_load_b32 v0, v[0:1], off
 ; VARIANT6-NEXT:    s_wait_loadcnt 0x0
-; VARIANT6-NEXT:    global_store_b32 v5, v0, s[0:1]
+; VARIANT6-NEXT:    global_store_b32 v4, v0, s[0:1]
 ; VARIANT6-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
