@@ -119,7 +119,7 @@ bool GenericUniformityAnalysisImpl<SSAContext>::isCustomUniform(
     const Instruction &I) const {
   // Build bitvector of uniform operands
   SmallBitVector UniformArgs(I.getNumOperands());
-  for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
+  for (unsigned OpIdx = 0, E =UniformArgs.size(); OpIdx != E; ++OpIdx) {
     UniformArgs[OpIdx] = !isDivergentUse(I.getOperandUse(OpIdx));
   }
 
