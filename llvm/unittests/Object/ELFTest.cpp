@@ -267,6 +267,15 @@ TEST(ELFTest, getRISCVVendorRelocationTypeName) {
 
   EXPECT_EQ("R_RISCV_NDS_BRANCH_10",
             getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM241, "ANDES"));
+
+  EXPECT_EQ("R_RISCV_CHERIOT_COMPARTMENT_HI",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM220, "XCHERIOT1"));
+  EXPECT_EQ("R_RISCV_CHERIOT_COMPARTMENT_LO_I",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM221, "XCHERIOT1"));
+  EXPECT_EQ("R_RISCV_CHERIOT_COMPARTMENT_LO_S",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM222, "XCHERIOT1"));
+  EXPECT_EQ("R_RISCV_CHERIOT_COMPARTMENT_SIZE",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM222, "XCHERIOT1"));
 }
 
 TEST(ELFTest, getELFRelativeRelocationType) {
