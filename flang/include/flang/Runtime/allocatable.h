@@ -13,6 +13,7 @@
 
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/freestanding-tools.h"
 
 namespace Fortran::runtime {
 
@@ -97,7 +98,7 @@ int RTDECL(AllocatableCheckLengthParameter)(Descriptor &,
 int RTDECL(AllocatableAllocate)(Descriptor &,
     std::int64_t *asyncObject = nullptr, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    int sourceLine = 0, MemmoveFct memmoveFct = nullptr);
 int RTDECL(AllocatableAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
     const char *sourceFile = nullptr, int sourceLine = 0);

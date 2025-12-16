@@ -252,6 +252,19 @@ constexpr TypeBuilderFunc getModel<void (*)(int)>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc
+getModel<void *(*)(void *, const void *, unsigned long)>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    auto voidPtrTy =
+        fir::LLVMPointerType::get(context, mlir::IntegerType::get(context, 8));
+    auto unsignedLongTy =
+        mlir::IntegerType::get(context, 8 * sizeof(unsigned long));
+    auto funcTy = mlir::FunctionType::get(
+        context, {voidPtrTy, voidPtrTy, unsignedLongTy}, {voidPtrTy});
+    return fir::LLVMPointerType::get(context, funcTy);
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<void **>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return fir::ReferenceType::get(

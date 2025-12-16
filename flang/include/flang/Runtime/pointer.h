@@ -14,6 +14,7 @@
 
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/freestanding-tools.h"
 
 namespace Fortran::runtime {
 extern "C" {
@@ -90,7 +91,7 @@ int RTDECL(PointerCheckLengthParameter)(Descriptor &,
 // Performs all necessary coarray synchronization and validation actions.
 int RTDECL(PointerAllocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    int sourceLine = 0, MemmoveFct memmoveFct = nullptr);
 int RTDECL(PointerAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
     const char *sourceFile = nullptr, int sourceLine = 0);
