@@ -1118,21 +1118,18 @@ struct WarpOpShapeCast : public WarpDistributionPattern {
 /// %cmp = arith.cmpi ult, %laneid, %0
 /// %ub = arith.select %cmp, %c0, %c1
 /// %1 = vector.create_mask %ub : vector<1xi1>
+template <typename OpType,
+          typename = std::enable_if_t<llvm::is_one_of<
+              OpType, vector::CreateMaskOp, vector::ConstantMaskOp>::value>>
 struct WarpOpCreateMask : public WarpDistributionPattern {
   using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *yieldOperand =
-        getWarpResult(warpOp, (llvm::IsaPred<vector::CreateMaskOp>));
-    if (!yieldOperand)
-      yieldOperand =
-          getWarpResult(warpOp, (llvm::IsaPred<vector::ConstantMaskOp>));
+    OpOperand *yieldOperand = getWarpResult(warpOp, (llvm::IsaPred<OpType>));
     if (!yieldOperand)
       return failure();
 
-    Operation *mask = yieldOperand->get().getDefiningOp<vector::CreateMaskOp>();
-    if (!mask)
-      mask = yieldOperand->get().getDefiningOp<vector::ConstantMaskOp>();
+    Operation *mask = yieldOperand->get().getDefiningOp<OpType>();
 
     // Early exit if any values needed for calculating the new mask indices
     // are defined inside the warp op.
@@ -1150,10 +1147,11 @@ struct WarpOpCreateMask : public WarpDistributionPattern {
     ArrayRef<int64_t> seqShape = seqType.getShape();
     ArrayRef<int64_t> distShape = distType.getShape();
     SmallVector<Value> materializedOperands;
-    if (auto createMaskOp = dyn_cast<vector::CreateMaskOp>(mask)) {
-      materializedOperands.append(createMaskOp.getOperands().begin(),
-                                  createMaskOp.getOperands().end());
-    } else if (auto constantMaskOp = dyn_cast<vector::ConstantMaskOp>(mask)) {
+    if constexpr (std::is_same_v<OpType, vector::CreateMaskOp>) {
+      materializedOperands.append(mask->getOperands().begin(),
+                                  mask->getOperands().end());
+    } else {
+      auto constantMaskOp = cast<vector::ConstantMaskOp>(mask);
       auto dimSizes = constantMaskOp.getMaskDimSizesAttr().asArrayRef();
       for (auto dimSize : dimSizes)
         materializedOperands.push_back(
@@ -2298,12 +2296,13 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn, PatternBenefit benefit,
     PatternBenefit readBenefit) {
   patterns.add<WarpOpTransferRead>(patterns.getContext(), readBenefit);
-  patterns
-      .add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
-           WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand, WarpOpConstant,
-           WarpOpInsertScalar, WarpOpInsert, WarpOpCreateMask,
-           WarpOpExtractStridedSlice, WarpOpInsertStridedSlice, WarpOpStep>(
-          patterns.getContext(), benefit);
+  patterns.add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
+               WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand,
+               WarpOpConstant, WarpOpInsertScalar, WarpOpInsert,
+               WarpOpCreateMask<vector::CreateMaskOp>,
+               WarpOpCreateMask<vector::ConstantMaskOp>,
+               WarpOpExtractStridedSlice, WarpOpInsertStridedSlice, WarpOpStep>(
+      patterns.getContext(), benefit);
   patterns.add<WarpOpExtractScalar>(patterns.getContext(), warpShuffleFromIdxFn,
                                     benefit);
   patterns.add<WarpOpScfForOp>(patterns.getContext(), distributionMapFn,
