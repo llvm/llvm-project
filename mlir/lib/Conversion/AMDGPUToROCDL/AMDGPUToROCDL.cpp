@@ -28,9 +28,9 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/AMDGPUWaitcnt.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
 namespace mlir {

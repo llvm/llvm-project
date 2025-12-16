@@ -14,6 +14,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/AMDGPUWaitcnt.h"
 #include "llvm/Support/Alignment.h"
 #include <array>
 #include <functional>
