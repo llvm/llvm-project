@@ -1190,14 +1190,15 @@ let Predicates = [HasVendorXqcilb, IsRV32] in {
 let Predicates = [HasVendorXqcili, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_LI : RVInstU<OPC_OP_IMM_32, (outs GPRNoX0:$rd), (ins simm20_li:$imm20),
-                      "qc.li", "$rd, $imm20"> {
+                      "qc.li", "$rd, $imm20">, Sched<[WriteIALU]> {
     let Inst{31} = imm20{19};
     let Inst{30-16} = imm20{14-0};
     let Inst{15-12} = imm20{18-15};
   }
 
   def QC_E_LI : RVInst48<(outs GPRNoX0:$rd), (ins bare_simm32:$imm),
-                         "qc.e.li", "$rd, $imm", [], InstFormatQC_EAI> {
+                         "qc.e.li", "$rd, $imm", [], InstFormatQC_EAI>,
+                Sched<[WriteIALU]> {
     bits<5> rd;
     bits<32> imm;
 
