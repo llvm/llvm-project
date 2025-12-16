@@ -877,8 +877,7 @@ Value *PHINode::removeIncomingValue(unsigned Idx) {
   Tracker.emplaceIfTracking<PHIRemoveIncoming>(this, Idx);
   llvm::Value *LLVMV =
       cast<llvm::PHINode>(Val)->removeIncomingValue(Idx,
-                                                    /*DeletePHIIfEmpty=*/false,
-                                                    /*KeepIncomingOrder=*/true);
+                                                    /*DeletePHIIfEmpty=*/false);
   return Ctx.getValue(LLVMV);
 }
 Value *PHINode::removeIncomingValue(BasicBlock *BB) {

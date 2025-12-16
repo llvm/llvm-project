@@ -2787,11 +2787,8 @@ public:
   /// is true), the PHI node is destroyed and any uses of it are replaced with
   /// dummy values.  The only time there should be zero incoming values to a PHI
   /// node is when the block is dead, so this strategy is sound.
-  /// If KeepIncomingOrder is true, the relative order of incoming values
-  /// remained is preserved.
   LLVM_ABI Value *removeIncomingValue(unsigned Idx,
-                                      bool DeletePHIIfEmpty = true,
-                                      bool KeepIncomingOrder = false);
+                                      bool DeletePHIIfEmpty = true);
 
   Value *removeIncomingValue(const BasicBlock *BB, bool DeletePHIIfEmpty=true) {
     int Idx = getBasicBlockIndex(BB);

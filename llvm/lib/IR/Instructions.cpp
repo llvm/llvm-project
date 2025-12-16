@@ -135,19 +135,13 @@ PHINode::PHINode(const PHINode &PN)
 
 // removeIncomingValue - Remove an incoming value.  This is useful if a
 // predecessor basic block is deleted.
-Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty, bool KeepIncomingOrder) {
+Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   Value *Removed = getIncomingValue(Idx);
-  if (KeepIncomingOrder) {
-    // Move everything after this operand down.
-    std::copy(op_begin() + Idx + 1, op_end(), op_begin() + Idx);
-    copyIncomingBlocks(drop_begin(blocks(), Idx + 1), Idx);
-  } else {
-    // Swap with the end of the list.
-    unsigned Last = getNumOperands() - 1;
-    if (Idx != Last) {
-      setIncomingValue(Idx, getIncomingValue(Last));
-      setIncomingBlock(Idx, getIncomingBlock(Last));
-    }
+  // Swap with the end of the list.
+  unsigned Last = getNumOperands() - 1;
+  if (Idx != Last) {
+    setIncomingValue(Idx, getIncomingValue(Last));
+    setIncomingBlock(Idx, getIncomingBlock(Last));
   }
 
   // Nuke the last value.
