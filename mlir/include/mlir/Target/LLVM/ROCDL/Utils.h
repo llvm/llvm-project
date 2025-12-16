@@ -99,11 +99,11 @@ protected:
                            StringRef abiVer);
 
   /// Compiles assembly to a binary.
-  virtual FailureOr<SmallVector<char, 0>>
-  compileToBinary(StringRef serializedISA);
+  virtual std::optional<SmallVector<char, 0>>
+  compileToBinary(const std::string &serializedISA);
 
   /// Default implementation of `ModuleToObject::moduleToObject`.
-  FailureOr<SmallVector<char, 0>>
+  std::optional<SmallVector<char, 0>>
   moduleToObjectImpl(const gpu::TargetOptions &targetOptions,
                      llvm::Module &llvmModule);
 

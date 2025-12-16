@@ -37,8 +37,8 @@ double gc[100];
 
 // CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
 
-// CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 24]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
+// CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 24, i64 {{4|8}}]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 1, i64 [[#0x4000]]]
 
 // CK1-LABEL: _Z3fooi
 void foo(int arg) {
@@ -238,20 +238,23 @@ void foo(int arg) {
   {++arg;}
 
   // Region 04
-  // CK1: [[DIV:%.+]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr (ptr, ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1) to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+
+  // &gb.b[0], &gb.b[0], 3 * sizeof(gb.b[0]), TO
+  // &gb.b,    &gb.b[0], sizeof(void*),       ATTACH
+
+  // CK1: [[B:%.+]] = load ptr, ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1)
+  // CK1: [[B1:%.+]] = load ptr, ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1)
+  // CK1: [[BGEP0:%.+]] = getelementptr inbounds nuw double, ptr [[B1]], i[[sz]] 0
   // CK1: [[BP0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP:%.+]], i32 0, i32 0
-  // CK1: store ptr @gb, ptr [[BP0]],
+  // CK1: store ptr [[B]], ptr [[BP0]],
   // CK1: [[P0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[P:%.+]], i32 0, i32 0
-  // CK1: store ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1), ptr [[P0]],
-  // CK1: [[PS0:%.+]] = getelementptr inbounds [2 x i64], ptr [[PS:%.+]], i32 0, i32 0
-  // CK1: store i64 [[DIV]], ptr [[PS0]],
+  // CK1: store ptr [[BGEP0]], ptr [[P0]],
   // CK1: [[BP1:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP]], i32 0, i32 1
   // CK1: store ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1), ptr [[BP1]],
   // CK1: [[P1:%.+]] = getelementptr inbounds [2 x ptr], ptr [[P]], i32 0, i32 1
-  // CK1: store ptr %{{.+}}, ptr [[P1]],
+  // CK1: store ptr [[BGEP0]], ptr [[P1]],
   // CK1: [[GEPBP0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP]], i32 0, i32 0
   // CK1: [[GEPP0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[P]], i32 0, i32 0
-  // CK1: [[GEPS0:%.+]] = getelementptr inbounds [2 x i64], ptr [[PS]], i32 0, i32 0
   // CK1: [[RES:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{88|52}}, i[[sz]] 1, ptr [[TASK_ENTRY4:@.+]])
   // CK1: [[TASK_T:%.+]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.+}}, ptr [[RES]], i32 0, i32 0
   // CK1: [[PRIVS:%.+]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.+}}, ptr [[RES]], i32 0, i32 1
@@ -260,9 +263,9 @@ void foo(int arg) {
   // CK1-64: [[PRIVS_PTRS:%.+]] = getelementptr inbounds nuw %struct..kmp_privates.t{{.+}}, ptr [[PRIVS]], i32 0, i32 1
   // CK1-64: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{8|4}} [[PRIVS_PTRS]], ptr align {{8|4}} [[GEPP0]], i[[sz]] {{16|8}}, i1 false)
   // CK1-64: [[PRIVS_SIZES:%.+]] = getelementptr inbounds nuw %struct..kmp_privates.t{{.+}}, ptr [[PRIVS]], i32 0, i32 2
-  // CK1-64: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{8|4}} [[PRIVS_SIZES]], ptr align {{8|4}} [[GEPS0]], i[[sz]] {{16|8}}, i1 false)
+  // CK1-64: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{8|4}} [[PRIVS_SIZES]], ptr align {{8|4}} [[SIZE04]], i[[sz]] {{16|8}}, i1 false)
   // CK1-32: [[PRIVS_SIZES:%.+]] = getelementptr inbounds nuw %struct..kmp_privates.t{{.+}}, ptr [[PRIVS]], i32 0, i32 0
-  // CK1-32: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{8|4}} [[PRIVS_SIZES]], ptr align {{8|4}} [[GEPS0]], i[[sz]] {{16|8}}, i1 false)
+  // CK1-32: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{8|4}} [[PRIVS_SIZES]], ptr align {{8|4}} [[SIZE04]], i[[sz]] {{16|8}}, i1 false)
   // CK1-32: [[PRIVS_BASEPTRS:%.+]] = getelementptr inbounds nuw %struct..kmp_privates.t{{.+}}, ptr [[PRIVS]], i32 0, i32 1
   // CK1-32: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{8|4}} [[PRIVS_BASEPTRS]], ptr align {{8|4}} [[GEPBP0]], i[[sz]] {{16|8}}, i1 false)
   // CK1-32: [[PRIVS_PTRS:%.+]] = getelementptr inbounds nuw %struct..kmp_privates.t{{.+}}, ptr [[PRIVS]], i32 0, i32 2
