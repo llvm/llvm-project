@@ -158,6 +158,16 @@ def get_failures(junit_objects) -> dict[str, list[tuple[str, str]]]:
     return failures
 
 
+def are_all_failures_explained(
+    failures: list[tuple[str, str]], failure_explanations: dict[str, FailureExplanation]
+) -> bool:
+    for failure in failures:
+        failed_action, _ = failure
+        if failed_action not in failure_explanations:
+            return False
+    return True
+
+
 # Set size_limit to limit the byte size of the report. The default is 1MB as this
 # is the most that can be put into an annotation. If the generated report exceeds
 # this limit and failures are listed, it will be generated again without failures
@@ -172,7 +182,7 @@ def generate_report(
     size_limit=1024 * 1024,
     list_failures=True,
     failure_explanations_list: list[FailureExplanation] = [],
-):
+) -> tuple[str, bool]:
     failures = get_failures(junit_objects)
     tests_run = 0
     tests_skipped = 0
@@ -183,6 +193,12 @@ def generate_report(
         if not failure_explanation["explained"]:
             continue
         failure_explanations[failure_explanation["name"]] = failure_explanation
+    all_failures_explained = True
+    if failures:
+        for _, failures_list in failures.items():
+            all_failures_explained &= are_all_failures_explained(
+                failures_list, failure_explanations
+            )
 
     for results in junit_objects:
         for testsuite in results:
@@ -202,7 +218,11 @@ def generate_report(
             )
         else:
             ninja_failures = find_failure_in_ninja_logs(ninja_logs)
+            all_failures_explained &= are_all_failures_explained(
+                ninja_failures, failure_explanations
+            )
             if not ninja_failures:
+                all_failures_explained = False
                 report.extend(
                     [
                         "The build failed before running any tests. Detailed "
@@ -229,7 +249,7 @@ def generate_report(
                         UNRELATED_FAILURES_STR,
                     ]
                 )
-        return "\n".join(report)
+        return ("\n".join(report), all_failures_explained)
 
     tests_passed = tests_run - tests_skipped - tests_failed
 
@@ -263,7 +283,11 @@ def generate_report(
         # No tests failed but the build was in a failed state. Bring this to the user's
         # attention.
         ninja_failures = find_failure_in_ninja_logs(ninja_logs)
+        all_failures_explained &= are_all_failures_explained(
+            ninja_failures, failure_explanations
+        )
         if not ninja_failures:
+            all_failures_explained = False
             report.extend(
                 [
                     "",
@@ -302,7 +326,7 @@ def generate_report(
             list_failures=False,
         )
 
-    return report
+    return (report, all_failures_explained)
 
 
 def load_info_from_files(build_log_files):
