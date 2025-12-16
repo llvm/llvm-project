@@ -12,8 +12,8 @@ define i32 @shl_nuw_zext(i16 zeroext %x) {
 ;
 ; X64-LABEL: shl_nuw_zext:
 ; X64:       # %bb.0:
-; X64-NEXT:    shll $3, %edi
-; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (,%rdi,8), %eax
 ; X64-NEXT:    retq
   %shl = shl nuw i16 %x, 3
   %zext = zext i16 %shl to i32
