@@ -5190,3 +5190,33 @@ bool RISCVInstrInfo::isHighLatencyDef(int Opc) const {
     return true;
   }
 }
+
+bool RISCVInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMUL) const {
+  if (MI->getOpcode() != TargetOpcode::COPY)
+    return false;
+  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+
+  Register DstReg = MI->getOperand(0).getReg();
+  const TargetRegisterClass *RC = DstReg.isVirtual()
+                                      ? MRI.getRegClass(DstReg)
+                                      : TRI->getMinimalPhysRegClass(DstReg);
+
+  switch (LMUL) {
+  case 1:
+    return RISCV::VRRegClass.hasSubClassEq(RC);
+  case 2:
+    return RISCV::VRM2RegClass.hasSubClassEq(RC);
+  case 4:
+    return RISCV::VRM4RegClass.hasSubClassEq(RC);
+  case 8:
+    return RISCV::VRM8RegClass.hasSubClassEq(RC);
+  case 0:
+    // Wildcard: return true as long as this is a vector register class.
+    // TODO: Perhaps we could distinguish segment register classes (e.g. VRN3M2)
+    // in the future.
+    return RISCVRegisterInfo::isRVVRegClass(RC);
+  default:
+    return false;
+  }
+}

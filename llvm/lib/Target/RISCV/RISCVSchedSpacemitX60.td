@@ -498,6 +498,9 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVIALUI", [SMX60_VIEU], mx, IsWorstCase>;
   }
 
+  let Latency = VIALULat in
+  def SMX60WriteVCOPY_ # mx : SchedWriteRes<[]>;
+
   defvar VILogicalLat = ConstValueUntilLMULThenDouble<"M2", 4, mx>.c;
   defvar VILogicalOcc = ConstValueUntilLMULThenDouble<"MF2", 1, mx>.c;
   let Latency = VILogicalLat, ReleaseAtCycles = [VILogicalOcc] in {
@@ -1033,9 +1036,25 @@ def : WriteRes<WriteCSR, [SMX60_IEU]>;
 def : WriteRes<WriteNop, [SMX60_IEU]>;
 def : WriteRes<WriteRdVLENB, [SMX60_IEUA]>;
 
-// Give COPY instructions an execution resource.
-// FIXME: This could be better modeled by looking at the regclasses of the operands.
-def : InstRW<[WriteIALU], (instrs COPY)>;
+// Assign scheduling info to COPY instructions.
+// Note: We try NOT to assign ProcResource but only latency to vector COPY because
+// those resources might push off the time those COPYs be seen by the scheduler. More
+// specifically, for a given COPY of live-in (physical) register, ideally we want it
+// to be visible to the top available queue as early as possible so that it can be scheduled
+// at the beginning of the function. Assigning resource to vector COPYs might risk
+// creating structural hazard that prevents those COPYs from even entering the available
+// queue and as a consequence, sinking those COPYs.
+// I see little difference on assigning ProcResource to scalar COPY or not, so I'm still
+// assigning WriteIALU to it.
+def SMX60CopySchedWriteVariant : SchedWriteVariant<[
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/1) }]>, [SMX60WriteVCOPY_M1]>,
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/2) }]>, [SMX60WriteVCOPY_M2]>,
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/4) }]>, [SMX60WriteVCOPY_M4]>,
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/8) }]>, [SMX60WriteVCOPY_M8]>,
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI) }]>,             [SMX60WriteVCOPY_M1]>,
+  SchedVar<NoSchedPred,                                           [WriteIALU]>
+]>;
+def : InstRW<[SMX60CopySchedWriteVariant], (instrs COPY)>;
 
 //===----------------------------------------------------------------------===//
 // Bypass and advance
