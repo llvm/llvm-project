@@ -16,9 +16,7 @@
 
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/SaveAndRestore.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -44,23 +42,11 @@ void CIRGenFunction::emitInvariantStart(CharUnits size, mlir::Value addr,
   mlir::Value sizeValue = builder.getConstInt(loc, builder.getSInt64Ty(),
                                               static_cast<int64_t>(width));
 
-  // Determine address space for intrinsic name
-  unsigned addrSpace = 0;
-  if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(addr.getType()))
-    addrSpace =
-        ptrTy.getAddrSpace() ? ptrTy.getAddrSpace().getValue().getUInt() : 0;
-
-  // Format intrinsic name with address space suffix (e.g.,
-  // "invariant.start.p0", "invariant.start.p10")
-  llvm::SmallString<32> intrinsicName;
-  llvm::raw_svector_ostream os(intrinsicName);
-  os << "invariant.start.p" << addrSpace;
-
   // Create the intrinsic call. The llvm.invariant.start intrinsic returns a
-  // token, but we don't need to capture it. The return type is set to match
-  // the address type for consistency with the operation signature.
+  // token, but we don't need to capture it. The address space will be
+  // automatically handled when the intrinsic is lowered to LLVM IR.
   cir::LLVMIntrinsicCallOp::create(
-      builder, loc, builder.getStringAttr(intrinsicName), addr.getType(),
+      builder, loc, builder.getStringAttr("invariant.start"), addr.getType(),
       mlir::ValueRange{sizeValue, addr});
 }
 
