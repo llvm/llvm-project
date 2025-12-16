@@ -1776,7 +1776,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   HadError = false;
 
   Kind = kind;
-  LiteralConverter LiteralConv = PP.getLiteralConverter();
+  TextEncodingConfig TEC = PP.getTextEncodingConfig();
 
   const char *TokBegin = begin;
 
@@ -1845,7 +1845,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
 
   llvm::TextEncodingConverter *Converter = nullptr;
   if (!isUTFLiteral(Kind) && !isWideLiteral(Kind))
-    Converter = LiteralConv.getConverter(CA_ToExecEncoding);
+    Converter = TEC.getConverter(CA_ToExecEncoding);
 
   while (begin != end) {
     // Is this a span of non-escape characters?
@@ -2068,7 +2068,7 @@ StringLiteralParser::StringLiteralParser(ArrayRef<Token> StringToks,
                                          ConversionAction Action)
     : SM(PP.getSourceManager()), Features(PP.getLangOpts()),
       Target(PP.getTargetInfo()), Diags(&PP.getDiagnostics()),
-      LiteralConv(&PP.getLiteralConverter()), MaxTokenLength(0), SizeBound(0),
+      TEC(&PP.getTextEncodingConfig()), MaxTokenLength(0), SizeBound(0),
       CharByteWidth(0), Kind(tok::unknown), ResultPtr(ResultBuf.data()),
       EvalMethod(EvalMethod), hadError(false), Pascal(false) {
   init(StringToks, Action);
@@ -2204,8 +2204,8 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks,
   SourceLocation UDSuffixTokLoc;
 
   llvm::TextEncodingConverter *Converter = nullptr;
-  if (!isUTFLiteral(Kind) && !isWideLiteral(Kind) && LiteralConv)
-    Converter = LiteralConv->getConverter(Action);
+  if (!isUTFLiteral(Kind) && !isWideLiteral(Kind) && TEC)
+    Converter = TEC->getConverter(Action);
 
   for (unsigned i = 0, e = StringToks.size(); i != e; ++i) {
     const char *ThisTokBuf = &TokenBuf[0];

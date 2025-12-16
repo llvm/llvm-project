@@ -1,4 +1,4 @@
-//===--- clang/Lex/LiteralConverter.h - Translator for Literals -*- C++ -*-===//
+//===-- clang/Lex/TextEncodingConfig.h - Text Conversion Config -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@ enum ConversionAction {
   CA_ToExecEncoding
 };
 
-class LiteralConverter {
+class TextEncodingConfig {
   llvm::StringRef InternalEncoding;
   llvm::StringRef SystemEncoding;
   llvm::StringRef ExecEncoding;
@@ -32,7 +32,7 @@ class LiteralConverter {
 public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action);
   static std::error_code
-  setConvertersFromOptions(LiteralConverter &LiteralConv,
+  setConvertersFromOptions(TextEncodingConfig &TEC,
                            const clang::LangOptions &Opts,
                            const clang::TargetInfo &TInfo);
 };
