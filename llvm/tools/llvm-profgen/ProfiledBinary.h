@@ -415,6 +415,16 @@ public:
   void setBaseAddress(int32_t PID, uint64_t Address) {
     BaseAddressByPID[PID] = Address;
   }
+  // Copy the base address from the old to the new PID in the case of a fork
+  void copyBaseAddress(int32_t OldPID, int32_t NewPID) {
+    auto Pos = BaseAddressByPID.find(OldPID);
+
+    // We don't need to do anything in this case
+    if (Pos == BaseAddressByPID.end())
+      return;
+
+    setBaseAddress(NewPID, Pos->second);
+  }
 
   bool isCOFF() const { return IsCOFF; }
 

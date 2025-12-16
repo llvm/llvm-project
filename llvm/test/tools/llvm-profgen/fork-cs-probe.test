@@ -1,0 +1,52 @@
+; Like fork-nocs-noprobe.perfscript, but with pseudo probes and a
+; context-sensitive profile
+
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/fork-cs-probe.perfscript --binary=%S/Inputs/fork-cs-probe.perfbin --output=%t --profile-summary-cold-count=0 --multi-process-profile
+; RUN: FileCheck %s --input-file %t
+
+; Check that we get samples from both processes
+
+CHECK:      loop1:30:0
+CHECK-NEXT:  1: 0
+CHECK-NEXT:  2: 15
+CHECK-NEXT:  4: 15
+CHECK-NEXT:  5: 0
+CHECK-NEXT:  !CFGChecksum: 88680961901
+CHECK-NEXT: loop2:30:0
+CHECK-NEXT:  1: 0
+CHECK-NEXT:  2: 15
+CHECK-NEXT:  4: 15
+CHECK-NEXT:  5: 0
+CHECK-NEXT:  !CFGChecksum: 88680961901
+
+; original code:
+; clang -g -fpseudo-probe-for-profiling -fno-omit-frame-pointer test.c -o fork-cs-probe.perfbin
+#include <unistd.h>
+#include <sys/wait.h>
+#include <stdint.h>
+
+// Loop for a while so we see samples in the function (compiled at -O0)
+void loop1() {
+  for (uint64_t i = 0; i < 10000000000; i++) {}
+}
+
+// Slightly modified to make sure there isn't any kind of linker merging
+void loop2() {
+  for (uint64_t i = 1; i < 10000000001; i++) {}
+}
+
+int main(void) {
+  pid_t pid = fork();
+
+  if (pid == -1) {
+    // Fork failed
+  } else if (pid == 0) {
+    // Forked process: Samples in loop2
+    loop2();
+  } else {
+    // Main process: Samples in loop1
+    loop1();
+    int status;
+    waitpid(pid, &status, 0);
+  }
+}

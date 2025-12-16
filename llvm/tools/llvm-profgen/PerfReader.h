@@ -632,14 +632,20 @@ public:
   static SmallVector<CleanupInstaller, 2> TempFileCleanups;
 
 protected:
-  // Check whether a given line is LBR sample
+  // Check whether a given line is an LBR sample
   static bool isLBRSample(StringRef Line);
-  // Check whether a given line is MMAP event
+  // Check whether a given line is an MMAP event
   static bool isMMapEvent(StringRef Line);
+  // Check whether a given line is a task event (COMM, FORK, EXIT)
+  static bool isTaskEvent(StringRef Line);
+  // Check whether a given line is a FORK event
+  static bool isForkEvent(StringRef Line);
   // Update base address based on mmap events
   void updateBinaryAddress(const MMapEvent &Event);
   // Parse mmap event and update binary address
   void parseMMapEvent(TraceStream &TraceIt);
+  // Parse fork event and update binary address
+  void parseForkEvent(TraceStream &TraceIt);
   // Parse perf events/samples and do aggregation
   void parseAndAggregateTrace();
   // Parse either an MMAP event or a perf sample

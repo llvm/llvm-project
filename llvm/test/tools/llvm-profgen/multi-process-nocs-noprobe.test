@@ -1,17 +1,17 @@
 ; Check that we can handle profiles with multiple processes, without
-; pseudo probes or a context-senstive profile
+; pseudo probes or a context-sensitive profile
 
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-nocs-noprobe.perfscript --binary=%S/Inputs/multi-process-nocs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --multi-process-profile
 ; RUN: FileCheck %s --input-file %t
 
-CHECK: loop1:1302:0
-CHECK-NEXT: 0: 0
-CHECK-NEXT: 1: 31
-CHECK-NEXT: 2: 0
-CHECK-NEXT:loop2:655:0
-CHECK-NEXT: 0: 0
-CHECK-NEXT: 1: 16
-CHECK-NEXT: 2: 0
+CHECK:      loop1:1302:0
+CHECK-NEXT:  0: 0
+CHECK-NEXT:  1: 31
+CHECK-NEXT:  2: 0
+CHECK-NEXT: loop2:655:0
+CHECK-NEXT:  0: 0
+CHECK-NEXT:  1: 16
+CHECK-NEXT:  2: 0
 
 ; original code:
 ; clang -g test.c -o multi-process.perfbin

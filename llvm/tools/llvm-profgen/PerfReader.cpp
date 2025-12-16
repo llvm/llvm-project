@@ -27,9 +27,10 @@ cl::opt<bool> SkipSymbolization("skip-symbolization",
                                          "output for CS profile generation."),
                                 cl::cat(ProfGenCategory));
 
-static cl::opt<bool> ShowMmapEvents("show-mmap-events",
-                                    cl::desc("Print binary load events."),
-                                    cl::cat(ProfGenCategory));
+static cl::opt<bool> ShowMmapEvents(
+    "show-mmap-events",
+    cl::desc("Print binary load events. Also logs process forks."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     UseOffset("use-offset", cl::init(true),
@@ -517,6 +518,8 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   ScriptSampleArgs.push_back("-F");
   if (MultiProcessProfile) {
     ScriptSampleArgs.push_back("pid,ip,brstack");
+    // We need to keep track of process forking
+    ScriptSampleArgs.push_back("--show-task-events");
   } else {
     ScriptSampleArgs.push_back("ip,brstack");
   }
@@ -1211,11 +1214,79 @@ void PerfScriptReader::parseMMapEvent(TraceStream &TraceIt) {
   TraceIt.advance();
 }
 
+void PerfScriptReader::parseForkEvent(TraceStream &TraceIt) {
+  // If multi process profile is not on, we treat everything as having the same
+  // PID anyway, so we don't care about forks
+  if (!MultiProcessProfile) {
+    TraceIt.advance();
+    return;
+  }
+
+  auto Line = TraceIt.getCurrentLine();
+
+  // e.g.
+  //  123456 PERF_RECORD_FORK(123457:123457):(123456:123456)
+  constexpr static const char *const ForkPattern =
+      " ?-?[0-9]* ?PERF_RECORD_FORK"
+      "\\((-?[0-9]+):(-?[0-9]+)\\):\\((-?[0-9]+):(-?[0-9]+)\\)";
+
+  enum EventIndex {
+    WHOLE_LINE = 0,
+    NEW_PID = 1,
+    NEW_TID = 2,
+    PARENT_PID = 3,
+    PARENT_TID = 4,
+  };
+
+  SmallVector<StringRef, 5> Fields;
+  Regex RegFork(ForkPattern);
+  bool R = RegFork.match(Line, &Fields);
+
+  if (!R) {
+    std::string WarningMsg = "Cannot parse fork event: " + Line.str() + " \n";
+    WithColor::warning() << WarningMsg;
+    TraceIt.advance();
+    return;
+  }
+
+  // We don't care about thread IDs
+  long long NewPID = 0;
+  long long ParentPID = 0;
+  getAsSignedInteger(Fields[NEW_PID], 10, NewPID);
+  getAsSignedInteger(Fields[PARENT_PID], 10, ParentPID);
+
+  if (ShowMmapEvents) {
+    outs() << "Fork: Process " << ParentPID << " created fork with ID "
+           << NewPID << " \n";
+  }
+
+  // Drop the event if process does not match pid filter
+  if (!PIDFilter.empty() && !PIDFilter.contains(NewPID)) {
+    TraceIt.advance();
+    return;
+  }
+
+  // If there was a base address entry for the old PID, copy it to the new PID
+  Binary->copyBaseAddress(ParentPID, NewPID);
+
+  TraceIt.advance();
+}
+
 void PerfScriptReader::parseEventOrSample(TraceStream &TraceIt) {
-  if (isMMapEvent(TraceIt.getCurrentLine()))
+  auto Line = TraceIt.getCurrentLine();
+
+  if (isMMapEvent(Line)) {
     parseMMapEvent(TraceIt);
-  else
+  } else if (isTaskEvent(Line)) {
+    // Only parse fork events, ignore other task events
+    if (isForkEvent(Line)) {
+      parseForkEvent(TraceIt);
+    } else {
+      TraceIt.advance();
+    }
+  } else {
     parseSample(TraceIt);
+  }
 }
 
 void PerfScriptReader::parseAndAggregateTrace() {
@@ -1277,6 +1348,28 @@ bool PerfScriptReader::isMMapEvent(StringRef Line) {
   // PERF_RECORD_MMAP2 or PERF_RECORD_MMAP does not appear at the beginning of
   // the line for ` perf script  --show-mmap-events  -i ...`
   return Line.contains("PERF_RECORD_MMAP");
+}
+
+bool PerfScriptReader::isTaskEvent(StringRef Line) {
+  if (Line.size() < 21)
+    return false;
+
+  // Event name should appear immediately after PID, so avoid searching the
+  // whole string
+  auto Sliced = Line.slice(0, 25);
+
+  if (!Sliced.contains("PERF_RECORD_"))
+    return false;
+  return Sliced.contains("PERF_RECORD_COMM") ||
+         Sliced.contains("PERF_RECORD_FORK") ||
+         Sliced.contains("PERF_RECORD_EXIT");
+}
+
+bool PerfScriptReader::isForkEvent(StringRef Line) {
+  if (Line.size() < 27 || Line.size() > 75)
+    return false;
+
+  return Line.slice(0, 25).contains("PERF_RECORD_FORK");
 }
 
 // The raw hybrid sample is like
