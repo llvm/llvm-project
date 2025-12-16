@@ -968,8 +968,8 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
 ]> {
   let summary = "A flattened version of `cir.resume`";
   let description = [{
-    The `cir_resume.flat` operation is a region-less and simplified
-    version of the `cir_resume`.
+    The `cir.resume.flat` operation is a region-less and simplified
+    version of the `cir.resume`.
 
     Its representation is closer to LLVM IR dialect
     than the C/C++ language feature.
