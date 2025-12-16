@@ -37,10 +37,10 @@ function at-exit {
     python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py \
       $retcode "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log \
       >> $GITHUB_STEP_SUMMARY
-    python "${MONOREPO_ROOT}"/.ci/premerge_advisor_explain.py \
+    (python "${MONOREPO_ROOT}"/.ci/premerge_advisor_explain.py \
       $(git rev-parse HEAD~1) $retcode "${GITHUB_TOKEN}" \
       $GITHUB_PR_NUMBER "${BUILD_DIR}"/test-results.*.xml \
-      "${MONOREPO_ROOT}"/ninja*.log
+      "${MONOREPO_ROOT}"/ninja*.log)
   fi
 
   if [[ "$retcode" != "0" ]]; then
@@ -53,6 +53,10 @@ function at-exit {
         $(git rev-parse HEAD) $BUILDBOT_BUILDNUMBER \
         "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log
     fi
+  fi
+
+  if [[ -n "$GITHUB_ACTIONS" ]]; then
+    exit $advisor_retcode
   fi
 }
 trap at-exit EXIT
