@@ -92,7 +92,13 @@ public:
     const mlir::TypeConverter *typeConverter = getTypeConverter();
     assert(typeConverter &&
            "CIRGenericCXXABILoweringPattern requires a type converter");
-    if (typeConverter->isLegal(op)) {
+    bool operandsAndResultsLegal = typeConverter->isLegal(op);
+    bool regionsLegal =
+        std::all_of(op->getRegions().begin(), op->getRegions().end(),
+                    [typeConverter](mlir::Region &region) {
+                      return typeConverter->isLegal(&region);
+                    });
+    if (operandsAndResultsLegal && regionsLegal) {
       // The operation does not have any CXXABI-dependent operands or results,
       // the match fails.
       return mlir::failure();
@@ -112,6 +118,15 @@ public:
     for (mlir::Type result : op->getResultTypes())
       loweredResultTypes.push_back(typeConverter->convertType(result));
     loweredOpState.addTypes(loweredResultTypes);
+
+    // Lower all regions
+    for (mlir::Region &region : op->getRegions()) {
+      mlir::Region *loweredRegion = loweredOpState.addRegion();
+      rewriter.inlineRegionBefore(region, *loweredRegion, loweredRegion->end());
+      if (mlir::failed(
+              rewriter.convertRegionTypes(loweredRegion, *getTypeConverter())))
+        return mlir::failure();
+    }
 
     // Clone the operation with lowered operand types and result types
     mlir::Operation *loweredOp = rewriter.create(loweredOpState);

@@ -22,6 +22,30 @@ auto test1() -> int Point::* {
   return &Point::y;
 }
 
+int Point::*pt_member_nested_region = test1();
+
+// CIR-BEFORE: cir.global external @pt_member_nested_region = ctor : !cir.data_member<!s32i in !rec_Point> {
+// CIR-BEFORE:   %[[MEMBER_PTR_ADDR:.*]] = cir.get_global @pt_member_nested_region : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
+// CIR-BEFORE:   %[[MEMBER_PTR:.*]] = cir.call @_Z5test1v() : () -> !cir.data_member<!s32i in !rec_Point>
+// CIR-BEFORE:   cir.store{{.*}} %[[MEMBER_PTR]], %[[MEMBER_PTR_ADDR]] : !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
+// CIR-BEFORE: }
+
+// CIR-AFTER: cir.global external @pt_member_nested_region = #cir.int<-1> : !s64i
+// CIR-AFTER: cir.func internal private @__cxx_global_var_init()
+// CIR-AFTER:   %[[MEMBER_PTR_ADDR:.*]] = cir.get_global @pt_member_nested_region : !cir.ptr<!s64i>
+// CIR-AFTER:   %[[MEMBER_PTR:.*]] = cir.call @_Z5test1v() : () -> !s64i
+// CIR-AFTER:   cir.store align(8) %[[MEMBER_PTR]], %[[MEMBER_PTR_ADDR]] : !s64i, !cir.ptr<!s64i>
+
+// LLVM: @pt_member_nested_region = global i64 -1, align 8
+// LLVM: define internal void @__cxx_global_var_init()
+// LLVM:   %[[MEMBER_PTR:.*]] = call i64 @_Z5test1v()
+// LLVM:   store i64 %[[MEMBER_PTR]], ptr @pt_member_nested_region, align 8
+
+// OGCG: @pt_member_nested_region = global i64 -1, align 8
+// OGCG emits __cxx_global_var_init between test1() and test2(). See checks below.
+
+// Checks for test1()
+
 // CIR-BEFORE: cir.func {{.*}} @_Z5test1v() -> !cir.data_member<!s32i in !rec_Point> {
 // CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>, ["__retval"]
 // CIR-BEFORE:   %[[MEMBER:.*]] = cir.const #cir.data_member<1> : !cir.data_member<!s32i in !rec_Point>
@@ -44,6 +68,11 @@ auto test1() -> int Point::* {
 
 // OGCG: define {{.*}} i64 @_Z5test1v()
 // OGCG:   ret i64 4
+
+// OGCG: define internal void @__cxx_global_var_init()
+// OGCG:   %[[MEMBER_PTR:.*]] = call i64 @_Z5test1v()
+// OGCG:   store i64 %[[MEMBER_PTR]], ptr @pt_member_nested_region
+
 
 int test2(const Point &pt, int Point::*member) {
   return pt.*member;
