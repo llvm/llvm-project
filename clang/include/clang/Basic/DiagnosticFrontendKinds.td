@@ -404,6 +404,69 @@ def warn_hlsl_langstd_minimal :
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
 
+def err_data_layout_mismatch : Error<"backend data layout '%0' does not match "
+                                     "expected target description '%1'">;
+def err_failed_to_open_for_embedding
+    : Error<"could not open '%0' for embedding">;
+def err_unsupported_cxx_abi_feature
+    : Error<"cannot yet compile %0 in this ABI">;
+
+def err_target_region_offloading_entry_incorrect
+    : Error<"offloading entry for target region in %0 is incorrect: either the "
+            "address or the ID is invalid">;
+def err_target_var_offloading_entry_incorrect_with_parent
+    : Error<"offloading entry for declare target variable %0 is incorrect: the "
+            "address is invalid">;
+def err_target_var_offloading_entry_incorrect
+    : Error<"offloading entry for declare target variable is incorrect: the "
+            "address is invalid">;
+
+def err_missing_mandatory_offloading
+    : Error<"no offloading entry generated while offloading is mandatory">;
+
+def err_reading_profile : Error<"error in reading profile %0: %1">;
+def err_open_hotpatch_file_failed
+    : Error<"failed to open hotpatch functions file "
+            "(-fms-hotpatch-functions-file): %0 : %1">;
+
+def err_codegen_unsupported : Error<"cannot compile this %0 yet">;
+
+def warn_trivial_auto_var_limit
+    : Warning<"-ftrivial-auto-var-init-stop-after=%0 has been enabled to limit "
+              "the number of times ftrivial-auto-var-init=%1 gets applied">,
+      InGroup<TrivialAutoVarInit>;
+
+def warn_simdlen_1_no_effect
+    : Warning<"the clause simdlen(1) has no effect when targeting aarch64">,
+      InGroup<SIMDLen>;
+def warn_simdlen_requires_power_of_2
+    : Warning<"the value specified in simdlen must be a power of 2 when "
+              "targeting Advanced SIMD">,
+      InGroup<SIMDLen>;
+def warn_simdlen_must_fit_lanes
+    : Warning<"the clause simdlen must fit the %0-bit lanes in the "
+              "architectural constraints for SVE (min is 128-bit, max is "
+              "2048-bit, by steps of 128-bit)">,
+      InGroup<SIMDLen>;
+
+def warn_pgo_nested_boolean_expr
+    : Warning<
+          "unsupported MC/DC boolean expression; contains an operation with a "
+          "nested boolean expression. Expression will not be covered">,
+      InGroup<PGOCoverage>;
+def warn_pgo_condition_limit
+    : Warning<"unsupported MC/DC boolean expression; number of conditions (%0) "
+              "exceeds max (%1). Expression will not be covered">,
+      InGroup<PGOCoverage>;
+def warn_pgo_test_vector_limit
+    : Warning<"unsupported MC/DC boolean expression; number of test vectors "
+              "(%0) exceeds max (%1). Expression will not be covered">,
+      InGroup<PGOCoverage>;
+
+def err_member_ptr_requires_complete_type
+    : Error<"member pointer representation requires a complete class type for "
+            "%0 to perform this expression">;
+
 // ClangIR frontend errors
 def err_cir_to_cir_transform_failed : Error<
     "CIR-to-CIR transformation failed">, DefaultFatal;
