@@ -36,6 +36,9 @@ struct IndexingOptions {
   // Has no effect if IndexFunctionLocals are false.
   bool IndexParametersInDeclarations = false;
   bool IndexTemplateParameters = false;
+  // Some information might only be available at the end of a translation unit,
+  // this flag delays the indexing for this purpose.
+  bool DeferIndexingToEndOfTranslationUnit = false;
 
   // If set, skip indexing inside some declarations for performance.
   // This prevents traversal, so skipping a struct means its declaration an

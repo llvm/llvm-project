@@ -220,6 +220,9 @@ std::unique_ptr<FrontendAction> createStaticIndexingAction(
       index::IndexingOptions::SystemSymbolFilterKind::All;
   // We index function-local classes and its member functions only.
   IndexOpts.IndexFunctionLocals = true;
+  // We need to delay indexing so function bodies become available, this is so
+  // we can find constructor calls through `make_unique`.
+  IndexOpts.DeferIndexingToEndOfTranslationUnit = true;
   Opts.CollectIncludePath = true;
   if (Opts.Origin == SymbolOrigin::Unknown)
     Opts.Origin = SymbolOrigin::Static;

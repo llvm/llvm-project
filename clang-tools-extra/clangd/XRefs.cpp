@@ -935,9 +935,8 @@ public:
       : PerToken(PerToken), AST(AST) {
     for (const NamedDecl *ND : Targets) {
       TargetDecls.insert(ND->getCanonicalDecl());
-      if (auto *Constructor = llvm::dyn_cast<clang::CXXConstructorDecl>(ND)) {
+      if (auto *Constructor = llvm::dyn_cast<clang::CXXConstructorDecl>(ND))
         TargetConstructors.insert(Constructor);
-      }
     }
   }
 
@@ -960,36 +959,31 @@ public:
   }
 
   bool forwardsToConstructor(const Decl *D) {
-    if (TargetConstructors.empty()) {
+    if (TargetConstructors.empty())
       return false;
-    }
     auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
-    if (FD == nullptr || !FD->isTemplateInstantiation()) {
+    if (FD == nullptr || !FD->isTemplateInstantiation())
       return false;
-    }
     if (auto *PT = FD->getPrimaryTemplate();
-        PT == nullptr || !isLikelyForwardingFunction(PT)) {
+        PT == nullptr || !isLikelyForwardingFunction(PT))
       return false;
-    }
+
     std::vector<CXXConstructorDecl *> *Constructors = nullptr;
     if (auto Entry = AST.ForwardingToConstructorCache.find(FD);
-        Entry != AST.ForwardingToConstructorCache.end()) {
+        Entry != AST.ForwardingToConstructorCache.end())
       Constructors = &Entry->getSecond();
-    }
     if (Constructors == nullptr) {
       ForwardingToConstructorVisitor Visitor{};
       Visitor.TraverseStmt(FD->getBody());
       auto Iter = AST.ForwardingToConstructorCache.try_emplace(
           FD, std::move(Visitor.Constructors));
-      if (Iter.second) {
+      if (Iter.second)
         Constructors = &Iter.first->getSecond();
-      }
     }
     if (Constructors != nullptr) {
       for (auto *Constructor : *Constructors) {
-        if (TargetConstructors.contains(Constructor)) {
+        if (TargetConstructors.contains(Constructor))
           return true;
-        }
       }
     }
     return false;
@@ -1001,9 +995,8 @@ public:
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
     if (!TargetDecls.contains(D->getCanonicalDecl()) &&
-        !forwardsToConstructor(ASTNode.OrigD)) {
+        !forwardsToConstructor(ASTNode.OrigD))
       return true;
-    }
     const SourceManager &SM = AST.getSourceManager();
     if (!isInsideMainFile(Loc, SM))
       return true;

@@ -1076,9 +1076,8 @@ bool ForwardingToConstructorVisitor::VisitCallExpr(CallExpr *E) {
 
 bool ForwardingToConstructorVisitor::VisitCXXNewExpr(CXXNewExpr *E) {
   if (auto *CE = E->getConstructExpr()) {
-    if (auto *Callee = CE->getConstructor()) {
+    if (auto *Callee = CE->getConstructor())
       Constructors.push_back(Callee);
-    }
   }
   return true;
 }

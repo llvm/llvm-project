@@ -581,24 +581,21 @@ SymbolCollector::getRefContainer(const Decl *Enclosing,
 std::vector<CXXConstructorDecl *>
 SymbolCollector::findIndirectConstructors(const Decl *D) {
   auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
-  if (FD == nullptr || !FD->isTemplateInstantiation()) {
+  if (FD == nullptr || !FD->isTemplateInstantiation())
     return {};
-  }
   if (auto *PT = FD->getPrimaryTemplate();
-      PT == nullptr || !isLikelyForwardingFunction(PT)) {
+      PT == nullptr || !isLikelyForwardingFunction(PT))
     return {};
-  }
   if (auto Entry = ForwardingToConstructorCache.find(FD);
-      Entry != ForwardingToConstructorCache.end()) {
+      Entry != ForwardingToConstructorCache.end())
     return Entry->getSecond();
-  }
+
   ForwardingToConstructorVisitor Visitor{};
   Visitor.TraverseStmt(FD->getBody());
   auto Iter = ForwardingToConstructorCache.try_emplace(
       FD, std::move(Visitor.Constructors));
-  if (Iter.second) {
+  if (Iter.second)
     return Iter.first->getSecond();
-  }
   return {};
 }
 
@@ -697,15 +694,13 @@ bool SymbolCollector::handleDeclOccurrence(
                            Container, isSpelled(FileLoc, *ND)});
       // Also collect indirect constructor calls like `make_unique`
       for (auto *Constructor : findIndirectConstructors(ASTNode.OrigD)) {
-        if (!shouldCollectSymbol(*Constructor, *ASTCtx, Opts, IsMainFileOnly)) {
+        if (!shouldCollectSymbol(*Constructor, *ASTCtx, Opts, IsMainFileOnly))
           continue;
-        }
-        if (auto ConstructorID = getSymbolIDCached(Constructor)) {
+        if (auto ConstructorID = getSymbolIDCached(Constructor))
           addRef(ConstructorID,
                  SymbolRef{FileLoc, FID, Roles,
                            index::getSymbolInfo(Constructor).Kind, Container,
                            isSpelled(FileLoc, *Constructor)});
-        }
       }
     }
   }
