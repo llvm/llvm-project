@@ -89,10 +89,17 @@ bool ExprSequence::inSequence(const Stmt *Before, const Stmt *After) const {
 
   // If 'After' is in the subtree of the siblings that follow 'Before' in the
   // chain of successors, we know that 'After' is sequenced after 'Before'.
-  for (const Stmt *Successor = getSequenceSuccessor(Before); Successor;
-       Successor = getSequenceSuccessor(Successor)) {
-    if (isDescendantOrEqual(After, Successor, Context))
-      return true;
+  {
+    SmallVector<const Stmt *, 2> Stack = {Before};
+    while (!Stack.empty()) {
+      const Stmt *Node = Stack.back();
+      Stack.pop_back();
+      for (const Stmt *Successor : getSequenceSuccessors(Node)) {
+        if (isDescendantOrEqual(After, Successor, Context))
+          return true;
+        Stack.push_back(Successor);
+      }
+    }
   }
 
   const SmallVector<const Stmt *, 1> BeforeParents =
@@ -158,7 +165,8 @@ bool ExprSequence::potentiallyAfter(const Stmt *After,
   return !inSequence(After, Before);
 }
 
-const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
+llvm::SmallVector<const Stmt *, 2>
+ExprSequence::getSequenceSuccessors(const Stmt *S) const {
   for (const Stmt *Parent : getParentStmts(S, Context)) {
     // If a statement has multiple parents, make sure we're using the parent
     // that lies within the sub-tree under Root.
@@ -168,14 +176,14 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
     if (const auto *BO = dyn_cast<BinaryOperator>(Parent)) {
       // Comma operator: Right-hand side is sequenced after the left-hand side.
       if (BO->getLHS() == S && BO->getOpcode() == BO_Comma)
-        return BO->getRHS();
+        return {BO->getRHS()};
     } else if (const auto *InitList = dyn_cast<InitListExpr>(Parent)) {
       // Initializer list: Each initializer clause is sequenced after the
       // clauses that precede it.
       for (const InitListExpr *Form : getAllInitListForms(InitList)) {
         for (unsigned I = 1; I < Form->getNumInits(); ++I) {
           if (Form->getInit(I - 1) == S) {
-            return Form->getInit(I);
+            return {Form->getInit(I)};
           }
         }
       }
@@ -185,7 +193,7 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
       if (ConstructExpr->isListInitialization()) {
         for (unsigned I = 1; I < ConstructExpr->getNumArgs(); ++I) {
           if (ConstructExpr->getArg(I - 1) == S) {
-            return ConstructExpr->getArg(I);
+            return {ConstructExpr->getArg(I)};
           }
         }
       }
@@ -195,7 +203,7 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
       const Stmt *Previous = nullptr;
       for (const auto *Child : Compound->body()) {
         if (Previous == S)
-          return Child;
+          return {Child};
         Previous = Child;
       }
     } else if (const auto *TheDeclStmt = dyn_cast<DeclStmt>(Parent)) {
@@ -206,7 +214,7 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
         if (const auto *TheVarDecl = dyn_cast<VarDecl>(TheDecl)) {
           if (const Expr *Init = TheVarDecl->getInit()) {
             if (PreviousInit == S)
-              return Init;
+              return {Init};
             PreviousInit = Init;
           }
         }
@@ -216,7 +224,7 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
       // body. (We need this rule because these get placed in the same
       // CFGBlock.)
       if (S == ForRange->getLoopVarStmt())
-        return ForRange->getBody();
+        return {ForRange->getBody()};
     } else if (const auto *TheIfStmt = dyn_cast<IfStmt>(Parent)) {
       // If statement:
       // - Sequence init statement before variable declaration, if present;
@@ -225,30 +233,35 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
       //   initialize it) before the evaluation of the condition.
       if (S == TheIfStmt->getInit()) {
         if (TheIfStmt->getConditionVariableDeclStmt() != nullptr)
-          return TheIfStmt->getConditionVariableDeclStmt();
-        return TheIfStmt->getCond();
+          return {TheIfStmt->getConditionVariableDeclStmt()};
+        return {TheIfStmt->getCond()};
       }
       if (S == TheIfStmt->getConditionVariableDeclStmt())
-        return TheIfStmt->getCond();
+        return {TheIfStmt->getCond()};
     } else if (const auto *TheSwitchStmt = dyn_cast<SwitchStmt>(Parent)) {
       // Ditto for switch statements.
       if (S == TheSwitchStmt->getInit()) {
         if (TheSwitchStmt->getConditionVariableDeclStmt() != nullptr)
-          return TheSwitchStmt->getConditionVariableDeclStmt();
-        return TheSwitchStmt->getCond();
+          return {TheSwitchStmt->getConditionVariableDeclStmt()};
+        return {TheSwitchStmt->getCond()};
       }
       if (S == TheSwitchStmt->getConditionVariableDeclStmt())
-        return TheSwitchStmt->getCond();
+        return {TheSwitchStmt->getCond()};
     } else if (const auto *TheWhileStmt = dyn_cast<WhileStmt>(Parent)) {
       // While statement: Sequence variable declaration (along with the
       // expression used to initialize it) before the evaluation of the
       // condition.
       if (S == TheWhileStmt->getConditionVariableDeclStmt())
-        return TheWhileStmt->getCond();
+        return {TheWhileStmt->getCond()};
+    } else if (const auto *TheCondStmt =
+                   dyn_cast<ConditionalOperator>(Parent)) {
+      // Conditional operator: condition is sequenced before both arms.
+      if (S == TheCondStmt->getCond())
+        return {TheCondStmt->getTrueExpr(), TheCondStmt->getFalseExpr()};
     }
   }
 
-  return nullptr;
+  return {};
 }
 
 const Stmt *ExprSequence::resolveSyntheticStmt(const Stmt *S) const {

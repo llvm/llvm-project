@@ -78,15 +78,14 @@ public:
   bool potentiallyAfter(const Stmt *After, const Stmt *Before) const;
 
 private:
-  // Returns the sibling of \p S (if any) that is directly sequenced after \p S,
-  // or nullptr if no such sibling exists. For example, if \p S is the child of
-  // a `CompoundStmt`, this would return the Stmt that directly follows \p S in
-  // the `CompoundStmt`.
+  // // Returns the siblings of \p S (if any) that are directly sequenced after
+  // \p S. For example, if \p S is the child of a `CompoundStmt`, this would
+  // return the Stmt that directly follows \p S in the `CompoundStmt`.
   //
   // As the sequencing of many constructs that change control flow is already
   // encoded in the `CFG`, this function only implements the sequencing rules
   // for those constructs where sequencing cannot be inferred from the `CFG`.
-  const Stmt *getSequenceSuccessor(const Stmt *S) const;
+  llvm::SmallVector<const Stmt *, 2> getSequenceSuccessors(const Stmt *S) const;
 
   const Stmt *resolveSyntheticStmt(const Stmt *S) const;
 
