@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -o %t.ll
 // RUN: FileCheck %s --input-file=%t.ll --check-prefix=OGCG
 
+// CIR: cir.global "private" constant cir_private dso_local @".str" = #cir.zero : !cir.array<!s8i x 1>
+// CIR: cir.global external @func = #cir.global_view<@".str"> : !cir.ptr<!s8i>
 // CIR: cir.global "private" constant cir_private dso_local @__func__.plainFunction = #cir.const_array<"plainFunction\00" : !cir.array<!s8i x 14>>
 // CIR: cir.global "private" constant cir_private dso_local @__PRETTY_FUNCTION__.plainFunction = #cir.const_array<"void plainFunction(void)\00" : !cir.array<!s8i x 25>>
 // CIR: cir.global "private" constant cir_private dso_local @__func__.externFunction = #cir.const_array<"externFunction\00" : !cir.array<!s8i x 15>>
@@ -15,6 +17,8 @@
 // CIR: cir.global "private" constant cir_private dso_local @__PRETTY_FUNCTION__.staticFunction = #cir.const_array<"void staticFunction(void)\00" : !cir.array<!s8i x 26>>
 
 // TODO(cir): These should be unnamed_addr
+// LLVM: @.str = private constant [1 x i8] zeroinitializer, align 1
+// LLVM: @func = global ptr @.str, align 8
 // LLVM: @__func__.plainFunction = private constant [14 x i8] c"plainFunction\00"
 // LLVM: @__PRETTY_FUNCTION__.plainFunction = private constant [25 x i8] c"void plainFunction(void)\00"
 // LLVM: @__func__.externFunction = private constant [15 x i8] c"externFunction\00"
@@ -24,6 +28,8 @@
 // LLVM: @__func__.staticFunction = private constant [15 x i8] c"staticFunction\00"
 // LLVM: @__PRETTY_FUNCTION__.staticFunction = private constant [26 x i8] c"void staticFunction(void)\00"
 
+// OGCG: @.str = private unnamed_addr constant [1 x i8] zeroinitializer, align 1
+// OGCG: @func = global ptr @.str, align 8
 // OGCG: @__func__.plainFunction = private unnamed_addr constant [14 x i8] c"plainFunction\00"
 // OGCG: @__PRETTY_FUNCTION__.plainFunction = private unnamed_addr constant [25 x i8] c"void plainFunction(void)\00"
 // OGCG: @__func__.externFunction = private unnamed_addr constant [15 x i8] c"externFunction\00"
@@ -32,6 +38,8 @@
 // OGCG: @__PRETTY_FUNCTION__.privateExternFunction = private unnamed_addr constant [33 x i8] c"void privateExternFunction(void)\00"
 // OGCG: @__func__.staticFunction = private unnamed_addr constant [15 x i8] c"staticFunction\00"
 // OGCG: @__PRETTY_FUNCTION__.staticFunction = private unnamed_addr constant [26 x i8] c"void staticFunction(void)\00"
+
+const char* func = __func__;
 
 int printf(const char *, ...);
 
