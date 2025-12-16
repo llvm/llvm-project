@@ -328,28 +328,28 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
 def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
 def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
 
-def ROCDL_BarrierInitOp : ROCDL_IntrOp<"s.barrier.init", [], [], [], 0, 0, 0, 0, [1], ["id"]>,
-  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$id)> {
+def ROCDL_BarrierInitOp : ROCDL_IntrOp<"s.barrier.init", [], [], [], 0, 0, 0, 0, [1], ["memberCnt"]>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$memberCnt)> {
   let description = [{
     Available on gfx1250+.
   }];
   let results = (outs);
-  let assemblyFormat = "$ptr `,` $id attr-dict";
+  let assemblyFormat = "$ptr `member_cnt` `=` $memberCnt attr-dict `:` qualified(type($ptr))";
 }
 
 def ROCDL_BarrierSignalOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal", [], 0, [0], ["id"]>,
   Arguments<(ins I32Attr:$id)> {
   let results = (outs);
-  let assemblyFormat = "$id attr-dict";
+  let assemblyFormat = "`id` `=` $id attr-dict";
 }
 
-def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 0, 0, 0, 0, [1], ["id"]>,
-  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$id)> {
+def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 0, 0, 0, 0, [1], ["memberCnt"]>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$memberCnt)> {
   let description = [{
     Available on gfx1250+.
   }];
   let results = (outs);
-  let assemblyFormat = "$ptr `,` $id attr-dict";
+  let assemblyFormat = "$ptr `member_cnt` `=` $memberCnt attr-dict `:` qualified(type($ptr))";
 }
 
 def ROCDL_BarrierJoinOp : ROCDL_IntrOp<"s.barrier.join", [], [], [], 0>,
@@ -358,7 +358,7 @@ def ROCDL_BarrierJoinOp : ROCDL_IntrOp<"s.barrier.join", [], [], [], 0>,
     Available on gfx1250+.
   }];
   let results = (outs);
-  let assemblyFormat = "$ptr attr-dict";
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
 
 def ROCDL_BarrierLeaveOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.leave", [], 0, [0], ["id"]>,
@@ -367,13 +367,13 @@ def ROCDL_BarrierLeaveOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.leave", [], 0, 
     Available on gfx1250+.
   }];
   let results = (outs);
-  let assemblyFormat = "$id attr-dict";
+  let assemblyFormat = "`id` `=` $id attr-dict";
 }
 
 def ROCDL_BarrierWaitOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.wait", [], 0, [0], ["id"]>,
   Arguments<(ins I16Attr:$id)> {
   let results = (outs);
-  let assemblyFormat = "$id attr-dict";
+  let assemblyFormat = "`id` `=` $id attr-dict";
 }
 
 def ROCDL_BarrierSignalIsfirstOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal.isfirst", [], 1, [0], ["id"]>,
@@ -382,7 +382,7 @@ def ROCDL_BarrierSignalIsfirstOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal.
     Available on gfx1250+.
   }];
   let results = (outs I1:$res);
-  let assemblyFormat = "$id attr-dict `:` type($res)";
+  let assemblyFormat = "`id` `=` $id attr-dict `->` type($res)";
 }
 
 def ROCDL_GetBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.barrier.state", [], 1, [0], ["id"]>,
@@ -391,7 +391,7 @@ def ROCDL_GetBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.barrier.state", 
     Available on gfx1250+.
   }];
   let results = (outs I32:$res);
-  let assemblyFormat = "$id attr-dict `:` type($res)";
+  let assemblyFormat = "`id` `=` $id attr-dict `->` type($res)";
 }
 
 def ROCDL_GetNamedBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.named.barrier.state", [], 1, [], []>,
@@ -400,7 +400,18 @@ def ROCDL_GetNamedBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.named.barri
     Available on gfx1250+.
   }];
   let results = (outs I32:$res);
-  let assemblyFormat = "$ptr attr-dict `:` type($res)";
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr)) `->` type($res)";
+}
+
+def ROCDL_WakeupBarrierOp : ROCDL_ConcreteNonMemIntrOp<"s.wakeup.barrier", [], 0, [], []>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
+  let description = [{
+    Wakes up waves associated with a given named barrier. Note, This op does not release waves waiting
+    at the barrier. It just signal other waves in the same work-group waiting on the indicated named barrier
+    to wake up.
+    Available on gfx1250+.
+  }];
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
 
 def ROCDL_WaitDscntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.dscnt", [], 0, [0], ["count"]>,

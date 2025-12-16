@@ -414,13 +414,13 @@ def sync_csv(rows: List[Tuple], from_github: List[PaperInfo], create_new: bool, 
 
 CSV_FILES_TO_SYNC = {
     'Cxx17Issues.csv': ['c++17', 'lwg-issue'],
-    'Cxx17Papers.csv': ['c++17', 'wg21 paper'],
+    'Cxx17Papers.csv': ['c++17', 'wg21-paper'],
     'Cxx20Issues.csv': ['c++20', 'lwg-issue'],
-    'Cxx20Papers.csv': ['c++20', 'wg21 paper'],
+    'Cxx20Papers.csv': ['c++20', 'wg21-paper'],
     'Cxx23Issues.csv': ['c++23', 'lwg-issue'],
-    'Cxx23Papers.csv': ['c++23', 'wg21 paper'],
+    'Cxx23Papers.csv': ['c++23', 'wg21-paper'],
     'Cxx2cIssues.csv': ['c++26', 'lwg-issue'],
-    'Cxx2cPapers.csv': ['c++26', 'wg21 paper'],
+    'Cxx2cPapers.csv': ['c++26', 'wg21-paper'],
 }
 
 def main(argv):

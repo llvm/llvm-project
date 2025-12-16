@@ -64,9 +64,18 @@ lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::Update() {
   if (!storage_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_element_type = m_backend.GetCompilerType().GetTypeTemplateArgument(0);
-  if (!m_element_type)
+  CompilerType backend_type = m_backend.GetCompilerType();
+  if (!backend_type)
     return lldb::ChildCacheState::eRefetch;
+
+  m_element_type = backend_type.GetTypeTemplateArgument(0);
+  if (!m_element_type) {
+    // PDB doesn't have info about templates, so use value_type which equals T.
+    m_element_type = backend_type.GetDirectNestedTypeWithName("value_type");
+
+    if (!m_element_type)
+      return lldb::ChildCacheState::eRefetch;
+  }
 
   m_storage = storage_sp.get();
   return lldb::ChildCacheState::eRefetch;

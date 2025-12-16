@@ -6,21 +6,21 @@ FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2022
 SHELL ["cmd", "/S", "/C"]
 
 # Download the Build Tools bootstrapper.
-ADD https://aka.ms/vs/16/release/vs_buildtools.exe /TEMP/vs_buildtools.exe
+ADD https://aka.ms/vs/17/release/vs_buildtools.exe /TEMP/vs_buildtools.exe
 
 RUN powershell -Command Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
 # Download channel for fixed install.
-ARG CHANNEL_URL=https://aka.ms/vs/16/release/channel
+ARG CHANNEL_URL=https://aka.ms/vs/17/release/channel
 ADD ${CHANNEL_URL} /TEMP/VisualStudio.chman
 
 # Install Build Tools with C++ workload.
 #   - Documentation for docker installation
-#     https://docs.microsoft.com/en-us/visualstudio/install/build-tools-container?view=vs-2019
+#     https://docs.microsoft.com/en-us/visualstudio/install/build-tools-container
 #   - Documentation on workloads
-#     https://docs.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-build-tools?view=vs-2019#c-build-tools
+#     https://docs.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-build-tools
 #   - Documentation on flags
-#     https://docs.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio?view=vs-2019
+#     https://docs.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio
 RUN /TEMP/vs_buildtools.exe --quiet --wait --norestart --nocache \
     --channelUri C:\TEMP\VisualStudio.chman \
     --installChannelUri C:\TEMP\VisualStudio.chman \

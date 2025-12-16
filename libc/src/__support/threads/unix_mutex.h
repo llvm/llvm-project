@@ -1,4 +1,4 @@
-//===--- Implementation of a Linux mutex class ------------------*- C++ -*-===//
+//===--- Implementation of a Unix mutex class -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H
-#define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_UNIX_MUTEX_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_UNIX_MUTEX_H
 
 #include "hdr/types/pid_t.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/threads/linux/futex_utils.h"
-#include "src/__support/threads/linux/raw_mutex.h"
 #include "src/__support/threads/mutex_common.h"
+#include "src/__support/threads/raw_mutex.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
