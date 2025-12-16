@@ -80,12 +80,6 @@ Examples:
      ``if (x) return true; return false;``
      becomes ``return static_cast<bool>(x);``
 
-.. note::
-
-   This check properly handles C++17 ``if`` statements with initialization
-   statements (e.g. ``if (int i = 0; i) ...``). It will not report false positives
-   or suggest invalid fixes for the condition variable in these cases.
-
 Options
 -------
 
