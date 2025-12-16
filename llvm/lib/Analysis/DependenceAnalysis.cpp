@@ -2495,7 +2495,7 @@ bool DependenceInfo::testMIV(const SCEV *Src, const SCEV *Dst,
 /// returns std::nullopt. For example, given (10 * X * Y)<nsw>, it returns 10.
 /// Notably, if it doesn't have nsw, the multiplication may overflow, and if
 /// so, it may not a multiple of 10.
-static std::optional<APInt> getConstanCoefficient(const SCEV *Expr) {
+static std::optional<APInt> getConstantCoefficient(const SCEV *Expr) {
   if (const auto *Constant = dyn_cast<SCEVConstant>(Expr))
     return Constant->getAPInt();
   if (const auto *Product = dyn_cast<SCEVMulExpr>(Expr))
@@ -2527,7 +2527,7 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
   if (AddRec->getLoop() == CurLoop) {
     CurLoopCoeff = Step;
   } else {
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Step);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Step);
 
     // If the coefficient is the product of a constant and other stuff, we can
     // use the constant in the GCD computation.
@@ -2580,7 +2580,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Coeff);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
     if (!ConstCoeff)
       return false;
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
@@ -2598,7 +2598,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Coeff);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
     if (!ConstCoeff)
       return false;
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
@@ -2656,7 +2656,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     Delta = SE->getMinusSCEV(SrcCoeff, DstCoeff);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Delta);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Delta);
     if (!ConstCoeff)
       // The difference of the two coefficients might not be a product
       // or constant, in which case we give up on this direction.
@@ -3277,9 +3277,6 @@ bool DependenceInfo::tryDelinearizeFixedSize(
          "Expected equal number of entries in the list of SrcSubscripts and "
          "DstSubscripts.");
 
-  Value *SrcPtr = getLoadStorePointerOperand(Src);
-  Value *DstPtr = getLoadStorePointerOperand(Dst);
-
   // In general we cannot safely assume that the subscripts recovered from GEPs
   // are in the range of values defined for their corresponding array
   // dimensions. For example some C language usage/interpretation make it
@@ -3287,8 +3284,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   // iff the subscripts are positive and are less than the range of the
   // dimension.
   if (!DisableDelinearizationChecks) {
-    if (!validateDelinearizationResult(*SE, SrcSizes, SrcSubscripts, SrcPtr) ||
-        !validateDelinearizationResult(*SE, DstSizes, DstSubscripts, DstPtr)) {
+    if (!validateDelinearizationResult(*SE, SrcSizes, SrcSubscripts) ||
+        !validateDelinearizationResult(*SE, DstSizes, DstSubscripts)) {
       SrcSubscripts.clear();
       DstSubscripts.clear();
       return false;
@@ -3296,8 +3293,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   }
   LLVM_DEBUG({
     dbgs() << "Delinearized subscripts of fixed-size array\n"
-           << "SrcGEP:" << *SrcPtr << "\n"
-           << "DstGEP:" << *DstPtr << "\n";
+           << "SrcGEP:" << *getLoadStorePointerOperand(Src) << "\n"
+           << "DstGEP:" << *getLoadStorePointerOperand(Dst) << "\n";
   });
   return true;
 }
@@ -3307,8 +3304,6 @@ bool DependenceInfo::tryDelinearizeParametricSize(
     const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
     SmallVectorImpl<const SCEV *> &DstSubscripts) {
 
-  Value *SrcPtr = getLoadStorePointerOperand(Src);
-  Value *DstPtr = getLoadStorePointerOperand(Dst);
   const SCEVUnknown *SrcBase =
       dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
   const SCEVUnknown *DstBase =
@@ -3353,8 +3348,8 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   // FIXME: It may be better to record these sizes and add them as constraints
   // to the dependency checks.
   if (!DisableDelinearizationChecks)
-    if (!validateDelinearizationResult(*SE, Sizes, SrcSubscripts, SrcPtr) ||
-        !validateDelinearizationResult(*SE, Sizes, DstSubscripts, DstPtr))
+    if (!validateDelinearizationResult(*SE, Sizes, SrcSubscripts) ||
+        !validateDelinearizationResult(*SE, Sizes, DstSubscripts))
       return false;
 
   return true;
