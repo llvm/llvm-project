@@ -1451,6 +1451,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     DestinationSize = ComputeSizeArgument(0);
     const Expr *LenArg = TheCall->getArg(1)->IgnoreParenImpCasts();
     const Expr *Dest = TheCall->getArg(0)->IgnoreParenImpCasts();
+    if (const auto *DestCast = dyn_cast_or_null<CastExpr>(Dest))
+      Dest = DestCast->getSubExprAsWritten();
     llvm::FoldingSetNodeID SizeOfArgID;
     IdentifierInfo *FnInfo = FD->getIdentifier();
     CheckSizeOfExpression(LenArg, Dest, SizeOfArgID, FnInfo);
@@ -10351,63 +10353,67 @@ bool Sema::CheckSizeOfExpression(const Expr *LenExpr, const Expr *Dest,
                                  llvm::FoldingSetNodeID SizeOfArgID,
                                  IdentifierInfo *FnName) {
   const Expr *SizeOfArg = getSizeOfExprArg(LenExpr);
+  if (!SizeOfArg)
+    return false;
+  if (Diags.isIgnored(diag::warn_sizeof_pointer_expr_memaccess,
+                      SizeOfArg->getExprLoc()))
+    return false;
   QualType DestTy = Dest->getType();
-  QualType PointeeTy;
-  if (const PointerType *DestPtrTy = DestTy->getAs<PointerType>()) {
-    PointeeTy = DestPtrTy->getPointeeType();
+  const PointerType *DestPtrTy = DestTy->getAs<PointerType>();
+  if (!DestPtrTy)
+    return false;
 
-    // Catch "memset(p, 0, sizeof(p))" -- needs to be sizeof(*p). Do this by
-    // actually comparing the expressions for equality. Because computing the
-    // expression IDs can be expensive, we only do this if the diagnostic is
-    // enabled.
-    if (SizeOfArg && !Diags.isIgnored(diag::warn_sizeof_pointer_expr_memaccess,
-                                      SizeOfArg->getExprLoc())) {
-      // We only compute IDs for expressions if the warning is enabled, and
-      // cache the sizeof arg's ID.
-      if (SizeOfArgID == llvm::FoldingSetNodeID())
-        SizeOfArg->Profile(SizeOfArgID, Context, true);
-      llvm::FoldingSetNodeID DestID;
-      Dest->Profile(DestID, Context, true);
-      if (DestID == SizeOfArgID) {
-        // TODO: For strncpy() and friends, this could suggest sizeof(dst)
-        //       over sizeof(src) as well.
-        unsigned ActionIdx = 0; // Default is to suggest dereferencing.
-        StringRef ReadableName = FnName->getName();
+  QualType PointeeTy = DestPtrTy->getPointeeType();
 
-        if (const UnaryOperator *UnaryOp = dyn_cast<UnaryOperator>(Dest))
-          if (UnaryOp->getOpcode() == UO_AddrOf)
-            ActionIdx = 1; // If its an address-of operator, just remove it.
-        if (!PointeeTy->isIncompleteType() &&
-            (Context.getTypeSize(PointeeTy) == Context.getCharWidth()))
-          ActionIdx = 2; // If the pointee's size is sizeof(char),
-                         // suggest an explicit length.
+  // Catch "memset(p, 0, sizeof(p))" -- needs to be sizeof(*p). Do this by
+  // actually comparing the expressions for equality. Because computing the
+  // expression IDs can be expensive, we only do this if the diagnostic is
+  // enabled.
+  // We only compute IDs for expressions if the warning is enabled, and
+  // cache the sizeof arg's ID.
+  if (SizeOfArgID == llvm::FoldingSetNodeID())
+    SizeOfArg->Profile(SizeOfArgID, Context, true);
 
-        // If the function is defined as a builtin macro, do not show macro
-        // expansion.
-        SourceLocation SL = SizeOfArg->getExprLoc();
-        SourceRange DSR = Dest->getSourceRange();
-        SourceRange SSR = SizeOfArg->getSourceRange();
-        SourceManager &SM = getSourceManager();
+  llvm::FoldingSetNodeID DestID;
+  Dest->Profile(DestID, Context, true);
+  if (DestID == SizeOfArgID) {
+    // TODO: For strncpy() and friends, this could suggest sizeof(dst)
+    //       over sizeof(src) as well.
+    unsigned ActionIdx = 0; // Default is to suggest dereferencing.
+    StringRef ReadableName = FnName->getName();
 
-        if (SM.isMacroArgExpansion(SL)) {
-          ReadableName = Lexer::getImmediateMacroName(SL, SM, LangOpts);
-          SL = SM.getSpellingLoc(SL);
-          DSR = SourceRange(SM.getSpellingLoc(DSR.getBegin()),
-                            SM.getSpellingLoc(DSR.getEnd()));
-          SSR = SourceRange(SM.getSpellingLoc(SSR.getBegin()),
-                            SM.getSpellingLoc(SSR.getEnd()));
-        }
+    if (const UnaryOperator *UnaryOp = dyn_cast<UnaryOperator>(Dest))
+      if (UnaryOp->getOpcode() == UO_AddrOf)
+        ActionIdx = 1; // If its an address-of operator, just remove it.
+    if (!PointeeTy->isIncompleteType() &&
+        (Context.getTypeSize(PointeeTy) == Context.getCharWidth()))
+      ActionIdx = 2; // If the pointee's size is sizeof(char),
+                     // suggest an explicit length.
 
-        DiagRuntimeBehavior(SL, SizeOfArg,
-                            PDiag(diag::warn_sizeof_pointer_expr_memaccess)
-                                << ReadableName << PointeeTy << DestTy << DSR
-                                << SSR);
-        DiagRuntimeBehavior(SL, SizeOfArg,
-                            PDiag(diag::warn_sizeof_pointer_expr_memaccess_note)
-                                << ActionIdx << SSR);
-        return true;
-      }
+    // If the function is defined as a builtin macro, do not show macro
+    // expansion.
+    SourceLocation SL = SizeOfArg->getExprLoc();
+    SourceRange DSR = Dest->getSourceRange();
+    SourceRange SSR = SizeOfArg->getSourceRange();
+    SourceManager &SM = getSourceManager();
+
+    if (SM.isMacroArgExpansion(SL)) {
+      ReadableName = Lexer::getImmediateMacroName(SL, SM, LangOpts);
+      SL = SM.getSpellingLoc(SL);
+      DSR = SourceRange(SM.getSpellingLoc(DSR.getBegin()),
+                        SM.getSpellingLoc(DSR.getEnd()));
+      SSR = SourceRange(SM.getSpellingLoc(SSR.getBegin()),
+                        SM.getSpellingLoc(SSR.getEnd()));
     }
+
+    DiagRuntimeBehavior(SL, SizeOfArg,
+                        PDiag(diag::warn_sizeof_pointer_expr_memaccess)
+                            << ReadableName << PointeeTy << DestTy << DSR
+                            << SSR);
+    DiagRuntimeBehavior(SL, SizeOfArg,
+                        PDiag(diag::warn_sizeof_pointer_expr_memaccess_note)
+                            << ActionIdx << SSR);
+    return true;
   }
   return false;
 }
