@@ -106,8 +106,8 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
 
   // +0.0 compares equal to -0.0, and so it does not behave as required for this
   // transform. Bail out if we can not exclude that possibility.
-  if (isa<FPMathOperator>(BO))
-    if (!BO->hasNoSignedZeros() &&
+  if (const auto *FPO = dyn_cast<FPMathOperator>(BO))
+    if (!FPO->hasNoSignedZeros() &&
         !cannotBeNegativeZero(Y,
                               IC.getSimplifyQuery().getWithInstruction(&Sel)))
       return nullptr;
@@ -522,8 +522,8 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
       return nullptr;
 
     FastMathFlags FMF;
-    if (isa<FPMathOperator>(&SI))
-      FMF = SI.getFastMathFlags();
+    if (const auto *FPO = dyn_cast<FPMathOperator>(&SI))
+      FMF = FPO->getFastMathFlags();
     Constant *C = ConstantExpr::getBinOpIdentity(
         TVI->getOpcode(), TVI->getType(), true, FMF.noSignedZeros());
     Value *OOp = TVI->getOperand(2 - OpToFold);
