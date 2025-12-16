@@ -375,7 +375,20 @@ public:
   }
 
   void VisitVAArgExpr(VAArgExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitVAArgExpr");
+    // For aggregate va_arg, emitVAArg returns a pointer to the aggregate.
+    mlir::Value vaArgPtr = cgf.emitVAArg(e);
+
+    // Get alignment for the aggregate type.
+    CharUnits align = cgf.getContext().getTypeAlignInChars(e->getType());
+
+    // Create an Address from the pointer value.
+    Address vaArgAddr(vaArgPtr, align);
+
+    // Create an LValue from the Address.
+    LValue vaArgLValue = cgf.makeAddrLValue(vaArgAddr, e->getType());
+
+    // Copy the aggregate value from va_arg location to destination.
+    emitFinalDestCopy(e->getType(), vaArgLValue);
   }
 
   void VisitCXXThrowExpr(const CXXThrowExpr *e) {
