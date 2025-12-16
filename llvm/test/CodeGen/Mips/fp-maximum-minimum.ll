@@ -13,12 +13,12 @@ declare double @llvm.minimum.f64(double, double)
 define float @maximum_float(float %x, float %y) {
 ; MIPS32R6-LABEL: maximum_float:
 ; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    cmp.un.s $f0, $f14, $f14
-; MIPS32R6-NEXT:    sel.s $f0, $f12, $f14
-; MIPS32R6-NEXT:    cmp.un.s $f1, $f0, $f0
-; MIPS32R6-NEXT:    sel.s $f1, $f14, $f0
+; MIPS32R6-NEXT:    max.s $f1, $f12, $f14
+; MIPS32R6-NEXT:    cmp.un.s $f0, $f12, $f14
+; MIPS32R6-NEXT:    lui $1, %hi($CPI0_0)
+; MIPS32R6-NEXT:    lwc1 $f2, %lo($CPI0_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    max.s $f0, $f0, $f1
+; MIPS32R6-NEXT:    sel.s $f0, $f1, $f2
 ;
 ; MIPS64R2-LABEL: maximum_float:
 ; MIPS64R2:       # %bb.0:
@@ -106,12 +106,12 @@ define float @maximum_float(float %x, float %y) {
 define float @maximum_float_nsz(float %x, float %y) {
 ; MIPS32R6-LABEL: maximum_float_nsz:
 ; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    cmp.un.s $f0, $f14, $f14
-; MIPS32R6-NEXT:    sel.s $f0, $f12, $f14
-; MIPS32R6-NEXT:    cmp.un.s $f1, $f0, $f0
-; MIPS32R6-NEXT:    sel.s $f1, $f14, $f0
+; MIPS32R6-NEXT:    max.s $f1, $f12, $f14
+; MIPS32R6-NEXT:    cmp.un.s $f0, $f12, $f14
+; MIPS32R6-NEXT:    lui $1, %hi($CPI1_0)
+; MIPS32R6-NEXT:    lwc1 $f2, %lo($CPI1_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    max.s $f0, $f0, $f1
+; MIPS32R6-NEXT:    sel.s $f0, $f1, $f2
 ;
 ; MIPS64R2-LABEL: maximum_float_nsz:
 ; MIPS64R2:       # %bb.0:
@@ -243,16 +243,14 @@ define float @maximum_float_nnan(float %x, float %y) {
 define double @maximum_double(double %x, double %y) {
 ; MIPS32R6-LABEL: maximum_double:
 ; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    cmp.un.d $f0, $f14, $f14
+; MIPS32R6-NEXT:    max.d $f1, $f12, $f14
+; MIPS32R6-NEXT:    cmp.un.d $f0, $f12, $f14
 ; MIPS32R6-NEXT:    mfc1 $1, $f0
 ; MIPS32R6-NEXT:    mtc1 $1, $f0
-; MIPS32R6-NEXT:    sel.d $f0, $f12, $f14
-; MIPS32R6-NEXT:    cmp.un.d $f1, $f0, $f0
-; MIPS32R6-NEXT:    mfc1 $1, $f1
-; MIPS32R6-NEXT:    mtc1 $1, $f1
-; MIPS32R6-NEXT:    sel.d $f1, $f14, $f0
+; MIPS32R6-NEXT:    lui $1, %hi($CPI3_0)
+; MIPS32R6-NEXT:    ldc1 $f2, %lo($CPI3_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    max.d $f0, $f0, $f1
+; MIPS32R6-NEXT:    sel.d $f0, $f1, $f2
 ;
 ; MIPS64R2-LABEL: maximum_double:
 ; MIPS64R2:       # %bb.0:
@@ -346,16 +344,14 @@ define double @maximum_double(double %x, double %y) {
 define double @maximum_double_nsz(double %x, double %y) {
 ; MIPS32R6-LABEL: maximum_double_nsz:
 ; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    cmp.un.d $f0, $f14, $f14
+; MIPS32R6-NEXT:    max.d $f1, $f12, $f14
+; MIPS32R6-NEXT:    cmp.un.d $f0, $f12, $f14
 ; MIPS32R6-NEXT:    mfc1 $1, $f0
 ; MIPS32R6-NEXT:    mtc1 $1, $f0
-; MIPS32R6-NEXT:    sel.d $f0, $f12, $f14
-; MIPS32R6-NEXT:    cmp.un.d $f1, $f0, $f0
-; MIPS32R6-NEXT:    mfc1 $1, $f1
-; MIPS32R6-NEXT:    mtc1 $1, $f1
-; MIPS32R6-NEXT:    sel.d $f1, $f14, $f0
+; MIPS32R6-NEXT:    lui $1, %hi($CPI4_0)
+; MIPS32R6-NEXT:    ldc1 $f2, %lo($CPI4_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    max.d $f0, $f0, $f1
+; MIPS32R6-NEXT:    sel.d $f0, $f1, $f2
 ;
 ; MIPS64R2-LABEL: maximum_double_nsz:
 ; MIPS64R2:       # %bb.0:
@@ -492,12 +488,12 @@ define double @maximum_double_nnan(double %x, double %y) {
 define float @minimum_float(float %x, float %y) {
 ; MIPS32R6-LABEL: minimum_float:
 ; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    cmp.un.s $f0, $f14, $f14
-; MIPS32R6-NEXT:    sel.s $f0, $f12, $f14
-; MIPS32R6-NEXT:    cmp.un.s $f1, $f0, $f0
-; MIPS32R6-NEXT:    sel.s $f1, $f14, $f0
+; MIPS32R6-NEXT:    min.s $f1, $f12, $f14
+; MIPS32R6-NEXT:    cmp.un.s $f0, $f12, $f14
+; MIPS32R6-NEXT:    lui $1, %hi($CPI6_0)
+; MIPS32R6-NEXT:    lwc1 $f2, %lo($CPI6_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    min.s $f0, $f0, $f1
+; MIPS32R6-NEXT:    sel.s $f0, $f1, $f2
 ;
 ; MIPS64R2-LABEL: minimum_float:
 ; MIPS64R2:       # %bb.0:
@@ -587,12 +583,12 @@ define float @minimum_float(float %x, float %y) {
 define float @minimum_float_nsz(float %x, float %y) {
 ; MIPS32R6-LABEL: minimum_float_nsz:
 ; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    cmp.un.s $f0, $f14, $f14
-; MIPS32R6-NEXT:    sel.s $f0, $f12, $f14
-; MIPS32R6-NEXT:    cmp.un.s $f1, $f0, $f0
-; MIPS32R6-NEXT:    sel.s $f1, $f14, $f0
+; MIPS32R6-NEXT:    min.s $f1, $f12, $f14
+; MIPS32R6-NEXT:    cmp.un.s $f0, $f12, $f14
+; MIPS32R6-NEXT:    lui $1, %hi($CPI7_0)
+; MIPS32R6-NEXT:    lwc1 $f2, %lo($CPI7_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    min.s $f0, $f0, $f1
+; MIPS32R6-NEXT:    sel.s $f0, $f1, $f2
 ;
 ; MIPS64R2-LABEL: minimum_float_nsz:
 ; MIPS64R2:       # %bb.0:
@@ -725,16 +721,14 @@ define float @minimum_float_nnan(float %x, float %y) {
 define double @minimum_double(double %x, double %y) {
 ; MIPS32R6-LABEL: minimum_double:
 ; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    cmp.un.d $f0, $f14, $f14
+; MIPS32R6-NEXT:    min.d $f1, $f12, $f14
+; MIPS32R6-NEXT:    cmp.un.d $f0, $f12, $f14
 ; MIPS32R6-NEXT:    mfc1 $1, $f0
 ; MIPS32R6-NEXT:    mtc1 $1, $f0
-; MIPS32R6-NEXT:    sel.d $f0, $f12, $f14
-; MIPS32R6-NEXT:    cmp.un.d $f1, $f0, $f0
-; MIPS32R6-NEXT:    mfc1 $1, $f1
-; MIPS32R6-NEXT:    mtc1 $1, $f1
-; MIPS32R6-NEXT:    sel.d $f1, $f14, $f0
+; MIPS32R6-NEXT:    lui $1, %hi($CPI9_0)
+; MIPS32R6-NEXT:    ldc1 $f2, %lo($CPI9_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    min.d $f0, $f0, $f1
+; MIPS32R6-NEXT:    sel.d $f0, $f1, $f2
 ;
 ; MIPS64R2-LABEL: minimum_double:
 ; MIPS64R2:       # %bb.0:
@@ -830,16 +824,14 @@ define double @minimum_double(double %x, double %y) {
 define double @minimum_double_nsz(double %x, double %y) {
 ; MIPS32R6-LABEL: minimum_double_nsz:
 ; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    cmp.un.d $f0, $f14, $f14
+; MIPS32R6-NEXT:    min.d $f1, $f12, $f14
+; MIPS32R6-NEXT:    cmp.un.d $f0, $f12, $f14
 ; MIPS32R6-NEXT:    mfc1 $1, $f0
 ; MIPS32R6-NEXT:    mtc1 $1, $f0
-; MIPS32R6-NEXT:    sel.d $f0, $f12, $f14
-; MIPS32R6-NEXT:    cmp.un.d $f1, $f0, $f0
-; MIPS32R6-NEXT:    mfc1 $1, $f1
-; MIPS32R6-NEXT:    mtc1 $1, $f1
-; MIPS32R6-NEXT:    sel.d $f1, $f14, $f0
+; MIPS32R6-NEXT:    lui $1, %hi($CPI10_0)
+; MIPS32R6-NEXT:    ldc1 $f2, %lo($CPI10_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    min.d $f0, $f0, $f1
+; MIPS32R6-NEXT:    sel.d $f0, $f1, $f2
 ;
 ; MIPS64R2-LABEL: minimum_double_nsz:
 ; MIPS64R2:       # %bb.0:
