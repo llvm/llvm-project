@@ -2365,11 +2365,7 @@ void AArch64FrameLowering::determineStackHazardSlot(
            AArch64::FPR128RegClass.contains(Reg) ||
            AArch64::ZPRRegClass.contains(Reg);
   });
-  bool HasPPRCSRs = any_of(SavedRegs.set_bits(), [](unsigned Reg) {
-    return AArch64::PPRRegClass.contains(Reg);
-  });
   bool HasFPRStackObjects = false;
-  bool HasPPRStackObjects = false;
   if (!HasFPRCSRs || SplitSVEObjects) {
     enum SlotType : uint8_t {
       Unknown = 0,
@@ -2402,10 +2398,8 @@ void AArch64FrameLowering::determineStackHazardSlot(
       HasFPRStackObjects |= SlotTypes[FI] == SlotType::ZPRorFPR;
       // For SplitSVEObjects remember that this stack slot is a predicate, this
       // will be needed later when determining the frame layout.
-      if (SlotTypes[FI] == SlotType::PPR) {
+      if (SlotTypes[FI] == SlotType::PPR)
         MFI.setStackID(FI, TargetStackID::ScalablePredicateVector);
-        HasPPRStackObjects = true;
-      }
     }
   }
 
@@ -2427,8 +2421,6 @@ void AArch64FrameLowering::determineStackHazardSlot(
       return;
     }
 
-    // We only use SplitSVEObjects in non-SVE CC functions if there's a
-    // possibility of a stack hazard between PPRs and ZPRs/FPRs.
     LLVM_DEBUG(dbgs() << "Determining if SplitSVEObjects should be used in "
                          "non-SVE CC function...\n");
 
@@ -2441,23 +2433,13 @@ void AArch64FrameLowering::determineStackHazardSlot(
       return;
     }
 
-    if (!HasPPRCSRs && !HasPPRStackObjects) {
-      LLVM_DEBUG(
-          dbgs() << "Not using SplitSVEObjects as no PPRs are on the stack\n");
-      return;
-    }
-
-    if (!HasFPRCSRs && !HasFPRStackObjects) {
+    auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+    if (HasFPRCSRs && !Subtarget.isSVEorStreamingSVEAvailable()) {
       LLVM_DEBUG(
           dbgs()
-          << "Not using SplitSVEObjects as no FPRs or ZPRs are on the stack\n");
+          << "SplitSVEObjects requires SVE to promote FPR CSRs to ZPRs\n");
       return;
     }
-
-    [[maybe_unused]] const AArch64Subtarget &Subtarget =
-        MF.getSubtarget<AArch64Subtarget>();
-    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
-           "Expected SVE to be available for PPRs");
 
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     // With SplitSVEObjects the CS hazard padding is placed between the
@@ -2689,9 +2671,12 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       CalleeStackUsed = FixedOff;
   }
 
+  bool HasSVEStack = SVEStackSize || (AFI->hasSplitSVEObjects() &&
+                                      AFI->hasStackHazardSlotIndex());
+
   // Conservatively always assume BigStack when there are SVE spills.
-  bool BigStack = SVEStackSize || (EstimatedStackSize + CSStackSize +
-                                   CalleeStackUsed) > EstimatedStackSizeLimit;
+  bool BigStack = HasSVEStack || (EstimatedStackSize + CSStackSize +
+                                  CalleeStackUsed) > EstimatedStackSizeLimit;
   if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF))
     AFI->setHasStackFrame(true);
 

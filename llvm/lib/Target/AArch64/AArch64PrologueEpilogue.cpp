@@ -341,6 +341,9 @@ bool AArch64PrologueEpilogueCommon::shouldCombineCSRLocalStackBump(
   if (AFI->hasSVEStackSize())
     return false;
 
+  if (AFI->hasSplitSVEObjects())
+    return false;
+
   return true;
 }
 
