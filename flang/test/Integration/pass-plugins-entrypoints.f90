@@ -43,8 +43,6 @@
 ! EP-OPT: VectorizerStart
 ! EP-OPT: VectorizerEnd
 ! EP-OPT: OptimizerLast
-
-! FIXME: Thin-LTO does not invoke vectorizer callbacks
 !
 ! RUN: %flang -fpass-plugin=%llvmshlibdir/Bye%pluginext -O2 -flto=thin \
 ! RUN:        -Xflang -load -Xflang %llvmshlibdir/Bye%pluginext \
