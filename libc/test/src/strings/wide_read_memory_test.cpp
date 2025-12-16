@@ -13,14 +13,14 @@
 // unreadable, the middle usable normally. By placing test data at the edges
 // between the middle page and the others, we can test for bad accesses.
 
+#include <assert.h>
 #include <cstddef>
 #include <type_traits>
-#include <vector>
 
-#include <assert.h>
-#include <sys/mman.h>
-#include <unistd.h>
-
+#include "src/unistd/getpagesize.h"
+#include "src/sys/mman/mmap.h"
+#include "src/sys/mman/munmap.h"
+#include "src/sys/mman/mprotect.h"
 #include "src/string/string_utils.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -35,24 +35,18 @@ class LlvmLibcWideAccessMemoryTest : public testing::Test {
 
 public:
   void SetUp() override {
-    page_size = getpagesize();
-    page0_ =
-        static_cast<char *>(mmap(nullptr, page_size * 3, PROT_READ | PROT_WRITE,
-                                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+    page_size = LIBC_NAMESPACE::getpagesize();
+    page0_ = static_cast<char *>(
+        LIBC_NAMESPACE::mmap(nullptr, page_size * 3, PROT_READ | PROT_WRITE,
+                             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
     ASSERT_NE(static_cast<void *>(page0_), MAP_FAILED);
     page1_ = page0_ + page_size;
     page2_ = page1_ + page_size;
-    mprotect(page0_, page_size, PROT_NONE);
-    mprotect(page2_, page_size, PROT_NONE);
+    LIBC_NAMESPACE::mprotect(page0_, page_size, PROT_NONE);
+    LIBC_NAMESPACE::mprotect(page2_, page_size, PROT_NONE);
   }
 
-  void TearDown() override { munmap(page0_, page_size * 3); }
-
-  // So we don't depend on system memcpy, which may itself be under test.
-  void BasicMemCopy(char *dst, const char *src, size_t len) {
-    while (len--)
-      *dst++ = *src++;
-  }
+  void TearDown() override { LIBC_NAMESPACE::munmap(page0_, page_size * 3); }
 
   // Repeatedly runs "func" on copies of the data in "buf", each progressively
   // closer to the boundary of valid memory. Test will segfault if function
