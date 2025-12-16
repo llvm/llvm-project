@@ -278,6 +278,35 @@ struct TestXeGPUMoveFuncBodyToWarpOp
   }
 };
 
+struct TestXeGPUPropagateLayouts
+    : public PassWrapper<TestXeGPUPropagateLayouts,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUPropagateLayouts)
+
+  StringRef getArgument() const final { return "test-xegpu-propagate-layouts"; }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU propagate layouts.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPUPropagateLayouts() = default;
+  TestXeGPUPropagateLayouts(const TestXeGPUPropagateLayouts &pass) = default;
+
+  void runOnOperation() override {
+    OpBuilder builder(getOperation());
+    if (xegpu::propagateLayouts(OpBuilder(getOperation()), getOperation(),
+                                LayoutKind::Lane)
+            .failed()) {
+      signalPassFailure();
+    }
+  }
+};
+
 struct TestXeGPULayoutInterface
     : public PassWrapper<TestXeGPULayoutInterface,
                          OperationPass<gpu::GPUModuleOp>> {

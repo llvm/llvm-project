@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
+#include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -52,8 +53,6 @@ using namespace mlir;
 using namespace mlir::dataflow;
 
 namespace {
-
-enum class LayoutKind { Lane, InstData };
 
 //===----------------------------------------------------------------------===//
 // LayoutInfo
@@ -336,7 +335,7 @@ getSIMTLayoutInfoForDPASOperand(VectorType vectorTy, unsigned operandNum,
 class LayoutInfoPropagation
     : public SparseBackwardDataFlowAnalysis<LayoutInfoLattice> {
 private:
-  LayoutKind layoutKind;
+  xegpu::LayoutKind layoutKind;
   void visitDpasOp(xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
                    ArrayRef<const LayoutInfoLattice *> results);
 
@@ -392,7 +391,7 @@ private:
 public:
   LayoutInfoPropagation(DataFlowSolver &solver,
                         SymbolTableCollection &symbolTable,
-                        LayoutKind layoutKind)
+                        xegpu::LayoutKind layoutKind)
       : SparseBackwardDataFlowAnalysis(solver, symbolTable),
         layoutKind(layoutKind) {}
   using SparseBackwardDataFlowAnalysis::SparseBackwardDataFlowAnalysis;
@@ -482,9 +481,9 @@ bool LayoutInfoPropagation::hasParamsOfLayoutKind(
   if (anchorLayout == nullptr) {
     return false;
   }
-  if (layoutKind == LayoutKind::InstData) {
+  if (layoutKind == xegpu::LayoutKind::InstData) {
     return !(anchorLayout.getEffectiveInstDataAsInt().empty());
-  } else if (layoutKind == LayoutKind::Lane) {
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
     return !(anchorLayout.getEffectiveLaneLayoutAsInt().empty() ||
              anchorLayout.getEffectiveLaneDataAsInt().empty());
   }
@@ -532,7 +531,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
       instData = {instHeight, instWidth};
     }
 
-    if (layoutKind == LayoutKind::InstData)
+    if (layoutKind == xegpu::LayoutKind::InstData)
       prefetchLayout =
           LayoutInfo(xegpu::LayoutAttr::get(tdescTy.getContext(), instData));
     else
@@ -705,7 +704,7 @@ void LayoutInfoPropagation::visitDpasOp(
     SmallVector<int> instDataA = {maxALen, subgroupSize};
     SmallVector<int> instDataB = {subgroupSize, maxBLen};
 
-    if (layoutKind == LayoutKind::InstData) {
+    if (layoutKind == xegpu::LayoutKind::InstData) {
       dpasALayout =
           LayoutInfo(xegpu::LayoutAttr::get(dpas.getContext(), instDataA));
       dpasBLayout =
@@ -719,7 +718,7 @@ void LayoutInfoPropagation::visitDpasOp(
 
     if (operands.size() > 2) {
       VectorType cTy = dpas.getAccType();
-      if (layoutKind == LayoutKind::InstData) {
+      if (layoutKind == xegpu::LayoutKind::InstData) {
         const unsigned dataCLen = bTy.getShape().back();
         auto supportedCLen =
             uArchInstruction->getSupportedN(bTy.getElementType());
@@ -789,7 +788,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
       instData = {instHeight, instWidth};
     }
 
-    if (layoutKind == LayoutKind::InstData)
+    if (layoutKind == xegpu::LayoutKind::InstData)
       storeLayout =
           LayoutInfo(xegpu::LayoutAttr::get(dataTy.getContext(), instData));
     else
@@ -949,7 +948,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
         instData.push_back(chunkSize);
     }
 
-    if (layoutKind == LayoutKind::InstData)
+    if (layoutKind == xegpu::LayoutKind::InstData)
       loadLayout =
           LayoutInfo(xegpu::LayoutAttr::get(load.getContext(), instData));
     else
@@ -1012,7 +1011,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     auto uArch = getUArch(getChipStr(storeScatter).value_or(""));
     const int subgroupSize = uArch->getSubgroupSize();
 
-    if (layoutKind == LayoutKind::InstData) {
+    if (layoutKind == xegpu::LayoutKind::InstData) {
       SmallVector<int> instData{subgroupSize};
       if (auto chunkSize = storeScatter.getChunkSize().value_or(0);
           chunkSize > 1)
@@ -1063,7 +1062,8 @@ class RunLayoutInfoPropagation {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(RunLayoutInfoPropagation)
 
-  RunLayoutInfoPropagation(Operation *op, LayoutKind layoutKind) : target(op) {
+  RunLayoutInfoPropagation(Operation *op, xegpu::LayoutKind layoutKind)
+      : target(op) {
     SymbolTableCollection symbolTable;
     loadBaselineAnalyses(solver);
     solver.load<LayoutInfoPropagation>(symbolTable, layoutKind);
@@ -1305,24 +1305,14 @@ struct XeGPUPropagateLayoutPass final
 
 } // namespace
 
-void XeGPUPropagateLayoutPass::runOnOperation() {
-  LayoutKind layoutKind;
-  if (this->layoutKind == "lane") {
-    layoutKind = LayoutKind::Lane;
-  } else if (this->layoutKind == "inst") {
-    layoutKind = LayoutKind::InstData;
-  } else {
-    getOperation()->emitError("Unsupported layout kind option: " +
-                              this->layoutKind);
-    signalPassFailure();
-    return;
-  }
-  RunLayoutInfoPropagation analysis(getOperation(), layoutKind);
+LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
+                                      LayoutKind layoutKind, bool printOnly) {
+  RunLayoutInfoPropagation analysis(target, layoutKind);
   // Print the analysis result and exit. (for debugging purposes)
   if (printOnly) {
     auto &os = llvm::outs();
     analysis.printAnalysisResult(os);
-    return;
+    return success();
   }
   // Helper to convert LayoutInfo to xegpu::LayoutAttr.
   auto getXeGPULayoutForValue = [&](Value val) -> xegpu::DistributeLayoutAttr {
@@ -1336,8 +1326,7 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     return cast<xegpu::LayoutAttr>(layoutAttr);
   };
 
-  mlir::OpBuilder builder(&getContext());
-  Operation *op = getOperation();
+  Operation *op = target;
   auto walkResult = op->walk([&](mlir::Block *block) -> WalkResult {
     for (mlir::Operation &op : llvm::reverse(block->getOperations())) {
       LogicalResult r = success();
@@ -1362,7 +1351,32 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     }
     return WalkResult::advance();
   });
-  if (walkResult.wasInterrupted()) {
+  if (walkResult.wasInterrupted())
+    return failure();
+
+  return success();
+}
+
+LogicalResult xegpu::resolveLayoutConflicts(OpBuilder &builder,
+                                            Operation *target) {
+  return success();
+}
+
+void XeGPUPropagateLayoutPass::runOnOperation() {
+  xegpu::LayoutKind layoutKind;
+  if (this->layoutKind == "lane") {
+    layoutKind = xegpu::LayoutKind::Lane;
+  } else if (this->layoutKind == "inst") {
+    layoutKind = xegpu::LayoutKind::InstData;
+  } else {
+    getOperation()->emitError("Unsupported layout kind option: " +
+                              this->layoutKind);
+    signalPassFailure();
+    return;
+  }
+  OpBuilder builder(&getContext());
+  if (failed(xegpu::propagateLayouts(builder, getOperation(), layoutKind,
+                                     this->printOnly))) {
     signalPassFailure();
     return;
   }

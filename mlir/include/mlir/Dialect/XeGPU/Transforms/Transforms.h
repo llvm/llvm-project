@@ -9,6 +9,8 @@
 #ifndef MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
@@ -90,6 +92,12 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
 ///   to re-assemble the slices into the original shape.
 void populateXeGPUUnrollPatterns(RewritePatternSet &patterns,
                                  const UnrollOptions &options);
+
+enum class LayoutKind { Lane, InstData };
+LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
+                               LayoutKind layoutKind, bool printOnly = false);
+
+LogicalResult resolveLayoutConflicts(OpBuilder &builder, Operation *target);
 
 } // namespace xegpu
 } // namespace mlir
