@@ -1953,14 +1953,6 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
                                                     VPCostContext &Ctx) const {
   SmallVector<const VPValue *> ArgOps(operands());
-  if (VectorIntrinsicID == Intrinsic::vp_load_ff) {
-    auto *StructTy = cast<StructType>(ResultTy);
-    Type *DataTy = toVectorizedTy(StructTy->getStructElementType(0), VF);
-    // TODO: Infer alignment from pointer.
-    Align Alignment;
-    return Ctx.TTI.getMemIntrinsicInstrCost(
-        {VectorIntrinsicID, DataTy, Alignment}, Ctx.CostKind);
-  }
   return getCostForIntrinsics(VectorIntrinsicID, ArgOps, *this, VF, Ctx);
 }
 
