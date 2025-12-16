@@ -2533,8 +2533,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       APFloat::opStatus Status =
           Tmp.convertToInteger(Result, APFloat::rmNearestTiesToEven, &IsExact);
 
-      // Allowed: opOK or opInexact
-      // Disallowed: opInvalidOp (overflow)
       if (Status == APFloat::opOK || Status == APFloat::opInexact)
         return ConstantInt::get(Ty, Result);
 

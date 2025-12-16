@@ -1144,7 +1144,7 @@ def ilogbl : TargetLibCall<"ilogbl", Int, [LDbl]>;
 /// long long llrint(double x);
 def llrint : TargetLibCall<"llrint", LLong, [Dbl]>;
 
-/// long long llrintf( float x);
+/// long long llrintf(float x);
 def llrintf : TargetLibCall<"llrintf", LLong, [Flt]>;
 
 /// long long llrintl(long double x);
