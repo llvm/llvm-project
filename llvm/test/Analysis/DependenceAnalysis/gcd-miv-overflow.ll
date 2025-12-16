@@ -193,10 +193,10 @@ exit:
 ; FIXME: DependenceAnalysis fails to detect dependency between two stores. Also
 ; GCD MIV misses '='-dependency.
 ;
-; memory accesses                     | (i,j) == (1844674407370955161,1) | (i,j) == (1844674407370955160,1)
-; ------------------------------------|----------------------------------|----------------------------------
-; A[ 5*i - 9223372036854775805*j]     | A[-5]                            |
-; A[-5*i + 9223372036854775796*j - 1] |                                  | A[-5]
+; memory accesses                     | (i,j) == (1844674407370955160,1)
+; ------------------------------------|----------------------------------
+; A[ 5*i - 9223372036854775805*j]     | A[-5]
+; A[-5*i + 9223372036854775796*j - 1] | A[-5]
 ;
 define void @gcdmiv_delta_ovfl2(ptr %A) {
 ; CHECK-ALL-LABEL: 'gcdmiv_delta_ovfl2'
@@ -256,7 +256,7 @@ loop.i.latch:
   %i.inc = add i64 %i, 1
   %c.i.0.next = add nsw i64 %c.i.0, 5
   %c.i.1.next = add nsw i64 %c.i.1, -5
-  %ec.i = icmp eq i64 %i.inc, 1844674407370955162
+  %ec.i = icmp eq i64 %i.inc, 1844674407370955161
   br i1 %ec.i, label %exit, label %loop.i.header
 
 exit:
