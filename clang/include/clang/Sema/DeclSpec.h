@@ -428,6 +428,12 @@ private:
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
   SourceLocation TQ_pipeLoc;
 
+  // Track conflicting type specifier when 'auto' is set (for Finish()
+  // detection)
+  LLVM_PREFERRED_TYPE(TST)
+  unsigned ConflictingTypeSpecifier : 7;
+  SourceLocation ConflictingTypeSpecifierLoc;
+
   WrittenBuiltinSpecs writtenBS;
   void SaveWrittenBuiltinSpecs();
 
@@ -472,14 +478,14 @@ public:
         TypeSpecSign(static_cast<unsigned>(TypeSpecifierSign::Unspecified)),
         TypeSpecType(TST_unspecified), TypeAltiVecVector(false),
         TypeAltiVecPixel(false), TypeAltiVecBool(false), TypeSpecOwned(false),
-        TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
         TypeQualifiers(TQ_unspecified),
         OB_state(static_cast<unsigned>(OverflowBehaviorState::Unspecified)),
         FS_inline_specified(false), FS_forceinline_specified(false),
         FS_virtual_specified(false), FS_noreturn_specified(false),
         FriendSpecifiedFirst(false), ConstexprSpecifier(static_cast<unsigned>(
                                          ConstexprSpecKind::Unspecified)),
-        Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
+        Attrs(attrFactory), ConflictingTypeSpecifier(TST_unspecified),
+        ConflictingTypeSpecifierLoc(), writtenBS(), ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
   SCS getStorageClassSpec() const { return (SCS)StorageClassSpec; }
@@ -519,6 +525,9 @@ public:
     return static_cast<TypeSpecifierSign>(TypeSpecSign);
   }
   TST getTypeSpecType() const { return (TST)TypeSpecType; }
+  bool hasConflictingTypeSpecifier() const {
+    return ConflictingTypeSpecifier != TST_unspecified;
+  }
   bool isTypeAltiVecVector() const { return TypeAltiVecVector; }
   bool isTypeAltiVecPixel() const { return TypeAltiVecPixel; }
   bool isTypeAltiVecBool() const { return TypeAltiVecBool; }
