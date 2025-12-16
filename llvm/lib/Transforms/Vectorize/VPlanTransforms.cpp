@@ -2474,21 +2474,21 @@ static void licm(VPlan &Plan) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (cannotHoistOrSinkRecipe(R))
         continue;
-      SmallSetVector<VPRecipeBase *, 4> Users;
-      if (any_of(R.definedValues(), [&Users](VPValue *V) {
-            return any_of(V->users(), [&Users](VPUser *U) {
+      SmallSetVector<VPBasicBlock *, 4> UserVPBBs;
+      if (any_of(R.definedValues(), [&UserVPBBs](VPValue *V) {
+            return any_of(V->users(), [&UserVPBBs](VPUser *U) {
               auto *UR = cast<VPRecipeBase>(U);
-              Users.insert(UR);
+              UserVPBBs.insert(UR->getParent());
               return UR->getParent()->getEnclosingLoopRegion();
             });
           }))
         continue;
-      if (Users.empty())
+      if (UserVPBBs.empty())
         continue;
-      VPBasicBlock *SinkVPBB = Users.front()->getParent();
-      for (auto *User : drop_begin(Users))
+      VPBasicBlock *SinkVPBB = UserVPBBs.front();
+      for (auto *UserVPBB : drop_begin(UserVPBBs))
         SinkVPBB = cast<VPBasicBlock>(
-            VPDT.findNearestCommonDominator(SinkVPBB, User->getParent()));
+            VPDT.findNearestCommonDominator(SinkVPBB, UserVPBB));
       R.moveBefore(*SinkVPBB, SinkVPBB->begin());
     }
   }
