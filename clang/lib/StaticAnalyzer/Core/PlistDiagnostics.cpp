@@ -835,7 +835,7 @@ getExpandedMacro(SourceLocation MacroExpansionLoc,
                  const SourceManager &SM) {
   if (auto CTUMacroExpCtx =
           CTU.getMacroExpansionContextForSourceLocation(MacroExpansionLoc)) {
-    return CTUMacroExpCtx->getFormattedExpandedText(MacroExpansionLoc);
+    return CTUMacroExpCtx->getExpandedText(MacroExpansionLoc);
   }
-  return MacroExpansions.getFormattedExpandedText(MacroExpansionLoc);
+  return MacroExpansions.getExpandedText(MacroExpansionLoc);
 }
