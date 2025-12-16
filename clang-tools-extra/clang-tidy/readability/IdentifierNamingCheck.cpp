@@ -1355,8 +1355,10 @@ IdentifierNamingCheck::getFailureInfo(
     return std::nullopt;
 
   std::string KindName =
-      fixupWithCase(Type, StyleNames[SK], ND, Style, HNOption,
-                    IdentifierNamingCheck::CT_LowerCase);
+      SK == SK_Default
+          ? "identifier"
+          : fixupWithCase(Type, StyleNames[SK], ND, Style, HNOption,
+                          IdentifierNamingCheck::CT_LowerCase);
   llvm::replace(KindName, '_', ' ');
 
   std::string Fixup = fixupWithStyle(Type, Name, Style, HNOption, ND);
