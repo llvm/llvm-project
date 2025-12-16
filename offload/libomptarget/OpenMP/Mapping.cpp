@@ -138,7 +138,7 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
   uintptr_t HP = (uintptr_t)HstPtrBegin;
   LookupResult LR;
 
-  ODBG(ODT_Mapping) << "Looking up mapping(HstPtrBegin=" << HP
+  ODBG(ODT_Mapping) << "Looking up mapping(HstPtrBegin=" << HstPtrBegin
                     << ", Size=" << Size << ")...";
 
   if (HDTTMap->empty())
@@ -346,12 +346,12 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
         OFFLOAD_FAIL) {
       ODBG(ODT_Mapping) << "Multiple new mappings of " << Size
                         << " bytes detected (hst:" << HstPtrBegin
-                        << ") -> (tgt:" << LR.TPR.TargetPointer;
+                        << ") -> (tgt:" << LR.TPR.TargetPointer << ")";
       return std::move(LR.TPR);
     }
 
     ODBG(ODT_Mapping) << "Moving " << Size << " bytes (hst:" << HstPtrBegin
-                      << ") -> (tgt:" << LR.TPR.TargetPointer;
+                      << ") -> (tgt:" << LR.TPR.TargetPointer << ")";
 
     int Ret = Device.submitData(LR.TPR.TargetPointer, HstPtrBegin, Size,
                                 AsyncInfo, LR.TPR.getEntry());
