@@ -180,6 +180,14 @@ if config.enable_per_target_runtime_dir:
         config.compiler_rt_libdir = re.sub(
             r"/sparc(?=-[^/]+$)", "/sparcv9", config.compiler_rt_libdir
         )
+    if config.target_arch == "powerpc":
+        config.compiler_rt_libdir = re.sub(
+            r"/powerpc64(?=-[^/]+$)", "/powerpc", config.compiler_rt_libdir
+        )
+    elif config.target_arch == "powerpc64":
+        config.compiler_rt_libdir = re.sub(
+            r"/powerpc(?=-[^/]+$)", "/powerpc64", config.compiler_rt_libdir
+        )
 
 # Check if the test compiler resource dir matches the local build directory
 # (which happens with -DLLVM_ENABLE_PROJECTS=clang;compiler-rt) or if we are

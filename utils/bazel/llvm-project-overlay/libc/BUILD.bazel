@@ -7103,7 +7103,6 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
-        ":mprotect",
         ":mprotect_common",
         ":types_size_t",
     ],
