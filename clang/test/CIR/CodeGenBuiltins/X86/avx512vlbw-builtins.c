@@ -28,6 +28,10 @@ __m128i test_mm_movm_epi8(__mmask16 __A) {
   // LLVM-LABEL: @test_mm_movm_epi8
   // LLVM: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // LLVM: %{{.*}} = sext <16 x i1> %{{.*}} to <16 x i8>
+
+  // OGCG-LABEL: @test_mm_movm_epi8
+  // OGCG: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: %{{.*}} = sext <16 x i1> %{{.*}} to <16 x i8>
   return _mm_movm_epi8(__A); 
 }
 
@@ -39,6 +43,10 @@ __m256i test_mm256_movm_epi8(__mmask32 __A) {
   // LLVM-LABEL: @test_mm256_movm_epi8
   // LLVM: %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
   // LLVM: %{{.*}} = sext <32 x i1> %{{.*}} to <32 x i8>
+
+  // OGCG-LABEL: @test_mm256_movm_epi8
+  // OGCG: %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
+  // OGCG: %{{.*}} = sext <32 x i1> %{{.*}} to <32 x i8>
   return _mm256_movm_epi8(__A); 
 }
 
@@ -50,6 +58,10 @@ __m512i test_mm512_movm_epi8(__mmask64 __A) {
   // LLVM-LABEL: @test_mm512_movm_epi8
   // LLVM:  %{{.*}} = bitcast i64 %{{.*}} to <64 x i1>
   // LLVM:  %{{.*}} = sext <64 x i1> %{{.*}} to <64 x i8>
+
+  // OGCG-LABEL: @test_mm512_movm_epi8
+  // OGCG: %{{.*}} = bitcast i64 %{{.*}} to <64 x i1>
+  // OGCG: %{{.*}} = sext <64 x i1> %{{.*}} to <64 x i8>
   return _mm512_movm_epi8(__A); 
 }
 
@@ -61,6 +73,10 @@ __m128i test_mm_movm_epi16(__mmask8 __A) {
   // LLVM-LABEL: @test_mm_movm_epi16
   // LLVM: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // LLVM: %{{.*}} = sext <8 x i1> %{{.*}} to <8 x i16>
+
+  // OGCG-LABEL: @test_mm_movm_epi16
+  // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %{{.*}} = sext <8 x i1> %{{.*}} to <8 x i16>
   return _mm_movm_epi16(__A); 
 }
 
@@ -72,6 +88,10 @@ __m256i test_mm256_movm_epi16(__mmask16 __A) {
   // LLVM-LABEL: @test_mm256_movm_epi16
   // LLVM: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // LLVM: %{{.*}} = sext <16 x i1> %{{.*}} to <16 x i16>
+
+  // OGCG-LABEL: @test_mm256_movm_epi16
+  // OGCG: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: %{{.*}} = sext <16 x i1> %{{.*}} to <16 x i16>
   return _mm256_movm_epi16(__A); 
 }
 

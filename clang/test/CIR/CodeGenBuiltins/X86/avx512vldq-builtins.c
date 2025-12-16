@@ -17,6 +17,11 @@ __m128i test_mm_movm_epi32(__mmask8 __A) {
   // LLVM: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // LLVM: %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // LLVM: %{{.*}} = sext <4 x i1> %{{.*}} to <4 x i32>
+
+  // OGCG-LABEL: @test_mm_movm_epi32
+  // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // OGCG: %{{.*}} = sext <4 x i1> %{{.*}} to <4 x i32>
   return _mm_movm_epi32(__A); 
 }
 
@@ -28,6 +33,10 @@ __m256i test_mm256_movm_epi32(__mmask8 __A) {
   // LLVM-LABEL: @test_mm256_movm_epi32
   // LLVM: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // LLVM: %{{.*}} = sext <8 x i1> %{{.*}} to <8 x i32>
+
+  // OGCG-LABEL: @test_mm256_movm_epi32
+  // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %{{.*}} = sext <8 x i1> %{{.*}} to <8 x i32>
   return _mm256_movm_epi32(__A); 
 }
 
@@ -39,6 +48,10 @@ __m512i test_mm512_movm_epi32(__mmask16 __A) {
   // LLVM-LABEL: @test_mm512_movm_epi32
   // LLVM: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // LLVM: %{{.*}} = sext <16 x i1> %{{.*}} to <16 x i32>
+
+  // OGCG-LABEL: @test_mm512_movm_epi32
+  // OGCG: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: %{{.*}} = sext <16 x i1> %{{.*}} to <16 x i32>
   return _mm512_movm_epi32(__A); 
 }
 
@@ -52,6 +65,11 @@ __m128i test_mm_movm_epi64(__mmask8 __A) {
   // LLVM: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // LLVM: %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // LLVM: %{{.*}} = sext <2 x i1> %{{.*}} to <2 x i64>
+
+  // OGCG-LABEL: @test_mm_movm_epi64
+  // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
+  // OGCG: %{{.*}} = sext <2 x i1> %{{.*}} to <2 x i64>
   return _mm_movm_epi64(__A); 
 }
 
@@ -65,6 +83,11 @@ __m256i test_mm256_movm_epi64(__mmask8 __A) {
   // LLVM: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // LLVM: %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // LLVM: %{{.*}} = sext <4 x i1> %{{.*}} to <4 x i64>
+
+  // OGCG-LABEL: @test_mm256_movm_epi64
+  // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // OGCG: %{{.*}} = sext <4 x i1> %{{.*}} to <4 x i64>
   return _mm256_movm_epi64(__A); 
 }
 
