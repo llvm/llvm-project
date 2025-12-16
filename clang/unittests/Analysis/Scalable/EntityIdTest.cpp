@@ -26,9 +26,12 @@ TEST(EntityIdTest, Equality) {
 
   EXPECT_EQ(Id1, Id1Copy);
   EXPECT_FALSE(Id1 != Id1Copy);
+  EXPECT_FALSE(Id1 < Id1Copy);
+  EXPECT_FALSE(Id1Copy < Id1);
 
   EXPECT_NE(Id1, Id2);
   EXPECT_FALSE(Id1 == Id2);
+  EXPECT_TRUE(Id1 < Id2 || Id2 < Id1);
 }
 
 TEST(EntityIdTest, LessThan) {
