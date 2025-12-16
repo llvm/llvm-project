@@ -21,7 +21,7 @@ local:
 This occurs because Flang's implementation of pointers to internal procedures requires an executable stack.
 
 An internal procedure has a "host scope", which is the scope in which it is contained.
-It can access variables in the host scope.
+It can access variables defined in that host scope.
 When an internal procedure is referenced from outside its host scope (for example, via a procedure pointer), the implementation must ensure that it can still access variables from that host scope.
 To achieve this, the current implementation of Flang generates a small piece of code, called a "trampoline", on the stack.
 When the procedure is called, this trampoline is executed.
