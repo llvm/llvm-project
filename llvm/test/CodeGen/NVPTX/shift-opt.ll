@@ -120,20 +120,22 @@ define i64 @test_negative_use_lop(i64 %x, i32 %y) {
 ; CHECK-LABEL: test_negative_use_lop(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_negative_use_lop_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_negative_use_lop_param_1];
-; CHECK-NEXT:    mul.wide.u32 %rd2, %r1, 32;
-; CHECK-NEXT:    or.b64 %rd3, %rd1, %rd2;
-; CHECK-NEXT:    shr.u64 %rd4, %rd3, 5;
+; CHECK-NEXT:    cvt.u64.u32 %rd2, %r1;
+; CHECK-NEXT:    mul.wide.u32 %rd3, %r1, 32;
+; CHECK-NEXT:    shr.u64 %rd4, %rd1, 5;
+; CHECK-NEXT:    or.b64 %rd5, %rd4, %rd2;
+; CHECK-NEXT:    or.b64 %rd6, %rd1, %rd3;
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .b64 param0;
-; CHECK-NEXT:    st.param.b64 [param0], %rd3;
+; CHECK-NEXT:    st.param.b64 [param0], %rd6;
 ; CHECK-NEXT:    call.uni use, (param0);
 ; CHECK-NEXT:    } // callseq 0
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd5;
 ; CHECK-NEXT:    ret;
   %ext = zext i32 %y to i64
   %shl = shl i64 %ext, 5
@@ -149,20 +151,21 @@ define i64 @test_negative_use_shl(i64 %x, i32 %y) {
 ; CHECK-LABEL: test_negative_use_shl(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_negative_use_shl_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_negative_use_shl_param_1];
-; CHECK-NEXT:    mul.wide.u32 %rd2, %r1, 32;
-; CHECK-NEXT:    or.b64 %rd3, %rd1, %rd2;
-; CHECK-NEXT:    shr.u64 %rd4, %rd3, 5;
+; CHECK-NEXT:    cvt.u64.u32 %rd2, %r1;
+; CHECK-NEXT:    mul.wide.u32 %rd3, %r1, 32;
+; CHECK-NEXT:    shr.u64 %rd4, %rd1, 5;
+; CHECK-NEXT:    or.b64 %rd5, %rd4, %rd2;
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .b64 param0;
-; CHECK-NEXT:    st.param.b64 [param0], %rd2;
+; CHECK-NEXT:    st.param.b64 [param0], %rd3;
 ; CHECK-NEXT:    call.uni use, (param0);
 ; CHECK-NEXT:    } // callseq 1
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd5;
 ; CHECK-NEXT:    ret;
   %ext = zext i32 %y to i64
   %shl = shl i64 %ext, 5
@@ -428,6 +431,29 @@ define i64 @test_guarded_i64_ult_shl(i64 %x, i64 %shift) {
 ; CHECK-NEXT:    ret;
   %cmp = icmp ult i64 %shift, 64
   %shl = shl i64 %x, %shift
+  %sel = select i1 %cmp, i64 %shl, i64 0
+  ret i64 %sel
+}
+
+; Verify that the optimization does not apply when the shift in the guard is different from the shift in the shift operation.
+define i64 @test_guarded_i64_ult_shl_different_shift(i64 %x, i64 %shift1, i64 %shift2) {
+; CHECK-LABEL: test_guarded_i64_ult_shl_different_shift(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_guarded_i64_ult_shl_different_shift_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_guarded_i64_ult_shl_different_shift_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i64_ult_shl_different_shift_param_2];
+; CHECK-NEXT:    setp.lt.u64 %p1, %rd2, 64;
+; CHECK-NEXT:    shl.b64 %rd3, %rd1, %r1;
+; CHECK-NEXT:    selp.b64 %rd4, %rd3, 0, %p1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i64 %shift1, 64
+  %shl = shl i64 %x, %shift2
   %sel = select i1 %cmp, i64 %shl, i64 0
   ret i64 %sel
 }
