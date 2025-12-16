@@ -1992,17 +1992,17 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
 
 bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
-    std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
-    unsigned &MaxCSFrameIndex) const {
+    std::vector<CalleeSavedInfo> &CSI) const {
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   // Preemptible Interrupts have two additional Callee-save Frame Indexes,
   // not tracked by `CSI`.
   if (RVFI->isSiFivePreemptibleInterrupt(MF)) {
     for (int I = 0; I < 2; ++I) {
       int FI = RVFI->getInterruptCSRFrameIndex(I);
-      MinCSFrameIndex = std::min<unsigned>(MinCSFrameIndex, FI);
-      MaxCSFrameIndex = std::max<unsigned>(MaxCSFrameIndex, FI);
+      MFI.setIsCalleeSavedObjectIndex(FI, true);
     }
   }
 
@@ -2027,9 +2027,6 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
       RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
     }
   }
-
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   for (auto &CS : CSI) {
     MCRegister Reg = CS.getReg();
@@ -2080,10 +2077,7 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     // min.
     Alignment = std::min(Alignment, getStackAlign());
     int FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
-    if ((unsigned)FrameIdx < MinCSFrameIndex)
-      MinCSFrameIndex = FrameIdx;
-    if ((unsigned)FrameIdx > MaxCSFrameIndex)
-      MaxCSFrameIndex = FrameIdx;
+    MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
     CS.setFrameIdx(FrameIdx);
     if (RISCVRegisterInfo::isRVVRegClass(RC))
       MFI.setStackID(FrameIdx, TargetStackID::ScalableVector);

@@ -84,27 +84,33 @@ Error MustacheGenerator::generateDocumentation(
       return JSONGenerator.takeError();
   }
 
-  SmallString<128> JSONPath;
-  sys::path::native(RootDir.str() + "/json", JSONPath);
+  SmallString<128> JSONDirPath(RootDir);
+  SmallString<128> DocsDirPath(RootDir);
+  {
+    TimeTraceScope TS("Create Output Directories");
+    sys::path::append(JSONDirPath, "json");
+    if (auto EC = sys::fs::create_directories(JSONDirPath))
+      return createFileError(JSONDirPath, EC);
+    sys::path::append(DocsDirPath, DirName);
+    if (auto EC = sys::fs::create_directories(DocsDirPath))
+      return createFileError(DocsDirPath, EC);
+  }
 
   {
     llvm::TimeTraceScope TS("Iterate JSON files");
     std::error_code EC;
-    sys::fs::recursive_directory_iterator JSONIter(JSONPath, EC);
+    sys::fs::recursive_directory_iterator JSONIter(JSONDirPath, EC);
     std::vector<json::Value> JSONFiles;
     JSONFiles.reserve(Infos.size());
     if (EC)
       return createStringError("Failed to create directory iterator.");
 
-    SmallString<128> DocsDirPath(RootDir.str() + '/' + DirName);
-    sys::path::native(DocsDirPath);
-    if (auto EC = sys::fs::create_directories(DocsDirPath))
-      return createFileError(DocsDirPath, EC);
     while (JSONIter != sys::fs::recursive_directory_iterator()) {
       // create the same directory structure in the docs format dir
       if (JSONIter->type() == sys::fs::file_type::directory_file) {
         SmallString<128> DocsClonedPath(JSONIter->path());
-        sys::path::replace_path_prefix(DocsClonedPath, JSONPath, DocsDirPath);
+        sys::path::replace_path_prefix(DocsClonedPath, JSONDirPath,
+                                       DocsDirPath);
         if (auto EC = sys::fs::create_directories(DocsClonedPath)) {
           return createFileError(DocsClonedPath, EC);
         }
@@ -121,10 +127,11 @@ Error MustacheGenerator::generateDocumentation(
 
       auto File = MemoryBuffer::getFile(Path);
       if (EC = File.getError(); EC) {
-        // TODO: Buffer errors to report later, look into using Clang
-        // diagnostics.
-        llvm::errs() << "Failed to open file: " << Path << " " << EC.message()
-                     << '\n';
+        unsigned ID = CDCtx.Diags.getCustomDiagID(DiagnosticsEngine::Warning,
+                                                  "Failed to open file: %0 %1");
+        CDCtx.Diags.Report(ID) << Path << EC.message();
+        JSONIter.increment(EC);
+        continue;
       }
 
       auto Parsed = json::parse((*File)->getBuffer());
@@ -134,7 +141,7 @@ Error MustacheGenerator::generateDocumentation(
 
       std::error_code FileErr;
       SmallString<128> DocsFilePath(JSONIter->path());
-      sys::path::replace_path_prefix(DocsFilePath, JSONPath, DocsDirPath);
+      sys::path::replace_path_prefix(DocsFilePath, JSONDirPath, DocsDirPath);
       sys::path::replace_extension(DocsFilePath, DirName);
       raw_fd_ostream InfoOS(DocsFilePath, FileErr, sys::fs::OF_None);
       if (FileErr)
@@ -236,8 +243,6 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
 [[maybe_unused]] static int YAMLGeneratorAnchorDest = YAMLGeneratorAnchorSource;
 [[maybe_unused]] static int MDGeneratorAnchorDest = MDGeneratorAnchorSource;
 [[maybe_unused]] static int HTMLGeneratorAnchorDest = HTMLGeneratorAnchorSource;
-[[maybe_unused]] static int MHTMLGeneratorAnchorDest =
-    MHTMLGeneratorAnchorSource;
 [[maybe_unused]] static int JSONGeneratorAnchorDest = JSONGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang

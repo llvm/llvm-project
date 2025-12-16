@@ -1715,6 +1715,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {}, Rank::scalar, IntrinsicClass::impureSubroutine},
     {"second", {{"time", DefaultReal, Rank::scalar}}, {}, Rank::scalar,
         IntrinsicClass::impureSubroutine},
+    {"__builtin_show_descriptor", {{"d", AnyData, Rank::anyOrAssumedRank}}, {},
+        Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system",
         {{"command", DefaultChar, Rank::scalar},
             {"exitstat", DefaultInt, Rank::scalar, Optionality::optional,
@@ -3595,8 +3597,13 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
           // presence of DIM=, use messages from a later entry if
           // the messages from an earlier entry complain about the
           // DIM= argument and it wasn't specified with a keyword.
+          // Also prefer later messages when earlier ones are about
+          // argument count mismatches, as a later entry that accepts
+          // the right number of arguments will give more specific errors.
+          bool preferLaterError{false};
           for (const auto &m : buffer.messages()) {
-            if (m.ToString().find("'dim='") != std::string::npos) {
+            std::string text{m.ToString()};
+            if (text.find("'dim='") != std::string::npos) {
               bool hadDimKeyword{false};
               for (const auto &a : arguments) {
                 if (a) {
@@ -3607,10 +3614,19 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
                 }
               }
               if (!hadDimKeyword) {
-                buffer = std::move(localBuffer);
+                preferLaterError = true;
               }
               break;
+            } else if (text.find("too many actual arguments") !=
+                std::string::npos) {
+              // Prefer messages from an entry that matched the argument
+              // count, as those will be more specific about what's wrong
+              preferLaterError = true;
+              break;
             }
+          }
+          if (preferLaterError) {
+            buffer = std::move(localBuffer);
           }
           localBuffer.clear();
         }
