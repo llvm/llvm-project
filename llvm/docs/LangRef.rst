@@ -17350,8 +17350,7 @@ If an operand is a signaling NaN, then the intrinsic will non-deterministically
 either:
 
  * Return a :ref:`NaN <floatnan>`.
- * Or treat the signaling NaN as a quiet NaN. In this case the intrinsic will
-   behave the same as ``llvm.minimumnum``.
+ * Or treat the signaling NaN as a quiet NaN.
 
 If the ``nsz`` flag is specified, ``llvm.minnum`` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
@@ -17360,6 +17359,9 @@ have the same sign.
 
 When used with the ``nsz`` flag, this intrinsics follows the semantics of
 ``fmin`` in C.
+
+The ``llvm.minnum`` intrinsic can be refined into ``llvm.minimumnum``, as the
+latter exhibits a subset of behaviors of the former.
 
 .. _i_maxnum:
 
@@ -17406,8 +17408,7 @@ If an operand is a signaling NaN, then the intrinsic will non-deterministically
 either:
 
  * Return a :ref:`NaN <floatnan>`.
- * Or treat the signaling NaN as a quiet NaN. In this case the intrinsic will
-   behave the same as ``llvm.maximumnum``.
+ * Or treat the signaling NaN as a quiet NaN.
 
 If the ``nsz`` flag is specified, ``llvm.maxnum`` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
@@ -17416,6 +17417,9 @@ have the same sign.
 
 When used with the ``nsz`` flag, this intrinsics follows the semantics of
 ``fmax`` in C.
+
+The ``llvm.maxnum`` intrinsic can be refined into ``llvm.maximumnum``, as the
+latter exhibits a subset of behaviors of the former.
 
 .. _i_minimum:
 
