@@ -18992,9 +18992,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     // ABI.
     bool CStdConstraintViolation =
         BitfieldIsOverwide && !getLangOpts().CPlusPlus;
-    bool MSBitfieldViolation =
-        Value.ugt(TypeStorageSize) &&
-        (IsMsStruct || Context.getTargetInfo().getCXXABI().isMicrosoft());
+    bool MSBitfieldViolation = Value.ugt(TypeStorageSize) && IsMsStruct;
     if (CStdConstraintViolation || MSBitfieldViolation) {
       unsigned DiagWidth =
           CStdConstraintViolation ? TypeWidth : TypeStorageSize;

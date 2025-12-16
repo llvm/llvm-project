@@ -30,6 +30,8 @@ protected:
   int protectedMethod();
 
   int ProtectedField;
+private:
+  int PrivateField;
 };
 
 // CHECK:       {
@@ -106,7 +108,10 @@ protected:
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "Template": {
 // CHECK-NEXT:          "Parameters": [
-// CHECK-NEXT:            "typename T"
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "End": true,
+// CHECK-NEXT:              "Param": "typename T"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:        }
 // CHECK-NEXT:      },
@@ -122,6 +127,7 @@ protected:
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "HasEnums": true,
+// CHECK-NEXT:    "HasPrivateMembers": true,
 // CHECK-NEXT:    "HasPublicFunctions": true,
 // CHECK-NEXT:    "HasPublicMembers": true,
 // CHECK-NEXT:    "HasRecords": true,
@@ -137,6 +143,13 @@ protected:
 // CHECK-NEXT:      "GlobalNamespace"
 // CHECK-NEXT:    ],
 // CHECK-NEXT:   "Path": "GlobalNamespace",
+// CHECK-NEXT:   "PrivateMembers": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "IsStatic": false,
+// CHECK-NEXT:       "Name": "PrivateField",
+// CHECK-NEXT:       "Type": "int"
+// CHECK-NEXT:     }
+// CHECK-NEXT:   ],
 // CHECK-NEXT:   "ProtectedFunctions": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "InfoType": "function",
@@ -158,6 +171,7 @@ protected:
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "ProtectedMembers": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "IsStatic": false,
 // CHECK-NEXT:        "Name": "ProtectedField",
 // CHECK-NEXT:        "Type": "int"
 // CHECK-NEXT:      }
@@ -198,6 +212,7 @@ protected:
 // CHECK-NEXT:        },
 // CHECK:         "PublicMembers": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "IsStatic": false,
 // CHECK-NEXT:        "Name": "PublicField",
 // CHECK-NEXT:        "Type": "int"
 // CHECK-NEXT:      }

@@ -89,6 +89,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -1848,6 +1849,8 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
   using namespace llvm::sys;
   assert(llvm::Triple(llvm::sys::getProcessTriple()).isOSDarwin() &&
          "Only knows about .crash files on Darwin");
+  // This is not a formal output of the compiler, let's bypass the sandbox.
+  auto BypassSandbox = sandbox::scopedDisable();
 
   // The .crash file can be found on at ~/Library/Logs/DiagnosticReports/
   // (or /Library/Logs/DiagnosticReports for root) and has the filename pattern

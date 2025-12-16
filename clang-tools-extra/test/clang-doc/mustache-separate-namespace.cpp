@@ -19,13 +19,12 @@ namespace MyNamespace {
 // CHECK-GLOBAL:             <main>
 // CHECK-GLOBAL-NEXT:            <div class="container">
 // CHECK-GLOBAL-NEXT:                <div class="sidebar">
-// CHECK-GLOBAL-NEXT:                    <h2> </h2>
+// CHECK-GLOBAL-NEXT:                    <h2>Global Namespace</h2>
 // CHECK-GLOBAL-NEXT:                    <ul>
 // CHECK-GLOBAL-NEXT:                    </ul>
 // CHECK-GLOBAL-NEXT:                </div>
 // CHECK-GLOBAL-NEXT:                <div class="resizer" id="resizer"></div>
 // CHECK-GLOBAL-NEXT:                <div class="content">
-// CHECK-GLOBAL-EMPTY:
 // CHECK-GLOBAL-NEXT:                </div>
 // CHECK-GLOBAL-NEXT:            </div>
 // CHECK-GLOBAL-NEXT:        </main>

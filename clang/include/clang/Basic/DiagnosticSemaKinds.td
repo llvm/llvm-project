@@ -3904,9 +3904,19 @@ def warn_attribute_dllimport_static_field_definition : Warning<
 def warn_attribute_dllexport_explicit_instantiation_decl : Warning<
   "explicit instantiation declaration should not be 'dllexport'">,
   InGroup<DllexportExplicitInstantiationDecl>;
-def warn_attribute_dllexport_explicit_instantiation_def : Warning<
+def warn_attr_dllexport_explicit_inst_def : Warning<
+  "'dllexport' attribute ignored on explicit instantiation definition">,
+  InGroup<DllexportExplicitInstantiation>;
+def warn_attr_dllexport_explicit_inst_def_mismatch : Warning<
   "'dllexport' attribute ignored on explicit instantiation definition">,
   InGroup<IgnoredAttributes>;
+def note_prev_decl_missing_dllexport : Note<
+  "'dllexport' attribute is missing on previous declaration">;
+def warn_dllexport_on_decl_ignored : Warning<
+  "explicit instantiation definition is not exported without 'dllexport'">,
+  InGroup<IgnoredAttributes>;
+def note_dllexport_on_decl : Note<
+  "'dllexport' attribute on the declaration is ignored">;
 def warn_attribute_exclude_from_explicit_instantiation_local_class : Warning<
   "%0 attribute ignored on local class%select{| member}1">,
   InGroup<IgnoredAttributes>;
@@ -11795,6 +11805,9 @@ def err_omp_expected_addressable_lvalue_or_array_item : Error<
   "expected addressable lvalue expression, array element%select{ or array section|, array section or array shaping expression}0%select{| of non 'omp_depend_t' type}1">;
 def err_omp_expected_named_var_member_or_array_expression: Error<
   "expected expression containing only member accesses and/or array sections based on named variables">;
+def err_omp_expected_base_pointer_var_name_member_expr
+    : Error<"base-pointer is not a variable name%select{| or data member of "
+            "current class}0">;
 def err_omp_bit_fields_forbidden_in_clause : Error<
   "bit fields cannot be used to specify storage in a '%0' clause">;
 def err_array_section_does_not_specify_contiguous_storage : Error<
