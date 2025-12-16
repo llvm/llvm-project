@@ -1499,11 +1499,6 @@ bool TargetTransformInfo::allowVectorElementIndexingUsingGEP() const {
   return TTIImpl->allowVectorElementIndexingUsingGEP();
 }
 
-InstructionUniformity
-TargetTransformInfo::getInstructionUniformity(const Value *V) const {
-  return TTIImpl->getInstructionUniformity(V);
-}
-
 bool TargetTransformInfo::isUniform(const Instruction *I,
                                     const SmallBitVector &UniformArgs) const {
   return TTIImpl->isUniform(I, UniformArgs);

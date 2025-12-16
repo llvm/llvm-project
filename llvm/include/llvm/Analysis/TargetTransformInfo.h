@@ -2003,8 +2003,6 @@ public:
   /// target.
   LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
 
-  InstructionUniformity getInstructionUniformity(const Value *V) const;
-
   /// Determine if an instruction with some operands uniform can be proven
   /// uniform. This is used for custom uniformity analysis where the target
   /// can define complex rules that depend on which specific operands are

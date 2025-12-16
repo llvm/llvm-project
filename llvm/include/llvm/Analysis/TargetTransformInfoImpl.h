@@ -1151,13 +1151,6 @@ public:
 
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
 
-  // New API for uniformity classification
-  // Targets should override this to provide target-specific uniformity analysis
-  // The default implementation returns Default (conservative behavior)
-  virtual InstructionUniformity getInstructionUniformity(const Value *V) const {
-    return InstructionUniformity::Default;
-  }
-
   // Custom uniformity check for instructions marked as Custom
   // Override this to provide complex uniformity rules based on which operands
   // are uniform
