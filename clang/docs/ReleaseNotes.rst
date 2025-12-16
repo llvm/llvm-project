@@ -856,6 +856,7 @@ Bug Fixes to C++ Support
 - Fixed an issue where templates prevented nested anonymous records from checking the deletion of special members. (#GH167217)
 - Fixed spurious diagnoses of certain nested lambda expressions. (#GH149121) (#GH156579)
 - Fix the result of ``__is_pointer_interconvertible_base_of`` when arguments are qualified and passed via template parameters. (#GH135273)
+- Fixed a crash when standard comparison categories (e.g. ``std::partial_ordering``) are defined with incorrect static member types. (#GH170015) (#GH56571)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1097,6 +1098,18 @@ OpenMP Support
 
 Improvements
 ^^^^^^^^^^^^
+- Mapping of expressions that have base-pointers now conforms to the OpenMP's
+  conditional pointer-attachment based on both pointee and poitner being
+  present, and one being new. This also lays the foundation of supporting
+  OpenMP 6.1's attach map-type modifier.
+- Several improvements were made to the handling of maps on list items involving
+  multiple levels of pointer dereferences, including not mapping intermediate
+  expressions, and grouping the items that share the same base-pointer, as
+  belonging to the same containing structure.
+- Support of array-sections on ``use_device_addr`` was made more robust,
+  including diagnosing when the array-section's base is not a named-variable.
+- Handling of ``use_device_addr`` and ``use_device_ptr`` in the presence of
+  other maps with the same base-pointer/variable, was improved.
 
 Additional Information
 ======================

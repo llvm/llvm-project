@@ -3488,6 +3488,10 @@ def fno_modules_prune_non_affecting_module_map_files :
     Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
     MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesPruneNonAffectingModuleMaps">>,
     HelpText<"Do not prune non-affecting module map files when writing module files">;
+def fmodules_single_module_parse_mode :
+  Flag<["-"], "fmodules-single-module-parse-mode">,
+  Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
+  MarshallingInfoFlag<PreprocessorOpts<"SingleModuleParseMode">>;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,

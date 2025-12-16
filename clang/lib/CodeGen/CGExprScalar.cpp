@@ -3339,7 +3339,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   // Vector increment/decrement.
   } else if (type->isVectorType()) {
     if (type->hasIntegerRepresentation()) {
-      llvm::Value *amt = llvm::ConstantInt::get(value->getType(), amount);
+      llvm::Value *amt = llvm::ConstantInt::getSigned(value->getType(), amount);
 
       value = Builder.CreateAdd(value, amt, isInc ? "inc" : "dec");
     } else {
@@ -3439,7 +3439,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     CharUnits size = CGF.getContext().getTypeSizeInChars(OPT->getObjectType());
     if (!isInc) size = -size;
     llvm::Value *sizeValue =
-      llvm::ConstantInt::get(CGF.SizeTy, size.getQuantity());
+        llvm::ConstantInt::getSigned(CGF.SizeTy, size.getQuantity());
 
     if (CGF.getLangOpts().PointerOverflowDefined)
       value = Builder.CreateGEP(CGF.Int8Ty, value, sizeValue, "incdec.objptr");

@@ -1480,9 +1480,9 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopTripCount) {
                            bool IsSigned, bool InclusiveStop) -> int64_t {
     OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
     Type *LCTy = Type::getInt16Ty(Ctx);
-    Value *StartVal = ConstantInt::get(LCTy, Start);
-    Value *StopVal = ConstantInt::get(LCTy, Stop);
-    Value *StepVal = ConstantInt::get(LCTy, Step);
+    Value *StartVal = ConstantInt::get(LCTy, Start, IsSigned);
+    Value *StopVal = ConstantInt::get(LCTy, Stop, IsSigned);
+    Value *StepVal = ConstantInt::get(LCTy, Step, IsSigned);
     Value *TripCount = OMPBuilder.calculateCanonicalLoopTripCount(
         Loc, StartVal, StopVal, StepVal, IsSigned, InclusiveStop);
     return cast<ConstantInt>(TripCount)->getValue().getZExtValue();
@@ -1918,9 +1918,9 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
                            int64_t TileSize) -> uint64_t {
     OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
     Type *LCTy = Type::getInt16Ty(Ctx);
-    Value *StartVal = ConstantInt::get(LCTy, Start);
-    Value *StopVal = ConstantInt::get(LCTy, Stop);
-    Value *StepVal = ConstantInt::get(LCTy, Step);
+    Value *StartVal = ConstantInt::get(LCTy, Start, IsSigned);
+    Value *StopVal = ConstantInt::get(LCTy, Stop, IsSigned);
+    Value *StepVal = ConstantInt::get(LCTy, Step, IsSigned);
 
     // Generate a loop.
     auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {
@@ -1950,7 +1950,7 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
 
   // Empty iteration domain.
   EXPECT_EQ(GetFloorCount(0, 0, 1, false, false, 7), 0u);
-  EXPECT_EQ(GetFloorCount(0, -1, 1, false, true, 7), 0u);
+  EXPECT_EQ(GetFloorCount(0, -1, 1, true, true, 7), 0u);
   EXPECT_EQ(GetFloorCount(-1, -1, -1, true, false, 7), 0u);
   EXPECT_EQ(GetFloorCount(-1, 0, -1, true, true, 7), 0u);
   EXPECT_EQ(GetFloorCount(-1, -1, 3, true, false, 7), 0u);
