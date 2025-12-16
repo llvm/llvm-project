@@ -1611,7 +1611,7 @@ public:
   mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
                               llvm::ArrayRef<mlir::Value> args = {});
 
-  void emitInvariantStart(CharUnits Size, mlir::Value Addr, mlir::Location loc);
+  void emitInvariantStart(CharUnits size, mlir::Value addr, mlir::Location loc);
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e,

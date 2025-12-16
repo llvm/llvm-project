@@ -31,7 +31,7 @@ static void emitDeclInvariant(CIRGenFunction &cgf, const VarDecl *d) {
                          addr, cgf.getLoc(d->getSourceRange()));
 }
 
-void CIRGenFunction::emitInvariantStart(CharUnits Size, mlir::Value Addr,
+void CIRGenFunction::emitInvariantStart(CharUnits size, mlir::Value addr,
                                         mlir::Location loc) {
   // Do not emit the intrinsic if we're not optimizing.
   if (!cgm.getCodeGenOpts().OptimizationLevel)
@@ -40,13 +40,13 @@ void CIRGenFunction::emitInvariantStart(CharUnits Size, mlir::Value Addr,
   CIRGenBuilderTy &builder = getBuilder();
 
   // Create the size constant as i64
-  uint64_t width = Size.getQuantity();
+  uint64_t width = size.getQuantity();
   mlir::Value sizeValue = builder.getConstInt(loc, builder.getSInt64Ty(),
                                               static_cast<int64_t>(width));
 
   // Determine address space for intrinsic name
   unsigned addrSpace = 0;
-  if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(Addr.getType()))
+  if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(addr.getType()))
     addrSpace =
         ptrTy.getAddrSpace() ? ptrTy.getAddrSpace().getValue().getUInt() : 0;
 
@@ -60,8 +60,8 @@ void CIRGenFunction::emitInvariantStart(CharUnits Size, mlir::Value Addr,
   // token, but we don't need to capture it. The return type is set to match
   // the address type for consistency with the operation signature.
   cir::LLVMIntrinsicCallOp::create(
-      builder, loc, builder.getStringAttr(intrinsicName), Addr.getType(),
-      mlir::ValueRange{sizeValue, Addr});
+      builder, loc, builder.getStringAttr(intrinsicName), addr.getType(),
+      mlir::ValueRange{sizeValue, addr});
 }
 
 static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
