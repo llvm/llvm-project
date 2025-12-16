@@ -3582,7 +3582,7 @@ static void mcpuHelp() {
     reportCmdLineError(ErrMessage);
   // We need to access the Help() through the corresponding MCSubtargetInfo.
   std::unique_ptr<MCSubtargetInfo> MSI(
-      DummyTarget->createMCSubtargetInfo(TheTriple.str(), "help", ""));
+      DummyTarget->createMCSubtargetInfo(TheTriple, "help", ""));
 }
 
 static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
