@@ -4630,8 +4630,8 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     Args.push_back(Builder.getFalse());
 
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-      F->getParent(), Intrinsic::amdgcn_wmma_i32_16x16x64_iu8,
-      {CI->getArgOperand(4)->getType(), CI->getArgOperand(1)->getType()});
+        F->getParent(), Intrinsic::amdgcn_wmma_i32_16x16x64_iu8,
+        {CI->getArgOperand(4)->getType(), CI->getArgOperand(1)->getType()});
 
     SmallVector<OperandBundleDef, 1> Bundles;
     CI->getOperandBundlesAsDefs(Bundles);
