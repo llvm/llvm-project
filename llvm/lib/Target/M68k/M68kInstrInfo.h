@@ -318,9 +318,6 @@ public:
   bool ExpandPUSH_POP(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,
                       bool IsPush) const;
 
-  /// Moves to/from CCR
-  bool ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const;
-
   /// Expand all MOVEM pseudos into real MOVEMs
   bool ExpandMOVEM(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,
                    bool IsRM) const;
