@@ -4441,9 +4441,9 @@ public:
 
       DeclIDs.push_back(ID);
     };
+    ASTReader *Chain = Writer.getChain();
     for (NamedDecl *D : Decls) {
-      if (ASTReader *Chain = Writer.getChain();
-          Chain && isa<NamespaceDecl>(D) && D->isFromASTFile() &&
+      if (Chain && isa<NamespaceDecl>(D) && D->isFromASTFile() &&
           D == Chain->getKeyDeclaration(D)) {
         // In ASTReader, we stored only the key declaration of a namespace decl
         // for this TU rather than storing all of the key declarations from each
