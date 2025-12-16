@@ -161,28 +161,27 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
 
 void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
                                     bool DeletePHIIfEmpty) {
-  SmallDenseSet<unsigned> RemoveIndices;
-  for (unsigned Idx = 0; Idx < getNumIncomingValues(); ++Idx)
+  unsigned NumOps = getNumIncomingValues();
+  unsigned NewNumOps = 0;
+  for (unsigned Idx = 0; Idx < NumOps; ++Idx) {
     if (Predicate(Idx))
-      RemoveIndices.insert(Idx);
+      continue;
 
-  if (RemoveIndices.empty())
+    if (Idx != NewNumOps) {
+      setIncomingValue(NewNumOps, getIncomingValue(Idx));
+      setIncomingBlock(NewNumOps, getIncomingBlock(Idx));
+    }
+    ++NewNumOps;
+  }
+
+  if (NewNumOps == NumOps)
     return;
 
   // Remove operands.
-  auto NewOpEnd = remove_if(operands(), [&](Use &U) {
-    return RemoveIndices.contains(U.getOperandNo());
-  });
-  for (Use &U : make_range(NewOpEnd, op_end()))
-    U.set(nullptr);
+  for (unsigned Idx = NewNumOps; Idx < NumOps; ++Idx)
+    getOperandUse(Idx).set(nullptr);
 
-  // Remove incoming blocks.
-  (void)std::remove_if(const_cast<block_iterator>(block_begin()),
-                 const_cast<block_iterator>(block_end()), [&](BasicBlock *&BB) {
-                   return RemoveIndices.contains(&BB - block_begin());
-                 });
-
-  setNumHungOffUseOperands(getNumOperands() - RemoveIndices.size());
+  setNumHungOffUseOperands(NewNumOps);
 
   // If the PHI node is dead, because it has zero entries, nuke it now.
   if (getNumOperands() == 0 && DeletePHIIfEmpty) {
