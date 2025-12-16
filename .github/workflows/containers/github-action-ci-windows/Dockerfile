@@ -39,9 +39,6 @@ RUN regsvr32 /S "C:\BuildTools\DIA SDK\bin\amd64\msdia140.dll" & \
 
 # install tools as described in https://llvm.org/docs/GettingStartedVS.html
 # and a few more that were not documented...
-# Pin an older version of Python; the current Python 3.10 fails when
-# doing "pip install" for the other dependencies, as it fails to find libxml
-# while compiling some package.
 # We version pin the other packages as well to ensure the container build is as
 # reproducible as possible to prevent issues when upgrading only part of the
 # container.
