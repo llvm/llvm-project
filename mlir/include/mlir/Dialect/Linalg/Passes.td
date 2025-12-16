@@ -167,11 +167,11 @@ def LinalgInlineScalarOperandsPass : Pass<"linalg-inline-scalar-operands"> {
 }
 
 def LinalgFoldIntoElementwisePass : Pass<"linalg-fold-into-elementwise"> {
-  let summary = "Fold transform ops into elementwise";
+  let summary = "Fold transpose ops into elementwise";
   let dependentDialects = ["linalg::LinalgDialect"];
 
   let description = [{
-    Fold transform ops that feed `linalg.elementwise` into the elementwise op
+    Fold transpose ops that feed `linalg.elementwise` into the elementwise op
     by updating its indexing maps. `linalg.transpose` producers whose consumer
     indexing map is the identity are absorbed, turning the permutation into
     the elementwise map itself. Other operands remain untouched.
