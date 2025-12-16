@@ -1,4 +1,6 @@
-# RUN: llc %s -start-after=livedebugvalues --filetype=obj -o - | llvm-dwarfdump - -v
+# RUN: llc %s -start-after=livedebugvalues --filetype=obj -o - \
+# RUN: | llvm-dwarfdump - -v \
+# RUN: | FileCheck %s
 
 ## Contrived test: -gdwarf-3 -ggdb and hand-modified IR adding DISubprogram
 ## flag DIFlagAllCallsDescribed to force call site emission using DW_FORM_block,
