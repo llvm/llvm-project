@@ -90,38 +90,6 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::GetChildAtIndex(
                                       m_element_type);
 }
 
-static std::optional<size_t>
-getBlockSize(const lldb_private::CompilerType &deque_type) {
-  auto block_size_decl = deque_type.GetStaticFieldWithName("_Block_size");
-  if (block_size_decl) {
-    auto block_size = block_size_decl.GetConstantValue();
-    if (block_size.IsValid())
-      return block_size.ULongLong();
-  }
-
-  // MSVC doesn't include static members like _Block_size. As a workaround, the
-  // STL has enum { _EEN_DS = _Block_size };
-  // This is named "<unnamed-enum-_EEN_DS>" in PDB.
-  auto enum_type =
-      deque_type.GetDirectNestedTypeWithName("<unnamed-enum-_EEN_DS>");
-  if (!enum_type)
-    return std::nullopt;
-
-  std::optional<size_t> value;
-  enum_type.ForEachEnumerator(
-      [&](const lldb_private::CompilerType &integer_type,
-          lldb_private::ConstString name, const llvm::APSInt &ap_value) {
-        if (name != "_EEN_DS")
-          return true; // keep iterating
-
-        int64_t signed_value = ap_value.getExtValue();
-        if (signed_value > 0)
-          value.emplace(static_cast<uint64_t>(signed_value));
-        return false;
-      });
-  return value;
-}
-
 lldb::ChildCacheState
 lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
   m_size = 0;
@@ -136,8 +104,11 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
   if (!deque_type)
     return lldb::eRefetch;
 
-  auto block_size = getBlockSize(deque_type);
-  if (!block_size)
+  auto block_size_decl = deque_type.GetStaticFieldWithName("_Block_size");
+  if (!block_size_decl)
+    return lldb::eRefetch;
+  auto block_size = block_size_decl.GetConstantValue();
+  if (!block_size.IsValid())
     return lldb::eRefetch;
 
   auto offset_sp = storage_sp->GetChildMemberWithName("_Myoff");
@@ -172,7 +143,7 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
 
   m_map = map_sp.get();
   m_exe_ctx_ref = m_backend.GetExecutionContextRef();
-  m_block_size = *block_size;
+  m_block_size = block_size.ULongLong();
   m_offset = offset;
   m_map_size = map_size;
   m_element_size = *element_size;
