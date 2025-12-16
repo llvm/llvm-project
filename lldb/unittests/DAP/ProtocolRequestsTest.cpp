@@ -243,3 +243,64 @@ TEST(ProtocolRequestsTest, LocationsResponseBody) {
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
 }
+
+TEST(ProtocolRequestsTest, CompileUnitsArguments) {
+  llvm::Expected<CompileUnitsArguments> expected =
+      parse<CompileUnitsArguments>(R"({"moduleId": "42"})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->moduleId, "42");
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<CompileUnitsArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).moduleId"));
+}
+
+TEST(ProtocolRequestsTest, CompileUnitsResponseBody) {
+  CompileUnitsResponseBody body;
+  body.compileUnits = {{"main.cpp"}, {"util.cpp"}};
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({
+    "compileUnits": [
+      {
+        "compileUnitPath": "main.cpp"
+      },
+      {
+        "compileUnitPath": "util.cpp"
+      }
+    ]
+  })");
+
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+}
+
+TEST(ProtocolRequestsTest, TestGetTargetBreakpointsResponseBody) {
+  Breakpoint breakpoint1;
+  breakpoint1.id = 1;
+  breakpoint1.verified = true;
+  Breakpoint breakpoint2;
+  breakpoint2.id = 2;
+  breakpoint2.verified = false;
+  breakpoint2.message = "Failed to set breakpoint";
+  TestGetTargetBreakpointsResponseBody body;
+  body.breakpoints = {breakpoint1, breakpoint2};
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({
+    "breakpoints": [
+      {
+        "id": 1,
+        "verified": true
+      },
+      {
+        "id": 2,
+        "verified": false,
+        "message": "Failed to set breakpoint"
+      }
+    ]
+  })");
+
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+}
