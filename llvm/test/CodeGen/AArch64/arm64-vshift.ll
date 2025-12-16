@@ -927,23 +927,14 @@ define i64 @sqrshl_scalar(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @sqrshl_scalar_constant(ptr %A) nounwind {
-; CHECK-SD-LABEL: sqrshl_scalar_constant:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov x8, #1 // =0x1
-; CHECK-SD-NEXT:    ldr d0, [x0]
-; CHECK-SD-NEXT:    fmov d1, x8
-; CHECK-SD-NEXT:    sqrshl d0, d0, d1
-; CHECK-SD-NEXT:    fmov x0, d0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sqrshl_scalar_constant:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    ldr d0, [x0]
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    sqrshl d0, d0, d1
-; CHECK-GI-NEXT:    fmov x0, d0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sqrshl_scalar_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    sqrshl d0, d0, d1
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.sqrshl.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
@@ -1042,23 +1033,14 @@ define i64 @uqrshl_scalar(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @uqrshl_scalar_constant(ptr %A) nounwind {
-; CHECK-SD-LABEL: uqrshl_scalar_constant:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov x8, #1 // =0x1
-; CHECK-SD-NEXT:    ldr d0, [x0]
-; CHECK-SD-NEXT:    fmov d1, x8
-; CHECK-SD-NEXT:    uqrshl d0, d0, d1
-; CHECK-SD-NEXT:    fmov x0, d0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: uqrshl_scalar_constant:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    ldr d0, [x0]
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    uqrshl d0, d0, d1
-; CHECK-GI-NEXT:    fmov x0, d0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: uqrshl_scalar_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    uqrshl d0, d0, d1
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.uqrshl.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
