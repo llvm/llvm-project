@@ -3888,7 +3888,8 @@ private:
 
   class TreeEntry {
   public:
-    TreeEntry(BoUpSLP::VecTreeTy &Container) : Container(Container) {}
+    TreeEntry(SmallVector<BoUpSLP::VecTreeTy> &Container, unsigned CntIdx)
+        : Container(Container), CntIdx(CntIdx) {}
 
     /// \returns Common mask for reorder indices and reused scalars.
     SmallVector<int> getCommonMask() const {
@@ -4028,7 +4029,8 @@ private:
     /// to be a pointer and needs to be able to initialize the child iterator.
     /// Thus we need a reference back to the container to translate the indices
     /// to entries.
-    VecTreeTy &Container;
+    SmallVector<VecTreeTy> &Container;
+    unsigned CntIdx;
 
     /// The TreeEntry index containing the user of this entry.
     EdgeInfo UserTreeIndex;
@@ -4374,8 +4376,8 @@ private:
         S.getOpcode() == Instruction::Load && UserTreeIdx.EdgeIdx == UINT_MAX &&
         !UserTreeIdx.UserTE)
       return nullptr;
-    VectorizableTree.back().push_back(
-        std::make_unique<TreeEntry>(VectorizableTree.back()));
+    VectorizableTree.back().push_back(std::make_unique<TreeEntry>(
+        VectorizableTree, VectorizableTree.size() - 1));
     TreeEntry *Last = VectorizableTree.back().back().get();
     Last->Idx = VectorizableTree.back().size() - 1;
     Last->State = EntryState;
@@ -6149,11 +6151,11 @@ template <> struct llvm::GraphTraits<BoUpSLP *> {
   }
 
   static ChildIteratorType child_begin(NodeRef N) {
-    return {&N->UserTreeIndex, N->Container};
+    return {&N->UserTreeIndex, N->Container[N->CntIdx]};
   }
 
   static ChildIteratorType child_end(NodeRef N) {
-    return {&N->UserTreeIndex + 1, N->Container};
+    return {&N->UserTreeIndex + 1, N->Container[N->CntIdx]};
   }
 
   /// For the node iterator we just need to turn the TreeEntry iterator into a
@@ -16513,9 +16515,10 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
         // block as the root phis, currently vectorized. It allows to keep
         // better ordering info of PHIs, being vectorized currently.
         bool IsProfitablePHIUser =
-            (KeepScalar || (ScalarCost - ExtraCost <= TTI::TCC_Basic &&
-                            Entry->Container.front()->Scalars.size() > 2)) &&
-          Entry->Container.front()->hasState() &&
+            (KeepScalar ||
+             (ScalarCost - ExtraCost <= TTI::TCC_Basic &&
+              Entry->Container[Entry->CntIdx].front()->Scalars.size() > 2)) &&
+            Entry->Container[Entry->CntIdx].front()->hasState() &&
             VectorizableTree.back().front()->getOpcode() == Instruction::PHI &&
             !Inst->hasNUsesOrMore(UsesLimit) &&
             none_of(
