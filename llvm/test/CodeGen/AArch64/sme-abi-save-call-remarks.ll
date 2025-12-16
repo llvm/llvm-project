@@ -117,3 +117,12 @@ exit:
 
   ret void
 }
+
+define void @test_lazy_save_function_ptr_callee(ptr %private_za_callee) nounwind "aarch64_inout_za" {
+; CHECK: remark: <unknown>:0:0: call from 'test_lazy_save_function_ptr_callee' to 'unknown callee' sets up a lazy save for ZA
+
+; CHECK-NEWLOWERING:      remark: <unknown>:0:0: lazy save of ZA emitted in 'test_lazy_save_function_ptr_callee'
+; CHECK-NEWLOWERING-NEXT: remark: <unknown>:0:0: call requires ZA save
+  call void %private_za_callee()
+  ret void
+}

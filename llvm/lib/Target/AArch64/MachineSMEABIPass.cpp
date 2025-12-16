@@ -728,6 +728,10 @@ static DebugLoc getDebugLoc(MachineBasicBlock &MBB,
   return MBBI != MBB.end() ? MBBI->getDebugLoc() : MBB.back().getDebugLoc();
 }
 
+/// Finds the first call (as determined by MachineInstr::isCall()) starting from
+/// \p MBBI in \p MBB marked with \p Marker (which is a marker opcode such as
+/// RequiresZASavePseudo). If a marked call is found, it is pushed to \p Calls
+/// and the function returns true.
 static bool findMarkedCall(const MachineBasicBlock &MBB,
                            MachineBasicBlock::const_iterator MBBI,
                            SmallVectorImpl<const MachineInstr *> &Calls,
