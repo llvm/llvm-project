@@ -22,7 +22,7 @@ This occurs because Flang's implementation of pointers to internal procedures re
 
 An internal procedure has a "host scope", which is the scope in which it is contained.
 It can access variables defined in that host scope.
-When an internal procedure is referenced from outside its host scope (for example, via a procedure pointer), the implementation must ensure that it can still access variables from that host scope.
+When an internal procedure is referenced from outside its host scope (for example, via a procedure pointer), the implementation must ensure that it can still access variables from the host scope.
 To achieve this, the current implementation of Flang generates a small piece of code, called a "trampoline", on the stack.
 When the procedure is called, this trampoline is executed.
 The trampoline is on the stack, so the stack itself must be executable.
