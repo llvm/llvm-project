@@ -17454,8 +17454,8 @@ Semantics:
 """"""""""
 If either operand is a NaN, returns NaN. Otherwise returns the lesser
 of the two arguments. -0.0 is considered to be less than +0.0 for this
-intrinsic. Note that these are the semantics specified in the draft of
-IEEE 754-2019.
+intrinsic. Note that these are the semantics of minimum specified in
+IEEE 754-2019, with the usual :ref:`signaling NaN <floatnan>` exception.
 
 If the ``nsz`` flag is specified, ``llvm.maximum`` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
@@ -17499,8 +17499,8 @@ Semantics:
 """"""""""
 If either operand is a NaN, returns NaN. Otherwise returns the greater
 of the two arguments. -0.0 is considered to be less than +0.0 for this
-intrinsic. Note that these are the semantics specified in the draft of
-IEEE 754-2019.
+intrinsic. Note that these are the semantics of maximum specified in
+IEEE 754-2019, with the usual :ref:`signaling NaN <floatnan>` exception.
 
 If the ``nsz`` flag is specified, ``llvm.maximum`` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
