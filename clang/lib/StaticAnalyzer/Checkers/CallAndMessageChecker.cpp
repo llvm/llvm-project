@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -240,14 +241,8 @@ template <> struct format_provider<FindUninitializedField::FieldChainTy> {
       Stream << " (e.g., field: '" << *V[0] << "')";
     else {
       Stream << " (e.g., via the field chain: '";
-      bool First = true;
-      for (const FieldDecl *FD : V) {
-        if (First)
-          First = false;
-        else
-          Stream << '.';
-        Stream << *FD;
-      }
+      interleave(
+          V, Stream, [&Stream](const FieldDecl *FD) { Stream << *FD; }, ".");
       Stream << "')";
     }
   }
