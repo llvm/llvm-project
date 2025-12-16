@@ -42,6 +42,16 @@ static mlir::Value emitIntrinsicCallOp(CIRGenBuilderTy &builder,
       .getResult();
 }
 
+// Generate vscale * scalingFactor
+static mlir::Value genVscaleTimesFactor(mlir::Location loc,
+                                        CIRGenBuilderTy builder,
+                                        mlir::Type cirTy,
+                                        int32_t scalingFactor) {
+  auto vscale = emitIntrinsicCallOp(builder, loc, "vscale", cirTy);
+  return builder.createNUWAMul(loc, vscale,
+                               builder.getUInt64(scalingFactor, loc));
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                                           const CallExpr *expr) {
@@ -53,21 +63,13 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
     return mlir::Value{};
   }
 
-  mlir::Location loc = getLoc(expr->getExprLoc());
-  // Generate vscale * scalingFactor
-  auto vscaleTimesFactor = [&](int32_t scalingFactor) {
-    StringRef intrinsicName = "vscale.i64";
-    auto vscale = emitIntrinsicCallOp(builder, loc, intrinsicName,
-                                      convertType(expr->getType()));
-    return builder.createNUWAMul(loc, vscale,
-                                 builder.getUInt64(scalingFactor, loc));
-  };
-
   assert(!cir::MissingFeatures::aarch64SVEIntrinsics());
 
   switch (builtinID) {
   default:
     return std::nullopt;
+
+    mlir::Location loc = getLoc(expr->getExprLoc());
 
   case SVE::BI__builtin_sve_svreinterpret_b:
   case SVE::BI__builtin_sve_svreinterpret_c:
@@ -129,20 +131,20 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
     return mlir::Value{};
   case SVE::BI__builtin_sve_svlen_u8:
   case SVE::BI__builtin_sve_svlen_s8:
-    return vscaleTimesFactor(16);
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 16);
   case SVE::BI__builtin_sve_svlen_u16:
   case SVE::BI__builtin_sve_svlen_s16:
   case SVE::BI__builtin_sve_svlen_f16:
   case SVE::BI__builtin_sve_svlen_bf16:
-    return vscaleTimesFactor(8);
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 8);
   case SVE::BI__builtin_sve_svlen_u32:
   case SVE::BI__builtin_sve_svlen_s32:
   case SVE::BI__builtin_sve_svlen_f32:
-    return vscaleTimesFactor(4);
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 4);
   case SVE::BI__builtin_sve_svlen_u64:
   case SVE::BI__builtin_sve_svlen_s64:
   case SVE::BI__builtin_sve_svlen_f64:
-    return vscaleTimesFactor(2);
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 2);
   case SVE::BI__builtin_sve_svtbl2_u8:
   case SVE::BI__builtin_sve_svtbl2_s8:
   case SVE::BI__builtin_sve_svtbl2_u16:
