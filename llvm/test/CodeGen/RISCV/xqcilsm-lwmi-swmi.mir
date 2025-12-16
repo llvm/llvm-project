@@ -357,12 +357,12 @@ body: |
     ; CHECK-LABEL: name: pair_if_not_adjacent_setwmi
     ; CHECK: liveins: $x10, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: QC_SETWMI $x1, $x10, 2, 20 :: (store (s32))
+    ; CHECK-NEXT: QC_SETWMI killed $x1, $x10, 2, 20 :: (store (s32))
     ; CHECK-NEXT: $x2 = ADDI $x2, 10
     ; CHECK-NEXT: PseudoRET
     SW $x1, $x10, 20 :: (store (s32), align 4)
     $x2 = ADDI $x2, 10
-    SW $x1, $x10, 24 :: (store (s32), align 4)
+    SW killed $x1, $x10, 24 :: (store (s32), align 4)
     PseudoRET
 
 ...

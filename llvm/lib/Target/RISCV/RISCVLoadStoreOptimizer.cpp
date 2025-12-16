@@ -220,35 +220,41 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
   Register StartReg = FirstOp0.getReg();
   Register NextReg = SecondOp0.getReg();
 
-  // Only QC_SETWMI can have the StartReg as X0.
-  if (StartReg == RISCV::X0 && Opc != RISCV::SW)
-    return false;
+  unsigned XqciOpc;
+  unsigned StartRegState;
+  unsigned NextRegState = 0;
+  bool AddNextReg = true;
 
-  // If the base reg gets overwritten by one of the loads or the StartReg and
-  // NextReg are not consecutive then bail out.
-  if (Opc == RISCV::LW &&
-      ((StartReg == Base1 || NextReg == Base1) || NextReg != StartReg + 1))
-    return false;
+  if (Opc == RISCV::LW) {
 
-  // For stores the regs need to be equal or consecutive.
-  if (NextReg != StartReg + 1 && NextReg != StartReg)
-    return false;
+    if (StartReg == RISCV::X0)
+      return false;
 
-  unsigned XqciOpc = (Opc == RISCV::LW)      ? RISCV::QC_LWMI
-                     : (NextReg == StartReg) ? RISCV::QC_SETWMI
-                                             : RISCV::QC_SWMI;
+    // If the base reg gets overwritten by one of the loads bail out.
+    if (StartReg == Base1 || NextReg == Base1)
+      return false;
 
-  unsigned StartRegState =
-      (XqciOpc == RISCV::QC_LWMI) ? static_cast<unsigned>(RegState::Define)
-      : (XqciOpc == RISCV::QC_SWMI)
-          ? getKillRegState(FirstOp0.isKill())
-          : getKillRegState(FirstOp0.isKill() || SecondOp0.isKill());
-  unsigned NextRegState =
-      (XqciOpc == RISCV::QC_LWMI)
-          ? static_cast<unsigned>(RegState::ImplicitDefine)
-      : (XqciOpc == RISCV::QC_SWMI)
-          ? (RegState::Implicit | getKillRegState(SecondOp0.isKill()))
-          : 0;
+    // The registers need to be consecutive.
+    if (NextReg != StartReg + 1)
+      return false;
+
+    XqciOpc = RISCV::QC_LWMI;
+    StartRegState = static_cast<unsigned>(RegState::Define);
+    NextRegState = static_cast<unsigned>(RegState::ImplicitDefine);
+  } else {
+    assert(Opc == RISCV::SW && "Expected a SW instruction");
+    if (StartReg == NextReg) {
+      XqciOpc = RISCV::QC_SETWMI;
+      StartRegState = getKillRegState(FirstOp0.isKill() || SecondOp0.isKill());
+      AddNextReg = false;
+    } else if (NextReg == StartReg + 1) {
+      XqciOpc = RISCV::QC_SWMI;
+      StartRegState = getKillRegState(FirstOp0.isKill());
+      NextRegState = RegState::Implicit | getKillRegState(SecondOp0.isKill());
+    } else {
+      return false;
+    }
+  }
 
   DebugLoc DL =
       First->getDebugLoc() ? First->getDebugLoc() : Second->getDebugLoc();
@@ -259,8 +265,7 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
       .addImm(Off1)
       .cloneMergedMemRefs({&*First, &*Second});
 
-  // Add the NextRegState only if it is not QC_SETWMI.
-  if (XqciOpc != RISCV::QC_SETWMI)
+  if (AddNextReg)
     MIB.addReg(NextReg, NextRegState);
 
   First->getParent()->insert(First, MIB);
