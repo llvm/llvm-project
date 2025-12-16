@@ -91,23 +91,23 @@
 // The following intrinsics were once defined here, but are now auto-upgraded
 // to target-generic LLVM intrinsics.
 //
-//   * llvm.nvvm.brev32  --> llvm.bitreverse.i32
-//   * llvm.nvvm.brev64  --> llvm.bitreverse.i64
-//   * llvm.nvvm.clz.i   --> llvm.ctlz.i32
-//   * llvm.nvvm.clz.ll  --> trunc i64 llvm.ctlz.i64(x) to i32
-//   * llvm.nvvm.popc.i  --> llvm.ctpop.i32
-//   * llvm.nvvm.popc.ll --> trunc i64 llvm.ctpop.i64 to i32
-//   * llvm.nvvm.abs.i   --> select(x >= -x, x, -x)
-//   * llvm.nvvm.abs.ll  --> ibid.
-//   * llvm.nvvm.max.i   --> select(x sge y, x, y)
-//   * llvm.nvvm.max.ll  --> ibid.
-//   * llvm.nvvm.max.ui  --> select(x uge y, x, y)
-//   * llvm.nvvm.max.ull --> ibid.
-//   * llvm.nvvm.max.i   --> select(x sle y, x, y)
-//   * llvm.nvvm.max.ll  --> ibid.
-//   * llvm.nvvm.max.ui  --> select(x ule y, x, y)
-//   * llvm.nvvm.max.ull --> ibid.
-//   * llvm.nvvm.h2f     --> llvm.convert.to.fp16.f32
+//   * llvm.nvvm.brev32              --> llvm.bitreverse.i32
+//   * llvm.nvvm.brev64              --> llvm.bitreverse.i64
+//   * llvm.nvvm.clz.i               --> llvm.ctlz.i32
+//   * llvm.nvvm.clz.ll              --> trunc i64 llvm.ctlz.i64(x) to i32
+//   * llvm.nvvm.popc.i              --> llvm.ctpop.i32
+//   * llvm.nvvm.popc.ll             --> trunc i64 llvm.ctpop.i64 to i32
+//   * llvm.nvvm.abs.i               --> select(x >= -x, x, -x)
+//   * llvm.nvvm.abs.ll              --> ibid.
+//   * llvm.nvvm.max.i               --> select(x sge y, x, y)
+//   * llvm.nvvm.max.ll              --> ibid.
+//   * llvm.nvvm.max.ui              --> select(x uge y, x, y)
+//   * llvm.nvvm.max.ull             --> ibid.
+//   * llvm.nvvm.max.i               --> select(x sle y, x, y)
+//   * llvm.nvvm.max.ll              --> ibid.
+//   * llvm.nvvm.max.ui              --> select(x ule y, x, y)
+//   * llvm.nvvm.max.ull             --> ibid.
+//   * llvm.nvvm.h2f                 --> llvm.convert.to.fp16.f32
 //   * llvm.nvvm.bitcast.f2i         --> bitcast
 //   * llvm.nvvm.bitcast.i2f         --> ibid.
 //   * llvm.nvvm.bitcast.d2ll        --> ibid.
@@ -134,6 +134,9 @@
 //   * llvm.nvvm.barrier             --> llvm.nvvm.barrier.cta.sync.aligned(x, y)
 //   * llvm.nvvm.barrier.sync        --> llvm.nvvm.barrier.cta.sync.all(x)
 //   * llvm.nvvm.barrier.sync.cnt    --> llvm.nvvm.barrier.cta.sync(x, y)
+//   * llvm.nvvm.barrier0.popc       --> llvm.nvvm.barrier.cta.red.popc.aligned.all(0, c)
+//   * llvm.nvvm.barrier0.and        --> llvm.nvvm.barrier.cta.red.and.aligned.all(0, z)
+//   * llvm.nvvm.barrier0.or         --> llvm.nvvm.barrier.cta.red.or.aligned.all(0, z)
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;         // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;         // (shared)ptr
@@ -1841,28 +1844,34 @@ let TargetPrefix = "nvvm" in {
   //
   // Bar.Sync
   //
-  def int_nvvm_barrier0_popc : ClangBuiltin<"__nvvm_bar0_popc">,
-      Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  def int_nvvm_barrier0_and : ClangBuiltin<"__nvvm_bar0_and">,
-      Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  def int_nvvm_barrier0_or : ClangBuiltin<"__nvvm_bar0_or">,
-      Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-
   def int_nvvm_bar_warp_sync : NVVMBuiltin,
       Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
-  // barrier{.cta}.sync{.aligned}      a{, b};
-  // barrier{.cta}.arrive{.aligned}    a, b;
-  let IntrProperties = [IntrConvergent, IntrNoCallback] in {
-    foreach align = ["", "_aligned"] in {
-      def int_nvvm_barrier_cta_sync # align # _all :
-          Intrinsic<[], [llvm_i32_ty]>;
-      def int_nvvm_barrier_cta_sync # align # _count :
-          Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
-      def int_nvvm_barrier_cta_arrive # align # _count :
-          Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+  multiclass BarrierCTAIntrinsic<list<LLVMType> ret_types = [],
+                                 list<LLVMType> extra_param_types = [],
+                                 bit has_all_variant = true> {
+    let IntrProperties = [IntrConvergent, IntrNoCallback] in {
+      foreach align = ["", "_aligned"] in {
+        def align # _count :
+          Intrinsic<ret_types, [llvm_i32_ty, llvm_i32_ty] # extra_param_types>;
+        if has_all_variant then
+          def align # _all :
+            Intrinsic<ret_types, [llvm_i32_ty] # extra_param_types>;
+      }
     }
   }
+
+  // barrier{.cta}.sync{.aligned}      a{, b};
+  // barrier{.cta}.arrive{.aligned}    a, b;
+  defm int_nvvm_barrier_cta_sync : BarrierCTAIntrinsic<>;
+  defm int_nvvm_barrier_cta_arrive : BarrierCTAIntrinsic<has_all_variant = false>;
+
+  // barrier{.cta}.red.popc{.aligned}.u32  d, a{, b}, {!}c;
+  // barrier{.cta}.red.op{.aligned}.pred   p, a{, b}, {!}c;
+  // .op = { .and, .or };
+  defm int_nvvm_barrier_cta_red_popc : BarrierCTAIntrinsic<[llvm_i32_ty], [llvm_i1_ty]>;
+  defm int_nvvm_barrier_cta_red_and : BarrierCTAIntrinsic<[llvm_i1_ty], [llvm_i1_ty]>;
+  defm int_nvvm_barrier_cta_red_or : BarrierCTAIntrinsic<[llvm_i1_ty], [llvm_i1_ty]>;
 
   let IntrProperties = [IntrConvergent, IntrNoCallback] in {
     // barrier.cluster.[wait, arrive, arrive.relaxed]
