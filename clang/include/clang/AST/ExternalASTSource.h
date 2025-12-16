@@ -40,6 +40,7 @@ class ASTConsumer;
 class ASTContext;
 class ASTSourceDescriptor;
 class CXXBaseSpecifier;
+class CXXConstructorDecl;
 class CXXCtorInitializer;
 class CXXRecordDecl;
 class DeclarationName;
@@ -175,6 +176,9 @@ public:
   virtual bool
   LoadExternalSpecializations(const Decl *D,
                               ArrayRef<TemplateArgument> TemplateArgs);
+
+  virtual void LoadExternalExceptionCopyingConstructors(
+      llvm::SmallDenseMap<CXXRecordDecl *, CXXConstructorDecl *> &RecordToCtor);
 
   /// Ensures that the table of all visible declarations inside this
   /// context is up to date.

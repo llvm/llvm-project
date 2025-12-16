@@ -778,6 +778,8 @@ private:
   /// For performance, track whether any function effects are in use.
   mutable bool AnyFunctionEffects = false;
 
+  bool ExternalCopyConstructorsForExceptionObjectsLoaded = false;
+
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
   clang::PrintingPolicy PrintingPolicy;
@@ -3477,6 +3479,9 @@ public:
   void forEachMultiversionedFunctionVersion(
       const FunctionDecl *FD,
       llvm::function_ref<void(FunctionDecl *)> Pred) const;
+
+  llvm::SmallDenseMap<CXXRecordDecl *, CXXConstructorDecl *> *
+  getRecordToCopyCtor();
 
   const CXXConstructorDecl *
   getCopyConstructorForExceptionObject(CXXRecordDecl *RD);

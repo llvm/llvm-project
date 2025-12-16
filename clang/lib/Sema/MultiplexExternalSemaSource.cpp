@@ -135,6 +135,12 @@ bool MultiplexExternalSemaSource::LoadExternalSpecializations(
   return AnyNewSpecsLoaded;
 }
 
+void MultiplexExternalSemaSource::LoadExternalExceptionCopyingConstructors(
+    llvm::SmallDenseMap<CXXRecordDecl *, CXXConstructorDecl *> &RecordToCtor) {
+  for (size_t i = 0; i < Sources.size(); ++i)
+    Sources[i]->LoadExternalExceptionCopyingConstructors(RecordToCtor);
+}
+
 void MultiplexExternalSemaSource::completeVisibleDeclsMap(const DeclContext *DC){
   for(size_t i = 0; i < Sources.size(); ++i)
     Sources[i]->completeVisibleDeclsMap(DC);
