@@ -13,6 +13,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/SymbolContextScope.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-enumerations.h"
@@ -154,9 +155,11 @@ public:
     return m_mangled;
   }
 
-  ConstString GetReExportedSymbolName() const;
+  ConstString GetReExportedSymbolName() const { return m_reexport_name; }
 
-  FileSpec GetReExportedSymbolSharedLibrary() const;
+  FileSpec GetReExportedSymbolSharedLibrary() const {
+    return m_reexport_library;
+  }
 
   void SetReExportedSymbolName(ConstString name);
 
@@ -312,7 +315,7 @@ protected:
   // modules we've already seen to make sure we don't get caught in a cycle.
 
   Symbol *ResolveReExportedSymbolInModuleSpec(
-      Target &target, ConstString &reexport_name,
+      Target &target, ConstString reexport_name,
       lldb_private::ModuleSpec &module_spec,
       lldb_private::ModuleList &seen_modules) const;
 
@@ -347,6 +350,12 @@ protected:
   AddressRange m_addr_range; // Contains the value, or the section offset
                              // address when the value is an address in a
                              // section, and the size (if any)
+  /// Stores the re-exported name if this symbol is of type
+  /// eSymbolTypeReExported.
+  ConstString m_reexport_name;
+  /// Stores the re-exported shared library if this symbol is of type
+  /// eSymbolTypeReExported.
+  FileSpec m_reexport_library;
   uint32_t m_flags = 0; // A copy of the flags from the original symbol table,
                         // the ObjectFile plug-in can interpret these
 };
