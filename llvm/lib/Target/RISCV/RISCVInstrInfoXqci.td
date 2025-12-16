@@ -1061,26 +1061,39 @@ let Predicates = [HasVendorXqcicm, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
   def QC_C_MVEQZ   : RVInst16CL<0b101, 0b10, (outs GPRC:$rd_wb),
                               (ins GPRC:$rd, GPRC:$rs1),
-                              "qc.c.mveqz", "$rd, $rs1"> {
+                              "qc.c.mveqz", "$rd, $rs1">,
+                     Sched<[WriteIALU, ReadIALU, ReadIALU]> {
     let Constraints = "$rd = $rd_wb";
 
     let Inst{12-10} = 0b011;
     let Inst{6-5} = 0b00;
   }
 
-  def QC_MVEQ    : QCIMVCC<0b000, "qc.mveq">;
-  def QC_MVNE    : QCIMVCC<0b001, "qc.mvne">;
-  def QC_MVLT    : QCIMVCC<0b100, "qc.mvlt">;
-  def QC_MVGE    : QCIMVCC<0b101, "qc.mvge">;
-  def QC_MVLTU   : QCIMVCC<0b110, "qc.mvltu">;
-  def QC_MVGEU   : QCIMVCC<0b111, "qc.mvgeu">;
+  def QC_MVEQ    : QCIMVCC<0b000, "qc.mveq">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_MVNE    : QCIMVCC<0b001, "qc.mvne">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_MVLT    : QCIMVCC<0b100, "qc.mvlt">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_MVGE    : QCIMVCC<0b101, "qc.mvge">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_MVLTU   : QCIMVCC<0b110, "qc.mvltu">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_MVGEU   : QCIMVCC<0b111, "qc.mvgeu">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
 
-  def QC_MVEQI   : QCIMVCCI<0b000, "qc.mveqi", simm5>;
-  def QC_MVNEI   : QCIMVCCI<0b001, "qc.mvnei", simm5>;
-  def QC_MVLTI   : QCIMVCCI<0b100, "qc.mvlti", simm5>;
-  def QC_MVGEI   : QCIMVCCI<0b101, "qc.mvgei", simm5>;
-  def QC_MVLTUI  : QCIMVCCI<0b110, "qc.mvltui", uimm5>;
-  def QC_MVGEUI  : QCIMVCCI<0b111, "qc.mvgeui", uimm5>;
+  def QC_MVEQI   : QCIMVCCI<0b000, "qc.mveqi", simm5>,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_MVNEI   : QCIMVCCI<0b001, "qc.mvnei", simm5>,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_MVLTI   : QCIMVCCI<0b100, "qc.mvlti", simm5>,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_MVGEI   : QCIMVCCI<0b101, "qc.mvgei", simm5>,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_MVLTUI  : QCIMVCCI<0b110, "qc.mvltui", uimm5>,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_MVGEUI  : QCIMVCCI<0b111, "qc.mvgeui", uimm5>,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 } // Predicates = [HasVendorXqcicm, IsRV32]
 
 let Predicates = [HasVendorXqciint, IsRV32], hasSideEffects = 1 in {
