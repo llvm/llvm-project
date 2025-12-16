@@ -5,7 +5,7 @@ target triple = "aarch64"
 ; Check we don't crash here or try to generate an ill-formed `G_UMAX` of
 ; pointer vectors.
 
-define <4 x ptr> @pr168872(<4 x ptr> %0) {
+define <4 x ptr> @pr168872(<4 x ptr> %ptrs) {
   ; CHECK-LABEL: name: pr168872
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $q0, $q1
@@ -42,7 +42,7 @@ define <4 x ptr> @pr168872(<4 x ptr> %0) {
   ; CHECK-NEXT:   $q1 = COPY [[BITCAST5]](<2 x s64>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0, implicit $q1
 entry:
-  %1 = icmp ugt <4 x ptr> %0, zeroinitializer
-  %2 = select <4 x i1> %1, <4 x ptr> %0, <4 x ptr> zeroinitializer
-  ret <4 x ptr> %2
+  %cmp = icmp ugt <4 x ptr> %ptrs, zeroinitializer
+  %ptrs.select = select <4 x i1> %cmp, <4 x ptr> %ptrs, <4 x ptr> zeroinitializer
+  ret <4 x ptr> %ptrs.select
 }

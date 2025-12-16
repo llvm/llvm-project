@@ -1,13 +1,8 @@
-#RUN: not --crash llc -o - -mtriple=arm64 -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+#RUN: not --crash llc -mtriple=arm64 -global-isel -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
 name:            test_minmax
-legalized:       true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-liveins:
 body:             |
   bb.0:
     ; Pointer operands
