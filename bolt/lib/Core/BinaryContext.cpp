@@ -2560,8 +2560,8 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   setSymbolToFunctionMap(BF->getSymbol(), BF);
   BF->CurrentState = BinaryFunction::State::CFG;
 
-  if (!getOutputBinaryFunctions().empty())
-    getOutputBinaryFunctions().push_back(BF);
+  if (!OutputFunctions.empty())
+    OutputFunctions.push_back(BF);
 
   return BF;
 }
@@ -2601,6 +2601,12 @@ BinaryContext::createInstructionPatch(uint64_t Address,
     PBF->setAnonymous(true);
 
   return PBF;
+}
+
+BinaryFunction *
+BinaryContext::createThunkBinaryFunction(const std::string &Name) {
+  static NameResolver NR;
+  return createInjectedBinaryFunction(NR.uniquify(Name));
 }
 
 std::pair<size_t, size_t>
