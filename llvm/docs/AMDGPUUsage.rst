@@ -2133,6 +2133,14 @@ callable functions (i.e. those that do not correspond to hardware entry points):
 * On return from a function, all dependency counters must be zero except for
   ``VScnt``/``STOREcnt``.
 
+For entry points, the ABI conventions are dictated by the hardware behavior at
+wave launch and wave termination:
+
+* When a wave is launched the shader can assume that all dependency counters are
+  zero.
+* The shader can leave the dependency counters in any state before terminating
+  the wave (e.g. with ``s_endpgm``).
+
 AMDGPU MCExpr
 -------------
 
