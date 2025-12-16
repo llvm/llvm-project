@@ -3379,7 +3379,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUTensorLoadStoreOpLowering<TensorLoadToLDSOp,
                                            ROCDL::TensorLoadToLDSOp>,
            AMDGPUTensorLoadStoreOpLowering<TensorStoreFromLDSOp,
-                                           ROCDL::TensorStoreFromLDSOp>>
-						   (converter, chipset);
+                                           ROCDL::TensorStoreFromLDSOp>>(
+          converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }
