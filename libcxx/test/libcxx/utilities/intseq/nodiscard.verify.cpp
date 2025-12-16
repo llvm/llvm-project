@@ -14,6 +14,8 @@
 
 #include <utility>
 
+#include "test_macros.h"
+
 void test() {
   std::integer_sequence<int, 49, 82, 94> seq;
 
