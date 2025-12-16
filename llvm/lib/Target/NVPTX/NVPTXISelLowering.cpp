@@ -867,14 +867,14 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine(
-    {ISD::ADD,         ISD::AND,          ISD::EXTRACT_VECTOR_ELT,
-      ISD::FADD,        ISD::FMAXNUM,      ISD::FMINNUM,
-      ISD::FMAXIMUM,    ISD::FMINIMUM,     ISD::FMAXIMUMNUM,
-      ISD::FMINIMUMNUM, ISD::MUL,          ISD::SELECT,
-      ISD::SHL,         ISD::SREM,         ISD::UREM,
-      ISD::VSELECT,     ISD::BUILD_VECTOR, ISD::ADDRSPACECAST,
-      ISD::LOAD,        ISD::STORE,        ISD::ZERO_EXTEND,
-      ISD::SIGN_EXTEND});
+      {ISD::ADD,         ISD::AND,          ISD::EXTRACT_VECTOR_ELT,
+       ISD::FADD,        ISD::FMAXNUM,      ISD::FMINNUM,
+       ISD::FMAXIMUM,    ISD::FMINIMUM,     ISD::FMAXIMUMNUM,
+       ISD::FMINIMUMNUM, ISD::MUL,          ISD::SELECT,
+       ISD::SHL,         ISD::SREM,         ISD::UREM,
+       ISD::VSELECT,     ISD::BUILD_VECTOR, ISD::ADDRSPACECAST,
+       ISD::LOAD,        ISD::STORE,        ISD::ZERO_EXTEND,
+       ISD::SIGN_EXTEND});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -6251,82 +6251,82 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
 /// shifts produce sign-extended results (0 or -1) when shift >= BitWidth,
 /// which differs from the C pattern that always returns 0.
 static SDValue PerformSELECTShiftCombine(SDNode *N,
-  TargetLowering::DAGCombinerInfo &DCI) {
-SDValue Cond = N->getOperand(0);
-SDValue TrueVal = N->getOperand(1);
-SDValue FalseVal = N->getOperand(2);
+                                         TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueVal = N->getOperand(1);
+  SDValue FalseVal = N->getOperand(2);
 
-// We're looking for:
-//   (select (setcc shift, BitWidth-1, ugt), 0, (shift x, shift))
-// or:
-//   (select (setcc shift, BitWidth, ult), (shift x, shift), 0)
+  // We're looking for:
+  //   (select (setcc shift, BitWidth-1, ugt), 0, (shift x, shift))
+  // or:
+  //   (select (setcc shift, BitWidth, ult), (shift x, shift), 0)
 
-SDValue ZeroVal, ShiftOp;
-bool Inverted = false;
+  SDValue ZeroVal, ShiftOp;
+  bool Inverted = false;
 
-if (isConstZero(TrueVal)) {
-ZeroVal = TrueVal;
-ShiftOp = FalseVal;
-} else if (isConstZero(FalseVal)) {
-ZeroVal = FalseVal;
-ShiftOp = TrueVal;
-Inverted = true;
-} else {
-return SDValue();
-}
+  if (isConstZero(TrueVal)) {
+    ZeroVal = TrueVal;
+    ShiftOp = FalseVal;
+  } else if (isConstZero(FalseVal)) {
+    ZeroVal = FalseVal;
+    ShiftOp = TrueVal;
+    Inverted = true;
+  } else {
+    return SDValue();
+  }
 
-// Only handle logical shifts (SRL, SHL), not arithmetic (SRA)
-unsigned ShiftOpc = ShiftOp.getOpcode();
-if (ShiftOpc != ISD::SRL && ShiftOpc != ISD::SHL)
-return SDValue();
+  // Only handle logical shifts (SRL, SHL), not arithmetic (SRA)
+  unsigned ShiftOpc = ShiftOp.getOpcode();
+  if (ShiftOpc != ISD::SRL && ShiftOpc != ISD::SHL)
+    return SDValue();
 
-// Condition must be a SETCC
-if (Cond.getOpcode() != ISD::SETCC)
-return SDValue();
+  // Condition must be a SETCC
+  if (Cond.getOpcode() != ISD::SETCC)
+    return SDValue();
 
-ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
-SDValue CondLHS = Cond.getOperand(0);
-SDValue CondRHS = Cond.getOperand(1);
-SDValue ShiftAmt = ShiftOp.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  SDValue CondLHS = Cond.getOperand(0);
+  SDValue CondRHS = Cond.getOperand(1);
+  SDValue ShiftAmt = ShiftOp.getOperand(1);
 
-// Look through truncation - NVPTX truncates 64-bit shift amounts to 32-bit
-if (ShiftAmt.getOpcode() == ISD::TRUNCATE)
-ShiftAmt = ShiftAmt.getOperand(0);
+  // Look through truncation - NVPTX truncates 64-bit shift amounts to 32-bit
+  if (ShiftAmt.getOpcode() == ISD::TRUNCATE)
+    ShiftAmt = ShiftAmt.getOperand(0);
 
-// The value being compared must be the same as the shift amount.
-// e.g., in "shift > 31 ? 0 : x >> shift", both must use the same 'shift'.
-if (CondLHS != ShiftAmt)
-return SDValue();
+  // The value being compared must be the same as the shift amount.
+  // e.g., in "shift > 31 ? 0 : x >> shift", both must use the same 'shift'.
+  if (CondLHS != ShiftAmt)
+    return SDValue();
 
-auto *Threshold = dyn_cast<ConstantSDNode>(CondRHS);
-if (!Threshold)
-return SDValue();
+  auto *Threshold = dyn_cast<ConstantSDNode>(CondRHS);
+  if (!Threshold)
+    return SDValue();
 
-unsigned BitWidth = ShiftOp.getValueType().getSizeInBits();
-uint64_t ThreshVal = Threshold->getZExtValue();
+  unsigned BitWidth = ShiftOp.getValueType().getSizeInBits();
+  uint64_t ThreshVal = Threshold->getZExtValue();
 
-// Check for valid patterns based on select orientation:
-//
-// When TrueVal is 0 (not inverted):
-//   (select (ugt shift, BitWidth-1), 0, shift_result)
-//   i.e., shift > 31 ? 0 : x >> shift
-//
-// When FalseVal is 0 (inverted):
-//   (select (ult shift, BitWidth), shift_result, 0)
-//   i.e., shift < 32 ? x >> shift : 0
-//
-// Both patterns return 0 when shift >= BitWidth, which PTX handles natively.
-bool ValidPattern = false;
-if (!Inverted && CC == ISD::SETUGT && ThreshVal == BitWidth - 1)
-ValidPattern = true;
-else if (Inverted && CC == ISD::SETULT && ThreshVal == BitWidth)
-ValidPattern = true;
+  // Check for valid patterns based on select orientation:
+  //
+  // When TrueVal is 0 (not inverted):
+  //   (select (ugt shift, BitWidth-1), 0, shift_result)
+  //   i.e., shift > 31 ? 0 : x >> shift
+  //
+  // When FalseVal is 0 (inverted):
+  //   (select (ult shift, BitWidth), shift_result, 0)
+  //   i.e., shift < 32 ? x >> shift : 0
+  //
+  // Both patterns return 0 when shift >= BitWidth, which PTX handles natively.
+  bool ValidPattern = false;
+  if (!Inverted && CC == ISD::SETUGT && ThreshVal == BitWidth - 1)
+    ValidPattern = true;
+  else if (Inverted && CC == ISD::SETULT && ThreshVal == BitWidth)
+    ValidPattern = true;
 
-if (!ValidPattern)
-return SDValue();
+  if (!ValidPattern)
+    return SDValue();
 
-// Pattern matched! PTX shift with clamping handles this correctly.
-return ShiftOp;
+  // Pattern matched! PTX shift with clamping handles this correctly.
+  return ShiftOp;
 }
 
 static SDValue PerformVSELECTCombine(SDNode *N,
