@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef _LIBCPP___CXX03_FLOAT_H
+#define _LIBCPP___CXX03_FLOAT_H
+
 /*
     float.h synopsis
 
@@ -67,26 +70,26 @@ Macros:
 
 */
 
-#if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/float.h>
-#else
-#  if (defined(__need_infinity_nan) || defined(__need_next_float_after_libcpp)) && __has_include_next(<float.h>)
-#    include_next <float.h>
-#  else
-#    include <__float/header_macro.h>
+#include <__cxx03/__config>
 
-#    include <__config>
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
 
-#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#      pragma GCC system_header
-#    endif
+#if __has_include_next(<float.h>)
+#  include_next <float.h>
+#endif
 
-#    if __has_include_next(<float.h>)
-#      include_next <float.h>
-#    endif
+#ifdef __cplusplus
 
-#    ifdef __cplusplus
-#      include <__float/characteristics.h>
-#    endif // __cplusplus
-#  endif   // defined(__need_infinity_nan) && __has_include_next(<float.h>)
-#endif     // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  ifndef FLT_EVAL_METHOD
+#    define FLT_EVAL_METHOD __FLT_EVAL_METHOD__
+#  endif
+
+#  ifndef DECIMAL_DIG
+#    define DECIMAL_DIG __DECIMAL_DIG__
+#  endif
+
+#endif // __cplusplus
+
+#endif // _LIBCPP___CXX03_FLOAT_H

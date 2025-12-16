@@ -25,6 +25,8 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["bitset", "vector"]
     elif re.match("__configuration/.+", header) or header == "__config":
         return ["version"]
+    elif re.match("__float/.+", header):
+        return ["cfloat"]
     elif header == "__hash_table":
         return ["unordered_map", "unordered_set"]
     elif header == "__locale":

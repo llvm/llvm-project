@@ -382,6 +382,8 @@ set(files
   __flat_set/flat_set.h
   __flat_set/ra_iterator.h
   __flat_set/utils.h
+  __float/characteristics.h
+  __float/header_macro.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h
@@ -1622,6 +1624,7 @@ set(files
   __cxx03/ext/__hash
   __cxx03/ext/hash_map
   __cxx03/ext/hash_set
+  __cxx03/float.h
   __cxx03/forward_list
   __cxx03/fstream
   __cxx03/functional

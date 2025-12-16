@@ -2429,8 +2429,9 @@ module std_fenv_h [system] {
   export *
 }
 module std_float_h [system] {
-  header "float.h"
-  export *
+  textual header "float.h"
+  module characteristics { header "__float/characteristics.h" }
+  module header_macro { header "__float/header_macro.h" }
 }
 module std_inttypes_h [system] {
   header "inttypes.h"
