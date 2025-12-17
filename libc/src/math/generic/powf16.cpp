@@ -27,8 +27,10 @@
 namespace LIBC_NAMESPACE_DECL {
 
 using namespace common_constants_internal;
+
 namespace {
-static inline double exp2_range_reduced(double x) {
+
+LIBC_INLINE static double exp2_range_reduced(double x) {
   // k = round(x * 32)  => (hi + mid) * 2^5
   double kf = fputil::nearest_integer(x * 32.0);
   int k = static_cast<int>(kf);
@@ -69,7 +71,8 @@ static inline double exp2_range_reduced(double x) {
 
   return result;
 }
-bool is_odd_integer(float16 x) {
+
+LIBC_INLINE bool is_odd_integer(float16 x) {
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
   uint16_t x_u = xbits.uintval();
@@ -81,7 +84,7 @@ bool is_odd_integer(float16 x) {
   return (x_e + lsb == UNIT_EXPONENT);
 }
 
-bool is_integer(float16 x) {
+LIBC_INLINE bool is_integer(float16 x) {
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
   uint16_t x_u = xbits.uintval();
@@ -117,16 +120,21 @@ LLVM_LIBC_FUNCTION(float16, powf16, (float16 x, float16 y)) {
     fputil::raise_except_if_required(FE_INVALID);
     return FPBits::quiet_nan().get_val();
   }
+
   if (LIBC_UNLIKELY(
           ybits.is_zero() || x_u == FPBits::one().uintval() || xbits.is_nan() ||
           ybits.is_nan() || x_u == FPBits::one().uintval() ||
           x_u == FPBits::zero().uintval() || x_u >= FPBits::inf().uintval() ||
           y_u >= FPBits::inf().uintval() ||
-          x_u < FPBits::min_normal().uintval() || y_a == 0x3400U ||
-          y_a == 0x3800U || y_a == 0x3A00U || y_a == 0x3800U ||
-          y_a == 0x3800U || y_a == 0x3D00U || y_a == 0x3E00U ||
-          y_a == 0x4100U || y_a == 0x4300U || y_a == 0x3c00U ||
-          y_a == 0x4000U || is_integer(y))) {
+          x_u < FPBits::min_normal().uintval() || y_a == 0x3400U || // 0.25
+          y_a == 0x3800U ||                                         // 0.5
+          y_a == 0x3A00U ||                                         // 0.75
+          y_a == 0x3D00U ||                                         // 1.25
+          y_a == 0x3E00U ||                                         // 1.5
+          y_a == 0x4000U ||                                         // 2.0
+          y_a == 0x4100U ||                                         // 2.5
+          y_a == 0x4300U ||                                         // 3.5
+          is_integer(y))) {
     // pow(x, 0) = 1
     if (ybits.is_zero()) {
       return 1.0f16;
