@@ -1104,7 +1104,9 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForGEP(
     Value *ArrayIdx = GEP->getOperand(I);
     uint64_t ElementSize = GTI.getSequentialElementStride(*DL);
     IntegerType *PtrIdxTy = cast<IntegerType>(DL->getIndexType(GEP->getType()));
-    ConstantInt *ElementSizeIdx = ConstantInt::get(PtrIdxTy, ElementSize, true);
+    // If the element size overflows the type, truncate.
+    ConstantInt *ElementSizeIdx = ConstantInt::get(
+        PtrIdxTy, ElementSize, /*IsSigned=*/true, /*ImplicitTrunc=*/true);
     if (ArrayIdx->getType()->getIntegerBitWidth() <=
         DL->getIndexSizeInBits(GEP->getAddressSpace())) {
       // Skip factoring if ArrayIdx is wider than the index size, because
