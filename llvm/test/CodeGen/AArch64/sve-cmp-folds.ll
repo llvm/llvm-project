@@ -122,14 +122,9 @@ define i1 @foo_last_i32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: foo_last_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    incw x8
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    mov w8, w8
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    whilels p0.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p0, z0.s
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %vcond = fcmp oeq <vscale x 4 x float> %a, %b
   %vscale = call i32 @llvm.vscale.i32()
