@@ -49861,6 +49861,38 @@ static SDValue combineMulToPMULDQ(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineMulToPMADD52(SDNode *N, const SDLoc &DL,
+                                   SelectionDAG &DAG,
+                                   const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  // Only optimize vXi64 when the standard PMULLQ instruction is slow.
+  if (VT.getScalarType() != MVT::i64 || !Subtarget.isPMULLQSlow())
+    return SDValue();
+  // Check hardware support:
+  // 512-bit vectors require AVX512-IFMA.
+  // 128/256-bit vectors require either AVX512-IFMA + VLX, or AVX-IFMA.
+  bool Supported512 = VT.getSizeInBits() == 512 && Subtarget.hasIFMA();
+  bool SupportedSmall =
+      VT.getSizeInBits() < 512 &&
+      ((Subtarget.hasIFMA() && Subtarget.hasVLX()) || Subtarget.hasAVXIFMA());
+  if (!Supported512 && !SupportedSmall)
+    return SDValue();
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  // Use KnownBits analysis to verify if the high bits are zero.
+  KnownBits Known0 = DAG.computeKnownBits(Op0);
+  KnownBits Known1 = DAG.computeKnownBits(Op1);
+  KnownBits KnownMul = KnownBits::mul(Known0, Known1, Op0 == Op1);
+  // If inputs and the result fit in 52 bits, VPMADD52L is safe to use.
+  // We pass a zero vector as the addend since we only need the multiply result.
+  if (Known0.countMaxActiveBits() <= 52 && Known1.countMaxActiveBits() <= 52 &&
+      KnownMul.countMaxActiveBits() <= 52) {
+    SDValue Zero = getZeroVector(VT.getSimpleVT(), Subtarget, DAG, DL);
+    return DAG.getNode(X86ISD::VPMADD52L, DL, VT, Op0, Op1, Zero);
+  }
+  return SDValue();
+}
+
 static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -49873,40 +49905,8 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineMulToPMULDQ(N, DL, DAG, Subtarget))
     return V;
 
-  if (VT.getScalarType() == MVT::i64 && Subtarget.isPMULLQSlow()) {
-    SDValue Op0 = N->getOperand(0);
-    SDValue Op1 = N->getOperand(1);
-
-    KnownBits Known0 = DAG.computeKnownBits(Op0);
-    KnownBits Known1 = DAG.computeKnownBits(Op1);
-    unsigned Count0 = Known0.countMinLeadingZeros();
-    unsigned Count1 = Known1.countMinLeadingZeros();
-
-    // Optimization 1: Use VPMULUDQ (32-bit multiply).
-    if (Count0 >= 32 && Count1 >= 32)
-      return DAG.getNode(X86ISD::PMULUDQ, DL, VT, Op0, Op1);
-
-    // Optimization 1.5: Use PMULDQ (32-bit signed multiply).
-    unsigned Sign0 = DAG.ComputeNumSignBits(Op0);
-    unsigned Sign1 = DAG.ComputeNumSignBits(Op1);
-    if (Sign0 > 32 && Sign1 > 32)
-      return DAG.getNode(X86ISD::PMULDQ, DL, VT, Op0, Op1);
-
-    // Optimization 2: Use VPMADD52L (52-bit multiply-add).
-    if (Subtarget.hasIFMA() || Subtarget.hasAVXIFMA()) {
-      if ((VT.getSizeInBits() == 512 && Subtarget.hasIFMA()) ||
-          (VT.getSizeInBits() < 512 &&
-           (Subtarget.hasVLX() || Subtarget.hasAVXIFMA()))) {
-        KnownBits KnownMul = KnownBits::mul(Known0, Known1, Op0 == Op1);
-        if (Known0.countMaxActiveBits() <= 52 &&
-            Known1.countMaxActiveBits() <= 52 &&
-            KnownMul.countMaxActiveBits() <= 52) {
-          SDValue Zero = getZeroVector(VT.getSimpleVT(), Subtarget, DAG, DL);
-          return DAG.getNode(X86ISD::VPMADD52L, DL, VT, Op0, Op1, Zero);
-        }
-      }
-    }
-  }
+  if (SDValue V = combineMulToPMADD52(N, DL, DAG, Subtarget))
+    return V;
 
   if (DCI.isBeforeLegalize() && VT.isVector())
     return reduceVMULWidth(N, DL, DAG, Subtarget);
