@@ -25,17 +25,17 @@ let Attributes = [NoThrow, Const] in {
 // https://github.com/andestech/andes-intrinsic-doc/blob/main/andes-scalar-intrinsic.md
 
 let Features = "xandesperf,32bit" in {
-def ffb_32     : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
-def ffzmism_32 : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
-def ffmism_32  : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
-def flmism_32  : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
+  def ffb_32 : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
+  def ffzmism_32 : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
+  def ffmism_32 : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
+  def flmism_32 : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
 }
 
 let Features = "xandesperf,64bit" in {
-def ffb_64     : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
-def ffzmism_64 : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
-def ffmism_64  : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
-def flmism_64  : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
+  def ffb_64 : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
+  def ffzmism_64 : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
+  def ffmism_64 : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
+  def flmism_64 : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
 }
 
 //===----------------------------------------------------------------------===//
