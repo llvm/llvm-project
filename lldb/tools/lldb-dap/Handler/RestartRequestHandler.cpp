@@ -12,7 +12,6 @@
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
-#include "lldb/API/SBError.h"
 
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
@@ -73,13 +72,8 @@ RestartRequestHandler::Run(const std::optional<RestartArguments> &args) const {
   // This is normally done after receiving a "configuration done" request.
   // Because we're restarting, configuration has already happened so we can
   // continue the process right away.
-  if (dap.stop_at_entry) {
-    if (llvm::Error error = SendThreadStoppedEvent(dap, /*on_entry=*/true))
-      return error;
-  } else {
-    if (lldb::SBError error = dap.target.GetProcess().Continue(); error.Fail())
-      return ToError(error);
-  }
+  if (dap.stop_at_entry)
+    return SendThreadStoppedEvent(dap, /*on_entry=*/true);
 
-  return llvm::Error::success();
+  return ToError(dap.target.GetProcess().Continue());
 }
