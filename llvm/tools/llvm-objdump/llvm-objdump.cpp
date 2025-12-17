@@ -3533,6 +3533,60 @@ commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
   return Values;
 }
 
+static void mcpuHelp() {
+  Triple TheTriple;
+
+  if (!TripleName.empty()) {
+    TheTriple.setTriple(TripleName);
+  } else {
+    assert(!InputFilenames.empty());
+    Expected<OwningBinary<Binary>> OBinary = createBinary(InputFilenames[0]);
+    if (Error E = OBinary.takeError()) {
+      reportError(InputFilenames[0], "triple was not specified and could not "
+                                     "be inferred from the input file: " +
+                                         toString(std::move(E)));
+    }
+
+    Binary *Bin = OBinary->getBinary();
+    if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin)) {
+      TheTriple = Obj->makeTriple();
+    } else if (Archive *A = dyn_cast<Archive>(Bin)) {
+      Error Err = Error::success();
+      unsigned I = -1;
+      for (auto &C : A->children(Err)) {
+        ++I;
+        Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
+        if (!ChildOrErr) {
+          if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+            reportError(std::move(E), getFileNameForError(C, I),
+                        A->getFileName());
+          continue;
+        }
+        if (ObjectFile *Obj = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
+          TheTriple = Obj->makeTriple();
+          break;
+        }
+      }
+      if (Err)
+        reportError(std::move(Err), A->getFileName());
+    }
+    if (TheTriple.empty())
+      reportError(InputFilenames[0],
+                  "target triple could not be derived from input file");
+  }
+
+  std::string ErrMessage;
+  const Target *DummyTarget =
+      TargetRegistry::lookupTarget(TheTriple, ErrMessage);
+  if (!DummyTarget)
+    reportCmdLineError(ErrMessage);
+  // We need to access the Help() through the corresponding MCSubtargetInfo.
+  // To avoid a memory leak, we wrap the createMcSubtargetInfo result in a
+  // unique_ptr.
+  std::unique_ptr<MCSubtargetInfo> MSI(
+      DummyTarget->createMCSubtargetInfo(TheTriple, "help", ""));
+}
+
 static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   MachOOpt = true;
   FullLeadingAddr = true;
@@ -3826,18 +3880,29 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
       !DisassembleSymbols.empty())
     Disassemble = true;
 
-  if (!ArchiveHeaders && !Disassemble && DwarfDumpType == DIDT_Null &&
-      !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
-      !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
-      !DynamicSymbolTable && !UnwindInfo && !FaultMapSection && !Offloading &&
-      !(MachOOpt &&
-        (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
-         DylibsUsed || ExportsTrie || FirstPrivateHeader ||
-         FunctionStartsType != FunctionStartsMode::None || IndirectSymbols ||
-         InfoPlist || LazyBind || LinkOptHints || ObjcMetaData || Rebase ||
-         Rpaths || UniversalHeaders || WeakBind || !FilterSections.empty()))) {
+  const bool PrintCpuHelp = (MCPU == "help" || is_contained(MAttrs, "help"));
+
+  const bool ShouldDump =
+      ArchiveHeaders || Disassemble || DwarfDumpType != DIDT_Null ||
+      DynamicRelocations || FileHeaders || PrivateHeaders || RawClangAST ||
+      Relocations || SectionHeaders || SectionContents || SymbolTable ||
+      DynamicSymbolTable || UnwindInfo || FaultMapSection || Offloading ||
+      (MachOOpt &&
+       (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
+        DylibsUsed || ExportsTrie || FirstPrivateHeader ||
+        FunctionStartsType != FunctionStartsMode::None || IndirectSymbols ||
+        InfoPlist || LazyBind || LinkOptHints || ObjcMetaData || Rebase ||
+        Rpaths || UniversalHeaders || WeakBind || !FilterSections.empty()));
+
+  if (!ShouldDump && !PrintCpuHelp) {
     T->printHelp(ToolName);
     return 2;
+  }
+
+  if (PrintCpuHelp) {
+    mcpuHelp();
+    if (!ShouldDump)
+      return EXIT_SUCCESS;
   }
 
   DisasmSymbolSet.insert_range(DisassembleSymbols);

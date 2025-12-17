@@ -869,6 +869,7 @@ bool DWARFAttribute::mayHaveLocationExpr(dwarf::Attribute Attr) {
   // Extensions.
   case DW_AT_GNU_call_site_value:
   case DW_AT_GNU_call_site_target:
+  case DW_AT_GNU_call_site_target_clobbered:
     return true;
   default:
     return false;
