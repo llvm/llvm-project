@@ -11,6 +11,7 @@
 // NOP is placed.
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "Sparc.h"
 #include "SparcSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
@@ -406,9 +407,11 @@ static bool combineRestoreADD(MachineBasicBlock &MBB,
   // Check whether it uses %o7 as its source and the corresponding branch
   // instruction is a call.
   MachineBasicBlock::iterator LastInst = MBB.getFirstTerminator();
-  bool IsCall = LastInst != MBB.end() && LastInst->isCall();
+  unsigned CallOpc = LastInst->getOpcode();
+  bool IsCall = LastInst != MBB.end() &&
+                (LastInst->isCall() || CallOpc == SP::TAIL_CALL ||
+                 CallOpc == SP::TAIL_CALLri);
 
-  // Check whether it uses %o7 as its source.
   if (IsCall && AddMI->getOpcode() == SP::ADDrr &&
       (AddMI->getOperand(1).getReg() == SP::O7 ||
        AddMI->getOperand(2).getReg() == SP::O7))
@@ -460,7 +463,10 @@ static bool combineRestoreOR(MachineBasicBlock &MBB,
   // Check whether it uses %o7 as its source and the corresponding branch
   // instruction is a call.
   MachineBasicBlock::iterator LastInst = MBB.getFirstTerminator();
-  bool IsCall = LastInst != MBB.end() && LastInst->isCall();
+  unsigned CallOpc = LastInst->getOpcode();
+  bool IsCall = LastInst != MBB.end() &&
+                (LastInst->isCall() || CallOpc == SP::TAIL_CALL ||
+                 CallOpc == SP::TAIL_CALLri);
 
   if (IsCall && OrMI->getOpcode() == SP::ORrr &&
       (OrMI->getOperand(1).getReg() == SP::O7 ||
