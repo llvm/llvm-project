@@ -2051,7 +2051,8 @@ SDValue SelectionDAGLegalize::ExpandBUILD_VECTOR(SDNode *Node) {
           // we don't want a v16i8 to become a v16i32 for example.
           const ConstantInt *CI = V->getConstantIntValue();
           CV.push_back(ConstantInt::get(EltVT.getTypeForEVT(*DAG.getContext()),
-                                        CI->getZExtValue()));
+                                        CI->getZExtValue(), /*IsSigned=*/false,
+                                        /*ImplicitTrunc=*/true));
         }
       } else {
         assert(Node->getOperand(i).isUndef());
