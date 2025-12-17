@@ -15,18 +15,6 @@
 namespace clang::lifetimes::internal {
 using llvm::isa_and_present;
 
-static bool isPointerType(QualType QT) {
-  return QT->isPointerOrReferenceType() || isGslPointerType(QT);
-}
-// Check if a type has an origin.
-static bool hasOrigin(const Expr *E) {
-  return E->isGLValue() || isPointerType(E->getType());
-}
-
-static bool hasOrigin(const VarDecl *VD) {
-  return isPointerType(VD->getType());
-}
-
 /// Creates a loan for the storage path of a given declaration reference.
 /// This function should be called whenever a DeclRefExpr represents a borrow.
 /// \param DRE The declaration reference expression that initiates the borrow.

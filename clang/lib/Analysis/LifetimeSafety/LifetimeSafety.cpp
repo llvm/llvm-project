@@ -73,10 +73,10 @@ void LifetimeSafetyAnalysis::run() {
 
 void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
                           LifetimeSafetyStats &Stats) {
-  if (!AC.getBody())
-    return;
   Stmt *FunctionBody = AC.getBody();
-  OM.collectMissingOrigins(FunctionBody, Stats);
+  if (FunctionBody == nullptr)
+    return;
+  OM.collectMissingOrigins(*FunctionBody, Stats);
 }
 } // namespace internal
 

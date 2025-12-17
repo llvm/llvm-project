@@ -16,13 +16,6 @@
 
 namespace clang::lifetimes::internal {
 namespace {
-bool isPointerType(QualType QT) {
-  return QT->isPointerOrReferenceType() || isGslPointerType(QT);
-}
-// Check if a type has an origin.
-bool hasOrigin(const Expr *E) {
-  return E->isGLValue() || isPointerType(E->getType());
-}
 /// A utility class to traverse the function body in the analysis
 /// context and collect the count of expressions with missing origins.
 class MissingOriginCollector
@@ -129,13 +122,10 @@ OriginID OriginManager::getOrCreate(const ValueDecl &D) {
   return NewID;
 }
 
-void OriginManager::collectMissingOrigins(Stmt *FunctionBody,
+void OriginManager::collectMissingOrigins(Stmt &FunctionBody,
                                           LifetimeSafetyStats &LSStats) {
-  if (!FunctionBody)
-    return;
-
   MissingOriginCollector Collector(this->ExprToOriginID, LSStats);
-  Collector.TraverseStmt(const_cast<Stmt *>(FunctionBody));
+  Collector.TraverseStmt(const_cast<Stmt *>(&FunctionBody));
 }
 
 } // namespace clang::lifetimes::internal

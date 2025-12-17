@@ -82,7 +82,7 @@ public:
   void dump(OriginID OID, llvm::raw_ostream &OS) const;
 
   /// Collects statistics about expressions that lack associated origins.
-  void collectMissingOrigins(Stmt *FunctionBody, LifetimeSafetyStats &LSStats);
+  void collectMissingOrigins(Stmt &FunctionBody, LifetimeSafetyStats &LSStats);
 
 private:
   OriginID getNextOriginID() { return NextOriginID++; }
