@@ -1807,46 +1807,41 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
 
 SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   SDLoc DL(N);
+  EVT VT = N->getValueType(0);
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
-  SDValue EltSize = N->getOperand(2);
+  SDValue EltSizeInBytes = N->getOperand(2);
 
-  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
-  EVT VT = N->getValueType(0);
+  // Note: The lane offset is scalable if the mask is scalable.
+  ElementCount LaneOffsetEC =
+      ElementCount::get(N->getConstantOperandVal(3), VT.isScalableVT());
+
   EVT PtrVT = SourceValue->getValueType(0);
+  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
 
+  // Take the difference between the pointers and divided by the element size,
+  // to see how many lanes separate them.
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
   if (IsReadAfterWrite)
     Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
+  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSizeInBytes);
 
-  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSize);
-
-  // If the difference is positive then some elements may alias
-  EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                     Diff.getValueType());
+  // The pointers do not alias if:
+  //  * Diff <= 0 (WAR_MASK)
+  //  * Diff == 0 (RAW_MASK)
+  EVT CmpVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), PtrVT);
   SDValue Zero = DAG.getConstant(0, DL, PtrVT);
   SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
                              IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
 
-  // Create the lane mask
-  EVT SplatVT = VT.changeElementType(PtrVT);
-  SDValue DiffSplat = DAG.getSplat(SplatVT, DL, Diff);
-  SDValue VectorStep = DAG.getStepVector(DL, SplatVT);
-  EVT MaskVT = VT.changeElementType(MVT::i1);
-  SDValue DiffMask =
-      DAG.getSetCC(DL, MaskVT, VectorStep, DiffSplat, ISD::CondCode::SETULT);
+  // The pointers do not alias if:
+  // Lane + LaneOffset < Diff (WAR/RAW_MASK)
+  SDValue LaneOffset = DAG.getElementCount(DL, PtrVT, LaneOffsetEC);
+  SDValue MaskN =
+      DAG.getSelect(DL, PtrVT, Cmp, DAG.getConstant(-1, DL, PtrVT), Diff);
 
-  EVT EltVT = VT.getVectorElementType();
-  // Extend the diff setcc in case the intrinsic has been promoted to a vector
-  // type with elements larger than i1
-  if (EltVT.getScalarSizeInBits() > MaskVT.getScalarSizeInBits())
-    DiffMask = DAG.getNode(ISD::ANY_EXTEND, DL, VT, DiffMask);
-
-  // Splat the compare result then OR it with the lane mask
-  if (CmpVT.getScalarSizeInBits() < EltVT.getScalarSizeInBits())
-    Cmp = DAG.getNode(ISD::ZERO_EXTEND, DL, EltVT, Cmp);
-  SDValue Splat = DAG.getSplat(VT, DL, Cmp);
-  return DAG.getNode(ISD::OR, DL, VT, DiffMask, Splat);
+  return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT, LaneOffset, MaskN);
 }
 
 void VectorLegalizer::ExpandFP_TO_UINT(SDNode *Node,

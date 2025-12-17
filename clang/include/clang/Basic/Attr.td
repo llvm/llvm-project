@@ -1952,14 +1952,6 @@ def TriviallyRelocatable : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
-def Replaceable : InheritableAttr {
-  let Spellings = [CustomKeyword<"replaceable_if_eligible">];
-  let SemaHandler = 0;
-  // Omitted from docs, since this is language syntax, not an attribute, as far
-  // as users are concerned.
-  let Documentation = [InternalOnly];
-}
-
 def MinSize : InheritableAttr {
   let Spellings = [Clang<"minsize">];
   let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
@@ -4387,8 +4379,13 @@ def CFGuard : InheritableAttr, TargetSpecificAttr<TargetWindows> {
 def MSStruct : InheritableAttr {
   let Spellings = [GCC<"ms_struct">];
   let Subjects = SubjectList<[Record]>;
-  let Documentation = [Undocumented];
-  let SimpleHandler = 1;
+  let Documentation = [MSStructDocs];
+}
+
+def GCCStruct : InheritableAttr {
+  let Spellings = [GCC<"gcc_struct">];
+  let Subjects = SubjectList<[Record]>;
+  let Documentation = [MSStructDocs]; // Covers this attribute too.
 }
 
 def DLLExport : InheritableAttr, TargetSpecificAttr<TargetHasDLLImportExport> {

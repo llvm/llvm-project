@@ -510,26 +510,6 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   }
 }
 
-/// Create a conditional branch using \p Cond branching to the successors of \p
-/// VPBB. Note that the first successor is always forward (i.e. not created yet)
-/// while the second successor may already have been created (if it is a header
-/// block and VPBB is a latch).
-static BranchInst *createCondBranch(Value *Cond, VPBasicBlock *VPBB,
-                                    VPTransformState &State) {
-  // Replace the temporary unreachable terminator with a new conditional
-  // branch, hooking it up to backward destination (header) for latch blocks
-  // now, and to forward destination(s) later when they are created.
-  // Second successor may be backwards - iff it is already in VPBB2IRBB.
-  VPBasicBlock *SecondVPSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
-  BasicBlock *SecondIRSucc = State.CFG.VPBB2IRBB.lookup(SecondVPSucc);
-  BasicBlock *IRBB = State.CFG.VPBB2IRBB[VPBB];
-  BranchInst *CondBr = State.Builder.CreateCondBr(Cond, IRBB, SecondIRSucc);
-  // First successor is always forward, reset it to nullptr
-  CondBr->setSuccessor(0, nullptr);
-  IRBB->getTerminator()->eraseFromParent();
-  return CondBr;
-}
-
 Value *VPInstruction::generate(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
 
@@ -659,16 +639,20 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::BranchOnCond: {
     Value *Cond = State.get(getOperand(0), VPLane(0));
-    auto *Br = createCondBranch(Cond, getParent(), State);
+    // Replace the temporary unreachable terminator with a new conditional
+    // branch, hooking it up to backward destination for latch blocks now, and
+    // to forward destination(s) later when they are created.
+    // Second successor may be backwards - iff it is already in VPBB2IRBB.
+    VPBasicBlock *SecondVPSucc =
+        cast<VPBasicBlock>(getParent()->getSuccessors()[1]);
+    BasicBlock *SecondIRSucc = State.CFG.VPBB2IRBB.lookup(SecondVPSucc);
+    BasicBlock *IRBB = State.CFG.VPBB2IRBB[getParent()];
+    auto *Br = Builder.CreateCondBr(Cond, IRBB, SecondIRSucc);
+    // First successor is always forward, reset it to nullptr.
+    Br->setSuccessor(0, nullptr);
+    IRBB->getTerminator()->eraseFromParent();
     applyMetadata(*Br);
     return Br;
-  }
-  case VPInstruction::BranchOnCount: {
-    // First create the compare.
-    Value *IV = State.get(getOperand(0), /*IsScalar*/ true);
-    Value *TC = State.get(getOperand(1), /*IsScalar*/ true);
-    Value *Cond = Builder.CreateICmpEQ(IV, TC);
-    return createCondBranch(Cond, getParent(), State);
   }
   case VPInstruction::Broadcast: {
     return Builder.CreateVectorSplat(
@@ -2314,7 +2298,6 @@ void VPWidenIntOrFpInductionRecipe::printRecipe(
   printAsOperand(O, SlotTracker);
   O << " = WIDEN-INDUCTION";
   printFlags(O);
-  O << " ";
   printOperands(O, SlotTracker);
 
   if (auto *TI = getTruncInst())
@@ -2527,15 +2510,12 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
-  unsigned CurrentPart = getUnrollPart(*this);
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  Type *IndexTy = DL.getIndexType(State.TypeAnalysis.inferScalarType(this));
+  assert(getOffset() &&
+         "Expected prior simplification of recipe without offset");
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-
-  Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
-  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Increment,
-                                       "", getGEPNoWrapFlags());
-
+  Value *Offset = State.get(getOffset(), true);
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Offset, "",
+                                       getGEPNoWrapFlags());
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
 
@@ -2552,6 +2532,11 @@ void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
+  // A blend will be expanded to a select VPInstruction, which will generate a
+  // scalar select if only the first lane is used.
+  if (vputils::onlyFirstLaneUsed(this))
+    VF = ElementCount::getFixed(1);
+
   Type *ResultTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
   Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);
   return (getNumIncomingValues() - 1) *
