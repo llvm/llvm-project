@@ -86,6 +86,31 @@ TEST(KmpStrTest, BasicStrToInt) {
   EXPECT_EQ(__kmp_basic_str_to_int("123"), 123);
 }
 
+// Test basic string to int conversion with invalid inputs
+TEST(KmpStrTest, BasicStrToIntInvalid) {
+  // Empty string returns 0
+  EXPECT_EQ(__kmp_basic_str_to_int(""), 0);
+
+  // Strings starting with non-digits return 0
+  EXPECT_EQ(__kmp_basic_str_to_int("abc"), 0);
+  EXPECT_EQ(__kmp_basic_str_to_int("hello"), 0);
+  EXPECT_EQ(__kmp_basic_str_to_int("xyz123"), 0);
+
+  // Special characters return 0
+  EXPECT_EQ(__kmp_basic_str_to_int("!@#"), 0);
+  EXPECT_EQ(__kmp_basic_str_to_int("+42"), 0);
+  EXPECT_EQ(__kmp_basic_str_to_int("-42"), 0);
+
+  // Leading whitespace causes early stop (returns 0)
+  EXPECT_EQ(__kmp_basic_str_to_int(" 42"), 0);
+  EXPECT_EQ(__kmp_basic_str_to_int("\t42"), 0);
+
+  // Mixed content: parses digits until first non-digit
+  EXPECT_EQ(__kmp_basic_str_to_int("123abc"), 123);
+  EXPECT_EQ(__kmp_basic_str_to_int("42 "), 42);
+  EXPECT_EQ(__kmp_basic_str_to_int("7.5"), 7);
+}
+
 // Test string match
 TEST(KmpStrTest, StrMatch) {
   const char *data = "Hello World";
@@ -134,6 +159,73 @@ TEST(KmpStrTest, MatchBool) {
   EXPECT_TRUE(__kmp_str_match_false("0"));
   EXPECT_TRUE(__kmp_str_match_false("no"));
   EXPECT_TRUE(__kmp_str_match_false("NO"));
+
+  // Note: Trailing characters after a valid prefix still match due to
+  // minimum-length prefix matching (e.g., "true" uses len=1, "yes" uses len=1)
+  EXPECT_TRUE(__kmp_str_match_true("true "));
+  EXPECT_TRUE(__kmp_str_match_false("false "));
+  EXPECT_TRUE(__kmp_str_match_true("truex"));
+  EXPECT_TRUE(__kmp_str_match_false("falsex"));
+
+  // Partial prefixes also match due to minimum-length matching
+  EXPECT_TRUE(__kmp_str_match_true("t"));
+  EXPECT_TRUE(__kmp_str_match_true("tru"));
+  EXPECT_TRUE(__kmp_str_match_false("f"));
+  EXPECT_TRUE(__kmp_str_match_false("fals"));
+  EXPECT_TRUE(__kmp_str_match_true("y"));
+  EXPECT_TRUE(__kmp_str_match_true("yess"));
+  EXPECT_TRUE(__kmp_str_match_false("n"));
+  EXPECT_TRUE(__kmp_str_match_false("noo"));
+
+  // "on" and "off" require at least 2 characters
+  EXPECT_TRUE(__kmp_str_match_true("on"));
+  EXPECT_TRUE(__kmp_str_match_false("of"));
+  EXPECT_TRUE(__kmp_str_match_false("off"));
+
+  // "enabled" and "disabled" require exact match (len=0)
+  EXPECT_TRUE(__kmp_str_match_true("enabled"));
+  EXPECT_TRUE(__kmp_str_match_false("disabled"));
+}
+
+// Test string match for invalid bool values
+TEST(KmpStrTest, MatchBoolInvalid) {
+  // Empty string is neither true nor false
+  EXPECT_FALSE(__kmp_str_match_true(""));
+  EXPECT_FALSE(__kmp_str_match_false(""));
+
+  // Random strings are neither true nor false
+  EXPECT_FALSE(__kmp_str_match_true("hello"));
+  EXPECT_FALSE(__kmp_str_match_false("hello"));
+  EXPECT_FALSE(__kmp_str_match_true("abc"));
+  EXPECT_FALSE(__kmp_str_match_false("abc"));
+
+  // Numbers other than 0/1 are neither true nor false
+  EXPECT_FALSE(__kmp_str_match_true("2"));
+  EXPECT_FALSE(__kmp_str_match_false("2"));
+  EXPECT_FALSE(__kmp_str_match_true("42"));
+  EXPECT_FALSE(__kmp_str_match_false("42"));
+  EXPECT_FALSE(__kmp_str_match_true("-1"));
+  EXPECT_FALSE(__kmp_str_match_false("-1"));
+
+  // Leading whitespace prevents matching
+  EXPECT_FALSE(__kmp_str_match_true(" true"));
+  EXPECT_FALSE(__kmp_str_match_false(" false"));
+
+  // "on" and "off" require at least 2 characters
+  EXPECT_FALSE(__kmp_str_match_true("o"));
+  EXPECT_FALSE(__kmp_str_match_false("o"));
+
+  // "enabled" and "disabled" require exact match (len=0)
+  EXPECT_FALSE(__kmp_str_match_true("enable"));
+  EXPECT_FALSE(__kmp_str_match_false("disable"));
+
+  // True values don't match as false and vice versa
+  EXPECT_FALSE(__kmp_str_match_false("true"));
+  EXPECT_FALSE(__kmp_str_match_false("1"));
+  EXPECT_FALSE(__kmp_str_match_false("yes"));
+  EXPECT_FALSE(__kmp_str_match_true("false"));
+  EXPECT_FALSE(__kmp_str_match_true("0"));
+  EXPECT_FALSE(__kmp_str_match_true("no"));
 }
 
 // Test string replace
