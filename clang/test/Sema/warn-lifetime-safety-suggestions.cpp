@@ -75,6 +75,7 @@ int* return_pointer_directly(int* a) {
 
 MyObj* return_pointer_object(MyObj* a) {
   return a;                                // expected-note {{param returned here}} 
+}
 
 MyObj& return_reference(MyObj& a, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
                         MyObj& b, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
