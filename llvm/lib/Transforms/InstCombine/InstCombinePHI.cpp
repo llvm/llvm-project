@@ -589,7 +589,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
       // also requires a PHI, we'd be introducing more PHIs than we're
       // eliminating, which increases register pressure on entry to the PHI's
       // block.
-      if (NeededPhi)
+      if (NeededPhi && FixedOperands[Op] != nullptr)
         return nullptr;
 
       FixedOperands[Op] = nullptr; // Needs a PHI.
