@@ -1346,7 +1346,7 @@ def PseudoCCQC_LI : SFBQC_LI;
 def PseudoCCQC_E_LI : SFBQC_E_LI;
 }
 
-let Predicates = [HasShortForwardBranchIQCLoad] in {
+let Predicates = [HasShortForwardBranchILoad] in {
 def PseudoCCQC_E_LB : SFBQCLoad;
 def PseudoCCQC_E_LH : SFBQCLoad;
 def PseudoCCQC_E_LW : SFBQCLoad;

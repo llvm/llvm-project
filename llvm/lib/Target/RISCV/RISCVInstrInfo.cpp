@@ -897,23 +897,6 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
       .addImm(0);
 }
 
-static unsigned getQCLoadPredicatedOpcode(unsigned Opcode) {
-  switch (Opcode) {
-  case RISCV::QC_E_LB:
-    return RISCV::PseudoCCQC_E_LB;
-  case RISCV::QC_E_LBU:
-    return RISCV::PseudoCCQC_E_LBU;
-  case RISCV::QC_E_LH:
-    return RISCV::PseudoCCQC_E_LH;
-  case RISCV::QC_E_LHU:
-    return RISCV::PseudoCCQC_E_LHU;
-  case RISCV::QC_E_LW:
-    return RISCV::PseudoCCQC_E_LW;
-  default:
-    return 0;
-  }
-}
-
 static unsigned getLoadPredicatedOpcode(unsigned Opcode) {
   switch (Opcode) {
   case RISCV::LB:
@@ -930,6 +913,16 @@ static unsigned getLoadPredicatedOpcode(unsigned Opcode) {
     return RISCV::PseudoCCLWU;
   case RISCV::LD:
     return RISCV::PseudoCCLD;
+  case RISCV::QC_E_LB:
+    return RISCV::PseudoCCQC_E_LB;
+  case RISCV::QC_E_LBU:
+    return RISCV::PseudoCCQC_E_LBU;
+  case RISCV::QC_E_LH:
+    return RISCV::PseudoCCQC_E_LH;
+  case RISCV::QC_E_LHU:
+    return RISCV::PseudoCCQC_E_LHU;
+  case RISCV::QC_E_LW:
+    return RISCV::PseudoCCQC_E_LW;
   default:
     return 0;
   }
@@ -943,17 +936,10 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
   if (MI.getOpcode() != RISCV::PseudoCCMOVGPR)
     return nullptr;
 
-  unsigned PredOpc = getQCLoadPredicatedOpcode(LoadMI.getOpcode());
+  unsigned PredOpc = getLoadPredicatedOpcode(LoadMI.getOpcode());
 
-  if (!STI.hasShortForwardBranchIQCLoad() && PredOpc)
+  if (!STI.hasShortForwardBranchILoad() || !PredOpc)
     return nullptr;
-
-  if (!PredOpc) {
-    PredOpc = getLoadPredicatedOpcode(LoadMI.getOpcode());
-
-    if (!STI.hasShortForwardBranchILoad() || !PredOpc)
-      return nullptr;
-  }
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   if (Ops.size() != 1 || (Ops[0] != 4 && Ops[0] != 5))
