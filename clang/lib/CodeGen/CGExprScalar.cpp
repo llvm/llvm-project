@@ -510,7 +510,10 @@ public:
     return llvm::ConstantFP::get(VMContext, E->getValue());
   }
   Value *VisitCharacterLiteral(const CharacterLiteral *E) {
-    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
+    // Character literals are always stored in an unsigned (even for signed
+    // char), so allow implicit truncation here.
+    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue(),
+                                  /*IsSigned=*/false, /*ImplicitTrunc=*/true);
   }
   Value *VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E) {
     return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
