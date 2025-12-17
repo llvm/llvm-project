@@ -6257,43 +6257,43 @@ class TensormapReplaceInst_3<string state_space, string field_name,
        (Intrin node:$addr, node:$ord, node:$val), predicate>
       addr:$addr, i32:$ord, ValTy:$val)]>;
 
-foreach state_space = ["GLOBAL", "SHARED_CTA"] in {
-  defvar pred = !if(!eq(state_space, "GLOBAL"), AS_match.global, AS_match.shared);
-  defvar ss_ptx = !tolower(!subst("_", "::", state_space));
+foreach ss = ["GLOBAL", "SHARED_CTA"] in {
+  defvar pred = !if(!eq(ss, "GLOBAL"), AS_match.global, AS_match.shared);
+  defvar ss_ptx = !tolower(!subst("_", "::", ss));
   let Predicates = [callSubtarget<"hasTensormapReplaceSupport">] in {
-    def TMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # state_space : 
+    def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # ss : 
       TensormapReplaceInst_2<ss_ptx, "global_address", "b64", B64, i64,
         int_nvvm_tensormap_replace_global_address, pred>;
 
     foreach field_name = ["INTERLEAVE_LAYOUT", "FILL_MODE", "RANK"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
-      def TMAP_REPLACE_TILE_ # field_name # _ # state_space : 
+      def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss : 
         TensormapReplaceInst_2<ss_ptx, !tolower(field_name), "b32", B32, i32,
           intrin, pred>;
     } // field_name
 
-    def TMAP_REPLACE_TILE_GLOBAL_STRIDE_ # state_space : 
+    def TENSORMAP_REPLACE_TILE_GLOBAL_STRIDE_ # ss : 
       TensormapReplaceInst_3<ss_ptx, "global_stride", "b64", B64, i64, 
         int_nvvm_tensormap_replace_global_stride, pred>;
 
     foreach field_name = ["BOX_DIM", "GLOBAL_DIM", "ELEMENT_STRIDE"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
-      def TMAP_REPLACE_TILE_ # field_name # _ # state_space : 
+      def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss : 
         TensormapReplaceInst_3<ss_ptx, !tolower(field_name), "b32", B32, i32, 
           intrin, pred>;
     } // field_name
   } // hasTensormapReplaceSupport
 
-  def TMAP_REPLACE_TILE_ELEMTYPE_ # state_space : 
+  def TENSORMAP_REPLACE_TILE_ELEMTYPE_ # ss : 
     TensormapReplaceInst_2<ss_ptx, "elemtype", "b32", B32, i32, 
       int_nvvm_tensormap_replace_elemtype, pred>;
 
-  def TMAP_REPLACE_SWIZZLE_ATOMICITY_ # state_space : 
+  def TENSORMAP_REPLACE_SWIZZLE_ATOMICITY_ # ss : 
     TensormapReplaceInst_2<ss_ptx, "swizzle_atomicity", "b32", B32, i32, 
       int_nvvm_tensormap_replace_swizzle_atomicity, pred>,
     Requires<[callSubtarget<"hasTensormapReplaceSwizzleAtomicitySupport">]>;
 
-  def TMAP_REPLACE_SWIZZLE_MODE_ # state_space : 
+  def TENSORMAP_REPLACE_SWIZZLE_MODE_ # ss : 
     TensormapReplaceInst_2<ss_ptx, "swizzle_mode", "b32", B32, i32, 
       int_nvvm_tensormap_replace_swizzle_mode, pred>;
 } // state_space
