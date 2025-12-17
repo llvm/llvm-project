@@ -3694,6 +3694,60 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
     R->dissolveToCFGLoop();
 }
 
+void VPlanTransforms::expandBranchOnMultiCond(VPlan &Plan) {
+  // Expand BranchOnMultiCond instructions into explicit CFG with branching.
+  // This must run after dissolveLoopRegions, when successors have been
+  // restored.
+  SmallVector<VPBasicBlock *> WorkList;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getEntry()))) {
+    if (VPBB->empty())
+      continue;
+    if (match(&VPBB->back(), m_BranchOnMultiCond()))
+      WorkList.push_back(VPBB);
+  }
+
+  for (VPBasicBlock *VPBB : WorkList) {
+    auto *BMC = cast<VPInstruction>(&VPBB->back());
+
+    unsigned NumConds = BMC->getNumOperands();
+    assert(NumConds > 0 &&
+           "BranchOnMultiCond must have at least one condition");
+    DebugLoc DL = BMC->getDebugLoc();
+    const auto Successors = to_vector(VPBB->getSuccessors());
+    assert(Successors.size() == NumConds + 1 &&
+           "BranchOnMultiCond must have N operands and N+1 successors");
+
+    // Disconnect all successors.
+    for (VPBlockBase *Succ : Successors)
+      VPBlockUtils::disconnectBlocks(VPBB, Succ);
+
+    // Create chain of conditional branches. Each condition branches to its
+    // corresponding successor on true, and to the next condition block (or the
+    // final successor) on false.
+    VPBasicBlock *CurrentBlock = VPBB;
+    for (const auto &[I, Cond] : enumerate(BMC->operands())) {
+      VPBlockBase *TrueSucc = Successors[I];
+      VPBlockBase *FalseSucc = Successors[NumConds];
+      if (I + 1 != NumConds) {
+        auto *FalseBlock = Plan.createVPBasicBlock(
+            (Twine(VPBB->getName()) + ".multi.cond." + Twine(I + 1)).str());
+        FalseBlock->setParent(VPBB->getParent());
+        FalseSucc = FalseBlock;
+      }
+
+      VPBuilder(CurrentBlock)
+          .createNaryOp(VPInstruction::BranchOnCond, {Cond}, DL);
+      VPBlockUtils::connectBlocks(CurrentBlock, TrueSucc);
+      VPBlockUtils::connectBlocks(CurrentBlock, FalseSucc);
+
+      CurrentBlock = cast<VPBasicBlock>(FalseSucc);
+    }
+
+    BMC->eraseFromParent();
+  }
+}
+
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   VPTypeAnalysis TypeInfo(Plan);
   SmallVector<VPRecipeBase *> ToRemove;
@@ -3846,36 +3900,36 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
                               ? CondOfEarlyExitingVPBB
                               : Builder.createNot(CondOfEarlyExitingVPBB);
 
-  // Split the middle block and have it conditionally branch to the early exit
-  // block if CondToEarlyExit.
+  // Create a BranchOnMultiCond in the latch that branches to:
+  // [0] vector.early.exit, [1] middle block, [2] header (continue looping).
   VPValue *IsEarlyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {CondToEarlyExit});
-  VPBasicBlock *NewMiddle = Plan.createVPBasicBlock("middle.split");
   VPBasicBlock *VectorEarlyExitVPBB =
       Plan.createVPBasicBlock("vector.early.exit");
-  VPBlockUtils::insertOnEdge(LatchVPBB, MiddleVPBB, NewMiddle);
-  VPBlockUtils::connectBlocks(NewMiddle, VectorEarlyExitVPBB);
-  NewMiddle->swapSuccessors();
+  VectorEarlyExitVPBB->setParent(LatchVPBB->getParent());
 
+  // Update PHI operands: copy from EarlyExitingVPBB to VectorEarlyExitVPBB.
+  unsigned PredIdx = EarlyExitVPBB->getIndexForPredecessor(EarlyExitingVPBB);
   VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, EarlyExitVPBB);
 
-  // Update the exit phis in the early exit block.
-  VPBuilder MiddleBuilder(NewMiddle);
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
+  VPBuilder MiddleBuilder(cast<VPBasicBlock>(MiddleVPBB));
   for (VPRecipeBase &R : EarlyExitVPBB->phis()) {
     auto *ExitIRI = cast<VPIRPhi>(&R);
-    // Early exit operand should always be last, i.e., 0 if EarlyExitVPBB has
-    // a single predecessor and 1 if it has two.
+
+    // Move operand from EarlyExitingVPBB to VectorEarlyExitVPBB.
+    VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(PredIdx);
+    ExitIRI->addOperand(IncomingFromEarlyExit);
+    ExitIRI->removeIncomingValueFor(EarlyExitingVPBB);
+
+    // Early exit operand is now at the last position.
     unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
     if (ExitIRI->getNumOperands() != 1) {
-      // The first of two operands corresponds to the latch exit, via MiddleVPBB
-      // predecessor. Extract its final lane.
+      // The first operand corresponds to the latch exit via MiddleVPBB.
       ExitIRI->extractLastLaneOfLastPartOfFirstOperand(MiddleBuilder);
     }
 
-    VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
     if (!IncomingFromEarlyExit->isLiveIn()) {
-      // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {CondToEarlyExit},
           DebugLoc::getUnknown(), "first.active.lane");
@@ -3885,11 +3939,8 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
       ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExit);
     }
   }
-  MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
 
-  // Replace the condition controlling the non-early exit from the vector loop
-  // with one exiting if either the original condition of the vector latch is
-  // true or the early exit has been taken.
+  // Get the old latch terminator to extract the trip count condition.
   auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
   // Skip single-iteration loop region
   assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
@@ -3897,10 +3948,16 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
   auto *IsLatchExitTaken =
       Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
                          LatchExitingBranch->getOperand(1));
-  auto *AnyExitTaken = Builder.createNaryOp(
-      Instruction::Or, {IsEarlyExitTaken, IsLatchExitTaken});
-  Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
+
+  DebugLoc LatchDL = LatchExitingBranch->getDebugLoc();
   LatchExitingBranch->eraseFromParent();
+
+  Builder.setInsertPoint(LatchVPBB);
+  Builder.createNaryOp(VPInstruction::BranchOnMultiCond,
+                       {IsEarlyExitTaken, IsLatchExitTaken}, LatchDL);
+  LatchVPBB->clearSuccessors();
+  LatchVPBB->setSuccessors({VectorEarlyExitVPBB, MiddleVPBB, HeaderVPBB});
+  VectorEarlyExitVPBB->setPredecessors({LatchVPBB});
 }
 
 /// This function tries convert extended in-loop reductions to

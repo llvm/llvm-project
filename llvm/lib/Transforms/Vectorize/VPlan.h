@@ -1058,6 +1058,12 @@ public:
     // lowered to ICmp + BranchOnCond during VPlan to VPlan transformation.
     BranchOnCount,
     BranchOnCond,
+    // Multi-way branch with N boolean condition operands and N+1 successors.
+    // If condition i is true, branches to successor i; otherwise falls through
+    // to check the next condition. If all conditions are false, branches to
+    // the final successor. Expanded to a chain of BranchOnCond after region
+    // dissolution.
+    BranchOnMultiCond,
     Broadcast,
     /// Given operands of (the same) struct type, creates a struct of fixed-
     /// width vectors each containing a struct field of all operands. The
@@ -1212,6 +1218,7 @@ public:
     case Instruction::Fence:
     case Instruction::AtomicRMW:
     case VPInstruction::BranchOnCond:
+    case VPInstruction::BranchOnMultiCond:
     case VPInstruction::BranchOnCount:
       return false;
     default:
@@ -4405,7 +4412,7 @@ public:
   /// latch. If there is an early exit from the vector loop, the middle block
   /// conceptully has the early exit block as third successor, split accross 2
   /// VPBBs. In that case, the second VPBB selects whether to execute the scalar
-  /// tail loop or the exit bock. If the scalar tail loop or exit block are
+  /// tail loop or the exit block. If the scalar tail loop or exit block are
   /// known to always execute, the middle block may branch directly to that
   /// block. This function cannot be called once the vector loop region has been
   /// removed.
@@ -4414,12 +4421,8 @@ public:
     assert(
         LoopRegion &&
         "cannot call the function after vector loop region has been removed");
-    auto *RegionSucc = cast<VPBasicBlock>(LoopRegion->getSingleSuccessor());
-    if (RegionSucc->getSingleSuccessor() ||
-        is_contained(RegionSucc->getSuccessors(), getScalarPreheader()))
-      return RegionSucc;
-    // There is an early exit. The successor of RegionSucc is the middle block.
-    return cast<VPBasicBlock>(RegionSucc->getSuccessors()[1]);
+    // The middle block is always the last successor of the region.
+    return cast<VPBasicBlock>(LoopRegion->getSuccessors().back());
   }
 
   const VPBasicBlock *getMiddleBlock() const {

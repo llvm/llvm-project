@@ -26,7 +26,7 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add i64 3, [[N_VEC]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[LOOP_INC:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = mul nuw nsw i64 [[TMP4]], 2
@@ -60,10 +60,9 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[TMP33:%.*]] = or <vscale x 16 x i1> [[TMP62]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP33]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT3]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP36:%.*]] = or i1 [[TMP12]], [[TMP35]]
-; CHECK-NEXT:    br i1 [[TMP36]], label [[MIDDLE_SPLIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[LOOP_INC:%.*]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[LOOP_INC]]
+; CHECK:       vector.body.multi.cond.1:
+; CHECK-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 510, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_END:%.*]], label [[SCALAR_PH]]
@@ -92,7 +91,7 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 3, [[TMP16]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT]], [[LOOP_INC]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT]], [[MIDDLE_BLOCK]] ], [ 3, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX2:%.*]] = phi i64 [ [[INDEX_NEXT1:%.*]], [[LOOP_INC1:%.*]] ], [ [[INDEX]], [[SCALAR_PH]] ]
@@ -107,7 +106,7 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT1]], 513
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP1]], label [[LOOP_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX2]], [[LOOP1]] ], [ 67, [[LOOP_INC1]] ], [ 67, [[LOOP_INC]] ], [ [[TMP17]], [[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX2]], [[LOOP1]] ], [ 67, [[LOOP_INC1]] ], [ 67, [[MIDDLE_BLOCK]] ], [ [[TMP17]], [[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:

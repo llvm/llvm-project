@@ -16,19 +16,27 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; VF4IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4IC2:       [[VECTOR_BODY]]:
-; VF4IC2-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 8, i32 16, i32 24>
-; VF4IC2-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> [[BROADCAST_SPLAT]], <i32 32, i32 40, i32 48, i32 56>
+; VF4IC2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_MULTI_COND_1:.*]] ]
+; VF4IC2-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY_MULTI_COND_1]] ]
+; VF4IC2-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; VF4IC2-NEXT:    [[TMP0:%.*]] = shl nuw nsw <4 x i32> [[VEC_IND]], splat (i32 3)
+; VF4IC2-NEXT:    [[TMP1:%.*]] = shl nuw nsw <4 x i32> [[STEP_ADD]], splat (i32 3)
+; VF4IC2-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[BROADCAST_SPLAT]], [[TMP0]]
+; VF4IC2-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> [[BROADCAST_SPLAT]], [[TMP1]]
 ; VF4IC2-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP2]], zeroinitializer
 ; VF4IC2-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
+; VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; VF4IC2-NEXT:    [[TMP17:%.*]] = freeze <4 x i1> [[TMP4]]
 ; VF4IC2-NEXT:    [[TMP18:%.*]] = freeze <4 x i1> [[TMP5]]
 ; VF4IC2-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP17]], [[TMP18]]
 ; VF4IC2-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
-; VF4IC2-NEXT:    br label %[[MIDDLE_SPLIT:.*]]
-; VF4IC2:       [[MIDDLE_SPLIT]]:
-; VF4IC2-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
-; VF4IC2-NEXT:    br i1 [[TMP7]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
+; VF4IC2-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
+; VF4IC2-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[STEP_ADD]], splat (i32 4)
+; VF4IC2-NEXT:    br i1 [[TMP7]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_MULTI_COND_1]]
+; VF4IC2:       [[VECTOR_BODY_MULTI_COND_1]]:
+; VF4IC2-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4IC2:       [[MIDDLE_BLOCK]]:
+; VF4IC2-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
 ; VF4IC2-NEXT:    br label %[[RETURN:.*]]
 ; VF4IC2:       [[VECTOR_EARLY_EXIT]]:
 ; VF4IC2-NEXT:    [[TMP9:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP5]], i1 false)
@@ -38,9 +46,10 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP11]], 4
 ; VF4IC2-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 [[TMP10]]
 ; VF4IC2-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP14]] to i32
+; VF4IC2-NEXT:    [[TMP19:%.*]] = add i32 [[INDEX]], [[TMP15]]
 ; VF4IC2-NEXT:    br label %[[RETURN]]
 ; VF4IC2:       [[RETURN]]:
-; VF4IC2-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VECTOR_EARLY_EXIT]] ]
+; VF4IC2-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ [[TMP19]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF4IC2-NEXT:    ret i32 [[RES]]
 ;
 ; VF8IC1-LABEL: define noundef i32 @f(
@@ -52,22 +61,29 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; VF8IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8IC1:       [[VECTOR_BODY]]:
-; VF8IC1-NEXT:    [[TMP1:%.*]] = ashr <8 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 8, i32 16, i32 24, i32 32, i32 40, i32 48, i32 56>
+; VF8IC1-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_MULTI_COND_1:.*]] ]
+; VF8IC1-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY_MULTI_COND_1]] ]
+; VF8IC1-NEXT:    [[TMP0:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], splat (i32 3)
+; VF8IC1-NEXT:    [[TMP1:%.*]] = ashr <8 x i32> [[BROADCAST_SPLAT]], [[TMP0]]
 ; VF8IC1-NEXT:    [[TMP2:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
+; VF8IC1-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; VF8IC1-NEXT:    [[TMP8:%.*]] = freeze <8 x i1> [[TMP2]]
 ; VF8IC1-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP8]])
-; VF8IC1-NEXT:    br label %[[MIDDLE_SPLIT:.*]]
-; VF8IC1:       [[MIDDLE_SPLIT]]:
-; VF8IC1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
-; VF8IC1-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
+; VF8IC1-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
+; VF8IC1-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
+; VF8IC1-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_MULTI_COND_1]]
+; VF8IC1:       [[VECTOR_BODY_MULTI_COND_1]]:
+; VF8IC1-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF8IC1:       [[MIDDLE_BLOCK]]:
+; VF8IC1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
 ; VF8IC1-NEXT:    br label %[[RETURN:.*]]
 ; VF8IC1:       [[VECTOR_EARLY_EXIT]]:
 ; VF8IC1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP2]], i1 false)
 ; VF8IC1-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; VF8IC1-NEXT:    [[TMP9:%.*]] = add i32 [[INDEX]], [[TMP6]]
 ; VF8IC1-NEXT:    br label %[[RETURN]]
 ; VF8IC1:       [[RETURN]]:
-; VF8IC1-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[TMP6]], %[[VECTOR_EARLY_EXIT]] ]
+; VF8IC1-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[TMP9]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF8IC1-NEXT:    ret i32 [[RES]]
 ;
 entry:

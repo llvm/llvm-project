@@ -281,6 +281,10 @@ struct VPlanTransforms {
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
 
+  /// Expand BranchOnMultiCond instructions into explicit CFG with
+  /// BranchOnCond instructions. Should be called after dissolveLoopRegions.
+  static void expandBranchOnMultiCond(VPlan &Plan);
+
   /// Transform EVL loops to use variable-length stepping after region
   /// dissolution.
   ///
