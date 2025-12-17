@@ -24,7 +24,7 @@
 
 // Some of the __need macros are new in clang 22.x and Apple clang 21.x (there
 // isn't an Apple clang 18-20)
-// UNSUPPORTED: clang-20, clang-21, apple-clang-17
+// UNSUPPORTED: clang-20, clang-21, clang-22, apple-clang-17
 
 // float.h doesn't always define INFINITY and NAN.
 #define __need_infinity_nan
