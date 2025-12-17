@@ -134,7 +134,8 @@ void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
   using WrapperFnTy =
       shared::CWrapperFunctionResult (*)(const char *Data, size_t Size);
   auto *WrapperFn = WrapperFnAddr.toPtr<WrapperFnTy>();
-  SendResult(WrapperFn(ArgBuffer.data(), ArgBuffer.size()));
+  SendResult(shared::WrapperFunctionResult(
+      WrapperFn(ArgBuffer.data(), ArgBuffer.size())));
 }
 
 Error SelfExecutorProcessControl::disconnect() {
