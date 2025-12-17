@@ -3,34 +3,20 @@
 
 target triple = "nvptx64-unknown-nvidiacl"
 
-define ptr @pr171890() {
-; CHECK-LABEL: define ptr @pr171890() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+define ptr @pr171890(i1 %c) {
+; CHECK-LABEL: define ptr @pr171890(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca i16, align 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[STACK]] to ptr addrspace(5)
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[TMP0]] to ptr
-; CHECK-NEXT:    br label %[[IF:.*]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    [[NULLPHI:%.*]] = phi ptr [ null, %[[ENTRY]] ]
-; CHECK-NEXT:    br i1 false, label %[[THEN:.*]], label %[[ELSE:.*]]
-; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    br label %[[THEN]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi ptr [ [[TMP1]], %[[IF]] ], [ [[NULLPHI]], %[[ELSE]] ]
-; CHECK-NEXT:    ret ptr [[PHI2]]
+; CHECK-NEXT:    [[CONST:%.*]] = getelementptr i8, ptr null, i64 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], ptr [[TMP1]], ptr [[CONST]]
+; CHECK-NEXT:    ret ptr [[SEL]]
 ;
 entry:
   %stack = alloca i16, align 2
-  br label %if
-
-if:
-  %nullphi = phi ptr [ null, %entry ]
-  br i1 false, label %then, label %else
-
-else:
-  br label %then
-
-then:
-  %phi2 = phi ptr [ %stack, %if ], [ %nullphi, %else ]
-  ret ptr %phi2
+  %const = getelementptr i8, ptr null, i64 1
+  %sel = select i1 %c, ptr %stack, ptr %const
+  ret ptr %sel
 }
