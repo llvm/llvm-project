@@ -502,9 +502,9 @@
 # CHECK-NEXT:  2      3     0.50                        extr	w11, w13, w17, #31
 # CHECK-NEXT:  2      3     0.50                        extr	x3, x5, x7, #15
 # CHECK-NEXT:  2      3     0.50                        extr	x11, x13, x17, #63
-# CHECK-NEXT:  2      3     0.50                        ror	x19, x23, #24
-# CHECK-NEXT:  2      3     0.50                        ror	x29, xzr, #63
-# CHECK-NEXT:  2      3     0.50                        ror	w9, w13, #31
+# CHECK-NEXT:  1      1     0.25                        ror	x19, x23, #24
+# CHECK-NEXT:  1      1     0.25                        ror	x29, xzr, #63
+# CHECK-NEXT:  1      1     0.25                        ror	w9, w13, #31
 # CHECK-NEXT:  1      2     1.00                        fcmp	h5, h21
 # CHECK-NEXT:  1      2     1.00                        fcmp	h5, #0.0
 # CHECK-NEXT:  1      2     1.00                        fcmpe	h22, h21
@@ -1267,7 +1267,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT: 13.00  13.00  34.00  34.00  90.33  161.33 161.33 539.50 253.50 169.00 169.00 254.00 101.00
+# CHECK-NEXT: 13.00  13.00  34.00  34.00  90.33  161.33 161.33 538.00 252.00 169.00 169.00 254.00 101.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
@@ -1763,9 +1763,9 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.75   0.75   0.25   0.25    -      -     extr	w11, w13, w17, #31
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.75   0.75   0.25   0.25    -      -     extr	x3, x5, x7, #15
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.75   0.75   0.25   0.25    -      -     extr	x11, x13, x17, #63
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.75   0.75   0.25   0.25    -      -     ror	x19, x23, #24
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.75   0.75   0.25   0.25    -      -     ror	x29, xzr, #63
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.75   0.75   0.25   0.25    -      -     ror	w9, w13, #31
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     ror	x19, x23, #24
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     ror	x29, xzr, #63
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     ror	w9, w13, #31
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcmp	h5, h21
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcmp	h5, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcmpe	h22, h21
