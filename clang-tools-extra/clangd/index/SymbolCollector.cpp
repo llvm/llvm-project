@@ -45,14 +45,12 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <cassert>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -578,22 +576,22 @@ SymbolCollector::getRefContainer(const Decl *Enclosing,
   return Enclosing;
 }
 
-std::vector<CXXConstructorDecl *>
+SmallVector<CXXConstructorDecl *, 1>
 SymbolCollector::findIndirectConstructors(const Decl *D) {
   auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
   if (FD == nullptr || !FD->isTemplateInstantiation())
     return {};
-  if (auto *PT = FD->getPrimaryTemplate();
-      PT == nullptr || !isLikelyForwardingFunction(PT))
-    return {};
   if (auto Entry = ForwardingToConstructorCache.find(FD);
       Entry != ForwardingToConstructorCache.end())
     return Entry->getSecond();
+  if (auto *PT = FD->getPrimaryTemplate();
+      PT == nullptr || !isLikelyForwardingFunction(PT))
+    return {};
 
-  ForwardingToConstructorVisitor Visitor{};
-  Visitor.TraverseStmt(FD->getBody());
+  SmallVector<CXXConstructorDecl *, 1> FoundConstructors =
+      searchConstructorsInForwardingFunction(FD);
   auto Iter = ForwardingToConstructorCache.try_emplace(
-      FD, std::move(Visitor.Constructors));
+      FD, std::move(FoundConstructors));
   if (Iter.second)
     return Iter.first->getSecond();
   return {};
@@ -662,10 +660,12 @@ bool SymbolCollector::handleDeclOccurrence(
   // ND is the canonical (i.e. first) declaration. If it's in the main file
   // (which is not a header), then no public declaration was visible, so assume
   // it's main-file only.
-  bool IsMainFileOnly =
-      SM.isWrittenInMainFile(SM.getExpansionLoc(ND->getBeginLoc())) &&
-      !isHeaderFile(SM.getFileEntryRefForID(SM.getMainFileID())->getName(),
-                    ASTCtx->getLangOpts());
+  auto CheckIsMainFileOnly = [&](const NamedDecl *Decl) {
+    return SM.isWrittenInMainFile(SM.getExpansionLoc(Decl->getBeginLoc())) &&
+           !isHeaderFile(SM.getFileEntryRefForID(SM.getMainFileID())->getName(),
+                         ASTCtx->getLangOpts());
+  };
+  bool IsMainFileOnly = CheckIsMainFileOnly(ND);
   // In C, printf is a redecl of an implicit builtin! So check OrigD instead.
   if (ASTNode.OrigD->isImplicit() ||
       !shouldCollectSymbol(*ND, *ASTCtx, Opts, IsMainFileOnly))
@@ -694,7 +694,8 @@ bool SymbolCollector::handleDeclOccurrence(
                            Container, isSpelled(FileLoc, *ND)});
       // Also collect indirect constructor calls like `make_unique`
       for (auto *Constructor : findIndirectConstructors(ASTNode.OrigD)) {
-        if (!shouldCollectSymbol(*Constructor, *ASTCtx, Opts, IsMainFileOnly))
+        if (!shouldCollectSymbol(*Constructor, *ASTCtx, Opts,
+                                 CheckIsMainFileOnly(Constructor)))
           continue;
         if (auto ConstructorID = getSymbolIDCached(Constructor))
           addRef(ConstructorID,

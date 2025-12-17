@@ -15,7 +15,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <deque>
-#include <thread>
 
 using ::testing::_;
 using ::testing::AllOf;

@@ -312,6 +312,7 @@ MATCHER_P3(sym, Name, Decl, DefOrNone, "") {
 MATCHER_P(sym, Name, "") { return arg.Name == Name; }
 
 MATCHER_P(rangeIs, R, "") { return arg.Loc.range == R; }
+MATCHER_P(fileIs, F, "") { return arg.Loc.uri.file() == F; }
 MATCHER_P(containerIs, C, "") {
   return arg.Loc.containerName.value_or("") == C;
 }
@@ -2740,7 +2741,7 @@ TEST(FindReferences, ForwardingInAST) {
                           rangeIs(Main.range("Caller"))));
 }
 
-TEST(FindReferences, ForwardingInASTTwice) {
+TEST(FindReferences, ForwardingInASTChained) {
   Annotations Main(R"cpp(
     namespace std {
     template <class T> T &&forward(T &t);
@@ -2788,15 +2789,18 @@ TEST(FindReferences, ForwardingInIndex) {
     }
   )cpp");
   TestWorkspace TW;
-  TW.addMainFile("header.hpp", Header.code());
+  TW.addSource("header.hpp", Header.code());
   TW.addMainFile("main.cpp", Main.code());
   auto AST = TW.openFile("header.hpp").value();
   auto Index = TW.index();
 
-  EXPECT_THAT(findReferences(AST, Header.point(), 0, Index.get(),
-                             /*AddContext*/ true)
-                  .References,
-              ElementsAre(rangeIs(Header.range()), rangeIs(Main.range())));
+  EXPECT_THAT(
+      findReferences(AST, Header.point(), 0, Index.get(),
+                     /*AddContext*/ true)
+          .References,
+      ElementsAre(
+          AllOf(rangeIs(Header.range()), fileIs(testPath("header.hpp"))),
+          AllOf(rangeIs(Main.range()), fileIs(testPath("main.cpp")))));
 }
 
 TEST(GetNonLocalDeclRefs, All) {

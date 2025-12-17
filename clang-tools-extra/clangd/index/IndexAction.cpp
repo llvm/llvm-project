@@ -21,7 +21,6 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexingOptions.h"
-#include <cstddef>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -220,8 +219,8 @@ std::unique_ptr<FrontendAction> createStaticIndexingAction(
       index::IndexingOptions::SystemSymbolFilterKind::All;
   // We index function-local classes and its member functions only.
   IndexOpts.IndexFunctionLocals = true;
-  // We need to delay indexing so function bodies become available, this is so
-  // we can find constructor calls through `make_unique`.
+  // We need to delay indexing so instantiations of function bodies become
+  // available, this is so we can find constructor calls through `make_unique`.
   IndexOpts.DeferIndexingToEndOfTranslationUnit = true;
   Opts.CollectIncludePath = true;
   if (Opts.Origin == SymbolOrigin::Unknown)

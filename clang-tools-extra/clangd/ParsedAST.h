@@ -124,7 +124,7 @@ public:
   }
 
   /// Cache for constructors called through forwarding, e.g. make_unique
-  llvm::DenseMap<const FunctionDecl *, std::vector<CXXConstructorDecl *>>
+  llvm::DenseMap<const FunctionDecl *, SmallVector<CXXConstructorDecl *, 1>>
       ForwardingToConstructorCache;
 
 private:

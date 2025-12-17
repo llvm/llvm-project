@@ -18,8 +18,6 @@
 #include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MacroInfo.h"
@@ -254,22 +252,14 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
 /// reference to one (e.g. `Args&...` or `Args&&...`).
 bool isExpandedFromParameterPack(const ParmVarDecl *D);
 
-/// Heuristic that checks if FT is forwarding a parameter pack to another
-/// function (e.g. `make_unique`).
+/// Heuristic that checks if FT is likely to be forwarding a parameter pack to
+/// another function (e.g. `make_unique`).
 bool isLikelyForwardingFunction(FunctionTemplateDecl *FT);
 
-class ForwardingToConstructorVisitor
-    : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
-public:
-  ForwardingToConstructorVisitor() {}
-
-  bool VisitCallExpr(CallExpr *E);
-
-  bool VisitCXXNewExpr(CXXNewExpr *E);
-
-  // Output of this visitor
-  std::vector<CXXConstructorDecl *> Constructors{};
-};
+/// Only call if FD is a likely forwarding function. Returns
+/// constructors that might be forwraded to
+SmallVector<CXXConstructorDecl *, 1>
+searchConstructorsInForwardingFunction(const FunctionDecl *FD);
 
 } // namespace clangd
 } // namespace clang

@@ -18,7 +18,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
@@ -32,7 +31,6 @@
 #include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1061,25 +1059,66 @@ bool isLikelyForwardingFunction(FunctionTemplateDecl *FT) {
   return false;
 }
 
-bool ForwardingToConstructorVisitor::VisitCallExpr(CallExpr *E) {
-  if (auto *FD = E->getDirectCallee()) {
-    if (auto *PT = FD->getPrimaryTemplate();
-        PT && isLikelyForwardingFunction(PT)) {
-      ForwardingToConstructorVisitor Visitor{};
-      Visitor.TraverseStmt(FD->getBody());
-      std::move(Visitor.Constructors.begin(), Visitor.Constructors.end(),
-                std::back_inserter(Constructors));
-    }
-  }
-  return true;
-}
+class ForwardingToConstructorVisitor
+    : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
+public:
+  struct SeenFunctions {
+    unsigned int DepthLeft;
+    SeenFunctions *Prev;
+    const FunctionDecl *Current;
+  };
 
-bool ForwardingToConstructorVisitor::VisitCXXNewExpr(CXXNewExpr *E) {
-  if (auto *CE = E->getConstructExpr()) {
-    if (auto *Callee = CE->getConstructor())
-      Constructors.push_back(Callee);
+  ForwardingToConstructorVisitor(SeenFunctions SF,
+                                 SmallVector<CXXConstructorDecl *, 1> &Output)
+      : SF(std::move(SF)), Constructors(Output) {}
+
+  bool seenFunction(const FunctionDecl *FD) {
+    if (SF.Current == FD)
+      return true;
+    if (SF.Prev == nullptr)
+      return false;
+    return seenFunction(SF.Prev->Current);
   }
-  return true;
+
+  bool VisitCallExpr(CallExpr *E) {
+    if (SF.DepthLeft == 0)
+      return true;
+    if (auto *FD = E->getDirectCallee()) {
+      // Check if we already visited this function to prevent endless recursion
+      if (seenFunction(FD))
+        return true;
+      if (auto *PT = FD->getPrimaryTemplate();
+          PT && isLikelyForwardingFunction(PT)) {
+        SeenFunctions Next{SF.DepthLeft - 1, &SF, FD};
+        ForwardingToConstructorVisitor Visitor{std::move(Next), Constructors};
+        Visitor.TraverseStmt(FD->getBody());
+        std::move(Visitor.Constructors.begin(), Visitor.Constructors.end(),
+                  std::back_inserter(Constructors));
+      }
+    }
+    return true;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    if (auto *CE = E->getConstructExpr())
+      if (auto *Callee = CE->getConstructor())
+        Constructors.push_back(Callee);
+    return true;
+  }
+
+  // List of function stack
+  SeenFunctions SF;
+  // Output of this visitor
+  SmallVector<CXXConstructorDecl *, 1> &Constructors;
+};
+
+SmallVector<CXXConstructorDecl *, 1>
+searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
+  SmallVector<CXXConstructorDecl *, 1> Result;
+  ForwardingToConstructorVisitor::SeenFunctions SF{10, nullptr, FD};
+  ForwardingToConstructorVisitor Visitor{std::move(SF), Result};
+  Visitor.TraverseStmt(FD->getBody());
+  return Result;
 }
 
 } // namespace clangd

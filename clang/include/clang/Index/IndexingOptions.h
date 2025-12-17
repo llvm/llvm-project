@@ -37,7 +37,10 @@ struct IndexingOptions {
   bool IndexParametersInDeclarations = false;
   bool IndexTemplateParameters = false;
   // Some information might only be available at the end of a translation unit,
-  // this flag delays the indexing for this purpose.
+  // this flag delays the indexing for this purpose (e.g. instantiation of
+  // function definitions). This option only takes effect on operations that
+  // actually build the AST, e.g. `createIndexingAction()` and
+  // `createIndexingASTConsumer()`.
   bool DeferIndexingToEndOfTranslationUnit = false;
 
   // If set, skip indexing inside some declarations for performance.

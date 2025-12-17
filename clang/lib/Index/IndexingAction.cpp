@@ -16,7 +16,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include <memory>
-#include <vector>
 
 using namespace clang;
 using namespace clang::index;
@@ -104,7 +103,6 @@ class IndexASTConsumer final : public ASTConsumer {
   std::shared_ptr<Preprocessor> PP;
   std::function<bool(const Decl *)> ShouldSkipFunctionBody;
   bool DeferIndexingToEndOfTranslationUnit;
-  std::vector<DeclGroupRef> TopLevelDecls;
 
 public:
   IndexASTConsumer(std::shared_ptr<IndexDataConsumer> DataConsumer,
@@ -130,11 +128,9 @@ protected:
   }
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
-    if (DeferIndexingToEndOfTranslationUnit) {
-      TopLevelDecls.emplace_back(std::move(DG));
-      return true;
-    }
-    return IndexCtx->indexDeclGroupRef(DG);
+    if (!DeferIndexingToEndOfTranslationUnit)
+      return IndexCtx->indexDeclGroupRef(DG);
+    return true;
   }
 
   void HandleInterestingDecl(DeclGroupRef DG) override {
@@ -142,18 +138,14 @@ protected:
   }
 
   void HandleTopLevelDeclInObjCContainer(DeclGroupRef DG) override {
-    if (DeferIndexingToEndOfTranslationUnit)
-      TopLevelDecls.emplace_back(std::move(DG));
-    else
+    if (!DeferIndexingToEndOfTranslationUnit)
       IndexCtx->indexDeclGroupRef(DG);
   }
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
-    if (DeferIndexingToEndOfTranslationUnit) {
-      for (auto &DG : TopLevelDecls) {
-        IndexCtx->indexDeclGroupRef(DG);
-      }
-    }
+    if (DeferIndexingToEndOfTranslationUnit)
+      for (auto *DG : Ctx.getTranslationUnitDecl()->decls())
+        IndexCtx->indexTopLevelDecl(DG);
     DataConsumer->finish();
   }
 

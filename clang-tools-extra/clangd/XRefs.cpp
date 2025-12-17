@@ -16,7 +16,6 @@
 #include "Quality.h"
 #include "Selection.h"
 #include "SourceCode.h"
-#include "URI.h"
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Types.h"
 #include "index/Index.h"
@@ -43,7 +42,6 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -60,7 +58,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -964,28 +961,27 @@ public:
     auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
     if (FD == nullptr || !FD->isTemplateInstantiation())
       return false;
-    if (auto *PT = FD->getPrimaryTemplate();
-        PT == nullptr || !isLikelyForwardingFunction(PT))
-      return false;
 
-    std::vector<CXXConstructorDecl *> *Constructors = nullptr;
+    SmallVector<CXXConstructorDecl *, 1> *Constructors = nullptr;
     if (auto Entry = AST.ForwardingToConstructorCache.find(FD);
         Entry != AST.ForwardingToConstructorCache.end())
       Constructors = &Entry->getSecond();
     if (Constructors == nullptr) {
-      ForwardingToConstructorVisitor Visitor{};
-      Visitor.TraverseStmt(FD->getBody());
+      if (auto *PT = FD->getPrimaryTemplate();
+          PT == nullptr || !isLikelyForwardingFunction(PT))
+        return false;
+
+      SmallVector<CXXConstructorDecl *, 1> FoundConstructors =
+          searchConstructorsInForwardingFunction(FD);
       auto Iter = AST.ForwardingToConstructorCache.try_emplace(
-          FD, std::move(Visitor.Constructors));
+          FD, std::move(FoundConstructors));
       if (Iter.second)
         Constructors = &Iter.first->getSecond();
     }
-    if (Constructors != nullptr) {
-      for (auto *Constructor : *Constructors) {
+    if (Constructors != nullptr)
+      for (auto *Constructor : *Constructors)
         if (TargetConstructors.contains(Constructor))
           return true;
-      }
-    }
     return false;
   }
 
