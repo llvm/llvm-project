@@ -625,9 +625,11 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
   if (I.USR == GlobalNamespaceID)
     Obj["Name"] = "Global Namespace";
 
-  if (!I.Children.Namespaces.empty())
+  if (!I.Children.Namespaces.empty()) {
     serializeArray(I.Children.Namespaces, Obj, "Namespaces",
                    SerializeReferenceLambda);
+    Obj["HasNamespaces"] = true;
+  }
 
   static auto SerializeInfo = [RepositoryUrl](const auto &Info,
                                               Object &Object) {
