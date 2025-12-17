@@ -217,9 +217,13 @@ void bar() {
 // CHECK-NEXT:   %[[ISFIRSTBITZERO:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
 // CHECK-NEXT:   br i1 %[[ISFIRSTBITZERO]], label %dtor.continue, label %dtor.call_delete_after_array_destroy
 // CHECK: dtor.call_delete_after_array_destroy:
-// X64-NEXT:     call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef 8)
-// X86-NEXT:     call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef 4)
-// CHECK-NEXT:   br label %dtor.continue
+// X64-NEXT:  %[[ARRSZ:.*]] = mul i64 8, %[[HOWMANY]]
+// X86-NEXT:  %[[ARRSZ:.*]] = mul i32 4, %[[HOWMANY]]
+// X64-NEXT:  %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
+// X86-NEXT:  %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
+// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef %[[TOTALSZ]])
+// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[TOTALSZ]])
+// CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.scalar:
 // X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %[[LTHIS]])
 // X86-NEXT:   call x86_thiscallcc void @"??1Parrot@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %[[LTHIS]])
@@ -252,8 +256,12 @@ void bar() {
 // X86-NEXT: call void @"??_VHasOperatorDelete@@SAXPAX@Z"
 // CHECK-NEXT:   br label %dtor.continue
 // CHECK: dtor.call_glob_delete_after_array_destroy:
-// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef 8)
-// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef 4)
+// X64-NEXT: %[[ARRSZ:.*]] = mul i64 8, %[[COOKIE:.*]]
+// X86-NEXT: %[[ARRSZ:.*]] = mul i32 4, %[[COOKIE:.*]]
+// X64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
+// X86-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
+// X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
+// X86-NEXT: call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:   br label %dtor.continue
 
 
@@ -314,22 +322,26 @@ void foobartest() {
 // CHECK-NEXT:  %5 = icmp eq i32 %4, 0
 // CHECK-NEXT:  br i1 %5, label %dtor.continue, label %dtor.call_delete_after_array_destroy
 // CHECK: dtor.call_delete_after_array_destroy:
-// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef 16)
-// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef 8)
+// X64-NEXT: %[[ARRSZ:.*]] = mul i64 16, %[[COOKIE:.*]]
+// X86-NEXT: %[[ARRSZ:.*]] = mul i32 8, %[[COOKIE:.*]]
+// X64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
+// X86-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
+// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
+// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.scalar:
 // X64-NEXT:  call void @"??1Derived@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(16) %this1)
 // X86-NEXT:  call x86_thiscallcc void @"??1Derived@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(8) %this1)
-// CHECK-NEXT:  %6 = and i32 %should_call_delete2, 1
-// CHECK-NEXT:  %7 = icmp eq i32 %6, 0
-// CHECK-NEXT:  br i1 %7, label %dtor.continue, label %dtor.call_delete
+// CHECK-NEXT:  %8 = and i32 %should_call_delete2, 1
+// CHECK-NEXT:  %9 = icmp eq i32 %8, 0
+// CHECK-NEXT:  br i1 %9, label %dtor.continue, label %dtor.call_delete
 // CHECK: dtor.call_delete:
 // X64-NEXT:  call void @"??3@YAXPEAX_K@Z"(ptr noundef %this1, i64 noundef 16)
 // X86-NEXT:  call void @"??3@YAXPAXI@Z"(ptr noundef %this1, i32 noundef 8)
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.continue:
-// CHECK-NEXT:  %8 = load ptr, ptr %retval
-// CHECK-NEXT:  ret ptr %8
+// CHECK-NEXT:  %10 = load ptr, ptr %retval
+// CHECK-NEXT:  ret ptr %10
 
 // X64: define weak dso_local noundef ptr @"??_EAllocatedAsArray@@UEAAPEAXI@Z"
 // X86: define weak dso_local x86_thiscallcc noundef ptr @"??_EAllocatedAsArray@@UAEPAXI@Z"
