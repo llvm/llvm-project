@@ -12358,7 +12358,10 @@ SDValue SITargetLowering::lowerFDIV_FAST(SDValue Op, SelectionDAG &DAG) const {
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
 
-  SDValue r1 = DAG.getNode(ISD::FABS, SL, MVT::f32, RHS, Flags);
+  // TODO: The combiner should probably handle elimination of redundant fabs.
+  SDValue r1 = DAG.SignBitIsZeroFP(RHS)
+                   ? RHS
+                   : DAG.getNode(ISD::FABS, SL, MVT::f32, RHS, Flags);
 
   const APFloat K0Val(0x1p+96f);
   const SDValue K0 = DAG.getConstantFP(K0Val, SL, MVT::f32);

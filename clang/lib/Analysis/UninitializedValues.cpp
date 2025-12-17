@@ -274,15 +274,9 @@ namespace {
 /// Classify each DeclRefExpr as an initialization or a use. Any
 /// DeclRefExpr which isn't explicitly classified will be assumed to have
 /// escaped the analysis and will be treated as an initialization.
-class ClassifyRefs : public StmtVisitor<ClassifyRefs> {
+class ClassifyRefs : public ConstStmtVisitor<ClassifyRefs> {
 public:
-  enum Class {
-    Init,
-    Use,
-    SelfInit,
-    ConstRefUse,
-    Ignore
-  };
+  enum Class { Init, Use, SelfInit, ConstRefUse, ConstPtrUse, Ignore };
 
 private:
   const DeclContext *DC;
@@ -297,14 +291,14 @@ private:
 public:
   ClassifyRefs(AnalysisDeclContext &AC) : DC(cast<DeclContext>(AC.getDecl())) {}
 
-  void VisitDeclStmt(DeclStmt *DS);
-  void VisitUnaryOperator(UnaryOperator *UO);
-  void VisitBinaryOperator(BinaryOperator *BO);
-  void VisitCallExpr(CallExpr *CE);
-  void VisitCastExpr(CastExpr *CE);
-  void VisitOMPExecutableDirective(OMPExecutableDirective *ED);
+  void VisitDeclStmt(const DeclStmt *DS);
+  void VisitUnaryOperator(const UnaryOperator *UO);
+  void VisitBinaryOperator(const BinaryOperator *BO);
+  void VisitCallExpr(const CallExpr *CE);
+  void VisitCastExpr(const CastExpr *CE);
+  void VisitOMPExecutableDirective(const OMPExecutableDirective *ED);
 
-  void operator()(Stmt *S) { Visit(S); }
+  void operator()(const Stmt *S) { Visit(S); }
 
   Class get(const DeclRefExpr *DRE) const {
     llvm::DenseMap<const DeclRefExpr*, Class>::const_iterator I
@@ -322,10 +316,10 @@ public:
 
 } // namespace
 
-static const DeclRefExpr *getSelfInitExpr(VarDecl *VD) {
+static const DeclRefExpr *getSelfInitExpr(const VarDecl *VD) {
   if (VD->getType()->isRecordType())
     return nullptr;
-  if (Expr *Init = VD->getInit()) {
+  if (const Expr *Init = VD->getInit()) {
     const auto *DRE =
         dyn_cast<DeclRefExpr>(stripCasts(VD->getASTContext(), Init));
     if (DRE && DRE->getDecl() == VD)
@@ -382,7 +376,7 @@ void ClassifyRefs::classify(const Expr *E, Class C) {
   }
 }
 
-void ClassifyRefs::VisitDeclStmt(DeclStmt *DS) {
+void ClassifyRefs::VisitDeclStmt(const DeclStmt *DS) {
   for (auto *DI : DS->decls()) {
     auto *VD = dyn_cast<VarDecl>(DI);
     if (VD && isTrackedVar(VD))
@@ -391,7 +385,7 @@ void ClassifyRefs::VisitDeclStmt(DeclStmt *DS) {
   }
 }
 
-void ClassifyRefs::VisitBinaryOperator(BinaryOperator *BO) {
+void ClassifyRefs::VisitBinaryOperator(const BinaryOperator *BO) {
   // Ignore the evaluation of a DeclRefExpr on the LHS of an assignment. If this
   // is not a compound-assignment, we will treat it as initializing the variable
   // when TransferFunctions visits it. A compound-assignment does not affect
@@ -403,14 +397,15 @@ void ClassifyRefs::VisitBinaryOperator(BinaryOperator *BO) {
     classify(BO->getLHS(), Ignore);
 }
 
-void ClassifyRefs::VisitUnaryOperator(UnaryOperator *UO) {
+void ClassifyRefs::VisitUnaryOperator(const UnaryOperator *UO) {
   // Increment and decrement are uses despite there being no lvalue-to-rvalue
   // conversion.
   if (UO->isIncrementDecrementOp())
     classify(UO->getSubExpr(), Use);
 }
 
-void ClassifyRefs::VisitOMPExecutableDirective(OMPExecutableDirective *ED) {
+void ClassifyRefs::VisitOMPExecutableDirective(
+    const OMPExecutableDirective *ED) {
   for (Stmt *S : OMPExecutableDirective::used_clauses_children(ED->clauses()))
     classify(cast<Expr>(S), Use);
 }
@@ -419,16 +414,16 @@ static bool isPointerToConst(const QualType &QT) {
   return QT->isAnyPointerType() && QT->getPointeeType().isConstQualified();
 }
 
-static bool hasTrivialBody(CallExpr *CE) {
-  if (FunctionDecl *FD = CE->getDirectCallee()) {
-    if (FunctionTemplateDecl *FTD = FD->getPrimaryTemplate())
+static bool hasTrivialBody(const CallExpr *CE) {
+  if (const FunctionDecl *FD = CE->getDirectCallee()) {
+    if (const FunctionTemplateDecl *FTD = FD->getPrimaryTemplate())
       return FTD->getTemplatedDecl()->hasTrivialBody();
     return FD->hasTrivialBody();
   }
   return false;
 }
 
-void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
+void ClassifyRefs::VisitCallExpr(const CallExpr *CE) {
   // Classify arguments to std::move as used.
   if (CE->isCallToStdMove()) {
     // RecordTypes are handled in SemaDeclCXX.cpp.
@@ -442,22 +437,20 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
   // conservatively do not assume that it is used.
   // If a value is passed by const reference to a function,
   // it should already be initialized.
-  for (CallExpr::arg_iterator I = CE->arg_begin(), E = CE->arg_end();
-       I != E; ++I) {
-    if ((*I)->isGLValue()) {
-      if ((*I)->getType().isConstQualified())
-        classify((*I), isTrivialBody ? Ignore : ConstRefUse);
-    } else if (isPointerToConst((*I)->getType())) {
-      const Expr *Ex = stripCasts(DC->getParentASTContext(), *I);
+  for (const Expr *Argument : CE->arguments()) {
+    if (Argument->isGLValue()) {
+      if (Argument->getType().isConstQualified())
+        classify(Argument, isTrivialBody ? Ignore : ConstRefUse);
+    } else if (isPointerToConst(Argument->getType())) {
+      const Expr *Ex = stripCasts(DC->getParentASTContext(), Argument);
       const auto *UO = dyn_cast<UnaryOperator>(Ex);
       if (UO && UO->getOpcode() == UO_AddrOf)
-        Ex = UO->getSubExpr();
-      classify(Ex, Ignore);
+        classify(UO->getSubExpr(), isTrivialBody ? Ignore : ConstPtrUse);
     }
   }
 }
 
-void ClassifyRefs::VisitCastExpr(CastExpr *CE) {
+void ClassifyRefs::VisitCastExpr(const CastExpr *CE) {
   if (CE->getCastKind() == CK_LValueToRValue)
     classify(CE->getSubExpr(), Use);
   else if (const auto *CSE = dyn_cast<CStyleCastExpr>(CE)) {
@@ -476,7 +469,7 @@ void ClassifyRefs::VisitCastExpr(CastExpr *CE) {
 
 namespace {
 
-class TransferFunctions : public StmtVisitor<TransferFunctions> {
+class TransferFunctions : public ConstStmtVisitor<TransferFunctions> {
   CFGBlockValues &vals;
   const CFG &cfg;
   const CFGBlock *block;
@@ -496,16 +489,17 @@ public:
 
   void reportUse(const Expr *ex, const VarDecl *vd);
   void reportConstRefUse(const Expr *ex, const VarDecl *vd);
+  void reportConstPtrUse(const Expr *ex, const VarDecl *vd);
 
-  void VisitBinaryOperator(BinaryOperator *bo);
-  void VisitBlockExpr(BlockExpr *be);
-  void VisitCallExpr(CallExpr *ce);
-  void VisitDeclRefExpr(DeclRefExpr *dr);
-  void VisitDeclStmt(DeclStmt *ds);
-  void VisitGCCAsmStmt(GCCAsmStmt *as);
-  void VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS);
-  void VisitObjCMessageExpr(ObjCMessageExpr *ME);
-  void VisitOMPExecutableDirective(OMPExecutableDirective *ED);
+  void VisitBinaryOperator(const BinaryOperator *bo);
+  void VisitBlockExpr(const BlockExpr *be);
+  void VisitCallExpr(const CallExpr *ce);
+  void VisitDeclRefExpr(const DeclRefExpr *dr);
+  void VisitDeclStmt(const DeclStmt *ds);
+  void VisitGCCAsmStmt(const GCCAsmStmt *as);
+  void VisitObjCForCollectionStmt(const ObjCForCollectionStmt *FS);
+  void VisitObjCMessageExpr(const ObjCMessageExpr *ME);
+  void VisitOMPExecutableDirective(const OMPExecutableDirective *ED);
 
   bool isTrackedVar(const VarDecl *vd) {
     return ::isTrackedVar(vd, cast<DeclContext>(ac.getDecl()));
@@ -682,7 +676,17 @@ void TransferFunctions::reportConstRefUse(const Expr *ex, const VarDecl *vd) {
   }
 }
 
-void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS) {
+void TransferFunctions::reportConstPtrUse(const Expr *ex, const VarDecl *vd) {
+  Value v = vals[vd];
+  if (isAlwaysUninit(v)) {
+    auto use = getUninitUse(ex, vd, v);
+    use.setConstPtrUse();
+    handler.handleUseOfUninitVariable(vd, use);
+  }
+}
+
+void TransferFunctions::VisitObjCForCollectionStmt(
+    const ObjCForCollectionStmt *FS) {
   // This represents an initialization of the 'element' value.
   if (const auto *DS = dyn_cast<DeclStmt>(FS->getElement())) {
     const auto *VD = cast<VarDecl>(DS->getSingleDecl());
@@ -692,8 +696,9 @@ void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS) {
 }
 
 void TransferFunctions::VisitOMPExecutableDirective(
-    OMPExecutableDirective *ED) {
-  for (Stmt *S : OMPExecutableDirective::used_clauses_children(ED->clauses())) {
+    const OMPExecutableDirective *ED) {
+  for (const Stmt *S :
+       OMPExecutableDirective::used_clauses_children(ED->clauses())) {
     assert(S && "Expected non-null used-in-clause child.");
     Visit(S);
   }
@@ -701,7 +706,7 @@ void TransferFunctions::VisitOMPExecutableDirective(
     Visit(ED->getStructuredBlock());
 }
 
-void TransferFunctions::VisitBlockExpr(BlockExpr *be) {
+void TransferFunctions::VisitBlockExpr(const BlockExpr *be) {
   const BlockDecl *bd = be->getBlockDecl();
   for (const auto &I : bd->captures()) {
     const VarDecl *vd = I.getVariable();
@@ -715,8 +720,8 @@ void TransferFunctions::VisitBlockExpr(BlockExpr *be) {
   }
 }
 
-void TransferFunctions::VisitCallExpr(CallExpr *ce) {
-  if (Decl *Callee = ce->getCalleeDecl()) {
+void TransferFunctions::VisitCallExpr(const CallExpr *ce) {
+  if (const Decl *Callee = ce->getCalleeDecl()) {
     if (Callee->hasAttr<ReturnsTwiceAttr>()) {
       // After a call to a function like setjmp or vfork, any variable which is
       // initialized anywhere within this function may now be initialized. For
@@ -738,7 +743,7 @@ void TransferFunctions::VisitCallExpr(CallExpr *ce) {
   }
 }
 
-void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *dr) {
+void TransferFunctions::VisitDeclRefExpr(const DeclRefExpr *dr) {
   switch (classification.get(dr)) {
   case ClassifyRefs::Ignore:
     break;
@@ -754,10 +759,13 @@ void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *dr) {
   case ClassifyRefs::ConstRefUse:
     reportConstRefUse(dr, cast<VarDecl>(dr->getDecl()));
     break;
+  case ClassifyRefs::ConstPtrUse:
+    reportConstPtrUse(dr, cast<VarDecl>(dr->getDecl()));
+    break;
   }
 }
 
-void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
+void TransferFunctions::VisitBinaryOperator(const BinaryOperator *BO) {
   if (BO->getOpcode() == BO_Assign) {
     FindVarResult Var = findVar(BO->getLHS());
     if (const VarDecl *VD = Var.getDecl())
@@ -765,9 +773,9 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
   }
 }
 
-void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
-  for (auto *DI : DS->decls()) {
-    auto *VD = dyn_cast<VarDecl>(DI);
+void TransferFunctions::VisitDeclStmt(const DeclStmt *DS) {
+  for (const Decl *DI : DS->decls()) {
+    const auto *VD = dyn_cast<VarDecl>(DI);
     if (VD && isTrackedVar(VD)) {
       if (getSelfInitExpr(VD)) {
         // If the initializer consists solely of a reference to itself, we
@@ -801,7 +809,7 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
   }
 }
 
-void TransferFunctions::VisitGCCAsmStmt(GCCAsmStmt *as) {
+void TransferFunctions::VisitGCCAsmStmt(const GCCAsmStmt *as) {
   // An "asm goto" statement is a terminator that may initialize some variables.
   if (!as->isAsmGoto())
     return;
@@ -824,7 +832,7 @@ void TransferFunctions::VisitGCCAsmStmt(GCCAsmStmt *as) {
   }
 }
 
-void TransferFunctions::VisitObjCMessageExpr(ObjCMessageExpr *ME) {
+void TransferFunctions::VisitObjCMessageExpr(const ObjCMessageExpr *ME) {
   // If the Objective-C message expression is an implicit no-return that
   // is not modeled in the CFG, set the tracked dataflow values to Unknown.
   if (objCNoRet.isImplicitNoReturn(ME)) {

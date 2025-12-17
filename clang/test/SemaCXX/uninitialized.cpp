@@ -185,6 +185,10 @@ void test_const_ptr() {
   const int *ptr2;
   foo(ptr); // expected-warning {{variable 'ptr' is uninitialized when used here}}
   foobar(&ptr2);
+  int *ptr3; // expected-note {{initialize the variable 'ptr3' to silence this warning}}
+  const int *ptr4; // expected-note {{initialize the variable 'ptr4' to silence this warning}}
+  bar(ptr3); // expected-warning {{variable 'ptr3' is uninitialized when used here}}
+  bar(ptr4); // expected-warning {{variable 'ptr4' is uninitialized when used here}}
 }
 }
 
