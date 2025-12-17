@@ -200,7 +200,22 @@ reduction operations, such as addition, multiplication, XOR, AND and OR.
     return sum;
   }
 
-We support floating point reduction operations when `-ffast-math` is used.
+The full vectorization of reductions inherently involves reordering operations,
+which is problematic for floating-point reductions. Since floating-point
+operations are not associative, the result may depend on the order of operations.
+Therefore, vectorizing floating-point reductions is implicitly prohibited by
+the C and C++ standards, unless the compiler can ensure that the result does
+not change.
+
+For this reason, on most targets we support floating point reduction operations
+only when `-ffast-math` (or at least the `-fassociative-math -fno-signed-zeros 
+-fno-trapping-math` subset of `-ffast-math`) is used. On select targets such as
+AArch64 and RISC-V we support generating ordered reductions which preserve the
+exact result, allowing a limited form of vectorization to take place while
+remaining standards-compliant. However, ordered reductions are typically less
+efficient than traditionally vectorized reductions, therefore enabling floating-
+point reordering may still result in more performant reductions on these
+targets.
 
 Inductions
 ^^^^^^^^^^
