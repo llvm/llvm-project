@@ -4589,7 +4589,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   }
 
   case Intrinsic::nvvm_tensormap_replace_global_address:
-  case Intrinsic::nvvm_tensormap_replace_global_stride:{
+  case Intrinsic::nvvm_tensormap_replace_global_stride: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::i64;
     Info.ptrVal = I.getArgOperand(0);
